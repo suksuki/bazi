@@ -1,0 +1,78 @@
+# WSL2 环境专用配置
+# 完全禁用文件监控，确保最大稳定性
+
+[server]
+# 核心设置：禁用文件监控
+runOnSave = false
+fileWatcherType = "none"
+
+# 服务器配置
+port = 8501
+address = "0.0.0.0"
+headless = true
+
+# 文件上传
+maxUploadSize = 200
+maxMessageSize = 200
+
+# CORS和安全
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+# 禁用自动打开浏览器（WSL环境下无意义）
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[runner]
+# 魔法命令
+magicEnabled = true
+
+# 禁用快速重运行（避免不必要的重载）
+fastReruns = false
+
+# 脚本超时（秒）
+scriptTimeout = 600
+
+# 后台任务处理
+postScriptGC = true
+
+# 强制重启条件（仅当这些文件变化时）
+# 注意：fileWatcherType=none 时此设置无效，但保留以备切换
+# 如果需要启用有限的文件监控，可以改为 poll + 设置此项
+# alwaysRerunOn = ["main.py", "core/*.py", "ui/*.py"]
+
+[client]
+# 工具栏
+toolbarMode = "minimal"
+
+# 显示错误详情
+showErrorDetails = true
+
+# 在WSL中可能需要显示额外信息
+showWarningOnDirectExecution = false
+
+[theme]
+# 可选：深色主题
+base = "dark"
+
+[logger]
+# 日志级别
+level = "info"
+
+# 消息格式
+messageFormat = "%(asctime)s - %(levelname)s - %(message)s"
+
+[deprecation]
+# 禁用废弃警告
+showPyplotGlobalUse = false
+showfileUploaderEncoding = false
+
+# WSL 特定优化
+[global]
+# 开发模式关闭（生产模式）
+developmentMode = false
+
+# 禁用使用统计
+disableWatchdogWarning = true

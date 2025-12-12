@@ -1,0 +1,61 @@
+# Streamlit 文件监控忽略列表
+# 这些目录/文件的变化不会触发应用重载
+
+# 数据目录 - 防止数据文件变化导致重载
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 日志文件
+*.log
+logs/
+
+# 缓存和临时文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 测试文件
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 下载的媒体文件
+*.mp3
+*.mp4
+*.wav
+*.webm
+
+# 文档和 markdown（通常不需要触发重载）
+*.md
+docs/
+
+# 配置文件（如果你不想配置变化触发重载）
+# config.json
+# *.yaml
+# *.yml

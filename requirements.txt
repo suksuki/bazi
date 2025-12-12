@@ -1,0 +1,12 @@
+lunar_python
+streamlit
+ollama
+pandas
+plotly
+beautifulsoup4
+requests
+duckduckgo-search
+yt-dlp
+openai-whisper
+youtube-transcript-api
+scikit-learn

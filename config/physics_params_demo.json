@@ -1,0 +1,96 @@
+{
+  "hidden_stems_ratios": {
+    "子": {
+      "癸": 1.0
+    },
+    "丑": {
+      "己": 0.6,
+      "癸": 0.3,
+      "辛": 0.1
+    },
+    "寅": {
+      "甲": 0.6,
+      "丙": 0.3,
+      "戊": 0.1
+    },
+    "卯": {
+      "乙": 1.0
+    },
+    "辰": {
+      "戊": 0.6,
+      "乙": 0.3,
+      "癸": 0.1
+    },
+    "巳": {
+      "丙": 0.6,
+      "戊": 0.3,
+      "庚": 0.1
+    },
+    "午": {
+      "丁": 0.7,
+      "己": 0.3
+    },
+    "未": {
+      "己": 0.6,
+      "丁": 0.3,
+      "乙": 0.1
+    },
+    "申": {
+      "庚": 0.6,
+      "壬": 0.3,
+      "戊": 0.1
+    },
+    "酉": {
+      "辛": 1.0
+    },
+    "戌": {
+      "戊": 0.6,
+      "辛": 0.3,
+      "丁": 0.1
+    },
+    "亥": {
+      "壬": 0.7,
+      "甲": 0.3
+    }
+  },
+  "angle_chong": 180.0,
+  "angle_sanhe": 120.0,
+  "angle_liuhe": 60.0,
+  "angle_xing": 90.0,
+  "angle_tolerance": 5.0,
+  "chong_energy_release": 0.8,
+  "sanhe_resonance_boost": 1.5,
+  "liuhe_binding_strength": 1.2,
+  "xing_friction_loss": 0.3,
+  "rooting_base_strength": 1.0,
+  "rooting_distance_decay": 2.0,
+  "projection_efficiency": 0.8,
+  "sheng_transfer_efficiency": 0.75,
+  "ke_resistance_factor": 0.5,
+  "distance_decay_exponent": 2.0,
+  "work_energy_coefficient": 1.0,
+  "work_efficiency_base": 1.0,
+  "dayun_field_strength": 1.2,
+  "dayun_constant_rewrite_factor": 0.5,
+  "liunian_impact_strength": 1.2,
+  "liunian_trigger_threshold": 0.3,
+  "latitude_temperature_coefficient": 0.01,
+  "longitude_phase_shift": 0.0,
+  "terrain_humidity_modifier": {
+    "coastal": 1.2,
+    "inland": 1.0,
+    "desert": 0.7,
+    "mountain": 0.9
+  },
+  "wavefunction_uncertainty_base": 10.0,
+  "probability_threshold_high": 0.7,
+  "probability_threshold_low": 0.3,
+  "position_weights": {
+    "year": 0.15,
+    "month": 0.45,
+    "day": 0.15,
+    "hour": 0.25
+  },
+  "yang_divergence_factor": 1.2,
+  "yin_convergence_factor": 0.8
+}

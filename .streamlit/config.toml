@@ -1,0 +1,70 @@
+[server]
+# ✅ 系统WSL直接运行 - 优化配置
+# 启用热重载但使用稳定的poll模式
+runOnSave = true
+
+# poll模式：稳定且不会被data/目录变化干扰
+# WSL环境下poll比watchdog更可靠
+fileWatcherType = "poll"
+
+# 轮询间隔（秒）- 增大可进一步减少检查频率
+# 默认是每秒检查，我们改为每2秒
+pollingInterval = 2.0
+
+# 服务器地址和端口
+port = 8501
+address = "0.0.0.0"
+
+# 启用 CORS (如果需要跨域访问)
+enableCORS = false
+
+# XSS 保护
+enableXsrfProtection = true
+
+# 最大上传大小 (MB)
+maxUploadSize = 200
+
+# 服务器超时设置
+maxMessageSize = 200
+
+[browser]
+# 服务器启动时不自动打开浏览器
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[runner]
+# 魔法命令开关
+magicEnabled = true
+
+# 快速重运行 - 减少不必要的重载
+fastReruns = true
+
+# 脚本执行超时（秒）
+scriptTimeout = 600
+
+# 后台任务处理 - 防止因为后台任务导致的重载
+postScriptGC = true
+
+[client]
+# 工具栏模式
+toolbarMode = "minimal"
+
+# 显示错误详情
+showErrorDetails = true
+
+[theme]
+# 可选：设置主题（可以删除这部分如果不需要）
+base = "dark"
+
+[logger]
+# 日志级别：error, warning, info, debug
+level = "info"
+
+# 消息格式
+messageFormat = "%(asctime)s %(message)s"
+
+[deprecation]
+# 禁用过时警告（你的日志中有很多 use_container_width 警告）
+showPyplotGlobalUse = false
+showfileUploaderEncoding = false

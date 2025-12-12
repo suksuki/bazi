@@ -1,0 +1,157 @@
+{
+    "comment": "Antigravity Physics Parameters V32.0 - First Principles Model",
+    "version": "32.0",
+    "last_updated": "2025-12-12",
+    "warning": "ALL VALUES ARE INITIAL ESTIMATES - MUST BE OPTIMIZED VIA DATA REGRESSION",
+    "structure_algorithm": {
+        "comment": "Definition 3: Shell-Core Model (Hidden Stems Ratios)",
+        "hidden_stems_ratios": {
+            "子": {
+                "癸": 1.0
+            },
+            "丑": {
+                "己": 0.60,
+                "癸": 0.30,
+                "辛": 0.10
+            },
+            "寅": {
+                "甲": 0.60,
+                "丙": 0.30,
+                "戊": 0.10
+            },
+            "卯": {
+                "乙": 1.0
+            },
+            "辰": {
+                "戊": 0.60,
+                "乙": 0.30,
+                "癸": 0.10
+            },
+            "巳": {
+                "丙": 0.60,
+                "戊": 0.30,
+                "庚": 0.10
+            },
+            "午": {
+                "丁": 0.70,
+                "己": 0.30
+            },
+            "未": {
+                "己": 0.60,
+                "丁": 0.30,
+                "乙": 0.10
+            },
+            "申": {
+                "庚": 0.60,
+                "壬": 0.30,
+                "戊": 0.10
+            },
+            "酉": {
+                "辛": 1.0
+            },
+            "戌": {
+                "戊": 0.60,
+                "辛": 0.30,
+                "丁": 0.10
+            },
+            "亥": {
+                "壬": 0.70,
+                "甲": 0.30
+            }
+        }
+    },
+    "geometric_interaction": {
+        "comment": "Definition 4: Phase Angles and Interaction Thresholds",
+        "angle_chong": 180.0,
+        "angle_sanhe": 120.0,
+        "angle_liuhe": 60.0,
+        "angle_xing": 90.0,
+        "angle_tolerance": 5.0,
+        "interaction_strengths": {
+            "chong_energy_release": 0.8,
+            "sanhe_resonance_boost": 1.5,
+            "liuhe_binding_strength": 1.2,
+            "xing_friction_loss": 0.3
+        }
+    },
+    "dynamics_and_work": {
+        "comment": "Definition 5: Rooting, Projection, Energy Flow",
+        "rooting": {
+            "base_strength": 1.0,
+            "distance_decay": 2.0
+        },
+        "projection": {
+            "efficiency": 0.8
+        },
+        "energy_flow": {
+            "sheng_transfer_efficiency": 0.7,
+            "ke_resistance_factor": 0.5,
+            "distance_decay_exponent": 2.0
+        },
+        "work_formula": {
+            "energy_coefficient": 1.0,
+            "efficiency_base": 1.0
+        }
+    },
+    "spacetime_system": {
+        "comment": "Definition 6: Da Yun (Static) and Liu Nian (Dynamic)",
+        "dayun": {
+            "field_strength": 1.0,
+            "constant_rewrite_factor": 0.5
+        },
+        "liunian": {
+            "impact_strength": 1.2,
+            "trigger_threshold": 0.3
+        }
+    },
+    "spatial_correction": {
+        "comment": "Definition 7: Geographic Modifiers (K_geo)",
+        "latitude_temperature_coefficient": 0.01,
+        "longitude_phase_shift": 0.0,
+        "terrain_humidity_modifier": {
+            "coastal": 1.2,
+            "inland": 1.0,
+            "desert": 0.7,
+            "mountain": 0.9
+        }
+    },
+    "probability_calculation": {
+        "comment": "Definition 8: Wave Function Parameters",
+        "wavefunction_uncertainty_base": 10.0,
+        "probability_threshold_high": 0.7,
+        "probability_threshold_low": 0.3
+    },
+    "position_weights": {
+        "comment": "Pillar Importance (must sum to 1.0)",
+        "year": 0.15,
+        "month": 0.45,
+        "day": 0.15,
+        "hour": 0.25
+    },
+    "spin_modifiers": {
+        "comment": "Definition 1: Yin/Yang as Spin (Divergent/Convergent)",
+        "yang_divergence_factor": 1.2,
+        "yin_convergence_factor": 0.8
+    },
+    "optimization_metadata": {
+        "comment": "Definition 9: Evolution Mechanism",
+        "total_parameters": 30,
+        "tunable_parameters": [
+            "hidden_stems_ratios",
+            "interaction_strengths",
+            "rooting.base_strength",
+            "rooting.distance_decay",
+            "energy_flow.sheng_transfer_efficiency",
+            "energy_flow.ke_resistance_factor",
+            "dayun.field_strength",
+            "liunian.impact_strength",
+            "spatial_correction.latitude_temperature_coefficient",
+            "probability_calculation.wavefunction_uncertainty_base",
+            "position_weights",
+            "spin_modifiers"
+        ],
+        "optimization_status": "INITIAL - NOT OPTIMIZED",
+        "training_cases_required": 1000,
+        "validation_accuracy_target": 0.85
+    }
+}
