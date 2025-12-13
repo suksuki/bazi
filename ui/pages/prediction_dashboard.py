@@ -349,7 +349,9 @@ def render_prediction_dashboard():
     # === V6.0: BaziProfile Initialization ===
     # Convert input date/time to full datetime
     birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
-    profile = BaziProfile(birth_dt, gender)
+    # BUG FIX: 使用 gender_idx (整数 1/0) 而不是 gender (字符串 "男"/"女")
+    # BaziProfile 需要整数参数: 1=男, 0=女
+    profile = BaziProfile(birth_dt, gender_idx)
     
     # Optional: Update profile with specific analysis if needed (e.g. wang_shuai from previous steps if we trust it more?)
     # For now, let BaziProfile calculate its own strength to be the Single Source of Truth.
