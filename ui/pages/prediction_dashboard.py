@@ -532,7 +532,15 @@ def render_prediction_dashboard():
         'day_master': chart.get('day',{}).get('stem','?'),
         'wang_shuai': wang_shuai_str, 
         'physics_sources': physics_sources,
-        'bazi': bazi_list # Required for Structural/Harm Matrix
+        'bazi': bazi_list, # Required for Structural/Harm Matrix
+        # Sprint 5.4: 注入出生信息以支持动态大运
+        'birth_info': {
+            'year': d.year,
+            'month': d.month,
+            'day': d.day,
+            'hour': t,
+            'gender': 1 if "男" in gender else 0
+        }
     }
     
     # 3. Execute Quantum Engine
@@ -905,8 +913,25 @@ def render_prediction_dashboard():
     st.markdown("### 🌊 动态流年模拟 (Dynamic Timeline)")
     st.caption(f"未来 12 年 ({sim_year} - {sim_year+11}) 能量趋势模拟")
     
+    # Sprint 5.4: Adaptive Disclaimer
+    birth_info_check = case_data.get('birth_info')
+    is_dynamic_ready = birth_info_check and birth_info_check.get('year')
+    
+    if is_dynamic_ready:
+        st.info("""
+✅ **动态大运已激活**: 系统正在根据您的出生日期实时计算大运切换。
+如果图表中出现 🔄 虚线，表示该年运势进入新阶段。
+        """.strip())
+    else:
+        st.warning("""
+ℹ️ **静态大运模式**: 由于未检测到具体出生日期（仅有四柱干支），系统将使用当前大运进行推演。
+若需查看精确的换运时间，请使用日期方式重新排盘。
+        """.strip())
+    
     years = range(sim_year, sim_year + 12)
     traj_data = []
+    handover_years = []  # Sprint 5.4: 记录换运年份
+    prev_luck = None  # 跟踪上一年的大运
     
     # Helper for GanZhi
     gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
@@ -937,121 +962,135 @@ def render_prediction_dashboard():
         l_zhi = zhi_chars[offset % 12]
         l_gz = f"{l_gan}{l_zhi}"
         
-        # Determine Da Yun for this year
-        dy_str = selected_yun['gan_zhi'] if selected_yun else ''
-        d_ctx = {'year': l_gz, 'dayun': dy_str}
+        # === Sprint 5.4: 动态大运计算 ===
+        # 防御机制：只有当 birth_info 存在且有效时才启用
+        # 避免使用 1990 默认值导致的乱码
         
-        # Execute Standard V2.4 Engine
-        res_L = engine.calculate_energy(case_data, d_ctx)
+        has_valid_birth = False
+        active_luck = ''
         
-        # --- V2.0 INJECTION: Structural Score Override ---
-        # V3.0 Fix: Rebuild chart structure for treasury detection
-        birth_chart_v3 = {
+        birth_info = case_data.get('birth_info')
+        if birth_info and birth_info.get('year'):
+            # 简单的有效性检查：如果年份存在，认为是有效的出生信息
+            # (通常 extraction 模块如果不确定就不会返回 year)
+            has_valid_birth = True
+            
+            try:
+                birth_year = birth_info.get('year')
+                birth_month = birth_info.get('month', 1)
+                birth_day = birth_info.get('day', 1)
+                birth_hour = birth_info.get('hour', 12)
+                gender = birth_info.get('gender', 1)
+                
+                # 尝试动态计算
+                calc_luck = engine.get_dynamic_luck_pillar(
+                    birth_year, birth_month, birth_day, birth_hour, gender, y
+                )
+                
+                # 过滤异常返回值 (注意: "未知大运"也算有效，只过滤真正的错误)
+                if calc_luck and calc_luck not in ["计算异常", "计算失败", "童限(起运前)"]:
+                    active_luck = calc_luck
+            except:
+                pass # Fallback to static
+        
+        # Fallback: 如果动态计算失败或没启用，使用静态大运
+        if not active_luck:
+            active_luck = selected_yun['gan_zhi'] if selected_yun else ''
+        
+        # === Trinity Architecture V4.0 ===
+        # Use unified interface instead of fragmented calculation
+        
+        # Build birth chart for Trinity
+        dm_energy_self = case_data.get('physics_sources', {}).get('self', {}).get('stem_support', 0)
+        
+        birth_chart_v4 = {
             'year_pillar': f"{chart.get('year',{}).get('stem','')}{chart.get('year',{}).get('branch','')}",
             'month_pillar': f"{chart.get('month',{}).get('stem','')}{chart.get('month',{}).get('branch','')}",
             'day_pillar': f"{chart.get('day',{}).get('stem','')}{chart.get('day',{}).get('branch','')}",
             'hour_pillar': f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}",
-            'day_master': chart.get('day',{}).get('stem','')
+            'day_master': chart.get('day',{}).get('stem',''),
+            'energy_self': dm_energy_self,
+            'current_luck_pillar': active_luck  # 动态大运
         }
         
-        # Fixed: Unpacking tuple (score, details) as of V3.0 Sprint 3
-        v2_score, v2_details_list = engine.calculate_year_score(l_gz, favorable, unfavorable, birth_chart_v3)
+        # Call Trinity unified interface with dynamic luck
+        ctx = engine.calculate_year_context(
+            year_pillar=l_gz,
+            favorable_elements=favorable,
+            unfavorable_elements=unfavorable,
+            birth_chart=birth_chart_v4,
+            year=y,
+            active_luck=active_luck  # Sprint 5.4: 传入动态大运
+        )
         
-        # Apply V2.0 impact to dimensions based on logic
-        # If V2.0 detects "Cut Feet" (-5.0 or less), it drags down everything significantly.
-        # If V2.0 is positive, it boosts without cap.
+        # Extract data from DestinyContext (clean and simple!)
+        final_career = ctx.career
+        final_wealth = ctx.wealth
+        final_rel = ctx.relationship
+        full_desc = ctx.description
         
-        # Modifiers with Dimension-Specific Logic:
-        # V2.0 structural score affects each dimension differently
+        # Trinity data for visualization
+        is_treasury_open = ctx.is_treasury_open
+        treasury_icon_type = ctx.icon
+        treasury_risk = ctx.risk_level
+        treasury_tags = ctx.tags
         
-        # Base modifier
-        base_mod = v2_score * 0.5  # -7.0 -> -3.5 impact
-        
-        # Special Case: Amplify for bad structures
-        if v2_score <= -5.0:
-            base_mod *= 1.5  # -5.25 impact for Cut Feet
-        
-        # Dimension-Specific Impact
-        # Career: Heavily affected by structure (0.8x weight)
-        # Wealth: Most affected by structure and treasury (1.0x weight)
-        # Relationship: Less affected by external structure (0.4x weight)
-        
-        career_mod = base_mod * 0.8
-        wealth_mod = base_mod * 1.0
-        rel_mod = base_mod * 0.4
-        
-        # V3.0 Treasury Bonus: Primarily boosts Wealth, with career spillover
-        treasury_bonus_wealth = 0.0
-        treasury_bonus_career = 0.0
-        
-        if v2_details_list:
-            if any("💰" in d or "财库" in d for d in v2_details_list):
-                # Wealth Treasury: Major wealth boost, minor career boost
-                treasury_bonus_wealth = v2_score * 0.3  # Extra wealth multiplier
-                treasury_bonus_career = v2_score * 0.15  # Career gets some spillover
-        
-        final_career = res_L['career'] + career_mod + treasury_bonus_career
-        final_wealth = res_L['wealth'] + wealth_mod + treasury_bonus_wealth
-        final_rel = res_L['relationship'] + rel_mod  # No treasury effect on relationship
-        
-        # Format Description
-        v2_desc = ""
-        if v2_details_list:
-            v2_desc = f" [{'; '.join(v2_details_list)}]"
-        elif v2_score <= -4.0: 
-            v2_desc = f"[截脚/凶结构 {v2_score}]"
-        elif v2_score >= 4.0: 
-            v2_desc = f"[吉结构 {v2_score}]"
-        
-        full_desc = f"{res_L.get('desc', '')} {v2_desc}"
+        # Sprint 5.4: 检测换运点
+        if prev_luck and prev_luck != active_luck:
+            handover_years.append({
+                'year': y,
+                'from': prev_luck,
+                'to': active_luck
+            })
+        prev_luck = active_luck
 
-        # V3.0 Sprint 4: Treasury Detection
-        is_treasury_open = False
-        is_wealth_treasury = False
-        treasury_element = None
-        
-        if v2_details_list:
-            # Check for Treasury Openings
-            if any("库" in d for d in v2_details_list):
-                is_treasury_open = True
-                
-                # Detect if it's a Wealth Treasury (财库)
-                if any("💰" in d or "财库" in d for d in v2_details_list):
-                    is_wealth_treasury = True
-                
-                # Extract treasury element
-                for d in v2_details_list:
-                    if "库[" in d:
-                        start = d.find("[") + 1
-                        end = d.find("]")
-                        if start > 0 and end > start:
-                            treasury_element = d[start:end]
-                            break
+        # 0. 确保数据类型绝对安全
+        safe_year = int(y)
+        safe_career = float(final_career) if final_career is not None else 0.0
+        safe_wealth = float(final_wealth) if final_wealth is not None else 0.0
+        safe_rel = float(final_rel) if final_rel is not None else 0.0
 
         traj_data.append({
-            "year": y,
-            "label": f"{y}\n{l_gz}",
-            "career": round(final_career, 2),
-            "wealth": round(final_wealth, 2),
-            "relationship": round(final_rel, 2),
+            "year": safe_year,
+            "label": f"{safe_year}\n{l_gz}",
+            "career": round(safe_career, 2),
+            "wealth": round(safe_wealth, 2),
+            "relationship": round(safe_rel, 2),
             "desc": full_desc,
-            # V3.0 Metadata
+            # V3.5 Metadata (simplified)
             "is_treasury_open": is_treasury_open,
-            "is_wealth_treasury": is_wealth_treasury,
-            "treasury_element": treasury_element
+            "treasury_icon": treasury_icon_type,
+            "treasury_risk": treasury_risk
         })
         
+    # Sprint 5.4 Debug: 显示大运变化信息
+    if handover_years:
+        st.success(f"🔄 检测到 {len(handover_years)} 个换运点：")
+        for h in handover_years:
+            st.write(f"  • {h['year']}年: {h['from']} → {h['to']}")
+    else:
+        st.error("⚠️ **Bug警告**: 12年内未检测到换运点！")
+        st.error("📐 数学事实: 一步大运=10年，模拟周期=12年，12>10 → 必然有换运！")
+        st.error("🔍 请查看下方调试面板获取详细信息")
+        if prev_luck:
+            st.caption(f"可疑: 全程使用同一大运 `{prev_luck}` (可能是fallback)")
+    
     # Render Chart
     df_traj = pd.DataFrame(traj_data)
     
+    # 🔍 终极调试：打印前三年数据，看看为什么没画出来
+    st.write("🔍 **前三年数据检查 (Raw Data)**:")
+    st.write(df_traj.head(3)[['year', 'label', 'career', 'wealth', 'relationship']])
+    
     # Safety check: Only render chart if data exists
     if not df_traj.empty and 'label' in df_traj.columns:
-        # V3.0 Sprint 4: Extract Treasury Points
+        # V3.5 Sprint 5: Extract Treasury Points with icon and color
         treasury_points_labels = []
         treasury_points_career = []
         treasury_points_wealth = []
         treasury_points_rel = []
         treasury_icons = []
+        treasury_colors = []  # Color differentiation
         
         for d in traj_data:
             if d.get('is_treasury_open'):
@@ -1060,35 +1099,49 @@ def render_prediction_dashboard():
                 treasury_points_wealth.append(d['wealth'])
                 treasury_points_rel.append(d['relationship'])
                 
-                # Icon selection based on treasury type
-                if d.get('is_wealth_treasury'):
-                    treasury_icons.append("🏆")  # Gold Trophy for Wealth Treasury
+                # Use backend-provided icon directly
+                icon = d.get('treasury_icon', '🗝️')
+                treasury_icons.append(icon)
+                
+                # Color mapping based on risk level
+                risk = d.get('treasury_risk', 'opportunity')
+                if risk == 'warning':
+                    treasury_colors.append('#FF6B35')  # Orange for warning
                 else:
-                    treasury_icons.append("🗝️")  # Key for other vaults
+                    treasury_colors.append('#FFD700')  # Gold for opportunity
         
         fig = go.Figure()
         
         # Base trajectory lines
         fig.add_trace(go.Scatter(
-            x=df_traj['label'], y=df_traj['career'], 
-            mode='lines+markers', name='事业 (Career)', 
-            line=dict(color='#00CED1', width=3),
+            x=df_traj['year'], 
+            y=df_traj['career'], 
+            mode='lines+markers', 
+            name='事业 (Career)',
+            line=dict(color='#00E5FF', width=3),
+            connectgaps=True, # 强制连线
             hovertext=df_traj['desc']
         ))
         fig.add_trace(go.Scatter(
-            x=df_traj['label'], y=df_traj['wealth'], 
-            mode='lines+markers', name='财富 (Wealth)', 
+            x=df_traj['year'], 
+            y=df_traj['wealth'], 
+            mode='lines+markers', 
+            name='财富 (Wealth)',
             line=dict(color='#FFD700', width=3),
+            connectgaps=True, # 强制连线
             hovertext=df_traj['desc']
         ))
         fig.add_trace(go.Scatter(
-            x=df_traj['label'], y=df_traj['relationship'], 
-            mode='lines+markers', name='感情 (Rel)', 
-            line=dict(color='#FF1493', width=3),
+            x=df_traj['year'], 
+            y=df_traj['relationship'], 
+            mode='lines+markers', 
+            name='感情 (Rel)',
+            line=dict(color='#F50057', width=3),
+            connectgaps=True, # 强制连线
             hovertext=df_traj['desc']
         ))
         
-        # V3.0 Treasury Icon Overlay
+        # V3.5 Treasury Icon Overlay with Color Differentiation
         if treasury_points_labels:
             # Use the maximum value among the three dimensions for icon placement
             treasury_points_y = [max(c, w, r) for c, w, r in zip(
@@ -1101,16 +1154,39 @@ def render_prediction_dashboard():
                 mode='text',
                 text=treasury_icons,
                 textposition="top center",
-                textfont=dict(size=32, color='#FFD700'),  # Large golden icons
-                name='💰 库门大开',
+                textfont=dict(size=36),  # Larger for visibility
+                marker=dict(color=treasury_colors),
+                name='💰 库门事件',
                 hoverinfo='skip',
                 showlegend=False
             ))
         
+        # Sprint 5.4: 添加换运分界线
+        for handover in handover_years:
+            fig.add_vline(
+                x=handover['year'],
+                line_width=2,
+                line_dash="dash",
+                line_color="rgba(255,255,255,0.6)",
+                annotation_text=f"🔄 换运\\n{handover['to']}",
+                annotation_position="top",
+                annotation=dict(
+                    font=dict(size=10, color="white"),
+                    bgcolor="rgba(100,100,255,0.3)",
+                    bordercolor="rgba(255,255,255,0.5)",
+                    borderwidth=1
+                )
+            )
+        
         fig.update_layout(
-            title="🏛️ Antigravity V3.0: 命运全息图 (Destiny Wavefunction)",
-            yaxis=dict(title="能量级 (Energy Score)", range=[-10, 12]),  # Expanded range
-            xaxis=dict(title="年份 (Year)"),
+            title="🏛️ Antigravity V3.5: 命运全息图 (Destiny Wavefunction)",
+            yaxis=dict(title="能量级 (Energy Score)", range=[-10, 12]),
+            xaxis=dict(
+                title="年份 (Year)",
+                range=[sim_year - 0.5, sim_year + 11.5], # 强制锁定范围
+                tickmode='linear',
+                dtick=1
+            ),
             hovermode="x unified",
             margin=dict(l=40, r=40, t=60, b=80),  # More space for legend
             height=500,  # Taller chart
@@ -1156,6 +1232,73 @@ def render_prediction_dashboard():
                         'treasury_element': d.get('treasury_element'),
                         'v2_details': d.get('desc', '').split('|')[-1] if '|' in d.get('desc', '') else 'none'
                     })
+        
+        # Sprint 5.4 DEBUG: Dynamic Luck Progression
+        with st.expander("🔄 大运动态检测 (Luck Progression Debug)", expanded=True):  # 默认展开！
+            st.write(f"**模拟年份**: {sim_year} - {sim_year + 11}")
+            st.write(f"**检测到换运点**: {len(handover_years)} 个")
+            
+            # === 关键调试：显示完整大运时间表 ===
+            st.markdown("### 📋 完整大运时间表 (Timeline)")
+            try:
+                # 尝试获取timeline
+                birth_info = case_data.get('birth_info', {})
+                birth_year = birth_info.get('year', 1990)
+                birth_month = birth_info.get('month', 1)
+                birth_day = birth_info.get('day', 1)
+                birth_hour = birth_info.get('hour', 12)
+                gender = birth_info.get('gender', 1)
+                
+                # Debug: 显示使用的出生信息
+                st.caption(f"计算基准: {birth_year}年{birth_month}月{birth_day}日 {birth_hour}时 (性别:{gender})")
+                
+                timeline = engine.get_luck_timeline(
+                    birth_year, birth_month, birth_day, birth_hour, gender, num_steps=10
+                )
+                
+                if timeline:
+                    st.success("✅ 成功生成大运时间表：")
+                    st.json(timeline) # 直接显示完整JSON以便检查
+                else:
+                    st.error("❌ Timeline为空！")
+            except Exception as e:
+                st.error(f"❌ Timeline获取失败: {e}")
+            
+            st.markdown("### 📊 逐年大运追踪")
+            # 显示每年实际使用的大运
+            if traj_data:
+                year_luck_tracking = []
+                # 重新计算每年的大运（用于调试）
+                for y in range(sim_year, sim_year + 12):
+                    try:
+                        luck = engine.get_dynamic_luck_pillar(
+                            birth_year, birth_month, birth_day, birth_hour, gender, y
+                        )
+                        year_luck_tracking.append(f"{y}: `{luck}`")
+                    except:
+                        year_luck_tracking.append(f"{y}: ❌ 计算失败")
+                
+                # 按列显示
+                col1, col2, col3 = st.columns(3)
+                for i, track in enumerate(year_luck_tracking):
+                    if i % 3 == 0:
+                        col1.write(track)
+                    elif i % 3 == 1:
+                        col2.write(track)
+                    else:
+                        col3.write(track)
+            
+            if handover_years:
+                st.success("✅ 发现大运切换：")
+                for h in handover_years:
+                    st.write(f"  📍 {h['year']}年: `{h['from']}` → `{h['to']}`")
+            else:
+                st.error("⚠️ **BUG警告**: 12年内未检测到换运！")
+                st.error("数学上12 > 10，必然有换运点！请检查算法！")
+                if prev_luck:
+                    st.write(f"**全程大运**: `{prev_luck}` (可能是静态fallback)")
+            
+            st.caption("💡 如果Timeline显示有多个大运，但未检测到换运，说明代码有Bug！")
         
         # DEBUG: Show data summary
         with st.expander("🔍 数据诊断 (Data Debug)", expanded=False):

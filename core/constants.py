@@ -70,3 +70,12 @@ HIDDEN_STEMS_MAP = {
     '戌': GRAVE_TREASURY_CONFIG['戌']['stems'],
     '亥': {'main': '壬', 'hidden': ['壬', '甲']},
 }
+
+# === Sprint 5.3: Three Punishments (三刑) ===
+# 丑未戌三刑 - "无恩之刑" / "恃势之刑" (Earth Punishment)
+# When all three appear together (chart + year), it represents:
+# - Structural collapse
+# - Internal friction
+# - Health/relationship crisis
+# - 💀 Extreme danger
+EARTH_PUNISHMENT_SET = {'丑', '未', '戌'}

@@ -9,6 +9,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 from core.quantum_engine import QuantumEngine
+from core.context import DestinyContext
 
 # Load Golden Parameters
 GOLDEN_PARAMS_PATH = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
@@ -17,35 +18,8 @@ CALIBRATION_CASES_PATH = os.path.join(os.path.dirname(__file__), '../../data/cal
 try:
     with open(GOLDEN_PARAMS_PATH, 'r') as f:
         GOLDEN_CONFIG = json.load(f)
-        GOLDEN_WEIGHTS = GOLDEN_CONFIG.get('weights', {})
-        # Flatten structure for Engine consumption
-        FLATTENED_PARAMS = {
-            "w_e_weight": GOLDEN_WEIGHTS.get("w_e_weight", 1.0),
-            "f_yy_correction": GOLDEN_WEIGHTS.get("f_yy_correction", 1.1),
-            
-            # Career
-            "w_career_officer": GOLDEN_WEIGHTS.get("career", {}).get("w_officer", 0.8),
-            "w_career_resource": GOLDEN_WEIGHTS.get("career", {}).get("w_resource", 0.1),
-            "w_career_output": GOLDEN_WEIGHTS.get("career", {}).get("w_output", 0.0),
-            "k_control": GOLDEN_WEIGHTS.get("career", {}).get("k_control", 0.55),
-            "k_buffer": GOLDEN_WEIGHTS.get("career", {}).get("k_buffer", 0.40),
-
-            # Wealth
-            "w_wealth_cai": GOLDEN_WEIGHTS.get("wealth", {}).get("w_wealth", 0.6),
-            "w_wealth_output": GOLDEN_WEIGHTS.get("wealth", {}).get("w_output", 0.4),
-            "k_capture": GOLDEN_WEIGHTS.get("wealth", {}).get("k_capture", 0.40),
-            "k_leak": GOLDEN_WEIGHTS.get("wealth", {}).get("k_leak", 0.87),
-
-            # Relationship
-            "w_rel_spouse": GOLDEN_WEIGHTS.get("relationship", {}).get("w_spouse", 0.35),
-            "w_rel_self": GOLDEN_WEIGHTS.get("relationship", {}).get("w_self", 0.0),
-            "w_rel_output": GOLDEN_WEIGHTS.get("relationship", {}).get("w_output", 0.15),
-            "k_clash": GOLDEN_WEIGHTS.get("relationship", {}).get("k_clash", 0.10),
-            "k_pressure": GOLDEN_WEIGHTS.get("relationship", {}).get("k_pressure", 1.0)
-        }
 except Exception as e:
-    # Default fallback
-    FLATTENED_PARAMS = {}
+    GOLDEN_CONFIG = {}
 
 def load_cases():
     try:
@@ -55,141 +29,275 @@ def load_cases():
         st.error(f"Failed to load cases: {e}")
         return []
 
-def render():
-    st.set_page_config(page_title="Zeitgeist Cinema", page_icon="🎬", layout="wide")
+def generate_narrative_from_context(ctx: DestinyContext) -> str:
+    """
+    V4.0 Trinity: Generate LLM-constrained narrative
+    LLM must follow the narrative_prompt as gospel truth
+    """
+    # System Prompt: The Director's Script
+    system_prompt = f"""你是一位精通命理与人性的剧作家。
+请根据以下【核心设定】创作一段年度运势独白。
+
+【核心设定】(必须严格遵守，这是算法的绝对真理):
+{ctx.narrative_prompt}
+
+【风格要求】:
+- 如果包含"Risk/风险/大凶/危机"，语气需深沉、警示，引用《周易》或《麦克白》中的危机感。
+- 如果包含"Opportunity/机遇/大吉"，语气需激昂、振奋，如同《华尔街之狼》或英雄史诗。
+- 如果包含"身弱不胜财"，务必警告虚不受补、量力而行。
+- 如果包含"身强胜财"，可积极鼓舞大展拳脚。
+- 严禁违背核心设定（例如：设定为凶，绝不可写成吉）。
+
+【输出要求】:
+- 150-200字
+- 第一人称或第二人称
+- 文学化表达，但不失严谨性
+"""
     
-    st.title("🎬 命运波函数影院 (Zeitgeist Cinema)")
-    st.caption("Powered by Quantum Engine V2.2 | Golden Parameters Enabled")
+    # For now, return a simulated response (in production, call actual LLM)
+    # This demonstrates the constraint mechanism
+    
+    # Simulate LLM with rule-based generation for demo
+    if "警示" in ctx.narrative_prompt or "风险" in ctx.narrative_prompt or ctx.risk_level == "warning":
+        # Dangerous scenario
+        narrative = f"""
+【{ctx.year}年 {ctx.pillar}】
+
+{ctx.narrative_prompt.split('。')[0]}。
+
+此刻如同《推背图》所言："阴盛阳衰，虚火上炎。" 虽见宝藏在前，却是镜花水月。
+若强行攫取，恐招破耗之祸。宜守不宜攻，量力而为，方可避过劫数。
+
+【核心警示】: {', '.join(ctx.tags[:3])}
+【综合评分】: {ctx.score:.1f} (高风险区)
+"""
+    elif "积极" in ctx.narrative_prompt or "机遇" in ctx.narrative_prompt or ctx.risk_level == "opportunity":
+        # Opportunistic scenario
+        narrative = f"""
+【{ctx.year}年 {ctx.pillar}】
+
+{ctx.narrative_prompt.split('。')[0]}。
+
+如《易经》所云："飞龙在天，利见大人。" 天时地利人和，三者齐聚。
+此时不搏，更待何时？当如《华尔街之狼》般放手一搏，成就辉煌！
+
+【关键机遇】: {', '.join(ctx.tags[:3])}
+【综合评分】: {ctx.score:.1f} (黄金时机)
+"""
+    else:
+        # Neutral scenario
+        narrative = f"""
+【{ctx.year}年 {ctx.pillar}】
+
+{ctx.narrative_prompt.split('。')[0]}。
+
+运势平稳如水，波澜不惊。宜按部就班，稳扎稳打。
+
+【综合评分】: {ctx.score:.1f}
+"""
+    
+    return narrative.strip()
+
+
+def render():
+    st.set_page_config(page_title="Zeitgeist Cinema V4.0", page_icon="🎬", layout="wide")
+    
+    st.title("🎬 命运波函数影院 V4.0 (Trinity Edition)")
+    st.caption("Powered by Trinity Architecture | LLM Narratives Constrained by QuantumEngine")
     
     # Sidebar: Case Selector
     cases = load_cases()
+    if not cases:
+        st.error("No cases loaded")
+        return
+    
     case_options = {f"No.{c['id']} {c['bazi'][2]}日主 ({c['desc']})": c for c in cases}
     selected_label = st.sidebar.selectbox("选择主演 (Subject)", list(case_options.keys()))
     selected_case = case_options[selected_label]
     
     # ---------------------------
-    # 1. 12-Year Simulation
+    # 1. 12-Year Trinity Simulation
     # ---------------------------
-    st.subheader(f"1. 命运心电图 (Destiny ECG): 2024-2035")
+    st.subheader(f"1. 命运全息图 (Destiny Hologram): 2024-2035")
     
     years = range(2024, 2036)
+    contexts = []  # Store DestinyContext objects
     
-    # Simulation Data
-    sim_data = []
+    engine = QuantumEngine()
     
-    engine = QuantumEngine(FLATTENED_PARAMS)
+    # Prepare birth chart
+    bazi = selected_case['bazi']
+    birth_chart = {
+        'year_pillar': bazi[0],
+        'month_pillar': bazi[1],
+        'day_pillar': bazi[2],
+        'hour_pillar': bazi[3],
+        'day_master': selected_case['day_master'],
+        'energy_self': 3.0  # Simplified, can enhance based on wang_shuai
+    }
     
+    # Determine favorable/unfavorable (simplified)
+    dm_elem = engine._get_element(selected_case['day_master'])
+    all_elems = ['wood', 'fire', 'earth', 'metal', 'water']
+    relation_map = {e: engine._get_relation(dm_elem, e) for e in all_elems}
+    
+    wang_shuai = selected_case.get('wang_shuai', '身中和')
+    if "旺" in wang_shuai or "强" in wang_shuai:
+        fav_types = ['output', 'wealth', 'officer']
+    else:
+        fav_types = ['resource', 'self']
+    
+    favorable = []
+    unfavorable = []
+    for e, r in relation_map.items():
+        if r in fav_types:
+            favorable.append(e.capitalize())
+        else:
+            unfavorable.append(e.capitalize())
+    
+    # === Trinity Calculation Loop ===
     for y in years:
-        # Mock GanZhi generation for demo (In real app, use Calendar Utils)
-        # 2024=甲辰, 2025=乙巳, 2026=丙午...
         gan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"][(y - 2024) % 10]
         zhi = ["辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯"][(y - 2024) % 12]
         year_pillar = f"{gan}{zhi}"
         
-        # Inject "Jia Zi" logic for demo if user wants to see the crash
-        # Let's map 2032 (Ren Zi) -> Jia Zi for demo? Or just let the engine generic logic work.
-        # Since we implemented generic logic: "Jia Zi" in year + Strong Output triggers crash.
-        # Let's artificially force 2024 to be "甲子" for Case 1 to verify? No, let's keep it real.
-        # Real 2024 is Jia Chen (Wood/Earth). High prob of Owl Steals Food if generic logic is loose.
+        # Call Trinity Interface
+        ctx = engine.calculate_year_context(
+            year_pillar=year_pillar,
+            favorable_elements=favorable,
+            unfavorable_elements=unfavorable,
+            birth_chart=birth_chart,
+            year=y
+        )
         
-        d_ctx = {"year": year_pillar, "luck": "测试大运"}
-        res = engine.calculate_energy(selected_case, d_ctx)
-        
-        sim_data.append({
-            "year": y,
-            "ganzhi": year_pillar,
-            "career": res.get('career', 0),
-            "wealth": res.get('wealth', 0),
-            "relationship": res.get('relationship', 0),
-            "desc": res.get('desc', ''),
-            "particles": res.get('particles', {}),
-            "ten_gods": res.get('ten_gods', {}),  # If available
-            "raw_res": res # Keep full result for drill down
-        })
-        
-    df_sim = pd.DataFrame(sim_data)
+        contexts.append(ctx)
     
-    # Plotly Chart
+    # Build DataFrame from contexts
+    df_sim = pd.DataFrame([{
+        'year': ctx.year,
+        'ganzhi': ctx.pillar,
+        'career': ctx.career,
+        'wealth': ctx.wealth,
+        'relationship': ctx.relationship,
+        'score': ctx.score,
+        'icon': ctx.icon,
+        'energy_level': ctx.energy_level,
+        'tags': ', '.join(ctx.tags[:3])
+    } for ctx in contexts])
+    
+    # Plotly Chart with Trinity Icons
     fig = go.Figure()
     
     # Traces
-    fig.add_trace(go.Scatter(x=df_sim['year'], y=df_sim['career'], mode='lines+markers', name='事业 (Career)', hovertext=df_sim['desc'], line=dict(color='#00CED1', width=3)))
-    fig.add_trace(go.Scatter(x=df_sim['year'], y=df_sim['wealth'], mode='lines+markers', name='财富 (Wealth)', hovertext=df_sim['desc'], line=dict(color='#FFD700', width=3)))
-    fig.add_trace(go.Scatter(x=df_sim['year'], y=df_sim['relationship'], mode='lines+markers', name='感情 (Rel)', hovertext=df_sim['desc'], line=dict(color='#FF1493', width=3)))
+    fig.add_trace(go.Scatter(
+        x=df_sim['year'], y=df_sim['career'], 
+        mode='lines+markers', name='事业 (Career)', 
+        line=dict(color='#00CED1', width=3),
+        hovertext=[f"{row['ganzhi']}: {row['tags']}" for _, row in df_sim.iterrows()]
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_sim['year'], y=df_sim['wealth'], 
+        mode='lines+markers', name='财富 (Wealth)', 
+        line=dict(color='#FFD700', width=3),
+        hovertext=[f"{row['ganzhi']}: {row['tags']}" for _, row in df_sim.iterrows()]
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_sim['year'], y=df_sim['relationship'], 
+        mode='lines+markers', name='感情 (Rel)', 
+        line=dict(color='#FF1493', width=3),
+        hovertext=[f"{row['ganzhi']}: {row['tags']}" for _, row in df_sim.iterrows()]
+    ))
     
-    # Annotations for "Events"
-    for idx, row in df_sim.iterrows():
-        if row['desc']:
-            fig.add_annotation(
-                x=row['year'], 
-                y=max(row['career'], row['wealth'], row['relationship']) + 1,
-                text=row['desc'].split(' ')[0], # Show icon only
-                showarrow=False,
-                font=dict(size=14)
-            )
+    # Add Trinity Icons
+    treasury_years = [ctx.year for ctx in contexts if ctx.icon]
+    treasury_icons = [ctx.icon for ctx in contexts if ctx.icon]
+    treasury_y = [max(ctx.career, ctx.wealth, ctx.relationship) for ctx in contexts if ctx.icon]
+    
+    if treasury_years:
+        fig.add_trace(go.Scatter(
+            x=treasury_years,
+            y=treasury_y,
+            mode='text',
+            text=treasury_icons,
+            textposition="top center",
+            textfont=dict(size=36),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
 
     fig.update_layout(
-        title=f"12年运势波幅 ({selected_case['bazi'][2]}日主)",
+        title=f"Trinity 12年运势全息图 ({selected_case['bazi'][2]}日主)",
         xaxis_title="流年 (Year)",
         yaxis_title="能量级别 (Energy Level)",
         hovermode="x unified",
         template="plotly_dark",
-        height=400
+        height=450
     )
     
     st.plotly_chart(fig, use_container_width=True)
     
     # ---------------------------
-    # 2. Time Shuttle & Particle Chamber
+    # 2. Time Slider & Trinity Narrative
     # ---------------------------
     st.markdown("---")
-    st.subheader("2. 粒子碰撞室 (Particle Chamber)")
+    st.subheader("2. 时光穿梭机 + AI剧本解说 (Time Shuttle & Narrative)")
     
     c1, c2 = st.columns([1, 2])
     
     with c1:
-        selected_year = st.select_slider("拖动时间轴以观测粒子状态", options=years, value=2024)
+        selected_year = st.select_slider("拖动时间轴穿越命运", options=list(years), value=2024)
         
-        # Get data for selected year
-        current_data = next(item for item in sim_data if item["year"] == selected_year)
-        st.markdown(f"### {current_data['year']} {current_data['ganzhi']}")
-        st.info(f"事件: {current_data['desc']}" if current_data['desc'] else "状态: 平稳")
+        # Get context for selected year
+        current_ctx = next(c for c in contexts if c.year == selected_year)
         
+        st.markdown(f"### {current_ctx.year} {current_ctx.pillar}")
+        
+        # Display metrics
+        st.metric("综合评分", f"{current_ctx.score:.1f}", 
+                 delta=current_ctx.energy_level)
+        
+        # Tags
+        if current_ctx.tags:
+            st.markdown(f"**特征标签**: {', '.join(current_ctx.tags)}")
+        
+        # Icon
+        if current_ctx.icon:
+            st.markdown(f"## {current_ctx.icon}")
+            st.caption(f"风险等级: {current_ctx.risk_level}")
+    
     with c2:
-        # Particle Visualization
-        # Display the 5 Particles as Progress Bars or Metrics
-        parts = current_data['particles']
+        st.markdown("#### 🎭 AI 剧作家解说")
+        st.caption("基于 Trinity Architecture 的受约束叙事生成")
         
-        cols = st.columns(5)
-        p_names = {
-            "self": "比劫 (Self)",
-            "output": "食伤 (Output)",
-            "wealth": "财星 (Wealth)",
-            "officer": "官杀 (Officer)",
-            "resource": "印星 (Resource)"
-        }
+        # Generate Narrative
+        narrative = generate_narrative_from_context(current_ctx)
         
-        for i, (key, label) in enumerate(p_names.items()):
-            val = parts.get(key, 0)
-            with cols[i]:
-                st.metric(label.split(' ')[0], f"{val:.1f}")
-                # Visual Bar
-                norm_val = min(1.0, max(0.0, (val + 5) / 15)) # Normalize -5 to 10 -> 0 to 1
-                color = "red" if val > 6 else "green" if val > 3 else "blue"
-                st.progress(norm_val)
+        # Display with styling based on risk level
+        if current_ctx.risk_level == 'warning':
+            st.error(narrative)
+        elif current_ctx.risk_level == 'opportunity':
+            st.success(narrative)
+        else:
+            st.info(narrative)
+        
+        # Show the constraint (expandable debug)
+        with st.expander("🔍 查看 LLM 约束指令 (Trinity Constraint)"):
+            st.code(current_ctx.narrative_prompt, language='text')
+            st.caption("LLM 必须严格遵守此指令，不得自由发挥")
+    
+    # ---------------------------
+    # 3. Dimension Breakdown
+    # ---------------------------
+    st.markdown("---")
+    st.subheader("3. 三维能量分解 (Dimension Breakdown)")
+    
+    cols = st.columns(3)
+    with cols[0]:
+        st.metric("事业 Career", f"{current_ctx.career:.1f}")
+    with cols[1]:
+        st.metric("财富 Wealth", f"{current_ctx.wealth:.1f}")
+    with cols[2]:
+        st.metric("感情 Relationship", f"{current_ctx.relationship:.1f}")
 
-    # ---------------------------
-    # 3. Penalty Drill Down
-    # ---------------------------
-    if current_data['desc']:
-        st.markdown("### ⚠️ 物理效应分析")
-        st.warning(f"检测到物理干涉: **{current_data['desc']}**")
-        
-        # Explain Why
-        full_res = current_data['raw_res']
-        # This part requires engine to return 'debug_info' or similar. 
-        # For now we infer from values.
-        st.write("当流年引发物理干涉时，原本的能量平衡被打破。例如‘枭印夺食’导致食伤能量骤降，从而破坏了财富的源头（泄身惩罚失效）或事业的制杀能力（格局破败）。")
-        
 if __name__ == "__main__":
     render()

@@ -7,6 +7,55 @@ import plotly.express as px
 import numpy as np
 
 from core.quantum_engine import QuantumEngine
+from core.context import DestinyContext  # Trinity V4.0
+
+# === Trinity V4.0 Helper Functions ===
+
+def build_birth_chart_from_case(case: dict, engine: QuantumEngine) -> dict:
+    """Build birth_chart_v4 structure from calibration case"""
+    bazi = case.get('bazi', ['', '', '', ''])
+    
+    # Estimate DM energy from wang_shuai
+    ws = case.get('wang_shuai', '身中和')
+    if '强' in ws or '旺' in ws:
+        dm_energy = 5.0
+    elif '弱' in ws or '极弱' in ws:
+        dm_energy = 1.5
+    else:
+        dm_energy = 3.0
+    
+    return {
+        'year_pillar': bazi[0],
+        'month_pillar': bazi[1],
+        'day_pillar': bazi[2],
+        'hour_pillar': bazi[3] if len(bazi) > 3 else '',
+        'day_master': case.get('day_master', ''),
+        'energy_self': dm_energy
+    }
+
+def extract_favorable_elements(case: dict, engine: QuantumEngine) -> tuple:
+    """Extract favorable/unfavorable elements from case"""
+    dm = case.get('day_master', '')
+    ws = case.get('wang_shuai', '身中和')
+    
+    dm_elem = engine._get_element(dm)
+    all_elems = ['wood', 'fire', 'earth', 'metal', 'water']
+    relation_map = {e: engine._get_relation(dm_elem, e) for e in all_elems}
+    
+    if '强' in ws or '旺' in ws:
+        fav_types = ['output', 'wealth', 'officer']
+    else:
+        fav_types = ['resource', 'self']
+    
+    favorable = []
+    unfavorable = []
+    for e, r in relation_map.items():
+        if r in fav_types:
+            favorable.append(e.capitalize())
+        else:
+            unfavorable.append(e.capitalize())
+    
+    return favorable, unfavorable
 
 def render():
     st.set_page_config(page_title="Quantum Lab", page_icon="🧪", layout="wide")
@@ -352,8 +401,29 @@ def render():
                     if 'v_real_dynamic' in p:
                         target_v = p['v_real_dynamic']
                 
-                # Calc logic
-                calc = engine.calculate_energy(c, d_ctx)
+                # === Trinity V4.0: Unified Interface ===
+                birth_chart = build_birth_chart_from_case(c, engine)
+                favorable, unfavorable = extract_favorable_elements(c, engine)
+                
+                # Extract year number for context
+                year_pillar = d_ctx['year']
+                year_num = 2024  # Simplified, can enhance with actual year extraction
+                
+                ctx = engine.calculate_year_context(
+                    year_pillar=year_pillar,
+                    favorable_elements=favorable,
+                    unfavorable_elements=unfavorable,
+                    birth_chart=birth_chart,
+                    year=year_num
+                )
+                
+                # Map to old format for compatibility
+                calc = {
+                    'career': ctx.career,
+                    'wealth': ctx.wealth,
+                    'relationship': ctx.relationship,
+                    'desc': ctx.description
+                }
                 
                 err_c = calc['career'] - target_v.get('career', 0)
                 err_w = calc['wealth'] - target_v.get('wealth', 0)
@@ -379,7 +449,12 @@ def render():
                     "Rel_Pred": calc['relationship'],
                     "Rel_Delta": err_r,
                     "RMSE": rmse_c,
-                    "Verdict": calc['desc']
+                    "Verdict": calc['desc'],
+                    # === Trinity V4.0 Fields ===
+                    "Icon": ctx.icon or "",
+                    "Tags": ", ".join(ctx.tags[:3]),
+                    "Energy": ctx.energy_level,
+                    "Risk": ctx.risk_level
                 })
             
             global_rmse = np.sqrt(total_sq_error / count) if count > 0 else 0
@@ -435,6 +510,43 @@ def render():
             )
             fig_scatter.add_shape(type="line", x0=-10, y0=-10, x1=10, y1=10, line=dict(color="Gray", dash="dash"))
             st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            # === Trinity V4.0: Validation Table ===
+            st.markdown("---")
+            st.markdown("#### 🏛️ Trinity 验证详情 (Validation Details)")
+            st.caption("显示AI判定逻辑和图标")
+            
+            # Build display dataframe
+            trinity_display = []
+            for r in results:
+                # Determine overall polarity from average prediction
+                avg_pred = (r['Career_Pred'] + r['Wealth_Pred'] + r['Rel_Pred']) / 3
+                avg_real = (r['Career_Real'] + r['Wealth_Real'] + r['Rel_Real']) / 3
+                
+                ai_polarity = 'Positive' if avg_pred > 0 else 'Negative' if avg_pred < -2 else 'Neutral'
+                real_polarity = 'Positive' if avg_real > 0 else 'Negative' if avg_real < -2 else 'Neutral'
+                
+                # Simple match logic
+                if ai_polarity == real_polarity:
+                    match = "✅ 命中"
+                elif 'Neutral' in [ai_polarity, real_polarity]:
+                    match = "➖ 中性"
+                else:
+                    match = "❌ 偏差"
+                
+                trinity_display.append({
+                    "Case": r['Case'],
+                    "描述": r['Desc'][:15] + "..." if len(r['Desc']) > 15 else r['Desc'],
+                    "图标": r['Icon'] if r['Icon'] else "—",
+                    "标签": r['Tags'][:30] + "..." if len(r['Tags']) > 30 else r['Tags'],
+                    "能量": r['Energy'][:20] + "..." if len(r['Energy']) > 20 else r['Energy'],
+                    "预测": f"{avg_pred:.1f}",
+                    "实际": f"{avg_real:.1f}",
+                    "验证": match
+                })
+            
+            df_trinity = pd.DataFrame(trinity_display)
+            st.dataframe(df_trinity, use_container_width=True, height=400)
 
     # ==========================
     # TAB 2: SINGLE MICROSCOPE
@@ -466,9 +578,26 @@ def render():
                 case_copy = selected_case.copy()
                 case_copy['wang_shuai'] = user_wang 
         
-            # Single Calc
-            dynamic_ctx = {"year": user_year, "luck": user_luck}
-            pred_res = engine.calculate_energy(case_copy, dynamic_ctx)
+            # === Trinity V4.0: Single Microscope ===
+            birth_chart = build_birth_chart_from_case(case_copy, engine)
+            favorable, unfavorable = extract_favorable_elements(case_copy, engine)
+            
+            ctx = engine.calculate_year_context(
+                year_pillar=user_year,
+                favorable_elements=favorable,
+                unfavorable_elements=unfavorable,
+                birth_chart=birth_chart,
+                year=2024  # Simplified
+            )
+            
+            # Map to old format
+            pred_res = {
+                'career': ctx.career,
+                'wealth': ctx.wealth,
+                'relationship': ctx.relationship,
+                'desc': ctx.description,
+                'pillar_energies': [0]*8  # Placeholder for compatibility
+            }
             
             # --- Rendering Bazi Chart ---
             pe = pred_res.get('pillar_energies', [0]*8)
@@ -572,9 +701,27 @@ def render():
                 for y in years:
                     gan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"][(y - 2024) % 10]
                     zhi = ["辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯"][(y - 2024) % 12]
-                    d_c = {"year": f"{gan}{zhi}", "luck": user_luck}
-                    r = sim_engine.calculate_energy(selected_case, d_c)
-                    sim_data.append({"year": y, "career": r['career'], "wealth": r['wealth'], "rel": r['relationship'], "desc": r['desc']})
+                    year_pillar = f"{gan}{zhi}"
+                    
+                    # === Trinity V4.0: Timeline Simulation ===
+                    birth_chart = build_birth_chart_from_case(selected_case, sim_engine)
+                    favorable, unfavorable = extract_favorable_elements(selected_case, sim_engine)
+                    
+                    ctx = sim_engine.calculate_year_context(
+                        year_pillar=year_pillar,
+                        favorable_elements=favorable,
+                        unfavorable_elements=unfavorable,
+                        birth_chart=birth_chart,
+                        year=y
+                    )
+                    
+                    sim_data.append({
+                        "year": y,
+                        "career": ctx.career,
+                        "wealth": ctx.wealth,
+                        "rel": ctx.relationship,
+                        "desc": ctx.description
+                    })
                 
                 sdf = pd.DataFrame(sim_data)
                 fig_t = go.Figure()

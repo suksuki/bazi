@@ -3,8 +3,9 @@ import json
 import os
 from lunar_python import Solar, Lunar
 from collections import Counter
-from core.constants import GRAVE_TREASURY_CONFIG, HIDDEN_STEMS_MAP
+from core.constants import GRAVE_TREASURY_CONFIG, HIDDEN_STEMS_MAP, EARTH_PUNISHMENT_SET
 from core.interaction_service import InteractionService
+from core.context import DestinyContext, create_context_from_v35_result
 
 class QuantumEngine:
     """
@@ -845,13 +846,13 @@ def _load_default_params(self):
 
 QuantumEngine._load_default_params = _load_default_params
 
-def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfavorable_elements: list, birth_chart: dict = None) -> tuple:
+def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfavorable_elements: list, birth_chart: dict = None) -> dict:
     """
-    V3.0 Core Algorithm: Calculate Year Luck Score with 'Cover Head/Cut Feet' logic AND Treasury Mechanics.
-    Returns (score, details_list)
+    V3.5 Core Algorithm: Calculate Year Luck Score with Treasury Mechanics and Ethical Safety Valve.
+    Returns dict with score, details, treasury_icon, treasury_risk
     """
     if not year_pillar or len(year_pillar) < 2:
-        return 0.0, ["Invalid Pillar"]
+        return {'score': 0.0, 'details': ["Invalid Pillar"], 'treasury_icon': None, 'treasury_risk': 'none'}
         
     stem = year_pillar[0]
     branch = year_pillar[1]
@@ -861,7 +862,7 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
     branch_element = self._get_element(branch)
     
     if not stem_element or not branch_element:
-        return 0.0, ["Unknown Elements"]
+        return {'score': 0.0, 'details': ["Unknown Elements"], 'treasury_icon': None, 'treasury_risk': 'none'}
         
     # Normalize input lists to lowercase for comparison
     fav_norm = [f.lower() for f in favorable_elements]
@@ -917,6 +918,10 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
     final_score = base_score
     
     # === V3.0 Sprint 3: Treasury Multiplier ===
+    # === V3.5 Sprint 5: Ethical Safety Valve ===
+    treasury_icon = None  # Will indicate icon type for frontend
+    treasury_risk_level = "none"  # none, opportunity, warning
+    
     if birth_chart:
         # 1. Detect Interaction
         interaction_results = self.analyze_year_interaction(birth_chart, branch)
@@ -928,23 +933,436 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
         dm_char = birth_chart.get('day_master')
         dm_elem = self._get_element(dm_char)
         
+        # V3.5: Get Day Master Strength (from birth_chart if available)
+        # This should ideally come from the full energy calculation
+        # For now, we use a simplified estimation or passed-in value
+        dm_strength = birth_chart.get('dm_strength', 'medium')  # 'strong', 'medium', 'weak'
+        
+        # Alternative: Estimate from energy score if available
+        dm_energy = birth_chart.get('energy_self', None)
+        if dm_energy is not None:
+            if dm_energy > 3.5:
+                dm_strength = 'strong'
+            elif dm_energy >= 2.0:
+                dm_strength = 'medium'
+            else:
+                dm_strength = 'weak'
+        
         for status in interaction_results:
             if status.is_open:
                 # 2. Check if Wealth Treasury
                 if self._is_wealth_treasury(dm_elem, status.treasury_element):
-                    # 💰 JACKPOT
-                    multiplier = 2.0
-                    bonus_points += 20.0
-                    details.append(f"💰 财库[{status.treasury_element}]大开！(Vault Open)")
-                    # V3.1: We might want to check if the Wealth Element inside is actually Favorable!
-                    # If Wealth is Unfavorable (Wealth Burden), opening it might be bad.
-                    # But per Sprint 3 instructions: "Just Multiplier".
+                    # === Ethical Safety Valve: 身强身弱差异化处理 ===
+                    
+                    if dm_strength == 'strong':
+                        # Case A: 身强 + 财库 = 暴富契机
+                        multiplier = 2.0
+                        bonus_points += 20.0
+                        treasury_icon = "🏆"  # Gold Trophy
+                        treasury_risk_level = "opportunity"
+                        details.append(f"🏆 身强胜财，财库[{status.treasury_element}]大开！暴富契机")
+                        
+                    elif dm_strength == 'medium':
+                        # Case B: 中和 + 财库 = 机遇但需谨慎
+                        multiplier = 1.5
+                        bonus_points += 10.0
+                        treasury_icon = "🗝️"  # Golden Key
+                        treasury_risk_level = "opportunity"
+                        details.append(f"🗝️ 财库[{status.treasury_element}]开启，机遇可期，适度为宜")
+                        
+                    else:  # weak
+                        # Case C: 身弱 + 财库 = 高风险警告
+                        multiplier = 0.6  # 打折而非放大
+                        bonus_points -= 15.0  # 负向修正
+                        treasury_icon = "⚠️"  # Warning
+                        treasury_risk_level = "warning"
+                        details.append(f"⚠️ 身弱不胜财！财库[{status.treasury_element}]冲开恐有破耗")
+                        
                 else:
+                    # Non-wealth treasury (杂气库)
+                    treasury_icon = "🗝️"  # Silver Key
+                    treasury_risk_level = "opportunity"
                     details.append(f"🔓 杂气库[{status.treasury_element}]开启")
-                    bonus_points += 2.0 # Small bonus for activity
+                    bonus_points += 2.0  # Small bonus
         
         final_score = (base_score * multiplier) + bonus_points
 
-    return round(final_score, 2), details
+    # V3.5: Return enhanced structure
+    return {
+        'score': round(final_score, 2),
+        'details': details,
+        'treasury_icon': treasury_icon,
+        'treasury_risk': treasury_risk_level
+    }
 
 QuantumEngine.calculate_year_score = calculate_year_score
+
+# === Sprint 5.3: Three Punishments Detection ===
+
+def _detect_three_punishments(self, birth_chart: dict, year_branch: str) -> bool:
+    """
+    检测是否构成丑未戌三刑 (Earth Punishment)
+    
+    逻辑: 命局地支 + 流年地支 的集合中，是否包含完整的 {丑, 未, 戌}
+    
+    Args:
+        birth_chart: Birth chart dict with pillar structure
+        year_branch: Current year branch (地支)
+    
+    Returns:
+        bool: True if three punishments are triggered
+    """
+    # 1. Extract all branches from birth chart
+    try:
+        chart_branches = {
+            birth_chart.get('year_pillar', '  ')[1],
+            birth_chart.get('month_pillar', '  ')[1],
+            birth_chart.get('day_pillar', '  ')[1],
+            birth_chart.get('hour_pillar', '  ')[1]
+        }
+    except (IndexError, TypeError):
+        # Malformed chart, no punishment
+        return False
+    
+    # 2. Add current year branch
+    chart_branches.add(year_branch)
+    
+    # 3. Check if Earth Punishment set is subset of active branches
+    return EARTH_PUNISHMENT_SET.issubset(chart_branches)
+
+QuantumEngine._detect_three_punishments = _detect_three_punishments
+
+# === Trinity Architecture: Unified Interface ===
+# This method is the ONLY bridge between QuantumEngine and all consumers
+
+def calculate_year_context(
+    self,
+    year_pillar: str,
+    favorable_elements: list,
+    unfavorable_elements: list,
+    birth_chart: dict,
+    year: int = None,
+    active_luck: str = None  # Sprint 5.4: 动态大运支持
+) -> DestinyContext:
+    """
+    [Trinity 核心接口] V4.0 Unified Interface
+    
+    Calculate year destiny and return standardized DestinyContext.
+    This is the single source of truth for Dashboard, QuantumLab, and Cinema.
+    
+    Args:
+        year_pillar: Year pillar string, e.g. "甲辰"
+        favorable_elements: List of favorable elements
+        unfavorable_elements: List of unfavorable elements  
+        birth_chart: Birth chart dict with V3.5 structure
+        year: Optional year number for context
+    
+    Returns:
+        DestinyContext: Unified context object with all metadata
+    """
+    # Sprint 5.4: 动态大运选择
+    # 如果传入了 active_luck，使用动态大运；否则使用静态大运
+    current_luck_pillar = active_luck if active_luck else birth_chart.get('current_luck_pillar', '')
+    
+    # CRITICAL: 将动态大运注入 birth_chart，确保后续计算使用正确的大运！
+    birth_chart_with_luck = birth_chart.copy()
+    birth_chart_with_luck['current_luck_pillar'] = current_luck_pillar
+    
+    # 1. Call V3.5 core logic (reuse, don't rewrite)
+    v35_result = self.calculate_year_score(
+        year_pillar=year_pillar,
+        favorable_elements=favorable_elements,
+        unfavorable_elements=unfavorable_elements,
+        birth_chart=birth_chart_with_luck  # 使用包含动态大运的 birth_chart!
+    )
+    
+    raw_score = v35_result.get('score', 0.0)
+    icon = v35_result.get('treasury_icon')
+    risk_level = v35_result.get('treasury_risk', 'none')
+    details = v35_result.get('details', [])
+    
+    # 2. Calculate dimension-specific scores (from Dashboard logic)
+    base_mod = raw_score * 0.5
+    if raw_score <= -5.0:
+        base_mod *= 1.5
+    
+    career_mod = base_mod * 0.8
+    wealth_mod = base_mod * 1.0
+    rel_mod = base_mod * 0.4
+    
+    # Treasury bonus (if applicable)
+    treasury_bonus_wealth = 0.0
+    treasury_bonus_career = 0.0
+    
+    if icon in ['🏆', '🗝️'] and risk_level == 'opportunity':
+        treasury_bonus_wealth = raw_score * 0.3
+        treasury_bonus_career = raw_score * 0.15
+    
+    # Assume base energy scores (simplified, can be enhanced)
+    base_career = 5.0
+    base_wealth = 4.0
+    base_rel = 6.0
+    
+    career_score = base_career + career_mod + treasury_bonus_career
+    wealth_score = base_wealth + wealth_mod + treasury_bonus_wealth
+    rel_score = base_rel + rel_mod
+    
+    # 3. Extract structured features
+    is_treasury = icon in ['🏆', '⚠️', '🗝️', '💀']
+    
+    # Get DM strength from birth_chart
+    dm_energy = birth_chart.get('energy_self', 0)
+    if dm_energy > 3.5:
+        dm_strength = 'Strong'
+    elif dm_energy >= 2.0:
+        dm_strength = 'Medium'
+    else:
+        dm_strength = 'Weak'
+    
+    # Determine treasury type
+    treasury_type = None
+    treasury_element = None
+    if is_treasury:
+        if any('财库' in d for d in details):
+            treasury_type = 'Wealth'
+        elif any('官库' in d for d in details):
+            treasury_type = 'Power'
+        else:
+            treasury_type = 'General'
+        
+        # Extract element
+        for d in details:
+            if '库[' in d:
+                start = d.find('[') + 1
+                end = d.find(']')
+                if start > 0 and end > start:
+                    treasury_element = d[start:end]
+                    break
+    
+    # 4. Build tags
+    tags = []
+    energy_level = "Neutral"
+    
+    if raw_score > 15:
+        energy_level = "Extreme Opportunity (大吉)"
+        tags.append("机遇")
+    elif raw_score > 8:
+        energy_level = "High Opportunity (吉)"
+        tags.append("顺利")
+    elif raw_score > 0:
+        energy_level = "Moderate Positive (小吉)"
+        tags.append("平稳")
+    elif raw_score > -8:
+        energy_level = "ModerateNegative (小凶)"
+        tags.append("谨慎")
+    elif raw_score > -15:
+        energy_level = "High Risk (凶)"
+        tags.append("风险")
+    else:
+        energy_level = "Extreme Risk (大凶)"
+        tags.append("危机")
+    
+    if icon == '⚠️':
+        tags.extend(["身弱不胜财", "财库冲开", "虚不受补"])
+    elif icon == '🏆':
+        tags.extend(["身强胜财", "财库爆发", "暴富契机"])
+    elif icon == '🗝️':
+        tags.append("库门开启")
+    
+    # Add structural tags
+    for detail in details:
+        if '截脚' in detail:
+            tags.append("截脚")
+        if '盖头' in detail:
+            tags.append("盖头")
+    
+    # === Sprint 5.3: Three Punishments Override ===
+    # Check for 丑未戌三刑 - The Skull Protocol 💀
+    year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
+    is_punishment = self._detect_three_punishments(birth_chart, year_branch)
+    
+    if is_punishment:
+        # 💀 Three Punishments Triggered! Override everything!
+        # This is structural collapse - more dangerous than treasury or other events
+        
+        icon = "💀"
+        risk_level = "danger"
+        
+        # Heavy penalty
+        raw_score -= 40.0
+        
+        # Update tags - prepend critical warnings
+        tags.insert(0, "三刑齐见")
+        tags.insert(1, "恃势之刑")
+        tags.insert(2, "结构性崩塌")
+        
+        # Override energy level
+        energy_level = "Structural Collapse (大凶)"
+        
+        # Update dimension scores to reflect extreme danger
+        career_score = min(career_score, -10.0)
+        wealth_score = min(wealth_score, -10.0)
+        rel_score = min(rel_score, -8.0)
+    
+    # 5. Build narrative prompt for LLM
+    strength_desc = {'Strong': '身强', 'Medium': '中和', 'Weak': '身弱'}
+    
+    narrative_parts = []
+    narrative_parts.append(f"用户八字日主{strength_desc.get(dm_strength, '中和')}")
+    narrative_parts.append(f"流年[{year_pillar}]状态：{energy_level}")
+    
+    if is_treasury:
+        action = "冲开" if risk_level == "warning" else "开启"
+        narrative_parts.append(f"{treasury_type}库{action}")
+    
+    narrative_parts.append(f"关键事件：{'; '.join(details[:3])}")  # Top 3 details
+    narrative_parts.append(f"核心特征：{', '.join(tags)}")
+    narrative_parts.append(f"系统判定综合分数：{raw_score:.1f}")
+    
+    if risk_level == 'warning':
+        narrative_parts.append("请以警示、谨慎的语气进行叙事")
+    elif risk_level == 'opportunity':
+        narrative_parts.append("请以积极、鼓舞的语气进行叙事")
+    elif risk_level == 'danger':
+        # Sprint 5.3: Three Punishments extreme warning
+        narrative_parts.append("【严重警告】流年触发'丑未戌三刑'。这是极度危险的结构性压力，预示着内部崩塌、健康受损或牢狱之灾。语气必须极其严厉")
+    
+    narrative_prompt = "。".join(narrative_parts) + "。"
+    
+    # 6. Assemble DestinyContext
+    ctx = create_context_from_v35_result(
+        year=year or 2024,  # Use provided year or default
+        pillar=year_pillar,
+        v35_result=v35_result,
+        career=career_score,
+        wealth=wealth_score,
+        relationship=rel_score
+    )
+    
+    # Override/enhance with calculated values
+    ctx.day_master_strength = dm_strength
+    ctx.dm_energy = dm_energy
+    ctx.energy_level = energy_level
+    ctx.tags = tags
+    ctx.narrative_prompt = narrative_prompt
+    ctx.treasury_type = treasury_type
+    ctx.treasury_element = treasury_element
+    ctx.description = '; '.join(details[:2]) if details else ""
+    
+    # Sprint 5.3: Override icon, risk, and score if punishment detected
+    if is_punishment:
+        ctx.icon = "💀"
+        ctx.risk_level = "danger"
+        ctx.display_color = "#FF0000"
+        ctx.score = raw_score  # Apply the -40 penalty
+    
+    return ctx
+
+# Bind method to class
+QuantumEngine.calculate_year_context = calculate_year_context
+
+# === Sprint 5.4: Dynamic Luck Pillar ===
+
+def get_dynamic_luck_pillar(self, birth_year: int, birth_month: int, birth_day: int, 
+                            birth_hour: int, gender: int, target_year: int) -> str:
+    """
+    [Sprint 5.4] 动态获取指定年份的大运干支
+    
+    Args:
+        birth_year: 出生年 (公历)
+        birth_month: 出生月
+        birth_day: 出生日
+        birth_hour: 出生时
+        gender: 性别 (1=男, 0=女)
+        target_year: 目标年份
+    
+    Returns:
+        str: 该年所属的大运干支，如 "戊辰"
+    """
+    try:
+        from lunar_python import Solar
+        
+        # 1. 创建Solar对象
+        solar = Solar.fromYmdHms(birth_year, birth_month, birth_day, birth_hour, 0, 0)
+        
+        # 2. 转换为Lunar并获取八字
+        lunar = solar.getLunar()
+        eight_char = lunar.getEightChar()
+        
+        # 3. 获取大运 (gender: 1=男, 0=女)
+        yun = eight_char.getYun(gender)
+        dayun_list = yun.getDaYun()
+        
+        if not dayun_list:
+            return "未知大运"
+
+        # 4. 稳健遍历：确保按时间顺序，严格区间判断
+        # 即使库返回无序列表，我们先排序（按startYear）
+        sorted_dayun = sorted(dayun_list, key=lambda x: x.getStartYear())
+        
+        for i, dayun in enumerate(sorted_dayun):
+            start_year = dayun.getStartYear()
+            end_year = dayun.getEndYear()
+            
+            # 严格区间: [start, end)
+            if start_year <= target_year < end_year:
+                return dayun.getGanZhi()
+            
+            # Sprint 5.4 Fix: 填补交运年缝隙 (Gap Filling)
+            # 如果 target_year 恰好落在本运结束和下运开始之间 (e.g. end=2027, next_start=2028, target=2027)
+            # 这种情况下，通常视作旧大运的延续（交运前夕）
+            if i < len(sorted_dayun) - 1:
+                next_start = sorted_dayun[i+1].getStartYear()
+                if end_year <= target_year < next_start:
+                    return dayun.getGanZhi()
+        
+        # 边界情况处理
+        first_start = sorted_dayun[0].getStartYear()
+        last_end = sorted_dayun[-1].getEndYear()
+        
+        if target_year < first_start:
+            return "童限(起运前)"
+        if target_year >= last_end:
+            return sorted_dayun[-1].getGanZhi() # 极晚年延续最后一步
+        
+        # 终极兜底：找最近的大运（理论上不应该走到这里）
+        # 但如果走到了，就找距离 target_year 最近的那步大运
+        nearest_dayun = min(sorted_dayun, key=lambda d: abs(d.getStartYear() - target_year))
+        return nearest_dayun.getGanZhi()
+        
+    except Exception as e:
+        # 调试模式：返回具体错误信息
+        # import traceback
+        # return f"Error: {str(e)}"
+        return "计算异常"
+
+QuantumEngine.get_dynamic_luck_pillar = get_dynamic_luck_pillar
+
+
+def get_luck_timeline(self, birth_year: int, birth_month: int, birth_day: int,
+                      birth_hour: int, gender: int, num_steps: int = 8) -> dict:
+    """
+    [Sprint 5.4] 获取大运时间表
+    """
+    try:
+        from lunar_python import Solar
+        
+        solar = Solar.fromYmdHms(birth_year, birth_month, birth_day, birth_hour, 0, 0)
+        lunar = solar.getLunar()
+        eight_char = lunar.getEightChar()
+        yun = eight_char.getYun(gender)
+        
+        timeline = {}
+        dayun_list = yun.getDaYun()
+        
+        # 修正: 直接使用 DaYun 对象的 getStartYear()
+        for dayun in dayun_list[:num_steps]:
+            start_year = dayun.getStartYear()
+            timeline[start_year] = dayun.getGanZhi()
+        
+        return timeline
+        
+    except Exception as e:
+        return {}
+
+QuantumEngine.get_luck_timeline = get_luck_timeline
