@@ -13,6 +13,46 @@ from core.quantum_engine import QuantumEngine # V2.4 Engine
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 
+# --- Component: Narrative Card Renderer (V2.9) ---
+def render_narrative_card(event):
+    """
+    Renders a single narrative card based on the event payload.
+    Uses Quantum Glassmorphism styles.
+    """
+    ctype = event.get('card_type', 'default')
+    
+    # Map types to CSS classes and icons
+    config = {
+        "mountain_alliance": {"css": "card-mountain", "icon": "⛰️", "icon_css": "icon-mountain"},
+        "penalty_cap": {"css": "card-shield", "icon": "🛡️", "icon_css": "icon-shield"},
+        "mediation": {"css": "card-flow", "icon": "🌊", "icon_css": "icon-flow"},
+        "pressure": {"css": "card-danger", "icon": "⚠️", "icon_css": ""},
+        "control": {"css": "card-flow", "icon": "⚡", "icon_css": "icon-flow"}, # Re-use flow for control
+        "default": {"css": "", "icon": "📜", "icon_css": ""}
+    }
+    
+    cfg = config.get(ctype, config.get(event.get('type'), config['default'])) # Fallback to 'type' key if 'card_type' missing
+    
+    # Generate HTML
+    html = f"""
+    <div class="narrative-card {cfg['css']}">
+        <div style="display: flex; align-items: start; gap: 16px;">
+            <div class="{cfg['icon_css']}">{cfg['icon']}</div>
+            <div style="flex-grow: 1;">
+                <div class="card-title">{event.get('title', 'Unknown Event')}</div>
+                <div class="card-subtitle">{event.get('desc', '')}</div>
+                <div class="card-impact">{event.get('score_delta', '')}</div>
+            </div>
+        </div>
+        <!-- Visualization Placeholder -->
+        <div style="position: absolute; right: 10px; top: 10px; opacity: 0.1;">
+            <span style="font-size: 60px;">{cfg['icon']}</span>
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+
 def render_prediction_dashboard():
     """
     Renders the V2.4 Pure Prediction Dashboard.
@@ -37,7 +77,105 @@ def render_prediction_dashboard():
     luck_cycles = calc.get_luck_cycles(gender_idx)
     
     # 2. UI: Header & Chart
-    st.title(f"🔮 {name} 的量子命盘 (V2.4)")
+    st.title(f"🔮 {name} 的量子命盘 (V2.9)")
+    
+    # --- V2.9 Glassmorphism CSS ---
+    st.markdown("""
+    <style>
+    /* 1. Global Gradient Background (Deep Space) */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        color: #e2e8f0;
+    }
+
+    /* 2. Glassmorphism Card Container */
+    .narrative-card {
+        position: relative;
+        padding: 24px;
+        border-radius: 16px;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+        background: rgba(30, 41, 59, 0.4); /* Fallback */
+    }
+    .narrative-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 3. Card Types / Themes */
+    /* Mountain Alliance (Earth/Gold) */
+    .card-mountain {
+        background: linear-gradient(135deg, rgba(120, 53, 15, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%);
+        border-top: 2px solid rgba(251, 191, 36, 0.4);
+    }
+    .icon-mountain {
+        font-size: 32px;
+        background: linear-gradient(to bottom, #fbbf24, #b45309);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+    }
+
+    /* Penalty Cap (Shield/Blue) */
+    .card-shield {
+        background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(56, 189, 248, 0.1) 100%);
+        border-top: 2px solid rgba(56, 189, 248, 0.4);
+    }
+    .icon-shield {
+        font-size: 32px;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+    }
+
+    /* Mediation Flow (Water/Green) */
+    .card-flow {
+        background: linear-gradient(135deg, rgba(6, 78, 59, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%);
+        border-top: 2px solid rgba(52, 211, 153, 0.4);
+    }
+    .icon-flow {
+        font-size: 32px;
+        color: #34d399;
+        filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.6));
+    }
+
+    /* Danger / Pressure (Red) */
+    .card-danger {
+        background: linear-gradient(135deg, rgba(127, 29, 29, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
+        border-top: 2px solid rgba(248, 113, 113, 0.4);
+    }
+
+    /* 4. Typography */
+    .card-title {
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+        color: #f1f5f9;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .card-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+        color: #94a3b8;
+        margin-bottom: 12px;
+    }
+    .card-impact {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: rgba(0,0,0,0.3);
+        display: inline-block;
+        color: #e2e8f0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     
     # Helper: Quantum Theme System (Constitution V1.0)
     # Mapping "Forms" to Visuals (Icons + Animations + Gradients)
@@ -760,7 +898,19 @@ def render_prediction_dashboard():
         st.metric("❤️ 感情 (Rel)", f"{results['relationship']}", delta=get_verdict_text(results['relationship']))
         
     # B. Narrative Box
-    st.info(f"**📜 物理叙事 (V2.3 Narrative)**\n\n{results.get('desc', '能量流转平稳')}")
+    # B. Narrative Box (V2.9: Narrative Cards)
+    st.markdown("### 📜 物理叙事 (Compassionate Narrative)")
+    
+    narrative_events = results.get('narrative_events', [])
+    
+    if narrative_events:
+        for event in narrative_events:
+            render_narrative_card(event)
+    else:
+        # Fallback to description if no special events
+        desc = results.get('desc', '能量流转平稳')
+        st.info(f"**V2.3 Narrative:**\n\n{desc}")
+
     st.markdown("---")
     # --- New Section: Quantum Destiny Trajectory (Charts) ---
     # --- New Section: Dynamic Timeline (Quantum Lab Logic) ---
