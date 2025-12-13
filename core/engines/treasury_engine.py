@@ -3,8 +3,19 @@ core/engines/treasury_engine.py
 -------------------------------
 [V6.0 Sub-Engine] 财库与墓库引擎
 负责处理：墓库定义、开库检测、财库识别、爆发系数计算
+
+[V6.0+ Parameterization] 所有评分常量从 config_rules 模块读取
 """
 from typing import Dict, List, Tuple, Optional
+
+# === Import Configuration Constants ===
+from core.config_rules import (
+    SCORE_TREASURY_BONUS,
+    SCORE_TREASURY_PENALTY,
+    SCORE_GENERAL_OPEN,
+    WEALTH_MAP,
+    TOMB_ELEMENTS,
+)
 
 
 class TreasuryEngine:
@@ -74,8 +85,14 @@ class TreasuryEngine:
         }
     }
 
-    def __init__(self):
-        # 如果未来需要依赖 InteractionService，可以在这里初始化
+    def __init__(self, config: dict = None):
+        """初始化，支持外部配置覆盖默认值"""
+        self.config = config or {}
+        # 从配置获取评分参数，优先使用外部传入值
+        self.treasury_bonus = self.config.get('score_treasury_bonus', SCORE_TREASURY_BONUS)
+        self.treasury_penalty = self.config.get('score_treasury_penalty', SCORE_TREASURY_PENALTY)
+        self.general_open_score = self.config.get('score_general_open', SCORE_GENERAL_OPEN)
+        
         # 六冲定义
         self.CLASHES = {
             '子': '午', '午': '子',
@@ -175,6 +192,7 @@ class TreasuryEngine:
     def calculate_bonus(self, is_open: bool, is_wealth: bool, dm_strength: str) -> Tuple[float, Optional[str], List[str]]:
         """
         计算财库开启后的加成 (V3.5 伦理安全阀逻辑)
+        使用 config_rules 中的配置参数
         """
         score = 0.0
         icon = None
@@ -185,15 +203,18 @@ class TreasuryEngine:
 
         if is_wealth:
             if dm_strength == 'Strong':
-                score = 20.0
+                # 身强胜财 - 使用配置中的 SCORE_TREASURY_BONUS
+                score = self.treasury_bonus
                 icon = "🏆"
                 tags = ["身强胜财", "财库爆发", "暴富契机"]
             else:
-                score = -20.0
+                # 身弱不胜财 - 使用配置中的 SCORE_TREASURY_PENALTY
+                score = self.treasury_penalty
                 icon = "⚠️"
                 tags = ["身弱不胜财", "财多压身", "风险警示"]
         else:
-            score = 5.0
+            # 普通杂气库开启 - 使用配置中的 SCORE_GENERAL_OPEN
+            score = self.general_open_score
             icon = "🗝️"
             tags = ["库门开启", "潜能释放"]
             

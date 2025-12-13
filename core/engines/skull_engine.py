@@ -4,8 +4,16 @@ core/engines/skull_engine.py
 [V6.0 Sub-Engine] 骷髅协议引擎 (Skull Protocol)
 负责处理：三刑检测、刑冲害组合、极凶判定
 基于 V5.3 Skull Protocol 文档实现
+
+[V6.0+ Parameterization] 所有评分常量从 config_rules 模块读取
 """
 from typing import Dict, List, Tuple, Optional, Set
+
+# === Import Configuration Constants ===
+from core.config_rules import (
+    SCORE_SKULL_CRASH,
+    EARTH_PUNISHMENT_SET,
+)
 
 
 class SkullEngine:
@@ -44,8 +52,11 @@ class SkullEngine:
         '酉': '戌', '戌': '酉',
     }
 
-    def __init__(self):
-        pass
+    def __init__(self, config: dict = None):
+        """初始化，支持外部配置覆盖默认值"""
+        self.config = config or {}
+        # 从配置获取评分参数，优先使用外部传入值
+        self.skull_crash_score = self.config.get('score_skull_crash', SCORE_SKULL_CRASH)
 
     def detect_three_punishments(self, chart: Dict, year_branch: str) -> bool:
         """
@@ -79,16 +90,17 @@ class SkullEngine:
         branch_set = set(branches)
         
         # 检测 丑未戌三刑 (最凶，骷髅协议核心)
+        # 使用配置中的 SCORE_SKULL_CRASH
         if self.THREE_PUNISHMENTS['chou_wei_xu'].issubset(branch_set):
-            return True, "丑未戌三刑", -50.0
+            return True, "丑未戌三刑", self.skull_crash_score
         
-        # 检测 寅巳申三刑
+        # 检测 寅巳申三刑 (次凶，使用 80% 的崩塌分)
         if self.THREE_PUNISHMENTS['yin_si_shen'].issubset(branch_set):
-            return True, "寅巳申三刑", -40.0
+            return True, "寅巳申三刑", self.skull_crash_score * 0.8
         
-        # 检测 子卯刑 (二刑，较轻)
+        # 检测 子卯刑 (二刑，较轻，使用 50% 的崩塌分)
         if self.THREE_PUNISHMENTS['zi_mao'].issubset(branch_set):
-            return True, "子卯刑", -25.0
+            return True, "子卯刑", self.skull_crash_score * 0.5
         
         return False, "", 0.0
 

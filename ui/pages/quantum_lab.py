@@ -269,44 +269,124 @@ def render():
     # --- SIDEBAR CONTROLS ---
     st.sidebar.title("🎛️ 物理参数 (Physics)")
     
-    # Global
-    w_e_val = st.sidebar.slider("We: 全局能量增益", 0.5, 2.0, fd.get('w_e', 1.0), 0.1)
-    f_yy_val = st.sidebar.slider("F(阴阳): 异性耦合效率", 0.8, 1.5, fd.get('f_yy', 1.1), 0.05)
+    # === V6.0+ 新增：算法核心控制台 ===
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🎛️ 算法核心控制台")
+    st.sidebar.caption("基于马云/乔布斯案例调优的核心参数")
     
-    # Career
-    st.sidebar.subheader("W_事业 (Career)")
-    w_career_officer = st.sidebar.slider("W_官杀 (Officer)", 0.0, 1.0, fd.get('w_off', 0.8), 0.05)
-    w_career_resource = st.sidebar.slider("W_印星 (Resource)", 0.0, 1.0, fd.get('w_res', 0.1), 0.05)
-    w_career_output = st.sidebar.slider("W_食伤 (Tech)", 0.0, 1.0, fd.get('w_out_c', 0.0), 0.05)
-    k_control = st.sidebar.slider("K_制杀 (Control)", 0.0, 1.0, fd.get('k_ctl', 0.55))
-    k_buffer = st.sidebar.slider("K_化杀 (Buffer)", 0.0, 1.0, fd.get('k_buf', 0.40))
-    k_mutiny = st.sidebar.slider("K_伤官见官 (Mutiny)", 0.0, 3.0, fd.get('k_mut', 1.8))
-    k_pressure = st.sidebar.slider("K_官杀攻身 (Pressure)", 0.0, 2.0, fd.get('k_press', 1.0))
-    st.sidebar.caption("Pressure controls Career stress & Relationship stress")
-
-    # Wealth
+    # 导入默认配置值
+    from core.config_rules import (
+        SCORE_SKULL_CRASH, SCORE_TREASURY_BONUS, SCORE_TREASURY_PENALTY,
+        ENERGY_THRESHOLD_STRONG, ENERGY_THRESHOLD_WEAK, SCORE_GENERAL_OPEN
+    )
+    
+    # Skull Crash (骷髅协议崩塌分)
+    score_skull_crash = st.sidebar.number_input(
+        "💀 Skull Crash (三刑崩塌分)", 
+        min_value=-100.0, max_value=0.0,
+        value=SCORE_SKULL_CRASH,
+        step=5.0,
+        help="丑未戌三刑触发时的强制熔断分 (乔布斯2011案例调优)"
+    )
+    
+    # Treasury Bonus (财库爆发分)
+    score_treasury_bonus = st.sidebar.slider(
+        "🏆 Treasury Bonus (身强暴富分)",
+        min_value=0.0, max_value=50.0,
+        value=SCORE_TREASURY_BONUS,
+        step=1.0,
+        help="身强冲开财库时的爆发加成 (马云2014 IPO案例调优)"
+    )
+    
+    # Treasury Penalty (财库风险分)
+    score_treasury_penalty = st.sidebar.slider(
+        "⚠️ Treasury Penalty (身弱风险分)",
+        min_value=-50.0, max_value=0.0,
+        value=SCORE_TREASURY_PENALTY,
+        step=1.0,
+        help="身弱冲开财库时的风险惩罚 (伦理安全阀)"
+    )
+    
+    # Energy Thresholds (能量阈值)
+    st.sidebar.markdown("**能量阈值线**")
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        energy_strong = st.number_input(
+            "🔥 身旺线",
+            min_value=0.0, max_value=10.0,
+            value=ENERGY_THRESHOLD_STRONG,
+            step=0.5
+        )
+    with col2:
+        energy_weak = st.number_input(
+            "💧 身弱线",
+            min_value=0.0, max_value=10.0,
+            value=ENERGY_THRESHOLD_WEAK,
+            step=0.5
+        )
+    
+    # General Open Score (普通库开启分)
+    score_general_open = st.sidebar.slider(
+        "🗝️ General Open (普通开库分)",
+        min_value=0.0, max_value=20.0,
+        value=SCORE_GENERAL_OPEN,
+        step=1.0
+    )
+    
+    # === 应用并回测按钮 ===
     st.sidebar.markdown("---")
-    st.sidebar.subheader("W_财富 (Wealth)")
-    w_wealth_cai = st.sidebar.slider("W_财星 (Wealth)", 0.0, 1.0, fd.get('w_cai', 0.6), 0.05)
-    w_wealth_output = st.sidebar.slider("W_食伤 (Source)", 0.0, 1.0, fd.get('w_out_w', 0.4), 0.05)
-    k_capture = st.sidebar.slider("K_身旺担财 (Capture)", 0.0, 0.5, fd.get('k_cap', 0.0), 0.05)
-    k_leak = st.sidebar.slider("K_身弱泄气 (Leak)", 0.0, 2.0, fd.get('k_leak', 0.87), 0.01)
-    k_burden = st.sidebar.slider("K_财多身弱 (Burden)", 0.5, 2.0, fd.get('k_bur', 1.0), 0.1)
-
-    # Relationship
+    if st.sidebar.button("🔄 应用并回测", type="primary", use_container_width=True):
+        # 构建算法核心配置
+        algo_config = {
+            'score_skull_crash': score_skull_crash,
+            'score_treasury_bonus': score_treasury_bonus,
+            'score_treasury_penalty': score_treasury_penalty,
+            'score_general_open': score_general_open,
+            'energy_threshold_strong': energy_strong,
+            'energy_threshold_weak': energy_weak,
+        }
+        # 存入 session_state 以便后续使用
+        st.session_state['algo_config'] = algo_config
+        st.toast(f"✅ 算法参数已更新！Treasury Bonus = {score_treasury_bonus}")
+        st.rerun()
+    
     st.sidebar.markdown("---")
-    st.sidebar.subheader("W_感情 (Relationship)")
-    w_rel_spouse = st.sidebar.slider("W_配偶星 (Spouse)", 0.1, 1.0, fd.get('w_spouse', 0.35), 0.05)
-    w_rel_self = st.sidebar.slider("W_日主 (Self)", -0.5, 0.5, fd.get('w_self', 0.20), 0.05)
-    w_rel_output = st.sidebar.slider("W_食伤 (Output)", 0.0, 1.0, fd.get('w_out_r', 0.15), 0.05)
-    k_clash = st.sidebar.slider("K_比劫夺财 (Clash)", 0.0, 2.0, fd.get('k_clash', 1.2), 0.1)
+    
+    # Global (原有参数)
+    with st.sidebar.expander("📊 物理权重参数 (高级)", expanded=False):
+        w_e_val = st.slider("We: 全局能量增益", 0.5, 2.0, fd.get('w_e', 1.0), 0.1)
+        f_yy_val = st.slider("F(阴阳): 异性耦合效率", 0.8, 1.5, fd.get('f_yy', 1.1), 0.05)
+        
+        # Career
+        st.markdown("**W_事业 (Career)**")
+        w_career_officer = st.slider("W_官杀 (Officer)", 0.0, 1.0, fd.get('w_off', 0.8), 0.05)
+        w_career_resource = st.slider("W_印星 (Resource)", 0.0, 1.0, fd.get('w_res', 0.1), 0.05)
+        w_career_output = st.slider("W_食伤 (Tech)", 0.0, 1.0, fd.get('w_out_c', 0.0), 0.05)
+        k_control = st.slider("K_制杀 (Control)", 0.0, 1.0, fd.get('k_ctl', 0.55))
+        k_buffer = st.slider("K_化杀 (Buffer)", 0.0, 1.0, fd.get('k_buf', 0.40))
+        k_mutiny = st.slider("K_伤官见官 (Mutiny)", 0.0, 3.0, fd.get('k_mut', 1.8))
+        k_pressure = st.slider("K_官杀攻身 (Pressure)", 0.0, 2.0, fd.get('k_press', 1.0))
 
-    # Advanced Logic
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🚩 逻辑开关 (Advanced Flags)")
-    k_broken = st.sidebar.slider("K_假从崩塌 (Broken)", 1.0, 3.0, fd.get('k_brk', 1.5), 0.1)
-    enable_mediation = st.sidebar.checkbox("通关豁免 (Mediation)", fd.get('en_med', True))
-    enable_structural = st.sidebar.checkbox("地支互斥 (Structural)", fd.get('en_str', True))
+        # Wealth
+        st.markdown("**W_财富 (Wealth)**")
+        w_wealth_cai = st.slider("W_财星 (Wealth)", 0.0, 1.0, fd.get('w_cai', 0.6), 0.05)
+        w_wealth_output = st.slider("W_食伤 (Source)", 0.0, 1.0, fd.get('w_out_w', 0.4), 0.05)
+        k_capture = st.slider("K_身旺担财 (Capture)", 0.0, 0.5, fd.get('k_cap', 0.0), 0.05)
+        k_leak = st.slider("K_身弱泄气 (Leak)", 0.0, 2.0, fd.get('k_leak', 0.87), 0.01)
+        k_burden = st.slider("K_财多身弱 (Burden)", 0.5, 2.0, fd.get('k_bur', 1.0), 0.1)
+
+        # Relationship
+        st.markdown("**W_感情 (Relationship)**")
+        w_rel_spouse = st.slider("W_配偶星 (Spouse)", 0.1, 1.0, fd.get('w_spouse', 0.35), 0.05)
+        w_rel_self = st.slider("W_日主 (Self)", -0.5, 0.5, fd.get('w_self', 0.20), 0.05)
+        w_rel_output = st.slider("W_食伤 (Output)", 0.0, 1.0, fd.get('w_out_r', 0.15), 0.05)
+        k_clash = st.slider("K_比劫夺财 (Clash)", 0.0, 2.0, fd.get('k_clash', 1.2), 0.1)
+
+        # Advanced Logic
+        st.markdown("**🚩 逻辑开关**")
+        k_broken = st.slider("K_假从崩塌 (Broken)", 1.0, 3.0, fd.get('k_brk', 1.5), 0.1)
+        enable_mediation = st.checkbox("通关豁免 (Mediation)", fd.get('en_med', True))
+        enable_structural = st.checkbox("地支互斥 (Structural)", fd.get('en_str', True))
     
     current_params = {
         "w_e_weight": w_e_val,
@@ -333,15 +413,27 @@ def render():
         
         "k_broken": k_broken,
         "enable_mediation_exemption": enable_mediation,
-        "enable_structural_clash": enable_structural
+        "enable_structural_clash": enable_structural,
+        
+        # === V6.0+ 新增算法核心参数 ===
+        "score_skull_crash": score_skull_crash,
+        "score_treasury_bonus": score_treasury_bonus,
+        "score_treasury_penalty": score_treasury_penalty,
+        "score_general_open": score_general_open,
+        "energy_threshold_strong": energy_strong,
+        "energy_threshold_weak": energy_weak,
     }
     
     st.sidebar.markdown("---")
-    if st.sidebar.button("💾 保存现有配置 (Save)", type="primary"):
+    if st.sidebar.button("💾 保存现有配置 (Save)"):
         save_params_to_disk(current_params)
 
     # --- MAIN ENGINE SETUP ---
     engine = QuantumEngine(current_params)
+    
+    # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
+    if 'algo_config' in st.session_state:
+        engine.update_config(st.session_state['algo_config'])
 
     # --- UI HEADER ---
     st.title("🧪 量子八字 V6.0 验证工作台")

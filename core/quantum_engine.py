@@ -11,11 +11,16 @@ from core.engines.luck_engine import LuckEngine
 from core.engines.skull_engine import SkullEngine
 from core.engines.treasury_engine import TreasuryEngine
 
+# === V6.0+ Parameterization: Import Algorithm Config ===
+from core.config_rules import DEFAULT_CONFIG
+
 class QuantumEngine:
     """
     Quantum Bazi V2.4 Physics Engine (Unified)
     Calculates E_pred (Energy Potential) based on W (Weights) and C (Couplings).
     Supports Dynamic Time-Variable (Da Yun / Liu Nian) with Full Elemental Interaction.
+    
+    [V6.0+ Parameterization] 支持通过 config 字典动态调整算法参数
     """
     def __init__(self, params=None):
         # Allow default params loading if None
@@ -25,6 +30,14 @@ class QuantumEngine:
         self.params = params
         self.flat_params = self._flatten_params(params)
         
+        # === V6.0+ Parameterization: Load Algorithm Config ===
+        # 将 config_rules 默认配置与 params 中的覆盖值合并
+        self.config = DEFAULT_CONFIG.copy()
+        # 允许 params 覆盖默认配置
+        if params and isinstance(params, dict):
+            for key, value in params.items():
+                if key in self.config:
+                    self.config[key] = value
         
         # Load Narrative Config
         try:
@@ -53,25 +66,42 @@ class QuantumEngine:
         # V3.0 Constants: The Four Vaults
         self.VAULT_MAPPING = GRAVE_TREASURY_CONFIG
         
-        # V3.0 Sprint 3: Wealth Logic
-        self.WEALTH_MAP = {
+        # V3.0 Sprint 3: Wealth Logic (Use config values)
+        self.WEALTH_MAP = self.config.get('wealth_map', {
             'wood': 'earth',
             'fire': 'metal',
             'earth': 'water',
             'metal': 'wood',
             'water': 'fire'
-        }
-        self.TOMB_ELEMENTS = {
+        })
+        self.TOMB_ELEMENTS = self.config.get('tomb_elements', {
             '辰': 'water', # Water Tomb
             '戌': 'fire',  # Fire Tomb
             '丑': 'metal', # Metal Tomb
             '未': 'wood'   # Wood Tomb
-        }
+        })
 
-        # Initialize Engines (V6.0)
+        # === V6.0+ Initialize Engines with Config ===
         self.luck_engine = LuckEngine()
-        self.skull_engine = SkullEngine()
-        self.treasury_engine = TreasuryEngine()
+        self.skull_engine = SkullEngine(config=self.config)
+        self.treasury_engine = TreasuryEngine(config=self.config)
+    
+    def update_config(self, new_config: dict):
+        """
+        [V6.0+ Parameterization] 允许前端注入新参数，覆盖默认 config_rules
+        热更新算法参数，无需重启引擎
+        
+        :param new_config: 新的配置字典，如 {'score_skull_crash': -40.0, 'score_treasury_bonus': 30.0}
+        """
+        # 更新主配置
+        self.config.update(new_config)
+        
+        # 同步通知子引擎 - 重新初始化以应用新配置
+        self.skull_engine = SkullEngine(config=self.config)
+        self.treasury_engine = TreasuryEngine(config=self.config)
+        
+        # 返回更新后的配置供前端确认
+        return self.config
 
     def _flatten_params(self, params):
         """Helper to flatten nested JSON params for easier access."""
@@ -890,7 +920,8 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
         
         # === Delegated to SkullEngine (V6.0) ===
         if self.skull_engine.detect_three_punishments(birth_chart, branch):
-            final_score = -50.0 # Collapse
+            # 使用配置中的 score_skull_crash (支持热更新)
+            final_score = self.config.get('score_skull_crash', -50.0)
             treasury_icon = '💀'
             treasury_risk_level = 'danger'
             details.append("💀 丑未戌三刑！结构性崩塌 (Structure Collapse)")
@@ -992,7 +1023,8 @@ def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyCont
     
     if is_skull_triggered:
         # 💀 骷髅协议触发！强制覆盖一切！
-        final_score = -50.0
+        # 使用配置中的 score_skull_crash (支持热更新)
+        final_score = self.config.get('score_skull_crash', -50.0)
         icon = "💀"
         details = ["三刑崩塌 (The Skull)", "结构性崩塌", "极度风险"]
         risk_level = "danger"
