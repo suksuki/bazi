@@ -38,12 +38,14 @@ class AdvancedTrajectoryEngine:
              year_pz = lunar.getYearInGanZhi() # "辛卯"
              
              # 3. Call V2.0 Score
-             raw_score, details = self.quantum.calculate_year_score(
+             result = self.quantum.calculate_year_score(
                  year_pillar=year_pz,
                  favorable_elements=favorable_elements or [],
                  unfavorable_elements=unfavorable_elements or [],
                  birth_chart=self.chart
              )
+             raw_score = result['score']
+             details = result['details']
              
              # 4. Normalize (-15 ~ +15) -> (-10 ~ +10)
              # Smoothing high volatility

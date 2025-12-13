@@ -39,7 +39,7 @@ def test_dynamic_luck_calculation():
     
     results = {}
     for year in test_years:
-        luck = engine.get_dynamic_luck_pillar(
+        luck = engine.luck_engine.get_dynamic_luck_pillar(
             birth_year, birth_month, birth_day, birth_hour, gender, year
         )
         results[year] = luck
@@ -65,7 +65,7 @@ def test_luck_timeline():
     engine = QuantumEngine({})
     
     # 测试用例
-    timeline = engine.get_luck_timeline(
+    timeline = engine.luck_engine.get_luck_timeline(
         birth_year=1977,
         birth_month=5,
         birth_day=8,
@@ -117,7 +117,7 @@ def test_handover_detection():
     handovers = []
     
     for year in years:
-        current_luck = engine.get_dynamic_luck_pillar(
+        current_luck = engine.luck_engine.get_dynamic_luck_pillar(
             birth_year, birth_month, birth_day, birth_hour, gender, year
         )
         
@@ -155,44 +155,36 @@ def test_score_variation_on_handover():
     engine = QuantumEngine({})
     
     # 准备测试数据
-    birth_chart = {
-        'year_pillar': '丁巳',
-        'month_pillar': '乙巳',
-        'day_pillar': '丁丑',
-        'hour_pillar': '癸酉',
-        'day_master': '丁',
-        'energy_self': 3.0,
-        'current_luck_pillar': ''  # 将被动态设置
+    pillars = {
+        'year': '丁巳',
+        'month': '乙巳',
+        'day': '丁丑',
+        'hour': '癸酉',
     }
-    
-    favorable = ['Wood', 'Fire']
-    unfavorable = ['Water', 'Metal']
+    # day_master='丁' inferred or passed
     
     # 两个不同大运
     luck_a = "庚子"  # 金水运
     luck_b = "己亥"  # 土水运
     
     # 同一流年
-    year_pillar = "乙巳"  # 2025年
+    # year_pillar = "乙巳"  # 2025年 (Controlled by year=2025 in engine)
     
     # 用大运A计算
+    from core.bazi_profile import VirtualBaziProfile
+    profile_a = VirtualBaziProfile(pillars=pillars, static_luck=luck_a, day_master='丁', gender=1)
+    
     ctx_a = engine.calculate_year_context(
-        year_pillar=year_pillar,
-        favorable_elements=favorable,
-        unfavorable_elements=unfavorable,
-        birth_chart=birth_chart,
-        year=2025,
-        active_luck=luck_a
+        profile=profile_a,
+        year=2025
     )
     
     # 用大运B计算
+    profile_b = VirtualBaziProfile(pillars=pillars, static_luck=luck_b, day_master='丁', gender=1)
+    
     ctx_b = engine.calculate_year_context(
-        year_pillar=year_pillar,
-        favorable_elements=favorable,
-        unfavorable_elements=unfavorable,
-        birth_chart=birth_chart,
-        year=2025,
-        active_luck=luck_b
+         profile=profile_b,
+         year=2025
     )
     
     print(f"  大运 {luck_a}: 事业={ctx_a.career:.2f}, 财富={ctx_a.wealth:.2f}")
@@ -216,22 +208,25 @@ def test_trinity_interface():
     
     engine = QuantumEngine({})
     
-    birth_chart = {
-        'year_pillar': '甲子',
-        'month_pillar': '丙寅',
-        'day_pillar': '戊辰',
-        'hour_pillar': '庚午',
-        'day_master': '戊',
-        'energy_self': 5.0
+    from core.bazi_profile import VirtualBaziProfile
+    
+    pillars = {
+        'year': '甲子',
+        'month': '丙寅',
+        'day': '戊辰',
+        'hour': '庚午',
     }
     
+    profile = VirtualBaziProfile(
+        pillars=pillars,
+        static_luck="丁卯", 
+        day_master='戊',
+        gender=1
+    )
+    
     ctx = engine.calculate_year_context(
-        year_pillar="甲辰",
-        favorable_elements=['Fire', 'Earth'],
-        unfavorable_elements=['Water', 'Wood'],
-        birth_chart=birth_chart,
-        year=2024,
-        active_luck="丁卯"
+        profile=profile,
+        year=2024
     )
     
     # 检查返回的 DestinyContext 是否完整
@@ -271,23 +266,26 @@ def test_three_punishments():
     engine = QuantumEngine({})
     
     # 八字中有丑和未，流年戌 -> 触发三刑
-    birth_chart = {
-        'year_pillar': '乙丑',
-        'month_pillar': '丁未',
-        'day_pillar': '壬戌',
-        'hour_pillar': '庚子',
-        'day_master': '壬',
-        'energy_self': 2.0
+    # 构造 V6 profile
+    from core.bazi_profile import VirtualBaziProfile
+    pillars = {
+        'year': '乙丑',
+        'month': '丁未',
+        'day': '壬戌',
+        'hour': '庚子',
     }
+    
+    profile = VirtualBaziProfile(
+        pillars=pillars, 
+        static_luck="己亥",
+        day_master='壬',
+        gender=1
+    )
     
     # 流年戌 (如 2030年庚戌)
     ctx = engine.calculate_year_context(
-        year_pillar="庚戌",
-        favorable_elements=['Metal', 'Water'],
-        unfavorable_elements=['Fire', 'Earth'],
-        birth_chart=birth_chart,
-        year=2030,
-        active_luck="己亥"
+         profile=profile,
+         year=2030
     )
     
     print(f"  图标: {ctx.icon}")
@@ -314,23 +312,25 @@ def test_treasury_detection():
     engine = QuantumEngine({})
     
     # 构造一个应该触发财库的案例
-    birth_chart = {
-        'year_pillar': '甲辰',
-        'month_pillar': '丙寅',
-        'day_pillar': '戊午',
-        'hour_pillar': '庚申',
-        'day_master': '戊',
-        'energy_self': 6.0  # 身强
+    from core.bazi_profile import VirtualBaziProfile
+    pillars = {
+        'year': '甲辰',
+        'month': '丙寅',
+        'day': '戊午',
+        'hour': '庚申',
     }
     
-    # 流年冲辰 (戌冲辰)
+    profile = VirtualBaziProfile(
+        pillars=pillars,
+        static_luck="壬子",
+        day_master='戊',
+        gender=1
+    )
+    
+    # 流年冲辰 (戌冲辰) -> 2034 应该是 甲戌
     ctx = engine.calculate_year_context(
-        year_pillar="甲戌",
-        favorable_elements=['Metal', 'Water', 'Wood'],
-        unfavorable_elements=['Fire', 'Earth'],
-        birth_chart=birth_chart,
-        year=2034,
-        active_luck="壬子"
+        profile=profile,
+        year=2034
     )
     
     print(f"  图标: {ctx.icon}")

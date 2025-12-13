@@ -7,6 +7,9 @@ from core.constants import GRAVE_TREASURY_CONFIG, HIDDEN_STEMS_MAP, EARTH_PUNISH
 from core.interaction_service import InteractionService
 from core.context import DestinyContext, create_context_from_v35_result
 from core.bazi_profile import BaziProfile
+from core.engines.luck_engine import LuckEngine
+from core.engines.skull_engine import SkullEngine
+from core.engines.treasury_engine import TreasuryEngine
 
 class QuantumEngine:
     """
@@ -65,6 +68,11 @@ class QuantumEngine:
             '未': 'wood'   # Wood Tomb
         }
 
+        # Initialize Engines (V6.0)
+        self.luck_engine = LuckEngine()
+        self.skull_engine = SkullEngine()
+        self.treasury_engine = TreasuryEngine()
+
     def _flatten_params(self, params):
         """Helper to flatten nested JSON params for easier access."""
         flat = {}
@@ -96,114 +104,6 @@ class QuantumEngine:
         if self.DESTRUCTION[target_elem] == dm_elem: return 'officer'
         if self.GENERATION[target_elem] == dm_elem: return 'resource'
         return 'unknown'
-    def get_hidden_stems(self, branch):
-        """
-        V3.0: Retrieve the internal microstructure of an Earthly Branch.
-        Returns the Main Qi, Residual Qi, and Tomb Gas (if applicable).
-        """
-        return HIDDEN_STEMS_MAP.get(branch, {})
-
-    def _is_wealth_treasury(self, day_master_element: str, treasury_branch: str) -> bool:
-        """
-        V3.0: Check if the opened treasury is the user's Wealth Treasury.
-        """
-        if not day_master_element: return False
-        dm_elem = day_master_element.lower()
-        wealth_element = self.WEALTH_MAP.get(dm_elem)
-        tomb_content = self.TOMB_ELEMENTS.get(treasury_branch)
-        
-        # Special Logic for Wood DM: Earth is Wealth. 
-        # Chen/Xu/Chou/Wei are all Earth branches partially.
-        # But specifically, Dragon(Chen) and Dog(Xu) are the main "Pulse" of Earth clashing in water/fire cycles.
-        # Simplified V3.0: If Wood DM, and treasury is one of the 4 Earths, treat as potential wealth source interaction.
-        if dm_elem == 'wood' and treasury_branch in self.TOMB_ELEMENTS:
-            # But the user spec says "Wood DM -> Wealth in Chen/Xu". 
-            # Let's stick to strict user spec for Sprint 3?
-            # User spec: "Wood DM -> Wealth in Chen/Xu/Chou/Wei (Earth is Wealth)".
-            return True
-            
-        return wealth_element == tomb_content
-
-    def scan_vault_state(self, branch, global_energy_map):
-        """
-        V3.0: Determine if a Vault is Alive (Vault) or Dead (Tomb)
-        Based on the global energy of the stored element.
-        """
-        if branch not in self.VAULT_MAPPING: return "UNKNOWN"
-        target_element = self.VAULT_MAPPING[branch]['element']
-        energy_level = global_energy_map.get(target_element, 0)
-
-        # Core Threshold: > 3.0 implies sufficient Qi to be a usable Vault
-        if energy_level > 3.0:
-            return "VAULT" # Alive, Bank Vault
-        else:
-            return "TOMB"  # Dead, Grave
-
-    def process_quantum_tunneling(self, branch, energy_map):
-        """
-        V3.0: Handle the 'Opening' or 'Breaking' of a Storehouse.
-        Returns (bonus_score, narrative_card)
-        """
-        vault_state = self.scan_vault_state(branch, energy_map)
-        target_element = self.VAULT_MAPPING[branch]['element']
-        e_inside = energy_map.get(target_element, 0)
-        
-        # Determine 10 God Type of the Vault for Narrative
-        # (This context requires knowing DM, but for now we focus on physics)
-        
-        if vault_state == "VAULT":
-            # Scenario A: Open the Vault (Quantum Tunneling)
-            # Impact: Massive Energy Release
-            bonus = e_inside * 2.0 # Critical Hit
-            
-            narrative = {
-                "card_type": "vault_open",
-                "level": "legendary",
-                "title": f"🚪 墓库洞开 ({branch})",
-                "desc": f"Quantum tunneling releases pent-up {target_element.title()} energy!",
-                "score_delta": f"+{round(bonus, 1)} Wealth/Career",
-                "animation_trigger": "gold_explosion"
-            }
-            return bonus, narrative
-        
-        else:
-            # Scenario B: Break the Tomb (Structural Collapse)
-            # Impact: Destruction of Roots
-            penalty = -5.0 
-            
-            narrative = {
-                "card_type": "tomb_break",
-                "level": "danger",
-                "title": f"⚰️ 根基崩塌 ({branch})",
-                "desc": f"Protective walls collapse. Weak {target_element.title()} energy dissipates.",
-                "score_delta": "-5.0 Structure",
-                "animation_trigger": "rubble_collapse"
-            }
-            return penalty, narrative
-
-    def analyze_year_interaction(self, birth_chart, year_branch):
-        """
-        V3.0 New: Analyze interaction between Annual Branch and Birth Chart (Treasury Opening Detection)
-        """
-        # Ensure birth_chart has the expected structure. 
-        # Assuming birth_chart is a dict with keys like 'year_pillar', etc. containing strings like "甲子"
-        # We need to extract the branch (2nd char) safety.
-        try:
-            chart_branches = {
-                'year': birth_chart.get('year_pillar', '  ')[1],
-                'month': birth_chart.get('month_pillar', '  ')[1],
-                'day': birth_chart.get('day_pillar', '  ')[1],
-                'hour': birth_chart.get('hour_pillar', '  ')[1]
-            }
-        except IndexError:
-            # Fallback if pillars are malformed
-            return []
-        
-        # Call Interaction Service
-        interaction_service = InteractionService() 
-        openings = interaction_service.detect_treasury_openings(year_branch, chart_branches)
-        
-        return openings
 
     def calculate_energy(self, case_data, dynamic_context=None):
         """
@@ -485,23 +385,22 @@ class QuantumEngine:
                 # === Sprint 5.3: Three Punishments (The Skull Protocol) ===
                 # Logic: Check if {丑, 未, 戌} is a subset of (Chart Branches + Year Branch)
                 
-                # Get dynamic year branch
+                # Get dynamic year branch (V5.3 Logic restored)
                 current_year_branch = None
                 if dynamic_context and 'year' in dynamic_context:
                     yp = dynamic_context['year']
                     if len(yp) > 1: current_year_branch = yp[1]
-                
+
                 if current_year_branch:
-                    all_branches = set(branches)
-                    all_branches.add(current_year_branch)
+                    # Construct simple chart dict for engine
+                    temp_chart = {
+                        'year_pillar': ' ' + branches[0] if len(branches) > 0 else '  ',
+                        'month_pillar': ' ' + branches[1] if len(branches) > 1 else '  ',
+                        'day_pillar': ' ' + branches[2] if len(branches) > 2 else '  ',
+                        'hour_pillar': ' ' + branches[3] if len(branches) > 3 else '  ',
+                    }
                     
-                    # Import punishment set if not available (defensive)
-                    try:
-                        from core.constants import EARTH_PUNISHMENT_SET
-                    except ImportError:
-                        EARTH_BRANCHES_SET = {'丑', '未', '戌'}
-                    
-                    if EARTH_PUNISHMENT_SET.issubset(all_branches):
+                    if self.skull_engine.detect_three_punishments(temp_chart, current_year_branch):
                         # TRIGGERED
                         clash_score += 50.0 # Massive penalty
                         narrative.append("💀 丑未戌三刑！结构性崩塌")
@@ -531,14 +430,14 @@ class QuantumEngine:
 
                         # V3.0 Logic: Quantum Vault Tunneling (Replaces Earth Amnesty)
                         # Detect Earth Clashes: Chen-Xu, Chou-Wei
-                        is_earth_clash = (b1 in self.VAULT_MAPPING and b2 in self.VAULT_MAPPING and 
+                        is_earth_clash = (b1 in self.treasury_engine.VAULT_MAPPING and b2 in self.treasury_engine.VAULT_MAPPING and 
                                          ((b1, b2) in self.CLASH_PAIRS or (b2, b1) in self.CLASH_PAIRS))
                         
                         if is_earth_clash:
                             # Process EACH side of the clash as a potential Vault opening
                             # Loop via set to handle duplicate branch case safely (though rare in collision pair)
                             for branch_key in [b1, b2]:
-                                bonus, event = self.process_quantum_tunneling(branch_key, element_map)
+                                bonus, event = self.treasury_engine.process_quantum_tunneling(branch_key, element_map)
                                 narrative_events.append(event)
                                 
                                 if "vault_open" in event['card_type']:
@@ -976,74 +875,21 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
     treasury_risk_level = "none"  # none, opportunity, warning
     
     if birth_chart:
-        # 1. Detect Interaction
-        interaction_results = self.analyze_year_interaction(birth_chart, branch)
+        # === Delegated to TreasuryEngine (V6.0) ===
+        # Calculate bonus score and details from Treasury Interactions
+        final_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
+            birth_chart, branch, base_score, 
+            birth_chart.get('dm_strength', 'medium'), # TODO: better estimation
+            self._get_element(birth_chart.get('day_master'))
+        )
         
-        multiplier = 1.0
-        bonus_points = 0.0
+        # Append data
+        details.extend(t_details)
+        treasury_icon = t_icon
+        treasury_risk_level = t_risk
         
-        # Get DM Element
-        dm_char = birth_chart.get('day_master')
-        dm_elem = self._get_element(dm_char)
-        
-        # V3.5: Get Day Master Strength (from birth_chart if available)
-        # This should ideally come from the full energy calculation
-        # For now, we use a simplified estimation or passed-in value
-        dm_strength = birth_chart.get('dm_strength', 'medium')  # 'strong', 'medium', 'weak'
-        
-        # Alternative: Estimate from energy score if available
-        dm_energy = birth_chart.get('energy_self', None)
-        if dm_energy is not None:
-            if dm_energy > 3.5:
-                dm_strength = 'strong'
-            elif dm_energy >= 2.0:
-                dm_strength = 'medium'
-            else:
-                dm_strength = 'weak'
-        
-        for status in interaction_results:
-            if status.is_open:
-                # 2. Check if Wealth Treasury
-                if self._is_wealth_treasury(dm_elem, status.treasury_element):
-                    # === Ethical Safety Valve: 身强身弱差异化处理 ===
-                    
-                    if dm_strength == 'strong':
-                        # Case A: 身强 + 财库 = 暴富契机
-                        multiplier = 2.0
-                        bonus_points += 20.0
-                        treasury_icon = "🏆"  # Gold Trophy
-                        treasury_risk_level = "opportunity"
-                        details.append(f"🏆 身强胜财，财库[{status.treasury_element}]大开！暴富契机")
-                        
-                    elif dm_strength == 'medium':
-                        # Case B: 中和 + 财库 = 机遇但需谨慎
-                        multiplier = 1.5
-                        bonus_points += 10.0
-                        treasury_icon = "🗝️"  # Golden Key
-                        treasury_risk_level = "opportunity"
-                        details.append(f"🗝️ 财库[{status.treasury_element}]开启，机遇可期，适度为宜")
-                        
-                    else:  # weak
-                        # Case C: 身弱 + 财库 = 高风险警告
-                        multiplier = 0.6  # 打折而非放大
-                        bonus_points -= 15.0  # 负向修正
-                        treasury_icon = "⚠️"  # Warning
-                        treasury_risk_level = "warning"
-                        details.append(f"⚠️ 身弱不胜财！财库[{status.treasury_element}]冲开恐有破耗")
-                        
-                else:
-                    # Non-wealth treasury (杂气库)
-                    treasury_icon = "🗝️"  # Silver Key
-                    treasury_risk_level = "opportunity"
-                    details.append(f"🔓 杂气库[{status.treasury_element}]开启")
-                    bonus_points += 2.0  # Small bonus
-        
-        final_score = (base_score * multiplier) + bonus_points
-        
-        # === Sprint 5.3: Three Punishments (The Skull Protocol) ===
-        # Check for Chou-Wei-Xu Earth Punishment
-        # Requires self._detect_three_punishments to be available
-        if hasattr(self, '_detect_three_punishments') and self._detect_three_punishments(birth_chart, branch):
+        # === Delegated to SkullEngine (V6.0) ===
+        if self.skull_engine.detect_three_punishments(birth_chart, branch):
             final_score = -50.0 # Collapse
             treasury_icon = '💀'
             treasury_risk_level = 'danger'
@@ -1059,70 +905,25 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
 
 QuantumEngine.calculate_year_score = calculate_year_score
 
-# === Sprint 5.3: Three Punishments Detection ===
+# === V6.0 Final: Sub-Engine Delegation ===
+# Three Punishments detection is now handled by SkullEngine
+# Year pillar calculation is now handled by LuckEngine.get_year_ganzhi()
 
-def _detect_three_punishments(self, birth_chart: dict, year_branch: str) -> bool:
-    """
-    检测是否构成丑未戌三刑 (Earth Punishment)
-    
-    逻辑: 命局地支 + 流年地支 的集合中，是否包含完整的 {丑, 未, 戌}
-    
-    Args:
-        birth_chart: Birth chart dict with pillar structure
-        year_branch: Current year branch (地支)
-    
-    Returns:
-        bool: True if three punishments are triggered
-    """
-    # 1. Extract all branches from birth chart
-    try:
-        chart_branches = {
-            birth_chart.get('year_pillar', '  ')[1],
-            birth_chart.get('month_pillar', '  ')[1],
-            birth_chart.get('day_pillar', '  ')[1],
-            birth_chart.get('hour_pillar', '  ')[1]
-        }
-    except (IndexError, TypeError):
-        # Malformed chart, no punishment
-        return False
-    
-    # 2. Add current year branch
-    chart_branches.add(year_branch)
-    
-    # 3. Check if Earth Punishment set is subset of active branches
-    return EARTH_PUNISHMENT_SET.issubset(chart_branches)
-
-QuantumEngine._detect_three_punishments = _detect_three_punishments
-
-# === Trinity Architecture: Unified Interface ===
-# This method is the ONLY bridge between QuantumEngine and all consumers
-
-def get_year_pillar(self, year: int) -> str:
-    """
-    Helper method to get the year pillar (干支) for a given year.
-    """
-    solar = Solar.fromYmdHms(year, 6, 15, 0, 0, 0)
-    lunar = solar.getLunar()
-    return lunar.getYearInGanZhi()
-
-QuantumEngine.get_year_pillar = get_year_pillar
 
 def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyContext:
     """
-    [V6.0 Trinity 接口] 基于 BaziProfile 对象计算流年上下文
-    现在全面升级为调用 calculate_energy (V2.6+) 以获取多维度分数。
-    """
-    # 1. 获取流年干支
-    year_pillar = self.get_year_pillar(year) 
+    [V6.0 Final] 核心调度逻辑 (Facade Pattern)
     
-    # 2. 获取当年大运
+    不再包含具体算法实现，只负责指挥子引擎协同工作：
+    - LuckEngine: 处理流年干支与大运
+    - TreasuryEngine: 处理财库与机遇检测
+    - SkullEngine: 处理三刑等极端风控
+    """
+    # === 1. 运势层 (Luck Layer) ===
+    year_pillar = self.luck_engine.get_year_ganzhi(year)
     current_luck = profile.get_luck_pillar_at(year)
     
-    # 3. 构造 calculate_energy 所需的 case_data
-    # 注意：这里我们依赖 calculate_energy 内部的 FluxEngine fallback 
-    # 来自动计算 physics_sources (pillar_energies)
-    
-    # 转换 BaziProfile 的四柱为列表
+    # === 2. 基础数据准备 ===
     bazi_list = [
         profile.pillars['year'],
         profile.pillars['month'],
@@ -1130,226 +931,222 @@ def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyCont
         profile.pillars['hour']
     ]
     
-    # 临时估算旺衰 (calculate_energy 内部若无 physics_sources 会 fallback，
-    # 但如果有 wang_shuai 字符串会更好)
-    # 暂时用简单的逻辑或留空让 engine 自动处理
-    wang_shuai_str = "身中和" 
+    # 提取四柱地支
+    chart_branches = [p[1] for p in bazi_list if len(p) > 1]
+    year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
+    
+    # 估算旺衰
+    wang_shuai_str = "Medium"
     try:
-         w_s, _ = self._evaluate_wang_shuai(profile.day_master, bazi_list)
-         wang_shuai_str = "身旺" if "Strong" in w_s else "身弱"
+        w_s, _ = self._evaluate_wang_shuai(profile.day_master, bazi_list)
+        wang_shuai_str = "Strong" if "Strong" in w_s else "Weak"
     except:
-         pass
-
-    # Handle VirtualProfile (Legacy/Test mode) without birth_date
-    b_date = getattr(profile, 'birth_date', None)
-    birth_info = {
-        'year': b_date.year,
-        'month': b_date.month,
-        'day': b_date.day,
-        'hour': getattr(b_date, 'hour', 12),
-        'gender': profile.gender
-    } if b_date else {
-        'year': 2000, 'month': 1, 'day': 1, 'hour': 12, 'gender': profile.gender
-    }
-
-    case_data = {
-        'id': 9999, # Dummy ID
-        'gender': '男' if profile.gender == 1 else '女',
+        pass
+    
+    # 获取日主五行
+    dm_element = self._get_element(profile.day_master)
+    dm_element_cap = dm_element.capitalize() if dm_element else 'Wood'
+    
+    # === 3. 基础分数计算 ===
+    # 构造适配数据
+    adapter_chart = {
         'day_master': profile.day_master,
-        'wang_shuai': wang_shuai_str,
-        'bazi': bazi_list,
-        'birth_info': birth_info
+        'year': bazi_list[0],
+        'month': bazi_list[1],
+        'day': bazi_list[2],
+        'hour': bazi_list[3],
+        'dm_strength': wang_shuai_str
     }
     
-    # 4. 构造 Dynamic Context
-    # calculate_energy 期望的大运格式是 "AB" (干支)
-    # 流年也是 "CD" (干支)
-    dyn_ctx = {
-        'year': year_pillar,
-        'dayun': current_luck,
-        'luck': current_luck # 兼容某些旧代码可能用 'luck' key
+    # 计算基础分 (使用现有的 calculate_year_score)
+    favorable = self._determine_favorable(profile.day_master, wang_shuai_str, bazi_list)
+    unfavorable = [e.capitalize() for e in ['wood', 'fire', 'earth', 'metal', 'water'] 
+                   if e.capitalize() not in favorable]
+    
+    base_result = self.calculate_year_score(year_pillar, favorable, unfavorable, adapter_chart)
+    base_score = base_result.get('score', 0.0)
+    details = base_result.get('details', [])
+    
+    # === 4. 财库/机遇层 (Treasury Layer) ===
+    t_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
+        adapter_chart, year_branch, base_score, wang_shuai_str, dm_element_cap
+    )
+    
+    # 合并结果
+    if t_details:
+        details.extend(t_details)
+    final_score = t_score
+    icon = t_icon
+    risk_level = t_risk
+    
+    # === 5. 骷髅/风控层 (Skull Layer) ===
+    # 构造 SkullEngine 需要的 chart 格式
+    skull_chart = {
+        'year_pillar': bazi_list[0],
+        'month_pillar': bazi_list[1],
+        'day_pillar': bazi_list[2],
+        'hour_pillar': bazi_list[3]
     }
     
-    # 5. 调用核心引擎
-    results = self.calculate_energy(case_data, dyn_ctx)
+    is_skull_triggered = self.skull_engine.detect_three_punishments(skull_chart, year_branch)
     
-    # 6. 解析结果并转换为 DestinyContext
-    final_career = results.get('career', 0.0)
-    final_wealth = results.get('wealth', 0.0)
-    final_rel = results.get('relationship', 0.0)
+    if is_skull_triggered:
+        # 💀 骷髅协议触发！强制覆盖一切！
+        final_score = -50.0
+        icon = "💀"
+        details = ["三刑崩塌 (The Skull)", "结构性崩塌", "极度风险"]
+        risk_level = "danger"
+        energy_lvl = "Critical Risk (大凶)"
+    else:
+        # 正常能量等级判定
+        if final_score <= -40:
+            energy_lvl = "Structural Collapse"
+        elif final_score > 6:
+            energy_lvl = "High Opportunity"
+        elif final_score < -6:
+            energy_lvl = "High Risk"
+        else:
+            energy_lvl = "Neutral"
     
-    # 为了兼容性，我们取三者的平均值或者最大值的某种加权作为总分 score
-    # V3.5 通常用综合分。这里简单取平均值作为参考 score
-    raw_score = (final_career + final_wealth + final_rel) / 3.0
-    
-    narrative_events = results.get('narrative_events', [])
-    details = [e['title'] for e in narrative_events]
-    
-    # 提取 Vision / Icon
-    # 优先看有没有 narrative_events 里的 heavy hitters
-    icon = None
-    main_risk = "none"
-    
-    # 简单判定 icon
-    # 简单判定 icon
-    for ev in narrative_events:
-        ctype = ev.get('card_type', '')
-        # Skull has highest priority (The Skull Protocol)
-        if 'punishment' in ctype or 'collapse' in ctype or 'broken' in ctype:
-            icon = "💀"
-            main_risk = "danger"
-            # Override score for Structural Collapse
-            raw_score = -50.0
-            break 
-            
-        elif 'vault_open' in ctype: 
-            # Only set if not already set (though loop breaks on skull)
-            # But we want to ensure we don't overwrite if we had a warning?
-            # Actually, Opportunity can coexist with Warning, but Skull trumps all.
-            # If we haven't found a Skull yet, current icon is either None or Warning.
-            # Opportunity usually implies we should show it unless it's a Skull.
-            icon = "🏆"
-            main_risk = "opportunity"
-            
-        elif 'pressure' in ctype or 'clash' in ctype:
-            if not icon: # Don't overwrite trophy
-                icon = "⚠️"
-                main_risk = "warning"
-    
-    # 判定能量等级
-    if raw_score <= -40: energy_lvl = "Structural Collapse"
-    elif raw_score > 6: energy_lvl = "High Opportunity"
-    elif raw_score < -6: energy_lvl = "High Risk"
-    else: energy_lvl = "Neutral"
-
-    # 7. 构造 Context
+    # === 6. 构造 DestinyContext ===
     ctx = DestinyContext(
         year=year,
         pillar=year_pillar,
         luck_pillar=current_luck,
-        score=raw_score,
-        raw_score=raw_score,
+        score=final_score,
+        raw_score=base_score,
         energy_level=energy_lvl,
-        career=final_career,
-        wealth=final_wealth,
-        relationship=final_rel,
         is_treasury_open=(icon in ["🏆", "🗝️"]),
-        risk_level=main_risk,
+        treasury_type="Wealth" if t_icon == "🏆" else "General" if t_icon else None,
+        day_master_strength=wang_shuai_str,
+        risk_level=risk_level,
         icon=icon,
         tags=details,
-        description=results.get('desc', ''),
-        narrative_events=narrative_events,
-        version="V6.0"
+        description="; ".join(details[:2]) if details else "平稳流年",
+        career=final_score * 0.8,  # 简化的维度映射
+        wealth=final_score * 1.0,
+        relationship=final_score * 0.6,
+        version="V6.0-Final"
     )
     
-    # Auto prompt
+    # Auto-build narrative
     ctx.narrative_prompt = ctx.build_narrative_prompt()
     return ctx
 
+
 QuantumEngine.calculate_year_context = calculate_year_context
 
-# === Sprint 5.4: Dynamic Luck Pillar ===
 
-def get_dynamic_luck_pillar(self, birth_year: int, birth_month: int, birth_day: int, 
-                            birth_hour: int, gender: int, target_year: int) -> str:
+# === LuckEngine Proxy Methods ===
+# Delegate to internal LuckEngine for clean architecture
+
+def get_luck_timeline(self, profile_or_year, start_year_or_month=None, years_or_day=None, 
+                      hour=None, gender=None, num_steps=None):
     """
-    [Sprint 5.4] 动态获取指定年份的大运干支
+    [V6.0 Proxy] 生成包含大运信息的完整运势时间线
+    支持两种调用方式：
+    1. 新接口: get_luck_timeline(profile, start_year, years=12)
+    2. 旧接口 (兼容): get_luck_timeline(birth_year, birth_month, birth_day, birth_hour, gender, num_steps=8)
     
-    Args:
-        birth_year: 出生年 (公历)
-        birth_month: 出生月
-        birth_day: 出生日
-        birth_hour: 出生时
-        gender: 性别 (1=男, 0=女)
-        target_year: 目标年份
+    :return: 带大运信息的流年列表
+    """
+    from datetime import datetime
+    import calendar
     
-    Returns:
-        str: 该年所属的大运干支，如 "戊辰"
+    # 检测调用方式
+    if hasattr(profile_or_year, 'get_luck_pillar_at'):
+        # 新接口: 传入的是 BaziProfile 对象
+        profile = profile_or_year
+        start_year = start_year_or_month
+        years = years_or_day if years_or_day else 12
+        birth_year = profile.birth_date.year if hasattr(profile, 'birth_date') and profile.birth_date else None
+    else:
+        # 旧接口: 传入的是出生年份等组件
+        birth_year = profile_or_year
+        birth_month = start_year_or_month
+        birth_day = years_or_day
+        birth_hour = hour or 12
+        gender_val = gender or 1
+        years = num_steps or 8
+        
+        try:
+            # 构造 BaziProfile
+            birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+            profile = BaziProfile(birth_date, gender_val)
+            # 旧接口从当前年份开始
+            start_year = datetime.now().year
+        except Exception as e:
+            return []  # 返回空列表表示失败
+    
+    # 公共逻辑：生成时间线
+    timeline = []
+    prev_luck = None
+    
+    for i in range(years):
+        y = start_year + i
+        
+        # 获取当年大运 (使用 BaziProfile 的接口)
+        current_luck = profile.get_luck_pillar_at(y)
+        
+        # 检测是否换运年
+        is_handover = (prev_luck is not None and current_luck != prev_luck)
+        
+        # 计算年龄
+        age = (y - birth_year) if birth_year else None
+        
+        # 使用 LuckEngine 获取流年干支
+        year_ganzhi = self.luck_engine.get_year_ganzhi(y)
+        
+        timeline.append({
+            'year': y,
+            'age': age,
+            'year_pillar': year_ganzhi,
+            'stem': year_ganzhi[0] if year_ganzhi else None,
+            'branch': year_ganzhi[1] if len(year_ganzhi) > 1 else None,
+            'luck_pillar': current_luck,
+            'is_handover': is_handover,
+            'old_luck': prev_luck if is_handover else None,
+            'new_luck': current_luck if is_handover else None
+        })
+        
+        prev_luck = current_luck
+        
+    return timeline
+
+
+def get_dynamic_luck_pillar(self, profile_or_year, year_or_month=None, 
+                            day=None, hour=None, gender=None, target_year=None):
     """
-    try:
-        from lunar_python import Solar
-        
-        # 1. 创建Solar对象
-        solar = Solar.fromYmdHms(birth_year, birth_month, birth_day, birth_hour, 0, 0)
-        
-        # 2. 转换为Lunar并获取八字
-        lunar = solar.getLunar()
-        eight_char = lunar.getEightChar()
-        
-        # 3. 获取大运 (gender: 1=男, 0=女)
-        yun = eight_char.getYun(gender)
-        dayun_list = yun.getDaYun()
-        
-        if not dayun_list:
-            return "未知大运"
-
-        # 4. 稳健遍历：确保按时间顺序，严格区间判断
-        # 即使库返回无序列表，我们先排序（按startYear）
-        sorted_dayun = sorted(dayun_list, key=lambda x: x.getStartYear())
-        
-        for i, dayun in enumerate(sorted_dayun):
-            start_year = dayun.getStartYear()
-            end_year = dayun.getEndYear()
-            
-            # 严格区间: [start, end)
-            if start_year <= target_year < end_year:
-                return dayun.getGanZhi()
-            
-            # Sprint 5.4 Fix: 填补交运年缝隙 (Gap Filling)
-            # 如果 target_year 恰好落在本运结束和下运开始之间 (e.g. end=2027, next_start=2028, target=2027)
-            # 这种情况下，通常视作旧大运的延续（交运前夕）
-            if i < len(sorted_dayun) - 1:
-                next_start = sorted_dayun[i+1].getStartYear()
-                if end_year <= target_year < next_start:
-                    return dayun.getGanZhi()
-        
-        # 边界情况处理
-        first_start = sorted_dayun[0].getStartYear()
-        last_end = sorted_dayun[-1].getEndYear()
-        
-        if target_year < first_start:
-            return "童限(起运前)"
-        if target_year >= last_end:
-            return sorted_dayun[-1].getGanZhi() # 极晚年延续最后一步
-        
-        # 终极兜底：找最近的大运（理论上不应该走到这里）
-        # 但如果走到了，就找距离 target_year 最近的那步大运
-        nearest_dayun = min(sorted_dayun, key=lambda d: abs(d.getStartYear() - target_year))
-        return nearest_dayun.getGanZhi()
-        
-    except Exception as e:
-        # 调试模式：返回具体错误信息
-        # import traceback
-        # return f"Error: {str(e)}"
-        return "计算异常"
-
-QuantumEngine.get_dynamic_luck_pillar = get_dynamic_luck_pillar
-
-
-def get_luck_timeline(self, birth_year: int, birth_month: int, birth_day: int,
-                      birth_hour: int, gender: int, num_steps: int = 8) -> dict:
+    [V6.0 Proxy] 获取指定年份的动态大运干支
+    支持两种调用方式：
+    1. 新接口: get_dynamic_luck_pillar(profile, year)
+    2. 旧接口 (兼容): get_dynamic_luck_pillar(birth_year, birth_month, birth_day, birth_hour, gender, target_year)
+    
+    :return: 大运干支 或 None
     """
-    [Sprint 5.4] 获取大运时间表
-    """
-    try:
-        from lunar_python import Solar
+    from datetime import datetime
+    
+    # 检测调用方式
+    if hasattr(profile_or_year, 'get_luck_pillar_at'):
+        # 新接口: 传入的是 BaziProfile 对象
+        profile = profile_or_year
+        year = year_or_month
+        return profile.get_luck_pillar_at(year)
+    else:
+        # 旧接口: 传入的是出生年份等组件
+        birth_year = profile_or_year
+        birth_month = year_or_month
+        birth_day = day
+        birth_hour = hour or 12
         
-        solar = Solar.fromYmdHms(birth_year, birth_month, birth_day, birth_hour, 0, 0)
-        lunar = solar.getLunar()
-        eight_char = lunar.getEightChar()
-        yun = eight_char.getYun(gender)
-        
-        timeline = {}
-        dayun_list = yun.getDaYun()
-        
-        # 修正: 直接使用 DaYun 对象的 getStartYear()
-        for dayun in dayun_list[:num_steps]:
-            start_year = dayun.getStartYear()
-            timeline[start_year] = dayun.getGanZhi()
-        
-        return timeline
-        
-    except Exception as e:
-        return {}
+        try:
+            # 构造 BaziProfile
+            birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+            profile = BaziProfile(birth_date, gender or 1)
+            return profile.get_luck_pillar_at(target_year)
+        except Exception as e:
+            return "计算异常"
 
 QuantumEngine.get_luck_timeline = get_luck_timeline
+QuantumEngine.get_dynamic_luck_pillar = get_dynamic_luck_pillar
+

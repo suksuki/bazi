@@ -32,7 +32,9 @@ class TestNoneHandling(unittest.TestCase):
         
         # Should not raise TypeError
         try:
-            score, details = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            result = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            score = result['score']
+            details = result['details']
             print(f"✅ Score: {score}, Details: {details}")
             # Should not have treasury opening because dm_elem is None
             self.assertNotIn("财库", str(details), "Should not detect wealth treasury with None day_master")
@@ -60,7 +62,9 @@ class TestNoneHandling(unittest.TestCase):
         
         # Should not raise KeyError or TypeError
         try:
-            score, details = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            result = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            score = result['score']
+            details = result['details']
             print(f"✅ Score: {score}, Details: {details}")
         except (KeyError, TypeError) as e:
             self.fail(f"❌ Exception raised with missing day_master: {e}")
@@ -84,7 +88,9 @@ class TestNoneHandling(unittest.TestCase):
         year_pillar = "甲辰"
         
         try:
-            score, details = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            result = self.engine.calculate_year_score(year_pillar, favorable, unfavorable, birth_chart)
+            score = result['score']
+            details = result['details']
             print(f"✅ Score: {score}, Details: {details}")
         except TypeError as e:
             self.fail(f"❌ TypeError raised with empty string day_master: {e}")
