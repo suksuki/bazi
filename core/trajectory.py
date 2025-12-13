@@ -2,6 +2,7 @@ import random
 import datetime
 from lunar_python import Solar
 from core.flux import FluxEngine
+from core.quantum_engine import QuantumEngine
 
 class AdvancedTrajectoryEngine:
     def __init__(self, chart, luck_cycles, start_year):
@@ -9,6 +10,93 @@ class AdvancedTrajectoryEngine:
         self.luck_cycles = luck_cycles
         self.start_year = start_year
         self.flux_engine = FluxEngine(chart)
+        self.quantum = QuantumEngine() # Init V2.0 Engine
+
+    def generate_v2_curve(self, start_year, end_year, favorable_elements=None, unfavorable_elements=None):
+        """
+        V2.0 Deterministic Life Curve using 'Cover Head/Cut Feet' Structural Logic.
+        """
+        # 1. Auto-detect favorable if not provided
+        if not favorable_elements or not unfavorable_elements:
+             # Basic Wang/Shuai check
+             # Note: self.chart expected format from BaziCalculator, need conversion or simple mapping
+             # For robustness, we'll try to deduce from QuantumEngine helper if we had birth data, 
+             # but here we might rely on the caller passing it, or do a rough estimate.
+             # Fallback: Assume Balanced/Strong for now or require inputs.
+             pass 
+
+        timeline = []
+        for year in range(start_year, end_year + 1):
+             # 2. Get Pillar (e.g. "辛卯")
+             # Use QuantumEngine helper
+             elems = self.quantum.get_elements_for_year(year) # ["Metal", "Wood"] - this gives elements, not chars
+             # We need actual chars for structural check. 
+             # Let's use lunar_python directly as we are inside the engine context
+             from lunar_python import Solar
+             solar = Solar.fromYmd(year, 6, 15)
+             lunar = solar.getLunar()
+             year_pz = lunar.getYearInGanZhi() # "辛卯"
+             
+             # 3. Call V2.0 Score
+             raw_score, details = self.quantum.calculate_year_score(
+                 year_pillar=year_pz,
+                 favorable_elements=favorable_elements or [],
+                 unfavorable_elements=unfavorable_elements or [],
+                 birth_chart=self.chart
+             )
+             
+             # 4. Normalize (-15 ~ +15) -> (-10 ~ +10)
+             # Smoothing high volatility
+             normalized_score = max(-10, min(10, raw_score))
+             
+             # Analyze Reason (Simple Reverse Engineering for UI)
+             comment = ""
+             if raw_score <= -5.0:
+                 comment = "⚠️ 结构截脚/盖头"
+             elif raw_score >= 5.0:
+                 comment = "🌟 干支同气/生扶"
+
+             # Append V3.0 Details
+             # V3.0 Sprint 4: Treasury Detection for UI
+             is_treasury_open = False
+             is_wealth_treasury = False
+             treasury_element = None
+             
+             if details:
+                 # Check for Treasury Openings
+                 treasury_msg = [d for d in details if "库" in d]
+                 if treasury_msg:
+                     comment = f"{comment} | {' '.join(treasury_msg)}"
+                     is_treasury_open = True
+                     
+                     # Detect if it's a Wealth Treasury (财库)
+                     if any("💰" in d or "财库" in d for d in details):
+                         is_wealth_treasury = True
+                     
+                     # Extract treasury element (e.g., 戌, 辰)
+                     for d in details:
+                         if "库[" in d:
+                             # Extract character between [ and ]
+                             start = d.find("[") + 1
+                             end = d.find("]")
+                             if start > 0 and end > start:
+                                 treasury_element = d[start:end]
+                                 break
+
+             timeline.append({
+                 "year": year,
+                 "pillar": year_pz,
+                 "score": normalized_score,
+                 "comment": comment.strip(" |"),
+                 "raw_score": raw_score,
+                 # V3.0 Metadata
+                 "is_treasury_open": is_treasury_open,
+                 "is_wealth_treasury": is_wealth_treasury,
+                 "treasury_element": treasury_element,
+                 "details": details  # Full details list
+             })
+             
+        return timeline
         
     def run_monte_carlo(self, end_age=90, granularity="year", n_simulations=50):
         """

@@ -913,6 +913,24 @@ def render_prediction_dashboard():
     zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
     base_year = 1924 # Jia Zi
     
+    # V2.0 Logic Setup: Determine Favorable/Unfavorable
+    # Based on Wang/Shuai calculated previously
+    dm_elem = engine._get_element(chart.get('day',{}).get('stem'))
+    all_elems = ['wood', 'fire', 'earth', 'metal', 'water']
+    relation_map = {e: engine._get_relation(dm_elem, e) for e in all_elems}
+    
+    favorable = []
+    unfavorable = []
+    
+    if "身旺" in wang_shuai_str or "强" in wang_shuai_str:
+        fav_types = ['output', 'wealth', 'officer']
+    else:
+        fav_types = ['resource', 'self']
+        
+    for e, r in relation_map.items():
+        if r in fav_types: favorable.append(e.capitalize())
+        else: unfavorable.append(e.capitalize())
+
     for y in years:
         offset = y - base_year
         l_gan = gan_chars[offset % 10]
@@ -920,20 +938,107 @@ def render_prediction_dashboard():
         l_gz = f"{l_gan}{l_zhi}"
         
         # Determine Da Yun for this year
-        # We simplify by using the currently selected Da Yun for the whole window 
         dy_str = selected_yun['gan_zhi'] if selected_yun else ''
         d_ctx = {'year': l_gz, 'dayun': dy_str}
         
-        # Execute Engine (Standard V2.4 Logic - No Re-Flux)
+        # Execute Standard V2.4 Engine
         res_L = engine.calculate_energy(case_data, d_ctx)
         
+        # --- V2.0 INJECTION: Structural Score Override ---
+        # V3.0 Fix: Rebuild chart structure for treasury detection
+        birth_chart_v3 = {
+            'year_pillar': f"{chart.get('year',{}).get('stem','')}{chart.get('year',{}).get('branch','')}",
+            'month_pillar': f"{chart.get('month',{}).get('stem','')}{chart.get('month',{}).get('branch','')}",
+            'day_pillar': f"{chart.get('day',{}).get('stem','')}{chart.get('day',{}).get('branch','')}",
+            'hour_pillar': f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}",
+            'day_master': chart.get('day',{}).get('stem','')
+        }
+        
+        # Fixed: Unpacking tuple (score, details) as of V3.0 Sprint 3
+        v2_score, v2_details_list = engine.calculate_year_score(l_gz, favorable, unfavorable, birth_chart_v3)
+        
+        # Apply V2.0 impact to dimensions based on logic
+        # If V2.0 detects "Cut Feet" (-5.0 or less), it drags down everything significantly.
+        # If V2.0 is positive, it boosts without cap.
+        
+        # Modifiers with Dimension-Specific Logic:
+        # V2.0 structural score affects each dimension differently
+        
+        # Base modifier
+        base_mod = v2_score * 0.5  # -7.0 -> -3.5 impact
+        
+        # Special Case: Amplify for bad structures
+        if v2_score <= -5.0:
+            base_mod *= 1.5  # -5.25 impact for Cut Feet
+        
+        # Dimension-Specific Impact
+        # Career: Heavily affected by structure (0.8x weight)
+        # Wealth: Most affected by structure and treasury (1.0x weight)
+        # Relationship: Less affected by external structure (0.4x weight)
+        
+        career_mod = base_mod * 0.8
+        wealth_mod = base_mod * 1.0
+        rel_mod = base_mod * 0.4
+        
+        # V3.0 Treasury Bonus: Primarily boosts Wealth, with career spillover
+        treasury_bonus_wealth = 0.0
+        treasury_bonus_career = 0.0
+        
+        if v2_details_list:
+            if any("💰" in d or "财库" in d for d in v2_details_list):
+                # Wealth Treasury: Major wealth boost, minor career boost
+                treasury_bonus_wealth = v2_score * 0.3  # Extra wealth multiplier
+                treasury_bonus_career = v2_score * 0.15  # Career gets some spillover
+        
+        final_career = res_L['career'] + career_mod + treasury_bonus_career
+        final_wealth = res_L['wealth'] + wealth_mod + treasury_bonus_wealth
+        final_rel = res_L['relationship'] + rel_mod  # No treasury effect on relationship
+        
+        # Format Description
+        v2_desc = ""
+        if v2_details_list:
+            v2_desc = f" [{'; '.join(v2_details_list)}]"
+        elif v2_score <= -4.0: 
+            v2_desc = f"[截脚/凶结构 {v2_score}]"
+        elif v2_score >= 4.0: 
+            v2_desc = f"[吉结构 {v2_score}]"
+        
+        full_desc = f"{res_L.get('desc', '')} {v2_desc}"
+
+        # V3.0 Sprint 4: Treasury Detection
+        is_treasury_open = False
+        is_wealth_treasury = False
+        treasury_element = None
+        
+        if v2_details_list:
+            # Check for Treasury Openings
+            if any("库" in d for d in v2_details_list):
+                is_treasury_open = True
+                
+                # Detect if it's a Wealth Treasury (财库)
+                if any("💰" in d or "财库" in d for d in v2_details_list):
+                    is_wealth_treasury = True
+                
+                # Extract treasury element
+                for d in v2_details_list:
+                    if "库[" in d:
+                        start = d.find("[") + 1
+                        end = d.find("]")
+                        if start > 0 and end > start:
+                            treasury_element = d[start:end]
+                            break
+
         traj_data.append({
             "year": y,
             "label": f"{y}\n{l_gz}",
-            "career": res_L['career'],
-            "wealth": res_L['wealth'],
-            "relationship": res_L['relationship'],
-            "desc": res_L.get('desc', '')
+            "career": round(final_career, 2),
+            "wealth": round(final_wealth, 2),
+            "relationship": round(final_rel, 2),
+            "desc": full_desc,
+            # V3.0 Metadata
+            "is_treasury_open": is_treasury_open,
+            "is_wealth_treasury": is_wealth_treasury,
+            "treasury_element": treasury_element
         })
         
     # Render Chart
@@ -941,7 +1046,29 @@ def render_prediction_dashboard():
     
     # Safety check: Only render chart if data exists
     if not df_traj.empty and 'label' in df_traj.columns:
+        # V3.0 Sprint 4: Extract Treasury Points
+        treasury_points_labels = []
+        treasury_points_career = []
+        treasury_points_wealth = []
+        treasury_points_rel = []
+        treasury_icons = []
+        
+        for d in traj_data:
+            if d.get('is_treasury_open'):
+                treasury_points_labels.append(d['label'])
+                treasury_points_career.append(d['career'])
+                treasury_points_wealth.append(d['wealth'])
+                treasury_points_rel.append(d['relationship'])
+                
+                # Icon selection based on treasury type
+                if d.get('is_wealth_treasury'):
+                    treasury_icons.append("🏆")  # Gold Trophy for Wealth Treasury
+                else:
+                    treasury_icons.append("🗝️")  # Key for other vaults
+        
         fig = go.Figure()
+        
+        # Base trajectory lines
         fig.add_trace(go.Scatter(
             x=df_traj['label'], y=df_traj['career'], 
             mode='lines+markers', name='事业 (Career)', 
@@ -961,16 +1088,117 @@ def render_prediction_dashboard():
             hovertext=df_traj['desc']
         ))
         
+        # V3.0 Treasury Icon Overlay
+        if treasury_points_labels:
+            # Use the maximum value among the three dimensions for icon placement
+            treasury_points_y = [max(c, w, r) for c, w, r in zip(
+                treasury_points_career, treasury_points_wealth, treasury_points_rel
+            )]
+            
+            fig.add_trace(go.Scatter(
+                x=treasury_points_labels,
+                y=treasury_points_y,
+                mode='text',
+                text=treasury_icons,
+                textposition="top center",
+                textfont=dict(size=32, color='#FFD700'),  # Large golden icons
+                name='💰 库门大开',
+                hoverinfo='skip',
+                showlegend=False
+            ))
+        
         fig.update_layout(
-            title="12年运势 - 量子波函数 (Destiny Wavefunction)",
-            yaxis=dict(title="能量级 (Energy Score)", range=[-8, 12]), # Fixed range for consistency
+            title="🏛️ Antigravity V3.0: 命运全息图 (Destiny Wavefunction)",
+            yaxis=dict(title="能量级 (Energy Score)", range=[-10, 12]),  # Expanded range
+            xaxis=dict(title="年份 (Year)"),
             hovermode="x unified",
-            margin=dict(l=20, r=20, t=40, b=20),
-            height=400,
-            legend=dict(orientation="h", y=1.1)
+            margin=dict(l=40, r=40, t=60, b=80),  # More space for legend
+            height=500,  # Taller chart
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.25,  # Below chart
+                xanchor="center",
+                x=0.5,
+                font=dict(size=12),
+                bgcolor="rgba(0,0,0,0.5)",
+                bordercolor="rgba(255,255,255,0.3)",
+                borderwidth=1
+            ),
+            plot_bgcolor='rgba(0,0,0,0.05)',
+            paper_bgcolor='rgba(0,0,0,0)'
         )
         
         st.plotly_chart(fig, use_container_width=True)
+        
+        # V3.0 DEBUG: Treasury Detection Status
+        with st.expander("🐛 财库检测调试 (Treasury Debug)", expanded=False):
+            st.write(f"**总年数**: {len(traj_data)} 年")
+            st.write(f"**检测到财库开启**: {len(treasury_points_labels)} 次")
+            
+            if treasury_points_labels:
+                st.success(f"✅ 找到 {len(treasury_points_labels)} 个财库事件！")
+                for i, label in enumerate(treasury_points_labels):
+                    icon = treasury_icons[i]
+                    st.write(f"- {label}: {icon} (Y坐标: {treasury_points_y[i]})")
+            else:
+                st.warning("⚠️ 未检测到任何财库开启事件")
+                st.write("**检查以下内容**:")
+                
+                # Show sample data
+                st.write("**前3年数据样本**:")
+                for i, d in enumerate(traj_data[:3]):
+                    st.json({
+                        'year': d['year'],
+                        'label': d['label'],
+                        'is_treasury_open': d.get('is_treasury_open'),
+                        'is_wealth_treasury': d.get('is_wealth_treasury'),
+                        'treasury_element': d.get('treasury_element'),
+                        'v2_details': d.get('desc', '').split('|')[-1] if '|' in d.get('desc', '') else 'none'
+                    })
+        
+        # DEBUG: Show data summary
+        with st.expander("🔍 数据诊断 (Data Debug)", expanded=False):
+            st.write("**样本数据点 (前3年)**:")
+            for i, d in enumerate(traj_data[:3]):
+                st.write(f"Year {d['year']}: Career={d['career']}, Wealth={d['wealth']}, Rel={d['relationship']}")
+            
+            # Check for identical values (which would cause lines to overlap)
+            careers = [d['career'] for d in traj_data]
+            wealths = [d['wealth'] for d in traj_data]
+            rels = [d['relationship'] for d in traj_data]
+            
+            st.write(f"\n**数值范围**:")
+            st.write(f"- 事业: [{min(careers):.1f}, {max(careers):.1f}]")
+            st.write(f"- 财富: [{min(wealths):.1f}, {max(wealths):.1f}]")
+            st.write(f"- 感情: [{min(rels):.1f}, {max(rels):.1f}]")
+            
+            # Check if all lines are identical
+            if careers == wealths == rels:
+                st.warning("⚠️ 警告：三条曲线数值完全相同！这会导致线条重叠。")
+        
+        # V3.0 Explainer: Treasury Events Log
+        treasury_events = [d for d in traj_data if d.get('is_treasury_open')]
+        if treasury_events:
+            st.markdown("### 🔓 墓库开启事件 (Treasury Opening Events)")
+            cols = st.columns(min(len(treasury_events), 4))
+            for i, event in enumerate(treasury_events):
+                with cols[i % 4]:
+                    icon = "🏆" if event.get('is_wealth_treasury') else "🗝️"
+                    treasury_type = "财库 (Wealth)" if event.get('is_wealth_treasury') else f"杂气库 ({event.get('treasury_element')})"
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                padding: 15px; border-radius: 10px; text-align: center; 
+                                box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                        <div style="font-size: 2.5em;">{icon}</div>
+                        <div style="font-size: 1.2em; font-weight: bold; color: #FFD700; margin-top: 5px;">
+                            {event['year']} {event['label'].split()[1] if len(event['label'].split()) > 1 else ''}
+                        </div>
+                        <div style="font-size: 0.9em; color: #EEE; margin-top: 5px;">
+                            {treasury_type}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
     else:
         st.warning("⚠️ No trajectory data available for visualization.")
 

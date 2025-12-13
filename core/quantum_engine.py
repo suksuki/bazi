@@ -1,6 +1,10 @@
 import hashlib
 import json
 import os
+from lunar_python import Solar, Lunar
+from collections import Counter
+from core.constants import GRAVE_TREASURY_CONFIG, HIDDEN_STEMS_MAP
+from core.interaction_service import InteractionService
 
 class QuantumEngine:
     """
@@ -8,9 +12,14 @@ class QuantumEngine:
     Calculates E_pred (Energy Potential) based on W (Weights) and C (Couplings).
     Supports Dynamic Time-Variable (Da Yun / Liu Nian) with Full Elemental Interaction.
     """
-    def __init__(self, params):
+    def __init__(self, params=None):
+        # Allow default params loading if None
+        if params is None:
+            params = self._load_default_params()
+            
         self.params = params
         self.flat_params = self._flatten_params(params)
+        
         
         # Load Narrative Config
         try:
@@ -37,11 +46,21 @@ class QuantumEngine:
         ]
 
         # V3.0 Constants: The Four Vaults
-        self.VAULT_MAPPING = {
-            '辰': {'element': 'water', 'main_energy': '癸'}, # Water Vault
-            '戌': {'element': 'fire',  'main_energy': '丁'}, # Fire Vault
-            '丑': {'element': 'metal', 'main_energy': '辛'}, # Metal Vault
-            '未': {'element': 'wood',  'main_energy': '乙'}  # Wood Vault
+        self.VAULT_MAPPING = GRAVE_TREASURY_CONFIG
+        
+        # V3.0 Sprint 3: Wealth Logic
+        self.WEALTH_MAP = {
+            'wood': 'earth',
+            'fire': 'metal',
+            'earth': 'water',
+            'metal': 'wood',
+            'water': 'fire'
+        }
+        self.TOMB_ELEMENTS = {
+            '辰': 'water', # Water Tomb
+            '戌': 'fire',  # Fire Tomb
+            '丑': 'metal', # Metal Tomb
+            '未': 'wood'   # Wood Tomb
         }
 
     def _flatten_params(self, params):
@@ -62,6 +81,8 @@ class QuantumEngine:
         return f"{ev['icon']}【{ev['title']}】{ev['desc']}（断语：{ev['verdict']}）"
 
     def _get_element(self, char):
+        if not char:  # Defensive check for None or empty string
+            return None
         for e, chars in self.ELEMENTS.items():
             if char in chars: return e
         return None
@@ -73,6 +94,33 @@ class QuantumEngine:
         if self.DESTRUCTION[target_elem] == dm_elem: return 'officer'
         if self.GENERATION[target_elem] == dm_elem: return 'resource'
         return 'unknown'
+    def get_hidden_stems(self, branch):
+        """
+        V3.0: Retrieve the internal microstructure of an Earthly Branch.
+        Returns the Main Qi, Residual Qi, and Tomb Gas (if applicable).
+        """
+        return HIDDEN_STEMS_MAP.get(branch, {})
+
+    def _is_wealth_treasury(self, day_master_element: str, treasury_branch: str) -> bool:
+        """
+        V3.0: Check if the opened treasury is the user's Wealth Treasury.
+        """
+        if not day_master_element: return False
+        dm_elem = day_master_element.lower()
+        wealth_element = self.WEALTH_MAP.get(dm_elem)
+        tomb_content = self.TOMB_ELEMENTS.get(treasury_branch)
+        
+        # Special Logic for Wood DM: Earth is Wealth. 
+        # Chen/Xu/Chou/Wei are all Earth branches partially.
+        # But specifically, Dragon(Chen) and Dog(Xu) are the main "Pulse" of Earth clashing in water/fire cycles.
+        # Simplified V3.0: If Wood DM, and treasury is one of the 4 Earths, treat as potential wealth source interaction.
+        if dm_elem == 'wood' and treasury_branch in self.TOMB_ELEMENTS:
+            # But the user spec says "Wood DM -> Wealth in Chen/Xu". 
+            # Let's stick to strict user spec for Sprint 3?
+            # User spec: "Wood DM -> Wealth in Chen/Xu/Chou/Wei (Earth is Wealth)".
+            return True
+            
+        return wealth_element == tomb_content
 
     def scan_vault_state(self, branch, global_energy_map):
         """
@@ -130,6 +178,30 @@ class QuantumEngine:
                 "animation_trigger": "rubble_collapse"
             }
             return penalty, narrative
+
+    def analyze_year_interaction(self, birth_chart, year_branch):
+        """
+        V3.0 New: Analyze interaction between Annual Branch and Birth Chart (Treasury Opening Detection)
+        """
+        # Ensure birth_chart has the expected structure. 
+        # Assuming birth_chart is a dict with keys like 'year_pillar', etc. containing strings like "甲子"
+        # We need to extract the branch (2nd char) safety.
+        try:
+            chart_branches = {
+                'year': birth_chart.get('year_pillar', '  ')[1],
+                'month': birth_chart.get('month_pillar', '  ')[1],
+                'day': birth_chart.get('day_pillar', '  ')[1],
+                'hour': birth_chart.get('hour_pillar', '  ')[1]
+            }
+        except IndexError:
+            # Fallback if pillars are malformed
+            return []
+        
+        # Call Interaction Service
+        interaction_service = InteractionService() 
+        openings = interaction_service.detect_treasury_openings(year_branch, chart_branches)
+        
+        return openings
 
     def calculate_energy(self, case_data, dynamic_context=None):
         """
@@ -571,3 +643,308 @@ class QuantumEngine:
             "pillar_energies": pillar_energies,
             "narrative_events": narrative_events
         }
+from core.quantum_engine import QuantumEngine
+from lunar_python import Solar
+from collections import Counter
+
+# Patch QuantumEngine with new methods for Verification Pipeline
+# This avoids rewriting the whole file drastically while adding the logic.
+
+def calculate_chart(self, birth_data: dict) -> dict:
+    """
+    Step 2: Pai Pan (排盘) - Calculate Chart & Analysis from Birth Data.
+    Uses lunar_python for high precision.
+    """
+    try:
+        # 1. Parse Input
+        year = int(birth_data.get('birth_year', 2000))
+        month = int(birth_data.get('birth_month', 1))
+        day = int(birth_data.get('birth_day', 1))
+        hour = int(birth_data.get('birth_hour', 12))
+        minute = int(birth_data.get('birth_minute', 0))
+        
+        # 2. Lunar Python Calculation
+        solar = Solar.fromYmdHms(year, month, day, hour, minute, 0)
+        lunar = solar.getLunar()
+        bazi = lunar.getEightChar()
+        
+        # Get GantZhi (Pillars)
+        # lunar_python returns "甲子", "乙丑" etc.
+        # Note: lunar_python getYear() might return the year based on Lunar calendar or Solar terms. 
+        # Standard Paipan relies on Solar Terms (Jie Qi). lunar_python handles this in getEightChar().
+        year_fz = bazi.getYear()
+        month_fz = bazi.getMonth()
+        day_fz = bazi.getDay()
+        hour_fz = bazi.getTime()
+        
+        bazi_list = [year_fz, month_fz, day_fz, hour_fz]
+        day_master = day_fz[0] # Day Stem
+        
+        # 3. Determine Strong/Weak (Wang Shuai)
+        # Simplified algorithm based on resource/friend scores
+        wang_shuai, energy_score = self._evaluate_wang_shuai(day_master, bazi_list)
+        
+        # 4. Determine Favorable Elements (Xi Yong Shen)
+        favorable = self._determine_favorable(day_master, wang_shuai, bazi_list)
+        
+        return {
+            "bazi": bazi_list,
+            "day_master": day_master,
+            "wang_shuai": wang_shuai, # e.g. "Body Strong", "Body Weak"
+            "energy_score": energy_score,
+            "favorable_elements": favorable, # e.g. ["Water", "Wood"]
+            "solar_date": f"{year}-{month}-{day} {hour}:{minute}"
+        }
+        
+    except Exception as e:
+        print(f"Error in calculate_chart: {e}")
+        return {
+            "bazi": [],
+            "error": str(e),
+            "favorable_elements": []
+        }
+
+def _evaluate_wang_shuai(self, dm: str, bazi: list) -> (str, float):
+    """
+    Internal: Evaluate Day Master strength.
+    """
+    dm_elem = self._get_element(dm)
+    if not dm_elem: return "Unknown", 0.0
+    
+    score = 0.0
+    
+    # Weights
+    WEIGHT_MONTH_COMMAND = 0.40 # Month Branch is key
+    WEIGHT_DAY_BRANCH = 0.15
+    WEIGHT_STEM = 0.10
+    WEIGHT_BRANCH = 0.05
+    
+    month_branch = bazi[1][1]
+    
+    # 1. Month Command (Ling)
+    mb_elem = self._get_element(month_branch)
+    rel = self._get_relation(dm_elem, mb_elem)
+    
+    is_same_group = (rel == 'self' or rel == 'resource')
+    if is_same_group: score += 40
+    
+    # 2. Iterate all chars
+    total_support = 0
+    total_oppose = 0
+    
+    for idx, pillar in enumerate(bazi):
+        stem, branch = pillar[0], pillar[1]
+        
+        # Stem
+        if idx != 2: # Skip DM itself
+            s_elem = self._get_element(stem)
+            s_rel = self._get_relation(dm_elem, s_elem)
+            if s_rel in ['self', 'resource']: total_support += 10
+            else: total_oppose += 10
+            
+        # Branch
+        b_elem = self._get_element(branch)
+        b_rel = self._get_relation(dm_elem, b_elem)
+        
+        w = 1.0
+        if idx == 1: w = 2.0 # Month branch weighted double in raw count too? Or simplified.
+        
+        if b_rel in ['self', 'resource']: total_support += (10 * w)
+        else: total_oppose += (10 * w)
+        
+    final_score = score + total_support
+    
+    # Thresholds (Simplified)
+    # A standard balanced chart axis is around 40-50% strength? 
+    # Let's say arbitrary score:
+    # If Support > Oppose -> Strong
+    
+    strength = "Strong" if (final_score > total_oppose) else "Weak"
+    
+    # Adjustment for Month Command
+    if is_same_group and (final_score + 10 > total_oppose): strength = "Strong"
+    
+    return strength, final_score
+
+def _determine_favorable(self, dm: str, wang_shuai: str, bazi: list) -> list:
+    """
+    Determine Xi Yong Shen based on Strong/Weak.
+    Strong -> Needs Suppress (Officer), Drain (Output), Consume (Wealth)
+    Weak -> Needs Support (Resource), Help (Friend)
+    """
+    dm_elem = self._get_element(dm)
+    # Generation chain: Wood -> Fire -> Earth -> Metal -> Water -> Wood
+    
+    # Get all elements
+    elements = ["wood", "fire", "earth", "metal", "water"]
+    
+    # Identify type relations relative to DM
+    # Self, Output, Wealth, Officer, Resource
+    relations = {}
+    for e in elements:
+        r = self._get_relation(dm_elem, e)
+        relations[r] = e
+        
+    favorable = []
+    
+    if "Strong" in wang_shuai:
+        # Favor: Output, Wealth, Officer
+        favorable.append(relations.get('output'))
+        favorable.append(relations.get('wealth'))
+        favorable.append(relations.get('officer'))
+    else:
+        # Favor: Resource, Self
+        favorable.append(relations.get('resource'))
+        favorable.append(relations.get('self'))
+        
+    # Clean up None and capitalize
+    return [f.capitalize() for f in favorable if f]
+
+def get_elements_for_year(self, year: int) -> list:
+    """
+    Get the Five Elements for a specific year (Gui Si -> Water, Fire).
+    """
+    try:
+        # Use lunar_python to get GanZhi for the year
+        # Create a date in that year (e.g., Mid-year) to get the year pillar
+        solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
+        lunar = solar.getLunar()
+        year_gan_zhi = lunar.getYearInGanZhi() # e.g. "甲午"
+        
+        stem = year_gan_zhi[0]
+        branch = year_gan_zhi[1]
+        
+        e1 = self._get_element(stem)
+        e2 = self._get_element(branch)
+        
+        # Capitalize
+        res = []
+        if e1: res.append(e1.capitalize())
+        if e2: res.append(e2.capitalize())
+        return res
+    except Exception:
+        return []
+
+# Dynamically add methods to the class
+QuantumEngine.calculate_chart = calculate_chart
+QuantumEngine._evaluate_wang_shuai = _evaluate_wang_shuai
+QuantumEngine._determine_favorable = _determine_favorable
+QuantumEngine.get_elements_for_year = get_elements_for_year
+
+# Helper for default params
+def _load_default_params(self):
+    """Load golden parameters from disk as default."""
+    try:
+        path = os.path.join(os.path.dirname(__file__), '../data/golden_parameters.json')
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+QuantumEngine._load_default_params = _load_default_params
+
+def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfavorable_elements: list, birth_chart: dict = None) -> tuple:
+    """
+    V3.0 Core Algorithm: Calculate Year Luck Score with 'Cover Head/Cut Feet' logic AND Treasury Mechanics.
+    Returns (score, details_list)
+    """
+    if not year_pillar or len(year_pillar) < 2:
+        return 0.0, ["Invalid Pillar"]
+        
+    stem = year_pillar[0]
+    branch = year_pillar[1]
+    
+    # Get elements (lowercase)
+    stem_element = self._get_element(stem)
+    branch_element = self._get_element(branch)
+    
+    if not stem_element or not branch_element:
+        return 0.0, ["Unknown Elements"]
+        
+    # Normalize input lists to lowercase for comparison
+    fav_norm = [f.lower() for f in favorable_elements]
+    unfav_norm = [u.lower() for u in unfavorable_elements]
+    
+    details = []
+    
+    # 1. Base Score Calculation
+    # Stem (Appearance)
+    if stem_element in fav_norm:
+        stem_score = 10.0
+    elif stem_element in unfav_norm:
+        stem_score = -10.0
+    else:
+        stem_score = 0.0 # Neutral
+        
+    # Branch (Root/Foundation)
+    if branch_element in fav_norm:
+        branch_score = 10.0
+    elif branch_element in unfav_norm:
+        branch_score = -10.0
+    else:
+        branch_score = 0.0 # Neutral
+        
+    # 2. Weighted Total (Stem 40%, Branch 60%)
+    base_score = (stem_score * 0.4) + (branch_score * 0.6)
+    
+    # 3. Structural Mechanics (V2.0)
+    
+    # Check Generation Relationships
+    stem_gen_branch = (self.GENERATION.get(stem_element) == branch_element)
+    branch_gen_stem = (self.GENERATION.get(branch_element) == stem_element)
+    same_element = (stem_element == branch_element)
+    
+    # 3.1 Penalty: Cut Feet / Cover Head (截脚/盖头)
+    if stem_element in fav_norm and branch_element in unfav_norm:
+        base_score -= 5.0
+        details.append("⚠️ 截脚 (Cut Feet)")
+        
+    # 3.2 Reward: Synergy (相生/通气)
+    if stem_gen_branch and (branch_element in fav_norm):
+        base_score += 5.0
+        details.append("🌟 盖头 (Cover Head - Good)")
+        
+    if branch_gen_stem and (stem_element in fav_norm):
+        base_score += 5.0
+        details.append("🌟 坐禄/印 (Root Support)")
+        
+    if same_element and (stem_element in fav_norm or branch_element in fav_norm):
+        base_score += 5.0
+        details.append("🔥 干支同气 (Pure Energy)")
+        
+    final_score = base_score
+    
+    # === V3.0 Sprint 3: Treasury Multiplier ===
+    if birth_chart:
+        # 1. Detect Interaction
+        interaction_results = self.analyze_year_interaction(birth_chart, branch)
+        
+        multiplier = 1.0
+        bonus_points = 0.0
+        
+        # Get DM Element
+        dm_char = birth_chart.get('day_master')
+        dm_elem = self._get_element(dm_char)
+        
+        for status in interaction_results:
+            if status.is_open:
+                # 2. Check if Wealth Treasury
+                if self._is_wealth_treasury(dm_elem, status.treasury_element):
+                    # 💰 JACKPOT
+                    multiplier = 2.0
+                    bonus_points += 20.0
+                    details.append(f"💰 财库[{status.treasury_element}]大开！(Vault Open)")
+                    # V3.1: We might want to check if the Wealth Element inside is actually Favorable!
+                    # If Wealth is Unfavorable (Wealth Burden), opening it might be bad.
+                    # But per Sprint 3 instructions: "Just Multiplier".
+                else:
+                    details.append(f"🔓 杂气库[{status.treasury_element}]开启")
+                    bonus_points += 2.0 # Small bonus for activity
+        
+        final_score = (base_score * multiplier) + bonus_points
+
+    return round(final_score, 2), details
+
+QuantumEngine.calculate_year_score = calculate_year_score

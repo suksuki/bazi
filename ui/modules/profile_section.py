@@ -2,32 +2,28 @@ import streamlit as st
 import time
 from datetime import datetime as dt
 from core.profile_manager import ProfileManager
-from learning.bio_miner import BioMiner
-from learning.web_hunter import WebHunter
-from learning.db import LearningDB
+from lunar_python import Solar
 
 def render_profile_section():
     """
-    Renders the Profile Management Expander.
-    Handles Profile List, Bio Miner, and Web Hunter.
-    Syncs selected profile to st.session_state for the Input Form to pick up.
+    Simplified Profile Management with Bazi Quick Test.
+    Removed: Bio Miner, Web Hunter
+    Added: Quick Bazi Input
     """
     pm = ProfileManager()
     
     with st.expander("📂 档案管理 (Archives)", expanded=True):
-        # --- Profile & Bio Import Tabs ---
-        tab_prof, tab_bio, tab_web = st.tabs(["👥 档案管理 (Profiles)", "🧬 名人传记导入 (Bio Miner)", "🌐 全网搜捕 (Web Hunter)"])
+        # --- Tabs: Profile Management & Quick Bazi Test ---
+        tab_prof, tab_bazi = st.tabs(["👥 档案管理 (Profiles)", "⚡ 八字测试 (Quick Test)"])
         
         with tab_prof:
             _render_profile_list(pm)
 
-        with tab_bio:
-            _render_bio_miner()
-
-        with tab_web:
-            _render_web_hunter(pm)
+        with tab_bazi:
+            _render_bazi_quick_test()
 
 def _render_profile_list(pm):
+    """Existing profile management functionality"""
     all_profiles = pm.get_all()
     # Unique names
     profile_names = ["(New / Custom)"] + [f"{p.get('name', 'Unknown')} ({p.get('gender','?')})" for p in all_profiles]
@@ -48,7 +44,7 @@ def _render_profile_list(pm):
         # Reset if switching to New
         if st.session_state.get('last_profile') != selected_profile_str:
             st.session_state['last_profile'] = selected_profile_str
-            # FIX: Explicitly clear inputs so user can type new name
+            # Clear inputs so user can type new name
             st.session_state['input_name'] = "某人"
             st.session_state['input_gender'] = "男"
             st.session_state['input_date'] = dt(1990, 1, 1)
@@ -83,6 +79,7 @@ def _render_profile_list(pm):
                 st.rerun()
 
 def _sync_profile_to_session(loaded_data):
+    """Sync loaded profile data to session state"""
     st.session_state['input_name'] = loaded_data['name']
     st.session_state['input_gender'] = loaded_data['gender']
     try:
@@ -92,96 +89,225 @@ def _sync_profile_to_session(loaded_data):
         pass
     st.session_state['input_time'] = int(loaded_data['hour'])
 
-def _render_bio_miner():
-    st.caption("🤖 利用 AI 自动从传记文本中提取核心人生事件，作为训练系统的“真值数据”。")
-    bio_name = st.text_input("人物姓名", placeholder="e.g. Steve Jobs")
-    bio_year = st.number_input("出生年份 (用于对齐时间轴)", 1900, 2025, 1980)
-    bio_text = st.text_area("传记文本 / Wiki", height=150, placeholder="粘贴传记内容...")
+def _render_bazi_quick_test():
+    """
+    NEW: Quick Bazi Test - Single input field with auto-parsing
+    User inputs complete 8-character bazi string: "乙未丙戌壬戌辛亥"
+    System auto-parses into 4 pillars
+    """
+    st.caption("⚡ 快速测试：输入完整八字（8个字），系统自动识别四柱")
     
-    if st.button("🔬 启动生平分析 (Analyze Bio)"):
-        if not bio_text or len(bio_text) < 50:
-            st.warning("文本太短")
-        else:
-            with st.spinner("AI 正在阅读传记并量化人生..."):
-                miner = BioMiner(ollama_host=st.session_state.get('ollama_host'))
-                events = miner.analyze_biography(bio_text, bio_year)
-                
-                st.session_state['bio_events_cache'] = events
-                st.success(f"提取成功! 发现 {len(events)} 个关键事件")
+    # Single input field for complete bazi
+    bazi_input = st.text_input(
+        "完整八字 (8个字符，可带空格)", 
+        value="乙未 丙戌 壬戌 辛亥",
+        placeholder="例: 乙未丙戌壬戌辛亥 或 乙未 丙戌 壬戌 辛亥",
+        max_chars=15,  # 8 chars + spaces
+        key="bazi_full_input",
+        help="年月日时共8个字，可用空格分隔"
+    )
     
-    # Show results & cleanup
-    if 'bio_events_cache' in st.session_state and st.session_state['bio_events_cache']:
-        events = st.session_state['bio_events_cache']
-        st.write(events) # JSON view
+    # Auto-parse and display
+    parsed = _parse_bazi_string(bazi_input)
+    
+    if parsed['valid']:
+        # Display parsed pillars in a nice format
+        st.markdown("**识别结果**:")
+        col1, col2, col3, col4 = st.columns(4)
         
-        # Rectification Tool (Simplified)
-        if st.checkbox("🔍 启用【生时校对】 (Time Rectification)"):
-             # Logic to reverse engineer birth hour based on events
-             pass # Kept simple for now as it relies on Trajectory Engine which we haven't modularized fully here? 
-                  # Actually Rectification logic is complex. We'll leave the UI hooks.
-             st.info("校对功能需要调用后台模拟... (Refactored: Please implement Rectification Module)")
-
-        # Import Button
-        if st.button("📥 导入此数据作为【真值】"):
-            db = LearningDB()
-            count = 0
-            for e in events:
-                yr = e.get('year')
-                # Simplistic mapping
-                asp = e.get('aspect')
-                map_asp = {"Career": "事业 (Career)", "Wealth": "财富 (Wealth)", "Health": "健康 (Health)", "Marriage": "人际 (Friendship)"}
-                final_asp = map_asp.get(asp, "总运势 (Total)")
-                
-                if yr:
-                    db.add_feedback(yr, final_asp, e.get('score', 50), e.get('note', ''))
-                    count += 1
+        with col1:
+            st.markdown(f"<div style='text-align: center; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; font-size: 1.2em; font-weight: bold;'>{parsed['year']}</div>", unsafe_allow_html=True)
+            st.caption("年柱")
+        with col2:
+            st.markdown(f"<div style='text-align: center; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; font-size: 1.2em; font-weight: bold;'>{parsed['month']}</div>", unsafe_allow_html=True)
+            st.caption("月柱")
+        with col3:
+            st.markdown(f"<div style='text-align: center; padding: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 8px; color: white; font-size: 1.2em; font-weight: bold;'>{parsed['day']}</div>", unsafe_allow_html=True)
+            st.caption("日柱 ⭐")
+        with col4:
+            st.markdown(f"<div style='text-align: center; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white; font-size: 1.2em; font-weight: bold;'>{parsed['hour']}</div>", unsafe_allow_html=True)
+            st.caption("时柱")
+        
+        # Show day master
+        day_master = parsed['day'][0]
+        st.info(f"日主 (Day Master): **{day_master}** ({_get_element_name(day_master)})")
+    else:
+        st.warning(f"⚠️ {parsed['error']}")
+        st.caption("请输入8个有效的天干地支字符，如: 乙未丙戌壬戌辛亥")
+    
+    # Gender selection
+    gender = st.radio("性别", ["男", "女"], horizontal=True, key="bazi_gender")
+    
+    # Quick Test Button
+    if st.button("🚀 快速排盘 (Quick Calculate)", type="primary", disabled=not parsed['valid']):
+        # Reverse calculate approximate date
+        try:
+            approx_date = _reverse_calculate_date(
+                parsed['year'], parsed['month'], parsed['day'], parsed['hour']
+            )
             
-            st.success(f"成功导入 {count} 条真值数据！")
-            st.session_state['bio_events_cache'] = None
-            time.sleep(1); st.rerun()
-
-def _render_web_hunter(pm):
-    st.caption("🤖 自动搜寻网络上的八字案例，并提取其人生轨迹。")
-    w_name = st.text_input("目标人物 Key", placeholder="e.g. 马云 八字")
+            # Set session state with calculated values
+            st.session_state['input_name'] = f"八字测试-{day_master}"
+            st.session_state['input_gender'] = gender
+            st.session_state['input_date'] = approx_date['date']
+            st.session_state['input_time'] = approx_date['hour']
+            
+            # Store the original bazi for display
+            st.session_state['bazi_input'] = {
+                'year': parsed['year'],
+                'month': parsed['month'],
+                'day': parsed['day'],
+                'hour': parsed['hour']
+            }
+            
+            # Trigger calculation
+            st.session_state['calc_active'] = True
+            
+            st.success(f"✅ 八字已加载: {parsed['year']} {parsed['month']} {parsed['day']} {parsed['hour']}")
+            st.info(f"📅 近似日期: {approx_date['date'].strftime('%Y-%m-%d')} {approx_date['hour']}:00")
+            time.sleep(0.8)
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"计算错误: {e}")
     
-    if st.button("🚀 搜索并抓取 (Hunt Bazi)"):
-        with st.spinner(f"正在全网搜捕【{w_name}】的命理数据..."):
-             hunter = WebHunter(ollama_host=st.session_state.get('ollama_host'))
-             result = hunter.hunt(w_name)
-             
-             if result:
-                 st.success(f"捕获成功！来源: {result.get('source_url')}")
-                 st.session_state['hunt_result'] = result
-             else:
-                 st.error("未找到有效的八字分析文章 (或抓取失败)")
-
-    if 'hunt_result' in st.session_state:
-        res = st.session_state['hunt_result']
-        st.json(res)
+    # Show example with copy buttons
+    with st.expander("📖 示例八字 (点击复制)", expanded=False):
+        st.markdown("**V3.0 财库测试案例 (保证看到🏆)**:")
         
-        if st.button("💾 存入数据库"):
-             # 1. Add Profile
-             try:
-                 nm = res.get('name', w_name)
-                 yr = res.get('birth_year')
-                 mo = res.get('birth_month')
-                 dy = res.get('birth_day')
-                 hr = res.get('birth_hour') or 12
-                 gen = res.get('gender', '男')
-                 
-                 if yr and mo and dy:
-                     pm.add_profile(nm, gen, yr, mo, dy, hr)
-                     # 2. Add Feedbacks
-                     db = LearningDB()
-                     events = res.get('events', [])
-                     for e in events:
-                         asp = e.get('aspect')
-                         map_asp = {"Career": "事业 (Career)", "Wealth": "财富 (Wealth)"}
-                         final_asp = map_asp.get(asp, "总运势 (Total)")
-                         db.add_feedback(e.get('year'), final_asp, e.get('score', 50), e.get('note','From Web'))
-                         
-                     st.success("全部入库完成！")
-                 else:
-                     st.error("抓取的数据日期不全，无法入库")
-             except Exception as e:
-                 st.error(f"Save Error: {e}")
+        examples = [
+            ("乙未丙戌壬戌辛亥", "水日主+戌财库 → 2024辰年冲开"),
+            ("甲子丙寅甲丑丙寅", "木日主+丑土库 → 2015未年冲开"),
+            ("庚申丁酉辛未戊子", "金日主+未木库 → 2021丑年冲开"),
+            ("乙未戊寅壬午辛亥", "乔布斯八字 → 2011截脚测试"),
+            ("甲辰丙子己亥丙寅", "马云八字 → 财库多开"),
+        ]
+        
+        for bazi, desc in examples:
+            col_text, col_btn = st.columns([3, 1])
+            with col_text:
+                st.code(bazi, language="text")
+                st.caption(desc)
+            with col_btn:
+                if st.button("📋", key=f"copy_{bazi}", help="点击自动填充"):
+                    st.session_state['bazi_full_input'] = bazi
+                    st.rerun()
+
+def _parse_bazi_string(input_str):
+    """
+    Parse bazi input string into 4 pillars.
+    Accepts formats:
+    - "乙未丙戌壬戌辛亥" (no spaces)
+    - "乙未 丙戌 壬戌 辛亥" (with spaces)
+    """
+    if not input_str:
+        return {'valid': False, 'error': '请输入八字'}
+    
+    # Remove spaces
+    cleaned = input_str.replace(' ', '').replace('　', '')  # Remove both space types
+    
+    # Check length
+    if len(cleaned) != 8:
+        return {'valid': False, 'error': f'长度错误：需要8个字符，当前{len(cleaned)}个'}
+    
+    # Valid characters
+    gan = "甲乙丙丁戊己庚辛壬癸"
+    zhi = "子丑寅卯辰巳午未申酉戌亥"
+    
+    # Parse each pillar (2 chars each)
+    try:
+        pillars = {
+            'year': cleaned[0:2],
+            'month': cleaned[2:4],
+            'day': cleaned[4:6],
+            'hour': cleaned[6:8]
+        }
+        
+        # Validate each pillar
+        for name, pillar in pillars.items():
+            stem, branch = pillar[0], pillar[1]
+            if stem not in gan:
+                return {'valid': False, 'error': f'{name}柱天干错误: {stem}'}
+            if branch not in zhi:
+                return {'valid': False, 'error': f'{name}柱地支错误: {branch}'}
+        
+        return {
+            'valid': True,
+            **pillars
+        }
+        
+    except Exception as e:
+        return {'valid': False, 'error': f'解析错误: {str(e)}'}
+
+def _get_element_name(gan_char):
+    """Get element name in Chinese for a Gan character"""
+    element_map = {
+        '甲': '木', '乙': '木',
+        '丙': '火', '丁': '火',
+        '戊': '土', '己': '土',
+        '庚': '金', '辛': '金',
+        '壬': '水', '癸': '水'
+    }
+    return element_map.get(gan_char, '?')
+
+def _reverse_calculate_date(year_pz, month_pz, day_pz, hour_pz):
+    """
+    Reverse calculate approximate birth date from Bazi pillars.
+    This is a simplified version - uses a recent 60-year cycle.
+    """
+    try:
+        # Ganzi cycle mapping (simplified)
+        gan_chars = "甲乙丙丁戊己庚辛壬癸"
+        zhi_chars = "子丑寅卯辰巳午未申酉戌亥"
+        
+        # Extract year stem and branch
+        year_stem = year_pz[0]
+        year_branch = year_pz[1]
+        
+        # Find year in recent cycle (1924-2043 covers most test cases)
+        base_year = 1924  # 甲子年
+        
+        year_stem_idx = gan_chars.index(year_stem)
+        year_branch_idx = zhi_chars.index(year_branch)
+        
+        # Calculate offset in 60-year cycle
+        # Stem cycles every 10 years, Branch every 12
+        # Find the year where both match
+        for offset in range(120):  # Search 2 full cycles
+            test_year = base_year + offset
+            if (offset % 10 == year_stem_idx) and (offset % 12 == year_branch_idx):
+                # Found a matching year
+                # Use mid-year as approximation
+                result_year = test_year
+                break
+        else:
+            # Fallback to a default
+            result_year = 1990
+        
+        # Extract month branch for season estimation
+        month_branch = month_pz[1]
+        month_map = {
+            '寅': 2, '卯': 3, '辰': 4, '巳': 5, '午': 6, '未': 7,
+            '申': 8, '酉': 9, '戌': 10, '亥': 11, '子': 12, '丑': 1
+        }
+        approx_month = month_map.get(month_branch, 6)
+        
+        # Extract hour branch
+        hour_branch = hour_pz[1]
+        hour_map = {
+            '子': 0, '丑': 2, '寅': 4, '卯': 6, '辰': 8, '巳': 10,
+            '午': 12, '未': 14, '申': 16, '酉': 18, '戌': 20, '亥': 22
+        }
+        approx_hour = hour_map.get(hour_branch, 12)
+        
+        return {
+            'date': dt(result_year, approx_month, 15),  # Use mid-month
+            'hour': approx_hour
+        }
+        
+    except Exception as e:
+        # Fallback to default
+        return {
+            'date': dt(1990, 6, 15),
+            'hour': 12
+        }
