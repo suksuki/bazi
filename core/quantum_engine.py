@@ -1040,7 +1040,35 @@ def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyCont
         else:
             energy_lvl = "Neutral"
     
-    # === 6. 构造 DestinyContext ===
+    # === 6. 三维度能量计算 (使用完整算法) ===
+    # 构造 case_data 以调用 calculate_energy
+    case_data = {
+        'id': year,
+        'day_master': profile.day_master,
+        'wang_shuai': wang_shuai_str,
+        'bazi': bazi_list,
+        'physics_sources': {
+            'self': {'stem_support': 3.0 if wang_shuai_str == 'Strong' else -3.0},
+            'output': {'base': 2.0},
+            'wealth': {'base': 2.0},
+            'officer': {'base': 2.0},
+            'resource': {'base': 2.0}
+        }
+    }
+    dynamic_context = {'year': year_pillar, 'dayun': current_luck or ''}
+    
+    try:
+        energy_result = self.calculate_energy(case_data, dynamic_context)
+        e_career = energy_result.get('career', final_score * 0.8)
+        e_wealth = energy_result.get('wealth', final_score * 1.0)
+        e_relationship = energy_result.get('relationship', final_score * 0.6)
+    except Exception:
+        # Fallback to simple mapping if calculate_energy fails
+        e_career = final_score * 0.8
+        e_wealth = final_score * 1.0
+        e_relationship = final_score * 0.6
+    
+    # === 7. 构造 DestinyContext ===
     ctx = DestinyContext(
         year=year,
         pillar=year_pillar,
@@ -1055,9 +1083,9 @@ def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyCont
         icon=icon,
         tags=details,
         description="; ".join(details[:2]) if details else "平稳流年",
-        career=final_score * 0.8,  # 简化的维度映射
-        wealth=final_score * 1.0,
-        relationship=final_score * 0.6,
+        career=e_career,
+        wealth=e_wealth,
+        relationship=e_relationship,
         version="V6.0-Final"
     )
     
