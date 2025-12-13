@@ -9,7 +9,7 @@ import plotly.graph_objects as go # Fix: Import globally
 # Core Imports
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.quantum_engine import QuantumEngine # V2.4 Engine
+from core.quantum_engine import QuantumEngine # V2.9 Quantum Physics Engine
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 
@@ -79,84 +79,72 @@ def render_prediction_dashboard():
     # 2. UI: Header & Chart
     st.title(f"🔮 {name} 的量子命盘 (V2.9)")
     
-    # --- V2.9 Glassmorphism CSS ---
+    # --- V2.9 Glassmorphism CSS (Dark Mode) ---
     st.markdown("""
     <style>
-    /* 1. Global Gradient Background (Deep Space) */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-        color: #e2e8f0;
-    }
+    /* 1. Reset Global Background to Default */
+    /* No .stApp override - let Streamlit use default or user preference, but we force containers to dark */
 
-    /* 2. Glassmorphism Card Container */
+    /* 2. Card Container (Deep Space Dark) */
     .narrative-card {
         position: relative;
         padding: 24px;
-        border-radius: 16px;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        overflow: hidden;
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         margin-bottom: 20px;
-        background: rgba(30, 41, 59, 0.4); /* Fallback */
+        background: #1e293b;
     }
     .narrative-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 12px rgba(0,0,0,0.5);
+        border-color: #475569;
     }
 
-    /* 3. Card Types / Themes */
-    /* Mountain Alliance (Earth/Gold) */
+    /* 3. Card Types / Themes (Dark Mode Adapted) */
+    /* Mountain Alliance */
     .card-mountain {
-        background: linear-gradient(135deg, rgba(120, 53, 15, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%);
-        border-top: 2px solid rgba(251, 191, 36, 0.4);
+        background: linear-gradient(to bottom right, #451a03, #1e293b);
+        border-top: 3px solid #f59e0b;
     }
     .icon-mountain {
         font-size: 32px;
-        background: linear-gradient(to bottom, #fbbf24, #b45309);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+        color: #f59e0b;
     }
 
-    /* Penalty Cap (Shield/Blue) */
+    /* Penalty Cap */
     .card-shield {
-        background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(56, 189, 248, 0.1) 100%);
-        border-top: 2px solid rgba(56, 189, 248, 0.4);
+        background: linear-gradient(to bottom right, #0c4a6e, #1e293b);
+        border-top: 3px solid #38bdf8;
     }
     .icon-shield {
         font-size: 32px;
-        text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        color: #38bdf8;
     }
 
-    /* Mediation Flow (Water/Green) */
+    /* Mediation Flow */
     .card-flow {
-        background: linear-gradient(135deg, rgba(6, 78, 59, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%);
-        border-top: 2px solid rgba(52, 211, 153, 0.4);
+        background: linear-gradient(to bottom right, #064e3b, #1e293b);
+        border-top: 3px solid #34d399;
     }
     .icon-flow {
         font-size: 32px;
         color: #34d399;
-        filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.6));
     }
 
-    /* Danger / Pressure (Red) */
+    /* Danger / Pressure */
     .card-danger {
-        background: linear-gradient(135deg, rgba(127, 29, 29, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
-        border-top: 2px solid rgba(248, 113, 113, 0.4);
+        background: linear-gradient(to bottom right, #7f1d1d, #1e293b);
+        border-top: 3px solid #f87171;
     }
 
-    /* 4. Typography */
+    /* 4. Typography (Light Text) */
     .card-title {
         font-family: 'Inter', sans-serif;
         font-weight: 700;
         font-size: 1.1rem;
         margin-bottom: 4px;
         color: #f1f5f9;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
     .card-subtitle {
         font-family: 'Inter', sans-serif;
@@ -169,9 +157,10 @@ def render_prediction_dashboard():
         font-size: 0.85rem;
         padding: 4px 8px;
         border-radius: 4px;
-        background: rgba(0,0,0,0.3);
+        background: #334155;
         display: inline-block;
         color: #e2e8f0;
+        font-weight: 600;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -182,36 +171,36 @@ def render_prediction_dashboard():
     
     QUANTUM_THEME = {
         # --- Wood (Growth / Networking) ---
-        "甲": {"color": "#228B22", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d)"}, 
-        "乙": {"color": "#98FB98", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0ba360 0%, #3cba92 100%)"},
-        "寅": {"color": "#006400", "icon": "🐅", "anim": "pulse-fast", "grad": "linear-gradient(to top, #09203f 0%, #537895 100%)"}, # Reactor
-        "卯": {"color": "#32CD32", "icon": "🐇", "anim": "bounce", "grad": "linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%)"},
-        
+        "甲": {"color": "#4ade80", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d)"}, # Green 400
+        "乙": {"color": "#86efac", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0ba360 0%, #3cba92 100%)"},
+        "寅": {"color": "#22c55e", "icon": "🐅", "anim": "pulse-fast", "grad": "linear-gradient(to top, #09203f 0%, #537895 100%)"}, # Green 500
+        "卯": {"color": "#a3e635", "icon": "🐇", "anim": "bounce", "grad": "linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%)"},
+
         # --- Fire (Radiation / Focus) ---
-        "丙": {"color": "#FF4500", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9966, #ff5e62)"},
-        "丁": {"color": "#FF1493", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #f43b47 0%, #453a94 100%)"},
-        "巳": {"color": "#FF4500", "icon": "🐍", "anim": "slither", "grad": "linear-gradient(to right, #f83600 0%, #f9d423 100%)"},
-        "午": {"color": "#FF0000", "icon": "🐎", "anim": "gallop", "grad": "linear-gradient(to right, #ff8177 0%, #ff867a 0%, #ff8c7f 21%, #f99185 52%, #cf556c 78%, #b12a5b 100%)"}, # Furnace
+        "丙": {"color": "#fb923c", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9966, #ff5e62)"}, # Orange 400
+        "丁": {"color": "#f472b6", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #f43b47 0%, #453a94 100%)"}, # Pink 400
+        "巳": {"color": "#fdba74", "icon": "🐍", "anim": "slither", "grad": "linear-gradient(to right, #f83600 0%, #f9d423 100%)"},
+        "午": {"color": "#f87171", "icon": "🐎", "anim": "gallop", "grad": "linear-gradient(to right, #ff8177 0%, #ff867a 0%, #ff8c7f 21%, #f99185 52%, #cf556c 78%, #b12a5b 100%)"}, # Red 400
 
         # --- Earth (Mass / Matrix) ---
-        "戊": {"color": "#8B4513", "icon": "🏔️", "anim": "stable", "grad": "linear-gradient(to top, #c79081 0%, #dfa579 100%)"},
-        "己": {"color": "#D2B48C", "icon": "🧱", "anim": "stable", "grad": "linear-gradient(to top, #e6b980 0%, #eacda3 100%)"},
-        "辰": {"color": "#556B2F", "icon": "🐲", "anim": "float", "grad": "linear-gradient(to top, #9be15d 0%, #00e3ae 100%)"}, # Wet Earth
-        "戌": {"color": "#B22222", "icon": "🌋", "anim": "rumble", "grad": "linear-gradient(to right, #434343 0%, black 100%)"}, # Dry Earth/Volcano
-        "丑": {"color": "#8B8B00", "icon": "🐂", "anim": "stable", "grad": "linear-gradient(to top, #50cc7f 0%, #f5d100 100%)"}, # Frozen Earth
-        "未": {"color": "#D2691E", "icon": "🐑", "anim": "stable", "grad": "linear-gradient(120deg, #f6d365 0%, #fda085 100%)"}, # Dry Earth
+        "戊": {"color": "#a8a29e", "icon": "🏔️", "anim": "stable", "grad": "linear-gradient(to top, #c79081 0%, #dfa579 100%)"}, # Stone 400
+        "己": {"color": "#e7e5e4", "icon": "🧱", "anim": "stable", "grad": "linear-gradient(to top, #e6b980 0%, #eacda3 100%)"},
+        "辰": {"color": "#84cc16", "icon": "🐲", "anim": "float", "grad": "linear-gradient(to top, #9be15d 0%, #00e3ae 100%)"}, 
+        "戌": {"color": "#fda4af", "icon": "🌋", "anim": "rumble", "grad": "linear-gradient(to right, #434343 0%, black 100%)"}, 
+        "丑": {"color": "#fde047", "icon": "🐂", "anim": "stable", "grad": "linear-gradient(to top, #50cc7f 0%, #f5d100 100%)"}, # Yellow 300
+        "未": {"color": "#fdba74", "icon": "🐑", "anim": "stable", "grad": "linear-gradient(120deg, #f6d365 0%, #fda085 100%)"}, 
 
         # --- Metal (Impact / Order) ---
-        "庚": {"color": "#708090", "icon": "⚔️", "anim": "flash", "grad": "linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)"},
-        "辛": {"color": "#FFD700", "icon": "💎", "anim": "sparkle", "grad": "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)"},
-        "申": {"color": "#778899", "icon": "🐵", "anim": "swing", "grad": "linear-gradient(to top, #30cfd0 0%, #330867 100%)"},
-        "酉": {"color": "#C0C0C0", "icon": "🐓", "anim": "strut", "grad": "linear-gradient(to top, #cd9cf2 0%, #f6f3ff 100%)"},
+        "庚": {"color": "#cbd5e1", "icon": "⚔️", "anim": "flash", "grad": "linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)"}, # Slate 300
+        "辛": {"color": "#fde047", "icon": "💎", "anim": "sparkle", "grad": "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)"}, # Gold
+        "申": {"color": "#94a3b8", "icon": "🐵", "anim": "swing", "grad": "linear-gradient(to top, #30cfd0 0%, #330867 100%)"}, # Slate 400
+        "酉": {"color": "#e2e8f0", "icon": "🐓", "anim": "strut", "grad": "linear-gradient(to top, #cd9cf2 0%, #f6f3ff 100%)"}, # Slate 200
 
         # --- Water (Flow / Permeability) ---
-        "壬": {"color": "#1E90FF", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #3b41c5 0%, #a981bb 49%, #ffc8a9 100%)"}, # Momentum
-        "癸": {"color": "#87CEEB", "icon": "☁️", "anim": "drift", "grad": "linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)"}, # Mist
-        "子": {"color": "#00008B", "icon": "🐀", "anim": "scurry", "grad": "linear-gradient(15deg, #13547a 0%, #80d0c7 100%)"}, # Polar Abyss
-        "亥": {"color": "#483D8B", "icon": "🐖", "anim": "float", "grad": "linear-gradient(to top, #4fb576 0%, #44a08d 24%, #2b88aa 52%, #0f5f87 76%, #0d2f4a 100%)"}, # Ocean
+        "壬": {"color": "#38bdf8", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #3b41c5 0%, #a981bb 49%, #ffc8a9 100%)"}, # Sky 400
+        "癸": {"color": "#7dd3fc", "icon": "☁️", "anim": "drift", "grad": "linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)"}, # Sky 300
+        "子": {"color": "#60a5fa", "icon": "🐀", "anim": "scurry", "grad": "linear-gradient(15deg, #13547a 0%, #80d0c7 100%)"}, # Blue 400
+        "亥": {"color": "#818cf8", "icon": "🐖", "anim": "float", "grad": "linear-gradient(to top, #4fb576 0%, #44a08d 24%, #2b88aa 52%, #0f5f87 76%, #0d2f4a 100%)"}, # Indigo 400
     }
 
     def get_theme(char):
@@ -242,25 +231,26 @@ def render_prediction_dashboard():
         
         /* --- Card Styles --- */
         .pillar-card {{
-            background: #1a1a1a;
+            background: #1e293b;
             border-radius: 15px;
             padding: 10px;
             text-align: center;
-            border: 1px solid #333;
+            border: 1px solid #334155;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
         }}
         .pillar-card:hover {{
             transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.5);
-            border-color: #555;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+            border-color: #475569;
         }}
         .pillar-title {{
             font-size: 0.75em;
-            color: #888;
+            color: #94a3b8;
             margin-bottom: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 600;
         }}
         
         /* --- Quantum Token (The Character) --- */
@@ -467,35 +457,23 @@ def render_prediction_dashboard():
     # UNIT: Quantum Engine Integration & Visualization (Aligns with Quantum Lab)
     # -------------------------------------------------------------------------
     
-    # 1. Load Parameters
+    # 1. Load Parameters (Golden Master V2.9)
     try:
         import os
         params_path = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
         with open(params_path, 'r') as f:
             gp = json.load(f)
         
-        params = {
-            "w_e_weight": gp.get('global_physics', {}).get('w_e_weight', 1.0),
-            "f_yy_correction": gp.get('global_physics', {}).get('f_yy_correction', 1.1),
-            "w_career_officer": gp['macro_weights_w']['W_Career_Officer'],
-            "w_career_resource": gp['macro_weights_w']['W_Career_Resource'],
-            "w_career_output": gp['macro_weights_w']['W_Career_Output'],
-            "w_wealth_cai": gp['macro_weights_w']['W_Wealth_Cai'],
-            "w_wealth_output": gp['macro_weights_w']['W_Wealth_Output'],
-            "w_rel_spouse": gp.get('relationship_weights', {}).get('W_Rel_Spouse', 0.35),
-            "w_rel_self": gp.get('relationship_weights', {}).get('W_Rel_Self', 0.20),
-            "w_rel_output": gp.get('relationship_weights', {}).get('W_Rel_Output', 0.15),
-            "k_control": gp['conflict_and_conversion_k_factors']['K_Control_Conversion'],
-            "k_buffer": gp['conflict_and_conversion_k_factors']['K_Buffer_Defense'],
-            "k_clash": gp['conflict_and_conversion_k_factors']['K_Clash_Robbery'],
-            "k_pressure": gp['conflict_and_conversion_k_factors']['K_Pressure_Attack'],
-            "k_mutiny": gp['conflict_and_conversion_k_factors']['K_Mutiny_Betrayal'],
-            "k_leak": gp['conflict_and_conversion_k_factors']['K_Leak_Drain'],
-            "k_capture": gp['conflict_and_conversion_k_factors'].get('K_Capture_Wealth', 0.0)
-        }
+        # Pass the full configuration directly to QuantumEngine.
+        # The engine's _flatten_params method will handle the nested structure 
+        # (k_factors, logic_switches, weights, etc.) automatically.
+        params = gp
+        
     except Exception as e:
-        # st.error(f"Config Load Error: {e}")
-        params = {}
+        st.error(f"Config Load Error: {e}")
+        params = {} # Fallback to engine defaults
+
+    # 2. Extract Data from Flux (Sensor) to feed Quantum Engine
 
     # 2. Extract Data from Flux (Sensor) to feed Quantum Engine
     scale = 0.08 
@@ -540,12 +518,21 @@ def render_prediction_dashboard():
         'pillar_energies': pe_list # Inject Scaled Real Energies
     }
     
+    # Construct Bazi List for Structural Clash Logic
+    bazi_list = [
+        f"{chart.get('year',{}).get('stem','')}{chart.get('year',{}).get('branch','')}",
+        f"{chart.get('month',{}).get('stem','')}{chart.get('month',{}).get('branch','')}",
+        f"{chart.get('day',{}).get('stem','')}{chart.get('day',{}).get('branch','')}",
+        f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}"
+    ]
+
     case_data = {
         'id': 8888, 
         'gender': gender,
         'day_master': chart.get('day',{}).get('stem','?'),
         'wang_shuai': wang_shuai_str, 
-        'physics_sources': physics_sources
+        'physics_sources': physics_sources,
+        'bazi': bazi_list # Required for Structural/Harm Matrix
     }
     
     # 3. Execute Quantum Engine
@@ -610,12 +597,13 @@ def render_prediction_dashboard():
     st.markdown(f"""
     <style>
         .bazi-box {{
-            background-color: #1E1E1E;
+            background-color: #1e293b;
             padding: 15px;
             border-radius: 8px;
             text-align: center;
             font-family: 'Courier New', Courier, monospace;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
         }}
         .bazi-table {{
             width: 100%;
@@ -625,56 +613,54 @@ def render_prediction_dashboard():
         }}
         .bazi-header {{
             font-size: 0.85em;
-            color: #888;
+            color: #94a3b8;
             margin-bottom: 8px;
             display: inline-block;
             white-space: nowrap;
         }}
         /* Title Animations */
-        .h-anim-year {{ animation: wave 3s ease-in-out infinite; color: #98FB98; text-shadow: 0 0 5px rgba(152, 251, 152, 0.2); }}
-        .h-anim-month {{ animation: drift 5s ease-in-out infinite; color: #87CEEB; text-shadow: 0 0 5px rgba(135, 206, 235, 0.2); }}
-        .h-anim-day {{ animation: pulse-grow 2.5s ease-in-out infinite; color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); font-weight: bold; }}
-        .h-anim-hour {{ animation: sway 4s ease-in-out infinite; color: #DDA0DD; text-shadow: 0 0 5px rgba(221, 160, 221, 0.2); }}
-        .h-anim-dayun {{ animation: wave 6s ease-in-out infinite alternate; color: #00CED1; opacity: 0.9; }}
-        .h-anim-liunian {{ animation: flash 3s ease-in-out infinite; color: #FF69B4; }}
+        .h-anim-year {{ animation: wave 3s ease-in-out infinite; color: #4ade80; }}
+        .h-anim-month {{ animation: drift 5s ease-in-out infinite; color: #38bdf8; }}
+        .h-anim-day {{ animation: pulse-grow 2.5s ease-in-out infinite; color: #fbbf24; font-weight: bold; }}
+        .h-anim-hour {{ animation: sway 4s ease-in-out infinite; color: #c084fc; }}
+        .h-anim-dayun {{ animation: wave 6s ease-in-out infinite alternate; color: #22d3ee; opacity: 0.9; }}
+        .h-anim-liunian {{ animation: flash 3s ease-in-out infinite; color: #f472b6; }}
         /* Column Highlight for Day Master */
         .col-day {{
-            background: rgba(255, 69, 0, 0.1);
+            background: #334155;
             border-radius: 8px;
         }}
         
         .stem {{
             font-size: 1.8em;
             font-weight: bold;
-            color: #FFF;
+            color: #f1f5f9;
             line-height: 1.1;
         }}
         .branch {{
             font-size: 1.8em;
             font-weight: bold;
-            color: #DDD;
+            color: #e2e8f0;
             line-height: 1.1;
         }}
         .day-master {{
             text-decoration: underline;
-            text-decoration-color: #FF4500;
+            text-decoration-color: #f97316;
             text-decoration-thickness: 3px;
         }}
         .energy-val {{
             font-size: 0.75em;
-            color: #00E676; /* Neon Green */
+            color: #15803d; /* Safe Dark Green */
             font-family: 'Verdana', sans-serif;
             font-weight: 900;
-            text-shadow: 0 0 5px rgba(0, 230, 118, 0.4);
             margin-top: -2px;
             margin-bottom: 2px;
         }}
         .energy-val-low {{
              font-size: 0.75em;
-             color: #E0E0E0; /* Bright Silver */
+             color: #cbd5e1; /* Silver */
              font-family: 'Verdana', sans-serif;
              font-weight: bold;
-             text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
              margin-top: -2px;
              margin-bottom: 2px;
         }}
@@ -687,7 +673,7 @@ def render_prediction_dashboard():
         
         /* Dynamic Columns distinct style */
         .dynamic-col {{
-            background: rgba(0, 191, 255, 0.05);
+            background: #0f172a;
             border-radius: 8px;
         }}
     </style>
@@ -899,13 +885,15 @@ def render_prediction_dashboard():
         
     # B. Narrative Box
     # B. Narrative Box (V2.9: Narrative Cards)
-    st.markdown("### 📜 物理叙事 (Compassionate Narrative)")
+    st.markdown("### 📜 核心叙事 (Narrative Events)")
     
     narrative_events = results.get('narrative_events', [])
     
     if narrative_events:
-        for event in narrative_events:
-            render_narrative_card(event)
+        nc1, nc2 = st.columns(2)
+        for i, event in enumerate(narrative_events):
+            with nc1 if i % 2 == 0 else nc2:
+                render_narrative_card(event)
     else:
         # Fallback to description if no special events
         desc = results.get('desc', '能量流转平稳')

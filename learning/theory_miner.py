@@ -31,7 +31,18 @@ class TheoryMiner:
         mode="rule_extraction": Extract atomic rules (JSON)
         mode="summary": Summarize key concepts (JSON)
         """
-        model = model or self.default_model
+        # 1. Dynamic Config Loading
+        current_host = self.cm.get('ollama_host', "http://localhost:11434")
+        # If host argument was provided at init or here, we might want to respect it, but generally we want config.
+        # The existing init logic allows overriding host at init. 
+        # But for hot swapping, we want to prefer the ConfigManager values at runtime unless explicitly overridden for this specific call (not init).
+        # We'll use the self.client if it's already set up, but that defeats the point of hot swap if client is cached.
+        
+        # Re-instantiate client to ensure fresh host
+        client = ollama.Client(host=current_host)
+        
+        target_model = model or self.cm.get('selected_model_name', 'qwen2.5:3b')
+
         if mode == "summary":
             prompt = f"""
             你是一个精通八字命理的高级研究员。
@@ -41,6 +52,7 @@ class TheoryMiner:
             1. 忽略口语废话（如“点赞关注”、“大家好”）。
             2. 识别其中的【特定技法】或【断语逻辑】。
             3. 如果没有干货，直接返回空 JSON。
+            4. 目标模型: {target_model}
 
             【内容片段】:
             {text_snippet[:8000]} 
@@ -73,8 +85,8 @@ class TheoryMiner:
                 """
         
         try:
-            response = self.client.chat(
-                model=model,
+            response = client.chat(
+                model=target_model,
                 messages=[{'role': 'user', 'content': prompt}]
             )
             content = response['message']['content']

@@ -86,11 +86,9 @@ class CaseExtractor:
             self.config = ConfigManager()
             # Default to qwen2.5 if not set, user can override to 'qwen2:7b' etc.
             # Align with UI key: 'selected_model_name'
-            self.model_name = self.config.get('selected_model_name', 'qwen2.5')
-            self.ollama_host = self.config.get('ollama_host', None)
+            pass
         except ImportError:
-            self.model_name = "qwen2.5"
-            self.ollama_host = None
+            pass
 
     def _smart_compress(self, text: str) -> str:
         """
@@ -147,7 +145,10 @@ class CaseExtractor:
         Main extraction method.
         Connects to Local LLM (Ollama) to perform structural extraction.
         """
-        target_model = model or self.model_name
+        # 1. Runtime Config Loading (Hot-Swapping Support)
+        current_host = self.config.get('ollama_host', 'http://localhost:11434')
+        # Priority: Method Argument > Config > Default
+        target_model = model or self.config.get('selected_model_name', 'qwen2.5')
         
         # Fast Path: Local Regex Mode
         if target_model == 'regex':
@@ -170,9 +171,9 @@ class CaseExtractor:
                 raise ImportError("Ollama library not loaded")
             
             # Use custom host if configured
-            client = ollama.Client(host=self.ollama_host, timeout=300) if self.ollama_host else ollama
+            client = ollama.Client(host=current_host, timeout=300)
             
-            print(f"   ⏳ [Extractor] Sending {len(final_text)} chars to {target_model}... (Host: {self.ollama_host})")
+            print(f"   ⏳ [Extractor] Sending {len(final_text)} chars to {target_model}... (Host: {current_host})")
             import time
             start_t = time.time()
             

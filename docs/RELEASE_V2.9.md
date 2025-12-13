@@ -56,4 +56,9 @@ V2.9 不仅仅是一次物理引擎的升级，更是一次人文精神的觉醒
 ### 4. 结语 (Closing)
 Antigravity V2.9 是我们向世界展示的第一份完整答卷。它证明了 AI 可以不仅聪明，而且**温柔**。
 
+
+### 5. Hotfix Updates (2025-12-13)
+*   **Physics Engine Patch:** 集成 `FluxEngine` 作为 `QuantumEngine` 的能量计算托底，修复了部分案例能量值全为 0 的问题（Rule 14）。
+*   **UI Experience Upgrade:** 为量子叙事卡片（Narrative Cards）实装了 CSS 粒子动画（Floating, Pulse, Flow, Alert），提升了视觉交互体验（Rule 13）。
+
 **Ready for Public Beta.**

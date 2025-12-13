@@ -584,7 +584,7 @@ class FluxEngine:
     def _get_stem_spectrum(self):
         spec = {s: 0.0 for s in Kernel.STEM_PROPERTIES.keys()}
         for p in self.particles:
-            if p.type == 'stem':
+            if p.type == 'stem' and p.char in spec:
                 spec[p.char] += p.wave.amplitude
         for p in self.particles:
             if p.type == 'branch':

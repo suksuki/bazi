@@ -22,10 +22,16 @@ class TestQuantumV24System:
             self.gp = json.load(f)
             
         # Map to Engine Keys if needed (Simulating Dashboard Logic)
+        # Map to Engine Keys if needed (Simulating Dashboard Logic)
+        
+        # Support V2.9 Structure (Flattened/Grouped)
+        weights = self.gp.get('weights', self.gp.get('macro_weights_w', {}))
+        k_factors = self.gp.get('k_factors', self.gp.get('conflict_and_conversion_k_factors', {}))
+        
         self.params = {
-            "w_career_officer": self.gp['macro_weights_w']['W_Career_Officer'], # 0.8
-            "k_control": self.gp['conflict_and_conversion_k_factors']['K_Control_Conversion'], # 0.55
-            "k_mutiny": self.gp['conflict_and_conversion_k_factors']['K_Mutiny_Betrayal'], # 1.8
+            "w_career_officer": weights.get('W_Career_Officer', 0.8),
+            "k_control": k_factors.get('K_Control_Conversion', 0.55),
+            "k_mutiny": k_factors.get('K_Mutiny_Betrayal', 1.8),
             "k_capture": 0.40
         }
 

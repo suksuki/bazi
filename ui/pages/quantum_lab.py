@@ -14,6 +14,32 @@ def render():
     # --- CSS: Quantum Glassmorphism & Animations ---
     st.markdown("""
     <style>
+    /* Animation Keyframes */
+    @keyframes oat-float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+        100% { transform: translateY(0px); }
+    }
+    @keyframes oat-pulse-shield {
+        0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+    }
+    @keyframes oat-flow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    @keyframes oat-alert {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes oat-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
     /* Narrative Card Styles */
     .narrative-card {
         position: relative;
@@ -26,7 +52,7 @@ def render():
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         overflow: hidden;
         transition: all 0.3s ease;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }
     .narrative-card:hover {
         transform: translateY(-2px);
@@ -40,11 +66,9 @@ def render():
         border-top: 2px solid rgba(251, 191, 36, 0.4);
     }
     .icon-mountain {
-        font-size: 28px;
-        background: linear-gradient(to bottom, #fbbf24, #b45309);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+        font-size: 32px;
+        animation: oat-float 3s ease-in-out infinite;
+        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
     }
     
     .card-shield {
@@ -52,29 +76,36 @@ def render():
         border-top: 2px solid rgba(56, 189, 248, 0.4);
     }
     .icon-shield {
-        font-size: 28px;
-        text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        font-size: 32px;
+        border-radius: 50%;
+        animation: oat-pulse-shield 2s infinite;
     }
     
     .card-flow {
-        background: linear-gradient(135deg, rgba(6, 78, 59, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%);
+        background: linear-gradient(270deg, rgba(6, 78, 59, 0.2), rgba(52, 211, 153, 0.15), rgba(6, 78, 59, 0.2));
+        background-size: 200% 200%;
+        animation: oat-flow 6s ease infinite;
         border-top: 2px solid rgba(52, 211, 153, 0.4);
     }
     .icon-flow {
-        font-size: 28px;
-        color: #34d399;
-        filter: drop-shadow(0 0 5px rgba(52, 211, 153, 0.6));
+        font-size: 32px;
+        display: inline-block;
+        animation: oat-float 2s ease-in-out infinite;
     }
 
     .card-danger {
         background: linear-gradient(135deg, rgba(127, 29, 29, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
         border-top: 2px solid rgba(248, 113, 113, 0.4);
     }
+    .icon-danger {
+        font-size: 32px;
+        animation: oat-alert 1.5s infinite;
+    }
 
     /* Typography */
-    .card-title { font-weight: 700; font-size: 1.0rem; margin-bottom: 2px; color: #f1f5f9; }
-    .card-subtitle { font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; }
-    .card-impact { font-family: 'monospace'; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.3); display: inline-block; }
+    .card-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; color: #f1f5f9; letter-spacing: 0.5px; }
+    .card-subtitle { font-size: 0.9rem; color: #cbd5e1; margin-bottom: 8px; line-height: 1.4; }
+    .card-impact { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.3); display: inline-block; color: #a5b4fc; }
     </style>
     """, unsafe_allow_html=True)
     
@@ -86,17 +117,21 @@ def render():
             "mountain_alliance": {"css": "card-mountain", "icon": "⛰️", "icon_css": "icon-mountain"},
             "penalty_cap": {"css": "card-shield", "icon": "🛡️", "icon_css": "icon-shield"},
             "mediation": {"css": "card-flow", "icon": "🌊", "icon_css": "icon-flow"},
-            "pressure": {"css": "card-danger", "icon": "⚠️", "icon_css": ""},
+            "pressure": {"css": "card-danger", "icon": "⚠️", "icon_css": "icon-danger"},
             "control": {"css": "card-shield", "icon": "⚡", "icon_css": "icon-shield"}, 
             "default": {"css": "", "icon": "📜", "icon_css": ""}
         }
         
         cfg = config.get(ctype, config['default'])
         
+        # Determine animation class based on triggers
+        anim_trigger = event.get('animation_trigger', '')
+        extra_icon_style = ""
+        
         html = f"""
         <div class="narrative-card {cfg['css']}">
-            <div style="display: flex; align-items: start; gap: 12px;">
-                <div class="{cfg['icon_css']}">{cfg['icon']}</div>
+            <div style="display: flex; align-items: start; gap: 16px;">
+                <div class="{cfg['icon_css']}" style="{extra_icon_style}">{cfg['icon']}</div>
                 <div style="flex-grow: 1;">
                     <div class="card-title">{event.get('title', 'Unknown Event')}</div>
                     <div class="card-subtitle">{event.get('desc', '')}</div>
@@ -129,11 +164,27 @@ def render():
         original = load_params_from_disk()
         
         # Update global
-        original['global_physics']['w_e_weight'] = new_params.get('w_e_weight', 1.0)
-        original['global_physics']['f_yy_correction'] = new_params.get('f_yy_correction', 1.1)
+        if 'weights' not in original: original['weights'] = {}
+        if 'k_factors' not in original: original['k_factors'] = {}
+        if 'logic_switches' not in original: original['logic_switches'] = {}
+
+        # Update Weights
+        w = original['weights']
+        w['w_e_weight'] = new_params.get('w_e_weight', 1.0)
+        w['f_yy_correction'] = new_params.get('f_yy_correction', 1.1)
+        
+        w['W_Career_Officer'] = new_params.get('w_career_officer', 0.8)
+        w['W_Career_Resource'] = new_params.get('w_career_resource', 0.1)
+        w['W_Career_Output'] = new_params.get('w_career_output', 0.0)
+        w['W_Wealth_Cai'] = new_params.get('w_wealth_cai', 0.6)
+        w['W_Wealth_Output'] = new_params.get('w_wealth_output', 0.4)
+        
+        w['W_Rel_Spouse'] = new_params.get('w_rel_spouse', 0.35)
+        w['W_Rel_Self'] = new_params.get('w_rel_self', 0.20)
+        w['W_Rel_Output'] = new_params.get('w_rel_output', 0.15)
         
         # Update K Factors
-        k = original['conflict_and_conversion_k_factors']
+        k = original['k_factors']
         k['K_Control_Conversion'] = new_params.get('k_control', 0.55)
         k['K_Buffer_Defense'] = new_params.get('k_buffer', 0.40)
         k['K_Clash_Robbery'] = new_params.get('k_clash', 1.2)
@@ -142,23 +193,11 @@ def render():
         k['K_Pressure_Attack'] = new_params.get('k_pressure', 1.0)
         k['K_Burden_Wealth'] = new_params.get('k_burden', 1.0)
         k['K_Broken_Collapse'] = new_params.get('k_broken', 1.5)
+        k['K_Capture_Wealth'] = new_params.get('k_capture', 0.0)
         
-        # Update Weights
-        mw = original['macro_weights_w']
-        mw['W_Career_Officer'] = new_params.get('w_career_officer', 0.8)
-        mw['W_Career_Resource'] = new_params.get('w_career_resource', 0.1)
-        mw['W_Career_Output'] = new_params.get('w_career_output', 0.0)
-        mw['W_Wealth_Cai'] = new_params.get('w_wealth_cai', 0.6)
-        mw['W_Wealth_Output'] = new_params.get('w_wealth_output', 0.4)
-        
-        rw = original['relationship_weights']
-        rw['W_Rel_Spouse'] = new_params.get('w_rel_spouse', 0.35)
-        rw['W_Rel_Self'] = new_params.get('w_rel_self', 0.20)
-        rw['W_Rel_Output'] = new_params.get('w_rel_output', 0.15)
-        
-        # flags
-        original['logic_flags']['enable_mediation_exemption'] = new_params.get('enable_mediation_exemption', True)
-        original['logic_flags']['enable_structural_clash'] = new_params.get('enable_structural_clash', True)
+        # Flags
+        original['logic_switches']['enable_mediation_exemption'] = new_params.get('enable_mediation_exemption', True)
+        original['logic_switches']['enable_structural_clash'] = new_params.get('enable_structural_clash', True)
 
         with open(path, "w") as f:
             json.dump(original, f, indent=4, ensure_ascii=False)
@@ -170,23 +209,23 @@ def render():
     # Flatten defaults for sliders
     fd = {}
     if defaults:
-        gp = defaults.get('global_physics', {})
-        fd['w_e'] = gp.get('w_e_weight', 1.0)
-        fd['f_yy'] = gp.get('f_yy_correction', 1.1)
+        # 1. Weights (Mixed Global + Macro + Rel)
+        w = defaults.get('weights', {})
+        fd['w_e'] = w.get('w_e_weight', 1.0)
+        fd['f_yy'] = w.get('f_yy_correction', 1.1)
         
-        mw = defaults.get('macro_weights_w', {})
-        fd['w_off'] = mw.get('W_Career_Officer', 0.8)
-        fd['w_res'] = mw.get('W_Career_Resource', 0.1)
-        fd['w_out_c'] = mw.get('W_Career_Output', 0.0)
-        fd['w_cai'] = mw.get('W_Wealth_Cai', 0.6)
-        fd['w_out_w'] = mw.get('W_Wealth_Output', 0.4)
+        fd['w_off'] = w.get('W_Career_Officer', 0.8)
+        fd['w_res'] = w.get('W_Career_Resource', 0.1)
+        fd['w_out_c'] = w.get('W_Career_Output', 0.0)
+        fd['w_cai'] = w.get('W_Wealth_Cai', 0.6)
+        fd['w_out_w'] = w.get('W_Wealth_Output', 0.4)
         
-        rw = defaults.get('relationship_weights', {})
-        fd['w_spouse'] = rw.get('W_Rel_Spouse', 0.35)
-        fd['w_self'] = rw.get('W_Rel_Self', 0.20)
-        fd['w_out_r'] = rw.get('W_Rel_Output', 0.15)
+        fd['w_spouse'] = w.get('W_Rel_Spouse', 0.35)
+        fd['w_self'] = w.get('W_Rel_Self', 0.20)
+        fd['w_out_r'] = w.get('W_Rel_Output', 0.15)
         
-        k = defaults.get('conflict_and_conversion_k_factors', {})
+        # 2. K Factors
+        k = defaults.get('k_factors', {})
         fd['k_ctl'] = k.get('K_Control_Conversion', 0.55)
         fd['k_buf'] = k.get('K_Buffer_Defense', 0.40)
         fd['k_mut'] = k.get('K_Mutiny_Betrayal', 1.8)
@@ -197,7 +236,8 @@ def render():
         fd['k_brk'] = k.get('K_Broken_Collapse', 1.5)
         fd['k_bur'] = k.get('K_Burden_Wealth', 1.0)
         
-        fl = defaults.get('logic_flags', {})
+        # 3. Flags
+        fl = defaults.get('logic_switches', {})
         fd['en_med'] = fl.get('enable_mediation_exemption', True)
         fd['en_str'] = fl.get('enable_structural_clash', True)
 

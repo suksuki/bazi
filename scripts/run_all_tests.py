@@ -115,6 +115,33 @@ def run_meaning_v24_tests():
         traceback.print_exc()
         return False
 
+def run_v29_integration_tests():
+    print("\n[Running V2.9 Integration Tests]")
+    try:
+        from tests.test_v2_9_integration import (
+            test_flux_engine_integration_fallback,
+            test_visual_narrative_event_structure,
+            test_structural_penalty_cap_event
+        )
+        
+        print("Reference: test_flux_engine_integration_fallback...", end=" ")
+        test_flux_engine_integration_fallback()
+        print("PASS")
+        
+        print("Reference: test_visual_narrative_event_structure...", end=" ")
+        test_visual_narrative_event_structure()
+        print("PASS")
+
+        print("Reference: test_structural_penalty_cap_event...", end=" ")
+        test_structural_penalty_cap_event()
+        print("PASS")
+        
+        return True
+    except Exception as e:
+        print(f"FAIL: {e}")
+        traceback.print_exc()
+        return False
+
 if __name__ == "__main__":
     print("==========================================")
     print("   QUANTUM CHART V2.4 AUTOMATED TEST SUITE")
@@ -124,6 +151,7 @@ if __name__ == "__main__":
     results.append(run_v24_system_tests())
     results.append(run_quantum_engine_tests())
     results.append(run_meaning_v24_tests()) # Uncommented now that it's verified
+    results.append(run_v29_integration_tests())
     
     print("\n==========================================")
     if all(results):

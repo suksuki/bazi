@@ -36,6 +36,14 @@ class QuantumEngine:
             ('子', '午'), ('丑', '未'), ('寅', '申'), ('卯', '酉'), ('辰', '戌'), ('巳', '亥') # 6 Clashes Only
         ]
 
+        # V3.0 Constants: The Four Vaults
+        self.VAULT_MAPPING = {
+            '辰': {'element': 'water', 'main_energy': '癸'}, # Water Vault
+            '戌': {'element': 'fire',  'main_energy': '丁'}, # Fire Vault
+            '丑': {'element': 'metal', 'main_energy': '辛'}, # Metal Vault
+            '未': {'element': 'wood',  'main_energy': '乙'}  # Wood Vault
+        }
+
     def _flatten_params(self, params):
         """Helper to flatten nested JSON params for easier access."""
         flat = {}
@@ -65,6 +73,63 @@ class QuantumEngine:
         if self.DESTRUCTION[target_elem] == dm_elem: return 'officer'
         if self.GENERATION[target_elem] == dm_elem: return 'resource'
         return 'unknown'
+
+    def scan_vault_state(self, branch, global_energy_map):
+        """
+        V3.0: Determine if a Vault is Alive (Vault) or Dead (Tomb)
+        Based on the global energy of the stored element.
+        """
+        if branch not in self.VAULT_MAPPING: return "UNKNOWN"
+        target_element = self.VAULT_MAPPING[branch]['element']
+        energy_level = global_energy_map.get(target_element, 0)
+
+        # Core Threshold: > 3.0 implies sufficient Qi to be a usable Vault
+        if energy_level > 3.0:
+            return "VAULT" # Alive, Bank Vault
+        else:
+            return "TOMB"  # Dead, Grave
+
+    def process_quantum_tunneling(self, branch, energy_map):
+        """
+        V3.0: Handle the 'Opening' or 'Breaking' of a Storehouse.
+        Returns (bonus_score, narrative_card)
+        """
+        vault_state = self.scan_vault_state(branch, energy_map)
+        target_element = self.VAULT_MAPPING[branch]['element']
+        e_inside = energy_map.get(target_element, 0)
+        
+        # Determine 10 God Type of the Vault for Narrative
+        # (This context requires knowing DM, but for now we focus on physics)
+        
+        if vault_state == "VAULT":
+            # Scenario A: Open the Vault (Quantum Tunneling)
+            # Impact: Massive Energy Release
+            bonus = e_inside * 2.0 # Critical Hit
+            
+            narrative = {
+                "card_type": "vault_open",
+                "level": "legendary",
+                "title": f"🚪 墓库洞开 ({branch})",
+                "desc": f"Quantum tunneling releases pent-up {target_element.title()} energy!",
+                "score_delta": f"+{round(bonus, 1)} Wealth/Career",
+                "animation_trigger": "gold_explosion"
+            }
+            return bonus, narrative
+        
+        else:
+            # Scenario B: Break the Tomb (Structural Collapse)
+            # Impact: Destruction of Roots
+            penalty = -5.0 
+            
+            narrative = {
+                "card_type": "tomb_break",
+                "level": "danger",
+                "title": f"⚰️ 根基崩塌 ({branch})",
+                "desc": f"Protective walls collapse. Weak {target_element.title()} energy dissipates.",
+                "score_delta": "-5.0 Structure",
+                "animation_trigger": "rubble_collapse"
+            }
+            return penalty, narrative
 
     def calculate_energy(self, case_data, dynamic_context=None):
         """
@@ -110,7 +175,30 @@ class QuantumEngine:
                 sources = {'self': {'day_root': 1.0}} 
             elif '身弱' in wang_shuai: raw_e_self -= 3
             elif '身旺' in wang_shuai: raw_e_self += 3
-            elif is_follow: raw_e_self = -8 
+        if is_follow: raw_e_self = -8 
+
+        # Extract DM Element (Relocated for V3.0 Map Construction)
+        dm_char = case_data.get('day_master', '甲')
+        dm_elem = self._get_element(dm_char) or 'wood'
+
+        # V3.0: Construct Global Elemental Energy Map
+        # Map 10 Gods back to 5 Elements for Physics Calculations
+        element_map = {}
+        curr_elem = dm_elem
+        # 1. Self -> Wood (if DM Wood)
+        element_map[curr_elem] = raw_e_self
+        # 2. Output -> Fire
+        curr_elem = self.GENERATION[curr_elem]
+        element_map[curr_elem] = raw_e_output
+        # 3. Wealth -> Earth
+        curr_elem = self.GENERATION[curr_elem]
+        element_map[curr_elem] = raw_e_cai
+        # 4. Officer -> Metal
+        curr_elem = self.GENERATION[curr_elem]
+        element_map[curr_elem] = raw_e_guan_sha
+        # 5. Resource -> Water
+        curr_elem = self.GENERATION[curr_elem]
+        element_map[curr_elem] = raw_e_resource 
 
         # Narrative Storage (UI Payload)
         narrative_events = []
@@ -330,18 +418,29 @@ class QuantumEngine:
                         if pair in checked_pairs: continue
                         checked_pairs.add(pair)
 
-                        # V2.8 Logic 0: Earth Amnesty (土之赦免)
-                        # Clashes/Harms between Earth branches are often "Opening the Treasury", not destruction.
-                        enable_earth_amnesty = fp.get('enable_earth_amnesty', True)
-                        if enable_earth_amnesty and b1 in EARTH_BRANCHES and b2 in EARTH_BRANCHES:
-                            narrative_events.append({
-                                "card_type": "mountain_alliance",
-                                "level": "rare",
-                                "title": "土之赦免 (Amnesty)",
-                                "desc": f"Earth clash ({b1}-{b2}) opens the treasury instead of destroying it.",
-                                "score_delta": "Ignored",
-                                "animation_trigger": "earth_tremor"
-                            })
+                        # V3.0 Logic: Quantum Vault Tunneling (Replaces Earth Amnesty)
+                        # Detect Earth Clashes: Chen-Xu, Chou-Wei
+                        is_earth_clash = (b1 in self.VAULT_MAPPING and b2 in self.VAULT_MAPPING and 
+                                         ((b1, b2) in self.CLASH_PAIRS or (b2, b1) in self.CLASH_PAIRS))
+                        
+                        if is_earth_clash:
+                            # Process EACH side of the clash as a potential Vault opening
+                            # Loop via set to handle duplicate branch case safely (though rare in collision pair)
+                            for branch_key in [b1, b2]:
+                                bonus, event = self.process_quantum_tunneling(branch_key, element_map)
+                                narrative_events.append(event)
+                                
+                                if "vault_open" in event['card_type']:
+                                    # Bonus applies to Wealth and Career
+                                    e_wealth += bonus
+                                    e_career += bonus
+                                    narrative.append(f"💰 {event['title']}")
+                                else:
+                                    # Penalty applies to Structure/Rel
+                                    clash_score += abs(bonus) # Add to clash score for relation penalty
+                                    narrative.append(f"⚠️ {event['title']}")
+                            
+                            # Skip standard clash penalty logic for these specific branches (they are handled as Vaults)
                             continue
 
                         # 1. Six Clashes (Crash)
@@ -401,6 +500,50 @@ class QuantumEngine:
         full_desc = " ".join(narrative[-3:]) if narrative else "Energy Stable" 
         
         pillar_energies = sources.get('pillar_energies', [0]*8)
+        
+        # FluxEngine Integration: Auto-Calculate if missing
+        if all(v == 0 for v in pillar_energies) and 'bazi' in case_data:
+            try:
+                from core.flux import FluxEngine
+                bazi_list = case_data['bazi'] 
+                if len(bazi_list) >= 4:
+                    def parse_pillar(s): return {'stem': s[0], 'branch': s[1]} if len(s) > 1 else {}
+                    chart = {
+                        'year': parse_pillar(bazi_list[0]),
+                        'month': parse_pillar(bazi_list[1]),
+                        'day': parse_pillar(bazi_list[2]),
+                        'hour': parse_pillar(bazi_list[3])
+                    }
+                    fe = FluxEngine(chart)
+                    
+                    d_s, d_b, l_s, l_b = None, None, None, None
+                    if dynamic_context:
+                        dy = dynamic_context.get('luck', '')
+                        ln = dynamic_context.get('year', '')
+                        if len(dy)>1: d_s, d_b = dy[0], dy[1]
+                        if len(ln)>1: l_s, l_b = ln[0], ln[1]
+                    
+                    flux_res = fe.calculate_flux(dy_stem=d_s, dy_branch=d_b, ln_stem=l_s, ln_branch=l_b)
+                    
+                    pe_map = [0.0] * 8
+                    p_lookup = {p['id']: p['amp'] for p in flux_res['particle_states']}
+                    
+                    pe_map[0] = p_lookup.get('year_stem', 0)
+                    pe_map[1] = p_lookup.get('year_branch', 0)
+                    pe_map[2] = p_lookup.get('month_stem', 0)
+                    pe_map[3] = p_lookup.get('month_branch', 0)
+                    pe_map[4] = p_lookup.get('day_stem', 0)
+                    pe_map[5] = p_lookup.get('day_branch', 0)
+                    pe_map[6] = p_lookup.get('hour_stem', 0)
+                    pe_map[7] = p_lookup.get('hour_branch', 0)
+                    
+                    pillar_energies = [round(x, 1) for x in pe_map]
+            except Exception as e:
+                # Fallback to silent fail if FluxEngine not available or error
+                print(f"DEBUG: FluxEngine Integration Error: {e}")
+                import traceback
+                traceback.print_exc()
+                pass
 
         tg = {
             "bi_jian": raw_e_self * 0.5, "jie_cai": raw_e_self * 0.5,

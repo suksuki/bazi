@@ -29,6 +29,10 @@ class BioMiner:
         """
         import ollama
         
+        # Dynamic Config (Hot-Swap)
+        current_host = self.cm.get('ollama_host', "http://localhost:11434")
+        current_model = self.cm.get('selected_model_name', 'qwen2.5:3b')
+
         prompt = f"""
         You are a Biographer and Data Analyst.
         Read the following biography text. The subject was born in {birth_year}.
@@ -49,8 +53,8 @@ class BioMiner:
         """
         
         try:
-            client = ollama.Client(host=self.host)
-            response = client.generate(model=self.model, prompt=prompt, format='json', stream=False)
+            client = ollama.Client(host=current_host)
+            response = client.generate(model=current_model, prompt=prompt, format='json', stream=False)
             content = response['response']
             
             # Parse JSON
