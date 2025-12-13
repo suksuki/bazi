@@ -340,7 +340,6 @@ def render_prediction_dashboard():
     years = range(sim_year, sim_year + 12)
     traj_data = []
     handover_years = []  # Sprint 5.4: 记录换运年份
-    prev_luck = None  # 跟踪上一年的大运
     
     # Helper for GanZhi
     gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
@@ -354,6 +353,10 @@ def render_prediction_dashboard():
     
     # Optional: Update profile with specific analysis if needed (e.g. wang_shuai from previous steps if we trust it more?)
     # For now, let BaziProfile calculate its own strength to be the Single Source of Truth.
+    
+    # === BUG FIX: 初始化 prev_luck 为模拟起始年的前一年大运 ===
+    # 这样可以正确检测到第一年是否有换运
+    prev_luck = profile.get_luck_pillar_at(sim_year - 1)
     
     for y in years:
         offset = y - base_year
