@@ -12,6 +12,7 @@ from core.flux import FluxEngine
 from core.quantum_engine import QuantumEngine # V2.9 Quantum Physics Engine
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
+from core.bazi_profile import BaziProfile
 
 # --- Component: Narrative Card Renderer (V2.9) ---
 def render_narrative_card(event):
@@ -77,7 +78,7 @@ def render_prediction_dashboard():
     luck_cycles = calc.get_luck_cycles(gender_idx)
     
     # 2. UI: Header & Chart
-    st.title(f"🔮 {name} 的量子命盘 (V2.9)")
+    st.title(f"🔮 {name} 的量子命盘 (V5.3 Skull)")
     
     # --- V2.9 Glassmorphism CSS (Dark Mode) ---
     st.markdown("""
@@ -938,90 +939,25 @@ def render_prediction_dashboard():
     zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
     base_year = 1924 # Jia Zi
     
-    # V2.0 Logic Setup: Determine Favorable/Unfavorable
-    # Based on Wang/Shuai calculated previously
-    dm_elem = engine._get_element(chart.get('day',{}).get('stem'))
-    all_elems = ['wood', 'fire', 'earth', 'metal', 'water']
-    relation_map = {e: engine._get_relation(dm_elem, e) for e in all_elems}
+    # === V6.0: BaziProfile Initialization ===
+    # Convert input date/time to full datetime
+    birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
+    profile = BaziProfile(birth_dt, gender)
     
-    favorable = []
-    unfavorable = []
+    # Optional: Update profile with specific analysis if needed (e.g. wang_shuai from previous steps if we trust it more?)
+    # For now, let BaziProfile calculate its own strength to be the Single Source of Truth.
     
-    if "身旺" in wang_shuai_str or "强" in wang_shuai_str:
-        fav_types = ['output', 'wealth', 'officer']
-    else:
-        fav_types = ['resource', 'self']
-        
-    for e, r in relation_map.items():
-        if r in fav_types: favorable.append(e.capitalize())
-        else: unfavorable.append(e.capitalize())
-
     for y in years:
         offset = y - base_year
         l_gan = gan_chars[offset % 10]
         l_zhi = zhi_chars[offset % 12]
         l_gz = f"{l_gan}{l_zhi}"
         
-        # === Sprint 5.4: 动态大运计算 ===
-        # 防御机制：只有当 birth_info 存在且有效时才启用
-        # 避免使用 1990 默认值导致的乱码
+        # 1. Get Luck from Profile (O(1))
+        active_luck = profile.get_luck_pillar_at(y)
         
-        has_valid_birth = False
-        active_luck = ''
-        
-        birth_info = case_data.get('birth_info')
-        if birth_info and birth_info.get('year'):
-            # 简单的有效性检查：如果年份存在，认为是有效的出生信息
-            # (通常 extraction 模块如果不确定就不会返回 year)
-            has_valid_birth = True
-            
-            try:
-                birth_year = birth_info.get('year')
-                birth_month = birth_info.get('month', 1)
-                birth_day = birth_info.get('day', 1)
-                birth_hour = birth_info.get('hour', 12)
-                gender = birth_info.get('gender', 1)
-                
-                # 尝试动态计算
-                calc_luck = engine.get_dynamic_luck_pillar(
-                    birth_year, birth_month, birth_day, birth_hour, gender, y
-                )
-                
-                # 过滤异常返回值 (注意: "未知大运"也算有效，只过滤真正的错误)
-                if calc_luck and calc_luck not in ["计算异常", "计算失败", "童限(起运前)"]:
-                    active_luck = calc_luck
-            except:
-                pass # Fallback to static
-        
-        # Fallback: 如果动态计算失败或没启用，使用静态大运
-        if not active_luck:
-            active_luck = selected_yun['gan_zhi'] if selected_yun else ''
-        
-        # === Trinity Architecture V4.0 ===
-        # Use unified interface instead of fragmented calculation
-        
-        # Build birth chart for Trinity
-        dm_energy_self = case_data.get('physics_sources', {}).get('self', {}).get('stem_support', 0)
-        
-        birth_chart_v4 = {
-            'year_pillar': f"{chart.get('year',{}).get('stem','')}{chart.get('year',{}).get('branch','')}",
-            'month_pillar': f"{chart.get('month',{}).get('stem','')}{chart.get('month',{}).get('branch','')}",
-            'day_pillar': f"{chart.get('day',{}).get('stem','')}{chart.get('day',{}).get('branch','')}",
-            'hour_pillar': f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}",
-            'day_master': chart.get('day',{}).get('stem',''),
-            'energy_self': dm_energy_self,
-            'current_luck_pillar': active_luck  # 动态大运
-        }
-        
-        # Call Trinity unified interface with dynamic luck
-        ctx = engine.calculate_year_context(
-            year_pillar=l_gz,
-            favorable_elements=favorable,
-            unfavorable_elements=unfavorable,
-            birth_chart=birth_chart_v4,
-            year=y,
-            active_luck=active_luck  # Sprint 5.4: 传入动态大运
-        )
+        # 2. Call QuantumEngine V6.0 Interface
+        ctx = engine.calculate_year_context(profile, y)
         
         # Extract data from DestinyContext (clean and simple!)
         final_career = ctx.career
@@ -1179,7 +1115,7 @@ def render_prediction_dashboard():
             )
         
         fig.update_layout(
-            title="🏛️ Antigravity V3.5: 命运全息图 (Destiny Wavefunction)",
+            title="🏛️ Antigravity V5.3: 命运全息图 (Destiny Wavefunction)",
             yaxis=dict(title="能量级 (Energy Score)", range=[-10, 12]),
             xaxis=dict(
                 title="年份 (Year)",

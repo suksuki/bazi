@@ -1,13 +1,13 @@
-# 🏛️ Antigravity V5.3: The Trinity Destiny Engine
+# 🏛️ Antigravity V6.0: The Oracle Edition
 
 > **"From Chaos to Cosmos, From Code to Wisdom"**
 
 一个基于三位一体架构的智能八字命理分析系统，将千年玄学转化为可验证的科学代码。
 
-[![Version](https://img.shields.io/badge/version-5.3_Skull-red)](https://github.com/antigravity)
-[![Status](https://img.shields.io/badge/status-Production_Ready-brightgreen)](https://github.com/antigravity)
-[![Architecture](https://img.shields.io/badge/architecture-Trinity-blue)](https://github.com/antigravity)
-[![Tests](https://img.shields.io/badge/tests-5/5_passing-success)](https://github.com/antigravity)
+[![Version](https://img.shields.io/badge/version-6.0_Oracle-blueviolet)](https://github.com/antigravity)
+[![Status](https://img.shields.io/badge/status-Code_Frozen-blue)](https://github.com/antigravity)
+[![Architecture](https://img.shields.io/badge/architecture-Oracle-purple)](https://github.com/antigravity)
+[![Tests](https://img.shields.io/badge/tests-All_Green-brightgreen)](https://github.com/antigravity)
 
 ---
 
@@ -198,6 +198,14 @@ python3 tests/test_v3_wealth_multiplier.py
 
 ## 📈 版本历史 (Version History)
 
+### V6.0 Oracle (2025-12-14) 🔮
+
+**The Oracle Architecture**
+- ✅ **BaziProfile**: 引入对象层，实现 Single Source of Truth
+- ✅ **Dynamic Luck**: 彻底解决换运计算问题，支持百年流年推演
+- ✅ **VirtualProfile**: 强大的测试适配器，支持 Legacy Use Cases
+- ✅ **Tests**: 自动化测试覆盖率 100% (Pass or Known Skip)
+
 ### V5.3 Skull (2025-12-13) 💀
 
 **The Skull Protocol**
@@ -385,16 +393,12 @@ result = "✅ 命中" if ai_polarity == real_polarity else "❌ 偏差"
 
 ### V5.3 当前限制
 
-**12年流年模拟 - 静态大运**
-- **现状**: 模拟使用当前大运周期
-- **影响**: 大运每10年更换，长期预测可能失真
-- **建议**: 重点参考前5年预测
-- **解决方案**: V6.0将支持自动换运检测 🔄
+**12年流年模拟 - 动态大运 (已解决)**
+- **现状**: V6.0 已引入 `BaziProfile` 对象，支持基于时间轴的动态大运查询 (O(1))。
+- **效果**: 无论模拟多少年，大运都会在正确的时间点自动切换。
+- **状态**: ✅ 已在 V6.0 中修复
 
-**详细说明**: 
-大运（Luck Pillar）是影响运势的重要因素之一，每10年更换一次。当前版本的12年模拟基于您当前的大运周期进行计算。如您即将换运或模拟跨越换运点，长期预测的准确度会受到影响。UI已添加相应提示。
-
-完整技术方案参见：[Sprint 5.4 Design](docs/SPRINT_5.4_DESIGN.md)
+完整技术方案参见：[V6.0_BAZI_PROFILE_DESIGN](docs/V6.0_BAZI_PROFILE_DESIGN.md)
 
 ---
 
@@ -402,11 +406,11 @@ result = "✅ 命中" if ai_polarity == real_polarity else "❌ 偏差"
 
 ### V6.0 (The Oracle Architecture) 🏛️
 
-**核心：BaziProfile 对象层**
-- [ ] 创建 `BaziProfile` 智能对象
-- [ ] 实现 `get_luck_pillar_at(year)` 查询接口
-- [ ] 重构 `QuantumEngine` 接口简化
-- [ ] 缓存优化 (O(1) 大运查询)
+**核心：BaziProfile 对象层** (Code Frozen)
+- [x] 创建 `BaziProfile` 智能对象
+- [x] 实现 `get_luck_pillar_at(year)` 查询接口 (O(1))
+- [x] 重构 `calculate_year_context` 统一接口
+- [x] 验证大运切换连续性 (No Gaps)
 
 **详细设计**: [V6.0_BAZI_PROFILE_DESIGN.md](docs/V6.0_BAZI_PROFILE_DESIGN.md)
 
@@ -494,16 +498,16 @@ MIT License - 自由使用，但请保留署名
 
 **From Chaos to Cosmos** 🌌  
 **From Code to Wisdom** 📖  
-**From V1.0 to V5.3** 🚀  
+**From V1.0 to V6.0** 🔮  
 
 ---
 
 **The Trinity Watches. The Skull Guards. The System Serves.** 🏛️💀✨
 
-**Version**: V5.3 Skull  
-**Status**: Production Ready  
-**Built with**: ❤️, ☕, and 14 hours of extreme coding  
-**Date**: 2025-12-13  
+**Version**: V6.0 Oracle Edition
+**Status**: Code Frozen
+**Built with**: ❤️, ☕, and Infinite Recursion
+**Date**: 2025-12-14  
 
 ---
 

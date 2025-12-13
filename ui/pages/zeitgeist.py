@@ -10,6 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 
 from core.quantum_engine import QuantumEngine
 from core.context import DestinyContext
+from core.bazi_profile import VirtualBaziProfile
 
 # Load Golden Parameters
 GOLDEN_PARAMS_PATH = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
@@ -155,20 +156,30 @@ def render():
         else:
             unfavorable.append(e.capitalize())
     
+    
+    gender_map = {"男": 1, "女": 0}
+    gender_val = gender_map.get(selected_case.get('gender', '男'), 1)
+    
+    # Construct pillars dict
+    bazi_list = selected_case['bazi']
+    pillars_dict = {
+        'year': bazi_list[0],
+        'month': bazi_list[1],
+        'day': bazi_list[2],
+        'hour': bazi_list[3]
+    }
+    
+    profile = VirtualBaziProfile(
+        pillars=pillars_dict,
+        static_luck="未知",
+        day_master=selected_case['day_master'],
+        gender=gender_val
+    )
+
     # === Trinity Calculation Loop ===
     for y in years:
-        gan = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"][(y - 2024) % 10]
-        zhi = ["辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯"][(y - 2024) % 12]
-        year_pillar = f"{gan}{zhi}"
-        
         # Call Trinity Interface
-        ctx = engine.calculate_year_context(
-            year_pillar=year_pillar,
-            favorable_elements=favorable,
-            unfavorable_elements=unfavorable,
-            birth_chart=birth_chart,
-            year=y
-        )
+        ctx = engine.calculate_year_context(profile, y)
         
         contexts.append(ctx)
     

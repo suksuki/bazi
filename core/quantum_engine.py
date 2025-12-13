@@ -6,6 +6,7 @@ from collections import Counter
 from core.constants import GRAVE_TREASURY_CONFIG, HIDDEN_STEMS_MAP, EARTH_PUNISHMENT_SET
 from core.interaction_service import InteractionService
 from core.context import DestinyContext, create_context_from_v35_result
+from core.bazi_profile import BaziProfile
 
 class QuantumEngine:
     """
@@ -481,6 +482,43 @@ class QuantumEngine:
                 # V2.8: Earth Branches Set
                 EARTH_BRANCHES = {'辰', '戌', '丑', '未'}
 
+                # === Sprint 5.3: Three Punishments (The Skull Protocol) ===
+                # Logic: Check if {丑, 未, 戌} is a subset of (Chart Branches + Year Branch)
+                
+                # Get dynamic year branch
+                current_year_branch = None
+                if dynamic_context and 'year' in dynamic_context:
+                    yp = dynamic_context['year']
+                    if len(yp) > 1: current_year_branch = yp[1]
+                
+                if current_year_branch:
+                    all_branches = set(branches)
+                    all_branches.add(current_year_branch)
+                    
+                    # Import punishment set if not available (defensive)
+                    try:
+                        from core.constants import EARTH_PUNISHMENT_SET
+                    except ImportError:
+                        EARTH_BRANCHES_SET = {'丑', '未', '戌'}
+                    
+                    if EARTH_PUNISHMENT_SET.issubset(all_branches):
+                        # TRIGGERED
+                        clash_score += 50.0 # Massive penalty
+                        narrative.append("💀 丑未戌三刑！结构性崩塌")
+                        narrative_events.append({
+                            "card_type": "punishment_collapse",
+                            "level": "apocalypse",
+                            "title": "三刑崩塌 (The Skull)",
+                            "desc": "Chou-Wei-Xu Earth Punishment triggered. Structural Integrity Critical.",
+                            "score_delta": "-50.0 (Collapse)",
+                            "animation_trigger": "skull_shatter"
+                        })
+                        
+                        # Apply immediate heavy damage
+                        e_career -= 20.0
+                        e_wealth -= 20.0
+                        e_relationship -= 20.0
+
                 for i in range(len(branches)):
                     for j in range(i + 1, len(branches)):
                         b1 = branches[i]
@@ -832,6 +870,21 @@ QuantumEngine._evaluate_wang_shuai = _evaluate_wang_shuai
 QuantumEngine._determine_favorable = _determine_favorable
 QuantumEngine.get_elements_for_year = get_elements_for_year
 
+def get_year_pillar(self, year: int) -> str:
+    """
+    Get the GanZhi for a specific year.
+    """
+    try:
+        from lunar_python import Solar
+        # Use mid-year to avoid boundary issues
+        solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
+        lunar = solar.getLunar()
+        return lunar.getYearInGanZhi()
+    except Exception:
+        return ""
+
+QuantumEngine.get_year_pillar = get_year_pillar
+
 # Helper for default params
 def _load_default_params(self):
     """Load golden parameters from disk as default."""
@@ -986,6 +1039,15 @@ def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfav
                     bonus_points += 2.0  # Small bonus
         
         final_score = (base_score * multiplier) + bonus_points
+        
+        # === Sprint 5.3: Three Punishments (The Skull Protocol) ===
+        # Check for Chou-Wei-Xu Earth Punishment
+        # Requires self._detect_three_punishments to be available
+        if hasattr(self, '_detect_three_punishments') and self._detect_three_punishments(birth_chart, branch):
+            final_score = -50.0 # Collapse
+            treasury_icon = '💀'
+            treasury_risk_level = 'danger'
+            details.append("💀 丑未戌三刑！结构性崩塌 (Structure Collapse)")
 
     # V3.5: Return enhanced structure
     return {
@@ -1035,230 +1097,155 @@ QuantumEngine._detect_three_punishments = _detect_three_punishments
 # === Trinity Architecture: Unified Interface ===
 # This method is the ONLY bridge between QuantumEngine and all consumers
 
-def calculate_year_context(
-    self,
-    year_pillar: str,
-    favorable_elements: list,
-    unfavorable_elements: list,
-    birth_chart: dict,
-    year: int = None,
-    active_luck: str = None  # Sprint 5.4: 动态大运支持
-) -> DestinyContext:
+def get_year_pillar(self, year: int) -> str:
     """
-    [Trinity 核心接口] V4.0 Unified Interface
-    
-    Calculate year destiny and return standardized DestinyContext.
-    This is the single source of truth for Dashboard, QuantumLab, and Cinema.
-    
-    Args:
-        year_pillar: Year pillar string, e.g. "甲辰"
-        favorable_elements: List of favorable elements
-        unfavorable_elements: List of unfavorable elements  
-        birth_chart: Birth chart dict with V3.5 structure
-        year: Optional year number for context
-    
-    Returns:
-        DestinyContext: Unified context object with all metadata
+    Helper method to get the year pillar (干支) for a given year.
     """
-    # Sprint 5.4: 动态大运选择
-    # 如果传入了 active_luck，使用动态大运；否则使用静态大运
-    current_luck_pillar = active_luck if active_luck else birth_chart.get('current_luck_pillar', '')
+    solar = Solar.fromYmdHms(year, 6, 15, 0, 0, 0)
+    lunar = solar.getLunar()
+    return lunar.getYearInGanZhi()
+
+QuantumEngine.get_year_pillar = get_year_pillar
+
+def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyContext:
+    """
+    [V6.0 Trinity 接口] 基于 BaziProfile 对象计算流年上下文
+    现在全面升级为调用 calculate_energy (V2.6+) 以获取多维度分数。
+    """
+    # 1. 获取流年干支
+    year_pillar = self.get_year_pillar(year) 
     
-    # CRITICAL: 将动态大运注入 birth_chart，确保后续计算使用正确的大运！
-    birth_chart_with_luck = birth_chart.copy()
-    birth_chart_with_luck['current_luck_pillar'] = current_luck_pillar
+    # 2. 获取当年大运
+    current_luck = profile.get_luck_pillar_at(year)
     
-    # 1. Call V3.5 core logic (reuse, don't rewrite)
-    v35_result = self.calculate_year_score(
-        year_pillar=year_pillar,
-        favorable_elements=favorable_elements,
-        unfavorable_elements=unfavorable_elements,
-        birth_chart=birth_chart_with_luck  # 使用包含动态大运的 birth_chart!
-    )
+    # 3. 构造 calculate_energy 所需的 case_data
+    # 注意：这里我们依赖 calculate_energy 内部的 FluxEngine fallback 
+    # 来自动计算 physics_sources (pillar_energies)
     
-    raw_score = v35_result.get('score', 0.0)
-    icon = v35_result.get('treasury_icon')
-    risk_level = v35_result.get('treasury_risk', 'none')
-    details = v35_result.get('details', [])
+    # 转换 BaziProfile 的四柱为列表
+    bazi_list = [
+        profile.pillars['year'],
+        profile.pillars['month'],
+        profile.pillars['day'],
+        profile.pillars['hour']
+    ]
     
-    # 2. Calculate dimension-specific scores (from Dashboard logic)
-    base_mod = raw_score * 0.5
-    if raw_score <= -5.0:
-        base_mod *= 1.5
+    # 临时估算旺衰 (calculate_energy 内部若无 physics_sources 会 fallback，
+    # 但如果有 wang_shuai 字符串会更好)
+    # 暂时用简单的逻辑或留空让 engine 自动处理
+    wang_shuai_str = "身中和" 
+    try:
+         w_s, _ = self._evaluate_wang_shuai(profile.day_master, bazi_list)
+         wang_shuai_str = "身旺" if "Strong" in w_s else "身弱"
+    except:
+         pass
+
+    # Handle VirtualProfile (Legacy/Test mode) without birth_date
+    b_date = getattr(profile, 'birth_date', None)
+    birth_info = {
+        'year': b_date.year,
+        'month': b_date.month,
+        'day': b_date.day,
+        'hour': getattr(b_date, 'hour', 12),
+        'gender': profile.gender
+    } if b_date else {
+        'year': 2000, 'month': 1, 'day': 1, 'hour': 12, 'gender': profile.gender
+    }
+
+    case_data = {
+        'id': 9999, # Dummy ID
+        'gender': '男' if profile.gender == 1 else '女',
+        'day_master': profile.day_master,
+        'wang_shuai': wang_shuai_str,
+        'bazi': bazi_list,
+        'birth_info': birth_info
+    }
     
-    career_mod = base_mod * 0.8
-    wealth_mod = base_mod * 1.0
-    rel_mod = base_mod * 0.4
+    # 4. 构造 Dynamic Context
+    # calculate_energy 期望的大运格式是 "AB" (干支)
+    # 流年也是 "CD" (干支)
+    dyn_ctx = {
+        'year': year_pillar,
+        'dayun': current_luck,
+        'luck': current_luck # 兼容某些旧代码可能用 'luck' key
+    }
     
-    # Treasury bonus (if applicable)
-    treasury_bonus_wealth = 0.0
-    treasury_bonus_career = 0.0
+    # 5. 调用核心引擎
+    results = self.calculate_energy(case_data, dyn_ctx)
     
-    if icon in ['🏆', '🗝️'] and risk_level == 'opportunity':
-        treasury_bonus_wealth = raw_score * 0.3
-        treasury_bonus_career = raw_score * 0.15
+    # 6. 解析结果并转换为 DestinyContext
+    final_career = results.get('career', 0.0)
+    final_wealth = results.get('wealth', 0.0)
+    final_rel = results.get('relationship', 0.0)
     
-    # Assume base energy scores (simplified, can be enhanced)
-    base_career = 5.0
-    base_wealth = 4.0
-    base_rel = 6.0
+    # 为了兼容性，我们取三者的平均值或者最大值的某种加权作为总分 score
+    # V3.5 通常用综合分。这里简单取平均值作为参考 score
+    raw_score = (final_career + final_wealth + final_rel) / 3.0
     
-    career_score = base_career + career_mod + treasury_bonus_career
-    wealth_score = base_wealth + wealth_mod + treasury_bonus_wealth
-    rel_score = base_rel + rel_mod
+    narrative_events = results.get('narrative_events', [])
+    details = [e['title'] for e in narrative_events]
     
-    # 3. Extract structured features
-    is_treasury = icon in ['🏆', '⚠️', '🗝️', '💀']
+    # 提取 Vision / Icon
+    # 优先看有没有 narrative_events 里的 heavy hitters
+    icon = None
+    main_risk = "none"
     
-    # Get DM strength from birth_chart
-    dm_energy = birth_chart.get('energy_self', 0)
-    if dm_energy > 3.5:
-        dm_strength = 'Strong'
-    elif dm_energy >= 2.0:
-        dm_strength = 'Medium'
-    else:
-        dm_strength = 'Weak'
+    # 简单判定 icon
+    # 简单判定 icon
+    for ev in narrative_events:
+        ctype = ev.get('card_type', '')
+        # Skull has highest priority (The Skull Protocol)
+        if 'punishment' in ctype or 'collapse' in ctype or 'broken' in ctype:
+            icon = "💀"
+            main_risk = "danger"
+            # Override score for Structural Collapse
+            raw_score = -50.0
+            break 
+            
+        elif 'vault_open' in ctype: 
+            # Only set if not already set (though loop breaks on skull)
+            # But we want to ensure we don't overwrite if we had a warning?
+            # Actually, Opportunity can coexist with Warning, but Skull trumps all.
+            # If we haven't found a Skull yet, current icon is either None or Warning.
+            # Opportunity usually implies we should show it unless it's a Skull.
+            icon = "🏆"
+            main_risk = "opportunity"
+            
+        elif 'pressure' in ctype or 'clash' in ctype:
+            if not icon: # Don't overwrite trophy
+                icon = "⚠️"
+                main_risk = "warning"
     
-    # Determine treasury type
-    treasury_type = None
-    treasury_element = None
-    if is_treasury:
-        if any('财库' in d for d in details):
-            treasury_type = 'Wealth'
-        elif any('官库' in d for d in details):
-            treasury_type = 'Power'
-        else:
-            treasury_type = 'General'
-        
-        # Extract element
-        for d in details:
-            if '库[' in d:
-                start = d.find('[') + 1
-                end = d.find(']')
-                if start > 0 and end > start:
-                    treasury_element = d[start:end]
-                    break
-    
-    # 4. Build tags
-    tags = []
-    energy_level = "Neutral"
-    
-    if raw_score > 15:
-        energy_level = "Extreme Opportunity (大吉)"
-        tags.append("机遇")
-    elif raw_score > 8:
-        energy_level = "High Opportunity (吉)"
-        tags.append("顺利")
-    elif raw_score > 0:
-        energy_level = "Moderate Positive (小吉)"
-        tags.append("平稳")
-    elif raw_score > -8:
-        energy_level = "ModerateNegative (小凶)"
-        tags.append("谨慎")
-    elif raw_score > -15:
-        energy_level = "High Risk (凶)"
-        tags.append("风险")
-    else:
-        energy_level = "Extreme Risk (大凶)"
-        tags.append("危机")
-    
-    if icon == '⚠️':
-        tags.extend(["身弱不胜财", "财库冲开", "虚不受补"])
-    elif icon == '🏆':
-        tags.extend(["身强胜财", "财库爆发", "暴富契机"])
-    elif icon == '🗝️':
-        tags.append("库门开启")
-    
-    # Add structural tags
-    for detail in details:
-        if '截脚' in detail:
-            tags.append("截脚")
-        if '盖头' in detail:
-            tags.append("盖头")
-    
-    # === Sprint 5.3: Three Punishments Override ===
-    # Check for 丑未戌三刑 - The Skull Protocol 💀
-    year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
-    is_punishment = self._detect_three_punishments(birth_chart, year_branch)
-    
-    if is_punishment:
-        # 💀 Three Punishments Triggered! Override everything!
-        # This is structural collapse - more dangerous than treasury or other events
-        
-        icon = "💀"
-        risk_level = "danger"
-        
-        # Heavy penalty
-        raw_score -= 40.0
-        
-        # Update tags - prepend critical warnings
-        tags.insert(0, "三刑齐见")
-        tags.insert(1, "恃势之刑")
-        tags.insert(2, "结构性崩塌")
-        
-        # Override energy level
-        energy_level = "Structural Collapse (大凶)"
-        
-        # Update dimension scores to reflect extreme danger
-        career_score = min(career_score, -10.0)
-        wealth_score = min(wealth_score, -10.0)
-        rel_score = min(rel_score, -8.0)
-    
-    # 5. Build narrative prompt for LLM
-    strength_desc = {'Strong': '身强', 'Medium': '中和', 'Weak': '身弱'}
-    
-    narrative_parts = []
-    narrative_parts.append(f"用户八字日主{strength_desc.get(dm_strength, '中和')}")
-    narrative_parts.append(f"流年[{year_pillar}]状态：{energy_level}")
-    
-    if is_treasury:
-        action = "冲开" if risk_level == "warning" else "开启"
-        narrative_parts.append(f"{treasury_type}库{action}")
-    
-    narrative_parts.append(f"关键事件：{'; '.join(details[:3])}")  # Top 3 details
-    narrative_parts.append(f"核心特征：{', '.join(tags)}")
-    narrative_parts.append(f"系统判定综合分数：{raw_score:.1f}")
-    
-    if risk_level == 'warning':
-        narrative_parts.append("请以警示、谨慎的语气进行叙事")
-    elif risk_level == 'opportunity':
-        narrative_parts.append("请以积极、鼓舞的语气进行叙事")
-    elif risk_level == 'danger':
-        # Sprint 5.3: Three Punishments extreme warning
-        narrative_parts.append("【严重警告】流年触发'丑未戌三刑'。这是极度危险的结构性压力，预示着内部崩塌、健康受损或牢狱之灾。语气必须极其严厉")
-    
-    narrative_prompt = "。".join(narrative_parts) + "。"
-    
-    # 6. Assemble DestinyContext
-    ctx = create_context_from_v35_result(
-        year=year or 2024,  # Use provided year or default
+    # 判定能量等级
+    if raw_score <= -40: energy_lvl = "Structural Collapse"
+    elif raw_score > 6: energy_lvl = "High Opportunity"
+    elif raw_score < -6: energy_lvl = "High Risk"
+    else: energy_lvl = "Neutral"
+
+    # 7. 构造 Context
+    ctx = DestinyContext(
+        year=year,
         pillar=year_pillar,
-        v35_result=v35_result,
-        career=career_score,
-        wealth=wealth_score,
-        relationship=rel_score
+        luck_pillar=current_luck,
+        score=raw_score,
+        raw_score=raw_score,
+        energy_level=energy_lvl,
+        career=final_career,
+        wealth=final_wealth,
+        relationship=final_rel,
+        is_treasury_open=(icon in ["🏆", "🗝️"]),
+        risk_level=main_risk,
+        icon=icon,
+        tags=details,
+        description=results.get('desc', ''),
+        narrative_events=narrative_events,
+        version="V6.0"
     )
     
-    # Override/enhance with calculated values
-    ctx.day_master_strength = dm_strength
-    ctx.dm_energy = dm_energy
-    ctx.energy_level = energy_level
-    ctx.tags = tags
-    ctx.narrative_prompt = narrative_prompt
-    ctx.treasury_type = treasury_type
-    ctx.treasury_element = treasury_element
-    ctx.description = '; '.join(details[:2]) if details else ""
-    
-    # Sprint 5.3: Override icon, risk, and score if punishment detected
-    if is_punishment:
-        ctx.icon = "💀"
-        ctx.risk_level = "danger"
-        ctx.display_color = "#FF0000"
-        ctx.score = raw_score  # Apply the -40 penalty
-    
+    # Auto prompt
+    ctx.narrative_prompt = ctx.build_narrative_prompt()
     return ctx
 
-# Bind method to class
 QuantumEngine.calculate_year_context = calculate_year_context
 
 # === Sprint 5.4: Dynamic Luck Pillar ===
