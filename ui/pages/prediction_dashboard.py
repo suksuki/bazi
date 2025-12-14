@@ -16,7 +16,7 @@ from ui.components.styles import (
 # Core Imports
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.quantum_engine import QuantumEngine # V2.9 Quantum Physics Engine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 from core.bazi_profile import BaziProfile
