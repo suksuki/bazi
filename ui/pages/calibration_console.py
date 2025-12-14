@@ -73,83 +73,49 @@ def save_params(new_params):
 
 # --- UI ---
 st.title("🎛️ Quantum Calibration Console")
-st.markdown("### V2.6.1 Physics Engine Tuning")
+st.markdown("### V8.8 Physics Engine Tuning (Hot-Reload)")
 
-# 1. SIDEBAR CONTROLS
-st.sidebar.header("🛠️ Physics Controls")
+from core.config_manager import ConfigManager
 
-# Load Defaults
-defaults = load_params()
-flat_defaults = {}
+# Load Active Config
+config = ConfigManager.load_config()
 
-# Flatten logic similar to script
-if defaults:
-    gp = defaults.get('global_physics', {})
-    flat_defaults['w_e_weight'] = gp.get('w_e_weight', 1.0)
-    
-    k = defaults.get('conflict_and_conversion_k_factors', {})
-    flat_defaults['k_clash'] = k.get('K_Clash_Robbery', 1.2)
-    flat_defaults['k_mutiny'] = k.get('K_Mutiny_Betrayal', 1.8)
-    flat_defaults['k_pressure'] = k.get('K_Pressure_Attack', 1.0)
-    flat_defaults['k_leak'] = k.get('K_Leak_Drain', 0.87)
-    flat_defaults['k_broken'] = k.get('K_Broken_Collapse', 1.5)
-    flat_defaults['k_burden'] = k.get('K_Burden_Wealth', 1.0)
-    flat_defaults['k_control'] = k.get('K_Control_Conversion', 0.55)
-    
-    mw = defaults.get('macro_weights_w', {})
-    flat_defaults['w_career_officer'] = mw.get('W_Career_Officer', 0.8)
-    flat_defaults['w_wealth_cai'] = mw.get('W_Wealth_Cai', 0.6)
-    
-    flags = defaults.get('logic_flags', {})
-    flat_defaults['enable_mediation'] = flags.get('enable_mediation_exemption', True)
-    flat_defaults['enable_structural'] = flags.get('enable_structural_clash', True)
+# 1. PHYSICS CONTROLS
+st.sidebar.header("🛠️ Physics Layers")
 
+st.sidebar.subheader("Layer 1: Base Physics")
+p_cfg = config.get('physics', {})
+new_stem = st.sidebar.slider("Stem Score (Base Unit)", 5.0, 20.0, float(p_cfg.get('stem_score', 10.0)), 0.5)
+new_branch_main = st.sidebar.slider("Branch Main Qi", 5.0, 20.0, float(p_cfg.get('branch_main_qi', 10.0)), 0.5)
+new_branch_sub = st.sidebar.slider("Branch Sub Qi", 1.0, 10.0, float(p_cfg.get('branch_sub_qi', 7.0)), 0.5)
 
-# Sliders
-k_clash = st.sidebar.slider("K_Clash (Robbery/Clash)", 0.5, 2.0, flat_defaults.get('k_clash', 1.2), 0.1)
-k_mutiny = st.sidebar.slider("K_Mutiny (Officer vs Output)", 1.0, 3.0, flat_defaults.get('k_mutiny', 1.8), 0.1)
-k_pressure = st.sidebar.slider("K_Pressure (Officer Attack)", 0.5, 2.0, flat_defaults.get('k_pressure', 1.0), 0.1)
-k_leak = st.sidebar.slider("K_Leak (Weak vs Output)", 0.5, 1.5, flat_defaults.get('k_leak', 0.87), 0.01)
-k_broken = st.sidebar.slider("K_Broken (Fake Follow)", 1.0, 3.0, flat_defaults.get('k_broken', 1.5), 0.1)
-k_burden = st.sidebar.slider("K_Burden (Wealth Burden)", 0.5, 2.0, flat_defaults.get('k_burden', 1.0), 0.1)
+st.sidebar.subheader("Layer 2: Seasonal")
+s_cfg = config.get('seasonal', {})
+new_cmd_bonus = st.sidebar.slider("Command Bonus (Multiplier)", 0.0, 5.0, float(s_cfg.get('monthly_command_bonus', 1.5)), 0.1)
+new_gen_bonus = st.sidebar.slider("Generation Bonus (Multiplier)", 0.0, 5.0, float(s_cfg.get('generation_bonus', 1.2)), 0.1)
 
-st.sidebar.markdown("---")
-w_off = st.sidebar.slider("W_Career_Officer", 0.0, 1.0, flat_defaults.get('w_career_officer', 0.8), 0.05)
-w_cai = st.sidebar.slider("W_Wealth_Cai", 0.0, 1.0, flat_defaults.get('w_wealth_cai', 0.6), 0.05)
-
-enable_mediation = st.sidebar.checkbox("Enable Mediation Exemption", flat_defaults.get('enable_mediation', True))
-enable_structural = st.sidebar.checkbox("Enable Structural Clash", flat_defaults.get('enable_structural', True))
-
-# Construct Params Object for Engine
-current_params = {
-    'w_e_weight': flat_defaults.get('w_e_weight', 1.0), # Fixed for now
-    'f_yy_correction': 1.1,
-    'w_career_officer': w_off,
-    'w_career_resource': 0.1,
-    'w_career_output': 0.0,
-    'w_wealth_cai': w_cai,
-    'w_wealth_output': 0.4,
-    'w_rel_spouse': 0.35,
-    'w_rel_self': 0.20,
-    'k_control': flat_defaults.get('k_control', 0.55),
-    'k_buffer': 0.40,
-    'k_mutiny': k_mutiny,
-    'k_capture': 0.0,
-    'k_leak': k_leak,
-    'k_clash': k_clash,
-    'k_pressure': k_pressure,
-    'k_burden': k_burden,
-    'k_broken': k_broken,
-    'enable_mediation_exemption': enable_mediation,
-    'enable_structural_clash': enable_structural
+# Construct Params Object for Save
+new_config = {
+    "physics": {
+        "stem_score": new_stem,
+        "branch_main_qi": new_branch_main,
+        "branch_sub_qi": new_branch_sub
+    },
+    "seasonal": {
+        "monthly_command_bonus": new_cmd_bonus,
+        "generation_bonus": new_gen_bonus
+    }
 }
 
 # Save Button
-if st.sidebar.button("💾 Export Config to Disk"):
-    save_params(current_params)
+if st.sidebar.button("💾 Apply & Save Config"):
+    ConfigManager.save_config(new_config)
+    st.sidebar.success("Config saved! Engine will reload.")
+    st.rerun()
 
 # 2. CALCULATION ENGINE
-engine = QuantumEngine(current_params)
+# Initialize Engine (it will auto-load config via ConfigManager in processors)
+engine = QuantumEngine() # No need to pass params, processors read ConfigManager directly
 cases = load_cases()
 
 results = []

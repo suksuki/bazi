@@ -98,6 +98,23 @@ class PhysicsProcessor(BaseProcessor):
                 'stem_elements': [str]
             }
         """
+        # 🔥 Hot-Reload: Load latest config
+        from core.config_manager import ConfigManager
+        config = ConfigManager.load_config()
+        p_params = config.get("physics", {})
+        
+        # Load params
+        base_stem = p_params.get("stem_score", 10.0)
+        base_branch = p_params.get("branch_main_qi", 10.0)
+        
+        # Hardcoded weights for now, can be moved to config later if needed
+        pillar_weights = {
+            'year': 0.8,
+            'month': 2.0,
+            'day': 1.0,
+            'hour': 0.9
+        }
+        
         bazi = context.get('bazi', [])
         dm_char = context.get('day_master', '甲')
         dm_element = self._get_element_stem(dm_char)
@@ -129,15 +146,16 @@ class PhysicsProcessor(BaseProcessor):
             
             stem, branch = pillar[0], pillar[1]
             p_name = pillar_names[idx]
-            p_weight = self.PILLAR_WEIGHTS.get(p_name, 1.0)
+            p_weight = pillar_weights.get(p_name, 1.0)
             
             # Spatial decay from Day pillar (idx=2)
             dist = abs(idx - 2)
             k_dist = 1.0
+            # Use fixed decay for now as it's not in default config
             if dist == 1:
-                k_dist = self.SPATIAL_DECAY['gap1']
+                k_dist = 0.6
             elif dist >= 2:
-                k_dist = self.SPATIAL_DECAY['gap2']
+                k_dist = 0.3
             
             # Stem energy (skip Day Master itself)
             if idx != 2:
@@ -149,12 +167,13 @@ class PhysicsProcessor(BaseProcessor):
                 k_root = self.ROOTING_WEIGHT if is_rooted else 0.5
                 k_exposed = self.EXPOSED_BOOST if is_rooted else 1.0
                 
-                s_score = self.BASE_UNIT * p_weight * k_dist * k_exposed
+                # Apply multipliers
+                s_score = base_stem * p_weight * k_dist * k_exposed
                 energy[s_elem] += s_score
             
             # Branch energy
             b_elem = self._get_element_branch(branch)
-            b_score = self.BASE_UNIT * p_weight * k_dist
+            b_score = base_branch * p_weight * k_dist
             energy[b_elem] += b_score
         
         return {

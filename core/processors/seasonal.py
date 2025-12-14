@@ -56,10 +56,6 @@ class SeasonalProcessor(BaseProcessor):
         """
         Calculate seasonal adjustments.
         
-        Input context should include:
-        - month_branch: e.g., '午'
-        - dm_element: e.g., 'metal'
-        
         Returns:
             {
                 'is_in_command': bool,
@@ -69,6 +65,33 @@ class SeasonalProcessor(BaseProcessor):
                 'seasonal_multipliers': {element: multiplier}
             }
         """
+        # 🔥 Hot-Reload
+        from core.config_manager import ConfigManager
+        config = ConfigManager.load_config()
+        s_params = config.get("seasonal", {})
+        p_params = config.get("physics", {})
+        
+        # Base unit for scaling
+        base_unit = p_params.get("stem_score", 10.0)
+        
+        # Load multipliers (default to reasonable factors of base_unit)
+        # Default 1.5 -> 1.5 * 10 = 15. (Original was 150 vs 50, which is 3.0x)
+        # We will assume the config values are Multipliers of Base Unit
+        cmd_mult = s_params.get("monthly_command_bonus", 1.5)
+        gen_mult = s_params.get("generation_bonus", 1.2)
+        
+        in_command_bonus_val = base_unit * cmd_mult * 10.0 # Scale up to match legacy magnitude? 
+        # Wait, if we change the base scale from 50 to 10, everything scales down.
+        # So we should just use base_unit * multiplier.
+        # If user provided 1.5 in config, and base is 10, result is 15.
+        # This preserves the ratio relative to the new scale.
+        
+        in_command_bonus_val = base_unit * cmd_mult 
+        resource_month_bonus_val = base_unit * gen_mult
+        
+        # If the user intended the legacy "Big Number" feel, they might need to adjust config.
+        # But for V8.8, we are moving to a cleaner scale (10s instead of 100s).
+        
         month_branch = context.get('month_branch', '')
         dm_element = context.get('dm_element', 'wood')
         
@@ -79,7 +102,6 @@ class SeasonalProcessor(BaseProcessor):
         is_in_command = (month_element == dm_element)
         
         # Check 印绶月 (Resource Month)
-        # Resource is what generates DM
         resource_element = None
         for mother, child in GENERATION.items():
             if child == dm_element:
@@ -89,8 +111,8 @@ class SeasonalProcessor(BaseProcessor):
         is_resource_month = (month_element == resource_element)
         
         # Calculate bonuses
-        in_command_bonus = self.IN_COMMAND_BONUS if is_in_command else 0.0
-        resource_month_bonus = self.RESOURCE_MONTH_BONUS if is_resource_month else 0.0
+        in_command_bonus = in_command_bonus_val if is_in_command else 0.0
+        resource_month_bonus = resource_month_bonus_val if is_resource_month else 0.0
         
         # Get prosperity multipliers for this month
         seasonal_mults = self.MONTH_PROSPERITY.get(month_branch, {
