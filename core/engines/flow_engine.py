@@ -3,9 +3,20 @@ import numpy as np
 
 class FlowEngine:
     """
-    V7.4 Energy Flow Dynamics Engine (Resonance & Flow)
+    V8.0 Energy Flow Dynamics Engine (Resonance & Flow)
     Implements the Damping Protocol (Impedance, Viscosity, Entropy).
+    
+    [V8.0 NEW] Phase Change Protocol:
+    - Scorched Earth (焦土): Summer fire evaporates moisture from earth,
+      blocking the earth -> metal generation path.
+    - Frozen Water (冻水): Winter extreme cold freezes water,
+      blocking the water -> wood generation path.
     """
+    
+    # Summer branches (火旺季节)
+    SUMMER_BRANCHES = {'巳', '午', '未'}
+    # Winter branches (水旺季节)
+    WINTER_BRANCHES = {'亥', '子', '丑'}
     
     def __init__(self, config=None):
         self.config = config or {}
@@ -13,16 +24,24 @@ class FlowEngine:
         self.GENERATION = {'wood': 'fire', 'fire': 'earth', 'earth': 'metal', 'metal': 'water', 'water': 'wood'}
         self.CONTROL = {'wood': 'earth', 'earth': 'water', 'water': 'fire', 'fire': 'metal', 'metal': 'wood'}
         
+        # V8.0: Track seasonal context
+        self.month_branch = None
+        
     def update_config(self, new_config):
         self.config = new_config
+    
+    def set_month_branch(self, branch: str):
+        """[V8.0] Set the month branch for Phase Change calculations."""
+        self.month_branch = branch
 
-    def simulate_flow(self, initial_energies: dict, dm_elem: str = None) -> dict:
+    def simulate_flow(self, initial_energies: dict, dm_elem: str = None, month_branch: str = None) -> dict:
         """
-        [V7.4 Core] Constrained Flow Simulation (The Damping Protocol).
-        Applies Physics of Impedance and Viscosity to prevent 'Over-Drain' and 'Over-Fill'.
+        [V8.0 Core] Constrained Flow Simulation with Phase Change Protocol.
+        Applies Physics of Impedance, Viscosity, and Seasonal Phase Change.
         
         :param initial_energies: Raw energy dict (Wood: 100, Fire: 50...)
         :param dm_elem: Day Master Element (e.g., 'wood') - CRITICAL for role-based physics
+        :param month_branch: [V8.0 NEW] Month branch for Phase Change detection
         :return: Final stabilized energy
         """
         import copy
@@ -34,6 +53,14 @@ class FlowEngine:
         res_imp = fc.get('resourceImpedance', {'base': 0.3, 'weaknessPenalty': 0.5})
         out_vis = fc.get('outputViscosity', {'maxDrainRate': 0.6, 'drainFriction': 0.2})
         entropy = fc.get('globalEntropy', 0.05)
+        
+        # [V8.0] Phase Change Parameters
+        phase_change = fc.get('phaseChange', {})
+        scorched_earth_damping = phase_change.get('scorchedEarthDamping', 0.15)  # 85% blocked
+        frozen_water_damping = phase_change.get('frozenWaterDamping', 0.3)  # 70% blocked
+        
+        # Use passed month_branch or stored one
+        active_month = month_branch or self.month_branch
         
         # Legacy Fallbacks (if new params missing)
         eff = fc.get('generationEfficiency', 0.7)
@@ -61,12 +88,41 @@ class FlowEngine:
             if self.CONTROL[dm_elem] == elem: return 'wealth'
             if self.CONTROL[elem] == dm_elem: return 'officer'
             return 'other'
+        
+        # [V8.0] Phase Change: Calculate channel efficiency modifiers
+        def get_phase_change_modifier(mother: str, child: str) -> float:
+            """
+            Returns generation efficiency modifier based on seasonal Phase Change.
+            
+            Physics Reality:
+            - Summer (午月): Hot sun evaporates moisture from earth -> Earth becomes 焦土
+              焦土 does NOT generate Metal (cracks and brittles it instead)
+            - Winter (子月): Extreme cold freezes water -> Water becomes 冻水
+              冻水 does NOT generate Wood (trees cannot absorb frozen water)
+            """
+            if not active_month:
+                return 1.0  # No seasonal data, full efficiency
+            
+            # Summer: Earth -> Metal is blocked (Scorched Earth)
+            if active_month in self.SUMMER_BRANCHES:
+                if mother == 'earth' and child == 'metal':
+                    # Debug: This is the key fix for VAL_006 (Stephen Chow)
+                    print(f"[V8.0 Phase Change] 🔥 Scorched Earth: {active_month}月 土不生金, damping={scorched_earth_damping}")
+                    return scorched_earth_damping
+                    
+            # Winter: Water -> Wood is blocked (Frozen Water)  
+            if active_month in self.WINTER_BRANCHES:
+                if mother == 'water' and child == 'wood':
+                    print(f"[V8.0 Phase Change] ❄️ Frozen Water: {active_month}月 水不生木, damping={frozen_water_damping}")
+                    return frozen_water_damping
+            
+            return 1.0  # Normal efficiency
 
         # Iteration
         for step in range(MAX_STEPS):
             next_state = current.copy()
             
-            # --- 1. Generation Phase (Impedance & Viscosity Applied) ---
+            # --- 1. Generation Phase (Impedance & Viscosity & Phase Change Applied) ---
             for mother, child in self.GENERATION.items():
                 mother_e = current.get(mother, 0.0)
                 if mother_e <= 0.001: continue
@@ -74,6 +130,9 @@ class FlowEngine:
                 # Identify Role of this Channel
                 mother_role = get_role(mother)
                 child_role = get_role(child)
+                
+                # [V8.0] Get Phase Change modifier for this channel
+                phase_modifier = get_phase_change_modifier(mother, child)
                 
                 # A. Resource -> Self (Impedance Logic)
                 if child_role == 'self':
@@ -88,8 +147,11 @@ class FlowEngine:
                     # Clamp Impedance [0, 1.0]
                     k_imp = min(0.95, k_imp)
                     
+                    # [V8.0] Apply Phase Change to efficiency
+                    effective_eff = eff * phase_modifier
+                    
                     # Transfer Amount
-                    transfer = mother_e * eff * (1.0 - k_imp)
+                    transfer = mother_e * effective_eff * (1.0 - k_imp)
                     # Mother still loses Energy usually
                     loss = mother_e * drain 
                     
@@ -102,9 +164,12 @@ class FlowEngine:
                     max_drain_rate = out_vis.get('maxDrainRate', 0.6)
                     friction = out_vis.get('drainFriction', 0.2)
                     
+                    # [V8.0] Apply Phase Change to efficiency
+                    effective_eff = eff * phase_modifier
+                    
                     # Theoretical Drain (Linear)
                     theoretical_loss = mother_e * drain
-                    theoretical_gain = mother_e * eff
+                    theoretical_gain = mother_e * effective_eff
                     
                     # Apply Clamp
                     # Cannot lose more than X% of current Self energy
@@ -113,14 +178,17 @@ class FlowEngine:
                     actual_loss = min(theoretical_loss, allowed_loss)
                     
                     # Friction reduces Gain (Heat Loss)
-                    actual_gain = actual_loss * (eff / drain) * (1.0 - friction)
+                    actual_gain = actual_loss * (effective_eff / drain) * (1.0 - friction)
                     
                     next_state[mother] -= actual_loss
                     next_state[child] += actual_gain
                     
                 # C. Generic Generation (Other relations)
                 else:
-                    transfer = mother_e * eff 
+                    # [V8.0] Apply Phase Change to efficiency
+                    effective_eff = eff * phase_modifier
+                    
+                    transfer = mother_e * effective_eff 
                     loss = mother_e * drain
                     next_state[child] += transfer
                     next_state[mother] -= loss
@@ -157,3 +225,4 @@ class FlowEngine:
             current = next_state
         
         return current
+

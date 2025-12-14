@@ -112,7 +112,7 @@ def render():
         st.error("No cases loaded")
         return
     
-    case_options = {f"No.{c['id']} {c['bazi'][2]}日主 ({c['desc']})": c for c in cases}
+    case_options = {f"No.{c['id']} {c['bazi'][2]}日主 ({c.get('description', 'Unknown')})": c for c in cases}
     selected_label = st.sidebar.selectbox("选择主演 (Subject)", list(case_options.keys()))
     selected_case = case_options[selected_label]
     

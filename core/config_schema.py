@@ -95,7 +95,7 @@ DEFAULT_FULL_ALGO_PARAMS = {
     },
 
     # === 面板 4: 能量流转 (Energy Flow) ===
-    # [V7.4 Refactor] The Damping Protocol (阻尼协议)
+    # [V8.0 Refactor] The Damping Protocol + Phase Change (阻尼协议 + 相变)
     "flow": {
         # A. 输入阻抗 (Resource Impedance)
         "resourceImpedance": {
@@ -112,7 +112,14 @@ DEFAULT_FULL_ALGO_PARAMS = {
         # C. 全局熵 (System Entropy)
         "globalEntropy": 0.05,     # 每轮损耗 5%
         
-        # D. Legacy/Base Params (Optional preservation)
+        # D. [V8.0 NEW] 相变协议 (Phase Change Protocol)
+        # 解决 VAL_006 (星爷) 的 "夏土生金" 悖论
+        "phaseChange": {
+            "scorchedEarthDamping": 0.15,  # 焦土不生金 (85% blocked in summer)
+            "frozenWaterDamping": 0.3       # 冻水不生木 (70% blocked in winter)
+        },
+        
+        # E. Legacy/Base Params (Optional preservation)
         "spatialDecay": { "gap1": 0.6, "gap2": 0.3 }
     },
 

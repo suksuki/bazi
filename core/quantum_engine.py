@@ -258,7 +258,23 @@ class QuantumEngine:
             # But for Energy Flow to DM, distance matters.
             
             raw_energy[b_elem] += b_score
-            
+        
+        # [V8.1] 建禄加成 (Lu Bonus / In-Command Bonus)
+        # When DM's element matches Month Branch element, DM is "得令" (In Command)
+        # This gives a HUGE bonus to Self energy
+        month_branch = bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else ''
+        mb_elem = self._get_element(month_branch)
+        
+        if mb_elem == dm_elem:
+            # 得令 - In Command! Day Master controls the season
+            LU_BONUS = BASE_UNIT * 3.0  # Major bonus: +150 points
+            raw_energy[dm_elem] += LU_BONUS
+            print(f"[V8.1] 建禄加成: {dm_elem} 得令 (Month: {month_branch}), +{LU_BONUS}")
+        elif self.GENERATION.get(mb_elem) == dm_elem:
+            # 印绶生身 - Month generates DM
+            RESOURCE_BONUS = BASE_UNIT * 1.5  # Moderate bonus: +75 points
+            raw_energy[dm_elem] += RESOURCE_BONUS
+            print(f"[V8.1] 印绶得月: {mb_elem} 生 {dm_elem}, +{RESOURCE_BONUS}")
         # [V7.4] Inject Stem Fusion Physics (Alchemy)
         # Check for Warlord Case (Wu-Gui -> Fire) and others
         stems = [p[0] for p in bazi_list if len(p) > 0]
@@ -316,7 +332,8 @@ class QuantumEngine:
         # 4. Simulate Flow
         # Update Flow Engine with current config (just in case)
         self.flow_engine.update_config(fc)
-        final_state = self.flow_engine.simulate_flow(raw_energy, dm_elem=dm_elem)
+        # [V8.0] Pass month_branch for Phase Change Protocol
+        final_state = self.flow_engine.simulate_flow(raw_energy, dm_elem=dm_elem, month_branch=month_branch)
         
         # [V3.0] Macro Physics: Geography & Era
         macro = fc.get('macroPhysics', {})
@@ -404,12 +421,16 @@ class QuantumEngine:
             raw_e_guan_sha = sources.get('officer', {}).get('base', 1.0)
             raw_e_resource = sources.get('resource', {}).get('base', 1.0)
         else:
-            # Fallback Mock
-            raw_e_guan_sha = ((cid * 7) % 10) 
-            raw_e_cai = ((cid * 5) % 9)
-            raw_e_self = ((cid * 2) % 8) + 2 
-            raw_e_output = ((cid * 3) % 8) 
-            raw_e_resource = ((cid * 4) % 8)
+            # Fallback Mock - Convert string ID to numeric hash for calculations
+            if isinstance(cid, str):
+                cid_num = hash(cid) % 100  # Convert string to stable number
+            else:
+                cid_num = cid if cid else 1
+            raw_e_guan_sha = ((cid_num * 7) % 10) 
+            raw_e_cai = ((cid_num * 5) % 9)
+            raw_e_self = ((cid_num * 2) % 8) + 2 
+            raw_e_output = ((cid_num * 3) % 8) 
+            raw_e_resource = ((cid_num * 4) % 8)
             
             if '身极弱' in wang_shuai: 
                 raw_e_self = -5.0
@@ -1011,12 +1032,49 @@ class QuantumEngine:
                 
             e_resource = flow_state.get(resource_elem, 0) if resource_elem else 0
             
+            # === V8.0 Phase Change: Scorched Earth Correction ===
+            # If month is summer AND DM is Metal AND Resource is Earth,
+            # the Resource CANNOT effectively support Metal (焦土不生金)
+            # Apply same damping to Resource contribution
+            month_branch = bazi[1][1] if len(bazi) > 1 and len(bazi[1]) > 1 else ''
+            SUMMER_BRANCHES = {'巳', '午', '未'}
+            
+            if month_branch in SUMMER_BRANCHES and dm_elem == 'metal' and resource_elem == 'earth':
+                # Scorched Earth: Resource is functionally useless to Metal
+                # Only count the 15% that ACTUALLY transfers
+                pc = self.full_config.get('flow', {}).get('phaseChange', {})
+                scorched_damping = pc.get('scorchedEarthDamping', 0.15)
+                
+                original_resource = e_resource
+                e_resource *= scorched_damping
+                print(f"[V8.0] Scorched Earth: Resource {original_resource:.1f} → {e_resource:.1f} (Effective for Metal)")
+            
             total_flow_support = e_self + e_resource
             total_flow_oppose = sum(flow_state.values()) - total_flow_support
             
             strength_v7 = "Strong" if (total_flow_support > total_flow_oppose) else "Weak"
             
-            if final_score > 0 and abs(total_flow_support - final_score) > 5:
+            # === V8.1 得令保护 (In-Command Override) ===
+            # When DM is "得令" (Month Branch element == DM element),
+            # Month is the STRONGEST pillar. If DM controls the month,
+            # this is a very strong indicator that should override flow simulation.
+            mb_elem = self._get_element(month_branch)
+            is_in_command = (mb_elem == dm_elem)
+            
+            if is_in_command:
+                # Check if there's severe opposition (e.g., multiple fire pillars for metal DM)
+                # But even then, month control is significant
+                opposition_ratio = total_flow_oppose / max(total_flow_support, 1.0)
+                
+                if opposition_ratio < 5.0:  # Not overwhelmingly opposed
+                    strength_v7 = "Strong"
+                    strength = "Strong"  # V8.1: Force assignment!
+                    # Recalculate score with month bonus
+                    final_score = max(final_score, 80.0)  # Minimum score for 得令
+                    print(f"[V8.1] 得令保护: {dm_elem} 得令于{month_branch}月, 判定为Strong (Override)")
+            
+            # Only override if significant difference and NOT protected by 得令
+            elif final_score > 0 and abs(total_flow_support - final_score) > 5:
                 final_score = total_flow_support 
                 strength = strength_v7
                 

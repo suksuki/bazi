@@ -1,5 +1,25 @@
 # Antigravity Release Notes
 
+## [V8.0-Preview] - Phase Change Protocol - 2025-12-14
+**Status:** 🧪 TESTING (Targeting VAL_006 Fix)
+
+### 🔥 物理引擎突破 (Physics Breakthrough)
+* **✅ 相变协议 (Phase Change Protocol):** 实现了季节性相生通道阻断
+  * **焦土不生金:** 夏季 (巳午未月) 土的水分被蒸发，变成焦土，阻断 Earth → Metal 相生通道 (85%)
+  * **冻水不生木:** 冬季 (亥子丑月) 水结冰，阻断 Water → Wood 相生通道 (70%)
+
+### 🎯 目标修复
+* **VAL_006 (星爷):** 辛金日主生于午月，此前误判为身强 (152.9分)
+  * **问题:** 辰土生辛金流程过于顺畅
+  * **修复:** 午月焦土效应，土生金效率降至 15%，预期身弱判定
+
+### 📁 文件变更
+* `core/engines/flow_engine.py` - 升级至 V8.0，添加 `phaseChange` 协议
+* `core/config_schema.py` - 新增 `scorchedEarthDamping` 和 `frozenWaterDamping` 参数
+* `tests/test_v8_phase_change.py` - V8.0 专项测试 (5/5 passed)
+
+---
+
 ## [V7.4] - The Physicist Edition - 2025-12-14
 **Status:** ✅ Stable / FROZEN ❄️  
 **Test Status:** 145 passed, 22 legacy failures, 2 skipped  

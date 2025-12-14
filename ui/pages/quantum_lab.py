@@ -713,7 +713,7 @@ def render():
         engine.update_full_config(st.session_state['full_algo_config'])
 
     # --- UI HEADER ---
-    st.title("🧪 量子八字 V6.0 验证工作台")
+    st.title("🧪 量子八字 V8.0 验证工作台 (Phase Change)")
     st.markdown("Dynamic Space-Time Validation Module (Unified Arch)")
 
     # --- TABS ---
