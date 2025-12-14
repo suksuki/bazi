@@ -356,16 +356,28 @@ class EngineV88:
         else:
             icon = "💀"
         
+        # Calculate dimension scores based on year score
+        # Career benefits from Officer/Wealth elements
+        # Wealth benefits from Wealth elements
+        # Relationship benefits from Resource/Output elements
+        career_score = base_score * 0.8 + 2.0
+        wealth_score = base_score * 0.7 + 1.5
+        rel_score = base_score * 0.6 + 1.0
+        
         # Build context
         ctx = DestinyContext(
             year=year,
-            pillar=year_pillar,  # Required parameter
+            pillar=year_pillar,
             score=base_score,
             icon=icon,
             details=details,
             tags=[],
             risk_level="low" if base_score >= 0 else "medium",
-            day_master_strength=strength
+            day_master_strength=strength,
+            # Dimension scores for hologram display
+            career=career_score,
+            wealth=wealth_score,
+            relationship=rel_score
         )
         
         return ctx
