@@ -451,3 +451,71 @@ class EngineV88:
                 result['e_officer'] = value
         
         return result
+    
+    def get_luck_timeline(self, profile_or_year, start_year_or_month=None, years_or_day=None,
+                          hour=None, gender=None, num_steps=None) -> List[Dict]:
+        """
+        V8.8 Luck Timeline - simplified version.
+        Generates timeline with year pillars and luck info.
+        """
+        from datetime import datetime
+        
+        # Detect calling mode
+        if hasattr(profile_or_year, 'get_luck_pillar_at'):
+            # New interface: BaziProfile object
+            profile = profile_or_year
+            start_year = start_year_or_month or datetime.now().year
+            years = years_or_day if years_or_day else 12
+            birth_year = profile.birth_date.year if hasattr(profile, 'birth_date') and profile.birth_date else None
+        else:
+            # Legacy interface: year, month, day, hour, gender
+            birth_year = profile_or_year
+            birth_month = start_year_or_month or 1
+            birth_day = years_or_day or 1
+            birth_hour = hour or 12
+            gender_val = gender if gender is not None else 1
+            years = num_steps or 8
+            
+            try:
+                from core.bazi_profile import BaziProfile
+                birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+                profile = BaziProfile(birth_date, gender_val)
+                start_year = datetime.now().year
+            except Exception:
+                return []
+        
+        # Generate timeline
+        timeline = []
+        prev_luck = None
+        
+        for i in range(years):
+            y = start_year + i
+            
+            # Get luck pillar for this year
+            try:
+                current_luck = profile.get_luck_pillar_at(y) if hasattr(profile, 'get_luck_pillar_at') else "未知"
+            except:
+                current_luck = "未知"
+            
+            # Detect handover year
+            is_handover = (prev_luck is not None and current_luck != prev_luck)
+            
+            # Calculate age
+            age = (y - birth_year) if birth_year else None
+            
+            # Get year pillar
+            year_ganzhi = self.get_year_pillar(y)
+            
+            timeline.append({
+                'year': y,
+                'age': age,
+                'year_pillar': year_ganzhi,
+                'stem': year_ganzhi[0] if year_ganzhi else None,
+                'branch': year_ganzhi[1] if len(year_ganzhi) > 1 else None,
+                'luck_pillar': current_luck,
+                'is_handover': is_handover
+            })
+            
+            prev_luck = current_luck
+        
+        return timeline
