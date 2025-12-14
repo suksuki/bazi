@@ -8,7 +8,7 @@ import sys
 # Append root path to sys.path to resolve imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Migration
 from core.context import DestinyContext
 from core.bazi_profile import VirtualBaziProfile
 
@@ -105,7 +105,7 @@ def render():
     
     st.title("🎬 命运波函数影院 V4.0 (Trinity Edition)")
     st.caption("Powered by Trinity Architecture | LLM Narratives Constrained by QuantumEngine")
-    st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}`")
+    st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}` (Modular)")
     
     # Sidebar: Case Selector
     cases = load_cases()

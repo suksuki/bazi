@@ -7,7 +7,7 @@ import plotly.express as px
 import numpy as np
 import altair as alt
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Migration
 from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
@@ -714,7 +714,7 @@ def render():
     # --- UI HEADER ---
     st.title("🧪 量子八字 V8.0 验证工作台 (Phase Change)")
     st.markdown("Dynamic Space-Time Validation Module (Unified Arch)")
-    st.caption(f"🔧 Engine Version: `{engine.VERSION}`")
+    st.caption(f"🔧 Engine Version: `{engine.VERSION}` (Modular)")
 
     # --- TABS ---
     tab_global, tab_single  = st.tabs(["🔭 全局校准 (Global Telescope)", "🔬 单点分析 (Single Microscope)"])

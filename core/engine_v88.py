@@ -206,3 +206,30 @@ class EngineV88:
         """
         result = self.analyze(bazi, day_master)
         return (result.strength.verdict, result.strength.adjusted_score)
+    
+    # === Legacy Compatibility Methods ===
+    # These methods mirror QuantumEngine's interface for easy migration
+    
+    def _get_element(self, char: str) -> str:
+        """Get element for stem or branch character (legacy compat)"""
+        from core.processors.physics import STEM_ELEMENTS, BRANCH_ELEMENTS
+        if char in STEM_ELEMENTS:
+            return STEM_ELEMENTS[char]
+        if char in BRANCH_ELEMENTS:
+            return BRANCH_ELEMENTS[char]
+        return 'earth'  # default
+    
+    def _get_relation(self, dm_elem: str, target_elem: str) -> str:
+        """Get relation between DM element and target (legacy compat)"""
+        from core.processors.physics import get_relation
+        return get_relation(dm_elem, target_elem)
+    
+    def _evaluate_wang_shuai(self, dm: str, bazi: List[str]) -> tuple:
+        """Legacy method name compatibility"""
+        return self.evaluate_strength(dm, bazi)
+    
+    def update_full_config(self, config: Dict) -> None:
+        """Update configuration (legacy compat - currently no-op)"""
+        self.config = config
+        # V8.8 doesn't use config yet, but we accept it for compatibility
+        pass
