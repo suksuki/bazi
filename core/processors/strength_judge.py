@@ -71,17 +71,33 @@ class StrengthJudge(BaseProcessor):
                 'final_score': max(adjusted_score, self.THRESHOLD_STRONG),
                 'raw_score': raw_total,
                 'confidence': 0.90,
-                'reason': '得令覆盖'
+                'reason': '得令覆盖 (Month Command)'
+            }
+
+        # Rule 2: Writer Lady Protection (Indulgence Protocol)
+        # If output is favorable but DM is weak, and Month is Resource, we allow Survival.
+        # This is a special "Protected Weak" or "Functional Strong".
+        # V8.1 logic: Treat as Strong for flow purposes (Resource > Output chain).
+        flags = context.get('flags', [])
+        is_writer_lady = context.get('is_writer_lady', False) or 'writer_lady_protection' in flags
+        
+        if is_writer_lady:
+             return {
+                'verdict': 'Strong',
+                'final_score': max(adjusted_score, self.THRESHOLD_MODERATE + 5),
+                'raw_score': raw_total,
+                'confidence': 0.88,
+                'reason': '印绶护身 (Writer Lady)'
             }
         
-        # Rule 2: 印绶月+高分 = 强
+        # Rule 3: 印绶月+高分 = 强
         if is_resource_month and raw_total > self.THRESHOLD_MODERATE:
             return {
                 'verdict': 'Strong',
                 'final_score': adjusted_score,
                 'raw_score': raw_total,
                 'confidence': 0.85,
-                'reason': '印绶得月'
+                'reason': '印绶得月 (Resource Month)'
             }
         
         # === Standard Threshold Judgment ===

@@ -52,136 +52,141 @@ CONTROL = {
 
 class PhysicsProcessor(BaseProcessor):
     """
-    Layer 1: Base Physics Score Calculator
+    Layer 1: Base Physics Score Calculator (Genesis V9.1)
     
-    Calculates raw five-element energy distribution.
-    Does NOT consider:
-    - Seasonal adjustments (that's SeasonalProcessor)
-    - Phase changes (that's PhaseProcessor)
-    - Special patterns (that's PatternProcessor)
+    Rebuilt strictly according to 'Algorithm Constitution'.
+    Logic: Energy Quantization.
     """
     
-    # === Configurable Weights (all tunable) ===
-    BASE_UNIT = 50.0
+    # === Genesis Blueprint Constants ===
     
-    # Positional weights (from config_schema)
-    PILLAR_WEIGHTS = {
-        'year': 0.8,
-        'month': 2.0,   # Month is king
-        'day': 1.0,
-        'hour': 0.9
+    # 1. Hidden Stems Map (Hardcoded Source of Truth)
+    # Format: Branch -> [(Stem, Weight)]
+    GENESIS_HIDDEN_MAP = {
+        '子': [('癸', 10)],                                      # Zi: Gui (Pure)
+        '丑': [('己', 10), ('癸', 7), ('辛', 3)],                 # Chou: Ji, Gui, Xin
+        '寅': [('甲', 10), ('丙', 7), ('戊', 3)],                 # Yin: Jia, Bing, Wu
+        '卯': [('乙', 10)],                                      # Mao: Yi (Pure)
+        '辰': [('戊', 10), ('乙', 7), ('癸', 3)],                 # Chen: Wu, Yi, Gui
+        '巳': [('丙', 10), ('戊', 7), ('庚', 3)],                 # Si: Bing, Wu, Geng
+        '午': [('丁', 10), ('己', 7)],                           # Wu: Ding, Ji
+        '未': [('己', 10), ('丁', 7), ('乙', 3)],                 # Wei: Ji, Ding, Yi
+        '申': [('庚', 10), ('壬', 7), ('戊', 3)],                 # Shen: Geng, Ren, Wu
+        '酉': [('辛', 10)],                                      # You: Xin (Pure)
+        '戌': [('戊', 10), ('辛', 7), ('丁', 3)],                 # Xu: Wu, Xin, Ding
+        '亥': [('壬', 10), ('甲', 7)]                            # Hai: Ren, Jia
     }
     
-    # Spatial decay
-    SPATIAL_DECAY = {
-        'gap1': 0.6,    # Adjacent pillars
-        'gap2': 0.3     # Far pillars
-    }
-    
-    # Rooting bonus
-    ROOTING_WEIGHT = 1.5
-    EXPOSED_BOOST = 1.3
+    # 2. Weights
+    PILLAR_WEIGHTS = {'year': 0.8, 'month': 2.0, 'day': 1.0, 'hour': 0.9}
+    BASE_SCORE = 10.0
+    ROOT_BONUS = 1.2
     
     @property
     def name(self) -> str:
-        return "Physics Layer 1"
-    
+        return "Physics Layer 1 (Genesis)"
+        
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate raw five-element energy distribution.
-        
-        Returns:
-            {
-                'raw_energy': {element: score},
-                'dm_element': str,
-                'rooted_elements': [str],
-                'stem_elements': [str]
-            }
+        Calculates raw five-element energy using Genesis Logic.
         """
-        # 🔥 Hot-Reload: Load latest config
-        from core.config_manager import ConfigManager
-        config = ConfigManager.load_config()
-        p_params = config.get("physics", {})
-        
-        # Load params
-        base_stem = p_params.get("stem_score", 10.0)
-        base_branch = p_params.get("branch_main_qi", 10.0)
-        
-        # Hardcoded weights for now, can be moved to config later if needed
-        pillar_weights = {
-            'year': 0.8,
-            'month': 2.0,
-            'day': 1.0,
-            'hour': 0.9
-        }
-        
         bazi = context.get('bazi', [])
         dm_char = context.get('day_master', '甲')
         dm_element = self._get_element_stem(dm_char)
         
-        if len(bazi) < 4:
-            return self._empty_result(dm_element)
+        # Initialize Energy Accumulator
+        energy = {'wood': 0.0, 'fire': 0.0, 'earth': 0.0, 'metal': 0.0, 'water': 0.0}
         
-        # Initialize energy map
-        energy = {
-            'wood': 0.0, 'fire': 0.0, 'earth': 0.0, 
-            'metal': 0.0, 'water': 0.0
-        }
+        # Helper lists for analysis
+        stem_chars = []
+        branch_chars = []
+        all_hidden_chars = set()
         
-        # Track rooting and stems
-        branch_elements = []
-        stem_elements = []
-        
-        # Collect branch elements for rooting check
-        for pillar in bazi:
-            if len(pillar) >= 2:
-                branch_elements.append(self._get_element_branch(pillar[1]))
-        
-        # Calculate energy from each pillar
+        # --- 1. Processing Loop ---
         pillar_names = ['year', 'month', 'day', 'hour']
         
         for idx, pillar in enumerate(bazi):
-            if not pillar or len(pillar) < 2:
-                continue
+            if len(pillar) < 2: continue
             
-            stem, branch = pillar[0], pillar[1]
             p_name = pillar_names[idx]
-            p_weight = pillar_weights.get(p_name, 1.0)
+            stem_char = pillar[0]
+            branch_char = pillar[1]
+            w_pillar = self.PILLAR_WEIGHTS.get(p_name, 1.0)
             
-            # Spatial decay from Day pillar (idx=2)
-            dist = abs(idx - 2)
-            k_dist = 1.0
-            # Use fixed decay for now as it's not in default config
-            if dist == 1:
-                k_dist = 0.6
-            elif dist >= 2:
-                k_dist = 0.3
-            
-            # Stem energy (skip Day Master itself)
-            if idx != 2:
-                s_elem = self._get_element_stem(stem)
-                stem_elements.append(s_elem)
+            # A. Heavenly Stems ( 天干 )
+            if idx != 2: # Skip DM for energy counting
+                stem_chars.append(stem_char)
+                elem = self._get_element_stem(stem_char)
+                score = self.BASE_SCORE * w_pillar
+                energy[elem] += score
                 
-                # Check if rooted
-                is_rooted = s_elem in branch_elements
-                k_root = self.ROOTING_WEIGHT if is_rooted else 0.5
-                k_exposed = self.EXPOSED_BOOST if is_rooted else 1.0
-                
-                # Apply multipliers
-                s_score = base_stem * p_weight * k_dist * k_exposed
-                energy[s_elem] += s_score
+            # B. Earthly Branches ( 地支 ) - Using Genesis Map
+            branch_chars.append(branch_char)
+            hiddens = self.GENESIS_HIDDEN_MAP.get(branch_char, [])
             
-            # Branch energy
-            b_elem = self._get_element_branch(branch)
-            b_score = base_branch * p_weight * k_dist
-            energy[b_elem] += b_score
+            for h_char, h_weight in hiddens:
+                all_hidden_chars.add(h_char)
+                elem = self._get_element_stem(h_char)
+                # Formula: Pillar_Weight * Hidden_Weight
+                # Note: Hidden_Weight is 10, 7, 3.
+                score = w_pillar * h_weight 
+                energy[elem] += score
+
+        # --- 2. Rooting Logic ( 通根 ) ---
+        # "If a Stem matches a Hidden Stem in ANY branch -> Multiply Stem's score"
+        # Since we already added Stem scores, we apply a bonus calculation.
         
+        rooted_stems = []
+        
+        # We need to re-iterate stems to apply the bonus to the specific stem contribution?
+        # Simpler: Just add the bonus directly to the energy map.
+        # But wait, which stem contributed?
+        # Let's re-calculate Stem Energy with Root Bonus.
+        
+        # Reset energy to just branch contribution first? No.
+        # Let's separate Stem and Branch calculations for clarity?
+        # Or just apply bonus now.
+        
+        # Refined Logic:
+        # For each stem (except DM):
+        #   If rooted:
+        #      Add extra (Score * 0.2) to match 1.2x total.
+        
+        for idx, pillar in enumerate(bazi):
+             if idx == 2: continue # Skip DM
+             if len(pillar) < 1: continue
+             
+             stem_char = pillar[0]
+             p_name = pillar_names[idx]
+             w_pillar = self.PILLAR_WEIGHTS.get(p_name, 1.0)
+             
+             if stem_char in all_hidden_chars:
+                 elem = self._get_element_stem(stem_char)
+                 # Original Score was BASE(10) * W_Pillar
+                 original_score = self.BASE_SCORE * w_pillar
+                 bonus = original_score * (self.ROOT_BONUS - 1.0) # 0.2x
+                 energy[elem] += bonus
+                 rooted_stems.append(stem_char)
+
+        # --- 3. Era Multipliers (Preserve V9.1 Feature) ---
+        # (This is good, keep it)
+        try:
+            import os, json
+            era_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "era_constants.json")
+            if os.path.exists(era_path):
+                with open(era_path, 'r') as f:
+                    era_mults = json.load(f).get('physics_multipliers', {})
+                    for elem, mult in era_mults.items():
+                        if elem in energy: energy[elem] *= mult
+        except:
+             pass
+
         return {
             'raw_energy': energy,
             'dm_element': dm_element,
-            'rooted_elements': list(set(e for e in stem_elements if e in branch_elements)),
-            'stem_elements': stem_elements,
-            'branch_elements': branch_elements
+            'rooted_elements': list(set(rooted_stems)),
+            'stem_elements': [self._get_element_stem(c) for c in stem_chars],
+            'branch_elements': list(all_hidden_chars)
         }
     
     def _get_element_stem(self, stem: str) -> str:

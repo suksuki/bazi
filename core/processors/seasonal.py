@@ -54,78 +54,51 @@ class SeasonalProcessor(BaseProcessor):
     
     def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate seasonal adjustments.
+        Calculate seasonal adjustments (Genesis Reconstruction).
         
-        Returns:
-            {
-                'is_in_command': bool,
-                'is_resource_month': bool,
-                'in_command_bonus': float,
-                'resource_month_bonus': float,
-                'seasonal_multipliers': {element: multiplier}
-            }
+        Logic:
+        1. Monthly Command (月令提纲): The King of the chart.
+        2. Resource Support (印绶): Motherly support.
+        
+        Bonuses are returned as Absolute Points to be added to DM Strength.
         """
-        # 🔥 Hot-Reload
-        from core.config_manager import ConfigManager
-        config = ConfigManager.load_config()
-        s_params = config.get("seasonal", {})
-        p_params = config.get("physics", {})
-        
-        # Base unit for scaling
-        base_unit = p_params.get("stem_score", 10.0)
-        
-        # Load multipliers (default to reasonable factors of base_unit)
-        # Default 1.5 -> 1.5 * 10 = 15. (Original was 150 vs 50, which is 3.0x)
-        # We will assume the config values are Multipliers of Base Unit
-        cmd_mult = s_params.get("monthly_command_bonus", 1.5)
-        gen_mult = s_params.get("generation_bonus", 1.2)
-        
-        in_command_bonus_val = base_unit * cmd_mult * 10.0 # Scale up to match legacy magnitude? 
-        # Wait, if we change the base scale from 50 to 10, everything scales down.
-        # So we should just use base_unit * multiplier.
-        # If user provided 1.5 in config, and base is 10, result is 15.
-        # This preserves the ratio relative to the new scale.
-        
-        in_command_bonus_val = base_unit * cmd_mult 
-        resource_month_bonus_val = base_unit * gen_mult
-        
-        # If the user intended the legacy "Big Number" feel, they might need to adjust config.
-        # But for V8.8, we are moving to a cleaner scale (10s instead of 100s).
-        
         month_branch = context.get('month_branch', '')
         dm_element = context.get('dm_element', 'wood')
         
-        # Get month element
+        # 1. Resolve Month Element
         month_element = BRANCH_ELEMENTS.get(month_branch, 'earth')
         
-        # Check 得令 (In-Command)
+        # 2. Determine Relationship (Command vs Resource)
         is_in_command = (month_element == dm_element)
         
-        # Check 印绶月 (Resource Month)
         resource_element = None
         for mother, child in GENERATION.items():
             if child == dm_element:
                 resource_element = mother
                 break
-        
         is_resource_month = (month_element == resource_element)
         
-        # Calculate bonuses
-        in_command_bonus = in_command_bonus_val if is_in_command else 0.0
-        resource_month_bonus = resource_month_bonus_val if is_resource_month else 0.0
+        # 3. Calculate Genesis Bonuses (Hardcoded)
+        # "Huge Bonus" strategy:
+        # 1 Stem = 10 pts.
+        # In-Command = Worth 5 Stems (50 pts).
+        # Resource Month = Worth 3 Stems (30 pts).
         
-        # Get prosperity multipliers for this month
-        seasonal_mults = self.MONTH_PROSPERITY.get(month_branch, {
-            'wood': 1.0, 'fire': 1.0, 'earth': 1.0, 'metal': 1.0, 'water': 1.0
-        })
+        bonus_command = 50.0 if is_in_command else 0.0
+        bonus_resource = 30.0 if is_resource_month else 0.0
         
+        # 4. Writer Lady Flag (Survival Pattern)
+        # Weak Day Master (not in command) but born in Resource Month -> Special Protection
+        is_writer_lady = False
+        if is_resource_month and not is_in_command:
+            is_writer_lady = True
+
         return {
             'is_in_command': is_in_command,
             'is_resource_month': is_resource_month,
-            'in_command_bonus': in_command_bonus,
-            'resource_month_bonus': resource_month_bonus,
+            'in_command_bonus': bonus_command,
+            'resource_month_bonus': bonus_resource,
             'month_element': month_element,
-            'resource_element': resource_element,
-            'seasonal_multipliers': seasonal_mults,
-            'dm_prosperity': seasonal_mults.get(dm_element, 1.0)
+            'is_writer_lady': is_writer_lady,
+            'flags': [k for k, v in locals().items() if k.startswith('is_') and v]
         }

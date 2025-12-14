@@ -74,6 +74,27 @@ class DestinyCharts:
 
         fig = go.Figure()
         
+        # --- Ghost Lines (Base Comparison) ---
+        if 'base_career' in df_traj.columns and not df_traj['base_career'].isnull().all():
+             fig.add_trace(go.Scatter(
+                x=df_traj['year'], y=df_traj['base_career'],
+                mode='lines', name='原生 (Base)',
+                line=dict(color='rgba(0, 229, 255, 0.3)', width=2, dash='dot'),
+                hoverinfo='skip'
+            ))
+             fig.add_trace(go.Scatter(
+                x=df_traj['year'], y=df_traj['base_wealth'],
+                mode='lines', showlegend=False,
+                line=dict(color='rgba(255, 215, 0, 0.3)', width=2, dash='dot'),
+                hoverinfo='skip'
+            ))
+             fig.add_trace(go.Scatter(
+                x=df_traj['year'], y=df_traj['base_relationship'],
+                mode='lines', showlegend=False,
+                line=dict(color='rgba(245, 0, 87, 0.3)', width=2, dash='dot'),
+                hoverinfo='skip'
+            ))
+
         # Base trajectory lines
         fig.add_trace(go.Scatter(
             x=df_traj['year'], 

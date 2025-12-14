@@ -27,7 +27,7 @@ DEFAULT_FULL_ALGO_PARAMS = {
         },
         # [新增] 宫位引力 (Pillar Weights)
         "pillarWeights": {
-            "year": 0.8, "month": 2.0, "day": 1.0, "hour": 0.9
+            "year": 0.8, "month": 1.2, "day": 1.0, "hour": 0.9
         },
         # [NEW V2.5] 十二长生修正 (Optional)
         "lifeStageImpact": 0.2
@@ -97,6 +97,11 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # === 面板 4: 能量流转 (Energy Flow) ===
     # [V8.0 Refactor] The Damping Protocol + Phase Change (阻尼协议 + 相变)
     "flow": {
+        # Genesis Compliance Keys
+        "generationEfficiency": 1.2, # 生的效率
+        "controlImpact": 0.7,        # 克的影响
+        "dampingFactor": 0.5,        # 衰减因子
+        
         # A. 输入阻抗 (Resource Impedance)
         "resourceImpedance": {
             "base": 0.3,           # 基础阻抗 (Base Resistance)

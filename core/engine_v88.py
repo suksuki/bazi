@@ -53,11 +53,15 @@ class EngineV88:
         from core.engines.treasury_engine import TreasuryEngine
         from core.engines.skull_engine import SkullEngine
         from core.engines.harmony_engine import HarmonyEngine
+        from core.processors.domains import DomainProcessor
         
         self.luck_engine = LuckEngine()
         self.treasury_engine = TreasuryEngine()
         self.skull_engine = SkullEngine()
         self.harmony_engine = HarmonyEngine()
+        
+        # V9.3 Domain Processor (Restored Logic)
+        self.domains = DomainProcessor()
         
         print(f"⚡ Antigravity {self.VERSION} Engine Initialized")
         print(f"   Processors: {len(self._get_processors())}")
@@ -136,7 +140,9 @@ class EngineV88:
             'resource_month_bonus': seasonal_result['resource_month_bonus'],
             'resource_efficiency': resource_efficiency,
             'is_in_command': is_in_command,
-            'is_resource_month': is_resource_month
+            'is_resource_month': is_resource_month,
+            'is_writer_lady': seasonal_result.get('is_writer_lady', False),
+            'flags': seasonal_result.get('flags', [])
         }
         
         judgment = self.judge.process(judge_context)
@@ -437,10 +443,51 @@ class EngineV88:
             else:
                 icon = "💀"
         
-        # Calculate dimension scores
-        career_score = base_score * 0.8 + 2.0
-        wealth_score = base_score * 0.7 + 1.5
-        rel_score = base_score * 0.6 + 1.0
+        # Calculate dimension scores via DomainProcessor
+        # Map Year Luck Score back to Domains
+        # This is a dynamic estimation. True domain simulation requires re-running physics with year pillar.
+        # For efficiency, we approximate: 
+        # 1. Identify what the Year Pillar element represents (Ten Gods).
+        # 2. If Year is Wealth, boost Wealth Score.
+        
+        # Determine Year Element Ten God
+        # We need stem and branch elements
+        y_stem_char = year_pillar[0] if year_pillar else ''
+        y_branch_char = year_pillar[1] if len(year_pillar) > 1 else ''
+        
+        y_stem_elem = self._get_element(y_stem_char)
+        y_branch_elem = self._get_element(y_branch_char)
+        
+        rel_stem = self._get_relation(dm_elem, y_stem_elem) if y_stem_elem else 'unknown'
+        rel_branch = self._get_relation(dm_elem, y_branch_elem) if y_branch_elem else 'unknown'
+        
+        # Base Luck Impact (normalized around 0)
+        luck_boost = base_score * 1.0
+        
+        # Domain Specific Boosts
+        # Wealth: Impacted by Wealth element or Output (Source of Wealth)
+        wealth_boost = luck_boost
+        if rel_stem == 'wealth' or rel_branch == 'wealth':
+            wealth_boost += 2.0
+        elif rel_stem == 'output' or rel_branch == 'output':
+            wealth_boost += 1.0
+            
+        # Career: Impacted by Officer or Resource (or Output for art)
+        career_boost = luck_boost
+        if rel_stem == 'officer' or rel_branch == 'officer':
+            career_boost += 2.0
+        elif rel_stem == 'resource' or rel_branch == 'resource':
+            career_boost += 1.5
+            
+        # Relationship: Spouse Star
+        rel_boost = luck_boost
+        spouse_rel = 'wealth' if profile.gender == 1 else 'officer'
+        if rel_stem == spouse_rel or rel_branch == spouse_rel:
+            rel_boost += 2.0
+            
+        career_score = max(0, 5.0 + career_boost) # Center at 5.0
+        wealth_score = max(0, 5.0 + wealth_boost)
+        rel_score = max(0, 5.0 + rel_boost)
         
         # Get luck pillar
         try:
@@ -515,13 +562,30 @@ class EngineV88:
             'e_output': 0,
             'e_wealth': 0,
             'e_officer': 0,
-            'narrative': [f'{strength} ({score:.1f})'],
             'desc': f'{dm_char}日主 {strength}',
-            # UI compatibility - dimension scores
-            'career': score / 10.0,
-            'wealth': score / 10.0,
-            'relationship': score / 10.0
         }
+        
+        # V9.3 Domain Logic Integration
+        # Calculate complex domain scores
+        domain_ctx = {
+            'raw_energy': raw_energy,
+            'dm_element': dm_elem,
+            'strength': {
+                 'verdict': strength,
+                 'raw_score': score # Use the strength score (e.g. 50.0)
+            },
+            'gender': case_data.get('gender', 1)
+        }
+        domain_res = self.domains.process(domain_ctx)
+        
+        result.update({
+            'career': domain_res['career']['score'] / 10.0, # Scale to 0-10 UI
+            'wealth': domain_res['wealth']['score'] / 10.0,
+            'relationship': domain_res['relationship']['score'] / 10.0,
+            'domain_details': domain_res # Keep full details provided by processor
+        })
+        
+
         
         # Map energies to ten gods
         from core.processors.physics import GENERATION, CONTROL

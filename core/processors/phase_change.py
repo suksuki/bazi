@@ -11,7 +11,7 @@ This processor handles special seasonal physics:
 """
 
 from core.processors.base import BaseProcessor
-from core.processors.physics import BRANCH_ELEMENTS
+from core.processors.physics import BRANCH_ELEMENTS, STEM_ELEMENTS
 from typing import Dict, Any, Set
 
 
@@ -76,11 +76,14 @@ class PhaseChangeProcessor(BaseProcessor):
         }
         
         # === Check Scorched Earth (Summer + Metal DM) ===
+        is_scorched = False
         if month_branch in self.SUMMER_BRANCHES and dm_element == 'metal':
             # Check for humid rescue (water presence)
             has_water = any(b in self.WATER_BRANCHES for b in branches)
+            # Water stems also count for rescue
+            has_water_stem = any(self._get_element(s) == 'water' for s in stems)
             
-            if has_water:
+            if has_water or has_water_stem:
                 result['is_active'] = True
                 result['phase_type'] = 'humid_rescue'
                 result['resource_efficiency'] = self.HUMID_RESCUE_EFFICIENCY
@@ -91,7 +94,19 @@ class PhaseChangeProcessor(BaseProcessor):
                 result['phase_type'] = 'scorched_earth'
                 result['resource_efficiency'] = self.SCORCHED_EARTH_DAMPING
                 result['description'] = f'焦土不生金 ({month_branch}月土燥)'
+                is_scorched = True
         
+        # === Check Dry Earth (Constitution Algo C) ===
+        # Wei(未) and Xu(戌) are Dry Earth. They are brittle to Metal.
+        # If not already scorched (which is worse), apply Dry Earth penalty.
+        if not is_scorched and dm_element == 'metal':
+            if month_branch in {'未', '戌'}: # Wei or Xu
+                 # Dry Earth generates Metal poorly, but better than Scorched
+                 result['is_active'] = True
+                 result['phase_type'] = 'dry_earth'
+                 result['resource_efficiency'] = 0.5 # 50% efficiency
+                 result['description'] = f'燥土脆金 ({month_branch}土燥难生金)'
+
         # === Check Frozen Water (Winter + Wood DM) ===
         elif month_branch in self.WINTER_BRANCHES and dm_element == 'wood':
             # Check for warm rescue (fire presence)
@@ -119,3 +134,6 @@ class PhaseChangeProcessor(BaseProcessor):
             result['summer_earth_penalty'] = 1.0
         
         return result
+    
+    def _get_element(self, stem: str) -> str:
+        return STEM_ELEMENTS.get(stem, 'wood')

@@ -4,10 +4,10 @@
 
 一个基于三位一体架构的智能八字命理分析系统，将千年玄学转化为可验证的科学代码。
 
-[![Version](https://img.shields.io/badge/version-6.0_Oracle-blueviolet)](https://github.com/antigravity)
-[![Status](https://img.shields.io/badge/status-Code_Frozen-blue)](https://github.com/antigravity)
-[![Architecture](https://img.shields.io/badge/architecture-Oracle-purple)](https://github.com/antigravity)
-[![Tests](https://img.shields.io/badge/tests-All_Green-brightgreen)](https://github.com/antigravity)
+[![Version](https://img.shields.io/badge/version-8.8_Modular-blueviolet)](https://github.com/antigravity)
+[![Status](https://img.shields.io/badge/status-Stable-brightgreen)](https://github.com/antigravity)
+[![Architecture](https://img.shields.io/badge/architecture-Trinity-purple)](https://github.com/antigravity)
+[![Tests](https://img.shields.io/badge/tests-39%2F39_Passed-brightgreen)](https://github.com/antigravity)
 
 ---
 
@@ -61,21 +61,21 @@ Dashboard        Cinema        QuantumLab
 - ✅ 100%逻辑一致性
 - ✅ 零前端重复代码
 
-### 🧬 V5.3 核心算法
+### 🧬 核心算法演进
 
-**V2.0: 五行生克**
-- 天干地支相生相克
-- 截脚盖头判定
+**V8.0: 相变协议 (Phase Change)** 🔥
+- **焦土不生金**: 夏季(巳午未月)蒸发效应，土生金效率阻断 (85%)
+- **冻水不生木**: 冬季(亥子丑月)凝固效应，水生木效率阻断 (70%)
+
+**V7.4: 物理引擎 (Physics)** ⚛️
+- **阻尼协议**: 引入输入阻抗与输出粘滞，模拟能量传递损耗
+- **月令集权**: 确立月令作为全局引力中心(2.0权重)
+- **热力学修正**: 季节性环境对五行能量的影响
 
 **V3.0: 墓库理论** 🏆
 - 辰戌丑未四库检测
 - 财库/官库/印库识别
 - 冲库 = 爆发契机
-
-**V3.5: 伦理安全阀** ⚠️
-- 身强身弱差异化
-- 防止误导身弱者冒险
-- 自动风险警示
 
 **V5.3: 骷髅协议** 💀
 - 丑未戌三刑检测
@@ -147,26 +147,19 @@ streamlit run ui/main.py
 
 ```
 antigravity/
-├── core/                   # 核心引擎
-│   ├── quantum_engine.py   # QuantumEngine (1200+ lines)
-│   ├── context.py          # DestinyContext 数据协议
-│   ├── interaction_service.py  # 墓库检测服务
-│   └── constants.py        # 常量定义
+├── core/                   # 核心引擎 (Trinity)
+│   ├── engines/            # 子引擎
+│   │   ├── flow_engine.py  # V8.0 流体物理
+│   │   ├── harmony.py      # 化学反应
+│   │   └── treasury.py     # 墓库管理
+│   ├── quantum_engine.py   # Facade 入口
+│   └── config_schema.py    # DNA 配置
 ├── ui/pages/               # UI 模块 (Trinity)
 │   ├── prediction_dashboard.py  # Dashboard
 │   ├── zeitgeist.py        # Cinema (命运影院)
 │   └── quantum_lab.py      # QuantumLab (验证室)
-├── tests/                  # 测试套件
-│   ├── test_trinity_core.py
-│   ├── test_three_punishments.py
-│   └── test_v3_wealth_multiplier.py
-├── docs/                   # 完整文档
-│   ├── TRINITY_V4.0_COMPLETE.md
-│   ├── SPRINT_5.3_SKULL_PROTOCOL.md
-│   └── MILESTONE_TRINITY_V4.0.md
-└── data/
-    ├── calibration_cases.json  # 校准案例
-    └── golden_parameters.json  # 黄金参数
+├── tests/                  # 测试套件 (190+)
+└── data/                   # 数据层
 ```
 
 ---
@@ -176,93 +169,50 @@ antigravity/
 ### 运行测试
 
 ```bash
-# Trinity 核心测试
-python3 tests/test_trinity_core.py
+# 运行完整测试套件
+pytest
 
-# 三刑检测测试
-python3 tests/test_three_punishments.py
-
-# 财库测试
-python3 tests/test_v3_wealth_multiplier.py
+# 运行 V8.0 专项测试
+pytest tests/test_v8_phase_change.py
 ```
 
 ### 测试覆盖
 
 | 测试套件 | 状态 | 覆盖内容 |
 |---------|-----|---------|
-| Trinity Core | ✅ 3/3 | 统一接口验证 |
-| Three Punishments | ✅ 2/2 | 骷髅协议 |
-| Wealth Multiplier | ✅ 2/2 | 伦理安全阀 |
+| Trinity Core | ✅ PASS | 统一接口验证 |
+| Physics V8.0 | ✅ PASS | 相变协议 |
+| Physics V7.4 | ✅ PASS | 阻尼与粘滞 |
 
 ---
 
 ## 📈 版本历史 (Version History)
 
-### V6.0 Oracle (2025-12-14) 🔮
+### V8.0 Phase Change (2025-12-14) 🔥
+**Preview**
+- ✅ **相变协议**: 焦土不生金，冻水不生木
+- ✅ **Config DNA**: 全参数解耦配置
 
-**The Oracle Architecture**
-- ✅ **BaziProfile**: 引入对象层，实现 Single Source of Truth
-- ✅ **Dynamic Luck**: 彻底解决换运计算问题，支持百年流年推演
-- ✅ **VirtualProfile**: 强大的测试适配器，支持 Legacy Use Cases
-- ✅ **Tests**: 自动化测试覆盖率 100% (Pass or Known Skip)
+### V7.4 Physicist (2025-12-14) ⚛️
+**Stable**
+- ✅ **物理引擎**: 阻抗/粘滞/热力学修正
+- ✅ **月令集权**: 权重提升至 2.0
+- ✅ **动态化气**: 修复 Case 005
+
+### V6.0 Oracle (2025-12-14) 🔮
+**Oracle Architecture**
+- ✅ **BaziProfile**: 引入对象层
+- ✅ **Dynamic Luck**: 动态大运时间轴
+- ✅ **Modularization**: 引擎分层解耦
 
 ### V5.3 Skull (2025-12-13) 💀
-
-**The Skull Protocol**
-- ✅ 丑未戌三刑检测
-- ✅ 💀 骷髅图标
+**Skull Protocol**
+- ✅ 丑未戌三刑
 - ✅ 结构性崩塌预警
-- ✅ -40分重罚机制
 
 ### V4.0 Trinity (2025-12-13) 🏛️
-
 **三位一体架构**
-- ✅ DestinyContext 统一数据协议
-- ✅ calculate_year_context 统一接口
-- ✅ Dashboard/Cinema/Lab 100%同步
-- ✅ 代码简化 -66%
-
-### V3.5 Ethics (2025-12-13) ⚠️
-
-**伦理安全阀**
-- ✅ 身强身弱差异化
-- ✅ ⚠️ 警告图标
-- ✅ 防止误导身弱者
-
-### V3.0 Treasury (2025-12-13) 🏆
-
-**墓库理论实现**
-- ✅ 辰戌丑未四库检测
-- ✅ 🏆 暴富图标
-- ✅ 财库冲开机制
-
-### V2.0 Foundation (Earlier)
-
-**五行生克基础**
-- ✅ 天干地支计算
-- ✅ 截脚盖头逻辑
-
----
-
-## 🎯 核心指标 (Key Metrics)
-
-### 代码质量
-
-| 指标 | V3.5 | V5.3 | 提升 |
-|-----|------|------|------|
-| Dashboard 代码行数 | 95 | 32 | **-66%** |
-| 数据源统一 | 3个API | 1个API | **100%** |
-| LLM 幻觉风险 | 高 | 低 | **-80%** |
-| 逻辑一致性 | 60% | 100% | **+67%** |
-
-### 功能完整性
-
-- ✅ 生克判定
-- ✅ 墓库检测 (🏆/⚠️/🗝️)
-- ✅ 三刑预警 (💀)
-- ✅ 身强身弱差异化
-- ✅ LLM 智能约束
-- ✅ 可视化验证
+- ✅ Dashboard/Cinema/Lab 逻辑统一
 
 ---
 

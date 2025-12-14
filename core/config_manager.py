@@ -95,3 +95,8 @@ class ConfigManager:
         """Helper to get a specific value"""
         cfg = ConfigManager.load_config()
         return cfg.get(section, {}).get(key, default)
+
+    def get(self, key: str, default=None):
+        """Instance method to mimic dict.get on the root config"""
+        cfg = ConfigManager.load_config()
+        return cfg.get(key, default)

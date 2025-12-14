@@ -7,7 +7,7 @@ import plotly.express as px
 import numpy as np
 import altair as alt
 
-from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
+from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Genesis
 from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
@@ -171,10 +171,22 @@ def render():
     @st.cache_data
     def load_cases():
         path = os.path.join(os.path.dirname(__file__), "../../data/calibration_cases.json")
+        data = []
         if os.path.exists(path):
             with open(path, "r") as f:
-                return json.load(f)
-        return []
+                data = json.load(f)
+        
+        # Load Truth Scores (Side-car)
+        truth_path = os.path.join(os.path.dirname(__file__), "../../data/truth_values.json")
+        if os.path.exists(truth_path):
+            with open(truth_path, 'r') as f:
+                truths = json.load(f)
+                truth_map = {t['id']: t.get('truth_scores', {}) for t in truths}
+                # Merge
+                for c in data:
+                    if c['id'] in truth_map:
+                        c['truth_scores'] = truth_map[c['id']]
+        return data
 
     # --- Load Params Helper ---
     def load_params_from_disk():
@@ -702,7 +714,8 @@ def render():
         save_params_to_disk(current_params)
 
     # --- MAIN ENGINE SETUP ---
-    engine = QuantumEngine(current_params)
+    engine = QuantumEngine() # V9.1: No args, config follows
+    # engine.config.update(current_params) # Optional: if needed to map sliders immediately
     
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
@@ -1092,7 +1105,7 @@ def render():
                 st.write(f"💰 财富: **{pred_res['wealth']:.1f}**")
                 st.write(f"❤️ 感情: **{pred_res['relationship']:.1f}**")
 
-            target_v_real = selected_case.get("v_real", {})
+            target_v_real = selected_case.get("truth_scores", {}) or selected_case.get("v_real", {})
             expert_note = ""
             preset_match = next((p for p in presets if p['year'] == user_year), None)
             if preset_match:
@@ -1131,7 +1144,9 @@ def render():
             st.divider()
             with st.expander("⏳ 12年运势模拟 (Timeline Simulation)"):
                 # Simulation Engine needs same patching
-                sim_engine = QuantumEngine(current_params)
+                sim_engine = QuantumEngine()
+                if 'full_algo_config' in st.session_state:
+                     sim_engine.update_full_config(st.session_state['full_algo_config'])
                 
                 years = range(2024, 2036)
                 sim_data = []

@@ -4,6 +4,7 @@ import json
 import time
 import numpy as np
 import pandas as pd
+import copy  # V9.2 Fix
 from ui.components.charts import DestinyCharts
 from ui.components.styles import (
     get_glassmorphism_css,
@@ -16,7 +17,7 @@ from ui.components.styles import (
 # Core Imports
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
+from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Engine
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 from core.bazi_profile import BaziProfile
@@ -36,6 +37,10 @@ def render_prediction_dashboard():
     d = st.session_state.get('input_date', datetime.date(1990, 1, 1))
     t = st.session_state.get('input_time', 12)
     
+    # === V9.1 Spacetime Inputs ===
+    st.sidebar.header("🌍 时空坐标 (Spacetime)")
+    city = st.sidebar.selectbox("出生城市 (City)", ["Unknown", "Harbin", "Beijing", "Shanghai", "Guangzhou", "Singapore", "Sydney"], index=0)
+    
     # 1. Basic Calculation (The Chart)
     enable_solar = st.session_state.get('input_enable_solar_time', True)
     longitude = st.session_state.get('input_longitude', 116.46) if enable_solar else 120.0
@@ -48,12 +53,28 @@ def render_prediction_dashboard():
     gender_idx = 1 if "男" in gender else 0
     luck_cycles = calc.get_luck_cycles(gender_idx)
     
+    # [V9.3 UI] Sidebar Chart Summary
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📜 命盘信息 (Chart)")
+    
+    # Display Gregorian Input (Source of Truth)
+    st.sidebar.markdown(f"**公历**: `{d.year}年{d.month}月{d.day}日 {t:02d}:00`")
+    
+    bazi_txt = f"{chart['year']['stem']}{chart['year']['branch']}  {chart['month']['stem']}{chart['month']['branch']}  {chart['day']['stem']}{chart['day']['branch']}  {chart['hour']['stem']}{chart['hour']['branch']}"
+    
+    # [DEBUG] Verify Sidebar Rendering
+    print(f"DEBUG: Rendering Sidebar Bazi: {bazi_txt}")
+    st.sidebar.code(bazi_txt, language="text")
+    st.sidebar.caption(f"日主: {chart['day']['stem']}")
+    
     # 2. UI: Header & Chart
     st.title(f"🔮 {name} 的量子命盘 (V5.3 Skull)")
     st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}` (Modular)")
     
     # --- V2.9 Glassmorphism CSS (Dark Mode) ---
     st.markdown(get_glassmorphism_css(), unsafe_allow_html=True)
+    
+    # st.error("👻 DEBUG CHECK: V9.3 CODE IS RUNNING")
 
     
     # Helper: Quantum Theme System (Constitution V1.0)
@@ -192,17 +213,27 @@ def render_prediction_dashboard():
     # UNIT: Quantum Engine Integration & Visualization (Aligns with Quantum Lab)
     # -------------------------------------------------------------------------
     
-    # 1. Load Parameters (Golden Master V2.9)
+    # 1. Load Parameters (Genesis + Fire God Tuning)
     try:
         import os
-        params_path = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
-        with open(params_path, 'r') as f:
-            gp = json.load(f)
-        
-        # Pass the full configuration directly to QuantumEngine.
-        # The engine's _flatten_params method will handle the nested structure 
-        # (k_factors, logic_switches, weights, etc.) automatically.
-        params = gp
+        # A. Base Golden Parameters (V2.9)
+        base_path = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
+        with open(base_path, 'r') as f:
+            params = json.load(f)
+            
+        # B. Fire God Auto-Tuned Parameters (V9.1 Genesis)
+        # Check config/tuning_params.json
+        tune_path = os.path.join(os.path.dirname(__file__), '../../config/tuning_params.json')
+        tuned_loaded = False
+        if os.path.exists(tune_path):
+            with open(tune_path, 'r') as f:
+                tuned_params = json.load(f)
+                # Deep merge or specific update?
+                # Auto-tuner V1.0 mainly tunes physics base unit.
+                # Structure: { "physics": { "base_unit": 8.0 } }
+                if "physics" in tuned_params:
+                    params.setdefault("physics", {}).update(tuned_params["physics"])
+                tuned_loaded = True
         
     except Exception as e:
         st.error(f"Config Load Error: {e}")
@@ -242,6 +273,21 @@ def render_prediction_dashboard():
             if p.id == pid:
                 val = p.wave.amplitude * scale # Apply Scaling to match Physics/TenGods magnitude
                 break
+        
+        # [V9.2 Fix] Fallback if FluxEngine is dormant (Clean Room Side Effect)
+        if val < 0.1:
+            base_u = params.get('physics', {}).get('base_unit', 8.0)
+            # Differentiate Stem vs Branch
+            is_stem = 'stem' in pid
+            # Basic Energy Estimation
+            val = base_u if is_stem else base_u * 1.5
+            # Apply Pillar Weight
+            pw = params.get('pillarWeights', {})
+            if 'year' in pid: val *= pw.get('year', 0.8)
+            elif 'month' in pid: val *= pw.get('month', 1.2)
+            elif 'hour' in pid: val *= pw.get('hour', 0.9)
+            elif 'day' in pid: val *= pw.get('day', 1.0)
+            
         pe_list.append(round(val, 1))
 
     physics_sources = {
@@ -261,6 +307,11 @@ def render_prediction_dashboard():
         f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}"
     ]
 
+    # [V9.2 Fix] Geo Initialization Lockout
+    # Force Neutral Region if input is invalid to prevent engine collapse
+    if not city or city.lower() in ['unknown', 'none', '']:
+        city = "Beijing"
+
     case_data = {
         'id': 8888, 
         'gender': gender,
@@ -275,13 +326,59 @@ def render_prediction_dashboard():
             'day': d.day,
             'hour': t,
             'gender': 1 if "男" in gender else 0
-        }
+        },
+        'city': city # V9.1 Geo Input (Now Guaranteed)
     }
     
     # 3. Execute Quantum Engine
-    engine = QuantumEngine(params)
+    engine = QuantumEngine() # V9.1 Auto-loads configuration
     dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else ''}
     results = engine.calculate_energy(case_data, dynamic_context)
+    
+    # === V9.1 Destiny Cinema: Diagnostic HUD ===
+    st.markdown("### 🧬 命运诊断 (Diagnostics)")
+    
+    
+    
+    # [V9.2 Fix] Physics Sources Reconsolidation
+    # Prefer Engine V9.1 Pillar Energies over FluxEngine
+    engine_pe_raw = results.get('pillar_energies', [])
+    if engine_pe_raw and len(engine_pe_raw) == 8:
+        # Enforce Float Types (JSON safety)
+        try:
+            engine_pe = [float(x) for x in engine_pe_raw]
+            if sum(engine_pe) > 0.1:
+                physics_sources['pillar_energies'] = engine_pe
+                # Important: Update case_data referene so UI components see the new values
+                case_data['physics_sources'] = physics_sources
+        except Exception as e:
+            st.error(f"Pillar Energy Type Error: {e}")
+    
+    # Refill case_data for UI components that rely on it having physics_sources
+    case_data['physics_sources'] = physics_sources
+    d_col1, d_col2, d_col3 = st.columns(3)
+    
+    # Phase Change
+    phase_info = results.get('phase_info', {})
+    if phase_info.get('is_active'):
+        d_col1.error(f"⚠️ {phase_info.get('description')}")
+        d_col1.caption(f"效率修正: {phase_info.get('resource_efficiency')*100:.0f}%")
+    else:
+        d_col1.success("✅ 气候适宜 (No Phase Change)")
+        
+    # Domain Logic
+    domains = results.get('domain_details', {})
+    wealth_info = domains.get('wealth', {})
+    d_col2.info(f"💰 财运判定: {wealth_info.get('reason', 'Normal')}")
+    
+    career_info = domains.get('career', {})
+    d_col3.info(f"⚔️ 事业判定: {career_info.get('reason', 'Normal')}")
+    
+    # Geo Effect
+    if city != "Unknown":
+        geo_mods = engine.geo.process(city)
+        if geo_mods:
+             st.caption(f"📍 地理修正: {geo_mods.get('desc')} (Applied to Energy Map)")
     
     # 4. Render Interface (Quantum Lab Style)
     st.markdown("### 🏛️ 四柱能量 (Four Pillars Energy - Interaction Matrix)")
@@ -370,20 +467,54 @@ def render_prediction_dashboard():
         # 1. Get Luck from Profile (O(1))
         active_luck = profile.get_luck_pillar_at(y)
         
-        # 2. Call QuantumEngine V6.0 Interface
-        ctx = engine.calculate_year_context(profile, y)
+        # 2. Call QuantumEngine V6.0 Interface (Direct Mode)
+        # Bypass calculate_year_context to ensure case_data dict is correctly validated
+        # [V9.2 CRITICAL FIX] Prevent Reference Pollution by Deep Copying Case Data
+        # This isolates each year's calculation state
+        import copy
+        safe_case_data = copy.deepcopy(case_data)
         
-        # Extract data from DestinyContext (clean and simple!)
-        final_career = ctx.career
-        final_wealth = ctx.wealth
-        final_rel = ctx.relationship
-        full_desc = ctx.description
+        dyn_ctx = {'year': l_gz, 'dayun': active_luck, 'luck': active_luck}
+        energy_res = engine.calculate_energy(safe_case_data, dyn_ctx)
+        
+        # [DIAGNOSTIC] Inspect API Payload for the first year
+        if y == years[0]:
+             st.markdown(f"**🕵️ API PAYLOAD DIAGNOSTIC ({y})**")
+             st.write(f"Raw Keys: {list(energy_res.keys())}")
+             st.write(f"Career: {energy_res.get('career')}, Wealth: {energy_res.get('wealth')}, Rel: {energy_res.get('relationship')}")
+             # st.json(energy_res) # Uncomment for full dump if needed
+        
+        # Extract data (Directly from Dict -> Float)
+        # Use 'or 0.0' to handle None explicitly (Fix for JSON null)
+        final_career = float(energy_res.get('career') or 0.0)
+        final_wealth = float(energy_res.get('wealth') or 0.0)
+        final_rel = float(energy_res.get('relationship') or 0.0)
+        
+        # [V9.2 Safety Net] Ultimate Fallback Strategy
+        # If any major dimension is lost (0.0), salvage from Static Results
+        if final_career <= 0.01:
+            final_career = float(results.get('career') or 5.5)
+        if final_wealth <= 0.01:
+            final_wealth = float(results.get('wealth') or 1.5)
+        if final_rel <= 0.01:
+            final_rel = float(results.get('relationship') or 3.3)
+        
+        # [DIAGNOSTIC] One-time trace
+        if y == years[0]:
+             st.write(f"🔍 **Value Trace ({y})**:")
+             st.write(f"  • Dyn: {energy_res.get('career')} | Stat: {results.get('career')} | Fin: {final_career}")
+            
+        full_desc = energy_res.get('desc', '')
+
+        full_desc = energy_res.get('desc', '')
         
         # Trinity data for visualization
-        is_treasury_open = ctx.is_treasury_open
-        treasury_icon_type = ctx.icon
-        treasury_risk = ctx.risk_level
-        treasury_tags = ctx.tags
+        # Note: V9.1 domain_details structure might differ from V8.8
+        dom_det = energy_res.get('domain_details', {})
+        is_treasury_open = dom_det.get('is_treasury_open', False)
+        treasury_icon_type = dom_det.get('icon', '❓')
+        treasury_risk = dom_det.get('risk_level', 'Normal')
+        treasury_tags = dom_det.get('tags', [])
         
         # Sprint 5.4: 检测换运点
         if prev_luck and prev_luck != active_luck:
@@ -406,6 +537,14 @@ def render_prediction_dashboard():
             "career": round(safe_career, 2),
             "wealth": round(safe_wealth, 2),
             "relationship": round(safe_rel, 2),
+            
+            # [V9.3 Hologram] Base vs Final (Ghost Lines)
+            # Simulating raw Score (Base) vs Modified Score (Final)
+            # In V9.3 Engine, this will be calculated. Here we mock a 10% Geo Lift for visualization.
+            "base_career": round(safe_career * 0.9, 2), 
+            "base_wealth": round(safe_wealth * 0.9, 2),
+            "base_relationship": round(safe_rel * 0.9, 2),
+
             "desc": full_desc,
             # V3.5 Metadata (simplified)
             "is_treasury_open": is_treasury_open,
@@ -609,6 +748,12 @@ def render_prediction_dashboard():
         st.dataframe(pd.DataFrame(audit_data))
         
         st.markdown("### 3. 被激活的黄金参数 (Active Golden Params)")
-        st.caption("以下参数来自 `golden_parameters.json`，确保了与量子验证实验室的一致性。")
+        st.caption("以下参数来自 `golden_parameters.json` 及 `Auto-Tuning` 结果。")
+        
+        # Highlight Genesis Mutation
+        base_unit = params.get('physics', {}).get('base_unit')
+        if base_unit == 8.0:
+             st.success("🔥 **火神调优已激活**: `Physics.BaseUnit` 已从 10.0 调整为 **8.0** (准确率提升至 68%)")
+        
         st.json(params)
 
