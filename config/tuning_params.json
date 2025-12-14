@@ -1,0 +1,18 @@
+{
+    "physics": {
+        "stem_score": 12.0,
+        "branch_main_qi": 10.0,
+        "branch_sub_qi": 7.0,
+        "gan_zhi_overlap_ratio": 0.5
+    },
+    "seasonal": {
+        "monthly_command_bonus": 1.5,
+        "generation_bonus": 1.2
+    },
+    "phase": {
+        "scorched_earth_threshold": 0.8
+    },
+    "calibration": {
+        "mae_threshold": 4.0
+    }
+}
