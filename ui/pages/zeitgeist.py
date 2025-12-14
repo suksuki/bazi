@@ -105,6 +105,7 @@ def render():
     
     st.title("🎬 命运波函数影院 V4.0 (Trinity Edition)")
     st.caption("Powered by Trinity Architecture | LLM Narratives Constrained by QuantumEngine")
+    st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}`")
     
     # Sidebar: Case Selector
     cases = load_cases()

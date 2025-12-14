@@ -714,6 +714,7 @@ def render():
     # --- UI HEADER ---
     st.title("🧪 量子八字 V8.0 验证工作台 (Phase Change)")
     st.markdown("Dynamic Space-Time Validation Module (Unified Arch)")
+    st.caption(f"🔧 Engine Version: `{engine.VERSION}`")
 
     # --- TABS ---
     tab_global, tab_single  = st.tabs(["🔭 全局校准 (Global Telescope)", "🔬 单点分析 (Single Microscope)"])

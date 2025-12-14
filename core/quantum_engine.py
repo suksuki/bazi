@@ -20,12 +20,16 @@ from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 class QuantumEngine:
     """
-    Quantum Bazi V2.4 Physics Engine (Unified)
+    Quantum Bazi V8.1 Physics Engine (Unified)
     Calculates E_pred (Energy Potential) based on W (Weights) and C (Couplings).
     Supports Dynamic Time-Variable (Da Yun / Liu Nian) with Full Elemental Interaction.
     
     [V6.0+ Parameterization] 支持通过 config 字典动态调整算法参数
+    [V8.0] Phase Change Protocol - 焦土不生金/冻水不生木
+    [V8.1] 得令保护 + 建禄加成
     """
+    
+    VERSION = "8.1-Legacy"  # Version watermark for UI verification
     def __init__(self, params=None):
         # Allow default params loading if None
         if params is None:
