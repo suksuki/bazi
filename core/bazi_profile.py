@@ -120,9 +120,38 @@ class VirtualBaziProfile:
         return "甲" # Fallback
 
     def get_luck_pillar_at(self, year: int) -> str:
-        # 旧用例是静态快照，没有时间轴
-        # 无论哪一年，都返回预设的那个大运
-        return self._static_luck
+        """
+        虚拟大运计算 - 基于年份模拟大运变化
+        每5年换一个大运（简化版，便于在12年视图中看到换运）
+        """
+        # 每5年换运（模拟），根据性别顺推或逆推
+        base_year = 2024
+        cycles = (year - base_year) // 5
+        
+        # 简化：使用天干地支推算
+        gan_list = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+        zhi_list = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+        
+        # 从月柱推算大运
+        if 'month' in self._pillars and len(self._pillars['month']) >= 2:
+            month_gan = self._pillars['month'][0]
+            month_zhi = self._pillars['month'][1]
+            
+            try:
+                gan_idx = gan_list.index(month_gan)
+                zhi_idx = zhi_list.index(month_zhi)
+                
+                # 性别决定顺逆
+                direction = 1 if self.gender == 1 else -1
+                
+                new_gan_idx = (gan_idx + cycles * direction) % 10
+                new_zhi_idx = (zhi_idx + cycles * direction) % 12
+                
+                return gan_list[new_gan_idx] + zhi_list[new_zhi_idx]
+            except:
+                pass
+        
+        return self._static_luck if self._static_luck != "未知" else "未知大运"
 
     # 兼容性接口
     def get_year_pillar(self, year: int) -> str:
