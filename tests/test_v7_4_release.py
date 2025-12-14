@@ -16,7 +16,7 @@ import unittest
 import copy
 from datetime import datetime
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 from core.config_rules import (
     MONTH_WEIGHT_MULTIPLIER,

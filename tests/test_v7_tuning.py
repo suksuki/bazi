@@ -1,5 +1,5 @@
 import unittest
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 from core.bazi_profile import BaziProfile
 
 class TestV7Tuning(unittest.TestCase):

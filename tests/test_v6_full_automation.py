@@ -7,7 +7,7 @@ from datetime import datetime
 # Allow importing from root
 sys.path.insert(0, os.getcwd())
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 
 class TestV6Profile(unittest.TestCase):

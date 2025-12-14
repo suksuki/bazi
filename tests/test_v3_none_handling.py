@@ -5,7 +5,7 @@ import unittest
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 class TestNoneHandling(unittest.TestCase):
     def setUp(self):

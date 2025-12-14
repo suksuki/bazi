@@ -7,7 +7,7 @@ tests/test_v6_parameterization.py
 import sys
 sys.path.insert(0, '/home/jin/bazi_predict')
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 from core.bazi_profile import VirtualBaziProfile
 from core.config_rules import (
     SCORE_SKULL_CRASH, SCORE_TREASURY_BONUS, SCORE_TREASURY_PENALTY,

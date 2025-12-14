@@ -4,13 +4,13 @@ import json
 import copy
 sys.path.append(os.getcwd())
 try:
-    from core.quantum_engine import QuantumEngine
+    from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
     from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
     from ui.pages.quantum_lab import create_profile_from_case # Try reuse logic if possible, or mock
 except ImportError:
     # If UI import fails due to streamlit dependency in headless mode, mock create_profile
     from core.bazi_profile import VirtualBaziProfile
-    from core.quantum_engine import QuantumEngine
+    from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
     from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 def create_profile_mock(case, luck):

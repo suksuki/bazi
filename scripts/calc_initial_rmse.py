@@ -7,7 +7,7 @@ import sys
 # Add repository root to path so we can import core
 sys.path.append("/home/jin/bazi_predict")
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 def load_cases():
     path = "/home/jin/bazi_predict/data/calibration_cases.json"

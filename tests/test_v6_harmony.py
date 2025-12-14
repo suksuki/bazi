@@ -1,6 +1,6 @@
 from datetime import datetime
 from core.bazi_profile import BaziProfile
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 def test_love_over_war():
     print("--- V6.1 HarmonyEngine: 贪合忘冲测试 ---")

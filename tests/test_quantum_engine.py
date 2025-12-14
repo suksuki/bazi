@@ -1,7 +1,7 @@
 import pytest
 import os
 import json
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 # --- Fixture: Load Calibration Data ---
 @pytest.fixture

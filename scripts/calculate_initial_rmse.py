@@ -5,7 +5,7 @@ import json
 import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 def load_cases():
     path = os.path.join(os.path.dirname(__file__), "../data/calibration_cases.json")

@@ -5,7 +5,7 @@ import os
 from datetime import date
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 # Setup Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

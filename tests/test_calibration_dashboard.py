@@ -3,7 +3,7 @@ import pytest
 import os
 import json
 import numpy as np
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 # --- Fixtures ---
 @pytest.fixture

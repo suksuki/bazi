@@ -1,6 +1,6 @@
 from datetime import datetime
 from core.bazi_profile import BaziProfile
-from core.quantum_engine import QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
 
 def test_skull_protocol_survival():
     print("--- V6.0 骷髅协议回归测试 ---")
