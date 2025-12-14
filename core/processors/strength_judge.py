@@ -1,0 +1,130 @@
+"""
+Antigravity V8.8 Strength Judge
+================================
+Layer 3: Final Strength Determination
+
+This processor makes the final Strong/Weak/Follower judgment
+based on aggregated scores from other processors.
+"""
+
+from core.processors.base import BaseProcessor
+from typing import Dict, Any, Tuple
+
+
+class StrengthJudge(BaseProcessor):
+    """
+    Layer 3: Final Judgment
+    
+    Takes aggregated scores and makes the verdict.
+    Implements fixed thresholds + special overrides.
+    """
+    
+    # === Thresholds (configurable) ===
+    THRESHOLD_VERY_STRONG = 150.0
+    THRESHOLD_STRONG = 80.0
+    THRESHOLD_MODERATE = 50.0
+    THRESHOLD_WEAK = 20.0
+    THRESHOLD_FOLLOWER = -10.0
+    
+    @property
+    def name(self) -> str:
+        return "Strength Judge Layer 3"
+    
+    def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Make final strength judgment.
+        
+        Input context should include:
+        - base_score: Raw physics score
+        - in_command_bonus: 得令加分
+        - resource_month_bonus: 印绶月加分
+        - resource_efficiency: Phase change modifier
+        - is_in_command: bool
+        - is_resource_month: bool
+        
+        Returns:
+            {
+                'verdict': str,
+                'final_score': float,
+                'confidence': float,
+                'reason': str
+            }
+        """
+        # Extract inputs
+        base_score = context.get('base_score', 0.0)
+        in_command_bonus = context.get('in_command_bonus', 0.0)
+        resource_month_bonus = context.get('resource_month_bonus', 0.0)
+        resource_efficiency = context.get('resource_efficiency', 1.0)
+        is_in_command = context.get('is_in_command', False)
+        is_resource_month = context.get('is_resource_month', False)
+        
+        # Calculate adjusted score
+        raw_total = base_score + in_command_bonus + resource_month_bonus
+        adjusted_score = raw_total * resource_efficiency
+        
+        # === Special Override Rules ===
+        
+        # Rule 1: 得令必强 (In-Command Override)
+        if is_in_command:
+            return {
+                'verdict': 'Strong',
+                'final_score': max(adjusted_score, self.THRESHOLD_STRONG),
+                'raw_score': raw_total,
+                'confidence': 0.90,
+                'reason': '得令覆盖'
+            }
+        
+        # Rule 2: 印绶月+高分 = 强
+        if is_resource_month and raw_total > self.THRESHOLD_MODERATE:
+            return {
+                'verdict': 'Strong',
+                'final_score': adjusted_score,
+                'raw_score': raw_total,
+                'confidence': 0.85,
+                'reason': '印绶得月'
+            }
+        
+        # === Standard Threshold Judgment ===
+        verdict, reason = self._threshold_judge(adjusted_score)
+        
+        return {
+            'verdict': verdict,
+            'final_score': adjusted_score,
+            'raw_score': raw_total,
+            'confidence': 0.80,
+            'reason': reason
+        }
+    
+    def _threshold_judge(self, score: float) -> Tuple[str, str]:
+        """Apply threshold-based judgment"""
+        if score >= self.THRESHOLD_VERY_STRONG:
+            return ('Strong', '分数极高')
+        elif score >= self.THRESHOLD_STRONG:
+            return ('Strong', '分数达标')
+        elif score >= self.THRESHOLD_MODERATE:
+            return ('Moderate', '中和')
+        elif score >= self.THRESHOLD_WEAK:
+            return ('Weak', '偏弱')
+        elif score >= self.THRESHOLD_FOLLOWER:
+            return ('Weak', '身弱')
+        else:
+            return ('Follower', '极弱/从格候选')
+    
+    def judge_with_overrides(
+        self, 
+        score: float, 
+        is_in_command: bool = False,
+        is_resource_month: bool = False,
+        resource_efficiency: float = 1.0
+    ) -> Dict[str, Any]:
+        """
+        Convenience method for direct judgment.
+        """
+        return self.process({
+            'base_score': score,
+            'in_command_bonus': 0.0,
+            'resource_month_bonus': 0.0,
+            'resource_efficiency': resource_efficiency,
+            'is_in_command': is_in_command,
+            'is_resource_month': is_resource_month
+        })
