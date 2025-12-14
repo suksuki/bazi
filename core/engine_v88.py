@@ -369,3 +369,68 @@ class EngineV88:
         )
         
         return ctx
+    
+    def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None) -> Dict:
+        """
+        V8.8 Energy calculation - simplified version.
+        Returns energy breakdown for UI display.
+        """
+        dm_char = case_data.get('day_master', '甲')
+        dm_elem = self._get_element(dm_char)
+        
+        # Get bazi from case_data
+        bazi_list = [
+            case_data.get('year', '甲子'),
+            case_data.get('month', '甲子'),
+            case_data.get('day', '甲子'),
+            case_data.get('hour', '甲子')
+        ]
+        
+        # Calculate strength using modular processors
+        strength, score = self._evaluate_wang_shuai(dm_char, bazi_list)
+        
+        # Get raw energy from physics processor
+        context = {
+            'bazi': bazi_list,
+            'day_master': dm_char,
+            'dm_element': dm_elem,
+            'month_branch': bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else ''
+        }
+        physics_result = self.physics.process(context)
+        raw_energy = physics_result['raw_energy']
+        
+        # Determine favorable based on strength
+        favorable = self._determine_favorable(dm_char, strength, bazi_list)
+        
+        # Build result
+        result = {
+            'wang_shuai': strength,
+            'wang_shuai_score': score,
+            'dm_element': dm_elem,
+            'favorable': favorable,
+            'energy_map': raw_energy,
+            'e_self': raw_energy.get(dm_elem, 0),
+            'e_resource': 0,
+            'e_output': 0,
+            'e_wealth': 0,
+            'e_officer': 0,
+            'narrative': [f'{strength} ({score:.1f})']
+        }
+        
+        # Map energies to ten gods
+        from core.processors.physics import GENERATION, CONTROL
+        
+        for elem, value in raw_energy.items():
+            rel = self._get_relation(dm_elem, elem)
+            if rel == 'self':
+                result['e_self'] = value
+            elif rel == 'resource':
+                result['e_resource'] = value
+            elif rel == 'output':
+                result['e_output'] = value
+            elif rel == 'wealth':
+                result['e_wealth'] = value
+            elif rel == 'officer':
+                result['e_officer'] = value
+        
+        return result
