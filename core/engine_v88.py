@@ -415,6 +415,7 @@ class EngineV88:
             'e_wealth': 0,
             'e_officer': 0,
             'narrative': [f'{strength} ({score:.1f})'],
+            'desc': f'{dm_char}日主 {strength}',
             # UI compatibility - dimension scores
             'career': score / 10.0,
             'wealth': score / 10.0,
