@@ -1,7 +1,7 @@
 """
 V8.8 Hybrid Engine Test Suite
 ==============================
-Tests the HybridEngineV88 which combines:
+Tests the EngineV88 which combines:
 - Legacy QuantumEngine features (get_year_pillar, calculate_year_context)
 - Modular processors (_evaluate_wang_shuai override)
 """
@@ -13,10 +13,10 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.engine_hybrid import HybridEngineV88
+from core.engine_v88 import EngineV88  # Pure modular engine
 
 
-class TestHybridEngineV88(unittest.TestCase):
+class TestEngineV88(unittest.TestCase):
     """Test V8.8 Hybrid Engine functionality"""
     
     @classmethod
@@ -26,12 +26,12 @@ class TestHybridEngineV88(unittest.TestCase):
         import io
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()
-        cls.engine = HybridEngineV88()
+        cls.engine = EngineV88()
         sys.stdout = old_stdout
     
     def test_version_watermark(self):
-        """Engine should report V8.8-Hybrid version"""
-        self.assertEqual(self.engine.VERSION, "V8.8-Hybrid")
+        """Engine should report V8.8 version"""
+        self.assertEqual(self.engine.VERSION, "V8.8")
     
     def test_legacy_get_year_pillar(self):
         """Legacy method should work"""
@@ -80,7 +80,7 @@ class TestHybridEngineRegression(unittest.TestCase):
         import io
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()
-        cls.engine = HybridEngineV88()
+        cls.engine = EngineV88()
         sys.stdout = old_stdout
         
         # Load cases

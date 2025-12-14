@@ -233,3 +233,139 @@ class EngineV88:
         self.config = config
         # V8.8 doesn't use config yet, but we accept it for compatibility
         pass
+    
+    # === Full Feature Methods (migrated from QuantumEngine) ===
+    
+    def get_year_pillar(self, year: int) -> str:
+        """Get the GanZhi for a specific year."""
+        try:
+            from lunar_python import Solar
+            # Use mid-year to avoid boundary issues
+            solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
+            lunar = solar.getLunar()
+            return lunar.getYearInGanZhi()
+        except Exception:
+            return ""
+    
+    def _determine_favorable(self, dm: str, wang_shuai: str, bazi: list) -> list:
+        """Determine Xi Yong Shen based on Strong/Weak."""
+        from core.processors.physics import GENERATION, CONTROL
+        dm_elem = self._get_element(dm)
+        elements = ["wood", "fire", "earth", "metal", "water"]
+        
+        # Find resource element (what generates DM)
+        resource = None
+        for mother, child in GENERATION.items():
+            if child == dm_elem:
+                resource = mother
+                break
+        
+        # Find output element (what DM generates)
+        output = GENERATION.get(dm_elem)
+        
+        # Find wealth element (what DM controls)
+        wealth = CONTROL.get(dm_elem)
+        
+        # Find officer element (what controls DM)
+        officer = None
+        for mother, child in CONTROL.items():
+            if child == dm_elem:
+                officer = mother
+                break
+        
+        if "Strong" in wang_shuai:
+            # Strong needs output, wealth, officer
+            favorable = [output, wealth, officer]
+        else:
+            # Weak needs resource and self
+            favorable = [resource, dm_elem]
+        
+        return [e.capitalize() for e in favorable if e]
+    
+    def calculate_year_score(self, year_pillar: str, favorable: list, unfavorable: list, birth_chart: dict = None) -> dict:
+        """Calculate year luck score - simplified V8.8 version."""
+        if not year_pillar or len(year_pillar) < 2:
+            return {'score': 0, 'details': ['Invalid year pillar']}
+        
+        year_stem = year_pillar[0]
+        year_branch = year_pillar[1]
+        
+        stem_elem = self._get_element(year_stem).capitalize()
+        branch_elem = self._get_element(year_branch).capitalize()
+        
+        score = 0.0
+        details = []
+        
+        # Stem scoring
+        if stem_elem in favorable:
+            score += 5.0
+            details.append(f"年干 {year_stem}({stem_elem}) 喜用 +5")
+        elif stem_elem in unfavorable:
+            score -= 3.0
+            details.append(f"年干 {year_stem}({stem_elem}) 忌神 -3")
+        
+        # Branch scoring
+        if branch_elem in favorable:
+            score += 5.0
+            details.append(f"年支 {year_branch}({branch_elem}) 喜用 +5")
+        elif branch_elem in unfavorable:
+            score -= 3.0
+            details.append(f"年支 {year_branch}({branch_elem}) 忌神 -3")
+        
+        return {'score': score, 'details': details}
+    
+    def calculate_year_context(self, profile, year: int):
+        """
+        V8.8 Year Context Calculation.
+        Returns a DestinyContext-like object for UI compatibility.
+        """
+        from core.context import DestinyContext
+        
+        # Get year pillar
+        year_pillar = self.get_year_pillar(year)
+        
+        # Extract bazi
+        bazi_list = [
+            profile.pillars.get('year', '甲子'),
+            profile.pillars.get('month', '甲子'),
+            profile.pillars.get('day', '甲子'),
+            profile.pillars.get('hour', '甲子')
+        ]
+        
+        # Calculate strength
+        dm = profile.day_master
+        strength, score = self._evaluate_wang_shuai(dm, bazi_list)
+        
+        # Determine favorable elements
+        favorable = self._determine_favorable(dm, strength, bazi_list)
+        unfavorable = [e.capitalize() for e in ['wood', 'fire', 'earth', 'metal', 'water']
+                       if e.capitalize() not in favorable]
+        
+        # Calculate year score
+        year_result = self.calculate_year_score(year_pillar, favorable, unfavorable)
+        base_score = year_result.get('score', 0)
+        details = year_result.get('details', [])
+        
+        # Determine icon
+        if base_score >= 5:
+            icon = "✨"
+        elif base_score >= 0:
+            icon = "☀️"
+        elif base_score >= -3:
+            icon = "⚡"
+        else:
+            icon = "💀"
+        
+        # Build context
+        ctx = DestinyContext(
+            year=year,
+            pillar=year_pillar,  # Required parameter
+            score=base_score,
+            icon=icon,
+            details=details,
+            tags=[],
+            risk_level="low" if base_score >= 0 else "medium",
+            day_master_strength=strength
+        )
+        
+        return ctx

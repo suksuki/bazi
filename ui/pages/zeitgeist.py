@@ -8,7 +8,7 @@ import sys
 # Append root path to sys.path to resolve imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from core.engine_hybrid import HybridEngineV88 as QuantumEngine  # V8.8 Hybrid
+from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
 from core.context import DestinyContext
 from core.bazi_profile import VirtualBaziProfile
 
