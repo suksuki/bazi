@@ -97,14 +97,77 @@ class VirtualBaziProfile:
     """
     [V6.0 Adapter] 虚拟八字档案 (The Mask)
     专门用于 QuantumLab 的旧测试用例 (Legacy Cases)。
-    它没有出生日期，只有硬编码的四柱文本。
-    实现了 BaziProfile 的鸭子类型接口。
+    从四柱反推出生日期，然后委托给真正的 BaziProfile 计算大运。
     """
+    
+    # 天干地支表
+    GAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+    ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+    
+    # 地支对应的月份 (寅月=1月立春后)
+    ZHI_TO_MONTH = {"寅": 1, "卯": 2, "辰": 3, "巳": 4, "午": 5, "未": 6,
+                    "申": 7, "酉": 8, "戌": 9, "亥": 10, "子": 11, "丑": 12}
+    
+    # 地支对应的时辰 (子时=23-1点)
+    ZHI_TO_HOUR = {"子": 0, "丑": 2, "寅": 4, "卯": 6, "辰": 8, "巳": 10,
+                   "午": 12, "未": 14, "申": 16, "酉": 18, "戌": 20, "亥": 22}
+    
     def __init__(self, pillars: Dict[str, str], static_luck: str = "未知", day_master: str = None, gender: int = 1):
         self._pillars = pillars
         self._static_luck = static_luck
         self._day_master = day_master
-        self.gender = gender # 默认男，旧用例通常不敏感
+        self.gender = gender
+        
+        # 反推出生日期并创建真正的 BaziProfile
+        self._real_profile = self._create_real_profile()
+    
+    def _create_real_profile(self) -> Optional['BaziProfile']:
+        """从四柱反推出生日期，创建真正的 BaziProfile"""
+        try:
+            from datetime import datetime
+            from lunar_python import Lunar, Solar
+            
+            year_pillar = self._pillars.get('year', '')
+            month_pillar = self._pillars.get('month', '')
+            day_pillar = self._pillars.get('day', '')
+            hour_pillar = self._pillars.get('hour', '')
+            
+            if len(year_pillar) < 2 or len(month_pillar) < 2:
+                return None
+            
+            # 年柱反推年份 (假设是1920-2020之间)
+            year_gan = year_pillar[0]
+            year_zhi = year_pillar[1]
+            gan_idx = self.GAN.index(year_gan)
+            zhi_idx = self.ZHI.index(year_zhi)
+            
+            # 60 甲子循环
+            for base_year in range(1920, 2020):
+                if (base_year - 4) % 10 == gan_idx and (base_year - 4) % 12 == zhi_idx:
+                    birth_year = base_year
+                    break
+            else:
+                return None
+            
+            # 月柱反推月份
+            month_zhi = month_pillar[1]
+            birth_month = self.ZHI_TO_MONTH.get(month_zhi, 6)
+            # 调整为公历月份 (农历寅月约公历2-3月)
+            birth_month_solar = birth_month + 1 if birth_month <= 10 else birth_month - 10
+            
+            # 假设日期为15日 (月中)
+            birth_day = 15
+            
+            # 时柱反推时辰
+            hour_zhi = hour_pillar[1] if len(hour_pillar) > 1 else '午'
+            birth_hour = self.ZHI_TO_HOUR.get(hour_zhi, 12)
+            
+            # 创建真正的 BaziProfile
+            birth_date = datetime(birth_year, birth_month_solar, birth_day, birth_hour, 0)
+            return BaziProfile(birth_date, self.gender)
+            
+        except Exception as e:
+            return None
 
     @property
     def pillars(self) -> Dict[str, str]:
@@ -112,49 +175,24 @@ class VirtualBaziProfile:
 
     @property
     def day_master(self) -> str:
-        # 如果初始化时未指定，尝试从 pillars['day'] 解析
         if self._day_master:
             return self._day_master
         if 'day' in self._pillars and len(self._pillars['day']) > 0:
             return self._pillars['day'][0]
-        return "甲" # Fallback
+        return "甲"
+    
+    @property
+    def birth_date(self):
+        """返回反推的出生日期"""
+        return self._real_profile.birth_date if self._real_profile else None
 
     def get_luck_pillar_at(self, year: int) -> str:
-        """
-        虚拟大运计算 - 基于年份模拟大运变化
-        每5年换一个大运（简化版，便于在12年视图中看到换运）
-        """
-        # 每5年换运（模拟），根据性别顺推或逆推
-        base_year = 2024
-        cycles = (year - base_year) // 5
-        
-        # 简化：使用天干地支推算
-        gan_list = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-        zhi_list = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-        
-        # 从月柱推算大运
-        if 'month' in self._pillars and len(self._pillars['month']) >= 2:
-            month_gan = self._pillars['month'][0]
-            month_zhi = self._pillars['month'][1]
-            
-            try:
-                gan_idx = gan_list.index(month_gan)
-                zhi_idx = zhi_list.index(month_zhi)
-                
-                # 性别决定顺逆
-                direction = 1 if self.gender == 1 else -1
-                
-                new_gan_idx = (gan_idx + cycles * direction) % 10
-                new_zhi_idx = (zhi_idx + cycles * direction) % 12
-                
-                return gan_list[new_gan_idx] + zhi_list[new_zhi_idx]
-            except:
-                pass
-        
-        return self._static_luck if self._static_luck != "未知" else "未知大运"
+        """使用真正的 BaziProfile 计算大运"""
+        if self._real_profile:
+            return self._real_profile.get_luck_pillar_at(year)
+        return self._static_luck
 
-    # 兼容性接口
     def get_year_pillar(self, year: int) -> str:
-        # 如果 QuantumEngine 还需要调用 profile.get_year_pillar
-        # 这里返回 Unknown 让 Engine 去处理（Engine 有自己的 get_year_pillar）
+        if self._real_profile:
+            return self._real_profile.get_year_pillar(year)
         return "Unknown"
