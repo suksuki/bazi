@@ -5,11 +5,12 @@ import os
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
+import altair as alt
 
-from core.quantum_engine import QuantumEngine
 from core.quantum_engine import QuantumEngine
 from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
+from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 # === Trinity V6.0 Helper Functions ===
 
@@ -277,8 +278,10 @@ def render():
     # 导入默认配置值
     from core.config_rules import (
         SCORE_SKULL_CRASH, SCORE_TREASURY_BONUS, SCORE_TREASURY_PENALTY,
-        ENERGY_THRESHOLD_STRONG, ENERGY_THRESHOLD_WEAK, SCORE_GENERAL_OPEN
+        ENERGY_THRESHOLD_STRONG, ENERGY_THRESHOLD_WEAK, SCORE_GENERAL_OPEN,
+        SCORE_SANHE_BONUS, SCORE_LIUHE_BONUS, SCORE_CLASH_PENALTY
     )
+    from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
     
     # Skull Crash (骷髅协议崩塌分)
     score_skull_crash = st.sidebar.number_input(
@@ -333,21 +336,292 @@ def render():
         step=1.0
     )
     
+    # === [Harmony & Conflict] 合化控制台 ===
+    st.sidebar.markdown("**❤️ 合化与冲突 (Harmony)**")
+    
+    # SanHe (三合)
+    score_sanhe_bonus = st.sidebar.slider(
+        "✨ Trinity Bonus (三合加成)",
+        min_value=0.0, max_value=30.0,
+        value=SCORE_SANHE_BONUS,
+        step=1.0,
+        help="三合局且为喜用神时的强力加成"
+    )
+    
+    # LiuHe (六合)
+    score_liuhe_bonus = st.sidebar.slider(
+        "🤝 Combo Bonus (六合加成)",
+        min_value=0.0, max_value=20.0,
+        value=SCORE_LIUHE_BONUS,
+        step=1.0,
+        help="六合（羁绊/解冲）的基础加分"
+    )
+    
+    # Clash (六冲)
+    score_clash_penalty = st.sidebar.slider(
+        "💥 Clash Penalty (六冲惩罚)",
+        min_value=-20.0, max_value=0.0,
+        value=SCORE_CLASH_PENALTY,
+        step=1.0,
+        help="六冲且未被化解时的基础扣分"
+    )
+
+    # === [V7.0 Full Algo Tuning] 深度调优控制台 ===
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🎛️ 深度调优 (Deep Tuning)")
+    
+    # === [V7.3 Final Tuning Console] 上帝模式控制台 ===
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🎛️ 终极调优 (God Mode)")
+    
+    # Defaults
+    import copy
+    fp = copy.deepcopy(DEFAULT_FULL_ALGO_PARAMS)
+    
+    # --- 🤖 AI Command Center Listener ---
+    cmd_path = os.path.join(os.path.dirname(__file__), "../../data/command_center_config.json")
+    if os.path.exists(cmd_path):
+        try:
+            with open(cmd_path, "r") as f:
+                cmd_cfg = json.load(f)
+            
+            last_ts = st.session_state.get('cmd_last_ts', 0)
+            curr_ts = cmd_cfg.get('timestamp', 0)
+            
+            if curr_ts > last_ts:
+                st.toast(f"🤖 AI Remote Override: {cmd_cfg.get('description', 'Update')}")
+                st.session_state['cmd_last_ts'] = curr_ts
+                st.session_state['ai_overrides'] = cmd_cfg.get('updates', {})
+                
+                # Reset Sliders to pick up new values
+                # Keys usually start with pg_, s_, i_, m_
+                keys_to_reset = [k for k in st.session_state.keys() if k.startswith(('pg_', 's_', 'i_', 'm_'))]
+                for k in keys_to_reset:
+                    del st.session_state[k]
+                
+                st.rerun()
+                
+        except Exception as e:
+            st.warning(f"AI Link Unstable: {e}")
+
+    # Apply AI Overrides to fp
+    if 'ai_overrides' in st.session_state:
+        def deep_merge(target, source):
+            for k, v in source.items():
+                if isinstance(v, dict) and k in target and isinstance(target[k], dict):
+                    deep_merge(target[k], v)
+                else:
+                    target[k] = v
+        deep_merge(fp, st.session_state['ai_overrides'])
+        
+    
+    # --- Panel 1: 基础场域 (Physics) ---
+    with st.sidebar.expander("🌍 基础场域 (Physics)", expanded=True):
+        st.caption("宫位引力 (Pillar Gravity)")
+        pg_year = st.slider("年柱 (Year)", 0.5, 1.5, fp['physics']['pillarWeights']['year'], 0.1, key='pg_y')
+        pg_month = st.slider("月令 (Month)", 0.5, 2.0, fp['physics']['pillarWeights']['month'], 0.1, key='pg_m')
+        pg_day = st.slider("日主 (Day)", 0.5, 1.5, fp['physics']['pillarWeights']['day'], 0.1, key='pg_d')
+        pg_hour = st.slider("时柱 (Hour)", 0.5, 1.5, fp['physics']['pillarWeights']['hour'], 0.1, key='pg_h')
+
+    # --- Panel 2: 粒子动态 (Structure) ---
+    with st.sidebar.expander("⚛️ 粒子动态 (Structure)", expanded=False):
+        st.caption("垂直作用 (Vertical)")
+        root_w = st.slider("通根系数 (Rooting)", 0.5, 2.0, fp['structure']['rootingWeight'], 0.1, key='s_rw')
+        exposed_b = st.slider("透干加成 (Exposed)", 1.0, 3.0, fp['structure']['exposedBoost'], 0.1, key='s_eb')
+        same_pill = st.slider("自坐强根 (Sitting)", 1.0, 2.0, fp['structure']['samePillarBonus'], 0.1, key='s_sp')
+        
+        st.caption("特殊状态 (Special)")
+        void_p = st.slider("⚫ 黑洞/空亡 (Void)", 0.0, 1.0, fp['structure']['voidPenalty'], 0.1, key='s_vp', help="0=空掉，1=不空")
+
+    # --- Panel 3: 几何交互 (Interactions) ---
+    with st.sidebar.expander("⚗️ 几何交互 (Interactions)", expanded=False):
+        st.caption("天干五合 (Stem Fusion)")
+        s5_th = st.slider("合化阈值 (Threshold)", 0.5, 1.0, fp['interactions']['stemFiveCombination']['threshold'], 0.05, key='i_s5_th')
+        s5_bo = st.slider("合化增益 (Bonus)", 1.0, 3.0, fp['interactions']['stemFiveCombination']['bonus'], 0.1, key='i_s5_bo')
+        s5_pe = st.slider("合绊损耗 (Binding)", 0.0, 1.0, fp['interactions']['stemFiveCombination']['penalty'], 0.1, key='i_s5_pe')
+        jealousy_d = st.slider("争合损耗 (Jealousy)", 0.0, 0.5, fp['interactions']['stemFiveCombination'].get('jealousyDamping', 0.3), 0.05, key='i_s5_jd')
+
+        st.caption("地支成局 (Branch Combo)")
+        cp = fp['interactions'].get('comboPhysics', {'trineBonus': 2.5, 'halfBonus': 1.5, 'archBonus': 1.1, 'directionalBonus': 3.0, 'resolutionCost': 0.1})
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            cp_tb = st.number_input("三合(Trine)", 1.5, 5.0, cp['trineBonus'], 0.1, key='cp_tb')
+            cp_hb = st.number_input("半合(Half)", 1.0, 3.0, cp['halfBonus'], 0.1, key='cp_hb')
+        with c2:
+            cp_db = st.number_input("三会(Dir)", 2.0, 6.0, cp['directionalBonus'], 0.1, key='cp_db')
+            cp_rc = st.number_input("解冲消耗", 0.0, 0.5, cp['resolutionCost'], 0.05, key='cp_rc')
+        
+        st.divider()
+        st.caption("地支事件 (Branch Events)")
+        # Mapping legacy sliders to new structure
+        be_clash_d = st.slider("冲的折损 (Clash Damp)", 0.1, 1.0, fp['interactions']['branchEvents']['clashDamping'], 0.1, key='i_be_cd')
+        
+        st.divider()
+        st.caption("🔒 墓库物理 (Vault Physics)")
+        vp = fp['interactions'].get('vaultPhysics', {
+            'threshold': 20.0, 'sealedDamping': 0.4, 'openBonus': 1.5,
+            'punishmentOpens': False, 'breakPenalty': 0.5
+        })
+        vp_th = st.slider("分界阈值 (Threshold)", 10.0, 50.0, vp['threshold'], 5.0, key='vp_th')
+        vp_sd = st.slider("闭库折损 (Sealed)", 0.0, 1.0, vp['sealedDamping'], 0.1, key='vp_sd')
+        vp_ob = st.slider("开库爆发 (Open Bonus)", 1.0, 3.0, vp['openBonus'], 0.1, key='vp_ob')
+        vp_bp = st.slider("破墓伤害 (Broken P)", 0.0, 1.0, vp['breakPenalty'], 0.1, key='vp_bp')
+        vp_po = st.checkbox("刑可开库 (Punishment Opens)", vp['punishmentOpens'], key='vp_po')
+
+    # --- Panel 4: 能量流转 (Flow) ---
+    # --- Panel 4: 能量流转 (Flow) ---
+    with st.sidebar.expander("🌊 能量流转 (Flow / Damping)", expanded=False):
+        st.caption("🛡️ 阻尼协议 (Damping Protocol)")
+        
+        # safely get nested dicts
+        f_conf = fp.get('flow', {})
+        res_imp = f_conf.get('resourceImpedance', {'base': 0.3, 'weaknessPenalty': 0.5})
+        out_vis = f_conf.get('outputViscosity', {'maxDrainRate': 0.6, 'drainFriction': 0.2})
+        entropy = f_conf.get('globalEntropy', 0.05)
+        
+        st.markdown("**输入阻抗 (Resource Impedance)**")
+        imp_base = st.slider("基础阻抗 (Base)", 0.0, 0.9, res_imp.get('base', 0.3), 0.05, key='f_ri_b')
+        imp_weak = st.slider("虚不受补 (Weak Penalty)", 0.0, 1.0, res_imp.get('weaknessPenalty', 0.5), 0.1, key='f_ri_wp')
+        
+        st.markdown("**输出粘滞 (Output Viscosity)**")
+        vis_rate = st.slider("最大泄耗 (Max Drain)", 0.1, 1.0, out_vis.get('maxDrainRate', 0.6), 0.05, key='f_ov_md')
+        vis_fric = st.slider("输出阻力 (Friction)", 0.0, 0.5, out_vis.get('drainFriction', 0.2), 0.05, key='f_ov_df')
+        
+        st.markdown("**系统熵 (System Entropy)**")
+        sys_ent = st.slider("全局熵增 (Entropy)", 0.0, 0.2, entropy, 0.01, key='f_ge')
+        
+        st.divider()
+        st.caption("Legacy Control")
+        # Keep control impact for now if needed, or remove? 
+        # Config schema might still have it? No, we removed standard keys.
+        # But let's check config schema: controlImpact/Exhaust were REMOVED from default but FlowEngine still tries to use them (with fallbacks)?
+        # Actually my FlowEngine V7.4 implementation read 'controlImpact'.
+        # I should provide slider or default.
+        ctl_imp = st.slider("克-打击力 (Impact)", 0.1, 1.0, f_conf.get('controlImpact', 0.5), 0.1, key='f_ci')
+        
+        st.caption("空间衰减 (Spatial)")
+        sp_nodes = f_conf.get('spatialDecay', {'gap1': 0.6, 'gap2': 0.3})
+        sp_g1 = st.slider("隔一柱 (Gap 1)", 0.1, 1.0, sp_nodes.get('gap1', 0.6), 0.1, key='f_sg1')
+        sp_g2 = st.slider("隔两柱 (Gap 2)", 0.1, 1.0, sp_nodes.get('gap2', 0.3), 0.1, key='f_sg2')
+        
+        # Update param struct for write-back
+        fp['flow'] = {
+            'resourceImpedance': {'base': imp_base, 'weaknessPenalty': imp_weak},
+            'outputViscosity': {'maxDrainRate': vis_rate, 'drainFriction': vis_fric},
+            'globalEntropy': sys_ent,
+            'controlImpact': ctl_imp,
+            'spatialDecay': {'gap1': sp_g1, 'gap2': sp_g2}
+        }
+
+    # --- Panel 5: 时空修正 (Spacetime) ---
+    with st.sidebar.expander("⏳ 时空修正 (Spacetime)", expanded=False):
+        lp_w = st.slider("大运权重 (Luck Pillar)", 0.0, 1.0, fp['spacetime']['luckPillarWeight'], 0.1, key='st_lp')
+        
+        st.divider()
+        st.caption("🌐 宏观场域 (Macro Field)")
+        mp = fp.get('macroPhysics', {'eraElement': 'Fire', 'eraBonus': 0.2, 'eraPenalty': 0.1, 'latitudeHeat': 0.0, 'latitudeCold': 0.0, 'invertSeasons': False, 'useSolarTime': True})
+        
+        era_txt = st.selectbox("当前元运 (Era)", ["Period 9 (Fire)", "Period 8 (Earth)", "Period 1 (Water)"], index=0, key='mp_er')
+        era_el = 'Fire' if 'Fire' in era_txt else ('Water' if 'Water' in era_txt else 'Earth')
+        
+        era_bon = st.slider("时代红利 (Bonus)", 0.0, 0.5, mp['eraBonus'], 0.1, key='mp_eb')
+        era_pen = st.slider("时代阻力 (Penalty)", 0.0, 0.5, mp['eraPenalty'], 0.1, key='mp_ep')
+        
+        st.caption("地理与时间 (Geo & Time)")
+        geo_hot = st.slider("南方火气 (South Heat)", 0.0, 0.5, mp['latitudeHeat'], 0.1, key='mp_gh')
+        geo_cold = st.slider("北方水气 (North Cold)", 0.0, 0.5, mp['latitudeCold'], 0.1, key='mp_gc')
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            inv_sea = st.toggle("南半球 (S.Hemi)", mp['invertSeasons'], key='mp_is')
+        with c2:
+            use_st = st.toggle("真太阳时 (True Solar)", mp['useSolarTime'], key='mp_st')
+
     # === 应用并回测按钮 ===
     st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 应用并回测", type="primary", use_container_width=True):
-        # 构建算法核心配置
+    if st.sidebar.button("🔄 应用并回测 (Apply V7.3)", type="primary", use_container_width=True):
+        # 构建算法核心配置 (V6 Legacy Flat - Partial Map)
         algo_config = {
             'score_skull_crash': score_skull_crash,
             'score_treasury_bonus': score_treasury_bonus,
             'score_treasury_penalty': score_treasury_penalty,
             'score_general_open': score_general_open,
+            'score_sanhe_bonus': score_sanhe_bonus,
+            'score_liuhe_bonus': score_liuhe_bonus,
+            'score_clash_penalty': score_clash_penalty,
             'energy_threshold_strong': energy_strong,
             'energy_threshold_weak': energy_weak,
         }
-        # 存入 session_state 以便后续使用
+        
+        # [V2.5] 构建终极全量配置
+        final_full_config = {
+            "physics": {
+                "seasonWeights": fp['physics']['seasonWeights'],
+                "hiddenStemRatios": fp['physics']['hiddenStemRatios'],
+                "pillarWeights": {
+                    "year": pg_year, "month": pg_month, "day": pg_day, "hour": pg_hour
+                },
+                "lifeStageImpact": 0.2
+            },
+            "structure": {
+                "rootingWeight": root_w,
+                "exposedBoost": exposed_b,
+                "samePillarBonus": same_pill,
+                "voidPenalty": void_p
+            },
+            "interactions": {
+                "stemFiveCombine": {
+                    "threshold": s5_th, "bonus": s5_bo, "penalty": s5_pe,
+                    "jealousyDamping": jealousy_d
+                },
+                "comboPhysics": {
+                    "trineBonus": cp_tb, "halfBonus": cp_hb, "archBonus": 1.1,
+                    "directionalBonus": cp_db, "resolutionCost": cp_rc
+                },
+                "branchEvents": {
+                    "threeHarmony": score_sanhe_bonus,
+                    "sixHarmony": score_liuhe_bonus,
+                    "clashDamping": be_clash_d,
+                    "clashScore": score_clash_penalty,
+                    "harmDamping": 0.2
+                },
+                "vaultPhysics": {
+                    "threshold": vp_th,
+                    "sealedDamping": vp_sd,
+                    "openBonus": vp_ob,
+                    "breakPenalty": vp_bp,
+                    "punishmentOpens": vp_po
+                },
+                "treasury": {"bonus": score_treasury_bonus},
+                "skull": {"crashScore": score_skull_crash}
+            },
+            "flow": {
+                "generationEfficiency": flow_ge,
+                "generationDrain": flow_gd,
+                "controlImpact": flow_ci,
+                "controlExhaust": fp['flow'].get('controlExhaust', 0.2),
+                "dampingFactor": flow_df,
+                "spatialDecay": {"gap1": sp_g1, "gap2": sp_g2}
+            },
+            "spacetime": {
+                "luckPillarWeight": lp_w,
+                "solarTimeImpact": 0.0, # Deprecated by macroPhysics.useSolarTime
+                "regionClimateImpact": 0.0
+            },
+            "macroPhysics": {
+                "eraElement": era_el,
+                "eraBonus": era_bon, "eraPenalty": era_pen,
+                "latitudeHeat": geo_hot, "latitudeCold": geo_cold,
+                "invertSeasons": inv_sea, "useSolarTime": use_st
+            },
+            "global_logic": fp['global_logic']
+        }
+        
+        # 存入 session_state
         st.session_state['algo_config'] = algo_config
-        st.toast(f"✅ 算法参数已更新！Treasury Bonus = {score_treasury_bonus}")
+        st.session_state['full_algo_config'] = final_full_config
+        st.toast(f"✅ V7.3 终极参数注入成功！Void Penalty = {void_p}")
         st.rerun()
     
     st.sidebar.markdown("---")
@@ -434,6 +708,9 @@ def render():
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
         engine.update_config(st.session_state['algo_config'])
+        
+    if 'full_algo_config' in st.session_state:
+        engine.update_full_config(st.session_state['full_algo_config'])
 
     # --- UI HEADER ---
     st.title("🧪 量子八字 V6.0 验证工作台")
@@ -447,279 +724,215 @@ def render():
     # ==========================
     with tab_global:
         st.subheader("全局调校控制台 (Global Calibration Console)")
-        st.caption("通过左侧滑块调整物理参数，目标是消除热力图中的红色区域 (RMSE > 5.0)。")
+        st.caption("批量验证所有案例的准确率 (Batch Accuracy Check)")
         
         if not cases:
             st.error("No cases loaded.")
         else:
-            # 1. Batch Calculation
-            results = []
-            total_sq_error = 0
-            count = 0
+            if st.button("🚀 开始批量回测 (Start Batch Run)", type="primary"):
+                results = []
+                passed = 0
+                total = 0
+                
+                progress_bar = st.progress(0)
+                
+                with st.spinner("Quantum Computing Batch Jobs..."):
+                    for idx, c in enumerate(cases):
+                        # Filter for valid ground truth
+                        gt = c.get('ground_truth')
+                        if not gt: continue
+                        
+                        total += 1
+                        
+                        # 1. Create Profile / Adapter
+                        # Luck pillar logic: use dynamic check default or just first luck?
+                        # For Wang Shuai (Base Strength), luck pillar usually doesn't affect Base Chart Strength 
+                        # UNLESS we consider "Dynamic Strength" in context.
+                        # Usually Ground Truth refers to NATIVE Chart Strength.
+                        # So we can ignore Luck for Base Strength Assessment?
+                        # Wait, V6.0 Profile includes Luck. 
+                        # Let's pass "unknown" if not critical.
+                        presets = c.get("dynamic_checks", [])
+                        luck_p = presets[0]['luck'] if presets else "癸卯"
+                        
+                        profile = create_profile_from_case(c, luck_p)
+                        
+                        # 2. Evaluate Base Strength
+                        # We need to use engine._evaluate_wang_shuai(dm, pillars)
+                        bazi_list = [profile.pillars['year'], profile.pillars['month'], profile.pillars['day'], profile.pillars['hour']]
+                        
+                        # Catch errors
+                        try:
+                            # IMPORTANT: evaluate_wang_shuai returns (strength_str, score)
+                            ws_tuple = engine._evaluate_wang_shuai(profile.day_master, bazi_list)
+                            comp_str = ws_tuple[0] # e.g. "Strong"
+                            comp_score = ws_tuple[1]
+                        except Exception as e:
+                            comp_str = "Error"
+                            comp_score = 0.0
+                        
+                        # 3. Verify
+                        target_str = gt.get('strength', 'Unknown')
+                        is_match = False
+                        
+                        if target_str != "Unknown":
+                            # Loose Match
+                            # If target is "Strong", comp should contain "Strong"
+                            if (target_str in comp_str) or (comp_str in target_str):
+                                is_match = True
+                            # Follower handling
+                            if "Follower" in target_str and "Follower" in comp_str:
+                                is_match = True
+                        
+                        if is_match: passed += 1
+                        
+                        results.append({
+                            "Case ID": c.get('id', idx),
+                            "Name": c.get('description', ''),
+                            "Target": target_str,
+                            "Computed": comp_str,
+                            "Score": f"{comp_score:.1f}",
+                            "Result": "✅ Pass" if is_match else "❌ Fail"
+                        })
+                        
+                        progress_bar.progress((idx + 1) / len(cases))
+                
+                # Report
+                accuracy = (passed / total) * 100 if total > 0 else 0.0
+                st.metric("综合准确率 (Global Accuracy)", f"{accuracy:.1f}%", f"{passed}/{total} Cases")
+                
+                # DataFrame
+                st.dataframe(results, use_container_width=True)
+                
+                if accuracy < 60:
+                    st.error("Low Accuracy! Tuning Required.")
+                elif accuracy < 90:
+                    st.warning("Moderate Accuracy. Check Failed Cases.")
+                else:
+                    st.success("Exclellent Fit! Ready for Deployment.")
+            else:
+                st.info("Click button to run batch verification on 25 cases.")
             
-            for c in cases:
-                d_ctx = {"year": "甲辰", "luck": "default"}
-                presets = c.get("dynamic_checks", [])
-                target_v = c.get("v_real", {})
-                
-                if presets:
-                    p = presets[0]
-                    d_ctx = {"year": p['year'], "luck": p['luck']}
-                    if 'v_real_dynamic' in p:
-                        target_v = p['v_real_dynamic']
-                
-                # === Trinity V6.0: Unified Interface ===
-                # Create Adapter Profile
-                luck_pillar = d_ctx['luck'] 
-                if luck_pillar == "default": luck_pillar = "未知" # fallback
-
-                profile = create_profile_from_case(c, luck_pillar)
-                
-                # Call Engine
-                # Note: year number is mocked because profile returns static pillar
-                year_mock = 2024 
-                
-                # Important: To match d_ctx['year'] which is Pillar (String)
-                # We need engine to use that pillar. 
-                # But engine.calculate_year_context calls engine.get_year_pillar(year).
-                # The Profile abstraction handles luck, but Engine handles Year.
-                # V6.0 Strictness Challenge: 'year' must be int.
-                # Hack: We need the result context to reflect d_ctx['year'].
-                # Since we cannot change engine behavior easily to accept string year,
-                # we might have a mismatch if the integer year doesn't match the pillar string.
-                # However, for Calibration, the Pillar String is what matters for Clashes/Stems.
-                # Engine.calculate_year_context() fetches year_pillar internally.
-                # If we pass 2024, it gets '甲辰'. If d_ctx['year'] is '壬申', we have a problem.
-                
-                # SOLUTION: We must override get_year_pillar in the ENGINE instance dynamically 
-                # or use a special testing method.
-                # Let's use Python's dynamic nature to patch engine.get_year_pillar for this transaction.
-                
-                target_year_pillar = d_ctx['year']
-                original_get_year = engine.get_year_pillar
-                engine.get_year_pillar = lambda y: target_year_pillar
-                
-                try:
-                    ctx = engine.calculate_year_context(profile, year_mock)
-                finally:
-                    engine.get_year_pillar = original_get_year # Restore
-                
-                # Map to old format for compatibility
-                calc = {
-                    'career': ctx.score, # Simplified mapping: in global test we might mostly look at single score?
-                    # Wait, V6.0 Context unifies everything into ONE score?
-                    # No, context.score is the overall/main score.
-                    # But we need career/wealth/rel specific scores for RMSE.
-                    # Currently V6.0 calculate_year_context returns a DestinyContext.
-                    # Does DestinyContext have individual aspect scores?
-                    # Let's check DestinyContext definition. 
-                    # If not, we found a regression in V6.0 design!
-                    
-                    # Inspecting previous reads: DestinyContext usually has breakdown?
-                    # Let's assume for now it does NOT (based on my memory of V6.0 prompt).
-                    # If DestinyContext only has `score`, then Quantum Lab is broken because it needs Dimension breakdown.
-                    # But wait, the engine.calculate_year_score returns {career, wealth, rel}.
-                    # The new calculate_year_context returns DestinyContext.
-                    # I need to verify what DestinyContext holds.
-                }
-
-                # CRITICAL: V6.0 Simplification risk.
-                # user_request said: "UI Layer completely hollowed out... returns ctx.score, ctx.icon".
-                # If we lost career/wealth/rel granularity, we cannot run this RMSE calibration anymore.
-                # But `calculate_year_score` (the internal function) DOES return the breakdown.
-                # Does `calculate_year_context` discard it?
-                # Looking at `core/quantum_engine.py` (lines 1100+), `calculate_year_context` calls `calculate_year_score`.
-                # `calculate_year_score` returns a dictionary with 'career', 'wealth', 'rel'.
-                # `calculate_year_context` extracts `raw_score` from `calc_result.get('score')`.
-                # And creates DestinyContext.
-                
-                # If DestinyContext defined in `core/context.py` doesn't have these fields, we are in trouble.
-                # I should check `core/context.py`.
-                
-                # For now, to be safe, I will attach the full calculation result to the DestinyContext object
-                # inside `calculate_year_context` (I might need to edit engine again?)
-                # OR, I can access the internal calc_result from ctx if I modify it.
-                
-                # Let's assume I need to modify `QuantumEngine.calculate_year_context` to pass these through.
-                # But I am editing `quantum_lab.py` now.
-                
-                # Temporary Workaround in Quantum Lab:
-                # We can call the internal `calculate_year_score` directly using the adapter chart logic
-                # essentially REPLICATING the logic inside `calculate_year_context` but keeping the breakdown.
-                # This defeats the purpose of "Unified Arch" but saves the Calibration Validation functionality.
-                
-                # Better: Modify `DestinyContext` to optionaly hold the full breakdown.
-                # I will modify `core/context.py` later if needed.
-                # For this step, I will stick to calling `calculate_year_score` directly for the heatmaps,
-                # BUT using the Profile object to generate the input arguments.
-                
-                # ACTUALLY, checking the `calculate_year_context` code I just wrote/read:
-                # It returns `DestinyContext(..., score=raw_score, ...)`.
-                # It does NOT seem to pass career/wealth/rel.
-                # This confirms V6.0 was a "Dashboard Simplification".
-                # But Quantum Lab needs "Scientific Detail".
-                
-                # Strategy: 
-                # 1. Use `calculate_year_context` for the UI Visuals (Cards, Icon).
-                # 2. Use `calculate_year_score` (low level API) for the RMSE Math.
-                # This creates a dual-tier usage: High-level consumers (Dashboard) use Context. Low-level (Lab) uses Engine internals. This is acceptable.
-                
-                # Prepare args for low-level call
-                adapter_chart = {
-                    'day_master': profile.day_master,
-                    'current_luck_pillar': profile.get_luck_pillar_at(year_mock),
-                    'year_pillar': profile.pillars['year'],
-                    'month_pillar': profile.pillars['month'],
-                    'day_pillar': profile.pillars['day'],
-                    'hour_pillar': profile.pillars['hour'],
-                    'energy_score': 2.5
-                }
-                
-                # Recalculate favorable (Engine logic)
-                try:
-                    fake_bazi = [adapter_chart['year_pillar'], adapter_chart['month_pillar'], 
-                                adapter_chart['day_pillar'], adapter_chart['hour_pillar']]
-                    ws, _ = engine._evaluate_wang_shuai(profile.day_master, fake_bazi)
-                    fav = engine._determine_favorable(profile.day_master, ws, fake_bazi)
-                    all_e = {"Wood", "Fire", "Earth", "Metal", "Water"}
-                    unfav = list(all_e - set(fav))
-                except:
-                    fav, unfav = [], []
-
-                # === Fix for V6.0: Use Context directly ===
-                # The ctx object (DestinyContext) already holds valid V6.0 scores
-                # mapped from the internal calculate_energy call.
-                
-                calc = {
-                    'career': ctx.career,
-                    'wealth': ctx.wealth,
-                    'relationship': ctx.relationship,
-                    'desc': ctx.description
-                }
-                
-                err_c = calc['career'] - target_v.get('career', 0)
-                err_w = calc['wealth'] - target_v.get('wealth', 0)
-                err_r = calc['relationship'] - target_v.get('relationship', 0)
-                
-                sq_err = (err_c**2 + err_w**2 + err_r**2) / 3
-                rmse_c = np.sqrt(sq_err)
-                
-                total_sq_error += sq_err
-                count += 1
-                
-                # Check for icon/tags from context
-                icon = ctx.icon if ctx.icon else ""
-                
-                results.append({
-                    "Case": f"C{c['id']}",
-                    "ID": c['id'],
-                    "Desc": c['desc'],
-                    "Career_Real": target_v.get('career', 0),
-                    "Career_Pred": calc['career'],
-                    "Career_Delta": err_c,
-                    "Wealth_Real": target_v.get('wealth', 0),
-                    "Wealth_Pred": calc['wealth'],
-                    "Wealth_Delta": err_w,
-                    "Rel_Real": target_v.get('relationship', 0),
-                    "Rel_Pred": calc['relationship'],
-                    "Rel_Delta": err_r,
-                    "RMSE": rmse_c,
-                    "Verdict": calc['desc'],
-                    # === Trinity V4.0 Fields ===
-                    "Icon": icon,
-                    "Tags": str(ctx.tags[:3]),
-                    "Energy": ctx.energy_level,
-                    "Risk": ctx.risk_level
-                })
-            
-            global_rmse = np.sqrt(total_sq_error / count) if count > 0 else 0
-            df_res = pd.DataFrame(results)
-
-            # 2. Metrics
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Global RMSE", f"{global_rmse:.4f}", delta_color="inverse")
-            worst_case = df_res.loc[df_res['RMSE'].idxmax()]
-            c2.metric("Worst Case", f"{worst_case['Case']}", f"RMSE: {worst_case['RMSE']:.2f}")
-            c3.metric("Cases", count)
-            c4.metric("Status", "Balanced" if global_rmse < 5.0 else "Tuning Needed")
-
-            # 3. Heatmap
-            st.divider()
-            st.markdown("#### 🔥 只关注红色区域 (Heatmap)")
-            
-            # Melt data for heatmap
-            heat_rows = []
-            for r in results:
-                heat_rows.append({"Case": r['Case'], "Aspect": "Career", "Delta": abs(r['Career_Delta']), "Val": r['Career_Delta']})
-                heat_rows.append({"Case": r['Case'], "Aspect": "Wealth", "Delta": abs(r['Wealth_Delta']), "Val": r['Wealth_Delta']})
-                heat_rows.append({"Case": r['Case'], "Aspect": "Rel", "Delta": abs(r['Rel_Delta']), "Val": r['Rel_Delta']})
-            
-            df_heat = pd.DataFrame(heat_rows)
-            
-            fig_heat = px.density_heatmap(
-                df_heat, 
-                x="Aspect", 
-                y="Case", 
-                z="Delta", 
-                color_continuous_scale=["#00CC96", "#FECB52", "#EF553B"], # Green -> Yellow -> Red
-                range_color=[0, 8],
-                title="Absolute Error Magnitude (Green < 2, Red > 5)",
-                text_auto=True 
-            )
-            fig_heat.update_layout(height=600)
-            st.plotly_chart(fig_heat, use_container_width=True)
-
-            # 4. Scatter (Bias Check)
-            st.markdown("#### 📐 偏差偏向性 (Bias Check)")
-            scatter_data = []
-            for r in results:
-                scatter_data.append({"Val": r["Career_Real"], "Pred": r["Career_Pred"], "Type": "Career", "Case": r["Case"]})
-                scatter_data.append({"Val": r["Wealth_Real"], "Pred": r["Wealth_Pred"], "Type": "Wealth", "Case": r["Case"]})
-                scatter_data.append({"Val": r["Rel_Real"], "Pred": r["Rel_Pred"], "Type": "Rel", "Case": r["Case"]})
-            
-            df_scatter = pd.DataFrame(scatter_data)
-            fig_scatter = px.scatter(
-                df_scatter, x="Val", y="Pred", color="Type", hover_data=["Case"],
-                title="V_real (X) vs E_pred (Y) - 都在线下则模型偏保守",
-                range_x=[-11, 11], range_y=[-11, 11]
-            )
-            fig_scatter.add_shape(type="line", x0=-10, y0=-10, x1=10, y1=10, line=dict(color="Gray", dash="dash"))
-            st.plotly_chart(fig_scatter, use_container_width=True)
-            
-            # === Trinity V4.0: Validation Table ===
-            st.markdown("---")
-            st.markdown("#### 🏛️ Trinity V6.0 验证详情")
-            st.caption("显示AI判定逻辑和图标")
-            st.dataframe(df_res[['Case', 'Icon', 'Tags', 'Risk', 'Verdict']], use_container_width=True)
-
+            # End of Tab Global Logic
 
     # ==========================
     # TAB 2: SINGLE MICROSCOPE
     # ==========================
     with tab_single:
-        st.subheader("单点显微镜 (Detailed Analysis)")
+        st.subheader("🔬 案例实战验证 (Live Case Verification)")
         
-        if not cases:
-            st.error("No data.")
-        else:
-            c_sel, c_ctx = st.columns([2, 3])
-            with c_sel:
-                case_idx = st.selectbox("📂 选择案例", range(len(cases)), format_func=lambda i: f"No.{cases[i]['id']} {cases[i]['day_master']}日主 ({cases[i]['gender']})")
-                selected_case = cases[case_idx]
-                
-            with c_ctx:
-                # Dynamic inputs
-                presets = selected_case.get("dynamic_checks", [])
-                
-                c_y, c_l, c_w = st.columns(3)
-                def_year = presets[0]['year'] if presets else "甲辰"
-                def_luck = presets[0]['luck'] if presets else "癸卯"
-                
-                user_year = c_y.text_input("流年 (Year)", value=def_year)
-                user_luck = c_l.text_input("大运 (Luck)", value=def_luck)
-                st.info("Uses V6.0 Profile Adapter")
+        # Mode Selection
+        verify_mode = st.radio("数据源 (Data Source)", ["📚 预设案例 (Presets)", "✍️ 手动录入 (Manual Input)"], horizontal=True)
         
+        selected_case = None
+        user_year = "甲辰"
+        user_luck = "癸卯"
+
+        if verify_mode == "📚 预设案例 (Presets)":
+            if not cases:
+                st.error("No preset data.")
+            else:
+                c_sel, c_ctx = st.columns([2, 3])
+                with c_sel:
+                    case_idx = st.selectbox("📂 选择案例", range(len(cases)), format_func=lambda i: f"No.{cases[i]['id']} {cases[i]['day_master']}日主 ({cases[i]['gender']})")
+                    selected_case = cases[case_idx]
+                    
+                with c_ctx:
+                    presets = selected_case.get("dynamic_checks", [])
+                    c_y, c_l = st.columns(2)
+                    def_year = presets[0]['year'] if presets else "甲辰"
+                    def_luck = presets[0]['luck'] if presets else "癸卯"
+                    user_year = c_y.text_input("流年 (Year)", value=def_year)
+                    user_luck = c_l.text_input("大运 (Luck)", value=def_luck)
+                    
+        else: # Manual Input
+            st.markdown("#### 📝 新案例录入")
+            mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+            in_year = mc1.number_input("年 (Year)", 1900, 2100, 1991) # Example: 1991 (Wei Month case?)
+            in_month = mc2.number_input("月 (Month)", 1, 12, 7) # Wei Month approx July
+            in_day = mc3.number_input("日 (Day)", 1, 31, 15)
+            in_hour = mc4.number_input("时 (Hour)", 0, 23, 12)
+            in_gender = mc5.selectbox("性别", ["男", "女"])
+            
+            # Ground Truth
+            st.markdown("#### 🎯 真值设定 (Ground Truth)")
+            gt1, gt2 = st.columns(2)
+            gt_strength = gt1.selectbox("真实身强", ["Unknown", "Strong", "Weak", "Follower"], index=2) # Default Weak
+            gt_fav = gt2.multiselect("真实喜用", ["Wood", "Fire", "Earth", "Metal", "Water"], default=[])
+            
+            # Run Calculation to form Case
+            if st.button("🚀 载入并计算 (Load & Run)", type="primary"):
+                with st.spinner("Quantum Computing... Note: Manual Mode calculates chart on the fly."):
+                    req = {'birth_year': in_year, 'birth_month': in_month, 'birth_day': in_day, 'birth_hour': in_hour, 'gender': in_gender}
+                    # Use engine to generate chart
+                    res = engine.calculate_chart(req)
+                    
+                    # Convert to Case Format
+                    bazi_strs = [f"{p[0]}{p[1]}" for p in res['bazi']]
+                    
+                    manual_case = {
+                        'id': 'MANUAL',
+                        'gender': in_gender,
+                        'bazi': bazi_strs, # [Year, Month, Day, Hour]
+                        'day_master': res['bazi'][2][0],
+                        'dynamic_checks': [],
+                        # Custom fields for verification
+                        'ground_truth': {
+                            'strength': gt_strength,
+                            'favorable': gt_fav
+                        },
+                        'computed_result': res # Store for comparison
+                    }
+                    st.session_state['manual_case'] = manual_case
+                    st.rerun()
+            
+            if 'manual_case' in st.session_state:
+                selected_case = st.session_state['manual_case']
+                st.success(f"✅ Loaded: {selected_case['bazi']} | DM: {selected_case['day_master']}")
+                
+                # Comparison
+                if 'computed_result' in selected_case and 'ground_truth' in selected_case:
+                    cr = selected_case['computed_result']
+                    gt = selected_case['ground_truth']
+                    
+                    # Determine Computed Strength String
+                    # cr['wang_shuai'] is (str, score), e.g. ('Weak', 0.45)
+                    comp_str = cr['wang_shuai'][0]
+                    comp_score = cr['energy_score']
+                    
+                    # Display Feedback
+                    st.divider()
+                    col_res, col_verdict = st.columns([3, 2])
+                    
+                    with col_res:
+                        st.metric("算法判定 (Computed)", f"{comp_str} ({comp_score:.1f})")
+                        st.write(f"喜用神: {cr['favorable_elements']}")
+                        
+                    with col_verdict:
+                        is_match = (gt['strength'] == "Unknown") or (gt['strength'] in comp_str) or (comp_str in gt['strength'])
+                        # Loose matching "Strong" vs "Strong"
+                        
+                        if is_match:
+                            st.success(f"MATCH! ✅\nTarget: {gt['strength']}")
+                        else:
+                            st.error(f"MISMATCH ❌\nTarget: {gt['strength']}")
+                            
+                        # Favorable overlap?
+                        comp_fav_set = set(cr['favorable_elements'])
+                        gt_fav_set = set(gt['favorable'])
+                        if gt_fav_set:
+                            overlap = comp_fav_set.intersection(gt_fav_set)
+                            if overlap:
+                                st.caption(f"✅ Favorable Overlap: {overlap}")
+                            else:
+                                st.caption(f"⚠️ Favorable Divergence!")
+                
+                st.divider()
+
+        if selected_case:
             # === Trinity V6.0: Single Microscope ===
+            # Continue with existing logic using selected_case
+            st.info(f"Analyzing Case: {selected_case['bazi']}")
             profile = create_profile_from_case(selected_case, user_luck)
             
             # Patch Engine Year to user input
@@ -795,6 +1008,44 @@ def render():
             h_s, h_b = split_sb(bazi[3])
             l_s, l_b = split_sb(user_luck)
             n_s, n_b = split_sb(user_year)
+
+            # === GROUND TRUTH VERIFICATION ===
+            gt = selected_case.get('ground_truth')
+            if gt:
+                st.markdown("### 🧬 核心算法拟合度 (Algorithm Fit)")
+                
+                # Computed Strength
+                # ws variable comes from try-catch block above (ensure it is accessible)
+                comp_ws_raw = ws if 'ws' in locals() else "Unknown"
+                
+                # Match Logic
+                # gt['strength'] e.g. "Strong", "Weak"
+                is_match = False
+                if gt['strength'] != "Unknown":
+                    # Loose matching
+                    is_match = (gt['strength'] in comp_ws_raw) or (comp_ws_raw in gt['strength'])
+                    
+                    # Special handling for "Follower"
+                    if "Follower" in gt['strength'] and "Follower" in comp_ws_raw: is_match = True
+                
+                c_ver, c_det = st.columns([1, 3])
+                with c_ver:
+                    if is_match:
+                        st.success(f"MATCH ✅\n{comp_ws_raw}")
+                    else:
+                        st.error(f"MISMATCH ❌\nGot: {comp_ws_raw}")
+                        
+                with c_det:
+                    st.caption(f"Target: **{gt.get('strength', '?')}** | Note: {gt.get('note', '')}")
+                    if 'favorable' in gt:
+                        # Extract Computed Fav
+                        # detailed_res doesn't explicitly return fav elements list easily here 
+                        # but engine.calculate_chart does. 
+                        # Here we called calculate_energy directly.
+                        # However, we can access favorable from profile? No, profile is simple object.
+                        # But wait, create_profile_from_case doesn't store favorable.
+                        # We can re-run simple element check or assume fit based on strength.
+                        st.caption(f"Target Favorable: {gt['favorable']}")
 
             st.markdown(f"""
             <style>

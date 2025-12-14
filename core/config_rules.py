@@ -41,6 +41,23 @@ SCORE_INTERACTION_PENALTY = -5.0 # 盖头截脚
 
 
 # =========================================
+# 4. 合化与冲突 (Harmony & Conflict)
+# =========================================
+# [Harmony Layer] 三合局 (Grand Trinity)
+# 能量质变，如申子辰合水
+SCORE_SANHE_BONUS = 15.0   # 合为喜用
+SCORE_SANHE_PENALTY = -15.0 # 合为忌神
+
+# [Harmony Layer] 六合 (Six Combination)
+# 羁绊/贵人/解冲
+SCORE_LIUHE_BONUS = 5.0
+
+# [Conflict Layer] 六冲 (Six Clash)
+# 只有在未被解冲时才生效
+SCORE_CLASH_PENALTY = -5.0
+
+
+# =========================================
 # 3. 结构定义
 # =========================================
 EARTH_PUNISHMENT_SET = {'丑', '未', '戌'}
@@ -77,6 +94,12 @@ DEFAULT_CONFIG = {
     'score_general_open': SCORE_GENERAL_OPEN,
     'score_interaction_bonus': SCORE_INTERACTION_BONUS,
     'score_interaction_penalty': SCORE_INTERACTION_PENALTY,
+    
+    # Harmony & Conflict Weights (V6.1)
+    'score_sanhe_bonus': SCORE_SANHE_BONUS,
+    'score_sanhe_penalty': SCORE_SANHE_PENALTY,
+    'score_liuhe_bonus': SCORE_LIUHE_BONUS,
+    'score_clash_penalty': SCORE_CLASH_PENALTY,
     
     # Structural Definitions
     'earth_punishment_set': EARTH_PUNISHMENT_SET,

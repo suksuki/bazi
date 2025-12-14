@@ -10,9 +10,13 @@ from core.bazi_profile import BaziProfile
 from core.engines.luck_engine import LuckEngine
 from core.engines.skull_engine import SkullEngine
 from core.engines.treasury_engine import TreasuryEngine
+from core.engines.harmony_engine import HarmonyEngine
+from core.engines.flow_engine import FlowEngine
 
 # === V6.0+ Parameterization: Import Algorithm Config ===
 from core.config_rules import DEFAULT_CONFIG
+# === V7.0 Architecture: Full Algo Schema ===
+from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 class QuantumEngine:
     """
@@ -33,11 +37,19 @@ class QuantumEngine:
         # === V6.0+ Parameterization: Load Algorithm Config ===
         # 将 config_rules 默认配置与 params 中的覆盖值合并
         self.config = DEFAULT_CONFIG.copy()
-        # 允许 params 覆盖默认配置
+        
+        # === V7.0 Architecture: Load Full Algo Params ===
+        self.full_config = self._deep_copy(DEFAULT_FULL_ALGO_PARAMS)
+        
+        # 允许 params 覆盖默认配置 (Legacy Shallow Merge)
         if params and isinstance(params, dict):
             for key, value in params.items():
                 if key in self.config:
                     self.config[key] = value
+            
+            # Try to deep merge into full_config if params matches structure
+            # (Assuming params might contain flat overrides for now, V7 will transition to structured)
+            pass
         
         # Load Narrative Config
         try:
@@ -85,6 +97,11 @@ class QuantumEngine:
         self.luck_engine = LuckEngine()
         self.skull_engine = SkullEngine(config=self.config)
         self.treasury_engine = TreasuryEngine(config=self.config)
+        
+        # [V7.0 Fix] Harmony Engine needs Full Config for Stem Interactions (V3.0 Schema)
+        self.harmony_engine = HarmonyEngine(config=self.full_config)
+        
+        self.flow_engine = FlowEngine(config=self.full_config)
     
     def update_config(self, new_config: dict):
         """
@@ -99,9 +116,229 @@ class QuantumEngine:
         # 同步通知子引擎 - 重新初始化以应用新配置
         self.skull_engine = SkullEngine(config=self.config)
         self.treasury_engine = TreasuryEngine(config=self.config)
+        self.harmony_engine = HarmonyEngine(config=self.config)
+        
+        # Explicitly update weights in partial reload scenarios if supported
+        if hasattr(self.harmony_engine, 'update_weights'):
+            self.harmony_engine.update_weights(
+                sanhe_bonus=self.config.get('score_sanhe_bonus'),
+                sanhe_penalty=self.config.get('score_sanhe_penalty'),
+                liuhe_bonus=self.config.get('score_liuhe_bonus'),
+                clash_penalty=self.config.get('score_clash_penalty')
+            )
         
         # 返回更新后的配置供前端确认
         return self.config
+
+    def _deep_copy(self, d):
+        """Simple deep copy for dict/list structure."""
+        if isinstance(d, dict):
+            return {k: self._deep_copy(v) for k, v in d.items()}
+        elif isinstance(d, list):
+            return [self._deep_copy(x) for x in d]
+        else:
+            return d
+
+    def _deep_update(self, target, source):
+        """Recursive update for nested dictionaries."""
+        for k, v in source.items():
+            if k in target and isinstance(target[k], dict) and isinstance(v, dict):
+                self._deep_update(target[k], v)
+            else:
+                target[k] = v
+
+    def update_full_config(self, new_full_config: dict):
+        """
+        [V7.0] Deep update for hierarchial params.
+        """
+        self._deep_update(self.full_config, new_full_config)
+        
+        # Sync back to flat config for V6.0 compatibility (Optional/Partial)
+        # For now, we manually sync critical Harmony/Physics keys if needed.
+        # But ideally, engines start reading from self.full_config directly.
+        
+        # Re-init engines with NEW config references if they support it
+        # HarmonyEngine V6.1 reads flat config. We might need to update it to read full_config?
+        # Or we map full_config values back to flat config here.
+        
+        # Map V7 Harmony -> V6 Flat
+        if 'interactions' in self.full_config and 'harmony' in self.full_config['interactions']:
+            h = self.full_config['interactions']['harmony']
+            self.config['score_sanhe_bonus'] = h.get('sanHeBonus', 15.0)
+            self.config['score_liuhe_bonus'] = h.get('liuHeBonus', 5.0)
+            self.config['score_clash_penalty'] = h.get('clashPenalty', -5.0)
+            
+        # Trigger standard update
+        self.update_config({}) # Refreshes engines with updated flat config
+        
+        # [V7.3] Ensure All Engines get FULL Config
+        # This overrides the flat config passed by update_config
+        self.flow_engine.update_config(self.full_config)
+        self.treasury_engine.update_config(self.full_config)
+        self.harmony_engine.update_config(self.full_config)
+        
+        return self.full_config
+
+    def _calculate_energy_v7(self, bazi_list, dm_elem):
+        """
+        [V7.3 Core] Dynamic Energy Simulation (V2.5 Schema).
+        Calculates energy map applying:
+        1. Base Physics (Pillar Gravity)
+        2. Particle Structure (Exposed Boost, Rooting)
+        3. Void Penalty (TODO: Void detection logic)
+        4. Flow Simulation
+        """
+        from collections import defaultdict
+        
+        # 1. Config Refs (V2.5 Schema)
+        fc = self.full_config
+        # Physics
+        phy = fc.get('physics', {})
+        pw = phy.get('pillarWeights', {'year': 0.8, 'month': 1.2, 'day': 1.0, 'hour': 0.9})
+        # Structure
+        struc = fc.get('structure', {})
+        root_w = struc.get('rootingWeight', 1.0)
+        exposed_boost = struc.get('exposedBoost', 1.5)
+        # Flow
+        flow = fc.get('flow', {})
+        sp_decay = flow.get('spatialDecay', {'gap1': 0.6, 'gap2': 0.3})
+        
+        # 2. Build Initial State (Raw Energy)
+        raw_energy = defaultdict(float)
+        BASE_UNIT = 50.0 # Base unit per character
+        
+        # Indices: 0:Year, 1:Month, 2:Day, 3:Hour
+        idx_map = {0: 'year', 1: 'month', 2: 'day', 3: 'hour'}
+        
+        # Pre-scan for Roots (simple logic: check if Stem element exists in Branches)
+        # For simplicity, just gather all branch elements first.
+        branch_elems = []
+        for p in bazi_list:
+             if len(p) > 1: branch_elems.append(self._get_element(p[1]))
+
+        for idx, pillar in enumerate(bazi_list):
+            if not pillar or len(pillar) < 2: continue
+            
+            stem, branch = pillar[0], pillar[1]
+            s_elem = self._get_element(stem)
+            b_elem = self._get_element(branch)
+            
+            # Key: Pillar Gravity (V2.5 New!)
+            # Replaces old positionWeights
+            p_key = idx_map.get(idx, 'year')
+            p_weight = pw.get(p_key, 1.0)
+            
+            # --- Spatial Decay (Distance from Day Stem) ---
+            dist = abs(idx - 2)
+            k_dist = 1.0
+            if dist == 1: k_dist = sp_decay.get('gap1', 0.6)
+            elif dist >= 2: k_dist = sp_decay.get('gap2', 0.3)
+            
+            # --- Energy Calculation ---
+            
+            # Stem Energy
+            if idx != 2: # Skip DM (Day Stem)
+                # Check Rooting (is Stem supported by ANY branch? Simplified)
+                is_rooted = s_elem in branch_elems
+                k_root = root_w if is_rooted else 0.5 
+                # Note: Exposed Boost concept is usually: hidden stem gets huge boost IF revealed.
+                # Here we are calculating Stem directly. Is it boosted?
+                # Let's say: if rooted, we apply exposedBoost relative to underground potential?
+                # Simplified: Stem = Base * P_Weight * Dist * (ExposedBoost if Rooted)
+                
+                k_exposed = exposed_boost if is_rooted else 1.0
+                
+                s_score = BASE_UNIT * p_weight * k_dist * k_exposed
+                raw_energy[s_elem] += s_score
+                
+            # Branch Energy
+            # Branch is the source, usually stronger.
+            b_score = BASE_UNIT * p_weight * k_dist # Branch distance also matters?
+            # Usually Branch is 'Ground', less affected by distance for root support?
+            # But for Energy Flow to DM, distance matters.
+            
+            raw_energy[b_elem] += b_score
+            
+        # [V7.4] Inject Stem Fusion Physics (Alchemy)
+        # Check for Warlord Case (Wu-Gui -> Fire) and others
+        stems = [p[0] for p in bazi_list if len(p) > 0]
+        month_branch = bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else ''
+        
+        stem_combos = self.harmony_engine.detect_stem_interactions(stems, month_branch)
+        if stem_combos:
+            print(f"[DEBUG] Stem Combos Found: {len(stem_combos)}")
+            for c in stem_combos: print(f" - {c['stems']} -> {c['transform_to']} (Bonus: {c['bonus']})")
+            
+        for combo in stem_combos:
+            target_elem = combo['transform_to']
+            bonus_mult = combo['bonus'] # e.g., 2.0
+            
+            # Apply Transformation Energy
+            # We add significant energy to the Target Element
+            added_energy = BASE_UNIT * bonus_mult
+            raw_energy[target_elem] += added_energy
+            print(f"[DEBUG] Boosted {target_elem} by {added_energy}")
+            
+            # [V7.4 Fix] Transformation COST (The Equivalent Exchange)
+            # Remove energy from original elements to prevent Double Counting / Flow Drain
+            s1_char, s2_char = combo['stems']
+            e1 = self._get_element(s1_char)
+            e2 = self._get_element(s2_char)
+            
+            # Deduct Base Energy (approx 1 unit)
+            # If 2.0 Bonus is added to Target, we remove ~1.0 from originals?
+            # Or remove whatever they had?
+            # Stems usually have 1.0 * Weights (approx 50-80).
+            # Let's remove BASE_UNIT (50).
+            deduct = BASE_UNIT * 1.0 
+            
+            raw_energy[e1] -= deduct
+            raw_energy[e2] -= deduct
+            
+            if raw_energy[e1] < 0: raw_energy[e1] = 0
+            if raw_energy[e2] < 0: raw_energy[e2] = 0
+            print(f"[DEBUG] Deducted {deduct} from {e1}, {e2}")
+
+            
+        # 3. [V7.4 Fix] Summer Earth Physics (Thermodynamic Correction)
+        # "Dry Earth does not generate Metal" & "Hot Earth does not drain Fire"
+        # If Month is Summer (Si, Wu, Wei), Earth is Dry/Hot -> Efficiency Drops.
+        # We model this by reducing Effective Earth Energy.
+        summer_branches = ['巳', '午', '未'] # Summer + Late Summer
+        if month_branch in summer_branches:
+            # Apply Penalty
+            dry_earth_penalty = 0.6 # Reduce by 40%
+            current_earth = raw_energy.get('earth', 0)
+            if current_earth > 0:
+                raw_energy['earth'] *= dry_earth_penalty
+                print(f"[DEBUG] Summer {month_branch}: Damping Earth {current_earth:.1f} -> {raw_energy['earth']:.1f}")
+
+        # 4. Simulate Flow
+        # Update Flow Engine with current config (just in case)
+        self.flow_engine.update_config(fc)
+        final_state = self.flow_engine.simulate_flow(raw_energy, dm_elem=dm_elem)
+        
+        # [V3.0] Macro Physics: Geography & Era
+        macro = fc.get('macroPhysics', {})
+        
+        # Geography
+        lat_heat = macro.get('latitudeHeat', 0.0)
+        lat_cold = macro.get('latitudeCold', 0.0)
+        
+        if lat_heat > 0:
+            final_state['Fire'] *= (1.0 + lat_heat)
+            final_state['Earth'] *= (1.0 + (lat_heat * 0.5))
+            
+        if lat_cold > 0:
+            final_state['Water'] *= (1.0 + lat_cold)
+            final_state['Metal'] *= (1.0 + (lat_cold * 0.3))
+            
+        # Era Ambient (Background Radiation)
+        era_el = macro.get('eraElement', 'Fire')
+        if era_el in final_state:
+            final_state[era_el] *= 1.1 
+        
+        return final_state
 
     def _flatten_params(self, params):
         """Helper to flatten nested JSON params for easier access."""
@@ -611,602 +848,666 @@ class QuantumEngine:
             "pillar_energies": pillar_energies,
             "narrative_events": narrative_events
         }
-from core.quantum_engine import QuantumEngine
-from lunar_python import Solar
-from collections import Counter
+        # Patch QuantumEngine with new methods for Verification Pipeline
+        # This avoids rewriting the whole file drastically while adding the logic.
 
-# Patch QuantumEngine with new methods for Verification Pipeline
-# This avoids rewriting the whole file drastically while adding the logic.
-
-def calculate_chart(self, birth_data: dict) -> dict:
-    """
-    Step 2: Pai Pan (排盘) - Calculate Chart & Analysis from Birth Data.
-    Uses lunar_python for high precision.
-    """
-    try:
-        # 1. Parse Input
-        year = int(birth_data.get('birth_year', 2000))
-        month = int(birth_data.get('birth_month', 1))
-        day = int(birth_data.get('birth_day', 1))
-        hour = int(birth_data.get('birth_hour', 12))
-        minute = int(birth_data.get('birth_minute', 0))
-        
-        # 2. Lunar Python Calculation
-        solar = Solar.fromYmdHms(year, month, day, hour, minute, 0)
-        lunar = solar.getLunar()
-        bazi = lunar.getEightChar()
-        
-        # Get GantZhi (Pillars)
-        # lunar_python returns "甲子", "乙丑" etc.
-        # Note: lunar_python getYear() might return the year based on Lunar calendar or Solar terms. 
-        # Standard Paipan relies on Solar Terms (Jie Qi). lunar_python handles this in getEightChar().
-        year_fz = bazi.getYear()
-        month_fz = bazi.getMonth()
-        day_fz = bazi.getDay()
-        hour_fz = bazi.getTime()
-        
-        bazi_list = [year_fz, month_fz, day_fz, hour_fz]
-        day_master = day_fz[0] # Day Stem
-        
-        # 3. Determine Strong/Weak (Wang Shuai)
-        # Simplified algorithm based on resource/friend scores
-        wang_shuai, energy_score = self._evaluate_wang_shuai(day_master, bazi_list)
-        
-        # 4. Determine Favorable Elements (Xi Yong Shen)
-        favorable = self._determine_favorable(day_master, wang_shuai, bazi_list)
-        
-        return {
-            "bazi": bazi_list,
-            "day_master": day_master,
-            "wang_shuai": wang_shuai, # e.g. "Body Strong", "Body Weak"
-            "energy_score": energy_score,
-            "favorable_elements": favorable, # e.g. ["Water", "Wood"]
-            "solar_date": f"{year}-{month}-{day} {hour}:{minute}"
-        }
-        
-    except Exception as e:
-        print(f"Error in calculate_chart: {e}")
-        return {
-            "bazi": [],
-            "error": str(e),
-            "favorable_elements": []
-        }
-
-def _evaluate_wang_shuai(self, dm: str, bazi: list) -> (str, float):
-    """
-    Internal: Evaluate Day Master strength.
-    """
-    dm_elem = self._get_element(dm)
-    if not dm_elem: return "Unknown", 0.0
-    
-    score = 0.0
-    
-    # Weights
-    WEIGHT_MONTH_COMMAND = 0.40 # Month Branch is key
-    WEIGHT_DAY_BRANCH = 0.15
-    WEIGHT_STEM = 0.10
-    WEIGHT_BRANCH = 0.05
-    
-    month_branch = bazi[1][1]
-    
-    # 1. Month Command (Ling)
-    mb_elem = self._get_element(month_branch)
-    rel = self._get_relation(dm_elem, mb_elem)
-    
-    is_same_group = (rel == 'self' or rel == 'resource')
-    if is_same_group: score += 40
-    
-    # 2. Iterate all chars
-    total_support = 0
-    total_oppose = 0
-    
-    for idx, pillar in enumerate(bazi):
-        stem, branch = pillar[0], pillar[1]
-        
-        # Stem
-        if idx != 2: # Skip DM itself
-            s_elem = self._get_element(stem)
-            s_rel = self._get_relation(dm_elem, s_elem)
-            if s_rel in ['self', 'resource']: total_support += 10
-            else: total_oppose += 10
+    def calculate_chart(self, birth_data: dict) -> dict:
+                """
+                Step 2: Pai Pan (排盘) - Calculate Chart & Analysis from Birth Data.
+                Uses lunar_python for high precision.
+                """
+                try:
+                    # 1. Parse Input
+                    year = int(birth_data.get('birth_year', 2000))
+                    month = int(birth_data.get('birth_month', 1))
+                    day = int(birth_data.get('birth_day', 1))
+                    hour = int(birth_data.get('birth_hour', 12))
+                    minute = int(birth_data.get('birth_minute', 0))
+                
+                    # [V3.0] Solar Time Calibration
+                    fc = getattr(self, 'full_config', {})
+                    macro = fc.get('macroPhysics', {})
+                    if macro.get('useSolarTime', False):
+                        blon = birth_data.get('birth_lon')
+                        if blon is not None:
+                            # 4 minutes per degree. Standard: 120.0 E (Beijing)
+                            try:
+                                deg = float(blon)
+                                offset_min = (deg - 120.0) * 4.0
+                                total_min = hour * 60 + minute + offset_min
+                                
+                                # Normalize
+                                import math
+                                total_min = int(round(total_min))
+                                new_h = (total_min // 60) % 24
+                                new_m = total_min % 60
+                                
+                                hour, minute = new_h, new_m
+                            except:
+                                pass # Fallback to clock time
+                                
+                    # 2. Lunar Python Calculation
+                    from lunar_python import Solar
+                    solar = Solar.fromYmdHms(year, month, day, hour, minute, 0)
+                    lunar = solar.getLunar()
+                    bazi = lunar.getEightChar()
             
-        # Branch
-        b_elem = self._get_element(branch)
-        b_rel = self._get_relation(dm_elem, b_elem)
-        
-        w = 1.0
-        if idx == 1: w = 2.0 # Month branch weighted double in raw count too? Or simplified.
-        
-        if b_rel in ['self', 'resource']: total_support += (10 * w)
-        else: total_oppose += (10 * w)
-        
-    final_score = score + total_support
-    
-    # Thresholds (Simplified)
-    # A standard balanced chart axis is around 40-50% strength? 
-    # Let's say arbitrary score:
-    # If Support > Oppose -> Strong
-    
-    strength = "Strong" if (final_score > total_oppose) else "Weak"
-    
-    # Adjustment for Month Command
-    if is_same_group and (final_score + 10 > total_oppose): strength = "Strong"
-    
-    return strength, final_score
+                    # Get GantZhi (Pillars)
+                    # lunar_python returns "甲子", "乙丑" etc.
+                    # Note: lunar_python getYear() might return the year based on Lunar calendar or Solar terms.
+                    # Standard Paipan relies on Solar Terms (Jie Qi). lunar_python handles this in getEightChar().
+                    year_fz = bazi.getYear()
+                    month_fz = bazi.getMonth()
+                    day_fz = bazi.getDay()
+                    hour_fz = bazi.getTime()
+            
+                    bazi_list = [year_fz, month_fz, day_fz, hour_fz]
+                    day_master = day_fz[0] # Day Stem
+            
+                    # 3. Determine Strong/Weak (Wang Shuai)
+                    # Simplified algorithm based on resource/friend scores
+                    wang_shuai, energy_score = self._evaluate_wang_shuai(day_master, bazi_list)
+            
+                    # 4. Determine Favorable Elements (Xi Yong Shen)
+                    favorable = self._determine_favorable(day_master, wang_shuai, bazi_list)
+            
+                    return {
+                        "bazi": bazi_list,
+                        "day_master": day_master,
+                        "wang_shuai": wang_shuai, # e.g. "Body Strong", "Body Weak"
+                        "energy_score": energy_score,
+                        "favorable_elements": favorable, # e.g. ["Water", "Wood"]
+                        "solar_date": f"{year}-{month}-{day} {hour}:{minute}"
+                    }
+            
+                except Exception as e:
+                    print(f"Error in calculate_chart: {e}")
+                    return {
+                        "bazi": [],
+                        "error": str(e),
+                        "favorable_elements": []
+                    }
 
-def _determine_favorable(self, dm: str, wang_shuai: str, bazi: list) -> list:
-    """
-    Determine Xi Yong Shen based on Strong/Weak.
-    Strong -> Needs Suppress (Officer), Drain (Output), Consume (Wealth)
-    Weak -> Needs Support (Resource), Help (Friend)
-    """
-    dm_elem = self._get_element(dm)
-    # Generation chain: Wood -> Fire -> Earth -> Metal -> Water -> Wood
-    
-    # Get all elements
-    elements = ["wood", "fire", "earth", "metal", "water"]
-    
-    # Identify type relations relative to DM
-    # Self, Output, Wealth, Officer, Resource
-    relations = {}
-    for e in elements:
-        r = self._get_relation(dm_elem, e)
-        relations[r] = e
+    def _evaluate_wang_shuai(self, dm: str, bazi: list) -> (str, float):
+        """
+        Internal: Evaluate Day Master strength.
+        """
+        dm_elem = self._get_element(dm)
+        if not dm_elem: return "Unknown", 0.0
         
-    favorable = []
-    
-    if "Strong" in wang_shuai:
-        # Favor: Output, Wealth, Officer
-        favorable.append(relations.get('output'))
-        favorable.append(relations.get('wealth'))
-        favorable.append(relations.get('officer'))
-    else:
-        # Favor: Resource, Self
-        favorable.append(relations.get('resource'))
-        favorable.append(relations.get('self'))
+        score = 0.0
         
-    # Clean up None and capitalize
-    return [f.capitalize() for f in favorable if f]
-
-def get_elements_for_year(self, year: int) -> list:
-    """
-    Get the Five Elements for a specific year (Gui Si -> Water, Fire).
-    """
-    try:
-        # Use lunar_python to get GanZhi for the year
-        # Create a date in that year (e.g., Mid-year) to get the year pillar
-        solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
-        lunar = solar.getLunar()
-        year_gan_zhi = lunar.getYearInGanZhi() # e.g. "甲午"
+        # Weights (V7.3 Config Driven - V2.5 Schema)
+        fc = getattr(self, 'full_config', {})
+        phy = fc.get('physics', {})
+        pw = phy.get('pillarWeights', {})
         
-        stem = year_gan_zhi[0]
-        branch = year_gan_zhi[1]
+        # Map V2.5 weights to legacy relative weights for fallback calculation
+        WEIGHT_MONTH_COMMAND = 0.40 * pw.get('month', 1.2)
+        WEIGHT_DAY_BRANCH = 0.15 * pw.get('day', 1.0)
+        WEIGHT_STEM = 0.10 * pw.get('year', 0.8)
+        WEIGHT_BRANCH = 0.05 * pw.get('hour', 0.9)
         
-        e1 = self._get_element(stem)
-        e2 = self._get_element(branch)
+        month_branch = bazi[1][1]
+        BASE_UNIT = 50.0
         
-        # Capitalize
-        res = []
-        if e1: res.append(e1.capitalize())
-        if e2: res.append(e2.capitalize())
-        return res
-    except Exception:
-        return []
-
-# Dynamically add methods to the class
-QuantumEngine.calculate_chart = calculate_chart
-QuantumEngine._evaluate_wang_shuai = _evaluate_wang_shuai
-QuantumEngine._determine_favorable = _determine_favorable
-QuantumEngine.get_elements_for_year = get_elements_for_year
-
-def get_year_pillar(self, year: int) -> str:
-    """
-    Get the GanZhi for a specific year.
-    """
-    try:
-        from lunar_python import Solar
-        # Use mid-year to avoid boundary issues
-        solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
-        lunar = solar.getLunar()
-        return lunar.getYearInGanZhi()
-    except Exception:
-        return ""
-
-QuantumEngine.get_year_pillar = get_year_pillar
-
-# Helper for default params
-def _load_default_params(self):
-    """Load golden parameters from disk as default."""
-    try:
-        path = os.path.join(os.path.dirname(__file__), '../data/golden_parameters.json')
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return {}
-
-QuantumEngine._load_default_params = _load_default_params
-
-def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfavorable_elements: list, birth_chart: dict = None) -> dict:
-    """
-    V3.5 Core Algorithm: Calculate Year Luck Score with Treasury Mechanics and Ethical Safety Valve.
-    Returns dict with score, details, treasury_icon, treasury_risk
-    """
-    if not year_pillar or len(year_pillar) < 2:
-        return {'score': 0.0, 'details': ["Invalid Pillar"], 'treasury_icon': None, 'treasury_risk': 'none'}
+        # 1. Month Command (Ling)
+        mb_elem = self._get_element(month_branch)
+        rel = self._get_relation(dm_elem, mb_elem)
         
-    stem = year_pillar[0]
-    branch = year_pillar[1]
-    
-    # Get elements (lowercase)
-    stem_element = self._get_element(stem)
-    branch_element = self._get_element(branch)
-    
-    if not stem_element or not branch_element:
-        return {'score': 0.0, 'details': ["Unknown Elements"], 'treasury_icon': None, 'treasury_risk': 'none'}
+        is_same_group = (rel == 'self' or rel == 'resource')
+        if is_same_group: score += (WEIGHT_MONTH_COMMAND * BASE_UNIT)
         
-    # Normalize input lists to lowercase for comparison
-    fav_norm = [f.lower() for f in favorable_elements]
-    unfav_norm = [u.lower() for u in unfavorable_elements]
-    
-    details = []
-    
-    # 1. Base Score Calculation
-    # Stem (Appearance)
-    if stem_element in fav_norm:
-        stem_score = 10.0
-    elif stem_element in unfav_norm:
-        stem_score = -10.0
-    else:
-        stem_score = 0.0 # Neutral
+        score = 0.0 
         
-    # Branch (Root/Foundation)
-    if branch_element in fav_norm:
-        branch_score = 10.0
-    elif branch_element in unfav_norm:
-        branch_score = -10.0
-    else:
-        branch_score = 0.0 # Neutral
+        # 2. Iterate all chars
+        total_support = 0.0
+        total_oppose = 0.0
         
-    # 2. Weighted Total (Stem 40%, Branch 60%)
-    base_score = (stem_score * 0.4) + (branch_score * 0.6)
-    
-    # 3. Structural Mechanics (V2.0)
-    
-    # Check Generation Relationships
-    stem_gen_branch = (self.GENERATION.get(stem_element) == branch_element)
-    branch_gen_stem = (self.GENERATION.get(branch_element) == stem_element)
-    same_element = (stem_element == branch_element)
-    
-    # 3.1 Penalty: Cut Feet / Cover Head (截脚/盖头)
-    if stem_element in fav_norm and branch_element in unfav_norm:
-        base_score -= 5.0
-        details.append("⚠️ 截脚 (Cut Feet)")
+        for idx, pillar in enumerate(bazi):
+            if not pillar: continue
+            stem, branch = pillar[0], pillar[1]
+            
+            # Stem
+            if idx != 2: # Skip DM itself
+                s_elem = self._get_element(stem)
+                s_rel = self._get_relation(dm_elem, s_elem)
+                
+                w_val = WEIGHT_STEM * BASE_UNIT
+                if s_rel in ['self', 'resource']: total_support += w_val
+                else: total_oppose += w_val
+                
+            # Branch
+            b_elem = self._get_element(branch)
+            b_rel = self._get_relation(dm_elem, b_elem)
+            
+            # Select Weight based on Position
+            if idx == 1: # Month
+                w_val = WEIGHT_MONTH_COMMAND * BASE_UNIT
+            elif idx == 2: # Day
+                w_val = WEIGHT_DAY_BRANCH * BASE_UNIT
+            else: # Year/Hour
+                w_val = WEIGHT_BRANCH * BASE_UNIT
+            
+            if b_rel in ['self', 'resource']: total_support += w_val
+            else: total_oppose += w_val
+            
+        final_score = score + total_support
         
-    # 3.2 Reward: Synergy (相生/通气)
-    if stem_gen_branch and (branch_element in fav_norm):
-        base_score += 5.0
-        details.append("🌟 盖头 (Cover Head - Good)")
+        # Thresholds (Simplified)
+        strength = "Strong" if (final_score > total_oppose) else "Weak"
         
-    if branch_gen_stem and (stem_element in fav_norm):
-        base_score += 5.0
-        details.append("🌟 坐禄/印 (Root Support)")
-        
-    if same_element and (stem_element in fav_norm or branch_element in fav_norm):
-        base_score += 5.0
-        details.append("🔥 干支同气 (Pure Energy)")
-        
-    final_score = base_score
-    
-    # === V3.0 Sprint 3: Treasury Multiplier ===
-    # === V3.5 Sprint 5: Ethical Safety Valve ===
-    treasury_icon = None  # Will indicate icon type for frontend
-    treasury_risk_level = "none"  # none, opportunity, warning
-    
-    if birth_chart:
-        # === Delegated to TreasuryEngine (V6.0) ===
-        # Calculate bonus score and details from Treasury Interactions
-        final_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
-            birth_chart, branch, base_score, 
-            birth_chart.get('dm_strength', 'medium'), # TODO: better estimation
-            self._get_element(birth_chart.get('day_master'))
-        )
-        
-        # Append data
-        details.extend(t_details)
-        treasury_icon = t_icon
-        treasury_risk_level = t_risk
-        
-        # === Delegated to SkullEngine (V6.0) ===
-        if self.skull_engine.detect_three_punishments(birth_chart, branch):
-            # 使用配置中的 score_skull_crash (支持热更新)
-            final_score = self.config.get('score_skull_crash', -50.0)
-            treasury_icon = '💀'
-            treasury_risk_level = 'danger'
-            details.append("💀 丑未戌三刑！结构性崩塌 (Structure Collapse)")
-
-    # V3.5: Return enhanced structure
-    return {
-        'score': round(final_score, 2),
-        'details': details,
-        'treasury_icon': treasury_icon,
-        'treasury_risk': treasury_risk_level
-    }
-
-QuantumEngine.calculate_year_score = calculate_year_score
-
-# === V6.0 Final: Sub-Engine Delegation ===
-# Three Punishments detection is now handled by SkullEngine
-# Year pillar calculation is now handled by LuckEngine.get_year_ganzhi()
-
-
-def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyContext:
-    """
-    [V6.0 Final] 核心调度逻辑 (Facade Pattern)
-    
-    不再包含具体算法实现，只负责指挥子引擎协同工作：
-    - LuckEngine: 处理流年干支与大运
-    - TreasuryEngine: 处理财库与机遇检测
-    - SkullEngine: 处理三刑等极端风控
-    """
-    # === 1. 运势层 (Luck Layer) ===
-    year_pillar = self.luck_engine.get_year_ganzhi(year)
-    current_luck = profile.get_luck_pillar_at(year)
-    
-    # === 2. 基础数据准备 ===
-    bazi_list = [
-        profile.pillars['year'],
-        profile.pillars['month'],
-        profile.pillars['day'],
-        profile.pillars['hour']
-    ]
-    
-    # 提取四柱地支
-    chart_branches = [p[1] for p in bazi_list if len(p) > 1]
-    year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
-    
-    # 估算旺衰
-    wang_shuai_str = "Medium"
-    try:
-        w_s, _ = self._evaluate_wang_shuai(profile.day_master, bazi_list)
-        wang_shuai_str = "Strong" if "Strong" in w_s else "Weak"
-    except:
-        pass
-    
-    # 获取日主五行
-    dm_element = self._get_element(profile.day_master)
-    dm_element_cap = dm_element.capitalize() if dm_element else 'Wood'
-    
-    # === 3. 基础分数计算 ===
-    # 构造适配数据
-    adapter_chart = {
-        'day_master': profile.day_master,
-        'year': bazi_list[0],
-        'month': bazi_list[1],
-        'day': bazi_list[2],
-        'hour': bazi_list[3],
-        'dm_strength': wang_shuai_str
-    }
-    
-    # 计算基础分 (使用现有的 calculate_year_score)
-    favorable = self._determine_favorable(profile.day_master, wang_shuai_str, bazi_list)
-    unfavorable = [e.capitalize() for e in ['wood', 'fire', 'earth', 'metal', 'water'] 
-                   if e.capitalize() not in favorable]
-    
-    base_result = self.calculate_year_score(year_pillar, favorable, unfavorable, adapter_chart)
-    base_score = base_result.get('score', 0.0)
-    details = base_result.get('details', [])
-    
-    # === 4. 财库/机遇层 (Treasury Layer) ===
-    t_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
-        adapter_chart, year_branch, base_score, wang_shuai_str, dm_element_cap
-    )
-    
-    # 合并结果
-    if t_details:
-        details.extend(t_details)
-    final_score = t_score
-    icon = t_icon
-    risk_level = t_risk
-    
-    # === 5. 骷髅/风控层 (Skull Layer) ===
-    # 构造 SkullEngine 需要的 chart 格式
-    skull_chart = {
-        'year_pillar': bazi_list[0],
-        'month_pillar': bazi_list[1],
-        'day_pillar': bazi_list[2],
-        'hour_pillar': bazi_list[3]
-    }
-    
-    is_skull_triggered = self.skull_engine.detect_three_punishments(skull_chart, year_branch)
-    
-    if is_skull_triggered:
-        # 💀 骷髅协议触发！强制覆盖一切！
-        # 使用配置中的 score_skull_crash (支持热更新)
-        final_score = self.config.get('score_skull_crash', -50.0)
-        icon = "💀"
-        details = ["三刑崩塌 (The Skull)", "结构性崩塌", "极度风险"]
-        risk_level = "danger"
-        energy_lvl = "Critical Risk (大凶)"
-    else:
-        # 正常能量等级判定
-        if final_score <= -40:
-            energy_lvl = "Structural Collapse"
-        elif final_score > 6:
-            energy_lvl = "High Opportunity"
-        elif final_score < -6:
-            energy_lvl = "High Risk"
-        else:
-            energy_lvl = "Neutral"
-    
-    # === 6. 三维度能量计算 (使用完整算法) ===
-    # 构造 case_data 以调用 calculate_energy
-    case_data = {
-        'id': year,
-        'day_master': profile.day_master,
-        'wang_shuai': wang_shuai_str,
-        'bazi': bazi_list,
-        'physics_sources': {
-            'self': {'stem_support': 3.0 if wang_shuai_str == 'Strong' else -3.0},
-            'output': {'base': 2.0},
-            'wealth': {'base': 2.0},
-            'officer': {'base': 2.0},
-            'resource': {'base': 2.0}
-        }
-    }
-    dynamic_context = {'year': year_pillar, 'dayun': current_luck or ''}
-    
-    try:
-        energy_result = self.calculate_energy(case_data, dynamic_context)
-        e_career = energy_result.get('career', final_score * 0.8)
-        e_wealth = energy_result.get('wealth', final_score * 1.0)
-        e_relationship = energy_result.get('relationship', final_score * 0.6)
-    except Exception:
-        # Fallback to simple mapping if calculate_energy fails
-        e_career = final_score * 0.8
-        e_wealth = final_score * 1.0
-        e_relationship = final_score * 0.6
-    
-    # === 7. 构造 DestinyContext ===
-    ctx = DestinyContext(
-        year=year,
-        pillar=year_pillar,
-        luck_pillar=current_luck,
-        score=final_score,
-        raw_score=base_score,
-        energy_level=energy_lvl,
-        is_treasury_open=(icon in ["🏆", "🗝️"]),
-        treasury_type="Wealth" if t_icon == "🏆" else "General" if t_icon else None,
-        day_master_strength=wang_shuai_str,
-        risk_level=risk_level,
-        icon=icon,
-        tags=details,
-        description="; ".join(details[:2]) if details else "平稳流年",
-        career=e_career,
-        wealth=e_wealth,
-        relationship=e_relationship,
-        version="V6.0-Final"
-    )
-    
-    # Auto-build narrative
-    ctx.narrative_prompt = ctx.build_narrative_prompt()
-    return ctx
-
-
-QuantumEngine.calculate_year_context = calculate_year_context
-
-
-# === LuckEngine Proxy Methods ===
-# Delegate to internal LuckEngine for clean architecture
-
-def get_luck_timeline(self, profile_or_year, start_year_or_month=None, years_or_day=None, 
-                      hour=None, gender=None, num_steps=None):
-    """
-    [V6.0 Proxy] 生成包含大运信息的完整运势时间线
-    支持两种调用方式：
-    1. 新接口: get_luck_timeline(profile, start_year, years=12)
-    2. 旧接口 (兼容): get_luck_timeline(birth_year, birth_month, birth_day, birth_hour, gender, num_steps=8)
-    
-    :return: 带大运信息的流年列表
-    """
-    from datetime import datetime
-    import calendar
-    
-    # 检测调用方式
-    if hasattr(profile_or_year, 'get_luck_pillar_at'):
-        # 新接口: 传入的是 BaziProfile 对象
-        profile = profile_or_year
-        start_year = start_year_or_month
-        years = years_or_day if years_or_day else 12
-        birth_year = profile.birth_date.year if hasattr(profile, 'birth_date') and profile.birth_date else None
-    else:
-        # 旧接口: 传入的是出生年份等组件
-        birth_year = profile_or_year
-        birth_month = start_year_or_month
-        birth_day = years_or_day
-        birth_hour = hour or 12
-        gender_val = gender or 1
-        years = num_steps or 8
-        
+        if is_same_group and (final_score * 1.2 > total_oppose): 
+            strength = "Strong"
+            
+        # === V7.1 Flow Override ===
         try:
-            # 构造 BaziProfile
-            birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
-            profile = BaziProfile(birth_date, gender_val)
-            # 旧接口从当前年份开始
-            start_year = datetime.now().year
+            flow_state = self._calculate_energy_v7(bazi, dm_elem)
+            e_self = flow_state.get(dm_elem, 0)
+            
+            resource_elem = None
+            for e, v in self.GENERATION.items():
+                if v == dm_elem: resource_elem = e
+                
+            e_resource = flow_state.get(resource_elem, 0) if resource_elem else 0
+            
+            total_flow_support = e_self + e_resource
+            total_flow_oppose = sum(flow_state.values()) - total_flow_support
+            
+            strength_v7 = "Strong" if (total_flow_support > total_flow_oppose) else "Weak"
+            
+            if final_score > 0 and abs(total_flow_support - final_score) > 5:
+                final_score = total_flow_support 
+                strength = strength_v7
+                
         except Exception as e:
-            return []  # 返回空列表表示失败
+            print(f"V7 Flow Error: {e}")
+        
+        return strength, final_score
+
+    def _determine_favorable(self, dm: str, wang_shuai: str, bazi: list) -> list:
+            """
+            Determine Xi Yong Shen based on Strong/Weak.
+            Strong -> Needs Suppress (Officer), Drain (Output), Consume (Wealth)
+            Weak -> Needs Support (Resource), Help (Friend)
+            """
+            dm_elem = self._get_element(dm)
+            # Generation chain: Wood -> Fire -> Earth -> Metal -> Water -> Wood
     
-    # 公共逻辑：生成时间线
-    timeline = []
-    prev_luck = None
+            # Get all elements
+            elements = ["wood", "fire", "earth", "metal", "water"]
     
-    for i in range(years):
-        y = start_year + i
+            # Identify type relations relative to DM
+            # Self, Output, Wealth, Officer, Resource
+            relations = {}
+            for e in elements:
+                r = self._get_relation(dm_elem, e)
+                relations[r] = e
         
-        # 获取当年大运 (使用 BaziProfile 的接口)
-        current_luck = profile.get_luck_pillar_at(y)
+            favorable = []
+    
+            if "Strong" in wang_shuai:
+                # Favor: Output, Wealth, Officer
+                favorable.append(relations.get('output'))
+                favorable.append(relations.get('wealth'))
+                favorable.append(relations.get('officer'))
+            else:
+                # Favor: Resource, Self
+                favorable.append(relations.get('resource'))
+                favorable.append(relations.get('self'))
         
-        # 检测是否换运年
-        is_handover = (prev_luck is not None and current_luck != prev_luck)
+            # Clean up None and capitalize
+            return [f.capitalize() for f in favorable if f]
+
+    def get_elements_for_year(self, year: int) -> list:
+            """
+            Get the Five Elements for a specific year (Gui Si -> Water, Fire).
+            """
+            try:
+                # Use lunar_python to get GanZhi for the year
+                # Create a date in that year (e.g., Mid-year) to get the year pillar
+                solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
+                lunar = solar.getLunar()
+                year_gan_zhi = lunar.getYearInGanZhi() # e.g. "甲午"
         
-        # 计算年龄
-        age = (y - birth_year) if birth_year else None
+                stem = year_gan_zhi[0]
+                branch = year_gan_zhi[1]
         
-        # 使用 LuckEngine 获取流年干支
-        year_ganzhi = self.luck_engine.get_year_ganzhi(y)
+                e1 = self._get_element(stem)
+                e2 = self._get_element(branch)
         
-        timeline.append({
-            'year': y,
-            'age': age,
-            'year_pillar': year_ganzhi,
-            'stem': year_ganzhi[0] if year_ganzhi else None,
-            'branch': year_ganzhi[1] if len(year_ganzhi) > 1 else None,
-            'luck_pillar': current_luck,
-            'is_handover': is_handover,
-            'old_luck': prev_luck if is_handover else None,
-            'new_luck': current_luck if is_handover else None
-        })
-        
-        prev_luck = current_luck
-        
-    return timeline
+                # Capitalize
+                res = []
+                if e1: res.append(e1.capitalize())
+                if e2: res.append(e2.capitalize())
+                return res
+            except Exception:
+                return []
 
 
-def get_dynamic_luck_pillar(self, profile_or_year, year_or_month=None, 
-                            day=None, hour=None, gender=None, target_year=None):
-    """
-    [V6.0 Proxy] 获取指定年份的动态大运干支
-    支持两种调用方式：
-    1. 新接口: get_dynamic_luck_pillar(profile, year)
-    2. 旧接口 (兼容): get_dynamic_luck_pillar(birth_year, birth_month, birth_day, birth_hour, gender, target_year)
-    
-    :return: 大运干支 或 None
-    """
-    from datetime import datetime
-    
-    # 检测调用方式
-    if hasattr(profile_or_year, 'get_luck_pillar_at'):
-        # 新接口: 传入的是 BaziProfile 对象
-        profile = profile_or_year
-        year = year_or_month
-        return profile.get_luck_pillar_at(year)
-    else:
-        # 旧接口: 传入的是出生年份等组件
-        birth_year = profile_or_year
-        birth_month = year_or_month
-        birth_day = day
-        birth_hour = hour or 12
-        
-        try:
-            # 构造 BaziProfile
-            birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
-            profile = BaziProfile(birth_date, gender or 1)
-            return profile.get_luck_pillar_at(target_year)
-        except Exception as e:
-            return "计算异常"
 
-QuantumEngine.get_luck_timeline = get_luck_timeline
-QuantumEngine.get_dynamic_luck_pillar = get_dynamic_luck_pillar
+    def get_year_pillar(self, year: int) -> str:
+            """
+            Get the GanZhi for a specific year.
+            """
+            try:
+                from lunar_python import Solar
+                # Use mid-year to avoid boundary issues
+                solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
+                lunar = solar.getLunar()
+                return lunar.getYearInGanZhi()
+            except Exception:
+                return ""
+
+
+        # Helper for default params
+    def _load_default_params(self):
+            """Load golden parameters from disk as default."""
+            try:
+                path = os.path.join(os.path.dirname(__file__), '../data/golden_parameters.json')
+                if os.path.exists(path):
+                    with open(path, 'r') as f:
+                        return json.load(f)
+            except Exception:
+                pass
+            return {}
+
+
+    def calculate_year_score(self, year_pillar: str, favorable_elements: list, unfavorable_elements: list, birth_chart: dict = None) -> dict:
+            """
+            V3.5 Core Algorithm: Calculate Year Luck Score with Treasury Mechanics and Ethical Safety Valve.
+            Returns dict with score, details, treasury_icon, treasury_risk
+            """
+            if not year_pillar or len(year_pillar) < 2:
+                return {'score': 0.0, 'details': ["Invalid Pillar"], 'treasury_icon': None, 'treasury_risk': 'none'}
+        
+            stem = year_pillar[0]
+            branch = year_pillar[1]
+    
+            # Get elements (lowercase)
+            stem_element = self._get_element(stem)
+            branch_element = self._get_element(branch)
+    
+            if not stem_element or not branch_element:
+                return {'score': 0.0, 'details': ["Unknown Elements"], 'treasury_icon': None, 'treasury_risk': 'none'}
+        
+            # Normalize input lists to lowercase for comparison
+            fav_norm = [f.lower() for f in favorable_elements]
+            unfav_norm = [u.lower() for u in unfavorable_elements]
+    
+            details = []
+    
+            # 1. Base Score Calculation
+            # Stem (Appearance)
+            if stem_element in fav_norm:
+                stem_score = 10.0
+            elif stem_element in unfav_norm:
+                stem_score = -10.0
+            else:
+                stem_score = 0.0 # Neutral
+        
+            # Branch (Root/Foundation)
+            if branch_element in fav_norm:
+                branch_score = 10.0
+            elif branch_element in unfav_norm:
+                branch_score = -10.0
+            else:
+                branch_score = 0.0 # Neutral
+        
+            # 2. Weighted Total (Stem 40%, Branch 60%)
+            base_score = (stem_score * 0.4) + (branch_score * 0.6)
+    
+            # 3. Structural Mechanics (V2.0)
+    
+            # Check Generation Relationships
+            stem_gen_branch = (self.GENERATION.get(stem_element) == branch_element)
+            branch_gen_stem = (self.GENERATION.get(branch_element) == stem_element)
+            same_element = (stem_element == branch_element)
+    
+            # 3.1 Penalty: Cut Feet / Cover Head (截脚/盖头)
+            if stem_element in fav_norm and branch_element in unfav_norm:
+                base_score -= 5.0
+                details.append("⚠️ 截脚 (Cut Feet)")
+        
+            # 3.2 Reward: Synergy (相生/通气)
+            if stem_gen_branch and (branch_element in fav_norm):
+                base_score += 5.0
+                details.append("🌟 盖头 (Cover Head - Good)")
+        
+            if branch_gen_stem and (stem_element in fav_norm):
+                base_score += 5.0
+                details.append("🌟 坐禄/印 (Root Support)")
+        
+            if same_element and (stem_element in fav_norm or branch_element in fav_norm):
+                base_score += 5.0
+                details.append("🔥 干支同气 (Pure Energy)")
+        
+            final_score = base_score
+    
+            # === V3.0 Sprint 3: Treasury Multiplier ===
+            # === V3.5 Sprint 5: Ethical Safety Valve ===
+            treasury_icon = None  # Will indicate icon type for frontend
+            treasury_risk_level = "none"  # none, opportunity, warning
+    
+            if birth_chart:
+                # === Delegated to TreasuryEngine (V6.0) ===
+                # Calculate bonus score and details from Treasury Interactions
+                final_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
+                    birth_chart, branch, base_score,
+                    birth_chart.get('dm_strength', 'medium'), # TODO: better estimation
+                    self._get_element(birth_chart.get('day_master'))
+                )
+        
+                # Append data
+                details.extend(t_details)
+                treasury_icon = t_icon
+                treasury_risk_level = t_risk
+        
+                # === Delegated to SkullEngine (V6.0) ===
+                if self.skull_engine.detect_three_punishments(birth_chart, branch):
+                    # 使用配置中的 score_skull_crash (支持热更新)
+                    final_score = self.config.get('score_skull_crash', -50.0)
+                    treasury_icon = '💀'
+                    treasury_risk_level = 'danger'
+                    details.append("💀 丑未戌三刑！结构性崩塌 (Structure Collapse)")
+
+            # V3.5: Return enhanced structure
+            return {
+                'score': round(final_score, 2),
+                'details': details,
+                'treasury_icon': treasury_icon,
+                'treasury_risk': treasury_risk_level
+            }
+
+
+        # === V6.0 Final: Sub-Engine Delegation ===
+        # Three Punishments detection is now handled by SkullEngine
+        # Year pillar calculation is now handled by LuckEngine.get_year_ganzhi()
+
+
+    def calculate_year_context(self, profile: BaziProfile, year: int) -> DestinyContext:
+            """
+            [V6.0 Final] 核心调度逻辑 (Facade Pattern)
+    
+            不再包含具体算法实现，只负责指挥子引擎协同工作：
+            - LuckEngine: 处理流年干支与大运
+            - TreasuryEngine: 处理财库与机遇检测
+            - SkullEngine: 处理三刑等极端风控
+            """
+            # === 1. 运势层 (Luck Layer) ===
+            year_pillar = self.luck_engine.get_year_ganzhi(year)
+            current_luck = profile.get_luck_pillar_at(year)
+    
+            # === 2. 基础数据准备 ===
+            bazi_list = [
+                profile.pillars['year'],
+                profile.pillars['month'],
+                profile.pillars['day'],
+                profile.pillars['hour']
+            ]
+    
+            # 提取四柱地支
+            chart_branches = [p[1] for p in bazi_list if len(p) > 1]
+            year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
+    
+            # 估算旺衰
+            wang_shuai_str = "Medium"
+            try:
+                w_s, _ = self._evaluate_wang_shuai(profile.day_master, bazi_list)
+                wang_shuai_str = "Strong" if "Strong" in w_s else "Weak"
+            except:
+                pass
+    
+            # 获取日主五行
+            dm_element = self._get_element(profile.day_master)
+            dm_element_cap = dm_element.capitalize() if dm_element else 'Wood'
+    
+            # === 3. 基础分数计算 ===
+            # 构造适配数据
+            adapter_chart = {
+                'day_master': profile.day_master,
+                'year': bazi_list[0],
+                'month': bazi_list[1],
+                'day': bazi_list[2],
+                'hour': bazi_list[3],
+                'dm_strength': wang_shuai_str
+            }
+    
+            # 计算基础分 (使用现有的 calculate_year_score)
+            favorable = self._determine_favorable(profile.day_master, wang_shuai_str, bazi_list)
+            unfavorable = [e.capitalize() for e in ['wood', 'fire', 'earth', 'metal', 'water']
+                           if e.capitalize() not in favorable]
+    
+            base_result = self.calculate_year_score(year_pillar, favorable, unfavorable, adapter_chart)
+            base_score = base_result.get('score', 0.0)
+            details = base_result.get('details', [])
+    
+            # === 4. 财库/机遇层 (Treasury Layer) ===
+            t_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
+                adapter_chart, year_branch, base_score, wang_shuai_str, dm_element_cap
+            )
+    
+            # 合并结果
+            if t_details:
+                details.extend(t_details)
+            final_score = t_score
+            icon = t_icon
+            risk_level = t_risk
+    
+            # === 4.5 Harmony Layer (Fusion & Fission) ===
+            # V6.1: Chemical Reactions (SanHe, LiuHe, LiuChong)
+            h_interactions = self.harmony_engine.detect_interactions(chart_branches, year_branch)
+            h_score, h_details, h_tags = self.harmony_engine.calculate_harmony_score(h_interactions, favorable)
+    
+            final_score += h_score
+            details.extend(h_details)
+            # Merge Tags if useful, though Context usually uses details
+    
+            # Harmony Icon Logic (Priority over Treasury if significant)
+            if h_score >= 15.0: # SanHe Favorable
+                icon = "✨"
+            elif h_score <= -15.0: # SanHe Unfavorable
+                icon = "🌪️"
+            elif "六合" in str(h_tags):
+                # Only override if no Treasury
+                if not t_icon: icon = "❤️"
+            elif "六冲" in str(h_tags):
+                if not t_icon: icon = "💥"
+
+            # === 5. 骷髅/风控层 (Skull Layer) ===
+            # 构造 SkullEngine 需要的 chart 格式
+            skull_chart = {
+                'year_pillar': bazi_list[0],
+                'month_pillar': bazi_list[1],
+                'day_pillar': bazi_list[2],
+                'hour_pillar': bazi_list[3]
+            }
+    
+            is_skull_triggered = self.skull_engine.detect_three_punishments(skull_chart, year_branch)
+    
+            if is_skull_triggered:
+                # 💀 骷髅协议触发！强制覆盖一切！
+                # 使用配置中的 score_skull_crash (支持热更新)
+                final_score = self.config.get('score_skull_crash', -50.0)
+                icon = "💀"
+                details = ["三刑崩塌 (The Skull)", "结构性崩塌", "极度风险"]
+                risk_level = "danger"
+                energy_lvl = "Critical Risk (大凶)"
+            else:
+                # 正常能量等级判定
+                if final_score <= -40:
+                    energy_lvl = "Structural Collapse"
+                elif final_score > 6:
+                    energy_lvl = "High Opportunity"
+                elif final_score < -6:
+                    energy_lvl = "High Risk"
+                else:
+                    energy_lvl = "Neutral"
+    
+            # === 6. 三维度能量计算 (使用完整算法) ===
+            # 构造 case_data 以调用 calculate_energy
+            case_data = {
+                'id': year,
+                'day_master': profile.day_master,
+                'wang_shuai': wang_shuai_str,
+                'bazi': bazi_list,
+                'physics_sources': {
+                    'self': {'stem_support': 3.0 if wang_shuai_str == 'Strong' else -3.0},
+                    'output': {'base': 2.0},
+                    'wealth': {'base': 2.0},
+                    'officer': {'base': 2.0},
+                    'resource': {'base': 2.0}
+                }
+            }
+            dynamic_context = {'year': year_pillar, 'dayun': current_luck or ''}
+    
+            try:
+                energy_result = self.calculate_energy(case_data, dynamic_context)
+                e_career = energy_result.get('career', final_score * 0.8)
+                e_wealth = energy_result.get('wealth', final_score * 1.0)
+                e_relationship = energy_result.get('relationship', final_score * 0.6)
+            except Exception:
+                # Fallback to simple mapping if calculate_energy fails
+                e_career = final_score * 0.8
+                e_wealth = final_score * 1.0
+                e_relationship = final_score * 0.6
+    
+            # === 7. 构造 DestinyContext ===
+            ctx = DestinyContext(
+                year=year,
+                pillar=year_pillar,
+                luck_pillar=current_luck,
+                score=final_score,
+                raw_score=base_score,
+                energy_level=energy_lvl,
+                is_treasury_open=(icon in ["🏆", "🗝️"]),
+                treasury_type="Wealth" if t_icon == "🏆" else "General" if t_icon else None,
+                day_master_strength=wang_shuai_str,
+                risk_level=risk_level,
+                icon=icon,
+                tags=details,
+                description="; ".join(details[:2]) if details else "平稳流年",
+                career=e_career,
+                wealth=e_wealth,
+                relationship=e_relationship,
+                version="V6.0-Final"
+            )
+    
+            # Auto-build narrative
+            ctx.narrative_prompt = ctx.build_narrative_prompt()
+            return ctx
+
+
+
+
+        # === LuckEngine Proxy Methods ===
+        # Delegate to internal LuckEngine for clean architecture
+
+    def get_luck_timeline(self, profile_or_year, start_year_or_month=None, years_or_day=None,
+                              hour=None, gender=None, num_steps=None):
+            """
+            [V6.0 Proxy] 生成包含大运信息的完整运势时间线
+            支持两种调用方式：
+            1. 新接口: get_luck_timeline(profile, start_year, years=12)
+            2. 旧接口 (兼容): get_luck_timeline(birth_year, birth_month, birth_day, birth_hour, gender, num_steps=8)
+    
+            :return: 带大运信息的流年列表
+            """
+            from datetime import datetime
+            import calendar
+    
+            # 检测调用方式
+            if hasattr(profile_or_year, 'get_luck_pillar_at'):
+                # 新接口: 传入的是 BaziProfile 对象
+                profile = profile_or_year
+                start_year = start_year_or_month
+                years = years_or_day if years_or_day else 12
+                birth_year = profile.birth_date.year if hasattr(profile, 'birth_date') and profile.birth_date else None
+            else:
+                # 旧接口: 传入的是出生年份等组件
+                birth_year = profile_or_year
+                birth_month = start_year_or_month
+                birth_day = years_or_day
+                birth_hour = hour or 12
+                gender_val = gender or 1
+                years = num_steps or 8
+        
+                try:
+                    # 构造 BaziProfile
+                    birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+                    profile = BaziProfile(birth_date, gender_val)
+                    # 旧接口从当前年份开始
+                    start_year = datetime.now().year
+                except Exception as e:
+                    return []  # 返回空列表表示失败
+    
+            # 公共逻辑：生成时间线
+            timeline = []
+            prev_luck = None
+    
+            for i in range(years):
+                y = start_year + i
+        
+                # 获取当年大运 (使用 BaziProfile 的接口)
+                current_luck = profile.get_luck_pillar_at(y)
+        
+                # 检测是否换运年
+                is_handover = (prev_luck is not None and current_luck != prev_luck)
+        
+                # 计算年龄
+                age = (y - birth_year) if birth_year else None
+        
+                # 使用 LuckEngine 获取流年干支
+                year_ganzhi = self.luck_engine.get_year_ganzhi(y)
+        
+                timeline.append({
+                    'year': y,
+                    'age': age,
+                    'year_pillar': year_ganzhi,
+                    'stem': year_ganzhi[0] if year_ganzhi else None,
+                    'branch': year_ganzhi[1] if len(year_ganzhi) > 1 else None,
+                    'luck_pillar': current_luck,
+                    'is_handover': is_handover,
+                    'old_luck': prev_luck if is_handover else None,
+                    'new_luck': current_luck if is_handover else None
+                })
+        
+                prev_luck = current_luck
+        
+            return timeline
+
+
+    def get_dynamic_luck_pillar(self, profile_or_year, year_or_month=None,
+                                    day=None, hour=None, gender=None, target_year=None):
+            """
+            [V6.0 Proxy] 获取指定年份的动态大运干支
+            支持两种调用方式：
+            1. 新接口: get_dynamic_luck_pillar(profile, year)
+            2. 旧接口 (兼容): get_dynamic_luck_pillar(birth_year, birth_month, birth_day, birth_hour, gender, target_year)
+    
+            :return: 大运干支 或 None
+            """
+            from datetime import datetime
+    
+            # 检测调用方式
+            if hasattr(profile_or_year, 'get_luck_pillar_at'):
+                # 新接口: 传入的是 BaziProfile 对象
+                profile = profile_or_year
+                year = year_or_month
+                return profile.get_luck_pillar_at(year)
+            else:
+                # 旧接口: 传入的是出生年份等组件
+                birth_year = profile_or_year
+                birth_month = year_or_month
+                birth_day = day
+                birth_hour = hour or 12
+        
+                try:
+                    # 构造 BaziProfile
+                    birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+                    profile = BaziProfile(birth_date, gender or 1)
+                    return profile.get_luck_pillar_at(target_year)
+                except Exception as e:
+                    return "计算异常"
+
 
