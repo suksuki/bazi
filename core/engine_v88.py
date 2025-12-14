@@ -364,10 +364,20 @@ class EngineV88:
         wealth_score = base_score * 0.7 + 1.5
         rel_score = base_score * 0.6 + 1.0
         
+        # Get luck pillar for this year
+        try:
+            if hasattr(profile, 'get_luck_pillar_at'):
+                luck_pillar = profile.get_luck_pillar_at(year)
+            else:
+                luck_pillar = None
+        except:
+            luck_pillar = None
+        
         # Build context
         ctx = DestinyContext(
             year=year,
             pillar=year_pillar,
+            luck_pillar=luck_pillar,  # For handover detection
             score=base_score,
             icon=icon,
             details=details,

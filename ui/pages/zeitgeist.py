@@ -237,6 +237,26 @@ def render():
             hoverinfo='skip'
         ))
 
+    # Detect luck pillar handover years and add vertical dashed lines
+    handover_years = []
+    prev_luck = None
+    for ctx in contexts:
+        curr_luck = ctx.luck_pillar
+        if prev_luck is not None and curr_luck != prev_luck and curr_luck:
+            handover_years.append((ctx.year, curr_luck))
+        prev_luck = curr_luck
+    
+    # Add vertical dashed lines for handover years
+    for h_year, h_luck in handover_years:
+        fig.add_vline(
+            x=h_year, 
+            line_dash="dash", 
+            line_color="rgba(255, 215, 0, 0.7)",
+            annotation_text=f"换运→{h_luck}",
+            annotation_position="top right",
+            annotation_font_color="gold"
+        )
+
     fig.update_layout(
         title=f"Trinity 12年运势全息图 ({selected_case['bazi'][2]}日主)",
         xaxis_title="流年 (Year)",
