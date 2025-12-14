@@ -50,6 +50,7 @@ def render_prediction_dashboard():
     
     # 2. UI: Header & Chart
     st.title(f"🔮 {name} 的量子命盘 (V5.3 Skull)")
+    st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}` (Modular)")
     
     # --- V2.9 Glassmorphism CSS (Dark Mode) ---
     st.markdown(get_glassmorphism_css(), unsafe_allow_html=True)
