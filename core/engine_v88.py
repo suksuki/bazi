@@ -42,14 +42,26 @@ class EngineV88:
         """Initialize the modular engine with all processors."""
         self.config = config or {}
         
-        # Initialize processors
+        # Initialize core processors (V8.8 modular)
         self.physics = PhysicsProcessor()
         self.seasonal = SeasonalProcessor()
         self.phase_change = PhaseChangeProcessor()
         self.judge = StrengthJudge()
         
+        # Initialize sub-engines (from legacy QuantumEngine for full features)
+        from core.engines.luck_engine import LuckEngine
+        from core.engines.treasury_engine import TreasuryEngine
+        from core.engines.skull_engine import SkullEngine
+        from core.engines.harmony_engine import HarmonyEngine
+        
+        self.luck_engine = LuckEngine()
+        self.treasury_engine = TreasuryEngine()
+        self.skull_engine = SkullEngine()
+        self.harmony_engine = HarmonyEngine()
+        
         print(f"⚡ Antigravity {self.VERSION} Engine Initialized")
         print(f"   Processors: {len(self._get_processors())}")
+        print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
     
     def _get_processors(self) -> List:
         """Get list of active processors"""
@@ -316,13 +328,14 @@ class EngineV88:
     
     def calculate_year_context(self, profile, year: int):
         """
-        V8.8 Year Context Calculation.
-        Returns a DestinyContext-like object for UI compatibility.
+        V8.8 Year Context Calculation (Full Version).
+        Uses all sub-engines for comprehensive analysis.
         """
         from core.context import DestinyContext
         
         # Get year pillar
         year_pillar = self.get_year_pillar(year)
+        year_branch = year_pillar[1] if len(year_pillar) > 1 else ''
         
         # Extract bazi
         bazi_list = [
@@ -331,45 +344,93 @@ class EngineV88:
             profile.pillars.get('day', '甲子'),
             profile.pillars.get('hour', '甲子')
         ]
+        chart_branches = [p[1] for p in bazi_list if len(p) > 1]
         
         # Calculate strength
         dm = profile.day_master
-        strength, score = self._evaluate_wang_shuai(dm, bazi_list)
+        dm_elem = self._get_element(dm)
+        dm_elem_cap = dm_elem.capitalize() if dm_elem else 'Wood'
+        strength, strength_score = self._evaluate_wang_shuai(dm, bazi_list)
         
         # Determine favorable elements
         favorable = self._determine_favorable(dm, strength, bazi_list)
         unfavorable = [e.capitalize() for e in ['wood', 'fire', 'earth', 'metal', 'water']
                        if e.capitalize() not in favorable]
         
-        # Calculate year score
+        # === Layer 1: Base Year Score ===
         year_result = self.calculate_year_score(year_pillar, favorable, unfavorable)
         base_score = year_result.get('score', 0)
         details = year_result.get('details', [])
+        tags = []
+        icon = None
+        risk_level = "low"
         
-        # Determine icon
-        if base_score >= 5:
-            icon = "✨"
-        elif base_score >= 0:
-            icon = "☀️"
-        elif base_score >= -3:
-            icon = "⚡"
-        else:
-            icon = "💀"
+        # === Layer 2: Treasury Engine ===
+        try:
+            adapter_chart = {
+                'day_master': dm,
+                'year': bazi_list[0],
+                'month': bazi_list[1],
+                'day': bazi_list[2],
+                'hour': bazi_list[3],
+                'dm_strength': strength
+            }
+            t_score, t_details, t_icon, t_risk = self.treasury_engine.process_treasury_scoring(
+                adapter_chart, year_branch, base_score, strength, dm_elem_cap
+            )
+            base_score = t_score
+            if t_details:
+                details.extend(t_details)
+            if t_icon:
+                icon = t_icon
+            if t_risk and t_risk != 'none':
+                risk_level = t_risk
+        except Exception as e:
+            pass  # Treasury processing optional
         
-        # Calculate dimension scores based on year score
-        # Career benefits from Officer/Wealth elements
-        # Wealth benefits from Wealth elements
-        # Relationship benefits from Resource/Output elements
+        # === Layer 3: Harmony Engine (三合六合) ===
+        try:
+            h_interactions = self.harmony_engine.detect_interactions(chart_branches, year_branch)
+            h_score, h_details, h_tags = self.harmony_engine.calculate_harmony_score(h_interactions, favorable)
+            base_score += h_score
+            details.extend(h_details)
+            tags.extend(h_tags)
+            if h_score >= 15.0:
+                icon = "✨"
+        except Exception:
+            pass
+        
+        # === Layer 4: Skull Engine (三刑) ===
+        try:
+            skull_result = self.skull_engine.detect_three_punishments(chart_branches, year_branch)
+            if skull_result.get('triggered'):
+                base_score -= 20
+                icon = "💀"
+                risk_level = "danger"
+                details.append(skull_result.get('detail', '三刑触发'))
+                tags.append("三刑")
+        except Exception:
+            pass
+        
+        # Default icon if not set
+        if not icon:
+            if base_score >= 5:
+                icon = "✨"
+            elif base_score >= 0:
+                icon = "☀️"
+            elif base_score >= -3:
+                icon = "⚡"
+            else:
+                icon = "💀"
+        
+        # Calculate dimension scores
         career_score = base_score * 0.8 + 2.0
         wealth_score = base_score * 0.7 + 1.5
         rel_score = base_score * 0.6 + 1.0
         
-        # Get luck pillar for this year
+        # Get luck pillar
         try:
-            if hasattr(profile, 'get_luck_pillar_at'):
-                luck_pillar = profile.get_luck_pillar_at(year)
-            else:
-                luck_pillar = None
+            luck_pillar = profile.get_luck_pillar_at(year) if hasattr(profile, 'get_luck_pillar_at') else None
         except:
             luck_pillar = None
         
@@ -377,14 +438,13 @@ class EngineV88:
         ctx = DestinyContext(
             year=year,
             pillar=year_pillar,
-            luck_pillar=luck_pillar,  # For handover detection
+            luck_pillar=luck_pillar,
             score=base_score,
             icon=icon,
             details=details,
-            tags=[],
-            risk_level="low" if base_score >= 0 else "medium",
+            tags=tags,
+            risk_level=risk_level,
             day_master_strength=strength,
-            # Dimension scores for hologram display
             career=career_score,
             wealth=wealth_score,
             relationship=rel_score
