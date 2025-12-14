@@ -7,7 +7,7 @@ import plotly.express as px
 import numpy as np
 import altair as alt
 
-from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Migration
+from core.quantum_engine import QuantumEngine  # Using legacy for full feature support
 from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
