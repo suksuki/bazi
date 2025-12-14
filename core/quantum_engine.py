@@ -20,17 +20,31 @@ from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 class QuantumEngine:
     """
-    Quantum Bazi V8.1 Physics Engine (Unified)
-    Calculates E_pred (Energy Potential) based on W (Weights) and C (Couplings).
-    Supports Dynamic Time-Variable (Da Yun / Liu Nian) with Full Elemental Interaction.
+    ⚠️ DEPRECATED - Use core.engine_v88.EngineV88 instead!
     
-    [V6.0+ Parameterization] 支持通过 config 字典动态调整算法参数
-    [V8.0] Phase Change Protocol - 焦土不生金/冻水不生木
-    [V8.1] 得令保护 + 建禄加成
+    Quantum Bazi V8.1 Physics Engine (Legacy)
+    This class is kept for backward compatibility with tests and scripts.
+    All UI now uses EngineV88 (core/engine_v88.py).
+    
+    Migration Guide:
+        OLD: from core.quantum_engine import QuantumEngine
+        NEW: from core.engine_v88 import EngineV88 as QuantumEngine
+    
+    [V8.1-Legacy] Phase Change Protocol + 得令保护 + 建禄加成
     """
     
-    VERSION = "8.1-Legacy"  # Version watermark for UI verification
+    VERSION = "8.1-Legacy (DEPRECATED)"  # Use EngineV88 instead!
+    
     def __init__(self, params=None):
+        # ⚠️ DEPRECATION WARNING
+        import warnings
+        warnings.warn(
+            "QuantumEngine is deprecated. Use EngineV88 instead: "
+            "from core.engine_v88 import EngineV88",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
         # Allow default params loading if None
         if params is None:
             params = self._load_default_params()
