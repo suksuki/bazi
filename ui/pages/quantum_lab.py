@@ -597,11 +597,10 @@ def render():
                 "skull": {"crashScore": score_skull_crash}
             },
             "flow": {
-                "generationEfficiency": flow_ge,
-                "generationDrain": flow_gd,
-                "controlImpact": flow_ci,
-                "controlExhaust": fp['flow'].get('controlExhaust', 0.2),
-                "dampingFactor": flow_df,
+                "resourceImpedance": {"base": imp_base, "weaknessPenalty": imp_weak},
+                "outputViscosity": {"maxDrainRate": vis_rate, "drainFriction": vis_fric},
+                "globalEntropy": sys_ent,
+                "controlImpact": ctl_imp,
                 "spatialDecay": {"gap1": sp_g1, "gap2": sp_g2}
             },
             "spacetime": {
