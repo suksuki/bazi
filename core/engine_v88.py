@@ -519,3 +519,35 @@ class EngineV88:
             prev_luck = current_luck
         
         return timeline
+    
+    def get_dynamic_luck_pillar(self, profile_or_year, year_or_month=None,
+                                day=None, hour=None, gender=None, target_year=None) -> str:
+        """
+        V8.8 Dynamic Luck Pillar - get luck pillar for a specific year.
+        Supports both new (BaziProfile) and legacy (year, month, day, hour, gender, target_year) interfaces.
+        """
+        from datetime import datetime
+        
+        # Detect calling mode
+        if hasattr(profile_or_year, 'get_luck_pillar_at'):
+            # New interface: BaziProfile object
+            profile = profile_or_year
+            year = year_or_month
+            try:
+                return profile.get_luck_pillar_at(year)
+            except:
+                return "未知"
+        else:
+            # Legacy interface: year, month, day, hour, gender, target_year
+            birth_year = profile_or_year
+            birth_month = year_or_month or 1
+            birth_day = day or 1
+            birth_hour = hour or 12
+            
+            try:
+                from core.bazi_profile import BaziProfile
+                birth_date = datetime(birth_year, birth_month, birth_day, birth_hour, 0)
+                profile = BaziProfile(birth_date, gender or 1)
+                return profile.get_luck_pillar_at(target_year)
+            except Exception:
+                return "计算异常"
