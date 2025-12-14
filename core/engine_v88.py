@@ -414,7 +414,11 @@ class EngineV88:
             'e_output': 0,
             'e_wealth': 0,
             'e_officer': 0,
-            'narrative': [f'{strength} ({score:.1f})']
+            'narrative': [f'{strength} ({score:.1f})'],
+            # UI compatibility - dimension scores
+            'career': score / 10.0,
+            'wealth': score / 10.0,
+            'relationship': score / 10.0
         }
         
         # Map energies to ten gods
