@@ -540,7 +540,7 @@ def render():
 
     # === 应用并回测按钮 ===
     st.sidebar.markdown("---")
-    if st.sidebar.button("🔄 应用并回测 (Apply V7.3)", type="primary", use_container_width=True):
+    if st.sidebar.button("🔄 应用并回测 (Apply V7.3)", type="primary", width='stretch'):
         # 构建算法核心配置 (V6 Legacy Flat - Partial Map)
         algo_config = {
             'score_skull_crash': score_skull_crash,
@@ -802,7 +802,7 @@ def render():
                 st.metric("综合准确率 (Global Accuracy)", f"{accuracy:.1f}%", f"{passed}/{total} Cases")
                 
                 # DataFrame
-                st.dataframe(results, use_container_width=True)
+                st.dataframe(results, width='stretch')
                 
                 if accuracy < 60:
                     st.error("Low Accuracy! Tuning Required.")
@@ -1116,7 +1116,7 @@ def render():
                 fig.add_trace(go.Scatter(x=cats, y=y_r, name='Real', line=dict(color='#00FF00', width=3)))
                 fig.add_trace(go.Scatter(x=cats, y=y_p, name='AI', line=dict(color='#00BFFF', dash='dash', width=3)))
                 fig.update_layout(height=250, margin=dict(t=10,b=10))
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             # Narrative Cards (New in V2.9)
             narrative_events = pred_res.get('narrative_events', [])
@@ -1191,7 +1191,7 @@ def render():
                 fig_t.add_trace(go.Scatter(x=sdf['year'], y=sdf['wealth'], name='Wealth'))
                 fig_t.add_trace(go.Scatter(x=sdf['year'], y=sdf['rel'], name='Rel'))
                 fig_t.update_layout(height=300, title="未来趋势")
-                st.plotly_chart(fig_t, use_container_width=True)
+                st.plotly_chart(fig_t, width='stretch')
 
 if __name__ == "__main__":
     render()

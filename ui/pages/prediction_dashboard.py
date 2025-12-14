@@ -436,7 +436,7 @@ def render_prediction_dashboard():
     fig = DestinyCharts.render_life_curve(df_traj, sim_year, handover_years)
     
     if fig:
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # V3.0 DEBUG: Treasury Detection Status
         # Computed locally for debug view

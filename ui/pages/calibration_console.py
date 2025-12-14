@@ -230,7 +230,7 @@ fig_heat = px.density_heatmap(
     title="Absolute Error Magnitude (Green < 2, Red > 5)"
 )
 fig_heat.update_layout(height=600)
-st.plotly_chart(fig_heat, use_container_width=True)
+st.plotly_chart(fig_heat, width='stretch')
 
 # 5. SCATTER PLOT (Correlation)
 st.subheader("📈 Prediction vs Reality Correlation")
@@ -256,7 +256,7 @@ fig_scatter = px.scatter(
 # Add y=x line
 fig_scatter.add_shape(type="line", x0=-10, y0=-10, x1=10, y1=10, line=dict(color="Gray", dash="dash"))
 
-st.plotly_chart(fig_scatter, use_container_width=True)
+st.plotly_chart(fig_scatter, width='stretch')
 
 # 6. DETAILED DATA
 with st.expander("查看详细数据表 (Detailed Data)"):

@@ -217,7 +217,7 @@ def render():
                             },
                             disabled=["Filename", "Type", "Size (KB)"],
                             hide_index=True,
-                            use_container_width=True,
+                            width='stretch',
                             key=editor_key
                         )
                         
@@ -277,7 +277,7 @@ def render():
                         "name": st.column_config.TextColumn("姓名", width="medium"),
                         "quality_tier": st.column_config.TextColumn("质量等级", width="small"),
                     },
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
                 
@@ -328,7 +328,7 @@ def render():
             conn = rule_db._get_conn()
             try:
                 df_rules = pd.read_sql("SELECT * FROM rules", conn)
-                st.dataframe(df_rules, use_container_width=True)
+                st.dataframe(df_rules, width='stretch')
             except:
                 st.info("规则库为空。")
             conn.close()

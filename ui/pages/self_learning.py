@@ -718,7 +718,7 @@ def _render_task_manager():
         )
     with col_ctrl2:
          st.write("") # Spacer
-         if st.button("🔄 刷新列表", use_container_width=True):
+         if st.button("🔄 刷新列表", width='stretch'):
              st.rerun()
          
          if st.checkbox("自动刷新 (Auto)", value=False, key="task_auto_refresh"):
