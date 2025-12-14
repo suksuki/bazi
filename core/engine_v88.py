@@ -364,6 +364,9 @@ class EngineV88:
         tags = []
         icon = None
         risk_level = "low"
+        is_treasury_open = False
+        treasury_type = None
+        treasury_element = None
         
         # === Layer 2: Treasury Engine ===
         try:
@@ -381,6 +384,17 @@ class EngineV88:
             base_score = t_score
             if t_details:
                 details.extend(t_details)
+                # Check if treasury was opened
+                for detail in t_details:
+                    if '财库' in detail or '墓库' in detail:
+                        is_treasury_open = True
+                        treasury_element = year_branch
+                        if '财库' in detail:
+                            treasury_type = "Wealth"
+                        elif '官库' in detail:
+                            treasury_type = "Power"
+                        else:
+                            treasury_type = "Resource"
             if t_icon:
                 icon = t_icon
             if t_risk and t_risk != 'none':
@@ -445,6 +459,11 @@ class EngineV88:
             tags=tags,
             risk_level=risk_level,
             day_master_strength=strength,
+            # Treasury info
+            is_treasury_open=is_treasury_open,
+            treasury_type=treasury_type,
+            treasury_element=treasury_element,
+            # Dimension scores
             career=career_score,
             wealth=wealth_score,
             relationship=rel_score
