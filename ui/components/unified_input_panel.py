@@ -4,6 +4,10 @@ import os
 import datetime
 from typing import Dict, List, Optional, Tuple, Any
 
+from utils.constants_manager import get_constants
+
+from facade.bazi_facade import BaziFacade
+
 
 def _load_cases() -> List[Dict[str, Any]]:
     """
@@ -32,7 +36,7 @@ def _load_geo_cities() -> List[str]:
         return ["Unknown", "Beijing", "Shanghai", "Guangzhou", "Singapore"]
 
 
-def render_and_collect_input(controller,
+def render_and_collect_input(facade: BaziFacade,
                              cases: Optional[List[Dict[str, Any]]] = None,
                              is_quantum_lab: bool = False) -> Tuple[Optional[Dict[str, Any]], Dict[str, float], str]:
     """
@@ -46,6 +50,9 @@ def render_and_collect_input(controller,
     Returns:
         (selected_case, era_factor_dict, selected_city)
     """
+    controller = facade._controller
+    consts = get_constants()
+
     with st.sidebar:
         st.header("⚙️ 核心数据与修正")
 
@@ -72,7 +79,7 @@ def render_and_collect_input(controller,
         raw_cities = _load_geo_cities()
         if "Beijing" in raw_cities:
             raw_cities.remove("Beijing")
-        cities = ["None", "Beijing"] + raw_cities
+        cities = ["None"] + consts.DEFAULT_GEO_CITIES
 
         archive_city = selected_case.get("city") if isinstance(selected_case, dict) else None
         default_city = archive_city if archive_city in cities else "None"
@@ -84,18 +91,25 @@ def render_and_collect_input(controller,
         era_factor: Dict[str, float] = {}
         if is_quantum_lab:
             st.subheader("🌐 ERA 时代修正 (可调)")
-            cols = st.columns(5)
-            era_factor["Wood"] = cols[0].slider("木 (ERA %)", -10, 10, 0, key="era_wood") / 100
-            era_factor["Fire"] = cols[1].slider("火 (ERA %)", -10, 10, 0, key="era_fire") / 100
-            era_factor["Earth"] = cols[2].slider("土 (ERA %)", -10, 10, 0, key="era_earth") / 100
-            era_factor["Metal"] = cols[3].slider("金 (ERA %)", -10, 10, 0, key="era_metal") / 100
-            era_factor["Water"] = cols[4].slider("水 (ERA %)", -10, 10, 0, key="era_water") / 100
+            cols = st.columns(len(consts.FIVE_ELEMENTS))
+            prefix = st.session_state.get("era_key_prefix", "era")
+            for idx, elem in enumerate(consts.FIVE_ELEMENTS):
+                label_map = {
+                    "Wood": "木",
+                    "Fire": "火",
+                    "Earth": "土",
+                    "Metal": "金",
+                    "Water": "水",
+                }
+                era_factor[elem] = cols[idx].slider(
+                    f"{label_map.get(elem, elem)} (ERA %)", -10, 10, 0, key=f"{prefix}_{elem.lower()}"
+                ) / 100
         else:
             st.subheader("🌐 ERA 时代修正 (当前生效)")
-            current_era = controller.get_current_era_factor()
+            current_era = controller.get_current_era_factor() if controller else {}
             if current_era and any(current_era.values()):
                 cols = st.columns(3)
-                elements = ["Wood", "Fire", "Earth", "Metal", "Water"]
+                elements = consts.FIVE_ELEMENTS
                 c_idx = 0
                 for elem in elements:
                     factor = current_era.get(elem, 0.0) * 100
@@ -107,8 +121,8 @@ def render_and_collect_input(controller,
                 st.info("当前未应用 ERA 因子。")
                 era_factor = {}
 
-        # --- 构造用户输入并刷新 Controller ---
-        # 因档案未必带有出生日期，这里使用默认日期/时辰，主要用于实验/展示
+        # --- 构造用户输入并通过 Facade 刷新 Controller ---
+        controller = facade._controller
         try:
             name = selected_case.get("description", "User")
             gender = "男" if selected_case.get("gender", "男") in ["男", "M", 1] else "女"
@@ -118,16 +132,25 @@ def render_and_collect_input(controller,
         demo_date = datetime.date(1990, 1, 1)
         demo_hour = 12
 
+        user_data = {
+            "name": name,
+            "gender": gender,
+            "date": demo_date,
+            "time": demo_hour,
+            "city": city_for_controller,
+            "enable_solar": True,
+            "longitude": 116.46,
+            "era_factor": era_factor if era_factor else None,
+        }
+
+        particle_weights = controller.get_current_particle_weights() if hasattr(controller, "get_current_particle_weights") else {}
+
         try:
-            controller.set_user_input(
-                name=name,
-                gender=gender,
-                date_obj=demo_date,
-                time_int=demo_hour,
-                city=city_for_controller,
-                enable_solar=True,
-                longitude=116.46,
+            facade.process_and_set_inputs(
+                user_data=user_data,
+                geo_city=city_for_controller,
                 era_factor=era_factor if era_factor else None,
+                particle_weights=particle_weights if particle_weights else None
             )
             st.success("数据与修正因子已同步到 Controller。")
         except Exception as e:

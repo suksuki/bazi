@@ -4,6 +4,11 @@
 
 一个基于三位一体架构的智能八字命理分析系统，将千年玄学转化为可验证的科学代码。
 
+## 🔗 核心架构与工程化文档
+
+* **[系统核心架构 (V14.0)](./docs/ARCHITECTURE.md)**：了解 Facade 模式、三维修正因子 (GEO/ERA/Particle) 的数据流与分层设计。
+* **[待办与维护列表](./TODO.md)**：查看当前的性能优化、Bug 修复与功能增强计划。
+
 [![Version](https://img.shields.io/badge/version-8.8_Modular-blueviolet)](https://github.com/antigravity)
 [![Status](https://img.shields.io/badge/status-Stable-brightgreen)](https://github.com/antigravity)
 [![Architecture](https://img.shields.io/badge/architecture-Trinity-purple)](https://github.com/antigravity)

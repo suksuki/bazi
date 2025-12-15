@@ -3,7 +3,12 @@ import os
 from typing import Dict, Any
 from threading import Lock
 
+from dotenv import load_dotenv
+
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "tuning_params.json")
+
+# 加载 .env 环境变量（若存在）
+load_dotenv()
 
 # 默认参数 (如果文件不存在)
 DEFAULT_CONFIG = {
@@ -34,6 +39,13 @@ class ConfigManager:
     _lock = Lock()
     _cached_config = None
     _last_mtime = 0
+
+    # 环境变量默认值（用于发布/部署相关）
+    ENV_DEFAULTS = {
+        "LLM_API_KEY": "default_llm_key",
+        "DATABASE_URL": "sqlite:///./db.sqlite",
+        "DEPLOYMENT_MODE": "DEV"
+    }
 
     @staticmethod
     def _ensure_dir():
@@ -127,3 +139,12 @@ class ConfigManager:
         """Instance method to mimic dict.get on the root config"""
         cfg = ConfigManager.load_config()
         return cfg.get(key, default)
+
+    @staticmethod
+    def get_env_setting(key: str, default=None):
+        """
+        读取环境变量配置，若不存在则返回默认值（可由 ENV_DEFAULTS 提供）。
+        """
+        if default is None:
+            default = ConfigManager.ENV_DEFAULTS.get(key)
+        return os.getenv(key, default)
