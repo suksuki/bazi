@@ -1,3 +1,28 @@
+# V9.6 项目竣工报告
+
+## 1) 功能总结
+- **P1 智能排盘**：完成八字核心分析（身强/弱判定、五行能量分布、十神组合分析、核心结论与建议），全部通过 Controller 公共 API 获取，数据准确、呈现清晰。
+- **P2 量子验证**：完成 GEO 对比曲线与侧边栏城市选择，使用 `get_geo_comparison()` 等 API，保持调优/校验定位。
+- **P3 命运影院**：完成 GEO 修正下的时间线预测，新增高级 API `run_geo_predictive_timeline()`，提供起始年份/时长输入、Plotly 轨迹图、数据表与缓存统计。
+
+## 2) 架构修正总结
+- **View 净化**：移除所有对底层 Engine/particles 的直接访问，所有计算统一由 Controller 提供（五行能量、柱位能量、粒子审计、GEO 预测等）。
+- **Controller API 扩展**：新增/强化 `get_five_element_energies()`, `get_pillar_energies()`, `get_particle_audit_data()`, `get_balance_suggestion()`, `get_top_ten_gods_summary()`, `get_current_city()`, `run_geo_predictive_timeline()` 等，形成“胖 Controller、瘦 View”的清晰层次。
+- **缓存与性能**：沿用 V9.5 智能缓存，在 P3 时间线预测中直接展示缓存命中统计，性能优化可视化。
+
+## 3) GEO 修正战略总结
+- **全站一致**：P1（修正系数显示）、P2（GEO 对比曲线）、P3（GEO 修正预测）全部经由 Controller GEO 接口统一处理。
+- **城市输入来源**：P3 改为“预测档案”模式，使用真实档案城市，保证预测个性化和准确性。
+- **预测一体化**：`run_geo_predictive_timeline()` 将 GEO 修正融入时间线模拟核心流程，而非附加步骤。
+
+## 4) 下一步展望
+- **部署与监控**：进入部署，开启性能/缓存/错误日志监控，验证生产稳定性。
+- **后续功能方向（可选）**：
+  - P3 深化：增加规划/建议模块（结合情景设定、目标达成路径）。
+  - 数据/模型迭代：引入更精细的 GEO/ERA 动态参数或用户画像权重。
+  - A/B 实验：在 P2/P3 对比不同调优参数的实际预测效果，闭环优化。
+
+> 当前系统在数据准确性、功能完整性、性能与架构纯净度上已达成 V9.6 目标，可进入部署或启动下一阶段规划。
 # V9.5 MVC 架构重构 - 最终交付报告
 ## Final Delivery Report
 
