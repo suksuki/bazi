@@ -220,7 +220,8 @@ class BaziController:
     
     def set_user_input(self, name: str, gender: str, date_obj: datetime.date, 
                        time_int: int, city: str = "Unknown",
-                       enable_solar: bool = True, longitude: float = 116.46) -> None:
+                       enable_solar: bool = True, longitude: float = 116.46,
+                       era_factor: Optional[Dict] = None) -> None:
         """
         Set user input and trigger base calculations.
         
@@ -259,7 +260,8 @@ class BaziController:
                 self._user_input.get('time') != time_int or
                 self._user_input.get('city') != city or
                 self._user_input.get('enable_solar') != enable_solar or
-                self._user_input.get('longitude') != longitude
+                self._user_input.get('longitude') != longitude or
+                self._user_input.get('era_factor') != era_factor
             )
             
             self._user_input = {
@@ -269,7 +271,8 @@ class BaziController:
                 'time': time_int,
                 'city': city,
                 'enable_solar': enable_solar,
-                'longitude': longitude
+                'longitude': longitude,
+                'era_factor': era_factor
             }
             
             self._gender_idx = 1 if "男" in gender else 0
@@ -282,6 +285,15 @@ class BaziController:
             
             # Trigger base calculations
             self._calculate_base()
+
+            # Apply ERA factor if provided and supported by flux engine
+            if era_factor and self._flux_engine and hasattr(self._flux_engine, "set_input_parameters"):
+                try:
+                    self._flux_engine.set_input_parameters(era_factor=era_factor)
+                    logger.info("Applied ERA factor to FluxEngine inputs.")
+                except Exception as e:
+                    logger.warning(f"Failed to apply ERA factor: {e}", exc_info=True)
+
             logger.info("User input set and base calculations completed")
             
         except BaziInputError:
@@ -756,6 +768,15 @@ class BaziController:
         """Return BaziProfile instance."""
         return self._profile
 
+    def get_current_era_factor(self) -> Dict[str, float]:
+        """
+        Return current ERA factor stored in user input.
+        """
+        era = self._user_input.get('era_factor') if self._user_input else None
+        if isinstance(era, dict):
+            return era
+        return {}
+
     def _assemble_llm_prompt_data(self, scenario_data: Dict) -> Dict:
         """
         Assemble prompt payload for LLM planning service.
@@ -806,6 +827,81 @@ class BaziController:
             logger.warning(f"LLM scenario analysis failed: {e}", exc_info=True)
             return {"text_summary": f"LLM 服务调用失败: {e}", "risk_assessment": "", "actionable_steps": ""}
 
+    # =========================================================================
+    # V9.8 Optimal Path Finder
+    # =========================================================================
+    def find_optimal_adjustment_path(self, target_metric: str, target_increase_percent: float,
+                                     flux_data: Optional[Dict] = None, max_iter: int = 50) -> Dict[str, float]:
+        """
+        Heuristic optimal adjustment finder.
+
+        Args:
+            target_metric: Target field, e.g., 'Wealth', 'Career', 'Relationship', 'Health'
+            target_increase_percent: desired increase percentage (e.g., 15 for +15%)
+            flux_data: optional flux data; falls back to cached or recomputed
+            max_iter: iteration budget for refinement (placeholder)
+
+        Returns:
+            Dict of five-element adjustments, e.g., {'Wood': 0.05, 'Fire': -0.02, ...}
+        """
+        # Ensure flux data
+        if flux_data is None:
+            flux_data = self._flux_data or self.get_flux_data()
+
+        if not flux_data:
+            logger.warning("No flux data available for optimal path computation.")
+            return {}
+
+        # Map target_metric to a baseline value
+        metric_map = {
+            'Wealth': lambda d: float(d.get('ZhengCai', 0) + d.get('PianCai', 0)),
+            'Career': lambda d: float(d.get('ZhengGuan', 0) + d.get('QiSha', 0)),
+            'Relationship': lambda d: float(d.get('ShiShen', 0) + d.get('ShangGuan', 0)),
+            'Health': lambda d: float(d.get('ZhengYin', 0) + d.get('PianYin', 0)),
+        }
+
+        get_val = metric_map.get(target_metric, lambda d: 0.0)
+        baseline = get_val(flux_data)
+
+        if baseline <= 0:
+            logger.warning(f"Baseline for {target_metric} is non-positive; cannot optimize meaningfully.")
+            return {}
+
+        gap = baseline * (target_increase_percent / 100.0)
+        target_value = baseline + gap
+
+        # Simple heuristic: distribute adjustment proportional to gap across elements
+        # Positive gap -> boost nourishing elements; negative gap -> reduce controlling elements
+        # This is a placeholder; can be replaced by a real optimizer later.
+        element_adjustments = {e: 0.0 for e in ['Wood', 'Fire', 'Earth', 'Metal', 'Water']}
+
+        # Determine primary element influence per metric (simplified mapping)
+        primary_element = {
+            'Wealth': 'Metal',       # 偏财/正财
+            'Career': 'Water',       # 官杀
+            'Relationship': 'Fire',  # 食伤在火 (示例)
+            'Health': 'Earth',       # 印星偏土 (示例)
+        }.get(target_metric, 'Earth')
+
+        # Apply a bounded proportional adjustment
+        delta = min(max(gap / max(baseline, 1e-3) * 0.3, -0.3), 0.3)  # cap at ±30%
+
+        element_adjustments[primary_element] = round(delta, 3)
+
+        # Spread a small counterbalance to the generating element to stabilize
+        generate_map = {
+            'Wood': 'Water',
+            'Fire': 'Wood',
+            'Earth': 'Fire',
+            'Metal': 'Earth',
+            'Water': 'Metal'
+        }
+        gen_elem = generate_map.get(primary_element)
+        if gen_elem:
+            element_adjustments[gen_elem] = round(delta * 0.3, 3)
+
+        logger.info(f"Optimal path heuristic result for {target_metric}: {element_adjustments}, target={target_value:.2f}")
+        return element_adjustments
     def get_current_city(self) -> str:
         """
         Get current city stored in controller (fallback to 'Unknown').

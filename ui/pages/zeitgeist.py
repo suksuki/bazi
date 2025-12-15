@@ -408,34 +408,40 @@ def render():
 
     st.write(f"> {narrative}")
 
-    # --- FUTURE TRAJECTORY: Controller-based cached simulation ---
+    # --- FUTURE TRAJECTORY: GEO-corrected predictive timeline via Controller ---
     st.markdown("---")
-    st.subheader("🔮 未来能量轨迹 (Future Trajectory)")
-    st.caption("基于 Controller.run_timeline_simulation 的智能缓存，快速获取未来走势。")
+    st.subheader("🔮 未来能量轨迹分析 (Timeline Simulation)")
+    st.caption("使用 Controller.run_geo_predictive_timeline（含智能缓存与 GEO 修正）")
     
     col_ft1, col_ft2 = st.columns(2)
+    current_year = datetime.datetime.now().year
     with col_ft1:
-        start_year = st.number_input("起始年份 (Start Year)", 1900, 2100, selected_year)
+        start_year = st.number_input("起始年份", min_value=1900, max_value=2100, value=current_year, step=1)
     with col_ft2:
-        duration = st.slider("模拟时长 (年)", 1, 30, 10)
+        duration = st.slider("模拟时长 (年)", min_value=1, max_value=30, value=10)
     
     controller = get_controller_for_case(selected_case, selected_city)
-    
     if controller:
-        if st.button("生成未来轨迹", type="primary"):
+        loaded_city_for_geo = controller.get_current_city()
+        
+        if st.button("🚀 开始时间线预测 (含 GEO 修正)", type="primary"):
+            st.info(f"正在模拟 {loaded_city_for_geo or '无GEO修正'} 下从 {start_year} 年开始的 {duration} 年能量轨迹...")
             with st.spinner("计算中 (使用缓存优先)..."):
                 try:
-                    traj_df, handovers = controller.run_timeline_simulation(start_year, duration, use_cache=True)
+                    simulation_data = controller.run_geo_predictive_timeline(
+                        start_year=start_year,
+                        duration=duration,
+                        geo_correction_city=loaded_city_for_geo
+                    )
                     
-                    if traj_df is None or traj_df.empty:
-                        st.warning("⚠️ 无法生成未来轨迹数据。")
-                    else:
+                    if simulation_data is not None and not simulation_data.empty:
+                        st.success("✅ 预测模拟成功完成！")
                         fig_ft = go.Figure()
-                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['career'], name='Career', line=dict(color='#00E5FF', width=3)))
-                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['wealth'], name='Wealth', line=dict(color='#FFD700', width=3)))
-                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['relationship'], name='Relationship', line=dict(color='#F50057', width=3)))
+                        fig_ft.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['career'], name='Career', line=dict(color='#00E5FF', width=3)))
+                        fig_ft.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['wealth'], name='Wealth', line=dict(color='#FFD700', width=3)))
+                        fig_ft.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['relationship'], name='Relationship', line=dict(color='#F50057', width=3)))
                         fig_ft.update_layout(
-                            title=f"未来 {duration} 年能量轨迹 ({start_year} 起)",
+                            title=f"未来 {duration} 年能量轨迹 ({start_year} 起，GEO: {loaded_city_for_geo})",
                             xaxis_title="年份 (Year)",
                             yaxis_title="能量值 (Energy)",
                             hovermode="x unified",
@@ -445,11 +451,170 @@ def render():
                         st.plotly_chart(fig_ft, width='stretch')
                         
                         with st.expander("📋 轨迹数据表"):
-                            st.dataframe(traj_df, use_container_width=True)
+                            st.dataframe(simulation_data, width='stretch')
+                        
+                        # Cache stats
+                        stats = controller.get_cache_stats()
+                        hits = stats.get('hits', 0)
+                        misses = stats.get('misses', 0)
+                        cache_size = stats.get('size', 0)
+                        hit_rate = (hits / (hits + misses) * 100) if (hits + misses) > 0 else 0.0
+                        st.caption(f"缓存命中: {hits}, 未命中: {misses}, 命中率: {hit_rate:.2f}%, 缓存条目: {cache_size}")
+                    else:
+                        st.warning("⚠️ 模拟未返回有效数据。")
                 except Exception as e:
-                    st.error(f"未来轨迹计算失败: {e}")
+                    st.error(f"❌ 预测模拟发生错误: {e}")
     else:
         st.warning("⚠️ 无法初始化 Controller，未来轨迹功能不可用。")
+
+    # --- SCENARIO + LLM PLANNING ---
+    st.markdown("---")
+    st.subheader("✨ 情景模拟与智能规划 (LLM)")
+    st.caption("运行 GEO 修正时间线后，调用 LLM 生成规划建议")
+
+    scenario_tag = st.text_input("情景标签 (Scenario Tag)", value="默认情景")
+    st.markdown("#### 🎯 目标五行调整 (±50 为范围，单位为相对比例)")
+    c_wood, c_fire, c_earth, c_metal, c_water = st.columns(5)
+    adj_wood = c_wood.slider("木", -50, 50, 0, 5)
+    adj_fire = c_fire.slider("火", -50, 50, 0, 5)
+    adj_earth = c_earth.slider("土", -50, 50, 0, 5)
+    adj_metal = c_metal.slider("金", -50, 50, 0, 5)
+    adj_water = c_water.slider("水", -50, 50, 0, 5)
+
+    target_adjustment = {
+        "Wood": adj_wood,
+        "Fire": adj_fire,
+        "Earth": adj_earth,
+        "Metal": adj_metal,
+        "Water": adj_water,
+    }
+
+    if controller and st.button("✨ 运行情景模拟", type="primary"):
+        st.info("正在运行 GEO/LLM 混合模拟...")
+        with st.spinner("计算中..."):
+            try:
+                # 1) 运行时间线模拟（含 GEO，使用当前城市）
+                loaded_city_for_geo = controller.get_current_city()
+                simulation_data = controller.run_geo_predictive_timeline(
+                    start_year=start_year,
+                    duration=duration,
+                    geo_correction_city=loaded_city_for_geo,
+                )
+
+                if simulation_data is None or simulation_data.empty:
+                    st.warning("⚠️ 模拟未返回有效数据。")
+                else:
+                    # 2) 准备 LLM 输入
+                    # 基础八字数据与五行能量（用于上下文）
+                    base_chart_data = controller.get_user_data()
+                    flux_data = controller.get_flux_data()
+                    element_energies = controller.get_five_element_energies(flux_data)
+
+                    scenario_data_payload = {
+                        "scenario_tag": scenario_tag,
+                        "base_chart_data": base_chart_data,
+                        "simulated_timeline": simulation_data.to_dict(orient="records"),
+                        "target_adjustment": target_adjustment,
+                        "element_energies": element_energies,
+                    }
+
+                    # 3) 调用 LLM 分析
+                    llm_analysis = controller.get_llm_scenario_analysis(scenario_data_payload)
+
+                    st.success("✅ 规划模拟与分析成功完成！")
+
+                    # 4) 渲染 LLM 输出
+                    st.header(f"🤖 智能规划师分析：{scenario_tag}")
+                    st.markdown("---")
+
+                    st.subheader("💡 核心总结")
+                    st.markdown(llm_analysis.get("text_summary", "LLM 服务返回总结失败。"))
+
+                    st.subheader("✅ 可执行步骤 (Actionable Steps)")
+                    st.success(llm_analysis.get("actionable_steps", "无具体建议。"))
+
+                    st.subheader("⚠️ 潜在风险评估")
+                    st.warning(llm_analysis.get("risk_assessment", "风险评估不可用。"))
+
+                    # 5) 可视化：再绘制一次情景轨迹
+                    fig_s = go.Figure()
+                    fig_s.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['career'], name='Career', line=dict(color='#00E5FF', width=3)))
+                    fig_s.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['wealth'], name='Wealth', line=dict(color='#FFD700', width=3)))
+                    fig_s.add_trace(go.Scatter(x=simulation_data['year'], y=simulation_data['relationship'], name='Relationship', line=dict(color='#F50057', width=3)))
+                    fig_s.update_layout(
+                        title=f"情景模拟轨迹: {scenario_tag} (GEO: {loaded_city_for_geo})",
+                        xaxis_title="年份 (Year)",
+                        yaxis_title="能量值 (Energy)",
+                        hovermode="x unified",
+                        height=350,
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                    )
+                    st.plotly_chart(fig_s, width='stretch')
+
+                    with st.expander("📋 情景数据表"):
+                        st.dataframe(simulation_data, width='stretch')
+
+                    # 6) 可选：展示原始 payload
+                    with st.expander("🔍 调试 / LLM Payload"):
+                        st.json(scenario_data_payload)
+
+            except Exception as e:
+                st.error(f"❌ 模拟或 LLM 服务发生错误: {e}")
+    elif not controller:
+        st.warning("⚠️ 无法初始化 Controller，情景模拟不可用。")
+
+    # --- OPTIMAL PATH FINDER ---
+    st.markdown("---")
+    st.subheader("🌟 目标路径推荐 (Optimal Path Finder)")
+    st.caption("系统将自动计算达成目标所需的最优五行干预组合。")
+
+    target_metric = st.selectbox(
+        "选择优化目标",
+        options=["财富 (Wealth)", "事业 (Career)", "情感 (Relationship)", "健康 (Health)"],
+        index=0
+    )
+
+    target_increase = st.slider("期望提升幅度 (%)", min_value=1, max_value=30, value=15, step=1)
+
+    if st.button("🔍 查找最优调整组合"):
+        st.info(f"正在为目标 **{target_metric}** 提升 **{target_increase}%** 查找最优调整路径...")
+        try:
+            optimal_adjustment = controller.find_optimal_adjustment_path(
+                target_metric=target_metric.replace(" (Wealth)", "").replace(" (Career)", "").replace(" (Relationship)", "").replace(" (Health)", ""),
+                target_increase_percent=target_increase
+            )
+            
+            if optimal_adjustment:
+                st.success("✨ 最优五行调整组合已找到！")
+                
+                st.subheader("📊 推荐干预组合")
+                cols = st.columns(5)
+                elements = ['Wood', 'Fire', 'Earth', 'Metal', 'Water']
+                
+                for i, element in enumerate(elements):
+                    adjustment_value = optimal_adjustment.get(element, 0.0)
+                    adjustment_percent = adjustment_value * 100
+                    
+                    if adjustment_percent > 0:
+                        color = "normal"
+                    elif adjustment_percent < 0:
+                        color = "inverse"
+                    else:
+                        color = "off"
+                    
+                    cols[i].metric(
+                        label=f"{element} 调整", 
+                        value=f"{adjustment_percent:+.2f}%",
+                        delta=None,
+                        delta_color=color
+                    )
+
+                st.markdown("---")
+                st.info("💡 提示：可将此推荐组合填入上方情景设定后运行模拟，查看对未来轨迹的影响。")
+            else:
+                st.warning("未能找到最优调整组合。请尝试调整目标或幅度。")
+        except Exception as e:
+            st.error(f"❌ 最优路径查找错误: {e}")
 
     # --- 4. LIFE HOLOGRAPHY (Restored Dimensions) ---
     st.markdown("---")

@@ -542,6 +542,17 @@ def render():
         
         era_bon = st.slider("时代红利 (Bonus)", 0.0, 0.5, mp['eraBonus'], 0.1, key='mp_eb')
         era_pen = st.slider("时代阻力 (Penalty)", 0.0, 0.5, mp['eraPenalty'], 0.1, key='mp_ep')
+
+        st.markdown("#### 🌐 时代修正因子 (ERA Factor)")
+        st.caption("调整五行能量基线，模拟宏观环境影响。")
+
+        col_wood, col_fire, col_earth, col_metal, col_water = st.columns(5)
+        era_adjustment = {}
+        era_adjustment['Wood'] = col_wood.slider("木 (ERA %)", -10, 10, 0, key='era_wood') / 100
+        era_adjustment['Fire'] = col_fire.slider("火 (ERA %)", -10, 10, 0, key='era_fire') / 100
+        era_adjustment['Earth'] = st.slider("土 (ERA %)", -10, 10, 0, key='era_earth') / 100
+        era_adjustment['Metal'] = st.slider("金 (ERA %)", -10, 10, 0, key='era_metal') / 100
+        era_adjustment['Water'] = st.slider("水 (ERA %)", -10, 10, 0, key='era_water') / 100
         
         st.caption("地理与时间 (Geo & Time)")
         
@@ -746,12 +757,37 @@ def render():
     # V9.5 MVC: Controller instance (for GEO comparison)
     controller = BaziController()  # V9.6: Enable for GEO comparison feature
     
+    # Collect ERA adjustment from sidebar (stored in session_state)
+    era_adjustment = {
+        'Wood': st.session_state.get('era_wood', 0) / 100,
+        'Fire': st.session_state.get('era_fire', 0) / 100,
+        'Earth': st.session_state.get('era_earth', 0) / 100,
+        'Metal': st.session_state.get('era_metal', 0) / 100,
+        'Water': st.session_state.get('era_water', 0) / 100,
+    }
+    
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
         engine.update_config(st.session_state['algo_config'])
         
     if 'full_algo_config' in st.session_state:
         engine.update_full_config(st.session_state['full_algo_config'])
+
+    # === V9.9: Refresh Controller input with ERA factor ===
+    # For P2 lab, use a default demo profile (can be replaced with selected case inputs)
+    demo_date = datetime.date(1990, 1, 1)
+    demo_hour = 12
+    demo_city = "Beijing"
+    controller.set_user_input(
+        name="LabUser",
+        gender="男",
+        date_obj=demo_date,
+        time_int=demo_hour,
+        city=demo_city,
+        enable_solar=True,
+        longitude=116.46,
+        era_factor=era_adjustment
+    )
 
     # --- UI HEADER ---
     st.title("🧪 量子八字 V8.0 验证工作台 (Phase Change)")
