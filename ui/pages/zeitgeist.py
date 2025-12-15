@@ -14,6 +14,9 @@ from core.engine_v91 import EngineV91
 from core.context import DestinyContext
 from core.bazi_profile import VirtualBaziProfile, BaziProfile
 
+# V9.5 MVC Controller (for standard data access)
+from controllers.bazi_controller import BaziController
+
 # Load Constants
 GOLDEN_PARAMS_PATH = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
 CALIBRATION_CASES_PATH = os.path.join(os.path.dirname(__file__), '../../data/calibration_cases.json')

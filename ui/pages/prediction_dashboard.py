@@ -14,14 +14,15 @@ from ui.components.styles import (
     get_nature_color
 )
 
-# Core Imports
-from core.calculator import BaziCalculator
-from core.flux import FluxEngine
-from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Engine
+# Core Imports (V9.5 MVC: Models accessed via Controller)
+from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 for VERSION display only
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 from core.bazi_profile import BaziProfile
 from ui.components.cards import DestinyCards
+
+# MVC Controller Import
+from controllers.bazi_controller import BaziController
 
 
 
@@ -41,17 +42,22 @@ def render_prediction_dashboard():
     st.sidebar.header("🌍 时空坐标 (Spacetime)")
     city = st.sidebar.selectbox("出生城市 (City)", ["Unknown", "Harbin", "Beijing", "Shanghai", "Guangzhou", "Singapore", "Sydney"], index=0)
     
-    # 1. Basic Calculation (The Chart)
+    # 1. Basic Calculation (The Chart) - V9.5 MVC: Via Controller
     enable_solar = st.session_state.get('input_enable_solar_time', True)
     longitude = st.session_state.get('input_longitude', 116.46) if enable_solar else 120.0
     
-    calc = BaziCalculator(d.year, d.month, d.day, t, 0, longitude=longitude)
-    chart = calc.get_chart()
-    details = calc.get_details()
+    # === V9.5 MVC: Initialize Controller ===
+    controller = BaziController()
+    controller.set_user_input(name, gender, d, t, city, enable_solar, longitude)
     
-    # Luck Cycles
-    gender_idx = 1 if "男" in gender else 0
-    luck_cycles = calc.get_luck_cycles(gender_idx)
+    # Get data from Controller (replaces direct BaziCalculator calls)
+    chart = controller.get_chart()
+    details = controller.get_details()
+    calc = controller.get_calculator()  # For backward compatibility with advanced features
+    
+    # Luck Cycles (via Controller)
+    gender_idx = controller.get_gender_idx()
+    luck_cycles = controller.get_luck_cycles()
     
     # [V9.3 UI] Sidebar Chart Summary
     st.sidebar.markdown("---")
@@ -176,25 +182,11 @@ def render_prediction_dashboard():
         
     current_gan_zhi = ln_gan_zhi # Focus on Liu Nian for Physics
     
-    # 4. Engine Execution (Flux -> Quantum V2.4)
+    # 4. Engine Execution (Flux -> Quantum V2.4) - V9.5 MVC via Controller
     
-    # A. FluxEngine (Sensor Layer)
-    flux_engine = FluxEngine(chart)
-    
-    # Prepare Environment
-    dy_dict = None
-    if selected_yun:
-        gz = selected_yun['gan_zhi']
-        if len(gz) >= 2: dy_dict = {'stem': gz[0], 'branch': gz[1]}
-        
-    ln_dict = None
-    if current_gan_zhi and len(current_gan_zhi) >= 2:
-        ln_dict = {'stem': current_gan_zhi[0], 'branch': current_gan_zhi[1]}
-        
-    flux_engine.set_environment(dy_dict, ln_dict)
-    
-    # Run Calculation
-    flux_data = flux_engine.compute_energy_state()
+    # A. FluxEngine (Sensor Layer) - Via Controller
+    flux_data = controller.get_flux_data(selected_yun, current_gan_zhi)
+    flux_engine = controller.get_flux_engine()  # Reference for particle access
     dynamic_gods_map = flux_data
     
     # DEBUG: Inspect Flux Data
@@ -330,10 +322,10 @@ def render_prediction_dashboard():
         'city': city # V9.1 Geo Input (Now Guaranteed)
     }
     
-    # 3. Execute Quantum Engine
-    engine = QuantumEngine() # V9.1 Auto-loads configuration
+    # 3. Execute Quantum Engine - V9.5 MVC via Controller
+    engine = controller.get_quantum_engine()  # Reference for advanced features (geo, timeline)
     dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else ''}
-    results = engine.calculate_energy(case_data, dynamic_context)
+    results = controller.run_single_year_simulation(case_data, dynamic_context)
     
     # === V9.1 Destiny Cinema: Diagnostic HUD ===
     st.markdown("### 🧬 命运诊断 (Diagnostics)")
@@ -374,9 +366,9 @@ def render_prediction_dashboard():
     career_info = domains.get('career', {})
     d_col3.info(f"⚔️ 事业判定: {career_info.get('reason', 'Normal')}")
     
-    # Geo Effect
+    # Geo Effect - V9.5 MVC via Controller
     if city != "Unknown":
-        geo_mods = engine.geo.process(city)
+        geo_mods = controller.get_geo_modifiers(city)
         if geo_mods:
              st.caption(f"📍 地理修正: {geo_mods.get('desc')} (Applied to Energy Map)")
     
@@ -628,9 +620,7 @@ def render_prediction_dashboard():
                 # Debug: 显示使用的出生信息
                 st.caption(f"计算基准: {birth_year}年{birth_month}月{birth_day}日 {birth_hour}时 (性别:{gender})")
                 
-                timeline = engine.get_luck_timeline(
-                    birth_year, birth_month, birth_day, birth_hour, gender, num_steps=10
-                )
+                timeline = controller.get_luck_timeline(num_steps=10)  # V9.5 MVC
                 
                 if timeline:
                     st.success("✅ 成功生成大运时间表：")
@@ -647,9 +637,7 @@ def render_prediction_dashboard():
                 # 重新计算每年的大运（用于调试）
                 for y in range(sim_year, sim_year + 12):
                     try:
-                        luck = engine.get_dynamic_luck_pillar(
-                            birth_year, birth_month, birth_day, birth_hour, gender, y
-                        )
+                        luck = controller.get_dynamic_luck_pillar(y)  # V9.5 MVC
                         year_luck_tracking.append(f"{y}: `{luck}`")
                     except:
                         year_luck_tracking.append(f"{y}: ❌ 计算失败")

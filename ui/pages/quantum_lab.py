@@ -12,6 +12,9 @@ from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
+# V9.5 MVC Controller (for standard data access)
+from controllers.bazi_controller import BaziController
+
 # === Trinity V6.0 Helper Functions ===
 
 def create_profile_from_case(case: dict, luck_pillar: str) -> VirtualBaziProfile:
@@ -714,8 +717,12 @@ def render():
         save_params_to_disk(current_params)
 
     # --- MAIN ENGINE SETUP ---
-    engine = QuantumEngine() # V9.1: No args, config follows
-    # engine.config.update(current_params) # Optional: if needed to map sliders immediately
+    # V9.5 MVC Note: This is a Calibration Tool requiring direct engine access.
+    # Controller is available for standard operations, but engine is exposed for tuning.
+    engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
+    
+    # V9.5 MVC: Controller instance (for future migration)
+    # controller = BaziController()  # Uncomment when ready to use Controller API
     
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
