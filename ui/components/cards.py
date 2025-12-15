@@ -120,20 +120,23 @@ class DestinyCards:
         pass
 
     @staticmethod
-    def render_bazi_table_with_engine(chart, selected_yun, current_gan_zhi, flux_engine, scale=0.08, wang_shuai_str=""):
+    def render_bazi_table_with_engine(chart, selected_yun, current_gan_zhi, pe_list, scale=0.08, wang_shuai_str=""):
         """
-        Renders the Four Pillars table using Flux Engine for energy values.
+        Renders the Four Pillars table using pre-calculated pillar energies.
+        
+        V9.6 Architecture Fix: Changed from accepting flux_engine to accepting pe_list
+        to maintain View layer purity. All calculation logic should be in Controller.
+        
+        Args:
+            chart: Bazi chart dictionary
+            selected_yun: Selected Da Yun dict
+            current_gan_zhi: Current Liu Nian GanZhi string
+            pe_list: Pre-calculated pillar energies list [year_stem, year_branch, ..., hour_branch]
+            scale: Scaling factor (kept for compatibility, but pe_list should already be scaled)
+            wang_shuai_str: Wang/Shuai strength string
         """
-        # Prepare Pillar Energies
-        pe = []
-        p_order = ["year_stem", "year_branch", "month_stem", "month_branch", "day_stem", "day_branch", "hour_stem", "hour_branch"]
-        for pid in p_order:
-            val = 0.0
-            for p in flux_engine.particles:
-                if p.id == pid:
-                    val = p.wave.amplitude * scale 
-                    break
-            pe.append(round(val, 1))
+        # Use provided pillar energies (already calculated by Controller)
+        pe = pe_list if pe_list and len(pe_list) == 8 else [0.0] * 8
         
         # Extract Chart Data (Repeated logic, but cleaner to have it all here)
         y_s = chart.get('year',{}).get('stem','?')

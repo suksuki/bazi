@@ -14,6 +14,8 @@ View components (P1, P2, P3) should ONLY interact with this controller.
 import datetime
 import copy
 import pandas as pd
+import logging
+import time
 from typing import Dict, List, Tuple, Optional, Any
 
 # Model Imports
@@ -21,6 +23,16 @@ from core.calculator import BaziCalculator
 from core.flux import FluxEngine
 from core.engine_v91 import EngineV91 as QuantumEngine
 from core.bazi_profile import BaziProfile
+from core.exceptions import (
+    BaziCalculationError,
+    BaziInputError,
+    BaziDataError,
+    BaziEngineError,
+    BaziCacheError
+)
+
+# Configure logger for BaziController
+logger = logging.getLogger("BaziController")
 
 
 class BaziController:
@@ -37,23 +49,162 @@ class BaziController:
     
     def __init__(self):
         """Initialize controller with lazy-loaded models."""
-        # Models (Lazy Initialization)
-        self._calc: Optional[BaziCalculator] = None
-        self._flux_engine: Optional[FluxEngine] = None
-        self._quantum_engine: Optional[QuantumEngine] = None
-        self._profile: Optional[BaziProfile] = None
+        logger.info(f"Initializing {self.VERSION} Controller...")
         
-        # State Cache
-        self._user_input: Dict[str, Any] = {}
-        self._chart: Optional[Dict] = None
-        self._luck_cycles: Optional[List] = None
-        self._flux_data: Optional[Dict] = None
-        self._details: Optional[Dict] = None
+        try:
+            # Models (Lazy Initialization)
+            self._calc: Optional[BaziCalculator] = None
+            self._flux_engine: Optional[FluxEngine] = None
+            self._quantum_engine: Optional[QuantumEngine] = None
+            self._profile: Optional[BaziProfile] = None
+            
+            # State Cache
+            self._user_input: Dict[str, Any] = {}
+            self._chart: Optional[Dict] = None
+            self._luck_cycles: Optional[List] = None
+            self._flux_data: Optional[Dict] = None
+            self._details: Optional[Dict] = None
+            
+            # Computed State
+            self._gender_idx: int = 1
+            self._city: str = "Unknown"
+            
+            # V9.5 Performance Optimization: Cache era multipliers to avoid file I/O
+            self._era_multipliers: Dict[str, float] = {}
+            self._load_era_multipliers()
+            logger.debug(f"Era multipliers loaded: {len(self._era_multipliers)} elements")
+            
+            # V9.5 Performance Optimization: Smart result caching
+            self._timeline_cache: Dict[str, Tuple[pd.DataFrame, List[Dict]]] = {}
+            self._cache_stats: Dict[str, int] = {
+                'hits': 0,
+                'misses': 0,
+                'invalidations': 0
+            }
+            
+            logger.info(f"{self.VERSION} Controller initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize controller: {e}", exc_info=True)
+            raise BaziEngineError(
+                "控制器初始化失败",
+                f"Initialization error: {str(e)}"
+            )
+    
+    # =========================================================================
+    # Performance Optimization: Era Multipliers Cache
+    # =========================================================================
+    
+    def _load_era_multipliers(self) -> None:
+        """
+        Load era multipliers from file and cache in memory.
         
-        # Computed State
-        self._gender_idx: int = 1
-        self._city: str = "Unknown"
+        V9.5 Performance Optimization: This eliminates repeated file I/O operations
+        that were causing 20.33% performance overhead.
+        """
+        import os
+        import json
         
+        try:
+            # Calculate era_constants.json path
+            # From controllers/ -> project root -> data/
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            era_path = os.path.join(project_root, "data", "era_constants.json")
+            
+            if os.path.exists(era_path):
+                with open(era_path, 'r', encoding='utf-8') as f:
+                    era_data = json.load(f)
+                    self._era_multipliers = era_data.get('physics_multipliers', {})
+                logger.debug(f"Era multipliers loaded from {era_path}")
+            else:
+                # Default multipliers if file doesn't exist
+                self._era_multipliers = {}
+                logger.warning(f"Era constants file not found: {era_path}, using defaults")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse era constants JSON: {e}")
+            self._era_multipliers = {}
+        except Exception as e:
+            # Fallback to empty dict on any error
+            logger.error(f"Error loading era multipliers: {e}", exc_info=True)
+            self._era_multipliers = {}
+    
+    def get_era_multipliers(self) -> Dict[str, float]:
+        """
+        Get cached era multipliers.
+        
+        Returns:
+            Dictionary of element multipliers, e.g., {'fire': 1.25, 'water': 0.85}
+        """
+        return self._era_multipliers.copy()
+    
+    # =========================================================================
+    # Performance Optimization: Smart Result Caching
+    # =========================================================================
+    
+    def _generate_cache_key(self, start_year: int, duration: int, 
+                           params: Optional[Dict] = None) -> str:
+        """
+        Generate a unique cache key for timeline simulation.
+        
+        Args:
+            start_year: Starting year for simulation
+            duration: Number of years to simulate
+            params: Optional golden parameters
+            
+        Returns:
+            Cache key string
+        """
+        import hashlib
+        import json
+        
+        # Build key components
+        key_data = {
+            'user_input': self._user_input,
+            'start_year': start_year,
+            'duration': duration,
+            'params': params or {}
+        }
+        
+        # Create hash from key data
+        key_str = json.dumps(key_data, sort_keys=True, default=str)
+        key_hash = hashlib.md5(key_str.encode('utf-8')).hexdigest()
+        
+        return f"timeline_{key_hash}"
+    
+    def _invalidate_cache(self) -> None:
+        """
+        Invalidate all cached timeline simulation results.
+        Called when user input changes.
+        """
+        if self._timeline_cache:
+            cache_size = len(self._timeline_cache)
+            self._cache_stats['invalidations'] += cache_size
+            self._timeline_cache.clear()
+            logger.info(f"Cache invalidated: {cache_size} entries cleared")
+    
+    def get_cache_stats(self) -> Dict[str, int]:
+        """
+        Get cache statistics for monitoring.
+        
+        Returns:
+            Dictionary with cache statistics (hits, misses, invalidations, size)
+        """
+        stats = self._cache_stats.copy()
+        stats['size'] = len(self._timeline_cache)
+        stats['hit_rate'] = (
+            self._cache_stats['hits'] / 
+            (self._cache_stats['hits'] + self._cache_stats['misses'])
+            if (self._cache_stats['hits'] + self._cache_stats['misses']) > 0 
+            else 0.0
+        )
+        return stats
+    
+    def clear_cache(self) -> None:
+        """
+        Manually clear all cached results.
+        Useful for memory management or forced recalculation.
+        """
+        self._invalidate_cache()
+    
     # =========================================================================
     # Input Management
     # =========================================================================
@@ -72,48 +223,118 @@ class BaziController:
             city: Birth city for geo correction
             enable_solar: Enable solar time correction
             longitude: Longitude for solar time
+            
+        Raises:
+            BaziInputError: If input validation fails
+            BaziCalculationError: If base calculation fails
         """
-        self._user_input = {
-            'name': name,
-            'gender': gender,
-            'date': date_obj,
-            'time': time_int,
-            'city': city,
-            'enable_solar': enable_solar,
-            'longitude': longitude
-        }
+        logger.info(f"Setting user input: name={name}, gender={gender}, date={date_obj}, time={time_int}, city={city}")
         
-        self._gender_idx = 1 if "男" in gender else 0
-        self._city = city if city and city.lower() not in ['unknown', 'none', ''] else "Beijing"
-        
-        # Trigger base calculations
-        self._calculate_base()
+        try:
+            # Input validation
+            if not name or not name.strip():
+                raise BaziInputError("用户姓名不能为空", "name parameter is empty")
+            if gender not in ["男", "女"]:
+                raise BaziInputError(f"性别参数无效: {gender}", f"gender must be '男' or '女', got '{gender}'")
+            if not isinstance(date_obj, datetime.date):
+                raise BaziInputError("日期格式无效", f"date_obj must be datetime.date, got {type(date_obj)}")
+            if not (0 <= time_int <= 23):
+                raise BaziInputError(f"时间参数无效: {time_int}", "time_int must be between 0 and 23")
+            
+            # V9.5: Check if input actually changed to avoid unnecessary cache invalidation
+            input_changed = (
+                not self._user_input or
+                self._user_input.get('name') != name or
+                self._user_input.get('gender') != gender or
+                self._user_input.get('date') != date_obj or
+                self._user_input.get('time') != time_int or
+                self._user_input.get('city') != city or
+                self._user_input.get('enable_solar') != enable_solar or
+                self._user_input.get('longitude') != longitude
+            )
+            
+            self._user_input = {
+                'name': name,
+                'gender': gender,
+                'date': date_obj,
+                'time': time_int,
+                'city': city,
+                'enable_solar': enable_solar,
+                'longitude': longitude
+            }
+            
+            self._gender_idx = 1 if "男" in gender else 0
+            self._city = city if city and city.lower() not in ['unknown', 'none', ''] else "Beijing"
+            
+            # V9.5: Invalidate cache if input changed
+            if input_changed:
+                logger.info("User input changed, invalidating cache")
+                self._invalidate_cache()
+            
+            # Trigger base calculations
+            self._calculate_base()
+            logger.info("User input set and base calculations completed")
+            
+        except BaziInputError:
+            raise
+        except Exception as e:
+            logger.error(f"Error setting user input: {e}", exc_info=True)
+            raise BaziCalculationError(
+                "设置用户输入时发生错误",
+                f"Error in set_user_input: {str(e)}"
+            )
         
     def _calculate_base(self) -> None:
         """Internal: Calculate base chart and initialize engines."""
         if not self._user_input:
+            logger.warning("_calculate_base called without user input")
             return
+        
+        try:
+            logger.debug("Starting base calculations...")
+            start_time = time.time()
             
-        d = self._user_input['date']
-        t = self._user_input['time']
-        lng = self._user_input.get('longitude', 120.0)
-        
-        # 1. BaziCalculator
-        self._calc = BaziCalculator(d.year, d.month, d.day, t, 0, longitude=lng)
-        self._chart = self._calc.get_chart()
-        self._details = self._calc.get_details()
-        self._luck_cycles = self._calc.get_luck_cycles(self._gender_idx)
-        
-        # 2. FluxEngine
-        self._flux_engine = FluxEngine(self._chart)
-        
-        # 3. QuantumEngine (Singleton-like)
-        if self._quantum_engine is None:
-            self._quantum_engine = QuantumEngine()
+            d = self._user_input['date']
+            t = self._user_input['time']
+            lng = self._user_input.get('longitude', 120.0)
             
-        # 4. BaziProfile
-        birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
-        self._profile = BaziProfile(birth_dt, self._gender_idx)
+            # 1. BaziCalculator
+            logger.debug(f"Initializing BaziCalculator: {d.year}-{d.month}-{d.day} {t}:00")
+            self._calc = BaziCalculator(d.year, d.month, d.day, t, 0, longitude=lng)
+            self._chart = self._calc.get_chart()
+            self._details = self._calc.get_details()
+            self._luck_cycles = self._calc.get_luck_cycles(self._gender_idx)
+            
+            if not self._chart:
+                raise BaziDataError("排盘结果为空", "BaziCalculator returned empty chart")
+            
+            logger.debug(f"Chart calculated: {len(self._chart)} pillars")
+            
+            # 2. FluxEngine
+            logger.debug("Initializing FluxEngine...")
+            self._flux_engine = FluxEngine(self._chart)
+            
+            # 3. QuantumEngine (Singleton-like)
+            if self._quantum_engine is None:
+                logger.debug("Initializing QuantumEngine...")
+                self._quantum_engine = QuantumEngine()
+                
+            # 4. BaziProfile
+            logger.debug("Creating BaziProfile...")
+            birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
+            self._profile = BaziProfile(birth_dt, self._gender_idx)
+            
+            elapsed = time.time() - start_time
+            logger.info(f"Base calculations completed in {elapsed:.4f} seconds")
+            
+        except BaziDataError:
+            raise
+        except Exception as e:
+            logger.error(f"Error in base calculations: {e}", exc_info=True)
+            raise BaziCalculationError(
+                "基础计算失败",
+                f"Error in _calculate_base: {str(e)}"
+            )
         
     # =========================================================================
     # Chart & Basic Data Accessors
@@ -201,7 +422,8 @@ class BaziController:
         
     def run_timeline_simulation(self, start_year: int, duration: int = 12,
                                 case_data: Optional[Dict] = None,
-                                params: Optional[Dict] = None) -> Tuple[pd.DataFrame, List[Dict]]:
+                                params: Optional[Dict] = None,
+                                use_cache: bool = True) -> Tuple[pd.DataFrame, List[Dict]]:
         """
         Run multi-year timeline simulation.
         
@@ -210,78 +432,154 @@ class BaziController:
             duration: Number of years to simulate
             case_data: Pre-built case data (optional, will build if None)
             params: Golden parameters (optional)
+            use_cache: Whether to use cached results (default: True)
             
         Returns:
             Tuple of (trajectory DataFrame, handover_years list)
+            
+        Raises:
+            BaziDataError: If required data is missing
+            BaziCalculationError: If simulation fails
         """
-        if not self._quantum_engine or not self._profile:
-            return pd.DataFrame(), []
-            
-        # Build case_data if not provided
-        if case_data is None:
-            case_data = self._build_case_data(params)
-            
-        # GanZhi calculation helpers
-        gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-        zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-        base_year = 1924
+        logger.info(f"Starting timeline simulation: start_year={start_year}, duration={duration}, use_cache={use_cache}")
+        start_time = time.time()
         
-        traj_data = []
-        handover_years = []
-        
-        # Initialize prev_luck to detect handovers correctly
-        prev_luck = self._profile.get_luck_pillar_at(start_year - 1)
-        
-        for y in range(start_year, start_year + duration):
-            offset = y - base_year
-            l_gan = gan_chars[offset % 10]
-            l_zhi = zhi_chars[offset % 12]
-            l_gz = f"{l_gan}{l_zhi}"
+        try:
+            if not self._quantum_engine or not self._profile:
+                raise BaziDataError(
+                    "缺少必要的引擎或配置文件",
+                    "QuantumEngine or BaziProfile not initialized. Call set_user_input() first."
+                )
             
-            # Get dynamic luck pillar
-            active_luck = self._profile.get_luck_pillar_at(y)
+            # V9.5 Performance Optimization: Check cache first
+            cache_key = None
+            if use_cache and case_data is None:
+                cache_key = self._generate_cache_key(start_year, duration, params)
+                if cache_key in self._timeline_cache:
+                    self._cache_stats['hits'] += 1
+                    logger.info(f"Cache HIT for key: {cache_key[:16]}...")
+                    # Return deep copy to prevent cache pollution
+                    df, handovers = self._timeline_cache[cache_key]
+                    elapsed = time.time() - start_time
+                    logger.info(f"Timeline simulation completed (cached) in {elapsed:.4f} seconds")
+                    return df.copy(), copy.deepcopy(handovers)
+                else:
+                    self._cache_stats['misses'] += 1
+                    logger.debug(f"Cache MISS for key: {cache_key[:16]}...")
             
-            # Detect handover
-            if prev_luck and prev_luck != active_luck:
-                handover_years.append({
-                    'year': y,
-                    'from': prev_luck,
-                    'to': active_luck
+            # Build case_data if not provided
+            if case_data is None:
+                logger.debug("Building case_data from user input...")
+                case_data = self._build_case_data(params)
+            
+            # GanZhi calculation helpers
+            gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+            zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+            base_year = 1924
+            
+            traj_data = []
+            handover_years = []
+            
+            # Initialize prev_luck to detect handovers correctly
+            prev_luck = self._profile.get_luck_pillar_at(start_year - 1)
+            
+            logger.debug(f"Processing {duration} years starting from {start_year}...")
+            for y in range(start_year, start_year + duration):
+                offset = y - base_year
+                l_gan = gan_chars[offset % 10]
+                l_zhi = zhi_chars[offset % 12]
+                l_gz = f"{l_gan}{l_zhi}"
+                
+                # Get dynamic luck pillar
+                active_luck = self._profile.get_luck_pillar_at(y)
+                
+                # Detect handover
+                if prev_luck and prev_luck != active_luck:
+                    handover_years.append({
+                        'year': y,
+                        'from': prev_luck,
+                        'to': active_luck
+                    })
+                prev_luck = active_luck
+                
+                # Deep copy to prevent reference pollution
+                safe_case_data = copy.deepcopy(case_data)
+                dyn_ctx = {'year': l_gz, 'dayun': active_luck, 'luck': active_luck}
+                
+                # Calculate
+                # V9.5 Performance Optimization: Pass cached era_multipliers
+                try:
+                    energy_res = self._quantum_engine.calculate_energy(
+                        safe_case_data, 
+                        dyn_ctx,
+                        era_multipliers=self._era_multipliers
+                    )
+                except Exception as e:
+                    logger.error(f"Error calculating energy for year {y}: {e}", exc_info=True)
+                    raise BaziCalculationError(
+                        f"计算年份 {y} 的能量时发生错误",
+                        f"Error in calculate_energy for year {y}: {str(e)}"
+                    )
+                
+                # Extract with safety fallbacks
+                final_career = float(energy_res.get('career') or 0.0)
+                final_wealth = float(energy_res.get('wealth') or 0.0)
+                final_rel = float(energy_res.get('relationship') or 0.0)
+                
+                # Domain details
+                dom_det = energy_res.get('domain_details', {})
+                
+                traj_data.append({
+                    "year": int(y),
+                    "label": f"{y}\n{l_gz}",
+                    "career": round(final_career, 2),
+                    "wealth": round(final_wealth, 2),
+                    "relationship": round(final_rel, 2),
+                    "base_career": round(final_career * 0.9, 2),
+                    "base_wealth": round(final_wealth * 0.9, 2),
+                    "base_relationship": round(final_rel * 0.9, 2),
+                    "desc": energy_res.get('desc', ''),
+                    "is_treasury_open": dom_det.get('is_treasury_open', False),
+                    "treasury_icon": dom_det.get('icon', '❓'),
+                    "treasury_risk": dom_det.get('risk_level', 'Normal'),
+                    "result": energy_res  # Full result for advanced usage
                 })
-            prev_luck = active_luck
             
-            # Deep copy to prevent reference pollution
-            safe_case_data = copy.deepcopy(case_data)
-            dyn_ctx = {'year': l_gz, 'dayun': active_luck, 'luck': active_luck}
+            # Build result
+            result_df = pd.DataFrame(traj_data)
+            result_handovers = handover_years
             
-            # Calculate
-            energy_res = self._quantum_engine.calculate_energy(safe_case_data, dyn_ctx)
+            # V9.5 Performance Optimization: Cache result if using cache
+            if use_cache and cache_key is not None:
+                logger.debug(f"Caching result with key: {cache_key[:16]}...")
+                try:
+                    # Store deep copies to prevent cache pollution
+                    self._timeline_cache[cache_key] = (
+                        result_df.copy(),
+                        copy.deepcopy(result_handovers)
+                    )
+                    logger.debug(f"Result cached successfully (cache size: {len(self._timeline_cache)})")
+                except Exception as e:
+                    logger.warning(f"Failed to cache result: {e}", exc_info=True)
+                    # Continue without caching - not critical
             
-            # Extract with safety fallbacks
-            final_career = float(energy_res.get('career') or 0.0)
-            final_wealth = float(energy_res.get('wealth') or 0.0)
-            final_rel = float(energy_res.get('relationship') or 0.0)
+            elapsed = time.time() - start_time
+            logger.info(f"Timeline simulation completed in {elapsed:.4f} seconds "
+                       f"(years: {duration}, rows: {len(result_df)})")
             
-            # Domain details
-            dom_det = energy_res.get('domain_details', {})
+            return result_df, result_handovers
             
-            traj_data.append({
-                "year": int(y),
-                "label": f"{y}\n{l_gz}",
-                "career": round(final_career, 2),
-                "wealth": round(final_wealth, 2),
-                "relationship": round(final_rel, 2),
-                "base_career": round(final_career * 0.9, 2),
-                "base_wealth": round(final_wealth * 0.9, 2),
-                "base_relationship": round(final_rel * 0.9, 2),
-                "desc": energy_res.get('desc', ''),
-                "is_treasury_open": dom_det.get('is_treasury_open', False),
-                "treasury_icon": dom_det.get('icon', '❓'),
-                "treasury_risk": dom_det.get('risk_level', 'Normal'),
-                "result": energy_res  # Full result for advanced usage
-            })
-            
-        return pd.DataFrame(traj_data), handover_years
+        except BaziDataError:
+            raise
+        except BaziCacheError:
+            raise
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error(f"Timeline simulation failed after {elapsed:.4f} seconds: {e}", exc_info=True)
+            raise BaziCalculationError(
+                f"时间序列模拟失败 (start_year={start_year}, duration={duration})",
+                f"Error in run_timeline_simulation: {str(e)}"
+            )
         
     def _build_case_data(self, params: Optional[Dict] = None) -> Dict:
         """Build case_data dict for quantum engine."""
@@ -448,6 +746,12 @@ class BaziController:
     def get_profile(self) -> Optional[BaziProfile]:
         """Return BaziProfile instance."""
         return self._profile
+
+    def get_current_city(self) -> str:
+        """
+        Get current city stored in controller (fallback to 'Unknown').
+        """
+        return self._city or "Unknown"
         
     def get_wang_shuai_str(self, flux_data: Dict, scale: float = 0.08) -> str:
         """
@@ -469,6 +773,379 @@ class BaziController:
             return "身弱"
         else:
             return "身旺"
+    
+    def get_five_element_energies(self, flux_data: Optional[Dict] = None, 
+                                   scale: float = 0.08) -> Dict[str, float]:
+        """
+        Calculate and return five-element energies (Wood, Fire, Earth, Metal, Water).
+        
+        This method encapsulates the calculation logic and ensures data accuracy.
+        View layer should only call this API without knowing implementation details.
+        
+        Args:
+            flux_data: Optional flux data dict. If None, uses internal _flux_data.
+            scale: Scaling factor for energy values (default: 0.08, matching get_wang_shuai_str)
+            
+        Returns:
+            Dictionary with keys: 'Wood', 'Fire', 'Earth', 'Metal', 'Water'
+            Values are scaled energy amounts.
+        """
+        # Use provided flux_data or fall back to internal state
+        if flux_data is None:
+            flux_data = self._flux_data or {}
+        
+        element_energies = {'Wood': 0.0, 'Fire': 0.0, 'Earth': 0.0, 'Metal': 0.0, 'Water': 0.0}
+        
+        # Method 1: Extract from spectrum if available (most accurate)
+        if 'spectrum' in flux_data:
+            spectrum = flux_data['spectrum']
+            if isinstance(spectrum, dict):
+                # Spectrum is a dict with keys: Wood, Fire, Earth, Metal, Water
+                for element in element_energies.keys():
+                    element_energies[element] = spectrum.get(element, 0.0) * scale
+                logger.debug(f"Five-element energies extracted from spectrum: {element_energies}")
+                return element_energies
+        
+        # Method 2: Calculate from flux engine particles (if spectrum not available)
+        if self._flux_engine and hasattr(self._flux_engine, 'particles'):
+            element_totals = {'Wood': 0.0, 'Fire': 0.0, 'Earth': 0.0, 'Metal': 0.0, 'Water': 0.0}
+            
+            try:
+                for particle in self._flux_engine.particles:
+                    if hasattr(particle, 'wave') and hasattr(particle.wave, 'get_energy'):
+                        for element in element_totals.keys():
+                            energy = particle.wave.get_energy(element)
+                            element_totals[element] += energy
+                
+                # Apply scale factor
+                element_energies = {k: v * scale for k, v in element_totals.items()}
+                logger.debug(f"Five-element energies calculated from particles: {element_energies}")
+                return element_energies
+            except Exception as e:
+                logger.warning(f"Error calculating five-element energies from particles: {e}", exc_info=True)
+        
+        # Method 3: Fallback - return zeros with warning
+        logger.warning("Unable to extract five-element energies from flux_data. Returning zeros.")
+        return element_energies
+
+    def run_geo_predictive_timeline(self, start_year: int, duration: int = 10,
+                                    geo_correction_city: Optional[str] = None,
+                                    params: Optional[Dict] = None) -> pd.DataFrame:
+        """
+        Run timeline simulation with optional GEO correction (cached).
+
+        Args:
+            start_year: starting year for simulation
+            duration: number of years to simulate
+            geo_correction_city: target city for GEO correction; if None, use current city
+            params: optional golden parameters
+
+        Returns:
+            DataFrame containing timeline trajectory
+        """
+        original_city = self._city
+
+        # Determine target city
+        target_city = geo_correction_city if geo_correction_city else original_city
+        if not target_city or target_city.lower() in ['none', 'unknown', '']:
+            target_city = "Unknown"
+        self._city = target_city
+
+        try:
+            # Build case data with target city
+            case_data = self._build_case_data(params)
+            case_data['city'] = target_city
+
+            df, _ = self.run_timeline_simulation(start_year, duration, case_data, params, use_cache=True)
+            return df
+        finally:
+            # Restore original city
+            self._city = original_city
+    
+    def get_pillar_energies(self, flux_data: Optional[Dict] = None,
+                            params: Optional[Dict] = None,
+                            scale: float = 0.08) -> List[float]:
+        """
+        Get pillar energies for all 8 positions (year_stem, year_branch, ..., hour_branch).
+        
+        This method encapsulates pillar energy calculation logic.
+        View layer should only call this API without accessing flux_engine directly.
+        
+        Args:
+            flux_data: Optional flux data dict. If None, uses internal _flux_data.
+            params: Optional golden parameters for fallback calculations.
+            scale: Scaling factor for energy values (default: 0.08)
+            
+        Returns:
+            List of 8 float values representing pillar energies in order:
+            [year_stem, year_branch, month_stem, month_branch, 
+             day_stem, day_branch, hour_stem, hour_branch]
+        """
+        # Use provided flux_data or fall back to internal state
+        if flux_data is None:
+            flux_data = self._flux_data or {}
+        
+        p_order = ["year_stem", "year_branch", "month_stem", "month_branch",
+                   "day_stem", "day_branch", "hour_stem", "hour_branch"]
+        pe_list = []
+        
+        # Method 1: Extract from particle_states if available
+        if 'particle_states' in flux_data:
+            particle_states = flux_data['particle_states']
+            particle_map = {p.get('id'): p for p in particle_states if isinstance(p, dict)}
+            
+            for pid in p_order:
+                val = 0.0
+                if pid in particle_map:
+                    p_data = particle_map[pid]
+                    val = p_data.get('amp', 0.0) * scale
+                
+                # Fallback if value is too low
+                if val < 0.1:
+                    base_u = (params or {}).get('physics', {}).get('base_unit', 8.0) if params else 8.0
+                    is_stem = 'stem' in pid
+                    val = base_u if is_stem else base_u * 1.5
+                    pw = (params or {}).get('pillarWeights', {}) if params else {}
+                    if 'year' in pid:
+                        val *= pw.get('year', 0.8)
+                    elif 'month' in pid:
+                        val *= pw.get('month', 1.2)
+                    elif 'hour' in pid:
+                        val *= pw.get('hour', 0.9)
+                    elif 'day' in pid:
+                        val *= pw.get('day', 1.0)
+                
+                pe_list.append(round(val, 1))
+            
+            logger.debug(f"Pillar energies extracted from particle_states: {pe_list}")
+            return pe_list
+        
+        # Method 2: Calculate from flux engine particles (if particle_states not available)
+        if self._flux_engine and hasattr(self._flux_engine, 'particles'):
+            try:
+                for pid in p_order:
+                    val = 0.0
+                    for p in self._flux_engine.particles:
+                        if p.id == pid:
+                            val = p.wave.amplitude * scale
+                            break
+                    
+                    # Fallback if value is too low
+                    if val < 0.1:
+                        base_u = (params or {}).get('physics', {}).get('base_unit', 8.0) if params else 8.0
+                        is_stem = 'stem' in pid
+                        val = base_u if is_stem else base_u * 1.5
+                        pw = (params or {}).get('pillarWeights', {}) if params else {}
+                        if 'year' in pid:
+                            val *= pw.get('year', 0.8)
+                        elif 'month' in pid:
+                            val *= pw.get('month', 1.2)
+                        elif 'hour' in pid:
+                            val *= pw.get('hour', 0.9)
+                        elif 'day' in pid:
+                            val *= pw.get('day', 1.0)
+                    
+                    pe_list.append(round(val, 1))
+                
+                logger.debug(f"Pillar energies calculated from particles: {pe_list}")
+                return pe_list
+            except Exception as e:
+                logger.warning(f"Error calculating pillar energies from particles: {e}", exc_info=True)
+        
+        # Method 3: Fallback - return default values
+        logger.warning("Unable to extract pillar energies. Returning default values.")
+        base_u = (params or {}).get('physics', {}).get('base_unit', 8.0) if params else 8.0
+        pw = (params or {}).get('pillarWeights', {}) if params else {}
+        
+        for pid in p_order:
+            is_stem = 'stem' in pid
+            val = base_u if is_stem else base_u * 1.5
+            if 'year' in pid:
+                val *= pw.get('year', 0.8)
+            elif 'month' in pid:
+                val *= pw.get('month', 1.2)
+            elif 'hour' in pid:
+                val *= pw.get('hour', 0.9)
+            elif 'day' in pid:
+                val *= pw.get('day', 1.0)
+            pe_list.append(round(val, 1))
+        
+        return pe_list
+    
+    def get_particle_audit_data(self, flux_data: Optional[Dict] = None,
+                                 scale: float = 0.08) -> List[Dict]:
+        """
+        Get particle audit data for calculation transparency.
+        
+        This method returns particle information for audit/debugging purposes.
+        View layer should use this instead of directly accessing flux_engine.particles.
+        
+        Args:
+            flux_data: Optional flux data dict. If None, uses internal _flux_data.
+            scale: Scaling factor for energy values (default: 0.08)
+            
+        Returns:
+            List of dictionaries with keys: 'Particle', 'Raw Flux (E_f)', 'Scale Factor', 'Quantum Input (E_q)'
+        """
+        # Use provided flux_data or fall back to internal state
+        if flux_data is None:
+            flux_data = self._flux_data or {}
+        
+        audit_data = []
+        
+        # Method 1: Extract from particle_states if available
+        if 'particle_states' in flux_data:
+            particle_states = flux_data['particle_states']
+            for p_data in particle_states:
+                if not isinstance(p_data, dict):
+                    continue
+                pid = p_data.get('id', '')
+                # Skip dynamic particles (da yun, liu nian)
+                if "dy_" in pid or "ln_" in pid:
+                    continue
+                
+                raw = p_data.get('amp', 0.0)
+                scaled = raw * scale
+                audit_data.append({
+                    "Particle": f"{p_data.get('char', '?')} ({pid})",
+                    "Raw Flux (E_f)": f"{raw:.1f}",
+                    "Scale Factor": f"{scale}",
+                    "Quantum Input (E_q)": f"{scaled:.1f}"
+                })
+            
+            logger.debug(f"Particle audit data extracted from particle_states: {len(audit_data)} particles")
+            return audit_data
+        
+        # Method 2: Calculate from flux engine particles (if particle_states not available)
+        if self._flux_engine and hasattr(self._flux_engine, 'particles'):
+            try:
+                for p in self._flux_engine.particles:
+                    # Skip dynamic particles (da yun, liu nian)
+                    if "dy_" in p.id or "ln_" in p.id:
+                        continue
+                    
+                    raw = p.wave.amplitude
+                    scaled = raw * scale
+                    audit_data.append({
+                        "Particle": f"{p.char} ({p.id})",
+                        "Raw Flux (E_f)": f"{raw:.1f}",
+                        "Scale Factor": f"{scale}",
+                        "Quantum Input (E_q)": f"{scaled:.1f}"
+                    })
+                
+                logger.debug(f"Particle audit data calculated from particles: {len(audit_data)} particles")
+                return audit_data
+            except Exception as e:
+                logger.warning(f"Error calculating particle audit data from particles: {e}", exc_info=True)
+        
+        # Method 3: Fallback - return empty list
+        logger.warning("Unable to extract particle audit data. Returning empty list.")
+        return audit_data
+
+    def get_balance_suggestion(self, element_energies: Optional[Dict[str, float]] = None) -> Dict[str, str]:
+        """
+        Provide a simple five-element balance suggestion.
+
+        Args:
+            element_energies: Dict with keys Wood/Fire/Earth/Metal/Water (scaled values).
+
+        Returns:
+            Dict with:
+                - element_to_balance: element with the highest energy (needs restraint)
+                - element_to_support: element with the lowest energy (needs nourishment)
+                - text_summary: brief recommendation text.
+        """
+        elements = ['Wood', 'Fire', 'Earth', 'Metal', 'Water']
+        energies = element_energies or {}
+        # Ensure all elements exist
+        energies = {e: float(energies.get(e, 0.0) or 0.0) for e in elements}
+
+        if not energies:
+            return {
+                "element_to_balance": "Unknown",
+                "element_to_support": "Unknown",
+                "text_summary": "数据不足，无法生成建议。"
+            }
+
+        # Find max/min
+        max_elem = max(energies, key=energies.get)
+        min_elem = min(energies, key=energies.get)
+
+        # Simple five-element restraining cycle for suggestion
+        restrain_map = {
+            'Wood': 'Metal',
+            'Fire': 'Water',
+            'Earth': 'Wood',
+            'Metal': 'Fire',
+            'Water': 'Earth'
+        }
+        nourish_map = {
+            'Wood': 'Water',
+            'Fire': 'Wood',
+            'Earth': 'Fire',
+            'Metal': 'Earth',
+            'Water': 'Metal'
+        }
+
+        restraint = restrain_map.get(max_elem, "Neutral")
+        support = nourish_map.get(min_elem, "Neutral")
+
+        summary = (
+            f"{max_elem} 偏旺，宜用 {restraint} 适度制衡；"
+            f"{min_elem} 偏弱，可用 {support} 予以滋养。"
+        )
+
+        return {
+            "element_to_balance": max_elem,
+            "element_to_support": min_elem,
+            "text_summary": summary
+        }
+
+    def get_top_ten_gods_summary(self, flux_data: Optional[Dict] = None, top_n: int = 2,
+                                 scale: float = 0.08) -> Dict[str, Any]:
+        """
+        Return a brief summary of the strongest Ten Gods.
+
+        Args:
+            flux_data: Flux data dict (expects raw Ten Gods scores).
+            top_n: Number of top gods to include.
+            scale: Scaling factor (kept for consistency).
+
+        Returns:
+            Dict with:
+                - top_gods: list of (name, value) tuples (scaled)
+                - top_two_gods: string summary of top two gods
+        """
+        tg_keys = [
+            ('BiJian', '比肩'),
+            ('JieCai', '劫财'),
+            ('ShiShen', '食神'),
+            ('ShangGuan', '伤官'),
+            ('PianCai', '偏财'),
+            ('ZhengCai', '正财'),
+            ('QiSha', '七杀'),
+            ('ZhengGuan', '正官'),
+            ('PianYin', '偏印'),
+            ('ZhengYin', '正印'),
+        ]
+
+        data = flux_data or self._flux_data or {}
+
+        tg_list = []
+        for key, label in tg_keys:
+            val = float(data.get(key, 0.0) or 0.0) * scale
+            tg_list.append((label, val))
+
+        # Sort by value descending
+        tg_list.sort(key=lambda x: x[1], reverse=True)
+        top_gods = tg_list[:top_n]
+
+        top_two_str = "、".join([f"{name}({val:.2f})" for name, val in top_gods]) if top_gods else "无数据"
+
+        return {
+            "top_gods": top_gods,
+            "top_two_gods": top_two_str
+        }
     
     # =========================================================================
     # P2 Quantum Verification: GEO Comparison Interface

@@ -17,6 +17,69 @@ from core.bazi_profile import VirtualBaziProfile, BaziProfile
 # V9.5 MVC Controller (for standard data access)
 from controllers.bazi_controller import BaziController
 
+# V9.5 MVC: Controller instance for timeline simulations
+# Note: Engine is still needed for analyze() which has no Controller equivalent yet
+_controller_cache = {}
+
+def get_controller_for_case(case_data: dict, city: str = "Unknown"):
+    """
+    Factory to get or create a BaziController from case data.
+    Uses derived birth date from Bazi reverse lookup for accurate profiles.
+    """
+    import datetime
+    from lunar_python import Solar
+    
+    case_id = case_data.get('id', 'unknown')
+    cache_key = f"{case_id}_{city}"
+    
+    if cache_key in _controller_cache:
+        return _controller_cache[cache_key]
+    
+    controller = BaziController()
+    
+    # Attempt to derive birth date from Bazi
+    bazi = case_data.get('bazi', ['', '', '', ''])
+    derived_date = reverse_lookup_bazi(bazi, 1940, 2010) if bazi[0] else None
+    
+    if derived_date:
+        try:
+            # Parse "YYYY-M-D H:00"
+            parts = derived_date.split(' ')
+            date_parts = parts[0].split('-')
+            time_parts = parts[1].split(':')
+            
+            birth_date = datetime.date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
+            birth_hour = int(time_parts[0])
+            gender = "男" if case_data.get('gender', 'M') in ['M', '男', 1] else "女"
+            name = case_data.get('description', f"Case_{case_id}")
+            
+            controller.set_user_input(
+                name=name,
+                gender=gender,
+                date_obj=birth_date,
+                time_int=birth_hour,
+                city=city
+            )
+            
+            _controller_cache[cache_key] = controller
+            return controller
+        except Exception as e:
+            pass
+    
+    # Fallback: create controller with default birth info if reverse lookup failed
+    try:
+        controller.set_user_input(
+            name=case_data.get('description', f"Case_{case_id}"),
+            gender="男" if case_data.get('gender', 'M') in ['M', '男', 1] else "女",
+            date_obj=datetime.date(2000, 1, 1),
+            time_int=12,
+            city=city
+        )
+        _controller_cache[cache_key] = controller
+        return controller
+    except Exception:
+        return None  # Return None if we can't derive a valid profile
+
 # Load Constants
 GOLDEN_PARAMS_PATH = os.path.join(os.path.dirname(__file__), '../../data/golden_parameters.json')
 CALIBRATION_CASES_PATH = os.path.join(os.path.dirname(__file__), '../../data/calibration_cases.json')
@@ -132,14 +195,15 @@ def render():
     # --- 1. SIDEBAR CONTROLS ---
     st.sidebar.header("🕹️ 时空控制台 (Spacetime Console)")
 
-    # Case Selection
+    # Case Selection (Prediction Archive)
     cases = load_cases()
     if not cases:
         st.error("No cases loaded.")
         return
 
+    st.sidebar.subheader("🗂️ 选择预测档案 (Prediction Archive)")
     case_options = {f"{c['id']} - {c['description']}": c for c in cases}
-    selected_case_name = st.sidebar.selectbox("🎭 选择剧本 (Case)", list(case_options.keys()))
+    selected_case_name = st.sidebar.selectbox("🎭 档案", list(case_options.keys()))
     selected_case = case_options[selected_case_name]
 
     # Bazi Info
@@ -168,11 +232,38 @@ def render():
     if "Beijing" in raw_cities: raw_cities.remove("Beijing")
     cities = ["None", "Beijing"] + raw_cities
     
-    selected_city = st.sidebar.selectbox("出生/生活城市", cities, index=0)
+    # Preselect city from archive if available
+    archive_city = selected_case.get('city') if isinstance(selected_case, dict) else None
+    default_city = archive_city if archive_city in cities else "None"
+    default_idx = cities.index(default_city) if default_city in cities else 0
+    selected_city = st.sidebar.selectbox("出生/生活城市", cities, index=default_idx)
     
     # [V9.3 Logic] Map None to Neutral
     if selected_city == "None":
         selected_city = "Unknown" # Passes to Engine as Unknown -> Neutral Fallback
+    
+    # === V9.6: GEO 修正系数显示 ===
+    # 只有当用户明确选择城市时才显示 GEO 修正
+    city_input = selected_city if selected_city and selected_city.lower() not in ['unknown', 'none', ''] else None
+    
+    if city_input:
+        # Initialize Controller for GEO modifiers
+        try:
+            geo_controller = BaziController()
+            geo_modifiers = geo_controller.get_geo_modifiers(city_input)
+            
+            if geo_modifiers:
+                st.sidebar.markdown("---")
+                st.sidebar.subheader("🌍 地理修正系数 (GEO Modifiers)")
+                modifier_display = {k: v for k, v in geo_modifiers.items()
+                                  if k not in ['desc'] and isinstance(v, (int, float))}
+                if modifier_display:
+                    st.sidebar.json(modifier_display)
+                if geo_modifiers.get('desc'):
+                    st.sidebar.caption(f"📍 {geo_modifiers.get('desc')}")
+        except Exception as e:
+            # Silently fail - GEO modifiers are optional
+            pass
     
     manual_lat = st.sidebar.number_input("或手动纬度 (Latitude)", -90.0, 90.0, 0.0, disabled=(selected_city!="Unknown")) # This disabled logic might be weird if I force Beijing, but it's fine for now (Beijing is known).
 
@@ -270,7 +361,7 @@ def render():
             ))
             
             fig.update_layout(barmode='stack', title="Base Energy + Spacetime Correction", height=400)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
     with col2:
         st.subheader("🔍 时空因子 (Spacetime Modifiers)")
@@ -296,7 +387,7 @@ def render():
         st.dataframe(
             df_chart[['Element', 'Geo', 'Era', 'Score']],
             hide_index=True,
-            use_container_width=True
+            width='stretch'
         )
 
     # Narrative / Interpretation
@@ -317,6 +408,49 @@ def render():
 
     st.write(f"> {narrative}")
 
+    # --- FUTURE TRAJECTORY: Controller-based cached simulation ---
+    st.markdown("---")
+    st.subheader("🔮 未来能量轨迹 (Future Trajectory)")
+    st.caption("基于 Controller.run_timeline_simulation 的智能缓存，快速获取未来走势。")
+    
+    col_ft1, col_ft2 = st.columns(2)
+    with col_ft1:
+        start_year = st.number_input("起始年份 (Start Year)", 1900, 2100, selected_year)
+    with col_ft2:
+        duration = st.slider("模拟时长 (年)", 1, 30, 10)
+    
+    controller = get_controller_for_case(selected_case, selected_city)
+    
+    if controller:
+        if st.button("生成未来轨迹", type="primary"):
+            with st.spinner("计算中 (使用缓存优先)..."):
+                try:
+                    traj_df, handovers = controller.run_timeline_simulation(start_year, duration, use_cache=True)
+                    
+                    if traj_df is None or traj_df.empty:
+                        st.warning("⚠️ 无法生成未来轨迹数据。")
+                    else:
+                        fig_ft = go.Figure()
+                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['career'], name='Career', line=dict(color='#00E5FF', width=3)))
+                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['wealth'], name='Wealth', line=dict(color='#FFD700', width=3)))
+                        fig_ft.add_trace(go.Scatter(x=traj_df['year'], y=traj_df['relationship'], name='Relationship', line=dict(color='#F50057', width=3)))
+                        fig_ft.update_layout(
+                            title=f"未来 {duration} 年能量轨迹 ({start_year} 起)",
+                            xaxis_title="年份 (Year)",
+                            yaxis_title="能量值 (Energy)",
+                            hovermode="x unified",
+                            height=350,
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                        )
+                        st.plotly_chart(fig_ft, width='stretch')
+                        
+                        with st.expander("📋 轨迹数据表"):
+                            st.dataframe(traj_df, use_container_width=True)
+                except Exception as e:
+                    st.error(f"未来轨迹计算失败: {e}")
+    else:
+        st.warning("⚠️ 无法初始化 Controller，未来轨迹功能不可用。")
+
     # --- 4. LIFE HOLOGRAPHY (Restored Dimensions) ---
     st.markdown("---")
     st.subheader("🧬 命运全息图 (Destiny Hologram: 12-Year Dimensions)")
@@ -325,123 +459,153 @@ def render():
     if st.checkbox("启动全息推演 (Start Hologram)", value=True):
         trend_data = []
         handover_years = []
-        last_luck_pillar = None
         
         progress_bar = st.progress(0)
         start_y = selected_year
         end_y = start_y + 12
+        duration = 12
         
-        # Helper for GanZhi
-        gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-        zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-        base_year = 1924
-
         # Pre-construct Case Data
-        # Ensure 'bazi' is list of strings
         c_bazi = selected_case['bazi']
         c_dm = selected_case['day_master']
-
-        # [V9.3 Feature] Time Detective Integration
-        # Attempt to rebuild Real Profile to get accurate Luck Cycles (Handover Lines)
-        real_profile = None
-        # Use cached lookup
-        derived_dt_str = reverse_lookup_bazi(c_bazi, 1940, 2010)
         
-        if derived_dt_str:
-             try:
-                 # Parse "YYYY-M-D H:00"
-                 p_parts = derived_dt_str.split(' ')
-                 p_date = p_parts[0].split('-')
-                 p_time = p_parts[1].split(':')
-                 dt_birth = datetime.datetime(int(p_date[0]), int(p_date[1]), int(p_date[2]), int(p_time[0]))
-                 gender_idx = 1 if selected_case.get('gender', 'M') == 'M' else 0
-                 real_profile = BaziProfile(dt_birth, gender_idx)
-             except: pass
-
-        # Construct Base Case Data
-        base_case_data = {
-            'id': selected_case.get('id', 0),
-            'gender': 1 if selected_case.get('gender', 'M') == 'M' else 0,
-            'day_master': c_dm,
-            'bazi': c_bazi,
-            'city': selected_city, # Forced Beijing if Unknown
-            'physics_sources': {} # flux engine not active here, empty is fine for V9.1 defaults
-        }
-
-        for idx, y in enumerate(range(start_y, end_y)):
-            try:
-                # Calculate Year GanZhi
-                offset = y - base_year
-                l_gan = gan_chars[offset % 10]
-                l_zhi = zhi_chars[offset % 12]
-                l_gz = f"{l_gan}{l_zhi}"
-                
-                # [V9.3] Dynamic Luck Handover Detection
-                # If we have a Real Profile (via Time Detective), use it.
-                current_lp = "Unknown"
-                if real_profile:
-                     # Get Luck Pillar for this year
-                     current_lp = real_profile.get_luck_pillar_at(y)
-                     
-                     # Check if changed from last year (or init)
-                     if last_luck_pillar and current_lp != last_luck_pillar:
-                          handover_years.append({'year': y, 'to': current_lp})
-                     last_luck_pillar = current_lp
-                     
-                     # First year init
-                     if idx == 0: last_luck_pillar = current_lp
-                
-                # Dynamic Context
-                dyn_ctx = {'year': l_gz, 'dayun': current_lp}
-                
-                # 1. Geo Run (Selected City - Spacetime Enabled)
-                safe_case_data_geo = copy.deepcopy(base_case_data)
-                safe_case_data_geo['city'] = selected_city 
-                energy_res_geo = engine.calculate_energy(safe_case_data_geo, dyn_ctx)
-                
-                # 2. Base Run (Neutral / Unknown - Baseline)
-                safe_case_data_base = copy.deepcopy(base_case_data)
-                safe_case_data_base['city'] = 'Unknown'
-                energy_res_base = engine.calculate_energy(safe_case_data_base, dyn_ctx)
-                
-                # Extract Geo Scores (Main Lines)
-                s_career = float(energy_res_geo.get('career') or 0.0)
-                s_wealth = float(energy_res_geo.get('wealth') or 0.0)
-                s_rel = float(energy_res_geo.get('relationship') or 0.0)
-                desc = str(energy_res_geo.get('desc', ''))
-                
-                # Extract Base Scores (Ghost Lines)
-                b_career = float(energy_res_base.get('career') or 0.0)
-                b_wealth = float(energy_res_base.get('wealth') or 0.0)
-                b_rel = float(energy_res_base.get('relationship') or 0.0)
-                
-                # Extract Domain Details for Key Events (Skull/Key) - From Geo Run
-                dom_det = energy_res_geo.get('domain_details', {})
-                is_tr_open = dom_det.get('is_treasury_open', False)
-                tr_icon = dom_det.get('icon', '🗝️') if is_tr_open else ''
-                tr_risk = dom_det.get('risk_level', 'low')
-                
-                row = {
-                    "year": y,
-                    "career": s_career,
-                    "wealth": s_wealth,
-                    "relationship": s_rel,
-                    "desc": f"{y} {l_gz}\n{desc[:50]}...",
-                    "is_treasury_open": is_tr_open,
-                    "treasury_icon": tr_icon,
-                    "treasury_risk": tr_risk,
-                    # Base Data
-                    "base_career": b_career,
-                    "base_wealth": b_wealth,
-                    "base_relationship": b_rel
-                }
-                trend_data.append(row)
-                
-            except Exception as e:
-                st.error(f"Loop Error {y}: {e}")
-                pass
+        # === V9.5 MVC: Attempt Controller-based simulation ===
+        controller = get_controller_for_case(selected_case, selected_city)
+        
+        if controller:
+            # 🎯 MVC Path: Use Controller API for GEO comparison
+            st.caption("🔧 Mode: MVC Controller (V9.5)")
             
-            progress_bar.progress((idx + 1) / 12)
+            try:
+                # Get combined baseline + GEO trajectory via Controller
+                combined_df, geo_mods = controller.get_geo_comparison(
+                    city=selected_city,
+                    start_year=start_y,
+                    duration=duration
+                )
+                
+                if not combined_df.empty:
+                    # Get handover years from timeline simulation
+                    _, handover_list = controller.run_timeline_simulation(start_y, duration)
+                    handover_years = handover_list
+                    
+                    # Convert DataFrame to trend_data format
+                    for _, row in combined_df.iterrows():
+                        trend_data.append({
+                            "year": int(row['year']),
+                            "career": float(row.get('geo_career', 0)),
+                            "wealth": float(row.get('geo_wealth', 0)),
+                            "relationship": float(row.get('geo_relationship', 0)),
+                            "desc": row.get('label', ''),
+                            "is_treasury_open": False,  # Controller doesn't expose this detail yet
+                            "treasury_icon": "",
+                            "treasury_risk": "low",
+                            "base_career": float(row.get('baseline_career', 0)),
+                            "base_wealth": float(row.get('baseline_wealth', 0)),
+                            "base_relationship": float(row.get('baseline_relationship', 0))
+                        })
+                    progress_bar.progress(1.0)
+                    
+            except Exception as e:
+                st.warning(f"Controller fallback: {e}")
+                controller = None  # Fallback to Engine
+        
+        # === Fallback: Direct Engine simulation (Legacy Mode) ===
+        if not controller or not trend_data:
+            st.caption("🔧 Mode: Direct Engine (Legacy)")
+            
+            last_luck_pillar = None
+            
+            # Helper for GanZhi
+            gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+            zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+            base_year = 1924
+
+            # [V9.3 Feature] Time Detective Integration
+            real_profile = None
+            derived_dt_str = reverse_lookup_bazi(c_bazi, 1940, 2010)
+            
+            if derived_dt_str:
+                 try:
+                     p_parts = derived_dt_str.split(' ')
+                     p_date = p_parts[0].split('-')
+                     p_time = p_parts[1].split(':')
+                     dt_birth = datetime.datetime(int(p_date[0]), int(p_date[1]), int(p_date[2]), int(p_time[0]))
+                     gender_idx = 1 if selected_case.get('gender', 'M') == 'M' else 0
+                     real_profile = BaziProfile(dt_birth, gender_idx)
+                 except: pass
+
+            # Construct Base Case Data
+            base_case_data = {
+                'id': selected_case.get('id', 0),
+                'gender': 1 if selected_case.get('gender', 'M') == 'M' else 0,
+                'day_master': c_dm,
+                'bazi': c_bazi,
+                'city': selected_city,
+                'physics_sources': {}
+            }
+
+            for idx, y in enumerate(range(start_y, end_y)):
+                try:
+                    offset = y - base_year
+                    l_gan = gan_chars[offset % 10]
+                    l_zhi = zhi_chars[offset % 12]
+                    l_gz = f"{l_gan}{l_zhi}"
+                    
+                    current_lp = "Unknown"
+                    if real_profile:
+                         current_lp = real_profile.get_luck_pillar_at(y)
+                         if last_luck_pillar and current_lp != last_luck_pillar:
+                              handover_years.append({'year': y, 'to': current_lp})
+                         last_luck_pillar = current_lp
+                         if idx == 0: last_luck_pillar = current_lp
+                    
+                    dyn_ctx = {'year': l_gz, 'dayun': current_lp}
+                    
+                    # 1. Geo Run
+                    safe_case_data_geo = copy.deepcopy(base_case_data)
+                    safe_case_data_geo['city'] = selected_city 
+                    energy_res_geo = engine.calculate_energy(safe_case_data_geo, dyn_ctx)
+                    
+                    # 2. Base Run
+                    safe_case_data_base = copy.deepcopy(base_case_data)
+                    safe_case_data_base['city'] = 'Unknown'
+                    energy_res_base = engine.calculate_energy(safe_case_data_base, dyn_ctx)
+                    
+                    s_career = float(energy_res_geo.get('career') or 0.0)
+                    s_wealth = float(energy_res_geo.get('wealth') or 0.0)
+                    s_rel = float(energy_res_geo.get('relationship') or 0.0)
+                    desc = str(energy_res_geo.get('desc', ''))
+                    
+                    b_career = float(energy_res_base.get('career') or 0.0)
+                    b_wealth = float(energy_res_base.get('wealth') or 0.0)
+                    b_rel = float(energy_res_base.get('relationship') or 0.0)
+                    
+                    dom_det = energy_res_geo.get('domain_details', {})
+                    is_tr_open = dom_det.get('is_treasury_open', False)
+                    tr_icon = dom_det.get('icon', '🗝️') if is_tr_open else ''
+                    tr_risk = dom_det.get('risk_level', 'low')
+                    
+                    row = {
+                        "year": y,
+                        "career": s_career,
+                        "wealth": s_wealth,
+                        "relationship": s_rel,
+                        "desc": f"{y} {l_gz}\n{desc[:50]}...",
+                        "is_treasury_open": is_tr_open,
+                        "treasury_icon": tr_icon,
+                        "treasury_risk": tr_risk,
+                        "base_career": b_career,
+                        "base_wealth": b_wealth,
+                        "base_relationship": b_rel
+                    }
+                    trend_data.append(row)
+                    
+                except Exception as e:
+                    st.error(f"Loop Error {y}: {e}")
+                    pass
+                
+                progress_bar.progress((idx + 1) / 12)
             
         progress_bar.empty()
         
@@ -504,7 +668,7 @@ def render():
                 plot_bgcolor='rgba(0,0,0,0.05)',
                 paper_bgcolor='rgba(0,0,0,0)'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             with st.expander("查看详细数据 (Data Table)"):
                 st.dataframe(df_trend)

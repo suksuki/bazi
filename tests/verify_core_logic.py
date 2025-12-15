@@ -3,8 +3,11 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.calculator import BaziCalculator
-from core.flux import FluxEngine
+# V9.5 MVC: Use adapters instead of direct Model imports
+from tests.adapters.test_engine_adapter import (
+    BaziCalculatorAdapter as BaziCalculator,
+    FluxEngineAdapter as FluxEngine
+)
 from core.trajectory import AdvancedTrajectoryEngine
 from core.wuxing_engine import WuXingEngine
 from core.alchemy import AlchemyEngine
@@ -33,8 +36,15 @@ def test_core_logic():
     # Simulate current Da Yun / Liu Nian (Just dummy stems)
     # Jia Zi year
     flux_data = flux.calculate_flux("甲", "子", "乙", "丑")
-    print("Flux Data keys:", list(flux_data.keys()))
-    print("Sample Flux (Wealth):", flux_data.get("财星 (Wealth/Wife)"))
+    # Windows console compatibility
+    try:
+        print("Flux Data keys:", list(flux_data.keys()))
+        print("Sample Flux (Wealth):", flux_data.get("财星 (Wealth/Wife)"))
+    except UnicodeEncodeError:
+        print("Flux Data keys:", [k.encode('ascii', 'ignore').decode('ascii') if isinstance(k, str) else str(k) for k in flux_data.keys()])
+        wealth_key = [k for k in flux_data.keys() if 'Wealth' in str(k) or '财' in str(k)]
+        if wealth_key:
+            print("Sample Flux (Wealth):", flux_data.get(wealth_key[0]))
     
     print("\n>>> 4. Testing AdvancedTrajectoryEngine (Life Curve)...")
     # Mock Luck Cycles

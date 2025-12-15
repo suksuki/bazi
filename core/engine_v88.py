@@ -63,9 +63,15 @@ class EngineV88:
         # V9.3 Domain Processor (Restored Logic)
         self.domains = DomainProcessor()
         
-        print(f"⚡ Antigravity {self.VERSION} Engine Initialized")
-        print(f"   Processors: {len(self._get_processors())}")
-        print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
+        # Suppress Unicode output for Windows compatibility
+        try:
+            print(f"⚡ Antigravity {self.VERSION} Engine Initialized")
+            print(f"   Processors: {len(self._get_processors())}")
+            print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
+        except UnicodeEncodeError:
+            print(f"Antigravity {self.VERSION} Engine Initialized")
+            print(f"   Processors: {len(self._get_processors())}")
+            print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
     
     def _get_processors(self) -> List:
         """Get list of active processors"""
@@ -518,10 +524,16 @@ class EngineV88:
         
         return ctx
     
-    def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None) -> Dict:
+    def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None,
+                        era_multipliers: Optional[Dict[str, float]] = None) -> Dict:
         """
         V8.8 Energy calculation - simplified version.
         Returns energy breakdown for UI display.
+        
+        Args:
+            case_data: Case data dictionary
+            dynamic_context: Dynamic context (optional)
+            era_multipliers: Optional era multipliers dict (for performance optimization)
         """
         dm_char = case_data.get('day_master', '甲')
         dm_elem = self._get_element(dm_char)
@@ -538,11 +550,13 @@ class EngineV88:
         strength, score = self._evaluate_wang_shuai(dm_char, bazi_list)
         
         # Get raw energy from physics processor
+        # V9.5 Performance Optimization: Pass era_multipliers via context
         context = {
             'bazi': bazi_list,
             'day_master': dm_char,
             'dm_element': dm_elem,
-            'month_branch': bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else ''
+            'month_branch': bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else '',
+            'era_multipliers': era_multipliers or {}  # Pass cached multipliers
         }
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']

@@ -1,0 +1,138 @@
+{
+  "benchmarks": {
+    "quantum_engine_direct": {
+      "average_time_seconds": 0.00011231660842895507,
+      "description": "QuantumEngine.calculate_energy() direct call"
+    },
+    "controller_timeline": {
+      "average_time_seconds": 0.003607368469238281,
+      "description": "BaziController.run_timeline_simulation() for 12 years"
+    }
+  },
+  "bottlenecks": {
+    "quantum_engine": [
+      {
+        "rank": 1,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\engine_v91.py:207(calculate_energy)",
+        "cumulative_time": 0.0117728,
+        "call_count": 50
+      },
+      {
+        "rank": 2,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\physics.py:89(process)",
+        "cumulative_time": 0.0034772,
+        "call_count": 50
+      },
+      {
+        "rank": 3,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\domains.py:72(process)",
+        "cumulative_time": 0.0014016,
+        "call_count": 50
+      },
+      {
+        "rank": 4,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\engine_v88.py:274(_determine_favorable)",
+        "cumulative_time": 0.0012043000000000002,
+        "call_count": 50
+      },
+      {
+        "rank": 5,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\seasonal.py:55(process)",
+        "cumulative_time": 0.0011084,
+        "call_count": 50
+      },
+      {
+        "rank": 6,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\phase_change.py:44(process)",
+        "cumulative_time": 0.0010996,
+        "call_count": 50
+      },
+      {
+        "rank": 7,
+        "function": "~:0(<method 'get' of 'dict' objects>)",
+        "cumulative_time": 0.0007953000000000001,
+        "call_count": 3900
+      },
+      {
+        "rank": 8,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\physics.py:188(_get_element_stem)",
+        "cumulative_time": 0.0007080000000000001,
+        "call_count": 900
+      },
+      {
+        "rank": 9,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\seasonal.py:103(<listcomp>)",
+        "cumulative_time": 0.0005493000000000001,
+        "call_count": 50
+      },
+      {
+        "rank": 10,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\domains.py:105(_map_ten_gods)",
+        "cumulative_time": 0.0005355000000000001,
+        "call_count": 50
+      }
+    ],
+    "controller_timeline": [
+      {
+        "rank": 1,
+        "function": "Z:\\home\\jin\\bazi_predict\\controllers\\bazi_controller.py:246(run_timeline_simulation)",
+        "cumulative_time": 0.0101042,
+        "call_count": 1
+      },
+      {
+        "rank": 2,
+        "function": "C:\\Users\\hnl23110801\\anaconda3\\Lib\\copy.py:128(deepcopy)",
+        "cumulative_time": 0.0033831,
+        "call_count": 732
+      },
+      {
+        "rank": 3,
+        "function": "C:\\Users\\hnl23110801\\anaconda3\\Lib\\copy.py:227(_deepcopy_dict)",
+        "cumulative_time": 0.0032955000000000003,
+        "call_count": 96
+      },
+      {
+        "rank": 4,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\engine_v91.py:207(calculate_energy)",
+        "cumulative_time": 0.0030557,
+        "call_count": 12
+      },
+      {
+        "rank": 5,
+        "function": "C:\\Users\\hnl23110801\\anaconda3\\Lib\\site-packages\\pandas\\core\\frame.py:665(__init__)",
+        "cumulative_time": 0.0015586,
+        "call_count": 1
+      },
+      {
+        "rank": 6,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\bazi_profile.py:48(get_luck_pillar_at)",
+        "cumulative_time": 0.0015085,
+        "call_count": 13
+      },
+      {
+        "rank": 7,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\bazi_profile.py:76(_build_luck_timeline)",
+        "cumulative_time": 0.0014755,
+        "call_count": 1
+      },
+      {
+        "rank": 8,
+        "function": "Z:\\home\\jin\\bazi_predict\\core\\processors\\physics.py:89(process)",
+        "cumulative_time": 0.0009702000000000001,
+        "call_count": 12
+      },
+      {
+        "rank": 9,
+        "function": "C:\\Users\\hnl23110801\\anaconda3\\Lib\\site-packages\\pandas\\core\\internals\\construction.py:96(arrays_to_mgr)",
+        "cumulative_time": 0.0008011,
+        "call_count": 1
+      },
+      {
+        "rank": 10,
+        "function": "C:\\Users\\hnl23110801\\anaconda3\\Lib\\site-packages\\lunar_python\\eightchar\\Yun.py:115(getDaYun)",
+        "cumulative_time": 0.0006753,
+        "call_count": 1
+      }
+    ]
+  }
+}

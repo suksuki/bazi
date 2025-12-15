@@ -1,0 +1,41 @@
+QuantumEngine.calculate_energy() Performance Profile
+============================================================
+
+         10101 function calls in 0.012 seconds
+
+   Ordered by: cumulative time
+   List reduced from 36 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       50    0.002    0.000    0.012    0.000 Z:\home\jin\bazi_predict\core\engine_v91.py:207(calculate_energy)
+       50    0.002    0.000    0.003    0.000 Z:\home\jin\bazi_predict\core\processors\physics.py:89(process)
+       50    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:72(process)
+       50    0.001    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\engine_v88.py:274(_determine_favorable)
+       50    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\seasonal.py:55(process)
+       50    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\phase_change.py:44(process)
+     3900    0.001    0.000    0.001    0.000 {method 'get' of 'dict' objects}
+      900    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\physics.py:188(_get_element_stem)
+       50    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\seasonal.py:103(<listcomp>)
+       50    0.000    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:105(_map_ten_gods)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\engine_v91.py:387(_check_spacetime_events)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\strength_judge.py:33(process)
+      100    0.000    0.000    0.000    0.000 {built-in method builtins.any}
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\physics.py:184(<listcomp>)
+      650    0.000    0.000    0.000    0.000 {method 'startswith' of 'str' objects}
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\geo.py:28(process)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\phase_change.py:67(<listcomp>)
+      850    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:216(_calc_relationship)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:140(_calc_wealth)
+     1000    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\phase_change.py:68(<listcomp>)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\engine_v88.py:237(_get_element)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\engine_v88.py:307(<listcomp>)
+       50    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:171(_calc_career)
+      250    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\phase_change.py:113(<genexpr>)
+      400    0.000    0.000    0.000    0.000 {method 'add' of 'set' objects}
+      400    0.000    0.000    0.000    0.000 {method 'items' of 'dict' objects}
+      150    0.000    0.000    0.000    0.000 {built-in method builtins.max}
+      200    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\phase_change.py:114(<genexpr>)
+
+

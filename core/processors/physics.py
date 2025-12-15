@@ -169,17 +169,13 @@ class PhysicsProcessor(BaseProcessor):
                  rooted_stems.append(stem_char)
 
         # --- 3. Era Multipliers (Preserve V9.1 Feature) ---
-        # (This is good, keep it)
-        try:
-            import os, json
-            era_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "era_constants.json")
-            if os.path.exists(era_path):
-                with open(era_path, 'r') as f:
-                    era_mults = json.load(f).get('physics_multipliers', {})
-                    for elem, mult in era_mults.items():
-                        if elem in energy: energy[elem] *= mult
-        except:
-             pass
+        # V9.5 Performance Optimization: era_multipliers now passed via context
+        # to avoid file I/O operations (eliminated 20.33% performance overhead)
+        era_mults = context.get('era_multipliers', {})
+        if era_mults:
+            for elem, mult in era_mults.items():
+                if elem in energy and isinstance(mult, (int, float)):
+                    energy[elem] *= mult
 
         return {
             'raw_energy': energy,

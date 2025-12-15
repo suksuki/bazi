@@ -1,0 +1,41 @@
+BaziController.run_timeline_simulation() Performance Profile
+============================================================
+
+         9055 function calls (8234 primitive calls) in 0.010 seconds
+
+   Ordered by: cumulative time
+   List reduced from 233 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.010    0.010 Z:\home\jin\bazi_predict\controllers\bazi_controller.py:246(run_timeline_simulation)
+   732/12    0.002    0.000    0.003    0.000 C:\Users\hnl23110801\anaconda3\Lib\copy.py:128(deepcopy)
+    96/12    0.001    0.000    0.003    0.000 C:\Users\hnl23110801\anaconda3\Lib\copy.py:227(_deepcopy_dict)
+       12    0.001    0.000    0.003    0.000 Z:\home\jin\bazi_predict\core\engine_v91.py:207(calculate_energy)
+        1    0.000    0.000    0.002    0.002 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\frame.py:665(__init__)
+       13    0.000    0.000    0.002    0.000 Z:\home\jin\bazi_predict\core\bazi_profile.py:48(get_luck_pillar_at)
+        1    0.000    0.000    0.001    0.001 Z:\home\jin\bazi_predict\core\bazi_profile.py:76(_build_luck_timeline)
+       12    0.001    0.000    0.001    0.000 Z:\home\jin\bazi_predict\core\processors\physics.py:89(process)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\construction.py:96(arrays_to_mgr)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\eightchar\Yun.py:115(getDaYun)
+       10    0.000    0.000    0.001    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\eightchar\DaYun.py:11(__init__)
+       24    0.000    0.000    0.001    0.000 C:\Users\hnl23110801\anaconda3\Lib\copy.py:201(_deepcopy_list)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\construction.py:506(nested_data_to_arrays)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\construction.py:793(to_arrays)
+       10    0.000    0.000    0.001    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\eightchar\Yun.py:104(getStartSolar)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\EightChar.py:429(getYun)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\eightchar\Yun.py:11(__init__)
+        1    0.000    0.000    0.001    0.001 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\eightchar\Yun.py:19(__compute_start)
+     2548    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\managers.py:2068(create_block_manager_from_column_arrays)
+       14    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\construction.py:519(sanitize_array)
+        1    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\construction.py:891(_list_of_dict_to_arrays)
+       12    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\domains.py:72(process)
+        2    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\Lunar.py:1029(__getNearJieQi)
+        1    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\construction.py:596(_homogenize)
+       12    0.000    0.000    0.000    0.000 Z:\home\jin\bazi_predict\core\processors\seasonal.py:55(process)
+        4    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\indexes\base.py:7521(ensure_index)
+        1    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\pandas\core\internals\managers.py:1744(_consolidate_inplace)
+       10    0.000    0.000    0.000    0.000 C:\Users\hnl23110801\anaconda3\Lib\site-packages\lunar_python\Solar.py:438(nextMonth)
+       25    0.000    0.000    0.000    0.000 {pandas._libs.lib.maybe_convert_objects}
+
+

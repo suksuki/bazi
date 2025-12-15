@@ -7,7 +7,8 @@ import time
 # Add project root
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from core.engine_v91 import EngineV91
+# V9.5 MVC: Use adapter instead of direct Model import
+from tests.adapters.test_engine_adapter import QuantumEngineAdapter as EngineV91
 
 ERA_PATH = os.path.join(os.path.dirname(__file__), "../data/era_constants.json")
 
@@ -20,7 +21,11 @@ def save_era(data):
         json.dump(data, f, indent=4)
 
 def run_spacetime_test():
-    print("🚀 V9.1 Spacetime Fusion Test")
+    # Windows console compatibility
+    try:
+        print("🚀 V9.1 Spacetime Fusion Test")
+    except UnicodeEncodeError:
+        print("V9.1 Spacetime Fusion Test")
     print("===========================")
     
     # Backup original era config

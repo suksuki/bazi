@@ -40,15 +40,40 @@ def render_prediction_dashboard():
     
     # === V9.1 Spacetime Inputs ===
     st.sidebar.header("🌍 时空坐标 (Spacetime)")
-    city = st.sidebar.selectbox("出生城市 (City)", ["Unknown", "Harbin", "Beijing", "Shanghai", "Guangzhou", "Singapore", "Sydney"], index=0)
+    city = st.sidebar.selectbox("出生城市 (City)", ["None", "Unknown", "Harbin", "Beijing", "Shanghai", "Guangzhou", "Singapore", "Sydney"], index=0)
     
     # 1. Basic Calculation (The Chart) - V9.5 MVC: Via Controller
     enable_solar = st.session_state.get('input_enable_solar_time', True)
     longitude = st.session_state.get('input_longitude', 116.46) if enable_solar else 120.0
     
     # === V9.5 MVC: Initialize Controller ===
+    # V9.6: Handle "None" option - convert to "Unknown" for Controller (neutral region)
+    city_for_controller = "Unknown" if (not city or city.lower() in ['none', '']) else city
     controller = BaziController()
-    controller.set_user_input(name, gender, d, t, city, enable_solar, longitude)
+    controller.set_user_input(name, gender, d, t, city_for_controller, enable_solar, longitude)
+    
+    # === V9.6: GEO 修正系数显示 ===
+    # 只有当用户明确选择城市时才显示 GEO 修正
+    city_input = city if city and city.lower() not in ['unknown', 'none', ''] else None
+    
+    if city_input:
+        # 调用 Controller 获取 GEO 修正系数
+        geo_modifiers = controller.get_geo_modifiers(city_input)
+        
+        # 在侧边栏渲染结果
+        if geo_modifiers:
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("🌍 地理修正系数 (GEO Modifiers)")
+            # 显示修正系数（排除描述性字段）
+            modifier_display = {k: v for k, v in geo_modifiers.items() 
+                              if k not in ['desc'] and isinstance(v, (int, float))}
+            if modifier_display:
+                st.sidebar.json(modifier_display)
+            if geo_modifiers.get('desc'):
+                st.sidebar.caption(f"📍 {geo_modifiers.get('desc')}")
+        else:
+            st.sidebar.warning(f"城市 [{city_input}] 暂无 GEO 修正数据。")
+    # 默认情况下，城市输入为空 (None) 或未选择，不显示 GEO 修正部分
     
     # Get data from Controller (replaces direct BaziCalculator calls)
     chart = controller.get_chart()
@@ -182,11 +207,197 @@ def render_prediction_dashboard():
         
     current_gan_zhi = ln_gan_zhi # Focus on Liu Nian for Physics
     
+    # === V9.6: 八字核心分析 (Bazi Core Analysis) ===
+    st.markdown("---")
+    st.subheader("📊 八字核心分析 (Bazi Core Analysis)")
+    
+    # Get flux data for analysis
+    flux_data_for_analysis = controller.get_flux_data(selected_yun, current_gan_zhi)
+    
+    # 1. 日主强弱判定 (Wang/Shuai Strength)
+    if flux_data_for_analysis:
+        wang_shuai_str = controller.get_wang_shuai_str(flux_data_for_analysis)
+        
+        col_ws1, col_ws2 = st.columns([1, 2])
+        with col_ws1:
+            # Display strength with color coding
+            if "身旺" in wang_shuai_str:
+                st.success(f"**日主强弱**: {wang_shuai_str}")
+            elif "身弱" in wang_shuai_str:
+                st.warning(f"**日主强弱**: {wang_shuai_str}")
+            else:
+                st.info(f"**日主强弱**: {wang_shuai_str}")
+        
+        with col_ws2:
+            # Calculate self energy for display
+            s_self = flux_data_for_analysis.get('BiJian', 0) + flux_data_for_analysis.get('JieCai', 0)
+            est_self = s_self * 0.08
+            st.caption(f"日主能量值: {est_self:.2f}")
+    
+    # 2. 五行能量状态 (Five Elements Energy Distribution)
+    st.markdown("#### 🌈 五行能量分布 (Five Elements Energy)")
+    
+    # V9.6 Architecture Fix: Use Controller API instead of direct calculation in View
+    # All calculation logic is encapsulated in controller.get_five_element_energies()
+    element_energies = controller.get_five_element_energies(flux_data_for_analysis)
+    
+    # Create visualization
+    if element_energies:
+            import plotly.graph_objects as go
+            
+            elements = list(element_energies.keys())
+            energies = list(element_energies.values())
+            
+            # Color mapping for elements
+            colors = {
+                'Wood': '#4CAF50',
+                'Fire': '#F44336',
+                'Earth': '#FF9800',
+                'Metal': '#2196F3',
+                'Water': '#00BCD4'
+            }
+            
+            fig_elements = go.Figure(data=[
+                go.Bar(
+                    x=elements,
+                    y=energies,
+                    marker_color=[colors.get(e, '#757575') for e in elements],
+                    text=[f"{e:.2f}" for e in energies],
+                    textposition='auto'
+                )
+            ])
+            
+            fig_elements.update_layout(
+                title="五行能量分布图",
+                xaxis_title="五行 (Elements)",
+                yaxis_title="能量值 (Energy)",
+                height=300,
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig_elements, width='stretch')
+            
+            # Display as metrics
+            col_e1, col_e2, col_e3, col_e4, col_e5 = st.columns(5)
+            cols_e = [col_e1, col_e2, col_e3, col_e4, col_e5]
+            for i, (element, energy) in enumerate(element_energies.items()):
+                with cols_e[i]:
+                    st.metric(element, f"{energy:.2f}")
+    
+    # 3. 十神组合分析 (Ten Gods Analysis)
+    st.markdown("#### ⚡ 十神组合分析 (Ten Gods Combination)")
+    
+    if flux_data_for_analysis:
+        # Map flux data keys to Ten Gods
+        tengods_mapping = {
+            'BiJian': '比肩',
+            'JieCai': '劫财',
+            'ShiShen': '食神',
+            'ShangGuan': '伤官',
+            'PianCai': '偏财',
+            'ZhengCai': '正财',
+            'QiSha': '七杀',
+            'ZhengGuan': '正官',
+            'PianYin': '偏印',
+            'ZhengYin': '正印'
+        }
+        
+        tengods_data = {}
+        for key, name in tengods_mapping.items():
+            value = flux_data_for_analysis.get(key, 0) * 0.08  # Apply scale
+            if value > 0.1:  # Only show significant values
+                tengods_data[name] = value
+        
+        if tengods_data:
+            # Display as cards
+            tengods_cols = st.columns(5)
+            tengods_list = list(tengods_data.items())
+            
+            for i, (name, value) in enumerate(tengods_list):
+                col_idx = i % 5
+                with tengods_cols[col_idx]:
+                    st.metric(name, f"{value:.2f}")
+            
+            # Create a summary DataFrame
+            tengods_df = pd.DataFrame([
+                {'十神': name, '能量值': value} 
+                for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
+            ])
+            
+            with st.expander("📋 十神详细数据表"):
+                st.dataframe(tengods_df, hide_index=True, width='stretch')
+        else:
+            st.info("暂无显著的十神能量数据")
+    
+    # === V9.6: 核心结论与建议 (Core Conclusions & Suggestions) ===
+    st.markdown("---")
+    st.subheader("📝 核心结论与建议 (Core Conclusions & Suggestions)")
+    
+    # Get balance suggestion and top ten gods summary using Controller APIs
+    if flux_data_for_analysis and element_energies:
+        try:
+            suggestion = controller.get_balance_suggestion(element_energies)
+            summary = controller.get_top_ten_gods_summary(flux_data_for_analysis)
+            
+            with st.expander("查看八字测试总结", expanded=True):
+                # Core metrics in columns
+                col1, col2, col3 = st.columns(3)
+                
+                # 1. 日主强弱结论
+                with col1:
+                    if "身旺" in wang_shuai_str:
+                        st.success(f"**日主强弱**: {wang_shuai_str}")
+                    elif "身弱" in wang_shuai_str:
+                        st.warning(f"**日主强弱**: {wang_shuai_str}")
+                    else:
+                        st.info(f"**日主强弱**: {wang_shuai_str}")
+                
+                # 2. 五行平衡建议 (制衡元素)
+                with col2:
+                    if suggestion.get('element_to_balance'):
+                        st.metric("制衡元素", suggestion['element_to_balance'])
+                    else:
+                        st.metric("制衡元素", "平衡")
+                
+                # 3. 核心十神总结
+                with col3:
+                    if summary.get('top_two_gods'):
+                        st.metric("核心十神", summary['top_two_gods'])
+                    else:
+                        st.metric("核心十神", "未检测")
+                
+                # Detailed suggestions
+                st.markdown("---")
+                
+                # Balance suggestion
+                if suggestion.get('element_to_balance') and suggestion.get('element_to_support'):
+                    st.success(f"💡 **平衡建议**: 需要 **{suggestion['element_to_balance']}** 来制衡 **{suggestion['element_to_support']}**。")
+                
+                # Text summary
+                if suggestion.get('text_summary'):
+                    st.info(f"📚 **解读**: {suggestion['text_summary']}")
+                
+                # Top ten gods summary
+                if summary.get('top_gods'):
+                    st.markdown(f"🧬 **显著十神**: {summary['top_gods']}")
+                
+                # Optional: Show detailed data for verification
+                if st.checkbox("显示详细数据 (Show Detailed Data)", value=False):
+                    st.json({
+                        "suggestion": suggestion,
+                        "summary": summary,
+                        "element_energies": element_energies
+                    })
+        except Exception as e:
+            st.warning(f"⚠️ 无法生成核心结论: {e}")
+            # Log error for debugging (if logging is needed, import logging module)
+    
+    st.markdown("---")
+    
     # 4. Engine Execution (Flux -> Quantum V2.4) - V9.5 MVC via Controller
     
     # A. FluxEngine (Sensor Layer) - Via Controller
     flux_data = controller.get_flux_data(selected_yun, current_gan_zhi)
-    flux_engine = controller.get_flux_engine()  # Reference for particle access
     dynamic_gods_map = flux_data
     
     # DEBUG: Inspect Flux Data
@@ -257,30 +468,8 @@ def render_prediction_dashboard():
         wang_shuai_str = "身旺"
 
     # Capture Pillar Energies
-    pe_list = []
-    p_order = ["year_stem", "year_branch", "month_stem", "month_branch", "day_stem", "day_branch", "hour_stem", "hour_branch"]
-    for pid in p_order:
-        val = 0.0
-        for p in flux_engine.particles:
-            if p.id == pid:
-                val = p.wave.amplitude * scale # Apply Scaling to match Physics/TenGods magnitude
-                break
-        
-        # [V9.2 Fix] Fallback if FluxEngine is dormant (Clean Room Side Effect)
-        if val < 0.1:
-            base_u = params.get('physics', {}).get('base_unit', 8.0)
-            # Differentiate Stem vs Branch
-            is_stem = 'stem' in pid
-            # Basic Energy Estimation
-            val = base_u if is_stem else base_u * 1.5
-            # Apply Pillar Weight
-            pw = params.get('pillarWeights', {})
-            if 'year' in pid: val *= pw.get('year', 0.8)
-            elif 'month' in pid: val *= pw.get('month', 1.2)
-            elif 'hour' in pid: val *= pw.get('hour', 0.9)
-            elif 'day' in pid: val *= pw.get('day', 1.0)
-            
-        pe_list.append(round(val, 1))
+    # V9.6 Architecture Fix: Use Controller API instead of direct flux_engine access
+    pe_list = controller.get_pillar_energies(flux_data, params, scale)
 
     physics_sources = {
         'self': {'stem_support': final_self},
@@ -301,8 +490,11 @@ def render_prediction_dashboard():
 
     # [V9.2 Fix] Geo Initialization Lockout
     # Force Neutral Region if input is invalid to prevent engine collapse
+    # V9.6: Handle "None" option - use neutral region (Beijing) for calculations
     if not city or city.lower() in ['unknown', 'none', '']:
-        city = "Beijing"
+        city_for_calc = "Beijing"  # Use neutral region for engine calculations
+    else:
+        city_for_calc = city
 
     case_data = {
         'id': 8888, 
@@ -375,8 +567,9 @@ def render_prediction_dashboard():
     # 4. Render Interface (Quantum Lab Style)
     st.markdown("### 🏛️ 四柱能量 (Four Pillars Energy - Interaction Matrix)")
     
+    # V9.6 Architecture Fix: Pass pe_list instead of flux_engine
     DestinyCards.render_bazi_table_with_engine(
-        chart, selected_yun, current_gan_zhi, flux_engine, scale, wang_shuai_str
+        chart, selected_yun, current_gan_zhi, pe_list, scale, wang_shuai_str
     )
     
     st.markdown("---")
@@ -722,17 +915,8 @@ def render_prediction_dashboard():
         st.latex(r"E_{quantum} = E_{flux} \times 0.08")
         
         st.markdown("### 2. 详细转换追踪 (Trace)")
-        audit_data = []
-        for p in flux_engine.particles:
-            if "dy_" in p.id or "ln_" in p.id: continue
-            raw = p.wave.amplitude
-            scaled = raw * scale
-            audit_data.append({
-                "Particle": f"{p.char} ({p.id})",
-                "Raw Flux (E_f)": f"{raw:.1f}",
-                "Scale Factor": f"{scale}",
-                "Quantum Input (E_q)": f"{scaled:.1f}"
-            })
+        # V9.6 Architecture Fix: Use Controller API instead of direct flux_engine access
+        audit_data = controller.get_particle_audit_data(flux_data, scale)
         st.dataframe(pd.DataFrame(audit_data))
         
         st.markdown("### 3. 被激活的黄金参数 (Active Golden Params)")

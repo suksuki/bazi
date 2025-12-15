@@ -544,6 +544,28 @@ def render():
         era_pen = st.slider("时代阻力 (Penalty)", 0.0, 0.5, mp['eraPenalty'], 0.1, key='mp_ep')
         
         st.caption("地理与时间 (Geo & Time)")
+        
+        # === V9.6: GEO 城市选择 (City Selection) ===
+        def load_geo_cities_for_sidebar():
+            """Load available cities from geo_coefficients.json for sidebar"""
+            geo_path = os.path.join(os.path.dirname(__file__), "../../data/geo_coefficients.json")
+            try:
+                with open(geo_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    cities = list(data.get("cities", {}).keys())
+                    return ["Unknown"] + sorted(cities) if cities else ["Unknown", "Beijing", "Shanghai", "Singapore"]
+            except:
+                return ["Unknown", "Beijing", "Shanghai", "Singapore", "Harbin", "Guangzhou", "Sydney"]
+        
+        geo_cities_list = load_geo_cities_for_sidebar()
+        p2_city_input = st.selectbox(
+            "🌍 出生城市 (Birth City)",
+            geo_cities_list,
+            index=0,
+            key='p2_sidebar_city',
+            help="选择出生城市以应用 GEO 修正系数"
+        )
+        
         geo_hot = st.slider("南方火气 (South Heat)", 0.0, 0.5, mp['latitudeHeat'], 0.1, key='mp_gh')
         geo_cold = st.slider("北方水气 (North Cold)", 0.0, 0.5, mp['latitudeCold'], 0.1, key='mp_gc')
         
@@ -721,8 +743,8 @@ def render():
     # Controller is available for standard operations, but engine is exposed for tuning.
     engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
     
-    # V9.5 MVC: Controller instance (for future migration)
-    # controller = BaziController()  # Uncomment when ready to use Controller API
+    # V9.5 MVC: Controller instance (for GEO comparison)
+    controller = BaziController()  # V9.6: Enable for GEO comparison feature
     
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
@@ -1214,6 +1236,165 @@ def render():
                 fig_t.add_trace(go.Scatter(x=sdf['year'], y=sdf['rel'], name='Rel'))
                 fig_t.update_layout(height=300, title="未来趋势")
                 st.plotly_chart(fig_t, width='stretch')
+
+            # === V9.6: GEO 能量轨迹对比 (GEO Comparison) ===
+            st.divider()
+            st.markdown("### 🌍 GEO 能量轨迹对比 (GEO Energy Trajectory Comparison)")
+            st.caption("对比基线 (Baseline) 与 GEO 修正后的能量轨迹")
+            
+            # V9.6: Use city from sidebar if available, otherwise provide selection in main area
+            # Check if sidebar city is set and valid
+            sidebar_city = st.session_state.get('p2_sidebar_city', 'Unknown')
+            
+            if sidebar_city and sidebar_city.lower() not in ['unknown', 'none', '']:
+                # Use sidebar city selection
+                comparison_city = sidebar_city
+                st.info(f"📍 使用侧边栏选择的城市: **{comparison_city}** (可在侧边栏「时空修正」面板中修改)")
+            else:
+                # Fallback: Provide city selection in main area
+                def load_geo_cities():
+                    """Load available cities from geo_coefficients.json"""
+                    geo_path = os.path.join(os.path.dirname(__file__), "../../data/geo_coefficients.json")
+                    try:
+                        with open(geo_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            cities = list(data.get("cities", {}).keys())
+                            return ["None"] + sorted(cities) if cities else ["None", "Beijing", "Shanghai", "Singapore"]
+                    except:
+                        return ["None", "Beijing", "Shanghai", "Singapore", "Harbin", "Guangzhou", "Sydney"]
+                
+                geo_cities = load_geo_cities()
+                comparison_city = st.selectbox(
+                    "🌍 选择 GEO 对比城市 (Select City for GEO Comparison)",
+                    geo_cities,
+                    index=0,
+                    help="选择一个城市以查看 GEO 修正后的能量轨迹与基线的对比（或使用侧边栏「时空修正」面板中的城市选择）"
+                )
+                
+                # Convert "None" to None for controller
+                if comparison_city == "None":
+                    comparison_city = None
+            
+            # Check if we have a valid case and city for comparison
+            if selected_case and comparison_city and comparison_city.lower() not in ['unknown', 'none', '']:
+                # Ensure controller has user input set (needed for get_geo_comparison)
+                # We need to set user input from selected_case
+                try:
+                    # Try to derive birth info from case
+                    # For preset cases, we might not have exact birth date
+                    # Use a default date if needed
+                    from datetime import date
+                    default_date = date(2000, 1, 1)
+                    default_gender = selected_case.get('gender', '男')
+                    
+                    # Set controller input (minimal required fields)
+                    controller.set_user_input(
+                        name=selected_case.get('description', 'Test Case'),
+                        gender=default_gender,
+                        date_obj=default_date,
+                        time_int=12,
+                        city=comparison_city,
+                        enable_solar=True,
+                        longitude=116.46  # Default Beijing longitude
+                    )
+                    
+                    st.subheader(f"📊 GEO 能量轨迹对比 ({comparison_city} vs. Baseline)")
+                    
+                    # Get comparison data
+                    start_year_geo = 2024  # Default start year
+                    duration_geo = 12     # Default duration
+                    
+                    with st.spinner(f"正在计算 {comparison_city} 的 GEO 修正轨迹..."):
+                        comparison_df, geo_modifiers = controller.get_geo_comparison(
+                            city=comparison_city,
+                            start_year=start_year_geo,
+                            duration=duration_geo
+                        )
+                    
+                    if not comparison_df.empty:
+                        # Display GEO modifiers
+                        if geo_modifiers:
+                            st.markdown("#### 🌍 GEO 修正系数")
+                            modifier_display = {k: v for k, v in geo_modifiers.items()
+                                              if k not in ['desc'] and isinstance(v, (int, float))}
+                            if modifier_display:
+                                st.json(modifier_display)
+                            if geo_modifiers.get('desc'):
+                                st.caption(f"📍 {geo_modifiers.get('desc')}")
+                        
+                        # Plot comparison chart
+                        st.markdown("#### 📈 能量轨迹对比图")
+                        
+                        fig_geo = go.Figure()
+                        
+                        # Baseline trajectories
+                        if 'baseline_career' in comparison_df.columns:
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['baseline_career'],
+                                name='Baseline Career',
+                                line=dict(color='#00BFFF', width=2, dash='dash')
+                            ))
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['baseline_wealth'],
+                                name='Baseline Wealth',
+                                line=dict(color='#00BFFF', width=2, dash='dash')
+                            ))
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['baseline_relationship'],
+                                name='Baseline Relationship',
+                                line=dict(color='#00BFFF', width=2, dash='dash')
+                            ))
+                        
+                        # GEO-corrected trajectories
+                        if 'geo_career' in comparison_df.columns:
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['geo_career'],
+                                name=f'{comparison_city} Career',
+                                line=dict(color='#FF6B6B', width=3)
+                            ))
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['geo_wealth'],
+                                name=f'{comparison_city} Wealth',
+                                line=dict(color='#FF6B6B', width=3)
+                            ))
+                            fig_geo.add_trace(go.Scatter(
+                                x=comparison_df['year'],
+                                y=comparison_df['geo_relationship'],
+                                name=f'{comparison_city} Relationship',
+                                line=dict(color='#FF6B6B', width=3)
+                            ))
+                        
+                        fig_geo.update_layout(
+                            height=400,
+                            title=f"GEO-Corrected Trajectory in {comparison_city}",
+                            xaxis_title="Year",
+                            yaxis_title="Energy Score",
+                            hovermode='x unified',
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                        )
+                        
+                        st.plotly_chart(fig_geo, width='stretch')
+                        
+                        # Display data table
+                        with st.expander("📋 详细数据表 (Detailed Data Table)"):
+                            st.dataframe(comparison_df, width='stretch')
+                        
+                        st.success("✅ GEO 能量轨迹对比图已生成。")
+                    else:
+                        st.warning(f"⚠️ 无法生成 {comparison_city} 的对比数据。请检查 Controller 配置。")
+                        
+                except Exception as e:
+                    st.error(f"❌ 轨迹计算错误: {e}")
+                    st.exception(e)
+            elif selected_case:
+                st.info("请选择一个城市以生成 GEO 能量轨迹对比图。")
+            else:
+                st.info("请先选择一个案例以进行 GEO 对比分析。")
 
 if __name__ == "__main__":
     render()

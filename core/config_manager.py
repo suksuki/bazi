@@ -59,9 +59,36 @@ class ConfigManager:
             return DEFAULT_CONFIG
 
     @staticmethod
-    def save_config(new_config: Dict[str, Any]):
-        """保存配置 (AI和侧边栏都调这个)"""
+    def save_config(new_config_or_key=None, value=None):
+        """
+        保存配置 (AI和侧边栏都调这个)
+        
+        支持两种调用方式:
+        1. save_config({'key': 'value'}) - 传入字典
+        2. save_config('key', 'value') - 传入键值对（位置参数）
+        
+        Args:
+            new_config_or_key: 配置字典或配置键
+            value: 配置值（当第一个参数是键时使用）
+        """
         ConfigManager._ensure_dir()
+        
+        # 判断调用方式
+        if new_config_or_key is None:
+            raise ValueError("save_config() requires either a dict or (key, value) arguments")
+        
+        # 如果第二个参数存在且第一个参数是字符串，则是键值对方式
+        if value is not None:
+            if isinstance(new_config_or_key, str):
+                # 键值对方式：save_config('key', 'value')
+                new_config = {new_config_or_key: value}
+            else:
+                raise ValueError("When using (key, value) format, key must be a string")
+        elif isinstance(new_config_or_key, dict):
+            # 字典方式：save_config({'key': 'value'})
+            new_config = new_config_or_key
+        else:
+            raise ValueError("save_config() requires either a dict or (key, value) arguments")
         
         with ConfigManager._lock: # 线程安全锁，防止同时写入冲突
             # 读取旧配置，进行合并更新 (防止覆盖掉未传的参数)

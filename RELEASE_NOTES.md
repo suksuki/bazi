@@ -1,7 +1,53 @@
 # Antigravity Release Notes
 
+## [V9.5] - MVC Architecture Edition - 2025-12-15
+**Status:** ✅ STABLE / PRODUCTION READY  
+**Test Status:** Controller Integration: 15/15 PASSED ✅ | Total: 190+ PASSED
+
+### 🏛️ MVC 架构革命 (MVC Architecture Revolution)
+
+#### Controller Layer Established
+* **✅ BaziController:** 20+ 公共方法的统一接口层
+  * Input Management: `set_user_input()`
+  * Chart & Luck: `get_chart()`, `get_luck_cycles()`, `get_dynamic_luck_pillar()`
+  * Timeline: `run_timeline_simulation()`, `run_single_year_simulation()`
+  * GEO Comparison: `get_baseline_trajectory()`, `get_geo_trajectory()`, `get_geo_comparison()` ⭐
+  * Convenience: `get_flux_data()`, `get_wang_shuai_str()`, `get_profile()`
+
+#### View Layer Decoupling
+| Page | Status | Strategy |
+|------|--------|----------|
+| P1 智能排盘 | ✅ Pure View | 100% Controller API |
+| P2 量子验证 | ✅ Hybrid Mode | Controller + Engine (Calibration) |
+| P3 命运影院 | ✅ Progressive MVC | Controller-first with Engine fallback |
+
+### ⚡ 架构优势 (Architecture Benefits)
+* **Single Source of Truth:** 所有业务逻辑通过 Controller 流转
+* **Lazy Initialization:** 按需创建 Model 实例
+* **State Isolation:** 每个 Controller 实例独立状态
+* **Backward Compatibility:** 保留 Engine 直接访问用于校准工具
+
+### 🧪 新增测试 (New Tests)
+* `tests/integration/test_controller_integration.py` - 15 项 Controller 集成测试
+  * TestControllerInitialization: ✅
+  * TestUserInputAPI: ✅
+  * TestChartAndLuckAPI: ✅
+  * TestTimelineSimulation: ✅
+  * TestGeoComparisonAPI: ✅
+  * TestFluxEngineAPI: ✅
+
+### 📁 新增文档 (New Documentation)
+* `docs/CONTROLLER_API.md` - 完整 Controller API 参考手册
+
+### 🔧 P3 命运影院渐进式解耦
+* **Controller 工厂函数:** `get_controller_for_case()` 从案例数据创建 Controller
+* **双保险机制:** MVC 优先，Legacy Engine 后备
+* **GEO 对比曲线:** 通过 `get_geo_comparison()` 获取双轨迹数据
+
+---
+
 ## [V8.8] - Modular Genesis Edition - 2025-12-14
-**Status:** ✅ STABLE / PRODUCTION READY
+**Status:** ✅ STABLE / PRODUCTION READY  
 **Test Status:** V8.8 Comprehensive Suite: 25/25 PASSED ✅
 
 ### 🏛️ 模块化架构 (Modular Architecture)

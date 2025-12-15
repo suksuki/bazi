@@ -26,11 +26,35 @@ class EngineV91(EngineV88):
 
     def analyze(self, bazi: List[str], day_master: str, 
                 city: str = "Unknown", latitude: Optional[float] = None,
+                era_multipliers: Optional[Dict[str, float]] = None,
                 **kwargs) -> AnalysisResponse:
         """
         V9.1 Analysis Entry Point.
+        
+        Args:
+            bazi: List of 4 pillars
+            day_master: Day master character
+            city: City name for geo correction
+            latitude: Optional latitude override
+            era_multipliers: Optional cached era multipliers (for performance optimization)
+            **kwargs: Additional arguments (e.g., year for UI display)
         """
         messages = [f"[{self.VERSION}] Starting Spacetime Analysis..."]
+        
+        # V9.5 Performance Optimization: Load era_multipliers if not provided
+        # (backward compatibility - allows callers to pass cached multipliers)
+        if era_multipliers is None:
+            import json, os
+            era_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/era_constants.json")
+            try:
+                with open(era_path, 'r') as f:
+                    era_data = json.load(f)
+                    era_multipliers = era_data.get('physics_multipliers', {})
+            except:
+                era_multipliers = {}
+        
+        # Store for UI display
+        era_mods = era_multipliers.copy() if era_multipliers else {}
         
         # 1. Physics Context
         dm_element = self.physics._get_element_stem(day_master)
@@ -38,23 +62,14 @@ class EngineV91(EngineV88):
             'bazi': bazi,
             'day_master': day_master,
             'dm_element': dm_element,
-            'month_branch': bazi[1][1] if len(bazi) > 1 else ''
+            'month_branch': bazi[1][1] if len(bazi) > 1 else '',
+            'era_multipliers': era_multipliers or {}  # V9.5: Pass cached multipliers
         }
         
         # 2. Run Physics (Era-Aware)
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
         messages.append("[Physics] Applied Era Constants (Period 9)")
-        
-        # Debug: Load Era Constants just for UI display
-        era_mods = {}
-        import json, os
-        # Fix: dirname(dirname(__file__)) is project root. Join with "data/..." directly.
-        era_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/era_constants.json")
-        try:
-            with open(era_path, 'r') as f:
-                era_mods = json.load(f).get('physics_multipliers', {})
-        except: pass
         
         # 3. Apply Geo Modifiers (Layer 0)
         loc_input = latitude if latitude is not None else city
@@ -189,7 +204,8 @@ class EngineV91(EngineV88):
         )
         repo_response.chart_config.suggested_theme = theme
         return repo_response
-    def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None) -> Dict:
+    def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None, 
+                        era_multipliers: Optional[Dict[str, float]] = None) -> Dict:
         """
         V9.1 Spacetime Energy Calculation (Backwards Compatible / Dashboard Ready).
         
@@ -197,6 +213,11 @@ class EngineV91(EngineV88):
         1. Geo-Correction (City/Lat)
         2. Era-Correction (Already in Physics)
         3. Domain Logic (Recalculated with Spacetime Energy)
+        
+        Args:
+            case_data: Case data dictionary
+            dynamic_context: Dynamic context (year, dayun, etc.)
+            era_multipliers: Optional era multipliers dict (for performance optimization)
         """
         dm_char = case_data.get('day_master', '甲')
         dm_elem = self.physics._get_element_stem(dm_char)
@@ -218,11 +239,13 @@ class EngineV91(EngineV88):
                  pass
         
         # 1. Physics (Era-Aware via PhysicsProcessor)
+        # V9.5 Performance Optimization: Pass era_multipliers via context to avoid file I/O
         context = {
             'bazi': current_bazi, # Use the dynamic-aware bazi list
             'day_master': dm_char,
             'dm_element': dm_elem,
-            'month_branch': current_bazi[1][1] if len(current_bazi) > 1 and len(current_bazi[1]) > 1 else ''
+            'month_branch': current_bazi[1][1] if len(current_bazi) > 1 and len(current_bazi[1]) > 1 else '',
+            'era_multipliers': era_multipliers or {}  # Pass cached multipliers
         }
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
