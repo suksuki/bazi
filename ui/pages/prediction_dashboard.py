@@ -24,6 +24,8 @@ from ui.components.cards import DestinyCards
 # MVC Controller Import
 from controllers.bazi_controller import BaziController
 
+# V10.0 Unified Input Panel
+from ui.components.unified_input_panel import render_and_collect_input
 
 
 
@@ -32,57 +34,25 @@ def render_prediction_dashboard():
     Renders the V2.4 Pure Prediction Dashboard.
     Focuses solely on Quantum Physics Logic.
     """
-    # 0. Inputs (Session State)
-    name = st.session_state.get('input_name', '某人')
-    gender = st.session_state.get('input_gender', '男')
-    d = st.session_state.get('input_date', datetime.date(1990, 1, 1))
-    t = st.session_state.get('input_time', 12)
-    
-    # === V9.1 Spacetime Inputs ===
-    st.sidebar.header("🌍 时空坐标 (Spacetime)")
-    city = st.sidebar.selectbox("出生城市 (City)", ["None", "Unknown", "Harbin", "Beijing", "Shanghai", "Guangzhou", "Singapore", "Sydney"], index=0)
-    
-    # 1. Basic Calculation (The Chart) - V9.5 MVC: Via Controller
-    enable_solar = st.session_state.get('input_enable_solar_time', True)
-    longitude = st.session_state.get('input_longitude', 116.46) if enable_solar else 120.0
-    
-    # === V9.5 MVC: Initialize Controller ===
-    # V9.6: Handle "None" option - convert to "Unknown" for Controller (neutral region)
-    city_for_controller = "Unknown" if (not city or city.lower() in ['none', '']) else city
+    # === V10.0: Unified Input Panel ===
     controller = BaziController()
-    controller.set_user_input(name, gender, d, t, city_for_controller, enable_solar, longitude)
-    
-    # === V9.6: GEO 修正系数显示 ===
-    # 只有当用户明确选择城市时才显示 GEO 修正
-    city_input = city if city and city.lower() not in ['unknown', 'none', ''] else None
-    
-    if city_input:
-        # 调用 Controller 获取 GEO 修正系数
-        geo_modifiers = controller.get_geo_modifiers(city_input)
-        
-        # 在侧边栏渲染结果
-        if geo_modifiers:
-            st.sidebar.markdown("---")
-            st.sidebar.subheader("🌍 地理修正系数 (GEO Modifiers)")
-            # 显示修正系数（排除描述性字段）
-            modifier_display = {k: v for k, v in geo_modifiers.items() 
-                              if k not in ['desc'] and isinstance(v, (int, float))}
-            if modifier_display:
-                st.sidebar.json(modifier_display)
-            if geo_modifiers.get('desc'):
-                st.sidebar.caption(f"📍 {geo_modifiers.get('desc')}")
-        else:
-            st.sidebar.warning(f"城市 [{city_input}] 暂无 GEO 修正数据。")
-    # 默认情况下，城市输入为空 (None) 或未选择，不显示 GEO 修正部分
-    
+    selected_case, era_factor, city_for_controller = render_and_collect_input(controller, is_quantum_lab=False)
+
     # Get data from Controller (replaces direct BaziCalculator calls)
     chart = controller.get_chart()
     details = controller.get_details()
     calc = controller.get_calculator()  # For backward compatibility with advanced features
-    
+
     # Luck Cycles (via Controller)
     gender_idx = controller.get_gender_idx()
     luck_cycles = controller.get_luck_cycles()
+
+    # Extract user info from controller state
+    user_data = controller.get_user_data()
+    name = user_data.get('name', '某人')
+    gender = user_data.get('gender', '男')
+    d = user_data.get('date', datetime.date(1990, 1, 1))
+    t = user_data.get('time', 12)
     
     # [V9.3 UI] Sidebar Chart Summary
     st.sidebar.markdown("---")

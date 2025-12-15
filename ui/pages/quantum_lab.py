@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 import altair as alt
+import datetime
 
 from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Genesis
 from core.context import DestinyContext  # Trinity V4.0
@@ -751,20 +752,11 @@ def render():
 
     # --- MAIN ENGINE SETUP ---
     # V9.5 MVC Note: This is a Calibration Tool requiring direct engine access.
-    # Controller is available for standard operations, but engine is exposed for tuning.
     engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
     
-    # V9.5 MVC: Controller instance (for GEO comparison)
-    controller = BaziController()  # V9.6: Enable for GEO comparison feature
-    
-    # Collect ERA adjustment from sidebar (stored in session_state)
-    era_adjustment = {
-        'Wood': st.session_state.get('era_wood', 0) / 100,
-        'Fire': st.session_state.get('era_fire', 0) / 100,
-        'Earth': st.session_state.get('era_earth', 0) / 100,
-        'Metal': st.session_state.get('era_metal', 0) / 100,
-        'Water': st.session_state.get('era_water', 0) / 100,
-    }
+    # V10.0: Unified input panel (P2 lab allows ERA tuning)
+    controller = BaziController()
+    selected_case, era_factor, city_for_controller = render_and_collect_input(controller, is_quantum_lab=True)
     
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:
@@ -772,22 +764,6 @@ def render():
         
     if 'full_algo_config' in st.session_state:
         engine.update_full_config(st.session_state['full_algo_config'])
-
-    # === V9.9: Refresh Controller input with ERA factor ===
-    # For P2 lab, use a default demo profile (can be replaced with selected case inputs)
-    demo_date = datetime.date(1990, 1, 1)
-    demo_hour = 12
-    demo_city = "Beijing"
-    controller.set_user_input(
-        name="LabUser",
-        gender="男",
-        date_obj=demo_date,
-        time_int=demo_hour,
-        city=demo_city,
-        enable_solar=True,
-        longitude=116.46,
-        era_factor=era_adjustment
-    )
 
     # --- UI HEADER ---
     st.title("🧪 量子八字 V8.0 验证工作台 (Phase Change)")

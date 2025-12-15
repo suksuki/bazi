@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import copy
+from ui.components.unified_input_panel import render_and_collect_input
 
 # Append root path to sys.path to resolve imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -192,86 +193,13 @@ def render():
     st.title("🎬 命运影院 V9.2 (Destiny Cinema)")
     st.caption("Powered by Antigravity Engine V9.1 (Heaven & Earth)")
 
-    # --- 1. SIDEBAR CONTROLS ---
-    st.sidebar.header("🕹️ 时空控制台 (Spacetime Console)")
+    # --- 1. UNIFIED SIDEBAR INPUTS ---
+    controller = BaziController()
+    selected_case, era_factor, selected_city = render_and_collect_input(controller, is_quantum_lab=False)
 
-    # Case Selection (Prediction Archive)
-    cases = load_cases()
-    if not cases:
-        st.error("No cases loaded.")
-        return
-
-    st.sidebar.subheader("🗂️ 选择预测档案 (Prediction Archive)")
-    case_options = {f"{c['id']} - {c['description']}": c for c in cases}
-    selected_case_name = st.sidebar.selectbox("🎭 档案", list(case_options.keys()))
-    selected_case = case_options[selected_case_name]
-
-    # Bazi Info
-    # [V9.3 UI] Enhanced Sidebar Display
-    bazi_str = ' '.join(selected_case['bazi'])
-    st.sidebar.subheader("📜 剧本八字 (Script)")
-    st.sidebar.code(bazi_str, language="text")
-    st.sidebar.markdown(f"**日主**: `{selected_case['day_master']}`")
-    
-    # [TIME DETECTIVE] Auto-derive Date
-    # Scanning 1940-2010 (Typical range for current tycoons)
-    derived_date = reverse_lookup_bazi(selected_case['bazi'], 1940, 2010)
-    if derived_date:
-        st.sidebar.success(f"🗓️ 推算日期: {derived_date}")
-    else:
-        st.sidebar.caption("🔍 未找到匹配日期 (1940-2010)")
-
-    st.sidebar.markdown("---")
-
-    # Geo Control
-    st.sidebar.subheader("🌍 地利 (Geo)")
-    
-    # [V9.3 Fix] Default to None (Neutral) as requested
-    raw_cities = load_geo_cities()
-    # Ensure Beijing is prominent
-    if "Beijing" in raw_cities: raw_cities.remove("Beijing")
-    cities = ["None", "Beijing"] + raw_cities
-    
-    # Preselect city from archive if available
-    archive_city = selected_case.get('city') if isinstance(selected_case, dict) else None
-    default_city = archive_city if archive_city in cities else "None"
-    default_idx = cities.index(default_city) if default_city in cities else 0
-    selected_city = st.sidebar.selectbox("出生/生活城市", cities, index=default_idx)
-    
-    # [V9.3 Logic] Map None to Neutral
-    if selected_city == "None":
-        selected_city = "Unknown" # Passes to Engine as Unknown -> Neutral Fallback
-    
-    # === V9.6: GEO 修正系数显示 ===
-    # 只有当用户明确选择城市时才显示 GEO 修正
-    city_input = selected_city if selected_city and selected_city.lower() not in ['unknown', 'none', ''] else None
-    
-    if city_input:
-        # Initialize Controller for GEO modifiers
-        try:
-            geo_controller = BaziController()
-            geo_modifiers = geo_controller.get_geo_modifiers(city_input)
-            
-            if geo_modifiers:
-                st.sidebar.markdown("---")
-                st.sidebar.subheader("🌍 地理修正系数 (GEO Modifiers)")
-                modifier_display = {k: v for k, v in geo_modifiers.items()
-                                  if k not in ['desc'] and isinstance(v, (int, float))}
-                if modifier_display:
-                    st.sidebar.json(modifier_display)
-                if geo_modifiers.get('desc'):
-                    st.sidebar.caption(f"📍 {geo_modifiers.get('desc')}")
-        except Exception as e:
-            # Silently fail - GEO modifiers are optional
-            pass
-    
-    manual_lat = st.sidebar.number_input("或手动纬度 (Latitude)", -90.0, 90.0, 0.0, disabled=(selected_city!="Unknown")) # This disabled logic might be weird if I force Beijing, but it's fine for now (Beijing is known).
-
-    # Era Control
+    # Era Control (retain year selection for engine analyze)
     st.sidebar.subheader("⏳ 天时 (Era)")
-    # Period 9 is 2024+. Allow simulation.
     selected_year = st.sidebar.slider("当前年份 (Year)", 2020, 2035, 2024)
-
     period = "Period 8 (Earth)" if selected_year < 2024 else "Period 9 (Fire)"
     st.sidebar.info(f"当前元运: **{period}**")
 
