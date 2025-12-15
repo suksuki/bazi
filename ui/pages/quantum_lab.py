@@ -7,6 +7,8 @@ import plotly.express as px
 import numpy as np
 import altair as alt
 import datetime
+from ui.components.unified_input_panel import render_and_collect_input
+from utils.notification_manager import get_notification_manager
 
 from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Genesis
 from core.context import DestinyContext  # Trinity V4.0
@@ -755,8 +757,53 @@ def render():
     engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
     
     # V10.0: Unified input panel (P2 lab allows ERA tuning)
+    st.session_state["era_key_prefix"] = "era_p2"
     controller = BaziController()
     selected_case, era_factor, city_for_controller = render_and_collect_input(controller, is_quantum_lab=True)
+    
+    # --- Particle Weights Calibration (P2 only) ---
+    st.sidebar.subheader("⚛️ 粒子权重校准 (Particle Weights)")
+    st.sidebar.caption("调整核心十神粒子对模型的影响强度（50%-150%）。")
+    particle_weights = {}
+    # 资源/印星
+    pw_res_col1, pw_res_col2 = st.sidebar.columns(2)
+    particle_weights['ZhengYin'] = pw_res_col1.slider("正印 (Zheng Yin)", 50, 150, 100, step=5, key="pw_p2_zhengyin") / 100
+    particle_weights['PianYin'] = pw_res_col2.slider("偏印 (Pian Yin)", 50, 150, 100, step=5, key="pw_p2_pianyin") / 100
+    # 财星
+    pw_cai_col1, pw_cai_col2 = st.sidebar.columns(2)
+    particle_weights['ZhengCai'] = pw_cai_col1.slider("正财 (Zheng Cai)", 50, 150, 100, step=5, key="pw_p2_zhengcai") / 100
+    particle_weights['PianCai'] = pw_cai_col2.slider("偏财 (Pian Cai)", 50, 150, 100, step=5, key="pw_p2_piancai") / 100
+    # 官杀
+    pw_gs_col1, pw_gs_col2 = st.sidebar.columns(2)
+    particle_weights['ZhengGuan'] = pw_gs_col1.slider("正官 (Zheng Guan)", 50, 150, 100, step=5, key="pw_p2_zhengguan") / 100
+    particle_weights['QiSha'] = pw_gs_col2.slider("七杀 (Qi Sha)", 50, 150, 100, step=5, key="pw_p2_qisha") / 100
+    # 食伤
+    pw_ss_col1, pw_ss_col2 = st.sidebar.columns(2)
+    particle_weights['ShiShen'] = pw_ss_col1.slider("食神 (Shi Shen)", 50, 150, 100, step=5, key="pw_p2_shishen") / 100
+    particle_weights['ShangGuan'] = pw_ss_col2.slider("伤官 (Shang Guan)", 50, 150, 100, step=5, key="pw_p2_shangguan") / 100
+    # 比劫
+    pw_bj_col1, pw_bj_col2 = st.sidebar.columns(2)
+    particle_weights['BiJian'] = pw_bj_col1.slider("比肩 (Bi Jian)", 50, 150, 100, step=5, key="pw_p2_bijian") / 100
+    particle_weights['JieCai'] = pw_bj_col2.slider("劫财 (Jie Cai)", 50, 150, 100, step=5, key="pw_p2_jiecai") / 100
+    
+    # Refresh controller input with particle weights as well (reuse current user data)
+    user_data = controller.get_user_data()
+    try:
+        controller.set_user_input(
+            name=user_data.get('name', 'LabUser'),
+            gender=user_data.get('gender', '男'),
+            date_obj=user_data.get('date', datetime.date(1990, 1, 1)),
+            time_int=user_data.get('time', 12),
+            city=city_for_controller or "Beijing",
+            enable_solar=user_data.get('enable_solar', True),
+            longitude=user_data.get('longitude', 116.46),
+            era_factor=era_factor if era_factor else None,
+            particle_weights=particle_weights
+        )
+    except Exception as e:
+        st.warning(f"无法刷新 Controller 输入（粒子权重）: {e}")
+
+    get_notification_manager().display_all()
     
     # === V6.0+ 热更新：从 session_state 读取并应用算法配置 ===
     if 'algo_config' in st.session_state:

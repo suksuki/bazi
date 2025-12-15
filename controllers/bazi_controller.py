@@ -30,6 +30,8 @@ from core.exceptions import (
     BaziEngineError,
     BaziCacheError
 )
+# Notification Manager
+from utils.notification_manager import get_notification_manager
 # Config Manager
 from utils.configuration_manager import get_config_manager
 
@@ -90,6 +92,9 @@ class BaziController:
             # LLM service placeholder
             self._llm_service = None
             self._init_llm_service()
+
+            # V10.0: Notification Manager
+            self.notification_manager = get_notification_manager()
             
             logger.info(f"{self.VERSION} Controller initialized successfully")
         except Exception as e:
@@ -221,7 +226,8 @@ class BaziController:
     def set_user_input(self, name: str, gender: str, date_obj: datetime.date, 
                        time_int: int, city: str = "Unknown",
                        enable_solar: bool = True, longitude: float = 116.46,
-                       era_factor: Optional[Dict] = None) -> None:
+                       era_factor: Optional[Dict] = None,
+                       particle_weights: Optional[Dict] = None) -> None:
         """
         Set user input and trigger base calculations.
         
@@ -261,7 +267,8 @@ class BaziController:
                 self._user_input.get('city') != city or
                 self._user_input.get('enable_solar') != enable_solar or
                 self._user_input.get('longitude') != longitude or
-                self._user_input.get('era_factor') != era_factor
+                self._user_input.get('era_factor') != era_factor or
+                self._user_input.get('particle_weights') != particle_weights
             )
             
             self._user_input = {
@@ -272,7 +279,8 @@ class BaziController:
                 'city': city,
                 'enable_solar': enable_solar,
                 'longitude': longitude,
-                'era_factor': era_factor
+                'era_factor': era_factor,
+                'particle_weights': particle_weights
             }
             
             self._gender_idx = 1 if "男" in gender else 0
@@ -287,12 +295,18 @@ class BaziController:
             self._calculate_base()
 
             # Apply ERA factor if provided and supported by flux engine
-            if era_factor and self._flux_engine and hasattr(self._flux_engine, "set_input_parameters"):
+            if self._flux_engine and hasattr(self._flux_engine, "set_input_parameters"):
                 try:
-                    self._flux_engine.set_input_parameters(era_factor=era_factor)
-                    logger.info("Applied ERA factor to FluxEngine inputs.")
+                    self._flux_engine.set_input_parameters(
+                        era_factor=era_factor,
+                        particle_weights=particle_weights
+                    )
+                    if era_factor:
+                        logger.info("Applied ERA factor to FluxEngine inputs.")
+                    if particle_weights:
+                        logger.info("Applied particle weights to FluxEngine inputs.")
                 except Exception as e:
-                    logger.warning(f"Failed to apply ERA factor: {e}", exc_info=True)
+                    logger.warning(f"Failed to apply input parameters: {e}", exc_info=True)
 
             logger.info("User input set and base calculations completed")
             
@@ -813,6 +827,11 @@ class BaziController:
         is_enabled = self.config_manager.get_setting('LLM_SERVICE_ENABLED', False)
         llm_service = getattr(self, "_llm_service", None)
         if (not is_enabled) or (llm_service is None):
+            if hasattr(self, "notification_manager"):
+                self.notification_manager.add_warning(
+                    "LLM 服务未启用",
+                    "请在配置中心启用 LLM_SERVICE_ENABLED，并提供有效 LLM_API_KEY。"
+                )
             return {
                 "text_summary": "LLM 服务未启用。请检查配置中心状态。",
                 "risk_assessment": "高",
@@ -825,6 +844,11 @@ class BaziController:
             return llm_service.generate_analysis(prompt_payload)
         except Exception as e:
             logger.warning(f"LLM scenario analysis failed: {e}", exc_info=True)
+            if hasattr(self, "notification_manager"):
+                self.notification_manager.add_error(
+                    "LLM 服务调用失败",
+                    str(e)
+                )
             return {"text_summary": f"LLM 服务调用失败: {e}", "risk_assessment": "", "actionable_steps": ""}
 
     # =========================================================================
