@@ -747,6 +747,51 @@ class BaziController:
         """Return BaziProfile instance."""
         return self._profile
 
+    def _assemble_llm_prompt_data(self, scenario_data: Dict) -> Dict:
+        """
+        Assemble prompt payload for LLM planning service.
+
+        This keeps View clean and centralizes data shaping in Controller.
+        """
+        base_chart = scenario_data.get('base_chart_data') or {}
+        sim_timeline = scenario_data.get('simulated_timeline') or {}
+        target_adj = scenario_data.get('target_adjustment') or {}
+
+        return {
+            "chart": base_chart,
+            "timeline": sim_timeline,
+            "target_adjustment": target_adj,
+            "meta": {
+                "version": self.VERSION,
+                "city": self._city,
+            }
+        }
+
+    def get_llm_scenario_analysis(self, scenario_data: Dict) -> Dict:
+        """
+        Call LLM planning service to generate natural language analysis.
+
+        Input:
+            scenario_data includes:
+              - base_chart_data
+              - simulated_timeline (e.g., run_geo_predictive_timeline result)
+              - target_adjustment (user desired element adjustments)
+
+        Output:
+            Dict with keys like 'text_summary', 'risk_assessment', 'actionable_steps'.
+        """
+        llm_service = getattr(self, "_llm_service", None)
+        if not llm_service:
+            return {"text_summary": "LLM 服务未启用。", "risk_assessment": "", "actionable_steps": ""}
+
+        prompt_payload = self._assemble_llm_prompt_data(scenario_data)
+
+        try:
+            return llm_service.generate_analysis(prompt_payload)
+        except Exception as e:
+            logger.warning(f"LLM scenario analysis failed: {e}", exc_info=True)
+            return {"text_summary": f"LLM 服务调用失败: {e}", "risk_assessment": "", "actionable_steps": ""}
+
     def get_current_city(self) -> str:
         """
         Get current city stored in controller (fallback to 'Unknown').
