@@ -30,6 +30,8 @@ from core.exceptions import (
     BaziEngineError,
     BaziCacheError
 )
+# Config Manager
+from utils.configuration_manager import get_config_manager
 
 # Configure logger for BaziController
 logger = logging.getLogger("BaziController")
@@ -81,6 +83,13 @@ class BaziController:
                 'misses': 0,
                 'invalidations': 0
             }
+
+            # V9.8: Global configuration manager
+            self.config_manager = get_config_manager()
+
+            # LLM service placeholder
+            self._llm_service = None
+            self._init_llm_service()
             
             logger.info(f"{self.VERSION} Controller initialized successfully")
         except Exception as e:
@@ -780,9 +789,14 @@ class BaziController:
         Output:
             Dict with keys like 'text_summary', 'risk_assessment', 'actionable_steps'.
         """
+        is_enabled = self.config_manager.get_setting('LLM_SERVICE_ENABLED', False)
         llm_service = getattr(self, "_llm_service", None)
-        if not llm_service:
-            return {"text_summary": "LLM 服务未启用。", "risk_assessment": "", "actionable_steps": ""}
+        if (not is_enabled) or (llm_service is None):
+            return {
+                "text_summary": "LLM 服务未启用。请检查配置中心状态。",
+                "risk_assessment": "高",
+                "actionable_steps": "请在配置中心启用 LLM_SERVICE_ENABLED，并提供有效 LLM_API_KEY。"
+            }
 
         prompt_payload = self._assemble_llm_prompt_data(scenario_data)
 
@@ -872,6 +886,30 @@ class BaziController:
         # Method 3: Fallback - return zeros with warning
         logger.warning("Unable to extract five-element energies from flux_data. Returning zeros.")
         return element_energies
+
+    def _init_llm_service(self) -> None:
+        """
+        Initialize or disable LLM service based on configuration.
+        """
+        llm_enabled = self.config_manager.get_setting('LLM_SERVICE_ENABLED', False)
+        api_key = self.config_manager.get_setting('LLM_API_KEY', '')
+
+        # Try import lazily to avoid hard dependency if disabled
+        try:
+            from services.llm_planning_service import LLMPlanningService  # type: ignore
+        except Exception:
+            LLMPlanningService = None
+
+        if llm_enabled and api_key and api_key != 'default_key' and LLMPlanningService:
+            try:
+                self._llm_service = LLMPlanningService(api_key=api_key)
+                logger.info("LLM Planning Service initialized.")
+            except Exception as e:
+                self._llm_service = None
+                logger.error(f"LLM Planning Service initialization failed: {e}", exc_info=True)
+        else:
+            self._llm_service = None
+            logger.info("LLM Service disabled or missing API key; fallback to degraded mode.")
 
     def run_geo_predictive_timeline(self, start_year: int, duration: int = 10,
                                     geo_correction_city: Optional[str] = None,
