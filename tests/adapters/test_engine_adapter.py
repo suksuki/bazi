@@ -18,7 +18,7 @@ Usage:
     chart = calc.get_chart()
     
     # Old way (direct import):
-    from core.engine_v91 import EngineV91
+    from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
     engine = EngineV91()
     result = engine.analyze(bazi, day_master, city="Harbin")
     

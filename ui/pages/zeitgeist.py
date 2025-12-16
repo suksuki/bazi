@@ -13,8 +13,8 @@ from utils.notification_manager import get_notification_manager
 # Append root path to sys.path to resolve imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-# 🚀 V9.2 Spacetime Engine
-from core.engine_v91 import EngineV91
+# 🚀 V9.1 Unified Engine
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 from core.context import DestinyContext
 from core.bazi_profile import VirtualBaziProfile, BaziProfile
 
@@ -109,11 +109,11 @@ def load_cases():
 # @st.cache_resource
 def get_engine():
     print("🔄 Reloading Engine V9.1...")
-    # Force reload to pick up hotfixes in engine_v91.py
+    # Force reload to pick up hotfixes in engine_v88.py
     import importlib
-    import core.engine_v91
-    importlib.reload(core.engine_v91)
-    from core.engine_v91 import EngineV91
+    import core.engine_v88
+    importlib.reload(core.engine_v88)
+    from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
     return EngineV91()
 
 engine = get_engine()

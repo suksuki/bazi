@@ -11,3 +11,6 @@ openai-whisper
 youtube-transcript-api
 scikit-learn
 python-dotenv
+optuna
+numpy
+scipy

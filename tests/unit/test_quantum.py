@@ -1,7 +1,7 @@
 import unittest
-from core.quantum import QuantumEngine
+from core.quantum import QuantumSimulator
 
-class TestQuantumEngine(unittest.TestCase):
+class TestQuantumSimulator(unittest.TestCase):
 
     def setUp(self):
         # Base Inputs
@@ -32,7 +32,7 @@ class TestQuantumEngine(unittest.TestCase):
         """
         Test that strong Wealth stars result in high Wealth Expected Value.
         """
-        engine = QuantumEngine(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
+        engine = QuantumSimulator(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
         results = engine.simulate()
         
         wealth_res = results["财富 (Wealth)"]

@@ -2,9 +2,11 @@ import streamlit as st
 import datetime
 import json
 import time
+import os
 import numpy as np
 import pandas as pd
 import copy  # V9.2 Fix
+import plotly.graph_objects as go
 from ui.components.charts import DestinyCharts
 from ui.components.styles import (
     get_glassmorphism_css,
@@ -15,7 +17,9 @@ from ui.components.styles import (
 )
 
 # Core Imports (V9.5 MVC: Models accessed via Controller)
-from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 for VERSION display only
+from core.engine_v88 import EngineV88 as QuantumEngine  # V9.1 Unified Engine
+from core.engine_graph import GraphNetworkEngine
+from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 from learning.db import LearningDB
 from core.interactions import get_stem_interaction, get_branch_interaction
 from core.bazi_profile import BaziProfile
@@ -29,6 +33,111 @@ from utils.notification_manager import get_notification_manager
 # V10.0 Unified Input Panel
 from ui.components.unified_input_panel import render_and_collect_input
 
+
+def calculate_lucky_score(result: dict, useful_god: list, taboo_god: list, 
+                          year_pillar: str = None, day_master: str = None) -> float:
+    """
+    [V56.0 改进版] 计算吉凶分（Lucky Score）
+    从 verify_timeline.py 移植
+    """
+    dynamic_score = result.get('dynamic_score', 0.0)
+    trigger_events = result.get('trigger_events', [])
+    strength_score = result.get('strength_score', 50.0)
+    strength_label = result.get('strength_label', 'Balanced')
+    
+    # 基础分数：动态评分
+    base_score = dynamic_score
+    
+    # 检查触发事件
+    penalty = 0.0
+    bonus = 0.0
+    
+    # [V56.0 新增] 检测七杀攻身
+    has_seven_kill = False
+    has_officer_attack = False
+    
+    # 从流年天干判断七杀攻身
+    if year_pillar and day_master and len(year_pillar) >= 2:
+        year_stem = year_pillar[0]
+        seven_kill_map = {
+            '甲': '庚', '乙': '辛', '丙': '壬', '丁': '癸', '戊': '甲',
+            '己': '乙', '庚': '丙', '辛': '丁', '壬': '戊', '癸': '己'
+        }
+        if seven_kill_map.get(day_master) == year_stem:
+            has_seven_kill = True
+            if strength_label == 'Weak' or strength_score < 40:
+                has_officer_attack = True
+                penalty += 35.0
+            else:
+                penalty += 20.0
+    
+    for event in trigger_events:
+        if '冲提纲' in event:
+            penalty += 40.0
+        if '强根' in event or '帝旺' in event or '临官' in event:
+            if '帝旺' in event:
+                bonus += 20.0
+            elif '临官' in event:
+                bonus += 15.0
+            elif '强根' in event:
+                bonus += 10.0
+        elif '冲开' in event and '库' in event:
+            bonus += 20.0
+        elif '冲' in event and '提纲' not in event:
+            penalty += 5.0
+    
+    # 最终分数
+    lucky_score = base_score - penalty + bonus
+    
+    # [V56.0 改进] 强根加分需要根据身强身弱调整
+    has_strong_root = any('强根' in e or '帝旺' in e or '临官' in e for e in trigger_events)
+    if has_strong_root and penalty < 5:
+        if strength_label == 'Weak' or strength_score < 40:
+            if any('帝旺' in e for e in trigger_events):
+                lucky_score += 12.0
+            elif any('临官' in e for e in trigger_events):
+                lucky_score += 10.0
+            else:
+                lucky_score += 8.0
+        else:
+            if any('帝旺' in e for e in trigger_events):
+                lucky_score += 8.0
+            elif any('临官' in e for e in trigger_events):
+                lucky_score += 6.0
+            else:
+                lucky_score += 5.0
+    
+    # 根据喜用神调整
+    if dynamic_score > 50 and penalty < 10:
+        lucky_score += 10.0
+    
+    # [V56.0 改进] 七杀攻身时，即使有官印相生也要扣分
+    has_officer_resource = any('官印相生' in e for e in trigger_events)
+    if has_officer_resource:
+        if has_officer_attack:
+            lucky_score += 0.0
+        else:
+            lucky_score += 30.0
+    
+    # 如果有冲提纲，大幅扣分
+    has_month_clash = any('冲提纲' in e for e in trigger_events)
+    if has_month_clash:
+        lucky_score -= 30.0
+    
+    # 如果有库开，加分
+    has_storehouse_open = any('冲开' in e and '库' in e for e in trigger_events)
+    if has_storehouse_open:
+        lucky_score += 25.0
+    
+    # [V56.0 新增] 如果七杀攻身且身弱，额外扣分
+    if has_seven_kill and (strength_label == 'Weak' or strength_score < 40):
+        has_passage = any('通关' in e for e in trigger_events)
+        if not has_passage:
+            lucky_score -= 15.0
+        else:
+            lucky_score -= 8.0
+    
+    return max(0.0, min(100.0, lucky_score))
 
 
 def render_prediction_dashboard():
@@ -56,37 +165,21 @@ def render_prediction_dashboard():
     user_data = controller.get_user_data()
     name = user_data.get('name', '某人')
     gender = user_data.get('gender', '男')
-    d = user_data.get('date', datetime.date(1990, 1, 1))
+    d_raw = user_data.get('date', datetime.date(1990, 1, 1))
+    # 处理 date 可能是字典的情况
+    if isinstance(d_raw, dict):
+        d = datetime.date(
+            d_raw.get('year', 1990),
+            d_raw.get('month', 1),
+            d_raw.get('day', 1)
+        )
+    elif isinstance(d_raw, datetime.date):
+        d = d_raw
+    else:
+        d = datetime.date(1990, 1, 1)
     t = user_data.get('time', 12)
     # Ensure city has a non-None value for downstream usage
     city_for_calc = user_data.get('city') or city_for_controller or "Beijing"
-    
-    # [V9.3 UI] Sidebar Chart Summary
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📜 命盘信息 (Chart)")
-    
-    # Display Gregorian Input (Source of Truth)
-    st.sidebar.markdown(f"**公历**: `{d.year}年{d.month}月{d.day}日 {t:02d}:00`")
-    
-    bazi_txt = f"{chart['year']['stem']}{chart['year']['branch']}  {chart['month']['stem']}{chart['month']['branch']}  {chart['day']['stem']}{chart['day']['branch']}  {chart['hour']['stem']}{chart['hour']['branch']}"
-    
-    # [DEBUG] Verify Sidebar Rendering
-    print(f"DEBUG: Rendering Sidebar Bazi: {bazi_txt}")
-    st.sidebar.code(bazi_txt, language="text")
-    st.sidebar.caption(f"日主: {chart['day']['stem']}")
-    # Particle weights display
-    st.sidebar.subheader("⚛️ 当前生效的粒子权重")
-    st.sidebar.caption("预测已应用的十神粒子影响强度校准。")
-    current_weights = controller.get_current_particle_weights()
-    if current_weights and any(abs(w - 1.0) > 0.001 for w in current_weights.values()):
-        cols_pw = st.sidebar.columns(2)
-        c_idx = 0
-        for p, w in current_weights.items():
-            if abs(w - 1.0) > 0.001:
-                cols_pw[c_idx % 2].metric(label=f"{p} 权重", value=f"{w*100:.0f}%")
-                c_idx += 1
-    else:
-        st.sidebar.info("当前应用默认粒子权重 (100%)。")
     
     # 2. UI: Header & Chart
     st.title(f"🔮 {name} 的量子命盘 (V5.3 Skull)")
@@ -496,9 +589,9 @@ def render_prediction_dashboard():
         'bazi': bazi_list, # Required for Structural/Harm Matrix
         # Sprint 5.4: 注入出生信息以支持动态大运
         'birth_info': {
-            'year': d.year,
-            'month': d.month,
-            'day': d.day,
+            'year': d.year if isinstance(d, datetime.date) else (d.get('year', 1990) if isinstance(d, dict) else 1990),
+            'month': d.month if isinstance(d, datetime.date) else (d.get('month', 1) if isinstance(d, dict) else 1),
+            'day': d.day if isinstance(d, datetime.date) else (d.get('day', 1) if isinstance(d, dict) else 1),
             'hour': t,
             'gender': 1 if "男" in gender else 0
         },
@@ -621,11 +714,14 @@ def render_prediction_dashboard():
     base_year = 1924 # Jia Zi
     
     # === V6.0: BaziProfile Initialization ===
-    # Convert input date/time to full datetime
-    birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
-    # BUG FIX: 使用 gender_idx (整数 1/0) 而不是 gender (字符串 "男"/"女")
-    # BaziProfile 需要整数参数: 1=男, 0=女
-    profile = BaziProfile(birth_dt, gender_idx)
+    # [V56.3] 复用 Controller 的 profile，避免重复创建
+    profile = controller.get_profile()
+    if not profile:
+        # Fallback: 如果 controller 没有 profile，则创建新的
+        birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
+        # BUG FIX: 使用 gender_idx (整数 1/0) 而不是 gender (字符串 "男"/"女")
+        # BaziProfile 需要整数参数: 1=男, 0=女
+        profile = BaziProfile(birth_dt, gender_idx)
     
     # Optional: Update profile with specific analysis if needed (e.g. wang_shuai from previous steps if we trust it more?)
     # For now, let BaziProfile calculate its own strength to be the Single Source of Truth.
@@ -919,4 +1015,377 @@ def render_prediction_dashboard():
              st.success("🔥 **火神调优已激活**: `Physics.BaseUnit` 已从 10.0 调整为 **8.0** (准确率提升至 68%)")
         
         st.json(params)
+    
+    # ==========================================
+    # E. 流年大运折线 & 财富折线 (V56.2)
+    # ==========================================
+    st.markdown("---")
+    st.markdown("### 📈 流年大运折线 & 财富折线 (Lifetime Timeline)")
+    
+    # [V56.3] 复用 Controller 的 profile
+    # profile 已经在第718行从 controller.get_profile() 获取（或创建），这里直接复用
+    # 从 profile 获取出生年份（最可靠的方式）
+    if profile and hasattr(profile, 'birth_date'):
+        birth_year = profile.birth_date.year
+        birth_month = profile.birth_date.month
+        birth_day = profile.birth_date.day
+        st.caption(f"✅ 复用已有的 BaziProfile，出生日期: {birth_year}年{birth_month}月{birth_day}日")
+    else:
+        # Fallback: 如果 profile 不存在，从 d 获取
+        if isinstance(d, datetime.date):
+            birth_year = d.year
+            birth_month = d.month
+            birth_day = d.day
+        elif isinstance(d, dict):
+            birth_year = d.get('year', 1990)
+            birth_month = d.get('month', 1)
+            birth_day = d.get('day', 1)
+        else:
+            birth_year = 1990
+            birth_month = 1
+            birth_day = 1
+        st.warning(f"⚠️ Profile不存在，使用日期: {birth_year}年{birth_month}月{birth_day}日")
+    
+    st.caption(f"从出生到100岁的完整预测 ({birth_year} - {birth_year + 100})")
+    
+    # 初始化图网络引擎（用于计算流年大运和财富）
+    graph_config = DEFAULT_FULL_ALGO_PARAMS.copy()
+    # 尝试加载用户配置
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), '../../config/parameters.json')
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                user_config = json.load(f)
+                def deep_merge(base, update):
+                    for key, value in update.items():
+                        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                            deep_merge(base[key], value)
+                        else:
+                            base[key] = value
+                deep_merge(graph_config, user_config)
+    except Exception as e:
+        st.warning(f"⚠️ 加载配置失败，使用默认配置: {e}")
+    
+    graph_engine = GraphNetworkEngine(config=graph_config)
+    
+    # 获取八字信息
+    bazi_list = [
+        f"{chart.get('year',{}).get('stem','')}{chart.get('year',{}).get('branch','')}",
+        f"{chart.get('month',{}).get('stem','')}{chart.get('month',{}).get('branch','')}",
+        f"{chart.get('day',{}).get('stem','')}{chart.get('day',{}).get('branch','')}",
+        f"{chart.get('hour',{}).get('stem','')}{chart.get('hour',{}).get('branch','')}"
+    ]
+    day_master = chart.get('day', {}).get('stem', '甲')
+    gender_str = gender
+    
+    # 计算从出生到100岁的数据（从出生年份开始，不是当前年份）
+    # 例如：如果出生年份是1990年，则计算1990-2090年
+    end_year = birth_year + 100
+    years_range = range(birth_year, end_year + 1)
+    
+    # 确认：确保是从出生年份开始
+    if years_range and years_range[0] != birth_year:
+        st.error(f"⚠️ 错误：年份范围应该从出生年份 {birth_year} 开始，但实际从 {years_range[0]} 开始")
+    
+    # [V56.3] 调试信息：显示年份范围
+    st.caption(f"📊 年份范围: {birth_year} - {end_year} (共 {len(years_range)} 年)")
+    
+    # [V56.3 修复] 确保 d 是 datetime.date 类型后再访问属性
+    if isinstance(d, datetime.date):
+        d_display = d
+    elif isinstance(d, dict):
+        d_display = datetime.date(
+            d.get('year', birth_year),
+            d.get('month', birth_month),
+            d.get('day', birth_day)
+        )
+    else:
+        d_display = datetime.date(birth_year, birth_month, birth_day)
+    
+    st.caption(f"📅 出生日期: {d_display.year}年{d_display.month}月{d_display.day}日 {t}时 | 性别: {gender} (idx={gender_idx})")
+    
+    # [V56.3] 关键调试：显示实际使用的出生年份和profile信息
+    if profile and hasattr(profile, 'birth_date'):
+        st.info(f"🔍 **调试信息**: Profile出生日期 = {profile.birth_date.year}年{profile.birth_date.month}月{profile.birth_date.day}日 | 计算的birth_year = {birth_year}")
+    else:
+        st.warning(f"⚠️ **警告**: Profile不存在或没有birth_date属性！使用的birth_year = {birth_year}")
+    
+    # [V56.3] 显示前5年和后5年的年份，用于验证
+    if len(years_range) > 0:
+        first_5_years = list(years_range[:5])
+        last_5_years = list(years_range[-5:])
+        st.caption(f"📋 年份验证: 前5年 = {first_5_years}, 后5年 = {last_5_years}")
+    
+    # 获取大运时间表（用于检测换运）
+    timeline = controller.get_luck_timeline(num_steps=15)  # 获取15步大运（150年）
+    handover_years_all = []
+    
+    # 计算每年的数据
+    lucky_scores = []
+    wealth_indices = []
+    years_list = []
+    
+    # 辅助函数：获取年份的干支
+    gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+    zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+    base_year = 1924
+    
+    # 检测换运年份
+    prev_luck = None
+    for timeline_item in timeline:
+        if timeline_item.get('is_handover'):
+            handover_years_all.append({
+                'year': timeline_item.get('year'),
+                'from': timeline_item.get('luck_pillar'),  # 可能需要调整
+                'to': timeline_item.get('luck_pillar')
+            })
+    
+    # 使用 BaziProfile 检测换运
+    prev_luck_pillar = None
+    
+    # 添加进度条
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    total_years = len(years_range)
+    
+    error_count = 0
+    for idx, y in enumerate(years_range):
+        try:
+            # 更新进度
+            progress = (idx + 1) / total_years
+            progress_bar.progress(progress)
+            status_text.text(f"正在计算 {y}年 ({idx + 1}/{total_years})...")
+            
+            # 获取当前年份的大运
+            current_luck_raw = profile.get_luck_pillar_at(y)
+            
+            # [V56.3 修复] 确保 current_luck 是字符串格式的干支
+            # lunar_python 的 getGanZhi() 可能返回字符串或整数索引
+            current_luck = None
+            
+            if isinstance(current_luck_raw, str) and len(current_luck_raw) >= 2:
+                # 已经是有效的字符串格式
+                current_luck = current_luck_raw
+            elif isinstance(current_luck_raw, int):
+                # 如果是整数，尝试从 controller 获取
+                try:
+                    current_luck = controller.get_dynamic_luck_pillar(y)
+                    if not isinstance(current_luck, str) or len(current_luck) < 2:
+                        current_luck = None
+                except:
+                    current_luck = None
+            else:
+                # 其他类型，尝试转换为字符串
+                try:
+                    current_luck_str = str(current_luck_raw)
+                    if len(current_luck_str) >= 2:
+                        current_luck = current_luck_str
+                    else:
+                        current_luck = None
+                except:
+                    current_luck = None
+            
+            # 最终验证和 Fallback：确保是有效的干支格式（2个字符）
+            if not current_luck or not isinstance(current_luck, str) or len(current_luck) < 2:
+                # 最后尝试：从 controller 获取
+                try:
+                    current_luck = controller.get_dynamic_luck_pillar(y)
+                    if not isinstance(current_luck, str) or len(current_luck) < 2:
+                        current_luck = "未知大运"
+                except:
+                    current_luck = "未知大运"
+            
+            # [V56.3 关键修复] 最终强制类型检查：确保 current_luck 一定是字符串
+            if not isinstance(current_luck, str):
+                current_luck = str(current_luck) if current_luck else "未知大运"
+            
+            # 如果长度不够，使用默认值
+            if len(current_luck) < 2:
+                current_luck = "未知大运"
+            
+            # 检测换运
+            if prev_luck_pillar and prev_luck_pillar != current_luck:
+                handover_years_all.append({
+                    'year': y,
+                    'from': prev_luck_pillar,
+                    'to': current_luck
+                })
+            prev_luck_pillar = current_luck
+            
+            # 计算流年干支
+            offset = y - base_year
+            year_gan = gan_chars[offset % 10]
+            year_zhi = zhi_chars[offset % 12]
+            year_pillar = f"{year_gan}{year_zhi}"
+            
+            # 1. 计算流年大运折线（使用 analyze + calculate_lucky_score）
+            try:
+                analyze_result = graph_engine.analyze(
+                    bazi=bazi_list,
+                    day_master=day_master,
+                    luck_pillar=current_luck,
+                    year_pillar=year_pillar
+                )
+                
+                # 计算 lucky_score（简化版，不使用喜用神）
+                useful_god = []  # 可以从其他地方获取
+                taboo_god = []
+                lucky_score = calculate_lucky_score(
+                    analyze_result, 
+                    useful_god, 
+                    taboo_god,
+                    year_pillar=year_pillar,
+                    day_master=day_master
+                )
+            except Exception as e:
+                lucky_score = 50.0  # 默认值
+                error_count += 1
+                if error_count <= 3:  # 只显示前3个错误
+                    st.warning(f"⚠️ {y}年流年大运计算失败: {e}")
+            
+            # 2. 计算财富折线（使用 calculate_wealth_index）
+            # [V56.3 关键修复] 在调用前再次确保 current_luck 是字符串
+            if not isinstance(current_luck, str):
+                current_luck = str(current_luck) if current_luck else "未知大运"
+            if len(current_luck) < 2:
+                current_luck = "未知大运"
+            
+            try:
+                wealth_result = graph_engine.calculate_wealth_index(
+                    bazi=bazi_list,
+                    day_master=day_master,
+                    gender=gender_str,
+                    luck_pillar=current_luck,
+                    year_pillar=year_pillar
+                )
+                
+                if isinstance(wealth_result, dict):
+                    wealth_index = wealth_result.get('wealth_index', 0.0)
+                    wealth_details = wealth_result.get('details', [])
+                    wealth_opportunity = wealth_result.get('opportunity', 0.0)
+                    
+                    # 调试信息：显示前几年的详细计算过程
+                    if idx < 5:
+                        st.caption(f"🔍 {y}年财富计算: 机会={wealth_opportunity:.1f}, 指数={wealth_index:.1f}, 事件={', '.join(wealth_details[:3]) if wealth_details else '无'}")
+                else:
+                    wealth_index = float(wealth_result) if wealth_result else 0.0
+            except Exception as e:
+                wealth_index = 0.0
+                error_count += 1
+                if error_count <= 3:  # 只显示前3个错误
+                    st.warning(f"⚠️ {y}年财富计算失败: {e}")
+                    import traceback
+                    st.caption(f"详细错误: {traceback.format_exc()}")
+            
+            years_list.append(y)
+            lucky_scores.append(lucky_score)
+            wealth_indices.append(wealth_index)
+            
+        except Exception as e:
+            # 如果某年计算失败，跳过
+            error_count += 1
+            if error_count <= 3:  # 只显示前3个错误
+                st.warning(f"⚠️ {y}年计算失败: {e}")
+            continue
+    
+    # 清除进度条
+    progress_bar.empty()
+    status_text.empty()
+    
+    if error_count > 3:
+        st.caption(f"⚠️ 共有 {error_count} 年计算失败，已自动使用默认值")
+    
+    # 绘制流年大运折线
+    if years_list and lucky_scores:
+        st.markdown("#### 📊 流年大运折线 (Lucky Score Timeline)")
+        fig_lucky = go.Figure()
+        
+        # 添加折线
+        fig_lucky.add_trace(go.Scatter(
+            x=years_list,
+            y=lucky_scores,
+            mode='lines+markers',
+            name='流年大运分',
+            line=dict(color='#00BFFF', width=2),
+            marker=dict(size=3),
+            hovertemplate='%{x}年: %{y:.1f}分<extra></extra>'
+        ))
+        
+        # 添加换大运的纵向虚线
+        for handover in handover_years_all:
+            if handover['year'] in years_list:
+                fig_lucky.add_vline(
+                    x=handover['year'],
+                    line_width=2,
+                    line_dash="dash",
+                    line_color="rgba(255,255,255,0.6)",
+                    annotation_text=f"🔄 换运\\n{handover['to']}",
+                    annotation_position="top",
+                    annotation=dict(
+                        font=dict(size=10, color="white"),
+                        bgcolor="rgba(100,100,255,0.3)",
+                        bordercolor="rgba(255,255,255,0.5)",
+                        borderwidth=1
+                    )
+                )
+        
+        fig_lucky.update_layout(
+            title="流年大运折线 (从出生到100岁)",
+            xaxis_title="年份 (Year)",
+            yaxis_title="流年大运分 (Lucky Score)",
+            yaxis=dict(range=[0, 100]),
+            height=400,
+            hovermode="x unified",
+            plot_bgcolor='rgba(0,0,0,0.05)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        st.plotly_chart(fig_lucky, use_container_width=True)
+    
+    # 绘制财富折线
+    if years_list and wealth_indices:
+        st.markdown("#### 💰 财富折线 (Wealth Index Timeline)")
+        fig_wealth = go.Figure()
+        
+        # 添加折线
+        fig_wealth.add_trace(go.Scatter(
+            x=years_list,
+            y=wealth_indices,
+            mode='lines+markers',
+            name='财富指数',
+            line=dict(color='#FFD700', width=2),
+            marker=dict(size=3),
+            hovertemplate='%{x}年: %{y:.1f}分<extra></extra>'
+        ))
+        
+        # 添加换大运的纵向虚线
+        for handover in handover_years_all:
+            if handover['year'] in years_list:
+                fig_wealth.add_vline(
+                    x=handover['year'],
+                    line_width=2,
+                    line_dash="dash",
+                    line_color="rgba(255,255,255,0.6)",
+                    annotation_text=f"🔄 换运\\n{handover['to']}",
+                    annotation_position="top",
+                    annotation=dict(
+                        font=dict(size=10, color="white"),
+                        bgcolor="rgba(100,100,255,0.3)",
+                        bordercolor="rgba(255,255,255,0.5)",
+                        borderwidth=1
+                    )
+                )
+        
+        fig_wealth.update_layout(
+            title="财富折线 (从出生到100岁)",
+            xaxis_title="年份 (Year)",
+            yaxis_title="财富指数 (Wealth Index)",
+            yaxis=dict(range=[-100, 100]),
+            height=400,
+            hovermode="x unified",
+            plot_bgcolor='rgba(0,0,0,0.05)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
+        
+        st.plotly_chart(fig_wealth, use_container_width=True)
 

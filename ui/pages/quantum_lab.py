@@ -12,7 +12,7 @@ from facade.bazi_facade import BaziFacade
 from utils.constants_manager import get_constants
 from utils.notification_manager import get_notification_manager
 
-from core.engine_v91 import EngineV91 as QuantumEngine  # V9.1 Spacetime Genesis
+from core.engine_v88 import EngineV88 as QuantumEngine  # V9.1 Unified Engine
 from core.context import DestinyContext  # Trinity V4.0
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
@@ -220,10 +220,23 @@ def render():
 
     # --- Load Params Helper ---
     def load_params_from_disk():
+        """加载旧的 golden_parameters.json（用于兼容性）"""
         path = os.path.join(os.path.dirname(__file__), "../../data/golden_parameters.json")
         if os.path.exists(path):
             with open(path, "r") as f:
                 return json.load(f)
+        return {}
+    
+    def load_golden_params_from_config():
+        """V50.0: 从 config/parameters.json 加载当前黄金参数配置"""
+        config_path = os.path.join(os.path.dirname(__file__), "../../config/parameters.json")
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                st.warning(f"⚠️ 无法加载黄金参数配置: {e}")
+                return {}
         return {}
         
     def save_params_to_disk(new_params):
@@ -321,6 +334,9 @@ def render():
     # --- SIDEBAR CONTROLS ---
     st.sidebar.markdown("---")
     
+    # V50.0: 提前加载黄金配置（供所有边栏参数使用）
+    golden_config = load_golden_params_from_config()
+    
     # === V6.0+ 新增：算法核心控制台 ===
     st.sidebar.markdown("---")
     st.sidebar.subheader("🎛️ 算法核心控制台")
@@ -334,85 +350,112 @@ def render():
     )
     from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
     
+    # 获取算法核心参数（优先使用黄金配置，否则使用默认值）
+    def get_param_value(golden_path, default_value):
+        """从黄金配置中获取参数值，支持嵌套路径"""
+        if not golden_config:
+            return default_value
+        keys = golden_path.split('.')
+        value = golden_config
+        try:
+            for key in keys:
+                value = value[key]
+            return value
+        except (KeyError, TypeError):
+            return default_value
+    
+    # 显示同步状态提示
+    if golden_config:
+        st.sidebar.info("💡 边栏参数已与当前黄金配置同步")
+    
     # Skull Crash (骷髅协议崩塌分)
+    skull_crash_value = get_param_value('interactions.skull.crashScore', SCORE_SKULL_CRASH)
     score_skull_crash = st.sidebar.number_input(
         "💀 Skull Crash (三刑崩塌分)", 
         min_value=-100.0, max_value=0.0,
-        value=SCORE_SKULL_CRASH,
+        value=skull_crash_value,
         step=5.0,
         help="丑未戌三刑触发时的强制熔断分 (乔布斯2011案例调优)"
     )
     
     # Treasury Bonus (财库爆发分)
+    treasury_bonus_value = get_param_value('interactions.treasury.bonus', SCORE_TREASURY_BONUS)
     score_treasury_bonus = st.sidebar.slider(
         "🏆 Treasury Bonus (身强暴富分)",
         min_value=0.0, max_value=50.0,
-        value=SCORE_TREASURY_BONUS,
+        value=treasury_bonus_value,
         step=1.0,
         help="身强冲开财库时的爆发加成 (马云2014 IPO案例调优)"
     )
     
-    # Treasury Penalty (财库风险分)
+    # Treasury Penalty (财库风险分) - 从 interactions.treasury.penalty 读取
+    treasury_penalty_value = get_param_value('interactions.treasury.penalty', SCORE_TREASURY_PENALTY)
     score_treasury_penalty = st.sidebar.slider(
         "⚠️ Treasury Penalty (身弱风险分)",
         min_value=-50.0, max_value=0.0,
-        value=SCORE_TREASURY_PENALTY,
+        value=treasury_penalty_value,
         step=1.0,
         help="身弱冲开财库时的风险惩罚 (伦理安全阀)"
     )
     
-    # Energy Thresholds (能量阈值)
+    # Energy Thresholds (能量阈值) - 从 global_logic 读取
     st.sidebar.markdown("**能量阈值线**")
     col1, col2 = st.sidebar.columns(2)
     with col1:
+        energy_strong_value = get_param_value('global_logic.energy_threshold_strong', ENERGY_THRESHOLD_STRONG)
         energy_strong = st.number_input(
             "🔥 身旺线",
             min_value=0.0, max_value=10.0,
-            value=ENERGY_THRESHOLD_STRONG,
+            value=energy_strong_value,
             step=0.5
         )
     with col2:
+        energy_weak_value = get_param_value('global_logic.energy_threshold_weak', ENERGY_THRESHOLD_WEAK)
         energy_weak = st.number_input(
             "💧 身弱线",
             min_value=0.0, max_value=10.0,
-            value=ENERGY_THRESHOLD_WEAK,
+            value=energy_weak_value,
             step=0.5
         )
     
-    # General Open Score (普通库开启分)
+    # General Open Score (普通库开启分) - 从 global_logic 读取
+    general_open_value = get_param_value('global_logic.score_general_open', SCORE_GENERAL_OPEN)
     score_general_open = st.sidebar.slider(
         "🗝️ General Open (普通开库分)",
         min_value=0.0, max_value=20.0,
-        value=SCORE_GENERAL_OPEN,
+        value=general_open_value,
         step=1.0
     )
     
     # === [Harmony & Conflict] 合化控制台 ===
     st.sidebar.markdown("**❤️ 合化与冲突 (Harmony)**")
     
-    # SanHe (三合)
+    # SanHe (三合) - 从 interactions.branchEvents.threeHarmony 读取
+    sanhe_bonus_value = get_param_value('interactions.branchEvents.threeHarmony', SCORE_SANHE_BONUS)
     score_sanhe_bonus = st.sidebar.slider(
         "✨ Trinity Bonus (三合加成)",
         min_value=0.0, max_value=30.0,
-        value=SCORE_SANHE_BONUS,
+        value=sanhe_bonus_value,
         step=1.0,
         help="三合局且为喜用神时的强力加成"
     )
     
-    # LiuHe (六合)
+    # LiuHe (六合) - 从 interactions.branchEvents.sixHarmony 读取
+    liuhe_bonus_value = get_param_value('interactions.branchEvents.sixHarmony', SCORE_LIUHE_BONUS)
     score_liuhe_bonus = st.sidebar.slider(
         "🤝 Combo Bonus (六合加成)",
         min_value=0.0, max_value=20.0,
-        value=SCORE_LIUHE_BONUS,
+        value=liuhe_bonus_value,
         step=1.0,
         help="六合（羁绊/解冲）的基础加分"
     )
     
-    # Clash (六冲)
+    # Clash (六冲) - 从 interactions.branchEvents.clashScore 读取
+    clash_penalty_value = get_param_value('interactions.branchEvents.clashScore', SCORE_CLASH_PENALTY)
     score_clash_penalty = st.sidebar.slider(
         "💥 Clash Penalty (六冲惩罚)",
         min_value=-20.0, max_value=0.0,
-        value=SCORE_CLASH_PENALTY,
+        value=clash_penalty_value,
         step=1.0,
         help="六冲且未被化解时的基础扣分"
     )
@@ -428,6 +471,21 @@ def render():
     # Defaults
     import copy
     fp = copy.deepcopy(DEFAULT_FULL_ALGO_PARAMS)
+    
+    # V50.0: golden_config 已在前面加载，这里直接使用
+    
+    # V50.0: 将黄金参数合并到 fp（用于深度调优面板）
+    if golden_config:
+        def deep_merge_params(target, source):
+            """深度合并参数，source 覆盖 target"""
+            for key, value in source.items():
+                if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+                    deep_merge_params(target[key], value)
+                else:
+                    target[key] = value
+        
+        # 合并黄金参数到 fp（用于深度调优面板）
+        deep_merge_params(fp, golden_config)
     
     # --- 🤖 AI Command Center Listener ---
     cmd_path = os.path.join(os.path.dirname(__file__), "../../data/command_center_config.json")
@@ -495,13 +553,19 @@ def render():
         st.caption("地支成局 (Branch Combo)")
         cp = fp['interactions'].get('comboPhysics', {'trineBonus': 2.5, 'halfBonus': 1.5, 'archBonus': 1.1, 'directionalBonus': 3.0, 'resolutionCost': 0.1})
         
+        # V50.0: 动态调整范围以适配黄金配置中的实际值
+        trine_bonus_val = cp.get('trineBonus', 2.5)
+        half_bonus_val = cp.get('halfBonus', 1.5)
+        dir_bonus_val = cp.get('directionalBonus', 3.0)
+        resolution_cost_val = cp.get('resolutionCost', 0.1)
+        
         c1, c2 = st.columns(2)
         with c1:
-            cp_tb = st.number_input("三合(Trine)", 1.5, 5.0, cp['trineBonus'], 0.1, key='cp_tb')
-            cp_hb = st.number_input("半合(Half)", 1.0, 3.0, cp['halfBonus'], 0.1, key='cp_hb')
+            cp_tb = st.number_input("三合(Trine)", 0.5, 5.0, trine_bonus_val, 0.1, key='cp_tb')
+            cp_hb = st.number_input("半合(Half)", 0.5, 3.0, half_bonus_val, 0.1, key='cp_hb')
         with c2:
-            cp_db = st.number_input("三会(Dir)", 2.0, 6.0, cp['directionalBonus'], 0.1, key='cp_db')
-            cp_rc = st.number_input("解冲消耗", 0.0, 0.5, cp['resolutionCost'], 0.05, key='cp_rc')
+            cp_db = st.number_input("三会(Dir)", 0.5, 6.0, dir_bonus_val, 0.1, key='cp_db')
+            cp_rc = st.number_input("解冲消耗", 0.0, 1.0, resolution_cost_val, 0.05, key='cp_rc')
         
         st.divider()
         st.caption("地支事件 (Branch Events)")
@@ -540,16 +604,17 @@ def render():
         vis_fric = st.slider("输出阻力 (Friction)", 0.0, 0.5, out_vis.get('drainFriction', 0.2), 0.05, key='f_ov_df')
         
         st.markdown("**系统熵 (System Entropy)**")
-        sys_ent = st.slider("全局熵增 (Entropy)", 0.0, 0.2, entropy, 0.01, key='f_ge')
+        sys_ent = st.slider("全局熵增 (Entropy)", 0.0, 0.3, entropy, 0.01, key='f_ge')
         
         st.divider()
-        st.caption("Legacy Control")
-        # Keep control impact for now if needed, or remove? 
-        # Config schema might still have it? No, we removed standard keys.
-        # But let's check config schema: controlImpact/Exhaust were REMOVED from default but FlowEngine still tries to use them (with fallbacks)?
-        # Actually my FlowEngine V7.4 implementation read 'controlImpact'.
-        # I should provide slider or default.
-        ctl_imp = st.slider("克-打击力 (Impact)", 0.1, 1.0, f_conf.get('controlImpact', 0.5), 0.1, key='f_ci')
+        st.caption("核心流转参数 (Core Flow)")
+        # V50.0: 添加 dampingFactor 和 outputDrainPenalty 滑块
+        damping_factor = st.slider("阻尼因子 (Damping)", 0.0, 0.6, f_conf.get('dampingFactor', 0.5), 0.05, key='f_df', 
+                                   help="V50.0: 系统能量衰减系数（已同步黄金配置）")
+        output_drain = st.slider("食伤泄耗 (Output Drain)", 1.0, 4.5, f_conf.get('outputDrainPenalty', 2.0), 0.1, key='f_od',
+                                help="V50.0: 日主生食伤时的额外损耗惩罚（已同步黄金配置）")
+        ctl_imp = st.slider("克-打击力 (Impact)", 0.1, 10.0, f_conf.get('controlImpact', 5.0), 0.1, key='f_ci',
+                           help="克制关系的影响强度")
         
         st.caption("空间衰减 (Spatial)")
         sp_nodes = f_conf.get('spatialDecay', {'gap1': 0.6, 'gap2': 0.3})
@@ -561,6 +626,8 @@ def render():
             'resourceImpedance': {'base': imp_base, 'weaknessPenalty': imp_weak},
             'outputViscosity': {'maxDrainRate': vis_rate, 'drainFriction': vis_fric},
             'globalEntropy': sys_ent,
+            'dampingFactor': damping_factor,  # V50.0: 添加阻尼因子
+            'outputDrainPenalty': output_drain,  # V50.0: 添加食伤泄耗惩罚
             'controlImpact': ctl_imp,
             'spatialDecay': {'gap1': sp_g1, 'gap2': sp_g2}
         }
@@ -571,7 +638,8 @@ def render():
         
         st.divider()
         st.caption("🌐 宏观场域 (Macro Field)")
-        mp = fp.get('macroPhysics', {'eraElement': 'Fire', 'eraBonus': 0.2, 'eraPenalty': 0.1, 'latitudeHeat': 0.0, 'latitudeCold': 0.0, 'invertSeasons': False, 'useSolarTime': True})
+        # V56.2: 修复 macroPhysics 位置 - 从 interactions 下读取
+        mp = fp.get('interactions', {}).get('macroPhysics', fp.get('macroPhysics', {'eraElement': 'Fire', 'eraBonus': 0.2, 'eraPenalty': 0.1, 'latitudeHeat': 0.0, 'latitudeCold': 0.0, 'invertSeasons': False, 'useSolarTime': True}))
         
         era_txt = st.selectbox("当前元运 (Era)", ["Period 9 (Fire)", "Period 8 (Earth)", "Period 1 (Water)"], index=0, key='mp_er')
         era_el = 'Fire' if 'Fire' in era_txt else ('Water' if 'Water' in era_txt else 'Earth')
@@ -682,12 +750,20 @@ def render():
                     "punishmentOpens": vp_po
                 },
                 "treasury": {"bonus": score_treasury_bonus},
-                "skull": {"crashScore": score_skull_crash}
+                "skull": {"crashScore": score_skull_crash},
+                "macroPhysics": {
+                    "eraElement": era_el,
+                    "eraBonus": era_bon, "eraPenalty": era_pen,
+                    "latitudeHeat": geo_hot, "latitudeCold": geo_cold,
+                    "invertSeasons": inv_sea, "useSolarTime": use_st
+                }
             },
             "flow": {
                 "resourceImpedance": {"base": imp_base, "weaknessPenalty": imp_weak},
                 "outputViscosity": {"maxDrainRate": vis_rate, "drainFriction": vis_fric},
                 "globalEntropy": sys_ent,
+                "dampingFactor": damping_factor,  # V50.0: 阻尼因子
+                "outputDrainPenalty": output_drain,  # V50.0: 食伤泄耗惩罚
                 "controlImpact": ctl_imp,
                 "spatialDecay": {"gap1": sp_g1, "gap2": sp_g2}
             },
@@ -695,12 +771,6 @@ def render():
                 "luckPillarWeight": lp_w,
                 "solarTimeImpact": 0.0, # Deprecated by macroPhysics.useSolarTime
                 "regionClimateImpact": 0.0
-            },
-            "macroPhysics": {
-                "eraElement": era_el,
-                "eraBonus": era_bon, "eraPenalty": era_pen,
-                "latitudeHeat": geo_hot, "latitudeCold": geo_cold,
-                "invertSeasons": inv_sea, "useSolarTime": use_st
             },
             "global_logic": fp['global_logic']
         }

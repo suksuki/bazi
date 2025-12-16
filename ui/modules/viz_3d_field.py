@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 import json
 import numpy as np
 from core.wuxing_engine import WuXingEngine
-from core.quantum import QuantumEngine
+from core.quantum import QuantumSimulator
 
 def render_3d_quantum_field(chart, strength_data, current_context=None, aspect_ratio=(1,1,0.8)):
     """
@@ -20,8 +20,11 @@ def render_3d_quantum_field(chart, strength_data, current_context=None, aspect_r
     
     # Physics Engine
     we = WuXingEngine(chart)
-    qe = QuantumEngine({}, [], wuxing_engine=we)
-    interactions = qe.calculate_interactions(chart)
+    # Note: QuantumSimulator is for wave function simulation, not interaction calculation
+    # For interactions, use the main engine or interaction service
+    # qe = QuantumSimulator({}, [], wuxing_engine=we)
+    # interactions = qe.calculate_interactions(chart)  # This method doesn't exist
+    interactions = []  # TODO: Use proper interaction service
 
     # 1. Prepare Data for Three.js
     nodes = []

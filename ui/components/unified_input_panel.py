@@ -56,24 +56,26 @@ def render_and_collect_input(facade: BaziFacade,
     with st.sidebar:
         st.header("⚙️ 核心数据与修正")
 
-        # --- 档案选择 ---
-        if cases is None:
-            cases = _load_cases()
-
+        # --- 档案选择（仅量子验证页面） ---
         selected_case = None
-        if cases:
-            case_options = {f"{c.get('id', 'NA')} - {c.get('description', 'Case')}": c for c in cases}
-            selected_case_name = st.selectbox("🎭 选择档案 (Archive)", list(case_options.keys()))
-            selected_case = case_options[selected_case_name]
-        else:
-            st.warning("未找到预测档案数据，使用默认示例。")
-            selected_case = {
-                "id": "DEMO",
-                "description": "Demo Case",
-                "bazi": ["甲子", "乙丑", "丙寅", "丁卯"],
-                "day_master": "丙",
-                "gender": "男",
-            }
+        if is_quantum_lab:
+            # 量子验证页面需要档案选择
+            if cases is None:
+                cases = _load_cases()
+
+            if cases:
+                case_options = {f"{c.get('id', 'NA')} - {c.get('description', 'Case')}": c for c in cases}
+                selected_case_name = st.selectbox("🎭 选择档案 (Archive)", list(case_options.keys()))
+                selected_case = case_options[selected_case_name]
+            else:
+                st.warning("未找到预测档案数据，使用默认示例。")
+                selected_case = {
+                    "id": "DEMO",
+                    "description": "Demo Case",
+                    "bazi": ["甲子", "乙丑", "丙寅", "丁卯"],
+                    "day_master": "丙",
+                    "gender": "男",
+                }
 
         # --- GEO 城市选择 ---
         raw_cities = _load_geo_cities()
@@ -81,8 +83,13 @@ def render_and_collect_input(facade: BaziFacade,
             raw_cities.remove("Beijing")
         cities = ["None"] + consts.DEFAULT_GEO_CITIES
 
-        archive_city = selected_case.get("city") if isinstance(selected_case, dict) else None
-        default_city = archive_city if archive_city in cities else "None"
+        # 从档案或 session_state 获取默认城市
+        if selected_case and isinstance(selected_case, dict):
+            archive_city = selected_case.get("city")
+            default_city = archive_city if archive_city in cities else "None"
+        else:
+            default_city = st.session_state.get("unified_geo_city", "None")
+        
         default_idx = cities.index(default_city) if default_city in cities else 0
         selected_city = st.selectbox("🌍 GEO 修正城市", cities, index=default_idx, key="unified_geo_city")
         city_for_controller = "Unknown" if selected_city == "None" else selected_city
@@ -90,8 +97,8 @@ def render_and_collect_input(facade: BaziFacade,
         # --- ERA 因子 ---
         era_factor: Dict[str, float] = {}
         if is_quantum_lab:
-            # 在 ERA 调节前展示档案概要
-            if isinstance(selected_case, dict):
+            # 在 ERA 调节前展示档案概要（仅量子验证页面）
+            if isinstance(selected_case, dict) and selected_case:
                 st.subheader("档案信息")
                 st.markdown(f"- 档案ID: {selected_case.get('id', 'Unknown')}")
                 st.markdown(f"- 性别: {selected_case.get('gender', '未知')}")
@@ -135,25 +142,62 @@ def render_and_collect_input(facade: BaziFacade,
 
         # --- 构造用户输入并通过 Facade 刷新 Controller ---
         controller = facade._controller
-        try:
-            name = selected_case.get("description", "User")
-            gender = "男" if selected_case.get("gender", "男") in ["男", "M", 1] else "女"
-        except Exception:
-            name, gender = "User", "男"
+        
+        # 智能排盘页面：从 session_state 读取输入表单的数据
+        if not is_quantum_lab:
+            # 从 session_state 读取输入表单的数据（档案管理或手动输入）
+            name = st.session_state.get("input_name", "某人")
+            gender = st.session_state.get("input_gender", "男")
+            input_date = st.session_state.get("input_date")
+            input_time = st.session_state.get("input_time", 12)
+            input_longitude = st.session_state.get("input_longitude", 116.46)
+            input_enable_solar = st.session_state.get("input_enable_solar_time", True)
+            
+            # 确保日期是 datetime.date 对象
+            if isinstance(input_date, datetime.date):
+                date_obj = input_date
+            elif isinstance(input_date, datetime.datetime):
+                date_obj = input_date.date()
+            else:
+                date_obj = datetime.date(1990, 1, 1)
+            
+            user_data = {
+                "name": name,
+                "gender": gender,
+                "date": date_obj,
+                "time": input_time,
+                "city": city_for_controller,
+                "enable_solar": input_enable_solar,
+                "longitude": input_longitude,
+                "era_factor": era_factor if era_factor else None,
+            }
+        else:
+            # 量子验证页面：使用档案数据或默认值
+            if selected_case and isinstance(selected_case, dict):
+                try:
+                    name = selected_case.get("description", "User")
+                    gender = "男" if selected_case.get("gender", "男") in ["男", "M", 1] else "女"
+                except Exception:
+                    name, gender = "User", "男"
+            else:
+                # 从 controller 获取或使用默认值
+                user_data_existing = controller.get_user_data() if controller else {}
+                name = user_data_existing.get("name", "User")
+                gender = user_data_existing.get("gender", "男")
 
-        demo_date = datetime.date(1990, 1, 1)
-        demo_hour = 12
+            demo_date = datetime.date(1990, 1, 1)
+            demo_hour = 12
 
-        user_data = {
-            "name": name,
-            "gender": gender,
-            "date": demo_date,
-            "time": demo_hour,
-            "city": city_for_controller,
-            "enable_solar": True,
-            "longitude": 116.46,
-            "era_factor": era_factor if era_factor else None,
-        }
+            user_data = {
+                "name": name,
+                "gender": gender,
+                "date": demo_date,
+                "time": demo_hour,
+                "city": city_for_controller,
+                "enable_solar": True,
+                "longitude": 116.46,
+                "era_factor": era_factor if era_factor else None,
+            }
 
         particle_weights = controller.get_current_particle_weights() if hasattr(controller, "get_current_particle_weights") else {}
 

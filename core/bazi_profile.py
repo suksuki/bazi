@@ -52,7 +52,17 @@ class BaziProfile:
         if self._luck_timeline is None:
             self._build_luck_timeline()
         
-        return self._luck_timeline.get(year, "未知大运")
+        result = self._luck_timeline.get(year, "未知大运")
+        
+        # [V56.3 修复] 确保返回值是字符串格式
+        if isinstance(result, str):
+            return result
+        elif isinstance(result, int):
+            # 如果是整数，转换为字符串（可能是索引）
+            return "未知大运"
+        else:
+            # 其他类型，转换为字符串
+            return str(result) if result else "未知大运"
 
     def get_year_pillar(self, year: int) -> str:
         """
@@ -87,6 +97,11 @@ class BaziProfile:
             start = dy.getStartYear()
             end = dy.getEndYear()
             ganzhi = dy.getGanZhi()
+            
+            # [V56.3 修复] 确保 ganzhi 是字符串格式
+            if not isinstance(ganzhi, str):
+                # 如果是整数或其他类型，转换为字符串
+                ganzhi = str(ganzhi) if ganzhi else "未知大运"
             
             # 填充时间轴
             for y in range(start, end + 1):

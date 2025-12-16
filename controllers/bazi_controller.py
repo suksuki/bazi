@@ -22,7 +22,7 @@ from lunar_python import Solar
 # Model Imports
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.engine_v91 import EngineV91 as QuantumEngine
+from core.engine_v88 import EngineV88 as QuantumEngine
 from core.bazi_profile import BaziProfile
 from core.exceptions import (
     BaziCalculationError,
@@ -143,6 +143,48 @@ class BaziController:
         except Exception as e:
             logger.error(f"Failed to load particle weights config: {e}", exc_info=True)
             self._particle_weights_config = {}
+    
+    def _load_golden_config(self) -> Optional[Dict]:
+        """
+        V50.0: Load full golden config from config/parameters.json.
+        This is the single source of truth for all algorithm parameters.
+        
+        Returns:
+            Full config dict with all parameters, or None if loading fails
+        """
+        import os
+        import json
+        
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(project_root, "config", "parameters.json")
+            
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    golden_config = json.load(f)
+                
+                # Merge with default structure to ensure completeness
+                from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+                merged_config = DEFAULT_FULL_ALGO_PARAMS.copy()
+                
+                # Deep merge golden config into defaults
+                def deep_merge(base, update):
+                    """Recursively merge update into base"""
+                    for key, value in update.items():
+                        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                            deep_merge(base[key], value)
+                        else:
+                            base[key] = value
+                
+                deep_merge(merged_config, golden_config)
+                logger.debug(f"Golden config loaded from {config_path}")
+                return merged_config
+            else:
+                logger.warning(f"Config file not found: {config_path}, using defaults")
+                return None
+        except Exception as e:
+            logger.error(f"Failed to load golden config: {e}", exc_info=True)
+            return None
     
     def _save_particle_weights_config(self, weights: Dict[str, float]) -> bool:
         """
@@ -545,18 +587,20 @@ class BaziController:
             # 3. QuantumEngine (Singleton-like)
             if self._quantum_engine is None:
                 logger.debug("Initializing QuantumEngine...")
+                # V50.0: Load full golden config from config/parameters.json
+                engine_config = self._load_golden_config()
                 self._quantum_engine = QuantumEngine()
+                # Update engine with full golden config
+                if engine_config:
+                    self._quantum_engine.update_full_config(engine_config)
+                    logger.debug(f"Updated QuantumEngine with full golden config from config/parameters.json")
             
-            # V16.0: Update engine config with particle weights from config file
-            # This ensures engine uses the latest particle weights from config/parameters.json
-            particle_weights = self.get_current_particle_weights()
-            if particle_weights:
-                # Build full config structure for engine
-                from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
-                engine_config = DEFAULT_FULL_ALGO_PARAMS.copy()
-                engine_config['particleWeights'] = particle_weights
+            # V50.0: Always update engine config with latest golden parameters
+            # This ensures engine uses the latest optimized parameters from config/parameters.json
+            engine_config = self._load_golden_config()
+            if engine_config:
                 self._quantum_engine.update_full_config(engine_config)
-                logger.debug(f"Updated QuantumEngine with {len(particle_weights)} particle weights from config")
+                logger.debug(f"Updated QuantumEngine with latest golden config")
                 
             # 4. BaziProfile
             logger.debug("Creating BaziProfile...")

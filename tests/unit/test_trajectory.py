@@ -16,7 +16,7 @@ class TestTrajectoryEngine(unittest.TestCase):
         
     @patch('core.wuxing_engine.WuXingEngine')
     @patch('core.trajectory.FluxEngine') 
-    @patch('core.quantum.QuantumEngine')
+    @patch('core.quantum.QuantumSimulator')
     def test_run_monte_carlo_backbone(self, MockQuantum, MockFlux, MockWuXing):
         # Init Engine under patches
         engine = AdvancedTrajectoryEngine(self.chart, self.luck_cycles, self.start_year)
@@ -48,7 +48,7 @@ class TestTrajectoryEngine(unittest.TestCase):
 
     @patch('core.wuxing_engine.WuXingEngine')
     @patch('core.trajectory.FluxEngine') 
-    @patch('core.quantum.QuantumEngine')
+    @patch('core.quantum.QuantumSimulator')
     def test_run_monte_carlo_month(self, MockQuantum, MockFlux, MockWuXing):
         # Init Engine under patches
         engine = AdvancedTrajectoryEngine(self.chart, self.luck_cycles, self.start_year)

@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from controllers.bazi_controller import BaziController
 from core.engine_v88 import EngineV88
-from core.engine_v91 import EngineV91
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 
 
 def create_test_case_data():

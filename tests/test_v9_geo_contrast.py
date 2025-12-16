@@ -5,10 +5,10 @@ import json
 # Add project root
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from core.engine_v90 import EngineV90
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 
 def run_geo_experiment():
-    print("🌍 V9.0 Latitude Survival Test (Geo Contrast)")
+    print("🌍 V9.1 Latitude Survival Test (Geo Contrast)")
     print("============================================")
 
     # 1. 准备实验对象：冬天的丙火 (急需火来调候)
@@ -16,8 +16,8 @@ def run_geo_experiment():
     bazi = ["丙子", "庚子", "丙午", "壬辰"]
     dm = "丙"
     
-    # 初始化 V9.0 引擎
-    engine = EngineV90()
+    # 初始化 V9.1 引擎
+    engine = EngineV91()
     
     # 2. 定义对照组
     scenarios = [
@@ -29,7 +29,7 @@ def run_geo_experiment():
     results = []
 
     for case in scenarios:
-        # 调用 V9.0 分析
+        # 调用 V9.1 分析
         analysis = engine.analyze(
             bazi=bazi, 
             day_master=dm, 
@@ -81,7 +81,7 @@ def run_geo_experiment():
     
     if sg['fire'] > harbin['fire']:
         print(f"✅ HYPOTHESIS CONFIRMED: Singapore Fire ({sg['fire']:.1f}) >> Harbin Fire ({harbin['fire']:.1f})")
-        print("   -> V9.0 Geo Layer is correctly modifying elemental weights.")
+        print("   -> V9.1 Geo Layer is correctly modifying elemental weights.")
     else:
         print("❌ HYPOTHESIS FAILED: No significant difference found.")
 

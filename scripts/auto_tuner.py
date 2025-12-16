@@ -26,7 +26,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.engine_v91 import EngineV91
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 from core.config_rules import (
     ENERGY_THRESHOLD_STRONG, ENERGY_THRESHOLD_WEAK,
@@ -237,7 +237,7 @@ class EngineWrapper:
     """封装引擎调用，支持参数注入"""
     
     def __init__(self):
-        self.engine = EngineV91()
+        self.engine = EngineV91()  # EngineV88 with V9.1 features
     
     def calculate_score(self, case: Dict, params: Dict) -> Dict:
         """
@@ -254,7 +254,7 @@ class EngineWrapper:
         if hasattr(self.engine, 'update_full_config'):
             self.engine.update_full_config(params)
         elif hasattr(self.engine, 'config'):
-            # EngineV91 使用 config 属性
+            # EngineV88 (V9.1) 使用 config 属性
             self.engine.config = copy.deepcopy(params)
             # 如果引擎内部使用了 processors，也需要更新它们的配置
             if hasattr(self.engine, 'physics') and hasattr(self.engine.physics, 'config'):

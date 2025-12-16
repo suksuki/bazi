@@ -7,7 +7,7 @@ Engine Adapter - Graph Network Engine Integration Adapter
 
 from typing import Dict, List, Any, Optional
 from core.engine_graph import GraphNetworkEngine
-from core.engine_v91 import EngineV91
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
 

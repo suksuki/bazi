@@ -13,10 +13,10 @@
       "remnant": 0.1
     },
     "pillarWeights": {
-      "year": 0.9,
-      "month": 1.9500000000000002,
-      "day": 1.4,
-      "hour": 1.35
+      "year": 0.373976744582628,
+      "month": 0.8742769408708053,
+      "day": 2.0731699999668844,
+      "hour": 1.7012281975686456
     },
     "lifeStageImpact": 0.2,
     "InteractionFactors": {
@@ -55,7 +55,7 @@
     }
   },
   "structure": {
-    "rootingWeight": 4.9,
+    "rootingWeight": 0.35190964309829476,
     "exposedBoost": 1.5,
     "samePillarBonus": 1.2,
     "voidPenalty": 0.5
@@ -63,7 +63,7 @@
   "interactions": {
     "stemFiveCombination": {
       "threshold": 0.8,
-      "bonus": 2.0,
+      "bonus": 1.261166751886353,
       "penalty": 0.4,
       "jealousyDamping": 0.3
     },
@@ -94,7 +94,7 @@
     "branchEvents": {
       "threeHarmony": 15.0,
       "sixHarmony": 5.0,
-      "clashDamping": 0.5,
+      "clashDamping": 0.3440865797777606,
       "clashScore": -3.0,
       "harmDamping": 0.2,
       "harmPenalty": -2.0,
@@ -108,21 +108,21 @@
     }
   },
   "flow": {
-    "generationEfficiency": 0.1,
-    "controlImpact": 5.0,
-    "dampingFactor": 0.25,
+    "generationEfficiency": 0.2165577814758547,
+    "controlImpact": -5.626253391818409,
+    "dampingFactor": 0.4710544895308158,
     "systemEntropy": 0.05,
-    "outputDrainPenalty": 1.5,
+    "outputDrainPenalty": 0.10878997354289584,
     "resourceImpedance": {
       "base": 0.2,
       "weaknessPenalty": 0.75
     },
     "outputViscosity": {
       "maxDrainRate": 0.35,
-      "drainFriction": 0.3,
+      "drainFriction": 0.2,
       "viscosity": 0.95
     },
-    "globalEntropy": 0.14,
+    "globalEntropy": 0.01520842343742963,
     "phaseChange": {
       "scorchedEarthDamping": 0.15,
       "frozenWaterDamping": 0.3
@@ -137,7 +137,7 @@
       "Cancellation_Factor": 0.0,
       "Enabled": false
     },
-    "earthMetalMoistureBoost": 7.5
+    "earthMetalMoistureBoost": 3.217745254824024
   },
   "spacetime": {
     "luckPillarWeight": 0.5,
@@ -175,5 +175,10 @@
       "C07": 1.338
     },
     "k_capture": 0.25
-  }
+  },
+  "gen_eff": 0.17,
+  "ctl_imp": -2.2,
+  "damping": 0.62,
+  "drain_rate": 1.5,
+  "entropy": 0.24
 }

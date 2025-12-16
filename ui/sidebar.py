@@ -42,7 +42,15 @@ def render_sidebar(app_mode):
                 key='engine_mode_radio',
                 help="选择计算引擎：Legacy=传统线性算法，Graph=图网络矩阵算法"
             )
-            st.session_state['engine_mode'] = 'Legacy' if engine_mode == 'Legacy (线性)' else 'Graph'
+            new_engine_mode = 'Legacy' if engine_mode == 'Legacy (线性)' else 'Graph'
+            old_engine_mode = st.session_state.get('engine_mode', 'Legacy')
+            
+            # 如果引擎模式改变，更新 session_state 并重新加载页面
+            if new_engine_mode != old_engine_mode:
+                st.session_state['engine_mode'] = new_engine_mode
+                st.rerun()  # 重新加载页面以使用新的引擎
+            else:
+                st.session_state['engine_mode'] = new_engine_mode
             
             if engine_mode == 'Graph (图网络)':
                 st.caption("🌐 图网络引擎：基于矩阵传播的动态能量计算")

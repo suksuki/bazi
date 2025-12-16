@@ -4,13 +4,13 @@ import os
 # Add project root
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from core.engine_v90 import EngineV90
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 
 def run_algo_test():
-    print("🌍 V9.0 Geo Algorithm Regression Test")
+    print("🌍 V9.1 Geo Algorithm Regression Test")
     print("=====================================")
     
-    engine = EngineV90()
+    engine = EngineV91()
     bazi = ["丙子", "庚子", "丙午", "壬辰"] # Dummy data
     dm = "丙"
     

@@ -151,7 +151,7 @@ class AdvancedTrajectoryEngine:
         """
         Generates the deterministic trajectory backbone.
         """
-        from core.quantum import QuantumEngine
+        # Note: QuantumSimulator not needed here, only TenGodsWaveFunction is used
         from lunar_python import Solar
         
         timeline = []

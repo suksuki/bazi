@@ -166,6 +166,11 @@ def evaluate_case(engine: GraphNetworkEngine, case: Dict[str, Any]) -> Dict[str,
     strength_label = result.get('strength_label', 'Unknown')
     special_pattern = result.get('special_pattern')
     
+    # [V58.0] 从配置中获取阈值，或使用默认值
+    grading_config = engine.config.get('grading', {})
+    strong_threshold = grading_config.get('strong_threshold', 60.0)
+    weak_threshold = grading_config.get('weak_threshold', 40.0)
+    
     # [V40.0] 优先使用引擎返回的标签（可能包含Special_Strong）
     if strength_label in ["Strong", "Balanced", "Weak", "Special_Strong"]:
         pred_label = strength_label

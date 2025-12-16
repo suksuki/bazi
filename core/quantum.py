@@ -2,11 +2,20 @@ import math
 import random
 from core.config_manager import ConfigManager
 
-class QuantumEngine:
+class QuantumSimulator:
     """
-    Quantum Bazi Engine V16.0
-    Simulates the collapse of the Bazi Wavefunction into concrete life aspects using Flux Dynamics.
-    Integrates Real-time Particle Energy, Entropy, and Dynamic Weights.
+    Quantum Bazi Simulator V16.0
+    
+    ⚠️ NOTE: This is NOT the main prediction engine.
+    Main engine: EngineV91 (aliased as QuantumEngine in controllers)
+    
+    This class simulates the collapse of the Bazi Wavefunction into concrete life aspects 
+    using Flux Dynamics. Integrates Real-time Particle Energy, Entropy, and Dynamic Weights.
+    
+    Used for:
+    - Quantum trajectory simulations
+    - 3D field visualization
+    - Monte Carlo sampling
     """
     def __init__(self, chart_gods, reactions, flux_data=None, wuxing_engine=None):
         self.gods = chart_gods # Legacy support

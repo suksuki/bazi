@@ -1,17 +1,17 @@
 import sys
 import os
 sys.path.append(os.getcwd())
-from core.engine_v90 import EngineV90
+from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
 
 def run_era_experiment():
-    print("⏳ V9.0 Era Transition Test (Period 8 vs Period 9)")
+    print("⏳ V9.1 Era Transition Test (Period 8 vs Period 9)")
     print("================================================")
 
     # 不用 Harbin，用标准位置，控制单一变量
     bazi = ["丙子", "庚子", "丙午", "壬辰"] 
     dm = "丙" # 弱火
     
-    engine = EngineV90()
+    engine = EngineV91()
     
     years = [2023, 2024]
     

@@ -12,18 +12,34 @@
 4. 自动扩大触顶参数的搜索范围
 5. 循环迭代直到达到目标准确率
 
-版本: V1.0
+版本: V51.0 (Golden Ratio Hard-Reset)
 作者: Antigravity Team
 日期: 2025-12-16
+
+V50.1 新增功能:
+- Stagnation Detection: 检测连续5次无改进
+- CHAOS MODE: 极端权重偏向、参数抖动、超大范围
+- Reset Logic: 混沌模式后重置计数器
+
+V51.0 新增功能:
+- Fine-Tuning Mode: 锁定核心参数（黄金比例），只调整边缘参数
+- Golden Ratio Constants: 基于物理守恒定律的黄金参数组
+- Stop Random Search: 停止随机震荡，使用计算出的物理常数
 """
 
 import json
 import sys
 import subprocess
 import re
+import random
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import copy
+
+# V50.1: 确保输出不被缓冲（用于 nohup 后台运行）
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent
@@ -132,22 +148,45 @@ def detect_parameter_ceiling(best_params: Dict[str, float],
 
 
 def update_loss_weights(accuracies: Dict[str, float], 
-                       current_weights: Dict[str, float]) -> Dict[str, float]:
+                       current_weights: Dict[str, float],
+                       chaos_mode: bool = False) -> Dict[str, float]:
     """
     根据准确率动态调整 Loss 权重。
     
     V50.0 改进：使用更激进的动态公式，准确率越低，权重越高。
+    V50.1 新增：CHAOS MODE - 极端权重偏向，只关注最差的类别。
     
     Args:
         accuracies: 当前准确率（0-100）
         current_weights: 当前权重
+        chaos_mode: 是否启用混沌模式（极端权重偏向）
     
     Returns:
         更新后的权重
     """
     new_weights = copy.deepcopy(current_weights)
     
-    # V50.0: 动态权重公式
+    if chaos_mode:
+        # V50.1 CHAOS MODE: 极端权重偏向
+        # 找到准确率最低的类别，给它极高的权重，其他类别权重极低
+        weakest_label, weakest_acc = diagnose_weakness(accuracies)
+        
+        print(f"   ⚠️  CHAOS MODE: 极端权重偏向")
+        print(f"   🎯 聚焦最弱类别: {weakest_label} ({weakest_acc:.1f}%)")
+        
+        for label in ["Strong", "Balanced", "Weak"]:
+            if label == weakest_label:
+                # 最弱类别：极高权重
+                new_weights[label] = 50.0
+                print(f"      {label}: {current_weights.get(label, 1.0):.1f} → 50.0 ⚡ (极端聚焦)")
+            else:
+                # 其他类别：极低权重（几乎放弃）
+                new_weights[label] = 0.1
+                print(f"      {label}: {current_weights.get(label, 1.0):.1f} → 0.1 (暂时放弃)")
+        
+        return new_weights
+    
+    # V50.0: 正常模式 - 动态权重公式
     # weight = base + (1.0 - accuracy/100) * multiplier
     # 准确率越低，权重越高
     
@@ -179,18 +218,56 @@ def update_loss_weights(accuracies: Dict[str, float],
 
 
 def expand_parameter_ranges(ceilings: Dict[str, bool],
-                           current_ranges: Dict[str, Tuple[float, float]]) -> Dict[str, Tuple[float, float]]:
+                           current_ranges: Dict[str, Tuple[float, float]],
+                           chaos_mode: bool = False) -> Dict[str, Tuple[float, float]]:
     """
     自动扩大触顶参数的搜索范围。
+    
+    V50.1 新增：CHAOS MODE - 超大范围（临时扩大3倍）
     
     Args:
         ceilings: 触顶检测结果
         current_ranges: 当前参数范围
+        chaos_mode: 是否启用混沌模式（超大范围）
     
     Returns:
         更新后的参数范围
     """
     new_ranges = copy.deepcopy(current_ranges)
+    
+    if chaos_mode:
+        # V50.1 CHAOS MODE: 超大范围（临时扩大3倍）
+        expansion_factor = 3.0
+        print(f"   ⚠️  CHAOS MODE: 超大范围扩展 (3倍)")
+        
+        # 对所有参数都扩大范围（不仅仅是触顶的）
+        for param_path, (min_val, max_val) in current_ranges.items():
+            range_size = max_val - min_val
+            new_min = max(0.0, min_val - range_size * 0.5)  # 向下扩展50%
+            new_max = max_val + range_size * 2.0  # 向上扩展200%
+            
+            # 设置合理的绝对上限
+            if 'rootingWeight' in param_path:
+                new_max = min(new_max, 50.0)  # rootingWeight 上限 50.0
+            elif 'controlImpact' in param_path:
+                new_max = min(new_max, 30.0)  # controlImpact 上限 30.0
+            elif 'moistureBoost' in param_path:
+                new_max = min(new_max, 40.0)  # moistureBoost 上限 40.0
+            elif 'dampingFactor' in param_path:
+                new_max = min(new_max, 1.0)  # dampingFactor 上限 1.0
+            elif 'globalEntropy' in param_path:
+                new_max = min(new_max, 0.5)  # globalEntropy 上限 0.5
+            elif 'outputDrainPenalty' in param_path:
+                new_max = min(new_max, 10.0)  # outputDrainPenalty 上限 10.0
+            else:
+                new_max = min(new_max, max_val * 3.0)  # 其他参数最多3倍
+            
+            new_ranges[param_path] = (new_min, new_max)
+            print(f"      {param_path}: [{min_val:.2f}, {max_val:.2f}] → [{new_min:.2f}, {new_max:.2f}]")
+        
+        return new_ranges
+    
+    # V50.0: 正常模式 - 只扩大触顶参数
     expansion_factor = 1.5  # 扩大50%
     
     for param_path, is_at_ceiling in ceilings.items():
@@ -294,9 +371,40 @@ def extract_best_params_from_config() -> Dict[str, float]:
     return best_params
 
 
+def apply_parameter_jitter(best_params: Dict[str, float], 
+                           jitter_factor: float = 0.2) -> Dict[str, float]:
+    """
+    V50.1: 参数抖动 - 对当前最佳参数进行随机扰动。
+    
+    Args:
+        best_params: 当前最佳参数
+        jitter_factor: 扰动因子（±20%）
+    
+    Returns:
+        扰动后的参数
+    """
+    jittered_params = {}
+    
+    for param_path, value in best_params.items():
+        # 随机扰动 ±20%
+        jitter = random.uniform(-jitter_factor, jitter_factor)
+        new_value = value * (1.0 + jitter)
+        
+        # 确保参数值合理（非负等）
+        if 'dampingFactor' in param_path or 'globalEntropy' in param_path:
+            new_value = max(0.0, new_value)  # 确保非负
+        elif 'rootingWeight' in param_path or 'controlImpact' in param_path:
+            new_value = max(0.1, new_value)  # 确保最小正值
+        
+        jittered_params[param_path] = new_value
+    
+    return jittered_params
+
+
 def auto_evolve(target_accuracy: float = 75.0, 
                 max_iterations: int = 10,
-                trials_per_iteration: int = 200):
+                trials_per_iteration: int = 200,
+                step: int = 1):
     """
     自动进化主循环。
     
@@ -306,8 +414,10 @@ def auto_evolve(target_accuracy: float = 75.0,
         trials_per_iteration: 每次迭代的试验次数
     """
     print("=" * 80)
-    print("🤖 Antigravity 自动进化元优化器 (V50.0)")
+    print("🤖 Antigravity 自动进化元优化器 (V51.0 Golden Ratio)")
     print("   Unattended Meta-Optimizer - The Golden Equilibrium Pusher")
+    print("   ⚡ V51.0: Fine-Tuning Mode - 锁定黄金参数，微调边缘参数")
+    print(f"   🪜 训练阶段(step): {step} (0=全阶段, 1=Foundation, 2=Dynamics)")
     print("=" * 80)
     print()
     print(f"🎯 目标准确率: {target_accuracy:.1f}%")
@@ -323,27 +433,41 @@ def auto_evolve(target_accuracy: float = 75.0,
     # V50.0: 初始化权重（从当前配置开始，后续动态调整）
     current_weights = {"Strong": 1.0, "Weak": 4.0, "Balanced": 4.0}
     
-    # V50.0: 参数范围（基于 V49.0，后续会根据触顶情况自动扩大）
+    # V51.0: Fine-Tuning Mode - 锁定核心参数，只调整边缘参数
+    # 架构师测算的黄金参数组（基于物理守恒定律）
+    GOLDEN_CONSTANTS = {
+        'structure.rootingWeight': 4.25,      # π + 1.1 的近似值
+        'flow.controlImpact': 2.618,         # φ² (黄金比例平方)
+        'flow.outputDrainPenalty': 2.80,     # 泄耗通道（关键！）
+        'flow.generationEfficiency': 0.25,    # 最佳传导率
+        'flow.dampingFactor': 0.33,          # 三分之一能量耗散
+    }
+    
+    # V51.0: 锁定核心参数（允许±5%误差）
+    LOCKED_PARAMS = set(GOLDEN_CONSTANTS.keys())
+    LOCK_TOLERANCE = 0.05  # 5% 容差
+    
+    # V51.0: 只调整边缘参数
     param_ranges = {
-        'structure.rootingWeight': (3.0, 6.0),
-        'physics.pillarWeights.day': (1.0, 1.8),
-        'physics.pillarWeights.month': (0.8, 2.0),
-        'physics.pillarWeights.year': (0.5, 1.8),
-        'physics.pillarWeights.hour': (0.5, 1.5),
-        'flow.controlImpact': (5.0, 10.0),
-        'flow.generationEfficiency': (0.1, 0.4),
-        'flow.dampingFactor': (0.0, 0.4),
-        'flow.outputDrainPenalty': (1.5, 3.0),
-        'flow.globalEntropy': (0.05, 0.15),
+        # 边缘参数1: 润局系数
         'flow.earthMetalMoistureBoost': (5.0, 15.0),
-        'interactions.stemFiveCombination.bonus': (1.2, 2.5),
+        # 边缘参数2: 冲战损耗
         'interactions.branchEvents.clashDamping': (0.2, 0.8),
     }
     
+    print("📋 V51.0 Fine-Tuning Mode 配置:")
+    print("   🔒 锁定核心参数（黄金比例）:")
+    for param_path, golden_value in GOLDEN_CONSTANTS.items():
+        print(f"      {param_path}: {golden_value:.3f} (±5%)")
+    print("   🎛️  可调边缘参数:")
+    for param_path, (min_val, max_val) in param_ranges.items():
+        print(f"      {param_path}: [{min_val:.1f}, {max_val:.1f}]")
+    print()
+    
     iteration = 0
     best_total_accuracy = 0.0
-    no_improvement_count = 0  # 连续无改进次数
-    max_no_improvement = 5  # 连续5次无改进则扩大搜索空间
+    # V51.0: 禁用 Chaos Mode，使用 Fine-Tuning Mode
+    chaos_mode_active = False  # V51.0: 永远禁用混沌模式
     
     # V50.0: 加载当前最佳参数作为种子
     print("📥 加载当前最佳参数作为种子...")
@@ -387,24 +511,47 @@ def auto_evolve(target_accuracy: float = 75.0,
         print(f"   🔬 试验次数: {trials_per_iteration} (实际使用 train_model_optuna.py 的循环配置)")
         print()
         
-        # V50.0: 运行训练脚本（train_model_optuna.py 会自动加载 config/parameters.json 作为种子）
-        result = subprocess.run(
-            ["python3", str(project_root / "scripts" / "train_model_optuna.py")],
+        # V53.0: 运行训练脚本（实时输出，不缓冲）
+        # 使用 Popen 实时显示输出，而不是 capture_output
+        print("   🔄 训练进行中（输出将实时显示）...")
+        print()
+        
+        cmd = ["python3", str(project_root / "scripts" / "train_model_optuna.py")]
+        if step in (0, 1, 2):
+            cmd += ["--step", str(step)]
+
+        process = subprocess.Popen(
+            cmd,
             cwd=str(project_root),
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            encoding='utf-8'
+            encoding='utf-8',
+            bufsize=1  # 行缓冲
         )
         
-        if result.returncode != 0:
-            print(f"   ❌ 训练失败")
-            error_preview = result.stderr[:500] if result.stderr else result.stdout[:500]
+        # 实时读取并打印输出
+        output_lines = []
+        for line in process.stdout:
+            line = line.rstrip()
+            print(line)
+            output_lines.append(line)
+            # 强制刷新输出
+            sys.stdout.flush()
+        
+        # 等待进程完成
+        returncode = process.wait()
+        
+        if returncode != 0:
+            print(f"   ❌ 训练失败 (返回码: {returncode})")
+            error_preview = '\n'.join(output_lines[-20:])  # 显示最后20行
             print(f"   {error_preview}")
             print()
             print("   ⚠️  跳过本次迭代，继续下一轮...")
             # 继续下一轮迭代
             continue
         
+        print()
         print("   ✅ 训练完成")
         
         # 检查训练是否真的更新了参数
@@ -423,17 +570,16 @@ def auto_evolve(target_accuracy: float = 75.0,
             print(f"      {label}: {accuracies[label]:.1f}%")
         print()
         
-        # 更新最佳准确率
+        # V51.0: Fine-Tuning Mode - 简化改进检测
         improved = False
+        
         if accuracies['Total'] > best_total_accuracy:
             improvement = accuracies['Total'] - best_total_accuracy
             best_total_accuracy = accuracies['Total']
             improved = True
-            no_improvement_count = 0
             print(f"   🎉 发现更好的配置！准确率提升 {improvement:.2f}%")
         else:
-            no_improvement_count += 1
-            print(f"   ⚠️  本次迭代未改进（连续 {no_improvement_count} 次无改进）")
+            print(f"   ⚠️  本次迭代未改进（当前最佳: {best_total_accuracy:.1f}%）")
         
         # 步骤3: 检查是否达标
         if accuracies['Total'] >= target_accuracy:
@@ -451,9 +597,9 @@ def auto_evolve(target_accuracy: float = 75.0,
         # 步骤4: 诊断和调整
         print("🔍 步骤4: 诊断短板并调整策略...")
         
-        # 更新权重
+        # V51.0: Fine-Tuning Mode - 正常权重调整（不使用混沌模式）
         old_weights = copy.deepcopy(current_weights)
-        current_weights = update_loss_weights(accuracies, current_weights)
+        current_weights = update_loss_weights(accuracies, current_weights, chaos_mode=False)
         
         # 如果有权重变化，更新训练脚本
         if current_weights != old_weights:
@@ -462,23 +608,43 @@ def auto_evolve(target_accuracy: float = 75.0,
         # 提取最佳参数并检测触顶
         best_params = extract_best_params_from_config()
         if best_params:
+            # V50.1: 混沌模式 - 参数抖动
+            if chaos_mode_active and stagnation_detected:
+                print("   ⚠️  CHAOS MODE: 应用参数抖动 (±20% 随机扰动)")
+                jittered_params = apply_parameter_jitter(best_params, jitter_factor=0.2)
+                
+                # 将抖动后的参数写回 config/parameters.json（作为下一轮训练的种子）
+                config_path = project_root / "config" / "parameters.json"
+                if config_path.exists():
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                    
+                    # 更新参数
+                    for param_path, value in jittered_params.items():
+                        keys = param_path.split('.')
+                        target = config
+                        for key in keys[:-1]:
+                            if key not in target:
+                                target[key] = {}
+                            target = target[key]
+                        target[keys[-1]] = value
+                    
+                    with open(config_path, 'w', encoding='utf-8') as f:
+                        json.dump(config, f, indent=2, ensure_ascii=False)
+                    
+                    print(f"   ✅ 已应用参数抖动，更新了 {len(jittered_params)} 个参数")
+                    # 显示几个示例
+                    for param_path, value in list(jittered_params.items())[:3]:
+                        old_value = best_params.get(param_path, 0)
+                        print(f"      {param_path}: {old_value:.3f} → {value:.3f}")
+                    if len(jittered_params) > 3:
+                        print(f"      ... 还有 {len(jittered_params) - 3} 个参数")
+            
             ceilings = detect_parameter_ceiling(best_params, param_ranges)
             
-            # 扩大触顶参数的搜索范围
-            old_ranges = copy.deepcopy(param_ranges)
-            param_ranges = expand_parameter_ranges(ceilings, param_ranges)
-            
-            # 如果有范围变化，需要更新 train_model_optuna.py 中的参数范围
-            # 这里简化处理，打印提示
-            if param_ranges != old_ranges:
-                print("   ⚠️  参数范围已更新，但需要手动修改 train_model_optuna.py 中的搜索范围")
-                print("   更新后的参数范围:")
-                for param_path, (min_val, max_val) in param_ranges.items():
-                    if param_path in old_ranges:
-                        old_min, old_max = old_ranges[param_path]
-                        if abs(max_val - old_max) > 0.01:
-                            print(f"      {param_path}: [{min_val:.2f}, {max_val:.2f}] (原: [{old_min:.2f}, {old_max:.2f}])")
-                print()
+            # V51.0: Fine-Tuning Mode - 参数范围固定（只调整边缘参数）
+            # 核心参数已锁定，不需要扩展范围
+            print("   ✅ Fine-Tuning Mode: 核心参数已锁定，只调整边缘参数")
         
         print("=" * 80)
         print(f"✅ 迭代 {iteration} 完成")
@@ -526,13 +692,16 @@ def main():
                        help='最大迭代次数 (默认: 0 = 无限循环直到达标)')
     parser.add_argument('--trials', type=int, default=300,
                        help='每次迭代的试验次数 (默认: 300)')
+    parser.add_argument('--step', type=int, default=1, choices=[0, 1, 2],
+                       help='训练阶段: 0=全阶段, 1=基础层(Foundation), 2=动力层(Dynamics)。默认 1')
     
     args = parser.parse_args()
     
     auto_evolve(
         target_accuracy=args.target,
         max_iterations=args.max_iter,
-        trials_per_iteration=args.trials
+        trials_per_iteration=args.trials,
+        step=args.step
     )
 
 

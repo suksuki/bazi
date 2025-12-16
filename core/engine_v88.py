@@ -1,19 +1,27 @@
 """
-Antigravity V8.8 Engine
-========================
-New modular engine architecture.
+Antigravity V9.1 Engine (Unified)
+==================================
+Unified modular engine architecture combining V8.8 and V9.1 features.
 
-This is a PARALLEL implementation alongside the legacy QuantumEngine.
-Use this for testing the new architecture while keeping backward compatibility.
+This is the main production engine, replacing both EngineV88 and EngineV91.
+Features:
+- Modular processor architecture (V8.8)
+- Geo-correction support (V9.1)
+- Era-aware physics (V9.1)
+- Spacetime event detection (V9.1)
 """
 
 from typing import Dict, Any, List, Optional
+import logging
+import json
+import os
 from core.processors import (
     PhysicsProcessor,
     SeasonalProcessor,
     PhaseChangeProcessor,
     StrengthJudge
 )
+from core.processors.geo import GeoProcessor
 from core.schemas import (
     AnalysisResponse,
     StrengthResult,
@@ -23,23 +31,30 @@ from core.schemas import (
     VisualTheme
 )
 
+logger = logging.getLogger(__name__)
+
 
 class EngineV88:
     """
-    V8.8 Modular Analysis Engine
+    V9.1 Unified Modular Analysis Engine
     
     This engine delegates all calculations to specialized processors.
-    It only handles orchestration and response assembly.
+    It handles orchestration, response assembly, and spacetime corrections.
+    
+    Features:
+    - Layer 1: Era-Aware Physics (via PhysicsProcessor with Era constants)
+    - Layer 0: Geo-Correction (via GeoProcessor)
+    - Spacetime Event Detection (Treasury & Skull protocols)
     
     Usage:
         engine = EngineV88()
-        result = engine.analyze(['甲子', '丙午', '辛卯', '壬辰'], '辛')
+        result = engine.analyze(['甲子', '丙午', '辛卯', '壬辰'], '辛', city='Beijing')
     """
     
-    VERSION = "V8.8"
+    VERSION = "9.1.0-Spacetime"
     
     def __init__(self, config: Optional[Dict] = None):
-        """Initialize the modular engine with all processors."""
+        """Initialize the unified modular engine with all processors."""
         self.config = config or {}
         
         # Initialize core processors (V8.8 modular)
@@ -47,6 +62,9 @@ class EngineV88:
         self.seasonal = SeasonalProcessor()
         self.phase_change = PhaseChangeProcessor()
         self.judge = StrengthJudge()
+        
+        # V9.1: GeoProcessor for Layer 0 (Geo-Correction)
+        self.geo = GeoProcessor()
         
         # Initialize sub-engines (from legacy QuantumEngine for full features)
         from core.engines.luck_engine import LuckEngine
@@ -68,29 +86,51 @@ class EngineV88:
             print(f"⚡ Antigravity {self.VERSION} Engine Initialized")
             print(f"   Processors: {len(self._get_processors())}")
             print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
+            print(f"   Features: Geo-Correction, Era-Aware Physics")
         except UnicodeEncodeError:
             print(f"Antigravity {self.VERSION} Engine Initialized")
             print(f"   Processors: {len(self._get_processors())}")
             print(f"   Sub-Engines: 4 (Luck, Treasury, Skull, Harmony)")
+            print(f"   Features: Geo-Correction, Era-Aware Physics")
     
     def _get_processors(self) -> List:
         """Get list of active processors"""
         return [self.physics, self.seasonal, self.phase_change, self.judge]
     
-    def analyze(self, bazi: List[str], day_master: str) -> AnalysisResponse:
+    def analyze(self, bazi: List[str], day_master: str, 
+                city: str = "Unknown", latitude: Optional[float] = None,
+                era_multipliers: Optional[Dict[str, float]] = None,
+                **kwargs) -> AnalysisResponse:
         """
-        Main analysis entry point.
+        V9.1 Unified Analysis Entry Point.
         
         Args:
             bazi: List of 4 pillars, e.g., ['甲子', '丙午', '辛卯', '壬辰']
             day_master: Day Master character, e.g., '辛'
+            city: City name for geo correction
+            latitude: Optional latitude override
+            era_multipliers: Optional cached era multipliers (for performance optimization)
+            **kwargs: Additional arguments (e.g., year for UI display)
         
         Returns:
             AnalysisResponse with full analysis results
         """
-        messages = [f"[{self.VERSION}] Starting analysis..."]
+        messages = [f"[{self.VERSION}] Starting Spacetime Analysis..."]
         
-        # Build initial context
+        # V9.5 Performance Optimization: Load era_multipliers if not provided
+        if era_multipliers is None:
+            era_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/era_constants.json")
+            try:
+                with open(era_path, 'r') as f:
+                    era_data = json.load(f)
+                    era_multipliers = era_data.get('physics_multipliers', {})
+            except:
+                era_multipliers = {}
+        
+        # Store for UI display
+        era_mods = era_multipliers.copy() if era_multipliers else {}
+        
+        # Build initial context with era multipliers
         month_branch = bazi[1][1] if len(bazi) > 1 and len(bazi[1]) > 1 else ''
         dm_element = self.physics._get_element_stem(day_master)
         
@@ -98,13 +138,31 @@ class EngineV88:
             'bazi': bazi,
             'day_master': day_master,
             'dm_element': dm_element,
-            'month_branch': month_branch
+            'month_branch': month_branch,
+            'era_multipliers': era_multipliers or {}  # V9.5: Pass cached multipliers
         }
         
-        # === Stage 1: Physics (Layer 1) ===
+        # === Stage 1: Physics (Layer 1) - Era-Aware ===
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
-        messages.append(f"[Physics] Raw energy: {raw_energy}")
+        messages.append("[Physics] Applied Era Constants (Period 9)")
+        
+        # === V9.1 Layer 0: Apply Geo Modifiers ===
+        loc_input = latitude if latitude is not None else city
+        geo_mods = self.geo.process(loc_input)
+        
+        if geo_mods:
+            mod_desc = geo_mods.get('desc', 'GeoMod')
+            messages.append(f"[Geo] Applying {mod_desc}")
+            
+            for elem, mult in geo_mods.items():
+                if elem in raw_energy and isinstance(mult, (int, float)):
+                    raw_energy[elem] *= mult
+        
+        # === Stage 2: Seasonal (Layer 2) ===
+        seasonal_result = self.seasonal.process(context)
+        is_in_command = seasonal_result['is_in_command']
+        is_resource_month = seasonal_result['is_resource_month']
         
         # Calculate self+resource vs others
         resource_element = None
@@ -118,11 +176,6 @@ class EngineV88:
         e_resource = raw_energy.get(resource_element, 0) if resource_element else 0
         base_score = e_self + e_resource
         
-        # === Stage 2: Seasonal (Layer 2) ===
-        seasonal_result = self.seasonal.process(context)
-        is_in_command = seasonal_result['is_in_command']
-        is_resource_month = seasonal_result['is_resource_month']
-        
         # Apply bonuses
         base_score += seasonal_result['in_command_bonus']
         base_score += seasonal_result['resource_month_bonus']
@@ -133,6 +186,7 @@ class EngineV88:
             messages.append(f"[Seasonal] 印绶月! +{seasonal_result['resource_month_bonus']}")
         
         # === Stage 3: Phase Change (Layer 2.5) ===
+        context['raw_energy_snapshot'] = raw_energy
         phase_result = self.phase_change.process(context)
         resource_efficiency = phase_result['resource_efficiency']
         
@@ -152,14 +206,24 @@ class EngineV88:
         }
         
         judgment = self.judge.process(judge_context)
-        messages.append(f"[Judge] Verdict: {judgment['verdict']} ({judgment['reason']})")
+        messages.append(f"[Judge] Verdict provided based on Spacetime Energy.")
+        
+        # Prepare Delta Factors for UI
+        modifiers = {
+            "era_json": era_mods,
+            "geo_json": geo_mods,
+            "city": city,
+            "latitude": latitude or "Auto",
+            "year": kwargs.get('year', 2024)
+        }
         
         # === Build Response ===
         return self._build_response(
             judgment=judgment,
             phase_result=phase_result,
             raw_energy=raw_energy,
-            messages=messages
+            messages=messages,
+            modifiers=modifiers
         )
     
     def _build_response(
@@ -167,9 +231,10 @@ class EngineV88:
         judgment: Dict,
         phase_result: Dict,
         raw_energy: Dict,
-        messages: List[str]
+        messages: List[str],
+        modifiers: Dict = None
     ) -> AnalysisResponse:
-        """Assemble the final response object"""
+        """Assemble the final response object with optional modifiers"""
         
         verdict = judgment['verdict']
         score = judgment['final_score']
@@ -201,27 +266,36 @@ class EngineV88:
             )
             theme = VisualTheme.NORMAL
         
-        return AnalysisResponse(
-            strength=StrengthResult(
-                verdict=verdict,
-                raw_score=judgment.get('raw_score', score),
-                adjusted_score=score,
-                confidence=judgment.get('confidence', 0.8)
-            ),
+        # Prepare Dicts directly to guarantee type (V9.1 compatibility)
+        strength_dict = {
+            "verdict": verdict,
+            "raw_score": judgment.get('raw_score', score),
+            "adjusted_score": score,
+            "confidence": judgment.get('confidence', 0.8),
+            "in_command_bonus": judgment.get('in_command_bonus', 0.0),
+            "resource_month_bonus": judgment.get('resource_month_bonus', 0.0)
+        }
+        
+        phase_dict = phase_result if phase_result else {"is_active": False, "description": "", "damping_factor": 1.0}
+        
+        ui_dict = ui.model_dump() if hasattr(ui, 'model_dump') else {
+            "display_text": ui.display_text,
+            "color_hex": ui.color_hex,
+            "icon_name": ui.icon_name,
+            "tooltip": ui.tooltip
+        }
+        
+        repo_response = AnalysisResponse(
+            strength=strength_dict,
             energy_distribution=raw_energy,
-            phase_change=PhaseChangeInfo(
-                is_active=phase_result['is_active'],
-                phase_type=phase_result.get('phase_type'),
-                damping_factor=phase_result['resource_efficiency'],
-                description=phase_result['description']
-            ),
-            ui=ui,
-            chart_config=ChartConfig(
-                suggested_theme=theme
-            ),
+            phase_change=phase_dict,
+            ui=ui_dict,
             messages=messages,
+            debug={"modifiers": modifiers} if modifiers else None,  # V9.1: Inject modifiers
             engine_version=self.VERSION
         )
+        repo_response.chart_config.suggested_theme = theme
+        return repo_response
     
     def evaluate_strength(self, day_master: str, bazi: List[str]) -> tuple:
         """
@@ -253,10 +327,41 @@ class EngineV88:
         return self.evaluate_strength(dm, bazi)
     
     def update_full_config(self, config: Dict) -> None:
-        """Update configuration (legacy compat - currently no-op)"""
-        self.config = config
-        # V8.8 doesn't use config yet, but we accept it for compatibility
-        pass
+        """
+        V50.0: Update full configuration and propagate to sub-engines.
+        This ensures all sub-engines use the latest golden parameters from config/parameters.json.
+        """
+        self.config = config or {}
+        
+        # Update sub-engines with new config
+        if hasattr(self, 'skull_engine') and self.skull_engine:
+            # Extract skull-specific config from interactions.skull.crashScore
+            skull_config = self.skull_engine.config.copy()
+            if 'interactions' in config and 'skull' in config['interactions']:
+                crash_score = config['interactions']['skull'].get('crashScore', -50.0)
+                skull_config['score_skull_crash'] = crash_score
+                self.skull_engine.skull_crash_score = crash_score
+            self.skull_engine.config = skull_config
+        
+        if hasattr(self, 'treasury_engine') and self.treasury_engine:
+            # Treasury engine uses full config structure (reads from interactions.treasury and interactions.vaultPhysics)
+            if hasattr(self.treasury_engine, 'update_config'):
+                self.treasury_engine.update_config(config)
+        
+        if hasattr(self, 'harmony_engine') and self.harmony_engine:
+            # Harmony engine uses full config structure (reads from interactions.comboPhysics and interactions.branchEvents)
+            if hasattr(self.harmony_engine, 'update_config'):
+                self.harmony_engine.update_config(config)
+        
+        # Update processors if they support config
+        if hasattr(self, 'physics') and hasattr(self.physics, 'config'):
+            if 'physics' in config:
+                if isinstance(self.physics.config, dict):
+                    self.physics.config.update(config['physics'])
+                else:
+                    self.physics.config = config['physics']
+        
+        logger.debug(f"EngineV88 config updated and propagated to sub-engines")
     
     # === Full Feature Methods (migrated from QuantumEngine) ===
     
@@ -527,40 +632,53 @@ class EngineV88:
     def calculate_energy(self, case_data: Dict, dynamic_context: Dict = None,
                         era_multipliers: Optional[Dict[str, float]] = None) -> Dict:
         """
-        V8.8 Energy calculation - simplified version.
-        Returns energy breakdown for UI display.
+        V9.1 Spacetime Energy Calculation (Unified Version).
+        
+        Refines V8.8 logic by adding:
+        1. Geo-Correction (City/Lat)
+        2. Era-Correction (Already in Physics)
+        3. Domain Logic (Recalculated with Spacetime Energy)
+        4. Spacetime Event Detection (Treasury & Skull)
         
         Args:
             case_data: Case data dictionary
-            dynamic_context: Dynamic context (optional)
+            dynamic_context: Dynamic context (year, dayun, etc.)
             era_multipliers: Optional era multipliers dict (for performance optimization)
         """
         dm_char = case_data.get('day_master', '甲')
-        dm_elem = self._get_element(dm_char)
+        dm_elem = self.physics._get_element_stem(dm_char)
         
-        # Get bazi from case_data
-        bazi_list = [
-            case_data.get('year', '甲子'),
-            case_data.get('month', '甲子'),
-            case_data.get('day', '甲子'),
-            case_data.get('hour', '甲子')
-        ]
+        # Get bazi from case_data (support both list and dict formats)
+        bazi_list = case_data.get('bazi', [])
+        if not bazi_list:
+            # Fallback to individual fields
+            bazi_list = [
+                case_data.get('year', '甲子'),
+                case_data.get('month', '甲子'),
+                case_data.get('day', '甲子'),
+                case_data.get('hour', '甲子')
+            ]
         
-        # Calculate strength using modular processors
-        strength, score = self._evaluate_wang_shuai(dm_char, bazi_list)
+        # [V9.3 Logic] Dynamic Context Overlay
+        # Replace Case Year with Dynamic Year for Time Series Simulation
+        current_bazi = list(bazi_list)  # Shallow copy to protect original source
+        if dynamic_context and 'year' in dynamic_context:
+            # V9.3: Time Series Simulation overrides the Year Pillar (Flow)
+            if len(current_bazi) > 0:
+                current_bazi[0] = dynamic_context['year']
         
-        # Get raw energy from physics processor
-        # V9.5 Performance Optimization: Pass era_multipliers via context
+        # 1. Physics (Era-Aware via PhysicsProcessor)
+        # V9.5 Performance Optimization: Pass era_multipliers via context to avoid file I/O
         # V21.0: Pass flow_config and interactions_config for complex interactions and coupling effects
         flow_config = self.config.get('flow', {}) if hasattr(self, 'config') else {}
         interactions_config = self.config.get('interactions', {}) if hasattr(self, 'config') else {}
         physics_config = self.config.get('physics', {}) if hasattr(self, 'config') else {}
         pillar_weights = physics_config.get('pillarWeights', {}) if physics_config else {}
         context = {
-            'bazi': bazi_list,
+            'bazi': current_bazi,  # Use the dynamic-aware bazi list
             'day_master': dm_char,
             'dm_element': dm_elem,
-            'month_branch': bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else '',
+            'month_branch': current_bazi[1][1] if len(current_bazi) > 1 and len(current_bazi[1]) > 1 else '',
             'era_multipliers': era_multipliers or {},  # Pass cached multipliers
             'flow_config': flow_config,  # V21.0: Pass flow config for coupling effects
             'interactions_config': interactions_config,  # V21.0: Pass interactions config for complex interactions
@@ -569,30 +687,66 @@ class EngineV88:
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
         
-        # Determine favorable based on strength
-        favorable = self._determine_favorable(dm_char, strength, bazi_list)
+        # 2. Geo-Correction (Layer 0)
+        # Check case_data for location
+        city = case_data.get('city', 'Unknown')
+        latitude = case_data.get('latitude', None)
+        loc_input = latitude if latitude is not None else city
         
-        # Build result
-        result = {
-            'wang_shuai': strength,
-            'wang_shuai_score': score,
-            'dm_element': dm_elem,
-            'favorable': favorable,
-            'energy_map': raw_energy,
-            'e_self': raw_energy.get(dm_elem, 0),
-            'e_resource': 0,
-            'e_output': 0,
-            'e_wealth': 0,
-            'e_officer': 0,
-            'desc': f'{dm_char}日主 {strength}',
+        geo_mods = self.geo.process(loc_input)
+        
+        # [V9.2 Fix] Neutral Region Fallback
+        # Prevent "Unknown" from causing calculation collapse (e.g. NoneType math)
+        if not geo_mods and loc_input in ['Unknown', '', None]:
+            # Force Beijing-like neutral dict if logic failed
+            geo_mods = {}  # Empty dict means multiplier 1.0 (Safe)
+        geo_desc = ""
+        if geo_mods:
+            geo_desc = geo_mods.get('desc', '')
+            for elem, mult in geo_mods.items():
+                if elem in raw_energy and isinstance(mult, (int, float)):
+                    raw_energy[elem] *= mult
+        
+        # 3. Strength Judge (Recalculate with Geo Energy)
+        seasonal_result = self.seasonal.process(context)
+        
+        # Self/Resource
+        resource_element = None
+        from core.processors.physics import GENERATION
+        for mother, child in GENERATION.items():
+            if child == dm_elem:
+                resource_element = mother
+                break
+        
+        e_self = raw_energy.get(dm_elem, 0)
+        e_resource = raw_energy.get(resource_element, 0) if resource_element else 0
+        base_score = e_self + e_resource
+        
+        base_score += seasonal_result['in_command_bonus']
+        base_score += seasonal_result['resource_month_bonus']
+        
+        # Phase Change
+        context['raw_energy_snapshot'] = raw_energy
+        phase_result = self.phase_change.process(context)
+        resource_efficiency = phase_result['resource_efficiency']
+        
+        judge_context = {
+            'base_score': base_score,
+            'in_command_bonus': seasonal_result['in_command_bonus'],
+            'resource_month_bonus': seasonal_result['resource_month_bonus'],
+            'resource_efficiency': resource_efficiency,
+            'is_in_command': seasonal_result['is_in_command'],
+            'is_resource_month': seasonal_result['is_resource_month'],
+            'is_writer_lady': seasonal_result.get('is_writer_lady', False),
+            'flags': seasonal_result.get('flags', [])
         }
+        judgment = self.judge.process(judge_context)
+        strength = judgment['verdict']
+        score = judgment['final_score']
         
-        # V9.3 Domain Logic Integration
-        # Calculate complex domain scores
+        # 4. Domain Logic (V9.3)
         # V16.0: Pass particle weights and physics config from config
         particle_weights = self.config.get('particleWeights', {}) if hasattr(self, 'config') else {}
-        physics_config = self.config.get('physics', {}) if hasattr(self, 'config') else {}
-        # V17.0: Pass Observation Bias Factor from config
         observation_bias_config = self.config.get('ObservationBiasFactor', {}) if hasattr(self, 'config') else {}
         
         # V25.0: Ensure particle_weights is not empty (use defaults if missing)
@@ -610,12 +764,9 @@ class EngineV88:
             annual_pillar = dynamic_context.get('pillar') or dynamic_context.get('annual_pillar')
         
         domain_ctx = {
-            'raw_energy': raw_energy,
+            'raw_energy': raw_energy,  # Now Geo-Corrected!
             'dm_element': dm_elem,
-            'strength': {
-                 'verdict': strength,
-                 'raw_score': score # Use the strength score (e.g. 50.0)
-            },
+            'strength': {'verdict': strength, 'raw_score': score},
             'gender': case_data.get('gender', 1),
             'particle_weights': particle_weights,  # V16.0: Pass particle weights
             'physics_config': physics_config,  # V16.0: Pass physics config (amplifiers, exponents)
@@ -626,32 +777,158 @@ class EngineV88:
         }
         domain_res = self.domains.process(domain_ctx)
         
-        result.update({
-            'career': domain_res['career']['score'] / 10.0, # Scale to 0-10 UI
+        # [V9.3 Logic] Spacetime Event Detection (Treasury & Skull)
+        # Check interactions between Flow Year (Dynamic) and Chart
+        flow_year_str = dynamic_context.get('year', '') if dynamic_context else ''
+        if flow_year_str and len(flow_year_str) > 1:
+            flow_branch = flow_year_str[1]
+            st_events = self._check_spacetime_events(dm_char, bazi_list, flow_branch)
+            
+            # Merge events into domain_details
+            if st_events:
+                domain_res.update(st_events)
+                # Modulate Wealth Score on Open Treasury
+                if st_events.get('is_treasury_open'):
+                    domain_res['wealth']['score'] *= 1.5  # Massive Bonus
+                
+                # Modulate Risk on Skull
+                if st_events.get('risk_level') == 'danger':
+                    # Penalize all scores
+                    domain_res['career']['score'] *= 0.6
+                    domain_res['wealth']['score'] *= 0.6
+                    domain_res['relationship']['score'] *= 0.6
+
+        # Support logic (Favorable)
+        favorable = self._determine_favorable(dm_char, strength, bazi_list)
+        
+        # Assemble Result
+        result = {
+            'wang_shuai': strength,
+            'wang_shuai_score': score,
+            'dm_element': dm_elem,
+            'favorable': favorable,
+            'energy_map': raw_energy,
+            'desc': f'{dm_char}日主 {strength} ({judgment["reason"]}) {geo_desc}',
+            'career': domain_res['career']['score'] / 10.0,
             'wealth': domain_res['wealth']['score'] / 10.0,
             'relationship': domain_res['relationship']['score'] / 10.0,
-            'domain_details': domain_res # Keep full details provided by processor
-        })
+            'domain_details': domain_res,
+            'phase_info': phase_result
+        }
         
-
+        # Map Ten Gods (Simplified)
+        # Calculate gods_strength if not in domain_res
+        if 'gods_strength' not in domain_res:
+            # Calculate ten gods from raw energy
+            from core.processors.physics import GENERATION, CONTROL
+            elements = ['wood', 'fire', 'earth', 'metal', 'water']
+            dm_idx = elements.index(dm_elem) if dm_elem in elements else 0
+            
+            self_idx = dm_idx
+            output_idx = (dm_idx + 1) % 5
+            wealth_idx = (dm_idx + 2) % 5
+            officer_idx = (dm_idx + 3) % 5
+            resource_idx = (dm_idx + 4) % 5
+            
+            domain_res['gods_strength'] = {
+                'self': raw_energy.get(elements[self_idx], 0.0),
+                'output': raw_energy.get(elements[output_idx], 0.0),
+                'wealth': raw_energy.get(elements[wealth_idx], 0.0),
+                'officer': raw_energy.get(elements[officer_idx], 0.0),
+                'resource': raw_energy.get(elements[resource_idx], 0.0)
+            }
         
-        # Map energies to ten gods
-        from core.processors.physics import GENERATION, CONTROL
+        from core.processors.physics import CONTROL
+        result['e_self'] = domain_res['gods_strength']['self']
+        result['e_output'] = domain_res['gods_strength']['output']
+        result['e_wealth'] = domain_res['gods_strength']['wealth']
+        result['e_officer'] = domain_res['gods_strength']['officer']
+        result['e_resource'] = domain_res['gods_strength']['resource']
         
-        for elem, value in raw_energy.items():
-            rel = self._get_relation(dm_elem, elem)
-            if rel == 'self':
-                result['e_self'] = value
-            elif rel == 'resource':
-                result['e_resource'] = value
-            elif rel == 'output':
-                result['e_output'] = value
-            elif rel == 'wealth':
-                result['e_wealth'] = value
-            elif rel == 'officer':
-                result['e_officer'] = value
+        # 5. Pillar Energies (API Patch for UI compatibility)
+        # Creates a synthetic list of [YearStem, YearBranch, ..., HourBranch] scores
+        # based on V9.1 Physics Constants.
+        pe_list = []
+        base_unit = 8.0
+        p_weights = [0.8, 1.2, 1.0, 0.9]  # Year, Month, Day, Hour
+        
+        # Loop through 4 pillars
+        for i in range(4):
+            w = p_weights[i]
+            # Stem Score
+            pe_list.append(base_unit * w)
+            # Branch Score (Approx 1.5x for Root+Hidden)
+            pe_list.append(base_unit * w * 1.5)
+            
+        result['pillar_energies'] = pe_list
         
         return result
+    
+    def _check_spacetime_events(self, dm: str, bazi: List[str], flow_branch: str) -> Dict:
+        """
+        V9.3 Core Algorithm: Detect Key (Treasury) and Skull (Penalty).
+        """
+        if not bazi or len(bazi) < 3:
+            return {}
+        
+        # Parse Chart Branches using index 1
+        try:
+            month_branch = bazi[1][1]
+            day_branch = bazi[2][1]
+        except:
+            return {}
+        
+        # 1. Determine Wealth Element & Its Tomb
+        gan_map = {'甲': 'wood', '乙': 'wood', '丙': 'fire', '丁': 'fire', '戊': 'earth', '己': 'earth',
+                   '庚': 'metal', '辛': 'metal', '壬': 'water', '癸': 'water'}
+        dm_elem = gan_map.get(dm, 'wood')
+        
+        # Wealth Map (I control)
+        wealth_map = {'wood': 'earth', 'fire': 'metal', 'earth': 'water', 'metal': 'wood', 'water': 'fire'}
+        w_elem = wealth_map[dm_elem]
+        
+        # Tomb Map (Element -> Tomb Branch)
+        tomb_map = {'water': '辰', 'earth': '戌', 'fire': '戌', 'metal': '丑', 'wood': '未'}
+        w_tomb = tomb_map.get(w_elem)
+        
+        # Clash Map (Key to open Tomb)
+        clash_map = {'辰': '戌', '戌': '辰', '丑': '未', '未': '丑'}
+        key_branch = clash_map.get(w_tomb)
+        
+        events = {}
+        
+        # === KEY: Open Treasury (Wealth Tomb Clash) ===
+        # Condition: Day Branch is Wealth Tomb AND Flow Branch is Key (Clash)
+        if w_tomb and key_branch:
+            if day_branch == w_tomb and flow_branch == key_branch:
+                events['is_treasury_open'] = True
+                events['icon'] = '🗝️'  # Key
+                events['desc'] = f"Open Treasury: {flow_branch} clashes {day_branch} ({w_elem} Vault)"
+                events['risk_level'] = 'opportunity'
+
+        # === SKULL: Three Penalties (San Xing) ===
+        # Set of branches present in current timeframe (Flow + Month + Day)
+        current_branches = {flow_branch, month_branch, day_branch}
+        
+        # Penalty Sets
+        p_earth = {'丑', '未', '戌'}
+        p_force = {'寅', '巳', '申'}  # Ungrateful Penalty
+        
+        if p_earth.issubset(current_branches):
+            events['risk_level'] = 'danger'
+            events['icon'] = '💀'
+            events['desc'] = "Earth Penalty (Triple San Xing) - Obstacles"
+            # If simultaneous Open Treasury (e.g. Chou+Wei+Xu contains Wei+Chou clash?),
+            # it becomes High Risk Wealth.
+            if events.get('is_treasury_open'):
+                events['icon'] = '🏴‍☠️'  # Pirate (Danger + Wealth)
+
+        if p_force.issubset(current_branches):
+            events['risk_level'] = 'danger'
+            events['icon'] = '💀'
+            events['desc'] = "Ungrateful Penalty (Tiger-Snake-Monkey)"
+
+        return events
     
     def get_luck_timeline(self, profile_or_year, start_year_or_month=None, years_or_day=None,
                           hour=None, gender=None, num_steps=None) -> List[Dict]:
