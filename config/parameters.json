@@ -13,10 +13,10 @@
       "remnant": 0.1
     },
     "pillarWeights": {
-      "year": 0.9,
-      "month": 1.9500000000000002,
-      "day": 1.4,
-      "hour": 1.35
+      "year": 0.95,
+      "month": 2.0,
+      "day": 1.35,
+      "hour": 1.3
     },
     "lifeStageImpact": 0.2,
     "InteractionFactors": {
@@ -55,7 +55,7 @@
     }
   },
   "structure": {
-    "rootingWeight": 4.9,
+    "rootingWeight": 6.0,
     "exposedBoost": 1.5,
     "samePillarBonus": 1.2,
     "voidPenalty": 0.5
@@ -109,10 +109,10 @@
   },
   "flow": {
     "generationEfficiency": 0.1,
-    "controlImpact": 5.0,
-    "dampingFactor": 0.25,
+    "controlImpact": 5.2,
+    "dampingFactor": 0.0,
     "systemEntropy": 0.05,
-    "outputDrainPenalty": 1.5,
+    "outputDrainPenalty": 2.0,
     "resourceImpedance": {
       "base": 0.2,
       "weaknessPenalty": 0.75
@@ -122,7 +122,7 @@
       "drainFriction": 0.3,
       "viscosity": 0.95
     },
-    "globalEntropy": 0.14,
+    "globalEntropy": 0.15,
     "phaseChange": {
       "scorchedEarthDamping": 0.15,
       "frozenWaterDamping": 0.3
