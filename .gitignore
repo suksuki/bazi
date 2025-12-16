@@ -63,3 +63,7 @@ data.backup/
 tmp/
 temp/
 *.tmp
+scripts/auto_evolve.py
+scripts/auto_tune_val005.py
+scripts/debug_outliers.py
+scripts/train_wrapper.sh
