@@ -6,6 +6,9 @@ import os
 import sys
 import copy
 from ui.components.unified_input_panel import render_and_collect_input
+from facade.bazi_facade import BaziFacade
+from utils.notification_manager import get_notification_manager
+from utils.notification_manager import get_notification_manager
 
 # Append root path to sys.path to resolve imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -195,16 +198,52 @@ def render():
 
     # --- 1. UNIFIED SIDEBAR INPUTS ---
     controller = BaziController()
-    selected_case, era_factor, selected_city = render_and_collect_input(controller, is_quantum_lab=False)
+    bazi_facade = BaziFacade(controller=controller)
+    selected_case, era_factor, selected_city = render_and_collect_input(bazi_facade, is_quantum_lab=False)
+    get_notification_manager().display_all()
+
+    # --- 1.1 Health report & auto calibration (V12.0) ---
+    health_report = controller.get_health_report() or {}
+    recommendations = controller.get_auto_recommendations() or {}
+
+    st.header("🔬 档案健康与自动校准")
+    if health_report.get('is_healthy', True):
+        st.success("✅ 当前档案数据健康，无需自动校准。")
+    else:
+        st.error("⚠️ 档案健康警告！建议应用自动校准以提升预测精度。")
+        if health_report.get('warnings'):
+            for warning in health_report['warnings']:
+                st.warning(warning)
+
+    if recommendations and (recommendations.get('era_factor') or recommendations.get('particle_weights')):
+        if st.button("✨ 一键应用自动校准 (推荐)"):
+            bazi_facade.apply_auto_calibration()
+            st.experimental_rerun()
+    st.markdown("---")
 
     # Era Control (retain year selection for engine analyze)
     st.sidebar.subheader("⏳ 天时 (Era)")
     selected_year = st.sidebar.slider("当前年份 (Year)", 2020, 2035, 2024)
     period = "Period 8 (Earth)" if selected_year < 2024 else "Period 9 (Fire)"
     st.sidebar.info(f"当前元运: **{period}**")
+    
+    # Particle weights display
+    st.sidebar.subheader("⚛️ 当前生效的粒子权重")
+    st.sidebar.caption("预测已应用的十神粒子影响强度校准。")
+    current_weights = controller.get_current_particle_weights()
+    if current_weights and any(abs(w - 1.0) > 0.001 for w in current_weights.values()):
+        cols_pw = st.sidebar.columns(2)
+        c_idx = 0
+        for p, w in current_weights.items():
+            if abs(w - 1.0) > 0.001:
+                cols_pw[c_idx % 2].metric(label=f"{p} 权重", value=f"{w*100:.0f}%")
+                c_idx += 1
+    else:
+        st.sidebar.info("当前应用默认粒子权重 (100%)。")
 
     # --- 2. ENGINE ANALYSIS ---
-    lat_arg = None if selected_city != "Unknown" else (manual_lat if manual_lat != 0 else None)
+    engine = get_engine()
+    lat_arg = None
 
     # Call Engine V9.1
     response = engine.analyze(
@@ -421,34 +460,18 @@ def render():
         st.info("正在运行 GEO/LLM 混合模拟...")
         with st.spinner("计算中..."):
             try:
-                # 1) 运行时间线模拟（含 GEO，使用当前城市）
-                loaded_city_for_geo = controller.get_current_city()
-                simulation_data = controller.run_geo_predictive_timeline(
+                scenario_results = bazi_facade.run_predictive_scenario(
                     start_year=start_year,
                     duration=duration,
-                    geo_correction_city=loaded_city_for_geo,
+                    scenario_tag=scenario_tag,
+                    target_adjustment=target_adjustment
                 )
+                simulation_data = scenario_results.get("timeline_data")
+                llm_analysis = scenario_results.get("llm_analysis", {})
 
-                if simulation_data is None or simulation_data.empty:
+                if simulation_data is None or getattr(simulation_data, "empty", False):
                     st.warning("⚠️ 模拟未返回有效数据。")
                 else:
-                    # 2) 准备 LLM 输入
-                    # 基础八字数据与五行能量（用于上下文）
-                    base_chart_data = controller.get_user_data()
-                    flux_data = controller.get_flux_data()
-                    element_energies = controller.get_five_element_energies(flux_data)
-
-                    scenario_data_payload = {
-                        "scenario_tag": scenario_tag,
-                        "base_chart_data": base_chart_data,
-                        "simulated_timeline": simulation_data.to_dict(orient="records"),
-                        "target_adjustment": target_adjustment,
-                        "element_energies": element_energies,
-                    }
-
-                    # 3) 调用 LLM 分析
-                    llm_analysis = controller.get_llm_scenario_analysis(scenario_data_payload)
-
                     st.success("✅ 规划模拟与分析成功完成！")
 
                     # 4) 渲染 LLM 输出
@@ -484,7 +507,11 @@ def render():
 
                     # 6) 可选：展示原始 payload
                     with st.expander("🔍 调试 / LLM Payload"):
-                        st.json(scenario_data_payload)
+                        st.json({
+                            "scenario_tag": scenario_tag,
+                            "target_adjustment": target_adjustment,
+                            "simulated_timeline": simulation_data.to_dict(orient="records")
+                        })
 
             except Exception as e:
                 st.error(f"❌ 模拟或 LLM 服务发生错误: {e}")
@@ -507,7 +534,7 @@ def render():
     if st.button("🔍 查找最优调整组合"):
         st.info(f"正在为目标 **{target_metric}** 提升 **{target_increase}%** 查找最优调整路径...")
         try:
-            optimal_adjustment = controller.find_optimal_adjustment_path(
+            optimal_adjustment = bazi_facade.find_optimal_adjustment(
                 target_metric=target_metric.replace(" (Wealth)", "").replace(" (Career)", "").replace(" (Relationship)", "").replace(" (Health)", ""),
                 target_increase_percent=target_increase
             )

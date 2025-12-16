@@ -240,12 +240,20 @@ class EngineV91(EngineV88):
         
         # 1. Physics (Era-Aware via PhysicsProcessor)
         # V9.5 Performance Optimization: Pass era_multipliers via context to avoid file I/O
+        # V21.0: Pass flow_config and interactions_config for complex interactions and coupling effects
+        flow_config = self.config.get('flow', {}) if hasattr(self, 'config') else {}
+        interactions_config = self.config.get('interactions', {}) if hasattr(self, 'config') else {}
+        physics_config = self.config.get('physics', {}) if hasattr(self, 'config') else {}
+        pillar_weights = physics_config.get('pillarWeights', {}) if physics_config else {}
         context = {
             'bazi': current_bazi, # Use the dynamic-aware bazi list
             'day_master': dm_char,
             'dm_element': dm_elem,
             'month_branch': current_bazi[1][1] if len(current_bazi) > 1 and len(current_bazi[1]) > 1 else '',
-            'era_multipliers': era_multipliers or {}  # Pass cached multipliers
+            'era_multipliers': era_multipliers or {},  # Pass cached multipliers
+            'flow_config': flow_config,  # V21.0: Pass flow config for coupling effects
+            'interactions_config': interactions_config,  # V21.0: Pass interactions config for complex interactions
+            'pillar_weights': pillar_weights  # V22.0: Pass pillar weights to PhysicsProcessor
         }
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
@@ -358,6 +366,27 @@ class EngineV91(EngineV88):
         }
         
         # Map Ten Gods (Simplified)
+        # Calculate gods_strength if not in domain_res
+        if 'gods_strength' not in domain_res:
+            # Calculate ten gods from raw energy
+            from core.processors.physics import GENERATION, CONTROL
+            elements = ['wood', 'fire', 'earth', 'metal', 'water']
+            dm_idx = elements.index(dm_elem) if dm_elem in elements else 0
+            
+            self_idx = dm_idx
+            output_idx = (dm_idx + 1) % 5
+            wealth_idx = (dm_idx + 2) % 5
+            officer_idx = (dm_idx + 3) % 5
+            resource_idx = (dm_idx + 4) % 5
+            
+            domain_res['gods_strength'] = {
+                'self': raw_energy.get(elements[self_idx], 0.0),
+                'output': raw_energy.get(elements[output_idx], 0.0),
+                'wealth': raw_energy.get(elements[wealth_idx], 0.0),
+                'officer': raw_energy.get(elements[officer_idx], 0.0),
+                'resource': raw_energy.get(elements[resource_idx], 0.0)
+            }
+        
         from core.processors.physics import CONTROL
         result['e_self'] = domain_res['gods_strength']['self']
         result['e_output'] = domain_res['gods_strength']['output']

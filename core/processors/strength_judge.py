@@ -7,8 +7,17 @@ This processor makes the final Strong/Weak/Follower judgment
 based on aggregated scores from other processors.
 """
 
+import os
 from core.processors.base import BaseProcessor
 from typing import Dict, Any, Tuple
+
+
+def _env_float(name: str, default: float) -> float:
+    """Safely parse float from env, fallback to default."""
+    try:
+        return float(os.getenv(name, default))
+    except (TypeError, ValueError):
+        return default
 
 
 class StrengthJudge(BaseProcessor):
@@ -19,12 +28,25 @@ class StrengthJudge(BaseProcessor):
     Implements fixed thresholds + special overrides.
     """
     
-    # === Thresholds (configurable) ===
-    THRESHOLD_VERY_STRONG = 150.0
-    THRESHOLD_STRONG = 80.0
-    THRESHOLD_MODERATE = 50.0
-    THRESHOLD_WEAK = 20.0
-    THRESHOLD_FOLLOWER = -10.0
+    # === Thresholds (configurable via env offsets) ===
+    _BASE_VERY_STRONG = 150.0
+    _BASE_STRONG = 80.0
+    _BASE_MODERATE = 50.0
+    _BASE_WEAK = 20.0
+    _BASE_FOLLOWER = -10.0
+
+    # Offsets allow global shifting without code edits
+    _SHIFT_VERY_STRONG = _env_float("WANG_SHUAI_SHIFT_VERY_STRONG", 0.0)
+    _SHIFT_STRONG = _env_float("WANG_SHUAI_SHIFT_STRONG", 0.0)
+    _SHIFT_MODERATE = _env_float("WANG_SHUAI_SHIFT_MODERATE", 0.0)
+    _SHIFT_WEAK = _env_float("WANG_SHUAI_SHIFT_WEAK", 0.0)
+    _SHIFT_FOLLOWER = _env_float("WANG_SHUAI_SHIFT_FOLLOWER", 0.0)
+
+    THRESHOLD_VERY_STRONG = _BASE_VERY_STRONG + _SHIFT_VERY_STRONG
+    THRESHOLD_STRONG = _BASE_STRONG + _SHIFT_STRONG
+    THRESHOLD_MODERATE = _BASE_MODERATE + _SHIFT_MODERATE
+    THRESHOLD_WEAK = _BASE_WEAK + _SHIFT_WEAK
+    THRESHOLD_FOLLOWER = _BASE_FOLLOWER + _SHIFT_FOLLOWER
     
     @property
     def name(self) -> str:

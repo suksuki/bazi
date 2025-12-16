@@ -551,12 +551,20 @@ class EngineV88:
         
         # Get raw energy from physics processor
         # V9.5 Performance Optimization: Pass era_multipliers via context
+        # V21.0: Pass flow_config and interactions_config for complex interactions and coupling effects
+        flow_config = self.config.get('flow', {}) if hasattr(self, 'config') else {}
+        interactions_config = self.config.get('interactions', {}) if hasattr(self, 'config') else {}
+        physics_config = self.config.get('physics', {}) if hasattr(self, 'config') else {}
+        pillar_weights = physics_config.get('pillarWeights', {}) if physics_config else {}
         context = {
             'bazi': bazi_list,
             'day_master': dm_char,
             'dm_element': dm_elem,
             'month_branch': bazi_list[1][1] if len(bazi_list) > 1 and len(bazi_list[1]) > 1 else '',
-            'era_multipliers': era_multipliers or {}  # Pass cached multipliers
+            'era_multipliers': era_multipliers or {},  # Pass cached multipliers
+            'flow_config': flow_config,  # V21.0: Pass flow config for coupling effects
+            'interactions_config': interactions_config,  # V21.0: Pass interactions config for complex interactions
+            'pillar_weights': pillar_weights  # V22.0: Pass pillar weights to PhysicsProcessor
         }
         physics_result = self.physics.process(context)
         raw_energy = physics_result['raw_energy']
@@ -581,6 +589,26 @@ class EngineV88:
         
         # V9.3 Domain Logic Integration
         # Calculate complex domain scores
+        # V16.0: Pass particle weights and physics config from config
+        particle_weights = self.config.get('particleWeights', {}) if hasattr(self, 'config') else {}
+        physics_config = self.config.get('physics', {}) if hasattr(self, 'config') else {}
+        # V17.0: Pass Observation Bias Factor from config
+        observation_bias_config = self.config.get('ObservationBiasFactor', {}) if hasattr(self, 'config') else {}
+        
+        # V25.0: Ensure particle_weights is not empty (use defaults if missing)
+        if not particle_weights:
+            particle_weights = {
+                'PianCai': 1.3, 'ZhengCai': 1.3, 'ShiShen': 1.4, 'ShangGuan': 1.2,
+                'QiSha': 1.15, 'BiJian': 1.5, 'JieCai': 1.1, 'ZhengYin': 0.9,
+                'PianYin': 1.1, 'ZhengGuan': 0.85
+            }
+        # V18.0: Extract dynamic context (luck pillar, annual pillar) for SpacetimeCorrector
+        luck_pillar = None
+        annual_pillar = None
+        if dynamic_context:
+            luck_pillar = dynamic_context.get('luck_pillar')
+            annual_pillar = dynamic_context.get('pillar') or dynamic_context.get('annual_pillar')
+        
         domain_ctx = {
             'raw_energy': raw_energy,
             'dm_element': dm_elem,
@@ -588,7 +616,13 @@ class EngineV88:
                  'verdict': strength,
                  'raw_score': score # Use the strength score (e.g. 50.0)
             },
-            'gender': case_data.get('gender', 1)
+            'gender': case_data.get('gender', 1),
+            'particle_weights': particle_weights,  # V16.0: Pass particle weights
+            'physics_config': physics_config,  # V16.0: Pass physics config (amplifiers, exponents)
+            'observation_bias_config': observation_bias_config,  # V17.0: Pass observation bias factor
+            'case_id': case_data.get('case_id', 'Unknown'),  # V16.0: Pass case_id for debug logging
+            'luck_pillar': luck_pillar,  # V18.0: Pass luck pillar for SpacetimeCorrector
+            'annual_pillar': annual_pillar  # V18.0: Pass annual pillar for SpacetimeCorrector
         }
         domain_res = self.domains.process(domain_ctx)
         

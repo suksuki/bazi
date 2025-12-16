@@ -23,6 +23,8 @@ from ui.components.cards import DestinyCards
 
 # MVC Controller Import
 from controllers.bazi_controller import BaziController
+from facade.bazi_facade import BaziFacade
+from utils.notification_manager import get_notification_manager
 
 # V10.0 Unified Input Panel
 from ui.components.unified_input_panel import render_and_collect_input
@@ -36,7 +38,10 @@ def render_prediction_dashboard():
     """
     # === V10.0: Unified Input Panel ===
     controller = BaziController()
-    selected_case, era_factor, city_for_controller = render_and_collect_input(controller, is_quantum_lab=False)
+    bazi_facade = BaziFacade(controller=controller)
+    selected_case, era_factor, city_for_controller = render_and_collect_input(bazi_facade, is_quantum_lab=False)
+    # Display centralized notifications
+    get_notification_manager().display_all()
 
     # Get data from Controller (replaces direct BaziCalculator calls)
     chart = controller.get_chart()
@@ -53,6 +58,8 @@ def render_prediction_dashboard():
     gender = user_data.get('gender', '男')
     d = user_data.get('date', datetime.date(1990, 1, 1))
     t = user_data.get('time', 12)
+    # Ensure city has a non-None value for downstream usage
+    city_for_calc = user_data.get('city') or city_for_controller or "Beijing"
     
     # [V9.3 UI] Sidebar Chart Summary
     st.sidebar.markdown("---")
@@ -67,6 +74,19 @@ def render_prediction_dashboard():
     print(f"DEBUG: Rendering Sidebar Bazi: {bazi_txt}")
     st.sidebar.code(bazi_txt, language="text")
     st.sidebar.caption(f"日主: {chart['day']['stem']}")
+    # Particle weights display
+    st.sidebar.subheader("⚛️ 当前生效的粒子权重")
+    st.sidebar.caption("预测已应用的十神粒子影响强度校准。")
+    current_weights = controller.get_current_particle_weights()
+    if current_weights and any(abs(w - 1.0) > 0.001 for w in current_weights.values()):
+        cols_pw = st.sidebar.columns(2)
+        c_idx = 0
+        for p, w in current_weights.items():
+            if abs(w - 1.0) > 0.001:
+                cols_pw[c_idx % 2].metric(label=f"{p} 权重", value=f"{w*100:.0f}%")
+                c_idx += 1
+    else:
+        st.sidebar.info("当前应用默认粒子权重 (100%)。")
     
     # 2. UI: Header & Chart
     st.title(f"🔮 {name} 的量子命盘 (V5.3 Skull)")
@@ -461,10 +481,11 @@ def render_prediction_dashboard():
     # [V9.2 Fix] Geo Initialization Lockout
     # Force Neutral Region if input is invalid to prevent engine collapse
     # V9.6: Handle "None" option - use neutral region (Beijing) for calculations
-    if not city or city.lower() in ['unknown', 'none', '']:
+    city_val = chart.get('city') or user_data.get('city') or ""
+    if not city_val or str(city_val).lower() in ['unknown', 'none', '']:
         city_for_calc = "Beijing"  # Use neutral region for engine calculations
     else:
-        city_for_calc = city
+        city_for_calc = city_val
 
     case_data = {
         'id': 8888, 
@@ -481,7 +502,7 @@ def render_prediction_dashboard():
             'hour': t,
             'gender': 1 if "男" in gender else 0
         },
-        'city': city # V9.1 Geo Input (Now Guaranteed)
+        'city': city_for_calc  # V9.1 Geo Input (Now Guaranteed)
     }
     
     # 3. Execute Quantum Engine - V9.5 MVC via Controller
@@ -529,8 +550,8 @@ def render_prediction_dashboard():
     d_col3.info(f"⚔️ 事业判定: {career_info.get('reason', 'Normal')}")
     
     # Geo Effect - V9.5 MVC via Controller
-    if city != "Unknown":
-        geo_mods = controller.get_geo_modifiers(city)
+    if city_for_calc != "Unknown":
+        geo_mods = controller.get_geo_modifiers(city_for_calc)
         if geo_mods:
              st.caption(f"📍 地理修正: {geo_mods.get('desc')} (Applied to Energy Map)")
     

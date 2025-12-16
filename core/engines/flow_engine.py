@@ -50,7 +50,8 @@ class FlowEngine:
         fc = self.config.get('flow', {})
         
         # New Params
-        res_imp = fc.get('resourceImpedance', {'base': 0.3, 'weaknessPenalty': 0.5})
+        # V26.0 FIX: Use correct default value from config (0.20, not 0.3)
+        res_imp = fc.get('resourceImpedance', {'base': 0.20, 'weaknessPenalty': 0.75})
         out_vis = fc.get('outputViscosity', {'maxDrainRate': 0.6, 'drainFriction': 0.2})
         entropy = fc.get('globalEntropy', 0.05)
         

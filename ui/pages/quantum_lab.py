@@ -43,6 +43,26 @@ def create_profile_from_case(case: dict, luck_pillar: str) -> VirtualBaziProfile
         gender=gender
     )
 
+def render_sidebar_case_summary(selected_case: dict):
+    """Render archive summary in sidebar (ID/性别/日主/八字/推断公历/特征)."""
+    if not selected_case:
+        return
+    bd = selected_case.get("birth_date", "")
+    bt = selected_case.get("birth_time", "")
+    gender = selected_case.get("gender", "未知")
+    dm = selected_case.get("day_master", "?")
+    bazi = selected_case.get("bazi", [])
+    bazi_str = " | ".join(bazi) if bazi else "未提供"
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("档案信息")
+    st.sidebar.markdown(f"- 档案ID：{selected_case.get('id','?')}")
+    st.sidebar.markdown(f"- 性别：{gender}")
+    st.sidebar.markdown(f"- 日主：{dm}")
+    st.sidebar.markdown(f"- 八字：{bazi_str}")
+    st.sidebar.markdown(f"- 推断公历：{bd} {bt}".strip())
+    if selected_case.get("characteristics"):
+        st.sidebar.caption(f"特征：{selected_case.get('characteristics')}")
+
 def render():
     st.set_page_config(page_title="Quantum Lab", page_icon="🧪", layout="wide")
 
@@ -183,6 +203,8 @@ def render():
         if os.path.exists(path):
             with open(path, "r") as f:
                 data = json.load(f)
+        # Normalize required fields via controller helper (no view-layer inference)
+        data = BaziController.normalize_cases(data)
         
         # Load Truth Scores (Side-car)
         truth_path = os.path.join(os.path.dirname(__file__), "../../data/truth_values.json")
@@ -287,8 +309,17 @@ def render():
         fd['en_str'] = fl.get('enable_structural_clash', True)
 
 
+    # --- 统一输入面板置顶（P2 专用） ---
+    st.session_state["era_key_prefix"] = "era_p2"
+    consts = get_constants()
+    controller = BaziController()
+    bazi_facade = BaziFacade(controller=controller)
+    selected_case, era_factor, city_for_controller = render_and_collect_input(
+        bazi_facade, cases=cases, is_quantum_lab=True
+    )
+
     # --- SIDEBAR CONTROLS ---
-    st.sidebar.title("🎛️ 物理参数 (Physics)")
+    st.sidebar.markdown("---")
     
     # === V6.0+ 新增：算法核心控制台 ===
     st.sidebar.markdown("---")
@@ -548,6 +579,10 @@ def render():
         era_bon = st.slider("时代红利 (Bonus)", 0.0, 0.5, mp['eraBonus'], 0.1, key='mp_eb')
         era_pen = st.slider("时代阻力 (Penalty)", 0.0, 0.5, mp['eraPenalty'], 0.1, key='mp_ep')
 
+        # 档案信息摘要（放在 ERA 调节上方，调用侧栏渲染）
+        if 'selected_case' in locals():
+            render_sidebar_case_summary(selected_case)
+
         st.markdown("#### 🌐 时代修正因子 (ERA Factor)")
         st.caption("调整五行能量基线，模拟宏观环境影响。")
 
@@ -756,35 +791,66 @@ def render():
 
     # --- MAIN ENGINE SETUP ---
     # V9.5 MVC Note: This is a Calibration Tool requiring direct engine access.
-    engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
+    # V33.0: Support dual engine mode (Legacy vs Graph)
+    engine_mode = st.session_state.get('engine_mode', 'Legacy')
     
-    # V10.0: Unified input panel (P2 lab allows ERA tuning)
-    st.session_state["era_key_prefix"] = "era_p2"
-    consts = get_constants()
-    controller = BaziController()
-    bazi_facade = BaziFacade(controller=controller)
-    selected_case, era_factor, city_for_controller = render_and_collect_input(bazi_facade, is_quantum_lab=True)
+    if engine_mode == 'Graph':
+        from core.engine_adapter import GraphEngineAdapter
+        from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+        # Merge defaults if available, otherwise use DEFAULT_FULL_ALGO_PARAMS
+        graph_config = DEFAULT_FULL_ALGO_PARAMS
+        if defaults:
+            # Merge defaults into graph_config (shallow merge for now)
+            if 'weights' in defaults:
+                # Map old format to new format if needed
+                pass
+        engine = GraphEngineAdapter(config=graph_config)
+    else:
+        engine = QuantumEngine()  # V9.1: Direct access for advanced tuning
     
     # --- Particle Weights Calibration (P2 only) ---
     st.sidebar.subheader("⚛️ 粒子权重校准 (Particle Weights)")
     st.sidebar.caption("调整核心十神粒子对模型的影响强度（50%-150%）。")
+    
+    # V16.0: Load particle weights from Controller (which reads from config/parameters.json)
+    config_weights = controller.get_current_particle_weights()
+    
     particle_weights = {}
     # 使用常量列表，保持原有中文标签顺序分组
+    # V16.0: Slider value now comes from config file via Controller
     pw_res_col1, pw_res_col2 = st.sidebar.columns(2)
-    particle_weights[consts.TEN_GODS[0]] = pw_res_col1.slider("正印 (Zheng Yin)", 50, 150, 100, step=5, key="pw_p2_zhengyin") / 100
-    particle_weights[consts.TEN_GODS[1]] = pw_res_col2.slider("偏印 (Pian Yin)", 50, 150, 100, step=5, key="pw_p2_pianyin") / 100
+    zheng_yin_val = int(config_weights.get(consts.TEN_GODS[0], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[0]] = pw_res_col1.slider("正印 (Zheng Yin)", 50, 150, zheng_yin_val, step=5, key="pw_p2_zhengyin") / 100
+    pian_yin_val = int(config_weights.get(consts.TEN_GODS[1], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[1]] = pw_res_col2.slider("偏印 (Pian Yin)", 50, 150, pian_yin_val, step=5, key="pw_p2_pianyin") / 100
     pw_cai_col1, pw_cai_col2 = st.sidebar.columns(2)
-    particle_weights[consts.TEN_GODS[6]] = pw_cai_col1.slider("正财 (Zheng Cai)", 50, 150, 100, step=5, key="pw_p2_zhengcai") / 100
-    particle_weights[consts.TEN_GODS[7]] = pw_cai_col2.slider("偏财 (Pian Cai)", 50, 150, 100, step=5, key="pw_p2_piancai") / 100
+    zheng_cai_val = int(config_weights.get(consts.TEN_GODS[6], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[6]] = pw_cai_col1.slider("正财 (Zheng Cai)", 50, 150, zheng_cai_val, step=5, key="pw_p2_zhengcai") / 100
+    pian_cai_val = int(config_weights.get(consts.TEN_GODS[7], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[7]] = pw_cai_col2.slider("偏财 (Pian Cai)", 50, 150, pian_cai_val, step=5, key="pw_p2_piancai") / 100
     pw_gs_col1, pw_gs_col2 = st.sidebar.columns(2)
-    particle_weights[consts.TEN_GODS[8]] = pw_gs_col1.slider("正官 (Zheng Guan)", 50, 150, 100, step=5, key="pw_p2_zhengguan") / 100
-    particle_weights[consts.TEN_GODS[9]] = pw_gs_col2.slider("七杀 (Qi Sha)", 50, 150, 100, step=5, key="pw_p2_qisha") / 100
+    zheng_guan_val = int(config_weights.get(consts.TEN_GODS[8], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[8]] = pw_gs_col1.slider("正官 (Zheng Guan)", 50, 150, zheng_guan_val, step=5, key="pw_p2_zhengguan") / 100
+    qi_sha_val = int(config_weights.get(consts.TEN_GODS[9], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[9]] = pw_gs_col2.slider("七杀 (Qi Sha)", 50, 150, qi_sha_val, step=5, key="pw_p2_qisha") / 100
     pw_ss_col1, pw_ss_col2 = st.sidebar.columns(2)
-    particle_weights[consts.TEN_GODS[4]] = pw_ss_col1.slider("食神 (Shi Shen)", 50, 150, 100, step=5, key="pw_p2_shishen") / 100
-    particle_weights[consts.TEN_GODS[5]] = pw_ss_col2.slider("伤官 (Shang Guan)", 50, 150, 100, step=5, key="pw_p2_shangguan") / 100
+    shi_shen_val = int(config_weights.get(consts.TEN_GODS[4], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[4]] = pw_ss_col1.slider("食神 (Shi Shen)", 50, 150, shi_shen_val, step=5, key="pw_p2_shishen") / 100
+    shang_guan_val = int(config_weights.get(consts.TEN_GODS[5], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[5]] = pw_ss_col2.slider("伤官 (Shang Guan)", 50, 150, shang_guan_val, step=5, key="pw_p2_shangguan") / 100
     pw_bj_col1, pw_bj_col2 = st.sidebar.columns(2)
-    particle_weights[consts.TEN_GODS[2]] = pw_bj_col1.slider("比肩 (Bi Jian)", 50, 150, 100, step=5, key="pw_p2_bijian") / 100
-    particle_weights[consts.TEN_GODS[3]] = pw_bj_col2.slider("劫财 (Jie Cai)", 50, 150, 100, step=5, key="pw_p2_jiecai") / 100
+    bi_jian_val = int(config_weights.get(consts.TEN_GODS[2], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[2]] = pw_bj_col1.slider("比肩 (Bi Jian)", 50, 150, bi_jian_val, step=5, key="pw_p2_bijian") / 100
+    jie_cai_val = int(config_weights.get(consts.TEN_GODS[3], 1.0) * 100)
+    particle_weights[consts.TEN_GODS[3]] = pw_bj_col2.slider("劫财 (Jie Cai)", 50, 150, jie_cai_val, step=5, key="pw_p2_jiecai") / 100
+    
+    # V16.0: Save button to write slider values back to config file
+    if st.sidebar.button("💾 保存粒子权重到配置", type="secondary"):
+        if controller._save_particle_weights_config(particle_weights):
+            st.sidebar.success("✅ 粒子权重已保存到 config/parameters.json")
+            st.rerun()
+        else:
+            st.sidebar.error("❌ 保存失败，请检查日志")
     
     # Refresh controller input with particle weights via Facade
     user_data = controller.get_user_data()
@@ -821,7 +887,11 @@ def render():
     st.caption(f"🔧 Engine Version: `{engine.VERSION}` (Modular)")
 
     # --- TABS ---
-    tab_global, tab_single  = st.tabs(["🔭 全局校准 (Global Telescope)", "🔬 单点分析 (Single Microscope)"])
+    tab_global, tab_single, tab_topology = st.tabs([
+        "🔭 全局校准 (Global Telescope)", 
+        "🔬 单点分析 (Single Microscope)",
+        "🌐 网络拓扑 (Network Topology)"
+    ])
 
     # ==========================
     # TAB 1: GLOBAL TELESCOPE
@@ -938,14 +1008,24 @@ def render():
             else:
                 c_sel, c_ctx = st.columns([2, 3])
                 with c_sel:
-                    case_idx = st.selectbox("📂 选择案例", range(len(cases)), format_func=lambda i: f"No.{cases[i]['id']} {cases[i]['day_master']}日主 ({cases[i]['gender']})")
+                    def _fmt(i):
+                        c = cases[i]
+                        birth = ""
+                        if c.get("birth_date"):
+                            bt = c.get("birth_time", "")
+                            birth = f" | {c.get('birth_date')} {bt}"
+                        return f"No.{c.get('id','?')} {c.get('day_master','?')}日主 ({c.get('gender','?')}){birth}"
+                    case_idx = st.selectbox("📂 选择档案", range(len(cases)), format_func=_fmt)
                     selected_case = cases[case_idx]
-                    
+                
                 with c_ctx:
-                    presets = selected_case.get("dynamic_checks", [])
+                    presets = selected_case.get("dynamic_checks", []) or []
                     c_y, c_l = st.columns(2)
-                    def_year = presets[0]['year'] if presets else "甲辰"
-                    def_luck = presets[0]['luck'] if presets else "癸卯"
+                    first_chk = presets[0] if presets else {}
+                    # Prefer dynamic check year; else use derived birth year; else empty
+                    derived_year = (selected_case.get("birth_date") or "")[:4]
+                    def_year = first_chk.get('year') or derived_year or ""
+                    def_luck = first_chk.get('luck', "")
                     user_year = c_y.text_input("流年 (Year)", value=def_year)
                     user_luck = c_l.text_input("大运 (Luck)", value=def_luck)
                     
@@ -1085,7 +1165,14 @@ def render():
                 }
                 
                 # 3. Call Physics Engine
-                detailed_res = engine.calculate_energy(case_data_mock, dyn_ctx_mock)
+                # V33.0: Support both Legacy and Graph engines
+                if engine_mode == 'Legacy':
+                    detailed_res = engine.calculate_energy(case_data_mock, dyn_ctx_mock)
+                    # Store for comparison
+                    st.session_state['legacy_result'] = detailed_res
+                else:
+                    # Graph engine uses adapter which returns compatible format
+                    detailed_res = engine.calculate_energy(case_data_mock, dyn_ctx_mock)
                 
             finally:
                 engine.get_year_pillar = original_get_year
@@ -1115,41 +1202,83 @@ def render():
 
             # === GROUND TRUTH VERIFICATION ===
             gt = selected_case.get('ground_truth')
+            target_focus = selected_case.get('target_focus', 'UNKNOWN')
+            
             if gt:
-                st.markdown("### 🧬 核心算法拟合度 (Algorithm Fit)")
+                st.markdown("### 🧬 V16.0 宏观相精准调优 (Macro-Phase Calibration)")
                 
-                # Computed Strength
-                # ws variable comes from try-catch block above (ensure it is accessible)
-                comp_ws_raw = ws if 'ws' in locals() else "Unknown"
+                # V16.0: Calculate Domain MAE
+                # Get model domain scores (0-10 scale, convert to 0-100)
+                model_career = detailed_res.get('career', 0.0) * 10.0
+                model_wealth = detailed_res.get('wealth', 0.0) * 10.0
+                model_rel = detailed_res.get('relationship', 0.0) * 10.0
                 
-                # Match Logic
-                # gt['strength'] e.g. "Strong", "Weak"
-                is_match = False
-                if gt['strength'] != "Unknown":
-                    # Loose matching
-                    is_match = (gt['strength'] in comp_ws_raw) or (comp_ws_raw in gt['strength'])
+                # Get GT scores (支持新字段名: career_score, wealth_score, relationship_score)
+                gt_career = gt.get('career_score', gt.get('career', 0.0))
+                gt_wealth = gt.get('wealth_score', gt.get('wealth', 0.0))
+                gt_rel = gt.get('relationship_score', gt.get('relationship', 0.0))
+                
+                # Calculate MAE
+                mae_career = abs(model_career - gt_career) if gt_career > 0 else 0.0
+                mae_wealth = abs(model_wealth - gt_wealth) if gt_wealth > 0 else 0.0
+                mae_rel = abs(model_rel - gt_rel) if gt_rel > 0 else 0.0
+                total_mae = (mae_career + mae_wealth + mae_rel) / 3.0 if (gt_career > 0 or gt_wealth > 0 or gt_rel > 0) else 0.0
+                
+                # Display GT vs Model Comparison
+                st.markdown("#### 📊 宏观相得分对比 (Domain Scores Comparison)")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("事业 (Career)", 
+                             f"{model_career:.1f}", 
+                             delta=f"GT: {gt_career:.0f}",
+                             delta_color="inverse" if mae_career > 10 else "normal")
+                    st.caption(f"MAE: {mae_career:.1f}")
+                with col2:
+                    st.metric("财富 (Wealth)", 
+                             f"{model_wealth:.1f}", 
+                             delta=f"GT: {gt_wealth:.0f}",
+                             delta_color="inverse" if mae_wealth > 10 else "normal")
+                    st.caption(f"MAE: {mae_wealth:.1f}")
+                with col3:
+                    st.metric("情感 (Relationship)", 
+                             f"{model_rel:.1f}", 
+                             delta=f"GT: {gt_rel:.0f}",
+                             delta_color="inverse" if mae_rel > 10 else "normal")
+                    st.caption(f"MAE: {mae_rel:.1f}")
+                with col4:
+                    st.metric("综合 MAE", 
+                             f"{total_mae:.1f}",
+                             delta=f"目标: <10",
+                             delta_color="inverse" if total_mae > 10 else "normal")
+                    st.caption(f"调优目标: {target_focus}")
+                
+                # Legacy Strength Verification (if exists)
+                if 'strength' in gt:
+                    st.markdown("---")
+                    st.markdown("#### 🧬 旺衰判定 (Strength Judgment)")
                     
-                    # Special handling for "Follower"
-                    if "Follower" in gt['strength'] and "Follower" in comp_ws_raw: is_match = True
-                
-                c_ver, c_det = st.columns([1, 3])
-                with c_ver:
-                    if is_match:
-                        st.success(f"MATCH ✅\n{comp_ws_raw}")
-                    else:
-                        st.error(f"MISMATCH ❌\nGot: {comp_ws_raw}")
-                        
-                with c_det:
-                    st.caption(f"Target: **{gt.get('strength', '?')}** | Note: {gt.get('note', '')}")
-                    if 'favorable' in gt:
-                        # Extract Computed Fav
-                        # detailed_res doesn't explicitly return fav elements list easily here 
-                        # but engine.calculate_chart does. 
-                        # Here we called calculate_energy directly.
-                        # However, we can access favorable from profile? No, profile is simple object.
-                        # But wait, create_profile_from_case doesn't store favorable.
-                        # We can re-run simple element check or assume fit based on strength.
-                        st.caption(f"Target Favorable: {gt['favorable']}")
+                    # Computed Strength
+                    comp_ws_raw = ws if 'ws' in locals() else "Unknown"
+                    
+                    # Match Logic
+                    is_match = False
+                    if gt['strength'] != "Unknown":
+                        is_match = (gt['strength'] in comp_ws_raw) or (comp_ws_raw in gt['strength'])
+                        if "Follower" in gt['strength'] and "Follower" in comp_ws_raw: 
+                            is_match = True
+                    
+                    c_ver, c_det = st.columns([1, 3])
+                    with c_ver:
+                        if is_match:
+                            st.success(f"MATCH ✅\n{comp_ws_raw}")
+                        else:
+                            st.error(f"MISMATCH ❌\nGot: {comp_ws_raw}")
+                            
+                    with c_det:
+                        st.caption(f"Target: **{gt.get('strength', '?')}** | Note: {gt.get('note', '')}")
+                        if 'favorable' in gt:
+                            st.caption(f"Target Favorable: {gt['favorable']}")
 
             st.markdown(f"""
             <style>
@@ -1200,7 +1329,7 @@ def render():
             expert_note = ""
             preset_match = next((p for p in presets if p['year'] == user_year), None)
             if preset_match:
-                target_v_real = preset_match['v_real_dynamic']
+                target_v_real = preset_match.get('v_real_dynamic', target_v_real)
                 expert_note = preset_match.get('note', '')
 
             with c_real:
@@ -1299,6 +1428,28 @@ def render():
                 fig_t.update_layout(height=300, title="未来趋势")
                 st.plotly_chart(fig_t, width='stretch')
 
+            # === V33.0: Engine Comparison (引擎对比) ===
+            if engine_mode == 'Graph' and 'graph_data' in detailed_res:
+                st.divider()
+                st.markdown("### ⚖️ 引擎对比 (Engine Comparison)")
+                
+                # 如果有Legacy结果，进行对比
+                if st.session_state.get('legacy_result'):
+                    legacy_res = st.session_state['legacy_result']
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Legacy 身强判定", legacy_res.get('wang_shuai', 'Unknown'))
+                        st.metric("Legacy 财富", f"{legacy_res.get('wealth', 0)*10:.1f}")
+                    with col2:
+                        st.metric("Graph 身强判定", detailed_res.get('wang_shuai', 'Unknown'))
+                        st.metric("Graph 财富", f"{detailed_res.get('wealth', 0)*10:.1f}")
+                    with col3:
+                        delta_str = "一致" if legacy_res.get('wang_shuai') == detailed_res.get('wang_shuai') else "不一致"
+                        st.metric("判定差异", delta_str)
+                        wealth_delta = (detailed_res.get('wealth', 0) - legacy_res.get('wealth', 0)) * 10
+                        st.metric("财富差异", f"{wealth_delta:+.1f}", 
+                                 delta_color="normal" if abs(wealth_delta) < 5 else "inverse")
+            
             # === V9.6: GEO 能量轨迹对比 (GEO Comparison) ===
             st.divider()
             st.markdown("### 🌍 GEO 能量轨迹对比 (GEO Energy Trajectory Comparison)")
@@ -1457,6 +1608,199 @@ def render():
                 st.info("请选择一个城市以生成 GEO 能量轨迹对比图。")
             else:
                 st.info("请先选择一个案例以进行 GEO 对比分析。")
+    
+    # ==========================
+    # TAB 3: NETWORK TOPOLOGY
+    # ==========================
+    with tab_topology:
+        st.subheader("🌐 网络拓扑可视化 (Network Topology Visualization)")
+        st.caption("图网络引擎的拓扑结构和能量流动可视化")
+        
+        if engine_mode != 'Graph':
+            st.warning("⚠️ 网络拓扑可视化仅在 Graph 引擎模式下可用。请在侧边栏切换到 Graph 引擎。")
+        else:
+            # 需要选择一个案例才能显示拓扑
+            if not selected_case:
+                st.info("👈 请在「单点分析」标签中选择一个案例，然后返回此标签查看拓扑结构。")
+            else:
+                # 重新计算以确保有graph_data
+                profile = create_profile_from_case(selected_case, user_luck)
+                bazi_list = [profile.pillars['year'], profile.pillars['month'], 
+                            profile.pillars['day'], profile.pillars['hour']]
+                
+                case_data_mock = {
+                    'id': selected_case.get('id', 999),
+                    'gender': selected_case.get('gender', '男'),
+                    'day_master': profile.day_master,
+                    'bazi': bazi_list,
+                }
+                dyn_ctx_mock = {
+                    'year': user_year,
+                    'dayun': user_luck,
+                    'luck': user_luck
+                }
+                
+                graph_result = engine.calculate_energy(case_data_mock, dyn_ctx_mock)
+                
+                if 'graph_data' in graph_result:
+                    graph_data = graph_result['graph_data']
+                    nodes = graph_data.get('nodes', [])
+                    adjacency_matrix = np.array(graph_data.get('adjacency_matrix', []))
+                    initial_energy = graph_data.get('initial_energy', [])
+                    final_energy = graph_data.get('final_energy', [])
+                    
+                    # 生成节点标签
+                    node_labels = [f"{node['char']}" for node in nodes]
+                    
+                    # 渲染拓扑图
+                    from ui.components.graph_visualizer import (
+                        render_topology_graph, 
+                        render_energy_flow_comparison,
+                        render_adjacency_heatmap
+                    )
+                    
+                    st.markdown("#### 📊 拓扑结构图")
+                    # 获取日主信息（从case_data或graph_result）
+                    day_master = case_data_mock.get('day_master') or graph_result.get('dm_element', '')
+                    fig_topology = render_topology_graph(
+                        adjacency_matrix, nodes, final_energy, node_labels, day_master=day_master
+                    )
+                    st.plotly_chart(fig_topology, use_container_width=True)
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("#### 📈 能量流动对比")
+                        fig_flow = render_energy_flow_comparison(
+                            initial_energy, final_energy, node_labels
+                        )
+                        st.plotly_chart(fig_flow, use_container_width=True)
+                    
+                    with col2:
+                        st.markdown("#### 🔥 邻接矩阵热图")
+                        fig_heatmap = render_adjacency_heatmap(
+                            adjacency_matrix, node_labels
+                        )
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+                    
+                    # 显示节点详细信息
+                    with st.expander("📋 节点详细信息"):
+                        node_data = []
+                        for i, node in enumerate(nodes):
+                            init_e = initial_energy[i] if i < len(initial_energy) else 0
+                            final_e = final_energy[i] if i < len(final_energy) else 0
+                            node_data.append({
+                                'ID': node.get('id', i),
+                                '字符': node.get('char', ''),
+                                '类型': node.get('type', ''),
+                                '元素': node.get('element', ''),
+                                '初始能量': f"{init_e:.2f}",
+                                '最终能量': f"{final_e:.2f}",
+                                '能量变化': f"{final_e - init_e:.2f}"
+                            })
+                        df_nodes = pd.DataFrame(node_data)
+                        st.dataframe(df_nodes, use_container_width=True)
+                else:
+                    st.error("无法获取图网络数据。请确保使用 Graph 引擎并选择了有效案例。")
+                
+                # === 双引擎对比验证 ===
+                if engine_mode == 'Graph' and 'legacy_result' in st.session_state:
+                    st.markdown("---")
+                    st.markdown("### 🔬 双引擎对比验证 (Legacy vs Graph)")
+                    
+                    legacy_res = st.session_state['legacy_result']
+                    graph_res = graph_result
+                    
+                    # 提取旺衰分数
+                    legacy_wang_shuai = legacy_res.get('wang_shuai_score', 0.0)
+                    graph_wang_shuai = graph_res.get('wang_shuai_score', 0.0)
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Legacy Engine", 
+                                 f"{legacy_wang_shuai:.2f}",
+                                 legacy_res.get('wang_shuai', 'Unknown'))
+                    with col2:
+                        delta = graph_wang_shuai - legacy_wang_shuai
+                        delta_pct = (delta / abs(legacy_wang_shuai) * 100) if legacy_wang_shuai != 0 else 0
+                        st.metric("Graph Engine",
+                                 f"{graph_wang_shuai:.2f}",
+                                 delta=delta,
+                                 help=f"差异: {delta:+.2f} ({delta_pct:+.1f}%)")
+                    with col3:
+                        st.metric("Graph Engine", 
+                                 graph_res.get('wang_shuai', 'Unknown'),
+                                 "旺衰判定")
+                    
+                    # 特别检查：如果是 VAL_005 或其他关键案例
+                    case_id = selected_case.get('id')
+                    case_desc = selected_case.get('description', '')
+                    
+                    if 'VAL_005' in str(case_id) or '塑胶' in case_desc or '大亨' in case_desc:
+                        st.info("""
+                        **🎯 VAL_005 塑胶大亨案例验证**
+                        
+                        **预期行为**：
+                        - Graph Engine 应能通过 **亥(Water) → 未/戌(Earth) → 金(Metal)** 的传导路径
+                        - 邻接矩阵中应显示：`Matrix[亥][未]` 和 `Matrix[亥][戌]` 的权重（润局效应）
+                        - Graph Engine 的旺衰分数应 **高于** Legacy Engine
+                        
+                        **关键检查点**：
+                        1. 拓扑图中是否显示 **亥 → 未/戌** 的绿色连线（正向影响）？
+                        2. 邻接矩阵热图中 **亥** 行与 **未/戌** 列的交点是否为正值？
+                        3. 日主能量是否通过迭代传播得到提升？
+                        """)
+                        
+                        # 显示邻接矩阵的关键位置
+                        if 'graph_data' in graph_result:
+                            nodes = graph_data.get('nodes', [])
+                            adj_matrix = np.array(graph_data.get('adjacency_matrix', []))
+                            
+                            # 查找亥、未、戌、日主的位置
+                            node_indices = {}
+                            for i, node in enumerate(nodes):
+                                char = node.get('char', '')
+                                if char in ['亥', '未', '戌']:
+                                    node_indices[char] = i
+                                # 日主是天干
+                                if node.get('node_type') == 'stem' and node.get('pillar_idx') == 2:
+                                    node_indices['日主'] = i
+                            
+                            if node_indices:
+                                st.markdown("#### 🔍 关键节点交互检查")
+                                check_df = []
+                                
+                                # 检查亥 → 未/戌
+                                if '亥' in node_indices and ('未' in node_indices or '戌' in node_indices):
+                                    hai_idx = node_indices['亥']
+                                    for target_char in ['未', '戌']:
+                                        if target_char in node_indices:
+                                            target_idx = node_indices[target_char]
+                                            if hai_idx < len(adj_matrix) and target_idx < len(adj_matrix[hai_idx]):
+                                                weight = adj_matrix[hai_idx][target_idx]
+                                                check_df.append({
+                                                    '源节点': '亥',
+                                                    '目标节点': target_char,
+                                                    '矩阵权重': f"{weight:.3f}",
+                                                    '解读': '润局效应（正值为佳）' if weight > 0 else '无润局效应'
+                                                })
+                                
+                                # 检查土 → 金（日主）
+                                if '日主' in node_indices:
+                                    dm_idx = node_indices['日主']
+                                    for source_char in ['未', '戌']:
+                                        if source_char in node_indices:
+                                            source_idx = node_indices[source_char]
+                                            if source_idx < len(adj_matrix) and dm_idx < len(adj_matrix[source_idx]):
+                                                weight = adj_matrix[source_idx][dm_idx]
+                                                check_df.append({
+                                                    '源节点': source_char,
+                                                    '目标节点': '日主(金)',
+                                                    '矩阵权重': f"{weight:.3f}",
+                                                    '解读': '土生金（正值为佳）' if weight > 0 else '无生助'
+                                                })
+                                
+                                if check_df:
+                                    st.dataframe(pd.DataFrame(check_df), use_container_width=True)
 
 if __name__ == "__main__":
     render()

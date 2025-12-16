@@ -90,6 +90,18 @@ def render_and_collect_input(facade: BaziFacade,
         # --- ERA 因子 ---
         era_factor: Dict[str, float] = {}
         if is_quantum_lab:
+            # 在 ERA 调节前展示档案概要
+            if isinstance(selected_case, dict):
+                st.subheader("档案信息")
+                st.markdown(f"- 档案ID: {selected_case.get('id', 'Unknown')}")
+                st.markdown(f"- 性别: {selected_case.get('gender', '未知')}")
+                st.markdown(f"- 日主: {selected_case.get('day_master', '?')}")
+                bazi_list = selected_case.get("bazi", [])
+                bazi_str = " | ".join(bazi_list) if bazi_list else "未提供"
+                st.markdown(f"- 八字: {bazi_str}")
+                birth_date = selected_case.get("birth_date", "")
+                birth_time = selected_case.get("birth_time", "")
+                st.markdown(f"- 推断公历: {birth_date} {birth_time}".strip())
             st.subheader("🌐 ERA 时代修正 (可调)")
             cols = st.columns(len(consts.FIVE_ELEMENTS))
             prefix = st.session_state.get("era_key_prefix", "era")

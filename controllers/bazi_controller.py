@@ -17,6 +17,7 @@ import pandas as pd
 import logging
 import time
 from typing import Dict, List, Tuple, Optional, Any
+from lunar_python import Solar
 
 # Model Imports
 from core.calculator import BaziCalculator
@@ -34,6 +35,8 @@ from core.exceptions import (
 from utils.notification_manager import get_notification_manager
 # Config Manager
 from utils.configuration_manager import get_config_manager
+# Calibration
+from services.calibration_service import CalibrationService
 
 # Configure logger for BaziController
 logger = logging.getLogger("BaziController")
@@ -89,12 +92,21 @@ class BaziController:
             # V9.8: Global configuration manager
             self.config_manager = get_config_manager()
 
+            # V16.0: Load particle weights from config/parameters.json
+            self._particle_weights_config: Dict[str, float] = {}
+            self._load_particle_weights_config()
+
             # LLM service placeholder
             self._llm_service = None
             self._init_llm_service()
 
             # V10.0: Notification Manager
             self.notification_manager = get_notification_manager()
+
+            # V12.0: Calibration Service
+            self._calibration_service = CalibrationService(flux_engine=self._flux_engine)
+            self._health_report: Dict[str, Any] = {}
+            self._auto_recommendations: Dict[str, Any] = {}
             
             logger.info(f"{self.VERSION} Controller initialized successfully")
         except Exception as e:
@@ -103,6 +115,67 @@ class BaziController:
                 "控制器初始化失败",
                 f"Initialization error: {str(e)}"
             )
+    
+    # =========================================================================
+    # V16.0: Particle Weights Configuration (Single Source of Truth)
+    # =========================================================================
+    
+    def _load_particle_weights_config(self) -> None:
+        """
+        V16.0: Load particle weights from config/parameters.json.
+        This is the single source of truth for particle weights.
+        """
+        import os
+        import json
+        
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(project_root, "config", "parameters.json")
+            
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+                    self._particle_weights_config = config_data.get('particleWeights', {})
+                logger.info(f"Particle weights loaded from {config_path}: {len(self._particle_weights_config)} weights")
+            else:
+                logger.warning(f"Config file not found: {config_path}, using defaults")
+                self._particle_weights_config = {}
+        except Exception as e:
+            logger.error(f"Failed to load particle weights config: {e}", exc_info=True)
+            self._particle_weights_config = {}
+    
+    def _save_particle_weights_config(self, weights: Dict[str, float]) -> bool:
+        """
+        V16.0: Save particle weights to config/parameters.json.
+        Returns True if successful, False otherwise.
+        """
+        import os
+        import json
+        
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(project_root, "config", "parameters.json")
+            
+            # Load existing config
+            config_data = {}
+            if os.path.exists(config_path):
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+            
+            # Update particle weights
+            config_data['particleWeights'] = weights
+            self._particle_weights_config = weights
+            
+            # Save back
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Particle weights saved to {config_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save particle weights config: {e}", exc_info=True)
+            return False
     
     # =========================================================================
     # Performance Optimization: Era Multipliers Cache
@@ -211,6 +284,112 @@ class BaziController:
             else 0.0
         )
         return stats
+
+    # =========================================================================
+    # Case Normalization Helpers (shared across P1/P2/P3)
+    # =========================================================================
+    @staticmethod
+    def normalize_case_fields(case: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure required fields exist:
+        - day_master: derive from bazi[2] (day pillar stem) if missing.
+        - gender: default to '未知' if missing.
+        - birth_date/time: if missing and bazi complete, reverse-lookup Gregorian datetime.
+        - dynamic_checks: fill 'year' from birth_date or bazi year pillar if missing.
+        """
+        if not isinstance(case, dict):
+            return case
+        c = case
+        if not c.get("day_master"):
+            bazi = c.get("bazi") or []
+            if len(bazi) >= 3 and isinstance(bazi[2], str) and bazi[2]:
+                c["day_master"] = bazi[2][0]
+        if not c.get("gender"):
+            c["gender"] = "未知"
+
+        # Reverse lookup birth date/time from full bazi if missing
+        if (not c.get("birth_date") or not c.get("birth_time")) and isinstance(c.get("bazi"), list) and len(c["bazi"]) >= 4:
+            try:
+                dt = BaziController.reverse_lookup_bazi(c["bazi"])
+                if dt:
+                    c["birth_date"] = dt.strftime("%Y-%m-%d")
+                    c["birth_time"] = f"{dt.hour:02d}:{dt.minute:02d}"
+            except Exception:
+                pass
+
+        # Fill dynamic_checks.year:
+        # - Prefer birth_date (YYYY-MM-DD) year component
+        # - Else fall back to bazi year pillar (bazi[0]) to avoid KeyError
+        if c.get("dynamic_checks"):
+            normalized_checks = []
+            for chk in c.get("dynamic_checks", []):
+                if not isinstance(chk, dict):
+                    continue
+                if "year" not in chk or not chk.get("year"):
+                    birth_date = c.get("birth_date")
+                    year_val = None
+                    if isinstance(birth_date, str) and len(birth_date) >= 4:
+                        try:
+                            year_val = birth_date.split("-")[0]
+                        except Exception:
+                            year_val = None
+                    if not year_val:
+                        bazi = c.get("bazi") or []
+                        if len(bazi) >= 1 and isinstance(bazi[0], str) and bazi[0]:
+                            year_val = bazi[0]  # fallback to year pillar
+                    chk["year"] = year_val
+                normalized_checks.append(chk)
+            c["dynamic_checks"] = normalized_checks
+        return c
+
+    @classmethod
+    def normalize_cases(cls, cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Normalize a list of cases safely."""
+        if not isinstance(cases, list):
+            return cases
+        return [cls.normalize_case_fields(c) for c in cases]
+
+    # =========================================================================
+    # Reverse lookup date/time from Bazi
+    # =========================================================================
+    @staticmethod
+    def reverse_lookup_bazi(target_bazi: List[str], start_year: int = 1950, end_year: int = 2030):
+        """
+        Brute-force reverse lookup of Bazi (Y, M, D, H GanZhi) to Gregorian datetime.
+        Returns datetime.datetime if found, else None.
+        """
+        if not target_bazi or len(target_bazi) < 4:
+            return None
+        tg_y, tg_m, tg_d, tg_h = target_bazi[:4]
+        import datetime
+
+        for y in range(start_year, end_year + 1):
+            start_d = datetime.date(y, 1, 1)
+            end_d = datetime.date(y, 12, 31)
+            curr = start_d
+            while curr <= end_d:
+                try:
+                    s = Solar.fromYmd(curr.year, curr.month, curr.day)
+                    l = s.getLunar()
+                    if l.getYearInGanZhiExact() != tg_y:
+                        curr += datetime.timedelta(days=1)
+                        continue
+                    if l.getMonthInGanZhiExact() != tg_m:
+                        curr += datetime.timedelta(days=1)
+                        continue
+                    if l.getDayInGanZhiExact() != tg_d:
+                        curr += datetime.timedelta(days=1)
+                        continue
+                    # check hour
+                    for h in range(0, 24):
+                        sh = Solar.fromYmdHms(curr.year, curr.month, curr.day, h, 0, 0)
+                        lh = sh.getLunar()
+                        if lh.getTimeInGanZhi() == tg_h:
+                            return datetime.datetime(curr.year, curr.month, curr.day, h, 0, 0)
+                except Exception:
+                    pass
+                curr += datetime.timedelta(days=1)
+        return None
     
     def clear_cache(self) -> None:
         """
@@ -294,6 +473,20 @@ class BaziController:
             # Trigger base calculations
             self._calculate_base()
 
+            # V12.0: Auto health check & recommendations
+            try:
+                if self._calibration_service:
+                    # Ensure calibration service uses latest flux engine
+                    self._calibration_service.flux_engine = self._flux_engine
+                    self._health_report = self._calibration_service.run_health_check(self._user_input)
+                    self._auto_recommendations = self._calibration_service.get_auto_recommendations(
+                        self._health_report
+                    )
+                    for warning in self._health_report.get('warnings', []):
+                        self.notification_manager.add_warning(f"档案健康警告: {warning}")
+            except Exception as e:
+                logger.warning(f"Calibration health check failed: {e}", exc_info=True)
+
             # Apply ERA factor if provided and supported by flux engine
             if self._flux_engine and hasattr(self._flux_engine, "set_input_parameters"):
                 try:
@@ -353,6 +546,17 @@ class BaziController:
             if self._quantum_engine is None:
                 logger.debug("Initializing QuantumEngine...")
                 self._quantum_engine = QuantumEngine()
+            
+            # V16.0: Update engine config with particle weights from config file
+            # This ensures engine uses the latest particle weights from config/parameters.json
+            particle_weights = self.get_current_particle_weights()
+            if particle_weights:
+                # Build full config structure for engine
+                from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+                engine_config = DEFAULT_FULL_ALGO_PARAMS.copy()
+                engine_config['particleWeights'] = particle_weights
+                self._quantum_engine.update_full_config(engine_config)
+                logger.debug(f"Updated QuantumEngine with {len(particle_weights)} particle weights from config")
                 
             # 4. BaziProfile
             logger.debug("Creating BaziProfile...")
@@ -790,6 +994,75 @@ class BaziController:
         if isinstance(era, dict):
             return era
         return {}
+
+    def get_current_particle_weights(self) -> Dict[str, float]:
+        """
+        V16.0: Return current particle weights.
+        Priority: user_input > config file > defaults (1.0)
+        """
+        # First check user input (from UI sliders)
+        pw = self._user_input.get('particle_weights') if self._user_input else None
+        if pw:
+            return pw
+        
+        # Fall back to config file (single source of truth)
+        if self._particle_weights_config:
+            return self._particle_weights_config.copy()
+        
+        # Default: all 1.0
+        from utils.constants_manager import get_constants
+        consts = get_constants()
+        return {god: 1.0 for god in consts.TEN_GODS}
+    
+    def get_particle_weight_from_config(self, god_name: str) -> float:
+        """
+        V16.0: Get a specific particle weight from config file.
+        Returns 1.0 if not found.
+        """
+        return self._particle_weights_config.get(god_name, 1.0)
+        if isinstance(pw, dict):
+            return pw
+        return {}
+
+    # V12.0: Calibration state accessors
+    def get_health_report(self) -> Dict[str, Any]:
+        """Return the latest health report generated during set_user_input."""
+        return self._health_report or {}
+
+    def get_auto_recommendations(self) -> Dict[str, Any]:
+        """Return the latest auto calibration recommendations."""
+        return self._auto_recommendations or {}
+
+    def apply_temporary_corrections(
+        self,
+        era_factor: Optional[Dict[str, float]] = None,
+        particle_weights: Optional[Dict[str, float]] = None
+    ) -> None:
+        """
+        Apply recommended corrections to current user input and refresh calculations.
+        This reuses set_user_input to keep cache invalidation and engine sync consistent.
+        """
+        if not self._user_input:
+            self.notification_manager.add_warning("尚未加载档案，无法应用校准。")
+            return
+
+        current = self._user_input
+        try:
+            self.set_user_input(
+                name=current.get('name'),
+                gender=current.get('gender'),
+                date_obj=current.get('date'),
+                time_int=current.get('time'),
+                city=current.get('city'),
+                enable_solar=current.get('enable_solar', True),
+                longitude=current.get('longitude', 116.46),
+                era_factor=era_factor if era_factor is not None else current.get('era_factor'),
+                particle_weights=particle_weights if particle_weights is not None else current.get('particle_weights')
+            )
+            self.notification_manager.add_success("已应用自动校准并刷新模型。")
+        except Exception as e:
+            logger.error(f"Failed to apply temporary corrections: {e}", exc_info=True)
+            self.notification_manager.add_error(f"应用校准失败: {e}")
 
     def _assemble_llm_prompt_data(self, scenario_data: Dict) -> Dict:
         """

@@ -96,11 +96,14 @@ DEFAULT_FULL_ALGO_PARAMS = {
 
     # === 面板 4: 能量流转 (Energy Flow) ===
     # [V8.0 Refactor] The Damping Protocol + Phase Change (阻尼协议 + 相变)
+    # [V42.1] Added System Entropy and Output Drain
     "flow": {
         # Genesis Compliance Keys
         "generationEfficiency": 1.2, # 生的效率
         "controlImpact": 0.7,        # 克的影响
         "dampingFactor": 0.5,        # 衰减因子
+        "systemEntropy": 0.05,       # [V42.1] 全局系统熵（每轮能量损耗5%）
+        "outputDrainPenalty": 1.2,   # [V42.1] 食伤泄耗惩罚（日主生食伤时的额外损耗）
         
         # A. 输入阻抗 (Resource Impedance)
         "resourceImpedance": {
@@ -140,5 +143,12 @@ DEFAULT_FULL_ALGO_PARAMS = {
         "energy_threshold_strong": ENERGY_THRESHOLD_STRONG,
         "energy_threshold_weak": ENERGY_THRESHOLD_WEAK,
         "score_general_open": SCORE_GENERAL_OPEN
+    },
+    
+    # === 面板 6: 判定标准 (Grading Thresholds) ===
+    # [V36.1] Dynamic Threshold Tuning
+    "grading": {
+        "strong_threshold": 60.0,  # Strong >= 此值
+        "weak_threshold": 40.0     # Weak < 此值, Balanced 在此之间
     }
 }
