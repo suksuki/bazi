@@ -1,0 +1,939 @@
+{
+  "tgd_sensitivity": {
+    "tgd_delta": 1.0,
+    "avg_delta_wealth": -767.783112671149,
+    "avg_baseline_error": 771.3127295632045,
+    "avg_perturbed_error": 9.422481016944667,
+    "case_results": [
+      {
+        "case_id": "C01",
+        "baseline_wealth": 980.0,
+        "perturbed_wealth": 98.0,
+        "delta_wealth": -882.0,
+        "gt_wealth": 99,
+        "baseline_error": 881.0,
+        "perturbed_error": 1.0,
+        "particle_energies": {
+          "self": 16.0,
+          "output": 37.6,
+          "wealth": 21.45,
+          "officer": 24.1,
+          "resource": 51.4
+        },
+        "raw_energy": {
+          "wood": 51.4,
+          "fire": 16.0,
+          "earth": 37.6,
+          "metal": 21.45,
+          "water": 24.1
+        }
+      },
+      {
+        "case_id": "C02",
+        "baseline_wealth": 852.4330810132085,
+        "perturbed_wealth": 85.93005958720157,
+        "delta_wealth": -766.503021426007,
+        "gt_wealth": 90,
+        "baseline_error": 762.4330810132085,
+        "perturbed_error": 4.069940412798431,
+        "particle_energies": {
+          "self": 25.0,
+          "output": 43.4,
+          "wealth": 33.6,
+          "officer": 8.4,
+          "resource": 39.6
+        },
+        "raw_energy": {
+          "wood": 25.0,
+          "fire": 43.4,
+          "earth": 33.6,
+          "metal": 8.4,
+          "water": 39.6
+        }
+      },
+      {
+        "case_id": "C03",
+        "baseline_wealth": 980.0,
+        "perturbed_wealth": 98.0,
+        "delta_wealth": -882.0,
+        "gt_wealth": 92,
+        "baseline_error": 888.0,
+        "perturbed_error": 6.0,
+        "particle_energies": {
+          "self": 24.0,
+          "output": 36.4,
+          "wealth": 30.4,
+          "officer": 20.0,
+          "resource": 25.6
+        },
+        "raw_energy": {
+          "wood": 36.4,
+          "fire": 30.4,
+          "earth": 20.0,
+          "metal": 25.6,
+          "water": 24.0
+        }
+      },
+      {
+        "case_id": "C04",
+        "baseline_wealth": 897.5318221799998,
+        "perturbed_wealth": 89.75318221799998,
+        "delta_wealth": -807.7786399619998,
+        "gt_wealth": 99,
+        "baseline_error": 798.5318221799998,
+        "perturbed_error": 9.246817782000022,
+        "particle_energies": {
+          "self": 20.0,
+          "output": 37.4,
+          "wealth": 4.9,
+          "officer": 35.1,
+          "resource": 31.599999999999998
+        },
+        "raw_energy": {
+          "wood": 31.599999999999998,
+          "fire": 20.0,
+          "earth": 37.4,
+          "metal": 4.9,
+          "water": 35.1
+        }
+      },
+      {
+        "case_id": "C05",
+        "baseline_wealth": 757.7530169524191,
+        "perturbed_wealth": 75.77530169524191,
+        "delta_wealth": -681.9777152571772,
+        "gt_wealth": 85,
+        "baseline_error": 672.7530169524191,
+        "perturbed_error": 9.224698304758093,
+        "particle_energies": {
+          "self": 39.0,
+          "output": 2.5,
+          "wealth": 25.5,
+          "officer": 9.0,
+          "resource": 43.6
+        },
+        "raw_energy": {
+          "wood": 9.0,
+          "fire": 43.6,
+          "earth": 39.0,
+          "metal": 2.5,
+          "water": 25.5
+        }
+      },
+      {
+        "case_id": "C06",
+        "baseline_wealth": 654.7379999999999,
+        "perturbed_wealth": 65.4738,
+        "delta_wealth": -589.2642,
+        "gt_wealth": 55,
+        "baseline_error": 599.7379999999999,
+        "perturbed_error": 10.473799999999997,
+        "particle_energies": {
+          "self": 14.040000000000001,
+          "output": 17.4,
+          "wealth": 22.5,
+          "officer": 17.8,
+          "resource": 15.0
+        },
+        "raw_energy": {
+          "wood": 17.8,
+          "fire": 15.0,
+          "earth": 14.040000000000001,
+          "metal": 17.4,
+          "water": 22.5
+        }
+      },
+      {
+        "case_id": "C07",
+        "baseline_wealth": 953.345916360008,
+        "perturbed_wealth": 95.3345916360008,
+        "delta_wealth": -858.0113247240072,
+        "gt_wealth": 60,
+        "baseline_error": 893.345916360008,
+        "perturbed_error": 35.334591636000795,
+        "particle_energies": {
+          "self": 16.0,
+          "output": 15.4,
+          "wealth": 24.96,
+          "officer": 25.6,
+          "resource": 33.1
+        },
+        "raw_energy": {
+          "wood": 24.96,
+          "fire": 25.6,
+          "earth": 33.1,
+          "metal": 16.0,
+          "water": 15.4
+        }
+      },
+      {
+        "case_id": "C08",
+        "baseline_wealth": 749.7,
+        "perturbed_wealth": 74.97,
+        "delta_wealth": -674.73,
+        "gt_wealth": 75,
+        "baseline_error": 674.7,
+        "perturbed_error": 0.030000000000001137,
+        "particle_energies": {
+          "self": 36.4,
+          "output": 10.0,
+          "wealth": 15.0,
+          "officer": 5.5,
+          "resource": 32.1
+        },
+        "raw_energy": {
+          "wood": 36.4,
+          "fire": 10.0,
+          "earth": 15.0,
+          "metal": 5.5,
+          "water": 32.1
+        }
+      }
+    ]
+  },
+  "level2_weights": {
+    "wealth": {
+      "amplifier": 1.2,
+      "observation_bias": 2.7,
+      "max_score": 98,
+      "nonlinear_exponent_high": 2.0,
+      "nonlinear_exponent_mid": 1.3,
+      "high_energy_threshold": 55,
+      "mid_energy_threshold": 30,
+      "k_capture": 0.25
+    },
+    "career": {
+      "amplifier": 1.2,
+      "observation_bias_low": 2.0,
+      "observation_bias_high": 0.95,
+      "max_score": 98.0
+    },
+    "relationship": {
+      "amplifier": 1.0,
+      "observation_bias": 3.0,
+      "max_score": 75.0
+    },
+    "domain_weights": {
+      "wealth_base": 0.4,
+      "wealth_body": 0.3,
+      "career_officer": 0.35,
+      "career_resource": 0.25,
+      "career_output": 0.15,
+      "rel_spouse": 0.5,
+      "rel_self": 0.3
+    }
+  },
+  "particle_energies_all": {
+    "C01": {
+      "raw_energy": {
+        "wood": 51.4,
+        "fire": 16.0,
+        "earth": 37.6,
+        "metal": 21.45,
+        "water": 24.1
+      },
+      "ten_gods": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      },
+      "domain_scores": {
+        "career": 79.212672,
+        "wealth": 98.0,
+        "relationship": 75.0
+      },
+      "body_strength": 167.4
+    },
+    "C02": {
+      "raw_energy": {
+        "wood": 25.0,
+        "fire": 43.4,
+        "earth": 33.6,
+        "metal": 8.4,
+        "water": 39.6
+      },
+      "ten_gods": {
+        "self": 25.0,
+        "output": 43.4,
+        "wealth": 33.6,
+        "officer": 8.4,
+        "resource": 39.6
+      },
+      "domain_scores": {
+        "career": 98.0,
+        "wealth": 85.24330810132085,
+        "relationship": 17.370395999999996
+      },
+      "body_strength": 51.68
+    },
+    "C03": {
+      "raw_energy": {
+        "wood": 36.4,
+        "fire": 30.4,
+        "earth": 20.0,
+        "metal": 25.6,
+        "water": 24.0
+      },
+      "ten_gods": {
+        "self": 24.0,
+        "output": 36.4,
+        "wealth": 30.4,
+        "officer": 20.0,
+        "resource": 25.6
+      },
+      "domain_scores": {
+        "career": 86.75120563199995,
+        "wealth": 98.0,
+        "relationship": 75.0
+      },
+      "body_strength": 49.6
+    },
+    "C04": {
+      "raw_energy": {
+        "wood": 31.599999999999998,
+        "fire": 20.0,
+        "earth": 37.4,
+        "metal": 4.9,
+        "water": 35.1
+      },
+      "ten_gods": {
+        "self": 20.0,
+        "output": 37.4,
+        "wealth": 4.9,
+        "officer": 35.1,
+        "resource": 31.599999999999998
+      },
+      "domain_scores": {
+        "career": 98.0,
+        "wealth": 89.75318221799998,
+        "relationship": 75.0
+      },
+      "body_strength": 51.599999999999994
+    },
+    "C05": {
+      "raw_energy": {
+        "wood": 9.0,
+        "fire": 43.6,
+        "earth": 39.0,
+        "metal": 2.5,
+        "water": 25.5
+      },
+      "ten_gods": {
+        "self": 39.0,
+        "output": 2.5,
+        "wealth": 25.5,
+        "officer": 9.0,
+        "resource": 43.6
+      },
+      "domain_scores": {
+        "career": 65.3125176,
+        "wealth": 75.77530169524191,
+        "relationship": 57.8295375
+      },
+      "body_strength": 82.6
+    },
+    "C06": {
+      "raw_energy": {
+        "wood": 17.8,
+        "fire": 15.0,
+        "earth": 14.040000000000001,
+        "metal": 17.4,
+        "water": 22.5
+      },
+      "ten_gods": {
+        "self": 14.040000000000001,
+        "output": 17.4,
+        "wealth": 22.5,
+        "officer": 17.8,
+        "resource": 15.0
+      },
+      "domain_scores": {
+        "career": 68.362504056,
+        "wealth": 65.4738,
+        "relationship": 67.51012637564999
+      },
+      "body_strength": 89.03999999999999
+    },
+    "C07": {
+      "raw_energy": {
+        "wood": 24.96,
+        "fire": 25.6,
+        "earth": 33.1,
+        "metal": 16.0,
+        "water": 15.4
+      },
+      "ten_gods": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      },
+      "domain_scores": {
+        "career": 98.0,
+        "wealth": 95.3345916360008,
+        "relationship": 67.0704
+      },
+      "body_strength": 55.0
+    },
+    "C08": {
+      "raw_energy": {
+        "wood": 36.4,
+        "fire": 10.0,
+        "earth": 15.0,
+        "metal": 5.5,
+        "water": 32.1
+      },
+      "ten_gods": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      },
+      "domain_scores": {
+        "career": 38.830647240000005,
+        "wealth": 74.97,
+        "relationship": 33.481755
+      },
+      "body_strength": 168.5
+    }
+  },
+  "error_analysis": [
+    {
+      "case_id": "C01",
+      "dimension": "career",
+      "gt": 98,
+      "pred": 79.212672,
+      "error": 18.787328000000002,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      }
+    },
+    {
+      "case_id": "C01",
+      "dimension": "wealth",
+      "gt": 99,
+      "pred": 98.0,
+      "error": 1.0,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      }
+    },
+    {
+      "case_id": "C01",
+      "dimension": "relationship",
+      "gt": 40,
+      "pred": 75.0,
+      "error": 35.0,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      }
+    },
+    {
+      "case_id": "C02",
+      "dimension": "career",
+      "gt": 95,
+      "pred": 98.0,
+      "error": 3.0,
+      "particle_energies": {
+        "self": 25.0,
+        "output": 43.4,
+        "wealth": 33.6,
+        "officer": 8.4,
+        "resource": 39.6
+      }
+    },
+    {
+      "case_id": "C02",
+      "dimension": "wealth",
+      "gt": 90,
+      "pred": 85.24330810132085,
+      "error": 4.756691898679151,
+      "particle_energies": {
+        "self": 25.0,
+        "output": 43.4,
+        "wealth": 33.6,
+        "officer": 8.4,
+        "resource": 39.6
+      }
+    },
+    {
+      "case_id": "C02",
+      "dimension": "relationship",
+      "gt": 75,
+      "pred": 17.370395999999996,
+      "error": 57.629604,
+      "particle_energies": {
+        "self": 25.0,
+        "output": 43.4,
+        "wealth": 33.6,
+        "officer": 8.4,
+        "resource": 39.6
+      }
+    },
+    {
+      "case_id": "C03",
+      "dimension": "career",
+      "gt": 96,
+      "pred": 86.75120563199995,
+      "error": 9.248794368000048,
+      "particle_energies": {
+        "self": 24.0,
+        "output": 36.4,
+        "wealth": 30.4,
+        "officer": 20.0,
+        "resource": 25.6
+      }
+    },
+    {
+      "case_id": "C03",
+      "dimension": "wealth",
+      "gt": 92,
+      "pred": 98.0,
+      "error": 6.0,
+      "particle_energies": {
+        "self": 24.0,
+        "output": 36.4,
+        "wealth": 30.4,
+        "officer": 20.0,
+        "resource": 25.6
+      }
+    },
+    {
+      "case_id": "C03",
+      "dimension": "relationship",
+      "gt": 80,
+      "pred": 75.0,
+      "error": 5.0,
+      "particle_energies": {
+        "self": 24.0,
+        "output": 36.4,
+        "wealth": 30.4,
+        "officer": 20.0,
+        "resource": 25.6
+      }
+    },
+    {
+      "case_id": "C04",
+      "dimension": "career",
+      "gt": 95,
+      "pred": 98.0,
+      "error": 3.0,
+      "particle_energies": {
+        "self": 20.0,
+        "output": 37.4,
+        "wealth": 4.9,
+        "officer": 35.1,
+        "resource": 31.599999999999998
+      }
+    },
+    {
+      "case_id": "C04",
+      "dimension": "wealth",
+      "gt": 99,
+      "pred": 89.75318221799998,
+      "error": 9.246817782000022,
+      "particle_energies": {
+        "self": 20.0,
+        "output": 37.4,
+        "wealth": 4.9,
+        "officer": 35.1,
+        "resource": 31.599999999999998
+      }
+    },
+    {
+      "case_id": "C04",
+      "dimension": "relationship",
+      "gt": 50,
+      "pred": 75.0,
+      "error": 25.0,
+      "particle_energies": {
+        "self": 20.0,
+        "output": 37.4,
+        "wealth": 4.9,
+        "officer": 35.1,
+        "resource": 31.599999999999998
+      }
+    },
+    {
+      "case_id": "C05",
+      "dimension": "career",
+      "gt": 93,
+      "pred": 65.3125176,
+      "error": 27.687482399999993,
+      "particle_energies": {
+        "self": 39.0,
+        "output": 2.5,
+        "wealth": 25.5,
+        "officer": 9.0,
+        "resource": 43.6
+      }
+    },
+    {
+      "case_id": "C05",
+      "dimension": "wealth",
+      "gt": 85,
+      "pred": 75.77530169524191,
+      "error": 9.224698304758093,
+      "particle_energies": {
+        "self": 39.0,
+        "output": 2.5,
+        "wealth": 25.5,
+        "officer": 9.0,
+        "resource": 43.6
+      }
+    },
+    {
+      "case_id": "C05",
+      "dimension": "relationship",
+      "gt": 65,
+      "pred": 57.8295375,
+      "error": 7.170462499999999,
+      "particle_energies": {
+        "self": 39.0,
+        "output": 2.5,
+        "wealth": 25.5,
+        "officer": 9.0,
+        "resource": 43.6
+      }
+    },
+    {
+      "case_id": "C06",
+      "dimension": "career",
+      "gt": 70,
+      "pred": 68.362504056,
+      "error": 1.637495943999994,
+      "particle_energies": {
+        "self": 14.040000000000001,
+        "output": 17.4,
+        "wealth": 22.5,
+        "officer": 17.8,
+        "resource": 15.0
+      }
+    },
+    {
+      "case_id": "C06",
+      "dimension": "wealth",
+      "gt": 55,
+      "pred": 65.4738,
+      "error": 10.473799999999997,
+      "particle_energies": {
+        "self": 14.040000000000001,
+        "output": 17.4,
+        "wealth": 22.5,
+        "officer": 17.8,
+        "resource": 15.0
+      }
+    },
+    {
+      "case_id": "C06",
+      "dimension": "relationship",
+      "gt": 70,
+      "pred": 67.51012637564999,
+      "error": 2.489873624350011,
+      "particle_energies": {
+        "self": 14.040000000000001,
+        "output": 17.4,
+        "wealth": 22.5,
+        "officer": 17.8,
+        "resource": 15.0
+      }
+    },
+    {
+      "case_id": "C07",
+      "dimension": "career",
+      "gt": 80,
+      "pred": 98.0,
+      "error": 18.0,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      }
+    },
+    {
+      "case_id": "C07",
+      "dimension": "wealth",
+      "gt": 60,
+      "pred": 95.3345916360008,
+      "error": 35.334591636000795,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      }
+    },
+    {
+      "case_id": "C07",
+      "dimension": "relationship",
+      "gt": 60,
+      "pred": 67.0704,
+      "error": 7.0704000000000065,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      }
+    },
+    {
+      "case_id": "C08",
+      "dimension": "career",
+      "gt": 85,
+      "pred": 38.830647240000005,
+      "error": 46.169352759999995,
+      "particle_energies": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      }
+    },
+    {
+      "case_id": "C08",
+      "dimension": "wealth",
+      "gt": 75,
+      "pred": 74.97,
+      "error": 0.030000000000001137,
+      "particle_energies": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      }
+    },
+    {
+      "case_id": "C08",
+      "dimension": "relationship",
+      "gt": 75,
+      "pred": 33.481755,
+      "error": 41.518245,
+      "particle_energies": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      }
+    }
+  ],
+  "dimension_errors": {
+    "career": {
+      "mean": 15.941306684000004,
+      "max": 46.169352759999995
+    },
+    "wealth": {
+      "mean": 9.508324952679757,
+      "max": 35.334591636000795
+    },
+    "relationship": {
+      "mean": 22.609823140543753,
+      "max": 57.629604
+    }
+  },
+  "top_errors": [
+    {
+      "case_id": "C02",
+      "dimension": "relationship",
+      "gt": 75,
+      "pred": 17.370395999999996,
+      "error": 57.629604,
+      "particle_energies": {
+        "self": 25.0,
+        "output": 43.4,
+        "wealth": 33.6,
+        "officer": 8.4,
+        "resource": 39.6
+      }
+    },
+    {
+      "case_id": "C08",
+      "dimension": "career",
+      "gt": 85,
+      "pred": 38.830647240000005,
+      "error": 46.169352759999995,
+      "particle_energies": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      }
+    },
+    {
+      "case_id": "C08",
+      "dimension": "relationship",
+      "gt": 75,
+      "pred": 33.481755,
+      "error": 41.518245,
+      "particle_energies": {
+        "self": 36.4,
+        "output": 10.0,
+        "wealth": 15.0,
+        "officer": 5.5,
+        "resource": 32.1
+      }
+    },
+    {
+      "case_id": "C07",
+      "dimension": "wealth",
+      "gt": 60,
+      "pred": 95.3345916360008,
+      "error": 35.334591636000795,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      }
+    },
+    {
+      "case_id": "C01",
+      "dimension": "relationship",
+      "gt": 40,
+      "pred": 75.0,
+      "error": 35.0,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      }
+    },
+    {
+      "case_id": "C05",
+      "dimension": "career",
+      "gt": 93,
+      "pred": 65.3125176,
+      "error": 27.687482399999993,
+      "particle_energies": {
+        "self": 39.0,
+        "output": 2.5,
+        "wealth": 25.5,
+        "officer": 9.0,
+        "resource": 43.6
+      }
+    },
+    {
+      "case_id": "C04",
+      "dimension": "relationship",
+      "gt": 50,
+      "pred": 75.0,
+      "error": 25.0,
+      "particle_energies": {
+        "self": 20.0,
+        "output": 37.4,
+        "wealth": 4.9,
+        "officer": 35.1,
+        "resource": 31.599999999999998
+      }
+    },
+    {
+      "case_id": "C01",
+      "dimension": "career",
+      "gt": 98,
+      "pred": 79.212672,
+      "error": 18.787328000000002,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 37.6,
+        "wealth": 21.45,
+        "officer": 24.1,
+        "resource": 51.4
+      }
+    },
+    {
+      "case_id": "C07",
+      "dimension": "career",
+      "gt": 80,
+      "pred": 98.0,
+      "error": 18.0,
+      "particle_energies": {
+        "self": 16.0,
+        "output": 15.4,
+        "wealth": 24.96,
+        "officer": 25.6,
+        "resource": 33.1
+      }
+    },
+    {
+      "case_id": "C06",
+      "dimension": "wealth",
+      "gt": 55,
+      "pred": 65.4738,
+      "error": 10.473799999999997,
+      "particle_energies": {
+        "self": 14.040000000000001,
+        "output": 17.4,
+        "wealth": 22.5,
+        "officer": 17.8,
+        "resource": 15.0
+      }
+    }
+  ],
+  "optimal_params": {
+    "pg_year": 1.5,
+    "pg_month": 1.4744058087721197,
+    "pg_day": 1.5,
+    "pg_hour": 1.4938491952809194,
+    "root_w": 1.0,
+    "exposed_b": 1.5,
+    "same_pill": 2.5,
+    "clashScore": -2.962619837932829,
+    "harmPenalty": -2.033339227965805,
+    "punishmentPenalty": -3.9239167160795825,
+    "clashDamping": 0.7,
+    "trineBonus": 1.2,
+    "halfBonus": 1.5,
+    "archBonus": 1.1,
+    "directionalBonus": 1.3,
+    "resolutionCost": 0.4,
+    "sixHarmony": 5.0,
+    "imp_base": 0.2,
+    "imp_weak": 0.75,
+    "vis_rate": 0.35,
+    "vis_fric": 0.3,
+    "vis_visc": 0.95,
+    "ctl_imp": 1.25,
+    "sys_ent": 0.05,
+    "T_Main": 7.5,
+    "T_Stem": 5.0,
+    "T_Mid": 3.0,
+    "T_Minor": 1.5,
+    "energy_strong": 3.5,
+    "energy_weak": 2.0,
+    "vp_threshold": 15.0,
+    "vp_openBonus": 1.3,
+    "vp_sealedPenalty": -4.939585605722172,
+    "score_skull_crash": -50.0,
+    "score_treasury_bonus": 20.0,
+    "score_treasury_penalty": -20.0,
+    "score_general_open": 5.0,
+    "score_sanhe_bonus": 10.0,
+    "score_liuhe_bonus": 5.0
+  }
+}

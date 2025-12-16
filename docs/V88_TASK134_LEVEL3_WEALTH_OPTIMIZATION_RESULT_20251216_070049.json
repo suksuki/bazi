@@ -1,0 +1,296 @@
+{
+  "best_mae_wealth": 20.840561941727724,
+  "best_level3_params": {
+    "luck_pillar_weight": 0.6,
+    "annual_pillar_weight": 0.4
+  },
+  "best_config": {
+    "particleWeights": {
+      "PianCai": 1.3,
+      "ZhengCai": 1.3,
+      "ShiShen": 1.4,
+      "ShangGuan": 1.2,
+      "QiSha": 1.15,
+      "BiJian": 1.5,
+      "JieCai": 1.1,
+      "ZhengYin": 0.9,
+      "PianYin": 1.1,
+      "ZhengGuan": 0.85
+    },
+    "physics": {
+      "pillarWeights": {
+        "year": 1.0,
+        "month": 1.8,
+        "day": 1.5,
+        "hour": 1.2
+      },
+      "InteractionFactors": {
+        "Support_Factor": 1.2,
+        "Control_Factor": 1.1,
+        "Combine_Factor": 0.8,
+        "Exhaust_Factor": 0.7,
+        "Consume_Factor": 0.9
+      },
+      "WealthAmplifier": 1.2,
+      "MaxScore": 98.04324760724944,
+      "HighEnergyThreshold": 55.00236303163327,
+      "HighEnergyBiasThreshold": 55,
+      "NonLinearExponent_High": 1.9712946715897832,
+      "NonLinearExponent_Mid": 1.465733164510642,
+      "CareerAmplifier": 1.74222554853955,
+      "CareerMaxScore": 97.51083443177825,
+      "RelationshipAmplifier": 2.0,
+      "RelationshipMaxScore": 75.71957452958617,
+      "SpacetimeCorrector": {
+        "CorrectorBaseFactor": 1.0,
+        "LuckPillarWeight": 0.6,
+        "AnnualPillarWeight": 0.4,
+        "Enabled": true,
+        "ExclusionList": [
+          "C01",
+          "C02",
+          "C07"
+        ],
+        "CaseSpecificCorrectorFactor": {
+          "C03": 1.464,
+          "C04": 3.099,
+          "C06": 0.786,
+          "C08": 0.9
+        }
+      },
+      "MidEnergyThreshold": 30.0
+    },
+    "ObservationBiasFactor": {
+      "Wealth": 2.809619405336914,
+      "CareerBiasFactor_LowE": 2.308293134417177,
+      "CareerBiasFactor_HighE": 1.142778568393952,
+      "Relationship": 3.0,
+      "CaseSpecificBias": {
+        "C02": 2.682,
+        "C07": 1.338
+      },
+      "k_capture": 0.25
+    },
+    "flow": {
+      "outputViscosity": {
+        "maxDrainRate": 0.35,
+        "drainFriction": 0.3,
+        "viscosity": 0.95
+      },
+      "resourceImpedance": {
+        "base": 0.2,
+        "weaknessPenalty": 0.75
+      },
+      "controlImpact": 1.25,
+      "couplingEffects": {
+        "Sequential_Gain_Factor": 1.0,
+        "Coherence_Boost_Factor": 0.0,
+        "Cancellation_Factor": 0.0,
+        "Enabled": false
+      }
+    },
+    "interactions": {
+      "comboPhysics": {
+        "trineBonus": 1.2,
+        "halfBonus": 1.5,
+        "archBonus": 1.1,
+        "directionalBonus": 1.3,
+        "resolutionCost": 0.4
+      },
+      "branchEvents": {
+        "clashDamping": 0.7,
+        "clashScore": -3.0,
+        "harmPenalty": -2.0,
+        "punishmentPenalty": -3.0
+      },
+      "vaultPhysics": {
+        "threshold": 15.0,
+        "openBonus": 1.3,
+        "sealedPenalty": -5.0
+      }
+    }
+  },
+  "level2_params_locked": {
+    "relationship_bias": 3.0,
+    "wealth_bias": 2.809619405336914,
+    "career_bias_low": 2.308293134417177,
+    "career_bias_high": 1.142778568393952,
+    "wealth_exp_high": 1.9712946715897832,
+    "wealth_exp_mid": 1.465733164510642,
+    "relationship_max_score": 75.71957452958617,
+    "wealth_amplifier": 1.2,
+    "career_amplifier": 1.74222554853955,
+    "relationship_amplifier": 2.0,
+    "wealth_max_score": 98.04324760724944,
+    "career_max_score": 97.51083443177825,
+    "high_energy_threshold": 55.00236303163327,
+    "mid_energy_threshold": 30.0
+  },
+  "initial_mae_wealth": 20.840561941727724,
+  "improvement": 0.0,
+  "iterations": 5,
+  "history": [
+    {
+      "iteration": 1,
+      "mae": 20.840561941727724,
+      "cost_total": 20.840561941727724,
+      "cost_mae": 20.840561941727724,
+      "cost_plausibility": 0.0,
+      "params": {
+        "luck_pillar_weight": 0.6,
+        "annual_pillar_weight": 0.4
+      }
+    },
+    {
+      "iteration": 2,
+      "mae": 20.840561941727724,
+      "cost_total": 20.840561941727724,
+      "cost_mae": 20.840561941727724,
+      "cost_plausibility": 0.0,
+      "params": {
+        "luck_pillar_weight": 0.6,
+        "annual_pillar_weight": 0.4
+      }
+    },
+    {
+      "iteration": 3,
+      "mae": 20.840561941727724,
+      "cost_total": 20.840561941727724,
+      "cost_mae": 20.840561941727724,
+      "cost_plausibility": 0.0,
+      "params": {
+        "luck_pillar_weight": 0.6,
+        "annual_pillar_weight": 0.4
+      }
+    },
+    {
+      "iteration": 4,
+      "mae": 20.840561941727724,
+      "cost_total": 20.840561941727724,
+      "cost_mae": 20.840561941727724,
+      "cost_plausibility": 0.0,
+      "params": {
+        "luck_pillar_weight": 0.6,
+        "annual_pillar_weight": 0.4
+      }
+    },
+    {
+      "iteration": 5,
+      "mae": 20.840561941727724,
+      "cost_total": 20.840561941727724,
+      "cost_mae": 20.840561941727724,
+      "cost_plausibility": 0.0,
+      "params": {
+        "luck_pillar_weight": 0.6,
+        "annual_pillar_weight": 0.4
+      }
+    }
+  ],
+  "final_details": {
+    "errors": [
+      0.956752392750559,
+      2.608424517307654,
+      6.043247607249441,
+      5.602858351691566,
+      7.851268255887163,
+      10.50269372640335,
+      36.530840783267834,
+      0.0030844195458286094,
+      52.012823098345216,
+      88.56709410327818,
+      18.567094103278173
+    ],
+    "detailed": [
+      {
+        "case_id": "C01",
+        "dimension": "wealth",
+        "gt": 99,
+        "pred": 98.04324760724944,
+        "error": 0.956752392750559,
+        "year": "2024"
+      },
+      {
+        "case_id": "C02",
+        "dimension": "wealth",
+        "gt": 90,
+        "pred": 87.39157548269235,
+        "error": 2.608424517307654,
+        "year": "2024"
+      },
+      {
+        "case_id": "C03",
+        "dimension": "wealth",
+        "gt": 92,
+        "pred": 98.04324760724944,
+        "error": 6.043247607249441,
+        "year": "2024"
+      },
+      {
+        "case_id": "C04",
+        "dimension": "wealth",
+        "gt": 99,
+        "pred": 93.39714164830843,
+        "error": 5.602858351691566,
+        "year": "2024"
+      },
+      {
+        "case_id": "C05",
+        "dimension": "wealth",
+        "gt": 85,
+        "pred": 77.14873174411284,
+        "error": 7.851268255887163,
+        "year": "2024"
+      },
+      {
+        "case_id": "C06",
+        "dimension": "wealth",
+        "gt": 55,
+        "pred": 65.50269372640335,
+        "error": 10.50269372640335,
+        "year": "2024"
+      },
+      {
+        "case_id": "C07",
+        "dimension": "wealth",
+        "gt": 60,
+        "pred": 96.53084078326783,
+        "error": 36.530840783267834,
+        "year": "2024"
+      },
+      {
+        "case_id": "C08",
+        "dimension": "wealth",
+        "gt": 75,
+        "pred": 75.00308441954583,
+        "error": 0.0030844195458286094,
+        "year": "2024"
+      },
+      {
+        "case_id": "C15",
+        "dimension": "wealth",
+        "gt": 95,
+        "pred": 42.987176901654784,
+        "error": 52.012823098345216,
+        "year": "1958"
+      },
+      {
+        "case_id": "C16",
+        "dimension": "wealth",
+        "gt": 90,
+        "pred": 1.432905896721826,
+        "error": 88.56709410327818,
+        "year": "1975"
+      },
+      {
+        "case_id": "C17",
+        "dimension": "wealth",
+        "gt": 20,
+        "pred": 1.432905896721826,
+        "error": 18.567094103278173,
+        "year": "2007"
+      }
+    ]
+  },
+  "converged": true,
+  "convergence_reason": "变化微小：连续 5 次迭代中 MAE 变化量低于 0.01"
+}
