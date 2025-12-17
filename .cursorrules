@@ -1,0 +1,605 @@
+# Cursor 编码规则与架构约束
+
+## 🏛️ MVC 架构约束 (MVC Architecture Constraints)
+
+### 强制要求 (Mandatory Requirements)
+
+1. **严格分层架构**
+   - **View 层** (`ui/pages/`, `ui/components/`): 
+     - ✅ 只能调用 Controller 的方法
+     - ❌ 禁止直接调用 Engine、Model 或 Service
+     - ✅ 使用 `BaziController` 或 `WealthVerificationController` 作为唯一数据源
+   
+   - **Controller 层** (`controllers/`):
+     - ✅ 负责协调 Model 和 View 之间的交互
+     - ✅ 封装业务逻辑，不包含 UI 代码
+     - ✅ 提供统一的 API 接口
+     - ❌ 禁止直接操作数据库或文件系统（通过 Model 层）
+   
+   - **Model 层** (`core/models/`):
+     - ✅ 负责数据结构和持久化
+     - ✅ 提供 CRUD 操作
+     - ❌ 禁止包含业务逻辑（业务逻辑在 Controller）
+     - ❌ 禁止直接访问 UI 组件
+
+2. **导入规范 (Import Rules)**
+   ```python
+   # ✅ 正确：View 导入 Controller
+   from controllers.bazi_controller import BaziController
+   from controllers.wealth_verification_controller import WealthVerificationController
+   
+   # ❌ 错误：View 直接导入 Engine
+   from core.engine_graph import GraphNetworkEngine  # 禁止！
+   from core.engine_v88 import EngineV88  # 禁止！
+   
+   # ✅ 正确：Controller 导入 Model
+   from core.models.wealth_case_model import WealthCaseModel
+   
+   # ❌ 错误：Controller 直接操作文件
+   import json  # 应该通过 Model 层
+   ```
+
+3. **财富验证功能架构**
+   - View: `ui/pages/wealth_verification.py`
+   - Controller: `controllers/wealth_verification_controller.py`
+   - Model: `core/models/wealth_case_model.py`
+   - 数据流: View → Controller → Model → Engine
+
+## 📁 目录结构规范 (Directory Structure)
+
+```
+bazi_predict/
+├── controllers/          # Controller 层（业务逻辑协调）
+│   ├── bazi_controller.py
+│   └── wealth_verification_controller.py
+├── core/
+│   ├── models/          # Model 层（数据模型和持久化）
+│   │   └── wealth_case_model.py
+│   ├── engine_*.py      # Engine 层（核心计算引擎）
+│   └── ...
+├── ui/
+│   ├── pages/           # View 层（页面组件）
+│   │   ├── prediction_dashboard.py
+│   │   └── wealth_verification.py
+│   └── components/      # View 层（可复用组件）
+└── scripts/             # 工具脚本（可以混合使用，但新功能优先 MVC）
+```
+
+## 🔧 代码组织规则 (Code Organization Rules)
+
+### Controller 设计模式
+
+1. **单一职责原则**
+   - 每个 Controller 只负责一个业务领域
+   - `BaziController`: 八字排盘和预测
+   - `WealthVerificationController`: 财富验证
+
+2. **Lazy Initialization**
+   ```python
+   class BaziController:
+       def __init__(self):
+           self._engine = None  # 延迟初始化
+       
+       @property
+       def engine(self):
+           if self._engine is None:
+               self._engine = GraphNetworkEngine()
+           return self._engine
+   ```
+
+3. **状态管理**
+   - Controller 维护用户输入状态
+   - 使用缓存避免重复计算
+   - 输入变更时自动失效缓存
+
+### Model 设计模式
+
+1. **数据类定义**
+   ```python
+   from dataclasses import dataclass
+   
+   @dataclass
+   class WealthEvent:
+       year: int
+       ganzhi: str
+       dayun: str
+       real_magnitude: float
+       desc: str
+   ```
+
+2. **持久化封装**
+   - 所有文件 I/O 操作在 Model 层
+   - 提供统一的 CRUD 接口
+   - 错误处理在 Model 层完成
+
+### View 设计模式
+
+1. **纯展示逻辑**
+   - View 只负责渲染和用户交互
+   - 不包含业务逻辑判断
+   - 通过 Controller 获取所有数据
+
+2. **组件复用**
+   - 可复用组件放在 `ui/components/`
+   - 页面特定组件放在 `ui/pages/`
+
+## 📝 命名规范 (Naming Conventions)
+
+### 文件命名
+- Controller: `*_controller.py` (如 `bazi_controller.py`)
+- Model: `*_model.py` (如 `wealth_case_model.py`)
+- View: 描述性名称 (如 `wealth_verification.py`)
+
+### 类命名
+- Controller: `*Controller` (如 `BaziController`)
+- Model: `*Model` (如 `WealthCaseModel`)
+- Data Class: `*Case`, `*Event` (如 `WealthCase`, `WealthEvent`)
+
+### 方法命名
+- Controller 公共方法: 动词开头 (如 `get_chart()`, `verify_case()`)
+- Model 方法: CRUD 操作 (如 `load_all_cases()`, `save_case()`)
+- 私有方法: 下划线前缀 (如 `_load_config()`)
+
+## 🚫 禁止模式 (Anti-Patterns)
+
+### ❌ 禁止在 View 中直接调用 Engine
+```python
+# ❌ 错误示例
+from core.engine_graph import GraphNetworkEngine
+engine = GraphNetworkEngine()
+result = engine.calculate_wealth_index(...)
+
+# ✅ 正确示例
+from controllers.wealth_verification_controller import WealthVerificationController
+controller = WealthVerificationController()
+results = controller.verify_case(case)
+```
+
+### ❌ 禁止在 Controller 中直接操作文件
+```python
+# ❌ 错误示例
+import json
+with open('data/cases.json', 'r') as f:
+    data = json.load(f)
+
+# ✅ 正确示例
+from core.models.wealth_case_model import WealthCaseModel
+model = WealthCaseModel()
+cases = model.load_all_cases()
+```
+
+### ❌ 禁止在 Model 中包含业务逻辑
+```python
+# ❌ 错误示例
+class WealthCaseModel:
+    def calculate_wealth(self, case):
+        # 业务逻辑应该在 Controller
+        result = engine.calculate_wealth_index(...)
+
+# ✅ 正确示例
+class WealthCaseModel:
+    def load_all_cases(self):
+        # 只负责数据加载
+        return cases
+```
+
+## ✅ 最佳实践 (Best Practices)
+
+1. **错误处理**
+   - Controller 层捕获异常并返回错误信息
+   - View 层显示用户友好的错误消息
+   - Model 层记录详细错误日志
+
+2. **类型提示**
+   ```python
+   from typing import List, Dict, Optional
+   
+   def verify_case(self, case: WealthCase) -> List[Dict[str, Any]]:
+       ...
+   ```
+
+3. **文档字符串**
+   ```python
+   def verify_case(self, case: WealthCase) -> List[Dict[str, Any]]:
+       """
+       验证财富案例的预测结果
+       
+       Args:
+           case: 财富案例对象
+           
+       Returns:
+           验证结果列表，每个结果包含 year, predicted, error 等字段
+       """
+   ```
+
+4. **配置管理**
+   - 使用 `config/parameters.json` 存储配置
+   - Controller 负责加载和传递配置
+   - 避免硬编码配置值
+   - 所有可调参数必须通过配置文件管理
+   - 使用 `core.config_manager` 或 `core.config_schema` 加载配置
+
+## 🔍 代码审查检查清单 (Code Review Checklist)
+
+在提交代码前，请确认：
+
+### 文档检查（新功能必须）
+- [ ] 需求文档已创建（`docs/REQUIREMENTS_*.md`）
+- [ ] 设计文档已创建（`docs/DESIGN_*.md`）
+- [ ] TODO List 已创建并包含所有任务
+- [ ] 文档已提交到版本控制系统
+
+### 架构检查
+- [ ] View 层只调用 Controller，不直接调用 Engine
+- [ ] Controller 层封装了所有业务逻辑
+- [ ] Model 层只负责数据操作，不包含业务逻辑
+- [ ] 所有文件 I/O 操作在 Model 层
+- [ ] 遵循 MVC 分层架构
+
+### 配置检查
+- [ ] 没有硬编码的数值（所有参数从配置文件读取）
+- [ ] 配置项有合理的默认值
+- [ ] 配置加载有错误处理
+- [ ] 配置变更会失效相关缓存
+
+### 算法检查（八字相关功能必须）
+- [ ] 遵循核心算法总纲（`ALGORITHM_CONSTITUTION_v2.5.md`）
+- [ ] 遵循核心算法内核（`CORE_ALGORITHM_KERNEL_V9.md`）
+- [ ] 参考了相关算法补充文档
+- [ ] 所有算法参数从配置文件读取
+- [ ] 参数可通过 `FullAlgoParams` 接口调优
+- [ ] 有回归验证接口
+
+### 代码质量检查
+- [ ] 错误处理在适当的层级完成
+- [ ] 类型提示完整（所有公共方法）
+- [ ] 文档字符串清晰（Google/NumPy 风格）
+- [ ] 遵循命名规范
+- [ ] 使用 `logging` 而不是 `print()`
+- [ ] 没有裸露的 `except:` 语句
+
+### 性能检查
+- [ ] 使用了适当的缓存机制
+- [ ] 延迟初始化（Lazy Loading）
+- [ ] 批量操作优于循环单个操作
+
+## 📚 参考文档 (Reference Documentation)
+
+### 架构文档
+- MVC 架构文档: `docs/WEALTH_VERIFICATION_MVC_ARCHITECTURE.md`
+- Controller API: `docs/CONTROLLER_API.md`
+- 架构总览: `docs/ARCHITECTURE.md`
+
+### 算法规范文档（必须遵循）
+- **核心算法总纲**: `docs/ALGORITHM_CONSTITUTION_v2.5.md` (最新版本)
+- **核心算法内核**: `docs/CORE_ALGORITHM_KERNEL_V9.md`
+- **算法补充文档**:
+  - `docs/ALGORITHM_SUPPLEMENT_L2_ENERGY_CONDUCTION.md` (能量传导)
+  - `docs/ALGORITHM_SUPPLEMENT_L2_SPACETIME.md` (时空)
+  - `docs/ALGORITHM_SUPPLEMENT_L2_STOREHOUSE.md` (墓库)
+
+## ⚙️ 配置化与参数管理 (Configuration & Parameters)
+
+### 强制要求
+
+1. **禁止硬编码**
+   ```python
+   # ❌ 错误：硬编码数值
+   wealth_bonus = 100.0
+   error_threshold = 20.0
+   max_retries = 3
+   
+   # ✅ 正确：从配置文件读取
+   from core.config_manager import get_config_manager
+   config = get_config_manager()
+   wealth_bonus = config.get('wealth', {}).get('bonus', 100.0)
+   error_threshold = config.get('verification', {}).get('error_threshold', 20.0)
+   ```
+
+2. **配置文件结构**
+   - 主配置: `config/parameters.json`
+   - 默认配置: `core/config_schema.py` 中的 `DEFAULT_FULL_ALGO_PARAMS`
+   - 用户配置: 通过 UI 修改后保存到 `config/parameters.json`
+
+3. **配置加载模式**
+   ```python
+   # ✅ 推荐方式：使用 ConfigManager
+   from core.config_manager import get_config_manager
+   config_manager = get_config_manager()
+   value = config_manager.get('section', 'key', default_value)
+   
+   # ✅ 或者：使用 config_schema
+   from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+   import json
+   config = copy.deepcopy(DEFAULT_FULL_ALGO_PARAMS)
+   # 合并用户配置
+   with open('config/parameters.json', 'r') as f:
+       user_config = json.load(f)
+       # 深度合并
+   ```
+
+4. **配置项命名规范**
+   - 使用有意义的键名
+   - 使用嵌套结构组织相关配置
+   - 提供默认值和文档说明
+   ```json
+   {
+     "wealth": {
+       "base_energy": 50.0,
+       "strong_root_bonus": 40.0,
+       "vault_bonus": 100.0,
+       "clash_penalty": 150.0,
+       "error_threshold": 20.0
+     },
+     "verification": {
+       "hit_rate_threshold": 0.5,
+       "max_error": 30.0
+     }
+   }
+   ```
+
+5. **运行时配置修改**
+   - Controller 可以动态加载配置
+   - 配置变更后应失效相关缓存
+   - 重要配置变更应记录日志
+
+## 🔒 代码质量约束 (Code Quality Constraints)
+
+### 1. 类型安全
+   - 所有公共方法必须有类型提示
+   - 使用 `typing` 模块的类型注解
+   - 避免使用 `Any`，除非必要
+   ```python
+   from typing import List, Dict, Optional, Union
+   
+   def verify_case(self, case: WealthCase) -> List[Dict[str, Union[float, str]]]:
+       ...
+   ```
+
+### 2. 错误处理
+   - 所有可能失败的操作必须有异常处理
+   - 使用具体的异常类型，避免裸露 `except:`
+   - 记录错误日志，返回用户友好的错误信息
+   ```python
+   try:
+       result = engine.calculate_wealth_index(...)
+   except ValueError as e:
+       logger.error(f"Invalid input: {e}")
+       return None
+   except Exception as e:
+       logger.exception(f"Unexpected error: {e}")
+       raise
+   ```
+
+### 3. 日志记录
+   - 使用 `logging` 模块，不要使用 `print()`
+   - 不同级别：DEBUG, INFO, WARNING, ERROR
+   - Controller 和 Model 层必须记录关键操作
+   ```python
+   import logging
+   logger = logging.getLogger(__name__)
+   logger.info("Starting verification...")
+   logger.debug(f"Case data: {case}")
+   ```
+
+### 4. 文档字符串
+   - 所有公共类和方法必须有文档字符串
+   - 使用 Google 风格或 NumPy 风格
+   - 包含参数说明、返回值说明、示例
+   ```python
+   def verify_case(self, case: WealthCase) -> List[Dict[str, Any]]:
+       """
+       验证财富案例的预测结果
+       
+       Args:
+           case: 财富案例对象，包含八字和事件时间线
+           
+       Returns:
+           验证结果列表，每个结果包含：
+           - year: 年份
+           - predicted: 预测值
+           - real: 真实值
+           - error: 误差
+           - is_correct: 是否在误差范围内
+           
+       Raises:
+           ValueError: 如果案例数据无效
+           
+       Example:
+           >>> case = WealthCase(...)
+           >>> results = controller.verify_case(case)
+           >>> print(f"Hit rate: {sum(r['is_correct'] for r in results) / len(results)}")
+       """
+   ```
+
+### 5. 性能优化
+   - 使用缓存避免重复计算
+   - 延迟初始化（Lazy Initialization）
+   - 批量操作优于循环单个操作
+   ```python
+   # ✅ 使用缓存
+   @lru_cache(maxsize=128)
+   def expensive_calculation(self, key: str) -> float:
+       ...
+   
+   # ✅ 延迟初始化
+   @property
+   def engine(self):
+       if self._engine is None:
+           self._engine = GraphNetworkEngine()
+       return self._engine
+   ```
+
+## 🎯 特殊规则 (Special Rules)
+
+### 财富验证功能
+- 必须使用 `WealthVerificationController` 进行验证
+- 案例数据通过 `WealthCaseModel` 管理
+- UI 通过 `ui/pages/wealth_verification.py` 展示
+- 所有财富计算参数必须从 `config/parameters.json` 读取
+
+### 八字排盘功能
+- 必须使用 `BaziController` 进行排盘
+- 通过 `get_chart()`, `get_luck_cycles()` 等方法获取数据
+- UI 通过 `ui/pages/prediction_dashboard.py` 展示
+- 所有算法参数必须从配置文件读取
+
+### 脚本和工具
+- `scripts/` 目录下的脚本可以混合使用（向后兼容）
+- 新功能必须遵循 MVC 架构
+- 测试脚本可以使用直接 Engine 访问
+- 脚本中的参数也应尽量从配置文件读取
+
+## 📄 文档要求 (Documentation Requirements)
+
+### 强制要求：所有新功能必须包含以下文档
+
+1. **需求文档 (Requirements Document)**
+   - 位置: `docs/` 目录
+   - 命名: `REQUIREMENTS_<功能名>.md` 或 `REQUIREMENTS_V<版本>_<功能名>.md`
+   - 内容必须包括:
+     - 功能概述和目标
+     - 用户故事和使用场景
+     - 功能需求列表
+     - 非功能需求（性能、安全等）
+     - 验收标准
+   
+   ```markdown
+   # 需求文档: <功能名>
+   
+   ## 1. 功能概述
+   - 目标: ...
+   - 背景: ...
+   
+   ## 2. 用户故事
+   - 作为...，我希望...，以便...
+   
+   ## 3. 功能需求
+   - [ ] FR-001: ...
+   - [ ] FR-002: ...
+   
+   ## 4. 非功能需求
+   - 性能: ...
+   - 安全: ...
+   
+   ## 5. 验收标准
+   - [ ] AC-001: ...
+   ```
+
+2. **设计文档 (Design Document)**
+   - 位置: `docs/` 目录
+   - 命名: `DESIGN_<功能名>.md` 或 `DESIGN_V<版本>_<功能名>.md`
+   - 内容必须包括:
+     - 架构设计（MVC 分层）
+     - 数据模型设计
+     - API 设计（Controller 接口）
+     - 算法设计（如涉及）
+     - 数据库/文件结构设计
+     - 流程图或时序图
+   
+   ```markdown
+   # 设计文档: <功能名>
+   
+   ## 1. 架构设计
+   - View 层: ...
+   - Controller 层: ...
+   - Model 层: ...
+   
+   ## 2. 数据模型
+   - 数据结构: ...
+   - 数据流: ...
+   
+   ## 3. API 设计
+   - Controller 方法: ...
+   - 参数和返回值: ...
+   
+   ## 4. 算法设计
+   - 核心逻辑: ...
+   - 参数配置: ...
+   ```
+
+3. **TODO List (任务清单)**
+   - 位置: 项目根目录或 `docs/` 目录
+   - 命名: `TODO_<功能名>.md` 或使用项目的统一 TODO 管理
+   - 内容必须包括:
+     - 开发任务列表（按优先级）
+     - 测试任务列表
+     - 文档任务列表
+     - 每个任务的状态（待办/进行中/已完成）
+   
+   ```markdown
+   # TODO: <功能名>
+   
+   ## 开发任务
+   - [ ] 任务1: ...
+   - [ ] 任务2: ...
+   
+   ## 测试任务
+   - [ ] 单元测试
+   - [ ] 集成测试
+   
+   ## 文档任务
+   - [ ] 更新 API 文档
+   - [ ] 编写用户指南
+   ```
+
+### 文档审查检查清单
+- [ ] 需求文档已创建并包含所有必需章节
+- [ ] 设计文档已创建并包含架构设计
+- [ ] TODO List 已创建并包含所有任务
+- [ ] 文档已提交到版本控制系统
+
+## 🧮 八字算法规范 (Bazi Algorithm Standards)
+
+### 强制要求：所有算法实现必须遵循
+
+1. **核心算法总纲 (Algorithm Constitution)**
+   - **必须遵循**: `docs/ALGORITHM_CONSTITUTION_v2.5.md`
+   - **核心原则**:
+     - ✅ 所有参数必须可配置（禁止硬编码）
+     - ✅ 所有数值必须有回归验证接口
+     - ✅ 遵循物理模型（矢量场、波动力学、流体力学）
+     - ✅ 使用 `FullAlgoParams` 接口暴露参数
+   
+2. **核心算法内核 (Algorithm Kernel)**
+   - **必须遵循**: `docs/CORE_ALGORITHM_KERNEL_V9.md`
+   - **核心定义**:
+     - 阴阳 = 自旋 (Spin)
+     - 五行 = 矢量场 (Vector Fields)
+     - 天干 = 波形态 (Waveforms)
+     - 地支 = 场域环境 (Field Environments)
+
+3. **算法补充文档 (Algorithm Supplements)**
+   - **能量传导**: `docs/ALGORITHM_SUPPLEMENT_L2_ENERGY_CONDUCTION.md`
+     - 垂直作用与透干
+     - 通根机制
+     - 自坐加成
+   
+   - **时空**: `docs/ALGORITHM_SUPPLEMENT_L2_SPACETIME.md`
+     - 大运流年机制
+     - 时空修正
+   
+   - **墓库**: `docs/ALGORITHM_SUPPLEMENT_L2_STOREHOUSE.md`
+     - 墓库拓扑学
+     - 量子隧穿机制
+
+4. **算法实现检查清单**
+   - [ ] 所有参数从配置文件读取（`config/parameters.json`）
+   - [ ] 遵循物理模型定义（矢量场、波形态等）
+   - [ ] 实现符合算法总纲的规范
+   - [ ] 参考了相关补充文档的机制
+   - [ ] 参数可通过 `FullAlgoParams` 接口调优
+   - [ ] 有回归验证接口
+
+5. **算法修改流程**
+   - 修改算法前，必须先更新相关文档
+   - 重大算法变更需要更新算法总纲
+   - 新增机制需要创建或更新补充文档
+   - 所有算法变更必须通过回归测试
+
+---
+
+**最后更新**: 2025-01-XX  
+**版本**: 1.1.0  
+**维护者**: Bazi Predict Team
+
