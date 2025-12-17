@@ -1030,6 +1030,29 @@ class BaziController:
         """Return BaziProfile instance."""
         return self._profile
 
+    def get_current_era_info(self) -> Dict[str, Any]:
+        """
+        [V9.3 MCP] 获取当前时代的详细信息
+        
+        Returns:
+            Dict containing era information including:
+            - era_element: 时代元素
+            - period: 周期编号
+            - desc: 描述（如"九紫离火运"）
+            - modifiers: 修正系数
+            - era_bonus: 时代红利系数
+            - era_penalty: 时代折损系数
+            - impact_description: 影响描述
+        """
+        from core.processors.era import EraProcessor
+        from datetime import datetime
+        
+        current_year = datetime.now().year
+        era_processor = EraProcessor()
+        era_info = era_processor.process(current_year)
+        
+        return era_info if era_info else {}
+    
     def get_current_era_factor(self) -> Dict[str, float]:
         """
         Return current ERA factor stored in user input.

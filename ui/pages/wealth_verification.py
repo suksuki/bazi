@@ -28,6 +28,21 @@ def render():
     # MVC: 初始化Controller
     controller = WealthVerificationController()
     
+    # [V10.1] 侧边栏：概率分布选项
+    with st.sidebar:
+        st.header("⚙️ 验证设置")
+        use_probabilistic = st.checkbox(
+            "📈 启用概率分布验证",
+            value=st.session_state.get('use_probabilistic_energy', False),
+            help="启用后，验证将基于概率分布（置信区间、Z-score等）而非单一预测值"
+        )
+        st.session_state['use_probabilistic_energy'] = use_probabilistic
+        
+        # 设置Controller的概率分布模式
+        controller.set_probabilistic_mode(use_probabilistic)
+        
+        st.markdown("---")
+    
     # 侧边栏：导入功能
     with st.sidebar:
         st.header("📥 导入案例")
@@ -165,13 +180,31 @@ def render():
         
         # 统计信息
         st.markdown("### 📊 验证统计")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("命中率", f"{stats['correct_count']}/{stats['total_count']} ({stats['hit_rate']:.1f}%)")
-        with col2:
-            st.metric("平均误差", f"{stats['avg_error']:.1f}分")
-        with col3:
-            st.metric("验证状态", stats['status'])
+        
+        # [V10.1] 如果启用概率分布，显示额外的统计信息
+        if stats.get('probabilistic_mode', False):
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("命中率", f"{stats['correct_count']}/{stats['total_count']} ({stats['hit_rate']:.1f}%)")
+            with col2:
+                st.metric("置信区间命中率", f"{stats['confidence_interval_hit_rate']:.1f}%",
+                         help="真实值在预测置信区间（25%-75%）内的比例")
+            with col3:
+                st.metric("平均Z-score", f"{stats['avg_z_score']:.2f}",
+                         help="真实值距离预测均值的标准差倍数，绝对值越小越好")
+            with col4:
+                st.metric("验证状态", stats['status'])
+            
+            st.markdown("---")
+            st.info(f"📊 **概率分布模式**：使用置信区间和Z-score进行验证。置信区间命中率：{stats['confidence_interval_hit_rate']:.1f}%")
+        else:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("命中率", f"{stats['correct_count']}/{stats['total_count']} ({stats['hit_rate']:.1f}%)")
+            with col2:
+                st.metric("平均误差", f"{stats['avg_error']:.1f}分")
+            with col3:
+                st.metric("验证状态", stats['status'])
         
         st.markdown("---")
         
@@ -181,17 +214,34 @@ def render():
         table_data = []
         for r in results:
             if r.get('error') is not None:
-                table_data.append({
-                    '年份': r['year'],
-                    '流年': r['ganzhi'],
-                    '大运': r['dayun'],
-                    '真实值': r['real'],
-                    '预测值': r.get('predicted', 'N/A') if r.get('predicted') is not None else 'N/A',
-                    '误差': f"{r['error']:.1f}",
-                    '状态': '✅' if r['is_correct'] else '❌',
-                    '财库': '🏆' if r.get('vault_opened') else ('💀' if r.get('vault_collapsed') else '🔒'),
-                    '强根': '✅' if r.get('strong_root') else '❌'
-                })
+                # [V10.1] 如果启用概率分布，显示更多信息
+                if r.get('wealth_distribution'):
+                    predicted_display = f"{r.get('predicted_mean', r.get('predicted', 0)):.1f} ± {r.get('predicted_std', 0):.1f}"
+                    table_data.append({
+                        '年份': r['year'],
+                        '流年': r['ganzhi'],
+                        '大运': r['dayun'],
+                        '真实值': r['real'],
+                        '预测值（均值±标准差）': predicted_display,
+                        '置信区间': f"[{r.get('predicted_p25', 0):.1f}, {r.get('predicted_p75', 0):.1f}]",
+                        'Z-score': f"{r.get('z_score', 0):.2f}",
+                        '误差': f"{r['error']:.1f}",
+                        '状态': '✅' if r['is_correct'] else '❌',
+                        '财库': '🏆' if r.get('vault_opened') else ('💀' if r.get('vault_collapsed') else '🔒'),
+                        '强根': '✅' if r.get('strong_root') else '❌'
+                    })
+                else:
+                    table_data.append({
+                        '年份': r['year'],
+                        '流年': r['ganzhi'],
+                        '大运': r['dayun'],
+                        '真实值': r['real'],
+                        '预测值': r.get('predicted', 'N/A') if r.get('predicted') is not None else 'N/A',
+                        '误差': f"{r['error']:.1f}",
+                        '状态': '✅' if r['is_correct'] else '❌',
+                        '财库': '🏆' if r.get('vault_opened') else ('💀' if r.get('vault_collapsed') else '🔒'),
+                        '强根': '✅' if r.get('strong_root') else '❌'
+                    })
             else:
                 table_data.append({
                     '年份': r['year'],
@@ -239,28 +289,63 @@ def render():
         real_values = [r['real'] for r in results]
         predicted_values = [r.get('predicted', 0) if r.get('predicted') is not None else 0 for r in results]
         
+        # [V10.1] 检查是否启用概率分布
+        use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
+        has_distributions = any(r.get('wealth_distribution') for r in results)
+        
         fig = go.Figure()
         
-        # 真实值折线
+        # [V10.1] 如果启用概率分布，显示置信区间
+        if use_probabilistic and has_distributions:
+            # 提取置信区间数据
+            dist_years = [r['year'] for r in results if r.get('wealth_distribution')]
+            dist_means = [r.get('predicted_mean', r.get('predicted', 0)) for r in results if r.get('wealth_distribution')]
+            dist_lowers = [r.get('predicted_p25', 0) for r in results if r.get('wealth_distribution')]
+            dist_uppers = [r.get('predicted_p75', 0) for r in results if r.get('wealth_distribution')]
+            
+            # 1. 添加置信区间（阴影区域）
+            fig.add_trace(go.Scatter(
+                x=dist_years + dist_years[::-1],
+                y=dist_uppers + dist_lowers[::-1],
+                fill='toself',
+                fillcolor='rgba(255, 215, 0, 0.2)',
+                line=dict(color='rgba(255,255,255,0)'),
+                hoverinfo="skip",
+                showlegend=True,
+                name='预测置信区间 (25%-75%)'
+            ))
+            
+            # 2. 添加预测均值折线
+            fig.add_trace(go.Scatter(
+                x=dist_years,
+                y=dist_means,
+                mode='lines+markers',
+                name='AI预测值 (均值)',
+                line=dict(color='#FFD700', width=3, dash='dash', shape='spline'),
+                marker=dict(size=8, color='#FFD700'),
+                hovertemplate='%{x}年: 预测均值 %{y:.1f}<extra></extra>'
+            ))
+        else:
+            # 传统模式：单一预测值
+            fig.add_trace(go.Scatter(
+                x=years,
+                y=predicted_values,
+                mode='lines+markers',
+                name='AI预测值',
+                line=dict(color='#FFD700', width=3, dash='dash', shape='spline'),
+                marker=dict(size=8, color='#FFD700'),
+                hovertemplate='%{x}年: 预测值 %{y:.1f}<extra></extra>'
+            ))
+        
+        # 真实值折线（始终显示）
         fig.add_trace(go.Scatter(
             x=years,
             y=real_values,
             mode='lines+markers',
             name='真实值 (Ground Truth)',
-            line=dict(color='#00E5FF', width=3),
+            line=dict(color='#00E5FF', width=3, shape='spline'),
             marker=dict(size=8, color='#00E5FF'),
             hovertemplate='%{x}年: 真实值 %{y:.1f}<extra></extra>'
-        ))
-        
-        # 预测值折线
-        fig.add_trace(go.Scatter(
-            x=years,
-            y=predicted_values,
-            mode='lines+markers',
-            name='AI预测值',
-            line=dict(color='#FFD700', width=3, dash='dash'),
-            marker=dict(size=8, color='#FFD700'),
-            hovertemplate='%{x}年: 预测值 %{y:.1f}<extra></extra>'
         ))
         
         # 标注关键事件
@@ -298,6 +383,48 @@ def render():
         )
         
         st.plotly_chart(fig, use_container_width=True)
+        
+        # [V9.3 MCP] 事件锚点用户输入功能
+        st.markdown("---")
+        st.subheader("📝 添加实际事件 (MCP: 交互上下文)")
+        st.caption("💡 点击图表上的年份，或手动输入实际发生的财富事件，用于模型校准")
+        
+        input_col1, input_col2 = st.columns(2)
+        with input_col1:
+            input_year = st.number_input("年份", min_value=1900, max_value=2100, value=2024, step=1)
+            input_ganzhi = st.text_input("流年干支", value="", placeholder="如：甲子", help="可选，如果不填将自动计算")
+            input_dayun = st.text_input("大运干支", value="", placeholder="如：乙丑", help="可选")
+        
+        with input_col2:
+            input_real_value = st.number_input("实际财富值", min_value=-100.0, max_value=100.0, value=0.0, step=1.0, 
+                                             help="真实发生的财富变化值（-100 到 100）")
+            input_desc = st.text_area("事件描述", value="", placeholder="描述该年发生的财富事件", height=100)
+        
+        if st.button("💾 保存事件", type="primary"):
+            if input_desc:
+                try:
+                    # 通过 Controller 保存用户反馈
+                    success, message = controller.add_user_feedback(
+                        case_id=selected_case.id,
+                        year=input_year,
+                        ganzhi=input_ganzhi if input_ganzhi else None,
+                        dayun=input_dayun if input_dayun else None,
+                        real_magnitude=input_real_value,
+                        description=input_desc
+                    )
+                    if success:
+                        st.success(f"✅ {message}")
+                        st.info("💡 事件已保存，将用于模型校准。请重新验证以查看更新后的结果。")
+                        # 清除结果缓存，强制重新验证
+                        if results_key in st.session_state:
+                            del st.session_state[results_key]
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                except Exception as e:
+                    st.error(f"保存失败: {str(e)}")
+            else:
+                st.warning("⚠️ 请填写事件描述")
         
         # 详细分析流程
         st.markdown("---")

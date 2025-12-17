@@ -6,11 +6,19 @@ Plotly Chart rendering logic.
 """
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
+
+# [V10.1] 用于平滑曲线的插值
+try:
+    from scipy.interpolate import make_interp_spline
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
 
 
 class DestinyCharts:
     @staticmethod
-    def render_life_curve(df_traj, sim_year, handover_years):
+    def render_life_curve(df_traj, sim_year, handover_years, use_probabilistic=False, distributions_data=None):
         """
         Renders the Dynamic Trajectory Chart using Plotly.
         """

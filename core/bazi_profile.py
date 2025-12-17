@@ -1,5 +1,5 @@
 from lunar_python import Lunar, EightChar
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 
 class BaziProfile:
     """
@@ -113,75 +113,105 @@ class VirtualBaziProfile:
     [V6.0 Adapter] 虚拟八字档案 (The Mask)
     专门用于 QuantumLab 的旧测试用例 (Legacy Cases)。
     从四柱反推出生日期，然后委托给真正的 BaziProfile 计算大运。
+    
+    [V9.3 Optimization] 使用 BaziReverseCalculator 进行反推，支持自定义年份范围和精度
     """
     
-    # 天干地支表
-    GAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-    ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    
-    # 地支对应的月份 (寅月=1月立春后)
-    ZHI_TO_MONTH = {"寅": 1, "卯": 2, "辰": 3, "巳": 4, "午": 5, "未": 6,
-                    "申": 7, "酉": 8, "戌": 9, "亥": 10, "子": 11, "丑": 12}
-    
-    # 地支对应的时辰 (子时=23-1点)
-    ZHI_TO_HOUR = {"子": 0, "丑": 2, "寅": 4, "卯": 6, "辰": 8, "巳": 10,
-                   "午": 12, "未": 14, "申": 16, "酉": 18, "戌": 20, "亥": 22}
-    
-    def __init__(self, pillars: Dict[str, str], static_luck: str = "未知", day_master: str = None, gender: int = 1):
+    def __init__(
+        self,
+        pillars: Dict[str, str],
+        static_luck: str = "未知",
+        day_master: str = None,
+        gender: int = 1,
+        year_range: Tuple[int, int] = (1900, 2100),
+        precision: str = "medium",
+        consider_lichun: bool = True
+    ):
+        """
+        初始化虚拟八字档案
+        
+        Args:
+            pillars: 四柱字典
+            static_luck: 静态大运（如果反推失败）
+            day_master: 日主天干
+            gender: 性别（1=男, 0=女）
+            year_range: 年份搜索范围 (start_year, end_year)
+            precision: 精度模式 ('high', 'medium', 'low')
+            consider_lichun: 是否考虑立春边界
+        """
         self._pillars = pillars
         self._static_luck = static_luck
         self._day_master = day_master
         self.gender = gender
+        self.year_range = year_range
+        self.precision = precision
+        self.consider_lichun = consider_lichun
         
-        # 反推出生日期并创建真正的 BaziProfile
+        # 使用 BaziReverseCalculator 反推出生日期
+        self._reverse_calculator = None
         self._real_profile = self._create_real_profile()
     
     def _create_real_profile(self) -> Optional['BaziProfile']:
         """从四柱反推出生日期，创建真正的 BaziProfile"""
         try:
             from datetime import datetime
-            from lunar_python import Lunar, Solar
             
-            year_pillar = self._pillars.get('year', '')
-            month_pillar = self._pillars.get('month', '')
-            day_pillar = self._pillars.get('day', '')
-            hour_pillar = self._pillars.get('hour', '')
+            # 使用 BaziReverseCalculator 进行反推
+            if self._reverse_calculator is None:
+                from core.bazi_reverse_calculator import BaziReverseCalculator
+                self._reverse_calculator = BaziReverseCalculator(year_range=self.year_range)
             
-            if len(year_pillar) < 2 or len(month_pillar) < 2:
-                return None
+            result = self._reverse_calculator.reverse_calculate(
+                self._pillars,
+                precision=self.precision,
+                consider_lichun=self.consider_lichun
+            )
             
-            # 年柱反推年份 (假设是1920-2020之间)
-            year_gan = year_pillar[0]
-            year_zhi = year_pillar[1]
-            gan_idx = self.GAN.index(year_gan)
-            zhi_idx = self.ZHI.index(year_zhi)
+            if result and result.get('birth_date'):
+                birth_date = result['birth_date']
+                if isinstance(birth_date, datetime):
+                    return BaziProfile(birth_date, self.gender)
             
-            # 60 甲子循环
-            for base_year in range(1920, 2020):
-                if (base_year - 4) % 10 == gan_idx and (base_year - 4) % 12 == zhi_idx:
-                    birth_year = base_year
-                    break
-            else:
-                return None
-            
-            # 月柱反推月份
-            month_zhi = month_pillar[1]
-            birth_month = self.ZHI_TO_MONTH.get(month_zhi, 6)
-            # 调整为公历月份 (农历寅月约公历2-3月)
-            birth_month_solar = birth_month + 1 if birth_month <= 10 else birth_month - 10
-            
-            # 假设日期为15日 (月中)
-            birth_day = 15
-            
-            # 时柱反推时辰
-            hour_zhi = hour_pillar[1] if len(hour_pillar) > 1 else '午'
-            birth_hour = self.ZHI_TO_HOUR.get(hour_zhi, 12)
-            
-            # 创建真正的 BaziProfile
-            birth_date = datetime(birth_year, birth_month_solar, birth_day, birth_hour, 0)
-            return BaziProfile(birth_date, self.gender)
+            # 如果反推失败，尝试旧方法（向后兼容）
+            return self._create_real_profile_legacy()
             
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"反推出生日期失败: {e}")
+            return None
+    
+    def _create_real_profile_legacy(self) -> Optional['BaziProfile']:
+        """
+        旧版反推方法（向后兼容）
+        
+        使用 BaziReverseCalculator 的低精度模式作为后备方案
+        """
+        try:
+            from datetime import datetime
+            
+            # 使用 BaziReverseCalculator 的低精度模式
+            if self._reverse_calculator is None:
+                from core.bazi_reverse_calculator import BaziReverseCalculator
+                self._reverse_calculator = BaziReverseCalculator(year_range=self.year_range)
+            
+            result = self._reverse_calculator.reverse_calculate(
+                self._pillars,
+                precision='low',
+                consider_lichun=False
+            )
+            
+            if result and result.get('birth_date'):
+                birth_date = result['birth_date']
+                if isinstance(birth_date, datetime):
+                    return BaziProfile(birth_date, self.gender)
+            
+            return None
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"旧版反推方法失败: {e}")
             return None
 
     @property

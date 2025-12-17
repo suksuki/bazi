@@ -142,9 +142,32 @@ def _render_bazi_quick_test():
     if st.button("🚀 快速排盘 (Quick Calculate)", type="primary", disabled=not parsed['valid']):
         # Reverse calculate approximate date
         try:
-            approx_date = _reverse_calculate_date(
-                parsed['year'], parsed['month'], parsed['day'], parsed['hour']
-            )
+            # [V9.3] 使用 BaziReverseCalculator 替代旧函数
+            from core.bazi_reverse_calculator import BaziReverseCalculator
+            calculator = BaziReverseCalculator(year_range=(1924, 2043))
+            pillars = {
+                'year': year_pz,
+                'month': month_pz,
+                'day': day_pz,
+                'hour': hour_pz
+            }
+            result = calculator.reverse_calculate(pillars, precision='low', consider_lichun=False)
+            if result and result.get('birth_date'):
+                birth_date = result['birth_date']
+                # 转换为旧格式以保持兼容性
+                from datetime import datetime as dt_class
+                if isinstance(birth_date, dt_class):
+                    approx_date = {
+                        'date': birth_date.date(),
+                        'hour': birth_date.hour
+                    }
+                else:
+                    approx_date = {'date': birth_date, 'hour': 12}
+            else:
+                # 后备方案：使用旧函数
+                approx_date = _reverse_calculate_date(
+                    parsed['year'], parsed['month'], parsed['day'], parsed['hour']
+                )
             
             # Set session state with calculated values
             st.session_state['input_name'] = f"八字测试-{day_master}"
@@ -252,6 +275,13 @@ def _get_element_name(gan_char):
 
 def _reverse_calculate_date(year_pz, month_pz, day_pz, hour_pz):
     """
+    [DEPRECATED] 旧版反推函数，保留用于向后兼容
+    
+    建议使用 BaziReverseCalculator 替代：
+    from core.bazi_reverse_calculator import BaziReverseCalculator
+    calculator = BaziReverseCalculator(year_range=(1924, 2043))
+    result = calculator.reverse_calculate(pillars, precision='low')
+    
     Reverse calculate approximate birth date from Bazi pillars.
     This is a simplified version - uses a recent 60-year cycle.
     """

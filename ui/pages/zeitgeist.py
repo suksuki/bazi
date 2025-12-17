@@ -133,15 +133,55 @@ def generate_narrative_from_context(ctx: DestinyContext) -> str:
 
 # [V9.3 Feature] Time Detective: Reverse Engineer Date from Bazi
 import datetime
+from datetime import datetime as dt
 from lunar_python import Solar
 
 @st.cache_data(show_spinner=False) 
 def reverse_lookup_bazi(target_bazi, start_year=1950, end_year=2030):
     """
+    [V9.3 Optimization] 使用 BaziReverseCalculator 进行反推
+    
     Brute-force (optimized) reverse lookup of Bazi to Gregorian Date.
     target_bazi: [Y, M, D, H] (GanZhi strings)
     """
-    found_dates = []
+    try:
+        # 使用新的 BaziReverseCalculator
+        from core.bazi_reverse_calculator import BaziReverseCalculator
+        
+        pillars = {
+            'year': target_bazi[0],
+            'month': target_bazi[1],
+            'day': target_bazi[2],
+            'hour': target_bazi[3]
+        }
+        
+        calculator = BaziReverseCalculator(year_range=(start_year, end_year))
+        result = calculator.reverse_calculate(
+            pillars,
+            precision='high',
+            consider_lichun=True
+        )
+        
+        if result and result.get('birth_date'):
+            birth_date = result['birth_date']
+            if isinstance(birth_date, dt):
+                return f"{birth_date.year}-{birth_date.month}-{birth_date.day} {birth_date.hour}:00"
+        
+        # 如果新方法失败，回退到旧方法
+        return reverse_lookup_bazi_legacy(target_bazi, start_year, end_year)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"使用新反推方法失败，回退到旧方法: {e}")
+        # 回退到旧方法
+        return reverse_lookup_bazi_legacy(target_bazi, start_year, end_year)
+
+
+def reverse_lookup_bazi_legacy(target_bazi, start_year=1950, end_year=2030):
+    """
+    [Legacy] 旧版反推方法（向后兼容）
+    保留用于向后兼容，但建议使用 BaziReverseCalculator
+    """
     tg_y, tg_m, tg_d, tg_h = target_bazi[0], target_bazi[1], target_bazi[2], target_bazi[3]
     
     # Iterate roughly possible years. 60-year cycle helps but manual is safer for close range.

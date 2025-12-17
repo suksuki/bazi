@@ -258,6 +258,15 @@ class WealthCaseModel:
 - [ ] 使用 `logging` 而不是 `print()`
 - [ ] 没有裸露的 `except:` 语句
 
+### 测试检查（新功能必须）
+- [ ] **单元测试**: 所有新功能都有对应的单元测试
+- [ ] **集成测试**: 有集成测试验证完整业务流程
+- [ ] **回归测试**: 修复的 Bug 和历史案例有回归测试
+- [ ] **测试覆盖**: 测试覆盖率 ≥ 80%，关键路径 = 100%
+- [ ] **测试通过**: 所有测试用例通过，无失败或跳过
+- [ ] **测试文档**: 测试文件有清晰的文档说明
+- [ ] **测试性能**: 测试执行时间合理（单元测试 < 1秒，集成测试 < 10秒）
+
 ### 性能检查
 - [ ] 使用了适当的缓存机制
 - [ ] 延迟初始化（Lazy Loading）
@@ -548,6 +557,319 @@ class WealthCaseModel:
 - [ ] 设计文档已创建并包含架构设计
 - [ ] TODO List 已创建并包含所有任务
 - [ ] 文档已提交到版本控制系统
+
+## 🧪 测试要求 (Testing Requirements)
+
+### 强制要求：所有新功能必须包含测试
+
+**核心原则**: 每个新功能单元必须同时提供单元测试、集成测试和回归测试用例。
+
+### 1. 测试类型要求
+
+#### 1.1 单元测试 (Unit Tests)
+- **位置**: `tests/unit/` 或 `tests/test_<功能名>.py`
+- **覆盖范围**: 
+  - 所有公共方法
+  - 所有边界条件
+  - 所有错误处理路径
+- **命名规范**: `test_<功能名>_<具体功能>.py` 或 `Test<ClassName>` 类
+- **要求**:
+  - 每个功能方法至少有一个测试用例
+  - 测试用例必须独立，不依赖外部资源（使用 Mock）
+  - 测试覆盖率 ≥ 80%
+
+#### 1.2 集成测试 (Integration Tests)
+- **位置**: `tests/integration/` 或 `tests/test_<功能名>_integration.py`
+- **覆盖范围**:
+  - Controller 与 Model 的交互
+  - Controller 与 Engine 的交互
+  - 完整业务流程
+- **命名规范**: `test_<功能名>_integration.py` 或 `Test<ClassName>Integration`
+- **要求**:
+  - 测试真实的数据流
+  - 验证各层之间的接口契约
+  - 测试端到端场景
+
+#### 1.3 回归测试 (Regression Tests)
+- **位置**: `tests/test_<功能名>_regression.py` 或集成到现有回归测试套件
+- **覆盖范围**:
+  - 修复的 Bug 场景
+  - 历史案例验证
+  - 性能回归
+- **命名规范**: `test_<功能名>_regression.py` 或 `Test<ClassName>Regression`
+- **要求**:
+  - 确保修复的问题不再重现
+  - 验证历史案例的准确性
+  - 性能指标不退化
+
+### 2. 测试文件结构
+
+```
+tests/
+├── unit/                          # 单元测试
+│   ├── test_<功能名>.py          # 功能单元测试
+│   └── ...
+├── integration/                   # 集成测试
+│   ├── test_<功能名>_integration.py
+│   └── ...
+├── test_<功能名>_regression.py   # 回归测试
+└── conftest.py                    # pytest 配置和 fixtures
+```
+
+### 3. 测试代码规范
+
+#### 3.1 测试类结构
+```python
+import unittest
+from unittest.mock import Mock, patch
+
+class TestMyFeature(unittest.TestCase):
+    """测试我的功能"""
+    
+    def setUp(self):
+        """测试前准备"""
+        # 初始化测试数据
+        self.test_data = {...}
+    
+    def tearDown(self):
+        """测试后清理"""
+        # 清理资源
+        pass
+    
+    def test_basic_functionality(self):
+        """测试基本功能"""
+        # Arrange
+        input_data = self.test_data
+        
+        # Act
+        result = my_function(input_data)
+        
+        # Assert
+        self.assertIsNotNone(result)
+        self.assertEqual(result['status'], 'success')
+        print("✅ 基本功能测试通过")
+    
+    def test_edge_case(self):
+        """测试边界情况"""
+        # 测试空输入、None、边界值等
+        pass
+    
+    def test_error_handling(self):
+        """测试错误处理"""
+        with self.assertRaises(ValueError):
+            my_function(invalid_input)
+```
+
+#### 3.2 测试命名规范
+- 测试类: `Test<ClassName>` 或 `Test<FeatureName>`
+- 测试方法: `test_<功能描述>`，使用下划线分隔
+- 测试文件: `test_<功能名>.py`，使用下划线分隔
+
+#### 3.3 测试断言
+```python
+# ✅ 推荐：使用具体的断言方法
+self.assertEqual(actual, expected)
+self.assertIsNotNone(result)
+self.assertIn('key', result)
+self.assertTrue(condition)
+self.assertRaises(ValueError, function, args)
+
+# ❌ 避免：使用 assert 语句（pytest 除外）
+assert result == expected  # 不推荐在 unittest 中使用
+```
+
+### 4. 测试执行要求
+
+#### 4.1 测试必须通过
+- 所有测试用例必须通过才能提交代码
+- 不允许跳过测试（除非有明确理由）
+- 测试失败必须修复，不能注释掉
+
+#### 4.2 测试覆盖率
+- 单元测试覆盖率 ≥ 80%
+- 关键路径覆盖率 = 100%
+- 使用 `pytest-cov` 生成覆盖率报告
+
+#### 4.3 测试性能
+- 单元测试单个用例执行时间 < 1 秒
+- 集成测试单个用例执行时间 < 10 秒
+- 所有测试总执行时间 < 5 分钟
+
+### 5. 测试检查清单
+
+在提交代码前，必须确认：
+
+#### 单元测试检查
+- [ ] 所有新功能都有对应的单元测试
+- [ ] 测试覆盖所有公共方法
+- [ ] 测试覆盖边界条件和错误情况
+- [ ] 测试用例独立，不依赖外部资源
+- [ ] 使用 Mock 隔离外部依赖
+- [ ] 测试命名清晰，描述功能
+
+#### 集成测试检查
+- [ ] 有集成测试验证完整业务流程
+- [ ] 测试 Controller 与 Model 的交互
+- [ ] 测试 Controller 与 Engine 的交互
+- [ ] 测试端到端场景
+- [ ] 验证接口契约
+
+#### 回归测试检查
+- [ ] 修复的 Bug 有回归测试
+- [ ] 历史案例验证通过
+- [ ] 性能指标未退化
+- [ ] 相关回归测试已更新
+
+#### 测试执行检查
+- [ ] 所有测试用例通过
+- [ ] 测试覆盖率达标（≥ 80%）
+- [ ] 测试执行时间合理
+- [ ] 测试报告已生成
+
+### 6. 测试示例
+
+#### 示例 1: 新功能单元测试
+```python
+# tests/test_new_feature.py
+import unittest
+from core.processors.new_feature import NewFeatureProcessor
+
+class TestNewFeatureProcessor(unittest.TestCase):
+    """测试新功能处理器"""
+    
+    def setUp(self):
+        self.processor = NewFeatureProcessor()
+    
+    def test_process_basic(self):
+        """测试基本处理功能"""
+        result = self.processor.process({'input': 'test'})
+        self.assertIsNotNone(result)
+        self.assertIn('output', result)
+        print("✅ 基本处理功能测试通过")
+    
+    def test_process_edge_case(self):
+        """测试边界情况"""
+        result = self.processor.process({'input': ''})
+        # 验证边界情况处理
+        self.assertIsNotNone(result)
+    
+    def test_process_error_handling(self):
+        """测试错误处理"""
+        with self.assertRaises(ValueError):
+            self.processor.process(None)
+```
+
+#### 示例 2: 集成测试
+```python
+# tests/integration/test_new_feature_integration.py
+import unittest
+from controllers.new_feature_controller import NewFeatureController
+from core.models.new_feature_model import NewFeatureModel
+
+class TestNewFeatureIntegration(unittest.TestCase):
+    """测试新功能集成"""
+    
+    def setUp(self):
+        self.controller = NewFeatureController()
+        self.model = NewFeatureModel()
+    
+    def test_controller_model_integration(self):
+        """测试 Controller 与 Model 的集成"""
+        # 测试完整的数据流
+        result = self.controller.process_data({'input': 'test'})
+        self.assertIsNotNone(result)
+        # 验证数据已保存到 Model
+        saved_data = self.model.load_data('test_id')
+        self.assertIsNotNone(saved_data)
+        print("✅ Controller-Model 集成测试通过")
+```
+
+#### 示例 3: 回归测试
+```python
+# tests/test_new_feature_regression.py
+import unittest
+from core.processors.new_feature import NewFeatureProcessor
+
+class TestNewFeatureRegression(unittest.TestCase):
+    """测试新功能回归"""
+    
+    def test_bug_fix_001(self):
+        """回归测试：修复 Bug #001"""
+        processor = NewFeatureProcessor()
+        # 重现 Bug 场景
+        result = processor.process({'input': 'bug_scenario'})
+        # 验证 Bug 已修复
+        self.assertNotEqual(result['status'], 'error')
+        print("✅ Bug #001 回归测试通过")
+    
+    def test_historical_case(self):
+        """回归测试：历史案例验证"""
+        processor = NewFeatureProcessor()
+        # 使用历史案例数据
+        historical_data = load_historical_case('case_001')
+        result = processor.process(historical_data)
+        # 验证结果与历史一致
+        self.assertEqual(result['output'], historical_data['expected_output'])
+        print("✅ 历史案例验证通过")
+```
+
+### 7. 测试工具和框架
+
+#### 推荐工具
+- **单元测试框架**: `unittest` (Python 标准库) 或 `pytest`
+- **Mock 框架**: `unittest.mock` 或 `pytest-mock`
+- **覆盖率工具**: `pytest-cov` 或 `coverage.py`
+- **性能测试**: `pytest-benchmark`
+
+#### 运行测试
+```bash
+# 运行所有测试
+pytest tests/ -v
+
+# 运行特定测试文件
+pytest tests/test_new_feature.py -v
+
+# 运行并生成覆盖率报告
+pytest tests/ --cov=core --cov=controllers --cov-report=html
+
+# 运行集成测试
+pytest tests/integration/ -v
+
+# 运行回归测试
+pytest tests/ -k regression -v
+```
+
+### 8. 测试文档要求
+
+每个测试文件必须包含：
+- 文件头注释说明测试目的
+- 测试类和方法都有文档字符串
+- 复杂测试用例有注释说明测试意图
+
+```python
+"""
+新功能测试套件
+================
+测试新功能处理器的所有功能
+
+测试覆盖:
+1. 基本功能
+2. 边界情况
+3. 错误处理
+4. 性能测试
+"""
+
+import unittest
+...
+```
+
+---
+
+**重要提醒**: 
+- ❌ **禁止**在没有测试的情况下提交新功能代码
+- ❌ **禁止**跳过或注释掉失败的测试
+- ✅ **必须**在实现功能的同时编写测试
+- ✅ **必须**确保所有测试通过才能提交
 
 ## 🧮 八字算法规范 (Bazi Algorithm Standards)
 

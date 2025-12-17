@@ -1,0 +1,72 @@
+{
+  "case_id": "JASON_B_T1964_0910",
+  "case_name": "Jason B (身弱用印)",
+  "bazi": [
+    "甲辰",
+    "癸酉",
+    "己亥",
+    "戊辰"
+  ],
+  "day_master": "己",
+  "analysis_results": [
+    {
+      "year": 1999,
+      "year_pillar": "己卯",
+      "luck_pillar": "丁丑",
+      "real_wealth": 100.0,
+      "strength_score": 90.9752297504273,
+      "strength_normalized": 0.909752297504273,
+      "strength_label": "Strong",
+      "seal_count": 0,
+      "year_seal": false,
+      "luck_seal": true,
+      "predicted_wealth": 16.444690824868378,
+      "error": 83.55530917513163,
+      "details": [
+        "流年比劫帮身",
+        "基础财富能量(13.7)",
+        "💪 身旺任财",
+        "🌟 冲提纲(身强+印星通关，转为机会)(卯冲酉)"
+      ]
+    },
+    {
+      "year": 2007,
+      "year_pillar": "丁亥",
+      "luck_pillar": "戊寅",
+      "real_wealth": 70.0,
+      "strength_score": 14.144507636609186,
+      "strength_normalized": 0.14144507636609185,
+      "strength_label": "Weak",
+      "seal_count": 0,
+      "year_seal": true,
+      "luck_seal": false,
+      "predicted_wealth": 66.5,
+      "error": 3.5,
+      "details": [
+        "地支坐财(亥)",
+        "流年印星帮身",
+        "🌟 印星特权加成(+30.0)",
+        "✅ 身弱得助，可担财"
+      ]
+    },
+    {
+      "year": 2014,
+      "year_pillar": "甲午",
+      "luck_pillar": "己卯",
+      "real_wealth": 100.0,
+      "strength_score": 40.37763512230709,
+      "strength_normalized": 0.40377635122307093,
+      "strength_label": "Balanced",
+      "seal_count": 0,
+      "year_seal": true,
+      "luck_seal": false,
+      "predicted_wealth": 27.0,
+      "error": 73.0,
+      "details": [
+        "流年午为日主临官(强根)",
+        "✅ 身弱得助，可担财",
+        "⚠️ 七杀攻身(有通关，影响减轻)(甲克己)[非线性模型: -1.3]"
+      ]
+    }
+  ]
+}

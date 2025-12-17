@@ -1,0 +1,11 @@
+{
+  "target_year": 1999,
+  "target_real_value": 50.0,
+  "optimal_parameters": {
+    "strength_beta": 6.025648712816734,
+    "clash_k": 6.799492078264635,
+    "trine_boost": 0.49119237111150216,
+    "tunneling_factor": 0.08986395420634384
+  },
+  "final_error": 80.0
+}

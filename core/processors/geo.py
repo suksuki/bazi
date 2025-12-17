@@ -34,6 +34,11 @@ class GeoProcessor(BaseProcessor):
             
         Returns:
             Dict[str, float]: Multipliers for elements {'water': 1.1, ...}
+            Also includes:
+            - desc: Description
+            - temperature_factor: 温度系数（寒暖）
+            - humidity_factor: 湿度系数（燥湿）
+            - environment_bias: 环境修正偏向描述
         """
         cities = self.geo_data.get("cities", {})
         algo_params = self.geo_data.get("algorithm", {})
@@ -44,17 +49,69 @@ class GeoProcessor(BaseProcessor):
         if isinstance(input_location, str):
             city_info = cities.get(input_location)
             if city_info:
-                return city_info.get("modifiers", {})
+                modifiers = city_info.get("modifiers", {})
+                # [V9.3 MCP] 添加环境信息
+                modifiers['desc'] = city_info.get("desc", f"City: {input_location}")
+                modifiers['temperature_factor'] = city_info.get("temperature_factor", 1.0)
+                modifiers['humidity_factor'] = city_info.get("humidity_factor", 1.0)
+                modifiers['environment_bias'] = self._get_environment_bias(modifiers)
+                return modifiers
                 
             # If city not found, return neutral (or implement geocoding later)
             # For now, if city unknown, return default
-            return {"desc": "Unknown City - Neutral"}
+            return {
+                "desc": "Unknown City - Neutral",
+                "temperature_factor": 1.0,
+                "humidity_factor": 1.0,
+                "environment_bias": "未应用地理修正"
+            }
             
         # 2. Option B: Latitude Calculation
         if isinstance(input_location, (int, float)):
-            return self._calculate_by_lat(float(input_location), algo_params)
+            result = self._calculate_by_lat(float(input_location), algo_params)
+            # [V9.3 MCP] 添加环境信息
+            result['temperature_factor'] = self._estimate_temperature_factor(float(input_location))
+            result['humidity_factor'] = 1.0  # 默认值，可根据需要扩展
+            result['environment_bias'] = self._get_environment_bias(result)
+            return result
             
         return {}
+    
+    def _estimate_temperature_factor(self, latitude: float) -> float:
+        """估算温度系数（基于纬度）"""
+        abs_lat = abs(latitude)
+        # 纬度越高，温度越低（水能量增强，火能量减弱）
+        # 纬度越低，温度越高（火能量增强，水能量减弱）
+        if abs_lat < 20:  # 低纬度（热带）
+            return 1.2  # 热辐射极值
+        elif abs_lat < 40:  # 中纬度（温带）
+            return 1.0  # 中性
+        else:  # 高纬度（寒带）
+            return 0.8  # 寒冷
+    
+    def _get_environment_bias(self, modifiers: Dict[str, float]) -> str:
+        """生成环境修正偏向描述"""
+        fire_mod = modifiers.get('fire', 1.0)
+        water_mod = modifiers.get('water', 1.0)
+        wood_mod = modifiers.get('wood', 1.0)
+        metal_mod = modifiers.get('metal', 1.0)
+        earth_mod = modifiers.get('earth', 1.0)
+        
+        biases = []
+        if fire_mod > 1.1:
+            biases.append(f"火能量增强({fire_mod:.2f}x)")
+        if water_mod > 1.1:
+            biases.append(f"水能量增强({water_mod:.2f}x)")
+        if wood_mod > 1.1:
+            biases.append(f"木能量增强({wood_mod:.2f}x)")
+        if metal_mod > 1.1:
+            biases.append(f"金能量增强({metal_mod:.2f}x)")
+        if earth_mod > 1.1:
+            biases.append(f"土能量增强({earth_mod:.2f}x)")
+        
+        if not biases:
+            return "环境修正偏向：中性（无明显偏向）"
+        return f"环境修正偏向：{', '.join(biases)}"
         
     def _calculate_by_lat(self, lat: float, params: dict) -> dict:
         """

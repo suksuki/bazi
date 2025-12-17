@@ -23,6 +23,10 @@ from copy import deepcopy
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
 from core.processors.base import BaseProcessor
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+from core.nonlinear_activation import NonlinearActivation
+from core.bayesian_inference import BayesianInference
+from core.gat_attention import GATAdjacencyBuilder
+from core.transformer_temporal import TemporalTransformer, MultiScaleTemporalFusion
 
 # [V52.0] 十二长生表 (12 Life Stages Table)
 # 定义天干在各地支的长生状态
@@ -157,6 +161,13 @@ class GraphNetworkEngine:
         
         # 物理处理器（用于计算初始能量）
         self.physics_processor = PhysicsProcessor()
+        
+        # [V10.0] GAT 邻接矩阵构建器（可选）
+        self.use_gat = config.get('use_gat', False)  # 默认使用传统固定矩阵
+        if self.use_gat:
+            self.gat_builder = GATAdjacencyBuilder(config)
+        else:
+            self.gat_builder = None
         
         # 元素映射
         self.STEM_ELEMENTS = {
@@ -732,8 +743,101 @@ class GraphNetworkEngine:
         # [V55.0] 添加流年的引动逻辑（动态触发）
         self._add_liunian_trigger_links(A)
         
+        # [V10.0] 如果启用 GAT，使用动态注意力机制替代固定矩阵
+        if self.use_gat and self.gat_builder is not None:
+            # 构建关系类型矩阵
+            relation_types = self._build_relation_types_matrix()
+            
+            # 获取节点能量向量
+            node_energies = self.H0.reshape(-1, 1) if self.H0 is not None else np.ones((N, 1))
+            
+            # 使用 GAT 构建动态邻接矩阵
+            A_dynamic = self.gat_builder.build_dynamic_adjacency_matrix(
+                nodes=self.nodes,
+                node_energies=node_energies,
+                relation_types=relation_types,
+                base_adjacency=A  # 使用固定矩阵作为先验知识
+            )
+            
+            # 混合固定矩阵和动态矩阵（可配置混合比例）
+            gat_mix_ratio = self.config.get('gat', {}).get('gat_mix_ratio', 0.5)  # 默认 50% 动态，50% 固定
+            A = (1 - gat_mix_ratio) * A + gat_mix_ratio * A_dynamic
+        
         self.adjacency_matrix = A
         return A
+    
+    def _build_relation_types_matrix(self) -> np.ndarray:
+        """
+        [V10.0] 构建关系类型矩阵
+        
+        用于 GAT 注意力机制，标识节点间的关系类型。
+        
+        Returns:
+            关系类型矩阵 [N x N]:
+            - 1: 生 (Generation)
+            - -1: 克 (Control)
+            - 2: 合 (Combination)
+            - -2: 冲 (Clash)
+            - 0: 无关系
+        """
+        N = len(self.nodes)
+        relation_types = np.zeros((N, N))
+        
+        from core.processors.physics import GENERATION, CONTROL
+        
+        # 地支冲关系
+        clashes = {'子': '午', '午': '子', '寅': '申', '申': '寅', '卯': '酉', '酉': '卯',
+                   '辰': '戌', '戌': '辰', '丑': '未', '未': '丑', '巳': '亥', '亥': '巳'}
+        
+        # 天干五合
+        stem_combinations = {
+            '甲': '己', '己': '甲',
+            '乙': '庚', '庚': '乙',
+            '丙': '辛', '辛': '丙',
+            '丁': '壬', '壬': '丁',
+            '戊': '癸', '癸': '戊'
+        }
+        
+        # 地支六合
+        branch_combinations = {
+            '子': '丑', '丑': '子',
+            '寅': '亥', '亥': '寅',
+            '卯': '戌', '戌': '卯',
+            '辰': '酉', '酉': '辰',
+            '午': '未', '未': '午',
+            '申': '巳', '巳': '申'
+        }
+        
+        for i in range(N):
+            for j in range(N):
+                if i == j:
+                    continue
+                
+                node_i = self.nodes[i]
+                node_j = self.nodes[j]
+                
+                # 1. 检查生克关系
+                if GENERATION.get(node_j.element) == node_i.element:
+                    relation_types[i, j] = 1  # 生
+                elif CONTROL.get(node_j.element) == node_i.element:
+                    relation_types[i, j] = -1  # 克
+                
+                # 2. 检查天干五合
+                if (node_i.node_type == 'stem' and node_j.node_type == 'stem' and
+                    stem_combinations.get(node_i.char) == node_j.char):
+                    relation_types[i, j] = 2  # 合
+                
+                # 3. 检查地支六合
+                if (node_i.node_type == 'branch' and node_j.node_type == 'branch' and
+                    branch_combinations.get(node_i.char) == node_j.char):
+                    relation_types[i, j] = 2  # 合
+                
+                # 4. 检查冲关系
+                if (node_i.node_type == 'branch' and node_j.node_type == 'branch' and
+                    clashes.get(node_i.char) == node_j.char):
+                    relation_types[i, j] = -2  # 冲
+        
+        return relation_types
     
     def _get_generation_weight(self, source_element: str, target_element: str,
                                flow_config: Dict, source_char: str = None,
@@ -1358,24 +1462,51 @@ class GraphNetworkEngine:
         else:
             net_ratio = 1.0
         
+        # [V10.0] 核心分析师建议：格局极性锁定
+        # 禁用净力抵消对极弱格局的干预
+        # 如果 strength_normalized < 0.45 且日主根基虚脱，强制锁定为 Weak 或 Extreme_Weak
+        normalized_score_before_override = strength_score / 100.0
+        is_extreme_weak_candidate = normalized_score_before_override < 0.45
+        
         # 如果净力差小于 15%（净力差小于 15%），强制判定为动态平衡
         net_force_threshold = 0.15  # 15% 容差
         if net_ratio < net_force_threshold:
-            # 推力与拉力接近平衡，强制判定为 Balanced
-            # 同时修正分数：向 0.5 (Balanced) 拉拢
-            # total_strength = 0.5 + (total_strength - 0.5) * 0.5 (衰减偏离度)
-            normalized_score = strength_score / 100.0  # 归一化到 0-1
-            balanced_score = 0.5 + (normalized_score - 0.5) * 0.5  # 衰减偏离度
-            strength_score = balanced_score * 100.0  # 转回 0-100
-            strength_label = "Balanced"
-            net_force_override = True
+            # [V10.0] 格局极性锁定：极弱格局不受净力抵消机制影响
+            if is_extreme_weak_candidate:
+                # 极弱格局：保持 Weak 标签，不应用净力抵消
+                # 但可以轻微修正分数（不超过阈值）
+                if strength_label == "Weak":
+                    # 保持 Weak，不强制改为 Balanced
+                    net_force_override = False
+                else:
+                    # 如果原本是 Balanced，但归一化值 < 0.45，强制改为 Weak
+                    strength_label = "Weak"
+                    net_force_override = False
+            else:
+                # 非极弱格局：正常应用净力抵消机制
+                # 推力与拉力接近平衡，强制判定为 Balanced
+                # 同时修正分数：向 0.5 (Balanced) 拉拢
+                normalized_score = strength_score / 100.0  # 归一化到 0-1
+                balanced_score = 0.5 + (normalized_score - 0.5) * 0.5  # 衰减偏离度
+                strength_score = balanced_score * 100.0  # 转回 0-100
+                strength_label = "Balanced"
+                net_force_override = True
         else:
             net_force_override = False
+        
+        # [V10.0] 极弱格局最终确认：如果归一化值 < 0.45，强制为 Weak
+        if normalized_score_before_override < 0.45 and strength_label != "Weak":
+            strength_label = "Weak"
         
         # [V40.0] 特殊格局检测：专旺格/从旺格
         special_pattern = self._detect_special_pattern(dm_element, strength_score)
         if special_pattern:
             strength_label = special_pattern  # 覆盖为 "Special_Strong"
+        
+        # [V9.3 MCP] 计算格局不确定性
+        uncertainty = self._calculate_pattern_uncertainty(
+            strength_score, strength_label, self.bazi if hasattr(self, 'bazi') else [], dm_element, special_pattern
+        )
         
         return {
             'strength_score': strength_score,
@@ -1391,8 +1522,89 @@ class GraphNetworkEngine:
                 'total_pull': total_pull,
                 'balance_ratio': net_force_balance,
                 'override': net_force_override
-            }
+            },
+            # [V9.3 MCP] 格局不确定性
+            'uncertainty': self._calculate_pattern_uncertainty(
+                strength_score, strength_label, self.bazi if hasattr(self, 'bazi') else [], dm_element, special_pattern
+            )
         }
+    
+    def _calculate_pattern_uncertainty(self, strength_score: float, strength_label: str, 
+                                       bazi: List[str], dm_element: str, 
+                                       special_pattern: Optional[str]) -> Dict[str, Any]:
+        """
+        [V9.3 MCP] 计算格局不确定性
+        
+        针对极弱格局或多冲格局，计算转化为从格的概率和预测结果的波动范围。
+        
+        Args:
+            strength_score: 身强分数 (0-100)
+            strength_label: 身强标签
+            bazi: 八字列表
+            dm_element: 日主元素
+            special_pattern: 特殊格局（如果有）
+            
+        Returns:
+            Dict containing:
+            - has_uncertainty: 是否有不确定性
+            - pattern_type: 格局类型
+            - follower_probability: 转化为从格的概率 (0-1)
+            - volatility_range: 预测结果波动范围
+            - warning_message: 警告消息
+        """
+        uncertainty = {
+            'has_uncertainty': False,
+            'pattern_type': 'Normal',
+            'follower_probability': 0.0,
+            'volatility_range': 0.0,
+            'warning_message': ''
+        }
+        
+        # 检查极弱格局
+        is_extreme_weak = strength_score < 30.0 and strength_label in ['Weak', 'Very_Weak']
+        
+        # 检查多冲格局（计算冲的数量）
+        clash_count = 0
+        clashes = {'子': '午', '午': '子', '寅': '申', '申': '寅', '卯': '酉', '酉': '卯',
+                   '辰': '戌', '戌': '辰', '丑': '未', '未': '丑'}
+        if bazi and len(bazi) >= 2:
+            branches = [p[1] for p in bazi if len(p) >= 2]
+            clash_pairs = set()
+            for i, b1 in enumerate(branches):
+                for j, b2 in enumerate(branches):
+                    if i != j and clashes.get(b1) == b2:
+                        pair = tuple(sorted([b1, b2]))
+                        clash_pairs.add(pair)
+            clash_count = len(clash_pairs)
+        
+        is_multi_clash = clash_count >= 2
+        
+        # 计算不确定性
+        if is_extreme_weak:
+            uncertainty['has_uncertainty'] = True
+            uncertainty['pattern_type'] = 'Extreme_Weak'
+            # 极弱格局：根据强度分数计算转化为从格的概率
+            # 分数越低，转化概率越高
+            uncertainty['follower_probability'] = max(0.0, min(1.0, (30.0 - strength_score) / 30.0 * 0.5))
+            uncertainty['volatility_range'] = 40.0  # 预测结果可能波动 ±40分
+            uncertainty['warning_message'] = f"⚠️ **极弱格局警告**: 身强分数 {strength_score:.1f}，有 {uncertainty['follower_probability']*100:.0f}% 概率转化为从格，预测结果存在较大波动（±{uncertainty['volatility_range']:.0f}分）。"
+        
+        elif is_multi_clash:
+            uncertainty['has_uncertainty'] = True
+            uncertainty['pattern_type'] = 'Multi_Clash'
+            # 多冲格局：冲越多，不确定性越高
+            uncertainty['follower_probability'] = min(0.4, clash_count * 0.15)
+            uncertainty['volatility_range'] = clash_count * 15.0  # 每个冲增加15分波动
+            uncertainty['warning_message'] = f"⚠️ **多冲格局警告**: 检测到 {clash_count} 对相冲，格局不稳定，预测结果存在波动（±{uncertainty['volatility_range']:.0f}分）。"
+        
+        elif special_pattern == 'Special_Follow':
+            uncertainty['has_uncertainty'] = True
+            uncertainty['pattern_type'] = 'Follower_Grid'
+            uncertainty['follower_probability'] = 0.8  # 已是从格，但可能转化回正常格局
+            uncertainty['volatility_range'] = 30.0
+            uncertainty['warning_message'] = f"ℹ️ **从格格局**: 已识别为从格，预测结果相对稳定，但需注意流年大运变化可能导致格局转化。"
+        
+        return uncertainty
     
     def _calculate_net_force(self, dm_element: str, resource_element: Optional[str]) -> Dict[str, float]:
         """
@@ -2617,9 +2829,12 @@ class GraphNetworkEngine:
             return "Weak"
     
     def simulate_timeline(self, bazi: List[str], day_master: str, gender: str,
-                         start_year: int, duration: int = 10) -> List[Dict[str, Any]]:
+                         start_year: int, duration: int = 10,
+                         use_transformer: bool = False) -> List[Dict[str, Any]]:
         """
         [V55.0] 时间线推演：批量推演未来 N 年的运势曲线
+        
+        [V10.0] 新增 Transformer 时序建模支持
         
         Args:
             bazi: 八字列表
@@ -2627,15 +2842,18 @@ class GraphNetworkEngine:
             gender: 性别（用于计算大运）
             start_year: 起始年份
             duration: 推演年数（默认 10 年）
+            use_transformer: 是否使用 Transformer 时序建模（默认 False）
         
         Returns:
             包含每年运势数据的列表
         """
         timeline = []
         
-        # 计算大运（简化：假设每 10 年换一次大运）
-        # 这里需要根据实际的大运计算逻辑来完善
-        current_dayun = None  # 需要实现大运计算逻辑
+        # 计算大运（需要 BaziProfile）
+        # 注意：simulate_timeline 需要出生日期才能准确计算大运
+        # 这里简化处理，如果没有提供出生日期，则使用近似方法
+        profile = None
+        # 如果需要准确的大运计算，应该在调用时提供 BaziProfile
         
         for year_offset in range(duration):
             current_year = start_year + year_offset
@@ -2650,6 +2868,11 @@ class GraphNetworkEngine:
             year_branch = zhi_list[zhi_index]
             year_pillar = year_stem + year_branch
             
+            # 计算大运
+            current_dayun = None
+            if profile:
+                current_dayun = profile.get_luck_pillar_at(current_year)
+            
             # 分析该年的运势
             result = self.analyze(
                 bazi=bazi,
@@ -2658,15 +2881,41 @@ class GraphNetworkEngine:
                 year_pillar=year_pillar
             )
             
+            wealth_result = self.calculate_wealth_index(
+                bazi=bazi,
+                day_master=day_master,
+                gender=gender,
+                luck_pillar=current_dayun,
+                year_pillar=year_pillar
+            )
+            
             timeline.append({
                 'year': current_year,
                 'year_pillar': year_pillar,
-                'dayun': current_dayun,
+                'luck_pillar': current_dayun,
                 'strength_score': result.get('strength_score', 0.0),
-                'dynamic_score': result.get('dynamic_score', 0.0),
                 'strength_label': result.get('strength_label', 'Unknown'),
-                'dynamic_label': result.get('dynamic_label', 'Unknown')
+                'wealth_index': wealth_result.get('wealth_index', 0.0),
+                'confidence_interval': wealth_result.get('confidence_interval', {}),
+                'details': wealth_result.get('details', [])
             })
+        
+        # [V10.0] 如果启用 Transformer，使用时序建模优化结果
+        if use_transformer and len(timeline) >= 3:
+            transformer_config = self.config.get('transformer', {})
+            transformer = TemporalTransformer(transformer_config)
+            
+            # 使用 Transformer 捕捉长程依赖
+            encoded_features, _ = transformer.forward(timeline)
+            
+            # 基于 Transformer 特征调整结果（简化版）
+            # 实际应该使用更复杂的后处理
+            for i, item in enumerate(timeline):
+                if i < len(encoded_features):
+                    # 使用 Transformer 特征微调（简化版）
+                    # 实际应该使用更复杂的融合方法
+                    # 这里暂时不做调整，保持原结果
+                    pass
         
         return timeline
     
@@ -2975,10 +3224,17 @@ class GraphNetworkEngine:
                 luck_pillar = None
         
         # 1. 基础物理计算
-        result = self.analyze(bazi, day_master, gender, luck_pillar, year_pillar)
+        # [V10.0] 强制上下文统一：使用 analyze() 的结果，确保旺衰判定与财富计算一致
+        result = self.analyze(bazi, day_master, luck_pillar=luck_pillar, year_pillar=year_pillar)
         strength_score = result.get('strength_score', 50.0)  # 0-100
         strength_normalized = strength_score / 100.0  # 归一化到 0-1
         strength_label = result.get('strength_label', 'Balanced')
+        
+        # [V10.0] 调试日志：记录旺衰判定结果
+        if strength_normalized < 0.45 and strength_label == 'Strong':
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[V10.0] 旺衰判定不一致: strength_score={strength_score}, strength_normalized={strength_normalized}, strength_label={strength_label}")
         
         # 2. 基础定义
         if not year_pillar or len(year_pillar) < 2:
@@ -2998,9 +3254,10 @@ class GraphNetworkEngine:
         dm_element = self.STEM_ELEMENTS.get(day_master, 'wood')
         dm_idx = elem_map.get(dm_element, 0)
         
-        # 我克为财，我生为食伤
+        # 我克为财，我生为食伤，克我为官
         wealth_idx = (dm_idx + 2) % 5
         output_idx = (dm_idx + 1) % 5
+        officer_idx = (dm_idx + 3) % 5  # [V61.2] 官杀索引
         
         # 获取流年五行
         stem_elem = self._get_element_str(year_stem)
@@ -3015,9 +3272,29 @@ class GraphNetworkEngine:
             details.append(f"天干透财({year_stem})")
         
         # A2. 地支食伤生财 (Multiplier - 2002修正)
+        # [V10.0] 显式激活"食伤生财"通道，增加 opportunity_bonus
         if branch_idx == output_idx:
-            wealth_energy += 30.0 * 1.5  # 提升权重
-            details.append(f"食伤生财({year_branch})")
+            base_output_wealth = 30.0 * 1.5  # 基础权重
+            # [V10.0] 食伤生财通道：增加 opportunity_bonus
+            generation_efficiency = self.config.get('flow', {}).get('generationEfficiency', 1.2)
+            opportunity_bonus = 15.0 * generation_efficiency  # 机会加成
+            
+            # [V10.0] 核心分析师建议：泄气惩罚
+            # 针对极弱格局，将"食伤生财"的opportunity_bonus反转为exhaustion_penalty
+            if strength_normalized < 0.3:
+                # 极弱格局：食伤是"泄气"而非"生财"
+                exhaustion_penalty = opportunity_bonus * 2.0  # 泄气惩罚加倍
+                wealth_energy += base_output_wealth - exhaustion_penalty  # 减去泄气惩罚
+                details.append(f"食伤生财({year_branch})[基础: {base_output_wealth:.1f}, 泄气惩罚: -{exhaustion_penalty:.1f}]")
+            elif strength_normalized < 0.45:
+                # 身弱格局：食伤部分泄气
+                exhaustion_penalty = opportunity_bonus * 0.5  # 泄气惩罚减半
+                wealth_energy += base_output_wealth + (opportunity_bonus - exhaustion_penalty)  # 部分抵消
+                details.append(f"食伤生财({year_branch})[基础: {base_output_wealth:.1f}, 机会加成: {opportunity_bonus:.1f}, 泄气惩罚: -{exhaustion_penalty:.1f}]")
+            else:
+                # 身强格局：正常食伤生财
+                wealth_energy += base_output_wealth + opportunity_bonus
+                details.append(f"食伤生财({year_branch})[基础: {base_output_wealth:.1f}, 机会加成: {opportunity_bonus:.1f}]")
         
         # A3. 地支坐财
         if branch_idx == wealth_idx:
@@ -3030,11 +3307,20 @@ class GraphNetworkEngine:
         vault_elements = {'辰': 'water', '戌': 'fire', '丑': 'metal', '未': 'wood'}
         clashes = {'子': '午', '午': '子', '寅': '申', '申': '寅', '卯': '酉', '酉': '卯',
                    '辰': '戌', '戌': '辰', '丑': '未', '未': '丑'}
+        # [V61.0] 六合关系：用于检测"合开财库"
+        combinations = {
+            '子': '丑', '丑': '子',  # 子丑合
+            '寅': '亥', '亥': '寅',  # 寅亥合
+            '卯': '戌', '戌': '卯',  # 卯戌合
+            '辰': '酉', '酉': '辰',  # 辰酉合
+            '午': '未', '未': '午',  # 午未合
+            '申': '巳', '巳': '申',  # 申巳合
+        }
         
         treasury_opened = False  # [V56.2] 标记是否开库
         treasury_collapsed = False  # [V60.0] 标记是否库塌
         
-        # 检查是否冲开了原局的财库
+        # B1. 检查是否冲开了原局的财库
         for pillar in bazi:
             if len(pillar) < 2:
                 continue
@@ -3043,20 +3329,168 @@ class GraphNetworkEngine:
                 # [V59.1] 检查这个库是否是财库（库中存储的元素是否是日主的财星）
                 vault_element = vault_elements.get(p_branch)
                 if vault_element and elem_map.get(vault_element) == wealth_idx:
-                    # [V60.0] 修复：区分开库(身强)和库塌(身弱)
-                    if strength_normalized > 0.5:
-                        # 身强：开库 = 财富爆发
-                        treasury_bonus = 100.0
-                        wealth_energy += treasury_bonus
-                        details.append(f"🏆 冲开财库(财富爆发)({year_branch}冲{p_branch})")
+                    # [V10.0] 使用非线性模型替代硬编码 if/else
+                    # 检测三刑效应
+                    has_trine = False
+                    trine_completeness = 0.0
+                    if p_branch == '丑' and year_branch == '未':
+                        # 检查是否有戌（丑未戌三刑）
+                        for p in bazi:
+                            if len(p) >= 2 and p[1] == '戌':
+                                has_trine = True
+                                trine_completeness = 1.0
+                                break
+                    elif p_branch == '未' and year_branch == '丑':
+                        # 检查是否有戌（丑未戌三刑）
+                        for p in bazi:
+                            if len(p) >= 2 and p[1] == '戌':
+                                has_trine = True
+                                trine_completeness = 1.0
+                                break
+                    
+                    # 使用非线性模型计算财库能量
+                    clash_intensity = 1.0  # 冲的强度
+                    vault_energy, vault_details = NonlinearActivation.calculate_vault_energy_nonlinear(
+                        strength_normalized=strength_normalized,
+                        clash_type='冲',
+                        clash_intensity=clash_intensity,
+                        has_trine=has_trine,
+                        trine_completeness=trine_completeness,
+                        base_bonus=100.0,
+                        base_penalty=-120.0,
+                        config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    )
+                    
+                    wealth_energy += vault_energy
+                    if vault_energy > 0:
+                        details.append(f"🏆 冲开财库(财富爆发)({year_branch}冲{p_branch})[非线性模型: {vault_energy:.1f}]")
                         treasury_opened = True
                     else:
-                        # 身弱：库塌 = 财富损失
-                        treasury_penalty = -120.0  # [V60.1] 增强库塌惩罚
-                        wealth_energy += treasury_penalty
-                        details.append(f"💥 财库坍塌(结构崩塌)({year_branch}冲{p_branch})")
+                        details.append(f"💥 财库坍塌(结构崩塌)({year_branch}冲{p_branch})[非线性模型: {vault_energy:.1f}]")
                         treasury_collapsed = True
                     break
+        
+        # B1.5. [V61.0] 检查是否合开了原局的财库或官库（如寅合未）
+        # [V61.3] 扩展：检查流年地支和大运地支是否都能触发合开库
+        if not treasury_opened and not treasury_collapsed:
+            for pillar in bazi:
+                if len(pillar) < 2:
+                    continue
+                p_branch = pillar[1]
+                # 检查流年地支是否与原局库"合"（不能是相同地支）
+                year_combines_vault = (p_branch in vaults and year_branch != p_branch and combinations.get(year_branch) == p_branch)
+                # [V61.3] 也检查大运地支是否与原局库"合"（大运和流年共同作用，不能是相同地支）
+                luck_combines_vault = False
+                if luck_pillar and len(luck_pillar) >= 2:
+                    luck_branch = luck_pillar[1]
+                    luck_combines_vault = (p_branch in vaults and luck_branch != p_branch and combinations.get(luck_branch) == p_branch)
+                
+                if year_combines_vault or luck_combines_vault:
+                    vault_element = vault_elements.get(p_branch)
+                    is_wealth_vault = (vault_element and elem_map.get(vault_element) == wealth_idx)
+                    is_officer_vault = (vault_element and elem_map.get(vault_element) == officer_idx)
+                    
+                    # [V61.3] 确定是流年还是大运触发的合
+                    if year_combines_vault:
+                        trigger_branch = year_branch
+                        trigger_source = "流年"
+                    elif luck_combines_vault and luck_pillar and len(luck_pillar) >= 2:
+                        trigger_branch = luck_pillar[1]
+                        trigger_source = "大运"
+                    else:
+                        trigger_branch = year_branch
+                        trigger_source = "流年"
+                    
+                    # [V61.2] 检查财库或官库
+                    if is_wealth_vault:
+                        # [V10.0] 使用非线性模型替代硬编码 if/else
+                        clash_intensity = 0.8  # 合的强度略低于冲
+                        vault_energy, vault_details = NonlinearActivation.calculate_vault_energy_nonlinear(
+                            strength_normalized=strength_normalized,
+                            clash_type='合',
+                            clash_intensity=clash_intensity,
+                            has_trine=False,  # 合开通常不涉及三刑
+                            trine_completeness=0.0,
+                            base_bonus=100.0,
+                            base_penalty=-120.0,
+                            config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                        )
+                        
+                        wealth_energy += vault_energy
+                        if vault_energy > 0:
+                            details.append(f"🏆 合开财库(财富爆发)({trigger_source}{trigger_branch}合{p_branch})[非线性模型: {vault_energy:.1f}]")
+                            treasury_opened = True
+                        else:
+                            details.append(f"💥 财库坍塌(合开导致)({trigger_source}{trigger_branch}合{p_branch})[非线性模型: {vault_energy:.1f}]")
+                            treasury_collapsed = True
+                        break
+                    elif is_officer_vault:
+                        # [V61.2] 合开官库：官印相生或官生财，也能带来财富（但加成较小）
+                        if strength_normalized > 0.5:
+                            # 身强：官库打开，官生财
+                            treasury_bonus = 80.0  # 官库打开比财库打开加成稍小
+                            wealth_energy += treasury_bonus
+                            details.append(f"🏆 合开官库(官生财)({trigger_source}{trigger_branch}合{p_branch})")
+                            treasury_opened = True
+                        else:
+                            # 身弱：官库打开也可能带来财富（通过官印相生），但需要检查是否有印星
+                            if has_help:  # 有帮身（印星或比劫）
+                                treasury_bonus = 60.0
+                                wealth_energy += treasury_bonus
+                                details.append(f"🏆 合开官库(官印相生)({trigger_source}{trigger_branch}合{p_branch})")
+                                treasury_opened = True
+                            else:
+                                # 无帮身：官库打开可能导致压力
+                                treasury_penalty = -80.0
+                                wealth_energy += treasury_penalty
+                                details.append(f"💥 官库打开(压力)({trigger_source}{trigger_branch}合{p_branch})")
+                                treasury_collapsed = True
+                        break
+        
+        # B1.6. [V61.4] 检查三合局引动库
+        # 如果大运和流年形成三合局，且原局有对应的库，也可能触发开库
+        if not treasury_opened and not treasury_collapsed:
+            trine_groups = [
+                {'申', '子', '辰'},  # 三合水
+                {'亥', '卯', '未'},  # 三合木
+                {'寅', '午', '戌'},  # 三合火
+                {'巳', '酉', '丑'},  # 三合金
+            ]
+            
+            # 收集所有地支（原局 + 流年 + 大运）
+            all_branches = []
+            for pillar in bazi:
+                if len(pillar) >= 2:
+                    all_branches.append(pillar[1])
+            all_branches.append(year_branch)
+            if luck_pillar and len(luck_pillar) >= 2:
+                all_branches.append(luck_pillar[1])
+            
+            # 检查每个三合局
+            for trine_group in trine_groups:
+                branches_in_trine = [b for b in all_branches if b in trine_group]
+                if len(branches_in_trine) >= 3:  # 三合局成立
+                    # 检查原局是否有库在三合局中
+                    for pillar in bazi:
+                        if len(pillar) < 2:
+                            continue
+                        p_branch = pillar[1]
+                        if p_branch in vaults and p_branch in trine_group:
+                            vault_element = vault_elements.get(p_branch)
+                            is_wealth_vault = (vault_element and elem_map.get(vault_element) == wealth_idx)
+                            is_officer_vault = (vault_element and elem_map.get(vault_element) == officer_idx)
+                            
+                            # 三合局引动库：身强时财富爆发
+                            if is_wealth_vault or is_officer_vault:
+                                if strength_normalized > 0.5:
+                                    treasury_bonus = 100.0 if is_wealth_vault else 80.0
+                                    wealth_energy += treasury_bonus
+                                    vault_type = "财库" if is_wealth_vault else "官库"
+                                    details.append(f"🏆 三合局引动{vault_type}(财富爆发)(三合局成立)")
+                                    treasury_opened = True
+                                    break
+                    if treasury_opened:
+                        break
         
         # B2. 检查流年地支本身是否是财库（2021年修正）
         # 如果流年地支是财库（辰戌丑未），且原局有对应的冲支，也可能触发库开
@@ -3136,6 +3570,20 @@ class GraphNetworkEngine:
             else:
                 details.append(f"🌟 官印相生(流年官杀+大运印星)")
         
+        # [V61.7] 检查流年和大运都是官库的情况（双库共振）
+        # 如果流年地支是官库，且大运地支也是官库（相同），可能形成"双库共振"
+        if year_branch_is_officer_vault and luck_pillar and len(luck_pillar) >= 2:
+            luck_branch = luck_pillar[1]
+            if luck_branch in vaults:
+                luck_vault_element = vault_elements.get(luck_branch)
+                if luck_vault_element and luck_vault_element == officer_element:
+                    # 双库共振：流年和大运都是官库，形成共振效应
+                    # 即使没有官印相生，双库共振也能带来财富（通过官生财）
+                    double_vault_bonus = 100.0 if strength_normalized > 0.4 else 80.0
+                    wealth_energy += double_vault_bonus
+                    details.append(f"🏆 双库共振(流年和大运都是官库)({year_branch}+{luck_branch})")
+                    treasury_opened = True
+        
         # D. 承载力与极性反转 (Capacity & Inversion)
         final_index = 0.0
         
@@ -3190,6 +3638,10 @@ class GraphNetworkEngine:
                     has_help = True
                     help_type = "大运印星帮身"
                     details.append(help_type)
+                    # [V10.0] 大运印星帮身时，直接增加财富能量（非线性增强）
+                    luck_seal_help_bonus = 30.0 if strength_normalized < 0.45 else 20.0
+                    wealth_energy += luck_seal_help_bonus
+                    details.append(f"🌟 大运印星帮身加成(+{luck_seal_help_bonus:.1f})")
                 elif luck_stem_elem == peer_element or luck_branch_elem == peer_element:
                     has_help = True
                     help_type = "大运比劫帮身"
@@ -3217,8 +3669,19 @@ class GraphNetworkEngine:
                     if not strong_root_type:
                         strong_root_type = luck_life_stage  # 如果流年没有强根，使用大运强根类型
         
+        # [V10.0] 强制上下文统一：确保使用 analyze() 的结果，不再二次计算
+        # 使用 V10.0 概率波输出，确保旺衰判定与财富计算一致
+        dm_strength = strength_normalized  # 直接使用 analyze() 的结果
+        
+        # [V10.0] 关键修复：身强时不应该应用身弱惩罚
+        # 彻底杜绝身强时的身弱惩罚
+        apply_weak_penalty = (dm_strength < 0.45)
+        
         # 关键修正：身弱财多 = 破财，但有帮身时可以担财
-        if strength_normalized < 0.45:
+        # [V61.8] 特殊机制优先：如果触发了双库共振、官印相生或开库，即使身弱也不反转
+        special_mechanism_triggered = treasury_opened or (year_branch_is_officer_vault and luck_pillar and len(luck_pillar) >= 2 and luck_pillar[1] in vaults)
+        
+        if apply_weak_penalty:  # [V10.0] 使用统一的判断条件
             if wealth_energy > 0:
                 if has_help:
                     # [V56.2] 有帮身：可以担财，根据强根类型调整承载力
@@ -3227,6 +3690,35 @@ class GraphNetworkEngine:
                     has_wealth_exposed = False
                     if stem_idx == wealth_idx or branch_idx == wealth_idx:
                         has_wealth_exposed = True
+                    
+                    # [V10.0] 激活"印星特权"加成：针对"身弱用印"命局，增强印星帮身的加成
+                    # 检查是否是印星帮身（而非比劫帮身）
+                    is_seal_help = False
+                    if help_type and ("印星" in help_type or "印" in help_type):
+                        is_seal_help = True
+                    
+                    # [V10.0] 印星帮身：非线性增强（量子隧穿效应）
+                    seal_additional_bonus = 0.0
+                    if is_seal_help:
+                        # [V10.0] 核心分析师建议：印星特权条件化
+                        # 如果has_leg_cutting且is_extreme_weak，禁用seal_privilege_bonus
+                        # 检查是否会在后面检测到截脚结构（提前检查）
+                        has_leg_cutting_condition = False
+                        if year_stem and year_branch:
+                            year_stem_elem_check = self._get_element_str(year_stem)
+                            year_branch_elem_check = self._get_element_str(year_branch)
+                            if year_stem_elem_check in CONTROL and CONTROL[year_stem_elem_check] == year_branch_elem_check:
+                                has_leg_cutting_condition = True
+                        
+                        is_extreme_weak_condition = strength_normalized < 0.3
+                        
+                        if has_leg_cutting_condition and is_extreme_weak_condition:
+                            # 极弱格局 + 截脚结构：印星参与截脚，禁用特权加成
+                            details.append(f"⚠️ 印星特权禁用(极弱+截脚，印星转为忌神)")
+                        else:
+                            seal_additional_bonus = 30.0  # 印星特权加成
+                            wealth_energy += seal_additional_bonus
+                            details.append(f"🌟 印星特权加成(+{seal_additional_bonus:.1f})")
                     
                     if strong_root_type == '帝旺':
                         # 身弱得帝旺强根，承载力大幅提升
@@ -3242,12 +3734,42 @@ class GraphNetworkEngine:
                         else:
                             final_index = wealth_energy * 0.8  # 有财透时保持原值
                     else:
-                        final_index = wealth_energy * 0.8  # 保持原值
+                        # [V10.0] 无强根但有印星帮身时，也给予较高加成
+                        if is_seal_help:
+                            final_index = wealth_energy * 0.95  # 印星帮身时接近1.0
+                        else:
+                            final_index = wealth_energy * 0.8  # 保持原值
                     details.append("✅ 身弱得助，可担财")
+                elif special_mechanism_triggered:
+                    # [V61.8] 特殊机制触发（双库共振、官印相生、开库）：即使身弱也不反转
+                    # 特殊机制的能量足够大，可以抵消身弱的影响
+                    final_index = wealth_energy * 0.9  # 轻微折扣，但不反转
+                    details.append("✅ 特殊机制触发，身弱可担财")
                 else:
-                    # 无帮身：财变债
-                    final_index = wealth_energy * -1.2  # 反转为负分
-                    details.append("💸 身弱财重: 变债务")
+                    # [V10.0] 核心分析师建议：完善从格判定
+                    # 正确区分"从财格"与"身弱不从"
+                    # 从格条件：身极弱 + 财星强旺 + 无帮身
+                    is_from_pattern = (
+                        strength_normalized < 0.45 and  # 身极弱
+                        (has_wealth_exposed or wealth_energy > 50.0) and  # 财星强旺（放宽条件）
+                        not has_help  # 无帮身
+                    )
+                    
+                    if is_from_pattern:
+                        # 从格：财星为用神，不反转
+                        # 如果满足从格，财富能量应为正向（Wealth×1.0）
+                        final_index = wealth_energy * 1.0
+                        details.append("🌟 从财格: 财星为用神，不反转")
+                    else:
+                        # 非从格：身弱财重，财变债
+                        # 如果不从且见截脚，触发"极向反转"（Wealth×−1.5）
+                        if wealth_energy > 50.0:  # 提高财重阈值
+                            final_index = wealth_energy * -1.5  # 增强反转系数（从-1.2到-1.5）
+                            details.append("💸 身弱财重: 变债务")
+                        else:
+                            # 财不重时，仍然反转但系数较小
+                            final_index = wealth_energy * -1.2
+                            details.append("💸 身弱财多: 变债务")
             else:
                 # [V56.3] 身弱时，即使没有特殊事件，也应该有基础财富能量（但为负值，表示消耗）
                 # [V56.2] 如果只有强根但没有财，也应该有基础财富能量
@@ -3260,10 +3782,17 @@ class GraphNetworkEngine:
                         final_index = strong_root_bonus * 0.6  # 强根带来基础财富
                         details.append(f"强根基础财富({strong_root_bonus * 0.6:.1f})")
                 else:
+                    # [V10.0] 修复：确保只在真正身弱时应用基础消耗
                     # [V56.3] 身弱且无帮身时，基础财富为负（消耗）
-                    base_wealth = -10.0 - (1.0 - strength_normalized) * 10.0  # -10到-20分
-                    final_index = base_wealth
-                    details.append(f"身弱基础消耗({base_wealth:.1f})")
+                    if dm_strength < 0.45:  # [V10.0] 双重检查，确保不会在身强时应用
+                        base_wealth = -10.0 - (1.0 - dm_strength) * 10.0  # -10到-20分
+                        final_index = base_wealth
+                        details.append(f"身弱基础消耗({base_wealth:.1f})")
+                    else:
+                        # [V10.0] 身强时不应该有基础消耗
+                        base_wealth = dm_strength * 15.0  # 身强时基础财富0-15分
+                        final_index = base_wealth
+                        details.append(f"身强基础财富({base_wealth:.1f})")
         else:
             # 身强任财
             # [V56.2] 身强时，如果有库开或官印相生，额外加成
@@ -3294,106 +3823,632 @@ class GraphNetworkEngine:
             # 检查是否是天干克地支（截脚）
             if year_stem_elem in CONTROL and CONTROL[year_stem_elem] == year_branch_elem:
                 # [V60.5] 截脚结构惩罚：根据身强身弱、是否有帮身和财富能量来调整
-                # 如果财富能量很小，截脚结构的影响应该更小（因为本身就没有多少财富）
-                # 如果财富能量很大，截脚结构的影响应该更大（因为会削弱大量财富）
-                wealth_factor = min(1.0, max(0.3, wealth_energy / 50.0))  # 0.3-1.0的系数
+                # [V10.0] 核心分析师建议：对于极弱格局，截脚惩罚应该是固定严重惩罚，不依赖wealth_energy
+                if strength_normalized < 0.3:
+                    # 极弱格局：截脚惩罚不依赖wealth_energy，直接使用固定严重惩罚
+                    # 结构性坍塌：截脚意味着仅存的一点"印星护卫"或"气机"被切断
+                    base_penalty = -100.0  # 极弱格局固定严重惩罚
+                    # 使用非线性模型计算惩罚（但强度设为1.0，不依赖wealth_factor）
+                    leg_cutting_penalty, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                        strength_normalized=strength_normalized,
+                        penalty_type='leg_cutting',
+                        intensity=1.0,  # 极弱格局时强度设为1.0，不依赖wealth_factor
+                        has_help=has_help,
+                        has_mediation=False,  # 截脚结构通常无通关
+                        base_penalty=base_penalty,
+                        config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    )
+                    # [V10.0] 核心分析师建议：截脚惩罚指数化
+                    # 极弱格局：结构性坍塌，惩罚2.5x-4.5x（贝叶斯调优：上限从3.0调至4.5）
+                    extreme_weak_multiplier = 2.5 + (0.3 - strength_normalized) * 4.0  # 2.5-4.5
+                    leg_cutting_penalty = leg_cutting_penalty * extreme_weak_multiplier
+                else:
+                    # 非极弱格局：正常计算，依赖wealth_factor
+                    wealth_factor = min(1.0, max(0.3, wealth_energy / 50.0))  # 0.3-1.0的系数
+                    
+                    # 根据身强身弱决定基础惩罚
+                    if strength_normalized < 0.45:
+                        base_penalty = -60.0  # 身弱格局
+                    else:
+                        base_penalty = -50.0  # 身强格局
+                    
+                    # 使用非线性模型计算惩罚
+                    leg_cutting_penalty, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                        strength_normalized=strength_normalized,
+                        penalty_type='leg_cutting',
+                        intensity=wealth_factor,  # 使用财富因子作为强度
+                        has_help=has_help,
+                        has_mediation=False,  # 截脚结构通常无通关
+                        base_penalty=base_penalty,
+                        config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    )
+                    
+                    # [V10.0] 核心分析师建议：截脚惩罚指数化
+                    if strength_normalized < 0.45:
+                        # 身弱格局：惩罚增加50%
+                        leg_cutting_penalty = leg_cutting_penalty * 1.5
+                    else:
+                        # 身强格局：正常惩罚（1.0x）
+                        pass
+                    
+                    # 应用财富因子
+                    leg_cutting_penalty = leg_cutting_penalty * wealth_factor
                 
-                if strength_normalized < 0.3:  # 极弱格局
-                    if has_help:
-                        leg_cutting_penalty = -40.0 * wealth_factor  # [V60.5] 有帮身时，惩罚减轻
-                    else:
-                        leg_cutting_penalty = -80.0 * wealth_factor  # [V60.5] 无帮身时，惩罚减轻（从-100降低到-80）
-                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
-                elif strength_normalized < 0.45:  # 身弱格局
-                    if has_help:
-                        leg_cutting_penalty = -25.0 * wealth_factor  # [V60.5] 有帮身时，惩罚减轻（从-40降低到-25）
-                    else:
-                        leg_cutting_penalty = -60.0 * wealth_factor  # [V60.5] 无帮身时，惩罚减轻（从-80降低到-60）
-                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
-                else:  # 身强格局
-                    # [V60.5] 身强时，截脚结构惩罚应该更重，因为身强时截脚结构的影响更大
-                    if has_help:
-                        leg_cutting_penalty = -50.0 * wealth_factor  # [V60.5] 有帮身时，惩罚加重（从-30增加到-50）
-                    else:
-                        leg_cutting_penalty = -80.0 * wealth_factor  # [V60.5] 无帮身时，惩罚加重（从-60增加到-80）
-                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
+                details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)[非线性模型: {leg_cutting_penalty:.1f}]")
                 
                 # [V60.5] 应用截脚结构惩罚到 final_index（在所有正面因素之后）
                 final_index += leg_cutting_penalty
         
-        # F. [V60.0] 修复冲提纲判断：不再一票否决，结合帮身/通关因素
+        # F0. [V61.9] 七杀攻身检测：优先于其他因素（除了冲提纲和特殊机制）
+        # 如果流年天干是七杀，且身弱或无通关，应该识别为危机
+        # [V61.10] 但特殊机制（双库共振、官印相生、开库）优先于七杀攻身
+        seven_kill_attack = False
+        seven_kill_penalty = 0.0
+        
+        if year_stem:
+            # 检查流年天干是否是七杀（克日主的元素）
+            year_stem_elem = self._get_element_str(year_stem)
+            if year_stem_elem == officer_element:
+                # 流年天干是官杀，检查是否有通关机制
+                has_seven_kill_mediation = False
+                
+                # 检查是否有印星通关（官印相生）
+                if luck_pillar and len(luck_pillar) >= 2:
+                    luck_stem = luck_pillar[0]
+                    luck_branch = luck_pillar[1]
+                    luck_stem_elem = self._get_element_str(luck_stem)
+                    luck_branch_elem = self._get_element_str(luck_branch)
+                    if luck_stem_elem == resource_element or luck_branch_elem == resource_element:
+                        has_seven_kill_mediation = True
+                
+                # 检查流年地支是否是印星
+                if branch_elem == resource_element:
+                    has_seven_kill_mediation = True
+                
+                # [V61.14] 检查是否有针对流年七杀的通关事件
+                # 只有直接化解流年七杀的通关才能抵消七杀攻身
+                # 原局的通关不能化解流年七杀攻身
+                trigger_events = result.get('trigger_events', [])
+                for event in trigger_events:
+                    event_str = str(event)
+                    # 检查是否是针对流年七杀的通关
+                    # 如果通关涉及流年天干（七杀），才能化解
+                    if ('通关' in event_str or '官印相生' in event_str) and year_stem in event_str:
+                        has_seven_kill_mediation = True
+                        break
+                    # 或者，如果大运是印星，且流年地支是印星，也可能通关
+                    if luck_pillar and len(luck_pillar) >= 2:
+                        luck_branch = luck_pillar[1]
+                        if branch_elem == resource_element and luck_branch_elem == resource_element:
+                            # 流年地支和大运地支都是印星，可能形成通关
+                            has_seven_kill_mediation = True
+                            break
+                
+                # [V61.10] 检查是否有特殊机制（双库共振、开库等）
+                # 这些机制优先于七杀攻身
+                has_special_mechanism = treasury_opened or (year_branch_is_officer_vault and luck_pillar and len(luck_pillar) >= 2 and luck_pillar[1] in vaults)
+                
+                # [V10.0] 使用非线性模型替代硬编码 if/else
+                if not has_seven_kill_mediation and not has_special_mechanism:
+                    seven_kill_attack = True
+                    # 根据身强身弱决定基础惩罚
+                    if strength_normalized < 0.4:
+                        base_penalty = -100.0  # 身极弱
+                    elif strength_normalized < 0.5:
+                        base_penalty = -80.0  # 身弱
+                    else:
+                        base_penalty = -60.0  # 身强但杀重
+                    
+                    # 检查是否有财星透出（杀重身轻的典型情况）
+                    has_wealth_exposed = (stem_idx == wealth_idx or branch_idx == wealth_idx)
+                    intensity = 1.0 if has_wealth_exposed else 0.9
+                    
+                    # 使用非线性模型计算惩罚
+                    seven_kill_penalty, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                        strength_normalized=strength_normalized,
+                        penalty_type='seven_kill',
+                        intensity=intensity,
+                        has_help=False,  # 七杀攻身时通常无帮身
+                        has_mediation=has_seven_kill_mediation,
+                        base_penalty=base_penalty,
+                        config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    )
+                    
+                    if strength_normalized < 0.4:
+                        details.append(f"💀 七杀攻身(身极弱，无通关)({year_stem}克{day_master})[非线性模型: {seven_kill_penalty:.1f}]")
+                    elif strength_normalized < 0.5:
+                        details.append(f"💀 七杀攻身(身弱，无通关)({year_stem}克{day_master})[非线性模型: {seven_kill_penalty:.1f}]")
+                    else:
+                        details.append(f"💀 七杀攻身(杀重身轻)({year_stem}克{day_master})[非线性模型: {seven_kill_penalty:.1f}]")
+                elif has_special_mechanism:
+                    # [V61.10] 有特殊机制：七杀攻身的影响被特殊机制抵消
+                    # 不应用惩罚，或只应用轻微惩罚
+                    details.append(f"✅ 七杀攻身被特殊机制化解({year_stem}克{day_master})")
+                else:
+                    # 有通关：七杀攻身的影响被化解，但仍可能有轻微影响
+                    # 使用非线性模型计算轻微惩罚
+                    seven_kill_penalty, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                        strength_normalized=strength_normalized,
+                        penalty_type='seven_kill',
+                        intensity=0.2,  # 有通关，强度降低
+                        has_help=False,
+                        has_mediation=True,
+                        base_penalty=-20.0,
+                        config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    )
+                    # [V10.0] 专项修复：强制激活"食神制杀/伤官配印"特权
+                    # 检查是否有印星通关且流年见强根（食神制杀的典型情况）
+                    has_strong_root_for_mediation = False
+                    if day_master and year_branch:
+                        life_stage = TWELVE_LIFE_STAGES.get((day_master, year_branch))
+                        if life_stage in ['帝旺', '临官', '长生']:
+                            has_strong_root_for_mediation = True
+                    
+                    # [V10.0] 检查大运是否有印星（丁火等）
+                    has_luck_seal = False
+                    if luck_pillar and len(luck_pillar) >= 2:
+                        luck_stem = luck_pillar[0]
+                        luck_stem_elem = self._get_element_str(luck_stem)
+                        if luck_stem_elem == resource_element:
+                            has_luck_seal = True
+                    
+                    # [V10.0] 检查流年地支是否是印星强根（午火等）
+                    has_year_branch_seal = False
+                    if branch_elem == resource_element:
+                        has_year_branch_seal = True
+                    
+                    # [V10.0] 强制激活"制化豁免"协议
+                    # 条件：七杀攻身 + (大运印星 OR 流年地支印星) + 强根
+                    pathway_activated = False
+                    if (has_seven_kill_mediation or has_luck_seal or has_year_branch_seal) and has_strong_root_for_mediation:
+                        pathway_activated = True
+                    
+                    if pathway_activated:
+                        # [V10.0] 核心分析师建议：应用"制化优先"原则
+                        # 当流年见印星强根时，强制下调80%的惩罚，并赋予"名利双收"的加成
+                        nonlinear_config = self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                        
+                        # 1. 制化豁免：将七杀惩罚力度强制缩减 80%（根据核心分析师建议）
+                        seal_conduction_multiplier = nonlinear_config.get('seal_conduction_multiplier', 1.7445)
+                        reduction_factor = 0.80 * (seal_conduction_multiplier / 2.0)  # 根据优化参数调整，基础缩减80%
+                        base_penalty = -20.0 * (1 - reduction_factor)  # 缩减80%
+                        intensity = 0.05  # 极低强度
+                        
+                        # 重新计算惩罚
+                        seven_kill_penalty, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                            strength_normalized=strength_normalized,
+                            penalty_type='seven_kill',
+                            intensity=intensity,
+                            has_help=False,
+                            has_mediation=True,
+                            base_penalty=base_penalty,
+                            config=nonlinear_config
+                        )
+                        
+                        # 2. 能量转化：将甲木的部分能量转化为名利加成
+                        # 应用 opportunity_scaling 参数（贝叶斯优化结果：1.8952）
+                        opportunity_scaling = nonlinear_config.get('opportunity_scaling', 1.8952)
+                        luck_pillar_weight = 0.5 if has_luck_seal else 0.3
+                        base_opportunity = 45.0 * luck_pillar_weight
+                        opportunity_bonus = base_opportunity * opportunity_scaling
+                        
+                        # 3. 印星特权加成（贝叶斯优化结果：seal_bonus = 43.76）
+                        seal_bonus = nonlinear_config.get('seal_bonus', 43.76)
+                        seal_multiplier = nonlinear_config.get('seal_multiplier', 0.8538)
+                        
+                        # 先应用印星直接加成
+                        wealth_energy += seal_bonus
+                        
+                        # 再应用机会加成
+                        wealth_energy += opportunity_bonus
+                        
+                        # 最后应用印星乘数效应
+                        wealth_energy = wealth_energy * seal_multiplier
+                        
+                        # [V10.0] 核心分析师建议：重新计算 final_index，确保加成生效
+                        # 根据身强身弱情况，重新计算 final_index
+                        if strength_normalized >= 0.5:
+                            # 身强：直接使用财富能量
+                            bonus = 1.2 if strength_normalized > 0.6 else 1.0
+                            final_index = wealth_energy * bonus
+                        else:
+                            # 身弱：根据强根类型调整
+                            if has_strong_root_for_mediation:
+                                # 获取强根类型
+                                life_stage_for_index = TWELVE_LIFE_STAGES.get((day_master, year_branch), None)
+                                if life_stage_for_index == '临官':
+                                    final_index = wealth_energy * 0.9
+                                elif life_stage_for_index in ['帝旺', '长生']:
+                                    final_index = wealth_energy * 1.0
+                                else:
+                                    final_index = wealth_energy * 0.9
+                            else:
+                                final_index = wealth_energy * 0.8
+                        
+                        # 标记触发事件
+                        details.append(f"🌟 触发：食神制杀（化杀为权），财富阶跃({year_stem}克{day_master})[惩罚缩减: {seven_kill_penalty:.1f}, 印星加成: {seal_bonus:.1f}, 机会加成: {opportunity_bonus:.1f}, 乘数: {seal_multiplier:.4f}, 最终指数: {final_index:.1f}]")
+                    else:
+                        details.append(f"⚠️ 七杀攻身(有通关，影响减轻)({year_stem}克{day_master})[非线性模型: {seven_kill_penalty:.1f}]")
+        
+        # 如果七杀攻身且无通关且无特殊机制，直接应用惩罚（优先于其他因素）
+        if seven_kill_attack and seven_kill_penalty < -50.0:
+            # 七杀攻身是严重危机，直接返回负值
+            return {
+                'wealth_index': seven_kill_penalty,
+                'details': details,
+                'strength_score': strength_score,
+                'strength_label': strength_label,
+                'opportunity': wealth_energy if wealth_energy > 0 else 0.0
+            }
+        
+        # F. [V61.0] 修复冲提纲判断：优先检查，优先于其他因素
         clash_commander = False
         has_mediation = False  # [V60.0] 检查是否有通关机制
         
-        # 从 analyze 结果中检查是否有通关机制
-        trigger_events = result.get('trigger_events', [])
-        for event in trigger_events:
-            event_str = str(event)
-            if '通关' in event_str or '官印相生' in event_str or '绝对通关' in event_str:
-                has_mediation = True
-                break
-        
-        # 也检查是否有官印相生（通关机制）
-        if not has_mediation and luck_pillar and len(luck_pillar) >= 2:
-            luck_stem = luck_pillar[0]
-            luck_branch = luck_pillar[1]
-            luck_stem_elem = self._get_element_str(luck_stem)
-            luck_branch_elem = self._get_element_str(luck_branch)
-            
-            # 检查是否有官印相生（这是通关的一种）
-            # [V60.6] 修复：直接比较字符串，不要使用 elem_map
-            if resource_element and officer_element:
-                # 检查流年是否是官杀（天干或库）
-                year_is_officer_for_mediation = (stem_elem == officer_element)
-                year_branch_is_officer_vault_for_mediation = False
-                if year_branch in vaults:
-                    vault_element_for_mediation = vault_elements.get(year_branch)
-                    if vault_element_for_mediation and vault_element_for_mediation == officer_element:
-                        year_branch_is_officer_vault_for_mediation = True
-                
-                # 检查大运是否是印星
-                luck_is_resource_for_mediation = (luck_stem_elem == resource_element or luck_branch_elem == resource_element)
-                
-                if (year_is_officer_for_mediation or year_branch_is_officer_vault_for_mediation) and luck_is_resource_for_mediation:
-                    has_mediation = True
-        
+        # 提前检查冲提纲（在计算财富能量之前）
         if month_branch and clashes.get(month_branch) == year_branch:
             clash_commander = True
-            # [V60.1] 检查是否有库塌等其他负面因素
-            has_negative_factors = treasury_collapsed  # 库塌是负面因素
             
-            # [V60.0] 检查是否有帮身或通关机制
-            # 如果有帮身或通关，冲提纲只是动荡，不是灾难
-            if has_help or has_mediation:
-                if has_negative_factors:
-                    # 有帮身但有库塌：冲提纲 + 库塌 = 灾难
-                    final_index -= 100.0  # [V60.1] 从-50增加到-100
-                    details.append(f"💀 冲提纲+库塌(双重灾难)({year_branch}冲{month_branch})")
-                else:
-                    # [V60.2] 有帮身且无库塌：冲提纲只是动荡，根据 wealth_energy 调整惩罚
-                    # 如果 wealth_energy 较小，惩罚应该更小，避免过度惩罚
-                    if wealth_energy < 30.0:
-                        clash_penalty = -15.0  # [V60.2] 财富能量小时，惩罚更小
-                    elif wealth_energy < 60.0:
-                        clash_penalty = -20.0  # [V60.2] 财富能量中等时，惩罚中等
-                    else:
-                        clash_penalty = -30.0  # [V60.2] 财富能量大时，惩罚较大
-                    final_index -= clash_penalty
-                    details.append(f"⚠️ 冲提纲(动荡但可化解)({year_branch}冲{month_branch})")
+            # [V61.6] 从 analyze 结果中检查是否有针对冲提纲的通关机制
+            # 只有通关机制直接化解子午冲时，才能抵消冲提纲的影响
+            trigger_events = result.get('trigger_events', [])
+            for event in trigger_events:
+                event_str = str(event)
+                # 检查是否有关键字，但需要进一步判断是否针对冲提纲
+                # 子午冲的通关：需要水（子）或火（午）作为通关神
+                # 例如：子 -> 木 -> 午，或 午 -> 土 -> 子
+                if '通关' in event_str or '官印相生' in event_str or '绝对通关' in event_str:
+                    # [V61.6] 简化：如果有通关机制，暂时认为可以部分化解
+                    # 但冲提纲的影响仍然存在，只是减轻
+                    has_mediation = True
+                    break
+            
+            # 也检查是否有官印相生（通关机制）
+            if not has_mediation and luck_pillar and len(luck_pillar) >= 2:
+                luck_stem = luck_pillar[0]
+                luck_branch = luck_pillar[1]
+                luck_stem_elem = self._get_element_str(luck_stem)
+                luck_branch_elem = self._get_element_str(luck_branch)
+                
+                # 检查是否有官印相生（这是通关的一种）
+                if resource_element and officer_element:
+                    # 检查流年是否是官杀（天干或库）
+                    year_is_officer_for_mediation = (stem_elem == officer_element)
+                    year_branch_is_officer_vault_for_mediation = False
+                    if year_branch in vaults:
+                        vault_element_for_mediation = vault_elements.get(year_branch)
+                        if vault_element_for_mediation and vault_element_for_mediation == officer_element:
+                            year_branch_is_officer_vault_for_mediation = True
+                    
+                    # 检查大运是否是印星
+                    luck_is_resource_for_mediation = (luck_stem_elem == resource_element or luck_branch_elem == resource_element)
+                    
+                    if (year_is_officer_for_mediation or year_branch_is_officer_vault_for_mediation) and luck_is_resource_for_mediation:
+                        has_mediation = True
+            
+            # [V61.0] 冲提纲优先判断：如果无帮身且无通关，直接返回负值（一票否决）
+            # 注意：这里需要先检查帮身，但帮身是在后面计算的，所以先检查是否有强根、印星、比劫
+            # 临时检查是否有帮身（简化版，主要检查流年和大运）
+            temp_has_help = False
+            if day_master and year_branch:
+                life_stage = TWELVE_LIFE_STAGES.get((day_master, year_branch))
+                if life_stage in ['帝旺', '临官', '长生']:
+                    temp_has_help = True
+            if not temp_has_help:
+                if stem_elem == resource_element or branch_elem == resource_element:
+                    temp_has_help = True
+                elif stem_elem == dm_element or branch_elem == dm_element:
+                    temp_has_help = True
+            if not temp_has_help and luck_pillar and len(luck_pillar) >= 2:
+                luck_stem = luck_pillar[0]
+                luck_branch = luck_pillar[1]
+                luck_stem_elem = self._get_element_str(luck_stem)
+                luck_branch_elem = self._get_element_str(luck_branch)
+                if luck_stem_elem == resource_element or luck_branch_elem == resource_element:
+                    temp_has_help = True
+                elif luck_stem_elem == dm_element or luck_branch_elem == dm_element:
+                    temp_has_help = True
+                if day_master and luck_branch:
+                    luck_life_stage = TWELVE_LIFE_STAGES.get((day_master, luck_branch))
+                    if luck_life_stage in ['帝旺', '临官', '长生']:
+                        temp_has_help = True
+            
+            # [V10.0] 使用非线性模型替代硬编码 if/else
+            # [V10.0] 优化：身强且有印星通关时，冲提纲转为正面机会
+            # 计算冲提纲的惩罚强度
+            clash_intensity = 1.0  # 冲提纲的强度最高
+            
+            # [V10.0] 关键优化：身强且有印星通关时，大幅降低惩罚
+            # 检查是否有印星通关（大运或流年）
+            has_seal_mediation = False
+            if luck_pillar and len(luck_pillar) >= 2:
+                luck_stem_elem = self._get_element_str(luck_pillar[0])
+                luck_branch_elem = self._get_element_str(luck_pillar[1])
+                if luck_stem_elem == resource_element or luck_branch_elem == resource_element:
+                    has_seal_mediation = True
+            if branch_elem == resource_element or stem_elem == resource_element:
+                has_seal_mediation = True
+            
+            # [V10.0] 身强且有印星通关时，冲提纲转为"变动中的机会"
+            # [V10.0] 优化：对于身极强（strength_normalized > 0.9）且有印星通关的情况，进一步降低惩罚
+            if strength_normalized >= 0.9 and has_seal_mediation:
+                # 身极强且有印星通关：冲提纲转为正面机会
+                base_penalty = -10.0  # 极低惩罚（从-120降到-10）
+                clash_intensity = 0.1  # 极低强度
+                details.append(f"🌟 冲提纲(身极强+印星通关，转为机会)({year_branch}冲{month_branch})")
+            elif strength_normalized >= 0.7 and has_seal_mediation:
+                # 身强且有印星通关：冲提纲转为变动中的机会
+                base_penalty = -20.0  # 大幅降低惩罚（从-120降到-20）
+                clash_intensity = 0.2  # 降低强度
+                details.append(f"🌟 冲提纲(身强+印星通关，转为机会)({year_branch}冲{month_branch})")
+            elif strength_normalized >= 0.5 and has_seal_mediation:
+                # 身稍强且有印星通关：冲提纲惩罚减轻
+                base_penalty = -30.0  # 降低惩罚（从-120降到-30）
+                clash_intensity = 0.3  # 降低强度
+                details.append(f"🌟 冲提纲(身稍强+印星通关，转为机会)({year_branch}冲{month_branch})")
+            elif strength_normalized >= 0.9:
+                # 身极强但无印星通关：惩罚仍然大幅降低
+                base_penalty = -40.0 if treasury_collapsed else -30.0
+                clash_intensity = 0.4
+                details.append(f"⚠️ 冲提纲(身极强，影响减轻)({year_branch}冲{month_branch})")
+            elif strength_normalized >= 0.7:
+                # 身强但无印星通关：惩罚适度降低
+                base_penalty = -60.0 if treasury_collapsed else -50.0
+                clash_intensity = 0.6
+                details.append(f"⚠️ 冲提纲(身强，影响减轻)({year_branch}冲{month_branch})")
             else:
-                # 无帮身且无通关：冲提纲是灾难
-                final_index -= 150.0  # 毁灭性打击
-                details.append(f"💀 灾难: 冲提纲(结构崩塌)({year_branch}冲{month_branch})")
+                base_penalty = -150.0 if treasury_collapsed else -120.0
+            
+            clash_penalty_value, penalty_details = NonlinearActivation.calculate_penalty_nonlinear(
+                strength_normalized=strength_normalized,
+                penalty_type='clash_commander',
+                intensity=clash_intensity,
+                has_help=temp_has_help,
+                has_mediation=has_mediation or has_seal_mediation,  # [V10.0] 包含印星通关
+                base_penalty=base_penalty,
+                config=self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+            )
+            
+            # [V10.0] 优化：身强且有印星通关时，不直接返回，继续计算其他因素
+            if not temp_has_help and not has_mediation and not (strength_normalized >= 0.5 and has_seal_mediation):
+                # 无帮身且无通关且非身强印星通关：毁灭性打击，直接返回负值
+                if treasury_collapsed:
+                    details.append(f"💀 冲提纲+库塌(双重灾难)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                else:
+                    details.append(f"💀 灾难: 冲提纲(结构崩塌)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                
+                # [V61.0] 直接返回，不再计算其他因素
+                return {
+                    'wealth_index': clash_penalty_value,
+                    'details': details,
+                    'strength_score': strength_score,
+                    'strength_label': strength_label,
+                    'opportunity': wealth_energy if wealth_energy > 0 else 0.0
+                }
+            elif not has_mediation:
+                # [V61.5] 有帮身但无通关：冲提纲仍有严重惩罚，但可以部分抵消
+                # [V61.16] 如果有特殊机制（开库、双库共振等），冲提纲的惩罚应该减轻
+                if treasury_opened:
+                    # 有开库：冲提纲的影响被开库抵消大部分
+                    clash_penalty_value = -40.0 if treasury_collapsed else -30.0
+                    if treasury_collapsed:
+                        details.append(f"⚠️ 冲提纲+库塌(有帮身和开库，影响减轻)({year_branch}冲{month_branch})")
+                    else:
+                        details.append(f"⚠️ 冲提纲(有帮身和开库，影响减轻)({year_branch}冲{month_branch})")
+                    # 应用惩罚，但不直接返回，继续计算其他因素
+                    final_index = clash_penalty_value
+                    # 继续正常计算，但冲提纲惩罚已应用
+                else:
+                    # 无开库：冲提纲仍有严重惩罚
+                    # [V61.17] 如果有强根或印星帮身，冲提纲的惩罚应该减轻，并且应该继续计算其他正面因素
+                    # 检查是否有强根或印星帮身
+                    has_strong_help = False
+                    if strong_root_type in ['帝旺', '临官', '长生']:
+                        has_strong_help = True
+                    # 检查大运是否是印星
+                    if luck_pillar and len(luck_pillar) >= 2:
+                        luck_stem = luck_pillar[0]
+                        luck_stem_elem = self._get_element_str(luck_stem)
+                        if luck_stem_elem == resource_element:
+                            has_strong_help = True
+                    
+                    if has_strong_help:
+                        # 有强根或印星帮身：冲提纲的惩罚减轻，但继续计算其他因素
+                        # [V10.0] 使用非线性模型的结果，而不是硬编码值
+                        # clash_penalty_value 已经在前面通过 NonlinearActivation.calculate_penalty_nonlinear 计算
+                        # 对于有强根或印星帮身的情况，非线性模型已经考虑了这些因素
+                        if treasury_collapsed:
+                            details.append(f"⚠️ 冲提纲+库塌(有强根/印星帮身，影响减轻)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                        else:
+                            details.append(f"⚠️ 冲提纲(有强根/印星帮身，影响减轻)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                        # 应用惩罚，但不直接返回，继续计算其他因素
+                        # [V10.0] 对于身强的情况，final_index 应该先被设置为 wealth_energy * bonus，然后再加上 clash_penalty_value
+                        # 但是，由于冲提纲的惩罚是在 final_index 计算之后应用的，所以这里应该累加，而不是覆盖
+                        # 注意：final_index 已经在 D 部分（第3743行）被设置为 wealth_energy * bonus
+                        final_index += clash_penalty_value
+                        # 继续正常计算，但冲提纲惩罚已应用
+                    else:
+                        # 无强根或印星帮身：冲提纲仍有严重惩罚
+                        # [V10.0] 使用非线性模型的结果，而不是硬编码值
+                        # clash_penalty_value 已经在前面通过 NonlinearActivation.calculate_penalty_nonlinear 计算
+                        # 对于身强的情况，非线性模型已经根据身强程度降低了惩罚
+                        if strength_normalized >= 0.7:
+                            # 身强：使用非线性模型的结果，继续计算其他因素
+                            if treasury_collapsed:
+                                details.append(f"⚠️ 冲提纲+库塌(身强，影响减轻)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                            else:
+                                details.append(f"⚠️ 冲提纲(身强，影响减轻)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                            # 应用惩罚，但不直接返回，继续计算其他因素
+                            # [V10.0] 对于身强的情况，final_index 应该先被设置为 wealth_energy * bonus，然后再加上 clash_penalty_value
+                            # 注意：final_index 已经在 D 部分（第3743行）被设置为 wealth_energy * bonus
+                            final_index += clash_penalty_value
+                        else:
+                            # 身弱或身稍强：冲提纲仍有严重惩罚
+                            if treasury_collapsed:
+                                details.append(f"💀 冲提纲+库塌(有帮身但仍有严重损失)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                            else:
+                                details.append(f"💀 冲提纲(有帮身但结构受损)({year_branch}冲{month_branch})[非线性模型: {clash_penalty_value:.1f}]")
+                            
+                            # 应用冲提纲惩罚到 final_index
+                            final_index = clash_penalty_value
+                            # 不再计算其他正面因素（冲提纲优先）
+                            return {
+                                'wealth_index': final_index,
+                                'details': details,
+                                'strength_score': strength_score,
+                                'strength_label': strength_label,
+                                'opportunity': wealth_energy if wealth_energy > 0 else 0.0
+                            }
+            else:
+                # [V10.0] 有通关：冲提纲的影响被部分化解或转为机会
+                # [V61.6] 有通关但冲提纲影响仍然存在，只是减轻
+                # [V61.15] 如果有特殊机制（开库、双库共振等），冲提纲的惩罚应该大幅减轻
+                
+                # [V10.0] 关键优化：身强且有印星通关时，冲提纲转为正面机会
+                if strength_normalized >= 0.5 and has_seal_mediation:
+                    # 身强且有印星通关：冲提纲转为正面机会
+                    # [V10.0] 应用贝叶斯优化参数：opportunity_scaling = 1.8952
+                    nonlinear_config = self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+                    opportunity_scaling = nonlinear_config.get('opportunity_scaling', 1.8952)
+                    base_opportunity = 40.0  # 基础机会加成
+                    opportunity_bonus = base_opportunity * opportunity_scaling
+                    
+                    # 应用印星特权加成（贝叶斯优化结果：seal_bonus = 43.76）
+                    seal_bonus = nonlinear_config.get('seal_bonus', 43.76)
+                    seal_multiplier = nonlinear_config.get('seal_multiplier', 0.8538)
+                    
+                    # 先应用印星直接加成
+                    wealth_energy += seal_bonus
+                    
+                    # 再应用机会加成
+                    wealth_energy += opportunity_bonus
+                    
+                    # 最后应用印星乘数效应
+                    wealth_energy = wealth_energy * seal_multiplier
+                    
+                    # [V10.0] 核心分析师建议：重新计算 final_index，确保加成生效
+                    # 根据身强身弱情况，重新计算 final_index
+                    if strength_normalized >= 0.5:
+                        # 身强：直接使用财富能量
+                        bonus = 1.2 if strength_normalized > 0.6 else 1.0
+                        final_index = wealth_energy * bonus
+                    else:
+                        # 身弱：根据强根类型调整
+                        final_index = wealth_energy * 0.9
+                    
+                    # 更新详情
+                    details.append(f"💰 冲提纲转为机会加成: {opportunity_bonus:.1f} (缩放: {opportunity_scaling:.4f})")
+                    details.append(f"💰 印星特权加成: {seal_bonus:.1f}, 乘数: {seal_multiplier:.4f}, 最终指数: {final_index:.1f}")
+                    
+                    # 跳过后续的惩罚逻辑
+                    pass
+                elif treasury_opened:
+                    # 有开库：冲提纲的影响被开库抵消大部分
+                    clash_penalty = -20.0 if treasury_collapsed else -15.0
+                    if treasury_collapsed:
+                        details.append(f"⚠️ 冲提纲+库塌(有通关和开库，影响减轻)({year_branch}冲{month_branch})")
+                    else:
+                        details.append(f"⚠️ 冲提纲(有通关和开库，影响减轻)({year_branch}冲{month_branch})")
+                    # 应用冲提纲惩罚（在final_index计算之后）
+                    final_index += clash_penalty
+                else:
+                    # 无开库且非身强印星通关：冲提纲的惩罚应该仍然应用，但可以部分抵消
+                    clash_penalty = -60.0 if treasury_collapsed else -50.0
+                    if treasury_collapsed:
+                        details.append(f"⚠️ 冲提纲+库塌(有通关但仍有损失)({year_branch}冲{month_branch})")
+                    else:
+                        details.append(f"⚠️ 冲提纲(有通关但结构受损)({year_branch}冲{month_branch})")
+                    # 应用冲提纲惩罚（在final_index计算之后）
+                    final_index += clash_penalty
+                # 继续正常计算，但冲提纲惩罚已应用（如果适用）
         
-        # G. 限制范围
+        # G. [V10.0] 非线性阻尼机制 - 防止过拟合（核心分析师建议）
+        # 在能量超过80分后自动减缓增长斜率，以实现三年的整体平衡
+        nonlinear_config = self.config.get('nonlinear', {}) if hasattr(self, 'config') else {}
+        damping_config = nonlinear_config.get('nonlinear_damping', {})
+        
+        if damping_config.get('enabled', True):
+            damping_threshold = damping_config.get('threshold', 80.0)
+            damping_rate = damping_config.get('damping_rate', 0.3)
+            max_value = damping_config.get('max_value', 100.0)
+            
+            if final_index > damping_threshold:
+                # 计算超出阈值的部分
+                excess = final_index - damping_threshold
+                # 应用非线性阻尼：超出部分按阻尼率缩减
+                damped_excess = excess * (1.0 - damping_rate)
+                final_index = damping_threshold + damped_excess
+                details.append(f"🔧 非线性阻尼(阈值: {damping_threshold:.1f}, 阻尼率: {damping_rate:.2f}, 调整后: {final_index:.2f})")
+            
+            # 硬上限限制
+            if final_index > max_value:
+                final_index = max_value
+                details.append(f"🔧 硬上限限制: {max_value:.1f}")
+        
+        # G. 限制范围（保持原有的下限限制）
         final_index = max(-100.0, min(100.0, final_index))
         
+        # [V10.0] 贝叶斯推理：计算置信区间
+        # 检测关键机制以估计不确定性
+        has_clash = clash_commander if 'clash_commander' in locals() else False
+        has_trine_detected = any('三刑' in d or 'trine' in d.lower() for d in details)
+        
+        uncertainty_factors = BayesianInference.estimate_uncertainty_factors(
+            strength_normalized=strength_normalized,
+            clash_intensity=1.0 if has_clash else 0.0,
+            has_trine=has_trine_detected,
+            has_mediation=has_mediation if 'has_mediation' in locals() else False,
+            has_help=has_help if 'has_help' in locals() else False
+        )
+        
+        confidence_interval = BayesianInference.calculate_confidence_interval(
+            point_estimate=final_index,
+            uncertainty_factors=uncertainty_factors,
+            confidence_level=0.95
+        )
+        
+        # [V10.1] 计算概率分布（如果启用）
+        probabilistic_config = self.config.get('probabilistic_energy', {})
+        use_probabilistic = probabilistic_config.get('use_probabilistic_energy', False)
+        wealth_distribution = None
+        
+        if use_probabilistic:
+            # 定义参数扰动范围
+            parameter_ranges = {
+                'strength_normalized': (
+                    max(0.0, strength_normalized - 0.1),
+                    min(1.0, strength_normalized + 0.1)
+                ),
+                'clash_intensity': (0.8, 1.2) if has_clash else (0.0, 0.2),
+                'trine_effect': (0.0, 1.0) if has_trine_detected else (0.0, 0.1),
+            }
+            
+            # 蒙特卡洛模拟生成概率分布
+            monte_carlo_result = BayesianInference.monte_carlo_simulation(
+                base_estimate=final_index,
+                parameter_ranges=parameter_ranges,
+                n_samples=1000,
+                confidence_level=0.95
+            )
+            
+            wealth_distribution = {
+                "mean": monte_carlo_result.get('mean', final_index),
+                "std": monte_carlo_result.get('std', uncertainty_factors.get('base_uncertainty', 5.0)),
+                "percentiles": monte_carlo_result.get('percentiles', {}),
+                "samples_count": 1000
+            }
+        
         return {
-            "wealth_index": final_index,
+            "wealth_index": final_index,  # 点估计（向后兼容）
             "details": details,
             "opportunity": wealth_energy,
             "capacity": -1.2 if strength_normalized < 0.45 and wealth_energy > 0 else (1.2 if strength_normalized > 0.6 else 1.0),
             "strength_score": strength_score,
-            "strength_label": strength_label
+            "strength_label": strength_label,
+            # [V10.0] 贝叶斯推理结果
+            "confidence_interval": confidence_interval,
+            "uncertainty_factors": uncertainty_factors,
+            # [V10.1] 概率分布（如果启用）
+            "wealth_distribution": wealth_distribution
         }
 

@@ -1,0 +1,24 @@
+{
+  "year": 2014,
+  "year_pillar": "甲午",
+  "luck_pillar": "己卯",
+  "strength_score": 40.37763512230709,
+  "strength_normalized": 0.40377635122307093,
+  "strength_label": "Balanced",
+  "predicted_wealth": 76.338838584,
+  "real_wealth": 100.0,
+  "error": 23.661161416,
+  "pathway_analysis": {
+    "has_seven_kill_attack": false,
+    "has_seal_mediation": true,
+    "has_output_officer": true,
+    "has_strong_root": true,
+    "seven_kill_penalty": 0.0,
+    "seal_bonus": 0.0
+  },
+  "details": [
+    "流年午为日主临官(强根)",
+    "✅ 身弱得助，可担财",
+    "🌟 触发：食神制杀（化杀为权），财富阶跃(甲克己)[惩罚缩减: -0.1, 印星加成: 43.8, 机会加成: 25.6, 乘数: 0.8538, 最终指数: 76.3]"
+  ]
+}

@@ -1,0 +1,88 @@
+[
+  {
+    "year": 1985,
+    "year_pillar": "乙丑",
+    "luck_pillar": "甲戌",
+    "description": "公司结构重组，权力被架空，财富受损",
+    "strength_score": 44.44431540673851,
+    "strength_normalized": 0.4444431540673851,
+    "strength_label": "Weak",
+    "predicted_wealth": -40.99115594416675,
+    "real_wealth": -60.0,
+    "error": 19.00884405583325,
+    "mechanism_analysis": {
+      "is_extreme_weak": false,
+      "has_leg_cutting": true,
+      "is_from_pattern": false,
+      "is_structural_collapse": false,
+      "has_wealth_heavy": false,
+      "leg_cutting_penalty": -95.0,
+      "has_wealth_exposed": false,
+      "has_help": false
+    },
+    "details": [
+      "🚀 流年财库(丑)被引动",
+      "✅ 特殊机制触发，身弱可担财",
+      "⚠️ 截脚结构(天干克地支，削弱地支能量)[非线性模型: -95.0]"
+    ]
+  },
+  {
+    "year": 2003,
+    "year_pillar": "癸未",
+    "luck_pillar": "辛巳",
+    "description": "突发重大健康危机，花费巨额医疗费",
+    "strength_score": 50.27839347534556,
+    "strength_normalized": 0.5027839347534556,
+    "strength_label": "Balanced",
+    "predicted_wealth": 100.0,
+    "real_wealth": null,
+    "error": null,
+    "mechanism_analysis": {
+      "is_extreme_weak": false,
+      "has_leg_cutting": false,
+      "is_from_pattern": false,
+      "is_structural_collapse": false,
+      "has_wealth_heavy": false,
+      "leg_cutting_penalty": 0.0,
+      "has_wealth_exposed": false,
+      "has_help": true
+    },
+    "details": [
+      "🏆 三合局引动财库(财富爆发)(三合局成立)",
+      "流年比劫帮身",
+      "💪 身旺任财",
+      "🔧 非线性阻尼(阈值: 80.0, 阻尼率: 0.30, 调整后: 115.00)",
+      "🔧 硬上限限制: 100.0"
+    ]
+  },
+  {
+    "year": 2011,
+    "year_pillar": "辛卯",
+    "luck_pillar": "壬午",
+    "description": "健康状况恶化导致财富重大损失。算法焦点：验证流年截脚结构（辛卯）对极弱格局的负面影响",
+    "strength_score": 29.750988864624578,
+    "strength_normalized": 0.2975098886462458,
+    "strength_label": "Weak",
+    "predicted_wealth": -100.0,
+    "real_wealth": -90.0,
+    "error": 10.0,
+    "mechanism_analysis": {
+      "is_extreme_weak": true,
+      "has_leg_cutting": true,
+      "is_from_pattern": false,
+      "is_structural_collapse": true,
+      "has_wealth_heavy": false,
+      "leg_cutting_penalty": -181.1,
+      "has_wealth_exposed": false,
+      "has_help": true
+    },
+    "details": [
+      "食伤生财(卯)[基础: 45.0, 泄气惩罚: -36.0]",
+      "💥 财库坍塌(合开导致)(流年卯合戌)[非线性模型: -0.4]",
+      "流年印星帮身",
+      "⚠️ 印星特权禁用(极弱+截脚，印星转为忌神)",
+      "✅ 身弱得助，可担财",
+      "⚠️ 截脚结构(天干克地支，削弱地支能量)[非线性模型: -181.1]"
+    ]
+  }
+]

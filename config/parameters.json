@@ -180,5 +180,14 @@
   "ctl_imp": -2.2,
   "damping": 0.62,
   "drain_rate": 1.5,
-  "entropy": 0.24
+  "entropy": 0.24,
+  "strength": {
+    "energy_threshold_center": 2.89,
+    "phase_transition_width": 10.0,
+    "attention_dropout": 0.29
+  },
+  "gat": {
+    "use_gat": true,
+    "attention_dropout": 0.29
+  }
 }

@@ -1,0 +1,93 @@
+{
+  "case_id": "JASON_D_T1961_1010",
+  "case_name": "Jason D (财库连冲)",
+  "context": {
+    "bazi": [
+      "辛丑",
+      "丁酉",
+      "庚辰",
+      "丙戌"
+    ],
+    "day_master": "庚",
+    "strength_score": 106.44360842410174,
+    "strength_label": "Special_Strong",
+    "element_distribution": {},
+    "node_features": {},
+    "attention_weights": {},
+    "wealth_vaults": [
+      "丑",
+      "辰",
+      "戌"
+    ],
+    "vault_count": 3
+  },
+  "simulation_results": [
+    {
+      "year": 2015,
+      "year_pillar": "乙未",
+      "luck_pillar": "壬辰",
+      "wealth_index": 100.0,
+      "opportunity": 130.0,
+      "details": [
+        "天干透财(乙)",
+        "🚀 流年财库(未)被引动",
+        "流年印星帮身",
+        "💪 身旺任财",
+        "⚠️ 截脚结构(天干克地支，削弱地支能量)[非线性模型: -15.8]"
+      ],
+      "vault_opened": false,
+      "vault_collapsed": false,
+      "trine_effect": false,
+      "wealth_distribution": {
+        "mean": 99.70630680187666,
+        "std": 10.385630703821622,
+        "percentiles": {
+          "p5": 83.25158364067401,
+          "p25": 92.6774402151137,
+          "p50": 99.7355365439154,
+          "p75": 106.88979621435873,
+          "p95": 116.82501377645215
+        },
+        "samples_count": 1000
+      }
+    }
+  ],
+  "probability_results": [
+    {
+      "year": 2015,
+      "mean": 99.70630680187666,
+      "std": 10.385630703821622,
+      "confidence_interval": {
+        "p25": 92.6774402151137,
+        "p50": 99.7355365439154,
+        "p75": 106.88979621435873
+      },
+      "uncertainty_factors": {
+        "strength_uncertainty": 5.0,
+        "clash_uncertainty": 0.0,
+        "trine_uncertainty": 0.0,
+        "mediation_uncertainty": 2.0,
+        "help_uncertainty": 1.0,
+        "base_uncertainty": 5.0
+      },
+      "risk_level": "medium"
+    }
+  ],
+  "rlhf_feedback": {
+    "total_events": 1,
+    "correct_predictions": 1,
+    "hit_rate": 100.0,
+    "avg_error": 0.0,
+    "feedback_data": [
+      {
+        "year": 2015,
+        "real": 100.0,
+        "predicted": 100.0,
+        "error": 0.0,
+        "is_correct": true
+      }
+    ],
+    "recommendations": []
+  },
+  "timestamp": "2025-12-17T18:42:00.574216"
+}

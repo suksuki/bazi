@@ -7,6 +7,18 @@ import numpy as np
 import pandas as pd
 import copy  # V9.2 Fix
 import plotly.graph_objects as go
+import logging
+
+# [V10.1] 用于平滑曲线的插值
+try:
+    from scipy.interpolate import make_interp_spline
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+
+# 设置 logger
+logger = logging.getLogger(__name__)
+
 from ui.components.charts import DestinyCharts
 from ui.components.styles import (
     get_glassmorphism_css,
@@ -386,10 +398,56 @@ def render_prediction_dashboard():
         }
         
         tengods_data = {}
+        tengods_distributions = {}  # [V10.1] 概率分布数据
+        
+        # [V10.1] 检查是否启用概率分布
+        use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
+        
         for key, name in tengods_mapping.items():
             value = flux_data_for_analysis.get(key, 0) * 0.08  # Apply scale
             if value > 0.1:  # Only show significant values
                 tengods_data[name] = value
+                
+                # [V10.1] 如果启用概率分布，计算概率分布
+                if use_probabilistic:
+                    # 使用蒙特卡洛模拟生成概率分布
+                    from core.bayesian_inference import BayesianInference
+                    
+                    # 定义参数扰动范围（基于当前值）
+                    # 注意：monte_carlo_simulation 需要正确的参数格式
+                    parameter_ranges = {
+                        'base_value': (value * 0.9, value * 1.1),  # ±10% 扰动
+                    }
+                    
+                    try:
+                        # 蒙特卡洛模拟
+                        monte_carlo_result = BayesianInference.monte_carlo_simulation(
+                            base_estimate=value,
+                            parameter_ranges=parameter_ranges,
+                            n_samples=500,  # 减少采样次数以提高性能
+                            confidence_level=0.95
+                        )
+                    except Exception as e:
+                        logger.debug(f"十神能量概率分布计算失败 ({name}): {e}")
+                        # 如果计算失败，使用简化版本（基于不确定性估计）
+                        monte_carlo_result = {
+                            'mean': value,
+                            'std': value * 0.1,  # 假设 10% 的不确定性
+                            'percentiles': {
+                                'p5': value * 0.85,
+                                'p25': value * 0.92,
+                                'p50': value,
+                                'p75': value * 1.08,
+                                'p95': value * 1.15
+                            }
+                        }
+                    
+                    tengods_distributions[name] = {
+                        "mean": monte_carlo_result.get('mean', value),
+                        "std": monte_carlo_result.get('std', value * 0.1),
+                        "percentiles": monte_carlo_result.get('percentiles', {}),
+                        "point_estimate": value
+                    }
         
         if tengods_data:
             # Display as cards
@@ -399,16 +457,57 @@ def render_prediction_dashboard():
             for i, (name, value) in enumerate(tengods_list):
                 col_idx = i % 5
                 with tengods_cols[col_idx]:
-                    st.metric(name, f"{value:.2f}")
+                    if use_probabilistic and name in tengods_distributions:
+                        # [V10.1] 显示概率分布
+                        dist = tengods_distributions[name]
+                        mean_val = dist['mean']
+                        std_val = dist['std']
+                        percentiles = dist.get('percentiles', {})
+                        
+                        # 显示均值和标准差
+                        st.metric(
+                            name, 
+                            f"{mean_val:.2f}",
+                            delta=f"±{std_val:.2f}" if std_val > 0 else None
+                        )
+                        
+                        # 显示分位数（如果有）
+                        if percentiles:
+                            p25 = percentiles.get('p25', mean_val)
+                            p75 = percentiles.get('p75', mean_val)
+                            st.caption(f"范围: {p25:.2f} - {p75:.2f}")
+                    else:
+                        # 传统模式：只显示确定性值
+                        st.metric(name, f"{value:.2f}")
             
             # Create a summary DataFrame
-            tengods_df = pd.DataFrame([
-                {'十神': name, '能量值': value} 
-                for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
-            ])
+            if use_probabilistic and tengods_distributions:
+                # [V10.1] 包含概率分布的数据表
+                tengods_df = pd.DataFrame([
+                    {
+                        '十神': name, 
+                        '能量值(均值)': tengods_distributions.get(name, {}).get('mean', value),
+                        '标准差': tengods_distributions.get(name, {}).get('std', 0),
+                        '25%分位': tengods_distributions.get(name, {}).get('percentiles', {}).get('p25', value),
+                        '50%分位': tengods_distributions.get(name, {}).get('percentiles', {}).get('p50', value),
+                        '75%分位': tengods_distributions.get(name, {}).get('percentiles', {}).get('p75', value),
+                        '点估计': value
+                    } 
+                    for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
+                ])
+            else:
+                # 传统模式：只显示确定性值
+                tengods_df = pd.DataFrame([
+                    {'十神': name, '能量值': value} 
+                    for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
+                ])
             
             with st.expander("📋 十神详细数据表"):
                 st.dataframe(tengods_df, hide_index=True, width='stretch')
+                
+                # [V10.1] 如果启用概率分布，显示说明
+                if use_probabilistic and tengods_distributions:
+                    st.info("📊 **概率分布模式**: 能量值显示为概率分布（均值±标准差），而非单一确定值。这更符合量子八字的本质：命运是概率分布，而非确定性结论。")
         else:
             st.info("暂无显著的十神能量数据")
     
@@ -642,11 +741,160 @@ def render_prediction_dashboard():
     career_info = domains.get('career', {})
     d_col3.info(f"⚔️ 事业判定: {career_info.get('reason', 'Normal')}")
     
-    # Geo Effect - V9.5 MVC via Controller
+    # [V9.3 MCP] 模型不确定性提示
+    # 从 chart 或 results 中获取不确定性信息
+    uncertainty = None
+    # 尝试从多个位置获取不确定性信息
+    if chart:
+        if 'strength_data' in chart and isinstance(chart['strength_data'], dict):
+            uncertainty = chart['strength_data'].get('uncertainty')
+        elif 'uncertainty' in chart:
+            uncertainty = chart.get('uncertainty')
+    
+    if not uncertainty and results:
+        if 'strength_data' in results and isinstance(results['strength_data'], dict):
+            uncertainty = results['strength_data'].get('uncertainty')
+        elif 'uncertainty' in results:
+            uncertainty = results.get('uncertainty')
+    
+    # 如果仍然没有，尝试从引擎直接获取
+    if not uncertainty and engine:
+        try:
+            # 使用引擎的 analyze 方法获取不确定性
+            analysis_result = engine.analyze(bazi_list, chart.get('day', {}).get('stem', ''), 
+                                            chart.get('gender', '男'), 
+                                            selected_yun['gan_zhi'] if selected_yun else None,
+                                            current_gan_zhi)
+            if analysis_result and 'uncertainty' in analysis_result:
+                uncertainty = analysis_result.get('uncertainty')
+        except Exception as e:
+            logger.debug(f"Could not get uncertainty from engine: {e}")
+    
+    if uncertainty and uncertainty.get('has_uncertainty', False):
+        warning_msg = uncertainty.get('warning_message', '')
+        if warning_msg:
+            pattern_type = uncertainty.get('pattern_type', 'Unknown')
+            if pattern_type == 'Extreme_Weak':
+                st.warning(warning_msg)
+            elif pattern_type == 'Multi_Clash':
+                st.warning(warning_msg)
+            elif pattern_type == 'Follower_Grid':
+                st.info(warning_msg)
+            
+            # 显示概率分布
+            follower_prob = uncertainty.get('follower_probability', 0.0)
+            volatility = uncertainty.get('volatility_range', 0.0)
+            if follower_prob > 0 or volatility > 0:
+                prob_col1, prob_col2 = st.columns(2)
+                with prob_col1:
+                    if follower_prob > 0:
+                        st.metric("从格转化概率", f"{follower_prob*100:.0f}%", 
+                                 "概率分布", delta_color="inverse" if follower_prob > 0.3 else "normal")
+                    else:
+                        st.metric("从格转化概率", "0%", "稳定格局")
+                with prob_col2:
+                    if volatility > 0:
+                        st.metric("预测波动范围", f"±{volatility:.0f}分", 
+                                 "不确定性", delta_color="inverse" if volatility > 30 else "normal")
+                    else:
+                        st.metric("预测波动范围", "±0分", "稳定预测")
+    
+    # [V9.3 MCP] 宏观场实时更新显示
+    era_info = controller.get_current_era_info()
+    if era_info:
+        st.markdown("### 🌐 宏观场 (MCP: 时代上下文)")
+        era_cols = st.columns(4)
+        
+        with era_cols[0]:
+            era_desc = era_info.get('desc', '未知')
+            st.metric("当前时代", era_desc, f"周期 {era_info.get('period', '?')}")
+        
+        with era_cols[1]:
+            era_element = era_info.get('era_element', '')
+            era_bonus = era_info.get('era_bonus', 0.0)
+            element_names = {'wood': '木', 'fire': '火', 'earth': '土', 'metal': '金', 'water': '水'}
+            element_name = element_names.get(era_element, era_element)
+            st.metric("时代红利", f"{era_bonus*100:.0f}%", f"{element_name}能量增强", delta_color="normal")
+        
+        with era_cols[2]:
+            era_penalty = era_info.get('era_penalty', 0.0)
+            controlled_element = None
+            CONTROL = {'wood': 'earth', 'fire': 'metal', 'earth': 'water', 'metal': 'wood', 'water': 'fire'}
+            if era_element in CONTROL:
+                controlled_element = CONTROL[era_element]
+                controlled_name = element_names.get(controlled_element, controlled_element)
+                st.metric("时代折损", f"{abs(era_penalty)*100:.0f}%", f"{controlled_name}能量减弱", delta_color="inverse")
+            else:
+                st.metric("时代折损", "0%", "无")
+        
+        with era_cols[3]:
+            start_year = era_info.get('start_year', '?')
+            end_year = era_info.get('end_year', '?')
+            st.metric("时代跨度", f"{start_year}-{end_year}", f"共{end_year-start_year+1}年")
+        
+        # 影响描述
+        impact_desc = era_info.get('impact_description', '')
+        if impact_desc:
+            st.info(f"💡 **时代影响**: {impact_desc}")
+        
+        st.markdown("---")
+    
+    # [V9.3 MCP] Geo Effect - Enhanced Visualization
     if city_for_calc != "Unknown":
         geo_mods = controller.get_geo_modifiers(city_for_calc)
         if geo_mods:
-             st.caption(f"📍 地理修正: {geo_mods.get('desc')} (Applied to Energy Map)")
+            st.caption(f"📍 地理修正: {geo_mods.get('desc')} (Applied to Energy Map)")
+            
+            # [V9.3 MCP] 寒暖燥湿可视化面板
+            with st.expander("🌍 环境修正详情 (MCP: 地理上下文)", expanded=False):
+                col1, col2, col3 = st.columns(3)
+                
+                # 温度系数
+                temp_factor = geo_mods.get('temperature_factor', 1.0)
+                with col1:
+                    if temp_factor > 1.1:
+                        st.metric("🌡️ 温度系数", f"{temp_factor:.2f}x", "热辐射极值", delta_color="inverse")
+                    elif temp_factor < 0.9:
+                        st.metric("🌡️ 温度系数", f"{temp_factor:.2f}x", "寒冷", delta_color="normal")
+                    else:
+                        st.metric("🌡️ 温度系数", f"{temp_factor:.2f}x", "中性")
+                
+                # 湿度系数
+                humidity_factor = geo_mods.get('humidity_factor', 1.0)
+                with col2:
+                    if humidity_factor > 1.1:
+                        st.metric("💧 湿度系数", f"{humidity_factor:.2f}x", "湿润", delta_color="normal")
+                    elif humidity_factor < 0.9:
+                        st.metric("💧 湿度系数", f"{humidity_factor:.2f}x", "干燥", delta_color="inverse")
+                    else:
+                        st.metric("💧 湿度系数", f"{humidity_factor:.2f}x", "中性")
+                
+                # 环境修正偏向
+                env_bias = geo_mods.get('environment_bias', '未应用地理修正')
+                with col3:
+                    st.markdown("**环境修正偏向**")
+                    st.info(env_bias)
+                
+                # 五行修正系数详情
+                st.markdown("#### 📊 五行能量修正系数")
+                element_cols = st.columns(5)
+                element_labels = {'wood': '木', 'fire': '火', 'earth': '土', 'metal': '金', 'water': '水'}
+                element_colors = {'wood': '🟢', 'fire': '🔴', 'earth': '🟡', 'metal': '⚪', 'water': '🔵'}
+                
+                for idx, (elem, label) in enumerate(element_labels.items()):
+                    mod_value = geo_mods.get(elem, 1.0)
+                    color_icon = element_colors.get(elem, '⚫')
+                    with element_cols[idx]:
+                        if mod_value > 1.05:
+                            st.success(f"{color_icon} {label}\n**{mod_value:.2f}x** ⬆️")
+                        elif mod_value < 0.95:
+                            st.error(f"{color_icon} {label}\n**{mod_value:.2f}x** ⬇️")
+                        else:
+                            st.info(f"{color_icon} {label}\n**{mod_value:.2f}x** ➡️")
+                
+                st.caption("💡 **MCP 说明**: 地理修正系数直接影响五行能量计算，进而影响财富、事业等预测结果。")
+    else:
+        st.warning("⚠️ **MCP 警告**: 未选择地理城市，地域修正模块未激活。预测结果可能不准确。")
     
     # 4. Render Interface (Quantum Lab Style)
     st.markdown("### 🏛️ 四柱能量 (Four Pillars Energy - Interaction Matrix)")
@@ -707,6 +955,17 @@ def render_prediction_dashboard():
     years = range(sim_year, sim_year + 12)
     traj_data = []
     handover_years = []  # Sprint 5.4: 记录换运年份
+    
+    # [V10.1] 初始化概率分布数据列表（用于命运全息图）
+    distributions_data_for_hologram = []
+    use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
+    
+    # [V10.1] 如果启用概率分布，初始化 GraphNetworkEngine
+    graph_engine_for_hologram = None
+    if use_probabilistic:
+        graph_config = DEFAULT_FULL_ALGO_PARAMS.copy()
+        graph_config['probabilistic_energy'] = {'use_probabilistic_energy': True}
+        graph_engine_for_hologram = GraphNetworkEngine(config=graph_config)
     
     # Helper for GanZhi
     gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
@@ -803,6 +1062,78 @@ def render_prediction_dashboard():
         safe_wealth = float(final_wealth) if final_wealth is not None else 0.0
         safe_rel = float(final_rel) if final_rel is not None else 0.0
 
+        # [V10.1] 如果启用概率分布，计算概率分布数据
+        domain_distributions = {}
+        if use_probabilistic and graph_engine_for_hologram:
+            try:
+                # 使用 GraphNetworkEngine 计算概率分布
+                # 获取八字信息（从 case_data 或 controller）
+                chart = controller.get_chart() if hasattr(controller, 'get_chart') else None
+                if chart:
+                    bazi_list = [
+                        chart.get('year', {}).get('stem', '') + chart.get('year', {}).get('branch', ''),
+                        chart.get('month', {}).get('stem', '') + chart.get('month', {}).get('branch', ''),
+                        chart.get('day', {}).get('stem', '') + chart.get('day', {}).get('branch', ''),
+                        chart.get('hour', {}).get('stem', '') + chart.get('hour', {}).get('branch', '')
+                    ]
+                    day_master = chart.get('day', {}).get('stem', '甲')
+                else:
+                    # 从 case_data 获取
+                    bazi_list = case_data.get('bazi', ['甲子', '乙丑', '丙寅', '丁卯'])
+                    day_master = case_data.get('day_master', '甲')
+                
+                # 分析该年
+                analyze_result = graph_engine_for_hologram.analyze(
+                    bazi=bazi_list,
+                    day_master=day_master,
+                    luck_pillar=active_luck,
+                    year_pillar=l_gz
+                )
+                
+                # 计算 domain_scores 的概率分布（简化版：基于不确定性估计）
+                from core.bayesian_inference import BayesianInference
+                
+                for domain_name, domain_value in [('career', safe_career), ('wealth', safe_wealth), ('relationship', safe_rel)]:
+                    # 定义参数扰动范围
+                    parameter_ranges = {
+                        'base_value': (domain_value * 0.9, domain_value * 1.1),  # ±10% 扰动
+                    }
+                    
+                    try:
+                        monte_carlo_result = BayesianInference.monte_carlo_simulation(
+                            base_estimate=domain_value,
+                            parameter_ranges=parameter_ranges,
+                            n_samples=500,
+                            confidence_level=0.95
+                        )
+                        
+                        domain_distributions[domain_name] = {
+                            "mean": monte_carlo_result.get('mean', domain_value),
+                            "std": monte_carlo_result.get('std', domain_value * 0.1),
+                            "percentiles": monte_carlo_result.get('percentiles', {})
+                        }
+                    except Exception as e:
+                        logger.debug(f"概率分布计算失败 ({domain_name}): {e}")
+                        # 使用简化版本
+                        domain_distributions[domain_name] = {
+                            "mean": domain_value,
+                            "std": domain_value * 0.1,
+                            "percentiles": {
+                                'p25': domain_value * 0.92,
+                                'p50': domain_value,
+                                'p75': domain_value * 1.08
+                            }
+                        }
+            except Exception as e:
+                logger.debug(f"命运全息图概率分布计算失败: {e}")
+        
+        # 保存概率分布数据
+        if use_probabilistic and domain_distributions:
+            distributions_data_for_hologram.append({
+                'year': safe_year,
+                'distributions': domain_distributions
+            })
+
         traj_data.append({
             "year": safe_year,
             "label": f"{safe_year}\n{l_gz}",
@@ -845,7 +1176,14 @@ def render_prediction_dashboard():
     
     # Safety check: Only render chart if data exists
     # V6.0 Refactor: Delegate to Component
-    fig = DestinyCharts.render_life_curve(df_traj, sim_year, handover_years)
+    # [V10.1] 传递概率分布数据到图表组件
+    fig = DestinyCharts.render_life_curve(
+        df_traj, 
+        sim_year, 
+        handover_years,
+        use_probabilistic=use_probabilistic,
+        distributions_data=distributions_data_for_hologram if use_probabilistic and distributions_data_for_hologram else None
+    )
     
     if fig:
         st.plotly_chart(fig, width='stretch')
@@ -1065,6 +1403,12 @@ def render_prediction_dashboard():
                 deep_merge(graph_config, user_config)
     except Exception as e:
         st.warning(f"⚠️ 加载配置失败，使用默认配置: {e}")
+
+    # [V10.1] 概率分布开关（来自侧边栏）
+    use_prob = st.session_state.get('use_probabilistic_energy', False)
+    if 'probabilistic_energy' not in graph_config:
+        graph_config['probabilistic_energy'] = {}
+    graph_config['probabilistic_energy']['use_probabilistic_energy'] = use_prob
     
     graph_engine = GraphNetworkEngine(config=graph_config)
     
@@ -1119,6 +1463,9 @@ def render_prediction_dashboard():
     # 获取大运时间表（用于检测换运）
     timeline = controller.get_luck_timeline(num_steps=15)  # 获取15步大运（150年）
     handover_years_all = []
+    
+    # [V10.1] 初始化概率分布数据列表
+    wealth_distributions = []
     
     # 计算每年的数据
     lucky_scores = []
@@ -1264,6 +1611,14 @@ def render_prediction_dashboard():
                     wealth_details = wealth_result.get('details', [])
                     wealth_opportunity = wealth_result.get('opportunity', 0.0)
                     
+                    # [V10.1] 保存概率分布数据（如果启用）
+                    wealth_distribution = wealth_result.get('wealth_distribution')
+                    if wealth_distribution:
+                        wealth_distributions.append({
+                            'year': y,
+                            'distribution': wealth_distribution
+                        })
+                    
                     # 调试信息：显示前几年的详细计算过程
                     if idx < 5:
                         st.caption(f"🔍 {y}年财富计算: 机会={wealth_opportunity:.1f}, 指数={wealth_index:.1f}, 事件={', '.join(wealth_details[:3]) if wealth_details else '无'}")
@@ -1347,16 +1702,95 @@ def render_prediction_dashboard():
         st.markdown("#### 💰 财富折线 (Wealth Index Timeline)")
         fig_wealth = go.Figure()
         
-        # 添加折线
-        fig_wealth.add_trace(go.Scatter(
-            x=years_list,
-            y=wealth_indices,
-            mode='lines+markers',
-            name='财富指数',
-            line=dict(color='#FFD700', width=2),
-            marker=dict(size=3),
-            hovertemplate='%{x}年: %{y:.1f}分<extra></extra>'
-        ))
+        # [V10.1] 检查是否启用概率分布
+        use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
+        
+        if use_probabilistic and wealth_distributions and len(wealth_distributions) > 0:
+            # 概率分布模式：显示平滑曲线和置信区间
+            
+            # 提取概率分布数据
+            dist_years = [d['year'] for d in wealth_distributions]
+            dist_means = [d['distribution'].get('mean', 0) for d in wealth_distributions]
+            dist_stds = [d['distribution'].get('std', 0) for d in wealth_distributions]
+            dist_lowers = [d['distribution'].get('percentiles', {}).get('p25', d['distribution'].get('mean', 0) - d['distribution'].get('std', 0)) for d in wealth_distributions]
+            dist_uppers = [d['distribution'].get('percentiles', {}).get('p75', d['distribution'].get('mean', 0) + d['distribution'].get('std', 0)) for d in wealth_distributions]
+            
+            # 1. 添加置信区间（阴影区域）
+            fig_wealth.add_trace(go.Scatter(
+                x=dist_years + dist_years[::-1],
+                y=dist_uppers + dist_lowers[::-1],
+                fill='toself',
+                fillcolor='rgba(255, 215, 0, 0.2)',
+                line=dict(color='rgba(255,255,255,0)'),
+                hoverinfo="skip",
+                showlegend=True,
+                name='置信区间 (25%-75%)'
+            ))
+            
+            # 2. 添加平滑曲线（基于均值，使用插值）
+            if HAS_SCIPY and len(dist_years) > 3:
+                # 使用样条插值创建平滑曲线
+                try:
+                    # 创建更密集的x轴点
+                    x_smooth = np.linspace(min(dist_years), max(dist_years), len(dist_years) * 3)
+                    # 使用样条插值
+                    spl = make_interp_spline(dist_years, dist_means, k=min(3, len(dist_years)-1))
+                    y_smooth = spl(x_smooth)
+                    
+                    # 添加平滑曲线
+                    fig_wealth.add_trace(go.Scatter(
+                        x=x_smooth,
+                        y=y_smooth,
+                        mode='lines',
+                        name='财富指数 (平滑曲线)',
+                        line=dict(color='#FFD700', width=3, shape='spline'),
+                        hovertemplate='%{x:.0f}年: %{y:.1f}分<extra></extra>'
+                    ))
+                except Exception as e:
+                    logger.debug(f"样条插值失败，使用普通折线: {e}")
+                    # 如果插值失败，使用普通折线
+                    fig_wealth.add_trace(go.Scatter(
+                        x=dist_years,
+                        y=dist_means,
+                        mode='lines+markers',
+                        name='财富指数 (均值)',
+                        line=dict(color='#FFD700', width=3, shape='spline'),
+                        marker=dict(size=4),
+                        hovertemplate='%{x}年: %{y:.1f}分 (均值)<extra></extra>'
+                    ))
+            else:
+                # 数据点太少或没有 scipy，使用普通折线（但使用 spline 形状）
+                fig_wealth.add_trace(go.Scatter(
+                    x=dist_years,
+                    y=dist_means,
+                    mode='lines+markers',
+                    name='财富指数 (均值)',
+                    line=dict(color='#FFD700', width=3, shape='spline'),  # shape='spline' 让 Plotly 自动平滑
+                    marker=dict(size=4),
+                    hovertemplate='%{x}年: %{y:.1f}分 (均值)<extra></extra>'
+                ))
+            
+            # 3. 添加点估计值（可选，作为参考）
+            fig_wealth.add_trace(go.Scatter(
+                x=years_list,
+                y=wealth_indices,
+                mode='markers',
+                name='点估计',
+                marker=dict(size=2, color='rgba(255, 215, 0, 0.5)'),
+                hovertemplate='%{x}年: %{y:.1f}分 (点估计)<extra></extra>',
+                showlegend=False
+            ))
+        else:
+            # 传统模式：普通折线（但使用 spline 形状让曲线更平滑）
+            fig_wealth.add_trace(go.Scatter(
+                x=years_list,
+                y=wealth_indices,
+                mode='lines+markers',
+                name='财富指数',
+                line=dict(color='#FFD700', width=2, shape='spline'),  # shape='spline' 让 Plotly 自动平滑
+                marker=dict(size=3),
+                hovertemplate='%{x}年: %{y:.1f}分<extra></extra>'
+            ))
         
         # 添加换大运的纵向虚线
         for handover in handover_years_all:

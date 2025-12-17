@@ -56,6 +56,17 @@ def render_sidebar(app_mode):
                 st.caption("🌐 图网络引擎：基于矩阵传播的动态能量计算")
             else:
                 st.caption("📊 传统引擎：基于规则的能量累加计算")
+
+            # 概率分布开关（仅图网络模式有意义）
+            st.markdown("### 📈 概率分布")
+            init_session_state({'use_probabilistic_energy': False})
+            use_prob = st.checkbox(
+                "启用概率分布 (wealth_distribution)",
+                value=st.session_state.get('use_probabilistic_energy', False),
+                help="开启后，财富指数将返回概率分布（均值/标准差/分位数），更符合量子八字的概率特性。",
+                key="use_probabilistic_energy_checkbox"
+            )
+            st.session_state['use_probabilistic_energy'] = use_prob
             
         # Global Background Task Monitor (Removed per request)
         # render_mini_task_monitor() 

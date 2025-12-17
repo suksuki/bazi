@@ -150,5 +150,103 @@ DEFAULT_FULL_ALGO_PARAMS = {
     "grading": {
         "strong_threshold": 60.0,  # Strong >= 此值
         "weak_threshold": 40.0     # Weak < 此值, Balanced 在此之间
+    },
+    
+    # === 面板 7: 图注意力网络 (Graph Attention Network - GAT) ===
+    # [V10.0] 从固定邻接矩阵转向动态注意力机制
+    "gat": {
+        "use_gat": True,               # [V10.0] 启用 GAT 动态注意力（实现局部隔离调优）
+        "num_heads": 4,                # Multi-head Attention 头数
+        "attention_dropout": 0.29,     # [V10.0] 注意力稀疏度（从敏感度分析得出）
+        "leaky_relu_alpha": 0.2,       # LeakyReLU 参数
+        "gat_mix_ratio": 0.5,          # GAT 动态矩阵与固定矩阵的混合比例
+        "generation_efficiency": 0.3,  # 生的效率（作为先验知识）
+        "control_impact": 0.7,         # 克的影响（作为先验知识）
+        "combination_weight": 0.5,     # 合的权重
+        "clash_weight": -0.8           # 冲的权重
+    },
+    
+    # === 面板 8: Transformer 时序建模 (Transformer Temporal Modeling) ===
+    # [V10.0] 时序建模，捕捉长程依赖
+    "transformer": {
+        "use_transformer": False,      # 是否启用 Transformer（默认 False）
+        "d_model": 64,                 # 模型维度
+        "num_heads": 4,                # 注意力头数
+        "num_layers": 2,               # Transformer 层数
+        "dropout": 0.1,                # Dropout 比率
+        "max_seq_len": 100,            # 最大序列长度
+        "year_weight": 1.0,            # 流年权重
+        "month_weight": 0.3,           # 流月权重
+        "day_weight": 0.1              # 流日权重
+    },
+    
+    # === 面板 9: 强化学习反馈 (Reinforcement Learning from Human Feedback - RLHF) ===
+    # [V10.0] 基于真实案例反馈的自适应进化
+    "rlhf": {
+        "use_rlhf": False,             # 是否启用 RLHF（默认 False）
+        "learning_rate": 0.01,         # 学习率
+        "accuracy_weight": 1.0,        # 准确率权重
+        "error_penalty_weight": -0.5,  # 误差惩罚权重
+        "hit_rate_bonus": 10.0,        # 命中率加成
+        "error_threshold": 20.0,       # 误差阈值
+        "feedback_file": "data/rlhf_feedback.json"  # 反馈历史文件路径
+    },
+    
+    # === 面板 10: 概率能量值 (Probabilistic Energy Values) ===
+    # [V10.1] 将能量值改为概率分布，符合量子八字本质
+    "probabilistic_energy": {
+        "use_probabilistic_energy": False,  # 是否启用概率能量值（默认 False）
+        "monte_carlo_samples": 1000,       # 蒙特卡洛采样次数
+        "parameter_perturbation": 0.1,     # 参数扰动范围（10%）
+        "return_samples": False            # 是否返回所有采样值（默认 False，只返回统计量）
+    },
+    
+    # === 面板 7.5: 旺衰判定参数 (Strength Determination) ===
+    # [V10.0] 旺衰概率波、GAT 动态注意力、贝叶斯自校准
+    "strength": {
+        # 激活函数中心点（中性点）
+        "energy_threshold_center": 2.89,      # 最优值（从敏感度分析得出）
+        # 相变宽度（Softplus β 参数）
+        "phase_transition_width": 10.0,      # 保持默认值，平滑过渡
+        # 注意力稀疏度（GAT dropout）
+        "attention_dropout": 0.29            # 最优值（从敏感度分析得出）
+    },
+    
+    # === 面板 8: 非线性激活函数 (Nonlinear Activation) ===
+    # [V10.0] 从硬编码 if/else 转向非线性 Soft-thresholding 模型
+    "nonlinear": {
+        # Softplus/Sigmoid 软阈值参数
+        "threshold": 0.5,          # 临界点阈值
+        "scale": 10.0,             # Softplus 缩放因子，控制过渡的陡峭程度
+        "steepness": 10.0,         # Sigmoid 陡峭度，控制过渡的平滑程度
+        
+        # 相变能量模型参数
+        "phase_point": 0.5,        # 相变点（临界点）
+        "critical_exponent": 2.0,  # 临界指数（控制相变的陡峭程度）
+        
+        # 量子隧穿概率模型参数
+        "barrier_height": 0.6,     # 屏障高度（库的封闭强度）
+        "barrier_width": 1.0,      # 屏障宽度（库的厚度）
+        
+        # 多因素综合影响权重
+        "clash_intensity_weight": 0.5,  # 冲的强度权重
+        "trine_effect_weight": 0.3,     # 三刑效应权重
+        "mediation_factor": 0.3,        # 通关缓解因子
+        "help_factor": 0.6,             # 帮身缓解因子
+        
+        # [V10.0] 贝叶斯优化参数 - Jason B 案例优化结果
+        "seal_bonus": 43.76,                    # 印星帮身直接加成（0-50）
+        "seal_multiplier": 0.8538,              # 印星帮身乘数（0.8-1.2）
+        "seal_conduction_multiplier": 1.7445,  # 印星传导乘数（1.0-2.0），用于食神制杀通道
+        "opportunity_scaling": 1.8952,          # 机会加成缩放比例（0.5-2.0），用于冲提纲转为机会
+        "clash_damping_limit": 0.2820,         # 身强时冲提纲减刑系数（0.1-0.3）
+        
+        # [V10.0] 非线性阻尼机制 - 防止过拟合（核心分析师建议）
+        "nonlinear_damping": {
+            "enabled": True,                    # 是否启用非线性阻尼
+            "threshold": 80.0,                  # 阻尼阈值（能量超过此值后开始阻尼）
+            "damping_rate": 0.3,                # 阻尼率（0-1，值越大阻尼越强）
+            "max_value": 100.0                  # 最大允许值（硬上限）
+        }
     }
 }
