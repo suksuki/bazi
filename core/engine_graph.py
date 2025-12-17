@@ -352,9 +352,57 @@ class GraphNetworkEngine:
                     node, pillar_weights, structure_config, geo_modifiers
                 )
             
+            # [V58.2] Seasonal Dominance Lock: 当令五行初始能量加成
+            # 检查节点元素是否是当令五行（月令元素）
+            if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 1:
+                month_branch = self.bazi[1][1] if len(self.bazi[1]) > 1 else None
+                if month_branch:
+                    month_element = self.BRANCH_ELEMENTS.get(month_branch, 'earth')
+                    # 如果节点元素是当令五行，初始能量获得 1.3x 季节加成
+                    if node.element == month_element:
+                        energy *= 1.3
+            
             node.initial_energy = energy
             node.current_energy = energy
             H0[i] = energy
+        
+        # [V59.0] Absolute Self-Punishment (绝对自刑惩罚) - Fix REAL_W_010
+        # 在节点初始化完成后，检测自刑并直接削减节点初始能量
+        if hasattr(self, 'bazi') and self.bazi:
+            branches = [p[1] for p in self.bazi if len(p) >= 2]
+            self_punishments = {'辰', '午', '酉', '亥'}
+            branch_counts = {}
+            for branch in branches:
+                branch_counts[branch] = branch_counts.get(branch, 0) + 1
+            
+            # 检测自刑地支（出现 >= 2 次）
+            self_punishment_branches = set()
+            for branch, count in branch_counts.items():
+                if branch in self_punishments and count >= 2:
+                    self_punishment_branches.add(branch)
+            
+            # 如果检测到自刑，削减所有对应地支的节点初始能量
+            if self_punishment_branches:
+                for i, node in enumerate(self.nodes):
+                    # 如果是自刑地支节点本身，直接削减
+                    if node.node_type == 'branch' and node.char in self_punishment_branches:
+                        # 强制削减 80% 初始能量（只保留 20%）
+                        node.initial_energy *= 0.2
+                        node.current_energy *= 0.2
+                        H0[i] *= 0.2
+                    # 如果是自刑地支藏干对应的天干节点，也削减
+                    elif node.node_type == 'stem':
+                        # 检查该天干是否在自刑地支的藏干中
+                        from core.processors.physics import PhysicsProcessor
+                        for branch_char in self_punishment_branches:
+                            hidden_map = PhysicsProcessor.GENESIS_HIDDEN_MAP.get(branch_char, [])
+                            for hidden_stem, _ in hidden_map:
+                                if node.char == hidden_stem:
+                                    # 该天干是自刑地支的藏干，削减其初始能量
+                                    node.initial_energy *= 0.2
+                                    node.current_energy *= 0.2
+                                    H0[i] *= 0.2
+                                    break
         
         self.H0 = H0
         return H0
@@ -647,8 +695,29 @@ class GraphNetworkEngine:
                 )
                 
                 # 5. 距离衰减（空间衰减）
+                # [V59.0] 透干印星豁免距离衰减：如果节点是透干印星（天干节点且是印星），不应用距离衰减
+                # 因为透干印星的通关能力不受距离限制
+                is_exposed_resource = False
+                if node_j.node_type == 'stem':
+                    # 检查 node_j 是否是透干印星
+                    from core.processors.physics import GENERATION
+                    # 从节点中动态获取日主元素（因为可能化气）
+                    dm_element = None
+                    for node in self.nodes:
+                        if node.pillar_idx == 2 and node.node_type == 'stem':
+                            dm_element = node.element
+                            break
+                    if dm_element:
+                        resource_element = None
+                        for elem, target in GENERATION.items():
+                            if target == dm_element:
+                                resource_element = elem
+                                break
+                        if resource_element and node_j.element == resource_element:
+                            is_exposed_resource = True
+                
                 distance = abs(node_i.pillar_idx - node_j.pillar_idx)
-                if distance > 0:
+                if distance > 0 and not is_exposed_resource:  # 透干印星豁免距离衰减
                     spatial_config = flow_config.get('spatialDecay', {'gap1': 0.6, 'gap2': 0.3})
                     if distance == 1:
                         weight *= spatial_config.get('gap1', 0.6)
@@ -678,18 +747,65 @@ class GraphNetworkEngine:
             flow_config: 流程配置
             source_char: 源字符（用于特殊检测，如润局）
             target_char: 目标字符（用于特殊检测）
+        
+        [V58.1] Seasonal Dominance (得令者昌) - Fix Bruce Lee
+        - 冬季（亥/子/丑月）：增强水生木的效率
         """
         if source_element in GENERATION and GENERATION[source_element] == target_element:
             generation_efficiency = flow_config.get('generationEfficiency', 1.2)
             base_weight = 0.6 * generation_efficiency
             
-            # 特殊处理：润局效应（水润土生金）
-            # 如果土生金，且存在水（如亥），增强权重
+            # [V58.2] Seasonal Dominance Lock (季节性优势锁定) - Fix Bruce Lee
+            # 检查当前季节（月令）
+            is_winter = False
+            month_branch = None
+            if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 1:
+                month_branch = self.bazi[1][1] if len(self.bazi[1]) > 1 else None
+                # 冬季：亥、子、丑月
+                if month_branch in ['亥', '子', '丑']:
+                    is_winter = True
+            
+            # [V58.2] 如果是冬季，且是水生木，增强生成效率（即使水很冷，只要有木，水就会流向木）
+            if is_winter and source_element == 'water' and target_element == 'wood':
+                # 水生木效率提升 50%
+                base_weight *= 1.5
+            
+            # [V58.2] 当令五行能量加成：如果源元素是当令五行，增强生成效率
+            if month_branch:
+                month_element = self.BRANCH_ELEMENTS.get(month_branch, 'earth')
+                if source_element == month_element:
+                    # 当令五行生其他元素：效率提升 30%
+                    base_weight *= 1.3
+            
+            # [V58.3] 湿土生金润局优化：如果土生金，根据土的干湿程度调整权重
             if source_element == 'earth' and target_element == 'metal':
-                # 检查是否有水存在（简化：如果源字符是未/戌，且图中有亥/子）
-                # 这里我们只检查基础权重，润局效应在矩阵构建时通过检查全局水节点来增强
-                moisture_boost = flow_config.get('earthMetalMoistureBoost', 1.0)
-                base_weight *= moisture_boost
+                # 检查是否是湿土（丑、辰）
+                is_moist_earth = False
+                if source_char:
+                    # 湿土：丑、辰
+                    if source_char in ['丑', '辰']:
+                        is_moist_earth = True
+                
+                # [V58.3] 湿土生金效率更高
+                if is_moist_earth:
+                    base_weight *= 1.3  # 湿土生金效率提升 30%
+                else:
+                    # 燥土（未、戌）：检查是否有润局（水能量 > 3.0）
+                    # 计算全局水能量
+                    water_energy = 0.0
+                    if hasattr(self, 'nodes'):
+                        for node in self.nodes:
+                            if node.element == 'water':
+                                water_energy += node.initial_energy if hasattr(node, 'initial_energy') else node.current_energy
+                    
+                    # [V59.0] Absolute Climate Boost (绝对润局增幅) - Fix REAL_S_006
+                    # 如果水能量 > 3.0（润局），将土生金的增幅提高到 1.5x
+                    if water_energy > 3.0:
+                        base_weight *= 1.5  # 润局时，燥土生金效率提升 50%（从 1.3 提升到 1.5）
+                    else:
+                        # 普通燥土生金：使用默认权重
+                        moisture_boost = flow_config.get('earthMetalMoistureBoost', 1.0)
+                        base_weight *= moisture_boost
             
             return base_weight
         return 0.0
@@ -703,10 +819,27 @@ class GraphNetworkEngine:
         [V52.0] 任务 A：通关导管逻辑
         - 如果存在通关神（中间元素），计算导管容量
         - 只有当通关神足够强时，才能转化掉克制力
+        
+        [V58.1] Seasonal Dominance (得令者昌) - Fix Bruce Lee
+        - 冬季（亥/子/丑月）：削弱土克水，增强水生木
         """
         if source_element in CONTROL and CONTROL[source_element] == target_element:
             control_impact = flow_config.get('controlImpact', 0.7)
             base_control = -0.3 * control_impact
+            
+            # [V58.2] Seasonal Dominance Lock (季节性优势锁定) - Fix Bruce Lee
+            # 检查当前季节（月令）
+            is_winter = False
+            if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 1:
+                month_branch = self.bazi[1][1] if len(self.bazi[1]) > 1 else None
+                # 冬季：亥、子、丑月
+                if month_branch in ['亥', '子', '丑']:
+                    is_winter = True
+            
+            # [V58.2] 如果是冬季，且是土克水，大幅削弱克制效率（冻土不能止水）
+            if is_winter and source_element == 'earth' and target_element == 'water':
+                # 冻土不克水：克制效率降低到 10%（几乎无效）
+                base_control *= 0.1
             
             # [V52.0] 任务 A：检查通关机制
             enable_mediation = flow_config.get('enable_mediation', True)
@@ -847,6 +980,17 @@ class GraphNetworkEngine:
                 clash_damping = branch_events.get('clashDamping', 0.3)
                 clash_score = branch_events.get('clashScore', -5.0)
                 
+                # [V58.1] Commander Immunity (提纲免死金牌) - Fix Wu Zetian
+                # 检查被冲的节点是否是月令地支（Month Branch）
+                is_month_branch_clashed = False
+                if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 1:
+                    month_branch = self.bazi[1][1] if len(self.bazi[1]) > 1 else None
+                    if month_branch and (char1 == month_branch or char2 == month_branch):
+                        is_month_branch_clashed = True
+                        # 月令被冲：至少保留 80% 能量（普通地支可能只剩 40%）
+                        # 调整 clash_damping：从 0.3 提升到 0.8（保留更多能量）
+                        clash_damping = max(clash_damping, 0.8)  # 至少保留 80% 能量
+                
                 # [V57.2] 阳刃金刚盾：检查所有参与冲的地支节点，如果其中一个是日主的阳刃（帝旺位），完全豁免冲的影响
                 is_yangren_shielded = False
                 if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 2:
@@ -940,12 +1084,74 @@ class GraphNetworkEngine:
                             # 标记节点为阳刃
                             node.is_yangren = True
         
+        # [V58.2] Commander Absolute Immunity (月令绝对免疫) - Fix Wu Zetian
+        # 识别月令节点及其对日主的生助连接
+        month_branch_nodes = []
+        month_branch_char = None
+        if hasattr(self, 'bazi') and self.bazi and len(self.bazi) > 1:
+            month_branch_char = self.bazi[1][1] if len(self.bazi[1]) > 1 else None
+            if month_branch_char:
+                # 找到月支节点及其藏干节点
+                for i, node in enumerate(self.nodes):
+                    if (node.node_type == 'branch' and node.char == month_branch_char and 
+                        node.pillar_idx == 1):  # 月支
+                        month_branch_nodes.append(i)
+                    # 检查藏干节点（如果月支藏干中有生助日主的元素）
+                    if node.node_type == 'branch' and node.char == month_branch_char:
+                        from core.processors.physics import PhysicsProcessor
+                        hidden_map = PhysicsProcessor.GENESIS_HIDDEN_MAP.get(month_branch_char, [])
+                        for hidden_stem, _ in hidden_map:
+                            hidden_element = self.STEM_ELEMENTS.get(hidden_stem, 'earth')
+                            # 如果藏干元素生助日主（印星或比劫），也标记为月令相关节点
+                            from core.processors.physics import GENERATION
+                            resource_element = None
+                            for elem, target in GENERATION.items():
+                                if target == dm_element:
+                                    resource_element = elem
+                                    break
+                            if hidden_element == resource_element or hidden_element == dm_element:
+                                # 找到对应的天干节点
+                                for j, other_node in enumerate(self.nodes):
+                                    if other_node.char == hidden_stem and other_node.node_type == 'stem':
+                                        if j not in month_branch_nodes:
+                                            month_branch_nodes.append(j)
+        
         for iteration in range(max_iterations):
             # 矩阵乘法：能量传播
             H_new = self.adjacency_matrix @ H
             
             # 应用阻尼（防止发散）
             H = damping * H_new + (1 - damping) * self.H0
+            
+            # [V58.2] Commander Absolute Immunity (月令绝对免疫) - Fix Wu Zetian
+            # 确保月令节点对日主的生助权重锁定为 1.0（无损传输）
+            if month_branch_nodes and dm_indices and self.adjacency_matrix is not None:
+                for month_idx in month_branch_nodes:
+                    month_node = self.nodes[month_idx]
+                    # 检查月令节点是否生助日主
+                    from core.processors.physics import GENERATION
+                    resource_element = None
+                    for elem, target in GENERATION.items():
+                        if target == dm_element:
+                            resource_element = elem
+                            break
+                    
+                    # 如果月令节点是印星（生我的）或比劫（同我的），锁定其对日主的生助权重
+                    is_helping_dm = (month_node.element == resource_element or 
+                                    month_node.element == dm_element)
+                    
+                    if is_helping_dm:
+                        for dm_idx in dm_indices:
+                            # 锁定月令对日主的生助权重为 1.0（无损传输）
+                            current_weight = self.adjacency_matrix[dm_idx][month_idx]
+                            if current_weight > 0:  # 如果是生助关系（正权重）
+                                # 强制锁定为 1.0，确保能量无损传输
+                                self.adjacency_matrix[dm_idx][month_idx] = max(
+                                    current_weight, 1.0
+                                )
+                            # 如果月令节点能量低于初始能量的 80%，强制恢复到初始能量的 80%
+                            if H[month_idx] < self.H0[month_idx] * 0.8:
+                                H[month_idx] = self.H0[month_idx] * 0.8
             
             # [V57.2] 阳刃金刚盾：保护阳刃节点，确保能量不被过度削弱
             # [V57.4] 增强：如果阳刃节点被冲，不仅豁免，还要能量加成（越冲越旺）
@@ -1056,6 +1262,18 @@ class GraphNetworkEngine:
                 break
         
         # [V57.0] 计算根气状态（用于虚浮比劫惩罚）
+        # [V58.3] 检测自刑地支（用于根气惩罚）
+        self_punishment_branches = set()
+        if hasattr(self, 'bazi') and self.bazi:
+            branches = [p[1] for p in self.bazi if len(p) >= 2]
+            self_punishments = {'辰', '午', '酉', '亥'}
+            branch_counts = {}
+            for branch in branches:
+                branch_counts[branch] = branch_counts.get(branch, 0) + 1
+            for branch, count in branch_counts.items():
+                if branch in self_punishments and count >= 2:
+                    self_punishment_branches.add(branch)
+        
         total_root_energy = 0.0
         from core.processors.physics import PhysicsProcessor
         for node in self.nodes:
@@ -1065,7 +1283,11 @@ class GraphNetworkEngine:
                 for hidden_stem, weight in hidden_map:
                     hidden_element = self.STEM_ELEMENTS.get(hidden_stem, 'earth')
                     if hidden_element == dm_element:
-                        total_root_energy += weight * node.current_energy * 0.1
+                        root_energy = weight * node.current_energy * 0.1
+                        # [V58.3] 自刑惩罚：如果地支有自刑，根气贡献乘以 0.2（根源削减）
+                        if branch_char in self_punishment_branches:
+                            root_energy *= 0.2  # 自刑根气惩罚：只保留 20% 贡献
+                        total_root_energy += root_energy
         
         # 累加所有节点的能量
         for node in self.nodes:
@@ -1565,8 +1787,16 @@ class GraphNetworkEngine:
             for dm_idx in dm_indices:
                 kill_weight = self.adjacency_matrix[dm_idx][officer_idx]
                 
-                # 如果克制权重为负且绝对值较大（强克制）
-                if kill_weight < -0.1:
+                # [V59.0] 降低阈值以识别更多通关情况（特别是透干印星）
+                # 如果克制权重为负（即使很小，只要有克制，就应该检查通关）
+                # 或者如果存在透干印星，强制检查通关（即使克制权重很小）
+                has_exposed_resource = any(
+                    node.node_type == 'stem' and node.element == resource_element 
+                    for node in self.nodes
+                )
+                
+                # 如果克制权重为负，或者存在透干印星，都应该检查通关
+                if kill_weight < -0.01 or (has_exposed_resource and kill_weight < 0):
                     # 寻找印星节点，检查是否存在通关路径
                     best_resource_idx = None
                     best_mediation_strength = 0.0
@@ -1578,59 +1808,108 @@ class GraphNetworkEngine:
                         # 2. 印星生日主（印星 -> 日主）
                         resource_to_dm = self.adjacency_matrix[dm_idx][resource_idx]
                         
-                        # [V57.0] 降低阈值以识别更多通关情况
+                        # [V59.0] 降低阈值以识别更多通关情况（特别是透干印星）
+                        # 对于透干印星，路径权重阈值应该更低（0.01），因为透干印星转化效率高
+                        resource_node = self.nodes[resource_idx]
+                        is_exposed = resource_node.node_type == 'stem'  # 天干即为透干
+                        
+                        # 透干印星：路径权重阈值降低到 0.01（从 0.05 降低）
+                        # 非透干印星：保持原阈值 0.05
+                        path_threshold = 0.01 if is_exposed else 0.05
+                        
                         # 如果两条路径都存在（权重为正），说明有通关
-                        if kill_to_resource > 0.05 and resource_to_dm > 0.05:
+                        if kill_to_resource > path_threshold and resource_to_dm > path_threshold:
+                            # [V58.3] 检查印星是否透干（透干印星忽略 Capacity Check）
+                            resource_node = self.nodes[resource_idx]
+                            is_exposed = resource_node.node_type == 'stem'  # 天干即为透干
+                            
                             # 计算通关强度（取两条路径的最小值）
                             mediation_strength = min(kill_to_resource, resource_to_dm)
                             # 还要考虑印星的能量（有气才能通关）
                             resource_energy = self.nodes[resource_idx].current_energy
                             kill_energy = self.nodes[officer_idx].current_energy
                             
-                            # [V54.0] Capacity Check: 印星能量必须足够大（>= 克制能量的 30%）
-                            # 否则通关失败（水多木漂/土多金埋）
-                            capacity_threshold = kill_energy * 0.3
-                            if resource_energy >= capacity_threshold:
-                                # 计算通关强度（考虑容量）
-                                total_strength = mediation_strength * min(1.0, resource_energy / max(kill_energy, 1.0))
+                            # [V58.3] 透干印星：忽略 Capacity Check 限制（转化效率高）
+                            if is_exposed:
+                                # 透干印星：直接计算通关强度，不检查容量
+                                # 透干印星转化效率大幅提升（2.0倍），确保能触发通关
+                                total_strength = mediation_strength * 2.0  # 透干印星转化效率提升（从1.5提升到2.0）
                                 if total_strength > best_mediation_strength:
                                     best_mediation_strength = total_strength
                                     best_resource_idx = resource_idx
+                            else:
+                                # [V54.0] Capacity Check: 非透干印星能量必须足够大（>= 克制能量的 30%）
+                                # 否则通关失败（水多木漂/土多金埋）
+                                capacity_threshold = kill_energy * 0.3
+                                if resource_energy >= capacity_threshold:
+                                    # 计算通关强度（考虑容量）
+                                    total_strength = mediation_strength * min(1.0, resource_energy / max(kill_energy, 1.0))
+                                    if total_strength > best_mediation_strength:
+                                        best_mediation_strength = total_strength
+                                        best_resource_idx = resource_idx
                     
                     # [V57.0] 降低阈值以识别更多通关情况
+                    # [V58.3] 对于透干印星，进一步降低阈值（透干印星转化效率高，即使路径权重较小也能通关）
+                    resource_node = None
+                    is_exposed_mediation = False
+                    if best_resource_idx is not None:
+                        resource_node = self.nodes[best_resource_idx]
+                        is_exposed_mediation = resource_node.node_type == 'stem'  # 天干即为透干
+                    
+                    # [V59.0] 透干印星：阈值降低到 0.01（从 0.05 进一步降低）
+                    # 非透干印星：保持原阈值 0.1
+                    mediation_threshold = 0.01 if is_exposed_mediation else 0.1
+                    
                     # 如果找到通关路径，重构拓扑
-                    if best_resource_idx is not None and best_mediation_strength > 0.1:
+                    if best_resource_idx is not None and best_mediation_strength > mediation_threshold:
                         # [V57.0] 检查印星是否透干（提升转化效率）
                         resource_node = self.nodes[best_resource_idx]
                         is_exposed = resource_node.node_type == 'stem'  # 天干即为透干
                         
-                        # 1. 大幅削弱直接克制（官杀 -> 日主）
+                        # [V59.0] Absolute Mediation Boost (绝对通关转化) - Fix REAL_B_011
+                        # 如果通关神是透干印星，强制提升转化效率到 3.0x，直接克制削减到 0.01
                         if is_exposed:
-                            # 印星透干：直接克制削减更多
-                            self.adjacency_matrix[dm_idx][officer_idx] *= 0.1
+                            # 1. [V59.0] 绝对削弱直接克制（官杀 -> 日主）：削减到 0.01（几乎完全切断）
+                            self.adjacency_matrix[dm_idx][officer_idx] *= 0.01
+                            
+                            # 2. [V59.0] 透干印星：强制提升转化效率到 3.0（绝对转化）
+                            # 同时增强印星生日主的权重
+                            self.adjacency_matrix[best_resource_idx][officer_idx] *= 3.0  # 官杀 -> 印星
+                            self.adjacency_matrix[dm_idx][best_resource_idx] *= 1.5  # 印星 -> 日主（额外增强）
+                            
+                            # [V59.0] Log: 记录绝对通关
+                            officer_char = self.nodes[officer_idx].char
+                            resource_char = self.nodes[best_resource_idx].char
+                            dm_char = self.nodes[dm_idx].char
+                            if not hasattr(self.nodes[best_resource_idx], 'trigger_events'):
+                                self.nodes[best_resource_idx].trigger_events = []
+                            self.nodes[best_resource_idx].trigger_events.append(
+                                f"🌉 绝对通关: 透干印星 {resource_char} 启动 ({officer_char} -> {resource_char} -> {dm_char})"
+                            )
                         else:
+                            # 非透干印星：使用原有逻辑
+                            # 1. 大幅削弱直接克制（官杀 -> 日主）
                             self.adjacency_matrix[dm_idx][officer_idx] *= 0.2
-                        
-                        # 2. 增强生印的力量（官杀 -> 印星）
-                        if is_exposed:
-                            # [V57.0] 印星透干：转化率提升到 2.0（无损转化）
-                            self.adjacency_matrix[best_resource_idx][officer_idx] *= 2.0
-                        else:
+                            
+                            # 2. 增强生印的力量（官杀 -> 印星）
                             self.adjacency_matrix[best_resource_idx][officer_idx] *= 1.5
+                            
+                            # Log: 记录通关成功
+                            officer_char = self.nodes[officer_idx].char
+                            resource_char = self.nodes[best_resource_idx].char
+                            dm_char = self.nodes[dm_idx].char
+                            if not hasattr(self.nodes[best_resource_idx], 'trigger_events'):
+                                self.nodes[best_resource_idx].trigger_events = []
+                            self.nodes[best_resource_idx].trigger_events.append(
+                                f"🌉 通关成功: {officer_char} -> {resource_char} -> {dm_char}"
+                            )
                         
-                        # [V57.0] Log: 记录通关成功
-                        officer_char = self.nodes[officer_idx].char
-                        resource_char = self.nodes[best_resource_idx].char
-                        dm_char = self.nodes[dm_idx].char
-                        # 确保节点有 trigger_events 属性
-                        if not hasattr(self.nodes[best_resource_idx], 'trigger_events'):
-                            self.nodes[best_resource_idx].trigger_events = []
-                        self.nodes[best_resource_idx].trigger_events.append(
-                            f"🌉 通关成功: {officer_char} -> {resource_char} -> {dm_char}"
-                        )
                         # 也在日主节点记录
                         if not hasattr(self.nodes[dm_idx], 'trigger_events'):
                             self.nodes[dm_idx].trigger_events = []
+                        officer_char = self.nodes[officer_idx].char
+                        resource_char = self.nodes[best_resource_idx].char
+                        dm_char = self.nodes[dm_idx].char
                         self.nodes[dm_idx].trigger_events.append(
                             f"🌉 官印相生: {officer_char}生{resource_char}生{dm_char}"
                         )
@@ -2030,6 +2309,18 @@ class GraphNetworkEngine:
         total_root_energy = 0.0
         
         # 方法1：检查地支藏干中的日主同五行
+        # [V58.3] 检测自刑地支（用于根气惩罚）
+        self_punishment_branches = set()
+        if hasattr(self, 'bazi') and self.bazi:
+            branches = [p[1] for p in self.bazi if len(p) >= 2]
+            self_punishments = {'辰', '午', '酉', '亥'}
+            branch_counts = {}
+            for branch in branches:
+                branch_counts[branch] = branch_counts.get(branch, 0) + 1
+            for branch, count in branch_counts.items():
+                if branch in self_punishments and count >= 2:
+                    self_punishment_branches.add(branch)
+        
         for node in self.nodes:
             if node.node_type == 'branch':
                 branch_char = node.char
@@ -2053,13 +2344,13 @@ class GraphNetworkEngine:
                                         is_clashed = True
                                         break
                         
-                        # 如果是强根（临官/帝旺），即使被冲也不打折
-                        if is_strong_root and is_clashed:
-                            # 阳刃逢冲，其性更烈 - 根气不减
-                            root_energy = weight * node.current_energy * 0.1
-                        else:
-                            # 普通根被冲，正常计算（可能已经在传播中被削弱）
-                            root_energy = weight * node.current_energy * 0.1
+                        # [V58.3] 自刑惩罚：如果地支有自刑，根气贡献乘以 0.2（根源削减）
+                        root_energy = weight * node.current_energy * 0.1
+                        if branch_char in self_punishment_branches:
+                            root_energy *= 0.2  # 自刑根气惩罚：只保留 20% 贡献
+                        
+                        # 如果是强根（临官/帝旺），即使被冲也不打折（但自刑惩罚仍然生效）
+                        # 注意：自刑惩罚优先于强根抗冲
                         
                         total_root_energy += root_energy
         
@@ -2081,11 +2372,13 @@ class GraphNetworkEngine:
                                     is_clashed = True
                                     break
                     
-                    if is_strong_root and is_clashed:
-                        # 阳刃逢冲，根气不减
-                        root_energy = node.current_energy * coefficient * 0.1
-                    else:
-                        root_energy = node.current_energy * coefficient * 0.1
+                    root_energy = node.current_energy * coefficient * 0.1
+                    
+                    # [V58.3] 自刑惩罚：如果地支有自刑，根气贡献乘以 0.2（根源削减）
+                    if node.char in self_punishment_branches:
+                        root_energy *= 0.2  # 自刑根气惩罚：只保留 20% 贡献
+                    
+                    # 注意：自刑惩罚优先于强根抗冲
                     
                     total_root_energy += root_energy
         
@@ -2465,7 +2758,19 @@ class GraphNetworkEngine:
         
         # Case A: Officer Stress (官杀克身)
         # [V43.0] 使用初始能量比，但考虑日主阵营（日主+印+比劫）vs 官杀
-        if self_energy_init > 0 and officer_energy_init > 0:
+        # [V59.0] 如果已经通关，不应该再惩罚日主
+        has_mediation = False
+        for node in self.nodes:
+            if hasattr(node, 'trigger_events') and node.trigger_events:
+                for event in node.trigger_events:
+                    event_str = str(event)
+                    if '通关' in event_str or '官印相生' in event_str or '绝对通关' in event_str:
+                        has_mediation = True
+                        break
+                if has_mediation:
+                    break
+        
+        if self_energy_init > 0 and officer_energy_init > 0 and not has_mediation:
             # 计算日主阵营初始能量（日主+印+比劫）
             self_team_init = self_energy_init + resource_energy_init + peer_energy_init
             ratio_kill = officer_energy_init / self_team_init if self_team_init > 0 else 0
@@ -2721,23 +3026,37 @@ class GraphNetworkEngine:
         
         # B. 墓库隧穿 (Tunneling) - 暴富逻辑
         vaults = {'辰', '戌', '丑', '未'}
+        # 墓库对应的五行元素（库中存储的元素）
+        vault_elements = {'辰': 'water', '戌': 'fire', '丑': 'metal', '未': 'wood'}
         clashes = {'子': '午', '午': '子', '寅': '申', '申': '寅', '卯': '酉', '酉': '卯',
                    '辰': '戌', '戌': '辰', '丑': '未', '未': '丑'}
         
         treasury_opened = False  # [V56.2] 标记是否开库
+        treasury_collapsed = False  # [V60.0] 标记是否库塌
         
-        # 检查是否冲开了原局的库
+        # 检查是否冲开了原局的财库
         for pillar in bazi:
             if len(pillar) < 2:
                 continue
             p_branch = pillar[1]
             if p_branch in vaults and clashes.get(p_branch) == year_branch:
-                # [V56.2] 增强库开财富能量（特别是身强时）
-                treasury_bonus = 100.0 if strength_normalized > 0.5 else 80.0
-                wealth_energy += treasury_bonus
-                details.append(f"🚀 冲开财库({year_branch}冲{p_branch})")
-                treasury_opened = True
-                break
+                # [V59.1] 检查这个库是否是财库（库中存储的元素是否是日主的财星）
+                vault_element = vault_elements.get(p_branch)
+                if vault_element and elem_map.get(vault_element) == wealth_idx:
+                    # [V60.0] 修复：区分开库(身强)和库塌(身弱)
+                    if strength_normalized > 0.5:
+                        # 身强：开库 = 财富爆发
+                        treasury_bonus = 100.0
+                        wealth_energy += treasury_bonus
+                        details.append(f"🏆 冲开财库(财富爆发)({year_branch}冲{p_branch})")
+                        treasury_opened = True
+                    else:
+                        # 身弱：库塌 = 财富损失
+                        treasury_penalty = -120.0  # [V60.1] 增强库塌惩罚
+                        wealth_energy += treasury_penalty
+                        details.append(f"💥 财库坍塌(结构崩塌)({year_branch}冲{p_branch})")
+                        treasury_collapsed = True
+                    break
         
         # B2. 检查流年地支本身是否是财库（2021年修正）
         # 如果流年地支是财库（辰戌丑未），且原局有对应的冲支，也可能触发库开
@@ -2757,39 +3076,67 @@ class GraphNetworkEngine:
                         treasury_opened = True
                         break
         
-        # B3. [V56.2] 检测官印相生对财富的影响
-        # 如果流年是官杀，大运是印星，形成官印相生，大幅增加财富能量
+        # B3. [V60.0] 增强官印相生机制
+        # 扩展判断条件：流年官杀 + 大运印星（天干或地支）
+        # 特别检查：大运地支是否是印星（如亥水生甲木）
+        
+        # [V60.2] 确定官杀元素和印星元素（提前定义，以便后续使用）
+        officer_element = None
+        for attacker, defender in CONTROL.items():
+            if defender == dm_element:
+                officer_element = attacker
+                break
+        
+        resource_element = None
+        for source, target in GENERATION.items():
+            if target == dm_element:
+                resource_element = source
+                break
+        
+        # 检查流年天干是否是官杀
+        year_is_officer = (stem_elem == officer_element)
+        # 检查流年地支是否是官杀库（如辛丑，丑是金库）
+        year_branch_is_officer_vault = False
+        if year_branch in vaults:
+            vault_element = vault_elements.get(year_branch)  # 返回 'metal', 'wood', 'fire', 'water'
+            # [V60.1] 修复：直接比较字符串，确保 officer_element 是字符串类型
+            if vault_element and vault_element == officer_element:
+                year_branch_is_officer_vault = True
+        
+        # [V60.3] 检查大运是否是印星（即使 luck_pillar 为空，也检查流年本身）
+        luck_is_resource = False
         if luck_pillar and len(luck_pillar) >= 2:
             luck_stem = luck_pillar[0]
             luck_branch = luck_pillar[1]
             luck_stem_elem = self._get_element_str(luck_stem)
             luck_branch_elem = self._get_element_str(luck_branch)
-            
-            # 确定官杀元素和印星元素
-            officer_element = None
-            for attacker, defender in CONTROL.items():
-                if defender == dm_element:
-                    officer_element = attacker
-                    break
-            
-            resource_element = None
-            for source, target in GENERATION.items():
-                if target == dm_element:
-                    resource_element = source
-                    break
-            
-            # 检查流年天干是否是官杀
-            year_is_officer = (stem_elem == officer_element)
-            # 检查大运天干或地支是否是印星
             luck_is_resource = (luck_stem_elem == resource_element or luck_branch_elem == resource_element)
-            
-            if year_is_officer and luck_is_resource:
-                # 官印相生：官杀通过印星通关，转化为财富能量
-                officer_resource_bonus = 50.0 if strength_normalized < 0.45 else 40.0
-                wealth_energy += officer_resource_bonus
+        
+        # [V60.6] 扩展判断：流年官杀（天干或库）+ 大运印星（天干或地支）
+        # 如果流年天干是官杀，且大运是印星，触发官印相生
+        # [V60.6] 修复：确保判断逻辑正确，包括检查流年地支是否是官杀库
+        # 特别处理：如果流年地支是官杀库（如辛丑，丑是金库），且大运是印星，也应该触发
+        # 注意：官印相生应该在计算 final_index 之前就增加 wealth_energy，这样后续的"身弱财重"判断才能正确
+        # [V60.7] 修复：确保 luck_pillar 正确传递，并添加调试信息
+        if luck_pillar and len(luck_pillar) >= 2:
+            # 重新计算 luck_is_resource（确保使用最新的 luck_pillar）
+            luck_stem_check = luck_pillar[0]
+            luck_branch_check = luck_pillar[1]
+            luck_stem_elem_check = self._get_element_str(luck_stem_check)
+            luck_branch_elem_check = self._get_element_str(luck_branch_check)
+            luck_is_resource = (luck_stem_elem_check == resource_element or luck_branch_elem_check == resource_element)
+        
+        if (year_is_officer or year_branch_is_officer_vault) and luck_is_resource:
+            # 官印相生：官杀通过印星通关，转化为财富能量
+            # [V60.0] 提升权重，特别是身弱时
+            officer_resource_bonus = 80.0 if strength_normalized < 0.45 else 60.0
+            wealth_energy += officer_resource_bonus
+            if year_branch_is_officer_vault:
+                details.append(f"🌟 官印相生(流年官杀库+大运印星)")
+            else:
                 details.append(f"🌟 官印相生(流年官杀+大运印星)")
         
-        # C. 承载力与极性反转 (Capacity & Inversion)
+        # D. 承载力与极性反转 (Capacity & Inversion)
         final_index = 0.0
         
         # 检查是否有帮身元素（强根、印星、比劫）
@@ -2816,12 +3163,8 @@ class GraphNetworkEngine:
                 wealth_energy += strong_root_bonus
         
         # C2. 检查流年天干/地支是否是印星或比劫
-        # [V56.2] 如果 B3 部分已经定义了 resource_element，这里不需要重新定义
-        if resource_element is None:
-            for source, target in GENERATION.items():
-                if target == dm_element:
-                    resource_element = source
-                    break
+        # [V60.2] 如果 B3 部分已经定义了 resource_element，这里不需要重新定义
+        # resource_element 已在 B3 部分定义，这里不需要重新定义
         
         peer_element = dm_element  # 比劫
         
@@ -2859,26 +3202,45 @@ class GraphNetworkEngine:
                     has_help = True
                     help_type = f"大运{luck_branch}为日主{luck_life_stage}(强根)"
                     details.append(help_type)
-                    # [V56.2] 大运强根也增加财富能量（但权重稍低）
-                    if not strong_root_type:  # 如果流年没有强根，大运强根才直接加分
-                        if luck_life_stage == '帝旺':
-                            strong_root_bonus = 30.0 if strength_normalized < 0.45 else 20.0
-                        elif luck_life_stage == '临官':
-                            strong_root_bonus = 25.0 if strength_normalized < 0.45 else 15.0
-                        else:  # 长生
-                            strong_root_bonus = 15.0 if strength_normalized < 0.45 else 10.0
-                        wealth_energy += strong_root_bonus
+                    # [V60.0] 增强大运强根的权重，特别是身弱时
+                    # 即使流年有强根，大运强根也应该增加财富能量（叠加效应）
+                    if luck_life_stage == '帝旺':
+                        luck_strong_root_bonus = 40.0 if strength_normalized < 0.45 else 25.0
+                    elif luck_life_stage == '临官':
+                        luck_strong_root_bonus = 35.0 if strength_normalized < 0.45 else 20.0
+                    else:  # 长生
+                        luck_strong_root_bonus = 30.0 if strength_normalized < 0.45 else 15.0
+                    
+                    # [V60.0] 大运强根总是增加财富能量（与流年强根叠加）
+                    wealth_energy += luck_strong_root_bonus
+                    strong_root_bonus += luck_strong_root_bonus  # 累加到总强根加成
+                    if not strong_root_type:
+                        strong_root_type = luck_life_stage  # 如果流年没有强根，使用大运强根类型
         
         # 关键修正：身弱财多 = 破财，但有帮身时可以担财
         if strength_normalized < 0.45:
             if wealth_energy > 0:
                 if has_help:
                     # [V56.2] 有帮身：可以担财，根据强根类型调整承载力
+                    # [V59.1] 修复1995年：身弱得强根但无财透时，应该给予更高的基础财富能量
+                    # 检查是否有财星透出（天干透财或地支坐财）
+                    has_wealth_exposed = False
+                    if stem_idx == wealth_idx or branch_idx == wealth_idx:
+                        has_wealth_exposed = True
+                    
                     if strong_root_type == '帝旺':
                         # 身弱得帝旺强根，承载力大幅提升
                         final_index = wealth_energy * 1.0  # 从0.8提升到1.0
                     elif strong_root_type == '临官':
                         final_index = wealth_energy * 0.9  # 从0.8提升到0.9
+                    elif strong_root_type == '长生':
+                        # [V59.1] 长生强根：如果无财透，给予更高的基础财富能量（创业/起步加成）
+                        if not has_wealth_exposed:
+                            # 无财透但得强根：创业/起步加成，给予更高的基础财富能量
+                            final_index = wealth_energy * 1.0 + 40.0  # 强根能量 + 创业加成
+                            details.append("🚀 身弱得强根创业加成")
+                        else:
+                            final_index = wealth_energy * 0.8  # 有财透时保持原值
                     else:
                         final_index = wealth_energy * 0.8  # 保持原值
                     details.append("✅ 身弱得助，可担财")
@@ -2890,8 +3252,13 @@ class GraphNetworkEngine:
                 # [V56.3] 身弱时，即使没有特殊事件，也应该有基础财富能量（但为负值，表示消耗）
                 # [V56.2] 如果只有强根但没有财，也应该有基础财富能量
                 if strong_root_bonus > 0:
-                    final_index = strong_root_bonus * 0.6  # 强根带来基础财富
-                    details.append(f"强根基础财富({strong_root_bonus * 0.6:.1f})")
+                    # [V59.1] 修复1995年：如果只有强根没有财，且是长生强根，给予创业加成
+                    if strong_root_type == '长生':
+                        final_index = strong_root_bonus * 1.0 + 40.0  # 强根能量 + 创业加成
+                        details.append(f"🚀 强根创业加成({final_index:.1f})")
+                    else:
+                        final_index = strong_root_bonus * 0.6  # 强根带来基础财富
+                        details.append(f"强根基础财富({strong_root_bonus * 0.6:.1f})")
                 else:
                     # [V56.3] 身弱且无帮身时，基础财富为负（消耗）
                     base_wealth = -10.0 - (1.0 - strength_normalized) * 10.0  # -10到-20分
@@ -2917,12 +3284,108 @@ class GraphNetworkEngine:
             if wealth_energy > 0:
                 details.append("💪 身旺任财")
         
-        # D. 一票否决：冲提纲 (Clash Commander) - 2008年修正核心
-        if month_branch and clashes.get(month_branch) == year_branch:
-            final_index -= 150.0  # 毁灭性打击
-            details.append(f"⚠️ 灾难: 冲提纲({year_branch}冲{month_branch})")
+        # E. [V60.5] 截脚结构检测（移到强根之后应用，根据帮身情况和财富能量调整惩罚）
+        # 截脚 = 流年天干克流年地支，导致地支能量被削弱
+        # [V60.5] 修复：截脚结构惩罚应该根据是否有帮身和财富能量来调整，避免过度惩罚或不足
+        if year_stem and year_branch:
+            year_stem_elem = self._get_element_str(year_stem)
+            year_branch_elem = self._get_element_str(year_branch)
+            
+            # 检查是否是天干克地支（截脚）
+            if year_stem_elem in CONTROL and CONTROL[year_stem_elem] == year_branch_elem:
+                # [V60.5] 截脚结构惩罚：根据身强身弱、是否有帮身和财富能量来调整
+                # 如果财富能量很小，截脚结构的影响应该更小（因为本身就没有多少财富）
+                # 如果财富能量很大，截脚结构的影响应该更大（因为会削弱大量财富）
+                wealth_factor = min(1.0, max(0.3, wealth_energy / 50.0))  # 0.3-1.0的系数
+                
+                if strength_normalized < 0.3:  # 极弱格局
+                    if has_help:
+                        leg_cutting_penalty = -40.0 * wealth_factor  # [V60.5] 有帮身时，惩罚减轻
+                    else:
+                        leg_cutting_penalty = -80.0 * wealth_factor  # [V60.5] 无帮身时，惩罚减轻（从-100降低到-80）
+                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
+                elif strength_normalized < 0.45:  # 身弱格局
+                    if has_help:
+                        leg_cutting_penalty = -25.0 * wealth_factor  # [V60.5] 有帮身时，惩罚减轻（从-40降低到-25）
+                    else:
+                        leg_cutting_penalty = -60.0 * wealth_factor  # [V60.5] 无帮身时，惩罚减轻（从-80降低到-60）
+                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
+                else:  # 身强格局
+                    # [V60.5] 身强时，截脚结构惩罚应该更重，因为身强时截脚结构的影响更大
+                    if has_help:
+                        leg_cutting_penalty = -50.0 * wealth_factor  # [V60.5] 有帮身时，惩罚加重（从-30增加到-50）
+                    else:
+                        leg_cutting_penalty = -80.0 * wealth_factor  # [V60.5] 无帮身时，惩罚加重（从-60增加到-80）
+                    details.append(f"⚠️ 截脚结构(天干克地支，削弱地支能量)")
+                
+                # [V60.5] 应用截脚结构惩罚到 final_index（在所有正面因素之后）
+                final_index += leg_cutting_penalty
         
-        # E. 限制范围
+        # F. [V60.0] 修复冲提纲判断：不再一票否决，结合帮身/通关因素
+        clash_commander = False
+        has_mediation = False  # [V60.0] 检查是否有通关机制
+        
+        # 从 analyze 结果中检查是否有通关机制
+        trigger_events = result.get('trigger_events', [])
+        for event in trigger_events:
+            event_str = str(event)
+            if '通关' in event_str or '官印相生' in event_str or '绝对通关' in event_str:
+                has_mediation = True
+                break
+        
+        # 也检查是否有官印相生（通关机制）
+        if not has_mediation and luck_pillar and len(luck_pillar) >= 2:
+            luck_stem = luck_pillar[0]
+            luck_branch = luck_pillar[1]
+            luck_stem_elem = self._get_element_str(luck_stem)
+            luck_branch_elem = self._get_element_str(luck_branch)
+            
+            # 检查是否有官印相生（这是通关的一种）
+            # [V60.6] 修复：直接比较字符串，不要使用 elem_map
+            if resource_element and officer_element:
+                # 检查流年是否是官杀（天干或库）
+                year_is_officer_for_mediation = (stem_elem == officer_element)
+                year_branch_is_officer_vault_for_mediation = False
+                if year_branch in vaults:
+                    vault_element_for_mediation = vault_elements.get(year_branch)
+                    if vault_element_for_mediation and vault_element_for_mediation == officer_element:
+                        year_branch_is_officer_vault_for_mediation = True
+                
+                # 检查大运是否是印星
+                luck_is_resource_for_mediation = (luck_stem_elem == resource_element or luck_branch_elem == resource_element)
+                
+                if (year_is_officer_for_mediation or year_branch_is_officer_vault_for_mediation) and luck_is_resource_for_mediation:
+                    has_mediation = True
+        
+        if month_branch and clashes.get(month_branch) == year_branch:
+            clash_commander = True
+            # [V60.1] 检查是否有库塌等其他负面因素
+            has_negative_factors = treasury_collapsed  # 库塌是负面因素
+            
+            # [V60.0] 检查是否有帮身或通关机制
+            # 如果有帮身或通关，冲提纲只是动荡，不是灾难
+            if has_help or has_mediation:
+                if has_negative_factors:
+                    # 有帮身但有库塌：冲提纲 + 库塌 = 灾难
+                    final_index -= 100.0  # [V60.1] 从-50增加到-100
+                    details.append(f"💀 冲提纲+库塌(双重灾难)({year_branch}冲{month_branch})")
+                else:
+                    # [V60.2] 有帮身且无库塌：冲提纲只是动荡，根据 wealth_energy 调整惩罚
+                    # 如果 wealth_energy 较小，惩罚应该更小，避免过度惩罚
+                    if wealth_energy < 30.0:
+                        clash_penalty = -15.0  # [V60.2] 财富能量小时，惩罚更小
+                    elif wealth_energy < 60.0:
+                        clash_penalty = -20.0  # [V60.2] 财富能量中等时，惩罚中等
+                    else:
+                        clash_penalty = -30.0  # [V60.2] 财富能量大时，惩罚较大
+                    final_index -= clash_penalty
+                    details.append(f"⚠️ 冲提纲(动荡但可化解)({year_branch}冲{month_branch})")
+            else:
+                # 无帮身且无通关：冲提纲是灾难
+                final_index -= 150.0  # 毁灭性打击
+                details.append(f"💀 灾难: 冲提纲(结构崩塌)({year_branch}冲{month_branch})")
+        
+        # G. 限制范围
         final_index = max(-100.0, min(100.0, final_index))
         
         return {

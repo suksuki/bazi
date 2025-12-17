@@ -40,6 +40,33 @@ def render_input_form():
         st.checkbox("启用真太阳时 (True Solar Time)", value=True, key="input_enable_solar_time", help="选中：使用经度校准真太阳时；不选：使用北京时间(120°E)")
         
         st.caption("ℹ️ V4.0 内核已支持真太阳时校准。不选中则默认按标准北京时间计算。")
+        
+        # [V56.3] GEO 修正城市选择（放在"启用真太阳时"之后）
+        from utils.constants_manager import get_constants
+        import json
+        import os
+        
+        consts = get_constants()
+        
+        # 加载 GEO 城市列表
+        def _load_geo_cities():
+            geo_path = os.path.join(os.path.dirname(__file__), "../../data/geo_coefficients.json")
+            try:
+                with open(geo_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return list(data.get("cities", {}).keys())
+            except:
+                return []
+        
+        raw_cities = _load_geo_cities()
+        if "Beijing" in raw_cities:
+            raw_cities.remove("Beijing")
+        cities = ["None"] + consts.DEFAULT_GEO_CITIES
+        
+        # 从 session_state 获取默认城市
+        default_city = st.session_state.get("unified_geo_city", "None")
+        default_idx = cities.index(default_city) if default_city in cities else 0
+        selected_city = st.selectbox("🌍 GEO 修正城市", cities, index=default_idx, key="unified_geo_city")
 
         # Main Submit Button
         submitted = st.form_submit_button("🚀 开始排盘 (Calculate)")

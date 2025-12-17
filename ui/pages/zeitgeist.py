@@ -202,6 +202,33 @@ def render():
     selected_case, era_factor, selected_city = render_and_collect_input(bazi_facade, is_quantum_lab=False)
     get_notification_manager().display_all()
 
+    # [V58.2 修复] 如果 selected_case 为 None，从 controller 获取数据构造 selected_case
+    if selected_case is None:
+        chart = controller.get_chart()
+        if chart:
+            selected_case = {
+                'bazi': [
+                    chart.get('year', {}).get('stem', '') + chart.get('year', {}).get('branch', ''),
+                    chart.get('month', {}).get('stem', '') + chart.get('month', {}).get('branch', ''),
+                    chart.get('day', {}).get('stem', '') + chart.get('day', {}).get('branch', ''),
+                    chart.get('hour', {}).get('stem', '') + chart.get('hour', {}).get('branch', ''),
+                ],
+                'day_master': chart.get('day', {}).get('stem', ''),
+                'gender': controller.get_user_data().get('gender', '男'),
+                'id': 'current_user',
+                'description': controller.get_user_data().get('name', '当前用户')
+            }
+        else:
+            # 如果 controller 也没有数据，使用默认值
+            st.warning("⚠️ 未找到用户数据，请先在智能排盘页面输入八字信息。")
+            selected_case = {
+                'bazi': ['甲子', '乙丑', '丙寅', '丁卯'],
+                'day_master': '丙',
+                'gender': '男',
+                'id': 'demo',
+                'description': '演示案例'
+            }
+
     # --- 1.1 Health report & auto calibration (V12.0) ---
     health_report = controller.get_health_report() or {}
     recommendations = controller.get_auto_recommendations() or {}

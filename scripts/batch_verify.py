@@ -35,11 +35,20 @@ def load_golden_cases(data_path: Path = None) -> List[Dict[str, Any]]:
     
     如果文件不存在，生成一个包含典型案例的 Mock 文件用于测试。
     
+    默认优先加载 golden_cases_v4.json (V4.0 高难度数据集)，
+    如果不存在则回退到 golden_cases.json。
+    
     Returns:
         案例列表，每个案例包含 id, bazi, day_master, true_label 等信息
     """
     if data_path is None:
-        data_path = project_root / "data" / "golden_cases.json"
+        # 优先加载 V4.0 数据集
+        v4_path = project_root / "data" / "golden_cases_v4.json"
+        if v4_path.exists():
+            data_path = v4_path
+            print(f"📊 检测到 Golden Dataset V4.0，使用高难度数据集")
+        else:
+            data_path = project_root / "data" / "golden_cases.json"
     
     # 如果文件存在，直接加载
     if data_path.exists():
@@ -179,9 +188,32 @@ def evaluate_case(engine: GraphNetworkEngine, case: Dict[str, Any]) -> Dict[str,
         pred_label = predict_strength(strength_score, strong_threshold, weak_threshold)
     
     # 判断是否正确
-    # [V40.0/V41.0] 特殊格局例外处理
-    is_correct = (pred_label == true_label)
+    # [V58.1] 标签归一化处理 - 支持 Special_Vibrant 和 Special_Follow
+    # Special_Vibrant (专旺) 视为 Strong 的极致形式
+    # Special_Follow (从格) 视为 Weak (日主能量极低，顺从大势)
     
+    # 归一化 true_label
+    normalized_true = true_label
+    if true_label == 'Special_Vibrant':
+        normalized_true = 'Strong'
+    elif true_label == 'Special_Follow':
+        normalized_true = 'Weak'
+    
+    # 归一化 pred_label
+    normalized_pred = pred_label
+    if pred_label in ['Special_Vibrant', 'Special_Strong']:
+        normalized_pred = 'Strong'
+    elif pred_label == 'Special_Follow':
+        normalized_pred = 'Weak'
+    
+    # 首先检查精确匹配（特殊格局的精确匹配优先）
+    if true_label == pred_label:
+        is_correct = True
+    else:
+        # 使用归一化后的标签进行比较
+        is_correct = (normalized_true == normalized_pred)
+    
+    # [V40.0/V41.0] 保留原有的特殊格局例外处理（向后兼容）
     if not is_correct:
         # 例外1：如果被判定为Special_Strong，且True_Label是Balanced，视为通过（广义中和/贵格）
         if pred_label == "Special_Strong" and true_label == "Balanced":
@@ -342,8 +374,17 @@ def run_batch_verification():
     if config_path.exists():
         with open(config_path, 'r', encoding='utf-8') as f:
             user_config = json.load(f)
-            # 合并配置
-            config.update(user_config)
+            # [V60.1] 修复：使用深度合并，而不是浅层合并
+            # 确保嵌套字典被正确合并，而不是被完全覆盖
+            def _merge_config(base: dict, update: dict):
+                """深度合并配置"""
+                for key, value in update.items():
+                    if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                        _merge_config(base[key], value)
+                    else:
+                        base[key] = value
+            
+            _merge_config(config, user_config)
         print(f"   ✅ 已加载配置: {config_path}")
     
     engine = GraphNetworkEngine(config=config)

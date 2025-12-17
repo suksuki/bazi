@@ -43,12 +43,19 @@ def run_backtest():
     engine = GraphNetworkEngine(config=config)
     
     # 2. Load Data
+    data_path = project_root / 'data' / 'golden_timeline.json'
     try:
-        with open('data/golden_timeline.json', 'r', encoding='utf-8') as f:
+        with open(data_path, 'r', encoding='utf-8') as f:
             cases = json.load(f)
     except FileNotFoundError:
-        print("❌ 数据文件未找到，请先运行 scripts/create_wealth_timeline.py")
-        return
+        print("❌ 数据文件未找到，正在自动创建...")
+        # 自动创建数据文件
+        from scripts.create_wealth_timeline import create_wealth_dataset
+        create_wealth_dataset()
+        # 重新加载
+        with open(data_path, 'r', encoding='utf-8') as f:
+            cases = json.load(f)
+        print("✅ 数据文件已创建并加载")
 
     musk = cases[0]
     print(f"👤 案例: {musk['name']} ({musk['day_master']}日主)")
@@ -81,27 +88,42 @@ def run_backtest():
         desc = evt.get('desc', '')
         
         # 3. Call Engine
-        if hasattr(engine, 'calculate_wealth_index'):
-            result = engine.calculate_wealth_index(
-                bazi=musk['bazi'],
-                day_master=musk['day_master'],
-                gender=musk['gender'],
-                luck_pillar=dayun,
-                year_pillar=ganzhi
-            )
-            
-            # 处理返回结果（可能是字典或浮点数）
-            if isinstance(result, dict):
-                ai_score = result.get('wealth_index', 0.0)
-                details = result.get('details', [])
+        try:
+            if hasattr(engine, 'calculate_wealth_index'):
+                result = engine.calculate_wealth_index(
+                    bazi=musk['bazi'],
+                    day_master=musk['day_master'],
+                    gender=musk['gender'],
+                    luck_pillar=dayun,
+                    year_pillar=ganzhi
+                )
+                
+                # 处理返回结果（可能是字典或浮点数）
+                if isinstance(result, dict):
+                    ai_score = result.get('wealth_index', 0.0)
+                    details = result.get('details', [])
+                    strength_score = result.get('strength_score', 0.0)
+                    strength_label = result.get('strength_label', 'Unknown')
+                else:
+                    ai_score = result
+                    details = []
+                    strength_score = 0.0
+                    strength_label = 'Unknown'
             else:
-                ai_score = result
+                print("⚠️ 警告：引擎尚未实现 calculate_wealth_index，使用基础 analyze 模拟")
+                res = engine.analyze(musk['bazi'], musk['day_master'], luck_pillar=dayun, year_pillar=ganzhi)
+                ai_score = res.get('strength_score', 50.0)  # 仅作占位
                 details = []
-        else:
-            print("⚠️ 警告：引擎尚未实现 calculate_wealth_index，使用基础 analyze 模拟")
-            res = engine.analyze(musk['bazi'], musk['day_master'], musk['gender'])
-            ai_score = res.get('strength_score', 50.0)  # 仅作占位
-            details = []
+                strength_score = res.get('strength_score', 0.0)
+                strength_label = res.get('strength_label', 'Unknown')
+        except Exception as e:
+            print(f"⚠️ 计算错误: {e}")
+            import traceback
+            traceback.print_exc()
+            ai_score = 0.0
+            details = [f"错误: {str(e)}"]
+            strength_score = 0.0
+            strength_label = 'Error'
 
         # 4. Compare
         diff = abs(real_mag - ai_score)
@@ -119,8 +141,10 @@ def run_backtest():
         print(f"{year} ({ganzhi}) | 运: {dayun}")
         print(f"   真实财富: {real_mag:>6.1f} | {desc.split('。')[0]}")
         print(f"   AI 预测 : {ai_score:>6.1f} | 误差: {diff:.1f}")
+        if 'strength_score' in locals():
+            print(f"   身强分数: {strength_score:.1f} ({strength_label})")
         if details:
-            print(f"   触发机制: {', '.join(details)}")
+            print(f"   触发机制: {', '.join(details[:5])}")  # 只显示前5个，避免过长
         print(f"   结果: {mark}")
         print("-" * 40)
 

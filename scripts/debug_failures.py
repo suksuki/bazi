@@ -88,8 +88,20 @@ TARGET_CASES = [
 def calculate_root_status(engine: GraphNetworkEngine, day_master: str, bazi: List[str]) -> Dict[str, Any]:
     """
     计算日主的根气状态。
+    [V58.3] 应用自刑惩罚，与引擎内部逻辑保持一致。
     """
     dm_element = engine.STEM_ELEMENTS.get(day_master, 'metal')
+    
+    # [V58.3] 检测自刑地支（用于根气惩罚）
+    self_punishment_branches = set()
+    branches = [p[1] for p in bazi if len(p) >= 2]
+    self_punishments = {'辰', '午', '酉', '亥'}
+    branch_counts = {}
+    for branch in branches:
+        branch_counts[branch] = branch_counts.get(branch, 0) + 1
+    for branch, count in branch_counts.items():
+        if branch in self_punishments and count >= 2:
+            self_punishment_branches.add(branch)
     
     # 方法1：检查地支藏干中的日主同五行
     total_root_energy = 0.0
@@ -107,13 +119,19 @@ def calculate_root_status(engine: GraphNetworkEngine, day_master: str, bazi: Lis
             if hidden_element == dm_element:
                 # 找到根气
                 root_energy = weight * 0.1  # 简化计算
+                
+                # [V58.3] 自刑惩罚：如果地支有自刑，根气贡献乘以 0.2（根源削减）
+                if branch_char in self_punishment_branches:
+                    root_energy *= 0.2  # 自刑根气惩罚：只保留 20% 贡献
+                
                 total_root_energy += root_energy
                 root_details.append({
                     'pillar': pillar,
                     'branch': branch_char,
                     'hidden_stem': hidden_stem,
                     'weight': weight,
-                    'energy': root_energy
+                    'energy': root_energy,
+                    'self_punishment': branch_char in self_punishment_branches
                 })
     
     # 方法2：检查十二长生强根位置
@@ -126,13 +144,20 @@ def calculate_root_status(engine: GraphNetworkEngine, day_master: str, bazi: Lis
         if life_stage in ['长生', '临官', '帝旺', '冠带']:
             strong_root_count += 1
             coefficient = LIFE_STAGE_COEFFICIENTS.get(life_stage, 1.0)
-            total_root_energy += coefficient * 0.1
+            root_energy = coefficient * 0.1
+            
+            # [V58.3] 自刑惩罚：如果地支有自刑，根气贡献乘以 0.2（根源削减）
+            if branch_char in self_punishment_branches:
+                root_energy *= 0.2  # 自刑根气惩罚：只保留 20% 贡献
+            
+            total_root_energy += root_energy
     
     return {
         'total_root_energy': total_root_energy,
         'root_details': root_details,
         'strong_root_count': strong_root_count,
-        'status': 'Strong' if total_root_energy >= 1.0 else ('Weak' if total_root_energy < 0.5 else 'Medium')
+        'status': 'Strong' if total_root_energy >= 1.0 else ('Weak' if total_root_energy < 0.5 else 'Medium'),
+        'self_punishment_branches': list(self_punishment_branches)  # [V58.3] 记录自刑地支
     }
 
 
@@ -172,9 +197,12 @@ def check_structure_flags(engine: GraphNetworkEngine, result: Dict[str, Any], ba
         flags['clashes'] = clashes
     
     # 检查通关（从 trigger_events 中查找）
+    # [V58.3] 支持识别"强效通关"和"通关成功"事件
     trigger_events = result.get('trigger_events', [])
     for event in trigger_events:
-        if '通关' in str(event) or 'Mediation' in str(event):
+        event_str = str(event)
+        if ('通关' in event_str or 'Mediation' in event_str or 
+            '强效通关' in event_str or '官印相生' in event_str):
             flags['mediation'] = True
             break
     

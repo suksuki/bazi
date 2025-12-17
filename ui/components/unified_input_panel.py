@@ -54,7 +54,6 @@ def render_and_collect_input(facade: BaziFacade,
     consts = get_constants()
 
     with st.sidebar:
-        st.header("⚙️ 核心数据与修正")
 
         # --- 档案选择（仅量子验证页面） ---
         selected_case = None
@@ -78,20 +77,9 @@ def render_and_collect_input(facade: BaziFacade,
                 }
 
         # --- GEO 城市选择 ---
-        raw_cities = _load_geo_cities()
-        if "Beijing" in raw_cities:
-            raw_cities.remove("Beijing")
-        cities = ["None"] + consts.DEFAULT_GEO_CITIES
-
-        # 从档案或 session_state 获取默认城市
-        if selected_case and isinstance(selected_case, dict):
-            archive_city = selected_case.get("city")
-            default_city = archive_city if archive_city in cities else "None"
-        else:
-            default_city = st.session_state.get("unified_geo_city", "None")
-        
-        default_idx = cities.index(default_city) if default_city in cities else 0
-        selected_city = st.selectbox("🌍 GEO 修正城市", cities, index=default_idx, key="unified_geo_city")
+        # [V56.3] GEO 修正城市已移到 input_form.py 中（在"启用真太阳时"之后）
+        # 这里从 session_state 读取已选择的城市
+        selected_city = st.session_state.get("unified_geo_city", "None")
         city_for_controller = "Unknown" if selected_city == "None" else selected_city
 
         # --- ERA 因子 ---

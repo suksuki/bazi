@@ -29,7 +29,7 @@ init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
 
 app_mode = st.radio(
     "Navigation", 
-    ["🔮 智能排盘 (Prediction)", "🧠 自我进化 (Self-Learning)", "⛏️ 实战挖掘 (Mining)", "🧪 量子验证 (Quantum Lab)", "🎬 命运影院 (Cinema)", "🏋️ 核心训练 (Training)", "⚙️ 系统配置 (System Config)", "⚡ 架构师 (Architect)"], 
+    ["🔮 智能排盘 (Prediction)", "💰 财富验证 (Wealth Verification)", "🧠 自我进化 (Self-Learning)", "⛏️ 实战挖掘 (Mining)", "🧪 量子验证 (Quantum Lab)", "🎬 命运影院 (Cinema)", "🏋️ 核心训练 (Training)", "⚙️ 系统配置 (System Config)", "⚡ 架构师 (Architect)"], 
     horizontal=True,
     label_visibility="collapsed",
     key="nav_radio"
@@ -72,6 +72,10 @@ elif app_mode == "🧠 自我进化 (Self-Learning)":
 elif app_mode == "⛏️ 实战挖掘 (Mining)":
     from ui.pages.mining_console import render as render_mining_console
     render_mining_console()
+
+elif app_mode == "💰 财富验证 (Wealth Verification)":
+    from ui.pages.wealth_verification import render
+    render()
 
 elif app_mode == "🔮 智能排盘 (Prediction)":
     # --- Prediction Mode ---
