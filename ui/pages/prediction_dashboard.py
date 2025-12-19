@@ -400,54 +400,29 @@ def render_prediction_dashboard():
         tengods_data = {}
         tengods_distributions = {}  # [V10.1] 概率分布数据
         
-        # [V10.1] 检查是否启用概率分布
-        use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
-        
+        # V13.0: 全程启用概率分布
         for key, name in tengods_mapping.items():
             value = flux_data_for_analysis.get(key, 0) * 0.08  # Apply scale
             if value > 0.1:  # Only show significant values
                 tengods_data[name] = value
                 
-                # [V10.1] 如果启用概率分布，计算概率分布
-                if use_probabilistic:
-                    # 使用蒙特卡洛模拟生成概率分布
-                    from core.bayesian_inference import BayesianInference
-                    
-                    # 定义参数扰动范围（基于当前值）
-                    # 注意：monte_carlo_simulation 需要正确的参数格式
-                    parameter_ranges = {
-                        'base_value': (value * 0.9, value * 1.1),  # ±10% 扰动
-                    }
-                    
-                    try:
-                        # 蒙特卡洛模拟
-                        monte_carlo_result = BayesianInference.monte_carlo_simulation(
-                            base_estimate=value,
-                            parameter_ranges=parameter_ranges,
-                            n_samples=500,  # 减少采样次数以提高性能
-                            confidence_level=0.95
-                        )
-                    except Exception as e:
-                        logger.debug(f"十神能量概率分布计算失败 ({name}): {e}")
-                        # 如果计算失败，使用简化版本（基于不确定性估计）
-                        monte_carlo_result = {
-                            'mean': value,
-                            'std': value * 0.1,  # 假设 10% 的不确定性
-                            'percentiles': {
-                                'p5': value * 0.85,
-                                'p25': value * 0.92,
-                                'p50': value,
-                                'p75': value * 1.08,
-                                'p95': value * 1.15
-                            }
-                        }
-                    
-                    tengods_distributions[name] = {
-                        "mean": monte_carlo_result.get('mean', value),
-                        "std": monte_carlo_result.get('std', value * 0.1),
-                        "percentiles": monte_carlo_result.get('percentiles', {}),
-                        "point_estimate": value
-                    }
+                # V13.0: 全程使用概率分布（使用 ProbValue）
+                from core.prob_math import ProbValue
+                # 创建 ProbValue（基于当前值，假设 10% 不确定度）
+                prob_value = ProbValue(value, std_dev_percent=0.1)
+                
+                tengods_distributions[name] = {
+                    "mean": prob_value.mean,
+                    "std": prob_value.std,
+                    "percentiles": {
+                        'p5': prob_value.mean - 1.645 * prob_value.std,
+                        'p25': prob_value.mean - 0.675 * prob_value.std,
+                        'p50': prob_value.mean,
+                        'p75': prob_value.mean + 0.675 * prob_value.std,
+                        'p95': prob_value.mean + 1.645 * prob_value.std
+                    },
+                    "point_estimate": value
+                }
         
         if tengods_data:
             # Display as cards
@@ -457,8 +432,8 @@ def render_prediction_dashboard():
             for i, (name, value) in enumerate(tengods_list):
                 col_idx = i % 5
                 with tengods_cols[col_idx]:
-                    if use_probabilistic and name in tengods_distributions:
-                        # [V10.1] 显示概率分布
+                    # V13.0: 全程显示概率分布
+                    if name in tengods_distributions:
                         dist = tengods_distributions[name]
                         mean_val = dist['mean']
                         std_val = dist['std']
@@ -477,12 +452,11 @@ def render_prediction_dashboard():
                             p75 = percentiles.get('p75', mean_val)
                             st.caption(f"范围: {p25:.2f} - {p75:.2f}")
                     else:
-                        # 传统模式：只显示确定性值
+                        # 后备：显示确定性值
                         st.metric(name, f"{value:.2f}")
             
-            # Create a summary DataFrame
-            if use_probabilistic and tengods_distributions:
-                # [V10.1] 包含概率分布的数据表
+            # Create a summary DataFrame (V13.0: 全程使用概率分布)
+            if tengods_distributions:
                 tengods_df = pd.DataFrame([
                     {
                         '十神': name, 
@@ -496,7 +470,7 @@ def render_prediction_dashboard():
                     for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
                 ])
             else:
-                # 传统模式：只显示确定性值
+                # 后备：只显示确定性值
                 tengods_df = pd.DataFrame([
                     {'十神': name, '能量值': value} 
                     for name, value in sorted(tengods_data.items(), key=lambda x: x[1], reverse=True)
@@ -505,8 +479,8 @@ def render_prediction_dashboard():
             with st.expander("📋 十神详细数据表"):
                 st.dataframe(tengods_df, hide_index=True, width='stretch')
                 
-                # [V10.1] 如果启用概率分布，显示说明
-                if use_probabilistic and tengods_distributions:
+                # V13.0: 全程使用概率分布
+                if tengods_distributions:
                     st.info("📊 **概率分布模式**: 能量值显示为概率分布（均值±标准差），而非单一确定值。这更符合量子八字的本质：命运是概率分布，而非确定性结论。")
         else:
             st.info("暂无显著的十神能量数据")
@@ -636,18 +610,18 @@ def render_prediction_dashboard():
     s_officer = dg.get('ZhengGuan', 0) + dg.get('QiSha', 0)
     s_resource = dg.get('ZhengYin', 0) + dg.get('PianYin', 0)
     
-    est_self = s_self * scale
+    # [V12.1] 使用Controller的最新旺衰判定方法（包含SVM模型）
+    wang_shuai_str = controller.get_wang_shuai_str(flux_data, scale)
     
+    # 为了向后兼容，保留est_self的计算（用于后续的physics_sources）
+    est_self = s_self * scale
     final_self = est_self
-    wang_shuai_str = "身中和"
-    if est_self < 1.0:
-        wang_shuai_str = "假从/极弱"
+    # 根据新的旺衰判定结果调整final_self
+    if "从格" in wang_shuai_str or "极弱" in wang_shuai_str:
         final_self = est_self - 8.0 
-    elif est_self < 3.5:
-        wang_shuai_str = "身弱"
-        final_self = est_self - 6.0 
-    else:
-        wang_shuai_str = "身旺"
+    elif "身弱" in wang_shuai_str:
+        final_self = est_self - 6.0
+    # 身旺或身中和时保持原值
 
     # Capture Pillar Energies
     # V9.6 Architecture Fix: Use Controller API instead of direct flux_engine access
@@ -956,16 +930,15 @@ def render_prediction_dashboard():
     traj_data = []
     handover_years = []  # Sprint 5.4: 记录换运年份
     
-    # [V10.1] 初始化概率分布数据列表（用于命运全息图）
+    # V13.0: 全程启用概率分布，初始化 GraphNetworkEngine
     distributions_data_for_hologram = []
-    use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
-    
-    # [V10.1] 如果启用概率分布，初始化 GraphNetworkEngine
     graph_engine_for_hologram = None
-    if use_probabilistic:
+    try:
         graph_config = DEFAULT_FULL_ALGO_PARAMS.copy()
-        graph_config['probabilistic_energy'] = {'use_probabilistic_energy': True}
+        # V13.0: 概率分布已全程启用，无需配置开关
         graph_engine_for_hologram = GraphNetworkEngine(config=graph_config)
+    except Exception as e:
+        logger.debug(f"GraphNetworkEngine 初始化失败: {e}")
     
     # Helper for GanZhi
     gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
@@ -1064,7 +1037,7 @@ def render_prediction_dashboard():
 
         # [V10.1] 如果启用概率分布，计算概率分布数据
         domain_distributions = {}
-        if use_probabilistic and graph_engine_for_hologram:
+        if graph_engine_for_hologram:
             try:
                 # 使用 GraphNetworkEngine 计算概率分布
                 # 获取八字信息（从 case_data 或 controller）
@@ -1127,8 +1100,8 @@ def render_prediction_dashboard():
             except Exception as e:
                 logger.debug(f"命运全息图概率分布计算失败: {e}")
         
-        # 保存概率分布数据
-        if use_probabilistic and domain_distributions:
+        # V13.0: 保存概率分布数据（全程启用）
+        if domain_distributions:
             distributions_data_for_hologram.append({
                 'year': safe_year,
                 'distributions': domain_distributions
@@ -1181,8 +1154,8 @@ def render_prediction_dashboard():
         df_traj, 
         sim_year, 
         handover_years,
-        use_probabilistic=use_probabilistic,
-        distributions_data=distributions_data_for_hologram if use_probabilistic and distributions_data_for_hologram else None
+        use_probabilistic=True,  # V13.0: 全程启用概率分布
+        distributions_data=distributions_data_for_hologram if distributions_data_for_hologram else None
     )
     
     if fig:
@@ -1404,11 +1377,7 @@ def render_prediction_dashboard():
     except Exception as e:
         st.warning(f"⚠️ 加载配置失败，使用默认配置: {e}")
 
-    # [V10.1] 概率分布开关（来自侧边栏）
-    use_prob = st.session_state.get('use_probabilistic_energy', False)
-    if 'probabilistic_energy' not in graph_config:
-        graph_config['probabilistic_energy'] = {}
-    graph_config['probabilistic_energy']['use_probabilistic_energy'] = use_prob
+    # V13.0: 概率分布已全程启用，无需配置开关
     
     graph_engine = GraphNetworkEngine(config=graph_config)
     
@@ -1703,9 +1672,8 @@ def render_prediction_dashboard():
         fig_wealth = go.Figure()
         
         # [V10.1] 检查是否启用概率分布
-        use_probabilistic = st.session_state.get('use_probabilistic_energy', False)
-        
-        if use_probabilistic and wealth_distributions and len(wealth_distributions) > 0:
+        # V13.0: 全程启用概率分布
+        if wealth_distributions and len(wealth_distributions) > 0:
             # 概率分布模式：显示平滑曲线和置信区间
             
             # 提取概率分布数据

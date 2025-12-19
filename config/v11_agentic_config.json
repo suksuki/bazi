@@ -1,0 +1,25 @@
+{
+  "use_smote": false,
+  "smote_target_ratio": 0.2,
+  "use_gridsearch": true,
+  "classic_weight": 2.5,
+  "synthetic_weight": 2.0,
+  "modern_weight": 1.0,
+  "synthetic_count": 30,
+  "use_dynamic_cleaning": true,
+  "confidence_threshold": 0.9,
+  "test_random_state": 100,
+  "gridsearch_c_range": [
+    10,
+    100,
+    500,
+    1000
+  ],
+  "gridsearch_gamma_range": [
+    "scale",
+    "auto",
+    0.1,
+    0.01
+  ],
+  "conflict_similarity_threshold": 0.98
+}

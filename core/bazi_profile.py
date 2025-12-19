@@ -68,18 +68,23 @@ class BaziProfile:
         """
         获取指定流年的干支 (无需 engine 再去算)
         """
-        # 简单推算：这里可以使用 lunar_python 的流年对象，
-        # 或者为了性能，直接用干支算法。这里演示用 Lunar 准确获取。
-        # 注意：为了性能，实际工程中通常用数学公式推算流年干支，
-        # 但这里为了准确性（立春界限），我们构建临时的 Lunar 对象。
-        # *优化*: 仅计算该年的立春后干支
-        
-        # 简易版 (仅用于 Demo，后续可优化为查表法)
-        from lunar_python import GanZhi
-        # 这里的计算略复杂，暂时返回占位，稍后我们在 Engine 里迁移逻辑
-        # 或者简单地：
-        offset = year - 1984
-        return GanZhi.getGanZhi(offset) # 这是一个近似值，V6.1再精细化
+        # 使用 lunar_python 的 Solar 对象计算流年干支
+        # 注意：为了准确性（立春界限），使用年中点（6月15日）计算
+        try:
+            from lunar_python import Solar
+            solar = Solar.fromYmd(year, 6, 15)
+            lunar = solar.getLunar()
+            year_ganzhi = lunar.getYearInGanZhi()
+            return str(year_ganzhi) if year_ganzhi else "未知"
+        except Exception as e:
+            # 如果计算失败，使用简化算法（基于1984年甲子年）
+            # 1984年是甲子年，以此为基准推算
+            offset = year - 1984
+            gan_list = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+            zhi_list = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+            gan_idx = offset % 10
+            zhi_idx = offset % 12
+            return gan_list[gan_idx] + zhi_list[zhi_idx]
 
     # --- 内部逻辑 ---
 

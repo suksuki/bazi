@@ -29,44 +29,9 @@ def render_sidebar(app_mode):
                  st.session_state['calc_active'] = True
              st.divider()
         
-        # Engine Switcher (for all modes that use engine)
-        if app_mode in ["🔮 智能排盘 (Prediction)", "🧪 量子验证 (Quantum Lab)", "🎬 命运影院 (Cinema)"]:
-            st.markdown("---")
-            st.markdown("### ⚙️ 计算引擎 (Engine)")
-            init_session_state({'engine_mode': 'Legacy'})
-            
-            engine_mode = st.radio(
-                "引擎模式",
-                ["Legacy (线性)", "Graph (图网络)"],
-                index=0 if st.session_state.get('engine_mode', 'Legacy') == 'Legacy' else 1,
-                key='engine_mode_radio',
-                help="选择计算引擎：Legacy=传统线性算法，Graph=图网络矩阵算法"
-            )
-            new_engine_mode = 'Legacy' if engine_mode == 'Legacy (线性)' else 'Graph'
-            old_engine_mode = st.session_state.get('engine_mode', 'Legacy')
-            
-            # 如果引擎模式改变，更新 session_state 并重新加载页面
-            if new_engine_mode != old_engine_mode:
-                st.session_state['engine_mode'] = new_engine_mode
-                st.rerun()  # 重新加载页面以使用新的引擎
-            else:
-                st.session_state['engine_mode'] = new_engine_mode
-            
-            if engine_mode == 'Graph (图网络)':
-                st.caption("🌐 图网络引擎：基于矩阵传播的动态能量计算")
-            else:
-                st.caption("📊 传统引擎：基于规则的能量累加计算")
-
-            # 概率分布开关（仅图网络模式有意义）
-            st.markdown("### 📈 概率分布")
-            init_session_state({'use_probabilistic_energy': False})
-            use_prob = st.checkbox(
-                "启用概率分布 (wealth_distribution)",
-                value=st.session_state.get('use_probabilistic_energy', False),
-                help="开启后，财富指数将返回概率分布（均值/标准差/分位数），更符合量子八字的概率特性。",
-                key="use_probabilistic_energy_checkbox"
-            )
-            st.session_state['use_probabilistic_energy'] = use_prob
+        # V13.0: 已删除引擎模式选择和概率分布开关
+        # - Legacy 引擎已完全移除，只使用 Graph 网络引擎
+        # - 概率分布已全程启用，无需开关
             
         # Global Background Task Monitor (Removed per request)
         # render_mini_task_monitor() 

@@ -1276,12 +1276,73 @@ class BaziController:
         """
         Calculate Wang/Shuai strength string.
         
+        [V12.1] 升级：优先使用GraphNetworkEngine的最新算法（包含SVM模型）
+        
         Args:
             flux_data: Flux engine data
-            scale: Scaling factor
+            scale: Scaling factor (legacy parameter, not used in new algorithm)
             
         Returns:
             Strength description string
+        """
+        # [V12.1] 优先使用GraphNetworkEngine的最新算法
+        try:
+            from core.engine_graph import GraphNetworkEngine
+            from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+            from core.models.config_model import ConfigModel
+            
+            # 加载最新配置
+            config_model = ConfigModel()
+            config = config_model.load_config()
+            
+            # 获取八字信息
+            chart = self.get_chart()
+            if not chart:
+                # Fallback to legacy method
+                return self._get_wang_shuai_str_legacy(flux_data, scale)
+            
+            bazi_list = [
+                f"{chart.get('year', {}).get('stem', '')}{chart.get('year', {}).get('branch', '')}",
+                f"{chart.get('month', {}).get('stem', '')}{chart.get('month', {}).get('branch', '')}",
+                f"{chart.get('day', {}).get('stem', '')}{chart.get('day', {}).get('branch', '')}",
+                f"{chart.get('hour', {}).get('stem', '')}{chart.get('hour', {}).get('branch', '')}"
+            ]
+            day_master = chart.get('day', {}).get('stem', '')
+            
+            if not day_master or not all(bazi_list):
+                # Fallback to legacy method
+                return self._get_wang_shuai_str_legacy(flux_data, scale)
+            
+            # 使用GraphNetworkEngine计算旺衰
+            engine = GraphNetworkEngine(config=config)
+            engine.initialize_nodes(bazi_list, day_master)
+            engine.build_adjacency_matrix()
+            engine.propagate(max_iterations=10)
+            
+            # 使用最新的calculate_strength_score（包含SVM模型）
+            result = engine.calculate_strength_score(day_master)
+            strength_label = result.get('strength_label', 'Balanced')
+            
+            # 映射到中文标签
+            label_map = {
+                'Special_Strong': '身旺（专旺）',
+                'Strong': '身旺',
+                'Balanced': '身中和',
+                'Weak': '身弱',
+                'Follower': '从格/极弱'
+            }
+            
+            return label_map.get(strength_label, '身中和')
+            
+        except Exception as e:
+            logger.warning(f"使用GraphNetworkEngine计算旺衰失败，回退到旧方法: {e}")
+            # Fallback to legacy method
+            return self._get_wang_shuai_str_legacy(flux_data, scale)
+    
+    def _get_wang_shuai_str_legacy(self, flux_data: Dict, scale: float = 0.08) -> str:
+        """
+        Legacy method for calculating Wang/Shuai strength string.
+        Used as fallback when GraphNetworkEngine is not available.
         """
         s_self = flux_data.get('BiJian', 0) + flux_data.get('JieCai', 0)
         est_self = s_self * scale

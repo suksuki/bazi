@@ -243,7 +243,7 @@ class WealthCaseModel:
 - [ ] 配置变更会失效相关缓存
 
 ### 算法检查（八字相关功能必须）
-- [ ] 遵循核心算法总纲（`ALGORITHM_CONSTITUTION_v2.5.md`）
+- [ ] 遵循核心算法总纲（`ALGORITHM_CONSTITUTION_v2.6.md`）
 - [ ] 遵循核心算法内核（`CORE_ALGORITHM_KERNEL_V9.md`）
 - [ ] 参考了相关算法补充文档
 - [ ] 所有算法参数从配置文件读取
@@ -280,7 +280,7 @@ class WealthCaseModel:
 - 架构总览: `docs/ARCHITECTURE.md`
 
 ### 算法规范文档（必须遵循）
-- **核心算法总纲**: `docs/ALGORITHM_CONSTITUTION_v2.5.md` (最新版本)
+- **核心算法总纲**: `docs/ALGORITHM_CONSTITUTION_v2.6.md` (最新版本)
 - **核心算法内核**: `docs/CORE_ALGORITHM_KERNEL_V9.md`
 - **算法补充文档**:
   - `docs/ALGORITHM_SUPPLEMENT_L2_ENERGY_CONDUCTION.md` (能量传导)
@@ -876,7 +876,7 @@ import unittest
 ### 强制要求：所有算法实现必须遵循
 
 1. **核心算法总纲 (Algorithm Constitution)**
-   - **必须遵循**: `docs/ALGORITHM_CONSTITUTION_v2.5.md`
+   - **必须遵循**: `docs/ALGORITHM_CONSTITUTION_v2.6.md`
    - **核心原则**:
      - ✅ 所有参数必须可配置（禁止硬编码）
      - ✅ 所有数值必须有回归验证接口

@@ -1,0 +1,206 @@
+{
+  "phase": "phase1",
+  "match_rate": 52.818239392020274,
+  "config": {
+    "physics": {
+      "seasonWeights": {
+        "wang": 1.2,
+        "xiang": 1.0,
+        "xiu": 0.8,
+        "qiu": 0.6,
+        "si": 0.4
+      },
+      "hiddenStemRatios": {
+        "main": 0.6,
+        "middle": 0.3,
+        "remnant": 0.1
+      },
+      "pillarWeights": {
+        "year": 1.1714345709729554,
+        "month": 1.5370013985837736,
+        "day": 0.8915113927528603,
+        "hour": 1.3294510739201166
+      },
+      "lifeStageImpact": 0.2
+    },
+    "structure": {
+      "rootingWeight": 1.2,
+      "exposedBoost": 1.5,
+      "samePillarBonus": 1.6,
+      "voidPenalty": 0.5
+    },
+    "interactions": {
+      "stemFiveCombination": {
+        "threshold": 0.8,
+        "bonus": 2.0,
+        "penalty": 0.4,
+        "jealousyDamping": 0.3
+      },
+      "comboPhysics": {
+        "trineBonus": 2.5,
+        "halfBonus": 1.5,
+        "archBonus": 1.1,
+        "directionalBonus": 3.0,
+        "resolutionCost": 0.1
+      },
+      "macroPhysics": {
+        "eraElement": "Fire",
+        "eraBonus": 0.2,
+        "eraPenalty": 0.1,
+        "latitudeHeat": 0.0,
+        "latitudeCold": 0.0,
+        "invertSeasons": false,
+        "useSolarTime": true
+      },
+      "vaultPhysics": {
+        "threshold": 20.0,
+        "sealedDamping": 0.4,
+        "openBonus": 1.5,
+        "punishmentOpens": false,
+        "breakPenalty": 0.5
+      },
+      "branchEvents": {
+        "threeHarmony": 15.0,
+        "sixHarmony": 5.0,
+        "clashDamping": 0.3,
+        "clashScore": -5.0,
+        "harmDamping": 0.2
+      },
+      "treasury": {
+        "bonus": 20.0
+      },
+      "skull": {
+        "crashScore": -50.0
+      }
+    },
+    "flow": {
+      "generationEfficiency": 1.2,
+      "controlImpact": 0.7,
+      "dampingFactor": 0.5,
+      "systemEntropy": 0.05,
+      "outputDrainPenalty": 1.2,
+      "resourceImpedance": {
+        "base": 0.3,
+        "weaknessPenalty": 0.5
+      },
+      "outputViscosity": {
+        "maxDrainRate": 0.6,
+        "drainFriction": 0.2
+      },
+      "globalEntropy": 0.05,
+      "phaseChange": {
+        "scorchedEarthDamping": 0.15,
+        "frozenWaterDamping": 0.3
+      },
+      "spatialDecay": {
+        "gap1": 0.6,
+        "gap2": 0.3
+      }
+    },
+    "spacetime": {
+      "luckPillarWeight": 0.5,
+      "solarTimeImpact": 0.0,
+      "regionClimateImpact": 0.0
+    },
+    "global_logic": {
+      "energy_threshold_strong": 3.5,
+      "energy_threshold_weak": 2.0,
+      "score_general_open": 5.0
+    },
+    "grading": {
+      "strong_threshold": 60.0,
+      "weak_threshold": 40.0
+    },
+    "gat": {
+      "use_gat": true,
+      "num_heads": 4,
+      "attention_dropout": 0.29,
+      "leaky_relu_alpha": 0.2,
+      "gat_mix_ratio": 0.5,
+      "generation_efficiency": 0.3,
+      "control_impact": 0.7,
+      "combination_weight": 0.5,
+      "clash_weight": -0.8
+    },
+    "transformer": {
+      "use_transformer": false,
+      "d_model": 64,
+      "num_heads": 4,
+      "num_layers": 2,
+      "dropout": 0.1,
+      "max_seq_len": 100,
+      "year_weight": 1.0,
+      "month_weight": 0.3,
+      "day_weight": 0.1
+    },
+    "rlhf": {
+      "use_rlhf": false,
+      "learning_rate": 0.01,
+      "accuracy_weight": 1.0,
+      "error_penalty_weight": -0.5,
+      "hit_rate_bonus": 10.0,
+      "error_threshold": 20.0,
+      "feedback_file": "data/rlhf_feedback.json"
+    },
+    "probabilistic_energy": {
+      "use_probabilistic_energy": false,
+      "monte_carlo_samples": 1000,
+      "parameter_perturbation": 0.1,
+      "return_samples": false
+    },
+    "strength": {
+      "energy_threshold_center": 4.16,
+      "phase_transition_width": 10.0,
+      "attention_dropout": 0.29,
+      "follower_threshold": 0.15
+    },
+    "nonlinear": {
+      "threshold": 0.5,
+      "scale": 10.0,
+      "steepness": 10.0,
+      "phase_point": 0.5,
+      "critical_exponent": 2.0,
+      "barrier_height": 0.6,
+      "barrier_width": 1.0,
+      "clash_intensity_weight": 0.5,
+      "trine_effect_weight": 0.3,
+      "mediation_factor": 0.3,
+      "help_factor": 0.6,
+      "seal_bonus": 43.76,
+      "seal_multiplier": 0.8538,
+      "seal_conduction_multiplier": 1.7445,
+      "opportunity_scaling": 1.8952,
+      "clash_damping_limit": 0.282,
+      "nonlinear_damping": {
+        "enabled": true,
+        "threshold": 80.0,
+        "damping_rate": 0.3,
+        "max_value": 100.0
+      }
+    }
+  },
+  "frozen_params": {
+    "physics": {
+      "seasonWeights": {
+        "wang": 1.2,
+        "xiang": 1.0,
+        "xiu": 0.8,
+        "qiu": 0.6,
+        "si": 0.4
+      },
+      "hiddenStemRatios": {
+        "main": 0.6,
+        "middle": 0.3,
+        "remnant": 0.1
+      },
+      "pillarWeights": {
+        "year": 1.1714345709729554,
+        "month": 1.5370013985837736,
+        "day": 0.8915113927528603,
+        "hour": 1.3294510739201166
+      },
+      "lifeStageImpact": 0.2
+    }
+  },
+  "timestamp": "2025-12-18 13:42:52"
+}

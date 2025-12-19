@@ -1,0 +1,85 @@
+{
+  "_comment": "V9.3 Quantum-Inertia Hotfix Configuration",
+  "_description": "基于量子力学波函数坍缩与经典力学惯性的混合拟合方案",
+  "_version": "9.3",
+  
+  "physics": {
+    "seasonWeights": {
+      "wang": 1.2,
+      "xiang": 1.0,
+      "xiu": 0.8,
+      "qiu": 0.6,
+      "si": 0.4
+    },
+    "pillarWeights": {
+      "year": 0.8,
+      "month": 1.5,
+      "day": 1.0,
+      "hour": 0.9
+    }
+  },
+  
+  "flow": {
+    "_comment": "V9.3: 提高Base Impact，因为新公式会大幅阻尼伤害",
+    "controlImpact": 0.8,
+    "generationEfficiency": 0.7,
+    "generationDrain": 0.15,
+    "dampingFactor": 0.005,
+    "spatialDecay": {
+      "gap0": 1.0,
+      "gap1": 0.8,
+      "gap2": 0.5,
+      "gap3": 0.3
+    }
+  },
+  
+  "interactions": {
+    "_comment": "V9.3: 从乘法逻辑改为对数增益逻辑，防止共振灾难（爆炸）",
+    "stemFiveCombination": {
+      "threshold": 0.7,
+      "transformBonus": 1.4,
+      "_comment_transformBonus": "从2.0降到1.4（稳定同位素），符合波的有效值(RMS)叠加原理",
+      "bindingPenalty": 0.2,
+      "_comment_bindingPenalty": "合绊扣减20%能量",
+      "jealousyDamping": 0.3
+    },
+    
+    "branchEvents": {
+      "trineBonus": 1.8,
+      "_comment_trineBonus": "从2.5降到1.8（构造性干涉极限）",
+      "halfBonus": 1.25,
+      "_comment_halfBonus": "明确的谐波能级",
+      "archBonus": 1.10,
+      "_comment_archBonus": "明确的虚共振能级",
+      "clashDamping": 0.4,
+      "_comment_clashDamping": "碰撞损失因子（从0.9降到0.4）",
+      
+      "threeHarmony": {
+        "bonus": 1.8,
+        "transform": true
+      },
+      "halfHarmony": {
+        "bonus": 1.25,
+        "transform": true
+      },
+      "archHarmony": {
+        "bonus": 1.10,
+        "transform": true
+      },
+      "sixHarmony": {
+        "bonus": 1.2,
+        "transform": true,
+        "bindingPenalty": 0.2
+      }
+    },
+    
+    "comboPhysics": {
+      "trineBonus": 1.8,
+      "halfBonus": 1.25,
+      "archBonus": 1.10,
+      "directionalBonus": 3.0,
+      "resolutionCost": 0.1
+    }
+  }
+}
+

@@ -55,26 +55,17 @@ def render_and_collect_input(facade: BaziFacade,
 
     with st.sidebar:
 
-        # --- 档案选择（仅量子验证页面） ---
+        # V13.0: 已删除档案选择功能（量子验证页面）
         selected_case = None
         if is_quantum_lab:
-            # 量子验证页面需要档案选择
-            if cases is None:
-                cases = _load_cases()
-
-            if cases:
-                case_options = {f"{c.get('id', 'NA')} - {c.get('description', 'Case')}": c for c in cases}
-                selected_case_name = st.selectbox("🎭 选择档案 (Archive)", list(case_options.keys()))
-                selected_case = case_options[selected_case_name]
-            else:
-                st.warning("未找到预测档案数据，使用默认示例。")
-                selected_case = {
-                    "id": "DEMO",
-                    "description": "Demo Case",
-                    "bazi": ["甲子", "乙丑", "丙寅", "丁卯"],
-                    "day_master": "丙",
-                    "gender": "男",
-                }
+            # 使用默认示例
+            selected_case = {
+                "id": "DEMO",
+                "description": "Demo Case",
+                "bazi": ["甲子", "乙丑", "丙寅", "丁卯"],
+                "day_master": "丙",
+                "gender": "男",
+            }
 
         # --- GEO 城市选择 ---
         # [V56.3] GEO 修正城市已移到 input_form.py 中（在"启用真太阳时"之后）
@@ -82,51 +73,9 @@ def render_and_collect_input(facade: BaziFacade,
         selected_city = st.session_state.get("unified_geo_city", "None")
         city_for_controller = "Unknown" if selected_city == "None" else selected_city
 
-        # --- ERA 因子 ---
+        # --- ERA 因子 ---（移到最底部，在函数返回前渲染）
+        # 先初始化为空，稍后在函数末尾渲染
         era_factor: Dict[str, float] = {}
-        if is_quantum_lab:
-            # 在 ERA 调节前展示档案概要（仅量子验证页面）
-            if isinstance(selected_case, dict) and selected_case:
-                st.subheader("档案信息")
-                st.markdown(f"- 档案ID: {selected_case.get('id', 'Unknown')}")
-                st.markdown(f"- 性别: {selected_case.get('gender', '未知')}")
-                st.markdown(f"- 日主: {selected_case.get('day_master', '?')}")
-                bazi_list = selected_case.get("bazi", [])
-                bazi_str = " | ".join(bazi_list) if bazi_list else "未提供"
-                st.markdown(f"- 八字: {bazi_str}")
-                birth_date = selected_case.get("birth_date", "")
-                birth_time = selected_case.get("birth_time", "")
-                st.markdown(f"- 推断公历: {birth_date} {birth_time}".strip())
-            st.subheader("🌐 ERA 时代修正 (可调)")
-            cols = st.columns(len(consts.FIVE_ELEMENTS))
-            prefix = st.session_state.get("era_key_prefix", "era")
-            for idx, elem in enumerate(consts.FIVE_ELEMENTS):
-                label_map = {
-                    "Wood": "木",
-                    "Fire": "火",
-                    "Earth": "土",
-                    "Metal": "金",
-                    "Water": "水",
-                }
-                era_factor[elem] = cols[idx].slider(
-                    f"{label_map.get(elem, elem)} (ERA %)", -10, 10, 0, key=f"{prefix}_{elem.lower()}"
-                ) / 100
-        else:
-            st.subheader("🌐 ERA 时代修正 (当前生效)")
-            current_era = controller.get_current_era_factor() if controller else {}
-            if current_era and any(current_era.values()):
-                cols = st.columns(3)
-                elements = consts.FIVE_ELEMENTS
-                c_idx = 0
-                for elem in elements:
-                    factor = current_era.get(elem, 0.0) * 100
-                    if abs(factor) > 0.001:
-                        cols[c_idx % 3].metric(label=elem, value=f"{factor:+.1f}%")
-                        c_idx += 1
-                era_factor = current_era
-            else:
-                st.info("当前未应用 ERA 因子。")
-                era_factor = {}
 
         # --- 构造用户输入并通过 Facade 刷新 Controller ---
         controller = facade._controller
@@ -189,6 +138,31 @@ def render_and_collect_input(facade: BaziFacade,
 
         particle_weights = controller.get_current_particle_weights() if hasattr(controller, "get_current_particle_weights") else {}
 
+        # --- ERA 因子 ---（在输入面板中处理，不在量子验证页面显示）
+        if is_quantum_lab:
+            # 量子验证页面：不显示 ERA 输入，只从 session_state 读取或使用默认值
+            prefix = st.session_state.get("era_key_prefix", "era")
+            era_factor = {}
+            for elem in consts.FIVE_ELEMENTS:
+                era_factor[elem] = st.session_state.get(f"{prefix}_{elem.lower()}", 0) / 100
+        else:
+            # 智能排盘页面：显示 ERA 当前生效值
+            st.sidebar.subheader("🌐 ERA 时代修正 (当前生效)")
+            current_era = controller.get_current_era_factor() if controller else {}
+            if current_era and any(current_era.values()):
+                cols = st.sidebar.columns(3)
+                elements = consts.FIVE_ELEMENTS
+                c_idx = 0
+                for elem in elements:
+                    factor = current_era.get(elem, 0.0) * 100
+                    if abs(factor) > 0.001:
+                        cols[c_idx % 3].metric(label=elem, value=f"{factor:+.1f}%")
+                        c_idx += 1
+                era_factor = current_era
+            else:
+                st.sidebar.info("当前未应用 ERA 因子。")
+                era_factor = {}
+
         try:
             facade.process_and_set_inputs(
                 user_data=user_data,
@@ -196,7 +170,6 @@ def render_and_collect_input(facade: BaziFacade,
                 era_factor=era_factor if era_factor else None,
                 particle_weights=particle_weights if particle_weights else None
             )
-            st.success("数据与修正因子已同步到 Controller。")
         except Exception as e:
             st.warning(f"无法刷新 Controller 输入: {e}")
 

@@ -11,8 +11,45 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import networkx as nx
+
+# V13.0: 处理 ProbValue 转换
+try:
+    from core.prob_math import ProbValue
+except ImportError:
+    ProbValue = None
+
+
+def _convert_to_float(value: Union[float, Any]) -> float:
+    """
+    将值转换为 float，如果是 ProbValue 则返回其均值。
+    
+    Args:
+        value: 可以是 float、ProbValue 或其他类型
+        
+    Returns:
+        float 值
+    """
+    if ProbValue is not None and isinstance(value, ProbValue):
+        return float(value)  # ProbValue 有 __float__ 方法，返回 mean
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _convert_energy_list(energy_list: List[Any]) -> List[float]:
+    """
+    将能量列表转换为 float 列表。
+    
+    Args:
+        energy_list: 能量值列表（可能包含 ProbValue）
+        
+    Returns:
+        float 列表
+    """
+    return [_convert_to_float(e) for e in energy_list]
 
 
 def _calculate_ten_god(day_master: str, char: str, is_stem: bool = True) -> Optional[str]:
@@ -132,13 +169,16 @@ def render_topology_graph(adjacency_matrix: np.ndarray, nodes: List[Dict],
         # 如果能量数量不匹配，使用默认值
         node_energies = node_energies[:N] if len(node_energies) > N else node_energies + [0.0] * (N - len(node_energies))
     
+    # V13.0: 转换 ProbValue 为 float（用于 JSON 序列化）
+    node_energies_float = _convert_energy_list(node_energies)
+    
     # 创建 NetworkX 图
     G = nx.DiGraph()
     
     # 添加节点
     for i, node in enumerate(nodes):
         node_label = node_labels[i] if node_labels and i < len(node_labels) else f"{node.get('char', f'Node{i}')}"
-        G.add_node(i, label=node_label, energy=node_energies[i] if i < len(node_energies) else 0.0, **node)
+        G.add_node(i, label=node_label, energy=node_energies_float[i] if i < len(node_energies_float) else 0.0, **node)
     
     # 添加边（只添加权重较大的边，避免图过于复杂）
     threshold = 0.1  # 只显示权重绝对值 > 0.1 的边
@@ -293,7 +333,7 @@ def render_topology_graph(adjacency_matrix: np.ndarray, nodes: List[Dict],
         node_x.append(x)
         node_y.append(y)
         
-        energy = node_energies[i] if i < len(node_energies) else 0.0
+        energy = node_energies_float[i] if i < len(node_energies_float) else 0.0
         node_label = (node_labels[i] if node_labels and i < len(node_labels) 
                      else node.get('char', f'Node{i}'))
         
@@ -441,25 +481,29 @@ def render_energy_flow_comparison(initial_energy: List[float], final_energy: Lis
     渲染能量流动对比图（初始 vs 最终）。
     
     Args:
-        initial_energy: 初始能量向量
-        final_energy: 最终能量向量
+        initial_energy: 初始能量向量（可能包含 ProbValue）
+        final_energy: 最终能量向量（可能包含 ProbValue）
         node_labels: 节点标签列表
     
     Returns:
         Plotly Figure 对象
     """
+    # V13.0: 转换 ProbValue 为 float（用于 JSON 序列化）
+    initial_energy_float = _convert_energy_list(initial_energy)
+    final_energy_float = _convert_energy_list(final_energy)
+    
     fig = go.Figure()
     
     fig.add_trace(go.Bar(
         x=node_labels,
-        y=initial_energy,
+        y=initial_energy_float,
         name='初始能量 (H⁰)',
         marker_color='lightblue'
     ))
     
     fig.add_trace(go.Bar(
         x=node_labels,
-        y=final_energy,
+        y=final_energy_float,
         name='最终能量 (H^final)',
         marker_color='darkblue'
     ))
@@ -480,14 +524,24 @@ def render_adjacency_heatmap(adjacency_matrix: np.ndarray, node_labels: List[str
     渲染邻接矩阵热图。
     
     Args:
-        adjacency_matrix: 邻接矩阵 [N x N]
+        adjacency_matrix: 邻接矩阵 [N x N]（可能包含 ProbValue）
         node_labels: 节点标签列表
     
     Returns:
         Plotly Figure 对象
     """
+    # V13.0: 转换 ProbValue 为 float（用于 JSON 序列化）
+    # 将矩阵转换为 float 类型
+    if adjacency_matrix is not None and adjacency_matrix.size > 0:
+        # 使用列表推导式转换所有元素
+        matrix_float = np.array([[_convert_to_float(adjacency_matrix[i][j]) 
+                                 for j in range(adjacency_matrix.shape[1])]
+                                for i in range(adjacency_matrix.shape[0])], dtype=float)
+    else:
+        matrix_float = adjacency_matrix
+    
     fig = px.imshow(
-        adjacency_matrix,
+        matrix_float,
         labels=dict(x="目标节点 (Target)", y="源节点 (Source)", color="权重 (Weight)"),
         x=node_labels,
         y=node_labels,

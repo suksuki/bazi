@@ -1,0 +1,129 @@
+{
+  "timestamp": "2025-12-18T13:57:06.855559",
+  "stage": "result",
+  "diagnosis": {
+    "match_rate": 51.361621279290695,
+    "total_cases": 91,
+    "matched_cases": 45,
+    "main_issues": [
+      {
+        "pattern": "Special_Strong → Balanced",
+        "count": 10,
+        "examples": [
+          {
+            "name": "毛泽东",
+            "score": 71.94822958270986
+          },
+          {
+            "name": "张学良",
+            "score": 77.94426433795338
+          },
+          {
+            "name": "张大千",
+            "score": 100.0
+          }
+        ]
+      },
+      {
+        "pattern": "Weak → Strong",
+        "count": 8,
+        "examples": [
+          {
+            "name": "慈禧太后 (Empress Cixi)",
+            "score": 43.03372230715381
+          },
+          {
+            "name": "弘时（雍正第三子）",
+            "score": 32.90675456284259
+          },
+          {
+            "name": "永珅（弘时之子）",
+            "score": 27.229204636756876
+          }
+        ]
+      },
+      {
+        "pattern": "Special_Strong → Weak",
+        "count": 8,
+        "examples": [
+          {
+            "name": "雍正帝（清世宗·胤禛）",
+            "score": 78.40610011631273
+          },
+          {
+            "name": "周恩来",
+            "score": 100.0
+          },
+          {
+            "name": "测试案例_020 (Test Case 020)",
+            "score": 72.45310420576746
+          }
+        ]
+      },
+      {
+        "pattern": "Strong → Weak",
+        "count": 5,
+        "examples": [
+          {
+            "name": "杜月笙 (Du Yuesheng)",
+            "score": 60.42800961495066
+          },
+          {
+            "name": "慈禧太后（叶赫那拉·杏贞）",
+            "score": 60.29773545810466
+          },
+          {
+            "name": "史蒂夫·乔布斯 (Steve Jobs)",
+            "score": 57.256322926914116
+          }
+        ]
+      },
+      {
+        "pattern": "Weak → Balanced",
+        "count": 3,
+        "examples": [
+          {
+            "name": "胡适",
+            "score": 16.57145221303495
+          },
+          {
+            "name": "测试案例_014 (Test Case 014)",
+            "score": 12.153463966205196
+          },
+          {
+            "name": "CN_ELITE_06",
+            "score": 26.70170250627123
+          }
+        ]
+      }
+    ],
+    "recommendations": [
+      "身弱误判为强: Weak → Strong (8个案例)。建议：提高energy_threshold_center",
+      "身强误判为弱: Special_Strong → Weak (8个案例)。建议：降低energy_threshold_center或提高samePillarBonus",
+      "身强误判为弱: Strong → Weak (5个案例)。建议：降低energy_threshold_center或提高samePillarBonus"
+    ]
+  },
+  "action_taken": "logic_refactoring",
+  "code_changes": [
+    {
+      "file": "core/engine_graph.py",
+      "function": "calculate_strength_score",
+      "change": "降低Special_Strong判定阈值或增强判定逻辑",
+      "reason": "有10个案例被误判为Balanced"
+    },
+    {
+      "file": "core/engine_graph.py",
+      "function": "_calculate_node_base_energy",
+      "change": "优化通根识别逻辑或提高主气根加成",
+      "reason": "有8个案例Strong↔Weak互判错误"
+    },
+    {
+      "file": "core/engine_graph.py",
+      "function": "_calculate_node_base_energy",
+      "change": "优化通根识别逻辑或提高主气根加成",
+      "reason": "有8个案例Strong↔Weak互判错误"
+    }
+  ],
+  "next_action": "review_result",
+  "status": "needs_attention"
+}

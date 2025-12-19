@@ -63,41 +63,64 @@
    - 案例：Jason D 1999年误差修正
    - 参数映射说明
 
+### 量子验证页面文档
+
+8. **[V10.0 量子验证页面完整实施总结](./V10_QUANTUM_LAB_COMPLETE_SUMMARY.md)** (新增)
+   - MVC架构重构总结
+   - 功能清理说明
+   - Bug修复记录
+   - 测试验证结果
+   - 架构对比
+
+9. **[V10.0 量子验证页面 MVC 架构文档](./V10_QUANTUM_LAB_MVC_ARCHITECTURE.md)** (新增)
+   - MVC三层架构说明
+   - Controller设计原则
+   - View层设计原则
+   - 数据流说明
+   - 最佳实践
+
+10. **[V10.0 量子验证页面旺衰判定基础参数调优指南](./V10_QUANTUM_LAB_STRENGTH_TUNING_GUIDE.md)** (新增)
+    - 调优思路和方法
+    - 参数说明
+    - 自动化调优方案
+    - 敏感度分析
+    - 回归检查
+
 ### 实施总结文档
 
-8. **[V10.0 非线性优化实施总结](./V10_NONLINEAR_IMPLEMENTATION_SUMMARY.md)**
-   - 非线性 Soft-thresholding 实施
-   - 文件变更列表
-   - 测试结果
+11. **[V10.0 非线性优化实施总结](./V10_NONLINEAR_IMPLEMENTATION_SUMMARY.md)**
+    - 非线性 Soft-thresholding 实施
+    - 文件变更列表
+    - 测试结果
 
-6. **[V10.0 GAT 实施总结](./V10_GAT_IMPLEMENTATION_SUMMARY.md)**
-   - GAT 网络实施
-   - 动态注意力机制
-   - 测试结果
+12. **[V10.0 GAT 实施总结](./V10_GAT_IMPLEMENTATION_SUMMARY.md)**
+    - GAT 网络实施
+    - 动态注意力机制
+    - 测试结果
 
-7. **[V10.0 Transformer 实施总结](./V10_TRANSFORMER_IMPLEMENTATION_SUMMARY.md)**
-   - Transformer 时序建模实施
-   - 长程依赖捕捉
-   - 测试结果
+13. **[V10.0 Transformer 实施总结](./V10_TRANSFORMER_IMPLEMENTATION_SUMMARY.md)**
+    - Transformer 时序建模实施
+    - 长程依赖捕捉
+    - 测试结果
 
-8. **[V10.0 RLHF 实施总结](./V10_RLHF_IMPLEMENTATION_SUMMARY.md)**
-   - RLHF 反馈循环实施
-   - 自适应参数调优
-   - 测试结果
+14. **[V10.0 RLHF 实施总结](./V10_RLHF_IMPLEMENTATION_SUMMARY.md)**
+    - RLHF 反馈循环实施
+    - 自适应参数调优
+    - 测试结果
 
-9. **[V10.0 完整优化总结](./V10_COMPLETE_OPTIMIZATION_SUMMARY.md)**
-   - 所有模块实施总结
-   - 整体性能提升
-   - 未来优化方向
+15. **[V10.0 完整优化总结](./V10_COMPLETE_OPTIMIZATION_SUMMARY.md)**
+    - 所有模块实施总结
+    - 整体性能提升
+    - 未来优化方向
 
 ### 优化提案文档
 
-10. **[V10.0 非线性优化提案](./V10_NONLINEAR_OPTIMIZATION_PROPOSAL.md)**
+16. **[V10.0 非线性优化提案](./V10_NONLINEAR_OPTIMIZATION_PROPOSAL.md)**
     - 非线性 Soft-thresholding 提案
     - 数学模型设计
     - 实施计划
 
-11. **[V10.0 概率分布提案](./V10_PROBABILISTIC_ENERGY_PROPOSAL.md)**
+17. **[V10.0 概率分布提案](./V10_PROBABILISTIC_ENERGY_PROPOSAL.md)**
     - 贝叶斯推理提案
     - 概率分布设计
     - 实施计划

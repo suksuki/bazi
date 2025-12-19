@@ -3,12 +3,15 @@ import os
 from typing import Dict, Any
 from threading import Lock
 
-from dotenv import load_dotenv
+# 可选导入 dotenv（如果不存在则跳过）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 加载 .env 环境变量（若存在）
+except ImportError:
+    # dotenv 未安装，跳过环境变量加载
+    pass
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "tuning_params.json")
-
-# 加载 .env 环境变量（若存在）
-load_dotenv()
 
 # 默认参数 (如果文件不存在)
 DEFAULT_CONFIG = {

@@ -4,6 +4,11 @@
 Based on V2.5 Master Plan.
 This file defines the FINAL structure for the Auto-Tuning Architecture.
 Replaces all previous versions.
+
+[V13.1] 参数清洗说明：
+- 已删除 season_dominance_boost：避免能量通胀，由 seasonWeights.wang 和 pillarWeights.month 决定
+- 已删除 floating_peer_penalty：由通根饱和函数 (Tanh/Sigmoid) 处理无根虚弱
+- 大运/流年参数保留（用于Phase 2+），但不在Phase 1 UI显示
 """
 
 from core.config_rules import (
@@ -18,27 +23,47 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # === 面板 1: 基础场域 (Field Environment) ===
     "physics": {
         # [V2.4 第2条] 五行能量
+        # [V13.1] 最终调优：泄气(xiu)从0.85提升到0.90，被克(si)从0.50降低到0.45，确保显著差异
         "seasonWeights": { 
-            "wang": 1.20, "xiang": 1.00, "xiu": 0.80, "qiu": 0.60, "si": 0.40 
+            "wang": 1.20, "xiang": 1.00, "xiu": 0.90, "qiu": 0.60, "si": 0.45 
         },
         # [V2.4 第5条] 壳核模型 (藏干)
         "hiddenStemRatios": { 
             "main": 0.60, "middle": 0.30, "remnant": 0.10 
         },
         # [新增] 宫位引力 (Pillar Weights)
+        # [V12.5] 强制纠正宫位权重倒挂：确保物理逻辑正确（Day >= 1.2 > Hour <= 0.9）
+        # [V13.1] 最终调优：日支权重从1.2提升到1.35，解决Group C倒挂问题
         "pillarWeights": {
-            "year": 0.8, "month": 1.2, "day": 1.0, "hour": 0.9
+            "year": 0.7,   # V12.5: 年支权重（最低）
+            "month": 1.2,  # V12.5: 月令权重（最高，但保持合理范围）
+            "day": 1.35,   # V13.1: 日支权重（从1.2提升到1.35，解决Group C倒挂）
+            "hour": 0.9    # V12.5: 时支权重（必须显著低于日支）
         },
         # [NEW V2.5] 十二长生修正 (Optional)
-        "lifeStageImpact": 0.2
+        "lifeStageImpact": 0.2,
+        # [V13.1] 参数清洗：删除 season_dominance_boost（避免能量通胀，由 seasonWeights.wang 和 pillarWeights.month 决定）
+        # [V13.1] 参数清洗：删除 floating_peer_penalty（由通根饱和函数处理）
+        "season_decay_factor": 0.3,     # V12.2: 失令衰减因子（被月令克制时的衰减系数）
+        "self_punishment_damping": 0.2,  # 自刑惩罚（自刑地支能量保留比例，0.2=保留20%）
+        # [V13.1] 大运/流年参数：保留在配置中（用于Phase 2+），但不在Phase 1 UI显示
+        "dayun_branch_multiplier": 1.2,  # 大运地支权重倍数（相对于月令）
+        "dayun_stem_multiplier": 0.8,    # 大运天干权重倍数（相对于月令）
+        "liunian_power": 2.0,            # 流年权力系数（初始能量增强倍数）
+        "liunian_decay_rate": 0.9        # 流年能量衰减率（每次迭代）
     },
 
     # === 面板 2: 粒子动态 (Particle Dynamics) ===
     "structure": {
         # [V2.4 第7条] 垂直作用
-        "rootingWeight": 1.0,      # 通根系数
+        # [V10.0 新数据集调优] 通根系数保持在1.2（当前数据集不敏感）
+        "rootingWeight": 1.2,
+        # [V12.2] 非线性饱和函数参数
+        "rootingSaturationMax": 2.5,      # 通根最大加成上限（饱和函数 max_val）
+        "rootingSaturationSteepness": 0.8, # 通根饱和曲线陡峭度（控制边际递减速度）      # 通根系数
         "exposedBoost": 1.5,       # 透干加成
-        "samePillarBonus": 1.2,    # 自坐强根加权
+        # [V13.1] 最终调优：从1.8提升到3.0，解决Group B (B3 vs B2) 差距不够的问题
+        "samePillarBonus": 3.0,    # 自坐强根加权（V13.1: 从1.8提升到3.0，显著拉开B3与B2的差距）
         
         # [新增] 黑洞效应 (Void)
         "voidPenalty": 0.5         # 空亡折损 (0.0=Empty, 1.0=Full)
@@ -47,11 +72,12 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # === 面板 3: 几何交互 (Geometric Interactions) ===
     "interactions": {
         # [V2.4 第6条] 天干五合
+        # [V13.3 Phase 2] 量子纠缠参数：用于计算干支的合化与刑冲（对应 Group F）
         "stemFiveCombination": {
-            "threshold": 0.8,
-            "bonus": 2.0,
-            "penalty": 0.4,
-            "jealousyDamping": 0.3    # [NEW V3.0] 争合损耗
+            "threshold": 1.5,      # [Phase 2] 合化阈值：需要月令支持度 > 1.5 才能合化成功（决定甲己合土是"化气"还是"羁绊"）
+            "bonus": 1.5,          # [Phase 2] 合化增益：如果合化成功（如甲己化土），产生的新土能量的倍率
+            "penalty": 0.5,        # [Phase 2] 合化失败惩罚：合而不化时，双方能量均受损的折损率
+            "jealousyDamping": 0.3  # [NEW V3.0] 争合损耗
         },
         # [NEW V3.0] 地支合局物理 (Combo Physics)
         "comboPhysics": {
@@ -82,12 +108,43 @@ DEFAULT_FULL_ALGO_PARAMS = {
             "breakPenalty": 0.5      # 冲破墓的惩罚系数
         },
         # [V2.4 第6条] 地支事件 (Legacy Harmony Mapping)
-        "branchEvents": {          
-             "threeHarmony": SCORE_SANHE_BONUS, # 15.0
-             "sixHarmony": SCORE_LIUHE_BONUS,   # 5.0
-             "clashDamping": 0.3,               # 冲的折损系数 (New Scalar)
-             "clashScore": SCORE_CLASH_PENALTY, # -5.0 (Legacy Score)
-             "harmDamping": 0.2
+        # [V13.5 Phase 2] 量子纠缠参数：解耦"合"的参数，区分三合/半合/拱合/六合的物理差异
+        "branchEvents": {
+             "clashScore": SCORE_CLASH_PENALTY,         # -5.0 (Legacy Score)
+             "harmDamping": 0.2,                        # (Legacy)
+             
+             # [V13.5] Phase 2 精细参数
+             "clashDamping": 0.4,                       # [Phase 2] 冲的折损：子午冲导致双方能量都大幅削减，且σ(不确定度)暴增
+             
+             # [V13.5] 三合 (Three Harmony) - 120°相位，共振质变
+             "threeHarmony": {
+                 "bonus": 2.0,                          # 能量翻倍（质变级）
+                 "transform": True                      # 允许改变五行属性（化气）
+             },
+             
+             # [V13.5] 半合 (Half Harmony) - 不完全共振
+             "halfHarmony": {
+                 "bonus": 1.4,                          # 能量中等提升
+                 "transform": False                     # 通常不彻底改变属性，除非月令支持
+             },
+             
+             # [V13.5] 拱合 (Arch Harmony) - 缺中神，虚拱
+             "archHarmony": {
+                 "bonus": 1.1,                          # 能量微升（暗拱）
+                 "transform": False
+             },
+             
+             # [V13.5] 六合 (Six Harmony) - 磁力吸附，物理羁绊
+             "sixHarmony": {
+                 "bonus": 1.3,                          # 能量提升
+                 "bindingPenalty": 0.2                  # 羁绊惩罚：活性/对外输出降低 20%
+             },
+             
+             # [V13.9] 三会局 (Three Meetings) - 方局，力量最强（纯暴力）
+             "threeMeeting": {
+                 "bonus": 2.5,                          # 能量最强（方局）
+                 "transform": True                      # 必须改变五行（整个家族站在一起）
+             }
         },
         # Legacy Treasury/Skull (Keep for compatibility)
         "treasury": { "bonus": SCORE_TREASURY_BONUS },
@@ -98,10 +155,23 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # [V8.0 Refactor] The Damping Protocol + Phase Change (阻尼协议 + 相变)
     # [V42.1] Added System Entropy and Output Drain
     "flow": {
-        # Genesis Compliance Keys
-        "generationEfficiency": 1.2, # 生的效率
-        "controlImpact": 0.7,        # 克的影响
-        "dampingFactor": 0.5,        # 衰减因子
+        # [V13.3 Phase 2] 流体力学参数 (Fluid Dynamics)
+        # 用于计算普通的生克泄耗（对应 Group D 和 E）
+        "generationEfficiency": 0.7,  # [Phase 2] 生的效率：甲木生丙火，甲木付出100，丙火实际得到70（传输损耗30%）
+        "generationDrain": 0.3,        # [Phase 2] 泄的程度：甲木生丙火，甲木自身减损30%（生别人很累）
+        "controlImpact": 0.5,          # [Phase 2] 克的破坏力：水克火，火的能量直接打5折（防止克过头变成"斩尽杀绝"）
+        "dampingFactor": 0.1,         # [Phase 2] 系统阻尼/熵增：每次能量传递的自然损耗，防止数值爆炸
+        
+        # [V13.3 Phase 2] 空间场参数 (Spatial Field)
+        # 用于计算距离对生克的影响（对应 Group C 在动态中的表现）
+        "spatialDecay": {
+            "gap0": 1.0,  # 同柱（如甲寅中的甲和寅）：无衰减
+            "gap1": 0.9,  # 相邻（年干生月干）：损失小
+            "gap2": 0.6,  # 隔一柱（年干生日干）：损失大
+            "gap3": 0.3   # 隔两柱（年干生时干）：遥不可及
+        },
+        
+        # Legacy/Compatibility Keys (保留向后兼容)
         "systemEntropy": 0.05,       # [V42.1] 全局系统熵（每轮能量损耗5%）
         "outputDrainPenalty": 1.2,   # [V42.1] 食伤泄耗惩罚（日主生食伤时的额外损耗）
         
@@ -125,10 +195,7 @@ DEFAULT_FULL_ALGO_PARAMS = {
         "phaseChange": {
             "scorchedEarthDamping": 0.15,  # 焦土不生金 (85% blocked in summer)
             "frozenWaterDamping": 0.3       # 冻水不生木 (70% blocked in winter)
-        },
-        
-        # E. Legacy/Base Params (Optional preservation)
-        "spatialDecay": { "gap1": 0.6, "gap2": 0.3 }
+        }
     },
 
     # === 面板 5: 时空修正 (Spacetime Modifiers) ===
@@ -205,11 +272,18 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # [V10.0] 旺衰概率波、GAT 动态注意力、贝叶斯自校准
     "strength": {
         # 激活函数中心点（中性点）
-        "energy_threshold_center": 2.89,      # 最优值（从敏感度分析得出）
+        # [V10.0 新数据集调优] 从2.89调整到4.16，匹配率从45.2%提升到50.0%（91个案例）
+        "energy_threshold_center": 4.16,      # 最优值（网格搜索得出，范围4.16-4.40都达到50.0%）
         # 相变宽度（Softplus β 参数）
         "phase_transition_width": 10.0,      # 保持默认值，平滑过渡
         # 注意力稀疏度（GAT dropout）
-        "attention_dropout": 0.29            # 最优值（从敏感度分析得出）
+        "attention_dropout": 0.29,           # 最优值（从敏感度分析得出）
+        # [V10.0 核心分析师建议] 从格阈值（Extreme Weak Lock）
+        "follower_threshold": 0.15,          # 当 strength_probability < 此值时，判定为 Follower（从格）
+        # [V12.1] 判定阈值（可调整，解决"概率高却判定为弱"的问题）
+        "weak_score_threshold": 40.0,        # 分数 ≤ 此值，直接判定为弱（默认40.0）
+        "strong_score_threshold": 50.0,      # 分数 > 此值 且 概率 ≥ 60%，判定为强（默认50.0）
+        "strong_probability_threshold": 0.60  # 概率 ≥ 此值 且 分数 > 50，判定为强（默认0.60）
     },
     
     # === 面板 8: 非线性激活函数 (Nonlinear Activation) ===
