@@ -27,27 +27,87 @@ class ProfileManager:
         with open(self.file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def add_profile(self, name, gender, year, month, day, hour):
+    def save_profile(self, profile_id=None, name=None, gender=None, year=None, month=None, day=None, hour=None, minute=0, city=None, longitude=None):
+        """
+        Save or update a profile.
+        
+        If profile_id is provided and exists, update that profile.
+        Otherwise, create a new profile.
+        
+        This is the preferred method for saving profiles as it uses ID-based identification.
+        """
         profiles = self._load_data()
         
-        # Check duplicate (Simple check by Name)
-        if any(p['name'] == name for p in profiles):
-            # Update existing or throw error? Let's auto-update/overwrite for now or create distinct
-            # For simplicity, allow duplicates but use UUID
-            pass
+        # Normalize name: strip whitespace
+        name = name.strip() if name else name
+        
+        # Find existing profile by ID
+        existing_idx = None
+        if profile_id:
+            existing_idx = next((i for i, p in enumerate(profiles) if p.get('id') == profile_id), None)
+        
+        new_profile = {
+            "id": profile_id if existing_idx is not None else str(uuid.uuid4()),
+            "name": name,
+            "gender": gender,  # "男" or "女"
+            "year": int(year),
+            "month": int(month),
+            "day": int(day),
+            "hour": int(hour),
+            "minute": int(minute) if minute else 0,
+            "city": city if city and city != "None" else None,
+            "longitude": float(longitude) if longitude else None,
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        if existing_idx is not None:
+            # Update existing profile (keep original created_at if possible)
+            original_created_at = profiles[existing_idx].get('created_at')
+            if original_created_at:
+                new_profile['created_at'] = original_created_at
+            new_profile['updated_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            profiles[existing_idx] = new_profile
+        else:
+            # Insert new profile
+            profiles.insert(0, new_profile)  # Newest first
+        
+        self._save_data(profiles)
+        return True, new_profile['id']
+
+    def add_profile(self, name, gender, year, month, day, hour, minute=0, city=None, longitude=None):
+        """
+        Legacy method for adding profiles. Uses name-based duplicate detection.
+        Consider using save_profile() for new code.
+        """
+        profiles = self._load_data()
+        
+        # Normalize name: strip whitespace
+        name = name.strip() if name else name
+        
+        # Check duplicate (Simple check by Name, also strip existing names for matching)
+        existing_idx = next((i for i, p in enumerate(profiles) if p.get('name', '').strip() == name), None)
 
         new_profile = {
-            "id": str(uuid.uuid4()),
+            "id": str(uuid.uuid4()) if existing_idx is None else profiles[existing_idx]['id'],
             "name": name,
             "gender": gender, # "男" or "女"
             "year": int(year),
             "month": int(month),
             "day": int(day),
             "hour": int(hour),
+            "minute": int(minute) if minute else 0,
+            "city": city if city and city != "None" else None,
+            "longitude": float(longitude) if longitude else None,
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        profiles.insert(0, new_profile) # Newest first
+        if existing_idx is not None:
+            # Update existing profile
+            profiles[existing_idx] = new_profile
+        else:
+            # Insert new profile
+            profiles.insert(0, new_profile) # Newest first
+        
         self._save_data(profiles)
         return True, "Profile saved successfully."
 

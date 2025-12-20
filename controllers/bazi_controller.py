@@ -216,7 +216,7 @@ class BaziController:
     # =========================================================================
     
     def set_user_input(self, name: str, gender: str, date_obj: datetime.date, 
-                       time_int: int, city: str = "Unknown",
+                       time_int: int, minute_int: int = 0, city: str = "Unknown",
                        enable_solar: bool = True, longitude: float = 116.46,
                        era_factor: Optional[Dict] = None,
                        particle_weights: Optional[Dict] = None) -> None:
@@ -228,6 +228,7 @@ class BaziController:
             gender: "男" or "女"
             date_obj: Birth date
             time_int: Birth hour (0-23)
+            minute_int: Birth minute (0-59)
             city: Birth city for geo correction
             enable_solar: Enable solar time correction
             longitude: Longitude for solar time
@@ -236,7 +237,7 @@ class BaziController:
             BaziInputError: If input validation fails
             BaziCalculationError: If base calculation fails
         """
-        logger.info(f"Setting user input: name={name}, gender={gender}, date={date_obj}, time={time_int}, city={city}")
+        logger.info(f"Setting user input: name={name}, gender={gender}, date={date_obj}, time={time_int}:{minute_int:02d}, city={city}")
         
         try:
             # Input validation via Delegate
@@ -250,6 +251,7 @@ class BaziController:
                 self._user_input.get('gender') != gender or
                 self._user_input.get('date') != date_obj or
                 self._user_input.get('time') != time_int or
+                self._user_input.get('minute') != minute_int or
                 self._user_input.get('city') != city or
                 self._user_input.get('enable_solar') != enable_solar or
                 self._user_input.get('longitude') != longitude or
@@ -262,6 +264,7 @@ class BaziController:
                 'gender': gender,
                 'date': date_obj,
                 'time': time_int,
+                'minute': minute_int,
                 'city': city,
                 'enable_solar': enable_solar,
                 'longitude': longitude,
@@ -331,11 +334,12 @@ class BaziController:
             
             d = self._user_input['date']
             t = self._user_input['time']
+            m = self._user_input.get('minute', 0)  # Get minute for precise calculation
             lng = self._user_input.get('longitude', 120.0)
             
-            # 1. BaziCalculator
-            logger.debug(f"Initializing BaziCalculator: {d.year}-{d.month}-{d.day} {t}:00")
-            self._calc = BaziCalculator(d.year, d.month, d.day, t, 0, longitude=lng)
+            # 1. BaziCalculator (with minute for precise hour boundary)
+            logger.debug(f"Initializing BaziCalculator: {d.year}-{d.month}-{d.day} {t}:{m:02d}")
+            self._calc = BaziCalculator(d.year, d.month, d.day, t, m, longitude=lng)
             self._chart = self._calc.get_chart()
             self._details = self._calc.get_details()
             self._luck_cycles = self._calc.get_luck_cycles(self._gender_idx)
@@ -369,7 +373,7 @@ class BaziController:
                 
             # 4. BaziProfile
             logger.debug("Creating BaziProfile...")
-            birth_dt = datetime.datetime.combine(d, datetime.time(t, 0))
+            birth_dt = datetime.datetime.combine(d, datetime.time(t, m))  # Include minute
             self._profile = BaziProfile(birth_dt, self._gender_idx)
             
             elapsed = time.time() - start_time
@@ -917,6 +921,7 @@ class BaziController:
                 gender=current.get('gender'),
                 date_obj=current.get('date'),
                 time_int=current.get('time'),
+                minute_int=current.get('minute', 0),
                 city=current.get('city'),
                 enable_solar=current.get('enable_solar', True),
                 longitude=current.get('longitude', 116.46),

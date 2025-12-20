@@ -38,6 +38,7 @@ def render_prediction_dashboard():
             gender = st.session_state.get('input_gender', '男')
             date_obj = st.session_state.get('input_date')
             time_val = st.session_state.get('input_time', 12)
+            minute_val = st.session_state.get('input_minute', 0)
             city = st.session_state.get('unified_geo_city', 'Unknown')
             longitude = st.session_state.get('input_longitude', 116.46)
             enable_solar = st.session_state.get('input_enable_solar_time', True)
@@ -45,7 +46,7 @@ def render_prediction_dashboard():
             if date_obj:
                 controller.set_user_input(
                     name=name, gender=gender, date_obj=date_obj, 
-                    time_int=time_val, city=city, 
+                    time_int=time_val, minute_int=minute_val, city=city, 
                     longitude=longitude, enable_solar=enable_solar
                 )
         except Exception as e:

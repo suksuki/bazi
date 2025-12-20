@@ -62,6 +62,7 @@ def get_controller_for_case(case_data: dict, city: str = "Unknown"):
                 gender=gender,
                 date_obj=birth_date,
                 time_int=birth_hour,
+                minute_int=0,
                 city=city
             )
             
@@ -77,6 +78,7 @@ def get_controller_for_case(case_data: dict, city: str = "Unknown"):
             gender="男" if case_data.get('gender', 'M') in ['M', '男', 1] else "女",
             date_obj=datetime.date(2000, 1, 1),
             time_int=12,
+            minute_int=0,
             city=city
         )
         _controller_cache[cache_key] = controller

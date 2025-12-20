@@ -1,131 +1,355 @@
-/* Global Font & Background */
-@import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;500;700&display=swap');
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🔮 GYPSY FORTUNE TELLER THEME - Mystical Romani Aesthetic
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* === Mystic Fonts === */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Philosopher:ital,wght@0,400;0,700;1,400&family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;500;700&display=swap');
+
+/* === Color Palette (Mystical Night) === */
 :root {
-    --ink-black: #1a1a1a;
-    --paper-white: #f0f0e8;
-    --cinnabar-red: #aa3a3a;
-    --jade-green: #5d7a70;
-    --old-gold: #d4af37;
-    --bronze: #cd7f32;
-    --charcoal: #2c2c2c;
-    --bg-dark: #0f1012;
+    --midnight-purple: #0d0015;
+    --deep-violet: #1a0a2e;
+    --mystic-gold: #ffd700;
+    --rose-magenta: #c21e56;
+    --teal-mist: #40e0d0;
+    --moon-silver: #e8e8f0;
+    --velvet-purple: #2d1b4e;
+    --candle-glow: #ff9f43;
+    --crystal-blue: #a855f7;
+    --star-white: #fffef0;
 }
 
-html,
-body,
-.stApp {
-    font-family: 'Noto Serif SC', serif !important;
+/* === Starry Sky Background === */
+html, body, .stApp {
+    font-family: 'Philosopher', 'Noto Serif SC', serif !important;
     font-size: 16px;
-    background-color: var(--bg-dark);
+    background-color: var(--midnight-purple);
     background-image: 
-        radial-gradient(circle at 50% 0%, #2a2a2a 0%, transparent 60%),
-        radial-gradient(circle at 85% 30%, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
-    color: #e0e0e0;
+        /* Starfield Layer 1 - Distant */
+        radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 50px 160px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1px 1px at 160px 120px, rgba(255,255,255,0.4), transparent),
+        /* Starfield Layer 2 - Medium */
+        radial-gradient(2px 2px at 200px 50px, rgba(168,85,247,0.8), transparent),
+        radial-gradient(2px 2px at 250px 100px, rgba(255,215,0,0.7), transparent),
+        radial-gradient(2px 2px at 300px 20px, rgba(64,224,208,0.6), transparent),
+        radial-gradient(2px 2px at 350px 180px, rgba(194,30,86,0.5), transparent),
+        /* Cosmic Nebula Glow */
+        radial-gradient(ellipse at 75% 20%, rgba(168,85,247,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 25% 80%, rgba(194,30,86,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(45,27,78,0.8) 0%, var(--midnight-purple) 70%);
+    color: var(--moon-silver);
+    min-height: 100vh;
 }
 
-/* Headings - Calligraphy Style */
+/* === Starfield Animation === */
+@keyframes twinkle {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes crystal-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(168,85,247,0.5), 0 0 40px rgba(255,215,0,0.3); }
+    50% { box-shadow: 0 0 30px rgba(168,85,247,0.8), 0 0 60px rgba(255,215,0,0.5); }
+}
+
+@keyframes candle-flicker {
+    0%, 100% { opacity: 0.9; filter: brightness(1); }
+    25% { opacity: 0.85; filter: brightness(0.95); }
+    50% { opacity: 1; filter: brightness(1.1); }
+    75% { opacity: 0.88; filter: brightness(0.98); }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+/* === Headings - Ornate Mystic Style === */
 h1, h2, h3, .stTitle, .stHeader {
-    font-family: 'Ma Shan Zheng', cursive !important;
-    letter-spacing: 2px;
-    color: var(--old-gold) !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    font-family: 'Cinzel Decorative', 'Ma Shan Zheng', cursive !important;
+    letter-spacing: 3px;
+    color: var(--mystic-gold) !important;
+    text-shadow: 
+        0 0 10px rgba(255,215,0,0.5),
+        0 2px 4px rgba(0,0,0,0.8),
+        0 0 40px rgba(168,85,247,0.3);
 }
 
 h1 {
-    font-size: 2.5rem !important;
-    border-bottom: 2px solid var(--cinnabar-red);
-    padding-bottom: 10px;
+    font-size: 2.8rem !important;
+    font-weight: 700;
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(90deg, transparent, var(--mystic-gold), transparent) 1;
+    padding-bottom: 15px;
     display: inline-block;
+    position: relative;
 }
 
-/* Sidebar - Wooden/Dark Theme */
+h1::before, h1::after {
+    content: '✧';
+    position: absolute;
+    color: var(--mystic-gold);
+    font-size: 1rem;
+    animation: twinkle 2s infinite;
+}
+
+h1::before { left: -25px; top: 50%; }
+h1::after { right: -25px; top: 50%; }
+
+/* === Sidebar - Velvet Curtain === */
 [data-testid="stSidebar"] {
-    background-color: #161616;
-    border-right: 1px solid var(--charcoal);
+    background: linear-gradient(180deg, 
+        var(--deep-violet) 0%, 
+        var(--velvet-purple) 50%, 
+        var(--midnight-purple) 100%);
+    border-right: 2px solid;
+    border-image: linear-gradient(180deg, var(--mystic-gold), var(--rose-magenta), var(--crystal-blue)) 1;
+    box-shadow: 5px 0 30px rgba(168,85,247,0.3);
+}
+
+[data-testid="stSidebar"]::before {
+    content: '🌙';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    animation: float 3s ease-in-out infinite;
 }
 
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3 {
-    color: var(--paper-white) !important;
+    color: var(--star-white) !important;
+    text-shadow: 0 0 15px rgba(255,215,0,0.6);
 }
 
-/* Cards / Expanders - Ancient Paper/Tablet Feel */
+/* === Cards / Expanders - Tarot Card Style === */
 [data-testid="stExpander"] {
-    background: rgba(30, 30, 30, 0.6);
-    border: 1px solid var(--charcoal);
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-
-[data-testid="stExpander"]:hover {
-    border-color: var(--old-gold);
-    box-shadow: 0 4px 8px rgba(212, 175, 55, 0.1);
-}
-
-/* Metrics - Classical Numbers */
-[data-testid="stMetricValue"] {
-    font-family: 'Noto Serif SC', serif;
-    color: var(--paper-white) !important;
-    font-weight: bold;
-    font-size: 1.8rem;
-}
-
-[data-testid="stMetricLabel"] {
-    color: var(--jade-green) !important;
-    font-family: 'Ma Shan Zheng', cursive;
-}
-
-/* Buttons - Seal Style */
-.stButton>button {
-    background: transparent;
-    border: 1px solid var(--cinnabar-red);
-    color: var(--cinnabar-red);
-    border-radius: 2px;
-    transition: 0.3s;
-    font-family: 'Noto Serif SC', serif;
-    font-weight: 600;
-    padding: 0.5rem 1.5rem;
+    background: linear-gradient(145deg, 
+        rgba(45,27,78,0.9) 0%, 
+        rgba(26,10,46,0.95) 100%);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 12px;
+    box-shadow: 
+        0 4px 15px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1);
     position: relative;
     overflow: hidden;
 }
 
+[data-testid="stExpander"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--rose-magenta), var(--mystic-gold), var(--teal-mist));
+}
+
+[data-testid="stExpander"]:hover {
+    border-color: var(--mystic-gold);
+    box-shadow: 
+        0 8px 25px rgba(168,85,247,0.3),
+        0 0 50px rgba(255,215,0,0.15);
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+/* === Metrics - Crystal Ball Style === */
+[data-testid="stMetricValue"] {
+    font-family: 'Cinzel Decorative', serif;
+    color: var(--star-white) !important;
+    font-weight: bold;
+    font-size: 2rem;
+    text-shadow: 0 0 20px rgba(168,85,247,0.8);
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--teal-mist) !important;
+    font-family: 'Philosopher', serif;
+    letter-spacing: 1px;
+}
+
+/* === Buttons - Crystal Orb Style === */
+.stButton>button {
+    background: linear-gradient(145deg, 
+        rgba(45,27,78,0.9), 
+        rgba(26,10,46,0.95));
+    border: 2px solid var(--rose-magenta);
+    color: var(--moon-silver);
+    border-radius: 25px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Philosopher', serif;
+    font-weight: 600;
+    padding: 0.6rem 1.8rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+        0 4px 15px rgba(194,30,86,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.stButton>button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255,215,0,0.3), 
+        transparent);
+    transition: left 0.5s;
+}
+
 .stButton>button:hover {
-    background: var(--cinnabar-red);
-    color: var(--paper-white);
-    box-shadow: 0 0 10px rgba(170, 58, 58, 0.4);
-    border-color: var(--cinnabar-red);
+    background: linear-gradient(145deg, 
+        rgba(194,30,86,0.8), 
+        rgba(168,85,247,0.8));
+    border-color: var(--mystic-gold);
+    color: var(--star-white);
+    box-shadow: 
+        0 0 30px rgba(255,215,0,0.4),
+        0 8px 25px rgba(168,85,247,0.4);
+    transform: translateY(-3px);
 }
 
-/* Primary Button */
+.stButton>button:hover::before {
+    left: 100%;
+}
+
+/* Primary Button - Golden Crystal */
 .stButton>button[kind="primary"] {
-    background: linear-gradient(to bottom, #b94b4b, #8a2a2a);
-    border: 1px solid #6d2020;
-    color: var(--paper-white);
-    font-family: 'Ma Shan Zheng', cursive;
+    background: linear-gradient(145deg, 
+        var(--mystic-gold), 
+        #b8860b);
+    border: 2px solid var(--mystic-gold);
+    color: var(--midnight-purple);
+    font-family: 'Cinzel Decorative', cursive;
     letter-spacing: 2px;
+    animation: crystal-glow 3s ease-in-out infinite;
 }
 
-/* Dividers - Ink Line */
+/* === Dividers - Celestial Line === */
 hr {
-    border-color: var(--charcoal);
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        var(--rose-magenta), 
+        var(--mystic-gold), 
+        var(--teal-mist), 
+        transparent);
     margin: 2rem 0;
-    opacity: 0.5;
+    opacity: 0.7;
 }
 
-/* DataFrames/Tables */
-[data-testid="stDataFrame"] {
-    font-family: 'Noto Serif SC', serif;
-}
-
+/* === DataFrames/Tables - Ancient Scroll === */
+[data-testid="stDataFrame"],
 div[data-testid="stTable"] {
-    font-family: 'Noto Serif SC', serif; 
+    font-family: 'Philosopher', 'Noto Serif SC', serif;
+    background: rgba(26,10,46,0.8);
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 8px;
 }
 
-/* Mobile Responsiveness */
+/* === Input Fields - Mystical Portal === */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stSelectbox>div>div>div {
+    background: rgba(45,27,78,0.8) !important;
+    border: 1px solid rgba(168,85,247,0.5) !important;
+    color: var(--moon-silver) !important;
+    border-radius: 8px;
+}
+
+.stTextInput>div>div>input:focus,
+.stNumberInput>div>div>input:focus {
+    border-color: var(--mystic-gold) !important;
+    box-shadow: 0 0 20px rgba(255,215,0,0.3);
+}
+
+/* === Radio Buttons / Navigation === */
+.stRadio>div {
+    background: rgba(26,10,46,0.6);
+    padding: 10px;
+    border-radius: 15px;
+    border: 1px solid rgba(168,85,247,0.3);
+}
+
+.stRadio>div>label {
+    color: var(--moon-silver) !important;
+    font-family: 'Philosopher', serif;
+}
+
+.stRadio>div>label:hover {
+    color: var(--mystic-gold) !important;
+}
+
+/* === Tooltips === */
+.stTooltip {
+    background: var(--deep-violet) !important;
+    border: 1px solid var(--mystic-gold) !important;
+    color: var(--moon-silver) !important;
+}
+
+/* === Scrollbar - Mystical === */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--midnight-purple);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--rose-magenta), var(--crystal-blue));
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--mystic-gold), var(--rose-magenta));
+}
+
+/* === Mobile Responsiveness === */
 @media (max-width: 640px) {
     h1 {
         font-size: 2rem !important;
     }
+    
+    h1::before, h1::after {
+        display: none;
+    }
+}
+
+/* === Special Effects - Candle Glow Elements === */
+.candle-glow {
+    animation: candle-flicker 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px var(--candle-glow));
+}
+
+/* === Crystal Ball Container === */
+.crystal-ball {
+    background: radial-gradient(circle at 30% 30%, 
+        rgba(255,255,255,0.3), 
+        rgba(168,85,247,0.5), 
+        rgba(26,10,46,0.9));
+    border-radius: 50%;
+    box-shadow: 
+        0 0 30px rgba(168,85,247,0.5),
+        inset 0 0 60px rgba(255,255,255,0.1);
+    animation: crystal-glow 4s ease-in-out infinite;
 }

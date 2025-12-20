@@ -17,7 +17,7 @@ st.set_page_config(
 # 2. Global Styling & Title
 load_css()
 # Header Layout: Title left, Nav right (or just stacked)
-st.title("📜 天机 · AI 命理演算系统")
+st.title("🔮 吉普赛 · AI 命运占卜")
 
 # 2.1 Top Navigation
 from ui.utils import init_session_state
@@ -29,12 +29,13 @@ init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
 
 app_mode = st.radio(
     "Navigation", 
-    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🧠 自我进化 (Evolution)", "⛏️ 古籍挖掘 (Mining)", "🧪 量子真言 (Quantum Lab)", "🎬 命运回响 (Cinema)", "🏋️ 悟性训练 (Training)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
+    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
     horizontal=True,
     label_visibility="collapsed",
     key="nav_radio"
 )
 st.markdown("---") 
+
 
 # 3. Logging Setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -53,23 +54,23 @@ elif app_mode == "⚙️ 天机设置 (Config)":
     cm = ConfigManager()
     render_system_config(cm)
 
-elif app_mode == "🏋️ 悟性训练 (Training)":
+elif app_mode == "🕯️ 悟性训练 (Training)":
     from ui.pages.training_center import render_training_center
     render_training_center()
     
-elif app_mode == "🧪 量子真言 (Quantum Lab)":
+elif app_mode == "✨ 量子真言 (Quantum Lab)":
     import ui.pages.quantum_lab as qlab
     qlab.render()
 
-elif app_mode == "🎬 命运回响 (Cinema)":
+elif app_mode == "🌟 命运回响 (Cinema)":
     import ui.pages.zeitgeist as cinema
     cinema.render()
 
-elif app_mode == "🧠 自我进化 (Evolution)":
+elif app_mode == "🌙 自我进化 (Evolution)":
     from ui.pages.self_learning import render_self_learning
     render_self_learning()
 
-elif app_mode == "⛏️ 古籍挖掘 (Mining)":
+elif app_mode == "📜 古籍挖掘 (Mining)":
     from ui.pages.mining_console import render as render_mining_console
     render_mining_console()
 

@@ -2,289 +2,460 @@
 """
 ui/components/styles.py
 -----------------------
-CSS styles for the Mystic/Ancient UI.
+CSS styles for the Gypsy Fortune Teller / Mystical Theme.
 """
 
 def get_glassmorphism_css():
-    """Returns the main card styles (Mystic Theme)."""
+    """Returns the main card styles (Gypsy Mystic Theme)."""
     return """
     <style>
-    /* 1. Reset Global Background to Default */
-    /* No .stApp override */
+    /* ═══════════════════════════════════════════════════════════
+       🔮 Tarot Card Styles - Gypsy Fortune Teller Theme
+       ═══════════════════════════════════════════════════════════ */
 
-    /* 2. Narrative Card (Ancient Text Fragment) */
+    /* 1. Narrative Card (Tarot Card Fragment) */
     .narrative-card {
         position: relative;
-        padding: 24px;
-        border-radius: 4px; /* Sharper corners */
-        border: 1px solid #444;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-        margin-bottom: 20px;
-        background: radial-gradient(circle at top left, #2b2b2b, #1a1a1a);
-        border-left: 2px solid #888;
+        padding: 28px;
+        border-radius: 16px;
+        border: 2px solid rgba(255,215,0,0.3);
+        box-shadow: 
+            0 8px 32px rgba(168,85,247,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.1);
+        margin-bottom: 24px;
+        background: linear-gradient(145deg, 
+            rgba(45,27,78,0.95) 0%, 
+            rgba(26,10,46,0.98) 100%);
+        overflow: hidden;
     }
+    
+    .narrative-card::before {
+        content: '✧';
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 1.2rem;
+        color: rgba(255,215,0,0.6);
+        animation: twinkle 2s infinite;
+    }
+    
+    .narrative-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, 
+            #c21e56, #ffd700, #40e0d0, #a855f7);
+    }
+    
     .narrative-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 12px rgba(0,0,0,0.6);
-        border-color: #d4af37; /* Gold hover */
+        transform: translateY(-4px);
+        box-shadow: 
+            0 12px 40px rgba(168,85,247,0.4),
+            0 0 60px rgba(255,215,0,0.15);
+        border-color: #ffd700;
     }
 
-    /* 3. Card Types / Themes */
-    /* Mountain Alliance */
+    /* 2. Card Types / Elemental Themes */
+    /* Mountain Alliance - Earth Crystal */
     .card-mountain {
-        background: linear-gradient(to bottom right, #3e2723, #1a1a1a); /* Dark Brown */
-        border-top: 2px solid #d4af37; /* Gold */
+        background: linear-gradient(135deg, 
+            rgba(139,69,19,0.3) 0%, 
+            rgba(45,27,78,0.95) 100%);
+        border-top: 4px solid #ffd700;
     }
     .icon-mountain {
-        font-size: 32px;
-        color: #d4af37;
+        font-size: 36px;
+        color: #ffd700;
+        filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));
     }
 
-    /* Penalty Cap - Water Shield */
+    /* Shield - Mystic Water */
     .card-shield {
-        background: linear-gradient(to bottom right, #001f3f, #1a1a1a); /* Navy */
-        border-top: 2px solid #7FBCAC; /* Jade */
+        background: linear-gradient(135deg, 
+            rgba(64,224,208,0.2) 0%, 
+            rgba(45,27,78,0.95) 100%);
+        border-top: 4px solid #40e0d0;
     }
     .icon-shield {
-        font-size: 32px;
-        color: #7FBCAC;
+        font-size: 36px;
+        color: #40e0d0;
+        filter: drop-shadow(0 0 10px rgba(64,224,208,0.5));
     }
 
-    /* Mediation Flow - Wood */
+    /* Flow - Spirit Wind */
     .card-flow {
-        background: linear-gradient(to bottom right, #1b4d3e, #1a1a1a); /* Forest */
-        border-top: 2px solid #4E6E5D;
+        background: linear-gradient(135deg, 
+            rgba(168,85,247,0.2) 0%, 
+            rgba(45,27,78,0.95) 100%);
+        border-top: 4px solid #a855f7;
     }
     .icon-flow {
-        font-size: 32px;
-        color: #4E6E5D;
+        font-size: 36px;
+        color: #a855f7;
+        filter: drop-shadow(0 0 10px rgba(168,85,247,0.5));
     }
 
-    /* Danger - Cinnabar */
+    /* Danger - Blood Moon */
     .card-danger {
-        background: linear-gradient(to bottom right, #4a1c1c, #1a1a1a);
-        border-top: 2px solid #aa3a3a;
+        background: linear-gradient(135deg, 
+            rgba(194,30,86,0.3) 0%, 
+            rgba(45,27,78,0.95) 100%);
+        border-top: 4px solid #c21e56;
     }
 
-    /* 4. Typography (Serif) */
+    /* 3. Typography (Mystical Serif) */
     .card-title {
-        font-family: 'Ma Shan Zheng', cursive;
-        font-weight: 400;
-        font-size: 1.3rem;
-        margin-bottom: 4px;
-        color: #e0e0e0;
-        letter-spacing: 1px;
+        font-family: 'Cinzel Decorative', 'Ma Shan Zheng', cursive;
+        font-weight: 500;
+        font-size: 1.4rem;
+        margin-bottom: 8px;
+        color: #ffd700;
+        letter-spacing: 2px;
+        text-shadow: 0 0 15px rgba(255,215,0,0.4);
     }
     .card-subtitle {
-        font-family: 'Noto Serif SC', serif;
-        font-size: 0.95rem;
-        color: #aaa;
-        margin-bottom: 12px;
+        font-family: 'Philosopher', 'Noto Serif SC', serif;
+        font-size: 1rem;
+        color: #e8e8f0;
+        margin-bottom: 16px;
+        opacity: 0.9;
     }
     .card-impact {
-        font-family: 'Noto Serif SC', serif;
-        font-size: 0.85rem;
-        padding: 4px 8px;
-        border-radius: 2px;
-        background: #333;
+        font-family: 'Philosopher', serif;
+        font-size: 0.9rem;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: linear-gradient(145deg, 
+            rgba(168,85,247,0.3), 
+            rgba(194,30,86,0.3));
         display: inline-block;
-        color: #d4af37;
-        border: 1px solid #555;
+        color: #ffd700;
+        border: 1px solid rgba(255,215,0,0.4);
+        box-shadow: 0 0 15px rgba(168,85,247,0.2);
+    }
+    
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 1; }
     }
     </style>
     """
 
 def get_animation_css():
-    """Returns animation and token styles (Mystic/Seal Style)."""
+    """Returns animation and token styles (Crystal Ball / Mystic Seal)."""
     return """
     <style>
-        /* --- Animations (Subtle Qi Flow) --- */
-        @keyframes sway { 0% { transform: rotate(0deg); } 50% { transform: rotate(2deg); } 100% { transform: rotate(0deg); } }
-        @keyframes pulse-grow { 0% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.02); opacity: 1; } 100% { transform: scale(1); opacity: 0.9; } }
-        @keyframes flicker { 0% { opacity: 0.95; } 50% { opacity: 0.8; } 100% { opacity: 0.95; } }
-        @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes wave { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+        /* ═══════════════════════════════════════════════════════════
+           🔮 Mystic Animations - Gypsy Fortune Teller Theme
+           ═══════════════════════════════════════════════════════════ */
         
-        /* --- Card Styles (Spirit Tablet / Wooden Block) --- */
+        /* --- Celestial Animations --- */
+        @keyframes sway { 
+            0% { transform: rotate(-2deg); } 
+            50% { transform: rotate(2deg); } 
+            100% { transform: rotate(-2deg); } 
+        }
+        @keyframes pulse-grow { 
+            0% { transform: scale(1); opacity: 0.9; } 
+            50% { transform: scale(1.05); opacity: 1; } 
+            100% { transform: scale(1); opacity: 0.9; } 
+        }
+        @keyframes flicker { 
+            0% { opacity: 0.8; filter: brightness(0.9); } 
+            25% { opacity: 1; filter: brightness(1.1); } 
+            50% { opacity: 0.85; filter: brightness(0.95); } 
+            75% { opacity: 1; filter: brightness(1.05); } 
+            100% { opacity: 0.8; filter: brightness(0.9); } 
+        }
+        @keyframes spin-slow { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        @keyframes wave { 
+            0% { transform: translateY(0) rotate(0); } 
+            25% { transform: translateY(-3px) rotate(1deg); }
+            50% { transform: translateY(0) rotate(0); } 
+            75% { transform: translateY(3px) rotate(-1deg); }
+            100% { transform: translateY(0) rotate(0); } 
+        }
+        @keyframes crystal-pulse {
+            0%, 100% { 
+                box-shadow: 0 0 20px rgba(168,85,247,0.4), 
+                            0 0 40px rgba(255,215,0,0.2); 
+            }
+            50% { 
+                box-shadow: 0 0 35px rgba(168,85,247,0.7), 
+                            0 0 70px rgba(255,215,0,0.4); 
+            }
+        }
+        @keyframes moon-glow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(232,232,240,0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(232,232,240,0.9)); }
+        }
+        
+        /* --- Pillar Card (Celestial Tablet) --- */
         .pillar-card {
-            background: #232323;
-            border-radius: 6px;
-            padding: 15px 10px;
+            background: linear-gradient(145deg, 
+                rgba(45,27,78,0.9) 0%, 
+                rgba(26,10,46,0.95) 100%);
+            border-radius: 16px;
+            padding: 20px 15px;
             text-align: center;
-            border: 1px solid #3a3a3a;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            transition: all 0.3s ease;
+            border: 2px solid rgba(255,215,0,0.25);
+            box-shadow: 
+                0 8px 32px rgba(168,85,247,0.2),
+                inset 0 0 40px rgba(0,0,0,0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-        }
-        .pillar-card:hover {
-            border-color: #d4af37;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
-            transform: translateY(-3px);
-        }
-        .pillar-title {
-            font-family: 'Ma Shan Zheng', cursive;
-            font-size: 1em;
-            color: #888;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
+            overflow: hidden;
         }
         
-        /* --- Quantum Token (The Seal/Stamp) --- */
+        .pillar-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                #c21e56, #ffd700, #40e0d0);
+        }
+        
+        .pillar-card:hover {
+            border-color: #ffd700;
+            box-shadow: 
+                0 0 30px rgba(255,215,0,0.3),
+                0 12px 40px rgba(168,85,247,0.3);
+            transform: translateY(-5px);
+        }
+        
+        .pillar-title {
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 1.1em;
+            color: #40e0d0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            padding-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        
+        /* --- Crystal Ball Token (Mystic Orb) --- */
         .quantum-token {
-            display: inline-block;
-            width: 70px;
-            height: 70px;
-            border-radius: 50%; /* Start circular */
-            margin: 5px auto;
-            position: relative;
-            
-            /* Center Content */
-            display: flex;
+            display: inline-flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 8px auto;
+            position: relative;
             
-            /* Seal Style */
-            background-color: #1a1a1a;
-            border: 2px solid rgba(255,255,255,0.2);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            /* Crystal Ball Effect */
+            background: radial-gradient(circle at 30% 30%, 
+                rgba(255,255,255,0.25) 0%, 
+                rgba(168,85,247,0.4) 40%, 
+                rgba(26,10,46,0.9) 100%);
+            border: 3px solid rgba(255,215,0,0.5);
+            box-shadow: 
+                0 0 25px rgba(168,85,247,0.5),
+                inset 0 0 30px rgba(255,255,255,0.1),
+                0 8px 20px rgba(0,0,0,0.5);
+            animation: crystal-pulse 4s ease-in-out infinite;
         }
         
         .token-char {
             font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.2em;
+            font-size: 2.5em;
             color: #FFF;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+            text-shadow: 
+                0 0 10px rgba(255,215,0,0.8),
+                0 2px 4px rgba(0,0,0,0.9);
             z-index: 2;
         }
         
         .token-icon {
-            font-size: 0.7em;
+            font-size: 0.9em;
             position: absolute;
-            top: 2px;
-            right: 0;
-            opacity: 0.8;
+            top: 5px;
+            right: 5px;
+            opacity: 0.9;
             z-index: 3;
+            animation: moon-glow 3s ease-in-out infinite;
         }
         
-        /* Hidden Stems (Small Seals) */
+        /* --- Hidden Stems (Small Mystic Seals) --- */
         .hidden-container {
             display: flex;
             justify-content: center;
-            gap: 8px; 
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed #333;
+            gap: 10px; 
+            margin-top: 18px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(255,215,0,0.3);
         }
         
         .hidden-token {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px; /* Square seals for hidden */
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
             font-family: 'Noto Serif SC', serif;
-            font-size: 0.8em;
+            font-size: 0.85em;
             color: #FFF;
             
             display: flex;
             align-items: center;
             justify-content: center;
             
-            box-shadow: 0 1px 3px rgba(0,0,0,0.8);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, 
+                rgba(168,85,247,0.4), 
+                rgba(194,30,86,0.4));
+            box-shadow: 
+                0 0 10px rgba(168,85,247,0.3),
+                0 2px 4px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,215,0,0.4);
             cursor: help;
+            transition: all 0.3s ease;
         }
         
+        .hidden-token:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255,215,0,0.5);
+            border-color: #ffd700;
+        }
+        
+        /* Day Master Glow (The Chosen One) */
         .dm-glow {
-            border-color: #d4af37 !important;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3) !important;
+            border-color: #ffd700 !important;
+            box-shadow: 
+                0 0 30px rgba(255,215,0,0.6),
+                0 0 60px rgba(168,85,247,0.4) !important;
+            animation: crystal-pulse 2s ease-in-out infinite !important;
         }
     </style>
     """
 
 def get_bazi_table_css():
-    """Returns the CSS for the Bazi Table (Scroll Style)."""
+    """Returns the CSS for the Bazi Table (Fortune Teller Table)."""
     return """
     <style>
+        /* ═══════════════════════════════════════════════════════════
+           🔮 Bazi Table - Fortune Teller Spread
+           ═══════════════════════════════════════════════════════════ */
+        
         .bazi-box {
-            background-color: #232323;
-            padding: 15px;
-            border-radius: 4px;
+            background: linear-gradient(145deg, 
+                rgba(45,27,78,0.9) 0%, 
+                rgba(26,10,46,0.95) 100%);
+            padding: 20px;
+            border-radius: 16px;
             text-align: center;
-            font-family: 'Noto Serif SC', serif;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            border: 1px solid #444;
+            font-family: 'Philosopher', 'Noto Serif SC', serif;
+            box-shadow: 
+                0 8px 32px rgba(168,85,247,0.3),
+                inset 0 0 40px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,215,0,0.3);
+            position: relative;
         }
+        
+        .bazi-box::before {
+            content: '🌙';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            animation: moon-glow 3s ease-in-out infinite;
+        }
+        
         .bazi-table {
             width: 100%;
             table-layout: fixed;
         }
+        
         .bazi-header {
-            font-family: 'Ma Shan Zheng', cursive;
-            font-size: 0.9em;
-            color: #aaa;
-            margin-bottom: 8px;
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 1em;
+            color: #40e0d0;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(64,224,208,0.5);
         }
         
         .stem {
             font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.0em;
-            color: #f0f0e8;
-            line-height: 1.2;
+            font-size: 2.2em;
+            color: #e8e8f0;
+            line-height: 1.3;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
+        
         .branch {
             font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.0em;
-            color: #dcdcdc;
-            line-height: 1.2;
+            font-size: 2.2em;
+            color: #e8e8f0;
+            line-height: 1.3;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
+        
         .day-master {
-            color: #d4af37 !important; /* Gold */
-            text-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+            color: #ffd700 !important;
+            text-shadow: 
+                0 0 15px rgba(255,215,0,0.7),
+                0 0 30px rgba(168,85,247,0.5);
+            animation: moon-glow 2s ease-in-out infinite;
         }
+        
         .energy-val {
-            font-size: 0.75em;
-            color: #7FBCAC; /* Jade */
-            font-family: serif;
-            margin-top: 2px;
+            font-size: 0.8em;
+            color: #a855f7;
+            font-family: 'Philosopher', serif;
+            margin-top: 4px;
+            text-shadow: 0 0 8px rgba(168,85,247,0.5);
+        }
+        
+        @keyframes moon-glow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(232,232,240,0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(232,232,240,0.9)); }
         }
     </style>
     """
 
 def get_quantum_theme_config():
-    """Returns the Ancient Theme configuration (Muted, Natural)."""
+    """Returns the Gypsy Mystic Theme configuration (Celestial, Magical)."""
     return {
-        # --- Wood (Jade / Forest) ---
-        "甲": {"color": "#4E6E5D", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1b3a2b, #4e6e5d)"}, 
-        "乙": {"color": "#7FBCAC", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #2e5c4d, #7fbcac)"},
-        "寅": {"color": "#2E7D32", "icon": "🐅", "anim": "pulse-grow", "grad": "linear-gradient(to top, #1b5e20, #4caf50)"},
-        "卯": {"color": "#66BB6A", "icon": "🐇", "anim": "sway", "grad": "linear-gradient(120deg, #2e7d32, #81c784)"},
+        # --- Wood (Emerald Forest / Nature Spirit) ---
+        "甲": {"color": "#22c55e", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a4d2e, #40e0d0)"}, 
+        "乙": {"color": "#40e0d0", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"},
+        "寅": {"color": "#10b981", "icon": "🐅", "anim": "pulse-grow", "grad": "linear-gradient(to top, #064e3b, #34d399)"},
+        "卯": {"color": "#6ee7b7", "icon": "🐇", "anim": "sway", "grad": "linear-gradient(120deg, #059669, #6ee7b7)"},
 
-        # --- Fire (Cinnabar / Torch) ---
-        "丙": {"color": "#D84315", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #e64a19, #bf360c)"}, 
-        "丁": {"color": "#FF7043", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #d84315, #ff8a65)"},
-        "巳": {"color": "#F4511E", "icon": "🐍", "anim": "sway", "grad": "linear-gradient(to right, #bf360c, #f4511e)"},
-        "午": {"color": "#C62828", "icon": "🐎", "anim": "pulse-grow", "grad": "linear-gradient(to right, #b71c1c, #e53935)"}, 
+        # --- Fire (Candle Flame / Passion) ---
+        "丙": {"color": "#ff9f43", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9f43, #c21e56)"}, 
+        "丁": {"color": "#c21e56", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #c21e56, #ff6b6b)"},
+        "巳": {"color": "#f97316", "icon": "🐍", "anim": "sway", "grad": "linear-gradient(to right, #ea580c, #fbbf24)"},
+        "午": {"color": "#ef4444", "icon": "🐎", "anim": "pulse-grow", "grad": "linear-gradient(to right, #dc2626, #f43f5e)"}, 
 
-        # --- Earth (Ochre / Clay) ---
-        "戊": {"color": "#795548", "icon": "🏔️", "anim": "none", "grad": "linear-gradient(to top, #4e342e, #8d6e63)"}, 
-        "己": {"color": "#A1887F", "icon": "🧱", "anim": "none", "grad": "linear-gradient(to top, #5d4037, #bcaaa4)"},
-        "辰": {"color": "#558B2F", "icon": "🐲", "anim": "sway", "grad": "linear-gradient(to top, #33691e, #689f38)"}, 
-        "戌": {"color": "#8D6E63", "icon": "🌋", "anim": "none", "grad": "linear-gradient(to right, #3e2723, #5d4037)"}, 
-        "丑": {"color": "#FBC02D", "icon": "🐂", "anim": "none", "grad": "linear-gradient(to top, #f57f17, #fbc02d)"}, 
-        "未": {"color": "#F9A825", "icon": "🐑", "anim": "none", "grad": "linear-gradient(120deg, #fbc02d, #ffeb3b)"}, 
+        # --- Earth (Crystal Cave / Sacred Ground) ---
+        "戊": {"color": "#a855f7", "icon": "🏔️", "anim": "none", "grad": "linear-gradient(to top, #581c87, #a855f7)"}, 
+        "己": {"color": "#c084fc", "icon": "🔮", "anim": "none", "grad": "linear-gradient(to top, #6b21a8, #d8b4fe)"},
+        "辰": {"color": "#ffd700", "icon": "🐲", "anim": "sway", "grad": "linear-gradient(to top, #b8860b, #ffd700)"}, 
+        "戌": {"color": "#a78bfa", "icon": "🌋", "anim": "none", "grad": "linear-gradient(to right, #2d1b4e, #7c3aed)"}, 
+        "丑": {"color": "#facc15", "icon": "🐂", "anim": "none", "grad": "linear-gradient(to top, #ca8a04, #fde047)"}, 
+        "未": {"color": "#fb923c", "icon": "🐑", "anim": "none", "grad": "linear-gradient(120deg, #ea580c, #fbbf24)"}, 
 
-        # --- Metal (Silver / Bronze) ---
-        "庚": {"color": "#90A4AE", "icon": "⚔️", "anim": "none", "grad": "linear-gradient(to top, #546e7a, #90a4ae)"}, 
-        "辛": {"color": "#d4af37", "icon": "💎", "anim": "flicker", "grad": "linear-gradient(135deg, #b78628, #f7ef8a)"}, # Gold for Yin Metal
-        "申": {"color": "#78909C", "icon": "🐵", "anim": "sway", "grad": "linear-gradient(to top, #455a64, #78909c)"}, 
-        "酉": {"color": "#B0BEC5", "icon": "🐓", "anim": "none", "grad": "linear-gradient(to top, #78909c, #cfd8dc)"}, 
+        # --- Metal (Silver Moon / Precious) ---
+        "庚": {"color": "#e8e8f0", "icon": "⚔️", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #e8e8f0)"}, 
+        "辛": {"color": "#ffd700", "icon": "💎", "anim": "flicker", "grad": "linear-gradient(135deg, #b8860b, #ffd700, #fff8dc)"},
+        "申": {"color": "#cbd5e1", "icon": "🐵", "anim": "sway", "grad": "linear-gradient(to top, #475569, #94a3b8)"}, 
+        "酉": {"color": "#f1f5f9", "icon": "🐓", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #f8fafc)"}, 
 
-        # --- Water (Ink / Deep Sea) ---
-        "壬": {"color": "#0277BD", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #01579b, #0288d1)"}, 
-        "癸": {"color": "#4FC3F7", "icon": "☁️", "anim": "sway", "grad": "linear-gradient(to top, #0277bd, #4fc3f7)"}, 
-        "子": {"color": "#0288D1", "icon": "🐀", "anim": "sway", "grad": "linear-gradient(15deg, #01579b, #039be5)"}, 
-        "亥": {"color": "#039BE5", "icon": "🐖", "anim": "sway", "grad": "linear-gradient(to top, #006064, #0097a7)"}, 
+        # --- Water (Mystic Ocean / Deep Secrets) ---
+        "壬": {"color": "#40e0d0", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"}, 
+        "癸": {"color": "#a855f7", "icon": "☁️", "anim": "sway", "grad": "linear-gradient(to top, #581c87, #c084fc)"}, 
+        "子": {"color": "#3b82f6", "icon": "🐀", "anim": "sway", "grad": "linear-gradient(15deg, #1e3a8a, #60a5fa)"}, 
+        "亥": {"color": "#8b5cf6", "icon": "🐖", "anim": "sway", "grad": "linear-gradient(to top, #4c1d95, #a78bfa)"}, 
     }
 
 def get_theme(char):

@@ -1289,6 +1289,7 @@ def render():
                         gender=default_gender,
                         date_obj=default_date,
                         time_int=12,
+                        minute_int=0,
                         city=comparison_city,
                         enable_solar=True,
                         longitude=116.46  # Default Beijing longitude

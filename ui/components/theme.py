@@ -2,47 +2,222 @@
 """
 ui/components/theme.py
 ----------------------
-Manages colors, animations, and visual themes for the Quantum UI.
+🔮 Gypsy Fortune Teller Theme - Mystical Colors, Animations, and Icons
 """
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔮 QUANTUM THEME - Gypsy Mystic Aesthetic
+# ═══════════════════════════════════════════════════════════════════════════════
+
 QUANTUM_THEME = {
-    # --- Wood (Growth / Networking) ---
-    "甲": {"color": "#4ade80", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d)"}, # Green 400
-    "乙": {"color": "#86efac", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0ba360 0%, #3cba92 100%)"},
-    "寅": {"color": "#22c55e", "icon": "🐅", "anim": "pulse-fast", "grad": "linear-gradient(to top, #09203f 0%, #537895 100%)"}, # Green 500
-    "卯": {"color": "#a3e635", "icon": "🐇", "anim": "bounce", "grad": "linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%)"},
+    # --- Wood (Emerald Spirit / Forest Magic) ---
+    "甲": {
+        "color": "#22c55e", 
+        "icon": "🌲", 
+        "anim": "pulse-grow", 
+        "grad": "linear-gradient(135deg, #1a4d2e 0%, #40e0d0 100%)"
+    },
+    "乙": {
+        "color": "#40e0d0", 
+        "icon": "🌿", 
+        "anim": "sway", 
+        "grad": "linear-gradient(to top, #0d5c4d 0%, #40e0d0 100%)"
+    },
+    "寅": {
+        "color": "#10b981", 
+        "icon": "🐅", 
+        "anim": "pulse-grow", 
+        "grad": "linear-gradient(to top, #064e3b 0%, #34d399 100%)"
+    },
+    "卯": {
+        "color": "#6ee7b7", 
+        "icon": "🐇", 
+        "anim": "sway", 
+        "grad": "linear-gradient(120deg, #059669 0%, #6ee7b7 100%)"
+    },
 
-    # --- Fire (Radiation / Focus) ---
-    "丙": {"color": "#fb923c", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9966, #ff5e62)"}, # Orange 400
-    "丁": {"color": "#f472b6", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #f43b47 0%, #453a94 100%)"}, # Pink 400
-    "巳": {"color": "#fdba74", "icon": "🐍", "anim": "slither", "grad": "linear-gradient(to right, #f83600 0%, #f9d423 100%)"},
-    "午": {"color": "#f87171", "icon": "🐎", "anim": "gallop", "grad": "linear-gradient(to right, #ff8177 0%, #ff867a 0%, #ff8c7f 21%, #f99185 52%, #cf556c 78%, #b12a5b 100%)"}, # Red 400
+    # --- Fire (Candle Flame / Passionate Spirit) ---
+    "丙": {
+        "color": "#ff9f43", 
+        "icon": "☀️", 
+        "anim": "spin-slow", 
+        "grad": "radial-gradient(circle, #ff9f43, #c21e56)"
+    },
+    "丁": {
+        "color": "#c21e56", 
+        "icon": "🕯️", 
+        "anim": "flicker", 
+        "grad": "linear-gradient(to top, #c21e56 0%, #ff6b6b 100%)"
+    },
+    "巳": {
+        "color": "#f97316", 
+        "icon": "🐍", 
+        "anim": "sway", 
+        "grad": "linear-gradient(to right, #ea580c 0%, #fbbf24 100%)"
+    },
+    "午": {
+        "color": "#ef4444", 
+        "icon": "🐎", 
+        "anim": "pulse-grow", 
+        "grad": "linear-gradient(to right, #dc2626 0%, #f43f5e 100%)"
+    },
 
-    # --- Earth (Mass / Matrix) ---
-    "戊": {"color": "#a8a29e", "icon": "🏔️", "anim": "stable", "grad": "linear-gradient(to top, #c79081 0%, #dfa579 100%)"}, # Stone 400
-    "己": {"color": "#e7e5e4", "icon": "🧱", "anim": "stable", "grad": "linear-gradient(to top, #e6b980 0%, #eacda3 100%)"},
-    "辰": {"color": "#84cc16", "icon": "🐲", "anim": "float", "grad": "linear-gradient(to top, #9be15d 0%, #00e3ae 100%)"}, 
-    "戌": {"color": "#fda4af", "icon": "🌋", "anim": "rumble", "grad": "linear-gradient(to right, #434343 0%, black 100%)"}, 
-    "丑": {"color": "#fde047", "icon": "🐂", "anim": "stable", "grad": "linear-gradient(to top, #50cc7f 0%, #f5d100 100%)"}, # Yellow 300
-    "未": {"color": "#fdba74", "icon": "🐑", "anim": "stable", "grad": "linear-gradient(120deg, #f6d365 0%, #fda085 100%)"}, 
+    # --- Earth (Crystal Cave / Sacred Ground) ---
+    "戊": {
+        "color": "#a855f7", 
+        "icon": "🏔️", 
+        "anim": "stable", 
+        "grad": "linear-gradient(to top, #581c87 0%, #a855f7 100%)"
+    },
+    "己": {
+        "color": "#c084fc", 
+        "icon": "🔮", 
+        "anim": "stable", 
+        "grad": "linear-gradient(to top, #6b21a8 0%, #d8b4fe 100%)"
+    },
+    "辰": {
+        "color": "#ffd700", 
+        "icon": "🐲", 
+        "anim": "float", 
+        "grad": "linear-gradient(to top, #b8860b 0%, #ffd700 100%)"
+    },
+    "戌": {
+        "color": "#a78bfa", 
+        "icon": "🌋", 
+        "anim": "rumble", 
+        "grad": "linear-gradient(to right, #2d1b4e 0%, #7c3aed 100%)"
+    },
+    "丑": {
+        "color": "#facc15", 
+        "icon": "🐂", 
+        "anim": "stable", 
+        "grad": "linear-gradient(to top, #ca8a04 0%, #fde047 100%)"
+    },
+    "未": {
+        "color": "#fb923c", 
+        "icon": "🐑", 
+        "anim": "stable", 
+        "grad": "linear-gradient(120deg, #ea580c 0%, #fbbf24 100%)"
+    },
 
-    # --- Metal (Impact / Order) ---
-    "庚": {"color": "#cbd5e1", "icon": "⚔️", "anim": "flash", "grad": "linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)"}, # Slate 300
-    "辛": {"color": "#fde047", "icon": "💎", "anim": "sparkle", "grad": "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)"}, # Gold
-    "申": {"color": "#94a3b8", "icon": "🐵", "anim": "swing", "grad": "linear-gradient(to top, #30cfd0 0%, #330867 100%)"}, # Slate 400
-    "酉": {"color": "#e2e8f0", "icon": "🐓", "anim": "strut", "grad": "linear-gradient(to top, #cd9cf2 0%, #f6f3ff 100%)"}, # Slate 200
+    # --- Metal (Silver Moon / Precious Treasure) ---
+    "庚": {
+        "color": "#e8e8f0", 
+        "icon": "⚔️", 
+        "anim": "flash", 
+        "grad": "linear-gradient(to top, #94a3b8 0%, #e8e8f0 100%)"
+    },
+    "辛": {
+        "color": "#ffd700", 
+        "icon": "💎", 
+        "anim": "sparkle", 
+        "grad": "linear-gradient(135deg, #b8860b 0%, #ffd700 50%, #fff8dc 100%)"
+    },
+    "申": {
+        "color": "#cbd5e1", 
+        "icon": "🐵", 
+        "anim": "swing", 
+        "grad": "linear-gradient(to top, #475569 0%, #94a3b8 100%)"
+    },
+    "酉": {
+        "color": "#f1f5f9", 
+        "icon": "🐓", 
+        "anim": "strut", 
+        "grad": "linear-gradient(to top, #94a3b8 0%, #f8fafc 100%)"
+    },
 
-    # --- Water (Flow / Permeability) ---
-    "壬": {"color": "#38bdf8", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #3b41c5 0%, #a981bb 49%, #ffc8a9 100%)"}, # Sky 400
-    "癸": {"color": "#7dd3fc", "icon": "☁️", "anim": "drift", "grad": "linear-gradient(to top, #a18cd1 0%, #fbc2eb 100%)"}, # Sky 300
-    "子": {"color": "#60a5fa", "icon": "🐀", "anim": "scurry", "grad": "linear-gradient(15deg, #13547a 0%, #80d0c7 100%)"}, # Blue 400
-    "亥": {"color": "#818cf8", "icon": "🐖", "anim": "float", "grad": "linear-gradient(to top, #4fb576 0%, #44a08d 24%, #2b88aa 52%, #0f5f87 76%, #0d2f4a 100%)"}, # Indigo 400
+    # --- Water (Mystic Ocean / Deep Secrets) ---
+    "壬": {
+        "color": "#40e0d0", 
+        "icon": "🌊", 
+        "anim": "wave", 
+        "grad": "linear-gradient(to top, #0d5c4d 0%, #40e0d0 100%)"
+    },
+    "癸": {
+        "color": "#a855f7", 
+        "icon": "☁️", 
+        "anim": "drift", 
+        "grad": "linear-gradient(to top, #581c87 0%, #c084fc 100%)"
+    },
+    "子": {
+        "color": "#3b82f6", 
+        "icon": "🐀", 
+        "anim": "scurry", 
+        "grad": "linear-gradient(15deg, #1e3a8a 0%, #60a5fa 100%)"
+    },
+    "亥": {
+        "color": "#8b5cf6", 
+        "icon": "🐖", 
+        "anim": "float", 
+        "grad": "linear-gradient(to top, #4c1d95 0%, #a78bfa 100%)"
+    },
 }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🌙 Mystical Navigation Icons
+# ═══════════════════════════════════════════════════════════════════════════════
+
+MYSTIC_ICONS = {
+    "prediction": "🔮",
+    "wealth": "💰",
+    "evolution": "🌙",
+    "mining": "📜",
+    "quantum": "✨",
+    "cinema": "🌟",
+    "training": "🕯️",
+    "config": "⚙️",
+    "architect": "⚡",
+    "crystal_ball": "🔮",
+    "moon": "🌙",
+    "star": "⭐",
+    "candle": "🕯️",
+    "sparkle": "✨",
+    "tarot": "🎴",
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🎨 Mystical Gradient Palette
+# ═══════════════════════════════════════════════════════════════════════════════
+
+MYSTIC_GRADIENTS = {
+    "midnight": "linear-gradient(180deg, #0d0015 0%, #1a0a2e 100%)",
+    "velvet": "linear-gradient(145deg, #2d1b4e 0%, #1a0a2e 100%)",
+    "gold_shimmer": "linear-gradient(90deg, #b8860b 0%, #ffd700 50%, #b8860b 100%)",
+    "crystal": "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), rgba(168,85,247,0.5), rgba(26,10,46,0.9))",
+    "candle_glow": "radial-gradient(circle, #ff9f43 0%, rgba(255,159,67,0) 70%)",
+    "starfield": "radial-gradient(ellipse at 50% 50%, rgba(168,85,247,0.2) 0%, transparent 70%)",
+    "tarot_border": "linear-gradient(90deg, #c21e56, #ffd700, #40e0d0, #a855f7)",
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ✨ Magical Animation Definitions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+MYSTIC_ANIMATIONS = {
+    "shimmer": "shimmer 3s linear infinite",
+    "glow": "crystal-pulse 4s ease-in-out infinite",
+    "float": "float 3s ease-in-out infinite",
+    "flicker": "flicker 2s ease-in-out infinite",
+    "twinkle": "twinkle 2s ease-in-out infinite",
+    "moon_glow": "moon-glow 3s ease-in-out infinite",
+}
+
 
 def get_theme(char):
     """Get theme dict for a character (Stem/Branch)."""
     return QUANTUM_THEME.get(char, {"color": "#FFF", "icon": "❓", "anim": "none", "grad": "none"})
 
+
 def get_nature_color(char):
     """Helper to get just the color."""
     return get_theme(char)["color"]
+
+
+def get_mystic_icon(name):
+    """Get a mystical icon by name."""
+    return MYSTIC_ICONS.get(name, "🔮")
+
+
+def get_mystic_gradient(name):
+    """Get a mystical gradient by name."""
+    return MYSTIC_GRADIENTS.get(name, MYSTIC_GRADIENTS["midnight"])
