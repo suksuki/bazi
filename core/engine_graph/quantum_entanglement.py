@@ -9,9 +9,11 @@
 合化增益应该作为一次性修正应用到初始能量（H0），而不是通过矩阵乘法重复应用。
 """
 
+import math
 from typing import Dict, List, Any, Set
 from core.math import ProbValue
 from core.interactions import BRANCH_SIX_COMBINES, STEM_COMBINATIONS
+from core.engine_graph.wave_physics import WavePhysicsEngine
 
 
 class QuantumEntanglementProcessor:
@@ -30,14 +32,6 @@ class QuantumEntanglementProcessor:
     def apply_once(self):
         """
         [V15.3] 应用量子纠缠（合化/刑冲）- 在传播之前，只应用一次！
-        
-        检测并应用：
-        1. 三会方局（directionalBonus ~3.0）
-        2. 三合局（threeHarmony.bonus ~2.0）
-        3. 半合（halfHarmony.bonus ~1.4）
-        4. 拱合（archHarmony.bonus ~1.1）
-        5. 六合（sixHarmony.bonus ~1.3, bindingPenalty ~0.1）
-        6. 天干五合（stemFiveCombination.bonus/penalty）
         """
         if not hasattr(self.engine, 'H0') or self.engine.H0 is None:
             return
@@ -45,391 +39,385 @@ class QuantumEntanglementProcessor:
         interactions_config = self.config.get('interactions', {})
         branch_events = interactions_config.get('branchEvents', {})
         combo_physics = interactions_config.get('comboPhysics', {})
-        
-        # 1. 检测地支合局（三合、三会、半合、拱合、六合）
-        # [V15.3] 三会局定义（方局，力量最强）
-        three_meeting_groups = [
-            {'亥', '子', '丑'},  # 三会水（北方）
-            {'寅', '卯', '辰'},  # 三会木（东方）
-            {'巳', '午', '未'},  # 三会火（南方）
-            {'申', '酉', '戌'},  # 三会金（西方）
-        ]
-        
-        # 三合局定义
-        trine_groups = [
-            {'申', '子', '辰'},  # 三合水
-            {'亥', '卯', '未'},  # 三合木
-            {'寅', '午', '戌'},  # 三合火
-            {'巳', '酉', '丑'},  # 三合金
-        ]
-        
-        # 半合定义
-        half_harmony_pairs = [
-            ('申', '子'), ('子', '申'), ('子', '辰'), ('辰', '子'),
-            ('亥', '卯'), ('卯', '亥'), ('卯', '未'), ('未', '卯'),
-            ('寅', '午'), ('午', '寅'), ('午', '戌'), ('戌', '午'),
-            ('巳', '酉'), ('酉', '巳'), ('酉', '丑'), ('丑', '酉'),
-        ]
-        
-        # 拱合定义
-        arch_harmony_pairs = [
-            ('申', '辰'), ('辰', '申'),
-            ('亥', '未'), ('未', '亥'),
-            ('寅', '戌'), ('戌', '寅'),
-            ('巳', '丑'), ('丑', '巳'),
-        ]
+        # V11.0: 墓库配置适配
+        vault_config = interactions_config.get('vault', interactions_config.get('vaultPhysics', {}))
         
         # 收集所有地支节点
         branch_nodes = [(i, node) for i, node in enumerate(self.engine.nodes) 
                        if node.node_type == 'branch']
         branch_chars = {node.char for _, node in branch_nodes}
         
-        # [V15.3] 调试信息：记录检测到的合局
+        # [V15.3] 调试信息
         debug_info = {
             'detected_matches': [],
             'node_changes': [],
             'energy_snapshots': {}
         }
         
-        # [V15.3] 三会局对应的元素映射
-        three_meeting_element_map = {
-            frozenset({'亥', '子', '丑'}): 'water',  # 三会水（北方）
-            frozenset({'寅', '卯', '辰'}): 'wood',   # 三会木（东方）
-            frozenset({'巳', '午', '未'}): 'fire',   # 三会火（南方）
-            frozenset({'申', '酉', '戌'}): 'metal',  # 三会金（西方）
-        }
+        self._apply_branch_harmonies(branch_nodes, branch_chars, branch_events, combo_physics, debug_info)
+        self._apply_stem_harmonies(interactions_config, debug_info)
+        self._apply_branch_clashes(branch_nodes, branch_events, vault_config, debug_info)
+        self._apply_branch_punishments(branch_nodes, branch_events, debug_info)
         
-        # [V15.3] 检测三会局（优先级最高，力量最强）
-        for group in three_meeting_groups:
-            group_frozen = frozenset(group)
+        # [V15.3] 保存调试信息到引擎
+        self.engine._quantum_entanglement_debug = debug_info
+
+    def _apply_branch_harmonies(self, branch_nodes, branch_chars, branch_events, combo_physics, debug_info):
+        """处理地支合局 (三会、三合、半合、拱合、六合)"""
+        # 三会局定义
+        three_meeting_groups = [
+            ({'亥', '子', '丑'}, 'water'), ({'寅', '卯', '辰'}, 'wood'),
+            ({'巳', '午', '未'}, 'fire'), ({'申', '酉', '戌'}, 'metal'),
+        ]
+        # 三合局定义
+        trine_groups = [
+            ({'申', '子', '辰'}, 'water'), ({'亥', '卯', '未'}, 'wood'),
+            ({'寅', '午', '戌'}, 'fire'), ({'巳', '酉', '丑'}, 'metal'),
+        ]
+        
+        # 1. 三会方局 (Three Meeting) - 多体共振
+        for group, element in three_meeting_groups:
             if group.issubset(branch_chars):
-                meeting_node_indices = [i for i, node in branch_nodes if node.char in group]
-                if len(meeting_node_indices) >= 3:
-                    # [V15.3] 三会方局：使用 directionalBonus (3.0)，力量最强
-                    # 从 comboPhysics 读取 directionalBonus，如果没有则使用 threeMeeting.bonus
-                    if isinstance(combo_physics, dict) and 'directionalBonus' in combo_physics:
-                        meeting_bonus = combo_physics.get('directionalBonus', 3.0)
-                    else:
-                        three_meeting_config = branch_events.get('threeMeeting', {})
-                        if isinstance(three_meeting_config, dict):
-                            meeting_bonus = three_meeting_config.get('bonus', 2.5)
-                        else:
-                            meeting_bonus = 3.0  # 默认使用 3.0（三会方局力量最强）
+                indices = [i for i, node in branch_nodes if node.char in group]
+                if len(indices) >= 3:
+                    # 获取能量及Q值
+                    energies = [float(self.engine.nodes[idx].initial_energy.mean if isinstance(self.engine.nodes[idx].initial_energy, ProbValue) else self.engine.nodes[idx].initial_energy) for idx in indices]
+                    q_factor = combo_physics.get('threeMeetingQ', 2.5) # 强共振
                     
-                    three_meeting_config = branch_events.get('threeMeeting', {})
-                    if isinstance(three_meeting_config, dict):
-                        should_transform = three_meeting_config.get('transform', True)
-                    else:
-                        should_transform = True
+                    # 计算共振总能量
+                    energy_net = WavePhysicsEngine.compute_resonance(energies, q_factor)
+                    tag = f"ThreeMeeting({element})"
                     
-                    meeting_element = three_meeting_element_map.get(group_frozen, None)
-                    group_str = '-'.join(sorted(group))
-                    debug_info['detected_matches'].append(f"ThreeMeeting: {group_str} ({meeting_element})")
+                    # 记录并分配
+                    if f"{tag} Reson" not in debug_info['detected_matches']:
+                         debug_info['detected_matches'].append(f"🔗 {tag} 共振激活! Net={energy_net:.2f}")
                     
-                    # 应用 Bonus 到所有三会节点
-                    for idx in meeting_node_indices:
-                        old_element = self.engine.nodes[idx].element
-                        if isinstance(self.engine.H0[idx], ProbValue):
-                            self.engine.H0[idx] = self.engine.H0[idx] * meeting_bonus
-                        else:
-                            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * meeting_bonus, std_dev_percent=0.1)
-                        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                        self.engine.nodes[idx].is_locked = True
-                        
-                        # [V15.3] 元素转化：改变节点五行属性
-                        if should_transform and meeting_element:
-                            self.engine.nodes[idx].element = meeting_element
-                            self.engine.nodes[idx].original_element = old_element  # 保存原始元素
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({meeting_element})")
-                    
-                    # 同时增强所有同元素的天干节点
-                    if meeting_element:
-                        for i, node in enumerate(self.engine.nodes):
-                            if node.node_type == 'stem' and node.element == meeting_element:
-                                if isinstance(self.engine.H0[i], ProbValue):
-                                    self.engine.H0[i] = self.engine.H0[i] * meeting_bonus
-                                else:
-                                    self.engine.H0[i] = ProbValue(float(self.engine.H0[i]) * meeting_bonus, std_dev_percent=0.1)
-                                self.engine.nodes[i].initial_energy = self.engine.H0[i]
-                                self.engine.nodes[i].current_energy = self.engine.H0[i]
-        
-        # 检测三合局（完整三合）
-        trine_element_map = {
-            frozenset({'申', '子', '辰'}): 'water',  # 三合水
-            frozenset({'亥', '卯', '未'}): 'wood',   # 三合木
-            frozenset({'寅', '午', '戌'}): 'fire',   # 三合火
-            frozenset({'巳', '酉', '丑'}): 'metal',  # 三合金
-        }
-        
-        for group in trine_groups:
-            group_frozen = frozenset(group)
+                    self._distribute_wave_energy(indices, energies, energy_net, element, tag, debug_info)
+
+        # 2. 三合局 (Trine Harmony) - 多体共振
+        for group, element in trine_groups:
             if group.issubset(branch_chars):
-                trine_node_indices = [i for i, node in branch_nodes if node.char in group]
-                if len(trine_node_indices) >= 3:
-                    three_harmony_config = branch_events.get('threeHarmony', {})
-                    if isinstance(three_harmony_config, dict):
-                        three_bonus = three_harmony_config.get('bonus', 2.0)
-                        should_transform = three_harmony_config.get('transform', True)
-                    else:
-                        three_bonus = 2.0
-                        should_transform = True
+                indices = [i for i, node in branch_nodes if node.char in group]
+                if len(indices) >= 3:
+                    energies = [float(self.engine.nodes[idx].initial_energy.mean if isinstance(self.engine.nodes[idx].initial_energy, ProbValue) else self.engine.nodes[idx].initial_energy) for idx in indices]
+                    q_factor = branch_events.get('threeHarmony', {}).get('resonanceQ', 2.0)
                     
-                    trine_element = trine_element_map.get(group_frozen, None)
-                    group_str = '-'.join(sorted(group))
-                    debug_info['detected_matches'].append(f"ThreeHarmony: {group_str} ({trine_element})")
+                    energy_net = WavePhysicsEngine.compute_resonance(energies, q_factor)
+                    tag = f"ThreeHarmony({element})"
                     
-                    # 应用 Bonus 到所有三合节点
-                    for idx in trine_node_indices:
-                        old_element = self.engine.nodes[idx].element
-                        if isinstance(self.engine.H0[idx], ProbValue):
-                            self.engine.H0[idx] = self.engine.H0[idx] * three_bonus
-                        else:
-                            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * three_bonus, std_dev_percent=0.1)
-                        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                        self.engine.nodes[idx].is_locked = True
+                    if f"{tag} Reson" not in debug_info['detected_matches']:
+                         debug_info['detected_matches'].append(f"🔗 {tag} 共振激活! Net={energy_net:.2f}")
+                    
+                    self._distribute_wave_energy(indices, energies, energy_net, element, tag, debug_info)
+
+        # 3. 处理二合局 (六合、半合、拱合) - 双体干涉
+        processed_pairs = set()
+        
+        # 六合映射
+        six_combine_map = {
+            frozenset({'子', '丑'}): 'earth', frozenset({'寅', '亥'}): 'wood',
+            frozenset({'卯', '戌'}): 'fire', frozenset({'辰', '酉'}): 'metal',
+            frozenset({'巳', '申'}): 'water', frozenset({'午', '未'}): 'earth',
+        }
+        # 半合与拱合映射
+        half_harmony_map = {
+            frozenset({'申', '子'}): 'water', frozenset({'子', '辰'}): 'water',
+            frozenset({'亥', '卯'}): 'wood', frozenset({'卯', '未'}): 'wood',
+            frozenset({'寅', '午'}): 'fire', frozenset({'午', '戌'}): 'fire',
+            frozenset({'巳', '酉'}): 'metal', frozenset({'酉', '丑'}): 'metal',
+        }
+        arch_harmony_map = {
+            frozenset({'申', '辰'}): 'water', frozenset({'亥', '未'}): 'wood',
+            frozenset({'寅', '戌'}): 'fire', frozenset({'巳', '丑'}): 'metal',
+        }
+
+        for i, (idx1, node1) in enumerate(branch_nodes):
+            for j, (idx2, node2) in enumerate(branch_nodes):
+                if i >= j: continue
+                pair = frozenset({node1.node_id, node2.node_id})
+                if pair in processed_pairs: continue
+                
+                chars = frozenset({node1.char, node2.char})
+                
+                interaction_type = None
+                target_element = None
+                phase_rad = 0.0
+                entropy = 0.95
+                
+                # Check Six Harmony (同相)
+                if chars in six_combine_map:
+                    interaction_type = "sixHarmony"
+                    target_element = six_combine_map[chars]
+                    phase_rad = 0.1  # 接近 0度
+                    entropy = 0.98
+                # Check Half Harmony (30度)
+                elif chars in half_harmony_map:
+                    interaction_type = "halfHarmony"
+                    target_element = half_harmony_map[chars]
+                    phase_rad = 0.52 # ~30度
+                    entropy = 0.90
+                # Check Arch Harmony (45度)
+                elif chars in arch_harmony_map:
+                    interaction_type = "archHarmony"
+                    target_element = arch_harmony_map[chars]
+                    phase_rad = 0.78 # ~45度
+                    entropy = 0.85
+                
+                if interaction_type:
+                    processed_pairs.add(pair)
+                    
+                    e1 = float(node1.initial_energy.mean if isinstance(node1.initial_energy, ProbValue) else node1.initial_energy)
+                    e2 = float(node2.initial_energy.mean if isinstance(node2.initial_energy, ProbValue) else node2.initial_energy)
+                    
+                    # 构造参数
+                    params = {
+                        f"{interaction_type}_phase": phase_rad,
+                        f"{interaction_type}_entropy": entropy
+                    }
+                    
+                    # 计算干涉
+                    energy_net = WavePhysicsEngine.compute_interference(e1, e2, interaction_type, params)
+                    
+                    if f"{interaction_type} Wave" not in debug_info['detected_matches']:
+                        debug_info['detected_matches'].append(f"🌊 {interaction_type} 干涉: {node1.char}+{node2.char} -> Net={energy_net:.2f}")
+                    
+                    # 分配能量并转化
+                    self._distribute_wave_energy([idx1, idx2], [e1, e2], energy_net, target_element, interaction_type, debug_info)
+
+    def _apply_branch_clashes(self, branch_nodes, branch_events, vault_config, debug_info):
+        """
+        [V11.0] 处理地支冲 (Clash) 与墓库开启逻辑
+        """
+        from core.interactions import BRANCH_CLASHES
+        
+        # 墓库映射
+        VAULT_ELEMENTS = {'辰': 'water', '戌': 'fire', '丑': 'metal', '未': 'wood'}
+        
+        processed_pairs = set()
+        for i, (idx1, node1) in enumerate(branch_nodes):
+            for j, (idx2, node2) in enumerate(branch_nodes):
+                if i >= j: continue
+                pair = frozenset({node1.node_id, node2.node_id})
+                if pair in processed_pairs: continue
+                
+                if BRANCH_CLASHES.get(node1.char) == node2.char:
+                    processed_pairs.add(pair)
+                    debug_info['detected_matches'].append(f"Clash: {node1.char} vs {node2.char}")
+                    
+                    # 检查是否涉及墓库
+                    vault_found = False
+                    is_vault_1 = node1.char in VAULT_ELEMENTS
+                    is_vault_2 = node2.char in VAULT_ELEMENTS
+                    
+                    if is_vault_1 or is_vault_2:
+                        vault_found = True
+                        # V12.0: 物理判定 - 只要冲的一方能量足够大，就能冲开墓库
+                        # 取两者能量最大值作为冲击力
+                        e1 = self.engine.H0[idx1].mean if isinstance(self.engine.H0[idx1], ProbValue) else float(self.engine.H0[idx1])
+                        e2 = self.engine.H0[idx2].mean if isinstance(self.engine.H0[idx2], ProbValue) else float(self.engine.H0[idx2])
+                        impact_energy = max(e1, e2)
                         
-                        if should_transform and trine_element:
-                            self.engine.nodes[idx].element = trine_element
-                            self.engine.nodes[idx].original_element = old_element
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({trine_element})")
-                    
-                    # 同时增强所有同元素的天干节点
-                    if trine_element:
-                        for i, node in enumerate(self.engine.nodes):
-                            if node.node_type == 'stem' and node.element == trine_element:
-                                if isinstance(self.engine.H0[i], ProbValue):
-                                    self.engine.H0[i] = self.engine.H0[i] * three_bonus
-                                else:
-                                    self.engine.H0[i] = ProbValue(float(self.engine.H0[i]) * three_bonus, std_dev_percent=0.1)
-                                self.engine.nodes[i].initial_energy = self.engine.H0[i]
-                                self.engine.nodes[i].current_energy = self.engine.H0[i]
-        
-        # 检测半合
-        half_harmony_element_map = {
-            ('申', '子'): 'water', ('子', '申'): 'water', ('子', '辰'): 'water', ('辰', '子'): 'water',
-            ('亥', '卯'): 'wood', ('卯', '亥'): 'wood', ('卯', '未'): 'wood', ('未', '卯'): 'wood',
-            ('寅', '午'): 'fire', ('午', '寅'): 'fire', ('午', '戌'): 'fire', ('戌', '午'): 'fire',
-            ('巳', '酉'): 'metal', ('酉', '巳'): 'metal', ('酉', '丑'): 'metal', ('丑', '酉'): 'metal',
-        }
-        
-        for (branch1, branch2) in half_harmony_pairs:
-            if branch1 in branch_chars and branch2 in branch_chars:
-                node1_idx = next((i for i, node in branch_nodes if node.char == branch1), None)
-                node2_idx = next((i for i, node in branch_nodes if node.char == branch2), None)
-                if node1_idx is not None and node2_idx is not None:
-                    half_harmony_config = branch_events.get('halfHarmony', {})
-                    if isinstance(half_harmony_config, dict):
-                        half_bonus = half_harmony_config.get('bonus', 1.4)
-                        should_transform = half_harmony_config.get('transform', True)
-                    else:
-                        half_bonus = 1.4
-                        should_transform = False
-                    
-                    half_element = half_harmony_element_map.get((branch1, branch2), None)
-                    pair_str = f"{branch1}-{branch2}"
-                    if half_element:
-                        debug_info['detected_matches'].append(f"HalfHarmony: {pair_str} ({half_element})")
-                    
-                    # 应用 Bonus
-                    for idx in [node1_idx, node2_idx]:
-                        old_element = self.engine.nodes[idx].element
-                        if isinstance(self.engine.H0[idx], ProbValue):
-                            self.engine.H0[idx] = self.engine.H0[idx] * half_bonus
-                        else:
-                            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * half_bonus, std_dev_percent=0.1)
-                        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                        self.engine.nodes[idx].is_locked = True
+                        threshold = vault_config.get('threshold', 3.5)
                         
-                        if should_transform and half_element:
-                            self.engine.nodes[idx].element = half_element
-                            self.engine.nodes[idx].original_element = old_element
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({half_element})")
-        
-        # 检测拱合
-        arch_harmony_element_map = {
-            ('申', '辰'): 'water', ('辰', '申'): 'water',
-            ('亥', '未'): 'wood', ('未', '亥'): 'wood',
-            ('寅', '戌'): 'fire', ('戌', '寅'): 'fire',
-            ('巳', '丑'): 'metal', ('丑', '巳'): 'metal',
-        }
-        
-        for (branch1, branch2) in arch_harmony_pairs:
-            if branch1 in branch_chars and branch2 in branch_chars:
-                node1_idx = next((i for i, node in branch_nodes if node.char == branch1), None)
-                node2_idx = next((i for i, node in branch_nodes if node.char == branch2), None)
-                if node1_idx is not None and node2_idx is not None:
-                    arch_harmony_config = branch_events.get('archHarmony', {})
-                    if isinstance(arch_harmony_config, dict):
-                        arch_bonus = arch_harmony_config.get('bonus', 1.1)
-                        should_transform = arch_harmony_config.get('transform', True)
-                    else:
-                        arch_bonus = 1.1
-                        should_transform = False
-                    
-                    arch_element = arch_harmony_element_map.get((branch1, branch2), None)
-                    pair_str = f"{branch1}-{branch2}"
-                    if arch_element:
-                        debug_info['detected_matches'].append(f"ArchHarmony: {pair_str} ({arch_element})")
-                    
-                    # 应用 Bonus
-                    for idx in [node1_idx, node2_idx]:
-                        old_element = self.engine.nodes[idx].element
-                        if isinstance(self.engine.H0[idx], ProbValue):
-                            self.engine.H0[idx] = self.engine.H0[idx] * arch_bonus
+                        if impact_energy >= threshold:
+                            # 冲开 (Open Bonus)
+                            bonus = vault_config.get('openBonus', 1.8)
+                            tag = "VaultOpen"
+                            # 用符号标记，避免刷屏
+                            if f"🚀 {node1.char}-{node2.char} Open" not in debug_info['detected_matches']:
+                                debug_info['detected_matches'].append(f"🚀 {node1.char} vs {node2.char} 财库冲开！(Impact={impact_energy:.2f} >= {threshold})")
                         else:
-                            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * arch_bonus, std_dev_percent=0.1)
-                        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                        self.engine.nodes[idx].is_locked = True
+                            # 冲不破反受损 (Break Penalty)
+                            bonus = vault_config.get('breakPenalty', 0.5)
+                            tag = "TombBreak"
+                            if f"💥 {node1.char}-{node2.char} Break" not in debug_info['detected_matches']:
+                                debug_info['detected_matches'].append(f"💥 {node1.char} vs {node2.char} 墓库冲破！(Impact={impact_energy:.2f} < {threshold})")
                         
-                        if should_transform and arch_element:
-                            self.engine.nodes[idx].element = arch_element
-                            self.engine.nodes[idx].original_element = old_element
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({arch_element})")
-        
-        # 检测六合
-        six_combine_element_map = {
-            frozenset({'子', '丑'}): 'earth',  # 子丑合土
-            frozenset({'寅', '亥'}): 'wood',   # 寅亥合木
-            frozenset({'卯', '戌'}): 'fire',   # 卯戌合火
-            frozenset({'辰', '酉'}): 'metal',  # 辰酉合金
-            frozenset({'巳', '申'}): 'water',  # 巳申合水
-            frozenset({'午', '未'}): 'earth',  # 午未合土
-        }
-        
-        for branch1, branch2 in BRANCH_SIX_COMBINES.items():
-            if branch1 in branch_chars and branch2 in branch_chars:
-                node1_idx = next((i for i, node in branch_nodes if node.char == branch1), None)
-                node2_idx = next((i for i, node in branch_nodes if node.char == branch2), None)
-                if node1_idx is not None and node2_idx is not None:
-                    six_harmony_config = branch_events.get('sixHarmony', {})
-                    if isinstance(six_harmony_config, dict):
-                        six_bonus = six_harmony_config.get('bonus', 1.3)
-                        should_transform = six_harmony_config.get('transform', True)
-                    else:
-                        six_bonus = 1.3
-                        should_transform = False
-                    
-                    combine_element = six_combine_element_map.get(frozenset({branch1, branch2}), None)
-                    pair_str = f"{branch1}-{branch2}"
-                    if combine_element:
-                        debug_info['detected_matches'].append(f"SixHarmony: {pair_str} ({combine_element})")
-                    
-                    # 应用 Bonus
-                    for idx in [node1_idx, node2_idx]:
-                        old_element = self.engine.nodes[idx].element
-                        if isinstance(self.engine.H0[idx], ProbValue):
-                            self.engine.H0[idx] = self.engine.H0[idx] * six_bonus
-                        else:
-                            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * six_bonus, std_dev_percent=0.1)
-                        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                        self.engine.nodes[idx].is_locked = True
+                        # 应用能量修正 (对双方都应用，因为是相互作用)
+                        self._apply_energy_modifier(idx1, bonus, debug_info)
+                        self._apply_energy_modifier(idx2, bonus, debug_info)
                         
-                        if should_transform and combine_element:
-                            self.engine.nodes[idx].element = combine_element
-                            self.engine.nodes[idx].original_element = old_element
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({combine_element})")
+                        # V11.0: 同时也激活涉及元素的其他节点 (共振)
+                        if is_vault_1:
+                            v_elem = VAULT_ELEMENTS[node1.char]
+                            for k, t_node in enumerate(self.engine.nodes):
+                                if t_node.element == v_elem and k != idx1 and k != idx2:
+                                    self._apply_energy_modifier(k, bonus, debug_info)
+                        if is_vault_2:
+                            v_elem = VAULT_ELEMENTS[node2.char]
+                            for k, t_node in enumerate(self.engine.nodes):
+                                if t_node.element == v_elem and k != idx1 and k != idx2:
+                                    self._apply_energy_modifier(k, bonus, debug_info)
+                    
+                    if not vault_found:
+                        # [V12.0] 普通冲：应用波相消干涉 (Destructive Interference)
+                        e1 = float(node1.initial_energy.mean if isinstance(node1.initial_energy, ProbValue) else node1.initial_energy)
+                        e2 = float(node2.initial_energy.mean if isinstance(node2.initial_energy, ProbValue) else node2.initial_energy)
+                        
+                        # 获取物理参数 (相位角与熵)
+                        physics_params = {
+                            "clash_phase": branch_events.get("clashPhase", math.pi * 0.95), # 接近180度
+                            "clash_entropy": branch_events.get("clashEntropy", 0.6)        # 热损耗
+                        }
+                        
+                        # 计算叠加后的剩余总能量
+                        energy_net = WavePhysicsEngine.compute_interference(e1, e2, "clash", physics_params)
+                        
+                        # 按比例分配回原节点（简单物理：剩余能量平分）
+                        multiplier1 = (energy_net / 2.0) / e1 if e1 > 0 else 0
+                        multiplier2 = (energy_net / 2.0) / e2 if e2 > 0 else 0
+                        
+                        self._apply_energy_modifier(idx1, multiplier1, debug_info)
+                        self._apply_energy_modifier(idx2, multiplier2, debug_info)
+
+    def _distribute_wave_energy(self, indices, base_energies, net_energy, target_element, match_type, debug_info):
+        """
+        [V12.0] 波动力学能量分配器
+        将干涉/共振后的总能量 Net Energy 重新分配给参与节点，并执行元素转化。
+        分配原则：按原能量比例分配 (Proportional Distribution)。
+        """
+        total_base = sum(base_energies)
+        if total_base <= 0: return
+
+        # 计算每个节点的增益倍数 (用于记录 change)
+        # Multiplier = (Net * (Base/Total)) / Base = Net / Total
+        # 所以每个节点的倍数是一样的
+        global_multiplier = net_energy / total_base
+
+        for idx, node in zip(indices, [self.engine.nodes[i] for i in indices]):
+            old_element = node.element
+            
+            # 应用能量
+            self._apply_energy_modifier(idx, global_multiplier, debug_info)
+            node.is_locked = True
+            
+            # 元素转化
+            if target_element and node.element != target_element:
+                node.element = target_element
+                node.original_element = old_element
+                debug_info['node_changes'].append(f"{match_type}: {node.char}({old_element}) -> {node.char}({target_element})")
+
+        # 天干引动 (Stem Activation)
+        # 如果地支成局，同五行天干也会受到“共振”
+        if target_element:
+            for i, node in enumerate(self.engine.nodes):
+                if node.node_type == 'stem' and node.element == target_element:
+                    # 天干受到 30% 的共振增益
+                    self._apply_energy_modifier(i, 1.3, debug_info)
+
+    def _apply_branch_punishments(self, branch_nodes, branch_events, debug_info):
+        """
+        [V11.1] 处理地支刑 (Punishment)
+        区分通用刑（损耗）与土刑（激旺）
+        """
+        punishment_groups = [
+            ({'寅', '巳', '申'}, 'general'), # 寅巳申三刑
+            ({'丑', '未', '戌'}, 'earth'),   # 丑未戌三刑
+            ({'子', '卯'}, 'general'),       # 子卯相刑
+            ({'辰'}, 'earth_self'),          # 辰辰自刑
+            ({'午'}, 'self'),                # 午午自刑
+            ({'酉'}, 'self'),                # 酉酉自刑
+            ({'亥'}, 'self'),                # 亥亥自刑
+        ]
         
-        # 检测天干五合
-        stem_combine_element_map = {
-            ('甲', '己'): 'earth', ('己', '甲'): 'earth',  # 甲己合土
-            ('乙', '庚'): 'metal', ('庚', '乙'): 'metal',  # 乙庚合金
-            ('丙', '辛'): 'water', ('辛', '丙'): 'water',  # 丙辛合水
-            ('丁', '壬'): 'wood', ('壬', '丁'): 'wood',   # 丁壬合木
-            ('戊', '癸'): 'fire', ('癸', '戊'): 'fire',   # 戊癸合火
+        branch_chars = {node.char for _, node in branch_nodes}
+        penalty = branch_events.get('punishmentPenalty', 0.3)
+        earth_bonus = branch_events.get('earthlyPunishmentBonus', 1.3)
+        
+        # 1. 三刑处理
+        for group, p_type in punishment_groups:
+            if len(group) > 1 and group.issubset(branch_chars):
+                indices = [i for i, node in branch_nodes if node.char in group]
+                
+                # [V12.0] 波动力学路径
+                res_energies = [float(self.engine.nodes[idx].initial_energy.mean if isinstance(self.engine.nodes[idx].initial_energy, ProbValue) else self.engine.nodes[idx].initial_energy) for idx in indices]
+                
+                if p_type in ['earth', 'earth_self']:
+                    # 土刑共振 (Resonance)
+                    q_factor = branch_events.get('resonanceQ', 1.3)
+                    energy_net = WavePhysicsEngine.compute_resonance(res_energies, q_factor)
+                else:
+                    # 通用刑干涉 (Interference)
+                    e1 = res_energies[0]
+                    # 简化多体为两体干涉或逐个叠加
+                    e2 = sum(res_energies[1:])
+                    physics_params = {
+                        "punish_phase": branch_events.get("punishPhase", math.pi * 0.8), # 反相
+                        "punish_entropy": branch_events.get("punishEntropy", 0.7)
+                    }
+                    energy_net = WavePhysicsEngine.compute_interference(e1, e2, "punish", physics_params)
+                
+                debug_info['detected_matches'].append(f"{p_type.capitalize()} Punishment (Wave): {group} -> Net={energy_net:.2f}")
+                
+                # 分配能量
+                total_base = sum(res_energies)
+                for idx, e_base in zip(indices, res_energies):
+                    multiplier = (energy_net * (e_base / total_base)) / e_base if e_base > 0 else 0
+                    self._apply_energy_modifier(idx, multiplier, debug_info)
+            
+            # 2. 自刑处理
+            elif len(group) == 1:
+                char = list(group)[0]
+                indices = [i for i, node in branch_nodes if node.char == char]
+                if len(indices) >= 2:
+                    multiplier = earth_bonus if p_type == 'earth_self' else penalty
+                    debug_info['detected_matches'].append(f"Self-Punishment: {char}")
+                    for idx in indices:
+                        self._apply_energy_modifier(idx, multiplier, debug_info)
+
+    def _apply_energy_modifier(self, idx, multiplier, debug_info):
+        """统一应用能量乘数"""
+        if isinstance(self.engine.H0[idx], ProbValue):
+            self.engine.H0[idx] = self.engine.H0[idx] * multiplier
+        else:
+            self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * multiplier, std_dev_percent=0.1)
+        
+        self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
+        self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+
+    def _apply_stem_harmonies(self, interactions_config, debug_info):
+        """处理天干五合"""
+        stem_nodes = [(i, node) for i, node in enumerate(self.engine.nodes) if node.node_type == 'stem']
+        processed_pairs = set()
+        
+        stem_combine_map = {
+            ('甲', '己'): 'earth', ('乙', '庚'): 'metal', ('丙', '辛'): 'water',
+            ('丁', '壬'): 'wood', ('戊', '癸'): 'fire',
         }
         
-        # 天干五合月令支持映射
-        stem_combine_month_support = {
-            'earth': ['辰', '未', '戌', '丑', '巳', '午'],  # 土月或火月
-            'metal': ['申', '酉', '辰', '未', '戌', '丑'],  # 金月或土月
-            'water': ['亥', '子', '申', '酉'],              # 水月或金月
-            'wood': ['寅', '卯', '亥', '子'],               # 木月或水月
-            'fire': ['巳', '午', '寅', '卯'],               # 火月或木月
-        }
-        
-        # 获取月支
-        month_branch = None
-        if self.engine.bazi and len(self.engine.bazi) > 1:
-            month_pillar = self.engine.bazi[1]
-            if len(month_pillar) >= 2:
-                month_branch = month_pillar[1]
-        
-        # 收集所有天干节点
-        stem_nodes = [(i, node) for i, node in enumerate(self.engine.nodes) 
-                     if node.node_type == 'stem']
-        
-        # 检测天干五合
         for i, (idx1, node1) in enumerate(stem_nodes):
             for j, (idx2, node2) in enumerate(stem_nodes):
-                if i >= j:
-                    continue
+                if i >= j: continue
+                pair = frozenset({node1.node_id, node2.node_id})
+                if pair in processed_pairs: continue
                 
-                stem1 = node1.char
-                stem2 = node2.char
+                chars = (node1.char, node2.char)
+                target_element = stem_combine_map.get(chars) or stem_combine_map.get((chars[1], chars[0]))
                 
-                # 检查是否是天干五合
-                if (stem1, stem2) in stem_combine_element_map or (stem2, stem1) in stem_combine_element_map:
-                    target_element = stem_combine_element_map.get((stem1, stem2)) or stem_combine_element_map.get((stem2, stem1))
+                if target_element:
+                    processed_pairs.add(pair)
+                    cfg = interactions_config.get('stemFiveCombination', {})
+                    threshold = cfg.get('threshold', 3.0)
+                    bonus = cfg.get('bonus', 1.5)
+                    penalty_val = cfg.get('penalty', 0.7)
                     
-                    stem_combo_config = interactions_config.get('stemFiveCombination', {})
-                    if not stem_combo_config:
-                        stem_combo_config = interactions_config.get('stemFiveCombine', {})
+                    e1 = float(self.engine.H0[idx1].mean if isinstance(self.engine.H0[idx1], ProbValue) else self.engine.H0[idx1])
+                    e2 = float(self.engine.H0[idx2].mean if isinstance(self.engine.H0[idx2], ProbValue) else self.engine.H0[idx2])
                     
-                    # [V15.3] 检查月令是否支持合化
-                    can_transform = False
-                    if month_branch and target_element:
-                        supported_months = stem_combine_month_support.get(target_element, [])
-                        can_transform = month_branch in supported_months
-                    
-                    # [V15.3] 根据合化结果应用不同的处理
-                    if can_transform:
-                        # 合化成功：应用 Bonus（合化产生新能量）
-                        bonus = stem_combo_config.get('transformBonus', stem_combo_config.get('bonus', 1.2))
-                        pair_str = f"{stem1}-{stem2}"
-                        debug_info['detected_matches'].append(f"StemFiveCombine: {pair_str} -> {target_element} (成功)")
+                    # [V12.0] 天干五合波动力学化
+                    if (e1 + e2) / 2.0 >= threshold:
+                        # 成功合化：强相长干涉 (Phase = 0)
+                        params = {"stem_combine_phase": 0.05, "stem_combine_entropy": 0.95}
+                        energy_net = WavePhysicsEngine.compute_interference(e1, e2, "stem_combine", params)
                         
-                        for idx in [idx1, idx2]:
-                            old_element = self.engine.nodes[idx].element
-                            if isinstance(self.engine.H0[idx], ProbValue):
-                                self.engine.H0[idx] = self.engine.H0[idx] * bonus
-                            else:
-                                self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * bonus, std_dev_percent=0.1)
-                            self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                            self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                            # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                            self.engine.nodes[idx].is_locked = True
-                            
-                            # [V15.3] 元素转化：改变节点五行属性
-                            if target_element:
-                                self.engine.nodes[idx].element = target_element
-                                self.engine.nodes[idx].original_element = old_element
-                                debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}({old_element}) -> {self.engine.nodes[idx].char}({target_element})")
+                        # 分配能量
+                        self._distribute_wave_energy([idx1, idx2], [e1, e2], energy_net, target_element, "StemFiveCombine", debug_info)
                     else:
-                        # 合而不化：形成羁绊，双方能量受损
-                        penalty = stem_combo_config.get('penalty', 0.8)  # 默认减少到80%
-                        pair_str = f"{stem1}-{stem2}"
-                        debug_info['detected_matches'].append(f"StemFiveCombine: {pair_str} -> {target_element} (失败-羁绊)")
+                        # 羁绊：相消干涉 (Destructive Interference)
+                        # Phase = 120度 (阻滞)
+                        params = {"stem_bind_phase": 2.09, "stem_bind_entropy": 0.8} 
+                        energy_net = WavePhysicsEngine.compute_interference(e1, e2, "stem_bind", params)
                         
-                        for idx in [idx1, idx2]:
-                            if isinstance(self.engine.H0[idx], ProbValue):
-                                self.engine.H0[idx] = self.engine.H0[idx] * penalty
-                            else:
-                                self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * penalty, std_dev_percent=0.1)
-                            self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
-                            self.engine.nodes[idx].current_energy = self.engine.H0[idx]
-                            # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
-                            self.engine.nodes[idx].is_locked = True
-                            debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}(羁绊-能量受损)")
-        
-        # [V15.3] 保存调试信息到引擎（用于后续输出）
-        self.engine._quantum_entanglement_debug = debug_info
+                        # 分配惩罚
+                        self._distribute_wave_energy([idx1, idx2], [e1, e2], energy_net, None, "StemBind", debug_info)
+                        debug_info['detected_matches'].append(f"StemBind (Wave): {node1.char}+{node2.char} -> Net={energy_net:.2f}")

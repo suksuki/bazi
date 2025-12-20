@@ -12,6 +12,7 @@ Phase 2: 邻接矩阵构建模块
 - 大运和流年链接
 """
 
+import math
 import numpy as np
 from typing import Dict, List, Any, Optional
 from core.engine_graph.graph_node import GraphNode
@@ -71,115 +72,57 @@ class AdjacencyMatrixBuilder:
                 
                 weight = 0.0
                 
-                # 1. 五行生克关系（传入字符以支持特殊效应检测）
-                gen_weight = self._get_generation_weight(
-                    node_j.element, node_i.element, flow_config, 
-                    source_char=node_j.char, target_char=node_i.char
-                )
+                # 1. 场势耦合 (Field Coupling) - 取代线性生克
+                # 生 (Generation)
+                if node_j.element in GENERATION and GENERATION[node_j.element] == node_i.element:
+                     weight += self._calculate_field_coupling(node_j, node_i, 'generate', flow_config, distance=abs(node_i.pillar_idx - node_j.pillar_idx))
                 
-                control_weight = self._get_control_weight(
-                    node_j.element, node_i.element, flow_config,
-                    source_char=node_j.char, target_char=node_i.char
-                )
-
-                # [V10.0 Group H] 解冲逻辑 (Resolution Protocol)
-                # 如果 Source 节点处于贪合状态 (Locked)，则阻断其克制路径 (Control)
-                # 物理含义：贪合忘克
-                if getattr(node_j, 'is_locked', False) and control_weight < 0:
-                    control_weight = 0.0
-
-                weight += gen_weight
-                weight += control_weight
-                
-                # [V14.0] 比劫传导（Peer Flow）：同五行之间的能量传输
-                # 比劫是朋友关系，应该无损或低损传输，不像母子关系那样耗气
-                # 但需要控制效率，避免正反馈循环导致能量爆炸
+                # 克 (Control)
+                elif node_j.element in CONTROL and CONTROL[node_j.element] == node_i.element:
+                     # 检查通关逻辑 (Mediation)
+                     mediation_factor = 1.0
+                     # ... (保留通关检测简版，或移至耦合函数内) ...
+                     # 这里简化：如果被锁定，则不克
+                     if getattr(node_j, 'is_locked', False):
+                         weight += 0
+                     else:
+                         weight += self._calculate_field_coupling(node_j, node_i, 'control', flow_config, distance=abs(node_i.pillar_idx - node_j.pillar_idx))
+                         
+                # 2. 比劫 (Peer)
                 if node_j.element == node_i.element and node_j != node_i:
-                    peer_flow_efficiency = 0.13  # [V14.3] 朋友互助效率（从0.12提高到0.13，适度增强）
-                    weight += peer_flow_efficiency
+                    # 弱耦合
+                    weight += 0.13 * math.exp(-0.1 * abs(node_i.pillar_idx - node_j.pillar_idx))
+
+                # 3. 结构性连接 (Structure Types for GNN)
+                # 天干五合 / 地支合冲 仅作为拓扑连接存在
+                # 实际物理效应已移至 WavePhysicsEngine (QuantumEntanglement)
+                # 这里只保留 sign (正负号) 用于 GAT 识别关系类型
                 
-                # 1.5 特殊效应：润局（水润土生金）
-                # 如果土生金，且全局存在水，增强权重
-                if (node_j.element == 'earth' and node_i.element == 'metal' and
-                    (node_j.char in ['未', '戌'] or node_j.char in ['丑', '辰'])):
-                    # 检查是否有水节点存在
-                    has_water = any(n.element == 'water' for n in self.engine.nodes 
-                                   if n.char in ['亥', '子'])
-                    if has_water:
-                        moisture_boost = flow_config.get('earthMetalMoistureBoost', 1.5)
-                        # 增强土生金的权重
-                        if gen_weight > 0:
-                            weight = weight - gen_weight + (gen_weight * moisture_boost)
-                        else:
-                            # 如果原本没有生权重（不应该发生），添加一个
-                            generation_efficiency = flow_config.get('generationEfficiency', 1.2)
-                            weight += 0.6 * generation_efficiency * (moisture_boost - 1.0)
-                
-                # 2. 天干五合
-                # [V13.8] 矩阵解耦：合化增益不应进入邻接矩阵！
+                # 合
+                is_combine = False
                 if node_i.node_type == 'stem' and node_j.node_type == 'stem':
-                    combo_weight = self._get_stem_combination_weight(
-                        node_i.char, node_j.char, interactions_config
-                    )
-                    # [V13.8] 只保留小的连接权重（0.1），不包含 Bonus
-                    if combo_weight > 0:
-                        weight += 0.1  # 天干合连接权重（小值，表示连接存在）
+                     combo_weight = self._get_stem_combination_weight(node_i.char, node_j.char, interactions_config)
+                     if combo_weight > 0: is_combine = True
+                elif node_i.node_type == 'branch' and node_j.node_type == 'branch':
+                     combo_weight = self._get_branch_combo_weight(node_i.char, node_j.char, combo_physics, branch_events)
+                     if combo_weight > 0: is_combine = True
                 
-                # 3. 地支合局（三合、三会、六合）
-                # [V13.8] 矩阵解耦：合化增益不应进入邻接矩阵！
-                # 邻接矩阵只能包含传输效率（~0.7），不能包含 Bonus（2.0）
-                # Bonus 应该在传播前作为一次性修正应用到初始能量
-                # 这里只保留一个小的连接权重（表示合局的存在），不包含 Bonus
-                if node_i.node_type == 'branch' and node_j.node_type == 'branch':
-                    combo_weight = self._get_branch_combo_weight(
-                        node_i.char, node_j.char, combo_physics, branch_events
-                    )
-                    # [V13.8] 只保留小的连接权重（0.1），不包含 Bonus
-                    if combo_weight > 0:
-                        weight += 0.1  # 合局连接权重（小值，表示连接存在）
-                
-                # 4. 冲（Clash）
-                weight += self._get_clash_weight(
-                    node_i.char, node_j.char, node_i.node_type, node_j.node_type,
-                    branch_events
-                )
-                
-                # 5. 距离衰减（空间衰减）
-                # [V59.0] 透干印星豁免距离衰减：如果节点是透干印星（天干节点且是印星），不应用距离衰减
-                # 因为透干印星的通关能力不受距离限制
-                is_exposed_resource = False
-                if node_j.node_type == 'stem':
-                    # 检查 node_j 是否是透干印星
-                    # 从节点中动态获取日主元素（因为可能化气）
-                    dm_element = None
-                    for node in self.engine.nodes:
-                        if node.pillar_idx == 2 and node.node_type == 'stem':
-                            dm_element = node.element
-                            break
-                    if dm_element:
-                        resource_element = None
-                        for elem, target in GENERATION.items():
-                            if target == dm_element:
-                                resource_element = elem
-                                break
-                        if resource_element and node_j.element == resource_element:
-                            is_exposed_resource = True
-                
-                distance = abs(node_i.pillar_idx - node_j.pillar_idx)
-                if distance > 0 and not is_exposed_resource:  # 透干印星豁免距离衰减
-                    spatial_config = flow_config.get('spatialDecay', {'gap1': 0.6, 'gap2': 0.3})
-                    if distance == 1:
-                        weight *= spatial_config.get('gap1', 0.6)
-                    elif distance >= 2:
-                        weight *= spatial_config.get('gap2', 0.3)
-                
+                if is_combine:
+                    weight += 0.1 # 拓扑连接
+
+                # 冲
+                if node_i.node_type == node_j.node_type and node_i.node_type == 'branch':
+                     if (BRANCH_CLASHES.get(node_i.char) == node_j.char or BRANCH_CLASHES.get(node_j.char) == node_i.char):
+                         weight -= 0.1 # 拓扑负连接
+
                 A[i][j] = weight
         
         # [V55.0] 添加大运的 Support Link（静态叠加）
         self._add_dayun_support_links(A)
         
-        # [V55.0] 添加流年的引动逻辑（动态触发）
-        self._add_liunian_trigger_links(A)
+        
+        # [V12.0 The Purge] 移除 _add_liunian_trigger_links old logic
+        # 流年作用已全部迁移至 QuantumEntanglementProcessor (Wave Physics)
         
         # [V10.0] 如果启用 GAT，使用动态注意力机制替代固定矩阵
         if self.engine.use_gat and self.engine.gat_builder is not None:
@@ -275,82 +218,41 @@ class AdjacencyMatrixBuilder:
         
         return relation_types
     
-    def _get_generation_weight(self, source_element: str, target_element: str,
-                               flow_config: Dict, source_char: str = None,
-                               target_char: str = None) -> float:
+    def _calculate_field_coupling(self, source_node, target_node, type: str, flow_config: Dict, distance: int = 0) -> float:
         """
-        计算生的权重（正数：source 生 target）
+        [V12.0] 场势耦合 (Field Potential Coupling)
+        替代线性的生克权重。
         
-        Args:
-            source_element: 源元素
-            target_element: 目标元素
-            flow_config: 流程配置
-            source_char: 源字符（用于特殊检测，如润局）
-            target_char: 目标字符（用于特殊检测）
-        
-        [V58.1] Seasonal Dominance (得令者昌) - Fix Bruce Lee
-        - 冬季（亥/子/丑月）：增强水生木的效率
+        W = C_base * Sigmoid(E_src - E_thresh) * Exp(-lambda * distance)
         """
-        if source_element in GENERATION and GENERATION[source_element] == target_element:
-            generation_efficiency = flow_config.get('generationEfficiency', 1.2)
-            base_weight = 0.6 * generation_efficiency
+        # 1. 基础耦合系数
+        base = 0.8 if type == 'generate' else -0.4
+        
+        # 2. 源强度激活 (Source Activation)
+        # 只有能量强的源才能建立有效场
+        e_src = float(source_node.initial_energy.mean if isinstance(source_node.initial_energy, ProbValue) else source_node.initial_energy)
+        # Sigmoid: 能量 > 0.5 开始激活，> 3.0 满载
+        # k=2.0 陡度
+        activation = 1.0 / (1.0 + math.exp(-2.0 * (e_src - 1.5))) 
+        
+        # 3. 距离衰减 (Inverse Square or Exponential)
+        # 邻柱 (d=1) -> 0.81
+        # 隔柱 (d=2) -> 0.67
+        decay_lambda = 0.2
+        spatial_factor = math.exp(-decay_lambda * distance)
+        
+        # 透干豁免：如果源是天干且透出，衰减减弱
+        if source_node.node_type == 'stem' and getattr(source_node, 'is_exposed', False):
+            spatial_factor = max(spatial_factor, 0.9)
             
-            # [V58.2] Seasonal Dominance Lock (季节性优势锁定) - Fix Bruce Lee
-            # 检查当前季节（月令）
-            is_winter = False
-            month_branch = None
-            if hasattr(self.engine, 'bazi') and self.engine.bazi and len(self.engine.bazi) > 1:
-                month_branch = self.engine.bazi[1][1] if len(self.engine.bazi[1]) > 1 else None
-                # 冬季：亥、子、丑月
-                if month_branch in ['亥', '子', '丑']:
-                    is_winter = True
-            
-            # [V58.2] 如果是冬季，且是水生木，增强生成效率（即使水很冷，只要有木，水就会流向木）
-            if is_winter and source_element == 'water' and target_element == 'wood':
-                # 水生木效率提升 50%
-                base_weight *= 1.5
-            
-            # [V58.2] 当令五行能量加成：如果源元素是当令五行，增强生成效率
-            if month_branch:
-                month_element = self.engine.BRANCH_ELEMENTS.get(month_branch, 'earth')
-                if source_element == month_element:
-                    # 当令五行生其他元素：效率提升 30%
-                    base_weight *= 1.3
-            
-            # [V58.3] 湿土生金润局优化：如果土生金，根据土的干湿程度调整权重
-            if source_element == 'earth' and target_element == 'metal':
-                # 检查是否是湿土（丑、辰）
-                is_moist_earth = False
-                if source_char:
-                    # 湿土：丑、辰
-                    if source_char in ['丑', '辰']:
-                        is_moist_earth = True
-                
-                # [V58.3] 湿土生金效率更高
-                if is_moist_earth:
-                    base_weight *= 1.3  # 湿土生金效率提升 30%
-                else:
-                    # 燥土（未、戌）：检查是否有润局（水能量 > 3.0）
-                    # 计算全局水能量（使用概率分布）
-                    water_energy = ProbValue(0.0, std_dev_percent=0.1)
-                    if hasattr(self.engine, 'nodes'):
-                        for node in self.engine.nodes:
-                            if node.element == 'water':
-                                # V13.0: 使用 ProbValue（概率分布）
-                                energy = node.initial_energy if hasattr(node, 'initial_energy') else node.current_energy
-                                water_energy = water_energy + energy
-                    
-                    # [V59.0] Absolute Climate Boost (绝对润局增幅) - Fix REAL_S_006
-                    # 如果水能量 > 3.0（润局），将土生金的增幅提高到 1.5x
-                    # V13.0: 使用 ProbValue 的均值进行比较
-                    if water_energy.mean > 3.0:
-                        base_weight *= 1.5  # 润局时，燥土生金效率提升 50%（从 1.3 提升到 1.5）
-                    else:
-                        # 普通燥土生金：使用默认权重
-                        moisture_boost = flow_config.get('earthMetalMoistureBoost', 1.0)
-                        base_weight *= moisture_boost
-            
-            return base_weight
+        return base * activation * spatial_factor
+
+    def _get_generation_weight(self, *args, **kwargs):
+        """Deprecated legacy wrapper"""
+        return 0.0
+
+    def _get_control_weight(self, *args, **kwargs):
+        """Deprecated legacy wrapper"""
         return 0.0
     
     def _get_control_weight(self, source_element: str, target_element: str,
@@ -595,317 +497,8 @@ class AdjacencyMatrixBuilder:
         
         return 0.0
     
-    def _get_clash_weight(self, char1: str, char2: str, type1: str, type2: str,
-                          branch_events: Dict) -> float:
-        """计算冲的权重（负数：破坏性）"""
-        if type1 == 'branch' and type2 == 'branch':
-            if (char1, char2) in BRANCH_CLASHES or (char2, char1) in BRANCH_CLASHES:
-                clash_damping = branch_events.get('clashDamping', 0.3)
-                clash_score = branch_events.get('clashScore', -5.0)
-                
-                # [V58.1] Commander Immunity (提纲免死金牌) - Fix Wu Zetian
-                # 检查被冲的节点是否是月令地支（Month Branch）
-                is_month_branch_clashed = False
-                if hasattr(self.engine, 'bazi') and self.engine.bazi and len(self.engine.bazi) > 1:
-                    month_branch = self.engine.bazi[1][1] if len(self.engine.bazi[1]) > 1 else None
-                    if month_branch and (char1 == month_branch or char2 == month_branch):
-                        is_month_branch_clashed = True
-                        # 月令被冲：至少保留 80% 能量（普通地支可能只剩 40%）
-                        # 调整 clash_damping：从 0.3 提升到 0.8（保留更多能量）
-                        clash_damping = max(clash_damping, 0.8)  # 至少保留 80% 能量
-                
-                # [V57.2] 阳刃金刚盾：检查所有参与冲的地支节点，如果其中一个是日主的阳刃（帝旺位），完全豁免冲的影响
-                is_yangren_shielded = False
-                if hasattr(self.engine, 'bazi') and self.engine.bazi and len(self.engine.bazi) > 2:
-                    day_pillar = self.engine.bazi[2]
-                    if len(day_pillar) >= 2:
-                        day_master = day_pillar[0]
-                        # 检查 char1 和 char2 是否都是日主的阳刃（帝旺位）
-                        life_stage1 = TWELVE_LIFE_STAGES.get((day_master, char1))
-                        life_stage2 = TWELVE_LIFE_STAGES.get((day_master, char2))
-                        # 如果其中一个是阳刃（帝旺位），则完全豁免冲的影响
-                        if life_stage1 == '帝旺' or life_stage2 == '帝旺':
-                            is_yangren_shielded = True
-                
-                if is_yangren_shielded:
-                    # [V57.2] 阳刃金刚盾：完全豁免冲的影响（damping = 1.0，即无损）
-                    clash_damping = 1.0  # 完全豁免，不损失能量
-                    # 或者直接返回 0（不产生负权重）
-                    return 0.0
-                
-                # 冲的破坏性（负数，归一化为权重）
-                return clash_score / 10.0 * clash_damping
-        return 0.0
-    
-    def _add_dayun_support_links(self, A: np.ndarray):
-        """
-        [V55.0] 添加大运的 Support Link（静态叠加）
-        
-        大运节点与原局日主及所有同五行/相生节点建立"Support Link"（静态能量注入）。
-        物理含义：改变背景场域（如进入火运，全局火能量底噪提升）。
-        """
-        # 找到大运节点
-        dayun_nodes = []
-        for i, node in enumerate(self.engine.nodes):
-            if hasattr(node, 'dayun_weight'):
-                dayun_nodes.append(i)
-        
-        if not dayun_nodes:
-            return
-        
-        # 找到日主节点
-        dm_indices = []
-        for i, node in enumerate(self.engine.nodes):
-            if node.pillar_idx == 2 and node.node_type == 'stem':
-                dm_indices.append(i)
-        
-        # 大运节点对所有原局节点建立 Support Link
-        for dayun_idx in dayun_nodes:
-            dayun_node = self.engine.nodes[dayun_idx]
-            dayun_element = dayun_node.element
-            
-            for i, natal_node in enumerate(self.engine.nodes):
-                # 跳过非原局节点（大运、流年）
-                if natal_node.pillar_idx >= 4:
-                    continue
-                
-                natal_element = natal_node.element
-                
-                # 1. 同五行：直接支持（共振）
-                if natal_element == dayun_element:
-                    A[i][dayun_idx] += 0.3  # Support Link 权重
-                
-                # 2. 相生关系：大运生原局（注入能量）
-                elif GENERATION.get(dayun_element) == natal_element:
-                    A[i][dayun_idx] += 0.4  # 生关系权重更高
-                
-                # 3. 日主特殊加成：大运对日主的支持
-                if i in dm_indices:
-                    # 如果大运生日主或与日主同五行，额外加成
-                    if GENERATION.get(dayun_element) == natal_element or dayun_element == natal_element:
-                        A[i][dayun_idx] += 0.2
     
     def _add_liunian_trigger_links(self, A: np.ndarray):
-        """
-        [V55.0] 添加流年的引动逻辑（动态触发）
-        
-        流年节点作为"高能粒子"射入图网络，优先级最高。
-        流年与原局/大运的冲（Clash）和合（Combine）判定优先于原局内部关系。
-        被流年冲合的节点，其能量活跃度瞬间翻倍。
-        """
-        from core.engine_graph.constants import LIFE_STAGE_COEFFICIENTS
-        
-        # 找到流年节点
-        liunian_nodes = []
-        for i, node in enumerate(self.engine.nodes):
-            if hasattr(node, 'is_liunian') and node.is_liunian:
-                liunian_nodes.append(i)
-        
-        if not liunian_nodes:
-            return
-        
-        # 找到流年地支节点（用于冲合判定）
-        liunian_branch_idx = None
-        liunian_stem_idx = None
-        for idx in liunian_nodes:
-            node = self.engine.nodes[idx]
-            if node.node_type == 'branch':
-                liunian_branch_idx = idx
-            elif node.node_type == 'stem':
-                liunian_stem_idx = idx
-        
-        # 1. 流年地支冲原局/大运地支（引动）
-        if liunian_branch_idx is not None:
-            liunian_branch = self.engine.nodes[liunian_branch_idx].char
-            
-            for i, node in enumerate(self.engine.nodes):
-                if i == liunian_branch_idx:
-                    continue
-                
-                # 只处理地支节点
-                if node.node_type != 'branch':
-                    continue
-                
-                natal_branch = node.char
-                
-                # 检查是否相冲（BRANCH_CLASHES 是字典，不是 tuple 集合）
-                is_clash = (BRANCH_CLASHES.get(liunian_branch) == natal_branch or 
-                           BRANCH_CLASHES.get(natal_branch) == liunian_branch)
-                
-                if is_clash:
-                    # [V55.0] 墓库冲开检测（Storehouse Opening）
-                    is_storehouse = natal_branch in ['辰', '戌', '丑', '未']
-                    is_storehouse_opened = False
-                    
-                    if is_storehouse:
-                        # 检查是否满足冲开条件
-                        # 条件：被冲节点是墓库，且流年是对应的冲支
-                        storehouse_clash_map = {'辰': '戌', '戌': '辰', '丑': '未', '未': '丑'}
-                        if storehouse_clash_map.get(natal_branch) == liunian_branch:
-                            # 检查库中能量（简化：使用节点当前能量）
-                            storage_energy = node.current_energy
-                            vault_threshold = self.config.get('vault', {}).get('threshold', 15.0)
-                            
-                            # V13.0: 处理 ProbValue（概率值）
-                            storage_energy_val = float(storage_energy) if isinstance(storage_energy, ProbValue) else storage_energy
-                            if storage_energy_val >= vault_threshold:
-                                # 库被冲开：能量释放（能量翻倍）
-                                is_storehouse_opened = True
-                                node.is_activated = True
-                                node.activation_factor = 1.5  # 库开能量释放
-                                node.storehouse_opened = True
-                                node.trigger_events = getattr(node, 'trigger_events', [])
-                                node.trigger_events.append(f"{liunian_branch}冲开{natal_branch}库")
-                                
-                                # 流年冲开库：建立强连接（能量释放）
-                                A[i][liunian_branch_idx] += 1.0  # 冲开的正权重（能量释放）
-                    
-                    if not is_storehouse_opened:
-                        # [V55.0] 检测冲提纲（月支被冲）- 极其严重
-                        # 方法1：检查节点是否为月支（pillar_idx == 1 且是地支）
-                        is_month_pillar_by_idx = (node.pillar_idx == 1 and node.node_type == 'branch')
-                        
-                        # 方法2：检查 pillar_name
-                        is_month_pillar_by_name = (hasattr(node, 'pillar_name') and node.pillar_name == 'month')
-                        
-                        # 方法3：检查被冲的地支是否是月支（最可靠的方法）
-                        month_branch_in_bazi = None
-                        if hasattr(self.engine, 'bazi') and self.engine.bazi and len(self.engine.bazi) > 1:
-                            month_branch_in_bazi = self.engine.bazi[1][1] if len(self.engine.bazi[1]) > 1 else None
-                        is_month_branch = (natal_branch == month_branch_in_bazi) if month_branch_in_bazi else False
-                        
-                        if is_month_pillar_by_idx or is_month_pillar_by_name or is_month_branch:
-                            # 冲提纲：根基动摇，严重扣分
-                            node.is_activated = True
-                            node.activation_factor = 0.15  # 能量大幅下降（根基动摇，更严重）
-                            node.instability_penalty = 0.7  # 高不稳定性
-                            node.trigger_events = getattr(node, 'trigger_events', [])
-                            node.trigger_events.append(f"{liunian_branch}冲提纲({natal_branch})")
-                            
-                            # 流年冲提纲：极其严重的负权重
-                            A[i][liunian_branch_idx] -= 4.0  # 冲提纲的负权重（极其严重，提升）
-                            
-                            # [V55.0] 冲提纲时，日主能量也受影响
-                            for dm_node in self.engine.nodes:
-                                if dm_node.pillar_idx == 2 and dm_node.node_type == 'stem':
-                                    dm_node.trigger_events = getattr(dm_node, 'trigger_events', [])
-                                    dm_node.trigger_events.append(f"冲提纲影响日主")
-                                    # 日主能量也受影响
-                                    dm_node.activation_factor = getattr(dm_node, 'activation_factor', 1.0) * 0.7
-                                    break
-                        else:
-                            # 普通冲：能量受损，但不稳定性增加
-                            node.is_activated = True
-                            node.activation_factor = 0.5  # 能量减半（受损）
-                            node.instability_penalty = 0.3  # 不稳定性惩罚
-                            node.trigger_events = getattr(node, 'trigger_events', [])
-                            node.trigger_events.append(f"{liunian_branch}冲{natal_branch}")
-                            
-                            # 流年冲原局：流年对原局的影响权重极高（负权重）
-                            A[i][liunian_branch_idx] -= 1.5  # 冲的负权重（强烈冲击）
-        
-        # 2. 流年天干合原局天干（羁绊/化气）
-        if liunian_stem_idx is not None:
-            liunian_stem = self.engine.nodes[liunian_stem_idx].char
-            liunian_stem_element = self.engine.nodes[liunian_stem_idx].element
-            
-            for i, node in enumerate(self.engine.nodes):
-                if i == liunian_stem_idx:
-                    continue
-                
-                # 只处理天干节点
-                if node.node_type != 'stem':
-                    continue
-                
-                natal_stem = node.char
-                natal_element = node.element
-                
-                # 检查是否相合
-                combo_key = tuple(sorted([liunian_stem, natal_stem]))
-                if combo_key in STEM_COMBINATIONS or (liunian_stem, natal_stem) in STEM_COMBINATIONS:
-                    # 合化：视为羁绊或化气
-                    node.is_activated = True
-                    node.activation_factor = 1.5  # 合的能量增强
-                    node.trigger_events = getattr(node, 'trigger_events', [])
-                    node.trigger_events.append(f"{liunian_stem}合{natal_stem}")
-                    
-                    # 流年合原局：建立强连接
-                    A[i][liunian_stem_idx] += 1.2  # 合的权重
-                    
-                    # [V55.0] 检测官印相生：如果流年是官杀，合化后可能转化为印星
-                    # 找到日主
-                    for dm_node in self.engine.nodes:
-                        if dm_node.pillar_idx == 2 and dm_node.node_type == 'stem':
-                            dm_element = dm_node.element
-                            
-                            # 检查是否官印相生（流年官杀 -> 合化 -> 印星 -> 日主）
-                            officer_element = None
-                            for attacker, defender in CONTROL.items():
-                                if defender == dm_element:
-                                    officer_element = attacker
-                                    break
-                            resource_element = None
-                            for elem, target in GENERATION.items():
-                                if target == dm_element:
-                                    resource_element = elem
-                                    break
-                            
-                            # 如果流年是官杀，且原局有印星，可能官印相生
-                            if liunian_stem_element == officer_element and resource_element:
-                                # 检查是否有印星节点
-                                for res_node in self.engine.nodes:
-                                    if res_node.element == resource_element:
-                                        # 官印相生：加分
-                                        node.trigger_events.append(f"官印相生")
-                                        break
-                            break
-        
-        # 3. [V55.0] 检测流年地支为日主强根（帝旺、临官等）
-        if liunian_branch_idx is not None:
-            liunian_branch = self.engine.nodes[liunian_branch_idx].char
-            
-            # 找到日主节点（需要从 analyze 方法传入 day_master）
-            # 这里我们需要从节点中找到日主
-            day_master_char = None
-            for node in self.engine.nodes:
-                if node.pillar_idx == 2 and node.node_type == 'stem':
-                    day_master_char = node.char
-                    break
-            
-            if day_master_char:
-                # 检查流年地支是否为日主的强根
-                life_stage = TWELVE_LIFE_STAGES.get((day_master_char, liunian_branch))
-                
-                if life_stage in ['帝旺', '临官', '长生']:
-                    # 找到日主节点索引
-                    for i, node in enumerate(self.engine.nodes):
-                        if node.pillar_idx == 2 and node.node_type == 'stem' and node.char == day_master_char:
-                            # 流年是日主的强根：大幅提升日主能量
-                            strong_root_bonus = LIFE_STAGE_COEFFICIENTS.get(life_stage, 1.5)
-                            node.is_activated = True
-                            node.activation_factor = strong_root_bonus  # 强根加成
-                            node.trigger_events = getattr(node, 'trigger_events', [])
-                            node.trigger_events.append(f"流年{liunian_branch}为日主{life_stage}(强根)")
-                            
-                            # 流年强根对日主的支持权重极高
-                            A[i][liunian_branch_idx] += 2.5  # 强根支持的正权重（提升）
-                            break
-        
-        # 4. 流年对所有节点的基础影响（流年是君，权力最大）
-        for liunian_idx in liunian_nodes:
-            liunian_node = self.engine.nodes[liunian_idx]
-            liunian_element = liunian_node.element
-            
-            for i, node in enumerate(self.engine.nodes):
-                if i == liunian_idx:
-                    continue
-                
-                # 流年对所有节点都有基础影响（但权重较小）
-                # 这个影响会在传播中体现
-                if abs(A[i][liunian_idx]) < 0.1:  # 如果没有其他关系
-                    # 根据五行关系添加基础权重
-                    if GENERATION.get(liunian_element) == node.element:
-                        A[i][liunian_idx] += 0.2  # 流年生原局
-                    elif CONTROL.get(liunian_element) == node.element:
-                        A[i][liunian_idx] -= 0.2  # 流年克原局
+        """Deprecated legacy function. Liunian logic is now in QuantumEntanglementProcessor."""
+        pass
 

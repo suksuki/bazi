@@ -16,7 +16,7 @@ sys.path.insert(0, str(project_root))
 from core.phase1_auto_calibrator import Phase1AutoCalibrator
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 from core.models.config_model import ConfigModel
-from core.prob_math import ProbValue, prob_compare
+from core.math import ProbValue, prob_compare
 
 def load_test_cases():
     """加载测试案例"""

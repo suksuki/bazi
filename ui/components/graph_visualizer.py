@@ -16,7 +16,7 @@ import networkx as nx
 
 # V13.0: 处理 ProbValue 转换
 try:
-    from core.prob_math import ProbValue
+    from core.math import ProbValue
 except ImportError:
     ProbValue = None
 

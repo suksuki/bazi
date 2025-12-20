@@ -252,7 +252,7 @@ class PhysicsProcessor(BaseProcessor):
         interactions_config = context.get('interactions_config', {})
         combo_physics = interactions_config.get('comboPhysics', {})
         branch_events = interactions_config.get('branchEvents', {})
-        vault_physics = interactions_config.get('vaultPhysics', {})
+        vault_physics = interactions_config.get('vault', {})
         stem_five = interactions_config.get('stemFiveCombination', {})
         
         # Extract stems and branches

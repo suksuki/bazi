@@ -282,7 +282,7 @@ class TestQuantumLabProbValueIntegration(unittest.TestCase):
     def setUp(self):
         """测试前准备"""
         self.controller = QuantumLabController()
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         self.ProbValue = ProbValue
     
     def test_energy_calculation_returns_probvalue(self):
@@ -310,7 +310,7 @@ class TestQuantumLabProbValueIntegration(unittest.TestCase):
             
             if initial_energy:
                 # V13.0: 能量应该是ProbValue
-                from core.prob_math import ProbValue
+                from core.math import ProbValue
                 # 注意：在实际实现中，能量可能已经是ProbValue
                 # 这里验证数据结构正确
                 self.assertIsInstance(initial_energy, list)

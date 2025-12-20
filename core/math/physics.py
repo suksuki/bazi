@@ -17,7 +17,7 @@ def calculate_control_damage(attacker_energy: float, defender_energy: float, bas
     if attacker_energy <= 0 or defender_energy <= 0:
         return 0.0
 
-    k_smoothness = 20.0 
+    k_smoothness = 5.0 
     diff = attacker_energy - defender_energy
     
     # Sigmoid 激活

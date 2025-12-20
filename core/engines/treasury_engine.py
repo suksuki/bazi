@@ -42,14 +42,14 @@ class TreasuryEngine:
 
     def get_vault_params(self):
         """Extract Vault Physics params from full config"""
-        # Try finding in 'interactions' -> 'vaultPhysics' (V2.5 Schema)
+        # Try finding in 'interactions' -> 'vault' (V11.0 Schema) or 'vaultPhysics' (Legacy)
         inter = self.config.get('interactions', {})
-        vp = inter.get('vaultPhysics', {})
+        vp = inter.get('vault', inter.get('vaultPhysics', {}))
         
         return {
-            'threshold': vp.get('threshold', 20.0),
+            'threshold': vp.get('threshold', 3.5),
             'sealedDamping': vp.get('sealedDamping', 0.4),
-            'openBonus': vp.get('openBonus', 1.5),
+            'openBonus': vp.get('openBonus', 1.8),
             'punishmentOpens': vp.get('punishmentOpens', False),
             'breakPenalty': vp.get('breakPenalty', 0.5)
         }

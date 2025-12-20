@@ -35,6 +35,30 @@ class FlowEngine:
         """[V8.0] Set the month branch for Phase Change calculations."""
         self.month_branch = branch
     
+    @staticmethod
+    def calculate_control_damage(attacker_energy: float, defender_energy: float, base_impact: float = 0.8) -> float:
+        """
+        [V11.0 Tuning] Sigmoid 伤害模型。
+        使用 Sigmoid 函数计算攻防差导致的最终能量折损。
+        """
+        if attacker_energy <= 0 or defender_energy <= 0:
+            return 0.0
+
+        # [V11.0 Tuning] Sigmoid Sensitivity Adjustment
+        # 原 k=20.0 -> 新 k=5.0
+        # 物理含义: 提升分辨率。现在 ±2.0 的能量差即可触发显著的攻防判定。
+        k_smoothness = 5.0 
+        
+        diff = attacker_energy - defender_energy
+        
+        # Sigmoid 激活
+        from core.math import expit
+        activation = expit(diff / k_smoothness)
+        
+        raw_damage = defender_energy * base_impact * activation
+        max_allowed = defender_energy * 0.5 # 50% 硬钳位保护
+        
+        return min(raw_damage, max_allowed)
 
     def simulate_flow(self, initial_energies: dict, dm_elem: str = None, month_branch: str = None) -> dict:
         """

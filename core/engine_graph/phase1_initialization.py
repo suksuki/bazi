@@ -69,6 +69,29 @@ class NodeInitializer:
             'year': 0.8, 'month': 1.2, 'day': 1.0, 'hour': 0.9
         })
         
+        # [V11.0] 时空权重
+        spacetime_config = self.config.get('spacetime', {})
+        luck_pillar_weight = spacetime_config.get('luckPillarWeight', 1.0)
+        annual_pillar_weight = spacetime_config.get('annualPillarWeight', 1.2)
+        
+        # [V11.0] 计算地理与时代宏观修正系数
+        macro_config = self.config.get('interactions', {}).get('macroPhysics', {})
+        geo_config = spacetime_config.get('geo', {})
+        era_config = spacetime_config.get('era', {})
+        era_bonus = era_config.get('eraBonus', macro_config.get('eraBonus', 0.2))
+        
+        # 初始化或合并地理修正
+        if geo_modifiers is None:
+            geo_modifiers = {}
+        else:
+            geo_modifiers = geo_modifiers.copy()
+            
+        # 融合时代修正：九运离火加持火 (V11.0 时代场)
+        era_element = era_config.get('eraElement') or macro_config.get('eraElement')
+        if era_element and era_element.lower() == 'fire':
+            geo_modifiers['fire'] = geo_modifiers.get('fire', 1.0) * (1.0 + era_bonus)
+            geo_modifiers['water'] = geo_modifiers.get('water', 1.0) * (1.0 - era_bonus * 0.5)
+        
         # 1. 创建原局节点（8个：4天干 + 4地支）
         pillar_names = ['year', 'month', 'day', 'hour']
         
@@ -119,9 +142,9 @@ class NodeInitializer:
                 # [V52.0] 任务 B：记录通根地支，用于十二长生系数计算
                 stem_node.root_branch = branch_char
             
-            # 计算地支的藏干能量（壳核模型）
+            # 计算地支的藏干能量（壳核模型）- V11.0 传入地理修正
             branch_node.hidden_stems_energy = self._calculate_hidden_stems_energy(
-                branch_char, physics_config
+                branch_char, physics_config, geo_modifiers
             )
         
         # [V39.0] 在计算能量之前，先应用化气逻辑
@@ -137,13 +160,11 @@ class NodeInitializer:
             luck_stem = luck_pillar[0]
             luck_branch = luck_pillar[1]
             
-            # [V55.0] 大运权重：大运重地支，地支权重 = 1.2x 月令权重
-            # [V12.1] 参数化：从配置读取大运权重倍数
-            month_weight = pillar_weights.get('month', 1.2)
+            # [V11.0] 使用 spacetime.luckPillarWeight 作为基准权重
             dayun_branch_multiplier = physics_config.get('dayun_branch_multiplier', 1.2)
             dayun_stem_multiplier = physics_config.get('dayun_stem_multiplier', 0.8)
-            dayun_branch_weight = month_weight * dayun_branch_multiplier  # 大运地支权重
-            dayun_stem_weight = month_weight * dayun_stem_multiplier      # 大运天干权重
+            dayun_branch_weight = luck_pillar_weight * dayun_branch_multiplier
+            dayun_stem_weight = luck_pillar_weight * dayun_stem_multiplier
             
             luck_stem_node = GraphNode(
                 node_id=node_id, char=luck_stem, node_type='stem',
@@ -177,9 +198,8 @@ class NodeInitializer:
                 pillar_idx=5, pillar_name='year_stem'
             )
             year_stem_node.is_liunian = True  # [V55.0] 标记为流年节点
-            # [V12.1] 参数化：从配置读取流年权力系数
-            liunian_power = physics_config.get('liunian_power', 2.0)
-            year_stem_node.liunian_power = liunian_power  # [V55.0] 流年权力系数
+            # [V11.0] 使用 spacetime.annualPillarWeight 作为流年权力系数
+            year_stem_node.liunian_power = annual_pillar_weight
             node_id += 1
             
             year_branch_node = GraphNode(
@@ -188,7 +208,7 @@ class NodeInitializer:
                 pillar_idx=5, pillar_name='year_branch'
             )
             year_branch_node.is_liunian = True  # [V55.0] 标记为流年节点
-            year_branch_node.liunian_power = liunian_power  # [V55.0] 流年权力系数（复用上面读取的值）
+            year_branch_node.liunian_power = annual_pillar_weight
             node_id += 1
             
             self.engine.nodes.append(year_stem_node)
@@ -424,7 +444,8 @@ class NodeInitializer:
         return any(stem_char == hidden[0] for hidden in hidden_map)
     
     def _calculate_hidden_stems_energy(self, branch_char: str, 
-                                       physics_config: Dict) -> Dict[str, float]:
+                                       physics_config: Dict,
+                                       geo_modifiers: Dict[str, float] = None) -> Dict[str, float]:
         """
         计算地支的藏干能量（壳核模型）。
         
@@ -444,6 +465,11 @@ class NodeInitializer:
             if idx < len(ratio_values):
                 element = self.engine.STEM_ELEMENTS.get(stem_char, 'earth')
                 energy = weight * ratio_values[idx] / 10.0  # 归一化
+                
+                # [V11.0] 应用地理/时代环境修正到隐藏气分布
+                if geo_modifiers and element in geo_modifiers:
+                    energy *= geo_modifiers[element]
+                    
                 energy_dist[element] = energy_dist.get(element, 0.0) + energy
         
         return energy_dist
@@ -595,6 +621,7 @@ class NodeInitializer:
         if node.node_type == 'branch' and node.hidden_stems_energy:
             # 地支的能量来自藏干的加权和
             total_hidden = sum(node.hidden_stems_energy.values())
+            # V12.6: 修复 Bug - 之前此处直接赋值覆盖了 pillar_weight 和 geo_modifiers
             energy = BASE_SCORE * pillar_weight * total_hidden
         
         # 5. 地理修正

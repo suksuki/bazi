@@ -74,10 +74,10 @@ DEFAULT_FULL_ALGO_PARAMS = {
         # [V2.4 第6条] 天干五合
         # [V13.3 Phase 2] 量子纠缠参数：用于计算干支的合化与刑冲（对应 Group F）
         "stemFiveCombination": {
-            "threshold": 1.5,      # [Phase 2] 合化阈值：需要月令支持度 > 1.5 才能合化成功（决定甲己合土是"化气"还是"羁绊"）
-            "bonus": 1.5,          # [Phase 2] 合化增益：如果合化成功（如甲己化土），产生的新土能量的倍率
-            "penalty": 0.5,        # [Phase 2] 合化失败惩罚：合而不化时，双方能量均受损的折损率
-            "jealousyDamping": 0.3  # [NEW V3.0] 争合损耗
+            "//_COMMENT": "V11.1 Tuning: Normalized Energy Scale (~4.0)",
+            "threshold": 3.0,     # [重校] 合化阈值: 必须有 3.0 以上的能量底座才能合化
+            "bonus": 1.5,
+            "penalty": 0.7        # 羁绊损耗
         },
         # [NEW V3.0] 地支合局物理 (Combo Physics)
         "comboPhysics": {
@@ -99,11 +99,11 @@ DEFAULT_FULL_ALGO_PARAMS = {
             
             "useSolarTime": True      # 使用真太阳时
         },
-        # [NEW V3.0] 墓库物理 (Vault Physics)
-        "vaultPhysics": {
-            "threshold": 20.0,       # 界定 库vs墓 的能量阈值
+        # [NEW V11.0] 墓库物理 (Vault) - Realigned to Normalized Energy (~4.0)
+        "vault": {
+            "threshold": 3.5,       # 界定 库vs墓 的能量阈值
             "sealedDamping": 0.4,    # 闭库时的能量折损率
-            "openBonus": 1.5,        # 冲开后的爆发倍率
+            "openBonus": 1.8,        # 冲开后的爆发倍率
             "punishmentOpens": False,# 是否允许刑开库
             "breakPenalty": 0.5      # 冲破墓的惩罚系数
         },
@@ -118,13 +118,13 @@ DEFAULT_FULL_ALGO_PARAMS = {
              
              # [V13.5] 三合 (Three Harmony) - 120°相位，共振质变
              "threeHarmony": {
-                 "bonus": 2.0,                          # 能量翻倍（质变级）
+                 "bonus": 1.6,                          # [V11.1] 1.6
                  "transform": True                      # 允许改变五行属性（化气）
              },
              
              # [V13.5] 半合 (Half Harmony) - 不完全共振
              "halfHarmony": {
-                 "bonus": 1.4,                          # 能量中等提升
+                 "bonus": 1.25,                          # [V11.1] 1.25
                  "transform": False                     # 通常不彻底改变属性，除非月令支持
              },
              
@@ -133,18 +133,27 @@ DEFAULT_FULL_ALGO_PARAMS = {
                  "bonus": 1.1,                          # 能量微升（暗拱）
                  "transform": False
              },
+             # [V12.0] Wave Physics Parameters
+             "clashPhase": 2.618,                      # 150度 (相消)
+             "clashEntropy": 0.6,
+             "punishPhase": 2.513,                     # 144度
+             "punishEntropy": 0.7,
+             "resonanceQ": 1.5,                        # 土刑激旺
              
              # [V13.5] 六合 (Six Harmony) - 磁力吸附，物理羁绊
              "sixHarmony": {
-                 "bonus": 1.3,                          # 能量提升
-                 "bindingPenalty": 0.2                  # 羁绊惩罚：活性/对外输出降低 20%
+                 "bonus": 1.15,                          # [V11.1] 1.15
+                 "bindingPenalty": 0.2,                   # 羁绊惩罚：活性/对外输出降低 20%
+                 "phase": 0.332                         # 19度 (相长)
              },
              
              # [V13.9] 三会局 (Three Meetings) - 方局，力量最强（纯暴力）
              "threeMeeting": {
                  "bonus": 2.5,                          # 能量最强（方局）
                  "transform": True                      # 必须改变五行（整个家族站在一起）
-             }
+             },
+             # [V11.1 新增] 土刑物理参数
+             "earthlyPunishmentBonus": 1.3
         },
         # Legacy Treasury/Skull (Keep for compatibility)
         "treasury": { "bonus": SCORE_TREASURY_BONUS },
@@ -165,10 +174,11 @@ DEFAULT_FULL_ALGO_PARAMS = {
         # [V13.3 Phase 2] 空间场参数 (Spatial Field)
         # 用于计算距离对生克的影响（对应 Group C 在动态中的表现）
         "spatialDecay": {
-            "gap0": 1.0,  # 同柱（如甲寅中的甲和寅）：无衰减
-            "gap1": 0.9,  # 相邻（年干生月干）：损失小
-            "gap2": 0.6,  # 隔一柱（年干生日干）：损失大
-            "gap3": 0.3   # 隔两柱（年干生时干）：遥不可及
+            "//_COMMENT": "V11.1 Tuning: Flatter Field for Low Energy Level",
+            "gap0": 1.0,
+            "gap1": 0.9,
+            "gap2": 0.75,
+            "gap3": 0.6
         },
         
         # Legacy/Compatibility Keys (保留向后兼容)
@@ -200,7 +210,17 @@ DEFAULT_FULL_ALGO_PARAMS = {
 
     # === 面板 5: 时空修正 (Spacetime Modifiers) ===
     "spacetime": {
-        "luckPillarWeight": 0.5,    # 大运背景场权重
+        "luckPillarWeight": 1.5,    # [V11.0] 大运背景场权重 (Model D Fit)
+        "annualPillarWeight": 0.5,  # [V11.0] 流年动态场权重 (Model D Fit)
+        "geo": {
+            "//_COMMENT": "V11.0 Module C: Macro Physics Boost",
+            "latitudeHeat": 0.08,   # 每10度热力修正系数
+            "latitudeCold": 0.08    # 每10度冷力修正系数
+        },
+        "era": {
+            "eraElement": "fire",   # 当前九运五行
+            "eraBonus": 0.25        # 时代红利系数
+        },
         "solarTimeImpact": 0.0,     # 真太阳时修正 (0=Off)
         "regionClimateImpact": 0.0  # 地域寒暖修正 (0=Off)
     },

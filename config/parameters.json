@@ -36,10 +36,9 @@
   },
   "interactions": {
     "stemFiveCombination": {
-      "threshold": 1.5,
+      "threshold": 3.0,
       "bonus": 1.5,
-      "penalty": 0.5,
-      "jealousyDamping": 0.3
+      "penalty": 0.7
     },
     "comboPhysics": {
       "trineBonus": 2.5,
@@ -57,23 +56,28 @@
       "invertSeasons": false,
       "useSolarTime": true
     },
-    "vaultPhysics": {
-      "threshold": 20.0,
+    "vault": {
+      "//_COMMENT": "V12.0 Tuning: Adapted to Wave Physics",
+      "threshold": 3.0,
       "sealedDamping": 0.4,
-      "openBonus": 1.5,
-      "punishmentOpens": false,
-      "breakPenalty": 0.5
+      "openBonus": 2.5,
+      "breakPenalty": 0.5,
+      "punishmentOpens": false
     },
     "branchEvents": {
       "clashScore": -5.0,
       "harmDamping": 0.2,
-      "clashDamping": 0.4,
+      "clashPhase": 2.618,
+      "clashEntropy": 0.6,
+      "punishPhase": 2.513,
+      "punishEntropy": 0.7,
+      "resonanceQ": 1.5,
       "threeHarmony": {
-        "bonus": 2.0,
+        "bonus": 1.6,
         "transform": true
       },
       "halfHarmony": {
-        "bonus": 1.4,
+        "bonus": 1.25,
         "transform": false
       },
       "archHarmony": {
@@ -81,8 +85,9 @@
         "transform": false
       },
       "sixHarmony": {
-        "bonus": 1.3,
-        "bindingPenalty": 0.2
+        "bonus": 1.15,
+        "bindingPenalty": 0.2,
+        "phase": 0.332
       },
       "threeMeeting": {
         "bonus": 2.5,
@@ -104,8 +109,8 @@
     "spatialDecay": {
       "gap0": 1.0,
       "gap1": 0.9,
-      "gap2": 0.6,
-      "gap3": 0.3
+      "gap2": 0.75,
+      "gap3": 0.6
     },
     "systemEntropy": 0.05,
     "outputDrainPenalty": 1.2,
@@ -124,7 +129,15 @@
     }
   },
   "spacetime": {
-    "luckPillarWeight": 0.5,
+    "luckPillarWeight": 1.5,
+    "annualPillarWeight": 0.5,
+    "geo": {
+      "latitudeHeat": 0.08,
+      "latitudeCold": 0.08
+    },
+    "era": {
+      "eraBonus": 0.25
+    },
     "solarTimeImpact": 0.0,
     "regionClimateImpact": 0.0
   },

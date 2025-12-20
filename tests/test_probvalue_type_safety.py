@@ -25,7 +25,7 @@ import json
 import numpy as np
 from typing import List, Dict, Any
 
-from core.prob_math import ProbValue, prob_compare
+from core.math import ProbValue, prob_compare
 
 
 class TestProbValueTypeSafety(unittest.TestCase):
@@ -149,7 +149,7 @@ class TestEngineGraphProbValueIntegration(unittest.TestCase):
         self.engine.initialize_nodes(self.bazi_list, self.day_master)
         
         # V13.0: 节点能量始终是 ProbValue
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         for node in self.engine.nodes:
             # V13.0: 验证能量是 ProbValue
@@ -168,7 +168,7 @@ class TestEngineGraphProbValueIntegration(unittest.TestCase):
         """测试能量列表（V13.0: 保留 ProbValue，仅在可视化时转换）"""
         self.engine.initialize_nodes(self.bazi_list, self.day_master)
         
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # V13.0: 获取初始能量列表（保留 ProbValue）
         initial_energy = []
@@ -211,7 +211,7 @@ class TestPhase1CalibratorProbValue(unittest.TestCase):
     
     def test_self_team_energy_prob_initialization(self):
         """测试 self_team_energy_prob 的初始化（V13.0: 全程使用 ProbValue）"""
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # V13.0: 模拟 Group A 的逻辑（全程使用 ProbValue）
         self_team_energy_prob = ProbValue(0.0, std_dev_percent=0.1)
@@ -232,7 +232,7 @@ class TestPhase1CalibratorProbValue(unittest.TestCase):
     
     def test_prob_compare_function(self):
         """测试 prob_compare 函数"""
-        from core.prob_math import prob_compare
+        from core.math import prob_compare
         
         val_a = ProbValue(50.0, std_dev_percent=0.1)
         val_b = ProbValue(40.0, std_dev_percent=0.1)
@@ -253,7 +253,7 @@ class TestGraphVisualizerProbValue(unittest.TestCase):
     def test_energy_list_conversion_for_plotly(self):
         """测试能量列表转换用于 Plotly"""
         from ui.components.graph_visualizer import _convert_energy_list
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # 创建包含 ProbValue 的能量列表
         energy_list = [
@@ -276,7 +276,7 @@ class TestGraphVisualizerProbValue(unittest.TestCase):
     def test_json_serialization_for_plotly(self):
         """测试 Plotly 图表的 JSON 序列化"""
         import plotly.graph_objects as go
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # 创建包含转换后数据的图表
         node_labels = ['Node1', 'Node2', 'Node3']
@@ -307,7 +307,7 @@ class TestComprehensiveProbValueScenarios(unittest.TestCase):
         """测试真实场景：完整的能量计算流程（V13.0: 全程使用 ProbValue）"""
         from core.engine_graph import GraphNetworkEngine
         from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # 初始化引擎
         engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)

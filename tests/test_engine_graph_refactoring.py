@@ -93,7 +93,7 @@ class TestGraphNetworkEngineRefactoring(unittest.TestCase):
         
         # 验证能量非负
         for i, energy in enumerate(H_final):
-            from core.prob_math import ProbValue
+            from core.math import ProbValue
             if isinstance(energy, ProbValue):
                 self.assertGreaterEqual(energy.mean, 0, f"节点 {i} 的能量应为非负")
             else:

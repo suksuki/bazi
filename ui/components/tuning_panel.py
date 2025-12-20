@@ -76,6 +76,20 @@ def 初始化界面状态(配置数据, 强制=False):
         'p2_combine_penalty': 天干合.get('penalty', 0.5),
         'p2_jealousy': 天干合.get('jealousyDamping', 0.3),
         'p2_clash_damping': 事件.get('clashDamping', 0.4),
+        # 墓库 (Vault) - V11.0
+        'p2_vault_thresh': 交互.get('vault', {}).get('threshold', 3.5),
+        'p2_vault_sealed': 交互.get('vault', {}).get('sealedDamping', 0.4),
+        'p2_vault_open': 交互.get('vault', {}).get('openBonus', 1.8),
+        'p2_vault_break': 交互.get('vault', {}).get('breakPenalty', 0.5),
+    })
+    
+    # 时空背景 (Spacetime) - V11.0
+    时空 = 配置数据.get('spacetime', {})
+    参数映射.update({
+        'st_luck_w': 时空.get('luckPillarWeight', 1.5),
+        'st_annual_w': 时空.get('annualPillarWeight', 0.5),
+        'st_geo_heat': 时空.get('geo', {}).get('latitudeHeat', 0.08),
+        'st_era_bonus': 时空.get('era', {}).get('eraBonus', 0.25),
     })
     
     # 合局 (Harmony)
@@ -96,11 +110,18 @@ def 初始化界面状态(配置数据, 强制=False):
         'f_ri_wp': 流转.get('resourceImpedance', {}).get('weaknessPenalty', 0.5),
         'f_ov_mdr': 流转.get('outputViscosity', {}).get('maxDrainRate', 0.6),
         'f_ov_df': 流转.get('outputViscosity', {}).get('drainFriction', 0.2),
-        'f_gen_drain': 流转.get('generationDrain', 0.3),
-        'f_ctrl_imp': 流转.get('controlImpact', 0.5),
+        'p2_gen_drain': 流转.get('generationDrain', 0.3),
+        'p2_ctrl_imp': 流转.get('controlImpact', 0.5),
         'f_damp_fac': 流转.get('dampingFactor', 0.1),
         'pc_scorched': 相变.get('scorchedEarthDamping', 0.15),
         'pc_frozen': 相变.get('frozenWaterDamping', 0.3),
+        # V12.1 波动力学 (Wave Physics)
+        'wp_clash_phase': 事件.get('clashPhase', 2.618),
+        'wp_clash_entropy': 事件.get('clashEntropy', 0.6),
+        'wp_punish_phase': 事件.get('punishPhase', 2.513),
+        'wp_punish_entropy': 事件.get('punishEntropy', 0.7),
+        'wp_resonance_q': 事件.get('resonanceQ', 1.5),
+        'wp_harm_damping': 事件.get('harmDamping', 0.2),
     })
     
     # 旺衰与 GAT (Strength & GAT)
@@ -161,15 +182,40 @@ def merge_sidebar_values_to_config(config):
     if 'p2_combine_bonus' in st.session_state: 天干合['bonus'] = st.session_state['p2_combine_bonus']
     if 'p2_combine_penalty' in st.session_state: 天干合['penalty'] = st.session_state['p2_combine_penalty']
     if 'p2_jealousy' in st.session_state: 天干合['jealousyDamping'] = st.session_state['p2_jealousy']
-    if 'p2_clash_damping' in st.session_state: 事件['clashDamping'] = st.session_state['p2_clash_damping']
+    
+    # V12.1 波动力学参数回写
+    if 'wp_clash_phase' in st.session_state: 事件['clashPhase'] = st.session_state['wp_clash_phase']
+    if 'wp_clash_entropy' in st.session_state: 事件['clashEntropy'] = st.session_state['wp_clash_entropy']
+    if 'wp_punish_phase' in st.session_state: 事件['punishPhase'] = st.session_state['wp_punish_phase']
+    if 'wp_punish_entropy' in st.session_state: 事件['punishEntropy'] = st.session_state['wp_punish_entropy']
+    if 'wp_resonance_q' in st.session_state: 事件['resonanceQ'] = st.session_state['wp_resonance_q']
+    if 'wp_harm_damping' in st.session_state: 事件['harmDamping'] = st.session_state['wp_harm_damping']
+    
+    # 墓库 (Vault)
+    库 = 交互.setdefault('vault', {})
+    if 'p2_vault_thresh' in st.session_state: 库['threshold'] = st.session_state['p2_vault_thresh']
+    if 'p2_vault_sealed' in st.session_state: 库['sealedDamping'] = st.session_state['p2_vault_sealed']
+    if 'p2_vault_open' in st.session_state: 库['openBonus'] = st.session_state['p2_vault_open']
+    if 'p2_vault_break' in st.session_state: 库['breakPenalty'] = st.session_state['p2_vault_break']
+
+    # 时空背景 (Spacetime)
+    时空 = config.setdefault('spacetime', {})
+    if 'st_luck_w' in st.session_state: 时空['luckPillarWeight'] = st.session_state['st_luck_w']
+    if 'st_annual_w' in st.session_state: 时空['annualPillarWeight'] = st.session_state['st_annual_w']
+    
+    geo = 时空.setdefault('geo', {})
+    if 'st_geo_heat' in st.session_state: geo['latitudeHeat'] = st.session_state['st_geo_heat']
+    
+    era = 时空.setdefault('era', {})
+    if 'st_era_bonus' in st.session_state: era['eraBonus'] = st.session_state['st_era_bonus']
 
     # 能量流转
     流转 = config.setdefault('flow', {})
     if 'f_ri_b' in st.session_state: 流转.setdefault('resourceImpedance', {})['base'] = st.session_state['f_ri_b']
     if 'f_ri_wp' in st.session_state: 流转.setdefault('resourceImpedance', {})['weaknessPenalty'] = st.session_state['f_ri_wp']
     if 'f_ov_df' in st.session_state: 流转.setdefault('outputViscosity', {})['drainFriction'] = st.session_state['f_ov_df']
-    if 'f_gen_drain' in st.session_state: 流转['generationDrain'] = st.session_state['f_gen_drain']
-    if 'f_ctrl_imp' in st.session_state: 流转['controlImpact'] = st.session_state['f_ctrl_imp']
+    if 'p2_gen_drain' in st.session_state: 流转['generationDrain'] = st.session_state['p2_gen_drain']
+    if 'p2_ctrl_imp' in st.session_state: 流转['controlImpact'] = st.session_state['p2_ctrl_imp']
     if 'f_damp_fac' in st.session_state: 流转['dampingFactor'] = st.session_state['f_damp_fac']
 
     # 相变
@@ -219,118 +265,176 @@ def render_tuning_panel(controller, golden_config):
         deep_merge_params(fp, golden_config)
 
     # === UI 渲染开始 ===
-    st.sidebar.markdown("### 🧬 量子真言 | 调优控制台")
+    st.sidebar.markdown("""
+        <style>
+        /* 消除侧边栏顶部空白，但保持合理间距 */
+        [data-testid="stSidebarNav"] { display: none; }
+        section[data-testid="stSidebar"] > div { padding-top: 0.5rem !important; }
+        
+        /* 针对侧边栏主容器的精细调整 */
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+            gap: 0.5rem !important;
+        }
+        
+        /* 标签页样式优化 */
+        .stTabs [data-baseweb="tab-list"] { 
+            gap: 4px; 
+            margin-bottom: 10px;
+        }
+        .stTabs [data-baseweb="tab"] { 
+            padding: 6px 10px; 
+            background: rgba(255,255,255,0.03); 
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        /* 滑块样式优化 */
+        .stSlider { 
+            padding-bottom: 5px; 
+            margin-top: 0px;
+        }
+        .stSlider label { 
+            font-size: 0.75rem !important; 
+            font-weight: 500;
+            /* margin-bottom: -15px !important; REMOVED to fix overlap */
+            padding-bottom: 2px !important;
+        }
+        .stSlider [data-testid="stWidgetLabel"] p {
+            font-size: 0.75rem !important;
+        }
+        
+        /* 分隔线间距 */
+        hr { margin: 1rem 0 !important; }
+        
+        /* 标题间距 */
+        .tab-header {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            display: block;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #4facfe; /* 加入一点色彩区分 */
+        }
+        </style>
+        <style>
+        /* 更紧凑的布局 - 通用调整 */
+        div[data-testid="stExpander"] div[role="button"] p {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .stNumberInput { padding-bottom: 2px !important; margin-top: -2px !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.sidebar.markdown("### 🎚️ 量子实验室 | 调音混音台")
     
     # 操作按钮组
     列1, 列2 = st.sidebar.columns(2)
     with 列1:
-        if st.button("🔃 从文件同步", help="从 parameters.json 强制重新加载，放弃未保存的手动调整"):
+        if st.button("🔃 同步", help="从 parameters.json 重新加载", use_container_width=True):
             最新配置 = config_model.load_config()
             初始化界面状态(最新配置, 强制=True)
             st.rerun()
     with 列2:
-        if st.button("💾 保存到文件", help="将当前界面所有的手动滑块参数同步到 parameters.json"):
+        if st.button("💾 固化", help="保存推子参数", use_container_width=True):
             待保存配置 = merge_sidebar_values_to_config(copy.deepcopy(fp))
             if config_model.save_config(待保存配置, merge=True):
-                st.sidebar.success("已同步到参数表!")
+                st.sidebar.success("已固化!")
             else:
-                st.sidebar.error("同步失败")
+                st.sidebar.error("失败")
 
     st.sidebar.divider()
 
-    # --- 层次化展开栏 ---
-    
-    # Phase 1: 基础物理场
-    with st.sidebar.expander("🌍 Phase 1: 初始能量场", expanded=True):
-        st.markdown("**📍 宫位引力 (Pillar Weights)**")
-        st.slider("年柱 (Year)", 0.5, 2.0, key='pg_y', step=0.05)
-        st.slider("月令 (Month) ⭐", 0.5, 2.0, key='pg_m', step=0.05)
-        st.slider("日主 (Day)", 0.5, 2.0, key='pg_d', step=0.05)
-        st.slider("时柱 (Hour)", 0.5, 2.0, key='pg_h', step=0.05)
-        
-        st.divider()
-        st.markdown("**🌰 藏干比例 (Hidden Stems)**")
-        c1, c2, c3 = st.columns(3)
-        with c1: st.number_input("本气", 0.0, 1.0, key='hs_main', step=0.05)
-        with c2: st.number_input("中气", 0.0, 1.0, key='hs_mid', step=0.05)
-        with c3: st.number_input("余气", 0.0, 1.0, key='hs_rem', step=0.05)
-        
-        st.divider()
-        st.markdown("**⚡ 季节衰减 (Seasonality)**")
-        st.slider("旺 (Prosperous)", 1.0, 2.0, key='sw_wang', step=0.05)
-        st.slider("相 (Assist)", 0.8, 1.5, key='sw_xiang', step=0.05)
-        st.slider("休 (Rest)", 0.6, 1.2, key='sw_xiu', step=0.05)
-        st.slider("囚 (Trapped)", 0.4, 1.0, key='sw_qiu', step=0.05)
-        st.slider("死 (Dead)", 0.2, 0.8, key='sw_si', step=0.05)
-        
-        st.divider()
-        st.slider("自刑惩罚系数", 0.0, 1.0, key='physics_self_punishment_damping', step=0.05)
+    # --- 调音台标签页 ---
+    标签_主控, 标签_初始, 标签_交互, 标签_时空 = st.sidebar.tabs(["🎛️ 主控", "🌱 初始", "⚡ 交互", "🌌 时空"])
 
-    # Phase 2: 动态交互层
-    with st.sidebar.expander("⚡ Phase 2: 动态生克场", expanded=True):
-        st.info("ℹ️ V10.0 内核锁定：交互逻辑基于 Sigmoid 非线性算子")
-        st.markdown("**🧲 性质参数**")
-        st.slider("合化阈值", 0.8, 2.5, key='p2_combine_threshold', step=0.1)
-        st.slider("合化增益", 1.0, 2.5, key='p2_combine_bonus', step=0.1)
-        st.slider("合化失败折损", 0.0, 1.0, key='p2_combine_penalty', step=0.05)
-        st.slider("争合损耗 (Jealousy)", 0.0, 1.0, key='p2_jealousy', step=0.05)
-        st.slider("冲的折损 (Clash)", 0.0, 1.0, key='p2_clash_damping', step=0.05)
-        
-        st.divider()
-        st.markdown("**🤝 合局物理 (Harmony)**")
-        st.slider("三合增益", 1.0, 3.0, key='p2_three_harmony_bonus', step=0.1)
-        st.slider("半合增益", 1.0, 2.0, key='p2_half_harmony_bonus', step=0.1)
-        st.slider("三会增益", 1.5, 4.0, key='p2_three_meeting_bonus', step=0.1)
-        st.slider("六合增益", 1.0, 2.0, key='p2_six_harmony_bonus', step=0.1)
-        st.slider("六合羁绊惩罚", 0.0, 1.0, key='p2_six_harmony_binding', step=0.05)
+    # --- 标签页 1: 主控 (Particle Weights / Ten Gods) ---
+    with 标签_主控:
+        st.markdown('<span class="tab-header">⚛️ 十神权重推子 (God Mixers) 🎖️</span>', unsafe_allow_html=True)
+        consts = get_constants()
+        最终十神权重 = {}
+        for i in range(0, 10, 2):
+            c1, c2 = st.columns(2)
+            for idx, col in enumerate([c1, c2]):
+                if i + idx < len(consts.TEN_GODS):
+                    神 = consts.TEN_GODS[i+idx]
+                    键 = f"pw_p2_{神}"
+                    with col:
+                        值 = st.slider(f"{神} 🎖️", 50, 150, key=键, step=5)
+                        最终十神权重[神] = 值 / 100.0
 
-    # 粒子结构
-    with st.sidebar.expander("⚛️ 粒子结构 (Structure)", expanded=True):
-        st.slider("通根系数", 0.5, 2.0, key='s_rw', step=0.1)
-        st.slider("透干加成", 1.0, 3.0, key='s_eb', step=0.1)
-        st.slider("同柱物理加成", 1.0, 5.0, key='s_sp', step=0.1)
+    # --- 标签页 2: 初始能量场 (Phase 1 & Structure) ---
+    with 标签_初始:
+        with st.expander("📍 宫位权重 (Pillars) 🎖️", expanded=True):
+            c1, c2 = st.columns(2)
+            with c1: st.slider("年柱 (Y) 🎖️", 0.5, 2.0, key='pg_y', step=0.05)
+            with c2: st.slider("月令 (M) ⭐🎖️", 0.5, 2.0, key='pg_m', step=0.05)
+            with c1: st.slider("日主 (D) 🎖️", 0.5, 2.0, key='pg_d', step=0.05)
+            with c2: st.slider("时柱 (H) 🎖️", 0.5, 2.0, key='pg_h', step=0.05)
+            
+        with st.expander("🌰 藏干比例 (Hidden) 🎖️", expanded=True):
+            c1, c2, c3 = st.columns(3)
+            with c1: st.number_input("本气 🎖️", 0.0, 1.0, key='hs_main', step=0.05)
+            with c2: st.number_input("中气 🎖️", 0.0, 1.0, key='hs_mid', step=0.05)
+            with c3: st.number_input("余气 🎖️", 0.0, 1.0, key='hs_rem', step=0.05)
 
-    # 能量流转
-    with st.sidebar.expander("🌊 能量流转 (Flow)", expanded=True):
-        st.markdown("**🛡️ 阻尼协议**")
-        st.slider("基础资源阻抗", 0.0, 1.0, key='f_ri_b', step=0.05)
-        st.slider("虚不受补 (Weakness)", 0.0, 1.0, key='f_ri_wp', step=0.05)
-        st.slider("输出粘滞 (Viscosity)", 0.0, 1.0, key='f_ov_df', step=0.05)
-        st.slider("能量消耗 (Gen Drain)", 0.1, 0.9, key='f_gen_drain', step=0.05)
-        st.slider("克制杀伤力 (Control)", 0.1, 1.5, key='f_ctrl_imp', step=0.05)
-        st.slider("系统自然阻尼", 0.0, 0.5, key='f_damp_fac', step=0.01)
-        
-        st.divider()
-        st.markdown("**🧊 相变协议 (Phase Change)**")
-        st.slider("焦土不生 (Scorched)", 0.0, 1.0, key='pc_scorched', step=0.05)
-        st.slider("冻水不生 (Frozen)", 0.0, 1.0, key='pc_frozen', step=0.05)
+        with st.expander("⚡ 粒子结构 (Structure) 🎖️", expanded=True):
+            st.slider("通根系数 🎖️", 0.5, 2.0, key='s_rw', step=0.1)
+            st.slider("透干加成 🎖️", 1.0, 2.5, key='s_eb', step=0.1)
+            st.slider("同柱加成 🎖️", 1.0, 2.5, key='s_sp', step=0.1)
 
-    # 旺衰场
-    with st.sidebar.expander("📊 旺衰判定 (Strength Field)", expanded=True):
-        st.slider("能量阈值中心点", 1.0, 6.0, key='strength_energy_threshold', step=0.01)
-        st.slider("相变平滑宽度", 1.0, 20.0, key='strength_phase_width', step=0.5)
-        st.checkbox("启用 GAT 动态注意力", key='gat_use_gat')
-        st.slider("注意力稀疏度 (Dropout)", 0.0, 1.0, key='strength_attention_dropout', step=0.01)
+    # --- 标签页 3: 动态交互场 (Phase 2 & Strength) ---
+    with 标签_交互:
+        with st.expander("🌊 刑冲克害 (Physics) 🎖️", expanded=True):
+            tc, tp = st.tabs(["相克/害 (Classic)", "波动力学 (Wave)"])
+            with tc:
+                c1, c2 = st.columns(2)
+                with c1: st.slider("克制 (Ctrl) 🎖️", 0.0, 1.0, key='p2_ctrl_imp', step=0.05, help="五行相克的基础力度")
+                with c2: st.slider("穿害 (Harm) 🎖️", 0.0, 1.0, key='wp_harm_damping', step=0.05, help="地支六害的穿透系数")
+                st.caption("刑冲已移至波动力学")
+            with tp:
+                st.caption("V12.0 非线性干涉引擎")
+                c1, c2 = st.columns(2)
+                with c1: st.slider("冲相位 (Clash) 🎖️", 1.5, 3.14, key='wp_clash_phase', help="2.618=150度(强相消)")
+                with c2: st.slider("熵损 (Entropy)", 0.1, 1.0, key='wp_clash_entropy')
+                
+                c3, c4 = st.columns(2)
+                with c3: st.slider("刑相位 (Punish)", 1.5, 3.14, key='wp_punish_phase', help="2.513=144度")
+                with c4: st.slider("共振Q值 (Reson)", 1.0, 2.0, key='wp_resonance_q', help="土刑共振激旺因子")
 
-    # 十神权重校准
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("⚛️ 十神权重校准")
-    consts = get_constants()
-    最终十神权重 = {}
-    for i in range(0, 10, 2):
-        l_col, r_col = st.sidebar.columns(2)
-        if i < len(consts.TEN_GODS):
-            神 = consts.TEN_GODS[i]
-            键 = f"pw_p2_{神}"
-            with l_col: 
-                值 = st.slider(f"{神}", 50, 150, key=键, step=5)
-                最终十神权重[神] = 值 / 100.0
-        if i + 1 < len(consts.TEN_GODS):
-            神 = consts.TEN_GODS[i+1]
-            键 = f"pw_p2_{神}"
-            with r_col: 
-                值 = st.slider(f"{神}", 50, 150, key=键, step=5)
-                最终十神权重[神] = 值 / 100.0
+        with st.expander("⚔️ 生克与争合 (Interactions)", expanded=False):
+            c1, c2 = st.columns(2)
+            with c1: st.slider("生发耗泄 🎖️", 0.0, 1.0, key='p2_gen_drain', step=0.05)
+            with c2: st.slider("争合妒合 🎖️", 0.0, 1.0, key='p2_jealousy', step=0.05)
+            
+        with st.expander("🔗 规模效应 (Combo/Vault) 🎖️", expanded=True):
+            tc, tv = st.tabs(["合局 🎖️", "墓库 🎖️"])
+            with tc:
+                st.slider("三合增益 🎖️", 1.0, 3.0, key='p2_three_harmony_bonus', step=0.1)
+                st.slider("三会增益 🎖️", 1.5, 4.0, key='p2_three_meeting_bonus', step=0.1)
+                st.slider("六合增益 🎖️", 1.0, 2.0, key='p2_six_harmony_bonus', step=0.1)
+            with tv:
+                st.slider("阈值 🎖️", 0.0, 10.0, key='p2_vault_thresh', step=0.1)
+                st.slider("爆发 🎖️", 1.0, 5.0, key='p2_vault_open', step=0.1)
+                st.slider("惩罚 🎖️", 0.0, 1.0, key='p2_vault_break', step=0.05)
+
+        with st.expander("📊 判定场 🎖️", expanded=False):
+            st.slider("阈值中心点 🎖️", 1.0, 6.0, key='strength_energy_threshold', step=0.01)
+            st.checkbox("启用 GAT 注意力 ✅", key='gat_use_gat')
+
+    # --- 标签页 4: 时空与背景 (Phase 3 & Flow) ---
+    with 标签_时空:
+        with st.expander("⏳ 时空权重 (Weights) 🎖️", expanded=True):
+            st.slider("大运 (Luck) 🎖️", 0.1, 3.0, key='st_luck_w', step=0.1)
+            st.slider("流年 (Annual) 🎖️", 0.1, 3.0, key='st_annual_w', step=0.1)
+
+        with st.expander("🌎 环境红利 (Field) 🎖️", expanded=True):
+            st.slider("地理热力 🎖️", 0.0, 0.2, key='st_geo_heat', step=0.01)
+            st.slider("九运时代 🎖️", 0.0, 0.5, key='st_era_bonus', step=0.01)
+
+        with st.expander("🌊 能量流转 (Flow) ✅", expanded=True):
+            st.slider("系统熵增 ✅", 0.0, 0.2, key='f_entropy', step=0.01)
+            st.slider("焦土/冻水缩减 ✅", 0.0, 1.0, key='pc_scorched', step=0.05)
 
     # 最后合并当前 session 状态到返回的配置对象中
     merge_sidebar_values_to_config(fp)
