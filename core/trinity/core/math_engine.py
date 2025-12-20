@@ -93,6 +93,7 @@ class ProbValue:
     def __float__(self) -> float: return self.mean
     def __str__(self) -> str: return f"Prob(μ={self.mean:.2f}, σ={self.std:.2f})"
     def __repr__(self) -> str: return self.__str__()
+    def __format__(self, format_spec): return format(self.mean, format_spec)
 
 # Kernels
 def expit(x: float) -> float:

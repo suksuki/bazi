@@ -11,6 +11,12 @@ class RuleRegistry:
     """
     Single Source of Truth for Bazi interaction rules and scoring constants.
     """
+    # Rule Categories
+    CAT_A_SEASONAL = 'A' # Seasonal Potential (Wang/Shuai)
+    CAT_B_INTERACTION = 'B' # Geometric Interactions (Hui/He/Chong)
+    CAT_C_SPECIAL = 'C' # Special Patterns (Transformation)
+    CAT_D_STRUCTURAL = 'D' # Structural (Vaults/Hidden)
+
     # Energy Thresholds (Legacy scores, preserved for compatibility)
     ENERGY_THRESHOLD_STRONG = 3.5
     ENERGY_THRESHOLD_WEAK = 2.0
@@ -55,6 +61,32 @@ class RuleRegistry:
         '巳': 'Fire', '午': 'Fire', '未': 'Fire',
         '申': 'Metal', '酉': 'Metal', '戌': 'Metal',
         '亥': 'Water', '子': 'Water', '丑': 'Water'
+    }
+
+    # --- Interaction Rules (Moved from LogicMatrix) ---
+    SAN_HUI: Dict[frozenset, str] = {
+        frozenset({'寅', '卯', '辰'}): 'Wood',
+        frozenset({'巳', '午', '未'}): 'Fire',
+        frozenset({'申', '酉', '戌'}): 'Metal',
+        frozenset({'亥', '子', '丑'}): 'Water',
+    }
+
+    SAN_HE: Dict[frozenset, str] = {
+        frozenset({'申', '子', '辰'}): 'Water',
+        frozenset({'亥', '卯', '未'}): 'Wood',
+        frozenset({'寅', '午', '戌'}): 'Fire',
+        frozenset({'巳', '酉', '丑'}): 'Metal',
+    }
+
+    LIU_HE: Dict[frozenset, str] = {
+        frozenset({'子', '丑'}): 'Earth', frozenset({'寅', '亥'}): 'Wood',
+        frozenset({'卯', '戌'}): 'Fire', frozenset({'辰', '酉'}): 'Metal',
+        frozenset({'巳', '申'}): 'Water', frozenset({'午', '未'}): 'Earth',
+    }
+    
+    CLASH_MAP: Dict[str, str] = {
+        '子': '午', '午': '子', '丑': '未', '未': '丑', '寅': '申', '申': '寅', 
+        '卯': '酉', '酉': '卯', '辰': '戌', '戌': '辰', '巳': '亥', '亥': '巳'
     }
 
     @classmethod

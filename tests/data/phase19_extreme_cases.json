@@ -1,0 +1,226 @@
+[
+    {
+        "id": "CASE_FUSION_EXT_001_SYNC",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "甲子",
+            "month_pillar": "己巳",
+            "day_pillar": "乙亥",
+            "hour_pillar": "庚辰"
+        },
+        "test_focus": "Dual Transmutation (Concurrent Waves)",
+        "physics_params": {
+            "type": "dual_fusion",
+            "fusion_1": "Jia-Ji",
+            "fusion_2": "Yi-Geng"
+        },
+        "tags": [
+            "天干双化",
+            "同步相变",
+            "多重矢量重组"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_002_TOTAL_FIELD",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "丙申",
+            "month_pillar": "辛丑",
+            "day_pillar": "壬子",
+            "hour_pillar": "甲辰"
+        },
+        "test_focus": "Stem-Branch Full Coupling (Water Field)",
+        "physics_params": {
+            "type": "stem_branch_coupling",
+            "stem_fusion": "Bing-Xin",
+            "branch_trine": "Shen-Zi-Chen",
+            "eta_target": 0.95
+        },
+        "tags": [
+            "干支同化",
+            "全场耦合",
+            "极高相干度"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_003_N4_CHAOS",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "丁卯",
+            "month_pillar": "壬寅",
+            "day_pillar": "丁未",
+            "hour_pillar": "丁未"
+        },
+        "test_focus": "N=4 Jealousy Damping (The Singularity)",
+        "physics_params": {
+            "type": "multi_branch",
+            "total_energy": 20.0,
+            "branches": [
+                0,
+                0,
+                0,
+                0
+            ]
+        },
+        "tags": [
+            "四丁争壬",
+            "量子阻挫",
+            "系统内耗极大值"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_004_THRESHOLD_FAIL",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "戊子",
+            "month_pillar": "癸亥",
+            "day_pillar": "壬戌",
+            "hour_pillar": "丙午"
+        },
+        "test_focus": "False Fusion (Month Resistance)",
+        "physics_params": {
+            "type": "month_resistance",
+            "target_fusion": "Wu-Gui (Fire)",
+            "month_field": "Water"
+        },
+        "tags": [
+            "化合失败",
+            "月令反克",
+            "假化案例"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_005_DECAY_PARADOX",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "甲寅",
+            "month_pillar": "丙寅",
+            "day_pillar": "戊申",
+            "hour_pillar": "己未"
+        },
+        "test_focus": "Spatial Decay (1/D^2) vs Proximity",
+        "physics_params": {
+            "type": "spatial_decay",
+            "gap": 2,
+            "base_energy": 10.0
+        },
+        "tags": [
+            "遥隔合化",
+            "空间衰减",
+            "波函数消散"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_006_VAULT_BREAKER",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "乙未",
+            "month_pillar": "庚辰",
+            "day_pillar": "辛未",
+            "hour_pillar": "乙未"
+        },
+        "test_focus": "Fusion-Induced Vault Opening",
+        "physics_params": {
+            "type": "vault_break",
+            "clash_energy": 12.0,
+            "vault_integrity": 10.0
+        },
+        "tags": [
+            "化合破库",
+            "能量隧穿",
+            "动态引力陷阱"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_007_HALF_VS_CLASH",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "申子",
+            "month_pillar": "丙戌",
+            "day_pillar": "壬辰",
+            "hour_pillar": "庚戌"
+        },
+        "test_focus": "Half-Trine Stability vs Double Clash",
+        "physics_params": {
+            "type": "stability_test",
+            "bond_energy": 8.0,
+            "clash_energy": 14.0
+        },
+        "tags": [
+            "半合抗冲",
+            "贪合忘冲代价",
+            "结构稳定性测试"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_008_GHOST_TRANS",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "丁巳",
+            "month_pillar": "壬子",
+            "day_pillar": "丁巳",
+            "hour_pillar": "壬子"
+        },
+        "test_focus": "Symmetric Interference (The Mirror Paradox)",
+        "physics_params": {
+            "type": "multi_branch",
+            "branches": [
+                {
+                    "gap": 0,
+                    "palace": "year"
+                },
+                {
+                    "gap": 0,
+                    "palace": "day"
+                }
+            ],
+            "total_energy": 20.0
+        },
+        "tags": [
+            "对称干涉",
+            "镜像死锁",
+            "能量镜像纠缠"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_009_DIRECTIONAL_MIX",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "亥卯",
+            "month_pillar": "庚寅",
+            "day_pillar": "乙卯",
+            "hour_pillar": "己卯"
+        },
+        "test_focus": "Directional Meeting vs Three-Harmony Overlap",
+        "physics_params": {
+            "type": "field_overlap",
+            "directional_energy": 15.0,
+            "trine_energy": 12.0
+        },
+        "tags": [
+            "三会三合混杂",
+            "方局能量极值",
+            "矢量叠加"
+        ]
+    },
+    {
+        "id": "CASE_FUSION_EXT_010_PHASE_SHIFT_COLLAPSE",
+        "quality_tier": "A",
+        "chart": {
+            "year_pillar": "戊辰",
+            "month_pillar": "癸亥",
+            "day_pillar": "丙寅",
+            "hour_pillar": "辛卯"
+        },
+        "test_focus": "Total System Phase Shift (The Final Stress)",
+        "physics_params": {
+            "type": "multi_fusion_chaos",
+            "entropy_tax": 0.4
+        },
+        "tags": [
+            "全体系相变",
+            "极端熵税",
+            "多维坍缩预警"
+        ]
+    }
+]
