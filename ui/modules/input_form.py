@@ -19,7 +19,7 @@ def render_input_form():
     })
 
     with st.form("bazi_input_form"):
-        st.subheader("👤 命主信息")
+        st.subheader("👤 命主信息 (Subject Info)")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -68,7 +68,7 @@ def render_input_form():
         default_idx = cities.index(default_city) if default_city in cities else 0
         
         # [V9.3 MCP] 强制地理输入提示
-        st.markdown("**🌍 GEO 修正城市** (必需)")
+        st.markdown("**🌍 地脉修正 (Geomancy Context)**")
         st.caption("⚠️ 为激活地域修正模块，请选择出生城市或输入经纬度")
         
         selected_city = st.selectbox(
@@ -85,7 +85,7 @@ def render_input_form():
             st.info("💡 **建议**: 请选择出生城市，或在下方的经纬度输入中提供坐标。")
 
         # Main Submit Button
-        submitted = st.form_submit_button("🚀 开始排盘 (Calculate)")
+        submitted = st.form_submit_button("🔮 启卦排盘 (Divination)")
         
         # [V9.3 MCP] 验证地理输入（可选：可以阻止提交）
         # 如果需要强制，可以取消下面的注释

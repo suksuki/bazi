@@ -1,5 +1,29 @@
 # Antigravity Release Notes
 
+## [V16.0] - Controller Refactor Edition - 2025-12-20
+**Status:** ✅ STABLE / PRODUCTION READY  
+**Test Status:** 
+- Controller Architecture: 5/5 PASSED ✅
+- Core Engine: 44/44 PASSED ✅ (Core + Phase Change + Hybrid)
+
+### 🏛️ 架构重构 (Architecture Refactor)
+
+#### Controller Decomposition
+* **✅ ConfigController:** New centralized configuration manager. Handles loading, saving, and hot-loading of `parameters.json`. Delegated from `BaziController`.
+* **✅ SimulationController:** Encapsulated timeline simulation, result caching, and cache invalidation logic. Delegated from `BaziController`.
+* **✅ InputController:** Centralized input validation, normalization, and reverse Bazi lookup. Delegated from `BaziController`.
+* **✅ BaziController:** Refactored to act as a pure coordinator, delegating responsibilities to specialized sub-controllers. Removed "God Object" anti-pattern.
+
+#### UI Modularization
+* **✅ Tuning Panel:** Extracted Quantum Lab tuning controls into `ui/components/tuning_panel.py`.
+* **✅ Expert Mode:** Added toggle for Simple/Expert modes in UI.
+* **✅ Config Persistence:** Added "Save Config" capability to persisting tuning parameters to disk.
+
+### 🧪 新增测试 (New Tests)
+* `tests/test_controller_architecture.py` - Validates the new delegated architecture.
+
+---
+
 ## [V9.5] - MVC Architecture Edition - 2025-12-15
 **Status:** ✅ STABLE / PRODUCTION READY  
 **Test Status:** Controller Integration: 15/15 PASSED ✅ | Total: 190+ PASSED

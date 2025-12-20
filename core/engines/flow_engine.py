@@ -1,6 +1,6 @@
-from collections import defaultdict
 import numpy as np
 import math
+from core.math import calculate_control_damage, calculate_generation
 
 class FlowEngine:
     """
@@ -35,85 +35,6 @@ class FlowEngine:
         """[V8.0] Set the month branch for Phase Change calculations."""
         self.month_branch = branch
     
-    @staticmethod
-    def calculate_control_damage(attacker_energy: float, defender_energy: float, base_impact: float = 0.8) -> float:
-        """
-        [V9.7 FINAL] Physics: Sigmoid with HARD CLAMP.
-        No linear fallback allowed.
-        
-        Logic: Damage is determined by the DIFFERENCE between Attacker and Defender.
-        - If Attacker << Defender: Damage approaches 0 (Ant hitting Elephant).
-        - If Attacker >> Defender: Damage approaches BaseImpact (Full Strike).
-        
-        Formula: Damage = Defender * BaseImpact * Sigmoid((Attacker - Defender) / k)
-        
-        Args:
-            attacker_energy: 攻击者能量
-            defender_energy: 防御者能量
-            base_impact: 基础伤害系数（默认0.8）
-            
-        Returns:
-            计算得到的伤害值（硬钳位在 50% 以内）
-        """
-        if attacker_energy <= 0 or defender_energy <= 0:
-            return 0.0
-
-        # [V9.7] 平滑系数 k=20: 只有显著的强弱差才能触发伤害
-        # 设为 20.0 意味着攻击力需要高出防御力 20 点，伤害系数才能达到 ~73%
-        # 这样可以防止E2（弱克强）这种场景中，微小的攻防差也能造成显著伤害
-        k_smoothness = 20.0 
-        
-        # 1. 计算攻防差值 (Differential)
-        diff = attacker_energy - defender_energy
-        
-        # 2. Sigmoid 激活函数 (1 / (1 + e^-x))
-        # 钳位 exponent 防止溢出
-        exponent_input = -diff / k_smoothness
-        exponent_input = max(-50, min(50, exponent_input))
-        
-        activation = 1.0 / (1.0 + math.exp(exponent_input))
-        
-        # 3. 计算原始伤害（Raw Damage Calculation）
-        raw_damage = defender_energy * base_impact * activation
-        
-        # 4. [V9.7 关键] 硬钳位：单次伤害绝不超过 50%
-        # 这就是为了防止 E1 变成 0.013
-        # 无论克制多强，单次冲击最多只能带走 50% 的能量（围师必阙）
-        max_allowed = defender_energy * 0.5
-        
-        return min(raw_damage, max_allowed)
-    
-    @staticmethod
-    def calculate_generation(mother_energy: float, efficiency: float) -> float:
-        """
-        [V9.4] Physics: Threshold Generation (Activation Energy).
-        
-        Logic: Generation requires a minimum 'Activation Energy' (Threshold).
-        - If Mother < Threshold: Output is 0 (Wet wood won't burn).
-        
-        Formula: Output = max(0, (Mother - Threshold) * Efficiency)
-        
-        Args:
-            mother_energy: 母体能量
-            efficiency: 生成效率（默认0.7）
-            
-        Returns:
-            计算得到的生成能量
-        """
-        # 启动阈值: 必须有足够的能量底座才能向外输出
-        # [进一步优化] D2案例：弱木生火应该被拦截，预期比率1.1（几乎不增长）
-        # 当前阈值5.0，但D2案例中弱木可能还是>5.0，需要提高阈值
-        # D2案例初始火能量3.31，最终5.28，增长了59.7%，说明弱木还是生发了
-        # 需要检查弱木的实际能量值，如果<10.0，应该完全无法生火
-        ACTIVATION_THRESHOLD = 10.0  # 提高阈值以拦截弱木生火
-        
-        # 计算有效输出能量
-        effective_source = mother_energy - ACTIVATION_THRESHOLD
-        
-        if effective_source <= 0:
-            return 0.0
-            
-        return effective_source * efficiency
 
     def simulate_flow(self, initial_energies: dict, dm_elem: str = None, month_branch: str = None) -> dict:
         """

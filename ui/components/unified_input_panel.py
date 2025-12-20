@@ -68,10 +68,13 @@ def render_and_collect_input(facade: BaziFacade,
             }
 
         # --- GEO 城市选择 ---
-        # [V56.3] GEO 修正城市已移到 input_form.py 中（在"启用真太阳时"之后）
+        # [V56.3] GEO 修正城市已移到 input_form.py 中
         # 这里从 session_state 读取已选择的城市
         selected_city = st.session_state.get("unified_geo_city", "None")
-        city_for_controller = "Unknown" if selected_city == "None" else selected_city
+        if selected_city in ["Unknown", "None", ""]:
+             city_for_controller = "Unknown"
+        else:
+             city_for_controller = selected_city
 
         # --- ERA 因子 ---（移到最底部，在函数返回前渲染）
         # 先初始化为空，稍后在函数末尾渲染
@@ -147,7 +150,7 @@ def render_and_collect_input(facade: BaziFacade,
                 era_factor[elem] = st.session_state.get(f"{prefix}_{elem.lower()}", 0) / 100
         else:
             # 智能排盘页面：显示 ERA 当前生效值
-            st.sidebar.subheader("🌐 ERA 时代修正 (当前生效)")
+            st.sidebar.subheader("🌐 天时修正 (ERA Context)")
             current_era = controller.get_current_era_factor() if controller else {}
             if current_era and any(current_era.values()):
                 cols = st.sidebar.columns(3)

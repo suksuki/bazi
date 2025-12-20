@@ -3,9 +3,9 @@
     "seasonWeights": {
       "wang": 1.2,
       "xiang": 1.0,
-      "xiu": 1.0309147240398295,
+      "xiu": 0.9,
       "qiu": 0.6,
-      "si": 0.5
+      "si": 0.45
     },
     "hiddenStemRatios": {
       "main": 0.6,
@@ -13,10 +13,10 @@
       "remnant": 0.1
     },
     "pillarWeights": {
-      "year": 0.501319239213992,
-      "month": 1.317576064933591,
-      "day": 1.2824133359708125,
-      "hour": 0.9
+      "year": 0.7,
+      "month": 1.418581629122121,
+      "day": 1.35,
+      "hour": 0.7655576714330242
     },
     "lifeStageImpact": 0.2,
     "season_decay_factor": 0.3,
@@ -24,67 +24,28 @@
     "dayun_branch_multiplier": 1.2,
     "dayun_stem_multiplier": 0.8,
     "liunian_power": 2.0,
-    "liunian_decay_rate": 0.9,
-    "_comment_season_dominance_boost": "V13.1已删除：避免能量通胀，由seasonWeights.wang和pillarWeights.month决定",
-    "_comment_dayun_liunian": "V13.1：大运/流年参数保留（用于Phase 2+），但不在Phase 1 UI显示",
-    "InteractionFactors": {
-      "Support_Factor": 1.2,
-      "Control_Factor": 1.1,
-      "Combine_Factor": 0.8,
-      "Exhaust_Factor": 0.7,
-      "Consume_Factor": 0.9
-    },
-    "WealthAmplifier": 1.2,
-    "MaxScore": 98,
-    "HighEnergyThreshold": 55,
-    "HighEnergyBiasThreshold": 55,
-    "NonLinearExponent_High": 2.0,
-    "NonLinearExponent_Mid": 1.3,
-    "CareerAmplifier": 1.2,
-    "CareerMaxScore": 98.0,
-    "RelationshipAmplifier": 1.0,
-    "RelationshipMaxScore": 75.0,
-    "SpacetimeCorrector": {
-      "CorrectorBaseFactor": 1.0,
-      "LuckPillarWeight": 0.6,
-      "AnnualPillarWeight": 0.4,
-      "Enabled": true,
-      "ExclusionList": [
-        "C01",
-        "C02",
-        "C07"
-      ],
-      "CaseSpecificCorrectorFactor": {
-        "C03": 1.464,
-        "C04": 3.099,
-        "C06": 0.786,
-        "C08": 0.9
-      }
-    }
+    "liunian_decay_rate": 0.9
   },
   "structure": {
-    "rootingWeight": 2.155295918245232,
+    "rootingWeight": 1.0,
     "rootingSaturationMax": 2.5,
     "rootingSaturationSteepness": 0.8,
-    "exposedBoost": 2.3039044271158966,
-    "samePillarBonus": 3.004405159516505,
-    "voidPenalty": 0.5019269350775221
+    "exposedBoost": 1.5,
+    "samePillarBonus": 1.5,
+    "voidPenalty": 0.3
   },
   "interactions": {
-    "_comment_phase2": "V13.3 Phase 2 量子纠缠参数：用于计算干支的合化与刑冲",
     "stemFiveCombination": {
-      "threshold": 0.7,
-      "transformBonus": 1.2,
-      "bonus": 1.2,
-      "penalty": 0.8,
-      "bindingPenalty": 0.2,
+      "threshold": 1.5,
+      "bonus": 1.5,
+      "penalty": 0.5,
       "jealousyDamping": 0.3
     },
     "comboPhysics": {
-      "trineBonus": 1.8,
-      "halfBonus": 1.25,
-      "archBonus": 1.10,
-      "directionalBonus": 4.25,
+      "trineBonus": 2.5,
+      "halfBonus": 1.5,
+      "archBonus": 1.1,
+      "directionalBonus": 3.0,
       "resolutionCost": 0.1
     },
     "macroPhysics": {
@@ -101,40 +62,28 @@
       "sealedDamping": 0.4,
       "openBonus": 1.5,
       "punishmentOpens": false,
-      "breakPenalty": 0.5,
-      "sealedPenalty": -5.0
+      "breakPenalty": 0.5
     },
-    "_comment_branchEvents": "V13.5 Phase 2 地支事件参数：解耦'合'的参数，区分三合/半合/拱合/六合的物理差异",
     "branchEvents": {
-      "_comment_legacy": "保留 Legacy 参数（向后兼容）",
+      "clashScore": -5.0,
+      "harmDamping": 0.2,
+      "clashDamping": 0.4,
       "threeHarmony": {
         "bonus": 2.0,
         "transform": true
       },
+      "halfHarmony": {
+        "bonus": 1.4,
+        "transform": false
+      },
+      "archHarmony": {
+        "bonus": 1.1,
+        "transform": false
+      },
       "sixHarmony": {
         "bonus": 1.3,
-        "bindingPenalty": 0.1,
-        "transform": true
+        "bindingPenalty": 0.2
       },
-      "clashScore": -5.0,
-      "harmDamping": 0.2,
-      "harmPenalty": -2.0,
-      "punishmentPenalty": -3.0,
-      "_comment_phase2": "V13.5 Phase 2 精细参数",
-      "clashDamping": 0.4,
-      "_comment_threeHarmony": "V13.5 三合 (Three Harmony) - 120°相位，共振质变",
-      "_comment_halfHarmony": "V13.5 半合 (Half Harmony) - 不完全共振",
-      "halfHarmony": {
-        "bonus": 1.5,
-        "transform": true
-      },
-      "_comment_archHarmony": "V13.5 拱合 (Arch Harmony) - 缺中神，虚拱",
-      "archHarmony": {
-        "bonus": 1.2,
-        "transform": true
-      },
-      "_comment_sixHarmony": "V13.5 六合 (Six Harmony) - 磁力吸附，物理羁绊",
-      "_comment_threeMeeting": "V13.9 三会局 (Three Meetings) - 方局，力量最强",
       "threeMeeting": {
         "bonus": 2.5,
         "transform": true
@@ -148,21 +97,16 @@
     }
   },
   "flow": {
-    "_comment_phase2": "V13.3 Phase 2 动态交互层参数：用于验证生克制化规则",
-    "_comment_v13_7_fix": "V13.7 修复：降低阻尼和泄耗，避免能量被过度消耗",
-    "_comment_v14_0": "V14.0 优化：提高传导效率，降低损耗，对抗系统熵增",
-    "_comment_v14_0_auto": "V14.0 自动优化：进一步降低损耗，提高能量保留率",
-    "generationEfficiency": 0.5,
-    "generationDrain": 0.15,
-    "controlImpact": 0.8,
-    "dampingFactor": 0.005,
+    "generationEfficiency": 0.7,
+    "generationDrain": 0.3,
+    "controlImpact": 0.5,
+    "dampingFactor": 0.1,
     "spatialDecay": {
       "gap0": 1.0,
       "gap1": 0.9,
       "gap2": 0.6,
       "gap3": 0.3
     },
-    "_comment_legacy": "以下参数保留用于向后兼容",
     "systemEntropy": 0.05,
     "outputDrainPenalty": 1.2,
     "resourceImpedance": {
@@ -171,21 +115,13 @@
     },
     "outputViscosity": {
       "maxDrainRate": 0.6,
-      "drainFriction": 0.2,
-      "viscosity": 0.95
+      "drainFriction": 0.2
     },
     "globalEntropy": 0.05,
     "phaseChange": {
       "scorchedEarthDamping": 0.15,
       "frozenWaterDamping": 0.3
-    },
-    "couplingEffects": {
-      "Sequential_Gain_Factor": 1.0,
-      "Coherence_Boost_Factor": 0.0,
-      "Cancellation_Factor": 0.0,
-      "Enabled": false
-    },
-    "earthMetalMoistureBoost": 3.217745254824024
+    }
   },
   "spacetime": {
     "luckPillarWeight": 0.5,
@@ -239,10 +175,10 @@
     "return_samples": false
   },
   "strength": {
-    "energy_threshold_center": 3.1236203565420873,
-    "phase_transition_width": 24.01428612819832,
-    "attention_dropout": 0.2993292420985183,
-    "follower_threshold": 0.2329984854528513,
+    "energy_threshold_center": 4.16,
+    "phase_transition_width": 10.0,
+    "attention_dropout": 0.29,
+    "follower_threshold": 0.15,
     "weak_score_threshold": 40.0,
     "strong_score_threshold": 50.0,
     "strong_probability_threshold": 0.6
@@ -270,33 +206,5 @@
       "damping_rate": 0.3,
       "max_value": 100.0
     }
-  },
-  "particleWeights": {
-    "PianCai": 1.3,
-    "ZhengCai": 1.3,
-    "ShiShen": 1.4,
-    "ShangGuan": 1.2,
-    "QiSha": 1.15,
-    "BiJian": 1.5,
-    "JieCai": 1.1,
-    "ZhengYin": 0.9,
-    "PianYin": 1.1,
-    "ZhengGuan": 0.85
-  },
-  "ObservationBiasFactor": {
-    "Wealth": 2.7,
-    "CareerBiasFactor_LowE": 2.0,
-    "CareerBiasFactor_HighE": 0.95,
-    "Relationship": 3.0,
-    "CaseSpecificBias": {
-      "C02": 2.682,
-      "C07": 1.338
-    },
-    "k_capture": 0.25
-  },
-  "gen_eff": 0.17,
-  "ctl_imp": -2.2,
-  "damping": 0.62,
-  "drain_rate": 1.5,
-  "entropy": 0.24
+  }
 }

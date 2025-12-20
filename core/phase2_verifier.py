@@ -11,7 +11,7 @@ V13.6 Phase 2 动态交互验证器 (Phase 2 Dynamic Interaction Verifier)
 import logging
 from typing import Dict, List, Any, Optional
 from core.engine_graph import GraphNetworkEngine
-from core.prob_math import ProbValue
+from core.math import ProbValue
 from core.calculator import BaziCalculator
 
 logger = logging.getLogger(__name__)
@@ -235,7 +235,7 @@ class Phase2Verifier:
         Returns:
             该元素所有节点的能量总和（ProbValue）
         """
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         # 元素名称映射（支持中文和英文）
         element_map = {

@@ -21,7 +21,7 @@ def render_sidebar(app_mode):
             init_session_state({'selected_model_name': saved_model})
             
         if app_mode == "🔮 智能排盘 (Prediction)":
-             st.markdown("### 🔧 档案与输入")
+             st.markdown("### 📜 档案与输入 (Profile)")
              render_profile_section()
              st.divider()
              submit = render_input_form()
@@ -29,12 +29,7 @@ def render_sidebar(app_mode):
                  st.session_state['calc_active'] = True
              st.divider()
         
-        # V13.0: 已删除引擎模式选择和概率分布开关
-        # - Legacy 引擎已完全移除，只使用 Graph 网络引擎
-        # - 概率分布已全程启用，无需开关
-            
-        # Global Background Task Monitor (Removed per request)
-        # render_mini_task_monitor() 
+ 
             
 # def render_mini_task_monitor():
 

@@ -76,13 +76,11 @@ class BaziController:
             self._gender_idx: int = 1
             self._city: str = "Unknown"
             
-            # V9.5 Performance Optimization: Cache era multipliers to avoid file I/O
-            self._era_multipliers: Dict[str, float] = {}
-            self._load_era_multipliers()
-            logger.debug(f"Era multipliers loaded: {len(self._era_multipliers)} elements")
+
             
-            # V9.5 Performance Optimization: Smart result caching
-            self._timeline_cache: Dict[str, Tuple[pd.DataFrame, List[Dict]]] = {}
+            # V9.5 Performance Optimization: Smart result caching delegated to SimulationController
+            from controllers.simulation_controller import SimulationController
+            self._simulation_controller = SimulationController()
             self._cache_stats: Dict[str, int] = {
                 'hits': 0,
                 'misses': 0,
@@ -92,9 +90,12 @@ class BaziController:
             # V9.8: Global configuration manager
             self.config_manager = get_config_manager()
 
-            # V16.0: Load particle weights from config/parameters.json
-            self._particle_weights_config: Dict[str, float] = {}
-            self._load_particle_weights_config()
+            # V16.0: Config Controller
+            from controllers.config_controller import ConfigController
+            self._config_controller = ConfigController()
+            
+            # Load initial cache
+            self._config_controller.get_full_config()
 
             # LLM service placeholder
             self._llm_service = None
@@ -120,318 +121,86 @@ class BaziController:
     # V16.0: Particle Weights Configuration (Single Source of Truth)
     # =========================================================================
     
-    def _load_particle_weights_config(self) -> None:
-        """
-        V16.0: Load particle weights from config/parameters.json.
-        This is the single source of truth for particle weights.
-        """
-        import os
-        import json
-        
-        try:
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            config_path = os.path.join(project_root, "config", "parameters.json")
-            
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-                    self._particle_weights_config = config_data.get('particleWeights', {})
-                logger.info(f"Particle weights loaded from {config_path}: {len(self._particle_weights_config)} weights")
-            else:
-                logger.warning(f"Config file not found: {config_path}, using defaults")
-                self._particle_weights_config = {}
-        except Exception as e:
-            logger.error(f"Failed to load particle weights config: {e}", exc_info=True)
-            self._particle_weights_config = {}
+
     
-    def _load_golden_config(self) -> Optional[Dict]:
-        """
-        V50.0: Load full golden config from config/parameters.json.
-        This is the single source of truth for all algorithm parameters.
-        
-        Returns:
-            Full config dict with all parameters, or None if loading fails
-        """
-        import os
-        import json
-        
-        try:
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            config_path = os.path.join(project_root, "config", "parameters.json")
-            
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    golden_config = json.load(f)
-                
-                # Merge with default structure to ensure completeness
-                from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
-                merged_config = DEFAULT_FULL_ALGO_PARAMS.copy()
-                
-                # Deep merge golden config into defaults
-                def deep_merge(base, update):
-                    """Recursively merge update into base"""
-                    for key, value in update.items():
-                        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
-                            deep_merge(base[key], value)
-                        else:
-                            base[key] = value
-                
-                deep_merge(merged_config, golden_config)
-                logger.debug(f"Golden config loaded from {config_path}")
-                return merged_config
-            else:
-                logger.warning(f"Config file not found: {config_path}, using defaults")
-                return None
-        except Exception as e:
-            logger.error(f"Failed to load golden config: {e}", exc_info=True)
-            return None
+
     
-    def _save_particle_weights_config(self, weights: Dict[str, float]) -> bool:
-        """
-        V16.0: Save particle weights to config/parameters.json.
-        Returns True if successful, False otherwise.
-        """
-        import os
-        import json
-        
-        try:
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            config_path = os.path.join(project_root, "config", "parameters.json")
-            
-            # Load existing config
-            config_data = {}
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-            
-            # Update particle weights
-            config_data['particleWeights'] = weights
-            self._particle_weights_config = weights
-            
-            # Save back
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config_data, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"Particle weights saved to {config_path}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to save particle weights config: {e}", exc_info=True)
-            return False
+
     
     # =========================================================================
     # Performance Optimization: Era Multipliers Cache
     # =========================================================================
     
-    def _load_era_multipliers(self) -> None:
-        """
-        Load era multipliers from file and cache in memory.
-        
-        V9.5 Performance Optimization: This eliminates repeated file I/O operations
-        that were causing 20.33% performance overhead.
-        """
-        import os
-        import json
-        
-        try:
-            # Calculate era_constants.json path
-            # From controllers/ -> project root -> data/
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            era_path = os.path.join(project_root, "data", "era_constants.json")
-            
-            if os.path.exists(era_path):
-                with open(era_path, 'r', encoding='utf-8') as f:
-                    era_data = json.load(f)
-                    self._era_multipliers = era_data.get('physics_multipliers', {})
-                logger.debug(f"Era multipliers loaded from {era_path}")
-            else:
-                # Default multipliers if file doesn't exist
-                self._era_multipliers = {}
-                logger.warning(f"Era constants file not found: {era_path}, using defaults")
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse era constants JSON: {e}")
-            self._era_multipliers = {}
-        except Exception as e:
-            # Fallback to empty dict on any error
-            logger.error(f"Error loading era multipliers: {e}", exc_info=True)
-            self._era_multipliers = {}
+    # =========================================================================
+    # Configuration Management (Delegated to ConfigController)
+    # =========================================================================
     
+    def get_current_particle_weights(self) -> Dict[str, float]:
+        """
+        V16.0: Return current particle weights.
+        Priority: user_input > config file > defaults (1.0)
+        """
+        # First check user input (from UI sliders)
+        pw = self._user_input.get('particle_weights') if self._user_input else None
+        if pw:
+            return pw
+        
+        # Fall back to ConfigController
+        pw_config = self._config_controller.get_particle_weights()
+        if pw_config:
+            return pw_config.copy()
+        
+        # Default: all 1.0
+        from utils.constants_manager import get_constants
+        consts = get_constants()
+        return {god: 1.0 for god in consts.TEN_GODS}
+        
     def get_era_multipliers(self) -> Dict[str, float]:
         """
-        Get cached era multipliers.
-        
+        Get cached era multipliers from ConfigController.
         Returns:
             Dictionary of element multipliers, e.g., {'fire': 1.25, 'water': 0.85}
         """
-        return self._era_multipliers.copy()
+        return self._config_controller.get_era_multipliers()
+    
+
     
     # =========================================================================
     # Performance Optimization: Smart Result Caching
     # =========================================================================
     
-    def _generate_cache_key(self, start_year: int, duration: int, 
-                           params: Optional[Dict] = None) -> str:
-        """
-        Generate a unique cache key for timeline simulation.
-        
-        Args:
-            start_year: Starting year for simulation
-            duration: Number of years to simulate
-            params: Optional golden parameters
-            
-        Returns:
-            Cache key string
-        """
-        import hashlib
-        import json
-        
-        # Build key components
-        key_data = {
-            'user_input': self._user_input,
-            'start_year': start_year,
-            'duration': duration,
-            'params': params or {}
-        }
-        
-        # Create hash from key data
-        key_str = json.dumps(key_data, sort_keys=True, default=str)
-        key_hash = hashlib.md5(key_str.encode('utf-8')).hexdigest()
-        
-        return f"timeline_{key_hash}"
-    
     def _invalidate_cache(self) -> None:
         """
-        Invalidate all cached timeline simulation results.
+        Invalidate all cached timeline simulation results via SimulationController.
         Called when user input changes.
         """
-        if self._timeline_cache:
-            cache_size = len(self._timeline_cache)
-            self._cache_stats['invalidations'] += cache_size
-            self._timeline_cache.clear()
-            logger.info(f"Cache invalidated: {cache_size} entries cleared")
+        if hasattr(self, '_simulation_controller'):
+             self._simulation_controller.invalidate_cache()
     
     def get_cache_stats(self) -> Dict[str, int]:
         """
-        Get cache statistics for monitoring.
-        
-        Returns:
-            Dictionary with cache statistics (hits, misses, invalidations, size)
+        Get cache statistics for monitoring via SimulationController.
         """
-        stats = self._cache_stats.copy()
-        stats['size'] = len(self._timeline_cache)
-        stats['hit_rate'] = (
-            self._cache_stats['hits'] / 
-            (self._cache_stats['hits'] + self._cache_stats['misses'])
-            if (self._cache_stats['hits'] + self._cache_stats['misses']) > 0 
-            else 0.0
-        )
-        return stats
+        return self._simulation_controller.get_cache_stats() if hasattr(self, '_simulation_controller') else {}
 
     # =========================================================================
-    # Case Normalization Helpers (shared across P1/P2/P3)
+    # Case Normalization Helpers (Delegate to InputController)
     # =========================================================================
     @staticmethod
     def normalize_case_fields(case: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Ensure required fields exist:
-        - day_master: derive from bazi[2] (day pillar stem) if missing.
-        - gender: default to '未知' if missing.
-        - birth_date/time: if missing and bazi complete, reverse-lookup Gregorian datetime.
-        - dynamic_checks: fill 'year' from birth_date or bazi year pillar if missing.
-        """
-        if not isinstance(case, dict):
-            return case
-        c = case
-        if not c.get("day_master"):
-            bazi = c.get("bazi") or []
-            if len(bazi) >= 3 and isinstance(bazi[2], str) and bazi[2]:
-                c["day_master"] = bazi[2][0]
-        if not c.get("gender"):
-            c["gender"] = "未知"
-
-        # Reverse lookup birth date/time from full bazi if missing
-        if (not c.get("birth_date") or not c.get("birth_time")) and isinstance(c.get("bazi"), list) and len(c["bazi"]) >= 4:
-            try:
-                dt = BaziController.reverse_lookup_bazi(c["bazi"])
-                if dt:
-                    c["birth_date"] = dt.strftime("%Y-%m-%d")
-                    c["birth_time"] = f"{dt.hour:02d}:{dt.minute:02d}"
-            except Exception:
-                pass
-
-        # Fill dynamic_checks.year:
-        # - Prefer birth_date (YYYY-MM-DD) year component
-        # - Else fall back to bazi year pillar (bazi[0]) to avoid KeyError
-        if c.get("dynamic_checks"):
-            normalized_checks = []
-            for chk in c.get("dynamic_checks", []):
-                if not isinstance(chk, dict):
-                    continue
-                if "year" not in chk or not chk.get("year"):
-                    birth_date = c.get("birth_date")
-                    year_val = None
-                    if isinstance(birth_date, str) and len(birth_date) >= 4:
-                        try:
-                            year_val = birth_date.split("-")[0]
-                        except Exception:
-                            year_val = None
-                    if not year_val:
-                        bazi = c.get("bazi") or []
-                        if len(bazi) >= 1 and isinstance(bazi[0], str) and bazi[0]:
-                            year_val = bazi[0]  # fallback to year pillar
-                    chk["year"] = year_val
-                normalized_checks.append(chk)
-            c["dynamic_checks"] = normalized_checks
-        return c
+        from controllers.input_controller import InputController
+        return InputController.normalize_case_fields(case)
 
     @classmethod
     def normalize_cases(cls, cases: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Normalize a list of cases safely."""
-        if not isinstance(cases, list):
-            return cases
-        return [cls.normalize_case_fields(c) for c in cases]
+        from controllers.input_controller import InputController
+        return InputController.normalize_cases(cases)
 
-    # =========================================================================
-    # Reverse lookup date/time from Bazi
-    # =========================================================================
     @staticmethod
     def reverse_lookup_bazi(target_bazi: List[str], start_year: int = 1950, end_year: int = 2030):
-        """
-        Brute-force reverse lookup of Bazi (Y, M, D, H GanZhi) to Gregorian datetime.
-        Returns datetime.datetime if found, else None.
-        """
-        if not target_bazi or len(target_bazi) < 4:
-            return None
-        tg_y, tg_m, tg_d, tg_h = target_bazi[:4]
-        import datetime
+        from controllers.input_controller import InputController
+        return InputController.reverse_lookup_bazi(target_bazi, start_year, end_year)
 
-        for y in range(start_year, end_year + 1):
-            start_d = datetime.date(y, 1, 1)
-            end_d = datetime.date(y, 12, 31)
-            curr = start_d
-            while curr <= end_d:
-                try:
-                    s = Solar.fromYmd(curr.year, curr.month, curr.day)
-                    l = s.getLunar()
-                    if l.getYearInGanZhiExact() != tg_y:
-                        curr += datetime.timedelta(days=1)
-                        continue
-                    if l.getMonthInGanZhiExact() != tg_m:
-                        curr += datetime.timedelta(days=1)
-                        continue
-                    if l.getDayInGanZhiExact() != tg_d:
-                        curr += datetime.timedelta(days=1)
-                        continue
-                    # check hour
-                    for h in range(0, 24):
-                        sh = Solar.fromYmdHms(curr.year, curr.month, curr.day, h, 0, 0)
-                        lh = sh.getLunar()
-                        if lh.getTimeInGanZhi() == tg_h:
-                            return datetime.datetime(curr.year, curr.month, curr.day, h, 0, 0)
-                except Exception:
-                    pass
-                curr += datetime.timedelta(days=1)
-        return None
     
     def clear_cache(self) -> None:
         """
@@ -468,15 +237,9 @@ class BaziController:
         logger.info(f"Setting user input: name={name}, gender={gender}, date={date_obj}, time={time_int}, city={city}")
         
         try:
-            # Input validation
-            if not name or not name.strip():
-                raise BaziInputError("用户姓名不能为空", "name parameter is empty")
-            if gender not in ["男", "女"]:
-                raise BaziInputError(f"性别参数无效: {gender}", f"gender must be '男' or '女', got '{gender}'")
-            if not isinstance(date_obj, datetime.date):
-                raise BaziInputError("日期格式无效", f"date_obj must be datetime.date, got {type(date_obj)}")
-            if not (0 <= time_int <= 23):
-                raise BaziInputError(f"时间参数无效: {time_int}", "time_int must be between 0 and 23")
+            # Input validation via Delegate
+            from controllers.input_controller import InputController
+            InputController.validate_user_input(name, gender, date_obj, time_int)
             
             # V9.5: Check if input actually changed to avoid unnecessary cache invalidation
             input_changed = (
@@ -587,8 +350,8 @@ class BaziController:
             # 3. QuantumEngine (Singleton-like)
             if self._quantum_engine is None:
                 logger.debug("Initializing QuantumEngine...")
-                # V50.0: Load full golden config from config/parameters.json
-                engine_config = self._load_golden_config()
+                # V50.0: Load full golden config from ConfigController
+                engine_config = self._config_controller.get_full_config()
                 self._quantum_engine = QuantumEngine()
                 # Update engine with full golden config
                 if engine_config:
@@ -597,7 +360,7 @@ class BaziController:
             
             # V50.0: Always update engine config with latest golden parameters
             # This ensures engine uses the latest optimized parameters from config/parameters.json
-            engine_config = self._load_golden_config()
+            engine_config = self._config_controller.get_full_config()
             if engine_config:
                 self._quantum_engine.update_full_config(engine_config)
                 logger.debug(f"Updated QuantumEngine with latest golden config")
@@ -724,141 +487,34 @@ class BaziController:
             BaziDataError: If required data is missing
             BaziCalculationError: If simulation fails
         """
-        logger.info(f"Starting timeline simulation: start_year={start_year}, duration={duration}, use_cache={use_cache}")
-        start_time = time.time()
-        
+        """
+        Run timeline simulation (delegated to SimulationController).
+        """
         try:
-            if not self._quantum_engine or not self._profile:
-                raise BaziDataError(
-                    "缺少必要的引擎或配置文件",
-                    "QuantumEngine or BaziProfile not initialized. Call set_user_input() first."
-                )
-            
-            # V9.5 Performance Optimization: Check cache first
-            cache_key = None
-            if use_cache and case_data is None:
-                cache_key = self._generate_cache_key(start_year, duration, params)
-                if cache_key in self._timeline_cache:
-                    self._cache_stats['hits'] += 1
-                    logger.info(f"Cache HIT for key: {cache_key[:16]}...")
-                    # Return deep copy to prevent cache pollution
-                    df, handovers = self._timeline_cache[cache_key]
-                    elapsed = time.time() - start_time
-                    logger.info(f"Timeline simulation completed (cached) in {elapsed:.4f} seconds")
-                    return df.copy(), copy.deepcopy(handovers)
-                else:
-                    self._cache_stats['misses'] += 1
-                    logger.debug(f"Cache MISS for key: {cache_key[:16]}...")
-            
             # Build case_data if not provided
             if case_data is None:
-                logger.debug("Building case_data from user input...")
                 case_data = self._build_case_data(params)
+
+            # Delegate to SimulationController
+            df, handovers = self._simulation_controller.run_timeline(
+                engine=self._quantum_engine,
+                profile=self._profile,
+                user_input=self._user_input,
+                case_data=case_data,
+                start_year=start_year,
+                duration=duration,
+                era_multipliers=self.get_era_multipliers(),
+                params=params,
+                use_cache=use_cache
+            )
             
-            # GanZhi calculation helpers
-            gan_chars = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-            zhi_chars = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-            base_year = 1924
+            # Update cache stats from controller (optional, mainly for monitoring)
+            # self._cache_stats = self._simulation_controller.get_cache_stats()
             
-            traj_data = []
-            handover_years = []
-            
-            # Initialize prev_luck to detect handovers correctly
-            prev_luck = self._profile.get_luck_pillar_at(start_year - 1)
-            
-            logger.debug(f"Processing {duration} years starting from {start_year}...")
-            for y in range(start_year, start_year + duration):
-                offset = y - base_year
-                l_gan = gan_chars[offset % 10]
-                l_zhi = zhi_chars[offset % 12]
-                l_gz = f"{l_gan}{l_zhi}"
-                
-                # Get dynamic luck pillar
-                active_luck = self._profile.get_luck_pillar_at(y)
-                
-                # Detect handover
-                if prev_luck and prev_luck != active_luck:
-                    handover_years.append({
-                        'year': y,
-                        'from': prev_luck,
-                        'to': active_luck
-                    })
-                prev_luck = active_luck
-                
-                # Deep copy to prevent reference pollution
-                safe_case_data = copy.deepcopy(case_data)
-                dyn_ctx = {'year': l_gz, 'dayun': active_luck, 'luck': active_luck}
-                
-                # Calculate
-                # V9.5 Performance Optimization: Pass cached era_multipliers
-                try:
-                    energy_res = self._quantum_engine.calculate_energy(
-                        safe_case_data, 
-                        dyn_ctx,
-                        era_multipliers=self._era_multipliers
-                    )
-                except Exception as e:
-                    logger.error(f"Error calculating energy for year {y}: {e}", exc_info=True)
-                    raise BaziCalculationError(
-                        f"计算年份 {y} 的能量时发生错误",
-                        f"Error in calculate_energy for year {y}: {str(e)}"
-                    )
-                
-                # Extract with safety fallbacks
-                final_career = float(energy_res.get('career') or 0.0)
-                final_wealth = float(energy_res.get('wealth') or 0.0)
-                final_rel = float(energy_res.get('relationship') or 0.0)
-                
-                # Domain details
-                dom_det = energy_res.get('domain_details', {})
-                
-                traj_data.append({
-                    "year": int(y),
-                    "label": f"{y}\n{l_gz}",
-                    "career": round(final_career, 2),
-                    "wealth": round(final_wealth, 2),
-                    "relationship": round(final_rel, 2),
-                    "base_career": round(final_career * 0.9, 2),
-                    "base_wealth": round(final_wealth * 0.9, 2),
-                    "base_relationship": round(final_rel * 0.9, 2),
-                    "desc": energy_res.get('desc', ''),
-                    "is_treasury_open": dom_det.get('is_treasury_open', False),
-                    "treasury_icon": dom_det.get('icon', '❓'),
-                    "treasury_risk": dom_det.get('risk_level', 'Normal'),
-                    "result": energy_res  # Full result for advanced usage
-                })
-            
-            # Build result
-            result_df = pd.DataFrame(traj_data)
-            result_handovers = handover_years
-            
-            # V9.5 Performance Optimization: Cache result if using cache
-            if use_cache and cache_key is not None:
-                logger.debug(f"Caching result with key: {cache_key[:16]}...")
-                try:
-                    # Store deep copies to prevent cache pollution
-                    self._timeline_cache[cache_key] = (
-                        result_df.copy(),
-                        copy.deepcopy(result_handovers)
-                    )
-                    logger.debug(f"Result cached successfully (cache size: {len(self._timeline_cache)})")
-                except Exception as e:
-                    logger.warning(f"Failed to cache result: {e}", exc_info=True)
-                    # Continue without caching - not critical
-            
-            elapsed = time.time() - start_time
-            logger.info(f"Timeline simulation completed in {elapsed:.4f} seconds "
-                       f"(years: {duration}, rows: {len(result_df)})")
-            
-            return result_df, result_handovers
-            
-        except BaziDataError:
-            raise
-        except BaziCacheError:
-            raise
+            return df, handovers
+
         except Exception as e:
-            elapsed = time.time() - start_time
-            logger.error(f"Timeline simulation failed after {elapsed:.4f} seconds: {e}", exc_info=True)
+            logger.error(f"Timeline simulation failed: {e}", exc_info=True)
             raise BaziCalculationError(
                 f"时间序列模拟失败 (start_year={start_year}, duration={duration})",
                 f"Error in run_timeline_simulation: {str(e)}"
@@ -951,6 +607,13 @@ class BaziController:
             },
             'city': self._city
         }
+        
+    def get_case_data(self, params: Optional[Dict] = None) -> Dict:
+        """
+        Public API: Build and return case data for simulation.
+        Wrapper around _build_case_data.
+        """
+        return self._build_case_data(params)
         
     # =========================================================================
     # Geo & Luck Interfaces
@@ -1062,34 +725,15 @@ class BaziController:
             return era
         return {}
 
-    def get_current_particle_weights(self) -> Dict[str, float]:
-        """
-        V16.0: Return current particle weights.
-        Priority: user_input > config file > defaults (1.0)
-        """
-        # First check user input (from UI sliders)
-        pw = self._user_input.get('particle_weights') if self._user_input else None
-        if pw:
-            return pw
-        
-        # Fall back to config file (single source of truth)
-        if self._particle_weights_config:
-            return self._particle_weights_config.copy()
-        
-        # Default: all 1.0
-        from utils.constants_manager import get_constants
-        consts = get_constants()
-        return {god: 1.0 for god in consts.TEN_GODS}
+
     
     def get_particle_weight_from_config(self, god_name: str) -> float:
         """
         V16.0: Get a specific particle weight from config file.
         Returns 1.0 if not found.
         """
-        return self._particle_weights_config.get(god_name, 1.0)
-        if isinstance(pw, dict):
-            return pw
-        return {}
+        weights = self._config_controller.get_particle_weights()
+        return weights.get(god_name, 1.0)
 
     # V12.0: Calibration state accessors
     def get_health_report(self) -> Dict[str, Any]:

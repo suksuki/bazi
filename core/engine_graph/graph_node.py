@@ -5,7 +5,7 @@
 定义 GraphNode 类，表示图网络中的一个节点（八字粒子）。
 """
 
-from core.prob_math import ProbValue
+from core.math import ProbValue
 
 
 class GraphNode:

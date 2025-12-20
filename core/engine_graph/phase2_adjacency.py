@@ -17,7 +17,7 @@ from typing import Dict, List, Any, Optional
 from core.engine_graph.graph_node import GraphNode
 from core.engine_graph.constants import TWELVE_LIFE_STAGES
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
-from core.prob_math import ProbValue
+from core.math import ProbValue
 from core.interactions import BRANCH_CLASHES, BRANCH_SIX_COMBINES, STEM_COMBINATIONS
 
 
@@ -76,11 +76,20 @@ class AdjacencyMatrixBuilder:
                     node_j.element, node_i.element, flow_config, 
                     source_char=node_j.char, target_char=node_i.char
                 )
-                weight += gen_weight
-                weight += self._get_control_weight(
+                
+                control_weight = self._get_control_weight(
                     node_j.element, node_i.element, flow_config,
                     source_char=node_j.char, target_char=node_i.char
                 )
+
+                # [V10.0 Group H] 解冲逻辑 (Resolution Protocol)
+                # 如果 Source 节点处于贪合状态 (Locked)，则阻断其克制路径 (Control)
+                # 物理含义：贪合忘克
+                if getattr(node_j, 'is_locked', False) and control_weight < 0:
+                    control_weight = 0.0
+
+                weight += gen_weight
+                weight += control_weight
                 
                 # [V14.0] 比劫传导（Peer Flow）：同五行之间的能量传输
                 # 比劫是朋友关系，应该无损或低损传输，不像母子关系那样耗气

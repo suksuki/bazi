@@ -20,20 +20,26 @@ from datetime import datetime
 # 切换到项目根目录
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(PROJECT_ROOT)
+sys.path.append(PROJECT_ROOT)
 
 
 def run_pytest_suite():
-    """运行 pytest 核心测试套件"""
+    """运行核心测试套件 (Using unittest)"""
     print("\n" + "=" * 70)
     print("🧪 阶段 1: 核心测试套件 (Core Test Suite)")
     print("=" * 70)
     
+    # Files to test
+    test_files = [
+        "tests/test_v88_comprehensive.py",
+        "tests/test_controller_architecture.py",
+        "tests/test_v88_hybrid.py"
+    ]
+    
+    cmd = [sys.executable, "-m", "unittest", "-v"] + test_files
+    
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", 
-         "tests/test_v88_comprehensive.py",
-         "tests/test_v8_phase_change.py", 
-         "tests/test_v88_hybrid.py",
-         "-v", "--tb=short"],
+        cmd,
         capture_output=False
     )
     

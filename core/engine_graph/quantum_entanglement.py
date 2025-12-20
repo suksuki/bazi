@@ -10,7 +10,7 @@
 """
 
 from typing import Dict, List, Any, Set
-from core.prob_math import ProbValue
+from core.math import ProbValue
 from core.interactions import BRANCH_SIX_COMBINES, STEM_COMBINATIONS
 
 
@@ -135,6 +135,8 @@ class QuantumEntanglementProcessor:
                             self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * meeting_bonus, std_dev_percent=0.1)
                         self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                        self.engine.nodes[idx].is_locked = True
                         
                         # [V15.3] 元素转化：改变节点五行属性
                         if should_transform and meeting_element:
@@ -187,6 +189,8 @@ class QuantumEntanglementProcessor:
                             self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * three_bonus, std_dev_percent=0.1)
                         self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                        self.engine.nodes[idx].is_locked = True
                         
                         if should_transform and trine_element:
                             self.engine.nodes[idx].element = trine_element
@@ -239,6 +243,8 @@ class QuantumEntanglementProcessor:
                             self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * half_bonus, std_dev_percent=0.1)
                         self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                        self.engine.nodes[idx].is_locked = True
                         
                         if should_transform and half_element:
                             self.engine.nodes[idx].element = half_element
@@ -280,6 +286,8 @@ class QuantumEntanglementProcessor:
                             self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * arch_bonus, std_dev_percent=0.1)
                         self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                        self.engine.nodes[idx].is_locked = True
                         
                         if should_transform and arch_element:
                             self.engine.nodes[idx].element = arch_element
@@ -323,6 +331,8 @@ class QuantumEntanglementProcessor:
                             self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * six_bonus, std_dev_percent=0.1)
                         self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                        # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                        self.engine.nodes[idx].is_locked = True
                         
                         if should_transform and combine_element:
                             self.engine.nodes[idx].element = combine_element
@@ -396,6 +406,8 @@ class QuantumEntanglementProcessor:
                                 self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * bonus, std_dev_percent=0.1)
                             self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                             self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                            # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                            self.engine.nodes[idx].is_locked = True
                             
                             # [V15.3] 元素转化：改变节点五行属性
                             if target_element:
@@ -415,8 +427,9 @@ class QuantumEntanglementProcessor:
                                 self.engine.H0[idx] = ProbValue(float(self.engine.H0[idx]) * penalty, std_dev_percent=0.1)
                             self.engine.nodes[idx].initial_energy = self.engine.H0[idx]
                             self.engine.nodes[idx].current_energy = self.engine.H0[idx]
+                            # [V10.0 Group H] 锁定节点 (Locked due to Entanglement)
+                            self.engine.nodes[idx].is_locked = True
                             debug_info['node_changes'].append(f"{self.engine.nodes[idx].char}(羁绊-能量受损)")
         
         # [V15.3] 保存调试信息到引擎（用于后续输出）
         self.engine._quantum_entanglement_debug = debug_info
-

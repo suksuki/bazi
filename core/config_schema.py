@@ -35,10 +35,10 @@ DEFAULT_FULL_ALGO_PARAMS = {
         # [V12.5] 强制纠正宫位权重倒挂：确保物理逻辑正确（Day >= 1.2 > Hour <= 0.9）
         # [V13.1] 最终调优：日支权重从1.2提升到1.35，解决Group C倒挂问题
         "pillarWeights": {
-            "year": 0.7,   # V12.5: 年支权重（最低）
-            "month": 1.2,  # V12.5: 月令权重（最高，但保持合理范围）
-            "day": 1.35,   # V13.1: 日支权重（从1.2提升到1.35，解决Group C倒挂）
-            "hour": 0.9    # V12.5: 时支权重（必须显著低于日支）
+            "year": 0.7,   # V12.5: 年支权重
+            "month": 1.42, # V13.1: 月令权重（最高，满足皇权约束）
+            "day": 1.35,   # V13.1: 日支权重
+            "hour": 0.77   # V13.1: 时支权重（修正位置倒挂）
         },
         # [NEW V2.5] 十二长生修正 (Optional)
         "lifeStageImpact": 0.2,
@@ -56,14 +56,14 @@ DEFAULT_FULL_ALGO_PARAMS = {
     # === 面板 2: 粒子动态 (Particle Dynamics) ===
     "structure": {
         # [V2.4 第7条] 垂直作用
-        # [V10.0 新数据集调优] 通根系数保持在1.2（当前数据集不敏感）
-        "rootingWeight": 1.2,
+        # [V10.0 Normalized] 通根系数归一化 (1.0)
+        "rootingWeight": 1.0,  # [V10.0] From 2.16/1.2 -> 1.0
         # [V12.2] 非线性饱和函数参数
         "rootingSaturationMax": 2.5,      # 通根最大加成上限（饱和函数 max_val）
         "rootingSaturationSteepness": 0.8, # 通根饱和曲线陡峭度（控制边际递减速度）      # 通根系数
-        "exposedBoost": 1.5,       # 透干加成
-        # [V13.1] 最终调优：从1.8提升到3.0，解决Group B (B3 vs B2) 差距不够的问题
-        "samePillarBonus": 3.0,    # 自坐强根加权（V13.1: 从1.8提升到3.0，显著拉开B3与B2的差距）
+        "exposedBoost": 1.5,       # 透干加成 [V10.0] Normalized to 1.5
+        # [V10.0 Normalized] 自坐系数归一化 (1.5)
+        "samePillarBonus": 1.5,    # 自坐强根加权 [V10.0] From 4.0/3.0 -> 1.5
         
         # [新增] 黑洞效应 (Void)
         "voidPenalty": 0.5         # 空亡折损 (0.0=Empty, 1.0=Full)

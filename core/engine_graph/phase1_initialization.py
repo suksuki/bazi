@@ -17,8 +17,8 @@ from typing import Dict, List, Any, Optional
 from core.engine_graph.graph_node import GraphNode
 from core.engine_graph.constants import TWELVE_LIFE_STAGES, LIFE_STAGE_COEFFICIENTS
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
-from core.prob_math import ProbValue
-from core.math_utils import saturation_curve
+from core.math import ProbValue
+from core.math import saturation_curve
 
 
 class NodeInitializer:

@@ -437,6 +437,11 @@ pytest tests/integration/test_controller_integration.py -v
 | | | - 20+ public methods |
 | | | - P2 GEO comparison API |
 | | | - P3 progressive decoupling |
+| 16.0 | 2024-12-20 | Controller Decomposition Refactor |
+| | | - Extracted `InputController` (Validation) |
+| | | - Extracted `SimulationController` (Timeline & Caching) |
+| | | - Extracted `ConfigController` (Config Management) |
+| | | - UI: Modular Tuning Panel with Save support |
 
 ---
 

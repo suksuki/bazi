@@ -21,7 +21,7 @@ import pickle
 
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
-from core.prob_math import ProbValue
+from core.math import ProbValue
 from core.engine_graph.constants import TWELVE_LIFE_STAGES, LIFE_STAGE_COEFFICIENTS
 from core.engine_graph.graph_node import GraphNode
 

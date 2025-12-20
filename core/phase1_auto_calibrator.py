@@ -38,7 +38,7 @@ PARAM_BOUNDS = {
         'si': (0.5, 2.0),
     },
     'rootingWeight': (1.0, 3.0),
-    'samePillarBonus': (2.0, 4.0),  # V13.2: 下限从1.0提升到2.0，上限提升到4.0
+    'samePillarBonus': (1.0, 3.0),  # V10.0: 归一化后，范围调整为 [1.0, 3.0]
     # V13.1: 已删除 season_dominance_boost（参数清洗）
 }
 
@@ -112,7 +112,7 @@ class Phase1AutoCalibrator:
         Returns:
             (总损失, 损失详情)
         """
-        from core.prob_math import prob_compare
+        from core.math import prob_compare
         
         # 1. 运行验证获取能量值
         verification_result = self.run_verification(config)
@@ -127,7 +127,7 @@ class Phase1AutoCalibrator:
         
         # 2. Rule Loss: 遍历所有规则，计算概率损失
         rule_loss = 0.0
-        threshold = 0.85  # 目标概率阈值
+        threshold = 0.75  # V10.0: 参数平滑后，降低区分度阈值要求
         
         # Group A: 月令敏感度测试
         if 'group_a_results' in verification_result:
@@ -140,7 +140,7 @@ class Phase1AutoCalibrator:
                 next_energy = next_case.get('self_team_energy_prob', next_case.get('self_team_energy', 0.0))
                 
                 # 确保是 ProbValue
-                from core.prob_math import ProbValue
+                from core.math import ProbValue
                 if not isinstance(curr_energy, ProbValue):
                     curr_energy = ProbValue(float(curr_energy), std_dev_percent=0.1)
                 if not isinstance(next_energy, ProbValue):
@@ -154,7 +154,7 @@ class Phase1AutoCalibrator:
                     # 损失 = (目标 - 当前)^2 * 权重
                     gap = threshold - prob
                     rule_loss += (gap ** 2) * 100  # 平方惩罚，权重 100
-                # 如果 P >= 0.85，损失为 0（无痛）
+                # 如果 P >= 0.75，损失为 0（无痛）
         
         # Group B: 通根有效性测试
         if 'group_b_results' in verification_result:
@@ -166,7 +166,7 @@ class Phase1AutoCalibrator:
                 curr_energy = curr.get('self_team_energy_prob', curr.get('self_team_energy', 0.0))
                 next_energy = next_case.get('self_team_energy_prob', next_case.get('self_team_energy', 0.0))
                 
-                from core.prob_math import ProbValue
+                from core.math import ProbValue
                 if not isinstance(curr_energy, ProbValue):
                     curr_energy = ProbValue(float(curr_energy), std_dev_percent=0.1)
                 if not isinstance(next_energy, ProbValue):
@@ -188,7 +188,7 @@ class Phase1AutoCalibrator:
                 curr_energy = curr.get('self_team_energy_prob', curr.get('self_team_energy', 0.0))
                 next_energy = next_case.get('self_team_energy_prob', next_case.get('self_team_energy', 0.0))
                 
-                from core.prob_math import ProbValue
+                from core.math import ProbValue
                 if not isinstance(curr_energy, ProbValue):
                     curr_energy = ProbValue(float(curr_energy), std_dev_percent=0.1)
                 if not isinstance(next_energy, ProbValue):
@@ -220,14 +220,14 @@ class Phase1AutoCalibrator:
         # V13.1: 已删除 season_dominance_boost（参数清洗）
         
         # 通根系数
-        rooting_weight = structure_config.get('rootingWeight', 1.2)
-        default_rooting = default_structure.get('rootingWeight', 1.2)
+        rooting_weight = structure_config.get('rootingWeight', 1.0)
+        default_rooting = default_structure.get('rootingWeight', 1.0)
         reg_loss += 0.05 * ((rooting_weight - default_rooting) ** 2)
         
         # 自坐强根加成
         # V13.2: 默认值已提升到3.0，允许优化器探索2.0-4.0范围
-        same_pillar_bonus = structure_config.get('samePillarBonus', 3.0)
-        default_same = default_structure.get('samePillarBonus', 3.0)
+        same_pillar_bonus = structure_config.get('samePillarBonus', 1.5)
+        default_same = default_structure.get('samePillarBonus', 1.5)
         reg_loss += 0.05 * ((same_pillar_bonus - default_same) ** 2)
         
         loss_details['regularization_loss'] = reg_loss
@@ -293,7 +293,7 @@ class Phase1AutoCalibrator:
         """
         from core.engine_graph import GraphNetworkEngine
         from core.processors.physics import GENERATION
-        from core.prob_math import ProbValue, prob_compare
+        from core.math import ProbValue, prob_compare
         
         temp_engine = GraphNetworkEngine(config=config)
         results = {
@@ -307,7 +307,7 @@ class Phase1AutoCalibrator:
             'group_c_results': []
         }
         
-        threshold = 0.85
+        threshold = 0.75  # V10.0: 参数平滑后，降低区分度阈值要求
         
         # 验证 Group A: 月令敏感度测试
         group_a = self.test_cases.get('group_a_seasonality', [])

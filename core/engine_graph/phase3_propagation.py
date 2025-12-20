@@ -18,7 +18,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from core.engine_graph.graph_node import GraphNode
 from core.engine_graph.constants import TWELVE_LIFE_STAGES, LIFE_STAGE_COEFFICIENTS
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
-from core.prob_math import ProbValue
+from core.math import ProbValue, calculate_control_damage, calculate_generation
 from core.interactions import BRANCH_CLASHES, BRANCH_SIX_COMBINES, STEM_COMBINATIONS
 
 
@@ -55,7 +55,7 @@ class EnergyPropagator:
             最终能量向量 H^(final) [N x 1]
         """
         # [V13.6] 确保 ProbValue 在函数作用域内可访问
-        from core.prob_math import ProbValue
+        from core.math import ProbValue
         
         if not hasattr(self.engine, 'H0') or self.engine.H0 is None:
             raise ValueError("必须先执行 initialize_nodes()")
@@ -219,7 +219,7 @@ class EnergyPropagator:
                             resolution_factor = resolution_cost  # 0.1 = 90% 伤害削弱
                             
                             from core.engines.flow_engine import FlowEngine
-                            base_dmg = FlowEngine.calculate_control_damage(src_val, tgt_val, control_impact)
+                            base_dmg = calculate_control_damage(src_val, tgt_val, control_impact)
                             dmg = base_dmg * resolution_factor  # 伤害降低到 10%
                             max_allowed_damage = tgt_val * 0.1 * resolution_factor  # 最大伤害也降低
                             actual_damage = min(dmg, max_allowed_damage)
@@ -237,13 +237,13 @@ class EnergyPropagator:
                         if force_ratio < reverse_control_threshold:
                             # 反克：弱攻击者无法有效克制强防御者
                             reverse_control_factor = force_ratio / reverse_control_threshold  # 0.0 到 1.0
-                            base_dmg = FlowEngine.calculate_control_damage(src_val, tgt_val, control_impact)
+                            base_dmg = calculate_control_damage(src_val, tgt_val, control_impact)
                             dmg = base_dmg * reverse_control_factor
                             # 反克时，最大伤害限制应该更小（例如10%而不是50%）
                             max_allowed_damage = tgt_val * 0.1 * reverse_control_factor
                         else:
                             # 正常克制
-                            dmg = FlowEngine.calculate_control_damage(src_val, tgt_val, control_impact)
+                            dmg = calculate_control_damage(src_val, tgt_val, control_impact)
                             # 硬钳位：伤害不超过快照能量的50%
                             max_allowed_damage = tgt_val * 0.5
                         
@@ -261,7 +261,7 @@ class EnergyPropagator:
                         if is_generation:
                             # [V9.8] 必须使用 FlowEngine 的 Threshold 计算
                             from core.engines.flow_engine import FlowEngine
-                            gain = FlowEngine.calculate_generation(src_val, current_generation_efficiency)
+                            gain = calculate_generation(src_val, current_generation_efficiency)
                             # 计算距离衰减
                             distance = abs(tgt_node.pillar_idx - src_node.pillar_idx)
                             if distance == 0:
@@ -414,7 +414,7 @@ class EnergyPropagator:
                         source_energy_val = float(H[j]) if isinstance(H[j], ProbValue) else H[j]
                         
                         # [V9.5] 使用阈值生发公式：Output = max(0, (Mother - 5.0) * Efficiency)
-                        generation_output = FlowEngine.calculate_generation(source_energy_val, current_generation_efficiency)
+                        generation_output = calculate_generation(source_energy_val, current_generation_efficiency)
                         
                         # 转换为ProbValue
                         if isinstance(H[j], ProbValue):
@@ -497,7 +497,7 @@ class EnergyPropagator:
                     if is_control:
                         is_controlled = True
                         # [V9.8] 删除线性计算：不再使用 abs(weight) * abs(H[j])
-                        # 实际伤害计算已使用 FlowEngine.calculate_control_damage() 的 Sigmoid 公式
+                        # 实际伤害计算已使用 calculate_control_damage() 的 Sigmoid 公式
                 
                 # [V15.0] 如果被克，应用散射调谐（波函数调制）+ 残血保护
                 if is_controlled:
@@ -551,11 +551,11 @@ class EnergyPropagator:
                             reverse_control_factor = force_ratio / reverse_control_threshold  # 0.0 到 1.0
                             # 当 force_ratio = 0.1 时，reverse_control_factor = 0.33，伤害降低到原来的33%
                             # 当 force_ratio = 0.05 时，reverse_control_factor = 0.17，伤害降低到原来的17%
-                            base_damage = FlowEngine.calculate_control_damage(attacker_val, defender_val, base_impact)
+                            base_damage = calculate_control_damage(attacker_val, defender_val, base_impact)
                             damage_value = base_damage * reverse_control_factor
                         else:
                             # 正常克制：使用Sigmoid公式计算伤害
-                            damage_value = FlowEngine.calculate_control_damage(attacker_val, defender_val, base_impact)
+                            damage_value = calculate_control_damage(attacker_val, defender_val, base_impact)
                         
                         # 转换为ProbValue
                         damage_wave = ProbValue(damage_value, std_dev_percent=0.1)
@@ -1207,7 +1207,7 @@ class EnergyPropagator:
         
         # 使用质量惯性阻尼公式计算伤害
         # Formula: Damage = Base * (Attacker / (Attacker + Defender))^0.8
-        damage_mean = FlowEngine.calculate_control_damage(attacker_val, target_val, base_impact)
+        damage_mean = calculate_control_damage(attacker_val, target_val, base_impact)
         
         # 3. 调制伤害波函数 (均值受损，方差膨胀)
         # 物理细节：被攻击时，系统进入混沌状态，不确定性(std)暴增 -> 乘 1.5
