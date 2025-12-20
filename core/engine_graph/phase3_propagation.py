@@ -18,7 +18,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from core.engine_graph.graph_node import GraphNode
 from core.engine_graph.constants import TWELVE_LIFE_STAGES, LIFE_STAGE_COEFFICIENTS
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
-from core.math import ProbValue, calculate_control_damage, calculate_generation
+from core.math import ProbValue, calculate_control_damage, calculate_generation, calculate_impedance_mismatch, calculate_shielding_effect
 from core.interactions import BRANCH_CLASHES, BRANCH_SIX_COMBINES, STEM_COMBINATIONS
 
 
@@ -35,6 +35,7 @@ class EnergyPropagator:
         self.engine = engine
         self.config = engine.config
         self.CAPACITY = engine.CAPACITY
+        self.feedback_stats = []  # [V12.4] Storage for Cybernetics Telemetry
     
     def propagate(self, max_iterations: int = 10, damping: float = 0.9) -> np.ndarray:
         """
@@ -56,6 +57,8 @@ class EnergyPropagator:
         """
         # [V13.6] 确保 ProbValue 在函数作用域内可访问
         from core.math import ProbValue
+        
+        self.feedback_stats = []  # Reset stats for new run
         
         if not hasattr(self.engine, 'H0') or self.engine.H0 is None:
             raise ValueError("必须先执行 initialize_nodes()")
@@ -148,6 +151,26 @@ class EnergyPropagator:
         damping_factor = flow_config.get('dampingFactor', 0.1)
         spatial_decay = flow_config.get('spatialDecay', {'gap0': 1.0, 'gap1': 0.9, 'gap2': 0.6, 'gap3': 0.3})
         
+        # [V12.2] 阻抗与反馈参数
+        feedback_config = flow_config.get('feedback', {})
+        inverse_threshold = feedback_config.get('inverseControlThreshold', 4.0)
+        inverse_recoil_multiplier = feedback_config.get('inverseRecoilMultiplier', 2.0)
+        era_shield_factor = feedback_config.get('eraShieldingFactor', 0.5)
+        
+        # [V12.3] 获取当前环境能量 (Era/Geo) 用于屏蔽计算
+        era_element = None
+        if hasattr(self.engine, 'bazi') and len(self.engine.bazi) > 0:
+            # 简化：假设已知的环境元素（例如大运天干或地支主气）
+            # 这里暂时使用月令主气作为环境参考，或者扩展以支持真实的ERA输入
+            # 为了支持"寒衣护体"，我们需要知道"得令"或"得地"
+            # 暂时尝试从 engine 获取 context
+             if hasattr(self.engine, 'current_era_element'): # 假设有这个属性
+                 era_element = self.engine.current_era_element
+             # 或者通过月令判断（得令即有屏蔽？） -> 简化为月令五行
+             elif month_branch_char:
+                  from core.interactions import EARTHLY_BRANCHES
+                  era_element = EARTHLY_BRANCHES.get(month_branch_char, {}).get('element', '')
+
         for iteration in range(max_iterations):
             # [V9.8 FINAL PURGE] 完全删除矩阵乘法，改用纯物理遍历
             # [V15.2] 迭代衰减：生关系效率随迭代次数递减（强力制动）
@@ -230,25 +253,60 @@ class EnergyPropagator:
                         # [V9.8] 必须使用 FlowEngine 的 Sigmoid 计算，而不是直接乘 weight
                         from core.engines.flow_engine import FlowEngine
                         
-                        # [V15.3] 反克机制：当攻击者能量远小于防御者时，应该应用反克保护
-                        force_ratio = src_val / (tgt_val + 1e-5)  # 避免除零
-                        reverse_control_threshold = 0.3  # 当攻击者能量 < 防御者能量的30%时，触发反克
+                        # [V12.3] 阻抗失配与反克 (Impedance Mismatch)
+                        # calculate_impedance_mismatch 返回 (damage_mod, recoil_def_factor, is_inverse)
+                        # 注意：recoil_def_factor 已经是计算好的系数 (包含log缩放)
+                        # Recoil Energy = Source Energy * recoil_def_factor
                         
-                        if force_ratio < reverse_control_threshold:
-                            # 反克：弱攻击者无法有效克制强防御者
-                            reverse_control_factor = force_ratio / reverse_control_threshold  # 0.0 到 1.0
-                            base_dmg = calculate_control_damage(src_val, tgt_val, control_impact)
-                            dmg = base_dmg * reverse_control_factor
-                            # 反克时，最大伤害限制应该更小（例如10%而不是50%）
-                            max_allowed_damage = tgt_val * 0.1 * reverse_control_factor
-                        else:
-                            # 正常克制
-                            dmg = calculate_control_damage(src_val, tgt_val, control_impact)
-                            # 硬钳位：伤害不超过快照能量的50%
-                            max_allowed_damage = tgt_val * 0.5
+                        damage_mod, recoil_factor, is_inverse = calculate_impedance_mismatch(
+                            src_val, tgt_val,
+                            threshold=inverse_threshold,
+                            base_recoil=0.3, # 默认基础反冲
+                            inverse_recoil_multiplier=inverse_recoil_multiplier
+                        )
                         
-                        actual_damage = min(dmg, max_allowed_damage)
+                        # 1. 计算期望伤害
+                        raw_damage = calculate_control_damage(src_val, tgt_val, control_impact)
+                        # 应用阻抗失配修正 (0.05 or 1.0)
+                        potential_damage = raw_damage * damage_mod
+                        
+                        # 2. 应用环境屏蔽 (Era Shielding)
+                        # 只有当非反克状态下，屏蔽才有意义（反克本身已经忽略伤害）
+                        # 或者统一应用
+                        actual_damage = calculate_shielding_effect(
+                            potential_damage, 
+                            tgt_node.element, 
+                            era_element, 
+                            shield_factor=era_shield_factor
+                        )
+                        
+                        # 硬钳位：伤害不超过快照能量的50% (在 calculate_control_damage 内部已有 min, 但双重保险)
+                        max_allowed_damage = tgt_val * 0.5
+                        actual_damage = min(actual_damage, max_allowed_damage)
+                        
+                        # 应用伤害到目标
                         deltas[tgt_i] -= actual_damage
+                        
+                        # 3. 计算反噬 (Recoil)
+                        # Recoil = SourceVal * Factor (物理上反冲力与作用力相关，但在反克时与自身撞击能量相关)
+                        # 在 calculate_impedance_mismatch 中，factor 已针对 src_val 比例做了设计
+                        # Recoil Energy = src_val * recoil_factor
+                        recoil_energy = src_val * recoil_factor
+                        
+                        # 确保反噬不会让能量变负（或者允许变负代表崩溃？） -> 允许变负，但在 application 时处理
+                        deltas[src_i] -= recoil_energy
+                        
+                        # Debug / Logging for Telemetry
+                        if is_inverse or actual_damage < potential_damage * 0.9 or recoil_energy > 0.1:
+                            self.feedback_stats.append({
+                                "source": src_node.char,
+                                "target": tgt_node.char,
+                                "is_inverse": is_inverse,
+                                "recoil": recoil_energy,
+                                "shield_efficiency": 1.0 - (actual_damage / (potential_damage + 1e-6)),
+                                "damage_mitigated": potential_damage - actual_damage,
+                                "type": "Control"
+                            })
                     
                     # 正权重 = 生 (Generation) 或 比劫 (Support)
                     elif weight > 0:
@@ -791,8 +849,14 @@ class EnergyPropagator:
                                     current_weight, 1.0
                                 )
                             # 如果月令节点能量低于初始能量的 80%，强制恢复到初始能量的 80%
-                            if H[month_idx] < self.engine.H0[month_idx] * 0.8:
-                                H[month_idx] = self.engine.H0[month_idx] * 0.8
+                            # [V13.1] Fix: Extract mean values for comparison
+                            h_month_val = H[month_idx].mean if isinstance(H[month_idx], ProbValue) else float(H[month_idx])
+                            h0_month_val = self.engine.H0[month_idx].mean if isinstance(self.engine.H0[month_idx], ProbValue) else float(self.engine.H0[month_idx])
+                            if h_month_val < h0_month_val * 0.8:
+                                if isinstance(H[month_idx], ProbValue):
+                                    H[month_idx] = ProbValue(h0_month_val * 0.8, std_dev_percent=0.1)
+                                else:
+                                    H[month_idx] = h0_month_val * 0.8
             
             # [V57.2] 阳刃金刚盾：保护阳刃节点，确保能量不被过度削弱
             # [V57.4] 增强：如果阳刃节点被冲，不仅豁免，还要能量加成（越冲越旺）

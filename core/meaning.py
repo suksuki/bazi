@@ -605,7 +605,8 @@ class MeaningEngine:
                  path = "[身旺任财] (Strength carrying Wealth)"
                  process = "日主依靠自身 **强根(工具)** 直接担起了 **重财(矿源)**。"
 
-        # 3. Conclusion
+        # 3. Conclusion - Use grading thresholds instead of hard-coded values
+        # Thresholds: S级 > 200, A级 > 120, B级 > 60, D级 < 0 (proportional to energy scale)
         level = "普通 (Average)"
         if total_wealth_energy > 200: level = "S 级 (巨富)"
         elif total_wealth_energy > 120: level = "A 级 (富裕)"

@@ -14,7 +14,9 @@ from .physics import (
     calculate_control_damage, 
     calculate_generation,
     quantum_tunneling_probability,
-    phase_transition_energy
+    phase_transition_energy,
+    calculate_impedance_mismatch,
+    calculate_shielding_effect
 )
 from .utils import (
     saturation_curve, 
@@ -29,6 +31,7 @@ __all__ = [
     'sigmoid_threshold', 'softplus_threshold',
     'calculate_control_damage', 'calculate_generation',
     'quantum_tunneling_probability', 'phase_transition_energy',
+    'calculate_impedance_mismatch', 'calculate_shielding_effect',
     'saturation_curve', 'exponential_decay', 'smooth_step',
     'gaussian_gating'
 ]

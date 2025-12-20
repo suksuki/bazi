@@ -1,7 +1,19 @@
 
 import numpy as np
 import math
+import warnings
 from core.kernel import Kernel
+
+# [DEPRECATION WARNING] V13.0
+# FluxEngine is a legacy engine that does NOT use ProbValue (probability wave functions).
+# For production use, please migrate to GraphNetworkEngine which fully implements
+# probabilistic calculations and non-linear physics.
+# See: core/engine_graph.py
+warnings.warn(
+    "FluxEngine is deprecated. Use GraphNetworkEngine for ProbValue-based calculations.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 class WaveFunction:
     """

@@ -23,6 +23,7 @@ from lunar_python import Solar
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
 from core.engine_v88 import EngineV88 as QuantumEngine
+from core.engine_graph import GraphNetworkEngine
 from core.bazi_profile import BaziProfile
 from core.exceptions import (
     BaziCalculationError,
@@ -63,6 +64,7 @@ class BaziController:
             self._calc: Optional[BaziCalculator] = None
             self._flux_engine: Optional[FluxEngine] = None
             self._quantum_engine: Optional[QuantumEngine] = None
+            self._graph_engine: Optional[GraphNetworkEngine] = None
             self._profile: Optional[BaziProfile] = None
             
             # State Cache
@@ -465,6 +467,157 @@ class BaziController:
             return {}
             
         return self._quantum_engine.calculate_energy(case_data, dynamic_context)
+
+    def run_advanced_simulation(self, dynamic_context: Dict) -> Dict:
+        """
+        Phase 12: Advanced Simulation using GraphNetworkEngine (Physics-Initialized GNN).
+        Returns detailed energy, ten gods, and cybernetics status.
+        """
+        try:
+            # 1. Initialize Graph Engine if needed
+            if not self._graph_engine:
+                params = self._config_controller.get_full_config()
+                self._graph_engine = GraphNetworkEngine(config=params)
+
+            # 2. Update config dynamically
+            current_params = self._config_controller.get_full_config()
+            self._graph_engine.config = current_params # Update config
+
+            # 3. Prepare Inputs
+            bazi_list = [
+                f"{self._chart.get('year',{}).get('stem','')}{self._chart.get('year',{}).get('branch','')}",
+                f"{self._chart.get('month',{}).get('stem','')}{self._chart.get('month',{}).get('branch','')}",
+                f"{self._chart.get('day',{}).get('stem','')}{self._chart.get('day',{}).get('branch','')}",
+                f"{self._chart.get('hour',{}).get('stem','')}{self._chart.get('hour',{}).get('branch','')}"
+            ]
+            dm = self._chart.get('day', {}).get('stem', '?')
+            
+            # 4. Run Pipeline
+            # Phase 1: Init
+            self._graph_engine.initialize_nodes(
+                bazi=bazi_list, 
+                day_master=dm,
+                luck_pillar=dynamic_context.get('luck_pillar'),
+                year_pillar=dynamic_context.get('year')
+            )
+            
+            # Phase 2: Adjacency
+            self._graph_engine.build_adjacency_matrix()
+            
+            # Phase 2.5: Quantum Entanglement (三合/六合/刑冲)
+            # Must apply before propagation to modify initial energies
+            self._graph_engine._apply_quantum_entanglement_once()
+            
+            # Phase 3: Propagate
+            H_final = self._graph_engine.propagate(max_iterations=5)
+            
+            # 5. Extract Results
+            feedback_stats = self._graph_engine.energy_propagator.feedback_stats
+            
+            from core.math import ProbValue
+            
+            # Proper Ten Gods Mapping (with Yin/Yang distinction)
+            gods_map = {
+                "甲": {"甲":"BiJian", "乙":"JieCai", "丙":"ShiShen", "丁":"ShangGuan", "戊":"PianCai", "己":"ZhengCai", "庚":"QiSha", "辛":"ZhengGuan", "壬":"PianYin", "癸":"ZhengYin"},
+                "乙": {"乙":"BiJian", "甲":"JieCai", "丁":"ShiShen", "丙":"ShangGuan", "己":"PianCai", "戊":"ZhengCai", "辛":"QiSha", "庚":"ZhengGuan", "癸":"PianYin", "壬":"ZhengYin"},
+                "丙": {"丙":"BiJian", "丁":"JieCai", "戊":"ShiShen", "己":"ShangGuan", "庚":"PianCai", "辛":"ZhengCai", "壬":"QiSha", "癸":"ZhengGuan", "甲":"PianYin", "乙":"ZhengYin"},
+                "丁": {"丁":"BiJian", "丙":"JieCai", "己":"ShiShen", "戊":"ShangGuan", "辛":"PianCai", "庚":"ZhengCai", "癸":"QiSha", "壬":"ZhengGuan", "乙":"PianYin", "甲":"ZhengYin"},
+                "戊": {"戊":"BiJian", "己":"JieCai", "庚":"ShiShen", "辛":"ShangGuan", "壬":"PianCai", "癸":"ZhengCai", "甲":"QiSha", "乙":"ZhengGuan", "丙":"PianYin", "丁":"ZhengYin"},
+                "己": {"己":"BiJian", "戊":"JieCai", "辛":"ShiShen", "庚":"ShangGuan", "癸":"PianCai", "壬":"ZhengCai", "乙":"QiSha", "甲":"ZhengGuan", "丁":"PianYin", "丙":"ZhengYin"},
+                "庚": {"庚":"BiJian", "辛":"JieCai", "壬":"ShiShen", "癸":"ShangGuan", "甲":"PianCai", "乙":"ZhengCai", "丙":"QiSha", "丁":"ZhengGuan", "戊":"PianYin", "己":"ZhengYin"},
+                "辛": {"辛":"BiJian", "庚":"JieCai", "癸":"ShiShen", "壬":"ShangGuan", "乙":"PianCai", "甲":"ZhengCai", "丁":"QiSha", "丙":"ZhengGuan", "己":"PianYin", "戊":"ZhengYin"},
+                "壬": {"壬":"BiJian", "癸":"JieCai", "甲":"ShiShen", "乙":"ShangGuan", "丙":"PianCai", "丁":"ZhengCai", "戊":"QiSha", "己":"ZhengGuan", "庚":"PianYin", "辛":"ZhengYin"},
+                "癸": {"癸":"BiJian", "壬":"JieCai", "乙":"ShiShen", "甲":"ShangGuan", "丁":"PianCai", "丙":"ZhengCai", "己":"QiSha", "戊":"ZhengGuan", "辛":"PianYin", "庚":"ZhengYin"}
+            }
+            
+            current_map = gods_map.get(dm, {})
+            
+            # Calculate Ten Gods energies (aggregate by Stem chars)
+            # [V13.2] Fix: Include hidden stems from branches
+            ten_gods_detail = {
+                "BiJian": {"mean": 0, "std": 0}, "JieCai": {"mean": 0, "std": 0},
+                "ShiShen": {"mean": 0, "std": 0}, "ShangGuan": {"mean": 0, "std": 0},
+                "PianCai": {"mean": 0, "std": 0}, "ZhengCai": {"mean": 0, "std": 0},
+                "QiSha": {"mean": 0, "std": 0}, "ZhengGuan": {"mean": 0, "std": 0},
+                "PianYin": {"mean": 0, "std": 0}, "ZhengYin": {"mean": 0, "std": 0}
+            }
+            
+            # [V13.2] Use original element for five element distribution (before transformation)
+            element_dist = {"wood": {"mean": 0, "std": 0}, "fire": {"mean": 0, "std": 0}, 
+                           "earth": {"mean": 0, "std": 0}, "metal": {"mean": 0, "std": 0}, 
+                           "water": {"mean": 0, "std": 0}}
+            
+            # Hidden stems mapping for branches
+            from core.kernel import Kernel
+            HIDDEN_STEMS = Kernel.HIDDEN_STEMS  # {'巳': {'丙': 0.6, '庚': 0.3, '戊': 0.1}, ...}
+            
+            for node in self._graph_engine.nodes:
+                if isinstance(node.current_energy, ProbValue):
+                    mean_val = node.current_energy.mean
+                    std_val = node.current_energy.std
+                else:
+                    mean_val = float(node.current_energy)
+                    std_val = 0.1
+                
+                # [V13.2] Use original element if available (before three harmony transformation)
+                elem = getattr(node, 'original_element', None) or node.element
+                element_dist[elem]["mean"] += mean_val
+                element_dist[elem]["std"] = (element_dist[elem]["std"]**2 + std_val**2)**0.5
+                
+                # Map STEM nodes to Ten Gods (use char, not element)
+                if node.node_type == 'stem' and node.char in current_map:
+                    god_name = current_map[node.char]
+                    ten_gods_detail[god_name]["mean"] += mean_val
+                    ten_gods_detail[god_name]["std"] = (ten_gods_detail[god_name]["std"]**2 + std_val**2)**0.5
+                
+                # [V13.2] Include hidden stems from branches
+                elif node.node_type == 'branch' and node.char in HIDDEN_STEMS:
+                    hidden = HIDDEN_STEMS[node.char]
+                    for h_stem, ratio in hidden.items():
+                        if h_stem in current_map:
+                            god_name = current_map[h_stem]
+                            h_mean = mean_val * ratio  # Weighted by hidden stem ratio
+                            h_std = std_val * ratio
+                            ten_gods_detail[god_name]["mean"] += h_mean
+                            ten_gods_detail[god_name]["std"] = (ten_gods_detail[god_name]["std"]**2 + h_std**2)**0.5
+            
+            # Aggregate Ten Gods into 5 categories
+            ten_gods_summary = {
+                "比劫 (Self)": {"mean": ten_gods_detail["BiJian"]["mean"] + ten_gods_detail["JieCai"]["mean"],
+                              "std": (ten_gods_detail["BiJian"]["std"]**2 + ten_gods_detail["JieCai"]["std"]**2)**0.5},
+                "食伤 (Output)": {"mean": ten_gods_detail["ShiShen"]["mean"] + ten_gods_detail["ShangGuan"]["mean"],
+                                "std": (ten_gods_detail["ShiShen"]["std"]**2 + ten_gods_detail["ShangGuan"]["std"]**2)**0.5},
+                "财星 (Wealth)": {"mean": ten_gods_detail["PianCai"]["mean"] + ten_gods_detail["ZhengCai"]["mean"],
+                                "std": (ten_gods_detail["PianCai"]["std"]**2 + ten_gods_detail["ZhengCai"]["std"]**2)**0.5},
+                "官杀 (Power)": {"mean": ten_gods_detail["QiSha"]["mean"] + ten_gods_detail["ZhengGuan"]["mean"],
+                               "std": (ten_gods_detail["QiSha"]["std"]**2 + ten_gods_detail["ZhengGuan"]["std"]**2)**0.5},
+                "印枭 (Resource)": {"mean": ten_gods_detail["PianYin"]["mean"] + ten_gods_detail["ZhengYin"]["mean"],
+                                  "std": (ten_gods_detail["PianYin"]["std"]**2 + ten_gods_detail["ZhengYin"]["std"]**2)**0.5}
+            }
+                
+            return {
+                "bazi": bazi_list,
+                "day_master": dm,
+                "element_distribution": element_dist,
+                "ten_gods": ten_gods_summary,
+                "ten_gods_detail": ten_gods_detail,
+                "feedback_stats": feedback_stats,
+                "nodes": [
+                    {
+                        "char": n.char, 
+                        "element": n.element, 
+                        "energy_mean": n.current_energy.mean if isinstance(n.current_energy, ProbValue) else float(n.current_energy),
+                        "energy_std": n.current_energy.std if isinstance(n.current_energy, ProbValue) else 0.1,
+                        "type": n.node_type,
+                        "ten_god": current_map.get(n.char, "N/A") if n.node_type == 'stem' else "Branch"
+                    } 
+                    for n in self._graph_engine.nodes
+                ]
+            }
+            
+        except Exception as e:
+            logger.error(f"Advanced simulation failed: {e}", exc_info=True)
+            return {}
         
     def run_timeline_simulation(self, start_year: int, duration: int = 12,
                                 case_data: Optional[Dict] = None,

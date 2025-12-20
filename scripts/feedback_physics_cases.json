@@ -1,0 +1,128 @@
+[
+    {
+        "id": "SYN_FK_01",
+        "type": "inverse_control",
+        "desc": "合成案例: 滴水激火 (反克)",
+        "physics_model": "impedance_mismatch",
+        "bazi": [
+            "丙午",
+            "丙午",
+            "丙午",
+            "丙午"
+        ],
+        "trigger": {
+            "stem": "壬",
+            "branch": "子",
+            "relation": "clash"
+        },
+        "environment": {
+            "era": "fire",
+            "geo": "south"
+        },
+        "initial_energies": {
+            "Fire": 200.0,
+            "Water": 10.0
+        },
+        "expectation": {
+            "status": "INVERSE_CONTROL",
+            "damage_to_target(Fire)": "near_zero",
+            "recoil_to_source(Water)": "catastrophic",
+            "note": "杯水车薪。水不仅克不了火，反被瞬间汽化 (反噬 > 100%)。"
+        }
+    },
+    {
+        "id": "SYN_SH_01",
+        "type": "shielding",
+        "desc": "合成案例: 寒衣护体 (环境屏蔽)",
+        "physics_model": "environmental_shielding",
+        "bazi": [
+            "丙午",
+            "甲午",
+            "丙寅",
+            "甲午"
+        ],
+        "trigger": {
+            "stem": "壬",
+            "branch": "子",
+            "relation": "clash"
+        },
+        "environment": {
+            "era": "fire",
+            "geo": "south"
+        },
+        "initial_energies": {
+            "Fire": 50.0,
+            "Water": 40.0
+        },
+        "expectation": {
+            "status": "SHIELDED",
+            "raw_damage": 20.0,
+            "shielded_damage": 10.0,
+            "shielding_efficiency": 0.5,
+            "note": "双方势均力敌，本应两败俱伤。但得九运与南方火地之助，火受到的伤害减半。"
+        }
+    },
+    {
+        "id": "REAL_JOBS_2011",
+        "type": "inverse_control",
+        "desc": "真实案例: 乔布斯 2011 (木多金缺)",
+        "physics_model": "impedance_mismatch",
+        "bazi": [
+            "乙未",
+            "戊寅",
+            "壬午",
+            "辛亥"
+        ],
+        "trigger": {
+            "stem": "辛",
+            "branch": "卯",
+            "relation": "control"
+        },
+        "environment": {
+            "era": "earth",
+            "geo": "north_america"
+        },
+        "note": "2011 辛卯年。地支亥卯未三合极强木局。天干辛金(弱)试图克制强木。",
+        "initial_energies": {
+            "Wood": 120.0,
+            "Metal": 8.0
+        },
+        "expectation": {
+            "status": "INVERSE_CONTROL",
+            "damage_to_target(Wood)": "negligible",
+            "recoil_to_source(Metal)": "critical_failure",
+            "interpretation": "辛金(肺/呼吸)试图克木，遭遇全反射，金气崩塌。"
+        }
+    },
+    {
+        "id": "REAL_QIANLONG_CLASH",
+        "type": "normal_clash",
+        "desc": "真实案例: 乾隆帝 (子午极冲)",
+        "physics_model": "dynamic_equilibrium",
+        "bazi": [
+            "辛卯",
+            "丁酉",
+            "庚午",
+            "丙子"
+        ],
+        "trigger": {
+            "stem": "壬",
+            "branch": "申",
+            "relation": "interaction"
+        },
+        "environment": {
+            "era": "none",
+            "geo": "beijing"
+        },
+        "initial_energies": {
+            "Fire": 45.0,
+            "Water": 42.0
+        },
+        "expectation": {
+            "status": "NORMAL_CLASH",
+            "damage_to_target": "significant",
+            "recoil_to_source": "significant",
+            "note": "水火力量接近 (Ratio < 3.0)。这是正常的激烈对抗，不应触发反克。"
+        }
+    }
+]

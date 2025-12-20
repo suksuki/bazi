@@ -122,6 +122,11 @@ def 初始化界面状态(配置数据, 强制=False):
         'wp_punish_entropy': 事件.get('punishEntropy', 0.7),
         'wp_resonance_q': 事件.get('resonanceQ', 1.5),
         'wp_harm_damping': 事件.get('harmDamping', 0.2),
+        # V12.2 控制论 (Cybernetics)
+        'fb_inv_threshold': 流转.get('feedback', {}).get('inverseControlThreshold', 4.0),
+        'fb_inv_recoil': 流转.get('feedback', {}).get('inverseRecoilMultiplier', 2.0),
+        'fb_era_shield': 流转.get('feedback', {}).get('eraShieldingFactor', 0.5),
+        'ys_resonance': 流转.get('yongshen', {}).get('resonanceBoost', 1.2),
     })
     
     # 旺衰与 GAT (Strength & GAT)
@@ -217,6 +222,15 @@ def merge_sidebar_values_to_config(config):
     if 'p2_gen_drain' in st.session_state: 流转['generationDrain'] = st.session_state['p2_gen_drain']
     if 'p2_ctrl_imp' in st.session_state: 流转['controlImpact'] = st.session_state['p2_ctrl_imp']
     if 'f_damp_fac' in st.session_state: 流转['dampingFactor'] = st.session_state['f_damp_fac']
+    
+    # Cybernetics
+    反馈 = 流转.setdefault('feedback', {})
+    if 'fb_inv_threshold' in st.session_state: 反馈['inverseControlThreshold'] = st.session_state['fb_inv_threshold']
+    if 'fb_inv_recoil' in st.session_state: 反馈['inverseRecoilMultiplier'] = st.session_state['fb_inv_recoil']
+    if 'fb_era_shield' in st.session_state: 反馈['eraShieldingFactor'] = st.session_state['fb_era_shield']
+    
+    用神 = 流转.setdefault('yongshen', {})
+    if 'ys_resonance' in st.session_state: 用神['resonanceBoost'] = st.session_state['ys_resonance']
 
     # 相变
     相变 = 流转.setdefault('phaseChange', {})
@@ -435,6 +449,13 @@ def render_tuning_panel(controller, golden_config):
         with st.expander("🌊 能量流转 (Flow) ✅", expanded=True):
             st.slider("系统熵增 ✅", 0.0, 0.2, key='f_entropy', step=0.01)
             st.slider("焦土/冻水缩减 ✅", 0.0, 1.0, key='pc_scorched', step=0.05)
+
+        with st.expander("🛡️ 控制论反馈 (Cybernetics) 🎖️", expanded=True):
+            st.caption("V12.2 反克与屏蔽机制")
+            st.slider("反克阈值 (Ratio) 🎖️", 2.0, 10.0, key='fb_inv_threshold', step=0.1, help="触发反克的能量倍率阈值")
+            st.slider("反噬倍率 (Recoil) 🎖️", 1.0, 5.0, key='fb_inv_recoil', step=0.1, help="触发反克时的反噬伤害倍数")
+            st.slider("环境屏蔽 (Shield) 🎖️", 0.0, 1.0, key='fb_era_shield', step=0.1, help="得令得地的伤害屏蔽率")
+            st.slider("用神共振 (Resonance)", 1.0, 2.0, key='ys_resonance', step=0.1, help="和大运产生共振时的增益")
 
     # 最后合并当前 session 状态到返回的配置对象中
     merge_sidebar_values_to_config(fp)

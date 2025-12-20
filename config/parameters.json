@@ -102,6 +102,14 @@
     }
   },
   "flow": {
+    "medium": {
+      "//_COMMENT": "V12.2 Wave Mechanics: Transmission & Entropy",
+      "dampingFactor": 0.1,
+      "transmissionNoise": 0.5
+    },
+    "interaction": {
+      "recoilFactor": 0.3
+    },
     "generationEfficiency": 0.7,
     "generationDrain": 0.3,
     "controlImpact": 0.5,
@@ -111,6 +119,15 @@
       "gap1": 0.9,
       "gap2": 0.75,
       "gap3": 0.6
+    },
+    "feedback": {
+      "//_COMMENT": "Cybernetics: Impedance Mismatch & Environmental Shielding",
+      "inverseControlThreshold": 4.0,
+      "inverseRecoilMultiplier": 2.0,
+      "eraShieldingFactor": 0.5
+    },
+    "yongshen": {
+      "resonanceBoost": 1.2
     },
     "systemEntropy": 0.05,
     "outputDrainPenalty": 1.2,

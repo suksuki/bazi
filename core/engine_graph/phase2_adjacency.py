@@ -118,7 +118,8 @@ class AdjacencyMatrixBuilder:
                 A[i][j] = weight
         
         # [V55.0] 添加大运的 Support Link（静态叠加）
-        self._add_dayun_support_links(A)
+        # [V12.0 The Purge] Support Link 移交 Field Coupling 处理
+        # self._add_dayun_support_links(A)
         
         
         # [V12.0 The Purge] 移除 _add_liunian_trigger_links old logic

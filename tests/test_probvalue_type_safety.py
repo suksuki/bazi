@@ -140,9 +140,9 @@ class TestEngineGraphProbValueIntegration(unittest.TestCase):
         
         self.engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
         
-        # 创建测试八字
-        self.bazi_list = ['甲', '子', '乙', '丑', '丙', '寅', '丁', '卯']
-        self.day_master = '乙'
+        # 创建测试八字 (pillar format: 天干+地支)
+        self.bazi_list = ['甲子', '乙丑', '丙寅', '丁卯']
+        self.day_master = '丙'
     
     def test_node_energy_comparison(self):
         """测试节点能量比较（V13.0: 使用 ProbValue.mean 进行比较）"""
@@ -312,9 +312,9 @@ class TestComprehensiveProbValueScenarios(unittest.TestCase):
         # 初始化引擎
         engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
         
-        # 创建测试八字
-        bazi_list = ['甲', '子', '乙', '丑', '丙', '寅', '丁', '卯']
-        day_master = '乙'
+        # 创建测试八字 (pillar format: 天干+地支)
+        bazi_list = ['甲子', '乙丑', '丙寅', '丁卯']
+        day_master = '丙'
         
         # 初始化节点
         engine.initialize_nodes(bazi_list, day_master)

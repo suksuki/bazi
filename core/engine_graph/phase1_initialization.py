@@ -215,7 +215,8 @@ class NodeInitializer:
             self.engine.nodes.append(year_branch_node)
         
         # 4. 计算初始能量（应用所有物理规则）
-        H0 = np.zeros(len(self.engine.nodes))
+        # [V13.5] Fix: Must use dtype=object to hold ProbValue objects, otherwise they collapse to float
+        H0 = np.zeros(len(self.engine.nodes), dtype=object)
         
         for i, node in enumerate(self.engine.nodes):
             # [V55.0] 大运节点使用特殊权重
@@ -292,13 +293,22 @@ class NodeInitializer:
                     # V13.0: 应用季节系数（ProbValue 乘法）
                     energy = energy * season_factor
                     # V13.0: 调整不确定度
+                    # V13.0: 调整不确定度 - 确保转换为 ProbValue
+                    std_dev_percent = 0.1 * season_std_boost
                     if isinstance(energy, ProbValue):
-                        new_std_percent = (energy.std / energy.mean) * season_std_boost if energy.mean != 0 else 0.1
-                        energy = ProbValue(energy.mean, new_std_percent)
+                        # 如果已经是 ProbValue (来自乘法)，我们可能需要根据季节状态增加不确定度
+                        # 例如被克时，不确定度应该很大
+                         current_std_percent = energy.std / energy.mean if energy.mean != 0 else 0.1
+                         final_std_percent = max(current_std_percent, std_dev_percent)
+                         energy = ProbValue(energy.mean, final_std_percent)
                     else:
-                        # 如果 energy 还是 float，转换为 ProbValue
-                        std_dev_percent = 0.1 * season_std_boost  # 基础不确定度 * 季节调整
-                        energy = ProbValue(energy, std_dev_percent)
+                         energy = ProbValue(float(energy), std_dev_percent)
+                         
+                    # Store in H0 (as object)
+                    H0[i] = energy
+                    
+                    # Store in H0 (as object)
+                    H0[i] = energy
             
             # V13.0: 确保能量是 ProbValue（概率值）
             if not isinstance(energy, ProbValue):

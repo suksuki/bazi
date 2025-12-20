@@ -113,6 +113,63 @@ class ProbValue:
     def __float__(self) -> float:
         return self.mean
     
+    def transmit(self, damping_factor: float, noise_floor: float = 0.5) -> 'ProbValue':
+        """
+        [V12.2] 波的传输 (Transmission): 振幅衰减，熵增加
+        
+        Args:
+            damping_factor: 阻尼系数 (e^-damping)
+            noise_floor: 本底噪音 (高斯白噪声)
+        
+        物理含义:
+            信号穿过介质，能量按指数衰减，但携带的信息熵（不确定度）增加。
+            衰减后的方差 = (原方差 * 衰减系数)^2 + 噪音^2
+        """
+        # 1. 振幅衰减 (非线性)
+        attenuation = math.exp(-damping_factor)
+        new_mean = self.mean * attenuation
+        
+        # 2. 方差演化 (熵增)
+        # 信号变弱，但必须引入额外的传输噪音（不可逆的热力学过程）
+        # new_std = sqrt((old_std * att)^2 + noise^2)
+        new_std = math.sqrt((self.std * attenuation)**2 + noise_floor**2)
+        
+        # 重新计算相对波动率用于初始化
+        std_percent = new_std / new_mean if new_mean != 0 else 0.1
+        
+        # 直接使用 calculated std 初始化，覆盖默认的 std_percent 计算
+        new_prob = ProbValue(new_mean, std_percent)
+        new_prob.std = new_std  # 强制覆盖，确保精确物理值
+        return new_prob
+
+    def react(self, damage_dealt: float, recoil_factor: float) -> 'ProbValue':
+        """
+        [V12.2] 波的反作用 (Reaction): 能量减损，不稳定性剧增
+        
+        Args:
+            damage_dealt: 造成的伤害量 (Scalar or Mean)
+            recoil_factor: 后坐力系数 (beta)
+            
+        物理含义:
+            牛顿第三定律的反作用力。
+            攻击造成反噬，导致自身能量减少，且波函数剧烈震荡（方差增加）。
+        """
+        recoil_energy = damage_dealt * recoil_factor
+        
+        # 能量减少
+        new_mean = self.mean - recoil_energy
+        if new_mean < 0: new_mean = 0.0 # 能量不能为负
+        
+        # 方差剧增: 战斗导致波形崩塌/混乱
+        # 假设反作用力带来了巨大的扰动 (Instability)
+        added_instability = recoil_energy * 0.5 
+        new_std = math.sqrt(self.std**2 + added_instability**2)
+        
+        std_percent = new_std / new_mean if new_mean != 0 else 0.1
+        new_prob = ProbValue(new_mean, std_percent)
+        new_prob.std = new_std
+        return new_prob
+
     def __str__(self) -> str:
         return f"ProbValue(μ={self.mean:.2f}, σ={self.std:.2f})"
     

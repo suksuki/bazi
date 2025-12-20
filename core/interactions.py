@@ -10,6 +10,15 @@ STEM_COMBINATIONS = {
     "戊": "癸", "癸": "戊"
 }
 
+EARTHLY_BRANCHES = {
+    "子": {"element": "water"}, "丑": {"element": "earth"},
+    "寅": {"element": "wood"}, "卯": {"element": "wood"},
+    "辰": {"element": "earth"}, "巳": {"element": "fire"},
+    "午": {"element": "fire"}, "未": {"element": "earth"},
+    "申": {"element": "metal"}, "酉": {"element": "metal"},
+    "戌": {"element": "earth"}, "亥": {"element": "water"}
+}
+
 STEM_CLASHES = {
     "甲": "庚", "庚": "甲",
     "乙": "辛", "辛": "乙",

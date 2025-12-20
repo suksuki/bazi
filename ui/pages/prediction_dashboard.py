@@ -17,6 +17,8 @@ from ui.components.cards import DestinyCards
 from controllers.bazi_controller import BaziController
 from core.engine_v88 import EngineV88 as QuantumEngine
 from utils.notification_manager import get_notification_manager
+from core.processors.physics import GENERATION, CONTROL
+import numpy as np
 
 # Configure Logger
 logger = logging.getLogger(__name__)
@@ -28,7 +30,29 @@ def render_prediction_dashboard():
     """
     controller = BaziController()
     
-    # 1. State Verification
+    # 1. State Verification & Hydration
+    # [Fix] Hydrate Controller from Session State (Form Data)
+    if st.session_state.get('calc_active', False):
+        try:
+            name = st.session_state.get('input_name', 'Unknown')
+            gender = st.session_state.get('input_gender', '男')
+            date_obj = st.session_state.get('input_date')
+            time_val = st.session_state.get('input_time', 12)
+            city = st.session_state.get('unified_geo_city', 'Unknown')
+            longitude = st.session_state.get('input_longitude', 116.46)
+            enable_solar = st.session_state.get('input_enable_solar_time', True)
+            
+            if date_obj:
+                controller.set_user_input(
+                    name=name, gender=gender, date_obj=date_obj, 
+                    time_int=time_val, city=city, 
+                    longitude=longitude, enable_solar=enable_solar
+                )
+        except Exception as e:
+            logger.error(f"Failed to hydrate controller: {e}")
+            st.error("数据加载失败，请重新输入")
+            return
+
     user_data = controller.get_user_data()
     if not user_data or not user_data.get('name'):
         st.info("👈 请在左侧边栏输入您的出生信息并点击 '开始排盘'。")
@@ -170,34 +194,208 @@ def render_prediction_dashboard():
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
             st.plotly_chart(fig, use_container_width=True)
 
-    # 7. Quantum Physics Diagnostics
+    # --- NEW: 触发规则分析 (Triggered Rules Analysis) ---
     st.markdown("---")
-    st.subheader("🧬 命运诊断 (Diagnostics)")
+    st.subheader("📜 触发规则分析 (Activated Rules)")
     
-    # Use Controller to get full simulation results (replaces manual QuantumEngine usage)
-    case_data = controller.get_case_data() # Uses internal state
-    dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else ''}
-    
-    # Run Single Year Simulation
-    results = controller.run_single_year_simulation(case_data, dynamic_context)
-    
-    d_col1, d_col2, d_col3 = st.columns(3)
-    
-    # Phase Change
-    phase_info = results.get('phase_info', {})
-    if phase_info.get('is_active'):
-        d_col1.error(f"⚠️ {phase_info.get('description')}")
-        d_col1.caption(f"效率修正: {phase_info.get('resource_efficiency', 1.0)*100:.0f}%")
-    else:
-        d_col1.success("✅ 气候适宜 (No Phase Change)")
+    try:
+        from core.rule_matcher import RuleMatcher, MatchedRule
         
-    # Domain Logic
-    domains = results.get('domain_details', {})
-    wealth_info = domains.get('wealth', {})
-    d_col2.info(f"💰 财运判定: {wealth_info.get('reason', 'Normal')}")
+        # Build bazi list from chart
+        bazi_list = [
+            f"{chart.get('year', {}).get('stem', '')}{chart.get('year', {}).get('branch', '')}",
+            f"{chart.get('month', {}).get('stem', '')}{chart.get('month', {}).get('branch', '')}",
+            f"{chart.get('day', {}).get('stem', '')}{chart.get('day', {}).get('branch', '')}",
+            f"{chart.get('hour', {}).get('stem', '')}{chart.get('hour', {}).get('branch', '')}"
+        ]
+        dm = chart.get('day', {}).get('stem', '')
+        
+        # Match rules
+        matcher = RuleMatcher()
+        matched_rules = matcher.match(bazi_list, dm)
+        summary = matcher.get_rule_summary(matched_rules)
+        
+        # Display summary metrics
+        col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+        with col_r1:
+            st.metric("总规则数", summary['total'], help="触发的八字规则总数")
+        with col_r2:
+            st.metric("交互规则", summary['by_category'].get('B', 0), help="天干五合、六冲、三刑等")
+        with col_r3:
+            st.metric("墓库规则", summary['by_category'].get('D', 0), help="墓库开闭状态")
+        with col_r4:
+            active_count = len(summary['active_effects'])
+            st.metric("动态激活", active_count, help="非始终应用的规则")
+        
+        # Display active effects (dynamic rules)
+        if summary['active_effects']:
+            st.markdown("#### ⚡ 激活的动态规则")
+            for effect in summary['active_effects']:
+                st.info(f"🔹 {effect}")
+        
+        # Expandable rule details
+        with st.expander("📋 查看所有规则详情", expanded=False):
+            # Group by category
+            categories = {'A': '基础物理', 'B': '几何交互', 'C': '能量流转', 'D': '墓库规则', 'E': '判定阈值'}
+            
+            for cat, cat_name in categories.items():
+                cat_rules = [r for r in matched_rules if r.category == cat]
+                if cat_rules:
+                    st.markdown(f"**{cat}. {cat_name}** ({len(cat_rules)}条)")
+                    for rule in cat_rules:
+                        participants_str = f" | 参与: {', '.join(rule.participants)}" if rule.participants else ""
+                        effect_str = rule.effect if rule.effect != "始终应用" else "📌 基础规则"
+                        st.caption(f"• **{rule.rule_id} {rule.name_cn}**: {effect_str}{participants_str}")
+                    st.markdown("")
+                    
+    except Exception as e:
+        logger.error(f"Rule matching failed: {e}")
+        st.warning("规则匹配暂时不可用")
+
+    # 7. Quantum Physics Diagnostics (Advanced Smart Chart)
+    st.markdown("---")
+    st.subheader("🧬 命运诊断 (Pro Diagnostics)")
+
+    # Run Advanced Simulation (Graph Engine)
+    dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
+    adv_result = controller.run_advanced_simulation(dynamic_context)
     
-    career_info = domains.get('career', {})
-    d_col3.info(f"⚔️ 事业判定: {career_info.get('reason', 'Normal')}")
+    if adv_result:
+        # --- Section B: Ten Gods Radar ---
+        st.markdown("#### 📡 十神势力雷达 (Ten Gods Radar)")
+        c_radar, c_monitor = st.columns([1, 1])
+        
+        # Use proper Ten Gods data from controller
+        ten_gods = adv_result.get('ten_gods', {})
+        
+        if ten_gods:
+            tg_labels = list(ten_gods.keys())
+            tg_means = [v['mean'] for v in ten_gods.values()]
+            tg_stds = [v['std'] for v in ten_gods.values()]
+            
+            with c_radar:
+                # Radar Chart with error bars representation
+                fig_radar = go.Figure()
+                
+                # Main trace
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=tg_means,
+                    theta=tg_labels,
+                    fill='toself',
+                    name='μ (均值)',
+                    line_color='#7F39FB',
+                    fillcolor='rgba(127, 57, 251, 0.3)'
+                ))
+                
+                # Upper bound (mean + std)
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=[m + s for m, s in zip(tg_means, tg_stds)],
+                    theta=tg_labels,
+                    mode='lines',
+                    name='μ + σ',
+                    line=dict(color='rgba(127, 57, 251, 0.5)', dash='dash')
+                ))
+                
+                fig_radar.update_layout(
+                    polar=dict(radialaxis=dict(visible=True)),
+                    showlegend=True,
+                    height=350,
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                st.plotly_chart(fig_radar, use_container_width=True)
+                
+                # Show detailed values with uncertainty
+                st.caption("**十神详情 (ProbValue μ ± σ)**")
+                for label, vals in ten_gods.items():
+                    st.text(f"{label}: {vals['mean']:.2f} ± {vals['std']:.2f}")
+        else:
+            st.warning("十神数据未计算")
+        
+        # --- NEW: Node Energy Probability Table ---
+        nodes_data = adv_result.get('nodes', [])
+        if nodes_data:
+            with st.expander("🔬 节点能量概率值 (Node Energy ProbValue)", expanded=False):
+                st.caption("每个干支节点的能量值，以概率波函数表示 (μ ± σ)")
+                
+                # Build table data
+                table_data = []
+                for node in nodes_data:
+                    char = node.get('char', '?')
+                    elem = node.get('element', '?')
+                    mean = node.get('energy_mean', 0)
+                    std = node.get('energy_std', 0)
+                    ntype = node.get('type', '?')
+                    ten_god = node.get('ten_god', 'N/A')
+                    
+                    # Format energy as ProbValue string
+                    energy_str = f"{mean:.2f} ± {std:.2f}"
+                    
+                    table_data.append({
+                        '字符': char,
+                        '五行': elem,
+                        '类型': '天干' if ntype == 'stem' else '地支',
+                        '十神': ten_god,
+                        '能量 (μ ± σ)': energy_str,
+                        '均值': mean
+                    })
+                
+                # Sort by element for grouping
+                df_nodes = pd.DataFrame(table_data)
+                df_nodes = df_nodes.sort_values(by='均值', ascending=False)
+                
+                # Display with color coding by element
+                st.dataframe(
+                    df_nodes[['字符', '五行', '类型', '十神', '能量 (μ ± σ)']],
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                # Summary stats
+                total_mean = sum(n.get('energy_mean', 0) for n in nodes_data)
+                st.metric("总能量", f"{total_mean:.2f}", help="所有节点能量均值之和")
+            
+            
+        with c_monitor:
+            st.markdown("#### 🛡️ 控制论反馈 (Cybernetics)")
+            feedback_stats = adv_result.get('feedback_stats', [])
+            
+            # Stats Aggregation
+            inv_control_count = sum(1 for f in feedback_stats if f.get('is_inverse'))
+            total_recoil = sum(f.get('recoil', 0) for f in feedback_stats)
+            avg_shield = np.mean([f.get('shield_efficiency', 0) for f in feedback_stats]) if feedback_stats else 0
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("反克触发", f"{inv_control_count}次", delta_color="inverse")
+            m2.metric("反噬伤害", f"{total_recoil:.1f}", delta_color="inverse")
+            m3.metric("环境屏蔽", f"{avg_shield*100:.0f}%")
+            
+            if inv_control_count > 0:
+                st.error(f"⚠️ 警告: 即使攻击者也受到 {total_recoil:.1f} 点反噬伤害 (Impedance Mismatch)!")
+            if avg_shield > 0.3:
+                st.success("🛡️ 护盾激活: 环境气场屏蔽了部分克制伤害")
+                
+        # --- Section D: Quantum Assertions ---
+        st.markdown("#### 🔮 量子断言 (Quantum Assertions)")
+        assertions = []
+        if inv_control_count > 0:
+            assertions.append(f"⛔ **反克现象**: 弱木克土? 或者是弱金克木? 局中出现了以弱击强的【反克】现象 {inv_control_count} 次。")
+        if total_recoil > 10.0:
+            assertions.append(f"💥 **强烈反噬**: 攻击者受到严重反震，名为克制实为自损。建议以守为攻。")
+        if avg_shield > 0.5:
+            assertions.append(f"🔒 **得地得势**: 环境能量形成了天然护盾，外界压力难以穿透。")
+        
+        if not assertions:
+            assertions.append("✅ **系统平稳**: 能量流动符合经典物理模型，未检测到异常湍流。")
+            
+        for a in assertions:
+            st.info(a)
+            
+    else:
+        st.info("Computing Advanced Physics...")
+    
+    st.caption("注：雷达图展示了该年运下的十神能量相对强弱；控制论面板显示了深层物理交互状态。")
     
     # Uncertainty / MCP Era
     st.markdown("---")
