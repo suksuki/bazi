@@ -113,7 +113,7 @@ def render():
         )
     
     with col3:
-        if st.button("🚀 开始模拟", type="primary", use_container_width=True):
+        if st.button("🚀 开始模拟", type="primary", width='stretch'):
             with st.spinner(f"正在模拟0-{lifespan}岁完整人生财富曲线..."):
                 try:
                     from core.wealth_engine import simulate_life_wealth
@@ -325,7 +325,7 @@ def render():
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     
     # ========== 拟合度分析 ==========
     st.markdown("---")
@@ -424,7 +424,7 @@ def render():
         
         if comparison_data:
             comparison_df = pd.DataFrame(comparison_data)
-            st.dataframe(comparison_df, use_container_width=True)
+            st.dataframe(comparison_df, width='stretch')
     else:
         st.info("💡 该案例暂无Ground Truth事件数据")
     

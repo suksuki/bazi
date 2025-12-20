@@ -345,12 +345,12 @@ def render_tuning_panel(controller, golden_config):
     # 操作按钮组
     列1, 列2 = st.sidebar.columns(2)
     with 列1:
-        if st.button("🔃 同步", help="从 parameters.json 重新加载", use_container_width=True):
+        if st.button("🔃 同步", help="从 parameters.json 重新加载", width='stretch'):
             最新配置 = config_model.load_config()
             初始化界面状态(最新配置, 强制=True)
             st.rerun()
     with 列2:
-        if st.button("💾 固化", help="保存推子参数", use_container_width=True):
+        if st.button("💾 固化", help="保存推子参数", width='stretch'):
             待保存配置 = merge_sidebar_values_to_config(copy.deepcopy(fp))
             if config_model.save_config(待保存配置, merge=True):
                 st.sidebar.success("已固化!")
@@ -396,6 +396,13 @@ def render_tuning_panel(controller, golden_config):
             st.slider("通根系数 🎖️", 0.5, 2.0, key='s_rw', step=0.1)
             st.slider("透干加成 🎖️", 1.0, 2.5, key='s_eb', step=0.1)
             st.slider("同柱加成 🎖️", 1.0, 2.5, key='s_sp', step=0.1)
+
+        with st.expander("🍂 五态相对论 (Seasonality) ⭐🎖️ (已验证)", expanded=True):
+            st.slider("旺 (Wang) ⭐🎖️", 0.0, 2.0, key='sw_wang', step=0.05)
+            st.slider("相 (Xiang) 🎖️", 0.0, 2.0, key='sw_xiang', step=0.05)
+            st.slider("休 (Xiu) 🎖️", 0.0, 2.0, key='sw_xiu', step=0.05)
+            st.slider("囚 (Qiu) 🎖️", 0.0, 2.0, key='sw_qiu', step=0.05)
+            st.slider("死 (Si) 🎖️", 0.0, 2.0, key='sw_si', step=0.05)
 
     # --- 标签页 3: 动态交互场 (Phase 2 & Strength) ---
     with 标签_交互:

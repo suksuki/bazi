@@ -426,42 +426,43 @@ def get_quantum_theme_config():
     """Returns the Gypsy Mystic Theme configuration (Celestial, Magical)."""
     return {
         # --- Wood (Emerald Forest / Nature Spirit) ---
-        "甲": {"color": "#22c55e", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a4d2e, #40e0d0)"}, 
-        "乙": {"color": "#40e0d0", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"},
-        "寅": {"color": "#10b981", "icon": "🐅", "anim": "pulse-grow", "grad": "linear-gradient(to top, #064e3b, #34d399)"},
-        "卯": {"color": "#6ee7b7", "icon": "🐇", "anim": "sway", "grad": "linear-gradient(120deg, #059669, #6ee7b7)"},
+        "甲": {"name": "Jia Wood", "color": "#22c55e", "icon": "🌲", "anim": "pulse-grow", "grad": "linear-gradient(135deg, #1a4d2e, #40e0d0)"}, 
+        "乙": {"name": "Yi Wood", "color": "#40e0d0", "icon": "🌿", "anim": "sway", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"},
+        "寅": {"name": "Tiger Wood", "color": "#10b981", "icon": "🐅", "anim": "pulse-grow", "grad": "linear-gradient(to top, #064e3b, #34d399)"},
+        "卯": {"name": "Rabbit Wood", "color": "#6ee7b7", "icon": "🐇", "anim": "sway", "grad": "linear-gradient(120deg, #059669, #6ee7b7)"},
 
         # --- Fire (Candle Flame / Passion) ---
-        "丙": {"color": "#ff9f43", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9f43, #c21e56)"}, 
-        "丁": {"color": "#c21e56", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #c21e56, #ff6b6b)"},
-        "巳": {"color": "#f97316", "icon": "🐍", "anim": "sway", "grad": "linear-gradient(to right, #ea580c, #fbbf24)"},
-        "午": {"color": "#ef4444", "icon": "🐎", "anim": "pulse-grow", "grad": "linear-gradient(to right, #dc2626, #f43f5e)"}, 
+        "丙": {"name": "Bing Fire", "color": "#ff9f43", "icon": "☀️", "anim": "spin-slow", "grad": "radial-gradient(circle, #ff9f43, #c21e56)"}, 
+        "丁": {"name": "Ding Fire", "color": "#c21e56", "icon": "🕯️", "anim": "flicker", "grad": "linear-gradient(to top, #c21e56, #ff6b6b)"},
+        "巳": {"name": "Snake Fire", "color": "#f97316", "icon": "🐍", "anim": "sway", "grad": "linear-gradient(to right, #ea580c, #fbbf24)"},
+        "午": {"name": "Horse Fire", "color": "#ef4444", "icon": "🐎", "anim": "pulse-grow", "grad": "linear-gradient(to right, #dc2626, #f43f5e)"}, 
 
         # --- Earth (Crystal Cave / Sacred Ground) ---
-        "戊": {"color": "#a855f7", "icon": "🏔️", "anim": "none", "grad": "linear-gradient(to top, #581c87, #a855f7)"}, 
-        "己": {"color": "#c084fc", "icon": "🔮", "anim": "none", "grad": "linear-gradient(to top, #6b21a8, #d8b4fe)"},
-        "辰": {"color": "#ffd700", "icon": "🐲", "anim": "sway", "grad": "linear-gradient(to top, #b8860b, #ffd700)"}, 
-        "戌": {"color": "#a78bfa", "icon": "🌋", "anim": "none", "grad": "linear-gradient(to right, #2d1b4e, #7c3aed)"}, 
-        "丑": {"color": "#facc15", "icon": "🐂", "anim": "none", "grad": "linear-gradient(to top, #ca8a04, #fde047)"}, 
-        "未": {"color": "#fb923c", "icon": "🐑", "anim": "none", "grad": "linear-gradient(120deg, #ea580c, #fbbf24)"}, 
+        "戊": {"name": "Wu Earth", "color": "#a855f7", "icon": "🏔️", "anim": "none", "grad": "linear-gradient(to top, #581c87, #a855f7)"}, 
+        "己": {"name": "Ji Earth", "color": "#c084fc", "icon": "🔮", "anim": "none", "grad": "linear-gradient(to top, #6b21a8, #d8b4fe)"},
+        "辰": {"name": "Dragon Earth", "color": "#ffd700", "icon": "🐲", "anim": "sway", "grad": "linear-gradient(to top, #b8860b, #ffd700)"}, 
+        "戌": {"name": "Dog Earth", "color": "#a78bfa", "icon": "🌋", "anim": "none", "grad": "linear-gradient(to right, #2d1b4e, #7c3aed)"}, 
+        "丑": {"name": "Ox Earth", "color": "#facc15", "icon": "🐂", "anim": "none", "grad": "linear-gradient(to top, #ca8a04, #fde047)"}, 
+        "未": {"name": "Sheep Earth", "color": "#fb923c", "icon": "🐑", "anim": "none", "grad": "linear-gradient(120deg, #ea580c, #fbbf24)"}, 
 
         # --- Metal (Silver Moon / Precious) ---
-        "庚": {"color": "#e8e8f0", "icon": "⚔️", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #e8e8f0)"}, 
-        "辛": {"color": "#ffd700", "icon": "💎", "anim": "flicker", "grad": "linear-gradient(135deg, #b8860b, #ffd700, #fff8dc)"},
-        "申": {"color": "#cbd5e1", "icon": "🐵", "anim": "sway", "grad": "linear-gradient(to top, #475569, #94a3b8)"}, 
-        "酉": {"color": "#f1f5f9", "icon": "🐓", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #f8fafc)"}, 
+        "庚": {"name": "Geng Metal", "color": "#e8e8f0", "icon": "⚔️", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #e8e8f0)"}, 
+        "辛": {"name": "Xin Metal", "color": "#ffd700", "icon": "💎", "anim": "flicker", "grad": "linear-gradient(135deg, #b8860b, #ffd700, #fff8dc)"},
+        "申": {"name": "Monkey Metal", "color": "#cbd5e1", "icon": "🐵", "anim": "sway", "grad": "linear-gradient(to top, #475569, #94a3b8)"}, 
+        "酉": {"name": "Rooster Metal", "color": "#f1f5f9", "icon": "🐓", "anim": "none", "grad": "linear-gradient(to top, #94a3b8, #f8fafc)"}, 
 
         # --- Water (Mystic Ocean / Deep Secrets) ---
-        "壬": {"color": "#40e0d0", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"}, 
-        "癸": {"color": "#a855f7", "icon": "☁️", "anim": "sway", "grad": "linear-gradient(to top, #581c87, #c084fc)"}, 
-        "子": {"color": "#3b82f6", "icon": "🐀", "anim": "sway", "grad": "linear-gradient(15deg, #1e3a8a, #60a5fa)"}, 
-        "亥": {"color": "#8b5cf6", "icon": "🐖", "anim": "sway", "grad": "linear-gradient(to top, #4c1d95, #a78bfa)"}, 
+        "壬": {"name": "Ren Water", "color": "#40e0d0", "icon": "🌊", "anim": "wave", "grad": "linear-gradient(to top, #0d5c4d, #40e0d0)"}, 
+        "癸": {"name": "Gui Water", "color": "#a855f7", "icon": "☁️", "anim": "sway", "grad": "linear-gradient(to top, #581c87, #c084fc)"}, 
+        "子": {"name": "Rat Water", "color": "#3b82f6", "icon": "🐀", "anim": "sway", "grad": "linear-gradient(15deg, #1e3a8a, #60a5fa)"}, 
+        "亥": {"name": "Pig Water", "color": "#8b5cf6", "icon": "🐖", "anim": "sway", "grad": "linear-gradient(to top, #4c1d95, #a78bfa)"}, 
     }
 
 def get_theme(char):
     """Retrieve theme for a given Bazi character."""
     theme = get_quantum_theme_config()
-    return theme.get(char, {"color": "#FFF", "icon": "❓", "anim": "none", "grad": "none"})
+    return theme.get(char, {"name": "Unknown", "color": "#FFF", "icon": "❓", "anim": "none", "grad": "none"})
+
 
 def get_nature_color(char):
     """Retrieve nature color for a given Bazi character."""

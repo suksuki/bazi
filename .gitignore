@@ -70,3 +70,5 @@ scripts/train_wrapper.sh
 
 # local external data
 /data
+!data/real_celebrity_cases.json
+!data/v14_synthetic_cases.json

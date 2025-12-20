@@ -4,21 +4,28 @@ from datetime import datetime as dt
 from core.profile_manager import ProfileManager
 from lunar_python import Solar
 
+from ui.components.theme import COLORS, GLASS_STYLE
+
 def render_profile_section():
     """
     Simplified Profile Management with Bazi Quick Test.
     """
     pm = ProfileManager()
     
-    with st.expander("📂 档案管理 (Archives)", expanded=True):
-        # --- Tabs: Profile Management & Quick Bazi Test ---
-        tab_prof, tab_bazi = st.tabs(["👥 档案管理 (Profiles)", "⚡ 八字测试 (Quick Test)"])
-        
-        with tab_prof:
-            _render_profile_list(pm)
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 10px; border-left: 4px solid {COLORS['mystic_gold']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📂 档案管理</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # --- Tabs: Profile Management & Quick Bazi Test ---
+    tab_prof, tab_bazi = st.tabs(["👥 档案列表", "⚡ 快速测算"])
+    
+    with tab_prof:
+        _render_profile_list(pm)
 
-        with tab_bazi:
-            _render_bazi_quick_test()
+    with tab_bazi:
+        _render_bazi_quick_test()
 
 
 def _render_profile_list(pm):
@@ -33,8 +40,14 @@ def _render_profile_list(pm):
         pgender = p.get('gender', '?')
         profile_options[pid] = f"{pname} ({pgender})"
     
+    # Handle pending profile selection (set before widget renders)
+    if '_pending_profile_select' in st.session_state:
+        pending_id = st.session_state.pop('_pending_profile_select')
+        if pending_id in profile_options:
+            st.session_state['profile_select_id'] = pending_id
+    
     # Get current selected profile ID
-    current_id = st.session_state.get('current_profile_id', 'new')
+    current_id = st.session_state.get('profile_select_id', st.session_state.get('current_profile_id', 'new'))
     if current_id not in profile_options:
         current_id = 'new'
     
@@ -94,17 +107,17 @@ def _render_profile_list(pm):
     col_save, col_del = st.columns([1, 1])
     
     with col_save:
-        if st.button("💾 保存当前", key="btn_save", use_container_width=True):
+        if st.button("💾 保存当前", key="btn_save", width='stretch'):
             _do_save_profile(pm)
     
     with col_del:
         current_profile_id = st.session_state.get('current_profile_id')
-        if current_profile_id and st.button("🗑️ 删除选中", key="btn_del", use_container_width=True):
+        if current_profile_id and st.button("🗑️ 删除选中", key="btn_del", width='stretch'):
             ok, msg = pm.delete_profile(current_profile_id)
             if ok:
                 st.success("已删除")
                 st.session_state['current_profile_id'] = None
-                st.session_state['profile_select_id'] = 'new'
+                st.session_state['_pending_profile_select'] = 'new'
                 time.sleep(0.5)
                 st.rerun()
 
@@ -145,7 +158,8 @@ def _do_save_profile(pm):
         # msg contains the profile ID (returned from save_profile)
         saved_profile_id = msg
         st.session_state['current_profile_id'] = saved_profile_id
-        st.session_state['profile_select_id'] = saved_profile_id
+        # Use pending state to update selection on next rerun
+        st.session_state['_pending_profile_select'] = saved_profile_id
         
         st.success(f"已保存: {s_name}")
         time.sleep(0.5)

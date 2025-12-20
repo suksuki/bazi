@@ -21,7 +21,12 @@ def render_input_form():
     })
 
     # Use container instead of form for real-time updates
-    st.subheader("👤 命主信息 (Subject Info)")
+    from ui.components.theme import COLORS, GLASS_STYLE
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 10px; border-left: 4px solid {COLORS['crystal_blue']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">👤 命主信息</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -94,6 +99,6 @@ def render_input_form():
     st.divider()
     
     # Main Submit Button
-    submitted = st.button("🔮 启卦排盘 (Divination)", type="primary", use_container_width=True)
+    submitted = st.button("🔮 启卦排盘 (Divination)", type="primary", width='stretch')
     
     return submitted

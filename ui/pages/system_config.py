@@ -7,10 +7,21 @@ def render_system_config(config_manager):
     Args:
         config_manager: Instance of ConfigManager.
     """
-    st.header("⚙️ 系统控制台 (System Console)")
+    from ui.components.theme import COLORS, GLASS_STYLE
+    
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 25px; margin-bottom: 2rem; border-top: 4px solid {COLORS['mystic_gold']}; text-align: center;">
+            <h1 style="color: {COLORS['mystic_gold']}; margin: 0;">⚙️ 系统大阵控制 (System Forge)</h1>
+            <p style="color: {COLORS['moon_silver']}; font-style: italic;">调节命运算法的底层参数与链接</p>
+        </div>
+    """, unsafe_allow_html=True)
     
     # ==================== 学习任务配置 ====================
-    st.subheader("📚 学习任务引擎 (Learning Engine)")
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['teal_mist']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📚 知识炼金 (Learning Engine)</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
     col_learn_1, col_learn_2 = st.columns([1, 1])
     
@@ -62,7 +73,11 @@ def render_system_config(config_manager):
     st.divider()
     
     # ==================== LLM配置 ====================
-    st.subheader("🤖 大模型脑核 (LLM Core)")
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['rose_magenta']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🤖 大模型神启 (LLM Core)</h3>
+        </div>
+    """, unsafe_allow_html=True)
     col_llm_1, col_llm_2 = st.columns([1, 1])
     
     with col_llm_1:

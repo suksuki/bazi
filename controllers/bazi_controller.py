@@ -255,10 +255,14 @@ class BaziController:
                 self._user_input.get('city') != city or
                 self._user_input.get('enable_solar') != enable_solar or
                 self._user_input.get('longitude') != longitude or
-                self._user_input.get('era_factor') != era_factor or
-                self._user_input.get('particle_weights') != particle_weights
+                (self._user_input.get('era_factor') != era_factor and era_factor is not None) or
+                (self._user_input.get('particle_weights') != particle_weights and particle_weights is not None)
             )
             
+            if not input_changed:
+                logger.debug("Input unchanged, skipping base calculation.")
+                return
+
             self._user_input = {
                 'name': name,
                 'gender': gender,
@@ -276,9 +280,8 @@ class BaziController:
             self._city = city if city and city.lower() not in ['unknown', 'none', ''] else "Beijing"
             
             # V9.5: Invalidate cache if input changed
-            if input_changed:
-                logger.info("User input changed, invalidating cache")
-                self._invalidate_cache()
+            logger.info("User input changed, triggering recalculation")
+            self._invalidate_cache()
             
             # Trigger base calculations
             self._calculate_base()

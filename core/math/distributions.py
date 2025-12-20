@@ -110,6 +110,22 @@ class ProbValue:
             std_dev_percent = self.std / self.mean if self.mean != 0 else 0.1
             return ProbValue(new_mean, std_dev_percent)
     
+    def __lt__(self, other: Union[float, 'ProbValue']) -> bool:
+        val = other.mean if isinstance(other, ProbValue) else other
+        return self.mean < val
+
+    def __le__(self, other: Union[float, 'ProbValue']) -> bool:
+        val = other.mean if isinstance(other, ProbValue) else other
+        return self.mean <= val
+
+    def __gt__(self, other: Union[float, 'ProbValue']) -> bool:
+        val = other.mean if isinstance(other, ProbValue) else other
+        return self.mean > val
+
+    def __ge__(self, other: Union[float, 'ProbValue']) -> bool:
+        val = other.mean if isinstance(other, ProbValue) else other
+        return self.mean >= val
+
     def __float__(self) -> float:
         return self.mean
     

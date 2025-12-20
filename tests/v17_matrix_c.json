@@ -1,0 +1,70 @@
+[
+    {
+        "id": "C_01_妒合",
+        "desc": "天干争合：两辛合一丙 (Pauli Exclusion)",
+        "bazi": [
+            "辛卯",
+            "丙申",
+            "辛卯",
+            "甲午"
+        ],
+        "focus": "Pauli Exclusion (争合损耗)",
+        "expected": "合而不化，丙火受制，辛金羁绊。两个辛金各自保留 70% 本性。",
+        "ground_truth": {
+            "coherence_target": 0.3,
+            "residual_target": 0.7
+        }
+    },
+    {
+        "id": "C_02_冗余干涉",
+        "desc": "地支冗余：巳巳酉丑 + 天干丙火 (Multi-body Frustration)",
+        "bazi": [
+            "乙巳",
+            "辛巳",
+            "癸酉",
+            "癸丑"
+        ],
+        "ext_field": {
+            "stem_fire": "丙"
+        },
+        "focus": "Multi-body Frustration (多体阻挫)",
+        "expected": "三合金局成功，但因冗余巳火及天干丙火，合化相干度 η 降至 0.75，金局带火气。",
+        "ground_truth": {
+            "coherence_target": 0.75,
+            "residual_target": 0.25
+        }
+    },
+    {
+        "id": "C_03_隔位衰减",
+        "desc": "地支间隔合：申(年) 子(日) 辰(时) (Spatial Decay)",
+        "bazi": [
+            "壬申",
+            "丙午",
+            "甲子",
+            "戊辰"
+        ],
+        "focus": "Spatial Decay (空间衰减)",
+        "expected": "因月令午火横切且位置间隔，三合水局 η 仅为 0.4，判定为'有合之意，无合之实'。",
+        "ground_truth": {
+            "coherence_target": 0.4,
+            "residual_target": 0.6
+        }
+    },
+    {
+        "id": "C_04_真实案例_苏东坡",
+        "desc": "苏东坡：两申冲一寅 (Structural Breaking)",
+        "bazi": [
+            "丙子",
+            "辛丑",
+            "乙卯",
+            "乙酉"
+        ],
+        "note": "此处仅为示意，真实案例需匹配合化冲突点",
+        "focus": "Structural Breaking (破局测试)",
+        "expected": "验证大运介入后，原有合局是否因高能冲撞而发生结构坍缩。",
+        "ground_truth": {
+            "coherence_target": 0.0,
+            "residual_target": 1.0
+        }
+    }
+]

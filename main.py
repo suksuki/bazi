@@ -14,14 +14,9 @@ st.set_page_config(
 )
 
 # 2. Global Styling & Title
-# 2. Global Styling & Title
 load_css()
-# Header Layout: Title left, Nav right (or just stacked)
-st.title("🔮 吉普赛 · AI 命运占卜")
-
-# 2.1 Top Navigation
-from ui.utils import init_session_state
-init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
+from ui.components.theme import apply_custom_header
+apply_custom_header("🔮 吉普赛 · AI 命运占卜", "基于量子纠缠与子平古法的命运演算系统")
 
 # 2.1 Top Navigation
 from ui.utils import init_session_state
@@ -34,7 +29,7 @@ app_mode = st.radio(
     label_visibility="collapsed",
     key="nav_radio"
 )
-st.markdown("---") 
+st.markdown("<br>", unsafe_allow_html=True)
 
 
 # 3. Logging Setup

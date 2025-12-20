@@ -70,18 +70,18 @@ def render_prediction_dashboard():
     name = user_data.get('name', '未命名')
     
     # 3. UI Header
-    st.title(f"📜 {name} 的命理探究")
-    st.caption(f"🔧 Engine Version: `{QuantumEngine.VERSION}`")
+    from ui.components.theme import COLORS, GLASS_STYLE, card_container
     
-    # Apply CSS
-    st.markdown(get_glassmorphism_css(), unsafe_allow_html=True)
-    st.markdown(get_animation_css(), unsafe_allow_html=True)
-    st.markdown(get_bazi_table_css(), unsafe_allow_html=True)
-
     # 4. Render Chart (Four Pillars)
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 25px; margin-bottom: 2rem; border-top: 4px solid {COLORS['mystic_gold']};">
+            <h2 style="text-align: center; color: {COLORS['mystic_gold']}; margin-top: 0;">✨ 命盘真境 (Destiny Chart)</h2>
+        </div>
+    """, unsafe_allow_html=True)
+    
     cols = st.columns(4)
     pillars = ['year', 'month', 'day', 'hour']
-    labels = ["年柱 (Year)", "月柱 (Month)", "日柱 (Day)", "时柱 (Hour)"]
+    labels = ["🏰 年柱", "🍂 月柱", "🌅 日柱", "⏳ 时柱"]
     
     for i, p_key in enumerate(pillars):
         p_data = chart.get(p_key, {})
@@ -91,31 +91,33 @@ def render_prediction_dashboard():
         # Theme
         t_stem = get_theme(stem)
         t_branch = get_theme(branch)
-        dm_class = "dm-glow" if (p_key == 'day') else ""
+        dm_glow = "box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);" if (p_key == 'day') else ""
         
         # Hidden Stems Display
         hidden_list = p_data.get('hidden_stems', [])
-        hidden_html = '<div class="hidden-container">'
+        hidden_html = '<div style="display: flex; gap: 5px; justify-content: center; margin-top: 10px;">'
         for h_char in hidden_list:
             h_theme = get_theme(h_char)
-            hidden_html += f'<div class="hidden-token" style="background: {h_theme["grad"]};" title="{h_char}">{h_char}</div>'
+            hidden_html += f'<div style="width: 24px; height: 24px; border-radius: 50%; background: {h_theme["grad"]}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white;" title="{h_char}">{h_char}</div>'
         hidden_html += '</div>'
         
         with cols[i]:
-            st.markdown(f"""<div class="pillar-card">
-    <div class="pillar-title">{labels[i]}</div>
-    <div class="quantum-token {dm_class}" style="background: {t_stem['grad']}; animation: {t_stem['anim']} 3s infinite alternate;">
-        <div class="token-icon">{t_stem['icon']}</div>
-        <div class="token-char">{stem}</div>
-    </div>
-    <div class="quantum-token" style="background: {t_branch['grad']}; animation: {t_branch['anim']} 4s infinite alternate; margin-top: 10px;">
-         <div class="token-icon">{t_branch['icon']}</div>
-        <div class="token-char">{branch}</div>
-    </div>
-    {hidden_html}
-</div>""", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="{GLASS_STYLE} padding: 15px; text-align: center; {dm_glow}">
+                    <div style="color: {COLORS['teal_mist']}; font-size: 0.9rem; margin-bottom: 10px;">{labels[i]}</div>
+                    <div style="background: {t_stem['grad']}; padding: 10px; border-radius: 8px; margin-bottom: 5px;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: white;">{stem}</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8);">{t_stem['icon']} {t_stem['name']}</div>
+                    </div>
+                    <div style="background: {t_branch['grad']}; padding: 10px; border-radius: 8px;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: white;">{branch}</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8);">{t_branch['icon']} {t_branch['name']}</div>
+                    </div>
+                    {hidden_html}
+                </div>
+            """, unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
     
     # 5. Time Machine (Da Yun & Liu Nian)
     st.subheader("⏳ 流年推演 (Fate Simulation)")
@@ -154,8 +156,12 @@ def render_prediction_dashboard():
     current_gan_zhi = ln_gan_zhi # Focus on Liu Nian for Physics
 
     # 6. Core Analysis (Flux Data)
-    st.markdown("---")
-    st.subheader("📊 八字核心分析 (Bazi Core Analysis)")
+    from ui.components.theme import COLORS, GLASS_STYLE
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['rose_magenta']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📊 核心能量解析 (Core Energy)</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
     # Get Flux Data via Controller
     flux_data = controller.get_flux_data(selected_yun, current_gan_zhi)
@@ -166,15 +172,15 @@ def render_prediction_dashboard():
         col_ws1, col_ws2 = st.columns([1, 2])
         with col_ws1:
             if "身旺" in wang_shuai_str:
-                st.success(f"**日主强弱**: {wang_shuai_str}")
+                st.success(f"**日主判定**: {wang_shuai_str}")
             elif "身弱" in wang_shuai_str:
-                st.warning(f"**日主强弱**: {wang_shuai_str}")
+                st.warning(f"**日主判定**: {wang_shuai_str}")
             else:
-                st.info(f"**日主强弱**: {wang_shuai_str}")
+                st.info(f"**日主判定**: {wang_shuai_str}")
         
         with col_ws2:
              s_self = flux_data.get('BiJian', 0) + flux_data.get('JieCai', 0)
-             st.caption(f"日主能量值: {(s_self * 0.08):.2f}")
+             st.metric("日主能量", f"{(s_self * 0.08):.2f}", help="日主原局能量强度")
 
         # B. Five Elements
         element_energies = controller.get_five_element_energies(flux_data)
@@ -193,11 +199,14 @@ def render_prediction_dashboard():
                 textposition='auto'
             )])
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
     # --- NEW: 触发规则分析 (Triggered Rules Analysis) ---
-    st.markdown("---")
-    st.subheader("📜 触发规则分析 (Activated Rules)")
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['mystic_gold']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📜 触发神煞规则 (Activated Rules)</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
     try:
         from core.rule_matcher import RuleMatcher, MatchedRule
@@ -254,8 +263,11 @@ def render_prediction_dashboard():
         st.warning("规则匹配暂时不可用")
 
     # 7. Quantum Physics Diagnostics (Advanced Smart Chart)
-    st.markdown("---")
-    st.subheader("🧬 命运诊断 (Pro Diagnostics)")
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1.5rem; border-left: 4px solid {COLORS['crystal_blue']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🧬 深度命运诊断 (Pro Diagnostics)</h3>
+        </div>
+    """, unsafe_allow_html=True)
 
     # Run Advanced Simulation (Graph Engine)
     dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
@@ -305,7 +317,7 @@ def render_prediction_dashboard():
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
-                st.plotly_chart(fig_radar, use_container_width=True)
+                st.plotly_chart(fig_radar, width='stretch')
                 
                 # Show detailed values with uncertainty
                 st.caption("**十神详情 (ProbValue μ ± σ)**")
@@ -349,7 +361,7 @@ def render_prediction_dashboard():
                 # Display with color coding by element
                 st.dataframe(
                     df_nodes[['字符', '五行', '类型', '十神', '能量 (μ ± σ)']],
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
                 
