@@ -1,5 +1,6 @@
+from datetime import datetime
 from lunar_python import Lunar, EightChar
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, Any, Union
 
 class BaziProfile:
     """
@@ -112,6 +113,22 @@ class BaziProfile:
             for y in range(start, end + 1):
                 self._luck_timeline[y] = ganzhi
 
+    def get_luck_cycles(self) -> List[Dict]:
+        """返回所有大运周期的列表"""
+        yun = self.chart.getYun(self.gender)
+        da_yun_arr = yun.getDaYun()
+        cycles = []
+        for i, dy in enumerate(da_yun_arr):
+            gan_zhi = dy.getGanZhi()
+            if not gan_zhi:
+                continue
+            cycles.append({
+                "start_year": dy.getStartYear(),
+                "end_year": dy.getEndYear(),
+                "gan_zhi": gan_zhi
+            })
+        return cycles
+
 
 class VirtualBaziProfile:
     """
@@ -130,7 +147,8 @@ class VirtualBaziProfile:
         gender: int = 1,
         year_range: Tuple[int, int] = (1900, 2100),
         precision: str = "medium",
-        consider_lichun: bool = True
+        consider_lichun: bool = True,
+        birth_date: Optional[datetime] = None
     ):
         """
         初始化虚拟八字档案
@@ -151,15 +169,19 @@ class VirtualBaziProfile:
         self.year_range = year_range
         self.precision = precision
         self.consider_lichun = consider_lichun
+        self._provided_birth_date = birth_date
         
         # 使用 BaziReverseCalculator 反推出生日期
         self._reverse_calculator = None
         self._real_profile = self._create_real_profile()
     
     def _create_real_profile(self) -> Optional['BaziProfile']:
-        """从四柱反推出生日期，创建真正的 BaziProfile"""
+        """如果有提供出生日期，直接使用；否则从四柱反推"""
         try:
-            from datetime import datetime
+            
+            # 如果提供了出生日期，直接返回 BaziProfile
+            if self._provided_birth_date:
+                return BaziProfile(self._provided_birth_date, self.gender)
             
             # 使用 BaziReverseCalculator 进行反推
             if self._reverse_calculator is None:
@@ -246,3 +268,9 @@ class VirtualBaziProfile:
         if self._real_profile:
             return self._real_profile.get_year_pillar(year)
         return "Unknown"
+
+    def get_luck_cycles(self) -> List[Dict]:
+        """使用真正的 BaziProfile 获取大运周期列表"""
+        if self._real_profile:
+            return self._real_profile.get_luck_cycles()
+        return []

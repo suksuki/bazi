@@ -74,6 +74,7 @@ class LogicMatrix:
                             'resonance_q': 0.7, 'phase_shift': ImpedanceModel.PHASE_MAP['Clash']
                         })
                     
+                    e2 = ParticleDefinitions.BRANCH_ENVIRONMENTS.get(b2, {}).get('element')
                     if e2:
                         raw_interactions.append({
                             'id': 'B2', 'type': 'Chong', 'name': f'Clash ({b2}-{b1})',
@@ -117,6 +118,26 @@ class LogicMatrix:
                     'id': 'B9', 'type': 'Hai', 'name': f'Harm ({list(pair)})',
                     'target_element': None, 'branches': set(pair), 'priority': 10,
                     'resonance_q': 0.5, 'phase_shift': ImpedanceModel.PHASE_MAP['Clash']
+                })
+
+        # F. Arch Combos (拱合) - Phase 22 Gravitational Lensing - Priority 20
+        # Check for adjacent branches (60 deg apart) wrapping a third
+        # e.g. Zi (0) and Yin (60) wrapping Chou (30)
+        from .rule_registry import RuleRegistry
+        for pair, mid_branch in [
+            (frozenset({'子', '寅'}), '丑'), (frozenset({'丑', '卯'}), '寅'), 
+            (frozenset({'寅', '辰'}), '卯'), (frozenset({'卯', '巳'}), '辰'),
+            (frozenset({'辰', '午'}), '巳'), (frozenset({'巳', '未'}), '午'),
+            (frozenset({'午', '申'}), '未'), (frozenset({'未', '酉'}), '申'),
+            (frozenset({'申', '戌'}), '酉'), (frozenset({'酉', '亥'}), '戌'),
+            (frozenset({'戌', '子'}), '亥'), (frozenset({'亥', '丑'}), '子')
+        ]:
+            if pair.issubset(branch_set) and mid_branch not in branch_set:
+                target_elem = ParticleDefinitions.BRANCH_ENVIRONMENTS.get(mid_branch, {}).get('element')
+                raw_interactions.append({
+                    'id': 'B22', 'type': 'Arch', 'name': f'Arch ({mid_branch})',
+                    'target_element': target_elem, 'branches': set(pair), 'priority': 20,
+                    'resonance_q': 0.6, 'phase_shift': ImpedanceModel.PHASE_MAP['Harmony']
                 })
 
         # --- 2. ARBITRATION PROTOCOL: Structural Locking & Jealousy ---

@@ -137,6 +137,18 @@ def 初始化界面状态(配置数据, 强制=False):
         'gat_use_gat': 配置数据.get('gat', {}).get('use_gat', True),
         'strength_attention_dropout': 配置数据.get('gat', {}).get('attention_dropout', 0.29),
     })
+    
+    # 谐振与从格 (Resonance & Follow) - V21.0
+    从格 = 配置数据.get('resonance', {})
+    参数映射.update({
+        'res_locking_ratio': 从格.get('criticalLockingRatio', 1.8),
+        'res_beating_thresh': 从格.get('beatingThreshold', 0.5),
+        'res_coherent_thresh': 从格.get('coherentSyncThreshold', 0.95),
+        'res_beating_sync': 从格.get('beatingSyncThreshold', 0.6),
+        'res_follow_boost': 从格.get('superconductiveBoost', 0.5),
+        'res_beating_base': 从格.get('beatingBaseMultiplier', 0.6),
+        'res_beating_swing': 从格.get('beatingAmplitudeSwing', 0.5),
+    })
 
     # 应用到 session_state (只有强制刷新或键不存在时才覆盖)
     for k, v in 参数映射.items():
@@ -260,6 +272,16 @@ def merge_sidebar_values_to_config(config):
         if 键 in st.session_state:
             权重组[神] = st.session_state[键] / 100.0
 
+    # 谐振与从格 (Resonance)
+    res = config.setdefault('resonance', {})
+    if 'res_locking_ratio' in st.session_state: res['criticalLockingRatio'] = st.session_state['res_locking_ratio']
+    if 'res_beating_thresh' in st.session_state: res['beatingThreshold'] = st.session_state['res_beating_thresh']
+    if 'res_coherent_thresh' in st.session_state: res['coherentSyncThreshold'] = st.session_state['res_coherent_thresh']
+    if 'res_beating_sync' in st.session_state: res['beatingSyncThreshold'] = st.session_state['res_beating_sync']
+    if 'res_follow_boost' in st.session_state: res['superconductiveBoost'] = st.session_state['res_follow_boost']
+    if 'res_beating_base' in st.session_state: res['beatingBaseMultiplier'] = st.session_state['res_beating_base']
+    if 'res_beating_swing' in st.session_state: res['beatingAmplitudeSwing'] = st.session_state['res_beating_swing']
+
     return config
 
 def render_tuning_panel(controller, golden_config):
@@ -360,7 +382,7 @@ def render_tuning_panel(controller, golden_config):
     st.sidebar.divider()
 
     # --- 调音台标签页 ---
-    标签_主控, 标签_初始, 标签_交互, 标签_时空 = st.sidebar.tabs(["🎛️ 主控", "🌱 初始", "⚡ 交互", "🌌 时空"])
+    标签_主控, 标签_初始, 标签_交互, 标签_从格, 标签_时空 = st.sidebar.tabs(["🎛️ 主控", "🌱 初始", "⚡ 交互", "🌀 从格", "🌌 时空"])
 
     # --- 标签页 1: 主控 (Particle Weights / Ten Gods) ---
     with 标签_主控:
@@ -443,7 +465,24 @@ def render_tuning_panel(controller, golden_config):
             st.slider("阈值中心点 🎖️", 1.0, 6.0, key='strength_energy_threshold', step=0.01)
             st.checkbox("启用 GAT 注意力 ✅", key='gat_use_gat')
 
-    # --- 标签页 4: 时空与背景 (Phase 3 & Flow) ---
+    # --- 标签页 4: 谐振与从格 (Resonance & Follow) ---
+    with 标签_从格:
+        st.markdown('<span class="tab-header">🌀 谐振场与从格判据 (Resonance Pattern)</span>', unsafe_allow_html=True)
+        
+        with st.expander("🎯 注入锁定 (Locking) ✅", expanded=True):
+            st.slider("从格阈值 (Ratio) 🎖️", 1.0, 5.0, key='res_locking_ratio', step=0.1, help="场强与日主能量之比")
+            st.slider("拍频门槛 (Noise) 🎖️", 0.1, 1.0, key='res_beating_thresh', step=0.05)
+            
+        with st.expander("📏 相位同步 (Sync) ✅", expanded=True):
+            st.slider("真从同步率 🎖️", 0.8, 1.0, key='res_coherent_thresh', step=0.01)
+            st.slider("假从同步率 🎖️", 0.4, 0.8, key='res_beating_sync', step=0.01)
+            
+        with st.expander("📈 谐振增益 (Gain) ✅", expanded=True):
+            st.slider("超导增强 (Follow) 🎖️", 0.0, 1.0, key='res_follow_boost', step=0.1)
+            st.slider("拍频震荡倍率 🎖️", 0.1, 1.0, key='res_beating_base', step=0.05)
+            st.slider("振幅摆幅 (Swing) 🎖️", 0.1, 1.0, key='res_beating_swing', step=0.05)
+
+    # --- 标签页 5: 时空与背景 (Phase 3 & Flow) ---
     with 标签_时空:
         with st.expander("⏳ 时空权重 (Weights) 🎖️", expanded=True):
             st.slider("大运 (Luck) 🎖️", 0.1, 3.0, key='st_luck_w', step=0.1)

@@ -12,11 +12,15 @@ from core.trinity.core.structural_dynamics import StructuralDynamics, CollisionR
 from core.trinity.core.geophysics import GeoPhysics
 from core.bazi_profile import VirtualBaziProfile
 from core.models.config_model import ConfigModel
-from controllers.bazi_controller import BaziController
+from controllers.quantum_lab_controller import QuantumLabController
+from core.trinity.core.entanglement_engine import EntanglementEngine
+from core.trinity.core.gravitational_lens import GravitationalLensEngine
+from core.trinity.core.physics_engine import ParticleDefinitions
 
 # --- UI Components ---
 from ui.components.oscilloscope import Oscilloscope
 from ui.components.coherence_gauge import CoherenceGauge
+from ui.components.envelope_gauge import EnvelopeGauge
 from ui.components.tuning_panel import render_tuning_panel
 from ui.components.theme import COLORS, GLASS_STYLE
 
@@ -54,10 +58,10 @@ def render():
 
     # --- Initialization ---
     @st.cache_resource
-    def get_controller():
-        return BaziController()
+    def get_lab_controller_v2():
+        return QuantumLabController()
     
-    controller = get_controller()
+    controller = get_lab_controller_v2()
     config_model = ConfigModel()
     
     @st.cache_data(ttl=60)
@@ -85,21 +89,33 @@ def render():
     
     if input_mode == "📚 Presets":
         # Load Cases
-        @st.cache_data
         def load_all_cases():
             cases = []
-            # 1. Tuning Matrix (V15)
+            # 1. Quantum Mantra (V9.3 Unified)
+            p0 = os.path.join(os.path.dirname(__file__), "../../tests/data/quantum_mantra_v93.json")
+            if os.path.exists(p0):
+                try: 
+                    with open(p0, 'r', encoding='utf-8') as f: 
+                        cases.extend(json.load(f))
+                except: pass
+
+            # 2. Tuning Matrix (V15 Legacy)
             p1 = os.path.join(os.path.dirname(__file__), "../../tests/v14_tuning_matrix.json")
             if os.path.exists(p1):
                 try: 
-                    with open(p1, 'r') as f: cases.extend(json.load(f))
+                    with open(p1, 'r', encoding='utf-8') as f: 
+                        new_cases = json.load(f)
+                        existing_ids = {c.get('id') for c in cases}
+                        for c in new_cases:
+                            if c.get('id') not in existing_ids:
+                                cases.append(c)
                 except: pass
             
-            # 2. Calibration Cases (Legacy)
+            # 3. Calibration Cases (Legacy)
             p2 = os.path.join(os.path.dirname(__file__), "../../data/calibration_cases.json")
             if os.path.exists(p2):
                 try: 
-                    with open(p2, 'r') as f: 
+                    with open(p2, 'r', encoding='utf-8') as f: 
                         new_cases = json.load(f)
                         existing_ids = {c.get('id') for c in cases}
                         for c in new_cases:
@@ -129,50 +145,57 @@ def render():
             
             if st.button("Generate Manual Case"):
                 try:
-                    res = controller.calculate_chart({'birth_year': iy, 'birth_month': im, 'birth_day': id_, 'birth_hour': ih, 'gender': ig})
+                    res = controller.calculate_chart({'birth_year': iy, 'birth_month': im, 'birth_day': id_, 'birth_hour': ih, 'birth_minute': 0, 'gender': ig})
                     bazi_strs = [f"{p[0]}{p[1]}" for p in res['bazi']]
                     selected_case = {
                         'id': 'MANUAL', 'gender': ig, 'bazi': bazi_strs, 
-                        'day_master': res['bazi'][2][0], 'ground_truth': {'strength': 'Unknown'}
+                        'day_master': res['day_master'], 
+                        'birth_info': res['birth_info'],
+                        'ground_truth': {'strength': 'Unknown'}
                     }
                     st.session_state['manual_cache'] = selected_case
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    v = getattr(controller, 'version', 'Unknown')
+                    st.error(f"Error: {e} | Controller Version: {v}")
             
             if 'manual_cache' in st.session_state:
                 selected_case = st.session_state['manual_cache']
 
     # 2. Context & Time Machine (Virtual Alignment)
     if selected_case:
-        with st.expander("🕰️ 时空参数 (Spacetime Context)", expanded=True):
+        with st.expander("🕰️ 时空参数 (Spacetime Context)", expanded=False):
             cols = st.columns([2, 2, 3])
-            
-            # A. Virtual Profile for Ancient Cases
             bazi_list = selected_case.get('bazi', [])
             pillars_map = {}
             if len(bazi_list) >= 4:
                 pillars_map = {'year': bazi_list[0], 'month': bazi_list[1], 'day': bazi_list[2], 'hour': bazi_list[3]}
             
             gender_val = 1 if selected_case.get('gender','男') in ['男', 1] else 0
-            
             v_profile = None
             try:
+                birth_date = None
+                if selected_case.get('birth_info'):
+                    bi = selected_case['birth_info']
+                    birth_date = datetime.datetime(bi['birth_year'], bi['birth_month'], bi['birth_day'], bi['birth_hour'], bi.get('birth_minute', 0))
+                
                 v_profile = VirtualBaziProfile(
-                    pillars_map, gender=gender_val, 
-                    year_range=(1900, 2100), precision='medium'
+                    pillars_map, 
+                    gender=gender_val, 
+                    year_range=(1900, 2100), 
+                    precision='medium',
+                    birth_date=birth_date
                 )
-            except: pass
+            except Exception as e:
+                st.error(f"Profile Error: {e}")
             
-            # Controls
             presets = selected_case.get("dynamic_checks", [])
             def_luck = presets[0].get('luck', '') if presets else ''
             
-            # Luck Cycle
             with cols[0]:
-                if v_profile and v_profile._real_profile:
-                    yun = v_profile._real_profile.chart.getYun(gender_val)
-                    dys = yun.getDaYun()
-                    opts = [f"{d.getStartYear()}-{d.getEndYear()} [{d.getGanZhi()}]" for d in dys]
+                if v_profile:
+                    dys = v_profile.get_luck_cycles()
+                    opts = [f"{d['start_year']}-{d['end_year']} [{d['gan_zhi']}]" for d in dys]
+                    if not opts: opts = [f"未知 [{def_luck}]"]
                     sel_l = st.selectbox("大运 (Luck)", opts)
                     import re
                     m = re.search(r'\[(.*?)\]', sel_l)
@@ -180,379 +203,372 @@ def render():
                 else:
                     user_luck = st.text_input("大运 (Luck)", value=def_luck)
             
-            # Stream Year
             with cols[1]:
                 def_y = int(presets[0].get('year') or datetime.datetime.now().year) if presets else datetime.datetime.now().year
                 sel_y_int = st.number_input("流年 (Year)", 1900, 2100, def_y)
-                if v_profile:
-                    gz = v_profile.get_year_pillar(sel_y_int)
-                    st.caption(f"📅 [{gz}]")
-                    user_year = gz
-                else:
-                    user_year = str(sel_y_int)
+                user_year = v_profile.get_year_pillar(sel_y_int) if v_profile else str(sel_y_int)
+                st.caption(f"📅 [{user_year}]")
 
-            # Bazi Display
             with cols[2]:
-                st.info(f"八字: {' '.join(bazi_list)} | 日主: {selected_case.get('day_master')} | 运: {user_luck} | 岁: {user_year}")
+                st.info(f"八字: {' '.join(bazi_list)} | 日主: {selected_case.get('day_master')}")
+                t_vec = st.slider("🌌 时空向量 (Vector t)", 0.0, 100.0, 0.0, step=0.1)
+                with st.expander("⚛️ 量子干预控制台"):
+                    # Phase 24 Hook
+                    default_injs = []
+                    if st.session_state.get('inj_active') and st.session_state.get('auto_inj'):
+                        default_injs = [st.session_state.get('auto_inj')]
+                        st.info(f"已应用自动方案: {st.session_state.get('auto_inj')}")
+                        if st.button("撤销自动干预"):
+                            st.session_state.inj_active = False
+                            st.rerun()
 
-    # --- Tabs ---
-    tab_dash, tab_batch, tab_rules, tab_fusion = st.tabs(["📊 全息仪表盘 (Dashboard)", "🔭 批量验证 (Batch)", "📜 规则矩阵 (Rules)", "⚛️ 合化实验室 (Fusion Lab)"])
+                    enable_inj = st.toggle("开启粒子注入", value=st.session_state.get('inj_active', False))
+                    particle_sel = st.multiselect("选择注入粒子", list(EntanglementEngine.PARTICLE_MAP.keys()), default=default_injs)
+                    inj_list = particle_sel if enable_inj else None
 
-    # TAB 1: DASHBOARD
-    with tab_dash:
-        if selected_case:
-            try:
-                # 1. Execute Engine
-                engine = QuantumEngine(config=full_config)
-                dm = selected_case.get('day_master', '甲')
-                month = selected_case.get('month_branch')
-                if not month and len(bazi_list) > 1: month = bazi_list[1][1]
-                
-                # Analyze
-                res = engine.analyze_bazi(bazi_list, dm, month)
-                waves = res.get('waves', {})
-                verdict = res.get('verdict', {})
-                rules = res.get('matched_rules', [])
-                
-                # 2. Phase 18 Logic: Su Dongpo Collapse Check
-                # Simulation Mockup based on rules/physics
-                eta = 0.5
-                desc = "Normal State"
-                bind = 5.0
-                
-                # Check for "Collapse" conditions
-                has_clash = any("Clash" in r for r in rules)
-                has_combine = any("Combine" in r or "Union" in r for r in rules)
-                op = verdict.get('order_parameter', 0)
-                
-                if has_clash and has_combine:
-                    eta = 0.3 # Turbulent
-                    desc = "Structural Stress (Clash within Unity)"
-                elif has_combine:
-                    eta = 0.85 # Stable
-                    desc = "Coherent Structure"
-                else:
-                    eta = 0.5 + (op * 0.5)
-
+        # --- HUD: Real-time Analysis ---
+        st.divider()
+        try:
+            engine = QuantumEngine(config=full_config)
+            dm = selected_case.get('day_master', '甲')
+            month = selected_case.get('month_branch') or (bazi_list[1][1] if len(bazi_list)>1 else '子')
+            
+            # Merge Luck and Annual Luck into analysis
+            full_bazi_context = bazi_list + [user_luck, user_year]
+            
+            res = engine.analyze_bazi(full_bazi_context, dm, month, t=t_vec, injections=inj_list)
+            waves = res.get('waves', {})
+            verdict = res.get('verdict', {})
+            rules = res.get('matched_rules', [])
+            resonance = res.get('resonance_state')
+            op = verdict.get('order_parameter', 0)
+            suggestion = res.get('suggestion')
+            snr = res.get('snr', 0.0)
+            breakdown = res.get('breakdown')
+            reorg = res.get('reorg_strategy')
+            
+            # Global HUD Row
+            hud_1, hud_2, hud_3, hud_4 = st.columns([2, 1, 1, 1])
+            with hud_1:
+                st.markdown("#### 🌊 气场极向 (Phasor Field)")
+                st.caption("方向=属性 | 长度=能量强度")
+                Oscilloscope.render(waves)
+            
+            with hud_2:
+                st.markdown("#### 🔮 架构稳固度 (η)")
+                st.caption("衡量格局是否牢固、抗冲克能力")
+                eta = 0.5 + (op * 0.5)
+                desc = "Active Resonance"
                 if "Su Dongpo" in selected_case.get('description', ''):
-                    # Hardcode Demo for specific visual
                     res_sim = StructuralDynamics.simulate_1079_collapse()
                     eta = res_sim.remaining_coherence
                     desc = res_sim.description
-                    bind = 8.67
-
-                # 3. Visualization Grid
-                row1_1, row1_2 = st.columns([2, 1])
-                
-                with row1_1:
-                    st.markdown("#### 🌊 能量波函数 (Phasor Field)")
-                    Oscilloscope.render(waves)
-                
-                with row1_2:
-                    st.markdown("#### 🔮 相干度 (Coherence η)")
-                    CoherenceGauge.render(eta, desc, bind)
-                    st.divider()
-                    st.metric("秩序参数 (Order)", f"{op:.4f}", verdict.get('label'))
-
-                st.divider()
-                
-                # Fusion Topology Map
-                with st.expander("🕸️ 命局结构网络 (Interaction Network)", expanded=True):
-                    st.caption("此图展示八字内部的\"引力线\"。🟢绿色=合化(吉) | 🔴红色=冲克(凶) | 🟠橙色=争合/嫉妒(阻滞)")
-                    if not rules:
-                        st.caption("No interactions detected.")
-                    else:
-                        # 3D MOLECULAR VISUALIZATION (Phase 20 Upgrade)
-                        from ui.components.molviz_3d import render_molviz_3d
-                        
-                        # 1. Prepare Nodes
-                        # Map index 0-3 to Year/Month/Day/Hour
-                        labels_cn = ['年柱', '月柱', '日柱', '时柱']
-                        nodes_3d = []
-                        
-                        # Full Pillars are needed here. 
-                        # 'bazi_list' usually contains ['甲子', '乙丑', ...]
-                        # 'chart_branches' is just the branches.
-                        # We need full pillar for the Node Label, but ID can remain branch-based for edge mapping?
-                        # ACTUALLY, edge logic relies on 'chart_branches' being matched with rule 'branches'.
-                        # So we keep chart_branches variable for Edges, but use bazi_list for Nodes.
-                        
-                        chart_branches = [b[1] for b in bazi_list if len(b)>1]
-                        
-                        for i, full_pillar in enumerate(bazi_list):
-                            if i >= 4: break # Safety
-                            
-                            label_axis = labels_cn[i]
-                            branch_char = full_pillar[1]
-                            
-                            label_axis = labels_cn[i]
-                            branch_char = full_pillar[1]
-                            
-                            # User Request: Distinct colors for Year/Month/Day/Hour positions
-                            # Palette: Purple (Year), Blue (Month), Gold (Day), Green (Hour)
-                            position_colors = ['#9c27b0', '#03a9f4', '#ffc107', '#4caf50']
-                            color = position_colors[i]
-                            
-                            nodes_3d.append({
-                                'id': f"{branch_char}_{i}", # ID matches Edge logic
-                                'label': f"{label_axis}|{full_pillar}", # Separator '|'
-                                'color': color
-                            })
-
-                        # 2. Prepare Edges
-                        edges_3d = []
-                        for r in rules:
-                            cat = r.get('category')
-                            branches = r.get('branches', []) # set of branch chars
-                            
-                            f_state = r.get('fusion_state', 'Stable')
-                            color = "#00ff00" # Green
-                            if "Jealousy" in f_state or "Damped" in f_state:
-                                color = "#ffa500" # Orange
-                            elif "Clash" in r.get('name', ''):
-                                color = "#ff0000" # Red
-                            
-                            involved_nodes = []
-                            if isinstance(branches, set) or isinstance(branches, list):
-                                for b_char in branches:
-                                    for i, chart_b in enumerate(chart_branches):
-                                        if chart_b == b_char:
-                                            involved_nodes.append(f"{chart_b}_{i}")
-                            
-                            if len(involved_nodes) >= 2:
-                                for k in range(len(involved_nodes)-1):
-                                    edges_3d.append({
-                                        'source': involved_nodes[k],
-                                        'target': involved_nodes[k+1],
-                                        'color': color
-                                    })
-                                if len(involved_nodes) > 2:
-                                    edges_3d.append({
-                                        'source': involved_nodes[-1],
-                                        'target': involved_nodes[0],
-                                        'color': color
-                                    })
-
-                        render_molviz_3d(nodes_3d, edges_3d, height=400)
-
-                st.divider()
-                
-                # Phase 1 Initial Energy
-                with st.expander("📊 先天五行能量 (Base Energy Distribution)", expanded=False):
-                    st.caption("计算任何生克之前的\"出厂设置\"能量。用于判断身强身弱的原始依据。")
-                    # Use GraphEngine for granular node view
-                    from core.engine_graph import GraphNetworkEngine
-                    temp_graph = GraphNetworkEngine(config=full_config)
-                    temp_graph.initialize_nodes(bazi_list, dm)
-                    
-                    node_chars = [n.char for n in temp_graph.nodes]
-                    # Extract numeric value from ProbValue if necessary
-                    energies = []
-                    for n in temp_graph.nodes:
-                        val = n.initial_energy
-                        if hasattr(val, 'mean'): val = val.mean
-                        elif hasattr(val, 'value'): val = val.value
-                        energies.append(float(val))
-
-                    try:
-                        import plotly.graph_objects as go
-                        fig = go.Figure(data=[go.Bar(x=node_chars, y=energies, marker_color='#40e0d0')])
-                        fig.update_layout(title="H^(0) Matrix (Graph View)", height=300, margin=dict(t=30,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0.1)')
-                        st.plotly_chart(fig, use_container_width=True)
-                    except ImportError:
-                        st.warning("Plotly not installed. Showing raw data.")
-                        st.write(dict(zip(node_chars, energies)))
-
-            except Exception as e:
-                st.error(f"Engine Error: {e}")
-                st.exception(e)
-        else:
-            st.info("👈 Please select a case containing Bazi data.")
-
-    # TAB 2: BATCH
-    with tab_batch:
-        if st.button("🚀 Run Batch Verification (V15)", type="primary"):
-            cases_to_run = all_cases if 'all_cases' in locals() else []
-            if not cases_to_run: st.error("No cases loaded.")
-            else:
-                eng = QuantumEngine(config=full_config)
-                results = []
-                bar = st.progress(0)
-                
-                for i, c in enumerate(cases_to_run):
-                    gt = c.get('ground_truth', {}).get('strength', 'Unknown')
-                    if gt == 'Unknown': continue
-                    
-                    try:
-                        b = c.get('bazi', [])
-                        d = c.get('day_master', '甲')
-                        m = c.get('month_branch') or (b[1][1] if len(b)>1 else None)
-                        r = eng.analyze_bazi(b, d, m)
-                        
-                        comp = r['verdict']['label'].replace("Extreme ", "").strip()
-                        targ = gt.replace("Extreme ", "").strip()
-                        match = (comp == targ)
-                        
-                        results.append({
-                            "Case": c.get('id'),
-                            "Target": targ,
-                            "Computed": comp,
-                            "Score": f"{r['verdict'].get('order_parameter',0):.3f}",
-                            "Match": "✅" if match else "❌"
-                        })
-                    except: pass
-                    bar.progress((i+1)/len(cases_to_run))
-                
-                df = pd.DataFrame(results)
-                acc = len(df[df['Match']=="✅"]) / len(df) * 100 if len(df) > 0 else 0
-                st.metric("Batch Accuracy", f"{acc:.1f}%")
-                st.dataframe(df, use_container_width=True)
-
-    # TAB 3: RULES
-    with tab_rules:
-        if selected_case and 'rules' in locals():
-            st.markdown("#### 📜 Matched Interactions")
-            for r in rules:
-                st.info(r)
-        else:
-            st.info("Run Dashboard to see rules.")
-
-    # TAB 4: FUSION LAB
-    with tab_fusion:
-        st.markdown("### ⚛️ Phase 19: Quantum Fusion Dynamics")
-        st.caption("模拟多体干涉、相变坍缩与量子修补 (Simulation, Collapse & Remediation)")
-        
-        sim_col1, sim_col2 = st.columns([1, 2])
-        
-        with sim_col1:
-            scenario = st.radio("Simulation Scenario", 
-                ["Current Case (Analysis)", "Su Dongpo (1079 Collapse)", "Two Dragons (Jealousy)", "Plan C (De-Fusion)", "Phase 19 Extreme Batch"])
+                CoherenceGauge.render(eta, desc, 5.0)
             
-            run_sim = st.button("🚀 Run Physics Simulation", type="primary")
+            with hud_3:
+                # Resonance -> 从格判据 (Follow Logic)
+                if resonance:
+                    mode = resonance.resonance_report.vibration_mode
+                    ratio = resonance.resonance_report.locking_ratio
+                    
+                    st.markdown("#### 🌀 谐振从格 (Follow)")
+                    if mode == "COHERENT":
+                        st.success("🌟 真从格 (Coherent)")
+                        st.caption("环境场完全同调，超导锁定")
+                    elif mode == "BEATING":
+                        st.warning("⚡ 假从格 (Beating)")
+                        st.caption("同步不稳，存在周期性波动")
+                    else:
+                        st.info("💎 正格/不从 (Damped)")
+                        st.caption("日主独立，未发生频率耦合")
+                    
+                    st.metric("注入锁定比 (K)", f"{ratio:.2f}", 
+                              help="锁定比 > 1.0 时，日主开始被迫与大环境同步（从格倾向）")
+                else:
+                    st.markdown("#### 🍀 谐振状态")
+                    st.caption("暂无数据")
+            
+            with hud_4:
+                # SNR -> 气场纯净度 (Fate Purity)
+                st.markdown("#### 📡 顺遂度 (SNR)")
+                st.caption("气场杂质越少，执行力越顺")
+                color = "green" if snr > 0.8 else "orange" if snr > 0.5 else "red"
+                snr_label = "顺风顺水" if snr > 0.8 else "阻碍重重" if snr < 0.4 else "平稳起伏"
+                st.subheader(f":{color}[{snr:.2f}]")
+                st.caption(f"**提示**: {snr_label}")
+                st.progress(snr)
 
-        with sim_col2:
-            if run_sim:
-                st.markdown("#### 📡 Physics Trace")
+            # --- Master's Insight: Fate Translation Layer ---
+            st.divider()
+            ins_1, ins_2 = st.columns([1, 1])
+            with ins_1:
+                st.markdown("### 📜 命理点评 (Master's Insight)")
+                mode_map = {
+                    "COHERENT": "🌟 **真从格 (True Follow)**: 命局进入“超导态”，外界即是我，我即是外界。顺势而为必大发。",
+                    "BEATING": "🌀 **假从格 (Fake Follow)**: 气场不纯，看似顺从实则内心挣扎。运势如过山车，需防范“拍频震荡”带来的崩盘。",
+                    "DAMPED": "💎 **正格命局 (Standard)**: 日主元气尚存，不甘臣服。需靠自身拼搏，阻力较大但底蕴深厚。"
+                }
+                current_mode = resonance.resonance_report.vibration_mode if resonance else "Unknown"
+                st.info(mode_map.get(current_mode, "🛸 **维度观测中**: 正在捕捉命理脉络..."))
                 
-                if scenario == "Su Dongpo (1079 Collapse)":
-                    res = StructuralDynamics.simulate_1079_collapse()
-                    st.error(f"{res.description}")
-                    st.metric("Collapse Entropy (ΔS)", f"{res.entropy_increase:.2f}",delta="-CRITICAL", delta_color="inverse")
+                if breakdown and breakdown.get('status') == "CRITICAL":
+                    st.error(f"🚨 **破格预警**: 命局结构遭受剧烈冲击（{breakdown.get('reason','结构性崩溃')}），稳定性极低，需紧急介入。")
+            
+            with ins_2:
+                st.markdown("### 💊 量子处方 (Fate Remedy)")
+                if suggestion:
+                    # Map colors/particles to Bazi Elements
+                    p_map = {
+                        "Green/Cyan": "木 (Wood)",
+                        "Red/Purple": "火 (Fire)",
+                        "Yellow/Brown": "土 (Earth)",
+                        "White/Gold": "金 (Metal)",
+                        "Black/Blue": "水 (Water)"
+                    }
+                    best_p = suggestion.get('best_particle', 'Unknown')
+                    element_name = p_map.get(best_p, best_p) # Fallback to original if not in map (e.g. branches)
                     
-                    # Remediation UI
+                    st.success(f"✨ **建议方案**: 此时应增强「**{element_name}**」的能量。")
+                    st.caption(f"预计效果: 顺遂度可提升至 **{suggestion.get('metric', 0):.2f}**")
+                    
+                    if st.button("✨ 一键应用干预", key="apply_best_rem"):
+                        st.session_state.auto_inj = best_p
+                        st.session_state.inj_active = True
+                        st.rerun()
+                
+                if reorg:
                     st.divider()
-                    st.markdown("#### 🛡️ Quantum Remediation")
-                    if st.button("🚑 Search Energy Havens"):
-                        from core.trinity.sandbox.v17_transition.remediation import GeoPhysics
-                        havens = GeoPhysics.auto_search_all_elements(5.1, 7.0)
-                        if havens:
-                            best = havens[0]
-                            st.success(f"✅ Migrate to: **{best.location}** (K={best.k_geo})")
-                            st.caption(f"Energy Boost: 5.1 -> {best.boosted_energy:.2f}")
-                        else: st.error("No Haven Found.")
-                        
-                elif scenario == "Two Dragons (Jealousy)":
-                    # Call Multi-Branch
-                    res = StructuralDynamics.simulate_multi_branch_interference(10.0, [1, 1])
-                    st.warning(f"{res.description}")
-                    st.metric("Effective Energy", f"{res.total_effective_energy:.2f} / 10.0", delta="-58%")
-                    
-                elif scenario == "Plan C (De-Fusion)":
-                    st.info("Applying Clash (15.0) to Fusion (20.0, Eta=0.8)...")
-                    # Bind = 12.8
-                    res = StructuralDynamics.simulate_defusion_event(20.0, 0.8, 15.0)
-                    if res.broken:
-                        st.error(f"💥 {res.description}")
-                        st.metric("Entropy Release", f"{res.entropy_released:.2f}")
-                    else:
-                        st.success(f"🛡️ {res.description}")
-                        
-                elif scenario == "Phase 19 Extreme Batch":
-                    # Load Extreme Cases
-                    p_ext = os.path.join(os.path.dirname(__file__), "../../tests/data/phase19_extreme_cases.json")
-                    if os.path.exists(p_ext):
-                        with open(p_ext, 'r') as f: ext_cases = json.load(f)
-                    else: ext_cases = []
-                    
-                    st.info("🧬 Processing 10 Extreme Cases...")
-                    
-                    # Select Case 010 (Total Collapse) for Detail View
-                    case_010 = next((c for c in ext_cases if c['id'] == 'CASE_FUSION_EXT_010_PHASE_SHIFT_COLLAPSE'), None)
-                    
-                    if case_010:
-                        st.markdown("#### 🌋 Case 010: Total System Phase Shift")
-                        # Simulate 010
-                        res_010 = StructuralDynamics.generalized_collision(0.4, 20.0, 25.0) # High Tax/Clash
-                        st.error(f"💥 {res_010.description}")
-                        st.metric("Entropy Tax", "0.4")
-                        st.metric("Entropy Release", f"{res_010.entropy_increase:.2f}", delta="COLLAPSE")
-                        
-                        # Energy Contribution Bar Chart (Phase 20 Visual)
-                        st.markdown("#### 📊 Energy Contribution (Total Phase Shift)")
-                        breakdown = {
-                            "Year (Wu-Gui)": 4.5,
-                            "Month (Water)": 15.0, # Dominant
-                            "Day (Bing-Xin)": 3.0, # Damped
-                            "Entropy Loss": 8.0
-                        }
-                        # Use simulated breakdown for robustness in real version, but mocking logic for now
-                        
-                        # VISUALIZATION UPGRADE: Show Holographic Split
-                        try:
-                            import plotly.graph_objects as go
-                            fig = go.Figure([go.Bar(x=list(breakdown.keys()), y=list(breakdown.values()), marker_color=['#ff4b4b', '#40e0d0', '#ff4b4b', '#555'])])
-                            fig.update_layout(title="Holographic Energy Split", height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0.1)')
-                            st.plotly_chart(fig, use_container_width=True)
-                        except ImportError:
-                            st.info("Plotly not available. Showing raw breakdown:")
-                            st.json(breakdown)
+                    st.warning("🔄 **结构重构建议 (Structural Reorg)**")
+                    st.caption("针对目前的剧烈冲突，建议使用「贪合忘冲」策略锁定动量：")
+                    for sol in reorg:
+                        label = "六合锁定" if sol['type'] == "Six-Harmony" else "三合引导" if sol['type'] == "Triple-Harmony" else "方向压制"
+                        branch = sol.get('remedy_branch') or sol.get('particle')
+                        if st.button(f"✨ {label} [{branch}]", key=f"reorg_btn_{branch}_{sol['type']}"):
+                            st.session_state.auto_inj = branch
+                            st.session_state.inj_active = True
+                            st.rerun()
 
-                        # PHASE 20: DYNAMIC REMEDIATION
-                        st.divider()
-                        st.markdown("#### 🛡️ Quantum Remediation Strategy")
-                        if st.button("🚑 Search Quantum Cure (Dynamics)"):
-                            from core.trinity.core.geophysics import GeoPhysics
-                            remedy = GeoPhysics.remediate_extreme_case("CASE_FUSION_EXT_010_PHASE_SHIFT_COLLAPSE", breakdown)
+            # --- Detail Tabs ---
+            tab_dash, tab_batch, tab_rules, tab_fusion = st.tabs(["📊 仪表盘细节", "🔭 批量验证", "📜 规则矩阵", "⚛️ 合化仿真"])
+            
+            with tab_dash:
+                st.markdown("### 🔍 深度力学解析")
+                st.metric("秩序参数 (Order)", f"{op:.4f}", verdict.get('label'))
+                st.caption(f"**模式**: `{resonance.resonance_report.vibration_mode}` | {resonance.description}")
+                
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown("#### 🔭 空间矫正建议")
+                    dm_elem = ParticleDefinitions.STEM_WAVEFORMS.get(dm, {}).get('element', 'Earth')
+                    field_energies = {e: waves[e].amplitude for e in waves if e != dm_elem}
+                    target_elem = max(field_energies, key=field_energies.get) if field_energies else dm_elem
+                    repair = GravitationalLensEngine.simulate_spatial_repair(
+                        resonance.dm_wave, resonance.field_waves, t_vec, resonance.resonance_report.envelop_frequency, target_elem
+                    )
+                    st.success(f"🚀 **最佳方位**: {repair['results'][0]['location']}")
+                    st.caption(f"预计效果: {repair['results'][0]['env_at_t']:.2f}")
+                
+                with c2:
+                    virtuals = GravitationalLensEngine.detect_virtual_centers(bazi_list)
+                    if virtuals:
+                        st.markdown("#### 🌌 虚拟引力中心")
+                        for v in virtuals:
+                            st.info(f"✨ **{v['virtual_branch']}**: {v['type']} ({v['strength']*100:.0f}%)")
+
+                # Phase 25: Spacetime Forecast (Timeline)
+                st.divider()
+                with st.expander("📈 时空稳定性预测 (Spacetime Stability Forecast)", expanded=True):
+                    sc = EntanglementEngine.scan_stability_cycle(engine, bazi_list, dm, month, steps=40, injections=inj_list)
+                    import pandas as pd
+                    df_sc = pd.DataFrame(sc)
+                    
+                    # Modern Chart
+                    st.line_chart(df_sc.set_index('t')[['sync', 'env', 'stability']])
+                    
+                    # Actionable insight
+                    safe_zones = df_sc[df_sc['stability'] > 0.8]
+                    danger_zones = df_sc[df_sc['stability'] < 0.2]
+                    
+                    if not danger_zones.empty:
+                        st.warning(f"🚨 **预警**: 在向量 t=[{danger_zones.iloc[0]['t']:.1f}] 附近存在相位坍缩风险。")
+                    if not safe_zones.empty:
+                        st.success(f"🌟 **避险窗口**: 建议在向量 t=[{safe_zones.iloc[0]['t']:.1f}] 附近进行重大决策。")
+
+                st.divider()
+                with st.expander("🕸️ 命局结构网络 (Interaction Network)", expanded=True):
+                    from ui.components.molviz_3d import render_molviz_3d
+                    chart_branches = [b[1] for b in bazi_list if len(b)>1]
+                    labels_cn = ['年柱', '月柱', '日柱', '时柱']
+                    nodes_3d = []
+                    for i, full_pillar in enumerate(bazi_list):
+                        if i >= 4: break
+                        nodes_3d.append({'id': f"{full_pillar[1]}_{i}", 'label': f"{labels_cn[i]}|{full_pillar}", 'color': ['#9c27b0','#03a9f4','#ffc107','#4caf50'][i]})
+                    edges_3d = []
+                    for r in rules:
+                        branches = r.get('branches', [])
+                        color = "#00ff00"
+                        if "Clash" in r.get('name', ''): color = "#ff0000"
+                        involved = []
+                        if isinstance(branches, (set, list)):
+                            for b_char in branches:
+                                for i, chart_b in enumerate(chart_branches):
+                                    if chart_b == b_char: involved.append(f"{chart_b}_{i}")
+                        if len(involved) >= 2:
+                            for k in range(len(involved)-1):
+                                edges_3d.append({'source': involved[k], 'target': involved[k+1], 'color': color})
+                    render_molviz_3d(nodes_3d, edges_3d, height=400)
+
+            # TAB 2: BATCH
+            with tab_batch:
+                if st.button("🚀 Run Batch Verification (V15)", type="primary"):
+                    cases_to_run = all_cases if 'all_cases' in locals() else []
+                    if not cases_to_run: st.error("No cases loaded.")
+                    else:
+                        eng = QuantumEngine(config=full_config)
+                        results = []
+                        bar = st.progress(0)
+                        
+                        for i, c in enumerate(cases_to_run):
+                            gt = c.get('ground_truth', {}).get('strength', 'Unknown')
+                            if gt == 'Unknown': continue
                             
-                            if remedy:
-                                best = remedy[0]
-                                st.success(f"✅ SOLUTION FOUND: **{best.location}**")
-                                st.info(best.description)
-                                st.metric("Restored Energy (Fire)", f"{best.boosted_energy:.2f}", delta=f"+{(best.boosted_energy - 4.5):.2f}")
+                            try:
+                                b = c.get('bazi', [])
+                                d = c.get('day_master', '甲')
+                                m = c.get('month_branch') or (b[1][1] if len(b)>1 else None)
+                                r = eng.analyze_bazi(b, d, m)
                                 
-                                st.caption("Physics Rationale: Injecting Fire Energy at Low Latitude (K_geo > 1.4) neutralizes the Water Month Field pressure.")
+                                comp = r['verdict']['label'].replace("Extreme ", "").strip()
+                                targ = gt.replace("Extreme ", "").strip()
+                                match = (comp == targ)
+                                
+                                results.append({
+                                    "Case": c.get('id'),
+                                    "Target": targ,
+                                    "Computed": comp,
+                                    "Score": f"{r['verdict'].get('order_parameter',0):.3f}",
+                                    "Match": "✅" if match else "❌"
+                                })
+                            except: pass
+                            bar.progress((i+1)/len(cases_to_run))
+                        
+                        df = pd.DataFrame(results)
+                        acc = len(df[df['Match']=="✅"]) / len(df) * 100 if len(df) > 0 else 0
+                        st.metric("Batch Accuracy", f"{acc:.1f}%")
+                        st.dataframe(df, use_container_width=True)
+
+            # TAB 3: RULES
+            with tab_rules:
+                st.markdown("#### 📜 Matched Interactions")
+                for r in rules:
+                    st.info(r)
+
+            # TAB 4: FUSION LAB
+            with tab_fusion:
+                st.markdown("### ⚛️ Phase 19: Quantum Fusion Dynamics")
+                st.caption("模拟多体干涉、相变坍缩与量子修补 (Simulation, Collapse & Remediation)")
+                
+                sim_col1, sim_col2 = st.columns([1, 2])
+                
+                with sim_col1:
+                    scenario = st.radio("Simulation Scenario", 
+                        ["Current Case (Analysis)", "Su Dongpo (1079 Collapse)", "Two Dragons (Jealousy)", "Plan C (De-Fusion)", "Phase 19 Extreme Batch"])
+                    
+                    run_sim = st.button("🚀 Run Physics Simulation", type="primary")
+
+                with sim_col2:
+                    if run_sim:
+                        st.markdown("#### 📡 Physics Trace")
+                        
+                        if scenario == "Su Dongpo (1079 Collapse)":
+                            res_sd = StructuralDynamics.simulate_1079_collapse()
+                            st.error(f"{res_sd.description}")
+                            st.metric("Collapse Entropy (ΔS)", f"{res_sd.entropy_increase:.2f}",delta="-CRITICAL", delta_color="inverse")
+                            
+                            # Remediation UI
+                            st.divider()
+                            st.markdown("#### 🛡️ Quantum Remediation")
+                            if st.button("🚑 Search Energy Havens"):
+                                from core.trinity.sandbox.v17_transition.remediation import GeoPhysics
+                                havens = GeoPhysics.auto_search_all_elements(5.1, 7.0)
+                                if havens:
+                                    best = havens[0]
+                                    st.success(f"✅ Migrate to: **{best.location}** (K={best.k_geo})")
+                                    st.caption(f"Energy Boost: 5.1 -> {best.boosted_energy:.2f}")
+                                else: st.error("No Haven Found.")
+                                
+                        elif scenario == "Two Dragons (Jealousy)":
+                            res_ml = StructuralDynamics.simulate_multi_branch_interference(10.0, [1, 1])
+                            st.warning(f"{res_ml.description}")
+                            st.metric("Effective Energy", f"{res_ml.total_effective_energy:.2f} / 10.0", delta="-58%")
+                            
+                        elif scenario == "Plan C (De-Fusion)":
+                            st.info("Applying Clash (15.0) to Fusion (20.0, Eta=0.8)...")
+                            res_df = StructuralDynamics.simulate_defusion_event(20.0, 0.8, 15.0)
+                            if res_df.broken:
+                                st.error(f"💥 {res_df.description}")
+                                st.metric("Entropy Release", f"{res_df.entropy_released:.2f}")
                             else:
-                                st.error("System Irreparable.")
+                                st.success(f"🛡️ {res_df.description}")
+                                
+                        elif scenario == "Phase 19 Extreme Batch":
+                            p_ext = os.path.join(os.path.dirname(__file__), "../../tests/data/phase19_extreme_cases.json")
+                            if os.path.exists(p_ext):
+                                with open(p_ext, 'r') as f: ext_cases = json.load(f)
+                            else: ext_cases = []
+                            
+                            st.info("🧬 Processing 10 Extreme Cases...")
+                            
+                            case_010 = next((c for c in ext_cases if c['id'] == 'CASE_FUSION_EXT_010_PHASE_SHIFT_COLLAPSE'), None)
+                            if case_010:
+                                st.markdown("#### 🌋 Case 010: Total System Phase Shift")
+                                res_010 = StructuralDynamics.generalized_collision(0.4, 20.0, 25.0)
+                                st.error(f"💥 {res_010.description}")
+                                st.metric("Entropy Tax", "0.4")
+                                st.metric("Entropy Release", f"{res_010.entropy_increase:.2f}", delta="COLLAPSE")
+                                
+                                st.markdown("#### 📊 Energy Contribution (Total Phase Shift)")
+                                breakdown_map = {"Year (Wu-Gui)": 4.5, "Month (Water)": 15.0, "Day (Bing-Xin)": 3.0, "Entropy Loss": 8.0}
+                                try:
+                                    import plotly.graph_objects as go
+                                    fig = go.Figure([go.Bar(x=list(breakdown_map.keys()), y=list(breakdown_map.values()), marker_color=['#ff4b4b', '#40e0d0', '#ff4b4b', '#555'])])
+                                    fig.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0.1)')
+                                    st.plotly_chart(fig, use_container_width=True)
+                                except: st.json(breakdown_map)
 
-                    # Summary Table
-                    st.markdown("---")
-                    st.caption("Batch Summary (10/10 Passed)")
-                    st.dataframe(pd.DataFrame([{'ID': c['id'], 'Focus': c['test_focus']} for c in ext_cases]), hide_index=True)
+                                # PHASE 20: DYNAMIC REMEDIATION
+                                st.divider()
+                                st.markdown("#### 🛡️ Quantum Remediation Strategy")
+                                if st.button("🚑 Search Quantum Cure (Dynamics)"):
+                                    from core.trinity.core.geophysics import GeoPhysics
+                                    remedy = GeoPhysics.remediate_extreme_case("CASE_FUSION_EXT_010_PHASE_SHIFT_COLLAPSE", breakdown_map)
+                                    
+                                    if remedy:
+                                        best = remedy[0]
+                                        st.success(f"✅ SOLUTION FOUND: **{best.location}**")
+                                        st.info(best.description)
+                                        st.metric("Restored Energy (Fire)", f"{best.boosted_energy:.2f}", delta=f"+{(best.boosted_energy - 4.5):.2f}")
+                                        
+                                        st.caption("Physics Rationale: Injecting Fire Energy at Low Latitude (K_geo > 1.4) neutralizes the Water Month Field pressure.")
+                                    else:
+                                        st.error("System Irreparable.")
 
-                elif scenario == "Current Case (Analysis)":
-                    st.info("Generalized Analysis for Current Case...")
-                    # Use Mockup Data or Engine if available
-                    if selected_case:
-                         # Heuristic for Demo
-                         col_res = StructuralDynamics.generalized_collision(0.8, 10.0, 5.0)
-                         st.write(col_res.description)
-                    else:
-                        st.warning("Please select a case first.")
+                            # Summary Table
+                            st.markdown("---")
+                            st.caption("Batch Summary (10/10 Passed)")
+                            st.dataframe(pd.DataFrame([{'ID': c['id'], 'Focus': c['test_focus']} for c in ext_cases]), hide_index=True)
 
-    # TAB 4: Phase 19 FUSION LAB
-    tab_fusion = st.tabs(["⚛️ 合化实验室 (Fusion Lab)"])[0] # Append new tab? 
-    # Streamlit tabs API requires defining all tabs at once.
-    # Refactoring line 198 to include Fusion Tab.
+                        elif scenario == "Current Case (Analysis)":
+                            st.info("Generalized Analysis for Current Case...")
+                            # Use Mockup Data or Engine if available
+                            if selected_case:
+                                 st.write(StructuralDynamics.generalized_collision(0.8, 10.0, 5.0).description)
+                            else:
+                                st.warning("Please select a case first.")
 
-    # Oops, replace_file_content doesn't easily allow jumping back to line 198 and 331 simultaneously.
-    # checking line 198: tab_dash, tab_batch, tab_rules = st.tabs(...)
-    # I should edit around line 198 first.
-    
-    # Wait, I can only do contiguous edit.
-    # I will create a MultiReplace to handle both the Tab Declaration and the Tab Content.
-
-    # Let's switch to multi_replace_file_content tool.
-    pass
+        except Exception as e:
+            st.error(f"Engine Error: {e}")
+            st.exception(e)
 
 if __name__ == "__main__":
     render()

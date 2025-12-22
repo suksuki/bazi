@@ -342,5 +342,17 @@ DEFAULT_FULL_ALGO_PARAMS = {
             "damping_rate": 0.3,                # 阻尼率（0-1，值越大阻尼越强）
             "max_value": 100.0                  # 最大允许值（硬上限）
         }
+    },
+
+    # === 面板 11: 谐振与从格 (Resonance & Follow Pattern) ===
+    # [V21.0] 基于波动力学的从格判定与谐振增强
+    "resonance": {
+        "criticalLockingRatio": 1.8,       # 注入锁定阈值（从格判定门槛）
+        "beatingThreshold": 0.5,          # 拍频阈值
+        "coherentSyncThreshold": 0.95,    # 真从同步阈值
+        "beatingSyncThreshold": 0.6,      # 假从同步阈值
+        "superconductiveBoost": 0.5,      # 超导增强系数 (True Follow Bonus)
+        "beatingBaseMultiplier": 0.6,     # 拍频基础倍率
+        "beatingAmplitudeSwing": 0.5      # 拍频摆幅系数
     }
 }

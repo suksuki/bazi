@@ -77,7 +77,7 @@ class ParticleDefinitions:
     }
     
     # Weights and Constants
-    PILLAR_WEIGHTS = {'year': 0.5, 'month': 2.0, 'day': 1.0, 'hour': 0.8}
+    PILLAR_WEIGHTS = {'year': 0.5, 'month': 3.0, 'day': 1.0, 'hour': 0.8, 'luck': 1.2, 'annual': 1.0}
     BASE_SCORE = 1.0
     ROOT_BONUS = 1.2
     SAME_PILLAR_BONUS = 1.5

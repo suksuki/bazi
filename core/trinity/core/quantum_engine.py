@@ -4,6 +4,10 @@ from .math_engine import ProbValue
 from .physics_engine import PhysicsEngine, ParticleDefinitions
 from .flux_engine import FluxEngine
 from .wave_mechanics import WaveState, ModulationEngine, PhaseTransitionEngine, InterferenceSolver
+from .structural_dynamics import StructuralDynamics
+from .entanglement_engine import EntanglementEngine
+from .pattern_deconstructor import PatternDeconstructor
+from .structural_reorganizer import StructuralReorganizer
 from ..registry.logic_matrix import LogicMatrix
 
 class QuantumEngine:
@@ -22,32 +26,122 @@ class QuantumEngine:
     def analyze_bazi(self, bazi: List[str], day_master: str, 
                      month_branch: str,
                      luck_pillar: Optional[str] = None,
-                     year_pillar: Optional[str] = None) -> Dict[str, Any]:
+                     year_pillar: Optional[str] = None,
+                     t: float = 0.0,
+                     injections: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Perform a full V14.0 analysis using Wave Modulation and Phase Transition.
         """
-        # 1. Initialize Ground State (Wave Sources)
-        initial_waves = self._initialize_waves(bazi, day_master, month_branch)
+        # 1. Initialize Waves: Hierarchy of Influence
+        # Natal (4 Pillars)
+        natal_bazi = bazi[:4] if len(bazi) >= 4 else bazi
+        luck_p = bazi[4] if len(bazi) >= 5 else None
+        annual_p = bazi[5] if len(bazi) >= 6 else None
         
+        # Natal Base Field
+        field_natal = natal_bazi.copy()
+        if len(field_natal) > 2:
+            dm_pillar = field_natal[2]
+            field_natal[2] = dm_pillar[1] if len(dm_pillar) > 1 else "" 
+        
+        field_waves_init = self._initialize_waves(field_natal, day_master, month_branch)
+        
+        # Apply Luck as a BACKGROUND FIELD (Modulation)
+        if luck_p:
+            luck_waves = self._initialize_waves([luck_p], day_master, month_branch)
+            for k in field_waves_init:
+                # Luck modulates the field (1.2x theoretical weight as a 'Great Field')
+                field_waves_init[k] = InterferenceSolver.solve_interference(field_waves_init[k], luck_waves[k], coupling=1.2)
+        
+        # DM particle is just the Day Stem
+        dm_only_bazi = ["", "", day_master, ""]
+        dm_waves_init = self._initialize_waves(dm_only_bazi, day_master, month_branch)
+        dm_elem = ParticleDefinitions.STEM_WAVEFORMS.get(day_master, {}).get('element', 'Earth')
+        dm_wave_init = dm_waves_init.get(dm_elem, WaveState(1e-6, 0))
+        
+        # Initial composite field for logic matching
+        composite_initial = {e: InterferenceSolver.solve_interference(field_waves_init[e], dm_waves_init[e]) for e in field_waves_init}
+
         # 2. Match Geometric Interactions (Phase 2 Interference)
-        interactions = self.logic.match_logic(bazi, day_master, initial_waves)
+        interactions = self.logic.match_logic(bazi, day_master, composite_initial)
         
         # 3. Simulate Flux (Phase 3 Rheology)
-        final_waves = self.flux.simulate_wave_flow(
-            initial_waves=initial_waves,
+        # We simulate the flow of the entire system
+        final_system_waves = self.flux.simulate_wave_flow(
+            initial_waves=composite_initial,
             interactions=interactions,
             month_branch=month_branch,
-            steps=3 # Allow resonance to stabilize
+            steps=3
         )
         
-        # 4. Decision Layer (Phase 4 Phase Transition)
-        verdict = self._collapse_verdict(final_waves, day_master)
+        # Separate DM element field from Environment
+        dm_elem = ParticleDefinitions.STEM_WAVEFORMS.get(day_master, {}).get('element', 'Earth')
+        field_wave_list = []
+        for k, v in final_system_waves.items():
+            if k == dm_elem:
+                env_complex = v.to_complex() - dm_wave_init.to_complex()
+                field_wave_list.append(WaveState.from_complex(env_complex))
+            else:
+                field_wave_list.append(v)
+
+        # 4. Resonance Analysis (Phase 21 Unified Call)
+        # Phase 23/24: Entanglement Remediation & Active Filtering
+        if injections:
+            for particle in injections:
+                # 1. Subjective Remediation (Day Master Injection)
+                dm_wave_init = EntanglementEngine.inject_particle(dm_wave_init, particle, coupling=0.3)
+                # 2. Objective Remediation (Active Field Filtering)
+                field_wave_list = EntanglementEngine.apply_active_filtering(field_wave_list, particle, coupling=0.3)
+
+        res_config = self.config.get('resonance', {})
+        resonance_state = StructuralDynamics.evaluate_system_resonance(dm_wave_init, field_wave_list, t=t, config=res_config)
+        
+        # 4.5 Phase 24: Auto-Remediation (If Crisis or Damping Detected)
+        suggestion = None
+        if resonance_state.resonance_report.vibration_mode in ["BEATING", "DAMPED"]:
+            # Pass dm_wave_init (pre-manual injection)
+            suggestion = EntanglementEngine.find_optimal_injection(
+                dm_wave_init, field_wave_list, t=t, config=res_config
+            )
+
+        # 4.6 Phase 25/26: Pattern Deconstruction (Violent Disassembly)
+        # Hierarchy: Natal Graph triggered by Annual Pillar
+        trigger_nodes = []
+        if annual_p:
+            trigger_nodes = PatternDeconstructor.identify_energy_nodes([annual_p])
+            for tn in trigger_nodes: tn['is_trigger'] = True
+
+        natal_nodes = PatternDeconstructor.identify_energy_nodes(natal_bazi)
+        
+        breakdown_check = PatternDeconstructor.simulate_violent_disassembly(
+            dm_wave_init, field_wave_list, 
+            energy_nodes=natal_nodes,
+            trigger_nodes=trigger_nodes, # New: Annual triggers the natal
+            threshold=self.config.get('collapse_threshold', 25.0)
+        )
+        
+        # 4.7 Phase 27: Structural Reorganization (Suppression)
+        # Feed actual conflicts to finding suppression particles
+        reorg_strategy = []
+        if breakdown_check['status'] == "CRITICAL" and 'conflicts' in breakdown_check:
+             reorg_strategy = StructuralReorganizer.find_suppression_particles(
+                 breakdown_check['conflicts'], 
+                 dm_wave_init
+             )
+
+        # 5. Decision Layer (Phase 4 Phase Transition)
+        verdict = self._collapse_verdict(final_system_waves, day_master, resonance_state)
         
         return {
-            'waves': final_waves,
+            'waves': final_system_waves,
             'verdict': verdict,
+            'resonance_state': resonance_state,
             'matched_rules': interactions,
-            'engine': 'Quantum Trinity V14.0 (Precision Revolution)'
+            'suggestion': suggestion,
+            'snr': resonance_state.resonance_report.snr,
+            'breakdown': breakdown_check,
+            'reorg_strategy': reorg_strategy,
+            'engine': 'Quantum Trinity V27.0 (Structural Reorganization)'
         }
         
     def _initialize_waves(self, bazi: List[str], day_master: str, month_branch: str) -> Dict[str, WaveState]:
@@ -66,7 +160,9 @@ class QuantumEngine:
             stem_info = ParticleDefinitions.STEM_WAVEFORMS.get(stem)
             if stem_info:
                 elem = stem_info['element']
-                w = ParticleDefinitions.PILLAR_WEIGHTS.get(['year', 'month', 'day', 'hour'][p_idx], 1.0)
+                pillar_names = ['year', 'month', 'day', 'hour', 'luck', 'annual']
+                p_name = pillar_names[p_idx] if p_idx < len(pillar_names) else 'unknown'
+                w = ParticleDefinitions.PILLAR_WEIGHTS.get(p_name, 1.0)
                 amp = ParticleDefinitions.BASE_SCORE * w
                 
                 # Use intrinsic phase for the element
@@ -92,7 +188,9 @@ class QuantumEngine:
             elif num_stems >= 3:
                 weights = [0.6, 0.3, 0.1]
             
-            w_pillar = ParticleDefinitions.PILLAR_WEIGHTS.get(['year', 'month', 'day', 'hour'][p_idx], 1.0)
+            pillar_names = ['year', 'month', 'day', 'hour', 'luck', 'annual']
+            p_name = pillar_names[p_idx] if p_idx < len(pillar_names) else 'unknown'
+            w_pillar = ParticleDefinitions.PILLAR_WEIGHTS.get(p_name, 1.0)
             base_amp = ParticleDefinitions.BASE_SCORE * w_pillar * 1.5 # 1.5x for Earthly Branch
             
             for i, (stem_char, _) in enumerate(hidden_stems):
@@ -113,9 +211,10 @@ class QuantumEngine:
 
         return waves
         
-    def _collapse_verdict(self, waves: Dict[str, WaveState], day_master: str) -> Dict[str, Any]:
+    def _collapse_verdict(self, waves: Dict[str, WaveState], day_master: str, 
+                          resonance: Optional[StructuralDynamics.SystemState] = None) -> Dict[str, Any]:
         """
-        Landau Phase Transition Judgment.
+        Landau Phase Transition Judgment with Resonance Correction.
         """
         dm_elem = ParticleDefinitions.STEM_WAVEFORMS.get(day_master, {}).get('element', 'Earth')
         
@@ -132,14 +231,26 @@ class QuantumEngine:
         order_param = PhaseTransitionEngine.calculate_order_parameter(allies_energy, total_energy)
         
         # V14.6 DM Survival Guard
-        # If Day Master is annihilated (Amp < 0.1), it cannot be Strong, regardless of Resource
         dm_amp = waves.get(dm_elem, WaveState(0,0)).amplitude
-        if dm_amp < 0.1 and order_param > 0:
+        
+        # V21.0 Resonance Correction: Handle "Follow" Pattern
+        if resonance and resonance.is_follow_pattern:
+            # Resonance Synchronization implies "Superconductive Follow"
+            # It should be treated as "Extreme Weak" (Follow) but with high Coherence
+            base_label = "Extreme Weak (Follow)"
+            # Adjust order_param to the "Follow" region
+            order_param = -0.95
+        elif dm_amp < 0.1 and order_param > 0:
             # Force collapse to Weak (Flip polarity)
             order_param = -0.5 # Weak
+            base_label = PhaseTransitionEngine.collapse_to_label(order_param)
+        else:
+            base_label = PhaseTransitionEngine.collapse_to_label(order_param)
             
-        label = PhaseTransitionEngine.collapse_to_label(order_param)
-        
+        label = base_label
+        if resonance and resonance.resonance_report.vibration_mode == "BEATING":
+            label += " (Beating/Fake)"
+
         return {
             'label': label,
             'order_parameter': order_param,

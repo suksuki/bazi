@@ -2,7 +2,9 @@
 import math
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
+from .wave_mechanics import WaveState
+from .resonance_engine import ResonanceEngine, ResonanceResult
 
 @dataclass
 class CollisionResult:
@@ -13,8 +15,8 @@ class CollisionResult:
 
 class StructuralDynamics:
     """
-    Phase 18: Dynamic Structural Integrity Manager.
-    Models the binding energy of combinations vs external clashes.
+    Phase 18-21: Dynamic Structural Integrity & Resonance Manager.
+    Models the binding energy of combinations and frequency synchronization.
     """
     
     # Physics Constants for V18
@@ -468,10 +470,59 @@ class StructuralDynamics:
         Generic wrapper for global scanning.
         """
         # Calculate binding energy for current case
-        e_bind = StructuralDynamics.calculate_binding_energy(eta_struct, energy_struct)
-        
-        # Simulate
         return StructuralDynamics.simulate_collision(eta_struct, energy_struct, energy_clash)
+
+    # --- Phase 21: Unified Resonance & Sync Interface ---
+
+    @dataclass
+    class SystemState:
+        total_coherence: float
+        resonance_report: ResonanceResult
+        impedance_matrix: Dict[str, float]
+        dm_wave: WaveState
+        field_waves: List[WaveState]
+        is_follow_pattern: bool
+        description: str
+
+    @staticmethod
+    def evaluate_system_resonance(
+        dm_wave: WaveState,
+        field_waves: List[WaveState],
+        t: float = 0.0,
+        config: Optional[Dict] = None
+    ) -> SystemState:
+        """
+        [UNIFIED CALL] Evaluates the entire system from a Resonance Wave perspective.
+        Combines wave mechanics and structural dynamics.
+        """
+        # 1. Analyze Resonance Mode
+        res_res = ResonanceEngine.analyze_vibration_mode(dm_wave, field_waves, config=config)
+        
+        # 2. Calculate Impedance Matrix
+        # Base impedance is 1.0, modified by resonance result
+        base_z = 1.0 + res_res.impedance_shift
+        
+        # 3. Pattern Recognition
+        is_follow = res_res.vibration_mode == "COHERENT" and res_res.locking_ratio > 2.0
+        
+        desc = f"System Scan: {res_res.vibration_mode} Mode. Sync={res_res.sync_state:.2f}. "
+        if is_follow:
+            desc += "🔥 PATTERN DETECTED: SUPERCONDUCTING RESONANCE (TRUE FOLLOW)."
+        elif res_res.vibration_mode == "BEATING":
+            env = ResonanceEngine.interference_envelope(t, res_res.envelop_frequency)
+            desc += f"🌀 PATTERN DETECTED: PHASE BEATING (FAKE FOLLOW). Env={env:.2f}."
+            if env < 0.2:
+                desc += " ⚠️ PHASE CRISIS DETECTED!"
+        
+        return StructuralDynamics.SystemState(
+            total_coherence=res_res.sync_state,
+            resonance_report=res_res,
+            impedance_matrix={"DM": 1.0, "Field": base_z},
+            dm_wave=dm_wave,
+            field_waves=field_waves,
+            is_follow_pattern=is_follow,
+            description=desc
+        )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,54 @@
+[
+    {
+        "case_id": "04-Q-CALIB-FOLLOW-001",
+        "name": "⚡ FOLLOW - Gold Superconductor (金从旺超导)",
+        "bazi": [
+            "戊申",
+            "庚申",
+            "庚申",
+            "乙酉"
+        ],
+        "day_master": "庚",
+        "expected_mode": "COHERENT",
+        "description": "真从格验证。极高锁定比（Locking Ratio），阻尼趋于零，系统处于同调相干态。"
+    },
+    {
+        "case_id": "05-Q-CALIB-FOLLOW-002",
+        "name": "🌀 FOLLOW - Fake Fire Beating (从假火拍频)",
+        "bazi": [
+            "丙午",
+            "甲午",
+            "丁巳",
+            "壬子"
+        ],
+        "day_master": "丁",
+        "expected_mode": "BEATING",
+        "description": "假从格验证。时支壬子产生反向干涉，导致整体系统产生周期性拍频，存在时空相位危机。"
+    },
+    {
+        "case_id": "06-Q-CALIB-FOLLOW-003",
+        "name": "🌊 FOLLOW - Water Deep Sync (水从旺共振)",
+        "bazi": [
+            "壬子",
+            "辛亥",
+            "壬申",
+            "庚子"
+        ],
+        "day_master": "壬",
+        "expected_mode": "COHERENT",
+        "description": "金水相生从旺。验证金元素对水场频率的完美同步与能量补偿。"
+    },
+    {
+        "case_id": "07-Q-CALIB-FOLLOW-004",
+        "name": "❄️ FOLLOW - Winter Fire Crisis (冬火从水坍缩)",
+        "bazi": [
+            "壬子",
+            "癸亥",
+            "丙午",
+            "壬子"
+        ],
+        "day_master": "丙",
+        "expected_mode": "BEATING",
+        "description": "极端相位测试。丙火在冬季旺水场中试图从化，但因相位差过大，包络线极陡，极易产生熄灭效应。"
+    }
+]

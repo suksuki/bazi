@@ -51,8 +51,9 @@ class QuantumLabController:
             self._config = copy.deepcopy(config)
         else:
             self._config = self.config_model.load_config()
+        self.version = "1.0.1-AccurateBirthday"
         
-        logger.info("QuantumLabController initialized")
+        logger.info(f"QuantumLabController V{self.version} initialized")
     
     @property
     def engine(self) -> GraphNetworkEngine:
@@ -288,15 +289,31 @@ class QuantumLabController:
     
     def calculate_chart(self, birth_info: Dict) -> Dict:
         """
-        计算八字排盘（使用QuantumEngine）
-        
-        Args:
-            birth_info: 出生信息字典
-        
-        Returns:
-            排盘结果字典
+        计算八字排盘（直接使用 BaziCalculator）
         """
-        return self.quantum_engine.calculate_chart(birth_info)
+        from core.calculator import BaziCalculator
+        
+        calc = BaziCalculator(
+            birth_info.get('birth_year', 2000),
+            birth_info.get('birth_month', 1),
+            birth_info.get('birth_day', 1),
+            birth_info.get('birth_hour', 0),
+            birth_info.get('birth_minute', 0)
+        )
+        
+        chart = calc.get_chart()
+        bazi = [
+            f"{chart['year']['stem']}{chart['year']['branch']}",
+            f"{chart['month']['stem']}{chart['month']['branch']}",
+            f"{chart['day']['stem']}{chart['day']['branch']}",
+            f"{chart['hour']['stem']}{chart['hour']['branch']}"
+        ]
+        
+        return {
+            'bazi': bazi,
+            'day_master': bazi[2][0],
+            'birth_info': birth_info
+        }
     
     def calculate_year_context(self, profile: VirtualBaziProfile, year: int):
         """

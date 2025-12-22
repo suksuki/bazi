@@ -1,0 +1,167 @@
+[
+    {
+        "id": "01-SYNC-METAL",
+        "name": "⚡ SYNC - Superconductive Gold (从革格-真从)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "庚申",
+            "甲申",
+            "庚申",
+            "甲申"
+        ],
+        "day_master": "庚",
+        "month_branch": "申",
+        "expected_mode": "COHERENT",
+        "focus": "Superconductive Gold"
+    },
+    {
+        "id": "02-SYNC-FIRE",
+        "name": "🔥 SYNC - Beating Fire Crisis (从假火-拍频)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "丙午",
+            "甲午",
+            "丁巳",
+            "壬子"
+        ],
+        "day_master": "丁",
+        "month_branch": "午",
+        "expected_mode": "BEATING",
+        "focus": "Beating Fire Crisis"
+    },
+    {
+        "id": "03-SYNC-WOOD",
+        "name": "🌳 SYNC - Wood Resonance (曲直格-全场同调)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "癸卯",
+            "乙卯",
+            "甲寅",
+            "乙亥"
+        ],
+        "day_master": "甲",
+        "month_branch": "卯",
+        "expected_mode": "COHERENT",
+        "focus": "Wood Resonance"
+    },
+    {
+        "id": "04-SYNC-EARTH",
+        "name": "🧱 SYNC - Earth Gravity Well (稼穑格-引力阱)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "戊辰",
+            "己未",
+            "戊戌",
+            "己未"
+        ],
+        "day_master": "戊",
+        "month_branch": "未",
+        "expected_mode": "COHERENT",
+        "focus": "Earth Gravity Well"
+    },
+    {
+        "id": "05-SYNC-WATER",
+        "name": "🌊 SYNC - Water Flow Momentum (润下格-动量守恒)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "壬子",
+            "辛亥",
+            "壬子",
+            "庚子"
+        ],
+        "day_master": "壬",
+        "month_branch": "亥",
+        "expected_mode": "COHERENT",
+        "focus": "Water Flow Momentum"
+    },
+    {
+        "id": "06-SYNC-PSEUDO-GOLD",
+        "name": "⚖️ SYNC - Impure Metal (假从金-杂质能级)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "庚申",
+            "庚申",
+            "庚申",
+            "丙戌"
+        ],
+        "day_master": "庚",
+        "month_branch": "申",
+        "expected_mode": "BEATING",
+        "focus": "Impure Metal Resonance"
+    },
+    {
+        "id": "07-SYNC-EXTREME",
+        "name": "💎 SYNC - Perfect Sync Ratio (极致同调)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "庚申",
+            "庚申",
+            "庚申",
+            "庚辰"
+        ],
+        "day_master": "庚",
+        "month_branch": "申",
+        "expected_mode": "COHERENT",
+        "focus": "Perfect Sync Ratio"
+    },
+    {
+        "id": "08-SYNC-BRITTLE",
+        "name": "🍂 SYNC - Metal Brittleness (从金脆断)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "庚申",
+            "庚申",
+            "庚申",
+            "甲午"
+        ],
+        "day_master": "庚",
+        "month_branch": "申",
+        "expected_mode": "BEATING",
+        "focus": "Metal Brittleness Index"
+    },
+    {
+        "id": "09-SYNC-SOLAR",
+        "name": "☀️ SYNC - Solar Time Correction (真太阳时修正)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "丙午",
+            "甲午",
+            "丙午",
+            "戊戌"
+        ],
+        "day_master": "丙",
+        "month_branch": "午",
+        "expected_mode": "COHERENT",
+        "focus": "Solar Time Correction"
+    },
+    {
+        "id": "10-SYNC-FAIL",
+        "name": "⚠️ SYNC - Phase Lock Failure (锁定失败)",
+        "category": "Follow Prosperous",
+        "bazi": [
+            "壬子",
+            "癸亥",
+            "丙午",
+            "丁酉"
+        ],
+        "day_master": "丙",
+        "month_branch": "亥",
+        "expected_mode": "BEATING",
+        "focus": "Phase Locking Failure"
+    },
+    {
+        "id": "11-MULTI-CLASH",
+        "name": "🌪️ MULTI - Total Battlefield (金木交战-全场坍缩)",
+        "category": "Multi-Resonance",
+        "bazi": [
+            "庚申",
+            "庚申",
+            "甲寅",
+            "甲寅"
+        ],
+        "day_master": "甲",
+        "month_branch": "申",
+        "expected_mode": "DAMPED",
+        "focus": "Violent Disassembly"
+    }
+]
