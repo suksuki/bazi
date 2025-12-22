@@ -17,38 +17,73 @@ def render_wave_vision_3d(waves, full_bazi_context=None, dm_wave=None, resonance
     - Chrono-Layering (Natal center, Luck background, Annual comets)
     """
     
-    # 1. Prepare Chrono-Data (Binary Stars)
+    # 1. Prepare Chrono-Data (Binary Stars & Hidden Stems)
+    from core.trinity.core.nexus.definitions import BaziParticleNexus
     pillars_data = []
-    # Natal 4 (0-3), Luck (4), Annual (5)
-    for i in range(min(6, len(full_bazi_context or []))):
-        p_str = full_bazi_context[i]
-        if not p_str or len(p_str) < 2: continue
-        
+    
+    # Elemental Color Map
+    elem_colors = {
+        "Wood": "#4ade80", "Fire": "#f87171", "Earth": "#fdba74", "Metal": "#94a3b8", "Water": "#38bdf8"
+    }
+
+    # Stem Atomic Mapping for Sigils
+    stem_codes = {
+        "甲": ("WD+", "#4ade80"), "乙": ("WD-", "#4ade80"),
+        "丙": ("FR+", "#f87171"), "丁": ("FR-", "#f87171"),
+        "戊": ("ER+", "#fdba74"), "己": ("ER-", "#fdba74"),
+        "庚": ("MT+", "#94a3b8"), "辛": ("MT-", "#94a3b8"),
+        "壬": ("WT+", "#38bdf8"), "癸": ("WT-", "#38bdf8")
+    }
+    
+    # Branch Element Mapping for Sigils
+    branch_map = {
+        "子": "WT", "亥": "WT", "寅": "WD", "卯": "WD",
+        "巳": "FR", "午": "FR", "申": "MT", "酉": "MT",
+        "辰": "ER", "戌": "ER", "丑": "ER", "未": "ER"
+    }
+
+    bazi_list = full_bazi_context if full_bazi_context else []
+    for i in range(min(6, len(bazi_list))):
+        p_str = bazi_list[i]
+        if not p_str or len(p_str) < 2: 
+            continue
+            
         p_type = "NATAL"
         if i == 4: p_type = "LUCK"
         if i == 5: p_type = "ANNUAL"
         
+        s_char, b_char = p_str[0], p_str[1]
+        
+        # Get Stem Meta with safe defaults
+        s_code, s_color = stem_codes.get(s_char, ("ER+", "#ffffff"))
+        
+        # Get Branch Meta & Hidden Stems
+        b_elem_code = branch_map.get(b_char, "ER")
+        b_meta = BaziParticleNexus.BRANCHES.get(b_char, ("Earth", 0, []))
+        b_color = elem_colors.get(b_meta[0], "#ffffff")
+        
+        hidden = []
+        for h_char, _ in b_meta[2]:
+            _, h_color = stem_codes.get(h_char, ("ER+", "#ffffff"))
+            hidden.append({"color": h_color})
+            
         pillars_data.append({
-            "type": p_type, "label": p_str, "stem": p_str[0], "branch": p_str[1], "id": i
+            "type": p_type,
+            "stem": {"code": s_code, "color": s_color},
+            "branch": {"code": f"B-{b_elem_code}", "color": b_color, "hidden": hidden},
+            "id": i
         })
-    
-    # In Quantum Lab, luck/annual are separate. We should try to find them.
-    # We'll use dummy data if not explicitly passed, but ideally they'd be in a unified context.
     
     # 2. Prepare Element Shells
     elements_data = []
-    colors = {
-        "Wood": "#4ade80", "Fire": "#f87171", "Earth": "#fdba74", "Metal": "#94a3b8", "Water": "#38bdf8"
-    }
-    for name, color in colors.items():
-        wave = waves.get(name, WaveState(amplitude=0, phase=0))
+    for name, color in elem_colors.items():
+        wave = waves.get(name, WaveState(amplitude=0, phase=0)) if waves else WaveState(0,0)
         elements_data.append({
             "name": name, "color": color, 
             "amplitude": float(wave.amplitude), 
             "phase": float(wave.phase)
         })
 
-    # 3. System Health (Resonance)
     res_data = {
         "mode": resonance.mode if resonance else "DAMPED",
         "sync": resonance.sync_state if resonance else 0.0,
@@ -70,10 +105,12 @@ def render_wave_vision_3d(waves, full_bazi_context=None, dm_wave=None, resonance
             body {{ margin: 0; overflow: hidden; background: #000000; }}
             #container {{ width: 100%; height: {height}px; }}
             #hud {{
-                position: absolute; bottom: 20px; right: 20px;
+                position: absolute; bottom: 30px; right: 30px;
                 color: #ff9f43; font-family: 'Courier New', Courier, monospace;
                 pointer-events: none; text-align: right;
                 border-right: 2px solid #ff9f43; padding-right: 15px;
+                background: rgba(0,0,0,0.5); padding: 10px;
+                border-radius: 4px;
             }}
         </style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -81,7 +118,8 @@ def render_wave_vision_3d(waves, full_bazi_context=None, dm_wave=None, resonance
     </head>
     <body>
         <div id="hud">
-            [ARCHIVE: ORRERY V5.2]<br>
+            [QUANTUM ORRERY V5.3]<br>
+            STATUS: ACTIVE<br>
             FIELD: <span id="mode-val">DAMPED</span><br>
             COHERENCE: <span id="sync-val">0.000</span>
         </div>
@@ -98,168 +136,200 @@ def render_wave_vision_3d(waves, full_bazi_context=None, dm_wave=None, resonance
             document.getElementById('container').appendChild(renderer.domElement);
 
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
-            camera.position.set(20, 15, 20);
+            camera.position.set(15, 10, 15);
             controls.enableDamping = true;
 
             // 1. LIGHTING
-            scene.add(new THREE.AmbientLight(0xffffff, 0.2));
-            const pLight = new THREE.PointLight(0xffffff, 1, 50);
-            pLight.position.set(0, 10, 0);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            const pLight = new THREE.PointLight(0xffffff, 1.5, 60);
+            pLight.position.set(0, 15, 0);
             scene.add(pLight);
 
-            // 2. QUANTUM WAVE SHELLS (Wireframe Grids)
+            // 2. SHELLS
             const shells = [];
             data.elements.forEach((el, idx) => {{
-                if(el.amplitude < 0.1) return;
-                
-                const radius = 6 + idx * 1.5;
-                const geom = new THREE.SphereGeometry(radius, 32, 24);
+                if(el.amplitude < 0.05) return;
+                const radius = 6 + idx * 1.8;
+                const geom = new THREE.SphereGeometry(radius, 48, 36);
                 const mat = new THREE.MeshBasicMaterial({{
-                    color: el.color,
-                    wireframe: true,
-                    transparent: true,
-                    opacity: 0.15
+                    color: el.color, wireframe: true, transparent: true, opacity: 0.1
                 }});
                 const shell = new THREE.Mesh(geom, mat);
                 scene.add(shell);
                 shells.push({{ mesh: shell, baseRadius: radius, data: el }});
             }});
 
-            // 3. BINARY NEUTRON STARS (Pillars)
-            const pillarGroups = [];
-            function createCharTexture(char, color) {{
+            function createSigilTexture(type, color, polarity = "Yang") {{
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = 128; canvas.height = 128;
-                ctx.font = 'bold 90px "Microsoft YaHei"';
-                ctx.fillStyle = color;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(char, 64, 64);
+                canvas.width = 512; canvas.height = 512;
+                
+                ctx.clearRect(0, 0, 512, 512);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 20;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 40;
+                const center = 256;
+
+                ctx.beginPath();
+                if (type === "WD") {{
+                    ctx.moveTo(center-60, center+120); ctx.lineTo(center-60, center-120);
+                    ctx.moveTo(center, center+150); ctx.lineTo(center, center-150);
+                    ctx.moveTo(center+60, center+120); ctx.lineTo(center+60, center-120);
+                }} else if (type === "FR") {{
+                    ctx.moveTo(center, center-160); ctx.lineTo(center-140, center+100); ctx.lineTo(center+140, center+100); ctx.closePath();
+                }} else if (type === "ER") {{
+                    ctx.rect(center-120, center-120, 240, 240);
+                }} else if (type === "MT") {{
+                    ctx.arc(center, center, 140, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(center, center, 80, 0, Math.PI*2);
+                }} else if (type === "WT") {{
+                    for(let i=-1; i<=1; i++) {{
+                        ctx.moveTo(center-180, center + i*80);
+                        for(let x=-180; x<=180; x+=10) {{ ctx.lineTo(center+x, center + i*80 + Math.sin(x*0.05)*30); }}
+                    }}
+                }}
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.setLineDash(polarity === "Yang" ? [] : [30, 20]);
+                ctx.lineWidth = 10;
+                ctx.arc(center, center, 240, 0, Math.PI*2);
+                ctx.stroke();
                 return new THREE.CanvasTexture(canvas);
             }}
 
-            const starGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            
+            const starGeo = new THREE.SphereGeometry(0.5, 32, 32);
+            const branchGeo = new THREE.SphereGeometry(1.6, 32, 32);
+            const pillarGroups = [];
+
             data.pillars.forEach((p, idx) => {{
                 const group = new THREE.Group();
+                const orbitR = (p.type === "NATAL") ? 8 : (p.type === "LUCK" ? 22 : 27);
                 
-                // Position based on type
                 if (p.type === "NATAL") {{
                     const angle = (idx / 4) * Math.PI * 2;
-                    group.position.set(Math.cos(angle)*5, (Math.random()-0.5)*2, Math.sin(angle)*5);
-                }} else if (p.type === "LUCK") {{
-                    group.position.set(0, -8, 15); // Static start for luck field
-                }} else if (p.type === "ANNUAL") {{
-                    group.position.set(20, 10, 0); // Static start for annual comet
+                    group.position.set(Math.cos(angle)*8, (Math.random()-0.5)*2, Math.sin(angle)*8);
                 }}
-                
                 scene.add(group);
                 
-                // Stem Star
-                const sMat = new THREE.MeshPhongMaterial({{ color: 0xffffff, emissive: 0x00ffff, emissiveIntensity: 2 }});
+                const sMat = new THREE.MeshPhongMaterial({{ color: p.stem.color, emissive: p.stem.color, emissiveIntensity: 3 }});
                 const stemStar = new THREE.Mesh(starGeo, sMat);
                 group.add(stemStar);
                 
-                // Stem Label
-                const sTex = createCharTexture(p.stem, '#ffffff');
-                const sSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: sTex }}));
-                sSprite.scale.set(1.5, 1.5, 1.5);
-                sSprite.position.y = 0.8;
+                const sType = p.stem.code ? p.stem.code.substring(0,2) : "ER";
+                const sPol = p.stem.code && p.stem.code.endsWith("+") ? "Yang" : "Yin";
+                const sTex = createSigilTexture(sType, p.stem.color, sPol);
+                const sSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: sTex, transparent: true }}));
+                sSprite.scale.set(3.2, 3.2, 3.2);
                 stemStar.add(sSprite);
 
-                // Branch Star
-                const bMat = new THREE.MeshPhongMaterial({{ color: 0x40e0d0, emissive: 0x40e0d0, emissiveIntensity: 1.5 }});
-                const branchStar = new THREE.Mesh(starGeo, bMat);
-                group.add(branchStar);
+                const bMat = new THREE.MeshBasicMaterial({{ color: p.branch.color, wireframe: true, transparent: true, opacity: 0.25 }});
+                const branchSphere = new THREE.Mesh(branchGeo, bMat);
+                group.add(branchSphere);
                 
-                // Branch Label
-                const bTex = createCharTexture(p.branch, '#40e0d0');
-                const bSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: bTex }}));
-                bSprite.scale.set(1.8, 1.8, 1.8);
-                bSprite.position.y = -0.8;
-                branchStar.add(bSprite);
-                
-                // Light Beam Connection (Elliptic Orbit)
-                const curve = new THREE.EllipseCurve(0, 0, 1.2, 1.2, 0, 2 * Math.PI, false, 0);
-                const points = curve.getPoints(50);
-                const ringGeo = new THREE.BufferGeometry().setFromPoints(points);
-                const ringMat = new THREE.LineBasicMaterial({{ color: 0x00ffff, transparent: true, opacity: 0.3 }});
-                const orbitRing = new THREE.Line(ringGeo, ringMat);
-                orbitRing.rotation.x = Math.PI/2;
-                group.add(orbitRing);
+                const bType = p.branch.code ? p.branch.code.split("-")[1] : "ER";
+                const bTex = createSigilTexture(bType, p.branch.color, "Yang");
+                const bSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: bTex, transparent: true }}));
+                bSprite.scale.set(4.8, 4.8, 4.8);
+                branchSphere.add(bSprite);
+
+                // --- Quantum Spark Arcs (High-energy EM interaction) ---
+                const fluxLines = [];
+                for(let k=0; k<5; k++) {{
+                    const lineGeo = new THREE.BufferGeometry();
+                    const lineMat = new THREE.LineBasicMaterial({{ 
+                        color: p.stem.color, 
+                        transparent: true, 
+                        opacity: 0.6,
+                        blending: THREE.AdditiveBlending
+                    }});
+                    const line = new THREE.Line(lineGeo, lineMat);
+                    group.add(line);
+                    fluxLines.push(line);
+                }}
+
+                const hiddenStars = [];
+                (p.branch.hidden || []).forEach((h, hIdx) => {{
+                    const hMat = new THREE.MeshPhongMaterial({{ color: h.color, emissive: h.color, emissiveIntensity: 4 }});
+                    const hStar = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), hMat);
+                    const hAngle = (hIdx / p.branch.hidden.length) * Math.PI * 2;
+                    hStar.position.set(Math.cos(hAngle)*1.0, Math.sin(hAngle)*1.0, 0);
+                    branchSphere.add(hStar);
+                    hiddenStars.push(hStar);
+                }});
 
                 pillarGroups.push({{ 
-                    group, 
-                    stem: stemStar, 
-                    branch: branchStar, 
-                    timeOffset: idx * 2.3,
-                    type: p.type 
+                    group, stem: stemStar, branch: branchSphere, flux: fluxLines,
+                    hidden: hiddenStars, timeOffset: idx * 2.3, type: p.type, polarity: sPol,
+                    sSprite, bSprite, color: p.stem.color
                 }});
             }});
 
-            // 4. LUCK FIELD (Background Dust)
-            // Enhanced with color temperature shift based on sync
             const dustGeo = new THREE.BufferGeometry();
             const dustPos = [];
-            for (let i = 0; i < 3000; i++) {{
-                dustPos.push((Math.random()-0.5)*100, (Math.random()-0.5)*100, (Math.random()-0.5)*100);
+            for (let i = 0; i < 3500; i++) {{
+                dustPos.push((Math.random()-0.5)*120, (Math.random()-0.5)*120, (Math.random()-0.5)*120);
             }}
             dustGeo.setAttribute('position', new THREE.Float32BufferAttribute(dustPos, 3));
-            const dustMat = new THREE.PointsMaterial({{ color: 0x40e0d0, size: 0.15, transparent: true, opacity: 0.3 }});
-            const dust = new THREE.Points(dustGeo, dustMat);
+            const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({{ color: 0x40e0d0, size: 0.12, transparent: true, opacity: 0.4 }}));
             scene.add(dust);
 
-            // 5. ANIMATION LOOP
             let time = 0;
             function animate() {{
                 requestAnimationFrame(animate);
                 time += 0.01;
                 controls.update();
-
                 const sync = data.resonance.sync;
-                // Fate Breath: Pulse magnitude depends on stability
                 const breath = 1.0 + Math.sin(time * 1.5) * (0.05 + (1-sync)*0.1);
                 
                 shells.forEach(sh => {{
                     const pulse = 1.0 + Math.sin(time * 2 + sh.data.phase) * 0.05;
                     sh.mesh.scale.set(pulse * breath, pulse * breath, pulse * breath);
                     sh.mesh.rotation.y += 0.001;
-                    if(data.resonance.mode === "BEATING") {{
-                         sh.mesh.material.opacity = 0.05 + Math.sin(time * 5) * 0.05;
-                    }} else {{
-                         sh.mesh.material.opacity = 0.15;
-                    }}
                 }});
 
                 pillarGroups.forEach(obj => {{
-                    // Internal Binary Rotation
-                    const orbitT = time * 2 + obj.timeOffset;
-                    obj.stem.position.set(Math.cos(orbitT) * 1.2, 0, Math.sin(orbitT) * 1.2);
-                    obj.branch.position.set(-Math.cos(orbitT) * 1.2, 0, -Math.sin(orbitT) * 1.2);
+                    const orbitT = time * 1.2 + obj.timeOffset;
+                    const r = 2.6;
                     
-                    // External Movement
-                    if (obj.type === "NATAL") {{
-                         obj.group.rotation.y += 0.005;
-                         obj.group.position.y += Math.sin(time + obj.timeOffset) * 0.005;
-                    }} else if (obj.type === "LUCK") {{
-                         // Slow background field rotation
-                         const angle = time * 0.1;
-                         obj.group.position.set(Math.cos(angle)*25, -10, Math.sin(angle)*25);
+                    const sPos = new THREE.Vector3(Math.cos(orbitT) * r, Math.sin(orbitT * 0.4) * 0.8, Math.sin(orbitT) * r);
+                    const bPos = new THREE.Vector3(-Math.cos(orbitT) * r, -Math.sin(orbitT * 0.4) * 0.8, -Math.sin(orbitT) * r);
+                    
+                    obj.stem.position.copy(sPos);
+                    obj.branch.position.copy(bPos);
+                    
+                    const rotDir = (obj.polarity === "Yang") ? 1 : -1;
+                    obj.sSprite.material.rotation += 0.02 * rotDir;
+                    obj.bSprite.material.rotation -= 0.01;
+
+                    // Update Spark Arcs (Jittery & High Energy)
+                    obj.flux.forEach((line, k) => {{
+                        const jitter = (Math.random() - 0.5) * 2;
+                        const controlPoint = new THREE.Vector3(
+                            (sPos.x + bPos.x)/2 + (Math.sin(time * 10 + k) * 2) + jitter,
+                            (sPos.y + bPos.y)/2 + (Math.cos(time * 8 + k) * 2) + jitter,
+                            (sPos.z + bPos.z)/2 + (Math.sin(time * 12 + k) * 2) + jitter
+                        );
+                        const curve = new THREE.QuadraticBezierCurve3(sPos, controlPoint, bPos);
+                        const points = curve.getPoints(12);
+                        line.geometry.setFromPoints(points);
+                        line.material.opacity = (Math.random() > 0.3) ? (0.3 + Math.random() * 0.7) : 0.1;
+                        if(Math.random() > 0.95) line.material.color.setHex(0xffffff); // Flash white
+                        else line.material.color.setStyle(obj.color);
+                    }});
+
+                    obj.branch.rotation.y += 0.015;
+                    obj.hidden.forEach((h, hi) => {{ h.position.y = Math.sin(time * 2 + hi) * 0.3; }});
+
+                    if (obj.type === "LUCK") {{
+                         const angle = time * 0.12;
+                         obj.group.position.set(Math.cos(angle)*32, -12, Math.sin(angle)*32);
                     }} else if (obj.type === "ANNUAL") {{
-                         // Fast eccentric comet orbit
-                         const angle = time * 1.2;
-                         obj.group.position.set(Math.cos(angle)*35, 15 * Math.sin(angle*0.5), Math.sin(angle)*20);
-                         obj.group.scale.set(1.5, 1.5, 1.5); // Highlight annual
+                         const angle = time * 0.8;
+                         obj.group.position.set(Math.cos(angle)*42, 22 * Math.sin(angle*0.35), Math.sin(angle)*27);
                     }}
                 }});
-
-                dust.rotation.y += 0.0002;
-                if(sync > 0.9) {{
-                    dust.material.color.setHex(0xffffff); // Superconductive white
-                }} else {{
-                    dust.material.color.setHex(0x40e0d0);
-                }}
+                dust.rotation.y += 0.0003;
                 renderer.render(scene, camera);
             }}
             animate();

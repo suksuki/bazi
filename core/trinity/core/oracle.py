@@ -39,7 +39,7 @@ class TrinityOracle:
         if annual_pillar: all_pillars.append(annual_pillar)
         
         # 1. Logic Analysis
-        interactions = LogicArbitrator.match_interactions(all_pillars)
+        interactions = LogicArbitrator.match_interactions(all_pillars, day_master)
         
         # 2. Field Initialization
         initial_waves = LogicArbitrator.initialize_field(all_pillars, day_master)

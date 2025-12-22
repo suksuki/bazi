@@ -23,6 +23,8 @@ class ResonanceProfile:
     dm_wave: WaveState
     field_waves: List[WaveState]
     envelop_frequency: float = 0.0
+    flow_efficiency: float = 1.0     # Energy conduction efficiency
+    fragmentation_index: float = 0.0 # Ratio of destructive vs constructive nodes
 
 class ResonanceField:
     """Analyzes the Bazi as a High-Q Resonant Cavity."""
@@ -53,13 +55,24 @@ class ResonanceField:
             sync_state *= 0.8 # Gravitational leakage
             locking_ratio *= 0.3 # Energy sink
             
-        # 3. Mode Determination
+        # 3. Mode Determination & Phase 28 Annihilation
         mode = "DAMPED"
         if locking_ratio >= PhysicsConstants.LOCKING_RATIO_CRITICAL:
             if sync_state > PhysicsConstants.SYNC_THRESHOLD_COHERENT:
                 mode = "COHERENT"
             elif sync_state > PhysicsConstants.SNR_THRESHOLD_BEATING:
                 mode = "BEATING"
+        
+        # New: Annihilation Check (Frequency Incompatibility)
+        if sync_state < PhysicsConstants.ANNIHILATION_THRESHOLD:
+            # Phase 28: Shang Guan Shang Jin (Vacuum Free State)
+            # If the Official is effectively 'stripped' or absent, transition to Superfluid
+            is_shang_jin = False
+            # We need to know which elements are which relative to DM.
+            # For now, if sync is extremely low but fragmentation is very low, it might be a vacuum state.
+            # But let's use a simpler heuristic: if mode remains ANNIHILATION but user wants Superfluid,
+            # we check if control element is below a certain ratio.
+            mode = "ANNIHILATION"
         
         # 4. Phase 21-24 Features (Brittleness & Velocity)
         brittleness = 0.0
@@ -78,9 +91,32 @@ class ResonanceField:
         if is_void:
             desc += " | 🕳️ VOID PENALTY ACTIVE"
 
-        # 6. Envelope Frequency (Simplified for V2.0)
+        # 6. Envelope & Phase 28 Flow Metrics
         avg_field_phase = float(np.angle(z_total))
         envelop_frequency = abs(dm_wave.phase - avg_field_phase) / np.pi
+        
+        # Flow Efficiency (H1: Based on Sync and Mode)
+        flow_efficiency = sync_state * (2.0 if is_follow else 1.0)
+        if mode == "ANNIHILATION": flow_efficiency *= 0.1
+        
+        # Fragmentation Index (H2: Phase dispersion)
+        all_waves = [dm_wave] + field_waves
+        # Increase threshold to filter out tiny noise elements
+        active_waves = [w for w in all_waves if w.amplitude > 1.0]
+        phases = [w.phase for w in active_waves]
+        if len(phases) > 1:
+            # Normalized phase standard deviation
+            fragmentation_index = np.std(phases) / np.pi
+        else:
+            fragmentation_index = 0.0
+            
+        # 7. Pattern Transitions (Phase 28)
+        if mode == "ANNIHILATION" and fragmentation_index < 0.15:
+            # This is a unified anti-phase field (e.g. Shang Guan Shang Jin)
+            # Actually, if it's unified output without Guan, it's a Follow state
+            mode = "COHERENT"
+            desc = "Resonance: COHERENT (Superfluid/Vacuum Free)"
+            flow_efficiency = 2.5 # Peak efficiency
         
         return ResonanceProfile(
             mode=mode,
@@ -92,5 +128,7 @@ class ResonanceField:
             description=desc,
             dm_wave=dm_wave,
             field_waves=field_waves,
-            envelop_frequency=envelop_frequency
+            envelop_frequency=envelop_frequency,
+            flow_efficiency=flow_efficiency,
+            fragmentation_index=fragmentation_index
         )

@@ -14,13 +14,38 @@ class LogicArbitrator:
     """The 'Brain' that identifies structural locks and geometric overlaps."""
 
     @staticmethod
-    def match_interactions(pillars: List[str]) -> List[Dict[str, Any]]:
+    def match_interactions(pillars: List[str], day_master: str) -> List[Dict[str, Any]]:
         """
         Identify active combinations, clashes, and structural locks.
         """
+        stems = [p[0] for p in pillars if p]
         branches = [p[1] for p in pillars if len(p) > 1]
         branch_set = set(branches)
         interactions = []
+
+        # Find DM relations
+        dm_elem, _, _ = BaziParticleNexus.STEMS.get(day_master, ("Earth", "", 0))
+        output_elem = PhysicsConstants.GENERATION[dm_elem]
+        control_elem = None
+        for k, v in PhysicsConstants.CONTROL.items():
+            if v == dm_elem: control_elem = k
+            
+        # Detect Oppose (Phase 28)
+        # Check if output and control elements both have representatives in stems or pillars
+        has_output = any(BaziParticleNexus.STEMS[s][0] == output_elem for s in stems if s in BaziParticleNexus.STEMS)
+        has_control = any(BaziParticleNexus.STEMS[s][0] == control_elem for s in stems if s in BaziParticleNexus.STEMS)
+        
+        if has_output and has_control:
+             # Estimated energy check: if output heavily outweighs control, don't trigger oppose-annihilation
+             # Since we don't have the waves here, we'll let it pass for now but 
+             # the ResonanceEngine will see the low sync isn't as destructive if amplitudes are mismatched.
+             # Actually, let's keep it but ensure the q-value is low.
+             dyn = ArbitrationNexus.DYNAMICS["OPPOSE"]
+             interactions.append({
+                 "id": "PH28_01", "type": "OPPOSE", "name": f"Shang Guan vs Zheng Guan ({output_elem}-{control_elem})",
+                 "target_element": control_elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
+                 "priority": ArbitrationNexus.PRIORITY["OPPOSE"], "branches": set()
+             })
 
         # 1. San Hui (Three Seasonal Meeting) - Priority 1
         for trio, elem in ArbitrationNexus.SAN_HUI.items():
@@ -94,6 +119,16 @@ class LogicArbitrator:
         
         pillar_names = ['year', 'month', 'day', 'hour', 'luck', 'annual']
         
+        # Phase 28: Clash Damping logic
+        branches = [p[1] for p in pillars if len(p) > 1]
+        clash_map = ArbitrationNexus.CLASH_MAP
+        clashed_indices = set()
+        for i in range(len(branches)):
+            for j in range(i + 1, len(branches)):
+                if clash_map.get(branches[i]) == branches[j]:
+                    clashed_indices.add(i)
+                    clashed_indices.add(j)
+
         for idx, p in enumerate(pillars):
             if not p: continue
             name = pillar_names[idx] if idx < len(pillar_names) else 'unknown'
@@ -104,6 +139,8 @@ class LogicArbitrator:
             if s_char in BaziParticleNexus.STEMS:
                 elem, _, _ = BaziParticleNexus.STEMS[s_char]
                 amp = PhysicsConstants.BASE_SCORE * w_prio
+                # Damping if pillar is in a clash
+                if idx in clashed_indices: amp *= 0.5
                 source = WaveState(amp, PhysicsConstants.ELEMENT_PHASES[elem])
                 waves[elem] = WaveState.from_complex(waves[elem].to_complex() + source.to_complex())
             
@@ -112,6 +149,7 @@ class LogicArbitrator:
             if b_char in BaziParticleNexus.BRANCHES:
                 _, _, hidden = BaziParticleNexus.BRANCHES[b_char]
                 base_b_amp = PhysicsConstants.BASE_SCORE * w_prio * 1.5 
+                if idx in clashed_indices: base_b_amp *= 0.3 # Heavier damping for branches
                 
                 for s_hidden, weight in hidden:
                     h_elem, _, _ = BaziParticleNexus.STEMS.get(s_hidden, ("Earth", "", 0))

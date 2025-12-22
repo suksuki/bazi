@@ -29,7 +29,13 @@ class PhysicsConstants:
     BRITTLENESS_COEFF = 0.85
     CRITICAL_IMPEDANCE_RATIO = 4.2 # Z_ratio for Total Internal Reflection
     
-    # 4. Global Weights
+    # 4. Phase 28: Oppose Dynamics (Shang Guan vs Zheng Guan)
+    ANNIHILATION_THRESHOLD = 0.12  # Below this sync, system enters annihilation
+    RADIATION_SENSITIVITY = 1.8   # Multiplier for Shang Guan penetration
+    EXPOSED_BOOST_COEFF = 2.5     # Power boost when透干
+    ORDER_COLLAPSE_LIMIT = 0.15     # Critical order parameter for structural failure
+    
+    # 5. Global Weights
     PILLAR_WEIGHTS = {'year': 0.5, 'month': 3.0, 'day': 1.0, 'hour': 0.8, 'luck': 1.2, 'annual': 1.5}
     BASE_SCORE = 5.0  
 
@@ -99,7 +105,8 @@ class ArbitrationNexus:
         "HARMONY": 5, # Semi-combines
         "HARM": 6,
         "PUNISHMENT": 7,
-        "RESONANCE": 8
+        "RESONANCE": 8,
+        "OPPOSE": 0  # Phase 28: Highest priority for annihilation events
     }
 
     # 2. Static Interaction Maps
@@ -139,5 +146,6 @@ class ArbitrationNexus:
         "SAN_HE": {"q": 2.5, "phi": 0.0, "lock": True},
         "LIU_HE": {"q": 1.8, "phi": 0.15, "lock": True},
         "CLASH": {"q": 0.6, "phi": 2.827, "lock": False}, # ~162 deg (Clash)
-        "RESONANCE": {"q": 1.2, "phi": 0.0, "lock": False}
+        "RESONANCE": {"q": 1.2, "phi": 0.0, "lock": False},
+        "OPPOSE": {"q": 0.05, "phi": 3.14159, "lock": False}
     }

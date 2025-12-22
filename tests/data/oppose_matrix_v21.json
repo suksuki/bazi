@@ -1,0 +1,161 @@
+[
+    {
+        "id": "OPPOSE_001_RADIATION_STRIKE",
+        "description": "Radiation Stripping: Shang Guan (Radiation) vs Zheng Guan (Order)",
+        "chart": {
+            "year_pillar": "辛亥",
+            "month_pillar": "壬辰",
+            "day_pillar": "庚子",
+            "hour_pillar": "丁丑"
+        },
+        "day_master": "庚",
+        "gender": "男",
+        "birth_info": {
+            "birth_year": 1911,
+            "birth_month": 4,
+            "birth_day": 15,
+            "birth_hour": 2
+        },
+        "bazi": [
+            "辛亥",
+            "壬辰",
+            "庚子",
+            "丁丑"
+        ],
+        "test_focus": "High-Frequency Radiation vs. Weak Core",
+        "physics_params": {
+            "radiation_source": "Ren Water (Shang Guan)",
+            "target_core": "Ding Fire (Zheng Guan)",
+            "collision_angle": 180.0,
+            "structural_integrity": "Low (Ding is rootless)",
+            "radiation_permeability": 0.85,
+            "order_collapse_threshold": 0.15
+        },
+        "ground_truth": {
+            "strength": "Structural Collapse",
+            "mode": "ANNIHILATION"
+        },
+        "tags": [
+            "伤官见官",
+            "能级剥离",
+            "秩序坍缩"
+        ]
+    },
+    {
+        "id": "OPPOSE_002_SATURATED_RADIATION",
+        "description": "Saturated Radiation Pressure: Multiple Shang Guan nodes causing total evaporation.",
+        "chart": {
+            "year_pillar": "壬子",
+            "month_pillar": "壬子",
+            "day_pillar": "庚子",
+            "hour_pillar": "丁丑"
+        },
+        "day_master": "庚",
+        "gender": "男",
+        "birth_info": {
+            "birth_year": 1912,
+            "birth_month": 12,
+            "birth_day": 5,
+            "birth_hour": 2
+        },
+        "bazi": [
+            "壬子",
+            "壬子",
+            "庚子",
+            "丁丑"
+        ],
+        "test_focus": "Radiation Overload vs. Failing Core",
+        "physics_params": {
+            "radiation_source": "Ren Water (3x Saturated)",
+            "target_core": "Ding Fire",
+            "saturation_pressure": 3.0
+        },
+        "ground_truth": {
+            "strength": "Structural Evaporation",
+            "mode": "ANNIHILATION"
+        },
+        "tags": [
+            "饱和辐射",
+            "量子蒸发",
+            "核心失效"
+        ]
+    },
+    {
+        "id": "OPPOSE_003_SHANG_GUAN_SHANG_JIN",
+        "description": "Shang Guan Shang Jin: Perfect Vacuum / Free Motion state.",
+        "chart": {
+            "year_pillar": "壬子",
+            "month_pillar": "壬子",
+            "day_pillar": "庚子",
+            "hour_pillar": "壬午"
+        },
+        "day_master": "庚",
+        "gender": "男",
+        "birth_info": {
+            "birth_year": 1912,
+            "birth_month": 12,
+            "birth_day": 20,
+            "birth_hour": 12
+        },
+        "bazi": [
+            "壬子",
+            "壬子",
+            "庚子",
+            "壬午"
+        ],
+        "test_focus": "Total Shielding / Perfect Vacuum",
+        "physics_params": {
+            "radiation_source": "Ren Water",
+            "target_core": "None (Null Core)",
+            "vacuum_index": 1.0
+        },
+        "ground_truth": {
+            "strength": "Pure Kinetic Energy",
+            "mode": "COHERENT"
+        },
+        "tags": [
+            "伤官伤尽",
+            "真空自由态",
+            "高能动能"
+        ]
+    },
+    {
+        "id": "OPPOSE_004_SHIELDING_INTERVENTION",
+        "description": "Thermodynamic Remediation: Yin Shield protecting the Core.",
+        "chart": {
+            "year_pillar": "戊辰",
+            "month_pillar": "壬辰",
+            "day_pillar": "庚子",
+            "hour_pillar": "丁丑"
+        },
+        "day_master": "庚",
+        "gender": "男",
+        "birth_info": {
+            "birth_year": 1988,
+            "birth_month": 4,
+            "birth_day": 10,
+            "birth_hour": 2
+        },
+        "bazi": [
+            "戊辰",
+            "壬辰",
+            "庚子",
+            "丁丑"
+        ],
+        "test_focus": "Shielding Layer Effectiveness",
+        "physics_params": {
+            "radiation_source": "Ren Water",
+            "shielding_layer": "Wu Earth (Yin)",
+            "absorption_rate": 0.75
+        },
+        "ground_truth": {
+            "strength": "Damped Stability",
+            "mode": "BEATING"
+        },
+        "tags": [
+            "引产配印",
+            "辐射屏蔽",
+            "稳态维护"
+        ]
+    }
+]

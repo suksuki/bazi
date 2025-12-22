@@ -226,6 +226,14 @@ class VirtualBaziProfile:
             if result and result.get('birth_date'):
                 birth_date = result['birth_date']
                 if isinstance(birth_date, datetime):
+                    # Phase 28: Modern Era Shift Logic (Jiazi Cycles)
+                    # If birth year is too early (e.g. early 1900s), shift it forward by 60 years
+                    # to make luck cycles start after 1950 (Master Jin's requirement)
+                    while birth_date.year < 1940:
+                        try:
+                            birth_date = birth_date.replace(year=birth_date.year + 60)
+                        except ValueError: # Leap year Feb 29 issue
+                            birth_date = birth_date.replace(year=birth_date.year + 60, day=28)
                     return BaziProfile(birth_date, self.gender)
             
             # 如果反推失败，尝试旧方法（向后兼容）
