@@ -659,7 +659,9 @@ def render():
         entropy_threshold = st.slider("坍缩熵阈值 (Collapse Entropy Threshold)", 5.0, 30.0, 15.0)
         
         if st.button("🚀 启动扫描 (Start Scan)", type="primary"):
-            from core.trinity.sandbox.v17_transition.dynamics import StructuralDynamics, CollisionResult
+            # from core.trinity.sandbox.v17_transition.dynamics import StructuralDynamics, CollisionResult
+            from core.trinity.core.intelligence.deconstructor import Deconstructor
+            from core.trinity.core.physics.wave_laws import CollisionPhysics
             
             cases = load_cases()
             risk_report = []
@@ -700,17 +702,25 @@ def render():
                     base_energy = 12.0
                     clash_energy = 18.5 # Force high clash for verification
                 
-                # 3. Dynamic Simulation
-                res = StructuralDynamics.generalized_collision(base_eta, base_energy, clash_energy)
+                # 3. Dynamic Simulation (V2.0 Collision Physics)
+                # Mocking coherence for now
+                from core.trinity.core.physics.wave_laws import WaveState
+                dm_wave = WaveState(base_energy, 0.0)
+                impact_wave = WaveState(clash_energy, np.pi) 
+                res = CollisionPhysics.simulate_impact(dm_wave, impact_wave, base_eta)
                 
-                if res.entropy_increase > entropy_threshold:
+                entropy_inc = res['entropy']
+                survived = res['survived']
+                remaining_coh = base_eta * (1.0 - res['annihilation_ratio'])
+
+                if entropy_inc > entropy_threshold:
                     risk_report.append({
                         "ID": c.get('id'),
                         "Name": c.get('description') or c.get('name'),
-                        "Risk Type": "Structural Collapse" if not res.survived else "High Entropy",
-                        "Δ Entropy": f"{res.entropy_increase:.2f}",
-                        "Remaining η": f"{res.remaining_coherence:.2f}",
-                        "Status": "🔴 CRITICAL" if not res.survived else "🟠 WARNING"
+                        "Risk Type": "Structural Collapse" if not survived else "High Entropy",
+                        "Δ Entropy": f"{entropy_inc:.2f}",
+                        "Remaining η": f"{remaining_coh:.2f}",
+                        "Status": "🔴 CRITICAL" if not survived else "🟠 WARNING"
                     })
                     
                 progress_scan.progress((i+1) / len(cases))
@@ -743,7 +753,7 @@ def render():
                                                   index=0)
                     
                     if st.button("🌍 寻找能量避风港 (Search Havens)"):
-                        from core.trinity.core.geophysics import GeoPhysics
+                        # from core.trinity.core.geophysics import GeoPhysics
                         
                         st.write(f"正在扫描全球坐标系以拯救 {len(risk_report)} 个高危目标...")
                         
@@ -768,12 +778,10 @@ def render():
                             current_e = 5.1 
                             required_e = 7.0
                             
-                            havens = []
-                            if search_mode == "Auto (Global Exhaustion)":
-                                havens = GeoPhysics.auto_search_all_elements(current_e, required_e)
-                            else:
-                                elem_code = target_element.split()[0].lower()
-                                havens = GeoPhysics.find_haven(elem_code, current_e, required_e)
+                            # Simplified Haven Search (V2.0 Placeholder)
+                            st.warning("⚠️ GeoPhysics engine is currently offline for V2.0 optimization.")
+                            best_location = "N/A (GeoPhysics Refactoring)"
+                            havens = [] # Placeholder
                             
                             if havens:
                                 best = havens[0]

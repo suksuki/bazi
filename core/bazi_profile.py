@@ -113,6 +113,35 @@ class BaziProfile:
             for y in range(start, end + 1):
                 self._luck_timeline[y] = ganzhi
 
+    @staticmethod
+    def get_void_branches(pillar: str) -> List[str]:
+        """
+        [V6.1] Calculate Void Branches (空亡) for a given pillar.
+        Logic: Find the 'Xun' (10-day cycle start) and the remaining 2 branches after 10 days.
+        """
+        if not pillar or len(pillar) < 2: return []
+        
+        gan_list = "甲乙丙丁戊己庚辛壬癸"
+        zhi_list = "子丑寅卯辰巳午未申酉戌亥"
+        
+        try:
+            g_idx = gan_list.index(pillar[0])
+            z_idx = zhi_list.index(pillar[1])
+            
+            # The 'Xun' start is at z_idx - g_idx
+            xun_start_idx = (z_idx - g_idx) % 12
+            # The two void branches are the 11th and 12th in the 12-branch sequence starting from xun_start
+            void1 = zhi_list[(xun_start_idx + 10) % 12]
+            void2 = zhi_list[(xun_start_idx + 11) % 12]
+            return [void1, void2]
+        except:
+            return []
+
+    def get_chart_voids(self) -> List[str]:
+        """Returns the void branches based on the Day Pillar."""
+        day_p = self.chart.getDay()
+        return self.get_void_branches(day_p)
+
     def get_luck_cycles(self) -> List[Dict]:
         """返回所有大运周期的列表"""
         yun = self.chart.getYun(self.gender)

@@ -3,265 +3,175 @@ import json
 
 def render_molviz_3d(nodes, edges, height=500):
     """
-    Renders a 3D Molecule visualization using Three.js.
-    
-    Args:
-        nodes: List of dicts {'id': 'Year', 'label': 'Year', 'color': '#ff0000'}
-        edges: List of dicts {'source': 'Year', 'target': 'Month', 'color': 'green', 'type': 'dashed'}
+    Renders a 3D Interaction Network using Hollow Wireframe Spheres (Cages).
+    Each node (Pillar) is a Binary system of two cages.
+    Inside the cages are small Chinese character labels representing the Stem and Branch.
     """
     
-    # 1. Prepare Data for JS
-    data_json = json.dumps({'nodes': nodes, 'edges': edges})
+    # Pre-process nodes to separate Stem/Branch if label contains '|'
+    # Format: label: 'Year|甲子'
+    processed_nodes = []
+    for n in nodes:
+        label = n.get('label', '|')
+        parts = label.split('|')
+        axis = parts[0] if len(parts) > 0 else "Unknown"
+        char_pair = parts[1] if len(parts) > 1 else "??"
+        
+        processed_nodes.append({
+            "id": n['id'],
+            "axis": axis,
+            "stem_char": char_pair[0] if len(char_pair) > 0 else "?",
+            "branch_char": char_pair[1] if len(char_pair) > 1 else "?",
+            "color": n.get('color', '#ffffff')
+        })
+
+    data_json = json.dumps({'nodes': processed_nodes, 'edges': edges})
     
-    # 2. HTML Template with Three.js
     html_code = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Quantum MolViz</title>
         <style>
-            body {{ margin: 0; overflow: hidden; background-color: #0e1117; color: #ff4b4b; font-family: monospace; }}
-            canvas {{ width: 100%; height: 100%; display: block; }}
-            #status {{ position: absolute; top: 10px; left: 10px; z-index: 100; pointer-events: none; }}
+            body {{ margin: 0; overflow: hidden; background-color: #050710; }}
+            #container {{ width: 100%; height: {height}px; }}
         </style>
-        <!-- Load Three.js from CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     </head>
     <body>
-        <div id="status">Initializing 3D Engine...</div>
         <div id="container"></div>
         <script>
-            window.onerror = function(message, source, lineno, colno, error) {{
-                document.getElementById('status').innerText = "Error: " + message + " at line " + lineno;
-                return false;
+            const data = {data_json};
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            camera.position.set(0, 5, 12);
+            controls.enableDamping = true;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            
+            // Placement for the 4 pillars
+            const positions = {{
+                '年柱': new THREE.Vector3(-4, 2, -2),
+                '月柱': new THREE.Vector3(-1.5, 0, 2),
+                '日柱': new THREE.Vector3(1.5, 0, 2),
+                '时柱': new THREE.Vector3(4, -2, -2)
             }};
 
-            try {{
-                if (typeof THREE === 'undefined') {{
-                    throw new Error("Three.js not loaded. Check Internet Connection.");
-                }}
-                
-                document.getElementById('status').innerText = ""; // Clear Loading
-                
-                const data = {data_json};
-                
-                // 1. Scene Setup
-                const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x0e1117); 
-                
-                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                camera.position.set(0, 2, 5);
-                
-                const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                document.getElementById('container').appendChild(renderer.domElement);
-                
-                // Lighting
-                const ambientLight = new THREE.AmbientLight(0x404040); 
-                scene.add(ambientLight);
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-                directionalLight.position.set(5, 10, 7);
-                scene.add(directionalLight);
-                
-                // Controls
-                // Check if OrbitControls is attached to THREE
-                let ControlsClass = THREE.OrbitControls;
-                if (!ControlsClass && window.OrbitControls) ControlsClass = window.OrbitControls;
-                if (!ControlsClass) console.warn("OrbitControls not found, navigation disabled.");
-                
-                const controls = ControlsClass ? new ControlsClass(camera, renderer.domElement) : null;
-                if (controls) {{
-                    controls.enableDamping = true;
-                    controls.autoRotate = true;
-                    controls.autoRotateSpeed = 1.0;
-                }}
-                
-                // 2. Geometry
-                const positions = {{
-                    'Year':  new THREE.Vector3(0, 1.5, 0),
-                    'Month': new THREE.Vector3(-1.2, -0.5, 1.2),
-                    'Day':   new THREE.Vector3(1.2, -0.5, 1.2),
-                    'Hour':  new THREE.Vector3(0, -0.5, -1.5)
-                }};
-                
-                let nodePos = {{}};
-                data.nodes.forEach((n, idx) => {{
-                    let label = n.label.split("\\n")[0]; 
-                    if (positions[label]) {{
-                        nodePos[n.id] = positions[label];
-                    }} else {{
-                        // Default layout
-                        let angle = (idx / data.nodes.length) * Math.PI * 2;
-                        nodePos[n.id] = new THREE.Vector3(Math.cos(angle)*2, 0, Math.sin(angle)*2);
-                    }}
-                    
-                    // Standard Glass Material (Physical)
-                    const geometry = new THREE.SphereGeometry(0.6, 64, 32); // Smoother
-                    // MeshPhysicalMaterial for better glass effect
-                    const material = new THREE.MeshPhysicalMaterial({{ 
-                        color: n.color, 
-                        metalness: 0.1,
-                        roughness: 0.1,
-                        transmission: 0.6, // Glass-like transparency
-                        thickness: 1.0, 
-                        transparent: true,
-                        opacity: 0.5,
-                        side: THREE.DoubleSide,
-                        depthWrite: false, 
-                    }});
-                    
-                    const sphere = new THREE.Mesh(geometry, material);
-                    sphere.position.copy(nodePos[n.id]);
-                    scene.add(sphere);
-                    
-                    // Inner Nucleus (Glowing Core)
-                    const coreGeo = new THREE.SphereGeometry(0.2, 32, 16);
-                    const coreMat = new THREE.MeshBasicMaterial({{ color: n.color }}); // Emanating light
-                    const core = new THREE.Mesh(coreGeo, coreMat);
-                    core.position.copy(nodePos[n.id]);
-                    scene.add(core);
+            const nodeObjects = {{}};
 
-                    // Text Label
-                    const textParts = n.label.split("|");
-                    const mainText = textParts.length > 1 ? textParts[1] : textParts[0];
-                    const subText = textParts[0];
-
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = 512; canvas.height = 512;
-                    
-                    // Draw Main Char (Full Pillar e.g. "甲子")
-                    // Reduced Size: 110px (was 160px)
-                    context.font = 'Bold 110px "Microsoft YaHei", sans-serif'; 
-                    context.fillStyle = "rgba(255,255,255,1)";
-                    context.textAlign = "center";
-                    context.textBaseline = "middle";
-                    context.shadowColor = "rgba(0,0,0,0.8)";
-                    context.shadowBlur = 8;
-                    context.fillText(mainText, 256, 240);
-                    
-                    // Draw Sub Label (Axis e.g. "年柱")
-                    // Reduced Size: 40px
-                    context.font = 'Bold 40px "Microsoft YaHei", sans-serif'; // Chinese font support
-                    context.fillStyle = "rgba(220,220,220,0.9)";
-                    context.fillText(subText, 256, 340);
-                    
-                    const texture = new THREE.CanvasTexture(canvas);
-                    const spriteMat = new THREE.SpriteMaterial({{ map: texture, depthTest: false }});
-                    
-                    const sprite = new THREE.Sprite(spriteMat);
-                    sprite.position.copy(nodePos[n.id]);
-                    sprite.scale.set(1.4, 1.4, 1.4); 
-                    scene.add(sprite);
-                }});
-                
-                // Texture Generator for Energy Flow
-                function createFlowTexture(colorStr) {{
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 64; canvas.height = 64;
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Transparent background
-                    ctx.fillStyle = 'rgba(0,0,0,0)';
-                    ctx.fillRect(0,0,64,64);
-                    
-                    // Dashed Gradient Line (Energy Pulse)
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 64);
-                    gradient.addColorStop(0, 'rgba(0,0,0,0)');
-                    gradient.addColorStop(0.5, colorStr); 
-                    gradient.addColorStop(1, 'rgba(0,0,0,0)');
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(20, 0, 24, 64); // Center strip
-                    
-                    const tex = new THREE.CanvasTexture(canvas);
-                    tex.wrapS = THREE.RepeatWrapping;
-                    tex.wrapT = THREE.RepeatWrapping;
-                    // Rotate texture to align with cylinder Y?
-                    // Cylinder maps U around, V along height. 
-                    // We drew gradient along Y (0->64). So it should match V.
-                    // We will animate offset.y
-                    tex.repeat.set(1, 4); // Repeat 4 times along length
-                    return tex;
-                }}
-
-                // Store animatable textures
-                const flowTextures = [];
-
-                // Edges
-                data.edges.forEach(e => {{
-                    const start = nodePos[e.source];
-                    const end = nodePos[e.target];
-                    
-                    if (start && end) {{
-                        const distance = start.distanceTo(end);
-                        const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
-                        
-                        // 1. Thinner Tube (Energy Beam)
-                        const geometry = new THREE.CylinderGeometry(0.02, 0.02, distance, 8);
-                        
-                        // Animated Texture Material
-                        // We need a unique texture per color or clone it? 
-                        // CanvasTexture is cheap enough to make per edge for ease, or cache by color.
-                        // Let's cache? Nah, simple first.
-                        const flowTex = createFlowTexture(e.color);
-                        flowTextures.push(flowTex);
-                        
-                        const material = new THREE.MeshBasicMaterial({{ 
-                            map: flowTex,
-                            transparent: true,
-                            opacity: 0.8,
-                            side: THREE.DoubleSide,
-                            blending: THREE.AdditiveBlending, // Glow effect
-                            depthWrite: false
-                        }});
-                        
-                        const cylinder = new THREE.Mesh(geometry, material);
-                        cylinder.position.copy(mid);
-                        cylinder.lookAt(end);
-                        cylinder.rotateX(Math.PI / 2); // Align Y axis to LookAt vector
-                        scene.add(cylinder);
-                        
-                        // 2. Arrowhead (Direction Indicator)
-                        // Place at 2/3 distance towards target
-                        const dir = new THREE.Vector3().subVectors(end, start).normalize();
-                        const arrowPos = new THREE.Vector3().copy(start).add(dir.multiplyScalar(distance * 0.66));
-                        
-                        const coneGeo = new THREE.ConeGeometry(0.08, 0.2, 16);
-                        const coneMat = new THREE.MeshBasicMaterial({{ color: e.color }});
-                        const cone = new THREE.Mesh(coneGeo, coneMat);
-                        cone.position.copy(arrowPos);
-                        cone.lookAt(end);
-                        cone.rotateX(Math.PI / 2); 
-                        scene.add(cone);
-                    }}
-                }});
-                
-                // 3. Loop
-                function animate() {{
-                    requestAnimationFrame(animate);
-                    if (controls) controls.update();
-                    
-                    // Animate Flow Textures
-                    flowTextures.forEach(tex => {{
-                        tex.offset.y -= 0.02; // Flow towards target
-                    }});
-                    
-                    renderer.render(scene, camera);
-                }}
-                animate();
-                
-                window.addEventListener('resize', () => {{
-                   camera.aspect = window.innerWidth / window.innerHeight;
-                   camera.updateProjectionMatrix();
-                   renderer.setSize(window.innerWidth, window.innerHeight);
-                }}, false);
-
-            }} catch (err) {{
-                document.getElementById('status').innerText = "Runtime Error: " + err.message;
+            // Helper to generate text texture
+            function createTextTexture(text, color) {{
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 128; canvas.height = 128;
+                ctx.font = 'Bold 80px "Microsoft YaHei", "Heiti SC", sans-serif';
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(text, 64, 64);
+                return new THREE.CanvasTexture(canvas);
             }}
+
+            data.nodes.forEach((n, idx) => {{
+                const group = new THREE.Group();
+                const pos = positions[n.axis] || new THREE.Vector3(Math.cos(idx)*5, Math.sin(idx)*5, 0);
+                group.position.copy(pos);
+                
+                // --- Hollow Cage System ---
+                
+                // P1: Stem Cage (Wireframe)
+                const p1Geo = new THREE.SphereGeometry(0.35, 16, 16);
+                const p1Mat = new THREE.MeshBasicMaterial({{ color: n.color, wireframe: true, transparent: true, opacity: 0.4 }});
+                const p1 = new THREE.Mesh(p1Geo, p1Mat);
+                group.add(p1);
+
+                // Stem Text (Inside Cage)
+                const sTex = createTextTexture(n.stem_char, n.color);
+                const sSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: sTex, depthTest: false }}));
+                sSprite.scale.set(0.5, 0.5, 0.5);
+                p1.add(sSprite);
+
+                // P2: Branch Cage (Wireframe)
+                const p2Geo = new THREE.SphereGeometry(0.45, 16, 16);
+                const p2Mat = new THREE.MeshBasicMaterial({{ color: n.color, wireframe: true, transparent: true, opacity: 0.4 }});
+                const p2 = new THREE.Mesh(p2Geo, p2Mat);
+                group.add(p2);
+
+                // Branch Text (Inside Cage)
+                const bTex = createTextTexture(n.branch_char, n.color);
+                const bSprite = new THREE.Sprite(new THREE.SpriteMaterial({{ map: bTex, depthTest: false }}));
+                bSprite.scale.set(0.6, 0.6, 0.6);
+                p2.add(bSprite);
+
+                // Connection line
+                const beamGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.8, 8);
+                const beamMat = new THREE.MeshBasicMaterial({{ color: '#ffffff', transparent: true, opacity: 0.2 }});
+                const beam = new THREE.Mesh(beamGeo, beamMat);
+                beam.rotation.z = Math.PI/2;
+                group.add(beam);
+
+                scene.add(group);
+                nodeObjects[n.id] = {{ group, p1, p2, basePos: pos.clone() }};
+            }});
+
+            // 2. Edges (Interactions - Keep the arc logic)
+            data.edges.forEach(e => {{
+                const startNode = nodeObjects[e.source];
+                const endNode = nodeObjects[e.target];
+                if (startNode && endNode) {{
+                    const curve = new THREE.QuadraticBezierCurve3(
+                        startNode.basePos,
+                        new THREE.Vector3((startNode.basePos.x + endNode.basePos.x)/2, 2, (startNode.basePos.z + endNode.basePos.z)/2),
+                        endNode.basePos
+                    );
+                    const edgeGeo = new THREE.TubeGeometry(curve, 20, 0.02, 8, false);
+                    const edgeMat = new THREE.MeshBasicMaterial({{ color: e.color || '#ffffff', transparent: true, opacity: 0.3 }});
+                    scene.add(new THREE.Mesh(edgeGeo, edgeMat));
+                    
+                    const pGeo = new THREE.SphereGeometry(0.06, 8, 8);
+                    const flowP = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({{ color: e.color || '#ffffff' }}));
+                    scene.add(flowP);
+                    endNode.flows = endNode.flows || [];
+                    endNode.flows.push({{ mesh: flowP, curve, t: Math.random() }});
+                }}
+            }});
+
+            let time = 0;
+            function animate() {{
+                requestAnimationFrame(animate);
+                time += 0.02;
+                controls.update();
+
+                Object.values(nodeObjects).forEach((obj, idx) => {{
+                    const orbitT = time * 4 + idx;
+                    const d = 0.5;
+                    obj.p1.position.set(Math.cos(orbitT)*d, Math.sin(orbitT)*d, 0);
+                    obj.p2.position.set(-Math.cos(orbitT)*d, -Math.sin(orbitT)*d, 0);
+                    obj.group.position.y = obj.basePos.y + Math.sin(time + idx)*0.15;
+                    if (obj.flows) {{
+                        obj.flows.forEach(f => {{
+                            f.t += 0.005; if (f.t > 1) f.t = 0;
+                            const p = f.curve.getPoint(f.t);
+                            f.mesh.position.copy(p);
+                        }});
+                    }}
+                }});
+                renderer.render(scene, camera);
+            }}
+            animate();
+            window.addEventListener('resize', () => {{
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }});
         </script>
     </body>
     </html>

@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import numpy as np
 from typing import Dict
-from core.trinity.core.wave_mechanics import WaveState
+from core.trinity.core.physics.wave_laws import WaveState
 
 class Oscilloscope:
     """

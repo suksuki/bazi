@@ -1,20 +1,18 @@
+
 """
-Quantum Trinity (V1.0)
-=======================
-Unified implementation of Math, Physics, Registry, and Tuning systems.
+Quantum Trinity V2.0 (The Oracle)
+=====================================
+Modularized Bazi Physics Framework.
 """
 
-from .core.math_engine import ProbValue, prob_compare, expit, softplus, saturate, decay
-from .core.physics_engine import PhysicsEngine, ParticleDefinitions
-from .registry.parameter_store import ParameterStore
-from .registry.rule_registry import RuleRegistry
-from .tuning.engine import TuningEngine
-from .tuning.verifier import UnifiedVerifier
-from .tuning.strategies import BayesianStrategy, SCDStrategy
+from .core.oracle import TrinityOracle
+from .core.nexus.definitions import PhysicsConstants, BaziParticleNexus
+from .core.physics.wave_laws import WaveState, WaveLaws
 
 __all__ = [
-    'ProbValue', 'prob_compare', 'expit', 'softplus', 'saturate', 'decay',
-    'PhysicsEngine', 'ParticleDefinitions',
-    'ParameterStore', 'RuleRegistry',
-    'TuningEngine', 'UnifiedVerifier', 'BayesianStrategy', 'SCDStrategy'
+    'TrinityOracle',
+    'PhysicsConstants',
+    'BaziParticleNexus',
+    'WaveState',
+    'WaveLaws'
 ]
