@@ -1,0 +1,38 @@
+{
+    "test_suite": "Antigravity_G03_Gravity_Validation",
+    "comment": "Triangulation Validation for Phase B-11: Dynamic Pillar Weights",
+    "data_samples": [
+        {
+            "case_id": "GRAVITY_TEST_001_EQUILIBRIUM",
+            "type": "Synthetic",
+            "name": "交节初期 (Initial Equilibrium)",
+            "description": "Progress = 0.0 (Node). Month Wave sin(0) = 0. Base Weight.",
+            "inputs": {
+                "progress": 0.00
+            },
+            "expected_output": {
+                "Month": 0.40,
+                "Day": 0.25,
+                "Hour": 0.23,
+                "Year": 0.12,
+                "logic_check": "Month is dominant but not overwhelming."
+            }
+        },
+        {
+            "case_id": "GRAVITY_TEST_002_SINGULARITY",
+            "type": "Synthetic",
+            "name": "气旺极值 (Peak Singularity)",
+            "description": "Progress = 0.5 (Peak). Month Wave sin(pi*0.5) = 1. Max Weight.",
+            "inputs": {
+                "progress": 0.50
+            },
+            "expected_output": {
+                "Month": 0.55,
+                "Day": 0.25,
+                "Hour": 0.13,
+                "Year": 0.07,
+                "logic_check": "Month squeezes Year/Hour weights significantly."
+            }
+        }
+    ]
+}

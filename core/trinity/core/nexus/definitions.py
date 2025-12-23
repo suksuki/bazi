@@ -65,8 +65,34 @@ class BaziParticleNexus:
         "壬": ("Water", "Yang", 9), "癸": ("Water", "Yin", 10)
     }
     
+    STEM_SHI_SHEN = ["Bi Jian", "Jie Cai", "Shi Shen", "Shang Guan", "Pian Cai", "Zheng Cai", "Qi Sha", "Zheng Guan", "Pian Yin", "Zheng Yin"]
+
+    @classmethod
+    def get_shi_shen(cls, stem: str, dm_stem: str) -> str:
+        """
+        Calculates the Ten God (Shi Shen) label for a target stem relative to a Day Master.
+        """
+        if stem not in cls.STEMS or dm_stem not in cls.STEMS:
+            return "Unknown"
+        
+        from .definitions import PhysicsConstants
+        target_elem, target_pol, _ = cls.STEMS[stem]
+        dm_elem, dm_pol, _ = cls.STEMS[dm_stem]
+        
+        if target_elem == dm_elem:
+            return "Bi Jian" if target_pol == dm_pol else "Jie Cai"
+        if PhysicsConstants.GENERATION[dm_elem] == target_elem:
+            return "Shi Shen" if target_pol == dm_pol else "Shang Guan"
+        if PhysicsConstants.GENERATION[target_elem] == dm_elem:
+            return "Pian Yin" if target_pol == dm_pol else "Zheng Yin"
+        if PhysicsConstants.CONTROL[dm_elem] == target_elem:
+            return "Pian Cai" if target_pol == dm_pol else "Zheng Cai"
+        if PhysicsConstants.CONTROL[target_elem] == dm_elem:
+            return "Qi Sha" if target_pol == dm_pol else "Zheng Guan"
+        return "Unknown"
+    
     # Branches: (Element, Angle, HiddenStems[(Stem, Weight)])
-    # Combined Registry Hidden Stems
+    # Combined Registry Hidden Stems - STATIC WEIGHTS (legacy)
     BRANCHES = {
         "子": ("Water", 0, [('癸', 10)]),
         "丑": ("Earth", 30, [('己', 5), ('癸', 3), ('辛', 2)]),
@@ -81,6 +107,32 @@ class BaziParticleNexus:
         "戌": ("Earth", 300, [('戊', 5), ('辛', 3), ('丁', 2)]),
         "亥": ("Water", 330, [('壬', 7), ('甲', 3)])
     }
+    
+    # [Phase B] Dynamic weight accessor
+    @classmethod
+    def get_branch_weights(cls, branch: str, phase_progress: float = None, 
+                           dispersion_engine=None) -> list:
+        """
+        Get hidden stem weights for a branch - static or dynamic.
+        
+        Args:
+            branch: The branch character (e.g., '丑')
+            phase_progress: Solar term progress (0.0-1.0), None for static
+            dispersion_engine: QuantumDispersionEngine instance for dynamic mode
+        
+        Returns:
+            list: [(stem, weight), ...] 
+        """
+        if phase_progress is not None and dispersion_engine is not None:
+            # Dynamic mode: use quantum dispersion
+            dynamic_weights = dispersion_engine.get_dynamic_weights(branch, phase_progress)
+            return [(stem, weight) for stem, weight in dynamic_weights.items()]
+        
+        # Static mode: fallback to traditional weights
+        branch_data = cls.BRANCHES.get(branch)
+        if branch_data:
+            return branch_data[2]
+        return []
 
     # Phase 32: Structural Interactions (Harm/Penalty)
     # 6 Harms (Liu Hai) - Phase Jitter Sources

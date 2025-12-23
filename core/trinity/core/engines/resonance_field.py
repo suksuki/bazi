@@ -82,23 +82,6 @@ class ResonanceField:
         dt = 0.1
         velocity = abs(sync_state - prev_sync) / dt
         
-        # 5. Pattern Detection
-        is_follow = (mode == "COHERENT") and (locking_ratio > 2.0)
-        
-        desc = f"Resonance: {mode} Mode | Sync: {sync_state:.2f}"
-        if is_follow:
-            desc += " | 🔥 SUPERCONDUCTING (True Follow)"
-        if is_void:
-            desc += " | 🕳️ VOID PENALTY ACTIVE"
-
-        # 6. Envelope & Phase 28 Flow Metrics
-        avg_field_phase = float(np.angle(z_total))
-        envelop_frequency = abs(dm_wave.phase - avg_field_phase) / np.pi
-        
-        # Flow Efficiency (H1: Based on Sync and Mode)
-        flow_efficiency = sync_state * (2.0 if is_follow else 1.0)
-        if mode == "ANNIHILATION": flow_efficiency *= 0.1
-        
         # Fragmentation Index (H2: Phase dispersion)
         all_waves = [dm_wave] + field_waves
         # Increase threshold to filter out tiny noise elements
@@ -109,13 +92,43 @@ class ResonanceField:
             fragmentation_index = np.std(phases) / np.pi
         else:
             fragmentation_index = 0.0
+
+        # 5. Pattern Detection
+        # A 'True Follow' must be Coherent, strong enough, AND have low fragmentation (unified field)
+        is_follow = (mode == "COHERENT") and (locking_ratio > 2.0) and (fragmentation_index < 0.25)
+        
+        # Mode descriptions in bilingual format
+        mode_names = {
+            "COHERENT": "相干锁定 (Coherent)",
+            "BEATING": "拍频摆动 (Beating)", 
+            "DAMPED": "阻尼衰减 (Damped)",
+            "ANNIHILATION": "湮灭失相 (Annihilation)"
+        }
+        
+        sync_desc = "高" if sync_state > 0.7 else "中" if sync_state > 0.4 else "低"
+        desc = f"共振模式: {mode_names.get(mode, mode)} | 同步度 (Sync): {sync_state:.2f} ({sync_desc})"
+        
+        if is_follow:
+            desc += " | 🔥 超导锁定 (True Follow)"
+        if is_void:
+            desc += " | 🕳️ 空亡减益 (Void Penalty)"
+
+        # 6. Envelope & Phase 28 Flow Metrics
+        avg_field_phase = float(np.angle(z_total))
+        envelop_frequency = abs(dm_wave.phase - avg_field_phase) / np.pi
+        
+        # Flow Efficiency (H1: Based on Sync and Mode)
+        flow_efficiency = sync_state * (2.0 if is_follow else 1.0)
+        if mode == "ANNIHILATION": flow_efficiency *= 0.1
+        
+        # [MOVED UP] Fragmentation Index (H2: Phase dispersion)
             
         # 7. Pattern Transitions (Phase 28)
         if mode == "ANNIHILATION" and fragmentation_index < 0.15:
             # This is a unified anti-phase field (e.g. Shang Guan Shang Jin)
             # Actually, if it's unified output without Guan, it's a Follow state
             mode = "COHERENT"
-            desc = "Resonance: COHERENT (Superfluid/Vacuum Free)"
+            desc = "共振模式: 相干锁定 (Coherent) - 超流态/真空自由 (Superfluid/Vacuum Free)"
             flow_efficiency = 2.5 # Peak efficiency
         
         return ResonanceProfile(

@@ -1,0 +1,40 @@
+{
+    "test_suite": "Antigravity_G02_Resonance_Validation",
+    "comment": "Validating Phase B-10: Resonance & Rooting Gain Logic",
+    "data_samples": [
+        {
+            "case_id": "STRESS_TEST_B10_001_FLOATING",
+            "name": "天干虚浮压测 (Bing Fire Floating)",
+            "description": "Bing (Fire) in Winter (Pig/Rat/Ox). No Fire roots. Should be FLOATING.",
+            "inputs": {
+                "stem": "丙",
+                "branches": [
+                    "亥",
+                    "子",
+                    "丑"
+                ]
+            },
+            "expected_output": {
+                "resonance_gain": 0.50,
+                "stability_status": "CRITICAL_VOLATILE"
+            }
+        },
+        {
+            "case_id": "STRESS_TEST_B10_002_RESONANCE",
+            "name": "本气共振压测 (Jia Wood Rooted)",
+            "description": "Jia (Wood) on Tiger (Main Root). Should be SUPER_STABLE.",
+            "inputs": {
+                "stem": "甲",
+                "branches": [
+                    "寅",
+                    "辰",
+                    "午"
+                ]
+            },
+            "expected_output": {
+                "resonance_gain": 2.00,
+                "stability_status": "SUPER_STABLE"
+            }
+        }
+    ]
+}

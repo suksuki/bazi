@@ -1,6 +1,7 @@
 
 import numpy as np
-from core.trinity.core.nexus.definitions import BaziParticleNexus, PhysicsConstants
+from typing import List
+from core.trinity.core.nexus.definitions import BaziParticleNexus, PhysicsConstants, ArbitrationNexus
 
 class StructuralStressEngine:
     """
@@ -10,8 +11,9 @@ class StructuralStressEngine:
     2. IC (Interference Coefficient) - Phase Jitter SNR Model
     """
     
-    def __init__(self, resonance_context=None):
+    def __init__(self, resonance_context=None, day_master=None):
         self.resonance_context = resonance_context
+        self.day_master = day_master
         
     def calculate_micro_lattice_defects(self, branches: list, month_branch: str = None) -> dict:
         """
@@ -99,7 +101,19 @@ class StructuralStressEngine:
             if branch_counts.get(b, 0) >= 2:
                 k_self = get_branch_energy(b) * (branch_counts[b] - 1)
                 kinetic_sum += k_self * 0.5
-                defects.append({'type': 'PENALTY_SELF', 'nodes': [b]})
+                defects.append({'type': 'PENALTY_SELF', 'score': k_self * 0.5, 'nodes': [b]})
+
+        # E. Yang Ren Shear Burst (Sheep Blade Phase Transition)
+        if self.day_master:
+            shear_burst_score = self._calculate_shear_burst(branches)
+            if shear_burst_score > 0:
+                kinetic_sum += shear_burst_score
+                defects.append({
+                    'type': 'SHEAR_BURST', 
+                    'score': shear_burst_score, 
+                    'nodes': branches, 
+                    'desc': '羊刃逢冲: 超临界能级爆发 (Shear Burst)'
+                })
 
         # Calculate Final SAI
         # If month is part of penalty, E_bond drops.
@@ -111,29 +125,50 @@ class StructuralStressEngine:
         # Formula: IC = 1 - (1 / (1 + alpha * N_Harm))
         # Logic: SNR attenuation.
         
-        alpha = 0.6 # Sensitivity coefficient
-        harm_hits = 0
+        alpha = 0.8 # Increased sensitivity coefficient
+        harm_energy_sum = 0.0
         
         checked_pairs = set()
         for i in range(len(branches)):
             for j in range(i + 1, len(branches)):
                 b1 = branches[i]
                 b2 = branches[j]
-                if BaziParticleNexus.HARM_MAPPING.get(b1) == b2:
+                if ArbitrationNexus.HARM_MAP.get(b1) == b2:
                     pair_key = tuple(sorted([b1, b2]))
                     if pair_key not in checked_pairs:
-                        harm_hits += 1
-                        defects.append({'type': 'HARM_JITTER', 'score': 0.5, 'nodes': [b1, b2]})
+                        # Energy-weighted harm: Sum of participating branch energies
+                        e1 = get_branch_energy(b1)
+                        e2 = get_branch_energy(b2)
+                        harm_energy_sum += (e1 + e2) * 0.5
+                        defects.append({'type': 'HARM_JITTER', 'score': (e1 + e2) * 0.5, 'nodes': [b1, b2]})
                         checked_pairs.add(pair_key)
         
-        if harm_hits == 0:
+        if harm_energy_sum == 0:
             IC = 0.0
         else:
-            # SNR Model
-            IC = 1.0 - (1.0 / (1.0 + alpha * harm_hits))
+            # SNR Model with energy weighting
+            IC = 1.0 - (1.0 / (1.0 + alpha * harm_energy_sum))
             
         return {
             'SAI': round(SAI, 4),
             'IC': round(IC, 4),
             'defects': defects
         }
+    def _calculate_shear_burst(self, branches: List[str]) -> float:
+        """
+        Detects if a 'Sheep Blade' (Yang Ren) node is under extreme clash.
+        Triggering this leads to a non-linear SAI jump.
+        """
+        from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
+        yang_ren = SymbolicStarsEngine.YANG_REN_MAP.get(self.day_master)
+        
+        if not yang_ren or yang_ren not in branches:
+            return 0.0
+            
+        # Check if the yang_ren node is being clashed
+        chong_target = ArbitrationNexus.CLASH_MAP.get(yang_ren)
+        if chong_target in branches:
+            # Phase Transition: The stress isn't just cumulative, it hits a burst threshold.
+            return 2.5  # Critical shockwave score
+            
+        return 0.0

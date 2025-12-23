@@ -1,0 +1,53 @@
+{
+    "test_suite": "Antigravity_Single_Body_v10_Validation",
+    "comment": "Asset-grade validation suite for AntigravityEngine logic lock.",
+    "data_samples": [
+        {
+            "case_id": "SYNTH_ALPHA_001",
+            "type": "Extreme_Edge",
+            "description": "合成边界测试：交节后 0.001 进度。验证 B-01 正弦函数的初生能级噪声。",
+            "inputs": {
+                "progress": 0.001,
+                "branch": "寅",
+                "stems": [
+                    "甲",
+                    "丙",
+                    "戊"
+                ]
+            },
+            "expected_output": {
+                "check_continuity": true,
+                "max_entropy": 0.1
+            }
+        },
+        {
+            "case_id": "SYNTH_MID_001",
+            "type": "Mid_Point",
+            "description": "中点测试：进度 0.5。验证能量峰值。",
+            "inputs": {
+                "progress": 0.5,
+                "branch": "子",
+                "stems": [
+                    "癸"
+                ]
+            },
+            "expected_output": {
+                "min_energy_癸": 9.0
+            }
+        },
+        {
+            "case_id": "HYBRID_BETA_002",
+            "type": "Real_Anonymized",
+            "description": "匿名真实混合测试：三刑会冲环境下的羊刃相变验证。",
+            "inputs": {
+                "progress": 0.45,
+                "branch": "午",
+                "stress_trigger": "Chong"
+            },
+            "expected_output": {
+                "check_shear_burst": true,
+                "expected_shear_factor": 2.26
+            }
+        }
+    ]
+}

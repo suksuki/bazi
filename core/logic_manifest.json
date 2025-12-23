@@ -1,19 +1,28 @@
 {
-    "version": "9.3.5",
+    "version": "11.0.0",
+    "description": "Grand Unified Single-Body Physics with Micro-Precision Dynamics (Phase G Complete).",
     "system_id": "ANTIGRAVITY_CORE_ALPHA",
     "modules": {
-        "MOD_00_GRAND": {
-            "name": "🔮 大一统仲裁 (Grand Unified Arbitration)",
-            "icon": "🔮",
-            "type": "MAIN",
-            "description": "System Root | Global Arbitration Console",
-            "active": false,
-            "linked_metrics": [
-                "verdict.order_parameter",
-                "resonance.sync_state"
+        "MOD_00_SUBSTRATE": {
+            "id": "MOD_00_SUBSTRATE",
+            "name": "🧬 晶格基底与因果涌现 (Substrate & Causal Emergence)",
+            "icon": "🧬",
+            "type": "DETAIL",
+            "description": "基底即因果 (Substrate is Causality) | 基于量子弥散与因果熵的全链路物理仿真监控室。",
+            "active": true,
+            "linked_rules": [
+                "PH_QUANTUM_DISPERSION",
+                "PH_CAUSAL_ENTROPY",
+                "PH_SINGULARITY_DETECT"
             ],
-            "goal": "Synthesize all logic layers into a final verdict.",
-            "outcome": "Final Holographic Report"
+            "linked_metrics": [
+                "PHASE_PROGRESS",
+                "ENERGY_DISPERSION_DELTA",
+                "CAUSAL_ENTROPY",
+                "SINGULARITY_INDEX"
+            ],
+            "goal": "上帝视角监控：观测能量波动如何坍缩为因果奇点，并评估系统熵增风险。",
+            "outcome": "基底重构完成，实现从‘波’到‘坍缩’的命运断层消除。"
         },
         "MOD_01_TRIPLE": {
             "name": "♾️ 三元动力 (Integrated Triple Dynamics)",
@@ -130,6 +139,92 @@
             ],
             "goal": "Quantify Spouse Star/Palace gravitational binding and predict relationship phase transitions.",
             "outcome": "精准测算婚姻引力绑定能与轨道稳定性 (Marital Binding Energy & Orbital Stability)."
+        },
+        "MOD_07_LIFEPATH": {
+            "id": "MOD_07_LIFEPATH",
+            "name": "🚀 个人生命轨道仪 (Personal Orbit Orrery)",
+            "icon": "🚀",
+            "type": "DETAIL",
+            "description": "High-freq temporal sampling for life-path energy audit.",
+            "active": true,
+            "linked_rules": [
+                "PH_DYNAMIC_DISPERSION_SIN",
+                "PH_SHEAR_BURST",
+                "PH_RISK_NODE_DETECT"
+            ],
+            "linked_metrics": [
+                "ORBITAL_ENTROPY",
+                "RISK_NODE_DENSITY"
+            ],
+            "goal": "Map full life-cycle energy trajectory and identify risk nodes.",
+            "outcome": "Life-Path Risk Heatmap & Orbital Visualization."
+        },
+        "MOD_09_COMBINATION": {
+            "id": "MOD_09_COMBINATION",
+            "name": "⚛️ 干合化气相位 (Stem Combination Phase)",
+            "icon": "⚛️",
+            "type": "DETAIL",
+            "description": "Physics of Stem Transformation vs Entanglement.",
+            "active": true,
+            "linked_rules": [
+                "PH_COMBINATION_PHASE"
+            ],
+            "linked_metrics": [
+                "COMBINATION_THRESHOLD",
+                "TRANSFORM_POWER"
+            ],
+            "goal": "Determine Phase Transition (Transformation) vs Entanglement (Bound).",
+            "outcome": "Accurate Energy State of Combinations."
+        },
+        "MOD_10_RESONANCE": {
+            "id": "MOD_10_RESONANCE",
+            "name": "📡 干支共振增益 (Stem-Branch Resonance)",
+            "icon": "📡",
+            "type": "DETAIL",
+            "description": "Signal amplification via Rooting (Tian Gan/Di Zhi Resonance).",
+            "active": true,
+            "linked_rules": [
+                "PH_ROOTING_GAIN"
+            ],
+            "linked_metrics": [
+                "ROOTING_GAIN",
+                "STABILITY_STATUS"
+            ],
+            "goal": "Quantify signal gain from Rooting (Ben Qi/Zhong Qi/Yu Qi).",
+            "outcome": "Precise Stem Strength (Virtual vs Real)."
+        },
+        "MOD_11_GRAVITY": {
+            "id": "MOD_11_GRAVITY",
+            "name": "🌌 宫位引力场 (Pillar Gravitational Field)",
+            "icon": "🌌",
+            "type": "DETAIL",
+            "description": "Dynamic weight distribution based on Solar Term depth.",
+            "active": true,
+            "linked_rules": [
+                "PH_PILLAR_GRAVITY"
+            ],
+            "linked_metrics": [
+                "PILLAR_WEIGHT_MATRIX"
+            ],
+            "goal": "Model non-linear energy shifts (Month Command Dominance).",
+            "outcome": "Dynamic Energy Map."
+        },
+        "MOD_12_INERTIA": {
+            "id": "MOD_12_INERTIA",
+            "name": "🌊 时空场惯性 (Spacetime Field Inertia)",
+            "icon": "🌊",
+            "type": "DETAIL",
+            "description": "Fluid viscosity modeling for energy transitions.",
+            "active": true,
+            "linked_rules": [
+                "PH_FLUID_VISCOSITY"
+            ],
+            "linked_metrics": [
+                "INERTIA_CONSTANT_TAU",
+                "VISCOSITY_INDEX"
+            ],
+            "goal": "Smooth energy handoff during Luck Pillar switches.",
+            "outcome": "Stable Entropy (S) during transition."
         }
     },
     "registry": {
@@ -194,6 +289,15 @@
             "conditions": "is_void == true",
             "priority": 10,
             "effect": "ENERGY_LEAK",
+            "damping_factor": 0.45,
+            "status": "ACTIVE"
+        },
+        "PH_LIFE_CYCLE_RESONANCE": {
+            "id": "PH_LIFE_CYCLE_RESONANCE",
+            "name": "十二长生动能谐振 (Life Cycle Resonance)",
+            "type": "KINETIC_ENERGY",
+            "peak_gain": 2.0,
+            "description": "十二长生作为动能倍率，帝旺态增益标定为 2.0x。",
             "status": "ACTIVE"
         },
         "PH28_ANNIHILATION": {
@@ -270,9 +374,86 @@
             "type": "GRAVITY_DYNAMICS",
             "description": "Annual pillar as high-speed flyby body imparting orbital impulse.",
             "function": "apply_annual_impulse"
+        },
+        "PH_CAUSAL_ENTROPY": {
+            "id": "PH_CAUSAL_ENTROPY",
+            "name": "因果熵 (Causal Entropy)",
+            "type": "EMERGENCE",
+            "description": "Quantifies structural complexity and interaction density.",
+            "function": "calculate_causal_entropy"
+        },
+        "PH_SINGULARITY_DETECT": {
+            "id": "PH_SINGULARITY_DETECT",
+            "name": "奇点探测 (Singularity Detection)",
+            "type": "EMERGENCE",
+            "description": "Identifies temporal nodes where complex interactions overlap.",
+            "function": "detect_singularities"
+        },
+        "PH_QUANTUM_DISPERSION": {
+            "id": "PH_QUANTUM_DISPERSION",
+            "name": "正弦弥散 (Sinusoidal Dispersion)",
+            "type": "QUANTUM_ENGINE",
+            "description": "P(t) = A * sin^2(πt + φ) * e^(-τt). Core Asset for dynamic hidden stems.",
+            "function": "QuantumDispersionEngine.get_dynamic_weights"
+        },
+        "PH_SHEAR_BURST": {
+            "id": "PH_SHEAR_BURST",
+            "name": "羊刃相变 (Shear Burst)",
+            "type": "CRITICAL_PHYSICS",
+            "description": "Non-linear energy gain (2.26x) when Yang Ren encounters Clash (Chong).",
+            "function": "AntigravityEngine.check_shear_burst"
+        },
+        "PH_COMBINATION_PHASE": {
+            "id": "PH_COMBINATION_PHASE",
+            "name": "合化相位判定 (Combination Phase Check)",
+            "type": "QUANTUM_ENGINE",
+            "description": "Checks if month energy > threshold (0.65) for phase transition.",
+            "function": "check_combination_phase"
+        },
+        "PH_ROOTING_GAIN": {
+            "id": "PH_ROOTING_GAIN",
+            "name": "通根增益模型 (Rooting Gain Model)",
+            "type": "QUANTUM_ENGINE",
+            "description": "Calculates G_res based on Main(2.0)/Medium(1.5)/Residual(1.2)/None(0.5).",
+            "function": "ResonanceBooster.calculate_resonance_gain"
+        },
+        "PH_PILLAR_GRAVITY": {
+            "id": "PH_PILLAR_GRAVITY",
+            "name": "动态引力权重 (Dynamic Gravity Weights)",
+            "type": "QUANTUM_ENGINE",
+            "description": "Month Weight = 0.40 + 0.15*sin(pi*t).",
+            "function": "PillarGravityEngine.calculate_dynamic_weights"
+        },
+        "PH_FLUID_VISCOSITY": {
+            "id": "PH_FLUID_VISCOSITY",
+            "name": "流体粘滞模型 (Fluid Viscosity Model)",
+            "type": "QUANTUM_ENGINE",
+            "description": "Exponential Decay (W_prev = exp(-t/tau)). Default Tau=3.0 months.",
+            "function": "SpacetimeInertiaEngine.calculate_inertia_weights"
+        },
+        "PH_RISK_NODE_DETECT": {
+            "id": "PH_RISK_NODE_DETECT",
+            "name": "风险节点探测 (Risk Node Detection)",
+            "type": "CRITICAL_PHYSICS",
+            "description": "Triggered when SAI > 0.6, Entropy > 1.5, or IC > 0.6.",
+            "function": "LifePathEngine._identify_risk_reason"
         }
     },
     "metrics": {
+        "CAUSAL_ENTROPY": {
+            "id": "CAUSAL_ENTROPY",
+            "name": "系统熵 (System Entropy - S)",
+            "unit": "nats",
+            "description": "Structural entanglement richness. S = -sum(p*log(p)).",
+            "module": "MOD_00_SUBSTRATE"
+        },
+        "SINGULARITY_INDEX": {
+            "id": "SINGULARITY_INDEX",
+            "name": "奇点指标 (Singularity Index - Σ)",
+            "unit": "dimensionless",
+            "description": "Overlap count of high-priority interactions at specific nodes.",
+            "module": "MOD_00_SUBSTRATE"
+        },
         "REYNOLDS_NUMBER": {
             "id": "REYNOLDS_NUMBER",
             "name": "雷诺数 (Reynolds Number - Re)",
@@ -344,6 +525,69 @@
             "description": "Environmental modifier for gravitational constant G.",
             "module": "MOD_06_RELATIONSHIP",
             "formula": "G_eff = G * ε"
+        },
+        "ORBITAL_ENTROPY": {
+            "id": "ORBITAL_ENTROPY",
+            "name": "轨道熵 (Orbital Entropy)",
+            "unit": "nats",
+            "description": "Entropy integrated over the life-path trajectory.",
+            "module": "MOD_07_LIFEPATH"
+        },
+        "RISK_NODE_DENSITY": {
+            "id": "RISK_NODE_DENSITY",
+            "name": "风险节点密度 (Risk Node Density)",
+            "unit": "nodes/decade",
+            "description": "Frequency of structural risk events per 10-year cycle.",
+            "module": "MOD_07_LIFEPATH"
+        },
+        "COMBINATION_THRESHOLD": {
+            "id": "COMBINATION_THRESHOLD",
+            "name": "合化阈值 (Combination Threshold)",
+            "unit": "coeff",
+            "description": "Critical monthly energy level required for transformation (0.65).",
+            "module": "MOD_09_COMBINATION"
+        },
+        "TRANSFORM_POWER": {
+            "id": "TRANSFORM_POWER",
+            "name": "化气能量 (Transform Power)",
+            "unit": "ratio",
+            "description": "1.0 if Transformed, 0.3 if Entangled.",
+            "module": "MOD_09_COMBINATION"
+        },
+        "ROOTING_GAIN": {
+            "id": "ROOTING_GAIN",
+            "name": "通根增益 (Rooting Gain)",
+            "unit": "coeff",
+            "description": "Multiplier for Stem Energy: 2.0 (Main) to 0.5 (Floating).",
+            "module": "MOD_10_RESONANCE"
+        },
+        "STABILITY_STATUS": {
+            "id": "STABILITY_STATUS",
+            "name": "稳态标识 (Stability Status)",
+            "unit": "enum",
+            "description": "SUPER_STABLE | STABLE | DAMPED | CRITICAL_VOLATILE",
+            "module": "MOD_10_RESONANCE"
+        },
+        "PILLAR_WEIGHT_MATRIX": {
+            "id": "PILLAR_WEIGHT_MATRIX",
+            "name": "宫位权重矩阵 (Pillar Weight Matrix)",
+            "unit": "ratio",
+            "description": "Y/M/D/H weights summing to 1.0.",
+            "module": "MOD_11_GRAVITY"
+        },
+        "INERTIA_CONSTANT_TAU": {
+            "id": "INERTIA_CONSTANT_TAU",
+            "name": "惯性常数 (Inertia Constant τ)",
+            "unit": "months",
+            "description": "Time required for previous energy fields to decay by ~63%.",
+            "module": "MOD_12_INERTIA"
+        },
+        "VISCOSITY_INDEX": {
+            "id": "VISCOSITY_INDEX",
+            "name": "粘滞指数 (Viscosity Index)",
+            "unit": "ratio",
+            "description": "Measure of field mixing state (0.0=Pure, 1.0=Max Mix).",
+            "module": "MOD_12_INERTIA"
         }
     },
     "bazi_parameters": {
@@ -402,6 +646,22 @@
             "description": "Romantic attraction indicator. Branches: 子午卯酉 based on Year/Day Branch triads.",
             "relationship": "寅午戌->卯; 申子辰->酉; 巳酉丑->午; 亥卯未->子",
             "examples": "Year Branch 寅 -> Peach Blossom at 卯"
+        },
+        "RISK_NODE": {
+            "id": "RISK_NODE",
+            "name": "风险节点 (Risk Node)",
+            "type": "STRUCTURE_DEFECT",
+            "description": "Temporal point where structural stress (SAI) exceeds critical limits.",
+            "relationship": "SAI > 0.6 or Entropy > 1.5",
+            "examples": "2026: SAI=1.8 (Critical)"
+        },
+        "LIFE_PATH_TRAJECTORY": {
+            "id": "LIFE_PATH_TRAJECTORY",
+            "name": "生命轨迹 (Life-Path Trajectory)",
+            "type": "TEMPORAL_FLOW",
+            "description": "The continuous curve of energy states over a human lifespan.",
+            "relationship": "Integration of Annual/Luck Pillars",
+            "examples": "Entropic Decay Curve"
         }
     }
 }

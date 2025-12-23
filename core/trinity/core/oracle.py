@@ -6,6 +6,7 @@ Elegant Facade and Orchestrator for the Bazi Physics system.
 """
 
 from typing import List, Dict, Optional, Any
+from datetime import datetime
 import numpy as np
 
 from .nexus.definitions import PhysicsConstants, BaziParticleNexus
@@ -19,6 +20,9 @@ from .intelligence.deconstructor import Deconstructor
 from .engines.structural_stress import StructuralStressEngine
 from .engines.wealth_fluid import WealthFluidEngine
 from .engines.relationship_gravity import RelationshipGravityEngine
+from .engines.quantum_dispersion import QuantumDispersionEngine
+from .engines.causal_entanglement import CausalEntanglementEngine
+from .intelligence.symbolic_stars import SymbolicStarsEngine
 
 class TrinityOracle:
     """The Single Point of Truth and Analysis Orchestrator."""
@@ -33,7 +37,9 @@ class TrinityOracle:
                 annual_pillar: Optional[str] = None,
                 t: float = 0.0,
                 prev_sync: float = 1.0,
-                injections: Optional[List[str]] = None) -> Dict[str, Any]:
+                injections: Optional[List[str]] = None,
+                birth_date: Optional[datetime] = None,
+                dispersion_mode: bool = False) -> Dict[str, Any]:
         """
         [UNIFIED V2.0 PIPELINE]
         Logic -> Field Init -> Flux -> Resonance -> Verdict -> Remediation -> Deconstruction
@@ -45,8 +51,45 @@ class TrinityOracle:
         # 1. Logic Analysis
         interactions = LogicArbitrator.match_interactions(all_pillars, day_master)
         
-        # 2. Field Initialization
-        initial_waves = LogicArbitrator.initialize_field(all_pillars, day_master)
+        # [NEW] 1b. Symbolic Stars Architecture (Shen Sha)
+        # Collect branches from pillars AND injections
+        branches_only = [p[1] for p in all_pillars if len(p) >= 2]
+        if injections:
+            branches_only.extend([i for i in injections if i in BaziParticleNexus.BRANCHES.keys()])
+            
+        star_engine = SymbolicStarsEngine()
+        star_stats = star_engine.analyze_stars(day_master, branches_only)
+        star_mods = star_engine.get_physical_modifiers(star_stats)
+        
+        # Inject active stars into interactions for UI visibility
+        for star in star_stats['active_stars']:
+             interactions.append({
+                 "id": f"STAR_{star['name']}", "type": "SYMBOLIC_STAR", "name": f"星辰: {star['name']}",
+                 "target_element": "Field", "q": 1.0, "phi": 0.0, "lock": False,
+                 "priority": 15, "branches": {star['node']}
+             })
+        
+        # [Phase B] 2. Field Initialization (with optional Quantum Dispersion)
+        phase_progress = None
+        dispersion_engine = None
+        if dispersion_mode and birth_date:
+            dispersion_engine = QuantumDispersionEngine()
+            solar_terms = QuantumDispersionEngine.get_solar_term_times_for_year(birth_date.year)
+            # Handle year boundary if birth is near January
+            if birth_date.month == 1 and birth_date.day < 10:
+                solar_terms.update(QuantumDispersionEngine.get_solar_term_times_for_year(birth_date.year - 1))
+            elif birth_date.month == 12 and birth_date.day > 20:
+                solar_terms.update(QuantumDispersionEngine.get_solar_term_times_for_year(birth_date.year + 1))
+                
+            phase_progress, current_term, next_term = dispersion_engine.calculate_phase_progress(birth_date, solar_terms)
+            print(f"DEBUG: Quantum Dispersion Active. Progress in {current_term}: {phase_progress:.4f}")
+
+        initial_waves = LogicArbitrator.initialize_field(
+            all_pillars, 
+            day_master, 
+            phase_progress=phase_progress, 
+            dispersion_engine=dispersion_engine
+        )
         
         # 3. Apply Manual Injections (if any)
         if injections:
@@ -72,7 +115,9 @@ class TrinityOracle:
         month_b_for_season = pillars[1][1] if len(pillars) > 1 and len(pillars[1]) > 1 else '寅'
         seasonal_factors = PhysicsConstants.SEASONAL_MATRIX.get(month_b_for_season, {e: 1.0 for e in PhysicsConstants.ELEMENT_PHASES})
         dm_w_prio = PhysicsConstants.PILLAR_WEIGHTS.get('day', 1.0)
-        dm_amp = PhysicsConstants.BASE_SCORE * dm_w_prio * seasonal_factors.get(dm_elem, 1.0)
+        
+        # [PHASE B] Apply Lu Gain modifier
+        dm_amp = PhysicsConstants.BASE_SCORE * dm_w_prio * seasonal_factors.get(dm_elem, 1.0) * star_mods['lu_gain']
         dm_wave = WaveState(dm_amp, PhysicsConstants.ELEMENT_PHASES[dm_elem])
         
         # The 'Field' is the total system energy MINUS the Day Master's personal contribution
@@ -137,7 +182,7 @@ class TrinityOracle:
         if is_void:
             interactions.append({
                 "id": "PH27", "type": "VOID", "name": "Pattern: Void Energy Sink (空亡)",
-                "target_element": "Gravity", "q": 0.5, "phi": 0.0, "lock": False,
+                "target_element": "Gravity", "q": 0.45, "phi": 0.0, "lock": False,
                 "priority": 10, "branches": set(voids)
             })
 
@@ -199,8 +244,11 @@ class TrinityOracle:
         # Standard: Month is index 1
         month_branch_s = all_pillars[1][1] if len(all_pillars) > 1 and len(all_pillars[1]) > 1 else '寅'
         
-        stress_engine = StructuralStressEngine(resonance_context=resonance)
+        stress_engine = StructuralStressEngine(resonance_context=resonance, day_master=day_master)
         sys_stress = stress_engine.calculate_micro_lattice_defects(all_branches, month_branch=month_branch_s)
+        
+        # [PHASE B] Apply Star SNR Boost to IC
+        sys_stress['IC'] = round(sys_stress['IC'] / star_mods['snr_boost'], 4)
         
         # Risk Flags
         struct_risk = "STABLE"
@@ -228,6 +276,13 @@ class TrinityOracle:
         # Default to Male if gender not specified
         relationship_engine = RelationshipGravityEngine(day_master, gender="男")
         relationship_gravity = relationship_engine.analyze_relationship(final_waves, pillars)
+
+        # [NEW] 8e. Causal Entanglement & Emergence (Phase C)
+        causal_engine = CausalEntanglementEngine()
+        emergence_data = causal_engine.analyze_emergence(interactions, all_branches)
+        
+        # [PHASE B] Apply Tian Yi Entropy Damping
+        emergence_data['causal_entropy'] = round(emergence_data['causal_entropy'] * star_mods['entropy_damping'], 4)
 
         # Re-sort to ensure priority patterns appear first
         interactions.sort(key=lambda x: x['priority'])
@@ -258,6 +313,8 @@ class TrinityOracle:
             "relationship_gravity": relationship_gravity,
             "remedy": remedy,
             "breakdown": breakdown,
+            "emergence": emergence_data,
+            "symbolic_stars": star_stats,
             "logic_stack": {
                 "active_rules": [i['id'] for i in interactions if i.get('id')],
                 "manifest_version": LogicRegistry().version
@@ -265,6 +322,7 @@ class TrinityOracle:
             "metadata": {
                 "engine": "Quantum Trinity V2.2 (Integrated)",
                 "brittleness": resonance.brittleness,
-                "void_active": is_void
+                "void_active": is_void,
+                "star_modifiers": star_mods
             }
         }

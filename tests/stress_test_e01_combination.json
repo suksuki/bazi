@@ -1,0 +1,40 @@
+{
+    "test_suite": "Antigravity_G01_CombPhase_Validation",
+    "comment": "Validating Phase B-09: Stem Combination Phase Transitions (Threshold = 0.65)",
+    "data_samples": [
+        {
+            "case_id": "COMB_ZI_MONTH_SUCCESS",
+            "type": "Synthetic",
+            "description": "丁壬合木 (Ding-Ren -> Wood) in Zi Month (Rat/Water). Water supports Wood (Xiang).",
+            "inputs": {
+                "stems": [
+                    "丁",
+                    "壬"
+                ],
+                "month_energy": 1.20
+            },
+            "expected_output": {
+                "status": "PHASE_TRANSITION",
+                "power_ratio": 1.0,
+                "check_msg": "合化成功"
+            }
+        },
+        {
+            "case_id": "COMB_WU_MONTH_FAIL",
+            "type": "Synthetic",
+            "description": "丁壬合木 (Ding-Ren -> Wood) in Wu Month (Horse/Fire). Fire exhausts Wood (Xiu/Si).",
+            "inputs": {
+                "stems": [
+                    "丁",
+                    "壬"
+                ],
+                "month_energy": 0.40
+            },
+            "expected_output": {
+                "status": "ENTANGLEMENT",
+                "power_ratio": 0.3,
+                "check_msg": "合而不化"
+            }
+        }
+    ]
+}

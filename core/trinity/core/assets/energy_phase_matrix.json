@@ -1,0 +1,36 @@
+{
+    "matrix_version": "10.8.0",
+    "description": "Environmental Field Gain Coefficients (Gamma) for 5-Element Phases",
+    "phases": {
+        "WANG": {
+            "code": "PEAK",
+            "gamma": 1.50,
+            "desc": "Day Master shares Element with Month (Prominent)"
+        },
+        "XIANG": {
+            "code": "ASSIST",
+            "gamma": 1.20,
+            "desc": "Month produces Day Master (Resource)"
+        },
+        "XIU": {
+            "code": "REST",
+            "gamma": 0.80,
+            "desc": "Day Master produces Month (Output)"
+        },
+        "QIU": {
+            "code": "TRAPPED",
+            "gamma": 0.60,
+            "desc": "Day Master controls Month (Wealth)"
+        },
+        "SI": {
+            "code": "DEAD",
+            "gamma": 0.30,
+            "desc": "Month controls Day Master (Officer)"
+        }
+    },
+    "combination_thresholds": {
+        "transform_base_energy": 4.5,
+        "transform_success_bonus": 1.5,
+        "comb_fail_penalty": 0.5
+    }
+}

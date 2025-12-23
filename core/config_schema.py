@@ -66,7 +66,7 @@ DEFAULT_FULL_ALGO_PARAMS = {
         "samePillarBonus": 1.5,    # 自坐强根加权 [V10.0] From 4.0/3.0 -> 1.5
         
         # [新增] 黑洞效应 (Void)
-        "voidPenalty": 0.5         # 空亡折损 (0.0=Empty, 1.0=Full)
+        "voidPenalty": 0.45         # 空亡折损 (0.0=Empty, 1.0=Full) - V13.5: 校准为 0.45
     },
 
     # === 面板 3: 几何交互 (Geometric Interactions) ===

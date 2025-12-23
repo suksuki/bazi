@@ -9,88 +9,148 @@ from typing import List, Dict, Optional, Any, Set
 import numpy as np
 from ..nexus.definitions import BaziParticleNexus, ArbitrationNexus, PhysicsConstants
 from ..physics.wave_laws import WaveState, WaveLaws
+from ..assets.pillar_gravity_engine import PillarGravityEngine
+from ..assets.resonance_booster import ResonanceBooster
+import math
 
 class LogicArbitrator:
     """The 'Brain' that identifies structural locks and geometric overlaps."""
 
     @staticmethod
-    def match_interactions(pillars: List[str], day_master: str) -> List[Dict[str, Any]]:
+    def calculate_field_intensities(
+        pillars: List[str], 
+        day_master: str, 
+        phase_progress: float = 0.5,
+        dispersion_engine: Any = None,
+        geo_factor: float = 1.0
+    ) -> Dict[str, float]:
         """
-        Identify active combinations, clashes, and structural locks.
+        Calculates the expectation values (intensities) for all 10 Shi Shen.
+        Integrates Natal + Luck + Annual + Hidden Stems with non-linear weighting.
         """
-        stems = [p[0] for p in pillars if p]
+        # 1. Initialize intensities map
+        intensities = {
+            "Bi Jian": 0.0, "Jie Cai": 0.0,
+            "Shi Shen": 0.0, "Shang Guan": 0.0,
+            "Pian Cai": 0.0, "Zheng Cai": 0.0,
+            "Qi Sha": 0.0, "Zheng Guan": 0.0,
+            "Pian Yin": 0.0, "Zheng Yin": 0.0
+        }
+
+        if not day_master or day_master not in BaziParticleNexus.STEMS:
+            return intensities
+
+        # 2. Get Dynamic Pillar Weights (PH_PILLAR_GRAVITY)
+        p_weights = PillarGravityEngine.calculate_dynamic_weights(phase_progress)
+        weight_map = {
+            'year': p_weights['Year'],
+            'month': p_weights['Month'],
+            'day': p_weights['Day'],
+            'hour': p_weights['Hour'],
+            'luck': 1.2,   # Coupling constant for Luck
+            'annual': 1.5  # Coupling constant for Annual
+        }
+        pillar_names = ['year', 'month', 'day', 'hour', 'luck', 'annual']
+
+        # 3. Accumulated Shi Shen Mapping
+        # We look at each pillar and its hidden stems
+        for idx, p in enumerate(pillars):
+            if not p: continue
+            p_name = pillar_names[idx] if idx < len(pillar_names) else 'unknown'
+            base_w = weight_map.get(p_name, 1.0) * geo_factor
+            
+            # Stem Contribution
+            s_char = p[0]
+            if s_char in BaziParticleNexus.STEMS:
+                ss_name = BaziParticleNexus.get_shi_shen(s_char, day_master)
+                if ss_name in intensities:
+                    # Apply Rooting Gain (PH_ROOTING_GAIN)
+                    branches = [pp[1] for pp in pillars if len(pp) > 1]
+                    gain_ctx = ResonanceBooster.calculate_resonance_gain(s_char, branches)
+                    intensities[ss_name] += 10.0 * base_w * gain_ctx['gain']
+
+            # Branch Hidden Stem Contribution (PH_QUANTUM_DISPERSION)
+            b_char = p[1] if len(p) > 1 else ''
+            if b_char in BaziParticleNexus.BRANCHES:
+                hidden = BaziParticleNexus.get_branch_weights(
+                    b_char, 
+                    phase_progress=phase_progress, 
+                    dispersion_engine=dispersion_engine
+                )
+                # Branches have naturally higher energy (1.5x)
+                branch_base = base_w * 1.5
+                for s_hidden, weight in hidden:
+                    ss_name = BaziParticleNexus.get_shi_shen(s_hidden, day_master)
+                    if ss_name in intensities:
+                        # weight is 0-10
+                        intensities[ss_name] += branch_base * weight
+
+        return intensities
+
+    @staticmethod
+    def match_interactions(
+        pillars: List[str], 
+        day_master: str,
+        phase_progress: float = 0.5,
+        dispersion_engine: Any = None,
+        geo_factor: float = 1.0
+    ) -> List[Dict[str, Any]]:
+        """
+        Identify active combinations, clashes, and structural locks using Field Intensity.
+        [V2.1] Transitioned to Expectation Value based trigger.
+        """
+        # Calculate Intensities
+        intensities = LogicArbitrator.calculate_field_intensities(
+            pillars, day_master, phase_progress, dispersion_engine, geo_factor
+        )
+        
         branches = [p[1] for p in pillars if len(p) > 1]
         branch_set = set(branches)
         interactions = []
 
-        # Find DM relations
-        dm_elem, _, _ = BaziParticleNexus.STEMS.get(day_master, ("Earth", "", 0))
-        output_elem = PhysicsConstants.GENERATION[dm_elem]
-        control_elem = None
-        for k, v in PhysicsConstants.CONTROL.items():
-            if v == dm_elem: control_elem = k
-            
-        # Detect Oppose (Phase 28)
-        # Check if output and control elements both have representatives in stems or pillars
-        has_output = any(BaziParticleNexus.STEMS[s][0] == output_elem for s in stems if s in BaziParticleNexus.STEMS)
-        has_control = any(BaziParticleNexus.STEMS[s][0] == control_elem for s in stems if s in BaziParticleNexus.STEMS)
-        
-        # --- Phase 29: Dynamic Intervention Logic (Polarity Sensitive) ---
-        dm_elem, dm_pol, _ = BaziParticleNexus.STEMS.get(day_master, ("Earth", "Yang", 0))
-        resource_elem = None
-        wealth_elem = None
-        for k, v in PhysicsConstants.GENERATION.items():
-            if v == dm_elem: resource_elem = k
-        for k, v in PhysicsConstants.CONTROL.items():
-            if k == dm_elem: wealth_elem = v
-            
-        stems_info = [BaziParticleNexus.STEMS.get(s) for s in stems if s in BaziParticleNexus.STEMS]
-        
-        # Capture: Same Polarity Output (Eating God) vs Same Polarity Control (7-Killings)
-        has_shishen = any(info[0] == output_elem and info[1] == dm_pol for info in stems_info)
-        has_qisha = any(info[0] == control_elem and info[1] == dm_pol for info in stems_info)
-        
-        # Cutting: Same Polarity Resource (Owl God) vs Eating God
-        has_owl = any(info[0] == resource_elem and info[1] == dm_pol for info in stems_info)
-        
-        # Contamination: Wealth (Cai) vs Resource (Yin)
-        has_wealth = any(info[0] == wealth_elem for info in stems_info)
-        has_resource = any(info[0] == resource_elem for info in stems_info)
-
-        # 1. OPPOSE (Shang Guan vs Zheng Guan) - Traditional Element Check
-        if any(info[0] == output_elem for info in stems_info) and any(info[0] == control_elem for info in stems_info):
+        # 1. OPPOSE (Shang Guan vs Zheng Guan)
+        # Threshold adjusted for normalized weights ( Natal max ~10-15 )
+        overlap_sg_zg = intensities["Shang Guan"] * intensities["Zheng Guan"]
+        if overlap_sg_zg > 36.0: 
              dyn = ArbitrationNexus.DYNAMICS["OPPOSE"]
              interactions.append({
-                 "id": "PH28_01", "type": "OPPOSE", "name": f"Shang Guan vs Zheng Guan ({output_elem}-{control_elem})",
-                 "target_element": control_elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
-                 "priority": ArbitrationNexus.PRIORITY["OPPOSE"], "branches": set()
+                 "id": "PH28_01", "type": "OPPOSE", "name": f"伤官见官 (Shang Guan vs Zheng Guan)",
+                 "target_element": "Control", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
+                 "priority": ArbitrationNexus.PRIORITY["OPPOSE"], "intensity": overlap_sg_zg,
+                 "branches": set()
              })
 
         # 2. CAPTURE (Eating God vs Seven Killings)
-        if has_shishen and has_qisha:
+        overlap_ss_qs = intensities["Shi Shen"] * intensities["Qi Sha"]
+        if overlap_ss_qs > 25.0:
              dyn = ArbitrationNexus.DYNAMICS["CAPTURE"]
              interactions.append({
-                 "id": "PH29_01", "type": "CAPTURE", "name": "Eating God Captures Killings",
-                 "target_element": control_elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
-                 "priority": ArbitrationNexus.PRIORITY["CAPTURE"], "branches": set()
+                 "id": "PH29_01", "type": "CAPTURE", "name": "Eating God Captures Killings (Field)",
+                 "target_element": "Control", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
+                 "priority": ArbitrationNexus.PRIORITY["CAPTURE"], "intensity": overlap_ss_qs,
+                 "branches": set()
              })
              
         # 3. CUTTING (Owl God Cuts Food)
-        if has_owl and has_shishen:
+        overlap_py_ss = intensities["Pian Yin"] * intensities["Shi Shen"]
+        if overlap_py_ss > 20.0:
              dyn = ArbitrationNexus.DYNAMICS["CUTTING"]
              interactions.append({
-                 "id": "PH29_02", "type": "CUTTING", "name": "Owl God Cuts Food (Interruption)",
-                 "target_element": output_elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
-                 "priority": ArbitrationNexus.PRIORITY["CUTTING"], "branches": set()
+                 "id": "PH29_02", "type": "CUTTING", "name": "枭神夺食 (Owl God Cuts Food)",
+                 "target_element": "Output", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
+                 "priority": ArbitrationNexus.PRIORITY["CUTTING"], "intensity": overlap_py_ss,
+                 "branches": set()
              })
 
         # 4. CONTAMINATION (Wealth Breaks Seal)
-        if has_wealth and has_resource:
+        overlap_zc_zi = (intensities["Zheng Cai"] + intensities["Pian Cai"]) * (intensities["Zheng Yin"] + intensities["Pian Yin"])
+        if overlap_zc_zi > 20.0:
              dyn = ArbitrationNexus.DYNAMICS["CONTAMINATION"]
              interactions.append({
-                 "id": "PH29_03", "type": "CONTAMINATION", "name": "Wealth Contaminates Resource",
-                 "target_element": resource_elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
-                 "priority": ArbitrationNexus.PRIORITY["CONTAMINATION"], "branches": set()
+                 "id": "PH29_03", "type": "CONTAMINATION", "name": "财星坏印 (Wealth Contaminates Resource)",
+                 "target_element": "Resource", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
+                 "priority": ArbitrationNexus.PRIORITY["CONTAMINATION"], "intensity": overlap_zc_zi,
+                 "branches": set()
              })
 
         # 1. San Hui (Three Seasonal Meeting) - Priority 1
@@ -193,9 +253,12 @@ class LogicArbitrator:
         return interactions
 
     @staticmethod
-    def initialize_field(pillars: List[str], day_master: str) -> Dict[str, WaveState]:
+    def initialize_field(pillars: List[str], day_master: str, 
+                         phase_progress: Optional[float] = None,
+                         dispersion_engine: Optional[Any] = None) -> Dict[str, WaveState]:
         """
         Transforms Bazi characters into their initial physics WaveStates.
+        [Phase B] Now supports dynamic hidden stem energy allocation.
         """
         waves = {e: WaveState(1e-6, PhysicsConstants.ELEMENT_PHASES[e]) for e in PhysicsConstants.ELEMENT_PHASES}
         
@@ -235,7 +298,15 @@ class LogicArbitrator:
             # Branch Contribution
             b_char = p[1] if len(p) > 1 else ''
             if b_char in BaziParticleNexus.BRANCHES:
-                b_elem, _, hidden = BaziParticleNexus.BRANCHES[b_char]
+                b_elem, _, _ = BaziParticleNexus.BRANCHES[b_char] # Element only
+                
+                # [Phase B] Get Hidden Stems - Dynamic or Static
+                hidden = BaziParticleNexus.get_branch_weights(
+                    b_char, 
+                    phase_progress=phase_progress, 
+                    dispersion_engine=dispersion_engine
+                )
+                
                 b_seasonal = seasonal_factors.get(b_elem, 1.0)
                 base_b_amp = PhysicsConstants.BASE_SCORE * w_prio * 1.5 * b_seasonal
                 if idx in clashed_indices: base_b_amp *= 0.3 # Heavier damping for branches

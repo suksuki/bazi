@@ -1,0 +1,48 @@
+{
+    "test_suite": "Antigravity_G04_Inertia_Validation",
+    "comment": "Validating Phase B-12: Spacetime Fluid Inertia (Tau=3.0)",
+    "data_samples": [
+        {
+            "case_id": "INERTIA_TEST_001_PRE_SWITCH",
+            "name": "交运前态 (Before Switch)",
+            "description": "t = -1.0 months. Should be purely Previous Luck.",
+            "inputs": {
+                "months_since_switch": -1.0,
+                "tau": 3.0
+            },
+            "expected_output": {
+                "Prev_Luck": 1.0,
+                "Next_Luck": 0.0,
+                "Viscosity": 0.0
+            }
+        },
+        {
+            "case_id": "INERTIA_TEST_002_MIXING",
+            "name": "粘滞混合态 (Mixing State)",
+            "description": "t = 3.0 months (One Tau). Should show exponential decay (~0.368).",
+            "inputs": {
+                "months_since_switch": 3.0,
+                "tau": 3.0
+            },
+            "expected_output": {
+                "Prev_Luck": 0.3679,
+                "Next_Luck": 0.6321,
+                "Viscosity": 0.9302
+            }
+        },
+        {
+            "case_id": "INERTIA_TEST_003_SETTLED",
+            "name": "稳态建立 (Settled State)",
+            "description": "t = 12.0 months (4x Tau). Should be effectively Next Luck.",
+            "inputs": {
+                "months_since_switch": 12.0,
+                "tau": 3.0
+            },
+            "expected_output": {
+                "Prev_Luck": 0.0183,
+                "Next_Luck": 0.9817,
+                "Viscosity": 0.0719
+            }
+        }
+    ]
+}
