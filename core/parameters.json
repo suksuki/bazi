@@ -1,0 +1,25 @@
+{
+    "version": "9.3.5",
+    "last_update": "2025-12-23",
+    "PH29_CAPTURE": {
+        "phi_shift": 0.5,
+        "q_multiplier": 1.5,
+        "efficiency_threshold": 0.6
+    },
+    "PH30_CUTTING": {
+        "phi_shift": 2.2,
+        "q_multiplier": 0.3,
+        "critical_depth": 0.8
+    },
+    "PH31_CONTAMINATION": {
+        "phi_shift": 1.2,
+        "q_multiplier": 0.7,
+        "pollution_leak_threshold": 0.5
+    },
+    "RESONANCE_THRESHOLDS": {
+        "COHERENT": 0.85,
+        "BEATING": 0.45,
+        "ANNIHILATION": 0.12,
+        "FOLLOW_LOCKING_RATIO": 2.0
+    }
+}

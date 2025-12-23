@@ -23,7 +23,7 @@ from ui.utils import init_session_state
 init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
 
 app_mode = st.radio(
-    "Navigation", 
+    "导航 (Navigation)", 
     ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
     horizontal=True,
     label_visibility="collapsed",

@@ -1,0 +1,40 @@
+[
+    {
+        "id": "CASE_STABLE_001",
+        "name": "Stable Marriage (稳定婚姻)",
+        "description": "30+ years stable marriage. High Binding Energy expected.",
+        "bazi": [
+            "甲子",
+            "丙寅",
+            "壬午",
+            "庚戌"
+        ],
+        "day_master": "壬",
+        "gender": "男",
+        "notes": "Male Water DM. Spouse Star = Fire (Wealth). Day Branch 午 = Fire = Spouse Palace aligned with Spouse Star.",
+        "expected_result": {
+            "Binding_Energy": "<-50",
+            "Orbital_Stability": ">2.0",
+            "State": "BOUND"
+        }
+    },
+    {
+        "id": "CASE_COLLAPSE_001",
+        "name": "Flash Divorce (闪婚闪离)",
+        "description": "Short unstable marriage with multiple perturbations. Low Binding, High Perturbation.",
+        "bazi": [
+            "戊寅",
+            "甲子",
+            "丙申",
+            "壬辰"
+        ],
+        "day_master": "丙",
+        "gender": "男",
+        "notes": "Male Fire DM. Spouse Star = Metal (Wealth). Day Branch 申 clashes with Year Branch 寅 = Structural instability.",
+        "expected_result": {
+            "Binding_Energy": ">-20",
+            "Orbital_Stability": "<1.0",
+            "State": "PERTURBED"
+        }
+    }
+]

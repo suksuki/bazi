@@ -35,7 +35,23 @@ class PhysicsConstants:
     EXPOSED_BOOST_COEFF = 2.5     # Power boost when透干
     ORDER_COLLAPSE_LIMIT = 0.15     # Critical order parameter for structural failure
     
-    # 5. Global Weights
+    # 6. Seasonal Multipliers (Wang Shuai Xiu Qiu Si)
+    # Rows: Spring, Summer, Autumn, Winter, Earth-Month (End of seasons)
+    SEASONAL_MATRIX = {
+        '寅': {'Wood': 1.5, 'Fire': 1.2, 'Earth': 0.5, 'Metal': 0.4, 'Water': 0.8},
+        '卯': {'Wood': 1.8, 'Fire': 1.2, 'Earth': 0.4, 'Metal': 0.3, 'Water': 0.7},
+        '辰': {'Wood': 1.1, 'Fire': 0.8, 'Earth': 1.5, 'Metal': 1.1, 'Water': 1.0},
+        '巳': {'Wood': 0.8, 'Fire': 1.5, 'Earth': 1.2, 'Metal': 0.5, 'Water': 0.4},
+        '午': {'Wood': 0.7, 'Fire': 1.8, 'Earth': 1.2, 'Metal': 0.4, 'Water': 0.3},
+        '未': {'Wood': 1.0, 'Fire': 1.1, 'Earth': 1.5, 'Metal': 0.8, 'Water': 0.6},
+        '申': {'Wood': 0.4, 'Fire': 0.5, 'Earth': 0.8, 'Metal': 1.5, 'Water': 1.2},
+        '酉': {'Wood': 0.3, 'Fire': 0.4, 'Earth': 0.7, 'Metal': 1.8, 'Water': 1.2},
+        '戌': {'Wood': 0.6, 'Fire': 1.0, 'Earth': 1.5, 'Metal': 1.1, 'Water': 0.8},
+        '亥': {'Wood': 1.2, 'Fire': 0.4, 'Earth': 0.4, 'Metal': 0.8, 'Water': 1.5},
+        '子': {'Wood': 1.2, 'Fire': 0.3, 'Earth': 0.3, 'Metal': 0.7, 'Water': 1.8},
+        '丑': {'Wood': 0.8, 'Fire': 0.6, 'Earth': 1.5, 'Metal': 1.0, 'Water': 1.1},
+    }
+
     PILLAR_WEIGHTS = {'year': 0.5, 'month': 3.0, 'day': 1.0, 'hour': 0.8, 'luck': 1.2, 'annual': 1.5}
     BASE_SCORE = 5.0  
 
@@ -65,6 +81,38 @@ class BaziParticleNexus:
         "戌": ("Earth", 300, [('戊', 5), ('辛', 3), ('丁', 2)]),
         "亥": ("Water", 330, [('壬', 7), ('甲', 3)])
     }
+
+    # Phase 32: Structural Interactions (Harm/Penalty)
+    # 6 Harms (Liu Hai) - Phase Jitter Sources
+    HARM_MAPPING = {
+        '子': '未', '未': '子', # Rat - Goat
+        '丑': '午', '午': '丑', # Ox - Horse
+        '寅': '巳', '巳': '寅', # Tiger - Snake
+        '卯': '辰', '辰': '卯', # Rabbit - Dragon
+        '申': '亥', '亥': '申', # Monkey - Pig
+        '酉': '戌', '戌': '酉'  # Rooster - Dog
+    }
+
+    # Penalties (San Xing) - Shear Stress Sources
+    # Format: Trigger Branch -> Components required for full activation
+    PENALTY_GROUPS = {
+        '寅': {'components': ['巳', '申'], 'type': 'Ungrateful'},
+        '巳': {'components': ['寅', '申'], 'type': 'Ungrateful'},
+        '申': {'components': ['寅', '巳'], 'type': 'Ungrateful'},
+        
+        '丑': {'components': ['未', '戌'], 'type': 'Bullying'},
+        '未': {'components': ['丑', '戌'], 'type': 'Bullying'},
+        '戌': {'components': ['丑', '未'], 'type': 'Bullying'},
+        
+        '子': {'components': ['卯'], 'type': 'Uncivil'},
+        '卯': {'components': ['子'], 'type': 'Uncivil'},
+        
+        '辰': {'components': ['辰'], 'type': 'Self'},
+        '午': {'components': ['午'], 'type': 'Self'},
+        '酉': {'components': ['酉'], 'type': 'Self'},
+        '亥': {'components': ['亥'], 'type': 'Self'}
+    }
+
 
     # Remediation Particles (Prescriptions)
     REMEDY_PARTICLES = {
@@ -106,7 +154,10 @@ class ArbitrationNexus:
         "HARM": 6,
         "PUNISHMENT": 7,
         "RESONANCE": 8,
-        "OPPOSE": 0  # Phase 28: Highest priority for annihilation events
+        "OPPOSE": 0,  # Phase 28: Highest priority for annihilation events
+        "CAPTURE": 2, # Shishen vs Qisha (Force Neutralization)
+        "CUTTING": 1, # Xiao Shen Duo Shi (System Critical)
+        "CONTAMINATION": 3 # Cai Xing Huai Yin (Medium Priority)
     }
 
     # 2. Static Interaction Maps
@@ -139,6 +190,13 @@ class ArbitrationNexus:
         frozenset(['寅', '巳', '申']),
         frozenset(['丑', '戌', '未'])
     ]
+    
+    SELF_PUNISHMENT = {'辰', '午', '酉', '亥'}
+
+    HARM_MAP = {
+        '子': '未', '未': '子', '丑': '午', '午': '丑', '寅': '巳', '巳': '寅',
+        '卯': '辰', '辰': '卯', '申': '亥', '亥': '申', '酉': '戌', '戌': '酉'
+    }
 
     # 3. Dynamic Q (Resonance Multiplier) & Phase Shift (Radians)
     DYNAMICS = {
@@ -147,5 +205,10 @@ class ArbitrationNexus:
         "LIU_HE": {"q": 1.8, "phi": 0.15, "lock": True},
         "CLASH": {"q": 0.6, "phi": 2.827, "lock": False}, # ~162 deg (Clash)
         "RESONANCE": {"q": 1.2, "phi": 0.0, "lock": False},
-        "OPPOSE": {"q": 0.05, "phi": 3.14159, "lock": False}
+        "OPPOSE": {"q": 0.05, "phi": 3.14159, "lock": False},
+        "CAPTURE": {"q": 1.5, "phi": 0.5, "lock": True},
+        "CUTTING": {"q": 0.3, "phi": 2.2, "lock": False},
+        "CONTAMINATION": {"q": 0.7, "phi": 1.2, "lock": False},
+        "HARM": {"q": 0.4, "phi": 2.5, "lock": False},
+        "PUNISHMENT": {"q": 0.35, "phi": 2.7, "lock": False}
     }

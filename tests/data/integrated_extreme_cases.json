@@ -1,0 +1,37 @@
+[
+    {
+        "id": "INTEGRATED_EXTREME_001",
+        "description": "Integrated Stress Test: Capture vs. Cutting vs. Contamination",
+        "chart": {
+            "year_pillar": "丙寅",
+            "month_pillar": "甲寅",
+            "day_pillar": "戊申",
+            "hour_pillar": "庚申"
+        },
+        "day_master": "戊",
+        "gender": "男",
+        "birth_info": {
+            "birth_year": 1958,
+            "birth_month": 2,
+            "birth_day": 4,
+            "birth_hour": 16
+        },
+        "bazi": [
+            "丙寅",
+            "甲寅",
+            "戊申",
+            "庚申"
+        ],
+        "test_focus": "Capture vs. Cutting (Shishen vs. Xiaoshen)",
+        "physics_params": {
+            "capture_efficiency": 0.78,
+            "spectral_cut_depth": 0.92,
+            "is_contaminated": true
+        },
+        "tags": [
+            "食神制杀",
+            "枭神夺食",
+            "全系统回溯"
+        ]
+    }
+]

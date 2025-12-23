@@ -17,7 +17,9 @@ class QuantumRemedy:
     @staticmethod
     def find_optimal_remedy(dm_wave: WaveState, 
                            field_list: List[WaveState], 
-                           prev_sync: float = 1.0) -> Dict[str, Any]:
+                           prev_sync: float = 1.0,
+                           unified_metrics: Optional[Dict] = None,
+                           day_master: str = None) -> Dict[str, Any]:
         """
         Scan all five elements to find which one maximizes the system's sync_state.
         """
@@ -49,11 +51,48 @@ class QuantumRemedy:
                 max_sync = test_res.sync_state
                 best_elem = elem
         
+        if day_master:
+             dm_elem, _, _ = BaziParticleNexus.STEMS.get(day_master, ("Earth", "", 0))
+        
+        # [PH30-SHIELD] Strategic Override for Spectral Cutting
+        if unified_metrics and unified_metrics.get('cutting', {}).get('status') == 'CRITICAL':
+             # If cutting is critical, Bi-Jie (Same Element) is the mandatory shield
+             # forcing the optimizer to prefer DM's element if it provides *reasonable* sync
+             if day_master:
+                 shield_elem = dm_elem
+                 # Check if shield was analyzed (we scanned all elements)
+                 # We simply boost the 'best_elem' selection logic or override description
+                 if best_elem == shield_elem:
+                      pass # Natural convergence
+                 else:
+                      # If shield provides at least 80% of max_sync, prefer it for structural safety
+                      # But here we don't have the sync dict. 
+                      # Let's simplify: blindly prioritizing Shield might be safer for User Logic.
+                      # Re-evaluate Shield Element explicitly
+                      pass 
+
+        # Map element to a specific Particle (Stem)
+        particle_map = {
+            "Wood": "甲", "Fire": "丙", "Earth": "戊", "Metal": "庚", "Water": "壬"
+        }
+        
+        desc = f"Injection of {best_elem} optimized sync."
+        
+        # Override for Critical Cutting
+        if unified_metrics and unified_metrics.get('cutting', {}).get('status') == 'CRITICAL' and day_master:
+            shield_elem = dm_elem
+            best_elem = shield_elem # Force Shield
+            best_char = particle_map.get(best_elem, "None")
+            desc = f"[CRITICAL SHIELD] Injecting {best_char} (Bi-Jie) to shunt Owl God cutting frequency."
+        else:
+             best_char = particle_map.get(best_elem, "None")
+             desc = f"Injection of {best_char}({best_elem}) optimized sync to {max_sync:.2f}"
         return {
             "optimal_element": best_elem,
+            "best_particle": best_char,
             "expected_sync": max_sync,
             "improvement": max_sync - base_res.sync_state,
-            "description": f"Injection of {best_elem} optimized sync to {max_sync:.2f}"
+            "description": desc
         }
 
     @staticmethod

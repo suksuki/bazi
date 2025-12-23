@@ -1,0 +1,40 @@
+[
+    {
+        "id": "CASE_PENALTY_001",
+        "name": "寅巳申三刑全 (Tiger-Snake-Monkey Penalty)",
+        "description": "Stress Test: Three-axis Asymmetric Compression. 寅(Wood)-巳(Fire)-申(Metal) Generating Shear Stress.",
+        "gender": "男",
+        "bazi": [
+            "壬寅",
+            "乙巳",
+            "庚申",
+            "丙子"
+        ],
+        "birth_info": {
+            "birth_year": 2022,
+            "birth_month": 5,
+            "birth_day": 20,
+            "birth_hour": 23,
+            "birth_minute": 30
+        }
+    },
+    {
+        "id": "CASE_HARM_002",
+        "name": "子未相害 (Rat-Goat Harm)",
+        "description": "Phase Jitter Test: Rat(Water) vs Goat(Earth) Interaction. Preventing Horse-Goat Combination.",
+        "gender": "女",
+        "bazi": [
+            "甲子",
+            "辛未",
+            "癸丑",
+            "壬戌"
+        ],
+        "birth_info": {
+            "birth_year": 1984,
+            "birth_month": 7,
+            "birth_day": 15,
+            "birth_hour": 20,
+            "birth_minute": 0
+        }
+    }
+]

@@ -1,0 +1,38 @@
+[
+    {
+        "id": "CASE_WEALTH_001",
+        "name": "Balanced Wealth (身财两停)",
+        "description": "High Reynolds Number Case: Efficient Flow. DM strong, Wealth strong.",
+        "bazi": [
+            "甲寅",
+            "丙寅",
+            "戊辰",
+            "庚申"
+        ],
+        "day_master": "戊",
+        "gender": "男",
+        "expected_result": {
+            "Reynolds": ">2000",
+            "Viscosity": "Low",
+            "Flux": "High"
+        }
+    },
+    {
+        "id": "CASE_WEALTH_002",
+        "name": "Rival Robs Wealth (群比夺财)",
+        "description": "High Viscosity Case: Stagnant Flow. DM Extreme Strong, Wealth Weak.",
+        "bazi": [
+            "戊戌",
+            "己未",
+            "戊午",
+            "丙辰"
+        ],
+        "day_master": "戊",
+        "gender": "男",
+        "expected_result": {
+            "Reynolds": "<500",
+            "Viscosity": "High",
+            "Flux": "Blocked"
+        }
+    }
+]

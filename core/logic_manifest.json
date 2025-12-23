@@ -1,0 +1,407 @@
+{
+    "version": "9.3.5",
+    "system_id": "ANTIGRAVITY_CORE_ALPHA",
+    "modules": {
+        "MOD_00_GRAND": {
+            "name": "🔮 大一统仲裁 (Grand Unified Arbitration)",
+            "icon": "🔮",
+            "type": "MAIN",
+            "description": "System Root | Global Arbitration Console",
+            "active": false,
+            "linked_metrics": [
+                "verdict.order_parameter",
+                "resonance.sync_state"
+            ],
+            "goal": "Synthesize all logic layers into a final verdict.",
+            "outcome": "Final Holographic Report"
+        },
+        "MOD_01_TRIPLE": {
+            "name": "♾️ 三元动力 (Integrated Triple Dynamics)",
+            "icon": "♾️",
+            "type": "DETAIL",
+            "description": "Focus: Capture, Cutting & Contamination Control Logic",
+            "active": true,
+            "linked_rules": [
+                "PH29_CAPTURE",
+                "PH30_CUTTING",
+                "PH31_CONTAMINATION"
+            ],
+            "linked_metrics": [
+                "unified_metrics.capture",
+                "unified_metrics.cutting",
+                "unified_metrics.contamination"
+            ],
+            "goal": "Quantify 'Eating God' vs 'Seven Killings' control physics.",
+            "outcome": "Bi-Jie Shielding (11% D-Reduction) & Holographic Radar"
+        },
+        "MOD_02_SUPER": {
+            "name": "🔥 从格/专旺 (Super-Structure Resonance)",
+            "icon": "🔥",
+            "type": "DETAIL",
+            "description": "Focus: Resonance Wavefield & Energy Trend Analysis",
+            "active": true,
+            "linked_rules": [
+                "PH17-20_CONG",
+                "PH19_BEATING",
+                "PH28_ANNIHILATION",
+                "PH27_VOID"
+            ],
+            "linked_metrics": [
+                "resonance.sync_state",
+                "resonance.flow_efficiency",
+                "resonance.vibration_mode"
+            ],
+            "goal": "Identify high-order resonance modes (Cong/Hua).",
+            "outcome": "Resonant Wave 3D Orrery"
+        },
+        "MOD_03_TRANSFORM": {
+            "name": "⚗️ 合化/化气 (Transformation Chemistry)",
+            "icon": "⚗️",
+            "type": "DETAIL",
+            "description": "Focus: Heavenly Stems & Earthly Branches Bonding Topology",
+            "active": true,
+            "linked_rules": [
+                "PH_SAN_HE",
+                "PH_LIU_HE",
+                "PH_HE_HUA"
+            ],
+            "linked_metrics": [
+                "structure.bond_strength",
+                "structure.transform_success"
+            ],
+            "goal": "Map chemical bonding efficiency of Stems/Branches.",
+            "outcome": "Molecular Structure Visualization (MolViz)"
+        },
+        "MOD_04_STABILITY": {
+            "name": "🛡️ 刑害动力学 (Penalty & Harm Dynamics)",
+            "icon": "🛡️",
+            "type": "DETAIL",
+            "description": "Focus: Lattice Defects & Phase Jitter Analysis (SAI/IC)",
+            "active": true,
+            "linked_rules": [
+                "PH_PENALTY_3",
+                "PH_HARM_6",
+                "PH_SHEAR_STRESS"
+            ],
+            "linked_metrics": [
+                "structure.stress_accumulation_index",
+                "structure.interference_coefficient"
+            ],
+            "goal": "Quantify Micro-Lattice Defects (SAI) & Phase Jitter (IC).",
+            "outcome": "Stress Heatmap & SNR Devaluation Report."
+        },
+        "MOD_05_WEALTH": {
+            "id": "MOD_05_WEALTH",
+            "name": "🌊 财富流体力学 (Wealth Fluid Dynamics)",
+            "icon": "🌊",
+            "type": "DETAIL",
+            "description": "基于纳维-斯托克斯方程的财富能量流动分析 (Wealth Energy Fluid Analysis via Navier-Stokes).",
+            "active": true,
+            "linked_rules": [
+                "PH_WEALTH_PERMEABILITY",
+                "PH_WEALTH_VISCOSITY",
+                "PH_BI_JIE_SHIELD"
+            ],
+            "linked_metrics": [
+                "REYNOLDS_NUMBER",
+                "VISCOSITY",
+                "FLUX_Q"
+            ],
+            "goal": "Quantify Wealth Flow Efficiency (Q) and Stability (Re).",
+            "outcome": "精准测算财富流动性与阻滞系数 (Wealth Liquidity & Resistance Coefficient)."
+        },
+        "MOD_06_RELATIONSHIP": {
+            "id": "MOD_06_RELATIONSHIP",
+            "name": "🌌 情感引力场 (Relationship Gravity Field)",
+            "icon": "🌌",
+            "type": "DETAIL",
+            "description": "基于引力耦合与相位坍缩的婚姻情感动力学 (Relationship Dynamics via Gravitational Coupling & Phase Collapse).",
+            "active": true,
+            "linked_rules": [
+                "PH_GRAVITY_BINDING",
+                "PH_PERTURBATION_3BODY",
+                "PH_PHASE_COLLAPSE",
+                "PH_PEACH_BLOSSOM"
+            ],
+            "linked_metrics": [
+                "BINDING_ENERGY",
+                "ORBITAL_STABILITY",
+                "PHASE_COHERENCE"
+            ],
+            "goal": "Quantify Spouse Star/Palace gravitational binding and predict relationship phase transitions.",
+            "outcome": "精准测算婚姻引力绑定能与轨道稳定性 (Marital Binding Energy & Orbital Stability)."
+        }
+    },
+    "registry": {
+        "PH17-20_CONG": {
+            "name": "Pattern: Follow (从旺/从强)",
+            "category": "Structural Pattern",
+            "conditions": "mode == 'COHERENT' and locking_ratio > 2.0",
+            "priority": -1,
+            "effect": "SUPERCONDUCTING",
+            "labels": [
+                "CONG_WANG",
+                "CONG_QIANG"
+            ],
+            "status": "ACTIVE"
+        },
+        "PH19_BEATING": {
+            "name": "Pattern: Fake Follow (假从/拍频)",
+            "category": "Structural Pattern",
+            "conditions": "mode == 'BEATING'",
+            "priority": -0.5,
+            "effect": "INTERFERENCE_ENVELOPE",
+            "status": "ACTIVE"
+        },
+        "PH25-26_COLLAPSE": {
+            "name": "Pattern: Structural Collapse (结构坍塌)",
+            "category": "Dynamic Crisis",
+            "conditions": "clash_count >= 2",
+            "priority": -2,
+            "effect": "ANNIHILATION_RISK",
+            "status": "ACTIVE"
+        },
+        "PH_JITTER": {
+            "id": "PH_JITTER",
+            "name": "相位抖动 (Phase Jitter)",
+            "type": "STRUCTURAL",
+            "function": "phase_jitter_check"
+        },
+        "PH_WEALTH_PERMEABILITY": {
+            "id": "PH_WEALTH_PERMEABILITY",
+            "name": "财富渗透率 (Wealth Permeability - Re)",
+            "type": "FLUID_DYNAMICS",
+            "description": "Measures flow efficiency (Reynolds Number) of Wealth element.",
+            "function": "calculate_reynolds"
+        },
+        "PH_WEALTH_VISCOSITY": {
+            "id": "PH_WEALTH_VISCOSITY",
+            "name": "粘性阻力 (Viscosity - ν)",
+            "type": "FLUID_DYNAMICS",
+            "description": "Quantifies friction caused by Rival (Bi-Jie) elements.",
+            "function": "calculate_viscosity"
+        },
+        "PH_BI_JIE_SHIELD": {
+            "id": "PH_BI_JIE_SHIELD",
+            "name": "比劫护盾 (Bi-Jie Interference Shield)",
+            "type": "FLUID_DYNAMICS",
+            "description": "Analyzes if Rivals block Wealth or Shield Output.",
+            "function": "analyze_rival_shield"
+        },
+        "PH27_VOID": {
+            "name": "Pattern: Void Energy Sink (空亡)",
+            "category": "Field Defect",
+            "conditions": "is_void == true",
+            "priority": 10,
+            "effect": "ENERGY_LEAK",
+            "status": "ACTIVE"
+        },
+        "PH28_ANNIHILATION": {
+            "name": "Pattern: Annihilation State (系统湮灭)",
+            "category": "Critical Failure",
+            "conditions": "sync_state < 0.12",
+            "priority": -3,
+            "effect": "TOTAL_INTERNAL_REFLECTION",
+            "status": "ACTIVE"
+        },
+        "PH29_CAPTURE": {
+            "name": "Logic: Capture (食神制杀/伤官合杀)",
+            "category": "Interaction",
+            "phi_shift": 0.5,
+            "q_gain": 1.5,
+            "priority": 2,
+            "status": "ACTIVE"
+        },
+        "PH30_CUTTING": {
+            "name": "Logic: Cutting (枭神夺食/频谱切断)",
+            "category": "Critical Interaction",
+            "phi_shift": 2.2,
+            "q_gain": 0.3,
+            "priority": 1,
+            "status": "ACTIVE"
+        },
+        "PH31_CONTAMINATION": {
+            "name": "Logic: Contamination (财星坏印/介质污染)",
+            "category": "Interaction",
+            "phi_shift": 1.2,
+            "q_gain": 0.7,
+            "priority": 3,
+            "status": "ACTIVE"
+        },
+        "PH_GRAVITY_BINDING": {
+            "id": "PH_GRAVITY_BINDING",
+            "name": "引力绑定 (Gravitational Binding)",
+            "type": "GRAVITY_DYNAMICS",
+            "description": "Calculates binding energy between DM and Spouse Star.",
+            "function": "calculate_binding_energy",
+            "formula": "E = -G * M_dm * M_spouse / (2 * r)"
+        },
+        "PH_PERTURBATION_3BODY": {
+            "id": "PH_PERTURBATION_3BODY",
+            "name": "三体摅动 (Three-Body Perturbation)",
+            "type": "GRAVITY_DYNAMICS",
+            "description": "Analyzes orbital destabilization when third mass (Bi-Jie, Luck Pillar) enters system.",
+            "function": "analyze_perturbation"
+        },
+        "PH_PHASE_COLLAPSE": {
+            "id": "PH_PHASE_COLLAPSE",
+            "name": "相位坍缩 (Phase Collapse)",
+            "type": "QUANTUM_DYNAMICS",
+            "description": "Models wave function collapse of relationship potential into definite events.",
+            "function": "calculate_collapse_probability"
+        },
+        "PH_PEACH_BLOSSOM": {
+            "id": "PH_PEACH_BLOSSOM",
+            "name": "桃花波函数 (Peach Blossom Wave)",
+            "type": "QUANTUM_DYNAMICS",
+            "description": "Models romantic attraction as probability wave (Hong Luan, Tian Xi).",
+            "function": "calculate_peach_blossom_amplitude"
+        },
+        "PH_LUCK_BACKGROUND": {
+            "id": "PH_LUCK_BACKGROUND",
+            "name": "大运背景场 (Luck Background Field)",
+            "type": "GRAVITY_DYNAMICS",
+            "description": "Major Cycle as gravitational background radiation affecting base binding.",
+            "function": "apply_luck_modifier"
+        },
+        "PH_ANNUAL_IMPULSE": {
+            "id": "PH_ANNUAL_IMPULSE",
+            "name": "流年轨道冲量 (Annual Orbital Impulse)",
+            "type": "GRAVITY_DYNAMICS",
+            "description": "Annual pillar as high-speed flyby body imparting orbital impulse.",
+            "function": "apply_annual_impulse"
+        }
+    },
+    "metrics": {
+        "REYNOLDS_NUMBER": {
+            "id": "REYNOLDS_NUMBER",
+            "name": "雷诺数 (Reynolds Number - Re)",
+            "unit": "dimensionless",
+            "description": "Measures flow regime: Laminar (<2000), Transition (2000-4000), Turbulent (>4000).",
+            "module": "MOD_05_WEALTH",
+            "formula": "Re = (Density * Velocity * Length) / Viscosity"
+        },
+        "VISCOSITY": {
+            "id": "VISCOSITY",
+            "name": "粘滞系数 (Viscosity - ν)",
+            "unit": "Pa·s (analogous)",
+            "description": "Friction caused by Rival (Bi-Jie) energy. Square Law: ν = 1 + 0.05 * E_rival^2.",
+            "module": "MOD_05_WEALTH",
+            "formula": "nu = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)"
+        },
+        "FLUX_Q": {
+            "id": "FLUX_Q",
+            "name": "流量闸门 (Flux Gate - Q)",
+            "unit": "m³/s (analogous)",
+            "description": "Wealth flow rate driven by Output (Shishen/Shangguan) energy.",
+            "module": "MOD_05_WEALTH",
+            "formula": "Q = E_output * 2.0"
+        },
+        "BINDING_ENERGY": {
+            "id": "BINDING_ENERGY",
+            "name": "绑定能 (Binding Energy - E)",
+            "unit": "Joules (analogous)",
+            "description": "Gravitational binding energy between DM and Spouse Star. Negative = Bound.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "E = -G * M_dm * M_spouse / (2 * r)"
+        },
+        "ORBITAL_STABILITY": {
+            "id": "ORBITAL_STABILITY",
+            "name": "轨道稳定性 (Orbital Stability - σ)",
+            "unit": "dimensionless",
+            "description": "Measures resistance to orbital perturbation. Higher = More Stable.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "σ = |E_binding| / E_perturbation"
+        },
+        "PHASE_COHERENCE": {
+            "id": "PHASE_COHERENCE",
+            "name": "相位相干性 (Phase Coherence - η)",
+            "unit": "dimensionless [0-1]",
+            "description": "Quantum coherence of relationship wave function. 1 = Perfect Entanglement.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "η = cos²(Δφ / 2)"
+        },
+        "LUCK_MODIFIER": {
+            "id": "LUCK_MODIFIER",
+            "name": "大运修正系数 (Luck Modifier - λ)",
+            "unit": "dimensionless [0.5-1.5]",
+            "description": "Scales Spouse Star mass based on Major Cycle element alignment.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "λ = 1.3 (support) | 0.7 (control) | *0.6 (clash)"
+        },
+        "ANNUAL_IMPULSE": {
+            "id": "ANNUAL_IMPULSE",
+            "name": "流年冲量 (Annual Impulse - Δr)",
+            "unit": "AU (analogous)",
+            "description": "Orbital distance modification from Annual Pillar interactions.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "Δr = +50 (clash) | -30 (join)"
+        },
+        "GEO_FACTOR": {
+            "id": "GEO_FACTOR",
+            "name": "地域介质常数 (Geo Factor - ε)",
+            "unit": "dimensionless [0.5-1.5]",
+            "description": "Environmental modifier for gravitational constant G.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "G_eff = G * ε"
+        }
+    },
+    "bazi_parameters": {
+        "TEN_GODS_WEALTH": {
+            "id": "TEN_GODS_WEALTH",
+            "name": "财星 (财/Wealth)",
+            "type": "TEN_GOD",
+            "description": "Element controlled by Day Master. Represents wealth acquisition targets.",
+            "relationship": "DM controls Wealth",
+            "examples": "Earth DM -> Water is Wealth"
+        },
+        "TEN_GODS_RIVAL": {
+            "id": "TEN_GODS_RIVAL",
+            "name": "比劫 (Rival/Bi-Jie)",
+            "type": "TEN_GOD",
+            "description": "Same element as Day Master. Represents competition and resource sharing.",
+            "relationship": "DM == Rival",
+            "examples": "Earth DM -> Earth is Rival"
+        },
+        "TEN_GODS_OUTPUT": {
+            "id": "TEN_GODS_OUTPUT",
+            "name": "食伤 (Output/Shishen)",
+            "type": "TEN_GOD",
+            "description": "Element generated by Day Master. Represents skills and creative output.",
+            "relationship": "DM generates Output",
+            "examples": "Earth DM -> Metal is Output"
+        },
+        "TEN_GODS_CONTROL": {
+            "id": "TEN_GODS_CONTROL",
+            "name": "官杀 (Control/Officer)",
+            "type": "TEN_GOD",
+            "description": "Element that controls Day Master. Represents discipline and authority.",
+            "relationship": "Control controls DM",
+            "examples": "Earth DM -> Wood is Control"
+        },
+        "SPOUSE_STAR": {
+            "id": "SPOUSE_STAR",
+            "name": "配偶星 (Spouse Star)",
+            "type": "RELATIONSHIP",
+            "description": "For Male: Wealth Star (Cai). For Female: Control Star (Guan).",
+            "relationship": "Male: DM controls Spouse; Female: Spouse controls DM",
+            "examples": "Male Earth DM -> Water is Spouse Star"
+        },
+        "SPOUSE_PALACE": {
+            "id": "SPOUSE_PALACE",
+            "name": "配偶宫 (Spouse Palace)",
+            "type": "RELATIONSHIP",
+            "description": "Day Branch position. Represents marriage stability and spouse characteristics.",
+            "relationship": "Fixed position: Day Pillar Branch",
+            "examples": "戊辰 -> 辰 is Spouse Palace"
+        },
+        "PEACH_BLOSSOM": {
+            "id": "PEACH_BLOSSOM",
+            "name": "桃花 (Peach Blossom)",
+            "type": "AUXILIARY_STAR",
+            "description": "Romantic attraction indicator. Branches: 子午卯酉 based on Year/Day Branch triads.",
+            "relationship": "寅午戌->卯; 申子辰->酉; 巳酉丑->午; 亥卯未->子",
+            "examples": "Year Branch 寅 -> Peach Blossom at 卯"
+        }
+    }
+}

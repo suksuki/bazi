@@ -121,6 +121,7 @@
     },
     {
         "id": "OPPOSE_004_SHIELDING_INTERVENTION",
+        "quality_tier": "A",
         "description": "Thermodynamic Remediation: Yin Shield protecting the Core.",
         "chart": {
             "year_pillar": "戊辰",
@@ -144,18 +145,18 @@
         ],
         "test_focus": "Shielding Layer Effectiveness",
         "physics_params": {
-            "radiation_source": "Ren Water",
-            "shielding_layer": "Wu Earth (Yin)",
-            "absorption_rate": 0.75
+            "radiation_flux": 1.5,
+            "shielding_thickness_mu": 0.85,
+            "target_recovery_rate": 0.65
         },
         "ground_truth": {
             "strength": "Damped Stability",
             "mode": "BEATING"
         },
         "tags": [
-            "引产配印",
-            "辐射屏蔽",
-            "稳态维护"
+            "印星护官",
+            "能量对冲缓冲",
+            "调候修复"
         ]
     }
 ]
