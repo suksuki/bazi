@@ -190,34 +190,14 @@ class RelationshipGravityEngine:
         # 8. Calculate Peach Blossom Amplitude
         peach_amplitude = self._calculate_peach_blossom(pillars)
         
-        # 9. Determine Relationship State
-        # [Phase 36-B] Incorporate Phase Coherence into state determination
-        # Low coherence (η < 0.1) indicates quantum decoherence - relationship wave functions out of phase
-        if phase_coherence < 0.1:
-            # Decoherence overrides orbital stability
-            if orbital_stability > 1.0:
-                state = "PERTURBED"  # Structurally stable but emotionally disconnected
-            else:
-                state = "UNBOUND"  # Complete separation
-        # [Phase 36-C] Orbital Distance Override - large r means weak binding
-        elif r >= 6.0:
-            state = "UNBOUND"  # Too far apart, no gravitational binding
-        elif r >= 4.0:
-            state = "PERTURBED"  # Significant orbital expansion
-        elif r >= 2.5:
-            # Use stability to determine between BOUND and PERTURBED
-            if orbital_stability > 1.5:
-                state = "BOUND"
-            else:
-                state = "PERTURBED"
-        elif orbital_stability > 2.0 and phase_coherence > 0.7:
-            state = "ENTANGLED"  # Strongly bound, high coherence
-        elif orbital_stability > 1.0:
-            state = "BOUND"  # Stable orbit
-        elif orbital_stability > 0.5:
-            state = "PERTURBED"  # Unstable, risk of separation
-        else:
-            state = "UNBOUND"  # Not gravitationally bound
+        # 9. Determine Relationship State (deterministic)
+        state = self._determine_state(r, orbital_stability, phase_coherence)
+        
+        # 10. [Phase 37] Calculate State Confidence via Monte Carlo Sampling
+        state_probs, confidence = self._calculate_state_confidence(
+            r, orbital_stability, phase_coherence, 
+            r_sigma=0.15 * r, sigma_sigma=0.1 * orbital_stability, eta_sigma=0.1
+        )
         
         return {
             "Binding_Energy": round(binding_energy, 2),
@@ -225,6 +205,8 @@ class RelationshipGravityEngine:
             "Phase_Coherence": round(phase_coherence, 4),
             "Peach_Blossom_Amplitude": round(peach_amplitude, 2),
             "State": state,
+            "State_Confidence": round(confidence, 2),  # [Phase 37]
+            "State_Probabilities": state_probs,  # [Phase 37]
             "Metrics": {
                 "DM_Mass": round(m_dm, 2),
                 "Spouse_Mass": round(m_spouse, 2),
@@ -240,6 +222,75 @@ class RelationshipGravityEngine:
                 "G_Effective": round(G_effective, 3)
             }
         }
+    
+    def _determine_state(self, r: float, orbital_stability: float, phase_coherence: float) -> str:
+        """
+        [Phase 37] Deterministic state determination based on r, σ, and η.
+        Extracted from analyze_relationship for reuse in Monte Carlo sampling.
+        """
+        # Low coherence (η < 0.1) indicates quantum decoherence
+        if phase_coherence < 0.1:
+            if orbital_stability > 1.0:
+                return "PERTURBED"
+            else:
+                return "UNBOUND"
+        # Orbital Distance Override - large r means weak binding
+        elif r >= 6.0:
+            return "UNBOUND"
+        elif r >= 4.0:
+            return "PERTURBED"
+        elif r >= 2.5:
+            if orbital_stability > 1.5:
+                return "BOUND"
+            else:
+                return "PERTURBED"
+        elif orbital_stability > 2.0 and phase_coherence > 0.7:
+            return "ENTANGLED"
+        elif orbital_stability > 1.0:
+            return "BOUND"
+        elif orbital_stability > 0.5:
+            return "PERTURBED"
+        else:
+            return "UNBOUND"
+    
+    def _calculate_state_confidence(self, r: float, sigma: float, eta: float,
+                                     r_sigma: float = 0.3, sigma_sigma: float = 0.5, 
+                                     eta_sigma: float = 0.1, n_samples: int = 100) -> tuple:
+        """
+        [Phase 37] Monte Carlo sampling for state probability distribution.
+        
+        Args:
+            r: Mean orbital distance
+            sigma: Mean orbital stability  
+            eta: Mean phase coherence
+            r_sigma: Standard deviation for r sampling
+            sigma_sigma: Standard deviation for sigma sampling
+            eta_sigma: Standard deviation for eta sampling
+            n_samples: Number of Monte Carlo samples
+            
+        Returns:
+            (state_probs: dict, confidence: float)
+        """
+        state_counts = {"ENTANGLED": 0, "BOUND": 0, "PERTURBED": 0, "UNBOUND": 0}
+        
+        for _ in range(n_samples):
+            # Add quantum fluctuations (Gaussian noise)
+            r_sample = max(0.1, r + np.random.normal(0, r_sigma))
+            sigma_sample = max(0.1, sigma + np.random.normal(0, sigma_sigma))
+            eta_sample = np.clip(eta + np.random.normal(0, eta_sigma), 0, 1)
+            
+            # Determine state for this sample
+            sampled_state = self._determine_state(r_sample, sigma_sample, eta_sample)
+            state_counts[sampled_state] += 1
+        
+        # Calculate probabilities
+        state_probs = {k: round(v / n_samples, 2) for k, v in state_counts.items()}
+        
+        # Get deterministic state's probability as confidence
+        deterministic_state = self._determine_state(r, sigma, eta)
+        confidence = state_probs.get(deterministic_state, 0.0)
+        
+        return state_probs, confidence
     
     def _elements_compatible(self, elem1: str, elem2: str) -> bool:
         """Check if two elements are generatively related."""

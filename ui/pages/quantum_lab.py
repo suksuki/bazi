@@ -283,26 +283,105 @@ def render():
             b_list = selected_case.get('bazi', [])
             
             # Ensure birth_info is handled for presets to avoid 1900s defaults
+            # [Phase 38] For bazi-only profiles, estimate birth year using 60-year Jiazi cycle
             try:
                 bi = selected_case.get('birth_info')
+                
+                # Check if birth_info exists with birth_year, or use profile's 'year' field
+                if bi and 'birth_year' in bi:
+                    birth_year = bi['birth_year']
+                    birth_date = datetime.datetime(bi['birth_year'], bi['birth_month'], bi['birth_day'], bi['birth_hour'], bi.get('birth_minute', 0))
+                elif 'year' in selected_case:
+                    # ProfileManager format: use 'year' field directly
+                    birth_year = selected_case['year']
+                    birth_date = datetime.datetime(
+                        selected_case['year'], 
+                        selected_case.get('month', 1), 
+                        selected_case.get('day', 1), 
+                        selected_case.get('hour', 12)
+                    )
+                else:
+                    # [Phase 38] Bazi-only: Estimate birth year using 60-year Jiazi cycle
+                    # Find a year that matches the year pillar within a reasonable range
+                    year_pillar = b_list[0] if b_list else "甲子"
+                    
+                    # 60-year cycle: Find the most recent occurrence before current year that's reasonable (20-80 years old)
+                    current_year = datetime.datetime.now().year
+                    estimated_year = None
+                    
+                    # Try to find a matching year within the last 100 years
+                    for test_year in range(current_year - 20, current_year - 100, -1):
+                        # Calculate year pillar for test_year
+                        stem_idx = (test_year - 4) % 10
+                        branch_idx = (test_year - 4) % 12
+                        stems = "甲乙丙丁戊己庚辛壬癸"
+                        branches = "子丑寅卯辰巳午未申酉戌亥"
+                        test_pillar = stems[stem_idx] + branches[branch_idx]
+                        if test_pillar == year_pillar:
+                            estimated_year = test_year
+                            break
+                    
+                    if estimated_year is None:
+                        estimated_year = current_year - 40  # Fallback to 40 years ago
+                    
+                    birth_year = estimated_year
+                    birth_date = datetime.datetime(birth_year, 6, 15, 12)  # Mid-year default
+                    st.caption(f"💡 根据年柱 **{year_pillar}** 推算出生年约为 **{birth_year}** (甲子循环)")
+                
                 v_profile = VirtualBaziProfile({'year':b_list[0], 'month':b_list[1], 'day':b_list[2], 'hour':b_list[3]}, 
                                                gender=(1 if selected_case.get('gender')=='男' else 0), 
-                                               birth_date=datetime.datetime(bi['birth_year'], bi['birth_month'], bi['birth_day'], bi['birth_hour'], bi.get('birth_minute', 0)) if bi else None)
-            except: v_profile = None
+                                               birth_date=birth_date)
+            except Exception as e: 
+                v_profile = None
+                st.warning(f"无法创建 VirtualBaziProfile: {e}")
 
-            cx1, cx2, cx3 = st.columns([2, 2, 4])
+            # --- GLOBAL CONTROL AREA ---
+            current_year = datetime.datetime.now().year
+            
+            # Get luck cycles
+            luck_cycles = v_profile.get_luck_cycles() if v_profile else []
+            l_opts = [f"{d['start_year']}-{d['end_year']} [{d['gan_zhi']}]" for d in luck_cycles] if luck_cycles else ["Unknown"]
+            
+            # [Phase 38] Find default luck cycle that covers current year
+            default_luck_idx = 0
+            for i, lc in enumerate(luck_cycles):
+                if lc['start_year'] <= current_year <= lc['end_year']:
+                    default_luck_idx = i
+                    break
+            
+            # [Phase 38] GEO City Map - global
+            GEO_CITY_MAP = {
+                "北京 (Beijing)": (1.15, "Fire/Earth"),
+                "上海 (Shanghai)": (1.08, "Water/Metal"),
+                "深圳 (Shenzhen)": (1.12, "Fire/Water"),
+                "广州 (Guangzhou)": (1.10, "Fire"),
+                "成都 (Chengdu)": (0.95, "Earth/Wood"),
+                "杭州 (Hangzhou)": (1.05, "Water/Wood"),
+                "东京 (Tokyo)": (1.20, "Water/Metal"),
+                "新加坡 (Singapore)": (0.85, "Fire/Water"),
+                "纽约 (New York)": (1.25, "Metal/Water"),
+                "伦敦 (London)": (1.15, "Water/Metal"),
+                "悉尼 (Sydney)": (0.90, "Fire/Earth"),
+                "温哥华 (Vancouver)": (1.18, "Water/Wood"),
+            }
+            city_options = list(GEO_CITY_MAP.keys())
+            
+            cx1, cx2, cx3, cx4 = st.columns([2, 2, 2, 2])
             with cx1:
-                l_opts = [f"{d['start_year']}-{d['end_year']} [{d['gan_zhi']}]" for d in v_profile.get_luck_cycles()] if v_profile else ["Unknown"]
-                sel_l = st.selectbox("当前大运 (Luck Cycle)", l_opts)
+                sel_l = st.selectbox("当前大运 (Luck Cycle)", l_opts, index=default_luck_idx)
                 user_luck = re.search(r'\[(.*?)\]', sel_l).group(1) if '[' in sel_l else "?"
             with cx2:
-                # Default target year to current luck cycle if available, or current year
-                default_y = datetime.datetime.now().year
-                sel_y = st.number_input("目标流年 (Target Year)", 1900, 2100, default_y)
+                # Default target year to current year
+                sel_y = st.number_input("目标流年 (Target Year)", 1900, 2100, current_year)
                 user_year = v_profile.get_year_pillar(sel_y) if v_profile else "?"
                 st.caption(f"📅 支点流年 (Annual): {user_year}")
             with cx3:
-                t_vec = st.slider("时间/相位偏移 (Time/Phase Shift - t)", 0.0, 10.0, 0.0, step=0.1)
+                # [Phase 38] GEO Selector - global
+                selected_city = st.selectbox("🌍 所在城市 (Location)", city_options, key="global_geo_city")
+                geo_factor, geo_element = GEO_CITY_MAP.get(selected_city, (1.0, "Neutral"))
+                st.caption(f"🌐 Geo Factor: **{geo_factor}**")
+            with cx4:
+                t_vec = st.slider("时间/相位偏移 (t)", 0.0, 10.0, 0.0, step=0.1)
                 inj_on = st.toggle("量子注入模式 (Quantum Injection Mode)", value=st.session_state.get('inj_active', False))
                 inj_list = st.multiselect("补强粒子 (Remedy Particles)", list(BaziParticleNexus.REMEDY_PARTICLES.keys()), format_func=lambda x: BaziParticleNexus.REMEDY_DESC.get(x, x)) if inj_on else None
 
@@ -815,49 +894,22 @@ def render():
             with ctx_col2:
                 st.info(f"📅 目标流年: **{user_year}**")
             with ctx_col3:
-                # Geo Factor via City Selection
-                # Mapping: City -> (Geo Factor, Dominant Element)
-                GEO_CITY_MAP = {
-                    # 中国国内大城市 (Chinese Major Cities)
-                    "北京 (Beijing)": (1.15, "Water/Metal"),
-                    "上海 (Shanghai)": (1.10, "Water"),
-                    "广州 (Guangzhou)": (0.90, "Fire"),
-                    "深圳 (Shenzhen)": (0.92, "Fire"),
-                    "成都 (Chengdu)": (1.05, "Earth"),
-                    "重庆 (Chongqing)": (1.00, "Earth/Fire"),
-                    "杭州 (Hangzhou)": (1.08, "Water/Wood"),
-                    "武汉 (Wuhan)": (1.02, "Water/Fire"),
-                    "西安 (Xi'an)": (1.12, "Metal/Earth"),
-                    "南京 (Nanjing)": (1.05, "Water"),
-                    "哈尔滨 (Harbin)": (1.25, "Water"),
-                    "沈阳 (Shenyang)": (1.20, "Water/Metal"),
-                    "大连 (Dalian)": (1.18, "Water"),
-                    "青岛 (Qingdao)": (1.12, "Water"),
-                    "厦门 (Xiamen)": (0.95, "Water/Fire"),
-                    "昆明 (Kunming)": (0.98, "Wood/Earth"),
-                    # 世界著名城市 (World Famous Cities)
-                    "东京 (Tokyo)": (1.08, "Water"),
-                    "首尔 (Seoul)": (1.10, "Metal"),
-                    "新加坡 (Singapore)": (0.85, "Fire"),
-                    "曼谷 (Bangkok)": (0.82, "Fire"),
-                    "悉尼 (Sydney)": (0.95, "Fire/Water"),
-                    "纽约 (New York)": (1.05, "Metal/Water"),
-                    "洛杉矶 (Los Angeles)": (0.88, "Fire"),
-                    "伦敦 (London)": (1.15, "Water"),
-                    "巴黎 (Paris)": (1.02, "Water/Metal"),
-                    "迪拜 (Dubai)": (0.75, "Fire/Earth"),
-                    "多伦多 (Toronto)": (1.20, "Water"),
-                    "温哥华 (Vancouver)": (1.18, "Water/Wood"),
-                }
-                city_options = list(GEO_CITY_MAP.keys())
-                selected_city = st.selectbox("🌍 所在城市 (Location)", city_options, key="rel_geo_city")
-                geo_factor, geo_element = GEO_CITY_MAP.get(selected_city, (1.0, "Neutral"))
-                st.caption(f"🌐 Geo Factor: **{geo_factor}** ({geo_element})")
+                # [Phase 38] Use global GEO factor
+                st.info(f"� 地域因子: **{geo_factor:.2f}** ({selected_city})")
             
             st.divider()
             
-            # Get relationship data
-            r_data = res.get('relationship_gravity', {})
+            # Get relationship data - check session_state first for dynamic simulation results
+            # Initialize session state key for dynamic results
+            dynamic_key = f"dynamic_gravity_{selected_case.get('name', 'unknown')}"
+            
+            if dynamic_key in st.session_state:
+                # Use dynamic simulation results
+                r_data = st.session_state[dynamic_key]
+                st.info("📊 显示动态仿真结果 (Showing Dynamic Simulation Results)")
+            else:
+                # Use initial calculation results
+                r_data = res.get('relationship_gravity', {})
             
             # If dynamic params changed, we'd need to re-run, but for now show stored data
             E_val = r_data.get('Binding_Energy', 0)
@@ -865,6 +917,8 @@ def render():
             eta_val = r_data.get('Phase_Coherence', 0)
             peach_val = r_data.get('Peach_Blossom_Amplitude', 0)
             state = r_data.get('State', 'UNKNOWN')
+            confidence = r_data.get('State_Confidence', 1.0)
+            state_probs = r_data.get('State_Probabilities', {})
             metrics = r_data.get('Metrics', {})
             
             # State Translation & Color
@@ -986,25 +1040,38 @@ def render():
                 gender = selected_case.get('gender', '男')
                 dm = selected_case.get('day_master', '?')
                 
+                # Create mock waves for consistent phase coherence calculation
+                class MockWave:
+                    def __init__(self, amp, ph):
+                        self.amplitude = amp
+                        self.phase = ph
+                sim_waves = {
+                    "Wood": MockWave(10.0, 0.5),
+                    "Fire": MockWave(10.0, 0.5),
+                    "Earth": MockWave(10.0, 0.5),
+                    "Metal": MockWave(10.0, 0.5),
+                    "Water": MockWave(10.0, 0.5)
+                }
+                
                 # Re-run calculation with dynamic params
                 gravity_engine = RelationshipGravityEngine(dm, gender)
                 dynamic_result = gravity_engine.analyze_relationship(
-                    res.get('waves', {}),
+                    sim_waves,
                     selected_case['bazi'][:4],
                     luck_pillar=user_luck,
                     annual_pillar=user_year,
                     geo_factor=geo_factor
                 )
                 
-                # Display updated results
-                new_state = dynamic_result.get('State', 'UNKNOWN')
-                new_E = dynamic_result.get('Binding_Energy', 0)
-                new_sigma = dynamic_result.get('Orbital_Stability', 0)
-                new_eta = dynamic_result.get('Phase_Coherence', 0)
-                new_metrics = dynamic_result.get('Metrics', {})
+                # Store results in session_state for metrics display update
+                dynamic_key = f"dynamic_gravity_{selected_case.get('name', 'unknown')}"
+                st.session_state[dynamic_key] = dynamic_result
                 
-                st.success(f"✅ 动态仿真完成！新状态: **{new_state}** | E={new_E:.1f} | σ={new_sigma:.2f} | η={new_eta:.4f}")
-                st.json(new_metrics)
+                st.success(f"✅ 动态仿真完成！上方指标已更新。")
+                st.toast("指标已更新", icon="✅")
+                
+                # Rerun to update the metrics display at the top
+                st.rerun()
             
             # --- LIFETIME RELATIONSHIP TIMELINE SCANNER ---
             st.write("")
@@ -1193,7 +1260,9 @@ def render():
                                 "prediction": prediction,
                                 "E": result.get('Binding_Energy', 0),
                                 "sigma": result.get('Orbital_Stability', 0),
-                                "eta": result.get('Phase_Coherence', 0)
+                                "eta": result.get('Phase_Coherence', 0),
+                                "confidence": result.get('State_Confidence', 1.0),  # [Phase 37]
+                                "state_probs": result.get('State_Probabilities', {})  # [Phase 37]
                             })
                         
                         prev_state = current_state
@@ -1300,7 +1369,7 @@ def render():
                                 else:
                                     icon = "💚"
                                 
-                                with st.expander(f"{icon} {event['year']}年 ({event['age']}岁) | {event['transition']}", expanded=False):
+                                with st.expander(f"{icon} {event['year']}年 ({event['age']}岁) | {event['transition']} ({event.get('confidence', 1)*100:.0f}%)", expanded=False):
                                     col1, col2 = st.columns(2)
                                     with col1:
                                         st.markdown(f"**年份**: {event['year']} ({event['age']}岁)")
@@ -1309,7 +1378,19 @@ def render():
                                     with col2:
                                         st.markdown(f"**状态变化**: {event['prev_state']} → {event['new_state']}")
                                         st.markdown(f"**绑定能 (E)**: {event['E']:.1f}")
-                                        st.markdown(f"**稳定性 (σ)**: {event['sigma']:.2f}")
+                                        st.markdown(f"**置信度 (Confidence)**: {event.get('confidence', 1)*100:.0f}%")
+                                    
+                                    # [Phase 37] State Probability Bar
+                                    st.markdown("**📊 状态概率分布 (State Probabilities)**")
+                                    probs = event.get('state_probs', {})
+                                    if probs:
+                                        prob_cols = st.columns(4)
+                                        state_labels = [("🟢 ENTANGLED", "ENTANGLED"), ("🔵 BOUND", "BOUND"), 
+                                                       ("🟠 PERTURBED", "PERTURBED"), ("🔴 UNBOUND", "UNBOUND")]
+                                        for i, (label, key) in enumerate(state_labels):
+                                            with prob_cols[i]:
+                                                p = probs.get(key, 0)
+                                                st.metric(label, f"{p*100:.0f}%")
                                     
                                     st.markdown("---")
                                     st.markdown(f"**🔮 预测**: {event['prediction']}")
