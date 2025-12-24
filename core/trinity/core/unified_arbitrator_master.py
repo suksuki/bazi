@@ -11,7 +11,6 @@ from core.trinity.core.assets.pillar_gravity_engine import PillarGravityEngine
 from core.trinity.core.assets.resonance_booster import ResonanceBooster
 from core.trinity.core.assets.spacetime_inertia_engine import SpacetimeInertiaEngine
 from core.trinity.core.engines.structural_stress import StructuralStressEngine
-from core.trinity.core.engines.life_path_simulation import LifePathEngine
 from core.trinity.core.engines.wealth_fluid import WealthFluidEngine
 from core.trinity.core.engines.relationship_gravity import RelationshipGravityEngine
 # [NEW] Integrated Assets
@@ -50,7 +49,6 @@ class UnifiedArbitratorMaster:
         self.resonance_booster = ResonanceBooster()
         self.inertia_engine = SpacetimeInertiaEngine()
         self.stress_engine = StructuralStressEngine()
-        self.life_path_engine = LifePathEngine()
         self.combo_engine = CombinationPhaseEngine()
         # GeoProcessor needs no args usually, assuming it loads internal json
         self.geo_processor = GeoProcessor()

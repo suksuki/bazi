@@ -8,7 +8,6 @@ from tests.adapters.test_engine_adapter import (
     BaziCalculatorAdapter as BaziCalculator,
     FluxEngineAdapter as FluxEngine
 )
-from core.trajectory import AdvancedTrajectoryEngine
 from core.wuxing_engine import WuXingEngine
 from core.alchemy import AlchemyEngine
 import json
@@ -46,27 +45,8 @@ def test_core_logic():
         if wealth_key:
             print("Sample Flux (Wealth):", flux_data.get(wealth_key[0]))
     
-    print("\n>>> 4. Testing AdvancedTrajectoryEngine (Life Curve)...")
-    # Mock Luck Cycles
-    luck_cycles = [
-        {"start_year": 1990, "end_year": 1999, "gan_zhi": "甲子", "branch": "子"},
-        {"start_year": 2000, "end_year": 2009, "gan_zhi": "乙丑", "branch": "丑"},
-        {"start_year": 2010, "end_year": 2019, "gan_zhi": "丙寅", "branch": "寅"},
-    ]
-    traj = AdvancedTrajectoryEngine(chart, luck_cycles, 1990)
-    
-    print("   -> Running Yearly Simulation...")
-    res_year = traj.run(end_age=30, granularity='year')
-    print(f"   Yearly points: {len(res_year)}")
-    
-    print("   -> Running Monthly Simulation...")
-    res_month = traj.run(end_age=30, granularity='month')
-    print(f"   Monthly points: {len(res_month)}")
-    
-    # Optional: Daily is too slow for quick test, skipping or doing very short range
-    # print("   -> Running Daily Simulation (Short Range)...")
-    # res_day = traj.run(end_age=1, granularity='day') # Just age 0-1
-    # print(f"   Daily points (1 year): {len(res_day)}")
+    # [DEPRECATED] AdvancedTrajectoryEngine removed in V12.2.0
+    # Use TemporalShuntingEngine for temporal predictions instead.
     
     print("\n✅ All Core Engines Initialized and Ran Successfully.")
 

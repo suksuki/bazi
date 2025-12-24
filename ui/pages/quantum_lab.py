@@ -16,7 +16,6 @@ from core.models.config_model import ConfigModel
 from controllers.quantum_lab_controller import QuantumLabController
 from core.profile_manager import ProfileManager
 from core.trinity.core.engines.quantum_dispersion import QuantumDispersionEngine
-from core.trinity.core.engines.life_path_simulation import LifePathEngine
 from core.trinity.core.intelligence.destiny_translator import TranslationStyle
 
 # --- UI Components ---
@@ -2155,20 +2154,7 @@ def render():
                 sim_res = st.selectbox("采样分辨率 (Resolution)", ["节气 (Solar Term)", "月份 (Monthly)"], index=0, key="orb_sim_res")
                 
                 if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", use_container_width=True, key="run_lifepath_scan"):
-                    with st.spinner("⏳ 正在采集生命轨道数据..."):
-                        from core.bazi_profile import BaziProfile
-                        # Reconstruction of profile for batch processing
-                        v_profile = BaziProfile(birth_dt, gender=(1 if selected_case.get('gender')=='男' else 0))
-                        
-                        life_engine = LifePathEngine(oracle=oracle)
-                        orb_res = life_engine.simulate_lifespan(
-                            v_profile, 
-                            start_year=sim_range[0], 
-                            end_year=sim_range[1],
-                            resolution='term' if "节气" in sim_res else 'month'
-                        )
-                        st.session_state['orbital_data'] = orb_res
-                        st.success(f"扫瞄完成：采集到 {len(orb_res['timeline'])} 个时空样本点。")
+                    st.warning("⚠️ 生命轨道仪 (LifePathEngine) 已在 V12.2.0 中移除。请使用 '全息应期演化' 功能。")
             
             with orb_c1:
                 if 'orbital_data' in st.session_state:
@@ -3293,20 +3279,7 @@ def render():
                 sim_res = st.selectbox("采样分辨率 (Resolution)", ["节气 (Solar Term)", "月份 (Monthly)"], index=0, key="lp_res_mod7")
 
                 if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", use_container_width=True, key="run_lifepath_scan_mod7"):
-                    with st.spinner("⏳ 正在采集生命轨道数据..."):
-                        from core.bazi_profile import BaziProfile
-                        from core.trinity.core.engines.life_path_simulation import LifePathEngine
-
-                        v_profile = BaziProfile(birth_dt, gender=(1 if selected_case.get('gender') == '男' else 0))
-                        lp_engine = LifePathEngine(oracle=oracle)
-                        lp_res = lp_engine.simulate_lifespan(
-                            v_profile,
-                            start_year=sim_range[0],
-                            end_year=sim_range[1],
-                            resolution='term' if "节气" in sim_res else 'month'
-                        )
-                        st.session_state['lifepath_data_mod7'] = lp_res
-                        st.success(f"扫瞄完成：采集到 {len(lp_res['timeline'])} 个时空样本点。")
+                    st.warning("⚠️ 生命轨道仪 (LifePathEngine) 已在 V12.2.0 中移除。请使用 '全息应期演化' 功能。")
 
             with col_lp1:
                 lp_show = st.session_state.get('lifepath_data_mod7') or lp_data

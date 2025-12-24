@@ -13,10 +13,10 @@
       "remnant": 0.1
     },
     "pillarWeights": {
-      "year": 0.7,
-      "month": 1.418581629122121,
-      "day": 1.35,
-      "hour": 0.7655576714330242
+      "year": 0.8,
+      "month": 1.3,
+      "day": 1.0,
+      "hour": 0.9
     },
     "lifeStageImpact": 0.2,
     "season_decay_factor": 0.3,
@@ -36,6 +36,7 @@
   },
   "interactions": {
     "stemFiveCombination": {
+      "//_COMMENT": "V11.1 Tuning: Normalized Energy Scale (~4.0)",
       "threshold": 3.0,
       "bonus": 1.5,
       "penalty": 0.7
@@ -57,21 +58,17 @@
       "useSolarTime": true
     },
     "vault": {
-      "//_COMMENT": "V12.0 Tuning: Adapted to Wave Physics",
       "threshold": 3.0,
       "sealedDamping": 0.4,
       "openBonus": 2.5,
+      "punishmentOpens": false,
       "breakPenalty": 0.5,
-      "punishmentOpens": false
+      "//_COMMENT": "V12.0 Tuning: Adapted to Wave Physics"
     },
     "branchEvents": {
       "clashScore": -5.0,
       "harmDamping": 0.2,
-      "clashPhase": 2.618,
-      "clashEntropy": 0.6,
-      "punishPhase": 2.513,
-      "punishEntropy": 0.7,
-      "resonanceQ": 1.5,
+      "clashDamping": 0.4,
       "threeHarmony": {
         "bonus": 1.6,
         "transform": true
@@ -84,6 +81,11 @@
         "bonus": 1.1,
         "transform": false
       },
+      "clashPhase": 2.618,
+      "clashEntropy": 0.6,
+      "punishPhase": 2.513,
+      "punishEntropy": 0.7,
+      "resonanceQ": 1.5,
       "sixHarmony": {
         "bonus": 1.15,
         "bindingPenalty": 0.2,
@@ -92,7 +94,8 @@
       "threeMeeting": {
         "bonus": 2.5,
         "transform": true
-      }
+      },
+      "earthlyPunishmentBonus": 1.3
     },
     "treasury": {
       "bonus": 20.0
@@ -102,32 +105,16 @@
     }
   },
   "flow": {
-    "medium": {
-      "//_COMMENT": "V12.2 Wave Mechanics: Transmission & Entropy",
-      "dampingFactor": 0.1,
-      "transmissionNoise": 0.5
-    },
-    "interaction": {
-      "recoilFactor": 0.3
-    },
     "generationEfficiency": 0.7,
     "generationDrain": 0.3,
     "controlImpact": 0.5,
     "dampingFactor": 0.1,
     "spatialDecay": {
+      "//_COMMENT": "V11.1 Tuning: Flatter Field for Low Energy Level",
       "gap0": 1.0,
       "gap1": 0.9,
       "gap2": 0.75,
       "gap3": 0.6
-    },
-    "feedback": {
-      "//_COMMENT": "Cybernetics: Impedance Mismatch & Environmental Shielding",
-      "inverseControlThreshold": 4.0,
-      "inverseRecoilMultiplier": 2.0,
-      "eraShieldingFactor": 0.5
-    },
-    "yongshen": {
-      "resonanceBoost": 1.2
     },
     "systemEntropy": 0.05,
     "outputDrainPenalty": 1.2,
@@ -143,16 +130,35 @@
     "phaseChange": {
       "scorchedEarthDamping": 0.15,
       "frozenWaterDamping": 0.3
+    },
+    "medium": {
+      "//_COMMENT": "V12.2 Wave Mechanics: Transmission & Entropy",
+      "dampingFactor": 0.1,
+      "transmissionNoise": 0.5
+    },
+    "interaction": {
+      "recoilFactor": 0.3
+    },
+    "feedback": {
+      "//_COMMENT": "Cybernetics: Impedance Mismatch & Environmental Shielding",
+      "inverseControlThreshold": 4.0,
+      "inverseRecoilMultiplier": 2.0,
+      "eraShieldingFactor": 0.5
+    },
+    "yongshen": {
+      "resonanceBoost": 1.2
     }
   },
   "spacetime": {
     "luckPillarWeight": 1.5,
     "annualPillarWeight": 0.5,
     "geo": {
+      "//_COMMENT": "V11.0 Module C: Macro Physics Boost",
       "latitudeHeat": 0.08,
       "latitudeCold": 0.08
     },
     "era": {
+      "eraElement": "fire",
       "eraBonus": 0.25
     },
     "solarTimeImpact": 0.0,
@@ -236,5 +242,14 @@
       "damping_rate": 0.3,
       "max_value": 100.0
     }
+  },
+  "resonance": {
+    "criticalLockingRatio": 1.8,
+    "beatingThreshold": 0.5,
+    "coherentSyncThreshold": 0.95,
+    "beatingSyncThreshold": 0.6,
+    "superconductiveBoost": 0.5,
+    "beatingBaseMultiplier": 0.6,
+    "beatingAmplitudeSwing": 0.5
   }
 }

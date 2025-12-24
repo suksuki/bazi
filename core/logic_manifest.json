@@ -12,6 +12,11 @@
             "id": "WEALTH_DYNAMICS",
             "name": "财富动态主题",
             "description": "基于流体力学的财富流动、粘滞与增益分析。"
+        },
+        "FRAMEWORK_UTILITIES": {
+            "id": "FRAMEWORK_UTILITIES",
+            "name": "框架算法和模块",
+            "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。"
         }
     },
     "modules": {
@@ -468,6 +473,45 @@
             "priority": 100,
             "status": "ACTIVE",
             "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_19_BAZI_UTILITIES": {
+            "id": "MOD_19_BAZI_UTILITIES",
+            "name": "🧰 八字基础工具类 (Bazi Core Utilities)",
+            "icon": "🧰",
+            "type": "UTILITY",
+            "description": "核心工具类算法，包含八字反推、虚拟档案、日期计算等基础设施支撑模块。",
+            "active": true,
+            "linked_rules": [
+                "UTIL_REVERSE_CALCULATOR",
+                "UTIL_VIRTUAL_PROFILE",
+                "UTIL_LUCK_LOOKUP",
+                "UTIL_YEAR_PILLAR_CALC"
+            ],
+            "goal": "提供八字系统的核心工具类与反推算法支撑。",
+            "outcome": "确保四柱反推精度与虚拟档案的大运/流年查询稳定性。",
+            "layer": "INFRASTRUCTURE",
+            "priority": 50,
+            "status": "ACTIVE",
+            "theme": "FRAMEWORK_UTILITIES"
+        },
+        "MOD_20_SYS_CONFIG": {
+            "id": "MOD_20_SYS_CONFIG",
+            "name": "⚙️ 系统和档案配置 (System & Profile Config)",
+            "icon": "⚙️",
+            "type": "UTILITY",
+            "description": "系统配置加载与保存、用户档案管理等基础设施支撑模块。",
+            "active": true,
+            "linked_rules": [
+                "UTIL_CONFIG_MANAGER",
+                "UTIL_PROFILE_MANAGER",
+                "UTIL_LOGIC_REGISTRY"
+            ],
+            "goal": "提供系统配置持久化与用户档案管理支撑。",
+            "outcome": "确保配置加载一致性与用户档案的跨会话持久化。",
+            "layer": "INFRASTRUCTURE",
+            "priority": 40,
+            "status": "ACTIVE",
+            "theme": "FRAMEWORK_UTILITIES"
         }
     },
     "registry": {
