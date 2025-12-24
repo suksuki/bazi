@@ -100,23 +100,38 @@ class TemporalShuntingEngine:
                 wave_val = amp_year * math.sin(2 * math.pi * t / 120) + \
                            amp_month * math.sin(2 * math.pi * t / 12)
             
-            # Add noise
-            random.seed(self.day_master + str(t))
-            noise = random.lognormvariate(0, 0.1) * 0.2 if random.random() > 0.8 else 0
+            # --- V12.2.0: Probabilistic SAI Model ---
+            # SAI Mean (Expected Value)
+            sai_mean = (baseline_sai + abs(wave_val)) / social_damping
             
-            # [PATCH] Social Damping Logic
-            raw_sai = baseline_sai + abs(wave_val) + noise
-            total_sai = raw_sai / social_damping
+            # SAI Uncertainty (increases with interaction intensity)
+            # Base uncertainty + interaction-proportional uncertainty
+            sai_std = (0.15 + 0.1 * abs(wave_val)) / social_damping
             
-            # Event Classification
+            # 95% Confidence Upper Bound (z=1.645 for one-tailed 95%)
+            sai_p95 = sai_mean + 1.645 * sai_std
+            
+            # Singularity Probability: P(SAI > threshold)
+            # Using CDF: P(X > T) = 1 - Φ((T - μ) / σ)
+            if sai_std > 0:
+                z_score = (self.SAI_THRESHOLD - sai_mean) / sai_std
+                # Approximate normal CDF using erf
+                singularity_prob = 0.5 * (1 - math.erf(z_score / math.sqrt(2)))
+            else:
+                singularity_prob = 1.0 if sai_mean > self.SAI_THRESHOLD else 0.0
+            
+            # Event Classification (based on probability threshold)
+            PROB_THRESHOLD = 0.25  # 25% probability = potential singularity
             evt_type = "NONE"
             assertion = ""
             plain_assertion = ""
             
-            if total_sai > self.SAI_THRESHOLD:
+            is_singularity = singularity_prob > PROB_THRESHOLD
+            
+            if is_singularity:
                 evt_type = "OVERFLOW" if wave_val > 0 else "COLLAPSE"
                 trans = BAZI_TRANSLATION.get(evt_type, {})
-                assertion = f"{abs_year}年: {trans.get('title')} (SAI={total_sai:.2f})"
+                assertion = f"{abs_year}年: {trans.get('title')} (P={singularity_prob:.0%}, SAI={sai_mean:.2f}±{sai_std:.2f})"
                 plain_assertion = f"{trans.get('plain')}: {trans.get('desc')}"
             
             timeline_node = {
@@ -124,8 +139,12 @@ class TemporalShuntingEngine:
                 "year": str(abs_year),
                 "month": str(abs_month),
                 "age": age,
-                "sai": round(total_sai, 4),
-                "is_singularity": total_sai > self.SAI_THRESHOLD,
+                "sai": round(sai_mean, 4),        # Legacy field (now = mean)
+                "sai_mean": round(sai_mean, 4),   # Expected value
+                "sai_std": round(sai_std, 4),     # Uncertainty
+                "sai_p95": round(sai_p95, 4),     # 95% upper bound
+                "singularity_prob": round(singularity_prob, 4),  # P(SAI > threshold)
+                "is_singularity": is_singularity,
                 "is_future": abs_year >= start_year,
                 "type": evt_type,
                 "assertion": assertion,

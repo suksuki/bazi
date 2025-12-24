@@ -1629,7 +1629,13 @@ def render():
                     
                     # Determine Birth Year & Scanning Range
                     b_year = sel_case.get('birth_year', 1990)
-                    scan_res = t_engine.scan_singularities(start_year=2024, birth_year=b_year, horizon_months=120, social_damping=social_damping_val)
+                    
+                    # [V12.2.0 FIX] Construct profile from test case for real Luck Pillar physics
+                    case_pillars = sel_case.get('bazi', {}).get('pillars', {})
+                    case_gender = 1 if sel_case.get('gender', '男') == '男' else 0
+                    mod16_profile = VirtualBaziProfile(case_pillars, gender=case_gender) if case_pillars else None
+                    
+                    scan_res = t_engine.scan_singularities(start_year=2024, birth_year=b_year, horizon_months=120, social_damping=social_damping_val, profile=mod16_profile)
                     timeline = scan_res['timeline']
                     singularities = scan_res['singularities']
                     

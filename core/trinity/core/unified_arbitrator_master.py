@@ -250,6 +250,9 @@ class UnifiedArbitratorMaster:
             # [NEW] Add Dynamic Branches (Luck/Annual) for Stress & Star calculation
             if luck and len(luck) > 1: all_branches.append(luck[1])
             if annual and len(annual) > 1: all_branches.append(annual[1])
+            # [V12.2.0 FIX] Add Dynamic Stems (Luck/Annual) for Expert Assertions
+            if luck and len(luck) > 0: all_stems.append(luck[0])
+            if annual and len(annual) > 0: all_stems.append(annual[0])
         except IndexError:
             return {"error": "Chart Parsing Failed"}
 
@@ -400,18 +403,39 @@ class UnifiedArbitratorMaster:
             waves_mock, bazi_chart, luck_pillar=luck, annual_pillar=annual, geo_factor=geo_modifiers.get('fire', 1.0) # Using generic geo
         )
 
+        # [V12.2.0] 专旺格 Detection (Self-Dominance Follow Pattern)
+        # When DM element > 55% of total energy, it's a self-dominance pattern
+        total_energy = sum(elem_map.values())
+        dm_energy = elem_map.get(dm_elem, 0)
+        dm_dominance_ratio = dm_energy / max(total_energy, 0.1)
+        is_self_dominant = dm_dominance_ratio > 0.55  # DM element > 55% = 专旺格
+        
+        # For 专旺格, also check 印/比 (Resource/Companion) which SUPPORT DM
+        # Resource generates DM, Companion = same as DM
+        gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
+        resource_elem = gen_map.get(dm_elem, "")
+        resource_energy = elem_map.get(resource_elem, 0)
+        support_ratio = (dm_energy + resource_energy) / max(total_energy, 0.1)
+        is_follow_strong = support_ratio > 0.65  # DM + Resource > 65% = 从强
+
         # [NEW] 3.4 Resonance Field Analysis
         # Use the engines to get real coherence metrics
         dm_wave = waves_mock.get(dm_elem)
         field_list = [v for k, v in waves_mock.items() if k != dm_elem]
         res_analysis = self.resonance_field.evaluate_system(dm_wave, field_list)
         
+        # [V12.2.0] Override is_follow for 专旺格/从强 cases
+        final_is_follow = res_analysis.is_follow or is_self_dominant or is_follow_strong
+        
         resonance_metrics = {
             "gain": rooting_status.get('gain', 1.0),
             "locking_ratio": res_analysis.locking_ratio,
             "sync_state": res_analysis.sync_state,
             "status": res_analysis.mode,
-            "is_follow": res_analysis.is_follow
+            "is_follow": final_is_follow,
+            "dm_dominance_ratio": round(dm_dominance_ratio, 3),  # V12.2.0 Debug
+            "support_ratio": round(support_ratio, 3),           # V12.2.0 Debug
+            "follow_type": "专旺" if is_self_dominant else ("从强" if is_follow_strong else ("从弱" if res_analysis.is_follow else "身强/身弱"))
         }
         
         # [NEW] 3.5 Structural Vibration (MOD_15)

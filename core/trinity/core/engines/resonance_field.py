@@ -42,8 +42,22 @@ class ResonanceField:
         field_amp = float(np.abs(z_total))
         field_phase = float(np.angle(z_total))
         
-        # 2. Resonance Metrics
-        locking_ratio = field_amp / max(dm_wave.amplitude, 0.1)
+        # [V12.2.0] Calculate element dominance for hidden state shielding
+        total_amplitude = dm_wave.amplitude + field_amp
+        dominant_ratio = field_amp / max(total_amplitude, 0.1)  # Field dominance
+        
+        # 2. Resonance Metrics with Sigmoid S-Curve Transformation
+        raw_locking_ratio = field_amp / max(dm_wave.amplitude, 0.1)
+        
+        # [V12.2.0] Sigmoid Energy Collapse: S-curve for non-linear "gravitational collapse"
+        # Formula: locking_ratio_sigmoid = 1 / (1 + exp(-k * (dominant_ratio - 0.65)))
+        # When dominant_ratio > 0.65, locking_ratio accelerates towards 1.0
+        k = 12.0  # Steepness parameter (higher = sharper transition)
+        midpoint = 0.60  # 60% dominance = inflection point
+        sigmoid_factor = 1 / (1 + np.exp(-k * (dominant_ratio - midpoint)))
+        
+        # Blend: Use sigmoid to boost locking_ratio when field is dominant
+        locking_ratio = raw_locking_ratio * (1 + sigmoid_factor * 2.0)
         
         # Phase Matching (Coherence)
         phase_diff = abs(dm_wave.phase - field_phase) % (2 * np.pi)
@@ -63,15 +77,12 @@ class ResonanceField:
             elif sync_state > PhysicsConstants.SNR_THRESHOLD_BEATING:
                 mode = "BEATING"
         
+        # [V12.2.0] Follow Confidence Score (Probabilistic Follow)
+        # Uses dominant_ratio + sigmoid_factor to calculate confidence
+        follow_confidence = min(1.0, dominant_ratio * sigmoid_factor * 1.5)
+        
         # New: Annihilation Check (Frequency Incompatibility)
         if sync_state < PhysicsConstants.ANNIHILATION_THRESHOLD:
-            # Phase 28: Shang Guan Shang Jin (Vacuum Free State)
-            # If the Official is effectively 'stripped' or absent, transition to Superfluid
-            is_shang_jin = False
-            # We need to know which elements are which relative to DM.
-            # For now, if sync is extremely low but fragmentation is very low, it might be a vacuum state.
-            # But let's use a simpler heuristic: if mode remains ANNIHILATION but user wants Superfluid,
-            # we check if control element is below a certain ratio.
             mode = "ANNIHILATION"
         
         # 4. Phase 21-24 Features (Brittleness & Velocity)
@@ -84,18 +95,18 @@ class ResonanceField:
         
         # Fragmentation Index (H2: Phase dispersion)
         all_waves = [dm_wave] + field_waves
-        # Increase threshold to filter out tiny noise elements
         active_waves = [w for w in all_waves if w.amplitude > 1.0]
         phases = [w.phase for w in active_waves]
         if len(phases) > 1:
-            # Normalized phase standard deviation
             fragmentation_index = np.std(phases) / np.pi
         else:
             fragmentation_index = 0.0
 
-        # 5. Pattern Detection
-        # A 'True Follow' must be Coherent, strong enough, AND have low fragmentation (unified field)
-        is_follow = (mode == "COHERENT") and (locking_ratio > 2.0) and (fragmentation_index < 0.25)
+        # 5. Pattern Detection (Revised with follow_confidence)
+        # [V12.2.0] Lowered thresholds and use follow_confidence
+        # True Follow: locking_ratio > 1.5 (was 2.0), OR follow_confidence > 0.5
+        is_follow = ((mode == "COHERENT") and (locking_ratio > 1.5) and (fragmentation_index < 0.35)) or \
+                    (follow_confidence > 0.55)
         
         # Mode descriptions in bilingual format
         mode_names = {
