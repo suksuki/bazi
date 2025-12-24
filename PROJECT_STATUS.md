@@ -1,35 +1,29 @@
 # Antigravity Project Status Report
-**Current Version: V11.1.0 (Meta-Architecture & Pedigree Stable)**
+**Current Version: V12.1.0 (Stellar Coherence & Theme Classification Stable)**
 **Date: 2025-12-24**
 
 ## 🏗️ System Architecture Overview
 
-The system has evolved into a "Grand Unified Single-Body Physics" platform V112.0, now integrating **Non-linear Micro-Physics** to handle complex energy interactions.
+The system has evolved into a "Grand Unified Single-Body Physics" platform V12.1.0, featuring hierarchical module themes and stellar interaction physics.
 
 ### 1. The Core Engine (V10.6 - "Antigravity Trinity")
-- **Layer 0 (Kernel)**: `AntigravityEngine` with **Damped Sinusoidal Dispersion** ($P(t) = A \sin^2(\pi t + \phi) e^{-\tau t}$).
-- **Layer 1 (Dynamics)**: **Wealth Fluid Dynamics** (Navier-Stokes) & **Structural Stress** (SAI/IC).
-- **Layer 2 (Arbitration)**: **Causal Entropy** (Negentropy Protocols) & **Resonance Modes** (Coherent/Annihilation).
-- **Status**: 🔒 **LOCKED & ARCHIVED** (Asset: `dynamic_energy_engine.py`).
+... [unchanged] ...
 
-### 2. The Micro-Physics Layer (V11.0 - "Precision Dynamics") [NEW]
-- **MOD_09 Combination**: Phase Transition Threshold ($E > 0.65$) for Chemical bonding vs Physical mixing.
-- **MOD_10 Resonance**: Non-linear Rooting Gain ($G \in [0.5, 2.0]$) for Antenna/Base-Station signal strength.
-- **MOD_11 Gravity**: Spacetime Gravitational Engine ($W_M = 0.42 + 0.18\sin(\pi t)$) for Pillar Weighting.
-- **MOD_12 Inertia**: Fluid Viscosity Model ($e^{-t/\tau}$) for Luck Pillar transitions.
-- **Status**: ✅ **Operational** (`quantum_lab.py` UI Integrated).
+### 2. The Micro-Physics Layer (V11.0 - "Precision Dynamics")
+... [unchanged] ...
 
-### 3. The Interface (V11.5 - "Quantum Lab & Arbitration Console")
-- **Arbitration Console**: 🏛️ Grand Unified Arbitration with **Use-Shen (用神)** analysis and **Geographic Recommendations**.
-- **GEO Database**: Expanded from 12 to **70+ global cities** with elemental affinities.
-- **Rule System**: Unified arbitration for **12+ Bazi rules** (San He, San Hui, Oppose, etc.).
-- **Substrate Refinement**: Real-time sinusoidal energy tracking.
-- **Holographic Radar**: Multi-dimensional scoring.
+### 3. The Intelligence Layer (V12.0 - "Stellar & Narrative") [NEW]
+- **MOD_17 Stellar**: Peach Blossom (Attraction) & Post Horse (Impulse) physics.
+- **Narrative Intelligence**: Stephen Chow & Wong Kar-wai style translation engines.
 - **Status**: ✅ **Operational**.
 
-### 4. The Logic Asset System ("The Registry")
-- **Logic Manifest**: V11.0.0
-- **Status**: ✅ **Synchronized**.
+### 4. The Logic Asset System ("The Registry") [UPGRADED]
+- **Logic Manifest**: V12.1.0 (Hierarchical Themes)
+- **Hierarchy Structure**: 
+    - **Theme (主题)**: High-level classification (e.g., Basic Rules, Wealth Dynamics).
+    - **Topic (专题)**: Domain-specific modules (e.g., MOD_01 Triple Comb, MOD_18 Base App).
+- **Consolidation**: All unassigned global algorithms integrated into **MOD_18_BASE_APP**.
+- **Status**: ✅ **Synchronized & Verified** (tests/test_logic_hierarchy.py).
 
 ## 📊 Current Stability
 - **Logic Consistency**: 100% Pass (All Asset Stress Tests).

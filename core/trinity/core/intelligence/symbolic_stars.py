@@ -37,8 +37,25 @@ class SymbolicStarsEngine:
         '乙': '辰', '丁': '未', '己': '未', '辛': '戌', '癸': '丑'
     }
 
+    # [NEW] Phase B.5: Quantum Attraction & Kinetic Impulse
+    # Peach Blossom (桃花): 寅午戌->卯; 申子辰->酉; 巳酉丑->午; 亥卯未->子
+    PEACH_BLOSSOM_MAP = {
+        '寅': '卯', '午': '卯', '戌': '卯',
+        '申': '酉', '子': '酉', '辰': '酉',
+        '巳': '午', '酉': '午', '丑': '午',
+        '亥': '子', '卯': '子', '未': '子'
+    }
+
+    # Post Horse (驿马): 寅午戌->申; 申子辰->寅; 巳酉丑->亥; 亥卯未->巳
+    POST_HORSE_MAP = {
+        '寅': '申', '午': '申', '戌': '申',
+        '申': '寅', '子': '寅', '辰': '寅',
+        '巳': '亥', '酉': '亥', '丑': '亥',
+        '亥': '巳', '卯': '巳', '未': '巳'
+    }
+
     @classmethod
-    def analyze_stars(cls, day_master: str, branches: List[str]) -> Dict[str, Any]:
+    def analyze_stars(cls, day_master: str, branches: List[str], year_branch: str = None) -> Dict[str, Any]:
         """
         Identifies active symbolic stars and identifies their physical modifiers.
         """
@@ -47,6 +64,8 @@ class SymbolicStarsEngine:
             'wen_chang_count': 0,
             'lu_count': 0,
             'yang_ren_count': 0,
+            'peach_blossom_count': 0,
+            'post_horse_count': 0,
             'active_stars': []
         }
         
@@ -77,6 +96,29 @@ class SymbolicStarsEngine:
             if b == y_target:
                 stats['yang_ren_count'] += 1
                 stats['active_stars'].append({'name': '羊刃', 'effect': 'PHASE_TRANSITION_POTENTIAL', 'node': b})
+
+        # 5. Peach Blossom (Attraction) - Based on Year or Day Branch (here we check branches against both if available)
+        # Using a set of triggers for efficiency
+        triggers = []
+        if year_branch: triggers.append(year_branch)
+        if len(branches) > 2: triggers.append(branches[2]) # Day Branch is usually index 2 in Bazi list
+
+        for trigger in triggers:
+            pb_target = cls.PEACH_BLOSSOM_MAP.get(trigger)
+            for b in branches:
+                if b == pb_target:
+                    stats['peach_blossom_count'] += 1
+                    stats['active_stars'].append({'name': '桃花', 'effect': 'QUANTUM_ATTRACTION', 'node': b})
+                    break # Only count once per trigger
+
+        # 6. Post Horse (Inertia Damping)
+        for trigger in triggers:
+            ph_target = cls.POST_HORSE_MAP.get(trigger)
+            for b in branches:
+                if b == ph_target:
+                    stats['post_horse_count'] += 1
+                    stats['active_stars'].append({'name': '驿马', 'effect': 'KINETIC_IMPULSE', 'node': b})
+                    break
                 
         return stats
 
@@ -93,9 +135,17 @@ class SymbolicStarsEngine:
         
         # Lu Gain: 1.25x per Lu node
         lu_gain = 1.25 if star_stats['lu_count'] > 0 else 1.0
+
+        # Relationship Binding (Peach Blossom): Each increases Attraction by 0.15
+        attraction_boost = 0.15 * star_stats['peach_blossom_count']
+
+        # Kinetic Impulse (Post Horse): Each adds 0.2 to Impulse (reduces inertia effect)
+        kinetic_impulse = 0.2 * star_stats['post_horse_count']
         
         return {
             'entropy_damping': round(entropy_damping, 3),
             'snr_boost': round(snr_boost, 3),
-            'lu_gain': lu_gain
+            'lu_gain': lu_gain,
+            'attraction_boost': attraction_boost,
+            'kinetic_impulse': kinetic_impulse
         }

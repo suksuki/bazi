@@ -1,0 +1,89 @@
+[
+    {
+        "case_id": "MOD15_PATCH_HIDDEN",
+        "name": "地支藏干引动测试-丑库 (Hidden Pulse Trigger)",
+        "bazi": {
+            "stems": [
+                "辛",
+                "己",
+                "癸",
+                "辛"
+            ],
+            "branches": [
+                "酉",
+                "丑",
+                "巳",
+                "酉"
+            ]
+        },
+        "context": {
+            "annual_pillar": "癸卯",
+            "mode": "GENERAL"
+        },
+        "tags": [
+            "PATCH",
+            "HIDDEN_PULSE"
+        ],
+        "expected_behavior": "Annual stem '癸' matches hidden '癸' in '丑'. Resulting Water energy should be significantly higher than a non-triggered year."
+    },
+    {
+        "case_id": "MOD16_PATCH_DAMPING",
+        "name": "社会阻尼对比测试 (Social Damping Impedance)",
+        "bazi": {
+            "stems": [
+                "庚",
+                "甲",
+                "壬",
+                "丙"
+            ],
+            "branches": [
+                "子",
+                "午",
+                "子",
+                "午"
+            ]
+        },
+        "social_scenarios": [
+            {
+                "name": "Stable_Gov_Official",
+                "damping": 2.0
+            },
+            {
+                "name": "Independent_Trader",
+                "damping": 0.5
+            }
+        ],
+        "tags": [
+            "PATCH",
+            "DAMPING"
+        ],
+        "expected_behavior": "SAI peak for Gov Official should be significantly lower than for Trader due to social impedance."
+    },
+    {
+        "case_id": "MOD15_PATCH_REVERSAL",
+        "name": "从旺相变临界案 (Refined Phase Reversal)",
+        "bazi": {
+            "stems": [
+                "丙",
+                "丙",
+                "丙",
+                "丙"
+            ],
+            "branches": [
+                "午",
+                "午",
+                "午",
+                "午"
+            ]
+        },
+        "context": {
+            "annual_pillar": "壬子",
+            "mode": "GENERAL"
+        },
+        "tags": [
+            "PATCH",
+            "REVERSAL"
+        ],
+        "expected_behavior": "Extreme fire dominance (>80%). Annual '壬' (Water) should trigger a logic reversal alert, being treated as a system threat rather than a cure."
+    }
+]

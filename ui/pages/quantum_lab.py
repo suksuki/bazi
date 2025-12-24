@@ -1,4 +1,3 @@
-
 import streamlit as st
 import json
 import os
@@ -18,6 +17,7 @@ from controllers.quantum_lab_controller import QuantumLabController
 from core.profile_manager import ProfileManager
 from core.trinity.core.engines.quantum_dispersion import QuantumDispersionEngine
 from core.trinity.core.engines.life_path_simulation import LifePathEngine
+from core.trinity.core.intelligence.destiny_translator import TranslationStyle
 
 # --- UI Components ---
 from ui.components.oscilloscope import Oscilloscope
@@ -26,9 +26,47 @@ from ui.components.envelope_gauge import EnvelopeGauge
 from ui.components.tuning_panel import render_tuning_panel
 from ui.components.theme import COLORS, GLASS_STYLE, apply_custom_header
 from ui.components.wave_vision_3d import render_wave_vision_3d
-from ui.components.wave_vision_3d import render_wave_vision_3d
 from ui.components.molviz_3d import render_molviz_3d
 from ui.components.holographic_radar import render_holographic_radar
+
+# --- Singletons / Global Instances (Phase 40 Optimization) ---
+from core.trinity.core.unified_arbitrator_master import unified_arbitrator
+oracle = TrinityOracle()
+
+@st.cache_data(ttl=3600)
+def run_heavy_oracle_analysis(bazi, dm, luck, annual, t, injections, birth_dt, disp_on):
+    """
+    Cached wrapper for TrinityOracle.analyze to prevent redundant physics calc.
+    """
+    return oracle.analyze(
+        pillars=list(bazi), 
+        day_master=dm, 
+        luck_pillar=luck, 
+        annual_pillar=annual, 
+        t=t, 
+        injections=injections, 
+        birth_date=birth_dt,
+        dispersion_mode=disp_on
+    )
+
+@st.cache_data(ttl=3600)
+def run_arbitration_cached(bazi_tuple, binfo, luck_p, annual_p, months_s, city_name, geo_f, geo_e, scenario_name, gender_val):
+    """
+    Cached wrapper for UnifiedArbitrator.arbitrate_bazi with explicit serializable keys.
+    """
+    ctx = {
+        'luck_pillar': luck_p,
+        'annual_pillar': annual_p,
+        'months_since_switch': months_s,
+        'scenario': scenario_name,
+        'data': {
+            'city': city_name,
+            'geo_factor': geo_f,
+            'geo_element': geo_e
+        }
+    }
+    # Pass a copy of binfo to avoid side effects
+    return unified_arbitrator.arbitrate_bazi(list(bazi_tuple), binfo.copy() if binfo else {}, ctx)
 
 # [Phase 38] GEO City Map - Comprehensive Chinese + International Cities
 # Format: "城市 (City)": (geo_factor, "element_affinity")
@@ -580,27 +618,26 @@ def render():
         st.info("Initiate subject selection to start Oracle.")
         return
 
-    oracle = TrinityOracle(config=full_config)
-    
     # [Phase B] Pass birth_date and dispersion_mode
     birth_dt = None
     if selected_case and 'birth_info' in selected_case:
         bi = selected_case['birth_info']
         birth_dt = datetime(bi['birth_year'], bi['birth_month'], bi['birth_day'], bi['birth_hour'], bi.get('birth_minute', 0))
     
-    res = oracle.analyze(
-        selected_case['bazi'][:4], 
-        selected_case.get('day_master'), 
-        luck_pillar=user_luck, 
-        annual_pillar=user_year, 
-        t=t_vec, 
-        injections=inj_list,
-        birth_date=birth_dt,
-        dispersion_mode=disp_on
+    # [Phase 6.0] Caching: Wrap the heavy TrinityOracle.analyze call
+    res = run_heavy_oracle_analysis(
+        tuple(selected_case['bazi'][:4]),
+        selected_case.get('day_master'),
+        user_luck,
+        user_year,
+        t_vec,
+        tuple(inj_list) if inj_list else None,
+        birth_dt,
+        disp_on
     )
     resonance = res.get('resonance')
-    verdict = res.get('verdict', {})
-    
+    verdict_oracle = res.get('verdict', {})
+
     # [TRANSLATION LAYER]
     BILINGUAL_MAP = {
         # Resonance Modes
@@ -609,35 +646,35 @@ def render():
         "DAMPED": "阻尼态 (DAMPED)",
         "ANNIHILATION": "湮灭态 (ANNIHILATION)",
         "CHAOTIC": "混沌态 (CHAOTIC)",
-        
+
         # Verdict Labels
         "Extreme Strong": "极强/专旺 (Extreme Strong)",
         "Strong": "身强 (Strong)",
         "Balanced": "中和 (Balanced)",
         "Weak": "身弱 (Weak)",
         "Extreme Weak": "极弱/从格 (Extreme Weak)",
-        
+
         # Risk Flags
         "HIGH_STRESS": "极高应力 (HIGH STRESS)",
         "COMPROMISED": "信号受损 (COMPROMISED)",
         "STABLE": "稳定 (STABLE)",
         "OPTIMAL": "最佳 (OPTIMAL)",
-        
+
         # General Status
         "CRITICAL": "危急 (CRITICAL)",
         "LOW": "低 (LOW)"
     }
-    
+
     mode_disp = BILINGUAL_MAP.get(resonance.mode, resonance.mode)
-    label_disp = BILINGUAL_MAP.get(verdict.get("label"), verdict.get("label", "?"))
-    
+    label_disp = BILINGUAL_MAP.get(verdict_oracle.get("label"), verdict_oracle.get("label", "?"))
+
     # 5. Executive HUD (Pure CSS styling via class)
     st.write("")
     h1, h2, h3, h4 = st.columns(4)
     with h1:
         m_color = "#40e0d0" if resonance.mode == "COHERENT" else "#ff9f43" if resonance.mode == "BEATING" else "#ff4b4b" if resonance.mode == "ANNIHILATION" else "#888"
         st.markdown(f"""<div class="hud-card"><div class="sh-label">谐振模式 (Mode)</div><div class="sh-val" style="color:{m_color}; font-weight:bold; font-size:18px;">{mode_disp}</div></div>""", unsafe_allow_html=True)
-    with h2: st.markdown(f'<div class="hud-card"><div class="sh-label">秩序参数 (Order - O)</div><div class="sh-val">{verdict.get("order_parameter",0):.4f}</div></div>', unsafe_allow_html=True)
+    with h2: st.markdown(f'<div class="hud-card"><div class="sh-label">秩序参数 (Order - O)</div><div class="sh-val">{verdict_oracle.get("order_parameter",0):.4f}</div></div>', unsafe_allow_html=True)
     with h3: st.markdown(f'<div class="hud-card"><div class="sh-label">相干度 (Coherence - η)</div><div class="sh-val" style="color:#40e0d0">{resonance.sync_state:.4f}</div></div>', unsafe_allow_html=True)
     with h4: st.markdown(f'<div class="hud-card"><div class="sh-label">判定结果 (Verdict)</div><div class="sh-val" style="color:#ffd700; font-size:18px;">{label_disp}</div></div>', unsafe_allow_html=True)
 
@@ -645,9 +682,9 @@ def render():
     st.write("")
     st.write("")
     h_sub1, h_sub2, h_sub3, h_sub4 = st.columns(4)
-    with h_sub1: 
+    with h_sub1:
         st.markdown(f'<div class="hud-card"><div class="sh-label">碎片指数 (Fragmentation Index - F)</div><div class="sh-val" style="color:{"#ff4b4b" if resonance.fragmentation_index > 0.5 else "#888"}">{resonance.fragmentation_index:.2f}</div><div style="font-size:9px; color:#555;">Symmetry Breaking Index / 结构对称性破缺</div></div>', unsafe_allow_html=True)
-    with h_sub2: 
+    with h_sub2:
         f_color = "#f0f" if resonance.flow_efficiency > 1.8 else "#40e0d0"
         st.markdown(f'<div class="hud-card"><div class="sh-label">能效比 (Flow Efficiency - Φ)</div><div class="sh-val" style="color:{f_color}; text-shadow: {"0 0 10px #f0f" if resonance.flow_efficiency > 1.8 else "none"}">{resonance.flow_efficiency:.2f}</div><div style="font-size:9px; color:#555;">Superfluid Conductivity / 超流体传导力</div></div>', unsafe_allow_html=True)
     with h_sub3: st.markdown(f'<div class="hud-card"><div class="sh-label">包络频率 (Envelope Freq - ω)</div><div class="sh-val">{resonance.envelop_frequency:.4f}</div><div style="font-size:9px; color:#555;">Interference Envelope / 干涉包络频率</div></div>', unsafe_allow_html=True)
@@ -655,7 +692,7 @@ def render():
 
     # 6. Secondary Analysis Layer (Gauges & Insights Above Tabs)
     st.write("")
-    
+
     # Row 1: Real-time Gauages
     ga1, ga2 = st.columns(2)
     with ga1:
@@ -664,7 +701,7 @@ def render():
     with ga2:
         st.markdown("#### ⚙️ 相干性监控 (Coherence Monitoring)")
         CoherenceGauge.render(resonance.sync_state, resonance.description, 5.0)
-    
+
     # Row 2: Insights & Remedies
     ga3, ga4 = st.columns(2)
     with ga3:
@@ -676,10 +713,10 @@ def render():
             rem = res.get('remedy')
             p_char = rem.get('best_particle', 'None')
             p_desc = BaziParticleNexus.REMEDY_DESC.get(p_char, p_char)
-            
+
             st.success(f"**建议粒子 (Optimal Particle)**: {p_desc}")
             st.caption(f"📈 预期提升 (Coherence Gain): +{(rem.get('improvement', 0)*100):.1f}%")
-            if st.button("一键执行量子注入 (Execute Injection)", use_container_width=True): 
+            if st.button("一键执行量子注入 (Execute Injection)", use_container_width=True):
                 st.session_state['inj_active'] = True
                 st.rerun()
 
@@ -688,616 +725,374 @@ def render():
     pass
 
     # --- MASTER-DETAIL ARCHITECTURE SPLIT ---
-    
+
     # [MASTER VIEW]
     # Sections 0-6 (Chart, HUD, Gauges, Insights) are already rendered above.
-    
+
     st.divider()
-    
+
     # ========================================================
     # 🏛️ GRAND UNIFIED ARBITRATION (PERMANENT GLOBAL FEATURE)
     # ========================================================
     st.markdown("### 🏛️ 大一统仲裁 (Grand Unified Arbitration)")
     st.caption("V11.0.0 | 全物理层综合仲裁与王家卫式全息真言")
-    
-    # Dynamic Import of Unified Arbitrator
-    try:
-        from core.trinity.core.unified_arbitrator_master import unified_arbitrator
-        arbitrator_ready = True
-    except ImportError as e:
-        arbitrator_ready = False
-        st.error(f"⚠️ Unified Arbitrator Module not available: {e}")
-    
-    if arbitrator_ready and selected_case:
-        # Build context from current state
-        months_switch = st.session_state.get('months_since_switch', st.session_state.get('luck_month_offset', 6.0))
-        
-        # Get geo info from GEO_CITY_MAP
-        current_city = st.session_state.get('global_geo_city', selected_city)
-        current_geo_factor, current_geo_element = GEO_CITY_MAP.get(current_city, (1.0, "Neutral"))
-        
-        arb_ctx = {
-            'luck_pillar': user_luck,
-            'annual_pillar': user_year,
-            'months_since_switch': months_switch,
-            'data': {
-                'city': current_city,
-                'geo_factor': current_geo_factor,
-                'geo_element': current_geo_element
-            }
-        }
-        
-        # Get Bazi from selected case
-        bazi_list = selected_case.get('bazi', [])
-        birth_info = selected_case.get('birth_info', {})
-        # 若无 birth_info，尝试从案例字段回填
-        if bazi_list and not birth_info:
-            for k in ['year', 'month', 'day', 'hour']:
-                if k in selected_case:
-                    birth_info[f"birth_{k}"] = selected_case[k]
-        birth_info['gender'] = selected_case.get('gender', '男')
-        
-        @st.cache_data(ttl=60)
-        def run_arbitration(bazi_tuple, luck, annual, city, geo_factor, geo_element, months, gender, binfo, scenario):
-            ctx = {
-                'luck_pillar': luck,
-                'annual_pillar': annual,
-                'months_since_switch': months,
-                'scenario': scenario,
-                'data': {
-                    'city': city,
-                    'geo_factor': geo_factor,
-                    'geo_element': geo_element
-                }
-            }
-            return unified_arbitrator.arbitrate_bazi(list(bazi_tuple), binfo, ctx)
-        
-        unified_state = run_arbitration(
-            tuple(bazi_list),
-            user_luck,
-            user_year,
-            current_city,
-            current_geo_factor,
-            current_geo_element,
-            st.session_state.get('months_since_switch', 6.0),
-            birth_info['gender'],
-            birth_info,
-            selected_scenario.upper()
-        )
-        
-        if 'error' not in unified_state:
-            verdict = unified_state.get("verdict", {})
-            rules_tbl = unified_state.get("rules", [])
 
-            # Verdict summary (Card style)
-            st.markdown("#### ⚡ 仲裁断言 (Arbitration Verdict)")
-            v_cols = st.columns(4)
-            v_data = [
-                ("结构", verdict.get("structure", "N/A")),
-                ("财富", verdict.get("wealth", "N/A")),
-                ("情感", verdict.get("relationship", "N/A")),
-                ("行动", verdict.get("action", "N/A")),
-            ]
-            for col, (title, content) in zip(v_cols, v_data):
-                with col:
-                    st.markdown(f"""
-                    <div style="border-radius:12px; padding:10px 12px; background:linear-gradient(135deg, #1d1b3a 0%, #26214d 100%); color:#fff; border:1px solid rgba(255,255,255,0.08);">
-                        <div style="font-size:13px; color:#40e0d0;">{title}</div>
-                        <div style="font-size:16px; font-weight:600; margin-top:4px;">{content}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+    # Prepare arguments for run_arbitration_cached
+    birth_info = selected_case.get('birth_info', {})
+    gender = selected_case.get('gender', '男')
+    current_city = selected_city # From global controls
+    current_geo_factor = geo_factor # From global controls
+    current_geo_element = geo_element # From global controls
+    selected_scenario = "GENERAL" # Default scenario, can be made dynamic
 
-            # Plain-language summary
-            st.markdown("#### 💬 白话真言 (Plain Guidance)")
-            summary_lines = []
-            ent = unified_state.get("physics", {}).get("entropy", 0)
-            if ent <= 0.6:
-                summary_lines.append("整体气场平稳，属于低熵局面，适合推进重要计划。")
-            elif ent <= 1.2:
-                summary_lines.append("气场中性，有起伏但可控，稳扎稳打为宜。")
-            else:
-                summary_lines.append("熵值偏高，外部干扰大，建议先控节奏、降噪后再决策。")
+    unified_state = run_arbitration_cached(
+        tuple(b_list),
+        birth_info, # Assuming birth_info is hashable or small enough
+        user_luck,
+        user_year,
+        st.session_state.get('months_since_switch', 6.0), # Assuming this is set elsewhere
+        current_city,
+        current_geo_factor,
+        current_geo_element,
+        selected_scenario.upper(),
+        gender
+    )
 
-            wealth_phy = unified_state.get("physics", {}).get("wealth", {})
-            re_num = wealth_phy.get("Reynolds", 0)
-            nu_val = wealth_phy.get("Viscosity", 0)
-            if re_num < 100:
-                summary_lines.append("财富流动较慢，以储备、增厚现金流为主，暂缓冒险扩张。")
-            elif re_num > 4000:
-                summary_lines.append("财富流动湍急，机会伴随波动，需做好风控和止盈。")
-            else:
-                summary_lines.append("财富流动平顺，可稳步投入，注意分散风险。")
-            if nu_val > 1.5:
-                summary_lines.append("比劫摩擦大，注意伙伴/竞争带来的阻力，宜引入制衡或规则。")
+    if 'error' not in unified_state:
+        verdict = unified_state.get("verdict", {})
+        rules_tbl = unified_state.get("rules", [])
 
-            rel_phy = unified_state.get("physics", {}).get("relationship", {})
-            r_state = rel_phy.get("State", "UNKNOWN")
-            if r_state in ["ENTANGLED", "BOUND"]:
-                summary_lines.append("感情引力稳固，可利用共振期推进关系或合作。")
-            elif r_state == "PERTURBED":
-                summary_lines.append("感情/合作受扰动，尽量避免硬碰，先沟通缓冲。")
-            elif r_state == "UNBOUND":
-                summary_lines.append("情感引力弱，少做高期待决策，先提升连接感。")
-
-            grav_m = unified_state.get("physics", {}).get("gravity", {}).get("Month", 0)
-            summary_lines.append(f"月令权重≈{grav_m:.2f}，当下以月令主导，顺势而为。")
-
-            st.markdown("\n".join([f"- {line}" for line in summary_lines]))
-
-            # [RE-ENABLED] 100年命盘风险雷达
-            life_path = unified_state.get("physics", {}).get("life_path", {}) or {}
-            risk_nodes = life_path.get("risk_nodes", [])
-            if risk_nodes: 
-                st.markdown("#### 🛰️ 100年命盘风险雷达 (Life-path Events)")
-                import pandas as pd
-                import plotly.graph_objects as go
-                rows = []
-                for r in risk_nodes:
-                    ts = r.get("timestamp", "")
-                    year = int(ts[:4]) if ts else None
-                    metrics = r.get("metrics", {})
-                    topic = r.get("topic", "structure")
-                    if topic not in ["wealth", "relationship"]:
-                        continue  # 只看财富/情感
-                    score = r.get("risk_score", 0)
-                    
-                    # 使用不同阈值：财富评分尺度较大，情感评分范围1.5-2.5
-                    # 财富: >= 1.6 为高风险
-                    # 情感: >= 1.5 为高风险（新评分系统范围1.5-2.5+）
-                    threshold = 1.6 if topic == "wealth" else 1.5
-                    if score < threshold:
-                        continue
-                    
-                    entropy_v = metrics.get("entropy", 0)
-                    sai_v = metrics.get("sai", 0)
-                    ic_v = metrics.get("ic", 0)
-                    category = "综合波动"
-                    source = r.get("reason", "综合波动")
-                    destiny_advice = ""
-                    
-                    if topic == "wealth":
-                        w = metrics.get("wealth", {})
-                        state_w = w.get("State", "UNKNOWN")
-                        re_v = w.get("Reynolds", 0)
-                        visc_v = w.get("Viscosity", 0)
-                        if state_w == "TURBULENT":
-                            category = "财富湍流"
-                            destiny_advice = "财富流湍急，机会伴随风险。建议：加强风控、设置止盈止损、避免重仓。"
-                        elif visc_v > 1.5:
-                            category = "财富粘滞"
-                            destiny_advice = "财富流动受阻，比劫摩擦大。建议：疏通渠道、控制支出、引入制衡规则。"
-                        else:
-                            category = "财富波动"
-                            destiny_advice = "财富有波动但可控。建议：稳节奏、分散风险、保持现金流。"
-                        source = f"财富状态={state_w} Re={re_v:.0f}"
-                    elif topic == "relationship":
-                        rel = metrics.get("relationship", {})
-                        state_r = rel.get("State", "UNKNOWN")
-                        bind_e = rel.get("Binding_Energy", 0)
-                        if state_r == "UNBOUND":
-                            category = "关系解离"
-                            destiny_advice = "情感引力弱，关系易脱轨。建议：降低期待、优先沟通修复、避免硬碰。"
-                        elif state_r == "PERTURBED":
-                            category = "关系扰动"
-                            destiny_advice = "情感受扰动，易生摩擦。建议：缓冲冲突、保持对话、给彼此空间。"
-                        else:
-                            category = "关系波动"
-                            destiny_advice = "情感有波动但稳定。建议：保持稳定输出、倾听理解、共度共振期。"
-                        source = f"关系状态={state_r} E={bind_e:.1f}"
-                    
-                    rows.append({
-                        "年份": year,
-                        "主题": "💰财富" if topic == "wealth" else "💕情感",
-                        "topic_raw": topic,
-                        "原因": source,
-                        "熵": entropy_v,
-                        "SAI": sai_v,
-                        "IC": ic_v,
-                        "风险分": score,
-                        "类型": category,
-                        "来源": source,
-                        "等级": "高",
-                        "命运建议": destiny_advice
-                    })
-                
-                if not rows:
-                    st.info("暂无财富/情感风险节点")
-                    df_risk = pd.DataFrame()
-                else:
-                    df_risk = pd.DataFrame(rows).sort_values("年份")
-                    
-                    # 按年份和主题去重，保留每年每主题最高风险分
-                    df_risk = df_risk.loc[df_risk.groupby(["年份", "主题"])["风险分"].idxmax()].reset_index(drop=True)
-
-                if not df_risk.empty:
-                    # 分离财富和情感数据
-                    df_wealth = df_risk[df_risk["topic_raw"] == "wealth"].copy()
-                    df_emotion = df_risk[df_risk["topic_raw"] == "relationship"].copy()
-                    
-                    # 使用 Plotly Graph Objects 创建双折线图
-                    fig_risk = go.Figure()
-                    
-                    # 财富折线（蓝色系）
-                    if not df_wealth.empty:
-                        fig_risk.add_trace(go.Scatter(
-                            x=df_wealth["年份"],
-                            y=df_wealth["风险分"],
-                            mode='lines+markers',
-                            name='💰 财富风险',
-                            line=dict(color='#40e0d0', width=3),
-                            marker=dict(size=12, symbol='diamond', line=dict(width=2, color='#fff')),
-                            hovertemplate=(
-                                "<b>💰 财富风险预警</b><br>"
-                                "年份: %{x}<br>"
-                                "风险分: %{y:.2f}<br>"
-                                "类型: %{customdata[0]}<br>"
-                                "来源: %{customdata[1]}<br>"
-                                "<br><b>🎯 命运建议</b><br>"
-                                "%{customdata[2]}<extra></extra>"
-                            ),
-                            customdata=list(zip(df_wealth["类型"], df_wealth["来源"], df_wealth["命运建议"]))
-                        ))
-                    
-                    # 情感折线（粉色系）
-                    if not df_emotion.empty:
-                        fig_risk.add_trace(go.Scatter(
-                            x=df_emotion["年份"],
-                            y=df_emotion["风险分"],
-                            mode='lines+markers',
-                            name='💕 情感风险',
-                            line=dict(color='#ff6b9d', width=3),
-                            marker=dict(size=12, symbol='star', line=dict(width=2, color='#fff')),
-                            hovertemplate=(
-                                "<b>💕 情感风险预警</b><br>"
-                                "年份: %{x}<br>"
-                                "风险分: %{y:.2f}<br>"
-                                "类型: %{customdata[0]}<br>"
-                                "来源: %{customdata[1]}<br>"
-                                "<br><b>🎯 命运建议</b><br>"
-                                "%{customdata[2]}<extra></extra>"
-                            ),
-                            customdata=list(zip(df_emotion["类型"], df_emotion["来源"], df_emotion["命运建议"]))
-                        ))
-                    
-                    fig_risk.update_layout(
-                        height=320,
-                        margin=dict(l=10, r=10, t=30, b=20),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        xaxis=dict(
-                            title="年份",
-                            gridcolor='rgba(255,255,255,0.1)',
-                            showline=True,
-                            linecolor='rgba(255,255,255,0.3)'
-                        ),
-                        yaxis=dict(
-                            title="风险指数",
-                            gridcolor='rgba(255,255,255,0.1)',
-                            showline=True,
-                            linecolor='rgba(255,255,255,0.3)'
-                        ),
-                        legend=dict(
-                            orientation="h",
-                            yanchor="bottom",
-                            y=1.02,
-                            xanchor="center",
-                            x=0.5
-                        ),
-                        hovermode='closest'
-                    )
-                    
-                    st.plotly_chart(fig_risk, use_container_width=True, key="risk_chart_local")
-
-                    # 显示精简表格（移除内部字段）
-                    df_display = df_risk[["年份", "主题", "类型", "风险分", "命运建议"]].copy()
-                    st.dataframe(df_display, hide_index=True, use_container_width=True)
-
-                # 简短命运建议（仅在有数据时计算）
-                advice = []
-                if not df_risk.empty:
-                    try:
-                        target_year = int(datetime.now().year)
-                    except Exception:
-                        target_year = datetime.now().year
-                    upcoming = df_risk[df_risk["年份"] >= target_year]
-                    if upcoming.shape[0] == 0:
-                        upcoming_year = df_risk.iloc[-1]["年份"]
-                    else:
-                        upcoming_year = upcoming.iloc[0]["年份"]
-                    advice.append(f"近期预警年份：{upcoming_year}，提前做好流年/大运调节。")
-                    ent = unified_state.get("physics", {}).get("entropy", 0)
-                    if ent > 1.2:
-                        advice.append("系统熵偏高，宜控节奏、降噪，减少重大决策频率。")
-                    wealth = unified_state.get("physics", {}).get("wealth", {})
-                    if wealth.get("Reynolds", 0) < 100:
-                        advice.append("财富流体处于低流态，建议稳态蓄水，谨慎扩张。")
-                    rel = unified_state.get("physics", {}).get("relationship", {})
-                    if rel.get("State") in ["PERTURBED", "UNBOUND"]:
-                        advice.append("情感引力不稳，避免冲突时段，优先沟通与缓冲。")
-
-                # 分类建议
-                if not df_risk.empty:
-                    cat_top = df_risk.iloc[0]["类型"]
-                    cat_advice = {
-                        "熵暴": "熵暴期：尽量减少重大决策与资金大幅流动，先稳场再行动。",
-                        "结构应力": "结构应力期：关注健康/结构性风险，减压、分摊责任，避免过载。",
-                        "相位抖动": "相位抖动期：沟通与协调为先，避免硬碰，坚持小步快跑。",
-                        "综合波动": "综合波动期：常规波动，保持韧性，注意节奏与缓冲。"
-                    }
-                    advice.append(cat_advice.get(cat_top, "保持稳态，应对常规波动。"))
-
-                if advice:
-                    st.markdown("#### 🎯 命运建议 (Actionable Guidance)")
-                    st.markdown("\n".join([f"- {a}" for a in advice]))
-
-            # Triggered rules table
-            if rules_tbl:
-                st.markdown("#### 📜 触发规则 (Triggered Rules)")
-                import pandas as pd
-                df_rules = pd.DataFrame(rules_tbl)
-                st.dataframe(df_rules, hide_index=True, use_container_width=True)
-
-            # [NEW] Logic Trace Window (Tiered Arbitration)
-            tiered_rules = unified_state.get("tiered_rules", {})
-            if tiered_rules:
-                with st.expander("🔬 逻辑溯源 (Architectural Logic Trace)", expanded=False):
-                    st.info("展示分层调度总线 (Layered Dispatch Bus) 的仲裁结果：从环境场到时间脉冲的层级推导。")
-                    for layer_name, rules in tiered_rules.items():
-                        if rules:
-                            st.markdown(f"**【{layer_name}】**")
-                            for r in rules:
-                                # Rule Header: ID and Priority
-                                st.write(f"- `{r.get('id')}` (优先级: {r.get('priority')})")
-                                
-                                # Pedigree Info (Origin Trace)
-                                origin = r.get("origin_trace", [])
-                                f_type = r.get("fusion_type", "LEGACY")
-                                if origin:
-                                    pedigree_str = " ← ".join(origin)
-                                    st.caption(f"  🧬 **血统溯源 (Pedigree):** `{pedigree_str}` | 类型: `{f_type}`")
-                                
-                                # Conflict Suppression Info
-                                if r.get('conflicts'):
-                                    st.caption(f"  * 冲突策略: 抑制 {', '.join(r.get('conflicts'))}")
-
-
-            # [REMOVED] 白话解释器 - 与上方白话真言重复，已删除
-            
-            # Generate Holographic Report
-            holographic_report = unified_arbitrator.generate_holographic_report(unified_state)
-            with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=True):
-                st.markdown(holographic_report)
-            
-            # Physics Telemetry Dashboard
-            phy = unified_state.get('physics', {})
-            
-            arb_c1, arb_c2, arb_c3, arb_c4 = st.columns(4)
-            with arb_c1:
-                entropy_val = phy.get('entropy', 0)
-                entropy_color = "#ff4b4b" if entropy_val > 1.5 else "#40e0d0"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">系统熵 (Entropy)</div><div class="sh-val" style="color:{entropy_color}">{entropy_val:.3f}</div></div>""", unsafe_allow_html=True)
-            with arb_c2:
-                grav = phy.get('gravity', {})
-                month_g = grav.get('Month', 0)
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">月令引力 (Gravity)</div><div class="sh-val">{month_g:.2f}</div></div>""", unsafe_allow_html=True)
-            with arb_c3:
-                res_state = phy.get('resonance', {})
-                gain = res_state.get('gain', 1.0)
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">通根增益 (Rooting Gain)</div><div class="sh-val" style="color:#ffd700">{gain}x</div></div>""", unsafe_allow_html=True)
-            with arb_c4:
-                inertia = phy.get('inertia', {})
-                visc = inertia.get('Viscosity', 0.5)
-                visc_color = "#40e0d0" if visc < 0.5 else "#ff9f43"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">粘滞系数 (Viscosity)</div><div class="sh-val" style="color:{visc_color}">{visc:.2f}</div></div>""", unsafe_allow_html=True)
-            
-            # NEW: Wealth & Relationship Metrics Row (with bilingual state names)
-            wealth_state_names = {
-                "STAGNANT": "停滞 (Stagnant)",
-                "LAMINAR": "层流 (Laminar)",
-                "TRANSITION": "过渡 (Transition)",
-                "TURBULENT": "湍流 (Turbulent)"
-            }
-            rel_state_names = {
-                "ENTANGLED": "纠缠稳定 (Entangled)",
-                "BOUND": "绑定稳固 (Bound)",
-                "PERTURBED": "摄动波动 (Perturbed)",
-                "UNBOUND": "解离风险 (Unbound)"
-            }
-            
-            arb_w1, arb_w2 = st.columns(2)
-            with arb_w1:
-                wealth = phy.get('wealth', {})
-                re_num = wealth.get('Reynolds', 0)
-                w_state = wealth.get('State', 'LAMINAR')
-                w_state_display = wealth_state_names.get(w_state, w_state)
-                w_color = "#ff4b4b" if w_state == "TURBULENT" else "#ff9f43" if w_state == "TRANSITION" else "#40e0d0" if w_state == "LAMINAR" else "#888"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌊 财富流体 (Reynolds)</div><div class="sh-val" style="color:{w_color}">{re_num:.0f} - {w_state_display}</div></div>""", unsafe_allow_html=True)
-            with arb_w2:
-                rel = phy.get('relationship', {})
-                bind_e = rel.get('Binding_Energy', 0)
-                r_state = rel.get('State', 'UNBOUND')
-                r_state_display = rel_state_names.get(r_state, r_state)
-                r_color = "#40e0d0" if r_state == "ENTANGLED" else "#9370db" if r_state == "BOUND" else "#ff9f43" if r_state == "PERTURBED" else "#ff4b4b"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌌 情感引力 (Binding)</div><div class="sh-val" style="color:{r_color}">{bind_e:.1f} - {r_state_display}</div></div>""", unsafe_allow_html=True)
-            
-            st.divider()
-            
-            # === 专家级物理论断 (Expert Assertions from MOD_15) ===
-            st.markdown("#### 💡 专家级物理论断 (Expert Assertions)")
-
-            # [MOD_15 Integration] Retrieve Vibration Metrics
-            vib = unified_state.get('physics', {}).get('vibration', {})
-            opt_mix = vib.get('optimal_deity_mix', {})
-            entropy_val = vib.get('entropy', 0)
-            
-            # --- Definitions ---
-            elem_cn = {'Wood': '木', 'Fire': '火', 'Earth': '土', 'Metal': '金', 'Water': '水'}
-            dm_char = selected_case.get('day_master', '甲') 
-            # Note: b_list is available in scope from earlier definition
-            
-            # --- Logic Core ---
-            # 1. Best Element (Useful God)
-            best_elem_en = max(opt_mix, key=opt_mix.get) if opt_mix else "Unknown"
-            best_elem_cn = elem_cn.get(best_elem_en, best_elem_en)
-            useful_god_tg = get_ten_god_label(best_elem_en) if 'get_ten_god_label' in locals() else best_elem_en # Fallback or define helper
-            
-            # Helper for Ten God Label (Local Redefinition for safety if not in scope)
-            # Actually we can rely on Global `get_ten_god` helper defined at module level
-            def local_get_tg(elem):
-                # Naive find representative stem
-                # This is a bit tricky without full nexus. Let's use simplified lookup based on DM Element
-                # OR use the module level get_ten_god if we can map Element -> Stem
-                # Let's map Element to YIN stem for display (safe default)
-                e_map = {'Wood':'乙', 'Fire':'丁', 'Earth':'己', 'Metal':'辛', 'Water':'癸'}
-                return get_ten_god(dm_char, e_map.get(elem, ''))
-
-            useful_god_tg = local_get_tg(best_elem_en)
-
-            # 2. Favorable (Xi) - Source of Useful
-            gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
-            xi_elem_en = gen_map.get(best_elem_en, "Unknown")
-            xi_elem_cn = elem_cn.get(xi_elem_en, xi_elem_en)
-            xi_god_tg = local_get_tg(xi_elem_en)
-
-            # 3. Unfavorable (Ji) - Opposes Useful
-            control_map = {"Wood": "Metal", "Fire": "Water", "Earth": "Wood", "Metal": "Fire", "Water": "Earth"}
-            ji_elem_en = control_map.get(best_elem_en, "Unknown")
-            ji_elem_cn = elem_cn.get(ji_elem_en, ji_elem_en)
-            ji_god_tg = local_get_tg(ji_elem_en)
-
-            # 4. Harmonizer (Tiao Hou) - Geo Context
-            # Use Month Branch for Seasonality
-            month_branch = b_list[1][1] if len(b_list)>1 else "子"
-            season_map = {'亥':'Water','子':'Water','丑':'Water',
-                          '寅':'Wood','卯':'Wood','辰':'Wood',
-                          '巳':'Fire','午':'Fire','未':'Fire',
-                          '申':'Metal','酉':'Metal','戌':'Metal'}
-            season_elem = season_map.get(month_branch, 'Water')
-            tiao_hou_en = "Fire" if season_elem in ['Water', 'Metal'] else "Water"
-            tiao_hou_cn = elem_cn.get(tiao_hou_en)
-            
-            # --- Display Cards ---
-            ys_c1, ys_c2, ys_c3, ys_c4 = st.columns(4)
-            
-            def render_god_card(col, title, elem_cn, tg, desc, color):
-                col.markdown(f"""
-                <div style="border-radius:12px; padding:15px; background:rgba(255,255,255,0.05); border:1px solid {color}; text-align:center;">
-                    <div style="color:{color}; font-size:12px; margin-bottom:5px;">{title}</div>
-                    <div style="color:#fff; font-size:22px; font-weight:bold;">{elem_cn} <span style="font-size:14px; color:#aaa;">({tg})</span></div>
-                    <div style="color:#888; font-size:10px; margin-top:5px;">{desc}</div>
+        # Verdict summary (Card style)
+        st.markdown("#### ⚡ 仲裁断言 (Arbitration Verdict)")
+        v_cols = st.columns(4)
+        v_data = [
+            ("结构", verdict.get("structure", "N/A")),
+            ("财富", verdict.get("wealth", "N/A")),
+            ("情感", verdict.get("relationship", "N/A")),
+            ("行动", verdict.get("action", "N/A")),
+        ]
+        for col, (title, content) in zip(v_cols, v_data):
+            with col:
+                st.markdown(f"""
+                <div style="border-radius:12px; padding:10px 12px; background:linear-gradient(135deg, #1d1b3a 0%, #26214d 100%); color:#fff; border:1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size:13px; color:#40e0d0;">{title}</div>
+                    <div style="font-size:16px; font-weight:600; margin-top:4px;">{content}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                
-            render_god_card(ys_c1, "用神 (Useful God)", best_elem_cn, useful_god_tg, "核心通关", "#40e0d0")
-            render_god_card(ys_c2, "喜神 (Favorable)", xi_elem_cn, xi_god_tg, "原神生助", "#9370db")
-            render_god_card(ys_c3, "忌神 (Unfavorable)", ji_elem_cn, ji_god_tg, "阻抗干扰", "#ff4b4b")
-            render_god_card(ys_c4, "调候 (Harmonizer)", tiao_hou_cn, f"{month_branch}月", "环境修正", "#ffd700")
 
-            # --- Logic Generation ---
-            logic_chain = ""
-            conflict_note = ""
-            if best_elem_en == "Fire" and ji_elem_en == "Water":
-                logic_chain = f"**为何用{best_elem_cn}？** 全局金旺木折，需{best_elem_cn}（食伤）制杀护身。"
-                if tiao_hou_en == "Water":
-                     conflict_note = f"""
-                     - **⚠️ 关键矛盾 (Paradox)**：调候需{tiao_hou_cn}（润局），但结构忌{ji_elem_cn}（灭火）。
-                     - **最终裁决**：**生存 > 舒适**。{ji_elem_cn}虽为调候，但在本局中为**绝命忌神**，不可见。
-                     """
-            elif best_elem_en == "Water": logic_chain = f"**为何用{best_elem_cn}？** 火炎土燥需润局，或金多水浊需泄秀。"
-            elif best_elem_en == "Wood": logic_chain = f"**为何用{best_elem_cn}？** 土重木折需疏通，或水多木漂需扎根。"
-            elif best_elem_en == "Metal": logic_chain = f"**为何用{best_elem_cn}？** 木旺需修剪，或水多需发源。"
-            elif best_elem_en == "Earth": logic_chain = f"**为何用{best_elem_cn}？** 水旺需止流，或火多需晦光。"
-            
-            th_algo = "未知"
-            if season_elem in ['Fire', 'Wood', 'Earth']:
-                th_algo = f"生于{month_branch}月 (燥)，需水润局。"
-            elif season_elem in ['Water', 'Metal']:
-                th_algo = f"生于{month_branch}月 (寒)，需火暖局。"
-
-            mix_str = ", ".join([f"{elem_cn[k]} {v*100:.0f}%" for k,v in opt_mix.items()])
-            
-            # --- Final Status Info ---
-            st.info(f"""
-            **【用神推演】**：{logic_chain}
-            
-            **【喜忌辩证】**：
-            - **调候算法**：{th_algo} 判定调候为 **{tiao_hou_cn}**。
-            {conflict_note}
-            
-            **【最佳能配】**：系统推荐复合注入方案：**[{mix_str}]**。
-            """)
-            
-            # --- Legacy Mapping for Downstream Compatibility ---
-            yong_shen_elem = best_elem_en
-            yong_cn = best_elem_cn
-            xi_shen_elem = xi_elem_en
-            xi_cn = xi_elem_cn
-            ji_shen_elem = ji_elem_en
-            ji_cn = ji_elem_cn
-            
-            st.divider()
-            
-            # === 地理位置建议 (Geographic Recommendations) ===
-            st.markdown("#### 🌍 地理位置建议 (Geographic Recommendations)")
-            st.caption("基于用神五行匹配的城市推荐 | Cities recommended based on favorable element")
-            
-            # Find cities matching yong_shen element
-            recommended_cities = []
-            avoid_cities = []
-            
-            for city_name, (gf, elem_affinity) in GEO_CITY_MAP.items():
-                # Check if city element matches yong_shen
-                if yong_shen_elem in elem_affinity or yong_cn in elem_affinity:
-                    recommended_cities.append((city_name, gf, elem_affinity))
-                elif xi_shen_elem in elem_affinity or xi_cn in elem_affinity:
-                    recommended_cities.append((city_name, gf, elem_affinity))
-                # Check if city matches ji_shen
-                if ji_shen_elem in elem_affinity or ji_cn in elem_affinity:
-                    avoid_cities.append((city_name, gf, elem_affinity))
-            
-            # Sort by geo_factor descending
-            recommended_cities.sort(key=lambda x: x[1], reverse=True)
-            avoid_cities.sort(key=lambda x: x[1], reverse=True)
-            
-            geo_c1, geo_c2 = st.columns(2)
-            with geo_c1:
-                st.markdown("##### ✅ 推荐城市 (Recommended)")
-                if recommended_cities:
-                    for city, gf, elem in recommended_cities[:8]:
-                        gf_color = "#40e0d0" if gf >= 1.1 else "#9370db" if gf >= 1.0 else "#888"
-                        st.markdown(f"- **{city}** <span style='color:{gf_color}'>(ε={gf:.2f}, {elem})</span>", unsafe_allow_html=True)
-                else:
-                    st.caption("暂无特别推荐")
-            
-            with geo_c2:
-                st.markdown("##### ⚠️ 谨慎城市 (Use Caution)")
-                if avoid_cities:
-                    for city, gf, elem in avoid_cities[:6]:
-                        st.markdown(f"- {city} *(ε={gf:.2f}, {elem})*")
-                else:
-                    st.caption("暂无特别忌讳")
-            
-            st.caption("💡 **提示**: 地域因子 (ε) > 1.0 表示场强增益，< 1.0 表示场强衰减。选择用神五行匹配的城市可增强有利能量。")
-            
-            st.divider()
-            
-            # Detailed Physics JSON (Collapsible)
-            with st.expander("🎛️ 详细物理读数 (Detailed Physics Matrix)", expanded=False):
-                st.json(unified_state)
+        # Plain-language summary
+        st.markdown("#### 💬 白话真言 (Plain Guidance)")
+        summary_lines = []
+        ent = unified_state.get("physics", {}).get("entropy", 0)
+        if ent <= 0.6:
+            summary_lines.append("整体气场平稳，属于低熵局面，适合推进重要计划。")
+        elif ent <= 1.2:
+            summary_lines.append("气场中性，有起伏但可控，稳扎稳打为宜。")
         else:
-            st.warning(f"仲裁失败: {unified_state.get('error')}")
+            summary_lines.append("熵值偏高，外部干扰大，建议先控节奏、降噪后再决策。")
+
+        wealth_phy = unified_state.get("physics", {}).get("wealth", {})
+        re_num = wealth_phy.get("Reynolds", 0)
+        nu_val = wealth_phy.get("Viscosity", 0)
+        if re_num < 100:
+            summary_lines.append("财富流动较慢，以储备、增厚现金流为主，暂缓冒险扩张。")
+        elif re_num > 4000:
+            summary_lines.append("财富流动湍急，机会伴随波动，需做好风控和止盈。")
+        else:
+            summary_lines.append("财富流动平顺，可稳步投入，注意分散风险。")
+        if nu_val > 1.5:
+            summary_lines.append("比劫摩擦大，注意伙伴/竞争带来的阻力，宜引入制衡或规则。")
+
+        rel_phy = unified_state.get("physics", {}).get("relationship", {})
+        r_state = rel_phy.get("State", "UNKNOWN")
+        if r_state in ["ENTANGLED", "BOUND"]:
+            summary_lines.append("感情引力稳固，可利用共振期推进关系或合作。")
+        elif r_state == "PERTURBED":
+            summary_lines.append("感情/合作受扰动，尽量避免硬碰，先沟通缓冲。")
+        elif r_state == "UNBOUND":
+            summary_lines.append("情感引力弱，少做高期待决策，先提升连接感。")
+
+        grav_m = unified_state.get("physics", {}).get("gravity", {}).get("Month", 0)
+        summary_lines.append(f"月令权重≈{grav_m:.2f}，当下以月令主导，顺势而为。")
+
+        st.markdown("\n".join([f"- {line}" for line in summary_lines]))
+
+        # [Phase 6.0] 100-year Life-path Radar Removed for Performance
+
+        # Triggered rules table
+        if rules_tbl:
+            st.markdown("#### 📜 触发规则 (Triggered Rules)")
+            import pandas as pd
+            df_rules = pd.DataFrame(rules_tbl)
+            st.dataframe(df_rules, hide_index=True, use_container_width=True)
+
+        # [NEW] Logic Trace Window (Tiered Arbitration)
+        tiered_rules = unified_state.get("tiered_rules", {})
+
+        # Layer Name Translation Map (Pure Chinese)
+        layer_map_cn = {
+            "ENVIRONMENT": "🌍 环境场层",
+            "FUNDAMENTAL": "⚛️ 基础物理层",
+            "STRUCTURAL": "🏗️ 结构力学层",
+            "FLOW": "🌊 流体动力层",
+            "TEMPORAL": "⏳ 时空演化层"
+        }
+
+        if tiered_rules:
+            with st.expander("🔬 架构逻辑溯源", expanded=False):
+                st.info("展示分层调度总线 (Layered Dispatch Bus) 的仲裁结果：从环境场到时间脉冲的层级推导。")
+                for layer_name, rules in tiered_rules.items():
+                    if rules:
+                        cn_layer = layer_map_cn.get(layer_name, layer_name)
+                        st.markdown(f"**【{cn_layer}】**")
+                        for r in rules:
+                            # Rule Header: ID and Priority
+                            st.write(f"- `{r.get('id')}` (优先级: {r.get('priority')})")
+
+                            # Pedigree Info (Origin Trace)
+                            origin = r.get("origin_trace", [])
+                            f_type = r.get("fusion_type", "LEGACY")
+                            if origin:
+                                pedigree_str = " ← ".join(origin)
+                                st.caption(f"  🧬 **血统溯源:** `{pedigree_str}` | 类型: `{f_type}`")
+
+                            # Conflict Suppression Info
+                            if r.get('conflicts'):
+                                st.caption(f"  * 冲突策略: 抑制 {', '.join(r.get('conflicts'))}")
+
+
+        # [REMOVED] 白话解释器 - 与上方白话真言重复，已删除
+
+        # Generate Holographic Report
+        holographic_report = unified_arbitrator.generate_holographic_report(unified_state)
+        with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=True):
+            st.markdown(holographic_report)
+
+        # Physics Telemetry Dashboard
+        phy = unified_state.get('physics', {})
+
+        arb_c1, arb_c2, arb_c3, arb_c4 = st.columns(4)
+        with arb_c1:
+            entropy_val = phy.get('entropy', 0)
+            entropy_color = "#ff4b4b" if entropy_val > 1.5 else "#40e0d0"
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">系统熵 (Entropy)</div><div class="sh-val" style="color:{entropy_color}">{entropy_val:.3f}</div></div>""", unsafe_allow_html=True)
+        with arb_c2:
+            grav = phy.get('gravity', {})
+            month_g = grav.get('Month', 0)
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">月令引力 (Gravity)</div><div class="sh-val">{month_g:.2f}</div></div>""", unsafe_allow_html=True)
+        with arb_c3:
+            res_state = phy.get('resonance', {})
+            gain = res_state.get('gain', 1.0)
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">通根增益 (Rooting Gain)</div><div class="sh-val" style="color:#ffd700">{gain}x</div></div>""", unsafe_allow_html=True)
+        with arb_c4:
+            inertia = phy.get('inertia', {})
+            visc = inertia.get('Viscosity', 0.5)
+            visc_color = "#40e0d0" if visc < 0.5 else "#ff9f43"
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">粘滞系数 (Viscosity)</div><div class="sh-val" style="color:{visc_color}">{visc:.2f}</div></div>""", unsafe_allow_html=True)
+
+        # NEW: Wealth & Relationship Metrics Row (with bilingual state names)
+        wealth_state_names = {
+            "STAGNANT": "停滞 (Stagnant)",
+            "LAMINAR": "层流 (Laminar)",
+            "TRANSITION": "过渡 (Transition)",
+            "TURBULENT": "湍流 (Turbulent)"
+        }
+        rel_state_names = {
+            "ENTANGLED": "纠缠稳定 (Entangled)",
+            "BOUND": "绑定稳固 (Bound)",
+            "PERTURBED": "摄动波动 (Perturbed)",
+            "UNBOUND": "解离风险 (Unbound)"
+        }
+
+        arb_w1, arb_w2 = st.columns(2)
+        with arb_w1:
+            wealth = phy.get('wealth', {})
+            re_num = wealth.get('Reynolds', 0)
+            w_state = wealth.get('State', 'LAMINAR')
+            w_state_display = wealth_state_names.get(w_state, w_state)
+            w_color = "#ff4b4b" if w_state == "TURBULENT" else "#ff9f43" if w_state == "TRANSITION" else "#40e0d0" if w_state == "LAMINAR" else "#888"
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">🌊 财富流体 (Reynolds)</div><div class="sh-val" style="color:{w_color}">{re_num:.0f} - {w_state_display}</div></div>""", unsafe_allow_html=True)
+        with arb_w2:
+            rel = phy.get('relationship', {})
+            bind_e = rel.get('Binding_Energy', 0)
+            r_state = rel.get('State', 'UNBOUND')
+            r_state_display = rel_state_names.get(r_state, r_state)
+            r_color = "#40e0d0" if r_state == "ENTANGLED" else "#9370db" if r_state == "BOUND" else "#ff9f43" if r_state == "PERTURBED" else "#ff4b4b"
+            st.markdown(f"""<div class="hud-card"><div class="sh-label">🌌 情感引力 (Binding)</div><div class="sh-val" style="color:{r_color}">{bind_e:.1f} - {r_state_display}</div></div>""", unsafe_allow_html=True)
+
+        st.divider()
+
+        # === 专家级物理论断 (Expert Assertions from MOD_15) ===
+        st.markdown("#### 💡 专家级物理论断 (Expert Assertions)")
+
+        # [MOD_15 Integration] Retrieve Vibration Metrics
+        vib = unified_state.get('physics', {}).get('vibration', {})
+        opt_mix = vib.get('optimal_deity_mix', {})
+        entropy_val = vib.get('entropy', 0)
+
+        # --- Definitions ---
+        elem_cn = {'Wood': '木', 'Fire': '火', 'Earth': '土', 'Metal': '金', 'Water': '水'}
+        dm_char = selected_case.get('day_master', '甲')
+        # Note: b_list is available in scope from earlier definition
+
+        # Helper for Ten God Label (Local Redefinition for safety if not in scope)
+        # Actually we can rely on Global `get_ten_god` helper defined at module level
+        def local_get_tg(elem):
+            # Naive find representative stem
+            # This is a bit tricky without full nexus. Let's use simplified lookup based on DM Element
+            # OR use the module level get_ten_god if we can map Element -> Stem
+            # Let's map Element to YIN stem for display (safe default)
+            e_map = {'Wood':'乙', 'Fire':'丁', 'Earth':'己', 'Metal':'辛', 'Water':'癸'}
+            return get_ten_god(dm_char, e_map.get(elem, ''))
+
+        # 1. Best Element (Useful God)
+        best_elem_en = max(opt_mix, key=opt_mix.get) if opt_mix else "Unknown"
+        best_elem_cn = elem_cn.get(best_elem_en, best_elem_en)
+        useful_god_tg = local_get_tg(best_elem_en)
+
+        # 2. Favorable (Xi) - Source of Useful
+        gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
+        xi_elem_en = gen_map.get(best_elem_en, "Unknown")
+        xi_elem_cn = elem_cn.get(xi_elem_en, xi_elem_en)
+        xi_god_tg = local_get_tg(xi_elem_en)
+
+        # 3. Unfavorable (Ji) - Opposes Useful
+        control_map = {"Wood": "Metal", "Fire": "Water", "Earth": "Wood", "Metal": "Fire", "Water": "Earth"}
+        ji_elem_en = control_map.get(best_elem_en, "Unknown")
+        ji_elem_cn = elem_cn.get(ji_elem_en, ji_elem_en)
+        ji_god_tg = local_get_tg(ji_elem_en)
+
+        # 4. Harmonizer (Tiao Hou) - Geo Context
+        # Use Month Branch for Seasonality
+        month_branch = b_list[1][1] if len(b_list)>1 else "子"
+        season_map = {'亥':'Water','子':'Water','丑':'Water',
+                      '寅':'Wood','卯':'Wood','辰':'Wood',
+                      '巳':'Fire','午':'Fire','未':'Fire',
+                      '申':'Metal','酉':'Metal','戌':'Metal'}
+        season_elem = season_map.get(month_branch, 'Water')
+        tiao_hou_en = "Fire" if season_elem in ['Water', 'Metal'] else "Water"
+        tiao_hou_cn = elem_cn.get(tiao_hou_en)
+
+        # --- Display Cards ---
+        ys_c1, ys_c2, ys_c3, ys_c4 = st.columns(4)
+
+        def render_god_card(col, title, elem_cn, tg, desc, color):
+            col.markdown(f"""
+            <div style="border-radius:12px; padding:15px; background:rgba(255,255,255,0.05); border:1px solid {color}; text-align:center;">
+                <div style="color:{color}; font-size:12px; margin-bottom:5px;">{title}</div>
+                <div style="color:#fff; font-size:22px; font-weight:bold;">{elem_cn} <span style="font-size:14px; color:#aaa;">({tg})</span></div>
+                <div style="color:#888; font-size:10px; margin-top:5px;">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        render_god_card(ys_c1, "用神 (Useful God)", best_elem_cn, useful_god_tg, "核心通关", "#40e0d0")
+        render_god_card(ys_c2, "喜神 (Favorable)", xi_elem_cn, xi_god_tg, "原神生助", "#9370db")
+        render_god_card(ys_c3, "忌神 (Unfavorable)", ji_elem_cn, ji_god_tg, "阻抗干扰", "#ff4b4b")
+        render_god_card(ys_c4, "调候 (Harmonizer)", tiao_hou_cn, f"{month_branch}月", "环境修正", "#ffd700")
+
+        # --- Logic Generation ---
+        logic_chain = ""
+        conflict_note = ""
+        if best_elem_en == "Fire" and ji_elem_en == "Water":
+            logic_chain = f"**为何用{best_elem_cn}？** 全局金旺木折，需{best_elem_cn}（食伤）制杀护身。"
+            if tiao_hou_en == "Water":
+                 conflict_note = f"""
+                 - **⚠️ 关键矛盾 (Paradox)**：调候需{tiao_hou_cn}（润局），但结构忌{ji_elem_cn}（灭火）。
+                 - **最终裁决**：**生存 > 舒适**。{ji_elem_cn}虽为调候，但在本局中为**绝命忌神**，不可见。
+                 """
+        elif best_elem_en == "Water": logic_chain = f"**为何用{best_elem_cn}？** 火炎土燥需润局，或金多水浊需泄秀。"
+        elif best_elem_en == "Wood": logic_chain = f"**为何用{best_elem_cn}？** 土重木折需疏通，或水多木漂需扎根。"
+        elif best_elem_en == "Metal": logic_chain = f"**为何用{best_elem_cn}？** 木旺需修剪，或水多需发源。"
+        elif best_elem_en == "Earth": logic_chain = f"**为何用{best_elem_cn}？** 水旺需止流，或火多需晦光。"
+
+        th_algo = "未知"
+        if season_elem in ['Fire', 'Wood', 'Earth']:
+            th_algo = f"生于{month_branch}月 (燥)，需水润局。"
+        elif season_elem in ['Water', 'Metal']:
+            th_algo = f"生于{month_branch}月 (寒)，需火暖局。"
+
+        mix_str = ", ".join([f"{elem_cn[k]} {v*100:.0f}%" for k,v in opt_mix.items()])
+
+        # --- Final Status Info ---
+        st.info(f"""
+        **【用神推演】**：{logic_chain}
+
+        **【喜忌辩证】**：
+        - **调候算法**：{th_algo} 判定调候为 **{tiao_hou_cn}**。
+        {conflict_note}
+
+        **【最佳能配】**：系统推荐复合注入方案：**[{mix_str}]**。
+        """)
+
+        # --- Legacy Mapping for Downstream Compatibility ---
+        yong_shen_elem = best_elem_en
+        yong_cn = best_elem_cn
+        xi_shen_elem = xi_elem_en
+        xi_cn = xi_elem_cn
+        ji_shen_elem = ji_elem_en
+        ji_cn = ji_elem_cn
+
+        st.divider()
+
+        # === 地理位置建议 (Geographic Recommendations) ===
+        st.markdown("#### 🌍 地理位置建议 (Geographic Recommendations)")
+        st.caption("基于用神五行匹配的城市推荐 | Cities recommended based on favorable element")
+
+        # Find cities matching yong_shen element
+        recommended_cities = []
+        avoid_cities = []
+
+        for city_name, (gf, elem_affinity) in GEO_CITY_MAP.items():
+            # Check if city element matches yong_shen
+            if yong_shen_elem in elem_affinity or yong_cn in elem_affinity:
+                recommended_cities.append((city_name, gf, elem_affinity))
+            elif xi_shen_elem in elem_affinity or xi_cn in elem_affinity:
+                recommended_cities.append((city_name, gf, elem_affinity))
+            # Check if city matches ji_shen
+            if ji_shen_elem in elem_affinity or ji_cn in elem_affinity:
+                avoid_cities.append((city_name, gf, elem_affinity))
+
+        # Sort by geo_factor descending
+        recommended_cities.sort(key=lambda x: x[1], reverse=True)
+        avoid_cities.sort(key=lambda x: x[1], reverse=True)
+
+        geo_c1, geo_c2 = st.columns(2)
+        with geo_c1:
+            st.markdown("##### ✅ 推荐城市 (Recommended)")
+            if recommended_cities:
+                for city, gf, elem in recommended_cities[:8]:
+                    gf_color = "#40e0d0" if gf >= 1.1 else "#9370db" if gf >= 1.0 else "#888"
+                    st.markdown(f"- **{city}** <span style='color:{gf_color}'>(ε={gf:.2f}, {elem})</span>", unsafe_allow_html=True)
+            else:
+                st.caption("暂无特别推荐")
+
+        with geo_c2:
+            st.markdown("##### ⚠️ 谨慎城市 (Use Caution)")
+            if avoid_cities:
+                for city, gf, elem in avoid_cities[:6]:
+                    st.markdown(f"- {city} *(ε={gf:.2f}, {elem})*")
+            else:
+                st.caption("暂无特别忌讳")
+
+        st.caption("💡 **提示**: 地域因子 (ε) > 1.0 表示场强增益，< 1.0 表示场强衰减。选择用神五行匹配的城市可增强有利能量。")
+
+        st.divider()
+
+        # Detailed Physics JSON (Collapsible)
+        with st.expander("🎛️ 详细物理读数 (Detailed Physics Matrix)", expanded=False):
+            st.json(unified_state)
     elif not selected_case:
         st.info("请先选择或输入八字案例以执行大一统仲裁。")
-    
+
     st.divider()
-    
-    
+
+
     # --- HELPER FUNCTIONS ---
     def render_module_header(module_data, all_rules):
         """Standardized Header for all Topic Modules"""
         st.caption(f"🚀 {module_data.get('description', '')}")
         st.markdown(f"#### {module_data.get('name', 'Module')}")
-        
+
         # Rule Inspector
         linked_ids = module_data.get('linked_rules', [])
         if linked_ids:
@@ -1305,41 +1100,58 @@ def render():
                 # Filter rules that exist in the global manifest
                 # Some linked rules might be generic placeholders (PH_SAN_HE), so we try to find partial matches or exact
                 # For now simplify: exact match
-                
+
                 module_rules = {rid: rdata for rid, rdata in all_rules.items() if rid in linked_ids}
-                
+
                 if not module_rules:
                     st.info(f"No active rules found matching spec: {linked_ids}")
                 else:
                     rule_names = [f"{rid} | {r.get('name')}" for rid, r in module_rules.items()]
                     sel_rule = st.selectbox("查看规则详情 (Inspect Rule)", rule_names, key=f"sel_rule_{module_data['id']}")
-                    
+
                     if sel_rule:
                         rid = sel_rule.split(" | ")[0]
                         r_info = module_rules[rid]
                         st.json(r_info)
 
     # --- MAIN RENDER ---
-    
+
     # [DETAIL VIEW] -> Topic Deep Dives (Now at Top)
     # Topic Navigation (Dynamic from Registry)
     from core.logic_registry import LogicRegistry
     reg = LogicRegistry()
-    
+
     st.sidebar.divider()
+    st.sidebar.markdown("### 🏹 主题导航 (Theme Orbit)")
+    themes = reg.get_themes()
+    theme_names = [t['name'] for t in themes.values()]
+    theme_ids = {t['name']: t_id for t_id, t in themes.items()}
+
+    selected_theme_name = st.sidebar.selectbox(
+        "选择分析主题 (Theme)",
+        theme_names,
+        index=0,
+        help="根据不同的预测目标（如基础物理、财富动态等）筛选对应的专题模块。"
+    )
+    selected_theme_id = theme_ids.get(selected_theme_name)
+
     st.sidebar.markdown("### 🔮 专题罗盘 (Topic Compass)")
-    
-    active_modules = reg.get_active_modules() # Returns list of dicts with 'id', 'name', etc.
-    
+
+    active_modules = reg.get_active_modules(theme_id=selected_theme_id) # Returns list of dicts with 'id', 'name', etc.
+
     # Create a mapping for easy lookup
     module_map = {m['name']: m for m in active_modules}
     module_names = [m['name'] for m in active_modules]
-    
-    selected_name = st.sidebar.selectbox(
-        "选择专题 (Topic)",
-        module_names,
-        index=0
-    )
+
+    if not module_names:
+        st.sidebar.warning("⚠️ 该主题下暂无活跃专题 (No active topics).")
+        selected_name = None
+    else:
+        selected_name = st.sidebar.selectbox(
+            "选择专题 (Topic)",
+            module_names,
+            index=0
+        )
 
     st.sidebar.divider()
     translation_style = st.sidebar.radio(
@@ -1350,24 +1162,22 @@ def render():
     )
 
     # Select Topic (Module)
-    
+
     # Update translator style based on selection
-    from core.trinity.core.intelligence.destiny_translator import TranslationStyle
-    from core.trinity.core.unified_arbitrator_master import unified_arbitrator
     if "周星驰" in translation_style:
         unified_arbitrator.translator.set_style(TranslationStyle.STEPHEN_CHOW)
     else:
         unified_arbitrator.translator.set_style(TranslationStyle.WONG_KAR_WAI)
-    
+
     current_module = module_map.get(selected_name)
     selected_topic_id = current_module.get('id') if current_module else None
 
     # Render Selected Module Content (Above Global Console)
     st.divider()
-    
+
     # [REF] Single Collapsible Container for Entire Topic
     with st.expander(f"📊 {current_module.get('name')}", expanded=True):
-        
+
         # 1. Topic Metadata (Description, Goal, Outcome)
         tm1, tm2 = st.columns([1, 1])
         with tm1:
@@ -1377,12 +1187,12 @@ def render():
             st.success(f"**🏆 成果 (Outcome)**: {current_module.get('outcome', 'TBD')}")
 
         st.divider()
-        
+
         # 2. Rule Registry (Nested Expander)
         # We manually inline the logic of render_module_header here to keep it contained
         all_rules = reg.get_all_active_rules()
         linked_ids = current_module.get('linked_rules', [])
-        
+
         if linked_ids:
             with st.expander("📜 关联八字规则 (Logic & Rules Registry)", expanded=False):
                 module_rules = {rid: rdata for rid, rdata in all_rules.items() if rid in linked_ids}
@@ -1394,7 +1204,7 @@ def render():
                     if sel_rule:
                         rid = sel_rule.split(" | ")[0]
                         st.json(module_rules[rid])
-        
+
         st.divider()
 
         # --- MODULE IMPLEMENTATION SWITCH ---
@@ -1403,7 +1213,7 @@ def render():
         if selected_topic_id == "MOD_14_TIME_SPACE_INTERFERENCE":
             st.markdown("#### ⏳ 多维时空场耦合 (Spacetime Field Coupling)")
             st.caption(r"公式: $E_{Total} = \left|\Psi_{Base} + \alpha\Psi_{Luck} + \beta(K_{geo} \cdot \Psi_{Year})\right|^2$")
-            
+
             # A. Test Case Loader
             with st.expander("🧪 专题私有测试集 (Private Case Library)", expanded=True):
                 try:
@@ -1414,7 +1224,7 @@ def render():
                     if sel_case_str:
                         sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
                         st.json(sel_case)
-                        # Auto-inject context if run button is handled separately, 
+                        # Auto-inject context if run button is handled separately,
                         # but here for visualization we pretend to load it.
                         st.info(f"🔬 验证焦点: {sel_case['focus']}")
                 except FileNotFoundError:
@@ -1423,22 +1233,22 @@ def render():
             # B. Interference Waveform (Simulation)
             st.markdown("##### 🌊 时空干涉波形 (Interference Waveform)")
             import plotly.graph_objects as go
-            
+
             # Simulate Wave Functions
             x = np.linspace(0, 4*np.pi, 200)
             psi_base = np.sin(x)
             psi_luck = 0.5 * np.sin(x + np.pi/4)  # Shifted Luck
             psi_year = 0.8 * np.sin(2*x)          # Impulse Year (High Freq)
             k_geo = 1.2 # Mock high GEO factor
-            
+
             psi_total = np.abs(psi_base + psi_luck + k_geo * psi_year)**2
-            
+
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=x, y=psi_base, name="Ψ_Base (原局)", line=dict(color='gray', dash='dot')))
             fig.add_trace(go.Scatter(x=x, y=psi_luck, name="Ψ_Luck (大运)", line=dict(color='#40e0d0', dash='dash')))
             fig.add_trace(go.Scatter(x=x, y=psi_year, name="Ψ_Year (流年)", line=dict(color='#ff7f50')))
             fig.add_trace(go.Scatter(x=x, y=psi_total, name="|Ψ_Total|² (耦合场)", line=dict(color='#9370db', width=3), fill='tozeroy'))
-            
+
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 margin=dict(l=10, r=10, t=10, b=10),
@@ -1448,7 +1258,7 @@ def render():
                 legend=dict(orientation="h", y=1.1)
             )
             st.plotly_chart(fig, use_container_width=True)
-            
+
             # C. GEO Heatmap (Mockup)
             st.markdown("##### 🌍 K-Geo 效率热力图 (Spacetime Efficiency)")
             cols = st.columns(3)
@@ -1459,37 +1269,46 @@ def render():
 
         if selected_topic_id == "MOD_15_STRUCTURAL_VIBRATION":
             st.markdown("#### 🏗️ 结构振动传导 (Structural Vibration Transmission)")
-            st.caption(r"公式: $E_{out} = E_{max} \cdot \tanh(E_{in} / E_{th}) \cdot V_{coupling}$")
-            
+            st.caption(r"公式: $E_{out} = E_{max} \cdot \tanh(E_{in} / E_{th}) \cdot V_{coupling}$ (Phase Threshold: 80%)")
+
             # A. Test Case Loader
             with st.expander("🧪 专题私有测试集 (Private Case Library)", expanded=True):
+                # Phase 4.0: Support Precision Patches
+                suite_sel = st.radio("测试集 (Test Suite)", ["标准测试 (Standard)", "结构相变 (Phase Transition)", "精度校准补丁 (Precision Patches)"], horizontal=True)
+
+                json_path = "tests/cases/mod_15_structural_vibration.json"
+                if "Phase Transition" in suite_sel:
+                    json_path = "tests/cases/mod_15_phase_transition.json"
+                elif "Precision Patches" in suite_sel:
+                    json_path = "tests/cases/mod_precision_patches.json"
+
                 try:
-                    with open("tests/cases/mod_15_structural_vibration.json", "r") as f:
+                    with open(json_path, "r") as f:
                         test_cases = json.load(f)
                     case_names = [f"{c['case_id']} | {c['name']}" for c in test_cases]
                     sel_case_str = st.selectbox("加载测试案例", case_names, key="mod15_case_sel")
                     if sel_case_str:
                         sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
                         st.json(sel_case)
-                        st.info(f"🏷️ 案例标签: {', '.join(sel_case.get('tags', []))}")
+                        st.info(f"🏷️ 案例标签: {sel_case.get('tags', []) if 'tags' in sel_case else sel_case.get('expected_phase', 'Standard')}")
                 except FileNotFoundError:
-                    st.error("Test case library not found: tests/cases/mod_15_structural_vibration.json")
+                    st.error(f"Test case library not found: {json_path}")
 
             # B. 3D Transmission Topology (Simulation)
             st.markdown("##### 🕸️ 3D 能量传导拓扑 (Energy Transmission Topology)")
             import plotly.graph_objects as go
-            
+
             # Nodes: Year, Month, Day, Hour, Luck, Annual
             # Positions (x, y, z) - Schematic
             # Year(0,0,0), Month(1,0,0), Day(2,0,0), Hour(3,0,0)
             # Luck(1.5, 1, 0), Annual(1.5, 2, 0)
-            
+
             nodes_x = [0, 1, 2, 3, 1.5, 1.5]
             nodes_y = [0, 0, 0, 0, 1, 2]
             nodes_z = [0, 0, 0, 0, 0.5, 1.0] # Lift dynamic pillars
             node_names = ["Year", "Month", "Day", "Hour", "Luck", "Annual"]
             node_colors = ['#FFD700', '#FF4500', '#32CD32', '#1E90FF', '#9370DB', '#FF69B4']
-            
+
             fig_3d = go.Figure(data=[go.Scatter3d(
                 x=nodes_x, y=nodes_y, z=nodes_z,
                 mode='markers+text',
@@ -1497,11 +1316,11 @@ def render():
                 marker=dict(size=12, color=node_colors, opacity=0.8),
                 textposition="bottom center"
             )])
-            
+
             # Edges (Flow)
             # Year->Month, Month->Day, Day->Hour
             # Luck->Month, Annual->Month (Impact points)
-            edges = [(0,1), (1,2), (2,3), (4,1), (5,1)] 
+            edges = [(0,1), (1,2), (2,3), (4,1), (5,1)]
             for start, end in edges:
                 fig_3d.add_trace(go.Scatter3d(
                     x=[nodes_x[start], nodes_x[end]],
@@ -1524,9 +1343,9 @@ def render():
                 height=400
             )
             st.plotly_chart(fig_3d, use_container_width=True)
-            
+
             st.markdown("##### 🎯 复合神格配比 (Composite Deity Ratio)")
-            
+
             # RUN REAL SIMULATION
             if sel_case_str:
                 # Prepare Inputs
@@ -1543,7 +1362,7 @@ def render():
                      b = sel_case['bazi']['branches']
                      if len(s) == 4 and len(b) == 4:
                          b_list = [f"{s[0]}{b[0]}", f"{s[1]}{b[1]}", f"{s[2]}{b[2]}", f"{s[3]}{b[3]}"]
-                
+
                 ctx_data = sel_case.get('context', {})
                 ctx_obj = {
                     'luck_pillar': ctx_data.get('luck', None),
@@ -1554,46 +1373,59 @@ def render():
 
                 # Run Execution
                 with st.spinner("🚀 正在进行非线性动力网络仿真..."):
-                    # Use existing helper to run arbitration
-                    # config_model and controller are available in scope?
-                    # Controller.run_arbitration expects params.
-                    # We can use controller directly if instantiated, or import UnifiedArbitratorMaster
-                    # Let's instantiate a local master for isolation testing
-                    from core.trinity.core.unified_arbitrator_master import UnifiedArbitratorMaster
-                    master = UnifiedArbitratorMaster()
-                    state = master.arbitrate_bazi(b_list, {"gender": "male"}, ctx_obj)
-                    
+                    # Use the global unified_arbitrator instance
+                    state = unified_arbitrator.arbitrate_bazi(b_list, {"gender": "male"}, ctx_obj)
+
                     vib = state['physics'].get('vibration', {})
                     opt_mix = vib.get('optimal_deity_mix', {})
-                    
+                    is_phase = vib.get('is_phase_transition', False)
+                    dom_elem = vib.get('dominant_element', 'None')
+
+                    # ALERT: PHASE TRANSITION
+                    if is_phase:
+                        st.error(f"""
+                        **⚠️ 系统相变警告 (SYSTEM PHASE SHIFT DETECTED)**
+                        检测到 **{dom_elem}** 场域发生能级坍缩，进入【从旺/从格】非线性区。
+                        常规平衡法则已失效，SAI 算法已自动反转为‘顺势模式’。
+                        (Normal balance laws suspended. SAI logic inverted to 'Energy Maximization'.)
+                        """)
+
                     # Radar Update
                     all_elems = ['Wood', 'Fire', 'Earth', 'Metal', 'Water']
                     current_dist = [vib.get('energy_state', {}).get(e, 0) for e in all_elems]
                     target_dist = []
                     for e in all_elems:
                         base = vib.get('energy_state', {}).get(e, 0)
-                        # Target is simply Base + Injection? Or ideal? 
+                        # Target is simply Base + Injection? Or ideal?
                         # Let's visualize Injection as a separate layer
                         inj = opt_mix.get(e, 0) * 10
                         target_dist.append(base + inj)
 
                     fig_radar = go.Figure()
                     fig_radar.add_trace(go.Scatterpolar(r=current_dist, theta=all_elems, fill='toself', name='当前能量 (Current)'))
-                    fig_radar.add_trace(go.Scatterpolar(r=target_dist, theta=all_elems, fill='toself', name='熵减目标 (Optimized)', line=dict(color='gold')))
+                    fig_radar.add_trace(go.Scatterpolar(r=target_dist, theta=all_elems, fill='toself', name='熵减目标 (Optimized)', line=dict(color='gold' if not is_phase else 'red')))
                     fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)), paper_bgcolor='rgba(0,0,0,0)', height=350)
                     st.plotly_chart(fig_radar, use_container_width=True)
 
+                    # [PATCH] System Status lamp
+                    s_col1, s_col2 = st.columns(2)
+                    with s_col1:
+                        status_label = "🔴 EXTREME PHASE" if is_phase else "🟢 NORMAL STATE"
+                        st.metric("系统相位 (System Phase)", status_label)
+                    with s_col2:
+                        st.metric("能量纯度 (Purity)", f"{ (max(current_dist)/sum(current_dist)*100) if sum(current_dist)>0 else 0 :.1f}%")
+
                     # Text Report (Destiny Translator)
                     st.markdown("### 📜 智能全息论断 (Holographic Analysis)")
-                    
+
                     # --- Helper Conversions ---
                     elem_cn = {'Wood': '木', 'Fire': '火', 'Earth': '土', 'Metal': '金', 'Water': '水'}
-                    
+
                     # Calculate Ten Gods for Display
                     # BaziParticleNexus is already imported globally
                     dm = state['meta'].get('dm', '甲') # Current DM
                     dm_elem = BaziParticleNexus.STEMS.get(dm)[0]
-                    
+
                     def get_ten_god_label(target_e):
                         target_s = None
                         # Find a representative stem for this element to use get_shi_shen
@@ -1610,21 +1442,21 @@ def render():
                     best_elem_en = max(opt_mix, key=opt_mix.get) if opt_mix else "Unknown"
                     best_elem_cn = elem_cn.get(best_elem_en, best_elem_en)
                     useful_god_tg = get_ten_god_label(best_elem_en)
-                    
+
                     # Favorable (Xi) - Source of Useful (Generates Best)
                     # Wood->Fire->Earth->Metal->Water->Wood
                     gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
                     xi_elem_en = gen_map.get(best_elem_en, "Unknown")
                     xi_elem_cn = elem_cn.get(xi_elem_en, xi_elem_en)
                     xi_god_tg = get_ten_god_label(xi_elem_en)
-                    
+
                     # Unfavorable (Ji) - Clashing/Suppressing Best or Excess Source
                     # Simplified: Opposes Useful
                     control_map = {"Wood": "Metal", "Fire": "Water", "Earth": "Wood", "Metal": "Fire", "Water": "Earth"}
                     ji_elem_en = control_map.get(best_elem_en, "Unknown")
                     ji_elem_cn = elem_cn.get(ji_elem_en, ji_elem_en)
                     ji_god_tg = get_ten_god_label(ji_elem_en)
-                    
+
                     # Harmonizer (Tiao Hou) - Geo Context
                     geo_city = ctx_data.get('geo', 'Unknown')
                     # Map Geo to Element roughly (Mockup logic or rely on case tags)
@@ -1637,30 +1469,30 @@ def render():
                                   '巳':'Fire','午':'Fire','未':'Fire',
                                   '申':'Metal','酉':'Metal','戌':'Metal'}
                     season_elem = season_map.get(month_branch, 'Water')
-                    
+
                     tiao_hou_en = "Fire" if season_elem in ['Water', 'Metal'] else "Water" # Simple toggle
                     tiao_hou_cn = elem_cn.get(tiao_hou_en)
-                    
+
                     # Display Metrics
                     c1, c2, c3, c4 = st.columns(4)
                     c1.metric("用神 (Useful God)", f"{best_elem_cn} ({useful_god_tg})", "核心通关")
                     c2.metric("喜神 (Favorable)", f"{xi_elem_cn} ({xi_god_tg})", "原神生助")
                     c3.metric("忌神 (Unfavorable)", f"{ji_elem_cn} ({ji_god_tg})", "阻抗干扰")
                     c4.metric("调候 (Harmonizer)", f"{tiao_hou_cn} ({geo_city})", "环境修正")
-                    
+
                     st.divider()
 
                     # 2. Detailed Narrative Generation
                     st.markdown("#### 💡 专家级物理论断 (Expert Assertions)")
-                    
+
                     # Construct Narrative
                     entropy_val = vib.get('entropy', 0)
                     eff_val = vib.get('transmission_efficiency', 0)
-                    
+
                     # Logic Chain for Useful God
                     logic_chain = ""
                     conflict_note = ""
-                    
+
                     if best_elem_en == "Fire" and ji_elem_en == "Water":
                         logic_chain = f"**为何用{best_elem_cn}？** 全局存在强金局（或者金气过旺），导致{dm_elem}木气受克严重。{best_elem_cn}（{useful_god_tg}）是唯一能制金护木的力量（食伤制杀），故为第一核心用神。"
                         if tiao_hou_en == "Water":
@@ -1670,7 +1502,7 @@ def render():
                              - **调候需求**：生于{month_branch}月（夏/燥土），气候炎向，理论上需{tiao_hou_cn}来润局。
                              - **最终结论**：当生存（结构制杀）与舒适（调候润局）冲突时，**生存优先**。故判定：{ji_elem_cn}虽能调候，但为结构之**大忌**。此局乃“火炼真金”之特殊格局，不可见水破局。
                              """
-                             
+
                     elif best_elem_en == "Water":
                         logic_chain = f"**为何用{best_elem_cn}？** 局中火炎土燥（或金多水浊需泄秀）。{best_elem_cn}（{useful_god_tg}）能起到核心的滋润/流通作用。"
                     elif best_elem_en == "Wood":
@@ -1678,7 +1510,7 @@ def render():
                     elif best_elem_en == "Metal":
                         logic_chain = f"**为何用{best_elem_cn}？** 局中木旺（或水多需发源）。{best_elem_cn}（{useful_god_tg}）能修剪旺木或为水之源头。"
                     elif best_elem_en == "Earth":
-                         logic_chain = f"**为何用{best_elem_cn}？** 局中水旺（或火多需晦）。{best_elem_cn}（{useful_god_tg}）能止水/纳火，稳固根基。"
+                         logic_chain = f"**为何用{best_elem_cn}？** 水旺（或火多需晦）。{best_elem_cn}（{useful_god_tg}）能止水/纳火，稳固根基。"
 
                     # Tiao Hou Algorithm Explanation
                     th_algo = "未知"
@@ -1692,21 +1524,21 @@ def render():
                         status_text = "系统处于高熵震荡状态，能量传导存在严重阻滞。"
                     else:
                         status_text = "系统处于低熵稳态，能量流转相对顺畅。"
-                        
+
                     # Specific Advice
                     advice = ""
                     if best_elem_en == "Fire":
                         advice = f"建议在南方 ({geo_city}若为南则吉) 寻求火属性机遇（如科技、能源、文化产业）。利用{useful_god_tg}（Fire）化解{ji_god_tg}（{ji_elem_cn}）的阻力。"
-                    
+
                     mix_str = ", ".join([f"{elem_cn[k]} {v*100:.0f}%" for k,v in opt_mix.items()])
 
                     st.info(f"""
                     **【当下局势】**：{status_text}
-                    
+
                     **【用神推演链条】**：
                     {logic_chain}
-                    
-                    **react_component【调候算法揭秘】**：
+
+                    **【调候算法揭秘】**：
                     - **算法逻辑**：{th_algo}
                     - **当前判定**：调候神为 **{tiao_hou_cn}**。
                     
@@ -1727,7 +1559,246 @@ def render():
                     
                     with st.expander("查看完整物理日志 (Physics Log)"):
                         st.json(vib)
+
+        # --- MODULE 18: BASE APPLICATION & GLOBAL TOOLS ---
+        elif selected_topic_id == "MOD_18_BASE_APP":
+            st.markdown("#### 🛠️ 基础应用与全局工具 (Basic Applications & Global Tools)")
+            st.caption("跨模块物理准则、叙事风格翻译及全局系统状态监控。")
+            
+            # Display Linked Rules and Metrics in a clean way
+            st.markdown("##### 📜 全局资产 (Global Logic Assets)")
+            module_rules = {rid: rdata for rid, rdata in all_rules.items() if rid in current_module.get('linked_rules', [])}
+            
+            if module_rules:
+                rule_cols = st.columns(2)
+                for i, (rid, r_info) in enumerate(module_rules.items()):
+                    with rule_cols[i % 2]:
+                        st.markdown(f"""
+                        <div style="border-radius:10px; padding:10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 10px;">
+                            <div style="font-size: 11px; color: #888;">{rid}</div>
+                            <div style="font-size: 14px; font-weight: 500;">{r_info.get('name')}</div>
+                            <div style="font-size: 12px; color: #aaa; margin-top: 5px;">{r_info.get('description', '系统全局算法。')}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            st.markdown("##### 🌍 系统全息状态 (Global Telemetry)")
+            st.info("💡 此专题为系统底层支撑层，聚合了跨模块引用的核心资产。大一统仲裁台（下方）已启用，用于展示这些算法在实际推演中的全息表现。")
         
+        # --- MODULE 16: TEMPORAL SHUNTING (Topic 3) ---
+        if selected_topic_id == "MOD_16_TEMPORAL_SHUNTING":
+            st.markdown("#### ⏳ 应期预测与行为干预 (Temporal Response & Strategic Intervention)")
+            st.caption(r"分流动力学方程: $\Delta SAI = \int(F_{pulse} - R_{behavior} - G_{geo})dt$")
+            
+            # A. Test Case Loader
+            with st.expander("🧪 专题私有测试集 (Private Case Library)", expanded=True):
+                # Phase 4.0: Support Precision Patches
+                suite_sel_16 = st.radio("测试集 (Test Suite)", ["标准时间测试 (Standard)", "精度校准补丁 (Precision Patches)"], horizontal=True, key="suite_mod16")
+                
+                json_path_16 = "tests/cases/mod_16_temporal_shunting.json"
+                if "Precision Patches" in suite_sel_16:
+                    json_path_16 = "tests/cases/mod_precision_patches.json"
+                
+                try:
+                    with open(json_path_16, "r") as f:
+                        test_cases = json.load(f)
+                    case_names = [f"{c['case_id']} | {c['name']}" for c in test_cases]
+                    sel_case_str = st.selectbox("加载测试案例", case_names, key="mod16_case_sel")
+                    if sel_case_str:
+                        sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
+                        st.json(sel_case)
+                        st.info(f"🏷️ 案例标签: {sel_case.get('intervention') or sel_case.get('tags', [])}")
+                except FileNotFoundError:
+                    st.error(f"Test case library not found: {json_path_16}")
+            
+            # [PATCH] C. Social Damping Control (Platform Impedance)
+            st.markdown("##### 🧱 社会阻尼与平台载荷 (Social Damping / Platform Impedance)")
+            # Phase 4.0: 1.0 is now the Neutral baseline
+            social_damping_val = st.slider("环境阻尼因子 (Damping Factor)", 0.5, 3.0, 1.0, help="1.0=常规(Standard), 2.0=高阻尼(体制内/高防御), 0.5=低阻尼(高风险/敏锐)")
+            
+            # B. Simulation Execution
+            if sel_case_str:
+                from core.trinity.core.engines.temporal_shunting import TemporalShuntingEngine
+                
+                # Mock DM or get from case
+                dm_char = sel_case.get('bazi', {}).get('stems', ['甲'])[0]
+                t_engine = TemporalShuntingEngine(dm_char)
+                
+                col_dash1, col_dash2 = st.columns([2, 1])
+                
+                with col_dash1:
+                    st.markdown("##### 📉 应力时间序列 (SAI Timeline)")
+                    
+                    # Determine Birth Year & Scanning Range
+                    b_year = sel_case.get('birth_year', 1990)
+                    scan_res = t_engine.scan_singularities(start_year=2024, birth_year=b_year, horizon_months=120, social_damping=social_damping_val)
+                    timeline = scan_res['timeline']
+                    singularities = scan_res['singularities']
+                    
+                    # Plotly Time Series
+                    import plotly.graph_objects as go
+                    t_indices = [x['age'] for x in timeline] # Use Age for X-axis
+                    sai_values = [x['sai'] for x in timeline]
+                    t_labels = [f"Age {x['age']} ({x['year']}.{x['month']})" for x in timeline]
+                    is_future_markers = [x['is_future'] for x in timeline]
+                    
+                    fig_sai = go.Figure()
+                    
+                    # Split trace into Historical and Future for visual distinction
+                    hist_x, hist_y, hist_t = [], [], []
+                    fut_x, fut_y, fut_t = [], [], []
+                    
+                    for i, node in enumerate(timeline):
+                        if node['is_future']:
+                            fut_x.append(node['age'])
+                            fut_y.append(node['sai'])
+                            fut_t.append(t_labels[i])
+                        else:
+                            hist_x.append(node['age'])
+                            hist_y.append(node['sai'])
+                            hist_t.append(t_labels[i])
+                    
+                    # [PATCH] Calculate Shunted Line (Intervention Effect)
+                    # We need to know the action select from col_dash2 (which is defined later, so we need to move it up or anticipate)
+                    # For UI logic, col_dash2 controls are defined after. Let's move control definition up.
+                
+                with col_dash2:
+                    st.markdown("##### 🎛️ 干预模拟器 (Remedy Simulator)")
+                    # Singularity Focus (Auto-select first high risk peak)
+                    peak_sai = max([x['sai'] for x in singularities]) if singularities else 1.5
+                    st.metric("💥 峰值风险 (Peak Risk)", f"{peak_sai:.2f} SAI", delta="高危" if peak_sai > 2.26 else "正常", delta_color="inverse")
+                    
+                    act_opts = {"NONE": "无干预 (None)", "STUDY": "📚 学习/印星 (Study)", "DONATION": "💸 布施/财星 (Donation)", "TRAVEL": "✈️ 迁移/马星 (Travel)", "MEDITATION": "🧘 闭关/空亡 (Void)"}
+                    sel_action_key = st.selectbox("行为干预方案", list(act_opts.keys()), format_func=lambda x: act_opts[x], index=1, key="mod16_act_sel")
+                    geo_mod = st.slider("地理偏置系数 (K_geo)", 0.5, 2.0, 1.0, 0.1, key="mod16_geo_sel")
+                    
+                    shunt_res = t_engine.simulate_intervention(peak_sai, sel_action_key, geo_mod, social_damping=social_damping_val)
+                    
+                    # Display Delta
+                    new_sai = shunt_res['final_sai']
+                    reduction = shunt_res['reduction_pct']
+                    st.divider()
+                    st.metric("🛡️ 干预后应力 (Shunted SAI)", f"{new_sai:.2f}", delta=f"-{reduction}%", delta_color="normal")
+                    
+                    if new_sai < 2.26 < peak_sai:
+                        st.success("🚀 成功逃逸 (Escape Successful)")
+                    elif new_sai > 2.26:
+                        st.error("🚫 仍处险境 (Still Critical)")
+                    
+                with col_dash1:
+                    # Shunted Trace calculation
+                    shunt_y = []
+                    if sel_action_key != "NONE":
+                        for node in timeline:
+                            if node['is_future']:
+                                # Apply the same intervention logic to all future nodes
+                                sim = t_engine.simulate_intervention(node['sai'], sel_action_key, geo_mod, social_damping=social_damping_val)
+                                shunt_y.append(sim['final_sai'])
+                            else:
+                                shunt_y.append(None) # Match hist length
+                    
+                    # Historical Trace (Grey/Past)
+                    if hist_x:
+                        fig_sai.add_trace(go.Scatter(
+                            x=hist_x, y=hist_y,
+                            mode='lines', name='历史应力 (Historical)',
+                            line=dict(color='grey', width=1, dash='dot'),
+                            hovertemplate='年龄: %{x}<br>时间: %{text}<br>SAI: %{y:.2f}',
+                            text=hist_t
+                        ))
+
+                    # Future Trace (Cyan/Active)
+                    if fut_x:
+                        fig_sai.add_trace(go.Scatter(
+                            x=fut_x, y=fut_y,
+                            mode='lines', name='未来预测 (Future)',
+                            line=dict(color='#40e0d0', width=2),
+                            hovertemplate='年龄: %{x}<br>预测SAI: %{y:.2f}',
+                            text=fut_t
+                        ))
+                    
+                    # [PATCH] Shunted Trace (Green/Intervention)
+                    if shunt_y and any(y is not None for y in shunt_y):
+                        fig_sai.add_trace(go.Scatter(
+                            x=[n['age'] for n in timeline if n['is_future']],
+                            y=[y for y in shunt_y if y is not None],
+                            mode='lines', name='干预后预期 (Shunted)',
+                            line=dict(color='#2ecc71', width=2, dash='dash'),
+                            hovertemplate='年龄: %{x}<br>干预SAI: %{y:.2f}'
+                        ))
+                    
+                    # Current Time Marker
+                    fig_sai.add_vline(x=2024-b_year, line_dash="dash", line_color="white", annotation_text="Today")
+                    
+                    # Singularity Markers
+                    sin_age = [x['age'] for x in singularities]
+                    sin_v = [x['sai'] for x in singularities]
+                    sin_l = [f"Age {x['age']} ({x['year']}.{x['month']})" for x in singularities]
+                    
+                    if sin_age:
+                        fig_sai.add_trace(go.Scatter(
+                            x=sin_age, y=sin_v,
+                            mode='markers', name='奇点 (Singularity)',
+                            marker=dict(color='#ff4b4b', size=10, symbol='x'),
+                            hovertemplate='⚠️ 奇点爆发<br>%{text}<br>SAI: %{y:.2f}',
+                            text=sin_l
+                        ))
+                        
+                        # Threshold Line
+                        fig_sai.add_hline(y=2.26, line_dash="dash", line_color="#ff9f43", annotation_text="坍缩阈值 (2.26)")
+                        
+                    fig_sai.update_layout(
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                        height=350, margin=dict(l=0, r=0, t=30, b=0),
+                        xaxis_title="生命周期 (Life Cycle: Age)", yaxis_title="结构应力指数 (SAI)"
+                    )
+                    st.plotly_chart(fig_sai, use_container_width=True)
+                    
+                
+                # C. History Trace Wall & Calibration (Phase 3.5)
+                st.markdown("##### 🕰️ 历史镜像全息墙 (History Trace Wall & Calibration)")
+                
+                # Filter Historical Singularities
+                hist_singularities = [s for s in singularities if not s['is_future']]
+                
+                if not hist_singularities:
+                    st.info("ℹ️ 系统回溯扫描未发现过去有显著SAI异常 (No historical singularity detected).")
+                else:
+                    st.caption("以下为系统回溯扫描发现的历史断点，请您校准以提高未来预测精度：")
+                    
+                    feedback_data = []
+                    for idx, h_evt in enumerate(hist_singularities):
+                        with st.container():
+                            col_h1, col_h2 = st.columns([3, 1])
+                            with col_h1:
+                                # Display Assertion
+                                alert_color = "red" if h_evt['type'] == "COLLAPSE" else "orange"
+                                alert_icon = "💥" if h_evt['type'] == "COLLAPSE" else "🌊"
+                                st.markdown(f"**{h_evt['year']}年 (Age {h_evt['age']})** <span style='color:{alert_color}'>{alert_icon} {h_evt['type']}</span>", unsafe_allow_html=True)
+                                st.markdown(f"> *{h_evt['assertion']}* (SAI: {h_evt['sai']:.2f})")
+                            with col_h2:
+                                # Calibration Toggle
+                                is_acc = st.checkbox("准确 (Verify)", value=True, key=f"hist_cal_{idx}")
+                                feedback_data.append({"year": h_evt['year'], "is_accurate": is_acc})
+                            st.divider()
+                    
+                    # Apply Calibration
+                    cal_res = t_engine.calibrate_model(feedback_data)
+                    if cal_res['new_threshold'] > 2.26:
+                         st.success(f"🤖 模型已基于您的反馈自进化 (Calibrated): 根据您的抗压历史，我们将坍缩阈值调整为 **{cal_res['new_threshold']:.2f}**")
+                        
+                # D. Oracle Report (Updated)
+                st.markdown("##### 📜 终极改命路线图 (The Redemption Output)")
+                opt_paths = t_engine.sensitivity_search(peak_sai)
+                
+                if opt_paths:
+                    best = opt_paths[0]
+                    st.info(f"""
+                    **经过历史镜像校准，系统为您生成的【未来10年生存铁律】：**
+                    1.  **核心策略**：`{best['action']}` + `{best['geo']}`
+                    2.  **物理预期**：将 SAI 从 `{peak_sai:.2f}` 降至 `{best['metrics']['final_sai']:.2f}`。
+                    3.  **避雷指南**：未来若遇 **{hist_singularities[0]['type'] if hist_singularities else 'COLLAPSE'}** 类结构，请立即启动上述分流机制。
+                    """)
+
         # --- MODULE 00: SUBSTRATE REFINEMENT (Phase B) ---
         if selected_topic_id == "MOD_00_SUBSTRATE":
             st.markdown("#### 🧬 晶格基底重构")
@@ -2262,7 +2333,7 @@ def render():
         elif selected_topic_id == "MOD_01_TRIPLE":
             # [NEW] Holographic Decision Radar (Moved here as it uses 3-in-1 Logic)
             st.markdown("#### 🔭 全息决策雷达 (Holographic Decision Radar)")
-            render_holographic_radar(resonance, res.get('unified_metrics'), res.get('remedy'), verdict)
+            render_holographic_radar(resonance, res.get('unified_metrics'), res.get('remedy'), verdict_oracle)
             st.write("")
     
             # Phase 1: Interaction List (Control Focused)
@@ -3355,152 +3426,161 @@ def render():
                     st.markdown("#### 🧭 白话解释器 (Plain Interpreter)")
                     st.markdown("\n".join([f"- {t}" for t in plain_tips_gl]))
 
-                # Life-path events (global) — only wealth/relationship
-                life_path_gl = unified_state_gl.get("physics", {}).get("life_path", {}) or {}
-                risk_nodes_gl = life_path_gl.get("risk_nodes", [])
-                if risk_nodes_gl:
-                    st.markdown("#### 🛰️ 100年命盘风险雷达 (Life-path Events)")
+                # [MOD_17] Stellar Coherence Mantra
+                intel_gl = unified_state_gl.get("intelligence", {})
+                if intel_gl.get("stellar_mantra"):
+                    st.markdown("#### ✨ 星辰相干真言 (Stellar Coherence Mantra)")
+                    st.info(f"「周星驰风格翻译层」已启用")
+                    st.markdown(f"""
+                    <div style="background: rgba(255, 215, 0, 0.05); border-left: 5px solid #ffd700; padding: 15px; border-radius: 8px; font-style: italic; color: #ffd700; line-height: 1.6;">
+                        “{intel_gl['stellar_mantra']}”
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Stellar Telemetry
+                    st_phy = unified_state_gl.get("physics", {}).get("stellar", {})
+                    if st_phy:
+                        st_cols = st.columns(3)
+                        with st_cols[0]:
+                            st.metric("星辰相干度 (η_s)", f"{st_phy.get('coherence', 1.0):.2f}")
+                        with st_cols[1]:
+                            st.metric("量子引力 (Attraction)", f"+{st_phy.get('attraction', 0.0):.2f} eV")
+                        with st_cols[2]:
+                            st.metric("动能冲量 (Impulse)", f"+{st_phy.get('impulse', 0.0):.2f} ΔV")
+
+                # [Phase 5.0] Global Temporal Shunting Dashboard
+                st.markdown("#### ⏳ 全息应期演化 (Temporal SAI Dashboard)")
+                st.caption("基于当前选中八字、地理系数及社会阻尼实时生成的时空应力场")
+                
+                # 1. Platform Parameter Bonding
+                social_damping_gl = st.slider("全局环境阻尼 (Social Damping)", 0.5, 3.0, 1.0, key="global_damping_slider", help="1.0=常规 (Neutral), 2.0=高阻尼 (体制内), 0.5=低阻尼 (低阻尼/敏锐)")
+                
+                from core.trinity.core.engines.temporal_shunting import TemporalShuntingEngine
+                
+                # [Phase 6.2] V3 - Now includes profile for real Luck Pillar physics
+                @st.cache_data(ttl=3600)
+                def get_cached_sai_scan_v3(_engine, start_year, birth_year, horizon_months, social_damping, _profile):
+                    return _engine.scan_singularities(start_year=start_year, birth_year=birth_year, 
+                                                     horizon_months=horizon_months, social_damping=social_damping, profile=_profile)
+
+                # DM at index 4 (Day Stem), Birth Year from profile
+                dm_char_gl = bazi_list_gl[4] if len(bazi_list_gl) > 4 else "甲"
+                b_year_gl = birth_info_gl.get('birth_year', birth_info_gl.get('year', 1990))
+                
+                t_engine_gl = TemporalShuntingEngine(dm_char_gl)
+                
+                # Scan (10-year horizon from 2024 today) - CACHED with Profile
+                scan_gl = get_cached_sai_scan_v3(t_engine_gl, 2024, int(b_year_gl), 120, social_damping_gl, v_profile)
+                timeline_gl = scan_gl['timeline']
+                singularities_gl = scan_gl['singularities']
+                
+                # 2. Layout Structure
+                col_g1, col_g2 = st.columns([2, 1])
+                
+                with col_g2:
+                    st.markdown("##### 🎛️ 全域干预模拟 (Global Remedy)")
+                    
+                    # Target selection for intervention
+                    target_options = ["最高峰值 (Global Peak)"] + [f"{s.get('year')}年{s.get('month')}月 (Age {s.get('age')})" for s in singularities_gl]
+                    selected_target_str = st.selectbox("干预目标 (Intervention Target)", target_options, index=0, key="sai_target_sel")
+                    
+                    # Determine target SAI
+                    if selected_target_str == "最高峰值 (Global Peak)":
+                        target_node = max(singularities_gl, key=lambda x: x['sai']) if singularities_gl else None
+                        target_sai = target_node['sai'] if target_node else 1.0
+                    else:
+                        # Extract node from singularities_gl based on selection
+                        idx = target_options.index(selected_target_str) - 1
+                        target_node = singularities_gl[idx]
+                        target_sai = target_node['sai']
+                    
+                    st.metric("💥 目标应力 (Target SAI)", f"{target_sai:.2f}", 
+                             delta="高危" if target_sai > 2.0 else "安全", delta_color="inverse")
+                    
+                    # New: Automated Recommendations
+                    if target_sai > 1.5:
+                        recommendations = t_engine_gl.sensitivity_search(target_sai, social_damping=social_damping_gl)
+                        if recommendations:
+                            best = recommendations[0]
+                            st.info(f"✨ **系统推荐对冲方案**:\n{best['recommendation']}")
+                    
+                    # Unified Remedy Controls
+                    act_opts_gl = {"NONE": "无干预 (None)", "STUDY": "📚 学习/印星", "DONATION": "💸 布施/财星", "TRAVEL": "✈️ 迁移/马星", "MEDITATION": "🧘 闭关/空亡"}
+                    sel_act_gl = st.selectbox("核心干预方案 (Strategy)", list(act_opts_gl.keys()), format_func=lambda x: act_opts_gl[x], index=0, key="global_act_sel")
+                    
+                    # Geographic Bias
+                    geo_mod_gl = st.slider("地理偏置 (K_geo)", 0.5, 2.0, 1.0, 0.1, key="global_geo_sim_slider")
+                    
+                    # Simulation Output
+                    shunt_res_gl = t_engine_gl.simulate_intervention(target_sai, sel_act_gl, geo_mod_gl, social_damping=social_damping_gl)
+                    st.divider()
+                    st.metric("🛡️ 预演后应力 (Projected SAI)", f"{shunt_res_gl['final_sai']:.2f}", delta=f"-{shunt_res_gl['reduction_pct']}%", delta_color="normal")
+                    
+                    if shunt_res_gl['final_sai'] < 2.0 < target_sai:
+                        st.success("🎯 针对性干预成功对冲风险 (Damping Success)")
+                    elif target_sai > 2.0 and shunt_res_gl['final_sai'] >= 2.0:
+                        st.warning("⚠️ 当前方案对冲强度不足，请尝试系统推荐方案。")
+                
+                with col_g1:
+                    # Plotly Dashboard Visualization
+                    import plotly.graph_objects as go
+                    fig_gl = go.Figure()
+                    
+                    h_x, h_y, h_t = [], [], []
+                    f_x, f_y, f_t = [], [], []
+                    s_y = []
+                    
+                    for node in timeline_gl:
+                        age_v = node['age']
+                        sai_v = node['sai']
+                        label_v = f"Age {age_v} ({node['year']}.{node['month']})"
+                        if node['is_future']:
+                            f_x.append(age_v)
+                            f_y.append(sai_v)
+                            f_t.append(label_v)
+                            if sel_act_gl != "NONE":
+                                s_v = t_engine_gl.simulate_intervention(sai_v, sel_act_gl, geo_mod_gl, social_damping=social_damping_gl)
+                                s_y.append(s_v['final_sai'])
+                        else:
+                            h_x.append(age_v)
+                            h_y.append(sai_v)
+                            h_t.append(label_v)
+                    
+                    if h_x: fig_gl.add_trace(go.Scatter(x=h_x, y=h_y, mode='lines', name='历史镜像', line=dict(color='grey', width=1, dash='dot')))
+                    if f_x: fig_gl.add_trace(go.Scatter(x=f_x, y=f_y, mode='lines', name='未来趋势', line=dict(color='#40e0d0', width=2)))
+                    if s_y: fig_gl.add_trace(go.Scatter(x=f_x, y=s_y, mode='lines', name='干预效果', line=dict(color='#2ecc71', width=2, dash='dash')))
+                    
+                    # Singularity Markers (Peak Damping Trace)
+                    sin_x = [x['age'] for x in singularities_gl]
+                    sin_y = [x['sai'] for x in singularities_gl]
+                    if sin_x: fig_gl.add_trace(go.Scatter(x=sin_x, y=sin_y, mode='markers', name='核心奇点', 
+                                                       text=[f"{x.get('year')}年 {x.get('month')}月 | {x.get('plain_assertion', '')}" for x in singularities_gl],
+                                                       marker=dict(color='#ff4b4b', size=8, symbol='diamond')))
+                    
+                    # Highlight Active Target
+                    if target_node:
+                        fig_gl.add_trace(go.Scatter(x=[target_node['age']], y=[target_node['sai']], mode='markers', name='🎯 当前目标',
+                                                   marker=dict(color='#ffd700', size=15, symbol='star', line=dict(color='white', width=2))))
+                    
+                    fig_gl.add_vline(x=datetime.now().year - int(b_year_gl), line_dash="dash", line_color="white", annotation_text="Today")
+                    fig_gl.add_hline(y=2.0, line_dash="dash", line_color="orange", opacity=0.3)
+                    fig_gl.update_layout(height=320, margin=dict(l=0,r=0,t=10,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig_gl, use_container_width=True, key="global_sai_chart_unified")
+
+                # New: Singularity Interpretation Table (Bazi Plain Language)
+                if singularities_gl:
+                    st.markdown("#### 🔍 命理奇点解读 (Singularity Interpretations)")
+                    sin_data = []
+                    for s in singularities_gl:
+                        if s['is_future']:
+                            sin_data.append({
+                                "时间 (Time)": f"{s.get('year')}年 {s.get('month')}月",
+                                "年龄 (Age)": s.get('age'),
+                                "应力值 (SAI)": s.get('sai'),
+                                "命理白话 (Plain Bazi)": s.get('plain_assertion', '')
+                            })
                     import pandas as pd
-                    import plotly.express as px
-                    rows = []
-                    for r in risk_nodes_gl:
-                        ts = r.get("timestamp", "")
-                        year = int(ts[:4]) if ts else None
-                        metrics = r.get("metrics", {})
-                        topic = r.get("topic", "structure")
-                        if topic not in ["wealth", "relationship"]:
-                            continue
-                        score = r.get("risk_score", 0)
-                        entropy_v = metrics.get("entropy", 0)
-                        sai_v = metrics.get("sai", 0)
-                        ic_v = metrics.get("ic", 0)
-                        source = r.get("reason", "综合波动")
-                        if topic == "wealth":
-                            w = metrics.get("wealth", {})
-                            state_w = w.get("State", "UNKNOWN")
-                            re_v = w.get("Reynolds", 0)
-                            visc_v = w.get("Viscosity", 0)
-                            if state_w == "TURBULENT":
-                                category = "财富湍流"
-                            elif visc_v > 1.5:
-                                category = "财富粘滞"
-                            else:
-                                category = "财富波动"
-                            source = f"财富状态={state_w} Re={re_v:.0f}"
-                        elif topic == "relationship":
-                            relm = metrics.get("relationship", {})
-                            state_r = relm.get("State", "UNKNOWN")
-                            bind_e = relm.get("Binding_Energy", 0)
-                            if state_r == "UNBOUND":
-                                category = "关系解离"
-                            elif state_r == "PERTURBED":
-                                category = "关系扰动"
-                            else:
-                                category = "关系波动"
-                            source = f"关系状态={state_r} E={bind_e:.1f}"
-                        else:
-                            category = "综合波动"
-                        if score >= 1.6:
-                            level = "高"
-                        elif score >= 1.0:
-                            level = "中"
-                        else:
-                            level = "低"
-                        rows.append({
-                            "年份": year,
-                            "主题": "财富" if topic == "wealth" else "情感",
-                            "原因": source,
-                            "熵": entropy_v,
-                            "SAI": sai_v,
-                            "IC": ic_v,
-                            "风险分": score,
-                            "类型": category,
-                            "来源": source,
-                            "等级": level
-                        })
-                    if not rows:
-                        st.info("暂无财富/情感风险节点")
-                        df_rg = pd.DataFrame()
-                    else:
-                        df_rg = pd.DataFrame(rows).sort_values("年份")
-
-                    if not df_rg.empty:
-                        fig_risk_gl = px.line(
-                            df_rg,
-                            x="年份",
-                            y="风险分",
-                            markers=True,
-                            color="等级",
-                            hover_data=["类型", "来源", "熵", "SAI", "IC"],
-                            color_discrete_map={"高": "#ff4b4b", "中": "#ff9f43", "低": "#40e0d0"}
-                        )
-                        fig_risk_gl.update_traces(
-                            hovertemplate=(
-                                "主题=%{customdata[0]}<br>"
-                                "等级=%{customdata[1]}<br>"
-                                "年份=%{x}<br>"
-                                "风险分=%{y:.4f}<br>"
-                                "类型=%{customdata[2]}<br>"
-                                "来源=%{customdata[3]}<br>"
-                                "熵=%{customdata[4]:.4f}<br>"
-                                "SAI=%{customdata[5]:.4f}<br>"
-                                "IC=%{customdata[6]:.4f}<br>"
-                                "命运建议=%{customdata[7]}"
-                            ),
-                            customdata=[
-                                [row["主题"], row["等级"], row["类型"], row["来源"], row["熵"], row["SAI"], row["IC"],
-                                 ("财富湍流：稳风控、控仓位" if row["主题"] == "财富" and row["类型"] == "财富湍流"
-                                  else "财富粘滞：先疏通渠道、控支出" if row["主题"] == "财富" and row["类型"] == "财富粘滞"
-                                  else "财富波动：稳节奏、分散风险" if row["主题"] == "财富"
-                                  else "关系解离：降期待、先沟通修复" if row["主题"] == "情感" and row["类型"] == "关系解离"
-                                  else "关系扰动：缓冲摩擦、保持对话" if row["主题"] == "情感" and row["类型"] == "关系扰动"
-                                  else "关系波动：保持稳定输出与倾听")
-                                 ]
-                                for _, row in df_rg.iterrows()
-                            ],
-                            marker=dict(size=10, line=dict(width=1, color="#fff"))
-                        )
-                        fig_risk_gl.update_layout(height=260, margin=dict(l=10, r=10, t=20, b=20))
-                        st.plotly_chart(fig_risk_gl, use_container_width=True, key="risk_chart_global")
-
-                        st.dataframe(df_rg, hide_index=True, use_container_width=True)
-
-                    advice = []
-                    try:
-                        target_year_gl = int(datetime.now().year)
-                    except Exception:
-                        target_year_gl = datetime.now().year
-                    upcoming_gl = df_rg[df_rg["年份"] >= target_year_gl]
-                    if upcoming_gl.shape[0] == 0 and df_rg.shape[0] > 0:
-                        upcoming_year_gl = df_rg.iloc[-1]["年份"]
-                    elif upcoming_gl.shape[0] > 0:
-                        upcoming_year_gl = upcoming_gl.iloc[0]["年份"]
-                    else:
-                        upcoming_year_gl = None
-                    if upcoming_year_gl:
-                        advice.append(f"近期预警年份：{upcoming_year_gl}，提前做好流年/大运调节。")
-
-                    ent = unified_state_gl.get("physics", {}).get("entropy", 0)
-                    if ent > 1.2:
-                        advice.append("系统熵偏高，宜控节奏、降噪，减少重大决策频率。")
-                    wealth = unified_state_gl.get("physics", {}).get("wealth", {})
-                    if wealth.get("Reynolds", 0) < 100:
-                        advice.append("财富流体处于低流态，建议稳态蓄水，谨慎扩张。")
-                    rel = unified_state_gl.get("physics", {}).get("relationship", {})
-                    if rel.get("State") in ["PERTURBED", "UNBOUND"]:
-                        advice.append("情感引力不稳，避免冲突时段，优先沟通与缓冲。")
-                    if not df_rg.empty:
-                        cat_top = df_rg.iloc[0]["类型"]
-                        cat_advice = {
-                            "熵暴": "熵暴期：尽量减少重大决策与资金大幅流动，先稳场再行动。",
-                            "结构应力": "结构应力期：关注健康/结构性风险，减压、分摊责任，避免过载。",
-                            "相位抖动": "相位抖动期：沟通与协调为先，避免硬碰，坚持小步快跑。",
-                            "综合波动": "综合波动期：常规波动，保持韧性，注意节奏与缓冲。"
-                        }
-                        advice.append(cat_advice.get(cat_top, "保持稳态，应对常规波动。"))
-                    if advice:
-                        st.markdown("#### 🎯 命运建议 (Actionable Guidance)")
-                        st.markdown("\n".join([f"- {a}" for a in advice]))
+                    st.table(pd.DataFrame(sin_data))
 
                 # Generate Holographic Report
                 holographic_report_gl = global_arbitrator.generate_holographic_report(unified_state_gl)

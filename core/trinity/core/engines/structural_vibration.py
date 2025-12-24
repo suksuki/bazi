@@ -22,78 +22,104 @@ class StructuralVibrationEngine:
     def calculate_vibration_metrics(self, stems: List[str], branches: List[str], context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Main entry point for calculating structural vibration transmission.
+        Now supports 'annual_stem' pulse trigger for hidden stems.
         """
         context = context or {}
         geo_k = self._get_geo_factor(context)
+        # Extract periodic pulse (Annual Stem)
+        annual_pillar = context.get('annual_pillar', '甲子')
+        annual_stem = annual_pillar[0] if annual_pillar else None
         
         # 1. Base Energy Mapping (Linear)
         energy_map = self._map_base_energy(stems, branches)
         
         # 2. Vertical Coupling (Branch -> Stem Modulation)
-        # Apply Geo Damping to Roots first
-        self._apply_vertical_coupling(energy_map, stems, branches, geo_k)
+        # Phase 4.0: Includes Hidden-State Pulse (0.7/0.2/0.1)
+        self._apply_vertical_coupling(energy_map, stems, branches, geo_k, annual_stem)
         
         # 3. Non-linear Transmission (Tanh Saturation)
-        # Simulate interaction network (Simplified graph dynamics)
-        # Here we simulate the final energy state after stabilization
         final_energy = {}
         for elem, e_val in energy_map.items():
             final_energy[elem] = self._tanh_saturation(e_val)
             
-        # 4. Entropy Calculation
+        # 4. Phase Transition Detection (MOD_15 Extension - Refined 80% Threshold)
+        is_phase_transition, dominant_elem = self._detect_phase_transition(final_energy)
+        
+        # 5. Entropy Calculation
         entropy = self._calculate_system_entropy(final_energy)
         
-        # 5. Composite Deity Optimization
-        # Find optimal 'Useful God' mix to minimize entropy
-        optimal_mix = self._optimize_composite_deity(final_energy)
+        # 6. Composite Deity Optimization
+        optimal_mix = self._optimize_composite_deity(final_energy, is_phase_transition, dominant_elem)
         
         return {
             "energy_state": final_energy,
             "entropy": round(entropy, 4),
             "optimal_deity_mix": optimal_mix,
-            "transmission_efficiency": self._calculate_efficiency(energy_map, final_energy)
+            "transmission_efficiency": self._calculate_efficiency(energy_map, final_energy),
+            "is_phase_transition": is_phase_transition,
+            "dominant_element": dominant_elem
         }
     
+    def _detect_phase_transition(self, energy_map: Dict[str, float]) -> tuple[bool, str]:
+        """
+        Detects Phase Transition (Extreme Follow).
+        Threshold increased to 80% for Phase 4.0.
+        """
+        total_energy = sum(energy_map.values())
+        if total_energy == 0: return False, None
+        
+        sorted_elems = sorted(energy_map.items(), key=lambda x: x[1], reverse=True)
+        dom_elem, dom_val = sorted_elems[0]
+        
+        purity = dom_val / total_energy
+        if purity < 0.80: # Strict 80% Threshold
+            return False, None
+            
+        return True, dom_elem
+
     def _tanh_saturation(self, energy_in: float) -> float:
         """
-        Non-linear saturation function: E_out = E_max * tanh(E_in / E_threshold)
-        Assumes E_threshold approx E_MAX / 2 for smooth roll-off.
+        Non-linear saturation: E_out = E_max * tanh(E_in / threshold)
         """
         threshold = self.E_MAX / 2.0
         return self.E_MAX * math.tanh(energy_in / threshold)
     
-    def _apply_vertical_coupling(self, energy_map: Dict[str, float], stems: List[str], branches: List[str], geo_k: float):
+    def _apply_vertical_coupling(self, energy_map: Dict[str, float], stems: List[str], branches: List[str], geo_k: float, annual_stem: str = None):
         """
-        Modulates Stem energy based on Root strength and Geo factor.
-        V_boost = Root * C_coupling * K_geo
+        Modulates Stem energy.
+        Phase 4.0: Hidden-State Pulse Trigger.
+        If current annual_stem matches a hidden stem, release it at full potential.
+        Otherwise, use default weights.
         """
-        # Simple mapping: Check if Stem has Root in ANY branch
-        # If rooted, apply boost.
-        
         for stem in stems:
             stem_elem = BaziParticleNexus.STEMS.get(stem)[0]
-            # Check for roots
             root_strength = 0.0
+            
             for br in branches:
                 hidden = BaziParticleNexus.get_branch_weights(br)
-                for h_stem, h_weight in hidden:
+                # Hidden structure: [(Stem, Weight), ...] 
+                # Weight is usually a priority: Main(10), Secondary(3), Tertiary(1)
+                for h_idx, (h_stem, h_weight) in enumerate(hidden):
                     h_elem = BaziParticleNexus.STEMS.get(h_stem)[0]
                     if h_elem == stem_elem:
-                        root_strength += h_weight * 0.1 # Scaling
+                        # [PATCH] Pulsed Release Logic
+                        # If annual_stem 'activates' this hidden stem, increase release efficiency
+                        is_pulsed = (h_stem == annual_stem)
+                        pulse_mult = 1.5 if is_pulsed else 1.0
+                        
+                        # Apply 0.7/0.2/0.1 Ratio for Main/Sub/Residual
+                        ratios = [0.7, 0.2, 0.1]
+                        ratio = ratios[h_idx] if h_idx < len(ratios) else 0.05
+                        
+                        root_strength += h_weight * ratio * pulse_mult
             
-            # Apply Vertical Boost
             v_boost = root_strength * self.K_COUPLING * geo_k
-            
-            # Add to map
             energy_map[stem_elem] = energy_map.get(stem_elem, 0) + v_boost
 
     def _calculate_system_entropy(self, energy_map: Dict[str, float]) -> float:
-        """
-        Shannon Entropy of the element distribution: S = -Sum(Pi * ln(Pi))
-        """
+        """Shannon Entropy S = -Sum(Pi * ln(Pi))"""
         total = sum(energy_map.values())
         if total == 0: return 0.0
-        
         entropy = 0.0
         for e, v in energy_map.items():
             p = v / total
@@ -101,35 +127,28 @@ class StructuralVibrationEngine:
                 entropy -= p * math.log(p)
         return entropy
 
-    def _optimize_composite_deity(self, current_energy: Dict[str, float]) -> Dict[str, float]:
+    def _optimize_composite_deity(self, current_energy: Dict[str, float], is_phase_transition: bool = False, dominant_elem: str = None) -> Dict[str, float]:
         """
-        Finds the element(s) that, if injected, would minimize system entropy (bring balance).
-        Returns a dict of {Element: Injection_Percentage}.
+        Normal: Minimize Entropy.
+        Phase Transition: Support Flow (Follow or Clear Output).
         """
-        # Naive Gradient Descent: Try injecting each element and see S delta
-        best_elem = None
-        min_s = float('inf')
-        
-        base_s = self._calculate_system_entropy(current_energy)
-        
+        if is_phase_transition and dominant_elem:
+            # We also suggest the 'Output' of the dominant element if it exists
+            gen_map = {"Wood": "Fire", "Fire": "Earth", "Earth": "Metal", "Metal": "Water", "Water": "Wood"}
+            output_elem = gen_map.get(dominant_elem)
+            return {dominant_elem: 0.8, output_elem: 0.2}
+            
         results = {}
         for elem in ['Wood', 'Fire', 'Earth', 'Metal', 'Water']:
-            # Sim injection
             temp_map = current_energy.copy()
-            temp_map[elem] = temp_map.get(elem, 0) + 2.0 # Injection Unit
+            temp_map[elem] = temp_map.get(elem, 0) + 2.0
             new_s = self._calculate_system_entropy(temp_map)
             results[elem] = new_s
             
-        # Select best single or composite
-        # For now, return top 1
         sorted_res = sorted(results.items(), key=lambda x: x[1])
-        best_e = sorted_res[0][0]
-        
-        return {best_e: 1.0} # 100% suggestion
-
+        return {sorted_res[0][0]: 1.0}
+    
     def _get_geo_factor(self, context: Dict[str, Any]) -> float:
-        # Extract K_geo from context.data or default 1.0
-        # If 'geo_factor' is explicitly passed
         data = context.get('data', {})
         return data.get('geo_factor', 1.0)
         
@@ -138,10 +157,9 @@ class StructuralVibrationEngine:
         for s in stems:
              e = BaziParticleNexus.STEMS.get(s)[0]
              emap[e] = emap.get(e, 0) + 1.0
-        # Branches handled via vertical coupling mostly, but add base
         for b in branches:
              e = BaziParticleNexus.BRANCHES.get(b)[0]
-             emap[e] = emap.get(e, 0) + 1.0
+             emap[e] = emap.get(e, 0) + 0.5 # Minimal base from branch
         return emap
     
     def _calculate_efficiency(self, energy_in: Dict[str, float], energy_out: Dict[str, float]) -> float:

@@ -1,0 +1,244 @@
+[
+    {
+        "case_id": "MOD16_TEST_01_ESCAPE",
+        "name": "枭神夺食-行为避险测试 (Intellectual Escape)",
+        "bazi": {
+            "stems": [
+                "壬",
+                "甲",
+                "丙",
+                "戊"
+            ],
+            "branches": [
+                "申",
+                "辰",
+                "午",
+                "子"
+            ]
+        },
+        "context": {
+            "event_year": "2028 (戊申)",
+            "danger": "极高SAI (>2.5)"
+        },
+        "intervention": "STUDY",
+        "goal": "验证印星(STUDY)阻尼是否能对冲食神坍缩"
+    },
+    {
+        "case_id": "MOD16_TEST_02_MIGRATION",
+        "name": "伤官见官-地理分流测试 (Geo Escape)",
+        "birth_year": 1995,
+        "bazi": {
+            "stems": [
+                "庚",
+                "乙",
+                "己",
+                "甲"
+            ],
+            "branches": [
+                "申",
+                "酉",
+                "丑",
+                "戌"
+            ]
+        },
+        "context": {
+            "geo_old": "Seoul",
+            "geo_new": "Bangkok",
+            "geo_modifier": 1.8
+        },
+        "intervention": "MIGRATION",
+        "goal": "验证 K_geo 热能注入对金木对撞的物理稀释"
+    },
+    {
+        "case_id": "MOD16_TEST_03_WEALTH_BREAK",
+        "name": "群比争财-破财免灾 (Wealth Shunt)",
+        "bazi": {
+            "stems": [
+                "甲",
+                "甲",
+                "甲",
+                "戊"
+            ],
+            "branches": [
+                "寅",
+                "卯",
+                "辰",
+                "戌"
+            ]
+        },
+        "context": {
+            "event_year": "2024 (甲辰)",
+            "danger": "财星破碎"
+        },
+        "intervention": "DONATION",
+        "goal": "主动释放财气(Donation)以降低被动劫掠的SAI峰值"
+    },
+    {
+        "case_id": "MOD16_TEST_04_MARRIAGE_DELAY",
+        "name": "夫妻宫伏吟-晚婚策略 (Time Delay)",
+        "bazi": {
+            "stems": [
+                "癸",
+                "丁",
+                "癸",
+                "丁"
+            ],
+            "branches": [
+                "巳",
+                "未",
+                "巳",
+                "未"
+            ]
+        },
+        "context": {
+            "event_year": "2025 (乙巳)",
+            "danger": "伏吟痛击"
+        },
+        "intervention": "DELAY",
+        "goal": "推迟契约节点以避开SAI高频振荡区"
+    },
+    {
+        "case_id": "MOD16_TEST_05_CAREER_SWITCH",
+        "name": "官杀混杂-行业切换 (Industry Switch)",
+        "bazi": {
+            "stems": [
+                "丙",
+                "壬",
+                "庚",
+                "丁"
+            ],
+            "branches": [
+                "午",
+                "子",
+                "申",
+                "亥"
+            ]
+        },
+        "context": {
+            "event_year": "2026 (丙午)",
+            "danger": "官杀攻身"
+        },
+        "intervention": "CAREER_CHANGE",
+        "goal": "切换至水行业(Water)通关金火对战"
+    },
+    {
+        "case_id": "MOD16_TEST_06_CHARITY",
+        "name": "财多身弱-布施平衡 (Charity Balance)",
+        "bazi": {
+            "stems": [
+                "辛",
+                "乙",
+                "乙",
+                "己"
+            ],
+            "branches": [
+                "酉",
+                "未",
+                "丑",
+                "巳"
+            ]
+        },
+        "context": {
+            "event_year": "2027 (丁未)",
+            "danger": "富屋贫人"
+        },
+        "intervention": "DONATION",
+        "goal": "通过高频小额布施降低财压SAI"
+    },
+    {
+        "case_id": "MOD16_TEST_07_SECLUSION",
+        "name": "天克地冲-闭关策略 (Void Strategy)",
+        "bazi": {
+            "stems": [
+                "戊",
+                "壬",
+                "丙",
+                "庚"
+            ],
+            "branches": [
+                "子",
+                "午",
+                "申",
+                "寅"
+            ]
+        },
+        "context": {
+            "event_year": "2026 (丙午)",
+            "danger": "全盘反吟"
+        },
+        "intervention": "MEDITATION",
+        "goal": "进入低能耗模式(Void)规避外部场冲击"
+    },
+    {
+        "case_id": "MOD16_TEST_08_SURGERY",
+        "name": "血刃煞-医疗应劫 (Medical Shunt)",
+        "bazi": {
+            "stems": [
+                "庚",
+                "庚",
+                "甲",
+                "甲"
+            ],
+            "branches": [
+                "申",
+                "申",
+                "寅",
+                "寅"
+            ]
+        },
+        "context": {
+            "event_year": "2028 (戊申)",
+            "danger": "金木相战"
+        },
+        "intervention": "SURGERY",
+        "goal": "主动微创手术释放物理层面金木对撞应力"
+    },
+    {
+        "case_id": "MOD16_TEST_09_RELATIONSHIP_COOLING",
+        "name": "桃花泛滥-分居策略 (Spatial Cooling)",
+        "bazi": {
+            "stems": [
+                "壬",
+                "癸",
+                "丁",
+                "丙"
+            ],
+            "branches": [
+                "子",
+                "亥",
+                "酉",
+                "子"
+            ]
+        },
+        "context": {
+            "event_year": "2023 (癸卯)",
+            "danger": "桃花劫"
+        },
+        "intervention": "SEPARATION",
+        "goal": "物理距离增加空间阻尼，降低情感引力SAI"
+    },
+    {
+        "case_id": "MOD16_TEST_10_NAME_CHANGE",
+        "name": "弱格虚浮-名号补能 (Symbolic Remedy)",
+        "bazi": {
+            "stems": [
+                "丙",
+                "丙",
+                "己",
+                "丁"
+            ],
+            "branches": [
+                "午",
+                "巳",
+                "未",
+                "丑"
+            ]
+        },
+        "context": {
+            "event_year": "2029 (己酉)",
+            "danger": "晦火无光"
+        },
+        "intervention": "RENAME",
+        "goal": "轻量级符号注入对SAI的微扰动测试"
+    }
+]

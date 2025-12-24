@@ -311,8 +311,9 @@ class UnifiedArbitratorMaster:
         self.stress_engine.day_master = current_dm
         stress_report = self.stress_engine.calculate_micro_lattice_defects(all_branches, month_branch)
         
-        # 2.2 Symbolic Stars (Tian Yi / Wen Chang / Lu / Yang Ren)
-        star_stats = SymbolicStarsEngine.analyze_stars(current_dm, all_branches)
+        # 2.2 Symbolic Stars (Tian Yi / Wen Chang / Lu / Yang Ren / Peach / Horse)
+        year_branch = bazi_chart[0][1] if bazi_chart and len(bazi_chart[0]) >= 2 else None
+        star_stats = SymbolicStarsEngine.analyze_stars(current_dm, all_branches, year_branch=year_branch)
         star_phys = SymbolicStarsEngine.get_physical_modifiers(star_stats)
         
         # 2.3 Combination Phase (He Hua)
@@ -429,30 +430,39 @@ class UnifiedArbitratorMaster:
              months_since_switch=months_since_switch
         )
 
-        # 4.2 Life-Path Sampling - Re-enabled for Pulse Scan
-        life_path_data: Optional[Dict[str, Any]] = None
-        try:
-            if birth_info and all(k in birth_info for k in ('birth_year', 'birth_month', 'birth_day', 'birth_hour')):
-                bdt = datetime(
-                    int(birth_info['birth_year']),
-                    int(birth_info['birth_month']),
-                    int(birth_info['birth_day']),
-                    int(birth_info['birth_hour'])
-                )
-                from core.bazi_profile import VirtualBaziProfile
-                profile = VirtualBaziProfile({'year':bazi_chart[0], 'month':bazi_chart[1], 'day':bazi_chart[2], 'hour':bazi_chart[3]}, 
-                                            gender=(1 if gender == '男' else 0), 
-                                            birth_date=bdt)
-                birth_year = bdt.year
-                life_path_data = self.life_path_engine.simulate_lifespan(
-                    profile,
-                    start_year=birth_year,
-                    end_year=birth_year + 80,
-                    resolution='year'
-                )
-        except Exception as e:
-            logger.warning(f"Life-path simulation failed: {e}")
-            life_path_data = None
+        # Finalizing physics packet
+        stellar_metrics = {
+            "coherence": star_phys.get('entropy_damping', 1.0),
+            "snr_boost": star_phys.get('snr_boost', 1.0),
+            "attraction": star_phys.get('attraction_boost', 0.0),
+            "impulse": star_phys.get('kinetic_impulse', 0.0),
+            "stars": star_stats['active_stars']
+        }
+
+        # [Phase 6.0] Life-Path Sampling Disabled for Performance (Redundant after Radar Removal)
+        life_path_data = None
+        # try:
+        #     if birth_info and all(k in birth_info for k in ('birth_year', 'birth_month', 'birth_day', 'birth_hour')):
+        #         bdt = datetime(
+        #             int(birth_info['birth_year']),
+        #             int(birth_info['birth_month']),
+        #             int(birth_info['birth_day']),
+        #             int(birth_info['birth_hour'])
+        #         )
+        #         from core.bazi_profile import VirtualBaziProfile
+        #         profile = VirtualBaziProfile({'year':bazi_chart[0], 'month':bazi_chart[1], 'day':bazi_chart[2], 'hour':bazi_chart[3]}, 
+        #                                     gender=(1 if gender == '男' else 0), 
+        #                                     birth_date=bdt)
+        #         birth_year = bdt.year
+        #         life_path_data = self.life_path_engine.simulate_lifespan(
+        #             profile,
+        #             start_year=birth_year,
+        #             end_year=birth_year + 80,
+        #             resolution='year'
+        #         )
+        # except Exception as e:
+        #     logger.warning(f"Life-path simulation failed: {e}")
+        #     life_path_data = None
 
         # --- synthesize Unified State ---
         # 5.1 Probability Wave Correction (Phase 8: Context-Aware Adjustment)
@@ -559,6 +569,16 @@ class UnifiedArbitratorMaster:
         unified_state["modules_active"] = eval_res.get("modules_active", [])
         unified_state["verdict"] = eval_res.get("verdict", {})
         unified_state["plain_guidance"] = self._plain_guidance(unified_state)
+
+        # [MOD_17] Intelligence Layer: Stephen Chow Style Translation
+        from core.utils import Stellar_Comedy_Parser
+        sai_val = stress_report.get('SAI', 1.0)
+        ic_val = resonance_metrics.get('locking_ratio', 1.0)
+        # Re-calculating with the final system_entropy
+        stellar_narrative = Stellar_Comedy_Parser.translate(sai=sai_val, entropy=unified_state['physics']['entropy'], ic=ic_val)
+        unified_state["intelligence"] = {
+            "stellar_mantra": stellar_narrative
+        }
 
         return unified_state
 
@@ -820,6 +840,24 @@ class UnifiedArbitratorMaster:
         
         report.append(f"**【惯性预警】**：粘滞指数 **{viscosity:.2f}**，{'流动性极佳，换道超车正当时' if viscosity < 0.4 else '历史惯性极大，切勿轻举妄动'}。")
         report.append(f"**【GEO 建议】**：当前坐标显示 **{geo_msg}**。{'若感到压力过载，建议向反向五行区域迁徙以寻求物理对冲。' if entropy > 0.8 else '地气相宜，安营扎寨。'}")
+
+        # [NEW] MOD_17: Stellar Interaction
+        intelligence = state.get("intelligence", {})
+        if intelligence.get("stellar_mantra"):
+            report.append("\n### ✨ 第四部分：星辰相干真言 (Stellar Coherence Mantra)")
+            report.append(f"> **“{intelligence['stellar_mantra']}”**\n")
+            
+            # Add telemetry for stellar metrics
+            stellar = phy.get('stellar', {})
+            attraction = stellar.get('attraction', 0.0)
+            impulse = stellar.get('impulse', 0.0)
+            
+            st_metrics = []
+            if attraction > 0: st_metrics.append(f"量子引力增益: +{attraction:.2f} eV")
+            if impulse > 0: st_metrics.append(f"动能冲量增益: +{impulse:.2f} ΔV")
+            
+            if st_metrics:
+                report.append(f"**【星辰修正】**：{' | '.join(st_metrics)}")
 
         # 3. Future Pulse Scan
         report.append("\n### 🚀 第三部分：百年事件触发模拟 (100-Year Pulse Scan)")

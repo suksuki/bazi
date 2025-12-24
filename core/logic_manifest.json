@@ -2,6 +2,18 @@
     "version": "11.0.0",
     "description": "Grand Unified Single-Body Physics with Micro-Precision Dynamics (Phase G Complete).",
     "system_id": "ANTIGRAVITY_CORE_ALPHA",
+    "themes": {
+        "BAZI_FUNDAMENTAL": {
+            "id": "BAZI_FUNDAMENTAL",
+            "name": "八字基础规则主题",
+            "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。"
+        },
+        "WEALTH_DYNAMICS": {
+            "id": "WEALTH_DYNAMICS",
+            "name": "财富动态主题",
+            "description": "基于流体力学的财富流动、粘滞与增益分析。"
+        }
+    },
     "modules": {
         "MOD_14_TIME_SPACE_INTERFERENCE": {
             "id": "MOD_14_TIME_SPACE_INTERFERENCE",
@@ -29,7 +41,25 @@
                 "Topic_01_Spacetime_Coupling",
                 "ANTIGRAVITY_V2.6_PHYSICS_CONSTANTS"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_16_TEMPORAL_SHUNTING": {
+            "id": "MOD_16_TEMPORAL_SHUNTING",
+            "name": "⏳ 应期预测与行为干预 (Temporal Shunting)",
+            "description": "Calculates future SAI singularity points and simulates behavior/geo shunting efficiency using differential decay equations.",
+            "layer": "TEMPORAL",
+            "priority": 200,
+            "status": "ACTIVE",
+            "linked_rules": [
+                "SingularityTrigger",
+                "ShuntEfficiency"
+            ],
+            "dependencies": [
+                "MOD_15_STRUCTURAL_VIBRATION",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_15_STRUCTURAL_VIBRATION": {
             "id": "MOD_15_STRUCTURAL_VIBRATION",
@@ -57,7 +87,8 @@
                 "Topic_02_Structural_Vibration",
                 "ANTIGRAVITY_NONLINEAR_DYNAMICS"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_00_SUBSTRATE": {
             "id": "MOD_00_SUBSTRATE",
@@ -85,7 +116,8 @@
             "origin_trace": [
                 "ANTIGRAVITY_V10_CORE"
             ],
-            "fusion_type": "CORE_SUBSTRATE"
+            "fusion_type": "CORE_SUBSTRATE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_01_TRIPLE": {
             "name": "♾️ 大一统三元动力 (Integrated Triple Dynamics)",
@@ -111,7 +143,8 @@
             "origin_trace": [
                 "ANTIGRAVITY_V10_CORE"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_02_SUPER": {
             "name": "🔥 极高位格局共振 (Super-Structure Resonance)",
@@ -138,7 +171,8 @@
             "origin_trace": [
                 "ANTIGRAVITY_V10_CORE"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_03_TRANSFORM": {
             "name": "⚗️ 合化动力学 (Transformation Chemistry)",
@@ -163,7 +197,8 @@
             "origin_trace": [
                 "Topic_G_01_Combination"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_04_STABILITY": {
             "name": "🛡️ 刑害干涉动力学 (Penalty & Harm Dynamics)",
@@ -188,7 +223,8 @@
             "origin_trace": [
                 "ANTIGRAVITY_V10_CORE"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_05_WEALTH": {
             "id": "MOD_05_WEALTH",
@@ -218,7 +254,8 @@
             "origin_trace": [
                 "Topic_B_05_Wealth_Fluid"
             ],
-            "fusion_type": "STANDALONE_MODULE"
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_06_RELATIONSHIP": {
             "id": "MOD_06_RELATIONSHIP",
@@ -249,7 +286,8 @@
             "origin_trace": [
                 "Topic_B_06_Relationship_Gravity"
             ],
-            "fusion_type": "STANDALONE_MODULE"
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_07_LIFEPATH": {
             "id": "MOD_07_LIFEPATH",
@@ -275,7 +313,8 @@
             "origin_trace": [
                 "ANTIGRAVITY_V10_CORE"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_09_COMBINATION": {
             "id": "MOD_09_COMBINATION",
@@ -299,7 +338,8 @@
             "origin_trace": [
                 "Topic_G_01_Combination"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_10_RESONANCE": {
             "id": "MOD_10_RESONANCE",
@@ -323,7 +363,8 @@
             "origin_trace": [
                 "Topic_G_03_Pillar_Weighting"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_11_GRAVITY": {
             "id": "MOD_11_GRAVITY",
@@ -346,7 +387,8 @@
             "origin_trace": [
                 "Topic_G_03_Pillar_Weighting"
             ],
-            "fusion_type": "CORE_MODULE"
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
         },
         "MOD_12_INERTIA": {
             "id": "MOD_12_INERTIA",
@@ -363,14 +405,69 @@
                 "VISCOSITY_INDEX"
             ],
             "goal": "确保大运切换期间能量的平滑交接。",
-            "outcome": "在过渡期间保持因果熵稳定。",
+            "outcome": "在过渡期间保持因果熵 stable。",
             "layer": "TEMPORAL",
             "priority": 550,
             "status": "ACTIVE",
             "origin_trace": [
                 "Topic_G_04_Spacetime_Inertia"
             ],
-            "fusion_type": "STANDALONE_MODULE"
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_17_STELLAR_INTERACTION": {
+            "id": "MOD_17_STELLAR_INTERACTION",
+            "name": "✨ 星辰相干与喜剧真言 (Stellar Coherence & Comedy)",
+            "icon": "✨",
+            "type": "INTELLIGENCE",
+            "description": "将传统神煞（天乙、文昌、桃花、驿马）映射为高阶物理场增益与动能冲量，并提供周星驰风格的全息真言输出。",
+            "active": true,
+            "linked_rules": [
+                "PH_STELLAR_ENTROPY_DAMPING",
+                "PH_STELLAR_SNR_BOOST",
+                "PH_STELLAR_QUANTUM_ATTRACTION",
+                "PH_STELLAR_KINETIC_IMPULSE"
+            ],
+            "linked_metrics": [
+                "STELLAR_COHERENCE",
+                "QUANTUM_ATTRACTION",
+                "KINETIC_IMPULSE"
+            ],
+            "goal": "量化星辰场对系统熵与动能的修正，并实现人性化风格表达。",
+            "outcome": "生成 Stephen Chow 风格全息报告与高阶星辰修正矩阵。",
+            "layer": "INTELLIGENCE",
+            "priority": 400,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy"
+            ],
+            "fusion_type": "CORE_INTELLIGENCE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_18_BASE_APP": {
+            "id": "MOD_18_BASE_APP",
+            "name": "🛠️ 基础应用与全局工具 (Basic Applications & Global Tools)",
+            "icon": "🛠️",
+            "type": "DETAIL",
+            "description": "包含系统全局调用的基础算法、命运真言工具及跨模块物理干涉检测。",
+            "active": true,
+            "linked_rules": [
+                "PH_DESTINY_TRANSLATION",
+                "PH_SINGULARITY_DETECT",
+                "PH_CAUSAL_ENTROPY",
+                "PH_LIFE_CYCLE_RESONANCE",
+                "PH_JITTER",
+                "PH_CHONG",
+                "PH25-26_COLLAPSE",
+                "PH_LUCK_BACKGROUND",
+                "PH_ANNUAL_IMPULSE"
+            ],
+            "goal": "提供全系统的核心物理常量支撑与叙事风格翻译。",
+            "outcome": "确保全局物理场一致度与真言输出稳定性。",
+            "layer": "ENVIRONMENT",
+            "priority": 100,
+            "status": "ACTIVE",
+            "theme": "BAZI_FUNDAMENTAL"
         }
     },
     "registry": {
@@ -777,6 +874,46 @@
             "fusion_type": "CORE_ENGINE_RULE",
             "function": "LifePathEngine._identify_risk_reason"
         },
+        "PH_STELLAR_ENTROPY_DAMPING": {
+            "id": "PH_STELLAR_ENTROPY_DAMPING",
+            "name": "星辰熵衰减 (Stellar Entropy Damping)",
+            "type": "FIELD_MODIFIER",
+            "layer": "INTELLIGENCE",
+            "priority": 450,
+            "description": "Each Tian Yi (天乙) node damps system entropy by 10%.",
+            "status": "ACTIVE",
+            "fusion_type": "CORE_RULE"
+        },
+        "PH_STELLAR_SNR_BOOST": {
+            "id": "PH_STELLAR_SNR_BOOST",
+            "name": "星辰信噪比提升 (Stellar SNR Boost)",
+            "type": "FIELD_MODIFIER",
+            "layer": "INTELLIGENCE",
+            "priority": 440,
+            "description": "Each Wen Chang (文昌) node improves signal-to-noise ratio by 15%.",
+            "status": "ACTIVE",
+            "fusion_type": "CORE_RULE"
+        },
+        "PH_STELLAR_QUANTUM_ATTRACTION": {
+            "id": "PH_STELLAR_QUANTUM_ATTRACTION",
+            "name": "星辰量子引力 (Stellar Quantum Attraction)",
+            "type": "ATTRACTION",
+            "layer": "INTELLIGENCE",
+            "priority": 430,
+            "description": "Each Peach Blossom (桃花) increases relationship binding energy.",
+            "status": "ACTIVE",
+            "fusion_type": "CORE_RULE"
+        },
+        "PH_STELLAR_KINETIC_IMPULSE": {
+            "id": "PH_STELLAR_KINETIC_IMPULSE",
+            "name": "星辰动能冲量 (Stellar Kinetic Impulse)",
+            "type": "KINETIC",
+            "layer": "INTELLIGENCE",
+            "priority": 420,
+            "description": "Each Post Horse (驿马) reduces movement resistance and increases delta-V.",
+            "status": "ACTIVE",
+            "fusion_type": "CORE_RULE"
+        },
         "PH_DESTINY_TRANSLATION": {
             "id": "PH_DESTINY_TRANSLATION",
             "name": "命运真言翻译 (Destiny Translation Tool)",
@@ -1071,6 +1208,30 @@
             "origin_trace": [
                 "Topic_G_04_Spacetime_Inertia"
             ]
+        },
+        "STELLAR_COHERENCE": {
+            "id": "STELLAR_COHERENCE",
+            "name": "星辰相干度 (Stellar Coherence - η_s)",
+            "unit": "ratio",
+            "description": "Composite damping/boost effect from stable stellar nodes.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
+        },
+        "QUANTUM_ATTRACTION": {
+            "id": "QUANTUM_ATTRACTION",
+            "name": "量子引力增益 (Quantum Attraction Boost)",
+            "unit": "eV (analogous)",
+            "description": "Increased binding energy from Peach Blossom resonance.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
+        },
+        "KINETIC_IMPULSE": {
+            "id": "KINETIC_IMPULSE",
+            "name": "动能冲量 (Kinetic Impulse - ΔV)",
+            "unit": "m/s (analogous)",
+            "description": "Reduction in situational friction from Post Horse activity.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
         }
     },
     "bazi_parameters": {

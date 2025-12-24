@@ -1,7 +1,7 @@
 import json
 import os
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +36,23 @@ class LogicRegistry:
         registry = self._manifest.get('registry', {})
         return {k: v for k, v in registry.items() if v.get('status') == 'ACTIVE'}
 
-    def get_active_modules(self) -> List[Dict[str, Any]]:
+    def get_themes(self) -> Dict[str, Any]:
+        """Retrieves and returns the high-level themes from the manifest."""
+        return self._manifest.get('themes', {})
+
+    def get_active_modules(self, theme_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Retrieves active UI modules from the manifest, sorted by ID.
+        Retrieves active UI modules from the manifest, optionally filtered by theme.
         Returns a list of module dictionaries including their ID.
         """
         modules = self._manifest.get('modules', {})
         active_list = []
         for m_id, m_data in modules.items():
             if m_data.get('active', True):
+                # Filter by theme if requested
+                if theme_id and m_data.get('theme') != theme_id:
+                    continue
+                    
                 m_copy = m_data.copy()
                 m_copy['id'] = m_id
                 active_list.append(m_copy)

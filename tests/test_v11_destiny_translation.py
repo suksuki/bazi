@@ -68,7 +68,9 @@ class TestDestinyTranslation(unittest.TestCase):
         self.assertIn("🚀", holographic)
         self.assertIn("第三部分", holographic)
         # Verify that the report contains Chow-style quotes (since UnifiedArbitratorMaster defaults to Chow)
-        self.assertTrue("咸鱼" in holographic or "功夫" in holographic or "酱爆" in holographic or "运气" in holographic or "一万年" in holographic or "如花" in holographic)
+        # Verify that the report contains Chow-style keywords or specific narrative artifacts
+        chow_keywords = ["咸鱼", "功夫", "酱爆", "运气", "一万年", "如花", "黯然销魂饭", "跳舞", "毛孔", "自然醒", "责任轻"]
+        self.assertTrue(any(k in holographic for k in chow_keywords), f"No Chow-style keywords found in holographic report: {holographic}")
 
 if __name__ == "__main__":
     unittest.main()

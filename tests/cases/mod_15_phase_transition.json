@@ -1,0 +1,51 @@
+[
+    {
+        "case_id": "MOD15_PHASE_01_FOLLOW",
+        "name": "从革格-极限相变测试 (True Follow - Cong Ge)",
+        "birth_year": 1980,
+        "bazi": {
+            "stems": [
+                "辛",
+                "辛",
+                "庚",
+                "辛"
+            ],
+            "branches": [
+                "酉",
+                "酉",
+                "申",
+                "酉"
+            ]
+        },
+        "context": {
+            "luck": "庚申",
+            "year": "辛酉"
+        },
+        "goal": "验证系统是否能识别‘金’的绝对主宰，并将‘火’标记为最高SAI触发器",
+        "expected_phase": "TRUE"
+    },
+    {
+        "case_id": "MOD15_PHASE_02_FALSE_FOLLOW",
+        "name": "假从格-临界点震荡测试 (False Follow - Fake Cong)",
+        "birth_year": 1982,
+        "bazi": {
+            "stems": [
+                "壬",
+                "壬",
+                "壬",
+                "癸"
+            ],
+            "branches": [
+                "子",
+                "子",
+                "子",
+                "未"
+            ]
+        },
+        "context": {
+            "year": "丁未"
+        },
+        "goal": "监测未土（燥土）对水场的扰动，判定是‘维持从态’还是‘发生崩溃’",
+        "expected_phase": "FALSE"
+    }
+]
