@@ -30,11 +30,11 @@ class LogicArbitrator:
         """
         # 1. Initialize intensities map
         intensities = {
-            "Bi Jian": 0.0, "Jie Cai": 0.0,
-            "Shi Shen": 0.0, "Shang Guan": 0.0,
-            "Pian Cai": 0.0, "Zheng Cai": 0.0,
-            "Qi Sha": 0.0, "Zheng Guan": 0.0,
-            "Pian Yin": 0.0, "Zheng Yin": 0.0
+            "比肩": 0.0, "劫财": 0.0,
+            "食神": 0.0, "伤官": 0.0,
+            "偏财": 0.0, "正财": 0.0,
+            "七杀": 0.0, "正官": 0.0,
+            "偏印": 0.0, "正印": 0.0
         }
 
         if not day_master or day_master not in BaziParticleNexus.STEMS:
@@ -110,44 +110,44 @@ class LogicArbitrator:
 
         # 1. OPPOSE (Shang Guan vs Zheng Guan)
         # Threshold adjusted for normalized weights ( Natal max ~10-15 )
-        overlap_sg_zg = intensities["Shang Guan"] * intensities["Zheng Guan"]
+        overlap_sg_zg = intensities["伤官"] * intensities["正官"]
         if overlap_sg_zg > 36.0: 
              dyn = ArbitrationNexus.DYNAMICS["OPPOSE"]
              interactions.append({
-                 "id": "PH28_01", "type": "OPPOSE", "name": f"伤官见官 (Shang Guan vs Zheng Guan)",
+                 "id": "PH28_01", "type": "OPPOSE", "name": f"伤官见官",
                  "target_element": "Control", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                  "priority": ArbitrationNexus.PRIORITY["OPPOSE"], "intensity": overlap_sg_zg,
                  "branches": set()
              })
-
+ 
         # 2. CAPTURE (Eating God vs Seven Killings)
-        overlap_ss_qs = intensities["Shi Shen"] * intensities["Qi Sha"]
+        overlap_ss_qs = intensities["食神"] * intensities["七杀"]
         if overlap_ss_qs > 25.0:
              dyn = ArbitrationNexus.DYNAMICS["CAPTURE"]
              interactions.append({
-                 "id": "PH29_01", "type": "CAPTURE", "name": "Eating God Captures Killings (Field)",
+                 "id": "PH29_01", "type": "CAPTURE", "name": "食神制杀",
                  "target_element": "Control", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                  "priority": ArbitrationNexus.PRIORITY["CAPTURE"], "intensity": overlap_ss_qs,
                  "branches": set()
              })
-             
+              
         # 3. CUTTING (Owl God Cuts Food)
-        overlap_py_ss = intensities["Pian Yin"] * intensities["Shi Shen"]
+        overlap_py_ss = intensities["偏印"] * intensities["食神"]
         if overlap_py_ss > 20.0:
              dyn = ArbitrationNexus.DYNAMICS["CUTTING"]
              interactions.append({
-                 "id": "PH29_02", "type": "CUTTING", "name": "枭神夺食 (Owl God Cuts Food)",
+                 "id": "PH29_02", "type": "CUTTING", "name": "枭神夺食",
                  "target_element": "Output", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                  "priority": ArbitrationNexus.PRIORITY["CUTTING"], "intensity": overlap_py_ss,
                  "branches": set()
              })
-
+ 
         # 4. CONTAMINATION (Wealth Breaks Seal)
-        overlap_zc_zi = (intensities["Zheng Cai"] + intensities["Pian Cai"]) * (intensities["Zheng Yin"] + intensities["Pian Yin"])
+        overlap_zc_zi = (intensities["正财"] + intensities["偏财"]) * (intensities["正印"] + intensities["偏印"])
         if overlap_zc_zi > 20.0:
              dyn = ArbitrationNexus.DYNAMICS["CONTAMINATION"]
              interactions.append({
-                 "id": "PH29_03", "type": "CONTAMINATION", "name": "财星坏印 (Wealth Contaminates Resource)",
+                 "id": "PH29_03", "type": "CONTAMINATION", "name": "财星坏印",
                  "target_element": "Resource", "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                  "priority": ArbitrationNexus.PRIORITY["CONTAMINATION"], "intensity": overlap_zc_zi,
                  "branches": set()
@@ -158,7 +158,7 @@ class LogicArbitrator:
             if trio.issubset(branch_set):
                 dyn = ArbitrationNexus.DYNAMICS["SAN_HUI"]
                 interactions.append({
-                    "id": "A1", "type": "SAN_HUI", "name": f"Seasonal Meeting ({elem})",
+                    "id": "PH_SAN_HUI", "type": "SAN_HUI", "name": f"地支三会 ({elem})",
                     "target_element": elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                     "priority": ArbitrationNexus.PRIORITY["SAN_HUI"], "branches": set(trio)
                 })
@@ -168,7 +168,7 @@ class LogicArbitrator:
             if trio.issubset(branch_set):
                 dyn = ArbitrationNexus.DYNAMICS["SAN_HE"]
                 interactions.append({
-                    "id": "A2", "type": "SAN_HE", "name": f"Three Harmony ({elem})",
+                    "id": "PH_SAN_HE", "type": "SAN_HE", "name": f"地支三合 ({elem})",
                     "target_element": elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                     "priority": ArbitrationNexus.PRIORITY["SAN_HE"], "branches": set(trio)
                 })
@@ -178,7 +178,7 @@ class LogicArbitrator:
             if pair.issubset(branch_set):
                 dyn = ArbitrationNexus.DYNAMICS["LIU_HE"]
                 interactions.append({
-                    "id": "A3", "type": "LIU_HE", "name": f"Six Combination ({elem})",
+                    "id": "PH_LIU_HE", "type": "LIU_HE", "name": f"地支六合 ({elem})",
                     "target_element": elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                     "priority": ArbitrationNexus.PRIORITY["LIU_HE"], "branches": set(pair)
                 })
@@ -192,7 +192,7 @@ class LogicArbitrator:
                     dyn = ArbitrationNexus.DYNAMICS["CLASH"]
                     elem1 = BaziParticleNexus.BRANCHES[b1][0]
                     interactions.append({
-                        "id": "B1", "type": "CLASH", "name": f"Clash ({b1}-{b2})",
+                        "id": "PH_CHONG", "type": "CLASH", "name": f"地支六冲 ({b1}-{b2})",
                         "target_element": elem1, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                         "priority": ArbitrationNexus.PRIORITY["CLASH"], "branches": {b1, b2}
                     })
@@ -205,7 +205,7 @@ class LogicArbitrator:
                     elem = BaziParticleNexus.BRANCHES[b][0]
                     dyn = ArbitrationNexus.DYNAMICS["RESONANCE"]
                     interactions.append({
-                        "id": "R1", "type": "RESONANCE", "name": f"Resonance ({b})",
+                        "id": "PH_RESONANCE", "type": "RESONANCE", "name": f"同支伏吟 ({b})",
                         "target_element": elem, "q": dyn['q'], "phi": dyn['phi'], "lock": dyn['lock'],
                         "priority": ArbitrationNexus.PRIORITY["RESONANCE"], "branches": {b}
                     })
@@ -216,7 +216,7 @@ class LogicArbitrator:
             if trio.issubset(branch_set):
                 dyn = ArbitrationNexus.DYNAMICS["PUNISHMENT"]
                 interactions.append({
-                    "id": "P1", "type": "PUNISHMENT", "name": f"Three-fold Punishment ({'-'.join(trio)})",
+                    "id": "PH_PENALTY_3", "type": "PUNISHMENT", "name": f"地支三刑 ({'-'.join(trio)})",
                     "target_element": "Chaos", "q": dyn['q'], "phi": dyn['phi'], "lock": False,
                     "priority": ArbitrationNexus.PRIORITY["PUNISHMENT"], "branches": set(trio)
                 })
@@ -225,10 +225,10 @@ class LogicArbitrator:
         for b in branches:
             if b in ArbitrationNexus.SELF_PUNISHMENT and branches.count(b) >= 2:
                 # Avoid duplicates: only add once
-                if not any(i['name'] == f"Self-Punishment ({b})" for i in interactions):
+                if not any(i['name'] == f"地支自刑 ({b})" for i in interactions):
                     dyn = ArbitrationNexus.DYNAMICS["PUNISHMENT"]
                     interactions.append({
-                        "id": "P2", "type": "PUNISHMENT", "name": f"Self-Punishment ({b})",
+                        "id": "PH_PENALTY_3", "type": "PUNISHMENT", "name": f"地支自刑 ({b})",
                         "target_element": BaziParticleNexus.BRANCHES[b][0], "q": dyn['q'], "phi": dyn['phi'], "lock": False,
                         "priority": ArbitrationNexus.PRIORITY["PUNISHMENT"], "branches": {b}
                     })
@@ -241,7 +241,7 @@ class LogicArbitrator:
                 if harm_map.get(b1) == b2:
                     dyn = ArbitrationNexus.DYNAMICS["HARM"]
                     interactions.append({
-                        "id": "H1", "type": "HARM", "name": f"Harm ({b1}-{b2})",
+                        "id": "PH_HARM_6", "type": "HARM", "name": f"地支相害 ({b1}-{b2})",
                         "target_element": "Conflict", "q": dyn['q'], "phi": dyn['phi'], "lock": False,
                         "priority": ArbitrationNexus.PRIORITY["HARM"], "branches": {b1, b2}
                     })

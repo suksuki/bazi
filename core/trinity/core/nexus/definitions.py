@@ -65,7 +65,7 @@ class BaziParticleNexus:
         "壬": ("Water", "Yang", 9), "癸": ("Water", "Yin", 10)
     }
     
-    STEM_SHI_SHEN = ["Bi Jian", "Jie Cai", "Shi Shen", "Shang Guan", "Pian Cai", "Zheng Cai", "Qi Sha", "Zheng Guan", "Pian Yin", "Zheng Yin"]
+    STEM_SHI_SHEN = ["比肩", "劫财", "食神", "伤官", "偏财", "正财", "七杀", "正官", "偏印", "正印"]
 
     @classmethod
     def get_shi_shen(cls, stem: str, dm_stem: str) -> str:
@@ -80,18 +80,24 @@ class BaziParticleNexus:
         dm_elem, dm_pol, _ = cls.STEMS[dm_stem]
         
         if target_elem == dm_elem:
-            return "Bi Jian" if target_pol == dm_pol else "Jie Cai"
+            return "比肩" if target_pol == dm_pol else "劫财"
         if PhysicsConstants.GENERATION[dm_elem] == target_elem:
-            return "Shi Shen" if target_pol == dm_pol else "Shang Guan"
+            return "食神" if target_pol == dm_pol else "伤官"
         if PhysicsConstants.GENERATION[target_elem] == dm_elem:
-            return "Pian Yin" if target_pol == dm_pol else "Zheng Yin"
+            return "偏印" if target_pol == dm_pol else "正印"
         if PhysicsConstants.CONTROL[dm_elem] == target_elem:
-            return "Pian Cai" if target_pol == dm_pol else "Zheng Cai"
+            return "偏财" if target_pol == dm_pol else "正财"
         if PhysicsConstants.CONTROL[target_elem] == dm_elem:
-            return "Qi Sha" if target_pol == dm_pol else "Zheng Guan"
-        return "Unknown"
-    
-    # Branches: (Element, Angle, HiddenStems[(Stem, Weight)])
+            return "七杀" if target_pol == dm_pol else "正官"
+        return "未知"
+    @classmethod
+    def get_branch_weights(cls, branch: str) -> List[Tuple[str, int]]:
+        """
+        Returns the hidden stems and their weights for a given branch.
+        """
+        if branch not in cls.BRANCHES:
+            return []
+        return cls.BRANCHES[branch][2] # Index 2 is hidden stems list
     # Combined Registry Hidden Stems - STATIC WEIGHTS (legacy)
     BRANCHES = {
         "子": ("Water", 0, [('癸', 10)]),
@@ -148,49 +154,49 @@ class BaziParticleNexus:
     # Penalties (San Xing) - Shear Stress Sources
     # Format: Trigger Branch -> Components required for full activation
     PENALTY_GROUPS = {
-        '寅': {'components': ['巳', '申'], 'type': 'Ungrateful'},
-        '巳': {'components': ['寅', '申'], 'type': 'Ungrateful'},
-        '申': {'components': ['寅', '巳'], 'type': 'Ungrateful'},
+        '寅': {'components': ['巳', '申'], 'type': '无恩之刑'},
+        '巳': {'components': ['寅', '申'], 'type': '无恩之刑'},
+        '申': {'components': ['寅', '巳'], 'type': '无恩之刑'},
         
-        '丑': {'components': ['未', '戌'], 'type': 'Bullying'},
-        '未': {'components': ['丑', '戌'], 'type': 'Bullying'},
-        '戌': {'components': ['丑', '未'], 'type': 'Bullying'},
+        '丑': {'components': ['未', '戌'], 'type': '恃势之刑'},
+        '未': {'components': ['丑', '戌'], 'type': '恃势之刑'},
+        '戌': {'components': ['丑', '未'], 'type': '恃势之刑'},
         
-        '子': {'components': ['卯'], 'type': 'Uncivil'},
-        '卯': {'components': ['子'], 'type': 'Uncivil'},
+        '子': {'components': ['卯'], 'type': '无礼之刑'},
+        '卯': {'components': ['子'], 'type': '无礼之刑'},
         
-        '辰': {'components': ['辰'], 'type': 'Self'},
-        '午': {'components': ['午'], 'type': 'Self'},
-        '酉': {'components': ['酉'], 'type': 'Self'},
-        '亥': {'components': ['亥'], 'type': 'Self'}
+        '辰': {'components': ['辰'], 'type': '自刑'},
+        '午': {'components': ['午'], 'type': '自刑'},
+        '酉': {'components': ['酉'], 'type': '自刑'},
+        '亥': {'components': ['亥'], 'type': '自刑'}
     }
 
 
     # Remediation Particles (Prescriptions)
     REMEDY_PARTICLES = {
-        "甲": {"type": "Medicine", "effect": "Resonance Boost"},
-        "乙": {"type": "Herbal", "effect": "Sync Stabilization"},
-        "丙": {"type": "Radiation", "effect": "Structural Excitation"},
-        "丁": {"type": "Laser", "effect": "Precision Cut"},
-        "戊": {"type": "Shield", "effect": "Entropy Damping"},
-        "己": {"type": "Filter", "effect": "Impurity Capture"},
-        "庚": {"type": "Sword", "effect": "Pattern Decoupling"},
-        "辛": {"type": "Probe", "effect": "Connectivity Analysis"},
-        "壬": {"type": "Coolant", "effect": "Thermal Decay"},
-        "癸": {"type": "Solvent", "effect": "Crystal Dissolution"}
+        "甲": {"type": "能量药剂", "effect": "共振增强"},
+        "乙": {"type": "草本修复", "effect": "相位稳定"},
+        "丙": {"type": "光子脉冲", "effect": "结构激发"},
+        "丁": {"type": "激光引导", "effect": "精准手术"},
+        "戊": {"type": "重力护盾", "effect": "因果熵阻尼"},
+        "己": {"type": "量子过滤器", "effect": "杂质俘获"},
+        "庚": {"type": "星际切片", "effect": "模式解耦"},
+        "辛": {"type": "微观探针", "effect": "连通性分析"},
+        "壬": {"type": "冷却介质", "effect": "热寂衰减"},
+        "癸": {"type": "通用溶剂", "effect": "晶格溶解"}
     }
     
     REMEDY_DESC = {
-        "甲": "🌿 [甲] Medicine: Boosts coherent resonance.",
-        "乙": "🍀 [乙] Herbal: Stabilizes sync fluctuations.",
-        "丙": "🔥 [丙] Radiation: Excites structure nodes.",
-        "丁": "🕯️ [丁] Laser: Precision structural adjustment.",
-        "戊": "🏔️ [戊] Shield: Dampens erratic entropy.",
-        "己": "⏳ [己] Filter: Captures field impurities.",
-        "庚": "⚔️ [庚] Sword: Decouples rigid patterns.",
-        "辛": "💎 [辛] Probe: Analyzes connectivity gaps.",
-        "壬": "🌊 [壬] Coolant: Decays excessive heat/fire.",
-        "癸": "💧 [癸] Solvent: Dissolves crystalized blocks."
+        "甲": "🌿 [甲] 能量药剂: 增强系统共振相干性。",
+        "乙": "🍀 [乙] 草本修复: 稳定相位波动与抖动。",
+        "丙": "🔥 [丙] 光子脉冲: 激发结构弱节点能量。",
+        "丁": "🕯️ [丁] 激光引导: 精准调整结构缺陷。",
+        "戊": "🏔️ [戊] 重力护盾: 压制异常的因果熵增。",
+        "己": "⏳ [己] 量子过滤器: 捕捉场中的能量杂质。",
+        "庚": "⚔️ [庚] 星际切片: 解除僵化的规则模式。",
+        "辛": "💎 [辛] 微观探针: 分析能量连通性盲点。",
+        "壬": "🌊 [壬] 冷却介质: 降低场强度过高的节点。",
+        "癸": "💧 [癸] 通用溶剂: 溶解因果晶格中的阻塞。"
     }
 
 class ArbitrationNexus:

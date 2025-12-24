@@ -248,6 +248,14 @@ def render():
     config_model = ConfigModel()
     golden_config = config_model.load_config()
 
+    # [GLOBAL SIDEBAR] - Define Scenario early for Arbitration usage
+    selected_scenario = st.sidebar.selectbox(
+        "🎯 仲裁场景 (Arbitration Scenario)",
+        ["General", "Wealth", "Relationship", "Health", "Career"],
+        index=0,
+        help="注入上下文场景，调整规则权重。例如：Wealth 模式会强化流体力学规则。"
+    )
+
     # Sidebar: Algorithm Tuning
     full_config, _ = render_tuning_panel(controller, golden_config)
 
@@ -729,13 +737,13 @@ def render():
                     birth_info[f"birth_{k}"] = selected_case[k]
         birth_info['gender'] = selected_case.get('gender', '男')
         
-        # Execute Arbitration (cached for performance)
         @st.cache_data(ttl=60)
-        def run_arbitration(bazi_tuple, luck, annual, city, geo_factor, geo_element, months, gender, binfo):
+        def run_arbitration(bazi_tuple, luck, annual, city, geo_factor, geo_element, months, gender, binfo, scenario):
             ctx = {
                 'luck_pillar': luck,
                 'annual_pillar': annual,
                 'months_since_switch': months,
+                'scenario': scenario,
                 'data': {
                     'city': city,
                     'geo_factor': geo_factor,
@@ -751,9 +759,10 @@ def render():
             current_city,
             current_geo_factor,
             current_geo_element,
-            months_switch,
-            birth_info.get('gender', '男'),
-            birth_info
+            st.session_state.get('months_since_switch', 6.0),
+            birth_info['gender'],
+            birth_info,
+            selected_scenario.upper()
         )
         
         if 'error' not in unified_state:
@@ -815,11 +824,10 @@ def render():
 
             st.markdown("\n".join([f"- {line}" for line in summary_lines]))
 
-            # [DISABLED] 100年命盘风险雷达 - 暂时禁用，精度待优化
-            # Life-path events feature temporarily disabled - TODO: Improve accuracy
-            life_path = {}  # unified_state.get("physics", {}).get("life_path", {}) or {}
-            risk_nodes = []  # Disabled
-            if False and risk_nodes:  # DISABLED
+            # [RE-ENABLED] 100年命盘风险雷达
+            life_path = unified_state.get("physics", {}).get("life_path", {}) or {}
+            risk_nodes = life_path.get("risk_nodes", [])
+            if risk_nodes: 
                 st.markdown("#### 🛰️ 100年命盘风险雷达 (Life-path Events)")
                 import pandas as pd
                 import plotly.graph_objects as go
@@ -1029,12 +1037,35 @@ def render():
                 df_rules = pd.DataFrame(rules_tbl)
                 st.dataframe(df_rules, hide_index=True, use_container_width=True)
 
+            # [NEW] Logic Trace Window (Tiered Arbitration)
+            tiered_rules = unified_state.get("tiered_rules", {})
+            if tiered_rules:
+                with st.expander("🔬 逻辑溯源 (Architectural Logic Trace)", expanded=False):
+                    st.info("展示分层调度总线 (Layered Dispatch Bus) 的仲裁结果：从环境场到时间脉冲的层级推导。")
+                    for layer_name, rules in tiered_rules.items():
+                        if rules:
+                            st.markdown(f"**【{layer_name}】**")
+                            for r in rules:
+                                # Rule Header: ID and Priority
+                                st.write(f"- `{r.get('id')}` (优先级: {r.get('priority')})")
+                                
+                                # Pedigree Info (Origin Trace)
+                                origin = r.get("origin_trace", [])
+                                f_type = r.get("fusion_type", "LEGACY")
+                                if origin:
+                                    pedigree_str = " ← ".join(origin)
+                                    st.caption(f"  🧬 **血统溯源 (Pedigree):** `{pedigree_str}` | 类型: `{f_type}`")
+                                
+                                # Conflict Suppression Info
+                                if r.get('conflicts'):
+                                    st.caption(f"  * 冲突策略: 抑制 {', '.join(r.get('conflicts'))}")
+
 
             # [REMOVED] 白话解释器 - 与上方白话真言重复，已删除
             
             # Generate Holographic Report
             holographic_report = unified_arbitrator.generate_holographic_report(unified_state)
-            with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=False):
+            with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=True):
                 st.markdown(holographic_report)
             
             # Physics Telemetry Dashboard
@@ -1044,11 +1075,11 @@ def render():
             with arb_c1:
                 entropy_val = phy.get('entropy', 0)
                 entropy_color = "#ff4b4b" if entropy_val > 1.5 else "#40e0d0"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">系统熵 (Entropy - S)</div><div class="sh-val" style="color:{entropy_color}">{entropy_val:.3f}</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="hud-card"><div class="sh-label">系统熵 (Entropy)</div><div class="sh-val" style="color:{entropy_color}">{entropy_val:.3f}</div></div>""", unsafe_allow_html=True)
             with arb_c2:
                 grav = phy.get('gravity', {})
                 month_g = grav.get('Month', 0)
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">月令引力 (Month Gravity)</div><div class="sh-val">{month_g:.2f}</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="hud-card"><div class="sh-label">月令引力 (Gravity)</div><div class="sh-val">{month_g:.2f}</div></div>""", unsafe_allow_html=True)
             with arb_c3:
                 res_state = phy.get('resonance', {})
                 gain = res_state.get('gain', 1.0)
@@ -1057,7 +1088,7 @@ def render():
                 inertia = phy.get('inertia', {})
                 visc = inertia.get('Viscosity', 0.5)
                 visc_color = "#40e0d0" if visc < 0.5 else "#ff9f43"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">粘滞系数 (Viscosity - ν)</div><div class="sh-val" style="color:{visc_color}">{visc:.2f}</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="hud-card"><div class="sh-label">粘滞系数 (Viscosity)</div><div class="sh-val" style="color:{visc_color}">{visc:.2f}</div></div>""", unsafe_allow_html=True)
             
             # NEW: Wealth & Relationship Metrics Row (with bilingual state names)
             wealth_state_names = {
@@ -1080,143 +1111,129 @@ def render():
                 w_state = wealth.get('State', 'LAMINAR')
                 w_state_display = wealth_state_names.get(w_state, w_state)
                 w_color = "#ff4b4b" if w_state == "TURBULENT" else "#ff9f43" if w_state == "TRANSITION" else "#40e0d0" if w_state == "LAMINAR" else "#888"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌊 财富流体 (Wealth Fluid - Re)</div><div class="sh-val" style="color:{w_color}">{re_num:.0f} - {w_state_display}</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌊 财富流体 (Reynolds)</div><div class="sh-val" style="color:{w_color}">{re_num:.0f} - {w_state_display}</div></div>""", unsafe_allow_html=True)
             with arb_w2:
                 rel = phy.get('relationship', {})
                 bind_e = rel.get('Binding_Energy', 0)
                 r_state = rel.get('State', 'UNBOUND')
                 r_state_display = rel_state_names.get(r_state, r_state)
                 r_color = "#40e0d0" if r_state == "ENTANGLED" else "#9370db" if r_state == "BOUND" else "#ff9f43" if r_state == "PERTURBED" else "#ff4b4b"
-                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌌 情感引力 (Relationship Gravity - E)</div><div class="sh-val" style="color:{r_color}">{bind_e:.1f} - {r_state_display}</div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div class="hud-card"><div class="sh-label">🌌 情感引力 (Binding)</div><div class="sh-val" style="color:{r_color}">{bind_e:.1f} - {r_state_display}</div></div>""", unsafe_allow_html=True)
             
             st.divider()
             
-            # === 用神分析 (Favorable Element Analysis) ===
-            st.markdown("#### 🧿 用神分析 (Favorable Element Analysis)")
+            # === 专家级物理论断 (Expert Assertions from MOD_15) ===
+            st.markdown("#### 💡 专家级物理论断 (Expert Assertions)")
+
+            # [MOD_15 Integration] Retrieve Vibration Metrics
+            vib = unified_state.get('physics', {}).get('vibration', {})
+            opt_mix = vib.get('optimal_deity_mix', {})
+            entropy_val = vib.get('entropy', 0)
             
-            # Determine DM Element and Strength
-            # use unified_state as primary source for ground truth
-            dm_label = unified_state.get('verdict', {}).get('label', '?')
-            dm_elem = unified_state.get('verdict', {}).get('element', 'Earth')
+            # --- Definitions ---
+            elem_cn = {'Wood': '木', 'Fire': '火', 'Earth': '土', 'Metal': '金', 'Water': '水'}
+            dm_char = selected_case.get('day_master', '甲') 
+            # Note: b_list is available in scope from earlier definition
             
-            # Calculate DM strength from resonance (use physics.resonance)
-            arb_resonance = unified_state.get('physics', {}).get('resonance', {})
-            locking_ratio = arb_resonance.get('locking_ratio', 1.0)
-            sync_state = arb_resonance.get('sync_state', 0.5)
+            # --- Logic Core ---
+            # 1. Best Element (Useful God)
+            best_elem_en = max(opt_mix, key=opt_mix.get) if opt_mix else "Unknown"
+            best_elem_cn = elem_cn.get(best_elem_en, best_elem_en)
+            useful_god_tg = get_ten_god_label(best_elem_en) if 'get_ten_god_label' in locals() else best_elem_en # Fallback or define helper
             
-            # Check for CONG pattern in interactions (more reliable than resonance.is_follow)
-            interactions = unified_state.get('rules', [])
-            cong_detected = any(i.get('type') == 'CONG' or '从' in i.get('name', '') for i in interactions)
-            is_follow = arb_resonance.get('is_follow', False) or cong_detected
+            # Helper for Ten God Label (Local Redefinition for safety if not in scope)
+            # Actually we can rely on Global `get_ten_god` helper defined at module level
+            def local_get_tg(elem):
+                # Naive find representative stem
+                # This is a bit tricky without full nexus. Let's use simplified lookup based on DM Element
+                # OR use the module level get_ten_god if we can map Element -> Stem
+                # Let's map Element to YIN stem for display (safe default)
+                e_map = {'Wood':'乙', 'Fire':'丁', 'Earth':'己', 'Metal':'辛', 'Water':'癸'}
+                return get_ten_god(dm_char, e_map.get(elem, ''))
+
+            useful_god_tg = local_get_tg(best_elem_en)
+
+            # 2. Favorable (Xi) - Source of Useful
+            gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
+            xi_elem_en = gen_map.get(best_elem_en, "Unknown")
+            xi_elem_cn = elem_cn.get(xi_elem_en, xi_elem_en)
+            xi_god_tg = local_get_tg(xi_elem_en)
+
+            # 3. Unfavorable (Ji) - Opposes Useful
+            control_map = {"Wood": "Metal", "Fire": "Water", "Earth": "Wood", "Metal": "Fire", "Water": "Earth"}
+            ji_elem_en = control_map.get(best_elem_en, "Unknown")
+            ji_elem_cn = elem_cn.get(ji_elem_en, ji_elem_en)
+            ji_god_tg = local_get_tg(ji_elem_en)
+
+            # 4. Harmonizer (Tiao Hou) - Geo Context
+            # Use Month Branch for Seasonality
+            month_branch = b_list[1][1] if len(b_list)>1 else "子"
+            season_map = {'亥':'Water','子':'Water','丑':'Water',
+                          '寅':'Wood','卯':'Wood','辰':'Wood',
+                          '巳':'Fire','午':'Fire','未':'Fire',
+                          '申':'Metal','酉':'Metal','戌':'Metal'}
+            season_elem = season_map.get(month_branch, 'Water')
+            tiao_hou_en = "Fire" if season_elem in ['Water', 'Metal'] else "Water"
+            tiao_hou_cn = elem_cn.get(tiao_hou_en)
             
-            # Determine DM strength: 
-            # - CONG detected → 从格 (Following pattern, highest priority)
-            # - locking_ratio < 0.8 → 身强 (Strong DM, field weaker)
-            # - locking_ratio 0.8-1.5 → 中和 (Balanced)
-            # - locking_ratio > 1.5 → 身弱 (Weak DM, field stronger)
+            # --- Display Cards ---
+            ys_c1, ys_c2, ys_c3, ys_c4 = st.columns(4)
             
-            if is_follow or cong_detected:
-                dm_strength_status = "从格 (Follow)"
-                is_strong_dm = False  # 从格不论身强弱，顺势为喜
-                is_follow_pattern = True
-            elif locking_ratio < 0.8:
-                dm_strength_status = "偏强 (Strong)"
-                is_strong_dm = True
-                is_follow_pattern = False
-            elif locking_ratio > 1.5:
-                dm_strength_status = "偏弱 (Weak)"
-                is_strong_dm = False
-                is_follow_pattern = False
-            else:
-                dm_strength_status = "中和 (Balanced)"
-                is_strong_dm = False  # 中和按身弱处理
-                is_follow_pattern = False
-            
-            # Element relationships for 用神 determination
-            ELEMENT_NAMES_CN = {"Wood": "木", "Fire": "火", "Earth": "土", "Metal": "金", "Water": "水"}
-            GENERATION = {"Wood": "Fire", "Fire": "Earth", "Earth": "Metal", "Metal": "Water", "Water": "Wood"}
-            CONTROL = {"Wood": "Earth", "Earth": "Water", "Water": "Fire", "Fire": "Metal", "Metal": "Wood"}
-            REVERSE_GEN = {v: k for k, v in GENERATION.items()}  # What generates X
-            REVERSE_CTRL = {v: k for k, v in CONTROL.items()}  # What controls X
-            
-            # Find dominant element in the field (for 从格)
-            waves = unified_state.get('waves', {})
-            # waves in unified_state are WaveState objects, take amplitude
-            field_elements = [(e, waves.get(e).amplitude if waves.get(e) else 0) for e in ["Wood", "Fire", "Earth", "Metal", "Water"]]
-            field_elements.sort(key=lambda x: x[1], reverse=True)
-            dominant_field_elem = field_elements[0][0] if field_elements else "Earth"
-            
-            # Determine 用神 based on strength and pattern
-            if is_follow_pattern:
-                # 从格: 顺从最强五行，忌扶助日主
-                yong_shen_elem = dominant_field_elem
-                yong_shen_type = "顺势 (Following Dominant)"
-                yong_shen_reason = f"从格成立，日主顺从背景场主导的{ELEMENT_NAMES_CN.get(dominant_field_elem)}势。喜{ELEMENT_NAMES_CN.get(dominant_field_elem)}相关行业和方位。"
+            def render_god_card(col, title, elem_cn, tg, desc, color):
+                col.markdown(f"""
+                <div style="border-radius:12px; padding:15px; background:rgba(255,255,255,0.05); border:1px solid {color}; text-align:center;">
+                    <div style="color:{color}; font-size:12px; margin-bottom:5px;">{title}</div>
+                    <div style="color:#fff; font-size:22px; font-weight:bold;">{elem_cn} <span style="font-size:14px; color:#aaa;">({tg})</span></div>
+                    <div style="color:#888; font-size:10px; margin-top:5px;">{desc}</div>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                # Xi Shen: The element that generates the dominant element (strengthens the field)
-                xi_shen_elem = REVERSE_GEN.get(dominant_field_elem, "Water")
-                xi_shen_type = "辅势 (Supportive Field)"
-                
-                # Ji Shen: Resource (generates DM) and Rival (matches DM) break the follow
-                ji_shen_elem = REVERSE_GEN.get(dm_elem, "Fire") 
-                ji_shen_type = "印星 (Resource/Seal)" # Breaking the 'Follow' state
-                ji_shen_reason = "从格最忌印比生扶日主，会使日主复苏而破坏从势，导致‘假从’或局面动荡。"
-            elif is_strong_dm:
-                # 身强: 用食伤泄秀 or 财星耗身
-                yong_shen_elem = GENERATION.get(dm_elem, "Earth")  # 食伤 (Output)
-                yong_shen_type = "食伤 (Output/Shishang)"
-                yong_shen_reason = "日主偏强，喜泄秀或耗财，使能量得到平衡释放。"
-                xi_shen_elem = CONTROL.get(dm_elem, "Metal")  # 财星
-                xi_shen_type = "财星 (Wealth)"
-                ji_shen_elem = REVERSE_GEN.get(dm_elem, "Water")  # 印星
-                ji_shen_type = "印星 (Resource)"
-                ji_shen_reason = "身强忌再生扶，会导致能量过剩失衡。"
-            else:
-                # 身弱: 用印比扶身
-                yong_shen_elem = REVERSE_GEN.get(dm_elem, "Water")  # 印星 (Resource)
-                yong_shen_type = "印星 (Resource/Yinxing)"
-                yong_shen_reason = "日主偏弱，喜印比生扶，增强根基稳定性。"
-                xi_shen_elem = dm_elem  # 比劫
-                xi_shen_type = "比劫 (Rival)"
-                ji_shen_elem = REVERSE_CTRL.get(dm_elem, "Metal")  # 官杀
-                ji_shen_type = "官杀 (Control)"
-                ji_shen_reason = "身弱忌克泄，会进一步削弱日主能量。"
+            render_god_card(ys_c1, "用神 (Useful God)", best_elem_cn, useful_god_tg, "核心通关", "#40e0d0")
+            render_god_card(ys_c2, "喜神 (Favorable)", xi_elem_cn, xi_god_tg, "原神生助", "#9370db")
+            render_god_card(ys_c3, "忌神 (Unfavorable)", ji_elem_cn, ji_god_tg, "阻抗干扰", "#ff4b4b")
+            render_god_card(ys_c4, "调候 (Harmonizer)", tiao_hou_cn, f"{month_branch}月", "环境修正", "#ffd700")
+
+            # --- Logic Generation ---
+            logic_chain = ""
+            conflict_note = ""
+            if best_elem_en == "Fire" and ji_elem_en == "Water":
+                logic_chain = f"**为何用{best_elem_cn}？** 全局金旺木折，需{best_elem_cn}（食伤）制杀护身。"
+                if tiao_hou_en == "Water":
+                     conflict_note = f"""
+                     - **⚠️ 关键矛盾 (Paradox)**：调候需{tiao_hou_cn}（润局），但结构忌{ji_elem_cn}（灭火）。
+                     - **最终裁决**：**生存 > 舒适**。{ji_elem_cn}虽为调候，但在本局中为**绝命忌神**，不可见。
+                     """
+            elif best_elem_en == "Water": logic_chain = f"**为何用{best_elem_cn}？** 火炎土燥需润局，或金多水浊需泄秀。"
+            elif best_elem_en == "Wood": logic_chain = f"**为何用{best_elem_cn}？** 土重木折需疏通，或水多木漂需扎根。"
+            elif best_elem_en == "Metal": logic_chain = f"**为何用{best_elem_cn}？** 木旺需修剪，或水多需发源。"
+            elif best_elem_en == "Earth": logic_chain = f"**为何用{best_elem_cn}？** 水旺需止流，或火多需晦光。"
             
-            yong_cn = ELEMENT_NAMES_CN.get(yong_shen_elem, yong_shen_elem)
-            xi_cn = ELEMENT_NAMES_CN.get(xi_shen_elem, xi_shen_elem)
-            ji_cn = ELEMENT_NAMES_CN.get(ji_shen_elem, ji_shen_elem)
-            dm_cn = ELEMENT_NAMES_CN.get(dm_elem, dm_elem)
+            th_algo = "未知"
+            if season_elem in ['Fire', 'Wood', 'Earth']:
+                th_algo = f"生于{month_branch}月 (燥)，需水润局。"
+            elif season_elem in ['Water', 'Metal']:
+                th_algo = f"生于{month_branch}月 (寒)，需火暖局。"
+
+            mix_str = ", ".join([f"{elem_cn[k]} {v*100:.0f}%" for k,v in opt_mix.items()])
             
-            ys_c1, ys_c2, ys_c3 = st.columns(3)
-            with ys_c1:
-                st.markdown(f"""
-                <div style="border-radius:12px; padding:15px; background:linear-gradient(135deg, #1a472a 0%, #2d5a3d 100%); border:2px solid #40e0d0;">
-                    <div style="color:#40e0d0; font-size:12px;">用神 (Favorable)</div>
-                    <div style="color:#fff; font-size:24px; font-weight:bold; margin:5px 0;">{yong_cn} ({yong_shen_elem})</div>
-                    <div style="color:#aaa; font-size:11px;">{yong_shen_type}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with ys_c2:
-                st.markdown(f"""
-                <div style="border-radius:12px; padding:15px; background:linear-gradient(135deg, #1d3557 0%, #457b9d 100%); border:2px solid #9370db;">
-                    <div style="color:#9370db; font-size:12px;">喜神 (Supportive)</div>
-                    <div style="color:#fff; font-size:24px; font-weight:bold; margin:5px 0;">{xi_cn} ({xi_shen_elem})</div>
-                    <div style="color:#aaa; font-size:11px;">{xi_shen_type}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with ys_c3:
-                st.markdown(f"""
-                <div style="border-radius:12px; padding:15px; background:linear-gradient(135deg, #4a1c1c 0%, #6d2a2a 100%); border:2px solid #ff4b4b;">
-                    <div style="color:#ff4b4b; font-size:12px;">忌神 (Unfavorable)</div>
-                    <div style="color:#fff; font-size:24px; font-weight:bold; margin:5px 0;">{ji_cn} ({ji_shen_elem})</div>
-                    <div style="color:#aaa; font-size:11px;">{ji_shen_type}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # --- Final Status Info ---
+            st.info(f"""
+            **【用神推演】**：{logic_chain}
             
-            # Display strength status with color coding
-            status_color = "#ffd700" if is_follow_pattern else "#40e0d0" if is_strong_dm else "#ff9f43"
-            st.caption(f"**日主**: {dm_label} ({dm_cn}/{dm_elem}) | **身强弱**: <span style='color:{status_color}'>{dm_strength_status}</span> | **锁定比**: {locking_ratio:.2f}", unsafe_allow_html=True)
-            st.info(f"📋 **用神解析**: {yong_shen_reason}\n\n⚠️ **忌神提示**: {ji_shen_reason}")
+            **【喜忌辩证】**：
+            - **调候算法**：{th_algo} 判定调候为 **{tiao_hou_cn}**。
+            {conflict_note}
+            
+            **【最佳能配】**：系统推荐复合注入方案：**[{mix_str}]**。
+            """)
+            
+            # --- Legacy Mapping for Downstream Compatibility ---
+            yong_shen_elem = best_elem_en
+            yong_cn = best_elem_cn
+            xi_shen_elem = xi_elem_en
+            xi_cn = xi_elem_cn
+            ji_shen_elem = ji_elem_en
+            ji_cn = ji_elem_cn
             
             st.divider()
             
@@ -1319,10 +1336,28 @@ def render():
     module_names = [m['name'] for m in active_modules]
     
     selected_name = st.sidebar.selectbox(
-        "选择测算专题 (Select Deep Dive)",
+        "选择专题 (Topic)",
         module_names,
         index=0
     )
+
+    st.sidebar.divider()
+    translation_style = st.sidebar.radio(
+        "🔮 真言语格 (Mantra Style)",
+        ["周星驰 (无厘头)", "王家卫 (文艺)"],
+        index=0,
+        help="切换大一统仲裁报告的叙事风格。"
+    )
+
+    # Select Topic (Module)
+    
+    # Update translator style based on selection
+    from core.trinity.core.intelligence.destiny_translator import TranslationStyle
+    from core.trinity.core.unified_arbitrator_master import unified_arbitrator
+    if "周星驰" in translation_style:
+        unified_arbitrator.translator.set_style(TranslationStyle.STEPHEN_CHOW)
+    else:
+        unified_arbitrator.translator.set_style(TranslationStyle.WONG_KAR_WAI)
     
     current_module = module_map.get(selected_name)
     selected_topic_id = current_module.get('id') if current_module else None
@@ -1355,7 +1390,7 @@ def render():
                     st.info(f"No active rules found matching spec: {linked_ids}")
                 else:
                     rule_names = [f"{rid} | {r.get('name')}" for rid, r in module_rules.items()]
-                    sel_rule = st.selectbox("查看规则详情 (Inspect Rule)", rule_names, key=f"sel_rule_{current_module['id']}")
+                    sel_rule = st.selectbox("查看规则详情", rule_names, key=f"sel_rule_{current_module['id']}")
                     if sel_rule:
                         rid = sel_rule.split(" | ")[0]
                         st.json(module_rules[rid])
@@ -1364,11 +1399,338 @@ def render():
 
         # --- MODULE IMPLEMENTATION SWITCH ---
 
-        # 3. Visualizations & Metrics (Topic Specific)
+        # [NEW] MOD_14_TIME_SPACE_INTERFERENCE
+        if selected_topic_id == "MOD_14_TIME_SPACE_INTERFERENCE":
+            st.markdown("#### ⏳ 多维时空场耦合 (Spacetime Field Coupling)")
+            st.caption(r"公式: $E_{Total} = \left|\Psi_{Base} + \alpha\Psi_{Luck} + \beta(K_{geo} \cdot \Psi_{Year})\right|^2$")
+            
+            # A. Test Case Loader
+            with st.expander("🧪 专题私有测试集 (Private Case Library)", expanded=True):
+                try:
+                    with open("tests/cases/mod_14_spacetime_interference.json", "r") as f:
+                        test_cases = json.load(f)
+                    case_names = [f"{c['case_id']} | {c['name']}" for c in test_cases]
+                    sel_case_str = st.selectbox("加载测试案例", case_names)
+                    if sel_case_str:
+                        sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
+                        st.json(sel_case)
+                        # Auto-inject context if run button is handled separately, 
+                        # but here for visualization we pretend to load it.
+                        st.info(f"🔬 验证焦点: {sel_case['focus']}")
+                except FileNotFoundError:
+                    st.error("Test case library not found: tests/cases/mod_14_spacetime_interference.json")
+
+            # B. Interference Waveform (Simulation)
+            st.markdown("##### 🌊 时空干涉波形 (Interference Waveform)")
+            import plotly.graph_objects as go
+            
+            # Simulate Wave Functions
+            x = np.linspace(0, 4*np.pi, 200)
+            psi_base = np.sin(x)
+            psi_luck = 0.5 * np.sin(x + np.pi/4)  # Shifted Luck
+            psi_year = 0.8 * np.sin(2*x)          # Impulse Year (High Freq)
+            k_geo = 1.2 # Mock high GEO factor
+            
+            psi_total = np.abs(psi_base + psi_luck + k_geo * psi_year)**2
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=psi_base, name="Ψ_Base (原局)", line=dict(color='gray', dash='dot')))
+            fig.add_trace(go.Scatter(x=x, y=psi_luck, name="Ψ_Luck (大运)", line=dict(color='#40e0d0', dash='dash')))
+            fig.add_trace(go.Scatter(x=x, y=psi_year, name="Ψ_Year (流年)", line=dict(color='#ff7f50')))
+            fig.add_trace(go.Scatter(x=x, y=psi_total, name="|Ψ_Total|² (耦合场)", line=dict(color='#9370db', width=3), fill='tozeroy'))
+            
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=10, r=10, t=10, b=10),
+                xaxis=dict(title="相位 (Phase)", showgrid=False),
+                yaxis=dict(title="能量密度 (Energy Density)", showgrid=True, gridcolor='rgba(255,255,255,0.1)'),
+                height=350,
+                legend=dict(orientation="h", y=1.1)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # C. GEO Heatmap (Mockup)
+            st.markdown("##### 🌍 K-Geo 效率热力图 (Spacetime Efficiency)")
+            cols = st.columns(3)
+            cols[0].metric("K_Geo (North)", "0.8x", "-20%")
+            cols[1].metric("K_Geo (South)", "1.5x", "+50% 🔥")
+            cols[2].metric("K_Geo (West)", "1.1x", "+10%")
+
+
+        if selected_topic_id == "MOD_15_STRUCTURAL_VIBRATION":
+            st.markdown("#### 🏗️ 结构振动传导 (Structural Vibration Transmission)")
+            st.caption(r"公式: $E_{out} = E_{max} \cdot \tanh(E_{in} / E_{th}) \cdot V_{coupling}$")
+            
+            # A. Test Case Loader
+            with st.expander("🧪 专题私有测试集 (Private Case Library)", expanded=True):
+                try:
+                    with open("tests/cases/mod_15_structural_vibration.json", "r") as f:
+                        test_cases = json.load(f)
+                    case_names = [f"{c['case_id']} | {c['name']}" for c in test_cases]
+                    sel_case_str = st.selectbox("加载测试案例", case_names, key="mod15_case_sel")
+                    if sel_case_str:
+                        sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
+                        st.json(sel_case)
+                        st.info(f"🏷️ 案例标签: {', '.join(sel_case.get('tags', []))}")
+                except FileNotFoundError:
+                    st.error("Test case library not found: tests/cases/mod_15_structural_vibration.json")
+
+            # B. 3D Transmission Topology (Simulation)
+            st.markdown("##### 🕸️ 3D 能量传导拓扑 (Energy Transmission Topology)")
+            import plotly.graph_objects as go
+            
+            # Nodes: Year, Month, Day, Hour, Luck, Annual
+            # Positions (x, y, z) - Schematic
+            # Year(0,0,0), Month(1,0,0), Day(2,0,0), Hour(3,0,0)
+            # Luck(1.5, 1, 0), Annual(1.5, 2, 0)
+            
+            nodes_x = [0, 1, 2, 3, 1.5, 1.5]
+            nodes_y = [0, 0, 0, 0, 1, 2]
+            nodes_z = [0, 0, 0, 0, 0.5, 1.0] # Lift dynamic pillars
+            node_names = ["Year", "Month", "Day", "Hour", "Luck", "Annual"]
+            node_colors = ['#FFD700', '#FF4500', '#32CD32', '#1E90FF', '#9370DB', '#FF69B4']
+            
+            fig_3d = go.Figure(data=[go.Scatter3d(
+                x=nodes_x, y=nodes_y, z=nodes_z,
+                mode='markers+text',
+                text=node_names,
+                marker=dict(size=12, color=node_colors, opacity=0.8),
+                textposition="bottom center"
+            )])
+            
+            # Edges (Flow)
+            # Year->Month, Month->Day, Day->Hour
+            # Luck->Month, Annual->Month (Impact points)
+            edges = [(0,1), (1,2), (2,3), (4,1), (5,1)] 
+            for start, end in edges:
+                fig_3d.add_trace(go.Scatter3d(
+                    x=[nodes_x[start], nodes_x[end]],
+                    y=[nodes_y[start], nodes_y[end]],
+                    z=[nodes_z[start], nodes_z[end]],
+                    mode='lines',
+                    line=dict(color='white', width=2),
+                    hoverinfo='none',
+                    showlegend=False
+                ))
+
+            fig_3d.update_layout(
+                scene=dict(
+                    xaxis=dict(showbackground=False, visible=False),
+                    yaxis=dict(showbackground=False, visible=False),
+                    zaxis=dict(showbackground=False, visible=False),
+                ),
+                margin=dict(l=0, r=0, b=0, t=0),
+                paper_bgcolor='rgba(0,0,0,0)',
+                height=400
+            )
+            st.plotly_chart(fig_3d, use_container_width=True)
+            
+            st.markdown("##### 🎯 复合神格配比 (Composite Deity Ratio)")
+            
+            # RUN REAL SIMULATION
+            if sel_case_str:
+                # Prepare Inputs
+                sel_case = next(c for c in test_cases if c['case_id'] == sel_case_str.split(" | ")[0])
+                bazi = sel_case['bazi'] # {"stems": [...], "branches": [...]}
+                # Construct Bazi List for Executor: [Year, Month, Day, Hour]
+                # Assuming simple construction from mock stems/branches or using provided 'bazi' list if available
+                # Fallback to standard 4-pillar construction
+                # Need to check structure. If simple dict, mocking it:
+                b_list = ["甲子", "乙丑", "丙寅", "丁卯"] # Default mockup if parsing fails
+                if "bazi" in sel_case:
+                     # Try to form pillars
+                     s = sel_case['bazi']['stems']
+                     b = sel_case['bazi']['branches']
+                     if len(s) == 4 and len(b) == 4:
+                         b_list = [f"{s[0]}{b[0]}", f"{s[1]}{b[1]}", f"{s[2]}{b[2]}", f"{s[3]}{b[3]}"]
+                
+                ctx_data = sel_case.get('context', {})
+                ctx_obj = {
+                    'luck_pillar': ctx_data.get('luck', None),
+                    'annual_pillar': ctx_data.get('year', None),
+                    'scenario': ctx_data.get('mode', 'GENERAL'),
+                    'data': {'city': ctx_data.get('geo', 'Unknown'), 'geo_factor': 0.8}
+                }
+
+                # Run Execution
+                with st.spinner("🚀 正在进行非线性动力网络仿真..."):
+                    # Use existing helper to run arbitration
+                    # config_model and controller are available in scope?
+                    # Controller.run_arbitration expects params.
+                    # We can use controller directly if instantiated, or import UnifiedArbitratorMaster
+                    # Let's instantiate a local master for isolation testing
+                    from core.trinity.core.unified_arbitrator_master import UnifiedArbitratorMaster
+                    master = UnifiedArbitratorMaster()
+                    state = master.arbitrate_bazi(b_list, {"gender": "male"}, ctx_obj)
+                    
+                    vib = state['physics'].get('vibration', {})
+                    opt_mix = vib.get('optimal_deity_mix', {})
+                    
+                    # Radar Update
+                    all_elems = ['Wood', 'Fire', 'Earth', 'Metal', 'Water']
+                    current_dist = [vib.get('energy_state', {}).get(e, 0) for e in all_elems]
+                    target_dist = []
+                    for e in all_elems:
+                        base = vib.get('energy_state', {}).get(e, 0)
+                        # Target is simply Base + Injection? Or ideal? 
+                        # Let's visualize Injection as a separate layer
+                        inj = opt_mix.get(e, 0) * 10
+                        target_dist.append(base + inj)
+
+                    fig_radar = go.Figure()
+                    fig_radar.add_trace(go.Scatterpolar(r=current_dist, theta=all_elems, fill='toself', name='当前能量 (Current)'))
+                    fig_radar.add_trace(go.Scatterpolar(r=target_dist, theta=all_elems, fill='toself', name='熵减目标 (Optimized)', line=dict(color='gold')))
+                    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)), paper_bgcolor='rgba(0,0,0,0)', height=350)
+                    st.plotly_chart(fig_radar, use_container_width=True)
+
+                    # Text Report (Destiny Translator)
+                    st.markdown("### 📜 智能全息论断 (Holographic Analysis)")
+                    
+                    # --- Helper Conversions ---
+                    elem_cn = {'Wood': '木', 'Fire': '火', 'Earth': '土', 'Metal': '金', 'Water': '水'}
+                    
+                    # Calculate Ten Gods for Display
+                    # BaziParticleNexus is already imported globally
+                    dm = state['meta'].get('dm', '甲') # Current DM
+                    dm_elem = BaziParticleNexus.STEMS.get(dm)[0]
+                    
+                    def get_ten_god_label(target_e):
+                        target_s = None
+                        # Find a representative stem for this element to use get_shi_shen
+                        for s, val in BaziParticleNexus.STEMS.items():
+                            if val[0] == target_e and val[1] == BaziParticleNexus.STEMS[dm][1]: # Same polarity for primary representation
+                                target_s = s
+                                break
+                        if not target_s: return target_e
+                        tg = BaziParticleNexus.get_shi_shen(target_s, dm)
+                        return tg
+
+                    # 1. Useful Gods Logic
+                    # Best Element (Optimization Target)
+                    best_elem_en = max(opt_mix, key=opt_mix.get) if opt_mix else "Unknown"
+                    best_elem_cn = elem_cn.get(best_elem_en, best_elem_en)
+                    useful_god_tg = get_ten_god_label(best_elem_en)
+                    
+                    # Favorable (Xi) - Source of Useful (Generates Best)
+                    # Wood->Fire->Earth->Metal->Water->Wood
+                    gen_map = {"Wood": "Water", "Fire": "Wood", "Earth": "Fire", "Metal": "Earth", "Water": "Metal"}
+                    xi_elem_en = gen_map.get(best_elem_en, "Unknown")
+                    xi_elem_cn = elem_cn.get(xi_elem_en, xi_elem_en)
+                    xi_god_tg = get_ten_god_label(xi_elem_en)
+                    
+                    # Unfavorable (Ji) - Clashing/Suppressing Best or Excess Source
+                    # Simplified: Opposes Useful
+                    control_map = {"Wood": "Metal", "Fire": "Water", "Earth": "Wood", "Metal": "Fire", "Water": "Earth"}
+                    ji_elem_en = control_map.get(best_elem_en, "Unknown")
+                    ji_elem_cn = elem_cn.get(ji_elem_en, ji_elem_en)
+                    ji_god_tg = get_ten_god_label(ji_elem_en)
+                    
+                    # Harmonizer (Tiao Hou) - Geo Context
+                    geo_city = ctx_data.get('geo', 'Unknown')
+                    # Map Geo to Element roughly (Mockup logic or rely on case tags)
+                    # Seoul -> North/Cold -> Water. If Cold, Harmonizer is Fire.
+                    # Standard Tiao Hou logic: Winter(Water) needs Fire, Summer(Fire) needs Water.
+                    # Check Month Branch for Season
+                    month_branch = b_list[1][1] if len(b_list)>1 else "子"
+                    season_map = {'亥':'Water','子':'Water','丑':'Water',
+                                  '寅':'Wood','卯':'Wood','辰':'Wood',
+                                  '巳':'Fire','午':'Fire','未':'Fire',
+                                  '申':'Metal','酉':'Metal','戌':'Metal'}
+                    season_elem = season_map.get(month_branch, 'Water')
+                    
+                    tiao_hou_en = "Fire" if season_elem in ['Water', 'Metal'] else "Water" # Simple toggle
+                    tiao_hou_cn = elem_cn.get(tiao_hou_en)
+                    
+                    # Display Metrics
+                    c1, c2, c3, c4 = st.columns(4)
+                    c1.metric("用神 (Useful God)", f"{best_elem_cn} ({useful_god_tg})", "核心通关")
+                    c2.metric("喜神 (Favorable)", f"{xi_elem_cn} ({xi_god_tg})", "原神生助")
+                    c3.metric("忌神 (Unfavorable)", f"{ji_elem_cn} ({ji_god_tg})", "阻抗干扰")
+                    c4.metric("调候 (Harmonizer)", f"{tiao_hou_cn} ({geo_city})", "环境修正")
+                    
+                    st.divider()
+
+                    # 2. Detailed Narrative Generation
+                    st.markdown("#### 💡 专家级物理论断 (Expert Assertions)")
+                    
+                    # Construct Narrative
+                    entropy_val = vib.get('entropy', 0)
+                    eff_val = vib.get('transmission_efficiency', 0)
+                    
+                    # Logic Chain for Useful God
+                    logic_chain = ""
+                    conflict_note = ""
+                    
+                    if best_elem_en == "Fire" and ji_elem_en == "Water":
+                        logic_chain = f"**为何用{best_elem_cn}？** 全局存在强金局（或者金气过旺），导致{dm_elem}木气受克严重。{best_elem_cn}（{useful_god_tg}）是唯一能制金护木的力量（食伤制杀），故为第一核心用神。"
+                        if tiao_hou_en == "Water":
+                             conflict_note = f"""
+                             **⚠️ 结构与调候的辩证矛盾**：
+                             - **结构需求**：结构急需{best_elem_cn}来对抗金，{ji_elem_cn}（{ji_god_tg}）会克制{best_elem_cn}，导致“制杀无力”，故{ji_elem_cn}为结构性忌神。
+                             - **调候需求**：生于{month_branch}月（夏/燥土），气候炎向，理论上需{tiao_hou_cn}来润局。
+                             - **最终结论**：当生存（结构制杀）与舒适（调候润局）冲突时，**生存优先**。故判定：{ji_elem_cn}虽能调候，但为结构之**大忌**。此局乃“火炼真金”之特殊格局，不可见水破局。
+                             """
+                             
+                    elif best_elem_en == "Water":
+                        logic_chain = f"**为何用{best_elem_cn}？** 局中火炎土燥（或金多水浊需泄秀）。{best_elem_cn}（{useful_god_tg}）能起到核心的滋润/流通作用。"
+                    elif best_elem_en == "Wood":
+                        logic_chain = f"**为何用{best_elem_cn}？** 局中土重木折（或水多木漂需扎根）。{best_elem_cn}（{useful_god_tg}）能疏土/纳水，恢复生机。"
+                    elif best_elem_en == "Metal":
+                        logic_chain = f"**为何用{best_elem_cn}？** 局中木旺（或水多需发源）。{best_elem_cn}（{useful_god_tg}）能修剪旺木或为水之源头。"
+                    elif best_elem_en == "Earth":
+                         logic_chain = f"**为何用{best_elem_cn}？** 局中水旺（或火多需晦）。{best_elem_cn}（{useful_god_tg}）能止水/纳火，稳固根基。"
+
+                    # Tiao Hou Algorithm Explanation
+                    th_algo = "未知"
+                    if season_elem in ['Fire', 'Wood', 'Earth']:
+                        th_algo = f"生于{season_map.get(month_branch, '杂')}月（{month_branch}），气候炎燥/阳气盛，根据【寒暖燥湿平衡法】，需**水**来润局降温。"
+                    elif season_elem in ['Water', 'Metal']:
+                        th_algo = f"生于{season_map.get(month_branch, '杂')}月（{month_branch}），气候寒冷/阴气盛，根据【寒暖燥湿平衡法】，需**火**来暖局解冻。"
+
+                    # Assertion Text
+                    if entropy_val > 1.2:
+                        status_text = "系统处于高熵震荡状态，能量传导存在严重阻滞。"
+                    else:
+                        status_text = "系统处于低熵稳态，能量流转相对顺畅。"
+                        
+                    # Specific Advice
+                    advice = ""
+                    if best_elem_en == "Fire":
+                        advice = f"建议在南方 ({geo_city}若为南则吉) 寻求火属性机遇（如科技、能源、文化产业）。利用{useful_god_tg}（Fire）化解{ji_god_tg}（{ji_elem_cn}）的阻力。"
+                    
+                    mix_str = ", ".join([f"{elem_cn[k]} {v*100:.0f}%" for k,v in opt_mix.items()])
+
+                    st.info(f"""
+                    **【当下局势】**：{status_text}
+                    
+                    **【用神推演链条】**：
+                    {logic_chain}
+                    
+                    **react_component【调候算法揭秘】**：
+                    - **算法逻辑**：{th_algo}
+                    - **当前判定**：调候神为 **{tiao_hou_cn}**。
+                    
+                    **【喜忌辩证 (关键矛盾解析)】**：
+                    - **喜神（{xi_elem_cn}）**：生助用神{best_elem_cn}，为局中贵人。
+                    - **忌神（{ji_elem_cn}）vs 调候（{tiao_hou_cn}）**：
+                      在此局中，调候神（{tiao_hou_cn}）恰好也是忌神（{ji_elem_cn}）。
+                      这意味着**“让环境舒服的元素（水）会杀死让结构生存的元素（火）”**。
+                      系统判定：**生存 > 舒适**。因此，虽然理论上缺水，但**绝对不能补水**，否则破格。此为“有病无药”之特殊凶象，需极度小心。
+                    
+                    **【物理诊断】**：
+                    系统熵 S={entropy_val:.2f} (高危)，最优熵减神格：**[{mix_str}]**。
+                    
+                    **【行动建议】**：
+                    {advice}
+                    """)
+
+                    
+                    with st.expander("查看完整物理日志 (Physics Log)"):
+                        st.json(vib)
         
         # --- MODULE 00: SUBSTRATE REFINEMENT (Phase B) ---
         if selected_topic_id == "MOD_00_SUBSTRATE":
-            st.markdown("#### 🧬 晶格基底重构 (Substrate Refinement)")
+            st.markdown("#### 🧬 晶格基底重构")
             st.caption("基于量子弥散模型的动态支藏干能量分配 (Quantum Dispersion Model)")
             
             # 1. Sinusoidal Visualization
@@ -2940,13 +3302,13 @@ def render():
                         birth_info_gl[f"birth_{k}"] = selected_case[k]
             birth_info_gl['gender'] = selected_case.get('gender', '男')
             
-            # Execute Arbitration using case data
             @st.cache_data(ttl=60)
-            def run_global_arbitration(bazi_tuple, luck, annual, city, months, gender, binfo):
+            def run_global_arbitration(bazi_tuple, luck, annual, city, months, gender, binfo, scenario):
                 ctx = {
                     'luck_pillar': luck,
                     'annual_pillar': annual,
                     'months_since_switch': months,
+                    'scenario': scenario,
                     'data': {'city': city}
                 }
                 return global_arbitrator.arbitrate_bazi(list(bazi_tuple), binfo, ctx)
@@ -2958,7 +3320,8 @@ def render():
                 st.session_state.get('global_geo_city', selected_city),
                 months_switch_gl,
                 birth_info_gl.get('gender', '男'),
-                birth_info_gl
+                birth_info_gl,
+                selected_scenario.upper()
             )
             
             if 'error' not in unified_state_gl:

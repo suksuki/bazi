@@ -19,11 +19,16 @@ from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
 from core.trinity.core.assets.combination_phase_logic import CombinationPhaseEngine
 from core.processors.geo import GeoProcessor
 from core.trinity.core.engines.resonance_field import ResonanceField
+from core.trinity.core.engines.structural_vibration import StructuralVibrationEngine
 from core.trinity.core.intelligence.logic_arbitrator import LogicArbitrator
 from core.trinity.core.physics.wave_laws import WaveState
 from core.trinity.core.nexus.definitions import BaziParticleNexus
 from core.logic_registry import LogicRegistry
 from core.bazi_profile import BaziProfile
+from core.trinity.core.intelligence.destiny_translator import DestinyTranslator, TranslationStyle
+from core.utils import Stellar_Comedy_Parser
+from core.trinity.core.conflict_arbitrator import ConflictArbitrator
+from core.trinity.core.nexus.context import ContextSnapshot, ContextInjector, ArbitrationScenario
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +57,8 @@ class UnifiedArbitratorMaster:
         self.resonance_field = ResonanceField()
         # 60 甲子空亡映射（按旬空公式生成）
         self._void_table = self._build_void_table()
+        # Standardized Framework Utility: Destiny Translator (Default to Stephen Chow style)
+        self.translator = DestinyTranslator(style=TranslationStyle.STEPHEN_CHOW)
 
     @staticmethod
     def _build_void_table() -> Dict[str, List[str]]:
@@ -74,7 +81,7 @@ class UnifiedArbitratorMaster:
             return self._void_table[day_pillar]
         return BaziProfile.get_void_branches(day_pillar)
 
-    def _evaluate_rules(self, unified_state: Dict[str, Any]) -> Dict[str, Any]:
+    def _evaluate_rules(self, unified_state: Dict[str, Any], context: Optional[ContextSnapshot] = None) -> Dict[str, Any]:
         """根据 manifest 规则和当前物理读数生成触发列表与断言。"""
         rules_manifest = self.registry.get_all_active_rules()
         modules_manifest = {m['id']: m for m in self.registry.get_active_modules()}
@@ -172,12 +179,12 @@ class UnifiedArbitratorMaster:
                 "status": "WARNING" if entropy <= 1.5 else "CRITICAL"
             })
         if "PH25-26_COLLAPSE" in rules_manifest:
-            sai = stress.get("SAI", 0)
-            ic = stress.get("IC", 0)
-            if sai >= 1.5 or ic <= 0.2:
+            sai_val = stress.get("SAI", 0)
+            ic_val = stress.get("IC", 0)
+            if sai_val >= 1.5 or ic_val <= 0.2:
                 triggered.append({
                     "id": "PH25-26_COLLAPSE",
-                    "metric": {"SAI": sai, "IC": ic},
+                    "metric": {"SAI": sai_val, "IC": ic_val},
                     "status": "RISK"
                 })
 
@@ -200,8 +207,14 @@ class UnifiedArbitratorMaster:
             "action": f"月令权重={gravity.get('Month',0):.2f} | 惯性ν={inertia.get('Viscosity',0.5):.2f} | 交运月龄={env.get('months_since_switch',6.0)}"
         }
 
+        # --- Phase 1 Conflict Arbitration & Layering ---
+        # Resolve conflicts and group by layer
+        resolved_rules = ConflictArbitrator.resolve_conflicts(triggered, self.registry.manifest.get("registry", {}), context=context)
+        tiered_rules = ConflictArbitrator.group_by_layer(resolved_rules)
+
         return {
-            "rules": triggered,
+            "rules": resolved_rules,
+            "tiered_rules": tiered_rules,
             "modules_active": list(modules_manifest.keys()),
             "verdict": verdict
         }
@@ -219,6 +232,15 @@ class UnifiedArbitratorMaster:
         annual = ctx.get('annual_pillar', '甲子')
         months_since_switch = ctx.get('months_since_switch', 6.0)
         geo_city = ctx.get('data', {}).get('city', 'Unknown')
+        scenario_str = ctx.get('scenario', 'GENERAL')
+        
+        # Create Context Snapshot (Phase 8: Context-Aware State Machine)
+        context = ContextInjector.create_from_request(
+            luck_pillar=luck,
+            annual_pillar=annual,
+            geo_city=geo_city,
+            scenario=scenario_str
+        )
 
         # Extract stems/branches
         try:
@@ -227,6 +249,9 @@ class UnifiedArbitratorMaster:
             day_branch = bazi_chart[2][1]
             all_stems = [p[0] for p in bazi_chart]
             all_branches = [p[1] for p in bazi_chart]
+            # [NEW] Add Dynamic Branches (Luck/Annual) for Stress & Star calculation
+            if luck and len(luck) > 1: all_branches.append(luck[1])
+            if annual and len(annual) > 1: all_branches.append(annual[1])
         except IndexError:
             return {"error": "Chart Parsing Failed"}
 
@@ -283,6 +308,7 @@ class UnifiedArbitratorMaster:
         
         # --- PHASE 2: Micro-Structures (Internal) ---
         # 2.1 Structural Stress (SAI/IC)
+        self.stress_engine.day_master = current_dm
         stress_report = self.stress_engine.calculate_micro_lattice_defects(all_branches, month_branch)
         
         # 2.2 Symbolic Stars (Tian Yi / Wen Chang / Lu / Yang Ren)
@@ -317,10 +343,43 @@ class UnifiedArbitratorMaster:
         # Add Stem Energies (1.0 each, weighed by Gravity?) 
         # Simplify: Just count stems + branches (main qi)
         for p in bazi_chart:
+            # Stems
             s_elem = BaziParticleNexus.STEMS.get(p[0])[0]
-            b_elem = BaziParticleNexus.BRANCHES.get(p[1])[0]
             elem_map[s_elem] = elem_map.get(s_elem, 0) + 1.0
-            elem_map[b_elem] = elem_map.get(b_elem, 0) + 1.2 # Branch stronger
+            
+            # Branches (Include Hidden Stems for Micro-Precision)
+            # Use BaziParticleNexus to get hidden stems
+            hidden_stems = BaziParticleNexus.get_branch_weights(p[1])
+            for h_stem, h_weight in hidden_stems:
+                 h_elem = BaziParticleNexus.STEMS.get(h_stem)[0]
+                 # Normalize weight (assuming max ~10 in definition)
+                 elem_map[h_elem] = elem_map.get(h_elem, 0) + (h_weight * 0.15)
+
+        # [NEW] Inject Time-Space Energy (Luck & Annual)
+        dynamic_pillars = []
+        if luck: dynamic_pillars.append((luck, 0.8)) # Luck weight
+        if annual: dynamic_pillars.append((annual, 1.2)) # Annual weight (Impulse)
+
+        for pillar_str, weight in dynamic_pillars:
+             if len(pillar_str) >= 2:
+                s_char, b_char = pillar_str[0], pillar_str[1]
+                # Stem
+                if s_char in BaziParticleNexus.STEMS:
+                    s_e = BaziParticleNexus.STEMS[s_char][0]
+                    elem_map[s_e] = elem_map.get(s_e, 0) + (1.0 * weight)
+                # Branch
+                h_stems = BaziParticleNexus.get_branch_weights(b_char)
+                for h_s, h_w in h_stems:
+                    if h_s in BaziParticleNexus.STEMS:
+                        h_e = BaziParticleNexus.STEMS[h_s][0]
+                        elem_map[h_e] = elem_map.get(h_e, 0) + (h_w * 0.15 * weight)
+
+        # [NEW] Apply Geo Modifiers
+        # geo_modifiers e.g. {'Fire': 1.5, 'Water': 0.8}
+        if geo_modifiers:
+            for elem, boost in geo_modifiers.items():
+                if elem in elem_map:
+                    elem_map[elem] *= boost
             
         from core.trinity.core.nexus.definitions import PhysicsConstants
         # Create WaveState objects with real phases from PhysicsConstants
@@ -356,49 +415,70 @@ class UnifiedArbitratorMaster:
             "is_follow": res_analysis.is_follow
         }
         
+        # [NEW] 3.5 Structural Vibration (MOD_15)
+        # Non-linear energy transmission
+        vib_engine = StructuralVibrationEngine(current_dm)
+        # Context for vibration engine (reuse unified context 'ctx')
+        vib_metrics = vib_engine.calculate_vibration_metrics(
+             all_stems, all_branches, context=ctx
+        )
+        
         # --- PHASE 4: Temporal Evolution (Flow) ---
         # 4.1 Spacetime Inertia
         inertia_metrics = self.inertia_engine.calculate_inertia_weights(
              months_since_switch=months_since_switch
         )
 
-        # 4.2 Life-Path Sampling - [DISABLED] 暂时禁用，精度待优化
-        # TODO: Improve accuracy before re-enabling
+        # 4.2 Life-Path Sampling - Re-enabled for Pulse Scan
         life_path_data: Optional[Dict[str, Any]] = None
-        # Disabled for performance and accuracy reasons
-        # try:
-        #     if birth_info and all(k in birth_info for k in ('birth_year', 'birth_month', 'birth_day', 'birth_hour')):
-        #         bdt = datetime(
-        #             int(birth_info['birth_year']),
-        #             int(birth_info['birth_month']),
-        #             int(birth_info['birth_day']),
-        #             int(birth_info['birth_hour'])
-        #         )
-        #         profile = BaziProfile(bdt, gender=(1 if gender == '男' else 0))
-        #         birth_year = bdt.year
-        #         life_path_data = self.life_path_engine.simulate_lifespan(
-        #             profile,
-        #             start_year=birth_year,
-        #             end_year=birth_year + 80,
-        #             resolution='year'
-        #         )
-        # except Exception:
-        #     life_path_data = None
+        try:
+            if birth_info and all(k in birth_info for k in ('birth_year', 'birth_month', 'birth_day', 'birth_hour')):
+                bdt = datetime(
+                    int(birth_info['birth_year']),
+                    int(birth_info['birth_month']),
+                    int(birth_info['birth_day']),
+                    int(birth_info['birth_hour'])
+                )
+                from core.bazi_profile import VirtualBaziProfile
+                profile = VirtualBaziProfile({'year':bazi_chart[0], 'month':bazi_chart[1], 'day':bazi_chart[2], 'hour':bazi_chart[3]}, 
+                                            gender=(1 if gender == '男' else 0), 
+                                            birth_date=bdt)
+                birth_year = bdt.year
+                life_path_data = self.life_path_engine.simulate_lifespan(
+                    profile,
+                    start_year=birth_year,
+                    end_year=birth_year + 80,
+                    resolution='year'
+                )
+        except Exception as e:
+            logger.warning(f"Life-path simulation failed: {e}")
+            life_path_data = None
 
         # --- synthesize Unified State ---
-        # Calculate System Entropy (Mockup based on stress + defects)
-        # S = SAI + (1-IC) + sum(defects)
-        sai = stress_report.get('SAI', 0)
-        ic = stress_report.get('IC', 0)
+        # 5.1 Probability Wave Correction (Phase 8: Context-Aware Adjustment)
+        # Apply GEO Bias and Environmental saturation to core metrics
+        dm_char = current_dm
+        # Get DM element (mock mapping for correction)
+        dm_elem = BaziParticleNexus.STEMS.get(dm_char, ("Earth", "Yang", 5))[0]
+        geo_bias_val = context.geo_bias.get(dm_elem, 1.0)
+        
+        # Calculate System Entropy (Adjusted by context)
+        sai = stress_report.get('SAI', 0) * (2.0 - geo_bias_val) # Higher bias in DM element reduces stress
+        ic = min(1.0, stress_report.get('IC', 0) * geo_bias_val)  # Higher bias increases coherence
+        
         system_entropy = sai + (1.0 - ic) * 0.5
-        # Apply Tian Yi Damping
         system_entropy *= star_phys.get('entropy_damping', 1.0)
+        
+        # Adjust Wealth and Relationship metrics by context
+        wealth_metrics['Reynolds'] *= geo_bias_val
+        rel_metrics['Binding_Energy'] *= geo_bias_val
         
         unified_state = {
             "meta": {
                 "version": self.registry.version,
                 "timestamp": datetime.now().isoformat(),
-                "dm": current_dm
+                "dm": current_dm,
+                "scenario": context.scenario.name
             },
             "physics": {
                 "substrate": substrate_field,
@@ -406,7 +486,7 @@ class UnifiedArbitratorMaster:
                 "void_shield": void_shield_factor,
                 "void_branches": void_branches,
                 "geo": geo_modifiers,
-                "stress": stress_report,
+                "stress": {**stress_report, "SAI": round(sai, 3), "IC": round(ic, 3)},
                 "stars": {
                     "stats": star_stats,
                     "modifiers": star_phys
@@ -414,6 +494,7 @@ class UnifiedArbitratorMaster:
                 "resonance": resonance_metrics,
                 "wealth": wealth_metrics,       # [NEW]
                 "relationship": rel_metrics,    # [NEW]
+                "vibration": vib_metrics,       # [NEW] MOD_15
                 "inertia": inertia_metrics,
                 "combination": combo_res,
                 "life_path": life_path_data,
@@ -426,7 +507,7 @@ class UnifiedArbitratorMaster:
             }
         }
 
-        eval_res = self._evaluate_rules(unified_state)
+        eval_res = self._evaluate_rules(unified_state, context=context)
         
         # [NEW] 5. Inter-layer Logic Arbitration (Phase H)
         # Call LogicArbitrator with full context: pillars, dm, solar_progress, dispersion_engine, geo_factor
@@ -455,21 +536,26 @@ class UnifiedArbitratorMaster:
         
         waves_dict = {}
         # Self
-        waves_dict[dm_elem] = WaveState(intensities["Bi Jian"] + intensities["Jie Cai"], 0.0)
+        waves_dict[dm_elem] = WaveState(intensities["比肩"] + intensities["劫财"], 0.0)
         # Output
-        waves_dict[GEN[dm_elem]] = WaveState(intensities["Shi Shen"] + intensities["Shang Guan"], 0.0)
+        waves_dict[GEN[dm_elem]] = WaveState(intensities["食神"] + intensities["伤官"], 0.0)
         # Wealth
-        waves_dict[CTRL[dm_elem]] = WaveState(intensities["Pian Cai"] + intensities["Zheng Cai"], 0.0)
+        waves_dict[CTRL[dm_elem]] = WaveState(intensities["偏财"] + intensities["正财"], 0.0)
         # Control
         ctrl_elem = REVERSE_CTRL[dm_elem]
-        waves_dict[ctrl_elem] = WaveState(intensities["Qi Sha"] + intensities["Zheng Guan"], 0.0)
+        waves_dict[ctrl_elem] = WaveState(intensities["七杀"] + intensities["正官"], 0.0)
         # Resource
         res_elem = REVERSE_GEN[dm_elem]
-        waves_dict[res_elem] = WaveState(intensities["Pian Yin"] + intensities["Zheng Yin"], 0.0)
+        waves_dict[res_elem] = WaveState(intensities["偏印"] + intensities["正印"], 0.0)
 
         unified_state["waves"] = waves_dict
         
-        unified_state["rules"] = eval_res.get("rules", []) + logic_interactions
+        # Merge physical rules with logic interactions and perform final arbitration
+        all_triggered = eval_res.get("rules", []) + logic_interactions
+        final_resolved = ConflictArbitrator.resolve_conflicts(all_triggered, self.registry.manifest.get("registry", {}), context=context)
+        
+        unified_state["rules"] = final_resolved
+        unified_state["tiered_rules"] = ConflictArbitrator.group_by_layer(final_resolved)
         unified_state["modules_active"] = eval_res.get("modules_active", [])
         unified_state["verdict"] = eval_res.get("verdict", {})
         unified_state["plain_guidance"] = self._plain_guidance(unified_state)
@@ -678,7 +764,14 @@ class UnifiedArbitratorMaster:
         # 1. Master Overview
         report = []
         report.append("### 🔮 第一部分：八字物理全息概述 (Master Overview)")
-        report.append("> **“解析系统物理指纹，定义场论底色。”**\n")
+        
+        # Use localized translator with standard Tool-Class interface if style matches
+        if self.translator.style == TranslationStyle.STEPHEN_CHOW:
+            poetic_verdict = Stellar_Comedy_Parser.translate(sai=sai, entropy=entropy, ic=stress.get('IC', 1.0))
+        else:
+            poetic_verdict = self.translator.translate_state(state)
+            
+        report.append(f"> **“{poetic_verdict}”**\n")
         
         # Tone Definition
         struct_type = "稳态平衡"
@@ -736,14 +829,55 @@ class UnifiedArbitratorMaster:
         report.append("| :--- | :--- | :--- |")
         
         # Mock Logic based on Yang Ren
-        yr_count = stars.get('stats', {}).get('yang_ren_count', 0)
-        if yr_count > 0:
-            report.append("| **T+15y** | SAI=2.40 🔴 | **羊刃相变 (Shear Burst)**：标记为“剧烈相变期”，请系好安全带。 |")
+        life_path = phy.get('life_path', {}) or {}
+        risk_nodes = life_path.get('risk_nodes', [])
         
-        if entropy > 1.0:
-            report.append("| **T+42y** | η=0.08 🌑 | **信号丢失 (Signal Loss)**：意志动摇期，所有的意义都需要重新编码。 |")
+        if risk_nodes:
+            # Current year for relative timing
+            try:
+                current_year_int = int(state['meta']['timestamp'][:4])
+            except (ValueError, KeyError, TypeError):
+                current_year_int = datetime.now().year
+                
+            # Filter for future events only
+            future_risks = [r for r in risk_nodes if int(r.get('timestamp', '0000')[:4]) >= current_year_int]
+            
+            # Sort by risk score and filter for diversity (one per year for the top ones)
+            unique_years = {}
+            for r in sorted(future_risks, key=lambda x: x.get('risk_score', 0), reverse=True):
+                y = r.get('timestamp', '0000')[:4]
+                if y not in unique_years:
+                    unique_years[y] = r
+                if len(unique_years) >= 5:
+                    break
+            
+            sorted_risks = sorted(unique_years.values(), key=lambda x: x.get('timestamp', ''))
+            
+            for r in sorted_risks:
+                year_str = r.get('timestamp', '')[:4]
+                if not year_str.isdigit(): continue
+                year = int(year_str)
+                metrics = r.get('metrics', {})
+                sai_v = metrics.get('sai', 0)
+                ic_v = metrics.get('ic', 0)
+                # Event mantra handling
+                if self.translator.style == TranslationStyle.STEPHEN_CHOW:
+                    mantra = Stellar_Comedy_Parser.translate(sai=sai_v, entropy=metrics.get('entropy', 0), ic=ic_v)
+                else:
+                    mantra = self.translator.get_event_mantra(r)
+                
+                sig_icon = "🔴" if r.get('risk_score', 0) > 1.5 else "🟡"
+                report.append(f"| **T+{year - current_year_int}y ({year})** | SAI={sai_v:.2f}, IC={ic_v:.2f} {sig_icon} | **{mantra}** |")
         else:
-             report.append("| **T+30y** | Res=Max 🟢 | **共振峰值 (Peak Resonance)**：人生高光时刻，全功率输出。 |")
+            # Fallback if no life_path
+            yr_count = stars.get('stats', {}).get('yang_ren_count', 0)
+            if yr_count > 0:
+                report.append("| **T+15y** | SAI=2.40 🔴 | **“命运在这个春天准备了两份一模一样的礼物。一份是惊喜，另一份是警示，你必须全部签收。”** |")
+            
+            if entropy > 1.0:
+                report.append("| **T+42y** | η=0.08 🌑 | **“不要试图在浓雾里狂奔，那是信号最微弱的时候。”** |")
+            else:
+                 report.append("| **T+30y** | Res=Max 🟢 | **“人生高光时刻，全功率输出。所有的粒子都在为你而歌。”** |")
 
         report.append("\n**【终极仲裁】**：")
         report.append("> *“人生所有的遗憾，都是物理学上的必然。既已洞悉因果，便无须回头。”*")

@@ -73,3 +73,7 @@ class LogicRegistry:
     @property
     def version(self):
         return self._manifest.get('version', '0.0.0')
+
+    @property
+    def manifest(self):
+        return self._manifest

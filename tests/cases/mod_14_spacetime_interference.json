@@ -1,0 +1,234 @@
+[
+    {
+        "case_id": "MOD14_TEST_01_SOUTH_FIRE",
+        "name": "寒木向阳-南方地理耦合测试",
+        "data": {
+            "stems": [
+                "甲",
+                "丙",
+                "己",
+                "癸"
+            ],
+            "branches": [
+                "子",
+                "子",
+                "亥",
+                "丑"
+            ]
+        },
+        "context": {
+            "geo": "Guangzhou",
+            "luck": "丙寅",
+            "year": "丁卯"
+        },
+        "focus": "验证在 High K_geo (Heat Boost) 下的调候激活率"
+    },
+    {
+        "case_id": "MOD14_TEST_02_NORTH_WATER",
+        "name": "金水伤官-北方地理沉淀测试",
+        "data": {
+            "stems": [
+                "庚",
+                "壬",
+                "庚",
+                "辛"
+            ],
+            "branches": [
+                "辰",
+                "子",
+                "申",
+                "亥"
+            ]
+        },
+        "context": {
+            "geo": "Harbin",
+            "luck": "癸亥",
+            "year": "壬子"
+        },
+        "focus": "验证北方高纬度对水能级的正向反馈"
+    },
+    {
+        "case_id": "MOD14_TEST_03_TRANSIT_INERTIA",
+        "name": "交运期时空惯性拖尾测试",
+        "data": {
+            "stems": [
+                "戊",
+                "癸",
+                "丁",
+                "壬"
+            ],
+            "branches": [
+                "午",
+                "未",
+                "巳",
+                "寅"
+            ]
+        },
+        "context": {
+            "t_offset": 1.5,
+            "luck_old": "甲辰",
+            "luck_new": "乙巳"
+        },
+        "focus": "验证交运后 1.5 月新旧场强占比 (60.6%/39.4%)"
+    },
+    {
+        "case_id": "MOD14_TEST_04_CLASH_DAMPING",
+        "name": "子午冲-大运背景阻尼测试",
+        "data": {
+            "stems": [
+                "壬",
+                "甲",
+                "壬",
+                "丙"
+            ],
+            "branches": [
+                "子",
+                "午",
+                "子",
+                "午"
+            ]
+        },
+        "context": {
+            "luck": "戊申",
+            "year": "庚戌"
+        },
+        "focus": "验证大运背景场对 SAI 峰值的平滑效应"
+    },
+    {
+        "case_id": "MOD14_TEST_05_WEALTH_NS",
+        "name": "财富流体-通关路径激活测试",
+        "data": {
+            "stems": [
+                "辛",
+                "丁",
+                "甲",
+                "乙"
+            ],
+            "branches": [
+                "酉",
+                "酉",
+                "寅",
+                "丑"
+            ]
+        },
+        "context": {
+            "mode": "WEALTH",
+            "year": "壬寅"
+        },
+        "focus": "验证流年壬水是否有效通关金木对撞"
+    },
+    {
+        "case_id": "MOD14_TEST_06_VOID_RECOVERY",
+        "name": "空亡黑洞-流年引动修复测试",
+        "data": {
+            "stems": [
+                "甲",
+                "乙",
+                "丙",
+                "丁"
+            ],
+            "branches": [
+                "子",
+                "丑",
+                "寅",
+                "卯"
+            ]
+        },
+        "context": {
+            "void_pillar": "year",
+            "clash_year": "午"
+        },
+        "focus": "验证流年冲动是否能“填实” 0.45 的能量坍缩区"
+    },
+    {
+        "case_id": "MOD14_TEST_07_STOREHOUSE_TUNNEL",
+        "name": "辰库-流年量子隧穿测试",
+        "data": {
+            "stems": [
+                "壬",
+                "癸",
+                "戊",
+                "己"
+            ],
+            "branches": [
+                "辰",
+                "子",
+                "申",
+                "丑"
+            ]
+        },
+        "context": {
+            "year": "戌",
+            "interaction": "clash"
+        },
+        "focus": "验证库门开启后的 1.5x 能量爆发逻辑"
+    },
+    {
+        "case_id": "MOD14_TEST_08_GAT_ATTENTION",
+        "name": "动态注意力-全局重心转移测试",
+        "data": {
+            "stems": [
+                "丁",
+                "戊",
+                "癸",
+                "甲"
+            ],
+            "branches": [
+                "卯",
+                "申",
+                "酉",
+                "子"
+            ]
+        },
+        "context": {
+            "use_gat": true,
+            "year": "卯"
+        },
+        "focus": "验证流年引动后 GAT 对时柱权重的动态修正"
+    },
+    {
+        "case_id": "MOD14_TEST_09_ERA_RESONANCE",
+        "name": "九紫离火-时代背景辐射测试",
+        "data": {
+            "stems": [
+                "丙",
+                "丁",
+                "丙",
+                "丁"
+            ],
+            "branches": [
+                "午",
+                "巳",
+                "午",
+                "巳"
+            ]
+        },
+        "context": {
+            "era": "Period 9"
+        },
+        "focus": "验证喜火局在离火运下的 ResonanceFactor (+0.2)"
+    },
+    {
+        "case_id": "MOD14_TEST_10_PHASE_TRANSITION",
+        "name": "从格临界-概率波相变测试",
+        "data": {
+            "stems": [
+                "辛",
+                "辛",
+                "辛",
+                "辛"
+            ],
+            "branches": [
+                "酉",
+                "酉",
+                "酉",
+                "酉"
+            ]
+        },
+        "context": {
+            "year": "丁火",
+            "condition": "stress"
+        },
+        "focus": "监测系统在极限应力下是否发生从格坍塌"
+    }
+]

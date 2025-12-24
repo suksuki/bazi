@@ -1,0 +1,258 @@
+[
+    {
+        "case_id": "MOD15_TEST_01_SEOUL",
+        "name": "首尔-金木火对撞局",
+        "bazi": {
+            "stems": [
+                "丁",
+                "乙",
+                "乙",
+                "乙"
+            ],
+            "branches": [
+                "巳",
+                "巳",
+                "丑",
+                "酉"
+            ]
+        },
+        "context": {
+            "geo": "Seoul",
+            "luck": "庚子",
+            "year": "乙酉",
+            "mode": "WEALTH"
+        },
+        "tags": [
+            "伤官见官",
+            "调和因子",
+            "三合局"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_02_CHAIN",
+        "name": "四位连生顺行链",
+        "bazi": {
+            "stems": [
+                "丁",
+                "戊",
+                "辛",
+                "壬"
+            ],
+            "branches": [
+                "巳",
+                "寅",
+                "卯",
+                "子"
+            ]
+        },
+        "context": {
+            "mode": "FLOW"
+        },
+        "tags": [
+            "级联放大",
+            "端到端效率"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_03_FIRE_PUMP",
+        "name": "地支三巳火透干压力测试",
+        "bazi": {
+            "stems": [
+                "丁",
+                "丁",
+                "戊",
+                "丁"
+            ],
+            "branches": [
+                "巳",
+                "巳",
+                "寅",
+                "巳"
+            ]
+        },
+        "context": {
+            "mode": "HEALTH"
+        },
+        "tags": [
+            "场域叠加",
+            "垂直激放"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_04_IMPEDANCE",
+        "name": "印重金埋-资源阻抗测试",
+        "bazi": {
+            "stems": [
+                "戊",
+                "戊",
+                "辛",
+                "戊"
+            ],
+            "branches": [
+                "辰",
+                "戌",
+                "丑",
+                "未"
+            ]
+        },
+        "context": {
+            "mode": "SOUL"
+        },
+        "tags": [
+            "虚不受补",
+            "能量断链"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_05_MEDIATION",
+        "name": "通关路径自动探测案例",
+        "bazi": {
+            "stems": [
+                "庚",
+                "甲",
+                "庚",
+                "丙"
+            ],
+            "branches": [
+                "申",
+                "申",
+                "申",
+                "申"
+            ]
+        },
+        "context": {
+            "inject_element": "壬水"
+        },
+        "tags": [
+            "应力释放",
+            "食神制杀"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_06_GEO_DAMPING",
+        "name": "热极化调候偏置测试",
+        "bazi": {
+            "stems": [
+                "丙",
+                "丙",
+                "丙",
+                "丙"
+            ],
+            "branches": [
+                "午",
+                "午",
+                "午",
+                "午"
+            ]
+        },
+        "context": {
+            "geo": "Harbin",
+            "mode": "STABILITY"
+        },
+        "tags": [
+            "环境调和",
+            "负反馈"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_07_QUANTUM_LEAP",
+        "name": "从格坍塌临界测试",
+        "bazi": {
+            "stems": [
+                "癸",
+                "癸",
+                "癸",
+                "癸"
+            ],
+            "branches": [
+                "亥",
+                "亥",
+                "亥",
+                "亥"
+            ]
+        },
+        "context": {
+            "luck": "戊午"
+        },
+        "tags": [
+            "相位锁定",
+            "量子坍缩"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_08_VOID_BRIDGE",
+        "name": "空亡节点的能量隧穿",
+        "bazi": {
+            "stems": [
+                "甲",
+                "乙",
+                "丙",
+                "丁"
+            ],
+            "branches": [
+                "子",
+                "丑",
+                "寅",
+                "卯"
+            ]
+        },
+        "context": {
+            "void": "year"
+        },
+        "tags": [
+            "空亡修复",
+            "引动转换"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_09_BRANCH_CASCADE",
+        "name": "地支申子辰三合流体测试",
+        "bazi": {
+            "stems": [
+                "壬",
+                "庚",
+                "庚",
+                "壬"
+            ],
+            "branches": [
+                "申",
+                "子",
+                "辰",
+                "午"
+            ]
+        },
+        "context": {
+            "mode": "WEALTH"
+        },
+        "tags": [
+            "地支连茹",
+            "隧道效应"
+        ]
+    },
+    {
+        "case_id": "MOD15_TEST_10_COMPOSITE",
+        "name": "全要素复合神格测试",
+        "bazi": {
+            "stems": [
+                "己",
+                "甲",
+                "乙",
+                "丁"
+            ],
+            "branches": [
+                "卯",
+                "戌",
+                "亥",
+                "亥"
+            ]
+        },
+        "context": {
+            "geo": "HongKong",
+            "year": "辛丑"
+        },
+        "tags": [
+            "最优配比",
+            "综合仲裁"
+        ]
+    }
+]

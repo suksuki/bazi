@@ -3,6 +3,62 @@
     "description": "Grand Unified Single-Body Physics with Micro-Precision Dynamics (Phase G Complete).",
     "system_id": "ANTIGRAVITY_CORE_ALPHA",
     "modules": {
+        "MOD_14_TIME_SPACE_INTERFERENCE": {
+            "id": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "name": "⏳ 多维时空场耦合模型 (Multidimensional Spacetime Field Coupling)",
+            "icon": "⏳",
+            "type": "DETAIL",
+            "description": "实现原生概率波函数（Base Wave）与大运（Background）、流年（Impulse）、地域（GEO Bias）的相干叠加计算。",
+            "active": true,
+            "linked_rules": [
+                "PH_QUANTUM_DISPERSION",
+                "PH_WEALTH_PERMEABILITY",
+                "PH_GRAVITY_BINDING"
+            ],
+            "linked_metrics": [
+                "spacetime_interference_index",
+                "geo_coupling_efficiency",
+                "phase_coherence"
+            ],
+            "goal": "定量分析大运背景辐射与流年脉冲对原局结构的相干叠加效应。",
+            "outcome": "生成时空耦合波形图 (Spacetime Interference Waveform) 与 K-Geo 效率报告。",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 200,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_01_Spacetime_Coupling",
+                "ANTIGRAVITY_V2.6_PHYSICS_CONSTANTS"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "MOD_15_STRUCTURAL_VIBRATION": {
+            "id": "MOD_15_STRUCTURAL_VIBRATION",
+            "name": "🏗️ 结构振动传导 (Structural Vibration Transmission)",
+            "icon": "🏗️",
+            "type": "DETAIL",
+            "description": "基于非线性动力网络的能量传导、饱和与阻抗分析引擎。",
+            "active": true,
+            "linked_rules": [
+                "PH_NONLINEAR_SATURATION",
+                "PH_VERTICAL_COUPLING",
+                "PH_ENTROPY_OPTIMIZATION"
+            ],
+            "linked_metrics": [
+                "vibration_efficiency",
+                "impedance_break_index",
+                "composite_deity_ratio"
+            ],
+            "goal": "模拟干支网络中的能量非线性传导与断链效应，寻找系统最小熵解。",
+            "outcome": "生成3D能量传导拓扑图与复合神格配比盘。",
+            "layer": "STRUCTURAL_INTERACTION_LAYER",
+            "priority": 150,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_02_Structural_Vibration",
+                "ANTIGRAVITY_NONLINEAR_DYNAMICS"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
         "MOD_00_SUBSTRATE": {
             "id": "MOD_00_SUBSTRATE",
             "name": "🧬 晶格基底与因果涌现 (Substrate & Causal Emergence)",
@@ -22,13 +78,20 @@
                 "SINGULARITY_INDEX"
             ],
             "goal": "上帝视角监控：观测能量波动如何坍缩为因果奇点，并评估系统熵增风险。",
-            "outcome": "基底重构完成，实现从‘波’到‘坍缩’的命运断层消除。"
+            "outcome": "基底重构完成，实现从‘波’到‘坍缩’的命运断层消除。",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_SUBSTRATE"
         },
         "MOD_01_TRIPLE": {
-            "name": "♾️ 三元动力 (Integrated Triple Dynamics)",
+            "name": "♾️ 大一统三元动力 (Integrated Triple Dynamics)",
             "icon": "♾️",
             "type": "DETAIL",
-            "description": "Focus: Capture, Cutting & Contamination Control Logic",
+            "description": "焦点：克、泄、化控制逻辑分析 (Focus: Capture, Cutting & Contamination Control Logic)",
             "active": true,
             "linked_rules": [
                 "PH29_CAPTURE",
@@ -40,14 +103,21 @@
                 "unified_metrics.cutting",
                 "unified_metrics.contamination"
             ],
-            "goal": "Quantify 'Eating God' vs 'Seven Killings' control physics.",
-            "outcome": "Bi-Jie Shielding (11% D-Reduction) & Holographic Radar"
+            "goal": "定量分析‘食神制杀’与‘物理控制’逻辑。",
+            "outcome": "比劫屏蔽（11% 减损）与全息雷达监测。",
+            "layer": "FUNDAMENTAL",
+            "priority": 900,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_02_SUPER": {
-            "name": "🔥 从格/专旺 (Super-Structure Resonance)",
+            "name": "🔥 极高位格局共振 (Super-Structure Resonance)",
             "icon": "🔥",
             "type": "DETAIL",
-            "description": "Focus: Resonance Wavefield & Energy Trend Analysis",
+            "description": "焦点：共振波场与能量趋势分析 (Focus: Resonance Wavefield & Energy Trend Analysis)",
             "active": true,
             "linked_rules": [
                 "PH17-20_CONG",
@@ -60,14 +130,21 @@
                 "resonance.flow_efficiency",
                 "resonance.vibration_mode"
             ],
-            "goal": "Identify high-order resonance modes (Cong/Hua).",
-            "outcome": "Resonant Wave 3D Orrery"
+            "goal": "识别高阶共振模式（从格/化气）。",
+            "outcome": "共振波 3D 浑仪可视化。",
+            "layer": "STRUCTURAL",
+            "priority": 800,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_03_TRANSFORM": {
-            "name": "⚗️ 合化/化气 (Transformation Chemistry)",
+            "name": "⚗️ 合化动力学 (Transformation Chemistry)",
             "icon": "⚗️",
             "type": "DETAIL",
-            "description": "Focus: Heavenly Stems & Earthly Branches Bonding Topology",
+            "description": "焦点：天干地支键合拓扑分析 (Focus: Heavenly Stems & Earthly Branches Bonding Topology)",
             "active": true,
             "linked_rules": [
                 "PH_SAN_HE",
@@ -78,14 +155,21 @@
                 "structure.bond_strength",
                 "structure.transform_success"
             ],
-            "goal": "Map chemical bonding efficiency of Stems/Branches.",
-            "outcome": "Molecular Structure Visualization (MolViz)"
+            "goal": "映射干支之间的化学键合效率。",
+            "outcome": "分子结构可视化 (MolViz)。",
+            "layer": "STRUCTURAL",
+            "priority": 750,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_04_STABILITY": {
-            "name": "🛡️ 刑害动力学 (Penalty & Harm Dynamics)",
+            "name": "🛡️ 刑害干涉动力学 (Penalty & Harm Dynamics)",
             "icon": "🛡️",
             "type": "DETAIL",
-            "description": "Focus: Lattice Defects & Phase Jitter Analysis (SAI/IC)",
+            "description": "焦点：晶格缺陷与相位抖动分析 (Focus: Lattice Defects & Phase Jitter Analysis (SAI/IC))",
             "active": true,
             "linked_rules": [
                 "PH_PENALTY_3",
@@ -96,8 +180,15 @@
                 "structure.stress_accumulation_index",
                 "structure.interference_coefficient"
             ],
-            "goal": "Quantify Micro-Lattice Defects (SAI) & Phase Jitter (IC).",
-            "outcome": "Stress Heatmap & SNR Devaluation Report."
+            "goal": "量化微观晶格缺陷 (SAI) 与相位抖动 (IC)。",
+            "outcome": "应力显热图与信噪比降值报告。",
+            "layer": "FUNDAMENTAL",
+            "priority": 850,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_05_WEALTH": {
             "id": "MOD_05_WEALTH",
@@ -117,14 +208,24 @@
                 "FLUX_Q"
             ],
             "goal": "Quantify Wealth Flow Efficiency (Q) and Stability (Re).",
-            "outcome": "精准测算财富流动性与阻滞系数 (Wealth Liquidity & Resistance Coefficient)."
+            "outcome": "精准测算财富流动性与阻滞系数 (Wealth Liquidity & Resistance Coefficient).",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "WEALTH"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ],
+            "fusion_type": "STANDALONE_MODULE"
         },
         "MOD_06_RELATIONSHIP": {
             "id": "MOD_06_RELATIONSHIP",
             "name": "🌌 情感引力场 (Relationship Gravity Field)",
             "icon": "🌌",
             "type": "DETAIL",
-            "description": "基于引力耦合与相位坍缩的婚姻情感动力学 (Relationship Dynamics via Gravitational Coupling & Phase Collapse).",
+            "description": "基于引力耦合与相位坍缩的情感动力学 (Relationship Dynamics via Gravitational Coupling & Phase Collapse)",
             "active": true,
             "linked_rules": [
                 "PH_GRAVITY_BINDING",
@@ -137,15 +238,25 @@
                 "ORBITAL_STABILITY",
                 "PHASE_COHERENCE"
             ],
-            "goal": "Quantify Spouse Star/Palace gravitational binding and predict relationship phase transitions.",
-            "outcome": "精准测算婚姻引力绑定能与轨道稳定性 (Marital Binding Energy & Orbital Stability)."
+            "goal": "量化配偶星/宫的引力绑定并预测关系相位迁移。",
+            "outcome": "精准测算婚姻引力绑定能与轨道稳定性。",
+            "layer": "FLOW",
+            "priority": 650,
+            "scenario_affinity": [
+                "RELATIONSHIP"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ],
+            "fusion_type": "STANDALONE_MODULE"
         },
         "MOD_07_LIFEPATH": {
             "id": "MOD_07_LIFEPATH",
             "name": "🚀 个人生命轨道仪 (Personal Orbit Orrery)",
             "icon": "🚀",
             "type": "DETAIL",
-            "description": "High-freq temporal sampling for life-path energy audit.",
+            "description": "用于生命轨迹能量审计的高频时次采样分析。",
             "active": true,
             "linked_rules": [
                 "PH_DYNAMIC_DISPERSION_SIN",
@@ -156,15 +267,22 @@
                 "ORBITAL_ENTROPY",
                 "RISK_NODE_DENSITY"
             ],
-            "goal": "Map full life-cycle energy trajectory and identify risk nodes.",
-            "outcome": "Life-Path Risk Heatmap & Orbital Visualization."
+            "goal": "映射完整生命周期能量轨迹并识别风险节点。",
+            "outcome": "生命轨道风险热图与轨道可视化。",
+            "layer": "TEMPORAL",
+            "priority": 500,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_09_COMBINATION": {
             "id": "MOD_09_COMBINATION",
-            "name": "⚛️ 干合化气相位 (Stem Combination Phase)",
+            "name": "⚛️ 天干合化相位 (Stem Combination Phase)",
             "icon": "⚛️",
             "type": "DETAIL",
-            "description": "Physics of Stem Transformation vs Entanglement.",
+            "description": "天干合化与纠缠态物理学。",
             "active": true,
             "linked_rules": [
                 "PH_COMBINATION_PHASE"
@@ -173,15 +291,22 @@
                 "COMBINATION_THRESHOLD",
                 "TRANSFORM_POWER"
             ],
-            "goal": "Determine Phase Transition (Transformation) vs Entanglement (Bound).",
-            "outcome": "Accurate Energy State of Combinations."
+            "goal": "判定干支相位迁移（合化）或纠缠（羁绊）。",
+            "outcome": "精准测算合化能量状态。",
+            "layer": "STRUCTURAL",
+            "priority": 800,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_10_RESONANCE": {
             "id": "MOD_10_RESONANCE",
-            "name": "📡 干支共振增益 (Stem-Branch Resonance)",
+            "name": "📡 干支通根增益 (Stem-Branch Resonance)",
             "icon": "📡",
             "type": "DETAIL",
-            "description": "Signal amplification via Rooting (Tian Gan/Di Zhi Resonance).",
+            "description": "通过通根（天干地支谐振）实现的信号放大。",
             "active": true,
             "linked_rules": [
                 "PH_ROOTING_GAIN"
@@ -190,15 +315,22 @@
                 "ROOTING_GAIN",
                 "STABILITY_STATUS"
             ],
-            "goal": "Quantify signal gain from Rooting (Ben Qi/Zhong Qi/Yu Qi).",
-            "outcome": "Precise Stem Strength (Virtual vs Real)."
+            "goal": "量化来自本气/中气/余气的通根信号增益。",
+            "outcome": "精准测算天干虚实强弱。",
+            "layer": "FUNDAMENTAL",
+            "priority": 880,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_11_GRAVITY": {
             "id": "MOD_11_GRAVITY",
             "name": "🌌 宫位引力场 (Pillar Gravitational Field)",
             "icon": "🌌",
             "type": "DETAIL",
-            "description": "Dynamic weight distribution based on Solar Term depth.",
+            "description": "基于节气深度的动态权重分布。",
             "active": true,
             "linked_rules": [
                 "PH_PILLAR_GRAVITY"
@@ -206,15 +338,22 @@
             "linked_metrics": [
                 "PILLAR_WEIGHT_MATRIX"
             ],
-            "goal": "Model non-linear energy shifts (Month Command Dominance).",
-            "outcome": "Dynamic Energy Map."
+            "goal": "模拟非线性能量偏移（月令支配地位）。",
+            "outcome": "动态能量分布图。",
+            "layer": "FUNDAMENTAL",
+            "priority": 840,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_MODULE"
         },
         "MOD_12_INERTIA": {
             "id": "MOD_12_INERTIA",
             "name": "🌊 时空场惯性 (Spacetime Field Inertia)",
             "icon": "🌊",
             "type": "DETAIL",
-            "description": "Fluid viscosity modeling for energy transitions.",
+            "description": "用于能量迁移的流体粘性建模。",
             "active": true,
             "linked_rules": [
                 "PH_FLUID_VISCOSITY"
@@ -223,220 +362,484 @@
                 "INERTIA_CONSTANT_TAU",
                 "VISCOSITY_INDEX"
             ],
-            "goal": "Smooth energy handoff during Luck Pillar switches.",
-            "outcome": "Stable Entropy (S) during transition."
+            "goal": "确保大运切换期间能量的平滑交接。",
+            "outcome": "在过渡期间保持因果熵稳定。",
+            "layer": "TEMPORAL",
+            "priority": 550,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ],
+            "fusion_type": "STANDALONE_MODULE"
         }
     },
     "registry": {
         "PH17-20_CONG": {
-            "name": "Pattern: Follow (从旺/从强)",
-            "category": "Structural Pattern",
+            "name": "格局：从格/专旺 (Pattern: Follow)",
+            "category": "结构格局",
             "conditions": "mode == 'COHERENT' and locking_ratio > 2.0",
-            "priority": -1,
-            "effect": "SUPERCONDUCTING",
+            "priority": 950,
+            "layer": "STRUCTURAL",
+            "effect": "超导状态",
             "labels": [
-                "CONG_WANG",
-                "CONG_QIANG"
+                "从旺",
+                "从强"
             ],
-            "status": "ACTIVE"
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V9_RESONANCE"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH19_BEATING": {
-            "name": "Pattern: Fake Follow (假从/拍频)",
-            "category": "Structural Pattern",
+            "name": "格局：假从/拍频 (Pattern: Fake Follow)",
+            "category": "结构格局",
             "conditions": "mode == 'BEATING'",
-            "priority": -0.5,
-            "effect": "INTERFERENCE_ENVELOPE",
-            "status": "ACTIVE"
+            "priority": 940,
+            "layer": "STRUCTURAL",
+            "scenario_affinity": [
+                "WEALTH",
+                "CAREER"
+            ],
+            "effect": "干涉包络",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V9_RESONANCE"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH25-26_COLLAPSE": {
-            "name": "Pattern: Structural Collapse (结构坍塌)",
-            "category": "Dynamic Crisis",
+            "name": "格局：结构坍塌 (Structural Collapse)",
+            "category": "动态危机",
             "conditions": "clash_count >= 2",
-            "priority": -2,
-            "effect": "ANNIHILATION_RISK",
-            "status": "ACTIVE"
+            "priority": 990,
+            "layer": "FUNDAMENTAL",
+            "effect": "湮灭风险",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Clash_Dynamics"
+            ],
+            "fusion_type": "CRITICAL_SYSTEM_RULE"
         },
         "PH_JITTER": {
             "id": "PH_JITTER",
             "name": "相位抖动 (Phase Jitter)",
             "type": "STRUCTURAL",
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "phase_jitter_check"
         },
         "PH_WEALTH_PERMEABILITY": {
             "id": "PH_WEALTH_PERMEABILITY",
             "name": "财富渗透率 (Wealth Permeability - Re)",
-            "type": "FLUID_DYNAMICS",
-            "description": "Measures flow efficiency (Reynolds Number) of Wealth element.",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "WEALTH"
+            ],
+            "description": "测量财星的流动效率（雷诺数）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "calculate_reynolds"
         },
         "PH_WEALTH_VISCOSITY": {
             "id": "PH_WEALTH_VISCOSITY",
             "name": "粘性阻力 (Viscosity - ν)",
-            "type": "FLUID_DYNAMICS",
-            "description": "Quantifies friction caused by Rival (Bi-Jie) elements.",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 690,
+            "description": "量化由竞争者（比劫）元素引起的摩擦。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "calculate_viscosity"
         },
         "PH_BI_JIE_SHIELD": {
             "id": "PH_BI_JIE_SHIELD",
             "name": "比劫护盾 (Bi-Jie Interference Shield)",
-            "type": "FLUID_DYNAMICS",
-            "description": "Analyzes if Rivals block Wealth or Shield Output.",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 680,
+            "description": "分析比劫是拦截了财富还是屏蔽了输出。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "analyze_rival_shield"
         },
         "PH27_VOID": {
             "name": "Pattern: Void Energy Sink (空亡)",
             "category": "Field Defect",
             "conditions": "is_void == true",
-            "priority": 10,
+            "priority": 980,
+            "layer": "FUNDAMENTAL",
             "effect": "ENERGY_LEAK",
             "damping_factor": 0.45,
-            "status": "ACTIVE"
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V2_VOID"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH_LIFE_CYCLE_RESONANCE": {
             "id": "PH_LIFE_CYCLE_RESONANCE",
             "name": "十二长生动能谐振 (Life Cycle Resonance)",
             "type": "KINETIC_ENERGY",
+            "layer": "FUNDAMENTAL",
+            "priority": 870,
             "peak_gain": 2.0,
             "description": "十二长生作为动能倍率，帝旺态增益标定为 2.0x。",
-            "status": "ACTIVE"
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
         },
         "PH28_ANNIHILATION": {
-            "name": "Pattern: Annihilation State (系统湮灭)",
-            "category": "Critical Failure",
+            "name": "格局：系统湮灭 (Annihilation State)",
+            "category": "危急状态",
             "conditions": "sync_state < 0.12",
-            "priority": -3,
-            "effect": "TOTAL_INTERNAL_REFLECTION",
-            "status": "ACTIVE"
+            "priority": 1000,
+            "layer": "FUNDAMENTAL",
+            "effect": "全反射状态",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CRITICAL_SYSTEM_RULE"
         },
         "PH29_CAPTURE": {
-            "name": "Logic: Capture (食神制杀/伤官合杀)",
-            "category": "Interaction",
+            "name": "逻辑：食神制杀/伤官合杀 (Logic: Capture)",
+            "category": "相互作用",
             "phi_shift": 0.5,
             "q_gain": 1.5,
-            "priority": 2,
-            "status": "ACTIVE"
+            "type": "结构格局",
+            "layer": "STRUCTURAL",
+            "priority": 950,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "MOD_02_SUPER_STR",
+                "Legacy_V2_Follow"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH30_CUTTING": {
-            "name": "Logic: Cutting (枭神夺食/频谱切断)",
-            "category": "Critical Interaction",
+            "name": "逻辑：枭神夺食/频谱切断 (Logic: Cutting)",
+            "category": "关键干涉",
             "phi_shift": 2.2,
             "q_gain": 0.3,
-            "priority": 1,
-            "status": "ACTIVE"
+            "layer": "STRUCTURAL",
+            "priority": 840,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH31_CONTAMINATION": {
-            "name": "Logic: Contamination (财星坏印/介质污染)",
-            "category": "Interaction",
+            "name": "逻辑：财星坏印/介质污染 (Logic: Contamination)",
+            "category": "相互作用",
             "phi_shift": 1.2,
             "q_gain": 0.7,
-            "priority": 3,
-            "status": "ACTIVE"
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_PATTERN"
         },
         "PH_GRAVITY_BINDING": {
             "id": "PH_GRAVITY_BINDING",
             "name": "引力绑定 (Gravitational Binding)",
-            "type": "GRAVITY_DYNAMICS",
-            "description": "Calculates binding energy between DM and Spouse Star.",
+            "type": "引力动力学",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "RELATIONSHIP"
+            ],
+            "description": "计算日主与配偶星之间的绑定能量。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "calculate_binding_energy",
             "formula": "E = -G * M_dm * M_spouse / (2 * r)"
         },
         "PH_PERTURBATION_3BODY": {
             "id": "PH_PERTURBATION_3BODY",
-            "name": "三体摅动 (Three-Body Perturbation)",
-            "type": "GRAVITY_DYNAMICS",
-            "description": "Analyzes orbital destabilization when third mass (Bi-Jie, Luck Pillar) enters system.",
+            "name": "三体摄动 (Three-Body Perturbation)",
+            "type": "引力动力学",
+            "layer": "FLOW",
+            "priority": 690,
+            "description": "分析当第三方质量（比劫、大运）进入系统时的轨道不稳定性。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "analyze_perturbation"
         },
         "PH_PHASE_COLLAPSE": {
             "id": "PH_PHASE_COLLAPSE",
             "name": "相位坍缩 (Phase Collapse)",
-            "type": "QUANTUM_DYNAMICS",
-            "description": "Models wave function collapse of relationship potential into definite events.",
+            "type": "量子动力学",
+            "layer": "FLOW",
+            "priority": 680,
+            "description": "模拟情感势能波函数坍缩为确定性事件的过程。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "calculate_collapse_probability"
         },
         "PH_PEACH_BLOSSOM": {
             "id": "PH_PEACH_BLOSSOM",
             "name": "桃花波函数 (Peach Blossom Wave)",
-            "type": "QUANTUM_DYNAMICS",
-            "description": "Models romantic attraction as probability wave (Hong Luan, Tian Xi).",
+            "type": "量子动力学",
+            "layer": "FLOW",
+            "priority": 670,
+            "description": "将情感吸引力建模为概率波（红鸾、天喜）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
             "function": "calculate_peach_blossom_amplitude"
         },
         "PH_LUCK_BACKGROUND": {
             "id": "PH_LUCK_BACKGROUND",
             "name": "大运背景场 (Luck Background Field)",
-            "type": "GRAVITY_DYNAMICS",
-            "description": "Major Cycle as gravitational background radiation affecting base binding.",
+            "type": "引力动力学",
+            "layer": "TEMPORAL",
+            "priority": 600,
+            "description": "大运作为引力背景辐射干扰基础绑定状态。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "Topic_G_04_Spacetime_Inertia"
+            ],
+            "fusion_type": "COMPOSITE_EFFECT",
             "function": "apply_luck_modifier"
         },
         "PH_ANNUAL_IMPULSE": {
             "id": "PH_ANNUAL_IMPULSE",
             "name": "流年轨道冲量 (Annual Orbital Impulse)",
-            "type": "GRAVITY_DYNAMICS",
-            "description": "Annual pillar as high-speed flyby body imparting orbital impulse.",
+            "type": "引力动力学",
+            "layer": "TEMPORAL",
+            "priority": 590,
+            "description": "流年干支作为高速飞掠天体施加轨道冲量。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "COMPOSITE_EFFECT",
             "function": "apply_annual_impulse"
         },
         "PH_CAUSAL_ENTROPY": {
             "id": "PH_CAUSAL_ENTROPY",
             "name": "因果熵 (Causal Entropy)",
-            "type": "EMERGENCE",
-            "description": "Quantifies structural complexity and interaction density.",
+            "type": "涌现物理",
+            "layer": "ENVIRONMENT",
+            "priority": 990,
+            "description": "量化结构复杂性与相互作用密度。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "EMERGENT_PROPERTY",
             "function": "calculate_causal_entropy"
         },
         "PH_SINGULARITY_DETECT": {
             "id": "PH_SINGULARITY_DETECT",
             "name": "奇点探测 (Singularity Detection)",
-            "type": "EMERGENCE",
-            "description": "Identifies temporal nodes where complex interactions overlap.",
+            "type": "涌现物理",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
+            "description": "识别复杂能量干涉重叠的时间节点。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "EMERGENT_PROPERTY",
             "function": "detect_singularities"
         },
         "PH_QUANTUM_DISPERSION": {
             "id": "PH_QUANTUM_DISPERSION",
             "name": "正弦弥散 (Sinusoidal Dispersion)",
             "type": "QUANTUM_ENGINE",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
             "description": "P(t) = A * sin^2(πt + φ) * e^(-τt). Core Asset for dynamic hidden stems.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_ALGORITHM",
             "function": "QuantumDispersionEngine.get_dynamic_weights"
         },
         "PH_SHEAR_BURST": {
             "id": "PH_SHEAR_BURST",
             "name": "羊刃相变 (Shear Burst)",
             "type": "CRITICAL_PHYSICS",
+            "layer": "STRUCTURAL",
+            "priority": 850,
             "description": "Non-linear energy gain (2.26x) when Yang Ren encounters Clash (Chong).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE",
             "function": "AntigravityEngine.check_shear_burst"
         },
         "PH_COMBINATION_PHASE": {
             "id": "PH_COMBINATION_PHASE",
             "name": "合化相位判定 (Combination Phase Check)",
             "type": "QUANTUM_ENGINE",
+            "layer": "STRUCTURAL",
+            "priority": 840,
             "description": "Checks if month energy > threshold (0.65) for phase transition.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "CORE_MODULE",
             "function": "check_combination_phase"
         },
         "PH_ROOTING_GAIN": {
             "id": "PH_ROOTING_GAIN",
             "name": "通根增益模型 (Rooting Gain Model)",
             "type": "QUANTUM_ENGINE",
+            "layer": "FUNDAMENTAL",
+            "priority": 890,
             "description": "Calculates G_res based on Main(2.0)/Medium(1.5)/Residual(1.2)/None(0.5).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_MODULE",
             "function": "ResonanceBooster.calculate_resonance_gain"
         },
         "PH_PILLAR_GRAVITY": {
             "id": "PH_PILLAR_GRAVITY",
             "name": "动态引力权重 (Dynamic Gravity Weights)",
             "type": "QUANTUM_ENGINE",
+            "layer": "FUNDAMENTAL",
+            "priority": 910,
             "description": "Month Weight = 0.40 + 0.15*sin(pi*t).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_MODULE",
             "function": "PillarGravityEngine.calculate_dynamic_weights"
         },
         "PH_FLUID_VISCOSITY": {
             "id": "PH_FLUID_VISCOSITY",
             "name": "流体粘滞模型 (Fluid Viscosity Model)",
             "type": "QUANTUM_ENGINE",
+            "layer": "TEMPORAL",
+            "priority": 580,
             "description": "Exponential Decay (W_prev = exp(-t/tau)). Default Tau=3.0 months.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ],
+            "fusion_type": "CORE_MODULE",
             "function": "SpacetimeInertiaEngine.calculate_inertia_weights"
         },
         "PH_RISK_NODE_DETECT": {
             "id": "PH_RISK_NODE_DETECT",
             "name": "风险节点探测 (Risk Node Detection)",
             "type": "CRITICAL_PHYSICS",
+            "layer": "TEMPORAL",
+            "priority": 550,
             "description": "Triggered when SAI > 0.6, Entropy > 1.5, or IC > 0.6.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ],
+            "fusion_type": "CORE_ENGINE_RULE",
             "function": "LifePathEngine._identify_risk_reason"
+        },
+        "PH_DESTINY_TRANSLATION": {
+            "id": "PH_DESTINY_TRANSLATION",
+            "name": "命运真言翻译 (Destiny Translation Tool)",
+            "type": "INTELLIGENCE_ASSET",
+            "layer": "TEMPORAL",
+            "priority": 500,
+            "description": "Translates raw physics metrics into multi-style human narratives (WKW/Chow).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V11_INTELLIGENCE"
+            ],
+            "fusion_type": "INTELLIGENCE_LAYER",
+            "function": "DestinyTranslator.translate_state"
+        },
+        "PH_HE_HUA": {
+            "name": "干合化气 (Heavenly Stem Transformation)",
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "conflicts": [
+                "PH_CHONG"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_SAN_HE": {
+            "name": "地支三合局 (Three-Branch Combination)",
+            "layer": "STRUCTURAL",
+            "priority": 820,
+            "conflicts": [
+                "PH_CHONG",
+                "PH_HARM_6"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_LIU_HE": {
+            "name": "地支六合 (Six-Branch Combination)",
+            "layer": "STRUCTURAL",
+            "priority": 810,
+            "conflicts": [
+                "PH_CHONG"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_CHONG": {
+            "name": "地支六冲 (Six-Branch Clash)",
+            "layer": "STRUCTURAL",
+            "priority": 700,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Clash_Dynamics"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
         }
     },
     "metrics": {
@@ -444,71 +847,107 @@
             "id": "CAUSAL_ENTROPY",
             "name": "系统熵 (System Entropy - S)",
             "unit": "nats",
-            "description": "Structural entanglement richness. S = -sum(p*log(p)).",
-            "module": "MOD_00_SUBSTRATE"
+            "description": "结构纠缠深度。S = -sum(p*log(p))。",
+            "module": "MOD_00_SUBSTRATE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
         },
         "SINGULARITY_INDEX": {
             "id": "SINGULARITY_INDEX",
             "name": "奇点指标 (Singularity Index - Σ)",
             "unit": "dimensionless",
             "description": "Overlap count of high-priority interactions at specific nodes.",
-            "module": "MOD_00_SUBSTRATE"
+            "module": "MOD_00_SUBSTRATE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
         },
         "REYNOLDS_NUMBER": {
             "id": "REYNOLDS_NUMBER",
             "name": "雷诺数 (Reynolds Number - Re)",
-            "unit": "dimensionless",
-            "description": "Measures flow regime: Laminar (<2000), Transition (2000-4000), Turbulent (>4000).",
+            "unit": "无纲量",
+            "description": "测量流动状态：层流 (<2000), 过渡 (2000-4000), 湍流 (>4000)。",
             "module": "MOD_05_WEALTH",
-            "formula": "Re = (Density * Velocity * Length) / Viscosity"
+            "formula": "Re = (Density * Velocity * Length) / Viscosity",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ]
         },
         "VISCOSITY": {
             "id": "VISCOSITY",
             "name": "粘滞系数 (Viscosity - ν)",
-            "unit": "Pa·s (analogous)",
-            "description": "Friction caused by Rival (Bi-Jie) energy. Square Law: ν = 1 + 0.05 * E_rival^2.",
+            "unit": "Pa·s (类比)",
+            "description": "由竞争者（比劫）能量引起的摩擦力。平方律：ν = 1 + 0.05 * E_rival^2。",
             "module": "MOD_05_WEALTH",
-            "formula": "nu = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)"
+            "formula": "nu = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ]
         },
         "FLUX_Q": {
             "id": "FLUX_Q",
             "name": "流量闸门 (Flux Gate - Q)",
-            "unit": "m³/s (analogous)",
-            "description": "Wealth flow rate driven by Output (Shishen/Shangguan) energy.",
+            "unit": "m³/s (类比)",
+            "description": "由食伤能量驱动的财富流动速率。",
             "module": "MOD_05_WEALTH",
-            "formula": "Q = E_output * 2.0"
+            "formula": "Q = E_output * 2.0",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ]
         },
         "BINDING_ENERGY": {
             "id": "BINDING_ENERGY",
             "name": "绑定能 (Binding Energy - E)",
-            "unit": "Joules (analogous)",
-            "description": "Gravitational binding energy between DM and Spouse Star. Negative = Bound.",
+            "unit": "焦耳 (类比)",
+            "description": "日主与配偶星之间的引力绑定能。负值表示绑定。",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "E = -G * M_dm * M_spouse / (2 * r)"
+            "formula": "E = -G * M_dm * M_spouse / (2 * r)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "ORBITAL_STABILITY": {
             "id": "ORBITAL_STABILITY",
             "name": "轨道稳定性 (Orbital Stability - σ)",
-            "unit": "dimensionless",
-            "description": "Measures resistance to orbital perturbation. Higher = More Stable.",
+            "unit": "无纲量",
+            "description": "测量对轨道扰动的抵抗力。越高表示越稳定。",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "σ = |E_binding| / E_perturbation"
+            "formula": "σ = |E_binding| / E_perturbation",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "PHASE_COHERENCE": {
             "id": "PHASE_COHERENCE",
             "name": "相位相干性 (Phase Coherence - η)",
-            "unit": "dimensionless [0-1]",
-            "description": "Quantum coherence of relationship wave function. 1 = Perfect Entanglement.",
+            "unit": "无纲量 [0-1]",
+            "description": "关系波函数的量子相干性。1 = 完美纠缠。",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "η = cos²(Δφ / 2)"
+            "formula": "η = cos²(Δφ / 2)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "LUCK_MODIFIER": {
             "id": "LUCK_MODIFIER",
             "name": "大运修正系数 (Luck Modifier - λ)",
-            "unit": "dimensionless [0.5-1.5]",
-            "description": "Scales Spouse Star mass based on Major Cycle element alignment.",
+            "unit": "无纲量 [0.5-1.5]",
+            "description": "根据大运元素的一致性修正配偶星质量。",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "λ = 1.3 (support) | 0.7 (control) | *0.6 (clash)"
+            "formula": "λ = 1.3 (support) | 0.7 (control) | *0.6 (clash)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "ANNUAL_IMPULSE": {
             "id": "ANNUAL_IMPULSE",
@@ -516,7 +955,11 @@
             "unit": "AU (analogous)",
             "description": "Orbital distance modification from Annual Pillar interactions.",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "Δr = +50 (clash) | -30 (join)"
+            "formula": "Δr = +50 (clash) | -30 (join)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "GEO_FACTOR": {
             "id": "GEO_FACTOR",
@@ -524,104 +967,144 @@
             "unit": "dimensionless [0.5-1.5]",
             "description": "Environmental modifier for gravitational constant G.",
             "module": "MOD_06_RELATIONSHIP",
-            "formula": "G_eff = G * ε"
+            "formula": "G_eff = G * ε",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
         },
         "ORBITAL_ENTROPY": {
             "id": "ORBITAL_ENTROPY",
             "name": "轨道熵 (Orbital Entropy)",
             "unit": "nats",
             "description": "Entropy integrated over the life-path trajectory.",
-            "module": "MOD_07_LIFEPATH"
+            "module": "MOD_07_LIFEPATH",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
         },
         "RISK_NODE_DENSITY": {
             "id": "RISK_NODE_DENSITY",
             "name": "风险节点密度 (Risk Node Density)",
-            "unit": "nodes/decade",
-            "description": "Frequency of structural risk events per 10-year cycle.",
-            "module": "MOD_07_LIFEPATH"
+            "unit": "节点/十年",
+            "description": "每10年周期内的结构风险事件频率。",
+            "module": "MOD_07_LIFEPATH",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
         },
         "COMBINATION_THRESHOLD": {
             "id": "COMBINATION_THRESHOLD",
             "name": "合化阈值 (Combination Threshold)",
             "unit": "coeff",
             "description": "Critical monthly energy level required for transformation (0.65).",
-            "module": "MOD_09_COMBINATION"
+            "module": "MOD_09_COMBINATION",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ]
         },
         "TRANSFORM_POWER": {
             "id": "TRANSFORM_POWER",
             "name": "化气能量 (Transform Power)",
             "unit": "ratio",
             "description": "1.0 if Transformed, 0.3 if Entangled.",
-            "module": "MOD_09_COMBINATION"
+            "module": "MOD_09_COMBINATION",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ]
         },
         "ROOTING_GAIN": {
             "id": "ROOTING_GAIN",
             "name": "通根增益 (Rooting Gain)",
             "unit": "coeff",
             "description": "Multiplier for Stem Energy: 2.0 (Main) to 0.5 (Floating).",
-            "module": "MOD_10_RESONANCE"
+            "module": "MOD_10_RESONANCE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
         },
         "STABILITY_STATUS": {
             "id": "STABILITY_STATUS",
             "name": "稳态标识 (Stability Status)",
             "unit": "enum",
             "description": "SUPER_STABLE | STABLE | DAMPED | CRITICAL_VOLATILE",
-            "module": "MOD_10_RESONANCE"
+            "module": "MOD_10_RESONANCE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
         },
         "PILLAR_WEIGHT_MATRIX": {
             "id": "PILLAR_WEIGHT_MATRIX",
             "name": "宫位权重矩阵 (Pillar Weight Matrix)",
             "unit": "ratio",
             "description": "Y/M/D/H weights summing to 1.0.",
-            "module": "MOD_11_GRAVITY"
+            "module": "MOD_11_GRAVITY",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
         },
         "INERTIA_CONSTANT_TAU": {
             "id": "INERTIA_CONSTANT_TAU",
             "name": "惯性常数 (Inertia Constant τ)",
             "unit": "months",
             "description": "Time required for previous energy fields to decay by ~63%.",
-            "module": "MOD_12_INERTIA"
+            "module": "MOD_12_INERTIA",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ]
         },
         "VISCOSITY_INDEX": {
             "id": "VISCOSITY_INDEX",
             "name": "粘滞指数 (Viscosity Index)",
             "unit": "ratio",
             "description": "Measure of field mixing state (0.0=Pure, 1.0=Max Mix).",
-            "module": "MOD_12_INERTIA"
+            "module": "MOD_12_INERTIA",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ]
         }
     },
     "bazi_parameters": {
         "TEN_GODS_WEALTH": {
             "id": "TEN_GODS_WEALTH",
-            "name": "财星 (财/Wealth)",
-            "type": "TEN_GOD",
-            "description": "Element controlled by Day Master. Represents wealth acquisition targets.",
-            "relationship": "DM controls Wealth",
-            "examples": "Earth DM -> Water is Wealth"
+            "name": "财星 (Wealth)",
+            "type": "十神",
+            "description": "日主所克之元素。代表财富获取目标。",
+            "relationship": "日主克财",
+            "examples": "戊土日主 -> 水为财"
         },
         "TEN_GODS_RIVAL": {
             "id": "TEN_GODS_RIVAL",
             "name": "比劫 (Rival/Bi-Jie)",
-            "type": "TEN_GOD",
-            "description": "Same element as Day Master. Represents competition and resource sharing.",
-            "relationship": "DM == Rival",
-            "examples": "Earth DM -> Earth is Rival"
+            "type": "十神",
+            "description": "与日主同元素的成分。代表竞争与资源共享。",
+            "relationship": "日主 == 比劫",
+            "examples": "戊土日主 -> 土为比劫"
         },
         "TEN_GODS_OUTPUT": {
             "id": "TEN_GODS_OUTPUT",
-            "name": "食伤 (Output/Shishen)",
-            "type": "TEN_GOD",
-            "description": "Element generated by Day Master. Represents skills and creative output.",
-            "relationship": "DM generates Output",
-            "examples": "Earth DM -> Metal is Output"
+            "name": "食伤 (Output)",
+            "type": "十神",
+            "description": "日主所生之元素。代表技能与创造性输出。",
+            "relationship": "日主生食伤",
+            "examples": "戊土日主 -> 金为食伤"
         },
         "TEN_GODS_CONTROL": {
             "id": "TEN_GODS_CONTROL",
             "name": "官杀 (Control/Officer)",
-            "type": "TEN_GOD",
-            "description": "Element that controls Day Master. Represents discipline and authority.",
-            "relationship": "Control controls DM",
-            "examples": "Earth DM -> Wood is Control"
+            "type": "十神",
+            "description": "克制日主的元素。代表纪律与权威。",
+            "relationship": "官杀克日主",
+            "examples": "戊土日主 -> 木为官杀"
         },
         "SPOUSE_STAR": {
             "id": "SPOUSE_STAR",
@@ -662,6 +1145,16 @@
             "description": "The continuous curve of energy states over a human lifespan.",
             "relationship": "Integration of Annual/Luck Pillars",
             "examples": "Entropic Decay Curve"
+        }
+    },
+    "tools": {
+        "TOOL_01_STELLAR_PARSER": {
+            "id": "TOOL_01_STELLAR_PARSER",
+            "name": "周星驰风格翻译层 (Stephen Chow Style Translation Layer)",
+            "type": "INTELLIGENCE_TOOL",
+            "description": "基于周星驰无厘头语境的物理真言引擎，将高阶物理参数转化为喜剧表达。",
+            "class": "core.utils.Stellar_Comedy_Parser",
+            "active": true
         }
     }
 }
