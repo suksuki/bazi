@@ -10,6 +10,7 @@ Core Variables:
 """
 
 import numpy as np
+from typing import Dict, Any, List, Optional
 from core.trinity.core.nexus.definitions import PhysicsConstants, BaziParticleNexus, ArbitrationNexus
 
 class RelationshipGravityEngine:
@@ -55,23 +56,23 @@ class RelationshipGravityEngine:
             )
     
     def analyze_relationship(self, waves: dict, pillars: list, 
-                               luck_pillar: str = None, 
-                               annual_pillar: str = None,
-                               geo_factor: float = 1.0) -> dict:
+                                influence_bus: Optional[Any] = None) -> dict:
         """
         Analyzes relationship dynamics based on wave energies and structural interactions.
-        [Phase 36-B] Now includes dynamic spacetime factors.
-        
-        Args:
-            waves: Dict of WaveState objects keyed by element.
-            pillars: List of pillar strings ["甲子", "丙寅", ...]
-            luck_pillar: Current Major Cycle pillar (e.g., "壬申") - Background Field
-            annual_pillar: Current Annual pillar (e.g., "乙巳") - Impulse Perturbation
-            geo_factor: Geo-environmental multiplier (0.5-1.5) - Medium Constant
-        
-        Returns:
-            Dict containing Binding Energy, Orbital Stability, Phase Coherence, and State.
+        [V13.5] Now supports InfluenceBus for plug-and-play parameter injection.
         """
+        # [V13.5] Extract factors from Bus if present
+        luck_pillar = None
+        annual_pillar = None
+        geo_factor = 1.0
+        
+        if influence_bus:
+            # Reconstruct legacy params for compatibility
+            for f in influence_bus.active_factors:
+                if f.name == "LuckCycle/大运": luck_pillar = f.metadata.get("luck_pillar")
+                if f.name == "AnnualPulse/流年": annual_pillar = f.metadata.get("annual_pillar")
+                if f.name == "GeoBias/地域": geo_factor = f.metadata.get("geo_factor", 1.0)
+        
         # 1. Extract Day Branch (Spouse Palace)
         day_pillar = pillars[2] if len(pillars) > 2 else ""
         spouse_palace = day_pillar[1] if len(day_pillar) > 1 else ""

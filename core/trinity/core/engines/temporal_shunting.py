@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 
 class TemporalShuntingEngine:
     """
@@ -22,7 +22,7 @@ class TemporalShuntingEngine:
             "NONE": 0.0
         }
 
-    def scan_singularities(self, start_year: int = 2024, horizon_months: int = 120, baseline_sai: float = 1.0, birth_year: int = 1990, social_damping: float = 1.0, profile=None) -> Dict[str, Any]:
+    def scan_singularities(self, start_year: int = 2024, horizon_months: int = 120, baseline_sai: float = 1.0, birth_year: int = 1990, social_damping: float = 1.0, profile: Optional[Any] = None) -> Dict[str, Any]:
         """
         Scans timeline for Singularity Points (SAI > Threshold).
         Phase 4.0: Includes social_damping (Platform Impedance).

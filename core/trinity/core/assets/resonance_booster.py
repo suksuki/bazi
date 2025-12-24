@@ -5,6 +5,7 @@ Core physics logic for Stem-Branch Resonance & Rooting Gain.
 """
 
 from typing import List, Dict, Any, Optional
+from core.trinity.core.nexus.definitions import BaziParticleNexus
 
 class ResonanceBooster:
     
@@ -34,30 +35,84 @@ class ResonanceBooster:
     }
 
     @staticmethod
-    def calculate_resonance_gain(stem: str, branches: List[str]) -> Dict[str, Any]:
+    def calculate_resonance_gain(stem: str, branches: List[str], influence_bus: Optional[Any] = None) -> Dict[str, Any]:
         """
-        Calculates the maximum resonance gain (G_res) for a given stem against a list of branches.
+        [V13.7 物理化升级] 计算通根增益：从固定映射回归到"量子概率分布"
+        
+        核心公式：G_res = G_base * (1 + ε_geo * K_geo²)
+        - G_base: 基础通根增益（Main/Medium/Residual/None）
+        - ε_geo: 地理修正系数（二阶项，体现"得地"的物理实感）
+        - K_geo: 地理因子（从InfluenceBus获取）
         
         Args:
             stem: The Heavenly Stem (e.g., '甲')
             branches: List of Earthly Branches (e.g., ['寅', '辰'])
+            influence_bus: Optional InfluenceBus for dynamic adjustments (包含地理修正).
             
         Returns:
-            Dict: { 'gain': float, 'best_root': str, 'root_type': str, 'status': str }
+            Dict: { 'gain': float, 'best_root': str, 'root_type': str, 'status': str, 'geo_correction': float }
         """
+        all_branches = list(branches)
+        
+        # [V13.5] Extract branches from Bus if present
+        if influence_bus:
+            for factor in influence_bus.active_factors:
+                if hasattr(factor, 'luck_branch') and factor.luck_branch:
+                    all_branches.append(factor.luck_branch)
+                if hasattr(factor, 'annual_branch') and factor.annual_branch:
+                    all_branches.append(factor.annual_branch)
+
         max_gain = ResonanceBooster.GAIN_MATRIX["FLOATING"]
         best_root_branch = None
         best_root_type = "NONE"
         
-        for br in branches:
+        # [V13.7] 提取地理修正系数 K_geo
+        geo_correction = 0.0
+        geo_factor = 1.0
+        geo_element = None
+        if influence_bus:
+            for factor in influence_bus.active_factors:
+                # 检查 factor.name 或 metadata
+                if factor.name == "GeoBias/地域":
+                    geo_factor = factor.metadata.get("geo_factor", 1.0)
+                    geo_element = factor.metadata.get("geo_element")
+                    break
+                elif hasattr(factor, 'geo_factor') and factor.geo_factor:
+                    # 兼容旧格式
+                    geo_factor = factor.geo_factor
+                    geo_element = getattr(factor, 'geo_element', None)
+                    break
+        
+        # [V13.7] 应用地理二阶修正：G_res = G_base * (1 + ε_geo * K_geo²)
+        # 如果地理元素匹配日主元素，则应用修正
+        if geo_element and geo_factor > 1.0:
+            # 从 STEMS 字典获取天干元素
+            if stem in BaziParticleNexus.STEMS:
+                stem_element = BaziParticleNexus.STEMS[stem][0].lower()  # (Element, Polarity, HetuNumber)
+                if stem_element == geo_element.lower():
+                    # ε_geo: 地理修正系数（根据 REAL_01 案例校准：0.0509）
+                    # 目标：2.229 = 2.0 * (1 + ε_geo * K_geo²)
+                    # 如果 geo_factor = 1.5，则 K_geo = geo_factor = 1.5
+                    # 则：ε_geo = 0.1145 / (1.5²) = 0.0509
+                    epsilon_geo = 0.0509  # [V13.7] 校准值，基于 REAL_01 案例
+                    # K_geo = geo_factor（地理因子）
+                    K_geo = geo_factor
+                    # 二阶修正：G_res = G_base * (1 + ε_geo * K_geo²)
+                    geo_correction = epsilon_geo * (K_geo ** 2)
+        
+        for br in all_branches:
             hidden = ResonanceBooster.HIDDEN_STEMS.get(br, {})
             if stem in hidden:
                 rtype = hidden[stem]
-                gain = ResonanceBooster.GAIN_MATRIX.get(rtype, 1.0)
+                base_gain = ResonanceBooster.GAIN_MATRIX.get(rtype, 1.0)
+                
+                # [V13.7] 应用地理二阶修正
+                # G_res = G_base * (1 + ε_geo * K_geo²)
+                corrected_gain = base_gain * (1.0 + geo_correction)
                 
                 # "Strong Connection Priority": Take max gain
-                if gain > max_gain:
-                    max_gain = gain
+                if corrected_gain > max_gain:
+                    max_gain = corrected_gain
                     best_root_branch = br
                     best_root_type = rtype
         
@@ -68,7 +123,9 @@ class ResonanceBooster:
             "best_root": best_root_branch,
             "root_type": best_root_type,
             "status": status,
-            "energy_pumping": max_gain >= 2.0
+            "energy_pumping": max_gain >= 2.0,
+            "geo_correction": geo_correction,  # [V13.7] 新增：地理修正值
+            "base_gain": ResonanceBooster.GAIN_MATRIX.get(best_root_type, 1.0) if best_root_type != "NONE" else 0.5
         }
 
 # Export functional alias

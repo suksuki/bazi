@@ -29,7 +29,7 @@ from ui.components.molviz_3d import render_molviz_3d
 from ui.components.holographic_radar import render_holographic_radar
 
 # --- Singletons / Global Instances (Phase 40 Optimization) ---
-from core.trinity.core.unified_arbitrator_master import unified_arbitrator
+from core.trinity.core.unified_arbitrator_master import quantum_framework
 oracle = TrinityOracle()
 
 @st.cache_data(ttl=3600)
@@ -65,7 +65,7 @@ def run_arbitration_cached(bazi_tuple, binfo, luck_p, annual_p, months_s, city_n
         }
     }
     # Pass a copy of binfo to avoid side effects
-    return unified_arbitrator.arbitrate_bazi(list(bazi_tuple), binfo.copy() if binfo else {}, ctx)
+    return quantum_framework.arbitrate_bazi(list(bazi_tuple), binfo.copy() if binfo else {}, ctx)
 
 # [Phase 38] GEO City Map - Comprehensive Chinese + International Cities
 # Format: "城市 (City)": (geo_factor, "element_affinity")
@@ -731,10 +731,10 @@ def render():
     st.divider()
 
     # ========================================================
-    # 🏛️ GRAND UNIFIED ARBITRATION (PERMANENT GLOBAL FEATURE)
+    # 🏛️ 量子通用框架 (QUANTUM UNIVERSAL FRAMEWORK)
     # ========================================================
-    st.markdown("### 🏛️ 大一统仲裁 (Grand Unified Arbitration)")
-    st.caption("V11.0.0 | 全物理层综合仲裁与王家卫式全息真言")
+    st.markdown("### 🏛️ 量子通用框架 (Quantum Universal Framework Control Panel)")
+    st.caption("V13.6.0 | 全时空量子注入与多维环境因子修正")
 
     # Prepare arguments for run_arbitration_cached
     birth_info = selected_case.get('birth_info', {})
@@ -863,7 +863,7 @@ def render():
         # [REMOVED] 白话解释器 - 与上方白话真言重复，已删除
 
         # Generate Holographic Report
-        holographic_report = unified_arbitrator.generate_holographic_report(unified_state)
+        holographic_report = quantum_framework.generate_holographic_report(unified_state)
         with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=True):
             st.markdown(holographic_report)
 
@@ -1081,7 +1081,7 @@ def render():
         with st.expander("🎛️ 详细物理读数 (Detailed Physics Matrix)", expanded=False):
             st.json(unified_state)
     elif not selected_case:
-        st.info("请先选择或输入八字案例以执行大一统仲裁。")
+        st.info("请先选择或输入八字案例以执行量子通用框架仲裁。")
 
     st.divider()
 
@@ -1157,16 +1157,16 @@ def render():
         "🔮 真言语格 (Mantra Style)",
         ["周星驰 (无厘头)", "王家卫 (文艺)"],
         index=0,
-        help="切换大一统仲裁报告的叙事风格。"
+        help="切换量子通用框架报告的叙事风格。"
     )
 
     # Select Topic (Module)
 
     # Update translator style based on selection
     if "周星驰" in translation_style:
-        unified_arbitrator.translator.set_style(TranslationStyle.STEPHEN_CHOW)
+        quantum_framework.translator.set_style(TranslationStyle.STEPHEN_CHOW)
     else:
-        unified_arbitrator.translator.set_style(TranslationStyle.WONG_KAR_WAI)
+        quantum_framework.translator.set_style(TranslationStyle.WONG_KAR_WAI)
 
     current_module = module_map.get(selected_name)
     selected_topic_id = current_module.get('id') if current_module else None
@@ -1372,8 +1372,8 @@ def render():
 
                 # Run Execution
                 with st.spinner("🚀 正在进行非线性动力网络仿真..."):
-                    # Use the global unified_arbitrator instance
-                    state = unified_arbitrator.arbitrate_bazi(b_list, {"gender": "male"}, ctx_obj)
+                    # Use the global quantum_framework instance
+                    state = quantum_framework.arbitrate_bazi(b_list, {"gender": "male"}, ctx_obj)
 
                     vib = state['physics'].get('vibration', {})
                     opt_mix = vib.get('optimal_deity_mix', {})
@@ -1581,7 +1581,7 @@ def render():
                         """, unsafe_allow_html=True)
             
             st.markdown("##### 🌍 系统全息状态 (Global Telemetry)")
-            st.info("💡 此专题为系统底层支撑层，聚合了跨模块引用的核心资产。大一统仲裁台（下方）已启用，用于展示这些算法在实际推演中的全息表现。")
+            st.info("💡 此专题为系统底层支撑层，聚合了跨模块引用的核心资产。量子通用框架控制台（下方）已启用，用于展示这些算法在实际推演中的全息表现。")
         
         # --- MODULE 16: TEMPORAL SHUNTING (Topic 3) ---
         if selected_topic_id == "MOD_16_TEMPORAL_SHUNTING":
@@ -2014,10 +2014,22 @@ def render():
             st.markdown("#### 🌌 宫位引力场 (Pillar Gravitational Field)")
             st.caption("Auto-Pilot Weight Distribution based on Solar Term Depth (Progress).")
             
-            # Dynamic Import
+            # [V13.7 升级] 使用 V13.7 版本的宫位引力引擎（动态权重模型）
             try:
                 sys.path.append("/home/jin/bazi_predict")
-                from core.trinity.core.assets.pillar_gravity_engine import calculate_pillar_weights
+                from core.trinity.core.engines.pillar_gravity_v13_7 import PillarGravityEngineV13_7
+                pillar_engine = PillarGravityEngineV13_7()
+                # 创建兼容层：将旧版接口转换为 V13.7 接口
+                def calculate_pillar_weights(progress: float):
+                    """兼容层：将旧版接口转换为 V13.7 接口"""
+                    weights = pillar_engine.calculate_dynamic_weights(t=progress, influence_bus=None)
+                    # 转换键名：V13.7 使用小写，旧版使用首字母大写
+                    return {
+                        'Year': weights.get('year', 0.1),
+                        'Month': weights.get('month', 0.5),
+                        'Day': weights.get('day', 0.3),
+                        'Hour': weights.get('hour', 0.1)
+                    }
             except ImportError:
                 calculate_pillar_weights = lambda p: {'Year':0.1, 'Month':0.5, 'Day':0.3, 'Hour':0.1}
 
@@ -2082,10 +2094,38 @@ def render():
             st.markdown("#### 🌊 时空场惯性衰减 (Spacetime Fluid Inertia)")
             st.caption("Exponential Decay Model for Luck Pillar Transition (Default τ=3.0 mo)")
             
-            # Dynamic Import
+            # [V13.7 升级] 使用 V13.7 版本的时空惯性引擎（指数衰减模型）
             try:
                 sys.path.append("/home/jin/bazi_predict")
-                from core.trinity.core.assets.spacetime_inertia_engine import calculate_transition_inertia
+                from core.trinity.core.engines.spacetime_inertia_v13_7 import SpacetimeInertiaEngineV13_7
+                inertia_engine = SpacetimeInertiaEngineV13_7(tau=3.0)
+                # 创建适配器：将旧版接口转换为 V13.7 接口
+                def calculate_transition_inertia(months_since_switch: float, tau: float = 3.0):
+                    """适配器：将旧版接口转换为 V13.7 接口"""
+                    # 如果 months_since_switch < 0，直接返回旧版逻辑
+                    if months_since_switch < 0:
+                        return {"Prev_Luck": 1.0, "Next_Luck": 0.0, "Viscosity": 0.0}
+                    
+                    # V13.7 版本需要时间序列，但旧版接口是单个值
+                    # 我们创建一个单元素时间序列来适配
+                    time_months = [max(0.0, months_since_switch)]  # 确保非负
+                    weights = inertia_engine.calculate_inertia_weights(
+                        time_months=time_months,
+                        previous_energy=1.0,
+                        influence_bus=None
+                    )
+                    # V13.7 返回的是权重列表（前一时刻的权重），我们取第一个元素
+                    w_prev = weights[0] if weights else math.exp(-months_since_switch / tau)
+                    w_next = 1.0 - w_prev
+                    # 计算粘滞度（混合状态）：S_mix ~ 4 * w1 * w2
+                    viscosity = 4 * w_prev * w_next
+                    # 返回旧版格式
+                    return {
+                        'Prev_Luck': round(w_prev, 4),
+                        'Next_Luck': round(w_next, 4),
+                        'Viscosity': round(viscosity, 4)
+                    }
+                import math  # 确保 math 已导入
             except ImportError:
                 calculate_transition_inertia = lambda m, t: {'Prev_Luck': 0.5, 'Next_Luck': 0.5, 'Viscosity': 1.0}
 
@@ -2881,7 +2921,9 @@ def render():
             st.markdown("#### ⚡ 动态仿真 (Dynamic Simulation)")
             st.caption("点击按钮将使用当前选择的大运、流年、地域重新计算引力参数")
             if st.button("🚀 启动 情感引力仿真 (Run Gravity Simulation)", key="sim_relationship_btn", use_container_width=True):
-                from core.trinity.core.engines.relationship_gravity import RelationshipGravityEngine
+                # [V13.7 升级] 使用 V13.7 版本的情感引力引擎（谐振子摄动模型）
+                from core.trinity.core.engines.relationship_gravity_v13_7 import RelationshipGravityEngineV13_7
+                from core.trinity.core.middleware.influence_bus import InfluenceBus, InfluenceFactor, NonlinearType
                 st.toast("引力轨道计算中... (Calculating Orbital Dynamics...)", icon="🌌")
                 
                 # Get gender from case if available
@@ -2901,14 +2943,36 @@ def render():
                     "Water": MockWave(10.0, 0.5)
                 }
                 
-                # Re-run calculation with dynamic params
-                gravity_engine = RelationshipGravityEngine(dm, gender)
+                # [V13.7] 构建 InfluenceBus 以支持流年摄动模型
+                influence_bus = InfluenceBus()
+                if user_luck:
+                    luck_factor = InfluenceFactor(
+                        name="LuckCycle/大运",
+                        nonlinear_type=NonlinearType.STATIC_POTENTIAL_FIELD,
+                        metadata={"luck_pillar": user_luck}
+                    )
+                    influence_bus.register_factor(luck_factor)
+                if user_year:
+                    annual_factor = InfluenceFactor(
+                        name="AnnualPulse/流年",
+                        nonlinear_type=NonlinearType.KINETIC_IMPULSE_WAVE,
+                        metadata={"annual_pillar": user_year}
+                    )
+                    influence_bus.register_factor(annual_factor)
+                if geo_factor and geo_factor != 1.0:
+                    geo_factor_obj = InfluenceFactor(
+                        name="GeoBias/地域",
+                        nonlinear_type=NonlinearType.MEDIUM_DAMPING_COEFFICIENT,
+                        metadata={"geo_factor": geo_factor, "geo_element": geo_element}
+                    )
+                    influence_bus.register_factor(geo_factor_obj)
+                
+                # Re-run calculation with V13.7 engine (支持谐振子摄动模型)
+                gravity_engine = RelationshipGravityEngineV13_7(dm, gender)
                 dynamic_result = gravity_engine.analyze_relationship(
                     sim_waves,
                     selected_case['bazi'][:4],
-                    luck_pillar=user_luck,
-                    annual_pillar=user_year,
-                    geo_factor=geo_factor
+                    influence_bus=influence_bus
                 )
                 
                 # Store results in session_state for metrics display update
@@ -2927,7 +2991,8 @@ def render():
             st.caption("扫描从出生到100岁的情感触发事件 | 检测感情状态变化的关键时间点")
             
             if st.button("🔍 扫描终身情感时间线 (Scan Lifetime Timeline)", key="scan_timeline_btn", use_container_width=True):
-                from core.trinity.core.engines.relationship_gravity import RelationshipGravityEngine
+                # [V13.7 升级] 使用 V13.7 版本的情感引力引擎
+                from core.trinity.core.engines.relationship_gravity_v13_7 import RelationshipGravityEngineV13_7
                 
                 st.toast("扫描中... 正在遍历 0-100 岁情感轨道...", icon="🔍")
                 
@@ -2966,7 +3031,7 @@ def render():
                         birth_year = 1980  # Default assumption
                         v_profile = VirtualBaziProfile(pillars_dict, gender=gender_code)
                     
-                    gravity_engine = RelationshipGravityEngine(dm, selected_case.get('gender', '男'))
+                    gravity_engine = RelationshipGravityEngineV13_7(dm, selected_case.get('gender', '男'))
                     
                     # Get luck cycles
                     luck_cycles = v_profile.get_luck_cycles()
@@ -3035,12 +3100,31 @@ def render():
                                 if lc['start_year'] <= year <= lc['end_year']:
                                     luck_p = lc['gan_zhi']
                                     break
+                            # [V13.7] 构建 InfluenceBus 以支持流年摄动模型
+                            from core.trinity.core.middleware.influence_bus import InfluenceBus, InfluenceFactor, NonlinearType
+                            test_influence_bus = InfluenceBus()
+                            if luck_p and luck_p != "?":
+                                test_influence_bus.register_factor(InfluenceFactor(
+                                    name="LuckCycle/大运",
+                                    nonlinear_type=NonlinearType.STATIC_POTENTIAL_FIELD,
+                                    metadata={"luck_pillar": luck_p}
+                                ))
+                            if annual:
+                                test_influence_bus.register_factor(InfluenceFactor(
+                                    name="AnnualPulse/流年",
+                                    nonlinear_type=NonlinearType.KINETIC_IMPULSE_WAVE,
+                                    metadata={"annual_pillar": annual}
+                                ))
+                            if geo_factor and geo_factor != 1.0:
+                                test_influence_bus.register_factor(InfluenceFactor(
+                                    name="GeoBias/地域",
+                                    nonlinear_type=NonlinearType.MEDIUM_DAMPING_COEFFICIENT,
+                                    metadata={"geo_factor": geo_factor, "geo_element": geo_element}
+                                ))
                             test_result = gravity_engine.analyze_relationship(
                                 scan_waves,
                                 selected_case['bazi'][:4],
-                                luck_pillar=luck_p,
-                                annual_pillar=annual,
-                                geo_factor=geo_factor
+                                influence_bus=test_influence_bus
                             )
                             r = test_result.get('Metrics', {}).get('Orbital_Distance', 0)
                             state = test_result.get('State', 'UNKNOWN')
@@ -3064,13 +3148,32 @@ def render():
                                 luck_pillar = lc['gan_zhi']
                                 break
                         
+                        # [V13.7] 构建 InfluenceBus 以支持流年摄动模型
+                        from core.trinity.core.middleware.influence_bus import InfluenceBus, InfluenceFactor, NonlinearType
+                        year_influence_bus = InfluenceBus()
+                        if luck_pillar and luck_pillar != "?":
+                            year_influence_bus.register_factor(InfluenceFactor(
+                                name="LuckCycle/大运",
+                                nonlinear_type=NonlinearType.STATIC_POTENTIAL_FIELD,
+                                metadata={"luck_pillar": luck_pillar}
+                            ))
+                        if annual_pillar:
+                            year_influence_bus.register_factor(InfluenceFactor(
+                                name="AnnualPulse/流年",
+                                nonlinear_type=NonlinearType.KINETIC_IMPULSE_WAVE,
+                                metadata={"annual_pillar": annual_pillar}
+                            ))
+                        if geo_factor and geo_factor != 1.0:
+                            year_influence_bus.register_factor(InfluenceFactor(
+                                name="GeoBias/地域",
+                                nonlinear_type=NonlinearType.MEDIUM_DAMPING_COEFFICIENT,
+                                metadata={"geo_factor": geo_factor, "geo_element": geo_element}
+                            ))
                         # Calculate relationship state for this year
                         result = gravity_engine.analyze_relationship(
                             scan_waves,
                             selected_case['bazi'][:4],
-                            luck_pillar=luck_pillar,
-                            annual_pillar=annual_pillar,
-                            geo_factor=geo_factor
+                            influence_bus=year_influence_bus
                         )
                         
                         current_state = result.get('State', 'UNKNOWN')
@@ -3320,18 +3423,13 @@ def render():
 
     # [GLOBAL VIEW] -> Unified Arbitrator Integration Point
     st.divider()
-    # 🏛️ GRAND UNIFIED ARBITRATION CONSOLE (Relocated from Topic Module)
-    with st.expander("🔮 大一统仲裁台 (Grand Unified Arbitration Console)", expanded=False):
-        st.markdown("### 🏛️ 大一统仲裁团 (Unified Arbitrator Console)")
-        st.caption(f"Unified Field Physics Engine V{reg.version} | Phase G Complete")
+    # 🏛️ QUANTUM UNIVERSAL FRAMEWORK CONSOLE (Relocated from Topic Module)
+    with st.expander("🔮 量子通用框架控制台 (Quantum Universal Framework Console)", expanded=False):
+        st.markdown("### 🏛️ 量子通用框架 (Quantum Universal Framework)")
+        st.caption(f"Quantum Universal Physics Engine V{reg.version} | Phase G Complete")
         
-        # Dynamic Import
-        try:
-            sys.path.append("/home/jin/bazi_predict")
-            from core.trinity.core.unified_arbitrator_master import unified_arbitrator as global_arbitrator
-        except ImportError:
-            global_arbitrator = None
-            st.error("Unified Arbitrator Module not found in PYTHONPATH.")
+        # Use static import from top of file
+        global_arbitrator = quantum_framework
 
         if global_arbitrator and selected_case:
             # Build context from current state (use existing user_luck and user_year)
@@ -3607,8 +3705,8 @@ def render():
             else:
                 st.warning(f"仲裁失败: {unified_state_gl.get('error')}")
         elif not selected_case:
-            st.info("请先选择或输入八字案例以执行大一统仲裁。")
+            st.info("请先选择或输入八字案例以执行量子通用框架仲裁。")
 
 
-    st.caption(f"Antigravity Unified Field V{reg.version} (Precision Engine) | Phase G Complete")
+    st.caption(f"Antigravity Quantum Universal System V{reg.version} (Precision Engine) | Phase G Complete")
 

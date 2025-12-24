@@ -20,6 +20,7 @@ from core.engine_graph.constants import TWELVE_LIFE_STAGES, LIFE_STAGE_COEFFICIE
 from core.processors.physics import PhysicsProcessor, GENERATION, CONTROL
 from core.math import ProbValue, calculate_control_damage, calculate_generation, calculate_impedance_mismatch, calculate_shielding_effect
 from core.interactions import BRANCH_CLASHES, BRANCH_SIX_COMBINES, STEM_COMBINATIONS
+from core.engine_graph.impedance_model import ComplexImpedanceModel
 
 
 class EnergyPropagator:
@@ -36,6 +37,13 @@ class EnergyPropagator:
         self.config = engine.config
         self.CAPACITY = engine.CAPACITY
         self.feedback_stats = []  # [V12.4] Storage for Cybernetics Telemetry
+        # [V13.7] 初始化复阻抗模型（整合了 PH_NONLINEAR_SATURATION 和 PH_VERTICAL_COUPLING）
+        day_master = getattr(engine, 'day_master_element', None)
+        if not day_master and hasattr(engine, 'bazi') and engine.bazi and len(engine.bazi) > 2:
+            day_pillar = engine.bazi[2]
+            if len(day_pillar) >= 1:
+                day_master = day_pillar[0]
+        self.impedance_model = ComplexImpedanceModel(config, day_master=day_master)
     
     def propagate(self, max_iterations: int = 10, damping: float = 0.9) -> np.ndarray:
         """
@@ -330,7 +338,43 @@ class EnergyPropagator:
                                 decay = spatial_decay.get('gap2', 0.6)
                             else:
                                 decay = spatial_decay.get('gap3', 0.3)
-                            deltas[tgt_i] += gain * abs(weight) * decay
+                            
+                            # [V13.7] 应用复阻抗模型修正
+                            # 获取大运和流年信息
+                            luck_pillar = getattr(self.engine, 'luck_pillar', None)
+                            year_pillar = getattr(self.engine, 'year_pillar', None)
+                            influence_bus = getattr(self.engine, 'influence_bus', None)
+                            
+                            # 计算复阻抗
+                            R, X, Z_magnitude = self.impedance_model.calculate_impedance(
+                                source_node=src_node,
+                                target_node=tgt_node,
+                                source_energy=src_val,
+                                target_energy=tgt_val,
+                                luck_pillar=luck_pillar,
+                                year_pillar=year_pillar,
+                                influence_bus=influence_bus
+                            )
+                            
+                            # 应用阻抗修正到能量流
+                            base_flow = gain * abs(weight) * decay
+                            corrected_flow = self.impedance_model.apply_impedance_correction(
+                                base_flow, R, X, Z_magnitude
+                            )
+                            
+                            deltas[tgt_i] += corrected_flow
+                            
+                            # [V13.7] 记录阻抗信息到反馈统计
+                            if Z_magnitude > 2.0:  # 高阻抗情况
+                                self.feedback_stats.append({
+                                    "source": src_node.char,
+                                    "target": tgt_node.char,
+                                    "impedance_R": R,
+                                    "impedance_X": X,
+                                    "impedance_magnitude": Z_magnitude,
+                                    "efficiency": corrected_flow / (base_flow + 1e-6),
+                                    "type": "Impedance_Blockage"
+                                })
                             # 源节点泄气
                             if gain > 0:
                                 effective_source = src_val - 10.0  # 阈值已提高到10.0

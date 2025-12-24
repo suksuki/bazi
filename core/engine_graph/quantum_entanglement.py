@@ -376,7 +376,16 @@ class QuantumEntanglementProcessor:
         self.engine.nodes[idx].current_energy = self.engine.H0[idx]
 
     def _apply_stem_harmonies(self, interactions_config, debug_info):
-        """处理天干五合"""
+        """
+        [V13.7 物理化升级] 处理天干五合：引入地理能垒修正（阿伦尼乌斯公式）
+        
+        核心公式：P_transform = A * exp(-E_a / (k_B * T_geo))
+        - E_a: 活化能垒（受地理环境影响）
+        - T_geo: 地理温度（从InfluenceBus获取）
+        - k_B: 玻尔兹曼常数（归一化为1.0）
+        
+        火区环境下，化火成功率遵循阿伦尼乌斯公式修正。
+        """
         stem_nodes = [(i, node) for i, node in enumerate(self.engine.nodes) if node.node_type == 'stem']
         processed_pairs = set()
         
@@ -384,6 +393,15 @@ class QuantumEntanglementProcessor:
             ('甲', '己'): 'earth', ('乙', '庚'): 'metal', ('丙', '辛'): 'water',
             ('丁', '壬'): 'wood', ('戊', '癸'): 'fire',
         }
+        
+        # [V13.7] 提取地理修正（从engine的geo_modifiers或InfluenceBus）
+        geo_modifiers = getattr(self.engine, 'geo_modifiers', {}) or {}
+        geo_temperature = 1.0  # 默认地理温度
+        for elem, factor in geo_modifiers.items():
+            if elem.lower() == 'fire' and factor > 1.0:
+                # 火区环境：提高地理温度，降低化火能垒
+                geo_temperature = factor
+                break
         
         for i, (idx1, node1) in enumerate(stem_nodes):
             for j, (idx2, node2) in enumerate(stem_nodes):
@@ -397,18 +415,43 @@ class QuantumEntanglementProcessor:
                 if target_element:
                     processed_pairs.add(pair)
                     cfg = interactions_config.get('stemFiveCombination', {})
-                    threshold = cfg.get('threshold', 3.0)
+                    base_threshold = cfg.get('threshold', 3.0)
                     bonus = cfg.get('bonus', 1.5)
                     penalty_val = cfg.get('penalty', 0.7)
                     
                     e1 = float(self.engine.H0[idx1].mean if isinstance(self.engine.H0[idx1], ProbValue) else self.engine.H0[idx1])
                     e2 = float(self.engine.H0[idx2].mean if isinstance(self.engine.H0[idx2], ProbValue) else self.engine.H0[idx2])
                     
-                    # [V12.0] 天干五合波动力学化
-                    if (e1 + e2) / 2.0 >= threshold:
+                    # [V13.7] 使用整合后的合化相位判定算法（包含阿伦尼乌斯公式修正）
+                    from core.trinity.core.assets.combination_phase_logic import check_combination_phase
+                    
+                    # 计算月令能量（归一化到0-1范围）
+                    # base_threshold 通常是 3.0，我们需要将能量归一化
+                    avg_energy = (e1 + e2) / 2.0
+                    month_energy_normalized = avg_energy / max(base_threshold, 1.0)  # 归一化
+                    
+                    # 调用整合后的算法
+                    combo_result = check_combination_phase(
+                        stems=[node1.char, node2.char],
+                        month_energy=month_energy_normalized,
+                        geo_temperature=geo_temperature,
+                        target_element=target_element
+                    )
+                    
+                    # [V12.0] 天干五合波动力学化（使用算法返回的结果）
+                    if combo_result.get("status") == "PHASE_TRANSITION":
                         # 成功合化：强相长干涉 (Phase = 0)
                         params = {"stem_combine_phase": 0.05, "stem_combine_entropy": 0.95}
                         energy_net = WavePhysicsEngine.compute_interference(e1, e2, "stem_combine", params)
+                        
+                        # [V13.7] 记录地理修正信息（从算法结果中获取）
+                        geo_correction = combo_result.get("geo_correction", {})
+                        if geo_correction.get("applied"):
+                            debug_info['detected_matches'].append(
+                                f"🔥 化火成功（地理能垒修正）: {node1.char}+{node2.char} -> {target_element} "
+                                f"(E_a={geo_correction.get('E_a', 0):.3f}, T_geo={geo_correction.get('T_geo', 1.0):.2f}, "
+                                f"P={geo_correction.get('transform_probability', 1.0):.3f})"
+                            )
                         
                         # 分配能量
                         self._distribute_wave_energy([idx1, idx2], [e1, e2], energy_net, target_element, "StemFiveCombine", debug_info)

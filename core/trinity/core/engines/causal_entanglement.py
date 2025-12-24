@@ -14,7 +14,7 @@ Mathematical Model: Causal Entropy
 """
 
 import math
-from typing import List, Dict, Any, Set, Tuple
+from typing import List, Dict, Any, Set, Tuple, Optional
 
 class CausalEntanglementEngine:
     """

@@ -1,0 +1,81 @@
+{
+  "timestamp": "2025-12-25T02:34:32.186278",
+  "summary": {
+    "total_passed": 0,
+    "total_failed": 0,
+    "total_errors": 0,
+    "total_suites": 7
+  },
+  "results": [
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "V13.7 注册验证测试（新增注册项）",
+      "file": "tests/test_v13_7_registration_comprehensive.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "InfluenceBus 注入验证测试",
+      "file": "tests/test_influence_bus_injection_verification.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "REAL_01 通根增益验证测试",
+      "file": "tests/test_real_01_rooting_gain_verification.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "REAL_01 全生命周期回溯测试",
+      "file": "tests/test_real_01_full_lifespan_retrospective.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "财富逻辑测试",
+      "file": "tests/test_wealth_logic.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "情感引力测试",
+      "file": "tests/test_phase36_38_relationship_gravity.py"
+    },
+    {
+      "status": "FAILED",
+      "returncode": 1,
+      "passed": 0,
+      "failed": 0,
+      "errors": 0,
+      "output": "/usr/bin/python: No module named pytest\n",
+      "description": "基础功能测试",
+      "file": "tests/test_sanity.py"
+    }
+  ]
+}

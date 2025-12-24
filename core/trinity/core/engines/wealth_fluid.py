@@ -1,5 +1,6 @@
 
 import numpy as np
+from typing import Optional, Any
 from core.trinity.core.nexus.definitions import PhysicsConstants, BaziParticleNexus
 
 class WealthFluidEngine:
@@ -24,11 +25,12 @@ class WealthFluidEngine:
         # Search key in CONTROL dict where value is rival (e.g. Wood controls Earth)
         self.control = next((k for k, v in PhysicsConstants.CONTROL.items() if v == self.rival), None)
 
-    def analyze_flow(self, waves: dict) -> dict:
+    def analyze_flow(self, waves: dict, influence_bus: Optional[Any] = None) -> dict:
         """
         Calculates fluid dynamics properties based on wave energies.
         Args:
             waves: Dictionary of WaveState objects (keyed by element).
+            influence_bus: Optional InfluenceBus for dynamic adjustments.
         Returns:
             Dict containing Re, Viscosity, Flux, and FlowState.
         """
@@ -38,6 +40,11 @@ class WealthFluidEngine:
         e_wealth = waves.get(self.wealth).amplitude if waves.get(self.wealth) else 0.0 # Fluid Volume
         e_rival = waves.get(self.rival).amplitude if waves.get(self.rival) else 0.0    # Friction Source
         e_control = waves.get(self.control).amplitude if waves.get(self.control) else 0.0 # Friction Reducer
+
+        # InfluenceBus Integration: Adjust base amplitudes or nu if needed
+        if influence_bus:
+            # For now, InfluenceBus already modified waves_corrected in arbitrator
+            pass
 
         # 2. Calculate Viscosity (nu)
         # [Calibration Phase 35-B] Square Law Friction (非线性阻力)

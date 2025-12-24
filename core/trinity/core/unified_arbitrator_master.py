@@ -1,6 +1,7 @@
 
 import logging
 import json
+import math
 import numpy as np
 from datetime import datetime
 from typing import Dict, Any, List, Optional
@@ -9,10 +10,11 @@ from typing import Dict, Any, List, Optional
 from core.trinity.core.engines.quantum_dispersion import QuantumDispersionEngine
 from core.trinity.core.assets.pillar_gravity_engine import PillarGravityEngine
 from core.trinity.core.assets.resonance_booster import ResonanceBooster
-from core.trinity.core.assets.spacetime_inertia_engine import SpacetimeInertiaEngine
+# [V13.7 升级] 使用 V13.7 版本的物理引擎
+from core.trinity.core.engines.spacetime_inertia_v13_7 import SpacetimeInertiaEngineV13_7
 from core.trinity.core.engines.structural_stress import StructuralStressEngine
-from core.trinity.core.engines.wealth_fluid import WealthFluidEngine
-from core.trinity.core.engines.relationship_gravity import RelationshipGravityEngine
+from core.trinity.core.engines.wealth_fluid_v13_7 import WealthFluidEngineV13_7
+from core.trinity.core.engines.relationship_gravity_v13_7 import RelationshipGravityEngineV13_7
 # [NEW] Integrated Assets
 from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
 from core.trinity.core.assets.combination_phase_logic import CombinationPhaseEngine
@@ -29,30 +31,54 @@ from core.utils import Stellar_Comedy_Parser
 from core.trinity.core.conflict_arbitrator import ConflictArbitrator
 from core.trinity.core.nexus.context import ContextSnapshot, ContextInjector, ArbitrationScenario
 
+# [V13.5] Middleware & Operators
+from core.trinity.core.middleware.influence_bus import InfluenceBus
+from core.trinity.core.operators.standard_factors import (
+    LuckCycleFactor, AnnualPulseFactor, GeoBiasFactor, EraFactor
+)
+
 logger = logging.getLogger(__name__)
 
-class UnifiedArbitratorMaster:
+class QuantumUniversalFramework:
     """
-    🏛️ 大一统仲裁团 (Grand Unified Arbitrator)
+    🏛️ 量子通用框架 (Quantum Universal Framework)
     
-    The central command center for Antigravity V10.x.
+    The central command center for Antigravity V13.6.
     Orchestrates all physics modules to generate a 'Holographic' verdict.
     """
     
     def __init__(self):
         self.registry = LogicRegistry()
-        logger.info(f"🏛️ Initializing Unified Arbitrator Master [V{self.registry.version}]")
+        logger.info(f"🏛️ Initializing Quantum Universal Framework [V{self.registry.version}]")
         
         # 1. Initialize Sub-Engines
         self.dispersion_engine = QuantumDispersionEngine()
         self.gravity_engine = PillarGravityEngine()
         self.resonance_booster = ResonanceBooster()
-        self.inertia_engine = SpacetimeInertiaEngine()
+        # [V13.7 升级] 使用 V13.7 版本的时空惯性引擎（支持 InfluenceBus）
+        self.inertia_engine = SpacetimeInertiaEngineV13_7(tau=3.0)
         self.stress_engine = StructuralStressEngine()
         self.combo_engine = CombinationPhaseEngine()
         # GeoProcessor needs no args usually, assuming it loads internal json
         self.geo_processor = GeoProcessor()
         self.resonance_field = ResonanceField()
+        
+        # [V13.7 补齐] 初始化 V13.7 物理引擎
+        # MOD_14: 多维时空场耦合
+        from core.trinity.core.engines.spacetime_interference_v13_7 import SpacetimeInterferenceEngineV13_7
+        self.spacetime_interference_engine = SpacetimeInterferenceEngineV13_7()
+        
+        # MOD_16: 应期预测
+        from core.trinity.core.engines.temporal_prediction_v13_7 import TemporalPredictionEngineV13_7
+        self.temporal_prediction_engine = TemporalPredictionEngineV13_7()
+        
+        # MOD_07: 生命轨道
+        from core.trinity.core.engines.lifepath_resampling_v13_7 import LifepathResamplingEngineV13_7
+        self.lifepath_engine = LifepathResamplingEngineV13_7()
+        
+        # MOD_18: 全局干涉
+        from core.trinity.core.engines.global_interference_v13_7 import GlobalInterferenceEngineV13_7
+        self.global_interference_engine = GlobalInterferenceEngineV13_7()
         # 60 甲子空亡映射（按旬空公式生成）
         self._void_table = self._build_void_table()
         # Standardized Framework Utility: Destiny Translator (Default to Stephen Chow style)
@@ -216,8 +242,33 @@ class UnifiedArbitratorMaster:
             "modules_active": list(modules_manifest.keys()),
             "verdict": verdict
         }
+
+    def _build_influence_bus(self, ctx: Dict[str, Any], geo_modifiers: Dict[str, Any]) -> InfluenceBus:
+        """[V13.5] Factory for the God Plug-in Bus."""
+        bus = InfluenceBus()
         
-    def arbitrate_bazi(self, bazi_chart: List[str], birth_info: Dict[str, Any] = None, current_context: Dict[str, Any] = None) -> Dict[str, Any]:
+        # 1. Luck Factor
+        luck = ctx.get('luck_pillar')
+        if luck:
+            bus.register(LuckCycleFactor(luck_pillar=luck))
+            
+        # 2. Annual Factor
+        annual = ctx.get('annual_pillar')
+        if annual:
+            bus.register(AnnualPulseFactor(annual_pillar=annual))
+            
+        # 3. Geo Factor
+        geo_f = geo_modifiers.get('temperature_factor', 1.0)
+        geo_e = geo_modifiers.get('geo_element', 'Neutral')
+        if geo_f != 1.0 or geo_e != 'Neutral':
+            bus.register(GeoBiasFactor(geo_factor=geo_f, geo_element=geo_e))
+            
+        # 4. Era Factor (Disabled by default per audit)
+        bus.register(EraFactor(enabled=False))
+        
+        return bus
+        
+    def arbitrate_bazi(self, bazi_chart: List[str], birth_info: Optional[Dict[str, Any]] = None, current_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Executes the full physics pipeline on a Bazi chart.
         """
@@ -329,78 +380,62 @@ class UnifiedArbitratorMaster:
             combo_res = {}
 
         # --- PHASE 3: Power Dynamics (Energy) ---
+        # [V13.5] Initialize Influence Bus
+        influence_bus = self._build_influence_bus(ctx, geo_modifiers)
+        
         # 3.1 Resonance Gain (Rooting)
-        rooting_status = self.resonance_booster.calculate_resonance_gain(current_dm, all_branches)
+        # Pass influence_bus to MOD_10
+        rooting_status = self.resonance_booster.calculate_resonance_gain(
+            current_dm, all_branches, influence_bus=influence_bus
+        )
         
         # [NEW] 3.2 Wealth Fluid Dynamics (Navier-Stokes)
-        # We need an energy map (waves) for this. Constructing from Gravity x Dispersion.
-        # Element Energy = Sum of (Weight of Pillar * Element Strength in Pillar)
-        # Simplified: Use Month Command + Rooting for estimation.
-        # Mapping Stems to Elements:
+        # 3.2.1 Reconstruct Base Elemental Waves (NATAL ONLY)
         from core.trinity.core.nexus.definitions import BaziParticleNexus
-        elem_map = {} # Elem -> Amplitude
-        for elem in ['Wood', 'Fire', 'Earth', 'Metal', 'Water']:
-            elem_map[elem] = 0.0
+        elem_map = {e: 0.0 for e in ['Wood', 'Fire', 'Earth', 'Metal', 'Water']}
             
-        # Add Stem Energies (1.0 each, weighed by Gravity?) 
-        # Simplify: Just count stems + branches (main qi)
         for p in bazi_chart:
             # Stems
             s_elem = BaziParticleNexus.STEMS.get(p[0])[0]
             elem_map[s_elem] = elem_map.get(s_elem, 0) + 1.0
             
-            # Branches (Include Hidden Stems for Micro-Precision)
-            # Use BaziParticleNexus to get hidden stems
+            # Branches
             hidden_stems = BaziParticleNexus.get_branch_weights(p[1])
             for h_stem, h_weight in hidden_stems:
                  h_elem = BaziParticleNexus.STEMS.get(h_stem)[0]
-                 # Normalize weight (assuming max ~10 in definition)
                  elem_map[h_elem] = elem_map.get(h_elem, 0) + (h_weight * 0.15)
 
-        # [NEW] Inject Time-Space Energy (Luck & Annual)
-        dynamic_pillars = []
-        if luck: dynamic_pillars.append((luck, 0.8)) # Luck weight
-        if annual: dynamic_pillars.append((annual, 1.2)) # Annual weight (Impulse)
-
-        for pillar_str, weight in dynamic_pillars:
-             if len(pillar_str) >= 2:
-                s_char, b_char = pillar_str[0], pillar_str[1]
-                # Stem
-                if s_char in BaziParticleNexus.STEMS:
-                    s_e = BaziParticleNexus.STEMS[s_char][0]
-                    elem_map[s_e] = elem_map.get(s_e, 0) + (1.0 * weight)
-                # Branch
-                h_stems = BaziParticleNexus.get_branch_weights(b_char)
-                for h_s, h_w in h_stems:
-                    if h_s in BaziParticleNexus.STEMS:
-                        h_e = BaziParticleNexus.STEMS[h_s][0]
-                        elem_map[h_e] = elem_map.get(h_e, 0) + (h_w * 0.15 * weight)
-
-        # [NEW] Apply Geo Modifiers
-        # geo_modifiers e.g. {'Fire': 1.5, 'Water': 0.8}
-        if geo_modifiers:
-            for elem, boost in geo_modifiers.items():
-                if elem in elem_map:
-                    elem_map[elem] *= boost
-            
+        # 3.2.2 Create WaveStates for the Bus
         from core.trinity.core.nexus.definitions import PhysicsConstants
-        # Create WaveState objects with real phases from PhysicsConstants
-        waves_mock = {
+        waves_natal = {
             k: WaveState(amplitude=v, phase=PhysicsConstants.ELEMENT_PHASES.get(k, 0.0)) 
             for k, v in elem_map.items()
         }
+
+        # 3.2.3 [V13.5] Apply Influence Bus Correction
+        # This replaces the hardcoded Luck/Annual/Geo logic with plug-and-play factors
+        bus_verdict = influence_bus.arbitrate_environment(waves_natal, ctx)
+        corrected_e = bus_verdict["expectation"]
         
-        # Instantiate engines on fly or in init
+        # Sync corrected amplitudes back to waves
+        waves_corrected = {}
+        for k, v in waves_natal.items():
+            amplitude = corrected_e.elements.get(k.lower(), v.amplitude)
+            waves_corrected[k] = WaveState(amplitude=amplitude, phase=v.phase)
+        
+        # 3.2.4 Wealth Analysis
+        # [V13.7 升级] 使用 V13.7 版本的财富流体引擎（纳维-斯托克斯方程）
         dm_elem = BaziParticleNexus.STEMS.get(current_dm)[0]
-        wealth_engine = WealthFluidEngine(dm_elem)
-        wealth_metrics = wealth_engine.analyze_flow(waves_mock)
+        wealth_engine = WealthFluidEngineV13_7(dm_elem)
+        wealth_metrics = wealth_engine.analyze_flow(waves_corrected, influence_bus=influence_bus)
         
         # [NEW] 3.3 Relationship Gravity
-        # Need gender from birth_info or default Male
+        # [V13.7 升级] 使用 V13.7 版本的情感引力引擎（谐振子摄动模型）
         gender = birth_info.get('gender', '男') if birth_info else '男'
-        rel_engine = RelationshipGravityEngine(current_dm, gender)
+        rel_engine = RelationshipGravityEngineV13_7(current_dm, gender)
+        # [V13.7] 通过 InfluenceBus 传递大运、流年、地理信息，支持轨道摄动模型
         rel_metrics = rel_engine.analyze_relationship(
-            waves_mock, bazi_chart, luck_pillar=luck, annual_pillar=annual, geo_factor=geo_modifiers.get('fire', 1.0) # Using generic geo
+            waves_corrected, bazi_chart, influence_bus=influence_bus
         )
 
         # [V12.2.0] 专旺格 Detection (Self-Dominance Follow Pattern)
@@ -420,8 +455,8 @@ class UnifiedArbitratorMaster:
 
         # [NEW] 3.4 Resonance Field Analysis
         # Use the engines to get real coherence metrics
-        dm_wave = waves_mock.get(dm_elem)
-        field_list = [v for k, v in waves_mock.items() if k != dm_elem]
+        dm_wave = waves_corrected.get(dm_elem)
+        field_list = [v for k, v in waves_corrected.items() if k != dm_elem]
         res_analysis = self.resonance_field.evaluate_system(dm_wave, field_list)
         
         # [V12.2.0] Override is_follow for 专旺格/从强 cases
@@ -435,7 +470,12 @@ class UnifiedArbitratorMaster:
             "is_follow": final_is_follow,
             "dm_dominance_ratio": round(dm_dominance_ratio, 3),  # V12.2.0 Debug
             "support_ratio": round(support_ratio, 3),           # V12.2.0 Debug
-            "follow_type": "专旺" if is_self_dominant else ("从强" if is_follow_strong else ("从弱" if res_analysis.is_follow else "身强/身弱"))
+            "follow_type": "专旺" if is_self_dominant else ("从强" if is_follow_strong else ("从弱" if res_analysis.is_follow else "身强/身弱")),
+            # [V13.5] InfluenceBus Registry info
+            "influence_bus": {
+                "active_factors": [f.name for f in influence_bus.active_factors],
+                "factor_logs": bus_verdict.get("logs", {})
+            }
         }
         
         # [NEW] 3.5 Structural Vibration (MOD_15)
@@ -448,9 +488,23 @@ class UnifiedArbitratorMaster:
         
         # --- PHASE 4: Temporal Evolution (Flow) ---
         # 4.1 Spacetime Inertia
-        inertia_metrics = self.inertia_engine.calculate_inertia_weights(
-             months_since_switch=months_since_switch
+        # [V13.7 升级] 使用 V13.7 版本的时空惯性引擎（指数衰减模型，支持 InfluenceBus）
+        # 将单个值转换为时间序列以适配 V13.7 接口
+        time_months_list = [max(0.0, months_since_switch)]
+        inertia_weights = self.inertia_engine.calculate_inertia_weights(
+            time_months=time_months_list,
+            previous_energy=1.0,
+            influence_bus=influence_bus
         )
+        # 转换为旧版格式以保持兼容性
+        w_prev = inertia_weights[0] if inertia_weights else (1.0 if months_since_switch < 0 else math.exp(-months_since_switch / 3.0))
+        w_next = 1.0 - w_prev
+        viscosity = 4 * w_prev * w_next
+        inertia_metrics = {
+            "Prev_Luck": round(w_prev, 4),
+            "Next_Luck": round(w_next, 4),
+            "Viscosity": round(viscosity, 4)
+        }
 
         # Finalizing physics packet
         stellar_metrics = {
@@ -501,9 +555,96 @@ class UnifiedArbitratorMaster:
         system_entropy = sai + (1.0 - ic) * 0.5
         system_entropy *= star_phys.get('entropy_damping', 1.0)
         
-        # Adjust Wealth and Relationship metrics by context
+        # [V13.7 补齐] MOD_14: 多维时空场耦合分析
+        spacetime_interference = self.spacetime_interference_engine.analyze_spacetime_interference(
+            waves=waves_corrected,
+            day_master_element=dm_elem,
+            influence_bus=influence_bus
+        )
+        
+        # [V13.7 补齐] MOD_18: 全局干涉检测（交叉干涉修正）
+        # 建立模块状态字典
+        module_states = {
+            "MOD_04_STABILITY": {
+                "SAI": sai,
+                "IC": ic
+            },
+            "MOD_05_WEALTH": {
+                "viscosity": wealth_metrics.get('Viscosity', 1.0),
+                "reynolds": wealth_metrics.get('Reynolds', 0.0)
+            },
+            "MOD_06_RELATIONSHIP": {
+                "binding_energy": rel_metrics.get('Binding_Energy', 0.0),
+                "orbital_stability": rel_metrics.get('Orbital_Stability', 0.0)
+            },
+            "MOD_15_STRUCTURAL_VIBRATION": {
+                "impedance": vib_metrics.get('impedance_magnitude', 1.0)
+            }
+        }
+        
+        # 检测全局干涉
+        global_interference = self.global_interference_engine.detect_global_interference(
+            module_states=module_states,
+            influence_bus=influence_bus
+        )
+        
+        # [V13.7 补齐] 应用交叉干涉修正
+        # 如果 SAI 指数高，增加财富粘滞系数（应力导致财富流速减缓）
+        if sai > 1.5:
+            corrected_viscosity = self.global_interference_engine.calculate_cross_interference(
+                sai_index=sai,
+                target_module="MOD_05_WEALTH",
+                base_value=wealth_metrics.get('Viscosity', 1.0),
+                influence_bus=influence_bus
+            )
+            wealth_metrics['Viscosity'] = corrected_viscosity
+            wealth_metrics['Viscosity_Corrected'] = True  # 标记已修正
+        
+        # 如果 SAI 指数高，影响情感轨道稳定性
+        if sai > 1.5:
+            corrected_stability = self.global_interference_engine.calculate_cross_interference(
+                sai_index=sai,
+                target_module="MOD_06_RELATIONSHIP",
+                base_value=rel_metrics.get('Orbital_Stability', 1.0),
+                influence_bus=influence_bus
+            )
+            rel_metrics['Orbital_Stability'] = corrected_stability
+            rel_metrics['Stability_Corrected'] = True  # 标记已修正
+        
+        # Adjust Wealth and Relationship metrics by context (保留原有逻辑)
         wealth_metrics['Reynolds'] *= geo_bias_val
         rel_metrics['Binding_Energy'] *= geo_bias_val
+        
+        # [V13.7 补齐] MOD_16: 应期预测（如果 SAI 超过阈值，触发应期预测）
+        temporal_prediction = None
+        if sai > 2.0:  # 高风险阈值
+            # 构建未来时间线（未来10年）
+            current_year = datetime.now().year
+            timeline_years = list(range(current_year, current_year + 11))
+            
+            temporal_prediction = self.temporal_prediction_engine.predict_timeline(
+                base_energy=system_entropy,
+                timeline_years=timeline_years,
+                influence_bus=influence_bus,
+                singularity_threshold=0.6
+            )
+        
+        # [V13.7 补齐] MOD_07: 生命轨道分析（高频采样修正）
+        lifepath_analysis = None
+        if birth_info and all(k in birth_info for k in ('birth_year', 'birth_month', 'birth_day', 'birth_hour')):
+            try:
+                birth_year = int(birth_info['birth_year'])
+                # 构建基础时间线（0-100岁）
+                base_timeline = list(range(birth_year, birth_year + 101))
+                
+                lifepath_analysis = self.lifepath_engine.analyze_lifepath(
+                    base_timeline=base_timeline,
+                    base_energy=system_entropy,
+                    influence_bus=influence_bus
+                )
+            except Exception as e:
+                logger.warning(f"Life-path analysis failed: {e}")
+                lifepath_analysis = None
         
         unified_state = {
             "meta": {
@@ -530,7 +671,15 @@ class UnifiedArbitratorMaster:
                 "inertia": inertia_metrics,
                 "combination": combo_res,
                 "life_path": life_path_data,
-                "entropy": round(system_entropy, 3)
+                "entropy": round(system_entropy, 3),
+                # [V13.7 补齐] MOD_14: 多维时空场耦合
+                "spacetime_interference": spacetime_interference,
+                # [V13.7 补齐] MOD_16: 应期预测
+                "temporal_prediction": temporal_prediction,
+                # [V13.7 补齐] MOD_07: 生命轨道
+                "lifepath_analysis": lifepath_analysis,
+                # [V13.7 补齐] MOD_18: 全局干涉
+                "global_interference": global_interference
             },
             "environment": {
                 "luck": luck,
@@ -719,7 +868,7 @@ class UnifiedArbitratorMaster:
         return tips
 
 
-    def arbitrate(self, chart: Dict, ctx: Dict) -> Dict:
+    def arbitrate(self, chart: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
         """
         Adapter for UI integration.
         Args:
@@ -944,5 +1093,5 @@ class UnifiedArbitratorMaster:
         
         return "\n".join(report)
 
-# Global Instance for Dynamic Import
-unified_arbitrator = UnifiedArbitratorMaster()
+# Global Instance for Dynamic Import (Renamed to Quantum Universal Framework)
+quantum_framework = QuantumUniversalFramework()
