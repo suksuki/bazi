@@ -53,7 +53,7 @@ class EnvelopeGauge:
             height = 250
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         if env < 0.2:
             st.error("⚠️ PHASE CRISIS DETECTED! Potential collapse in this time vector.")
@@ -78,4 +78,4 @@ class EnvelopeGauge:
             yaxis=dict(showgrid=False, zeroline=False, range=[0, 1.1]),
             margin = {'t': 30, 'b': 10, 'l': 10, 'r': 10}
         )
-        st.plotly_chart(fig_trace, use_container_width=True)
+        st.plotly_chart(fig_trace, width='stretch')

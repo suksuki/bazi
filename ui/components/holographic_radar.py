@@ -122,7 +122,7 @@ def render_holographic_radar(resonance, unified_metrics, remedy, verdict):
     )
     
     st.markdown("##### 📡 全息决策雷达 (Holographic Decision Radar)")
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
     
     
     # Optional: Display Radar Metrics below

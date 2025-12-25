@@ -152,3 +152,76 @@ class EraFactor(InfluenceFactor):
 
     def apply_nonlinear_correction(self, base_e: ExpectationVector, context: Optional[Dict[str, Any]] = None) -> ExpectationVector:
         return base_e
+# ============================================================
+# 5. SOCIAL DAMPING FACTOR (社会阻尼 - ASE PHASE 2)
+# ============================================================
+
+class SocialDampingFactor(InfluenceFactor):
+    """
+    🌪️ SocialDampingFactor (Gamma)
+    
+    ASE Phase 2: Simulates the dissipation of entropy/energy in human society.
+    Formula: E_corrected = E_raw * (1 - gamma)
+    """
+    def __init__(self, gamma: float = 0.0, weight: float = 1.0, enabled: bool = True):
+        super().__init__(
+            name="SocialDamping/社会阻尼",
+            nonlinear_type=NonlinearType.EXPONENTIAL_DECAY,
+            weight=weight,
+            enabled=enabled,
+            metadata={"gamma": gamma}
+        )
+        self.gamma = gamma
+
+    def apply_nonlinear_correction(self, base_e: ExpectationVector, context: Optional[Dict[str, Any]] = None) -> ExpectationVector:
+        result = base_e.clone()
+        
+        # [ASE PHASE 2] Superconductive Protection (局部超导保护)
+        # If any element in natal chart is significantly dominant (>2.0), 
+        # it indicates a potential 'Pattern', we reduce the damping sensitivity.
+        max_val = max(base_e.elements.values()) if base_e.elements else 1.0
+        is_potential_pattern = max_val > 1.8
+        
+        effective_gamma = self.gamma
+        if is_potential_pattern:
+            effective_gamma *= 0.25 # [V13.8 最终校准] 敏感度降低 75% (保护权重从 50% 升至 75%)
+            self.log(f"Superconductive Protection active (max={max_val:.2f}): Gamma reduced to {effective_gamma:.4f}")
+
+        # Apply damping to all elements
+        damping_multiplier = 1.0 - effective_gamma
+        
+        for elem in result.elements:
+            result.elements[elem] *= damping_multiplier
+            
+        self.log(f"Social Damping applied: Γ_eff={effective_gamma:.4f}")
+        return result
+
+# ============================================================
+# 6. MANUAL INTERVENTION FACTOR (人工干预 - V14.8)
+# ============================================================
+
+class ManualInterventionFactor(InfluenceFactor):
+    """
+    🧪 ManualInterventionFactor (V14.8)
+    
+    Allows for specific element energy injection (e.g. Gravity Shield / Earth).
+    Effectively 're-wiring' the energy flow in the Universal Phase Diagram.
+    """
+    def __init__(self, shifts: Dict[str, float], weight: float = 1.0, enabled: bool = True):
+        super().__init__(
+            name="ManualIntervention/人工干预",
+            nonlinear_type=NonlinearType.IMPULSE,
+            weight=weight,
+            enabled=enabled,
+            metadata={"shifts": shifts}
+        )
+        self.shifts = shifts
+
+    def apply_nonlinear_correction(self, base_e: ExpectationVector, context: Optional[Dict[str, Any]] = None) -> ExpectationVector:
+        result = base_e.clone()
+        for elem, val in self.shifts.items():
+            elem_lower = elem.lower()
+            if elem_lower in result.elements:
+                result.elements[elem_lower] += val * self.weight
+                self.log(f"Intervention Inject: {elem} +{val * self.weight}")
+        return result

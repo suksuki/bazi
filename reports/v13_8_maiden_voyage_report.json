@@ -1,0 +1,895 @@
+{
+  "version": "V13.8 Gold Edition",
+  "calibration": {
+    "gamma": 0.3,
+    "protection_weight": 0.75,
+    "momentum_boost": 2.5
+  },
+  "real_cases_audit": [
+    {
+      "case": {
+        "id": "REAL_01",
+        "name": "癸水强根 (The Anchor)",
+        "pillars": [
+          "癸卯",
+          "甲寅",
+          "癸亥",
+          "壬子"
+        ],
+        "geo": "北京 (Beijing)"
+      },
+      "metrics": {
+        "SAI": 3.607,
+        "Reynolds": 11.08,
+        "Stability": 1431.4671
+      },
+      "mirror_stats": {
+        "count": 4,
+        "reality_gap": 0.025635068153655613,
+        "target_aligned": true
+      },
+      "scan_data": [
+        {
+          "year_offset": 0,
+          "avg_sai": 3.5762500000000004,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 1,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 2,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 3,
+          "avg_sai": 4.22425,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 4,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 5,
+          "avg_sai": 3.29925,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 6,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 7,
+          "avg_sai": 3.8005,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 8,
+          "avg_sai": 3.29925,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 9,
+          "avg_sai": 2.914,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 10,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 11,
+          "avg_sai": 3.14525,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 12,
+          "avg_sai": 3.5762500000000004,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 13,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 14,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 15,
+          "avg_sai": 4.22425,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 16,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 17,
+          "avg_sai": 3.29925,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 18,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 19,
+          "avg_sai": 3.8005,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 20,
+          "avg_sai": 3.29925,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 21,
+          "avg_sai": 2.914,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 22,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 23,
+          "avg_sai": 3.14525,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 24,
+          "avg_sai": 3.5762500000000004,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 25,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 26,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 27,
+          "avg_sai": 4.22425,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 28,
+          "avg_sai": 2.8369999999999997,
+          "spike_ratio": 1.0
+        },
+        {
+          "year_offset": 29,
+          "avg_sai": 3.29925,
+          "spike_ratio": 1.0
+        }
+      ]
+    },
+    {
+      "case": {
+        "id": "REAL_02",
+        "name": "李小龙 (The Dragon)",
+        "pillars": [
+          "庚辰",
+          "丁亥",
+          "甲戌",
+          "戊辰"
+        ],
+        "geo": "旧金山 (San Francisco)"
+      },
+      "metrics": {
+        "SAI": 0.093,
+        "Reynolds": 72.3,
+        "Stability": 999.0
+      },
+      "mirror_stats": {
+        "count": 54,
+        "reality_gap": 0.9369808160080775,
+        "target_aligned": false
+      },
+      "scan_data": [
+        {
+          "year_offset": 0,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 1,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 2,
+          "avg_sai": 0.15440740740740744,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 3,
+          "avg_sai": 1.441925925925926,
+          "spike_ratio": 0.05555555555555555
+        },
+        {
+          "year_offset": 4,
+          "avg_sai": 0.1565,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 5,
+          "avg_sai": 0.39318518518518525,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 6,
+          "avg_sai": 0.12224074074074076,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 7,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 8,
+          "avg_sai": 0.13212962962962965,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 9,
+          "avg_sai": 0.11570370370370371,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 10,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 11,
+          "avg_sai": 0.20342592592592598,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 12,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 13,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 14,
+          "avg_sai": 0.15440740740740744,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 15,
+          "avg_sai": 1.441925925925926,
+          "spike_ratio": 0.05555555555555555
+        },
+        {
+          "year_offset": 16,
+          "avg_sai": 0.1565,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 17,
+          "avg_sai": 0.39318518518518525,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 18,
+          "avg_sai": 0.12224074074074076,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 19,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 20,
+          "avg_sai": 0.13212962962962965,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 21,
+          "avg_sai": 0.11570370370370371,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 22,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 23,
+          "avg_sai": 0.20342592592592598,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 24,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 25,
+          "avg_sai": 0.10620370370370373,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 26,
+          "avg_sai": 0.15440740740740744,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 27,
+          "avg_sai": 1.441925925925926,
+          "spike_ratio": 0.05555555555555555
+        },
+        {
+          "year_offset": 28,
+          "avg_sai": 0.1565,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 29,
+          "avg_sai": 0.39318518518518525,
+          "spike_ratio": 0.0
+        }
+      ]
+    },
+    {
+      "case": {
+        "id": "REAL_03",
+        "name": "巴菲特 (The Oracle)",
+        "pillars": [
+          "庚午",
+          "甲申",
+          "壬子",
+          "戊申"
+        ],
+        "geo": "纽约 (New York)"
+      },
+      "metrics": {
+        "SAI": 1.167,
+        "Reynolds": 17.97,
+        "Stability": 0.75
+      },
+      "mirror_stats": {
+        "count": 54,
+        "reality_gap": 0.6530588829225756,
+        "target_aligned": false
+      },
+      "scan_data": [
+        {
+          "year_offset": 0,
+          "avg_sai": 1.1614074074074077,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 1,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 2,
+          "avg_sai": 1.1951111111111115,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 3,
+          "avg_sai": 1.656074074074074,
+          "spike_ratio": 0.07407407407407407
+        },
+        {
+          "year_offset": 4,
+          "avg_sai": 1.1694259259259259,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 5,
+          "avg_sai": 1.1951111111111112,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 6,
+          "avg_sai": 1.398314814814815,
+          "spike_ratio": 0.05555555555555555
+        },
+        {
+          "year_offset": 7,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 8,
+          "avg_sai": 1.140666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 9,
+          "avg_sai": 1.3519629629629633,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 10,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 11,
+          "avg_sai": 1.1199259259259262,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 12,
+          "avg_sai": 1.1614074074074077,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 13,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 14,
+          "avg_sai": 1.1951111111111115,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 15,
+          "avg_sai": 1.656074074074074,
+          "spike_ratio": 0.07407407407407407
+        },
+        {
+          "year_offset": 16,
+          "avg_sai": 1.1694259259259259,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 17,
+          "avg_sai": 1.1951111111111112,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 18,
+          "avg_sai": 1.398314814814815,
+          "spike_ratio": 0.05555555555555555
+        },
+        {
+          "year_offset": 19,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 20,
+          "avg_sai": 1.140666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 21,
+          "avg_sai": 1.3519629629629633,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 22,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 23,
+          "avg_sai": 1.1199259259259262,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 24,
+          "avg_sai": 1.1614074074074077,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 25,
+          "avg_sai": 1.0991851851851853,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 26,
+          "avg_sai": 1.1951111111111115,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 27,
+          "avg_sai": 1.656074074074074,
+          "spike_ratio": 0.07407407407407407
+        },
+        {
+          "year_offset": 28,
+          "avg_sai": 1.1694259259259259,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 29,
+          "avg_sai": 1.1951111111111112,
+          "spike_ratio": 0.0
+        }
+      ]
+    },
+    {
+      "case": {
+        "id": "REAL_04",
+        "name": "真从财格 (The Superconductor)",
+        "pillars": [
+          "癸卯",
+          "甲寅",
+          "辛卯",
+          "乙未"
+        ],
+        "geo": "上海 (Shanghai)"
+      },
+      "metrics": {
+        "SAI": 1.288,
+        "Reynolds": 258.83,
+        "Stability": 0.0
+      },
+      "mirror_stats": {
+        "count": 3,
+        "reality_gap": 0.6674927715819908,
+        "target_aligned": false
+      },
+      "scan_data": [
+        {
+          "year_offset": 0,
+          "avg_sai": 1.288,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 1,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 2,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 3,
+          "avg_sai": 1.5213333333333334,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 4,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 5,
+          "avg_sai": 1.1666666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 6,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 7,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 8,
+          "avg_sai": 1.1666666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 9,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 10,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 11,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 12,
+          "avg_sai": 1.288,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 13,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 14,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 15,
+          "avg_sai": 1.5213333333333334,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 16,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 17,
+          "avg_sai": 1.1666666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 18,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 19,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 20,
+          "avg_sai": 1.1666666666666667,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 21,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 22,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 23,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 24,
+          "avg_sai": 1.288,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 25,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 26,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 27,
+          "avg_sai": 1.5213333333333334,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 28,
+          "avg_sai": 1.0733333333333335,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 29,
+          "avg_sai": 1.1666666666666667,
+          "spike_ratio": 0.0
+        }
+      ]
+    },
+    {
+      "case": {
+        "id": "REAL_05",
+        "name": "极弱坍缩 (The Void)",
+        "pillars": [
+          "乙未",
+          "戊寅",
+          "壬午",
+          "辛亥"
+        ],
+        "geo": "拉萨 (Lhasa)"
+      },
+      "metrics": {
+        "SAI": 1.167,
+        "Reynolds": 83.42,
+        "Stability": 0.36
+      },
+      "mirror_stats": {
+        "count": 17,
+        "reality_gap": 0.6350863765580581,
+        "target_aligned": false
+      },
+      "scan_data": [
+        {
+          "year_offset": 0,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 1,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 2,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 3,
+          "avg_sai": 1.863705882352941,
+          "spike_ratio": 0.23529411764705882
+        },
+        {
+          "year_offset": 4,
+          "avg_sai": 1.1942941176470592,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 5,
+          "avg_sai": 1.307,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 6,
+          "avg_sai": 1.447,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 7,
+          "avg_sai": 1.2328823529411768,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 8,
+          "avg_sai": 1.307,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 9,
+          "avg_sai": 1.1724705882352942,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 10,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 11,
+          "avg_sai": 1.1779411764705883,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 12,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 13,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 14,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 15,
+          "avg_sai": 1.863705882352941,
+          "spike_ratio": 0.23529411764705882
+        },
+        {
+          "year_offset": 16,
+          "avg_sai": 1.1942941176470592,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 17,
+          "avg_sai": 1.307,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 18,
+          "avg_sai": 1.447,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 19,
+          "avg_sai": 1.2328823529411768,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 20,
+          "avg_sai": 1.307,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 21,
+          "avg_sai": 1.1724705882352942,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 22,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 23,
+          "avg_sai": 1.1779411764705883,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 24,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 25,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 26,
+          "avg_sai": 1.167,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 27,
+          "avg_sai": 1.863705882352941,
+          "spike_ratio": 0.23529411764705882
+        },
+        {
+          "year_offset": 28,
+          "avg_sai": 1.1942941176470592,
+          "spike_ratio": 0.0
+        },
+        {
+          "year_offset": 29,
+          "avg_sai": 1.307,
+          "spike_ratio": 0.0
+        }
+      ]
+    }
+  ],
+  "blind_test": {
+    "counts": {
+      "SUPERCONDUCTIVE": 5,
+      "COLLAPSE": 5,
+      "EQUILIBRIUM": 0
+    },
+    "damping_gap": 0,
+    "status": "Audit Complete"
+  },
+  "timestamp": "2025-12-25T11:33:02.297115"
+}

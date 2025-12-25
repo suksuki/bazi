@@ -728,7 +728,7 @@ def render():
             # Report
             if risk_report:
                 st.error(f"⚠️ 扫描完成！发现 {len(risk_report)} 个高危目标 (ΔS > {entropy_threshold})")
-                st.dataframe(pd.DataFrame(risk_report), use_container_width=True)
+                st.dataframe(pd.DataFrame(risk_report), width='stretch')
                 
                 # Detailed Analysis for Top Risk
                 st.markdown("### 🛑 高危案例深度分析")

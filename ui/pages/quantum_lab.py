@@ -204,8 +204,6 @@ def get_ten_god(dm_char: str, target_char: str) -> str:
     return ""
 
 def render():
-    st.set_page_config(page_title="Quantum Lab | Trinity V2.0", page_icon="🧪", layout="wide")
-
     # --- Robust Global Styling (Targeting Streamlit Classes) ---
     st.markdown(f"""
     <style>
@@ -425,7 +423,7 @@ def render():
                     with ex2:
                         st.selectbox("计算策略 (Policy)", ["Standard", "High-Precision", "Logic-Only", "Quantum-Safe"], help="选择测算精度与算法复杂度 (Algorithm Complexity)")
                 
-                if st.button("🚀 生成概率叶 (Generate Case)", use_container_width=True):
+                if st.button("🚀 生成概率叶 (Generate Case)", width='stretch'):
                     try:
                         import time
                         res = controller.calculate_chart({'birth_year': iy, 'birth_month': im, 'birth_day': id_, 'birth_hour': ih, 'birth_minute': imin, 'gender': ig})
@@ -609,7 +607,7 @@ def render():
                 else:
                     st.success("✅ **量子弥散系统 (Kernel B01)**: 动态支藏干能量分配已激活。 (等待出生时间)")
             else:
-                st.warning("⚠️ **静态模式**: 使用传统 70/20/10 比例。建议开启量子弥散模式以获得更高精度。")
+                st.warning("⚠️ **静态模式**: 使用传统 60/30/10 比例。建议开启量子弥散模式以获得更高精度。")
             st.info("💡 **物理提示**: 六柱谐振模型已激活，大运与流年已作为外部扰动源完整代入计算。")
 
     # 4. Oracle Core Analysis
@@ -715,7 +713,7 @@ def render():
 
             st.success(f"**建议粒子 (Optimal Particle)**: {p_desc}")
             st.caption(f"📈 预期提升 (Coherence Gain): +{(rem.get('improvement', 0)*100):.1f}%")
-            if st.button("一键执行量子注入 (Execute Injection)", use_container_width=True):
+            if st.button("一键执行量子注入 (Execute Injection)", width='stretch'):
                 st.session_state['inj_active'] = True
                 st.rerun()
 
@@ -761,60 +759,8 @@ def render():
         verdict = unified_state.get("verdict", {})
         rules_tbl = unified_state.get("rules", [])
 
-        # Verdict summary (Card style)
-        st.markdown("#### ⚡ 仲裁断言 (Arbitration Verdict)")
-        v_cols = st.columns(4)
-        v_data = [
-            ("结构", verdict.get("structure", "N/A")),
-            ("财富", verdict.get("wealth", "N/A")),
-            ("情感", verdict.get("relationship", "N/A")),
-            ("行动", verdict.get("action", "N/A")),
-        ]
-        for col, (title, content) in zip(v_cols, v_data):
-            with col:
-                st.markdown(f"""
-                <div style="border-radius:12px; padding:10px 12px; background:linear-gradient(135deg, #1d1b3a 0%, #26214d 100%); color:#fff; border:1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size:13px; color:#40e0d0;">{title}</div>
-                    <div style="font-size:16px; font-weight:600; margin-top:4px;">{content}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        # Plain-language summary
-        st.markdown("#### 💬 白话真言 (Plain Guidance)")
-        summary_lines = []
-        ent = unified_state.get("physics", {}).get("entropy", 0)
-        if ent <= 0.6:
-            summary_lines.append("整体气场平稳，属于低熵局面，适合推进重要计划。")
-        elif ent <= 1.2:
-            summary_lines.append("气场中性，有起伏但可控，稳扎稳打为宜。")
-        else:
-            summary_lines.append("熵值偏高，外部干扰大，建议先控节奏、降噪后再决策。")
-
-        wealth_phy = unified_state.get("physics", {}).get("wealth", {})
-        re_num = wealth_phy.get("Reynolds", 0)
-        nu_val = wealth_phy.get("Viscosity", 0)
-        if re_num < 100:
-            summary_lines.append("财富流动较慢，以储备、增厚现金流为主，暂缓冒险扩张。")
-        elif re_num > 4000:
-            summary_lines.append("财富流动湍急，机会伴随波动，需做好风控和止盈。")
-        else:
-            summary_lines.append("财富流动平顺，可稳步投入，注意分散风险。")
-        if nu_val > 1.5:
-            summary_lines.append("比劫摩擦大，注意伙伴/竞争带来的阻力，宜引入制衡或规则。")
-
-        rel_phy = unified_state.get("physics", {}).get("relationship", {})
-        r_state = rel_phy.get("State", "UNKNOWN")
-        if r_state in ["ENTANGLED", "BOUND"]:
-            summary_lines.append("感情引力稳固，可利用共振期推进关系或合作。")
-        elif r_state == "PERTURBED":
-            summary_lines.append("感情/合作受扰动，尽量避免硬碰，先沟通缓冲。")
-        elif r_state == "UNBOUND":
-            summary_lines.append("情感引力弱，少做高期待决策，先提升连接感。")
-
-        grav_m = unified_state.get("physics", {}).get("gravity", {}).get("Month", 0)
-        summary_lines.append(f"月令权重≈{grav_m:.2f}，当下以月令主导，顺势而为。")
-
-        st.markdown("\n".join([f"- {line}" for line in summary_lines]))
+        # [REMOVED] 仲裁断言 (Arbitration Verdict) - 已删除
+        # [REMOVED] 白话真言 (Plain Guidance) - 已删除
 
         # [Phase 6.0] 100-year Life-path Radar Removed for Performance
 
@@ -823,7 +769,7 @@ def render():
             st.markdown("#### 📜 触发规则 (Triggered Rules)")
             import pandas as pd
             df_rules = pd.DataFrame(rules_tbl)
-            st.dataframe(df_rules, hide_index=True, use_container_width=True)
+            st.dataframe(df_rules, hide_index=True, width='stretch')
 
         # [NEW] Logic Trace Window (Tiered Arbitration)
         tiered_rules = unified_state.get("tiered_rules", {})
@@ -861,11 +807,7 @@ def render():
 
 
         # [REMOVED] 白话解释器 - 与上方白话真言重复，已删除
-
-        # Generate Holographic Report
-        holographic_report = quantum_framework.generate_holographic_report(unified_state)
-        with st.expander("📜 全息真言报告 (Holographic Mantra Report)", expanded=True):
-            st.markdown(holographic_report)
+        # [REMOVED] 全息真言报告 - 已删除
 
         # Physics Telemetry Dashboard
         phy = unified_state.get('physics', {})
@@ -1256,7 +1198,7 @@ def render():
                 height=350,
                 legend=dict(orientation="h", y=1.1)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
             # C. GEO Heatmap (Mockup)
             st.markdown("##### 🌍 K-Geo 效率热力图 (Spacetime Efficiency)")
@@ -1341,7 +1283,7 @@ def render():
                 paper_bgcolor='rgba(0,0,0,0)',
                 height=400
             )
-            st.plotly_chart(fig_3d, use_container_width=True)
+            st.plotly_chart(fig_3d, width='stretch')
 
             st.markdown("##### 🎯 复合神格配比 (Composite Deity Ratio)")
 
@@ -1404,7 +1346,7 @@ def render():
                     fig_radar.add_trace(go.Scatterpolar(r=current_dist, theta=all_elems, fill='toself', name='当前能量 (Current)'))
                     fig_radar.add_trace(go.Scatterpolar(r=target_dist, theta=all_elems, fill='toself', name='熵减目标 (Optimized)', line=dict(color='gold' if not is_phase else 'red')))
                     fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True)), paper_bgcolor='rgba(0,0,0,0)', height=350)
-                    st.plotly_chart(fig_radar, use_container_width=True)
+                    st.plotly_chart(fig_radar, width='stretch')
 
                     # [PATCH] System Status lamp
                     s_col1, s_col2 = st.columns(2)
@@ -1756,7 +1698,7 @@ def render():
                         height=350, margin=dict(l=0, r=0, t=30, b=0),
                         xaxis_title="生命周期 (Life Cycle: Age)", yaxis_title="结构应力指数 (SAI)"
                     )
-                    st.plotly_chart(fig_sai, use_container_width=True)
+                    st.plotly_chart(fig_sai, width='stretch')
                     
                 
                 # C. History Trace Wall & Calibration (Phase 3.5)
@@ -1829,7 +1771,7 @@ def render():
                 yaxis=dict(title="能量权重 (Energy Weight)", gridcolor='rgba(255,255,255,0.1)'),
                 height=300, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             # 2. Real-time Analysis for Selected Pillar
             st.markdown("##### 📍 当前能级评估 (Live Energy Assessment)")
@@ -1859,7 +1801,7 @@ def render():
                     {"成分": k, "传统 (Static)": comp['static'].get(k, 0), "动态 (Phase B)": comp['dynamic'].get(k, 0), "偏离度 (Δ)": comp['delta'].get(k, 0)}
                     for k in comp['static'].keys()
                 ])
-                st.dataframe(df_comp, hide_index=True, use_container_width=True)
+                st.dataframe(df_comp, hide_index=True, width='stretch')
 
             with col_b:
                 st.markdown("**能级偏移控制 (Damping τ)**")
@@ -2075,7 +2017,7 @@ def render():
                 yaxis_title="Gravitational Weight (0.0-1.0)",
                 yaxis_range=[0, 0.7]
             )
-            st.plotly_chart(fig_w, use_container_width=True)
+            st.plotly_chart(fig_w, width='stretch')
             
             # 4. Analysis
             c1, c2 = st.columns(2)
@@ -2165,7 +2107,7 @@ def render():
                 fig_decay.add_vline(x=t_months, line_width=2, line_color="white", annotation_text="Current")
                 
                 fig_decay.update_layout(height=200, margin=dict(l=20, r=20, t=20, b=20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig_decay, use_container_width=True)
+                st.plotly_chart(fig_decay, width='stretch')
 
             with c_mix3:
                 st.metric("新大运 (Next)", f"{w_res['Next_Luck']*100:.1f}%", delta="Growing")
@@ -2199,7 +2141,7 @@ def render():
                 sim_range = st.slider("审计跨度 (Year Range)", sim_b_year, sim_b_year + 100, (sim_b_year, sim_b_year + 80), 1, key="orb_sim_range")
                 sim_res = st.selectbox("采样分辨率 (Resolution)", ["节气 (Solar Term)", "月份 (Monthly)"], index=0, key="orb_sim_res")
                 
-                if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", use_container_width=True, key="run_lifepath_scan"):
+                if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", width='stretch', key="run_lifepath_scan"):
                     st.warning("⚠️ 生命轨道仪 (LifePathEngine) 已在 V12.2.0 中移除。请使用 '全息应期演化' 功能。")
             
             with orb_c1:
@@ -2220,7 +2162,7 @@ def render():
                         yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="物理指标 (Metrics)"),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
-                    st.plotly_chart(fig_orb, use_container_width=True)
+                    st.plotly_chart(fig_orb, width='stretch')
                     
                     risks = orb_data.get('risk_nodes', [])
                     if risks:
@@ -2299,7 +2241,7 @@ def render():
                     if case:
                         desc = case.get('description') or case.get('name')
                         st.caption(f"**目标**: {desc}")
-                        if st.button(f"🚀 执行 {test_id} 压测", key=f"run_{test_id}", use_container_width=True):
+                        if st.button(f"🚀 执行 {test_id} 压测", key=f"run_{test_id}", width='stretch'):
                             
                             # A. Unit Test (Physics Engine)
                             if 'inputs' in case and 'progress' in case['inputs']:
@@ -2530,7 +2472,7 @@ def render():
                 xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
                 yaxis=dict(title="能量 (Energy)", gridcolor='rgba(255,255,255,0.1)')
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width='stretch')
             
             st.divider()
             
@@ -2764,7 +2706,7 @@ def render():
             
             st.write("")
             st.markdown("#### ⚡ 压力测试 (Stress Test Actions)")
-            if st.button("🚀 启动 财富流体仿真 (Run Wealth Fluid Simulation)", key="sim_wealth_fluid_btn", use_container_width=True):
+            if st.button("🚀 启动 财富流体仿真 (Run Wealth Fluid Simulation)", key="sim_wealth_fluid_btn", width='stretch'):
                 st.toast("流体动力学计算中... (Calculating Navier-Stokes...)", icon="🌊")
                 st.info("Simulation Complete. Check updated metrics above.")
 
@@ -2920,7 +2862,7 @@ def render():
             st.write("")
             st.markdown("#### ⚡ 动态仿真 (Dynamic Simulation)")
             st.caption("点击按钮将使用当前选择的大运、流年、地域重新计算引力参数")
-            if st.button("🚀 启动 情感引力仿真 (Run Gravity Simulation)", key="sim_relationship_btn", use_container_width=True):
+            if st.button("🚀 启动 情感引力仿真 (Run Gravity Simulation)", key="sim_relationship_btn", width='stretch'):
                 # [V13.7 升级] 使用 V13.7 版本的情感引力引擎（谐振子摄动模型）
                 from core.trinity.core.engines.relationship_gravity_v13_7 import RelationshipGravityEngineV13_7
                 from core.trinity.core.middleware.influence_bus import InfluenceBus, InfluenceFactor, NonlinearType
@@ -2990,7 +2932,7 @@ def render():
             st.markdown("#### 📅 终身情感时间线 (Lifetime Relationship Timeline)")
             st.caption("扫描从出生到100岁的情感触发事件 | 检测感情状态变化的关键时间点")
             
-            if st.button("🔍 扫描终身情感时间线 (Scan Lifetime Timeline)", key="scan_timeline_btn", use_container_width=True):
+            if st.button("🔍 扫描终身情感时间线 (Scan Lifetime Timeline)", key="scan_timeline_btn", width='stretch'):
                 # [V13.7 升级] 使用 V13.7 版本的情感引力引擎
                 from core.trinity.core.engines.relationship_gravity_v13_7 import RelationshipGravityEngineV13_7
                 
@@ -3305,7 +3247,7 @@ def render():
                             margin=dict(l=50, r=20, t=40, b=40)
                         )
                         
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                         
                         # ═══════ DETAILED EVENT LIST ═══════
                         with st.expander("📋 完整事件列表 (Full Event List)", expanded=False):
@@ -3353,7 +3295,7 @@ def render():
                                         prob_df = prob_df.sort_values('Order').drop('Order', axis=1)
                                         
                                         # Create a bar chart
-                                        st.bar_chart(prob_df.set_index("State"), use_container_width=True)
+                                        st.bar_chart(prob_df.set_index("State"), width='stretch')
                                     
                                     st.markdown("---")
                                     st.markdown(f"**🔮 预测**: {event['prediction']}")
@@ -3387,7 +3329,7 @@ def render():
                 sim_range = st.slider("审计跨度 (Year Range)", birth_dt.year, birth_dt.year + 100, (birth_dt.year, birth_dt.year + 60), 1, key="lp_range_mod7")
                 sim_res = st.selectbox("采样分辨率 (Resolution)", ["节气 (Solar Term)", "月份 (Monthly)"], index=0, key="lp_res_mod7")
 
-                if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", use_container_width=True, key="run_lifepath_scan_mod7"):
+                if st.button("🚀 执行全轨道扫描 (Execute Orbital Scan)", width='stretch', key="run_lifepath_scan_mod7"):
                     st.warning("⚠️ 生命轨道仪 (LifePathEngine) 已在 V12.2.0 中移除。请使用 '全息应期演化' 功能。")
 
             with col_lp1:
@@ -3409,7 +3351,7 @@ def render():
                         yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="物理指标 (Metrics)"),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                     )
-                    st.plotly_chart(fig_lp, use_container_width=True)
+                    st.plotly_chart(fig_lp, width='stretch')
 
                     risks = lp_show.get('risk_nodes', [])
                     if risks:
@@ -3476,27 +3418,12 @@ def render():
                 verdict_gl = unified_state_gl.get("verdict", {})
                 rules_gl = unified_state_gl.get("rules", [])
 
-                st.markdown("#### ⚡ 仲裁断言 (Arbitration Verdict)")
-                v_cols = st.columns(4)
-                v_data = [
-                    ("结构", verdict_gl.get("structure", "N/A")),
-                    ("财富", verdict_gl.get("wealth", "N/A")),
-                    ("情感", verdict_gl.get("relationship", "N/A")),
-                    ("行动", verdict_gl.get("action", "N/A")),
-                ]
-                for col, (title, content) in zip(v_cols, v_data):
-                    with col:
-                        st.markdown(f"""
-                        <div style="border-radius:12px; padding:10px 12px; background:linear-gradient(135deg, #1d1b3a 0%, #26214d 100%); color:#fff; border:1px solid rgba(255,255,255,0.08);">
-                            <div style="font-size:13px; color:#40e0d0;">{title}</div>
-                            <div style="font-size:16px; font-weight:600; margin-top:4px;">{content}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # [REMOVED] 仲裁断言 (Arbitration Verdict) - 已删除
 
                 if rules_gl:
                     st.markdown("#### 📜 触发规则 (Triggered Rules)")
                     import pandas as pd
-                    st.dataframe(pd.DataFrame(rules_gl), hide_index=True, use_container_width=True)
+                    st.dataframe(pd.DataFrame(rules_gl), hide_index=True, width='stretch')
 
                 plain_tips_gl = unified_state_gl.get("plain_guidance", [])
                 if plain_tips_gl:
@@ -3642,7 +3569,7 @@ def render():
                     fig_gl.add_vline(x=datetime.now().year - int(b_year_gl), line_dash="dash", line_color="white", annotation_text="Today")
                     fig_gl.add_hline(y=2.0, line_dash="dash", line_color="orange", opacity=0.3)
                     fig_gl.update_layout(height=320, margin=dict(l=0,r=0,t=10,b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(fig_gl, use_container_width=True, key="global_sai_chart_unified")
+                    st.plotly_chart(fig_gl, width='stretch', key="global_sai_chart_unified")
 
                 # New: Singularity Interpretation Table (Bazi Plain Language)
                 if singularities_gl:
@@ -3659,8 +3586,7 @@ def render():
                     import pandas as pd
                     st.table(pd.DataFrame(sin_data))
 
-                # Generate Holographic Report
-                holographic_report_gl = global_arbitrator.generate_holographic_report(unified_state_gl)
+                # [REMOVED] 全息真言报告 - 已删除
                 
                 # Physics Telemetry Dashboard
                 phy_gl = unified_state_gl.get('physics', {})

@@ -24,7 +24,7 @@ class QuantumDispersionEngine:
     """
     Dynamic hidden stem energy allocation based on solar term progression.
     
-    Replaces static 70/20/10 ratios with time-continuous quantum dispersion model.
+    Replaces static 60/30/10 ratios with time-continuous quantum dispersion model.
     """
     
     # Standard hidden stems per branch (static reference)

@@ -52,7 +52,7 @@ class CoherenceGauge:
             height = 250
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Stability Description
         st.markdown(f"**Stability Status**: {stability_desc}")
@@ -83,4 +83,4 @@ class CoherenceGauge:
             legend = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')

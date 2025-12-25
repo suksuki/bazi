@@ -73,7 +73,7 @@ class Oscilloscope:
             margin=dict(l=40, r=40, t=40, b=40)
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     @staticmethod
     def render_interference_monitor(interactions: list):
@@ -116,4 +116,4 @@ class Oscilloscope:
             height=200,
             margin=dict(t=30, b=20, l=20, r=20)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')

@@ -115,6 +115,24 @@ class StructuralStressEngine:
                     'desc': '羊刃逢冲: 超临界能级爆发 (Shear Burst)'
                 })
 
+        # F. Orbital Collision (Chong / Clash)
+        # Added to capture high-energy volatility (e.g. Musk 2008)
+        checked_clashes = set()
+        for i in range(len(branches)):
+            for j in range(i + 1, len(branches)):
+                b1, b2 = branches[i], branches[j]
+                if ArbitrationNexus.CLASH_MAP.get(b1) == b2:
+                    pair = tuple(sorted([b1, b2]))
+                    if pair not in checked_clashes:
+                        clash_energy = (get_branch_energy(b1) + get_branch_energy(b2)) * 0.75
+                        # Phase transition: Multi-clash logic
+                        if len(checked_clashes) >= 1: 
+                            clash_energy *= 1.5 # Resonance factor
+                            
+                        kinetic_sum += clash_energy
+                        defects.append({'type': 'CLASH_STRESS', 'score': clash_energy, 'nodes': [b1, b2]})
+                        checked_clashes.add(pair)
+
         # Calculate Final SAI
         # If month is part of penalty, E_bond drops.
         # Simple heuristic: If kinetic sum is high, it likely involves the month.

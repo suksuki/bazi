@@ -1,5 +1,5 @@
 {
-    "version": "13.7.0",
+    "version": "14.1.8",
     "description": "Quantum Universal Framework with Plug-and-Play Influence Bus & Multi-Body Physics.",
     "system_id": "ANTIGRAVITY_CORE_ALPHA",
     "themes": {
@@ -17,6 +17,11 @@
             "id": "FRAMEWORK_UTILITIES",
             "name": "框架算法和模块",
             "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。"
+        },
+        "PATTERN_PHYSICS": {
+            "id": "PATTERN_PHYSICS",
+            "name": "格局物理实验室 (PGB Pattern Lab)",
+            "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析。"
         }
     },
     "modules": {
@@ -648,7 +653,7 @@
                 "PH_PHYSICS_TENSOR"
             ],
             "goal": "提供统一的影响因子注册、激活和协调机制，支持大运、流年、地域、时代等环境因子的动态注入。",
-            "outcome": "实现环境因子的即插即用，支持高阶物理张量（相位、频率）的注入和计算。",
+            "outcome": "实现环境因子的即插即用，支持高阶物理张量（相位、频率）的注入 and 计算。",
             "layer": "INFRASTRUCTURE",
             "priority": 30,
             "status": "ACTIVE",
@@ -659,6 +664,88 @@
             "fusion_type": "INFRASTRUCTURE",
             "theme": "FRAMEWORK_UTILITIES",
             "class": "core.trinity.core.middleware.influence_bus.InfluenceBus"
+        },
+        "MOD_101_SGJG_FAILURE": {
+            "id": "MOD_101_SGJG_FAILURE",
+            "name": "🏹 伤官见官失效模型 (SGJG Failure Model)",
+            "icon": "🏹",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "基于 1.25 断裂模量的系统性崩坏模型。检测能量比超过阈值时的非线性应力爆发。",
+            "active": true,
+            "linked_rules": [
+                "PH_SGJG_BREAK_POINT"
+            ],
+            "linked_metrics": [
+                "energy_ratio",
+                "breaking_modulus"
+            ],
+            "status": "CALIBRATED"
+        },
+        "MOD_102_PGB_SUPERFLUID": {
+            "id": "MOD_102_PGB_SUPERFLUID",
+            "name": "🧊 排骨帮超流锁定格 (PGB Superfluid Lock)",
+            "icon": "🧊",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "极低摩擦系数的能量传输拓扑。在极高能级下保持超导稳定性，不触发 1.25 断裂预警。",
+            "active": true,
+            "status": "REGISTERED"
+        },
+        "MOD_103_PGB_BRITTLE": {
+            "id": "MOD_103_PGB_BRITTLE",
+            "name": "🗿 排骨帮脆性巨人格 (PGB Brittle Titan)",
+            "icon": "🗿",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "高刚度失效模型。研究极度纯净但在特定剪切力下发生瞬间坍塌的极端样本。",
+            "active": true,
+            "status": "REGISTERED"
+        },
+        "MOD_104_SGSJ_SUPERCONDUCTOR": {
+            "id": "MOD_104_SGSJ_SUPERCONDUCTOR",
+            "name": "❄️ 伤官伤尽真空超导模型 (SGSJ Superconductor)",
+            "icon": "❄️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "[V14.8.4] 基于零阻力真空场的单极高压模型。研究流年扰动引发的真空断裂响应。支持大运/流年/GEO总线注入。",
+            "active": true,
+            "status": "CALIBRATED",
+            "linked_rules": [
+                "PH_SGSJ_VACUUM_RUPTURE",
+                "PH_SGSJ_SUPER_FIELD",
+                "PH_SGSJ_GEO_CORRECTION"
+            ],
+            "linked_metrics": [
+                "purity",
+                "jump_rate",
+                "stress",
+                "geo_status"
+            ],
+            "goal": "筛选原局天干无官杀、地支藏干官杀极低的“真空超导”样本，并模拟外部官星注入时的应力跳变。",
+            "outcome": "生成 SAI 分布模拟、跳变率分析、GEO 地域影响报告。",
+            "layer": "PATTERN_PHYSICS",
+            "priority": 850,
+            "origin_trace": [
+                "V14.8.4_SGSJ_Superconductor",
+                "Topic_PGB_Vacuum_Field"
+            ],
+            "fusion_type": "CORE_TOPIC",
+            "used_algorithms": [
+                "PH_SGSJ_VACUUM_RUPTURE",
+                "PH_SGSJ_SUPER_FIELD",
+                "PH_SGSJ_GEO_CORRECTION",
+                "PH_3D_INDUCTION"
+            ],
+            "formula": "Purity = 1 - (Guan_Hidden / 3.0); JumpRate = (Total_Guan - Natal_Guan) / max(0.01, Natal_Guan) * 100; Stress = (0.1 + Total_Guan * 0.5) * GEO_Factor",
+            "parameters": {
+                "purity_threshold": 0.95,
+                "jump_rate_critical": 500,
+                "stress_rupture": 1.25,
+                "dim_coeff_protrude": 1.1,
+                "dim_coeff_hidden": 0.6
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout"
         }
     },
     "registry": {
@@ -1023,7 +1110,7 @@
             "layer": "FLOW",
             "priority": 680,
             "description": "[已整合] 模拟情感势能波函数坍缩为确定性事件的过程。已整合到 PH_ORBITAL_PERTURBATION 和 PH_WAVEFUNCTION_COLLAPSE 中。",
-            "replaced_by": "PH_WAVEFUNCTION_COLLAPSE",
+            "replaced_by": "PH_ORBITAL_PERTURBATION",
             "status": "DEPRECATED",
             "origin_trace": [
                 "Topic_B_06_Relationship_Gravity",
@@ -1032,8 +1119,7 @@
             "fusion_type": "INTEGRATED",
             "function": "RelationshipGravityEngineV13_7.calculate_annual_orbital_perturbation",
             "theme": "BAZI_FUNDAMENTAL",
-            "module": "MOD_06_RELATIONSHIP",
-            "replaced_by": "PH_ORBITAL_PERTURBATION"
+            "module": "MOD_06_RELATIONSHIP"
         },
         "PH_PEACH_BLOSSOM": {
             "id": "PH_PEACH_BLOSSOM",
@@ -1062,18 +1148,8 @@
             "layer": "TEMPORAL",
             "priority": 600,
             "description": "[已整合] 大运作为引力背景辐射干扰基础绑定状态。已整合到 InfluenceBus 和 MOD_14 的 PH_EXTRACT_BACKGROUND_FIELD 中。",
-            "replaced_by": "PH_EXTRACT_BACKGROUND_FIELD",
-            "status": "DEPRECATED",
-            "origin_trace": [
-                "Topic_B_06_Relationship_Gravity",
-                "Topic_G_04_Spacetime_Inertia",
-                "V13.7_Influence_Bus_Integration"
-            ],
-            "fusion_type": "INTEGRATED",
-            "function": "InfluenceBus.arbitrate_environment",
-            "theme": "BAZI_FUNDAMENTAL",
-            "module": "MOD_21_INFLUENCE_BUS",
-            "replaced_by": "PH_INFLUENCE_FACTOR"
+            "replaced_by": "PH_INFLUENCE_FACTOR",
+            "status": "DEPRECATED"
         },
         "PH_ANNUAL_IMPULSE": {
             "id": "PH_ANNUAL_IMPULSE",
@@ -1083,17 +1159,7 @@
             "priority": 590,
             "description": "[已整合] 流年干支作为高速飞掠天体施加轨道冲量。已整合到 PH_ORBITAL_PERTURBATION 中。",
             "replaced_by": "PH_ORBITAL_PERTURBATION",
-            "status": "DEPRECATED",
-            "origin_trace": [
-                "Topic_B_06_Relationship_Gravity",
-                "Topic_G_03_Pillar_Weighting",
-                "V13.7_Orbital_Perturbation_Integration"
-            ],
-            "fusion_type": "INTEGRATED",
-            "function": "RelationshipGravityEngineV13_7.calculate_annual_orbital_perturbation",
-            "theme": "BAZI_FUNDAMENTAL",
-            "module": "MOD_06_RELATIONSHIP",
-            "replaced_by": "PH_ORBITAL_PERTURBATION"
+            "status": "DEPRECATED"
         },
         "PH_CAUSAL_ENTROPY": {
             "id": "PH_CAUSAL_ENTROPY",
@@ -1563,7 +1629,11 @@
             "formula": "v_boost = root_strength * K_COUPLING * geo_k",
             "parameters": {
                 "K_COUPLING": 3.0,
-                "root_ratios": [0.7, 0.2, 0.1]
+                "root_ratios": [
+                    0.7,
+                    0.2,
+                    0.1
+                ]
             }
         },
         "PH_COMPLEX_IMPEDANCE": {
@@ -2300,6 +2370,63 @@
             "description": "基于周星驰无厘头语境的物理真言引擎，将高阶物理参数转化为喜剧表达。",
             "class": "core.utils.Stellar_Comedy_Parser",
             "active": true
+        },
+        "PH_SGSJ_VACUUM_RUPTURE": {
+            "id": "PH_SGSJ_VACUUM_RUPTURE",
+            "name": "真空断裂效应 (Vacuum Rupture Effect)",
+            "type": "物理灾变模型",
+            "layer": "DYNAMIC_COLLISION",
+            "description": "当超导环境下的伤官场遭遇流年官星扰动时，应力张量发生 >500% 的瞬间跳变。",
+            "conditions": "SGSJ_Purity > 0.95 and Annual_Guan_Sha > 0",
+            "parameter_定标": {
+                "jump_rate_threshold": 5.0,
+                "fracture_sai": 1.25
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_SGSJ_SUPER_FIELD": {
+            "id": "PH_SGSJ_SUPER_FIELD",
+            "name": "伤官超导场 (Shang Guan Superconductor Field)",
+            "type": "物理场模型",
+            "layer": "PATTERN_PHYSICS",
+            "description": "[V14.8.4] 在原局天干无官杀、地支藏干官杀极低的条件下形成的零阻力能量传导场。",
+            "conditions": "Stem_Guan = 0 and Hidden_Guan_Energy < 0.15",
+            "formula": "Purity = 1 - (Natal_Hidden_Guan / 3.0)",
+            "parameter_定标": {
+                "purity_threshold": 0.95,
+                "dim_coeff_protrude": 1.1,
+                "dim_coeff_hidden": 0.6
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_SGSJ_GEO_CORRECTION": {
+            "id": "PH_SGSJ_GEO_CORRECTION",
+            "name": "地理场强修正 (GEO Field Correction)",
+            "type": "环境修正模型",
+            "layer": "GEO_BUS",
+            "description": "[V14.8.4] 根据地理五行属性修正伤官场与官星场的相对能量。南方火旺增强火系伤官，北方水寒压制火系官星。",
+            "conditions": "geo_element != Neutral",
+            "formula": "Energy_Corrected = Base_Energy * GEO_ELEMENT_MAP[geo_element][stem_element]",
+            "parameter_定标": {
+                "boost_max": 1.15,
+                "damping_min": 0.85
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_3D_INDUCTION": {
+            "id": "PH_3D_INDUCTION",
+            "name": "三维电磁感应模型 (3D Electromagnetic Induction)",
+            "type": "物理传导模型",
+            "layer": "STRUCTURAL",
+            "description": "[V14.8.4] 从一维线性电路升级为三维感应模型。天干为主导线、地支藏干为感应线圈，透干时产生电压泵升效应。",
+            "conditions": "all_patterns",
+            "formula": "Total_Field = Σ(Stem_E * 1.0 + Hidden_E * dim_coeff)",
+            "parameter_定标": {
+                "stem_weight": 1.0,
+                "hidden_protrude": 1.1,
+                "hidden_static": 0.6
+            },
+            "status": "CALIBRATED"
         }
     }
 }

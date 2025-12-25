@@ -30,11 +30,17 @@ from core.trinity.core.intelligence.destiny_translator import DestinyTranslator,
 from core.utils import Stellar_Comedy_Parser
 from core.trinity.core.conflict_arbitrator import ConflictArbitrator
 from core.trinity.core.nexus.context import ContextSnapshot, ContextInjector, ArbitrationScenario
+from core.trinity.core.nexus.pattern_registry import PatternRegistry
 
 # [V13.5] Middleware & Operators
 from core.trinity.core.middleware.influence_bus import InfluenceBus
 from core.trinity.core.operators.standard_factors import (
-    LuckCycleFactor, AnnualPulseFactor, GeoBiasFactor, EraFactor
+    LuckCycleFactor, 
+    AnnualPulseFactor, 
+    GeoBiasFactor, 
+    EraFactor, 
+    SocialDampingFactor,
+    ManualInterventionFactor
 )
 
 logger = logging.getLogger(__name__)
@@ -259,13 +265,23 @@ class QuantumUniversalFramework:
             
         # 3. Geo Factor
         geo_f = geo_modifiers.get('temperature_factor', 1.0)
-        geo_e = geo_modifiers.get('geo_element', 'Neutral')
-        if geo_f != 1.0 or geo_e != 'Neutral':
-            bus.register(GeoBiasFactor(geo_factor=geo_f, geo_element=geo_e))
-            
-        # 4. Era Factor (Disabled by default per audit)
-        bus.register(EraFactor(enabled=False))
+        geo_e = geo_modifiers.get('desc', 'Neutral').split(' - ')[-1]
+        bus.register(GeoBiasFactor(geo_factor=geo_f, geo_element=geo_e))
+
+        # 4. Era 9 Factor (Auto-enabled in 2024+)
+        bus.register(EraFactor(enabled=True))
         
+        # 5. [ASE PHASE 2] Social Damping (Gamma) - Calibrated to 3.5% Singularity Rate
+        # Optimal Gamma Locked at 0.30 after 10,000 sample ASE Phase 2 Audit
+        gamma = ctx.get('damping_override', 0.30)
+        bus.register(SocialDampingFactor(gamma=gamma))
+        
+        # 6. Manual Intervention (V14.8)
+        # Check for numeric intervention or geo_shift
+        intervention_data = ctx.get("data", {}).get("geo_intervention")
+        if intervention_data:
+            bus.register(ManualInterventionFactor(shifts=intervention_data))
+
         return bus
         
     def arbitrate_bazi(self, bazi_chart: List[str], birth_info: Optional[Dict[str, Any]] = None, current_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -548,12 +564,94 @@ class QuantumUniversalFramework:
         dm_elem = BaziParticleNexus.STEMS.get(dm_char, ("Earth", "Yang", 5))[0]
         geo_bias_val = context.geo_bias.get(dm_elem, 1.0)
         
-        # Calculate System Entropy (Adjusted by context)
-        sai = stress_report.get('SAI', 0) * (2.0 - geo_bias_val) # Higher bias in DM element reduces stress
-        ic = min(1.0, stress_report.get('IC', 0) * geo_bias_val)  # Higher bias increases coherence
+        # Calculate System Entropy (Adjusted by context and ASE Social Damping)
+        gamma = ctx.get('damping_override', 0.30)
         
+        # [ASE PHASE 4] Dynamic Energy Tiers (Supreme Calibration)
+        # Calculate Orbital Flux Integration (Fo) based on natal chart concentration
+        elem_counts = {}
+        for s in all_stems[:4]: # Natal only
+            s_elem = BaziParticleNexus.STEMS.get(s, ("Other",))[0]
+            elem_counts[s_elem] = elem_counts.get(s_elem, 0) + 1
+        
+        # Max element count determines the base energy tier
+        max_concentration = max(elem_counts.values()) if elem_counts else 0
+        is_pattern = max_concentration >= 3
+        
+        # Determine Energy Tier: Normal -> Elite (3) -> Mars (4+)
+        energy_tier = "Normal"
+        if max_concentration == 3: energy_tier = "Elite"
+        elif max_concentration >= 4: energy_tier = "Mars"
+        
+        # Forced override for specific Master Jin identified patterns
+        if ctx.get('tier_override') == "Mars": energy_tier = "Mars"
+        
+        gamma = ctx.get('damping_override', 0.30)
+        effective_gamma = gamma
+        pattern_boost = 1.0
+        
+        if energy_tier == "Elite":
+            effective_gamma *= 0.25 # 75% Protection
+            pattern_boost = 2.5     # V13.8 Standard Boost
+        elif energy_tier == "Mars":
+            effective_gamma *= 0.15 # 85% Protection (Supreme)
+            pattern_boost = 4.5     # [SUPREME] Elon Musk Level Boost
+            
+        damp_multiplier = (1.0 - effective_gamma)
+        
+        # Final Physics Synthesis
+        sai = stress_report.get('SAI', 0) * (2.0 - geo_bias_val) * damp_multiplier * pattern_boost
+        ic = min(1.0, stress_report.get('IC', 0) * geo_bias_val * damp_multiplier * (1.0 / pattern_boost if is_pattern else 1.0))
+        
+        # [SUPREME] Apply Pattern Boost to Wealth (Hyper-Flow Induction)
+        if 'Reynolds' in wealth_metrics:
+            wealth_metrics['Reynolds'] *= (pattern_boost if energy_tier != "Normal" else 1.0)
+
         system_entropy = sai + (1.0 - ic) * 0.5
         system_entropy *= star_phys.get('entropy_damping', 1.0)
+
+        # --- [V14.0.9] SGJG Pragmatic Stress Injection ---
+        sgjg_stress_bonus = 0.0
+        ten_gods_natal = [BaziParticleNexus.get_shi_shen(p[0], current_dm) for p in bazi_chart]
+        if "伤官" in ten_gods_natal and "正官" in ten_gods_natal:
+            from core.trinity.core.nexus.definitions import PhysicsConstants as PC
+            sg_idx = [i for i, tg in enumerate(ten_gods_natal) if tg == "伤官"]
+            zg_idx = [i for i, tg in enumerate(ten_gods_natal) if tg == "正官"]
+            
+            # Use seasonal matrix for energy (simplified lab logic)
+            s_mult = PC.SEASONAL_MATRIX.get(month_branch, {})
+            def get_e(idx):
+                elem = BaziParticleNexus.STEMS[all_stems[idx]][0]
+                return PC.BASE_SCORE * PC.PILLAR_WEIGHTS.get(['year','month','day','hour'][idx], 1.0) * s_mult.get(elem, 1.0)
+            
+            sg_e = max([get_e(i) for i in sg_idx])
+            zg_e = max([get_e(i) for i in zg_idx])
+            
+            # [V14.1.0] Allow dynamic boosting for fine-tuning & live-fire
+            boost = ctx.get("pattern_boost_multiplier", 1.0)
+            energy_ratio = (sg_e * boost) / zg_e
+            
+            # Check Proximity
+            min_dist = min([abs(s-z) for s in sg_idx for z in zg_idx])
+            
+            # Apply Breaking Modulus from Registry
+            break_threshold = PatternRegistry.SGJG_CONST["BREAKING_MODULUS"]
+            if energy_ratio > break_threshold and min_dist <= 1:
+                # Non-linear stress jump at the singularity point
+                sgjg_stress_bonus = (energy_ratio - break_threshold) * 5.0 + 2.0
+                sai += sgjg_stress_bonus
+                system_entropy += sgjg_stress_bonus * 0.5
+                logger.info(f"🔥 [SGJG SINGULARITY] Ratio {energy_ratio:.2f} > {break_threshold} | Stress +{sgjg_stress_bonus:.2f}")
+
+        # --- [V14.0.9] PGB Stress Buffer (Fingerprint Reinforcement) ---
+        has_fingerprint = False
+        # Check for Yin-Xing (Resource) as a buffer
+        if "正印" in ten_gods_natal or "偏印" in ten_gods_natal:
+            has_fingerprint = True
+            reinforcement = PatternRegistry.PGB_STRESS_BUFFER["REINFORCEMENT_GAIN"]
+            sai *= (1.0 - reinforcement)
+            system_entropy *= (1.0 - reinforcement * 0.5)
+            logger.info(f"🛡️ [PGB BUFFER] Fingerprint: YIN_XING_HUA_SHA | SAI Reinforcement {reinforcement*100}%")
         
         # [V13.7 补齐] MOD_14: 多维时空场耦合分析
         spacetime_interference = self.spacetime_interference_engine.analyze_spacetime_interference(

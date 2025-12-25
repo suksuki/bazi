@@ -34,7 +34,7 @@ class StructuralVibrationEngine:
         energy_map = self._map_base_energy(stems, branches)
         
         # 2. Vertical Coupling (Branch -> Stem Modulation)
-        # Phase 4.0: Includes Hidden-State Pulse (0.7/0.2/0.1)
+        # Phase 4.0: Includes Hidden-State Pulse (0.6/0.3/0.1)
         self._apply_vertical_coupling(energy_map, stems, branches, geo_k, annual_stem)
         
         # 3. Non-linear Transmission (Tanh Saturation)
@@ -51,11 +51,15 @@ class StructuralVibrationEngine:
         # 6. Composite Deity Optimization
         optimal_mix = self._optimize_composite_deity(final_energy, is_phase_transition, dominant_elem)
         
+        efficiency = self._calculate_efficiency(energy_map, final_energy)
+        impedance = 1.0 / efficiency if efficiency > 0 else 10.0
+        
         return {
             "energy_state": final_energy,
             "entropy": round(entropy, 4),
             "optimal_deity_mix": optimal_mix,
-            "transmission_efficiency": self._calculate_efficiency(energy_map, final_energy),
+            "transmission_efficiency": efficiency,
+            "impedance_magnitude": round(impedance, 4),
             "is_phase_transition": is_phase_transition,
             "dominant_element": dominant_elem
         }
@@ -107,8 +111,8 @@ class StructuralVibrationEngine:
                         is_pulsed = (h_stem == annual_stem)
                         pulse_mult = 1.5 if is_pulsed else 1.0
                         
-                        # Apply 0.7/0.2/0.1 Ratio for Main/Sub/Residual
-                        ratios = [0.7, 0.2, 0.1]
+                        # Apply 0.6/0.3/0.1 Ratio for Main/Sub/Residual
+                        ratios = [0.6, 0.3, 0.1]
                         ratio = ratios[h_idx] if h_idx < len(ratios) else 0.05
                         
                         root_strength += h_weight * ratio * pulse_mult
