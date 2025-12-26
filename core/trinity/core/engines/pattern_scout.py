@@ -1,5 +1,6 @@
 
 import logging
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from core.trinity.core.nexus.definitions import BaziParticleNexus, PhysicsConstants as PC, ArbitrationNexus as AN
 from core.trinity.core.engines.synthetic_bazi_engine import SyntheticBaziEngine
@@ -76,11 +77,34 @@ class PatternScout:
             
         return found
 
-    def _deep_audit(self, chart: List[Tuple[str, str]], pattern_id: str, geo_context: dict = None) -> Optional[Dict[str, Any]]:
-        """[V14.8.4] Deep audit with GEO field correction support."""
+    def _deep_audit(self, chart, pattern_id, geo_context=None):
+        """[V14.9.5] Deep audit wrapper with Global Logic Registry integration."""
         if len(chart) < 4: return None
         
-        # [V4.2.1] Pattern ID 别名映射 (解决命名空间不一致问题)
+        # [V4.2.6] 全面集成全局注册中心
+        from core.logic_registry import LogicRegistry
+        registry = LogicRegistry()
+        registry_full_id, logic_ids = registry.resolve_logic_id(pattern_id)
+        
+        # 记录审计元数据 (向下兼容)
+        # 如果 logic_ids 为空，回退为输入 ID
+        main_logic_id = logic_ids[0] if logic_ids else pattern_id
+        
+        # 执行核心物理逻辑
+        result = self._execute_audit_logic(chart, main_logic_id, geo_context)
+        
+        # [V4.2.6] 统一注入 ID 身份标识与溯源元数据
+        if result and isinstance(result, dict):
+            result["registry_id"] = registry_full_id
+            result["pattern_id"] = main_logic_id
+            result["audit_timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            result["logic_version"] = "4.2.6"
+            
+        return result
+
+    def _execute_audit_logic(self, chart, pattern_id, geo_context=None):
+        """[CORE] The actual physics computation logic."""
+        # [Legacy Support]
         PATTERN_ID_ALIASES = {
             "CAI_GUAN_XIANG_SHENG": "CAI_GUAN_XIANG_SHENG_V4",
             "PGB_SUPER_FLUID_LOCK": "PGB_ULTRA_FLUID",
@@ -101,12 +125,17 @@ class PatternScout:
         stems = [p[0] for p in chart]
         branches = [p[1] for p in chart]
         
+        # [V4.2.6] 环境变量标准提取
+        luck_p = geo_context.get("luck_pillar", "甲子") if geo_context else "甲子"
+        annual_p = geo_context.get("annual_pillar", "甲子") if geo_context else "甲子"
+        
         ten_gods = [BaziParticleNexus.get_shi_shen(s, dm) for s in stems]
         
         if pattern_id == "SHANG_GUAN_JIAN_GUAN":
             # [ASE PHASE 4.1] SGGG V4.1: Gate Breakdown Model
-            luck_pillar = chart[4] if len(chart) >= 5 else ('', '')
-            annual_pillar = chart[5] if len(chart) >= 6 else ('', '')
+            # 保持向后兼容性封装
+            luck_pillar = luck_p
+            annual_pillar = annual_p
 
             # 1. Topology Screening (Natal Stems must have both SG and Officer)
             natal_tg = ten_gods[:4]
@@ -1251,8 +1280,6 @@ class PatternScout:
 
         if pattern_id == "HGFG_TRANSMUTATION":
             # [ASE PHASE 4.1] HGFG V4.1: Atomic Transmutation Model (Transformed Patterns)
-            luck_p = chart[4] if len(chart) >= 5 else ('', '')
-            annual_p = chart[5] if len(chart) >= 6 else ('', '')
 
             # 1. Atomic Pair Detection
             PAIRS = {"甲": "己", "己": "甲", "乙": "庚", "庚": "乙", "丙": "辛", "辛": "丙", "丁": "壬", "壬": "丁", "戊": "癸", "癸": "戊"}
@@ -1294,7 +1321,7 @@ class PatternScout:
             # a) Annual pillar clashing the transmutation (Reversal Reagent)
             # If annual stem is the agent that kills the goal element
             REAGENTS = {"Earth": "Wood", "Metal": "Fire", "Water": "Earth", "Wood": "Metal", "Fire": "Water"}
-            if BaziParticleNexus.STEMS.get(annual_p[0])[0] == REAGENTS.get(goal_elem):
+            if annual_p and len(annual_p) > 0 and BaziParticleNexus.STEMS.get(annual_p[0]) and BaziParticleNexus.STEMS.get(annual_p[0])[0] == REAGENTS.get(goal_elem):
                 is_reversed = True
             
             # b) Annual pillar bringing back original DM element strongly

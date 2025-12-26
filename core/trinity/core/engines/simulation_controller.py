@@ -371,22 +371,8 @@ class SimulationController:
                             # Wait, let's map known IDs.
                             p_id = mod_info.get("id")
                             if not mod_info.get("active", True): continue
-                            
-                            # Integrated Mapping: Link Registry MODs to PatternScout Logic
-                            mapping = {
-                                "MOD_101": ["SHANG_GUAN_JIAN_GUAN"],
-                                "MOD_104": ["SHANG_GUAN_SHANG_JIN"],
-                                "MOD_105": ["YANG_REN_JIA_SHA"],
-                                "MOD_106": ["XIAO_SHEN_DUO_SHI"],
-                                "MOD_107": ["CAI_GUAN_XIANG_SHENG_V4"],
-                                "MOD_108": ["SHANG_GUAN_PEI_YIN"],
-                                "MOD_109": ["SHI_SHEN_ZHI_SHA"],
-                                "MOD_110": ["PGB_ULTRA_FLUID", "PGB_BRITTLE_TITAN"],
-                                "MOD_111": ["CYGS_COLLAPSE"],
-                                "MOD_112": ["HGFG_TRANSMUTATION"],
-                                "MOD_113": ["SSSC_AMPLIFIER"],
-                                "MOD_114": ["JLTG_CORE_ENERGY"]
-                            }
+                            # [V4.2.6] 调用全局注册中心动态路由表
+                            mapping = self.framework.registry.get_logic_routing()
                             
                             found = False
                             for prefix, internal_ids in mapping.items():
