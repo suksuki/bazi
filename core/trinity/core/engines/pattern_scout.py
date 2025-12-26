@@ -96,133 +96,226 @@ class PatternScout:
         ten_gods = [BaziParticleNexus.get_shi_shen(s, dm) for s in stems]
         
         if pattern_id == "SHANG_GUAN_JIAN_GUAN":
-            # 1. HOLOGRAPHIC SCAN (Stems + Hidden Stems of 6 Pillars)
+            # ============================================================
+            # [V2.0] 伤官见官失效模型 - Master Protocol Implementation
+            # ============================================================
+            # Phase 1: 古代硬判据 (Ancient Hard Rules)
+            # - 天干必须同时有"伤官"和"正官/七杀"
+            # - 不允许食神代替伤官（严格定义）
+            # ============================================================
+            
+            # 1.1 天干硬约束: 必须有伤官 (原局四柱)
+            natal_tg = ten_gods[:4]
+            if "伤官" not in natal_tg:
+                return None  # 古法: 无伤官不成格
+            
+            # 1.2 天干或六柱必须有正官/七杀
+            all_tg = ten_gods
+            has_guan = any(g in ["正官", "七杀"] for g in all_tg)
+            if not has_guan:
+                return None  # 无官星碰撞对象
+            
+            # ============================================================
+            # Phase 2: 三维全息扫描 + 注入权重
+            # - GEO权重: 0.3 (地理阻抗)
+            # - 大运权重: 0.5 (静态电势)  
+            # - 流年权重: 1.0 (脉冲信号)
+            # ============================================================
+            INJECTION_WEIGHTS = {
+                'year': 0.5, 'month': 3.0, 'day': 1.0, 'hour': 0.8,
+                'luck': 0.5,   # 大运静态电势
+                'annual': 1.0  # 流年脉冲信号
+            }
+            
             p_labels = ['year', 'month', 'day', 'hour', 'luck', 'annual']
             season_mult = PC.SEASONAL_MATRIX.get(month_branch, {})
             
-            # Map of all active power points in the field
+            # 全息能量点采集
             points = []
-            stem_gods_set = set()
+            stem_gods_set = set(ten_gods)
             
-            # First pass: Collect stem gods (for Protrusion check)
-            for s in stems:
-                stem_gods_set.add(BaziParticleNexus.get_shi_shen(s, dm))
-
-            # Second pass: Build power points
             for i, p_label in enumerate(p_labels):
-                if i >= len(chart): continue # Safety for short charts
+                if i >= len(chart): continue
                 s, b = chart[i]
-                p_weight = PC.PILLAR_WEIGHTS.get(p_label, 1.0)
+                p_weight = INJECTION_WEIGHTS.get(p_label, 1.0)
                 
-                # A: Stem Point
+                # A: 天干能量 (直接传导)
                 tg_s = BaziParticleNexus.get_shi_shen(s, dm)
                 s_elem = BaziParticleNexus.STEMS[s][0]
-                s_energy = PC.BASE_SCORE * p_weight * season_mult.get(s_elem, 1.0)
+                geo_mod = geo_mult.get(s_elem, 1.0)  # GEO地理阻抗
+                s_energy = PC.BASE_SCORE * p_weight * season_mult.get(s_elem, 1.0) * geo_mod
                 points.append({
-                    "pos": i, "type": "stem", "god": tg_s, "energy": s_energy, "weight": 1.0
+                    "pos": i, "type": "stem", "god": tg_s, 
+                    "energy": s_energy, "weight": 1.0, "elem": s_elem,
+                    "is_natal": i < 4
                 })
                 
-                # B: Branch Hidden Points (Cross-Dimensional)
+                # B: 地支藏干能量 (维度感应)
                 hidden = BaziParticleNexus.get_branch_weights(b)
                 for h_stem, h_w in hidden:
                     tg_h = BaziParticleNexus.get_shi_shen(h_stem, dm)
-                    # [務實校研] 维度阻抗系数: 透干 1.1, 不透干 0.6
                     dim_coeff = 1.1 if tg_h in stem_gods_set else 0.6
                     h_elem = BaziParticleNexus.STEMS[h_stem][0]
-                    h_energy = PC.BASE_SCORE * p_weight * season_mult.get(h_elem, 1.0) * (float(h_w) / 10.0) * dim_coeff
+                    geo_mod_h = geo_mult.get(h_elem, 1.0)
+                    h_energy = PC.BASE_SCORE * p_weight * season_mult.get(h_elem, 1.0) * (float(h_w) / 10.0) * dim_coeff * geo_mod_h
                     points.append({
-                        "pos": i, "type": "hidden", "god": tg_h, "energy": h_energy, "weight": dim_coeff
+                        "pos": i, "type": "hidden", "god": tg_h, 
+                        "energy": h_energy, "weight": dim_coeff, "elem": h_elem,
+                        "is_natal": i < 4
                     })
 
-            # 2. Collision Detection (Attacker vs Officer)
-            # Pragmatic: Including Seven Killings (七杀) and Food (食神) as potential stress sources
-            attackers = [p for p in points if p["god"] in ["伤官", "食神"]]
+            # ============================================================
+            # Phase 3: 碰撞检测 (Collision Detection)
+            # ============================================================
+            attackers = [p for p in points if p["god"] == "伤官"]  # 严格: 只看伤官
             officers = [p for p in points if p["god"] in ["正官", "七杀"]]
             
-            if not attackers or not officers: return None
+            if not attackers or not officers: 
+                return None
             
-            # Find the "Core Collision Site" (Max energy pair)
+            # 3.1 计算碰撞强度
             max_sg_e = max(p["energy"] for p in attackers)
             max_zg_e = max(p["energy"] for p in officers)
-            r_ratio = max_sg_e / max_zg_e
+            collision_ratio = max_sg_e / max(0.01, max_zg_e)
             
-            if r_ratio < 0.6: return None # Below stress threshold
+            # 3.2 原局伤官能量 vs 外部官星能量
+            natal_sg_e = sum(p["energy"] for p in attackers if p["is_natal"])
+            external_zg_e = sum(p["energy"] for p in officers if not p["is_natal"])
             
-            # Calculate Proximity (Distance between strongest sources)
-            min_dist = 4
-            for s_p in [p for p in attackers if p["energy"] > max_sg_e * 0.7]:
-                for z_p in [p for p in officers if p["energy"] > max_zg_e * 0.7]:
-                    dist = abs(s_p["pos"] - z_p["pos"])
-                    min_dist = min(min_dist, dist)
-
-            # 3. Spatial Bus Impedance (Protection Audit)
-            protection_standard = 0.0
-            protection_spatial = 0.0
-            
-            # Identify core collision positions to check if protection is 'In between'
+            # 3.3 计算碰撞距离
             sg_core_pos = next(p["pos"] for p in attackers if p["energy"] == max_sg_e)
             zg_core_pos = next(p["pos"] for p in officers if p["energy"] == max_zg_e)
+            collision_dist = abs(sg_core_pos - zg_core_pos)
             collision_range = sorted([sg_core_pos, zg_core_pos])
             
+            # [V2.1] 月令震源中心加权
+            month_sg = any(p["pos"] == 1 and p["god"] == "伤官" for p in points)
+            month_zg = any(p["pos"] == 1 and p["god"] in ["正官", "七杀"] for p in points)
+            month_core_mult = 1.25 if (month_sg or month_zg) else 1.0
+
+            # ============================================================
+            # Phase 4: 保护层审计 (Shield Audit) - Dynamic Threshold
+            # - 财星通关: 伤官生财、财生官
+            # - 印星护身: 泄官生身
+            # - η_shield = Σ(Shield_E) × e^(-0.3 × distance)
+            # ============================================================
+            protection_total = 0.0
+            protection_effective = 0.0
+            shield_breakdown = {"财": 0.0, "印": 0.0}
+            
+            import math
             for p in points:
                 p_val = 0.0
-                if p["god"] in ["正财", "偏财"]: p_val = 0.8 * p["weight"]
-                elif p["god"] in ["正印", "偏印"]: p_val = 0.5 * p["weight"]
+                if p["god"] in ["正财", "偏财"]: 
+                    p_val = 0.8 * p["weight"]
+                    shield_breakdown["财"] += p_val
+                elif p["god"] in ["正印", "偏印"]: 
+                    p_val = 0.5 * p["weight"]
+                    shield_breakdown["印"] += p_val
                 
                 if p_val > 0:
-                    protection_standard += p_val
-                    # [務實校研] 距离损耗: 远水救不了近火
-                    # If protection is not between collision sites and distance > 2, reduce drastically
-                    is_between = (collision_range[0] <= p["pos"] <= collision_range[1])
-                    dist_to_center = min(abs(p["pos"] - sg_core_pos), abs(p["pos"] - zg_core_pos))
-                    
-                    if not is_between and dist_to_center > 1.5:
-                        protection_spatial += (p_val * 0.1) # Severe decay for remote guards
-                    else:
-                        protection_spatial += p_val # Effective buffer
+                    protection_total += p_val
+                    # [V2.1] 动态衰减函数: η_shield = Shield_E × e^(-0.3 × dist)
+                    dist_to_core = min(abs(p["pos"] - sg_core_pos), abs(p["pos"] - zg_core_pos))
+                    decay = math.exp(-0.3 * dist_to_core)
+                    protection_effective += (p_val * decay)
 
-            # 4. Final Verdict Logic
-            is_standard_blocked = protection_standard > 0.8
-            is_spatial_blocked = protection_spatial > 0.8
+            # ============================================================
+            # Phase 5: 坍缩阈值检测 (Collapse Detection)
+            # [V2.1] 加入五行克制系数 K_clash
+            # - 金木对撞: 1.4 (脆性折断)
+            # - 水火对撞: 1.2 (汽化损耗)
+            # - 其他: 1.0
+            # ============================================================
+            CLASH_COEFF_MAP = {
+                ("Metal", "Wood"): 1.4, ("Wood", "Metal"): 1.4,
+                ("Water", "Fire"): 1.2, ("Fire", "Water"): 1.2,
+                ("Earth", "Water"): 1.0, ("Water", "Earth"): 1.0,
+            }
             
-            if is_standard_blocked and is_spatial_blocked:
-                return None # Truly protected by both models
-
-            # Stress Calculation (Boosted by Proximity and Clashes)
-            has_clash = any(AN.CLASH_MAP.get(chart[i][1]) == chart[j][1] for i in range(len(chart)) for j in range(i+1, len(chart)))
-            stress_idx = r_ratio * (6 - min_dist) * (1.5 if has_clash else 1.0)
+            # 获取伤官和官星的五行
+            sg_elem = next((p["elem"] for p in attackers if p["energy"] == max_sg_e), "Earth")
+            zg_elem = next((p["elem"] for p in officers if p["energy"] == max_zg_e), "Earth")
+            k_clash = CLASH_COEFF_MAP.get((sg_elem, zg_elem), 1.0)
             
-            category = "维度对撞 (Holographic)"
-            if stress_idx > 12.0: category = "高压击穿 (Breakdown)"
-            elif is_standard_blocked and not is_spatial_blocked: category = "防御虚化 (Ghost Guard)"
-
-            # Check for 'Voltage Pump' (Protrusion factor 1.1)
-            has_voltage_pump = any(p["weight"] == 1.1 for p in points)
+            baseline_sai = natal_sg_e * 0.1  # 无官星时的平静态
+            
+            # 碰撞应力 = (伤官能量 × 官星能量 × 距离因子 × 月令系数 × 克制系数) / (保护层 + 1.0)
+            distance_factor = max(0.5, 5 - collision_dist)  # 距离越近压力越大
+            current_sai = (max_sg_e * max_zg_e * distance_factor * month_core_mult * k_clash) / max(0.1, protection_effective + 1.0)
+            
+            # 坍缩率
+            collapse_rate = current_sai / max(0.01, baseline_sai)
+            
+            # ============================================================
+            # Phase 6: 判定与分类
+            # ============================================================
+            COLLAPSE_THRESHOLD = 1.25  # 坍缩阈值
+            
+            is_shielded = protection_effective > 1.5
+            is_collapsed = current_sai > COLLAPSE_THRESHOLD
+            
+            # 古法安全判定: 有足够通关
+            if is_shielded and not is_collapsed:
+                return None  # 真正被保护
+            
+            # 分类
+            if current_sai > 2.0:
+                category = "高压击穿 (Critical Breakdown)"
+            elif current_sai > COLLAPSE_THRESHOLD:
+                category = "结构坍缩 (Structural Collapse)"
+            elif protection_total > 0.8 and protection_effective < 0.5:
+                category = "防御虚化 (Ghost Shield)"
+            else:
+                category = "应力过载 (Stress Overload)"
+            
+            # 冲克加成
+            has_clash = any(AN.CLASH_MAP.get(chart[i][1]) == chart[j][1] 
+                          for i in range(min(4, len(chart))) 
+                          for j in range(i+1, min(4, len(chart))))
+            if has_clash:
+                current_sai *= 1.3
+                category = f"{category} + 冲击"
+            
+            # 电压泵升检测
+            has_voltage_pump = any(p["weight"] == 1.1 and p["god"] in ["正官", "七杀"] for p in points)
 
             return {
                 "chart": chart,
-                "r_ratio": f"{r_ratio:.2f}",
-                "dist": min_dist,
-                "protection": f"Std:{protection_standard:.1f} / Spa:{protection_spatial:.1f}",
                 "category": category,
-                "stress": f"{stress_idx:.2f}",
+                "stress": f"{current_sai:.2f}",
+                "baseline_sai": f"{baseline_sai:.2f}",
+                "collapse_rate": f"{collapse_rate:.1f}x",
+                "r_ratio": f"{collision_ratio:.2f}",
+                "dist": collision_dist,
+                "protection": f"有效:{protection_effective:.2f}/总:{protection_total:.1f}",
+                "shield_breakdown": f"财:{shield_breakdown['财']:.1f} 印:{shield_breakdown['印']:.1f}",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
-                "audit_mode": "3D_INDUCTION_HOLOGRAPHIC",
-                "standard_verdict": "SAFE" if is_standard_blocked else "CRITICAL",
-                "spatial_verdict": "SAFE" if is_spatial_blocked else "CRITICAL",
+                "audit_mode": "SGJG_V2.1_MASTER_PROTOCOL",
                 "voltage_pump": "ACTIVE" if has_voltage_pump else "INACTIVE",
-                "bus_impedance": "SEVERE" if (protection_standard - protection_spatial) > 0.5 else "LOW"
+                "geo_element": geo_element,
+                "external_injection": f"官星外注:{external_zg_e:.1f}",
+                "month_core_mult": f"{month_core_mult:.2f}",
+                "k_clash": f"{k_clash:.1f}",
+                "sg_elem": sg_elem,
+                "zg_elem": zg_elem,
+                "standard_verdict": "CRITICAL",
+                "spatial_verdict": "CRITICAL" if not is_shielded else "SAFE"
             }
-
         if pattern_id == "SHANG_GUAN_SHANG_JIN":
-            # [V14.8.4] STRICT SUPERCONDUCTOR AUDIT WITH GEO CORRECTION
+            # ============================================================
+            # [V2.0] PGB 真空稳态模型 (Vacuum Stability Model)
+            # 基于 52 万样本数据驱动定标，废弃古代"伤尽"迷信
+            # 核心发现: 财星通关 > 纯净度，强韧来自"混浊"而非"纯净"
+            # ============================================================
+            
             # Hard Rule 1: Must have Shang Guan (伤官) in stems
             if "伤官" not in ten_gods: return None
             
             # Hard Rule 2: Natal stems must NOT have any 正官/七杀
             if any(tg in ["正官", "七杀"] for tg in ten_gods[:4]): return None
             
-            # 1. FULL SPECTRUM SCAN: Stems + Hidden Stems with GEO Correction
+            # 1. FULL SPECTRUM SCAN
             p_labels = ['year', 'month', 'day', 'hour', 'luck', 'annual']
             season_mult = PC.SEASONAL_MATRIX.get(month_branch, {})
             points = []
@@ -233,45 +326,213 @@ class PatternScout:
                 s, b = chart[i]
                 p_weight = PC.PILLAR_WEIGHTS.get(p_label, 1.0)
                 
-                # A: STEM ENERGY (天干 - Full Weight 1.0 + GEO Correction)
                 tg_s = BaziParticleNexus.get_shi_shen(s, dm)
                 s_elem = BaziParticleNexus.STEMS[s][0]
-                geo_corr = geo_mult.get(s_elem, 1.0)  # Apply GEO field
+                geo_corr = geo_mult.get(s_elem, 1.0)
                 s_energy = PC.BASE_SCORE * p_weight * season_mult.get(s_elem, 1.0) * geo_corr
                 points.append({"pos": i, "type": "stem", "god": tg_s, "energy": s_energy, "elem": s_elem, "is_natal": i < 4})
                 
-                # B: HIDDEN STEM ENERGY (藏干 - Dim Coeff 0.6/1.1 + GEO Correction)
                 hidden = BaziParticleNexus.get_branch_weights(b)
-                for h_stem, h_w in hidden:
+                for h_idx, (h_stem, h_w) in enumerate(hidden):
                     tg_h = BaziParticleNexus.get_shi_shen(h_stem, dm)
                     dim_coeff = 1.1 if tg_h in stem_gods_set else 0.6
                     h_elem = BaziParticleNexus.STEMS[h_stem][0]
-                    geo_corr_h = geo_mult.get(h_elem, 1.0)  # Apply GEO field
+                    geo_corr_h = geo_mult.get(h_elem, 1.0)
                     h_energy = PC.BASE_SCORE * p_weight * season_mult.get(h_elem, 1.0) * (float(h_w) / 10.0) * dim_coeff * geo_corr_h
-                    points.append({"pos": i, "type": "hidden", "god": tg_h, "energy": h_energy, "elem": h_elem, "is_natal": i < 4})
+                    is_main_qi = (h_idx == 0)
+                    points.append({"pos": i, "type": "hidden", "god": tg_h, "energy": h_energy, "elem": h_elem, "is_natal": i < 4, "is_main": is_main_qi})
+
+            # 2. PURITY AUDIT
+            natal_hidden_guan = sum(p["energy"] for p in points if p["is_natal"] and p["type"] == "hidden" and p["god"] in ["正官", "七杀"])
+            purity = max(0.0, 1.0 - (natal_hidden_guan / 3.0))
+            if purity < 0.95: return None
+            
+            # 3. 五行识别
+            dm_elem = BaziParticleNexus.STEMS[dm][0]
+            SHENG_CYCLE = {"Wood": "Fire", "Fire": "Earth", "Earth": "Metal", "Metal": "Water", "Water": "Wood"}
+            sg_elem = SHENG_CYCLE.get(dm_elem, "Earth")
+            
+            # 4. [V2.0] 稳态评分计算 (Stability Score)
+            wealth_count = sum(1 for p in points if p["god"] in ["正财", "偏财"])
+            yin_count = sum(1 for p in points if p["god"] in ["正印", "偏印"])
+            
+            RESONANCE_FACTOR = {
+                ("Wood", "Fire"): -0.5,   # 木火同气加分
+                ("Earth", "Metal"): -0.5, # 土金同气加分
+                ("Metal", "Water"): 0.5,  # 金水脆性扣分
+                ("Fire", "Earth"): 0.3,   # 中等风险
+            }
+            resonance_mod = RESONANCE_FACTOR.get((dm_elem, sg_elem), 0.0)
+            
+            stability_score = (wealth_count * 2.0 + yin_count * 1.0) - resonance_mod
+            
+            # 5. 外部官星分析
+            external_guan_points = [p for p in points if not p["is_natal"] and p["god"] in ["正官", "七杀"]]
+            external_guan_elem = external_guan_points[0]["elem"] if external_guan_points else None
+            
+            # 共振窗口
+            is_coherent = (external_guan_elem == sg_elem) if external_guan_elem else False
+            resonance_state = "STATE_RESONANCE" if is_coherent else "STATE_COLLISION"
+            
+            # 6. [V2.0] 五行差异化阈值 (按 42600% 跳变率数据定标)
+            ELEM_THRESHOLDS = {
+                ("Metal", "Water"): 1.25,   # 金水 - 极脆弱
+                ("Water", "Wood"): 2.5,     # 水木
+                ("Wood", "Fire"): 4.5,      # 木火 - 韧性结构
+                ("Fire", "Earth"): 2.5,     # 火土
+                ("Earth", "Metal"): 4.5,    # 土金 - 韧性结构
+            }
+            collapse_threshold = ELEM_THRESHOLDS.get((dm_elem, sg_elem), 2.0)
+
+            # 7. 护盾量化
+            hidden_wealth_shield = sum(p["energy"] for p in points if p["type"] == "hidden" and p["god"] in ["正财", "偏财"] and not p.get("is_main", True)) * 0.85
+            shield_multiplier = max(0.15, 1.0 - hidden_wealth_shield) if hidden_wealth_shield > 0 else 1.0
+
+            # 8. 应力计算
+            total_guan_strength = sum(p["energy"] for p in points if p["god"] in ["正官", "七杀"])
+            jump_rate = (total_guan_strength - natal_hidden_guan) / max(0.01, natal_hidden_guan) * 100
+            base_stress = (0.1 + (total_guan_strength * 0.5)) * geo_factor * shield_multiplier
+            
+            # 9. [V2.0] 分类判定 - 基于稳态评分
+            if stability_score >= 6.0:
+                category = "PGB_STABLE (排骨帮稳态格)"
+                stress = base_stress * 0.3
+            elif stability_score >= 2.0:
+                category = "真空稳态 (Vacuum Stable)"
+                stress = base_stress * 0.6
+            elif is_coherent:
+                category = "共振过载 (Resonant Overload)"
+                stress = base_stress * 0.5
+            elif jump_rate > 500:
+                category = "PGB_CRITICAL_VACUUM (极危真空格)"
+                stress = (collapse_threshold + (jump_rate / 10000)) * geo_factor * shield_multiplier
+            elif total_guan_strength > 0.5:
+                category = "场强扰动 (Perturbed)"
+                stress = base_stress
+            else:
+                category = "真空超导 (Superconductor)"
+                stress = base_stress
+            
+            geo_status = "BOOST" if geo_factor > 1.0 else ("DAMPED" if geo_factor < 1.0 else "NEUTRAL")
+
+            return {
+                "chart": chart,
+                "category": category,
+                "purity": f"{purity:.2f}",
+                "stress": f"{stress:.2f}",
+                "jump_rate": f"{jump_rate:.1f}%",
+                "stability_score": f"{stability_score:.1f}",
+                "r_ratio": f"{purity:.2f}",
+                "dist": 0,
+                "protection": f"财:{wealth_count} 印:{yin_count}",
+                "geo_status": geo_status,
+                "geo_element": geo_element,
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "SGSJ_V2.0_STABILITY_MODEL",
+                "voltage_pump": "ACTIVE" if any(p["energy"] > 2.0 and p["god"] in ["正官", "七杀"] for p in points) else "INACTIVE",
+                "pgb_advice": "稳态评分 > 2.0 为安全区。建议增加财星通关介质。",
+                "dm_elem": dm_elem,
+                "sg_elem": sg_elem,
+                "collapse_threshold": f"{collapse_threshold:.2f}",
+                "hidden_wealth_shield": f"{hidden_wealth_shield:.2f}",
+                "shield_multiplier": f"{shield_multiplier:.2f}",
+                "resonance_state": resonance_state,
+                "external_guan_elem": external_guan_elem or "N/A",
+                "wealth_count": wealth_count,
+                "yin_count": yin_count
+            }
+
+
+            for i, p_label in enumerate(p_labels):
+                if i >= len(chart): continue
+                s, b = chart[i]
+                p_weight = PC.PILLAR_WEIGHTS.get(p_label, 1.0)
+                
+                # A: STEM ENERGY (天干)
+                tg_s = BaziParticleNexus.get_shi_shen(s, dm)
+                s_elem = BaziParticleNexus.STEMS[s][0]
+                geo_corr = geo_mult.get(s_elem, 1.0)
+                s_energy = PC.BASE_SCORE * p_weight * season_mult.get(s_elem, 1.0) * geo_corr
+                points.append({"pos": i, "type": "stem", "god": tg_s, "energy": s_energy, "elem": s_elem, "is_natal": i < 4})
+                
+                # B: HIDDEN STEM ENERGY (藏干)
+                hidden = BaziParticleNexus.get_branch_weights(b)
+                for h_idx, (h_stem, h_w) in enumerate(hidden):
+                    tg_h = BaziParticleNexus.get_shi_shen(h_stem, dm)
+                    dim_coeff = 1.1 if tg_h in stem_gods_set else 0.6
+                    h_elem = BaziParticleNexus.STEMS[h_stem][0]
+                    geo_corr_h = geo_mult.get(h_elem, 1.0)
+                    h_energy = PC.BASE_SCORE * p_weight * season_mult.get(h_elem, 1.0) * (float(h_w) / 10.0) * dim_coeff * geo_corr_h
+                    is_main_qi = (h_idx == 0)  # 主气
+                    points.append({"pos": i, "type": "hidden", "god": tg_h, "energy": h_energy, "elem": h_elem, "is_natal": i < 4, "is_main": is_main_qi})
 
             # 2. PURITY AUDIT: Total Guan/Sha in NATAL Hidden Stems
             natal_hidden_guan = sum(p["energy"] for p in points if p["is_natal"] and p["type"] == "hidden" and p["god"] in ["正官", "七杀"])
-            # Strict threshold: < 1.5 energy for true superconductor
             purity = max(0.0, 1.0 - (natal_hidden_guan / 3.0))
             if purity < 0.95: return None
-
-            # 3. PERTURBATION TEST: Global field strength (Natal + External Bus)
-            total_guan_strength = sum(p["energy"] for p in points if p["god"] in ["正官", "七杀"])
             
-            # Jump Rate: % spike from external injection
+            # 3. 识别伤官五行 (日主五行 → 子五行)
+            dm_elem = BaziParticleNexus.STEMS[dm][0]
+            SHENG_CYCLE = {"Wood": "Fire", "Fire": "Earth", "Earth": "Metal", "Metal": "Water", "Water": "Wood"}
+            sg_elem = SHENG_CYCLE.get(dm_elem, "Earth")
+            
+            # 4. 识别外部官星五行
+            external_guan_points = [p for p in points if not p["is_natal"] and p["god"] in ["正官", "七杀"]]
+            external_guan_elem = external_guan_points[0]["elem"] if external_guan_points else None
+            
+            # ============================================================
+            # [V1.0] 共振窗口检测 (Coherent Window)
+            # 如果官星五行 == 伤官五行，判定为共振态，不是断裂
+            # ============================================================
+            is_coherent = (external_guan_elem == sg_elem) if external_guan_elem else False
+            resonance_state = "STATE_RESONANCE" if is_coherent else "STATE_COLLISION"
+            
+            # ============================================================
+            # [V1.0] 五行差异化断裂阈值 (按 AI 分析师 Phase 4 定标)
+            # ============================================================
+            ELEM_THRESHOLDS = {
+                ("Metal", "Water"): 1.25,   # 金水伤官 - 极脆弱 (31950% 跳变率)
+                ("Water", "Wood"): 2.5,     # 水木伤官
+                ("Wood", "Fire"): 4.5,      # 木火伤官 - 韧性结构
+                ("Fire", "Earth"): 2.5,     # 火土伤官
+                ("Earth", "Metal"): 4.5,    # 土金伤官 - 韧性结构
+            }
+
+            collapse_threshold = ELEM_THRESHOLDS.get((dm_elem, sg_elem), 2.0)
+            
+            # ============================================================
+            # [V1.0] 隐藏护盾量化 (Hidden Shield Quantification)
+            # 藏干中有财星 → SAI 削减 85%
+            # ============================================================
+            hidden_wealth_shield = 0.0
+            for p in points:
+                if p["type"] == "hidden" and p["god"] in ["正财", "偏财"] and not p.get("is_main", True):
+                    hidden_wealth_shield += p["energy"] * 0.85  # 中气/余气财星
+            
+            shield_multiplier = max(0.15, 1.0 - hidden_wealth_shield) if hidden_wealth_shield > 0 else 1.0
+
+            # 5. PERTURBATION TEST: Global field strength
+            total_guan_strength = sum(p["energy"] for p in points if p["god"] in ["正官", "七杀"])
             jump_rate = (total_guan_strength - natal_hidden_guan) / max(0.01, natal_hidden_guan) * 100
             
-            # 4. GEO-ADJUSTED STRESS
-            category = "真空超导 (Superconductor)"
-            stress = (0.1 + (total_guan_strength * 0.5)) * geo_factor
-            geo_status = "BOOST" if geo_factor > 1.0 else ("DAMPED" if geo_factor < 1.0 else "NEUTRAL")
+            # 6. STRESS CALCULATION with shield
+            base_stress = (0.1 + (total_guan_strength * 0.5)) * geo_factor * shield_multiplier
             
-            if jump_rate > 500:
+            # 7. CATEGORY DETERMINATION
+            if is_coherent:
+                category = "共振过载 (Resonant Overload)"
+                stress = base_stress * 0.5  # 共振态压力减半
+            elif jump_rate > 500:
                 category = "真空断裂 (Vacuum Rupture)"
-                stress = (1.25 + (jump_rate / 10000)) * geo_factor
+                stress = (collapse_threshold + (jump_rate / 10000)) * geo_factor * shield_multiplier
             elif total_guan_strength > 0.5:
                 category = "场强扰动 (Perturbed)"
+                stress = base_stress
+            else:
+                category = "真空超导 (Superconductor)"
+                stress = base_stress
+            
+            geo_status = "BOOST" if geo_factor > 1.0 else ("DAMPED" if geo_factor < 1.0 else "NEUTRAL")
 
             return {
                 "chart": chart,
@@ -285,10 +546,19 @@ class PatternScout:
                 "geo_status": geo_status,
                 "geo_element": geo_element,
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
-                "audit_mode": "SGSJ_SUPERCONDUCTOR_TRACK",
+                "audit_mode": "SGSJ_V1.0_PHASE4",
                 "voltage_pump": "ACTIVE" if any(p["energy"] > 2.0 and p["god"] in ["正官", "七杀"] for p in points) else "INACTIVE",
-                "pgb_advice": "建议注入'财星介质'（如：戊己土/壬癸水）建立超导泄压通道，预防 1.25 断裂。"
+                "pgb_advice": "建议注入'财星介质'（如：戊己土/壬癸水）建立超导泄压通道。",
+                # V1.0 Phase 4 新增参数
+                "dm_elem": dm_elem,
+                "sg_elem": sg_elem,
+                "collapse_threshold": f"{collapse_threshold:.2f}",
+                "hidden_wealth_shield": f"{hidden_wealth_shield:.2f}",
+                "shield_multiplier": f"{shield_multiplier:.2f}",
+                "resonance_state": resonance_state,
+                "external_guan_elem": external_guan_elem or "N/A"
             }
+
 
         # --- PGB Tracks (Refined) ---
         if pattern_id == "PGB_SUPER_FLUID_LOCK":

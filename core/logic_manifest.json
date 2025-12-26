@@ -20,7 +20,7 @@
         },
         "PATTERN_PHYSICS": {
             "id": "PATTERN_PHYSICS",
-            "name": "格局物理实验室 (PGB Pattern Lab)",
+            "name": "物理模型仿真 (Physics Model Simulation)",
             "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析。"
         }
     },
@@ -671,15 +671,36 @@
             "icon": "🏹",
             "theme": "PATTERN_PHYSICS",
             "type": "TOPIC",
-            "description": "基于 1.25 断裂模量的系统性崩坏模型。检测能量比超过阈值时的非线性应力爆发。",
+            "version": "2.1",
+            "description": "[V2.1 Master Protocol] 古代硬判据 + 五行克制系数 + 月令震源加权 + 动态护盾衰减的伤官见官物理失效模型。",
             "active": true,
             "linked_rules": [
-                "PH_SGJG_BREAK_POINT"
+                "PH_SGJG_COLLAPSE_THRESHOLD",
+                "PH_SGJG_SHIELD_AUDIT",
+                "PH_SGJG_GEO_IMPEDANCE",
+                "PH_SGJG_ELEMENTAL_CLASH",
+                "PH_SGJG_MONTH_CORE"
             ],
             "linked_metrics": [
-                "energy_ratio",
-                "breaking_modulus"
+                "sai_stress",
+                "collapse_rate",
+                "k_clash",
+                "month_core_mult",
+                "protection_effective"
             ],
+            "formula": "SAI = (SG_E × ZG_E × DistFactor × MonthMult × K_clash) / (Protection_effective + 1.0)",
+            "parameters": {
+                "collapse_threshold": 1.25,
+                "shield_effective_threshold": 1.5,
+                "injection_luck_weight": 0.5,
+                "injection_annual_weight": 1.0,
+                "month_core_multiplier": 1.25,
+                "distant_shield_decay_lambda": 0.3,
+                "k_clash_metal_wood": 1.4,
+                "k_clash_water_fire": 1.2,
+                "k_clash_default": 1.0
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
             "status": "CALIBRATED"
         },
         "MOD_102_PGB_SUPERFLUID": {
@@ -708,42 +729,36 @@
             "icon": "❄️",
             "theme": "PATTERN_PHYSICS",
             "type": "TOPIC",
-            "description": "[V14.8.4] 基于零阻力真空场的单极高压模型。研究流年扰动引发的真空断裂响应。支持大运/流年/GEO总线注入。",
+            "version": "1.0",
+            "description": "[V1.0 Phase 4] 五行差异化阈值 + 隐藏财星护盾 + 共振窗口检测的伤官伤尽物理模型。",
             "active": true,
             "status": "CALIBRATED",
             "linked_rules": [
                 "PH_SGSJ_VACUUM_RUPTURE",
-                "PH_SGSJ_SUPER_FIELD",
+                "PH_SGSJ_COHERENT_WINDOW",
+                "PH_SGSJ_HIDDEN_SHIELD",
+                "PH_SGSJ_ELEMENTAL_THRESHOLD",
                 "PH_SGSJ_GEO_CORRECTION"
             ],
             "linked_metrics": [
                 "purity",
                 "jump_rate",
                 "stress",
-                "geo_status"
+                "collapse_threshold",
+                "hidden_wealth_shield",
+                "resonance_state"
             ],
-            "goal": "筛选原局天干无官杀、地支藏干官杀极低的“真空超导”样本，并模拟外部官星注入时的应力跳变。",
-            "outcome": "生成 SAI 分布模拟、跳变率分析、GEO 地域影响报告。",
-            "layer": "PATTERN_PHYSICS",
-            "priority": 850,
-            "origin_trace": [
-                "V14.8.4_SGSJ_Superconductor",
-                "Topic_PGB_Vacuum_Field"
-            ],
-            "fusion_type": "CORE_TOPIC",
-            "used_algorithms": [
-                "PH_SGSJ_VACUUM_RUPTURE",
-                "PH_SGSJ_SUPER_FIELD",
-                "PH_SGSJ_GEO_CORRECTION",
-                "PH_3D_INDUCTION"
-            ],
-            "formula": "Purity = 1 - (Guan_Hidden / 3.0); JumpRate = (Total_Guan - Natal_Guan) / max(0.01, Natal_Guan) * 100; Stress = (0.1 + Total_Guan * 0.5) * GEO_Factor",
+            "formula": "Stress = (BaseStress × GEO × ShieldMult); ShieldMult = max(0.15, 1 - HiddenWealth); Threshold = f(DM_Elem, SG_Elem)",
             "parameters": {
                 "purity_threshold": 0.95,
                 "jump_rate_critical": 500,
-                "stress_rupture": 1.25,
-                "dim_coeff_protrude": 1.1,
-                "dim_coeff_hidden": 0.6
+                "threshold_metal_water": 1.25,
+                "threshold_wood_fire": 3.5,
+                "threshold_earth_metal": 3.5,
+                "threshold_water_wood": 2.5,
+                "threshold_fire_earth": 2.5,
+                "hidden_wealth_reduction": 0.85,
+                "resonance_stress_reduction": 0.5
             },
             "class": "core.trinity.core.engines.pattern_scout.PatternScout"
         }

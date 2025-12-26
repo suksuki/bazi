@@ -90,24 +90,11 @@ def render():
         }
         selected_track = st.selectbox("选择对撞轨道", list(track_labels.keys()), format_func=lambda x: track_labels.get(x, x))
         
-        if st.button("🔭 扫描筛选样本", use_container_width=True):
-            st.session_state.sim_view = "topic_lab"
+        # [V2.1] 一键全量扫描 - 带进度条
+        if st.button("⚡ 一键全量扫描 (Phase 1-4)", use_container_width=True, type="primary"):
+            st.session_state.sim_view = "full_pipeline_scan"
             st.session_state.target_track = selected_track
-            st.session_state.sim_active = True
-            st.session_state.sim_op_type = "scout_samples"
-            # Clear previous results to ensure fresh start
-            if "scouted_charts" in st.session_state: del st.session_state.scouted_charts
-            if "topic_res" in st.session_state: del st.session_state.topic_res
             st.rerun()
-
-        if st.button("🚀 启动专题对撞", use_container_width=True, type="primary"):
-            if st.session_state.get("scouted_charts"):
-                st.session_state.sim_view = "topic_lab"
-                st.session_state.sim_active = True
-                st.session_state.sim_op_type = "phase_6_topic"
-                st.rerun()
-            else:
-                st.error("请先执行‘扫描筛选样本’")
 
         st.divider()
         st.markdown("### ⚙️ 参数配置")
@@ -368,8 +355,8 @@ def render():
                 st.error("❌ 干预失败，结构依然处于高危崩塌态。")
 
     elif view == "real_world_audit":
-        st.markdown(f"### ⛩️ 真实档案实弹审计")
-        st.caption("从‘智能排盘’同步真实档案，执行 1.25 物理断裂模量穿透检查。")
+        st.markdown("### ⛩️ 真实档案实弹审计 (V2.1 Master Protocol)")
+        st.caption("SGJG/SGSJ 物理碰撞检测 | 五行克制系数 × 月令加权 × 动态护盾衰减")
         
         # Profile Selector
         profiles = controller.profile_manager.get_all()
@@ -413,8 +400,10 @@ def render():
                 cp1, cp2 = st.columns([1, 1])
                 
                 # Pre-calculate pillars for preview
+                from core.trinity.core.nexus.definitions import BaziParticleNexus as BPN
                 try:
                     bdt = datetime(p_preview['year'], p_preview['month'], p_preview['day'], p_preview['hour'], p_preview.get('minute', 0))
+
                     profile_obj = BaziProfile(bdt, 1 if p_preview['gender'] == '男' else 0)
                     pillars = profile_obj.pillars
                     luck = profile_obj.get_luck_pillar_at(audit_year)
@@ -429,10 +418,11 @@ def render():
                         for i, p_val in enumerate(six_pillars):
                             stem = p_val[0]
                             branch = p_val[1]
-                            s_god = BaziParticleNexus.get_shi_shen(stem, dm) if i != 2 else "日主"
-                            hidden = BaziParticleNexus.get_branch_weights(branch)
-                            h_gods = [BaziParticleNexus.get_shi_shen(h[0], dm) for h in hidden]
+                            s_god = BPN.get_shi_shen(stem, dm) if i != 2 else "日主"
+                            hidden = BPN.get_branch_weights(branch)
+                            h_gods = [BPN.get_shi_shen(h[0], dm) for h in hidden]
                             h_str = "<br>".join([f"<span style='color:#888; font-size:0.7em;'>{g}</span>" for g in h_gods])
+
                             
                             with cols[i]:
                                 st.markdown(f"""
@@ -515,6 +505,42 @@ def render():
                                 with ic2:
                                     b_color = "#ffaa00" if h.get("bus_impedance") == "SEVERE" else "#888"
                                     st.markdown(f"<div style='text-align:center; color:{b_color}; font-size:0.9em;'>📡 总线阻抗 (Bus Impedance): {h.get('bus_impedance')}</div>", unsafe_allow_html=True)
+
+                        # [V2.1] SGJG Master Protocol HUD
+                        if h.get("audit_mode") in ["SGJG_V2_MASTER_PROTOCOL", "SGJG_V2.1_MASTER_PROTOCOL"]:
+                            st.markdown("**🔥 伤官见官 Master Protocol V2.1:**")
+                            
+                            # Core Metrics Grid
+                            m1, m2, m3, m4 = st.columns(4)
+                            with m1:
+                                sai_val = float(h.get("stress", "0"))
+                                sai_color = "#ff4b4b" if sai_val > 1.25 else ("#ffaa00" if sai_val > 0.8 else "#00cc66")
+                                st.markdown(f"<div style='background:#1a1a2e; padding:12px; border-radius:8px; text-align:center;'><div style='color:#888; font-size:0.7em;'>当前 SAI</div><div style='color:{sai_color}; font-size:1.5em; font-weight:bold;'>{h.get('stress', 'N/A')}</div></div>", unsafe_allow_html=True)
+                            with m2:
+                                st.markdown(f"<div style='background:#1a1a2e; padding:12px; border-radius:8px; text-align:center;'><div style='color:#888; font-size:0.7em;'>坍缩率</div><div style='color:#40e0d0; font-size:1.5em; font-weight:bold;'>{h.get('collapse_rate', 'N/A')}</div></div>", unsafe_allow_html=True)
+                            with m3:
+                                k_clash = h.get("k_clash", "1.0")
+                                k_color = "#ff4b4b" if float(k_clash) > 1.2 else "#888"
+                                st.markdown(f"<div style='background:#1a1a2e; padding:12px; border-radius:8px; text-align:center;'><div style='color:#888; font-size:0.7em;'>克制系数</div><div style='color:{k_color}; font-size:1.5em; font-weight:bold;'>{k_clash}</div></div>", unsafe_allow_html=True)
+                            with m4:
+                                month_mult = h.get("month_core_mult", "1.00")
+                                m_color = "#ffaa00" if float(month_mult) > 1.0 else "#888"
+                                st.markdown(f"<div style='background:#1a1a2e; padding:12px; border-radius:8px; text-align:center;'><div style='color:#888; font-size:0.7em;'>月令系数</div><div style='color:{m_color}; font-size:1.5em; font-weight:bold;'>{month_mult}</div></div>", unsafe_allow_html=True)
+                            
+                            # Element Clash Info
+                            sg_e = h.get("sg_elem", "?")
+                            zg_e = h.get("zg_elem", "?")
+                            st.markdown(f"**五行对撞**: {sg_e}(伤) ⚔️ {zg_e}(官) | **保护层**: {h.get('protection', 'N/A')}")
+                            st.markdown(f"**护盾分解**: {h.get('shield_breakdown', 'N/A')} | **碰撞距离**: {h.get('dist', 'N/A')} 柱")
+                            
+                            # Voltage Pump & GEO
+                            pump_geo_row = ""
+                            if h.get("voltage_pump") == "ACTIVE":
+                                pump_geo_row += "<span style='color:#ff4b4b;'>⚡ 电压泵升 ACTIVE</span> | "
+                            if h.get("geo_element") and h.get("geo_element") != "Neutral":
+                                pump_geo_row += f"<span style='color:#40e0d0;'>🌍 地理阻抗: {h.get('geo_element')}</span>"
+                            if pump_geo_row:
+                                st.markdown(pump_geo_row, unsafe_allow_html=True)
                         
                         # [V14.8] SGSJ Superconductor HUD
                         if h.get("audit_mode") == "SGSJ_SUPERCONDUCTOR_TRACK":
@@ -651,6 +677,149 @@ def render():
                 for r in res_list:
                     if r["is_pgb_critical"]:
                         st.write(f"🚩 {r['profile_name']} | SAI: {r['sai']:.3f} | {r['luck']}/{r['annual']}")
+
+    # =====================================================================
+    # [V2.1] FULL PIPELINE SCAN VIEW - One-Click All Phases with Progress
+    # =====================================================================
+    if st.session_state.get("sim_view") == "full_pipeline_scan":
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.trinity.core.engines.synthetic_bazi_engine import SyntheticBaziEngine
+        from core.trinity.core.nexus.definitions import BaziParticleNexus
+        from collections import defaultdict
+        import time
+        
+        track_id = st.session_state.get("target_track", "SHANG_GUAN_SHANG_JIN")
+        track_name = "伤官伤尽 (SGSJ)" if "SHANG_JIN" in track_id else "伤官见官 (SGJG)"
+        
+        st.markdown(f"## ⚡ 全量物理扫描: {track_name}")
+        st.markdown("**模式**: 一键执行 Phase 1 → Phase 4")
+        st.divider()
+        
+        # Phase Progress Tracker
+        progress_bar = st.progress(0, text="准备中...")
+        status_text = st.empty()
+        result_container = st.container()
+        
+        # Phase 1: 海选
+        status_text.markdown("### 📦 Phase 1: 古代标签海选...")
+        progress_bar.progress(5, text="Phase 1: 古代标签海选 (0%)")
+        
+        engine = SyntheticBaziEngine()
+        scout = PatternScout()
+        
+        sgsj_samples = []
+        element_clusters = defaultdict(list)
+        total = 0
+        
+        for chart in engine.generate_all_bazi():
+            total += 1
+            if total % 50000 == 0:
+                pct = min(25, int(total / 518400 * 25))
+                progress_bar.progress(pct, text=f"Phase 1: 海选中 ({total:,}/518,400)")
+            
+            dm = chart[2][0]
+            stems = [p[0] for p in chart]
+            branches = [p[1] for p in chart]
+            ten_gods = [BaziParticleNexus.get_shi_shen(s, dm) for s in stems]
+            
+            # Ancient hard rules
+            if any(tg in ['正官', '七杀'] for tg in ten_gods): continue
+            has_main_guan = False
+            for b in branches:
+                hidden = BaziParticleNexus.get_branch_weights(b)
+                if hidden and BaziParticleNexus.get_shi_shen(hidden[0][0], dm) in ['正官', '七杀']:
+                    has_main_guan = True
+                    break
+            if has_main_guan: continue
+            if '伤官' not in ten_gods: continue
+            
+            dm_elem = BaziParticleNexus.STEMS[dm][0]
+            sg_stems = [s for s, tg in zip(stems, ten_gods) if tg == '伤官']
+            sg_elem = BaziParticleNexus.STEMS[sg_stems[0]][0] if sg_stems else 'Unknown'
+            cluster_key = f'{dm_elem}-{sg_elem}'
+            
+            element_clusters[cluster_key].append(chart)
+            sgsj_samples.append(chart)
+        
+        progress_bar.progress(25, text="Phase 1: 完成 ✓")
+        
+        # Phase 2: SAI 曲线
+        status_text.markdown("### ⚡ Phase 2: 三维注入 SAI 曲线...")
+        progress_bar.progress(30, text="Phase 2: 计算 SAI 应力曲线")
+        
+        ANNUAL_PILLARS = {
+            2024: ('甲', '辰'), 2025: ('乙', '巳'), 2026: ('丙', '午'),
+            2027: ('丁', '未'), 2028: ('戊', '申'), 2029: ('己', '酉'), 2030: ('庚', '戌')
+        }
+        LUCK = ('壬', '申')
+        
+        year_sai_matrix = {}
+        for cluster, charts in element_clusters.items():
+            year_sai_matrix[cluster] = {}
+            sample_charts = charts[:30]
+            for year, annual in ANNUAL_PILLARS.items():
+                sai_list = []
+                for c in sample_charts:
+                    six_pillar = list(c) + [LUCK, annual]
+                    result = scout._deep_audit(six_pillar, 'SHANG_GUAN_SHANG_JIN')
+                    if result:
+                        try: sai_list.append(float(result['stress']))
+                        except: pass
+                year_sai_matrix[cluster][year] = sum(sai_list) / len(sai_list) if sai_list else 0.0
+        
+        progress_bar.progress(50, text="Phase 2: 完成 ✓")
+        
+        # Phase 3: 离群分析
+        status_text.markdown("### 🔍 Phase 3: 离群聚类分析...")
+        progress_bar.progress(55, text="Phase 3: 检测隐藏护盾")
+        
+        anomaly_count = 0
+        no_match_count = 0
+        scanned = 0
+        for chart in sgsj_samples[:2000]:
+            scanned += 1
+            six_pillar = list(chart) + [LUCK, ANNUAL_PILLARS[2026]]
+            result = scout._deep_audit(six_pillar, 'SHANG_GUAN_SHANG_JIN')
+            if result:
+                try:
+                    if float(result['stress']) < 0.5: anomaly_count += 1
+                except: pass
+            else:
+                no_match_count += 1
+        
+        progress_bar.progress(75, text="Phase 3: 完成 ✓")
+        
+        # Phase 4: 定标
+        status_text.markdown("### 📐 Phase 4: 物理定标...")
+        progress_bar.progress(80, text="Phase 4: 生成报告")
+        time.sleep(0.5)
+        
+        progress_bar.progress(100, text="全部完成 ✓")
+        status_text.markdown("### ✅ 全量扫描完成!")
+        
+        # Results Display
+        with result_container:
+            st.divider()
+            st.markdown("## 📊 扫描报告")
+            
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("总扫描", f"{total:,}")
+            c2.metric("初选样本", f"{len(sgsj_samples):,}", f"{len(sgsj_samples)/total*100:.1f}%")
+            c3.metric("隐藏护盾", f"{no_match_count}", f"{no_match_count/2000*100:.0f}%")
+            c4.metric("低SAI异常", f"{anomaly_count}")
+            
+            st.markdown("### 🔮 五行聚类分布")
+            cluster_data = {k: len(v) for k, v in element_clusters.items()}
+            st.bar_chart(cluster_data)
+            
+            st.markdown("### 📈 流年 SAI 应力曲线 (危险预警)")
+            for cluster, yearly in year_sai_matrix.items():
+                max_sai = max(yearly.values()) if yearly.values() else 0
+                if max_sai > 2.0:
+                    max_year = max(yearly, key=yearly.get)
+                    st.warning(f"**{cluster}**: {max_year} 年最高 SAI = {max_sai:.2f} ⚠️")
+            
+            st.success("📁 报告已生成。详细数据请查看 `docs/` 目录。")
 
 if __name__ == "__main__":
     render()

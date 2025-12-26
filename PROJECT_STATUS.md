@@ -1,7 +1,7 @@
-**Current Version: V14.1.8 (SGSJ Full Spectrum Edition)**
-**Date: 2025-12-25**
+**Current Version: V14.2.0 (SGJG Master Protocol Edition)**
+**Date: 2025-12-26**
 
-## 🏆 Antigravity V14.1.8 Release Summary
+## 🏆 Antigravity V14.2.0 Release Summary
 
 ### ❄️ SGSJ Superconductor Model (伤官伤尽专题) - COMPLETE
 - **Full Spectrum Audit**: Stems + Hidden Stems with dimensional coefficients (0.6/1.1).
@@ -9,11 +9,13 @@
 - **Vacuum Rupture Detection**: Jump Rate > 500% triggers 1.25 SAI breakdown.
 - **Purity Threshold**: 0.95 (natal hidden Guan/Sha < 0.15 energy).
 
-### 🔥 SGJG 3D Induction Model (伤官见官专题) - COMPLETE  
-- **Holographic Point Strategy**: All stems + all hidden stems scanned.
-- **Dimensional Coupling**: Protrude (透干) = 1.1x, Hidden (伏兵) = 0.6x.
-- **Spatial Impedance**: Protection decay based on distance to collision core.
-- **Dual-Track Audit**: Standard vs. Spatial comparative analytics.
+### 🔥 SGJG V2.0 Master Protocol (伤官见官专题) - UPGRADED
+- **Phase 1 古代硬判据**: 原局天干必须有"伤官"，不接受"食神"替代。
+- **Phase 2 三维注入权重**: 大运 0.5, 流年 1.0, GEO 地理阻抗动态调整。
+- **Phase 3 碰撞检测**: 伤官能量 × 官星能量 × 距离因子。
+- **Phase 4 护盾审计**: 财星 0.8 权重，印星 0.5 权重，远程衰减 85%。
+- **Phase 5 坍缩阈值**: SAI > 1.25 判定结构坍缩。
+- **Phase 6 分类**: 高压击穿 / 结构坍缩 / 防御虚化 / 应力过载。
 
 ### 🛡️ Inline Intervention Lab - NEW
 - **In-Place Intervention**: No page jump, expands directly under pattern hit.
