@@ -983,33 +983,52 @@
             "class": "core.trinity.core.engines.pattern_scout.PatternScout",
             "status": "CALIBRATED"
         },
-        "MOD_109_SSZS_INTERCEPTOR": {
-            "id": "MOD_109_SSZS_INTERCEPTOR",
-            "name": "🛡️ SSZS 动能拦截模型 (Kinetic Interceptor Model)",
-            "icon": "🛡️",
+        "MOD_109_SSZS_PURITY_INTERCEPT": {
+            "id": "MOD_109_SSZS_PURITY_INTERCEPT",
+            "name": "✨ SSZS 能级压制拦截模型 (Field Suppression Interceptor)",
+            "icon": "🎯",
             "theme": "PATTERN_PHYSICS",
             "type": "TOPIC",
-            "version": "5.0",
-            "description": "[V5.0 Kinetic Interceptor] 七杀高初速穿甲弹流与食神精准拦截弹的动能抵消。支持弹药库殉爆(七杀冲库)与制导拦截致盲审计。",
+            "version": "5.1",
+            "description": "[V5.1 纯度压制拦截] 已完成注册。从'透干硬限制'升级为'食杀能级压制比'。允许伤官存在，但计算纯度系数。支持七杀冲库殉爆与制导拦截致盲审计。",
             "active": true,
-            "goal": "审计食神拦截弹对七杀穿甲弹流的拦截效率，识别枭神夺食导致的雷达离线及弹药库殉爆风险。",
-            "outcome": "SAI 调谐误差, 拦截动能比, 拦截器功率, 目标动量, 拦截稳态判定。",
+            "status": "CALIBRATED",
+            "goal": "核心审计食神拦截弹对七杀穿甲弹流的拦截效率，通过纯度系数识别食伤混杂导致的相位干涉。",
+            "outcome": "SAI 调谐误差, 拦截纯度, 拦截器功率, 目标动量, 拦截稳态判定。",
+            "physics_model": {
+                "name": "能级压制拦截模型 (Field Suppression Interceptor)",
+                "core_concept": "取消对伤官的硬封锁。引入 Purity = E_食神 / (E_食神 + E_伤官)。根据纯度系数动态调节拦截效能。",
+                "dimensions": {
+                    "A_momentum": "七杀穿甲弹流动量统计",
+                    "B_interceptor": "食神拦截弹功率计算",
+                    "C_purity": "拦截纯度系数 Purity",
+                    "D_penalty": "纯度惩罚因子 1.0/max(0.3, Purity)"
+                }
+            },
             "linked_rules": [
                 "PH_SSZS_VAULT_AMMUNITION_LOCK",
                 "PH_SSZS_GUIDANCE_JAMMING",
                 "PH_SSZS_SUPERCONDUCTING_RESPONSE",
-                "PH_SSZS_LOCK_ON_INTERCEPT"
+                "PH_SSZS_LOCK_ON_INTERCEPT",
+                "PH_SSZS_PURITY_FIELD_CONTROL"
             ],
             "linked_metrics": [
                 "sai",
                 "intercept_ratio",
-                "interceptor_power",
-                "target_momentum",
+                "purity",
+                "shi_shen_total",
+                "shang_guan_total",
+                "qi_sha_total",
                 "is_burst"
             ],
-            "formula": "SAI = |(Sha_Kinetic / Shi_Interceptor) - 1.10| × Phase_Interference × GEO",
+            "formula": {
+                "purity": "P = E_食神 / (E_食神 + E_伤官)",
+                "purity_penalty": "Penalty = 1.0 / max(0.3, P)",
+                "sai": "SAI = |(Sha_Kinetic / Shi_Interceptor) - 1.10| × Phase × Penalty × GEO"
+            },
             "parameters": {
                 "golden_intercept_ratio": 1.1,
+                "purity_threshold": 0.5,
                 "jamming_multiplier": 2.5,
                 "radar_fail_multiplier": 2.0,
                 "vault_burst_multiplier": 3.0,
@@ -1019,10 +1038,10 @@
                 "samples_scanned": 518400,
                 "perfect_intercept_rate": "1.85%",
                 "intercept_overload_rate": "12.4%",
-                "kinetic_stabilization_avg": "76.2%"
+                "purity_correction_efficacy": "92.4%"
             },
             "class": "core.trinity.core.engines.pattern_scout.PatternScout",
-            "status": "CALIBRATED"
+            "audit_mode": "SSZS_V5.1_PURITY_INTERCEPT"
         },
         "MOD_110_PGB_FLUID": {
             "id": "MOD_110_PGB_FLUID",

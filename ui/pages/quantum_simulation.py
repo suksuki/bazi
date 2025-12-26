@@ -1103,10 +1103,15 @@ def render():
             "SHANG_GUAN_SHANG_JIN": "⚔️",
             "YANG_REN_JIA_SHA": "🗡️",
             "XIAO_SHEN_DUO_SHI": "🦉",
+            "SHI_SHEN_ZHI_SHA": "🎯",
+            "CAI_GUAN_XIANG_SHENG": "💰",
+            "SHANG_GUAN_PEI_YIN": "📚",
             "CYGS_COLLAPSE": "🕳️",
             "HGFG_TRANSMUTATION": "⚗️",
             "SSSC_AMPLIFIER": "🌱",
-            "JLTG_CORE_ENERGY": "🔥"
+            "JLTG_CORE_ENERGY": "🔥",
+            "PGB_SUPER_FLUID_LOCK": "❄️",
+            "PGB_BRITTLE_TITAN": "🧱"
         }
         
         TOPIC_IDS = [

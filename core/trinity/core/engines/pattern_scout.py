@@ -80,6 +80,14 @@ class PatternScout:
         """[V14.8.4] Deep audit with GEO field correction support."""
         if len(chart) < 4: return None
         
+        # [V4.2.1] Pattern ID 别名映射 (解决命名空间不一致问题)
+        PATTERN_ID_ALIASES = {
+            "CAI_GUAN_XIANG_SHENG": "CAI_GUAN_XIANG_SHENG_V4",
+            "PGB_SUPER_FLUID_LOCK": "PGB_ULTRA_FLUID",
+            "PGB_SUPERFLUID_LOCK": "PGB_ULTRA_FLUID",
+        }
+        pattern_id = PATTERN_ID_ALIASES.get(pattern_id, pattern_id)
+        
         # Extract GEO correction factor if provided
         geo_element = "Neutral"
         geo_factor = 1.0
@@ -470,16 +478,44 @@ class PatternScout:
             }
             
 
-
         if pattern_id == "SHI_SHEN_ZHI_SHA":
-            # [ASE PHASE 5.0] SSZS V5.0: Kinetic Interceptor Model
+            # ============================================================
+            # [ASE PHASE 5.1] SSZS V5.1: 能级压制拦截模型
+            # V5.1 升级: 从"透干硬限制"改为"食杀能级压制比"
+            # 允许食神或七杀在藏干中存在，计算纯度系数
+            # ============================================================
             luck_pillar = chart[4] if len(chart) >= 5 else ('', '')
             annual_pillar = chart[5] if len(chart) >= 6 else ('', '')
 
-            # 1. Topology Screening (Natal Stems must have Eating God and Seven Killings)
-            natal_tg = ten_gods[:4]
-            if "食神" not in natal_tg: return None
-            if "七杀" not in natal_tg: return None
+            # 1. 能量统计 (包含天干和藏干)
+            shi_shen_total = 0.0  # 食神能量
+            shang_guan_total = 0.0  # 伤官能量
+            qi_sha_total = 0.0  # 七杀能量
+            
+            for i in range(4):
+                st, br = chart[i]
+                tg = ten_gods[i]
+                
+                # 天干能量
+                if tg == "食神": shi_shen_total += 3.0
+                elif tg == "伤官": shang_guan_total += 3.0
+                elif tg == "七杀": qi_sha_total += 3.0
+                
+                # 藏干能量
+                hidden = BaziParticleNexus.get_branch_weights(br)
+                for hs, w in hidden:
+                    hg = BaziParticleNexus.get_shi_shen(hs, dm)
+                    energy = w / 10.0
+                    if hg == "食神": shi_shen_total += energy
+                    elif hg == "伤官": shang_guan_total += energy
+                    elif hg == "七杀": qi_sha_total += energy
+            
+            # 2. 触发条件：必须有食神和七杀（天干或藏干）
+            if shi_shen_total < 1.0: return None  # 食神能量不足
+            if qi_sha_total < 1.0: return None  # 七杀能量不足
+            
+            # 3. 纯度系数计算: Purity = E_食神 / (E_食神 + E_伤官)
+            purity = shi_shen_total / max(0.1, shi_shen_total + shang_guan_total)
 
             STAGES = ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"]
             STAGE_MULT = {
@@ -568,12 +604,16 @@ class PatternScout:
             # Target ratio: 1.10 (Golden Intercept)
             ratio = sha_kinetic / max(0.1, shi_interceptor)
             tuning_error = abs(ratio - 1.10)
-            sai = tuning_error * phase_interference * geo_factor
+            
+            # [V5.1] 引入纯度系数: 纯度越低，SAI越高
+            purity_penalty = 1.0 / max(0.3, purity)  # 纯度<0.5时开始惩罚
+            sai = tuning_error * phase_interference * purity_penalty * geo_factor
 
             # 6. Status Categories
             if is_sha_burst: category = "KINETIC_OVERLOAD (殉爆/拦截崩溃)"
             elif is_jammed: category = "GUIDANCE_LOST (拦截致盲/失控)"
             elif is_circuit_fail: category = "RADAR_OFFLINE (绝缘崩溃/雷达离线)"
+            elif purity < 0.5: category = "IMPURE_INTERCEPT (食伤混杂/相位干涉)"
             elif tuning_error < 0.2 and phase_interference < 1.0: category = "PRECISE_INTERCEPT (定点拦截/完美制导)"
             elif ratio > 2.0: category = "INTERCEPT_FAILURE (拦截动能不足)"
             else: category = "SATURATED_DEFENSE (饱和防御态)"
@@ -585,10 +625,14 @@ class PatternScout:
                 "intercept_ratio": f"{ratio:.2f}",
                 "interceptor_power": f"{shi_interceptor:.2f}",
                 "target_momentum": f"{sha_kinetic:.2f}",
+                "shi_shen_total": f"{shi_shen_total:.2f}",
+                "shang_guan_total": f"{shang_guan_total:.2f}",
+                "qi_sha_total": f"{qi_sha_total:.2f}",
+                "purity": f"{purity*100:.1f}%",
                 "is_burst": "YES" if is_sha_burst else "NO",
                 "is_jammed": "YES" if is_jammed else "NO",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
-                "audit_mode": "SSZS_V5.0_INTERCEPTOR_MODEL",
+                "audit_mode": "SSZS_V5.1_PURITY_INTERCEPT",
                 "topic_name": "食神制杀 (SSZS)",
                 "stress": f"{sai:.2f}"
             }
