@@ -125,17 +125,38 @@ class PatternScout:
         stems = [p[0] for p in chart]
         branches = [p[1] for p in chart]
         
-        # [V4.2.6] 环境变量标准提取
-        luck_p = geo_context.get("luck_pillar", "甲子") if geo_context else "甲子"
-        annual_p = geo_context.get("annual_pillar", "甲子") if geo_context else "甲子"
+        # [V4.2.6] 环境变量标准提取 (支持多源：geo_context 或 chart 扩展位)
+        # 统一规范为 (Stem, Branch) TUPLE
+        def _to_tuple(p):
+            if isinstance(p, tuple) and len(p) >= 2: return p
+            if isinstance(p, list) and len(p) >= 2: return (p[0], p[1])
+            if isinstance(p, str) and len(p) >= 2 and p != "未知大运" and p != "未知":
+                return (p[0], p[1])
+            return ('', '')
+
+        luck_pillar = geo_context.get("luck_pillar") if geo_context else None
+        if not luck_pillar:
+            luck_pillar = chart[4] if len(chart) >= 5 else ('', '')
+            
+        annual_pillar = geo_context.get("annual_pillar") if geo_context else None
+        if not annual_pillar:
+            annual_pillar = chart[5] if len(chart) >= 6 else ('', '')
+            
+        # 标准化
+        luck_p = _to_tuple(luck_pillar)
+        annual_p = _to_tuple(annual_pillar)
         
+        # 兼容性别名 (用于各 MOD 内部)
+        luck_pillar = luck_p
+        annual_pillar = annual_p
+        
+        # 提取十神序列 (仅针对原本的支，不包含环境注入，除非显式需要)
+        # natal + injected (if exist)
         ten_gods = [BaziParticleNexus.get_shi_shen(s, dm) for s in stems]
+        # 如果 stems 包含环境 pillars，这里已经处理了
         
         if pattern_id == "SHANG_GUAN_JIAN_GUAN":
             # [ASE PHASE 4.1] SGGG V4.1: Gate Breakdown Model
-            # 保持向后兼容性封装
-            luck_pillar = luck_p
-            annual_pillar = annual_p
 
             # 1. Topology Screening (Natal Stems must have both SG and Officer)
             natal_tg = ten_gods[:4]
@@ -390,8 +411,6 @@ class PatternScout:
             # - 不再要求原局完全无官杀，而是要求伤官能级压制比 >= 12:1
             # - 当任何官杀粒子进入时，被高能伤官场"气化/相变"
             # ============================================================
-            luck_pillar = chart[4] if len(chart) >= 5 else ('', '')
-            annual_pillar = chart[5] if len(chart) >= 6 else ('', '')
             
             # ===== 维度 A: 基础拓扑筛选 =====
             # 必须有伤官存在（攻击源）
@@ -434,9 +453,8 @@ class PatternScout:
             suppression_ratio = sg_total / max(0.01, guan_total)
             is_vaporized = suppression_ratio >= 12.0  # 气化态判定
             
-            # 如果压制比不够，且官杀能量显著，则不构成伤尽
-            if suppression_ratio < 3.0 and guan_total > 1.0:
-                return None  # 官杀未被压制，不构成伤尽格局
+            # 如果压制比不够，且官杀能量显著，格局进入“崩溃边缘”
+            is_pattern_collapsed = suppression_ratio < 3.0 and guan_total > 1.0
             
             # ===== 维度 D: 日主电源稳定性 =====
             # 公式: Source_Stability = E_印比 / E_伤官
@@ -464,6 +482,8 @@ class PatternScout:
             
             if is_self_burn:
                 base_sai *= 5.0  # 自燃风险
+            if is_pattern_collapsed:
+                base_sai *= 15.0 # 致命风险：见官则祸
             if not intercept_success and incoming_guan > 0:
                 base_sai *= (3.0 + incoming_guan)  # 拦截失败风险
             
@@ -472,7 +492,9 @@ class PatternScout:
             sai = base_sai * wealth_factor * geo_factor
             
             # ===== 维度 G: 状态分类 =====
-            if is_vaporized and source_stability >= 0.5:
+            if is_pattern_collapsed:
+                category = "FIELD_COLLAPSE (气化场崩塌/见官则祸)"
+            elif is_vaporized and source_stability >= 0.5:
                 if incoming_guan > 0 and not intercept_success:
                     category = "VAPORIZATION_OVERLOAD (气化过载/拦截失败)"
                 elif incoming_guan > 0 and intercept_success:
@@ -1298,7 +1320,10 @@ class PatternScout:
             
             if not target_partner: return None
             
-            goal_elem, sub_pkg = TRANSFORM_GOAL.get((dm, target_partner))
+            pair_info = TRANSFORM_GOAL.get((dm, target_partner))
+            if not pair_info: return None
+            
+            goal_elem, sub_pkg = pair_info
 
             # 2. Catalytic Resonance (Month Branch Support)
             month_br = branches[1]
@@ -1329,7 +1354,7 @@ class PatternScout:
                 is_reversed = True
             
             # c) Breaking the pair (合去化神)
-            if PAIRS.get(annual_p[0]) in [dm, target_partner]:
+            if annual_p[0] and PAIRS.get(annual_p[0]) in [dm, target_partner]:
                 is_reversed = True
 
             # 5. Integrated SAI Calculation

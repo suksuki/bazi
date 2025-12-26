@@ -58,6 +58,23 @@ def render():
     if "sim_view" not in st.session_state:
         st.session_state.sim_view = "dashboard"
 
+    # --- [V4.2] 物理模型注册表 (Shared Topic Registry) ---
+    TRACK_ICONS = {
+        "SHANG_GUAN_JIAN_GUAN": "🔥",
+        "SHANG_GUAN_SHANG_JIN": "⚔️",
+        "YANG_REN_JIA_SHA": "🗡️",
+        "XIAO_SHEN_DUO_SHI": "🦉",
+        "CAI_GUAN_XIANG_SHENG": "🚀",
+        "SHANG_GUAN_PEI_YIN": "📚",
+        "PGB_ULTRA_FLUID": "🧊",
+        "PGB_BRITTLE_TITAN": "🧱",
+        "CYGS_COLLAPSE": "🕳️",
+        "HGFG_TRANSMUTATION": "⚗️",
+        "SSSC_AMPLIFIER": "🌱",
+        "JLTG_CORE_ENERGY": "🔥"
+    }
+    TRACK_IDS = list(TRACK_ICONS.keys())
+
     # --- 侧边栏：核心控制 ---
     with st.sidebar:
         st.markdown("### 🧬 系统导航")
@@ -77,30 +94,10 @@ def render():
             st.session_state.sim_view = "real_world_audit"
             st.rerun()
 
-        if st.button("📈 命运时间线扫描", use_container_width=True):
-            st.session_state.sim_view = "lifespan_scan"
-            st.rerun()
-
         st.divider()
         st.markdown("### 📑 物理模型仿真")
         
         # 使用翻译工具类
-        TRACK_ICONS = {
-            "SHANG_GUAN_JIAN_GUAN": "🔥",
-            "SHANG_GUAN_SHANG_JIN": "⚔️",
-            "YANG_REN_JIA_SHA": "🗡️",
-            "XIAO_SHEN_DUO_SHI": "🦉",
-            "CAI_GUAN_XIANG_SHENG": "🚀",
-            "SHANG_GUAN_PEI_YIN": "⚖️",
-            "PGB_SUPER_FLUID_LOCK": "🧊",
-            "PGB_BRITTLE_TITAN": "🗿",
-            "CYGS_COLLAPSE": "🕳️",
-            "HGFG_TRANSMUTATION": "⚗️",
-            "SSSC_AMPLIFIER": "🌱",
-            "JLTG_CORE_ENERGY": "🔥"
-        }
-        
-        TRACK_IDS = list(TRACK_ICONS.keys())
         
         def format_track(track_id: str) -> str:
             icon = TRACK_ICONS.get(track_id, "")
@@ -205,22 +202,6 @@ def render():
                     st.session_state.inter_bazi, base_ctx, st.session_state.inter_params
                 )
                 st.session_state.inter_res = inter_res
-            elif sim_op_type == "lifespan_topic_scan":
-                p = st.session_state.get("lifespan_profile")
-                topic_ids = st.session_state.get("lifespan_topics", [])
-                max_age = st.session_state.get("lifespan_max_age", 100)
-                
-                dt = datetime(p['year'], p['month'], p['day'], p['hour'], p.get('minute', 0))
-                po = BaziProfile(dt, 1 if p['gender'] == '男' else 0)
-                
-                scan_res = controller.run_lifespan_topic_scan(
-                    po, topic_ids, max_age,
-                    progress_callback=lambda curr, tot, stats: (
-                        progress_bar.progress(curr / tot),
-                        status.write(f"🔮 扫描中: {curr}岁 / {tot}岁")
-                    )
-                )
-                st.session_state.lifespan_scan_result = scan_res
                 
             st.session_state.sim_active = False
             status.update(label="✅ 运算完成", state="complete", expanded=False)
@@ -426,16 +407,6 @@ def render():
             audit_year = st.number_input("六柱对撞目标流年", 1900, 2100, default_year, key="audit_year_val")
             st.session_state.audit_year = audit_year
 
-        if st.button("🚀 启动单兵实弹对撞", use_container_width=True, type="primary"):
-            p = next((prof for prof in profiles if prof['id'] == selected_profile_id), None)
-            if p:
-                st.session_state.sim_active = True
-                st.session_state.sim_op_type = "single_real_audit"
-                st.session_state.selected_audit_profile = p
-                # Important: Use the city from the preview logic (might be overridden)
-                st.session_state.selected_audit_city = st.session_state.get("audit_city_override", p.get("city", "Beijing"))
-                st.session_state.audit_year = audit_year
-                st.rerun()
 
         # --- PREVIEW CARD (重构版 V3.0) ---
         p_preview = next((prof for prof in profiles if prof['id'] == selected_profile_id), None)
@@ -466,9 +437,9 @@ def render():
                 p_labels = ["年", "月", "日", "时", "运", "岁"]
                 raw_six = [pillars['year'], pillars['month'], pillars['day'], pillars['hour'], luck_pillar, annual_pillar]
                 
-                for i, p_val in enumerate(raw_six):
-                    stem = p_val[0]
-                    branch = p_val[1]
+                for i, p_data in enumerate(raw_six):
+                    stem = p_data[0]
+                    branch = p_data[1]
                     s_god = BPN.get_shi_shen(stem, dm) if i != 2 else "日主"
                     hidden = BPN.get_branch_weights(branch)
                     h_gods = [BPN.get_shi_shen(h[0], dm) for h in hidden]
@@ -526,30 +497,19 @@ def render():
                             city_idx = 0
                         selected_city = st.selectbox("🎯 地理背景场", options=city_list, index=city_idx, key="audit_city_override")
                         
-                        if st.button("🔍 深度格局鉴定", use_container_width=True):
-                            st.session_state.sim_active = True
-                            st.session_state.sim_op_type = "specialized_deep_scan"
-                            st.session_state.selected_audit_profile = p_preview
-                            st.session_state.persistent_audit_profile_id = selected_profile_id
-                            st.session_state.audit_year = audit_year
-                            st.rerun()
                 
                 # ========== 第三阶段：全量扫描区域 ==========
                 st.divider()
                 st.markdown("### 🔬 全量程物理扫描 (Full Pipeline Scan)")
                 
-                if st.button("🚀 一键全量扫描 (All V4.1 Models)", use_container_width=True, type="primary"):
+                if st.button("🚀 启动全量深度审计 (Deep Audit All MODs)", use_container_width=True, type="primary"):
                     st.session_state.show_pipeline_res = True
-                    st.rerun()
-                
-                if st.session_state.get("show_pipeline_res") and pillars:
-                    with st.spinner("正在对所有 V4.1 物理模型进行并发审计..."):
-                        modes_to_check = [
-                            "SSSC_AMPLIFIER", "JLTG_CORE_ENERGY", 
-                            "CYGS_COLLAPSE", "HGFG_TRANSMUTATION",
-                            "SHANG_GUAN_JIAN_GUAN", "SHANG_GUAN_SHANG_JIN",
-                            "PGB_ULTRA_FLUID", "PGB_BRITTLE_TITAN"
-                        ]
+                    # Reset results
+                    st.session_state.pipeline_hits = []
+                    
+                    with st.spinner("正在对所有物理仿真专题进行并发审计..."):
+                        # 只审计物理模型仿真主题里面注册了的专题
+                        modes_to_check = TRACK_IDS
                         
                         found_patterns = []
                         full_chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour'], luck_pillar, annual_pillar]
@@ -561,33 +521,75 @@ def render():
                             try:
                                 res = scout._deep_audit(full_chart, mode)
                                 if res:
+                                    # Inject pillars and other context for display
+                                    res["six_pillars"] = ["".join(p) for p in full_chart]
+                                    res["city"] = st.session_state.get("audit_city_override", p_preview.get("city", "Beijing"))
                                     found_patterns.append(res)
                             except:
-                                pass  # 忽略单个模型的错误
+                                pass
                         
                         if found_patterns:
+                            # 按照 SAI 排序
                             found_patterns.sort(key=lambda x: float(x.get('stress', 0)), reverse=True)
-                            st.success(f"检测到 {len(found_patterns)} 个物理格局")
+                        st.session_state.pipeline_hits = found_patterns
+                    st.rerun()
+                
+                # --- RESULTS DISPLAY (Consolidated HUDs) ---
+                if st.session_state.get("show_pipeline_res"):
+                    hits = st.session_state.get("pipeline_hits", [])
+                    if not hits:
+                        st.info("💡 在当前物理模型注册表中未发现显著共振点。")
+                    else:
+                        st.success(f"📡 深度审计完成：检测到 {len(hits)} 个物理格局命中。")
+                        for idx, h in enumerate(hits):
+                            sai_val = float(h.get('stress', 0))
+                            color = "#ff4b4b" if sai_val > 2.0 else ("#ffaa00" if sai_val > 1.25 else "#00cc66")
                             
-                            for idx, pat in enumerate(found_patterns[:5]):
-                                sai_val = float(pat.get('stress', 0))
-                                color = "#ff4b4b" if sai_val > 2.0 else ("#ffaa00" if sai_val > 1.0 else "#00cc66")
-                                st.markdown(f"""
-                                <div style='background:#1a1a2e; border:1px solid #333; padding:12px; border-radius:8px; margin-bottom:8px;'>
-                                    <div style='display:flex; justify-content:space-between; align-items:center;'>
-                                        <div>
-                                            <div style='font-weight:bold; color:#fff; font-size:1.1em;'>{pat.get('topic_name', 'Unknown')}</div>
-                                            <div style='font-size:0.85em; color:#888; margin-top:4px;'>{pat.get('category', '')}</div>
-                                        </div>
-                                        <div style='text-align:right;'>
-                                            <div style='color:{color}; font-weight:bold; font-size:1.4em;'>SAI {sai_val:.2f}</div>
-                                            <div style='font-size:0.7em; color:#666;'>应力指数</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                        else:
-                            st.info("💡 未检测到显著的物理构型格局")
+                            with st.expander(f"🧬 {h.get('topic_name', 'Unknown')} | SAI: {sai_val:.2f}", expanded=(idx==0)):
+                                # UI Formatting
+                                col_top1, col_top2 = st.columns([2, 1])
+                                with col_top1:
+                                    st.markdown(f"**格局分类:** `{h.get('category', 'MATCH')}`")
+                                    st.markdown(f"**对撞六柱:** `{ ' '.join(h.get('six_pillars', [])) }`")
+                                with col_top2:
+                                    st.markdown(f"<div style='text-align:right;'><span style='color:{color}; font-size:1.8em; font-weight:bold;'>SAI {sai_val:.2f}</span><br><span style='color:#666; font-size:0.7em;'>量子应力载荷</span></div>", unsafe_allow_html=True)
+                                
+                                st.divider()
+                                # 2.1 [ALIGNED] Master Protocol HUD Injection
+                                audit_mode = h.get("audit_mode", "")
+                                
+                                if audit_mode in ["SGJG_V2_MASTER_PROTOCOL", "SGJG_V2.1_MASTER_PROTOCOL", "SGGG_V4.1_GATE_BREAKDOWN", "SGGG_V4.2_GATE_BREAKDOWN"]:
+                                    st.markdown("**🔥 伤官见官 Master Protocol:**")
+                                    m1, m2, m3 = st.columns(3)
+                                    m1.metric("当前 SAI", h.get("stress", "N/A"))
+                                    m2.metric("坍缩率", h.get("collapse_rate", "N/A"))
+                                    m3.metric("克制系数", h.get("k_clash", "1.0"))
+                                
+                                elif audit_mode in ["SGSJ_SUPERCONDUCTOR_TRACK", "SGSJ_V4.1_WAVEGUIDE_MODEL", "SGSJ_V4.2_PLASMA_VAPORIZATION"]:
+                                    st.markdown("**⚔️ 伤官伤尽超导场 HUD:**")
+                                    sc1, sc2, sc3 = st.columns(3)
+                                    sc1.metric("超导纯净度", h.get("purity", "N/A"))
+                                    sc2.metric("压制比", h.get("suppression_ratio", "N/A"))
+                                    sc3.metric("拦截状态", "SUCCESS" if h.get("intercept_success")=="YES" else "FAILED")
+                                    
+                                    if h.get("incoming_guan") and float(h.get("incoming_guan", 0)) > 0:
+                                        st.warning(f"⚠️ 检测到官杀突入: {h['incoming_guan']} units")
+
+                                # Fallback/Generic Physics Params
+                                st.markdown("**物理参数明细 (Physics Parameters):**")
+                                cols_p = st.columns(2)
+                                with cols_p[0]:
+                                    st.markdown("**🛡️ 保护因子 (Shields):**")
+                                    if h.get("gate_stability"): st.caption(f"• 正官稳定度: {h['gate_stability']}")
+                                    if h.get("is_superconductor") == "YES": st.caption("• ⚡ 超导保护激活")
+                                    if h.get("buffer_eff"): st.caption(f"• 缓冲效率: {h['buffer_eff']}")
+                                with cols_p[1]:
+                                    st.markdown("**⚠️ 危险触发器 (Triggers):**")
+                                    if h.get("is_breakdown") == "YES": st.caption("• ⚡ 击穿发生")
+                                    if h.get("is_vault_burst") == "YES": st.caption("• 💥 墓库冲破")
+                                
+                                with st.expander("📋 完整物理原始数据 (Raw Data)", expanded=False):
+                                    st.json(h)
 
         # --- SPECIALIZED HITS (NEW) ---
         if st.session_state.get("specialized_hits"):
@@ -631,7 +633,7 @@ def render():
                                     st.markdown(f"<div style='text-align:center; color:{b_color}; font-size:0.9em;'>📡 总线阻抗 (Bus Impedance): {h.get('bus_impedance')}</div>", unsafe_allow_html=True)
 
                         # [V2.1] SGJG Master Protocol HUD
-                        if h.get("audit_mode") in ["SGJG_V2_MASTER_PROTOCOL", "SGJG_V2.1_MASTER_PROTOCOL", "SGGG_V4.1_GATE_BREAKDOWN"]:
+                        if h.get("audit_mode") in ["SGJG_V2_MASTER_PROTOCOL", "SGJG_V2.1_MASTER_PROTOCOL", "SGGG_V4.1_GATE_BREAKDOWN", "SGGG_V4.2_GATE_BREAKDOWN"]:
                             st.markdown("**🔥 伤官见官 Master Protocol V2.1:**")
                             
                             # Core Metrics Grid
@@ -667,7 +669,7 @@ def render():
                                 st.markdown(pump_geo_row, unsafe_allow_html=True)
                         
                         # [V14.8] SGSJ Superconductor HUD
-                        if h.get("audit_mode") in ["SGSJ_SUPERCONDUCTOR_TRACK", "SGSJ_V4.1_WAVEGUIDE_MODEL"]:
+                        if h.get("audit_mode") in ["SGSJ_SUPERCONDUCTOR_TRACK", "SGSJ_V4.1_WAVEGUIDE_MODEL", "SGSJ_V4.2_PLASMA_VAPORIZATION"]:
                             st.markdown("**真空超导场参数 (Superconductor HUD):**")
                             # Voltage Pump for SGSJ
                             if h.get("voltage_pump") == "ACTIVE":
@@ -797,81 +799,6 @@ def render():
                                     else:
                                         st.warning(f"⚠️ **干预不足**: 应力仍为 {new_stress:.2f}，请增加护盾强度。")
 
-        st.divider()
-        with st.expander("📂 批量审计工具 (Batch Audit)"):
-            if st.button("启动全档案六柱对撞审计 (物理压力测试)", use_container_width=True):
-                st.session_state.audit_year = audit_year
-                st.session_state.sim_active = True
-                st.session_state.sim_op_type = "real_world_audit"
-                st.rerun()
-
-        # Display Single Audit Result
-        if st.session_state.get("single_audit_res"):
-            item = st.session_state.single_audit_res
-            st.divider()
-            
-            # Header with Status Badge
-            status_color = "#ff4b4b" if item["is_pgb_critical"] else ("#ffaa00" if item["sai"] > 1.0 else "#00cc66")
-            st.markdown(f"""
-                <div style="background:{status_color}22; border-left: 5px solid {status_color}; padding:15px; border-radius:5px;">
-                    <h3 style="margin:0; color:{status_color};">🛰️ 实弹审计报告: {item['profile_name']}</h3>
-                    <caption style="color:{status_color}aa;">量子应力分析完成 | 目标流年: {st.session_state.audit_year}</caption>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Three Panel Layout
-            col1, col2, col3 = st.columns([1, 1, 1])
-            with col1: # Left: Profile & Geo
-                st.markdown("##### 🧬 空间维度 (Spatial)")
-                st.code(" ".join(item['chart']), language="text")
-                st.markdown(f"""
-                    <div style="background:#1e1e1e; padding:10px; border-radius:5px; border:1px solid #333;">
-                        <span style="color:#00ccff;">📍 地理注入:</span> {item['city']}<br>
-                        <span style="color:#666; font-size:0.8em;">(GEO_FIELD_ALPHA 已同步)</span>
-                    </div>
-                """, unsafe_allow_html=True)
-
-            with col2: # Middle: Temporal Dynamics
-                st.markdown("##### ⏳ 时间维度 (Temporal)")
-                st.markdown(f"**大运:** `{item['luck']}` ({item['luck_range']})")
-                st.markdown(f"**流年:** `{item['annual']}` ({st.session_state.audit_year})")
-                
-                # Mock Waveform
-                interference_data = np.random.normal(0.5, 0.1, 10).tolist()
-                fig = px.area(interference_data, height=80)
-                fig.update_layout(margin=dict(l=0,r=0,b=0,t=0), showlegend=False, xaxis_visible=False, yaxis_visible=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-                st.caption("六柱干涉相消强度 (Interference)")
-
-            with col3: # Right: Result
-                st.markdown("##### 📉 应力指标 (SAI)")
-                st.markdown(f"<h1 style='color:{status_color}; margin:0;'>{item['sai']:.3f}</h1>", unsafe_allow_html=True)
-                thr = item.get('dynamic_threshold', 1.25)
-                st.caption(f"SAI 实时载荷 (Dynamic Threshold: {thr:.2f})")
-                
-                if item["is_pgb_critical"]:
-                    st.error("🚨 **PGB_CRITICAL**")
-                    st.caption("达到物理粉碎阈值，建议执行‘量子干预’进行阻尼减压。")
-                else:
-                    st.success("✅ 结构稳定")
-
-        # Display Batch results if any
-        if st.session_state.get("real_audit_res"):
-            st.divider()
-            st.markdown("#### 📊 全档案审计汇总")
-            res_list = st.session_state.real_audit_res
-            critical_count = sum(1 for r in res_list if r["is_pgb_critical"])
-            m1, m2 = st.columns(2)
-            m1.metric("同步档案总数", len(res_list))
-            m2.metric("PGB 高危断裂", critical_count, delta_color="inverse")
-            
-            with st.expander("查看所有高危样本"):
-                for r in res_list:
-                    if r["is_pgb_critical"]:
-                        st.write(f"🚩 {r['profile_name']} | SAI: {r['sai']:.3f} | {r['luck']}/{r['annual']}")
-
     # =====================================================================
     # [V2.1] FULL PIPELINE SCAN VIEW - One-Click All Phases with Progress
     # =====================================================================
@@ -957,7 +884,7 @@ def render():
                 # CGXS 判据: 财官双透，且无伤官
                 if '正官' not in ten_gods: continue
                 if not any(tg in ['正财', '偏财'] for tg in ten_gods): continue
-                if '伤官' in ten_gods: continue
+                if '伤官' not in ten_gods: continue
                 cluster_key = dm
             elif track_id == "CYGS_COLLAPSE":
                 # CYGS 判据: 极端低能级日主 (月令无气 + 根基微弱)
@@ -1073,372 +1000,6 @@ def render():
             
             st.success("📁 报告已生成。详细数据请查看 `docs/` 目录。")
 
-    # =====================================================================
-    # [V4.2] 命运时间线扫描视图 (Lifespan Topic Scanner)
-    # =====================================================================
-    elif view == "lifespan_scan":
-        st.markdown("### 📈 命运时间线扫描 (Lifespan Topic Scanner)")
-        st.caption("扫描命主从出生到100岁的所有年份，检测指定物理格局的触发情况")
-        
-        # 档案选择
-        profiles = controller.profile_manager.get_all()
-        profile_options = {p['id']: f"{p['name']} ({p['gender']})" for p in profiles}
-        profile_ids = list(profile_options.keys())
-        
-        col_sel, col_age = st.columns([3, 1])
-        with col_sel:
-            selected_profile_id = st.selectbox(
-                "选择目标档案", 
-                options=profile_ids, 
-                format_func=lambda x: profile_options.get(x),
-                key="lifespan_profile_sel"
-            )
-        with col_age:
-            max_age = st.number_input("最大扫描年龄", 50, 120, 100, key="lifespan_max_age_input")
-        
-        # 专题选择 - 使用翻译工具
-        TOPIC_ICONS = {
-            "SELECT_ALL": "⭐",
-            "SHANG_GUAN_JIAN_GUAN": "🔥",
-            "SHANG_GUAN_SHANG_JIN": "⚔️",
-            "YANG_REN_JIA_SHA": "🗡️",
-            "XIAO_SHEN_DUO_SHI": "🦉",
-            "SHI_SHEN_ZHI_SHA": "🎯",
-            "CAI_GUAN_XIANG_SHENG": "💰",
-            "SHANG_GUAN_PEI_YIN": "📚",
-            "CYGS_COLLAPSE": "🕳️",
-            "HGFG_TRANSMUTATION": "⚗️",
-            "SSSC_AMPLIFIER": "🌱",
-            "JLTG_CORE_ENERGY": "🔥",
-            "PGB_SUPER_FLUID_LOCK": "❄️",
-            "PGB_BRITTLE_TITAN": "🧱"
-        }
-        
-        TOPIC_IDS = [
-            "SELECT_ALL",
-            "SHANG_GUAN_JIAN_GUAN",
-            "SHANG_GUAN_SHANG_JIN", 
-            "YANG_REN_JIA_SHA",
-            "XIAO_SHEN_DUO_SHI",
-            "CYGS_COLLAPSE",
-            "HGFG_TRANSMUTATION",
-            "SSSC_AMPLIFIER",
-            "JLTG_CORE_ENERGY"
-        ]
-        
-        def format_topic(topic_id: str) -> str:
-            """格式化专题显示名称"""
-            icon = TOPIC_ICONS.get(topic_id, "")
-            name = T.translate_pattern(topic_id)
-            return f"{icon} {name}"
-        
-        # 实际可扫描的专题 (不包含 SELECT_ALL)
-        real_topic_ids = [k for k in TOPIC_IDS if k != "SELECT_ALL"]
-        
-        selected_raw = st.multiselect(
-            "选择要扫描的物理格局 (可多选)",
-            options=TOPIC_IDS,
-            default=["SHANG_GUAN_JIAN_GUAN"],
-            format_func=format_topic,
-            key="lifespan_topics_sel"
-        )
-        
-        # 处理全选逻辑
-        if "SELECT_ALL" in selected_raw:
-            selected_topics = real_topic_ids
-            st.info(f"✅ 已选择全部 {len(real_topic_ids)} 个物理格局")
-        else:
-            selected_topics = selected_raw
-        
-        if st.button("🚀 启动时间线扫描", use_container_width=True, type="primary"):
-            p = next((prof for prof in profiles if prof['id'] == selected_profile_id), None)
-            if p and selected_topics:
-                st.session_state.sim_active = True
-                st.session_state.sim_op_type = "lifespan_topic_scan"
-                st.session_state.lifespan_profile = p
-                st.session_state.lifespan_topics = selected_topics
-                st.session_state.lifespan_max_age = max_age
-                st.rerun()
-            else:
-                st.warning("请选择档案和至少一个扫描专题")
-        
-        # 显示扫描结果
-        if st.session_state.get("lifespan_scan_result"):
-            scan_res = st.session_state.lifespan_scan_result
-            timeline = scan_res["timeline"]
-            summary = scan_res["summary"]
-            
-            st.divider()
-            
-            # 摘要卡片
-            st.markdown("#### 📊 扫描摘要")
-            m1, m2, m3, m4 = st.columns(4)
-            with m1:
-                st.metric("总扫描年数", f"{summary['total_years_scanned']}年")
-            with m2:
-                st.metric("危险年数", f"{summary['total_triggered_years']}年", 
-                         delta=summary['trigger_rate'], delta_color="inverse")
-            with m3:
-                peak_age = summary.get('peak_danger_age', 'N/A')
-                st.metric("峰值危险年龄", f"{peak_age}岁")
-            with m4:
-                peak_sai = summary.get('peak_danger_sai', 0)
-                sai_color = "inverse" if peak_sai > 1.5 else "normal"
-                st.metric("峰值 SAI", f"{peak_sai:.2f}", delta_color=sai_color)
-            
-            # 危险周期提示
-            if summary.get("danger_periods"):
-                st.markdown("#### ⚠️ 危险周期识别")
-                for period in summary["danger_periods"]:
-                    if period["end_age"] - period["start_age"] > 0:
-                        st.error(f"🚨 **{period['start_age']}-{period['end_age']}岁**: 连续危险期，峰值 SAI = {period['max_sai']:.2f}")
-                    else:
-                        st.warning(f"⚡ **{period['start_age']}岁**: 单点危险，SAI = {period['max_sai']:.2f}")
-            
-            st.divider()
-            
-            # 交互式图表
-            st.markdown("#### 📈 命运应力时间线 (点击查看详情)")
-            
-            # 准备图表数据
-            ages = [t["age"] for t in timeline]
-            sai_values = [t["max_sai"] for t in timeline]
-            years = [t["year"] for t in timeline]
-            luck_pillars = [t.get("luck_pillar", "") for t in timeline]
-            annual_pillars = [t.get("annual_pillar", "") for t in timeline]
-            
-            # 颜色编码：根据 SAI 值
-            colors = []
-            for sai in sai_values:
-                if sai > 2.0:
-                    colors.append("#ff4b4b")  # 高危 - 红色
-                elif sai > 1.25:
-                    colors.append("#ffaa00")  # 警告 - 橙色
-                elif sai > 0.5:
-                    colors.append("#40e0d0")  # 轻微 - 青色
-                else:
-                    colors.append("#00cc66")  # 安全 - 绿色
-            
-            # 创建 hover 文本
-            hover_texts = []
-            for t in timeline:
-                topics_str = ", ".join([tp["topic_name"] for tp in t.get("triggered_topics", [])]) or "无触发"
-                text = f"<b>{t['age']}岁 ({t['year']}年)</b><br>"
-                text += f"大运: {t.get('luck_pillar', 'N/A')}<br>"
-                text += f"流年: {t.get('annual_pillar', 'N/A')}<br>"
-                text += f"SAI: {t['max_sai']:.2f}<br>"
-                text += f"触发格局: {topics_str}"
-                hover_texts.append(text)
-            
-            # 创建 Plotly 图表
-            fig = go.Figure()
-            
-            # 添加安全区域背景
-            fig.add_hrect(y0=0, y1=1.25, fillcolor="rgba(0, 204, 102, 0.1)", 
-                         line_width=0, annotation_text="安全区", annotation_position="top left")
-            fig.add_hrect(y0=1.25, y1=2.0, fillcolor="rgba(255, 170, 0, 0.1)", 
-                         line_width=0, annotation_text="警戒区", annotation_position="top left")
-            fig.add_hrect(y0=2.0, y1=5.0, fillcolor="rgba(255, 75, 75, 0.1)", 
-                         line_width=0, annotation_text="危险区", annotation_position="top left")
-            
-            # 主折线
-            fig.add_trace(go.Scatter(
-                x=ages, 
-                y=sai_values,
-                mode='lines+markers',
-                name='SAI 应力值',
-                line=dict(color='#40e0d0', width=2),
-                marker=dict(
-                    size=8,
-                    color=colors,
-                    line=dict(color='white', width=1)
-                ),
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=hover_texts
-            ))
-            
-            # 标注危险点
-            danger_ages = [t["age"] for t in timeline if t["is_danger_zone"]]
-            danger_sais = [t["max_sai"] for t in timeline if t["is_danger_zone"]]
-            
-            if danger_ages:
-                fig.add_trace(go.Scatter(
-                    x=danger_ages,
-                    y=danger_sais,
-                    mode='markers',
-                    name='危险触发点',
-                    marker=dict(
-                        size=14,
-                        color='#ff4b4b',
-                        symbol='diamond',
-                        line=dict(color='white', width=2)
-                    ),
-                    hoverinfo='skip'
-                ))
-            
-            # 1.25 红线
-            fig.add_hline(y=1.25, line_dash="dash", line_color="#ff4b4b", 
-                         annotation_text="断裂模量 1.25", annotation_position="right")
-            
-            fig.update_layout(
-                title=dict(text="命运应力时间线 (点击数据点查看详情)", font=dict(size=18, color='#fff')),
-                xaxis=dict(
-                    title="年龄 (岁)",
-                    gridcolor='rgba(255,255,255,0.1)',
-                    tickmode='linear',
-                    dtick=10
-                ),
-                yaxis=dict(
-                    title="SAI 应力指数",
-                    gridcolor='rgba(255,255,255,0.1)',
-                    range=[0, max(3.0, max(sai_values) * 1.1)]
-                ),
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#888'),
-                hovermode='closest',
-                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-                height=450,
-                clickmode='event+select'
-            )
-            
-            # 显示图表
-            st.plotly_chart(fig, use_container_width=True, key="lifespan_chart")
-            
-            # 危险年份快速跳转
-            st.markdown("#### 🔍 年份详情查询")
-            
-            # 提取所有有触发的年份（按 SAI 排序）
-            triggered_years_sorted = sorted(
-                [t for t in timeline if t["max_sai"] > 0],
-                key=lambda x: x["max_sai"],
-                reverse=True
-            )[:20]  # 取 SAI 最高的前20个
-            
-            if triggered_years_sorted:
-                st.caption("⚡ 快速跳转 (点击查看详情):")
-                
-                # 创建按钮行
-                btn_cols = st.columns(min(10, len(triggered_years_sorted)))
-                for i, yd in enumerate(triggered_years_sorted[:10]):
-                    sai_color = "#ff4b4b" if yd["max_sai"] > 1.25 else "#ffaa00"
-                    with btn_cols[i]:
-                        if st.button(f"{yd['age']}岁", key=f"jump_{yd['age']}", use_container_width=True):
-                            st.session_state.selected_detail_age = yd["age"]
-                            st.rerun()
-            
-            st.divider()
-            
-            # 年龄选择器
-            col_query1, col_query2 = st.columns([1, 3])
-            with col_query1:
-                # 构建下拉选项：优先显示危险年份
-                age_options = list(range(0, len(timeline)))
-                
-                # 获取当前选中的年龄
-                default_age = st.session_state.get("selected_detail_age", 30)
-                if default_age >= len(timeline):
-                    default_age = 30
-                
-                query_age = st.selectbox(
-                    "选择年龄查看详情",
-                    options=age_options,
-                    index=default_age,
-                    format_func=lambda x: f"{x}岁 {'🔴' if timeline[x]['max_sai'] > 1.25 else ('🟠' if timeline[x]['max_sai'] > 0.5 else '🟢')} SAI:{timeline[x]['max_sai']:.1f}",
-                    key="query_age_select"
-                )
-            
-            with col_query2:
-                if query_age < len(timeline):
-                    year_detail = timeline[query_age]
-                    
-                    st.markdown(f"""
-                    <div style='background:#1a1a2e; border:1px solid #333; padding:15px; border-radius:10px;'>
-                        <div style='display:flex; justify-content:space-between; margin-bottom:10px;'>
-                            <div>
-                                <div style='font-size:1.5em; font-weight:bold; color:#fff;'>{query_age}岁 ({year_detail['year']}年)</div>
-                                <div style='color:#888;'>大运: {year_detail.get('luck_pillar', 'N/A')} | 流年: {year_detail.get('annual_pillar', 'N/A')}</div>
-                            </div>
-                            <div style='text-align:right;'>
-                                <div style='font-size:1.8em; font-weight:bold; color:{"#ff4b4b" if year_detail["max_sai"] > 1.25 else "#00cc66"};'>SAI {year_detail['max_sai']:.2f}</div>
-                                <div style='color:#888;'>应力指数</div>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # 显示触发的专题详情
-                    if year_detail.get("triggered_topics"):
-                        st.markdown("**触发的物理格局:**")
-                        for topic in year_detail["triggered_topics"]:
-                            sai_color = "#ff4b4b" if topic["sai"] > 1.25 else "#ffaa00"
-                            # 翻译专题名称
-                            topic_name = T.translate_pattern(topic.get('topic_id', '')) or topic.get('topic_name', topic['topic_id'])
-                            # 翻译分类
-                            category_raw = topic.get('category', 'N/A')
-                            category_cn = T.translate_category(category_raw)
-                            
-                            with st.expander(f"🧬 {topic_name} (SAI: {topic['sai']:.2f})", expanded=False):
-                                # 分类和实时载荷
-                                st.markdown(f"**分类:** {category_cn}")
-                                st.markdown(f"**实时载荷:** {topic.get('real_time_load', 'N/A')}")
-                                st.markdown(f"**标签:** `{topic.get('label', 'N/A')}`")
-                                
-                                # 提取详情中的保护/危险因子
-                                details = topic.get("details", {})
-                                
-                                # 显示物理参数
-                                col_p1, col_p2 = st.columns(2)
-                                with col_p1:
-                                    # 稳定性/保护因子
-                                    st.markdown("**🛡️ 保护因子:**")
-                                    if details.get("gate_stability"):
-                                        st.caption(f"• 正官稳定度: {details['gate_stability']}")
-                                    if details.get("o_stabilization"):
-                                        st.caption(f"• 官星稳态: {details['o_stabilization']}")
-                                    if details.get("buffer_eff"):
-                                        st.caption(f"• 缓冲效率: {details['buffer_eff']}")
-                                    if details.get("is_superconductor") == "YES":
-                                        st.caption("• ⚡ 超导保护激活")
-                                    if details.get("is_coupled") == "YES":
-                                        st.caption("• 🔗 耦合稳态激活")
-                                    if details.get("is_neutralized") == "YES":
-                                        st.caption("• ☯️ 中和保护激活")
-                                
-                                with col_p2:
-                                    # 危险触发器
-                                    st.markdown("**⚠️ 危险因子:**")
-                                    if details.get("is_trap") == "YES":
-                                        st.caption("• 🪤 天干合绊陷阱 (SAI×1.5)")
-                                    if details.get("is_vault_burst") == "YES":
-                                        st.caption("• 💥 墓库冲破 (SAI×3.0)")
-                                    if details.get("is_breakdown") == "YES":
-                                        st.caption("• ⚡ 击穿发生")
-                                    if details.get("is_phase_cancel") == "YES":
-                                        st.caption("• 🌀 相位干涉")
-                                    if details.get("is_vault_overflow") == "YES":
-                                        st.caption("• 🕳️ 墓库溢出")
-                                    if details.get("is_burst") == "YES":
-                                        st.caption("• 💣 能量暴发")
-                                    if details.get("is_runaway") == "YES":
-                                        st.caption("• 🔥 热失控")
-                                
-                                # 关键物理参数
-                                if details.get("charge_density") or details.get("sg_kinetic"):
-                                    st.markdown(f"**伤官动能:** {details.get('charge_density', details.get('sg_kinetic', 'N/A'))}")
-                                if details.get("ratio"):
-                                    st.markdown(f"**能量比:** {details['ratio']}")
-                                
-                                # 完整 JSON (折叠)
-                                with st.expander("📋 完整物理数据", expanded=False):
-                                    st.json(details)
-                    else:
-                        st.info("💚 该年份未触发任何危险格局")
-            
-            # 专题分布统计
-            st.divider()
-            st.markdown("#### 📊 专题触发统计")
-            
             topic_breakdown = summary.get("topic_breakdown", {})
             if topic_breakdown:
                 breakdown_data = [{"专题": T.translate_pattern(k), "触发次数": v} for k, v in topic_breakdown.items()]
