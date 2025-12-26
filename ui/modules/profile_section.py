@@ -94,11 +94,14 @@ def _render_profile_list(pm):
                 st.session_state['unified_geo_city'] = profile.get('city', 'None') or 'None'
                 st.session_state['input_longitude'] = float(profile.get('longitude', 116.46) or 116.46)
     
+    # Initialize session state if not exists (avoid conflict with widget default)
+    if 'profile_select_id' not in st.session_state:
+        st.session_state['profile_select_id'] = current_id
+    
     selected_display = st.selectbox(
         "选择档案 (Select Profile)",
         options=option_list,
         format_func=lambda x: profile_options.get(x, x),
-        index=current_idx,
         key="profile_select_id",
         on_change=on_profile_change
     )

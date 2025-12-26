@@ -335,35 +335,85 @@ class SimulationController:
             }
         }
 
-    def run_deep_specialized_scan(self, profile: Dict[str, Any], target_year: int = 2024):
+    def run_deep_specialized_scan(self, natal: Dict[str, Any], luck_pillar: tuple, annual_pillar: tuple, geo_factor: float = 1.0):
         """
-        [ASE PHASE 4.2] Deep specialized scan for a single profile.
+        [ASE PHASE 4.2] Deep specialized scan for a provided chart structure.
         Checks against all registered topics in the PATTERN_PHYSICS theme.
+        Updated V4.1 signature to accept pre-calculated pillars.
         """
-        self.logger.info(f"🧬 Running deep specialized scan for: {profile.get('name')} (Year: {target_year})")
+        # 1. Construct six pillar chart
+        chart = [natal['year'], natal['month'], natal['day'], natal['hour']]
+        six_pillar_chart = chart + [luck_pillar, annual_pillar]
         
-        # 1. Create Profile Object to get pillars
-        bdt = datetime(profile['year'], profile['month'], profile['day'], profile['hour'], profile.get('minute', 0))
-        gender_int = 1 if profile['gender'] == '男' else 0
-        profile_obj = BaziProfile(bdt, gender_int)
+        self.logger.info(f"🧬 Running deep specialized scan for chart: {six_pillar_chart}")
         
-        # 2. Extract Four Pillars
-        pillars = profile_obj.pillars
-        chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour']]
-        
-        # 3. Extract Time context
-        luck = profile_obj.get_luck_pillar_at(target_year)
-        annual = profile_obj.get_year_pillar(target_year)
-        city = profile.get("city", "Unknown")
-        six_pillar_chart = chart + [luck, annual]
-        
-        # 4. Define registered topics for scan
-        topics = [
-            {"id": "SHANG_GUAN_JIAN_GUAN", "name": "伤官见官失效模型"},
-            {"id": "SHANG_GUAN_SHANG_JIN", "name": "伤官伤尽超导模型"},
-            {"id": "PGB_SUPER_FLUID_LOCK", "name": "排骨帮超流锁定格"},
-            {"id": "PGB_BRITTLE_TITAN", "name": "排骨帮脆性巨人格"}
-        ]
+        # 4. Define registered topics for scan (Dynamically Load from Logic Manifest)
+        import json
+        import os
+        topics = []
+        try:
+            manifest_path = os.path.join(os.getcwd(), "core", "logic_manifest.json")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                    modules = manifest.get("modules", {})
+                    for mod_id, mod_info in modules.items():
+                        if mod_info.get("theme") == "PATTERN_PHYSICS" and mod_info.get("type") == "TOPIC":
+                            # Use internal ID for PatternScout (e.g., XIAO_SHEN_DUO_SHI from id like MOD_106_XSDS_CIRCUIT)
+                            # Actually, PatternScout expects IDs like SHANG_GUAN_JIAN_GUAN
+                            # In logic_manifest, we have id e.g. "SHANG_GUAN_JIAN_GUAN"
+                            # Let's map it correctly.
+                            p_id = mod_info.get("id")
+                            # If it starts with MOD_XXX_, we might need to extract the tail, 
+                            # but PatternScout seems to use the "id" directly or some mapping.
+                            # Previous code used: {"id": "YANG_REN_JIA_SHA", "name": "羊刃架杀聚变模型"}
+                            # In Manifest: "MOD_105_YRJS_FUSION" -> id "MOD_105_YRJS_FUSION"
+                            # Wait, let's map known IDs.
+                            p_id = mod_info.get("id")
+                            if not mod_info.get("active", True): continue
+                            
+                            # Integrated Mapping: Link Registry MODs to PatternScout Logic
+                            mapping = {
+                                "MOD_101": ["SHANG_GUAN_JIAN_GUAN"],
+                                "MOD_104": ["SHANG_GUAN_SHANG_JIN"],
+                                "MOD_105": ["YANG_REN_JIA_SHA"],
+                                "MOD_106": ["XIAO_SHEN_DUO_SHI"],
+                                "MOD_107": ["CAI_GUAN_XIANG_SHENG_V4"],
+                                "MOD_108": ["SHANG_GUAN_PEI_YIN"],
+                                "MOD_109": ["SHI_SHEN_ZHI_SHA"],
+                                "MOD_110": ["PGB_ULTRA_FLUID", "PGB_BRITTLE_TITAN"],
+                                "MOD_111": ["CYGS_COLLAPSE"],
+                                "MOD_112": ["HGFG_TRANSMUTATION"],
+                                "MOD_113": ["SSSC_AMPLIFIER"],
+                                "MOD_114": ["JLTG_CORE_ENERGY"]
+                            }
+                            
+                            found = False
+                            for prefix, internal_ids in mapping.items():
+                                if p_id.startswith(prefix):
+                                    for iid in internal_ids:
+                                        topics.append({"id": iid, "name": mod_info.get("name", p_id)})
+                                    found = True
+                                    break
+                            
+                            if not found:
+                                # Generic fallback: try to use the raw ID if it doesn't match a known pattern
+                                topics.append({"id": p_id, "name": mod_info.get("name", p_id)})
+            else:
+                self.logger.error(f"Logic manifest not found at {manifest_path}")
+        except Exception as e:
+            self.logger.error(f"Error loading logic manifest: {e}")
+
+        # Fallback if loading fails
+        if not topics:
+            topics = [
+                {"id": "SHANG_GUAN_JIAN_GUAN", "name": "伤官见官失效模型"},
+                {"id": "SHANG_GUAN_SHANG_JIN", "name": "伤官伤尽超导模型"},
+                {"id": "YANG_REN_JIA_SHA", "name": "羊刃架杀聚变模型"},
+                {"id": "XIAO_SHEN_DUO_SHI", "name": "枭神夺食量子断路模型"},
+                {"id": "PGB_SUPER_FLUID_LOCK", "name": "排骨帮超流锁定格"},
+                {"id": "PGB_BRITTLE_TITAN", "name": "排骨帮脆性巨人格"}
+            ]
         
         hits = []
         for t in topics:
@@ -375,17 +425,198 @@ class SimulationController:
                 match_data["collision_path"] = f"natal_chart -> {t['id']} -> resonance_trigger"
                 
                 # [V14.8 Add-on] In-situ Stress check
-                _, threshold = self.apply_bus_modifiers(chart, luck, annual, city)
+                # Convert tuple pillars to string format for apply_bus_modifiers
+                luck_str = f"{luck_pillar[0]}{luck_pillar[1]}" if luck_pillar else "甲子"
+                annual_str = f"{annual_pillar[0]}{annual_pillar[1]}" if annual_pillar else "甲子"
+                city = "Beijing"  # Default city, can be passed as parameter in future
+                
+                _, threshold = self.apply_bus_modifiers(chart, luck_str, annual_str, city)
                 match_data["dynamic_threshold"] = threshold
-                match_data["injected_luck"] = luck
-                match_data["injected_annual"] = annual
+                match_data["injected_luck"] = luck_str
+                match_data["injected_annual"] = annual_str
                 match_data["injected_city"] = city
                 match_data["six_pillars"] = six_pillar_chart
-                match_data["real_time_load"] = f"SAI {match_data.get('stress', '1.0')} / Thr {threshold:.2f} (Injected: {luck}/{annual} @ {city})"
+                match_data["real_time_load"] = f"SAI {match_data.get('stress', '1.0')} / Thr {threshold:.2f} (Injected: {luck_str}/{annual_str} @ {city})"
                 
                 hits.append(match_data)
         
         return hits
+
+    def run_lifespan_topic_scan(self, profile_obj, topic_ids: List[str], max_age: int = 100, progress_callback=None):
+        """
+        [ASE V4.2] 命运时间线扫描 (Lifespan Topic Scanner)
+        
+        从命主出生年扫描到指定年龄，逐年检测指定专题的触发情况。
+        返回时间线数据供交互式图表显示。
+        
+        Args:
+            profile_obj: BaziProfile 对象
+            topic_ids: 要扫描的专题 ID 列表
+            max_age: 最大扫描年龄 (默认100岁)
+            progress_callback: 进度回调函数
+            
+        Returns:
+            {
+                "timeline": [...],  # 每年的扫描结果
+                "triggered_years": [...],  # 触发专题的年份
+                "summary": {...}  # 统计摘要
+            }
+        """
+        self.logger.info(f"🔮 开始命运时间线扫描: 0-{max_age}岁, 专题: {topic_ids}")
+        
+        pillars = profile_obj.pillars
+        chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour']]
+        birth_year = profile_obj.birth_date.year
+        
+        timeline = []
+        triggered_years = []
+        topic_triggers = {tid: [] for tid in topic_ids}  # 按专题分类的触发记录
+        
+        for age in range(0, max_age + 1):
+            target_year = birth_year + age
+            
+            try:
+                # 获取该年的大运和流年
+                luck_pillar = profile_obj.get_luck_pillar_at(target_year)
+                annual_pillar = profile_obj.get_year_pillar(target_year)
+                
+                # 构建六柱
+                luck_str = f"{luck_pillar[0]}{luck_pillar[1]}" if luck_pillar else "甲子"
+                annual_str = f"{annual_pillar[0]}{annual_pillar[1]}" if annual_pillar else "甲子"
+                six_pillar_chart = chart + [luck_pillar, annual_pillar]
+                
+                year_data = {
+                    "age": age,
+                    "year": target_year,
+                    "luck_pillar": luck_str,
+                    "annual_pillar": annual_str,
+                    "triggered_topics": [],
+                    "max_sai": 0.0,
+                    "is_danger_zone": False
+                }
+                
+                # 对每个专题进行检测
+                for topic_id in topic_ids:
+                    match_data = self.pattern_scout._deep_audit(six_pillar_chart, topic_id)
+                    
+                    if match_data:
+                        # 获取 SAI 值 (参考 run_deep_specialized_scan)
+                        sai_raw = match_data.get('sai', match_data.get('stress', '0'))
+                        try:
+                            sai = float(sai_raw) if sai_raw else 0.0
+                        except (ValueError, TypeError):
+                            sai = 0.0
+                        
+                        # 专题名称映射
+                        TOPIC_NAMES = {
+                            "SHANG_GUAN_JIAN_GUAN": "伤官见官",
+                            "SHANG_GUAN_SHANG_JIN": "伤官伤尽",
+                            "SHANG_GUAN_PEI_YIN": "伤官配印",
+                            "YANG_REN_JIA_SHA": "羊刃架杀",
+                            "XIAO_SHEN_DUO_SHI": "枭神夺食",
+                            "SHI_SHEN_ZHI_SHA": "食神制杀",
+                            "CAI_GUAN_XIANG_SHENG": "财官相生",
+                            "CYGS_COLLAPSE": "从格坍缩",
+                            "HGFG_TRANSMUTATION": "化气格重构",
+                            "SSSC_AMPLIFIER": "食伤生财",
+                            "JLTG_CORE_ENERGY": "建禄月劫",
+                            "PGB_SUPER_FLUID_LOCK": "超流锁定格",
+                            "PGB_BRITTLE_TITAN": "脆性巨人格"
+                        }
+                        topic_name = TOPIC_NAMES.get(topic_id, match_data.get('topic_name', topic_id))
+                        
+                        # [V4.2] 参考 run_deep_specialized_scan: 应用总线修饰符，计算动态阈值
+                        city = "Beijing"  # 默认城市
+                        _, dynamic_threshold = self.apply_bus_modifiers(chart, luck_str, annual_str, city)
+                        
+                        # [V4.2] 只有 SAI 超过阈值才算真正触发 (参考深度格局鉴定的严格模式)
+                        # 最低触发阈值: 0.5 (微弱共振)，动态阈值由 apply_bus_modifiers 计算
+                        min_trigger_threshold = max(0.5, dynamic_threshold * 0.5)
+                        
+                        if sai >= min_trigger_threshold:
+                            topic_hit = {
+                                "topic_id": topic_id,
+                                "topic_name": topic_name,
+                                "sai": sai,
+                                "category": match_data.get('category', 'MATCH'),
+                                "label": match_data.get('label', ''),
+                                "dynamic_threshold": dynamic_threshold,
+                                "real_time_load": f"SAI {sai:.2f} / 阈值 {dynamic_threshold:.2f}",
+                                "details": match_data
+                            }
+                            
+                            year_data["triggered_topics"].append(topic_hit)
+                            year_data["max_sai"] = max(year_data["max_sai"], sai)
+                            
+                            # 记录到专题触发列表
+                            topic_triggers[topic_id].append({
+                                "age": age,
+                                "year": target_year,
+                                "sai": sai,
+                                "threshold": dynamic_threshold,
+                                "luck": luck_str,
+                                "annual": annual_str
+                            })
+                
+                # 判断是否为危险区域 (SAI > 1.25)
+                if year_data["max_sai"] > 1.25:
+                    year_data["is_danger_zone"] = True
+                    triggered_years.append(year_data)
+                
+                timeline.append(year_data)
+                
+                if progress_callback and age % 10 == 0:
+                    progress_callback(age, max_age, {"year": target_year})
+                    
+            except Exception as e:
+                self.logger.warning(f"扫描年龄 {age} 时出错: {e}")
+                timeline.append({
+                    "age": age,
+                    "year": target_year,
+                    "triggered_topics": [],
+                    "max_sai": 0.0,
+                    "is_danger_zone": False,
+                    "error": str(e)
+                })
+        
+        # 生成摘要统计
+        total_triggered = len(triggered_years)
+        danger_periods = []
+        current_period = None
+        
+        for yd in timeline:
+            if yd["is_danger_zone"]:
+                if current_period is None:
+                    current_period = {"start_age": yd["age"], "end_age": yd["age"], "max_sai": yd["max_sai"]}
+                else:
+                    current_period["end_age"] = yd["age"]
+                    current_period["max_sai"] = max(current_period["max_sai"], yd["max_sai"])
+            else:
+                if current_period is not None:
+                    danger_periods.append(current_period)
+                    current_period = None
+        
+        if current_period is not None:
+            danger_periods.append(current_period)
+        
+        summary = {
+            "total_years_scanned": max_age + 1,
+            "total_triggered_years": total_triggered,
+            "trigger_rate": f"{(total_triggered / (max_age + 1)) * 100:.1f}%",
+            "danger_periods": danger_periods,
+            "topic_breakdown": {tid: len(hits) for tid, hits in topic_triggers.items()},
+            "peak_danger_age": max(timeline, key=lambda x: x["max_sai"])["age"] if timeline else None,
+            "peak_danger_sai": max(t["max_sai"] for t in timeline) if timeline else 0
+        }
+        
+        self.logger.info(f"✅ 时间线扫描完成: {total_triggered}/{max_age+1} 年触发危险区域")
+        
+        return {
+            "timeline": timeline,
+            "triggered_years": triggered_years,
+            "topic_triggers": topic_triggers,
+            "summary": summary
+        }
 
     def scout_real_profiles(self, topic_id: str):
         """

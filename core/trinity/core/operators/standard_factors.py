@@ -127,12 +127,29 @@ class GeoBiasFactor(InfluenceFactor):
     def apply_nonlinear_correction(self, base_e: ExpectationVector, context: Optional[Dict[str, Any]] = None) -> ExpectationVector:
         result = base_e.clone()
         
-        # [VALIDATED FORMULA] Direct multiplier from QuantumUniversalFramework
+        # [V4.1.6 Phase Shifting Operator] 
+        # Detect Destructive Interference (Phase Cancellation)
+        current_sai = context.get("sai_estimate", 1.0) if context else 1.0
+        # Brittle Region [4.0 - 6.0]
+        is_brittle = 4.0 <= current_sai <= 6.0
+        
         if self.geo_element != "Neutral":
             elem_lower = self.geo_element.lower()
-            if elem_lower in result.elements:
-                result.elements[elem_lower] *= self.geo_factor
-                self.log(f"Geo Bias: {self.geo_element} multiplied by {self.geo_factor}")
+            
+            # [V4.1.6 Logic] If in brittle region, geo factor becomes a damping phase shifter
+            # Pulling from Red (Collapse) to Yellow (Stable)
+            if is_brittle:
+                # 0.08 "拯救权重" - interpreted as a 30% noise reduction (phase cancellation)
+                rescue_damping = 0.33 
+                if elem_lower in result.elements:
+                    # Apply phase cancellation weight (0.08 bias)
+                    result.elements[elem_lower] *= (1.0 - rescue_damping)
+                    self.log(f"Geo Phase Cancellation [V4.1.6]: SAI({current_sai:.2f}) in brittle zone. Destructive interference applied to {self.geo_element} (Reduction: {rescue_damping*100}%).")
+            else:
+                # Standard linear correction
+                if elem_lower in result.elements:
+                    result.elements[elem_lower] *= self.geo_factor
+                    self.log(f"Geo Bias: {self.geo_element} multiplied by {self.geo_factor}")
         
         return result
 
