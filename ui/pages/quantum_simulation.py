@@ -324,6 +324,16 @@ def render():
                     status.write(f"📻 [ZHSG] 正在频谱扫描: {curr}/{tot} (高激发态: {stats.get('matched', 0)})")
                 ))
                 st.session_state.v45_zh_res = zh_res
+            elif sim_op_type == "v50_ssep_audit":
+                 # [SSEP] Alpha Test
+                 st.write("🌌 SSEP Engine Initializing...")
+                 # Mock result for Alpha
+                 import time
+                 time.sleep(1)
+                 st.session_state.v50_ssep_res = {
+                     "hit_count": 0, "audit_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                     "top_samples": []
+                 }
                 
             st.session_state.sim_active = False
             status.update(label="✅ 运算完成", state="complete", expanded=False)
@@ -342,6 +352,12 @@ def render():
             m2.markdown(f'<div class="metric-card"><div class="metric-label">平均相干 (μ-IC)</div><div class="metric-value">{summary.get("IC", {}).get("mean", 0):.3f}</div></div>', unsafe_allow_html=True)
             rate = (summary.get("singularity_count", 0) / latest.get("sample_size", 1)) * 100
             m3.markdown(f'<div class="metric-card"><div class="metric-label">奇点发生率</div><div class="metric-value">{rate:.2f}%</div></div>', unsafe_allow_html=True)
+            
+            # [SSEP] Phase Radar Placeholder
+            st.markdown("### 🌌 [SSEP] 超对称相位雷达 (Phase Radar)")
+            r1, r2 = st.columns([1, 3])
+            r1.metric("全局超导率", "0.00%", delta="SSEP Inactive")
+            r2.progress(0, text="等待量子相变点火...")
             
             st.write("")
             sings = latest.get("singularities", [])
@@ -870,7 +886,7 @@ def render():
             **审计协议 [GXYG_GAP_V4.5]:**
             1. **空位探测**: 扫描地支拓扑中的隔位拱夹结构（如 Zi-Yin 拱 Chou）。
             2. **感应定标 ($V_{ind}$)**: 计算两侧高质量粒子产生的虚拟引力势阱强度。
-            3. **负压补偿 ($\Delta SAI$)**: 核算虚拟能级对系统总应力的对冲效应。
+            3. **负压补偿 ($\\Delta SAI$)**: 核算虚拟能级对系统总应力的对冲效应。
             4. **塌缩压力**: 模拟流年实态粒子撞击虚拟位导致的能级失效风险。
             """)
             if st.button("📡 启动 V4.5 [GXYG] 虚拟势阱深度定标", type="primary", use_container_width=True):
@@ -923,7 +939,7 @@ def render():
             2. **能核穿透扫描**: 同步审计金神 (JSG) 与魁罡 (KGG) 子态能核分布。
             3. **关联矩阵建立**: 区分空置容器与藏核容器的物理耦合差异。
             4. **[SKSK] 陷阱识别**: 扫描地支四库全齐（辰戌丑未）形成的引力坍缩奇点。
-            5. **复合 SAI 计算**: 定标基于势垒 $V_b$、耦合系数 $\mu$ 与坍缩张量 $S_{sksk}$ 的系统应力。
+            5. **复合 SAI 计算**: 定标基于势垒 $V_b$、耦合系数 $\\mu$ 与坍缩张量 $S_{sksk}$ 的系统应力。
             """)
             if st.button("📡 启动 V4.1.2 [MBGS] 全量穿透扫描", type="primary", use_container_width=True):
                 st.session_state.sim_active = True
@@ -978,7 +994,7 @@ def render():
             st.info("💡 尚未执行 518,400 全量样本杂气激发审计。")
             st.markdown("""
             **审计协议 [ZHSG_EXCITATION_V4.1.2]:**
-            1. **非饱和态定标**: 识别藏干数 $\geq 2$ 的高熵地支粒子空间。
+            1. **非饱和态定标**: 识别藏干数 $\\geq 2$ 的高熵地支粒子空间。
             2. **透干激发 (TSG)**: 同步分拣天干引信与地支余气的频谱对齐度。
             3. **背景辐射 (YQG)**: 审计月令余气对系统稳态的底层干预。
             4. **相位干涉干扰**: 定标多组分粒子相长/相消干涉对 SAI 的非线性波动效应。

@@ -1643,14 +1643,63 @@ class PatternScout:
                 total_c_phase = 1.4
                 sub_tags.append("PHASE_COHERENCE")
 
-            # --- 第三步：复合 SAI 定标 ---
-            # S_base = 基准压力
-            s_base = sum([len(heb["stems"]) for heb in high_entropy_branches]) * 0.5
+            # --- 第三步：非饱和场屏蔽算法 (Non-saturated Shielding) ---
+            # 模拟月令主气对余气的压制屏蔽因子 Omega
+            shielding_factor = 0.0
+            if len(branches) >= 2:
+                month_br = branches[1]
+                month_weights = BaziParticleNexus.get_branch_weights(month_br)
+                if month_weights:
+                     # Main Qi energy
+                     e_main = month_weights[0][1] # Main Qi weight
+                     # Shielding Factor Omega = 1 - e^(-k * E_main)
+                     # Simplified linear approx for performance:
+                     shielding_factor = min(0.8, e_main * 0.05) # Approx 0.5-0.8 for strong main qi
             
-            # final_sai = S_base + E_excite * C_phase
-            final_sai = (s_base + total_e_excite * total_c_phase) * geo_factor
+            # --- 第四步：量子叠加压力注入 (Superposition Stress) ---
+            # 获取大运/流年 (需上下文支持，若无则默认为空)
+            luck_p = chart[4] if len(chart) >= 5 else ('', '')
+            annual_p = chart[5] if len(chart) >= 6 else ('', '')
+            
+            # 全维度场强注入
+            # 大运 (0.7): Pre-heating
+            if luck_p[0] in t_stems:
+                total_e_excite += 0.7
+                sub_tags.append("LUCK_INJECTION")
+            
+            # 流年 (0.25): Impulse (Shielding Release)
+            impulse_factor = 0.0
+            if annual_p[1] in [b['branch'] for b in high_entropy_branches]:
+                # 冲刑流年 -> 屏蔽层瞬间塌缩 (Shielding Collapse)
+                impulse_factor = 1.5 
+                shielding_factor *= 0.2 # Shielding reduced by impulse
+                sub_tags.append("ANNUAL_IMPULSE_SHIELD_BREAK")
+            elif annual_p[0] in t_stems:
+                impulse_factor = 0.25
+            
+            total_e_excite += impulse_factor
+
+            # SKSK Checks within ZHSG (Constructive Interference Array)
+            all_brs = set(branches)
+            GRAVES = ['辰', '戌', '丑', '未']
+            if all(g in all_brs for g in GRAVES):
+                 total_c_phase = 2.5 # 四库全齐，相位强锁
+                 sub_tags.append("SKSK_CONSTRUCTIVE_ARRAY")
+                 # Remove cancellation check if SKSK is present
+                 if "PHASE_CANCELLATION" in sub_tags: sub_tags.remove("PHASE_CANCELLATION")
+
+            # --- 第五步：复合 SAI 定标 (Multi-phase SAI) ---
+            # S_base = 基准压力 (Based on entropy count)
+            s_base = sum([len(heb["stems"]) for heb in high_entropy_branches]) * 0.4
+            
+            # Effective Excitation = Total Excite * (1 - Shielding)
+            e_eff = total_e_excite * (1.0 - shielding_factor)
+            
+            # final_sai = (S_base + E_eff) * C_phase * Geo
+            final_sai = (s_base + e_eff) * total_c_phase * geo_factor
             
             status = "SPECTRAL_RESONANCE (频谱共振)" if "TSG_EXCITE_ACTIVE" in sub_tags else "NON_SATURATED_PLASMA (非饱和态)"
+            if "SKSK_CONSTRUCTIVE_ARRAY" in sub_tags: status = "SKSK_GRAVITATIONAL_LOCK (四库引力锁)"
             
             # [V16.4] Hierarchy ID Mappings
             zhsg_sub_id = None

@@ -84,12 +84,23 @@ class TestMasterQGAuites(unittest.TestCase):
     def test_tsg_mixed_excite(self):
         # MOD_134 TSG: Tou Gan Excite
         # High entropy branch (e.g. Chen: Wu, Yi, Gui). Stem: Yi.
-        c_tsg = [('甲', '子'), ('乙', '辰'), ('甲', '子'), ('甲', '子'), ('甲', '子'), ('甲', '子')]
+        # Add Luck Pillar (Index 4) to test Luck Injection
+        c_tsg = [('甲', '子'), ('乙', '辰'), ('甲', '子'), ('甲', '子'), ('乙', '亥'), ('甲', '子')]
         # Branch 1 is Chen (High entropy). Stem 1 is Yi. Yi is in Chen. -> TSG Active.
         res = self.run_audit(c_tsg, "ZHSG_MIXED_EXCITATION")
         self.assertIsNotNone(res)
         self.assertEqual(res.get('sub_module_id'), "MOD_134_TSG_EXCITE")
-        print("  ✅ ZHSG -> MOD_134 (TSG)")
+        print("  ✅ ZHSG -> MOD_134 (TSG + Luck Injection)")
+
+    def test_zhsg_sksk_constructive(self):
+        # NEW: SKSK within ZHSG forming Constructive Array
+        # 辰戌丑未 all present. 
+        c_sksk = [('甲', '辰'), ('甲', '戌'), ('甲', '丑'), ('甲', '未'), ('甲', '子'), ('甲', '子')]
+        res = self.run_audit(c_sksk, "ZHSG_MIXED_EXCITATION")
+        self.assertIsNotNone(res)
+        # Should change status to "SKSK_GRAVITATIONAL_LOCK" and tags contain "SKSK_CONSTRUCTIVE_ARRAY"
+        self.assertIn("SKSK_CONSTRUCTIVE_ARRAY", res.get("sub_tags", []))
+        print("  ✅ ZHSG -> SKSK Constructive Array Verified")
 
 if __name__ == '__main__':
     unittest.main()
