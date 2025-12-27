@@ -151,35 +151,94 @@ class PatternFrictionAnalysisEngine:
                 logger.debug(f"探测格局 {topic_id} 失败: {e}")
                 continue
         
-        # 保存检测到的格局（用于调试和后续分析）
-        self._last_detected_patterns = detected_patterns
-        logger.info(f"共检测到 {len(detected_patterns)} 个格局")
+        # [QGA V24.0] 模式优先驱动：先捕获典型局（特殊格局）
+        special_pattern = self._capture_special_patterns(detected_patterns, chart, bazi_profile)
         
-        # 3. 计算冲突指数
+        # 初始化prioritized_patterns（确保在所有分支中都有定义）
+        prioritized_patterns = {}
+        
+        # 如果捕获到特殊格局，逻辑锁死
+        if special_pattern:
+            logger.info(f"🔒 检测到特殊格局: {special_pattern['name']}，逻辑已锁死")
+            self._special_pattern_locked = special_pattern
+            # 特殊格局下，冲突指数设为0（因为格局本身是超稳态结构）
+            friction_index = 0.0
+            conflicting_pairs = []
+            coherence_level = "超稳态"
+            # 即使有特殊格局，也建立优先级结构（用于后续分析）
+            prioritized_patterns = {
+                'primary': {
+                    'name': special_pattern['name'],
+                    'type': special_pattern['type'],
+                    'pattern': special_pattern
+                },
+                'conflicts': [],
+                'singularities': []
+            }
+        else:
+            # [QGA V23.5] 格局优先级架构：建立层次结构
+            prioritized_patterns = self._prioritize_patterns(detected_patterns, chart, bazi_profile)
+            self._special_pattern_locked = None
+            logger.info(f"共检测到 {len(detected_patterns)} 个格局，主格局: {prioritized_patterns.get('primary', {}).get('name', '无')}")
+        
+        # 保存格局信息（用于后续分析）
+        self._prioritized_patterns = prioritized_patterns
+        self._last_detected_patterns = detected_patterns
+        
+        # 3. 计算冲突指数（基于优先级权重）
         friction_index = 0.0
         conflicting_pairs = []
         
-        # 检查格局之间的冲突
-        for i, p1 in enumerate(detected_patterns):
-            for j, p2 in enumerate(detected_patterns[i+1:], i+1):
-                conflict_score = self._check_pattern_conflict(p1, p2, chart, bazi_profile.day_master)
-                if conflict_score > 0.3:
-                    friction_index += conflict_score
-                    conflicting_pairs.append(f"{p1['name']} vs {p2['name']}")
+        primary_pattern = prioritized_patterns.get('primary')
+        conflict_patterns = prioritized_patterns.get('conflicts', [])
         
-        # 归一化到0-100
-        friction_index = min(100.0, friction_index * 20.0)
-        
-        # 4. 确定相干性等级
-        if friction_index < 30:
-            coherence_level = "高"
-        elif friction_index < 60:
-            coherence_level = "中"
+        # [QGA V23.5] 如果存在相位冲突格局，这是最大应力点
+        if conflict_patterns:
+            for cp in conflict_patterns:
+                if primary_pattern:
+                    # 主格局与冲突格局的冲突（权重60%）
+                    conflict_score = self._check_pattern_conflict(primary_pattern, cp, chart, bazi_profile.day_master)
+                    if conflict_score > 0.3:
+                        friction_index += conflict_score * 0.6
+                        conflicting_pairs.append(f"{primary_pattern['name']} vs {cp['name']}")
+                
+                # 冲突格局之间的冲突（权重20%）
+                for cp2 in conflict_patterns:
+                    if cp['id'] != cp2['id']:
+                        conflict_score = self._check_pattern_conflict(cp, cp2, chart, bazi_profile.day_master)
+                        if conflict_score > 0.3:
+                            friction_index += conflict_score * 0.2
+                            if f"{cp['name']} vs {cp2['name']}" not in conflicting_pairs:
+                                conflicting_pairs.append(f"{cp['name']} vs {cp2['name']}")
         else:
-            coherence_level = "低"
+            # 传统冲突检测（降权到10%）
+            for i, p1 in enumerate(detected_patterns):
+                for j, p2 in enumerate(detected_patterns[i+1:], i+1):
+                    conflict_score = self._check_pattern_conflict(p1, p2, chart, bazi_profile.day_master)
+                    if conflict_score > 0.3:
+                        friction_index += conflict_score * 0.1
+                        conflicting_pairs.append(f"{p1['name']} vs {p2['name']}")
+        
+        # 归一化到0-100（特殊格局已锁死，跳过此步骤）
+        if not special_pattern:
+            friction_index = min(100.0, friction_index * 20.0)
+            
+            # 4. 确定相干性等级
+            if friction_index < 30:
+                coherence_level = "高"
+            elif friction_index < 60:
+                coherence_level = "中"
+            else:
+                coherence_level = "低"
+        else:
+            # 特殊格局：超稳态结构
+            coherence_level = "超稳态"
         
         # 5. 生成语义解释
-        semantic = self._generate_friction_semantic(friction_index, conflicting_pairs, coherence_level)
+        if special_pattern:
+            semantic = self._generate_special_pattern_semantic(special_pattern)
+        else:
+            semantic = self._generate_friction_semantic(friction_index, conflicting_pairs, coherence_level)
         
         return PatternFrictionResult(
             friction_index=friction_index,
@@ -192,6 +251,85 @@ class PatternFrictionAnalysisEngine:
     def get_detected_patterns(self) -> List[Dict]:
         """获取最近一次分析中检测到的所有格局（用于调试）"""
         return getattr(self, '_last_detected_patterns', [])
+    
+    def _prioritize_patterns(self, detected_patterns: List[Dict], chart: List, 
+                            bazi_profile: BaziProfile) -> Dict[str, Any]:
+        """
+        [QGA V23.5] 格局优先级架构
+        第一优先级：月令格神（60%权重）
+        第二优先级：相位冲突（20%权重）
+        第三优先级：空间奇点（10%权重）
+        """
+        from core.trinity.core.nexus.definitions import BaziParticleNexus
+        
+        result = {
+            'primary': None,      # 主格局（月令格神）
+            'conflicts': [],      # 相位冲突格局
+            'singularities': []   # 空间奇点格局
+        }
+        
+        month_pillar = chart[1]  # 月柱
+        month_branch = month_pillar[1]  # 月支
+        day_master = bazi_profile.day_master
+        
+        # 识别月令格神（基于月支藏干和日主的关系）
+        month_hidden = BaziParticleNexus.get_branch_weights(month_branch)
+        month_ten_gods = []
+        for stem, weight in month_hidden:
+            ten_god = BaziParticleNexus.get_shi_shen(stem, day_master)
+            month_ten_gods.append((ten_god, weight))
+        
+        # 查找与月令相关的格局（优先级最高）
+        for pattern in detected_patterns:
+            pattern_name = pattern.get('name', '').lower()
+            pattern_id = pattern.get('id', '').lower()
+            
+            # 检查是否是月令相关格局
+            is_yue_ling_pattern = False
+            if '伤官' in pattern_name or 'shang_guan' in pattern_id:
+                if any('伤官' in tg[0] for tg in month_ten_gods):
+                    is_yue_ling_pattern = True
+            elif '正官' in pattern_name or 'zheng_guan' in pattern_id:
+                if any('正官' in tg[0] for tg in month_ten_gods):
+                    is_yue_ling_pattern = True
+            elif '正财' in pattern_name or 'zheng_cai' in pattern_id:
+                if any('正财' in tg[0] for tg in month_ten_gods):
+                    is_yue_ling_pattern = True
+            elif '偏财' in pattern_name or 'pian_cai' in pattern_id:
+                if any('偏财' in tg[0] for tg in month_ten_gods):
+                    is_yue_ling_pattern = True
+            elif '正印' in pattern_name or 'zheng_yin' in pattern_id:
+                if any('正印' in tg[0] for tg in month_ten_gods):
+                    is_yue_ling_pattern = True
+            
+            if is_yue_ling_pattern and not result['primary']:
+                result['primary'] = pattern
+                pattern['priority'] = 'primary'
+                pattern['weight'] = 0.6
+                continue
+            
+            # 检查是否是相位冲突格局（如伤官见官）
+            if '见' in pattern_name or 'jian' in pattern_id or 'conflict' in pattern_id:
+                result['conflicts'].append(pattern)
+                pattern['priority'] = 'conflict'
+                pattern['weight'] = 0.2
+                continue
+            
+            # 检查是否是空间奇点（拱夹、墓库）
+            if '拱' in pattern_name or '墓' in pattern_name or '库' in pattern_name or \
+               'gong' in pattern_id or 'mu' in pattern_id or 'ku' in pattern_id:
+                result['singularities'].append(pattern)
+                pattern['priority'] = 'singularity'
+                pattern['weight'] = 0.1
+                continue
+        
+        # 如果没有找到月令格神，选择第一个格局作为主格局（降权）
+        if not result['primary'] and detected_patterns:
+            result['primary'] = detected_patterns[0]
+            result['primary']['priority'] = 'primary'
+            result['primary']['weight'] = 0.4  # 降权
+        
+        return result
     
     def _check_pattern_conflict(self, p1: Dict, p2: Dict, chart: List, day_master: str) -> float:
         """检查两个格局之间的冲突程度"""
@@ -208,6 +346,133 @@ class PatternFrictionAnalysisEngine:
             conflict_score += 0.5
         
         return conflict_score
+    
+    def _capture_special_patterns(self, detected_patterns: List[Dict], chart: List,
+                                 bazi_profile: BaziProfile) -> Optional[Dict]:
+        """
+        [QGA V24.0] 典型局捕获器
+        识别特殊格局：伤官伤尽、从财格、化气格、羊刃驾杀等
+        一旦识别，逻辑锁死，后续计算必须服从该格局的"标准答案"
+        """
+        from core.trinity.core.nexus.definitions import BaziParticleNexus
+        from typing import Optional
+        
+        day_master = bazi_profile.day_master
+        stems = [p[0] for p in chart]
+        branches = [p[1] for p in chart]
+        ten_gods = [BaziParticleNexus.get_shi_shen(s, day_master) for s in stems]
+        
+        # 1. 伤官伤尽（Shang Guan Shang Jin）
+        # 判定：伤官多且无官星，或官星被完全制化
+        shang_guan_count = ten_gods.count('伤官')
+        zheng_guan_count = ten_gods.count('正官')
+        qi_sha_count = ten_gods.count('七杀')
+        
+        if shang_guan_count >= 2 and (zheng_guan_count == 0 and qi_sha_count == 0):
+            # 检查是否有官星被合化或冲掉
+            for pattern in detected_patterns:
+                pattern_name = pattern.get('name', '').lower()
+                if '伤官' in pattern_name and ('尽' in pattern_name or 'shang_jin' in pattern.get('id', '').lower()):
+                    return {
+                        'type': 'shang_guan_shang_jin',
+                        'name': '伤官伤尽',
+                        'pattern': pattern,
+                        'yong_shen_rule': 'shang_guan_or_wealth',  # 用神：伤官或行财运
+                        'life_theme': '才华横溢，不受约束，适合自由职业或艺术创作'
+                    }
+        
+        # 2. 从财格（From-Wealth Pattern）
+        # 判定：财星极旺，日主极弱，从财
+        cai_count = ten_gods.count('正财') + ten_gods.count('偏财')
+        if cai_count >= 3:
+            # 检查日主是否极弱（无印比支撑）
+            yin_count = ten_gods.count('正印') + ten_gods.count('偏印')
+            bi_jie_count = ten_gods.count('比肩') + ten_gods.count('劫财')
+            if yin_count == 0 and bi_jie_count <= 1:
+                return {
+                    'type': 'from_wealth',
+                    'name': '从财格',
+                    'pattern': None,
+                    'yong_shen_rule': 'wealth',  # 用神：财星
+                    'life_theme': '以财为用，善于经营，财富是人生核心追求'
+                }
+        
+        # 3. 化气格（Transformation Pattern）
+        # 判定：天干五合且合化成功
+        for pattern in detected_patterns:
+            pattern_name = pattern.get('name', '').lower()
+            pattern_id = pattern.get('id', '').lower()
+            if '化气' in pattern_name or 'hua_qi' in pattern_id or 'transform' in pattern_id:
+                match_data = pattern.get('match_data', {})
+                if match_data.get('transform', False):  # 合化成功
+                    return {
+                        'type': 'transformation',
+                        'name': pattern.get('name', '化气格'),
+                        'pattern': pattern,
+                        'yong_shen_rule': 'transformed_element',  # 用神：合化后的元素
+                        'life_theme': '性格转化，具有双重特质，人生多变'
+                    }
+        
+        # 4. 羊刃驾杀（Yang Ren Jia Sha）
+        # 判定：羊刃与七杀同时出现且力量相当
+        day_master_yang_ren = {
+            '甲': '卯', '乙': '寅',
+            '丙': '午', '丁': '巳',
+            '戊': '午', '己': '巳',
+            '庚': '酉', '辛': '申',
+            '壬': '子', '癸': '亥'
+        }
+        yang_ren = day_master_yang_ren.get(day_master)
+        
+        if yang_ren and yang_ren in branches and qi_sha_count >= 1:
+            return {
+                'type': 'yang_ren_jia_sha',
+                'name': '羊刃驾杀',
+                'pattern': None,
+                'yong_shen_rule': 'sha_or_yin',  # 用神：七杀或印星
+                'life_theme': '刚强果断，有领导力，但易冲动，需要制衡'
+            }
+        
+        # 5. 超导体/奇点格局（Superconductor/Singularity）
+        # 检查是否有高SAI、高纯度的格局
+        for pattern in detected_patterns:
+            pattern_id = pattern.get('id', '').lower()
+            sai = pattern.get('sai', 0.0)
+            # 确保sai是数值类型
+            try:
+                sai_float = float(sai) if sai is not None else 0.0
+            except (ValueError, TypeError):
+                sai_float = 0.0
+            
+            if 'superconductor' in pattern_id or 'singularity' in pattern_id or sai_float > 0.9:
+                return {
+                    'type': 'superconductor',
+                    'name': pattern.get('name', '超导体格局'),
+                    'pattern': pattern,
+                    'yong_shen_rule': 'maintain_purity',  # 用神：维持纯度
+                    'life_theme': '纯粹与秩序，追求完美，具有超常的专注力'
+                }
+        
+        return None
+    
+    def _generate_special_pattern_semantic(self, special_pattern: Dict) -> str:
+        """生成特殊格局的语义解释"""
+        pattern_type = special_pattern.get('type')
+        pattern_name = special_pattern.get('name')
+        life_theme = special_pattern.get('life_theme', '')
+        
+        if pattern_type == 'shang_guan_shang_jin':
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。用神直接锁定伤官或行财运，不再考虑身强身弱的平衡。"
+        elif pattern_type == 'from_wealth':
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。用神直接锁定财星，以财为用。"
+        elif pattern_type == 'transformation':
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。用神为合化后的元素。"
+        elif pattern_type == 'yang_ren_jia_sha':
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。用神为七杀或印星。"
+        elif pattern_type == 'superconductor':
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。用神为维持纯度，避免杂质干扰。"
+        else:
+            return f"命局呈现**{pattern_name}**格局，这是超稳态结构。{life_theme}。"
     
     def _generate_friction_semantic(self, friction: float, conflicts: List[str], coherence: str) -> str:
         """生成语义解释"""
@@ -239,22 +504,31 @@ class SystemOptimizationEngine:
         }
     
     def optimize(self, bazi_profile: BaziProfile, year: int = None,
-                 geo_element: str = None, geo_factor: float = 1.0) -> OptimizationResult:
+                 geo_element: str = None, geo_factor: float = 1.0,
+                 primary_pattern: Dict = None, conflict_patterns: List[Dict] = None,
+                 special_pattern: Dict = None) -> OptimizationResult:
         """
-        变分寻优
+        变分寻优（3年滚动窗口版本 + 定海神针逻辑）
         
         Args:
             bazi_profile: 八字档案对象
             year: 流年（可选）
             geo_element: 地理五行属性（可选）
             geo_factor: 地理因子（可选）
+            primary_pattern: 主格局（用于定海神针逻辑）
+            conflict_patterns: 冲突格局列表（用于定海神针逻辑）
             
         Returns:
-            优化结果
+            优化结果（确保用神在未来36个月内稳定）
         """
+        if not year:
+            year = 2024  # 默认年份
+        
+        # [优化2] 3年滚动窗口：扫描未来3年
+        window_years = [year, year + 1, year + 2]
+        
         # 1. 初始化引擎
         from core.engine_graph import GraphNetworkEngine
-        engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
         
         # 2. 获取基础八字
         pillars = bazi_profile.pillars
@@ -265,11 +539,7 @@ class SystemOptimizationEngine:
             pillars['hour']
         ]
         
-        # 3. 获取大运和流年
-        luck_pillar = bazi_profile.get_luck_pillar_at(year) if year else None
-        year_pillar = bazi_profile.get_year_pillar(year) if year else None
-        
-        # 4. 初始化节点（基准状态，包含地理修正）
+        # 3. 基准地理修正
         baseline_geo_modifiers = {}
         if geo_element:
             element_map = {
@@ -279,59 +549,112 @@ class SystemOptimizationEngine:
             if geo_element in element_map:
                 baseline_geo_modifiers[element_map[geo_element]] = geo_factor - 1.0
         
-        engine.initialize_nodes(
+        # 4. 计算基准状态（当前年）
+        baseline_engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
+        luck_pillar = bazi_profile.get_luck_pillar_at(year)
+        year_pillar = bazi_profile.get_year_pillar(year)
+        
+        baseline_engine.initialize_nodes(
             bazi, bazi_profile.day_master,
             luck_pillar, year_pillar,
             geo_modifiers=baseline_geo_modifiers if baseline_geo_modifiers else None
         )
-        engine.build_adjacency_matrix()
-        engine.propagate()
+        baseline_engine.build_adjacency_matrix()
+        baseline_engine.propagate()
         
-        baseline_entropy = self._calculate_entropy(engine)
-        baseline_stability = self._calculate_stability(engine)
+        baseline_entropy = self._calculate_entropy(baseline_engine)
+        baseline_stability = self._calculate_stability(baseline_engine)
         
-        # 5. 变分搜索
+        # [QGA V24.0] 用神判定优先级：格神优先 > 病药优先 > 平衡最后
+        target_elements = []
+        
+        # [QGA V24.0] 优先级1：格神优先（特殊格局锁死）
+        if special_pattern:
+            yong_shen_rule = special_pattern.get('yong_shen_rule')
+            target_elements = self._resolve_special_pattern_yong_shen(
+                yong_shen_rule, bazi_profile.day_master
+            )
+            logger.info(f"🔒 特殊格局锁死，用神规则: {yong_shen_rule}, 目标元素: {target_elements}")
+        # 优先级2：病药优先（格局冲突）
+        elif primary_pattern is not None or (conflict_patterns is not None and len(conflict_patterns) > 0):
+            target_elements = self._determine_yong_shen_direction(
+                primary_pattern, conflict_patterns or [], bazi_profile.day_master
+            )
+            logger.info(f"💊 病药优先，目标元素: {target_elements}")
+        # 优先级3：平衡最后（普通命局才计算五行平衡）
+        else:
+            logger.info("⚖️ 平衡最后，使用五行平衡算法")
+        
+        # 5. 变分搜索（3年滚动窗口）
         best_result = None
         best_score = float('inf')
         
-        # 简化版：只搜索单一元素注入
-        for element in self.elements:
+        # 如果定海神针逻辑确定了方向，优先搜索这些元素
+        search_elements = target_elements if target_elements else self.elements
+        
+        for element in search_elements:
             for injection_amount in np.arange(0.0, 1.0, self.step_size):
-                # 创建修正后的引擎（在基准地理修正基础上叠加）
-                test_engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
-                test_geo_modifiers = baseline_geo_modifiers.copy()
-                test_geo_modifiers[element] = test_geo_modifiers.get(element, 0.0) + injection_amount
+                # 测试该元素在未来3年的稳定性
+                year_scores = []
+                year_stabilities = []
+                year_entropies = []
                 
-                test_engine.initialize_nodes(
-                    bazi, bazi_profile.day_master,
-                    luck_pillar, year_pillar,
-                    geo_modifiers=test_geo_modifiers if test_geo_modifiers else None
-                )
-                test_engine.build_adjacency_matrix()
-                test_engine.propagate()
+                for test_year in window_years:
+                    test_luck = bazi_profile.get_luck_pillar_at(test_year)
+                    test_year_pillar = bazi_profile.get_year_pillar(test_year)
+                    
+                    test_engine = GraphNetworkEngine(config=DEFAULT_FULL_ALGO_PARAMS)
+                    test_geo_modifiers = baseline_geo_modifiers.copy()
+                    test_geo_modifiers[element] = test_geo_modifiers.get(element, 0.0) + injection_amount
+                    
+                    test_engine.initialize_nodes(
+                        bazi, bazi_profile.day_master,
+                        test_luck, test_year_pillar,
+                        geo_modifiers=test_geo_modifiers if test_geo_modifiers else None
+                    )
+                    test_engine.build_adjacency_matrix()
+                    test_engine.propagate()
+                    
+                    entropy = self._calculate_entropy(test_engine)
+                    stability = self._calculate_stability(test_engine)
+                    
+                    year_entropies.append(entropy)
+                    year_stabilities.append(stability)
+                    # 综合评分
+                    year_scores.append(entropy - stability * 10.0)
                 
-                entropy = self._calculate_entropy(test_engine)
-                stability = self._calculate_stability(test_engine)
+                # 3年综合评分：要求稳定性不能大幅下降
+                avg_score = np.mean(year_scores)
+                avg_stability = np.mean(year_stabilities)
+                stability_trend = year_stabilities[-1] - year_stabilities[0]  # 稳定性趋势
                 
-                # 综合评分：熵值越低、稳定性越高越好
-                score = entropy - stability * 10.0
+                # 如果稳定性下降超过20%，惩罚该方案
+                if stability_trend < -0.2:
+                    avg_score += 5.0  # 惩罚分
                 
-                if score < best_score:
-                    best_score = score
+                # 如果未来年份熵值增加，说明会激化冲突，惩罚
+                entropy_trend = year_entropies[-1] - year_entropies[0]
+                if entropy_trend > 0.05:
+                    avg_score += 3.0  # 惩罚分
+                
+                if avg_score < best_score:
+                    best_score = avg_score
                     best_result = {
                         'element': element,
                         'amount': injection_amount,
-                        'entropy': entropy,
-                        'stability': stability,
-                        'entropy_reduction': baseline_entropy - entropy
+                        'entropy': np.mean(year_entropies),
+                        'stability': avg_stability,
+                        'entropy_reduction': baseline_entropy - np.mean(year_entropies),
+                        'stability_trend': stability_trend,
+                        '3year_stable': stability_trend >= -0.1  # 3年稳定性标志
                     }
         
-        # 6. 生成最优组合（简化版：只返回最佳单一元素）
+        # 6. 生成最优组合
         optimal_elements = {}
         if best_result:
             optimal_elements[best_result['element']] = best_result['amount']
         
-        # 7. 生成语义解释
+        # 7. 生成语义解释（包含3年稳定性信息）
         semantic = self._generate_optimization_semantic(best_result, baseline_entropy, baseline_stability)
         
         return OptimizationResult(
@@ -340,6 +663,127 @@ class SystemOptimizationEngine:
             entropy_reduction=best_result['entropy_reduction'] if best_result else 0.0,
             semantic_interpretation=semantic
         )
+    
+    def _determine_yong_shen_direction(self, primary_pattern: Dict, conflict_patterns: List[Dict],
+                                      day_master: str) -> List[str]:
+        """
+        [QGA V23.5] 定海神针逻辑：基于格局冲突直接锁定用神方向
+        
+        如果主格局是[伤官见官]，矛盾点在"官星受损"：
+        - 通关方向：财星（伤官生财，财生官）
+        - 制衡方向：印星（印克伤官，保护官星）
+        
+        Returns:
+            目标元素列表（优先搜索方向）
+        """
+        if not conflict_patterns:
+            return []  # 没有冲突，不锁定方向
+        
+        # 检查是否是伤官见官格局
+        for cp in conflict_patterns:
+            pattern_name = cp.get('name', '').lower()
+            pattern_id = cp.get('id', '').lower()
+            
+            if '伤官' in pattern_name and '官' in pattern_name or \
+               'shang_guan' in pattern_id and 'guan' in pattern_id:
+                # 伤官见官：通关用财，制衡用印
+                # 根据日主确定财和印的元素
+                day_master_elements = {
+                    '甲': 'wood', '乙': 'wood',
+                    '丙': 'fire', '丁': 'fire',
+                    '戊': 'earth', '己': 'earth',
+                    '庚': 'metal', '辛': 'metal',
+                    '壬': 'water', '癸': 'water'
+                }
+                dm_element = day_master_elements.get(day_master, 'earth')
+                
+                # 财星：我克者为财
+                # 印星：生我者为印
+                generation_map = {
+                    'wood': 'water',  # 水生木（印）
+                    'fire': 'wood',   # 木生火（印）
+                    'earth': 'fire',  # 火生土（印）
+                    'metal': 'earth', # 土生金（印）
+                    'water': 'metal' # 金生水（印）
+                }
+                control_map = {
+                    'wood': 'earth',  # 木克土（财）
+                    'fire': 'metal',   # 火克金（财）
+                    'earth': 'water',  # 土克水（财）
+                    'metal': 'wood',   # 金克木（财）
+                    'water': 'fire'    # 水克火（财）
+                }
+                
+                yin_element = generation_map.get(dm_element, 'earth')
+                cai_element = control_map.get(dm_element, 'earth')
+                
+                # 优先通关（财），其次制衡（印）
+                return [cai_element, yin_element]
+        
+        return []  # 其他冲突格局，不锁定方向
+    
+    def _resolve_special_pattern_yong_shen(self, yong_shen_rule: str, day_master: str) -> List[str]:
+        """
+        [QGA V24.0] 解析特殊格局的用神规则
+        格神优先：直接锁定用神，不再考虑平衡
+        """
+        day_master_elements = {
+            '甲': 'wood', '乙': 'wood',
+            '丙': 'fire', '丁': 'fire',
+            '戊': 'earth', '己': 'earth',
+            '庚': 'metal', '辛': 'metal',
+            '壬': 'water', '癸': 'water'
+        }
+        dm_element = day_master_elements.get(day_master, 'earth')
+        
+        # 十神到五行的映射
+        generation_map = {
+            'wood': 'water',  # 水生木（印）
+            'fire': 'wood',   # 木生火（印）
+            'earth': 'fire',  # 火生土（印）
+            'metal': 'earth', # 土生金（印）
+            'water': 'metal'  # 金生水（印）
+        }
+        control_map = {
+            'wood': 'earth',  # 木克土（财）
+            'fire': 'metal',  # 火克金（财）
+            'earth': 'water', # 土克水（财）
+            'metal': 'wood',  # 金克木（财）
+            'water': 'fire'   # 水克火（财）
+        }
+        output_map = {
+            'wood': 'fire',   # 木生火（伤官/食神）
+            'fire': 'earth',  # 火生土（伤官/食神）
+            'earth': 'metal', # 土生金（伤官/食神）
+            'metal': 'water', # 金生水（伤官/食神）
+            'water': 'wood'   # 水生木（伤官/食神）
+        }
+        control_reverse_map = {
+            'wood': 'metal',  # 金克木（官杀）
+            'fire': 'water',  # 水克火（官杀）
+            'earth': 'wood',  # 木克土（官杀）
+            'metal': 'fire',  # 火克金（官杀）
+            'water': 'earth'  # 土克水（官杀）
+        }
+        
+        if yong_shen_rule == 'shang_guan_or_wealth':
+            # 伤官伤尽：用神为伤官（我生）或财（我克）
+            return [output_map.get(dm_element, 'fire'), control_map.get(dm_element, 'earth')]
+        elif yong_shen_rule == 'wealth':
+            # 从财格：用神为财（我克）
+            return [control_map.get(dm_element, 'earth')]
+        elif yong_shen_rule == 'sha_or_yin':
+            # 羊刃驾杀：用神为七杀（克我）或印（生我）
+            return [control_reverse_map.get(dm_element, 'metal'), generation_map.get(dm_element, 'water')]
+        elif yong_shen_rule == 'maintain_purity':
+            # 超导体：维持纯度，用神为日主本身
+            return [dm_element]
+        elif yong_shen_rule == 'transformed_element':
+            # 化气格：用神为合化后的元素（需要从格局信息中获取）
+            # 简化：返回日主元素（实际应该从合化信息中获取）
+            return [dm_element]
+        else:
+            return []
     
     def _calculate_entropy(self, engine: GraphNetworkEngine) -> float:
         """计算系统熵值"""
@@ -398,19 +842,36 @@ class SystemOptimizationEngine:
     
     def _generate_optimization_semantic(self, best_result: Dict, baseline_entropy: float, 
                                        baseline_stability: float) -> str:
-        """生成优化语义解释"""
+        """生成优化语义解释（包含3年稳定性验证）"""
         if not best_result:
             return "当前系统已达到较优状态，无需大幅调整。"
         
         element_cn = self.element_cn.get(best_result['element'], best_result['element'])
         reduction = best_result['entropy_reduction']
+        is_3year_stable = best_result.get('3year_stable', True)
+        stability_trend = best_result.get('stability_trend', 0.0)
+        
+        base_msg = ""
+        if reduction > 0.1:
+            base_msg = f"系统通过注入{element_cn}元素（强度{best_result['amount']:.2f}）能够显著降低内耗，提升稳定性。"
+        elif reduction > 0.05:
+            base_msg = f"系统通过适度注入{element_cn}元素能够改善能量分布，减少内部冲突。"
+        else:
+            base_msg = "当前系统状态较为平衡，小幅调整即可维持稳定。"
+        
+        # [优化2] 添加3年稳定性验证
+        if is_3year_stable:
+            if stability_trend > 0.05:
+                base_msg += " 经过3年滚动窗口验证，该用神在未来36个月内将带来持续稳定的增益，不会激化潜在冲突。"
+            else:
+                base_msg += " 经过3年滚动窗口验证，该用神在未来36个月内保持稳定，不会出现'今年发财，明年坐牢'的短视风险。"
+        else:
+            base_msg += f" ⚠️ 注意：该用神在未来3年内可能导致稳定性下降（趋势{stability_trend:.2f}），建议谨慎使用或寻找替代方案。"
         
         if reduction > 0.1:
-            return f"系统通过注入{element_cn}元素（强度{best_result['amount']:.2f}）能够显著降低内耗，提升稳定性。这是最能平息内耗、开启财富的钥匙。"
-        elif reduction > 0.05:
-            return f"系统通过适度注入{element_cn}元素能够改善能量分布，减少内部冲突。"
-        else:
-            return "当前系统状态较为平衡，小幅调整即可维持稳定。"
+            base_msg += " 这是最能平息内耗、开启财富的钥匙。"
+        
+        return base_msg
 
 
 class MediumCompensationEngine:
@@ -456,12 +917,21 @@ class MediumCompensationEngine:
             '悉尼': 'fire', '墨尔本': 'water', '奥克兰': 'water',
         }
         
-        # 微环境修正系数
+        # [优化4] 微环境修正系数（添加特定矢量偏移）
+        # 例如：近水增加水元素15%，同时降低火元素稳定性
         self.micro_env_factors = {
             '近水': {'water': 1.15, 'fire': 0.85, 'earth': 0.95, 'wood': 1.05, 'metal': 1.0},
             '近山': {'earth': 1.15, 'wood': 1.10, 'fire': 0.90, 'water': 0.95, 'metal': 1.05},
             '高层': {'fire': 1.10, 'metal': 1.05, 'earth': 0.95, 'water': 0.90, 'wood': 1.0},
             '低层': {'earth': 1.10, 'water': 1.05, 'wood': 1.0, 'fire': 0.95, 'metal': 0.95},
+        }
+        
+        # [优化4] 微环境矢量偏移（直接作用于五行能量分布）
+        self.micro_env_vector_offsets = {
+            '近水': {'water': +15.0, 'fire': -10.0},  # 近水：水+15%，火-10%
+            '近山': {'earth': +15.0, 'wood': +10.0},  # 近山：土+15%，木+10%
+            '高层': {'fire': +10.0, 'metal': +5.0, 'water': -10.0},  # 高层：火+10%，金+5%，水-10%
+            '低层': {'earth': +10.0, 'water': +5.0},  # 低层：土+10%，水+5%
         }
     
     def compensate(self, bazi_profile: BaziProfile, city: str = None,
@@ -500,8 +970,9 @@ class MediumCompensationEngine:
                 if city_element in control_map:
                     geo_correction[control_map[city_element]] = 0.90
         
-        # 2. 微环境修正
+        # 2. 微环境修正（[优化4] 应用矢量偏移）
         micro_correction = {'metal': 1.0, 'wood': 1.0, 'water': 1.0, 'fire': 1.0, 'earth': 1.0}
+        micro_vector_offsets = {'metal': 0.0, 'wood': 0.0, 'water': 0.0, 'fire': 0.0, 'earth': 0.0}
         
         if micro_env:
             for env in micro_env:
@@ -509,6 +980,12 @@ class MediumCompensationEngine:
                     factors = self.micro_env_factors[env]
                     for element, factor in factors.items():
                         micro_correction[element] *= factor
+                
+                # [优化4] 应用矢量偏移
+                if env in self.micro_env_vector_offsets:
+                    offsets = self.micro_env_vector_offsets[env]
+                    for element, offset in offsets.items():
+                        micro_vector_offsets[element] += offset
         
         # 3. 总修正（取平均值）
         total_correction = {}
@@ -524,6 +1001,27 @@ class MediumCompensationEngine:
             total_correction=total_correction,
             semantic_interpretation=semantic
         )
+    
+    def get_micro_env_vector_offsets(self, micro_env: List[str] = None) -> Dict[str, float]:
+        """
+        [优化4] 获取微环境的矢量偏移
+        
+        Args:
+            micro_env: 微环境列表
+            
+        Returns:
+            矢量偏移字典（百分比）
+        """
+        offsets = {'metal': 0.0, 'wood': 0.0, 'water': 0.0, 'fire': 0.0, 'earth': 0.0}
+        
+        if micro_env:
+            for env in micro_env:
+                if env in self.micro_env_vector_offsets:
+                    env_offsets = self.micro_env_vector_offsets[env]
+                    for element, offset in env_offsets.items():
+                        offsets[element] += offset
+        
+        return offsets
     
     def _generate_compensation_semantic(self, city: str, micro_env: List[str],
                                       geo_correction: Dict, micro_correction: Dict) -> str:

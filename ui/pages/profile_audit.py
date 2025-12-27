@@ -40,18 +40,22 @@ def render():
     .audit-report-card {{
         background: rgba(45, 27, 78, 0.4);
         border: 1px solid rgba(255, 215, 0, 0.3);
-        border-radius: 12px;
-        padding: 20px;
-        margin: 10px 0;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 5px 0;
     }}
     .section-title {{
         color: {COLORS['mystic_gold']};
-        font-size: 18px;
+        font-size: 16px;
         font-weight: bold;
-        margin-top: 15px;
-        margin-bottom: 10px;
-        border-bottom: 2px solid rgba(255, 215, 0, 0.3);
-        padding-bottom: 5px;
+        margin-top: 8px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+        padding-bottom: 3px;
+    }}
+    .compact-section {{
+        margin: 3px 0;
+        padding: 5px 0;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -72,8 +76,8 @@ def render():
         st.warning("📭 暂无档案数据，请先在智能排盘页面创建档案")
         return
     
-    # --- 三栏布局：左侧档案选择、中间矢量图、右侧报告 ---
-    col_left, col_mid, col_right = st.columns([1.2, 1.5, 1.8])
+    # --- 三栏布局：左侧档案选择、中间矢量图、右侧报告（紧凑版） ---
+    col_left, col_mid, col_right = st.columns([1.0, 1.2, 1.5], gap="small")
     
     with col_left:
         render_profile_selector(controller, all_profiles)
@@ -86,15 +90,132 @@ def render():
 
 
 def render_profile_selector(controller: ProfileAuditController, all_profiles: list):
-    """渲染左侧：档案与环境注入"""
+    """渲染左侧：档案与环境注入（紧凑版）"""
     st.markdown(f"""
-    <div class="audit-report-card">
-        <h3 style="color: {COLORS['mystic_gold']};">📂 档案与环境注入</h3>
+    <div class="audit-report-card" style="padding: 10px;">
+        <h3 style="color: {COLORS['mystic_gold']}; font-size: 16px; margin: 0 0 8px 0;">📂 档案与环境注入</h3>
     </div>
     """, unsafe_allow_html=True)
     
+    # [QGA V24.3] LLM合成开关
+    # 注意：st.checkbox会自动管理session_state，不需要手动设置
+    use_llm = st.checkbox(
+        "🤖 启用LLM语义合成",
+        value=st.session_state.get('use_llm_synthesis', False),
+        key="use_llm_synthesis",
+        help="使用LLM生成全息命运画像（需要安装ollama）"
+    )
+    
+    # [QGA V24.3] 显示LLM配置信息和连接状态（始终显示，不管是否启用）
+    from core.config_manager import ConfigManager
+    from core.models.llm_semantic_synthesizer import LLMSemanticSynthesizer
+    
+    config_manager = ConfigManager()
+    model_name = config_manager.get("selected_model_name", "未配置")
+    ollama_host = config_manager.get("ollama_host", "http://localhost:11434")
+    
+    # 测试连接（只在需要时测试，避免每次都测试）
+    if 'llm_connection_info' not in st.session_state or st.button("🔄 刷新LLM连接状态", key="refresh_llm_status"):
+        with st.spinner("正在测试LLM连接..."):
+            try:
+                synthesizer = LLMSemanticSynthesizer(use_llm=True)
+                connection_info = synthesizer.get_connection_info()
+                st.session_state['llm_connection_info'] = connection_info
+            except Exception as e:
+                st.session_state['llm_connection_info'] = {
+                    'model_name': model_name,
+                    'ollama_host': ollama_host,
+                    'connection_status': f"测试失败: {str(e)}",
+                    'connection_error': str(e),
+                    'use_llm': False
+                }
+    
+    connection_info = st.session_state.get('llm_connection_info', {})
+    
+    # 显示LLM信息（始终显示）
+    status_color = {
+        "连接正常": "🟢",
+        "连接失败": "🔴",
+        "未安装ollama": "🟡",
+        "未初始化": "⚪"
+    }.get(connection_info.get('connection_status', ''), "⚪")
+    
+    # 如果还没有测试过，显示配置信息但不显示状态
+    if not connection_info:
+        st.markdown(f"""
+        <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 12px;">
+            <strong>🤖 LLM配置:</strong><br>
+            • 模型: <code>{model_name}</code><br>
+            • 服务器: <code>{ollama_host}</code><br>
+            • 状态: 点击"刷新LLM连接状态"按钮测试连接
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 12px;">
+            <strong>🤖 LLM配置:</strong><br>
+            • 模型: <code>{connection_info.get('model_name', model_name)}</code><br>
+            • 服务器: <code>{connection_info.get('ollama_host', ollama_host)}</code><br>
+            • 状态: {status_color} {connection_info.get('connection_status', '未知')}
+            {f"<br>• 错误: <span style='color: {COLORS['rose_magenta']};'>{connection_info.get('connection_error', '')}</span>" if connection_info.get('connection_error') else ''}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # 如果连接失败，给出提示
+    if connection_info.get('connection_status') and connection_info.get('connection_status') != "连接正常":
+        st.warning("⚠️ LLM连接异常，将使用规则生成画像。请检查ollama服务是否运行，或前往系统配置页面检查LLM设置。")
+    
+    # 原来的if use_llm代码块已移除，因为现在始终显示
+    if False:  # 保留原代码结构，但不再使用
+        from core.config_manager import ConfigManager
+        from core.models.llm_semantic_synthesizer import LLMSemanticSynthesizer
+        
+        config_manager = ConfigManager()
+        model_name = config_manager.get("selected_model_name", "未配置")
+        ollama_host = config_manager.get("ollama_host", "http://localhost:11434")
+        
+        # 测试连接（只在需要时测试，避免每次都测试）
+        if 'llm_connection_info' not in st.session_state or st.button("🔄 刷新LLM连接状态", key="refresh_llm_status"):
+            with st.spinner("正在测试LLM连接..."):
+                try:
+                    synthesizer = LLMSemanticSynthesizer(use_llm=True)
+                    connection_info = synthesizer.get_connection_info()
+                    st.session_state['llm_connection_info'] = connection_info
+                except Exception as e:
+                    st.session_state['llm_connection_info'] = {
+                        'model_name': model_name,
+                        'ollama_host': ollama_host,
+                        'connection_status': f"测试失败: {str(e)}",
+                        'connection_error': str(e),
+                        'use_llm': False
+                    }
+        
+        connection_info = st.session_state.get('llm_connection_info', {})
+        
+        # 显示LLM信息
+        status_color = {
+            "连接正常": "🟢",
+            "连接失败": "🔴",
+            "未安装ollama": "🟡",
+            "未初始化": "⚪"
+        }.get(connection_info.get('connection_status', ''), "⚪")
+        
+        st.markdown(f"""
+        <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 12px;">
+            <strong>🤖 LLM配置:</strong><br>
+            • 模型: <code>{connection_info.get('model_name', model_name)}</code><br>
+            • 服务器: <code>{connection_info.get('ollama_host', ollama_host)}</code><br>
+            • 状态: {status_color} {connection_info.get('connection_status', '未知')}
+            {f"<br>• 错误: <span style='color: {COLORS['rose_magenta']};'>{connection_info.get('connection_error', '')}</span>" if connection_info.get('connection_error') else ''}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 如果连接失败，给出提示
+        if connection_info.get('connection_status') != "连接正常":
+            st.warning("⚠️ LLM连接异常，将使用规则生成画像。请检查ollama服务是否运行，或前往系统配置页面检查LLM设置。")
+    
     # 1. 档案选择
-    st.markdown("#### 👤 选择档案")
+    st.markdown("#### 👤 档案", help="选择要审计的档案")
     profile_options = {p.get('id'): f"{p.get('name', '未知')} ({p.get('gender', '?')})" 
                       for p in all_profiles}
     
@@ -109,14 +230,10 @@ def render_profile_selector(controller: ProfileAuditController, all_profiles: li
     if selected_profile_id:
         profile = controller.get_profile_by_id(selected_profile_id)
         if profile:
-            st.markdown(f"**姓名**: {profile.get('name', '未知')}")
-            st.markdown(f"**性别**: {profile.get('gender', '未知')}")
-            st.markdown(f"**出生**: {profile.get('year', '?')}年{profile.get('month', '?')}月{profile.get('day', '?')}日 {profile.get('hour', '?')}时")
-    
-    st.divider()
+            st.caption(f"**{profile.get('name', '未知')}** ({profile.get('gender', '未知')}) | {profile.get('year', '?')}-{profile.get('month', '?')}-{profile.get('day', '?')} {profile.get('hour', '?')}时")
     
     # 2. 流年选择（显示对应大运）
-    st.markdown("#### 📅 流年选择")
+    st.markdown("#### 📅 流年", help="选择要分析的流年")
     current_year = datetime.now().year
     selected_year = st.number_input(
         "选择流年",
@@ -161,7 +278,7 @@ def render_profile_selector(controller: ProfileAuditController, all_profiles: li
     st.divider()
     
     # 3. 地理环境
-    st.markdown("#### 🌍 地理环境")
+    st.markdown("#### 🌍 地理", help="选择城市和微环境")
     
     # 使用量子真言页面的城市列表
     GEO_CITY_MAP = {
@@ -290,11 +407,14 @@ def render_profile_selector(controller: ProfileAuditController, all_profiles: li
                 # 提取城市名称（去掉英文部分）
                 city_name = selected_city.split(' (')[0] if ' (' in selected_city else selected_city
                 
+                # [QGA V24.3] 传递LLM开关
+                use_llm = st.session_state.get('use_llm_synthesis', False)
                 audit_result = controller.perform_deep_audit(
                     selected_profile_id,
                     year=selected_year,
                     city=city_name,
-                    micro_env=selected_micro_env if selected_micro_env else None
+                    micro_env=selected_micro_env if selected_micro_env else None,
+                    use_llm=use_llm
                 )
                 st.session_state['current_audit_result'] = audit_result
                 st.success("✅ 审计完成！")
@@ -317,41 +437,102 @@ def render_force_vector_diagram(controller: ProfileAuditController):
         st.info("👈 请先在左侧选择档案并执行审计")
         return
     
-    force_vectors = audit_result['force_vectors']
+    force_vectors = audit_result['force_vectors'].copy()  # 复制，避免修改原数据
+    pfa_data = audit_result.get('pfa', {})
+    friction_index = pfa_data.get('friction_index', 0.0)
+    
+    # [QGA V24.3] 如果LLM推导出五行偏移，应用到矢量图
+    # 注意：LLM校准信息存储在controller中，需要从审计结果获取
+    if 'llm_calibration' in audit_result:
+        llm_calibration = audit_result['llm_calibration']
+        element_keys = ['metal', 'wood', 'water', 'fire', 'earth']
+        for key in element_keys:
+            if key in llm_calibration:
+                offset = llm_calibration[key]
+                force_vectors[key] = max(0.0, min(100.0, force_vectors.get(key, 20.0) + offset))
+        
+        # 重新归一化
+        total = sum(force_vectors.values())
+        if total > 0:
+            for key in element_keys:
+                force_vectors[key] = force_vectors[key] / total * 100.0
+        
+        st.caption("🤖 LLM已校准五行矢量")
     
     # 创建极坐标图显示五行受力
     elements = ['金', '木', '水', '火', '土']
     element_keys = ['metal', 'wood', 'water', 'fire', 'earth']
     values = [force_vectors.get(key, 20.0) for key in element_keys]
     
+    # [优化1] 检测冲突维度（格局冲突>0.6时显示震荡）
+    conflicting_axes = []
+    if friction_index > 60 and pfa_data.get('conflicting_patterns'):
+        # 检测对冲的五行（简化版：检测值差异大的相邻元素）
+        for i in range(len(elements)):
+            next_i = (i + 1) % len(elements)
+            # 如果两个相邻元素值差异大，可能是冲突
+            if abs(values[i] - values[next_i]) > 30:
+                conflicting_axes.extend([i, next_i])
+        conflicting_axes = list(set(conflicting_axes))
+    
     # 创建雷达图
     fig = go.Figure()
     
-    fig.add_trace(go.Scatterpolar(
+    # 基础矢量
+    base_trace = go.Scatterpolar(
         r=values,
         theta=elements,
         fill='toself',
         name='五行能量',
         line_color=COLORS['teal_mist'],
         fillcolor=f"rgba(64, 224, 208, 0.3)"
-    ))
+    )
+    fig.add_trace(base_trace)
+    
+    # [优化1] 如果检测到冲突，添加震荡效果
+    if conflicting_axes and friction_index > 60:
+        # 创建震荡数据（高频波动）
+        import numpy as np
+        vibration_values = values.copy()
+        for axis_idx in conflicting_axes:
+            # 添加±5%的震荡
+            vibration_values[axis_idx] = values[axis_idx] * (1.0 + 0.05 * np.sin(np.linspace(0, 4*np.pi, len(elements))))
+        
+        # 添加震荡轨迹（虚线）
+        fig.add_trace(go.Scatterpolar(
+            r=vibration_values,
+            theta=elements,
+            fill='none',
+            name='系统震荡',
+            line=dict(
+                color=COLORS['rose_magenta'],
+                width=2,
+                dash='dash',
+                shape='spline'
+            ),
+            mode='lines'
+        ))
+        
+        # 显示警告
+        st.warning(f"⚠️ 检测到系统不稳定（冲突指数{friction_index:.1f}），矢量场出现高频震荡")
     
     fig.update_layout(
         polar=dict(
             radialaxis=dict(
                 visible=True,
                 range=[0, 100],
-                tickfont=dict(color='#e2e8f0'),
+                tickfont=dict(color='#e2e8f0', size=10),
                 gridcolor='rgba(255, 255, 255, 0.2)'
             ),
             angularaxis=dict(
-                tickfont=dict(color='#e2e8f0'),
+                tickfont=dict(color='#e2e8f0', size=11),
                 linecolor='rgba(255, 255, 255, 0.3)'
             ),
             bgcolor='rgba(0, 0, 0, 0)'
         ),
         showlegend=False,
-        height=400,
+        height=320,
+        margin=dict(l=20, r=20, t=20, b=20),
         paper_bgcolor='rgba(0, 0, 0, 0)',
         plot_bgcolor='rgba(0, 0, 0, 0)',
         font_color='#e2e8f0'
@@ -359,8 +540,7 @@ def render_force_vector_diagram(controller: ProfileAuditController):
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # 显示数值
-    st.markdown("**五行能量分布:**")
+    # 显示数值（紧凑版）
     cols = st.columns(5)
     element_colors = {
         '金': '#FFD700', '木': '#10B981', '水': '#3B82F6',
@@ -369,18 +549,18 @@ def render_force_vector_diagram(controller: ProfileAuditController):
     for i, (elem, val, key) in enumerate(zip(elements, values, element_keys)):
         with cols[i]:
             st.markdown(f"""
-            <div style="text-align: center; padding: 10px; background: rgba(45, 27, 78, 0.3); border-radius: 8px; border: 1px solid {element_colors[elem]};">
-                <div style="color: {element_colors[elem]}; font-size: 14px; font-weight: bold;">{elem}</div>
-                <div style="color: {COLORS['teal_mist']}; font-size: 20px; font-weight: bold;">{val:.1f}%</div>
+            <div style="text-align: center; padding: 6px; background: rgba(45, 27, 78, 0.3); border-radius: 6px; border: 1px solid {element_colors[elem]};">
+                <div style="color: {element_colors[elem]}; font-size: 12px; font-weight: bold;">{elem}</div>
+                <div style="color: {COLORS['teal_mist']}; font-size: 16px; font-weight: bold;">{val:.1f}%</div>
             </div>
             """, unsafe_allow_html=True)
 
 
 def render_audit_report(controller: ProfileAuditController):
-    """渲染右侧：审计报告书（人话翻译）"""
+    """渲染右侧：审计报告书（人话翻译，紧凑版）"""
     st.markdown(f"""
-    <div class="audit-report-card">
-        <h3 style="color: {COLORS['mystic_gold']};">📋 审计报告书</h3>
+    <div class="audit-report-card" style="padding: 10px;">
+        <h3 style="color: {COLORS['mystic_gold']}; font-size: 16px; margin: 0 0 8px 0;">📋 审计报告书</h3>
     </div>
     """, unsafe_allow_html=True)
     
@@ -392,45 +572,151 @@ def render_audit_report(controller: ProfileAuditController):
     
     semantic_report = audit_result['semantic_report']
     
-    # 1. 核心矛盾
+    # 1. 核心矛盾（紧凑版）
     st.markdown(f"""
-    <div class="section-title">⚡ 核心矛盾</div>
-    <div class="audit-report-card">
-        <p style="color: {COLORS['rose_magenta']}; font-size: 16px; line-height: 1.8;">
+    <div class="section-title" style="font-size: 15px; margin-top: 5px;">⚡ 核心矛盾</div>
+    <div class="audit-report-card" style="padding: 10px; margin: 3px 0;">
+        <p style="color: {COLORS['rose_magenta']}; font-size: 14px; line-height: 1.6; margin: 0;">
             {semantic_report.get('core_conflict', '暂无分析')}
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # 2. 深度画像
+    # 2. 深度画像（紧凑版）
     st.markdown(f"""
-    <div class="section-title">👤 深度画像</div>
-    <div class="audit-report-card">
-        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.8; text-align: justify;">
+    <div class="section-title" style="font-size: 15px; margin-top: 5px;">👤 深度画像</div>
+    <div class="audit-report-card" style="padding: 10px; margin: 3px 0;">
+        <p style="color: #e2e8f0; font-size: 13px; line-height: 1.6; text-align: justify; margin: 0;">
             {semantic_report.get('persona', '暂无分析')}
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # 3. 财富相预测
+    # 3. 财富相预测（紧凑版）
     st.markdown(f"""
-    <div class="section-title">💰 财富相预测</div>
-    <div class="audit-report-card">
-        <div style="color: {COLORS['mystic_gold']}; font-size: 14px; line-height: 1.8;">
+    <div class="section-title" style="font-size: 15px; margin-top: 5px;">💰 财富相预测</div>
+    <div class="audit-report-card" style="padding: 10px; margin: 3px 0;">
+        <div style="color: {COLORS['mystic_gold']}; font-size: 13px; line-height: 1.6; margin: 0;">
             {semantic_report.get('wealth_prediction', '暂无分析')}
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # 4. 干预药方
+    # 4. 干预药方（紧凑版）
     st.markdown(f"""
-    <div class="section-title">💊 干预药方</div>
-    <div class="audit-report-card">
-        <div style="color: {COLORS['teal_mist']}; font-size: 14px; line-height: 1.8; white-space: pre-line;">
+    <div class="section-title" style="font-size: 15px; margin-top: 5px;">💊 干预药方</div>
+    <div class="audit-report-card" style="padding: 10px; margin: 3px 0;">
+        <div style="color: {COLORS['teal_mist']}; font-size: 13px; line-height: 1.6; white-space: pre-line; margin: 0;">
             {semantic_report.get('prescription', '暂无分析')}
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # [QGA V24.4] LLM Debug Console（如果启用了LLM）
+    # 注意：semantic_report已经在上面定义了（第573行），这里直接使用
+    use_llm = st.session_state.get('use_llm_synthesis', False)
+    debug_data = semantic_report.get('debug_data')
+    debug_prompt = semantic_report.get('debug_prompt', '')
+    debug_response = semantic_report.get('debug_response', '')
+    
+    # 如果启用了LLM，始终显示Debug Console区域（即使没有数据也显示提示）
+    if use_llm:
+        st.markdown("---")
+        st.markdown(f"""
+        <div class="section-title" style="font-size: 15px; margin-top: 5px; color: {COLORS['mystic_gold']};">
+            🔬 LLM调试控制台 (Debug Console)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if debug_data:
+            # 有debug数据，正常显示
+            st.markdown(f"""
+            <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 12px; color: {COLORS['teal_mist']};">
+                💡 这里显示发送给LLM的原始数据、Prompt模板和LLM的原始响应，用于调试和验证LLM的逻辑推理过程
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col_debug_left, col_debug_mid, col_debug_right = st.columns([1, 1, 1])
+            
+            with col_debug_left:
+                st.markdown("**📥 发送给LLM的数据 (Input JSON)**")
+                import json
+                st.json(debug_data if debug_data else {})
+                if debug_data:
+                    st.caption(f"包含 {len(debug_data.get('ActivePatterns', []))} 个激活格局")
+            
+            with col_debug_mid:
+                st.markdown("**📝 Prompt模板 (Prompt Template)**")
+                # 显示完整Prompt，但限制显示长度
+                prompt_display = debug_prompt if debug_prompt else "未生成"
+                if len(prompt_display) > 2000:
+                    prompt_display = prompt_display[:2000] + "\n\n... (已截断，完整内容请查看代码)"
+                st.text_area(
+                    "Prompt",
+                    value=prompt_display,
+                    height=250,
+                    key="debug_prompt_display",
+                    disabled=True,
+                    label_visibility="collapsed"
+                )
+                st.caption("💡 提示：Prompt在代码中定义，如需修改请编辑 `core/models/llm_semantic_synthesizer.py`")
+            
+            with col_debug_right:
+                st.markdown("**📤 LLM原始响应 (Raw Response)**")
+                response_display = debug_response if debug_response else "无响应"
+                if len(response_display) > 2000:
+                    response_display = response_display[:2000] + "\n\n... (已截断)"
+                st.text_area(
+                    "Response",
+                    value=response_display,
+                    height=250,
+                    key="debug_response_display",
+                    label_visibility="collapsed"
+                )
+                if debug_response:
+                    st.caption(f"响应长度: {len(debug_response)} 字符")
+            
+            # 显示解析结果
+            st.markdown("---")
+            st.markdown("**✅ 解析结果 (Parsed Results)**")
+            col_result_left, col_result_right = st.columns([2, 1])
+            
+            with col_result_left:
+                st.markdown("**生成的画像 (Persona):**")
+                st.text_area(
+                    "Persona",
+                    value=semantic_report.get('persona', '')[:500],
+                    height=100,
+                    key="debug_persona_display",
+                    disabled=True,
+                    label_visibility="collapsed"
+                )
+            
+            with col_result_right:
+                st.markdown("**五行校准 (Element Calibration):**")
+                calibration = audit_result.get('llm_calibration', {})
+                if calibration:
+                    st.json(calibration)
+                else:
+                    st.info("无五行校准数据")
+        else:
+            # 没有debug数据，显示提示信息
+            st.warning(f"""
+            ⚠️ **Debug数据未找到**
+            
+            - LLM开关: ✅ 已启用
+            - Debug数据: ❌ 未生成
+            
+            **可能原因：**
+            1. LLM调用失败（请检查LLM连接状态）
+            2. 使用了规则生成（LLM未实际调用）
+            3. Debug数据未正确保存
+            
+            **调试步骤：**
+            1. 检查左侧LLM连接状态是否显示"连接正常"
+            2. 查看浏览器控制台是否有错误信息
+            3. 重新执行审计
+            """)
     
     # 5. 技术细节（可折叠）
     with st.expander("🔬 技术细节（物理计算）", expanded=False):
@@ -458,6 +744,103 @@ def render_audit_report(controller: ProfileAuditController):
             pillars = audit_result['bazi_profile']['pillars']
             st.write(f"八字: {pillars.get('year', '')} {pillars.get('month', '')} {pillars.get('day', '')} {pillars.get('hour', '')}")
             st.write(f"日主: {audit_result['bazi_profile'].get('day_master', '')}")
+    
+    # [QGA V24.2] 实时激活格局清单（时空耦合格局审计，紧凑版）
+    if 'pattern_audit' in audit_result:
+        pattern_audit = audit_result['pattern_audit']
+        state_changes = pattern_audit.get('state_changes', [])
+        
+        st.markdown("---")
+        st.markdown(f"""
+        <div class="section-title" style="font-size: 15px; margin-top: 5px;">🔬 实时激活格局清单</div>
+        <div class="audit-report-card" style="padding: 8px; margin: 3px 0;">
+            <p style="color: {COLORS['teal_mist']}; font-size: 12px; margin: 0;">
+                <strong>流年:</strong> {pattern_audit.get('year', 'N/A')}年 {pattern_audit.get('year_pillar', '')} | 
+                <strong>大运:</strong> {pattern_audit.get('luck_pillar', '')} | 
+                <strong>激活:</strong> {pattern_audit.get('total_count', 0)}个格局
+            </p>
+            {f'<p style="color: {COLORS["rose_magenta"]}; font-size: 11px; margin: 3px 0 0 0;">⚠️ {len(state_changes)}个状态变化</p>' if state_changes else ''}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 显示格局状态变化（如果有，紧凑版）
+        if state_changes:
+            with st.expander(f"⚠️ 格局状态变化 ({len(state_changes)}个)", expanded=False):
+                for change in state_changes:
+                    st.warning(f"""
+                    **{change.get('original', '')}** → **{change.get('current', '')}**
+                    
+                    {change.get('trigger', '')}
+                    
+                    {change.get('impact', '')}
+                    """)
+        
+        patterns = pattern_audit.get('patterns', [])
+        
+        # [QGA V24.2] 优先显示状态变化的格局
+        state_changed_patterns = [p for p in patterns if p.get('is_state_changed', False)]
+        other_patterns = [p for p in patterns if not p.get('is_state_changed', False)]
+        
+        # 先显示状态变化的格局
+        for i, pattern in enumerate(state_changed_patterns + other_patterns):
+            pattern_type = pattern.get('type', 'normal')
+            type_colors = {
+                'primary': COLORS['mystic_gold'],
+                'conflict': COLORS['rose_magenta'],
+                'sub': '#FFA500',  # 橙色
+                'normal': COLORS['teal_mist']
+            }
+            type_labels = {
+                'primary': '主格局',
+                'conflict': '冲突格局',
+                'sub': '子格局',
+                'normal': '普通格局'
+            }
+            
+            # 状态变化的格局用特殊标记
+            pattern_name = pattern.get('name', '未知格局')
+            if pattern.get('is_state_changed', False):
+                pattern_name = f"🔄 {pattern_name} (状态已变化)"
+            
+            with st.expander(f"【{pattern_name}】 ({type_labels.get(pattern_type, '未知')})", expanded=(i == 0 or pattern.get('is_state_changed', False))):
+                # 击中逻辑（紧凑版）
+                st.markdown(f"""
+                <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
+                    <strong style="color: {type_colors.get(pattern_type, COLORS['teal_mist'])}; font-size: 12px;">🎯 击中逻辑:</strong>
+                    <p style="color: #e2e8f0; font-size: 12px; margin: 3px 0 0 0; line-height: 1.4;">
+                        {pattern.get('matching_logic', '暂无')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 格局特性（紧凑版）
+                characteristics = pattern.get('characteristics', {})
+                st.markdown(f"""
+                <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 4px; margin-bottom: 6px;">
+                    <strong style="color: {COLORS['mystic_gold']}; font-size: 12px;">⚡ 格局特性:</strong>
+                    <p style="color: #e2e8f0; font-size: 12px; margin: 3px 0 0 0; line-height: 1.4;">
+                        <strong>物理:</strong> {characteristics.get('physical', '暂无')}<br>
+                        <strong>宏观:</strong> {characteristics.get('destiny', '暂无')}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 干预策略（紧凑版）
+                intervention = pattern.get('intervention', {})
+                st.markdown(f"""
+                <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 4px;">
+                    <strong style="color: {COLORS['rose_magenta']}; font-size: 12px;">💊 干预策略:</strong>
+                    <p style="color: #e2e8f0; font-size: 12px; margin: 3px 0 0 0; line-height: 1.4;">
+                        <strong>用神:</strong> {intervention.get('yong_shen', '待定')} | 
+                        <strong>空间:</strong> {intervention.get('spatial', '无')[:30]}...<br>
+                        <strong>行为:</strong> {intervention.get('behavioral', '无')[:40]}...
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 技术指标（紧凑版）
+                if pattern.get('sai', 0) > 0 or pattern.get('stress', 0) > 0:
+                    st.caption(f"SAI: {pattern.get('sai', 0):.2f} | Stress: {pattern.get('stress', 0):.2f}")
 
 
 if __name__ == "__main__":
