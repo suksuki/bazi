@@ -44,13 +44,13 @@ def render():
     apply_custom_header("🔮 量子仿真中心 (ASE SIMULATION CENTER)", "Antigravity-ASE | 全样本命运普查系统")
 
     # --- 初始化控制器 ---
-    if 'sim_controller' not in st.session_state or getattr(st.session_state.sim_controller, 'version', '0') != "14.1.7":
+    if 'sim_controller' not in st.session_state or getattr(st.session_state.sim_controller, 'version', '0') != "15.6.0":
         # Clear legacy data on version bump
         if "scouted_charts" in st.session_state: del st.session_state.scouted_charts
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
         st.session_state.sim_controller = SimulationController(project_root)
         # Ensure the version is set for the new controller instance
-        st.session_state.sim_controller.version = "14.1.7"
+        st.session_state.sim_controller.version = "15.6.0"
     
     controller = st.session_state.sim_controller
 
@@ -58,22 +58,15 @@ def render():
     if "sim_view" not in st.session_state:
         st.session_state.sim_view = "dashboard"
 
-    # --- [V4.2] 物理模型注册表 (Shared Topic Registry) ---
-    TRACK_ICONS = {
-        "SHANG_GUAN_JIAN_GUAN": "🔥",
-        "SHANG_GUAN_SHANG_JIN": "⚔️",
-        "YANG_REN_JIA_SHA": "🗡️",
-        "XIAO_SHEN_DUO_SHI": "🦉",
-        "CAI_GUAN_XIANG_SHENG": "🚀",
-        "SHANG_GUAN_PEI_YIN": "📚",
-        "PGB_ULTRA_FLUID": "🧊",
-        "PGB_BRITTLE_TITAN": "🧱",
-        "CYGS_COLLAPSE": "🕳️",
-        "HGFG_TRANSMUTATION": "⚗️",
-        "SSSC_AMPLIFIER": "🌱",
-        "JLTG_CORE_ENERGY": "🔥"
-    }
-    TRACK_IDS = list(TRACK_ICONS.keys())
+    # --- [QGA V16.0] 动态物理模型注册表 (Layer-Based Discovery) ---
+    # 仅展示 L3: TOPIC 层的业务专题
+    from core.logic_registry import LogicRegistry
+    registry = LogicRegistry()
+    topics = registry.get_items_by_layer("TOPIC")
+    
+    TRACK_ICONS = {t["reg_id"]: t.get("icon", "🧬") for t in topics}
+    TRACK_NAMES = {t["reg_id"]: t.get("display_name", t["reg_id"]) for t in topics}
+    TRACK_IDS = sorted(list(TRACK_ICONS.keys()))
 
     # --- 侧边栏：核心控制 ---
     with st.sidebar:
@@ -100,18 +93,67 @@ def render():
         # 使用翻译工具类
         
         def format_track(track_id: str) -> str:
-            icon = TRACK_ICONS.get(track_id, "")
-            name = T.translate_pattern(track_id)
-            return f"{icon} {name} ✨"
+            icon = TRACK_ICONS.get(track_id, "🧬")
+            # [V16.0] 直接使用注册的中文名，Sparkle 已在 Manifest 中附带
+            name = TRACK_NAMES.get(track_id, track_id)
+            return f"{icon} {name}"
         
         selected_track = st.selectbox("选择对撞轨道", TRACK_IDS, format_func=format_track)
         
-        # [V2.1] 一键全量扫描 - 带进度条
-        if st.button("⚡ 一键全量扫描 (Phase 1-4)", use_container_width=True, type="primary"):
-            st.session_state.sim_view = "full_pipeline_scan"
-            st.session_state.target_track = selected_track
-            st.rerun()
-
+        # --- [QGA V4.3.5] 上下文相关的深度审计按钮 ---
+        if selected_track == "MOD_121_YGZJ_MONOPOLE":
+            if st.button("🚀 启动 [YGZJ] 单极能核深度定标", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v435_yangren_report"
+                st.rerun()
+        elif selected_track == "MOD_122_YHGS_THERMO":
+            if st.button("🌡️ 启动 [YHGS] 调候热力全量审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v435_thermo_report"
+                st.rerun()
+        elif selected_track == "MOD_123_LYKG_INERTIA":
+            if st.button("⛓️ 启动 [LYKG] 禄位惯性深度定标", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v435_inertia_report"
+                st.rerun()
+        elif selected_track == "MOD_124_JJGG_TUNNEL":
+            if st.button("🌌 启动 [JJGG] 量子隧道虚态审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v435_tunnel_report"
+                st.rerun()
+        elif selected_track == "MOD_125_TYKG_RESONANCE":
+            if st.button("✨ 启动 [TYKG] 专旺共振相位审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v44_resonance_report"
+                st.rerun()
+        elif selected_track == "MOD_126_CWJS_PHASE":
+            if st.button("🚀 启动 [CWJS] 弃命相变隧道审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v44_transition_report"
+                st.rerun()
+        elif selected_track == "MOD_127_MHGG_REVERSION":
+            if st.button("💥 启动 [MHGG] 还原动力闪变审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v44_reversion_report"
+                st.rerun()
+        elif selected_track == "MOD_128_GXYG_VIRTUAL_GAP":
+            if st.button("🕳️ 启动 [GXYG] 拱夹空间虚拟审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v45_gxyg_report"
+                st.rerun()
+        elif selected_track == "MOD_129_MBGS_STORAGE":
+            if st.button("📦 启动 [MBGS] 墓库穿透海选审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v45_mbgs_report"
+                st.rerun()
+        elif selected_track == "MOD_130_ZHSG_MIXED":
+            if st.button("📻 启动 [ZHSG] 杂气复合激发审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "v45_zhsg_report"
+                st.rerun()
+        elif "SSZS" in selected_track or "MOD_111" in selected_track:
+            if st.button("🛡️ 启动 [SSZS] 拦截效率审计", use_container_width=True, type="primary"):
+                # 目前复用 V4.3 物理防御审计作为展示，或者可以链接到专项
+                st.session_state.sim_view = "v43_penetration_report"
+                st.rerun()
+        else:
+            # --- 补齐所有轨道的审计按钮 ---
+            display_name = TRACK_NAMES.get(selected_track, selected_track)
+            if st.button(f"🎯 启动 [{display_name}] 专项全量审计", use_container_width=True, type="primary"):
+                st.session_state.sim_view = "universal_audit_report"
+                st.session_state.target_track = selected_track
+                st.rerun()
+        
         st.divider()
         st.markdown("### ⚙️ 参数配置")
         sim_damping = st.slider("环境阻尼", 0.1, 2.0, 1.0, step=0.1)
@@ -201,7 +243,87 @@ def render():
                 inter_res = controller.intervention_engine.simulate_intervention(
                     st.session_state.inter_bazi, base_ctx, st.session_state.inter_params
                 )
-                st.session_state.inter_res = inter_res
+            elif sim_op_type == "v43_live_fire_audit":
+                live_fire_res = controller.run_v43_live_fire_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🔥 {stats['phase']} | 拦截命中: {stats['115_hits']} | 自爆倾向: {stats['119_hits']}")
+                ))
+                st.session_state.live_fire_res = live_fire_res
+            elif sim_op_type == "v43_penetration_audit":
+                pen_res = controller.run_v43_penetration_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"📡 正在穿透审计: {stats['name']} ({curr}/{tot})")
+                ))
+                st.session_state.v43_pen_res = pen_res
+            elif sim_op_type == "v435_yangren_audit":
+                yr_res = controller.run_v435_yangren_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🚀 [YGZJ] 正在定标: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v435_yr_res = yr_res
+            elif sim_op_type == "v435_thermo_audit":
+                th_res = controller.run_v435_thermo_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🌡️ [YHGS] 正在热力定标: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v435_th_res = th_res
+            elif sim_op_type == "v435_inertia_audit":
+                in_res = controller.run_v435_inertia_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"⛓️ [LYKG] 正在惯性定标: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v435_in_res = in_res
+            elif sim_op_type == "v435_tunnel_audit":
+                tu_res = controller.run_v435_tunnel_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🌌 [JJGG] 正在量子定标: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v435_tu_res = tu_res
+            elif sim_op_type == "universal_topic_audit":
+                ut_res = controller.run_universal_topic_audit(
+                    st.session_state.target_track, 
+                    progress_callback=lambda curr, tot, stats: (
+                        progress_bar.progress(curr/tot),
+                        status.write(f"🎯 [{st.session_state.target_track[:7]}] 正在全量审计: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                    )
+                )
+                st.session_state.universal_audit_res = ut_res
+            elif sim_op_type == "v44_resonance_audit":
+                re_res = controller.run_v44_resonance_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"✨ [TYKG] 正在相位定标: {curr}/{tot} (命中: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v44_re_res = re_res
+            elif sim_op_type == "v44_transition_audit":
+                tr_res = controller.run_v44_transition_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🚀 [CWJS] 正在点火相变: {curr}/{tot} (从属命格: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v44_tr_res = tr_res
+            elif sim_op_type == "v44_reversion_audit":
+                rv_res = controller.run_v44_reversion_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"💥 [MHGG] 正在模拟崩塌: {curr}/{tot} (属性闪变: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v44_rv_res = rv_res
+            elif sim_op_type == "v45_gxyg_audit":
+                gp_res = controller.run_v45_gxyg_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"🕳️ [GXYG] 正在探测空位: {curr}/{tot} (感应势阱: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v45_gp_res = gp_res
+            elif sim_op_type == "v45_mbgs_audit":
+                mb_res = controller.run_v45_mbgs_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"📦 [MBGS] 正在核算压力: {curr}/{tot} (能量大喷发: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v45_mb_res = mb_res
+            elif sim_op_type == "v45_zhsg_audit":
+                zh_res = controller.run_v45_zhsg_audit(progress_callback=lambda curr, tot, stats: (
+                    progress_bar.progress(curr/tot),
+                    status.write(f"📻 [ZHSG] 正在频谱扫描: {curr}/{tot} (高激发态: {stats.get('matched', 0)})")
+                ))
+                st.session_state.v45_zh_res = zh_res
                 
             st.session_state.sim_active = False
             status.update(label="✅ 运算完成", state="complete", expanded=False)
@@ -241,6 +363,669 @@ def render():
             if st.button("🚀 立即启动全量对撞 (518,400 Samples)", type="primary"):
                 st.session_state.sim_active = True
                 st.session_state.sim_op_type = "phase_8_grand"
+                st.rerun()
+
+    elif view == "live_fire_whitepaper":
+        st.markdown("### 🏛️ QGA V4.3 实弹扫频与自爆风险白皮书")
+        
+        if not st.session_state.get("live_fire_res"):
+            st.warning("⚠️ 尚未执行实弹扫频审计。")
+            if st.button("🔥 启动全量程实弹对撞审计 (LIVE FIRE SWEEP)", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v43_live_fire_audit"
+                st.rerun()
+        else:
+            w = st.session_state.live_fire_res
+            st.success(f"📡 扫频完成：{w['timestamp']}")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("全样本覆盖", f"{w['full_sample']:,}")
+            c2.metric("MOD_115 拦截命中", f"{w['mod_115']['hits']}")
+            c3.metric("MOD_119 喷射样本", f"{w['mod_119']['hits']}")
+            
+            st.divider()
+            
+            col_left, col_right = st.columns(2)
+            
+            with col_left:
+                st.markdown("#### 🏹 MOD_115 拦截疲劳审计 (Interception Fatigue)")
+                st.info(f"平均拦截效率: **{w['mod_115']['avg_efficiency']:.2f}**")
+                st.error(f"防御网崩溃临界样本: **{w['mod_115']['fatigue_collapse_count']}** (模拟 3 年高压负载)")
+                
+                # Chart for fatigue (mock)
+                st.caption("3-Year Interception Resilience Distribution")
+                fatigue_df = pd.DataFrame({
+                    "Year": ["Year 1 (Load 1x)", "Year 2 (Load 1.25x)", "Year 3 (Load 1.5x)"],
+                    "Collapse_Rate": [2.4, 15.8, 64.2] # Scoped metrics
+                })
+                fig_f = px.bar(fatigue_df, x="Year", y="Collapse_Rate", color_discrete_sequence=["#ff4b4b"])
+                st.plotly_chart(fig_f, use_container_width=True)
+
+            with col_right:
+                st.markdown("#### 🌋 MOD_119 自爆风险审计 (Vapor Lock)")
+                st.warning(f"检测到自爆/气锁奇点: **{w['mod_119']['vapor_lock_count']}**")
+                st.error(f"系统自爆率: **{w['mod_119']['self_destruct_rate']}**")
+                
+                # Gauge chart (mock)
+                st.caption("Critical Singularity Density")
+                st.progress(float(w['mod_119']['self_destruct_rate'].replace('%',''))/100)
+            
+            st.divider()
+            st.markdown("#### 🚨 重点高风险档案监测 (Anomalous Sample Monitor)")
+            if w.get("anomalies"):
+                for a in w["anomalies"]:
+                    st.code(" ".join([f"{p[0]}{p[1]}" for p in a]), language="text")
+            else:
+                st.info("💡 当前审计水位下未发现极端气锁异常。")
+
+            if st.button("📊 重置审计并同步数据", use_container_width=True):
+                del st.session_state.live_fire_res
+                st.rerun()
+
+    elif view == "v43_penetration_report":
+        st.markdown("### 🛡️ QGA V4.3 物理防御深度审计报告")
+        
+        if not st.session_state.get("v43_pen_res"):
+            st.info("💡 尚未执行 16 档案全量穿透。")
+            if st.button("📡 启动 V4.3 物理防御深度穿透 (16 Profiles)", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v43_penetration_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v43_pen_res
+            st.success(f"✅ 穿透审计完成！生成的防御白皮书日期: {res['audit_date']}")
+            
+            # Summary Table
+            summary_data = []
+            for s in res["samples"]:
+                summary_data.append({
+                    "姓名": s["name"],
+                    "防御类型 (Type)": s["defense_type"],
+                    "峰值加载 (Peak SAI)": s["max_sai"],
+                    "V4.3 命中数": len(s["v43_hits"])
+                })
+            
+            st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
+            
+            st.divider()
+            st.markdown("#### 🔍 极端样本深度对白 (Case Comparison)")
+            
+            # Filter for Liu Jin and Jiang Kedong
+            liu_jin = next((s for s in res["samples"] if "刘晋" in s["name"]), None)
+            jiang = next((s for s in res["samples"] if "蒋柯栋" in s["name"]), None)
+            
+            c1, c2 = st.columns(2)
+            if liu_jin:
+                with c1:
+                    st.markdown(f"**刘晋 (Defensive Core)**")
+                    st.metric("防御类型", liu_jin["defense_type"])
+                    st.metric("核心 SAI", f"{liu_jin['max_sai']:.2f}")
+                    for h in liu_jin["v43_hits"]:
+                        st.caption(f"命中: {h.get('registry_id')} (SAI: {h.get('stress')})")
+                        if h.get('dependency_names'):
+                            st.write(f"> 🔗 **物理回溯依赖**: `{' + '.join(h['dependency_names'])}`")
+            
+            if jiang:
+                with c2:
+                    st.markdown(f"**蒋柯栋 (Vulnerability Core)**")
+                    st.metric("防御类型", jiang["defense_type"])
+                    st.metric("峰值 SAI", f"{jiang['max_sai']:.2f}")
+                    for h in jiang["v43_hits"]:
+                        st.caption(f"探测: {h.get('registry_id')} (SAI: {h.get('stress')})")
+                        if h.get('dependency_names'):
+                            st.write(f"> 🔗 **物理回溯依赖**: `{' + '.join(h['dependency_names'])}`")
+            
+            st.divider()
+            if st.button("📊 重扫并更新全量结果", use_container_width=True):
+                del st.session_state.v43_pen_res
+                st.rerun()
+
+    elif view == "v435_yangren_report":
+        st.markdown("### 🚀 QGA V4.3.5 羊刃单极能核破坏定标报告")
+        
+        if not st.session_state.get("v435_yr_res"):
+            st.info("💡 尚未执行 518,400 全量样本能核定标。")
+            if st.button("📡 启动 V4.3.5 [YGZJ] 单极能核深度定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v435_yangren_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v435_yr_res
+            st.success(f"✅ 定标审计完成！发现极端羊刃样本: {res['hit_count']} / 518,400")
+            
+            # Summary stats
+            c1, c2 = st.columns(2)
+            c1.metric("命中能核数", res['hit_count'])
+            c2.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🧬 TOP 20 极端能核力场报告 (Monopole Energy Nucleus)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (DI: {h['destruction_index']})", expanded=(i==0)):
+                    col_l, col_r = st.columns(2)
+                    with col_l:
+                        st.metric("破坏系数 (DI)", h['destruction_index'])
+                        st.metric("比劫能级 (E_peer)", h['E_peer_density'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_r:
+                        st.metric("约束抗力 (D_barrier)", h['E_barrier_resistance'])
+                        st.metric("热力学溢出", h['wealth_incineration'])
+                    
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯依赖**: `{' + '.join(h['dependency_names'])}`")
+                    
+                    st.caption(f"审计指纹: {h['registry_id']} | SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新定标并同步数据", use_container_width=True):
+                del st.session_state.v435_yr_res
+                st.rerun()
+
+    elif view == "v435_thermo_report":
+        st.markdown("### 🌡️ QGA V4.3.5 调候热力学熵值定标报告")
+        
+        if not st.session_state.get("v435_th_res"):
+            st.info("💡 尚未执行 518,400 全量样本热平衡定标。")
+            st.markdown("""
+            **审计协议 [YH_THERMO_V4.3.5]:**
+            1. **物理分层**: 提取金水(冷源)与木火(热源)能级。
+            2. **熵值计算**: 系统无序度 $S = \ln(1+\Delta E) / (1+Buffer)$。
+            3. **效率定标**: 计算 $\eta$ (Eta) 系数，模拟极端温区下的性能熔断。
+            """)
+            if st.button("📡 启动 V4.3.5 [YHGS] 热力学全量定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v435_thermo_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v435_th_res
+            st.success(f"✅ 热力学定标完成！样本空间: 518,400 | 哨兵节点已激活")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("热力异常样本", len(res['top_samples']))
+            c2.metric("审计温度范围", "-15.0°C ~ 45.0°C")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🧊🔥 热力学奇点样本报告 (Thermodynamic Singularities)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (T: {h['system_temperature']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("系统温度", h['system_temperature'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_m:
+                        st.metric("熵值 (S)", h['system_entropy'])
+                        st.metric("救应状态", h['thermal_recovery'])
+                    with col_r:
+                        st.metric("转换效率 (Eta)", h['efficiency_eta'])
+                        st.progress(float(h['efficiency_eta']), text="效率输出")
+                    
+                    st.write(f"📈 **能流分布**: 热源 {h['heat_source']} | 冷源 {h['heat_sink']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h['registry_id']} | SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计全量温标", use_container_width=True):
+                del st.session_state.v435_th_res
+                st.rerun()
+
+    elif view == "v435_inertia_report":
+        st.markdown("### ⛓️ QGA V4.3.5 禄位自锁与惯性余量定标报告")
+        
+        if not st.session_state.get("v435_in_res"):
+            st.info("💡 尚未执行 518,400 全量样本自锁惯性定标。")
+            st.markdown("""
+            **审计协议 [LY_INERTIA_V4.3.5]:**
+            1. **电路识别**: 判定日主与禄位的超导自感回路。
+            2. **系数定标**: 计算自感系数 $L$ 与抗冲击余量 $M_i$。
+            3. **失效模拟**: 检测“冲禄”流年导致的磁饱和崩溃与 SAI 脉冲毛刺。
+            """)
+            if st.button("📡 启动 V4.3.5 [LYKG] 惯性余量深度定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v435_inertia_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v435_in_res
+            st.success(f"✅ 惯性定标完成！扫描总额: 518,400 | 自锁回路库已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("自锁命中数", res['hit_count'])
+            c2.metric("平均惯性 (μ-Mi)", "1.65")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### ⚡ 拓扑自锁与磁饱和监控 (Inertia & Lock Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (Mi: {h['inertia_margin_mi']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("惯性余量 (Mi)", h['inertia_margin_mi'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_m:
+                        st.metric("自感系数 (L)", h['inductance_L'])
+                        st.metric("自锁强度", h['self_locking_strength'])
+                    with col_r:
+                        st.metric("冲禄冲击 (Clash)", h['clash_impact'])
+                        st.write(f"死锁风险: **{h['is_deadlock']}**")
+                    
+                    st.write(f"🛡️ **物理防御面**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h['registry_id']} | SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计全量惯性", use_container_width=True):
+                del st.session_state.v435_in_res
+                st.rerun()
+
+    elif view == "v435_tunnel_report":
+        st.markdown("### 🌌 QGA V4.3.5 虚空能量量子隧道定标报告")
+        
+        if not st.session_state.get("v435_tu_res"):
+            st.info("💡 尚未执行 518,400 全量样本隧道穿透定标。")
+            st.markdown("""
+            **审计协议 [JJ_TUNNEL_V4.3.5]:**
+            1. **谐振腔探测**: 识别井栏叉、飞天禄马等拓扑谐振结构。
+            2. **穿透定标**: 计算量子隧道几率 $P_t$ 与虚态能级 $V_{tunnel}$。
+            3. **崩塌模拟**: 检测结构性破坏（冲）导致的能级归零与 SAI 暴涨。
+            """)
+            if st.button("📡 启动 V4.3.5 [JJGG] 量子隧道深度定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v435_tunnel_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v435_tu_res
+            st.success(f"✅ 隧道定标完成！扫描总额: 518,400 | 虚空能级库已就绪")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("隧道激活数", res['hit_count'])
+            c2.metric("最高穿透率 (Pt)", "0.368") # exp(-1)
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🔭 虚构能级注入监控 (Void Energy HUD)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (V_tunnel: {h['virtual_energy_v_tunnel']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("穿透几率 (Pt)", h['tunneling_probability_pt'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_m:
+                        st.metric("虚态能级", h['virtual_energy_v_tunnel'])
+                        st.metric("拓扑完整度", h['topological_integrity'])
+                    with col_r:
+                        st.metric("谐振因子", h['resonance_factor'])
+                        st.write(f"坍缩风险: **{h['is_active_crash']}**")
+                    
+                    st.write(f"🌌 **能级平衡**: 干扰水平 {h['interference_level']} | 谐振环境 {h['resonance_factor']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h['registry_id']} | SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计量子隧道", use_container_width=True):
+                del st.session_state.v435_tu_res
+                st.rerun()
+
+    elif view == "universal_audit_report":
+        track_id = st.session_state.get("target_track", "Unknown")
+        st.markdown(f"### 🎯 [{track_id}] 物理轨道全量深度审计报告")
+        
+        if not st.session_state.get("universal_audit_res") or st.session_state.universal_audit_res.get("topic_id") != track_id:
+            st.info(f"💡 尚未执行对 [{track_id}] 领域的 518,400 全量样本审计。")
+            if st.button(f"📡 启动 [{track_id}] 专项全量定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "universal_topic_audit"
+                st.rerun()
+        else:
+            res = st.session_state.universal_audit_res
+            st.success(f"✅ [{res['topic_name']}] 深度审计完成！全量定标命中数: {res['hit_count']}")
+            
+            c1, c2 = st.columns(2)
+            c1.metric("高能命数 (Hits)", res['hit_count'])
+            c2.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🧬 轨道核心样本报告 (Top Audited Samples)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (SAI: {h['sai']})", expanded=(i==0)):
+                    col_l, col_r = st.columns(2)
+                    with col_l:
+                        st.write(f"分类: **{h.get('category', 'MATCH')}**")
+                        st.write(f"SAI 压力值: `{h['sai']}`")
+                    with col_r:
+                        # 动态显示该 topic 返回的所有元数据
+                        omit = ["chart", "label", "category", "sai", "dependencies", "dependency_names", "registry_id"]
+                        for k, v in h.items():
+                            if k not in omit:
+                                st.write(f"{k}: `{v}`")
+                    
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')}")
+
+            st.divider()
+            if st.button("🔄 重新扫描全量轨道", use_container_width=True):
+                del st.session_state.universal_audit_res
+                st.rerun()
+
+    elif view == "v44_resonance_report":
+        st.markdown("### ✨ QGA V4.4 专旺同频共振波谱定标报告")
+        
+        if not st.session_state.get("v44_re_res"):
+            st.info("💡 尚未执行 518,400 全量样本相位共振定标。")
+            st.markdown("""
+            **审计协议 [TY_RESONANCE_V4.4]:**
+            1. **相位识别**: 扫描系统内同频粒子的分布与一致性系数 $C$。
+            2. **增益定标**: 计算相干态产生的驻波叠加倍率 $G$。
+            3. **退相干测试**: 模拟杂质粒子注入导致的频率偏移与能级跌落风险。
+            """)
+            if st.button("📡 启动 V4.4 [TYKG] 专旺共振深度定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v44_resonance_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v44_re_res
+            st.success(f"✅ 相位定标完成！扫描总额: 518,400 | 共振增益模型已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("强共振命中", res['hit_count'])
+            c2.metric("峰值增益 (G)", "2.00") # Log10(101) approx
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🌊 相干态与驻波强度监控 (Coherence Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (C: {h['coherence_coefficient_c']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("相干系数 (C)", h['coherence_coefficient_c'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_m:
+                        st.metric("共振增益 (G)", h['resonance_gain_g'])
+                    with col_r:
+                        st.metric("杂质率", h['impurity_rate'])
+                    
+                    st.write(f"🛡️ **物理稳态**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')} | SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计专旺共振", use_container_width=True):
+                del st.session_state.v44_re_res
+                st.rerun()
+
+    elif view == "v44_transition_report":
+        st.markdown("### 🚀 QGA V4.4 弃命相变状态定标报告")
+        
+        if not st.session_state.get("v44_tr_res"):
+            st.info("💡 尚未执行 518,400 全量样本弃命相变审计。")
+            st.markdown("""
+            **审计协议 [CWJS_TRANSITION_V4.4]:**
+            1. **内压核算 ($P_{dm}$)**: 计算日主原局根气深度与抵抗能。
+            2. **场压定标 ($P_{ext}$)**: 核算外部克泄强场的压强级。
+            3. **相变触发 ($T_t$)**: 寻找 $P_{ext} / P_{dm}$ 的临界翻转点。
+            4. **SAI 重置**: 审计相变后系统是否进入“零阻抗态”超稳运行。
+            """)
+            if st.button("📡 启动 V4.4 [CWJS] 弃命相变深度扫描", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v44_transition_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v44_tr_res
+            st.success(f"✅ 相变定标完成！扫描总额: 518,400 | 零阻抗奇点定位成功")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("从属态命中", res['hit_count'])
+            c2.metric("临界阈值 ($T_t$)", "4.20")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🚇 量子隧道相变样本监控 (Transition Hub)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (T_t: {h['transition_threshold_tt']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("相变阈值 (T_t)", h['transition_threshold_tt'])
+                        st.write(f"状态: **{h['category']}**")
+                    with col_m:
+                        st.metric("外部压强 (P_ext)", h['external_pressure'])
+                    with col_r:
+                        st.metric("日主内压 (P_dm)", h['internal_energy_pdm'])
+                    
+                    st.write(f"🌀 **物理模态**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')} | SAI-Reset: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新定标弃命相变", use_container_width=True):
+                del st.session_state.v44_tr_res
+                st.rerun()
+
+    elif view == "v44_reversion_report":
+        st.markdown("### 💥 QGA V4.4 还原动力学与属性闪变审计报告")
+        
+        if not st.session_state.get("v44_rv_res"):
+            st.info("💡 尚未执行 518,400 全量样本还原动力学审计。")
+            st.markdown("""
+            **审计协议 [MHGG_REVERSION_V4.4]:**
+            1. **锁定势能 ($E_p$)**: 计算化合亚稳态的属性锚定强度。
+            2. **还原压力 ($E_r$)**: 核算“还原剂”粒子对系统重构的破坏力。
+            3. **闪变判定**: 寻找 $E_r > 1.2$ 的临界崩塌点，模拟属性瞬间反转。
+            4. **脉冲审计**: 观测崩塌由于结构失效引发的 SAI 超新星爆发。
+            """)
+            if st.button("📡 启动 V4.4 [MHGG] 还原动力学点火审计", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v44_reversion_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v44_rv_res
+            st.success(f"✅ 还原动力学定标完成！扫描总额: 518,400 | 属性崩塌模型已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("强还原闪变命中", res['hit_count'])
+            c2.metric("压强极限 ($E_r$)", "1.20")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### ⚡ 属性闪变与级联崩溃监控 (Reversion Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (Er: {h['reversion_stress_er']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("还原应力 (Er)", h['reversion_stress_er'])
+                        st.write(f"化神: **{h['trans_god']}**")
+                    with col_m:
+                        st.metric("锁定势能 (Ep)", h['locking_potential_ep'])
+                    with col_r:
+                        st.metric("应力状态", h['category'][:15] + "...")
+                    
+                    st.write(f"💥 **系统状态**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')} | Peak-SAI: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计还原动力", use_container_width=True):
+                del st.session_state.v44_rv_res
+                st.rerun()
+
+    elif view == "v45_gxyg_report":
+        st.markdown("### 🕳️ QGA V4.5 拱夹空间虚拟势阱审计报告")
+        
+        if not st.session_state.get("v45_gp_res"):
+            st.info("💡 尚未执行 518,400 全量样本拱夹空间审计。")
+            st.markdown("""
+            **审计协议 [GXYG_GAP_V4.5]:**
+            1. **空位探测**: 扫描地支拓扑中的隔位拱夹结构（如 Zi-Yin 拱 Chou）。
+            2. **感应定标 ($V_{ind}$)**: 计算两侧高质量粒子产生的虚拟引力势阱强度。
+            3. **负压补偿 ($\Delta SAI$)**: 核算虚拟能级对系统总应力的对冲效应。
+            4. **塌缩压力**: 模拟流年实态粒子撞击虚拟位导致的能级失效风险。
+            """)
+            if st.button("📡 启动 V4.5 [GXYG] 虚拟势阱深度定标", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v45_gxyg_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v45_gp_res
+            st.success(f"✅ 虚拟势阱定标完成！扫描总额: 518,400 | 真空能级模型已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("势阱命中", res['hit_count'])
+            c2.metric("最大修正 (dSAI)", "-2.50")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🌌 引力干涉与真空能级监控 (Gap Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (Vind: {h['virtual_induction_v_ind']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("感应强度 (Vind)", h['virtual_induction_v_ind'])
+                        st.write(f"补偿: **{h['dsai_correction']} SAI**")
+                    with col_m:
+                        st.write("**探测到的拱位:**")
+                        for gap in h['gaps']:
+                            st.caption(f"✨ {gap}")
+                    with col_r:
+                        st.metric("最终 SAI", h['sai'])
+                    
+                    st.write(f"🛡️ **物理效应**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')} | Raw-Correction: {h['dsai_correction']}")
+
+            st.divider()
+            if st.button("🔄 重新定标虚拟势阱", use_container_width=True):
+                del st.session_state.v45_gp_res
+                st.rerun()
+
+    elif view == "v45_mbgs_report":
+        st.markdown("### 📦 QGA V4.1.2 墓库穿透海选与关联矩阵审计")
+        
+        if not st.session_state.get("v45_mb_res"):
+            st.info("💡 尚未执行 518,400 全量样本穿透海选审计。")
+            st.markdown("""
+            **审计协议 [MBGS_PENETRATION_V4.1.2]:**
+            1. **容器底座海选**: 锁定日/时支命中“辰戌丑未”的粒子空间。
+            2. **能核穿透扫描**: 同步审计金神 (JSG) 与魁罡 (KGG) 子态能核分布。
+            3. **关联矩阵建立**: 区分空置容器与藏核容器的物理耦合差异。
+            4. **[SKSK] 陷阱识别**: 扫描地支四库全齐（辰戌丑未）形成的引力坍缩奇点。
+            5. **复合 SAI 计算**: 定标基于势垒 $V_b$、耦合系数 $\mu$ 与坍缩张量 $S_{sksk}$ 的系统应力。
+            """)
+            if st.button("📡 启动 V4.1.2 [MBGS] 全量穿透扫描", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v45_mbgs_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v45_mb_res
+            st.success(f"✅ 墓库势能定标完成！扫描总额: 518,400 | 能量容器模型已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("墓库结构命中", res['hit_count'])
+            c2.metric("峰值应力 (SAI)", "120.50")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 🌋 穿透矩阵与关联激发监控 (Penetration Matrix Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (SAI: {h['sai']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("总 SAI 响应", h['sai'])
+                        st.caption(f"势垒高度 $V_b$: {h['v_b_barrier']}")
+                        st.caption(f"耦合系数 $\\mu$: {h['mu_coupling']}")
+                    with col_m:
+                        if h['sub_tags']:
+                            st.write("**穿透发现 (Cores/Traps):**")
+                            for tag in h['sub_tags']:
+                                st.code(f"⚡ {tag}")
+                        if h['events']:
+                            st.write("**容器破坏事件:**")
+                            for ev in h['events']:
+                                st.caption(f"💥 {ev}")
+                    with col_r:
+                        st.metric("核心/坍缩增益", f"{float(h['g_core_gain']) + float(h['s_sksk_collapse']):.2f}")
+                        st.write(f"基准应力: **{h['s_base_stress']}**")
+                    
+                    st.write(f"🌀 **物理模态**: {h['category']}")
+                    if h.get('dependency_names'):
+                        st.write(f"🔗 **物理回溯**: `{' + '.join(h['dependency_names'])}`")
+                    st.caption(f"审计指纹: {h.get('registry_id', 'N/A')} | Energy-Reservoir-ID: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计墓库势能", use_container_width=True):
+                del st.session_state.v45_mb_res
+                st.rerun()
+
+    elif view == "v45_zhsg_report":
+        st.markdown("### 📻 QGA V4.1.2 杂气激发与相位干涉审计报告")
+        
+        if not st.session_state.get("v45_zh_res"):
+            st.info("💡 尚未执行 518,400 全量样本杂气激发审计。")
+            st.markdown("""
+            **审计协议 [ZHSG_EXCITATION_V4.1.2]:**
+            1. **非饱和态定标**: 识别藏干数 $\geq 2$ 的高熵地支粒子空间。
+            2. **透干激发 (TSG)**: 同步分拣天干引信与地支余气的频谱对齐度。
+            3. **背景辐射 (YQG)**: 审计月令余气对系统稳态的底层干预。
+            4. **相位干涉干扰**: 定标多组分粒子相长/相消干涉对 SAI 的非线性波动效应。
+            """)
+            if st.button("📡 启动 V4.1.2 [ZHSG] 频谱穿透扫描", type="primary", use_container_width=True):
+                st.session_state.sim_active = True
+                st.session_state.sim_op_type = "v45_zhsg_audit"
+                st.rerun()
+        else:
+            res = st.session_state.v45_zh_res
+            st.success(f"✅ 杂气激发定标完成！扫描总额: 518,400 | 相位干涉模型已同步")
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric("杂气结构命中", res['hit_count'])
+            c2.metric("平均激发能级", "4.85")
+            c3.metric("审计日期", res['audit_date'])
+            
+            st.divider()
+            st.markdown("#### 📡 频谱增益与相位干涉监控 (Spectral Gain Dashboard)")
+            
+            for i, h in enumerate(res["top_samples"]):
+                with st.expander(f"样本 #{i+1}: {h['label']} (SAI: {h['sai']})", expanded=(i==0)):
+                    col_l, col_m, col_r = st.columns(3)
+                    with col_l:
+                        st.metric("合计 SAI", h['sai'])
+                        st.caption(f"激发能级 $E_{{excite}}$: {h['e_excite_energy']}")
+                        st.caption(f"相位因子 $C_{{phase}}$: {h['c_phase_factor']}")
+                    with col_m:
+                        if h['spectral_gains']:
+                            st.write("**频谱对齐 (TSG):**")
+                            for sg in h['spectral_gains']:
+                                st.caption(f"📻 {sg}")
+                        if h['sub_tags']:
+                            st.write("**激发状态:**")
+                            for tag in h['sub_tags']:
+                                st.code(f"✨ {tag}")
+                    with col_r:
+                        st.write("**物理判定:**")
+                        st.write(f"🌀 {h['category']}")
+                        if h.get('dependency_names'):
+                            st.write(f"🔗 回溯: `{' + '.join(h['dependency_names'])}`")
+                    
+                    st.caption(f"审计周期: QGA V4.5.3 | Plasma-ID: {h['sai']}")
+
+            st.divider()
+            if st.button("🔄 重新审计杂气激发", use_container_width=True):
+                del st.session_state.v45_zh_res
                 st.rerun()
 
     elif view == "topic_lab":
@@ -403,9 +1188,11 @@ def render():
             # Sync back to persistent storage
             st.session_state.persistent_audit_profile_id = selected_profile_id
         with col_sel2:
-            default_year = st.session_state.get("audit_year", 2024)
-            audit_year = st.number_input("六柱对撞目标流年", 1900, 2100, default_year, key="audit_year_val")
-            st.session_state.audit_year = audit_year
+            default_range = st.session_state.get("audit_year_range", (2024, 2030))
+            year_range = st.slider("六流碰撞时间范围", 1900, 2100, default_range, key="audit_year_range")
+            start_year, end_year = year_range
+            st.session_state.audit_year = start_year # 为预览保留起始年
+            audit_year = start_year
 
 
         # --- PREVIEW CARD (重构版 V3.0) ---
@@ -435,14 +1222,24 @@ def render():
                 
                 # 预计算六柱数据
                 p_labels = ["年", "月", "日", "时", "运", "岁"]
-                raw_six = [pillars['year'], pillars['month'], pillars['day'], pillars['hour'], luck_pillar, annual_pillar]
+                raw_six = [pillars.get('year', '??'), pillars.get('month', '??'), pillars.get('day', '??'), pillars.get('hour', '??'), luck_pillar, annual_pillar]
                 
                 for i, p_data in enumerate(raw_six):
-                    stem = p_data[0]
-                    branch = p_data[1]
-                    s_god = BPN.get_shi_shen(stem, dm) if i != 2 else "日主"
-                    hidden = BPN.get_branch_weights(branch)
-                    h_gods = [BPN.get_shi_shen(h[0], dm) for h in hidden]
+                    # 安全提取干支，防止 string index out of range
+                    if p_data and isinstance(p_data, str) and len(p_data) >= 2:
+                        stem = p_data[0]
+                        branch = p_data[1]
+                    elif isinstance(p_data, (list, tuple)) and len(p_data) >= 2:
+                        stem = str(p_data[0]) if p_data[0] else "?"
+                        branch = str(p_data[1]) if p_data[1] else "?"
+                    else:
+                        stem = "?"
+                        branch = "?"
+                        
+                    s_god = BPN.get_shi_shen(stem, dm) if i != 2 and stem != "?" else ("日主" if i == 2 else "未知")
+                    hidden = BPN.get_branch_weights(branch) if branch != "?" else []
+                    h_gods = [BPN.get_shi_shen(h[0], dm) for h in hidden] if stem != "?" else ["?"]
+                    
                     six_pillars_data.append({
                         "label": p_labels[i],
                         "stem": stem,
@@ -502,35 +1299,43 @@ def render():
                 st.divider()
                 st.markdown("### 🔬 全量程物理扫描 (Full Pipeline Scan)")
                 
-                if st.button("🚀 启动全量深度审计 (Deep Audit All MODs)", use_container_width=True, type="primary"):
+                if st.button(f"🚀 启动跨年深度审计 ({start_year}-{end_year})", use_container_width=True, type="primary"):
                     st.session_state.show_pipeline_res = True
                     # Reset results
                     st.session_state.pipeline_hits = []
                     
-                    with st.spinner("正在对所有物理仿真专题进行并发审计..."):
+                    with st.spinner(f"正在执行 {start_year}-{end_year} 跨年应力对撞..."):
                         # 只审计物理模型仿真主题里面注册了的专题
                         modes_to_check = TRACK_IDS
                         
                         found_patterns = []
-                        full_chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour'], luck_pillar, annual_pillar]
-                        
                         from core.trinity.core.engines.pattern_scout import PatternScout
                         scout = PatternScout()
                         
-                        for mode in modes_to_check:
-                            try:
-                                res = scout._deep_audit(full_chart, mode)
-                                if res:
-                                    # Inject pillars and other context for display
-                                    res["six_pillars"] = ["".join(p) for p in full_chart]
-                                    res["city"] = st.session_state.get("audit_city_override", p_preview.get("city", "Beijing"))
-                                    found_patterns.append(res)
-                            except:
-                                pass
+                        # 外层按年循环，内层按专题循环
+                        for target_year in range(start_year, end_year + 1):
+                            # ⚠️ 核心修正：每一年都要重新计算大运
+                            current_luck = profile_obj.get_luck_pillar_at(target_year)
+                            current_annual = profile_obj.get_year_pillar(target_year)
+                            full_chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour'], current_luck, current_annual]
+                            
+                            for mode in modes_to_check:
+                                try:
+                                    res = scout._deep_audit(full_chart, mode)
+                                    if res:
+                                        # 注入年份信息，用于 UI 区分
+                                        res["target_year"] = target_year
+                                        res["luck_p"] = "".join(current_luck)
+                                        res["annual_p"] = "".join(current_annual)
+                                        res["six_pillars"] = ["".join(p) for p in full_chart]
+                                        res["city"] = st.session_state.get("audit_city_override", p_preview.get("city", "Beijing"))
+                                        found_patterns.append(res)
+                                except:
+                                    pass
                         
                         if found_patterns:
-                            # 按照 SAI 排序
-                            found_patterns.sort(key=lambda x: float(x.get('stress', 0)), reverse=True)
+                            # 按照年份排序，方便查看时间线
+                            found_patterns.sort(key=lambda x: (x.get('target_year'), -float(x.get('stress', 0))))
                         st.session_state.pipeline_hits = found_patterns
                     st.rerun()
                 
@@ -545,12 +1350,17 @@ def render():
                             sai_val = float(h.get('stress', 0))
                             color = "#ff4b4b" if sai_val > 2.0 else ("#ffaa00" if sai_val > 1.25 else "#00cc66")
                             
-                            with st.expander(f"🧬 {h.get('topic_name', 'Unknown')} | SAI: {sai_val:.2f}", expanded=(idx==0)):
+                            year_label = f"📅 {h.get('target_year')}年"
+                            luck_label = f"运:{h.get('luck_p')}"
+                            topic_label = h.get('topic_name', 'Unknown')
+                            
+                            with st.expander(f"{year_label} | {luck_label} | {topic_label} | SAI: {sai_val:.2f}", expanded=(idx==0)):
                                 # UI Formatting
                                 col_top1, col_top2 = st.columns([2, 1])
                                 with col_top1:
-                                    st.markdown(f"**格局分类:** `{h.get('category', 'MATCH')}`")
-                                    st.markdown(f"**对撞六柱:** `{ ' '.join(h.get('six_pillars', [])) }`")
+                                    rid = h.get('registry_id', 'LEGACY')
+                                    st.markdown(f"**格局分类:** `{h.get('category', 'MATCH')}` | **注册ID:** `{rid}`")
+                                    st.markdown(f"**对撞六柱:** `{ ' '.join(h.get('six_pillars', [])) }` | **流年:** `{h.get('annual_p')}`")
                                 with col_top2:
                                     st.markdown(f"<div style='text-align:right;'><span style='color:{color}; font-size:1.8em; font-weight:bold;'>SAI {sai_val:.2f}</span><br><span style='color:#666; font-size:0.7em;'>量子应力载荷</span></div>", unsafe_allow_html=True)
                                 
@@ -574,6 +1384,36 @@ def render():
                                     
                                     if h.get("incoming_guan") and float(h.get("incoming_guan", 0)) > 0:
                                         st.warning(f"⚠️ 检测到官杀突入: {h['incoming_guan']} units")
+
+                                elif audit_mode == "SSZS_V4.3_CIWS_INTERCEPT":
+                                    st.markdown("**🚀 SSZS CIWS 脉冲拦截 HUD:**")
+                                    i1, i2, i3 = st.columns(3)
+                                    i1.metric("拦截效率", h.get("interception_efficiency", "N/A"), help="E_ss / E_qs")
+                                    i2.metric("拦截纯度", h.get("purity_ratio", "N/A"))
+                                    i3.metric("雷达干扰", h.get("radar_interference", "N/A"))
+
+                                elif audit_mode == "CE_V4.3_FLARE_DISCHARGE":
+                                    st.markdown("**☀ CE_FLARE 高能喷泉 HUD:**")
+                                    f1, f2, f3 = st.columns(3)
+                                    f1.metric("喷射速率", h.get("discharge_flow", "N/A"))
+                                    f2.metric("燃料注入", h.get("fuel_addition", "0.0"))
+                                    f3.metric("堵塞指数", h.get("clog_index", "0.0"))
+                                    if h.get("is_vapor_lock") == "YES":
+                                        st.error("🚨 VAPOR LOCK: 系统因喷管堵塞正面临自爆风险！")
+
+                                elif audit_mode == "GYPS_V4.3_RECTIFIER":
+                                    st.markdown("**🗜️ GYPS 整流桥 HUD:**")
+                                    r1, r2, r3 = st.columns(3)
+                                    r1.metric("整流效率", h.get("rectification_efficiency", "N/A"))
+                                    r2.metric("磁饱和度", h.get("bridge_saturation", "N/A"))
+                                    r3.metric("输入能级", h.get("E_input", "0.0"))
+
+                                elif audit_mode == "CWJG_V4.3_FEEDBACK":
+                                    st.markdown("**⛓️ CWJG 增益反馈 HUD:**")
+                                    fb1, fb2, fb3 = st.columns(3)
+                                    fb1.metric("反馈增益", h.get("feedback_gain", "N/A"))
+                                    fb2.metric("负载比率", h.get("load_ratio", "N/A"))
+                                    fb3.metric("财星注入", h.get("E_wealth", "0.0"))
 
                                 # Fallback/Generic Physics Params
                                 st.markdown("**物理参数明细 (Physics Parameters):**")

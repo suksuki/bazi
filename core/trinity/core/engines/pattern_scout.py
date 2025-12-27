@@ -1,5 +1,5 @@
-
 import logging
+import math
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from core.trinity.core.nexus.definitions import BaziParticleNexus, PhysicsConstants as PC, ArbitrationNexus as AN
@@ -109,6 +109,20 @@ class PatternScout:
             "CAI_GUAN_XIANG_SHENG": "CAI_GUAN_XIANG_SHENG_V4",
             "PGB_SUPER_FLUID_LOCK": "PGB_ULTRA_FLUID",
             "PGB_SUPERFLUID_LOCK": "PGB_ULTRA_FLUID",
+            "MOD_115_SSZS": "SSZS_PULSE_INTERCEPTION",
+            "MOD_119_CE": "CE_FLARE_DISCHARGE",
+            "MOD_116_GYPS": "GYPS_RECTIFIER_BRIDGE",
+            "MOD_117_CWJG": "CWJG_FEEDBACK_LOOP",
+            "MOD_121_YGZJ": "YGZJ_MONOPOLE_ENERGY",
+            "MOD_122_YHGS": "YHGS_THERMODYNAMIC_ENTROPY",
+            "MOD_123_LYKG": "LYKG_LC_SELF_LOCKING",
+            "MOD_124_JJGG": "JJGG_QUANTUM_TUNNELING",
+            "MOD_125_TYKG": "TYKG_PHASE_RESONANCE",
+            "MOD_126_CWJS": "CWJS_QUANTUM_TRANSITION",
+            "MOD_127_MHGG": "MHGG_REVERSION_DYNAMICS",
+            "MOD_128_GXYG": "GXYG_VIRTUAL_GAP",
+            "MOD_129_MBGS": "MBGS_STORAGE_POTENTIAL",
+            "MOD_130_ZHSG": "ZHSG_MIXED_EXCITATION",
         }
         pattern_id = PATTERN_ID_ALIASES.get(pattern_id, pattern_id)
         
@@ -529,163 +543,1120 @@ class PatternScout:
             }
             
 
-        if pattern_id == "SHI_SHEN_ZHI_SHA":
+        if pattern_id == "SSZS_PULSE_INTERCEPTION":
             # ============================================================
-            # [ASE PHASE 5.1] SSZS V5.1: 能级压制拦截模型
-            # V5.1 升级: 从"透干硬限制"改为"食杀能级压制比"
-            # 允许食神或七杀在藏干中存在，计算纯度系数
+            # [QGA V4.3] MOD_115: SSZS CIWS 脉冲制导拦截模型
+            # 物理定义：日主泄放的“高频脉冲粒子（食神）”对外部突入的“重质量撞击物（七杀）”
+            # 进行动能对撞与轨迹偏转。
             # ============================================================
-            luck_pillar = chart[4] if len(chart) >= 5 else ('', '')
-            annual_pillar = chart[5] if len(chart) >= 6 else ('', '')
-
-            # 1. 能量统计 (包含天干和藏干)
-            shi_shen_total = 0.0  # 食神能量
-            shang_guan_total = 0.0  # 伤官能量
-            qi_sha_total = 0.0  # 七杀能量
             
-            for i in range(4):
-                st, br = chart[i]
-                tg = ten_gods[i]
+            # 1. 能量统计 (包含天干及环境注入)
+            E_ss = 0.0  # 食神 (Interceptor)
+            E_qs = 0.0  # 七杀 (Projectile)
+            E_sg = 0.0  # 伤官 (Interference)
+            E_resource = 0.0 # 印星 (Shield/Radar)
+            
+            # 基础环境组合
+            all_particles = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_particles):
+                st, br = p
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
                 
-                # 天干能量
-                if tg == "食神": shi_shen_total += 3.0
-                elif tg == "伤官": shang_guan_total += 3.0
-                elif tg == "七杀": qi_sha_total += 3.0
+                weight = 3.0 if i < 4 else (1.5 if i == 4 else 2.5) # 天干 > 流年 > 大运 weight
                 
-                # 藏干能量
+                if ts == "食神": E_ss += weight
+                elif ts == "七杀": E_qs += weight
+                elif ts == "伤官": E_sg += weight
+                elif ts in ["正印", "偏印"]: E_resource += weight
+            
+            # 藏干统计
+            for st, br in chart[:4]:
                 hidden = BaziParticleNexus.get_branch_weights(br)
                 for hs, w in hidden:
                     hg = BaziParticleNexus.get_shi_shen(hs, dm)
                     energy = w / 10.0
-                    if hg == "食神": shi_shen_total += energy
-                    elif hg == "伤官": shang_guan_total += energy
-                    elif hg == "七杀": qi_sha_total += energy
+                    if hg == "食神": E_ss += energy
+                    elif hg == "七杀": E_qs += energy
+                    elif hg == "伤官": E_sg += energy
+                    elif hg in ["正印", "偏印"]: E_resource += energy
             
-            # 2. 触发条件：必须有食神和七杀（天干或藏干）
-            if shi_shen_total < 1.0: return None  # 食神能量不足
-            if qi_sha_total < 1.0: return None  # 七杀能量不足
+            # 2. 核心算法：[Interception_Efficiency]
+            # 基础拦截率: 1.0 为完美动能抵消
+            if E_qs < 0.5 and E_ss < 0.5: return None # 无物理冲突
             
-            # 3. 纯度系数计算: Purity = E_食神 / (E_食神 + E_伤官)
-            purity = shi_shen_total / max(0.1, shi_shen_total + shang_guan_total)
-
-            STAGES = ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"]
-            STAGE_MULT = {
-                "长生": 1.5, "沐浴": 1.1, "冠带": 1.3, "临官": 2.0, "帝旺": 2.5,
-                "衰": 1.0, "病": 0.7, "死": 0.4, "墓": 1.8, "绝": 0.2, "胎": 0.6, "养": 1.0
-            }
-            LIFE_STAGES = {
-                "甲": ["亥", "子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌"],
-                "乙": ["午", "巳", "辰", "卯", "寅", "丑", "子", "亥", "戌", "酉", "申", "未"],
-                "丙": ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"],
-                "丁": ["酉", "申", "未", "午", "巳", "辰", "卯", "寅", "丑", "子", "亥", "戌"],
-                "戊": ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"],
-                "己": ["酉", "申", "未", "午", "巳", "辰", "卯", "寅", "丑", "子", "亥", "戌"],
-                "庚": ["巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰"],
-                "辛": ["子", "亥", "戌", "酉", "申", "未", "午", "巳", "辰", "卯", "寅", "丑"],
-                "壬": ["申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰", "巳", "午", "未"],
-                "癸": ["卯", "寅", "丑", "子", "亥", "戌", "酉", "申", "未", "午", "巳", "辰"]
-            }
-
-            def get_stage(stem, branch):
-                if stem not in LIFE_STAGES: return "衰"
-                try:
-                    idx = LIFE_STAGES[stem].index(branch)
-                    return STAGES[idx]
-                except: return "衰"
-
-            # 2. Interceptor Efficiency (Luck_Shi_Reset - 0.70 Weight)
-            shi_stems = [st for i, (st, br) in enumerate(chart[:4]) if ten_gods[i] == "食神"]
-            sha_stems = [st for i, (st, br) in enumerate(chart[:4]) if ten_gods[i] == "七杀"]
+            interception_eff = E_ss / max(0.1, E_qs)
             
-            luck_branch = luck_pillar[1]
-            shi_power_sum = 0
-            for ss in shi_stems:
-                stage = get_stage(ss, luck_branch)
-                shi_power_sum += STAGE_MULT.get(stage, 1.0)
+            # 拦截纯度：防止伤官混入导致弹道弥散
+            purity = E_ss / max(0.1, E_ss + E_sg)
             
-            # 3. Sha Momentum Reset (Luck_Sha_Reset)
-            sha_kinetic_sum = 0
-            for ss in sha_stems:
-                stage = get_stage(ss, luck_branch)
-                sha_kinetic_sum += STAGE_MULT.get(stage, 1.0)
+            # 雷达灵敏度：印星过多会干扰食神的发射频率（枭神夺食预警）
+            radar_interference = E_resource / max(0.1, E_ss)
             
-            shi_interceptor = (shi_power_sum / len(shi_stems) if shi_stems else 1.0) * 0.7
-            sha_kinetic = (sha_kinetic_sum / len(sha_stems) if sha_stems else 1.0) * 0.7
-
-            # 4. Phase Interference (Annual Pulse - 0.25 Weight)
-            phase_interference = 1.0
-            STEM_COMBINES = {"甲己", "己甲", "乙庚", "庚乙", "丙辛", "辛丙", "丁壬", "壬丁", "戊癸", "癸戊"}
+            # 3. SAI 应力计算 (基于拦截效能偏离度)
+            # 理想点：interception_eff ≈ 1.2 (过饱和拦截)
+            sai_base = abs(interception_eff - 1.2) * 1.5
             
-            # [Guidance_Jamming]: Shi Shen being combined
-            is_jammed = False
-            for ss in shi_stems:
-                if (ss + annual_pillar[0]) in STEM_COMBINES:
-                    is_jammed = True
-                    phase_interference *= 2.5 # Interceptor blinded
+            status = "STABLE_DEFENSE"
+            if interception_eff < 0.6:
+                status = "PENETRATION (物理穿透/防御崩溃)"
+                sai_base *= 4.0
+            elif interception_eff > 3.0:
+                status = "SATURATION (过载关机/能量浪费)"
+                sai_base *= 2.0
             
-            # [Secondary_Circuit_Failure]: Xiao Shen Duo Shi interference
-            annual_god = BaziParticleNexus.get_shi_shen(annual_pillar[0], dm)
-            is_circuit_fail = False
-            if annual_god in ["正印", "偏印"]:
-                is_circuit_fail = True
-                phase_interference *= 2.0 # Radar power off
-
-            # [Vault_Ammunition_Lock]: Sha or Shi in Vault
-            is_sha_burst = False
-            CLASHES = {"子午", "午子", "丑未", "未丑", "寅申", "申寅", "卯酉", "酉卯", "辰戌", "戌辰", "巳亥", "亥巳"}
-            for i in range(4):
-                br = branches[i]
-                if (annual_pillar[1] + br) in CLASHES:
-                    hidden = BaziParticleNexus.get_branch_weights(br)
-                    if any(BaziParticleNexus.get_shi_shen(hs, dm) == "七杀" for hs, w in hidden):
-                        if get_stage(dm, br) == "墓":
-                            is_sha_burst = True
-                            phase_interference *= 3.0 # Nuclear cook-off
-
-            # [Superconducting_Response]: Branch combinations for Shi
-            is_superactive = False
-            shi_elem = BaziParticleNexus.STEMS[shi_stems[0]][0] if shi_stems else "Neutral"
-            TRI_COMBINES = {"Wood": ["亥", "卯", "未"], "Fire": ["寅", "午", "戌"], "Metal": ["巳", "酉", "丑"], "Water": ["申", "子", "辰"]}
-            tri_members = TRI_COMBINES.get(shi_elem, [])
-            if all(m in branches for m in tri_members):
-                is_superactive = True
-                phase_interference *= 0.5 # Continuous beam lock
-
-            # 5. Lock-on Intercept Algorithm
-            # Target ratio: 1.10 (Golden Intercept)
-            ratio = sha_kinetic / max(0.1, shi_interceptor)
-            tuning_error = abs(ratio - 1.10)
+            if purity < 0.6:
+                status = "DIFFUSION_LOST (弹道弥散/效率下降)"
+                sai_base *= 1.8
             
-            # [V5.1] 引入纯度系数: 纯度越低，SAI越高
-            purity_penalty = 1.0 / max(0.3, purity)  # 纯度<0.5时开始惩罚
-            sai = tuning_error * phase_interference * purity_penalty * geo_factor
+            if radar_interference > 2.0:
+                status = "RADAR_BLOCKED (雷达封锁/系统离线)"
+                sai_base *= 3.0
 
-            # 6. Status Categories
-            if is_sha_burst: category = "KINETIC_OVERLOAD (殉爆/拦截崩溃)"
-            elif is_jammed: category = "GUIDANCE_LOST (拦截致盲/失控)"
-            elif is_circuit_fail: category = "RADAR_OFFLINE (绝缘崩溃/雷达离线)"
-            elif purity < 0.5: category = "IMPURE_INTERCEPT (食伤混杂/相位干涉)"
-            elif tuning_error < 0.2 and phase_interference < 1.0: category = "PRECISE_INTERCEPT (定点拦截/完美制导)"
-            elif ratio > 2.0: category = "INTERCEPT_FAILURE (拦截动能不足)"
-            else: category = "SATURATED_DEFENSE (饱和防御态)"
-
+            sai = sai_base * geo_factor
+            
             return {
                 "chart": chart,
-                "category": category,
+                "category": status,
                 "sai": f"{sai:.2f}",
-                "intercept_ratio": f"{ratio:.2f}",
-                "interceptor_power": f"{shi_interceptor:.2f}",
-                "target_momentum": f"{sha_kinetic:.2f}",
-                "shi_shen_total": f"{shi_shen_total:.2f}",
-                "shang_guan_total": f"{shang_guan_total:.2f}",
-                "qi_sha_total": f"{qi_sha_total:.2f}",
-                "purity": f"{purity*100:.1f}%",
-                "is_burst": "YES" if is_sha_burst else "NO",
-                "is_jammed": "YES" if is_jammed else "NO",
+                "interception_efficiency": f"{interception_eff:.2f}",
+                "purity_ratio": f"{purity*100:.1f}%",
+                "radar_interference": f"{radar_interference:.2f}",
+                "E_interceptor": f"{E_ss:.2f}",
+                "E_projectile": f"{E_qs:.2f}",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
-                "audit_mode": "SSZS_V5.1_PURITY_INTERCEPT",
+                "audit_mode": "SSZS_V4.3_CIWS_INTERCEPT",
                 "topic_name": "食神制杀 (SSZS)",
                 "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "CE_FLARE_DISCHARGE":
+            # ============================================================
+            # [QGA V4.3] MOD_119: CE_FLARE 高能等离子喷泉模型 (从儿格)
+            # 物理定义：系统不再寻求引力平衡，而是处于一种持续物质喷射态。
+            # 比劫 = 燃料 (Fuel Additive)，印星 = 喷管堵塞 (Vapor Lock)。
+            # ============================================================
+            
+            # 1. 能量统计
+            E_output = 0.0 # 食伤 (Discharge)
+            E_fuel = 0.0   # 比劫 (Fuel)
+            E_clog = 0.0   # 印星 (Vapor Lock)
+            E_drain = 0.0  # 财星 (Sink/Load)
+            
+            # 必须满足“从儿”基础：月令必须是食伤，且日主无根无助（或极弱）
+            month_br = chart[1][1]
+            hidden_month = BaziParticleNexus.get_branch_weights(month_br)
+            if not any(BaziParticleNexus.get_shi_shen(hs, dm) in ["食神", "伤官"] for hs, w in hidden_month):
+                return None
+            
+            all_chars = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_chars):
+                st, br = p
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
+                
+                w = 3.0 if i < 4 else 1.5
+                if ts in ["食神", "伤官"]: E_output += w
+                elif ts in ["比肩", "劫财"]: E_fuel += w
+                elif ts in ["正印", "偏印"]: E_clog += w
+                elif ts in ["正财", "偏财"]: E_drain += w
+                
+            # 2. 核心算法：[Discharge_Flow_Rate]
+            # 喷射速率 = 输出能级 / (系统残留能级)
+            flow_rate = E_output / max(0.1, E_fuel + E_clog + 1.0)
+            
+            # 3. 物理判定：Vapor Lock (印星介入)
+            is_vapor_lock = E_clog > 0.5
+            has_fuel_injection = E_fuel > 2.0
+            
+            # 4. SAI 临界值定标
+            # 从儿理想态：Flow Rate 极高，E_clog 为零，E_drain 适中
+            sai_base = 0.2
+            
+            if is_vapor_lock:
+                status = "VAPOR_LOCK (喷管堵塞/系统自爆)"
+                sai_base = 15.0 + (E_clog * 5.0) # 指数级跳变
+            elif flow_rate < 2.0:
+                status = "FLOW_DAMPING (喷射动力不足)"
+                sai_base = 2.5
+            elif has_fuel_injection:
+                status = "FUEL_INJECTED_FLARE (燃料注入/高能喷泉)"
+                sai_base = 0.1 # 极其稳定
+            else:
+                status = "STELLAR_FLARE (标准等离子喷泉)"
+                sai_base = 0.5
+            
+            # 财星作为负载，过重会稀释喷射能级
+            if E_drain > E_output:
+                status += " (LOAD_OVERFLOW)"
+                sai_base *= 1.5
+
+            sai = sai_base * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "discharge_flow": f"{flow_rate:.2f}",
+                "fuel_addition": f"{E_fuel:.2f}",
+                "clog_index": f"{E_clog:.2f}",
+                "is_vapor_lock": "YES" if is_vapor_lock else "NO",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "CE_V4.3_FLARE_DISCHARGE",
+                "topic_name": "从儿格 (CE_FLARE)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "GYPS_RECTIFIER_BRIDGE":
+            # ============================================================
+            # [QGA V4.3] MOD_116: GYPS 官印相生能量整流桥模型
+            # 物理定义：印星作为“变压整流器”，将突入的高压官杀能级
+            # 转化为日主的“偏置电压”。
+            # ============================================================
+            E_gs = 0.0 # 官杀 (Input Voltage)
+            E_in = 0.0 # 印星 (Rectifier/Bridge)
+            E_dm_support = 0.0 # 日主根气 (Stability)
+            
+            all_parts = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_parts):
+                st, br = p
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
+                w = 3.0 if i < 4 else 1.5
+                if ts in ["正官", "七杀"]: E_gs += w
+                elif ts in ["正印", "偏印"]: E_in += w
+                elif ts in ["比肩", "劫财"]: E_dm_support += w
+                
+            # 核心算法：[Rectification_Efficiency]
+            if E_gs < 0.5 or E_in < 0.5: return None
+            
+            # 磁饱和度：当官杀压力远大于印星转化能力时，整流桥击穿
+            saturation = E_gs / max(0.5, E_in)
+            efficiency = 1.0 / max(0.1, saturation - 0.5) if saturation > 1.5 else 1.0
+            
+            sai_base = abs(saturation - 1.0) * 1.2
+            status = "SMOOTH_RECTIFICATION"
+            
+            if saturation > 2.5:
+                status = "BRIDGE_BURNOUT (整流桥击穿/磁饱和自燃)"
+                sai_base *= 5.0
+            elif saturation < 0.4:
+                status = "REVERSE_LEAKAGE (转化效率极低/能量漏损)"
+                sai_base *= 2.0
+            elif E_gs > 5.0 and E_in > 4.0:
+                status = "HIGH_POWER_STABLE (重载稳压/大格局)"
+                sai_base = 0.1
+                
+            sai = sai_base * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "rectification_efficiency": f"{efficiency:.2f}",
+                "bridge_saturation": f"{saturation:.2f}",
+                "E_input": f"{E_gs:.2f}",
+                "E_transformer": f"{E_in:.2f}",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "GYPS_V4.3_RECTIFIER",
+                "topic_name": "官印相生 (GYPS)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "CWJG_FEEDBACK_LOOP":
+            # ============================================================
+            # [QGA V4.3] MOD_117: CWJG 财官联动多级增益反馈模型
+            # 物理定义：财星（燃料）注入官杀（发电机），产生级联压制。
+            # ============================================================
+            E_wealth = 0.0 # 财星 (Fuel Injection)
+            E_guan = 0.0   # 官杀 (Generator/Load)
+            E_dm = 1.0     # 日主基础强度
+            
+            all_parts = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_parts):
+                st, br = p
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
+                w = 3.0 if i < 4 else 1.5
+                if ts in ["正财", "偏财"]: E_wealth += w
+                elif ts in ["正官", "七杀"]: E_guan += w
+            
+            if E_wealth < 0.5 or E_guan < 0.5: return None
+            
+            # 核心算法：[Gain_Feedback_Ratio]
+            # 反馈增益 = 财能级 * 官能级
+            gain = E_wealth * E_guan
+            
+            # 判定日主是否能承荷
+            # 简单日主强度判定（是否有印、比）
+            dm_strength = sum(1 for i, (st, br) in enumerate(chart[:4]) if BaziParticleNexus.get_shi_shen(st, dm) in ["正印", "偏印", "比肩", "劫财"])
+            
+            load_factor = gain / max(1.0, dm_strength * 2.0)
+            
+            sai_base = load_factor * 1.5
+            status = "FEEDBACK_OPERATIONAL"
+            
+            if load_factor > 3.0:
+                status = "OVERVOLT_BURNOUT (财生杀重/系统烧毁)"
+                sai_base *= 2.5
+            elif load_factor < 0.5:
+                status = "IDLE_LOAD (负载空转)"
+                sai_base = 0.5
+            else:
+                status = "POWER_AMPLIFIED (财官联动/动力增强)"
+                sai_base = 0.2
+                
+            sai = sai_base * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "feedback_gain": f"{gain:.2f}",
+                "load_ratio": f"{load_factor:.2f}",
+                "E_wealth": f"{E_wealth:.2f}",
+                "E_guan": f"{E_guan:.2f}",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "CWJG_V4.3_FEEDBACK",
+                "topic_name": "财官联动 (CWJG)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "YGZJ_MONOPOLE_ENERGY":
+            # ============================================================
+            # [QGA V4.3.5] MOD_121: YGZJ 羊刃单极高能等离子体模型
+            # 语义：羊刃格且天干无官杀。定义为“露天核反应堆”。
+            # ============================================================
+            month_br = chart[1][1]
+            # 判定羊刃月令 (帝旺位)
+            DY_TABLE = {"甲": "卯", "乙": "寅", "丙": "午", "丁": "巳", "戊": "午", "己": "巳", "庚": "酉", "辛": "申", "壬": "子", "癸": "亥"}
+            if month_br != DY_TABLE.get(dm):
+                return None
+            
+            # 官杀约束检查 (天干)
+            if any(BaziParticleNexus.get_shi_shen(st, dm) in ["正官", "七杀"] for st, br in chart[:4]):
+                return None
+            
+            # 1. 能量统计
+            E_peer = 0.0     # 比劫 (High Energy Fuel)
+            E_barrier = 1.0  # 约束隔离层 (Resource/Support)
+            E_wealth = 0.0   # 财星 (Target to be incinerated)
+            
+            all_parts = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_parts):
+                st, br = p
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
+                w = 3.0 if i < 4 else 1.5
+                if ts in ["比肩", "劫财"]: E_peer += w
+                elif ts in ["正引", "偏印"]: E_barrier += w * 0.5 # 印星有一定约束
+                elif ts in ["正财", "偏财"]: E_wealth += w
+            
+            # 藏干修正
+            for st, br in chart[:4]:
+                hidden = BaziParticleNexus.get_branch_weights(br)
+                for hs, w_hidden in hidden:
+                    hg = BaziParticleNexus.get_shi_shen(hs, dm)
+                    energy = w_hidden / 10.0
+                    if hg in ["比肩", "劫财"]: E_peer += energy
+                    elif hg in ["正印", "偏印"]: E_barrier += energy * 0.3
+                    elif hg in ["正财", "偏财"]: E_wealth += energy
+            
+            # 2. 核心算法：[Destruction_Index]
+            # DI = E_peer^2 / D_barrier
+            di = (E_peer ** 2) / max(0.1, E_barrier)
+            
+            # 3. 物理判定：Wealth Incineration (热力学溢出)
+            is_wealth_incinerated = E_peer > 12.0 and E_wealth > 0
+            
+            # 4. SAI 应力计算
+            # 羊刃无制，SAI 随 DI 呈非线性增长
+            sai_base = (di / 40.0) * (1.5 if is_wealth_incinerated else 1.0)
+            
+            status = "MONOPOLE_ACTIVE"
+            if is_wealth_incinerated:
+                status = "WEALTH_INCINERATION (群比夺财/热寂效应)"
+                sai_base *= 2.0
+            elif di > 20.0:
+                status = "HIGH_ENERGY_ERUPTION (高能爆发/露天能核)"
+                sai_base *= 1.5
+            elif E_barrier > 5.0:
+                status = "CONTAINED_PLASMA (受控等离子体)"
+                sai_base *= 0.8
+                
+            sai = sai_base * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "destruction_index": f"{di:.2f}",
+                "E_peer_density": f"{E_peer:.2f}",
+                "E_barrier_resistance": f"{E_barrier:.2f}",
+                "wealth_incineration": "TRIGGERED" if is_wealth_incinerated else "NONE",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "YGZJ_V4.3.5_MONOPOLE",
+                "topic_name": "羊刃格 (YGZJ)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "YHGS_THERMODYNAMIC_ENTROPY":
+            # ============================================================
+            # [QGA V4.3.5] MOD_122: YHGS 调候热力学熵值平衡系统 (Step 2)
+            # 物理定义：计算全量熵值与效率损耗。
+            # 冷源: 金水, 热源: 木火, 缓冲: 土
+            # ============================================================
+            month_br = chart[1][1]
+            # 1. 基础温标定标 (Seasonal Base Temperature)
+            TEMP_MAP = {
+                "寅": 15, "卯": 20, "辰": 25, # 春: 温
+                "巳": 35, "午": 45, "未": 40, # 夏: 热
+                "申": 15, "酉": 10, "戌": 5,  # 秋: 凉
+                "亥": -5, "子": -15, "丑": -10 # 冬: 寒
+            }
+            T_base = TEMP_MAP.get(month_br, 20)
+            
+            # 2. 能量统计 (Thermal Flux)
+            E_heat = 0.0 # 木火 (Heat Source)
+            E_cold = 0.0 # 金水 (Heat Sink)
+            E_buffer = 0.0 # 土 (Thermal Mass)
+            
+            all_particles = list(chart[:4]) + [luck_pillar, annual_pillar]
+            for i, p in enumerate(all_particles):
+                st, br = p
+                if not st: continue
+                elem, pol, _ = BaziParticleNexus.STEMS[st]
+                weight = 3.0 if i < 4 else 1.5
+                if elem in ["Wood", "Fire"]: E_heat += weight
+                elif elem in ["Metal", "Water"]: E_cold += weight
+                elif elem in ["Earth"]: E_buffer += weight
+                
+            for st, br in chart[:4]:
+                hidden = BaziParticleNexus.get_branch_weights(br)
+                for hs, w in hidden:
+                    elem_h, _, _ = BaziParticleNexus.STEMS[hs]
+                    energy = w / 10.0
+                    if elem_h in ["Wood", "Fire"]: E_heat += energy
+                    elif elem_h in ["Metal", "Water"]: E_cold += energy
+                    elif elem_h in ["Earth"]: E_buffer += energy
+            
+            # 3. 核心计算
+            # 系统温度 T_sys (简化线性模型)
+            # T_sys = T_base + (E_heat - E_cold) * 5.0
+            T_sys = T_base + (E_heat - E_cold) * 5.0
+            
+            # 系统熵值 S (衡量无序度)
+            # S = ln(1 + |E_heat - E_cold|) / (1 + E_buffer)
+            entropy = math.log(1 + abs(E_heat - E_cold)) / (1 + E_buffer * 0.2)
+            
+            # 4. 效率损耗系数 Eta (Efficiency Factor)
+            # 理想工作温区: 15°C - 30°C
+            if T_sys < 0:
+                eta = max(0.2, 1.0 - abs(T_sys) / 50.0) # 超导冻结倾向
+                status = "SUPERCONDUCTIVE_FREEZE (温控失效/冷启动失败)"
+            elif T_sys > 50:
+                eta = max(0.2, 1.0 - (T_sys - 30) / 60.0) # 热坍缩倾向
+                status = "THERMAL_COLLAPSE (热力坍缩/过热熔断)"
+            else:
+                eta = 1.0 - (abs(T_sys - 22) / 100.0) # 稳态
+                status = "THERMAL_STABLE (调候稳态)"
+            
+            # 5. 调候救应 (Thermal Recovery)
+            recovery_boost = 0.0
+            has_recovery = False
+            # 寒冬需丙火, 炎夏需癸水
+            if month_br in ["亥", "子", "丑", "申", "酉"]: # 寒凉月
+                if any(p[0] == "丙" for p in all_particles):
+                    recovery_boost = 0.4
+                    has_recovery = True
+            elif month_br in ["巳", "午", "未", "辰", "戌"]: # 炎燥月
+                if any(p[0] == "癸" for p in all_particles):
+                    recovery_boost = 0.4
+                    has_recovery = True
+            
+            eta = min(1.0, eta + recovery_boost)
+            if has_recovery: 
+                status += " (RECOVERY_ACTIVE)"
+            
+            # SAI 响应: 熵值越高且效率越低，SAI 越高
+            sai = (entropy * 2.0) / max(0.1, eta) * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "system_temperature": f"{T_sys:.1f}°C",
+                "system_entropy": f"{entropy:.2f}",
+                "efficiency_eta": f"{eta:.2f}",
+                "thermal_recovery": "ACTIVE" if has_recovery else "NONE",
+                "heat_source": f"{E_heat:.2f}",
+                "heat_sink": f"{E_cold:.2f}",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "YHGS_V4.3.5_THERMO",
+                "topic_name": "调候格 (YHGS)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "LYKG_LC_SELF_LOCKING":
+            # ============================================================
+            # [QGA V4.3.5] MOD_123: LYKG 禄位自锁自感回路 (Step 3)
+            # 物理定义：日主与禄位形成超导自感线圈，提供系统惯性。
+            # ============================================================
+            
+            # 1. 禄位识别与自感定标 (Lu-Position Detection)
+            LU_TABLE = {"甲": "寅", "乙": "卯", "丙": "巳", "丁": "午", "戊": "巳", "己": "午", "庚": "申", "辛": "酉", "壬": "亥", "癸": "子"}
+            lu_target = LU_TABLE.get(dm)
+            
+            if lu_target not in branches:
+                return None
+            
+            # 2. 统计自感节点数量与强度
+            lu_count = sum(1 for br in branches if br == lu_target)
+            
+            # 环境冲击检测 (Clash Check for Inductor)
+            CLASHES = {"子午", "午子", "丑未", "未丑", "寅申", "申寅", "卯酉", "酉卯", "辰戌", "戌辰", "巳亥", "亥巳"}
+            clash_count = 0
+            # 检查是否有地支冲禄，特别是流年大运
+            for i, p in enumerate([luck_pillar, annual_pillar]):
+                if p[1] and (p[1] + lu_target) in CLASHES:
+                    clash_count += (2.0 if i == 1 else 1.0) # 流年冲击权重大
+            
+            # 3. 核心计算
+            # 自感系数 L: 基础由节点数决定，受冲击而衰减
+            L_base = lu_count * 1.5
+            inductance_L = max(0.1, L_base / (1.0 + clash_count * 2.0))
+            
+            # 抗冲击惯性余量 M_i
+            # 估算日主基础能级 (比劫 + 正偏印)
+            E_dm_core = 1.0
+            for i, p in enumerate(list(chart[:4]) + [luck_pillar, annual_pillar]):
+                st = p[0]
+                if not st: continue
+                ts = BaziParticleNexus.get_shi_shen(st, dm)
+                w = 3.0 if i < 4 else 1.5
+                if ts in ["比肩", "劫财", "正印", "偏印"]: E_dm_core += w
+                
+            # 惯性余量: Mi = (E_dm * L) / (External_Stress + 1)
+            # 外部压力估算 (官杀能级)
+            E_stress = 0.5
+            for i, p in enumerate(list(chart[:4]) + [luck_pillar, annual_pillar]):
+                st = p[0]
+                if not st: continue
+                if BaziParticleNexus.get_shi_shen(st, dm) in ["正官", "七杀"]:
+                    E_stress += (3.0 if i < 4 else 2.0)
+            
+            mi = (E_dm_core * inductance_L) / (E_stress * 0.5 + 1.0)
+            
+            # 4. 物理判定
+            status = "INERTIA_STABLE"
+            sai_base = 0.3
+            
+            # 自激死锁判定: 能量输出过低，且自感回路过强
+            E_output = sum(1 for i, (st, br) in enumerate(chart[:4]) if BaziParticleNexus.get_shi_shen(st, dm) in ["食神", "伤官", "正财", "偏财"])
+            is_deadlock = inductance_L > 4.0 and E_output < 1.0
+            
+            # 磁饱和崩溃判定 (冲禄)
+            is_clash_collapse = clash_count > 1.5 and L_base > 2.0
+            
+            if is_clash_collapse:
+                status = "MAGNETIC_SATURATION_COLLAPSE (冲禄/磁饱和崩溃)"
+                sai_base = 8.0 + (clash_count * 3.0)
+            elif is_deadlock:
+                status = "OSCILLATION_DEADLOCK (自激死锁/自闭能核)"
+                sai_base = 4.5
+            elif mi < 0.5:
+                status = "INERTIA_DEFICIT (惯性不足/脆性系统)"
+                sai_base = 2.0
+            elif inductance_L > 3.0:
+                status = "TOPOLOGY_LOCKED (拓扑锁定/超强稳态)"
+                sai_base = 0.1
+                
+            sai = sai_base * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "inductance_L": f"{inductance_L:.2f}",
+                "inertia_margin_mi": f"{mi:.2f}",
+                "self_locking_strength": f"{L_base:.2f}",
+                "clash_impact": f"{clash_count:.1f}",
+                "is_deadlock": "YES" if is_deadlock else "NO",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "LYKG_V4.3.5_LC_CIRCUIT",
+                "topic_name": "禄位自锁 (LYKG)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "JJGG_QUANTUM_TUNNELING":
+            # ============================================================
+            # [QGA V4.3.5] MOD_124: JJGG 虚空能量量子隧道注入 (Step 4)
+            # ============================================================
+            month_br = chart[1][1]
+            
+            # 1. 结构谐振腔识别 (Resonance Cavity Identification)
+            is_jlc = dm == "庚" and all(br in branches for br in ["申", "子", "辰"])
+            is_ftlm = dm in ["庚", "壬"] and branches.count("子") >= 2 and "午" not in branches
+            is_rqlb = dm == "壬" and branches.count("辰") >= 2
+            
+            if not (is_jlc or is_ftlm or is_rqlb):
+                return None
+            
+            # 2. 拓扑完整度 (Integrity) 计算
+            integrity = 1.0
+            if is_jlc:
+                # 检查地支完整度 (申子辰齐备为 1.0)
+                unique_br = set(branches)
+                found_count = sum(1 for target in ["申", "子", "辰"] if target in unique_br)
+                integrity = found_count / 3.0
+            elif is_ftlm:
+                integrity = min(1.0, branches.count("子") / 3.0)
+            elif is_rqlb:
+                integrity = min(1.0, branches.count("辰") / 3.0)
+                
+            # 杂气干扰判定 (Interference)
+            # 遥感格局最忌官杀显露（实态干扰虚态）
+            E_real_guan = 0.0
+            for i, (st, br) in enumerate(chart[:4]):
+                if BaziParticleNexus.get_shi_shen(st, dm) in ["正官", "七杀"]:
+                    E_real_guan += 3.0
+            
+            interference = E_real_guan * 2.0
+            
+            # 3. 核心计算：量子隧道穿透几率 Pt
+            # Pt = exp(-1/Integrity) / (1 + Interference)
+            pt = math.exp(-1.0 / max(0.1, integrity)) / (1.0 + interference)
+            
+            # 虚态注入能级 V_tunnel
+            # 假定虚空能级恒定为 10.0 原子能单位
+            V_void = 10.0
+            
+            # 季节谐振 (Resonance Factor)
+            # 井栏叉(金水)喜冬, 飞天禄马(水)喜冬
+            resonance = 1.0
+            if is_jlc or is_ftlm:
+                if month_br in ["亥", "子", "丑"]: resonance = 1.5
+                elif month_br in ["巳", "午", "未"]: resonance = 0.5
+            
+            v_tunnel = pt * V_void * resonance
+            
+            # 4. 坍缩失稳压力测试 (Collapse Stress)
+            # 检测是否有冲穿破坏了谐振腔
+            E_crash = 0.0
+            CLASH_MAP = {"子": "午", "午": "子", "申": "寅", "寅": "申", "辰": "戌", "戌": "辰"}
+            
+            check_targets = []
+            if is_jlc: check_targets = ["申", "子", "辰"]
+            elif is_ftlm: check_targets = ["子"]
+            elif is_rqlb: check_targets = ["辰"]
+            
+            active_crash = False
+            for target in check_targets:
+                clash_with = CLASH_MAP.get(target)
+                if clash_with and (clash_with in [luck_pillar[1], annual_pillar[1]]):
+                    E_crash += 5.0
+                    active_crash = True
+            
+            # SAI 响应: 隧道关闭时的瞬间能级跌落
+            # 基础 SAI 取决于注入能级, 但若发生崩塌, SAI 激增
+            if active_crash:
+                status = "TUNNEL_COLLAPSE (隧道坍缩/能级骤降)"
+                sai = (v_tunnel + 1) * E_crash * geo_factor
+            elif pt < 0.1:
+                status = "TUNNEL_BLOCKED (隧道屏蔽/干扰过重)"
+                sai = 2.0
+            else:
+                status = "TUNNEL_INJECTION_ACTIVE (隧道激活/虚空注入)"
+                sai = (0.5 / pt) * geo_factor # 注入越稳，应力越低
+                
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "tunneling_probability_pt": f"{pt:.3f}",
+                "virtual_energy_v_tunnel": f"{v_tunnel:.2f}",
+                "topological_integrity": f"{integrity:.2f}",
+                "interference_level": f"{interference:.2f}",
+                "resonance_factor": f"{resonance:.2f}",
+                "is_active_crash": "YES" if active_crash else "NO",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "JJGG_V4.3.5_TUNNEL",
+                "topic_name": "量子隧道 (JJGG)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "TYKG_PHASE_RESONANCE":
+            # ============================================================
+            # [QGA V4.4.0] MOD_125: TYKG 专旺相位共振 (Step 5)
+            # 物理定义：同频粒子高度对齐产生的相干态驻波能量增强。
+            # ============================================================
+            
+            # 1. 计算粒子丰度 (Particle Abundance)
+            # 获取全量五行分布 ( stems + branches )
+            elements = []
+            for st, br in chart:
+                elements.append(BaziParticleNexus.get_element(st))
+                # 支内含多个能量，这里取本气简化
+                elements.append(BaziParticleNexus.get_branch_main_element(br))
+            
+            dm_element = BaziParticleNexus.get_element(dm)
+            
+            # 统计同频粒子 (与日主同类或生助日主)
+            count_dm = elements.count(dm_element)
+            count_support = 0
+            # 这里简化逻辑：统计绝对同频粒子 (BiJie)
+            
+            # 2. 计算相干系数 C (Coherence Coefficient)
+            # C = (同频数量 / 总数量) * (1 - 杂质率)
+            # 杂质定义为克制或泄化日主的粒子
+            count_total = len(elements)
+            coherent_ratio = count_dm / count_total
+            
+            count_impurity = 0
+            for el in elements:
+                # 简单的五行生克逻辑 (简化版)
+                if BaziParticleNexus.is_clash_element(dm_element, el): # 客观克制
+                    count_impurity += 1
+            
+            impurity_rate = count_impurity / count_total
+            
+            # 相干系数 C
+            c_coeff = coherent_ratio * (1.0 - impurity_rate)
+            
+            # 3. 计算共振增益 G (Resonance Gain)
+            # G = Log10(1 + C * 100)
+            gain_g = math.log10(1.0 + c_coeff * 100.0) if c_coeff > 0 else 1.0
+            
+            # 4. 系统稳定性判定 (Resonance Stability)
+            # 只有达到基础一致性阈值才被记录为“全量审计命中”
+            if c_coeff > 0.4:
+                status = "RESONANCE_SUPER_STABLE (超稳态共振)"
+                sai = (1.0 / (gain_g + 1.0)) * geo_factor
+            elif c_coeff > 0.15:
+                status = "PHASE_COHERENT (相位一致)"
+                sai = 2.0 * geo_factor
+            else:
+                return None # 过滤掉退相干样本，不计入审计命中量
+                
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "coherence_coefficient_c": f"{c_coeff:.3f}",
+                "resonance_gain_g": f"{gain_g:.2f}",
+                "impurity_rate": f"{impurity_rate:.2f}",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "TYKG_V4.4.0_RESONANCE",
+                "topic_name": "专旺共振 (TYKG)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "CWJS_QUANTUM_TRANSITION":
+            # ============================================================
+            # [QGA V4.4.0] MOD_126: CWJS 弃命相变状态切换 (Step 6)
+            # 物理定义：日主放弃能量独立性，并入外部强场的零阻抗态。
+            # ============================================================
+            
+            # 1. 计算日主内压 P_dm (原局根气深度)
+            dm_element = BaziParticleNexus.get_element(dm)
+            dm_roots = []
+            for _, br in chart:
+                hidden = BaziParticleNexus.BRANCHES.get(br, [None, 0, []])[2]
+                for h_stem, h_weight in hidden:
+                    if BaziParticleNexus.get_element(h_stem) == dm_element:
+                        dm_roots.append(h_weight)
+            
+            p_dm = sum(dm_roots) / 10.0 # 标准化内能
+            
+            # 2. 计算外部压强 P_ext (强场能级)
+            # 寻找主导外部场 (从财或从杀)
+            elements_ext = []
+            for st, br in chart:
+                elements_ext.append(BaziParticleNexus.get_element(st))
+                elements_ext.append(BaziParticleNexus.get_branch_main_element(br))
+            
+            # 统计克制与泄化日主的粒子
+            p_ext = 0.0
+            for el in elements_ext:
+                if BaziParticleNexus.is_clash_element(dm_element, el): # 官杀场
+                    p_ext += 1.5
+                # 这里简化：不考虑食伤泄化，专注压强比
+            
+            # 3. 计算相变阈值 T_t (Transition Threshold)
+            # T_t = P_ext / (P_dm + 1.0)
+            t_t = p_ext / (p_dm + 1.0)
+            
+            # 4. 相变判定与状态切换
+            if t_t > 4.2: # 临界压强比
+                status = BaziParticleNexus.STATE_SUBORDINATE
+                # SAI 重置：零阻抗运行
+                sai = 0.12 * (1.0 / (t_t + 1.0)) * geo_factor
+            elif t_t > 1.8:
+                status = BaziParticleNexus.STATE_INTERMEDIATE
+                sai = 4.5 * geo_factor # 相变抖动区，阻抗波动
+            else:
+                status = BaziParticleNexus.STATE_ANTAGONISTIC
+                sai = 12.0 * geo_factor # 顽强抵抗态，阻抗极大
+            
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "transition_threshold_tt": f"{t_t:.2f}",
+                "external_pressure": f"{p_ext:.2f}",
+                "internal_energy_pdm": f"{p_dm:.2f}",
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "CWJS_V4.4.0_TRANSITION",
+                "topic_name": "弃命相变 (CWJS)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "MHGG_REVERSION_DYNAMICS":
+            # ============================================================
+            # [QGA V4.4.0] MOD_127: MHGG 还原动力学崩塌 (Step 7)
+            # 物理定义：化气格在遭遇“还原剂”冲击时的属性稳定性审计。
+            # ============================================================
+            
+            # 1. 识别化气倾向并提取“化神”
+            # 定义化合对与结果化神
+            TRANS_MAP = {
+                frozenset(['甲', '己']): 'Earth',
+                frozenset(['乙', '庚']): 'Metal',
+                frozenset(['丙', '辛']): 'Water',
+                frozenset(['丁', '壬']): 'Wood',
+                frozenset(['戊', '癸']): 'Fire',
+            }
+            
+            trans_god = None
+            found_pair = None
+            for p1, p2 in [(stems[0], stems[2]), (stems[0], stems[1]), (stems[2], stems[3])]:
+                pair = frozenset([p1, p2])
+                if pair in TRANS_MAP:
+                    trans_god = TRANS_MAP[pair]
+                    found_pair = pair
+                    break
+            
+            if not trans_god:
+                return None # 非化气格，不计入审计命中
+            
+            # 2. 计算锁定势能 Ep (Locking Potential)
+            # Ep = C_purity * Resonance_season
+            # 统计支内化神丰度
+            branch_elements = [BaziParticleNexus.get_branch_main_element(br) for br in branches]
+            count_god = branch_elements.count(trans_god)
+            c_purity = count_god / 4.0
+            
+            # 季节共振 (月令强度)
+            month_br = branches[1]
+            season_mult = PC.SEASONAL_MATRIX.get(month_br, {}).get(trans_god, 0.5)
+            
+            ep = c_purity * season_mult
+            
+            # 3. 计算还原冲击力 Er (Reversion Stress)
+            # 寻找还原剂 (克制化神的元素)
+            catalyst_element = PC.CONTROL.get(trans_god, "None")
+            count_catalyst = stems.count(BaziParticleNexus.get_shi_shen("Unknown", "Unknown")) # 占位
+            # 实际统计 stems 和 branches 中的还原粒子
+            all_elements = [BaziParticleNexus.get_element(s) for s in stems]
+            for br in branches:
+                all_elements.append(BaziParticleNexus.get_branch_main_element(br))
+            
+            i_catalyst = all_elements.count(catalyst_element) * 0.5
+            
+            # 还原比率
+            er = i_catalyst / (ep + 0.1)
+            
+            # 4. 崩塌判定与属性闪变
+            if er > 1.2:
+                status = "PROPERTY_FLASH (属性瞬间还原/系统崩塌)"
+                sai = 100.0 * (er - 1.2 + 1.0) * geo_factor # 超新星爆发
+            elif er > 0.6:
+                status = "EQUILIBRIUM_SHIFT (平衡左移/属性动摇)"
+                sai = 8.5 * er * geo_factor
+            else:
+                status = "LOCKED_SYNTHETIC (属性锁定/亚稳态稳定)"
+                sai = 0.5 * (1.0 / (ep + 1.0)) * geo_factor
+                
+            return {
+                "chart": chart,
+                "category": status,
+                "sai": f"{sai:.2f}",
+                "locking_potential_ep": f"{ep:.3f}",
+                "reversion_stress_er": f"{er:.3f}",
+                "trans_god": trans_god,
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "MHGG_V4.4.0_REVERSION",
+                "topic_name": "还原动力 (MHGG)",
+                "stress": f"{sai:.2f}"
+            }
+
+        if pattern_id == "GXYG_VIRTUAL_GAP":
+            # ============================================================
+            # [QGA V4.5.0] MOD_128: GXYG 拱夹空间虚拟势阱 (Step 8)
+            # 物理定义：地支拓扑空位通过引力干涉感生出的虚能增益。
+            # ============================================================
+            
+            branch_order = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+            
+            # 1. 识别 拱位 (Gap Detection)
+            # 扫描所有地支对，寻找跨度为 2 的组合
+            gaps = []
+            for i in range(len(branches)):
+                for j in range(i + 1, len(branches)):
+                    b1 = branches[i]
+                    b2 = branches[j]
+                    idx1 = branch_order.index(b1)
+                    idx2 = branch_order.index(b2)
+                    
+                    # 计算循环距离
+                    dist = abs(idx1 - idx2)
+                    if dist == 2 or dist == 10:
+                        mid_idx = (min(idx1, idx2) + 1) % 12
+                        if dist == 10: mid_idx = (max(idx1, idx2) + 1) % 12
+                        virtual_branch = branch_order[mid_idx]
+                        
+                        # 检查原局是否已存在该地支 (填实检查)
+                        if virtual_branch not in branches:
+                            gaps.append((b1, b2, virtual_branch))
+            
+            if not gaps:
+                return None # 无拱位空隙
+            
+            # 2. 计算虚拟感应场强 V_ind
+            # V_ind = (M1 * M2 / D) * cos(phi)
+            hits = []
+            total_v_ind = 0.0
+            
+            for b1, b2, v_br in gaps:
+                # 获取质量 (Hidden Stem Total / 10)
+                m1 = sum([w for s, w in BaziParticleNexus.get_branch_weights(b1)]) / 10.0
+                m2 = sum([w for s, w in BaziParticleNexus.get_branch_weights(b2)]) / 10.0
+                
+                # 相位差 phi (简化为五行属性夹角)
+                e1 = BaziParticleNexus.get_branch_main_element(b1)
+                e2 = BaziParticleNexus.get_branch_main_element(b2)
+                phi1 = PC.ELEMENT_PHASES.get(e1, 0)
+                phi2 = PC.ELEMENT_PHASES.get(e2, 0)
+                cos_phi = math.cos(phi1 - phi2)
+                
+                v_ind = (m1 * m2 / 2.0) * cos_phi
+                if v_ind > 0.01:
+                    total_v_ind += v_ind
+                    hits.append(f"{b1}{b2}拱{v_br}")
+
+            if total_v_ind <= 0.01:
+                return None # 无有效势阱增益
+
+            # 3. SAI 负压补偿 (SAI Correction)
+            # dSAI = -0.5 * V_ind
+            dsai = -0.5 * total_v_ind
+            base_sai = 5.0 # 基础参考基准
+            final_sai = max(0.1, base_sai + dsai) * geo_factor
+            
+            return {
+                "chart": chart,
+                "category": "VIRTUAL_POTENTIAL_WELL (虚拟势阱补给)",
+                "sai": f"{final_sai:.2f}",
+                "dsai_correction": f"{dsai:.2f}",
+                "virtual_induction_v_ind": f"{total_v_ind:.3f}",
+                "gaps": hits,
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "GXYG_V4.5.0_GAP",
+                "topic_name": "拱夹虚拟 (GXYG)",
+                "stress": f"{final_sai:.2f}"
+            }
+
+        if pattern_id == "MBGS_STORAGE_POTENTIAL":
+            # ============================================================
+            # [QGA V4.5.2] MOD_129: MBGS 墓库高压容器系统 (V4.1.2)
+            # 物理定义：地支墓库作为非线性高压约束容器。
+            # ============================================================
+            
+            GRAVES = ['辰', '戌', '丑', '未']
+            branch_order = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+            
+            # --- 第一步：容器底座海选 (Container Screening) ---
+            # 穿透审计：提取日/时支命中墓库的样本
+            active_graves = []
+            total_p_in = 0.0
+            
+            # 检查日支 (Index 2) 和 时支 (Index 3)
+            for i in [2, 3]:
+                if i < len(branches) and branches[i] in GRAVES:
+                    br = branches[i]
+                    # Vb = 墓库势垒高度 (基于藏干质量)
+                    m_total = sum([w for s, w in BaziParticleNexus.get_branch_weights(br)]) / 10.0
+                    vb_br = m_total * 3.2 # V4.1.2 势垒基准
+                    total_p_in += vb_br
+                    active_graves.append({"branch": br, "vb": vb_br, "index": i})
+            
+            if not active_graves:
+                return None # 未命中核心墓库容器
+            
+            # --- 第二步：能核穿透扫描 (Core Penetration) ---
+            g_jsg = 0.0
+            g_kgg = 0.0
+            sub_tags = []
+            
+            # 1. 金神核检索 (Day/Hour pillars: 癸酉, 己巳, 乙丑)
+            js_particles = [('癸', '酉'), ('己', '巳'), ('乙', '丑')]
+            for i in [2, 3]: # 日柱 或 时柱
+                if i < len(chart) and tuple(chart[i]) in js_particles:
+                    # G_jsg = 3.5 * Vb (受激辐射能核)
+                    g_jsg += 3.5 * (total_p_in / len(active_graves))
+                    sub_tags.append("JSG_CORE_STIMULATED")
+            
+            # 2. 魁罡核检索 (Day pillar: 壬辰, 庚戌, 庚辰, 戊戌)
+            if len(chart) >= 3:
+                day_p = tuple(chart[2])
+                k_particles = [('庚', '辰'), ('庚', '戌'), ('壬', '辰'), ('戊', '戌')]
+                if day_p in k_particles:
+                    # G_kgg = -1.8 * Vb (重力畸变压制算子)
+                    g_kgg = -1.8 * (total_p_in / len(active_graves))
+                    sub_tags.append("KGG_OPERATOR_SCANNED")
+            
+            # 3. 四库全齐海选 & 坍缩建模 (Collapse Trap Modelling)
+            s_sksk = 0.0
+            all_brs = set(branches)
+            if all(g in all_brs for g in GRAVES):
+                # S_sksk = 5.0 * Vb (引力场闭环坍缩项)
+                s_sksk = 5.0 * (total_p_in / 4.0)
+                sub_tags.append("SKSK_COLLAPSE_陷阱")
+                # [JSG] 增强交互：超压缩状态下的二次爆裂
+                if g_jsg > 0:
+                    g_jsg *= 2.2 
+                    sub_tags.append("JSG_SECONDARY_BURST")
+
+            # --- 第三步：复合 SAI 定标 (Calibration) ---
+            # 刑冲耦合定标
+            total_i_rel = 0.0
+            clash_events = []
+            for grave in active_graves:
+                g_br = grave["branch"]
+                for other_br in branches:
+                    if abs(branch_order.index(g_br) - branch_order.index(other_br)) == 6:
+                        total_i_rel += grave["vb"] * 4.0
+                        clash_events.append(f"{g_br}{other_br}冲")
+                    if g_br in BaziParticleNexus.PENALTY_GROUPS:
+                        for comp in BaziParticleNexus.PENALTY_GROUPS[g_br]['components']:
+                            if comp in branches:
+                                total_i_rel += grave["vb"] * 1.5
+                                clash_events.append(f"{g_br}{comp}刑")
+
+            # mu = 耦合系数 (刑冲匹配时非线性跳变)
+            mu = 2.5 if clash_events else 1.0
+            s_base = 0.6 * total_p_in + 1.2 * total_i_rel
+            
+            # SAI_composite = (S_base + mu * (G_jsg + G_kgg + S_sksk)) * geo
+            final_sai = (s_base + mu * (g_jsg + g_kgg + s_sksk)) * geo_factor
+            
+            status = "SINGULARITY_COLLAPSE (引力奇点)" if s_sksk > 0 else ("STORAGE_DISCHARGE (能级喷发)" if clash_events else "METASTABLE_LOCK (约束稳态)")
+            
+            return {
+                "chart": chart,
+                "category": f"{status} | V4.1.2",
+                "sai": f"{max(0.1, final_sai):.2f}",
+                "s_base_stress": f"{s_base:.2f}",
+                "s_sksk_collapse": f"{s_sksk:.2f}",
+                "v_b_barrier": f"{total_p_in:.2f}",
+                "mu_coupling": f"{mu:.2f}",
+                "g_core_gain": f"{(g_jsg + g_kgg):.2f}",
+                "events": list(set(clash_events)),
+                "sub_tags": sub_tags,
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "MBGS_PENETRATION_V4.1.2",
+                "topic_name": "墓库高压容器 (MBGS)",
+                "stress": f"{max(0.1, final_sai):.2f}"
+            }
+
+        if pattern_id == "ZHSG_MIXED_EXCITATION":
+            # ============================================================
+            # [QGA V4.5.3] MOD_130: ZHSG 杂气复合激发系统 (V4.1.2)
+            # 物理定义：地支余气作为多组分非饱和等离子体的能量干涉。
+            # ============================================================
+            
+            # --- 第一步：主态海选 (High-Entropy Mixed Stems) ---
+            high_entropy_branches = []
+            for i, br in enumerate(branches):
+                stems = BaziParticleNexus.get_branch_weights(br)
+                if len(stems) >= 2: # 藏干数 >= 2
+                    high_entropy_branches.append({
+                        "branch": br,
+                        "stems": stems,
+                        "index": i
+                    })
+            
+            if not high_entropy_branches:
+                return None
+            
+            # --- 第二步：子态穿透扫描 (TSG/YQG) ---
+            total_e_excite = 0.0
+            total_c_phase = 1.0 # 相位干涉因子
+            sub_tags = []
+            spectral_gains = []
+            
+            # 1. TSG 透干激发扫描 (频谱增益)
+            t_stems = [p[0] for p in chart]
+            for heb in high_entropy_branches:
+                for s_qi, w_qi in heb["stems"]:
+                    if s_qi in t_stems:
+                        # 频谱对齐激发：E_excite = w * 2.0
+                        gain = (w_qi / 10.0) * 2.5
+                        total_e_excite += gain
+                        spectral_gains.append(f"{heb['branch']}->{s_qi}")
+                        if "TSG_EXCITE_ACTIVE" not in sub_tags:
+                            sub_tags.append("TSG_EXCITE_ACTIVE")
+            
+            # 2. YQG 月令余气扫描 (背景辐射)
+            if len(branches) >= 2:
+                month_br = branches[1]
+                month_stems = BaziParticleNexus.get_branch_weights(month_br)
+                # 如果月令主气不透，而余气透出，触发 YQG 激发
+                if len(month_stems) >= 2:
+                    main_s = month_stems[0][0]
+                    for residual_s, w_res in month_stems[1:]:
+                        if residual_s in t_stems and main_s not in t_stems:
+                            total_e_excite += (w_res / 10.0) * 1.8
+                            sub_tags.append("YQG_MONTHLY_ACTIVE")
+            
+            # 3. 相位干涉干扰 (Interference Cancellation)
+            # 简单模型：不同五行杂气互见产生干涉
+            elements = []
+            for heb in high_entropy_branches:
+                for s_qi, _ in heb["stems"]:
+                    elements.append(BaziParticleNexus.get_element(s_qi))
+            
+            unique_elems = set(filter(None, elements))
+            if len(unique_elems) >= 3:
+                # 杂乱度极高，相位干涉抑制
+                total_c_phase = 0.65
+                sub_tags.append("PHASE_CANCELLATION")
+            elif len(unique_elems) == 1:
+                # 相长干涉
+                total_c_phase = 1.4
+                sub_tags.append("PHASE_COHERENCE")
+
+            # --- 第三步：复合 SAI 定标 ---
+            # S_base = 基准压力
+            s_base = sum([len(heb["stems"]) for heb in high_entropy_branches]) * 0.5
+            
+            # final_sai = S_base + E_excite * C_phase
+            final_sai = (s_base + total_e_excite * total_c_phase) * geo_factor
+            
+            status = "SPECTRAL_RESONANCE (频谱共振)" if "TSG_EXCITE_ACTIVE" in sub_tags else "NON_SATURATED_PLASMA (非饱和态)"
+            
+            return {
+                "chart": chart,
+                "category": f"{status} | V4.1.2",
+                "sai": f"{max(0.1, final_sai):.2f}",
+                "e_excite_energy": f"{total_e_excite:.2f}",
+                "c_phase_factor": f"{total_c_phase:.2f}",
+                "spectral_gains": spectral_gains,
+                "sub_tags": sub_tags,
+                "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
+                "audit_mode": "ZHSG_MIXED_V4.5.3",
+                "topic_name": "杂气复合激发 (ZHSG)",
+                "stress": f"{max(0.1, final_sai):.2f}"
             }
 
         # ============================================================
@@ -1218,7 +2189,6 @@ class PatternScout:
             field_counts = {
                 "P_111A": natal_tg.count("正财") + natal_tg.count("偏财"), # 从财
                 "P_111B": natal_tg.count("七杀") + natal_tg.count("正官"), # 从杀
-                "P_111C": natal_tg.count("食神") + natal_tg.count("伤官"), # 从儿
                 "P_111D": natal_tg.count("比肩") + natal_tg.count("劫财") + natal_tg.count("正印") + natal_tg.count("偏印") # 从强/旺
             }
             
@@ -1226,7 +2196,7 @@ class PatternScout:
             if field_counts[sub_package_id] < 1: return None 
 
             # Screening Validation
-            if sub_package_id in ["P_111A", "P_111B", "P_111C"]:
+            if sub_package_id in ["P_111A", "P_111B"]:
                 if is_month_support: return None # Must NOT be supported for Collapse
                 if field_counts[sub_package_id] < 2: return None
             else: # P_111D (Expansion)

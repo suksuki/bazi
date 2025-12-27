@@ -15,6 +15,7 @@ from core.trinity.core.engines.pattern_lifecycle_manager import PatternLifecycle
 from core.trinity.core.engines.intervention_engine import InterventionEngine
 from core.profile_manager import ProfileManager
 from core.bazi_profile import BaziProfile
+import numpy as np
 from datetime import datetime
 
 class SimulationController:
@@ -26,7 +27,7 @@ class SimulationController:
     """
     
     def __init__(self, workspace_root: str):
-        self.version = "14.1.6"
+        self.version = "14.2.0"
         self.model = SimulationModel(workspace_root)
         self.engine = SyntheticBaziEngine()
         self.framework = QuantumUniversalFramework()
@@ -41,8 +42,16 @@ class SimulationController:
         self.logger = logging.getLogger("SimulationController")
         
         # Phase 2 State
-        self.phase_2_results = {}
         self.damping_gap = 0.0
+        
+        # Load Logic Manifest for UI and engine discovery
+        import json
+        import os
+        self.logic_manifest = {}
+        manifest_path = os.path.join(workspace_root, "core", "logic_manifest.json")
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                self.logic_manifest = json.load(f)
 
     def run_batch_simulation(self, sample_size: int, progress_callback=None):
         """
@@ -686,6 +695,464 @@ class SimulationController:
             "phase_points": points,
             "status": "UNIVERSAL_PHASE_MAPPED",
             "axioms": [p for p in self.lifecycle_manager.adaptive_gen.proposals if p["type"] == "AXIOM_REGISTRATION"]
+        }
+
+    def run_v43_live_fire_audit(self, sample_size: int = 518400, progress_callback=None):
+        """
+        [QGA V4.3] Live Fire Audit Pipeline.
+        1. Full Sample Sweep for MOD_115 and MOD_119.
+        2. Detection of Vapor Lock Singularity.
+        3. Interception Fatigue Calculation.
+        """
+        self.logger.info(f"🔥 Starting V4.3 LIVE_FIRE_AUDIT sweep across {sample_size} samples...")
+        self.model.is_running = True
+        
+        # 1. Full Sample Sweep
+        mod_115_hits = []
+        mod_119_hits = []
+        
+        bazi_gen = self.engine.generate_all_bazi()
+        report_interval = max(sample_size // 50, 2000)
+        
+        for i in range(sample_size):
+            if not self.model.is_running: break
+            try:
+                chart = next(bazi_gen)
+                
+                # Check MOD_115 (SSZS)
+                res_115 = self.pattern_scout._deep_audit(chart, "MOD_115_SSZS")
+                if res_115: mod_115_hits.append(res_115)
+                
+                # Check MOD_119 (CE_FLARE)
+                res_119 = self.pattern_scout._deep_audit(chart, "MOD_119_CE")
+                if res_119: mod_119_hits.append(res_119)
+                
+            except StopIteration: break
+            
+            if progress_callback and i % report_interval == 0:
+                progress_callback(i, sample_size, {
+                    "phase": "📡 扫描中 (Sweep)",
+                    "115_hits": len(mod_115_hits),
+                    "119_hits": len(mod_119_hits)
+                })
+
+        # 2. Vapor Lock Critical Filtering (From MOD_119)
+        vapor_locks = [h for h in mod_119_hits if h.get("is_vapor_lock") == "YES"]
+        
+        # 3. Interception Fatigue (From MOD_115)
+        # Simulation: Inject 3 continuous years of high 'Projectile' energy to top hits
+        fatigue_cases = []
+        for hit in mod_115_hits[:100]: # Focus on top 100 hits
+            chart = hit["chart"]
+            collapse_point = 0
+            for year in range(1, 4):
+                # Fake annual pillar energy increase
+                # In real scenario we'd use SyntheticBaziEngine pillars, but here we simulate load gain
+                eff = float(hit.get("interception_efficiency", 1.0))
+                sim_eff = eff / (1.0 + (year * 0.25)) # Efficiency drops with continuous load
+                if sim_eff < 0.6: 
+                    collapse_point = year
+                    break
+            if collapse_point > 0:
+                fatigue_cases.append({"chart": chart, "collapse_year": collapse_point})
+
+        self.model.is_running = False
+        
+        # Final Whitepaper Aggregation
+        return {
+            "title": "🏛️ QGA V4.3 实弹扫频与自爆风险白皮书",
+            "full_sample": sample_size,
+            "mod_115": {
+                "hits": len(mod_115_hits),
+                "avg_efficiency": np.mean([float(h["interception_efficiency"]) for h in mod_115_hits]) if mod_115_hits else 0,
+                "fatigue_collapse_count": len(fatigue_cases)
+            },
+            "mod_119": {
+                "hits": len(mod_119_hits),
+                "vapor_lock_count": len(vapor_locks),
+                "self_destruct_rate": f"{(len(vapor_locks)/len(mod_119_hits)*100):.2f}%" if mod_119_hits else "0%"
+            },
+            "anomalies": [h["chart"] for h in vapor_locks[:10]] if vapor_locks else [],
+            "status": "WHITEPAPER_GENERATED",
+            "timestamp": datetime.now().strftime("%G-%m-%d %H:%M:%S")
+        }
+
+    def run_v43_penetration_audit(self, progress_callback=None):
+        """
+        [QGA V4.3] Full Penetration Audit for Core Profiles.
+        Audits 16 profiles against MOD_115, 116, 117, 119.
+        """
+        self.logger.info("📡 Initiating V4.3 Penetration Audit on core profiles...")
+        profiles = self.profile_manager.get_all()
+        target_mods = ["MOD_115_SSZS", "MOD_116_GYPS", "MOD_117_CWJG", "MOD_119_CE"]
+        
+        report_data = []
+        for i, p in enumerate(profiles):
+            try:
+                dt = datetime(p['year'], p['month'], p['day'], p['hour'], p.get('minute', 0))
+                po = BaziProfile(dt, 1 if p['gender'] == '男' else 0)
+                natal_p = po.pillars
+                luck_p = po.get_luck_pillar_at(2024)
+                annual_p = po.get_year_pillar(2024)
+                
+                # Run Deep Scan for these 4 MODs
+                hits = self.run_deep_specialized_scan(natal_p, luck_p, annual_p)
+                # Filter for our target MODs
+                v43_hits = [h for h in hits if any(mod in h.get('registry_id', '') for mod in target_mods)]
+                
+                # Determine "Main Defense Type"
+                defense_type = "UNDETERMINED"
+                if any("MOD_115" in h.get('registry_id','') for h in v43_hits): defense_type = "INTERCEPTION (SSI)"
+                elif any("MOD_116" in h.get('registry_id','') for h in v43_hits): defense_type = "RECTIFICATION (GYPS)"
+                
+                # [V16.0] 依赖回溯审计
+                from core.logic_registry import LogicRegistry
+                registry = LogicRegistry()
+                
+                for h in v43_hits:
+                    r_id = h.get('registry_id', '')
+                    h['dependencies'] = registry.get_dependencies(r_id)
+                    # 同时抓取依赖项的中文名
+                    h['dependency_names'] = [
+                        registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                        for dep in h['dependencies']
+                    ]
+
+                report_data.append({
+                    "name": p['name'],
+                    "defense_type": defense_type,
+                    "v43_hits": v43_hits,
+                    "max_sai": max([float(h.get('stress', 0)) for h in v43_hits]) if v43_hits else 1.0
+                })
+                
+                if progress_callback:
+                    progress_callback(i + 1, len(profiles), {"name": p['name']})
+            except Exception as e:
+                self.logger.error(f"Penetration audit failed for {p.get('name')}: {e}")
+                
+        return {
+            "title": "🛡️ QGA V4.3 物理防御深度审计报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "samples": report_data,
+            "status": "PENETRATION_COMPLETE"
+        }
+
+    def run_v435_yangren_audit(self, progress_callback=None):
+        """[V4.3.5] [Step 1] 羊刃单极能核破坏深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案 (ASE 全量标准)
+        hits = scout.scout_pattern("YGZJ_MONOPOLE_ENERGY", sample_size=518400, progress_callback=progress_callback)
+        
+        # 结果注入回溯依赖
+        for h in hits:
+            r_id = h.get('registry_id', '')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "🏹 [YGZJ_MONOPOLE_AUDIT] 羊刃单极能核破坏定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:20],  # 截取前 20 个极端样本
+            "status": "CALIBRATION_COMPLETE"
+        }
+
+    def run_v435_thermo_audit(self, progress_callback=None):
+        """[V4.3.5] [Step 2] 调候热力学熵值平衡深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("YHGS_THERMODYNAMIC_ENTROPY", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', '')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "🌡️ [YHGS_THERMO_AUDIT] 调候热力学熵值定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],  # 展示 30 个典型温控失效样本
+            "status": "THERMO_CALIBRATION_COMPLETE"
+        }
+
+    def run_v435_inertia_audit(self, progress_callback=None):
+        """[V4.3.5] [Step 3] 禄位自锁自感回路与惯性余量深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("LYKG_LC_SELF_LOCKING", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', '')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "⛓️ [LYKG_INERTIA_AUDIT] 禄位自锁与惯性余量定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],  # 展示典型样本
+            "status": "INERTIA_CALIBRATION_COMPLETE"
+        }
+
+    def run_v435_tunnel_audit(self, progress_callback=None):
+        """[V4.3.5] [Step 4] 虚空能量量子隧道注入深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("JJGG_QUANTUM_TUNNELING", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', '')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "🌌 [JJGG_TUNNEL_AUDIT] 虚空能量量子隧道定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],  # 展示典型样本
+            "status": "TUNNEL_CALIBRATION_COMPLETE"
+        }
+
+    def run_universal_topic_audit(self, topic_id: str, progress_callback=None):
+        """[V4.3.5] 通用深度审计引擎：支持对任意轨道进行 518,400 全量样本穿透定标。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 自动获取轨道名称
+        topic_meta = registry.manifest.get("modules", {}).get(topic_id, {})
+        topic_name = topic_meta.get("name_cn", topic_id)
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern(topic_id, sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            # 这里的 h 已经是 pattern_scout 返回的字典
+            r_id = h.get('registry_id', topic_id)
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": f"🎯 [{topic_id}] {topic_name} 全量样本深度审计报告",
+            "topic_id": topic_id,
+            "topic_name": topic_name,
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "UNIVERSAL_AUDIT_COMPLETE"
+        }
+
+    def run_v44_resonance_audit(self, progress_callback=None):
+        """[V4.4.0] [Step 5] 专旺同频相位共振深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("TYKG_PHASE_RESONANCE", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', 'MOD_125_TYKG_RESONANCE')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "✨ [TYKG_RESONANCE_AUDIT] 专旺相位共振定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "RESONANCE_CALIBRATION_COMPLETE"
+        }
+
+    def run_v44_transition_audit(self, progress_callback=None):
+         """[V4.4.0] [Step 6] 弃命格量子相变深度审计。"""
+         from core.trinity.core.engines.pattern_scout import PatternScout
+         from core.logic_registry import LogicRegistry
+         
+         scout = PatternScout(self.engine)
+         registry = LogicRegistry()
+         
+         # 批量扫描 518,400 组档案
+         hits = scout.scout_pattern("CWJS_QUANTUM_TRANSITION", sample_size=518400, progress_callback=progress_callback)
+         
+         # 过滤过滤：只记录发生“从属态/相变中”的样本
+         valid_hits = [h for h in hits if "ANTAGONISTIC" not in h.get('category', '')]
+         
+         # 依赖回溯
+         for h in valid_hits:
+             r_id = h.get('registry_id', 'MOD_126_CWJS_PHASE')
+             h['dependencies'] = registry.get_dependencies(r_id)
+             h['dependency_names'] = [
+                 registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                 for dep in h['dependencies']
+             ]
+             
+         return {
+             "title": "🚀 [CWJS_TRANSITION_AUDIT] 弃命相变隧道定标报告",
+             "audit_date": datetime.now().strftime("%Y-%m-%d"),
+             "hit_count": len(valid_hits),
+             "top_samples": valid_hits[:30],
+             "status": "TRANSITION_CALIBRATION_COMPLETE"
+         }
+
+    def run_v44_reversion_audit(self, progress_callback=None):
+        """[V4.4.0] [Step 7] 还原动力学/属性闪变深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("MHGG_REVERSION_DYNAMICS", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', 'MOD_127_MHGG_REVERSION')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "💥 [MHGG_REVERSION_AUDIT] 还原动力学/属性闪变定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "REVERSION_KINETICS_COMPLETE"
+        }
+
+    def run_v45_gxyg_audit(self, progress_callback=None):
+        """[V4.5.0] [Step 8] 拱夹空间虚拟势阱深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("GXYG_VIRTUAL_GAP", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', 'MOD_128_GXYG_VIRTUAL_GAP')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "🕳️ [GXYG_GAP_AUDIT] 拱夹空间虚拟势阱定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "GAP_POTENTIAL_WELL_COMPLETE"
+        }
+
+    def run_v45_mbgs_audit(self, progress_callback=None):
+        """[V4.5.0] [Step 9] 墓库空间高能势能深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("MBGS_STORAGE_POTENTIAL", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', 'MOD_129_MBGS_STORAGE')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "📦 [MBGS_STORAGE_AUDIT] 墓库空间高能势能定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "STORAGE_POTENTIAL_COMPLETE"
+        }
+
+    def run_v45_zhsg_audit(self, progress_callback=None):
+        """[V4.5.3] [Step 10] 杂气复合激发深度审计。"""
+        from core.trinity.core.engines.pattern_scout import PatternScout
+        from core.logic_registry import LogicRegistry
+        
+        scout = PatternScout(self.engine)
+        registry = LogicRegistry()
+        
+        # 批量扫描 518,400 组档案
+        hits = scout.scout_pattern("ZHSG_MIXED_EXCITATION", sample_size=518400, progress_callback=progress_callback)
+        
+        # 依赖回溯
+        for h in hits:
+            r_id = h.get('registry_id', 'MOD_130_ZHSG_MIXED')
+            h['dependencies'] = registry.get_dependencies(r_id)
+            h['dependency_names'] = [
+                registry.manifest.get('modules', {}).get(dep, {}).get('name_cn', dep)
+                for dep in h['dependencies']
+            ]
+            
+        return {
+            "title": "📻 [ZHSG_MIXED_AUDIT] 杂气复合激发能级定标报告",
+            "audit_date": datetime.now().strftime("%Y-%m-%d"),
+            "hit_count": len(hits),
+            "top_samples": hits[:30],
+            "status": "MIXED_EXCITATION_COMPLETE"
         }
 
     def stop_simulation(self):

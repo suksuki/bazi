@@ -56,6 +56,11 @@ class PhysicsConstants:
     BASE_SCORE = 5.0  
 
 class BaziParticleNexus:
+    # [QGA V4.4] Phase States for CWJS Transition
+    STATE_ANTAGONISTIC = "ANTAGONISTIC (对抗态)"
+    STATE_SUBORDINATE = "SUBORDINATE (从属态/零阻抗)"
+    STATE_INTERMEDIATE = "INTERMEDIATE (相变中间态/纠缠)"
+
     # Stems: (Element, Polarity, HetuNumber)
     STEMS = {
         "甲": ("Wood", "Yang", 1), "乙": ("Wood", "Yin", 2),
@@ -65,6 +70,24 @@ class BaziParticleNexus:
         "壬": ("Water", "Yang", 9), "癸": ("Water", "Yin", 10)
     }
     
+    @classmethod
+    def get_element(cls, stem: str) -> str:
+        if stem in cls.STEMS:
+            return cls.STEMS[stem][0]
+        return "Neutral"
+
+    @classmethod
+    def get_branch_main_element(cls, branch: str) -> str:
+        if branch in cls.BRANCHES:
+            return cls.BRANCHES[branch][0]
+        return "Neutral"
+
+    @classmethod
+    def is_clash_element(cls, e1: str, e2: str) -> bool:
+        # Returns True if e2 controls e1
+        from .definitions import PhysicsConstants
+        return PhysicsConstants.CONTROL.get(e2) == e1
+
     STEM_SHI_SHEN = ["比肩", "劫财", "食神", "伤官", "偏财", "正财", "七杀", "正官", "偏印", "正印"]
 
     @classmethod

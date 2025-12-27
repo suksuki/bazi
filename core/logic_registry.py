@@ -11,6 +11,14 @@ class LogicRegistry:
     _instance = None
     _manifest = {}
 
+    # [QGA V16.0] 四层能级定义
+    LAYERS = {
+        "INFRA": "基础设施",
+        "ALGO": "核心算子",
+        "MODEL": "物理模型",
+        "TOPIC": "业务专题"
+    }
+
     # [V4.2.6] 全局逻辑路由表：连接 Registry ID 与 引擎内部逻辑 ID
     _LOGIC_ROUTING = {
         "MOD_101": ["SHANG_GUAN_JIAN_GUAN"],
@@ -26,7 +34,56 @@ class LogicRegistry:
         "MOD_111": ["CYGS_COLLAPSE"],
         "MOD_112": ["HGFG_TRANSMUTATION"],
         "MOD_113": ["SSSC_AMPLIFIER"],
-        "MOD_114": ["JLTG_CORE_ENERGY"]
+        "MOD_114": ["JLTG_CORE_ENERGY"],
+        "MOD_115": ["SSZS_PULSE_INTERCEPTION"],
+        "MOD_116": ["GYPS_RECTIFIER_BRIDGE"],
+        "MOD_117": ["CWJG_FEEDBACK_LOOP"],
+        "MOD_119": ["CE_FLARE_DISCHARGE"],
+        "MOD_121": ["YGZJ_MONOPOLE_ENERGY"],
+        "MOD_122": ["YHGS_THERMODYNAMIC_ENTROPY"],
+        "MOD_123": ["LYKG_LC_SELF_LOCKING"],
+        "MOD_124": ["JJGG_QUANTUM_TUNNELING"],
+        "MOD_125": ["TYKG_PHASE_RESONANCE"],
+        "MOD_126": ["CWJS_QUANTUM_TRANSITION"],
+        "MOD_127": ["MHGG_REVERSION_DYNAMICS"],
+        "MOD_128": ["GXYG_VIRTUAL_GAP"],
+        "MOD_129": ["MBGS_STORAGE_POTENTIAL"],
+        "MOD_130": ["ZHSG_MIXED_EXCITATION"],
+        "MOD_131": ["MBGS_STORAGE_POTENTIAL"], # Jin Shen Sub-space
+        "MOD_132": ["MBGS_STORAGE_POTENTIAL"], # Kui Gang Sub-space
+        "MOD_133": ["MBGS_STORAGE_POTENTIAL"], # Four Graves Sub-space
+        "MOD_134": ["ZHSG_MIXED_EXCITATION"], # TSG Sub-space
+        "MOD_135": ["ZHSG_MIXED_EXCITATION"]  # YQG Sub-space
+    }
+
+    # [V4.2.6] 语义别名映射表
+    ALIASES = {
+        "CAI_GUAN_XIANG_SHENG": "MOD_107",
+        "SHI_SHEN_ZHI_SHA": "MOD_115",
+        "PGB_SUPER_FLUID_LOCK": "MOD_110",
+        "伤官见官": "MOD_101",
+        "伤官伤尽": "MOD_104",
+        "食神制杀": "MOD_115",
+        "财官相生": "MOD_107",
+        "超流锁定": "MOD_110",
+        "从儿格": "MOD_119",
+        "官印相生": "MOD_116",
+        "财官联动": "MOD_117",
+        "羊刃单极": "MOD_121",
+        "调候熵增": "MOD_122",
+        "禄位自锁": "MOD_123",
+        "量子隧道": "MOD_124",
+        "专旺共振": "MOD_125",
+        "弃命相变": "MOD_126",
+        "还原动力": "MOD_127",
+        "拱夹虚拟": "MOD_128",
+        "墓库势能": "MOD_129",
+        "杂气激发": "MOD_130",
+        "金神子态": "MOD_131",
+        "魁罡算子": "MOD_132",
+        "四库全齐": "MOD_133",
+        "透干激发": "MOD_134",
+        "月令余气": "MOD_135"
     }
 
     def __new__(cls):
@@ -73,18 +130,7 @@ class LogicRegistry:
             return registry_id, self._LOGIC_ROUTING.get(prefix, [input_id])
             
         # 2. 语义别名匹配
-        ALIASES = {
-            "CAI_GUAN_XIANG_SHENG": "MOD_107",
-            "SHI_SHEN_ZHI_SHA": "MOD_109",
-            "PGB_SUPER_FLUID_LOCK": "MOD_110",
-            "伤官见官": "MOD_101",
-            "伤官伤尽": "MOD_104",
-            "食神制杀": "MOD_109",
-            "财官相生": "MOD_107",
-            "超流锁定": "MOD_110"
-        }
-        
-        target_prefix = ALIASES.get(input_id)
+        target_prefix = self.ALIASES.get(input_id)
         if target_prefix:
             # 递归解析前缀
             return self.resolve_logic_id(target_prefix)
@@ -98,6 +144,24 @@ class LogicRegistry:
                 
         # 4. 彻底没有映射，保持原样回退
         return "UNKNOWN_REGISTRY", [input_id]
+
+    def get_items_by_layer(self, layer: str) -> List[Dict[str, Any]]:
+        """[V16.0] 按层级获取注册项，主要用于 UI 轨道渲染。"""
+        modules = self._manifest.get('modules', {})
+        items = []
+        for mid, mdata in modules.items():
+            if mdata.get('layer') == layer and mdata.get('active', True):
+                m_copy = mdata.copy()
+                m_copy['reg_id'] = mid
+                # 优先级: name_cn > name
+                m_copy['display_name'] = mdata.get('name_cn', mdata.get('name', mid))
+                items.append(m_copy)
+        return sorted(items, key=lambda x: x.get('reg_id', ''))
+
+    def get_dependencies(self, item_id: str) -> List[str]:
+        """[V16.0] 获取指定专题的物理依赖链（算法和模型）。"""
+        item = self._manifest.get('modules', {}).get(item_id, {})
+        return item.get('dependencies', [])
 
     def get_rule(self, rule_id: str) -> Dict[str, Any]:
         return self._manifest.get('registry', {}).get(rule_id, {})
