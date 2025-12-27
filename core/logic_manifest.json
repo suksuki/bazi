@@ -1125,6 +1125,10 @@
                 "brittle_critical_rate": "5.7%"
             },
             "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_151_PGB_A_ULTRA",
+                "MOD_152_PGB_B_BRITTLE"
+            ],
             "status": "CALIBRATED"
         },
         "MOD_111_CYGS_COLLAPSE": {
@@ -1144,6 +1148,12 @@
             "active": true,
             "goal": "分析系统放弃自旋后的引力锁定稳态，基于场强扫描算子实现全量子参数包自动分类。",
             "outcome": "SAI 引力应力, 子参数包认定(A/B/C/D), 纯度审计(Purity Audit), 奇点反弹判定。",
+            "sub_modules": [
+                "MOD_141_CYGS_A_CAI",
+                "MOD_142_CYGS_B_SHA",
+                "MOD_143_CYGS_C_ER",
+                "MOD_144_CYGS_D_QIANG"
+            ],
             "linked_rules": [
                 "PH_CYGS_GRAVITATIONAL_LOCKING",
                 "PH_CYGS_FIELD_POLARITY_SCAN",
@@ -1194,6 +1204,7 @@
         },
         "MOD_112_HGFG_TRANSMUTATION": {
             "id": "MOD_112_HGFG_TRANSMUTATION",
+            "name_cn": "化气格原子重构 ✨",
             "name": "⚗️ HGFG 化气格原子重构模型 (Atomic Transmutation)",
             "icon": "⚗️",
             "theme": "PATTERN_PHYSICS",
@@ -1203,6 +1214,13 @@
             "active": true,
             "goal": "核算粒子对撞后的属性转换纯度，监测还原剂(Reversal Reagents)介入时系统发生的属性坍缩。",
             "outcome": "SAI 转换应力, 转换纯度(Purity Index), 新元素场强, 还原奇点判定。",
+            "sub_modules": [
+                "MOD_145_HGFG_A_JIAJI",
+                "MOD_146_HGFG_B_YIGENG",
+                "MOD_147_HGFG_C_BINGXIN",
+                "MOD_148_HGFG_D_DINGREN",
+                "MOD_149_HGFG_E_WUGUI"
+            ],
             "linked_rules": [
                 "PH_HGFG_ATOMIC_TRANSFORMATION",
                 "PH_HGFG_CATALYTIC_RESONANCE",
@@ -1299,6 +1317,10 @@
                 "cutoff_events": "8,102"
             },
             "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_153_SSSC_A_GOD",
+                "MOD_154_SSSC_B_OFFICER"
+            ],
             "status": "CALIBRATED"
         },
         "MOD_114_JLTG_CORE_ENERGY": {
@@ -1349,6 +1371,10 @@
                 "core_oscillation_events": "4,320"
             },
             "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_155_JLTG_A_JIANLU",
+                "MOD_156_JLTG_B_YUEJIE"
+            ],
             "status": "CALIBRATED"
         },
         "MOD_115_SSZS_CIWS": {
@@ -1741,6 +1767,111 @@
             "name_cn": "月令余气子态 (YQG)",
             "layer": "SUB_TOPIC",
             "parent_topic": "MOD_130_ZHSG_MIXED",
+            "active": true
+        },
+        "MOD_141_CYGS_A_CAI": {
+            "id": "MOD_141_CYGS_A_CAI",
+            "name_cn": "从财格强电场 (A)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_142_CYGS_B_SHA": {
+            "id": "MOD_142_CYGS_B_SHA",
+            "name_cn": "从杀格强约束场 (B)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_143_CYGS_C_ER": {
+            "id": "MOD_143_CYGS_C_ER",
+            "name_cn": "从儿格高频辐射场 (C)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_144_CYGS_D_QIANG": {
+            "id": "MOD_144_CYGS_D_QIANG",
+            "name_cn": "从强格奇点膨胀场 (D)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_145_HGFG_A_JIAJI": {
+            "id": "MOD_145_HGFG_A_JIAJI",
+            "name_cn": "甲己化土子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_146_HGFG_B_YIGENG": {
+            "id": "MOD_146_HGFG_B_YIGENG",
+            "name_cn": "乙庚化金子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_147_HGFG_C_BINGXIN": {
+            "id": "MOD_147_HGFG_C_BINGXIN",
+            "name_cn": "丙辛化水子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_148_HGFG_D_DINGREN": {
+            "id": "MOD_148_HGFG_D_DINGREN",
+            "name_cn": "丁壬化木子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_149_HGFG_E_WUGUI": {
+            "id": "MOD_149_HGFG_E_WUGUI",
+            "name_cn": "戊癸化火子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_151_PGB_A_ULTRA": {
+            "id": "MOD_151_PGB_A_ULTRA",
+            "name_cn": "PGB 超流锁定子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_110_PGB_FLUID",
+            "active": true
+        },
+        "MOD_152_PGB_B_BRITTLE": {
+            "id": "MOD_152_PGB_B_BRITTLE",
+            "name_cn": "PGB 脆性巨人子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_110_PGB_FLUID",
+            "active": true
+        },
+        "MOD_153_SSSC_A_GOD": {
+            "id": "MOD_153_SSSC_A_GOD",
+            "name_cn": "食神层流放大子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_113_SSSC_AMPLIFIER",
+            "active": true
+        },
+        "MOD_154_SSSC_B_OFFICER": {
+            "id": "MOD_154_SSSC_B_OFFICER",
+            "name_cn": "伤官脉冲放大子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_113_SSSC_AMPLIFIER",
+            "active": true
+        },
+        "MOD_155_JLTG_A_JIANLU": {
+            "id": "MOD_155_JLTG_A_JIANLU",
+            "name_cn": "建禄稳态核心子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_114_JLTG_CORE_ENERGY",
+            "active": true
+        },
+        "MOD_156_JLTG_B_YUEJIE": {
+            "id": "MOD_156_JLTG_B_YUEJIE",
+            "name_cn": "月劫湍流核心子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_114_JLTG_CORE_ENERGY",
             "active": true
         },
         "ALGO_HEAT_DISSIPATION": {

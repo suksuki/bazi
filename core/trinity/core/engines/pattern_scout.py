@@ -1552,9 +1552,16 @@ class PatternScout:
             
             status = "SINGULARITY_COLLAPSE (引力奇点)" if s_sksk > 0 else ("STORAGE_DISCHARGE (能级喷发)" if clash_events else "METASTABLE_LOCK (约束稳态)")
             
+            # [V16.4] Hierarchy ID Mappings
+            mbgs_sub_id = None
+            if "SKSK_COLLAPSE_陷阱" in sub_tags: mbgs_sub_id = "MOD_133_SKSK_COLLAPSE"
+            elif "JSG_CORE_STIMULATED" in sub_tags: mbgs_sub_id = "MOD_131_JSG_CORE"
+            elif "KGG_OPERATOR_SCANNED" in sub_tags: mbgs_sub_id = "MOD_132_KGG_CORE"
+
             return {
                 "chart": chart,
                 "category": f"{status} | V4.1.2",
+                "sub_module_id": mbgs_sub_id,
                 "sai": f"{max(0.1, final_sai):.2f}",
                 "s_base_stress": f"{s_base:.2f}",
                 "s_sksk_collapse": f"{s_sksk:.2f}",
@@ -1645,9 +1652,15 @@ class PatternScout:
             
             status = "SPECTRAL_RESONANCE (频谱共振)" if "TSG_EXCITE_ACTIVE" in sub_tags else "NON_SATURATED_PLASMA (非饱和态)"
             
+            # [V16.4] Hierarchy ID Mappings
+            zhsg_sub_id = None
+            if "TSG_EXCITE_ACTIVE" in sub_tags: zhsg_sub_id = "MOD_134_TSG_EXCITE"
+            elif "YQG_MONTHLY_ACTIVE" in sub_tags: zhsg_sub_id = "MOD_135_YQG_MONTHLY"
+
             return {
                 "chart": chart,
                 "category": f"{status} | V4.1.2",
+                "sub_module_id": zhsg_sub_id,
                 "sai": f"{max(0.1, final_sai):.2f}",
                 "e_excite_energy": f"{total_e_excite:.2f}",
                 "c_phase_factor": f"{total_c_phase:.2f}",
@@ -2103,6 +2116,7 @@ class PatternScout:
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
                 "audit_mode": "PGB_V4.1_ULTRA_FLUID",
                 "topic_name": "PGB 超流锁定",
+                "sub_module_id": "MOD_151_PGB_A_ULTRA",
                 "stress": f"{sai:.2f}"
             }
 
@@ -2163,6 +2177,7 @@ class PatternScout:
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
                 "audit_mode": "PGB_V4.1_BRITTLE_TITAN",
                 "topic_name": "PGB 脆性巨人",
+                "sub_module_id": "MOD_152_PGB_B_BRITTLE",
                 "stress": f"{sai:.2f}"
             }
 
@@ -2255,6 +2270,14 @@ class PatternScout:
             elif locking_ratio < 0.8: category = "IMPURE_TRANSIENT (相位抖动/假态)"
             else: category = f"PURE_{sub_package_id.split('_')[-1]} ({category_base})"
 
+            # Legacy Mapping to V16.4 L4 IDs
+            l4_map = {
+                "P_111A": "MOD_141_CYGS_A_CAI",
+                "P_111B": "MOD_142_CYGS_B_SHA",
+                "P_111C": "MOD_143_CYGS_C_ER",
+                "P_111D": "MOD_144_CYGS_D_QIANG"
+            }
+            
             return {
                 "chart": chart,
                 "category": category,
@@ -2262,6 +2285,7 @@ class PatternScout:
                 "locking_ratio": f"{locking_ratio:.2f}",
                 "purity_index": f"{locking_ratio:.2f}",
                 "sub_package_id": sub_package_id,
+                "sub_module_id": l4_map.get(sub_package_id, sub_package_id),
                 "field_polarity": sub_package_id,
                 "is_rebound": "YES" if is_rebound else "NO",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
@@ -2342,6 +2366,15 @@ class PatternScout:
             elif is_dominant: category = "TRUE_TRANSMUTATION (核变稳态/真化)"
             else: category = "STRESSED_TRANSMUTATION (诱导重构/带感应)"
 
+            # Legacy Mapping to V16.4 L4 IDs
+            l4_map_hg = {
+                "P_112A": "MOD_145_HGFG_A_JIAJI",
+                "P_112B": "MOD_146_HGFG_B_YIGENG",
+                "P_112C": "MOD_147_HGFG_C_BINGXIN",
+                "P_112D": "MOD_148_HGFG_D_DINGREN",
+                "P_112E": "MOD_149_HGFG_E_WUGUI"
+            }
+
             return {
                 "chart": chart,
                 "category": category,
@@ -2349,6 +2382,7 @@ class PatternScout:
                 "transmutation_purity": f"{transmutation_purity:.2f}",
                 "goal_element": goal_elem,
                 "sub_package_id": sub_pkg,
+                "sub_module_id": l4_map_hg.get(sub_pkg, sub_pkg),
                 "is_reversed": "YES" if is_reversed else "NO",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
                 "audit_mode": "HGFG_V4.1_TRANSMUTATION",
@@ -2420,12 +2454,18 @@ class PatternScout:
             elif impedance_ratio < 0.5: category = "LOAD_HEAVY (负载过重/财多身弱)"
             else: category = f"MATCHED_GAIN (阻抗匹配/{'层流' if sub_pkg == 'P_113A' else '脉冲'}稳态)"
 
+            # Legacy Mapping
+            l4_map_ss = {
+                "P_113A": "MOD_153_SSSC_A_GOD",
+                "P_113B": "MOD_154_SSSC_B_OFFICER"
+            }
             return {
                 "chart": chart,
                 "category": category,
                 "sai": f"{sai:.2f}",
                 "gain_factor": f"{gain_factor:.2f}",
                 "sub_package_id": sub_pkg,
+                "sub_module_id": l4_map_ss.get(sub_pkg, sub_pkg),
                 "has_cutoff": "YES" if has_cutoff else "NO",
                 "label": " ".join([f"{p[0]}{p[1]}" for p in chart]),
                 "audit_mode": "SSSC_V4.1_AMPLIFIER",
@@ -2500,11 +2540,18 @@ class PatternScout:
             elif thermal_balance > 2.0: category = "ENERGY_淤积 (过热/无处宣泄)"
             else: category = f"STABLE_CORE (热平衡稳态/{'建禄' if sub_pkg == 'P_114A' else '月劫'})"
 
+            # Legacy Mapping
+            l4_map_jl = {
+                "P_114A": "MOD_155_JLTG_A_JIANLU",
+                "P_114B": "MOD_156_JLTG_B_YUEJIE"
+            }
             return {
                 "chart": chart,
                 "category": category,
                 "sai": f"{sai:.2f}",
                 "thermal_balance": f"{thermal_balance:.2f}",
+                "sub_package_id": sub_pkg,
+                "sub_module_id": l4_map_jl.get(sub_pkg, sub_pkg),
                 "sub_package_id": sub_pkg,
                 "is_runaway": "YES" if is_runaway else "NO",
                 "is_oscillation": "YES" if is_oscillation else "NO",
