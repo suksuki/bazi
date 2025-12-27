@@ -43,7 +43,7 @@ class EnergyPropagator:
             day_pillar = engine.bazi[2]
             if len(day_pillar) >= 1:
                 day_master = day_pillar[0]
-        self.impedance_model = ComplexImpedanceModel(config, day_master=day_master)
+        self.impedance_model = ComplexImpedanceModel(self.config, day_master=day_master)
     
     def propagate(self, max_iterations: int = 10, damping: float = 0.9) -> np.ndarray:
         """

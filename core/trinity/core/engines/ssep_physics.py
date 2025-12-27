@@ -27,7 +27,7 @@ class SSEPQuantumPhysics:
             chart: List of tuples [(Stem, Branch), ...]
             month_branch_weight: Dict or List of weights for the month branch (optional context)
         """
-        stems = [s for s, b in chart[:4]]
+        stems = [s for s, b in chart] # Use ALL stems (Natal + Luck + Annual) to detect Pairs
         if len(chart) < 2: return None
         month_branch = chart[1][1]
         
