@@ -6,6 +6,7 @@
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
+from .energy_operator import EnergyOperator
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class FeatureVectorizer:
     
     def __init__(self):
         """初始化特征向量提取器"""
+        self.energy_operator = EnergyOperator()  # RSS-V1.2规范：能量叠加算子
         logger.info("✅ 特征向量提取器初始化")
     
     def extract_elemental_fields(self, chart: List[Tuple[str, str]], 
@@ -85,32 +87,55 @@ class FeatureVectorizer:
             zhi_element = self.BRANCH_ELEMENT_MAP.get(zhi, 'earth')
             element_counts[zhi_element] += 1.0 * weight
         
-        # 处理大运柱
+        # RSS-V1.2规范：显性化实现能量叠加公式
+        # E_total = [ (E_base ⊗ ω_luck) ⊕ ΔE_year ] × (1 ± δ_geo)
+        
+        # Step 1: 归一化原局能量场（E_base）
+        total_base = sum(element_counts.values())
+        if total_base > 0:
+            base_energy = {k: v / total_base for k, v in element_counts.items()}
+        else:
+            base_energy = {k: 0.0 for k in element_counts.keys()}
+        
+        # Step 2: 提取大运和流年能量
+        luck_energy = {}
+        year_pulse = {}
+        
         if luck_pillar:
             gan, zhi = luck_pillar
             gan_element = self.ELEMENT_MAP.get(gan, 'earth')
             zhi_element = self.BRANCH_ELEMENT_MAP.get(zhi, 'earth')
-            # 大运权重稍低
-            element_counts[gan_element] += 0.5
-            element_counts[zhi_element] += 0.5
+            # 大运能量（用于张量积）
+            luck_energy[gan_element] = luck_energy.get(gan_element, 0.0) + 0.5
+            luck_energy[zhi_element] = luck_energy.get(zhi_element, 0.0) + 0.5
         
-        # 处理流年柱
         if year_pillar:
             gan, zhi = year_pillar
             gan_element = self.ELEMENT_MAP.get(gan, 'earth')
             zhi_element = self.BRANCH_ELEMENT_MAP.get(zhi, 'earth')
-            # 流年权重较低
-            element_counts[gan_element] += 0.3
-            element_counts[zhi_element] += 0.3
+            # 流年脉冲能量（用于直和）
+            year_pulse[gan_element] = year_pulse.get(gan_element, 0.0) + 0.3
+            year_pulse[zhi_element] = year_pulse.get(zhi_element, 0.0) + 0.3
         
-        # 归一化到0.0-1.0
-        total = sum(element_counts.values())
-        if total > 0:
-            normalized = {k: v / total for k, v in element_counts.items()}
+        # Step 3: 使用EnergyOperator显性化计算
+        # 大运权重：最高优先级基准场修正（ω_luck = 1.0）
+        luck_weight = 1.0
+        
+        # 计算总能量（包含地理修正）
+        # 注意：地理修正将在vectorize_bazi中应用
+        if luck_pillar or year_pillar:
+            # 使用能量叠加算子
+            total_energy = self.energy_operator.compute_total_energy(
+                base_energy=base_energy,
+                luck_weight=luck_weight,
+                year_pulse=year_pulse if year_pillar else None,
+                geo_damping=0.0  # 地理修正将在vectorize_bazi中单独应用
+            )
         else:
-            normalized = {k: 0.0 for k in element_counts.keys()}
+            # 只有原局，无需叠加
+            total_energy = base_energy
         
-        return normalized
+        return total_energy
     
     def extract_momentum_term(self, chart: List[Tuple[str, str]], 
                               day_master: str) -> Dict[str, float]:
@@ -269,38 +294,34 @@ class FeatureVectorizer:
                                   geo_info: Optional[str] = None,
                                   micro_env: Optional[List[str]] = None) -> Dict[str, float]:
         """
-        应用环境因子：地域、微环境对原始能级的阻尼系数
+        应用环境因子：地域、微环境对原始能级的阻尼系数（RSS-V1.2规范）
+        
+        RSS-V1.2规范：
+        - δ_geo (修正因子)：地理修正算子
+        - 基准值为[原局+大运+流年]的结果
+        - 限制在±15%以内
         
         Args:
-            elemental_fields: 原始五行场强分布
+            elemental_fields: 原始五行场强分布（已包含原局+大运+流年）
             geo_info: 地理信息（如 "北方/北京"）
             micro_env: 微环境列表（如 ["近水"]）
             
         Returns:
-            应用环境阻尼后的五行场强分布
+            应用环境阻尼后的五行场强分布（限制在±15%以内）
         """
-        damped_fields = elemental_fields.copy()
+        # RSS-V1.2规范：使用EnergyOperator显性化实现地理修正
+        # 计算地理阻尼系数（限制在±15%以内）
+        geo_damping = self.energy_operator.calculate_geo_damping_from_info(geo_info or '中央')
         
-        # 北方/近水环境：水元素增强，火元素减弱
-        if geo_info and ("北方" in geo_info or "北京" in geo_info):
-            if micro_env and "近水" in micro_env:
-                damped_fields['water'] = min(1.0, damped_fields['water'] * 1.3)
-                damped_fields['fire'] = max(0.0, damped_fields['fire'] * 0.7)
-            else:
-                damped_fields['water'] = min(1.0, damped_fields['water'] * 1.1)
-                damped_fields['fire'] = max(0.0, damped_fields['fire'] * 0.9)
+        # 应用地理修正：E_total = E × (1 ± δ_geo)
+        corrected_fields = self.energy_operator.geo_correction(
+            total_energy=elemental_fields,
+            geo_damping=geo_damping
+        )
         
-        # 南方/火地环境：火元素增强，水元素减弱
-        elif geo_info and ("南方" in geo_info or "火地" in geo_info):
-            damped_fields['fire'] = min(1.0, damped_fields['fire'] * 1.2)
-            damped_fields['water'] = max(0.0, damped_fields['water'] * 0.8)
+        logger.debug(f"📊 地理修正: geo_info={geo_info}, damping={geo_damping:.3f} (限制在±15%以内)")
         
-        # 重新归一化
-        total = sum(damped_fields.values())
-        if total > 0:
-            damped_fields = {k: v / total for k, v in damped_fields.items()}
-        
-        return damped_fields
+        return corrected_fields
     
     def suggest_routing_hint(self, elemental_fields: Dict[str, float],
                             stress_tensor: float,

@@ -12,28 +12,35 @@
   "description": "中央处理中枢 (Central Processing Kernel)，负责将八字物理指纹投射到LLM的逻辑潜空间，实现格局智能路由",
   "version": "25.0",
   "active": true,
-  
   "routing_parameters": {
     "field_strength_threshold": {
       "value": 0.6,
       "description": "场强探测阈值，定义AI启动特定逻辑分衬的敏感度",
       "tunable": true,
-      "range": [0.0, 1.0]
+      "range": [
+        0.0,
+        1.0
+      ]
     },
     "coherence_weight": {
       "value": 0.75,
       "description": "相干性权重，定义多格局叠加时的相干干涉系数",
       "tunable": true,
-      "range": [0.0, 1.0]
+      "range": [
+        0.0,
+        1.0
+      ]
     },
     "entropy_damping": {
       "value": 0.3,
       "description": "熵值阻尼，防止AI在处理矛盾格局时逻辑崩溃的保护参数",
       "tunable": true,
-      "range": [0.0, 1.0]
+      "range": [
+        0.0,
+        1.0
+      ]
     }
   },
-  
   "physics_models": {
     "feature_to_latent": {
       "operator_id": "Feature_to_Latent",
@@ -53,7 +60,6 @@
       "collapse_threshold": 0.7
     }
   },
-  
   "pattern_definitions": {
     "SHANG_GUAN_JIAN_GUAN": {
       "pattern_id": "SHANG_GUAN_JIAN_GUAN",
@@ -65,7 +71,12 @@
         "earth": 10.0,
         "wood": 10.0
       },
-      "semantic_keywords": ["权威与自由冲突", "规则挑战", "名誉损耗", "秩序崩塌"],
+      "semantic_keywords": [
+        "权威与自由冲突",
+        "规则挑战",
+        "名誉损耗",
+        "秩序崩塌"
+      ],
       "priority_rank": 2,
       "base_strength": 0.75,
       "physical_axiom": {
@@ -73,8 +84,39 @@
         "energy_equation": "E_collapse = (stress_tensor - 0.6) × (|metal_field - fire_field|) × 100",
         "phase_relationship": "金（官星）与火（伤官）形成180°相位对冲，产生结构脆性断裂",
         "correction_mechanism": "通过土（财星）作为缓冲介质，实现火→土→金的能量传导链，降低剪切力",
-        "collapse_threshold": 0.6,
-        "recovery_path": "财星通关：earth_field > 0.3 时，系统可通过利益置换化解冲突"
+        "collapse_threshold": 0.35,
+        "recovery_path": "财星通关：earth_field > 0.3 时，系统可通过利益置换化解冲突",
+        "optimized_parameters": {
+          "sai_collapse_threshold": 0.35,
+          "stress_tensor_weight": 1.25,
+          "survival_rate": 0.0002,
+          "optimization_date": "2025-12-28T19:03:01.980861",
+          "optimization_version": "V1.2",
+          "optimization_specification": "RSS-V1.2",
+          "auto_tuned": true,
+          "fitting_metrics": {
+            "total_samples": 3,
+            "average_deviation": 0.4000000000000001,
+            "average_actual_stability": 0.3499999999999999,
+            "average_stress_tensor": 0.6
+          },
+          "old_parameters": {
+            "sai_collapse_threshold": 0.35,
+            "stress_tensor_weight": 1.0
+          },
+          "parameter_diff": {
+            "stress_weight": 0.25,
+            "collapse_threshold": 0.0
+          }
+        },
+        "parameter_diff": {
+          "stress_weight": 0.25,
+          "collapse_threshold": 0.0
+        },
+        "old_parameters": {
+          "sai_collapse_threshold": 0.35,
+          "stress_tensor_weight": 1.0
+        }
       }
     },
     "HUA_HUO_GE": {
@@ -87,7 +129,12 @@
         "earth": -15.0,
         "water": -15.0
       },
-      "semantic_keywords": ["化学相变", "能量转化", "性格转化", "人生转折"],
+      "semantic_keywords": [
+        "化学相变",
+        "能量转化",
+        "性格转化",
+        "人生转折"
+      ],
       "priority_rank": 1,
       "base_strength": 0.85,
       "physical_axiom": {
@@ -111,7 +158,12 @@
         "fire": -10.0,
         "water": -5.0
       },
-      "semantic_keywords": ["精神内耗", "资源被夺", "项目停滞", "生机受损"],
+      "semantic_keywords": [
+        "精神内耗",
+        "资源被夺",
+        "项目停滞",
+        "生机受损"
+      ],
       "priority_rank": 2,
       "base_strength": 0.7,
       "physical_axiom": {
@@ -120,7 +172,32 @@
         "phase_relationship": "偏印（水/木）作为拦截器，阻断食神（火/土）的能量供给通道，形成相位干涉",
         "correction_mechanism": "通过财星（土/金）作为通关介质，强行打通被截断的回路，恢复能量供给",
         "collapse_threshold": 0.5,
-        "recovery_path": "财星通关：earth_field + metal_field > 0.4 时，系统可通过资源通道恢复供给"
+        "recovery_path": "财星通关：earth_field + metal_field > 0.4 时，系统可通过资源通道恢复供给",
+        "optimized_parameters": {
+          "trigger_condition_implementation": {
+            "yin_momentum_threshold": 0.3,
+            "momentum_ratio_threshold": 1.2,
+            "yin_to_self_threshold": 0.3,
+            "self_to_shi_threshold": 0.4,
+            "description": "因严格按registry定义（'日→食'动量为0）搜索不到样本，放宽条件：yin_momentum > 0.3 且 momentum_ratio > 1.2 且 yin_to_self > 0.3 且 self_to_shi < 0.4"
+          },
+          "momentum_calculation": {
+            "yin_momentum_formula": "有偏印时：min(1.0, (yin_count * 0.3 + pian_yin_count * 0.7) / 2.0)；无偏印时：min(1.0, yin_count / 3.0)",
+            "shi_momentum_formula": "min(1.0, shi_count / 3.0)",
+            "yin_to_self": "yin_momentum",
+            "self_to_shi": "shi_momentum"
+          },
+          "optimization_date": "2025-12-28T18:48:30.781256",
+          "optimization_version": "V1.2",
+          "optimization_specification": "RSS-V1.2",
+          "optimization_reason": "全量518400样本扫描，严格按registry定义（'日→食'动量为0）无法找到样本，放宽条件后找到4572个候选样本，最终选择3个代表性样本",
+          "sample_statistics": {
+            "total_scanned": 518400,
+            "pattern_scout_matched": 28008,
+            "after_analysis_filtered": 4572,
+            "final_selected": 3
+          }
+        }
       }
     },
     "JIAN_LU_YUE_JIE": {
@@ -132,7 +209,12 @@
         "earth": 15.0,
         "metal": 10.0
       },
-      "semantic_keywords": ["能量过载", "破财", "能量爆发", "需要疏导"],
+      "semantic_keywords": [
+        "能量过载",
+        "破财",
+        "能量爆发",
+        "需要疏导"
+      ],
       "priority_rank": 1,
       "base_strength": 0.8,
       "physical_axiom": {
@@ -154,7 +236,12 @@
         "water": 10.0,
         "wood": 5.0
       },
-      "semantic_keywords": ["社会声望", "资源位阶", "无阻力跃迁", "能量平滑传导"],
+      "semantic_keywords": [
+        "社会声望",
+        "资源位阶",
+        "无阻力跃迁",
+        "能量平滑传导"
+      ],
       "priority_rank": 3,
       "base_strength": 0.65,
       "physical_axiom": {
@@ -175,7 +262,12 @@
         "fire": 10.0,
         "metal": 5.0
       },
-      "semantic_keywords": ["极端高压", "动态平衡", "危机扩张", "竞争征服"],
+      "semantic_keywords": [
+        "极端高压",
+        "动态平衡",
+        "危机扩张",
+        "竞争征服"
+      ],
       "priority_rank": 1,
       "base_strength": 0.9,
       "physical_axiom": {
@@ -196,7 +288,12 @@
         "fire": 5.0,
         "earth": 5.0
       },
-      "semantic_keywords": ["才华横溢", "等离子喷泉", "能量喷发", "需要激活"],
+      "semantic_keywords": [
+        "才华横溢",
+        "等离子喷泉",
+        "能量喷发",
+        "需要激活"
+      ],
       "priority_rank": 1,
       "base_strength": 0.85,
       "physical_axiom": {
@@ -209,7 +306,6 @@
       }
     }
   },
-  
   "coherence_instructions": {
     "stress_priority": {
       "enabled": true,
@@ -235,7 +331,6 @@
       "formula": "weight = base_strength × (1 - entropy_damping)"
     }
   },
-  
   "optimization": {
     "self_healing": {
       "enabled": true,
@@ -253,11 +348,9 @@
       "storage_path": "logs/neural_router_outliers"
     }
   },
-  
   "execution_kernel": {
     "module": "core.subjects.neural_router.execution_kernel",
     "class": "NeuralRouterKernel",
     "entry_point": "process_bazi_profile"
   }
 }
-
