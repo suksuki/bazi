@@ -40,7 +40,7 @@ Path('logs').mkdir(exist_ok=True)
 class BatchPressureTest:
     """批量压力测试类"""
     
-    def __init__(self, sample_count: int = 1000, max_workers: int = 4):
+    def __init__(self, sample_count: int = 1000, max_workers: int = 8):
         """
         初始化批量测试
         
