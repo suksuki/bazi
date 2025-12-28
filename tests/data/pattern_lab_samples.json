@@ -1,0 +1,176 @@
+[
+  {
+    "id": "40338bc1-f8b2-4f49-b6bc-f534b4b58994",
+    "name": "虚拟-伤官见官",
+    "gender": "男",
+    "year": 1990,
+    "month": 12,
+    "day": 15,
+    "hour": 10,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "SHANG_GUAN_JIAN_GUAN",
+    "_description": "伤官见官格局：庚金日主，生于子月（伤官），遇到丁火（正官）",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "庚子",
+      "month": "戊子",
+      "day": "庚午",
+      "hour": "丁亥"
+    },
+    "_day_master": "庚",
+    "bazi_data": {
+      "year": "庚子",
+      "month": "戊子",
+      "day": "庚午",
+      "hour": "丁亥"
+    }
+  },
+  {
+    "id": "8c9fd8ab-249a-4f12-ae4d-4a361e436628",
+    "name": "虚拟-枭神夺食",
+    "gender": "男",
+    "year": 1985,
+    "month": 10,
+    "day": 20,
+    "hour": 14,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "XIAO_SHEN_DUO_SHI",
+    "_description": "枭神夺食格局：丙火日主，偏印（壬水）和食神（戊土）同时出现",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "壬子",
+      "month": "戊戌",
+      "day": "丙午",
+      "hour": "甲午"
+    },
+    "_day_master": "丙",
+    "bazi_data": {
+      "year": "壬子",
+      "month": "戊戌",
+      "day": "丙午",
+      "hour": "甲午"
+    }
+  },
+  {
+    "id": "8e8be607-1e41-4848-949b-482b3ef66606",
+    "name": "虚拟-化火格",
+    "gender": "女",
+    "year": 1992,
+    "month": 5,
+    "day": 10,
+    "hour": 12,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "HUA_HUO_GE",
+    "_description": "化火格：戊癸合化火，月令有火引化",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "戊午",
+      "month": "癸巳",
+      "day": "甲寅",
+      "hour": "丙午"
+    },
+    "_day_master": "甲",
+    "bazi_data": {
+      "year": "戊午",
+      "month": "癸巳",
+      "day": "甲寅",
+      "hour": "丙午"
+    }
+  },
+  {
+    "id": "af8160a2-5545-49a7-9775-d07bffde3991",
+    "name": "虚拟-建禄月劫",
+    "gender": "男",
+    "year": 1988,
+    "month": 6,
+    "day": 18,
+    "hour": 9,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "JIAN_LU_YUE_JIE",
+    "_description": "建禄月劫：丙火日主，生于午月（建禄），比劫众多",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "丙午",
+      "month": "甲午",
+      "day": "丙寅",
+      "hour": "丁巳"
+    },
+    "_day_master": "丙",
+    "bazi_data": {
+      "year": "丙午",
+      "month": "甲午",
+      "day": "丙寅",
+      "hour": "丁巳"
+    }
+  },
+  {
+    "id": "a4e83393-d5de-465f-ab6a-dae4ff9097f5",
+    "name": "虚拟-羊刃架杀",
+    "gender": "女",
+    "year": 1995,
+    "month": 3,
+    "day": 8,
+    "hour": 8,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "YANG_REN_JIA_SHA",
+    "_description": "羊刃架杀：甲木日主，羊刃在卯，七杀（庚金）出现",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "庚申",
+      "month": "戊卯",
+      "day": "甲寅",
+      "hour": "丙寅"
+    },
+    "_day_master": "甲",
+    "bazi_data": {
+      "year": "庚申",
+      "month": "戊卯",
+      "day": "甲寅",
+      "hour": "丙寅"
+    }
+  },
+  {
+    "id": "6a69abd7-bb4e-4fe0-ac0f-e20f117e166c",
+    "name": "虚拟-从儿格",
+    "gender": "男",
+    "year": 1990,
+    "month": 7,
+    "day": 25,
+    "hour": 10,
+    "minute": 0,
+    "city": null,
+    "longitude": null,
+    "created_at": "2025-12-28 12:37:40",
+    "_pattern_id": "CONG_ER_GE",
+    "_description": "从儿格：丙火日主，食伤极旺，不见印比",
+    "_use_hardcoded": true,
+    "_hardcoded_pillars": {
+      "year": "戊戌",
+      "month": "己未",
+      "day": "丙午",
+      "hour": "戊戌"
+    },
+    "_day_master": "丙",
+    "bazi_data": {
+      "year": "戊戌",
+      "month": "己未",
+      "day": "丙午",
+      "hour": "戊戌"
+    }
+  }
+]

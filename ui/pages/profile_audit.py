@@ -699,6 +699,134 @@ def render_audit_report(controller: ProfileAuditController):
                     st.json(calibration)
                 else:
                     st.info("无五行校准数据")
+            
+            # [QGA V24.5] 完整审计报告（可复制）- 放在解析结果之后
+            st.markdown("---")
+            st.markdown(f"""
+            <div class="section-title" style="font-size: 15px; margin-top: 10px; color: {COLORS['mystic_gold']};">
+                📋 完整审计报告（供AI分析师）
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div style="background: rgba(45, 27, 78, 0.3); padding: 8px; border-radius: 6px; margin: 5px 0; font-size: 12px; color: {COLORS['teal_mist']};">
+                💡 此报告包含完整的LLM交互信息，可直接复制发送给AI分析师进行深度审计
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 构建完整报告
+            import json
+            from datetime import datetime
+            
+            report_parts = []
+            report_parts.append("=" * 80)
+            report_parts.append("QGA 八字档案审计 - LLM交互完整报告")
+            report_parts.append("=" * 80)
+            report_parts.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            report_parts.append("")
+            
+            # 1. 基本信息
+            report_parts.append("【1. 基本信息】")
+            report_parts.append("-" * 80)
+            if 'profile' in audit_result:
+                profile = audit_result['profile']
+                report_parts.append(f"档案名称: {profile.get('name', 'N/A')}")
+                report_parts.append(f"出生日期: {profile.get('year', '')}年{profile.get('month', '')}月{profile.get('day', '')}日 {profile.get('hour', '')}时")
+                report_parts.append(f"性别: {profile.get('gender', 'N/A')}")
+            if 'bazi_profile' in audit_result:
+                bazi = audit_result['bazi_profile']
+                pillars = bazi.get('pillars', {})
+                report_parts.append(f"八字: {pillars.get('year', '')} {pillars.get('month', '')} {pillars.get('day', '')} {pillars.get('hour', '')}")
+                report_parts.append(f"日主: {bazi.get('day_master', 'N/A')}")
+            report_parts.append("")
+            
+            # 2. 发送给LLM的数据
+            report_parts.append("【2. 发送给LLM的输入数据 (Input JSON)】")
+            report_parts.append("-" * 80)
+            report_parts.append("数据格式: JSON")
+            report_parts.append("")
+            report_parts.append(json.dumps(debug_data, ensure_ascii=False, indent=2))
+            report_parts.append("")
+            
+            # 3. Prompt模板
+            report_parts.append("【3. LLM Prompt模板】")
+            report_parts.append("-" * 80)
+            report_parts.append(f"Prompt长度: {len(debug_prompt)} 字符")
+            report_parts.append("")
+            report_parts.append(debug_prompt if debug_prompt else "未生成")
+            report_parts.append("")
+            
+            # 4. LLM原始响应
+            report_parts.append("【4. LLM原始响应 (Raw Response)】")
+            report_parts.append("-" * 80)
+            report_parts.append(f"响应长度: {len(debug_response)} 字符")
+            if debug_response:
+                report_parts.append("")
+                report_parts.append(debug_response)
+            else:
+                report_parts.append("(无响应)")
+            report_parts.append("")
+            
+            # 5. APP处理逻辑
+            report_parts.append("【5. APP处理逻辑】")
+            report_parts.append("-" * 80)
+            report_parts.append("5.1 解析步骤:")
+            report_parts.append("  - 优先尝试解析纯JSON格式（包含'persona'和'corrected_elements'字段）")
+            report_parts.append("  - 如果失败，回退到旧格式解析（查找'核心矛盾：'和'修正后：'标记）")
+            report_parts.append("  - 应用非负约束（所有五行值 >= 0）")
+            report_parts.append("  - 计算五行校准偏移量（corrected - original）")
+            report_parts.append("")
+            report_parts.append("5.2 解析结果:")
+            
+            # 解析结果详情
+            parsed_persona = semantic_report.get('persona', '')
+            calibration = audit_result.get('llm_calibration', {})
+            report_parts.append(f"  生成的画像: {parsed_persona[:200]}..." if len(parsed_persona) > 200 else f"  生成的画像: {parsed_persona}")
+            if calibration:
+                report_parts.append("  五行校准偏移量:")
+                for element, offset in calibration.items():
+                    report_parts.append(f"    {element}: {offset:+.2f}")
+            else:
+                report_parts.append("  五行校准: 无数据")
+            report_parts.append("")
+            
+            # 6. 错误信息（如果有）
+            debug_error = semantic_report.get('debug_error')
+            if debug_error:
+                report_parts.append("【6. 错误信息】")
+                report_parts.append("-" * 80)
+                report_parts.append(debug_error)
+                report_parts.append("")
+            
+            # 7. 系统信息
+            report_parts.append("【7. 系统信息】")
+            report_parts.append("-" * 80)
+            if hasattr(st, 'session_state') and 'llm_connection_info' in st.session_state:
+                conn_info = st.session_state.get('llm_connection_info', {})
+                report_parts.append(f"LLM模型: {conn_info.get('model_name', 'N/A')}")
+                report_parts.append(f"API地址: {conn_info.get('ollama_host', 'N/A')}")
+                report_parts.append(f"连接状态: {conn_info.get('connection_status', 'N/A')}")
+            report_parts.append("")
+            
+            report_parts.append("=" * 80)
+            report_parts.append("报告结束")
+            report_parts.append("=" * 80)
+            
+            # 合并报告
+            full_report = "\n".join(report_parts)
+            
+            # 显示报告（可复制）
+            st.text_area(
+                "完整审计报告",
+                value=full_report,
+                height=600,
+                key="full_audit_report",
+                help="此报告包含完整的LLM交互信息，可直接复制发送给AI分析师",
+                label_visibility="collapsed"
+            )
+            
+            # 添加复制提示
+            st.info("💡 **提示**: 点击文本框右上角的复制按钮，或使用 Ctrl+A 全选后 Ctrl+C 复制整个报告")
         else:
             # 没有debug数据，显示提示信息
             st.warning(f"""
@@ -744,6 +872,336 @@ def render_audit_report(controller: ProfileAuditController):
             pillars = audit_result['bazi_profile']['pillars']
             st.write(f"八字: {pillars.get('year', '')} {pillars.get('month', '')} {pillars.get('day', '')} {pillars.get('hour', '')}")
             st.write(f"日主: {audit_result['bazi_profile'].get('day_master', '')}")
+    
+    # [QGA V25.0 Phase 5] Neural Route Trace - 神经矩阵路由溯源面板
+    if 'neural_router_metadata' in audit_result or 'logic_collapse' in audit_result:
+        st.markdown("---")
+        st.markdown(f"""
+        <div class="section-title" style="font-size: 16px; margin-top: 10px; color: {COLORS['mystic_gold']};">
+            🧠 神经矩阵路由溯源 (Neural Route Trace) [V25.0]
+        </div>
+        """, unsafe_allow_html=True)
+        
+        neural_metadata = audit_result.get('neural_router_metadata', {})
+        feature_vector = neural_metadata.get('feature_vector', {})
+        logic_collapse = audit_result.get('logic_collapse', {})
+        energy_state = audit_result.get('energy_state_report', {})
+        
+        # 1. 特征向量指纹雷达图
+        if feature_vector and 'elemental_fields_dict' in feature_vector:
+            st.markdown("#### 🔬 特征向量指纹 (Phase 2)")
+            elemental_fields = feature_vector.get('elemental_fields_dict', {})
+            stress_tensor = feature_vector.get('stress_tensor', 0.0)
+            phase_coherence = feature_vector.get('phase_coherence', 0.0)
+            
+            # 创建雷达图
+            elements = ['金', '木', '水', '火', '土']
+            element_keys = ['metal', 'wood', 'water', 'fire', 'earth']
+            values = [elemental_fields.get(key, 0.0) * 100 for key in element_keys]  # 转换为百分比
+            
+            fig_radar = go.Figure()
+            fig_radar.add_trace(go.Scatterpolar(
+                r=values,
+                theta=elements,
+                fill='toself',
+                name='五行场强',
+                line_color=COLORS['teal_mist'],
+                fillcolor=f"rgba(64, 224, 208, 0.3)"
+            ))
+            
+            fig_radar.update_layout(
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, 100],
+                        tickfont=dict(color='#e2e8f0', size=10),
+                        gridcolor='rgba(255, 255, 255, 0.2)'
+                    ),
+                    angularaxis=dict(
+                        tickfont=dict(color='#e2e8f0', size=11),
+                        linecolor='rgba(255, 255, 255, 0.3)'
+                    ),
+                    bgcolor='rgba(0, 0, 0, 0)'
+                ),
+                showlegend=False,
+                height=300,
+                margin=dict(l=20, r=20, t=20, b=20),
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                font_color='#e2e8f0',
+                title=dict(
+                    text="特征向量指纹（五行场强分布）",
+                    font=dict(size=14, color=COLORS['mystic_gold']),
+                    x=0.5
+                )
+            )
+            
+            st.plotly_chart(fig_radar, use_container_width=True)
+            
+            # 显示数值和关键指标
+            col_metrics1, col_metrics2, col_metrics3 = st.columns(3)
+            with col_metrics1:
+                st.metric("应力张量", f"{stress_tensor:.3f}", 
+                         help="系统内部冲突压力（0.0-1.0）")
+            with col_metrics2:
+                st.metric("相位一致性", f"{phase_coherence:.3f}",
+                         help="相位关系协调度（0.0-1.0）")
+            with col_metrics3:
+                max_elem = max(elemental_fields.items(), key=lambda x: x[1])[0] if elemental_fields else "未知"
+                elem_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}.get(max_elem, '未知')
+                st.metric("主导元素", elem_cn,
+                         help="场强最高的五行元素")
+        
+        # 2. 权重坍缩热力图
+        if logic_collapse:
+            st.markdown("#### ⚖️ 逻辑权重坍缩 (Phase 4)")
+            
+            # 创建热力图数据
+            pattern_names = []
+            weights = []
+            for pattern_id, weight in sorted(logic_collapse.items(), key=lambda x: -x[1]):
+                # 尝试获取格局中文名称
+                pattern_name = pattern_id
+                # 可以从注册表获取，这里简化处理
+                pattern_name_map = {
+                    'SHANG_GUAN_JIAN_GUAN': '伤官见官',
+                    'XIAO_SHEN_DUO_SHI': '枭神夺食',
+                    'CONG_ER_GE': '从儿格',
+                    'YANG_REN_JIA_SHA': '羊刃架杀',
+                    'HUA_HUO_GE': '化火格',
+                    'JIAN_LU_YUE_JIE': '建禄月劫',
+                    'GUAN_YIN_XIANG_SHENG': '官印相生'
+                }
+                pattern_name = pattern_name_map.get(pattern_id, pattern_id)
+                pattern_names.append(pattern_name)
+                weights.append(weight * 100)  # 转换为百分比
+            
+            # 创建水平条形图（热力图风格）
+            fig_heatmap = go.Figure()
+            fig_heatmap.add_trace(go.Bar(
+                x=weights,
+                y=pattern_names,
+                orientation='h',
+                marker=dict(
+                    color=weights,
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(title="权重 (%)", titlefont=dict(color='#e2e8f0'), tickfont=dict(color='#e2e8f0'))
+                ),
+                text=[f"{w:.2f}%" for w in weights],
+                textposition='outside',
+                textfont=dict(color='#e2e8f0', size=11)
+            ))
+            
+            fig_heatmap.update_layout(
+                title=dict(
+                    text="格局权重贡献分布（自动坍缩）",
+                    font=dict(size=14, color=COLORS['mystic_gold']),
+                    x=0.5
+                ),
+                xaxis=dict(
+                    title="贡献百分比 (%)",
+                    range=[0, 105],
+                    tickfont=dict(color='#e2e8f0'),
+                    gridcolor='rgba(255, 255, 255, 0.1)'
+                ),
+                yaxis=dict(
+                    tickfont=dict(color='#e2e8f0'),
+                    gridcolor='rgba(255, 255, 255, 0.1)'
+                ),
+                height=200 + len(pattern_names) * 40,
+                margin=dict(l=100, r=20, t=50, b=20),
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                font_color='#e2e8f0'
+            )
+            
+            st.plotly_chart(fig_heatmap, use_container_width=True)
+            
+            # 显示权重总和验证
+            total_weight = sum(logic_collapse.values()) * 100
+            if 95 <= total_weight <= 105:
+                st.success(f"✅ 权重归一化验证通过: {total_weight:.2f}%")
+            else:
+                st.warning(f"⚠️ 权重总和异常: {total_weight:.2f}% (应在95-105%范围内)")
+        
+        # 3. 能量状态报告（波形图）
+        if energy_state:
+            st.markdown("#### ⚡ 能量状态报告 (Phase 4)")
+            
+            system_stability = energy_state.get('system_stability', 0.0)
+            critical_state = energy_state.get('critical_state', '未知')
+            stress_tensor = energy_state.get('stress_tensor', 0.0)
+            phase_coherence = energy_state.get('phase_coherence', 0.0)
+            
+            # 创建稳定性波形图
+            import numpy as np
+            time_points = np.linspace(0, 10, 100)
+            
+            # 根据稳定性生成波形
+            if system_stability < 0.3:
+                # 崩态：高频震荡
+                waveform = 0.5 + 0.3 * np.sin(10 * time_points) * np.exp(-time_points * 0.1)
+                wave_color = COLORS['rose_magenta']
+                wave_label = "崩态波形（高频震荡）"
+            elif system_stability < 0.5:
+                # 临界态：中频波动
+                waveform = 0.5 + 0.2 * np.sin(5 * time_points) * np.exp(-time_points * 0.05)
+                wave_color = '#FFA500'  # 橙色
+                wave_label = "临界态波形（中频波动）"
+            elif phase_coherence > 0.7:
+                # 稳态：平滑波形
+                waveform = 0.5 + 0.1 * np.sin(2 * time_points) * np.exp(-time_points * 0.02)
+                wave_color = COLORS['teal_mist']
+                wave_label = "稳态波形（平滑传导）"
+            else:
+                # 波动态：低频波动
+                waveform = 0.5 + 0.15 * np.sin(3 * time_points) * np.exp(-time_points * 0.03)
+                wave_color = '#FFFF00'  # 黄色
+                wave_label = "波动态波形（低频波动）"
+            
+            fig_wave = go.Figure()
+            fig_wave.add_trace(go.Scatter(
+                x=time_points,
+                y=waveform,
+                mode='lines',
+                name=wave_label,
+                line=dict(color=wave_color, width=2),
+                fill='tozeroy',
+                fillcolor=wave_color.replace('#', 'rgba(').replace('', '') + ', 0.2)' if wave_color.startswith('#') else f"rgba(64, 224, 208, 0.2)"
+            ))
+            
+            # 添加稳定性阈值线
+            fig_wave.add_hline(
+                y=system_stability,
+                line_dash="dash",
+                line_color=COLORS['mystic_gold'],
+                annotation_text=f"系统稳定性: {system_stability:.3f}",
+                annotation_position="right"
+            )
+            
+            fig_wave.update_layout(
+                title=dict(
+                    text=f"能量状态波形 - {critical_state}",
+                    font=dict(size=14, color=COLORS['mystic_gold']),
+                    x=0.5
+                ),
+                xaxis=dict(
+                    title="时间（相对单位）",
+                    tickfont=dict(color='#e2e8f0'),
+                    gridcolor='rgba(255, 255, 255, 0.1)'
+                ),
+                yaxis=dict(
+                    title="能量振幅",
+                    range=[0, 1],
+                    tickfont=dict(color='#e2e8f0'),
+                    gridcolor='rgba(255, 255, 255, 0.1)'
+                ),
+                height=250,
+                margin=dict(l=50, r=20, t=50, b=30),
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                font_color='#e2e8f0',
+                showlegend=True,
+                legend=dict(
+                    font=dict(color='#e2e8f0'),
+                    bgcolor='rgba(0, 0, 0, 0)'
+                )
+            )
+            
+            st.plotly_chart(fig_wave, use_container_width=True)
+            
+            # 显示关键指标
+            col_energy1, col_energy2, col_energy3 = st.columns(3)
+            with col_energy1:
+                stability_color = COLORS['rose_magenta'] if system_stability < 0.3 else (COLORS['teal_mist'] if system_stability > 0.7 else '#FFA500')
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background: rgba(45, 27, 78, 0.3); border-radius: 6px; border-left: 3px solid {stability_color};">
+                    <div style="font-size: 11px; color: {COLORS['teal_mist']};">系统稳定性</div>
+                    <div style="font-size: 18px; font-weight: bold; color: {stability_color};">{system_stability:.3f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_energy2:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background: rgba(45, 27, 78, 0.3); border-radius: 6px; border-left: 3px solid {COLORS['mystic_gold']};">
+                    <div style="font-size: 11px; color: {COLORS['teal_mist']};">临界状态</div>
+                    <div style="font-size: 14px; font-weight: bold; color: {COLORS['mystic_gold']};">{critical_state[:15]}...</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_energy3:
+                energy_flow = energy_state.get('energy_flow_direction', '未知')
+                st.markdown(f"""
+                <div style="text-align: center; padding: 10px; background: rgba(45, 27, 78, 0.3); border-radius: 6px; border-left: 3px solid {COLORS['teal_mist']};">
+                    <div style="font-size: 11px; color: {COLORS['teal_mist']};">能量流向</div>
+                    <div style="font-size: 12px; font-weight: bold; color: {COLORS['teal_mist']};">{energy_flow[:20]}...</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # 4. 处理元数据摘要
+        if neural_metadata:
+            with st.expander("🔧 处理元数据详情", expanded=False):
+                st.markdown(f"""
+                - **格局数**: {neural_metadata.get('pattern_count', 'N/A')}
+                - **综合SAI**: {neural_metadata.get('aggregated_sai', 'N/A')}
+                - **Prompt长度**: {neural_metadata.get('inline_prompt_length', 'N/A')} 字符
+                - **场强阈值**: {neural_metadata.get('field_strength_threshold', 'N/A')}
+                - **相干权重**: {neural_metadata.get('coherence_weight', 'N/A')}
+                - **熵值阻尼**: {neural_metadata.get('entropy_damping', 'N/A')}
+                """)
+                if 'matrix_routing' in neural_metadata:
+                    matrix_info = neural_metadata['matrix_routing']
+                    st.markdown(f"""
+                    - **权重数**: {matrix_info.get('collapse_weights_count', 'N/A')}
+                    - **能量稳定性**: {matrix_info.get('energy_stability', 'N/A')}
+                    """)
+        
+        st.caption("💡 [V25.0] 神经矩阵路由系统自动计算格局权重和能量状态，无需手动配置")
+    
+    # [QGA V24.7] 逻辑审计溯源面板：显示BaseVectorBias
+    if 'pattern_audit' in audit_result:
+        pattern_audit = audit_result['pattern_audit']
+        
+        # 显示BaseVectorBias（初始物理偏差）
+        if 'base_vector_bias' in pattern_audit:
+            st.markdown("---")
+            st.markdown(f"""
+            <div class="section-title" style="font-size: 14px; margin-top: 10px; color: {COLORS['mystic_gold']};">
+                ⚖️ 初始物理偏差 (BaseVectorBias)
+            </div>
+            """, unsafe_allow_html=True)
+            
+            bias = pattern_audit['base_vector_bias']
+            geo_context = pattern_audit.get('geo_context', '')
+            
+            # 显示地理环境
+            if geo_context:
+                st.caption(f"📍 地理环境: {geo_context}")
+            
+            # 显示偏差值（5列布局）
+            col_bias1, col_bias2, col_bias3, col_bias4, col_bias5 = st.columns(5)
+            element_map = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
+            element_colors = {
+                'metal': '#FFD700',  # 金色
+                'wood': '#32CD32',   # 绿色
+                'water': '#1E90FF',  # 蓝色
+                'fire': '#FF4500',   # 红色
+                'earth': '#8B4513'   # 棕色
+            }
+            
+            cols = [col_bias1, col_bias2, col_bias3, col_bias4, col_bias5]
+            for idx, (en_name, cn_name) in enumerate(element_map.items()):
+                with cols[idx]:
+                    val = bias.get(en_name, 0.0)
+                    color = element_colors.get(en_name, '#FFFFFF')
+                    sign = "+" if val >= 0 else ""
+                    st.markdown(f"""
+                    <div style="text-align: center; padding: 8px; background: rgba(45, 27, 78, 0.3); border-radius: 6px; border-left: 3px solid {color};">
+                        <div style="font-size: 11px; color: {COLORS['teal_mist']};">{cn_name}</div>
+                        <div style="font-size: 14px; font-weight: bold; color: {color if abs(val) > 0.1 else COLORS['teal_mist']};">{sign}{val:.2f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            st.caption("💡 这是格局引擎根据激活格局计算出的初始物理偏差，LLM将在此基础上进行微调（±10%以内）")
     
     # [QGA V24.2] 实时激活格局清单（时空耦合格局审计，紧凑版）
     if 'pattern_audit' in audit_result:

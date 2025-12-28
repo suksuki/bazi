@@ -60,7 +60,9 @@ class ProfileAuditModel:
     
     def load_profile_by_id(self, profile_id: str) -> Optional[Dict[str, Any]]:
         """
-        根据ID加载单个档案
+        [QGA V24.7] 根据ID加载单个档案，支持虚拟档案（硬编码模式）
+        
+        如果ProfileManager中找不到，尝试从Pattern Lab加载虚拟档案
         
         Args:
             profile_id: 档案ID
@@ -68,6 +70,48 @@ class ProfileAuditModel:
         Returns:
             档案字典，如果不存在则返回None
         """
+        # 1. 先从ProfileManager加载
         profiles = self.profile_manager.get_all()
-        return next((p for p in profiles if p.get('id') == profile_id), None)
+        profile = next((p for p in profiles if p.get('id') == profile_id), None)
+        
+        if profile:
+            # 检查是否为虚拟档案（需要补充硬编码字段）
+            if profile.get('name', '').startswith('虚拟-'):
+                # 尝试从Pattern Lab重新生成以获取硬编码字段
+                try:
+                    from tests.pattern_lab import generate_synthetic_bazi, PATTERN_TEMPLATES
+                    # 从名称推断格局ID
+                    pattern_id = None
+                    for pid, template in PATTERN_TEMPLATES.items():
+                        if template['name'] == profile.get('name'):
+                            pattern_id = pid
+                            break
+                    
+                    if pattern_id:
+                        # 重新生成虚拟档案以获取硬编码字段
+                        virtual_profile = generate_synthetic_bazi(pattern_id, use_hardcoded=True)
+                        # 合并数据（保留ProfileManager的ID和创建时间）
+                        virtual_profile['id'] = profile['id']
+                        virtual_profile['created_at'] = profile.get('created_at', virtual_profile.get('created_at'))
+                        logger.info(f"✅ 加载虚拟档案硬编码字段: {profile.get('name')} -> {pattern_id}")
+                        return virtual_profile
+                except Exception as e:
+                    logger.warning(f"加载虚拟档案硬编码字段失败: {e}，使用标准档案")
+            
+            return profile
+        
+        # 2. 如果ProfileManager中找不到，尝试从Pattern Lab加载
+        try:
+            from tests.pattern_lab import generate_synthetic_bazi, PATTERN_TEMPLATES
+            # 遍历所有格局模板，查找匹配的ID
+            for pattern_id, template in PATTERN_TEMPLATES.items():
+                # 生成虚拟档案检查ID
+                virtual_profile = generate_synthetic_bazi(pattern_id, use_hardcoded=True)
+                if virtual_profile.get('id') == profile_id:
+                    logger.info(f"✅ 从Pattern Lab加载虚拟档案: {pattern_id}")
+                    return virtual_profile
+        except Exception as e:
+            logger.debug(f"从Pattern Lab加载虚拟档案失败: {e}")
+        
+        return None
 

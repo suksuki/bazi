@@ -83,19 +83,46 @@ class ProfileAuditController:
         if not profile_data:
             return {'error': '档案不存在'}
         
-        # 2. 创建BaziProfile对象
+        # 2. 创建BaziProfile对象（支持硬编码模式）
         try:
-            birth_date = datetime(
-                profile_data['year'],
-                profile_data['month'],
-                profile_data['day'],
-                profile_data.get('hour', 12),
-                profile_data.get('minute', 0)
-            )
-            gender = 1 if profile_data.get('gender') == '男' else 0
-            bazi_profile = BaziProfile(birth_date, gender)
+            # [QGA V24.7] 检查是否为硬编码虚拟档案
+            use_hardcoded = profile_data.get('_use_hardcoded', False)
+            hardcoded_pillars = profile_data.get('_hardcoded_pillars')
+            
+            if use_hardcoded and hardcoded_pillars:
+                # 使用VirtualBaziProfile（硬编码模式）
+                from core.bazi_profile import VirtualBaziProfile
+                day_master = profile_data.get('_day_master', '')
+                gender = 1 if profile_data.get('gender') == '男' else 0
+                
+                pillars_dict = {
+                    'year': hardcoded_pillars['year'],
+                    'month': hardcoded_pillars['month'],
+                    'day': hardcoded_pillars['day'],
+                    'hour': hardcoded_pillars['hour']
+                }
+                
+                bazi_profile = VirtualBaziProfile(
+                    pillars=pillars_dict,
+                    day_master=day_master,
+                    gender=gender
+                )
+                logger.info(f"✅ 使用VirtualBaziProfile（硬编码模式）: {profile_data.get('name', '')}")
+            else:
+                # 使用标准BaziProfile（从出生日期计算）
+                birth_date = datetime(
+                    profile_data['year'],
+                    profile_data['month'],
+                    profile_data['day'],
+                    profile_data.get('hour', 12),
+                    profile_data.get('minute', 0)
+                )
+                gender = 1 if profile_data.get('gender') == '男' else 0
+                bazi_profile = BaziProfile(birth_date, gender)
         except Exception as e:
             logger.error(f"创建BaziProfile失败: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {'error': f'创建八字档案失败: {str(e)}'}
         
         # 3. 先执行MCA获取地理信息
@@ -135,6 +162,101 @@ class ProfileAuditController:
         pattern_audit = self._analyze_year_patterns(
             bazi_profile, year, pfa_result, soa_result, geo_element, geo_factor
         )
+        
+        # [QGA V24.7] 权重坍缩和矢量校准预处理
+        base_vector_bias = None
+        geo_context_calculated = ""
+        
+        if pattern_audit and pattern_audit.get('patterns'):
+            patterns = pattern_audit['patterns']
+            
+            # 识别地理环境
+            if city:
+                if '北京' in city or '北方' in city:
+                    geo_context_calculated = "北方/北京"
+                elif '南方' in city or 'fire' in city.lower():
+                    geo_context_calculated = "南方/火地"
+            if micro_env:
+                if any('近水' in str(item) or 'water' in str(item).lower() for item in micro_env):
+                    geo_context_calculated = "近水环境"
+            
+            try:
+                # 应用权重坍缩算法
+                from core.models.weight_collapse import WeightCollapseAlgorithm
+                weighted_patterns = WeightCollapseAlgorithm.collapse_pattern_weights(patterns)
+                
+                # 计算初始物理偏差（格局引擎的vector_bias）
+                from core.models.pattern_engine import get_pattern_registry
+                pattern_registry = get_pattern_registry()
+                
+                # 计算格局引擎的初始偏移（作为"底色"）
+                pattern_engines_dict = {}
+                for pattern in patterns:
+                    pattern_name = pattern.get('name', '')
+                    if pattern_name:
+                        # [QGA V24.7] 尝试精确匹配
+                        engine = pattern_registry.get_by_name(pattern_name)
+                        if not engine:
+                            # 如果精确匹配失败，尝试部分匹配（去除emoji和特殊字符）
+                            clean_name = pattern_name.replace('✨', '').replace(' ', '').strip()
+                            
+                            # 尝试匹配核心格局名称（如"从儿格等离子喷泉" -> "从儿格"）
+                            # 或者"枭神夺食" -> "枭神夺食"
+                            for engine_candidate in pattern_registry.get_all_engines():
+                                candidate_name = engine_candidate.pattern_name
+                                # 检查候选名称是否在清理后的名称中，或清理后的名称是否在候选名称中
+                                if candidate_name in clean_name or clean_name in candidate_name:
+                                    engine = engine_candidate
+                                    logger.debug(f"✅ 格局名称部分匹配: '{pattern_name}' -> '{candidate_name}' ({engine_candidate.pattern_id})")
+                                    break
+                            
+                            # 如果还是没找到，尝试更宽松的匹配（检查是否包含关键格局名称）
+                            if not engine:
+                                # [QGA V24.7 优化] 扩展关键词匹配，支持更多变体
+                                key_patterns = {
+                                    '从儿格': '从儿格',
+                                    '枭神夺食': '枭神夺食',
+                                    '枭神': '枭神夺食',  # 支持"枭神"作为关键词
+                                    '夺食': '枭神夺食',  # 支持"夺食"作为关键词
+                                    '伤官见官': '伤官见官',
+                                    '化火格': '化火格',
+                                    '羊刃架杀': '羊刃架杀',
+                                    '建禄月劫': '建禄月劫',
+                                    '官印相生': '官印相生'
+                                }
+                                for key, pattern_name_cn in key_patterns.items():
+                                    if key in clean_name:
+                                        engine = pattern_registry.get_by_name(pattern_name_cn)
+                                        if engine:
+                                            logger.debug(f"✅ 格局名称关键词匹配: '{pattern_name}' -> '{key}' -> '{pattern_name_cn}' ({engine.pattern_id})")
+                                            break
+                        
+                        if engine:
+                            pattern_engines_dict[pattern_name] = engine
+                            logger.debug(f"✅ 找到格局引擎: {pattern_name} -> {engine.pattern_id}")
+                        else:
+                            logger.debug(f"⚠️ 未找到格局引擎: {pattern_name}")
+                
+                if pattern_engines_dict and weighted_patterns:
+                    from core.models.weight_collapse import VectorFieldCalibration
+                    
+                    # 计算初始物理偏差
+                    base_vector_bias = VectorFieldCalibration.calculate_weighted_bias(
+                        patterns_with_weights=weighted_patterns,
+                        pattern_engines=pattern_engines_dict,
+                        geo_context=geo_context_calculated
+                    )
+                    
+                    # 存储到pattern_audit中，供后续使用
+                    pattern_audit['base_vector_bias'] = base_vector_bias
+                    pattern_audit['geo_context'] = geo_context_calculated
+                    logger.info(f"✅ 计算初始物理偏差: {base_vector_bias}, geo_context={geo_context_calculated}")
+                else:
+                    logger.warning(f"⚠️ 无法计算初始物理偏差: engines={len(pattern_engines_dict)}, weighted_patterns={len(weighted_patterns)}")
+            except Exception as e:
+                logger.warning(f"⚠️ 权重坍缩或矢量校准计算失败: {e}，继续使用原有逻辑")
+                import traceback
+                logger.debug(traceback.format_exc())
         
         # 6. 生成语义报告（基于实时激活格局）
         # [QGA V24.3] 传递use_llm参数
@@ -478,7 +600,15 @@ class ProfileAuditController:
             
             # 获取激活格局
             if pattern_audit:
-                active_patterns = pattern_audit.get('patterns', [])
+                active_patterns_list = pattern_audit.get('patterns', [])
+                # [QGA V24.7] 传递base_vector_bias和geo_context给LLM合成器
+                # 创建一个包装字典，包含patterns列表和元数据
+                active_patterns = {
+                    'patterns_list': active_patterns_list,
+                    'base_vector_bias': pattern_audit.get('base_vector_bias'),
+                    'geo_context': pattern_audit.get('geo_context', '')
+                }
+                
                 synthesized_field = {
                     'has_luck': bool(pattern_audit.get('luck_pillar')),
                     'has_year': bool(pattern_audit.get('year_pillar')),
@@ -486,7 +616,12 @@ class ProfileAuditController:
                 }
             else:
                 # 回退：从PFA结果获取格局
-                active_patterns = getattr(self.pfa_engine, '_last_detected_patterns', [])
+                patterns_list_fallback = getattr(self.pfa_engine, '_last_detected_patterns', [])
+                active_patterns = {
+                    'patterns_list': patterns_list_fallback,
+                    'base_vector_bias': None,
+                    'geo_context': ''
+                }
                 synthesized_field = {}
             
             # 获取额外信息用于结构化数据
@@ -682,13 +817,22 @@ class ProfileAuditController:
             conflict_name = conflict_patterns[0].get('name', '格局冲突')
             
             # 根据冲突格局类型生成画像
-            if '伤官' in conflict_name and '官' in conflict_name:
-                # 伤官见官：权威与自由的冲突
-                parts.append(f"{name}的命局核心矛盾是**权威与自由的撕裂**。")
-                parts.append("伤官见官格局意味着你天生具有挑战权威、追求自由的冲动，")
-                parts.append("但现实环境（官星）要求你遵守规则、服从秩序。")
-                parts.append("这种内在冲突导致你时常在'反抗'与'妥协'之间摇摆，")
-                parts.append("理想与现实的强烈撕裂感成为你人生的主旋律。")
+            # [QGA V25.0] 逻辑真空化：从PatternDefinitionRegistry读取冲突描述
+            from core.models.pattern_definition_registry import get_pattern_definition_registry
+            
+            registry = get_pattern_definition_registry()
+            # 尝试从注册表获取格局定义
+            definition = None
+            for def_item in registry.get_all_definitions():
+                if def_item.pattern_name in conflict_name:
+                    definition = def_item
+                    break
+            
+            if definition:
+                parts.append(f"{name}的命局核心矛盾是**{definition.core_conflict}**。")
+                if definition.semantic_keywords:
+                    parts.append(f"这种格局意味着{', '.join(definition.semantic_keywords[:2])}，")
+                    parts.append("导致理想与现实的强烈撕裂感成为你人生的主旋律。")
             else:
                 parts.append(f"{name}的命局存在严重的格局冲突（{conflict_name}），")
                 parts.append("这是你人生最大的'痛点'。")
@@ -701,9 +845,9 @@ class ProfileAuditController:
             parts.append("这是你人生的底色和核心动力源。")
             
             # 基于主格局生成性格特征
-            if '伤官' in primary_name:
-                parts.append("你具有强烈的表达欲和创造力，但可能过于叛逆，需要适度收敛。")
-            elif '正官' in primary_name:
+            # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
+            # 格局描述逻辑将由Phase 2的特征向量提取器负责
+            if primary_name:
                 parts.append("你具有强烈的责任感和秩序感，但可能过于拘谨，需要适度突破。")
             elif '财' in primary_name:
                 parts.append("你具有强烈的财富欲望和商业头脑，但可能过于功利，需要平衡精神追求。")
@@ -1009,7 +1153,8 @@ class ProfileAuditController:
                     })
             
             # 2. 化气格受阻
-            elif pattern_type == 'transformation' and '化' in pattern_name:
+            # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
+            elif pattern_type == 'transformation':
                 # 检查流年是否克制化气
                 stem_elements = {
                     '甲': 'wood', '乙': 'wood',
@@ -1114,20 +1259,8 @@ class ProfileAuditController:
         pattern_name = pattern.get('name', '').lower()
         ten_gods = synthesized_field.get('ten_gods', [])
         
-        # 检查格局所需的条件是否在合成场强中满足
-        if '伤官' in pattern_name:
-            if '伤官' in ten_gods:
-                return True
-        elif '正官' in pattern_name or '七杀' in pattern_name or '官' in pattern_name:
-            if '正官' in ten_gods or '七杀' in ten_gods:
-                return True
-        elif '财' in pattern_name:
-            if '正财' in ten_gods or '偏财' in ten_gods:
-                return True
-        elif '印' in pattern_name:
-            if '正印' in ten_gods or '偏印' in ten_gods:
-                return True
-        
+        # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
+        # 格局激活逻辑将由Phase 2的特征向量提取器负责
         # 默认：如果原局检测到，合成场强下也激活
         return True
     
@@ -1226,27 +1359,14 @@ class ProfileAuditController:
                 parts.append(" + ".join(coupling_parts))
                 parts.append(" + 原局八字 → ")
         
-        # 检查是否是流年触发的格局
+        # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
+        # 格局描述逻辑将由Phase 2的特征向量提取器负责
+        pattern_name = pattern.get('name', '')
         if year_pillar:
-            year_gan = year_pillar[0] if len(year_pillar) > 0 else ''
-            year_ten_god = BaziParticleNexus.get_shi_shen(year_gan, day_master) if year_gan else ''
-            pattern_name = pattern.get('name', '')
-            
-            if '伤官' in pattern_name and '见官' in pattern_name:
-                parts.append(f"流年[{year_pillar}]透出{year_ten_god}，")
-                parts.append(f"与原局伤官形成【{pattern_name}】格局。")
-            elif '化' in pattern_name:
-                parts.append(f"流年天干[{year_gan}]参与天干五合，")
-                parts.append(f"触发【{pattern_name}】格局。")
-            elif '拱' in pattern_name:
-                year_zhi = year_pillar[1] if len(year_pillar) > 1 else ''
-                parts.append(f"流年地支[{year_zhi}]与原局地支构成拱局，")
-                parts.append(f"触发【{pattern_name}】格局。")
-            else:
-                parts.append(f"流年[{year_pillar}]与原局干支相互作用，")
-                parts.append(f"在时空耦合状态下触发【{pattern_name}】格局。")
+            parts.append(f"流年[{year_pillar}]与原局干支相互作用，")
+            parts.append(f"在时空耦合状态下触发【{pattern_name}】格局。")
         else:
-            parts.append(f"原局格局【{pattern.get('name', '')}】在时空耦合状态下持续生效。")
+            parts.append(f"原局格局【{pattern_name}】在时空耦合状态下持续生效。")
         
         return "".join(parts)
     
@@ -1260,29 +1380,23 @@ class ProfileAuditController:
         physical_traits = []
         destiny_traits = []
         
+        # [QGA V25.0] 逻辑真空化：从PatternDefinitionRegistry读取格局特性
+        from core.models.pattern_definition_registry import get_pattern_definition_registry
+        
+        registry = get_pattern_definition_registry()
+        pattern_id = pattern.get('id', '')
+        definition = registry.get_by_id(pattern_id) if pattern_id else None
+        
         # [QGA V24.2] 如果有状态变化，描述变化后的特性
         if state_change:
             physical_traits.append(state_change.get('impact', '系统状态发生变化'))
             destiny_traits.append("此时格局状态已改变，需要调整应对策略")
-        # 根据格局类型生成特性
-        elif '伤官' in pattern_name and '尽' in pattern_name:
-            physical_traits.append("能量极度聚焦于表达和创造，系统处于超稳态结构")
-            destiny_traits.append("此时才华横溢，名誉极高，但易招小人嫉妒")
-        elif '伤官' in pattern_name and '见官' in pattern_name:
-            physical_traits.append("能量发生相位冲突，系统稳定性下降")
-            destiny_traits.append("此时权威与自由产生撕裂，易有官非或职场冲突")
-        elif '化' in pattern_name:
-            physical_traits.append("系统发生化学变质，能量结构发生偏转")
-            destiny_traits.append("此时性格和命运发生转化，人生出现重大转折")
-        elif '拱' in pattern_name or '合' in pattern_name:
-            physical_traits.append("能量通过空间奇点汇聚，形成局部高能区")
-            destiny_traits.append("此时财富或机遇突然出现，但可能伴随突变")
-        elif '从财' in pattern_name:
-            physical_traits.append("系统完全服从财星，能量流向单一")
-            destiny_traits.append("此时财富是人生核心，善于经营和积累")
-        elif '羊刃' in pattern_name:
-            physical_traits.append("能量极度刚强，系统处于临界状态")
-            destiny_traits.append("此时具有极强的领导力和执行力，但易冲动")
+        # 从注册表读取格局特性
+        elif definition:
+            physical_traits.append(definition.core_conflict)
+            # 使用语义关键词生成命运特征
+            if definition.semantic_keywords:
+                destiny_traits.append(f"此时{', '.join(definition.semantic_keywords[:2])}")
         else:
             # 确保sai和stress是数值类型
             try:
@@ -1375,19 +1489,25 @@ class ProfileAuditController:
             intervention_elements.append(element_cn.get(control_map.get(dm_element, 'earth'), '土'))
             spatial_suggestions.append("建议去财星方位办公")
             behavioral_suggestions.append("专注于经营和财富积累")
-        elif '伤官' in pattern_name and '见官' in pattern_name:
-            dm_element = day_master_elements.get(day_master, 'earth')
-            control_map = {
-                'wood': 'earth', 'fire': 'metal', 'earth': 'water',
-                'metal': 'wood', 'water': 'fire'
-            }
-            intervention_elements.append(element_cn.get(control_map.get(dm_element, 'earth'), '土'))
-            spatial_suggestions.append("建议去财星方位，避免官星方位")
-            behavioral_suggestions.append("通过财富化解冲突，避免直接对抗权威")
-        elif '化' in pattern_name:
-            spatial_suggestions.append("建议去合化后的元素方位")
-            behavioral_suggestions.append("顺应转化，不要抗拒变化")
+        # [QGA V25.0] 逻辑真空化：从PatternDefinitionRegistry读取干预策略
+        from core.models.pattern_definition_registry import get_pattern_definition_registry
+        
+        registry = get_pattern_definition_registry()
+        pattern_id = pattern.get('id', '')
+        definition = registry.get_by_id(pattern_id) if pattern_id else None
+        
+        if definition and definition.correction_elements:
+            # 从注册表读取修正元素
+            intervention_elements = definition.correction_elements
+            # 根据修正元素生成空间和行为建议
+            if '土' in intervention_elements or '金' in intervention_elements:
+                spatial_suggestions.append("建议去财星方位")
+                behavioral_suggestions.append("通过财富化解冲突")
+            if '火' in intervention_elements:
+                spatial_suggestions.append("建议去火地方位")
+                behavioral_suggestions.append("顺应转化，不要抗拒变化")
         else:
+            # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
             intervention_elements.append("根据用神确定")
             spatial_suggestions.append("根据用神方位调整")
             behavioral_suggestions.append("根据格局特性调整行为")

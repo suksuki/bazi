@@ -3,6 +3,7 @@ LLM语义合成器 (LLM Semantic Synthesizer)
 基于格局语义池，使用LLM生成全息命运画像
 支持Qwen2.5:2.5b及未来70B模型
 [QGA V24.3] 从系统配置读取LLM模型名称
+[QGA V24.7] 集成LLM逻辑网关中间件和格局引擎注册机制
 """
 
 import logging
@@ -11,6 +12,8 @@ import json
 
 from core.models.pattern_semantic_pool import get_multiple_pattern_semantics
 from core.config_manager import ConfigManager
+from utils.llm_parser import LLMParser  # [QGA V24.7] LLM逻辑网关
+from core.models.pattern_engine import get_pattern_registry  # [QGA V24.7] 格局引擎注册表
 
 logger = logging.getLogger(__name__)
 
@@ -175,11 +178,32 @@ class LLMSemanticSynthesizer:
                 'debug_data': None
             }
         
+        # [QGA V24.7] 处理active_patterns（可能是包装字典）
+        patterns_list = active_patterns
+        base_vector_bias = None
+        geo_context_from_patterns = None
+        
+        if isinstance(active_patterns, dict) and 'patterns_list' in active_patterns:
+            # 提取patterns列表和元数据
+            patterns_list = active_patterns.get('patterns_list', [])
+            base_vector_bias = active_patterns.get('base_vector_bias')
+            geo_context_from_patterns = active_patterns.get('geo_context', '')
+            logger.debug(f"✅ 提取patterns列表: {len(patterns_list)}个格局, base_vector_bias={base_vector_bias is not None}")
+        elif isinstance(active_patterns, list):
+            # 如果是列表，直接使用
+            patterns_list = active_patterns
+            logger.debug(f"✅ 直接使用patterns列表: {len(patterns_list)}个格局")
+        
         # [QGA V24.4] 构建结构化JSON数据
         structured_data = self._build_structured_data(
-            active_patterns, synthesized_field, profile_name,
+            patterns_list, synthesized_field, profile_name,
             day_master, force_vectors, year, luck_pillar, year_pillar, geo_info
         )
+        
+        # [QGA V24.7] 如果有base_vector_bias，添加到structured_data中作为"底色"
+        if base_vector_bias:
+            structured_data['BaseVectorBias'] = base_vector_bias
+            logger.debug(f"✅ 添加BaseVectorBias到structured_data: {base_vector_bias}")
         
         # [QGA V24.4] 始终构建结构化数据，无论是否使用LLM
         # 这样即使LLM失败，也能看到发送的数据
@@ -270,12 +294,34 @@ class LLMSemanticSynthesizer:
             else:
                 response_text = str(response)
             
-            # 解析LLM返回
-            result = self._parse_structured_response(response_text, structured_data)
-            result['debug_data'] = structured_data
-            result['debug_prompt'] = prompt
-            result['debug_response'] = response_text
+            # [QGA V24.7] 使用LLM逻辑网关解析响应
+            original_elements = structured_data.get('RawElements', {})
+            # 转换为英文key用于LLMParser
+            element_map = {'金': 'metal', '木': 'wood', '水': 'water', '火': 'fire', '土': 'earth'}
+            original_elements_en = {}
+            for cn_name, val in original_elements.items():
+                if cn_name in element_map:
+                    original_elements_en[element_map[cn_name]] = val
             
+            # 转换为LLMParser需要的格式（中文key）
+            original_elements_for_parser = original_elements.copy()
+            
+            # 调用LLM逻辑网关
+            persona, calibration_en, debug_info = LLMParser.parse_llm_response(
+                response_text=response_text,
+                original_elements=original_elements_for_parser
+            )
+            
+            # 转换为内部格式
+            result = {
+                'persona': persona,
+                'element_calibration': calibration_en,  # 已经是英文key
+                'debug_data': structured_data,
+                'debug_prompt': prompt,
+                'debug_response': response_text,
+                'debug_parser_info': debug_info  # 新增：解析器调试信息
+            }
+
             return result
             
         except Exception as e:
@@ -313,32 +359,46 @@ class LLMSemanticSynthesizer:
         # 格式化JSON数据
         json_str = json.dumps(structured_data, ensure_ascii=False, indent=2)
         
-        # Few-shot示例
-        example = """
-【案例参考】
-输入：
-{
+        # [QGA V24.6] Few-shot示例 - 严格的纯JSON格式
+        example_input = """{
   "Context": {
     "Name": "测试案例",
-    "TimeSpace": "1993年 | 大运甲子 | 流年癸酉",
+    "TimeSpace": "1993年 | 大运甲子 | 流年癸酉 | 城市北京",
     "DayMaster": "丁火"
   },
   "ActivePatterns": [
     {
       "Name": "伤官见官",
       "Type": "Conflict",
+      "PriorityRank": 1,
       "Logic": "流年支酉金生旺伤官，直冲官星",
       "Strength": 0.92
     }
   ],
   "RawElements": { "金": 40, "木": 10, "水": 20, "火": 20, "土": 10 }
-}
-
-输出：
-核心矛盾：规则冲突。伤官见官格局导致权威与自由的撕裂，系统稳定性极低。
-五行修正：减金（官星受冲）-15%，加水（财通关）+10%，加木（印星制伤）+5%。
-修正后：{ "金": 25, "木": 15, "水": 30, "火": 20, "土": 10 }
-"""
+}"""
+        
+        example_output = """{"persona": "伤官见官格局在1993年北京（水地）环境下激化，权威与自由的冲突达到峰值，系统稳定性极低，需要财星通关化解。", "corrected_elements": {"金": 25, "木": 15, "水": 30, "火": 20, "土": 10}}"""
+        
+        example2_input = """{
+  "Context": {
+    "Name": "案例二",
+    "TimeSpace": "2025年 | 城市上海",
+    "DayMaster": "丙火"
+  },
+  "ActivePatterns": [
+    {
+      "Name": "从儿格",
+      "Type": "Special",
+      "PriorityRank": 1,
+      "Logic": "火土格局",
+      "Strength": 0.85
+    }
+  ],
+  "RawElements": { "金": 5, "木": 10, "水": 15, "火": 60, "土": 10 }
+}"""
+        
+        example2_output = """{"persona": "从儿格（火土）在2025年上海（火地）环境下得到充分激活，才华如等离子喷泉般喷发，但需注意过度消耗导致能量不稳定。", "corrected_elements": {"金": 5, "木": 8, "水": 12, "火": 65, "土": 10}}"""
         
         # [QGA V24.5] 提取最高优先级格局用于因果映射
         top_pattern = None
@@ -360,9 +420,54 @@ class LLMSemanticSynthesizer:
         elif '南方' in geo_info or 'fire' in geo_info.lower():
             geo_context = "南方/火地"
         
-        prompt = f"""你是一个QGA审计专家。请阅读提供的JSON数据，执行以下两步分析：
+        # [QGA V24.7] 针对特定格局+地理环境的因果映射修正
+        prompt_suffix = ""
+        if geo_context:
+            active_patterns_str = json.dumps(structured_data.get('ActivePatterns', []), ensure_ascii=False)
+            if "从儿格" in active_patterns_str or "CONG_ER_GE" in str(structured_data):
+                if "近水" in geo_context or "北方" in geo_context or "北京" in geo_context:
+                    prompt_suffix = f"""
+【特别因果映射规则 - 从儿格 + 近水/北方环境】
+- 物理逻辑：从儿格（等离子喷泉）在近水环境下遭遇极寒冷却，导致才华输出受阻。
+- 画像要求：必须体现"才华无法跨越地域寒气，导致产出受阻"这一物理过程。
+- 五行修正：火元素应该显著降低，水元素可能增强（但需要平衡）。
+"""
+            elif "食神制杀" in active_patterns_str or "SHI_SHEN_ZHI_SHA" in str(structured_data):
+                if "近水" in geo_context or "低层" in geo_context:
+                    prompt_suffix = f"""
+【特别因果映射规则 - 食神制杀 + 近水/低层环境】
+- 物理逻辑：近水环境增强了土元素的稳定性，但可能抑制食神的活力。
+- 画像要求：必须体现"过度的理智(水)淹没了表现力(火)"这一物理过程。
+"""
+            elif "枭神夺食" in active_patterns_str or "XIAO_SHEN_DUO_SHI" in str(structured_data):
+                if "近水" in geo_context or "北方" in geo_context or "北京" in geo_context:
+                    prompt_suffix = f"""
+【特别因果映射规则 - 枭神夺食 + 近水/北方环境】
+- 物理逻辑：水势作为燃料供给拦截器（木/枭），使得拦截力持续增强，导致生物能供给截断加剧。
+- 能量传导链：当前环境（水）正在作为燃料供给拦截器（木），请在画像中体现这种"助纣为虐"的逻辑。
+- 画像要求：必须包含"水势助长了印星的拦截力，使得原本枯竭的供给系统雪上加霜"这一物理过程。
+- 五行修正：火元素应该显著降低（食神被夺），水元素应该增强（拦截能量注入），土元素可能增强（财星通关）。
+"""
 
-{example}
+        prompt = f"""你是一个逻辑转换器。严禁输出任何分析过程、标题或解释性文字。仅允许输出纯JSON格式。
+
+【严格响应模版 (Template)】
+仅允许输出符合以下格式的JSON，不要带markdown代码块标记，不要带任何其他文字：
+{{"persona": "...", "corrected_elements": {{"金": XX, "木": XX, "水": XX, "火": XX, "土": XX}}}}
+
+【Few-Shot示例1】
+输入：
+{example_input}
+
+输出：
+{example_output}
+
+【Few-Shot示例2】
+输入：
+{example2_input}
+
+输出：
+{example2_output}
 
 ---
 
@@ -371,124 +476,51 @@ class LLMSemanticSynthesizer:
 
 ---
 
-【强制约束规则 (Constraint Rules)】
+【强制约束规则】
 
-1. **强制排序 (Strict Sorting)**: 
-   - 必须按照PriorityRank字段识别主导格局（PriorityRank=1为最高优先级）
-   - 如果PriorityRank不存在，则按Strength降序排列，取Strength最高的格局为主导
-   - 主导格局（Top 1）必须作为核心矛盾的主要来源
-   - 其他格局（Top 2-3）仅作为扰动因素
+1. **主导格局识别**: 
+   - 优先使用PriorityRank=1的格局，如无则选择Strength最高的格局
+   - 仅根据主导格局生成persona，忽略其他格局
 
-2. **非负约束 (Positive Only)**: 
-   - 五行修正后的结果严禁出现负数
-   - 若需扣减，最低限度为0（使用Math.max(0, value)逻辑）
-   - 所有五行值必须 >= 0
+2. **因果映射规则**:
+   - [从儿格（火土）] + [北方/北京/近水] -> "等离子喷泉遭遇极寒冷却，才华产出虽高但无法变现/受阻"
+   - [从儿格（火土）] + [南方/火地] -> "才华在火环境中得到充分激活，但需注意过度消耗"
+   - [食神制杀] + [近水环境] -> "过度的理智(水)淹没了表现力(火)，导致才华无法释放"
+   - [建禄月劫] + [近水] -> "水克火，导致热失控格局被抑制，但可能产生内部压力"
+   - [枭神夺食] + [北方/北京/近水] -> "水势助长了印星的拦截力，使得原本枯竭的供给系统雪上加霜"
 
-3. **因果映射表 (Hard-Mapping)**:
-   - 若 [食神制杀] + [近水环境] -> "过度的理智(水)淹没了表现力(火)，导致才华无法释放"
-   - 若 [从儿格] + [北方/北京] -> "才华无法跨越地域寒气，导致产出受阻，需要火元素激活"
-   - 若 [从儿格] + [南方/火地] -> "才华在火环境中得到激活，但需注意过度消耗"
-   - 若 [建禄月劫] + [近水] -> "水克火，导致热失控格局被抑制，但可能产生内部压力"
+{prompt_suffix}
 
-4. **输出规范**: 
-   - 必须返回纯JSON格式，严禁带"任务A/B"、"核心矛盾："等标题
-   - 格式：{{"persona": "...", "corrected_elements": {{"金": XX, "木": XX, "水": XX, "火": XX, "土": XX}}}}
+3. **五行修正规则**:
+   - 所有五行值必须 >= 0（负数自动设为0）
+   - 五行总和应接近原始总和（允许小幅波动）
+   - 仅在JSON的corrected_elements中输出纯数字，不要写算式或代码
+   - 如果提供了BaseVectorBias（初始物理偏差），你只需要在此基础上进行微调（±10%以内）
 
----
+4. **输出格式**: 
+   - 仅输出JSON，不要markdown代码块
+   - persona为一句完整的描述
+   - corrected_elements中的值必须是数字
 
-【任务A：逻辑归纳】
-第一步：找出PriorityRank=1的格局（或Strength最高的格局）作为主导格局。
-第二步：结合地理环境（{geo_context if geo_context else '当前环境'}），用一句话解释这个格局如何导致了命主在{structured_data.get('Context', {}).get('TimeSpace', '当前时空')}的不顺。
+{f"[提示：系统已计算初始物理偏差 {structured_data.get('BaseVectorBias', {})}，你只需在此基础上微调]" if structured_data.get('BaseVectorBias') else ""}
 
-【任务B：五行修正】
-基于主导格局和地理环境，请给出RawElements的修正百分比。
-规则：
-- 受克格局对应的五行必须扣减（但最低为0）
-- 救应格局对应的五行必须增加
-- 通关格局对应的五行必须增加
-- 所有修正后的值必须 >= 0
-
-【输出格式（纯JSON）】
-{{"persona": "[一句话描述，结合格局和地理环境]", "corrected_elements": {{"金": XX, "木": XX, "水": XX, "火": XX, "土": XX}}}}
+【请根据实际数据输出JSON】
 """
         return prompt
     
+    # [QGA V24.7] _parse_structured_response已被LLMParser替代
+    # 保留此方法作为向后兼容的回退方案
     def _parse_structured_response(self, response_text: str, structured_data: Dict) -> Dict[str, Any]:
         """
-        [QGA V24.4] 解析结构化响应
-        [QGA V24.5] 增强解析：支持纯JSON格式，添加非负约束验证
+        [DEPRECATED] 此方法已被LLMParser替代
+        保留作为向后兼容的回退方案
         """
-        import json
-        import re
-        
-        persona = ""
-        element_calibration = None
-        
-        # [QGA V24.5] 优先尝试解析纯JSON格式
-        try:
-            # 尝试提取JSON对象
-            json_match = re.search(r'\{[^{}]*"persona"[^{}]*"corrected_elements"[^{}]*\}', response_text, re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group(0))
-                persona = parsed.get('persona', '')
-                corrected_elements = parsed.get('corrected_elements', {})
-                
-                # [QGA V24.5] 应用非负约束
-                original = structured_data.get('RawElements', {})
-                element_map = {'金': 'metal', '木': 'wood', '水': 'water', '火': 'fire', '土': 'earth'}
-                calibration = {'metal': 0.0, 'wood': 0.0, 'water': 0.0, 'fire': 0.0, 'earth': 0.0}
-                
-                for cn_name, en_name in element_map.items():
-                    original_val = original.get(cn_name, 20.0)
-                    corrected_val = max(0.0, float(corrected_elements.get(cn_name, original_val)))  # 非负约束
-                    calibration[en_name] = corrected_val - original_val
-                
-                element_calibration = calibration
-        except Exception as e:
-            logger.debug(f"JSON格式解析失败，尝试旧格式: {e}")
-        
-        # 回退到旧格式解析
-        if not persona:
-            if "核心矛盾：" in response_text:
-                persona = response_text.split("核心矛盾：")[1].split("五行修正")[0].strip()
-            elif "核心矛盾" in response_text:
-                parts = response_text.split("核心矛盾")
-                if len(parts) > 1:
-                    persona = parts[1].split("五行修正")[0].strip().lstrip("：").lstrip(":")
-            
-            # 提取五行修正
-            if "修正后：" in response_text:
-                json_match = re.search(r'修正后：\s*(\{[^}]+\})', response_text)
-                if json_match:
-                    try:
-                        corrected = json.loads(json_match.group(1))
-                        # 计算偏移量
-                        original = structured_data.get('RawElements', {})
-                        element_map = {'金': 'metal', '木': 'wood', '水': 'water', '火': 'fire', '土': 'earth'}
-                        calibration = {'metal': 0.0, 'wood': 0.0, 'water': 0.0, 'fire': 0.0, 'earth': 0.0}
-                        
-                        for cn_name, en_name in element_map.items():
-                            original_val = original.get(cn_name, 20.0)
-                            corrected_val = max(0.0, float(corrected.get(cn_name, original_val)))  # [QGA V24.5] 非负约束
-                            calibration[en_name] = corrected_val - original_val
-                        
-                        element_calibration = calibration
-                    except Exception as e:
-                        logger.debug(f"解析五行修正失败: {e}")
-        
-        # 如果没有提取到，使用默认
-        if not persona:
-            persona = response_text[:300].strip()
-        
-        # [QGA V24.5] 最终验证：确保所有校准值都是合理的
-        if element_calibration:
-            for key, value in element_calibration.items():
-                if not isinstance(value, (int, float)) or value != value:  # 检查NaN
-                    element_calibration[key] = 0.0
+        original_elements = structured_data.get('RawElements', {})
+        persona, calibration, _ = LLMParser.parse_llm_response(response_text, original_elements)
         
         return {
             'persona': persona,
-            'element_calibration': element_calibration
+            'element_calibration': calibration
         }
     
     def _llm_synthesize(self, pattern_semantics: List[Dict],
@@ -554,6 +586,7 @@ class LLMSemanticSynthesizer:
                               year_pillar: str = None, geo_info: str = None) -> Dict[str, Any]:
         """
         [QGA V24.4] 构建结构化JSON数据协议
+        [QGA V24.7] 集成格局引擎，提取semantic_definition
         
         Returns:
             结构化的JSON数据字典
@@ -569,6 +602,18 @@ class LLMSemanticSynthesizer:
         if geo_info:
             timespace_parts.append(geo_info)
         timespace = " | ".join(timespace_parts) if timespace_parts else "原局"
+        
+        # [QGA V24.7] 识别地理环境
+        geo_context = ""
+        if '近水' in geo_info or 'water' in (geo_info or '').lower():
+            geo_context = "近水环境"
+        elif '北京' in geo_info or '北方' in geo_info:
+            geo_context = "北方/北京"
+        elif '南方' in geo_info or 'fire' in (geo_info or '').lower():
+            geo_context = "南方/火地"
+        
+        # [QGA V24.7] 从格局引擎注册表获取semantic_definition
+        pattern_registry = get_pattern_registry()
         
         # 构建激活格局列表（[QGA V24.5] 添加PriorityRank，按Strength降序排列）
         active_patterns_list = []
@@ -591,10 +636,31 @@ class LLMSemanticSynthesizer:
                 except (ValueError, TypeError):
                     default_strength = 0.5
             
+            pattern_name = pattern.get('name', '')
+            
+            # [QGA V24.7] 尝试从格局引擎获取semantic_definition
+            semantic_definition = pattern.get('matching_logic', '')[:100]  # 默认使用matching_logic
+            engine = pattern_registry.get_by_name(pattern_name)
+            if engine:
+                try:
+                    # 构造简化的match_result（实际应该使用真实的match_result）
+                    from core.models.pattern_engine import PatternMatchResult
+                    match_result = PatternMatchResult(
+                        matched=True,
+                        confidence=default_strength,
+                        match_data={},
+                        sai=pattern.get('sai', 0.0),
+                        stress=pattern.get('stress', 0.0)
+                    )
+                    semantic_definition = engine.semantic_definition(match_result, geo_context)
+                    logger.debug(f"✅ 从格局引擎获取semantic_definition: {pattern_name}")
+                except Exception as e:
+                    logger.warning(f"⚠️ 获取格局引擎semantic_definition失败 ({pattern_name}): {e}")
+            
             active_patterns_list.append({
-                "Name": pattern.get('name', ''),
+                "Name": pattern_name,
                 "Type": pattern_type,
-                "Logic": pattern.get('matching_logic', '')[:100],  # 限制长度
+                "Logic": semantic_definition,  # [QGA V24.7] 使用格局引擎的semantic_definition
                 "Strength": default_strength
             })
         
