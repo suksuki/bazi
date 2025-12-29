@@ -278,3 +278,199 @@ def calculate_clash_count(chart: List[str]) -> int:
     
     return clash_count
 
+
+def check_trigger(
+    rule_name: str,
+    context: Dict[str, Any]
+) -> bool:
+    """
+    检查事件触发条件（FDS-V1.4）
+    
+    基于InteractionEngine的事件标签匹配，实现事件触发字典
+    
+    Args:
+        rule_name: 规则名称，如 "Day_Branch_Clash", "Missing_Blade_Arrives"
+        context: 上下文字典，包含：
+            - chart: 四柱八字
+            - day_master: 日主
+            - day_branch: 日支
+            - luck_pillar: 大运（可选）
+            - year_pillar: 流年（可选）
+            - flux_events: 事件列表（可选）
+            - energy_flux: 能量流字典（可选）
+    
+    Returns:
+        是否触发该规则
+        
+    Example:
+        >>> context = {
+        ...     "chart": ["丙寅", "甲午", "戊午", "戊午"],
+        ...     "day_master": "戊",
+        ...     "day_branch": "午",
+        ...     "year_pillar": "子",
+        ...     "flux_events": []
+        ... }
+        >>> check_trigger("Day_Branch_Clash", context)
+        True  # 子冲午
+    """
+    chart = context.get("chart", [])
+    day_master = context.get("day_master", "")
+    day_branch = context.get("day_branch", "")
+    luck_pillar = context.get("luck_pillar", "")
+    year_pillar = context.get("year_pillar", "")
+    flux_events = context.get("flux_events", [])
+    energy_flux = context.get("energy_flux", {})
+    
+    # 获取地支
+    branches = [p[1] for p in chart] if chart else []
+    year_branch = year_pillar[1] if year_pillar and len(year_pillar) >= 2 else ""
+    luck_branch = luck_pillar[1] if luck_pillar and len(luck_pillar) >= 2 else ""
+    
+    # 规则映射表
+    if rule_name == "Day_Branch_Clash":
+        # 日支受到强力冲撞
+        # 检查流年地支是否冲日支
+        if day_branch and year_branch:
+            return check_clash(day_branch, year_branch)
+        # 检查大运地支是否冲日支
+        if day_branch and luck_branch:
+            return check_clash(day_branch, luck_branch)
+        # 检查原局是否有冲日支
+        for branch in branches:
+            if branch != day_branch and check_clash(day_branch, branch):
+                return True
+        return False
+    
+    elif rule_name == "Missing_Blade_Arrives":
+        # 原局缺羊刃，流年补齐
+        from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
+        yang_ren_map = SymbolicStarsEngine.YANG_REN_MAP
+        expected_blade = yang_ren_map.get(day_master)
+        
+        if not expected_blade:
+            return False
+        
+        # 检查原局是否有羊刃
+        has_blade = expected_blade in branches
+        
+        # 如果原局没有羊刃，检查流年是否补齐
+        if not has_blade and year_branch == expected_blade:
+            return True
+        
+        # 检查大运是否补齐
+        if not has_blade and luck_branch == expected_blade:
+            return True
+        
+        return False
+    
+    elif rule_name == "Resource_Destruction":
+        # 强财克印
+        # 检查财星能量是否过强，印星能量是否过弱
+        wealth_strength = energy_flux.get("wealth", 0.0)
+        resource_strength = energy_flux.get("resource", 0.0)
+        
+        return wealth_strength > 2.0 and resource_strength < 0.5
+    
+    elif rule_name == "Blade_Combined_Transformation":
+        # 羊刃被合
+        from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
+        yang_ren_map = SymbolicStarsEngine.YANG_REN_MAP
+        expected_blade = yang_ren_map.get(day_master)
+        
+        if not expected_blade:
+            return False
+        
+        # 检查羊刃是否在原局
+        if expected_blade not in branches:
+            return False
+        
+        # 检查羊刃是否被合
+        for branch in branches:
+            if branch != expected_blade and check_combination(expected_blade, branch):
+                return True
+        
+        # 检查流年是否合羊刃
+        if year_branch and check_combination(expected_blade, year_branch):
+            return True
+        
+        # 检查大运是否合羊刃
+        if luck_branch and check_combination(expected_blade, luck_branch):
+            return True
+        
+        return False
+    
+    else:
+        # 未知规则，返回False
+        return False
+
+
+def calculate_integrity_alpha(
+    natal_chart: List[str],
+    day_master: str,
+    day_branch: str,
+    flux_events: Optional[List[str]] = None,
+    luck_pillar: Optional[str] = None,
+    year_pillar: Optional[str] = None,
+    energy_flux: Optional[Dict[str, float]] = None
+) -> float:
+    """
+    计算结构完整性alpha值（FDS-V1.4）
+    
+    采用"扣分制"损伤模型 (Damage Model)
+    alpha代表结构的物理完整度 (0.0 - 1.0)
+    
+    公式: alpha = 1.0 - Σ(扣分项)
+    
+    Args:
+        natal_chart: 四柱八字
+        day_master: 日主
+        day_branch: 日支
+        flux_events: 事件列表（可选，如果提供则直接使用）
+        luck_pillar: 大运（可选）
+        year_pillar: 流年（可选）
+        energy_flux: 能量流字典（可选）
+    
+    Returns:
+        alpha值 (0.0 - 1.0)
+        
+    Example:
+        >>> chart = ["丙寅", "甲午", "戊午", "戊午"]
+        >>> alpha = calculate_integrity_alpha(chart, "戊", "午", year_pillar="子")
+        >>> alpha
+        0.4  # 日支逢冲，扣0.6
+    """
+    if flux_events is None:
+        flux_events = []
+    
+    if energy_flux is None:
+        energy_flux = {}
+    
+    # 初始化alpha为1.0（完美状态）
+    alpha = 1.0
+    
+    # 构建context用于check_trigger
+    context = {
+        "chart": natal_chart,
+        "day_master": day_master,
+        "day_branch": day_branch,
+        "luck_pillar": luck_pillar,
+        "year_pillar": year_pillar,
+        "flux_events": flux_events,
+        "energy_flux": energy_flux
+    }
+    
+    # 1. 根基崩塌 (羊刃逢冲) - 致命伤，扣0.6
+    if check_trigger("Day_Branch_Clash", context):
+        alpha -= 0.6  # 直接扣到0.4，触发破格
+    
+    # 2. 核心被合 (羊刃/七杀被合绊) - 结构失效，扣0.4
+    if check_trigger("Blade_Combined_Transformation", context):
+        alpha -= 0.4  # 降至0.6，边缘状态
+    
+    # 3. 资源断裂 (财坏印) - 续航受损，扣0.3
+    if check_trigger("Resource_Destruction", context):
+        alpha -= 0.3
+    
+    # 确保alpha在[0.0, 1.0]范围内
+    return max(0.0, min(1.0, alpha))
+

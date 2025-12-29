@@ -3,14 +3,15 @@
     "id": "HOLOGRAPHIC_PATTERN_REGISTRY",
     "name": "张量全息格局注册表",
     "name_en": "Tensor Holographic Pattern Registry",
-    "version": "1.0",
+    "version": "2.0",
     "created_at": "2025-12-29",
-    "description": "基于FDS-V1.1和QGA-HR V1.0规范的五维张量投影全息格局系统",
+    "updated_at": "2025-12-29",
+    "description": "基于FDS-V1.1和QGA-HR V2.0规范的五维张量投影全息格局系统",
     "total_patterns": 3,
     "specification": {
-      "qga_hr_version": "1.0",
+      "qga_hr_version": "2.0",
       "fds_version": "1.1",
-      "registry_standard": "QGA-HR V1.0"
+      "registry_standard": "QGA-HR V2.0"
     }
   },
   "theme": {
@@ -28,7 +29,7 @@
       "category": "A",
       "subject_id": "A-03",
       "icon": "⚔️",
-      "version": "1.0",
+      "version": "2.1",
       "active": true,
       "created_at": "2025-12-29",
       "description": "受控核聚变模型 - 高能等离子体（羊刃）被强磁场（七杀）完美约束，产生巨大的定向做功（贵气）",
@@ -42,6 +43,130 @@
           "七杀": "不仅是克身，在物理上是高强度的外部约束场，特性是压制、雕刻、强制收束",
           "架杀": "两者的结合不是简单的加减，而是一种受控核聚变状态"
         }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与转换逻辑 (FDS-V1.4 Kernel)",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.2,
+            "resource": 0.8,
+            "wealth": -0.5,
+            "output": -0.2,
+            "power": -0.1,
+            "description": "羊刃为基，印为源，财坏印为忌"
+          },
+          "O_row": {
+            "power": 0.9,
+            "parallel": 0.3,
+            "resource": 0.4,
+            "wealth": 0.0,
+            "output": 0.1,
+            "description": "七杀发生相变，转化为权力的主要来源"
+          },
+          "M_row": {
+            "wealth": 0.4,
+            "output": 0.3,
+            "parallel": -0.8,
+            "power": -0.2,
+            "resource": 0.0,
+            "description": "劫财过重，财富转化率低"
+          },
+          "S_row": {
+            "power": 0.3,
+            "wealth": 0.8,
+            "clash": 0.9,
+            "resource": -0.6,
+            "parallel": -0.4,
+            "description": "七杀虽制仍有余威，财党杀为最大风险"
+          },
+          "R_row": {
+            "output": 0.2,
+            "wealth": 0.2,
+            "combination": 0.8,
+            "power": 0.0,
+            "resource": 0.1,
+            "description": "高压结构下情感连接较弱"
+          }
+        },
+        "integrity_threshold": 0.45
+      },
+      "feature_anchors": {
+        "description": "基于大数据拟合算出的空间质心坐标 (The DNA of Fate)",
+        "standard_centroid": {
+          "description": "标准恒星锚点 (Tier A Mean) - 基于transfer_matrix计算",
+          "vector": {
+            "E": 0.2745,
+            "O": 0.4955,
+            "M": -0.0727,
+            "S": -0.1123,
+            "R": 0.0449
+          },
+          "match_threshold": 0.8,
+          "perfect_threshold": 0.92
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "A-03-X1",
+            "description": "A-03-X1质心 - 基于transfer_matrix计算",
+            "vector": {
+              "E": 0.0096,
+              "O": 0.6488,
+              "M": -0.1326,
+              "S": 0.1768,
+              "R": 0.0322
+            },
+            "match_threshold": 0.9,
+            "risk_level": "CRITICAL",
+            "special_instruction": "Enable Vent Logic (Disable Balance Check)",
+            "sample_count": 99
+          },
+          {
+            "sub_id": "A-03-X2",
+            "vector": {
+              "E": -0.0448,
+              "O": 0.5959,
+              "M": -0.1136,
+              "S": 0.2099,
+              "R": 0.0358
+            },
+            "sample_count": 1644,
+            "description": "A-03-X2质心 - 基于transfer_matrix计算",
+            "match_threshold": 0.9,
+            "risk_level": "CRITICAL"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "Step 4 定义的动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "Day_Branch_Clash",
+            "action": "Downgrade_Matrix",
+            "fallback_matrix": "Standard_Weak_Killings",
+            "description": "羊刃逢冲，根基动摇，七杀攻身，S轴爆炸。"
+          },
+          {
+            "trigger": "Resource_Destruction",
+            "action": "Damp_E_Axis",
+            "factor": 0.5,
+            "description": "强财克印，资源断裂，续航受损"
+          },
+          {
+            "trigger": "Blade_Combined_Transformation",
+            "action": "Downgrade_Matrix",
+            "fallback_matrix": "Standard_Weak_Killings",
+            "description": "羊刃被合化，结构失效"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Missing_Blade_Arrives",
+            "action": "Upgrade_Matrix",
+            "target_matrix": "A-03",
+            "validity": "Transient",
+            "description": "运至成格，瞬间获得 A-03 矩阵加持。"
+          }
+        ]
       },
       "tensor_operator": {
         "weights": {
@@ -110,10 +235,44 @@
             "function": "core.math_engine.phase_change_determination",
             "description": "判定是否触发奇点（TUNNELING/COLLAPSE/STABLE）"
           },
+          "tensor_similarity": {
+            "function": "core.math_engine.calculate_cosine_similarity",
+            "description": "计算5维能量矢量的余弦相似度，用于Step 6格局识别"
+          },
+          "tensor_projection": {
+            "function": "core.math_engine.project_tensor_with_matrix",
+            "description": "使用5x5转换矩阵计算五维投影（FDS-V1.4 V2.1）"
+          },
+          "integrity_alpha": {
+            "function": "core.physics_engine.calculate_integrity_alpha",
+            "description": "计算结构完整性alpha值（扣分制模型）"
+          },
+          "pattern_state_check": {
+            "function": "core.registry_loader.RegistryLoader._check_pattern_state",
+            "description": "检查成格/破格状态（FDS-V1.4）"
+          },
+          "event_trigger": {
+            "function": "core.physics_engine.check_trigger",
+            "description": "检查事件触发条件（Day_Branch_Clash等）"
+          },
           "registry_loader": {
             "class": "core.registry_loader.RegistryLoader",
             "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+          },
+          "paths": {
+            "tensor_projection": "core.math_engine.project_tensor_with_matrix",
+            "pattern_recognition": "core.registry_loader.RegistryLoader.pattern_recognition",
+            "integrity_alpha": "core.physics_engine.calculate_integrity_alpha",
+            "pattern_state_check": "core.registry_loader.RegistryLoader._check_pattern_state",
+            "event_trigger": "core.physics_engine.check_trigger"
           }
+        },
+        "paths": {
+          "tensor_projection": "core.math_engine.project_tensor_with_matrix",
+          "pattern_recognition": "core.registry_loader.RegistryLoader.pattern_recognition",
+          "integrity_alpha": "core.physics_engine.calculate_integrity_alpha",
+          "pattern_state_check": "core.registry_loader.RegistryLoader._check_pattern_state",
+          "event_trigger": "core.physics_engine.check_trigger"
         }
       },
       "kinetic_evolution": {
@@ -209,6 +368,26 @@
               "step4": "动态扩展与流年应力仿真（崩溃率36.86%）",
               "step5": "专题封卷与全息注册"
             }
+          },
+          {
+            "version": "2.0",
+            "date": "2025-12-29",
+            "source": "FDS-V1.1 Refit (V2.0 Alignment)",
+            "description": "重新拟合，计算质心锚点并更新feature_anchors",
+            "fds_steps": {
+              "step3": "计算质心（Tier A: 493, Tier X: 7）",
+              "step5": "更新feature_anchors到注册表"
+            }
+          },
+          {
+            "version": "2.0",
+            "date": "2025-12-29",
+            "source": "FDS-V1.1 Refit (V2.0 Alignment)",
+            "description": "重新拟合，计算质心锚点并更新feature_anchors",
+            "fds_steps": {
+              "step3": "计算质心（Tier A: 493, Tier X: 7）",
+              "step5": "更新feature_anchors到注册表"
+            }
           }
         ],
         "fds_fitting": {
@@ -274,7 +453,8 @@
         ]
       },
       "status": "✅ 已封卷 (Active)",
-      "last_updated": "2025-12-29"
+      "last_updated": "2025-12-29",
+      "updated_at": "2025-12-29"
     },
     "A-03-X1": {
       "id": "A-03-X1",

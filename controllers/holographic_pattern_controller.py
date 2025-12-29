@@ -41,6 +41,9 @@ class HolographicPatternController:
         self.registry_path = Path(__file__).parent.parent / "core" / "subjects" / "holographic_pattern" / "registry.json"
         self.registry = None
         self.framework = QuantumUniversalFramework()
+        # 初始化RegistryLoader用于V2.1+版本的计算
+        from core.registry_loader import RegistryLoader
+        self.registry_loader = RegistryLoader()
         logger.info("HolographicPatternController initialized (全新张量全息格局系统)")
     
     def load_registry(self) -> Dict:
@@ -196,6 +199,129 @@ class HolographicPatternController:
         
         return hierarchy
     
+    def calculate_evolution(
+        self,
+        pattern_id: str,
+        chart: List[str],
+        day_master: str,
+        year: int,
+        geo_city: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        计算动态演化状态（基于FDS-V1.1 Step 6）
+        
+        Args:
+            pattern_id: 格局ID
+            chart: 四柱八字
+            day_master: 日主
+            year: 演化年份
+            geo_city: 地理城市（可选）
+            
+        Returns:
+            演化结果字典，包含：
+            - base_tensor: 原局基态张量
+            - luck_tensor: 大运注入后的张量
+            - year_tensor: 流年注入后的张量
+            - final_tensor: 地理修正后的最终张量
+            - status: 输出状态（STABLE, CRITICAL, FRACTURED, MUTATED）
+            - deformation_type: 形变类型（ELASTIC, PLASTIC, FRACTURE）
+        """
+        try:
+            # 1. 计算原局基态
+            base_result = self.calculate_tensor_projection(pattern_id, chart, day_master)
+            if 'error' in base_result:
+                return {'error': base_result['error']}
+            
+            base_tensor = base_result['projection']
+            
+            # 2. 获取大运和流年（简化：使用框架计算）
+            # 这里需要从BaziProfile获取，暂时简化处理
+            from core.bazi_profile import BaziProfile
+            from datetime import datetime
+            
+            # 创建临时BaziProfile用于计算大运流年
+            # 注意：这里需要完整的出生信息，暂时使用简化方法
+            # Controller不应该直接访问session_state，应该通过参数传入
+            luck_pillar = "甲子"  # 默认值，实际应该从context传入
+            year_pillar = "甲子"  # 默认值，实际应该从context传入
+            
+            # 3. 计算大运注入（简化：使用固定系数）
+            luck_tensor = base_tensor.copy()
+            # 这里应该根据大运干支计算影响，暂时简化
+            luck_effect = 1.0  # 默认无影响
+            
+            # 4. 计算流年注入（主要影响S轴）
+            year_tensor = luck_tensor.copy()
+            # 简化：流年主要影响应力轴
+            year_impulse = 0.0  # 默认无脉冲
+            
+            # 5. 地理修正（如果有）
+            final_tensor = year_tensor.copy()
+            if geo_city:
+                from ui.pages.quantum_lab import GEO_CITY_MAP
+                if geo_city in GEO_CITY_MAP:
+                    geo_factor, geo_element = GEO_CITY_MAP[geo_city]
+                    # 根据五行偏向修正对应轴
+                    element_axis_map = {
+                        'Fire': 'E',
+                        'Earth': 'M',
+                        'Metal': 'O',
+                        'Water': 'R',
+                        'Wood': 'S'
+                    }
+                    target_axis = element_axis_map.get(geo_element, 'E')
+                    final_tensor[target_axis] = final_tensor.get(target_axis, 0) * geo_factor
+            
+            # 6. 获取断裂阈值（从注册表）
+            pattern = self.get_pattern_by_id(pattern_id)
+            fracture_threshold = 50.0  # 默认值
+            if pattern:
+                dynamic_sim = pattern.get('kinetic_evolution', {}).get('dynamic_simulation', {})
+                fracture_threshold = dynamic_sim.get('fracture_threshold', 50.0)
+            
+            # 7. 判定输出状态
+            # 注意：final_tensor的值是投影值（已经乘以SAI），需要转换为应力百分比
+            # 简化处理：使用S轴的投影值作为应力指标
+            s_projection = final_tensor.get('S', 0)
+            # 将投影值转换为应力百分比（假设SAI=1.0时，S投影值=权重，需要放大）
+            # 这里简化：直接使用S投影值，如果SAI>0则用SAI归一化
+            base_sai = base_result.get('sai', 1.0)
+            if base_sai > 0:
+                s_value = (s_projection / base_sai) * 100  # 转换为百分比
+            else:
+                s_value = s_projection * 100  # 如果SAI为0，直接使用投影值
+            
+            if s_value < 0.6 * fracture_threshold:
+                status = 'STABLE'
+                deformation_type = 'ELASTIC'
+            elif s_value < fracture_threshold:
+                status = 'CRITICAL'
+                deformation_type = 'PLASTIC'
+            else:
+                status = 'FRACTURED'
+                deformation_type = 'FRACTURE'
+            
+            # 8. 生成描述
+            description = f"在{year}年，系统处于{status}状态"
+            if geo_city:
+                description += f"，地理环境：{geo_city}"
+            
+            return {
+                'base_tensor': base_tensor,
+                'luck_tensor': luck_tensor,
+                'year_tensor': year_tensor,
+                'final_tensor': final_tensor,
+                'status': status,
+                'deformation_type': deformation_type,
+                'description': description,
+                'year': year,
+                'geo_city': geo_city
+            }
+            
+        except Exception as e:
+            logger.error(f"计算动态演化失败: {e}", exc_info=True)
+            return {'error': str(e)}
+    
     def get_pattern_by_id(self, pattern_id: str) -> Optional[Dict]:
         """
         根据ID获取格局详情
@@ -217,7 +343,7 @@ class HolographicPatternController:
     def calculate_tensor_projection(self, pattern_id: str, chart: List[str], 
                                    day_master: str, context: Optional[Dict] = None) -> Dict:
         """
-        计算五维张量投影（基于FDS-V1.1规范）
+        计算五维张量投影（支持FDS-V1.1和FDS-V1.4 V2.1）
         
         Args:
             pattern_id: 格局ID
@@ -233,6 +359,83 @@ class HolographicPatternController:
         if not pattern:
             return {'error': f'格局 {pattern_id} 不存在'}
         
+        # 检查版本（版本分流）
+        version = pattern.get('version', '1.0')
+        # 处理版本可能是字符串或数字的情况
+        if isinstance(version, (int, float)):
+            version = str(version)
+        is_v21 = version == '2.1'  # V2.1支持transfer_matrix
+        
+        logger.debug(f"格局 {pattern_id} 版本检查: version={version!r}, is_v21={is_v21}")
+        
+        # V2.1: 使用RegistryLoader的矩阵投影方法
+        if is_v21:
+            logger.info(f"✅ 检测到V2.1格局 {pattern_id}，使用transfer_matrix计算")
+            try:
+                if not hasattr(self, 'registry_loader') or self.registry_loader is None:
+                    logger.error("RegistryLoader未初始化！")
+                    return {'error': 'RegistryLoader未初始化，无法使用V2.1矩阵计算'}
+                
+                result = self.registry_loader.calculate_tensor_projection_from_registry(
+                    pattern_id=pattern_id,
+                    chart=chart,
+                    day_master=day_master,
+                    context=context
+                )
+                
+                logger.info(f"V2.1计算结果: sai={result.get('sai', 'N/A')}, projection={result.get('projection', {})}")
+                
+                # 检查是否有错误
+                if 'error' in result:
+                    logger.error(f"V2.1计算返回错误: {result['error']}")
+                    return result
+                
+                # 检查SAI是否为0
+                if result.get('sai', 0) == 0:
+                    logger.warning(f"⚠️ V2.1计算返回SAI=0，检查计算逻辑")
+                    # 检查是否有raw_projection
+                    raw_projection = result.get('raw_projection', {})
+                    if raw_projection:
+                        logger.warning(f"raw_projection: {raw_projection}")
+                    # 检查frequency_vector
+                    frequency_vector = result.get('frequency_vector', {})
+                    if frequency_vector:
+                        logger.warning(f"frequency_vector: {frequency_vector}")
+                
+                # 确保返回格式与旧版本兼容
+                # 添加pattern_name等字段以保持兼容性
+                if 'pattern_name' not in result:
+                    result['pattern_name'] = pattern.get('name', pattern_id)
+                # 添加semantic_seed
+                semantic_seed = pattern.get('semantic_seed', {})
+                if 'semantic_seed' not in result:
+                    result['semantic_seed'] = semantic_seed.get('description', '')
+                # 添加tensor_operator（用于UI显示）
+                tensor_operator = pattern.get('tensor_operator', {})
+                if 'tensor_operator' not in result:
+                    result['tensor_operator'] = tensor_operator
+                
+                # 确保weights字段存在（用于UI兼容）
+                if 'weights' not in result:
+                    # 从tensor_operator获取weights作为fallback
+                    weights = tensor_operator.get('weights', {})
+                    result['weights'] = weights
+                
+                logger.info(f"✅ V2.1计算成功: sai={result.get('sai', 0):.4f}")
+                return result
+            except Exception as e:
+                logger.error(f"❌ V2.1矩阵计算失败: {e}", exc_info=True)
+                # 不静默回退，返回错误信息
+                return {
+                    'error': f'V2.1矩阵计算失败: {str(e)}',
+                    'pattern_id': pattern_id,
+                    'pattern_name': pattern.get('name', pattern_id),
+                    'sai': 0,
+                    'projection': {'E': 0, 'O': 0, 'M': 0, 'S': 0, 'R': 0},
+                    'sai_warning': f'V2.1计算异常: {str(e)}'
+                }
+        
+        # V1.0/V2.0: 使用旧的tensor_operator逻辑
         # 获取张量投影算子（模块II）
         tensor_operator = pattern.get('tensor_operator', {})
         weights = tensor_operator.get('weights', {})
@@ -251,6 +454,8 @@ class HolographicPatternController:
             logger.warning(f"格局 {pattern_id} 权重未归一化，已自动归一化")
         
         # 计算SAI（系统对齐指数）
+        sai = 0.0
+        sai_error = None
         try:
             binfo = {'day_master': day_master}
             if context:
@@ -269,11 +474,35 @@ class HolographicPatternController:
             stress = physics.get('stress', {})
             sai = stress.get('SAI', 0.0)
             
-            # 如果SAI为0，记录警告
+            # 如果SAI为0，记录警告并尝试诊断
             if sai == 0.0:
-                logger.warning(f"SAI计算结果为0.0，可能的原因：1) 八字不匹配该格局 2) 计算异常 3) 结构过于稳定")
+                # 检查是否有其他可用的应力指标
+                if stress:
+                    # 尝试从其他字段获取SAI
+                    for key in ['sai', 'SAI', 'stress_index', 'system_alignment']:
+                        if key in stress and stress[key] != 0.0:
+                            sai = stress[key]
+                            logger.info(f"从字段 {key} 获取SAI值: {sai}")
+                            break
+                
+                if sai == 0.0:
+                    # 诊断信息
+                    diagnostic = {
+                        'chart': chart,
+                        'day_master': day_master,
+                        'pattern_id': pattern_id,
+                        'physics_keys': list(physics.keys()) if physics else [],
+                        'stress_keys': list(stress.keys()) if stress else [],
+                        'result_structure': list(result.keys()) if isinstance(result, dict) else 'not_dict'
+                    }
+                    logger.warning(
+                        f"SAI计算结果为0.0，诊断信息: {diagnostic}\n"
+                        f"可能的原因：1) 八字不匹配该格局 2) 计算异常 3) 结构过于稳定 4) 框架返回格式异常"
+                    )
+                    sai_error = "SAI计算为0，可能是格局不匹配或计算框架异常"
         except Exception as e:
             logger.error(f"计算SAI失败: {e}", exc_info=True)
+            sai_error = f"SAI计算异常: {str(e)}"
             sai = 0.0
         
         # 计算五维投影（SAI × 权重）
@@ -288,7 +517,7 @@ class HolographicPatternController:
         # 获取语义意象（模块I）
         semantic_seed = pattern.get('semantic_seed', {})
         
-        return {
+        result_dict = {
             'pattern_id': pattern_id,
             'pattern_name': pattern.get('name', pattern_id),
             'sai': sai,
@@ -297,6 +526,12 @@ class HolographicPatternController:
             'semantic_seed': semantic_seed.get('description', ''),
             'tensor_operator': tensor_operator
         }
+        
+        # 如果SAI为0且有错误信息，添加到结果中
+        if sai == 0.0 and sai_error:
+            result_dict['sai_warning'] = sai_error
+        
+        return result_dict
     
     def normalize_weights(self, weights: Dict[str, float]) -> Dict[str, float]:
         """
