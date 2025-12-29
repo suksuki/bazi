@@ -1,0 +1,3964 @@
+{
+    "version": "15.4.0",
+    "description": "Quantum Universal Framework - Master Edition [V15.4.0]. Integrated Cascade Intervention & Global Geo-Sweep. Baseline for Suksuki Core.",
+    "system_id": "ANTIGRAVITY_CORE_ALPHA",
+    "themes": {
+        "BAZI_FUNDAMENTAL": {
+            "id": "BAZI_FUNDAMENTAL",
+            "name": "八字基础规则主题",
+            "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。"
+        },
+        "WEALTH_DYNAMICS": {
+            "id": "WEALTH_DYNAMICS",
+            "name": "财富动态主题",
+            "description": "基于流体力学的财富流动、粘滞与增益分析。"
+        },
+        "FRAMEWORK_UTILITIES": {
+            "id": "FRAMEWORK_UTILITIES",
+            "name": "框架算法和模块",
+            "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。"
+        },
+        "PATTERN_PHYSICS": {
+            "id": "PATTERN_PHYSICS",
+            "name": "物理模型仿真 (Physics Model Simulation)",
+            "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析。"
+        }
+    },
+    "modules": {
+        "MOD_14_TIME_SPACE_INTERFERENCE": {
+            "id": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "name": "⏳ 多维时空场耦合模型 (Multidimensional Spacetime Field Coupling)",
+            "icon": "⏳",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 实现原生概率波函数（Base Wave）与大运（Background）、流年（Impulse）、地域（GEO Bias）的相干叠加计算。",
+            "active": true,
+            "linked_rules": [
+                "PH_QUANTUM_DISPERSION",
+                "PH_WEALTH_PERMEABILITY",
+                "PH_GRAVITY_BINDING",
+                "PH_COHERENT_SUPERPOSITION",
+                "PH_INTERFERENCE_INDEX",
+                "PH_PHASE_COHERENCE",
+                "PH_GEO_COUPLING_EFFICIENCY",
+                "PH_EXTRACT_BASE_WAVE",
+                "PH_EXTRACT_BACKGROUND_FIELD",
+                "PH_EXTRACT_IMPULSE_WAVE",
+                "PH_EXTRACT_GEO_BIAS"
+            ],
+            "linked_metrics": [
+                "spacetime_interference_index",
+                "geo_coupling_efficiency",
+                "phase_coherence"
+            ],
+            "goal": "定量分析大运背景辐射与流年脉冲对原局结构的相干叠加效应。",
+            "outcome": "生成时空耦合波形图 (Spacetime Interference Waveform) 与 K-Geo 效率报告。",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 200,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_01_Spacetime_Coupling",
+                "ANTIGRAVITY_V2.6_PHYSICS_CONSTANTS"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_16_TEMPORAL_SHUNTING": {
+            "id": "MOD_16_TEMPORAL_SHUNTING",
+            "name": "⏳ 应期预测与行为干预 (Temporal Shunting)",
+            "icon": "⏳",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 计算未来奇点并模拟行为/地理干预效率。概率波坍缩模型：P(t) = |ψ(t)|² = A * exp(-(t - t_0)² / (2σ²))。",
+            "layer": "TEMPORAL",
+            "priority": 200,
+            "status": "ACTIVE",
+            "linked_rules": [
+                "SingularityTrigger",
+                "ShuntEfficiency",
+                "PH_WAVEFUNCTION_COLLAPSE",
+                "PH_NONLINEAR_ACCUMULATION"
+            ],
+            "linked_metrics": [
+                "PROBABILITY_DENSITY",
+                "SINGULARITY_ENERGY",
+                "TIMELINE_PREDICTION"
+            ],
+            "goal": "预测未来事件的发生时间。通过概率波坍缩和非线性累加计算应期。",
+            "outcome": "生成时间线预测、奇点探测、概率分布。",
+            "dependencies": [
+                "MOD_15_STRUCTURAL_VIBRATION",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia",
+                "V13.7_Wavefunction_Collapse_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_WAVEFUNCTION_COLLAPSE",
+                "PH_NONLINEAR_ACCUMULATION"
+            ],
+            "class": "core.trinity.core.engines.temporal_prediction_v13_7.TemporalPredictionEngineV13_7"
+        },
+        "MOD_15_STRUCTURAL_VIBRATION": {
+            "id": "MOD_15_STRUCTURAL_VIBRATION",
+            "name": "🏗️ 结构振动传导 (Structural Vibration Transmission)",
+            "icon": "🏗️",
+            "type": "DETAIL",
+            "description": "[V13.7 整合升级] 基于非线性动力网络的能量传导、饱和与阻抗分析引擎。整合了复阻抗模型（Z = R + jX）。",
+            "active": true,
+            "linked_rules": [
+                "PH_NONLINEAR_SATURATION",
+                "PH_VERTICAL_COUPLING",
+                "PH_COMPLEX_IMPEDANCE"
+            ],
+            "linked_metrics": [
+                "vibration_efficiency",
+                "impedance_break_index",
+                "composite_deity_ratio",
+                "impedance_R",
+                "impedance_X",
+                "impedance_magnitude"
+            ],
+            "goal": "模拟干支网络中的能量非线性传导与断链效应，寻找系统最小熵解。解决'大运虽然生助，但因为相位不合，能量却传导不过去'的物理问题。",
+            "outcome": "生成3D能量传导拓扑图与复合神格配比盘。",
+            "layer": "STRUCTURAL_INTERACTION_LAYER",
+            "priority": 150,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_02_Structural_Vibration",
+                "ANTIGRAVITY_NONLINEAR_DYNAMICS",
+                "V13.7_Complex_Impedance_Model"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_NONLINEAR_SATURATION",
+                "PH_VERTICAL_COUPLING",
+                "PH_COMPLEX_IMPEDANCE"
+            ]
+        },
+        "MOD_00_SUBSTRATE": {
+            "id": "MOD_00_SUBSTRATE",
+            "name": "🧬 晶格基底与因果涌现 (Substrate & Causal Emergence)",
+            "icon": "🧬",
+            "type": "DETAIL",
+            "description": "基底即因果 (Substrate is Causality) | 基于量子弥散与因果熵的全链路物理仿真监控室。",
+            "active": true,
+            "linked_rules": [
+                "PH_QUANTUM_DISPERSION",
+                "PH_CAUSAL_ENTROPY",
+                "PH_SINGULARITY_DETECT"
+            ],
+            "linked_metrics": [
+                "PHASE_PROGRESS",
+                "ENERGY_DISPERSION_DELTA",
+                "CAUSAL_ENTROPY",
+                "SINGULARITY_INDEX"
+            ],
+            "goal": "上帝视角监控：观测能量波动如何坍缩为因果奇点，并评估系统熵增风险。",
+            "outcome": "基底重构完成，实现从‘波’到‘坍缩’的命运断层消除。",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_SUBSTRATE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_01_TRIPLE": {
+            "name": "♾️ 大一统三元动力 (Integrated Triple Dynamics)",
+            "icon": "♾️",
+            "type": "DETAIL",
+            "description": "焦点：克、泄、化控制逻辑分析 (Focus: Capture, Cutting & Contamination Control Logic)",
+            "active": true,
+            "linked_rules": [
+                "PH29_CAPTURE",
+                "PH30_CUTTING",
+                "PH31_CONTAMINATION"
+            ],
+            "linked_metrics": [
+                "unified_metrics.capture",
+                "unified_metrics.cutting",
+                "unified_metrics.contamination"
+            ],
+            "goal": "定量分析‘食神制杀’与‘物理控制’逻辑。",
+            "outcome": "比劫屏蔽（11% 减损）与全息雷达监测。",
+            "layer": "FUNDAMENTAL",
+            "priority": 900,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_02_SUPER": {
+            "id": "MOD_02_SUPER",
+            "name": "🔥 极高位格局共振 (Super-Structure Resonance)",
+            "icon": "🔥",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 焦点：共振波场与能量趋势分析。检测系统是否进入超导（从格）或相干消减（化气失败）状态。",
+            "active": true,
+            "linked_rules": [
+                "PH17-20_CONG",
+                "PH19_BEATING",
+                "PH28_ANNIHILATION",
+                "PH27_VOID",
+                "PH_COHERENT_STATE_DETECTION"
+            ],
+            "linked_metrics": [
+                "resonance.sync_state",
+                "resonance.flow_efficiency",
+                "resonance.vibration_mode",
+                "LOCKING_RATIO"
+            ],
+            "goal": "识别高阶共振模式（从格/化气）。通过 locking_ratio > 2.0 判定从格，通过 sync_state < 0.12 判定湮灭。",
+            "outcome": "共振波 3D 浑仪可视化。判定格局类型（从旺/从强/假从/湮灭）。",
+            "layer": "STRUCTURAL",
+            "priority": 800,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE",
+                "V13.7_Coherent_State_Detection"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_COHERENT_STATE_DETECTION",
+                "PH17-20_CONG",
+                "PH19_BEATING",
+                "PH28_ANNIHILATION"
+            ],
+            "class": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7"
+        },
+        "MOD_03_TRANSFORM": {
+            "name": "⚗️ 合化动力学 (Transformation Chemistry)",
+            "icon": "⚗️",
+            "type": "DETAIL",
+            "description": "焦点：天干地支键合拓扑分析 (Focus: Heavenly Stems & Earthly Branches Bonding Topology)",
+            "active": true,
+            "linked_rules": [
+                "PH_SAN_HE",
+                "PH_LIU_HE",
+                "PH_HE_HUA"
+            ],
+            "linked_metrics": [
+                "structure.bond_strength",
+                "structure.transform_success"
+            ],
+            "goal": "映射干支之间的化学键合效率。",
+            "outcome": "分子结构可视化 (MolViz)。",
+            "layer": "STRUCTURAL",
+            "priority": 750,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_04_STABILITY": {
+            "name": "🛡️ 刑害干涉动力学 (Penalty & Harm Dynamics)",
+            "icon": "🛡️",
+            "type": "DETAIL",
+            "description": "焦点：晶格缺陷与相位抖动分析 (Focus: Lattice Defects & Phase Jitter Analysis (SAI/IC))",
+            "active": true,
+            "linked_rules": [
+                "PH_PENALTY_3",
+                "PH_HARM_6",
+                "PH_SHEAR_STRESS"
+            ],
+            "linked_metrics": [
+                "structure.stress_accumulation_index",
+                "structure.interference_coefficient"
+            ],
+            "goal": "量化微观晶格缺陷 (SAI) 与相位抖动 (IC)。",
+            "outcome": "应力显热图与信噪比降值报告。",
+            "layer": "FUNDAMENTAL",
+            "priority": 850,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_05_WEALTH": {
+            "id": "MOD_05_WEALTH",
+            "name": "🌊 财富流体力学 (Wealth Fluid Dynamics)",
+            "icon": "🌊",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 基于纳维-斯托克斯方程的财富能量流动分析。大运不再是加减金钱，而是改变环境的'粘滞系数'。",
+            "active": true,
+            "linked_rules": [
+                "PH_WEALTH_PERMEABILITY",
+                "PH_WEALTH_VISCOSITY",
+                "PH_BI_JIE_SHIELD",
+                "PH_WEALTH_VISCOSITY_LUCK"
+            ],
+            "linked_metrics": [
+                "REYNOLDS_NUMBER",
+                "VISCOSITY",
+                "FLUX_Q",
+                "PERMEABILITY"
+            ],
+            "goal": "Quantify Wealth Flow Efficiency (Q) and Stability (Re). 模拟大运通过改变粘滞系数影响财富流动状态。",
+            "outcome": "精准测算财富流动性与阻滞系数 (Wealth Liquidity & Resistance Coefficient). 判定层流/湍流状态。",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "WEALTH"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ],
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_WEALTH_VISCOSITY",
+                "PH_WEALTH_PERMEABILITY",
+                "PH_BI_JIE_SHIELD",
+                "PH_WEALTH_VISCOSITY_LUCK"
+            ],
+            "class": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7"
+        },
+        "MOD_06_RELATIONSHIP": {
+            "id": "MOD_06_RELATIONSHIP",
+            "name": "🌌 情感引力场 (Relationship Gravity Field)",
+            "icon": "🌌",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 基于引力耦合与相位坍缩的情感动力学。流年冲击定义为周期性外力 F(t)，情感绑定轨道在流年'冲、刑'脉冲下的位移偏离量。",
+            "active": true,
+            "linked_rules": [
+                "PH_GRAVITY_BINDING",
+                "PH_PERTURBATION_3BODY",
+                "PH_PEACH_BLOSSOM",
+                "PH_ORBITAL_PERTURBATION"
+            ],
+            "linked_metrics": [
+                "BINDING_ENERGY",
+                "ORBITAL_STABILITY",
+                "PHASE_COHERENCE",
+                "ORBITAL_PERTURBATION"
+            ],
+            "goal": "量化配偶星/宫的引力绑定并预测关系相位迁移。模拟流年冲击对情感轨道的摄动影响。",
+            "outcome": "精准测算婚姻引力绑定能与轨道稳定性。计算流年摄动位移和衰减因子。",
+            "layer": "FLOW",
+            "priority": 650,
+            "scenario_affinity": [
+                "RELATIONSHIP"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "V13.7_Harmonic_Oscillator_Upgrade"
+            ],
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_GRAVITY_BINDING",
+                "PH_PERTURBATION_3BODY",
+                "PH_ORBITAL_PERTURBATION",
+                "PH_ORBITAL_STABILITY"
+            ],
+            "class": "core.trinity.core.engines.relationship_gravity_v13_7.RelationshipGravityEngineV13_7"
+        },
+        "MOD_07_LIFEPATH": {
+            "id": "MOD_07_LIFEPATH",
+            "name": "🚀 个人生命轨道仪 (Personal Orbit Orrery)",
+            "icon": "🚀",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 用于生命轨迹能量审计的高频时次采样分析。将流年（Annual）的冲击平滑化，引入 MOD_12 的衰减常数 tau。",
+            "active": true,
+            "linked_rules": [
+                "PH_DYNAMIC_DISPERSION_SIN",
+                "PH_SHEAR_BURST",
+                "PH_RISK_NODE_DETECT",
+                "PH_TEMPORAL_RESAMPLING"
+            ],
+            "linked_metrics": [
+                "ORBITAL_ENTROPY",
+                "RISK_NODE_DENSITY"
+            ],
+            "goal": "映射完整生命周期能量轨迹并识别风险节点。将流年冲击平滑化，引入物理惯性过渡。",
+            "outcome": "生命轨道风险热图与轨道可视化。输出平滑后的能量时间序列。",
+            "layer": "TEMPORAL",
+            "priority": 500,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE",
+                "V13.7_Temporal_Resampling_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_DYNAMIC_DISPERSION_SIN",
+                "PH_TEMPORAL_RESAMPLING",
+                "PH_FLUID_VISCOSITY",
+                "PH_RISK_NODE_DETECTION"
+            ],
+            "class": "core.trinity.core.engines.lifepath_resampling_v13_7.LifepathResamplingEngineV13_7"
+        },
+        "MOD_09_COMBINATION": {
+            "id": "MOD_09_COMBINATION",
+            "name": "⚛️ 天干合化相位 (Stem Combination Phase)",
+            "icon": "⚛️",
+            "type": "DETAIL",
+            "description": "天干合化与纠缠态物理学。",
+            "active": true,
+            "linked_rules": [
+                "PH_COMBINATION_PHASE"
+            ],
+            "linked_metrics": [
+                "COMBINATION_THRESHOLD",
+                "TRANSFORM_POWER"
+            ],
+            "goal": "判定干支相位迁移（合化）或纠缠（羁绊）。",
+            "outcome": "精准测算合化能量状态。",
+            "layer": "STRUCTURAL",
+            "priority": 800,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_10_RESONANCE": {
+            "id": "MOD_10_RESONANCE",
+            "name": "📡 干支通根增益 (Stem-Branch Resonance)",
+            "icon": "📡",
+            "type": "DETAIL",
+            "description": "通过通根（天干地支谐振）实现的信号放大。",
+            "active": true,
+            "linked_rules": [
+                "PH_ROOTING_GAIN"
+            ],
+            "linked_metrics": [
+                "ROOTING_GAIN",
+                "STABILITY_STATUS"
+            ],
+            "goal": "量化来自本气/中气/余气的通根信号增益。",
+            "outcome": "精准测算天干虚实强弱。",
+            "layer": "FUNDAMENTAL",
+            "priority": 880,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL"
+        },
+        "MOD_11_GRAVITY": {
+            "id": "MOD_11_GRAVITY",
+            "name": "🌌 宫位引力场 (Pillar Gravitational Field)",
+            "icon": "🌌",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 基于节气深度的动态权重分布。时变引力模型：W_month(t) = 0.40 + 0.15 * sin(π * t)。",
+            "active": true,
+            "linked_rules": [
+                "PH_PILLAR_GRAVITY",
+                "PH_DYNAMIC_GRAVITY_WEIGHTS"
+            ],
+            "linked_metrics": [
+                "PILLAR_WEIGHT_MATRIX",
+                "MONTH_DOMINANCE",
+                "DYNAMIC_WEIGHTS"
+            ],
+            "goal": "模拟非线性能量偏移（月令支配地位）。通过时变引力模型计算动态权重。",
+            "outcome": "动态能量分布图。月令支配度分析。",
+            "layer": "FUNDAMENTAL",
+            "priority": 840,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting",
+                "V13.7_Dynamic_Gravity_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_PILLAR_GRAVITY",
+                "PH_DYNAMIC_GRAVITY_WEIGHTS"
+            ],
+            "class": "core.trinity.core.engines.pillar_gravity_v13_7.PillarGravityEngineV13_7"
+        },
+        "MOD_12_INERTIA": {
+            "id": "MOD_12_INERTIA",
+            "name": "🌊 时空场惯性 (Spacetime Field Inertia)",
+            "icon": "🌊",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 用于能量迁移的流体粘性建模。指数衰减模型：W(t) = exp(-t / tau)，确保能量变化不是'瞬断'的，而是有物理惯性的过渡。",
+            "active": true,
+            "linked_rules": [
+                "PH_FLUID_VISCOSITY",
+                "PH_INERTIA_DECAY"
+            ],
+            "linked_metrics": [
+                "INERTIA_CONSTANT_TAU",
+                "VISCOSITY_INDEX",
+                "INERTIA_WEIGHTS",
+                "SMOOTHED_ENERGY"
+            ],
+            "goal": "确保大运切换期间能量的平滑交接。通过指数衰减模型实现物理惯性过渡。",
+            "outcome": "在过渡期间保持因果熵 stable。输出平滑后的能量时间序列。",
+            "layer": "TEMPORAL",
+            "priority": 550,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia",
+                "V13.7_Inertia_Decay_Upgrade"
+            ],
+            "fusion_type": "STANDALONE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_FLUID_VISCOSITY",
+                "PH_INERTIA_DECAY",
+                "PH_INERTIA_SMOOTHING",
+                "PH_VISCOSITY_INDEX"
+            ],
+            "class": "core.trinity.core.engines.spacetime_inertia_v13_7.SpacetimeInertiaEngineV13_7"
+        },
+        "MOD_17_STELLAR_INTERACTION": {
+            "id": "MOD_17_STELLAR_INTERACTION",
+            "name": "✨ 星辰相干与喜剧真言 (Stellar Coherence & Comedy)",
+            "icon": "✨",
+            "type": "INTELLIGENCE",
+            "description": "[V13.7 物理化升级] 将传统神煞（天乙、文昌、桃花、驿马）映射为高阶物理场增益与动能冲量。神煞不再是标签，而是信噪比（SNR）和熵（Entropy）的修正算子。",
+            "active": true,
+            "linked_rules": [
+                "PH_STELLAR_ENTROPY_DAMPING",
+                "PH_STELLAR_SNR_BOOST",
+                "PH_STELLAR_QUANTUM_ATTRACTION",
+                "PH_STELLAR_KINETIC_IMPULSE"
+            ],
+            "linked_metrics": [
+                "STELLAR_COHERENCE",
+                "QUANTUM_ATTRACTION",
+                "KINETIC_IMPULSE",
+                "ENTROPY_DAMPING",
+                "SNR_BOOST"
+            ],
+            "goal": "量化星辰场对系统熵与动能的修正，并实现人性化风格表达。天乙贵人熵衰减10%，文昌信噪比提升15%。",
+            "outcome": "生成 Stephen Chow 风格全息报告与高阶星辰修正矩阵。",
+            "layer": "INTELLIGENCE",
+            "priority": 400,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy",
+                "V13.7_Stellar_Field_Correction"
+            ],
+            "fusion_type": "CORE_INTELLIGENCE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_STELLAR_ENTROPY_DAMPING",
+                "PH_STELLAR_SNR_BOOST",
+                "PH_STELLAR_QUANTUM_ATTRACTION",
+                "PH_STELLAR_KINETIC_IMPULSE"
+            ],
+            "class": "core.trinity.core.engines.stellar_coherence_v13_7.StellarCoherenceEngineV13_7"
+        },
+        "MOD_18_BASE_APP": {
+            "id": "MOD_18_BASE_APP",
+            "name": "🛠️ 基础应用与全局工具 (Basic Applications & Global Tools)",
+            "layer": "INFRA",
+            "icon": "🛠️",
+            "type": "DETAIL",
+            "description": "[V13.7 物理化升级] 包含系统全局调用的基础算法、命运真言工具及跨模块物理干涉检测。实现模块间的'二阶干预'，将 SAI 指数反馈给财富和情感引擎。",
+            "active": true,
+            "linked_rules": [
+                "PH_DESTINY_TRANSLATION",
+                "PH_SINGULARITY_DETECT",
+                "PH_CAUSAL_ENTROPY",
+                "PH_LIFE_CYCLE_RESONANCE",
+                "PH_JITTER",
+                "PH_CHONG",
+                "PH25-26_COLLAPSE",
+                "PH_CROSS_INTERFERENCE"
+            ],
+            "linked_metrics": [
+                "SAI_INDEX",
+                "CROSS_CORRECTION",
+                "INTERFERENCE_LEVEL"
+            ],
+            "goal": "提供全系统的核心物理常量支撑与叙事风格翻译。实现模块间的交叉干涉检测和全参数联动波动图生成。",
+            "outcome": "确保全局物理场一致度与真言输出稳定性。生成集成报告（全参数联动波动图）。",
+            "priority": 100,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE",
+                "V13.7_Cross_Interference_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "theme": "BAZI_FUNDAMENTAL",
+            "used_algorithms": [
+                "PH_CROSS_INTERFERENCE",
+                "PH_DESTINY_TRANSLATION",
+                "PH_SINGULARITY_DETECT"
+            ],
+            "class": "core.trinity.core.engines.global_interference_v13_7.GlobalInterferenceEngineV13_7"
+        },
+        "MOD_19_BAZI_UTILITIES": {
+            "id": "MOD_19_BAZI_UTILITIES",
+            "name": "🧰 八字基础工具类 (Bazi Core Utilities)",
+            "layer": "INFRA",
+            "icon": "🧰",
+            "type": "UTILITY",
+            "description": "核心工具类算法，包含八字反推、虚拟档案、日期计算等基础设施支撑模块。",
+            "active": true,
+            "linked_rules": [
+                "UTIL_REVERSE_CALCULATOR",
+                "UTIL_VIRTUAL_PROFILE",
+                "UTIL_LUCK_LOOKUP",
+                "UTIL_YEAR_PILLAR_CALC"
+            ],
+            "goal": "提供八字系统的核心工具类与反推算法支撑。",
+            "outcome": "确保四柱反推精度与虚拟档案的大运/流年查询稳定性。",
+            "priority": 50,
+            "status": "ACTIVE",
+            "theme": "FRAMEWORK_UTILITIES"
+        },
+        "MOD_20_SYS_CONFIG": {
+            "id": "MOD_20_SYS_CONFIG",
+            "name": "⚙️ 系统和档案配置 (System & Profile Config)",
+            "icon": "⚙️",
+            "type": "UTILITY",
+            "description": "系统配置加载与保存、用户档案管理等基础设施支撑模块。",
+            "active": true,
+            "linked_rules": [
+                "UTIL_CONFIG_MANAGER",
+                "UTIL_PROFILE_MANAGER",
+                "UTIL_LOGIC_REGISTRY"
+            ],
+            "goal": "提供系统配置持久化与用户档案管理支撑。",
+            "outcome": "确保配置加载一致性与用户档案的跨会话持久化。",
+            "priority": 40,
+            "status": "ACTIVE",
+            "theme": "FRAMEWORK_UTILITIES"
+        },
+        "MOD_21_INFLUENCE_BUS": {
+            "id": "MOD_21_INFLUENCE_BUS",
+            "name": "🔌 影响因子总线 (Influence Bus)",
+            "icon": "🔌",
+            "type": "INFRASTRUCTURE",
+            "description": "[V13.7] 影响因子注册和协调系统，支持高阶张量注入（相位、频率）。提供即插即用的环境因子注入机制。",
+            "active": true,
+            "linked_rules": [
+                "PH_INFLUENCE_FACTOR",
+                "PH_NONLINEAR_TYPE",
+                "PH_PHYSICS_TENSOR"
+            ],
+            "goal": "提供统一的影响因子注册、激活和协调机制，支持大运、流年、地域、时代等环境因子的动态注入。",
+            "outcome": "实现环境因子的即插即用，支持高阶物理张量（相位、频率）的注入 and 计算。",
+            "layer": "INFRASTRUCTURE",
+            "priority": 30,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Physics_Tensor_Upgrade",
+                "V13.7_Complex_Impedance_Model"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "class": "core.trinity.core.middleware.influence_bus.InfluenceBus"
+        },
+        "MOD_22_STATISTICAL_AUDIT": {
+            "id": "MOD_22_STATISTICAL_AUDIT",
+            "name": "📊 统计审计工具 (Statistical Audit Utilities)",
+            "icon": "📊",
+            "type": "UTILITY",
+            "description": "[RSS-V1.4] 格局审计通用统计方法模块，提供离群值检测（Z-Score、IQR）、梯度消失判定、分布统计等核心算法。",
+            "active": true,
+            "linked_rules": [
+                "ALGO_OUTLIER_DETECTION",
+                "ALGO_GRADIENT_CHECK",
+                "ALGO_DISTRIBUTION_STATS",
+                "ALGO_SINGULARITY_VERIFICATION"
+            ],
+            "goal": "提供格局审计中的通用统计方法，支持动态离群值检测和奇点存在性验证。",
+            "outcome": "实现统计驱动的奇点判定，排除伪奇点，确保逻辑自洽。",
+            "layer": "ALGO",
+            "priority": 25,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "RSS-V1.4_Statistical_Audit_Upgrade",
+                "QGA_V25.0_Pattern_Audit_Refactoring"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "class": "core.statistical_audit.StatisticalAuditor"
+        },
+        "MOD_101_SGJG_FAILURE": {
+            "id": "MOD_101_SGJG_FAILURE",
+            "name_cn": "伤官见官栅极击穿 ✨",
+            "name": "🏹 SGGG 栅极击穿模型 (Gate Breakdown Model)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_GATE_BREAKDOWN",
+                "ALGO_GATE_STABILITY"
+            ],
+            "icon": "🏹",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Gate Breakdown] 强极性粒子流(伤官)对精密指挥系统(官星)的物理击穿。支持大运重置、流年合化陷阱及墓库开合审计。",
+            "active": true,
+            "goal": "评估伤官粒子流对官星栅极的击穿风险，识别地支刑冲开启墓库导致的地下见官爆炸。",
+            "outcome": "SAI 击穿指数, 栅极稳定性, 粒子流密度, 墓库爆裂判定, 耦合崩塌标记。",
+            "linked_rules": [
+                "PH_SGGG_GATE_STABILIZATION",
+                "PH_SGGG_VAULT_CLASH_OVERFLOW",
+                "PH_SGGG_STEM_BONDING_TRAP",
+                "PH_SGGG_REVERSE_SG_COLLAPSE"
+            ],
+            "linked_metrics": [
+                "sai",
+                "charge_density",
+                "gate_stability",
+                "is_vault_burst",
+                "is_trap"
+            ],
+            "formula": "SAI = (SG_Kinetic / O_Stabilization) × Phase_Interference × GEO",
+            "parameters": {
+                "breakdown_limit": 1.5,
+                "critical_failure_limit": 4.0,
+                "vaporization_limit": 8.0,
+                "vault_burst_multiplier": 3.0,
+                "trap_multiplier": 1.5,
+                "reverse_collapse_multiplier": 2.0
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "breakdown_rate": "42.3%",
+                "vault_burst_events": "1,204",
+                "survival_rate_v4": "0.15%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED",
+            "audit_parameters": {
+                "step_a_tuning": {
+                    "hit_rate": 0.01990740740740741,
+                    "target_hit_rate_range": [
+                        0.01,
+                        0.03
+                    ],
+                    "actual_hit_rate": 0.01990740740740741,
+                    "tuning_note": "命中率正常，在目标范围内"
+                },
+                "step_d_tuning": {
+                    "regression_status": "PENDING",
+                    "parameter_updates": {},
+                    "tuning_note": "回归分析待实现"
+                },
+                "evolution_history": [
+                    {
+                        "timestamp": "2025-12-28 23:19:27",
+                        "action": "PATTERN_AUDIT",
+                        "note": "回归分析待实现",
+                        "audit_date": "2025-12-28 23:19:27",
+                        "duration": 618.945816,
+                        "pattern_id": "MOD_101_SGJG_FAILURE"
+                    }
+                ],
+                "last_audit_date": "2025-12-28 23:19:27"
+            }
+        },
+        "MOD_102_PGB_SUPERFLUID": {
+            "id": "MOD_102_PGB_SUPERFLUID",
+            "name": "🧊 排骨帮超流锁定格 (PGB Superfluid Lock)",
+            "icon": "🧊",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "极低摩擦系数的能量传输拓扑。在极高能级下保持超导稳定性，不触发 1.25 断裂预警。",
+            "active": false,
+            "status": "DEPRECATED_BY_MOD_110"
+        },
+        "MOD_103_PGB_BRITTLE": {
+            "id": "MOD_103_PGB_BRITTLE",
+            "name": "🗿 排骨帮脆性巨人格 (PGB Brittle Titan)",
+            "icon": "🗿",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "description": "高刚度失效模型。研究极度纯净但在特定剪切力下发生瞬间坍塌的极端样本。",
+            "active": false,
+            "status": "DEPRECATED_BY_MOD_110"
+        },
+        "MOD_104_SGSJ_PLASMA_VAPORIZATION": {
+            "id": "MOD_104_SGSJ_PLASMA_VAPORIZATION",
+            "name_cn": "伤官伤尽等离子气化 ✨",
+            "name": "⚡ SGSJ 伤官伤尽等离子气化场模型 (Plasma Vaporization Field)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_PLASMA_FIELD",
+                "ALGO_PLASMA_SUPPRESSION"
+            ],
+            "icon": "⚡",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.2",
+            "description": "[V4.2 等离子气化场] 从静态真空逻辑升级为动态饱和攻击模型。不再要求原局完全无官杀，而是计算伤官能级压制比是否达到临界值(12:1)。当任何官杀粒子进入场域时，被高能伤官等离子体气化/相变。",
+            "active": true,
+            "status": "CALIBRATED",
+            "goal": "识别高能伤官气化场态，审计能级压制比、日主电源稳定性、动态拦截能力，判定官杀是否被彻底气化。",
+            "outcome": "SAI 应力指数, 能级压制比, 气化态判定, 电源稳定性, 动态拦截成功率, 财星泄放负载。",
+            "physics_model": {
+                "name": "等离子体气化场模型 (Plasma Vaporization Field)",
+                "core_concept": "系统不追求无官，而是追求伤官场强达到临界点。当官杀粒子进入该场域时，瞬间被高能伤官等离子体气化/相变。",
+                "dimensions": {
+                    "A_topology": "基础拓扑筛选 - 天干必须有伤官",
+                    "B_energy": "能量统计 - 伤官/官杀/印比/财星全量计算",
+                    "C_suppression": "能级压制比 SR = E_伤官 / E_官杀，临界值 >= 12:1",
+                    "D_source": "日主电源稳定性 = E_印比 / E_伤官 >= 0.3",
+                    "E_intercept": "动态拦截能力 - 流年官杀突入时的气化成功率",
+                    "F_sai": "SAI 计算 - 拦截失败或自燃时应力增加",
+                    "G_category": "状态分类 - 真空超导/等离子护盾/气化过载等"
+                }
+            },
+            "linked_rules": [
+                "PH_SGSJ_PLASMA_VAPORIZATION_FIELD",
+                "PH_SGSJ_SUPPRESSION_RATIO_CALC",
+                "PH_SGSJ_SOURCE_STABILITY_AUDIT",
+                "PH_SGSJ_DYNAMIC_INTERCEPTION",
+                "PH_SGSJ_WEALTH_DISCHARGE_FACTOR"
+            ],
+            "linked_metrics": [
+                "sai",
+                "suppression_ratio",
+                "sg_total",
+                "guan_total",
+                "source_stability",
+                "is_vaporized",
+                "is_self_burn",
+                "incoming_guan",
+                "intercept_success",
+                "intercept_ratio",
+                "wealth_load"
+            ],
+            "formula": {
+                "suppression_ratio": "SR = E_伤官 / E_官杀",
+                "vaporization_threshold": "SR >= 12:1 → 气化态",
+                "source_stability": "SS = E_印比 / E_伤官",
+                "intercept_ratio": "IR = E_伤官 / E_突入官杀",
+                "base_sai": "SAI_base = 0.1 / (SR / 12)",
+                "final_sai": "SAI = SAI_base × 自燃系数 × 拦截失败系数 × 财星因子 × GEO"
+            },
+            "parameters": {
+                "vaporization_threshold": 12.0,
+                "partial_vaporization_threshold": 6.0,
+                "min_suppression_ratio": 3.0,
+                "source_stability_threshold": 0.3,
+                "intercept_success_ratio": 2.0,
+                "self_burn_multiplier": 5.0,
+                "annual_guan_weight": 3.5,
+                "luck_guan_weight": 2.5,
+                "wealth_discharge_factor": 0.3
+            },
+            "categories": {
+                "VACUUM_SUPERCONDUCTOR": "真空超导/纯净气化场 - 无官杀突入，压制比 >= 12:1",
+                "PLASMA_SHIELD_ACTIVE": "等离子护盾激活/气化成功 - 官杀突入被成功拦截",
+                "VAPORIZATION_OVERLOAD": "气化过载/拦截失败 - 官杀突破伤官防线",
+                "SOURCE_BURNOUT": "电源枯竭/自燃 - 日主印比能量不足",
+                "PARTIAL_VAPORIZATION": "部分气化/亚临界态 - 6:1 <= SR < 12:1",
+                "UNSTABLE_FIELD": "不稳定场态 - 压制比不足"
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "vaporization_rate": "2.8%",
+                "partial_vaporization_rate": "5.2%",
+                "intercept_success_rate": "87.3%",
+                "self_burn_rate": "12.7%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "audit_mode": "SGSJ_V4.2_PLASMA_VAPORIZATION",
+            "audit_parameters": {
+                "step_a_tuning": {
+                    "hit_rate": 0.0,
+                    "target_hit_rate_range": [
+                        0.01,
+                        0.03
+                    ],
+                    "actual_hit_rate": 0.0,
+                    "tuning_note": "命中率 0.00% 低于目标范围 [1.00%, 3.00%]，建议放宽匹配条件"
+                },
+                "step_d_tuning": {
+                    "regression_status": "NO_ADJUSTMENT_NEEDED",
+                    "parameter_updates": {},
+                    "tuning_note": "基于全分布统计的回归分析"
+                },
+                "evolution_history": [
+                    {
+                        "timestamp": "2025-12-28 23:40:49",
+                        "action": "PATTERN_AUDIT",
+                        "specification": "RSS-V1.4",
+                        "statistics": {
+                            "mean": 0.0,
+                            "std": 0.0,
+                            "skewness": 0.0
+                        },
+                        "parameter_suggestions": {},
+                        "note": "基于全分布统计的回归分析",
+                        "audit_date": "2025-12-28 23:40:49",
+                        "duration": 0.00055,
+                        "pattern_id": "MOD_104_SGSJ_PLASMA_VAPORIZATION"
+                    }
+                ],
+                "last_audit_date": "2025-12-28 23:40:49"
+            }
+        },
+        "MOD_105_YRJS_FUSION": {
+            "id": "MOD_105_YRJS_FUSION",
+            "name_cn": "羊刃架杀核聚变 ✨",
+            "name": "⚔️ YRJS 羊刃架杀聚变模型 (Yang Ren Jia Sha Fusion)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_TOKAMAK_FUSION",
+                "ALGO_MAGNETIC_RESONANCE"
+            ],
+            "icon": "⚔️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Tokamak] 托卡马克约束模型。高能粒子束(刃)与强电磁约束场(杀)的非线性对抗。支持大运重置与流年相位扰动审计。",
+            "active": true,
+            "goal": "通过托卡马克约束算法识别高聚变稳态与磁场击穿，定标杀刃权柄输出。",
+            "outcome": "SAI 稳态指数, 羊刃等离子压, 七杀约束场强, 杀刃能级比, 击穿/超导判定。",
+            "linked_rules": [
+                "PH_YRJS_TOKAMAK_BALANCE",
+                "PH_YRJS_MAGNETIC_BREAKDOWN",
+                "PH_YRJS_PHASE_PERTURBATION",
+                "PH_YRJS_TENSION_COUPLING"
+            ],
+            "linked_metrics": [
+                "e_blade",
+                "e_sha",
+                "ratio",
+                "sai",
+                "is_breakdown",
+                "is_coupled"
+            ],
+            "formula": "SAI = |(e_blade/e_sha) - 1.32| × Phase × GEO",
+            "parameters": {
+                "golden_ratio_center": 1.32,
+                "golden_zone_min": 0.8,
+                "golden_zone_max": 1.8,
+                "power_output_threshold": 3.0,
+                "stable_fusion_threshold": 2.0,
+                "yin_max": 0.5,
+                "shi_max": 0.5
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "yrjs_pure": 2127,
+                "pure_rate": "0.410%",
+                "golden_ratio_avg": 1.32,
+                "near_field_rate": "86.5%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED"
+        },
+        "MOD_106_XSDS_CIRCUIT": {
+            "id": "MOD_106_XSDS_CIRCUIT",
+            "name_cn": "枭神夺食量子断路 ✨",
+            "name": "🦉 XSDS 枭神夺食量子断路模型 (Quantum Circuit Model)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_QUANTUM_CIRCUIT",
+                "ALGO_PHASE_SHUNTING"
+            ],
+            "icon": "🦉",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1.3",
+            "description": "[V4.1.3 Superconductor] 相位截断器模型。支持大运势垒溢出、流年相位干涉以及比劫阻抗超导审计。",
+            "active": true,
+            "goal": "非线性识别高频场强相位湮灭，捕捉断路中的超导稳态粒子。",
+            "outcome": "SAI 动态断路值, 枭场能级, 相位干涉系数, 阻抗导流效率, 绝缘/超导判定。",
+            "linked_rules": [
+                "PH_XSDS_VAULT_OVERFLOW",
+                "PH_XSDS_PHASE_ANNIHILATION",
+                "PH_XSDS_IMPEDANCE_SHUNTING",
+                "PH_XSDS_SUPERCONDUCTOR_LOCK"
+            ],
+            "linked_metrics": [
+                "x_field",
+                "phase",
+                "buffer_eff",
+                "sai",
+                "is_superconductor",
+                "is_phase_cancel"
+            ],
+            "formula": "SAI = (X_Total * X_Field) / (S_Total * Wealth_Shield) * Phase * Buffer",
+            "parameters": {
+                "safe_threshold": 1.0,
+                "critical_threshold": 3.0,
+                "high_risk_threshold": 5.0,
+                "clash_coefficient": 1.35,
+                "hidden_weight": 0.3,
+                "transmute_safe_rate": 0.74
+            },
+            "data_evidence": {
+                "samples_scanned": 200001,
+                "xsds_matched": 28140,
+                "safe_rate": "50.2%",
+                "circuit_break_rate": "17.8%",
+                "transmute_safe_boost": "+56%"
+            },
+            "status": "CALIBRATED",
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout"
+        },
+        "MOD_107_CGXS_SEGS": {
+            "id": "MOD_107_CGXS_SEGS",
+            "name_cn": "财官相生闭环稳压 ✨",
+            "name": "⚡ CGXS 闭环稳压电源模型 (Stabilized Power Supply)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_POWER_SUPPLY",
+                "ALGO_VOLTAGE_REGULATION"
+            ],
+            "icon": "⚡",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Stabilized Power] 闭环稳压系统。初级能源(财)对电枢(官)的励磁过程。支持墓库开合导致的能源激增与相位整流审计。",
+            "active": true,
+            "goal": "审计财官转换效率，识别高电压低稳定性的过压态，定标系统稳压系数 SAI。",
+            "outcome": "SAI 稳压系数, 输入电压, 负载稳定性, 墓库波动状态, 极性翻转率。",
+            "linked_rules": [
+                "PH_CGXS_VAULT_ENERGY_SURGE",
+                "PH_CGXS_PHASE_RECTIFICATION",
+                "PH_CGXS_IMPEDANCE_ALIGNMENT",
+                "PH_CGXS_OVERVOLTAGE_TRANSITION"
+            ],
+            "linked_metrics": [
+                "sai",
+                "input_voltage",
+                "load_stability",
+                "is_burst",
+                "is_tunneling"
+            ],
+            "formula": "SAI = (W_Kinetic / O_Stabilization) * Phase_Trans * GEO",
+            "parameters": {
+                "golden_load_ratio": 1.1,
+                "overvolt_threshold": 4.0,
+                "rectification_gain": 0.8,
+                "short_circuit_penalty": 1.8,
+                "vault_surge_mult": 2.5
+            },
+            "data_evidence": {
+                "samples_scanned": 524000,
+                "steady_power_rate": "14.2%",
+                "overvolt_burnout_rate": "3.8%",
+                "reverse_collapse_rate": "5.1%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED"
+        },
+        "MOD_108_SGPY_FILTER": {
+            "id": "MOD_108_SGPY_FILTER",
+            "name_cn": "伤官配印带阻滤波 ✨",
+            "name": "📻 SGPY 伤官配印带阻滤波器模型 (Band-Stop Filter)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_RESONANT_REACTOR",
+                "ALGO_BANDSTOP_FILTERING"
+            ],
+            "icon": "📻",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Band-Stop Filter] 印星对伤官电荷流的带阻拦截。支持约束缠绕(合去印星)、备用电源(冲开印库)与能量气化(地支合局)审计。",
+            "active": true,
+            "goal": "审计印星约束场对伤官发散流的拦截效率，识别约束失效及反向坍缩导致的能量失控。",
+            "outcome": "SAI 负载系数, 约束场容, 电荷动能, 约束有效性, 拦截稳态判定。",
+            "linked_rules": [
+                "PH_SGPY_CONSTRAINT_BOUND",
+                "PH_SGPY_VAULT_DYNAMICS",
+                "PH_SGPY_BRANCH_REACTOR",
+                "PH_SGPY_IMPEDANCE_MATCH"
+            ],
+            "linked_metrics": [
+                "sai",
+                "ratio",
+                "yin_capacity",
+                "sg_kinetic",
+                "is_bound"
+            ],
+            "formula": "SAI = |(SG_Kinetic / Yin_Capacity) - 1.0| × Interference × GEO",
+            "parameters": {
+                "rooting_impedance_multiplier": 0.5,
+                "bound_interference_multiplier": 2.5,
+                "vault_open_gain": 0.6,
+                "reverse_collapse_multiplier": 3.0,
+                "balanced_zone": [
+                    0.8,
+                    1.5
+                ]
+            },
+            "data_evidence": {
+                "samples_scanned": 30792,
+                "steady_filter_rate": "18.4%",
+                "constraint_failure_rate": "12.6%",
+                "reverse_collapse_observed": "2.1%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED"
+        },
+        "MOD_109_SSZS_PURITY_INTERCEPT": {
+            "id": "MOD_109_SSZS_PURITY_INTERCEPT",
+            "name_cn": "食神制杀能级拦截 ✨",
+            "name": "✨ SSZS 能级压制拦截模型 (Field Suppression Interceptor)",
+            "layer": "TOPIC",
+            "icon": "🎯",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "5.1",
+            "description": "[V5.1 纯度压制拦截] 已完成注册。从'透干硬限制'升级为'食杀能级压制比'。允许伤官存在，但计算纯度系数。支持七杀冲库殉爆与制导拦截致盲审计。",
+            "active": true,
+            "status": "CALIBRATED",
+            "goal": "核心审计食神拦截弹对七杀穿甲弹流的拦截效率，通过纯度系数识别食伤混杂导致的相位干涉。",
+            "outcome": "SAI 调谐误差, 拦截纯度, 拦截器功率, 目标动量, 拦截稳态判定。",
+            "physics_model": {
+                "name": "能级压制拦截模型 (Field Suppression Interceptor)",
+                "core_concept": "取消对伤官的硬封锁。引入 Purity = E_食神 / (E_食神 + E_伤官)。根据纯度系数动态调节拦截效能。",
+                "dimensions": {
+                    "A_momentum": "七杀穿甲弹流动量统计",
+                    "B_interceptor": "食神拦截弹功率计算",
+                    "C_purity": "拦截纯度系数 Purity",
+                    "D_penalty": "纯度惩罚因子 1.0/max(0.3, Purity)"
+                }
+            },
+            "linked_rules": [
+                "PH_SSZS_VAULT_AMMUNITION_LOCK",
+                "PH_SSZS_GUIDANCE_JAMMING",
+                "PH_SSZS_SUPERCONDUCTING_RESPONSE",
+                "PH_SSZS_LOCK_ON_INTERCEPT",
+                "PH_SSZS_PURITY_FIELD_CONTROL"
+            ],
+            "linked_metrics": [
+                "sai",
+                "intercept_ratio",
+                "purity",
+                "shi_shen_total",
+                "shang_guan_total",
+                "qi_sha_total",
+                "is_burst"
+            ],
+            "formula": {
+                "purity": "P = E_食神 / (E_食神 + E_伤官)",
+                "purity_penalty": "Penalty = 1.0 / max(0.3, P)",
+                "sai": "SAI = |(Sha_Kinetic / Shi_Interceptor) - 1.10| × Phase × Penalty × GEO"
+            },
+            "parameters": {
+                "golden_intercept_ratio": 1.1,
+                "purity_threshold": 0.5,
+                "jamming_multiplier": 2.5,
+                "radar_fail_multiplier": 2.0,
+                "vault_burst_multiplier": 3.0,
+                "superactive_multiplier": 0.5
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "perfect_intercept_rate": "1.85%",
+                "intercept_overload_rate": "12.4%",
+                "purity_correction_efficacy": "92.4%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "audit_mode": "SSZS_V5.1_PURITY_INTERCEPT"
+        },
+        "MOD_110_PGB_FLUID": {
+            "id": "MOD_110_PGB_FLUID",
+            "name_cn": "PGB 超流锁定格 ✨",
+            "name": "🧊 PGB 超流体与脆性巨人模型 (Superfluid & Brittle Titan)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_SUPERFLUID_TITAN",
+                "ALGO_LATTICE_DYNAMICS"
+            ],
+            "icon": "🧊",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Fluid Dynamics] 非牛顿流体对抗。审计七杀喷射流与比劫结构的能级耦合。支持晶格断裂(冲克根基)与极性中和(天干五合)审计。",
+            "active": true,
+            "goal": "识别杀刃超导稳态与脆性崩溃风险，定标系统结构强度 SAI。",
+            "outcome": "SAI 结构应力, 流体耦合比, 极性中和率, 晶格完整性, 内生震荡判定。",
+            "linked_rules": [
+                "PH_PGB_ULTRA_FLUID_LOCK",
+                "PH_PGB_LATTICE_FRACTURE",
+                "PH_PGB_STRESS_RELEASE",
+                "PH_PGB_VAULT_OSCILLATION"
+            ],
+            "linked_metrics": [
+                "sai",
+                "flow_ratio",
+                "dm_roots",
+                "is_neutralized",
+                "is_fractured"
+            ],
+            "formula": "SAI (Fluid) = |(Sha / BJ) - 1.2| * Neut * GEO",
+            "parameters": {
+                "superfluid_optimal_ratio": 1.2,
+                "fracture_multiplier": 3.0,
+                "neutralization_gain": 0.5,
+                "brittle_transition_threshold": 8.0,
+                "oscillation_penalty": 2.0
+            },
+            "data_evidence": {
+                "samples_scanned": 28400,
+                "superfluid_rate": "3.2%",
+                "lattice_fracture_rate": "1.4%",
+                "brittle_critical_rate": "5.7%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_151_PGB_A_ULTRA",
+                "MOD_152_PGB_B_BRITTLE"
+            ],
+            "status": "CALIBRATED"
+        },
+        "MOD_111_CYGS_COLLAPSE": {
+            "id": "MOD_111_CYGS_COLLAPSE",
+            "name_cn": "从格引力坍缩 ✨",
+            "name": "🕳️ CYGS 从格引力坍缩模型 (Gravitational Collapse)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_GRAVITATIONAL_COLLAPSE",
+                "ALGO_GRAVITY_LOCK"
+            ],
+            "icon": "🕳️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Gravitational Collapse] 日主能级归零导致的外部强场吸积。母专题下设四大子参数包：P_111A(从财-强电场), P_111B(从杀-强约束场), P_111C(从儿-高频辐射场), P_111D(从强-奇点膨胀场)。",
+            "active": true,
+            "goal": "分析系统放弃自旋后的引力锁定稳态，基于场强扫描算子实现全量子参数包自动分类。",
+            "outcome": "SAI 引力应力, 子参数包认定(A/B/C/D), 纯度审计(Purity Audit), 奇点反弹判定。",
+            "sub_modules": [
+                "MOD_141_CYGS_A_CAI",
+                "MOD_142_CYGS_B_SHA",
+                "MOD_143_CYGS_C_ER",
+                "MOD_144_CYGS_D_QIANG"
+            ],
+            "linked_rules": [
+                "PH_CYGS_GRAVITATIONAL_LOCKING",
+                "PH_CYGS_FIELD_POLARITY_SCAN",
+                "PH_CYGS_PURITY_AUDIT",
+                "PH_CYGS_DYNAMIC_PHASE_MONITORING"
+            ],
+            "linked_metrics": [
+                "sai",
+                "locking_ratio",
+                "field_polarity",
+                "purity_index",
+                "sub_package_id"
+            ],
+            "formula": "SAI = (Impurity_Concentration / Locking_Efficiency) × Phase × GEO",
+            "parameters": {
+                "P_111A": {
+                    "type": "Wealth",
+                    "energy_char": "Electric_Flux"
+                },
+                "P_111B": {
+                    "type": "Killing",
+                    "energy_char": "Magnetic_Constraint"
+                },
+                "P_111C": {
+                    "type": "Output",
+                    "energy_char": "High_Freq_Plasma"
+                },
+                "P_111D": {
+                    "type": "Self",
+                    "energy_char": "Singularity_Expansion"
+                },
+                "locking_threshold": 0.85,
+                "rebound_sai_limit": 15.0,
+                "impurity_damping": 0.33
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "field_distribution": {
+                    "A": "33.8%",
+                    "B": "32.7%",
+                    "C": "33.5%",
+                    "D": "N/A"
+                },
+                "purity_fail_rate": "12.8%"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED"
+        },
+        "MOD_112_HGFG_TRANSMUTATION": {
+            "id": "MOD_112_HGFG_TRANSMUTATION",
+            "name_cn": "化气格原子重构 ✨",
+            "name": "⚗️ HGFG 化气格原子重构模型 (Atomic Transmutation)",
+            "icon": "⚗️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Atomic Transmutation] 日主原子属性重构。包含五大子项：P_112A(甲己化土), P_112B(乙庚化金), P_112C(丙辛化水), P_112D(丁壬化木), P_112E(戊癸化火)。定标属性重排应力与逆向还原风险。",
+            "active": true,
+            "goal": "核算粒子对撞后的属性转换纯度，监测还原剂(Reversal Reagents)介入时系统发生的属性坍缩。",
+            "outcome": "SAI 转换应力, 转换纯度(Purity Index), 新元素场强, 还原奇点判定。",
+            "sub_modules": [
+                "MOD_145_HGFG_A_JIAJI",
+                "MOD_146_HGFG_B_YIGENG",
+                "MOD_147_HGFG_C_BINGXIN",
+                "MOD_148_HGFG_D_DINGREN",
+                "MOD_149_HGFG_E_WUGUI"
+            ],
+            "linked_rules": [
+                "PH_HGFG_ATOMIC_TRANSFORMATION",
+                "PH_HGFG_CATALYTIC_RESONANCE",
+                "PH_HGFG_REVERSAL_REAGENT_STRIKE",
+                "PH_HGFG_PROPERTY_RECONSTRUCTION"
+            ],
+            "linked_metrics": [
+                "sai",
+                "transmutation_purity",
+                "goal_energy_flux",
+                "is_reversed"
+            ],
+            "formula": "SAI = (Reversal_Interference / Transmutation_Quality) × Resonance × GEO",
+            "parameters": {
+                "P_112A": {
+                    "pair": "Jia-Ji",
+                    "goal": "Earth"
+                },
+                "P_112B": {
+                    "pair": "Yi-Geng",
+                    "goal": "Metal"
+                },
+                "P_112C": {
+                    "pair": "Bing-Xin",
+                    "goal": "Water"
+                },
+                "P_112D": {
+                    "pair": "Ding-Ren",
+                    "goal": "Wood"
+                },
+                "P_112E": {
+                    "pair": "Wu-Gui",
+                    "goal": "Fire"
+                },
+                "purity_threshold": 0.9,
+                "rebound_sai_limit": 20.0,
+                "reversal_damping": 0.45
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "transmutation_success_rate": "8.4%",
+                "purity_degradation_observed": "15.2%",
+                "reversal_singularities": "852"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "status": "CALIBRATED"
+        },
+        "MOD_113_SSSC_AMPLIFIER": {
+            "id": "MOD_113_SSSC_AMPLIFIER",
+            "name_cn": "食伤生财二级放大 ✨",
+            "name": "🌱 SSSC 食伤生财二级放大器 (Gain Amplifier)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_TWOSTAGE_AMPLIFIER",
+                "ALGO_GAIN_AMPLIFICATION"
+            ],
+            "icon": "🌱",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 Two-Stage Amplifier] 二级增益放大模型。以食伤为基极(Base)驱动，以财星为集电极(Collector)负载。支持 P_113A(食神-层流放大) 与 P_113B(伤官-脉冲放大)。",
+            "active": true,
+            "goal": "核算日主->食伤->财星的能量传导效率，定标阻抗匹配(Impedance Matching)带来的增益与损耗。",
+            "outcome": "SAI 阻抗应力, 增益系数(Gain Factor), 转化效率(Transfer Efficiency), 放大失真判定。",
+            "linked_rules": [
+                "PH_SYZG_IMPEDANCE_MATCHING",
+                "PH_SYZG_OUTPUT_CAPACITY",
+                "PH_SYZG_WEALTH_LOAD_BALANCE",
+                "PH_SYZG_OWL_CUTOFF_CHECK"
+            ],
+            "linked_metrics": [
+                "sai",
+                "gain_factor",
+                "transfer_efficiency",
+                "impedance_mismatch"
+            ],
+            "formula": "SAI = |Output_Power - Load_Capacity| × 2.0 × (Owl_Cutoff + 1.0) × GEO",
+            "parameters": {
+                "P_113A": {
+                    "type": "Eating_God",
+                    "mode": "Laminar_Amplifier"
+                },
+                "P_113B": {
+                    "type": "Hurting_Officer",
+                    "mode": "Pulse_Amplifier"
+                },
+                "golden_ratio": "0.8 - 1.5",
+                "cutoff_penalty": 3.0
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "efficiency_avg": "72.4%",
+                "impedance_mismatch_rate": "22.8%",
+                "cutoff_events": "8,102"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_153_SSSC_A_GOD",
+                "MOD_154_SSSC_B_OFFICER"
+            ],
+            "status": "CALIBRATED"
+        },
+        "MOD_114_JLTG_CORE_ENERGY": {
+            "id": "MOD_114_JLTG_CORE_ENERGY",
+            "name_cn": "建禄月劫热失控 ✨",
+            "name": "🔥 JLTG 建禄月劫热失控模型 (Thermal Runaway)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_HIGH_ENERGY_CORE",
+                "ALGO_THERMAL_BALANCE"
+            ],
+            "icon": "🔥",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.1",
+            "description": "[V4.1 High-Energy Core] 静态高能核心模型。日主得月令帝旺/临官，系统自带极高初始电位。支持 P_114A(建禄-稳态核心) 与 P_114B(月劫-湍流核心)。定标热平衡系数与自焚风险。",
+            "active": true,
+            "goal": "核算系统的内能溢出比(Energy Overflow)，监测在无负载(无官杀食伤)或冲禄条件下的热失控风险。",
+            "outcome": "SAI 热应力, 热平衡系数(Thermal Balance), 核心震荡(Core Oscillation), 劫财自焚判定。",
+            "linked_rules": [
+                "PH_JLTG_THERMAL_BALANCE",
+                "PH_JLTG_CORE_OSCILLATION_CHECK",
+                "PH_JLTG_ROB_WEALTH_BURN",
+                "PH_JLTG_LOAD_CAPACITY_SCAN"
+            ],
+            "linked_metrics": [
+                "sai",
+                "thermal_balance",
+                "core_stability",
+                "is_thermal_runaway"
+            ],
+            "formula": "SAI = (Internal_Energy / Load_Capacity) × Stability_Factor × Oscillation_Penalty × GEO",
+            "parameters": {
+                "P_114A": {
+                    "type": "Jian_Lu",
+                    "mode": "Steady_Core"
+                },
+                "P_114B": {
+                    "type": "Yue_Jie",
+                    "mode": "Turbulent_Core"
+                },
+                "ideal_balance": "0.8 - 1.2",
+                "runaway_threshold": 3.0
+            },
+            "data_evidence": {
+                "samples_scanned": 518400,
+                "thermal_runaway_rate": "18.4%",
+                "core_oscillation_events": "4,320"
+            },
+            "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+            "sub_modules": [
+                "MOD_155_JLTG_A_JIANLU",
+                "MOD_156_JLTG_B_YUEJIE"
+            ],
+            "status": "CALIBRATED"
+        },
+        "MOD_115_SSZS_CIWS": {
+            "id": "MOD_115_SSZS_CIWS",
+            "name_cn": "食神制杀脉冲拦截 ✨",
+            "name": "🚀 SSZS CIWS 脉冲制导拦截模型",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_V43_CIWS",
+                "ALGO_PULSE_GUIDANCE"
+            ],
+            "icon": "🚀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3",
+            "description": "[V4.3 CIWS Interception] 脉冲制导拦截。审计食神粒子对七杀穿甲弹的动能对撞。支持渗透判定与过载审计。",
+            "active": true,
+            "goal": "评估拦截系统的效能及稳定性。",
+            "outcome": "SAI 应力, 拦截效率, 纯度比, 雷达干扰度, 弹道状态判定。",
+            "physics_model": {
+                "name": "CIWS 脉冲拦截模型",
+                "core_concept": "利用高频脉冲粒子对外部突入重质量物进行动能对撞。",
+                "dimensions": {
+                    "Interception_Efficiency": "E_ss / E_qs",
+                    "Purity": "E_ss / (E_ss + E_sg)",
+                    "Radar_Stability": "E_resource / E_ss"
+                }
+            },
+            "status": "CALIBRATED"
+        },
+        "MOD_119_CE_FLARE": {
+            "id": "MOD_119_CE_FLARE",
+            "name_cn": "从儿格等离子喷泉 ✨",
+            "name": "☀ CE_FLARE 高能等离子喷泉模型",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_V43_FLARE",
+                "ALGO_VAPOR_LOCK"
+            ],
+            "icon": "☀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3",
+            "description": "[V4.3 Stellar Flare] 从儿格剥离重构。喷射态系统。印星视为喷管堵塞(Vapor Lock)。",
+            "active": true,
+            "goal": "分析系统处于持续物质喷射态的稳定性。",
+            "outcome": "SAI 应力, 喷射速率, 燃料注入量, 堵塞指数, 自爆风险判定。",
+            "physics_model": {
+                "name": "等离子喷泉模型",
+                "core_concept": "系统内压过大导致的持续物质喷射。",
+                "dimensions": {
+                    "Discharge_Flow_Rate": "E_output / E_input",
+                    "Vapor_Lock": "E_clog (In)",
+                    "Fuel_Injected": "E_fuel (BiJie)"
+                }
+            },
+            "status": "CALIBRATED"
+        },
+        "MOD_116_GYPS_RECTIFIER": {
+            "id": "MOD_116_GYPS_RECTIFIER",
+            "name_cn": "官印相生高压整流 ✨",
+            "name": "🗜️ GYPS 官印高压整流桥模型",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_V43_RECTIFIER",
+                "ALGO_MAG_SATURATION"
+            ],
+            "icon": "🗜️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3",
+            "description": "[V4.3 Rectifier Bridge] 官杀印相生转化。印星视为高压变压器，核算磁饱和度。",
+            "active": true,
+            "goal": "评估高压官杀能量转化为系统稳压的能力。",
+            "outcome": "SAI 应力, 整流效率, 磁饱和度, 输入电压, 转化负载。",
+            "physics_model": {
+                "name": "高压整流桥模型",
+                "core_concept": "将外部冲击性能量转化为内部稳态支持力。",
+                "dimensions": {
+                    "Rectification_Efficiency": "E_out / E_in",
+                    "Magnetic_Saturation": "E_gs / E_resource"
+                }
+            },
+            "status": "CALIBRATED"
+        },
+        "MOD_117_CWJG_FEEDBACK": {
+            "id": "MOD_117_CWJG_FEEDBACK",
+            "name_cn": "财官联动增益反馈 ✨",
+            "name": "⛓️ CWJG 财官多级增益反馈模型",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_V43_FEEDBACK",
+                "ALGO_CASCADE_GAIN"
+            ],
+            "icon": "⛓️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3",
+            "description": "[V4.3 Feedback Loop] 财星生官杀。核算二级增益导致的系统过流负载。",
+            "active": true,
+            "goal": "分析财星助燃官杀后对系统造成的级联压力。",
+            "outcome": "SAI 应力, 反馈增益比, 负载率, 燃油注入量, 级联压降。",
+            "physics_model": {
+                "name": "多级反馈增益模型",
+                "core_concept": "财星作为燃料注入官杀发电机，产生级联压制。",
+                "dimensions": {
+                    "Feedback_Gain": "E_w * E_g",
+                    "Load_Ratio": "Gain / DM_Strength"
+                }
+            }
+        },
+        "ALGO_PULSE_GUIDANCE": {
+            "id": "ALGO_PULSE_GUIDANCE",
+            "name_cn": "脉冲制导算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_V43_CIWS": {
+            "id": "MODEL_V43_CIWS",
+            "name_cn": "CIWS 对撞物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_MAG_SATURATION": {
+            "id": "ALGO_MAG_SATURATION",
+            "name_cn": "磁饱和度算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_V43_RECTIFIER": {
+            "id": "MODEL_V43_RECTIFIER",
+            "name_cn": "高压整流桥物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_CASCADE_GAIN": {
+            "id": "ALGO_CASCADE_GAIN",
+            "name_cn": "级联增益算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "ALGO_OUTLIER_DETECTION": {
+            "id": "ALGO_OUTLIER_DETECTION",
+            "name": "离群值检测算法 (Outlier Detection Algorithm)",
+            "name_cn": "离群值检测算法",
+            "type": "STATISTICAL_ALGORITHM",
+            "layer": "ALGO",
+            "priority": 10,
+            "description": "[RSS-V1.4] 使用Z-Score（3-Sigma规则）和IQR方法检测统计学意义上的离群值。用于格局审计中的动态奇点判定。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "RSS-V1.4_Statistical_Audit_Upgrade"
+            ],
+            "fusion_type": "ALGORITHM",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_22_STATISTICAL_AUDIT",
+            "class": "core.statistical_audit.StatisticalAuditor.detect_outliers",
+            "formula": "Z-Score = (x - μ) / σ, IQR = Q3 - Q1, Outlier = x < Q1 - 1.5*IQR or x > Q3 + 1.5*IQR",
+            "active": true
+        },
+        "ALGO_GRADIENT_CHECK": {
+            "id": "ALGO_GRADIENT_CHECK",
+            "name": "梯度消失判定算法 (Gradient Vanishing Check)",
+            "name_cn": "梯度消失判定算法",
+            "type": "STATISTICAL_ALGORITHM",
+            "layer": "ALGO",
+            "priority": 10,
+            "description": "[RSS-V1.4] 判定最差样本和平均样本的差异是否显著。如果差异小于20%，判定为逻辑平滑，拒绝奇点注册。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "RSS-V1.4_Statistical_Audit_Upgrade"
+            ],
+            "fusion_type": "ALGORITHM",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_22_STATISTICAL_AUDIT",
+            "class": "core.statistical_audit.StatisticalAuditor.check_gradient_vanishing",
+            "formula": "Gradient = μ - min(x), Gradient_Ratio = Gradient / μ, Has_Gradient = Gradient > threshold AND Gradient_Ratio > 0.20",
+            "active": true
+        },
+        "ALGO_DISTRIBUTION_STATS": {
+            "id": "ALGO_DISTRIBUTION_STATS",
+            "name": "分布统计算法 (Distribution Statistics)",
+            "name_cn": "分布统计算法",
+            "type": "STATISTICAL_ALGORITHM",
+            "layer": "ALGO",
+            "priority": 10,
+            "description": "[RSS-V1.4] 计算全量样本的分布统计量（均值、标准差、偏度、峰度等），并计算动态离群红线。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "RSS-V1.4_Statistical_Audit_Upgrade"
+            ],
+            "fusion_type": "ALGORITHM",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_22_STATISTICAL_AUDIT",
+            "class": "core.statistical_audit.StatisticalAuditor.calculate_distribution_stats",
+            "formula": "S_singular = min(0.15, μ - 3σ)",
+            "active": true
+        },
+        "ALGO_SINGULARITY_VERIFICATION": {
+            "id": "ALGO_SINGULARITY_VERIFICATION",
+            "name": "奇点存在性验证算法 (Singularity Existence Verification)",
+            "name_cn": "奇点存在性验证算法",
+            "type": "STATISTICAL_ALGORITHM",
+            "layer": "ALGO",
+            "priority": 10,
+            "description": "[RSS-V1.4] 结合离群值检测和梯度消失判定，验证是否存在真正的奇点。只有同时满足存在离群值和存在梯度时，才判定为存在奇点。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "RSS-V1.4_Statistical_Audit_Upgrade"
+            ],
+            "fusion_type": "ALGORITHM",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_22_STATISTICAL_AUDIT",
+            "class": "core.statistical_audit.StatisticalAuditor.verify_singularity_existence",
+            "formula": "Singularity_Exists = Has_Outliers AND Has_Gradient",
+            "active": true
+        },
+        "MODEL_V43_FEEDBACK": {
+            "id": "MODEL_V43_FEEDBACK",
+            "name_cn": "多级反馈物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_VAPOR_LOCK": {
+            "id": "ALGO_VAPOR_LOCK",
+            "name_cn": "气锁(Vapor Lock)检测算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_V43_FLARE": {
+            "id": "MODEL_V43_FLARE",
+            "name_cn": "等离子喷泉物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "MOD_121_YGZJ_MONOPOLE": {
+            "id": "MOD_121_YGZJ_MONOPOLE",
+            "name_cn": "羊刃单极能核破坏 ✨",
+            "name": "🚀 YGZJ 羊刃单极高能等离子体模型 (Monopole Energy)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_MONOPOLE_CORE",
+                "ALGO_HEAT_DISSIPATION"
+            ],
+            "icon": "🚀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3.5",
+            "description": "[V4.3.5 Monopole] 由于缺乏七杀约束，羊刃被定义为'露天核反应堆'。能量无序发散，产生极强热辐射效应。",
+            "active": true,
+            "goal": "定标无约束态下的能量耗散率与财星粒子辐射破坏率。",
+            "outcome": "破坏系数 (DI), 热溢出判定, SAI 突变特征。",
+            "status": "CALIBRATING"
+        },
+        "MOD_122_YHGS_THERMO": {
+            "id": "MOD_122_YHGS_THERMO",
+            "name_cn": "调候热力学熵平衡 ✨",
+            "name": "🌡️ YHGS 调候热力学熵值平衡系统 (Heat Pump Cycle)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_HEAT_PUMP",
+                "ALGO_ENTROPY_CALC"
+            ],
+            "icon": "🌡️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3.5",
+            "description": "[V4.3.5 Thermo] 解决系统工作温度问题。金水为冷却剂，木火为热源。计算全量熵值与效率损耗。",
+            "active": true,
+            "goal": "建立全量五行温度/熵值映射算子，分析极端温控失效。",
+            "outcome": "系统熵值 (S), 效率损耗比 (Eta), 温控报警状态。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_123_LYKG_LC_CIRCUIT": {
+            "id": "MOD_123_LYKG_LC_CIRCUIT",
+            "name_cn": "禄位自锁自感回路 ✨",
+            "name": "⛓️ LYKG 禄位回路惯性自锁电路 (LC Self-Oscillating Circuit)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_SELF_LOCK_LC",
+                "ALGO_INERTIA_MARGIN"
+            ],
+            "icon": "⛓️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3.5",
+            "description": "[V4.3.5 LC Circuit] 日主与时支禄位形成超导自感线圈。模拟闭环系统的抗冲击与死锁特性。",
+            "active": true,
+            "goal": "核算自锁强度与惯性余量，探测由于冲禄引起的反向电动势。",
+            "outcome": "自锁强度 (F_lock), 惯性余量 (M_i), 瞬时宕机风险。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_124_JJGG_TUNNEL": {
+            "id": "MOD_124_JJGG_TUNNEL",
+            "name_cn": "虚空能量量子隧道 ✨",
+            "name": "🌌 JJGG 遥感格局量子隧道注入 (Quantum Tunneling)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "MODEL_QUANTUM_TUNNEL",
+                "ALGO_TUNNEL_PROBABILITY"
+            ],
+            "icon": "🌌",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.3.5",
+            "description": "[V4.3.5 Tunneling] 原局无能量，通过特定拓扑产生量子隧道，从虚空获取能级注入。",
+            "active": true,
+            "goal": "建立虚空能量的隧道注入几率模型，计算虚态能级强度。",
+            "outcome": "穿透概率 (P_t), 虚态注入能级 (V_tunnel), 拓扑完整度报告。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_125_TYKG_RESONANCE": {
+            "id": "MOD_125_TYKG_RESONANCE",
+            "name_cn": "专旺相位共振 ✨",
+            "name": "🚀 TYKG 专旺同频共振波谱模型 (Phase Resonance)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_PHASE_COHERENCE",
+                "MODEL_STANDING_WAVE"
+            ],
+            "icon": "🚀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.4.0",
+            "description": "[V4.4.0 Resonance] 基于波动力学的专旺格局审计。核算系统内五行粒子的相位一致性与谐振增益。",
+            "active": true,
+            "goal": "计算相干系数 C 与共振增益 G，压力测试频率偏移导致的高能级坠落强度。",
+            "outcome": "相干系数 (C), 共振增益 (G), 谐振稳定性报告。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_126_CWJS_PHASE": {
+            "id": "MOD_126_CWJS_PHASE",
+            "name_cn": "弃命相变隧道 ✨",
+            "name": "🚀 CWJS 弃命相变状态切换模型 (Phase Transition)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_TUNNELING_TRANSITION",
+                "MODEL_ZERO_IMPEDANCE"
+            ],
+            "icon": "🚀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.4.0",
+            "description": "[V4.4.0 Transition] 模拟日主进入“零阻抗态”的相变力学。定标系统从对抗模式向追随模式切换的临界阈值。",
+            "active": true,
+            "goal": "核算弃命阈值 Tt 与相变点判定，审计逆相变引起的系统自愈性震荡。",
+            "outcome": "相变阈值 (Tt), 阻抗下降比, 稳态切换延迟参数。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_127_MHGG_REVERSION": {
+            "id": "MOD_127_MHGG_REVERSION",
+            "name_cn": "还原动力学崩塌 ✨",
+            "name": "🚀 MHGG 化气还原平衡移动模型 (Reversion Dynamics)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_EQUILIBRIUM_SHIFT",
+                "MODEL_PROPERTY_FLASH"
+            ],
+            "icon": "🚀",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.4.0",
+            "description": "[V4.4.0 Reversion] 审计化气格局的稳定性。模拟由于庚金冲击甲己化土等还原粒子导致的属性闪变风险。",
+            "active": true,
+            "goal": "定标属性锁定势能 Ep 与还原冲击力 Er，观测崩塌模式下的 SAI 爆炸增长机理。",
+            "outcome": "属性势能 (Ep), 还原应力 (Er), 结构崩塌报告。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_128_GXYG_VIRTUAL_GAP": {
+            "id": "MOD_128_GXYG_VIRTUAL_GAP",
+            "name_cn": "拱夹虚拟 (GXYG) ✨",
+            "name": "🚀 GXYG 拱夹空间虚拟势阱模型 (Virtual Potential Well)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_GRAV_RESONANCE",
+                "MODEL_VACUUM_WELL"
+            ],
+            "icon": "🕳️",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.5.0",
+            "description": "[V4.5.0 Gap] 探测地支拓扑中的空位干应。通过引力干涉定标虚拟能级增益。",
+            "active": true,
+            "goal": "定标虚拟感应场强 V_ind 与 SAI 修正系数，观测真空能级补给效应。",
+            "outcome": "虚拟感应场强 (V_ind), SAI 修正值, 拓扑干涉报告。",
+            "status": "DEVELOPMENT"
+        },
+        "MOD_129_MBGS_STORAGE": {
+            "id": "MOD_129_MBGS_STORAGE",
+            "name_cn": "墓库高压容器 (MBGS) ✨",
+            "name": "🚀 MBGS 墓库高压容器系统 (V4.1.2 Penetration Design)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_PULSE_RELEASE",
+                "MODEL_SPIN_RESERVOIR",
+                "ALGO_STIMULATED_EMISSION",
+                "MODEL_CONSTRAINED_FIELD"
+            ],
+            "icon": "📦",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.5.2",
+            "description": "[V4.5.2 Penetration] 定标地支墓库为高压约束容器。挂载金神、魁罡子态能核，执行穿透式关联矩阵审计。",
+            "active": true,
+            "goal": "核算复合 SAI 张量，定标金神能核与魁罡压制算子在极限压强下的受激辐射效率。",
+            "sub_modules": [
+                "MOD_131_JSG_CORE",
+                "MOD_132_KGG_CORE",
+                "MOD_133_SKSK_COLLAPSE"
+            ],
+            "status": "DEVELOPMENT"
+        },
+        "MOD_130_ZHSG_MIXED": {
+            "id": "MOD_130_ZHSG_MIXED",
+            "name_cn": "杂气激发 (ZHSG) ✨",
+            "name": "🚀 ZHSG 杂气复合激发系统 (Mixed Field Excitation)",
+            "layer": "TOPIC",
+            "dependencies": [
+                "ALGO_PHASE_INTERFERENCE",
+                "MODEL_NON_SATURATED_PLASMA"
+            ],
+            "icon": "📻",
+            "theme": "PATTERN_PHYSICS",
+            "type": "TOPIC",
+            "version": "4.5.3",
+            "description": "[V4.5.3 Mixed] 模拟地支杂气作为多组分非饱和等离子体的能量干涉。定标透干激发与相位消长效应。",
+            "active": true,
+            "goal": "核算激发能级 E_exite 与相位干涉因子，观测杂气系统从无序到定向激励的转换。",
+            "outcome": "激发能级 (E_excite), 相位干涉 (C_phase), 频谱增益报告。",
+            "sub_modules": [
+                "MOD_134_TSG_EXCITE",
+                "MOD_135_YQG_MONTHLY"
+            ],
+            "status": "DEVELOPMENT"
+        },
+        "MOD_131_JSG_CORE": {
+            "id": "MOD_131_JSG_CORE",
+            "name_cn": "金神子态能核 (JSG)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_129_MBGS_STORAGE",
+            "active": true
+        },
+        "MOD_132_KGG_CORE": {
+            "id": "MOD_132_KGG_CORE",
+            "name_cn": "魁罡压制算子 (KGG)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_129_MBGS_STORAGE",
+            "active": true
+        },
+        "MOD_133_SKSK_COLLAPSE": {
+            "id": "MOD_133_SKSK_COLLAPSE",
+            "name_cn": "四库多体坍缩 (SKSK)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_129_MBGS_STORAGE",
+            "active": true
+        },
+        "MOD_134_TSG_EXCITE": {
+            "id": "MOD_134_TSG_EXCITE",
+            "name_cn": "透干激发子态 (TSG)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_130_ZHSG_MIXED",
+            "active": true
+        },
+        "MOD_135_YQG_MONTHLY": {
+            "id": "MOD_135_YQG_MONTHLY",
+            "name_cn": "月令余气子态 (YQG)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_130_ZHSG_MIXED",
+            "active": true
+        },
+        "MOD_141_CYGS_A_CAI": {
+            "id": "MOD_141_CYGS_A_CAI",
+            "name_cn": "从财格强电场 (A)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_142_CYGS_B_SHA": {
+            "id": "MOD_142_CYGS_B_SHA",
+            "name_cn": "从杀格强约束场 (B)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_143_CYGS_C_ER": {
+            "id": "MOD_143_CYGS_C_ER",
+            "name_cn": "从儿格高频辐射场 (C)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_144_CYGS_D_QIANG": {
+            "id": "MOD_144_CYGS_D_QIANG",
+            "name_cn": "从强格奇点膨胀场 (D)",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_111_CYGS_COLLAPSE",
+            "active": true
+        },
+        "MOD_145_HGFG_A_JIAJI": {
+            "id": "MOD_145_HGFG_A_JIAJI",
+            "name_cn": "甲己化土子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_146_HGFG_B_YIGENG": {
+            "id": "MOD_146_HGFG_B_YIGENG",
+            "name_cn": "乙庚化金子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_147_HGFG_C_BINGXIN": {
+            "id": "MOD_147_HGFG_C_BINGXIN",
+            "name_cn": "丙辛化水子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_148_HGFG_D_DINGREN": {
+            "id": "MOD_148_HGFG_D_DINGREN",
+            "name_cn": "丁壬化木子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_149_HGFG_E_WUGUI": {
+            "id": "MOD_149_HGFG_E_WUGUI",
+            "name_cn": "戊癸化火子项",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_112_HGFG_TRANSMUTATION",
+            "active": true
+        },
+        "MOD_151_PGB_A_ULTRA": {
+            "id": "MOD_151_PGB_A_ULTRA",
+            "name_cn": "PGB 超流锁定子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_110_PGB_FLUID",
+            "active": true
+        },
+        "MOD_152_PGB_B_BRITTLE": {
+            "id": "MOD_152_PGB_B_BRITTLE",
+            "name_cn": "PGB 脆性巨人子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_110_PGB_FLUID",
+            "active": true
+        },
+        "MOD_153_SSSC_A_GOD": {
+            "id": "MOD_153_SSSC_A_GOD",
+            "name_cn": "食神层流放大子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_113_SSSC_AMPLIFIER",
+            "active": true
+        },
+        "MOD_154_SSSC_B_OFFICER": {
+            "id": "MOD_154_SSSC_B_OFFICER",
+            "name_cn": "伤官脉冲放大子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_113_SSSC_AMPLIFIER",
+            "active": true
+        },
+        "MOD_155_JLTG_A_JIANLU": {
+            "id": "MOD_155_JLTG_A_JIANLU",
+            "name_cn": "建禄稳态核心子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_114_JLTG_CORE_ENERGY",
+            "active": true
+        },
+        "MOD_156_JLTG_B_YUEJIE": {
+            "id": "MOD_156_JLTG_B_YUEJIE",
+            "name_cn": "月劫湍流核心子态",
+            "layer": "SUB_TOPIC",
+            "parent_topic": "MOD_114_JLTG_CORE_ENERGY",
+            "active": true
+        },
+        "ALGO_HEAT_DISSIPATION": {
+            "id": "ALGO_HEAT_DISSIPATION",
+            "name_cn": "能核热耗散算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_MONOPOLE_CORE": {
+            "id": "MODEL_MONOPOLE_CORE",
+            "name_cn": "单极高能等离子体物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_ENTROPY_CALC": {
+            "id": "ALGO_ENTROPY_CALC",
+            "name_cn": "系统熵值结算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_HEAT_PUMP": {
+            "id": "MODEL_HEAT_PUMP",
+            "name_cn": "热泵循环物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_INERTIA_MARGIN": {
+            "id": "ALGO_INERTIA_MARGIN",
+            "name_cn": "惯性余量判定算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_SELF_LOCK_LC": {
+            "id": "MODEL_SELF_LOCK_LC",
+            "name_cn": "LC 自激振荡回路物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_TUNNEL_PROBABILITY": {
+            "id": "ALGO_TUNNEL_PROBABILITY",
+            "name_cn": "隧道穿透几率算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_QUANTUM_TUNNEL": {
+            "id": "MODEL_QUANTUM_TUNNEL",
+            "name_cn": "量子隧道物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_GATE_STABILITY": {
+            "id": "ALGO_GATE_STABILITY",
+            "name_cn": "栅极稳定性算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_GATE_BREAKDOWN": {
+            "id": "MODEL_GATE_BREAKDOWN",
+            "name_cn": "栅极击穿物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_PLASMA_SUPPRESSION": {
+            "id": "ALGO_PLASMA_SUPPRESSION",
+            "name_cn": "等离子体压制比算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_PLASMA_FIELD": {
+            "id": "MODEL_PLASMA_FIELD",
+            "name_cn": "伤官伤尽等离子场模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_MAGNETIC_RESONANCE": {
+            "id": "ALGO_MAGNETIC_RESONANCE",
+            "name_cn": "杀刃磁谐振算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_TOKAMAK_FUSION": {
+            "id": "MODEL_TOKAMAK_FUSION",
+            "name_cn": "托卡马克杀刃聚变模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_PHASE_SHUNTING": {
+            "id": "ALGO_PHASE_SHUNTING",
+            "name_cn": "相位分流算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_QUANTUM_CIRCUIT": {
+            "id": "MODEL_QUANTUM_CIRCUIT",
+            "name_cn": "枭神夺食量子电路模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_VOLTAGE_REGULATION": {
+            "id": "ALGO_VOLTAGE_REGULATION",
+            "name_cn": "闭环稳压算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_POWER_SUPPLY": {
+            "id": "MODEL_POWER_SUPPLY",
+            "name_cn": "财官相生稳压电源模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_BANDSTOP_FILTERING": {
+            "id": "ALGO_BANDSTOP_FILTERING",
+            "name_cn": "带阻滤波算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_RESONANT_REACTOR": {
+            "id": "MODEL_RESONANT_REACTOR",
+            "name_cn": "伤官配印谐振反应堆模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_LATTICE_DYNAMICS": {
+            "id": "ALGO_LATTICE_DYNAMICS",
+            "name_cn": "比劫晶格动力学算子",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_SUPERFLUID_TITAN": {
+            "id": "MODEL_SUPERFLUID_TITAN",
+            "name_cn": "比劫超流体/脆性巨人物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_GRAVITY_LOCK": {
+            "id": "ALGO_GRAVITY_LOCK",
+            "name_cn": "引力锁定算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_GRAVITATIONAL_COLLAPSE": {
+            "id": "MODEL_GRAVITATIONAL_COLLAPSE",
+            "name_cn": "外部强场引力坍缩物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_GAIN_AMPLIFICATION": {
+            "id": "ALGO_GAIN_AMPLIFICATION",
+            "name_cn": "多级增益放大算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_TWOSTAGE_AMPLIFIER": {
+            "id": "MODEL_TWOSTAGE_AMPLIFIER",
+            "name_cn": "二级管增益放大器物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_THERMAL_BALANCE": {
+            "id": "ALGO_THERMAL_BALANCE",
+            "name_cn": "热平衡计算器",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_HIGH_ENERGY_CORE": {
+            "id": "MODEL_HIGH_ENERGY_CORE",
+            "name_cn": "高能核心热平衡物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_GRAV_RESONANCE": {
+            "id": "ALGO_GRAV_RESONANCE",
+            "name_cn": "引力干涉谐振算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_VACUUM_WELL": {
+            "id": "MODEL_VACUUM_WELL",
+            "name_cn": "真空势阱增益物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_PULSE_RELEASE": {
+            "id": "ALGO_PULSE_RELEASE",
+            "name_cn": "库裂脉冲泄放算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_SPIN_RESERVOIR": {
+            "id": "MODEL_SPIN_RESERVOIR",
+            "name_cn": "高压自旋能量容器模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_STIMULATED_EMISSION": {
+            "id": "ALGO_STIMULATED_EMISSION",
+            "name_cn": "受激辐射能量算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_CONSTRAINED_FIELD": {
+            "id": "MODEL_CONSTRAINED_FIELD",
+            "name_cn": "约束场物理模型",
+            "layer": "MODEL",
+            "active": true
+        },
+        "ALGO_PHASE_INTERFERENCE": {
+            "id": "ALGO_PHASE_INTERFERENCE",
+            "name_cn": "相位干涉算法",
+            "layer": "ALGO",
+            "active": true
+        },
+        "MODEL_NON_SATURATED_PLASMA": {
+            "id": "MODEL_NON_SATURATED_PLASMA",
+            "name_cn": "非饱和等离子体模型",
+            "layer": "MODEL",
+            "active": true
+        }
+    },
+    "registry": {
+        "PH17-20_CONG": {
+            "name": "格局：从格/专旺 (Pattern: Follow)",
+            "category": "结构格局",
+            "conditions": "mode == 'COHERENT' and locking_ratio > 2.0",
+            "priority": 950,
+            "layer": "STRUCTURAL",
+            "effect": "超导状态",
+            "labels": [
+                "从旺",
+                "从强"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V9_RESONANCE"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH19_BEATING": {
+            "name": "格局：假从/拍频 (Pattern: Fake Follow)",
+            "category": "结构格局",
+            "conditions": "mode == 'BEATING'",
+            "priority": 940,
+            "layer": "STRUCTURAL",
+            "scenario_affinity": [
+                "WEALTH",
+                "CAREER"
+            ],
+            "effect": "干涉包络",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V9_RESONANCE"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH25-26_COLLAPSE": {
+            "name": "格局：结构坍塌 (Structural Collapse)",
+            "category": "动态危机",
+            "conditions": "clash_count >= 2",
+            "priority": 990,
+            "layer": "FUNDAMENTAL",
+            "effect": "湮灭风险",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Clash_Dynamics"
+            ],
+            "fusion_type": "CRITICAL_SYSTEM_RULE"
+        },
+        "PH_JITTER": {
+            "id": "PH_JITTER",
+            "name": "相位抖动 (Phase Jitter)",
+            "type": "STRUCTURAL",
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "function": "phase_jitter_check"
+        },
+        "PH_WEALTH_PERMEABILITY": {
+            "id": "PH_WEALTH_PERMEABILITY",
+            "name": "财富渗透率 (Wealth Permeability - Re)",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "WEALTH"
+            ],
+            "description": "[V13.7 升级] 测量财星的流动效率（雷诺数）。升级后包含大运阻尼依赖：Re = (ρ * v * L) / ν_luck。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "function": "WealthFluidEngineV13_7.calculate_reynolds_with_luck",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_05_WEALTH",
+            "used_algorithms": [
+                "PH_WEALTH_PERMEABILITY",
+                "PH_WEALTH_VISCOSITY_LUCK"
+            ],
+            "formula": "Re = (ρ * v * L) / ν_luck",
+            "parameters": {
+                "length_scale": 10.0,
+                "velocity_multiplier": 2.0
+            }
+        },
+        "PH_WEALTH_PERMEABILITY_EFFICIENCY": {
+            "id": "PH_WEALTH_PERMEABILITY_EFFICIENCY",
+            "name": "财富渗透效率 (Wealth Permeability Efficiency - η)",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 705,
+            "scenario_affinity": [
+                "WEALTH"
+            ],
+            "description": "[V13.7 新注册] 基于雷诺数判定财富的渗透效率。公式：η = f(Re) = 1 / (1 + exp(-(Re - Re_critical) / Re_width))。层流状态渗透效率高，湍流状态渗透效率低。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Navier_Stokes_Upgrade",
+                "MOD_05_WEALTH"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "WealthFluidEngineV13_7.calculate_permeability",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_05_WEALTH",
+            "used_algorithms": [
+                "PH_WEALTH_PERMEABILITY_EFFICIENCY"
+            ],
+            "formula": "η = 1 / (1 + exp(-(Re - Re_critical) / Re_width))",
+            "parameters": {
+                "Re_critical": 2000.0,
+                "Re_width": 500.0,
+                "Re_laminar_threshold": 2000.0,
+                "Re_transition_threshold": 4000.0,
+                "Re_stagnant_threshold": 100.0
+            },
+            "dependencies": [
+                "PH_WEALTH_PERMEABILITY"
+            ]
+        },
+        "PH_WEALTH_VISCOSITY": {
+            "id": "PH_WEALTH_VISCOSITY",
+            "name": "粘性阻力 (Viscosity - ν)",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 690,
+            "description": "[V13.7 升级] 量化由竞争者（比劫）元素引起的摩擦。基础公式：nu = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "function": "calculate_viscosity",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_05_WEALTH",
+            "used_algorithms": [
+                "PH_WEALTH_VISCOSITY"
+            ],
+            "formula": "nu = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)"
+        },
+        "PH_WEALTH_VISCOSITY_LUCK": {
+            "id": "PH_WEALTH_VISCOSITY_LUCK",
+            "name": "粘性阻力（大运修正）(Viscosity with Luck Damping - ν_luck)",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 695,
+            "description": "[V13.7 新注册] 粘性阻力的大运阻尼修正。公式：ν_luck = ν_base * (1 + k_luck * |Δφ_luck|)。大运好（damping < 1.0）降低粘滞系数，大运坏（damping > 1.0）增加粘滞系数。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Navier_Stokes_Upgrade",
+                "MOD_05_WEALTH"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "WealthFluidEngineV13_7.calculate_viscosity_with_luck",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_05_WEALTH",
+            "used_algorithms": [
+                "PH_WEALTH_VISCOSITY",
+                "PH_WEALTH_VISCOSITY_LUCK"
+            ],
+            "formula": "ν_luck = ν_base * (1 + k_luck * |Δφ_luck|)",
+            "parameters": {
+                "k_luck": 0.1,
+                "nu_min": 1.0
+            },
+            "dependencies": [
+                "PH_WEALTH_VISCOSITY",
+                "MOD_21_INFLUENCE_BUS"
+            ]
+        },
+        "PH_BI_JIE_SHIELD": {
+            "id": "PH_BI_JIE_SHIELD",
+            "name": "比劫护盾 (Bi-Jie Interference Shield)",
+            "type": "流体动力学",
+            "layer": "FLOW",
+            "priority": 680,
+            "description": "[V13.7 升级] 分析比劫是拦截了财富还是屏蔽了输出。已集成到粘滞系数计算中（摩擦项：E_rival² * 0.05）。公式：friction_term = (E_rival²) * 0.05",
+            "formula": "friction_term = (E_rival²) * 0.05",
+            "function": "WealthFluidEngineV13_7.calculate_viscosity_with_luck",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_05_WEALTH",
+            "used_algorithms": [
+                "PH_BI_JIE_SHIELD",
+                "PH_WEALTH_VISCOSITY"
+            ]
+        },
+        "PH27_VOID": {
+            "name": "Pattern: Void Energy Sink (空亡)",
+            "category": "Field Defect",
+            "conditions": "is_void == true",
+            "priority": 980,
+            "layer": "FUNDAMENTAL",
+            "effect": "ENERGY_LEAK",
+            "damping_factor": 0.45,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V2_VOID"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH_LIFE_CYCLE_RESONANCE": {
+            "id": "PH_LIFE_CYCLE_RESONANCE",
+            "name": "十二长生动能谐振 (Life Cycle Resonance)",
+            "type": "KINETIC_ENERGY",
+            "layer": "FUNDAMENTAL",
+            "priority": 870,
+            "peak_gain": 2.0,
+            "description": "十二长生作为动能倍率，帝旺态增益标定为 2.0x。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH28_ANNIHILATION": {
+            "name": "格局：系统湮灭 (Annihilation State)",
+            "category": "危急状态",
+            "conditions": "sync_state < 0.12",
+            "priority": 1000,
+            "layer": "FUNDAMENTAL",
+            "effect": "全反射状态",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CRITICAL_SYSTEM_RULE"
+        },
+        "PH29_CAPTURE": {
+            "name": "逻辑：食神制杀/伤官合杀 (Logic: Capture)",
+            "category": "相互作用",
+            "phi_shift": 0.5,
+            "q_gain": 1.5,
+            "type": "结构格局",
+            "layer": "STRUCTURAL",
+            "priority": 950,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "MOD_02_SUPER_STR",
+                "Legacy_V2_Follow"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH30_CUTTING": {
+            "name": "逻辑：枭神夺食/频谱切断 (Logic: Cutting)",
+            "category": "关键干涉",
+            "phi_shift": 2.2,
+            "q_gain": 0.3,
+            "layer": "STRUCTURAL",
+            "priority": 840,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH31_CONTAMINATION": {
+            "name": "逻辑：财星坏印/介质污染 (Logic: Contamination)",
+            "category": "相互作用",
+            "phi_shift": 1.2,
+            "q_gain": 0.7,
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_PATTERN"
+        },
+        "PH_GRAVITY_BINDING": {
+            "id": "PH_GRAVITY_BINDING",
+            "name": "引力绑定 (Gravitational Binding)",
+            "type": "引力动力学",
+            "layer": "FLOW",
+            "priority": 700,
+            "scenario_affinity": [
+                "RELATIONSHIP"
+            ],
+            "description": "[V13.7 升级] 计算日主与配偶星之间的绑定能量。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "V13.7_Harmonic_Oscillator_Upgrade"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "function": "RelationshipGravityEngineV13_7.calculate_binding_energy",
+            "formula": "E = -G * M_dm * M_spouse / (2 * r)",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP",
+            "used_algorithms": [
+                "PH_GRAVITY_BINDING"
+            ]
+        },
+        "PH_PERTURBATION_3BODY": {
+            "id": "PH_PERTURBATION_3BODY",
+            "name": "三体摄动 (Three-Body Perturbation)",
+            "type": "引力动力学",
+            "layer": "FLOW",
+            "priority": 690,
+            "description": "[V13.7 升级] 分析当第三方质量（比劫、大运）进入系统时的轨道不稳定性。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "V13.7_Harmonic_Oscillator_Upgrade"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "function": "analyze_perturbation",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP",
+            "used_algorithms": [
+                "PH_PERTURBATION_3BODY"
+            ]
+        },
+        "PH_ORBITAL_PERTURBATION": {
+            "id": "PH_ORBITAL_PERTURBATION",
+            "name": "轨道摄动（谐振子模型）(Orbital Perturbation - Harmonic Oscillator)",
+            "type": "引力动力学",
+            "layer": "FLOW",
+            "priority": 695,
+            "scenario_affinity": [
+                "RELATIONSHIP"
+            ],
+            "description": "[V13.7 新注册] 流年冲击对情感绑定轨道的摄动影响。公式：Δr = A * sin(ωt + φ) * e^(-γt)。流年冲击的破坏力随节气进度衰减。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Harmonic_Oscillator_Upgrade",
+                "MOD_06_RELATIONSHIP"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "RelationshipGravityEngineV13_7.calculate_annual_orbital_perturbation",
+            "formula": "Δr = A * sin(ωt + φ) * e^(-γt)",
+            "parameters": {
+                "omega_base": 1.0,
+                "gamma_decay": 0.1
+            },
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP",
+            "used_algorithms": [
+                "PH_ORBITAL_PERTURBATION"
+            ],
+            "dependencies": [
+                "PH_GRAVITY_BINDING",
+                "MOD_21_INFLUENCE_BUS"
+            ]
+        },
+        "PH_PHASE_COLLAPSE": {
+            "id": "PH_PHASE_COLLAPSE",
+            "name": "相位坍缩 (Phase Collapse)",
+            "type": "量子动力学",
+            "layer": "FLOW",
+            "priority": 680,
+            "description": "[已整合] 模拟情感势能波函数坍缩为确定性事件的过程。已整合到 PH_ORBITAL_PERTURBATION 和 PH_WAVEFUNCTION_COLLAPSE 中。",
+            "replaced_by": "PH_ORBITAL_PERTURBATION",
+            "status": "DEPRECATED",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "V13.7_Orbital_Perturbation_Integration"
+            ],
+            "fusion_type": "INTEGRATED",
+            "function": "RelationshipGravityEngineV13_7.calculate_annual_orbital_perturbation",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP"
+        },
+        "PH_PEACH_BLOSSOM": {
+            "id": "PH_PEACH_BLOSSOM",
+            "name": "桃花波函数 (Peach Blossom Wave)",
+            "type": "量子动力学",
+            "layer": "FLOW",
+            "priority": 670,
+            "description": "[V13.7 升级] 将情感吸引力建模为概率波（红鸾、天喜）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity",
+                "V13.7_Relationship_Gravity_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "RelationshipGravityEngineV13_7._calculate_peach_blossom",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP",
+            "used_algorithms": [
+                "PH_PEACH_BLOSSOM"
+            ]
+        },
+        "PH_LUCK_BACKGROUND": {
+            "id": "PH_LUCK_BACKGROUND",
+            "name": "大运背景场 (Luck Background Field)",
+            "type": "引力动力学",
+            "layer": "TEMPORAL",
+            "priority": 600,
+            "description": "[已整合] 大运作为引力背景辐射干扰基础绑定状态。已整合到 InfluenceBus 和 MOD_14 的 PH_EXTRACT_BACKGROUND_FIELD 中。",
+            "replaced_by": "PH_INFLUENCE_FACTOR",
+            "status": "DEPRECATED"
+        },
+        "PH_ANNUAL_IMPULSE": {
+            "id": "PH_ANNUAL_IMPULSE",
+            "name": "流年轨道冲量 (Annual Orbital Impulse)",
+            "type": "引力动力学",
+            "layer": "TEMPORAL",
+            "priority": 590,
+            "description": "[已整合] 流年干支作为高速飞掠天体施加轨道冲量。已整合到 PH_ORBITAL_PERTURBATION 中。",
+            "replaced_by": "PH_ORBITAL_PERTURBATION",
+            "status": "DEPRECATED"
+        },
+        "PH_CAUSAL_ENTROPY": {
+            "id": "PH_CAUSAL_ENTROPY",
+            "name": "因果熵 (Causal Entropy)",
+            "type": "涌现物理",
+            "layer": "ENVIRONMENT",
+            "priority": 990,
+            "description": "[V13.7 更新] 量化结构复杂性与相互作用密度。公式：S = -Σ(p * log(p))",
+            "formula": "S = -Σ(p * log(p))",
+            "function": "calculate_causal_entropy",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_18_BASE_APP",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "EMERGENT_PROPERTY",
+            "used_algorithms": [
+                "PH_CAUSAL_ENTROPY"
+            ]
+        },
+        "PH_SINGULARITY_DETECT": {
+            "id": "PH_SINGULARITY_DETECT",
+            "name": "奇点探测 (Singularity Detection)",
+            "type": "涌现物理",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
+            "description": "[V13.7 更新] 识别复杂能量干涉重叠的时间节点。",
+            "function": "TemporalPredictionEngineV13_7.detect_singularity_points",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_16_TEMPORAL_SHUNTING",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE",
+                "V13.7_Temporal_Prediction_Engine"
+            ],
+            "fusion_type": "EMERGENT_PROPERTY",
+            "used_algorithms": [
+                "PH_SINGULARITY_DETECT"
+            ]
+        },
+        "PH_QUANTUM_DISPERSION": {
+            "id": "PH_QUANTUM_DISPERSION",
+            "name": "正弦弥散 (Sinusoidal Dispersion)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "ENVIRONMENT",
+            "priority": 1000,
+            "description": "P(t) = A * sin^2(πt + φ) * e^(-τt). Core Asset for dynamic hidden stems.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ],
+            "fusion_type": "CORE_ALGORITHM",
+            "function": "QuantumDispersionEngine.get_dynamic_weights"
+        },
+        "PH_SHEAR_BURST": {
+            "id": "PH_SHEAR_BURST",
+            "name": "羊刃相变 (Shear Burst)",
+            "type": "CRITICAL_PHYSICS",
+            "layer": "STRUCTURAL",
+            "priority": 850,
+            "description": "Non-linear energy gain (2.26x) when Yang Ren encounters Clash (Chong).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "AntigravityEngine.check_shear_burst"
+        },
+        "PH_COMBINATION_PHASE": {
+            "id": "PH_COMBINATION_PHASE",
+            "name": "合化相位判定 (Combination Phase Check)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "STRUCTURAL",
+            "priority": 840,
+            "description": "[V13.7 整合升级] Checks if month energy > threshold (0.65) for phase transition. 整合了阿伦尼乌斯公式修正（地理能垒）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination",
+                "V13.7_Arrhenius_Equation_Integration"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "check_combination_phase",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_03_TRANSFORM",
+            "used_algorithms": [
+                "PH_COMBINATION_PHASE"
+            ],
+            "formula": "P_transform = A * exp(-E_a / (k_B * T_geo))",
+            "parameters": {
+                "threshold": 0.65,
+                "E_a_base": 1.0,
+                "k_B": 1.0
+            }
+        },
+        "PH_ROOTING_GAIN": {
+            "id": "PH_ROOTING_GAIN",
+            "name": "通根增益模型 (Rooting Gain Model)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "FUNDAMENTAL",
+            "priority": 890,
+            "description": "[V13.7 整合升级] Calculates G_res based on Main(2.0)/Medium(1.5)/Residual(1.2)/None(0.5). 整合了地理二阶修正。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting",
+                "V13.7_Geographic_Second_Order_Correction"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "ResonanceBooster.calculate_resonance_gain",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_10_RESONANCE",
+            "used_algorithms": [
+                "PH_ROOTING_GAIN"
+            ],
+            "formula": "G_res = G_base * (1 + ε_geo * K_geo²)",
+            "parameters": {
+                "main_gain": 2.0,
+                "medium_gain": 1.5,
+                "residual_gain": 1.2,
+                "none_gain": 0.5
+            }
+        },
+        "PH_PILLAR_GRAVITY": {
+            "id": "PH_PILLAR_GRAVITY",
+            "name": "动态引力权重 (Dynamic Gravity Weights)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "FUNDAMENTAL",
+            "priority": 910,
+            "description": "[V13.7 升级] Month Weight = 0.40 + 0.15*sin(pi*t). 时变引力模型：宫位权重随时间（节气深度）动态变化。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting",
+                "V13.7_Dynamic_Gravity_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "PillarGravityEngineV13_7.calculate_dynamic_weights",
+            "formula": "W_month(t) = 0.40 + 0.15 * sin(π * t), W_other(t) = W_base * (1 - α * W_month(t))",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_11_GRAVITY",
+            "used_algorithms": [
+                "PH_PILLAR_GRAVITY"
+            ]
+        },
+        "PH_FLUID_VISCOSITY": {
+            "id": "PH_FLUID_VISCOSITY",
+            "name": "流体粘滞模型 (Fluid Viscosity Model)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "TEMPORAL",
+            "priority": 580,
+            "description": "[V13.7 升级] Exponential Decay (W_prev = exp(-t/tau)). Default Tau=3.0 months. 指数衰减模型：确保能量变化不是'瞬断'的，而是有物理惯性的过渡。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia",
+                "V13.7_Inertia_Decay_Upgrade"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "SpacetimeInertiaEngineV13_7.calculate_inertia_weights",
+            "formula": "W(t) = exp(-t / tau)",
+            "parameters": {
+                "tau_default": 3.0
+            },
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_12_INERTIA",
+            "used_algorithms": [
+                "PH_FLUID_VISCOSITY"
+            ]
+        },
+        "PH_INERTIA_DECAY": {
+            "id": "PH_INERTIA_DECAY",
+            "name": "惯性衰减 (Inertia Decay)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "TEMPORAL",
+            "priority": 585,
+            "description": "[V13.7 新注册] 惯性衰减模型。指数衰减：W(t) = exp(-t / tau)。确保大运切换期间能量的平滑交接。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Inertia_Decay_Upgrade",
+                "MOD_12_INERTIA"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "SpacetimeInertiaEngineV13_7.apply_inertia_smoothing",
+            "formula": "W(t) = exp(-t / tau), E_smooth = E_prev * W(t) + E_current * (1 - W(t))",
+            "parameters": {
+                "tau_default": 3.0
+            },
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_12_INERTIA",
+            "used_algorithms": [
+                "PH_INERTIA_DECAY"
+            ],
+            "dependencies": [
+                "PH_FLUID_VISCOSITY"
+            ]
+        },
+        "PH_TEMPORAL_RESAMPLING": {
+            "id": "PH_TEMPORAL_RESAMPLING",
+            "name": "动态应期采样修正 (Temporal Resampling)",
+            "type": "QUANTUM_ENGINE",
+            "layer": "TEMPORAL",
+            "priority": 510,
+            "description": "[V13.7 新注册] 动态应期采样修正。将流年（Annual）的冲击平滑化，引入 MOD_12 的衰减常数 tau。高频采样：每月采样一次。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Temporal_Resampling_Upgrade",
+                "MOD_07_LIFEPATH"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "LifepathResamplingEngineV13_7.resample_timeline",
+            "formula": "E(t) = E_base * (1 + A * sin(ωt + φ)), 然后应用惯性平滑",
+            "parameters": {
+                "sampling_frequency": 12.0,
+                "dispersion_amplitude": 0.15,
+                "dispersion_frequency": 1.0
+            },
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_07_LIFEPATH",
+            "used_algorithms": [
+                "PH_TEMPORAL_RESAMPLING",
+                "PH_DYNAMIC_DISPERSION_SIN",
+                "PH_INERTIA_DECAY"
+            ],
+            "dependencies": [
+                "PH_DYNAMIC_DISPERSION_SIN",
+                "MOD_12_INERTIA"
+            ]
+        },
+        "PH_CROSS_INTERFERENCE": {
+            "id": "PH_CROSS_INTERFERENCE",
+            "name": "交叉干涉 (Cross Interference)",
+            "type": "SYSTEM_LEVEL",
+            "layer": "ENVIRONMENT",
+            "priority": 110,
+            "description": "[V13.7 新注册] 模块间的'二阶干预'。当 MOD_04（刑害）产生极高 SAI 时，自动增加 MOD_05（财富）的粘滞系数。公式：ν_cross = ν_base * (1 + k_cross * SAI)。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Cross_Interference_Upgrade",
+                "MOD_18_BASE_APP"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "GlobalInterferenceEngineV13_7.calculate_cross_interference",
+            "formula": "ν_cross = ν_base * (1 + k_cross * SAI)",
+            "parameters": {
+                "k_cross_wealth": 0.15,
+                "k_cross_relationship": 0.12,
+                "k_cross_impedance": 0.1,
+                "sai_high_threshold": 0.6,
+                "sai_critical_threshold": 0.8
+            },
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_18_BASE_APP",
+            "used_algorithms": [
+                "PH_CROSS_INTERFERENCE"
+            ]
+        },
+        "PH_RISK_NODE_DETECT": {
+            "id": "PH_RISK_NODE_DETECT",
+            "name": "风险节点探测 (Risk Node Detection)",
+            "type": "CRITICAL_PHYSICS",
+            "layer": "TEMPORAL",
+            "priority": 550,
+            "description": "Triggered when SAI > 0.6, Entropy > 1.5, or IC > 0.6.",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ],
+            "fusion_type": "CORE_ENGINE_RULE",
+            "function": "LifePathEngine._identify_risk_reason"
+        },
+        "PH_STELLAR_ENTROPY_DAMPING": {
+            "id": "PH_STELLAR_ENTROPY_DAMPING",
+            "name": "星辰熵衰减 (Stellar Entropy Damping)",
+            "type": "FIELD_MODIFIER",
+            "layer": "INTELLIGENCE",
+            "priority": 450,
+            "description": "[V13.7 升级] Each Tian Yi (天乙) node damps system entropy by 10%. 公式：S_new = S_old * (1 - entropy_damping)。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy",
+                "V13.7_Stellar_Field_Correction"
+            ],
+            "fusion_type": "CORE_RULE",
+            "function": "StellarCoherenceEngineV13_7.calculate_entropy_damping",
+            "formula": "S_new = S_old * (1 - entropy_damping), entropy_damping = 0.1 * count_tian_yi",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "used_algorithms": [
+                "PH_STELLAR_ENTROPY_DAMPING"
+            ]
+        },
+        "PH_STELLAR_SNR_BOOST": {
+            "id": "PH_STELLAR_SNR_BOOST",
+            "name": "星辰信噪比提升 (Stellar SNR Boost)",
+            "type": "FIELD_MODIFIER",
+            "layer": "INTELLIGENCE",
+            "priority": 440,
+            "description": "[V13.7 升级] Each Wen Chang (文昌) node improves signal-to-noise ratio by 15%. 公式：SNR_new = SNR_old * (1 + SNR_boost)。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy",
+                "V13.7_Stellar_Field_Correction"
+            ],
+            "fusion_type": "CORE_RULE",
+            "function": "StellarCoherenceEngineV13_7.calculate_snr_boost",
+            "formula": "SNR_new = SNR_old * (1 + SNR_boost), SNR_boost = 0.15 * count_wen_chang",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "used_algorithms": [
+                "PH_STELLAR_SNR_BOOST"
+            ],
+            "parameters": {
+                "wen_chang_snr_boost": 0.15,
+                "max_boost": 1.0
+            }
+        },
+        "PH_STELLAR_QUANTUM_ATTRACTION": {
+            "id": "PH_STELLAR_QUANTUM_ATTRACTION",
+            "name": "星辰量子引力 (Stellar Quantum Attraction)",
+            "type": "ATTRACTION",
+            "layer": "INTELLIGENCE",
+            "priority": 430,
+            "description": "[V13.7 升级] Each Peach Blossom (桃花) increases relationship binding energy by 20%. 公式：E_new = E_old * (1 + binding_boost)。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy",
+                "V13.7_Stellar_Field_Correction"
+            ],
+            "fusion_type": "CORE_RULE",
+            "function": "StellarCoherenceEngineV13_7.calculate_quantum_attraction",
+            "formula": "E_new = E_old * (1 + binding_boost), binding_boost = 0.2 * count_peach_blossom",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "used_algorithms": [
+                "PH_STELLAR_QUANTUM_ATTRACTION"
+            ]
+        },
+        "PH_STELLAR_KINETIC_IMPULSE": {
+            "id": "PH_STELLAR_KINETIC_IMPULSE",
+            "name": "星辰动能冲量 (Stellar Kinetic Impulse)",
+            "type": "KINETIC",
+            "layer": "INTELLIGENCE",
+            "priority": 420,
+            "description": "[V13.7 升级] Each Post Horse (驿马) reduces movement resistance and increases delta-V by 25%. 公式：v_new = v_old * (1 + kinetic_impulse)。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_V12_Stellar_Comedy",
+                "V13.7_Stellar_Field_Correction"
+            ],
+            "fusion_type": "CORE_RULE",
+            "function": "StellarCoherenceEngineV13_7.calculate_kinetic_impulse",
+            "formula": "v_new = v_old * (1 + kinetic_impulse), kinetic_impulse = 0.25 * count_post_horse",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "used_algorithms": [
+                "PH_STELLAR_KINETIC_IMPULSE"
+            ]
+        },
+        "PH_DESTINY_TRANSLATION": {
+            "id": "PH_DESTINY_TRANSLATION",
+            "name": "命运真言翻译 (Destiny Translation Tool)",
+            "type": "INTELLIGENCE_ASSET",
+            "layer": "TEMPORAL",
+            "priority": 500,
+            "description": "Translates raw physics metrics into multi-style human narratives (WKW/Chow).",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V11_INTELLIGENCE"
+            ],
+            "fusion_type": "INTELLIGENCE_LAYER",
+            "function": "DestinyTranslator.translate_state"
+        },
+        "PH_HE_HUA": {
+            "name": "干合化气 (Heavenly Stem Transformation)",
+            "layer": "STRUCTURAL",
+            "priority": 830,
+            "conflicts": [
+                "PH_CHONG"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_SAN_HE": {
+            "name": "地支三合局 (Three-Branch Combination)",
+            "layer": "STRUCTURAL",
+            "priority": 820,
+            "conflicts": [
+                "PH_CHONG",
+                "PH_HARM_6"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_LIU_HE": {
+            "name": "地支六合 (Six-Branch Combination)",
+            "layer": "STRUCTURAL",
+            "priority": 810,
+            "conflicts": [
+                "PH_CHONG"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION"
+        },
+        "PH_CHONG": {
+            "name": "地支六冲 (Six-Branch Clash)",
+            "layer": "STRUCTURAL",
+            "priority": 700,
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Clash_Dynamics"
+            ],
+            "fusion_type": "PARTIAL_INTEGRATION",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_04_STABILITY"
+        },
+        "PH_NONLINEAR_SATURATION": {
+            "id": "PH_NONLINEAR_SATURATION",
+            "name": "非线性饱和 (Non-linear Saturation)",
+            "type": "STRUCTURAL_PHYSICS",
+            "layer": "STRUCTURAL",
+            "priority": 760,
+            "description": "[V13.7 整合] 使用 tanh 函数限制能量传导的上限，防止能量溢出。公式: E_out = E_max * tanh(E_in / threshold)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_02_Structural_Vibration",
+                "V13.7_Complex_Impedance_Integration"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "StructuralVibrationEngine._tanh_saturation",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_15_STRUCTURAL_VIBRATION",
+            "used_algorithms": [
+                "PH_NONLINEAR_SATURATION"
+            ],
+            "formula": "E_out = E_max * tanh(E_in / threshold)",
+            "parameters": {
+                "E_max": 10.0,
+                "threshold": 5.0
+            }
+        },
+        "PH_VERTICAL_COUPLING": {
+            "id": "PH_VERTICAL_COUPLING",
+            "name": "垂直耦合 (Vertical Coupling)",
+            "type": "STRUCTURAL_PHYSICS",
+            "layer": "STRUCTURAL",
+            "priority": 750,
+            "description": "[V13.7 整合] 地支对天干的垂直调制，通过通根增强相位匹配。公式: v_boost = root_strength * K_COUPLING * geo_k",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_02_Structural_Vibration",
+                "V13.7_Complex_Impedance_Integration"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "StructuralVibrationEngine._apply_vertical_coupling",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_15_STRUCTURAL_VIBRATION",
+            "used_algorithms": [
+                "PH_VERTICAL_COUPLING"
+            ],
+            "formula": "v_boost = root_strength * K_COUPLING * geo_k",
+            "parameters": {
+                "K_COUPLING": 3.0,
+                "root_ratios": [
+                    0.7,
+                    0.2,
+                    0.1
+                ]
+            }
+        },
+        "PH_COMPLEX_IMPEDANCE": {
+            "id": "PH_COMPLEX_IMPEDANCE",
+            "name": "复阻抗模型 (Complex Impedance Model)",
+            "type": "STRUCTURAL_PHYSICS",
+            "layer": "STRUCTURAL",
+            "priority": 155,
+            "description": "[V13.7 新注册] 解决'大运虽然生助，但因为相位不合，能量却传导不过去'的物理问题。引入复阻抗 Z = R + jX，其中 R 为电阻（原局克制），X 为电抗（相位迟滞）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Complex_Impedance_Model",
+                "MOD_15_STRUCTURAL_VIBRATION"
+            ],
+            "fusion_type": "CORE_MODULE",
+            "function": "ComplexImpedanceModel.calculate_impedance",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_15_STRUCTURAL_VIBRATION",
+            "used_algorithms": [
+                "PH_NONLINEAR_SATURATION",
+                "PH_VERTICAL_COUPLING",
+                "PH_COMPLEX_IMPEDANCE"
+            ],
+            "formula": "Z = R + jX, |Z| = sqrt(R² + X²), efficiency = 1 / |Z|",
+            "parameters": {
+                "R_base": 1.0,
+                "X_base_distance_0": 0.0,
+                "X_base_distance_1": 0.2,
+                "X_base_distance_2": 0.5,
+                "X_base_distance_3+": 1.0,
+                "X_luck_clash": 1.5,
+                "X_annual_clash": 0.8
+            },
+            "dependencies": [
+                "PH_NONLINEAR_SATURATION",
+                "PH_VERTICAL_COUPLING"
+            ]
+        },
+        "PH_INFLUENCE_FACTOR": {
+            "id": "PH_INFLUENCE_FACTOR",
+            "name": "影响因子基类 (Influence Factor Base)",
+            "type": "INFRASTRUCTURE",
+            "layer": "INFRASTRUCTURE",
+            "priority": 5,
+            "description": "[V13.7] 影响因子基类，支持高阶张量注入（相位、频率）。用于定义大运、流年、地域、时代等环境因子。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Physics_Tensor_Upgrade"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_21_INFLUENCE_BUS",
+            "class": "core.trinity.core.middleware.influence_bus.InfluenceFactor",
+            "used_algorithms": [
+                "PH_INFLUENCE_FACTOR"
+            ]
+        },
+        "PH_NONLINEAR_TYPE": {
+            "id": "PH_NONLINEAR_TYPE",
+            "name": "非线性类型枚举 (Nonlinear Type Enum)",
+            "type": "INFRASTRUCTURE",
+            "layer": "INFRASTRUCTURE",
+            "priority": 3,
+            "description": "[V13.7] 非线性类型枚举，定义影响因子的物理类型（如静态势场、动能冲量、介质阻尼系数等）。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Physics_Tensor_Upgrade"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_21_INFLUENCE_BUS",
+            "class": "core.trinity.core.middleware.influence_bus.NonlinearType",
+            "used_algorithms": [
+                "PH_NONLINEAR_TYPE"
+            ]
+        },
+        "PH_PHYSICS_TENSOR": {
+            "id": "PH_PHYSICS_TENSOR",
+            "name": "物理张量 (Physics Tensor)",
+            "type": "INFRASTRUCTURE",
+            "layer": "INFRASTRUCTURE",
+            "priority": 2,
+            "description": "[V13.7] 高阶物理张量，支持相位(phi)和频率(omega)的完整物理描述。用于替代简单的数值加减，实现真正的物理动力学模型。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Physics_Tensor_Upgrade"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_21_INFLUENCE_BUS",
+            "class": "core.trinity.core.middleware.influence_bus.PhysicsTensor",
+            "used_algorithms": [
+                "PH_PHYSICS_TENSOR"
+            ],
+            "formula": "Z = R + jX, |Z| = sqrt(R² + X²), arg(Z) = atan2(X, R)"
+        },
+        "PH_BAZI_PARTICLE_NEXUS": {
+            "id": "PH_BAZI_PARTICLE_NEXUS",
+            "name": "八字粒子连接 (Bazi Particle Nexus)",
+            "type": "INFRASTRUCTURE",
+            "layer": "INFRASTRUCTURE",
+            "priority": 1,
+            "description": "八字粒子连接定义，包含天干、地支、藏干等基础映射。提供天干元素、地支元素、藏干权重等基础查询功能。",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ],
+            "fusion_type": "INFRASTRUCTURE",
+            "theme": "FRAMEWORK_UTILITIES",
+            "module": "MOD_19_BAZI_UTILITIES",
+            "class": "core.trinity.core.nexus.definitions.BaziParticleNexus",
+            "used_algorithms": [
+                "PH_BAZI_PARTICLE_NEXUS"
+            ]
+        },
+        "PH_COHERENT_SUPERPOSITION": {
+            "id": "PH_COHERENT_SUPERPOSITION",
+            "name": "相干叠加模型 (Coherent Superposition Model)",
+            "type": "MATHEMATICAL_MODEL",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 200,
+            "description": "[V13.7 新注册] 计算原生概率波函数与大运、流年、地域的相干叠加。公式：ψ_total = ψ_base + ψ_background + ψ_impulse + ψ_geo",
+            "formula": "ψ_total = ψ_base + ψ_background + ψ_impulse + ψ_geo",
+            "function": "SpacetimeInterferenceEngineV13_7.calculate_coherent_superposition",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_COHERENT_SUPERPOSITION"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_COMPLEX_REPRESENTATION": {
+            "id": "PH_COMPLEX_REPRESENTATION",
+            "name": "复数表示模型 (Complex Representation Model)",
+            "type": "MATHEMATICAL_MODEL",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 195,
+            "description": "[V13.7 新注册] 将物理张量转换为复数形式。公式：A * e^(i*φ) = A * (cos(φ) + i*sin(φ))",
+            "formula": "A * e^(i*φ) = A * (cos(φ) + i*sin(φ))",
+            "function": "SpacetimeInterferenceEngineV13_7.calculate_coherent_superposition",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_COMPLEX_REPRESENTATION"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_INTERFERENCE_INDEX": {
+            "id": "PH_INTERFERENCE_INDEX",
+            "name": "干涉指数 (Interference Index)",
+            "type": "PHYSICS_MODEL",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 190,
+            "description": "[V13.7 新注册] 计算总波函数与原局波函数的干涉指数。公式：I = |ψ_total|² / |ψ_base|²",
+            "formula": "I = |ψ_total|² / |ψ_base|²",
+            "function": "SpacetimeInterferenceEngineV13_7.calculate_interference_index",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_INTERFERENCE_INDEX"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_PHASE_COHERENCE": {
+            "id": "PH_PHASE_COHERENCE",
+            "name": "相位相干度 (Phase Coherence)",
+            "type": "PHYSICS_MODEL",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 185,
+            "description": "[V13.7 新注册] 计算原局波函数与总波函数的相位相干度。公式：η = cos²(Δφ)",
+            "formula": "η = cos²(Δφ)",
+            "function": "SpacetimeInterferenceEngineV13_7.calculate_phase_coherence",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_PHASE_COHERENCE"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_GEO_COUPLING_EFFICIENCY": {
+            "id": "PH_GEO_COUPLING_EFFICIENCY",
+            "name": "地理耦合效率 (Geographic Coupling Efficiency)",
+            "type": "PHYSICS_MODEL",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 180,
+            "description": "[V13.7 新注册] 计算地理偏置对总波函数的耦合效率。公式：K_geo = 1 + ε_geo * |A_geo| / |A_total|",
+            "formula": "K_geo = 1 + ε_geo * |A_geo| / |A_total|",
+            "function": "SpacetimeInterferenceEngineV13_7.calculate_geo_coupling_efficiency",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_GEO_COUPLING_EFFICIENCY"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_ORBITAL_STABILITY": {
+            "id": "PH_ORBITAL_STABILITY",
+            "name": "轨道稳定性 (Orbital Stability)",
+            "type": "PHYSICS_MODEL",
+            "layer": "FLOW",
+            "priority": 640,
+            "description": "[V13.7 新注册] 计算情感绑定轨道的稳定性。公式：σ = |E_bind| / E_perturb",
+            "formula": "σ = |E_bind| / E_perturb",
+            "function": "RelationshipGravityEngineV13_7.calculate_orbital_stability",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_06_RELATIONSHIP",
+            "used_algorithms": [
+                "PH_ORBITAL_STABILITY"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Relationship_Gravity_Engine",
+                "MOD_06_RELATIONSHIP"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_VISCOSITY_INDEX": {
+            "id": "PH_VISCOSITY_INDEX",
+            "name": "粘滞指数 (Viscosity Index)",
+            "type": "PHYSICS_MODEL",
+            "layer": "TEMPORAL",
+            "priority": 480,
+            "description": "[V13.7 新注册] 计算时空场混合状态的粘滞指数。公式：Viscosity_Index = 1 - (min_energy / max_energy)",
+            "formula": "Viscosity_Index = 1 - (min_energy / max_energy)",
+            "function": "SpacetimeInertiaEngineV13_7.calculate_viscosity_index",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_12_INERTIA",
+            "used_algorithms": [
+                "PH_VISCOSITY_INDEX"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Inertia_Engine",
+                "MOD_12_INERTIA"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_EXTRACT_BASE_WAVE": {
+            "id": "PH_EXTRACT_BASE_WAVE",
+            "name": "提取原生概率波函数 (Extract Base Wave)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 175,
+            "description": "[V13.7 新注册] 从原局能量分布中提取日主的概率波函数",
+            "function": "SpacetimeInterferenceEngineV13_7.extract_base_wave",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_EXTRACT_BASE_WAVE"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_EXTRACT_BACKGROUND_FIELD": {
+            "id": "PH_EXTRACT_BACKGROUND_FIELD",
+            "name": "提取大运背景辐射 (Extract Background Field)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 170,
+            "description": "[V13.7 新注册] 从 InfluenceBus 中提取大运信息，构建静态势场",
+            "function": "SpacetimeInterferenceEngineV13_7.extract_background_field",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_EXTRACT_BACKGROUND_FIELD"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_EXTRACT_IMPULSE_WAVE": {
+            "id": "PH_EXTRACT_IMPULSE_WAVE",
+            "name": "提取流年脉冲 (Extract Impulse Wave)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 165,
+            "description": "[V13.7 新注册] 从 InfluenceBus 中提取流年信息，构建动能冲量",
+            "function": "SpacetimeInterferenceEngineV13_7.extract_impulse_wave",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_EXTRACT_IMPULSE_WAVE"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_EXTRACT_GEO_BIAS": {
+            "id": "PH_EXTRACT_GEO_BIAS",
+            "name": "提取地域偏置 (Extract Geo Bias)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL_INTERFERENCE_LAYER",
+            "priority": 160,
+            "description": "[V13.7 新注册] 从 InfluenceBus 中提取地理信息，构建介质阻尼系数",
+            "function": "SpacetimeInterferenceEngineV13_7.extract_geo_bias",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_14_TIME_SPACE_INTERFERENCE",
+            "used_algorithms": [
+                "PH_EXTRACT_GEO_BIAS"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Interference_Engine",
+                "MOD_14_TIME_SPACE_INTERFERENCE"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_INERTIA_SMOOTHING": {
+            "id": "PH_INERTIA_SMOOTHING",
+            "name": "惯性平滑 (Inertia Smoothing)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL",
+            "priority": 475,
+            "description": "[V13.7 新注册] 将流年冲击平滑化，引入衰减常数 tau。公式：E_smooth = E_prev * weight + E_current * (1 - weight)",
+            "formula": "E_smooth = E_prev * weight + E_current * (1 - weight)",
+            "function": "SpacetimeInertiaEngineV13_7.apply_inertia_smoothing",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_12_INERTIA",
+            "used_algorithms": [
+                "PH_INERTIA_SMOOTHING"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Spacetime_Inertia_Engine",
+                "MOD_12_INERTIA"
+            ],
+            "fusion_type": "CORE_MODULE"
+        },
+        "PH_RISK_NODE_DETECTION": {
+            "id": "PH_RISK_NODE_DETECTION",
+            "name": "风险节点探测 (Risk Node Detection)",
+            "type": "CORE_ALGORITHM",
+            "layer": "TEMPORAL",
+            "priority": 470,
+            "description": "[V13.7 新注册] 检测生命轨道中的高风险时间点",
+            "function": "LifepathResamplingEngineV13_7.detect_risk_nodes",
+            "theme": "BAZI_FUNDAMENTAL",
+            "module": "MOD_07_LIFEPATH",
+            "used_algorithms": [
+                "PH_RISK_NODE_DETECTION"
+            ],
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Lifepath_Resampling_Engine",
+                "MOD_07_LIFEPATH"
+            ],
+            "fusion_type": "CORE_MODULE"
+        }
+    },
+    "metrics": {
+        "CAUSAL_ENTROPY": {
+            "id": "CAUSAL_ENTROPY",
+            "name": "系统熵 (System Entropy - S)",
+            "unit": "nats",
+            "description": "结构纠缠深度。S = -sum(p*log(p))。",
+            "module": "MOD_00_SUBSTRATE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
+        },
+        "SINGULARITY_INDEX": {
+            "id": "SINGULARITY_INDEX",
+            "name": "奇点指标 (Singularity Index - Σ)",
+            "unit": "dimensionless",
+            "description": "Overlap count of high-priority interactions at specific nodes.",
+            "module": "MOD_00_SUBSTRATE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
+        },
+        "REYNOLDS_NUMBER": {
+            "id": "REYNOLDS_NUMBER",
+            "name": "雷诺数 (Reynolds Number - Re)",
+            "unit": "无纲量",
+            "description": "[V13.7 升级] 测量流动状态：层流 (<2000), 过渡 (2000-4000), 湍流 (>4000)。升级后包含大运阻尼依赖。",
+            "module": "MOD_05_WEALTH",
+            "formula": "Re = (ρ * v * L) / ν_luck",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ]
+        },
+        "VISCOSITY": {
+            "id": "VISCOSITY",
+            "name": "粘滞系数 (Viscosity - ν)",
+            "unit": "Pa·s (类比)",
+            "description": "[V13.7 升级] 由竞争者（比劫）能量引起的摩擦力。基础公式：ν = 1 + 0.05 * E_rival^2 - E_control * 2.0。升级后包含大运阻尼修正：ν_luck = ν_base * (1 + k_luck * |Δφ_luck|)。",
+            "module": "MOD_05_WEALTH",
+            "formula": "nu_luck = nu_base * (1 + k_luck * |Δφ_luck|), nu_base = 1.0 + (E_rival ** 2) * 0.05 - (E_control * 2.0)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid",
+                "V13.7_Navier_Stokes_Upgrade"
+            ]
+        },
+        "FLUX_Q": {
+            "id": "FLUX_Q",
+            "name": "流量闸门 (Flux Gate - Q)",
+            "unit": "m³/s (类比)",
+            "description": "由食伤能量驱动的财富流动速率。",
+            "module": "MOD_05_WEALTH",
+            "formula": "Q = E_output * 2.0",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_05_Wealth_Fluid"
+            ]
+        },
+        "PERMEABILITY": {
+            "id": "PERMEABILITY",
+            "name": "渗透效率 (Permeability Efficiency - η)",
+            "unit": "无纲量 [0-1]",
+            "description": "[V13.7 新注册] 基于雷诺数判定的财富渗透效率。公式：η = 1 / (1 + exp(-(Re - Re_critical) / Re_width))。层流状态渗透效率高，湍流状态渗透效率低。",
+            "module": "MOD_05_WEALTH",
+            "formula": "η = 1 / (1 + exp(-(Re - Re_critical) / Re_width))",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "V13.7_Navier_Stokes_Upgrade",
+                "MOD_05_WEALTH"
+            ]
+        },
+        "BINDING_ENERGY": {
+            "id": "BINDING_ENERGY",
+            "name": "绑定能 (Binding Energy - E)",
+            "unit": "焦耳 (类比)",
+            "description": "日主与配偶星之间的引力绑定能。负值表示绑定。",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "E = -G * M_dm * M_spouse / (2 * r)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "ORBITAL_STABILITY": {
+            "id": "ORBITAL_STABILITY",
+            "name": "轨道稳定性 (Orbital Stability - σ)",
+            "unit": "无纲量",
+            "description": "测量对轨道扰动的抵抗力。越高表示越稳定。",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "σ = |E_binding| / E_perturbation",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "PHASE_COHERENCE": {
+            "id": "PHASE_COHERENCE",
+            "name": "相位相干性 (Phase Coherence - η)",
+            "unit": "无纲量 [0-1]",
+            "description": "关系波函数的量子相干性。1 = 完美纠缠。",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "η = cos²(Δφ / 2)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "LUCK_MODIFIER": {
+            "id": "LUCK_MODIFIER",
+            "name": "大运修正系数 (Luck Modifier - λ)",
+            "unit": "无纲量 [0.5-1.5]",
+            "description": "根据大运元素的一致性修正配偶星质量。",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "λ = 1.3 (support) | 0.7 (control) | *0.6 (clash)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "ANNUAL_IMPULSE": {
+            "id": "ANNUAL_IMPULSE",
+            "name": "流年冲量 (Annual Impulse - Δr)",
+            "unit": "AU (analogous)",
+            "description": "Orbital distance modification from Annual Pillar interactions.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "Δr = +50 (clash) | -30 (join)",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "GEO_FACTOR": {
+            "id": "GEO_FACTOR",
+            "name": "地域介质常数 (Geo Factor - ε)",
+            "unit": "dimensionless [0.5-1.5]",
+            "description": "Environmental modifier for gravitational constant G.",
+            "module": "MOD_06_RELATIONSHIP",
+            "formula": "G_eff = G * ε",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_B_06_Relationship_Gravity"
+            ]
+        },
+        "ORBITAL_ENTROPY": {
+            "id": "ORBITAL_ENTROPY",
+            "name": "轨道熵 (Orbital Entropy)",
+            "unit": "nats",
+            "description": "Entropy integrated over the life-path trajectory.",
+            "module": "MOD_07_LIFEPATH",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
+        },
+        "RISK_NODE_DENSITY": {
+            "id": "RISK_NODE_DENSITY",
+            "name": "风险节点密度 (Risk Node Density)",
+            "unit": "节点/十年",
+            "description": "每10年周期内的结构风险事件频率。",
+            "module": "MOD_07_LIFEPATH",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "ANTIGRAVITY_V10_CORE"
+            ]
+        },
+        "COMBINATION_THRESHOLD": {
+            "id": "COMBINATION_THRESHOLD",
+            "name": "合化阈值 (Combination Threshold)",
+            "unit": "coeff",
+            "description": "Critical monthly energy level required for transformation (0.65).",
+            "module": "MOD_09_COMBINATION",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ]
+        },
+        "TRANSFORM_POWER": {
+            "id": "TRANSFORM_POWER",
+            "name": "化气能量 (Transform Power)",
+            "unit": "ratio",
+            "description": "1.0 if Transformed, 0.3 if Entangled.",
+            "module": "MOD_09_COMBINATION",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_01_Combination"
+            ]
+        },
+        "ROOTING_GAIN": {
+            "id": "ROOTING_GAIN",
+            "name": "通根增益 (Rooting Gain)",
+            "unit": "coeff",
+            "description": "Multiplier for Stem Energy: 2.0 (Main) to 0.5 (Floating).",
+            "module": "MOD_10_RESONANCE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
+        },
+        "STABILITY_STATUS": {
+            "id": "STABILITY_STATUS",
+            "name": "稳态标识 (Stability Status)",
+            "unit": "enum",
+            "description": "SUPER_STABLE | STABLE | DAMPED | CRITICAL_VOLATILE",
+            "module": "MOD_10_RESONANCE",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
+        },
+        "PILLAR_WEIGHT_MATRIX": {
+            "id": "PILLAR_WEIGHT_MATRIX",
+            "name": "宫位权重矩阵 (Pillar Weight Matrix)",
+            "unit": "ratio",
+            "description": "Y/M/D/H weights summing to 1.0.",
+            "module": "MOD_11_GRAVITY",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_03_Pillar_Weighting"
+            ]
+        },
+        "INERTIA_CONSTANT_TAU": {
+            "id": "INERTIA_CONSTANT_TAU",
+            "name": "惯性常数 (Inertia Constant τ)",
+            "unit": "months",
+            "description": "Time required for previous energy fields to decay by ~63%.",
+            "module": "MOD_12_INERTIA",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ]
+        },
+        "VISCOSITY_INDEX": {
+            "id": "VISCOSITY_INDEX",
+            "name": "粘滞指数 (Viscosity Index)",
+            "unit": "ratio",
+            "description": "Measure of field mixing state (0.0=Pure, 1.0=Max Mix).",
+            "module": "MOD_12_INERTIA",
+            "status": "ACTIVE",
+            "origin_trace": [
+                "Topic_G_04_Spacetime_Inertia"
+            ]
+        },
+        "STELLAR_COHERENCE": {
+            "id": "STELLAR_COHERENCE",
+            "name": "星辰相干度 (Stellar Coherence - η_s)",
+            "unit": "ratio",
+            "description": "Composite damping/boost effect from stable stellar nodes.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
+        },
+        "QUANTUM_ATTRACTION": {
+            "id": "QUANTUM_ATTRACTION",
+            "name": "量子引力增益 (Quantum Attraction Boost)",
+            "unit": "eV (analogous)",
+            "description": "Increased binding energy from Peach Blossom resonance.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
+        },
+        "KINETIC_IMPULSE": {
+            "id": "KINETIC_IMPULSE",
+            "name": "动能冲量 (Kinetic Impulse - ΔV)",
+            "unit": "m/s (analogous)",
+            "description": "Reduction in situational friction from Post Horse activity.",
+            "module": "MOD_17_STELLAR_INTERACTION",
+            "status": "ACTIVE"
+        }
+    },
+    "bazi_parameters": {
+        "TEN_GODS_WEALTH": {
+            "id": "TEN_GODS_WEALTH",
+            "name": "财星 (Wealth)",
+            "type": "十神",
+            "description": "日主所克之元素。代表财富获取目标。",
+            "relationship": "日主克财",
+            "examples": "戊土日主 -> 水为财"
+        },
+        "TEN_GODS_RIVAL": {
+            "id": "TEN_GODS_RIVAL",
+            "name": "比劫 (Rival/Bi-Jie)",
+            "type": "十神",
+            "description": "与日主同元素的成分。代表竞争与资源共享。",
+            "relationship": "日主 == 比劫",
+            "examples": "戊土日主 -> 土为比劫"
+        },
+        "TEN_GODS_OUTPUT": {
+            "id": "TEN_GODS_OUTPUT",
+            "name": "食伤 (Output)",
+            "type": "十神",
+            "description": "日主所生之元素。代表技能与创造性输出。",
+            "relationship": "日主生食伤",
+            "examples": "戊土日主 -> 金为食伤"
+        },
+        "TEN_GODS_CONTROL": {
+            "id": "TEN_GODS_CONTROL",
+            "name": "官杀 (Control/Officer)",
+            "type": "十神",
+            "description": "克制日主的元素。代表纪律与权威。",
+            "relationship": "官杀克日主",
+            "examples": "戊土日主 -> 木为官杀"
+        },
+        "SPOUSE_STAR": {
+            "id": "SPOUSE_STAR",
+            "name": "配偶星 (Spouse Star)",
+            "type": "RELATIONSHIP",
+            "description": "For Male: Wealth Star (Cai). For Female: Control Star (Guan).",
+            "relationship": "Male: DM controls Spouse; Female: Spouse controls DM",
+            "examples": "Male Earth DM -> Water is Spouse Star"
+        },
+        "SPOUSE_PALACE": {
+            "id": "SPOUSE_PALACE",
+            "name": "配偶宫 (Spouse Palace)",
+            "type": "RELATIONSHIP",
+            "description": "Day Branch position. Represents marriage stability and spouse characteristics.",
+            "relationship": "Fixed position: Day Pillar Branch",
+            "examples": "戊辰 -> 辰 is Spouse Palace"
+        },
+        "PEACH_BLOSSOM": {
+            "id": "PEACH_BLOSSOM",
+            "name": "桃花 (Peach Blossom)",
+            "type": "AUXILIARY_STAR",
+            "description": "Romantic attraction indicator. Branches: 子午卯酉 based on Year/Day Branch triads.",
+            "relationship": "寅午戌->卯; 申子辰->酉; 巳酉丑->午; 亥卯未->子",
+            "examples": "Year Branch 寅 -> Peach Blossom at 卯"
+        },
+        "RISK_NODE": {
+            "id": "RISK_NODE",
+            "name": "风险节点 (Risk Node)",
+            "type": "STRUCTURE_DEFECT",
+            "description": "Temporal point where structural stress (SAI) exceeds critical limits.",
+            "relationship": "SAI > 0.6 or Entropy > 1.5",
+            "examples": "2026: SAI=1.8 (Critical)"
+        },
+        "LIFE_PATH_TRAJECTORY": {
+            "id": "LIFE_PATH_TRAJECTORY",
+            "name": "生命轨迹 (Life-Path Trajectory)",
+            "type": "TEMPORAL_FLOW",
+            "description": "The continuous curve of energy states over a human lifespan.",
+            "relationship": "Integration of Annual/Luck Pillars",
+            "examples": "Entropic Decay Curve"
+        }
+    },
+    "tools": {
+        "TOOL_01_STELLAR_PARSER": {
+            "id": "TOOL_01_STELLAR_PARSER",
+            "name": "周星驰风格翻译层 (Stephen Chow Style Translation Layer)",
+            "type": "INTELLIGENCE_TOOL",
+            "description": "基于周星驰无厘头语境的物理真言引擎，将高阶物理参数转化为喜剧表达。",
+            "class": "core.utils.Stellar_Comedy_Parser",
+            "active": true
+        },
+        "PH_SGSJ_VACUUM_RUPTURE": {
+            "id": "PH_SGSJ_VACUUM_RUPTURE",
+            "name": "真空断裂效应 (Vacuum Rupture Effect)",
+            "type": "物理灾变模型",
+            "layer": "DYNAMIC_COLLISION",
+            "description": "当超导环境下的伤官场遭遇流年官星扰动时，应力张量发生 >500% 的瞬间跳变。",
+            "conditions": "SGSJ_Purity > 0.95 and Annual_Guan_Sha > 0",
+            "parameter_定标": {
+                "jump_rate_threshold": 5.0,
+                "fracture_sai": 1.25
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_SGSJ_SUPER_FIELD": {
+            "id": "PH_SGSJ_SUPER_FIELD",
+            "name": "伤官超导场 (Shang Guan Superconductor Field)",
+            "type": "物理场模型",
+            "layer": "PATTERN_PHYSICS",
+            "description": "[V14.8.4] 在原局天干无官杀、地支藏干官杀极低的条件下形成的零阻力能量传导场。",
+            "conditions": "Stem_Guan = 0 and Hidden_Guan_Energy < 0.15",
+            "formula": "Purity = 1 - (Natal_Hidden_Guan / 3.0)",
+            "parameter_定标": {
+                "purity_threshold": 0.95,
+                "dim_coeff_protrude": 1.1,
+                "dim_coeff_hidden": 0.6
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_SGSJ_GEO_CORRECTION": {
+            "id": "PH_SGSJ_GEO_CORRECTION",
+            "name": "地理场强修正 (GEO Field Correction)",
+            "type": "环境修正模型",
+            "layer": "GEO_BUS",
+            "description": "[V14.8.4] 根据地理五行属性修正伤官场与官星场的相对能量。南方火旺增强火系伤官，北方水寒压制火系官星。",
+            "conditions": "geo_element != Neutral",
+            "formula": "Energy_Corrected = Base_Energy * GEO_ELEMENT_MAP[geo_element][stem_element]",
+            "parameter_定标": {
+                "boost_max": 1.15,
+                "damping_min": 0.85
+            },
+            "status": "CALIBRATED"
+        },
+        "PH_3D_INDUCTION": {
+            "id": "PH_3D_INDUCTION",
+            "name": "三维电磁感应模型 (3D Electromagnetic Induction)",
+            "type": "物理传导模型",
+            "layer": "STRUCTURAL",
+            "description": "[V14.8.4] 从一维线性电路升级为三维感应模型。天干为主导线、地支藏干为感应线圈，透干时产生电压泵升效应。",
+            "conditions": "all_patterns",
+            "formula": "Total_Field = Σ(Stem_E * 1.0 + Hidden_E * dim_coeff)",
+            "parameter_定标": {
+                "stem_weight": 1.0,
+                "hidden_protrude": 1.1,
+                "hidden_static": 0.6
+            },
+            "status": "CALIBRATED"
+        },
+        "TOOL_02_TRANSLATION_UTIL": {
+            "id": "TOOL_02_TRANSLATION_UTIL",
+            "name": "翻译工具类 (Translation Utility)",
+            "type": "FRAMEWORK_TOOL",
+            "description": "[V4.2] 统一管理系统中所有英文术语的中文翻译。支持物理格局名称、状态分类、十神、五行、十二长生、物理术语、UI文本等多种类型的翻译。",
+            "class": "core.translation_util.TranslationUtil",
+            "alias": "T",
+            "active": true,
+            "categories": [
+                "PATTERN_NAMES",
+                "CATEGORIES",
+                "TEN_GODS",
+                "ELEMENTS",
+                "LIFE_STAGES",
+                "PHYSICS_TERMS",
+                "UI_TEXT"
+            ],
+            "methods": [
+                "get(key, default)",
+                "translate_pattern(pattern_id)",
+                "translate_category(category)",
+                "translate_element(element)",
+                "translate_god(god)"
+            ],
+            "status": "ACTIVE"
+        }
+    }
+}

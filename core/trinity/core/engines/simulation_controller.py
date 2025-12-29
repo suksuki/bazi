@@ -9,7 +9,7 @@ from core.trinity.core.engines.simulation_model import SimulationModel
 from core.trinity.core.engines.pattern_screener import PatternScreener
 from core.trinity.core.engines.mirror_engine import MirrorEngine
 from core.trinity.core.engines.celebrity_backtester import CelebrityBacktester
-from core.trinity.core.engines.pattern_scout import PatternScout
+# from core.trinity.core.engines.pattern_scout import PatternScout  # 已删除逆向审查模块
 from core.trinity.core.engines.pattern_physics_lab import PatternPhysicsLab
 from core.trinity.core.engines.pattern_lifecycle_manager import PatternLifecycleManager
 from core.trinity.core.engines.intervention_engine import InterventionEngine
@@ -34,7 +34,8 @@ class SimulationController:
         self.collector = ExpectedValueCollector()
         self.screener = PatternScreener()
         self.celebrity_backtester = CelebrityBacktester(self.framework)
-        self.pattern_scout = PatternScout(self.engine)
+        # self.pattern_scout = PatternScout(self.engine)  # 已删除逆向审查模块
+        self.pattern_scout = None
         self.pattern_lab = PatternPhysicsLab(self.framework)
         self.lifecycle_manager = PatternLifecycleManager(self.framework, self.engine)
         self.intervention_engine = InterventionEngine(self.framework)
@@ -270,7 +271,12 @@ class SimulationController:
         start_time = time.time()
         self.logger.info(f"🚀 [AUDIT START] Targeted scouting for {topic_id} across {sample_size} samples...")
         
-        scout_res = self.pattern_scout.scout_pattern(topic_id, sample_size=sample_size, progress_callback=progress_callback)
+        # 已删除逆向审查模块
+        if self.pattern_scout is None:
+            self.logger.warning("⚠️ PatternScout已删除，返回空结果")
+            scout_res = []
+        else:
+            scout_res = self.pattern_scout.scout_pattern(topic_id, sample_size=sample_size, progress_callback=progress_callback)
         
         elapsed = time.time() - start_time
         metrics = {
@@ -292,8 +298,13 @@ class SimulationController:
         # 1. Scout samples if not provided
         if not charts:
             self.logger.info(f"Scouting samples for {topic_id}...")
-            charts_data = self.pattern_scout.scout_pattern(topic_id, sample_size=518400)
-            charts = [s["chart"] if isinstance(s, dict) else s for s in charts_data]
+            # 已删除逆向审查模块
+            if self.pattern_scout is None:
+                self.logger.warning("⚠️ PatternScout已删除，无法获取样本")
+                charts = []
+            else:
+                charts_data = self.pattern_scout.scout_pattern(topic_id, sample_size=518400)
+                charts = [s["chart"] if isinstance(s, dict) else s for s in charts_data]
         
         if not charts:
             return {"error": "No samples found for pattern", "status": "Failed"}
@@ -413,7 +424,11 @@ class SimulationController:
         hits = []
         for t in topics:
             # Inject 6 pillars for deep audit
-            match_data = self.pattern_scout._deep_audit(six_pillar_chart, t["id"])
+            # 已删除逆向审查模块
+            if self.pattern_scout is None:
+                match_data = None
+            else:
+                match_data = self.pattern_scout._deep_audit(six_pillar_chart, t["id"])
             if match_data:
                 match_data["topic_name"] = t["name"]
                 # collision_path mapping (simplified for demo)
@@ -457,7 +472,11 @@ class SimulationController:
                 chart = [pillars['year'], pillars['month'], pillars['day'], pillars['hour']]
                 
                 # 3. Use PatternScout logic to check
-                match_data = self.pattern_scout._deep_audit(chart, topic_id)
+                # 已删除逆向审查模块
+                if self.pattern_scout is None:
+                    match_data = None
+                else:
+                    match_data = self.pattern_scout._deep_audit(chart, topic_id)
                 
                 if match_data:
                     match_data["profile_name"] = p["name"]
@@ -720,11 +739,14 @@ class SimulationController:
                 chart = next(bazi_gen)
                 
                 # Check MOD_115 (SSZS)
-                res_115 = self.pattern_scout._deep_audit(chart, "MOD_115_SSZS")
+                # 已删除逆向审查模块
+                if self.pattern_scout is None:
+                    res_115 = None
+                    res_119 = None
+                else:
+                    res_115 = self.pattern_scout._deep_audit(chart, "MOD_115_SSZS")
+                    res_119 = self.pattern_scout._deep_audit(chart, "MOD_119_CE")
                 if res_115: mod_115_hits.append(res_115)
-                
-                # Check MOD_119 (CE_FLARE)
-                res_119 = self.pattern_scout._deep_audit(chart, "MOD_119_CE")
                 if res_119: mod_119_hits.append(res_119)
                 
             except StopIteration: break
@@ -839,14 +861,18 @@ class SimulationController:
 
     def run_v435_yangren_audit(self, progress_callback=None):
         """[V4.3.5] [Step 1] 羊刃单极能核破坏深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案 (ASE 全量标准)
-        hits = scout.scout_pattern("YGZJ_MONOPOLE_ENERGY", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("YGZJ_MONOPOLE_ENERGY", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 结果注入回溯依赖
         for h in hits:
@@ -867,14 +893,18 @@ class SimulationController:
 
     def run_v435_thermo_audit(self, progress_callback=None):
         """[V4.3.5] [Step 2] 调候热力学熵值平衡深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("YHGS_THERMODYNAMIC_ENTROPY", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("YHGS_THERMODYNAMIC_ENTROPY", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -895,14 +925,18 @@ class SimulationController:
 
     def run_v435_inertia_audit(self, progress_callback=None):
         """[V4.3.5] [Step 3] 禄位自锁自感回路与惯性余量深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("LYKG_LC_SELF_LOCKING", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("LYKG_LC_SELF_LOCKING", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -923,14 +957,18 @@ class SimulationController:
 
     def run_v435_tunnel_audit(self, progress_callback=None):
         """[V4.3.5] [Step 4] 虚空能量量子隧道注入深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("JJGG_QUANTUM_TUNNELING", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("JJGG_QUANTUM_TUNNELING", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -951,10 +989,11 @@ class SimulationController:
 
     def run_universal_topic_audit(self, topic_id: str, progress_callback=None):
         """[V4.3.5] 通用深度审计引擎：支持对任意轨道进行 518,400 全量样本穿透定标。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 自动获取轨道名称
@@ -962,7 +1001,10 @@ class SimulationController:
         topic_name = topic_meta.get("name_cn", topic_id)
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern(topic_id, sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern(topic_id, sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -986,14 +1028,18 @@ class SimulationController:
 
     def run_v44_resonance_audit(self, progress_callback=None):
         """[V4.4.0] [Step 5] 专旺同频相位共振深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("TYKG_PHASE_RESONANCE", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("TYKG_PHASE_RESONANCE", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -1014,14 +1060,18 @@ class SimulationController:
 
     def run_v44_transition_audit(self, progress_callback=None):
          """[V4.4.0] [Step 6] 弃命格量子相变深度审计。"""
-         from core.trinity.core.engines.pattern_scout import PatternScout
+         # 已删除逆向审查模块
+         # from core.trinity.core.engines.pattern_scout import PatternScout
          from core.logic_registry import LogicRegistry
          
-         scout = PatternScout(self.engine)
+         # scout = PatternScout(self.engine)  # 已删除
          registry = LogicRegistry()
          
          # 批量扫描 518,400 组档案
-         hits = scout.scout_pattern("CWJS_QUANTUM_TRANSITION", sample_size=518400, progress_callback=progress_callback)
+         # hits = scout.scout_pattern("CWJS_QUANTUM_TRANSITION", sample_size=518400, progress_callback=progress_callback)  # 已删除
+         hits = []
+         if progress_callback:
+             progress_callback(0, 518400, {"matched": 0})
          
          # 过滤过滤：只记录发生“从属态/相变中”的样本
          valid_hits = [h for h in hits if "ANTAGONISTIC" not in h.get('category', '')]
@@ -1045,14 +1095,18 @@ class SimulationController:
 
     def run_v44_reversion_audit(self, progress_callback=None):
         """[V4.4.0] [Step 7] 还原动力学/属性闪变深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("MHGG_REVERSION_DYNAMICS", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("MHGG_REVERSION_DYNAMICS", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -1073,14 +1127,18 @@ class SimulationController:
 
     def run_v45_gxyg_audit(self, progress_callback=None):
         """[V4.5.0] [Step 8] 拱夹空间虚拟势阱深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("GXYG_VIRTUAL_GAP", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("GXYG_VIRTUAL_GAP", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -1101,14 +1159,18 @@ class SimulationController:
 
     def run_v45_mbgs_audit(self, progress_callback=None):
         """[V4.5.0] [Step 9] 墓库空间高能势能深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("MBGS_STORAGE_POTENTIAL", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("MBGS_STORAGE_POTENTIAL", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:
@@ -1129,14 +1191,18 @@ class SimulationController:
 
     def run_v45_zhsg_audit(self, progress_callback=None):
         """[V4.5.3] [Step 10] 杂气复合激发深度审计。"""
-        from core.trinity.core.engines.pattern_scout import PatternScout
+        # 已删除逆向审查模块
+        # from core.trinity.core.engines.pattern_scout import PatternScout
         from core.logic_registry import LogicRegistry
         
-        scout = PatternScout(self.engine)
+        # scout = PatternScout(self.engine)  # 已删除
         registry = LogicRegistry()
         
         # 批量扫描 518,400 组档案
-        hits = scout.scout_pattern("ZHSG_MIXED_EXCITATION", sample_size=518400, progress_callback=progress_callback)
+        # hits = scout.scout_pattern("ZHSG_MIXED_EXCITATION", sample_size=518400, progress_callback=progress_callback)  # 已删除
+        hits = []
+        if progress_callback:
+            progress_callback(0, 518400, {"matched": 0})
         
         # 依赖回溯
         for h in hits:

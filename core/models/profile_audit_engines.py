@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from core.bazi_profile import BaziProfile
 from core.engine_graph import GraphNetworkEngine
-from core.trinity.core.engines.pattern_scout import PatternScout
+# from core.trinity.core.engines.pattern_scout import PatternScout  # 已删除逆向审查模块
 from core.logic_registry import LogicRegistry
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 
@@ -54,7 +54,8 @@ class PatternFrictionAnalysisEngine:
     
     def __init__(self):
         self.registry = LogicRegistry()
-        self.scout = PatternScout()
+        # self.scout = PatternScout()  # 已删除逆向审查模块
+        self.scout = None
         
         # 格局冲突规则表
         self.conflict_rules = {

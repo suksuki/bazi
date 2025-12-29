@@ -120,7 +120,7 @@ if is_reverse_collapse: sai *= 2.0 # 三合局
 **硬触发条件:**
 ```python
 if "伤官" not in ten_gods: return None  # 必须有伤官
-if "正官" in ten_gods[:4]: return None  # 天干不能有正官
+# V4.2: 已移除"不能有正官"限制，通过能级压制比 SR >= 12:1 判定
 # 已移除藏干官杀限制！
 ```
 

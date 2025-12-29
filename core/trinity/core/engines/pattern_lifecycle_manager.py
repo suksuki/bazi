@@ -2,7 +2,7 @@
 import logging
 import time
 from typing import List, Dict, Any, Optional
-from core.trinity.core.engines.pattern_scout import PatternScout
+# from core.trinity.core.engines.pattern_scout import PatternScout  # 已删除逆向审查模块（保持注释）
 from core.trinity.core.engines.pattern_physics_lab import PatternPhysicsLab
 from core.trinity.core.engines.adaptive_model_generator import AdaptiveModelGenerator
 
@@ -15,7 +15,8 @@ class PatternLifecycleManager:
     """
     
     def __init__(self, framework, engine):
-        self.scout = PatternScout(engine)
+        # self.scout = PatternScout(engine)  # 已删除逆向审查模块
+        self.scout = None
         self.lab = PatternPhysicsLab(framework)
         self.adaptive_gen = AdaptiveModelGenerator()
         self.active_topics = {}

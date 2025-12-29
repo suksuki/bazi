@@ -24,7 +24,7 @@ init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
 
 app_mode = st.radio(
     "导航 (Navigation)", 
-    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌀 量子仿真 (Simulation)", "🌌 奇点狩猎 (Hunter)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "📋 八字档案审计 (Audit)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
+    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌀 量子仿真 (Simulation)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "📋 八字档案审计 (Audit)", "🌌 全息格局 (Holographic)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
     horizontal=True,
     label_visibility="collapsed",
     key="nav_radio"
@@ -57,12 +57,6 @@ elif app_mode == "✨ 量子真言 (Quantum Lab)":
     import ui.pages.quantum_lab as qlab
     qlab.render()
 
-elif app_mode == "🌌 奇点狩猎 (Hunter)":
-    from ui.pages.singularity_hunter_page import render as render_hunter
-    render_hunter()
-
-
-
 elif app_mode == "🌟 命运回响 (Cinema)":
     import ui.pages.zeitgeist as cinema
     cinema.render()
@@ -85,6 +79,10 @@ elif app_mode == "💰 财运推演 (Wealth)":
 
 elif app_mode == "📋 八字档案审计 (Audit)":
     from ui.pages.profile_audit import render
+    render()
+
+elif app_mode == "🌌 全息格局 (Holographic)":
+    from ui.pages.holographic_pattern import render
     render()
 
 elif app_mode == "🔮 智能排盘 (Prediction)":

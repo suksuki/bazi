@@ -2,6 +2,7 @@ import json
 import os
 import logging
 from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -220,3 +221,79 @@ class LogicRegistry:
     @property
     def manifest(self):
         return self._manifest
+
+    def update_module_audit_parameters(self, module_id: str, audit_parameters: Dict[str, Any]) -> bool:
+        """
+        更新模块的审计参数调优结果到注册表
+        
+        Args:
+            module_id: 模块ID (如 "MOD_101_SGJG_FAILURE")
+            audit_parameters: 审计参数调优结果，包含：
+                - step_a_tuning: Step A的参数调优（如命中率阈值调整）
+                - step_d_tuning: Step D的参数调优（如stress_tensor权重修正）
+                - evolution_log: 演化日志
+        
+        Returns:
+            bool: 是否成功更新
+        """
+        try:
+            modules = self._manifest.get('modules', {})
+            if module_id not in modules:
+                logger.warning(f"模块 {module_id} 不存在于注册表中")
+                return False
+            
+            module = modules[module_id]
+            
+            # 初始化audit_parameters字段（如果不存在）
+            if 'audit_parameters' not in module:
+                module['audit_parameters'] = {}
+            
+            # 更新Step A调优结果
+            if 'step_a_tuning' in audit_parameters:
+                module['audit_parameters']['step_a_tuning'] = audit_parameters['step_a_tuning']
+            
+            # 更新Step D调优结果
+            if 'step_d_tuning' in audit_parameters:
+                module['audit_parameters']['step_d_tuning'] = audit_parameters['step_d_tuning']
+            
+            # 更新演化日志
+            if 'evolution_log' in audit_parameters:
+                if 'evolution_history' not in module['audit_parameters']:
+                    module['audit_parameters']['evolution_history'] = []
+                module['audit_parameters']['evolution_history'].append(audit_parameters['evolution_log'])
+            
+            # 更新最后审计时间
+            module['audit_parameters']['last_audit_date'] = audit_parameters.get('audit_date', 
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            
+            # 保存到文件
+            return self._save_manifest()
+            
+        except Exception as e:
+            logger.error(f"更新模块审计参数失败: {e}")
+            return False
+    
+    def _save_manifest(self) -> bool:
+        """保存manifest到文件"""
+        try:
+            import os
+            from datetime import datetime
+            path = os.path.join(os.path.dirname(__file__), 'logic_manifest.json')
+            
+            # 创建备份
+            backup_path = f"{path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            if os.path.exists(path):
+                import shutil
+                shutil.copy2(path, backup_path)
+                logger.info(f"已创建备份: {backup_path}")
+            
+            # 保存更新后的manifest
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(self._manifest, f, ensure_ascii=False, indent=4)
+            
+            logger.info(f"✅ 注册表已更新: {path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"保存注册表失败: {e}")
+            return False

@@ -1,0 +1,1041 @@
+{
+  "metadata": {
+    "id": "PATTERN_PHYSICS_REGISTRY",
+    "name": "物理模型仿真格局注册表",
+    "name_en": "Pattern Physics Simulation Registry",
+    "version": "1.0",
+    "created_at": "2025-12-29 01:18:05",
+    "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析",
+    "source": "extracted from core/logic_manifest.json",
+    "total_patterns": 28
+  },
+  "theme": {
+    "id": "PATTERN_PHYSICS",
+    "name": "物理模型仿真 (Physics Model Simulation)",
+    "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析。"
+  },
+  "patterns": {
+    "MOD_101_SGJG_FAILURE": {
+      "id": "MOD_101_SGJG_FAILURE",
+      "name_cn": "伤官见官栅极击穿 ✨",
+      "name": "🏹 SGGG 栅极击穿模型 (Gate Breakdown Model)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_GATE_BREAKDOWN",
+        "ALGO_GATE_STABILITY"
+      ],
+      "icon": "🏹",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Gate Breakdown] 强极性粒子流(伤官)对精密指挥系统(官星)的物理击穿。支持大运重置、流年合化陷阱及墓库开合审计。",
+      "active": true,
+      "goal": "评估伤官粒子流对官星栅极的击穿风险，识别地支刑冲开启墓库导致的地下见官爆炸。",
+      "outcome": "SAI 击穿指数, 栅极稳定性, 粒子流密度, 墓库爆裂判定, 耦合崩塌标记。",
+      "linked_rules": [
+        "PH_SGGG_GATE_STABILIZATION",
+        "PH_SGGG_VAULT_CLASH_OVERFLOW",
+        "PH_SGGG_STEM_BONDING_TRAP",
+        "PH_SGGG_REVERSE_SG_COLLAPSE"
+      ],
+      "linked_metrics": [
+        "sai",
+        "charge_density",
+        "gate_stability",
+        "is_vault_burst",
+        "is_trap"
+      ],
+      "formula": "SAI = (SG_Kinetic / O_Stabilization) × Phase_Interference × GEO",
+      "parameters": {
+        "breakdown_limit": 1.5,
+        "critical_failure_limit": 4.0,
+        "vaporization_limit": 8.0,
+        "vault_burst_multiplier": 3.0,
+        "trap_multiplier": 1.5,
+        "reverse_collapse_multiplier": 2.0
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "breakdown_rate": "42.3%",
+        "vault_burst_events": "1,204",
+        "survival_rate_v4": "0.15%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_102_PGB_SUPERFLUID": {
+      "id": "MOD_102_PGB_SUPERFLUID",
+      "name": "🧊 排骨帮超流锁定格 (PGB Superfluid Lock)",
+      "icon": "🧊",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "description": "极低摩擦系数的能量传输拓扑。在极高能级下保持超导稳定性，不触发 1.25 断裂预警。",
+      "active": false,
+      "status": "DEPRECATED_BY_MOD_110"
+    },
+    "MOD_103_PGB_BRITTLE": {
+      "id": "MOD_103_PGB_BRITTLE",
+      "name": "🗿 排骨帮脆性巨人格 (PGB Brittle Titan)",
+      "icon": "🗿",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "description": "高刚度失效模型。研究极度纯净但在特定剪切力下发生瞬间坍塌的极端样本。",
+      "active": false,
+      "status": "DEPRECATED_BY_MOD_110"
+    },
+    "MOD_104_SGSJ_PLASMA_VAPORIZATION": {
+      "id": "MOD_104_SGSJ_PLASMA_VAPORIZATION",
+      "name_cn": "伤官伤尽等离子气化 ✨",
+      "name": "⚡ SGSJ 伤官伤尽等离子气化场模型 (Plasma Vaporization Field)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_PLASMA_FIELD",
+        "ALGO_PLASMA_SUPPRESSION"
+      ],
+      "icon": "⚡",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.2",
+      "description": "[V4.2 等离子气化场] 从静态真空逻辑升级为动态饱和攻击模型。不再要求原局完全无官杀，而是计算伤官能级压制比是否达到临界值(12:1)。当任何官杀粒子进入场域时，被高能伤官等离子体气化/相变。",
+      "active": true,
+      "status": "CALIBRATED",
+      "goal": "识别高能伤官气化场态，审计能级压制比、日主电源稳定性、动态拦截能力，判定官杀是否被彻底气化。",
+      "outcome": "SAI 应力指数, 能级压制比, 气化态判定, 电源稳定性, 动态拦截成功率, 财星泄放负载。",
+      "physics_model": {
+        "name": "等离子体气化场模型 (Plasma Vaporization Field)",
+        "core_concept": "系统不追求无官，而是追求伤官场强达到临界点。当官杀粒子进入该场域时，瞬间被高能伤官等离子体气化/相变。",
+        "dimensions": {
+          "A_topology": "基础拓扑筛选 - 天干必须有伤官",
+          "B_energy": "能量统计 - 伤官/官杀/印比/财星全量计算",
+          "C_suppression": "能级压制比 SR = E_伤官 / E_官杀，临界值 >= 12:1",
+          "D_source": "日主电源稳定性 = E_印比 / E_伤官 >= 0.3",
+          "E_intercept": "动态拦截能力 - 流年官杀突入时的气化成功率",
+          "F_sai": "SAI 计算 - 拦截失败或自燃时应力增加",
+          "G_category": "状态分类 - 真空超导/等离子护盾/气化过载等"
+        }
+      },
+      "linked_rules": [
+        "PH_SGSJ_PLASMA_VAPORIZATION_FIELD",
+        "PH_SGSJ_SUPPRESSION_RATIO_CALC",
+        "PH_SGSJ_SOURCE_STABILITY_AUDIT",
+        "PH_SGSJ_DYNAMIC_INTERCEPTION",
+        "PH_SGSJ_WEALTH_DISCHARGE_FACTOR"
+      ],
+      "linked_metrics": [
+        "sai",
+        "suppression_ratio",
+        "sg_total",
+        "guan_total",
+        "source_stability",
+        "is_vaporized",
+        "is_self_burn",
+        "incoming_guan",
+        "intercept_success",
+        "intercept_ratio",
+        "wealth_load"
+      ],
+      "formula": {
+        "suppression_ratio": "SR = E_伤官 / E_官杀",
+        "vaporization_threshold": "SR >= 12:1 → 气化态",
+        "source_stability": "SS = E_印比 / E_伤官",
+        "intercept_ratio": "IR = E_伤官 / E_突入官杀",
+        "base_sai": "SAI_base = 0.1 / (SR / 12)",
+        "final_sai": "SAI = SAI_base × 自燃系数 × 拦截失败系数 × 财星因子 × GEO"
+      },
+      "parameters": {
+        "vaporization_threshold": 12.0,
+        "partial_vaporization_threshold": 6.0,
+        "min_suppression_ratio": 3.0,
+        "source_stability_threshold": 0.3,
+        "intercept_success_ratio": 2.0,
+        "self_burn_multiplier": 5.0,
+        "annual_guan_weight": 3.5,
+        "luck_guan_weight": 2.5,
+        "wealth_discharge_factor": 0.3
+      },
+      "categories": {
+        "VACUUM_SUPERCONDUCTOR": "真空超导/纯净气化场 - 无官杀突入，压制比 >= 12:1",
+        "PLASMA_SHIELD_ACTIVE": "等离子护盾激活/气化成功 - 官杀突入被成功拦截",
+        "VAPORIZATION_OVERLOAD": "气化过载/拦截失败 - 官杀突破伤官防线",
+        "SOURCE_BURNOUT": "电源枯竭/自燃 - 日主印比能量不足",
+        "PARTIAL_VAPORIZATION": "部分气化/亚临界态 - 6:1 <= SR < 12:1",
+        "UNSTABLE_FIELD": "不稳定场态 - 压制比不足"
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "vaporization_rate": "2.8%",
+        "partial_vaporization_rate": "5.2%",
+        "intercept_success_rate": "87.3%",
+        "self_burn_rate": "12.7%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "audit_mode": "SGSJ_V4.2_PLASMA_VAPORIZATION"
+    },
+    "MOD_105_YRJS_FUSION": {
+      "id": "MOD_105_YRJS_FUSION",
+      "name_cn": "羊刃架杀核聚变 ✨",
+      "name": "⚔️ YRJS 羊刃架杀聚变模型 (Yang Ren Jia Sha Fusion)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_TOKAMAK_FUSION",
+        "ALGO_MAGNETIC_RESONANCE"
+      ],
+      "icon": "⚔️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Tokamak] 托卡马克约束模型。高能粒子束(刃)与强电磁约束场(杀)的非线性对抗。支持大运重置与流年相位扰动审计。",
+      "active": true,
+      "goal": "通过托卡马克约束算法识别高聚变稳态与磁场击穿，定标杀刃权柄输出。",
+      "outcome": "SAI 稳态指数, 羊刃等离子压, 七杀约束场强, 杀刃能级比, 击穿/超导判定。",
+      "linked_rules": [
+        "PH_YRJS_TOKAMAK_BALANCE",
+        "PH_YRJS_MAGNETIC_BREAKDOWN",
+        "PH_YRJS_PHASE_PERTURBATION",
+        "PH_YRJS_TENSION_COUPLING"
+      ],
+      "linked_metrics": [
+        "e_blade",
+        "e_sha",
+        "ratio",
+        "sai",
+        "is_breakdown",
+        "is_coupled"
+      ],
+      "formula": "SAI = |(e_blade/e_sha) - 1.32| × Phase × GEO",
+      "parameters": {
+        "golden_ratio_center": 1.32,
+        "golden_zone_min": 0.8,
+        "golden_zone_max": 1.8,
+        "power_output_threshold": 3.0,
+        "stable_fusion_threshold": 2.0,
+        "yin_max": 0.5,
+        "shi_max": 0.5
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "yrjs_pure": 2127,
+        "pure_rate": "0.410%",
+        "golden_ratio_avg": 1.32,
+        "near_field_rate": "86.5%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_106_XSDS_CIRCUIT": {
+      "id": "MOD_106_XSDS_CIRCUIT",
+      "name_cn": "枭神夺食量子断路 ✨",
+      "name": "🦉 XSDS 枭神夺食量子断路模型 (Quantum Circuit Model)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_QUANTUM_CIRCUIT",
+        "ALGO_PHASE_SHUNTING"
+      ],
+      "icon": "🦉",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1.3",
+      "description": "[V4.1.3 Superconductor] 相位截断器模型。支持大运势垒溢出、流年相位干涉以及比劫阻抗超导审计。",
+      "active": true,
+      "goal": "非线性识别高频场强相位湮灭，捕捉断路中的超导稳态粒子。",
+      "outcome": "SAI 动态断路值, 枭场能级, 相位干涉系数, 阻抗导流效率, 绝缘/超导判定。",
+      "linked_rules": [
+        "PH_XSDS_VAULT_OVERFLOW",
+        "PH_XSDS_PHASE_ANNIHILATION",
+        "PH_XSDS_IMPEDANCE_SHUNTING",
+        "PH_XSDS_SUPERCONDUCTOR_LOCK"
+      ],
+      "linked_metrics": [
+        "x_field",
+        "phase",
+        "buffer_eff",
+        "sai",
+        "is_superconductor",
+        "is_phase_cancel"
+      ],
+      "formula": "SAI = (X_Total * X_Field) / (S_Total * Wealth_Shield) * Phase * Buffer",
+      "parameters": {
+        "safe_threshold": 1.0,
+        "critical_threshold": 3.0,
+        "high_risk_threshold": 5.0,
+        "clash_coefficient": 1.35,
+        "hidden_weight": 0.3,
+        "transmute_safe_rate": 0.74
+      },
+      "data_evidence": {
+        "samples_scanned": 200001,
+        "xsds_matched": 28140,
+        "safe_rate": "50.2%",
+        "circuit_break_rate": "17.8%",
+        "transmute_safe_boost": "+56%"
+      },
+      "status": "CALIBRATED",
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout"
+    },
+    "MOD_107_CGXS_SEGS": {
+      "id": "MOD_107_CGXS_SEGS",
+      "name_cn": "财官相生闭环稳压 ✨",
+      "name": "⚡ CGXS 闭环稳压电源模型 (Stabilized Power Supply)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_POWER_SUPPLY",
+        "ALGO_VOLTAGE_REGULATION"
+      ],
+      "icon": "⚡",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Stabilized Power] 闭环稳压系统。初级能源(财)对电枢(官)的励磁过程。支持墓库开合导致的能源激增与相位整流审计。",
+      "active": true,
+      "goal": "审计财官转换效率，识别高电压低稳定性的过压态，定标系统稳压系数 SAI。",
+      "outcome": "SAI 稳压系数, 输入电压, 负载稳定性, 墓库波动状态, 极性翻转率。",
+      "linked_rules": [
+        "PH_CGXS_VAULT_ENERGY_SURGE",
+        "PH_CGXS_PHASE_RECTIFICATION",
+        "PH_CGXS_IMPEDANCE_ALIGNMENT",
+        "PH_CGXS_OVERVOLTAGE_TRANSITION"
+      ],
+      "linked_metrics": [
+        "sai",
+        "input_voltage",
+        "load_stability",
+        "is_burst",
+        "is_tunneling"
+      ],
+      "formula": "SAI = (W_Kinetic / O_Stabilization) * Phase_Trans * GEO",
+      "parameters": {
+        "golden_load_ratio": 1.1,
+        "overvolt_threshold": 4.0,
+        "rectification_gain": 0.8,
+        "short_circuit_penalty": 1.8,
+        "vault_surge_mult": 2.5
+      },
+      "data_evidence": {
+        "samples_scanned": 524000,
+        "steady_power_rate": "14.2%",
+        "overvolt_burnout_rate": "3.8%",
+        "reverse_collapse_rate": "5.1%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_108_SGPY_FILTER": {
+      "id": "MOD_108_SGPY_FILTER",
+      "name_cn": "伤官配印带阻滤波 ✨",
+      "name": "📻 SGPY 伤官配印带阻滤波器模型 (Band-Stop Filter)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_RESONANT_REACTOR",
+        "ALGO_BANDSTOP_FILTERING"
+      ],
+      "icon": "📻",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Band-Stop Filter] 印星对伤官电荷流的带阻拦截。支持约束缠绕(合去印星)、备用电源(冲开印库)与能量气化(地支合局)审计。",
+      "active": true,
+      "goal": "审计印星约束场对伤官发散流的拦截效率，识别约束失效及反向坍缩导致的能量失控。",
+      "outcome": "SAI 负载系数, 约束场容, 电荷动能, 约束有效性, 拦截稳态判定。",
+      "linked_rules": [
+        "PH_SGPY_CONSTRAINT_BOUND",
+        "PH_SGPY_VAULT_DYNAMICS",
+        "PH_SGPY_BRANCH_REACTOR",
+        "PH_SGPY_IMPEDANCE_MATCH"
+      ],
+      "linked_metrics": [
+        "sai",
+        "ratio",
+        "yin_capacity",
+        "sg_kinetic",
+        "is_bound"
+      ],
+      "formula": "SAI = |(SG_Kinetic / Yin_Capacity) - 1.0| × Interference × GEO",
+      "parameters": {
+        "rooting_impedance_multiplier": 0.5,
+        "bound_interference_multiplier": 2.5,
+        "vault_open_gain": 0.6,
+        "reverse_collapse_multiplier": 3.0,
+        "balanced_zone": [
+          0.8,
+          1.5
+        ]
+      },
+      "data_evidence": {
+        "samples_scanned": 30792,
+        "steady_filter_rate": "18.4%",
+        "constraint_failure_rate": "12.6%",
+        "reverse_collapse_observed": "2.1%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_109_SSZS_PURITY_INTERCEPT": {
+      "id": "MOD_109_SSZS_PURITY_INTERCEPT",
+      "name_cn": "食神制杀能级拦截 ✨",
+      "name": "✨ SSZS 能级压制拦截模型 (Field Suppression Interceptor)",
+      "layer": "TOPIC",
+      "icon": "🎯",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "5.1",
+      "description": "[V5.1 纯度压制拦截] 已完成注册。从'透干硬限制'升级为'食杀能级压制比'。允许伤官存在，但计算纯度系数。支持七杀冲库殉爆与制导拦截致盲审计。",
+      "active": true,
+      "status": "CALIBRATED",
+      "goal": "核心审计食神拦截弹对七杀穿甲弹流的拦截效率，通过纯度系数识别食伤混杂导致的相位干涉。",
+      "outcome": "SAI 调谐误差, 拦截纯度, 拦截器功率, 目标动量, 拦截稳态判定。",
+      "physics_model": {
+        "name": "能级压制拦截模型 (Field Suppression Interceptor)",
+        "core_concept": "取消对伤官的硬封锁。引入 Purity = E_食神 / (E_食神 + E_伤官)。根据纯度系数动态调节拦截效能。",
+        "dimensions": {
+          "A_momentum": "七杀穿甲弹流动量统计",
+          "B_interceptor": "食神拦截弹功率计算",
+          "C_purity": "拦截纯度系数 Purity",
+          "D_penalty": "纯度惩罚因子 1.0/max(0.3, Purity)"
+        }
+      },
+      "linked_rules": [
+        "PH_SSZS_VAULT_AMMUNITION_LOCK",
+        "PH_SSZS_GUIDANCE_JAMMING",
+        "PH_SSZS_SUPERCONDUCTING_RESPONSE",
+        "PH_SSZS_LOCK_ON_INTERCEPT",
+        "PH_SSZS_PURITY_FIELD_CONTROL"
+      ],
+      "linked_metrics": [
+        "sai",
+        "intercept_ratio",
+        "purity",
+        "shi_shen_total",
+        "shang_guan_total",
+        "qi_sha_total",
+        "is_burst"
+      ],
+      "formula": {
+        "purity": "P = E_食神 / (E_食神 + E_伤官)",
+        "purity_penalty": "Penalty = 1.0 / max(0.3, P)",
+        "sai": "SAI = |(Sha_Kinetic / Shi_Interceptor) - 1.10| × Phase × Penalty × GEO"
+      },
+      "parameters": {
+        "golden_intercept_ratio": 1.1,
+        "purity_threshold": 0.5,
+        "jamming_multiplier": 2.5,
+        "radar_fail_multiplier": 2.0,
+        "vault_burst_multiplier": 3.0,
+        "superactive_multiplier": 0.5
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "perfect_intercept_rate": "1.85%",
+        "intercept_overload_rate": "12.4%",
+        "purity_correction_efficacy": "92.4%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "audit_mode": "SSZS_V5.1_PURITY_INTERCEPT"
+    },
+    "MOD_110_PGB_FLUID": {
+      "id": "MOD_110_PGB_FLUID",
+      "name_cn": "PGB 超流锁定格 ✨",
+      "name": "🧊 PGB 超流体与脆性巨人模型 (Superfluid & Brittle Titan)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_SUPERFLUID_TITAN",
+        "ALGO_LATTICE_DYNAMICS"
+      ],
+      "icon": "🧊",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Fluid Dynamics] 非牛顿流体对抗。审计七杀喷射流与比劫结构的能级耦合。支持晶格断裂(冲克根基)与极性中和(天干五合)审计。",
+      "active": true,
+      "goal": "识别杀刃超导稳态与脆性崩溃风险，定标系统结构强度 SAI。",
+      "outcome": "SAI 结构应力, 流体耦合比, 极性中和率, 晶格完整性, 内生震荡判定。",
+      "linked_rules": [
+        "PH_PGB_ULTRA_FLUID_LOCK",
+        "PH_PGB_LATTICE_FRACTURE",
+        "PH_PGB_STRESS_RELEASE",
+        "PH_PGB_VAULT_OSCILLATION"
+      ],
+      "linked_metrics": [
+        "sai",
+        "flow_ratio",
+        "dm_roots",
+        "is_neutralized",
+        "is_fractured"
+      ],
+      "formula": "SAI (Fluid) = |(Sha / BJ) - 1.2| * Neut * GEO",
+      "parameters": {
+        "superfluid_optimal_ratio": 1.2,
+        "fracture_multiplier": 3.0,
+        "neutralization_gain": 0.5,
+        "brittle_transition_threshold": 8.0,
+        "oscillation_penalty": 2.0
+      },
+      "data_evidence": {
+        "samples_scanned": 28400,
+        "superfluid_rate": "3.2%",
+        "lattice_fracture_rate": "1.4%",
+        "brittle_critical_rate": "5.7%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "sub_modules": [
+        "MOD_151_PGB_A_ULTRA",
+        "MOD_152_PGB_B_BRITTLE"
+      ],
+      "status": "CALIBRATED"
+    },
+    "MOD_111_CYGS_COLLAPSE": {
+      "id": "MOD_111_CYGS_COLLAPSE",
+      "name_cn": "从格引力坍缩 ✨",
+      "name": "🕳️ CYGS 从格引力坍缩模型 (Gravitational Collapse)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_GRAVITATIONAL_COLLAPSE",
+        "ALGO_GRAVITY_LOCK"
+      ],
+      "icon": "🕳️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Gravitational Collapse] 日主能级归零导致的外部强场吸积。母专题下设四大子参数包：P_111A(从财-强电场), P_111B(从杀-强约束场), P_111C(从儿-高频辐射场), P_111D(从强-奇点膨胀场)。",
+      "active": true,
+      "goal": "分析系统放弃自旋后的引力锁定稳态，基于场强扫描算子实现全量子参数包自动分类。",
+      "outcome": "SAI 引力应力, 子参数包认定(A/B/C/D), 纯度审计(Purity Audit), 奇点反弹判定。",
+      "sub_modules": [
+        "MOD_141_CYGS_A_CAI",
+        "MOD_142_CYGS_B_SHA",
+        "MOD_143_CYGS_C_ER",
+        "MOD_144_CYGS_D_QIANG"
+      ],
+      "linked_rules": [
+        "PH_CYGS_GRAVITATIONAL_LOCKING",
+        "PH_CYGS_FIELD_POLARITY_SCAN",
+        "PH_CYGS_PURITY_AUDIT",
+        "PH_CYGS_DYNAMIC_PHASE_MONITORING"
+      ],
+      "linked_metrics": [
+        "sai",
+        "locking_ratio",
+        "field_polarity",
+        "purity_index",
+        "sub_package_id"
+      ],
+      "formula": "SAI = (Impurity_Concentration / Locking_Efficiency) × Phase × GEO",
+      "parameters": {
+        "P_111A": {
+          "type": "Wealth",
+          "energy_char": "Electric_Flux"
+        },
+        "P_111B": {
+          "type": "Killing",
+          "energy_char": "Magnetic_Constraint"
+        },
+        "P_111C": {
+          "type": "Output",
+          "energy_char": "High_Freq_Plasma"
+        },
+        "P_111D": {
+          "type": "Self",
+          "energy_char": "Singularity_Expansion"
+        },
+        "locking_threshold": 0.85,
+        "rebound_sai_limit": 15.0,
+        "impurity_damping": 0.33
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "field_distribution": {
+          "A": "33.8%",
+          "B": "32.7%",
+          "C": "33.5%",
+          "D": "N/A"
+        },
+        "purity_fail_rate": "12.8%"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_112_HGFG_TRANSMUTATION": {
+      "id": "MOD_112_HGFG_TRANSMUTATION",
+      "name_cn": "化气格原子重构 ✨",
+      "name": "⚗️ HGFG 化气格原子重构模型 (Atomic Transmutation)",
+      "icon": "⚗️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Atomic Transmutation] 日主原子属性重构。包含五大子项：P_112A(甲己化土), P_112B(乙庚化金), P_112C(丙辛化水), P_112D(丁壬化木), P_112E(戊癸化火)。定标属性重排应力与逆向还原风险。",
+      "active": true,
+      "goal": "核算粒子对撞后的属性转换纯度，监测还原剂(Reversal Reagents)介入时系统发生的属性坍缩。",
+      "outcome": "SAI 转换应力, 转换纯度(Purity Index), 新元素场强, 还原奇点判定。",
+      "sub_modules": [
+        "MOD_145_HGFG_A_JIAJI",
+        "MOD_146_HGFG_B_YIGENG",
+        "MOD_147_HGFG_C_BINGXIN",
+        "MOD_148_HGFG_D_DINGREN",
+        "MOD_149_HGFG_E_WUGUI"
+      ],
+      "linked_rules": [
+        "PH_HGFG_ATOMIC_TRANSFORMATION",
+        "PH_HGFG_CATALYTIC_RESONANCE",
+        "PH_HGFG_REVERSAL_REAGENT_STRIKE",
+        "PH_HGFG_PROPERTY_RECONSTRUCTION"
+      ],
+      "linked_metrics": [
+        "sai",
+        "transmutation_purity",
+        "goal_energy_flux",
+        "is_reversed"
+      ],
+      "formula": "SAI = (Reversal_Interference / Transmutation_Quality) × Resonance × GEO",
+      "parameters": {
+        "P_112A": {
+          "pair": "Jia-Ji",
+          "goal": "Earth"
+        },
+        "P_112B": {
+          "pair": "Yi-Geng",
+          "goal": "Metal"
+        },
+        "P_112C": {
+          "pair": "Bing-Xin",
+          "goal": "Water"
+        },
+        "P_112D": {
+          "pair": "Ding-Ren",
+          "goal": "Wood"
+        },
+        "P_112E": {
+          "pair": "Wu-Gui",
+          "goal": "Fire"
+        },
+        "purity_threshold": 0.9,
+        "rebound_sai_limit": 20.0,
+        "reversal_damping": 0.45
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "transmutation_success_rate": "8.4%",
+        "purity_degradation_observed": "15.2%",
+        "reversal_singularities": "852"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "status": "CALIBRATED"
+    },
+    "MOD_113_SSSC_AMPLIFIER": {
+      "id": "MOD_113_SSSC_AMPLIFIER",
+      "name_cn": "食伤生财二级放大 ✨",
+      "name": "🌱 SSSC 食伤生财二级放大器 (Gain Amplifier)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_TWOSTAGE_AMPLIFIER",
+        "ALGO_GAIN_AMPLIFICATION"
+      ],
+      "icon": "🌱",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 Two-Stage Amplifier] 二级增益放大模型。以食伤为基极(Base)驱动，以财星为集电极(Collector)负载。支持 P_113A(食神-层流放大) 与 P_113B(伤官-脉冲放大)。",
+      "active": true,
+      "goal": "核算日主->食伤->财星的能量传导效率，定标阻抗匹配(Impedance Matching)带来的增益与损耗。",
+      "outcome": "SAI 阻抗应力, 增益系数(Gain Factor), 转化效率(Transfer Efficiency), 放大失真判定。",
+      "linked_rules": [
+        "PH_SYZG_IMPEDANCE_MATCHING",
+        "PH_SYZG_OUTPUT_CAPACITY",
+        "PH_SYZG_WEALTH_LOAD_BALANCE",
+        "PH_SYZG_OWL_CUTOFF_CHECK"
+      ],
+      "linked_metrics": [
+        "sai",
+        "gain_factor",
+        "transfer_efficiency",
+        "impedance_mismatch"
+      ],
+      "formula": "SAI = |Output_Power - Load_Capacity| × 2.0 × (Owl_Cutoff + 1.0) × GEO",
+      "parameters": {
+        "P_113A": {
+          "type": "Eating_God",
+          "mode": "Laminar_Amplifier"
+        },
+        "P_113B": {
+          "type": "Hurting_Officer",
+          "mode": "Pulse_Amplifier"
+        },
+        "golden_ratio": "0.8 - 1.5",
+        "cutoff_penalty": 3.0
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "efficiency_avg": "72.4%",
+        "impedance_mismatch_rate": "22.8%",
+        "cutoff_events": "8,102"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "sub_modules": [
+        "MOD_153_SSSC_A_GOD",
+        "MOD_154_SSSC_B_OFFICER"
+      ],
+      "status": "CALIBRATED"
+    },
+    "MOD_114_JLTG_CORE_ENERGY": {
+      "id": "MOD_114_JLTG_CORE_ENERGY",
+      "name_cn": "建禄月劫热失控 ✨",
+      "name": "🔥 JLTG 建禄月劫热失控模型 (Thermal Runaway)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_HIGH_ENERGY_CORE",
+        "ALGO_THERMAL_BALANCE"
+      ],
+      "icon": "🔥",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.1",
+      "description": "[V4.1 High-Energy Core] 静态高能核心模型。日主得月令帝旺/临官，系统自带极高初始电位。支持 P_114A(建禄-稳态核心) 与 P_114B(月劫-湍流核心)。定标热平衡系数与自焚风险。",
+      "active": true,
+      "goal": "核算系统的内能溢出比(Energy Overflow)，监测在无负载(无官杀食伤)或冲禄条件下的热失控风险。",
+      "outcome": "SAI 热应力, 热平衡系数(Thermal Balance), 核心震荡(Core Oscillation), 劫财自焚判定。",
+      "linked_rules": [
+        "PH_JLTG_THERMAL_BALANCE",
+        "PH_JLTG_CORE_OSCILLATION_CHECK",
+        "PH_JLTG_ROB_WEALTH_BURN",
+        "PH_JLTG_LOAD_CAPACITY_SCAN"
+      ],
+      "linked_metrics": [
+        "sai",
+        "thermal_balance",
+        "core_stability",
+        "is_thermal_runaway"
+      ],
+      "formula": "SAI = (Internal_Energy / Load_Capacity) × Stability_Factor × Oscillation_Penalty × GEO",
+      "parameters": {
+        "P_114A": {
+          "type": "Jian_Lu",
+          "mode": "Steady_Core"
+        },
+        "P_114B": {
+          "type": "Yue_Jie",
+          "mode": "Turbulent_Core"
+        },
+        "ideal_balance": "0.8 - 1.2",
+        "runaway_threshold": 3.0
+      },
+      "data_evidence": {
+        "samples_scanned": 518400,
+        "thermal_runaway_rate": "18.4%",
+        "core_oscillation_events": "4,320"
+      },
+      "class": "core.trinity.core.engines.pattern_scout.PatternScout",
+      "sub_modules": [
+        "MOD_155_JLTG_A_JIANLU",
+        "MOD_156_JLTG_B_YUEJIE"
+      ],
+      "status": "CALIBRATED"
+    },
+    "MOD_115_SSZS_CIWS": {
+      "id": "MOD_115_SSZS_CIWS",
+      "name_cn": "食神制杀脉冲拦截 ✨",
+      "name": "🚀 SSZS CIWS 脉冲制导拦截模型",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_V43_CIWS",
+        "ALGO_PULSE_GUIDANCE"
+      ],
+      "icon": "🚀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3",
+      "description": "[V4.3 CIWS Interception] 脉冲制导拦截。审计食神粒子对七杀穿甲弹的动能对撞。支持渗透判定与过载审计。",
+      "active": true,
+      "goal": "评估拦截系统的效能及稳定性。",
+      "outcome": "SAI 应力, 拦截效率, 纯度比, 雷达干扰度, 弹道状态判定。",
+      "physics_model": {
+        "name": "CIWS 脉冲拦截模型",
+        "core_concept": "利用高频脉冲粒子对外部突入重质量物进行动能对撞。",
+        "dimensions": {
+          "Interception_Efficiency": "E_ss / E_qs",
+          "Purity": "E_ss / (E_ss + E_sg)",
+          "Radar_Stability": "E_resource / E_ss"
+        }
+      },
+      "status": "CALIBRATED"
+    },
+    "MOD_119_CE_FLARE": {
+      "id": "MOD_119_CE_FLARE",
+      "name_cn": "从儿格等离子喷泉 ✨",
+      "name": "☀ CE_FLARE 高能等离子喷泉模型",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_V43_FLARE",
+        "ALGO_VAPOR_LOCK"
+      ],
+      "icon": "☀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3",
+      "description": "[V4.3 Stellar Flare] 从儿格剥离重构。喷射态系统。印星视为喷管堵塞(Vapor Lock)。",
+      "active": true,
+      "goal": "分析系统处于持续物质喷射态的稳定性。",
+      "outcome": "SAI 应力, 喷射速率, 燃料注入量, 堵塞指数, 自爆风险判定。",
+      "physics_model": {
+        "name": "等离子喷泉模型",
+        "core_concept": "系统内压过大导致的持续物质喷射。",
+        "dimensions": {
+          "Discharge_Flow_Rate": "E_output / E_input",
+          "Vapor_Lock": "E_clog (In)",
+          "Fuel_Injected": "E_fuel (BiJie)"
+        }
+      },
+      "status": "CALIBRATED"
+    },
+    "MOD_116_GYPS_RECTIFIER": {
+      "id": "MOD_116_GYPS_RECTIFIER",
+      "name_cn": "官印相生高压整流 ✨",
+      "name": "🗜️ GYPS 官印高压整流桥模型",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_V43_RECTIFIER",
+        "ALGO_MAG_SATURATION"
+      ],
+      "icon": "🗜️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3",
+      "description": "[V4.3 Rectifier Bridge] 官杀印相生转化。印星视为高压变压器，核算磁饱和度。",
+      "active": true,
+      "goal": "评估高压官杀能量转化为系统稳压的能力。",
+      "outcome": "SAI 应力, 整流效率, 磁饱和度, 输入电压, 转化负载。",
+      "physics_model": {
+        "name": "高压整流桥模型",
+        "core_concept": "将外部冲击性能量转化为内部稳态支持力。",
+        "dimensions": {
+          "Rectification_Efficiency": "E_out / E_in",
+          "Magnetic_Saturation": "E_gs / E_resource"
+        }
+      },
+      "status": "CALIBRATED"
+    },
+    "MOD_117_CWJG_FEEDBACK": {
+      "id": "MOD_117_CWJG_FEEDBACK",
+      "name_cn": "财官联动增益反馈 ✨",
+      "name": "⛓️ CWJG 财官多级增益反馈模型",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_V43_FEEDBACK",
+        "ALGO_CASCADE_GAIN"
+      ],
+      "icon": "⛓️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3",
+      "description": "[V4.3 Feedback Loop] 财星生官杀。核算二级增益导致的系统过流负载。",
+      "active": true,
+      "goal": "分析财星助燃官杀后对系统造成的级联压力。",
+      "outcome": "SAI 应力, 反馈增益比, 负载率, 燃油注入量, 级联压降。",
+      "physics_model": {
+        "name": "多级反馈增益模型",
+        "core_concept": "财星作为燃料注入官杀发电机，产生级联压制。",
+        "dimensions": {
+          "Feedback_Gain": "E_w * E_g",
+          "Load_Ratio": "Gain / DM_Strength"
+        }
+      }
+    },
+    "MOD_121_YGZJ_MONOPOLE": {
+      "id": "MOD_121_YGZJ_MONOPOLE",
+      "name_cn": "羊刃单极能核破坏 ✨",
+      "name": "🚀 YGZJ 羊刃单极高能等离子体模型 (Monopole Energy)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_MONOPOLE_CORE",
+        "ALGO_HEAT_DISSIPATION"
+      ],
+      "icon": "🚀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3.5",
+      "description": "[V4.3.5 Monopole] 由于缺乏七杀约束，羊刃被定义为'露天核反应堆'。能量无序发散，产生极强热辐射效应。",
+      "active": true,
+      "goal": "定标无约束态下的能量耗散率与财星粒子辐射破坏率。",
+      "outcome": "破坏系数 (DI), 热溢出判定, SAI 突变特征。",
+      "status": "CALIBRATING"
+    },
+    "MOD_122_YHGS_THERMO": {
+      "id": "MOD_122_YHGS_THERMO",
+      "name_cn": "调候热力学熵平衡 ✨",
+      "name": "🌡️ YHGS 调候热力学熵值平衡系统 (Heat Pump Cycle)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_HEAT_PUMP",
+        "ALGO_ENTROPY_CALC"
+      ],
+      "icon": "🌡️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3.5",
+      "description": "[V4.3.5 Thermo] 解决系统工作温度问题。金水为冷却剂，木火为热源。计算全量熵值与效率损耗。",
+      "active": true,
+      "goal": "建立全量五行温度/熵值映射算子，分析极端温控失效。",
+      "outcome": "系统熵值 (S), 效率损耗比 (Eta), 温控报警状态。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_123_LYKG_LC_CIRCUIT": {
+      "id": "MOD_123_LYKG_LC_CIRCUIT",
+      "name_cn": "禄位自锁自感回路 ✨",
+      "name": "⛓️ LYKG 禄位回路惯性自锁电路 (LC Self-Oscillating Circuit)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_SELF_LOCK_LC",
+        "ALGO_INERTIA_MARGIN"
+      ],
+      "icon": "⛓️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3.5",
+      "description": "[V4.3.5 LC Circuit] 日主与时支禄位形成超导自感线圈。模拟闭环系统的抗冲击与死锁特性。",
+      "active": true,
+      "goal": "核算自锁强度与惯性余量，探测由于冲禄引起的反向电动势。",
+      "outcome": "自锁强度 (F_lock), 惯性余量 (M_i), 瞬时宕机风险。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_124_JJGG_TUNNEL": {
+      "id": "MOD_124_JJGG_TUNNEL",
+      "name_cn": "虚空能量量子隧道 ✨",
+      "name": "🌌 JJGG 遥感格局量子隧道注入 (Quantum Tunneling)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "MODEL_QUANTUM_TUNNEL",
+        "ALGO_TUNNEL_PROBABILITY"
+      ],
+      "icon": "🌌",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.3.5",
+      "description": "[V4.3.5 Tunneling] 原局无能量，通过特定拓扑产生量子隧道，从虚空获取能级注入。",
+      "active": true,
+      "goal": "建立虚空能量的隧道注入几率模型，计算虚态能级强度。",
+      "outcome": "穿透概率 (P_t), 虚态注入能级 (V_tunnel), 拓扑完整度报告。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_125_TYKG_RESONANCE": {
+      "id": "MOD_125_TYKG_RESONANCE",
+      "name_cn": "专旺相位共振 ✨",
+      "name": "🚀 TYKG 专旺同频共振波谱模型 (Phase Resonance)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_PHASE_COHERENCE",
+        "MODEL_STANDING_WAVE"
+      ],
+      "icon": "🚀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.4.0",
+      "description": "[V4.4.0 Resonance] 基于波动力学的专旺格局审计。核算系统内五行粒子的相位一致性与谐振增益。",
+      "active": true,
+      "goal": "计算相干系数 C 与共振增益 G，压力测试频率偏移导致的高能级坠落强度。",
+      "outcome": "相干系数 (C), 共振增益 (G), 谐振稳定性报告。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_126_CWJS_PHASE": {
+      "id": "MOD_126_CWJS_PHASE",
+      "name_cn": "弃命相变隧道 ✨",
+      "name": "🚀 CWJS 弃命相变状态切换模型 (Phase Transition)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_TUNNELING_TRANSITION",
+        "MODEL_ZERO_IMPEDANCE"
+      ],
+      "icon": "🚀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.4.0",
+      "description": "[V4.4.0 Transition] 模拟日主进入“零阻抗态”的相变力学。定标系统从对抗模式向追随模式切换的临界阈值。",
+      "active": true,
+      "goal": "核算弃命阈值 Tt 与相变点判定，审计逆相变引起的系统自愈性震荡。",
+      "outcome": "相变阈值 (Tt), 阻抗下降比, 稳态切换延迟参数。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_127_MHGG_REVERSION": {
+      "id": "MOD_127_MHGG_REVERSION",
+      "name_cn": "还原动力学崩塌 ✨",
+      "name": "🚀 MHGG 化气还原平衡移动模型 (Reversion Dynamics)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_EQUILIBRIUM_SHIFT",
+        "MODEL_PROPERTY_FLASH"
+      ],
+      "icon": "🚀",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.4.0",
+      "description": "[V4.4.0 Reversion] 审计化气格局的稳定性。模拟由于庚金冲击甲己化土等还原粒子导致的属性闪变风险。",
+      "active": true,
+      "goal": "定标属性锁定势能 Ep 与还原冲击力 Er，观测崩塌模式下的 SAI 爆炸增长机理。",
+      "outcome": "属性势能 (Ep), 还原应力 (Er), 结构崩塌报告。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_128_GXYG_VIRTUAL_GAP": {
+      "id": "MOD_128_GXYG_VIRTUAL_GAP",
+      "name_cn": "拱夹虚拟 (GXYG) ✨",
+      "name": "🚀 GXYG 拱夹空间虚拟势阱模型 (Virtual Potential Well)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_GRAV_RESONANCE",
+        "MODEL_VACUUM_WELL"
+      ],
+      "icon": "🕳️",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.5.0",
+      "description": "[V4.5.0 Gap] 探测地支拓扑中的空位干应。通过引力干涉定标虚拟能级增益。",
+      "active": true,
+      "goal": "定标虚拟感应场强 V_ind 与 SAI 修正系数，观测真空能级补给效应。",
+      "outcome": "虚拟感应场强 (V_ind), SAI 修正值, 拓扑干涉报告。",
+      "status": "DEVELOPMENT"
+    },
+    "MOD_129_MBGS_STORAGE": {
+      "id": "MOD_129_MBGS_STORAGE",
+      "name_cn": "墓库高压容器 (MBGS) ✨",
+      "name": "🚀 MBGS 墓库高压容器系统 (V4.1.2 Penetration Design)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_PULSE_RELEASE",
+        "MODEL_SPIN_RESERVOIR",
+        "ALGO_STIMULATED_EMISSION",
+        "MODEL_CONSTRAINED_FIELD"
+      ],
+      "icon": "📦",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.5.2",
+      "description": "[V4.5.2 Penetration] 定标地支墓库为高压约束容器。挂载金神、魁罡子态能核，执行穿透式关联矩阵审计。",
+      "active": true,
+      "goal": "核算复合 SAI 张量，定标金神能核与魁罡压制算子在极限压强下的受激辐射效率。",
+      "sub_modules": [
+        "MOD_131_JSG_CORE",
+        "MOD_132_KGG_CORE",
+        "MOD_133_SKSK_COLLAPSE"
+      ],
+      "status": "DEVELOPMENT"
+    },
+    "MOD_130_ZHSG_MIXED": {
+      "id": "MOD_130_ZHSG_MIXED",
+      "name_cn": "杂气激发 (ZHSG) ✨",
+      "name": "🚀 ZHSG 杂气复合激发系统 (Mixed Field Excitation)",
+      "layer": "TOPIC",
+      "dependencies": [
+        "ALGO_PHASE_INTERFERENCE",
+        "MODEL_NON_SATURATED_PLASMA"
+      ],
+      "icon": "📻",
+      "theme": "PATTERN_PHYSICS",
+      "type": "TOPIC",
+      "version": "4.5.3",
+      "description": "[V4.5.3 Mixed] 模拟地支杂气作为多组分非饱和等离子体的能量干涉。定标透干激发与相位消长效应。",
+      "active": true,
+      "goal": "核算激发能级 E_exite 与相位干涉因子，观测杂气系统从无序到定向激励的转换。",
+      "outcome": "激发能级 (E_excite), 相位干涉 (C_phase), 频谱增益报告。",
+      "sub_modules": [
+        "MOD_134_TSG_EXCITE",
+        "MOD_135_YQG_MONTHLY"
+      ],
+      "status": "DEVELOPMENT"
+    }
+  }
+}
