@@ -29,6 +29,82 @@ COMBINATION_PAIRS = [
 ]
 
 
+def _get_clash_pairs_from_module() -> List[Tuple[str, str]]:
+    """从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块获取冲合关系"""
+    try:
+        from core.logic_registry import LogicRegistry
+        
+        registry = LogicRegistry()
+        modules = registry.get_active_modules(theme_id="BAZI_FUNDAMENTAL")
+        
+        # 查找MOD_03_TRANSFORM模块
+        mod_03 = None
+        for module in modules:
+            if module.get('id') == 'MOD_03_TRANSFORM':
+                mod_03 = module
+                break
+        
+        if mod_03 and 'pattern_data' in mod_03:
+            pattern_data = mod_03['pattern_data']
+            physics_kernel = pattern_data.get('physics_kernel', {})
+            
+            # 尝试从physics_kernel中读取冲合关系
+            clash_rules = physics_kernel.get('clash_rules', [])
+            if clash_rules:
+                pairs = []
+                for rule in clash_rules:
+                    if isinstance(rule, dict) and 'branch1' in rule and 'branch2' in rule:
+                        pairs.append((rule['branch1'], rule['branch2']))
+                if pairs:
+                    return pairs
+        
+        # 如果模块未定义，回退到硬编码
+        return CLASH_PAIRS
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"无法从模块读取冲合关系，使用默认值: {e}")
+        return CLASH_PAIRS
+
+
+def _get_combination_pairs_from_module() -> List[Tuple[str, str]]:
+    """从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块获取合化关系"""
+    try:
+        from core.logic_registry import LogicRegistry
+        
+        registry = LogicRegistry()
+        modules = registry.get_active_modules(theme_id="BAZI_FUNDAMENTAL")
+        
+        # 查找MOD_03_TRANSFORM模块
+        mod_03 = None
+        for module in modules:
+            if module.get('id') == 'MOD_03_TRANSFORM':
+                mod_03 = module
+                break
+        
+        if mod_03 and 'pattern_data' in mod_03:
+            pattern_data = mod_03['pattern_data']
+            physics_kernel = pattern_data.get('physics_kernel', {})
+            
+            # 尝试从physics_kernel中读取合化关系
+            combination_rules = physics_kernel.get('combination_rules', [])
+            if combination_rules:
+                pairs = []
+                for rule in combination_rules:
+                    if isinstance(rule, dict) and 'branch1' in rule and 'branch2' in rule:
+                        pairs.append((rule['branch1'], rule['branch2']))
+                if pairs:
+                    return pairs
+        
+        # 如果模块未定义，回退到硬编码
+        return COMBINATION_PAIRS
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"无法从模块读取合化关系，使用默认值: {e}")
+        return COMBINATION_PAIRS
+
+
 def compute_energy_flux(
     chart: List[str],
     day_master: str,
@@ -39,15 +115,16 @@ def compute_energy_flux(
     计算十神能量流（参数化版本）
     
     将Step 3中的"羊刃=1.0, 七杀=0.8"等逻辑参数化，支持任意十神类型
+    参数从config_schema.py的DEFAULT_FULL_ALGO_PARAMS读取
     
     Args:
         chart: 四柱八字 ['年柱', '月柱', '日柱', '时柱']
         day_master: 日主
         ten_god_type: 十神类型（如'七杀', '羊刃', '正印', '偏印'）
-        weights: 能量权重字典（可选，默认使用框架标准权重）
+        weights: 能量权重字典（可选，默认从配置读取）
             - base: 基础能量（默认1.0）
-            - month_resonance: 月令共振权重（默认1.42）
-            - rooting: 通根权重（默认3.0）
+            - month_resonance: 月令共振权重（从config_schema.py读取）
+            - rooting: 通根权重（从config_schema.py读取）
             - generation: 得生权重（默认1.0）
         
     Returns:
@@ -61,12 +138,45 @@ def compute_energy_flux(
         3.0  # 地支三午（羊刃）
     """
     if weights is None:
-        weights = {
-            'base': 1.0,
-            'month_resonance': 1.42,  # 从config_schema.py获取
-            'rooting': 3.0,
-            'generation': 1.0
-        }
+        # 从配置读取参数
+        try:
+            from core.config_manager import ConfigManager
+            from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+            
+            config = ConfigManager.load_config()
+            physics_params = config.get('physics', DEFAULT_FULL_ALGO_PARAMS.get('physics', {}))
+            structure_params = config.get('structure', DEFAULT_FULL_ALGO_PARAMS.get('structure', {}))
+            
+            pillar_weights = physics_params.get('pillarWeights', {})
+            month_resonance = pillar_weights.get('month', 1.42)
+            rooting_weight = structure_params.get('rootingWeight', 1.0)
+            
+            # 应用通根饱和函数（如果有定义）
+            rooting_saturation_max = structure_params.get('rootingSaturationMax', 2.5)
+            rooting_saturation_steepness = structure_params.get('rootingSaturationSteepness', 0.8)
+            
+            # 使用饱和函数计算实际通根权重
+            import math
+            # Tanh饱和函数: saturation = max_val * tanh(weight * steepness)
+            actual_rooting = rooting_saturation_max * math.tanh(rooting_weight * rooting_saturation_steepness)
+            
+            weights = {
+                'base': 1.0,
+                'month_resonance': month_resonance,
+                'rooting': actual_rooting,
+                'generation': 1.0
+            }
+        except Exception as e:
+            # 如果读取配置失败，使用默认值
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"无法从配置读取参数，使用默认值: {e}")
+            weights = {
+                'base': 1.0,
+                'month_resonance': 1.42,
+                'rooting': 3.0,
+                'generation': 1.0
+            }
     
     stems = [p[0] for p in chart]
     branches = [p[1] for p in chart]
@@ -137,13 +247,39 @@ def compute_energy_flux(
 
 
 def check_clash(branch1: str, branch2: str) -> bool:
-    """检查两个地支是否对冲"""
-    return (branch1, branch2) in CLASH_PAIRS or (branch2, branch1) in CLASH_PAIRS
+    """
+    检查两个地支是否对冲
+    
+    优先从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块读取冲合关系，
+    如果模块未定义，则使用默认的CLASH_PAIRS。
+    
+    Args:
+        branch1: 地支1
+        branch2: 地支2
+        
+    Returns:
+        是否对冲
+    """
+    clash_pairs = _get_clash_pairs_from_module()
+    return (branch1, branch2) in clash_pairs or (branch2, branch1) in clash_pairs
 
 
 def check_combination(branch1: str, branch2: str) -> bool:
-    """检查两个地支是否相合"""
-    return (branch1, branch2) in COMBINATION_PAIRS or (branch2, branch1) in COMBINATION_PAIRS
+    """
+    检查两个地支是否相合
+    
+    优先从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块读取合化关系，
+    如果模块未定义，则使用默认的COMBINATION_PAIRS。
+    
+    Args:
+        branch1: 地支1
+        branch2: 地支2
+        
+    Returns:
+        是否相合
+    """
+    combination_pairs = _get_combination_pairs_from_module()
+    return (branch1, branch2) in combination_pairs or (branch2, branch1) in combination_pairs
 
 
 def get_clash_branch(branch: str) -> Optional[str]:

@@ -1126,10 +1126,85 @@ def render():
             st.markdown(f"**🎯 目的 (Goal)**: {current_module.get('goal', 'TBD')}")
         with tm2:
             st.success(f"**🏆 成果 (Outcome)**: {current_module.get('outcome', 'TBD')}")
+            # Show version and category if available
+            if current_module.get('version'):
+                st.caption(f"版本: {current_module.get('version')}")
+            if current_module.get('category'):
+                st.caption(f"分类: {current_module.get('category')}")
 
         st.divider()
 
-        # 2. Rule Registry (Nested Expander)
+        # 2. Registry Pattern Details (If loaded from registry)
+        pattern_data = current_module.get('pattern_data')
+        if pattern_data:
+            # Show semantic seed
+            semantic_seed = pattern_data.get('semantic_seed', {})
+            if semantic_seed:
+                with st.expander("🌱 语义种子 (Semantic Seed)", expanded=False):
+                    st.markdown(f"**物理意象**: {semantic_seed.get('physical_image', '-')}")
+                    st.markdown(f"**描述**: {semantic_seed.get('description', '-')}")
+                    classical_meaning = semantic_seed.get('classical_meaning', {})
+                    if classical_meaning:
+                        st.markdown("**古典含义**:")
+                        for key, value in classical_meaning.items():
+                            st.markdown(f"- **{key}**: {value}")
+            
+            # Show physics kernel
+            physics_kernel = pattern_data.get('physics_kernel', {})
+            if physics_kernel:
+                with st.expander("⚛️ 物理内核 (Physics Kernel)", expanded=False):
+                    st.markdown(f"**描述**: {physics_kernel.get('description', '-')}")
+                    # Show formulas
+                    for key, value in physics_kernel.items():
+                        if key != 'description' and isinstance(value, dict):
+                            formula = value.get('formula', '')
+                            desc = value.get('description', '')
+                            if formula:
+                                st.markdown(f"**{key}**: `{formula}`")
+                                if desc:
+                                    st.caption(desc)
+            
+            # Show algorithm implementation
+            algo_impl = pattern_data.get('algorithm_implementation', {})
+            if algo_impl:
+                with st.expander("🔧 算法实现 (Algorithm Implementation)", expanded=False):
+                    paths = algo_impl.get('paths', {})
+                    if paths:
+                        st.markdown("**函数路径映射**:")
+                        for func_name, func_path in paths.items():
+                            st.code(f"{func_name}: {func_path}", language=None)
+                    # Show other algorithm details
+                    for key, value in algo_impl.items():
+                        if key not in ['paths', 'registry_loader'] and isinstance(value, dict):
+                            func = value.get('function', '')
+                            desc = value.get('description', '')
+                            if func:
+                                st.markdown(f"**{key}**: `{func}`")
+                                if desc:
+                                    st.caption(desc)
+            
+            # Show feature anchors
+            feature_anchors = pattern_data.get('feature_anchors', {})
+            if feature_anchors:
+                with st.expander("🎯 特征锚点 (Feature Anchors)", expanded=False):
+                    standard_centroid = feature_anchors.get('standard_centroid', {})
+                    if standard_centroid:
+                        st.markdown("**标准质心**:")
+                        vector = standard_centroid.get('vector', {})
+                        if vector:
+                            st.json(vector)
+                        st.caption(f"匹配阈值: {standard_centroid.get('match_threshold', '-')}")
+                    
+                    singularity_centroids = feature_anchors.get('singularity_centroids', [])
+                    if singularity_centroids:
+                        st.markdown("**奇点质心**:")
+                        for idx, centroid in enumerate(singularity_centroids):
+                            st.markdown(f"**{centroid.get('sub_id', f'奇点{idx+1}')}**: {centroid.get('description', '-')}")
+                            st.json(centroid.get('vector', {}))
+            
+            st.divider()
+
+        # 3. Rule Registry (Nested Expander)
         # We manually inline the logic of render_module_header here to keep it contained
         all_rules = reg.get_all_active_rules()
         linked_ids = current_module.get('linked_rules', [])

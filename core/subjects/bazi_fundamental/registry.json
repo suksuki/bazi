@@ -1,0 +1,3268 @@
+{
+  "metadata": {
+    "id": "BAZI_FUNDAMENTAL_REGISTRY",
+    "name": "八字基础规则主题注册表",
+    "name_en": "Bazi Fundamental Rules Theme Registry",
+    "version": "1.0",
+    "created_at": "2025-12-30",
+    "updated_at": "2025-12-30",
+    "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。对齐HOLOGRAPHIC_PATTERN结构。",
+    "total_patterns": 17,
+    "specification": {
+      "registry_standard": "QGA-HR V2.0",
+      "alignment_target": "HOLOGRAPHIC_PATTERN",
+      "fds_version": "1.1"
+    }
+  },
+  "theme": {
+    "id": "BAZI_FUNDAMENTAL",
+    "name": "八字基础规则主题",
+    "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。",
+    "category": "FUNDAMENTAL"
+  },
+  "patterns": {
+    "MOD_00_SUBSTRATE": {
+      "id": "MOD_00_SUBSTRATE",
+      "name": "晶格基底与因果涌现",
+      "name_cn": "晶格基底与因果涌现",
+      "name_en": "Substrate & Causal Emergence",
+      "category": "SUBSTRATE",
+      "subject_id": "MOD_00_SUBSTRATE",
+      "icon": "🧬",
+      "version": "13.7",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "基底即因果 (Substrate is Causality) | 基于量子弥散与因果熵的全链路物理仿真监控室。观测能量波动如何坍缩为因果奇点，并评估系统熵增风险。",
+      "semantic_seed": {
+        "description": "八字系统被视为一个量子场，能量以概率波的形式存在。通过量子弥散计算能量分布，通过因果熵评估系统有序度，通过奇点检测识别关键转折点。",
+        "physical_image": "能量波动在时空中弥散，最终坍缩为因果奇点，形成命运的关键转折",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "量子弥散": "能量在时空中的概率分布，反映系统的波动性",
+          "因果熵": "系统的有序度与混乱度，熵值越高系统越混乱",
+          "奇点检测": "识别能量坍缩为因果奇点的关键节点，这些节点决定命运的转折"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "quantum_dispersion": {
+          "formula": "D(t) = Σ |E_i(t) - E_i(t-1)| / N",
+          "description": "计算能量在时空中的弥散程度",
+          "parameters": {
+            "dispersion_threshold": 0.1,
+            "sampling_interval": 1.0
+          }
+        },
+        "causal_entropy": {
+          "formula": "H_causal = -Σ p_i * log(p_i)",
+          "description": "评估系统的有序度与混乱度",
+          "parameters": {
+            "entropy_high_threshold": 2.5,
+            "entropy_low_threshold": 0.5
+          }
+        },
+        "singularity_detection": {
+          "formula": "SI = |∇E| / |E|",
+          "description": "检测能量梯度异常，识别奇点",
+          "parameters": {
+            "singularity_detection_threshold": 0.8
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态 - 能量分布均匀，熵值适中",
+          "vector": {
+            "PHASE_PROGRESS": 0.5,
+            "ENERGY_DISPERSION_DELTA": 0.1,
+            "CAUSAL_ENTROPY": 1.5,
+            "SINGULARITY_INDEX": 0.2
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_00_SINGULARITY",
+            "description": "奇点态 - 检测到能量坍缩为因果奇点",
+            "vector": {
+              "PHASE_PROGRESS": 0.9,
+              "ENERGY_DISPERSION_DELTA": 0.8,
+              "CAUSAL_ENTROPY": 0.3,
+              "SINGULARITY_INDEX": 0.95
+            },
+            "match_threshold": 0.8,
+            "risk_level": "CRITICAL",
+            "sample_count": 51840
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "High_Entropy",
+            "action": "System_Chaos",
+            "description": "熵值过高，系统进入混乱态"
+          },
+          {
+            "trigger": "Singularity_Detected",
+            "action": "Phase_Collapse",
+            "description": "检测到奇点，系统发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Low_Entropy_Stable",
+            "action": "System_Order",
+            "description": "熵值低且稳定，系统进入有序态"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "PHASE_PROGRESS": 0.3,
+          "ENERGY_DISPERSION_DELTA": 0.25,
+          "CAUSAL_ENTROPY": 0.3,
+          "SINGULARITY_INDEX": 0.15
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数，用于能量弥散计算",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "D(t) = Σ |E_i(t) - E_i(t-1)| / N",
+        "equation_description": "能量弥散度 = 相邻时间点能量差异的平均值"
+      },
+      "algorithm_implementation": {
+        "quantum_dispersion": {
+          "function": "core.trinity.core.engines.quantum_dispersion.QuantumDispersionEngine.get_dynamic_weights",
+          "description": "计算量子弥散动态权重",
+          "parameters": {
+            "dispersion_threshold": 0.1,
+            "sampling_interval": 1.0
+          }
+        },
+        "causal_entropy": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_causal_entropy",
+          "description": "计算因果熵值",
+          "parameters": {
+            "entropy_high_threshold": 2.5,
+            "entropy_low_threshold": 0.5
+          }
+        },
+        "singularity_detection": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._detect_singularity",
+          "description": "检测奇点",
+          "parameters": {
+            "singularity_detection_threshold": 0.8
+          }
+        },
+        "phase_progress": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_phase_progress",
+          "description": "计算相位进展",
+          "parameters": {}
+        },
+        "energy_delta": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算能量变化",
+          "parameters": {
+            "energy_delta_sensitivity": 0.05
+          }
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "quantum_dispersion": "core.trinity.core.engines.quantum_dispersion.QuantumDispersionEngine.get_dynamic_weights",
+          "causal_entropy": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_causal_entropy",
+          "singularity_detection": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._detect_singularity",
+          "phase_progress": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_phase_progress",
+          "energy_delta": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "entropy_increase",
+            "description": "熵值增加：系统混乱度上升，能量分布无序化"
+          },
+          {
+            "type": "singularity_formation",
+            "description": "奇点形成：能量梯度异常，系统发生相变"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "entropy_decrease",
+            "description": "熵值降低：系统有序度上升，能量分布集中化"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "能量弥散与奇点形成",
+          "description": "模拟能量在时空中的弥散过程，以及奇点形成的条件",
+          "simulation_samples": 518400,
+          "stable_dispersion_rate": 45.2,
+          "high_entropy_rate": 28.7,
+          "low_entropy_rate": 18.3,
+          "singularity_detection_rate": 7.8
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 95.3,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_QUANTUM_DISPERSION",
+        "PH_CAUSAL_ENTROPY",
+        "PH_SINGULARITY_DETECT"
+      ],
+      "linked_metrics": [
+        "PHASE_PROGRESS",
+        "ENERGY_DISPERSION_DELTA",
+        "CAUSAL_ENTROPY",
+        "SINGULARITY_INDEX",
+        "QUANTUM_DISPERSION_INDEX"
+      ],
+      "goal": "上帝视角监控：观测能量波动如何坍缩为因果奇点，并评估系统熵增风险。实现从'波'到'坍缩'的命运断层消除。",
+      "outcome": "基底重构完成，实现从'波'到'坍缩'的命运断层消除。输出量子弥散指数、因果熵值、奇点检测结果。",
+      "layer": "ENVIRONMENT",
+      "priority": 1000,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE"
+      ],
+      "fusion_type": "CORE_SUBSTRATE",
+      "class": "core.trinity.core.engines.quantum_dispersion.QuantumDispersionEngine"
+    },
+    "MOD_01_TRIPLE": {
+      "id": "MOD_01_TRIPLE",
+      "name": "大一统三元动力",
+      "name_cn": "大一统三元动力",
+      "name_en": "Integrated Triple Dynamics",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_01_TRIPLE",
+      "icon": "♾️",
+      "version": "10.0",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "焦点：克、泄、化控制逻辑分析 (Focus: Capture, Cutting & Contamination Control Logic)。统一分析食神制杀、比劫护盾、印星通关等三元动力系统。",
+      "semantic_seed": {
+        "description": "八字系统中的能量控制遵循三种基本模式：捕获（Capture）- 食神制杀、切割（Cutting）- 比劫护盾、污染（Contamination）- 印星通关。这三种模式共同构成系统的控制逻辑。",
+        "physical_image": "三种控制模式形成统一的三元动力系统，共同调节系统的能量流动和稳定性",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "捕获": "食神制杀，通过输出能量控制外部压力",
+          "切割": "比劫护盾，通过同类能量屏蔽外部干扰",
+          "污染": "印星通关，通过中间介质转化能量路径"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "capture": {
+          "formula": "C = E_output / E_power",
+          "description": "捕获模式：食神制杀的能量比",
+          "parameters": {
+            "capture_threshold": 1.5
+          }
+        },
+        "cutting": {
+          "formula": "Ct = E_parallel / E_external",
+          "description": "切割模式：比劫护盾的效率",
+          "parameters": {
+            "cutting_shield_ratio": 0.11
+          }
+        },
+        "contamination": {
+          "formula": "Cn = E_resource / (E_power + E_wealth)",
+          "description": "污染模式：印星通关的转化效率",
+          "parameters": {
+            "contamination_efficiency": 0.7
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于三元动力模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准平衡态 - 三种模式均衡",
+          "vector": {
+            "CAPTURE_INDEX": 0.33,
+            "CUTTING_INDEX": 0.33,
+            "CONTAMINATION_INDEX": 0.34
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_01_CAPTURE_DOMINANT",
+            "description": "捕获主导态 - 食神制杀能力强",
+            "vector": {
+              "CAPTURE_INDEX": 0.6,
+              "CUTTING_INDEX": 0.2,
+              "CONTAMINATION_INDEX": 0.2
+            },
+            "match_threshold": 0.8,
+            "risk_level": "MODERATE"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "Triple_Imbalanced",
+            "action": "System_Instability",
+            "description": "三元失衡：某种模式过强或过弱，系统不稳定"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Triple_Balanced",
+            "action": "System_Stable",
+            "description": "三元平衡：三种模式均衡，系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CAPTURE_INDEX": 0.33,
+          "CUTTING_INDEX": 0.33,
+          "CONTAMINATION_INDEX": 0.34
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数，用于三元动力计算",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TI = (C + Ct + Cn) / 3",
+        "equation_description": "三元动力指数 = 三种模式的平均值"
+      },
+      "algorithm_implementation": {
+        "capture": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_capture",
+          "description": "计算捕获模式指数",
+          "parameters": {
+            "capture_threshold": 1.5
+          }
+        },
+        "cutting": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_cutting",
+          "description": "计算切割模式指数",
+          "parameters": {
+            "cutting_shield_ratio": 0.11
+          }
+        },
+        "contamination": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_contamination",
+          "description": "计算污染模式指数",
+          "parameters": {
+            "contamination_efficiency": 0.7
+          }
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "capture": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_capture",
+          "cutting": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_cutting",
+          "contamination": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_contamination",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "capture_dominant",
+            "description": "捕获主导：食神制杀能力强，输出能量高"
+          },
+          {
+            "type": "cutting_dominant",
+            "description": "切割主导：比劫护盾有效，屏蔽能力强"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "triple_balanced",
+            "description": "三元平衡：三种模式均衡，系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "三元动力平衡与失衡",
+          "description": "模拟三种控制模式的动态平衡过程",
+          "simulation_samples": 518400,
+          "capture_dominant_rate": 32.5,
+          "cutting_dominant_rate": 28.3,
+          "contamination_dominant_rate": 24.7,
+          "triple_balanced_rate": 14.5
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 92.5,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH29_CAPTURE",
+        "PH30_CUTTING",
+        "PH31_CONTAMINATION"
+      ],
+      "linked_metrics": [
+        "unified_metrics.capture",
+        "unified_metrics.cutting",
+        "unified_metrics.contamination",
+        "triple_dynamics_index"
+      ],
+      "goal": "定量分析'食神制杀'与'物理控制'逻辑。通过统一的三元动力模型计算克、泄、化的综合效应。",
+      "outcome": "比劫屏蔽（11% 减损）与全息雷达监测。输出捕获指数、切割指数、污染指数。",
+      "layer": "FUNDAMENTAL",
+      "priority": 900,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_02_SUPER": {
+      "id": "MOD_02_SUPER",
+      "name": "极高位格局共振",
+      "name_cn": "极高位格局共振",
+      "name_en": "Super-Structure Resonance",
+      "category": "STRUCTURAL",
+      "subject_id": "MOD_02_SUPER",
+      "icon": "🔥",
+      "version": "13.7",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 焦点：共振波场与能量趋势分析。检测系统是否进入超导（从格）或相干消减（化气失败）状态。通过 locking_ratio > 2.0 判定从格，通过 sync_state < 0.12 判定湮灭。",
+      "semantic_seed": {
+        "description": "当系统能量高度集中且相位高度同步时，系统进入超导态（从格）。当相位失同步时，系统发生湮灭（化气失败）。通过锁定比和同步态可以判定系统的共振模式。",
+        "physical_image": "系统能量高度集中，相位同步，形成超导共振态；或相位失同步，系统发生湮灭",
+        "source": "ANTIGRAVITY_V10_CORE, V13.7_Coherent_State_Detection",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "锁定比": "系统能量集中度，LR > 2.0 表示从格",
+          "同步态": "系统相位同步度，SS < 0.12 表示湮灭",
+          "流效率": "能量传输效率，FE > 1.8 表示超导"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "locking_ratio": {
+          "formula": "LR = E_total / E_dispersed",
+          "description": "锁定比：系统能量集中度",
+          "parameters": {
+            "locking_ratio_threshold": 2.0
+          }
+        },
+        "sync_state": {
+          "formula": "SS = 1 - |phase_diff| / π",
+          "description": "同步态：系统相位同步度",
+          "parameters": {
+            "sync_state_annihilation_threshold": 0.12
+          }
+        },
+        "flow_efficiency": {
+          "formula": "FE = E_transmitted / E_input",
+          "description": "流效率：能量传输效率",
+          "parameters": {
+            "flow_efficiency_superconductor_threshold": 1.8
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于共振模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态 - 锁定比、同步态、流效率均适中",
+          "vector": {
+            "LOCKING_RATIO": 1.5,
+            "SYNC_STATE": 0.6,
+            "FLOW_EFFICIENCY": 1.2,
+            "COHERENCE_INDEX": 0.7
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_02_CONG_WANG",
+            "description": "从旺态 - 锁定比高，同步态高，流效率高",
+            "vector": {
+              "LOCKING_RATIO": 2.5,
+              "SYNC_STATE": 0.9,
+              "FLOW_EFFICIENCY": 2.0,
+              "COHERENCE_INDEX": 0.95
+            },
+            "match_threshold": 0.8,
+            "risk_level": "LOW"
+          },
+          {
+            "sub_id": "MOD_02_ANNIHILATION",
+            "description": "湮灭态 - 同步态 < 0.12，系统能量消散",
+            "vector": {
+              "LOCKING_RATIO": 0.8,
+              "SYNC_STATE": 0.08,
+              "FLOW_EFFICIENCY": 0.5,
+              "COHERENCE_INDEX": 0.1
+            },
+            "match_threshold": 0.8,
+            "risk_level": "CRITICAL"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "Sync_State_Low",
+            "action": "Annihilation",
+            "description": "同步态 < 0.12，系统发生湮灭"
+          },
+          {
+            "trigger": "False_Cong",
+            "action": "Structure_Unstable",
+            "description": "假从：锁定比中等，同步态低，流效率低"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Locking_Ratio_High_And_Sync_High",
+            "action": "Cong_Wang",
+            "description": "锁定比高且同步态高，系统进入从旺态"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "LOCKING_RATIO": 0.3,
+          "SYNC_STATE": 0.3,
+          "FLOW_EFFICIENCY": 0.25,
+          "COHERENCE_INDEX": 0.15
+        },
+        "activation_function": {
+          "type": "sigmoid",
+          "description": "Sigmoid激活函数，用于共振态判定",
+          "parameters": {
+            "k": 1.0,
+            "x0": 1.5
+          }
+        },
+        "normalized": true,
+        "core_equation": "CI = LR × SS × FE",
+        "equation_description": "相干指数 = 锁定比 × 同步态 × 流效率"
+      },
+      "algorithm_implementation": {
+        "coherent_state_detection": {
+          "function": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.detect_coherent_state",
+          "description": "检测相干态（从格/化气）",
+          "parameters": {
+            "locking_ratio_threshold": 2.0,
+            "sync_state_annihilation_threshold": 0.12
+          }
+        },
+        "locking_ratio": {
+          "function": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_locking_ratio",
+          "description": "计算锁定比",
+          "parameters": {}
+        },
+        "sync_state": {
+          "function": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_sync_state",
+          "description": "计算同步态",
+          "parameters": {}
+        },
+        "flow_efficiency": {
+          "function": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_flow_efficiency",
+          "description": "计算流效率",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "coherent_state_detection": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.detect_coherent_state",
+          "locking_ratio": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_locking_ratio",
+          "sync_state": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_sync_state",
+          "flow_efficiency": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7.calculate_flow_efficiency",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "locking_ratio_increase",
+            "description": "锁定比增加：系统能量集中度上升"
+          },
+          {
+            "type": "sync_state_decrease",
+            "description": "同步态降低：系统相位失同步，可能发生湮灭"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "coherent_resonance",
+            "description": "相干共振：锁定比、同步态、流效率均高，系统进入超导态"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "共振模式识别与湮灭检测",
+          "description": "模拟系统从稳定态到从格或湮灭的演化过程",
+          "simulation_samples": 518400,
+          "cong_wang_rate": 2.1,
+          "cong_qiang_rate": 3.4,
+          "false_cong_rate": 8.7,
+          "annihilation_rate": 12.3
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 88.5,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE, V13.7_Coherent_State_Detection",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH17-20_CONG",
+        "PH19_BEATING",
+        "PH28_ANNIHILATION",
+        "PH27_VOID",
+        "PH_COHERENT_STATE_DETECTION"
+      ],
+      "linked_metrics": [
+        "resonance.sync_state",
+        "resonance.flow_efficiency",
+        "resonance.vibration_mode",
+        "LOCKING_RATIO",
+        "COHERENCE_INDEX"
+      ],
+      "goal": "识别高阶共振模式（从格/化气）。通过锁定比和同步态判定格局类型（从旺/从强/假从/湮灭）。",
+      "outcome": "共振波 3D 浑仪可视化。判定格局类型（从旺/从强/假从/湮灭）。输出锁定比、同步态、流效率。",
+      "layer": "STRUCTURAL",
+      "priority": 800,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE",
+        "V13.7_Coherent_State_Detection"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.engines.super_structure_resonance_v13_7.SuperStructureResonanceEngineV13_7"
+    },
+    "MOD_03_TRANSFORM": {
+      "id": "MOD_03_TRANSFORM",
+      "name": "合化动力学",
+      "name_cn": "合化动力学",
+      "name_en": "Transformation Chemistry",
+      "category": "STRUCTURAL",
+      "subject_id": "MOD_03_TRANSFORM",
+      "icon": "⚗️",
+      "version": "10.0",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "焦点：天干地支键合拓扑分析 (Focus: Heavenly Stems & Earthly Branches Bonding Topology)。将干支之间的合化关系映射为化学键合过程，计算键合强度和转化成功率。",
+      "semantic_seed": {
+        "description": "天干地支之间的合化关系类似于化学键合。三合、六合、天干五合等关系可以视为不同类型的化学键。键合强度取决于能量匹配度和相位同步度。",
+        "physical_image": "干支之间的合化形成化学键，键合强度决定能量转化的成功率",
+        "source": "Topic_G_01_Combination",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "三合": "120°相位共振，能量大幅提升",
+          "六合": "60°相位匹配，能量中等提升",
+          "天干五合": "天干之间的聚变反应，释放巨大能量"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "bond_strength": {
+          "formula": "BS = E_match × Phase_sync × Geo_factor",
+          "description": "键合强度：能量匹配度 × 相位同步度 × 地理因子",
+          "parameters": {
+            "bond_strength_threshold": 3.0,
+            "san_he_bonus": 2.5,
+            "liu_he_bonus": 1.15
+          }
+        },
+        "transform_success": {
+          "formula": "TS = 1 if BS > threshold else 0",
+          "description": "转化成功率：键合强度超过阈值则成功",
+          "parameters": {
+            "phase_sync_threshold": 0.8
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于键合模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准键合态 - 键合强度适中，转化成功",
+          "vector": {
+            "BOND_STRENGTH": 3.5,
+            "TRANSFORM_SUCCESS": 1.0,
+            "BOND_TOPOLOGY_INDEX": 0.7,
+            "PHASE_SYNC_INDEX": 0.8
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_03_STRONG_BOND",
+            "description": "强键合态 - 键合强度高，转化成功",
+            "vector": {
+              "BOND_STRENGTH": 5.0,
+              "TRANSFORM_SUCCESS": 1.0,
+              "BOND_TOPOLOGY_INDEX": 0.9,
+              "PHASE_SYNC_INDEX": 0.95
+            },
+            "match_threshold": 0.8,
+            "risk_level": "LOW"
+          },
+          {
+            "sub_id": "MOD_03_BOND_BREAK",
+            "description": "键断裂态 - 键合强度不足，系统不稳定",
+            "vector": {
+              "BOND_STRENGTH": 1.5,
+              "TRANSFORM_SUCCESS": 0.0,
+              "BOND_TOPOLOGY_INDEX": 0.3,
+              "PHASE_SYNC_INDEX": 0.4
+            },
+            "match_threshold": 0.8,
+            "risk_level": "HIGH"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "Bond_Strength_Low",
+            "action": "Bond_Break",
+            "description": "键合强度不足，键断裂，系统不稳定"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "San_He_Active",
+            "action": "Energy_Surge",
+            "description": "三合激活：三合局成功，能量大幅提升"
+          },
+          {
+            "condition": "Liu_He_Active",
+            "action": "Energy_Boost",
+            "description": "六合激活：六合成功，能量中等提升"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "BOND_STRENGTH": 0.4,
+          "TRANSFORM_SUCCESS": 0.3,
+          "BOND_TOPOLOGY_INDEX": 0.2,
+          "PHASE_SYNC_INDEX": 0.1
+        },
+        "activation_function": {
+          "type": "sigmoid",
+          "description": "Sigmoid激活函数，用于键合强度判定",
+          "parameters": {
+            "k": 1.0,
+            "x0": 3.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "BS = E_match × Phase_sync × Geo_factor",
+        "equation_description": "键合强度 = 能量匹配度 × 相位同步度 × 地理因子"
+      },
+      "algorithm_implementation": {
+        "bond_strength": {
+          "function": "core.physics_engine.check_combination",
+          "description": "检查合化关系并计算键合强度",
+          "parameters": {
+            "bond_strength_threshold": 3.0,
+            "san_he_bonus": 2.5,
+            "liu_he_bonus": 1.15
+          }
+        },
+        "transform_success": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._check_transform_success",
+          "description": "判定转化是否成功",
+          "parameters": {
+            "phase_sync_threshold": 0.8
+          }
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "bond_strength": "core.physics_engine.check_combination",
+          "transform_success": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._check_transform_success",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "bond_formation",
+            "description": "键形成：干支之间形成化学键，能量提升"
+          },
+          {
+            "type": "bond_break",
+            "description": "键断裂：键合强度不足，系统不稳定"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "san_he_activation",
+            "description": "三合激活：三合局成功，能量大幅提升"
+          },
+          {
+            "type": "liu_he_activation",
+            "description": "六合激活：六合成功，能量中等提升"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "键合形成与断裂",
+          "description": "模拟干支之间化学键的形成和断裂过程",
+          "simulation_samples": 518400,
+          "strong_bond_rate": 18.5,
+          "weak_bond_rate": 35.2,
+          "san_he_active_rate": 4.3,
+          "liu_he_active_rate": 12.7
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 90.2,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "Topic_G_01_Combination",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_SAN_HE",
+        "PH_LIU_HE",
+        "PH_HE_HUA"
+      ],
+      "linked_metrics": [
+        "structure.bond_strength",
+        "structure.transform_success",
+        "bond_topology_index",
+        "phase_sync_index"
+      ],
+      "goal": "映射干支之间的化学键合效率。通过键合强度判定合化是否成功，通过转化成功率评估系统稳定性。",
+      "outcome": "分子结构可视化 (MolViz)。输出键合强度、转化成功率、键合拓扑图。",
+      "layer": "STRUCTURAL",
+      "priority": 750,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_01_Combination"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_04_STABILITY": {
+      "id": "MOD_04_STABILITY",
+      "name": "刑害干涉动力学",
+      "name_cn": "刑害干涉动力学",
+      "name_en": "Penalty & Harm Dynamics",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_04_STABILITY",
+      "icon": "🛡️",
+      "version": "10.0",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "焦点：晶格缺陷与相位抖动分析 (Focus: Lattice Defects & Phase Jitter Analysis (SAI/IC))。将刑、害、冲等关系映射为晶格缺陷，计算应力累积指数和干涉系数。",
+      "semantic_seed": {
+        "description": "八字系统中的刑、害、冲等关系类似于晶体中的缺陷。这些缺陷会导致应力累积和相位抖动，影响系统的稳定性和信号质量。",
+        "physical_image": "刑冲害形成晶格缺陷，导致应力累积和相位抖动，影响系统稳定性",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "应力累积": "刑冲害导致的能量损失",
+          "干涉系数": "相位抖动导致的信号衰减",
+          "晶格缺陷": "刑冲害的数量和强度"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "stress_accumulation": {
+          "formula": "SAI = Σ (Penalty_i × Intensity_i)",
+          "description": "应力累积指数：所有刑冲害的加权和",
+          "parameters": {
+            "penalty_3_score": -5.0,
+            "harm_6_score": -3.0,
+            "sai_critical_threshold": 20.0
+          }
+        },
+        "interference_coefficient": {
+          "formula": "IC = 1 - (Jitter / Signal)",
+          "description": "干涉系数：信号质量指标",
+          "parameters": {
+            "jitter_threshold": 0.2
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于应力模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态 - 应力低，干涉小",
+          "vector": {
+            "STRESS_ACCUMULATION_INDEX": 8.0,
+            "INTERFERENCE_COEFFICIENT": 0.85,
+            "LATTICE_DEFECT_DENSITY": 0.2,
+            "SIGNAL_NOISE_RATIO": 0.9
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_04_HIGH_STRESS",
+            "description": "高应力态 - SAI >= 20，系统不稳定",
+            "vector": {
+              "STRESS_ACCUMULATION_INDEX": 25.0,
+              "INTERFERENCE_COEFFICIENT": 0.4,
+              "LATTICE_DEFECT_DENSITY": 0.8,
+              "SIGNAL_NOISE_RATIO": 0.3
+            },
+            "match_threshold": 0.8,
+            "risk_level": "CRITICAL"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "High_Stress",
+            "action": "System_Unstable",
+            "description": "高应力：SAI >= 20，系统不稳定"
+          },
+          {
+            "trigger": "High_Interference",
+            "action": "Signal_Degradation",
+            "description": "高干涉：IC < 0.5，信号衰减严重"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Low_Stress_And_Low_Interference",
+            "action": "System_Stable",
+            "description": "低应力且低干涉：系统稳定，信号清晰"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "STRESS_ACCUMULATION_INDEX": 0.4,
+          "INTERFERENCE_COEFFICIENT": 0.3,
+          "LATTICE_DEFECT_DENSITY": 0.2,
+          "SIGNAL_NOISE_RATIO": 0.1
+        },
+        "activation_function": {
+          "type": "sigmoid",
+          "description": "Sigmoid激活函数，用于应力判定",
+          "parameters": {
+            "k": 1.0,
+            "x0": 20.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "SAI = Σ (Penalty_i × Intensity_i)",
+        "equation_description": "应力累积指数 = 所有刑冲害的加权和"
+      },
+      "algorithm_implementation": {
+        "stress_accumulation": {
+          "function": "core.physics_engine.calculate_interaction_damping",
+          "description": "计算交互阻尼和应力累积",
+          "parameters": {
+            "penalty_3_score": -5.0,
+            "harm_6_score": -3.0,
+            "clash_damping": 0.4
+          }
+        },
+        "interference_coefficient": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_interference_coefficient",
+          "description": "计算干涉系数",
+          "parameters": {
+            "jitter_threshold": 0.2
+          }
+        },
+        "clash_check": {
+          "function": "core.physics_engine.check_clash",
+          "description": "检查冲的关系",
+          "parameters": {}
+        },
+        "combination_check": {
+          "function": "core.physics_engine.check_combination",
+          "description": "检查合的关系",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "stress_accumulation": "core.physics_engine.calculate_interaction_damping",
+          "interference_coefficient": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator._calculate_interference_coefficient",
+          "clash_check": "core.physics_engine.check_clash",
+          "combination_check": "core.physics_engine.check_combination"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "stress_increase",
+            "description": "应力增加：刑冲害增多，系统稳定性下降"
+          },
+          {
+            "type": "interference_increase",
+            "description": "干涉增加：相位抖动加剧，信号质量下降"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "stress_decrease",
+            "description": "应力降低：刑冲害减少，系统稳定性上升"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "应力累积与干涉",
+          "description": "模拟刑冲害导致的应力累积和相位抖动过程",
+          "simulation_samples": 518400,
+          "low_stress_rate": 52.3,
+          "moderate_stress_rate": 31.7,
+          "high_stress_rate": 16.0,
+          "low_interference_rate": 48.5
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 91.8,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_PENALTY_3",
+        "PH_HARM_6",
+        "PH_SHEAR_STRESS"
+      ],
+      "linked_metrics": [
+        "structure.stress_accumulation_index",
+        "structure.interference_coefficient",
+        "lattice_defect_density",
+        "signal_noise_ratio"
+      ],
+      "goal": "量化微观晶格缺陷 (SAI) 与相位抖动 (IC)。通过应力累积指数评估系统稳定性，通过干涉系数评估信号质量。",
+      "outcome": "应力显热图与信噪比降值报告。输出应力累积指数、干涉系数、晶格缺陷分布。",
+      "layer": "FUNDAMENTAL",
+      "priority": 850,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_05_WEALTH": {
+      "id": "MOD_05_WEALTH",
+      "name": "财富流体力学",
+      "name_cn": "财富流体力学",
+      "name_en": "Wealth Fluid Dynamics",
+      "category": "FLOW",
+      "subject_id": "MOD_05_WEALTH",
+      "icon": "🌊",
+      "version": "13.7",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 基于纳维-斯托克斯方程的财富能量流动分析。大运不再是加减金钱，而是改变环境的'粘滞系数'。",
+      "semantic_seed": {
+        "description": "财富流动遵循流体力学规律。大运通过改变粘滞系数影响财富流动状态。雷诺数（Re）判定层流/湍流，渗透率（Q）评估财富获取效率。",
+        "physical_image": "财富能量像流体一样流动，大运改变环境的粘滞系数，影响流动状态",
+        "source": "Topic_B_05_Wealth_Fluid, V13.7_Navier_Stokes_Upgrade",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {
+          "雷诺数": "流动状态指标，Re < 2300为层流，Re > 4000为湍流",
+          "粘滞系数": "环境阻力，大运改变粘滞系数影响财富流动",
+          "渗透率": "财富获取效率，Q值越高获取财富越容易"
+        }
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "reynolds_number": {
+          "formula": "Re = ρ × v × L / μ",
+          "description": "雷诺数：判定层流/湍流状态",
+          "parameters": {
+            "laminar_threshold": 2300,
+            "turbulent_threshold": 4000
+          }
+        },
+        "viscosity": {
+          "formula": "μ = μ_base × (1 + luck_factor)",
+          "description": "粘滞系数：环境阻力，大运改变粘滞系数",
+          "parameters": {
+            "base_viscosity": 1.0,
+            "luck_viscosity_factor": 0.3
+          }
+        },
+        "flux_q": {
+          "formula": "Q = k × A × ΔP / μ",
+          "description": "渗透率：财富获取效率",
+          "parameters": {
+            "permeability_base": 1.0
+          }
+        }
+      },
+      "feature_anchors": {
+        "description": "基于流体模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准层流态 - 雷诺数适中，粘滞系数正常",
+          "vector": {
+            "REYNOLDS_NUMBER": 2000.0,
+            "VISCOSITY": 1.0,
+            "FLUX_Q": 0.7,
+            "PERMEABILITY": 0.8
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": [
+          {
+            "sub_id": "MOD_05_TURBULENT",
+            "description": "湍流态 - 雷诺数高，财富流动不稳定",
+            "vector": {
+              "REYNOLDS_NUMBER": 5000.0,
+              "VISCOSITY": 0.5,
+              "FLUX_Q": 1.5,
+              "PERMEABILITY": 0.9
+            },
+            "match_threshold": 0.8,
+            "risk_level": "MODERATE"
+          }
+        ]
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "High_Viscosity",
+            "action": "Flow_Blocked",
+            "description": "高粘滞：环境阻力大，财富流动受阻"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "Low_Viscosity_And_High_Permeability",
+            "action": "Flow_Optimal",
+            "description": "低粘滞且高渗透：财富流动最优"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "REYNOLDS_NUMBER": 0.3,
+          "VISCOSITY": 0.3,
+          "FLUX_Q": 0.25,
+          "PERMEABILITY": 0.15
+        },
+        "activation_function": {
+          "type": "sigmoid",
+          "description": "Sigmoid激活函数，用于流动状态判定",
+          "parameters": {
+            "k": 1.0,
+            "x0": 3000.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "Flow_State = f(Re, μ, Q)",
+        "equation_description": "流动状态 = 雷诺数、粘滞系数、渗透率的函数"
+      },
+      "algorithm_implementation": {
+        "wealth_fluid": {
+          "function": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_wealth_flow",
+          "description": "计算财富流动状态",
+          "parameters": {
+            "laminar_threshold": 2300,
+            "turbulent_threshold": 4000
+          }
+        },
+        "viscosity": {
+          "function": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_viscosity",
+          "description": "计算粘滞系数",
+          "parameters": {
+            "base_viscosity": 1.0,
+            "luck_viscosity_factor": 0.3
+          }
+        },
+        "permeability": {
+          "function": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_permeability",
+          "description": "计算渗透率",
+          "parameters": {
+            "permeability_base": 1.0
+          }
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "wealth_fluid": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_wealth_flow",
+          "viscosity": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_viscosity",
+          "permeability": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7.calculate_permeability",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "viscosity_increase",
+            "description": "粘滞增加：环境阻力增大，财富流动受阻"
+          },
+          {
+            "type": "reynolds_increase",
+            "description": "雷诺数增加：流动状态从层流转为湍流"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "viscosity_decrease",
+            "description": "粘滞降低：环境阻力减小，财富流动顺畅"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "财富流动状态演化",
+          "description": "模拟大运改变粘滞系数对财富流动的影响",
+          "simulation_samples": 518400,
+          "laminar_rate": 45.2,
+          "turbulent_rate": 28.7,
+          "optimal_flow_rate": 18.3
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 89.5,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_B_05_Wealth_Fluid, V13.7_Navier_Stokes_Upgrade",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_WEALTH_PERMEABILITY",
+        "PH_WEALTH_VISCOSITY",
+        "PH_BI_JIE_SHIELD",
+        "PH_WEALTH_VISCOSITY_LUCK"
+      ],
+      "linked_metrics": [
+        "REYNOLDS_NUMBER",
+        "VISCOSITY",
+        "FLUX_Q",
+        "PERMEABILITY"
+      ],
+      "goal": "Quantify Wealth Flow Efficiency (Q) and Stability (Re). 模拟大运通过改变粘滞系数影响财富流动状态。",
+      "outcome": "精准测算财富流动性与阻滞系数 (Wealth Liquidity & Resistance Coefficient). 判定层流/湍流状态。",
+      "layer": "FLOW",
+      "priority": 700,
+      "scenario_affinity": [
+        "WEALTH"
+      ],
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_B_05_Wealth_Fluid",
+        "V13.7_Navier_Stokes_Upgrade"
+      ],
+      "fusion_type": "STANDALONE_MODULE",
+      "class": "core.trinity.core.engines.wealth_fluid_v13_7.WealthFluidEngineV13_7"
+    },
+    "MOD_06_RELATIONSHIP": {
+      "id": "MOD_06_RELATIONSHIP",
+      "name": "🌌 情感引力场",
+      "name_cn": "🌌 情感引力场",
+      "name_en": "Relationship Gravity Field",
+      "category": "FLOW",
+      "subject_id": "MOD_06_RELATIONSHIP",
+      "icon": "🌌",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 基于引力耦合与相位坍缩的情感动力学。流年冲击定义为周期性外力 F(t)，情感绑定轨道在流年'冲、刑'脉冲下的位移偏离量。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 基于引力耦合与相位坍缩的情感动力学",
+        "physical_image": "[V13.7 物理化升级] 基于引力耦合与相位坍缩的情感动力学。流年冲击定义为周期性外力 F(t)，情感绑定轨道在流年'冲、刑'脉冲下的位移偏离量。",
+        "source": "Topic_B_06_Relationship_Gravity",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.relationship_gravity_v13_7.RelationshipGravityEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.relationship_gravity_v13_7.RelationshipGravityEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_B_06_Relationship_Gravity",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_GRAVITY_BINDING",
+        "PH_PERTURBATION_3BODY",
+        "PH_PEACH_BLOSSOM",
+        "PH_ORBITAL_PERTURBATION"
+      ],
+      "linked_metrics": [
+        "BINDING_ENERGY",
+        "ORBITAL_STABILITY",
+        "PHASE_COHERENCE",
+        "ORBITAL_PERTURBATION"
+      ],
+      "goal": "量化配偶星/宫的引力绑定并预测关系相位迁移。模拟流年冲击对情感轨道的摄动影响。",
+      "outcome": "精准测算婚姻引力绑定能与轨道稳定性。计算流年摄动位移和衰减因子。",
+      "layer": "FLOW",
+      "priority": 650,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_B_06_Relationship_Gravity",
+        "V13.7_Harmonic_Oscillator_Upgrade"
+      ],
+      "fusion_type": "STANDALONE_MODULE",
+      "class": "core.trinity.core.engines.relationship_gravity_v13_7.RelationshipGravityEngineV13_7"
+    },
+    "MOD_07_LIFEPATH": {
+      "id": "MOD_07_LIFEPATH",
+      "name": "🚀 个人生命轨道仪",
+      "name_cn": "🚀 个人生命轨道仪",
+      "name_en": "Personal Orbit Orrery",
+      "category": "TEMPORAL",
+      "subject_id": "MOD_07_LIFEPATH",
+      "icon": "🚀",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 用于生命轨迹能量审计的高频时次采样分析。将流年（Annual）的冲击平滑化，引入 MOD_12 的衰减常数 tau。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 用于生命轨迹能量审计的高频时次采样分析",
+        "physical_image": "[V13.7 物理化升级] 用于生命轨迹能量审计的高频时次采样分析。将流年（Annual）的冲击平滑化，引入 MOD_12 的衰减常数 tau。",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.lifepath_resampling_v13_7.LifepathResamplingEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.lifepath_resampling_v13_7.LifepathResamplingEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_DYNAMIC_DISPERSION_SIN",
+        "PH_SHEAR_BURST",
+        "PH_RISK_NODE_DETECT",
+        "PH_TEMPORAL_RESAMPLING"
+      ],
+      "linked_metrics": [
+        "ORBITAL_ENTROPY",
+        "RISK_NODE_DENSITY"
+      ],
+      "goal": "映射完整生命周期能量轨迹并识别风险节点。将流年冲击平滑化，引入物理惯性过渡。",
+      "outcome": "生命轨道风险热图与轨道可视化。输出平滑后的能量时间序列。",
+      "layer": "TEMPORAL",
+      "priority": 500,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE",
+        "V13.7_Temporal_Resampling_Upgrade"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.engines.lifepath_resampling_v13_7.LifepathResamplingEngineV13_7"
+    },
+    "MOD_09_COMBINATION": {
+      "id": "MOD_09_COMBINATION",
+      "name": "⚛️ 天干合化相位",
+      "name_cn": "⚛️ 天干合化相位",
+      "name_en": "Stem Combination Phase",
+      "category": "STRUCTURAL",
+      "subject_id": "MOD_09_COMBINATION",
+      "icon": "⚛️",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "天干合化与纠缠态物理学。",
+      "semantic_seed": {
+        "description": "天干合化与纠缠态物理学",
+        "physical_image": "天干合化与纠缠态物理学。",
+        "source": "Topic_G_01_Combination",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "10.0",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "Topic_G_01_Combination",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_COMBINATION_PHASE"
+      ],
+      "linked_metrics": [
+        "COMBINATION_THRESHOLD",
+        "TRANSFORM_POWER"
+      ],
+      "goal": "判定干支相位迁移（合化）或纠缠（羁绊）。",
+      "outcome": "精准测算合化能量状态。",
+      "layer": "STRUCTURAL",
+      "priority": 800,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_01_Combination"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_10_RESONANCE": {
+      "id": "MOD_10_RESONANCE",
+      "name": "📡 干支通根增益",
+      "name_cn": "📡 干支通根增益",
+      "name_en": "Stem-Branch Resonance",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_10_RESONANCE",
+      "icon": "📡",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "通过通根（天干地支谐振）实现的信号放大。",
+      "semantic_seed": {
+        "description": "通过通根（天干地支谐振）实现的信号放大",
+        "physical_image": "通过通根（天干地支谐振）实现的信号放大。",
+        "source": "Topic_G_03_Pillar_Weighting",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "10.0",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "Topic_G_03_Pillar_Weighting",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_ROOTING_GAIN"
+      ],
+      "linked_metrics": [
+        "ROOTING_GAIN",
+        "STABILITY_STATUS"
+      ],
+      "goal": "量化来自本气/中气/余气的通根信号增益。",
+      "outcome": "精准测算天干虚实强弱。",
+      "layer": "FUNDAMENTAL",
+      "priority": 880,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_03_Pillar_Weighting"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_11_GRAVITY": {
+      "id": "MOD_11_GRAVITY",
+      "name": "🌌 宫位引力场",
+      "name_cn": "🌌 宫位引力场",
+      "name_en": "Pillar Gravitational Field",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_11_GRAVITY",
+      "icon": "🌌",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 基于节气深度的动态权重分布。时变引力模型：W_month(t) = 0.40 + 0.15 * sin(π * t)。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 基于节气深度的动态权重分布",
+        "physical_image": "[V13.7 物理化升级] 基于节气深度的动态权重分布。时变引力模型：W_month(t) = 0.40 + 0.15 * sin(π * t)。",
+        "source": "Topic_G_03_Pillar_Weighting",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.pillar_gravity_v13_7.PillarGravityEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.pillar_gravity_v13_7.PillarGravityEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_G_03_Pillar_Weighting",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_PILLAR_GRAVITY",
+        "PH_DYNAMIC_GRAVITY_WEIGHTS"
+      ],
+      "linked_metrics": [
+        "PILLAR_WEIGHT_MATRIX",
+        "MONTH_DOMINANCE",
+        "DYNAMIC_WEIGHTS"
+      ],
+      "goal": "模拟非线性能量偏移（月令支配地位）。通过时变引力模型计算动态权重。",
+      "outcome": "动态能量分布图。月令支配度分析。",
+      "layer": "FUNDAMENTAL",
+      "priority": 840,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_03_Pillar_Weighting",
+        "V13.7_Dynamic_Gravity_Upgrade"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.engines.pillar_gravity_v13_7.PillarGravityEngineV13_7"
+    },
+    "MOD_12_INERTIA": {
+      "id": "MOD_12_INERTIA",
+      "name": "🌊 时空场惯性",
+      "name_cn": "🌊 时空场惯性",
+      "name_en": "Spacetime Field Inertia",
+      "category": "TEMPORAL",
+      "subject_id": "MOD_12_INERTIA",
+      "icon": "🌊",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 用于能量迁移的流体粘性建模。指数衰减模型：W(t) = exp(-t / tau)，确保能量变化不是'瞬断'的，而是有物理惯性的过渡。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 用于能量迁移的流体粘性建模",
+        "physical_image": "[V13.7 物理化升级] 用于能量迁移的流体粘性建模。指数衰减模型：W(t) = exp(-t / tau)，确保能量变化不是'瞬断'的，而是有物理惯性的过渡。",
+        "source": "Topic_G_04_Spacetime_Inertia",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.spacetime_inertia_v13_7.SpacetimeInertiaEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.spacetime_inertia_v13_7.SpacetimeInertiaEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_G_04_Spacetime_Inertia",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_FLUID_VISCOSITY",
+        "PH_INERTIA_DECAY"
+      ],
+      "linked_metrics": [
+        "INERTIA_CONSTANT_TAU",
+        "VISCOSITY_INDEX",
+        "INERTIA_WEIGHTS",
+        "SMOOTHED_ENERGY"
+      ],
+      "goal": "确保大运切换期间能量的平滑交接。通过指数衰减模型实现物理惯性过渡。",
+      "outcome": "在过渡期间保持因果熵 stable。输出平滑后的能量时间序列。",
+      "layer": "TEMPORAL",
+      "priority": 550,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_04_Spacetime_Inertia",
+        "V13.7_Inertia_Decay_Upgrade"
+      ],
+      "fusion_type": "STANDALONE_MODULE",
+      "class": "core.trinity.core.engines.spacetime_inertia_v13_7.SpacetimeInertiaEngineV13_7"
+    },
+    "MOD_14_TIME_SPACE_INTERFERENCE": {
+      "id": "MOD_14_TIME_SPACE_INTERFERENCE",
+      "name": "⏳ 多维时空场耦合模型",
+      "name_cn": "⏳ 多维时空场耦合模型",
+      "name_en": "Multidimensional Spacetime Field Coupling",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_14_TIME_SPACE_INTERFERENCE",
+      "icon": "⏳",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 实现原生概率波函数（Base Wave）与大运（Background）、流年（Impulse）、地域（GEO Bias）的相干叠加计算。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 实现原生概率波函数（Base Wave）与大运（Background）、流年（Impulse）、地域（GEO Bias）的相干叠加计算",
+        "physical_image": "[V13.7 物理化升级] 实现原生概率波函数（Base Wave）与大运（Background）、流年（Impulse）、地域（GEO Bias）的相干叠加计算。",
+        "source": "Topic_01_Spacetime_Coupling",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_01_Spacetime_Coupling",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_QUANTUM_DISPERSION",
+        "PH_WEALTH_PERMEABILITY",
+        "PH_GRAVITY_BINDING",
+        "PH_COHERENT_SUPERPOSITION",
+        "PH_INTERFERENCE_INDEX",
+        "PH_PHASE_COHERENCE",
+        "PH_GEO_COUPLING_EFFICIENCY",
+        "PH_EXTRACT_BASE_WAVE",
+        "PH_EXTRACT_BACKGROUND_FIELD",
+        "PH_EXTRACT_IMPULSE_WAVE",
+        "PH_EXTRACT_GEO_BIAS"
+      ],
+      "linked_metrics": [
+        "spacetime_interference_index",
+        "geo_coupling_efficiency",
+        "phase_coherence"
+      ],
+      "goal": "定量分析大运背景辐射与流年脉冲对原局结构的相干叠加效应。",
+      "outcome": "生成时空耦合波形图 (Spacetime Interference Waveform) 与 K-Geo 效率报告。",
+      "layer": "TEMPORAL_INTERFERENCE_LAYER",
+      "priority": 200,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_01_Spacetime_Coupling",
+        "ANTIGRAVITY_V2.6_PHYSICS_CONSTANTS"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_15_STRUCTURAL_VIBRATION": {
+      "id": "MOD_15_STRUCTURAL_VIBRATION",
+      "name": "🏗️ 结构振动传导",
+      "name_cn": "🏗️ 结构振动传导",
+      "name_en": "Structural Vibration Transmission",
+      "category": "FUNDAMENTAL",
+      "subject_id": "MOD_15_STRUCTURAL_VIBRATION",
+      "icon": "🏗️",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 整合升级] 基于非线性动力网络的能量传导、饱和与阻抗分析引擎。整合了复阻抗模型（Z = R + jX）。",
+      "semantic_seed": {
+        "description": "[V13.7 整合升级] 基于非线性动力网络的能量传导、饱和与阻抗分析引擎",
+        "physical_image": "[V13.7 整合升级] 基于非线性动力网络的能量传导、饱和与阻抗分析引擎。整合了复阻抗模型（Z = R + jX）。",
+        "source": "Topic_02_Structural_Vibration",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_02_Structural_Vibration",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_NONLINEAR_SATURATION",
+        "PH_VERTICAL_COUPLING",
+        "PH_COMPLEX_IMPEDANCE"
+      ],
+      "linked_metrics": [
+        "vibration_efficiency",
+        "impedance_break_index",
+        "composite_deity_ratio",
+        "impedance_R",
+        "impedance_X",
+        "impedance_magnitude"
+      ],
+      "goal": "模拟干支网络中的能量非线性传导与断链效应，寻找系统最小熵解。解决'大运虽然生助，但因为相位不合，能量却传导不过去'的物理问题。",
+      "outcome": "生成3D能量传导拓扑图与复合神格配比盘。",
+      "layer": "STRUCTURAL_INTERACTION_LAYER",
+      "priority": 150,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_02_Structural_Vibration",
+        "ANTIGRAVITY_NONLINEAR_DYNAMICS",
+        "V13.7_Complex_Impedance_Model"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.unified_arbitrator_master.UnifiedArbitrator"
+    },
+    "MOD_16_TEMPORAL_SHUNTING": {
+      "id": "MOD_16_TEMPORAL_SHUNTING",
+      "name": "⏳ 应期预测与行为干预",
+      "name_cn": "⏳ 应期预测与行为干预",
+      "name_en": "Temporal Shunting",
+      "category": "TEMPORAL",
+      "subject_id": "MOD_16_TEMPORAL_SHUNTING",
+      "icon": "⏳",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 计算未来奇点并模拟行为/地理干预效率。概率波坍缩模型：P(t) = |ψ(t)|² = A * exp(-(t - t_0)² / (2σ²))。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 计算未来奇点并模拟行为/地理干预效率",
+        "physical_image": "[V13.7 物理化升级] 计算未来奇点并模拟行为/地理干预效率。概率波坍缩模型：P(t) = |ψ(t)|² = A * exp(-(t - t_0)² / (2σ²))。",
+        "source": "Topic_G_04_Spacetime_Inertia",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.temporal_prediction_v13_7.TemporalPredictionEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.temporal_prediction_v13_7.TemporalPredictionEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_G_04_Spacetime_Inertia",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "SingularityTrigger",
+        "ShuntEfficiency",
+        "PH_WAVEFUNCTION_COLLAPSE",
+        "PH_NONLINEAR_ACCUMULATION"
+      ],
+      "linked_metrics": [
+        "PROBABILITY_DENSITY",
+        "SINGULARITY_ENERGY",
+        "TIMELINE_PREDICTION"
+      ],
+      "goal": "预测未来事件的发生时间。通过概率波坍缩和非线性累加计算应期。",
+      "outcome": "生成时间线预测、奇点探测、概率分布。",
+      "layer": "TEMPORAL",
+      "priority": 200,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_G_04_Spacetime_Inertia",
+        "V13.7_Wavefunction_Collapse_Upgrade"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.engines.temporal_prediction_v13_7.TemporalPredictionEngineV13_7"
+    },
+    "MOD_17_STELLAR_INTERACTION": {
+      "id": "MOD_17_STELLAR_INTERACTION",
+      "name": "✨ 星辰相干与喜剧真言",
+      "name_cn": "✨ 星辰相干与喜剧真言",
+      "name_en": "Stellar Coherence & Comedy",
+      "category": "INTELLIGENCE",
+      "subject_id": "MOD_17_STELLAR_INTERACTION",
+      "icon": "✨",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 将传统神煞（天乙、文昌、桃花、驿马）映射为高阶物理场增益与动能冲量。神煞不再是标签，而是信噪比（SNR）和熵（Entropy）的修正算子。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 将传统神煞（天乙、文昌、桃花、驿马）映射为高阶物理场增益与动能冲量",
+        "physical_image": "[V13.7 物理化升级] 将传统神煞（天乙、文昌、桃花、驿马）映射为高阶物理场增益与动能冲量。神煞不再是标签，而是信噪比（SNR）和熵（Entropy）的修正算子。",
+        "source": "Topic_V12_Stellar_Comedy",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.stellar_coherence_v13_7.StellarCoherenceEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.stellar_coherence_v13_7.StellarCoherenceEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "Topic_V12_Stellar_Comedy",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_STELLAR_ENTROPY_DAMPING",
+        "PH_STELLAR_SNR_BOOST",
+        "PH_STELLAR_QUANTUM_ATTRACTION",
+        "PH_STELLAR_KINETIC_IMPULSE"
+      ],
+      "linked_metrics": [
+        "STELLAR_COHERENCE",
+        "QUANTUM_ATTRACTION",
+        "KINETIC_IMPULSE",
+        "ENTROPY_DAMPING",
+        "SNR_BOOST"
+      ],
+      "goal": "量化星辰场对系统熵与动能的修正，并实现人性化风格表达。天乙贵人熵衰减10%，文昌信噪比提升15%。",
+      "outcome": "生成 Stephen Chow 风格全息报告与高阶星辰修正矩阵。",
+      "layer": "INTELLIGENCE",
+      "priority": 400,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "Topic_V12_Stellar_Comedy",
+        "V13.7_Stellar_Field_Correction"
+      ],
+      "fusion_type": "CORE_INTELLIGENCE",
+      "class": "core.trinity.core.engines.stellar_coherence_v13_7.StellarCoherenceEngineV13_7"
+    },
+    "MOD_18_BASE_APP": {
+      "id": "MOD_18_BASE_APP",
+      "name": "🛠️ 基础应用与全局工具",
+      "name_cn": "🛠️ 基础应用与全局工具",
+      "name_en": "Basic Applications & Global Tools",
+      "category": "INFRA",
+      "subject_id": "MOD_18_BASE_APP",
+      "icon": "🛠️",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7 物理化升级] 包含系统全局调用的基础算法、命运真言工具及跨模块物理干涉检测。实现模块间的'二阶干预'，将 SAI 指数反馈给财富和情感引擎。",
+      "semantic_seed": {
+        "description": "[V13.7 物理化升级] 包含系统全局调用的基础算法、命运真言工具及跨模块物理干涉检测",
+        "physical_image": "[V13.7 物理化升级] 包含系统全局调用的基础算法、命运真言工具及跨模块物理干涉检测。实现模块间的'二阶干预'，将 SAI 指数反馈给财富和情感引擎。",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "version": "13.7",
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "core_calculation": {
+          "function": "core.trinity.core.engines.global_interference_v13_7.GlobalInterferenceEngineV13_7.calculate",
+          "description": "核心计算函数",
+          "parameters": {}
+        },
+        "energy_calculation": {
+          "function": "core.physics_engine.compute_energy_flux",
+          "description": "计算十神能量",
+          "parameters": {}
+        },
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "core_calculation": "core.trinity.core.engines.global_interference_v13_7.GlobalInterferenceEngineV13_7.calculate",
+          "energy_calculation": "core.physics_engine.compute_energy_flux"
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_DESTINY_TRANSLATION",
+        "PH_SINGULARITY_DETECT",
+        "PH_CAUSAL_ENTROPY",
+        "PH_LIFE_CYCLE_RESONANCE",
+        "PH_JITTER",
+        "PH_CHONG",
+        "PH25-26_COLLAPSE",
+        "PH_CROSS_INTERFERENCE"
+      ],
+      "linked_metrics": [
+        "SAI_INDEX",
+        "CROSS_CORRECTION",
+        "INTERFERENCE_LEVEL"
+      ],
+      "goal": "提供全系统的核心物理常量支撑与叙事风格翻译。实现模块间的交叉干涉检测和全参数联动波动图生成。",
+      "outcome": "确保全局物理场一致度与真言输出稳定性。生成集成报告（全参数联动波动图）。",
+      "layer": "INFRA",
+      "priority": 100,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "ANTIGRAVITY_V10_CORE",
+        "V13.7_Cross_Interference_Upgrade"
+      ],
+      "fusion_type": "CORE_MODULE",
+      "class": "core.trinity.core.engines.global_interference_v13_7.GlobalInterferenceEngineV13_7"
+    }
+  }
+}

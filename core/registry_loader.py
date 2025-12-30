@@ -46,19 +46,32 @@ class RegistryLoader:
     - 支持任意格局的算法复原
     """
     
-    def __init__(self, registry_path: Optional[Path] = None):
+    def __init__(self, registry_path: Optional[Path] = None, theme_id: Optional[str] = None):
         """
         初始化注册表驱动器
         
         Args:
             registry_path: 注册表文件路径（可选，默认使用holographic_pattern注册表）
+            theme_id: 主题ID（可选，用于自动选择注册表路径）
+                - "HOLOGRAPHIC_PATTERN": 使用 holographic_pattern/registry.json
+                - "BAZI_FUNDAMENTAL": 使用 bazi_fundamental/registry.json
+                - "PATTERN_PHYSICS": 使用 physical_simulation/registry.json
         """
         if registry_path is None:
             project_root = Path(__file__).resolve().parents[1]
-            registry_path = project_root / "core" / "subjects" / "holographic_pattern" / "registry.json"
+            if theme_id == "BAZI_FUNDAMENTAL":
+                registry_path = project_root / "core" / "subjects" / "bazi_fundamental" / "registry.json"
+            elif theme_id == "FRAMEWORK_UTILITIES":
+                registry_path = project_root / "core" / "subjects" / "framework_utilities" / "registry.json"
+            elif theme_id == "PATTERN_PHYSICS":
+                registry_path = project_root / "core" / "subjects" / "physical_simulation" / "registry.json"
+            else:
+                # 默认使用 holographic_pattern
+                registry_path = project_root / "core" / "subjects" / "holographic_pattern" / "registry.json"
         
         self.registry_path = registry_path
         self.registry = None
+        self.theme_id = theme_id
         self._load_registry()
     
     def _load_registry(self):

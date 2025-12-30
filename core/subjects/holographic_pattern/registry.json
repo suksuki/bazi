@@ -201,13 +201,24 @@
           "R": "关联轴：0.08 - 六亲缘薄，孤立态"
         },
         "algorithm_implementation": {
+          "dependencies": {
+            "FRAMEWORK_UTILITIES": [
+              "MOD_19_BAZI_UTILITIES",
+              "MOD_20_SYS_CONFIG"
+            ],
+            "BAZI_FUNDAMENTAL": [
+              "MOD_03_TRANSFORM",
+              "MOD_06_MICRO_STRESS"
+            ]
+          },
           "energy_calculation": {
             "function": "core.physics_engine.compute_energy_flux",
-            "description": "读取任意十神的物理场强（支持月令加权）",
-            "weights": {
+            "description": "读取任意十神的物理场强（支持月令加权），参数从config_schema.py读取",
+            "config_source": "core.config_schema.DEFAULT_FULL_ALGO_PARAMS",
+            "parameters": {
+              "month_resonance": "physics.pillarWeights.month",
+              "rooting": "structure.rootingWeight",
               "base": 1.0,
-              "month_resonance": 1.42,
-              "rooting": 3.0,
               "generation": 1.0
             }
           },

@@ -178,8 +178,68 @@ class LogicRegistry:
     def get_active_modules(self, theme_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Retrieves active UI modules from the manifest, optionally filtered by theme.
+        If theme has a registry_path, loads modules from the registry file.
+        Otherwise, loads from manifest modules.
         Returns a list of module dictionaries including their ID.
         """
+        # Check if theme has a registry_path
+        themes = self._manifest.get('themes', {})
+        theme_data = themes.get(theme_id) if theme_id else None
+        
+        if theme_data and theme_data.get('registry_path'):
+            # Load modules from registry file
+            try:
+                from core.registry_loader import RegistryLoader
+                from pathlib import Path
+                import os
+                
+                registry_path = Path(__file__).parent.parent / theme_data['registry_path']
+                if registry_path.exists():
+                    loader = RegistryLoader(registry_path=registry_path, theme_id=theme_id)
+                    registry = loader.registry
+                    
+                    if registry and 'patterns' in registry:
+                        active_list = []
+                        for pattern_id, pattern_data in registry['patterns'].items():
+                            if pattern_data.get('active', True):
+                                # Convert pattern structure to module structure
+                                module_dict = {
+                                    'id': pattern_id,
+                                    'name': pattern_data.get('name', pattern_id),
+                                    'name_cn': pattern_data.get('name_cn', pattern_data.get('name', pattern_id)),
+                                    'name_en': pattern_data.get('name_en', pattern_data.get('name', pattern_id)),
+                                    'icon': pattern_data.get('icon', '🔧'),
+                                    'description': pattern_data.get('description', ''),
+                                    'goal': pattern_data.get('goal', ''),
+                                    'outcome': pattern_data.get('outcome', ''),
+                                    'layer': pattern_data.get('layer', 'FUNDAMENTAL'),
+                                    'priority': pattern_data.get('priority', 500),
+                                    'linked_rules': pattern_data.get('linked_rules', []),
+                                    'linked_metrics': pattern_data.get('linked_metrics', []),
+                                    'origin_trace': pattern_data.get('origin_trace', []),
+                                    'fusion_type': pattern_data.get('fusion_type', 'CORE_MODULE'),
+                                    'class': pattern_data.get('class', ''),
+                                    'theme': theme_id,
+                                    'active': pattern_data.get('active', True),
+                                    'version': pattern_data.get('version', '1.0'),
+                                    'category': pattern_data.get('category', 'FUNDAMENTAL'),
+                                    'subject_id': pattern_data.get('subject_id', pattern_id),
+                                    # Include full pattern data for detailed view
+                                    'pattern_data': pattern_data
+                                }
+                                active_list.append(module_dict)
+                        
+                        # Sort by key (MOD_00, MOD_01...)
+                        return sorted(active_list, key=lambda x: x['id'])
+                    else:
+                        logger.warning(f"注册表中没有找到 patterns: {registry_path}")
+                else:
+                    logger.warning(f"注册表文件不存在: {registry_path}")
+            except Exception as e:
+                logger.error(f"从注册表加载模块失败: {e}")
+                # Fall back to manifest modules
+        
+        # Fallback: Load from manifest modules
         modules = self._manifest.get('modules', {})
         active_list = []
         for m_id, m_data in modules.items():

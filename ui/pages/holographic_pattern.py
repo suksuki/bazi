@@ -549,212 +549,250 @@ def render():
         except:
             pass
         
-        # 实时演算
-        with st.spinner("正在演算量子命运轨迹..."):
-            try:
-                timeline_results = simulate_trajectory(
-                    chart=chart,
-                    day_master=day_master,
-                    pattern_id=selected_pattern_id,
-                    start_year=selected_year,
-                    duration=12,
-                    luck_pillar=luck_pillar
-                )
+        # 实时演算（带进度显示）
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        try:
+            import time
+            start_time = time.time()
+            
+            # 显示初始状态
+            status_text.text("正在演算量子命运轨迹... (0秒)")
+            logger.info("=" * 70)
+            logger.info("🚀 开始演算量子命运轨迹")
+            logger.info(f"   格局: {selected_pattern_id}")
+            logger.info(f"   起始年份: {selected_year}")
+            logger.info(f"   八字: {chart}, 日主: {day_master}")
+            logger.info("=" * 70)
+            
+            # 直接运行（不使用线程，避免Streamlit兼容性问题）
+            timeline_results = simulate_trajectory(
+                chart=chart,
+                day_master=day_master,
+                pattern_id=selected_pattern_id,
+                start_year=selected_year,
+                duration=12,
+                luck_pillar=luck_pillar
+            )
+            
+            # 完成
+            total_elapsed = time.time() - start_time
+            progress_bar.progress(1.0)
+            status_text.text(f"✅ 演算完成！耗时 {total_elapsed:.2f}秒")
+            
+            if total_elapsed > 10.0:
+                logger.warning(f"⚠️ 演算耗时较长: {total_elapsed:.2f}秒")
+            else:
+                logger.info(f"✅ 演算完成，耗时: {total_elapsed:.2f}秒")
+            
+            # 短暂显示完成状态后清除
+            time.sleep(0.5)
+            progress_bar.empty()
+            status_text.empty()
+            
+            # 检查结果
+            if not timeline_results:
+                st.error("❌ 演算失败：未返回任何结果")
+                st.info("💡 提示：请检查控制台日志获取详细错误信息")
+                return
+            
+            if timeline_results:
+                # === 动态状态判定 (Dynamic Status Check) ===
+                # 获取当前年份的状态（而不是静态的原局匹配）
+                current_year_data = None
+                for r in timeline_results:
+                    if r.get('year') == selected_year:
+                        current_year_data = r
+                        break
                 
-                if timeline_results:
-                    # === 动态状态判定 (Dynamic Status Check) ===
-                    # 获取当前年份的状态（而不是静态的原局匹配）
-                    current_year_data = None
+                # 如果没有找到当前年份，使用第一年
+                if not current_year_data:
+                    current_year_data = timeline_results[0] if timeline_results else None
+                
+                # === 动态状态判定 (Dynamic Status Check with Injection Factors) ===
+                # 获取当前年份的状态（注入因子后的混合状态）
+                current_pattern_state = None
+                current_alpha = None
+                if current_year_data:
+                    pattern_state_obj = current_year_data.get('pattern_state', {})
+                    current_pattern_state = pattern_state_obj.get('state', 'STABLE')
+                    current_alpha = current_year_data.get('alpha', 1.0)
+                
+                # 检查原局匹配（静态，出厂设置）
+                recognition = result.get('recognition', {})
+                is_pattern_matched = recognition.get('matched', False)
+                
+                # 动态判定：基于当前年份的状态显示提示（优先级逻辑）
+                if selected_pattern_id == 'A-03':
+                    # Case 1: 动态成功（注入因子生效！流年能量注入成功）
+                    if current_pattern_state in ['CRYSTALLIZED', 'FORMED_A03']:
+                        alpha_display = f"{current_alpha:.2f}" if current_alpha is not None else "N/A"
+                        st.success(
+                            f"✨ **运至成格 (Phase Crystallized)** | "
+                            f"流年能量注入成功，已激活 A-03 专属高维矩阵 "
+                            f"(Alpha: {alpha_display})"
+                        )
+                    
+                    # Case 2: 静态成功（原局入格，天生就是A-03）
+                    elif is_pattern_matched and current_pattern_state != 'COLLAPSED':
+                        status_display = current_pattern_state if current_pattern_state else 'STABLE'
+                        st.info(f"🛡️ **标准格局 (Standard A-03)** | 状态: {status_display}")
+                    
+                    # Case 3: 动态失败（格局崩塌）
+                    elif current_pattern_state == 'COLLAPSED':
+                        alpha_display = f"{current_alpha:.2f}" if current_alpha is not None else "N/A"
+                        st.error(
+                            f"⚡ **格局崩塌 (Phase Collapse)** | "
+                            f"结构完整性受损 (Alpha: {alpha_display})，已降级为通用矩阵"
+                        )
+                    
+                    # Case 4: 完全失败（既不是原局入格，也没有动态成格）
+                    else:
+                        st.warning(
+                            "⚠️ **非标格局 (Standard Pattern)** | "
+                            "当前八字未入 A-03 正格，且流年未达成格条件。以下为'强制拟合'视角的投影。"
+                        )
+                
+                # === 五维超流形可视化 (5D Hyper-Manifold) ===
+                st.markdown("#### 🪐 全息命运流形 (The Fate Manifold)")
+                st.caption("3D+2D视觉模型：将五维张量映射为悬浮在宇宙中的'发光天体'")
+                
+                # 获取当前投影和标准质心
+                current_projection = result.get('projection', {})
+                pattern_info = controller.get_pattern_by_id(selected_pattern_id)
+                reference_centroid = None
+                if pattern_info:
+                    feature_anchors = pattern_info.get('feature_anchors', {})
+                    standard_centroid = feature_anchors.get('standard_centroid', {})
+                    reference_centroid = standard_centroid.get('vector', {})
+                
+                # 获取格局状态
+                pattern_state = result.get('pattern_state', {}).get('state', 'STABLE')
+                if 'recognition' in result:
+                    recognition = result['recognition']
+                    if recognition.get('matched'):
+                        pattern_state = recognition.get('pattern_type', 'STABLE')
+                
+                # 渲染3D超流形
+                manifold_fig = render_5d_manifold(
+                    current_tensor=current_projection,
+                    reference_tensor=reference_centroid,
+                    pattern_state=pattern_state,
+                    pattern_name=result.get('pattern_name', selected_pattern_id)
+                )
+                st.plotly_chart(manifold_fig, use_container_width=True)
+                
+                # 显示流形描述
+                description = get_manifold_description(current_projection, pattern_state)
+                col_desc1, col_desc2, col_desc3, col_desc4 = st.columns(4)
+                
+                with col_desc1:
+                    st.metric("能级质量 (Mass)", description['mass'], description['energy'])
+                with col_desc2:
+                    st.metric("社会高度 (Altitude)", description['altitude'], description['order'])
+                with col_desc3:
+                    st.metric("核心温度 (Temp)", description['temperature'], description['stress'])
+                with col_desc4:
+                    st.metric("形态特征 (Shape)", description['shape'], "")
+                
+                # === 动态时间轴 ===
+                st.markdown("#### ⏱️ 动态时间轴 (2024-2035)")
+                st.caption("秩序轴 (O) vs 应力轴 (S) 演化趋势 | 相变事件标记")
+                
+                # 渲染时间轴
+                timeline_fig = render_phase_timeline(
+                    timeline_data=timeline_results,
+                    show_alpha=True,
+                    show_projection=True
+                )
+                st.plotly_chart(timeline_fig, use_container_width=True)
+                
+                # 显示关键事件摘要
+                with st.expander("📋 关键事件摘要", expanded=False):
+                    critical_years = []
                     for r in timeline_results:
-                        if r.get('year') == selected_year:
-                            current_year_data = r
-                            break
+                        state = r.get('pattern_state', {}).get('state', 'STABLE')
+                        if state in ['COLLAPSED', 'CRYSTALLIZED', 'MUTATED']:
+                            critical_years.append({
+                                'year': r['year'],
+                                'year_pillar': r.get('year_pillar', ''),
+                                'state': state,
+                                'alpha': r.get('alpha', 0.0),
+                                'trigger': r.get('pattern_state', {}).get('trigger', 'N/A')
+                            })
                     
+                    if critical_years:
+                        for event in critical_years:
+                            state_icons = {
+                                'COLLAPSED': '⚡',
+                                'CRYSTALLIZED': '💎',
+                                'MUTATED': '🔮'
+                            }
+                            state_names = {
+                                'COLLAPSED': '破格',
+                                'CRYSTALLIZED': '成格',
+                                'MUTATED': '变异'
+                            }
+                            icon = state_icons.get(event['state'], '⚪')
+                            name = state_names.get(event['state'], event['state'])
+                            
+                            st.markdown(f"**{icon} {event['year']}年 ({event['year_pillar']})**: {name}")
+                            st.markdown(f"  - Alpha: {event['alpha']:.4f}")
+                            st.markdown(f"  - 触发: {event['trigger']}")
+                            st.markdown("---")
+                    else:
+                        st.info("无关键事件")
+                
+                # === 命运叙事层 (Narrative Layer) ===
+                st.markdown("---")
+                st.markdown("#### 🔮 解码命运流形 (Decode Manifold)")
+                st.caption("基于5维张量的物理解读 | AI叙事生成")
+                
+                # 获取当前年份的数据（用于生成报告）
+                current_year_data_for_report = None
+                for r in timeline_results:
+                    if r.get('year') == selected_year:
+                        current_year_data_for_report = r
+                        break
+                
+                if not current_year_data_for_report:
                     # 如果没有找到当前年份，使用第一年
-                    if not current_year_data:
-                        current_year_data = timeline_results[0] if timeline_results else None
+                    current_year_data_for_report = timeline_results[0] if timeline_results else None
+                
+                if current_year_data_for_report:
+                    # 生成当前年份的报告
+                    report_data = {
+                        'projection': current_year_data_for_report.get('projection', {}),
+                        'alpha': current_year_data_for_report.get('alpha', 1.0),
+                        'pattern_state': current_year_data_for_report.get('pattern_state', {})
+                    }
                     
-                    # === 动态状态判定 (Dynamic Status Check with Injection Factors) ===
-                    # 获取当前年份的状态（注入因子后的混合状态）
-                    current_pattern_state = None
-                    current_alpha = None
-                    if current_year_data:
-                        pattern_state_obj = current_year_data.get('pattern_state', {})
-                        current_pattern_state = pattern_state_obj.get('state', 'STABLE')
-                        current_alpha = current_year_data.get('alpha', 1.0)
+                    narrative = generate_holographic_report(
+                        tensor_data=report_data,
+                        pattern_name=result.get('pattern_name', selected_pattern_id),
+                        pattern_state=pattern_state
+                    )
                     
-                    # 检查原局匹配（静态，出厂设置）
-                    recognition = result.get('recognition', {})
-                    is_pattern_matched = recognition.get('matched', False)
+                    # 使用st.markdown显示，确保Markdown格式（包括换行）被正确渲染
+                    # 使用unsafe_allow_html=False确保安全，但允许Markdown格式
+                    st.markdown(narrative, unsafe_allow_html=False)
                     
-                    # 动态判定：基于当前年份的状态显示提示（优先级逻辑）
-                    if selected_pattern_id == 'A-03':
-                        # Case 1: 动态成功（注入因子生效！流年能量注入成功）
-                        if current_pattern_state in ['CRYSTALLIZED', 'FORMED_A03']:
-                            alpha_display = f"{current_alpha:.2f}" if current_alpha is not None else "N/A"
-                            st.success(
-                                f"✨ **运至成格 (Phase Crystallized)** | "
-                                f"流年能量注入成功，已激活 A-03 专属高维矩阵 "
-                                f"(Alpha: {alpha_display})"
-                            )
-                        
-                        # Case 2: 静态成功（原局入格，天生就是A-03）
-                        elif is_pattern_matched and current_pattern_state != 'COLLAPSED':
-                            status_display = current_pattern_state if current_pattern_state else 'STABLE'
-                            st.info(f"🛡️ **标准格局 (Standard A-03)** | 状态: {status_display}")
-                        
-                        # Case 3: 动态失败（格局崩塌）
-                        elif current_pattern_state == 'COLLAPSED':
-                            alpha_display = f"{current_alpha:.2f}" if current_alpha is not None else "N/A"
-                            st.error(
-                                f"⚡ **格局崩塌 (Phase Collapse)** | "
-                                f"结构完整性受损 (Alpha: {alpha_display})，已降级为通用矩阵"
-                            )
-                        
-                        # Case 4: 完全失败（既不是原局入格，也没有动态成格）
-                        else:
-                            st.warning(
-                                "⚠️ **非标格局 (Standard Pattern)** | "
-                                "当前八字未入 A-03 正格，且流年未达成格条件。以下为'强制拟合'视角的投影。"
-                            )
-                    
-                    # === 五维超流形可视化 (5D Hyper-Manifold) ===
-                    st.markdown("#### 🪐 全息命运流形 (The Fate Manifold)")
-                    st.caption("3D+2D视觉模型：将五维张量映射为悬浮在宇宙中的'发光天体'")
-                    
-                    # 获取当前投影和标准质心
-                    current_projection = result.get('projection', {})
-                    pattern_info = controller.get_pattern_by_id(selected_pattern_id)
-                    reference_centroid = None
-                    if pattern_info:
-                        feature_anchors = pattern_info.get('feature_anchors', {})
-                        standard_centroid = feature_anchors.get('standard_centroid', {})
-                        reference_centroid = standard_centroid.get('vector', {})
-                    
-                    # 获取格局状态
-                    pattern_state = result.get('pattern_state', {}).get('state', 'STABLE')
-                    if 'recognition' in result:
-                        recognition = result['recognition']
-                        if recognition.get('matched'):
-                            pattern_state = recognition.get('pattern_type', 'STABLE')
-                    
-                    # 渲染3D超流形
-                    manifold_fig = render_5d_manifold(
-                        current_tensor=current_projection,
-                        reference_tensor=reference_centroid,
-                        pattern_state=pattern_state,
+                    # 生成时间轴洞察
+                    timeline_insight = generate_timeline_insight(
+                        timeline_data=timeline_results,
                         pattern_name=result.get('pattern_name', selected_pattern_id)
                     )
-                    st.plotly_chart(manifold_fig, use_container_width=True)
                     
-                    # 显示流形描述
-                    description = get_manifold_description(current_projection, pattern_state)
-                    col_desc1, col_desc2, col_desc3, col_desc4 = st.columns(4)
-                    
-                    with col_desc1:
-                        st.metric("能级质量 (Mass)", description['mass'], description['energy'])
-                    with col_desc2:
-                        st.metric("社会高度 (Altitude)", description['altitude'], description['order'])
-                    with col_desc3:
-                        st.metric("核心温度 (Temp)", description['temperature'], description['stress'])
-                    with col_desc4:
-                        st.metric("形态特征 (Shape)", description['shape'], "")
-                    
-                    # === 动态时间轴 ===
-                    st.markdown("#### ⏱️ 动态时间轴 (2024-2035)")
-                    st.caption("秩序轴 (O) vs 应力轴 (S) 演化趋势 | 相变事件标记")
-                    
-                    # 渲染时间轴
-                    timeline_fig = render_phase_timeline(
-                        timeline_data=timeline_results,
-                        show_alpha=True,
-                        show_projection=True
-                    )
-                    st.plotly_chart(timeline_fig, use_container_width=True)
-                    
-                    # 显示关键事件摘要
-                    with st.expander("📋 关键事件摘要", expanded=False):
-                        critical_years = []
-                        for r in timeline_results:
-                            state = r.get('pattern_state', {}).get('state', 'STABLE')
-                            if state in ['COLLAPSED', 'CRYSTALLIZED', 'MUTATED']:
-                                critical_years.append({
-                                    'year': r['year'],
-                                    'year_pillar': r.get('year_pillar', ''),
-                                    'state': state,
-                                    'alpha': r.get('alpha', 0.0),
-                                    'trigger': r.get('pattern_state', {}).get('trigger', 'N/A')
-                                })
-                        
-                        if critical_years:
-                            for event in critical_years:
-                                state_icons = {
-                                    'COLLAPSED': '⚡',
-                                    'CRYSTALLIZED': '💎',
-                                    'MUTATED': '🔮'
-                                }
-                                state_names = {
-                                    'COLLAPSED': '破格',
-                                    'CRYSTALLIZED': '成格',
-                                    'MUTATED': '变异'
-                                }
-                                icon = state_icons.get(event['state'], '⚪')
-                                name = state_names.get(event['state'], event['state'])
-                                
-                                st.markdown(f"**{icon} {event['year']}年 ({event['year_pillar']})**: {name}")
-                                st.markdown(f"  - Alpha: {event['alpha']:.4f}")
-                                st.markdown(f"  - 触发: {event['trigger']}")
-                                st.markdown("---")
-                        else:
-                            st.info("无关键事件")
-                    
-                    # === 命运叙事层 (Narrative Layer) ===
-                    st.markdown("---")
-                    st.markdown("#### 🔮 解码命运流形 (Decode Manifold)")
-                    st.caption("基于5维张量的物理解读 | AI叙事生成")
-                    
-                    # 获取当前年份的数据（用于生成报告）
-                    current_year_data = None
-                    for r in timeline_results:
-                        if r.get('year') == selected_year:
-                            current_year_data = r
-                            break
-                    
-                    if not current_year_data:
-                        # 如果没有找到当前年份，使用第一年
-                        current_year_data = timeline_results[0] if timeline_results else None
-                    
-                    if current_year_data:
-                        # 生成当前年份的报告
-                        report_data = {
-                            'projection': current_year_data.get('projection', {}),
-                            'alpha': current_year_data.get('alpha', 1.0),
-                            'pattern_state': current_year_data.get('pattern_state', {})
-                        }
-                        
-                        narrative = generate_holographic_report(
-                            tensor_data=report_data,
-                            pattern_name=result.get('pattern_name', selected_pattern_id),
-                            pattern_state=pattern_state
-                        )
-                        
-                        st.markdown(narrative)
-                        
-                        # 生成时间轴洞察
-                        timeline_insight = generate_timeline_insight(
-                            timeline_data=timeline_results,
-                            pattern_name=result.get('pattern_name', selected_pattern_id)
-                        )
-                        
-                        with st.expander("📊 12年轨迹洞察", expanded=False):
-                            st.markdown(timeline_insight)
-                else:
-                    st.warning("⚠️ 演算结果为空")
-            except Exception as e:
-                logging.error(f"实时演算失败: {e}", exc_info=True)
-                st.error(f"❌ 演算失败: {e}")
-                import traceback
-                st.code(traceback.format_exc(), language='python')
+                    with st.expander("📊 12年轨迹洞察", expanded=False):
+                        st.markdown(timeline_insight)
+            else:
+                st.warning("⚠️ 演算结果为空")
+        except Exception as e:
+            logging.error(f"实时演算失败: {e}", exc_info=True)
+            st.error(f"❌ 演算失败: {e}")
+            import traceback
+            st.code(traceback.format_exc(), language='python')
         
         # 显示详细数据
         with st.expander("📋 详细数据", expanded=False):

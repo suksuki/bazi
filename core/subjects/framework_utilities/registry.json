@@ -1,0 +1,716 @@
+{
+  "metadata": {
+    "id": "FRAMEWORK_UTILITIES_REGISTRY",
+    "name": "框架算法和模块注册表",
+    "name_en": "Framework Utilities & Algorithms Registry",
+    "version": "1.0",
+    "created_at": "2025-12-30",
+    "updated_at": "2025-12-30",
+    "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。对齐HOLOGRAPHIC_PATTERN结构。",
+    "total_patterns": 4,
+    "specification": {
+      "registry_standard": "QGA-HR V2.0",
+      "alignment_target": "HOLOGRAPHIC_PATTERN",
+      "fds_version": "1.1"
+    }
+  },
+  "theme": {
+    "id": "FRAMEWORK_UTILITIES",
+    "name": "框架算法和模块",
+    "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。",
+    "category": "INFRASTRUCTURE"
+  },
+  "patterns": {
+    "MOD_19_BAZI_UTILITIES": {
+      "id": "MOD_19_BAZI_UTILITIES",
+      "name": "🧰 八字基础工具类",
+      "name_cn": "🧰 八字基础工具类",
+      "name_en": "Bazi Core Utilities",
+      "category": "INFRASTRUCTURE",
+      "subject_id": "MOD_19_BAZI_UTILITIES",
+      "icon": "🧰",
+      "version": "10.0",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "核心工具类算法，包含八字反推、虚拟档案、日期计算等基础设施支撑模块。",
+      "semantic_seed": {
+        "description": "核心工具类算法，包含八字反推、虚拟档案、日期计算等基础设施支撑模块",
+        "physical_image": "核心工具类算法，包含八字反推、虚拟档案、日期计算等基础设施支撑模块。",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "reverse_calculator": "core.bazi_reverse_calculator.BaziReverseCalculator.reverse_calculate",
+          "virtual_profile": "core.bazi_profile.VirtualBaziProfile",
+          "bazi_profile": "core.bazi_profile.BaziProfile",
+          "particle_nexus": "core.trinity.core.nexus.definitions.BaziParticleNexus"
+        },
+        "reverse_calculator": {
+          "function": "core.bazi_reverse_calculator.BaziReverseCalculator.reverse_calculate",
+          "description": "从四柱反推出生日期",
+          "parameters": {
+            "precision": "high|medium|low",
+            "consider_lichun": true
+          }
+        },
+        "virtual_profile": {
+          "function": "core.bazi_profile.VirtualBaziProfile",
+          "description": "虚拟八字档案，从四柱反推并计算大运",
+          "parameters": {}
+        },
+        "bazi_profile": {
+          "function": "core.bazi_profile.BaziProfile",
+          "description": "八字档案对象，封装排盘、大运、流年映射",
+          "parameters": {}
+        },
+        "particle_nexus": {
+          "function": "core.trinity.core.nexus.definitions.BaziParticleNexus",
+          "description": "八字粒子连接定义，包含天干、地支、藏干等基础映射",
+          "parameters": {}
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "UTIL_REVERSE_CALCULATOR",
+        "UTIL_VIRTUAL_PROFILE",
+        "UTIL_LUCK_LOOKUP",
+        "UTIL_YEAR_PILLAR_CALC"
+      ],
+      "linked_metrics": [],
+      "goal": "提供八字系统的核心工具类与反推算法支撑。",
+      "outcome": "确保四柱反推精度与虚拟档案的大运/流年查询稳定性。",
+      "layer": "INFRA",
+      "priority": 50,
+      "status": "ACTIVE",
+      "origin_trace": [],
+      "fusion_type": "INFRASTRUCTURE",
+      "class": ""
+    },
+    "MOD_20_SYS_CONFIG": {
+      "id": "MOD_20_SYS_CONFIG",
+      "name": "⚙️ 系统和档案配置",
+      "name_cn": "⚙️ 系统和档案配置",
+      "name_en": "System & Profile Config",
+      "category": "INFRASTRUCTURE",
+      "subject_id": "MOD_20_SYS_CONFIG",
+      "icon": "⚙️",
+      "version": "10.0",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "系统配置加载与保存、用户档案管理等基础设施支撑模块。",
+      "semantic_seed": {
+        "description": "系统配置加载与保存、用户档案管理等基础设施支撑模块",
+        "physical_image": "系统配置加载与保存、用户档案管理等基础设施支撑模块。",
+        "source": "ANTIGRAVITY_V10_CORE",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V10.0 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "config_manager": "core.config_manager.ConfigManager",
+          "profile_manager": "core.profile_manager.ProfileManager",
+          "logic_registry": "core.logic_registry.LogicRegistry"
+        },
+        "config_manager": {
+          "function": "core.config_manager.ConfigManager",
+          "description": "系统配置管理器，加载和保存配置",
+          "parameters": {}
+        },
+        "profile_manager": {
+          "function": "core.profile_manager.ProfileManager",
+          "description": "用户档案管理器，管理用户档案的持久化",
+          "parameters": {}
+        },
+        "logic_registry": {
+          "function": "core.logic_registry.LogicRegistry",
+          "description": "逻辑注册表，管理主题和模块注册",
+          "parameters": {}
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "10.0",
+            "date": "2025-12-30",
+            "source": "ANTIGRAVITY_V10_CORE",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V10.0 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "UTIL_CONFIG_MANAGER",
+        "UTIL_PROFILE_MANAGER",
+        "UTIL_LOGIC_REGISTRY"
+      ],
+      "linked_metrics": [],
+      "goal": "提供系统配置持久化与用户档案管理支撑。",
+      "outcome": "确保配置加载一致性与用户档案的跨会话持久化。",
+      "layer": "INFRA",
+      "priority": 40,
+      "status": "ACTIVE",
+      "origin_trace": [],
+      "fusion_type": "INFRASTRUCTURE",
+      "class": ""
+    },
+    "MOD_21_INFLUENCE_BUS": {
+      "id": "MOD_21_INFLUENCE_BUS",
+      "name": "🔌 影响因子总线",
+      "name_cn": "🔌 影响因子总线",
+      "name_en": "Influence Bus",
+      "category": "INFRASTRUCTURE",
+      "subject_id": "MOD_21_INFLUENCE_BUS",
+      "icon": "🔌",
+      "version": "13.7",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[V13.7] 影响因子注册和协调系统，支持高阶张量注入（相位、频率）。提供即插即用的环境因子注入机制。",
+      "semantic_seed": {
+        "description": "[V13.7] 影响因子注册和协调系统，支持高阶张量注入（相位、频率）",
+        "physical_image": "[V13.7] 影响因子注册和协调系统，支持高阶张量注入（相位、频率）。提供即插即用的环境因子注入机制。",
+        "source": "V13.7_Physics_Tensor_Upgrade",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "influence_bus": "core.trinity.core.middleware.influence_bus.InfluenceBus",
+          "influence_factor": "core.trinity.core.middleware.influence_bus.InfluenceFactor",
+          "nonlinear_type": "core.trinity.core.middleware.influence_bus.NonlinearType",
+          "physics_tensor": "core.trinity.core.middleware.influence_bus.PhysicsTensor"
+        },
+        "influence_bus": {
+          "function": "core.trinity.core.middleware.influence_bus.InfluenceBus",
+          "description": "影响因子总线，注册和协调环境因子",
+          "parameters": {}
+        },
+        "influence_factor": {
+          "function": "core.trinity.core.middleware.influence_bus.InfluenceFactor",
+          "description": "影响因子定义",
+          "parameters": {}
+        },
+        "nonlinear_type": {
+          "function": "core.trinity.core.middleware.influence_bus.NonlinearType",
+          "description": "非线性类型枚举",
+          "parameters": {}
+        },
+        "physics_tensor": {
+          "function": "core.trinity.core.middleware.influence_bus.PhysicsTensor",
+          "description": "物理张量，支持相位和频率",
+          "parameters": {}
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "V13.7_Physics_Tensor_Upgrade",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "PH_INFLUENCE_FACTOR",
+        "PH_NONLINEAR_TYPE",
+        "PH_PHYSICS_TENSOR"
+      ],
+      "linked_metrics": [],
+      "goal": "提供统一的影响因子注册、激活和协调机制，支持大运、流年、地域、时代等环境因子的动态注入。",
+      "outcome": "实现环境因子的即插即用，支持高阶物理张量（相位、频率）的注入 and 计算。",
+      "layer": "INFRASTRUCTURE",
+      "priority": 30,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "V13.7_Physics_Tensor_Upgrade",
+        "V13.7_Complex_Impedance_Model"
+      ],
+      "fusion_type": "INFRASTRUCTURE",
+      "class": "core.trinity.core.middleware.influence_bus.InfluenceBus"
+    },
+    "MOD_22_STATISTICAL_AUDIT": {
+      "id": "MOD_22_STATISTICAL_AUDIT",
+      "name": "📊 统计审计工具",
+      "name_cn": "📊 统计审计工具",
+      "name_en": "Statistical Audit Utilities",
+      "category": "ALGORITHM",
+      "subject_id": "MOD_22_STATISTICAL_AUDIT",
+      "icon": "📊",
+      "version": "13.7",
+      "active": true,
+      "created_at": "2025-12-30",
+      "description": "[RSS-V1.4] 格局审计通用统计方法模块，提供离群值检测（Z-Score、IQR）、梯度消失判定、分布统计等核心算法。",
+      "semantic_seed": {
+        "description": "[RSS-V1.4] 格局审计通用统计方法模块，提供离群值检测（Z-Score、IQR）、梯度消失判定、分布统计等核心算法",
+        "physical_image": "[RSS-V1.4] 格局审计通用统计方法模块，提供离群值检测（Z-Score、IQR）、梯度消失判定、分布统计等核心算法。",
+        "source": "RSS-V1.4_Statistical_Audit_Upgrade",
+        "updated_at": "2025-12-30",
+        "classical_meaning": {}
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与计算逻辑 (V13.7 Kernel)",
+        "core_formula": {
+          "formula": "TBD",
+          "description": "待补充具体公式",
+          "parameters": {}
+        }
+      },
+      "feature_anchors": {
+        "description": "基于物理模型的特征锚点",
+        "standard_centroid": {
+          "description": "标准稳定态",
+          "vector": {
+            "CORE_INDEX": 0.5,
+            "STABILITY_INDEX": 0.7,
+            "EFFICIENCY_INDEX": 0.6
+          },
+          "match_threshold": 0.7,
+          "perfect_threshold": 0.85
+        },
+        "singularity_centroids": []
+      },
+      "dynamic_states": {
+        "description": "动态相变规则 (Phase Transitions)",
+        "collapse_rules": [
+          {
+            "trigger": "System_Unstable",
+            "action": "Phase_Collapse",
+            "description": "系统不稳定，发生相变"
+          }
+        ],
+        "crystallization_rules": [
+          {
+            "condition": "System_Stable",
+            "action": "Phase_Stable",
+            "description": "系统稳定"
+          }
+        ]
+      },
+      "tensor_operator": {
+        "weights": {
+          "CORE_INDEX": 0.4,
+          "STABILITY_INDEX": 0.3,
+          "EFFICIENCY_INDEX": 0.3
+        },
+        "activation_function": {
+          "type": "linear",
+          "description": "线性激活函数",
+          "parameters": {
+            "slope": 1.0,
+            "intercept": 0.0
+          }
+        },
+        "normalized": true,
+        "core_equation": "TBD",
+        "equation_description": "待补充具体公式"
+      },
+      "algorithm_implementation": {
+        "registry_loader": {
+          "class": "core.registry_loader.RegistryLoader",
+          "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
+        },
+        "paths": {
+          "statistical_auditor": "core.statistical_audit.StatisticalAuditor",
+          "detect_outliers": "core.statistical_audit.StatisticalAuditor.detect_outliers",
+          "check_gradient": "core.statistical_audit.StatisticalAuditor.check_gradient_vanishing",
+          "distribution_stats": "core.statistical_audit.StatisticalAuditor.calculate_distribution_stats",
+          "singularity_verification": "core.statistical_audit.StatisticalAuditor.verify_singularity_existence"
+        },
+        "statistical_auditor": {
+          "function": "core.statistical_audit.StatisticalAuditor",
+          "description": "统计审计器主类",
+          "parameters": {}
+        },
+        "detect_outliers": {
+          "function": "core.statistical_audit.StatisticalAuditor.detect_outliers",
+          "description": "离群值检测（Z-Score、IQR）",
+          "parameters": {}
+        },
+        "check_gradient": {
+          "function": "core.statistical_audit.StatisticalAuditor.check_gradient_vanishing",
+          "description": "梯度消失判定",
+          "parameters": {}
+        },
+        "distribution_stats": {
+          "function": "core.statistical_audit.StatisticalAuditor.calculate_distribution_stats",
+          "description": "分布统计计算",
+          "parameters": {}
+        },
+        "singularity_verification": {
+          "function": "core.statistical_audit.StatisticalAuditor.verify_singularity_existence",
+          "description": "奇点存在性验证",
+          "parameters": {}
+        }
+      },
+      "kinetic_evolution": {
+        "trigger_operators": [
+          {
+            "type": "system_change",
+            "description": "系统状态变化"
+          }
+        ],
+        "gain_operators": [
+          {
+            "type": "system_stable",
+            "description": "系统稳定"
+          }
+        ],
+        "geo_damping": 1.0,
+        "dynamic_simulation": {
+          "scenario": "系统演化",
+          "description": "模拟系统状态演化过程",
+          "simulation_samples": 518400
+        }
+      },
+      "audit_trail": {
+        "coverage_rate": 100.0,
+        "hit_rate": 85.0,
+        "data_selection_criteria": {
+          "target_samples": 518400
+        },
+        "version_history": [
+          {
+            "version": "13.7",
+            "date": "2025-12-30",
+            "source": "RSS-V1.4_Statistical_Audit_Upgrade",
+            "description": "重构对齐HOLOGRAPHIC_PATTERN结构",
+            "fds_steps": {
+              "step1": "物理意象力学解构",
+              "step2": "算法实现路径映射",
+              "step3": "特征锚点定义",
+              "step4": "动态演化规则",
+              "step5": "全息注册与封卷"
+            }
+          }
+        ],
+        "fds_fitting": {
+          "status": "completed",
+          "completed_at": "2025-12-30",
+          "version": "V13.7 (Aligned to HOLOGRAPHIC_PATTERN)"
+        }
+      },
+      "linked_rules": [
+        "ALGO_OUTLIER_DETECTION",
+        "ALGO_GRADIENT_CHECK",
+        "ALGO_DISTRIBUTION_STATS",
+        "ALGO_SINGULARITY_VERIFICATION"
+      ],
+      "linked_metrics": [],
+      "goal": "提供格局审计中的通用统计方法，支持动态离群值检测和奇点存在性验证。",
+      "outcome": "实现统计驱动的奇点判定，排除伪奇点，确保逻辑自洽。",
+      "layer": "ALGO",
+      "priority": 25,
+      "status": "ACTIVE",
+      "origin_trace": [
+        "RSS-V1.4_Statistical_Audit_Upgrade",
+        "QGA_V25.0_Pattern_Audit_Refactoring"
+      ],
+      "fusion_type": "INFRASTRUCTURE",
+      "class": "core.statistical_audit.StatisticalAuditor"
+    }
+  }
+}

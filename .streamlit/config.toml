@@ -56,6 +56,21 @@ showErrorDetails = true
 [theme]
 # 可选：设置主题（可以删除这部分如果不需要）
 base = "dark"
+primaryColor = "#FF6B6B"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[theme.sidebar]
+# 侧边栏主题配置（修复空字符串错误）
+primaryColor = "#FF6B6B"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+widgetBackgroundColor = "#262730"
+widgetBorderColor = "#3A3F4B"
+skeletonBackgroundColor = "#1E1E1E"
 
 [logger]
 # 日志级别：error, warning, info, debug

@@ -6,7 +6,9 @@
     "BAZI_FUNDAMENTAL": {
       "id": "BAZI_FUNDAMENTAL",
       "name": "八字基础规则主题",
-      "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。"
+      "description": "包含晶格基底、能量分布、合化动力学及微观应力等基础物理模型。",
+      "registry_path": "core/subjects/bazi_fundamental/registry.json",
+      "registry_standard": "QGA-HR V2.0"
     },
     "WEALTH_DYNAMICS": {
       "id": "WEALTH_DYNAMICS",
@@ -16,12 +18,21 @@
     "FRAMEWORK_UTILITIES": {
       "id": "FRAMEWORK_UTILITIES",
       "name": "框架算法和模块",
-      "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。"
+      "description": "核心工具类算法，包含八字反推、档案管理、注册表等基础设施支撑模块。",
+      "registry_path": "core/subjects/framework_utilities/registry.json",
+      "registry_standard": "QGA-HR V2.0"
     },
     "PATTERN_PHYSICS": {
       "id": "PATTERN_PHYSICS",
       "name": "物理模型仿真 (Physics Model Simulation)",
       "description": "专注于特定格局的物理极限测试、断裂模量定标与抗压指纹分析。"
+    },
+    "HOLOGRAPHIC_PATTERN": {
+      "id": "HOLOGRAPHIC_PATTERN",
+      "name": "张量全息格局 (Tensor Holographic Pattern)",
+      "description": "基于FDS-V1.1和QGA-HR V2.0规范的五维张量投影全息格局系统。使用transfer_matrix进行格局识别和状态判定。",
+      "registry_path": "core/subjects/holographic_pattern/registry.json",
+      "registry_standard": "QGA-HR V2.0"
     }
   },
   "modules": {

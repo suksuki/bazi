@@ -59,12 +59,20 @@ def generate_holographic_report(
     if use_llm:
         llm_synthesizer = _get_llm_synthesizer()
         if llm_synthesizer and llm_synthesizer.use_llm:
+            logger.info("🔮 尝试使用LLM生成叙事报告...")
             try:
-                return _generate_with_llm(tensor_data, pattern_name, pattern_state, llm_synthesizer)
+                result = _generate_with_llm(tensor_data, pattern_name, pattern_state, llm_synthesizer)
+                if result:
+                    return result
+                else:
+                    logger.warning("⚠️ LLM返回空结果，回退到规则生成")
             except Exception as e:
-                logger.warning(f"LLM生成失败，回退到规则生成: {e}")
+                logger.warning(f"⚠️ LLM生成失败，回退到规则生成: {e}", exc_info=True)
+        else:
+            logger.warning(f"⚠️ LLM不可用: synthesizer={llm_synthesizer is not None}, use_llm={llm_synthesizer.use_llm if llm_synthesizer else 'N/A'}")
     
     # 回退到规则生成
+    logger.info("📝 使用规则生成叙事报告")
     return _generate_with_rules(tensor_data, pattern_name, pattern_state)
 
 
@@ -104,12 +112,21 @@ def _generate_with_llm(
 5. 语调：专业、深刻，略带科幻感（如《经济学人》遇见《星际穿越》）。
 6. 长度：简洁（150字以内）。
 
-请生成分析报告（使用Markdown格式，包含**加粗**标题）。"""
+[格式要求]
+- 必须使用Markdown格式
+- 使用换行符分隔段落（每个段落之间用两个换行符）
+- 使用---作为水平分隔线
+- 使用**加粗**标记重要概念
+- 使用##作为小标题
+
+请生成分析报告，确保使用正确的Markdown格式和换行符。"""
     
     try:
         # 调用LLM（使用ollama客户端）
         if hasattr(llm_synthesizer, '_llm_client') and llm_synthesizer._llm_client:
             client = llm_synthesizer._llm_client
+            
+            logger.info(f"🔮 调用LLM生成叙事报告 (模型: {llm_synthesizer.model_name})")
             
             response = client.generate(
                 model=llm_synthesizer.model_name,
@@ -122,19 +139,54 @@ def _generate_with_llm(
                 }
             )
             
-            # 提取响应文本
+            logger.debug(f"LLM响应类型: {type(response)}")
+            logger.debug(f"LLM响应内容: {response}")
+            
+            # 提取响应文本（ollama返回的是生成器或字典）
+            narrative = None
             if isinstance(response, dict):
-                narrative = response.get('response', '') or response.get('text', '')
+                # ollama返回字典格式
+                narrative = response.get('response', '') or response.get('text', '') or response.get('content', '')
             elif hasattr(response, 'response'):
+                # ollama返回对象格式
                 narrative = response.response
+            elif hasattr(response, '__iter__') and not isinstance(response, str):
+                # ollama可能返回生成器（stream=False时也可能）
+                try:
+                    # 尝试获取第一个元素
+                    first_chunk = next(iter(response))
+                    if isinstance(first_chunk, dict):
+                        narrative = first_chunk.get('response', '') or first_chunk.get('text', '')
+                    else:
+                        narrative = str(first_chunk)
+                except StopIteration:
+                    narrative = None
             else:
                 narrative = str(response)
             
             if narrative and len(narrative.strip()) > 10:
-                logger.info("✅ 使用LLM生成叙事报告")
-                return narrative.strip()
+                logger.info("✅ 使用LLM生成叙事报告成功")
+                # 确保换行符被保留（Markdown格式需要）
+                # 清理文本，但保留换行符和Markdown格式
+                cleaned_narrative = narrative.strip()
+                
+                # 确保Markdown格式的换行被保留
+                import re
+                # 保留Markdown格式的换行（---、##等）
+                # 将多个连续换行符合并为两个（标准Markdown段落分隔）
+                cleaned_narrative = re.sub(r'\n{3,}', '\n\n', cleaned_narrative)
+                
+                # 确保水平线前后有换行符（Markdown要求）
+                cleaned_narrative = re.sub(r'([^\n])---([^\n])', r'\1\n---\n\2', cleaned_narrative)
+                cleaned_narrative = re.sub(r'^---([^\n])', r'---\n\1', cleaned_narrative)
+                cleaned_narrative = re.sub(r'([^\n])---$', r'\1\n---', cleaned_narrative)
+                
+                logger.debug(f"清理后的文本长度: {len(cleaned_narrative)}, 换行符数量: {cleaned_narrative.count(chr(10))}")
+                return cleaned_narrative
+            else:
+                logger.warning(f"⚠️ LLM响应为空或过短: {narrative}")
     except Exception as e:
-        logger.warning(f"LLM调用失败: {e}")
+        logger.error(f"❌ LLM调用失败: {e}", exc_info=True)
     
     # 如果LLM失败，回退到规则生成
     return _generate_with_rules(tensor_data, pattern_name, pattern_state)
