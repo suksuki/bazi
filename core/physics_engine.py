@@ -112,138 +112,153 @@ def compute_energy_flux(
     weights: Optional[Dict[str, float]] = None
 ) -> float:
     """
-    计算十神能量流（参数化版本）
-    
-    将Step 3中的"羊刃=1.0, 七杀=0.8"等逻辑参数化，支持任意十神类型
-    参数从config_schema.py的DEFAULT_FULL_ALGO_PARAMS读取
+    FDS-V1.4 Compliant Energy Calculation
+    Implements Vector Flux with Hidden Stem Ratios & Seasonal Damping.
     
     Args:
         chart: 四柱八字 ['年柱', '月柱', '日柱', '时柱']
         day_master: 日主
-        ten_god_type: 十神类型（如'七杀', '羊刃', '正印', '偏印'）
-        weights: 能量权重字典（可选，默认从配置读取）
-            - base: 基础能量（默认1.0）
-            - month_resonance: 月令共振权重（从config_schema.py读取）
-            - rooting: 通根权重（从config_schema.py读取）
-            - generation: 得生权重（默认1.0）
+        ten_god_type: 十神类型（如'七杀', '羊刃'）
+        weights: (Deprecated) Compatibility argument, ignored in V1.4 logic.
         
     Returns:
-        十神能量值
-        
-    Example:
-        >>> chart = ['丙寅', '甲午', '戊午', '戊午']
-        >>> compute_energy_flux(chart, '戊', '七杀')
-        0.8  # 七杀透干通根
-        >>> compute_energy_flux(chart, '戊', '羊刃')
-        3.0  # 地支三午（羊刃）
+        Energy flux value (float)
     """
-    if weights is None:
-        # 从配置读取参数
-        try:
-            from core.config_manager import ConfigManager
-            from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
-            
-            config = ConfigManager.load_config()
-            physics_params = config.get('physics', DEFAULT_FULL_ALGO_PARAMS.get('physics', {}))
-            structure_params = config.get('structure', DEFAULT_FULL_ALGO_PARAMS.get('structure', {}))
-            
-            pillar_weights = physics_params.get('pillarWeights', {})
-            month_resonance = pillar_weights.get('month', 1.42)
-            rooting_weight = structure_params.get('rootingWeight', 1.0)
-            
-            # 应用通根饱和函数（如果有定义）
-            rooting_saturation_max = structure_params.get('rootingSaturationMax', 2.5)
-            rooting_saturation_steepness = structure_params.get('rootingSaturationSteepness', 0.8)
-            
-            # 使用饱和函数计算实际通根权重
-            import math
-            # Tanh饱和函数: saturation = max_val * tanh(weight * steepness)
-            actual_rooting = rooting_saturation_max * math.tanh(rooting_weight * rooting_saturation_steepness)
-            
-            weights = {
-                'base': 1.0,
-                'month_resonance': month_resonance,
-                'rooting': actual_rooting,
-                'generation': 1.0
-            }
-        except Exception as e:
-            # 如果读取配置失败，使用默认值
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"无法从配置读取参数，使用默认值: {e}")
-            weights = {
-                'base': 1.0,
-                'month_resonance': 1.42,
-                'rooting': 3.0,
-                'generation': 1.0
-            }
+    # [FDS-V1.5 FIX] 羊刃特殊处理
+    # "羊刃" 不是标准十神，而是 "劫财" 在帝旺位置的特殊名称
+    # 壬日主 -> 羊刃在子 (子中藏癸, 癸是壬的劫财)
+    # 甲日主 -> 羊刃在卯 (卯中藏乙, 乙是甲的劫财)
+    # 丙日主 -> 羊刃在午 (午中藏丁, 丁是丙的劫财)
+    # etc.
+    BLADE_BRANCH_MAP = {
+        '甲': '卯', '乙': '寅', '丙': '午', '丁': '巳',
+        '戊': '午', '己': '巳', '庚': '酉', '辛': '申',
+        '壬': '子', '癸': '亥'
+    }
     
-    stems = [p[0] for p in chart]
-    branches = [p[1] for p in chart]
-    month_branch = branches[1]  # 月支
+    is_blade_search = ten_god_type == '羊刃'
+    if is_blade_search:
+        # 转换为劫财搜索，但需要验证地支是否为帝旺位置
+        ten_god_type = '劫财'
+        blade_branch = BLADE_BRANCH_MAP.get(day_master)
     
-    energy = 0.0
+    # 1. Load Physics Constants from Schema
+    from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
+    from core.trinity.core.nexus.definitions import PhysicsConstants, BaziParticleNexus
     
-    # 特殊处理：羊刃（通过地支计算）
-    if ten_god_type == '羊刃':
-        yang_ren_map = SymbolicStarsEngine.YANG_REN_MAP
-        yang_ren_branch = yang_ren_map.get(day_master)
-        if yang_ren_branch:
-            blade_count = branches.count(yang_ren_branch)
-            energy = weights['base'] * blade_count
-            # 月令共振加成
-            if month_branch == yang_ren_branch:
-                energy *= weights['month_resonance']
-        return energy
+    physics_cfg = DEFAULT_FULL_ALGO_PARAMS['physics']
+    season_weights = physics_cfg.get('seasonWeights', {})       # {wang: 1.2, xiang: 1.0, ...}
+    hidden_ratios = physics_cfg.get('hiddenStemRatios', {})     # {main: 0.6, middle: 0.3, remnant: 0.1}
+    pillar_weights = physics_cfg.get('pillarWeights', {})       # {year: 0.8, month: 1.2, ...}
+    structure_params = DEFAULT_FULL_ALGO_PARAMS.get('structure', {})
+    interactions_cfg = DEFAULT_FULL_ALGO_PARAMS.get('interactions', {})
+    vault_cfg = interactions_cfg.get('vault', {})
     
-    # 其他十神：通过天干计算
-    ten_god_stems = []
-    for i, stem in enumerate(stems):
-        if i == 2:  # 跳过日主
-            continue
-        ten_god = BaziParticleNexus.get_shi_shen(stem, day_master)
-        if ten_god == ten_god_type:
-            ten_god_stems.append((i, stem))
+    total_energy = 0.0
     
-    # 检查是否有根（通根权重）
-    for _, ten_god_stem in ten_god_stems:
-        has_root = False
+    # Helper to determine Phase (Wang/Xiang/Xiu/Qiu/Si)
+    def _get_phase(stem_elem: str, season_elem: str) -> str:
+        if stem_elem == season_elem:
+            return 'wang'
+        if PhysicsConstants.GENERATION.get(season_elem) == stem_elem: # Season generates Stem
+            return 'xiang'
+        if PhysicsConstants.GENERATION.get(stem_elem) == season_elem: # Stem generates Season
+            return 'xiu'
+        if PhysicsConstants.CONTROL.get(stem_elem) == season_elem: # Stem controls Season
+            return 'qiu'
+        if PhysicsConstants.CONTROL.get(season_elem) == stem_elem: # Season controls Stem
+            return 'si'
+        return 'si' # Default low
+
+    # Helper to check if a branch is clashed by any other branch in the chart
+    def _check_clash_exists_in_chart(target_branch: str, all_branches: List[str]) -> bool:
+        for b in all_branches:
+            if check_clash(target_branch, b):
+                return True
+        return False
+
+    # Safe extraction of Month Branch (Season Ruler)
+    context_month_branch = chart[1][1] if len(chart) > 1 and len(chart[1]) > 1 else (chart[0][1] if chart else "")
+    month_element = BaziParticleNexus.get_branch_main_element(context_month_branch)
+    
+    pillars_names = ['year', 'month', 'day', 'hour']
+    chart_branches = [p[1] for p in chart if len(p) > 1]
+    
+    # === Main Loop: Iterate Pillars ===
+    for idx, pillar_str in enumerate(chart):
+        if idx >= len(pillars_names): 
+            break
         
-        # 检查自坐
-        pillar_idx = ten_god_stems[0][0]
-        if pillar_idx < len(branches):
-            branch = branches[pillar_idx]
-            hidden_stems = BaziParticleNexus.get_branch_weights(branch)
-            for hidden_stem, weight in hidden_stems:
-                if hidden_stem == ten_god_stem and weight >= 5:  # 主气或中气
-                    has_root = True
-                    break
+        stem_char = pillar_str[0]
+        branch_char = pillar_str[1]
+        pillar_key = pillars_names[idx]
+        pillar_w = pillar_weights.get(pillar_key, 1.0)
         
-        # 检查其他地支
-        if not has_root:
-            for branch in branches:
-                hidden_stems = BaziParticleNexus.get_branch_weights(branch)
-                for hidden_stem, weight in hidden_stems:
-                    if hidden_stem == ten_god_stem and weight >= 5:
-                        has_root = True
-                        break
-                if has_root:
-                    break
+        # --- Part A: Hidden Stems (Ground Field / Rooting) ---
+        raw_hidden = BaziParticleNexus.get_branch_weights(branch_char)
         
-        # 计算能量
-        if has_root:
-            base_energy = weights['base']
-            # 月令共振加成
-            if pillar_idx == 1:  # 月干
-                base_energy *= weights['month_resonance']
-            # 通根加成
-            base_energy *= weights['rooting']
-            energy += base_energy
-        else:
-            # 无根：只有基础能量（虚浮）
-            energy += weights['base'] * 0.5
-    
-    return energy
+        for h_idx, (hidden_stem, _) in enumerate(raw_hidden):
+            # Determine Ratio Type
+            ratio_type = 'remnant'
+            if h_idx == 0: ratio_type = 'main'
+            elif h_idx == 1: ratio_type = 'middle'
+            
+            # Check ID
+            current_ten_god = BaziParticleNexus.get_shi_shen(hidden_stem, day_master)
+            
+            if current_ten_god == ten_god_type:
+                # [FDS-V1.5] 羊刃位置验证
+                # 如果正在搜索羊刃（已转换为劫财），必须验证地支是否为帝旺位置
+                if is_blade_search and branch_char != blade_branch:
+                    continue  # 跳过非帝旺位置的劫财
+                
+                # Term 1: Mass
+                mass = hidden_ratios.get(ratio_type, 0.1)
+                
+                # Term 2: Seasonality
+                h_elem = BaziParticleNexus.get_element(hidden_stem)
+                phase = _get_phase(h_elem, month_element)
+                season_mod = season_weights.get(phase, 0.45) # Default to 'si'
+                
+                # Term 3: Structure Bonus (Same Pillar)
+                # If checking YangRen (Blade), and it's Day Pillar, it's the "Day Blade" (Extreme)
+                structure_mod = 1.0
+                if pillar_key == 'day' and is_blade_search:
+                    structure_mod = structure_params.get('samePillarBonus', 1.5)
+                
+                # Calculate Base Term Energy
+                term_energy = mass * season_mod * pillar_w * structure_mod
+                
+                # [V3.0] Vault Topology (Tomb Logic)
+                # Check if this branch is a Tomb (Chen/Xu/Chou/Wei)
+                if branch_char in ['辰', '戌', '丑', '未']:
+                    is_open = _check_clash_exists_in_chart(branch_char, chart_branches)
+                    if is_open:
+                        term_energy *= vault_cfg.get('openBonus', 1.8)
+                    else:
+                        term_energy *= vault_cfg.get('sealedDamping', 0.4)
+                
+                total_energy += term_energy
+
+        # --- Part B: Exposed Stems (Sky Field) ---
+        # Ten Gods like Seven Killings often float in Stems.
+        # Note: Yang Ren is strictly a Branch phenomenon (Emperor Prosperous), 
+        # but sometimes Stem Rob Wealth is counted as assistance. 
+        # Here we only count if ten_god_type matches Stem.
+        stem_ten_god = BaziParticleNexus.get_shi_shen(stem_char, day_master)
+        if stem_ten_god == ten_god_type:
+            # Stem Mass is defined as Base (1.0) * ExposedBonus
+            stem_mass = 1.0 * structure_params.get('exposedBoost', 1.5)
+            
+            # Seasonality for Stem
+            s_elem = BaziParticleNexus.get_element(stem_char)
+            s_phase = _get_phase(s_elem, month_element)
+            s_season_mod = season_weights.get(s_phase, 0.45)
+            
+            # Add to total
+            total_energy += (stem_mass * s_season_mod * pillar_w)
+
+    return round(total_energy, 4)
 
 
 def check_clash(branch1: str, branch2: str) -> bool:
@@ -385,6 +400,45 @@ def calculate_interaction_damping(
     
     # 无解救（硬着陆）
     return lambda_coefficients['hard_landing']
+
+
+def analyze_clash_dynamics(target_branch: str, trigger_branch: str) -> Dict[str, Any]:
+    """
+    [V2.3] 判断冲的物理性质：是 'OPENER' (开库) 还是 'BREAKER' (破坏)
+    
+    核心逻辑：
+    - 四墓库（辰戌丑未）相冲，且为库位对冲（辰戌、丑未）时，视为开库。
+    - 开库释放库中藏干，增加系统的能量多样性和做功潜力（Entropy Delta > 0）。
+    - 破坏性相冲（如子午、卯酉）损耗根基权重（Breaker）。
+    
+    Returns:
+        Dict: {
+            "type": "OPENER" | "BREAKER",
+            "entropy_delta": float,  # 能量释放/损耗系数
+            "structure_risk": float # 结构性风险系数
+        }
+    """
+    vaults = ['辰', '戌', '丑', '未']
+    is_clash = check_clash(target_branch, trigger_branch)
+    
+    if not is_clash:
+        return {"type": "NONE", "entropy_delta": 0.0, "structure_risk": 0.0}
+    
+    # 墓库对冲判定
+    if target_branch in vaults and trigger_branch in vaults:
+        # 辰戌冲 / 丑未冲
+        return {
+            "type": "OPENER",
+            "entropy_delta": 0.45,  # 正值：释放库中藏干能量
+            "structure_risk": 0.2   # 低风险：受控的能量释放
+        }
+    
+    # 破坏性相冲
+    return {
+        "type": "BREAKER",
+        "entropy_delta": -0.6,    # 负值：主根损耗
+        "structure_risk": 0.8     # 高风险：结构可能崩塌
+    }
 
 
 def calculate_clash_count(chart: List[str]) -> int:
@@ -535,6 +589,17 @@ def check_trigger(
         
         return False
     
+    elif rule_name == "Kill_Blade_Resonance":
+        # 刃杀共振：两者能量都在高位且接近平衡
+        e_blade = energy_flux.get("E_blade", 0.0)
+        e_kill = energy_flux.get("E_kill", 0.0)
+        
+        if e_blade > 0.6 and e_kill > 0.5:
+            # [V1.5.2 Wide Window] 聚变响应区间扩展至 0.5 - 2.0
+            balance = e_blade / e_kill if e_kill > 0 else 0
+            return 0.5 <= balance <= 2.0
+        return False
+    
     else:
         # 未知规则，返回False
         return False
@@ -610,3 +675,41 @@ def calculate_integrity_alpha(
     # 确保alpha在[0.0, 1.0]范围内
     return max(0.0, min(1.0, alpha))
 
+
+def analyze_clash_dynamics(target_branch: str, trigger_branch: str) -> Dict[str, Any]:
+    """
+    [V2.3] 判断冲的物理性质：是 'OPENER' (开库) 还是 'BREAKER' (破坏)
+    
+    核心逻辑：
+    - 四墓库（辰戌丑未）相冲，且为库位对冲（辰戌、丑未）时，视为开库。
+    - 开库释放库中藏干，增加系统的能量多样性和做功潜力（Entropy Delta > 0）。
+    - 破坏性相冲（如子午、卯酉）损耗根基权重（Breaker）。
+    
+    Returns:
+        Dict: {
+            "type": "OPENER" | "BREAKER",
+            "entropy_delta": float,  # 能量释放/损耗系数
+            "structure_risk": float # 结构性风险系数
+        }
+    """
+    vaults = ['辰', '戌', '丑', '未']
+    is_clash = check_clash(target_branch, trigger_branch)
+    
+    if not is_clash:
+        return {"type": "NONE", "entropy_delta": 0.0, "structure_risk": 0.0}
+    
+    # 墓库对冲判定
+    if target_branch in vaults and trigger_branch in vaults:
+        # 辰戌冲 / 丑未冲
+        return {
+            "type": "OPENER",
+            "entropy_delta": 0.45,  # 正值：释放库中藏干能量
+            "structure_risk": 0.2   # 低风险：受控的能量释放
+        }
+    
+    # 破坏性相冲
+    return {
+        "type": "BREAKER",
+        "entropy_delta": -0.6,    # 负值：主根损耗
+        "structure_risk": 0.8     # 高风险：结构可能崩塌
+    }

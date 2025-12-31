@@ -8,7 +8,15 @@ def render_sidebar(app_mode):
     """
     Renders the sidebar content: System Monitor & Config Status.
     Navigation has moved to top level in main.py.
+    
+    IMPORTANT: Only render content for "智能排盘 (Prediction)" mode.
+    Other pages manage their own sidebar to maintain MVC isolation.
     """
+    # Early return for pages that have their own sidebar
+    # This is critical for MVC compliance - each page controls its own sidebar
+    if app_mode not in ["🔮 智能排盘 (Prediction)"]:
+        return
+    
     with st.sidebar:
         # 1. System Monitor & Config Status
         # Shared Config Initialization (Invisible but necessary)
@@ -20,16 +28,12 @@ def render_sidebar(app_mode):
         if saved_model:
             init_session_state({'selected_model_name': saved_model})
             
-        if app_mode == "🔮 智能排盘 (Prediction)":
-             st.markdown("### 📜 档案与输入 (Profile)")
-             render_profile_section()
-             st.divider()
-             submit = render_input_form()
-             if submit:
-                 st.session_state['calc_active'] = True
-             st.divider()
-        
- 
-            
-# def render_mini_task_monitor():
+        # Only render for Prediction mode
+        st.markdown("### 📜 档案与输入 (Profile)")
+        render_profile_section()
+        st.divider()
+        submit = render_input_form()
+        if submit:
+            st.session_state['calc_active'] = True
+        st.divider()
 

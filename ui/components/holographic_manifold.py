@@ -22,192 +22,133 @@ def render_5d_manifold(
     pattern_name: str = "A-03"
 ) -> go.Figure:
     """
-    渲染五维超流形（3D天体模型）
-    
-    Args:
-        current_tensor: 当前5维张量 {'E': float, 'O': float, 'M': float, 'S': float, 'R': float}
-        reference_tensor: 参考质心（标准格局质心），可选
-        pattern_state: 格局状态 ('STABLE', 'COLLAPSED', 'CRYSTALLIZED', 'MUTATED')
-        pattern_name: 格局名称
-        
-    Returns:
-        plotly.graph_objects.Figure
+    [V2.0] 渲染全息星图流形 (3D Tensor Crystal)
+    将5维张量映射为3D空间中的五角星体能量场
     """
-    # 提取5维值
-    E = current_tensor.get('E', 0.0)  # 能级/寿命 - 大小
-    O = current_tensor.get('O', 0.0)  # 秩序/权力 - Y轴高度
-    M = current_tensor.get('M', 0.0)  # 物质/财富 - X轴宽度
-    R = current_tensor.get('R', 0.0)  # 关联/人脉 - Z轴深度
-    S = current_tensor.get('S', 0.0)  # 应力/灾难 - 颜色
+    # 1. 定义5维轴在3D空间中的向量 (Fibonacci Sphere Distribution)
+    # 使用斐波那契球面算法在球面上生成数学级均匀分布的5个点
+    # 彻底实现“立体空间五个均分的分叉”，无极性，全方位辐射
+    import math
+    AXES = {}
+    axis_keys = ['E', 'O', 'M', 'S', 'R']
     
-    # 归一化到[0, 1]范围（如果值在[-1, 1]范围内）
-    def normalize_to_01(value):
-        """将值归一化到[0, 1]范围"""
-        if value < 0:
-            return 0.0
-        elif value > 1:
-            return 1.0
-        return value
+    phi = math.pi * (3. - math.sqrt(5.))  # 黄金角
     
-    E_norm = normalize_to_01(abs(E))
-    O_norm = normalize_to_01(abs(O))
-    M_norm = normalize_to_01(abs(M))
-    R_norm = normalize_to_01(abs(R))
-    S_norm = normalize_to_01(abs(S))
-    
-    # 创建3D图形
-    fig = go.Figure()
-    
-    # 1. 绘制参考质心（如果提供）- 半透明云状点
-    if reference_tensor:
-        ref_E = normalize_to_01(abs(reference_tensor.get('E', 0.0)))
-        ref_O = normalize_to_01(abs(reference_tensor.get('O', 0.0)))
-        ref_M = normalize_to_01(abs(reference_tensor.get('M', 0.0)))
-        ref_R = normalize_to_01(abs(reference_tensor.get('R', 0.0)))
-        ref_S = normalize_to_01(abs(reference_tensor.get('S', 0.0)))
+    for i, key in enumerate(axis_keys):
+        # y 从 1 (顶) 降到 -1 (底)
+        y = 1 - (i / float(len(axis_keys) - 1)) * 2 
+        radius = math.sqrt(1 - y * y)
+        theta = phi * i
         
-        # 参考质心使用较小的点和半透明
+        x = math.cos(theta) * radius
+        z = math.sin(theta) * radius
+        
+        # 调整坐标系：让第一个点(i=0, y=1)对应Z轴向上
+        # 原算法生成的y轴对应我们的Z轴
+        AXES[key] = np.array([x, z, y]) 
+    
+    # 2. 计算点位
+    def get_points(tensor):
+        pts = []
+        for key in axis_keys:
+            vector = AXES[key]
+            val = abs(tensor.get(key, 0.0))
+            # 缩放: 调整为原尺寸的 30%
+            # 原公式: 0.2 + val * 1.5
+            # 新公式: (0.2 + val * 1.5) * 0.3 = 0.06 + val * 0.45
+            scaled_val = 0.06 + val * 0.45
+            pts.append(vector * scaled_val)
+        return np.array(pts)
+
+    curr_pts = get_points(current_tensor)
+    center = np.array([0, 0, 0])
+    
+    fig = go.Figure()
+
+    # 绘制坐标轴 (Glowing Axes) - 从原点射出的光束
+    for key, vec in AXES.items():
         fig.add_trace(go.Scatter3d(
-            x=[ref_M],
-            y=[ref_O],
-            z=[ref_R],
-            mode='markers',
-            name=f'{pattern_name} 标准质心',
-            marker=dict(
-                size=ref_E * 50,  # 较小的大小
-                color=ref_S,
-                colorscale='RdYlBu_r',  # 反向：蓝(低S) -> 黄(中S) -> 红(高S)
-                colorbar=dict(title="应力 (S)", x=1.15),
-                opacity=0.3,
-                line=dict(width=1, color='rgba(128, 128, 128, 0.5)')
-            ),
-            hovertemplate=f'<b>{pattern_name} 标准质心</b><br>' +
-                         f'M(财富): {ref_M:.3f}<br>' +
-                         f'O(权力): {ref_O:.3f}<br>' +
-                         f'R(人脉): {ref_R:.3f}<br>' +
-                         f'E(能级): {ref_E:.3f}<br>' +
-                         f'S(应力): {ref_S:.3f}<extra></extra>'
+            x=[0, vec[0]*1.4], y=[0, vec[1]*1.4], z=[0, vec[2]*1.4],
+            mode='lines+text',
+            text=["", f"<b>{key}</b>"],
+            line=dict(color='rgba(255,255,255,0.2)', width=2),
+            textfont=dict(color='#40e0d0', size=12),
+            showlegend=False
         ))
+
+    # 3. 绘制标准/参考格局 (Wireframe Hull)
+    if reference_tensor:
+        ref_pts = get_points(reference_tensor)
+        # 使用 Mesh3d 的 alphahull=0 来绘制凸包轮廓
+        fig.add_trace(go.Mesh3d(
+            x=ref_pts[:, 0], y=ref_pts[:, 1], z=ref_pts[:, 2],
+            alphahull=0, # 凸包
+            color='rgba(64, 224, 208, 0.1)',
+            opacity=0.1,
+            name=f'标准 {pattern_name} 场域',
+            showscale=False
+        ))
+
+    # 4. 绘制用户命运晶体 (Fate Crystal - Solid Hull)
+    # 将中心点加入点云，确保晶体是有核心的实体
+    all_verts = np.vstack([center, curr_pts])
     
-    # 2. 绘制用户天体（主数据点）
-    marker_size = E_norm * 100 + 20  # 基础大小 + E值缩放（20-120）
-    
-    # 根据格局状态调整颜色映射
-    if pattern_state == 'CRYSTALLIZED':
-        # 成格：金色/橙色（贵气）
-        color_value = max(0.3, S_norm * 0.7)  # 降低红色，偏向金色
-        colorscale = 'YlOrRd'  # 黄-橙-红
-    elif pattern_state == 'COLLAPSED':
-        # 破格：深红/紫色（危险）
-        color_value = min(1.0, S_norm * 1.2)
-        colorscale = 'Reds'
-    else:
-        # 稳定/其他：标准映射
-        color_value = S_norm
-        colorscale = 'RdYlBu_r'  # 反向：蓝(低S) -> 黄(中S) -> 红(高S)
+    # 根据状态选择颜色
+    color_map = {
+        'CRYSTALLIZED': '#FFD700', # Gold
+        'COLLAPSED': '#FF4B4B',    # Red
+        'STABLE': '#40E0D0',       # Turquoise
+        'ACTIVATED': '#F0F',       # Purple
+        'STANDARD': '#40E0D0',     # Turquoise (Same as stable)
+        'SINGULARITY': '#FFD700',  # Gold (X1 Singularity)
+        'MARGINAL': '#888',        # Grey
+        'BROKEN': '#333'           # Dark Grey
+    }
+    main_color = color_map.get(pattern_state, '#40E0D0')
+
+    fig.add_trace(go.Mesh3d(
+        x=all_verts[:, 0], y=all_verts[:, 1], z=all_verts[:, 2],
+        alphahull=0, # 自动计算包含所有点(含中心)的凸包
+        opacity=0.8,
+        color=main_color,
+        name='当前命运张量 (Fate Tensor)',
+        flatshading=True,
+        lighting=dict(ambient=0.5, diffuse=1, specular=1, roughness=0.1),
+        hoverinfo='skip'
+    ))
+
+    # 添加颗粒顶点强化 (Dimensional Particles with unique colors)
+    # E: White, O: Gold, M: Green, S: Red, R: Blue
+    dim_colors = ['#ffffff', '#ffd700', '#00ff7f', '#ff4b4b', '#4169e1']
     
     fig.add_trace(go.Scatter3d(
-        x=[M_norm],
-        y=[O_norm],
-        z=[R_norm],
+        x=curr_pts[:, 0], y=curr_pts[:, 1], z=curr_pts[:, 2],
         mode='markers',
-        name='当前状态',
         marker=dict(
-            size=marker_size,
-            color=color_value,
-            colorscale=colorscale,
-            colorbar=dict(title="应力 (S)", x=1.15),
-            opacity=0.9,
-            line=dict(width=3, color='white'),
-            symbol='circle'
-        ),
-        hovertemplate='<b>当前状态</b><br>' +
-                     f'M(财富): {M_norm:.3f}<br>' +
-                     f'O(权力): {O_norm:.3f}<br>' +
-                     f'R(人脉): {R_norm:.3f}<br>' +
-                     f'E(能级): {E_norm:.3f}<br>' +
-                     f'S(应力): {S_norm:.3f}<br>' +
-                     f'状态: {pattern_state}<extra></extra>'
-    ))
-    
-    # 3. 绘制投影线（从天体到地面Y=0，显示"高度"）
-    fig.add_trace(go.Scatter3d(
-        x=[M_norm, M_norm],
-        y=[0, O_norm],  # 从地面到天体高度
-        z=[R_norm, R_norm],
-        mode='lines',
-        name='高度投影',
-        line=dict(
-            color='rgba(200, 200, 200, 0.5)',
-            width=2,
-            dash='dash'
+            size=3, 
+            color=dim_colors,
+            symbol='circle',
+            line=dict(color='rgba(255,255,255,0.8)', width=1)
         ),
         showlegend=False,
-        hovertemplate='<b>高度投影</b><br>权力高度: {y:.3f}<extra></extra>'
+        hovertemplate="维度: %{text}<br>强度: %{y:.2f}<extra></extra>",
+        text=['E (能级)', 'O (秩序)', 'M (物质)', 'S (应力)', 'R (关联)']
     ))
-    
-    # 4. 绘制地面网格（参考平面）
-    ground_size = 1.2
-    ground_x = [-ground_size, ground_size, ground_size, -ground_size, -ground_size]
-    ground_z = [-ground_size, -ground_size, ground_size, ground_size, -ground_size]
-    ground_y = [0, 0, 0, 0, 0]
-    
-    fig.add_trace(go.Scatter3d(
-        x=ground_x,
-        y=ground_y,
-        z=ground_z,
-        mode='lines',
-        name='地面',
-        line=dict(color='rgba(100, 100, 100, 0.3)', width=1),
-        showlegend=False,
-        hovertemplate='地面 (Y=0)<extra></extra>'
-    ))
-    
-    # 5. 设置布局
+
+    # 5. 布局优化
     fig.update_layout(
-        title=dict(
-            text=f'🪐 全息命运流形 | {pattern_name} | 状态: {pattern_state}',
-            x=0.5,
-            font=dict(size=18)
-        ),
         scene=dict(
-            xaxis=dict(
-                title='M (物质/财富)',
-                range=[-0.1, 1.1],
-                backgroundcolor='rgba(20, 20, 30, 0.1)',
-                gridcolor='rgba(100, 100, 100, 0.2)',
-                showbackground=True
-            ),
-            yaxis=dict(
-                title='O (秩序/权力)',
-                range=[-0.1, 1.1],
-                backgroundcolor='rgba(20, 20, 30, 0.1)',
-                gridcolor='rgba(100, 100, 100, 0.2)',
-                showbackground=True
-            ),
-            zaxis=dict(
-                title='R (关联/人脉)',
-                range=[-0.1, 1.1],
-                backgroundcolor='rgba(20, 20, 30, 0.1)',
-                gridcolor='rgba(100, 100, 100, 0.2)',
-                showbackground=True
-            ),
-            aspectmode='cube',
-            camera=dict(
-                eye=dict(x=1.5, y=1.5, z=1.5),
-                center=dict(x=0, y=0, z=0)
-            )
+            xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            zaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            camera=dict(eye=dict(x=1.5, y=1, z=1.5)),
+            aspectmode='manual',
+            aspectratio=dict(x=1, y=1, z=1)
         ),
-        height=700,
-        margin=dict(l=0, r=0, t=50, b=0),
-        showlegend=True,
-        legend=dict(
-            x=0.02,
-            y=0.98,
-            bgcolor='rgba(255, 255, 255, 0.8)',
-            bordercolor='rgba(0, 0, 0, 0.2)',
-            borderwidth=1
-        )
+        margin=dict(l=0, r=0, t=20, b=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        legend=dict(yanchor="top", y=0.9, xanchor="left", x=0.1, font=dict(color="white"))
     )
     
     return fig

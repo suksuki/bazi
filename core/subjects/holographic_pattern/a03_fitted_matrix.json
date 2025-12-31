@@ -1,0 +1,45 @@
+{
+  "E_row": {
+    "parallel": 0.6,
+    "resource": 0.0691,
+    "power": -0.2494,
+    "wealth": -0.0116,
+    "output": 0.0225,
+    "clash": -0.0055,
+    "combination": -0.0623
+  },
+  "O_row": {
+    "parallel": 0.1,
+    "power": 0.5,
+    "wealth": -0.1847,
+    "output": 0.0348,
+    "clash": -0.1773,
+    "combination": -0.2725
+  },
+  "M_row": {
+    "parallel": -0.0424,
+    "resource": 0.0303,
+    "power": -0.0076,
+    "wealth": 0.2284,
+    "output": 0.1183,
+    "clash": 0.0242,
+    "combination": -0.006
+  },
+  "S_row": {
+    "parallel": 0.0968,
+    "resource": 0.0032,
+    "power": -0.0226,
+    "wealth": 0.0086,
+    "output": 0.0295,
+    "clash": 0.3934,
+    "combination": -0.025
+  },
+  "R_row": {
+    "parallel": -0.0367,
+    "resource": 0.0458,
+    "power": 0.1144,
+    "wealth": 0.0443,
+    "output": 0.0799,
+    "combination": 0.1704
+  }
+}

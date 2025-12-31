@@ -26,7 +26,7 @@ from ui.components.tuning_panel import render_tuning_panel
 from ui.components.theme import COLORS, GLASS_STYLE, apply_custom_header
 from ui.components.wave_vision_3d import render_wave_vision_3d
 from ui.components.molviz_3d import render_molviz_3d
-from ui.components.holographic_radar import render_holographic_radar
+
 
 # --- Singletons / Global Instances (Phase 40 Optimization) ---
 from core.trinity.core.unified_arbitrator_master import quantum_framework
@@ -2380,10 +2380,6 @@ def render():
 
         # --- MODULE 1: INTEGRATED TRIPLE DYNAMICS (DETAIL) ---
         elif selected_topic_id == "MOD_01_TRIPLE":
-            # [NEW] Holographic Decision Radar (Moved here as it uses 3-in-1 Logic)
-            st.markdown("#### 🔭 全息决策雷达 (Holographic Decision Radar)")
-            render_holographic_radar(resonance, res.get('unified_metrics'), res.get('remedy'), verdict_oracle)
-            st.write("")
     
             # Phase 1: Interaction List (Control Focused)
             st.markdown("#### 🟢 核心控制结构 (Core Control Structures)")

@@ -85,7 +85,7 @@ class HolographicPatternController:
             subject_id = pattern_data.get('subject_id', pattern_id)
             parent_pattern = pattern_data.get('parent_pattern')
             
-            pattern_info = {
+            p_info = {
                 'id': pattern_id,
                 'category': category,
                 'subject_id': subject_id,
@@ -94,17 +94,32 @@ class HolographicPatternController:
                 'icon': pattern_data.get('icon', '🧬'),
                 'description': pattern_data.get('description', ''),
                 'version': pattern_data.get('version', 'N/A'),
-                'active': pattern_data.get('active', False),
-                'semantic_seed': pattern_data.get('semantic_seed', {}),
-                'tensor_operator': pattern_data.get('tensor_operator', {}),
+                'active': pattern_data.get('active', True),
                 'parent_pattern': parent_pattern,
                 'is_sub_pattern': parent_pattern is not None
             }
             
             if parent_pattern:
-                sub_patterns.append(pattern_info)
+                sub_patterns.append(p_info)
             else:
-                main_patterns.append(pattern_info)
+                main_patterns.append(p_info)
+                # [V2.5] 发现嵌套子格局
+                if 'sub_patterns_registry' in pattern_data:
+                    for sub_data in pattern_data['sub_patterns_registry']:
+                        sub_info = {
+                            'id': sub_data.get('id'),
+                            'category': category,
+                            'subject_id': sub_data.get('subject_id', sub_data.get('id')),
+                            'name': sub_data.get('name'),
+                            'name_cn': sub_data.get('name_cn'),
+                            'icon': sub_data.get('icon', p_info['icon']),
+                            'description': sub_data.get('description'),
+                            'version': p_info['version'],
+                            'active': True,
+                            'parent_pattern': pattern_id,
+                            'is_sub_pattern': True
+                        }
+                        sub_patterns.append(sub_info)
         
         # 主格局按Category和Subject ID排序
         main_patterns.sort(key=lambda x: (x.get('category', ''), x.get('subject_id', '')))
@@ -178,20 +193,23 @@ class HolographicPatternController:
         for pattern_id, pattern_data in patterns.items():
             parent_pattern = pattern_data.get('parent_pattern')
             if parent_pattern and parent_pattern in hierarchy:
-                category = pattern_data.get('category', '')
-                subject_id = pattern_data.get('subject_id', pattern_id)
-                
-                hierarchy[parent_pattern]['subs'].append({
-                    'id': pattern_id,
-                    'category': category,
-                    'subject_id': subject_id,
-                    'name': pattern_data.get('name', pattern_id),
-                    'name_cn': pattern_data.get('name_cn', ''),
-                    'icon': pattern_data.get('icon', '🧬'),
-                    'description': pattern_data.get('description', ''),
-                    'version': pattern_data.get('version', 'N/A'),
-                    'active': pattern_data.get('active', False)
-                })
+                # ... (existing flat logic)
+                pass # Already handled by flat structure
+            
+            # [V2.5] 发现嵌套子格局
+            if 'sub_patterns_registry' in pattern_data and pattern_id in hierarchy:
+                for sub_data in pattern_data['sub_patterns_registry']:
+                    hierarchy[pattern_id]['subs'].append({
+                        'id': sub_data.get('id'),
+                        'category': hierarchy[pattern_id]['main']['category'],
+                        'subject_id': sub_data.get('subject_id', sub_data.get('id')),
+                        'name': sub_data.get('name'),
+                        'name_cn': sub_data.get('name_cn'),
+                        'icon': sub_data.get('icon', '🧬'),
+                        'description': sub_data.get('description'),
+                        'version': hierarchy[pattern_id]['main']['version'],
+                        'active': True
+                    })
         
         # 对每个主格局的子格局排序
         for parent_id in hierarchy:
@@ -325,18 +343,25 @@ class HolographicPatternController:
     def get_pattern_by_id(self, pattern_id: str) -> Optional[Dict]:
         """
         根据ID获取格局详情
-        
-        Args:
-            pattern_id: 格局ID
-            
-        Returns:
-            格局详情字典，如果不存在则返回None
+        支持在主格局和嵌套子格局中查找
         """
         registry = self.load_registry()
         patterns = registry.get('patterns', {})
         
+        # 1. 检查主格局
         if pattern_id in patterns:
             return patterns[pattern_id]
+        
+        # 2. 检查嵌套子格局
+        for pid, data in patterns.items():
+            if 'sub_patterns_registry' in data:
+                for sub in data['sub_patterns_registry']:
+                    if sub.get('id') == pattern_id:
+                        # [V2.5] 自动合并主格局的内核配置以支持计算
+                        combined = sub.copy()
+                        combined['physics_kernel'] = sub.get('physics_kernel', data.get('physics_kernel'))
+                        combined['version'] = sub.get('version', data.get('version', '2.5'))
+                        return combined
         
         return None
     
@@ -360,11 +385,9 @@ class HolographicPatternController:
             return {'error': f'格局 {pattern_id} 不存在'}
         
         # 检查版本（版本分流）
-        version = pattern.get('version', '1.0')
-        # 处理版本可能是字符串或数字的情况
-        if isinstance(version, (int, float)):
-            version = str(version)
-        is_v21 = version == '2.1'  # V2.1支持transfer_matrix
+        version = str(pattern.get('version', '1.0'))
+        # V2.1+ 支持 transfer_matrix
+        is_v21 = version >= '2.1'
         
         logger.debug(f"格局 {pattern_id} 版本检查: version={version!r}, is_v21={is_v21}")
         

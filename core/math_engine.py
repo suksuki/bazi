@@ -7,7 +7,7 @@ QGA 数学内核引擎 (Math Engine)
 
 import numpy as np
 import math
-from typing import Union, Dict, List, Tuple
+from typing import Optional, Union, Dict, List, Any, Tuple
 
 
 def sigmoid_variant(x: Union[float, np.ndarray], k: float = 1.0, x0: float = 0.0) -> Union[float, np.ndarray]:
@@ -308,26 +308,11 @@ def project_tensor_with_matrix(
         >>> result
         {'E': 1.35, 'O': 1.12, 'M': 0.18, 'S': 0.45, 'R': 0.12}
     """
-    # 十神到矩阵键的映射
-    ten_god_map = {
-        "parallel": "parallel",    # 比劫
-        "resource": "resource",    # 印枭
-        "power": "power",         # 官杀
-        "wealth": "wealth",       # 财星
-        "output": "output"        # 食伤
-    }
-    
     # 初始化输出向量
-    output = {
-        "E": 0.0,
-        "O": 0.0,
-        "M": 0.0,
-        "S": 0.0,
-        "R": 0.0
-    }
+    output = {axis: 0.0 for axis in ["E", "O", "M", "S", "R"]}
     
     # 矩阵乘法：每个维度 = 对应行的权重 × 输入向量
-    for axis in ["E", "O", "M", "S", "R"]:
+    for axis in output.keys():
         row_key = f"{axis}_row"
         if row_key not in transfer_matrix:
             continue
@@ -339,10 +324,107 @@ def project_tensor_with_matrix(
         for ten_god, weight in row.items():
             if ten_god in input_vector:
                 axis_value += weight * input_vector[ten_god]
-            # 特殊处理：clash和combination需要从context中获取
-            # 这里暂时跳过，由调用者提供
         
         output[axis] = axis_value
     
     return output
 
+def apply_saturation_layer(val: float, k: float = 3.0) -> float:
+    """
+    [V1.4 Saturation]
+    Non-linear mapping for high-energy inputs.
+    """
+    return k * math.tanh(val / k)
+
+def project_tensor_with_saturated_matrix(
+    input_vector: Dict[str, float],
+    transfer_matrix: Dict[str, Dict[str, float]],
+    k_saturation: float = 3.0
+) -> Dict[str, float]:
+    """
+    [Internal/Training] 使用转换矩阵计算5维投影，并应用饱和层。
+    """
+    # 1. 对输入向量应用饱和处理
+    saturated_vector = {
+        k: apply_saturation_layer(v, k_saturation) 
+        for k, v in input_vector.items()
+    }
+    return project_tensor_with_matrix(saturated_vector, transfer_matrix)
+
+def calculate_mahalanobis_distance(
+    vec: Union[Dict[str, float], np.ndarray],
+    centroid: Union[Dict[str, float], np.ndarray],
+    covariance_matrix: Optional[np.ndarray] = None,
+    inverse_covariance: Optional[np.ndarray] = None
+) -> float:
+    """
+    [V1.5 Precision Physics]
+    计算马氏距离 (Mahalanobis Distance)
+    
+    公式: D_M = sqrt((x - mu)^T * S^-1 * (x - mu))
+    
+    物理意义：衡量当前张量是否落在格局的"协方差椭球"内。
+    """
+    # 统一转换为 numpy 数组 (5D: E, O, M, S, R)
+    axes = ["E", "O", "M", "S", "R"]
+    if isinstance(vec, dict):
+        x = np.array([vec.get(a, 0.0) for a in axes])
+    else:
+        x = vec
+        
+    if isinstance(centroid, dict):
+        mu = np.array([centroid.get(a, 0.0) for a in axes])
+    else:
+        mu = centroid
+        
+    delta = x - mu
+    
+    try:
+        if inverse_covariance is not None:
+            inv_cov = inverse_covariance
+        elif covariance_matrix is not None:
+            # 计算逆矩阵 (或者使用伪逆以增加稳定性)
+            inv_cov = np.linalg.pinv(covariance_matrix)
+        else:
+            return float(np.linalg.norm(delta))
+
+        dist_sq = delta.T @ inv_cov @ delta
+        return float(np.sqrt(max(0.0, dist_sq)))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"马氏距离计算失败: {e}")
+        # 回退到欧式距离
+        return float(np.linalg.norm(delta))
+
+def calculate_precision_score(
+    similarity: float,
+    mahalanobis_dist: float,
+    sai: float,
+    k_pdf: float = 0.5
+) -> float:
+    """
+    [V1.5.2 Gaussian Kernel]
+    基于高斯核函数的精密评分，防止马氏距离过度惩罚。
+    
+    公式: Score = Similarity * exp(-d²/(2σ²)) * energy_gate
+    σ = 2.0 (宽容度参数)
+    
+    物理意义：
+    - 距离=0 → 分数=1.0 (完美匹配)
+    - 距离=2.0 → 分数≈0.6 (可接受偏移)
+    - 距离=4.0 → 分数≈0.13 (明显偏离)
+    """
+    # 1. 高斯核衰减 (Gaussian Kernel)
+    # σ=2.0: 马氏距离在2个标准差内保持高分
+    sigma = 2.0
+    gaussian_decay = math.exp(-(mahalanobis_dist ** 2) / (2 * sigma ** 2))
+    
+    # 2. 能量门控 (Soft Gate)
+    # 当 SAI >= 1.0 时，门控接近 1.0
+    energy_gate = min(1.0, math.tanh(sai / 0.5))
+    
+    # 3. 结构融合
+    # 相似度贡献 60%，高斯衰减贡献 40%（允许方向偏移但位置接近）
+    score = (0.6 * similarity + 0.4 * gaussian_decay) * energy_gate
+    
+    return float(max(0.0, min(1.0, score)))

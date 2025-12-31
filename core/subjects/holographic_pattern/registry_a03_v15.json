@@ -1,0 +1,84 @@
+{
+  "A-03": {
+    "name": "Yang Ren Jia Sha",
+    "name_cn": "羊刃架杀",
+    "version": "1.5.1",
+    "sub_patterns": {
+      "Standard": {
+        "id": "A-03-A",
+        "description": "标准羊刃架杀 - 高压秩序平衡态",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.0,
+            "resource": 0.2,
+            "power": -0.6
+          },
+          "O_row": {
+            "parallel": 0.05,
+            "power": 1.0,
+            "wealth": -0.7
+          },
+          "M_row": {
+            "resource": 0.1,
+            "power": 0.1,
+            "wealth": 0.05
+          },
+          "S_row": {
+            "parallel": 0.1,
+            "power": 0.1,
+            "clash": 0.5
+          },
+          "R_row": {
+            "parallel": 0.1,
+            "combination": 0.2
+          }
+        },
+        "physical_profile": {
+          "primary_axis": "O",
+          "stability": "High",
+          "energy_tier": "Alpha"
+        }
+      },
+      "Vault": {
+        "id": "A-03-X1",
+        "description": "墓库集聚型羊刃 - 势能深井突破态",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.2,
+            "resource": 0.5
+          },
+          "O_row": {
+            "power": 0.8
+          },
+          "M_row": {
+            "vault": 0.8,
+            "resource": 0.4
+          },
+          "S_row": {
+            "pressure": 0.3
+          },
+          "R_row": {
+            "nexus": 0.5
+          }
+        },
+        "physical_profile": {
+          "primary_axis": "E",
+          "mutation_ready": true,
+          "energy_tier": "X1"
+        },
+        "special_operators": [
+          "VAULT_BREAKER",
+          "FLUID_INJECTION"
+        ]
+      }
+    },
+    "audit_info": {
+      "restart_date": "2025-12-30",
+      "protocol": "FDS-V1.5.1 (Deviation Protocol)",
+      "status": "SEALED",
+      "discarded_clusters": [
+        "X2 (High S Noise)"
+      ]
+    }
+  }
+}

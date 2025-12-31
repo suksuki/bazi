@@ -20,7 +20,9 @@ from core.math_engine import (
     calculate_flow_factor,
     phase_change_determination,
     calculate_cosine_similarity,
-    calculate_centroid
+    calculate_centroid,
+    calculate_mahalanobis_distance,
+    calculate_precision_score
 )
 from core.physics_engine import (
     compute_energy_flux,
@@ -32,6 +34,9 @@ from core.physics_engine import (
     check_combination
 )
 from core.math_engine import project_tensor_with_matrix
+from core.trinity.core.middleware.influence_bus import InfluenceBus
+from core.trinity.core.middleware.temporal_factors import TemporalInjectionFactor
+from core.trinity.core.engines.structural_vibration import StructuralVibrationEngine
 
 logger = logging.getLogger(__name__)
 
@@ -86,19 +91,47 @@ class RegistryLoader:
     
     def get_pattern(self, pattern_id: str) -> Optional[Dict]:
         """
-        获取格局配置
-        
-        Args:
-            pattern_id: 格局ID（如'A-03'）
-            
-        Returns:
-            格局配置字典，如果不存在则返回None
+        获取格局配置，支持嵌套查找 (V2.5+)
         """
         if not self.registry:
             return None
         
         patterns = self.registry.get('patterns', {})
-        return patterns.get(pattern_id)
+        
+        # 1. 直接查找
+        if pattern_id in patterns:
+            return patterns[pattern_id]
+        
+        # 2. 嵌套查找
+        for pid, data in patterns.items():
+            if 'sub_patterns_registry' in data:
+                for sub in data['sub_patterns_registry']:
+                    if sub.get('id') == pattern_id:
+                        # 自动合并父格局属性
+                        combined = sub.copy()
+                        
+                        # 核心继承：版本与物理规格
+                        if 'version' not in combined:
+                            combined['version'] = data.get('version', '2.5')
+                        if 'meta_info' not in combined:
+                            combined['meta_info'] = data.get('meta_info', {})
+                        if 'physics_kernel' not in combined and 'physics_kernel' in data:
+                            combined['physics_kernel'] = data['physics_kernel']
+                        
+                        # [V2.5.3] 动态状态映射继承
+                        if 'dynamic_states' not in combined and 'dynamic_states' in data:
+                            combined['dynamic_states'] = data['dynamic_states']
+                        
+                        # 元数据继承
+                        combined['parent_pattern'] = pid
+                        if 'category' not in combined:
+                            combined['category'] = data.get('category')
+                        if 'subject_id' not in combined:
+                            combined['subject_id'] = sub.get('id')
+                        
+                        return combined
+        
+        return None
     
     def get_pattern_by_id(self, pattern_id: str) -> Optional[Dict]:
         """
@@ -128,36 +161,92 @@ class RegistryLoader:
             return None
         
         # 检查版本
-        version = pattern.get('version', '1.0')
+        version = pattern.get('version')
+        if not version:
+            version = pattern.get('meta_info', {}).get('version', '1.0')
+            
         if not version.startswith('2.'):
             logger.warning(f"格局 {pattern_id} 版本为 {version}，不支持feature_anchors（需要V2.0+）")
             return None
         
+        # 兼容性适配：检查是否有sub_patterns_registry (Schema V2.5)
+        sub_patterns = pattern.get('sub_patterns_registry')
+        if sub_patterns:
+            anchors = {'singularity_centroids': []}
+            for sp in sub_patterns:
+                # 扁平化 manifold_stats
+                stats = sp.get('manifold_stats', {})
+                # 复制sp内容到anchor
+                anchor = sp.copy()
+                anchor.update(stats) # mean_vector, covariance_matrix 等上浮
+                anchor.pop('manifold_stats', None)
+                
+                # 映射 vector (兼容旧版代码)
+                if 'mean_vector' in anchor:
+                    anchor['vector'] = anchor['mean_vector']
+                
+                # 分类映射
+                sp_id = sp.get('id', '')
+                if 'STANDARD' in sp_id or sp.get('population_priority') == 'Tier A':
+                    anchors['standard_manifold'] = anchor
+                else:
+                    # 任何非标准的都视为奇点/激活态
+                    anchors['singularity_centroids'].append(anchor)
+                    # 另外，特例映射: SP_A03_VAULT -> activated_manifold
+                    if 'VAULT' in sp_id or 'ACTIVATED' in sp_id:
+                        anchors['activated_manifold'] = anchor
+                        # 确保 sub_id 存在 (用于 pattern_recognition)
+                        anchor['sub_id'] = sp_id
+            
+            return anchors
+
+        # [V2.5 Leaf Node Fix] 如果本身就是子格局，可能直接持有 manifold_stats
+        manifold_stats = pattern.get('manifold_stats')
+        if manifold_stats:
+            anchor = pattern.copy()
+            anchor.update(manifold_stats)
+            anchor.pop('manifold_stats', None)
+            if 'mean_vector' in anchor:
+                anchor['vector'] = anchor['mean_vector']
+            
+            # 判断它是哪种流形
+            sp_id = pattern.get('id', '')
+            if 'VAULT' in sp_id or 'ACTIVATED' in sp_id:
+                return {
+                    'activated_manifold': anchor,
+                    'standard_manifold': anchor, # 兜底，防止 recognition 找不到基准
+                    'singularity_centroids': [anchor]
+                }
+            else:
+                return {
+                    'standard_manifold': anchor,
+                    'singularity_centroids': []
+                }
+
         return pattern.get('feature_anchors')
     
     def pattern_recognition(
         self,
         current_tensor: Dict[str, float],
-        pattern_id: str
+        pattern_id: str,
+        dynamic_state: Optional[str] = None,
+        sai: float = 1.0
     ) -> Dict[str, Any]:
         """
         动态格局识别（Step 6）
         
         基于空间相似度的自动吸附机制，判断当前八字是否属于指定格局
+        支持多态观测：根据 dynamic_state 自动切换锚点基准 (V2.3)
+        [V1.5 Upgrade] 引入马氏距离 (Mahalanobis) 与概率密度 (PDF) 评分
         
         Args:
             current_tensor: 当前八字的5维投影值（原局基态，必须归一化）
-                          格式：{'E': float, 'O': float, 'M': float, 'S': float, 'R': float}
             pattern_id: 格局ID（如'A-03'）
+            dynamic_state: 当前动力学状态 (如 'STABLE', 'ACTIVATED')
+            sai: 系统对齐指数（能量强度）
             
         Returns:
-            识别结果字典，包含：
-            - matched: bool - 是否匹配
-            - pattern_type: str - 'STANDARD' | 'SINGULARITY' | 'BROKEN' | 'MARGINAL'
-            - similarity: float - 相似度值（0.0-1.0）
-            - anchor_id: str - 匹配的锚点ID（'standard' 或 'A-03-X1'等）
-            - resonance: bool - 是否达到共振态（similarity > perfect_threshold）
-            - description: str - 描述信息
+            识别结果字典
         """
         # 1. 获取格局配置和feature_anchors
         pattern = self.get_pattern(pattern_id)
@@ -188,42 +277,97 @@ class RegistryLoader:
             logger.warning(f"current_tensor未归一化（总和={total:.6f}），自动归一化")
             current_tensor = tensor_normalize(current_tensor)
         
-        # 3. 计算与标准锚点的相似度
-        standard_centroid = feature_anchors.get('standard_centroid')
-        if not standard_centroid:
+        # 3. 计算与目标锚点的相似度 (流形路由 V2.4)
+        target_manifold_id = 'standard_manifold'
+        manifold = feature_anchors.get('standard_manifold')
+        
+        # [V2.4 Manifold Protocol] 
+        # 根据 dynamic_state 切换观测流形
+        if dynamic_state in ['ACTIVATED', 'TRANSFORMED', 'VOLATILE']:
+            activated_manifold = feature_anchors.get('activated_manifold')
+            if activated_manifold:
+                manifold = activated_manifold
+                target_manifold_id = 'activated_manifold'
+                logger.info(f"Observer: Switching to 'activated_manifold' for {pattern_id} due to Phase Transition.")
+
+        if not manifold:
             return {
                 'matched': False,
                 'pattern_type': 'BROKEN',
                 'similarity': 0.0,
                 'anchor_id': None,
                 'resonance': False,
-                'description': f'格局 {pattern_id} 缺少standard_centroid'
+                'description': f'格局 {pattern_id} 缺少观测流形 ({target_manifold_id})'
             }
         
-        standard_vector = standard_centroid.get('vector', {})
-        match_threshold = standard_centroid.get('match_threshold', 0.80)
-        perfect_threshold = standard_centroid.get('perfect_threshold', 0.92)
+        mean_vector = manifold.get('mean_vector', manifold.get('vector', {})) # 兼容旧版
+        thresholds = manifold.get('thresholds', {})
+        match_threshold = thresholds.get('match_threshold', manifold.get('match_threshold', 0.80))
         
-        standard_similarity = calculate_cosine_similarity(current_tensor, standard_vector)
+        # [V1.5 Fix] 强制对齐特征锚点的尺度 (Scale Alignment)
+        # 如果特征锚点的总像素不为1.0，则进行归一化，确保马氏距离计算在同一物理空间
+        ref_total = sum(abs(v) for v in mean_vector.values())
+        if abs(ref_total - 1.0) > 0.05:
+            logger.info(f"Observer: Normalizing mean_vector scale ({ref_total:.4f} -> 1.0)")
+            mean_vector = tensor_normalize(mean_vector)
+
+        # 1. 计算余弦相似度 (Direction)
+        standard_similarity = calculate_cosine_similarity(current_tensor, mean_vector)
         
-        # 4. 检查奇点锚点
+        # 2. [V1.5] 计算马氏距离 (Statistical Distribution)
+        m_dist = 0.0
+        precision_score = standard_similarity 
+        
+        import numpy as np
+        inv_cov = manifold.get('inverse_covariance')
+        cov = manifold.get('covariance_matrix')
+        
+        inv_cov_np = np.array(inv_cov) if inv_cov else None
+        cov_np = np.array(cov) if cov else None
+
+        if inv_cov_np is not None or cov_np is not None:
+            m_dist = calculate_mahalanobis_distance(
+                current_tensor, 
+                mean_vector, 
+                covariance_matrix=cov_np, 
+                inverse_covariance=inv_cov_np
+            )
+            
+            # 3. [V1.5] 计算精密评分 (Precision Score)
+            precision_score = calculate_precision_score(standard_similarity, m_dist, sai)
+            logger.info(f"V1.5 Precision Check: Similarity={standard_similarity:.4f}, M-Dist={m_dist:.4f}, Final Score={precision_score:.4f}")
+
+        # 4. 能量门控 (SAI Gating)
+        min_sai = thresholds.get('min_sai_gating', 0.5)
+        max_m_dist = thresholds.get('max_mahalanobis_dist', 3.0)
+        
+        is_matched = precision_score > match_threshold
+        
+        # V2.4 精密判定：必须满足马氏距离与能量门控约束
+        if m_dist > max_m_dist:
+            logger.warning(f"Precision Gating: M-Dist {m_dist:.4f} exceeds threshold {max_m_dist}")
+            is_matched = False
+            
+        if sai < min_sai:
+            logger.warning(f"SAI Gating: SAI {sai:.4f} below threshold {min_sai}")
+            is_matched = False
+            
+        # 4. 判定决策 (Decision Logic V2.4)
+        perfect_threshold = thresholds.get('perfect_threshold', 0.92)
+        
+        # Check for singularities first
         singularity_centroids = feature_anchors.get('singularity_centroids', [])
         best_singularity = None
         best_singularity_sim = 0.0
         
         for singularity in singularity_centroids:
-            singularity_vector = singularity.get('vector', {})
-            singularity_threshold = singularity.get('match_threshold', 0.90)
-            
-            sim = calculate_cosine_similarity(current_tensor, singularity_vector)
+            sing_vec = singularity.get('vector', {})
+            sim = calculate_cosine_similarity(current_tensor, sing_vec)
             if sim > best_singularity_sim:
                 best_singularity_sim = sim
                 best_singularity = singularity
         
-        # 5. 判定逻辑（根据AI设计师裁定）
-        # 优先检查奇点（如果相似度 > 0.90 且明显高于标准格局）
         if best_singularity and best_singularity_sim > 0.90:
-            # 如果奇点相似度明显高于标准格局相似度（至少高3%），判定为奇点
             if best_singularity_sim > standard_similarity + 0.03:
                 return {
                     'matched': True,
@@ -231,45 +375,51 @@ class RegistryLoader:
                     'similarity': best_singularity_sim,
                     'anchor_id': best_singularity.get('sub_id', 'unknown'),
                     'resonance': best_singularity_sim > perfect_threshold,
-                    'description': f"匹配奇点变体 {best_singularity.get('sub_id', 'unknown')}，相似度 {best_singularity_sim:.4f}",
+                    'description': f"高度匹配奇点变体 {best_singularity.get('sub_id', 'unknown')}",
                     'risk_level': best_singularity.get('risk_level', 'UNKNOWN'),
                     'special_instruction': best_singularity.get('special_instruction')
                 }
         
-        # 检查标准格局
-        if standard_similarity > match_threshold:
+        # Final Match Decision
+        if is_matched:
+            p_tag = 'STANDARD' if target_manifold_id == 'standard_manifold' else 'ACTIVATED'
             return {
                 'matched': True,
-                'pattern_type': 'STANDARD',
+                'pattern_type': p_tag,
                 'similarity': standard_similarity,
-                'anchor_id': 'standard',
-                'resonance': standard_similarity > perfect_threshold,
-                'description': f"匹配标准格局，相似度 {standard_similarity:.4f}",
+                'mahalanobis_dist': m_dist,
+                'precision_score': precision_score,
+                'anchor_id': target_manifold_id,
+                'resonance': precision_score > perfect_threshold,
+                'description': f"精密观测匹配 ({p_tag})，评分 {precision_score:.4f}",
                 'risk_level': None,
                 'special_instruction': None
             }
         
-        # 破格
-        if standard_similarity < 0.60:
+        # 破格 (Broken) vs 边缘 (Marginal)
+        if precision_score < 0.60:
             return {
                 'matched': False,
                 'pattern_type': 'BROKEN',
                 'similarity': standard_similarity,
+                'mahalanobis_dist': m_dist,
+                'precision_score': precision_score,
                 'anchor_id': None,
                 'resonance': False,
-                'description': f"破格，相似度 {standard_similarity:.4f} < 0.60",
+                'description': f"物理破格，评分 {precision_score:.4f} < 0.60",
                 'risk_level': None,
                 'special_instruction': None
             }
         
-        # 边缘状态
         return {
             'matched': False,
             'pattern_type': 'MARGINAL',
             'similarity': standard_similarity,
+            'mahalanobis_dist': m_dist,
+            'precision_score': precision_score,
             'anchor_id': None,
             'resonance': False,
-            'description': f"边缘状态，相似度 {standard_similarity:.4f}（0.60-0.80之间）",
+            'description': f"边缘状态，评分 {precision_score:.4f}",
             'risk_level': None,
             'special_instruction': None
         }
@@ -305,15 +455,17 @@ class RegistryLoader:
         if not pattern:
             return {'error': f'格局 {pattern_id} 不存在'}
         
-        # 检查版本（版本分流）
-        version = pattern.get('version', '1.0')
+        # 检查版本 (优先检查root，其次检查meta_info)
+        version = pattern.get('version')
+        if not version:
+            version = pattern.get('meta_info', {}).get('version', '1.0')
+            
         is_v2 = version.startswith('2.')
-        is_v21 = version == '2.1'  # V2.1支持transfer_matrix
-        
-        # V2.1: 使用transfer_matrix
-        if is_v21:
+        # V2.1+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+)
+        if is_v2 and version >= '2.1':
             physics_kernel = pattern.get('physics_kernel', {})
-            transfer_matrix = physics_kernel.get('transfer_matrix')
+            # [V2.5] 优先支持 matrix_override (子格局特有)
+            transfer_matrix = pattern.get('matrix_override') or physics_kernel.get('transfer_matrix')
             
             if transfer_matrix:
                 # 使用矩阵投影
@@ -401,23 +553,50 @@ class RegistryLoader:
         # 9. 相变判定（如果配置了激活函数）
         activation = tensor_operator.get('activation_function', {})
         phase_change = None
-        if activation:
+        dynamic_state = "STABLE"
+        
+        # [V2.5 Phase Transition Logic]
+        # 首先构建完整的Context用于状态检查
+        day_branch = chart[2][1] if len(chart) > 2 and len(chart[2]) > 1 else ""
+        luck_pillar = context.get('luck_pillar', "") if context else ""
+        year_pillar = context.get('year_pillar', "") if context else ""
+        
+        # 调用 _check_pattern_state 获取动力学状态
+        # Mock alpha=1.0 for initial check
+        dynamic_result = self._check_pattern_state(
+            pattern, chart, day_master, day_branch, luck_pillar, year_pillar, 1.0
+        )
+        
+        if dynamic_result:
+            dynamic_state = dynamic_result.get('state', 'STABLE')
+            phase_change = dynamic_result # 保存完整结果
+            logger.info(f"Dynamic State Determined: {dynamic_state} (Trigger: {dynamic_result.get('trigger')})")
+        
+        if activation and not phase_change:
             threshold = activation.get('parameters', {}).get('collapse_threshold', 0.8)
             # 简化：使用S_balance作为能量指标
             if s_balance:
                 normalized_energy = min(s_balance / 2.0, 1.0)  # 归一化到0-1
-                phase_change = phase_change_determination(
+                phase_change_val = phase_change_determination(
                     normalized_energy,
                     threshold=threshold,
                     trigger=False  # 这里需要根据context判断是否有触发
                 )
-        
+                if phase_change_val:
+                     phase_change = {'state': phase_change_val}
+
         # 10. V2.0: 如果存在feature_anchors，执行格局识别
         recognition_result = None
         if is_v2:
             # 归一化projection作为current_tensor（用于格局识别）
             normalized_projection = tensor_normalize(projection)
-            recognition_result = self.pattern_recognition(normalized_projection, pattern_id)
+            # [Fix] Pass dynamic_state to enable Manifold Switching
+            recognition_result = self.pattern_recognition(
+                normalized_projection, 
+                pattern_id, 
+                dynamic_state=dynamic_state,
+                sai=sai
+            )
         
         result = {
             'pattern_id': pattern_id,
@@ -567,8 +746,23 @@ class RegistryLoader:
         for rule in collapse_rules:
             trigger_name = rule.get('trigger')
             if trigger_name and check_trigger(trigger_name, context):
+                # [V2.3] Check for exceptions
+                exceptions = rule.get('exceptions', [])
+                for exc in exceptions:
+                    if self._check_exception(exc, context):
+                        override = exc.get('override_state', {})
+                        return {
+                            "state": override.get('state', "ACTIVATED"),
+                            "alpha": alpha,
+                            "matrix": pattern.get('id'),
+                            "trigger": trigger_name,
+                            "exception": exc.get('name'),
+                            "tensor_modifier": override.get('tensor_modifier'),
+                            "centroid_ref": override.get('centroid_ref')
+                        }
+                
                 return {
-                    "state": "COLLAPSED",
+                    "state": rule.get('default_action', "COLLAPSED"),
                     "alpha": alpha,
                     "matrix": rule.get('fallback_matrix', 'Standard'),
                     "trigger": trigger_name,
@@ -602,6 +796,58 @@ class RegistryLoader:
             "alpha": alpha,
             "matrix": pattern.get('id', 'Standard')
         }
+
+    def _check_exception(self, exception_def: Dict[str, Any], context: Dict[str, Any]) -> bool:
+        """
+        [V2.3] 检查异常豁免条件
+        """
+        conditions = exception_def.get('conditions', [])
+        logic = exception_def.get('logic', 'AND')
+        
+        results = []
+        for cond in conditions:
+            operator = cond.get('operator')
+            if operator == "call_physics":
+                # 调用物理引擎算子
+                func_name = cond.get('function')
+                args_keys = cond.get('args', [])
+                
+                # 解析参数
+                args = []
+                for key in args_keys:
+                    if key == "$day_branch":
+                        args.append(context.get('day_branch'))
+                    elif key == "$year_branch":
+                        year_pillar = context.get('year_pillar')
+                        args.append(year_pillar[1] if year_pillar and len(year_pillar) >= 2 else "")
+                    else:
+                        args.append(context.get(key.lstrip('$')))
+                
+                # 执行调用
+                import core.physics_engine as physics
+                if hasattr(physics, func_name):
+                    func = getattr(physics, func_name)
+                    res = func(*args)
+                    
+                    # 检查期望值
+                    expect = cond.get('expect', {})
+                    match = True
+                    for k, v in expect.items():
+                        if isinstance(v, dict):
+                            if "gt" in v and not (res.get(k, 0) > v["gt"]): match = False
+                            if "lt" in v and not (res.get(k, 0) < v["lt"]): match = False
+                        elif res.get(k) != v:
+                            match = False
+                    results.append(match)
+                else:
+                    results.append(False)
+        
+        if not results:
+            return False
+            
+        if logic == 'AND':
+            return all(results)
+        return any(results)
     
     def _calculate_with_transfer_matrix(
         self,
@@ -644,51 +890,88 @@ class RegistryLoader:
             "output": output
         }
         
-        # 2. 如果context中有流年信息，调整frequency_vector
-        if context:
-            year_pillar = context.get('annual_pillar')
-            if year_pillar and len(year_pillar) >= 1:
-                from core.trinity.core.nexus.definitions import BaziParticleNexus
-                year_stem = year_pillar[0]
-                year_ten_god = BaziParticleNexus.get_shi_shen(year_stem, day_master)
-                
-                if year_ten_god in ['七杀', '正官']:
-                    frequency_vector['power'] += 0.5
-                elif year_ten_god in ['正印', '偏印']:
-                    frequency_vector['resource'] += 0.3
-                elif year_ten_god in ['比肩', '劫财']:
-                    frequency_vector['parallel'] += 0.3
+        # 2. [V1.4] Use InfluenceBus for Environmental Arbitration (No Hardcoding)
+        bus = InfluenceBus()
+        bus.register(TemporalInjectionFactor())
+        
+        # Prepare context for the bus
+        context = context or {}
+        context['day_master'] = day_master
+        
+        # Convert frequency_vector to waves_dict for bus protocol
+        waves_dict = {k: type('Wave', (), {'amplitude': v}) for k, v in frequency_vector.items()}
+        
+        # Arbitrate!
+        from core.trinity.core.unified_arbitrator_master import QuantumUniversalFramework
+        framework = QuantumUniversalFramework()
+        
+        binfo = {'day_master': day_master}
+        arbitration_res = framework.arbitrate_bazi(chart, binfo, context)
+        
+        # Get true physical SAI
+        physics = arbitration_res.get('physics', {})
+        stress = physics.get('stress', {})
+        sai_framework = stress.get('SAI', 0.0)
+        
+        verdict = bus.arbitrate_environment(waves_dict, context)
+        
+        # [V1.4 Fusion] Calculate Interaction Energies (Clash/Comb)
+        clash_energy = calculate_clash_count(chart) * 0.5 # Basic mapping
+        # MOD_15: Use Vibration Engine to check impedance
+        stems = [p[0] for p in chart]
+        branches = [p[1] for p in chart]
+        vib_engine = StructuralVibrationEngine(day_master)
+        v_metrics = vib_engine.calculate_vibration_metrics(stems, branches, context)
+        
+        # Adjust clash energy based on system entropy/impedance
+        # Higher impedance = More "brittle" clash impact
+        impedance = v_metrics.get('impedance_magnitude', 1.0)
+        clash_energy *= (1.0 + (impedance - 1.0) * 0.2)
+        
+        # Update frequency_vector with arbitrated values + interactions
+        frequency_vector = {k: verdict['expectation'].elements.get(k, 0) for k in frequency_vector.keys()}
+        frequency_vector['clash'] = round(clash_energy, 4)
+        frequency_vector['combination'] = 0.0 # Placeholder for future logic
+        
+        injection_logs = verdict.get('logs', {})
         
         # 3. 使用transfer_matrix进行矩阵投影
-        projection = project_tensor_with_matrix(frequency_vector, transfer_matrix)
+        # [V2.2 Policy] First, check for tensor_dynamics configuration
+        pattern = self.get_pattern(pattern_id)
+        physics_kernel = pattern.get('physics_kernel', {}) if pattern else {}
+        dynamics_config = physics_kernel.get('tensor_dynamics')
+        
+        # Apply Input Transform (if any)
+        processed_input = frequency_vector
+        if dynamics_config and dynamics_config.get('activation_function') == "tanh_saturation":
+            # [V2.2] Tanh Saturation applies BEFORE matrix projection as a gain control
+            params = dynamics_config.get('parameters', {})
+            k_val = params.get('k_factor', 3.0)
+            
+            from core.math_engine import apply_saturation_layer
+            processed_input = {
+                k: apply_saturation_layer(v, k_val) 
+                for k, v in frequency_vector.items()
+            }
+            logger.debug(f"Applied tanh_saturation (k={k_val}) to input vector")
+
+        # Core Projection
+        projection = project_tensor_with_matrix(processed_input, transfer_matrix)
         
         # 4. 归一化投影（用于格局识别）
         normalized_projection = tensor_normalize(projection)
         
         # 5. 计算SAI（系统对齐指数）
-        # SAI = 投影向量的模长（L2范数）
-        import math
-        sai = math.sqrt(sum(v ** 2 for v in projection.values()))
-        
-        logger.debug(f"初始SAI计算: projection={projection}, sai={sai:.4f}")
-        
-        # 如果SAI太小或为0，使用频率向量的模长作为基准
-        if sai < 0.1:
-            base_sai = math.sqrt(sum(v ** 2 for v in frequency_vector.values()))
-            logger.debug(f"频率向量: {frequency_vector}, 模长={base_sai:.4f}")
-            if base_sai > 0:
-                # 使用频率向量模长作为SAI基准，然后根据投影值调整
-                sai = base_sai * 0.5  # 调整系数，确保SAI不为0
-                logger.info(f"SAI过小({sai:.4f})，使用频率向量模长调整: {sai:.4f}")
-            else:
-                # 如果频率向量也是0，使用默认值
-                logger.warning(f"频率向量和投影值都为0，使用默认SAI=1.0")
-                sai = 1.0
-        
-        # 确保SAI不为0
-        if sai == 0.0:
-            logger.error(f"SAI仍为0，强制设置为1.0")
-            sai = 1.0
+        # SAI 优先使用框架计算的真实对齐力
+        if sai_framework > 0:
+            sai = sai_framework
+            logger.debug(f"使用框架SAI: {sai:.4f}")
+        else:
+            # SAI = 投影向量的模长（L2范数）作为物理强度补偿
+            import math
+            sai_l2 = math.sqrt(sum(v ** 2 for v in projection.values()))
+            sai = max(sai_l2, 1.0) # 兜底保护
+            logger.debug(f"框架SAI缺失，使用L2模长补偿: {sai:.4f}")
         
         # 6. 获取格局信息
         pattern = self.get_pattern(pattern_id)
@@ -701,7 +984,12 @@ class RegistryLoader:
         
         energy_flux = {
             "wealth": frequency_vector['wealth'],
-            "resource": frequency_vector['resource']
+            "resource": frequency_vector['resource'],
+            "power": frequency_vector['power'],
+            "parallel": frequency_vector['parallel'],
+            "output": frequency_vector['output'],
+            "E_blade": compute_energy_flux(chart, day_master, "羊刃"),
+            "E_kill": compute_energy_flux(chart, day_master, "七杀")
         }
         
         flux_events = []
@@ -722,10 +1010,7 @@ class RegistryLoader:
             energy_flux=energy_flux
         )
         
-        # 8. 格局识别
-        recognition_result = self.pattern_recognition(normalized_projection, pattern_id)
-        
-        # 9. 检查成格/破格状态
+        # 8. 检查成格/破格状态 (Step 4)
         pattern_state = None
         if pattern:
             pattern_state = self._check_pattern_state(
@@ -733,20 +1018,71 @@ class RegistryLoader:
                 luck_pillar, year_pillar, alpha
             )
         
+        # 9. 格局识别 (Step 6) - 注入当前状态与能量强度 [V1.5]
+        dynamic_state = pattern_state.get('state') if pattern_state else 'STABLE'
+        recognition_result = self.pattern_recognition(
+            normalized_projection, pattern_id, dynamic_state=dynamic_state, sai=sai
+        )
+            
+        # [V2.3] Apply Tensor Modifiers if state is ACTIVATED
+        if pattern_state and pattern_state.get('state') == "ACTIVATED":
+            modifier = pattern_state.get('tensor_modifier', {})
+            for axis, factor in modifier.items():
+                if axis in projection:
+                    projection[axis] *= factor
+            
+            # Recalculate normalized projection and SAI after modification
+            normalized_projection = tensor_normalize(projection)
+            sai = math.sqrt(sum(v ** 2 for v in projection.values()))
+            logger.info(f"Applied V2.3 Tensor Modifiers: {modifier}, New SAI: {sai:.4f}")
+
         result = {
             'pattern_id': pattern_id,
             'pattern_name': pattern_name,
-            'version': '2.1',
-            'projection': normalized_projection,  # 使用归一化后的投影（用于格局识别）
-            'raw_projection': projection,  # 保留原始投影（用于SAI计算）
+            'version': '2.5',
+            'projection': normalized_projection,
+            'raw_projection': projection,
             'sai': sai,
             'frequency_vector': frequency_vector,
             'alpha': alpha,
             'recognition': recognition_result,
             'pattern_state': pattern_state
         }
+
+        # [V2.5] 动态相变处理器 (Phase Transition Processor)
+        context_for_trigger = {
+            "chart": chart,
+            "day_master": day_master,
+            "day_branch": day_branch,
+            "luck_pillar": luck_pillar,
+            "year_pillar": year_pillar,
+            "flux_events": flux_events,
+            "energy_flux": energy_flux
+        }
         
-        logger.info(f"_calculate_with_transfer_matrix完成: sai={sai:.4f}, projection={normalized_projection}, raw_projection={projection}")
+        dynamic_rules = pattern.get('dynamic_states', {})
+        if dynamic_rules:
+            # 1. 检查崩塌规则
+            for rule in dynamic_rules.get('collapse_rules', []):
+                if check_trigger(rule.get('trigger'), context_for_trigger):
+                    result['recognition']['pattern_type'] = rule.get('default_action', 'COLLAPSED')
+                    result['recognition']['matched'] = False
+                    result['recognition']['description'] = f"⚠️ {rule.get('action', '结构崩塌')}"
+                    result['phase_change'] = 'COLLAPSE'
+                    break
+            
+            # 2. 检查晶化规则 (如果未崩塌)
+            if result.get('phase_change') != 'COLLAPSE':
+                for rule in dynamic_rules.get('crystallization_rules', []):
+                    if check_trigger(rule.get('condition'), context_for_trigger):
+                        result['recognition']['pattern_type'] = 'CRYSTALLIZED'
+                        result['recognition']['matched'] = True
+                        # 晶化态大幅提升Precision Score作为显示
+                        p_score = result['recognition'].get('precision_score', 0)
+                        result['recognition']['precision_score'] = max(0.96, p_score)
+                        result['recognition']['description'] = f"💎 {rule.get('action', '极致成格')}"
+                        result['phase_change'] = 'CRYSTALLIZATION'
+                        break
         
         return result
 

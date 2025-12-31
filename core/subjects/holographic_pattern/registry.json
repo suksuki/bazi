@@ -3,750 +3,201 @@
     "id": "HOLOGRAPHIC_PATTERN_REGISTRY",
     "name": "张量全息格局注册表",
     "name_en": "Tensor Holographic Pattern Registry",
-    "version": "2.0",
-    "created_at": "2025-12-29",
-    "updated_at": "2025-12-29",
-    "description": "基于FDS-V1.1和QGA-HR V2.0规范的五维张量投影全息格局系统",
-    "total_patterns": 3,
+    "version": "2.5.3",
+    "created_at": "2025-12-30",
+    "updated_at": "2025-12-30",
+    "description": "基于FDS-V1.5.1冷启动重建的全息格局系统",
     "specification": {
-      "qga_hr_version": "2.0",
-      "fds_version": "1.1",
-      "registry_standard": "QGA-HR V2.0"
+      "qga_hr_version": "2.5",
+      "fds_version": "1.5.1",
+      "registry_standard": "QGA-HR V2.5"
     }
-  },
-  "theme": {
-    "id": "HOLOGRAPHIC_PATTERN",
-    "name": "张量全息格局 (Tensor Holographic Pattern)",
-    "description": "基于FDS-V1.1规范的五维张量投影全息格局系统",
-    "category": "HOLOGRAPHIC"
   },
   "patterns": {
     "A-03": {
       "id": "A-03",
       "name": "羊刃架杀",
       "name_cn": "羊刃架杀",
-      "name_en": "Force-Field Constraint",
-      "category": "A",
-      "subject_id": "A-03",
       "icon": "⚔️",
-      "version": "2.1",
+      "category": "ARBITRATION",
+      "subject_id": "A-03",
+      "version": "2.5.3",
       "active": true,
-      "created_at": "2025-12-29",
-      "description": "受控核聚变模型 - 高能等离子体（羊刃）被强磁场（七杀）完美约束，产生巨大的定向做功（贵气）",
-      "semantic_seed": {
-        "description": "羊刃（Yang Ren）是极高频振荡的能量奇点，特性是刚强、暴裂、无序扩散。七杀（Seven Killings）是高强度的外部约束场，特性是压制、雕刻、强制收束。架杀是两者的结合，形成受控核聚变（Controlled Nuclear Fusion）状态。",
-        "physical_image": "高能等离子体（羊刃）被强磁场（七杀）完美约束，从而产生巨大的定向做功（贵气）",
-        "source": "ai_analyst_gemini",
-        "updated_at": "2025-12-29",
-        "classical_meaning": {
-          "羊刃": "不仅是劫财，在物理上是极高频振荡的能量奇点，特性是刚强、暴裂、无序扩散",
-          "七杀": "不仅是克身，在物理上是高强度的外部约束场，特性是压制、雕刻、强制收束",
-          "架杀": "两者的结合不是简单的加减，而是一种受控核聚变状态"
-        }
+      "meta_info": {
+        "physics_prototype": "Tokamak Fusion Reactor",
+        "description": "高能高压约束系统（主模型）"
       },
       "physics_kernel": {
-        "description": "核心物理参数与转换逻辑 (FDS-V1.4 Kernel)",
+        "integrity_threshold": 0.45,
         "transfer_matrix": {
           "E_row": {
-            "parallel": 1.2,
-            "resource": 0.8,
-            "wealth": -0.5,
-            "output": -0.2,
-            "power": -0.1,
-            "description": "羊刃为基，印为源，财坏印为忌"
+            "parallel": 0.6,
+            "resource": 0.3,
+            "power": -0.2
           },
           "O_row": {
-            "power": 0.9,
-            "parallel": 0.3,
-            "resource": 0.4,
-            "wealth": 0.0,
-            "output": 0.1,
-            "description": "七杀发生相变，转化为权力的主要来源"
+            "power": 0.7,
+            "output": -0.2
           },
           "M_row": {
-            "wealth": 0.4,
-            "output": 0.3,
-            "parallel": -0.8,
-            "power": -0.2,
-            "resource": 0.0,
-            "description": "劫财过重，财富转化率低"
+            "wealth": 0.4
           },
           "S_row": {
-            "power": 0.3,
-            "wealth": 0.8,
-            "clash": 0.9,
-            "resource": -0.6,
-            "parallel": -0.4,
-            "description": "七杀虽制仍有余威，财党杀为最大风险"
+            "clash": 0.5,
+            "power": 0.4
           },
           "R_row": {
-            "output": 0.2,
-            "wealth": 0.2,
-            "combination": 0.8,
-            "power": 0.0,
-            "resource": 0.1,
-            "description": "高压结构下情感连接较弱"
+            "combination": 0.5
           }
-        },
-        "integrity_threshold": 0.45
-      },
-      "feature_anchors": {
-        "description": "基于大数据拟合算出的空间质心坐标 (The DNA of Fate)",
-        "standard_centroid": {
-          "description": "标准恒星锚点 (Tier A Mean) - 基于transfer_matrix计算",
-          "vector": {
-            "E": 0.2745,
-            "O": 0.4955,
-            "M": -0.0727,
-            "S": -0.1123,
-            "R": 0.0449
-          },
-          "match_threshold": 0.8,
-          "perfect_threshold": 0.92
-        },
-        "singularity_centroids": [
-          {
-            "sub_id": "A-03-X1",
-            "description": "A-03-X1质心 - 基于transfer_matrix计算",
-            "vector": {
-              "E": 0.0096,
-              "O": 0.6488,
-              "M": -0.1326,
-              "S": 0.1768,
-              "R": 0.0322
-            },
-            "match_threshold": 0.9,
-            "risk_level": "CRITICAL",
-            "special_instruction": "Enable Vent Logic (Disable Balance Check)",
-            "sample_count": 99
-          },
-          {
-            "sub_id": "A-03-X2",
-            "vector": {
-              "E": -0.0448,
-              "O": 0.5959,
-              "M": -0.1136,
-              "S": 0.2099,
-              "R": 0.0358
-            },
-            "sample_count": 1644,
-            "description": "A-03-X2质心 - 基于transfer_matrix计算",
-            "match_threshold": 0.9,
-            "risk_level": "CRITICAL"
-          }
-        ]
+        }
       },
       "dynamic_states": {
-        "description": "Step 4 定义的动态相变规则 (Phase Transitions)",
         "collapse_rules": [
           {
             "trigger": "Day_Branch_Clash",
-            "action": "Downgrade_Matrix",
-            "fallback_matrix": "Standard_Weak_Killings",
-            "description": "羊刃逢冲，根基动摇，七杀攻身，S轴爆炸。"
-          },
-          {
-            "trigger": "Resource_Destruction",
-            "action": "Damp_E_Axis",
-            "factor": 0.5,
-            "description": "强财克印，资源断裂，续航受损"
-          },
-          {
-            "trigger": "Blade_Combined_Transformation",
-            "action": "Downgrade_Matrix",
-            "fallback_matrix": "Standard_Weak_Killings",
-            "description": "羊刃被合化，结构失效"
+            "default_action": "COLLAPSED",
+            "action": "结构崩塌：根基受损"
           }
         ],
         "crystallization_rules": [
           {
-            "condition": "Missing_Blade_Arrives",
-            "action": "Upgrade_Matrix",
+            "condition": "Kill_Blade_Resonance",
             "target_matrix": "A-03",
-            "validity": "Transient",
-            "description": "运至成格，瞬间获得 A-03 矩阵加持。"
+            "action": "极致对齐：刃杀共振"
           }
         ]
       },
-      "tensor_operator": {
-        "weights": {
-          "E": 0.21,
-          "O": 0.31,
-          "M": 0.15,
-          "S": 0.25,
-          "R": 0.08
-        },
-        "activation_function": {
-          "type": "sigmoid",
-          "description": "相变阈值判定：当流年引入冲刃因子时，如果稳定性不足，系统发生脆性断裂",
-          "parameters": {
-            "collapse_threshold": 0.8,
-            "phase_change_point": "冲刃之年或合杀忘杀"
-          }
-        },
-        "normalized": true,
-        "core_equation": "S_balance = E_blade / E_kill",
-        "equation_description": "当E_blade ≈ E_kill时，系统处于共振态，O轴输出最大化（大贵）。当E_blade > E_kill时（刃重杀轻），能量溢出，M轴变为负值（破财劫掠）。当E_blade < E_kill时（杀重刃轻），场强压垮核心，E轴坍缩（夭折/多病）",
-        "flow_factor": {
-          "description": "通关因子（Flow Factor）：印星的存在与否，不直接增加分数，而是作为分母上的安全系数",
-          "formula": "S_risk = S_base / (1 + E_seal)",
-          "meaning": "印星越有力，风险越小"
-        },
-        "weights_source": "FDS-V1.1 Step 3 (Tier A 500 samples)",
-        "weights_description": {
-          "E": "能级轴：0.21 - 基于Tier A均值16.92",
-          "O": "秩序轴：0.31 - 核心主轴，均值25.70验证了其贵气属性",
-          "M": "物质轴：0.15 - 次要轴，财富跟随地位而来",
-          "S": "应力轴：0.25 - 高危轴，均值20.67，基准线为常人3倍",
-          "R": "关联轴：0.08 - 六亲缘薄，孤立态"
-        },
-        "algorithm_implementation": {
-          "dependencies": {
-            "FRAMEWORK_UTILITIES": [
-              "MOD_19_BAZI_UTILITIES",
-              "MOD_20_SYS_CONFIG"
-            ],
-            "BAZI_FUNDAMENTAL": [
-              "MOD_03_TRANSFORM",
-              "MOD_06_MICRO_STRESS"
-            ]
-          },
-          "energy_calculation": {
-            "function": "core.physics_engine.compute_energy_flux",
-            "description": "读取任意十神的物理场强（支持月令加权），参数从config_schema.py读取",
-            "config_source": "core.config_schema.DEFAULT_FULL_ALGO_PARAMS",
-            "parameters": {
-              "month_resonance": "physics.pillarWeights.month",
-              "rooting": "structure.rootingWeight",
-              "base": 1.0,
-              "generation": 1.0
+      "sub_patterns_registry": [
+        {
+          "id": "SP_A03_STANDARD",
+          "name": "将星本部 (Standard)",
+          "name_cn": "将星本部",
+          "icon": "🏯",
+          "population_priority": "Tier A",
+          "description": "标准羊刃架杀流形。追求秩序(O)与对齐。",
+          "matrix_override": {
+            "E_row": {
+              "parallel": 1.0,
+              "resource": 0.2,
+              "power": -0.6
+            },
+            "O_row": {
+              "parallel": 0.05,
+              "power": 1.0,
+              "wealth": -0.7
+            },
+            "M_row": {
+              "resource": 0.1,
+              "power": 0.1,
+              "wealth": -0.3
+            },
+            "S_row": {
+              "parallel": 0.1,
+              "power": 0.1,
+              "clash": 0.5
+            },
+            "R_row": {
+              "parallel": 0.1,
+              "combination": 0.2
             }
           },
-          "activation_function": {
-            "function": "core.math_engine.sigmoid_variant",
-            "description": "执行非线性投影（支持 k斜率 和 x0阈值）",
-            "parameters": {
-              "k": 1.0,
-              "x0": 0.0
+          "manifold_stats": {
+            "mean_vector": {
+              "E": 0.783,
+              "O": 1.029,
+              "M": 0.2,
+              "S": 0.4,
+              "R": 0.4
+            },
+            "thresholds": {
+              "max_mahalanobis_dist": 3.0,
+              "min_sai_gating": 0.5,
+              "match_threshold": 0.8,
+              "perfect_threshold": 0.92
             }
-          },
-          "core_equation": {
-            "function": "core.math_engine.calculate_s_balance",
-            "description": "计算主轴的平衡度或对抗度 S_balance = E_blade / E_kill"
-          },
-          "flow_factor": {
-            "function": "core.math_engine.calculate_flow_factor",
-            "description": "计算通关组件（印星）的安全系数 S_risk = S_base / (1 + E_seal)"
-          },
-          "interaction_damping": {
-            "function": "core.physics_engine.calculate_interaction_damping",
-            "description": "计算刑冲合害的拓扑结构与阻尼系数 lambda"
-          },
-          "phase_change": {
-            "function": "core.math_engine.phase_change_determination",
-            "description": "判定是否触发奇点（TUNNELING/COLLAPSE/STABLE）"
-          },
-          "tensor_similarity": {
-            "function": "core.math_engine.calculate_cosine_similarity",
-            "description": "计算5维能量矢量的余弦相似度，用于Step 6格局识别"
-          },
-          "tensor_projection": {
-            "function": "core.math_engine.project_tensor_with_matrix",
-            "description": "使用5x5转换矩阵计算五维投影（FDS-V1.4 V2.1）"
-          },
-          "integrity_alpha": {
-            "function": "core.physics_engine.calculate_integrity_alpha",
-            "description": "计算结构完整性alpha值（扣分制模型）"
-          },
-          "pattern_state_check": {
-            "function": "core.registry_loader.RegistryLoader._check_pattern_state",
-            "description": "检查成格/破格状态（FDS-V1.4）"
-          },
-          "event_trigger": {
-            "function": "core.physics_engine.check_trigger",
-            "description": "检查事件触发条件（Day_Branch_Clash等）"
-          },
-          "registry_loader": {
-            "class": "core.registry_loader.RegistryLoader",
-            "description": "读取本 JSON 配置并驱动上述引擎，实现100%算法复原"
-          },
-          "paths": {
-            "tensor_projection": "core.math_engine.project_tensor_with_matrix",
-            "pattern_recognition": "core.registry_loader.RegistryLoader.pattern_recognition",
-            "integrity_alpha": "core.physics_engine.calculate_integrity_alpha",
-            "pattern_state_check": "core.registry_loader.RegistryLoader._check_pattern_state",
-            "event_trigger": "core.physics_engine.check_trigger"
           }
         },
-        "paths": {
-          "tensor_projection": "core.math_engine.project_tensor_with_matrix",
-          "pattern_recognition": "core.registry_loader.RegistryLoader.pattern_recognition",
-          "integrity_alpha": "core.physics_engine.calculate_integrity_alpha",
-          "pattern_state_check": "core.registry_loader.RegistryLoader._check_pattern_state",
-          "event_trigger": "core.physics_engine.check_trigger"
+        {
+          "id": "SP_A03_VAULT",
+          "name": "库刃爆发 (Vault)",
+          "name_cn": "库刃爆发",
+          "icon": "💎",
+          "population_priority": "Tier X",
+          "description": "奇点变体。地支墓库释放动能，M轴翻转。",
+          "matrix_override": {
+            "E_row": {
+              "parallel": 1.25,
+              "resource": 0.5
+            },
+            "O_row": {
+              "power": 0.65
+            },
+            "M_row": {
+              "vault": 0.92,
+              "resource": 0.4,
+              "wealth": 0.88
+            },
+            "S_row": {
+              "pressure": 0.35
+            },
+            "R_row": {
+              "nexus": 0.55
+            }
+          },
+          "manifold_stats": {
+            "mean_vector": {
+              "E": 0.95,
+              "O": 0.6,
+              "M": 0.85,
+              "S": 0.5,
+              "R": 0.6
+            },
+            "thresholds": {
+              "max_mahalanobis_dist": 4.5,
+              "min_sai_gating": 0.6,
+              "match_threshold": 0.75,
+              "perfect_threshold": 0.9
+            }
+          }
         }
-      },
-      "kinetic_evolution": {
-        "trigger_operators": [
-          {
-            "type": "clash",
-            "description": "冲刃之年（Clash of Blade）：流年引入冲刃因子（如子午冲），如果稳定性不足，系统发生脆性断裂（亡神发动）",
-            "example": "原局甲日卯月，走酉运（冲卯木羊刃），流年酉年（双冲）"
-          },
-          {
-            "type": "bond",
-            "description": "合杀忘杀（Structure Loss）：合杀导致结构丢失"
-          }
-        ],
-        "gain_operators": [
-          {
-            "type": "resonance",
-            "description": "当E_blade ≈ E_kill时，系统处于共振态，O轴输出最大化（大贵）"
-          }
-        ],
-        "geo_damping": 1.0,
-        "dynamic_simulation": {
-          "scenario": "流年冲刃事件 (Blade Clash Event)",
-          "description": "基于Step 4动态仿真结果，定义流年冲击时的应力变化",
-          "lambda_coefficients": {
-            "resonance": {
-              "value": 2.5,
-              "condition": "原局已有冲（如子午冲）",
-              "result": "必死/大凶（崩溃率100%）",
-              "description": "共振态：双冲共振，系统必然崩溃"
-            },
-            "hard_landing": {
-              "value": 1.8,
-              "condition": "原局无解救，单冲",
-              "result": "高危（需看大运修正）",
-              "description": "硬着陆：无缓冲，中等风险"
-            },
-            "damping": {
-              "value": 1.2,
-              "condition": "原局有\"合\"（如六合/三合）",
-              "result": "有惊无险（抗压成功）",
-              "description": "阻尼态：有合缓冲，降低冲击"
-            }
-          },
-          "fracture_threshold": 50.0,
-          "collapse_rate": 36.86,
-          "simulation_samples": 274
-        },
-        "favorable_gods": {
-          "喜": "杀旺用印（冷却），刃旺用杀（约束）",
-          "忌": "财多（党杀崩塌），食伤混杂（干扰磁场）"
-        }
-      },
-      "audit_trail": {
-        "coverage_rate": 0.0,
-        "hit_rate": 0.0,
-        "sai_baseline": 81.75,
-        "sai_description": "基于500个Tier A样本的SAI均值：81.75",
-        "data_selection_criteria": {
-          "month_lock": "月支本气必须为日主之帝旺（即羊刃）",
-          "stem_reveal": "天干必须透出七杀，且七杀必须有根（不可以是虚浮无力）",
-          "purity_filter": {
-            "exclude": [
-              "重食伤制杀（这会变成A-02食神制杀）",
-              "重财党杀（这会导致应力轴S爆表，变成财杀攻身的夭折局）"
-            ]
-          },
-          "target_samples": 500
-        },
-        "version_history": [
-          {
-            "version": "1.0",
-            "date": "2025-12-29",
-            "source": "ai_analyst_gemini",
-            "description": "初始注册，基于FDS-V1.1全流程闭环",
-            "fds_steps": {
-              "step1": "物理意象力学解构",
-              "step2": "经验母体海选标准",
-              "step3": "多维特征建模",
-              "step4": "动力学演化仿真",
-              "step5": "全息注册与封卷"
-            }
-          },
-          {
-            "version": "1.0",
-            "date": "2025-12-29",
-            "source": "FDS-V1.1 Full Pipeline",
-            "description": "正式封卷 - 基于FDS-V1.1全流程闭环",
-            "fds_steps": {
-              "step1": "物理意象力学解构",
-              "step2": "全量海选与分层提纯（Tier A: 500, Tier X: 101）",
-              "step3": "多维特征提取与张量拟合（5维投影）",
-              "step4": "动态扩展与流年应力仿真（崩溃率36.86%）",
-              "step5": "专题封卷与全息注册"
-            }
-          },
-          {
-            "version": "2.0",
-            "date": "2025-12-29",
-            "source": "FDS-V1.1 Refit (V2.0 Alignment)",
-            "description": "重新拟合，计算质心锚点并更新feature_anchors",
-            "fds_steps": {
-              "step3": "计算质心（Tier A: 493, Tier X: 7）",
-              "step5": "更新feature_anchors到注册表"
-            }
-          },
-          {
-            "version": "2.0",
-            "date": "2025-12-29",
-            "source": "FDS-V1.1 Refit (V2.0 Alignment)",
-            "description": "重新拟合，计算质心锚点并更新feature_anchors",
-            "fds_steps": {
-              "step3": "计算质心（Tier A: 493, Tier X: 7）",
-              "step5": "更新feature_anchors到注册表"
-            }
-          }
-        ],
-        "fds_fitting": {
-          "status": "completed",
-          "completed_at": "2025-12-29 12:06:34",
-          "version": "V1.0 (Based on FDS-V1.1)",
-          "step3_results": {
-            "samples_processed": 500,
-            "tier_a_mean_statistics": {
-              "E": 16.92,
-              "O": 25.7,
-              "M": 12.3,
-              "S": 20.67,
-              "R": 6.15,
-              "SAI": 81.75
-            }
-          },
-          "step4_results": {
-            "simulation_samples": 274,
-            "collapse_rate": 36.86,
-            "collapse_count": 101,
-            "survival_count": 173
-          }
-        },
-        "audit_verdict": {
-          "collapse_rate": 36.86,
-          "risk_level": "HIGH",
-          "core_safety_mechanism": "\"合\" (Combination) 是此格局唯一的物理安全气囊",
-          "prediction_rule": "若遇 [A-03] 结构，必须首先计算流年λ值。若λ >= 2.5，直接输出 CRITICAL_WARNING",
-          "verdict_date": "2025-12-29"
-        }
-      },
-      "fds_fitting": {
-        "status": "completed",
-        "completed_at": "2025-12-29",
-        "analyst": "Gemini (AI首席架构师)",
-        "specification_version": "FDS-V1.1 (Final)",
-        "notes": "第一次跑通全流程。在Step 3中发现需要引入通关因子（Flow Factor）作为安全系数"
-      },
-      "singularity_protocol": {
-        "tier_x_count": 101,
-        "variants": [
-          {
-            "id": "A-03-X1",
-            "name": "聚变临界型",
-            "description": "地支三刃以上",
-            "characteristics": {
-              "E_axis": "溢出",
-              "S_axis": "极不稳定"
-            },
-            "sample_count": 25
-          },
-          {
-            "id": "A-03-X2",
-            "name": "结构高压型",
-            "description": "七杀攻身无制",
-            "characteristics": {
-              "S_axis": "常态 > 50",
-              "state": "处于长期精神高压"
-            },
-            "sample_count": 76
-          }
-        ]
-      },
-      "status": "✅ 已封卷 (Active)",
-      "last_updated": "2025-12-29",
-      "updated_at": "2025-12-29"
+      ]
     },
-    "A-03-X1": {
-      "id": "A-03-X1",
-      "name": "羊刃聚变临界型",
-      "name_cn": "羊刃聚变临界型",
-      "name_en": "Fusion Critical State",
-      "category": "A",
-      "subject_id": "A-03-X1",
-      "parent_pattern": "A-03",
-      "icon": "⚛️",
-      "version": "1.0",
+    "D-01": {
+      "id": "D-01",
+      "name": "标准正财格",
+      "name_cn": "标准正财格",
+      "icon": "💰",
+      "category": "WEALTH",
+      "subject_id": "D-01",
+      "version": "1.5.1",
       "active": true,
-      "created_at": "2025-12-29",
-      "description": "托卡马克装置模型 - 能量极度溢出，如同被磁场约束的高温等离子体。稍有不慎即发生热核爆炸（暴亡），若能导出则为无限能源（极贵）",
-      "semantic_seed": {
-        "description": "地支三刃以上，能量极度溢出态。这不是普通的强，这是'切尔诺贝利反应堆'。普通的平衡算法对它们无效，它们需要专门的'防爆公式'。",
-        "physical_image": "托卡马克装置 (Tokamak Plasma) - 能量极度溢出，如同被磁场约束的高温等离子体",
-        "source": "ai_analyst_gemini",
-        "updated_at": "2025-12-29",
-        "classical_meaning": {
-          "三刃": "能量极度溢出，极易暴亡或大贵",
-          "聚变临界": "反应堆过热，需要专门的冷却机制"
-        }
+      "meta_info": {
+        "physics_prototype": "Gravity Capture System (引力捕获系统)",
+        "description": "标准正向拟合：引力捕获系统"
       },
-      "tensor_operator": {
-        "weights": {
-          "E": 0.5,
-          "O": 0.1,
-          "M": 0.05,
-          "S": 0.3,
-          "R": 0.05
-        },
-        "weight_description": {
-          "E": "能级轴：0.50 - 爆表。生命能量极大，甚至表现为多动、狂躁、破坏欲",
-          "O": "秩序轴：0.10 - 极难建立秩序，除非有极强的'宣泄口'",
-          "M": "物质轴：0.05 - 视金钱如粪土，或极度挥霍",
-          "S": "应力轴：0.30 - 极不稳定。自身就是不稳定的能量源",
-          "R": "关联轴：0.05 - 对六亲有极强的辐射伤害"
-        },
-        "activation_function": {
-          "type": "critical_explosion",
-          "description": "聚变临界判定：当能量密度突破临界值时，发生自发性爆炸",
-          "parameters": {
-            "critical_threshold": 0.95,
-            "explosion_trigger": "合刃（如地支三合局）"
-          }
-        },
-        "normalized": true,
-        "core_equation": "E_critical = E_blade_count * 3.0",
-        "equation_description": "三刃能量 = 单刃能量 × 3.0，能量密度突破临界值"
-      },
-      "kinetic_evolution": {
-        "trigger_operators": [
-          {
-            "type": "combination",
-            "description": "合刃（如地支三合局）：三刃再逢合，能量密度突破临界值 → 自发性爆炸（心脏、血液、猝死）",
-            "example": "地支三午（羊刃），再逢未（午未合）"
-          }
-        ],
-        "gain_operators": [
-          {
-            "type": "discharge",
-            "description": "食伤泄能：反应堆过热时，打开冷却塔（食伤）进行能量排放"
-          }
-        ],
-        "geo_damping": 0.8,
-        "dynamic_simulation": {
-          "scenario": "聚变临界事件 (Fusion Critical Event)",
-          "description": "能量极度溢出，需要专门的泄能机制。不喜印（生），最喜食伤（泄）"
-        },
-        "favorable_gods": {
-          "喜": "食伤（泄能，打开冷却塔）",
-          "忌": "印星（生刃，相当于加燃料，会导致爆炸）"
-        }
-      },
-      "audit_trail": {
-        "coverage_rate": 0.0,
-        "hit_rate": 0.0,
-        "sai_baseline": 0.0,
-        "sai_description": "待拟合",
-        "data_selection_criteria": {
-          "singularity_criteria": "地支羊刃数量 >= 3",
-          "sample_count": 25,
-          "source": "Tier X奇点集"
-        },
-        "version_history": [
-          {
-            "version": "1.0",
-            "date": "2025-12-29",
-            "source": "ai_analyst_gemini",
-            "description": "从A-03奇点集中提取并注册为独立子格局",
-            "parent_pattern": "A-03"
-          }
-        ]
-      },
-      "singularity_type": "X1-聚变临界型",
-      "status": "✅ 已封卷 (Active)",
-      "last_updated": "2025-12-29",
-      "fds_fitting": {
-        "status": "pending",
-        "analyst": "Gemini (AI首席架构师)",
-        "specification_version": "FDS-V1.1 (Final)",
-        "notes": "奇点变体，待独立拟合。当前基于物理原型定义权重，需后续完成Step 3-5全流程",
-        "typical_samples": [
-          {
-            "bazi": "丙寅甲午戊午戊午",
-            "chart": [
-              "丙寅",
-              "甲午",
-              "戊午",
-              "戊午"
-            ],
-            "description": "地支三刃：午月，戊日",
-            "purity_score": 110.0
+      "physics_kernel": {
+        "integrity_threshold": 0.5,
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.0,
+            "resource": 0.8
           },
-          {
-            "bazi": "戊辰甲子壬子庚子",
-            "chart": [
-              "戊辰",
-              "甲子",
-              "壬子",
-              "庚子"
-            ],
-            "description": "地支三刃：子月，壬日",
-            "purity_score": 115.0
+          "O_row": {
+            "power": 0.7
           },
-          {
-            "bazi": "庚午壬午丙午己亥",
-            "chart": [
-              "庚午",
-              "壬午",
-              "丙午",
-              "己亥"
-            ],
-            "description": "地支三刃：午月，丙日",
-            "purity_score": 70.0
+          "M_row": {
+            "wealth": 1.5,
+            "parallel": -1.5
+          },
+          "S_row": {
+            "clash": 1.0,
+            "power": 0.5
           }
-        ],
-        "sample_count": 25,
-        "source": "Tier X奇点集"
-      }
-    },
-    "A-03-X2": {
-      "id": "A-03-X2",
-      "name": "结构高压屈服型",
-      "name_cn": "结构高压屈服型",
-      "name_en": "Structural Yield Stress",
-      "category": "A",
-      "subject_id": "A-03-X2",
-      "parent_pattern": "A-03",
-      "icon": "💎",
-      "version": "1.0",
-      "active": true,
-      "created_at": "2025-12-29",
-      "description": "液压机下的钻石模型 - 外部约束场（杀）强度远超核心支撑力。系统终身处于'咯吱作响'的金属疲劳状态",
-      "semantic_seed": {
-        "description": "天干透出2个或以上七杀，且四柱无食神（制）无印星（化）。这不是普通的压力，这是'万米深海潜水艇'。它们的结构一直处于屈服极限（Yield Point）边缘。",
-        "physical_image": "液压机下的钻石 (Diamond under Press) - 外部约束场强度远超核心支撑力",
-        "source": "ai_analyst_gemini",
-        "updated_at": "2025-12-29",
-        "classical_meaning": {
-          "众杀": "七杀攻身无制，压力极大",
-          "结构高压": "一生处于极高应力下，精神或身体的极限测试"
+        },
+        "axiom_mask": {
+          "conservation": "wealth_positive_rob_negative",
+          "topological_specificity": "M_axis_dominant"
         }
-      },
-      "tensor_operator": {
-        "weights": {
-          "E": 0.1,
-          "O": 0.2,
-          "M": 0.05,
-          "S": 0.6,
-          "R": 0.05
-        },
-        "weight_description": {
-          "E": "能级轴：0.10 - 底气极虚，处于透支状态",
-          "O": "秩序轴：0.20 - 虽然有权力的可能性，但代价是消耗生命",
-          "M": "物质轴：0.05 - 财多则党杀，财是催命符",
-          "S": "应力轴：0.60 - 绝对主导。一生都在对抗压力，健康与精神时刻紧绷",
-          "R": "关联轴：0.05 - 六亲无靠，孤军奋战"
-        },
-        "activation_function": {
-          "type": "structural_collapse",
-          "description": "结构坍塌判定：当外部压力过大且无缓冲时，系统发生结构断裂",
-          "parameters": {
-            "yield_point": 0.9,
-            "collapse_trigger": "财流年（财星滋生七杀同时克制印星）"
-          }
-        },
-        "normalized": true,
-        "core_equation": "S_yield = E_killings / (E_resource + E_output)",
-        "equation_description": "当七杀能量远超印比能量时，系统处于屈服极限边缘"
-      },
-      "kinetic_evolution": {
-        "trigger_operators": [
-          {
-            "type": "wealth_year",
-            "description": "财流年：财星滋生七杀（加大压力）同时克制印星（移除缓冲） → 结构坍塌（过劳死、意外、绝症）",
-            "example": "原局众杀攻身无制，流年财星透出"
-          }
-        ],
-        "gain_operators": [
-          {
-            "type": "buffer",
-            "description": "印星化杀：引入缓冲液（印星）将压力转化为支撑力"
-          }
-        ],
-        "geo_damping": 0.9,
-        "dynamic_simulation": {
-          "scenario": "结构高压事件 (Structural Stress Event)",
-          "description": "外部压力过大，必须引入缓冲机制。最忌食伤（制），最喜印星（化）"
-        },
-        "favorable_gods": {
-          "喜": "印星（化杀，引入缓冲液）",
-          "忌": "食伤（制杀，硬碰硬会导致结构碎裂）、财星（党杀，加大压力）"
-        }
-      },
-      "audit_trail": {
-        "coverage_rate": 0.0,
-        "hit_rate": 0.0,
-        "sai_baseline": 0.0,
-        "sai_description": "待拟合",
-        "data_selection_criteria": {
-          "singularity_criteria": "天干透出2个或以上七杀，且四柱无食神（制）无印星（化）",
-          "sample_count": 76,
-          "source": "Tier X奇点集"
-        },
-        "version_history": [
-          {
-            "version": "1.0",
-            "date": "2025-12-29",
-            "source": "ai_analyst_gemini",
-            "description": "从A-03奇点集中提取并注册为独立子格局",
-            "parent_pattern": "A-03"
-          }
-        ]
-      },
-      "singularity_type": "X2-结构高压型",
-      "status": "✅ 已封卷 (Active)",
-      "last_updated": "2025-12-29",
-      "fds_fitting": {
-        "status": "pending",
-        "analyst": "Gemini (AI首席架构师)",
-        "specification_version": "FDS-V1.1 (Final)",
-        "notes": "奇点变体，待独立拟合。当前基于物理原型定义权重，需后续完成Step 3-5全流程",
-        "typical_samples": [
-          {
-            "bazi": "丙寅己亥癸酉己未",
-            "chart": [
-              "丙寅",
-              "己亥",
-              "癸酉",
-              "己未"
-            ],
-            "description": "众杀攻身：天干透出2个七杀，无制化",
-            "purity_score": 125.0
-          },
-          {
-            "bazi": "丙寅己亥癸未己未",
-            "chart": [
-              "丙寅",
-              "己亥",
-              "癸未",
-              "己未"
-            ],
-            "description": "众杀攻身：天干透出2个七杀，无制化",
-            "purity_score": 125.0
-          },
-          {
-            "bazi": "丙寅己亥癸巳己未",
-            "chart": [
-              "丙寅",
-              "己亥",
-              "癸巳",
-              "己未"
-            ],
-            "description": "众杀攻身：天干透出2个七杀，无制化",
-            "purity_score": 115.0
-          }
-        ],
-        "sample_count": 76,
-        "source": "Tier X奇点集"
       }
     }
   }
