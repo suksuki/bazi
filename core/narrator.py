@@ -71,9 +71,46 @@ def generate_holographic_report(
         else:
             logger.warning(f"⚠️ LLM不可用: synthesizer={llm_synthesizer is not None}, use_llm={llm_synthesizer.use_llm if llm_synthesizer else 'N/A'}")
     
-    # 回退到规则生成
+# 回退到规则生成
     logger.info("📝 使用规则生成叙事报告")
     return _generate_with_rules(tensor_data, pattern_name, pattern_state)
+
+
+def stream_holographic_report(
+    tensor_data: Dict[str, Any],
+    pattern_name: str = "A-03",
+    pattern_state: str = "STABLE",
+    use_llm: bool = True
+):
+    """
+    流式生成全息格局报告（基于5维张量数据）
+    
+    Args:
+        tensor_data: 包含投影数据的字典
+        pattern_name: 格局名称
+        pattern_state: 格局状态
+        
+    Yields:
+        生成的叙事文本片段 (Token)
+    """
+    # 尝试使用LLM生成
+    if use_llm:
+        llm_synthesizer = _get_llm_synthesizer()
+        if llm_synthesizer and llm_synthesizer.use_llm:
+            logger.info("🔮 尝试使用LLM流式生成叙事报告...")
+            try:
+                for chunk in _stream_with_llm(tensor_data, pattern_name, pattern_state, llm_synthesizer):
+                    yield chunk
+                return
+            except Exception as e:
+                logger.warning(f"⚠️ LLM流式生成失败，回退到规则生成: {e}")
+        else:
+            logger.warning(f"⚠️ LLM不可用，回退到规则生成")
+    
+    # 回退到规则生成（非流式，一次性产生结果但通过yield模拟流）
+    logger.info("📝 使用规则生成叙事报告")
+    result = _generate_with_rules(tensor_data, pattern_name, pattern_state)
+    yield result
 
 
 def _generate_with_llm(
@@ -188,8 +225,80 @@ def _generate_with_llm(
     except Exception as e:
         logger.error(f"❌ LLM调用失败: {e}", exc_info=True)
     
-    # 如果LLM失败，回退到规则生成
+# 如果LLM失败，回退到规则生成
     return _generate_with_rules(tensor_data, pattern_name, pattern_state)
+
+
+def _stream_with_llm(
+    tensor_data: Dict[str, Any],
+    pattern_name: str,
+    pattern_state: str,
+    llm_synthesizer: LLMSemanticSynthesizer
+):
+    """内部流式调用LLM"""
+    projection = tensor_data.get('projection', {})
+    E = projection.get('E', 0.0)
+    O = projection.get('O', 0.0)
+    M = projection.get('M', 0.0)
+    S = projection.get('S', 0.0)
+    R = projection.get('R', 0.0)
+    alpha = tensor_data.get('alpha', 1.0)
+    
+    # 构建LLM Prompt (与非流式一致)
+    prompt = f"""作为量子命运物理学家，分析以下5维命运张量数据。
+
+[物理遥测数据]
+- 能级轴 (E): {E:.4f} (生命力和抗压底气)
+- 秩序轴 (O): {O:.4f} (社会地位和权力)
+- 物质轴 (M): {M:.4f} (财富和资产)
+- 应力轴 (S): {S:.4f} (系统摩擦和风险)
+- 关联轴 (R): {R:.4f} (人际关系网络)
+- 结构完整性 (Alpha): {alpha:.4f}
+- 当前状态: {pattern_state}
+- 格局: {pattern_name}
+
+[分析指南]
+1. 如果状态是'CRYSTALLIZED'：描述这是一个高度凝聚的瞬间，混沌转化为秩序。
+2. 如果状态是'COLLAPSED'：描述结构崩塌，权柄（O）被应力（S）吞噬。
+3. 如果O高但M低：解释为什么有权力但财富有限（重名轻利）。
+4. 如果S为负：解释这是"负压吸积"的奇迹，高压被完美转化。
+5. 语调：专业、深刻，略带科幻感（如《经济学人》遇见《星际穿越》）。
+6. 长度：简洁（150字以内）。
+
+[格式要求]
+- 必须使用Markdown格式
+- 使用换行符分隔段落
+- 使用---作为水平分隔线
+- 使用**加粗**标记重要概念
+
+请生成分析报告。"""
+    
+    try:
+        if hasattr(llm_synthesizer, '_llm_client') and llm_synthesizer._llm_client:
+            client = llm_synthesizer._llm_client
+            
+            # 使用 Ollama 的流式接口
+            response_stream = client.generate(
+                model=llm_synthesizer.model_name,
+                prompt=prompt,
+                stream=True,
+                options={
+                    'temperature': 0.7,
+                    'top_p': 0.9,
+                    'num_predict': 500
+                }
+            )
+            
+            for chunk in response_stream:
+                if isinstance(chunk, dict):
+                    yield chunk.get('response', '')
+                elif hasattr(chunk, 'response'):
+                    yield chunk.response
+        else:
+            raise ValueError("LLM客户端未就绪")
+    except Exception as e:
+        logger.error(f"❌ LLM流式调用失败: {e}")
+        raise
 
 
 def _generate_with_rules(

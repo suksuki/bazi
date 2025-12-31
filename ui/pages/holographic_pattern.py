@@ -11,7 +11,7 @@ from core.bazi_profile import BaziProfile
 from ui.components.holographic_manifold import render_5d_manifold, get_manifold_description
 from ui.components.phase_timeline import render_phase_timeline
 from ui.components.theme import COLORS, apply_custom_header
-from core.narrator import generate_holographic_report, generate_timeline_insight
+from core.narrator import generate_holographic_report, generate_timeline_insight, stream_holographic_report
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -505,12 +505,9 @@ def render():
     with t_tab2:
         current_data = next((d for d in timeline_data if d['year'] == selected_year), timeline_data[0])
         
-        # [QGA V2.5.5] Use cache to avoid 60s wait for remote LLM
-        @st.cache_data(ttl=3600, show_spinner=False)
-        def get_cached_report(data, pattern_name, state):
-            return generate_holographic_report(data, pattern_name, state)
-
-        with st.status("🔮 正在解析全息轨迹...", expanded=True) as status:
+        # [QGA V2.5.6] Dynamic Streaming LLM Report
+        # Removed full-report cache to enable token-by-token streaming
+        with st.status("🔮 正在实时解析全息轨迹...", expanded=True) as status:
             st.write("🌌 正在提取 5D 张量特征...")
             report_data = {
                 'projection': current_data['projection'], 
@@ -518,17 +515,19 @@ def render():
                 'pattern_state': current_data['pattern_state']
             }
             
-            st.write("🧠 正在请求远程星际语义引擎 (Qwen2.5:3b)...")
-            st.info("💡 首次生成需 30-60s，请稍候...")
+            st.write("🧠 正在联通星际语义引擎 (Qwen2.5)...")
             
-            report = get_cached_report(
-                report_data,
-                result.get('pattern_name'), 
-                current_data['pattern_state'].get('state', 'STABLE')
-            )
-            status.update(label="✅ 轨迹报告联通完毕", state="complete", expanded=False)
+            # 使用 st.write_stream 实现流式输出效果
+            # 创建一个容器用于流式显示报告内容
+            report_container = st.empty()
+            with report_container.container():
+                st.write_stream(stream_holographic_report(
+                    report_data,
+                    result.get('pattern_name'), 
+                    current_data['pattern_state'].get('state', 'STABLE')
+                ))
             
-        st.markdown(report)
+            status.update(label="✅ 轨迹报告解析完毕", state="complete", expanded=False)
         with st.expander("📝 物理公理矩阵 (Transfer Matrix V2.5)"):
             # Display the matrix that was actually used
             active_tm = result.get('transfer_matrix')
