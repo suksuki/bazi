@@ -22,7 +22,7 @@ from lunar_python import Solar
 # Model Imports
 from core.calculator import BaziCalculator
 from core.flux import FluxEngine
-from core.engine_v88 import EngineV88 as QuantumEngine
+from core.unified_engine import UnifiedEngine as QuantumEngine
 from core.engine_graph import GraphNetworkEngine
 from core.bazi_profile import BaziProfile
 from core.exceptions import (
@@ -80,9 +80,9 @@ class BaziController:
             
 
             
-            # V9.5 Performance Optimization: Smart result caching delegated to SimulationController
-            from controllers.simulation_controller import SimulationController
-            self._simulation_controller = SimulationController()
+            # V9.5 Performance Optimization: Smart result caching delegated to SimulationService
+            from services.simulation_service import SimulationService
+            self._simulation_service = SimulationService()
             self._cache_stats: Dict[str, int] = {
                 'hits': 0,
                 'misses': 0,
@@ -176,14 +176,14 @@ class BaziController:
         Invalidate all cached timeline simulation results via SimulationController.
         Called when user input changes.
         """
-        if hasattr(self, '_simulation_controller'):
-             self._simulation_controller.invalidate_cache()
+        if hasattr(self, '_simulation_service'):
+             self._simulation_service.invalidate_cache()
     
     def get_cache_stats(self) -> Dict[str, int]:
         """
         Get cache statistics for monitoring via SimulationController.
         """
-        return self._simulation_controller.get_cache_stats() if hasattr(self, '_simulation_controller') else {}
+        return self._simulation_service.get_cache_stats() if hasattr(self, '_simulation_service') else {}
 
     # =========================================================================
     # Case Normalization Helpers (Delegate to InputController)
@@ -655,8 +655,8 @@ class BaziController:
             if case_data is None:
                 case_data = self._build_case_data(params)
 
-            # Delegate to SimulationController
-            df, handovers = self._simulation_controller.run_timeline(
+            # Delegate to SimulationService
+            df, handovers = self._simulation_service.run_timeline(
                 engine=self._quantum_engine,
                 profile=self._profile,
                 user_input=self._user_input,
@@ -668,8 +668,17 @@ class BaziController:
                 use_cache=use_cache
             )
             
-            # Update cache stats from controller (optional, mainly for monitoring)
-            # self._cache_stats = self._simulation_controller.get_cache_stats()
+            # [V16.1] Map columns to legacy names for compatibility with UI (zeitgeist.py) and tests
+            if not df.empty:
+                df = df.rename(columns={
+                    'score': 'career',
+                    'wealth_score': 'wealth',
+                    'flow_score': 'relationship',
+                    'gan_zhi': 'label' # Alias for legacy tests/UI
+                })
+                # Ensure 'label' exists even if rename failed (though it shouldn't)
+                if 'label' not in df.columns and 'gan_zhi' in df.columns:
+                    df['label'] = df['gan_zhi']
             
             return df, handovers
 
@@ -1589,7 +1598,7 @@ class BaziController:
         # Restore city
         self._city = original_city
         
-        # Rename columns for clarity
+        # Rename columns for clarity (Prefix with baseline_)
         if not df.empty:
             df = df.rename(columns={
                 'career': 'baseline_career',
@@ -1623,7 +1632,7 @@ class BaziController:
         # Run simulation
         df, handover_years = self.run_timeline_simulation(start_year, duration, case_data, params)
         
-        # Rename columns for clarity
+        # Rename columns for clarity (Prefix with geo_)
         if not df.empty:
             df = df.rename(columns={
                 'career': 'geo_career',

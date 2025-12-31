@@ -347,72 +347,88 @@ def get_bazi_table_css():
         
         .bazi-box {
             background: linear-gradient(145deg, 
-                rgba(45,27,78,0.9) 0%, 
-                rgba(26,10,46,0.95) 100%);
-            padding: 20px;
-            border-radius: 16px;
+                rgba(45, 27, 78, 0.4) 0%, 
+                rgba(26, 10, 46, 0.6) 100%);
+            padding: 30px;
+            border-radius: 24px;
             text-align: center;
             font-family: 'Philosopher', 'Noto Serif SC', serif;
             box-shadow: 
-                0 8px 32px rgba(168,85,247,0.3),
-                inset 0 0 40px rgba(0,0,0,0.4);
-            border: 2px solid rgba(255,215,0,0.3);
+                0 15px 45px rgba(0, 0, 0, 0.6),
+                inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             position: relative;
+            margin-bottom: 2rem;
         }
         
         .bazi-box::before {
-            content: '🌙';
+            content: '✧ 🌙 ✧';
             position: absolute;
-            top: -15px;
+            top: -12px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.5rem;
-            animation: moon-glow 3s ease-in-out infinite;
+            font-size: 1.2rem;
+            color: #ffd700;
+            background: #1a0a2e;
+            padding: 0 15px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            animation: moon-glow 4s ease-in-out infinite;
         }
         
         .bazi-table {
             width: 100%;
             table-layout: fixed;
+            border-spacing: 12px;
+            border-collapse: separate;
         }
         
         .bazi-header {
             font-family: 'Cinzel Decorative', cursive;
-            font-size: 1em;
+            font-size: 1.1em;
             color: #40e0d0;
-            margin-bottom: 12px;
-            text-shadow: 0 0 10px rgba(64,224,208,0.5);
+            margin-bottom: 15px;
+            text-shadow: 0 0 12px rgba(64,224,208,0.6);
+            letter-spacing: 2px;
         }
         
-        .stem {
-            font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.2em;
-            color: #e8e8f0;
-            line-height: 1.3;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        .pillar-cell {
+            background: rgba(45, 27, 78, 0.3);
+            border-radius: 15px;
+            padding: 15px 10px;
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            transition: all 0.3s ease;
         }
         
-        .branch {
-            font-family: 'Ma Shan Zheng', cursive;
-            font-size: 2.2em;
-            color: #e8e8f0;
-            line-height: 1.3;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        .pillar-cell:hover {
+            background: rgba(45, 27, 78, 0.5);
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateY(-5px);
+        }
+        
+        .stem, .branch {
+            font-family: 'Ma Shan Zheng', 'Cinzel Decorative', cursive;
+            font-size: 2.8rem;
+            line-height: 1.2;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.8);
         }
         
         .day-master {
             color: #ffd700 !important;
             text-shadow: 
-                0 0 15px rgba(255,215,0,0.7),
-                0 0 30px rgba(168,85,247,0.5);
-            animation: moon-glow 2s ease-in-out infinite;
+                0 0 15px rgba(255,215,0,0.8),
+                0 0 35px rgba(168,85,247,0.6);
+            animation: crystal-pulse 3s ease-in-out infinite;
         }
         
         .energy-val {
-            font-size: 0.8em;
+            font-size: 0.9rem;
             color: #a855f7;
-            font-family: 'Philosopher', serif;
-            margin-top: 4px;
-            text-shadow: 0 0 8px rgba(168,85,247,0.5);
+            font-weight: bold;
+            margin-top: 8px;
+            opacity: 0.8;
         }
         
         @keyframes moon-glow {

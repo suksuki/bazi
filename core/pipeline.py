@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from service.extractor import CaseExtractor
 from service.bio_miner import BioMiner
-from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Modular
+from core.unified_engine import UnifiedEngine as QuantumEngine  # Unified Modular Engine
 
 @dataclass
 class VerificationResult:

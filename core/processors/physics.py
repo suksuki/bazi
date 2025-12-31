@@ -369,8 +369,12 @@ class PhysicsProcessor(BaseProcessor):
                         # V26.0 FIX: Use addition instead of multiplication for positive effects
                         # This ensures consistent behavior with subtraction penalties
                         base_energy = energy.get(transform_to, 0)
-                        liuhe_bonus = branch_events.get('sixHarmony', 5.0)  # Default bonus from config
-                        energy[transform_to] = base_energy + liuhe_bonus  # 六合加成（加法）
+                        liuhe_config = branch_events.get('sixHarmony', {})
+                        if isinstance(liuhe_config, dict):
+                            liuhe_bonus = liuhe_config.get('bonus', 5.0)
+                        else:
+                            liuhe_bonus = float(liuhe_config)
+                        energy[transform_to] = energy.get(transform_to, 0) + liuhe_bonus  # 六合加成（加法）
         
         # 4. 地支六冲 (Six Clashes) - V22.0: Use subtraction penalty instead of multiplication
         # V26.0 FIX: Use correct default value from config (-3.0, not -15.0)

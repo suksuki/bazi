@@ -21,12 +21,8 @@ def render_input_form():
     })
 
     # Use container instead of form for real-time updates
-    from ui.components.theme import COLORS, GLASS_STYLE
-    st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 10px; border-left: 4px solid {COLORS['crystal_blue']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">👤 命主信息</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    from ui.components.theme import COLORS, GLASS_STYLE, sidebar_header
+    sidebar_header("👤 命主信息", "👤")
     
     col1, col2 = st.columns(2)
     with col1:

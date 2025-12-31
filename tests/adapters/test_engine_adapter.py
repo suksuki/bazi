@@ -18,7 +18,7 @@ Usage:
     chart = calc.get_chart()
     
     # Old way (direct import):
-    from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
+    from core.unified_engine import UnifiedEngine as EngineV91  # Alias for compatibility
     engine = EngineV91()
     result = engine.analyze(bazi, day_master, city="Harbin")
     
@@ -145,10 +145,10 @@ class BaziCalculatorAdapter:
 
 class QuantumEngineAdapter:
     """
-    Adapter for QuantumEngine (EngineV88/EngineV91) - provides backward-compatible
+    Adapter for QuantumEngine (UnifiedEngine) - provides backward-compatible
     interface while routing through BaziController.
     
-    This class mimics the EngineV88/EngineV91 API but uses BaziController internally.
+    This class mimics the UnifiedEngine API but uses BaziController internally.
     For tests that require custom params/config, a direct engine instance is created
     while still maintaining Controller access for other operations.
     """
@@ -169,11 +169,9 @@ class QuantumEngineAdapter:
         # If params are provided, create a direct engine instance for compatibility
         # This is needed for tests that require custom configuration
         if params:
-            # Use EngineV88 which accepts 'config' parameter
-            # EngineV91 inherits from EngineV88 but doesn't override __init__
-            from core.engine_v88 import EngineV88
-            # EngineV88 accepts 'config' parameter
-            self._direct_engine = EngineV88(config=params)
+            from core.unified_engine import UnifiedEngine
+            # UnifiedEngine accepts 'config' parameter
+            self._direct_engine = UnifiedEngine(config=params)
     
     def analyze(self, bazi: List[str], day_master: str, 
                 city: str = "Unknown", latitude: Optional[float] = None,

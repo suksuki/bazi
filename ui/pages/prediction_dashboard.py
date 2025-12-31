@@ -15,7 +15,7 @@ from ui.components.cards import DestinyCards
 
 # MVC
 from controllers.bazi_controller import BaziController
-from core.engine_v88 import EngineV88 as QuantumEngine
+from core.unified_engine import UnifiedEngine as QuantumEngine
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
 import numpy as np
@@ -29,6 +29,7 @@ def render_prediction_dashboard():
     Fully MVC compliant.
     """
     controller = BaziController()
+    selected_yun = None  # Initialize to prevent UnboundLocalError
     
     # 1. State Verification & Hydration
     # [Fix] Hydrate Controller from Session State (Form Data)
@@ -51,12 +52,14 @@ def render_prediction_dashboard():
                 )
         except Exception as e:
             logger.error(f"Failed to hydrate controller: {e}")
-            st.error("数据加载失败，请重新输入")
+            from ui.components.theme import render_crystal_notification
+            render_crystal_notification("数据加载失败，请重新输入", "error")
             return
 
     user_data = controller.get_user_data()
     if not user_data or not user_data.get('name'):
-        st.info("👈 请在左侧边栏输入您的出生信息并点击 '开始排盘'。")
+        from ui.components.theme import render_crystal_notification
+        render_crystal_notification("👈 请在左侧边栏输入您的出生信息并点击 '启卦排盘'。", "info")
         return
 
     # Display Notifications
@@ -72,61 +75,57 @@ def render_prediction_dashboard():
     # 3. UI Header
     from ui.components.theme import COLORS, GLASS_STYLE, card_container
     
-    # 4. Render Chart (Four Pillars)
+    st.markdown(get_bazi_table_css(), unsafe_allow_html=True)
+    st.markdown(get_animation_css(), unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Calculate Liu Nian for energy context (Default to current)
+    sim_year = st.session_state.get('sim_year', datetime.datetime.now().year)
+    base_year = 1924 
+    offset = sim_year - base_year
+    gd = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]
+    zhi = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"]
+    ln_gz = f"{gd[offset % 10]}{zhi[offset % 12]}"
+
+    # Map flux particles to pe_list [y_s, y_b, m_s, m_b, d_s, d_b, h_s, h_b]
+    # Get current flux data for energy bars
+    current_flux = controller.get_flux_data(selected_yun=selected_yun, current_gan_zhi=ln_gz)
+    
+    pe_list = [0.0] * 8
+    if current_flux and 'particles' in current_flux:
+        particles = current_flux['particles']
+        for i in range(min(len(particles), 8)):
+            pe_list[i] = particles[i].get('strength', 0)
+
+    wang_shuai_str = controller.get_wang_shuai_str(current_flux)
+    
+    # 4. Render Primary Chart (Four Pillars)
     st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 25px; margin-bottom: 2rem; border-top: 4px solid {COLORS['mystic_gold']};">
-            <h2 style="text-align: center; color: {COLORS['mystic_gold']}; margin-top: 0;">✨ 命盘真境 (Destiny Chart)</h2>
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <h2 style="color: {COLORS['mystic_gold']}; font-family: 'Cinzel Decorative', cursive;">✨ 命盘真境 (Destiny Chart)</h2>
         </div>
     """, unsafe_allow_html=True)
     
-    cols = st.columns(4)
-    pillars = ['year', 'month', 'day', 'hour']
-    labels = ["🏰 年柱", "🍂 月柱", "🌅 日柱", "⏳ 时柱"]
-    
-    for i, p_key in enumerate(pillars):
-        p_data = chart.get(p_key, {})
-        stem = p_data.get('stem', '?')
-        branch = p_data.get('branch', '?')
-        
-        # Theme
-        t_stem = get_theme(stem)
-        t_branch = get_theme(branch)
-        dm_glow = "box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);" if (p_key == 'day') else ""
-        
-        # Hidden Stems Display
-        hidden_list = p_data.get('hidden_stems', [])
-        hidden_html = '<div style="display: flex; gap: 5px; justify-content: center; margin-top: 10px;">'
-        for h_char in hidden_list:
-            h_theme = get_theme(h_char)
-            hidden_html += f'<div style="width: 24px; height: 24px; border-radius: 50%; background: {h_theme["grad"]}; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white;" title="{h_char}">{h_char}</div>'
-        hidden_html += '</div>'
-        
-        with cols[i]:
-            st.markdown(f"""
-                <div style="{GLASS_STYLE} padding: 15px; text-align: center; {dm_glow}">
-                    <div style="color: {COLORS['teal_mist']}; font-size: 0.9rem; margin-bottom: 10px;">{labels[i]}</div>
-                    <div style="background: {t_stem['grad']}; padding: 10px; border-radius: 8px; margin-bottom: 5px;">
-                        <div style="font-size: 1.5rem; font-weight: bold; color: white;">{stem}</div>
-                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8);">{t_stem['icon']} {t_stem['name']}</div>
-                    </div>
-                    <div style="background: {t_branch['grad']}; padding: 10px; border-radius: 8px;">
-                        <div style="font-size: 1.5rem; font-weight: bold; color: white;">{branch}</div>
-                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8);">{t_branch['icon']} {t_branch['name']}</div>
-                    </div>
-                    {hidden_html}
-                </div>
-            """, unsafe_allow_html=True)
+    DestinyCards.render_bazi_table_with_engine(
+        chart=chart,
+        selected_yun=selected_yun,
+        current_gan_zhi=ln_gz,
+        pe_list=pe_list,
+        wang_shuai_str=wang_shuai_str
+    )
 
     st.markdown("<br>", unsafe_allow_html=True)
     
     # 5. Time Machine (Da Yun & Liu Nian)
-    st.subheader("⏳ 流年推演 (Fate Simulation)")
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 2rem; border-right: 4px solid {COLORS['mystic_gold']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">⏳ 运势推演 (Fate Simulation)</h3>
+        </div>
+    """, unsafe_allow_html=True)
     
     current_year = datetime.datetime.now().year
     c1, c2 = st.columns([2, 1])
-    
-    selected_yun = None
-    current_gan_zhi = None 
     
     # Da Yun Selection
     if luck_cycles:
@@ -137,23 +136,20 @@ def render_prediction_dashboard():
                 if c['start_year'] <= current_year <= c['end_year']:
                     default_idx = i
                     break
-            selected_yun_str = st.selectbox("当前大运 (Da Yun)", yun_options, index=default_idx)
+            selected_yun_str = st.selectbox("选择大运 (Da Yun)", yun_options, index=default_idx)
             selected_yun = luck_cycles[yun_options.index(selected_yun_str)]
             
     # Liu Nian Selection
     with c2:
-        sim_year = st.number_input("模拟流年 (Year)", min_value=1900, max_value=2100, value=current_year)
-        # Calculate Liu Nian
-        base_year = 1924 # Jia Zi
+        sim_year = st.number_input("设置流年 (Year)", min_value=1900, max_value=2100, value=current_year, key="sim_year_input")
+        # Reuse ln_gz calculation for metric display
         offset = sim_year - base_year
-        gd = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]
-        zhi = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"]
         ln_gan = gd[offset % 10]
         ln_zhi = zhi[offset % 12]
         ln_gan_zhi = f"{ln_gan}{ln_zhi}"
-        st.metric("流年", f"{sim_year} {ln_gan_zhi}")
+        st.metric("演算流年", f"{sim_year} {ln_gan_zhi}")
         
-    current_gan_zhi = ln_gan_zhi # Focus on Liu Nian for Physics
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # 6. Core Analysis (Flux Data)
     from ui.components.theme import COLORS, GLASS_STYLE
@@ -163,8 +159,8 @@ def render_prediction_dashboard():
         </div>
     """, unsafe_allow_html=True)
     
-    # Get Flux Data via Controller
-    flux_data = controller.get_flux_data(selected_yun, current_gan_zhi)
+    # Use already computed current_flux
+    flux_data = current_flux
     
     if flux_data:
         # A. Wang/Shuai
@@ -260,7 +256,8 @@ def render_prediction_dashboard():
                     
     except Exception as e:
         logger.error(f"Rule matching failed: {e}")
-        st.warning("规则匹配暂时不可用")
+        from ui.components.theme import render_crystal_notification
+        render_crystal_notification("规则匹配暂时不可用", "warning")
 
     # 7. Quantum Physics Diagnostics (Advanced Smart Chart)
     st.markdown(f"""
@@ -406,7 +403,8 @@ def render_prediction_dashboard():
             st.info(a)
             
     else:
-        st.info("Computing Advanced Physics...")
+        from ui.components.theme import render_crystal_notification
+        render_crystal_notification("Computing Advanced Physics...", "info")
     
     st.caption("注：雷达图展示了该年运下的十神能量相对强弱；控制论面板显示了深层物理交互状态。")
     

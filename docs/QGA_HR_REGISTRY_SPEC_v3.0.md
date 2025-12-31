@@ -165,3 +165,14 @@ QGA-HR V3.0 是全息格局的最终数据载体。它继承了 V2.5 的 **“�
     ]
   }
 }
+
+---
+
+## 六、 服务层集成 (Service Layer Consumption)
+
+V3.0 注册表不再由控制器直接解析，而是通过专门的服务层进行处理：
+
+1. **SimulationService**: 负责解析 `physics_kernel` 与 `matching_router`。它将 `@config` 引用解析为当前的物理参数，并执行子格局路由逻辑。
+2. **ReportGeneratorService**: 负责根据全息维度输出 ($\mathcal{T}_{fate}$) 生成语义报告。它根据 `meta_info` 中的 `category` 决定生成的文案风格与重点。
+
+---

@@ -14,7 +14,7 @@ from utils.notification_manager import get_notification_manager
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 # 🚀 V9.1 Unified Engine
-from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
+from core.unified_engine import UnifiedEngine as EngineV91  # Alias for compatibility
 from core.context import DestinyContext
 from core.bazi_profile import VirtualBaziProfile, BaziProfile
 
@@ -114,11 +114,11 @@ def load_cases():
 # @st.cache_resource
 def get_engine():
     print("🔄 Reloading Engine V9.1...")
-    # Force reload to pick up hotfixes in engine_v88.py
+    # Force reload to pick up hotfixes in unified_engine.py
     import importlib
-    import core.engine_v88
-    importlib.reload(core.engine_v88)
-    from core.engine_v88 import EngineV88 as EngineV91  # Alias for compatibility
+    import core.unified_engine
+    importlib.reload(core.unified_engine)
+    from core.unified_engine import UnifiedEngine as EngineV91  # Alias for compatibility
     return EngineV91()
 
 engine = get_engine()

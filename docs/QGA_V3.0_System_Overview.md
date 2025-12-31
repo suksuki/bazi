@@ -64,6 +64,14 @@ V3.0 采用**双规范体系**管理系统架构，彻底实现逻辑与数据�
 | **QGA-HR** | V3.0 | 注册表 Schema | `docs/QGA_HR_REGISTRY_SPEC_v3.0.md` |
 | **Module Audit** | V1.0 | 模块合规审计 | `docs/QGA_V17_Module_Audit_Report.md` |
 
+### 2.3 Service-Oriented Architecture (SOA)
+
+V3.0 引入了服务层（Service Layer），旨在通过逻辑封装提升系统的可维护性和可测试性：
+
+- **SimulationService**: 统一了仿真逻辑。支持高并发批量采样（51.8万样本）、全球风险发现以及时间序列能量轨迹预测。
+- **ReportGeneratorService**: 解耦了语义分析与控制器。负责格局的人格化、财富预测及干预建议的生成。
+- **BaziController**: 作为 MVC 的枢纽，不再承担复杂的仿真运算，而是通过编排上述服务来响应前端请求。
+
 ---
 
 ## 三、 系统能力矩阵

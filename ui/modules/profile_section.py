@@ -12,11 +12,8 @@ def render_profile_section():
     """
     pm = ProfileManager()
     
-    st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 10px; border-left: 4px solid {COLORS['mystic_gold']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📂 档案管理</h3>
-        </div>
-    """, unsafe_allow_html=True)
+    from ui.components.theme import sidebar_header
+    sidebar_header("📂 档案管理", "📜")
     
     # --- Tabs: Profile Management & Quick Bazi Test ---
     tab_prof, tab_bazi = st.tabs(["👥 档案列表", "⚡ 快速测算"])

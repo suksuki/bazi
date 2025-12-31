@@ -191,80 +191,59 @@ class DestinyCards:
         <div class="bazi-box">
             <table class="bazi-table">
                 <tr>
-                    <td><div class="bazi-header h-anim-year">🌲 年柱 (Year)</div></td>
-                    <td><div class="bazi-header h-anim-month">🌤️ 月柱 (Month)</div></td>
-                    <td class="col-day"><div class="bazi-header h-anim-day">👑 日柱 (Day)</div></td>
-                    <td><div class="bazi-header h-anim-hour">🏹 时柱 (Hour)</div></td>
-                    <td style="width: 10px;"></td> <!-- Spacer -->
-                    <td class="dynamic-col"><div class="bazi-header h-anim-dayun">🛣️ 大运 (Dyn)</div></td>
-                    <td class="dynamic-col"><div class="bazi-header h-anim-liunian">🌊 流年 (Year)</div></td>
+                    <td><div class="bazi-header h-anim-year">🏰 年柱</div></td>
+                    <td><div class="bazi-header h-anim-month">🍂 月柱</div></td>
+                    <td><div class="bazi-header h-anim-day">👑 日柱</div></td>
+                    <td><div class="bazi-header h-anim-hour">⏳ 时柱</div></td>
+                    <td style="width: 20px;"></td>
+                    <td><div class="bazi-header h-anim-dayun">🛣️ 大运</div></td>
+                    <td><div class="bazi-header h-anim-liunian">🌊 流年</div></td>
                 </tr>
                 <tr>
-                    <!-- Stems -->
-                    <td class="stem" style="color: {get_nature_color(y_s)}">
-                        {y_s}
-                        <div class="{ 'energy-val' if pe[0]>2 else 'energy-val-low'}">{pe[0]}</div>
-                        <div class="int-container">{i_y_s}</div>
+                    <!-- Year -->
+                    <td class="pillar-cell">
+                        <div class="stem" style="color: {get_nature_color(y_s)}">{y_s}</div>
+                        <div class="branch" style="color: {get_nature_color(y_b)}">{y_b}</div>
+                        <div class="energy-val">{pe[0] + pe[1]:.1f}</div>
+                        <div class="int-container">{i_y_s}{i_y_b}</div>
                     </td>
-                    <td class="stem" style="color: {get_nature_color(m_s)}">
-                        {m_s}
-                        <div class="{ 'energy-val' if pe[2]>2 else 'energy-val-low'}">{pe[2]}</div>
-                        <div class="int-container">{i_m_s}</div>
+                    <!-- Month -->
+                    <td class="pillar-cell">
+                        <div class="stem" style="color: {get_nature_color(m_s)}">{m_s}</div>
+                        <div class="branch" style="color: {get_nature_color(m_b)}">{m_b}</div>
+                        <div class="energy-val">{pe[2] + pe[3]:.1f}</div>
+                        <div class="int-container">{i_m_s}{i_m_b}</div>
                     </td>
-                    <td class="stem day-master col-day" style="color: {get_nature_color(d_s)}">
-                        {d_s}
-                        <div class="{ 'energy-val' if pe[4]>2 else 'energy-val-low'}">{pe[4]}</div>
-                        <div class="int-container"><span style="font-size:0.4em; color:#666;">命主</span></div>
+                    <!-- Day (Day Master) -->
+                    <td class="pillar-cell dm-glow">
+                        <div class="stem day-master" style="color: {get_nature_color(d_s)}">{d_s}</div>
+                        <div class="branch day-master" style="color: {get_nature_color(d_b)}">{d_b}</div>
+                        <div class="energy-val" style="color: #ffd700;">{pe[4] + pe[5]:.1f}</div>
+                        <div class="int-container" style="color: #ffd700; font-size: 0.6rem;">✦ 命主 ✦</div>
                     </td>
-                    <td class="stem" style="color: {get_nature_color(h_s)}">
-                        {h_s}
-                        <div class="{ 'energy-val' if pe[6]>2 else 'energy-val-low'}">{pe[6]}</div>
-                        <div class="int-container">{i_h_s}</div>
+                    <!-- Hour -->
+                    <td class="pillar-cell">
+                        <div class="stem" style="color: {get_nature_color(h_s)}">{h_s}</div>
+                        <div class="branch" style="color: {get_nature_color(h_b)}">{h_b}</div>
+                        <div class="energy-val">{pe[6] + pe[7]:.1f}</div>
+                        <div class="int-container">{i_h_s}{i_h_b}</div>
                     </td>
+                    
                     <td></td>
-                    <td class="stem dynamic-col" style="color: {get_nature_color(l_s)}">
-                        {l_s}
-                        <div style="font-size:0.5em; color:#888;">&nbsp;</div>
-                        <div class="int-container">{i_l_s}</div>
+                    
+                    <!-- Luck (Da Yun) -->
+                    <td class="pillar-cell" style="opacity: 0.9;">
+                        <div class="stem" style="color: {get_nature_color(l_s)}">{l_s}</div>
+                        <div class="branch" style="color: {get_nature_color(l_b)}">{l_b}</div>
+                        <div class="energy-val">-</div>
+                        <div class="int-container">{i_l_s}{i_l_b}</div>
                     </td>
-                    <td class="stem dynamic-col" style="color: {get_nature_color(n_s)}">
-                        {n_s}
-                        <div style="font-size:0.5em; color:#888;">&nbsp;</div>
-                        <div class="int-container">{i_n_s}</div>
-                    </td>
-                </tr>
-                <tr>
-                    <!-- Branches -->
-                    <td class="branch" style="color: {get_nature_color(y_b)}">
-                        {y_b}
-                        <div class="{ 'energy-val' if pe[1]>2 else 'energy-val-low'}">{pe[1]}</div>
-                        <div class="int-container">{i_y_b}</div>
-                    </td>
-                    <td class="branch" style="color: {get_nature_color(m_b)}">
-                        {m_b}
-                        <div class="{ 'energy-val' if pe[3]>2 else 'energy-val-low'}">{pe[3]}</div>
-                        <div class="int-container">{i_m_b}</div>
-                    </td>
-                    <td class="branch day-master col-day" style="color: {get_nature_color(d_b)}">
-                        {d_b}
-                        <div class="{ 'energy-val' if pe[5]>2 else 'energy-val-low'}">{pe[5]}</div>
-                        <div class="int-container"><span style="font-size:0.4em; color:#666;">（坐）</span></div>
-                    </td>
-                    <td class="branch" style="color: {get_nature_color(h_b)}">
-                        {h_b}
-                        <div class="{ 'energy-val' if pe[7]>2 else 'energy-val-low'}">{pe[7]}</div>
-                        <div class="int-container">{i_h_b}</div>
-                    </td>
-                    <td></td>
-                    <td class="branch dynamic-col" style="color: {get_nature_color(l_b)}">
-                        {l_b}
-                        <div style="font-size:0.5em; color:#888;">&nbsp;</div>
-                        <div class="int-container">{i_l_b}</div>
-                    </td>
-                    <td class="branch dynamic-col" style="color: {get_nature_color(n_b)}">
-                        {n_b}
-                        <div style="font-size:0.5em; color:#888;">&nbsp;</div>
-                        <div class="int-container">{i_n_b}</div>
+                    <!-- Year (Liu Nian) -->
+                    <td class="pillar-cell" style="opacity: 0.9; border-color: rgba(64, 224, 208, 0.3);">
+                        <div class="stem" style="color: {get_nature_color(n_s)}">{n_s}</div>
+                        <div class="branch" style="color: {get_nature_color(n_b)}">{n_b}</div>
+                        <div class="energy-val">-</div>
+                        <div class="int-container">{i_n_s}{i_n_b}</div>
                     </td>
                 </tr>
             </table>

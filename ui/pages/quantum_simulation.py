@@ -9,20 +9,17 @@ import os
 import json
 from datetime import datetime
 
-from core.trinity.core.engines.simulation_controller import SimulationController
+from services.simulation_service import SimulationService
 from core.bazi_profile import BaziProfile, VirtualBaziProfile
 from core.trinity.core.nexus.definitions import BaziParticleNexus
 from core.translation_util import T
-from ui.components.theme import COLORS, GLASS_STYLE, apply_custom_header
+from ui.components.theme import COLORS, GLASS_STYLE, apply_custom_header, sidebar_header, render_crystal_notification
 
 def render():
     # --- 样式注入 ---
+    # Global styles from assets/style.css already handled background and basic geometry.
     st.markdown(f"""
     <style>
-    .stApp {{
-        background: radial-gradient(circle at 50% 50%, #0d0015 0%, #000000 100%);
-        color: #e2e8f0;
-    }}
     .metric-card {{
         background: rgba(45, 27, 78, 0.3);
         border: 1px solid rgba(64, 224, 208, 0.2);
@@ -35,8 +32,6 @@ def render():
         border-color: #40e0d0;
         box-shadow: 0 0 15px rgba(64, 224, 208, 0.2);
     }}
-    .metric-label {{ font-size: 12px; color: #888; text-transform: uppercase; }}
-    .metric-value {{ font-size: 24px; font-weight: bold; color: #40e0d0; margin-top: 5px; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -48,8 +43,8 @@ def render():
         # Clear legacy data on version bump
         if "scouted_charts" in st.session_state: del st.session_state.scouted_charts
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        st.session_state.sim_controller = SimulationController(project_root)
-        # Ensure the version is set for the new controller instance
+        st.session_state.sim_controller = SimulationService(project_root)
+        # Ensure the version is set for the new service instance
         st.session_state.sim_controller.version = "15.6.0"
     
     controller = st.session_state.sim_controller
@@ -70,7 +65,7 @@ def render():
 
     # --- 侧边栏：核心控制 ---
     with st.sidebar:
-        st.markdown("### 🧬 系统导航")
+        sidebar_header("🧬 系统导航", "🧬")
         if st.button("📊 核心看板", use_container_width=True):
             st.session_state.sim_view = "dashboard"
             st.rerun()
@@ -82,13 +77,13 @@ def render():
         if st.button("🛠️ 命运重塑实验", use_container_width=True):
             st.session_state.sim_view = "intervention"
             st.rerun()
-
+ 
         if st.button("⛩️ 真实档案实弹审计", use_container_width=True):
             st.session_state.sim_view = "real_world_audit"
             st.rerun()
-
+ 
         st.divider()
-        st.markdown("### 📑 物理模型仿真")
+        sidebar_header("📑 物理模型仿真", "📑")
         
         # 使用翻译工具类
         
@@ -155,10 +150,10 @@ def render():
                 st.rerun()
         
         st.divider()
-        st.markdown("### ⚙️ 参数配置")
+        sidebar_header("⚙️ 参数配置", "⚙️")
         sim_damping = st.slider("环境阻尼", 0.1, 2.0, 1.0, step=0.1)
         controller.model.config["damping_factor"] = sim_damping
-
+ 
         if st.button("🛑 停止运行", use_container_width=True):
             controller.stop_simulation()
             st.session_state.sim_active = False
@@ -174,7 +169,7 @@ def render():
                     progress_callback=lambda curr, tot, stats: progress_bar.progress(curr/tot))
                 st.session_state.grand_res = grand_res
             elif sim_op_type == "scout_samples":
-                st.info(f"🔭 正在执行‘排骨帮’极速扫描: {st.session_state.target_track}")
+                render_crystal_notification(f"🔭 正在执行‘排骨帮’极速扫描: {st.session_state.target_track}", "info")
                 scout_res = controller.scout_pattern_samples(st.session_state.target_track,
                     progress_callback=lambda curr, tot, stats: (
                         progress_bar.progress(curr/tot),
@@ -366,7 +361,7 @@ def render():
                 fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="#888")
                 st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("💡 暂无数据，请通过侧边栏启动仿真。")
+            render_crystal_notification("💡 暂无数据，请通过侧边栏启动仿真。", "info")
 
     elif view == "grand_audit":
         st.markdown("### 🏛️ 大一统因果审计")

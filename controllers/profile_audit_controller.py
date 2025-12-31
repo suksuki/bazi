@@ -14,6 +14,7 @@ from core.models.profile_audit_engines import (
     SystemOptimizationEngine,
     MediumCompensationEngine
 )
+from services.report_generator_service import ReportGeneratorService
 from core.bazi_profile import BaziProfile
 from core.engine_graph import GraphNetworkEngine
 
@@ -38,9 +39,21 @@ class ProfileAuditController:
         # 初始化三个核心引擎
         self.pfa_engine = PatternFrictionAnalysisEngine()
         self.soa_engine = SystemOptimizationEngine()
+
         self.mca_engine = MediumCompensationEngine()
         
+        # Report Service
+        self.report_service = ReportGeneratorService()
+        
         logger.info("ProfileAuditController initialized")
+
+    def set_llm_debug_data(self, debug_data: Dict):
+        """Callback for ReportGeneratorService to set debug data."""
+        self._llm_debug_data = debug_data
+        
+    def set_llm_element_calibration(self, calibration: Dict):
+        """Callback for ReportGeneratorService to set calibration data."""
+        self._llm_element_calibration = calibration
     
     def get_all_profiles(self) -> List[Dict[str, Any]]:
         """
@@ -526,477 +539,29 @@ class ProfileAuditController:
         [QGA V24.3] 集成LLM语义合成器
         """
         
-        # 1. 核心矛盾
-        core_conflict = self._generate_core_conflict(pfa_result, soa_result)
+        # 6. 生成语义报告（基于实时激活格局）
+        # [QGA V24.3] Delegated to ReportGeneratorService
+        active_patterns_fallback = getattr(self.pfa_engine, '_last_detected_patterns', [])
         
-        # 2. 深度画像（300字左右）
-        # [QGA V24.3] 优先使用LLM生成，回退到规则生成
-        persona = self._generate_persona_with_llm(
-            profile_data, pfa_result, soa_result, force_vectors, mca_result, year, pattern_audit, use_llm,
-            city=city, micro_env=micro_env
+        result = self.report_service.generate_semantic_report(
+            profile_data, pfa_result, soa_result, mca_result, force_vectors, year,
+            pattern_audit, use_llm, bazi_profile, city, micro_env,
+            llm_debug_data_saver=self,
+            active_patterns_fallback=active_patterns_fallback
         )
         
-        # 3. 财富相预测
-        wealth_prediction = self._generate_wealth_prediction(soa_result, force_vectors, year, mca_result)
-        
-        # 4. 干预药方
-        prescription = self._generate_prescription(soa_result, mca_result, pfa_result)
-        
-        result = {
-            'core_conflict': core_conflict,
-            'persona': persona,
-            'wealth_prediction': wealth_prediction,
-            'prescription': prescription
-        }
-        
-        # [QGA V24.4] 如果LLM生成了debug信息，添加到结果中
+        # [QGA V24.4] 如果LLM生成了debug信息，添加到结果中 (Set via callback)
         if hasattr(self, '_llm_debug_data'):
             debug_info = self._llm_debug_data
             result.update(debug_info)
-            logger.info(f"✅ Debug数据已添加到报告: debug_data={debug_info.get('debug_data') is not None}, "
-                       f"debug_prompt={bool(debug_info.get('debug_prompt'))}, "
-                       f"debug_response={bool(debug_info.get('debug_response'))}")
-            # 清除，避免影响下次审计
+            logger.info(f"✅ Debug数据已添加到报告")
+            # Clear to avoid pollution
             delattr(self, '_llm_debug_data')
-        else:
-            logger.warning("⚠️ _llm_debug_data不存在，可能LLM未调用或调用失败")
         
         return result
     
-    def _generate_core_conflict(self, pfa_result, soa_result) -> str:
-        """生成核心矛盾"""
-        friction = pfa_result.friction_index
-        stability = soa_result.stability_score
-        
-        if friction > 60 and stability < 0.5:
-            return "命局中存在严重的格局冲突，系统稳定性极低，导致理想与现实的强烈撕裂，需要外部干预来调和矛盾。"
-        elif friction > 40:
-            return f"命局中存在格局冲突（{', '.join(pfa_result.conflicting_patterns[:2]) if pfa_result.conflicting_patterns else '内在矛盾'}），导致性格中的自我拆台，需要寻找平衡点。"
-        elif stability < 0.5:
-            return "系统能量分布不稳定，存在内耗，需要通过优化来提升稳定性。"
-        else:
-            return "命局基本协调，但存在微妙的平衡点需要维护。"
-    
-    def _generate_persona_with_llm(self, profile_data: Dict, pfa_result, soa_result,
-                                   force_vectors: Dict, mca_result=None, year: int = None,
-                                   pattern_audit: Dict = None, use_llm: bool = False,
-                                   city: str = None, micro_env: List[str] = None) -> str:
-        """
-        [QGA V24.3] 使用LLM生成画像（优先），回退到规则生成
-        
-        Args:
-            use_llm: 是否使用LLM（从UI传入）
-        """
-        if not use_llm:
-            # 直接使用规则生成
-            return self._generate_persona(
-                profile_data, pfa_result, soa_result, force_vectors, mca_result, year, pattern_audit
-            )
-        
-        try:
-            from core.models.llm_semantic_synthesizer import LLMSemanticSynthesizer
-            
-            synthesizer = LLMSemanticSynthesizer(use_llm=True)
-            
-            # 获取激活格局
-            if pattern_audit:
-                active_patterns_list = pattern_audit.get('patterns', [])
-                # [QGA V24.7] 传递base_vector_bias和geo_context给LLM合成器
-                # 创建一个包装字典，包含patterns列表和元数据
-                active_patterns = {
-                    'patterns_list': active_patterns_list,
-                    'base_vector_bias': pattern_audit.get('base_vector_bias'),
-                    'geo_context': pattern_audit.get('geo_context', '')
-                }
-                
-                synthesized_field = {
-                    'has_luck': bool(pattern_audit.get('luck_pillar')),
-                    'has_year': bool(pattern_audit.get('year_pillar')),
-                    'geo_element': None  # 可以从mca_result获取
-                }
-            else:
-                # 回退：从PFA结果获取格局
-                patterns_list_fallback = getattr(self.pfa_engine, '_last_detected_patterns', [])
-                active_patterns = {
-                    'patterns_list': patterns_list_fallback,
-                    'base_vector_bias': None,
-                    'geo_context': ''
-                }
-                synthesized_field = {}
-            
-            # 获取额外信息用于结构化数据
-            bazi_profile = None
-            try:
-                birth_date = datetime(
-                    profile_data['year'],
-                    profile_data['month'],
-                    profile_data['day'],
-                    profile_data.get('hour', 12),
-                    profile_data.get('minute', 0)
-                )
-                gender = 1 if profile_data.get('gender') == '男' else 0
-                bazi_profile = BaziProfile(birth_date, gender)
-            except:
-                pass
-            
-            # 构建地理信息
-            geo_info_parts = []
-            if city:
-                geo_info_parts.append(f"城市{city}")
-            if micro_env:
-                geo_info_parts.extend(micro_env)
-            geo_info = " | ".join(geo_info_parts) if geo_info_parts else None
-            
-            # 获取日主
-            day_master = None
-            if bazi_profile:
-                day_master_stem = bazi_profile.pillars['day'][0]
-                day_master_element = self._get_element_from_stem(day_master_stem)
-                day_master_yinyang = "阴" if day_master_stem in ['乙', '丁', '己', '辛', '癸'] else "阳"
-                day_master = f"{day_master_stem}{day_master_element} ({day_master_yinyang}{day_master_element})"
-            
-            # 获取大运和流年柱
-            luck_pillar_str = None
-            year_pillar_str = None
-            if bazi_profile and year:
-                try:
-                    luck_pillar = bazi_profile.get_luck_pillar(year)
-                    if luck_pillar:
-                        luck_pillar_str = f"{luck_pillar[0]}{luck_pillar[1]}"
-                    year_pillar = bazi_profile.get_year_pillar(year)
-                    if year_pillar:
-                        year_pillar_str = f"{year_pillar[0]}{year_pillar[1]}"
-                except:
-                    pass
-            
-            # 使用LLM合成（结构化协议）
-            result = synthesizer.synthesize_persona(
-                active_patterns,
-                synthesized_field,
-                profile_data.get('name', '此人'),
-                day_master=day_master,
-                force_vectors=force_vectors,
-                year=year,
-                luck_pillar=luck_pillar_str,
-                year_pillar=year_pillar_str,
-                geo_info=geo_info
-            )
-            
-            persona = result.get('persona', '')
-            element_calibration = result.get('element_calibration')
-            
-            # [QGA V24.4] 保存debug信息到类属性，供UI使用
-            # 无论LLM成功还是失败，都保存debug_data
-            self._llm_debug_data = {
-                'debug_data': result.get('debug_data'),
-                'debug_prompt': result.get('debug_prompt', ''),
-                'debug_response': result.get('debug_response', ''),
-                'debug_error': result.get('debug_error')
-            }
-            
-            # [QGA V24.3] 如果LLM推导出五行偏移，存储到类属性，供后续使用
-            if element_calibration:
-                logger.info(f"LLM推导的五行偏移: {element_calibration}")
-                # 将校准信息存储到类属性，供UI使用
-                self._llm_element_calibration = element_calibration
-            
-            # 如果LLM生成失败，回退到规则生成
-            if not persona or persona.startswith("LLM生成失败"):
-                logger.warning("LLM生成失败，回退到规则生成")
-                # 即使回退，也保留debug_data
-                fallback_persona = self._generate_persona(
-                    profile_data, pfa_result, soa_result, force_vectors, mca_result, year, pattern_audit
-                )
-                # 确保debug_data仍然存在
-                if not self._llm_debug_data.get('debug_data'):
-                    # 如果没有debug_data，至少保存结构化数据的占位符
-                    logger.warning("LLM结果中没有debug_data，但已尝试保存")
-                return fallback_persona
-            
-            return persona
-            
-        except Exception as e:
-            logger.error(f"LLM合成失败: {e}，回退到规则生成")
-            # 即使异常，也尝试保存debug_data（如果有的话）
-            # 构建一个基本的结构化数据
-            try:
-                from core.models.llm_semantic_synthesizer import LLMSemanticSynthesizer
-                synthesizer = LLMSemanticSynthesizer(use_llm=False)
-                if pattern_audit:
-                    active_patterns = pattern_audit.get('patterns', [])
-                else:
-                    active_patterns = getattr(self.pfa_engine, '_last_detected_patterns', [])
-                
-                if active_patterns:
-                    synthesized_field = {
-                        'has_luck': bool(pattern_audit.get('luck_pillar') if pattern_audit else False),
-                        'has_year': bool(pattern_audit.get('year_pillar') if pattern_audit else False),
-                        'geo_element': None
-                    }
-                    structured_data = synthesizer._build_structured_data(
-                        active_patterns, synthesized_field, profile_data.get('name', '此人'),
-                        None, force_vectors, year, None, None, None
-                    )
-                    self._llm_debug_data = {
-                        'debug_data': structured_data,
-                        'debug_prompt': f"LLM调用异常: {str(e)}",
-                        'debug_response': '',
-                        'debug_error': str(e)
-                    }
-            except:
-                pass  # 如果构建失败，至少不阻塞
-        
-            return self._generate_persona(
-                profile_data, pfa_result, soa_result, force_vectors, mca_result, year, pattern_audit
-            )
-    
-    def _generate_persona(self, profile_data: Dict, pfa_result, soa_result,
-                         force_vectors: Dict, mca_result=None, year: int = None,
-                         pattern_audit: Dict = None) -> str:
-        """
-        生成深度画像（300字左右）
-        [QGA V23.5] 使用决策树逻辑，而非标签堆砌
-        IF (Primary Pattern = X) AND (Conflict = Y) THEN Output [Persona A]
-        """
-        name = profile_data.get('name', '此人')
-        friction = pfa_result.friction_index
-        
-        # [QGA V24.2] 基于实时激活格局生成画像
-        # 优先使用时空耦合后的最终状态
-        parts = []
-        
-        # 优先级0：检查是否有格局状态变化
-        if pattern_audit:
-            state_changes = pattern_audit.get('state_changes', [])
-            if state_changes:
-                change = state_changes[0]  # 取第一个状态变化
-                parts.append(f"{name}的命局在{year}年发生了**格局状态变化**。")
-                parts.append(f"原局格局【{change.get('original', '')}】")
-                parts.append(f"在时空耦合（大运+流年+地理）作用下，")
-                parts.append(f"已退化为【{change.get('current', '')}】。")
-                parts.append(f"{change.get('impact', '')}")
-                parts.append(f"因此，你的用神和应对策略必须立即调整。")
-                return " ".join(parts)
-        
-        # [QGA V24.0] 模式优先驱动：先检查特殊格局
-        special_pattern = getattr(self.pfa_engine, '_special_pattern_locked', None)
-        
-        # 决策树：先治病，再强身
-        # [QGA V24.0] 优先级0：特殊格局锁死，围绕格局生命主题生成画像
-        if special_pattern:
-            pattern_name = special_pattern.get('name', '特殊格局')
-            life_theme = special_pattern.get('life_theme', '')
-            pattern_type = special_pattern.get('type')
-            
-            parts.append(f"{name}的命局呈现**{pattern_name}**格局，这是超稳态结构。")
-            parts.append(life_theme)
-            
-            # 根据格局类型生成详细画像
-            if pattern_type == 'shang_guan_shang_jin':
-                parts.append("你具有极强的创造力和表达能力，不受传统规则约束。")
-                parts.append("适合从事艺术、创作、自由职业等需要发挥才华的领域。")
-                parts.append("财富来源主要是通过才华变现，而非传统意义上的稳定收入。")
-            elif pattern_type == 'from_wealth':
-                parts.append("你的人生以财富为核心追求，具有极强的商业头脑和经营能力。")
-                parts.append("善于发现商机，能够快速积累财富。")
-                parts.append("但需要注意平衡物质追求与精神追求，避免成为金钱的奴隶。")
-            elif pattern_type == 'superconductor':
-                parts.append("你追求纯粹与完美，具有超常的专注力和执行力。")
-                parts.append("适合从事需要极致专注的领域，如科研、精密制造等。")
-                parts.append("但需要注意避免过度追求完美导致的心理压力。")
-            
-            return " ".join(parts)
-        
-        # [QGA V23.5] 获取格局优先级信息
-        prioritized_patterns = getattr(self.pfa_engine, '_prioritized_patterns', {})
-        primary_pattern = prioritized_patterns.get('primary')
-        conflict_patterns = prioritized_patterns.get('conflicts', [])
-        
-        # 第一优先级：如果有严重的相位冲突，必须先谈这个"痛点"
-        if conflict_patterns and friction > 40:
-            conflict_name = conflict_patterns[0].get('name', '格局冲突')
-            
-            # 根据冲突格局类型生成画像
-            # [QGA V25.0] 逻辑真空化：从PatternDefinitionRegistry读取冲突描述
-            from core.models.pattern_definition_registry import get_pattern_definition_registry
-            
-            registry = get_pattern_definition_registry()
-            # 尝试从注册表获取格局定义
-            definition = None
-            for def_item in registry.get_all_definitions():
-                if def_item.pattern_name in conflict_name:
-                    definition = def_item
-                    break
-            
-            if definition:
-                parts.append(f"{name}的命局核心矛盾是**{definition.core_conflict}**。")
-                if definition.semantic_keywords:
-                    parts.append(f"这种格局意味着{', '.join(definition.semantic_keywords[:2])}，")
-                    parts.append("导致理想与现实的强烈撕裂感成为你人生的主旋律。")
-            else:
-                parts.append(f"{name}的命局存在严重的格局冲突（{conflict_name}），")
-                parts.append("这是你人生最大的'痛点'。")
-                parts.append("系统稳定性极低，导致理想与现实的强烈撕裂。")
-        
-        # 第二优先级：主格局（月令格神）
-        elif primary_pattern:
-            primary_name = primary_pattern.get('name', '主格局')
-            parts.append(f"{name}的命局以{primary_name}为主导，")
-            parts.append("这是你人生的底色和核心动力源。")
-            
-            # 基于主格局生成性格特征
-            # [QGA V25.0] 逻辑真空化：移除硬编码格局名称判断
-            # 格局描述逻辑将由Phase 2的特征向量提取器负责
-            if primary_name:
-                parts.append("你具有强烈的责任感和秩序感，但可能过于拘谨，需要适度突破。")
-            elif '财' in primary_name:
-                parts.append("你具有强烈的财富欲望和商业头脑，但可能过于功利，需要平衡精神追求。")
-            elif '印' in primary_name:
-                parts.append("你具有强烈的学习能力和包容心，但可能过于依赖，需要培养独立性。")
-        
-        # 第三优先级：如果没有格局，基于五行分析
-        else:
-            max_element = max(force_vectors.items(), key=lambda x: x[1])
-            element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-            dominant_element = element_cn.get(max_element[0], max_element[0])
-            parts.append(f"{name}的命局以{dominant_element}元素为主导，")
-            
-            behavior_map = {
-                '金': '性格刚毅果断，但可能过于刚硬',
-                '木': '性格生机勃勃，但可能过于急躁',
-                '水': '性格灵活变通，但可能缺乏定力',
-                '火': '性格热情奔放，但可能过于激烈',
-                '土': '性格稳重踏实，但可能过于保守'
-            }
-            parts.append(behavior_map.get(dominant_element, '性格特征明显'))
-        
-        # 环境因子影响（如果有）
-        if mca_result and mca_result.geo_correction:
-            max_geo = max(mca_result.geo_correction.items(), key=lambda x: x[1])
-            if max_geo[1] > 1.1:
-                element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-                geo_cn = element_cn.get(max_geo[0], max_geo[0])
-                parts.append(f" 当前环境（{geo_cn}属性补强）进一步强化了这种特质。")
-        
-        return " ".join(parts)
-    
-    def _generate_wealth_prediction(self, soa_result, force_vectors: Dict, year: int, 
-                                   mca_result=None) -> str:
-        """
-        生成财富相预测
-        [优化3] 使用因果链逻辑：[物理原因 -> 行为效应 -> 命运结果]
-        """
-        stability = soa_result.stability_score
-        entropy_reduction = soa_result.entropy_reduction
-        
-        # [优化3] 因果链生成
-        parts = []
-        
-        # 1. 物理原因（If）
-        if stability > 0.7 and entropy_reduction > 0.1:
-            wealth_type = "稳定积累型"
-            wealth_level = "大富"
-            parts.append("由于系统高度稳定（稳定性{:.2f}），能量流动顺畅，")
-            parts.append("通过优化能够显著降低内耗（熵值降低{:.3f}），")
-        elif stability > 0.6:
-            wealth_type = "稳步增长型"
-            wealth_level = "小康"
-            parts.append("由于系统稳定性良好（{:.2f}），")
-            parts.append("能量分布相对均衡，")
-        elif entropy_reduction > 0.05:
-            wealth_type = "暗能吸积型"
-            wealth_level = "中富"
-            parts.append("由于通过优化能够降低内耗（熵值降低{:.3f}），")
-            parts.append("系统处于暗能吸积状态，")
-        elif stability < 0.4:
-            wealth_type = "动荡泄漏型"
-            wealth_level = "动荡"
-            parts.append("由于系统稳定性极低（{:.2f}），存在明显内耗，")
-            parts.append("能量场不稳定，")
-        else:
-            wealth_type = "平衡维持型"
-            wealth_level = "小康"
-            parts.append("由于系统基本平衡（稳定性{:.2f}），")
-            parts.append("能量分布相对稳定，")
-        
-        # 2. 行为效应（Then）
-        if wealth_type == "稳定积累型":
-            parts.append("财富能够稳定积累，属于大富之相。")
-        elif wealth_type == "稳步增长型":
-            parts.append("财富能够稳步增长，属于小康之相。")
-        elif wealth_type == "暗能吸积型":
-            parts.append("财富属于暗能吸积型，需要激活引力场才能转化为实际收益。")
-        elif wealth_type == "动荡泄漏型":
-            parts.append("财富容易动荡泄漏，需要外部干预来调和矛盾。")
-        else:
-            parts.append("财富能够维持，属于小康之相。")
-        
-        # 3. 命运结果（Because）
-        if mca_result and mca_result.geo_correction:
-            max_geo = max(mca_result.geo_correction.items(), key=lambda x: x[1])
-            if max_geo[1] > 1.1:
-                element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-                geo_cn = element_cn.get(max_geo[0], max_geo[0])
-                parts.append(f" 当前环境（{geo_cn}属性补强）有助于财富积累。")
-            elif max_geo[1] < 0.95:
-                element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-                geo_cn = element_cn.get(max_geo[0], max_geo[0])
-                parts.append(f" ⚠️ 当前环境（{geo_cn}属性削弱）可能阻碍财富增长，建议调整。")
-        
-        if entropy_reduction > 0.1:
-            parts.append(" 建议选择能够激活能量场的城市和环境，以最大化财富潜力。")
-        
-        desc = "".join(parts).format(stability, entropy_reduction, stability, entropy_reduction, stability)
-        
-        return f"**财富类型**: {wealth_type} | **财富等级**: {wealth_level}\n\n{desc}"
-    
-    def _generate_prescription(self, soa_result, mca_result, pfa_result) -> str:
-        """生成干预药方"""
-        parts = []
-        
-        # 用神（最优元素）
-        if soa_result.optimal_elements:
-            best_element = list(soa_result.optimal_elements.keys())[0]
-            element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-            best_cn = element_cn.get(best_element, best_element)
-            amount = soa_result.optimal_elements[best_element]
-            parts.append(f"**用神**: {best_cn}（强度{amount:.2f}）")
-        
-        # 喜神（相生元素）
-        if soa_result.optimal_elements:
-            best_element = list(soa_result.optimal_elements.keys())[0]
-            generation_map = {
-                'wood': '水', 'fire': '木', 'earth': '火',
-                'metal': '土', 'water': '金'
-            }
-            like_element = generation_map.get(best_element)
-            if like_element:
-                element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-                parts.append(f"**喜神**: {element_cn.get(like_element, like_element)}")
-        
-        # 忌神（相克元素）
-        if soa_result.optimal_elements:
-            best_element = list(soa_result.optimal_elements.keys())[0]
-            control_map = {
-                'wood': '金', 'fire': '水', 'earth': '木',
-                'metal': '火', 'water': '土'
-            }
-            avoid_element = control_map.get(best_element)
-            if avoid_element:
-                element_cn = {'metal': '金', 'wood': '木', 'water': '水', 'fire': '火', 'earth': '土'}
-                parts.append(f"**忌神**: {element_cn.get(avoid_element, avoid_element)}")
-        
-        # 调候建议
-        if mca_result and mca_result.semantic_interpretation:
-            parts.append(f"\n**环境调候**: {mca_result.semantic_interpretation}")
-        
-        # 具体建议
-        if pfa_result.friction_index > 60:
-            parts.append("\n**改运建议**: 命局存在严重冲突，建议通过环境调整和能量注入来调和矛盾，避免在冲突激化的年份做出重大决策。")
-        elif soa_result.entropy_reduction > 0.1:
-            parts.append("\n**改运建议**: 通过优化能够显著改善系统状态，建议在有利的年份和环境进行重要决策。")
-        
-        return "\n".join(parts) if parts else "当前系统状态较优，保持现状即可。"
+    # _generate_core_conflict, _generate_persona_with_llm, _generate_persona,
+    # _generate_wealth_prediction, _generate_prescription have been moved to ReportGeneratorService
     
     def _analyze_year_patterns(self, bazi_profile: BaziProfile, year: int,
                                pfa_result, soa_result, geo_element: str = None,

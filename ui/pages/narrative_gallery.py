@@ -218,7 +218,7 @@ with tab2:
     import sys
     import os
     sys.path.append(os.getcwd())
-    from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
+    from core.unified_engine import UnifiedEngine as QuantumEngine  # V9.1 Unified Engine
     
     # Load Golden Parameters
     try:

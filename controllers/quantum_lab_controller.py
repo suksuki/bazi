@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 
 from core.engine_graph import GraphNetworkEngine
-from core.engine_v88 import EngineV88 as QuantumEngine
+from core.unified_engine import UnifiedEngine as QuantumEngine
 from core.bazi_profile import VirtualBaziProfile, BaziProfile
 from core.config_schema import DEFAULT_FULL_ALGO_PARAMS
 from core.models.config_model import ConfigModel

@@ -12,7 +12,7 @@ st.set_page_config(page_title="Quantum Calibration Console", page_icon="🎛️"
 
 # Add project root to sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
-from core.engine_v88 import EngineV88 as QuantumEngine  # V8.8 Pure Modular
+from core.unified_engine import UnifiedEngine as QuantumEngine  # V9.1 Unified Engine
 
 # --- CONSTANTS ---
 CASES_PATH = os.path.join(os.path.dirname(__file__), "../../data/calibration_cases.json")
@@ -73,7 +73,7 @@ def save_params(new_params):
 
 # --- UI ---
 st.title("🎛️ Quantum Calibration Console")
-st.markdown("### V8.8 Physics Engine Tuning (Hot-Reload)")
+st.markdown("### V9.1 Physics Engine Tuning (Hot-Reload)")
 
 from core.config_manager import ConfigManager
 

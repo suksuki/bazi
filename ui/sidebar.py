@@ -14,7 +14,7 @@ def render_sidebar(app_mode):
     """
     # Early return for pages that have their own sidebar
     # This is critical for MVC compliance - each page controls its own sidebar
-    if app_mode not in ["🔮 智能排盘 (Prediction)"]:
+    if app_mode not in ["🔮 智能排盘"]:
         return
     
     with st.sidebar:
@@ -29,7 +29,8 @@ def render_sidebar(app_mode):
             init_session_state({'selected_model_name': saved_model})
             
         # Only render for Prediction mode
-        st.markdown("### 📜 档案与输入 (Profile)")
+        from ui.components.theme import sidebar_header
+        sidebar_header("🔮 命理档案", "📜")
         render_profile_section()
         st.divider()
         submit = render_input_form()

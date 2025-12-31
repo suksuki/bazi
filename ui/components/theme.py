@@ -23,21 +23,25 @@ COLORS = {
 # Glassmorphism Box Style
 GLASS_STYLE = f"""
     background: linear-gradient(145deg, 
-        rgba(45, 27, 78, 0.8) 0%, 
-        rgba(26, 10, 46, 0.85) 100%);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+        rgba(45, 27, 78, 0.45) 0%, 
+        rgba(26, 10, 46, 0.6) 100%);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.5),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
 """
 
 def apply_custom_header(title: str, subtitle: str = ""):
-    """Renders a premium ornate header."""
+    """Renders a premium ornate header with shimmer effect."""
     st.markdown(f"""
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <h1 style="margin-bottom: 0;">{title}</h1>
-            <p style="color: {COLORS['teal_mist']}; font-style: italic; letter-spacing: 2px;">{subtitle}</p>
+        <div style="text-align: center; margin-bottom: 3rem; padding-top: 1rem;">
+            <h1 class="shimmer-text" style="margin-bottom: 0.5rem; font-size: 3.5rem !important;">{title}</h1>
+            <p style="color: {COLORS['teal_mist']}; font-style: italic; letter-spacing: 4px; font-size: 1.1rem; opacity: 0.9;">
+                ✦ {subtitle} ✦
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -47,6 +51,21 @@ def card_container(content: str, title: str = "", card_type: str = "default"):
     st.markdown(f"""
         <div style="{GLASS_STYLE} border-top: 3px solid {border_color}; padding: 20px; margin-bottom: 1rem;">
             {f'<h3 style="color: {COLORS["mystic_gold"]}; margin-top: 0;">{title}</h3>' if title else ''}
-            {content}
+            <div>{content}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+def sidebar_header(title: str, icon: str = ""):
+    """Renders a premium header for the sidebar."""
+    st.markdown(f'<div class="sidebar-title">{icon} {title}</div>', unsafe_allow_html=True)
+
+def render_crystal_notification(message: str, type: str = "info"):
+    """
+    Renders a theme-compliant notification box.
+    Types: info, success, warning, error
+    """
+    st.markdown(f"""
+        <div class="crystal-alert crystal-{type}">
+            {message}
         </div>
     """, unsafe_allow_html=True)

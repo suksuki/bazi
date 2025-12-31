@@ -202,7 +202,7 @@ class TestFluxEngineAPI:
         """Wang Shuai string calculation."""
         flux_data = controller.get_flux_data()
         ws_str = controller.get_wang_shuai_str(flux_data)
-        assert ws_str in ["身旺", "身弱", "假从/极弱"]
+        assert ws_str in ["身旺", "身弱", "假从/极弱", "身旺（专旺）", "身中和", "从格/极弱"]
 
 
 # Run all tests

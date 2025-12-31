@@ -17,6 +17,7 @@ sys.path.insert(0, str(project_root))
 
 # MVC: 只导入Controller，不直接操作Model或Engine
 from controllers.wealth_verification_controller import WealthVerificationController
+from ui.components.theme import apply_custom_header, sidebar_header, render_crystal_notification
 
 
 def render():
@@ -29,9 +30,7 @@ def render():
     )
     
     # 页面标题
-    st.title("🌊 V12.0 量子财富引力场")
-    st.caption("基于F, C, σ三维向量模型的0-100岁完整时间序列模拟与验证")
-    st.markdown("---")
+    apply_custom_header("🌊 V12.0 量子财富引力场", "基于F, C, σ三维向量模型的0-100岁完整时间序列模拟与验证")
     
     # MVC: 初始化Controller
     controller = WealthVerificationController()
@@ -45,12 +44,12 @@ def render():
             with open(celeb_file, 'r', encoding='utf-8') as f:
                 celebrities = json.load(f)
         except Exception as e:
-            st.error(f"❌ 加载名人案例库失败: {e}")
+            render_crystal_notification(f"❌ 加载名人案例库失败: {e}", "error")
     else:
-        st.warning("⚠️ 名人案例库文件不存在，请先创建 `data/celebrity_wealth.json`")
+        render_crystal_notification("⚠️ 名人案例库文件不存在，请先创建 `data/celebrity_wealth.json`", "warning")
     
     if not celebrities:
-        st.info("💡 提示：名人案例库为空，请先添加案例数据")
+        render_crystal_notification("💡 提示：名人案例库为空，请先添加案例数据", "info")
         return
     
     # ========== 侧边栏：案例选择与信息 ==========
@@ -70,7 +69,7 @@ def render():
         st.markdown("---")
         
         # 案例信息卡片
-        st.header("📋 案例信息")
+        sidebar_header("📋 案例信息", "📋")
         st.markdown(f"**姓名**: {selected_celeb['name']}")
         st.markdown(f"**八字**: {' '.join(selected_celeb['bazi'])}")
         st.markdown(f"**日主**: {selected_celeb['day_master']}")
@@ -83,7 +82,7 @@ def render():
         # 事件统计
         events = selected_celeb.get('events', [])
         if events:
-            st.header("📊 事件统计")
+            sidebar_header("📊 事件统计", "📊")
             boom_count = sum(1 for e in events if e.get('type') == 'boom')
             crash_count = sum(1 for e in events if e.get('type') == 'crash')
             spike_count = sum(1 for e in events if e.get('type') == 'spike')
@@ -143,7 +142,7 @@ def render():
     # ========== 显示结果 ==========
     timeline_key = f'v12_timeline_{selected_celeb["id"]}'
     if timeline_key not in st.session_state:
-        st.info("💡 请点击「开始模拟」按钮生成财富曲线")
+        render_crystal_notification("💡 请点击「开始模拟」按钮生成财富曲线", "info")
         return
     
     timeline = st.session_state[timeline_key]
