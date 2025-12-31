@@ -19,11 +19,17 @@ class HolographicMatrixFitter:
     Matrix T: 5x7
     """
     
-    DIM_INPUT = 7
+    DIM_INPUT = 15
     DIM_OUTPUT = 5
     
     # Key mapping for indexing
-    INPUT_KEYS = ["parallel", "resource", "power", "wealth", "output", "clash", "combination"]
+    INPUT_KEYS = [
+        "bi_jian", "jie_cai", "shi_shen", "shang_guan", "pian_cai", "zheng_cai", 
+        "qi_sha", "zheng_guan", "pian_yin", "zheng_yin", 
+        "parallel", "resource", "power", "wealth", "output",
+        "clash", "combination"
+    ]
+    DIM_INPUT = len(INPUT_KEYS)
     OUTPUT_KEYS = ["E", "O", "M", "S", "R"]
 
     def __init__(self, learning_rate: float = 0.05, regularization: float = 0.01, saturation_k: float = 3.0):

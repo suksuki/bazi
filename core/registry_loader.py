@@ -40,6 +40,15 @@ from core.trinity.core.engines.structural_vibration import StructuralVibrationEn
 
 logger = logging.getLogger(__name__)
 
+def count_vaults_helper(chart: List[str]) -> int:
+    """Calculates the number of earth branches (vaults) in a chart."""
+    vaults = {'辰', '戌', '丑', '未'}
+    count = 0
+    for pillar in chart:
+        if len(pillar) >= 2 and pillar[1] in vaults:
+            count += 1
+    return count
+
 
 class RegistryLoader:
     """
@@ -104,8 +113,9 @@ class RegistryLoader:
         
         # 2. 嵌套查找
         for pid, data in patterns.items():
-            if 'sub_patterns_registry' in data:
-                for sub in data['sub_patterns_registry']:
+            sub_patterns_list = data.get('sub_patterns_registry') or data.get('sub_patterns') or []
+            if sub_patterns_list:
+                for sub in sub_patterns_list:
                     if sub.get('id') == pattern_id:
                         # 自动合并父格局属性
                         combined = sub.copy()
@@ -169,8 +179,8 @@ class RegistryLoader:
             logger.warning(f"格局 {pattern_id} 版本为 {version}，不支持feature_anchors（需要V2.0+）")
             return None
         
-        # 兼容性适配：检查是否有sub_patterns_registry (Schema V2.5)
-        sub_patterns = pattern.get('sub_patterns_registry')
+        # 兼容性适配：检查是否有sub_patterns/sub_patterns_registry (Schema V2.5)
+        sub_patterns = pattern.get('sub_patterns_registry') or pattern.get('sub_patterns')
         if sub_patterns:
             anchors = {'singularity_centroids': []}
             for sp in sub_patterns:
@@ -460,18 +470,89 @@ class RegistryLoader:
         if not version:
             version = pattern.get('meta_info', {}).get('version', '1.0')
             
-        is_v2 = version.startswith('2.')
-        # V2.1+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+)
-        if is_v2 and version >= '2.1':
+        is_v2 = str(version).startswith('2.')
+        has_matrix = pattern.get('physics_kernel', {}).get('transfer_matrix') is not None
+        
+        # V2.1+/V1.5+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+)
+        if is_v2 or str(version) >= '1.5' or has_matrix:
+            # [V2.5] Pattern Routing Protocol
+            active_pattern = pattern
+            sub_id = None
+            
+            router = pattern.get('matching_router', {})
+            if router and router.get('strategies'):
+                # Execute routing logic
+                for strategy in router['strategies']:
+                    target_id = strategy.get('target')
+                    logic = strategy.get('logic', '')
+                    
+                    if strategy.get('priority') == 3 and logic == 'default':
+                        # Standard Fallback
+                        break
+                    
+                    # Compute preliminary projection (V1.5 Heuristic)
+                    bj = compute_energy_flux(chart, day_master, "比肩")
+                    jc = compute_energy_flux(chart, day_master, "劫财")
+                    zy = compute_energy_flux(chart, day_master, "正印")
+                    py = compute_energy_flux(chart, day_master, "偏印")
+                    zc = compute_energy_flux(chart, day_master, "正财")
+                    pc = compute_energy_flux(chart, day_master, "偏财")
+                    
+                    # E = bj + jc + 0.8*resource
+                    # M = zc + pc
+                    # E = bj + jc + 0.8*resource
+                    # M = zc + pc
+                    e_est = bj + jc + 0.5 * (zy + py)
+                    m_est = zc + pc
+                    
+                    # O = dg + qg (Direct Officer + Seven Killings)
+                    dg = compute_energy_flux(chart, day_master, "正官")
+                    qg = compute_energy_flux(chart, day_master, "七杀")
+                    o_est = dg + qg
+                    
+                    v_count = count_vaults_helper(chart)
+                    
+                    match = False
+                    # D-01 Logic
+                    if "E < 0.15" in logic and e_est < 0.20 and m_est > 0.8: match = True
+                    if "vault_count >= 3" in logic and v_count >= 3: match = True
+                    
+                    # A-03 Logic (FDS-V1.5.1)
+                    if "vault_count >= 2" in logic and v_count >= 2: match = True
+                    
+                    if "E < 0.35" in logic and "O > 0.55" in logic:
+                         # SP_A03_OVERKILL
+                         if e_est < 0.40 and o_est > 0.50: match = True # Relaxed slightly for heuristics
+                    
+                    if "E > 0.65" in logic and "O < 0.25" in logic:
+                         # SP_A03_NO_CONTROL
+                         if e_est > 0.60 and o_est < 0.30: match = True
+                    
+                    if match:
+                        sub_patterns = pattern.get('sub_patterns_registry') or pattern.get('sub_patterns') or []
+                        for sp in sub_patterns:
+                            if sp.get('id') == target_id:
+                                active_pattern = sp
+                                sub_id = target_id
+                                # Apply matrix_override immediately for accurate final calculation
+                                override = sp.get('matrix_override', {})
+                                if override.get('transfer_matrix'):
+                                    transfer_matrix = override['transfer_matrix']
+                                logger.info(f"Router redirection triggered: {pattern_id} -> {sub_id}")
+                                break
+                        if sub_id: break
+
             physics_kernel = pattern.get('physics_kernel', {})
-            # [V2.5] 优先支持 matrix_override (子格局特有)
-            transfer_matrix = pattern.get('matrix_override') or physics_kernel.get('transfer_matrix')
+            # [V2.5] Support nested matrix_override
+            transfer_matrix = active_pattern.get('matrix_override', {}).get('transfer_matrix') or \
+                              physics_kernel.get('transfer_matrix')
             
             if transfer_matrix:
-                # 使用矩阵投影
-                return self._calculate_with_transfer_matrix(
+                res = self._calculate_with_transfer_matrix(
                     pattern_id, chart, day_master, transfer_matrix, context
                 )
+                if sub_id: res['sub_id'] = sub_id
+                return res
         
         # V2.0/V1.0: 使用旧的tensor_operator逻辑
         tensor_operator = pattern.get('tensor_operator', {})
@@ -870,24 +951,34 @@ class RegistryLoader:
         Returns:
             计算结果字典，包含projection、sai等
         """
-        # 1. 计算十神频率向量
-        parallel = compute_energy_flux(chart, day_master, "比肩") + \
-                   compute_energy_flux(chart, day_master, "劫财")
-        resource = compute_energy_flux(chart, day_master, "正印") + \
-                   compute_energy_flux(chart, day_master, "偏印")
-        power = compute_energy_flux(chart, day_master, "七杀") + \
-                compute_energy_flux(chart, day_master, "正官")
-        wealth = compute_energy_flux(chart, day_master, "正财") + \
-                 compute_energy_flux(chart, day_master, "偏财")
-        output = compute_energy_flux(chart, day_master, "食神") + \
-                 compute_energy_flux(chart, day_master, "伤官")
-        
+        bj = compute_energy_flux(chart, day_master, "比肩")
+        jc = compute_energy_flux(chart, day_master, "劫财")
+        ss = compute_energy_flux(chart, day_master, "食神")
+        sg = compute_energy_flux(chart, day_master, "伤官")
+        pc = compute_energy_flux(chart, day_master, "偏财")
+        zc = compute_energy_flux(chart, day_master, "正财")
+        qs = compute_energy_flux(chart, day_master, "七杀")
+        zg = compute_energy_flux(chart, day_master, "正官")
+        py = compute_energy_flux(chart, day_master, "偏印")
+        zy = compute_energy_flux(chart, day_master, "正印")
+
         frequency_vector = {
-            "parallel": parallel,
-            "resource": resource,
-            "power": power,
-            "wealth": wealth,
-            "output": output
+            "bi_jian": bj,
+            "jie_cai": jc,
+            "shi_shen": ss,
+            "shang_guan": sg,
+            "pian_cai": pc,
+            "zheng_cai": zc,
+            "qi_sha": qs,
+            "zheng_guan": zg,
+            "pian_yin": py,
+            "zheng_yin": zy,
+            # [LEGACY COMPAT] 保持聚合字段
+            "parallel": bj + jc,
+            "resource": zy + py,
+            "power": zg + qs,
+            "wealth": zc + pc,
+            "output": ss + sg
         }
         
         # 2. [V1.4] Use InfluenceBus for Environmental Arbitration (No Hardcoding)
@@ -929,9 +1020,31 @@ class RegistryLoader:
         clash_energy *= (1.0 + (impedance - 1.0) * 0.2)
         
         # Update frequency_vector with arbitrated values + interactions
-        frequency_vector = {k: verdict['expectation'].elements.get(k, 0) for k in frequency_vector.keys()}
-        frequency_vector['clash'] = round(clash_energy, 4)
-        frequency_vector['combination'] = 0.0 # Placeholder for future logic
+        frequency_vector = {
+            "bi_jian": bj, "jie_cai": jc, "shi_shen": ss, "shang_guan": sg,
+            "pian_cai": pc, "zheng_cai": zc, "qi_sha": qs, "zheng_guan": zg,
+            "pian_yin": py, "zheng_yin": zy,
+            # [FDS-V1.5 Spec Support]
+            "Day_Master": bj,
+            "Rob_Wealth": jc,
+            "Food": ss,
+            "Injuries": sg,
+            "Indirect_Wealth": pc,
+            "Direct_Wealth": zc,
+            "Seven_Killings": qs,
+            "Direct_Officer": zg,
+            "Resource": zy + py, # Spec often aggregates
+            "Parallel": bj + jc,
+            "vault_count": count_vaults_helper(chart),
+            "clash": round(clash_energy, 4),
+            "combination": 0.0,
+            # [LEGACY COMPAT] Restored
+            "parallel": bj + jc,
+            "resource": zy + py,
+            "power": zg + qs,
+            "wealth": zc + pc,
+            "output": ss + sg
+        }
         
         injection_logs = verdict.get('logs', {})
         
@@ -1046,7 +1159,8 @@ class RegistryLoader:
             'frequency_vector': frequency_vector,
             'alpha': alpha,
             'recognition': recognition_result,
-            'pattern_state': pattern_state
+            'pattern_state': pattern_state,
+            'transfer_matrix': transfer_matrix
         }
 
         # [V2.5] 动态相变处理器 (Phase Transition Processor)

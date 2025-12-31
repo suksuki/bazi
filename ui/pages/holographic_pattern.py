@@ -17,6 +17,41 @@ from core.narrator import generate_holographic_report, generate_timeline_insight
 logger = logging.getLogger(__name__)
 
 def render():
+    st.markdown("""
+    <style>
+    .stMetric {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+    .stMetric:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: #40e0d0;
+        transform: translateY(-2px);
+    }
+    .report-card {
+        background: rgba(0, 0, 0, 0.2);
+        border-left: 5px solid #40e0d0;
+        padding: 20px;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+    /* Animated Gradient Background for Header */
+    .css-10trblm {
+        background: linear-gradient(-45deg, #000428, #004e92, #000000, #1c1c1c);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+    }
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     apply_custom_header("全息格局观测站", "FDS-V1.5 Holographic Manifold Observatory")
     
     controller = HolographicPatternController()
@@ -42,6 +77,9 @@ def render():
         profile_names['演示：羊刃架杀·经典案例'] = 'demo'
         profile_names['演示：将星本部 (Standard)'] = 'demo_standard'
         profile_names['演示：库刃爆发 (Vault)'] = 'demo_vault'
+        profile_names['演示：D-01 正财格 (Standard)'] = 'demo_d01_std'
+        profile_names['演示：D-01 从财格 (Surrender)'] = 'demo_d01_surrender'
+        profile_names['演示：D-01 墓库格 (Vault)'] = 'demo_d01_vault'
         
         current_profile_id = st.session_state.get('current_profile_id', list(profile_names.values())[0] if profile_names else 'demo')
         # Ensure current_profile_id is valid
@@ -80,6 +118,27 @@ def render():
                 'year_pillar': '壬辰', 'month_pillar': '庚戌', 
                 'day_pillar': '庚寅', 'hour_pillar': '丙戌',
                 'day_master': '庚'
+            }
+        elif selected_profile_id == 'demo_d01_std':
+            _profile_preview = {
+                'name': 'D-01 正财标准', 'gender': '男', 
+                'year_pillar': '庚辰', 'month_pillar': '乙酉', 
+                'day_pillar': '丁丑', 'hour_pillar': '庚子',
+                'day_master': '丁'
+            }
+        elif selected_profile_id == 'demo_d01_surrender':
+            _profile_preview = {
+                'name': 'D-01 弃命从财', 'gender': '男', 
+                'year_pillar': '庚申', 'month_pillar': '辛酉', 
+                'day_pillar': '丙申', 'hour_pillar': '戊子',
+                'day_master': '丙'
+            }
+        elif selected_profile_id == 'demo_d01_vault':
+            _profile_preview = {
+                'name': 'D-01 顶级墓库', 'gender': '男', 
+                'year_pillar': '戊戌', 'month_pillar': '乙未', 
+                'day_pillar': '甲辰', 'hour_pillar': '庚午',
+                'day_master': '甲'
             }
         else:
             _profile_preview = next((p for p in profiles if p['id'] == selected_profile_id), None)
@@ -264,6 +323,12 @@ def render():
             'year_pillar': '壬辰', 'month_pillar': '庚戌', 'day_pillar': '庚寅', 'hour_pillar': '丙戌',
             'day_master': '庚'
         }
+    elif selected_profile_id == 'demo_d01_std':
+        profile_data = {'name': 'D-01 正财标准', 'gender': '男', 'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '丁丑', 'hour_pillar': '庚子', 'day_master': '丁'}
+    elif selected_profile_id == 'demo_d01_surrender':
+        profile_data = {'name': 'D-01 弃命从财', 'gender': '男', 'year_pillar': '庚申', 'month_pillar': '辛酉', 'day_pillar': '丙申', 'hour_pillar': '戊子', 'day_master': '丙'}
+    elif selected_profile_id == 'demo_d01_vault':
+        profile_data = {'name': 'D-01 顶级墓库', 'gender': '男', 'year_pillar': '戊戌', 'month_pillar': '乙未', 'day_pillar': '甲辰', 'hour_pillar': '庚午', 'day_master': '甲'}
     else:
         profile_data = next((p for p in profiles if p['id'] == selected_profile_id), None)
         
@@ -343,6 +408,11 @@ def render():
     m1.metric("SAI (总对齐力)", f"{sai:.4f}")
     m2.metric("M-Dist (马氏距离)", f"{recognition.get('mahalanobis_dist', 0):.4f}")
     m3.metric("Precision (精密评分)", f"{recognition.get('precision_score', 0):.4f}")
+    
+    # [V2.5] Routing Trace
+    sub_id = result.get('sub_id')
+    if sub_id:
+        st.caption(f"🛣️ **路由追踪**: {selected_pattern_id} ➔ `{sub_id}` (奇点激活)")
     
     p_type = recognition.get('pattern_type', 'UNKNOWN')
     status_color = "#40e0d0" if "STANDARD" in p_type or "ACTIVATED" in p_type else "#ff6b6b"
@@ -429,6 +499,21 @@ def render():
             status.update(label="✅ 轨迹报告联通完毕", state="complete", expanded=False)
             
         st.markdown(report)
+        with st.expander("📝 物理公理矩阵 (Transfer Matrix V2.5)"):
+            # Display the matrix that was actually used
+            active_tm = result.get('transfer_matrix')
+            if active_tm:
+                rows = []
+                for axis in ['E', 'O', 'M', 'S', 'R']:
+                    row_data = active_tm.get(f'{axis}_row', {})
+                    row_data['Axis'] = axis
+                    rows.append(row_data)
+                df_tm = pd.DataFrame(rows).set_index('Axis').fillna(0.0)
+                st.dataframe(df_tm.style.format("{:.2f}"))
+                st.caption("ℹ️ 该矩阵定义了十神能量向五维命运张量的转化率。正值代表促进，负值代表抑制。")
+            else:
+                st.warning("该格局尚未升级至 V2.5 矩阵协议")
+
         with st.expander("更多周期性判析"):
             st.write(generate_timeline_insight(timeline_data, result.get('pattern_name')))
 

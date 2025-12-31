@@ -1,170 +1,202 @@
 {
-  "metadata": {
-    "id": "HOLOGRAPHIC_PATTERN_REGISTRY",
-    "name": "张量全息格局注册表",
-    "name_en": "Tensor Holographic Pattern Registry",
-    "version": "2.5.3",
-    "created_at": "2025-12-30",
-    "updated_at": "2025-12-30",
-    "description": "基于FDS-V1.5.1冷启动重建的全息格局系统",
-    "specification": {
-      "qga_hr_version": "2.5",
-      "fds_version": "1.5.1",
-      "registry_standard": "QGA-HR V2.5"
-    }
+  "meta": {
+    "version": "1.5.1",
+    "updated": "2025-12-31"
   },
   "patterns": {
     "A-03": {
       "id": "A-03",
-      "name": "羊刃架杀",
-      "name_cn": "羊刃架杀",
+      "name": "Yang Ren Jia Sha (羊刃架杀)",
+      "name_cn": "羊刃架杀格",
       "icon": "⚔️",
-      "category": "ARBITRATION",
+      "category": "POWER",
       "subject_id": "A-03",
-      "version": "2.5.3",
+      "version": "2.1.0",
       "active": true,
       "meta_info": {
-        "physics_prototype": "Tokamak Fusion Reactor",
-        "description": "高能高压约束系统（主模型）"
+        "physics_prototype": "Holographic Single-Pole Reactor",
+        "description": "Extreme Stress-Order Stabilization Pattern",
+        "version": "2.1.0",
+        "compliance": "FDS-V1.5.1"
       },
       "physics_kernel": {
+        "version": "2.1",
         "integrity_threshold": 0.45,
         "transfer_matrix": {
           "E_row": {
-            "parallel": 0.6,
-            "resource": 0.3,
-            "power": -0.2
+            "parallel": 1.0,
+            "resource": 0.2,
+            "power": -0.6
           },
           "O_row": {
-            "power": 0.7,
-            "output": -0.2
+            "power": 1.2,
+            "resource": 0.3,
+            "output": -0.4
           },
           "M_row": {
-            "wealth": 0.4
+            "wealth": 0.2,
+            "parallel": -0.5
           },
           "S_row": {
-            "clash": 0.5,
-            "power": 0.4
+            "clash": 1.5,
+            "power": 0.8
           },
           "R_row": {
-            "combination": 0.5
+            "combination": 1.0,
+            "clash": -0.5
+          }
+        },
+        "axiom_mask": "A-03",
+        "tensor_dynamics": {
+          "activation_function": "tanh_saturation",
+          "parameters": {
+            "k_factor": 3.0
           }
         }
       },
-      "dynamic_states": {
-        "collapse_rules": [
+      "matching_router": {
+        "strategies": [
           {
-            "trigger": "Day_Branch_Clash",
-            "default_action": "COLLAPSED",
-            "action": "结构崩塌：根基受损"
-          }
-        ],
-        "crystallization_rules": [
+            "priority": 1,
+            "target": "SP_A03_OVERKILL",
+            "logic": "E < 0.35 AND O > 0.55"
+          },
           {
-            "condition": "Kill_Blade_Resonance",
-            "target_matrix": "A-03",
-            "action": "极致对齐：刃杀共振"
+            "priority": 2,
+            "target": "SP_A03_NO_CONTROL",
+            "logic": "E > 0.65 AND O < 0.25"
+          },
+          {
+            "priority": 3,
+            "target": "SP_A03_VAULT",
+            "logic": "vault_count >= 2"
+          },
+          {
+            "priority": 4,
+            "target": "SP_A03_STANDARD",
+            "logic": "default"
           }
         ]
       },
       "sub_patterns_registry": [
         {
           "id": "SP_A03_STANDARD",
-          "name": "将星本部 (Standard)",
-          "name_cn": "将星本部",
-          "icon": "🏯",
+          "name": "Standard Blade-Kill Reactor (标准羊刃架杀)",
+          "name_cn": "标准羊刃架杀",
           "population_priority": "Tier A",
-          "description": "标准羊刃架杀流形。追求秩序(O)与对齐。",
-          "matrix_override": {
-            "E_row": {
-              "parallel": 1.0,
-              "resource": 0.2,
-              "power": -0.6
-            },
-            "O_row": {
-              "parallel": 0.05,
-              "power": 1.0,
-              "wealth": -0.7
-            },
-            "M_row": {
-              "resource": 0.1,
-              "power": 0.1,
-              "wealth": -0.3
-            },
-            "S_row": {
-              "parallel": 0.1,
-              "power": 0.1,
-              "clash": 0.5
-            },
-            "R_row": {
-              "parallel": 0.1,
-              "combination": 0.2
-            }
-          },
-          "manifold_stats": {
+          "manifold_data": {
             "mean_vector": {
-              "E": 0.783,
-              "O": 1.029,
-              "M": 0.2,
-              "S": 0.4,
-              "R": 0.4
+              "E": 0.45,
+              "O": 0.45,
+              "M": 0.10,
+              "S": 0.00,
+              "R": 0.00
             },
             "thresholds": {
-              "max_mahalanobis_dist": 3.0,
-              "min_sai_gating": 0.5,
-              "match_threshold": 0.8,
-              "perfect_threshold": 0.92
+              "match_threshold": 0.75
             }
-          }
+          },
+          "description": "Standard Balanced Blade-Kill Reactor"
+        },
+        {
+          "id": "SP_A03_OVERKILL",
+          "name": "Power Overwhelms Self (杀重身轻)",
+          "name_cn": "杀重身轻",
+          "matrix_override": {
+            "transfer_matrix": {
+              "E_row": {
+                "resource": 0.8,
+                "parallel": 0.2
+              },
+              "O_row": {
+                "power": 0.5,
+                "output": -0.3
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.30,
+              "O": 0.60,
+              "M": 0.10,
+              "S": 0.00,
+              "R": 0.00
+            }
+          },
+          "risk_level": "HIGH",
+          "description": "Power Overwhelms Self (杀重身轻) - Requires Resource Support",
+          "special_instruction": "Requires Resource (Indirection) Support"
+        },
+        {
+          "id": "SP_A03_NO_CONTROL",
+          "name": "Self Overwhelms Power (身强杀浅)",
+          "name_cn": "身强杀浅",
+          "matrix_override": {
+            "transfer_matrix": {
+              "E_row": {
+                "parallel": 0.5
+              },
+              "M_row": {
+                "wealth": 0.8
+              },
+              "O_row": {
+                "power": 0.3
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.70,
+              "O": 0.20,
+              "M": 0.10,
+              "S": 0.00,
+              "R": 0.00
+            }
+          },
+          "risk_level": "MEDIUM",
+          "description": "Self Overwhelms Power (身强杀浅) - Requires Wealth to generate Power",
+          "special_instruction": "Requires Wealth to generating Power"
         },
         {
           "id": "SP_A03_VAULT",
-          "name": "库刃爆发 (Vault)",
-          "name_cn": "库刃爆发",
-          "icon": "💎",
-          "population_priority": "Tier X",
-          "description": "奇点变体。地支墓库释放动能，M轴翻转。",
+          "name": "Yang Ren in Vault (羊刃入库)",
+          "name_cn": "羊刃入库",
           "matrix_override": {
-            "E_row": {
-              "parallel": 1.25,
-              "resource": 0.5
-            },
-            "O_row": {
-              "power": 0.65
-            },
-            "M_row": {
-              "vault": 0.92,
-              "resource": 0.4,
-              "wealth": 0.88
-            },
-            "S_row": {
-              "pressure": 0.35
-            },
-            "R_row": {
-              "nexus": 0.55
+            "integrity_threshold": 0.35,
+            "transfer_matrix": {
+              "E_row": {
+                "parallel": 0.3,
+                "resource": 0.4
+              },
+              "O_row": {
+                "power": 0.6
+              },
+              "S_row": {
+                "clash": 1.5
+              }
             }
           },
-          "manifold_stats": {
+          "manifold_data": {
             "mean_vector": {
-              "E": 0.95,
-              "O": 0.6,
-              "M": 0.85,
-              "S": 0.5,
-              "R": 0.6
+              "E": 0.55,
+              "O": 0.35,
+              "S": 0.10,
+              "M": 0.0,
+              "R": 0.0
             },
             "thresholds": {
-              "max_mahalanobis_dist": 4.5,
-              "min_sai_gating": 0.6,
-              "match_threshold": 0.75,
-              "perfect_threshold": 0.9
+              "match_threshold": 0.80
             }
-          }
+          },
+          "risk_level": "LOW",
+          "description": "Yang Ren Hidden in Vault - Potential energy waiting for clash to release. 需刑冲开库",
+          "special_instruction": "Checks for Vault Open/Close status"
         }
       ]
     },
     "D-01": {
       "id": "D-01",
-      "name": "标准正财格",
+      "name": "Standard Proper Wealth Pattern (正财格)",
       "name_cn": "标准正财格",
       "icon": "💰",
       "category": "WEALTH",
@@ -172,32 +204,149 @@
       "version": "1.5.1",
       "active": true,
       "meta_info": {
-        "physics_prototype": "Gravity Capture System (引力捕获系统)",
-        "description": "标准正向拟合：引力捕获系统"
+        "physics_prototype": "Gravity Capture System (恒星-行星引力捕获)",
+        "description": "基于 51.8 万样本拟合的财富引力流形，包含标准稳态与两种高能奇点态。"
       },
       "physics_kernel": {
-        "integrity_threshold": 0.5,
+        "version": "2.5",
         "transfer_matrix": {
+          "M_row": {
+            "Direct_Wealth": 1.25,
+            "Indirect_Wealth": 1.10,
+            "Rob_Wealth": -1.50,
+            "clash": -0.8
+          },
           "E_row": {
-            "parallel": 1.0,
-            "resource": 0.8
+            "Day_Master": 1.0,
+            "Resource": 0.8
           },
           "O_row": {
-            "power": 0.7
-          },
-          "M_row": {
-            "wealth": 1.5,
-            "parallel": -1.5
+            "Direct_Officer": 0.7,
+            "Seven_Killings": 0.4
           },
           "S_row": {
             "clash": 1.0,
-            "power": 0.5
+            "Seven_Killings": 0.6
           }
         },
-        "axiom_mask": {
-          "conservation": "wealth_positive_rob_negative",
-          "topological_specificity": "M_axis_dominant"
+        "tensor_dynamics": {
+          "activation_function": "log_saturation",
+          "parameters": {
+            "k_factor": 8.5,
+            "bias": 0.1
+          }
+        },
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.62,
+            "M": 0.65,
+            "O": 0.55,
+            "S": 0.20
+          },
+          "covariance_matrix": [
+            [
+              0.0478,
+              -0.0127,
+              -0.0775,
+              -0.0111,
+              -0.0006
+            ],
+            [
+              -0.0127,
+              0.1289,
+              -0.006,
+              -0.0154,
+              0.0002
+            ],
+            [
+              -0.0775,
+              -0.006,
+              0.1846,
+              -0.0109,
+              0.0018
+            ],
+            [
+              -0.0111,
+              -0.0154,
+              -0.0109,
+              0.1317,
+              -0.0001
+            ],
+            [
+              -0.0006,
+              0.0002,
+              0.0018,
+              -0.0001,
+              0.0001
+            ]
+          ]
         }
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_D01_SURRENDER",
+          "name": "Absolute Surrender (从财/弃命态)",
+          "matrix_override": {
+            "transfer_matrix": {
+              "E_row": {
+                "Day_Master": -1.5,
+                "Resource": -1.2
+              },
+              "M_row": {
+                "Direct_Wealth": 2.5,
+                "Rob_Wealth": -2.0
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.05,
+              "M": 0.95,
+              "O": 0.60,
+              "S": 0.30
+            }
+          }
+        },
+        {
+          "id": "SP_D01_VAULT",
+          "name": "The Vault Tycoon (墓库/隐财态)",
+          "matrix_override": {
+            "transfer_matrix": {
+              "M_row": {
+                "clash": 1.8
+              },
+              "S_row": {
+                "clash": 0.3
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.70,
+              "M": 0.88,
+              "S": 0.45
+            }
+          }
+        }
+      ],
+      "matching_router": {
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_D01_SURRENDER",
+            "logic": "E < 0.15 AND M > 0.85"
+          },
+          {
+            "priority": 2,
+            "target": "SP_D01_VAULT",
+            "logic": "vault_count >= 3"
+          },
+          {
+            "priority": 3,
+            "target": "SP_D01_STANDARD",
+            "logic": "default"
+          }
+        ]
       }
     }
   }

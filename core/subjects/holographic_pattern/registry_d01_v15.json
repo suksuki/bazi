@@ -1,0 +1,187 @@
+{
+    "meta_info": {
+        "subject": "D-01 Standard Proper Wealth Pattern (正财格)",
+        "version": "1.5.1 [FDS-V1.5]",
+        "specification": "Schema V2.5 (Matrix/Covariance Mapping)",
+        "last_audit": "2025-12-31",
+        "status": "SEALED"
+    },
+    "pattern_definition": {
+        "id": "D-01",
+        "name": "Standard Proper Wealth Pattern (正财格)",
+        "physics_prototype": "Gravity Capture System (引力捕获系统)",
+        "physics_kernel": {
+            "version": "2.5",
+            "standard_centroid": {
+                "vector": {
+                    "E": 0.2111,
+                    "O": 0.1988,
+                    "M": 0.2360,
+                    "S": 0.0497,
+                    "R": 0.1244
+                },
+                "description": "Standard Newton Manifold (Tier A Center)"
+            },
+            "covariance_matrix": [
+                [
+                    0.0478,
+                    -0.0127,
+                    -0.0775,
+                    -0.0111,
+                    -0.0006
+                ],
+                [
+                    -0.0127,
+                    0.1289,
+                    -0.0060,
+                    -0.0154,
+                    0.0002
+                ],
+                [
+                    -0.0775,
+                    -0.0060,
+                    0.1846,
+                    -0.0109,
+                    0.0018
+                ],
+                [
+                    -0.0111,
+                    -0.0154,
+                    -0.0109,
+                    0.1317,
+                    -0.0001
+                ],
+                [
+                    -0.0006,
+                    0.0002,
+                    0.0018,
+                    -0.0001,
+                    0.0001
+                ]
+            ],
+            "transfer_matrix": {
+                "E_row": {
+                    "bi_jian": 0.8000,
+                    "zheng_yin": 0.5000,
+                    "zheng_cai": -0.2000,
+                    "pian_yin": 0.3886
+                },
+                "O_row": {
+                    "zheng_guan": 0.5000,
+                    "zheng_cai": 0.1671,
+                    "qi_sha": 0.0815,
+                    "jie_cai": 0.3678
+                },
+                "M_row": {
+                    "zheng_cai": 1.2000,
+                    "jie_cai": -1.0000,
+                    "shi_shen": 0.4553,
+                    "shang_guan": 0.5089,
+                    "pian_cai": 0.6223,
+                    "zheng_guan": 0.1878
+                },
+                "S_row": {
+                    "clash": 0.5000,
+                    "qi_sha": 0.3000,
+                    "shi_shen": 0.3152,
+                    "shang_guan": 0.2253
+                },
+                "R_row": {
+                    "zheng_cai": 0.0238,
+                    "combination": 1.0000
+                }
+            },
+            "tensor_dynamics": {
+                "activation_function": "tanh_saturation",
+                "parameters": {
+                    "k_factor": 3.0,
+                    "mahalanobis_threshold": 3.5
+                }
+            },
+            "axiom_mask": "D-01"
+        }
+    },
+    "sub_patterns": [
+        {
+            "id": "SP_D01_SURRENDER",
+            "name": "Absolute Surrender (从财格)",
+            "physics_state": "Quantum Black Hole / Zero Resistance",
+            "trigger": {
+                "logic": "AND",
+                "conditions": [
+                    {
+                        "variable": "E_tensor",
+                        "operator": "lt",
+                        "threshold": 0.10
+                    },
+                    {
+                        "variable": "M_tensor",
+                        "operator": "gt",
+                        "threshold": 0.50
+                    }
+                ]
+            },
+            "matrix_override": {
+                "E_row": {
+                    "bi_jian": -1.2000,
+                    "zheng_yin": -1.0000,
+                    "jie_cai": -1.5000
+                },
+                "M_row": {
+                    "zheng_cai": 3.0000,
+                    "pian_cai": 2.5000,
+                    "output": 1.8000
+                },
+                "S_row": {
+                    "clash": 0.2000,
+                    "qi_sha": -0.5000
+                }
+            },
+            "description": "日主彻底放弃引力抵抗，进入财富超导态。能量路径从‘捕获’切换为‘随流’。"
+        },
+        {
+            "id": "SP_D01_VAULT",
+            "name": "The Vault Tycoon (墓库格)",
+            "physics_state": "Tunneling / Topological Opening",
+            "trigger": {
+                "logic": "AND",
+                "conditions": [
+                    {
+                        "variable": "vault_count",
+                        "operator": "gte",
+                        "threshold": 3
+                    }
+                ]
+            },
+            "matrix_override": {
+                "M_row": {
+                    "clash": 1.5000,
+                    "zheng_cai": 1.8000,
+                    "pian_cai": 1.8000
+                },
+                "S_row": {
+                    "clash": 0.1000,
+                    "mahalanobis_tolerance": 2.5
+                }
+            },
+            "description": "多维墓库存储势能。冲 (Clash) 在此流形下转变为激发布局（Key），非破坏性应力。"
+        }
+    ],
+    "runtime_router": {
+        "sequence": [
+            {
+                "target": "SP_D01_SURRENDER",
+                "priority": 1
+            },
+            {
+                "target": "SP_D01_VAULT",
+                "priority": 2
+            },
+            {
+                "target": "D-01_STANDARD",
+                "priority": 3
+            }
+        ],
+        "fallback": "D-01_STANDARD"
+    }
+}

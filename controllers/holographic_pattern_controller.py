@@ -104,8 +104,10 @@ class HolographicPatternController:
             else:
                 main_patterns.append(p_info)
                 # [V2.5] 发现嵌套子格局
-                if 'sub_patterns_registry' in pattern_data:
-                    for sub_data in pattern_data['sub_patterns_registry']:
+                # [V2.5] 发现嵌套子格局 (支持 sub_patterns_registry 和 sub_patterns)
+                sub_patterns_data = pattern_data.get('sub_patterns_registry') or pattern_data.get('sub_patterns') or []
+                if sub_patterns_data:
+                    for sub_data in sub_patterns_data:
                         sub_info = {
                             'id': sub_data.get('id'),
                             'category': category,
@@ -196,16 +198,30 @@ class HolographicPatternController:
                 # ... (existing flat logic)
                 pass # Already handled by flat structure
             
-            # [V2.5] 发现嵌套子格局
-            if 'sub_patterns_registry' in pattern_data and pattern_id in hierarchy:
-                for sub_data in pattern_data['sub_patterns_registry']:
+            # [V2.5] 发现嵌套子格局 (支持 sub_patterns_registry 和 sub_patterns)
+            sub_patterns_list = pattern_data.get('sub_patterns_registry') or pattern_data.get('sub_patterns') or []
+            if sub_patterns_list and pattern_id in hierarchy:
+                for sub_data in sub_patterns_list:
+                    # 获取中文名，如果没有则使用name
+                    name_cn = sub_data.get('name_cn')
+                    if not name_cn:
+                        name = sub_data.get('name', '')
+                        # 尝试从name提取中文 (e.g. "Name (中文)")
+                        if '(' in name and ')' in name:
+                            import re
+                            match = re.search(r'\((.*?)\)', name)
+                            if match:
+                                name_cn = match.group(1)
+                        if not name_cn:
+                            name_cn = name
+                            
                     hierarchy[pattern_id]['subs'].append({
                         'id': sub_data.get('id'),
                         'category': hierarchy[pattern_id]['main']['category'],
                         'subject_id': sub_data.get('subject_id', sub_data.get('id')),
                         'name': sub_data.get('name'),
-                        'name_cn': sub_data.get('name_cn'),
-                        'icon': sub_data.get('icon', '🧬'),
+                        'name_cn': name_cn,
+                        'icon': sub_data.get('icon', hierarchy[pattern_id]['main']['icon']), # Inherit icon if missing
                         'description': sub_data.get('description'),
                         'version': hierarchy[pattern_id]['main']['version'],
                         'active': True
@@ -384,16 +400,19 @@ class HolographicPatternController:
         if not pattern:
             return {'error': f'格局 {pattern_id} 不存在'}
         
-        # 检查版本（版本分流）
+        # [V2.5 Update] Detect Matrix Protocol by kernel signature or version string
         version = str(pattern.get('version', '1.0'))
-        # V2.1+ 支持 transfer_matrix
-        is_v21 = version >= '2.1'
+        physics_kernel = pattern.get('physics_kernel', {})
+        is_matrix_protocol = (
+            str(version) >= '1.5' or 
+            physics_kernel.get('transfer_matrix') is not None
+        )
         
-        logger.debug(f"格局 {pattern_id} 版本检查: version={version!r}, is_v21={is_v21}")
+        logger.debug(f"格局 {pattern_id} 核验: version={version!r}, is_matrix_protocol={is_matrix_protocol}")
         
-        # V2.1: 使用RegistryLoader的矩阵投影方法
-        if is_v21:
-            logger.info(f"✅ 检测到V2.1格局 {pattern_id}，使用transfer_matrix计算")
+        # V1.5+/V2.1+: 使用RegistryLoader的矩阵投影方法
+        if is_matrix_protocol:
+            logger.info(f"✅ 检测到矩阵协议格局 {pattern_id}，使用transfer_matrix计算")
             try:
                 if not hasattr(self, 'registry_loader') or self.registry_loader is None:
                     logger.error("RegistryLoader未初始化！")

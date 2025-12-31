@@ -66,18 +66,25 @@ AXIOM_CONSTRAINTS = {
         }
     },
 
-    "D-01": { # Zheng Cai (Wealth Proper)
+    "D-01": { # Zheng Cai (Wealth Proper) - FDS-V1.5 Granular
         "M_row": {
-            "wealth": (0.8, 3.0),  # Material-centric
-            "output": (0.2, 1.2),  # Output feeds wealth
-            "power": (-0.5, 0.5)   # Power consumes wealth (tax/status cost)
+            "zheng_cai": (1.2, 3.0),   # 主序星
+            "jie_cai": (-1.8, -1.0),   # 强负贡献
+            "shi_shen": (0.2, 1.2),    # 食神生财
+            "zheng_guan": (0.1, 0.8)   # 护财
         },
         "E_row": {
-            "parallel": (0.5, 2.0),
-            "wealth": (-1.5, 0.2)  # Wealth consumes DM energy (Shen Ruo Cai Wang)
+            "bi_jian": (0.8, 2.0),     # 恒星质量
+            "zheng_yin": (0.5, 1.5),   # 资源补给
+            "zheng_cai": (-1.5, -0.2)  # 耗泄能级
         },
         "O_row": {
-            "wealth": (0.1, 1.0)   # Wealth creates status
+            "zheng_guan": (0.5, 2.0),
+            "zheng_cai": (0.1, 1.0)    # 财旺生官
+        },
+        "S_row": {
+            "clash": (0.5, 2.5),       # 轨道震荡
+            "qi_sha": (0.3, 2.0)       # 压力源
         }
     },
 

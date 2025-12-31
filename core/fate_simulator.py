@@ -130,140 +130,45 @@ class FateSimulator:
         luck_pillar: str = ""
     ) -> Dict[str, Any]:
         """
-        计算指定年份的5维张量
-        
-        Args:
-            pattern_id: 格局ID（如'A-03'）
-            chart: 四柱八字
-            day_master: 日主
-            year: 年份
-            year_pillar: 流年干支
-            luck_pillar: 大运干支（可选）
-            
-        Returns:
-            包含projection、alpha、pattern_state等的字典
+        [V1.5.2] 计算指定年份的5维张量 - 全面切换至 RegistryLoader 统一计算链
         """
-        pattern = self.registry_loader.get_pattern(pattern_id)
-        if not pattern:
-            # 如果格局不存在，使用标准矩阵
-            pattern = {'id': 'Standard', 'physics_kernel': {}, 'dynamic_states': {}}
-        
-        # 获取transfer_matrix
-        physics_kernel = pattern.get('physics_kernel', {})
-        transfer_matrix = physics_kernel.get('transfer_matrix')
-        
-        if not transfer_matrix:
-            # 如果没有transfer_matrix，使用简化计算
-            frequency_vector = self.calculate_frequency_vector(chart, day_master)
-            # 简化投影（如果没有矩阵，使用默认映射）
-            projection = {
-                'E': frequency_vector.get('parallel', 0.0) * 0.3,
-                'O': frequency_vector.get('power', 0.0) * 0.4,
-                'M': frequency_vector.get('wealth', 0.0) * 0.1,
-                'S': abs(frequency_vector.get('power', 0.0) - frequency_vector.get('resource', 0.0)) * 0.15,
-                'R': frequency_vector.get('output', 0.0) * 0.05
-            }
-            normalized_projection = tensor_normalize(projection)
-        else:
-            # 使用transfer_matrix计算
-            frequency_vector = self.calculate_frequency_vector(chart, day_master)
-            
-            # 如果流年有影响，调整frequency_vector
-            if year_pillar:
-                year_stem = year_pillar[0]
-                year_ten_god = BaziParticleNexus.get_shi_shen(year_stem, day_master)
-                
-                if year_ten_god in ['七杀', '正官']:
-                    frequency_vector['power'] += 0.5
-                elif year_ten_god in ['正印', '偏印']:
-                    frequency_vector['resource'] += 0.3
-                elif year_ten_god in ['比肩', '劫财']:
-                    frequency_vector['parallel'] += 0.3
-            
-            projection = project_tensor_with_matrix(frequency_vector, transfer_matrix)
-            normalized_projection = tensor_normalize(projection)
-        
-        # 计算结构完整性alpha
-        day_branch = chart[2][1] if len(chart) > 2 and len(chart[2]) >= 2 else ""
-        
-        energy_flux = {
-            "wealth": compute_energy_flux(chart, day_master, "偏财") + 
-                      compute_energy_flux(chart, day_master, "正财"),
-            "resource": compute_energy_flux(chart, day_master, "正印") + 
-                       compute_energy_flux(chart, day_master, "偏印")
+        # 构建计算上下文
+        context = {
+            'annual_pillar': year_pillar,
+            'luck_pillar': luck_pillar,
+            'calculation_year': year
         }
         
-        # 检测事件（简化：基于流年判断）
-        flux_events = []
-        if year_pillar:
-            year_branch = year_pillar[1] if len(year_pillar) >= 2 else ""
-            # 检查日支是否被冲
-            from core.physics_engine import check_clash
-            if check_clash(day_branch, year_branch):
-                flux_events.append("Day_Branch_Clash")
-            # 检查是否有合
-            from core.physics_engine import check_combination
-            if check_combination(day_branch, year_branch):
-                flux_events.append("Blade_Combined_Transformation")
-        
-        alpha = calculate_integrity_alpha(
-            natal_chart=chart,
+        # 使用 RegistryLoader 进行高精度计算 (含路由、矩阵投影、格局识别)
+        result = self.registry_loader.calculate_tensor_projection_from_registry(
+            pattern_id=pattern_id,
+            chart=chart,
             day_master=day_master,
-            day_branch=day_branch,
-            flux_events=flux_events,
-            luck_pillar=luck_pillar,
-            year_pillar=year_pillar,
-            energy_flux=energy_flux
+            context=context
         )
         
-        # 检查成格/破格状态
-        pattern_state = self._check_pattern_state_internal(
-            pattern, chart, day_master, day_branch,
-            luck_pillar, year_pillar, alpha
-        )
-        
-        # 格局识别（可能较慢，添加超时保护和简化选项）
-        try:
-            import time
-            rec_start = time.time()
-            
-            # 对于非A-03格局，可以跳过格局识别以提升性能
-            if pattern_id != 'A-03':
-                # 简化识别：只做基本检查
-                recognition_result = {
-                    'matched': False,
-                    'pattern_type': 'STANDARD',
-                    'similarity': 0.5,
-                    'description': f'非A-03格局，使用标准识别'
-                }
-            else:
-                recognition_result = self.registry_loader.pattern_recognition(
-                    normalized_projection, pattern_id
-                )
-            
-            rec_elapsed = time.time() - rec_start
-            if rec_elapsed > 0.5:
-                logger.warning(f"格局识别耗时较长: {rec_elapsed:.2f}秒 (年份: {year})")
-                
-        except Exception as e:
-            logger.error(f"格局识别失败 (年份: {year}): {e}", exc_info=True)
-            # 使用默认值，避免中断
-            recognition_result = {
-                'matched': False,
-                'pattern_type': 'UNKNOWN',
-                'similarity': 0.0,
-                'description': f'识别失败: {str(e)}'
+        if 'error' in result:
+            logger.error(f"⚠️ {year}年计算异常: {result['error']}")
+            return {
+                'year': year,
+                'year_pillar': year_pillar,
+                'projection': {'E': 0, 'O': 0, 'M': 0, 'S': 0, 'R': 0},
+                'alpha': 0.0,
+                'pattern_state': {'state': 'ERROR'},
+                'error': result['error']
             }
-        
+            
+        # 兼容性包装：返回 UI 渲染所需的数据结构
         return {
             'year': year,
             'year_pillar': year_pillar,
-            'projection': normalized_projection,
-            'raw_projection': projection,
-            'alpha': alpha,
-            'pattern_state': pattern_state,
-            'recognition': recognition_result,
-            'frequency_vector': frequency_vector
+            'projection': result.get('projection', {}),
+            'raw_projection': result.get('raw_projection', {}),
+            'alpha': result.get('alpha', 0.5),
+            'pattern_state': result.get('pattern_state', {}),
+            'recognition': result.get('recognition', {}),
+            'frequency_vector': result.get('frequency_vector', {}),
+            'sub_id': result.get('sub_id')
         }
     
     def simulate_trajectory(

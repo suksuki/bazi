@@ -1,6 +1,6 @@
 """
 全息格局V2.1自动化测试套件
-测试FDS-V1.4 V2.1规范的核心功能：
+测试FDS-V1.5.1 V2.1规范的核心功能：
 - transfer_matrix矩阵投影
 - SAI计算
 - 动态状态判定（成格/破格）
@@ -38,7 +38,8 @@ class TestHolographicPatternV21(unittest.TestCase):
         
         # 验证版本
         version = cls.pattern.get('version', '1.0')
-        assert version == '2.1', f"A-03版本应为2.1，实际为{version}"
+        # Allow 2.1 or 2.1.0
+        assert version.startswith('2.1'), f"A-03版本应为2.1.x，实际为{version}"
         
         # 获取transfer_matrix
         physics_kernel = cls.pattern.get('physics_kernel', {})
@@ -61,7 +62,7 @@ class TestHolographicPatternV21(unittest.TestCase):
         self.assertIsNotNone(pattern, "格局应该存在")
         
         version = pattern.get('version', '1.0')
-        self.assertEqual(version, '2.1', f"版本应为2.1，实际为{version}")
+        self.assertTrue(version.startswith('2.1'), f"版本应为2.1.x，实际为{version}")
         
         physics_kernel = pattern.get('physics_kernel', {})
         transfer_matrix = physics_kernel.get('transfer_matrix')
