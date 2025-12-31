@@ -1,0 +1,183 @@
+{
+  "meta_info": {
+    "pattern_id": "A-03",
+    "name": "羊刃架杀格",
+    "version": "2.4",
+    "physics_prototype": "High-Pressure Containment System",
+    "compliance": "FDS-V1.5.1"
+  },
+  "physics_kernel": {
+    "description": "核心物理参数与转换逻辑",
+    "transfer_matrix": {
+      "E_row": {
+        "parallel": 1.0,
+        "resource": 0.2,
+        "power": -0.6
+      },
+      "O_row": {
+        "parallel": 0.05,
+        "power": 1.0,
+        "wealth": -0.7
+      },
+      "M_row": {
+        "resource": 0.1,
+        "power": 0.1,
+        "wealth": 0.05
+      },
+      "S_row": {
+        "parallel": 0.1,
+        "power": 0.1,
+        "clash": 0.5
+      },
+      "R_row": {
+        "parallel": 0.1,
+        "combination": 0.2
+      }
+    },
+    "tensor_dynamics": {
+      "activation_function": "tanh_saturation",
+      "parameters": {
+        "k_factor": 3.0,
+        "bias": 0.0
+      },
+      "target_axes": [
+        "E",
+        "O",
+        "S"
+      ]
+    },
+    "integrity_threshold": 0.45
+  },
+  "feature_anchors": {
+    "description": "基于 FDS-V1.5 马氏流形的统计包络",
+    "standard_manifold": {
+      "mean_vector": {
+        "E": 0.4444,
+        "O": 0.3083,
+        "M": 0.0632,
+        "S": 0.1194,
+        "R": 0.0647
+      },
+      "covariance_matrix": [
+        [
+          0.027588311556352694,
+          -0.022165968636713423,
+          -0.0026591921486172334,
+          -0.004639554203326655,
+          0.001877869556753507
+        ],
+        [
+          -0.022165968636713423,
+          0.019325037752144288,
+          0.001996095396713427,
+          0.0024168447189579162,
+          -0.0015713891040480962
+        ],
+        [
+          -0.0026591921486172334,
+          0.001996095396713427,
+          0.0007445469797194388,
+          0.0001734588242084168,
+          -0.00025401783919839675
+        ],
+        [
+          -0.004639554203326655,
+          0.0024168447189579162,
+          0.0001734588242084168,
+          0.0024918738139879768,
+          -0.00044162943899799564
+        ],
+        [
+          0.001877869556753507,
+          -0.0015713891040480962,
+          -0.00025401783919839675,
+          -0.00044162943899799564,
+          0.0003901999860120238
+        ]
+      ],
+      "inverse_covariance": [
+        [
+          200233.48873176172,
+          200213.26668305896,
+          199679.05130102608,
+          199990.80547859808,
+          198986.27415702448
+        ],
+        [
+          200213.26668305887,
+          200283.85605628547,
+          199498.77493260018,
+          199932.34241450505,
+          199184.34007345428
+        ],
+        [
+          199679.0513010261,
+          199498.77493260018,
+          201154.70101554523,
+          199604.47660630563,
+          199300.5841874017
+        ],
+        [
+          199990.80547859802,
+          199932.342414505,
+          199604.47660630557,
+          200272.2626367752,
+          199292.8928826182
+        ],
+        [
+          198986.27415702463,
+          199184.34007345443,
+          199300.58418740184,
+          199292.89288261844,
+          202371.4769200947
+        ]
+      ],
+      "thresholds": {
+        "max_mahalanobis_dist": 3.0,
+        "min_sai_gating": 0.5,
+        "match_threshold": 0.8,
+        "perfect_threshold": 0.92
+      }
+    }
+  },
+  "dynamic_states": {
+    "description": "状态机规则 (Schema V2.4)",
+    "collapse_rules": [
+      {
+        "trigger_name": "Day_Branch_Clash",
+        "default_action": "COLLAPSE",
+        "exceptions": [
+          {
+            "name": "Vault_Tunneling",
+            "conditions": [
+              {
+                "operator": "call_physics",
+                "function": "analyze_clash_dynamics",
+                "expect": {
+                  "entropy_delta": {
+                    "gt": 0
+                  }
+                }
+              }
+            ],
+            "override_state": {
+              "state": "ACTIVATED",
+              "centroid_ref": "activated_manifold",
+              "tensor_modifier": {
+                "E": 1.2,
+                "M": 1.5
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "algorithm_implementation": {
+    "paths": {
+      "energy_calculation": "core.physics_engine.compute_energy_flux",
+      "tensor_projection": "core.math_engine.project_tensor_with_matrix",
+      "pattern_recognition": "core.registry_loader.pattern_recognition"
+    }
+  }
+}

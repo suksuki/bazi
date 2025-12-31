@@ -8,6 +8,7 @@ QGA 物理内核引擎 (Physics Engine)
 from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 import sys
+from functools import lru_cache
 
 # 添加项目根目录到路径
 project_root = Path(__file__).resolve().parents[1]
@@ -29,6 +30,8 @@ COMBINATION_PAIRS = [
 ]
 
 
+
+@lru_cache(maxsize=1)
 def _get_clash_pairs_from_module() -> List[Tuple[str, str]]:
     """从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块获取冲合关系"""
     try:
@@ -67,6 +70,8 @@ def _get_clash_pairs_from_module() -> List[Tuple[str, str]]:
         return CLASH_PAIRS
 
 
+
+@lru_cache(maxsize=1)
 def _get_combination_pairs_from_module() -> List[Tuple[str, str]]:
     """从BAZI_FUNDAMENTAL的MOD_03_TRANSFORM模块获取合化关系"""
     try:

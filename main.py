@@ -24,7 +24,7 @@ init_session_state({"nav_radio": "🔮 智能排盘 (Prediction)"})
 
 app_mode = st.radio(
     "导航 (Navigation)", 
-    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌀 量子仿真 (Simulation)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "📋 八字档案审计 (Audit)", "🌌 全息格局 (Holographic)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
+    ["🔮 智能排盘 (Prediction)", "💰 财运推演 (Wealth)", "🌀 量子仿真 (Simulation)", "🌙 自我进化 (Evolution)", "📜 古籍挖掘 (Mining)", "✨ 量子真言 (Quantum Lab)", "🌟 命运回响 (Cinema)", "🕯️ 悟性训练 (Training)", "📋 八字档案审计 (Audit)", "🌌 全息格局 (Holographic)", "📦 注册管理 (Registry)", "⚙️ 天机设置 (Config)", "⚡ 架构师 (Architect)"], 
     horizontal=True,
     label_visibility="collapsed",
     key="nav_radio"
@@ -83,6 +83,10 @@ elif app_mode == "📋 八字档案审计 (Audit)":
 
 elif app_mode == "🌌 全息格局 (Holographic)":
     from ui.pages.holographic_pattern import render
+    render()
+
+elif app_mode == "📦 注册管理 (Registry)":
+    from ui.pages.registry_admin import render
     render()
 
 elif app_mode == "🔮 智能排盘 (Prediction)":

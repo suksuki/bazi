@@ -1,0 +1,30 @@
+{
+  "pattern_id": "A-01",
+  "meta_info": {
+    "category": "POWER (权柄)",
+    "chinese_name": "正官格",
+    "display_name": "Direct Officer (The Judge)"
+  },
+  "axioms": {
+    "reaction_type": "CRYSTALLIZATION",
+    "stability_mode": "STATIC_HIGH"
+  },
+  "init_matrix_logic": {
+    "E_row": {
+      "Day_Master": 1.2,
+      "Resource": 1.0
+    },
+    "O_row": {
+      "Direct_Officer": 1.5,
+      "Seven_Killings": -1.0,
+      "Hurting_Officer": -2.0
+    },
+    "M_row": {
+      "Direct_Wealth": 0.8,
+      "Indirect_Wealth": 0.5
+    },
+    "S_row": {
+      "Clash": -0.5
+    }
+  }
+}

@@ -6,345 +6,1302 @@
   "patterns": {
     "A-03": {
       "id": "A-03",
-      "name": "Yang Ren Jia Sha (羊刃架杀)",
-      "name_cn": "羊刃架杀格",
-      "icon": "⚔️",
-      "category": "POWER",
-      "subject_id": "A-03",
-      "version": "2.1.0",
+      "name": "Blade & Killer (羊刃架杀格)",
+      "version": "2.5",
       "active": true,
       "meta_info": {
-        "physics_prototype": "Holographic Single-Pole Reactor",
-        "description": "Extreme Stress-Order Stabilization Pattern",
-        "version": "2.1.0",
-        "compliance": "FDS-V1.5.1"
-      },
-      "physics_kernel": {
-        "version": "2.1",
-        "integrity_threshold": 0.45,
-        "transfer_matrix": {
-          "E_row": {
-            "parallel": 1.0,
-            "resource": 0.2,
-            "power": -0.6
-          },
-          "O_row": {
-            "power": 1.2,
-            "resource": 0.3,
-            "output": -0.4
-          },
-          "M_row": {
-            "wealth": 0.2,
-            "parallel": -0.5
-          },
-          "S_row": {
-            "clash": 1.5,
-            "power": 0.8
-          },
-          "R_row": {
-            "combination": 1.0,
-            "clash": -0.5
-          }
+        "pattern_id": "A-03",
+        "name": "Yang Ren Jia Sha (The Reactor)",
+        "version": "2.5",
+        "physics_prototype": "Tokamak / Stellarator (磁约束聚变)",
+        "description": "High Energy Plasma (Yang Ren) confined by High Stress Field (Seven Killings).",
+        "compliance": "FDS-V1.5.1 (Genesis Protocol)",
+        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
+        "calibration_date": "2025-12-31",
+        "mining_stats": {
+          "seed_count": 336,
+          "singularity_count": 436
         },
-        "axiom_mask": "A-03",
-        "tensor_dynamics": {
-          "activation_function": "tanh_saturation",
-          "parameters": {
-            "k_factor": 3.0
-          }
-        }
-      },
-      "matching_router": {
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "SP_A03_OVERKILL",
-            "logic": "E < 0.35 AND O > 0.55"
-          },
-          {
-            "priority": 2,
-            "target": "SP_A03_NO_CONTROL",
-            "logic": "E > 0.65 AND O < 0.25"
-          },
-          {
-            "priority": 3,
-            "target": "SP_A03_VAULT",
-            "logic": "vault_count >= 2"
-          },
-          {
-            "priority": 4,
-            "target": "SP_A03_STANDARD",
-            "logic": "default"
-          }
-        ]
-      },
-      "sub_patterns_registry": [
-        {
-          "id": "SP_A03_STANDARD",
-          "name": "Standard Blade-Kill Reactor (标准羊刃架杀)",
-          "name_cn": "标准羊刃架杀",
-          "population_priority": "Tier A",
-          "manifold_data": {
-            "mean_vector": {
-              "E": 0.45,
-              "O": 0.45,
-              "M": 0.10,
-              "S": 0.00,
-              "R": 0.00
-            },
-            "thresholds": {
-              "match_threshold": 0.75
-            }
-          },
-          "description": "Standard Balanced Blade-Kill Reactor"
-        },
-        {
-          "id": "SP_A03_OVERKILL",
-          "name": "Power Overwhelms Self (杀重身轻)",
-          "name_cn": "杀重身轻",
-          "matrix_override": {
-            "transfer_matrix": {
-              "E_row": {
-                "resource": 0.8,
-                "parallel": 0.2
-              },
-              "O_row": {
-                "power": 0.5,
-                "output": -0.3
-              }
-            }
-          },
-          "manifold_data": {
-            "mean_vector": {
-              "E": 0.30,
-              "O": 0.60,
-              "M": 0.10,
-              "S": 0.00,
-              "R": 0.00
-            }
-          },
-          "risk_level": "HIGH",
-          "description": "Power Overwhelms Self (杀重身轻) - Requires Resource Support",
-          "special_instruction": "Requires Resource (Indirection) Support"
-        },
-        {
-          "id": "SP_A03_NO_CONTROL",
-          "name": "Self Overwhelms Power (身强杀浅)",
-          "name_cn": "身强杀浅",
-          "matrix_override": {
-            "transfer_matrix": {
-              "E_row": {
-                "parallel": 0.5
-              },
-              "M_row": {
-                "wealth": 0.8
-              },
-              "O_row": {
-                "power": 0.3
-              }
-            }
-          },
-          "manifold_data": {
-            "mean_vector": {
-              "E": 0.70,
-              "O": 0.20,
-              "M": 0.10,
-              "S": 0.00,
-              "R": 0.00
-            }
-          },
-          "risk_level": "MEDIUM",
-          "description": "Self Overwhelms Power (身强杀浅) - Requires Wealth to generate Power",
-          "special_instruction": "Requires Wealth to generating Power"
-        },
-        {
-          "id": "SP_A03_VAULT",
-          "name": "Yang Ren in Vault (羊刃入库)",
-          "name_cn": "羊刃入库",
-          "matrix_override": {
-            "integrity_threshold": 0.35,
-            "transfer_matrix": {
-              "E_row": {
-                "parallel": 0.3,
-                "resource": 0.4
-              },
-              "O_row": {
-                "power": 0.6
-              },
-              "S_row": {
-                "clash": 1.5
-              }
-            }
-          },
-          "manifold_data": {
-            "mean_vector": {
-              "E": 0.55,
-              "O": 0.35,
-              "S": 0.10,
-              "M": 0.0,
-              "R": 0.0
-            },
-            "thresholds": {
-              "match_threshold": 0.80
-            }
-          },
-          "risk_level": "LOW",
-          "description": "Yang Ren Hidden in Vault - Potential energy waiting for clash to release. 需刑冲开库",
-          "special_instruction": "Checks for Vault Open/Close status"
-        }
-      ]
-    },
-    "D-01": {
-      "id": "D-01",
-      "name": "Standard Proper Wealth Pattern (正财格)",
-      "name_cn": "标准正财格",
-      "icon": "💰",
-      "category": "WEALTH",
-      "subject_id": "D-01",
-      "version": "1.5.1",
-      "active": true,
-      "meta_info": {
-        "physics_prototype": "Gravity Capture System (恒星-行星引力捕获)",
-        "description": "基于 51.8 万样本拟合的财富引力流形，包含标准稳态与两种高能奇点态。"
+        "category": "POWER",
+        "chinese_name": "羊刃架杀格"
       },
       "physics_kernel": {
         "version": "2.5",
         "transfer_matrix": {
-          "M_row": {
-            "Direct_Wealth": 1.25,
-            "Indirect_Wealth": 1.10,
-            "Rob_Wealth": -1.50,
-            "clash": -0.8
-          },
           "E_row": {
+            "Yang_Ren": 1.5,
             "Day_Master": 1.0,
-            "Resource": 0.8
-          },
-          "O_row": {
-            "Direct_Officer": 0.7,
-            "Seven_Killings": 0.4
+            "Seven_Killings": -0.3
           },
           "S_row": {
-            "clash": 1.0,
-            "Seven_Killings": 0.6
+            "Seven_Killings": 1.8,
+            "Direct_Officer": 0.5,
+            "Yang_Ren": 0.0
+          },
+          "O_row": {
+            "Seven_Killings": 1.2,
+            "Yang_Ren": 0.8,
+            "Eating_God": -0.8,
+            "Hurting_Officer": -0.8
+          },
+          "M_row": {
+            "Yang_Ren": -1.2,
+            "Direct_Wealth": 0.5,
+            "Seven_Killings": 0.8
+          },
+          "R_row": {
+            "Friend": 1.0,
+            "Rob_Wealth": 0.5
           }
         },
         "tensor_dynamics": {
-          "activation_function": "log_saturation",
+          "activation_function": "sigmoid_variant",
           "parameters": {
-            "k_factor": 8.5,
-            "bias": 0.1
+            "k_factor": 3.0
           }
         },
+        "integrity_threshold": 0.6
+      },
+      "feature_anchors": {
+        "description": "Standard Tokamak Manifold",
         "standard_manifold": {
           "mean_vector": {
-            "E": 0.62,
-            "M": 0.65,
-            "O": 0.55,
-            "S": 0.20
+            "E": 0.7276595149911346,
+            "O": 0.2414687203032891,
+            "M": 0.39296821973484697,
+            "S": 0.6118404758417586,
+            "R": 0.5043572938305908
           },
           "covariance_matrix": [
             [
-              0.0478,
-              -0.0127,
-              -0.0775,
-              -0.0111,
-              -0.0006
+              0.003377,
+              0.0,
+              0.0,
+              0.0,
+              0.0
             ],
             [
-              -0.0127,
-              0.1289,
-              -0.006,
-              -0.0154,
-              0.0002
+              0.0,
+              0.006678,
+              0.0,
+              0.0,
+              0.0
             ],
             [
-              -0.0775,
-              -0.006,
-              0.1846,
-              -0.0109,
-              0.0018
+              0.0,
+              0.0,
+              0.033345,
+              0.0,
+              0.0
             ],
             [
-              -0.0111,
-              -0.0154,
-              -0.0109,
-              0.1317,
-              -0.0001
+              0.0,
+              0.0,
+              0.0,
+              0.003056,
+              0.0
             ],
             [
-              -0.0006,
-              0.0002,
-              0.0018,
-              -0.0001,
-              0.0001
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.021499
             ]
-          ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist": 2.5
+          }
         }
       },
       "sub_patterns_registry": [
         {
-          "id": "SP_D01_SURRENDER",
-          "name": "Absolute Surrender (从财/弃命态)",
+          "id": "SP_A03_ALLIANCE",
+          "name": "The Alliance (羊刃合杀/仿星器)",
+          "type": "SINGULARITY",
+          "description": "Fusion achieved by bonding (High R). Self-stabilizing plasma.",
           "matrix_override": {
             "transfer_matrix": {
-              "E_row": {
-                "Day_Master": -1.5,
-                "Resource": -1.2
+              "S_row": {
+                "Seven_Killings": 1.0
               },
-              "M_row": {
-                "Direct_Wealth": 2.5,
-                "Rob_Wealth": -2.0
+              "O_row": {
+                "Seven_Killings": 1.5,
+                "Combination": 1.2
               }
             }
           },
           "manifold_data": {
             "mean_vector": {
-              "E": 0.05,
-              "M": 0.95,
-              "O": 0.60,
-              "S": 0.30
+              "E": 0.7081887872944159,
+              "O": 0.40104238155441363,
+              "M": 0.39956783658834333,
+              "S": 0.60928918235121,
+              "R": 0.653002320967814
             }
           }
         },
         {
-          "id": "SP_D01_VAULT",
-          "name": "The Vault Tycoon (墓库/隐财态)",
+          "id": "SP_A03_STANDARD",
+          "name": "The Tokamak (羊刃架杀/对抗态)",
+          "type": "DEFAULT",
+          "description": "Fusion achieved by pressure (High S). Dynamic equilibrium.",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.7276595149911346,
+              "O": 0.2414687203032891,
+              "M": 0.39296821973484697,
+              "S": 0.6118404758417586,
+              "R": 0.5043572938305908
+            },
+            "covariance_matrix": [
+              [
+                0.003377,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.006678,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.033345,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.003056,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.021499
+              ]
+            ]
+          }
+        }
+      ],
+      "matching_router": {
+        "strategy_version": "2.5 (Genesis)",
+        "description": "Nuclear Safety Protocols Enforced.",
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_A03_ALLIANCE",
+            "description": "Check for Superconductivity (Bonding)",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.6
+                },
+                {
+                  "axis": "S",
+                  "operator": "gt",
+                  "value": 0.5
+                },
+                {
+                  "axis": "R",
+                  "operator": "gt",
+                  "value": 0.5
+                }
+              ]
+            }
+          },
+          {
+            "priority": 2,
+            "target": "SP_A03_STANDARD",
+            "description": "Check for Tokamak Containment",
+            "logic": {
+              "condition": "HYBRID",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.6
+                },
+                {
+                  "axis": "S",
+                  "operator": "gt",
+                  "value": 0.5
+                },
+                {
+                  "axis": "O",
+                  "operator": "lt",
+                  "value": 0.35
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 2.5
+              }
+            }
+          }
+        ]
+      }
+    },
+    "D-01": {
+      "id": "D-01",
+      "name": "Direct Wealth Pattern (正财格)",
+      "version": "2.5",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "D-01",
+        "name": "Proper Wealth (The Keeper)",
+        "version": "2.5",
+        "physics_prototype": "Gravity Accumulation (引力吸积)",
+        "description": "Standard wealth accumulation. Requires High E to hold High M.",
+        "compliance": "FDS-V1.5.1 (Genesis Protocol)",
+        "data_source": "holographic_universe_518k.jsonl",
+        "calibration_date": "2025-12-31",
+        "category": "WEALTH",
+        "chinese_name": "正财格"
+      },
+      "physics_kernel": {
+        "version": "2.5",
+        "transfer_matrix": {
+          "E_row": {
+            "Day_Master": 1.2,
+            "Resource": 0.8
+          },
+          "M_row": {
+            "Direct_Wealth": 1.5,
+            "Rob_Wealth": -1.0
+          },
+          "O_row": {
+            "Direct_Officer": 1.0,
+            "Eating_God": 0.8
+          },
+          "S_row": {
+            "Seven_Killings": -0.5,
+            "Clash": 1.0
+          },
+          "R_row": {
+            "Friend": 0.5,
+            "Rob_Wealth": 1.2
+          }
+        },
+        "integrity_threshold": 0.5
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_D01_STANDARD",
+          "name": "The Keeper (守财奴/地主)",
+          "type": "DEFAULT",
+          "description": "High Energy, High Wealth, Low Relation (Private Ownership).",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6212995411401384,
+              "O": 0.4001211528497763,
+              "M": 0.6339446185123901,
+              "S": 0.29437324428482153,
+              "R": 0.3169461040949614
+            },
+            "covariance_matrix": [
+              [
+                0.014066,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.022767,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.010743,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.020393,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.004731
+              ]
+            ]
+          }
+        }
+      ],
+      "matching_router": {
+        "strategy_version": "2.5",
+        "description": "Standard Manifold Validation",
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_D01_STANDARD",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45
+                },
+                {
+                  "axis": "M",
+                  "operator": "gt",
+                  "value": 0.5
+                },
+                {
+                  "axis": "R",
+                  "operator": "lt",
+                  "value": 0.4
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    "D-02": {
+      "id": "D-02",
+      "name": "Indirect Wealth Pattern (偏财格)",
+      "version": "2.5.1 (Safety Redux)",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "D-02",
+        "name": "Indirect Wealth (The Hunter)",
+        "version": "2.5.1",
+        "physics_prototype": "Venture Lens / Dynamic Flow",
+        "description": "Wealth through leverage (R) and risk (S).",
+        "compliance": "FDS-V1.5.1 (Genesis Protocol - Shift Left)",
+        "data_source": "holographic_universe_518k.jsonl",
+        "calibration_date": "2025-12-31",
+        "category": "WEALTH",
+        "chinese_name": "偏财格"
+      },
+      "physics_kernel": {
+        "version": "2.5",
+        "transfer_matrix": {
+          "E_row": {
+            "Day_Master": 1.2,
+            "Resource": 0.8
+          },
+          "M_row": {
+            "Indirect_Wealth": 1.5,
+            "Direct_Wealth": 0.5,
+            "Rob_Wealth": -0.2
+          },
+          "O_row": {
+            "Hurting_Officer": 1.2,
+            "Eating_God": 0.8
+          },
+          "S_row": {
+            "Seven_Killings": 0.5,
+            "Clash": 0.5
+          },
+          "R_row": {
+            "Rob_Wealth": 1.0,
+            "Friend": 0.8
+          }
+        },
+        "integrity_threshold": 0.5
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_D02_COLLIDER",
+          "name": "The Collider (风投/枭雄)",
+          "type": "SINGULARITY",
+          "description": "High Risk (S), High Wealth (M). Profit from volatility.",
           "matrix_override": {
             "transfer_matrix": {
-              "M_row": {
-                "clash": 1.8
-              },
               "S_row": {
-                "clash": 0.3
+                "Seven_Killings": 1.2,
+                "Clash": 1.0
+              },
+              "M_row": {
+                "Direct_Wealth": 0.5,
+                "Indirect_Wealth": 1.8
               }
             }
           },
           "manifold_data": {
             "mean_vector": {
-              "E": 0.70,
-              "M": 0.88,
-              "S": 0.45
+              "E": 0.6126843536356524,
+              "O": 0.409434262363426,
+              "M": 0.6684884754862987,
+              "S": 0.6123156809120092,
+              "R": 0.5004050632440561
+            }
+          }
+        },
+        {
+          "id": "SP_D02_SYNDICATE",
+          "name": "The Syndicate (财团/大鳄)",
+          "type": "SINGULARITY",
+          "description": "High Leverage (R), High Wealth (M). Profit from network.",
+          "matrix_override": {
+            "transfer_matrix": {
+              "R_row": {
+                "Rob_Wealth": 1.5,
+                "Friend": 1.2
+              },
+              "M_row": {
+                "Rob_Wealth": 0.5
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6150308876955755,
+              "O": 0.39801250841174657,
+              "M": 0.6655112592523568,
+              "S": 0.2869402166737573,
+              "R": 0.6537491647450875
+            }
+          }
+        },
+        {
+          "id": "SP_D02_STANDARD",
+          "name": "The Hunter (传统大亨)",
+          "type": "DEFAULT",
+          "description": "Balanced high wealth and energy. Standard venture model.",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6130715893606609,
+              "O": 0.39959168586615834,
+              "M": 0.6660269762596114,
+              "S": 0.28575654720570703,
+              "R": 0.41079377353797514
+            },
+            "covariance_matrix": [
+              [
+                0.013968,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.023179,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.009137,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.023289,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.022208
+              ]
+            ]
+          }
+        }
+      ],
+      "matching_router": {
+        "strategy_version": "2.5.1 (Shift Left)",
+        "description": "Spectrum Priority w/ Native E-Gating",
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_D02_COLLIDER",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45
+                },
+                {
+                  "axis": "M",
+                  "operator": "gt",
+                  "value": 0.6
+                },
+                {
+                  "axis": "S",
+                  "operator": "gt",
+                  "value": 0.5
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          },
+          {
+            "priority": 2,
+            "target": "SP_D02_SYNDICATE",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45
+                },
+                {
+                  "axis": "M",
+                  "operator": "gt",
+                  "value": 0.6
+                },
+                {
+                  "axis": "R",
+                  "operator": "gt",
+                  "value": 0.5
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          },
+          {
+            "priority": 3,
+            "target": "SP_D02_STANDARD",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45
+                },
+                {
+                  "axis": "M",
+                  "operator": "gt",
+                  "value": 0.55
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "B-01": {
+      "id": "B-01",
+      "name": "Eating God Pattern (食神格)",
+      "version": "2.5",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "B-01",
+        "name": "Eating God (The Artist)",
+        "version": "2.5",
+        "physics_prototype": "Laminar Flow / Superfluidity (层流/超流体)",
+        "description": "包含标准层流态与高压逆转态的复合容器。",
+        "compliance": "FDS-V1.5.1 (Genesis Protocol)",
+        "calibration_date": "2025-12-31",
+        "mining_stats": {
+          "seed_count": 1522,
+          "singularity_count": 14586
+        },
+        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
+        "last_audit": "2025-12-31 21:06:33",
+        "category": "TALENT",
+        "chinese_name": "食神格"
+      },
+      "physics_kernel": {
+        "version": "2.5",
+        "transfer_matrix": {
+          "E_row": {
+            "Day_Master": 1.0,
+            "Resource": 0.8,
+            "Indirect_Resource": -0.5
+          },
+          "O_row": {
+            "Eating_God": 1.8,
+            "Hurting_Officer": -0.5
+          },
+          "M_row": {
+            "Wealth": 1.2,
+            "Eating_God": 0.6
+          },
+          "S_row": {
+            "Indirect_Resource": 2.5,
+            "Clash": 1.5,
+            "Seven_Killings": 1.0
+          },
+          "R_row": {
+            "Combination": 0.8,
+            "Friend": 0.5
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor": 2.0
+          }
+        },
+        "integrity_threshold": 0.5
+      },
+      "feature_anchors": {
+        "description": "Standard Laminar Manifold",
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.6100939410384849,
+            "O": 0.674604322245328,
+            "M": 0.49948863046062886,
+            "S": 0.11407494405419977,
+            "R": 0.502758333841734
+          },
+          "covariance_matrix": [
+            [
+              0.014421,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.003846,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.018052,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.003704,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.02115
+            ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist": 3.0
+          }
+        }
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_B01_STANDARD",
+          "name": "The Artist (标准层流态)",
+          "type": "DEFAULT",
+          "description": "Low Entropy, High Output. The ideal Eating God flow.",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6100939410384849,
+              "O": 0.674604322245328,
+              "M": 0.49948863046062886,
+              "S": 0.11407494405419977,
+              "R": 0.502758333841734
+            },
+            "covariance_matrix": [
+              [
+                0.014421,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.003846,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.018052,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.003704,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.02115
+              ]
+            ]
+          }
+        },
+        {
+          "id": "SP_B01_REVERSAL",
+          "name": "The Phoenix (弃食就印/倒食转化)",
+          "type": "SINGULARITY",
+          "description": "High Pressure (Owl) converted to Power by Strong Self.",
+          "matrix_override": {
+            "transfer_matrix": {
+              "S_row": {
+                "Indirect_Resource": -1.0,
+                "Seven_Killings": 0.5
+              },
+              "E_row": {
+                "Indirect_Resource": 1.5
+              }
+            }
+          },
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.5871486616475964,
+              "O": 0.4001683002239193,
+              "M": 0.39871333799184305,
+              "S": 0.5287578610501666,
+              "R": 0.4995058889536841
             }
           }
         }
       ],
       "matching_router": {
+        "strategy_version": "2.5 (Genesis)",
+        "description": "Strict Priority: Singularity First, Standard Fallback.",
         "strategies": [
           {
             "priority": 1,
-            "target": "SP_D01_SURRENDER",
-            "logic": "E < 0.15 AND M > 0.85"
+            "target": "SP_B01_REVERSAL",
+            "description": "Check for Phoenix first (More common, High Energy Requirement)",
+            "logic": {
+              "condition": "AND",
+              "rules": [
+                {
+                  "axis": "S",
+                  "operator": "gt",
+                  "value": 0.4
+                },
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45
+                }
+              ]
+            }
           },
           {
             "priority": 2,
-            "target": "SP_D01_VAULT",
-            "logic": "vault_count >= 3"
+            "target": "SP_B01_STANDARD",
+            "description": "Check for Laminar Flow (Strict Purity) [Secured by E-Gating]",
+            "logic": {
+              "condition": "HYBRID",
+              "description": "Composite Gate: Energy Floor + Manifold Shape",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.32,
+                  "description": "Energy Gating (Anti-Leakage)"
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    "A-01": {
+      "id": "A-01",
+      "name": "Direct Officer Pattern",
+      "version": "1.5.1",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "A-01",
+        "name": "Direct Officer (The Judge)",
+        "display_name": "Direct Officer",
+        "chinese_name": "正官格",
+        "category": "POWER",
+        "physics_prototype": "Monolithic Crystalline Lattice",
+        "description": "高度秩序化的单态晶体结构。以正官为核心，排斥伤官杂质。必须身旺方可入格。",
+        "compliance": "FDS-V1.5.1 (Single-State)",
+        "calibration_date": "2025-12-31"
+      },
+      "physics_kernel": {
+        "description": "Crystalline Lens (High Order, High Sensitivity to S)",
+        "transfer_matrix": {
+          "E_row": {
+            "Day_Master": 1.2,
+            "Resource": 1.5,
+            "Indirect_Resource": 0.8
+          },
+          "O_row": {
+            "Direct_Officer": 2.0,
+            "Seven_Killings": -1.5,
+            "Hurting_Officer": -2.5,
+            "Friend": 0.5
+          },
+          "M_row": {
+            "Direct_Wealth": 1.2,
+            "Indirect_Wealth": 0.8
+          },
+          "S_row": {
+            "Hurting_Officer": 3.0,
+            "Seven_Killings": 1.0,
+            "Clash": 1.5
+          },
+          "R_row": {
+            "Direct_Wealth": 0.5,
+            "Combination": 1.0
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor": 2.0
+          }
+        },
+        "integrity_threshold": 0.65
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_A01_STANDARD",
+          "name": "The Judge (标准正官)",
+          "type": "DEFAULT",
+          "category": "POWER",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6090107058299941,
+              "O": 0.6277597792337752,
+              "M": 0.3855257032926267,
+              "S": 0.18563796567778473,
+              "R": 0.4906727114673237
+            },
+            "covariance_matrix": [
+              [
+                0.011053721499270594,
+                -0.0002898875651934688,
+                -0.0006965706661648496,
+                0.0007010866637061961,
+                -0.0006191294309156114
+              ],
+              [
+                -0.0002898875651934688,
+                0.0023309060549298035,
+                0.00016050670707687143,
+                0.00011712556460505298,
+                0.0004460115473357756
+              ],
+              [
+                -0.0006965706661648496,
+                0.00016050670707687143,
+                0.039354894864790865,
+                -0.0001313490588427361,
+                0.000776250674008417
+              ],
+              [
+                0.0007010866637061961,
+                0.00011712556460505298,
+                -0.0001313490588427361,
+                0.006131524447067405,
+                -0.0007170265259990559
+              ],
+              [
+                -0.0006191294309156114,
+                0.0004460115473357756,
+                0.000776250674008417,
+                -0.0007170265259990559,
+                0.020590373136781193
+              ]
+            ],
+            "thresholds": {
+              "max_mahalanobis_dist": 2.5
+            }
+          }
+        }
+      ],
+      "matching_router": {
+        "strategy_version": "2.5.1 (Genesis)",
+        "description": "Single-State Monolithic Crystal. Strict E-Gating.",
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_A01_STANDARD",
+            "description": "Standard Direct Officer (The Judge)",
+            "logic": {
+              "condition": "HYBRID",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45,
+                  "description": "Safety: Hardened Floor (Anti-Puppet)"
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          }
+        ]
+      }
+    },
+    "B-02": {
+      "id": "B-02",
+      "name": "Hurting Officer Pattern",
+      "version": "1.5.1",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "B-02",
+        "name": "Hurting Officer (The Innovator)",
+        "display_name": "Hurting Officer",
+        "chinese_name": "伤官格",
+        "category": "TALENT",
+        "physics_prototype": "Dissipative Structure / Bifurcation",
+        "description": "高能量耗散结构。以伤官为动力，依冷却机制分化为学者(印)与巨贾(财)。严禁身弱入格。",
+        "compliance": "FDS-V1.5.1 (Multi-State)",
+        "calibration_date": "2025-12-31"
+      },
+      "physics_kernel": {
+        "description": "Dissipative Lens. High Output, High Reactivity (S). Requires Cooling (M/Resource).",
+        "transfer_matrix": {
+          "E_row": {
+            "Day_Master": 1.2,
+            "Resource": 1.2,
+            "Indirect_Resource": 0.8
+          },
+          "O_row": {
+            "Hurting_Officer": 2.5,
+            "Eating_God": 1.0,
+            "Direct_Officer": -1.5,
+            "Seven_Killings": 0.5
+          },
+          "M_row": {
+            "Direct_Wealth": 1.5,
+            "Indirect_Wealth": 1.2
+          },
+          "S_row": {
+            "Hurting_Officer": 2.0,
+            "Direct_Officer": 3.0,
+            "Seven_Killings": 1.5,
+            "Resource": -2.0,
+            "Direct_Wealth": -1.0
+          },
+          "R_row": {
+            "Friend": 0.5,
+            "Rob_Wealth": 0.5
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "tanh_variant",
+          "parameters": {
+            "k_factor": 1.5
+          }
+        },
+        "integrity_threshold": 0.6
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_B02_STANDARD",
+          "name": "The Strategist (混合型伤官)",
+          "type": "DEFAULT",
+          "category": "TALENT",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6147238119029429,
+              "O": 0.5879403854741945,
+              "M": 0.39074451932774623,
+              "S": 0.42256056700252775,
+              "R": 0.48370889039699483
+            },
+            "covariance_matrix": [
+              [
+                0.01201705746522445,
+                -0.00021824435846493428,
+                0.00040369047909684873,
+                -0.0002710514739848821,
+                0.00015305254442463408
+              ],
+              [
+                -0.00021824435846493428,
+                0.0034348450778958275,
+                -0.0003953320148428168,
+                -0.00032005590051252037,
+                0.0005048402525282869
+              ],
+              [
+                0.00040369047909684873,
+                -0.0003953320148428168,
+                0.036632941978167764,
+                -0.0004898759402352692,
+                0.0015488024201585455
+              ],
+              [
+                -0.0002710514739848821,
+                -0.00032005590051252037,
+                -0.0004898759402352692,
+                0.007487720285892719,
+                0.001196088097095031
+              ],
+              [
+                0.00015305254442463408,
+                0.0005048402525282869,
+                0.0015488024201585455,
+                0.001196088097095031,
+                0.018615324239125784
+              ]
+            ],
+            "thresholds": {
+              "max_mahalanobis_dist": 3.0
+            }
+          }
+        },
+        {
+          "id": "SP_B02_AUTHORITY",
+          "name": "The Guru (伤官配印)",
+          "type": "SINGULARITY",
+          "category": "TALENT",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6147238119029429,
+              "O": 0.5879403854741945,
+              "M": 0.39074451932774623,
+              "S": 0.42256056700252775,
+              "R": 0.48370889039699483
+            },
+            "covariance_matrix": [
+              [
+                0.01201705746522445,
+                -0.00021824435846493428,
+                0.00040369047909684873,
+                -0.0002710514739848821,
+                0.00015305254442463408
+              ],
+              [
+                -0.00021824435846493428,
+                0.0034348450778958275,
+                -0.0003953320148428168,
+                -0.00032005590051252037,
+                0.0005048402525282869
+              ],
+              [
+                0.00040369047909684873,
+                -0.0003953320148428168,
+                0.036632941978167764,
+                -0.0004898759402352692,
+                0.0015488024201585455
+              ],
+              [
+                -0.0002710514739848821,
+                -0.00032005590051252037,
+                -0.0004898759402352692,
+                0.007487720285892719,
+                0.001196088097095031
+              ],
+              [
+                0.00015305254442463408,
+                0.0005048402525282869,
+                0.0015488024201585455,
+                0.001196088097095031,
+                0.018615324239125784
+              ]
+            ],
+            "thresholds": {
+              "max_mahalanobis_dist": 3.0
+            }
+          },
+          "matrix_override": {
+            "transfer_matrix": {
+              "S_row": {
+                "Resource": -3.0
+              }
+            }
+          }
+        },
+        {
+          "id": "SP_B02_TYCOON",
+          "name": "The Tycoon (伤官生财)",
+          "type": "SINGULARITY",
+          "category": "TALENT",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6147238119029429,
+              "O": 0.5879403854741945,
+              "M": 0.39074451932774623,
+              "S": 0.42256056700252775,
+              "R": 0.48370889039699483
+            },
+            "covariance_matrix": [
+              [
+                0.01201705746522445,
+                -0.00021824435846493428,
+                0.00040369047909684873,
+                -0.0002710514739848821,
+                0.00015305254442463408
+              ],
+              [
+                -0.00021824435846493428,
+                0.0034348450778958275,
+                -0.0003953320148428168,
+                -0.00032005590051252037,
+                0.0005048402525282869
+              ],
+              [
+                0.00040369047909684873,
+                -0.0003953320148428168,
+                0.036632941978167764,
+                -0.0004898759402352692,
+                0.0015488024201585455
+              ],
+              [
+                -0.0002710514739848821,
+                -0.00032005590051252037,
+                -0.0004898759402352692,
+                0.007487720285892719,
+                0.001196088097095031
+              ],
+              [
+                0.00015305254442463408,
+                0.0005048402525282869,
+                0.0015488024201585455,
+                0.001196088097095031,
+                0.018615324239125784
+              ]
+            ],
+            "thresholds": {
+              "max_mahalanobis_dist": 3.0
+            }
+          },
+          "matrix_override": {
+            "transfer_matrix": {
+              "S_row": {
+                "Direct_Wealth": -2.0
+              }
+            }
+          }
+        }
+      ],
+      "matching_router": {
+        "strategy_version": "2.5.1 (Genesis)",
+        "description": "Multi-State Bifurcation (Guru/Tycoon/Strategist) w/ Hard Safety Gate.",
+        "strategies": [
+          {
+            "priority": 1,
+            "target": "SP_B02_AUTHORITY",
+            "description": "Resource Cooled (Guru). High E/Resource.",
+            "logic": {
+              "condition": "HYBRID",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45,
+                  "description": "Safety: Anti-Neurotic"
+                },
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.65,
+                  "description": "High Resource Support"
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
+          },
+          {
+            "priority": 2,
+            "target": "SP_B02_TYCOON",
+            "description": "Wealth Cooled (Tycoon). High M.",
+            "logic": {
+              "condition": "HYBRID",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45,
+                  "description": "Safety: Anti-Neurotic"
+                },
+                {
+                  "axis": "M",
+                  "operator": "gt",
+                  "value": 0.6,
+                  "description": "High Commercial Value"
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
           },
           {
             "priority": 3,
-            "target": "SP_D01_STANDARD",
-            "logic": "default"
+            "target": "SP_B02_STANDARD",
+            "description": "Standard Hurting Officer (Strategist).",
+            "logic": {
+              "condition": "HYBRID",
+              "rules": [
+                {
+                  "axis": "E",
+                  "operator": "gt",
+                  "value": 0.45,
+                  "description": "Safety: Anti-Neurotic"
+                }
+              ],
+              "distance_check": {
+                "type": "MAHALANOBIS",
+                "threshold": 3.0
+              }
+            }
           }
         ]
       }

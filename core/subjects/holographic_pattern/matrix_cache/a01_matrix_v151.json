@@ -1,0 +1,99 @@
+{
+  "pattern_id": "A-01",
+  "step": "Step 3 - Matrix Fitting (V1.5.1)",
+  "meta_info": {
+    "category": "POWER",
+    "display_name": "Direct Officer",
+    "chinese_name": "正官格",
+    "version": "1.5.1",
+    "compliance": "FDS-V1.5.1"
+  },
+  "physics_kernel": {
+    "description": "Crystalline Lens (High Order, High Sensitivity to S)",
+    "transfer_matrix": {
+      "E_row": {
+        "Day_Master": 1.2,
+        "Resource": 1.5,
+        "Indirect_Resource": 0.8
+      },
+      "O_row": {
+        "Direct_Officer": 2.0,
+        "Seven_Killings": -1.5,
+        "Hurting_Officer": -2.5,
+        "Friend": 0.5
+      },
+      "M_row": {
+        "Direct_Wealth": 1.2,
+        "Indirect_Wealth": 0.8
+      },
+      "S_row": {
+        "Hurting_Officer": 3.0,
+        "Seven_Killings": 1.0,
+        "Clash": 1.5
+      },
+      "R_row": {
+        "Direct_Wealth": 0.5,
+        "Combination": 1.0
+      }
+    },
+    "tensor_dynamics": {
+      "activation_function": "sigmoid_variant",
+      "parameters": {
+        "k_factor": 2.0
+      }
+    },
+    "integrity_threshold": 0.65
+  },
+  "feature_anchors": {
+    "description": "Standard Crystalline Manifold",
+    "standard_manifold": {
+      "mean_vector": {
+        "E": 0.6090107058299941,
+        "O": 0.6277597792337752,
+        "M": 0.3855257032926267,
+        "S": 0.18563796567778473,
+        "R": 0.4906727114673237
+      },
+      "covariance_matrix": [
+        [
+          0.011053721499270594,
+          -0.0002898875651934688,
+          -0.0006965706661648496,
+          0.0007010866637061961,
+          -0.0006191294309156114
+        ],
+        [
+          -0.0002898875651934688,
+          0.0023309060549298035,
+          0.00016050670707687143,
+          0.00011712556460505298,
+          0.0004460115473357756
+        ],
+        [
+          -0.0006965706661648496,
+          0.00016050670707687143,
+          0.039354894864790865,
+          -0.0001313490588427361,
+          0.000776250674008417
+        ],
+        [
+          0.0007010866637061961,
+          0.00011712556460505298,
+          -0.0001313490588427361,
+          0.006131524447067405,
+          -0.0007170265259990559
+        ],
+        [
+          -0.0006191294309156114,
+          0.0004460115473357756,
+          0.000776250674008417,
+          -0.0007170265259990559,
+          0.020590373136781193
+        ]
+      ],
+      "thresholds": {
+        "max_mahalanobis_dist": 2.5
+      }
+    }
+  }
+}

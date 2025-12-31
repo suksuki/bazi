@@ -64,6 +64,29 @@ class HolographicPatternController:
         
         return self.registry
     
+    def _get_display_name_cn(self, pattern_data: Dict, pattern_id: str) -> str:
+        """Helper to extract display name in Chinese."""
+        if pattern_data.get('name_cn'):
+            return pattern_data['name_cn']
+        
+        # Try meta_info Chinese Name (Primary source after normalization)
+        if 'meta_info' in pattern_data and pattern_data['meta_info'].get('chinese_name'):
+            return pattern_data['meta_info']['chinese_name']
+            
+        # Try meta_info Display Name but mark as English
+        if 'meta_info' in pattern_data and pattern_data['meta_info'].get('name'):
+            return pattern_data['meta_info']['name']
+            
+        # Try Regex from name if format is 'Name (ChineseName)'
+        name = pattern_data.get('name', '')
+        if '(' in name and ')' in name:
+            import re
+            match = re.search(r'[\(（](.*?)[\)）]', name)
+            if match:
+                return match.group(1)
+                
+        return name if name else pattern_id
+
     def get_all_patterns(self) -> List[Dict]:
         """
         获取所有格局列表（按QGA-HR V1.0层级命名规范）
@@ -90,7 +113,7 @@ class HolographicPatternController:
                 'category': category,
                 'subject_id': subject_id,
                 'name': pattern_data.get('name', pattern_id),
-                'name_cn': pattern_data.get('name_cn', ''),
+                'name_cn': self._get_display_name_cn(pattern_data, pattern_id),
                 'icon': pattern_data.get('icon', '🧬'),
                 'description': pattern_data.get('description', ''),
                 'version': pattern_data.get('version', 'N/A'),
@@ -113,7 +136,7 @@ class HolographicPatternController:
                             'category': category,
                             'subject_id': sub_data.get('subject_id', sub_data.get('id')),
                             'name': sub_data.get('name'),
-                            'name_cn': sub_data.get('name_cn'),
+                            'name_cn': self._get_display_name_cn(sub_data, sub_data.get('id')),
                             'icon': sub_data.get('icon', p_info['icon']),
                             'description': sub_data.get('description'),
                             'version': p_info['version'],
@@ -182,7 +205,7 @@ class HolographicPatternController:
                         'category': category,
                         'subject_id': subject_id,
                         'name': pattern_data.get('name', pattern_id),
-                        'name_cn': pattern_data.get('name_cn', ''),
+                        'name_cn': self._get_display_name_cn(pattern_data, pattern_id),
                         'icon': pattern_data.get('icon', '🧬'),
                         'description': pattern_data.get('description', ''),
                         'version': pattern_data.get('version', 'N/A'),
@@ -202,18 +225,8 @@ class HolographicPatternController:
             sub_patterns_list = pattern_data.get('sub_patterns_registry') or pattern_data.get('sub_patterns') or []
             if sub_patterns_list and pattern_id in hierarchy:
                 for sub_data in sub_patterns_list:
-                    # 获取中文名，如果没有则使用name
-                    name_cn = sub_data.get('name_cn')
-                    if not name_cn:
-                        name = sub_data.get('name', '')
-                        # 尝试从name提取中文 (e.g. "Name (中文)")
-                        if '(' in name and ')' in name:
-                            import re
-                            match = re.search(r'\((.*?)\)', name)
-                            if match:
-                                name_cn = match.group(1)
-                        if not name_cn:
-                            name_cn = name
+                    # 使用 helper 获取中文名
+                    name_cn = self._get_display_name_cn(sub_data, sub_data.get('id'))
                             
                     hierarchy[pattern_id]['subs'].append({
                         'id': sub_data.get('id'),

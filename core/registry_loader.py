@@ -509,24 +509,67 @@ class RegistryLoader:
                     dg = compute_energy_flux(chart, day_master, "正官")
                     qg = compute_energy_flux(chart, day_master, "七杀")
                     o_est = dg + qg
+
+                    # S & R Estimation (V2.4)
+                    clash_cnt = calculate_clash_count(chart)
+                    s_est = qg + 0.8 * clash_cnt - 0.5 * (zy + py) # Approx from D-02 Kernel
+
+                    # R Estimation
+                    # Simple combination count helper
+                    comb_cnt = 0
+                    branches = [p[1] for p in chart]
+                    for i in range(len(branches)):
+                        for j in range(i+1, len(branches)):
+                            from core.physics_engine import check_combination # Ensure import availability
+                            if check_combination(branches[i], branches[j]):
+                                comb_cnt += 1
+                                
+                    r_est = comb_cnt * 1.0 + bj * 0.5 + jc * 0.3 # Approx from D-02 Kernel_Row_R
                     
                     v_count = count_vaults_helper(chart)
                     
                     match = False
-                    # D-01 Logic
-                    if "E < 0.15" in logic and e_est < 0.20 and m_est > 0.8: match = True
-                    if "vault_count >= 3" in logic and v_count >= 3: match = True
                     
-                    # A-03 Logic (FDS-V1.5.1)
-                    if "vault_count >= 2" in logic and v_count >= 2: match = True
-                    
-                    if "E < 0.35" in logic and "O > 0.55" in logic:
-                         # SP_A03_OVERKILL
-                         if e_est < 0.40 and o_est > 0.50: match = True # Relaxed slightly for heuristics
-                    
-                    if "E > 0.65" in logic and "O < 0.25" in logic:
-                         # SP_A03_NO_CONTROL
-                         if e_est > 0.60 and o_est < 0.30: match = True
+                    # Protocol V2.5: Support JSON Logic (D-02 Standard)
+                    if isinstance(logic, list):
+                        conditions_met = True
+                        for cond in logic:
+                            axis = cond.get("axis")
+                            op = cond.get("operator")
+                            val = cond.get("value", 0.0)
+                            
+                            current_val = 0.0
+                            if axis == "E": current_val = e_est
+                            elif axis == "M": current_val = m_est
+                            elif axis == "O": current_val = o_est
+                            elif axis == "S": current_val = s_est
+                            elif axis == "R": current_val = r_est
+                            
+                            if op == "gt" and not (current_val > val): conditions_met = False
+                            elif op == "gte" and not (current_val >= val): conditions_met = False
+                            elif op == "lt" and not (current_val < val): conditions_met = False
+                            elif op == "lte" and not (current_val <= val): conditions_met = False
+                            
+                            if not conditions_met: break
+                        
+                        if conditions_met: match = True
+
+                    # Legacy String Logic
+                    elif isinstance(logic, str):
+                        # D-01 Logic
+                        if "E < 0.15" in logic and e_est < 0.20 and m_est > 0.8: match = True
+                        if "vault_count >= 3" in logic and v_count >= 3: match = True
+                        
+                        # A-03 Logic (FDS-V1.5.1)
+                        if "vault_count >= 2" in logic and v_count >= 2: match = True
+                        
+                        if "E < 0.35" in logic and "O > 0.55" in logic:
+                             # SP_A03_OVERKILL
+                             if e_est < 0.40 and o_est > 0.50: match = True # Relaxed slightly for heuristics
+                        
+                        if "E > 0.65" in logic and "O < 0.25" in logic:
+                             # SP_A03_NO_CONTROL
+                             if e_est > 0.60 and o_est < 0.30: match = True
                     
                     if match:
                         sub_patterns = pattern.get('sub_patterns_registry') or pattern.get('sub_patterns') or []

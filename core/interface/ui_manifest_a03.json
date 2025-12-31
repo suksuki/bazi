@@ -1,0 +1,56 @@
+{
+  "pattern_id": "A-03",
+  "view_mode": "REACTOR_DASHBOARD",
+  "display_name": "A-03 羊刃架杀 (The Reactor)",
+  "visual_metaphor": {
+    "type": "CONFINED_FUSION",
+    "components": [
+      {
+        "id": "core_fuel",
+        "label": "内核能量 (Yang Ren)",
+        "data_source": "tensor.E",
+        "color": "#FF0000",
+        "animation": "PULSE_FAST"
+      },
+      {
+        "id": "confinement_field",
+        "label": "磁场约束 (Seven Killings)",
+        "data_source": "tensor.S",
+        "color": "#222222",
+        "visual_effect": "FORCE_FIELD"
+      },
+      {
+        "id": "output_gauge",
+        "label": "实际权柄 (Real Power)",
+        "data_source": "computed.matrix_score",
+        "color": "#FFD700",
+        "is_primary_metric": true,
+        "note": "Power converted from Conflict, not Talent."
+      }
+    ]
+  },
+  "dynamic_labels": {
+    "SP_A03_STANDARD": {
+      "status_text": "TOKAMAK STABLE",
+      "warning": "High Internal Stress Detected.",
+      "color_theme": "DARK_RED"
+    },
+    "SP_A03_ALLIANCE": {
+      "status_text": "SUPERCONDUCTING",
+      "warning": "Optimal Flow Achieved.",
+      "color_theme": "ELECTRIC_BLUE"
+    }
+  },
+  "alert_states": {
+    "meltdown_risk": {
+      "trigger": "E < S * 0.8",
+      "message": "WARNING: Magnetic Crush Imminent (杀重攻身)",
+      "visual": "FIELD_COLLAPSE"
+    },
+    "explosion_risk": {
+      "trigger": "E > S * 1.5",
+      "message": "WARNING: Plasma Leakage (羊刃无制)",
+      "visual": "CORE_BREACH"
+    }
+  }
+}

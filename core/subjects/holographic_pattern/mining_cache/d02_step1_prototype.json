@@ -1,0 +1,47 @@
+{
+  "pattern_id": "D-02",
+  "pattern_name": "Indirect Wealth",
+  "step": "Step 1 - Prototype Definition",
+  "timestamp": "2025-12-31 21:48:40",
+  "physics_prototype": "Dynamic Flow / Risk Lens",
+  "axioms": {
+    "reaction_type": "EXCHANGE (交换/流通)",
+    "stability_mode": "DYNAMIC (动态平衡)",
+    "critical_mass": {
+      "E_threshold": 0.5,
+      "M_threshold": 0.55
+    },
+    "leverage_exception": [
+      "Rob_Wealth (Cost of Business)",
+      "Seven_Killings (Risk Premium)"
+    ]
+  },
+  "init_matrix_logic": {
+    "E_row": {
+      "Day_Master": 1.2,
+      "Resource": 0.8
+    },
+    "M_row": {
+      "Indirect_Wealth": 1.5,
+      "Direct_Wealth": 0.5,
+      "Rob_Wealth": -0.2
+    },
+    "S_row": {
+      "Seven_Killings": 0.5,
+      "Clash": 0.8
+    },
+    "O_row": {
+      "Eating_God": 1.0,
+      "Hurting_Officer": 1.2
+    },
+    "R_row": {
+      "Friend": 0.5,
+      "Rob_Wealth": 1.0
+    }
+  },
+  "mining_filters_preview": {
+    "L1": "Indirect_Wealth > 0.5",
+    "L2": "Low Entanglement constraint RELAXED (High R allowed)",
+    "L3": "Day_Master > 0.5 (Strong Self)"
+  }
+}

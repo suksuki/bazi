@@ -1,0 +1,66 @@
+{
+  "pattern_id": "D-02",
+  "view_mode": "VENTURE_DASHBOARD",
+  "display_name": "D-02 偏财格 (The Hunter)",
+  "visual_metaphor": {
+    "type": "TURBULENCE_GAUGE",
+    "components": [
+      {
+        "id": "flow_velocity",
+        "label": "现金流速 (Velocity)",
+        "data_source": "tensor.M",
+        "visual_type": "FLUID_METER",
+        "color": "#00FF00",
+        "note": "Base Wealth Volume"
+      },
+      {
+        "id": "network_density",
+        "label": "杠杆系数 (Leverage)",
+        "data_source": "tensor.R",
+        "visual_type": "NETWORK_GRAPH",
+        "color": "#00FFFF",
+        "threshold_highlight": 0.5
+      },
+      {
+        "id": "volatility_index",
+        "label": "波动指数 (Volatility)",
+        "data_source": "tensor.S",
+        "visual_type": "OSCILLOSCOPE",
+        "color": "#FF4500",
+        "threshold_highlight": 0.5
+      }
+    ]
+  },
+  "dynamic_labels": {
+    "SP_D02_STANDARD": {
+      "hero_title": "THE TYCOON (大亨)",
+      "status_text": "CASH FLOW STABLE",
+      "ui_theme": "LUXURY_GOLD",
+      "main_visual": "PIPELINE_VIEW"
+    },
+    "SP_D02_SYNDICATE": {
+      "hero_title": "THE SYNDICATE (财团)",
+      "status_text": "LEVERAGE ACTIVE (R-Amplified)",
+      "ui_theme": "NEON_BLUE",
+      "main_visual": "NODE_TOPOLOGY"
+    },
+    "SP_D02_COLLIDER": {
+      "hero_title": "THE COLLIDER (枭雄)",
+      "status_text": "HIGH VOLATILITY HARVESTING",
+      "ui_theme": "ADRENALINE_RED",
+      "main_visual": "SEISMOGRAPH"
+    }
+  },
+  "alert_states": {
+    "bubble_risk": {
+      "trigger": "M > 0.8 AND S > 0.7",
+      "message": "WARNING: Asset Bubble Detected (泡沫风险)",
+      "visual": "FLASHING_RED"
+    },
+    "leverage_warning": {
+      "trigger": "R > 0.7 AND M < 0.6",
+      "message": "WARNING: Empty Leverage (无效社交)",
+      "visual": "DIMMED_NODES"
+    }
+  }
+}

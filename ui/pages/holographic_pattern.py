@@ -80,6 +80,9 @@ def render():
         profile_names['演示：D-01 正财格 (Standard)'] = 'demo_d01_std'
         profile_names['演示：D-01 从财格 (Surrender)'] = 'demo_d01_surrender'
         profile_names['演示：D-01 墓库格 (Vault)'] = 'demo_d01_vault'
+        profile_names['演示：D-02 偏财格 (Standard Tycoon)'] = 'demo_d02_std'
+        profile_names['演示：D-02 资本大鳄 (The Syndicate)'] = 'demo_d02_syndicate'
+        profile_names['演示：D-02 乱世枭雄 (The Collider)'] = 'demo_d02_collider'
         
         current_profile_id = st.session_state.get('current_profile_id', list(profile_names.values())[0] if profile_names else 'demo')
         # Ensure current_profile_id is valid
@@ -138,6 +141,27 @@ def render():
                 'name': 'D-01 顶级墓库', 'gender': '男', 
                 'year_pillar': '戊戌', 'month_pillar': '乙未', 
                 'day_pillar': '甲辰', 'hour_pillar': '庚午',
+                'day_master': '甲'
+            }
+        elif selected_profile_id == 'demo_d02_std':
+            _profile_preview = {
+                'name': 'D-02 偏财大亨', 'gender': '男',
+                'year_pillar': '甲子', 'month_pillar': '壬申',
+                'day_pillar': '丙寅', 'hour_pillar': '己丑',
+                'day_master': '丙'
+            }
+        elif selected_profile_id == 'demo_d02_syndicate':
+            _profile_preview = {
+                'name': 'D-02 资本大鳄', 'gender': '男',
+                'year_pillar': '丙午', 'month_pillar': '丙申',
+                'day_pillar': '丙午', 'hour_pillar': '庚寅',
+                'day_master': '丙'
+            }
+        elif selected_profile_id == 'demo_d02_collider':
+            _profile_preview = {
+                'name': 'D-02 乱世枭雄', 'gender': '男',
+                'year_pillar': '庚申', 'month_pillar': '甲申',
+                'day_pillar': '甲寅', 'hour_pillar': '庚午',
                 'day_master': '甲'
             }
         else:
@@ -329,6 +353,12 @@ def render():
         profile_data = {'name': 'D-01 弃命从财', 'gender': '男', 'year_pillar': '庚申', 'month_pillar': '辛酉', 'day_pillar': '丙申', 'hour_pillar': '戊子', 'day_master': '丙'}
     elif selected_profile_id == 'demo_d01_vault':
         profile_data = {'name': 'D-01 顶级墓库', 'gender': '男', 'year_pillar': '戊戌', 'month_pillar': '乙未', 'day_pillar': '甲辰', 'hour_pillar': '庚午', 'day_master': '甲'}
+    elif selected_profile_id == 'demo_d02_std':
+        profile_data = {'name': 'D-02 偏财大亨', 'gender': '男', 'year_pillar': '甲子', 'month_pillar': '壬申', 'day_pillar': '丙寅', 'hour_pillar': '己丑', 'day_master': '丙'}
+    elif selected_profile_id == 'demo_d02_syndicate':
+        profile_data = {'name': 'D-02 资本大鳄', 'gender': '男', 'year_pillar': '丙午', 'month_pillar': '丙申', 'day_pillar': '丙午', 'hour_pillar': '庚寅', 'day_master': '丙'}
+    elif selected_profile_id == 'demo_d02_collider':
+        profile_data = {'name': 'D-02 乱世枭雄', 'gender': '男', 'year_pillar': '庚申', 'month_pillar': '甲申', 'day_pillar': '甲寅', 'hour_pillar': '庚午', 'day_master': '甲'}
     else:
         profile_data = next((p for p in profiles if p['id'] == selected_profile_id), None)
         
