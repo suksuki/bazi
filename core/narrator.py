@@ -14,24 +14,49 @@ from core.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
-# 全局LLM合成器实例（延迟初始化）
+# 全局LLM合成器实例（延迟初始化，支持配置更新）
 _llm_synthesizer: Optional[LLMSemanticSynthesizer] = None
+_llm_config_hash: Optional[str] = None  # 用于检测配置变化
 
 
-def _get_llm_synthesizer() -> Optional[LLMSemanticSynthesizer]:
-    """获取或创建LLM合成器（延迟初始化）"""
-    global _llm_synthesizer
-    if _llm_synthesizer is None:
+def _get_llm_synthesizer(force_reload: bool = False) -> Optional[LLMSemanticSynthesizer]:
+    """
+    获取或创建LLM合成器（延迟初始化，支持实时读取配置）
+    
+    Args:
+        force_reload: 是否强制重新加载（忽略缓存）
+    
+    Returns:
+        LLM合成器实例
+    """
+    global _llm_synthesizer, _llm_config_hash
+    
+    # 检查配置是否变化（实时读取）
+    from core.config_manager import ConfigManager
+    config_manager = ConfigManager()
+    current_model = config_manager.get("selected_model_name", "")
+    current_host = config_manager.get("ollama_host", "http://localhost:11434")
+    current_config_hash = f"{current_model}|{current_host}"
+    
+    # 如果配置变化或强制重新加载，重新初始化
+    if force_reload or _llm_synthesizer is None or _llm_config_hash != current_config_hash:
+        if _llm_config_hash != current_config_hash and _llm_synthesizer is not None:
+            logger.info(f"🔄 检测到LLM配置变化，重新初始化 (模型: {current_model}, 地址: {current_host})")
+        
+        _llm_synthesizer = None  # 清除旧实例
+        _llm_config_hash = current_config_hash
+        
         try:
             _llm_synthesizer = LLMSemanticSynthesizer()
             # 测试连接
             if _llm_synthesizer.use_llm:
-                logger.info("✅ LLM叙事生成器已初始化")
+                logger.info(f"✅ LLM叙事生成器已初始化 (模型: {current_model}, 地址: {current_host})")
             else:
                 logger.warning("⚠️ LLM不可用，将使用规则生成")
         except Exception as e:
             logger.warning(f"⚠️ LLM初始化失败: {e}，将使用规则生成")
             _llm_synthesizer = None
+    
     return _llm_synthesizer
 
 
@@ -99,18 +124,35 @@ def stream_holographic_report(
         if llm_synthesizer and llm_synthesizer.use_llm:
             logger.info("🔮 尝试使用LLM流式生成叙事报告...")
             try:
+                chunk_count = 0
                 for chunk in _stream_with_llm(tensor_data, pattern_name, pattern_state, llm_synthesizer):
+                    chunk_count += 1
                     yield chunk
-                return
+                # 如果成功生成内容，返回
+                if chunk_count > 0:
+                    return
+                else:
+                    logger.warning("⚠️ LLM返回空内容，回退到规则生成")
+            except ValueError as e:
+                # 检测到拒绝消息，回退到规则生成
+                if "拒绝消息" in str(e):
+                    logger.warning("⚠️ LLM返回拒绝消息，自动回退到规则生成")
+                else:
+                    logger.warning(f"⚠️ LLM流式生成失败，回退到规则生成: {e}")
             except Exception as e:
                 logger.warning(f"⚠️ LLM流式生成失败，回退到规则生成: {e}")
         else:
             logger.warning(f"⚠️ LLM不可用，回退到规则生成")
     
-    # 回退到规则生成（非流式，一次性产生结果但通过yield模拟流）
+    # 回退到规则生成（模拟流式输出，逐字符显示）
     logger.info("📝 使用规则生成叙事报告")
     result = _generate_with_rules(tensor_data, pattern_name, pattern_state)
-    yield result
+    # 逐字符输出，实现打字机效果（逐字逐句显示）
+    import time
+    for char in result:
+        yield char
+        # 添加小延迟以增强打字机效果（约30ms/字符）
+        time.sleep(0.03)
 
 
 def _generate_with_llm(
@@ -128,8 +170,8 @@ def _generate_with_llm(
     R = projection.get('R', 0.0)
     alpha = tensor_data.get('alpha', 1.0)
     
-    # 构建LLM Prompt
-    prompt = f"""作为量子命运物理学家，分析以下5维命运张量数据。
+    # 构建LLM Prompt (强制版：明确禁止拒绝)
+    prompt = f"""你是一个专业的量子命运物理学家，专门分析5维命运张量数据。你的任务是直接生成分析报告，不要拒绝或解释。
 
 [物理遥测数据]
 - 能级轴 (E): {E:.4f} (生命力和抗压底气)
@@ -141,7 +183,13 @@ def _generate_with_llm(
 - 当前状态: {pattern_state}
 - 格局: {pattern_name}
 
-[分析指南]
+[重要指令]
+- 你必须直接生成分析报告
+- 禁止说"我不能"、"无法生成"、"抱歉"等拒绝性语句
+- 禁止解释为什么不能生成
+- 直接开始分析，不要有任何前言或拒绝
+
+[分析规则]
 1. 如果状态是'CRYSTALLIZED'：描述这是一个高度凝聚的瞬间，混沌转化为秩序。
 2. 如果状态是'COLLAPSED'：描述结构崩塌，权柄（O）被应力（S）吞噬。
 3. 如果O高但M低（典型{pattern_name}特征）：解释为什么有权力但财富有限（重名轻利）。
@@ -149,14 +197,14 @@ def _generate_with_llm(
 5. 语调：专业、深刻，略带科幻感（如《经济学人》遇见《星际穿越》）。
 6. 长度：简洁（150字以内）。
 
-[格式要求]
-- 必须使用Markdown格式
+[输出格式]
+- 使用Markdown格式
 - 使用换行符分隔段落（每个段落之间用两个换行符）
 - 使用---作为水平分隔线
 - 使用**加粗**标记重要概念
 - 使用##作为小标题
 
-请生成分析报告，确保使用正确的Markdown格式和换行符。"""
+现在立即开始生成分析报告（不要有任何拒绝或解释）："""
     
     try:
         # 调用LLM（使用ollama客户端）
@@ -202,6 +250,33 @@ def _generate_with_llm(
                 narrative = str(response)
             
             if narrative and len(narrative.strip()) > 10:
+                # 检查是否包含拒绝消息
+                rejection_keywords = [
+                    "无法直接生成",
+                    "无法生成",
+                    "不能生成",
+                    "抱歉",
+                    "对不起",
+                    "我建议您",
+                    "自行编写",
+                    "寻找专业人士",
+                    "我无法",
+                    "我不能",
+                    "我不能直接",
+                    "我并不能",
+                    "我并不能进行",
+                    "不能直接生成分析报告",
+                    "不能进行专业的",
+                    "不能进行专业",
+                    "不能进行物理",
+                    "不能进行命运",
+                    "不能进行张量"
+                ]
+                narrative_lower = narrative[:200].lower()
+                if any(keyword in narrative_lower for keyword in [k.lower() for k in rejection_keywords]):
+                    logger.warning(f"⚠️ 检测到LLM拒绝消息，回退到规则生成。响应前200字符: {narrative[:200]}")
+                    raise ValueError("LLM返回拒绝消息，自动回退到规则生成")
+                
                 logger.info("✅ 使用LLM生成叙事报告成功")
                 # 确保换行符被保留（Markdown格式需要）
                 # 清理文本，但保留换行符和Markdown格式
@@ -222,10 +297,16 @@ def _generate_with_llm(
                 return cleaned_narrative
             else:
                 logger.warning(f"⚠️ LLM响应为空或过短: {narrative}")
+    except ValueError as e:
+        # 检测到拒绝消息，回退到规则生成
+        if "拒绝消息" in str(e):
+            logger.warning("⚠️ LLM返回拒绝消息，自动回退到规则生成")
+        else:
+            logger.error(f"❌ LLM调用失败: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"❌ LLM调用失败: {e}", exc_info=True)
     
-# 如果LLM失败，回退到规则生成
+    # 如果LLM失败，回退到规则生成
     return _generate_with_rules(tensor_data, pattern_name, pattern_state)
 
 
@@ -244,8 +325,8 @@ def _stream_with_llm(
     R = projection.get('R', 0.0)
     alpha = tensor_data.get('alpha', 1.0)
     
-    # 构建LLM Prompt (与非流式一致)
-    prompt = f"""作为量子命运物理学家，分析以下5维命运张量数据。
+    # 构建LLM Prompt (强制版：明确禁止拒绝)
+    prompt = f"""你是一个专业的量子命运物理学家，专门分析5维命运张量数据。你的任务是直接生成分析报告，不要拒绝或解释。
 
 [物理遥测数据]
 - 能级轴 (E): {E:.4f} (生命力和抗压底气)
@@ -257,7 +338,13 @@ def _stream_with_llm(
 - 当前状态: {pattern_state}
 - 格局: {pattern_name}
 
-[分析指南]
+[重要指令]
+- 你必须直接生成分析报告
+- 禁止说"我不能"、"无法生成"、"抱歉"等拒绝性语句
+- 禁止解释为什么不能生成
+- 直接开始分析，不要有任何前言或拒绝
+
+[分析规则]
 1. 如果状态是'CRYSTALLIZED'：描述这是一个高度凝聚的瞬间，混沌转化为秩序。
 2. 如果状态是'COLLAPSED'：描述结构崩塌，权柄（O）被应力（S）吞噬。
 3. 如果O高但M低：解释为什么有权力但财富有限（重名轻利）。
@@ -265,13 +352,13 @@ def _stream_with_llm(
 5. 语调：专业、深刻，略带科幻感（如《经济学人》遇见《星际穿越》）。
 6. 长度：简洁（150字以内）。
 
-[格式要求]
-- 必须使用Markdown格式
+[输出格式]
+- 使用Markdown格式
 - 使用换行符分隔段落
 - 使用---作为水平分隔线
 - 使用**加粗**标记重要概念
 
-请生成分析报告。"""
+现在立即开始生成分析报告（不要有任何拒绝或解释）："""
     
     try:
         if hasattr(llm_synthesizer, '_llm_client') and llm_synthesizer._llm_client:
@@ -289,13 +376,83 @@ def _stream_with_llm(
                 }
             )
             
+            # 收集响应内容用于验证（使用缓冲机制）
+            collected_text = ""
+            buffer_size = 150  # 缓冲前150个字符用于检测
+            rejection_keywords = [
+                "无法直接生成",
+                "无法生成",
+                "不能生成",
+                "抱歉",
+                "对不起",
+                "我建议您",
+                "自行编写",
+                "寻找专业人士",
+                "我无法",
+                "我不能",
+                "我不能直接",
+                "我并不能",
+                "我并不能进行",
+                "不能直接生成分析报告",
+                "不能进行专业的",
+                "不能进行专业",
+                "不能进行物理",
+                "不能进行命运",
+                "不能进行张量"
+            ]
+            buffer_mode = True  # 先缓冲，检测后再输出
+            buffer_chunks = []
+            
             for chunk in response_stream:
+                chunk_text = ""
                 if isinstance(chunk, dict):
-                    yield chunk.get('response', '')
+                    chunk_text = chunk.get('response', '')
                 elif hasattr(chunk, 'response'):
-                    yield chunk.response
+                    chunk_text = chunk.response
+                else:
+                    chunk_text = str(chunk)
+                
+                collected_text += chunk_text
+                
+                if buffer_mode:
+                    # 缓冲模式：收集chunk但不立即输出
+                    buffer_chunks.append(chunk_text)
+                    
+                    # 当收集到足够内容时，进行检测
+                    if len(collected_text) >= buffer_size:
+                        text_lower = collected_text[:buffer_size].lower()
+                        is_rejection = any(keyword in text_lower for keyword in [k.lower() for k in rejection_keywords])
+                        
+                        if is_rejection:
+                            logger.warning(f"⚠️ 检测到LLM拒绝消息，回退到规则生成。响应前{buffer_size}字符: {collected_text[:buffer_size]}")
+                            raise ValueError("LLM返回拒绝消息，自动回退到规则生成")
+                        else:
+                            # 通过检测，输出缓冲的内容（逐字符输出以实现流式效果）
+                            buffer_mode = False
+                            import time
+                            for buffered_chunk in buffer_chunks:
+                                # 逐字符输出，实现打字机效果
+                                for char in buffered_chunk:
+                                    yield char
+                                    # 添加小延迟以增强打字机效果（约30ms/字符，可根据需要调整）
+                                    time.sleep(0.03)
+                            buffer_chunks = []  # 清空缓冲
+                else:
+                    # 非缓冲模式：逐字符输出（已经通过初始检测）
+                    # 逐字符输出以实现逐字逐句的显示效果
+                    import time
+                    for char in chunk_text:
+                        yield char
+                        # 添加小延迟以增强打字机效果
+                        time.sleep(0.03)
         else:
             raise ValueError("LLM客户端未就绪")
+    except ValueError as e:
+        # 如果是拒绝消息，重新抛出以便上层处理
+        if "拒绝消息" in str(e):
+            raise
+        logger.error(f"❌ LLM流式调用失败: {e}")
+        raise
     except Exception as e:
         logger.error(f"❌ LLM流式调用失败: {e}")
         raise

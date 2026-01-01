@@ -5,7 +5,11 @@
     "compliance": "FDS-V3.0 (Pure Logic Edition)",
     "grand_slam_run": true,
     "fitted_patterns": [
-      "B-01"
+      "B-01",
+      "A-03",
+      "D-02",
+      "A-01",
+      "D-01"
     ]
   },
   "patterns": {
@@ -37,88 +41,91 @@
         "transfer_matrix": {
           "E_row": {
             "bi_jian": 0.2,
-            "jie_cai": 0.0461,
+            "jie_cai": 0.0022,
             "shi_shen": 0.05,
-            "shang_guan": -0.0549,
-            "pian_cai": -0.0163,
-            "zheng_cai": -0.0486,
-            "qi_sha": -0.0157,
-            "zheng_guan": -0.0143,
-            "pian_yin": 0.0415,
-            "zheng_yin": 0.0454,
-            "parallel": 0.0973,
-            "power": -0.0163,
-            "wealth": -0.0153,
-            "output": 0.0179,
-            "combination": -0.0403
+            "shang_guan": 0.0172,
+            "pian_cai": 0.0144,
+            "zheng_cai": 0.0087,
+            "qi_sha": 0.0061,
+            "zheng_guan": 0.0252,
+            "pian_yin": -0.1003,
+            "zheng_yin": 0.0342,
+            "parallel": 0.0269,
+            "power": -0.0409,
+            "wealth": -0.0113,
+            "output": -0.0176,
+            "clash": -0.045,
+            "combination": -0.0059
           },
           "O_row": {
-            "bi_jian": 0.0243,
-            "jie_cai": 0.0408,
-            "shi_shen": 0.0197,
-            "shang_guan": -0.0436,
-            "pian_cai": -0.012,
-            "zheng_cai": -0.0328,
-            "qi_sha": -0.0029,
+            "bi_jian": 0.0296,
+            "jie_cai": -0.0075,
+            "shi_shen": -0.0072,
+            "shang_guan": 0.0222,
+            "pian_cai": 0.0038,
+            "zheng_cai": 0.017,
+            "qi_sha": 0.0222,
             "zheng_guan": 0.05,
-            "pian_yin": 0.0074,
-            "zheng_yin": 0.0318,
-            "parallel": 0.0597,
-            "wealth": -0.0061,
-            "output": 0.0165,
-            "clash": 0.0299,
-            "combination": -0.0063
+            "pian_yin": -0.0725,
+            "zheng_yin": 0.0176,
+            "parallel": 0.0357,
+            "resource": 0.0002,
+            "wealth": 0.0019,
+            "output": 0.0003,
+            "clash": -0.0432,
+            "combination": -0.0068
           },
           "M_row": {
-            "bi_jian": 0.0398,
-            "jie_cai": 0.0818,
+            "bi_jian": 0.0118,
+            "jie_cai": -0.0141,
             "shi_shen": 0.05,
-            "shang_guan": -0.0534,
-            "pian_cai": -0.0066,
+            "shang_guan": 0.0163,
+            "pian_cai": 0.0077,
             "zheng_cai": 0.4,
-            "qi_sha": -0.0415,
-            "zheng_guan": -0.005,
-            "pian_yin": 0.029,
-            "zheng_yin": 0.0234,
-            "parallel": 0.0634,
-            "resource": -0.0316,
-            "power": -0.0096,
-            "output": 0.0191,
-            "clash": 0.0766,
-            "combination": -0.0255
+            "qi_sha": 0.0075,
+            "zheng_guan": 0.0452,
+            "pian_yin": -0.0897,
+            "zheng_yin": 0.0173,
+            "parallel": 0.0466,
+            "resource": -0.0169,
+            "power": -0.0065,
+            "clash": -0.0705,
+            "combination": -0.0074
           },
           "S_row": {
-            "bi_jian": 0.0139,
-            "jie_cai": 0.0347,
+            "bi_jian": -0.0012,
+            "jie_cai": -0.0167,
             "shi_shen": -0.1,
-            "shang_guan": -0.0392,
-            "pian_cai": -0.0132,
-            "zheng_cai": -0.0231,
-            "qi_sha": 0.0005,
-            "zheng_guan": 0.0012,
-            "pian_yin": 0.0256,
-            "zheng_yin": 0.0201,
-            "parallel": 0.0386,
-            "resource": -0.0161,
+            "shang_guan": 0.0293,
+            "pian_cai": 0.0051,
+            "zheng_cai": 0.0233,
+            "qi_sha": 0.006,
+            "zheng_guan": 0.0063,
+            "pian_yin": -0.059,
+            "zheng_yin": 0.0087,
+            "parallel": 0.0129,
+            "resource": 0.0121,
             "wealth": 0.1,
-            "output": 0.0158,
-            "combination": -0.0239
+            "output": -0.0059,
+            "combination": 0.0016
           },
           "R_row": {
             "bi_jian": 0.1,
-            "jie_cai": 0.0517,
+            "jie_cai": -0.0069,
             "shi_shen": 0.1,
-            "shang_guan": -0.0505,
-            "pian_cai": -0.0192,
-            "zheng_cai": -0.0549,
-            "qi_sha": -0.012,
-            "zheng_guan": -0.0131,
-            "pian_yin": 0.0227,
-            "zheng_yin": 0.0538,
-            "parallel": 0.0787,
-            "resource": -0.0153,
-            "power": -0.0224,
-            "output": 0.0148
+            "shang_guan": 0.0058,
+            "pian_cai": 0.0155,
+            "zheng_cai": 0.0042,
+            "qi_sha": 0.0138,
+            "zheng_guan": 0.0231,
+            "pian_yin": -0.0791,
+            "zheng_yin": 0.0234,
+            "parallel": 0.0496,
+            "resource": -0.0169,
+            "power": -0.0198,
+            "wealth": 0.0022,
+            "output": -0.0031,
+            "clash": -0.0373
           }
         },
         "tensor_dynamics": {
@@ -133,47 +140,47 @@
         "description": "Standard Manifold",
         "standard_manifold": {
           "mean_vector": {
-            "E": 0.046485576361645214,
-            "O": 0.025969692794559913,
-            "M": 0.012516144662436847,
-            "S": 0.013398470647061463,
-            "R": 0.038966430375730325
+            "E": 0.03533519227695007,
+            "O": 0.021789667229246575,
+            "M": 0.041042478073926386,
+            "S": 0.014075041851332643,
+            "R": 0.028874545630149753
           },
           "covariance_matrix": [
             [
-              0.04915552043574478,
-              0.015702163428199762,
-              0.008515048685947406,
-              0.00644726653792874,
-              0.03302407970063155
+              0.04879657572754596,
+              0.015256404078834163,
+              0.021100400086437373,
+              0.0029187259610992658,
+              0.03247951147755664
             ],
             [
-              0.015702163428199762,
-              0.01114114260786253,
-              0.0024836130881683485,
-              0.004472092084533818,
-              0.013067334700351083
+              0.015256404078834163,
+              0.010190468734193677,
+              0.014862158620123486,
+              0.0058110955703268566,
+              0.011565515476462106
             ],
             [
-              0.008515048685947406,
-              0.0024836130881683485,
-              0.14218469912818996,
-              -0.0023748632313959402,
-              0.004145607771020015
+              0.021100400086437373,
+              0.014862158620123486,
+              0.13828917694539541,
+              0.009247610767132161,
+              0.019958199978303896
             ],
             [
-              0.00644726653792874,
-              0.004472092084533818,
-              -0.0023748632313959402,
-              0.01990630751550048,
-              0.001332819049305842
+              0.0029187259610992658,
+              0.0058110955703268566,
+              0.009247610767132161,
+              0.020395409169101514,
+              -0.0011033721958251797
             ],
             [
-              0.03302407970063155,
-              0.013067334700351083,
-              0.004145607771020015,
-              0.001332819049305842,
-              0.029277615159776428
+              0.03247951147755664,
+              0.011565515476462106,
+              0.019958199978303896,
+              -0.0011033721958251797,
+              0.0276754120099149
             ]
           ],
           "thresholds": {
@@ -244,6 +251,602 @@
           }
         ]
       },
+      "dynamic_states": {
+        "description": "Phase Change Definitions (V3.0)",
+        "collapse_rules": [],
+        "exceptions": []
+      }
+    },
+    "A-03": {
+      "id": "A-03",
+      "name": "A-03",
+      "version": "3.0",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "A-03",
+        "name": "羊刃架杀格",
+        "version": "2.4",
+        "physics_prototype": "High-Pressure Containment System",
+        "compliance": "FDS-V1.5.1",
+        "chinese_name": "A-03"
+      },
+      "physics_kernel": {
+        "description": "核心物理参数与转换逻辑",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.0,
+            "resource": 0.2,
+            "power": -0.6
+          },
+          "O_row": {
+            "parallel": 0.05,
+            "power": 1.0,
+            "wealth": -0.7
+          },
+          "M_row": {
+            "resource": 0.1,
+            "power": 0.1,
+            "wealth": 0.05
+          },
+          "S_row": {
+            "parallel": 0.1,
+            "power": 0.1,
+            "clash": 0.5
+          },
+          "R_row": {
+            "parallel": 0.1,
+            "combination": 0.2
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor_ref": "@config.physics.k_factor"
+          }
+        },
+        "integrity_threshold": 0.45,
+        "version": "3.0",
+        "integrity_threshold_ref": "@config.patterns.a03.integrity_threshold"
+      },
+      "feature_anchors": {
+        "description": "基于 FDS-V1.5 马氏流形的统计包络",
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.4444,
+            "O": 0.3083,
+            "M": 0.0632,
+            "S": 0.1194,
+            "R": 0.0647
+          },
+          "covariance_matrix": [
+            [
+              0.027588311556352694,
+              -0.022165968636713423,
+              -0.0026591921486172334,
+              -0.004639554203326655,
+              0.001877869556753507
+            ],
+            [
+              -0.022165968636713423,
+              0.019325037752144288,
+              0.001996095396713427,
+              0.0024168447189579162,
+              -0.0015713891040480962
+            ],
+            [
+              -0.0026591921486172334,
+              0.001996095396713427,
+              0.0007445469797194388,
+              0.0001734588242084168,
+              -0.00025401783919839675
+            ],
+            [
+              -0.004639554203326655,
+              0.0024168447189579162,
+              0.0001734588242084168,
+              0.0024918738139879768,
+              -0.00044162943899799564
+            ],
+            [
+              0.001877869556753507,
+              -0.0015713891040480962,
+              -0.00025401783919839675,
+              -0.00044162943899799564,
+              0.0003901999860120238
+            ]
+          ],
+          "inverse_covariance": [
+            [
+              200233.48873176172,
+              200213.26668305896,
+              199679.05130102608,
+              199990.80547859808,
+              198986.27415702448
+            ],
+            [
+              200213.26668305887,
+              200283.85605628547,
+              199498.77493260018,
+              199932.34241450505,
+              199184.34007345428
+            ],
+            [
+              199679.0513010261,
+              199498.77493260018,
+              201154.70101554523,
+              199604.47660630563,
+              199300.5841874017
+            ],
+            [
+              199990.80547859802,
+              199932.342414505,
+              199604.47660630557,
+              200272.2626367752,
+              199292.8928826182
+            ],
+            [
+              198986.27415702463,
+              199184.34007345443,
+              199300.58418740184,
+              199292.89288261844,
+              202371.4769200947
+            ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist_ref": "@config.patterns.a03.mahalanobis_threshold",
+            "min_sai_gating_ref": "@config.gating.weak_self_limit",
+            "precision_gaussian_sigma_ref": "@config.patterns.a03.precision_gaussian_sigma",
+            "precision_energy_gate_k_ref": "@config.patterns.a03.precision_energy_gate_k",
+            "precision_weights_similarity_ref": "@config.patterns.a03.precision_weights.similarity",
+            "precision_weights_distance_ref": "@config.patterns.a03.precision_weights.distance"
+          }
+        }
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_A03_ALLIANCE",
+          "name": "The Alliance (羊刃合杀/超导态)",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.7081887872944159,
+              "O": 0.40104238155441363,
+              "M": 0.39956783658834333,
+              "S": 0.60928918235121,
+              "R": 0.653002320967814
+            }
+          }
+        }
+      ],
+      "matching_router": {},
+      "dynamic_states": {
+        "description": "状态机规则 (Schema V2.4)",
+        "collapse_rules": [
+          {
+            "trigger_name": "Day_Branch_Clash",
+            "default_action": "COLLAPSE",
+            "exceptions": [
+              {
+                "name": "Vault_Tunneling",
+                "conditions": [
+                  {
+                    "operator": "call_physics",
+                    "function": "analyze_clash_dynamics",
+                    "expect": {
+                      "entropy_delta": {
+                        "gt": 0
+                      }
+                    }
+                  }
+                ],
+                "override_state": {
+                  "state": "ACTIVATED",
+                  "centroid_ref": "activated_manifold",
+                  "tensor_modifier": {
+                    "E": 1.2,
+                    "M": 1.5
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "D-02": {
+      "id": "D-02",
+      "name": "偏财格",
+      "version": "3.0",
+      "active": true,
+      "meta_info": {
+        "category": "WEALTH",
+        "description": "偏财高流动性场域",
+        "compliance": "FDS-V3.0",
+        "pattern_id": "D-02",
+        "chinese_name": "偏财格"
+      },
+      "physics_kernel": {
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 0.0599,
+            "resource": 0.0165,
+            "power": 0.0226,
+            "output": 0.0341,
+            "combination": 0.0209
+          },
+          "O_row": {
+            "parallel": -0.0133,
+            "power": 0.1765,
+            "wealth": 0.1172,
+            "output": -0.0186,
+            "clash": -0.012,
+            "combination": -0.0061
+          },
+          "M_row": {
+            "parallel": -0.9227,
+            "resource": -0.2,
+            "power": -0.7854,
+            "wealth": 1.0,
+            "output": 0.5,
+            "clash": 0.1,
+            "combination": -0.2488
+          },
+          "S_row": {
+            "parallel": -0.1414,
+            "resource": -0.0949,
+            "wealth": 0.5,
+            "output": -0.1882,
+            "clash": 0.2,
+            "combination": -0.0472
+          },
+          "R_row": {
+            "parallel": 0.0186,
+            "resource": 0.0123,
+            "power": 0.0097,
+            "wealth": 0.0477,
+            "output": 0.0178,
+            "combination": 0.2936
+          }
+        },
+        "version": "3.0",
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor_ref": "@config.physics.k_factor"
+          }
+        },
+        "integrity_threshold_ref": "@config.patterns.d02.integrity_threshold"
+      },
+      "feature_anchors": {
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.6178317127000563,
+            "O": 0.40051959384750113,
+            "M": 0.6673782315569355,
+            "S": 0.30155822462448273,
+            "R": 0.4967148516848355
+          },
+          "covariance_matrix": [
+            [
+              0.013968,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.023179,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.009137,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.023289,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.022208
+            ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist_ref": "@config.patterns.d02.mahalanobis_threshold",
+            "min_sai_gating_ref": "@config.gating.weak_self_limit",
+            "precision_gaussian_sigma_ref": "@config.patterns.d02.precision_gaussian_sigma",
+            "precision_energy_gate_k_ref": "@config.patterns.d02.precision_energy_gate_k",
+            "precision_weights_similarity_ref": "@config.patterns.d02.precision_weights.similarity",
+            "precision_weights_distance_ref": "@config.patterns.d02.precision_weights.distance"
+          }
+        }
+      },
+      "sub_patterns_registry": [
+        {
+          "id": "SP_D02_STANDARD",
+          "name": "SP_D02_STANDARD",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6130715893606609,
+              "O": 0.39959168586615834,
+              "M": 0.6660269762596114,
+              "S": 0.28575654720570703,
+              "R": 0.41079377353797514
+            }
+          }
+        },
+        {
+          "id": "SP_D02_SYNDICATE",
+          "name": "SP_D02_SYNDICATE",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6150308876955755,
+              "O": 0.39801250841174657,
+              "M": 0.6655112592523568,
+              "S": 0.2869402166737573,
+              "R": 0.6537491647450875
+            }
+          }
+        },
+        {
+          "id": "SP_D02_COLLIDER",
+          "name": "SP_D02_COLLIDER",
+          "manifold_data": {
+            "mean_vector": {
+              "E": 0.6126843536356524,
+              "O": 0.409434262363426,
+              "M": 0.6684884754862987,
+              "S": 0.6123156809120092,
+              "R": 0.5004050632440561
+            }
+          }
+        }
+      ],
+      "matching_router": {},
+      "dynamic_states": {
+        "description": "Phase Change Definitions (V3.0)",
+        "collapse_rules": [],
+        "exceptions": []
+      }
+    },
+    "A-01": {
+      "id": "A-01",
+      "name": "Direct Officer Pattern (正官格)",
+      "version": "3.0",
+      "active": true,
+      "meta_info": {
+        "pattern_id": "A-01",
+        "name": "Direct Officer (The Judge)",
+        "display_name": "Direct Officer",
+        "chinese_name": "正官格",
+        "category": "POWER",
+        "physics_prototype": "Crystalline Lattice / Low Entropy",
+        "description": "高度秩序化的晶体结构，以正官为核心，财印相辅。排斥伤官杂质。",
+        "compliance": "FDS-V1.5.1 (Genesis Protocol)",
+        "calibration_date": "2025-12-31",
+        "mining_stats": {
+          "scanned": 518400,
+          "weak_self_rejected": 41067,
+          "impurity_rejected": 20573,
+          "candidates_found": 5153
+        },
+        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)"
+      },
+      "physics_kernel": {
+        "version": "3.0",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.2,
+            "zheng_yin": 1.5,
+            "pian_yin": 0.8
+          },
+          "O_row": {
+            "zheng_guan": 2.0,
+            "qi_sha": -1.5,
+            "bi_jian": 0.5
+          },
+          "M_row": {
+            "zheng_cai": 1.2,
+            "pian_cai": 0.8
+          },
+          "S_row": {
+            "shang_guan": 2.5,
+            "qi_sha": 1.0,
+            "clash": 1.5
+          },
+          "R_row": {
+            "zheng_cai": 0.5,
+            "combination": 1.0
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor_ref": "@config.physics.k_factor"
+          }
+        },
+        "integrity_threshold": 0.65,
+        "integrity_threshold_ref": "@config.patterns.a01.integrity_threshold"
+      },
+      "feature_anchors": {
+        "description": "Standard Crystalline Manifold",
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.6346272738266705,
+            "O": 0.6271058680163476,
+            "M": 0.3902541951994402,
+            "S": 0.18824426867716096,
+            "R": 0.4949023681985285
+          },
+          "covariance_matrix": [
+            [
+              0.009040458742538586,
+              -0.00014257939391023195,
+              0.0003482359040364933,
+              0.00012503607979234816,
+              -0.0006394531476863847
+            ],
+            [
+              -0.00014257939391023195,
+              0.0019598115178302094,
+              -7.041814690210759e-05,
+              -0.00014033686113705486,
+              0.00014948883104303598
+            ],
+            [
+              0.0003482359040364933,
+              -7.041814690210759e-05,
+              0.038104464941890195,
+              -0.00035906862561045703,
+              -0.0001764146053091442
+            ],
+            [
+              0.00012503607979234816,
+              -0.00014033686113705486,
+              -0.00035906862561045703,
+              0.005829514434986171,
+              -0.0008576501878437482
+            ],
+            [
+              -0.0006394531476863847,
+              0.00014948883104303598,
+              -0.0001764146053091442,
+              -0.0008576501878437482,
+              0.019296914315441088
+            ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist_ref": "@config.patterns.a01.mahalanobis_threshold",
+            "min_sai_gating_ref": "@config.gating.weak_self_limit",
+            "precision_gaussian_sigma_ref": "@config.patterns.a01.precision_gaussian_sigma",
+            "precision_energy_gate_k_ref": "@config.patterns.a01.precision_energy_gate_k",
+            "precision_weights_similarity_ref": "@config.patterns.a01.precision_weights.similarity",
+            "precision_weights_distance_ref": "@config.patterns.a01.precision_weights.distance"
+          }
+        }
+      },
+      "sub_patterns_registry": [],
+      "matching_router": {},
+      "dynamic_states": {
+        "description": "Phase Change Definitions (V3.0)",
+        "collapse_rules": [],
+        "exceptions": []
+      }
+    },
+    "D-01": {
+      "id": "D-01",
+      "name": "正财格",
+      "version": "3.0",
+      "active": true,
+      "meta_info": {
+        "category": "WEALTH",
+        "description": "正财稳健型场域",
+        "compliance": "FDS-V3.0",
+        "pattern_id": "D-01",
+        "chinese_name": "正财格"
+      },
+      "physics_kernel": {
+        "version": "3.0",
+        "description": "Direct Wealth Accumulation Dynamics",
+        "transfer_matrix": {
+          "E_row": {
+            "parallel": 1.2,
+            "zheng_yin": 0.8
+          },
+          "M_row": {
+            "zheng_cai": 1.5,
+            "jie_cai": -1.0
+          },
+          "O_row": {
+            "zheng_guan": 1.0,
+            "shi_shen": 0.8
+          },
+          "S_row": {
+            "qi_sha": -0.5,
+            "clash": 1.0
+          },
+          "R_row": {
+            "bi_jian": 0.5,
+            "jie_cai": 1.2
+          }
+        },
+        "tensor_dynamics": {
+          "activation_function": "sigmoid_variant",
+          "parameters": {
+            "k_factor_ref": "@config.physics.k_factor"
+          }
+        },
+        "integrity_threshold_ref": "@config.patterns.d01.integrity_threshold"
+      },
+      "feature_anchors": {
+        "standard_manifold": {
+          "mean_vector": {
+            "E": 0.6212995411401384,
+            "O": 0.4001211528497763,
+            "M": 0.6339446185123901,
+            "S": 0.29437324428482153,
+            "R": 0.3169461040949614
+          },
+          "covariance_matrix": [
+            [
+              0.014066,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.022767,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.010743,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.020393,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.004731
+            ]
+          ],
+          "thresholds": {
+            "max_mahalanobis_dist_ref": "@config.patterns.d01.mahalanobis_threshold",
+            "min_sai_gating_ref": "@config.gating.weak_self_limit",
+            "precision_gaussian_sigma_ref": "@config.patterns.d01.precision_gaussian_sigma",
+            "precision_energy_gate_k_ref": "@config.patterns.d01.precision_energy_gate_k",
+            "precision_weights_similarity_ref": "@config.patterns.d01.precision_weights.similarity",
+            "precision_weights_distance_ref": "@config.patterns.d01.precision_weights.distance"
+          }
+        }
+      },
+      "sub_patterns_registry": [],
+      "matching_router": {},
       "dynamic_states": {
         "description": "Phase Change Definitions (V3.0)",
         "collapse_rules": [],

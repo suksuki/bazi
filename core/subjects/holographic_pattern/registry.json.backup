@@ -5,488 +5,10 @@
     "compliance": "FDS-V3.0 (Pure Logic Edition)",
     "grand_slam_run": true,
     "fitted_patterns": [
-      "A-01",
-      "A-03",
-      "B-01",
-      "B-02",
-      "D-01",
-      "D-02"
+      "B-01"
     ]
   },
   "patterns": {
-    "A-01": {
-      "id": "A-01",
-      "name": "正官格",
-      "version": "3.0",
-      "active": true,
-      "meta_info": {
-        "pattern_id": "A-01",
-        "name": "Direct Officer",
-        "display_name": "Direct Officer",
-        "chinese_name": "正官格",
-        "category": "POWER",
-        "version": "3.0",
-        "physics_prototype": "The Judge (法官/秩序维护者)",
-        "description": "正官为权力与秩序的象征，需身旺方能担官。",
-        "compliance": "FDS-V3.0",
-        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
-        "calibration_date": "2026-01-01",
-        "mining_stats": {
-          "seed_count": 500,
-          "singularity_count": 0
-        }
-      },
-      "physics_kernel": {
-        "version": "3.0",
-        "description": "Default Physics Laws",
-        "transfer_matrix": {
-          "E_row": {
-            "bi_jian": 0.0095,
-            "jie_cai": 0.0222,
-            "shi_shen": -0.0019,
-            "shang_guan": 0.006,
-            "pian_cai": -0.0155,
-            "zheng_cai": -0.0165,
-            "qi_sha": 0.0118,
-            "zheng_guan": 0.0505,
-            "pian_yin": -0.014,
-            "zheng_yin": -0.0064,
-            "resource": 0.0214,
-            "power": 0.0019,
-            "wealth": -0.0002,
-            "output": -0.0005,
-            "combination": -0.0046
-          },
-          "O_row": {
-            "bi_jian": 0.008,
-            "jie_cai": 0.025,
-            "shi_shen": 0.007,
-            "shang_guan": -0.0114,
-            "pian_cai": -0.0084,
-            "zheng_cai": -0.0082,
-            "qi_sha": 0.0266,
-            "zheng_guan": 0.048,
-            "pian_yin": -0.0045,
-            "zheng_yin": -0.012,
-            "parallel": -0.0013,
-            "resource": 0.0072,
-            "wealth": 0.0059,
-            "output": -0.0129,
-            "clash": 0.0204,
-            "combination": 0.0042
-          },
-          "M_row": {
-            "bi_jian": 0.0078,
-            "jie_cai": 0.0148,
-            "shi_shen": 0.0014,
-            "shang_guan": 0.0118,
-            "pian_cai": -0.007,
-            "zheng_cai": -0.0012,
-            "qi_sha": 0.0124,
-            "zheng_guan": 0.035,
-            "pian_yin": -0.0004,
-            "zheng_yin": -0.0112,
-            "parallel": 0.0035,
-            "resource": 0.0263,
-            "power": 0.0089,
-            "wealth": 0.0028,
-            "output": 0.0146,
-            "clash": 0.0233,
-            "combination": -0.0137
-          },
-          "S_row": {
-            "bi_jian": 0.0054,
-            "jie_cai": -0.0037,
-            "shi_shen": 0.015,
-            "shang_guan": -0.0046,
-            "pian_cai": -0.024,
-            "zheng_cai": 0.0025,
-            "qi_sha": 0.004,
-            "zheng_guan": 0.0446,
-            "pian_yin": -0.0071,
-            "zheng_yin": -0.0095,
-            "parallel": -0.0113,
-            "resource": 0.0046,
-            "power": 0.0018,
-            "wealth": 0.1,
-            "output": -0.0071,
-            "clash": 0.0137,
-            "combination": -0.005
-          },
-          "R_row": {
-            "bi_jian": 0.0012,
-            "jie_cai": 0.0186,
-            "shi_shen": 0.0086,
-            "shang_guan": 0.0041,
-            "pian_cai": -0.0115,
-            "zheng_cai": -0.0175,
-            "qi_sha": 0.0204,
-            "zheng_guan": 0.0491,
-            "pian_yin": -0.0091,
-            "zheng_yin": -0.0196,
-            "parallel": 0.0032,
-            "resource": 0.0126,
-            "power": -0.0007,
-            "wealth": 0.0072,
-            "output": -0.0078
-          }
-        },
-        "tensor_dynamics": {
-          "activation_function": "sigmoid_variant",
-          "parameters": {
-            "k_factor_ref": "@config.physics.k_factor"
-          }
-        },
-        "integrity_threshold_ref": "@config.patterns.a01.integrity_threshold"
-      },
-      "feature_anchors": {
-        "description": "Standard Manifold",
-        "standard_manifold": {
-          "mean_vector": {
-            "E": 0.00529754222676711,
-            "O": 0.005698283196448373,
-            "M": 0.004783373134048199,
-            "S": 0.004607545384420535,
-            "R": 0.005190962868700325
-          },
-          "covariance_matrix": [
-            [
-              0.003124133016067122,
-              0.002520193915125828,
-              0.0022081787416566587,
-              0.0015910256147334406,
-              0.002828301196764544
-            ],
-            [
-              0.002520193915125828,
-              0.0032001441613500503,
-              0.0020197918002168285,
-              0.0021539853462349853,
-              0.002723793553474566
-            ],
-            [
-              0.0022081787416566587,
-              0.0020197918002168285,
-              0.002569827275047074,
-              0.0015152168073855271,
-              0.0020208136891170145
-            ],
-            [
-              0.0015910256147334406,
-              0.0021539853462349853,
-              0.0015152168073855271,
-              0.008706458932291647,
-              0.002157178096325424
-            ],
-            [
-              0.002828301196764544,
-              0.002723793553474566,
-              0.0020208136891170145,
-              0.002157178096325424,
-              0.0030067829496298027
-            ]
-          ],
-          "thresholds": {
-            "max_mahalanobis_dist_ref": "@config.patterns.a01.mahalanobis_threshold",
-            "min_sai_gating_ref": "@config.gating.weak_self_limit",
-            "precision_gaussian_sigma_ref": "@config.patterns.a01.precision_gaussian_sigma",
-            "precision_energy_gate_k_ref": "@config.patterns.a01.precision_energy_gate_k",
-            "precision_weights_similarity_ref": "@config.patterns.a01.precision_weights.similarity",
-            "precision_weights_distance_ref": "@config.patterns.a01.precision_weights.distance"
-          }
-        }
-      },
-      "sub_patterns_registry": [],
-      "matching_router": {
-        "strategy_version": "3.0",
-        "description": "Runtime Logic Gates with V3.0 @config References",
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "DEFAULT",
-            "description": "E-Gating: 防止身弱假格",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.gating.weak_self_limit",
-                  "description": "Safety: Anti-Puppet (防止身弱假格)"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "dynamic_states": {
-        "description": "Phase Change Definitions (V3.0)",
-        "collapse_rules": [],
-        "exceptions": []
-      }
-    },
-    "A-03": {
-      "id": "A-03",
-      "name": "羊刃架杀格",
-      "version": "3.0",
-      "active": true,
-      "meta_info": {
-        "pattern_id": "A-03",
-        "name": "Blade & Killer",
-        "display_name": "Blade & Killer",
-        "chinese_name": "羊刃架杀格",
-        "category": "POWER",
-        "version": "3.0",
-        "physics_prototype": "Tokamak / Stellarator (磁约束聚变)",
-        "description": "高能等离子体(羊刃)被高压场(七杀)约束，形成反应堆。",
-        "compliance": "FDS-V3.0",
-        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
-        "calibration_date": "2026-01-01",
-        "mining_stats": {
-          "seed_count": 500,
-          "singularity_count": 0
-        }
-      },
-      "physics_kernel": {
-        "version": "3.0",
-        "description": "Default Physics Laws",
-        "transfer_matrix": {
-          "E_row": {
-            "bi_jian": 0.0239,
-            "jie_cai": -0.0009,
-            "shi_shen": -0.0082,
-            "shang_guan": -0.0086,
-            "pian_cai": 0.0023,
-            "zheng_cai": -0.0533,
-            "qi_sha": -0.0207,
-            "zheng_guan": 0.0369,
-            "pian_yin": 0.0083,
-            "zheng_yin": -0.0333,
-            "parallel": 1.0,
-            "resource": 0.2,
-            "power": 0.0198,
-            "wealth": -0.0065,
-            "output": -0.0384,
-            "combination": -0.0209
-          },
-          "O_row": {
-            "bi_jian": -0.0096,
-            "jie_cai": 0.0239,
-            "shi_shen": 0.0149,
-            "shang_guan": 0.0224,
-            "pian_cai": -0.0055,
-            "zheng_cai": -0.014,
-            "qi_sha": -0.0328,
-            "zheng_guan": 0.0264,
-            "pian_yin": -0.0206,
-            "zheng_yin": 0.0137,
-            "parallel": 0.05,
-            "resource": 0.0071,
-            "power": 0.8,
-            "wealth": -0.1,
-            "output": -0.0463,
-            "clash": 0.0236,
-            "combination": 0.0174
-          },
-          "M_row": {
-            "bi_jian": 0.0066,
-            "jie_cai": 0.0113,
-            "shi_shen": -0.0023,
-            "shang_guan": 0.0111,
-            "pian_cai": -0.0056,
-            "zheng_cai": -0.0029,
-            "qi_sha": 0.0151,
-            "zheng_guan": 0.0309,
-            "pian_yin": -0.0008,
-            "zheng_yin": -0.0089,
-            "resource": 0.0252,
-            "power": 0.0079,
-            "wealth": 0.0007,
-            "output": 0.0117,
-            "clash": 0.022,
-            "combination": -0.0132
-          },
-          "S_row": {
-            "bi_jian": 0.0376,
-            "jie_cai": -0.0062,
-            "shi_shen": -0.0125,
-            "pian_cai": -0.0356,
-            "zheng_cai": -0.0129,
-            "qi_sha": -0.0111,
-            "zheng_guan": 0.0519,
-            "pian_yin": -0.0085,
-            "zheng_yin": -0.0087,
-            "parallel": -0.0215,
-            "resource": -0.0007,
-            "power": 0.004,
-            "wealth": 0.1,
-            "output": 0.0024,
-            "clash": 0.5,
-            "combination": -0.0107
-          },
-          "R_row": {
-            "bi_jian": 0.0053,
-            "jie_cai": 0.0195,
-            "shi_shen": 0.0054,
-            "shang_guan": 0.0035,
-            "pian_cai": -0.0039,
-            "zheng_cai": -0.0104,
-            "qi_sha": 0.0206,
-            "zheng_guan": 0.0496,
-            "pian_yin": -0.0214,
-            "zheng_yin": -0.0273,
-            "parallel": -0.001,
-            "resource": 0.0078,
-            "power": 0.0031,
-            "wealth": 0.0059,
-            "output": -0.009,
-            "combination": 0.2
-          }
-        },
-        "tensor_dynamics": {
-          "activation_function": "sigmoid_variant",
-          "parameters": {
-            "k_factor_ref": "@config.physics.k_factor"
-          }
-        },
-        "integrity_threshold_ref": "@config.patterns.a03.integrity_threshold"
-      },
-      "feature_anchors": {
-        "description": "Standard Manifold",
-        "standard_manifold": {
-          "mean_vector": {
-            "E": -0.00867868739574163,
-            "O": 0.005605777937929408,
-            "M": 0.0049493663696111665,
-            "S": 0.0250882714541702,
-            "R": 0.0008767882380432456
-          },
-          "covariance_matrix": [
-            [
-              0.848707703690304,
-              0.04572121353370185,
-              0.006437525193659085,
-              -0.006487832941446964,
-              0.0026522415756695234
-            ],
-            [
-              0.04572121353370185,
-              0.5644378997558548,
-              0.007325887892649285,
-              0.0028149328804184994,
-              0.004668163973674049
-            ],
-            [
-              0.006437525193659085,
-              0.007325887892649285,
-              0.002596185557823212,
-              0.01036406187608562,
-              -0.00013116602697018989
-            ],
-            [
-              -0.006487832941446964,
-              0.0028149328804184994,
-              0.01036406187608562,
-              0.21906264446368368,
-              0.0015086906787058674
-            ],
-            [
-              0.0026522415756695234,
-              0.004668163973674049,
-              -0.00013116602697018989,
-              0.0015086906787058674,
-              0.03741011875734793
-            ]
-          ],
-          "thresholds": {
-            "max_mahalanobis_dist_ref": "@config.patterns.a03.mahalanobis_threshold",
-            "min_sai_gating_ref": "@config.gating.weak_self_limit",
-            "precision_gaussian_sigma_ref": "@config.patterns.a03.precision_gaussian_sigma",
-            "precision_energy_gate_k_ref": "@config.patterns.a03.precision_energy_gate_k",
-            "precision_weights_similarity_ref": "@config.patterns.a03.precision_weights.similarity",
-            "precision_weights_distance_ref": "@config.patterns.a03.precision_weights.distance"
-          }
-        }
-      },
-      "sub_patterns_registry": [],
-      "matching_router": {
-        "strategy_version": "3.0",
-        "description": "Runtime Logic Gates with V3.0 @config References",
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "DEFAULT",
-            "description": "E-Gating: 防止身弱假格",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.gating.weak_self_limit",
-                  "description": "Safety: Anti-Puppet (防止身弱假格)"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 2,
-            "target": "SP_A03_STELLARATOR",
-            "description": "仿星器态: 极高E和高S",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.a03.alliance_e_min"
-                },
-                {
-                  "axis": "S",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.a03.alliance_s_min"
-                },
-                {
-                  "axis": "R",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.a03.alliance_r_min"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 3,
-            "target": "DEFAULT",
-            "description": "标准托卡马克态",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.a03.standard_e_min"
-                },
-                {
-                  "axis": "S",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.a03.standard_s_min"
-                },
-                {
-                  "axis": "O",
-                  "operator": "lt",
-                  "param_ref": "@config.patterns.a03.standard_o_max"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "dynamic_states": {
-        "description": "Phase Change Definitions (V3.0)",
-        "collapse_rules": [],
-        "exceptions": []
-      }
-    },
     "B-01": {
       "id": "B-01",
       "name": "食神格",
@@ -515,93 +37,88 @@
         "transfer_matrix": {
           "E_row": {
             "bi_jian": 0.2,
-            "jie_cai": 0.0538,
+            "jie_cai": 0.0461,
             "shi_shen": 0.05,
-            "shang_guan": 0.021,
-            "pian_cai": 0.0121,
-            "zheng_cai": -0.0104,
-            "qi_sha": 0.0046,
-            "zheng_guan": 0.0305,
-            "pian_yin": -0.0377,
-            "zheng_yin": -0.0387,
-            "resource": 0.028,
-            "power": 0.0457,
-            "wealth": -0.0009,
-            "output": 0.0394,
-            "combination": 0.0051
+            "shang_guan": -0.0549,
+            "pian_cai": -0.0163,
+            "zheng_cai": -0.0486,
+            "qi_sha": -0.0157,
+            "zheng_guan": -0.0143,
+            "pian_yin": 0.0415,
+            "zheng_yin": 0.0454,
+            "parallel": 0.0973,
+            "power": -0.0163,
+            "wealth": -0.0153,
+            "output": 0.0179,
+            "combination": -0.0403
           },
           "O_row": {
-            "bi_jian": 0.0101,
-            "jie_cai": 0.0371,
-            "shi_shen": 0.0077,
-            "shang_guan": 0.0085,
-            "pian_cai": 0.013,
-            "zheng_cai": -0.012,
-            "qi_sha": 0.0361,
+            "bi_jian": 0.0243,
+            "jie_cai": 0.0408,
+            "shi_shen": 0.0197,
+            "shang_guan": -0.0436,
+            "pian_cai": -0.012,
+            "zheng_cai": -0.0328,
+            "qi_sha": -0.0029,
             "zheng_guan": 0.05,
-            "pian_yin": -0.0205,
-            "zheng_yin": -0.0098,
-            "parallel": 0.0044,
-            "resource": 0.011,
-            "power": 0.0231,
-            "wealth": 0.0101,
-            "output": 0.0357,
-            "clash": 0.0367,
-            "combination": 0.0184
+            "pian_yin": 0.0074,
+            "zheng_yin": 0.0318,
+            "parallel": 0.0597,
+            "wealth": -0.0061,
+            "output": 0.0165,
+            "clash": 0.0299,
+            "combination": -0.0063
           },
           "M_row": {
-            "jie_cai": 0.0047,
+            "bi_jian": 0.0398,
+            "jie_cai": 0.0818,
             "shi_shen": 0.05,
-            "shang_guan": 0.0189,
-            "pian_cai": 0.0244,
+            "shang_guan": -0.0534,
+            "pian_cai": -0.0066,
             "zheng_cai": 0.4,
-            "qi_sha": 0.0085,
-            "zheng_guan": 0.0688,
-            "pian_yin": -0.0249,
-            "zheng_yin": -0.0092,
-            "parallel": -0.0047,
-            "resource": 0.0409,
-            "power": 0.0404,
-            "wealth": 0.0129,
-            "output": 0.0741,
-            "clash": 0.0102,
-            "combination": 0.0384
+            "qi_sha": -0.0415,
+            "zheng_guan": -0.005,
+            "pian_yin": 0.029,
+            "zheng_yin": 0.0234,
+            "parallel": 0.0634,
+            "resource": -0.0316,
+            "power": -0.0096,
+            "output": 0.0191,
+            "clash": 0.0766,
+            "combination": -0.0255
           },
           "S_row": {
-            "bi_jian": 0.0253,
-            "jie_cai": 0.0018,
+            "bi_jian": 0.0139,
+            "jie_cai": 0.0347,
             "shi_shen": -0.1,
-            "shang_guan": -0.0012,
-            "pian_cai": -0.0188,
-            "zheng_cai": -0.013,
-            "qi_sha": 0.0098,
-            "zheng_guan": 0.0242,
-            "pian_yin": -0.0104,
-            "zheng_yin": -0.0143,
-            "parallel": -0.0074,
-            "resource": 0.0151,
-            "power": 0.0123,
+            "shang_guan": -0.0392,
+            "pian_cai": -0.0132,
+            "zheng_cai": -0.0231,
+            "qi_sha": 0.0005,
+            "zheng_guan": 0.0012,
+            "pian_yin": 0.0256,
+            "zheng_yin": 0.0201,
+            "parallel": 0.0386,
+            "resource": -0.0161,
             "wealth": 0.1,
-            "output": 0.017,
-            "clash": 0.0317,
-            "combination": 0.0194
+            "output": 0.0158,
+            "combination": -0.0239
           },
           "R_row": {
             "bi_jian": 0.1,
-            "jie_cai": 0.0451,
+            "jie_cai": 0.0517,
             "shi_shen": 0.1,
-            "shang_guan": 0.0135,
-            "pian_cai": 0.0222,
-            "zheng_cai": -0.0115,
-            "qi_sha": 0.0214,
-            "zheng_guan": 0.0357,
-            "pian_yin": -0.0125,
-            "zheng_yin": -0.0476,
-            "parallel": 0.0095,
-            "resource": 0.0173,
-            "power": 0.0285,
-            "wealth": 0.0151,
-            "output": 0.0339
+            "shang_guan": -0.0505,
+            "pian_cai": -0.0192,
+            "zheng_cai": -0.0549,
+            "qi_sha": -0.012,
+            "zheng_guan": -0.0131,
+            "pian_yin": 0.0227,
+            "zheng_yin": 0.0538,
+            "parallel": 0.0787,
+            "resource": -0.0153,
+            "power": -0.0224,
+            "output": 0.0148
           }
         },
         "tensor_dynamics": {
@@ -616,47 +133,47 @@
         "description": "Standard Manifold",
         "standard_manifold": {
           "mean_vector": {
-            "E": 0.016995583458148424,
-            "O": 0.015023720854214974,
-            "M": 0.009228543202082483,
-            "S": 0.007286943450017735,
-            "R": 0.015296688926244964
+            "E": 0.046485576361645214,
+            "O": 0.025969692794559913,
+            "M": 0.012516144662436847,
+            "S": 0.013398470647061463,
+            "R": 0.038966430375730325
           },
           "covariance_matrix": [
             [
-              0.04132846483612715,
-              0.0081159974331584,
-              0.006939972327852009,
-              0.000747096136674061,
-              0.02742350188240518
+              0.04915552043574478,
+              0.015702163428199762,
+              0.008515048685947406,
+              0.00644726653792874,
+              0.03302407970063155
             ],
             [
-              0.0081159974331584,
-              0.0076199631571465,
-              0.004566288493412839,
-              0.003513190238683879,
-              0.007340309992391307
+              0.015702163428199762,
+              0.01114114260786253,
+              0.0024836130881683485,
+              0.004472092084533818,
+              0.013067334700351083
             ],
             [
-              0.006939972327852009,
-              0.004566288493412839,
-              0.13979547152575594,
-              -0.003665662410419886,
-              0.007562398735091019
+              0.008515048685947406,
+              0.0024836130881683485,
+              0.14218469912818996,
+              -0.0023748632313959402,
+              0.004145607771020015
             ],
             [
-              0.000747096136674061,
-              0.003513190238683879,
-              -0.003665662410419886,
-              0.020082892568474328,
-              -0.0033942658888286062
+              0.00644726653792874,
+              0.004472092084533818,
+              -0.0023748632313959402,
+              0.01990630751550048,
+              0.001332819049305842
             ],
             [
-              0.02742350188240518,
-              0.007340309992391307,
-              0.007562398735091019,
-              -0.0033942658888286062,
-              0.02345097941952105
+              0.03302407970063155,
+              0.013067334700351083,
+              0.004145607771020015,
+              0.001332819049305842,
+              0.029277615159776428
             ]
           ],
           "thresholds": {
@@ -721,746 +238,6 @@
                   "axis": "M",
                   "operator": "gt",
                   "param_ref": "@config.patterns.b01.accrual_m_min"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "dynamic_states": {
-        "description": "Phase Change Definitions (V3.0)",
-        "collapse_rules": [],
-        "exceptions": []
-      }
-    },
-    "B-02": {
-      "id": "B-02",
-      "name": "伤官格",
-      "version": "3.0",
-      "active": true,
-      "meta_info": {
-        "pattern_id": "B-02",
-        "name": "Hurting Officer",
-        "display_name": "Hurting Officer",
-        "chinese_name": "伤官格",
-        "category": "TALENT",
-        "version": "3.0",
-        "physics_prototype": "The Innovator (创新者/变革者)",
-        "description": "伤官为创新与破坏的象征，需身旺方能驾驭。",
-        "compliance": "FDS-V3.0",
-        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
-        "calibration_date": "2026-01-01",
-        "mining_stats": {
-          "seed_count": 500,
-          "singularity_count": 0
-        }
-      },
-      "physics_kernel": {
-        "version": "3.0",
-        "description": "Default Physics Laws",
-        "transfer_matrix": {
-          "E_row": {
-            "bi_jian": 0.0067,
-            "jie_cai": 0.0731,
-            "shi_shen": -0.0214,
-            "shang_guan": -0.0069,
-            "pian_cai": 0.0058,
-            "zheng_cai": -0.0459,
-            "qi_sha": 0.0188,
-            "zheng_guan": 0.0675,
-            "pian_yin": -0.0444,
-            "zheng_yin": -0.0287,
-            "resource": 0.0537,
-            "power": -0.0075,
-            "wealth": 0.0232,
-            "output": 0.004,
-            "combination": 0.024
-          },
-          "O_row": {
-            "bi_jian": 0.0028,
-            "jie_cai": 0.0737,
-            "shi_shen": -0.02,
-            "shang_guan": 0.0164,
-            "pian_cai": 0.0046,
-            "zheng_cai": -0.0306,
-            "qi_sha": 0.0373,
-            "zheng_guan": 0.0469,
-            "pian_yin": -0.0204,
-            "zheng_yin": -0.034,
-            "parallel": -0.0248,
-            "resource": 0.0257,
-            "wealth": 0.0252,
-            "output": 0.0141,
-            "clash": -0.006,
-            "combination": 0.0335
-          },
-          "M_row": {
-            "bi_jian": 0.0085,
-            "jie_cai": 0.051,
-            "shi_shen": -0.0065,
-            "shang_guan": 0.0287,
-            "pian_cai": 0.0182,
-            "zheng_cai": -0.0078,
-            "qi_sha": 0.0192,
-            "zheng_guan": 0.0487,
-            "pian_yin": -0.0233,
-            "zheng_yin": -0.0209,
-            "parallel": -0.0135,
-            "resource": 0.0386,
-            "power": -0.0003,
-            "wealth": 0.0164,
-            "output": 0.0506,
-            "clash": 0.0133,
-            "combination": 0.0041
-          },
-          "S_row": {
-            "bi_jian": -0.0013,
-            "jie_cai": 0.0223,
-            "shi_shen": 0.0002,
-            "shang_guan": -0.0078,
-            "pian_cai": -0.0362,
-            "zheng_cai": -0.033,
-            "qi_sha": 0.0294,
-            "zheng_guan": 0.029,
-            "pian_yin": -0.0171,
-            "zheng_yin": -0.0234,
-            "parallel": -0.0186,
-            "resource": 0.0154,
-            "wealth": 0.1,
-            "output": -0.0111,
-            "clash": 0.0074,
-            "combination": 0.019
-          },
-          "R_row": {
-            "bi_jian": 0.0009,
-            "jie_cai": 0.0608,
-            "shi_shen": -0.001,
-            "shang_guan": -0.0037,
-            "pian_cai": 0.0275,
-            "zheng_cai": -0.0398,
-            "qi_sha": 0.0124,
-            "zheng_guan": 0.0659,
-            "pian_yin": -0.0386,
-            "zheng_yin": -0.0452,
-            "parallel": -0.0252,
-            "resource": 0.0391,
-            "power": -0.0138,
-            "wealth": 0.0314,
-            "output": 0.0021,
-            "combination": 0.0203
-          }
-        },
-        "tensor_dynamics": {
-          "activation_function": "sigmoid_variant",
-          "parameters": {
-            "k_factor_ref": "@config.physics.k_factor"
-          }
-        },
-        "integrity_threshold_ref": "@config.patterns.b02.integrity_threshold"
-      },
-      "feature_anchors": {
-        "description": "Standard Manifold",
-        "standard_manifold": {
-          "mean_vector": {
-            "E": 0.01610144774783387,
-            "O": 0.014410684785748801,
-            "M": 0.01113505054555571,
-            "S": 0.010879679126199268,
-            "R": 0.01563051615232279
-          },
-          "covariance_matrix": [
-            [
-              0.010163784427316028,
-              0.008054610524889491,
-              0.006434368081366126,
-              0.005368876499465932,
-              0.008965208028068238
-            ],
-            [
-              0.008054610524889491,
-              0.007922824891331337,
-              0.005902918515973664,
-              0.005157344078824907,
-              0.007642638136334549
-            ],
-            [
-              0.006434368081366126,
-              0.005902918515973664,
-              0.006415436177698688,
-              0.0029111885843042147,
-              0.006120779120496601
-            ],
-            [
-              0.005368876499465932,
-              0.005157344078824907,
-              0.0029111885843042147,
-              0.0091541988506804,
-              0.005422897845756754
-            ],
-            [
-              0.008965208028068238,
-              0.007642638136334549,
-              0.006120779120496601,
-              0.005422897845756754,
-              0.0091929878141262
-            ]
-          ],
-          "thresholds": {
-            "max_mahalanobis_dist_ref": "@config.patterns.b02.mahalanobis_threshold",
-            "min_sai_gating_ref": "@config.gating.weak_self_limit",
-            "precision_gaussian_sigma_ref": "@config.patterns.b02.precision_gaussian_sigma",
-            "precision_energy_gate_k_ref": "@config.patterns.b02.precision_energy_gate_k",
-            "precision_weights_similarity_ref": "@config.patterns.b02.precision_weights.similarity",
-            "precision_weights_distance_ref": "@config.patterns.b02.precision_weights.distance"
-          }
-        }
-      },
-      "sub_patterns_registry": [],
-      "matching_router": {
-        "strategy_version": "3.0",
-        "description": "Runtime Logic Gates with V3.0 @config References",
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "DEFAULT",
-            "description": "E-Gating: 防止身弱假格",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.gating.weak_self_limit",
-                  "description": "Safety: Anti-Puppet (防止身弱假格)"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 2,
-            "target": "SP_B02_AUTHORITY",
-            "description": "权威态: 高O高E",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.b02.authority_e_min"
-                },
-                {
-                  "axis": "O",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.b02.authority_high_e_min"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 3,
-            "target": "SP_B02_TYCOON",
-            "description": "巨贾态: 高M高E",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.b02.tycoon_e_min"
-                },
-                {
-                  "axis": "M",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.b02.tycoon_m_min"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "dynamic_states": {
-        "description": "Phase Change Definitions (V3.0)",
-        "collapse_rules": [],
-        "exceptions": []
-      }
-    },
-    "D-01": {
-      "id": "D-01",
-      "name": "正财格",
-      "version": "3.0",
-      "active": true,
-      "meta_info": {
-        "pattern_id": "D-01",
-        "name": "Direct Wealth",
-        "display_name": "Direct Wealth",
-        "chinese_name": "正财格",
-        "category": "WEALTH",
-        "version": "3.0",
-        "physics_prototype": "The Keeper (守财者/资产管理者)",
-        "description": "正财为稳定财富的象征，需身旺方能守财。",
-        "compliance": "FDS-V3.0",
-        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
-        "calibration_date": "2026-01-01",
-        "mining_stats": {
-          "seed_count": 500,
-          "singularity_count": 0
-        }
-      },
-      "physics_kernel": {
-        "version": "3.0",
-        "description": "Default Physics Laws",
-        "transfer_matrix": {
-          "E_row": {
-            "bi_jian": 0.8,
-            "jie_cai": 0.0935,
-            "shi_shen": -0.1646,
-            "shang_guan": 0.0369,
-            "pian_cai": 0.0827,
-            "zheng_cai": -0.2,
-            "qi_sha": -0.0532,
-            "zheng_guan": -0.0239,
-            "pian_yin": -0.0667,
-            "zheng_yin": 0.5,
-            "parallel": 0.0235,
-            "resource": 0.0646,
-            "power": 0.0661,
-            "wealth": -0.0137,
-            "output": 0.0269,
-            "combination": -0.1044
-          },
-          "O_row": {
-            "bi_jian": 0.0022,
-            "jie_cai": 0.0705,
-            "shi_shen": -0.0247,
-            "shang_guan": -0.0128,
-            "pian_cai": 0.03,
-            "zheng_cai": 0.1,
-            "qi_sha": 0.0307,
-            "zheng_guan": 0.5,
-            "pian_yin": -0.0291,
-            "zheng_yin": -0.018,
-            "parallel": 0.0337,
-            "resource": 0.0511,
-            "power": 0.0385,
-            "wealth": 0.0682,
-            "output": 0.0675,
-            "clash": 0.0495,
-            "combination": 0.0021
-          },
-          "M_row": {
-            "bi_jian": -0.03,
-            "jie_cai": -1.0,
-            "shi_shen": 0.2,
-            "shang_guan": -0.042,
-            "pian_cai": 0.0705,
-            "zheng_cai": 1.2,
-            "qi_sha": 0.0568,
-            "zheng_guan": 0.1,
-            "pian_yin": -0.0491,
-            "zheng_yin": 0.0585,
-            "parallel": 0.0542,
-            "resource": 0.0989,
-            "power": -0.0047,
-            "wealth": 0.0991,
-            "output": 0.1408,
-            "clash": -0.0187,
-            "combination": 0.1107
-          },
-          "S_row": {
-            "bi_jian": 0.0257,
-            "jie_cai": -0.019,
-            "shi_shen": -0.0025,
-            "shang_guan": 0.0069,
-            "pian_cai": -0.0483,
-            "zheng_cai": -0.0508,
-            "qi_sha": 0.3,
-            "zheng_guan": 0.0859,
-            "pian_yin": 0.0029,
-            "zheng_yin": 0.0344,
-            "parallel": -0.0007,
-            "resource": -0.0085,
-            "wealth": 0.1,
-            "output": -0.0117,
-            "clash": 0.5,
-            "combination": -0.0178
-          },
-          "R_row": {
-            "bi_jian": 0.012,
-            "jie_cai": 0.0425,
-            "shi_shen": -0.015,
-            "shang_guan": 0.0028,
-            "pian_cai": 0.0381,
-            "zheng_cai": -0.0041,
-            "qi_sha": -0.0056,
-            "zheng_guan": 0.0473,
-            "pian_yin": -0.0334,
-            "zheng_yin": -0.0156,
-            "parallel": 0.0536,
-            "resource": 0.0511,
-            "power": 0.0238,
-            "wealth": 0.0372,
-            "output": 0.0518
-          }
-        },
-        "tensor_dynamics": {
-          "activation_function": "sigmoid_variant",
-          "parameters": {
-            "k_factor_ref": "@config.physics.k_factor"
-          }
-        },
-        "integrity_threshold_ref": "@config.patterns.d01.integrity_threshold"
-      },
-      "feature_anchors": {
-        "description": "Standard Manifold",
-        "standard_manifold": {
-          "mean_vector": {
-            "E": 0.05768375170349959,
-            "O": 0.060371249855924285,
-            "M": -0.04310317676196396,
-            "S": 0.046712591175944174,
-            "R": 0.024626352950000204
-          },
-          "covariance_matrix": [
-            [
-              0.8244711052078089,
-              0.0031049134074405496,
-              -0.24678429666955906,
-              0.0036343564601351505,
-              0.013751723476849078
-            ],
-            [
-              0.0031049134074405496,
-              0.21593491839856432,
-              0.08934190043091328,
-              0.04249490482318849,
-              0.027931516807199252
-            ],
-            [
-              -0.24678429666955906,
-              0.08934190043091328,
-              1.8666312739206599,
-              0.0013886940110480915,
-              -0.0210598989457585
-            ],
-            [
-              0.0036343564601351505,
-              0.04249490482318849,
-              0.0013886940110480915,
-              0.2869681513060278,
-              0.004911155553894633
-            ],
-            [
-              0.013751723476849078,
-              0.027931516807199252,
-              -0.0210598989457585,
-              0.004911155553894633,
-              0.012489409249255097
-            ]
-          ],
-          "thresholds": {
-            "max_mahalanobis_dist_ref": "@config.patterns.d01.mahalanobis_threshold",
-            "min_sai_gating_ref": "@config.gating.weak_self_limit",
-            "precision_gaussian_sigma_ref": "@config.patterns.d01.precision_gaussian_sigma",
-            "precision_energy_gate_k_ref": "@config.patterns.d01.precision_energy_gate_k",
-            "precision_weights_similarity_ref": "@config.patterns.d01.precision_weights.similarity",
-            "precision_weights_distance_ref": "@config.patterns.d01.precision_weights.distance"
-          }
-        }
-      },
-      "sub_patterns_registry": [],
-      "matching_router": {
-        "strategy_version": "3.0",
-        "description": "Runtime Logic Gates with V3.0 @config References",
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "DEFAULT",
-            "description": "E-Gating: 防止身弱假格",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.gating.weak_self_limit",
-                  "description": "Safety: Anti-Puppet (防止身弱假格)"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 2,
-            "target": "DEFAULT",
-            "description": "R-Gating: 防止杂气混杂 (私有制格局)",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "R",
-                  "operator": "lt",
-                  "param_ref": "@config.gating.max_relation_limit",
-                  "description": "Safety: Anti-Noise (防止杂气混杂)"
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "dynamic_states": {
-        "description": "Phase Change Definitions (V3.0)",
-        "collapse_rules": [],
-        "exceptions": []
-      }
-    },
-    "D-02": {
-      "id": "D-02",
-      "name": "偏财格",
-      "version": "3.0",
-      "active": true,
-      "meta_info": {
-        "pattern_id": "D-02",
-        "name": "Indirect Wealth",
-        "display_name": "Indirect Wealth",
-        "chinese_name": "偏财格",
-        "category": "WEALTH",
-        "version": "3.0",
-        "physics_prototype": "The Hunter (猎人/风投者)",
-        "description": "偏财为动态财富的象征，需身旺方能驾驭波动。",
-        "compliance": "FDS-V3.0",
-        "data_source": "holographic_universe_518k.jsonl (Static/Persistent)",
-        "calibration_date": "2026-01-01",
-        "mining_stats": {
-          "seed_count": 500,
-          "singularity_count": 0
-        }
-      },
-      "physics_kernel": {
-        "version": "3.0",
-        "description": "Default Physics Laws",
-        "transfer_matrix": {
-          "E_row": {
-            "bi_jian": 0.0067,
-            "jie_cai": 0.02,
-            "shi_shen": -0.0008,
-            "shang_guan": 0.0061,
-            "pian_cai": -0.015,
-            "zheng_cai": -0.0151,
-            "qi_sha": 0.0116,
-            "zheng_guan": 0.0472,
-            "pian_yin": -0.0139,
-            "zheng_yin": -0.0066,
-            "resource": 0.02,
-            "power": 0.0016,
-            "wealth": -0.0002,
-            "output": -0.001,
-            "combination": -0.0052
-          },
-          "O_row": {
-            "bi_jian": 0.0059,
-            "jie_cai": 0.0196,
-            "shi_shen": 0.0072,
-            "shang_guan": -0.0077,
-            "pian_cai": -0.0076,
-            "zheng_cai": -0.0076,
-            "qi_sha": 0.026,
-            "zheng_guan": 0.0401,
-            "pian_yin": -0.0041,
-            "zheng_yin": -0.0112,
-            "parallel": -0.001,
-            "resource": 0.0065,
-            "wealth": 0.003,
-            "output": -0.0135,
-            "clash": 0.0178,
-            "combination": 0.0022
-          },
-          "M_row": {
-            "bi_jian": -0.0275,
-            "jie_cai": -0.0021,
-            "shi_shen": -0.0013,
-            "shang_guan": -0.0417,
-            "pian_cai": -0.0605,
-            "zheng_cai": 0.0231,
-            "qi_sha": -0.0307,
-            "zheng_guan": 0.146,
-            "pian_yin": -0.0191,
-            "zheng_yin": 0.0376,
-            "parallel": -0.0225,
-            "resource": 0.0351,
-            "power": -0.0091,
-            "wealth": 1.0,
-            "output": 0.5,
-            "clash": 0.1,
-            "combination": -0.0172
-          },
-          "S_row": {
-            "bi_jian": 0.001,
-            "jie_cai": -0.0132,
-            "shi_shen": 0.0067,
-            "shang_guan": -0.0313,
-            "pian_cai": -0.0401,
-            "zheng_cai": 0.0014,
-            "qi_sha": -0.0083,
-            "zheng_guan": 0.0887,
-            "pian_yin": -0.0207,
-            "zheng_yin": -0.0012,
-            "parallel": -0.0181,
-            "resource": 0.0058,
-            "power": 0.0005,
-            "wealth": 0.5,
-            "output": 0.0087,
-            "clash": 0.2,
-            "combination": -0.0072
-          },
-          "R_row": {
-            "bi_jian": -0.0006,
-            "jie_cai": 0.0168,
-            "shi_shen": 0.0084,
-            "shang_guan": 0.0049,
-            "pian_cai": -0.0142,
-            "zheng_cai": -0.0157,
-            "qi_sha": 0.0194,
-            "zheng_guan": 0.0463,
-            "pian_yin": -0.0079,
-            "zheng_yin": -0.0175,
-            "parallel": 0.0015,
-            "resource": 0.0113,
-            "power": -0.0006,
-            "wealth": 0.0063,
-            "output": -0.0067
-          }
-        },
-        "tensor_dynamics": {
-          "activation_function": "sigmoid_variant",
-          "parameters": {
-            "k_factor_ref": "@config.physics.k_factor"
-          }
-        },
-        "integrity_threshold_ref": "@config.patterns.d02.integrity_threshold"
-      },
-      "feature_anchors": {
-        "description": "Standard Manifold",
-        "standard_manifold": {
-          "mean_vector": {
-            "E": 0.0055942168878908155,
-            "O": 0.005533875295307839,
-            "M": 0.005765780261271756,
-            "S": 0.013939080337353082,
-            "R": 0.0055218579069396785
-          },
-          "covariance_matrix": [
-            [
-              0.0032782867789158403,
-              0.002435644822128293,
-              0.001736820535554634,
-              0.0016114032673538881,
-              0.003012597484209095
-            ],
-            [
-              0.002435644822128293,
-              0.002884298382329962,
-              0.0006423016083439244,
-              0.005818007522963151,
-              0.002658622119374317
-            ],
-            [
-              0.001736820535554634,
-              0.0006423016083439244,
-              1.0220266739157977,
-              0.43500601261087296,
-              0.004892458396054371
-            ],
-            [
-              0.0016114032673538881,
-              0.005818007522963151,
-              0.43500601261087296,
-              0.2456325837016411,
-              0.004459181723004076
-            ],
-            [
-              0.003012597484209095,
-              0.002658622119374317,
-              0.004892458396054371,
-              0.004459181723004076,
-              0.0031838011450244508
-            ]
-          ],
-          "thresholds": {
-            "max_mahalanobis_dist_ref": "@config.patterns.d02.mahalanobis_threshold",
-            "min_sai_gating_ref": "@config.gating.weak_self_limit",
-            "precision_gaussian_sigma_ref": "@config.patterns.d02.precision_gaussian_sigma",
-            "precision_energy_gate_k_ref": "@config.patterns.d02.precision_energy_gate_k",
-            "precision_weights_similarity_ref": "@config.patterns.d02.precision_weights.similarity",
-            "precision_weights_distance_ref": "@config.patterns.d02.precision_weights.distance"
-          }
-        }
-      },
-      "sub_patterns_registry": [],
-      "matching_router": {
-        "strategy_version": "3.0",
-        "description": "Runtime Logic Gates with V3.0 @config References",
-        "strategies": [
-          {
-            "priority": 1,
-            "target": "DEFAULT",
-            "description": "E-Gating: 防止身弱假格",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.gating.weak_self_limit",
-                  "description": "Safety: Anti-Puppet (防止身弱假格)"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 2,
-            "target": "SP_D02_COLLIDER",
-            "description": "风投态: 高M高S",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.collider_e_min"
-                },
-                {
-                  "axis": "M",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.collider_m_min"
-                },
-                {
-                  "axis": "S",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.collider_s_min"
-                }
-              ]
-            }
-          },
-          {
-            "priority": 3,
-            "target": "SP_D02_SYNDICATE",
-            "description": "财团态: 高M高R",
-            "logic": {
-              "condition": "AND",
-              "rules": [
-                {
-                  "axis": "E",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.syndicate_e_min"
-                },
-                {
-                  "axis": "M",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.syndicate_m_min"
-                },
-                {
-                  "axis": "R",
-                  "operator": "gt",
-                  "param_ref": "@config.patterns.d02.syndicate_r_min"
                 }
               ]
             }

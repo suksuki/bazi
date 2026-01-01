@@ -564,17 +564,28 @@ def render():
                 'pattern_state': current_data['pattern_state']
             }
             
-            st.write("🧠 正在联通星际语义引擎 (Qwen2.5)...")
+            # 从系统配置读取实时LLM模型名称
+            from core.config_manager import ConfigManager
+            config_manager = ConfigManager()
+            current_model_name = config_manager.get("selected_model_name", "Qwen2.5")
+            if not current_model_name:
+                current_model_name = "Qwen2.5"  # 默认值
             
-            # 使用 st.write_stream 实现流式输出效果
-            # 创建一个容器用于流式显示报告内容
+            st.write(f"🧠 正在联通星际语义引擎 ({current_model_name})...")
+            
+            # 使用自定义流式显示实现逐字逐句打字机效果
             report_container = st.empty()
-            with report_container.container():
-                st.write_stream(stream_holographic_report(
-                    report_data,
-                    result.get('pattern_name'), 
-                    current_data['pattern_state'].get('state', 'STABLE')
-                ))
+            accumulated_text = ""
+            
+            # 使用生成器逐字符获取内容
+            for char in stream_holographic_report(
+                report_data,
+                result.get('pattern_name'), 
+                current_data['pattern_state'].get('state', 'STABLE')
+            ):
+                accumulated_text += char
+                # 实时更新显示内容（支持Markdown格式）
+                report_container.markdown(accumulated_text)
             
             status.update(label="✅ 轨迹报告解析完毕", state="complete", expanded=False)
         with st.expander("📝 物理公理矩阵 (Transfer Matrix V3.0)"):
