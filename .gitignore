@@ -72,3 +72,10 @@ scripts/train_wrapper.sh
 !data/real_celebrity_cases.json
 !data/v14_synthetic_cases.json
 data/ignored/
+results/
+*.json
+results/*.json
+results/*.json
+results/*.json
+core/data/*.jsonl
+*.tar.gz

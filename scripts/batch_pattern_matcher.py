@@ -25,6 +25,53 @@ from multiprocessing import Pool, cpu_count
 from functools import partial
 import numpy as np
 
+# 尝试导入 tqdm（进度条）
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    # 简单的进度条实现（如果没有tqdm）
+    class tqdm:
+        def __init__(self, iterable=None, total=None, desc=None, unit=None, ncols=None):
+            self.iterable = iterable
+            self.total = total
+            self.desc = desc or ""
+            self.unit = unit or "it"
+            self.current = 0
+            self.start_time = time.time()
+            
+        def __iter__(self):
+            if self.iterable:
+                for item in self.iterable:
+                    yield item
+                    self.current += 1
+                    self._update()
+            return self
+            
+        def __enter__(self):
+            return self
+            
+        def __exit__(self, *args):
+            self._close()
+            
+        def update(self, n=1):
+            self.current += n
+            self._update()
+            
+        def _update(self):
+            if self.total:
+                pct = (self.current / self.total) * 100
+                elapsed = time.time() - self.start_time
+                if self.current > 0:
+                    rate = self.current / elapsed
+                    eta = (self.total - self.current) / rate if rate > 0 else 0
+                    print(f"\r{self.desc}: {self.current}/{self.total} ({pct:.1f}%) | "
+                          f"速度: {rate:.1f} {self.unit}/s | ETA: {eta:.0f}s", end="", flush=True)
+                    
+        def _close(self):
+            print()  # 换行
+
 # 添加项目根目录
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
@@ -189,9 +236,10 @@ def process_single_sample(args: Tuple[int, Dict]) -> Dict[str, Any]:
             precision_score = calculate_precision_score(similarity, m_dist, sai)
             
             # 获取阈值（从manifold或feature_anchors）
+            # V3.1修正：提高匹配阈值至0.7，避免泛化过度
             thresholds = manifold.get('thresholds', {}) or feature_anchors.get('thresholds', {})
             max_m_dist = thresholds.get('max_mahalanobis_dist', 3.0)
-            match_threshold = thresholds.get('match_threshold', 0.6)
+            match_threshold = thresholds.get('match_threshold', 0.7)  # V3.1: 从0.6提高到0.7
             
             # 判断状态
             if precision_score > match_threshold and m_dist <= max_m_dist:
@@ -348,38 +396,47 @@ def process_batch(
     # 分批处理（避免内存问题）
     n_batches = (total_samples + batch_size - 1) // batch_size
     
-    for batch_idx in range(n_batches):
-        batch_start = batch_idx * batch_size
-        batch_end = min(batch_start + batch_size, total_samples)
-        batch_samples = samples[batch_start:batch_end]
-        
-        batch_num = batch_idx + 1
-        
-        print(f"📦 处理批次 {batch_num}/{n_batches} (样本 {batch_start+1:,} - {batch_end:,})...", end=' ')
-        batch_start_time = time.time()
-        
-        # 并行处理当前批次
-        with Pool(processes=workers, initializer=init_worker, initargs=(pattern_id,)) as pool:
-            batch_results = pool.map(process_single_sample, batch_samples)
-        
-        batch_elapsed = time.time() - batch_start_time
-        
-        # 统计批次结果
-        batch_success = sum(1 for r in batch_results if r.get('status') == 'success')
-        batch_errors = sum(1 for r in batch_results if r.get('status') == 'error')
-        
-        results.extend(batch_results)
-        errors.extend([r for r in batch_results if r.get('status') == 'error'])
-        
-        # 进度显示
-        processed = len(results)
-        elapsed_total = time.time() - start_time
-        rate = processed / elapsed_total if elapsed_total > 0 else 0
-        eta = (total_samples - processed) / rate if rate > 0 else 0
-        
-        print(f"✅ 成功: {batch_success}, 错误: {batch_errors} | "
-              f"总进度: {processed:,}/{total_samples:,} ({100*processed/total_samples:.1f}%) | "
-              f"速度: {rate:.1f} 样本/秒 | ETA: {eta/60:.1f} 分钟")
+    # 使用进度条
+    with tqdm(total=total_samples, desc="🚀 匹配进度", unit="样本", ncols=100) as pbar:
+        for batch_idx in range(n_batches):
+            batch_start = batch_idx * batch_size
+            batch_end = min(batch_start + batch_size, total_samples)
+            batch_samples = samples[batch_start:batch_end]
+            
+            batch_num = batch_idx + 1
+            batch_start_time = time.time()
+            
+            # 并行处理当前批次
+            with Pool(processes=workers, initializer=init_worker, initargs=(pattern_id,)) as pool:
+                batch_results = pool.map(process_single_sample, batch_samples)
+            
+            batch_elapsed = time.time() - batch_start_time
+            
+            # 统计批次结果
+            batch_success = sum(1 for r in batch_results if r.get('status') == 'success')
+            batch_errors = sum(1 for r in batch_results if r.get('status') == 'error')
+            batch_matched = sum(1 for r in batch_results if r.get('status') == 'success' and r.get('precision_score', 0) > 0.6)
+            
+            results.extend(batch_results)
+            errors.extend([r for r in batch_results if r.get('status') == 'error'])
+            
+            # 更新进度条
+            processed = len(results)
+            elapsed_total = time.time() - start_time
+            rate = processed / elapsed_total if elapsed_total > 0 else 0
+            eta = (total_samples - processed) / rate if rate > 0 else 0
+            
+            # 更新进度条描述
+            pbar.set_description(f"📦 批次 {batch_num}/{n_batches}")
+            pbar.update(len(batch_samples))
+            
+            # 在进度条后显示详细信息
+            pbar.set_postfix({
+                '成功': f"{batch_success}",
+                '匹配': f"{batch_matched}",
+                '速度': f"{rate:.0f}/s",
+                'ETA': f"{eta/60:.1f}min"
+            })
     
     # 统计汇总
     total_time = time.time() - start_time
@@ -387,9 +444,11 @@ def process_batch(
     success_results = [r for r in results if r.get('status') == 'success']
     precision_scores = [r.get('precision_score', 0) for r in success_results]
     
-    # 匹配度统计
-    matched = [r for r in success_results if r.get('precision_score', 0) > 0.6]
-    strong_matched = [r for r in success_results if r.get('precision_score', 0) > 0.8]
+    # 匹配度统计（修正：只有 MATCHED 状态才算真正成格）
+    matched = [r for r in success_results if r.get('pattern_status') == 'MATCHED']
+    edge_cases = [r for r in success_results if r.get('pattern_status') == 'EDGE']
+    # V3.1: 强匹配阈值保持0.8（相对于新的match_threshold=0.7）
+    strong_matched = [r for r in matched if r.get('precision_score', 0) > 0.8]
     
     stats = {
         'total_samples': total_samples,
@@ -440,7 +499,8 @@ def save_results(
         }, f, indent=2, ensure_ascii=False)
     
     # 保存详细结果（仅保存匹配的样本，避免文件过大）
-    matched_results = [r for r in results if r.get('status') == 'success' and r.get('precision_score', 0) > 0.6]
+    # V3.1: 只保存MATCHED状态的样本（已经是高质量筛选）
+    matched_results = [r for r in results if r.get('status') == 'success' and r.get('pattern_status') == 'MATCHED']
     
     results_path = output_path.with_suffix('.matched.json')
     with open(results_path, 'w', encoding='utf-8') as f:

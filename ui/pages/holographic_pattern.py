@@ -18,44 +18,18 @@ logger = logging.getLogger(__name__)
 
 # --- V1.5.3 Demo Definition Matrix ---
 # [V1.5.4 FIX] 修正四柱数据以确保匹配对应格局特征
+# [V3.1 UPDATE] 基于全量51.8万样本扫描结果，更新为最佳匹配案例
+# [V3.2 CLEANUP] 清理其他演示案例，仅保留A-03最佳匹配案例
 DEMO_PROFILES = {
-    'demo_a03_std': {
-        # 从data/holographic_pattern/A-03_Singularities.json中提取的真实成格案例
-        # Precision: 0.8127, 识别态: STANDARD
-        'name': '演示：羊刃架杀·经典案例', 'gender': '男', 'year': 2000,
+    'demo_a03_best_match': {
+        # 基于全量51.8万样本扫描的最佳匹配案例
+        # UID: 257531, Precision: 0.9040, Mahalanobis Distance: 0.5096
+        # Tensor: E=0.6649, O=0.5656, M=0.4890, S=0.5413, R=0.4939
+        # SAI: 0.5510, Pattern Status: MATCHED
+        # 注意：此案例基于扫描结果，实际Precision为0.9040，但演示八字仅为占位，计算结果可能不同
+        'name': '演示：羊刃架杀·最佳匹配案例', 'gender': '男', 'year': 2000,
         'year_pillar': '庚午', 'month_pillar': '壬午', 'day_pillar': '戊午', 'hour_pillar': '甲寅',
-        'day_master': '戊', 'desc': '真实成格案例，Precision 0.8127 (Standard A-03)'
-    },
-    'demo_a03_vault': {
-        # 从data/a03_step3_discovery.json中提取的VAULT案例
-        # Precision: 0.6239, 识别态: MARGINAL
-        'name': '演示：库刃爆发·奇点结构', 'gender': '男', 
-        'year_pillar': '戊子', 'month_pillar': '壬戌', 'day_pillar': '癸丑', 'hour_pillar': '壬子',
-        'day_master': '癸', 'desc': '真实成格案例，Precision 0.6239 (Vault A-03)'
-    },
-    'demo_d01_std': {
-        # 正财格标准案例：丁日主，有庚金（丁的正财）
-        'name': '演示：D-01 正财格 (Standard)', 'gender': '男', 
-        'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '丁丑', 'hour_pillar': '庚子', 
-        'day_master': '丁', 'desc': '财星得位，温和积累'
-    },
-    'demo_d01_surrender': {
-        # 弃命从财案例：丙日主，四柱金多（财旺），日主无根
-        'name': '演示：D-01 弃命从财', 'gender': '男', 
-        'year_pillar': '庚申', 'month_pillar': '辛酉', 'day_pillar': '丙申', 'hour_pillar': '戊子', 
-        'day_master': '丙', 'desc': '局中无根，顺势而为'
-    },
-    'demo_d02_syndicate': {
-        # 资本大鳄案例：丙日主，有午（羊刃）、偏财旺，人脉广
-        'name': '演示：D-02 资本大鳄 (The Syndicate)', 'gender': '男',
-        'year_pillar': '丙午', 'month_pillar': '丙申', 'day_pillar': '丙午', 'hour_pillar': '庚寅',
-        'day_master': '丙', 'desc': '高杠杆、强社交连接 (Activated D-02)'
-    },
-    'demo_d02_collider': {
-        # 乱世枭雄案例：甲日主，年干戊（偏财），申寅冲（高应力），符合D-02 Collider
-        'name': '演示：D-02 乱世枭雄 (The Collider)', 'gender': '男',
-        'year_pillar': '戊申', 'month_pillar': '甲申', 'day_pillar': '甲寅', 'hour_pillar': '庚午',
-        'day_master': '甲', 'desc': '偏财透干，申寅冲高应力，剧烈波动 (Activated D-02 Collider)'
+        'day_master': '戊', 'desc': '全量扫描最佳匹配 (UID: 257531) | 扫描结果: Precision=0.9040, M-Dist=0.5096 | 注意：演示八字为占位，计算结果可能不同'
     }
 }
 
@@ -68,7 +42,7 @@ def render():
         # 验证当前选择的demo是否仍然存在且有效
         if current_demo_id not in DEMO_PROFILES:
             # 如果选择的demo不存在，重置为默认值
-            st.session_state[f'{PAGE_PREFIX}demo_id'] = 'demo_a03_std'
+            st.session_state[f'{PAGE_PREFIX}demo_id'] = 'demo_a03_best_match'
     
     st.markdown("""
     <style>
@@ -166,13 +140,42 @@ def render():
                 index=list(demo_profile_names.values()).index(current_demo_id),
                 key=f"{PAGE_PREFIX}demo_select"
             )
-            st.session_state[f'{PAGE_PREFIX}demo_id'] = demo_profile_names[sel_demo]
-            st.caption(f"💡 {DEMO_PROFILES[demo_profile_names[sel_demo]]['desc']}")
+            
+            # [V3.2 FIX] 检测选择变化，强制更新session state并触发重新渲染
+            new_demo_id = demo_profile_names[sel_demo]
+            prev_demo_id = st.session_state.get(f'{PAGE_PREFIX}demo_id')
+            
+            # 立即更新demo_id
+            st.session_state[f'{PAGE_PREFIX}demo_id'] = new_demo_id
+            
+            # 如果选择改变了，且当前在演示案例tab，立即更新并触发重新渲染
+            if prev_demo_id != new_demo_id and st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'demo':
+                st.session_state['current_profile_id'] = new_demo_id
+                st.session_state['current_profile_source'] = 'demo'
+                st.rerun()  # 强制重新渲染
+            st.caption(f"💡 {DEMO_PROFILES[new_demo_id]['desc']}")
             
             # Simple radio to switch active source
+            prev_active_tab = st.session_state.get(f'{PAGE_PREFIX}active_tab', 'real')
             source_opt = st.radio("当前数据源", ["实测档案", "演示案例"], 
-                                index=0 if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'real' else 1,
+                                index=0 if prev_active_tab == 'real' else 1,
                                 horizontal=True, key=f"{PAGE_PREFIX}source_toggle")
+            
+            # [V3.2 FIX] 检测数据源切换，强制更新
+            new_active_tab = 'real' if source_opt == "实测档案" else 'demo'
+            if prev_active_tab != new_active_tab:
+                st.session_state[f'{PAGE_PREFIX}active_tab'] = new_active_tab
+                # 立即更新选中的profile
+                if new_active_tab == 'demo':
+                    current_demo_id = st.session_state.get(f'{PAGE_PREFIX}demo_id', new_demo_id)
+                    st.session_state['current_profile_id'] = current_demo_id
+                    st.session_state['current_profile_source'] = 'demo'
+                    st.rerun()  # 强制重新渲染
+                elif new_active_tab == 'real' and real_profile_names:
+                    real_id = st.session_state.get(f'{PAGE_PREFIX}real_id', list(real_profile_names.values())[0])
+                    st.session_state['current_profile_id'] = real_id
+                    st.session_state['current_profile_source'] = 'real'
+                    st.rerun()  # 强制重新渲染
             
             if source_opt == "实测档案":
                 st.session_state[f'{PAGE_PREFIX}active_tab'] = 'real'
@@ -182,17 +185,17 @@ def render():
                     profile_source = 'real'
                 else:
                     st.error("无法切换：实测档案为空")
-                    selected_profile_id = demo_profile_names[sel_demo]
+                    selected_profile_id = new_demo_id
                     profile_source = 'demo'
             else:
                 st.session_state[f'{PAGE_PREFIX}active_tab'] = 'demo'
-                selected_profile_id = demo_profile_names[sel_demo]
+                selected_profile_id = new_demo_id
                 profile_source = 'demo'
 
         if not selected_profile_id:
             # Final fallback
             if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'demo' or not real_profile_names:
-                selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}demo_id', 'demo_a03_std')
+                selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}demo_id', 'demo_a03_best_match')
                 profile_source = 'demo'
             else:
                 selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}real_id')
@@ -372,8 +375,23 @@ def render():
 
     # --- Main Content Area ---
     # Load Profile Data
+    # [V3.2 FIX] 确保从最新的session state读取，避免使用旧的缓存值
     profile_source = st.session_state.get('current_profile_source', 'real')
     selected_profile_id = st.session_state.get('current_profile_id')
+    
+    # 如果selected_profile_id为空，尝试从tab状态获取
+    if not selected_profile_id:
+        if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'demo':
+            selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}demo_id', 'demo_a03_best_match')
+            profile_source = 'demo'
+        else:
+            if real_profile_names:
+                selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}real_id', list(real_profile_names.values())[0])
+                profile_source = 'real'
+    
+    # 确保session state是最新的
+    st.session_state['current_profile_id'] = selected_profile_id
+    st.session_state['current_profile_source'] = profile_source
     
     profile_data = None
     if profile_source == 'real':
@@ -382,7 +400,18 @@ def render():
         profile_data = DEMO_PROFILES.get(selected_profile_id)
         
     if not profile_data:
-        st.error("❌ 档案读取失败")
+        st.error(f"❌ 档案读取失败: profile_id={selected_profile_id}, source={profile_source}")
+        # 调试信息
+        st.json({
+            'available_demos': list(DEMO_PROFILES.keys()),
+            'current_id': selected_profile_id,
+            'session_state': {
+                'current_profile_id': st.session_state.get('current_profile_id'),
+                'current_profile_source': st.session_state.get('current_profile_source'),
+                'demo_id': st.session_state.get(f'{PAGE_PREFIX}demo_id'),
+                'active_tab': st.session_state.get(f'{PAGE_PREFIX}active_tab')
+            }
+        })
         return
 
     # Initialize BaziProfile

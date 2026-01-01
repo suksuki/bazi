@@ -392,7 +392,8 @@ class RegistryLoader:
         if isinstance(thresholds, dict):
             thresholds = self.resolve_config_refs_in_dict(thresholds)
         
-        match_threshold = thresholds.get('match_threshold', manifold.get('match_threshold', 0.80))
+        # V3.1修正：提高匹配阈值至0.7，避免泛化过度，将成格率控制在合理区间(10-18%)
+        match_threshold = thresholds.get('match_threshold', manifold.get('match_threshold', 0.7))
         
         # 调试日志：检查协方差矩阵是否存在
         cov = manifold.get('covariance_matrix')
@@ -494,7 +495,8 @@ class RegistryLoader:
             }
         
         # 破格 (Broken) vs 边缘 (Marginal)
-        if precision_score < 0.60:
+        # V3.1修正：统一使用match_threshold判断，避免硬编码
+        if precision_score < match_threshold:
             return {
                 'matched': False,
                 'pattern_type': 'BROKEN',
@@ -503,7 +505,7 @@ class RegistryLoader:
                 'precision_score': precision_score,
                 'anchor_id': None,
                 'resonance': False,
-                'description': f"物理破格，评分 {precision_score:.4f} < 0.60",
+                'description': f"物理破格，评分 {precision_score:.4f} < {match_threshold:.2f}",
                 'risk_level': None,
                 'special_instruction': None
             }

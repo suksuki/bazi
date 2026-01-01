@@ -33,6 +33,7 @@ import sys
 sys.path.insert(0, str(project_root))
 
 from core.trinity.core.middleware.holographic_fitter import HolographicMatrixFitter
+from core.config import config, get_pattern_param
 
 # 配置日志
 logging.basicConfig(
@@ -274,42 +275,58 @@ def filter_samples_for_pattern(
     """
     L1 结构过滤: 根据格局的物理原型筛选样本
     
+    [V3.2 UPDATE] 使用层级化配置系统，从格局特异性参数中读取阈值
+    
     注意: 这是一个简化版本。实际应该使用更复杂的结构匹配逻辑。
     """
     filtered_inputs = []
     filtered_tensors = []
     
-    # 简化: 根据格局原型特征筛选
-    # 例如 A-03 需要高 E 和 S，D-01 需要高 M
-    pattern = PATTERNS_CONFIG[pattern_id]
+    # [V3.2] 从配置中获取格局特异性阈值
+    pattern_key = pattern_id.replace('-', '').lower()
+    pattern_config = getattr(config.patterns, pattern_key, None)
     
     for inp, tensor in zip(input_features, true_tensors):
-        # 简单的阈值过滤（实际应该更复杂）
+        # 使用格局特异性配置进行过滤
         keep = True
         
-        if pattern_id == "A-03":
-            # 羊刃架杀: 需要高 E 和高 S
-            if tensor[0] < 0.5 or tensor[3] < 0.4:  # E < 0.5 或 S < 0.4
+        # 通用E-Gating（所有格局都需要，从配置读取）
+        try:
+            min_e = get_pattern_param(pattern_id, 'standard_e_min', default_value=config.gating.min_self_energy)
+        except (KeyError, AttributeError):
+            min_e = config.gating.min_self_energy
+        
+        if tensor[0] < min_e:  # E 能量不足
+            keep = False
+            continue
+        
+        # 格局特定过滤（从配置读取）
+        if pattern_id == "A-03" and pattern_config:
+            # 羊刃架杀: 需要高 E 和高 S（从配置读取）
+            min_s = getattr(pattern_config, 'standard_s_min', 0.4)
+            if tensor[3] < min_s:  # S < threshold
                 keep = False
-        elif pattern_id == "D-01":
-            # 正财格: 需要高 M
-            if tensor[2] < 0.4:  # M < 0.4
+        elif pattern_id == "D-01" and pattern_config:
+            # 正财格: 需要高 M（从配置读取）
+            min_m = getattr(pattern_config, 'keeper_m_min', 0.4)
+            if tensor[2] < min_m:  # M < threshold
                 keep = False
-        elif pattern_id == "D-02":
-            # 偏财格: 需要高 M 和高 S
-            if tensor[2] < 0.5 or tensor[3] < 0.3:  # M < 0.5 或 S < 0.3
+        elif pattern_id == "D-02" and pattern_config:
+            # 偏财格: 需要高 M（从配置读取）
+            min_m = getattr(pattern_config, 'standard_m_min', 0.5)
+            if tensor[2] < min_m:  # M < threshold
                 keep = False
-        elif pattern_id == "A-01":
-            # 正官格: 需要高 O 和中等 E
-            if tensor[1] < 0.4 or tensor[0] < 0.3:  # O < 0.4 或 E < 0.3
+        elif pattern_id == "A-01" and pattern_config:
+            # 正官格: 需要高 O（简化处理，后续可完善）
+            if tensor[1] < 0.4:  # O < 0.4
                 keep = False
-        elif pattern_id == "B-01":
-            # 食神格: 需要中等 M 和 R
-            if tensor[2] < 0.3 or tensor[4] < 0.3:  # M < 0.3 或 R < 0.3
+        elif pattern_id == "B-01" and pattern_config:
+            # 食神格: 需要中等 M 和 R（简化处理）
+            if tensor[2] < 0.3 or tensor[4] < 0.3:
                 keep = False
-        elif pattern_id == "B-02":
-            # 伤官格: 需要高 O 或高 M
-            if tensor[1] < 0.3 and tensor[2] < 0.4:  # O < 0.3 且 M < 0.4
+        elif pattern_id == "B-02" and pattern_config:
+            # 伤官格: 需要高 O 或高 M（简化处理）
+            if tensor[1] < 0.3 and tensor[2] < 0.4:
                 keep = False
         
         if keep:
@@ -355,12 +372,17 @@ def fit_pattern(
     X = np.array(input_features)  # (N, DIM_INPUT)
     y_true = np.array(true_tensors)  # (N, 5)
     
+    # [V3.2 UPDATE] 从配置中获取格局特异性参数
+    # 使用格局特异性k_factor（如果有），否则使用全局默认值
+    saturation_k = get_pattern_param(pattern_id, 'k_factor', default_value=config.physics.k_factor)
+    
     # 初始化拟合器
     fitter = HolographicMatrixFitter(
         learning_rate=0.02,
         regularization=0.005,
-        saturation_k=3.0  # 从 @config 读取（这里先用默认值）
+        saturation_k=saturation_k  # [V3.2] 使用层级化配置
     )
+    logger.info(f"   使用配置参数: saturation_k={saturation_k}")
     
     # 执行拟合
     transfer_matrix = fitter.fit(pattern_id, X, y_true, epochs=epochs)
@@ -455,7 +477,12 @@ def inject_v3_protocols(pattern_id: str, fit_result: Dict[str, Any]) -> Dict[str
                 "covariance_matrix": fit_result["covariance_matrix"],
                 "thresholds": {
                     "max_mahalanobis_dist_ref": f"@config.patterns.{pattern_id.lower().replace('-', '')}.mahalanobis_threshold",
-                    "min_sai_gating_ref": "@config.gating.weak_self_limit"
+                    "min_sai_gating_ref": "@config.gating.weak_self_limit",
+                    # [V3.2] Precision Score参数（格局特异性）
+                    "precision_gaussian_sigma_ref": f"@config.patterns.{pattern_id.lower().replace('-', '')}.precision_gaussian_sigma",
+                    "precision_energy_gate_k_ref": f"@config.patterns.{pattern_id.lower().replace('-', '')}.precision_energy_gate_k",
+                    "precision_weights_similarity_ref": f"@config.patterns.{pattern_id.lower().replace('-', '')}.precision_weights.similarity",
+                    "precision_weights_distance_ref": f"@config.patterns.{pattern_id.lower().replace('-', '')}.precision_weights.distance"
                 }
             }
         },
