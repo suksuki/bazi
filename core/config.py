@@ -88,6 +88,14 @@ class PhysicsParams:
     precision_gaussian_sigma: float = 2.5            # 高斯衰减参数 σ (L1默认: 2.5)
     precision_energy_gate_k: float = 0.4             # SAI能量门控阈值 (L1默认: 0.4)
     
+    # Aliases for V3.1 Full Sync & Docs
+    @property
+    def weights(self): return self.precision_weights
+    @property
+    def gaussian_sigma(self): return self.precision_gaussian_sigma
+    @property
+    def energy_gate_k(self): return self.precision_energy_gate_k
+
     def __post_init__(self):
         # 初始化默认权重配置
         if self.precision_weights is None:
@@ -111,6 +119,10 @@ class GatingParams:
     min_self_energy: float = 0.40      # 通用身弱界限 (L3文档引用)
     weak_self_limit: float = 0.45      # FDS拟合用的身弱死线 (更严)
     
+    # Aliases for V3.1 Full Sync & Docs
+    @property
+    def weak_self(self): return self.weak_self_limit
+
     # R-Gating: 关联门控 (防止杂气混杂)
     max_relation: float = 0.60         # 纯粹格局允许的最大杂气干扰 (L3文档引用)
     max_relation_limit: float = 0.60   # 别名，保持向后兼容
@@ -157,16 +169,36 @@ class PatternA03Config:
         if self.precision_weights is None:
             self.precision_weights = PrecisionScoreWeights(similarity=0.5, distance=0.5)
     
+    # [V3.0 新增] 子格局详细阈值 (映射 UI 中的 JSON 结构)
+    class SubPatterns:
+        class Alliance: # 对应 "alliance_..."
+            e_min = 0.6  # 身杀两停：日主要强
+            s_min = 0.5  # 七杀要旺
+            r_min = 0.5  # 往往带比劫帮身
+        
+        class Standard: # 对应 "standard_..."
+            e_min = 0.6
+            s_min = 0.5
+            o_max = 0.35 # 食神制杀不可太过
+
     # 业务门控阈值（格局特定）
     min_killer_energy: float = 0.6             # 七杀必须具备的最低能量
-    standard_e_min: float = 0.6                # 标准态最小E值
-    standard_s_min: float = 0.5                # 标准态最小S值
-    standard_o_max: float = 0.35               # 标准态最大O值
-    alliance_e_min: float = 0.6                # 仿星器态最小E值
-    alliance_s_min: float = 0.5                # 仿星器态最小S值
-    alliance_r_min: float = 0.5                # 仿星器态最小R值
     mahalanobis_threshold: float = 2.5         # 马氏距离阈值
-    integrity_threshold: float = 0.6           # 完整性阈值
+    integrity_threshold: float = 0.9           # 完整性阈值 (V3.0 调优)
+    
+    # 快捷访问映射 (保持向后兼容)
+    @property
+    def standard_e_min(self): return self.SubPatterns.Standard.e_min
+    @property
+    def standard_s_min(self): return self.SubPatterns.Standard.s_min
+    @property
+    def standard_o_max(self): return self.SubPatterns.Standard.o_max
+    @property
+    def alliance_e_min(self): return self.SubPatterns.Alliance.e_min
+    @property
+    def alliance_s_min(self): return self.SubPatterns.Alliance.s_min
+    @property
+    def alliance_r_min(self): return self.SubPatterns.Alliance.r_min
 
 @dataclass
 class PatternA01Config:
@@ -245,12 +277,46 @@ class PatternD01Config:
 @dataclass
 class PatternB01Config:
     """B-01 食神格特异性参数 (L3)"""
-    reversal_s_min: float = 0.4                # 逆转态最小S值
-    reversal_e_min: float = 0.45               # 逆转态最小E值
-    standard_e_min: float = 0.32               # 标准态最小E值（防止泄漏）
-    integrity_threshold: float = 0.5
-    mahalanobis_threshold: float = 3.0
-    k_factor: float = 2.0
+    # 1. 基础物理常数
+    # 食神重方向(相似度)胜过位置(距离)，因为它是一种气质的表达
+    precision_weights: Optional[PrecisionScoreWeights] = field(default=None) 
+    precision_gaussian_sigma: float = 3.0   # 较宽的容度，食神讲究散漫与自由
+    precision_energy_gate_k: float = 0.3    # 较低的启动门槛
+    
+    def __post_init__(self):
+        # 如果precision_weights为None，使用默认值0.7/0.3
+        if self.precision_weights is None:
+            self.precision_weights = PrecisionScoreWeights(similarity=0.7, distance=0.3)
+    
+    # 2. 运行时阈值
+    mahalanobis_threshold: float = 2.8
+    integrity_threshold: float = 0.85
+    
+    # [V3.0 新增] 子格局定义
+    class SubPatterns:
+        # 枭神夺食态 (需高度关注 Stress 轴)
+        class Rejection: # 对应 "rejection_..."
+            s_max = 0.4    # 压力超过此限则破格
+            e_min = 0.5    # 必须有足够的能量抗衡
+        
+        # 食神生财态 (需关注 Material 轴)
+        class Accrual: # 对应 "accrual_..."
+            m_min = 0.6    # 物质转化效率要求
+
+    # Aliases
+    @property
+    def weights(self): return self.precision_weights
+    @property
+    def gaussian_sigma(self): return self.precision_gaussian_sigma
+    @property
+    def energy_gate_k(self): return self.precision_energy_gate_k
+    
+    @property
+    def rejection_s_max(self): return self.SubPatterns.Rejection.s_max
+    @property
+    def rejection_e_min(self): return self.SubPatterns.Rejection.e_min
+    @property
+    def accrual_m_min(self): return self.SubPatterns.Accrual.m_min
 
 @dataclass
 class PatternSpecificParams:
@@ -320,6 +386,48 @@ class SystemConfig:
     clustering: ClusteringParams = field(default_factory=ClusteringParams)
     patterns: PatternSpecificParams = field(default_factory=PatternSpecificParams)  # L3: Pattern Specifics
     
+    # V3.1 Master-Slave Sync Aliases
+    @property
+    def Patterns(self):
+        """V3.1 Alias for PatternSpecificParams"""
+        return self.patterns
+    
+    @property
+    def Physics(self):
+        """V3.1 Alias for GlobalPhysics"""
+        return self.physics
+        
+    @property
+    def Gating(self):
+        """V3.1 Alias for GatingParams"""
+        return self.gating
+        
+    @property
+    def Singularity(self):
+        """V3.1 Alias for SingularityParams"""
+        return self.singularity
+
+    @property
+    def Flow(self): return self.flow
+    
+    @property
+    def Interactions(self): return self.interactions
+    
+    @property
+    def Mediation(self): return self.mediation
+    
+    @property
+    def Integrity(self): return self.integrity
+    
+    @property
+    def Clustering(self): return self.clustering
+    
+    @property
+    def Spacetime(self): return self.spacetime
+    
+    @property
+    def Vault(self): return self.vault
+
     def resolve_config_ref(self, ref_path: str) -> Any:
         """
         解析配置引用路径，如 '@config.gating.weak_self_limit'

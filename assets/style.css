@@ -476,3 +476,25 @@ div[data-testid="stTable"] {
         inset 0 0 60px rgba(255, 255, 255, 0.1);
     animation: crystal-glow 4s ease-in-out infinite;
 }
+
+/* === Rendering Protocol (Industrial Standard) === */
+code:not(pre code) {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
+    font-family: ui-monospace, monospace !important;
+    vertical-align: middle !important;
+}
+
+span.katex {
+    vertical-align: middle !important;
+}
+
+.katex-display {
+    text-align: center !important;
+    margin: 1.5rem 0 !important;
+}
+
+.stMarkdown {
+    line-height: 1.65 !important;
+}

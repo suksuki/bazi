@@ -1,120 +1,92 @@
 {
-  "version": "3.0.0",
-  "gating": {
-    "min_self_energy": 0.4,
-    "weak_self_limit": 0.45,
-    "max_relation": 0.6,
-    "max_relation_limit": 0.6,
-    "min_wealth_level": 0.3
-  },
-  "physics": {
-    "k_factor": 3.0,
-    "precision_weights": {
-      "similarity": 0.7,
-      "distance": 0.3
+    "physics_version": "3.1.2",
+    "generated_by": "Antigravity V3.1.2 Ultra Sync Protocol",
+    "physics": {
+        "weights": {
+            "similarity": 0.5,
+            "distance": 0.5
+        },
+        "gaussian_sigma": 2.5,
+        "energy_gate_k": 0.4,
+        "rooting_weights": {
+            "main": 1.0,
+            "middle": 0.6,
+            "residual": 0.3
+        },
+        "projection_bonus": 1.2,
+        "spatial_decay": 0.6,
+        "global_entropy": 0.05,
+        "k_factor": 3.0
     },
-    "precision_gaussian_sigma": 3.5,
-    "precision_energy_gate_k": 0.3,
-    "rooting_weights": {
-      "main": 1.0,
-      "middle": 0.6,
-      "residual": 0.3
+    "gating": {
+        "min_self_energy": 0.4,
+        "weak_self": 0.45,
+        "weak_self_limit": 0.45,
+        "max_relation": 0.6,
+        "min_wealth_level": 0.3
     },
-    "projection_bonus": 1.2,
-    "spatial_decay": 0.6,
-    "global_entropy": 0.05
-  },
-  "spacetime": {
-    "macro_bonus": 0.2,
-    "latitude_coefficients": {
-      "high": 1.2,
-      "low": 0.8
+    "flow": {
+        "generation_efficiency": 0.3,
+        "control_impact": 0.7
     },
-    "invert_seasons": false,
-    "solar_time_correction": 4.0
-  },
-  "vault": {
-    "threshold": 20.0,
-    "sealed_damping": 0.4,
-    "open_bonus": 1.5,
-    "collapse_penalty": 0.5
-  },
-  "flow": {
-    "generation_efficiency": 0.3,
-    "control_impact": 0.7
-  },
-  "interactions": {
-    "clash_damping": 0.3
-  },
-  "mediation": {
-    "threshold": 4.0
-  },
-  "singularity": {
-    "threshold": 2.5,
-    "distance_threshold": 2.5,
-    "min_samples": 30,
-    "clustering_min_samples": 30
-  },
-  "clustering": {
-    "min_samples": 30
-  },
-  "patterns": {
-    "a03": {
-      "alliance_e_min": 0.6,
-      "alliance_s_min": 0.5,
-      "alliance_r_min": 0.5,
-      "standard_e_min": 0.6,
-      "standard_s_min": 0.5,
-      "standard_o_max": 0.35,
-      "mahalanobis_threshold": 2.5,
-      "integrity_threshold": 0.6
+    "interactions": {
+        "clash_damping": 0.3
     },
-    "d01": {
-      "keeper_e_min": 0.45,
-      "keeper_m_min": 0.4,
-      "surrender_r_max": 0.5,
-      "surrender_e_max": 0.3,
-      "integrity_threshold": 0.5,
-      "k_factor": 3.0
+    "mediation": {
+        "threshold": 4.0
     },
-    "d02": {
-      "collider_e_min": 0.45,
-      "collider_m_min": 0.6,
-      "collider_s_min": 0.5,
-      "syndicate_e_min": 0.45,
-      "syndicate_m_min": 0.6,
-      "syndicate_r_min": 0.5,
-      "syndicate_r_limit": 0.55,
-      "syndicate_m_limit": 0.6,
-      "standard_e_min": 0.45,
-      "standard_m_min": 0.55,
-      "integrity_threshold": 0.5,
-      "mahalanobis_threshold": 3.0,
-      "k_factor": 3.0
+    "singularity": {
+        "distance_threshold": 2.5,
+        "threshold": 2.5
     },
-    "b01": {
-      "reversal_s_min": 0.4,
-      "reversal_e_min": 0.45,
-      "standard_e_min": 0.32,
-      "integrity_threshold": 0.5,
-      "mahalanobis_threshold": 3.0,
-      "k_factor": 2.0
+    "clustering": {
+        "min_samples": 30
     },
-    "a01": {
-      "standard_e_min": 0.45,
-      "integrity_threshold": 0.65,
-      "mahalanobis_threshold": 3.0,
-      "k_factor": 2.0
+    "integrity": {
+        "threshold": 0.6
     },
-    "b02": {
-      "authority_e_min": 0.45,
-      "authority_high_e_min": 0.65,
-      "tycoon_e_min": 0.45,
-      "tycoon_m_min": 0.6,
-      "standard_e_min": 0.45,
-      "integrity_threshold": 0.6,
-      "mahalanobis_threshold": 3.0,
-      "k_factor": 1.5
+    "spacetime": {
+        "macro_bonus": 0.2,
+        "latitude_coefficients": {
+            "high": 1.2,
+            "low": 0.8
+        },
+        "invert_seasons": false,
+        "solar_time_correction": 4.0
+    },
+    "vault": {
+        "threshold": 20.0,
+        "sealed_damping": 0.4,
+        "open_bonus": 1.5,
+        "collapse_penalty": 0.5
+    },
+    "patterns": {
+        "a03": {
+            "mahalanobis_threshold": 2.5,
+            "integrity_threshold": 0.9,
+            "alliance_e_min": 0.6,
+            "alliance_s_min": 0.5,
+            "alliance_r_min": 0.5,
+            "standard_e_min": 0.6,
+            "standard_s_min": 0.5,
+            "standard_o_max": 0.35
+        },
+        "d02": {
+            "syndicate_r_limit": 0.55,
+            "syndicate_m_limit": 0.6,
+            "collider_e_min": 0.45,
+            "collider_m_min": 0.6,
+            "collider_s_min": 0.5,
+            "syndicate_e_min": 0.45,
+            "syndicate_m_min": 0.6,
+            "syndicate_r_min": 0.5
+        },
+        "b01": {
+            "mahalanobis_threshold": 2.8,
+            "integrity_threshold": 0.85,
+            "rejection_s_max": 0.4,
+            "rejection_e_min": 0.5,
+            "accrual_m_min": 0.6
+        }
     }
-  }
 }

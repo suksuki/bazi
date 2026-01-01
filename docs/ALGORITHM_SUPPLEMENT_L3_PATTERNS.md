@@ -16,7 +16,7 @@
 * **物理原理**: 只有达到 **临界质量 (Critical Mass)** 的命局才能支撑高阶结构。
 * **实现要求**: 
     * 严禁在代码中写死阈值。
-    * 必须调用 `@config.gating` 中的参数（如 `min_self_energy`）进行判定。
+    * 必须调用 `@config.gating.min_self_energy` 进行判定。
     * 未通过门控者，必须标记为 `COLLAPSED` (破格)。
 
 ---

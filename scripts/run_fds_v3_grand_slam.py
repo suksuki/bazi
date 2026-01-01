@@ -56,11 +56,11 @@ PATTERNS_CONFIG = {
         "description": "正官为权力与秩序的象征，需身旺方能担官。",
         # 物理原型: O(权力)高, E(根基)中等, S(压力)较低
         "prototype_hints": {
-            "E_row": {"Resource": 0.8, "Day_Master": 0.7},
-            "O_row": {"Direct_Officer": 1.2, "Eating_God": -0.5},
-            "S_row": {"Direct_Officer": -0.3, "Seven_Killings": -0.5},
-            "M_row": {"Direct_Wealth": 0.3},
-            "R_row": {"Combination": 0.2}
+            "E_row": {"zheng_yin": 0.8, "bi_jian": 0.7},
+            "O_row": {"zheng_guan": 1.2, "shi_shen": -0.5},
+            "S_row": {"zheng_guan": -0.3, "qi_sha": -0.5},
+            "M_row": {"zheng_cai": 0.3},
+            "R_row": {"combination": 0.2}
         }
     },
     "A-03": {
@@ -72,11 +72,11 @@ PATTERNS_CONFIG = {
         "description": "高能等离子体(羊刃)被高压场(七杀)约束，形成反应堆。",
         # 物理原型: E(能量)极高, S(压力)高, O(权力)中等
         "prototype_hints": {
-            "E_row": {"Yang_Ren": 1.5, "Day_Master": 1.0},
-            "S_row": {"Seven_Killings": 1.8, "Yang_Ren": 0.0},
-            "O_row": {"Seven_Killings": 1.2, "Yang_Ren": 0.8},
-            "M_row": {"Seven_Killings": 0.8, "Yang_Ren": -1.2},
-            "R_row": {"Friend": 1.0}
+            "E_row": {"jie_cai": 1.5, "bi_jian": 1.0},
+            "S_row": {"qi_sha": 1.8, "jie_cai": 0.0},
+            "O_row": {"qi_sha": 1.2, "jie_cai": 0.8},
+            "M_row": {"qi_sha": 0.8, "jie_cai": -1.2},
+            "R_row": {"bi_jian": 1.0}
         }
     },
     "B-01": {
@@ -88,11 +88,11 @@ PATTERNS_CONFIG = {
         "description": "食神为才华与表达的象征，需身旺泄秀方能成格。",
         # 物理原型: M(物质)中等, R(关联)高, S(压力)低
         "prototype_hints": {
-            "E_row": {"Day_Master": 0.8, "Resource": 0.6},
-            "M_row": {"Eating_God": 0.9, "Direct_Wealth": 0.4},
-            "R_row": {"Eating_God": 0.8, "Combination": 0.5},
-            "S_row": {"Eating_God": -0.4, "Seven_Killings": -0.6},
-            "O_row": {"Eating_God": 0.3}
+            "E_row": {"shi_shen": 0.4, "bi_jian": 0.6, "pian_yin": -0.5},
+            "O_row": {"shi_shen": -0.2, "zheng_guan": 0.3, "zheng_cai": 0.1},
+            "M_row": {"shi_shen": 0.3, "zheng_cai": 0.8, "bi_jian": -0.2},
+            "S_row": {"shi_shen": -0.6, "pian_yin": 0.5, "qi_sha": -0.3},
+            "R_row": {"shi_shen": 0.5, "bi_jian": 0.4, "pian_yin": -0.4}
         }
     },
     "B-02": {
@@ -104,11 +104,11 @@ PATTERNS_CONFIG = {
         "description": "伤官为创新与破坏的象征，需身旺方能驾驭。",
         # 物理原型: O(权力)高(权威态), M(物质)高(巨贾态), S(压力)中等
         "prototype_hints": {
-            "E_row": {"Day_Master": 0.9, "Resource": 0.7},
-            "O_row": {"Hurting_Officer": 1.0, "Direct_Officer": 0.6},
-            "M_row": {"Hurting_Officer": 0.8, "Direct_Wealth": 0.7},
-            "S_row": {"Hurting_Officer": 0.5, "Seven_Killings": 0.3},
-            "R_row": {"Combination": 0.3}
+            "E_row": {"bi_jian": 0.9, "zheng_yin": 0.7},
+            "O_row": {"shang_guan": 1.0, "zheng_guan": 0.6},
+            "M_row": {"shang_guan": 0.8, "zheng_cai": 0.7},
+            "S_row": {"shang_guan": 0.5, "qi_sha": 0.3},
+            "R_row": {"combination": 0.3}
         }
     },
     "D-01": {
@@ -120,11 +120,11 @@ PATTERNS_CONFIG = {
         "description": "正财为稳定财富的象征，需身旺方能守财。",
         # 物理原型: M(物质)高, E(根基)中等, R(关联)较低(私有制)
         "prototype_hints": {
-            "M_row": {"Direct_Wealth": 1.2, "Clash": -0.2},
-            "E_row": {"Day_Master": 0.7, "Resource": 0.5},
-            "R_row": {"Direct_Wealth": -0.3, "Rob_Wealth": -0.5},
-            "O_row": {"Direct_Officer": 0.4},
-            "S_row": {"Clash": -0.3}
+            "M_row": {"zheng_cai": 1.2, "clash": -0.2},
+            "E_row": {"bi_jian": 0.7, "zheng_yin": 0.5},
+            "R_row": {"zheng_cai": -0.3, "jie_cai": -0.5},
+            "O_row": {"zheng_guan": 0.4},
+            "S_row": {"clash": -0.3}
         }
     },
     "D-02": {
@@ -136,11 +136,11 @@ PATTERNS_CONFIG = {
         "description": "偏财为动态财富的象征，需身旺方能驾驭波动。",
         # 物理原型: M(物质)极高, S(压力)高, R(关联)中等
         "prototype_hints": {
-            "M_row": {"Indirect_Wealth": 1.3, "Clash": 0.4},
-            "S_row": {"Clash": 0.8, "Seven_Killings": 0.5},
-            "E_row": {"Day_Master": 0.8, "Resource": 0.5},
-            "R_row": {"Indirect_Wealth": 0.5, "Combination": 0.4},
-            "O_row": {"Direct_Officer": 0.2}
+            "M_row": {"pian_cai": 1.3, "clash": 0.4},
+            "S_row": {"clash": 0.8, "qi_sha": 0.5},
+            "E_row": {"bi_jian": 0.8, "zheng_yin": 0.5},
+            "R_row": {"pian_cai": 0.5, "combination": 0.4},
+            "O_row": {"zheng_guan": 0.2}
         }
     }
 }
@@ -184,9 +184,20 @@ def load_holographic_universe(data_path: Path) -> Tuple[List[np.ndarray], List[n
                     if 'meta' in entry:
                         continue
                     
-                    # 提取特征向量 (假设格式: {"tensor": [...], "features": {...}})
+                    # 提取特征向量 (假设格式: {"tensor": {"E":...}, "y_true": ...})
                     if 'tensor' in entry:
-                        tensor = np.array(entry['tensor'])
+                        t_data = entry['tensor']
+                        if isinstance(t_data, dict):
+                            tensor = np.array([
+                                t_data.get('E', 0), 
+                                t_data.get('O', 0), 
+                                t_data.get('M', 0), 
+                                t_data.get('S', 0), 
+                                t_data.get('R', 0)
+                            ])
+                        else:
+                            tensor = np.array(t_data)
+                            
                         if tensor.shape == (5,):
                             true_tensors.append(tensor)
                             count += 1
@@ -376,13 +387,26 @@ def fit_pattern(
     # 使用格局特异性k_factor（如果有），否则使用全局默认值
     saturation_k = get_pattern_param(pattern_id, 'k_factor', default_value=config.physics.k_factor)
     
+    # [V3.0] 格局特异性超参数微调
+    reg = 0.005
+    if pattern_id == "B-01":
+        reg = 0.05  # 食神格防止过度拟合
+    
     # 初始化拟合器
     fitter = HolographicMatrixFitter(
         learning_rate=0.02,
-        regularization=0.005,
+        regularization=reg,
         saturation_k=saturation_k  # [V3.2] 使用层级化配置
     )
-    logger.info(f"   使用配置参数: saturation_k={saturation_k}")
+    
+    # [V3.0] 注入初始权重种子 (Initial Weights)
+    if pattern_id in PATTERNS_CONFIG:
+        hints = PATTERNS_CONFIG[pattern_id].get("prototype_hints", {})
+        if hints:
+            fitter.set_initial_weights(hints)
+            logger.info(f"   已注入 {pattern_id} 初始权重种子")
+
+    logger.info(f"   使用配置参数: saturation_k={saturation_k}, reg={reg}")
     
     # 执行拟合
     transfer_matrix = fitter.fit(pattern_id, X, y_true, epochs=epochs)
@@ -639,6 +663,34 @@ def _build_matching_router_strategies(pattern_id: str) -> List[Dict[str, Any]]:
                     "rules": [
                         {"axis": "E", "operator": "gt", "param_ref": "@config.patterns.b02.tycoon_e_min"},
                         {"axis": "M", "operator": "gt", "param_ref": "@config.patterns.b02.tycoon_m_min"}
+                    ]
+                }
+            }
+        ])
+    
+    elif pattern_id == "B-01":
+        # 食神格: 枭神夺食态与食神生财态
+        strategies.extend([
+            {
+                "priority": 2,
+                "target": "SP_B01_REJECTION",
+                "description": "枭神夺食态: 高压身弱",
+                "logic": {
+                    "condition": "AND",
+                    "rules": [
+                        {"axis": "S", "operator": "gt", "param_ref": "@config.patterns.b01.rejection_s_max"},
+                        {"axis": "E", "operator": "lt", "param_ref": "@config.patterns.b01.rejection_e_min"}
+                    ]
+                }
+            },
+            {
+                "priority": 3,
+                "target": "SP_B01_ACCRUAL",
+                "description": "食神生财态: 高M转化",
+                "logic": {
+                    "condition": "AND",
+                    "rules": [
+                        {"axis": "M", "operator": "gt", "param_ref": "@config.patterns.b01.accrual_m_min"}
                     ]
                 }
             }

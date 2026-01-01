@@ -122,19 +122,16 @@ class RegistryLoader:
         if isinstance(data, dict):
             resolved = {}
             for key, value in data.items():
-                # 递归处理值
-                resolved[key] = self.resolve_config_refs_in_dict(value)
-                # 如果key本身包含_ref后缀，尝试解析并创建对应的无_ref字段
-                if key.endswith('_ref') and isinstance(resolved[key], str):
-                    if resolved[key].startswith('@config.'):
-                        # 解析引用，并在同名字段（无_ref后缀）存储解析后的值
-                        base_key = key[:-4]  # 移除'_ref'后缀
-                        resolved[base_key] = self.resolve_config_ref(resolved[key])
-                        logger.debug(f"解析{key}: {resolved[key]} -> {resolved[base_key]}")
-                # 如果值是字符串且以@config.开头，也解析（即使不是_ref字段）
-                elif isinstance(resolved[key], str) and resolved[key].startswith('@config.'):
-                    resolved[key] = self.resolve_config_ref(resolved[key])
-                    logger.debug(f"解析字符串引用 {key}: {resolved[key]}")
+                # 递归计算已解析的值
+                resolved_val = self.resolve_config_refs_in_dict(value)
+                resolved[key] = resolved_val
+                
+                # 如果key本身包含_ref后缀，且值是@config引用
+                if key.endswith('_ref') and isinstance(value, str) and value.startswith('@config.'):
+                    # 在同名字段（无_ref后缀）存储解析后的数字
+                    base_key = key[:-4]  # 移除'_ref'后缀
+                    resolved[base_key] = resolved_val
+                    logger.debug(f"解析并映射 {key} -> {base_key}: {resolved_val}")
             return resolved
         elif isinstance(data, list):
             return [self.resolve_config_refs_in_dict(item) for item in data]

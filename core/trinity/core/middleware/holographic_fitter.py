@@ -41,6 +41,26 @@ class HolographicMatrixFitter:
         # Initial guess: diagonal for first 5 ten gods
         for i in range(min(self.DIM_INPUT, self.DIM_OUTPUT)):
             self.transfer_matrix[i, i] = 1.0
+
+    def set_initial_weights(self, weights_dict: Dict[str, Dict[str, float]]):
+        """
+        [V3.0] 注入初始权重矩阵种子
+        
+        Args:
+            weights_dict: { "E_row": {"shi_shen": 0.4, ...}, "O_row": {...} }
+        """
+        for row_key, sub_dict in weights_dict.items():
+            axis = row_key.split('_')[0]
+            if axis in self.OUTPUT_KEYS:
+                row_idx = self.OUTPUT_KEYS.index(axis)
+                for ten_god, val in sub_dict.items():
+                    if ten_god in self.INPUT_KEYS:
+                        col_idx = self.INPUT_KEYS.index(ten_god)
+                        self.transfer_matrix[row_idx, col_idx] = val
+                    else:
+                        logger.warning(f"⚠️ Initial weight skip: TenGod '{ten_god}' not in INPUT_KEYS")
+            else:
+                logger.warning(f"⚠️ Initial weight skip: Axis '{axis}' not in OUTPUT_KEYS")
             
     def _get_axiom_mask(self, pattern_id: str) -> Tuple[np.ndarray, np.ndarray]:
         """

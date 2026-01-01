@@ -51,6 +51,40 @@ def render():
             --glow-primary: rgba(0, 217, 255, 0.3);
         }
         
+        /* ═══════════════════════════════════════════════════════════
+           🎨 Rendering Protocol (Industrial Standard)
+           ═══════════════════════════════════════════════════════════ */
+        
+        /* 1. Inline Code (Semantic Focus) */
+        code:not(pre code) {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            padding: 2px 4px !important;
+            border-radius: 4px !important;
+            font-family: ui-monospace, monospace !important;
+            vertical-align: middle !important;
+        }
+
+        /* 2. LaTeX/KaTeX Optimization */
+        span.katex { 
+            vertical-align: middle !important; 
+        }
+        
+        .katex-display {
+            text-align: center !important;
+            margin: 1.5rem 0 !important;
+        }
+
+        /* 3. Typography & Hierarchy */
+        .doc-content-box, .doc-preview-box {
+            line-height: 1.65 !important;
+            color: var(--text-primary) !important;
+        }
+        
+        li {
+            margin-bottom: 8px !important;
+        }
+
+        /* Existing Styles Optimized */
         .doc-metric-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -697,11 +731,12 @@ def _render_document_cards(controller: DocumentManagementController, documents):
             
             with mode_tab_link:
                 # 渲染带链接的全息预览（包含文档引用和配置引用）
-                rendered_content = _highlight_doc_refs_in_markdown(controller, doc_data['content'], doc.filename)
-                rendered_content_with_config = _highlight_config_refs_in_markdown(controller, rendered_content, doc.filename)
+                processed_content = render_holographic_markdown(controller, doc_data['content'], doc.filename)
                 st.markdown(f"""
                 <div class="doc-content-box doc-preview-box" style="height: 400px; overflow-y: auto;">
-                    {rendered_content_with_config}
+
+{processed_content}
+
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -820,12 +855,13 @@ def _render_unified_workspace(controller: DocumentManagementController, doc_id: 
             
     with preview_col:
         st.markdown("#### 👁️ 全息实时预览")
-        # 先处理文档引用，再处理配置引用
-        rendered_content = _highlight_doc_refs_in_markdown(controller, edited_content, doc_id)
-        rendered_content_with_config = _highlight_config_refs_in_markdown(controller, rendered_content, doc_id)
+        # 实时渲染预览 (V3.3 统一协议)
+        processed_content = render_holographic_markdown(controller, edited_content, doc_id)
         st.markdown(f"""
         <div class="doc-content-box doc-preview-box" style="height: 500px; overflow-y: auto;">
-            {rendered_content_with_config}
+
+{processed_content}
+
         </div>
         """, unsafe_allow_html=True)
         
@@ -922,140 +958,54 @@ def _render_unified_workspace(controller: DocumentManagementController, doc_id: 
             else: st.caption("目前处于叶子节点")
 
 
-def _highlight_config_refs_in_markdown(controller: DocumentManagementController, content: str, current_filename: str) -> str:
+def render_holographic_markdown(controller: DocumentManagementController, content: str, current_filename: str) -> str:
     """
-    在Markdown内容中高亮显示配置引用（@config.*），并添加悬停提示和点击定位功能
+    全息链路渲染引擎 (V3.5 - 工业级统一协议 & 递归隔离修正)
     
-    Args:
-        controller: 文档管理控制器
-        content: 文档内容（已处理过文档引用）
-        current_filename: 当前文档的文件名
-        
-    Returns:
-        处理后的Markdown内容（配置引用被高亮为可点击的HTML）
-    """
-    import re
-    
-    # 解析配置引用
-    refs_info = controller.get_document_references(current_filename)
-    config_refs = refs_info['references']['config_refs']
-    
-    if not config_refs:
-        return content
-    
-    # 为每个配置引用创建可点击的链接
-    processed_content = content
-    processed_positions = set()
-    
-    # 按长度排序（先匹配长的路径，避免短路径误匹配）
-    sorted_config_refs = sorted(config_refs, key=len, reverse=True)
-    
-    for config_ref in sorted_config_refs:
-        # 解析配置路径（例如 @config.gating.weak_self_limit -> gating.weak_self_limit）
-        config_path = config_ref.replace('@config.', '')
-        
-        # 获取配置值
-        config_value = controller.resolve_config_ref_link(config_path)
-        if config_value:
-            display_value = str(config_value)[:50]  # 限制显示长度
-            if len(str(config_value)) > 50:
-                display_value += "..."
-        else:
-            display_value = "未找到配置值"
-        
-        # 匹配模式：@config.xxx（完整匹配）
-        pattern = rf'@config\.{re.escape(config_path)}\b'
-        
-        # 查找所有匹配位置
-        for match in re.finditer(pattern, processed_content):
-            start, end = match.span()
-            
-            # 检查是否已被处理（避免重复替换）
-            is_processed = False
-            for p_start, p_end in processed_positions:
-                if not (end <= p_start or start >= p_end):
-                    is_processed = True
-                    break
-            
-            if is_processed:
-                continue
-            
-            # 标记为已处理
-            processed_positions.add((start, end))
-            
-            # 创建可点击的HTML元素（带悬停提示和点击跳转）
-            config_id = f"config_ref_{hash(config_ref)}_{start}"
-            # 转义HTML特殊字符
-            safe_display_value = display_value.replace('"', '&quot;').replace("'", '&#39;')
-            safe_config_path = config_path.replace('"', '&quot;').replace("'", '&#39;')
-            replacement = (
-                f'<span class="config-ref-link" '
-                f'id="{config_id}" '
-                f'data-config-path="{safe_config_path}" '
-                f'style="color: #00E676; font-weight: bold; text-decoration: underline; cursor: pointer; '
-                f'background: rgba(0, 230, 118, 0.1); padding: 2px 4px; border-radius: 3px; '
-                f'transition: background 0.2s;" '
-                f'onmouseover="this.style.background=\'rgba(0, 230, 118, 0.2)\';" '
-                f'onmouseout="this.style.background=\'rgba(0, 230, 118, 0.1)\';" '
-                f'onclick="event.preventDefault(); window.parent.postMessage({{type: \'streamlit:configLink\', configPath: \'{safe_config_path}\'}}, \'*\');" '
-                f'title="配置值: {safe_display_value} | 点击跳转到配置中心定位">'
-                f'{config_ref}'
-                f'</span>'
-            )
-            
-            # 替换（从后往前，避免位置偏移）
-            processed_content = processed_content[:start] + replacement + processed_content[end:]
-            
-            # 更新已处理位置（因为内容长度变了）
-            offset = len(replacement) - len(config_ref)
-            processed_positions = {
-                (s + offset if s > start else s, e + offset if e > start else e)
-                for s, e in processed_positions if (s, e) != (start, end)
-            }
-        
-    return processed_content
-
-
-def _highlight_doc_refs_in_markdown(controller: DocumentManagementController, content: str, current_filename: str) -> str:
-    """终极版：自动化全息链路解析
-    1. 自动识别文档 ID 及相关术语
-    2. 支持 QGA-HR -> QGA_HR 等模糊转换
-    3. 识别 @config 锚点
+    1. 实施防护屏蔽 (Masking Protocol)：隔离 LaTeX 和代码块
+    2. 执行全息链路解析：文档引用链接化 (兼容选配反引号)
+    3. 执行配置中心解析：@config 映射 (兼容反引号且彻底解决源码显现问题)
+    4. 执行术语高亮：MOD_xx, Category 等标识
+    5. 复原被屏蔽区域 (采用逆序替换，解决 10+ 占位符冲突问题)
     """
     import re
     from urllib.parse import quote
+    from core.config import config
     
-    # 基础 Markdown 转类 HTML (改为简约排版)
-    html_content = content.replace("###", '<div style="font-size: 1.05rem; font-weight: bold; margin: 15px 0 8px 0; color: var(--text-primary);">')
-    html_content = html_content.replace("##", '<div style="font-size: 1.15rem; font-weight: bold; margin: 20px 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; color: var(--text-primary);">')
-    html_content = html_content.replace("# ", '<div style="font-size: 1.3rem; font-weight: bold; margin: 25px 0 15px 0; color: var(--primary);">')
-    # 闭合 div
-    html_content = html_content.replace("\n", "</div>\n")
-    html_content = html_content.replace("\n", "<br>")
+    # === [Phase 1: Protection Masking] ===
+    # 保护优先级：多行代码 > 公式 > 行内代码 (排除特定前缀)
+    mask_patterns = [
+        r'```[\s\S]*?```',      # 多行代码块
+        r'\$\$[\s\S]*?\$\$',    # 独立行公式
+        r'\$[^$\n]+\$',         # 行内公式
+        r'`(?!@config|MOD_|[A-Z][A-Z0-9_\-\.]+)[^`\n]+`' # 行内代码：屏蔽非功能性 backticks
+    ]
     
-    # 获取所有文档名用于精准匹配
+    placeholders = []
+    masked_content = content
+    
+    def mask_callback(match):
+        placeholder = f"__FDS_MASK_{len(placeholders)}__"
+        placeholders.append(match.group(0))
+        return placeholder
+
+    for pattern in mask_patterns:
+        masked_content = re.sub(pattern, mask_callback, masked_content)
+
+    # === [Phase 2: Holographic Document Links] ===
     all_docs = [d.filename for d in controller.get_documents_by_category(category=None)]
-    
-    # 1. 解析文档引用 (如 QGA-HR V3.0, FDS_MODELING_SPEC, etc.)
-    # 匹配模式：大写字母开头，包含下划线、连字符或点号的标识符
-    # 或者显式的 .md 结尾
-    ref_pattern = r'\b([A-Z][A-Z0-9_\-\.]+(?:\s?V\d+\.\d+)?(?:\.md)?)\b'
+    ref_pattern = r'(`)?\b([A-Z][A-Z0-9_\-\.]+(?:\s?V\d+\.\d+)?(?:\.md)?)\b\1'
     
     def intelligent_doc_linker(match):
-        raw_text = match.group(1)
-        # 归一化处理：转大写，空格/连字符转下划线
+        raw_text = match.group(2)
+        if raw_text.startswith('@'): return match.group(0)
+        
         norm_text = raw_text.strip().upper().replace("-", "_").replace(" ", "_")
-        
-        # 尝试匹配
         target_filename = None
-        
-        # 策略A：完全匹配
         if raw_text in all_docs:
             target_filename = raw_text
-        # 策略B：加 .md 匹配
         elif f"{raw_text}.md" in all_docs:
             target_filename = f"{raw_text}.md"
-        # 策略C：归一化匹配 (QGA-HR V3.0 -> QGA_HR_V3.0.md)
         else:
             for doc_name in all_docs:
                 if norm_text in doc_name.upper():
@@ -1066,41 +1016,52 @@ def _highlight_doc_refs_in_markdown(controller: DocumentManagementController, co
             if target_filename == current_filename:
                 return f'<span style="color: #00D9FF; border-bottom: 1px dashed;">{raw_text}</span>'
             return f'<a href="?selected_doc={quote(target_filename)}" target="_self" style="color: #00D9FF; text-decoration: underline;">{raw_text}</a>'
-        
-        return raw_text
+        return match.group(0)
 
-    # 预处理：先处理 @config 免得被宏观正则吃掉
-    # 2. 高亮并链接配置项
-    cfg_pattern = r'(@config\.([a-z0-9_\.]+))'
-    from core.config import config
+    masked_content = re.sub(ref_pattern, intelligent_doc_linker, masked_content)
+
+    # === [Phase 3: Config Deep Links] ===
+    cfg_pattern = r'(`)?(@config\.([a-z0-9_\.]+))\1'
     
     def link_cfg(match):
-        full_cfg = match.group(1)
-        cfg_key = match.group(2)
+        full_cfg = match.group(2)
+        cfg_key = match.group(3)
         
-        # 尝试获取实时数值
         try:
             val = config.resolve_config_ref(full_cfg)
-            if isinstance(val, (int, float)):
-                val_str = f"{val:.2f}" if isinstance(val, float) else str(val)
-                tooltip = f"当前值: {val_str}"
-            else:
-                tooltip = f"配置项: {full_cfg}"
+            display_value = str(val)[:50] + ("..." if len(str(val)) > 50 else "")
+            tooltip = f"配置值: {display_value} | 点击跳转到配置中心定位"
         except:
-            tooltip = "解析失败"
+            tooltip = "无法解析配置项"
             
-        return f'<a href="?selected_doc={quote(current_filename)}&anchor_cfg={quote(cfg_key)}" target="_self" class="cfg-link" style="color: #00E676; text-decoration: none;" title="{tooltip}"><code style="color: #00E676; background: rgba(0,230,118,0.05); padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(0,230,118,0.15);">{full_cfg}</code></a>'
-    
-    html_content = re.sub(cfg_pattern, link_cfg, html_content)
-    
-    # 执行文档链接解析
-    html_content = re.sub(ref_pattern, intelligent_doc_linker, html_content)
-    
-    # 3. 高亮模块 ID (特殊处理)
-    mod_pattern = r'\b(MOD_\d+)\b'
-    html_content = re.sub(mod_pattern, r'<span style="color: #FFD600; font-weight: bold;">\1</span>', html_content)
+        safe_cfg_path = cfg_key.replace('"', '&quot;').replace("'", '&#39;')
+        
+        return (
+            f'<span class="config-ref-link" '
+            f'style="color: #00E676; font-weight: bold; text-decoration: underline; cursor: pointer; '
+            f'background: rgba(0, 0, 0, 0.05); padding: 2px 4px; border-radius: 4px; '
+            f'transition: background 0.2s; font-family: ui-monospace, monospace;" '
+            f'onmouseover="this.style.background=\'rgba(0, 230, 118, 0.1)\';" '
+            f'onmouseout="this.style.background=\'rgba(0, 0, 0, 0.05)\';" '
+            f'onclick="event.preventDefault(); window.parent.postMessage({{type: \'streamlit:configLink\', configPath: \'{safe_cfg_path}\'}}, \'*\');" '
+            f'title="{tooltip}">'
+            f'{full_cfg}'
+            f'</span>'
+        )
 
-    return html_content
+    masked_content = re.sub(cfg_pattern, link_cfg, masked_content)
+
+    # === [Phase 4: Terminology Highlights] ===
+    mod_pattern = r'\b(MOD_\d+)\b'
+    masked_content = re.sub(mod_pattern, r'<span style="color: #FFD600; font-weight: bold;">\1</span>', masked_content)
+
+    # === [Phase 5: Unmasking Restoration] ===
+    final_content = masked_content
+    # CRITICAL: 必须从后往前替换，防止 __FDS_MASK_1 替换了 __FDS_MASK_10 的前缀
+    for i in range(len(placeholders) - 1, -1, -1):
+        final_content = final_content.replace(f"__FDS_MASK_{i}__", placeholders[i])
+
+    return final_content
 
 
 # Main entry point

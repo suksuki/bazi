@@ -102,5 +102,28 @@ AXIOM_CONSTRAINTS = {
             "wealth": (0.5, 2.5),   # High pressure/risk accompanywindalls
             "clash": (0.2, 2.0)
         }
+    },
+
+    "B-01": { # Shi Shen (Eating God / The Artist)
+        "M_row": {
+            "shi_shen": (0.05, 1.5),   # 财之源 (User suggest +0.3)
+            "zheng_cai": (0.4, 2.0)    # 坐地取财 (User suggest +0.8)
+        },
+        "S_row": {
+            "shi_shen": (-2.0, -0.1),  # 减震器 (User suggest -0.6)
+            "qi_sha": (-1.0, 0.5)      # 杀受制 (User suggest -0.3)
+        },
+        "O_row": {
+            "shi_shen": (-1.5, 0.5),   # 不喜约束 (User suggest -0.2)
+            "zheng_guan": (0.05, 1.0)  # 维持基本秩序 (User suggest +0.3)
+        },
+        "E_row": {
+            "bi_jian": (0.2, 1.5),     # 动力源 (User suggest +0.6)
+            "shi_shen": (0.05, 1.0)    # 泄秀能级 (User suggest +0.4)
+        },
+        "R_row": {
+            "shi_shen": (0.1, 1.5),    # 口才社交 (User suggest +0.5)
+            "bi_jian": (0.1, 1.0)      # 同道中人 (User suggest +0.4)
+        }
     }
 }
