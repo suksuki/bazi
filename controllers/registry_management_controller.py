@@ -137,20 +137,26 @@ class RegistryManagementController:
             meta = info.get('meta_info', {})
             compliance = meta.get('compliance', 'N/A')
             
-            # Check compliance status (FDS-V1.5.1 or higher)
-            comp_status = "✅" if (
-                compliance.startswith("FDS-V1.5") or 
-                compliance.startswith("FDS-V1.6") or 
-                compliance.startswith("FDS-V1.7") or
-                compliance.startswith("FDS-V2")
-            ) else "⚠️"
+            # Check compliance status (FDS-V3.0 is preferred)
+            if compliance.startswith("FDS-V3"):
+                comp_status = "✅"  # V3.0 is fully compliant
+                comp_display = f"✅ {compliance} (最新标准)"
+            elif (compliance.startswith("FDS-V2") or
+                  compliance.startswith("FDS-V1.5") or 
+                  compliance.startswith("FDS-V1.6") or 
+                  compliance.startswith("FDS-V1.7")):
+                comp_status = "⚠️"  # Legacy versions (acceptable but deprecated)
+                comp_display = f"⚠️ {compliance} (已废弃)"
+            else:
+                comp_status = "❌"  # Non-compliant
+                comp_display = f"❌ {compliance} (不合规)"
             
             data.append({
                 "ID": pid,
                 "Name": meta.get('name', info.get('name', '')),
                 "CN Name": meta.get('chinese_name', info.get('name_cn', '')),
                 "Category": meta.get('category', info.get('category', 'N/A')),
-                "Compliance": f"{comp_status} {compliance}",
+                "Compliance": comp_display,
                 "Version": info.get('version', meta.get('version', '')),
                 "Sub-Patterns": len(info.get('sub_patterns_registry', [])),
             })
@@ -188,13 +194,12 @@ class RegistryManagementController:
                 themes_with_modules.add(theme)
         theme_utilization = len(themes_with_modules) / len(themes) if themes else 0
         
-        # Compliance rate
+        # Compliance rate (only FDS-V3.0 counts as fully compliant)
         compliant_patterns = 0
         for p in patterns.values():
             meta = p.get('meta_info', {})
             compliance = meta.get('compliance', '')
-            if compliance.startswith('FDS-V1.5') or compliance.startswith('FDS-V1.6') or \
-               compliance.startswith('FDS-V1.7') or compliance.startswith('FDS-V2'):
+            if compliance.startswith('FDS-V3'):  # Only V3.0 is fully compliant
                 compliant_patterns += 1
         compliance_rate = compliant_patterns / total_patterns if total_patterns > 0 else 0
         

@@ -89,6 +89,9 @@ def render_input_form():
         help="选择出生城市以应用地理修正系数"
     )
     
+    # 添加占位空间，确保下拉菜单有足够空间向下展开
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     if st.session_state.get('unified_geo_city') == "None":
         st.warning("⚠️ 未选择城市，地域修正模块将无法激活。")
 

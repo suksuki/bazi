@@ -397,7 +397,7 @@ class HolographicPatternController:
     def calculate_tensor_projection(self, pattern_id: str, chart: List[str], 
                                    day_master: str, context: Optional[Dict] = None) -> Dict:
         """
-        计算五维张量投影（支持FDS-V1.1和FDS-V1.4 V2.1）
+        计算五维张量投影（支持FDS-V3.0及历史版本V1.5+/V2.1+）
         
         Args:
             pattern_id: 格局ID
@@ -413,23 +413,24 @@ class HolographicPatternController:
         if not pattern:
             return {'error': f'格局 {pattern_id} 不存在'}
         
-        # [V2.5 Update] Detect Matrix Protocol by kernel signature or version string
+        # [V3.0 Update] Detect Matrix Protocol by kernel signature or version string
         version = str(pattern.get('version', '1.0'))
         physics_kernel = pattern.get('physics_kernel', {})
         is_matrix_protocol = (
             str(version) >= '1.5' or 
+            str(version).startswith('3.') or
             physics_kernel.get('transfer_matrix') is not None
         )
         
         logger.debug(f"格局 {pattern_id} 核验: version={version!r}, is_matrix_protocol={is_matrix_protocol}")
         
-        # V1.5+/V2.1+: 使用RegistryLoader的矩阵投影方法
+        # V1.5+/V2.1+/V3.0+: 使用RegistryLoader的矩阵投影方法
         if is_matrix_protocol:
             logger.info(f"✅ 检测到矩阵协议格局 {pattern_id}，使用transfer_matrix计算")
             try:
                 if not hasattr(self, 'registry_loader') or self.registry_loader is None:
                     logger.error("RegistryLoader未初始化！")
-                    return {'error': 'RegistryLoader未初始化，无法使用V2.1矩阵计算'}
+                    return {'error': 'RegistryLoader未初始化，无法使用V3.0矩阵计算'}
                 
                 result = self.registry_loader.calculate_tensor_projection_from_registry(
                     pattern_id=pattern_id,
@@ -438,16 +439,16 @@ class HolographicPatternController:
                     context=context
                 )
                 
-                logger.info(f"V2.1计算结果: sai={result.get('sai', 'N/A')}, projection={result.get('projection', {})}")
+                logger.info(f"V3.0计算结果: sai={result.get('sai', 'N/A')}, projection={result.get('projection', {})}")
                 
                 # 检查是否有错误
                 if 'error' in result:
-                    logger.error(f"V2.1计算返回错误: {result['error']}")
+                    logger.error(f"V3.0计算返回错误: {result['error']}")
                     return result
                 
                 # 检查SAI是否为0
                 if result.get('sai', 0) == 0:
-                    logger.warning(f"⚠️ V2.1计算返回SAI=0，检查计算逻辑")
+                    logger.warning(f"⚠️ V3.0计算返回SAI=0，检查计算逻辑")
                     # 检查是否有raw_projection
                     raw_projection = result.get('raw_projection', {})
                     if raw_projection:
@@ -476,18 +477,18 @@ class HolographicPatternController:
                     weights = tensor_operator.get('weights', {})
                     result['weights'] = weights
                 
-                logger.info(f"✅ V2.1计算成功: sai={result.get('sai', 0):.4f}")
+                logger.info(f"✅ V3.0计算成功: sai={result.get('sai', 0):.4f}")
                 return result
             except Exception as e:
-                logger.error(f"❌ V2.1矩阵计算失败: {e}", exc_info=True)
+                logger.error(f"❌ V3.0矩阵计算失败: {e}", exc_info=True)
                 # 不静默回退，返回错误信息
                 return {
-                    'error': f'V2.1矩阵计算失败: {str(e)}',
+                    'error': f'V3.0矩阵计算失败: {str(e)}',
                     'pattern_id': pattern_id,
                     'pattern_name': pattern.get('name', pattern_id),
                     'sai': 0,
                     'projection': {'E': 0, 'O': 0, 'M': 0, 'S': 0, 'R': 0},
-                    'sai_warning': f'V2.1计算异常: {str(e)}'
+                    'sai_warning': f'V3.0计算异常: {str(e)}'
                 }
         
         # V1.0/V2.0: 使用旧的tensor_operator逻辑

@@ -3,6 +3,7 @@
 
 **版本**: V3.0 (Precision Physics & Statistical Manifolds)
 **修订**: Genesis Protocol, Safety Protocols Injection & Metadata Enforcement (元数据强制)
+**最新修订**: Enhanced Precision Score Algorithm (增强版评分算法) - 2025-01-01
 **生效日期**: 2025-12-31
 **适用范围**: Antigravity Engine 全量格局 (A-Z Series)
 **依赖**: `ALGORITHM_CONSTITUTION_v3.0.md`
@@ -19,7 +20,12 @@
 一个标准的“正财格”或“羊刃架杀”，在 5D 空间中表现为一个协方差椭球。不仅要看中心在哪，还要看它“胖瘦”如何（方差）以及各维度是否“联动”（协方差）。
 
 ### 精密识别
-摒弃简单的“余弦相似度”。识别一个格局，等同于计算该样本落入目标概率势阱 (Potential Well) 的深度。必须引入能量门控，剔除“有形无气”的伪格局。
+采用**增强版识别算法**（方向+位置+能量三重验证）。识别一个格局，需要同时验证：
+1. **方向正确** (Cosine Similarity): 样本的五行力量比例关系是否与标准格局一致（"像不像"）
+2. **位置精准** (Mahalanobis Distance): 样本是否位于标准流形的概率密度范围内（"真不真"）
+3. **能量充足** (SAI Gating): 样本的结构总能量是否达到成格要求（"够不够"）
+
+摒弃单纯的距离匹配或单纯的相似度匹配，必须采用**矢量场 (Vector Field) + 概率云 (Probability Cloud)** 的双重验证模型。
 
 ---
 
@@ -111,8 +117,22 @@
     1.  **门控裁决 (The Gate)**: 优先检查 `matching_router` 中的硬性规则 (E/R Gating)。若未通过，直接返回 `MISMATCH`，不再进行距离计算。
     2.  **流形路由 (The Router)**: 优先匹配奇点子格局，最后兜底标准格局。
     3.  **马氏距离**: 计算 $D_M = \sqrt{(x - \mu)^T \Sigma^{-1} (x - \mu)}$。
-    4.  **概率评分**: $Score = G_{sai} \times \exp(-k \cdot D_M)$。
-* **验收测试**: 必须运行 Load Testing 脚本，验证 **Case Z** (如身弱杀重、身弱财重) 是否被 Step 5 植入的门控拦截。若拦截失败，回滚至 Step 5，严禁使用“Step 7 补丁”。
+    4.  **精密评分 (Enhanced Precision Score - FDS-V3.0)**:
+        * **增强版公式**（推荐实现）:
+          $$ Score = (W_{sim} \cdot CosSim + W_{dist} \cdot e^{-D_M^2 / 2\sigma^2}) \cdot G_{sai} $$
+        * **物理意义**:
+          - **$CosSim$ (余弦相似度)**: 衡量"方向正确"（五行力量的比例关系，判断"像不像"）
+          - **$D_M$ (马氏距离)**: 衡量"位置精准"（样本相对于标准模型的偏离程度和概率密度，判断"真不真"）
+          - **$G_{sai}$ (SAI能量门控)**: 衡量"能量充足"（确保结构总能量足够，$G_{sai} = \tanh(SAI / k)$）
+        * **参数配置**（V3.0 零硬编码原则）:
+          - $W_{sim}$: 余弦相似度权重（默认 0.7，从 `@config.physics.precision_weights.similarity` 读取）
+          - $W_{dist}$: 高斯衰减权重（默认 0.3，从 `@config.physics.precision_weights.distance` 读取）
+          - $\sigma$: 高斯衰减参数（默认 3.5，从 `@config.physics.precision_gaussian_sigma` 读取）
+          - $k$: SAI门控阈值（默认 0.3，从 `@config.physics.precision_energy_gate_k` 读取）
+        * **简化版公式**（仅位置匹配，已弃用）:
+          $$ Score = G_{sai} \times \exp(-k \cdot D_M) $$
+          注：简化版仅使用马氏距离，不考虑方向（余弦相似度），可能导致"结构不同但距离相近"的误判。增强版通过引入方向匹配，提高了识别精度。
+* **验收测试**: 必须运行 Load Testing 脚本，验证 **Case Z** (如身弱杀重、身弱财重) 是否被 Step 5 植入的门控拦截。若拦截失败，回滚至 Step 5，严禁使用"Step 7 补丁"。
 
 ---
 

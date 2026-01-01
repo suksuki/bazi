@@ -244,12 +244,12 @@ def render():
 
     # ==================== CONTROLLER INITIALIZATION ====================
     # ==================== CONTROLLER INITIALIZATION ====================
-    # Updated: Force cache refresh for B-02 Hurting Officer Release
+    # Updated: Force cache refresh for FDS-V3.0 upgrade
     @st.cache_resource
-    def get_controller(run_id=110):
+    def get_controller(run_id=112):
         return RegistryManagementController()
 
-    controller = get_controller(run_id=111)
+    controller = get_controller(run_id=112)
 
     # ==================== HEADER SECTION ====================
     st.markdown("""
@@ -421,9 +421,15 @@ def render():
         if cat_filter != "全部":
             df_patterns_filtered = df_patterns_filtered[df_patterns_filtered['Category'] == cat_filter]
         if pat_status == "合规 ✅":
-            df_patterns_filtered = df_patterns_filtered[df_patterns_filtered['Compliance'].str.contains("✅")]
+            # Show V3.0 compliant patterns (must contain both ✅ and "最新标准")
+            mask = (df_patterns_filtered['Compliance'].str.contains("✅", na=False)) & \
+                   (df_patterns_filtered['Compliance'].str.contains("最新标准", na=False))
+            df_patterns_filtered = df_patterns_filtered[mask]
         elif pat_status == "不合规 ⚠️":
-            df_patterns_filtered = df_patterns_filtered[~df_patterns_filtered['Compliance'].str.contains("✅")]
+            # Show deprecated or non-compliant patterns
+            mask = (df_patterns_filtered['Compliance'].str.contains("已废弃", na=False)) | \
+                   (df_patterns_filtered['Compliance'].str.contains("不合规", na=False))
+            df_patterns_filtered = df_patterns_filtered[mask]
         
         st.dataframe(
             df_patterns_filtered,
@@ -539,7 +545,7 @@ def render():
 
     # === Tab 4: Compliance Audit ===
     with tab_audit:
-        st.markdown("### FDS-V1.5.1 合规报告")
+        st.markdown("### FDS-V3.0 合规报告")
         
         col_status, col_action = st.columns([3, 1])
         
@@ -549,17 +555,22 @@ def render():
             df_patterns_audit = pd.DataFrame(patterns_data_audit)
             
             if not df_patterns_audit.empty:
-                non_compliant = df_patterns_audit[~df_patterns_audit['Compliance'].str.contains("✅")]
+                # Non-compliant = not V3.0 (doesn't contain "最新标准")
+                non_compliant = df_patterns_audit[~df_patterns_audit['Compliance'].str.contains("最新标准", na=False)]
                 
                 if not non_compliant.empty:
-                    st.error(f"⚠️ 发现 **{len(non_compliant)}** 个不合规的格局！")
+                    st.error(f"⚠️ 发现 **{len(non_compliant)}** 个不符合 FDS-V3.0 标准的格局！")
                     st.dataframe(
                         non_compliant[['ID', 'Name', 'Compliance', 'Version']],
                         use_container_width=True,
                         hide_index=True
                     )
+                    
+                    # Count V3.0 compliant
+                    v3_compliant = df_patterns_audit[df_patterns_audit['Compliance'].str.contains("最新标准", na=False)]
+                    st.info(f"✅ **{len(v3_compliant)}** 个格局已升级到 FDS-V3.0 标准")
                 else:
-                    st.success("✅ 所有已注册格局均 **符合 FDS-V1.5.1 标准**。")
+                    st.success("✅ 所有已注册格局均 **符合 FDS-V3.0 标准**！")
             else:
                 st.info("暂无已注册的格局数据")
         
@@ -578,10 +589,12 @@ def render():
         
         with col1:
             st.markdown("""
-            **格局要求 (FDS-V1.5.1)**
+            **格局要求 (FDS-V3.0)**
             - ✅ 必须定义 `physics_kernel` 包含 `transfer_matrix`
-            - ✅ 必须定义 `meta_info.compliance` 字段
-            - ✅ 必须定义 `matching_router` 用于子格局路由
+            - ✅ 必须定义 `meta_info.compliance: "FDS-V3.0"`
+            - ✅ 必须使用 `@config.xxx` 配置引用（零硬编码）
+            - ✅ 必须定义 `matching_router` 使用 `param_ref` 而非 `value`
+            - ✅ 必须定义 `integrity_threshold_ref` 和 `k_factor_ref`
             - ✅ 如适用应定义 `sub_patterns_registry`
             """)
         

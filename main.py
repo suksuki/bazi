@@ -20,9 +20,16 @@ apply_custom_header("🔮 吉普赛 · AI 命运占卜", "基于量子纠缠与�
 
 # 2.1 Navigation (Modern Segmented Control)
 st.markdown("<div style='margin-bottom: -15px;'>", unsafe_allow_html=True)
+nav_options = ["🔮 智能排盘", "💰 财运推演", "🌀 量子仿真", "🌙 自我进化", "📜 古籍挖掘", "✨ 量子真言", "🌟 命运回响", "🕯️ 悟性训练", "📋 档案审计", "🌌 全息格局", "📦 注册管理", "📚 规范文档", "⚙️ 天机设置", "⚡ 架构师"]
+
+# --- Smart Routing Fix ---
+# 如果 URL 带有文档或配置参数，强制跳转到规范文档页面
+if "selected_doc" in st.query_params or "anchor_cfg" in st.query_params:
+    st.session_state["nav_radio"] = "📚 规范文档"
+
 app_mode = st.radio(
     "Navigation", 
-    ["🔮 智能排盘", "💰 财运推演", "🌀 量子仿真", "🌙 自我进化", "📜 古籍挖掘", "✨ 量子真言", "🌟 命运回响", "🕯️ 悟性训练", "📋 档案审计", "🌌 全息格局", "📦 注册管理", "⚙️ 天机设置", "⚡ 架构师"], 
+    nav_options, 
     horizontal=True,
     label_visibility="collapsed",
     key="nav_radio"
@@ -86,6 +93,10 @@ elif app_mode == "🌌 全息格局":
 
 elif app_mode == "📦 注册管理":
     from ui.pages.registry_admin import render
+    render()
+
+elif app_mode == "📚 规范文档":
+    from ui.pages.document_management import render
     render()
 
 elif app_mode == "🔮 智能排盘":

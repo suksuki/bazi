@@ -2,7 +2,8 @@
 QGA 数学内核引擎 (Math Engine)
 封装所有数学计算函数，支持向量化操作
 
-基于FDS-V1.1规范，从Step 3和Step 4验证成功的代码中提取
+基于FDS-V3.0规范 (Pure Logic Edition)
+所有数值参数应从 core.config 读取，严禁硬编码
 """
 
 import numpy as np
@@ -400,31 +401,62 @@ def calculate_precision_score(
     similarity: float,
     mahalanobis_dist: float,
     sai: float,
-    k_pdf: float = 0.5
+    k_pdf: float = None
 ) -> float:
     """
-    [V1.5.2 Gaussian Kernel]
-    基于高斯核函数的精密评分，防止马氏距离过度惩罚。
+    [FDS-V3.0 Precision Score - 增强版算法]
+    基于统计流形的精密评分算法
     
-    公式: Score = Similarity * exp(-d²/(2σ²)) * energy_gate
-    σ = 2.0 (宽容度参数)
+    增强版公式（Vector Field + Probability Cloud 双重验证）:
+    $$ Score = (W_{sim} \\cdot CosSim + W_{dist} \\cdot e^{-D_M^2 / 2\\sigma^2}) \\cdot Gating(SAI) $$
+    
+    其中:
+    - CosSim: 余弦相似度 (Cosine Similarity) - "方向正确" (The Shape)
+      * 物理意义: 五行力量的比例关系，衡量"像不像"
+      * 例子: "日主=10, 七杀=20" 和 "日主=1, 七杀=2" 的余弦相似度是1.0
+    
+    - D_M: 马氏距离 (Mahalanobis Distance) - "位置精准" (The Position)
+      * 物理意义: 样本相对于标准模型的偏离程度和概率密度，衡量"真不真"
+      * 作用: 区分能量强弱、流形中心与边缘
+    
+    - G_sai: SAI能量门控 = tanh(SAI / k) - "能量充足" (The Energy)
+      * 物理意义: 确保样本有足够的结构总能量
+    
+    - W_{sim}: 余弦相似度权重 (默认0.7，V3.0提升以更重视形状匹配)
+    - W_{dist}: 高斯衰减权重 (默认0.3，V3.0降低以缓解"高分真空")
+    - σ: 高斯衰减参数 (默认3.5，V3.0从2.0放宽以允许合理波动)
+    - k: SAI门控阈值 (默认0.3，V3.0从0.5放宽)
     
     物理意义：
     - 距离=0 → 分数=1.0 (完美匹配)
-    - 距离=2.0 → 分数≈0.6 (可接受偏移)
-    - 距离=4.0 → 分数≈0.13 (明显偏离)
+    - 距离=2.0 → 分数≈0.8 (可接受偏移)
+    - 距离=4.0 → 分数≈0.3 (明显偏离)
+    
+    Note: [V3.0] 所有参数从 core.config 读取，符合零硬编码原则
     """
+    # [FDS-V3.0] 从配置中心读取参数（零硬编码）
+    from core.config import config
+    
+    # 获取权重配置
+    weights = config.physics.precision_weights
+    w_sim = weights.similarity
+    w_dist = weights.distance
+    
+    # 获取其他参数
+    sigma = config.physics.precision_gaussian_sigma
+    sai_threshold = config.physics.precision_energy_gate_k
+    
     # 1. 高斯核衰减 (Gaussian Kernel)
-    # σ=2.0: 马氏距离在2个标准差内保持高分
-    sigma = 2.0
+    # V3.0: σ=3.5，允许真实样本在保持形状相似的前提下有一定的距离波动
     gaussian_decay = math.exp(-(mahalanobis_dist ** 2) / (2 * sigma ** 2))
     
-    # 2. 能量门控 (Soft Gate)
-    # 当 SAI >= 1.0 时，门控接近 1.0
-    energy_gate = min(1.0, math.tanh(sai / 0.5))
+    # 2. 能量门控 (SAI Gate)
+    # V3.0: k=0.3，当SAI>=0.6时门控接近1.0，不再惩罚中等能量样本
+    # 公式: G_sai = tanh(SAI / k)
+    energy_gate = min(1.0, math.tanh(sai / sai_threshold))
     
-    # 3. 结构融合
-    # 相似度贡献 60%，高斯衰减贡献 40%（允许方向偏移但位置接近）
-    score = (0.6 * similarity + 0.4 * gaussian_decay) * energy_gate
+    # 3. 结构融合 (平衡余弦相似度和高斯衰减)
+    # 增强版：方向正确 (Cosine) + 位置精准 (Gaussian) + 能量充足 (Gating)
+    score = (w_sim * similarity + w_dist * gaussian_decay) * energy_gate
     
     return float(max(0.0, min(1.0, score)))

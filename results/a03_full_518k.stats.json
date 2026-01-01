@@ -1,0 +1,25 @@
+{
+  "pattern_id": "A-03",
+  "stats": {
+    "total_samples": 518400,
+    "success_count": 518400,
+    "error_count": 0,
+    "matched_count": 64083,
+    "strong_matched_count": 0,
+    "match_rate": 12.361689814814815,
+    "strong_match_rate": 0.0,
+    "avg_precision": 0.4592632598758178,
+    "median_precision": 0.4453608640221305,
+    "total_time_sec": 131.93883395195007,
+    "total_time_min": 2.1989805658658343,
+    "processing_rate": 3929.093387234214,
+    "precision_distribution": {
+      "0.0-0.2": 879,
+      "0.2-0.4": 168169,
+      "0.4-0.6": 285269,
+      "0.6-0.8": 64083,
+      "0.8-1.0": 0
+    }
+  },
+  "timestamp": "2026-01-01 11:56:26"
+}

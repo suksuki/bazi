@@ -102,6 +102,9 @@ def _render_profile_list(pm):
         key="profile_select_id",
         on_change=on_profile_change
     )
+    
+    # 添加占位空间，确保下拉菜单有足够空间向下展开
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # --- Save / Delete Actions ---
     col_save, col_del = st.columns([1, 1])

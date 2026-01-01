@@ -16,7 +16,60 @@ from core.narrator import generate_holographic_report, generate_timeline_insight
 # 配置日志
 logger = logging.getLogger(__name__)
 
+# --- V1.5.3 Demo Definition Matrix ---
+# [V1.5.4 FIX] 修正四柱数据以确保匹配对应格局特征
+DEMO_PROFILES = {
+    'demo_a03_std': {
+        # 从data/holographic_pattern/A-03_Singularities.json中提取的真实成格案例
+        # Precision: 0.8127, 识别态: STANDARD
+        'name': '演示：羊刃架杀·经典案例', 'gender': '男', 'year': 2000,
+        'year_pillar': '庚午', 'month_pillar': '壬午', 'day_pillar': '戊午', 'hour_pillar': '甲寅',
+        'day_master': '戊', 'desc': '真实成格案例，Precision 0.8127 (Standard A-03)'
+    },
+    'demo_a03_vault': {
+        # 从data/a03_step3_discovery.json中提取的VAULT案例
+        # Precision: 0.6239, 识别态: MARGINAL
+        'name': '演示：库刃爆发·奇点结构', 'gender': '男', 
+        'year_pillar': '戊子', 'month_pillar': '壬戌', 'day_pillar': '癸丑', 'hour_pillar': '壬子',
+        'day_master': '癸', 'desc': '真实成格案例，Precision 0.6239 (Vault A-03)'
+    },
+    'demo_d01_std': {
+        # 正财格标准案例：丁日主，有庚金（丁的正财）
+        'name': '演示：D-01 正财格 (Standard)', 'gender': '男', 
+        'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '丁丑', 'hour_pillar': '庚子', 
+        'day_master': '丁', 'desc': '财星得位，温和积累'
+    },
+    'demo_d01_surrender': {
+        # 弃命从财案例：丙日主，四柱金多（财旺），日主无根
+        'name': '演示：D-01 弃命从财', 'gender': '男', 
+        'year_pillar': '庚申', 'month_pillar': '辛酉', 'day_pillar': '丙申', 'hour_pillar': '戊子', 
+        'day_master': '丙', 'desc': '局中无根，顺势而为'
+    },
+    'demo_d02_syndicate': {
+        # 资本大鳄案例：丙日主，有午（羊刃）、偏财旺，人脉广
+        'name': '演示：D-02 资本大鳄 (The Syndicate)', 'gender': '男',
+        'year_pillar': '丙午', 'month_pillar': '丙申', 'day_pillar': '丙午', 'hour_pillar': '庚寅',
+        'day_master': '丙', 'desc': '高杠杆、强社交连接 (Activated D-02)'
+    },
+    'demo_d02_collider': {
+        # 乱世枭雄案例：甲日主，年干戊（偏财），申寅冲（高应力），符合D-02 Collider
+        'name': '演示：D-02 乱世枭雄 (The Collider)', 'gender': '男',
+        'year_pillar': '戊申', 'month_pillar': '甲申', 'day_pillar': '甲寅', 'hour_pillar': '庚午',
+        'day_master': '甲', 'desc': '偏财透干，申寅冲高应力，剧烈波动 (Activated D-02 Collider)'
+    }
+}
+
 def render():
+    # [V3.0] 清除可能缓存的旧演示案例数据
+    PAGE_PREFIX = "holo_"
+    # 如果检测到DEMO_PROFILES已更新，清除相关session state
+    if f'{PAGE_PREFIX}demo_id' in st.session_state:
+        current_demo_id = st.session_state.get(f'{PAGE_PREFIX}demo_id')
+        # 验证当前选择的demo是否仍然存在且有效
+        if current_demo_id not in DEMO_PROFILES:
+            # 如果选择的demo不存在，重置为默认值
+            st.session_state[f'{PAGE_PREFIX}demo_id'] = 'demo_a03_std'
+    
     st.markdown("""
     <style>
     .stMetric {
@@ -52,7 +105,7 @@ def render():
     </style>
     """, unsafe_allow_html=True)
     
-    apply_custom_header("全息格局观测站", "FDS-V1.5 Holographic Manifold Observatory")
+    apply_custom_header("全息格局观测站", "FDS-V3.0 Holographic Manifold Observatory")
     
     controller = HolographicPatternController()
     
@@ -71,103 +124,95 @@ def render():
         # This is the ONLY sidebar block for this page
         # All content must be within this block
         
-        st.markdown("### 👤 观测档案")
-        profiles = pm.get_all()
-        profile_names = {p['name']: p['id'] for p in profiles}
-        profile_names['演示：羊刃架杀·经典案例'] = 'demo'
-        profile_names['演示：将星本部 (Standard)'] = 'demo_standard'
-        profile_names['演示：库刃爆发 (Vault)'] = 'demo_vault'
-        profile_names['演示：D-01 正财格 (Standard)'] = 'demo_d01_std'
-        profile_names['演示：D-01 从财格 (Surrender)'] = 'demo_d01_surrender'
-        profile_names['演示：D-01 墓库格 (Vault)'] = 'demo_d01_vault'
-        profile_names['演示：D-02 偏财格 (Standard Tycoon)'] = 'demo_d02_std'
-        profile_names['演示：D-02 资本大鳄 (The Syndicate)'] = 'demo_d02_syndicate'
-        profile_names['演示：D-02 乱世枭雄 (The Collider)'] = 'demo_d02_collider'
+        st.markdown("### 👤 观测中心")
         
-        current_profile_id = st.session_state.get('current_profile_id', list(profile_names.values())[0] if profile_names else 'demo')
-        # Ensure current_profile_id is valid
-        if current_profile_id not in profile_names.values():
-            current_profile_id = 'demo'
+        profiles = pm.get_all()
+        real_profile_names = {p['name']: p['id'] for p in profiles}
+        demo_profile_names = {v['name']: k for k, v in DEMO_PROFILES.items()}
+        
+        tab_real, tab_demo = st.tabs(["🏛️ 观测档案", "🎞️ 演示案例"])
+        
+        selected_profile_id = None
+        profile_source = 'real'
+        
+        with tab_real:
+            if not real_profile_names:
+                st.caption("⚠️ 暂无档案")
+            else:
+                current_id = st.session_state.get(f'{PAGE_PREFIX}real_id')
+                if not current_id or current_id not in real_profile_names.values():
+                    current_id = list(real_profile_names.values())[0]
+                
+                sel_real = st.selectbox(
+                    "选择本地档案",
+                    options=list(real_profile_names.keys()),
+                    index=list(real_profile_names.values()).index(current_id),
+                    key=f"{PAGE_PREFIX}real_select"
+                )
+                st.session_state[f'{PAGE_PREFIX}real_id'] = real_profile_names[sel_real]
+                # Default source is real if this tab is interacted with or session state says so
+                if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'real' or not st.session_state.get(f'{PAGE_PREFIX}active_tab'):
+                    selected_profile_id = real_profile_names[sel_real]
+                    profile_source = 'real'
+
+        with tab_demo:
+            current_demo_id = st.session_state.get(f'{PAGE_PREFIX}demo_id')
+            if not current_demo_id or current_demo_id not in demo_profile_names.values():
+                current_demo_id = list(demo_profile_names.values())[0]
             
-        selected_profile_name = st.selectbox(
-            "选择档案", 
-            options=list(profile_names.keys()), 
-            index=list(profile_names.values()).index(current_profile_id),
-            key=f"{PAGE_PREFIX}profile_select"  # Page-specific key
-        )
-        selected_profile_id = profile_names[selected_profile_name]
+            sel_demo = st.selectbox(
+                "选择演示案例",
+                options=list(demo_profile_names.keys()),
+                index=list(demo_profile_names.values()).index(current_demo_id),
+                key=f"{PAGE_PREFIX}demo_select"
+            )
+            st.session_state[f'{PAGE_PREFIX}demo_id'] = demo_profile_names[sel_demo]
+            st.caption(f"💡 {DEMO_PROFILES[demo_profile_names[sel_demo]]['desc']}")
+            
+            # Simple radio to switch active source
+            source_opt = st.radio("当前数据源", ["实测档案", "演示案例"], 
+                                index=0 if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'real' else 1,
+                                horizontal=True, key=f"{PAGE_PREFIX}source_toggle")
+            
+            if source_opt == "实测档案":
+                st.session_state[f'{PAGE_PREFIX}active_tab'] = 'real'
+                # fallback if real is empty
+                if real_profile_names:
+                    selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}real_id')
+                    profile_source = 'real'
+                else:
+                    st.error("无法切换：实测档案为空")
+                    selected_profile_id = demo_profile_names[sel_demo]
+                    profile_source = 'demo'
+            else:
+                st.session_state[f'{PAGE_PREFIX}active_tab'] = 'demo'
+                selected_profile_id = demo_profile_names[sel_demo]
+                profile_source = 'demo'
+
+        if not selected_profile_id:
+            # Final fallback
+            if st.session_state.get(f'{PAGE_PREFIX}active_tab') == 'demo' or not real_profile_names:
+                selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}demo_id', 'demo_a03_std')
+                profile_source = 'demo'
+            else:
+                selected_profile_id = st.session_state.get(f'{PAGE_PREFIX}real_id')
+                profile_source = 'real'
+
         st.session_state['current_profile_id'] = selected_profile_id
+        st.session_state['current_profile_source'] = profile_source
         
         # --- 加载档案数据用于显示 ---
         _profile_preview = None
-        if selected_profile_id == 'demo':
-            _profile_preview = {
-                'name': '羊刃架杀·经典案例', 'gender': '男', 
-                'year': 2000,
-                'year_pillar': '庚辰', 'month_pillar': '乙酉', 
-                'day_pillar': '庚子', 'hour_pillar': '丙戌',
-                'day_master': '庚'
-            }
-        elif selected_profile_id == 'demo_standard':
-            _profile_preview = {
-                'name': '将星本部 (Standard)', 'gender': '男', 
-                'year_pillar': '庚辰', 'month_pillar': '乙酉', 
-                'day_pillar': '庚子', 'hour_pillar': '丙戌',
-                'day_master': '庚'
-            }
-        elif selected_profile_id == 'demo_vault':
-            _profile_preview = {
-                'name': '库刃爆发 (Vault)', 'gender': '男', 
-                'year_pillar': '壬辰', 'month_pillar': '庚戌', 
-                'day_pillar': '庚寅', 'hour_pillar': '丙戌',
-                'day_master': '庚'
-            }
-        elif selected_profile_id == 'demo_d01_std':
-            _profile_preview = {
-                'name': 'D-01 正财标准', 'gender': '男', 
-                'year_pillar': '庚辰', 'month_pillar': '乙酉', 
-                'day_pillar': '丁丑', 'hour_pillar': '庚子',
-                'day_master': '丁'
-            }
-        elif selected_profile_id == 'demo_d01_surrender':
-            _profile_preview = {
-                'name': 'D-01 弃命从财', 'gender': '男', 
-                'year_pillar': '庚申', 'month_pillar': '辛酉', 
-                'day_pillar': '丙申', 'hour_pillar': '戊子',
-                'day_master': '丙'
-            }
-        elif selected_profile_id == 'demo_d01_vault':
-            _profile_preview = {
-                'name': 'D-01 顶级墓库', 'gender': '男', 
-                'year_pillar': '戊戌', 'month_pillar': '乙未', 
-                'day_pillar': '甲辰', 'hour_pillar': '庚午',
-                'day_master': '甲'
-            }
-        elif selected_profile_id == 'demo_d02_std':
-            _profile_preview = {
-                'name': 'D-02 偏财大亨', 'gender': '男',
-                'year_pillar': '甲子', 'month_pillar': '壬申',
-                'day_pillar': '丙寅', 'hour_pillar': '己丑',
-                'day_master': '丙'
-            }
-        elif selected_profile_id == 'demo_d02_syndicate':
-            _profile_preview = {
-                'name': 'D-02 资本大鳄', 'gender': '男',
-                'year_pillar': '丙午', 'month_pillar': '丙申',
-                'day_pillar': '丙午', 'hour_pillar': '庚寅',
-                'day_master': '丙'
-            }
-        elif selected_profile_id == 'demo_d02_collider':
-            _profile_preview = {
-                'name': 'D-02 乱世枭雄', 'gender': '男',
-                'year_pillar': '庚申', 'month_pillar': '甲申',
-                'day_pillar': '甲寅', 'hour_pillar': '庚午',
-                'day_master': '甲'
-            }
-        else:
+        if profile_source == 'real':
             _profile_preview = next((p for p in profiles if p['id'] == selected_profile_id), None)
-            # Calculate pillars if not stored in profile
-            if _profile_preview and not _profile_preview.get('year_pillar'):
+        else:
+            _profile_preview = DEMO_PROFILES.get(selected_profile_id)
+
+        # [V3.0 FIX] 仅当没有四柱数据时才从year计算，避免覆盖已有的正确四柱
+        # Calculate pillars if not stored in profile (only for display purposes)
+        if _profile_preview and not _profile_preview.get('year_pillar'):
+            # 只有当确实没有year_pillar时，才尝试从year计算
+            if _profile_preview.get('year') and _profile_preview.get('month') and _profile_preview.get('day'):
                 try:
                     birth_date = datetime(
                         int(_profile_preview.get('year', 2000)),
@@ -310,6 +355,8 @@ def render():
             key=f"{PAGE_PREFIX}pattern_select"  # Page-specific key
         )
         selected_pattern_id = pattern_options[selected_pattern_name]
+        # 添加占位空间，确保下拉菜单有足够空间向下展开
+        st.markdown("<br>", unsafe_allow_html=True)
         
         pattern_info = controller.get_pattern_by_id(selected_pattern_id)
         if pattern_info:
@@ -321,46 +368,18 @@ def render():
             """, unsafe_allow_html=True)
             
         st.markdown("---")
-        st.caption("FDS-V1.5.2 Observatory Kernel")
+        st.caption("FDS-V3.0 Observatory Kernel")
 
     # --- Main Content Area ---
     # Load Profile Data
+    profile_source = st.session_state.get('current_profile_source', 'real')
+    selected_profile_id = st.session_state.get('current_profile_id')
+    
     profile_data = None
-    if selected_profile_id == 'demo':
-        # [V1.5.1 Verified] 真正的"羊刃架杀"经典案例
-        # 庚日主的羊刃在酉(月支) + 七杀丙火透干(时干)
-        # 庚辰年 乙酉月 庚子日 丙戌时 - 刃杀俱全，结构完整
-        profile_data = {
-            'name': '羊刃架杀·经典案例', 'gender': '男', 'year': 2000,
-            'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '庚子', 'hour_pillar': '丙戌',
-            'day_master': '庚'
-        }
-    elif selected_profile_id == 'demo_standard':
-        profile_data = {
-            'name': '将星本部 (Standard)', 'gender': '男',
-            'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '庚子', 'hour_pillar': '丙戌',
-            'day_master': '庚'
-        }
-    elif selected_profile_id == 'demo_vault':
-        profile_data = {
-            'name': '库刃爆发 (Vault)', 'gender': '男',
-            'year_pillar': '壬辰', 'month_pillar': '庚戌', 'day_pillar': '庚寅', 'hour_pillar': '丙戌',
-            'day_master': '庚'
-        }
-    elif selected_profile_id == 'demo_d01_std':
-        profile_data = {'name': 'D-01 正财标准', 'gender': '男', 'year_pillar': '庚辰', 'month_pillar': '乙酉', 'day_pillar': '丁丑', 'hour_pillar': '庚子', 'day_master': '丁'}
-    elif selected_profile_id == 'demo_d01_surrender':
-        profile_data = {'name': 'D-01 弃命从财', 'gender': '男', 'year_pillar': '庚申', 'month_pillar': '辛酉', 'day_pillar': '丙申', 'hour_pillar': '戊子', 'day_master': '丙'}
-    elif selected_profile_id == 'demo_d01_vault':
-        profile_data = {'name': 'D-01 顶级墓库', 'gender': '男', 'year_pillar': '戊戌', 'month_pillar': '乙未', 'day_pillar': '甲辰', 'hour_pillar': '庚午', 'day_master': '甲'}
-    elif selected_profile_id == 'demo_d02_std':
-        profile_data = {'name': 'D-02 偏财大亨', 'gender': '男', 'year_pillar': '甲子', 'month_pillar': '壬申', 'day_pillar': '丙寅', 'hour_pillar': '己丑', 'day_master': '丙'}
-    elif selected_profile_id == 'demo_d02_syndicate':
-        profile_data = {'name': 'D-02 资本大鳄', 'gender': '男', 'year_pillar': '丙午', 'month_pillar': '丙申', 'day_pillar': '丙午', 'hour_pillar': '庚寅', 'day_master': '丙'}
-    elif selected_profile_id == 'demo_d02_collider':
-        profile_data = {'name': 'D-02 乱世枭雄', 'gender': '男', 'year_pillar': '庚申', 'month_pillar': '甲申', 'day_pillar': '甲寅', 'hour_pillar': '庚午', 'day_master': '甲'}
-    else:
+    if profile_source == 'real':
         profile_data = next((p for p in profiles if p['id'] == selected_profile_id), None)
+    else:
+        profile_data = DEMO_PROFILES.get(selected_profile_id)
         
     if not profile_data:
         st.error("❌ 档案读取失败")
@@ -371,16 +390,9 @@ def render():
         profile_obj = None
         gender = 1 if profile_data.get('gender') == '男' else 0
         
-        # 1. Try Real Profile (Has Birth Date)
-        if profile_data.get('year') and profile_data.get('month') and profile_data.get('day'):
-            try:
-                birth_date = datetime(int(profile_data['year']), int(profile_data['month']), int(profile_data['day']), int(profile_data.get('hour', 12)))
-                profile_obj = BaziProfile(birth_date, gender)
-            except Exception:
-                pass
-        
-        # 2. Try Virtual Profile (Pillars Only)
-        if not profile_obj and profile_data.get('year_pillar'):
+        # [V3.0 FIX] 优先使用四柱数据，避免用year字段重新计算导致错误
+        # 1. Try Virtual Profile (Pillars Only) - 优先使用已提供的四柱
+        if profile_data.get('year_pillar'):
             from core.bazi_profile import VirtualBaziProfile
             pillars = {
                 'year': profile_data.get('year_pillar', '??'),
@@ -389,6 +401,14 @@ def render():
                 'hour': profile_data.get('hour_pillar', '??')
             }
             profile_obj = VirtualBaziProfile(pillars, gender=gender)
+        
+        # 2. Fallback: Try Real Profile (Has Birth Date) - 仅当没有四柱数据时
+        if not profile_obj and profile_data.get('year') and profile_data.get('month') and profile_data.get('day'):
+            try:
+                birth_date = datetime(int(profile_data['year']), int(profile_data['month']), int(profile_data['day']), int(profile_data.get('hour', 12)))
+                profile_obj = BaziProfile(birth_date, gender)
+            except Exception:
+                pass
             
         if not profile_obj:
             raise ValueError("无法创建物理实体：缺少出生日期或四柱数据")
@@ -433,7 +453,7 @@ def render():
     sai = result.get('sai', 0.0)
 
     # --- Step 3: High-Precision Dashboard ---
-    st.markdown("### 🌟 FDS-V1.5 观测报告")
+    st.markdown("### 🌟 FDS-V3.0 观测报告")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("SAI (总对齐力)", f"{sai:.4f}")
     m2.metric("M-Dist (马氏距离)", f"{recognition.get('mahalanobis_dist', 0):.4f}")
@@ -528,7 +548,7 @@ def render():
                 ))
             
             status.update(label="✅ 轨迹报告解析完毕", state="complete", expanded=False)
-        with st.expander("📝 物理公理矩阵 (Transfer Matrix V2.5)"):
+        with st.expander("📝 物理公理矩阵 (Transfer Matrix V3.0)"):
             # Display the matrix that was actually used
             active_tm = result.get('transfer_matrix')
             if active_tm:
@@ -541,7 +561,7 @@ def render():
                 st.dataframe(df_tm.style.format("{:.2f}"))
                 st.caption("ℹ️ 该矩阵定义了十神能量向五维命运张量的转化率。正值代表促进，负值代表抑制。")
             else:
-                st.warning("该格局尚未升级至 V2.5 矩阵协议")
+                st.warning("该格局尚未升级至 V3.0 矩阵协议")
 
         with st.expander("更多周期性判析"):
             st.write(generate_timeline_insight(timeline_data, result.get('pattern_name')))

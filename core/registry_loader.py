@@ -2,10 +2,11 @@
 QGA 注册表驱动器 (Registry Loader)
 实现从JSON注册表读取配置并自动调用引擎进行计算
 
-基于QGA-HR V2.0规范，支持：
+基于QGA-HR V3.0规范，支持：
 - feature_anchors（质心锚点系统）
 - pattern_recognition（Step 6格局识别）
-- Schema V2.0兼容
+- @config引用解析（FDS-V3.0配置路由）
+- Schema V3.0兼容
 """
 
 import json
@@ -37,6 +38,7 @@ from core.math_engine import project_tensor_with_matrix
 from core.trinity.core.middleware.influence_bus import InfluenceBus
 from core.trinity.core.middleware.temporal_factors import TemporalInjectionFactor
 from core.trinity.core.engines.structural_vibration import StructuralVibrationEngine
+from core.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,59 @@ class RegistryLoader:
         self.registry = None
         self.theme_id = theme_id
         self._load_registry()
+    
+    def resolve_config_ref(self, ref_path: str) -> Any:
+        """
+        解析配置引用路径（FDS-V3.0）
+        
+        Args:
+            ref_path: 配置引用路径，格式为 '@config.xxx.yyy.zzz' 或普通值
+            
+        Returns:
+            配置值，如果是非引用则直接返回原值
+        """
+        if not isinstance(ref_path, str) or not ref_path.startswith('@config.'):
+            return ref_path
+        
+        try:
+            return config.resolve_config_ref(ref_path)
+        except KeyError as e:
+            logger.error(f"配置引用解析失败: {ref_path}, 错误: {e}")
+            raise ValueError(f"Invalid config reference: {ref_path}") from e
+    
+    def resolve_config_refs_in_dict(self, data: Any) -> Any:
+        """
+        递归解析字典/列表中的所有@config引用（FDS-V3.0）
+        
+        Args:
+            data: 需要解析的数据（可以是dict、list或其他类型）
+            
+        Returns:
+            解析后的数据，所有@config引用都被替换为实际配置值
+        """
+        if isinstance(data, dict):
+            resolved = {}
+            for key, value in data.items():
+                # 递归处理值
+                resolved[key] = self.resolve_config_refs_in_dict(value)
+                # 如果key本身包含_ref后缀，尝试解析并创建对应的无_ref字段
+                if key.endswith('_ref') and isinstance(resolved[key], str):
+                    if resolved[key].startswith('@config.'):
+                        # 解析引用，并在同名字段（无_ref后缀）存储解析后的值
+                        base_key = key[:-4]  # 移除'_ref'后缀
+                        resolved[base_key] = self.resolve_config_ref(resolved[key])
+                        logger.debug(f"解析{key}: {resolved[key]} -> {resolved[base_key]}")
+                # 如果值是字符串且以@config.开头，也解析（即使不是_ref字段）
+                elif isinstance(resolved[key], str) and resolved[key].startswith('@config.'):
+                    resolved[key] = self.resolve_config_ref(resolved[key])
+                    logger.debug(f"解析字符串引用 {key}: {resolved[key]}")
+            return resolved
+        elif isinstance(data, list):
+            return [self.resolve_config_refs_in_dict(item) for item in data]
+        elif isinstance(data, str) and data.startswith('@config.'):
+            return self.resolve_config_ref(data)
+        else:
+            return data
     
     def _load_registry(self):
         """加载注册表"""
@@ -175,21 +230,30 @@ class RegistryLoader:
         if not version:
             version = pattern.get('meta_info', {}).get('version', '1.0')
             
-        if not version.startswith('2.'):
+        # 支持V2.0+和V3.0
+        if not (version.startswith('2.') or version.startswith('3.')):
             logger.warning(f"格局 {pattern_id} 版本为 {version}，不支持feature_anchors（需要V2.0+）")
             return None
         
-        # 兼容性适配：检查是否有sub_patterns/sub_patterns_registry (Schema V2.5)
+        # 兼容性适配：检查是否有sub_patterns/sub_patterns_registry (Schema V2.5/V3.0)
         sub_patterns = pattern.get('sub_patterns_registry') or pattern.get('sub_patterns')
         if sub_patterns:
             anchors = {'singularity_centroids': []}
             for sp in sub_patterns:
-                # 扁平化 manifold_stats
-                stats = sp.get('manifold_stats', {})
+                # 扁平化 manifold_data 或 manifold_stats (V3.0使用manifold_data)
+                stats = sp.get('manifold_data', {}) or sp.get('manifold_stats', {})
                 # 复制sp内容到anchor
                 anchor = sp.copy()
-                anchor.update(stats) # mean_vector, covariance_matrix 等上浮
+                # 如果stats是dict，更新到anchor中（mean_vector, covariance_matrix, thresholds等）
+                if isinstance(stats, dict):
+                    anchor.update(stats) # mean_vector, covariance_matrix, thresholds 等上浮
                 anchor.pop('manifold_stats', None)
+                anchor.pop('manifold_data', None)  # 清理原始字段
+                
+                # [V3.0] 解析thresholds中的配置引用
+                if 'thresholds' in anchor and isinstance(anchor['thresholds'], dict):
+                    resolved_thresholds = self.resolve_config_refs_in_dict(anchor['thresholds'])
+                    anchor['thresholds'] = resolved_thresholds
                 
                 # 映射 vector (兼容旧版代码)
                 if 'mean_vector' in anchor:
@@ -210,12 +274,19 @@ class RegistryLoader:
             
             return anchors
 
-        # [V2.5 Leaf Node Fix] 如果本身就是子格局，可能直接持有 manifold_stats
-        manifold_stats = pattern.get('manifold_stats')
-        if manifold_stats:
+        # [V2.5/V3.0 Leaf Node Fix] 如果本身就是子格局，可能直接持有 manifold_data 或 manifold_stats
+        manifold_data = pattern.get('manifold_data') or pattern.get('manifold_stats')
+        if manifold_data:
             anchor = pattern.copy()
-            anchor.update(manifold_stats)
+            if isinstance(manifold_data, dict):
+                anchor.update(manifold_data)
             anchor.pop('manifold_stats', None)
+            anchor.pop('manifold_data', None)  # 清理原始字段
+            
+            # [V3.0] 解析thresholds中的配置引用
+            if 'thresholds' in anchor and isinstance(anchor['thresholds'], dict):
+                resolved_thresholds = self.resolve_config_refs_in_dict(anchor['thresholds'])
+                anchor['thresholds'] = resolved_thresholds
             if 'mean_vector' in anchor:
                 anchor['vector'] = anchor['mean_vector']
             
@@ -311,8 +382,22 @@ class RegistryLoader:
             }
         
         mean_vector = manifold.get('mean_vector', manifold.get('vector', {})) # 兼容旧版
+        # 获取阈值配置：优先从manifold.thresholds，其次从feature_anchors根级，最后使用默认值
         thresholds = manifold.get('thresholds', {})
+        # 如果manifold中没有thresholds，尝试从feature_anchors根级获取
+        if not thresholds:
+            thresholds = feature_anchors.get('thresholds', {})
+        
+        # [V3.0] 确保thresholds中的配置引用已解析（如果之前未解析）
+        if isinstance(thresholds, dict):
+            thresholds = self.resolve_config_refs_in_dict(thresholds)
+        
         match_threshold = thresholds.get('match_threshold', manifold.get('match_threshold', 0.80))
+        
+        # 调试日志：检查协方差矩阵是否存在
+        cov = manifold.get('covariance_matrix')
+        if not cov:
+            logger.warning(f"⚠️ 格局 {pattern_id} 的流形 {target_manifold_id} 缺少 covariance_matrix，将使用欧式距离")
         
         # [V1.5 Fix] 强制对齐特征锚点的尺度 (Scale Alignment)
         # 如果特征锚点的总像素不为1.0，则进行归一化，确保马氏距离计算在同一物理空间
@@ -343,13 +428,15 @@ class RegistryLoader:
                 inverse_covariance=inv_cov_np
             )
             
-            # 3. [V1.5] 计算精密评分 (Precision Score)
+            # 3. [FDS-V3.0] 计算精密评分 (Precision Score)
             precision_score = calculate_precision_score(standard_similarity, m_dist, sai)
-            logger.info(f"V1.5 Precision Check: Similarity={standard_similarity:.4f}, M-Dist={m_dist:.4f}, Final Score={precision_score:.4f}")
+            logger.info(f"FDS-V3.0 Precision Check: Similarity={standard_similarity:.4f}, M-Dist={m_dist:.4f}, Final Score={precision_score:.4f}")
 
         # 4. 能量门控 (SAI Gating)
+        # [V3.0] 支持从thresholds获取，或从max_mahalanobis_dist_ref配置引用解析
         min_sai = thresholds.get('min_sai_gating', 0.5)
-        max_m_dist = thresholds.get('max_mahalanobis_dist', 3.0)
+        # max_mahalanobis_dist_ref 应该已经在resolve_config_refs_in_dict中解析
+        max_m_dist = thresholds.get('max_mahalanobis_dist', thresholds.get('max_mahalanobis_dist_ref', 3.0))
         
         is_matched = precision_score > match_threshold
         
@@ -471,10 +558,15 @@ class RegistryLoader:
             version = pattern.get('meta_info', {}).get('version', '1.0')
             
         is_v2 = str(version).startswith('2.')
+        is_v3 = str(version).startswith('3.')
         has_matrix = pattern.get('physics_kernel', {}).get('transfer_matrix') is not None
         
-        # V2.1+/V1.5+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+)
-        if is_v2 or str(version) >= '1.5' or has_matrix:
+        # [V3.0] 如果是V3.0，先解析所有@config引用
+        if is_v3:
+            pattern = self.resolve_config_refs_in_dict(pattern)
+        
+        # V2.1+/V1.5+/V3.0+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+, V3.0)
+        if is_v2 or is_v3 or str(version) >= '1.5' or has_matrix:
             # [V2.5] Pattern Routing Protocol
             active_pattern = pattern
             sub_id = None
@@ -530,8 +622,53 @@ class RegistryLoader:
                     
                     match = False
                     
-                    # Protocol V2.5: Support JSON Logic (D-02 Standard)
-                    if isinstance(logic, list):
+                    # Protocol V2.5/V3.0: Support JSON Logic
+                    if isinstance(logic, dict) and logic.get("rules"):
+                        # V3.0 format: logic = {"condition": "AND", "rules": [...]}
+                        rules = logic.get("rules", [])
+                        condition_type = logic.get("condition", "AND").upper()
+                        conditions_met = []
+                        
+                        for cond in rules:
+                            axis = cond.get("axis")
+                            op = cond.get("operator")
+                            
+                            # [V3.0] 支持param_ref引用配置，fallback到value
+                            val = None
+                            if "param_ref" in cond:
+                                val = self.resolve_config_ref(cond["param_ref"])
+                            elif "value" in cond:
+                                val = cond["value"]
+                            else:
+                                logger.warning(f"路由规则缺少value或param_ref: {cond}")
+                                continue
+                            
+                            current_val = 0.0
+                            if axis == "E": current_val = e_est
+                            elif axis == "M": current_val = m_est
+                            elif axis == "O": current_val = o_est
+                            elif axis == "S": current_val = s_est
+                            elif axis == "R": current_val = r_est
+                            
+                            cond_result = False
+                            if op == "gt": cond_result = current_val > val
+                            elif op == "gte": cond_result = current_val >= val
+                            elif op == "lt": cond_result = current_val < val
+                            elif op == "lte": cond_result = current_val <= val
+                            elif op == "eq": cond_result = abs(current_val - val) < 0.01
+                            
+                            conditions_met.append(cond_result)
+                        
+                        # 根据condition类型判断
+                        if condition_type == "AND":
+                            match = all(conditions_met) if conditions_met else False
+                        elif condition_type == "OR":
+                            match = any(conditions_met) if conditions_met else False
+                        else:
+                            match = all(conditions_met) if conditions_met else False  # 默认AND
+                            
+                    elif isinstance(logic, list):
+                        # Legacy V2.5 format: logic = [{...}, {...}]
                         conditions_met = True
                         for cond in logic:
                             axis = cond.get("axis")
@@ -552,7 +689,7 @@ class RegistryLoader:
                             
                             if not conditions_met: break
                         
-                        if conditions_met: match = True
+                        match = conditions_met
 
                     # Legacy String Logic
                     elif isinstance(logic, str):
@@ -847,7 +984,12 @@ class RegistryLoader:
         dynamic_states = pattern.get('dynamic_states', {})
         collapse_rules = dynamic_states.get('collapse_rules', [])
         crystallization_rules = dynamic_states.get('crystallization_rules', [])
-        integrity_threshold = pattern.get('physics_kernel', {}).get('integrity_threshold', 0.45)
+        # [V3.0] 处理integrity_threshold引用
+        integrity_threshold_ref = pattern.get('physics_kernel', {}).get('integrity_threshold_ref')
+        if integrity_threshold_ref:
+            integrity_threshold = self.resolve_config_ref(integrity_threshold_ref)
+        else:
+            integrity_threshold = pattern.get('physics_kernel', {}).get('integrity_threshold', 0.45)
         
         # 构建context
         energy_flux = {
@@ -1062,6 +1204,10 @@ class RegistryLoader:
         impedance = v_metrics.get('impedance_magnitude', 1.0)
         clash_energy *= (1.0 + (impedance - 1.0) * 0.2)
         
+        # [FDS-V1.5.2 Critical Fix] Compute Yang_Ren energy separately 
+        # Yang_Ren is NOT a ten-god but Rob_Wealth at Emperor position
+        yang_ren_energy = compute_energy_flux(chart, day_master, "羊刃")
+        
         # Update frequency_vector with arbitrated values + interactions
         frequency_vector = {
             "bi_jian": bj, "jie_cai": jc, "shi_shen": ss, "shang_guan": sg,
@@ -1086,7 +1232,18 @@ class RegistryLoader:
             "resource": zy + py,
             "power": zg + qs,
             "wealth": zc + pc,
-            "output": ss + sg
+            "output": ss + sg,
+            # [FDS-V1.5.2 A-03 Matrix Compatibility]
+            # 添加 transfer_matrix 所需的所有键名
+            "Yang_Ren": yang_ren_energy,      # 羊刃 (关键！A-03 格局核心)
+            "Friend": bj,                      # 比肩 (同类)
+            "Eating_God": ss,                  # 食神
+            "Hurting_Officer": sg,             # 伤官
+            "Indirect_Resource": py,           # 偏印
+            "Direct_Resource": zy,             # 正印
+            "Clash": round(clash_energy, 4),   # 冲 (大写版本)
+            "Combination": 0.0,                # 合 (大写版本)
+            "Wealth": zc + pc                  # 财 (聚合)
         }
         
         injection_logs = verdict.get('logs', {})
@@ -1102,7 +1259,12 @@ class RegistryLoader:
         if dynamics_config and dynamics_config.get('activation_function') == "tanh_saturation":
             # [V2.2] Tanh Saturation applies BEFORE matrix projection as a gain control
             params = dynamics_config.get('parameters', {})
-            k_val = params.get('k_factor', 3.0)
+            # [V3.0] 处理k_factor引用
+            k_factor_ref = params.get('k_factor_ref')
+            if k_factor_ref:
+                k_val = self.resolve_config_ref(k_factor_ref)
+            else:
+                k_val = params.get('k_factor', 3.0)
             
             from core.math_engine import apply_saturation_layer
             processed_input = {
