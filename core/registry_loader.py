@@ -451,6 +451,17 @@ class RegistryLoader:
 
         return pattern.get('feature_anchors')
     
+    # =========================================================================
+    # [FDS-LKV] Pattern Engine Interface (Forwarding)
+    # =========================================================================
+
+    def _get_pattern_engine(self):
+        """Lazy load PatternEngine to avoid circular imports"""
+        if not hasattr(self, '_pattern_engine'):
+            from core.pattern_engine import PatternEngine
+            self._pattern_engine = PatternEngine(self)
+        return self._pattern_engine
+
     def pattern_recognition(
         self,
         current_tensor: Dict[str, float],
@@ -459,215 +470,13 @@ class RegistryLoader:
         sai: float = 1.0
     ) -> Dict[str, Any]:
         """
-        动态格局识别（Step 6）
-        
-        基于空间相似度的自动吸附机制，判断当前八字是否属于指定格局
-        支持多态观测：根据 dynamic_state 自动切换锚点基准 (V2.3)
-        [V1.5 Upgrade] 引入马氏距离 (Mahalanobis) 与概率密度 (PDF) 评分
-        
-        Args:
-            current_tensor: 当前八字的5维投影值（原局基态，必须归一化）
-            pattern_id: 格局ID（如'A-03'）
-            dynamic_state: 当前动力学状态 (如 'STABLE', 'ACTIVATED')
-            sai: 系统对齐指数（能量强度）
-            
-        Returns:
-            识别结果字典
+        [Delegated] 动态格局识别
+        Delegates to PatternEngine.pattern_recognition
         """
-        # 1. 获取格局配置和feature_anchors
-        pattern = self.get_pattern(pattern_id)
-        if not pattern:
-            return {
-                'matched': False,
-                'pattern_type': 'BROKEN',
-                'similarity': 0.0,
-                'anchor_id': None,
-                'resonance': False,
-                'description': f'格局 {pattern_id} 不存在'
-            }
-        
-        feature_anchors = self.get_feature_anchors(pattern_id)
-        if not feature_anchors:
-            return {
-                'matched': False,
-                'pattern_type': 'BROKEN',
-                'similarity': 0.0,
-                'anchor_id': None,
-                'resonance': False,
-                'description': f'格局 {pattern_id} 缺少feature_anchors（需要V2.0+）'
-            }
-        
-        # 2. 验证current_tensor已归一化
-        total = sum(abs(v) for v in current_tensor.values())
-        if abs(total - 1.0) > 0.01:
-            logger.warning(f"current_tensor未归一化（总和={total:.6f}），自动归一化")
-            current_tensor = tensor_normalize(current_tensor)
-        
-        # 3. 计算与目标锚点的相似度 (流形路由 V2.4)
-        target_manifold_id = 'standard_manifold'
-        manifold = feature_anchors.get('standard_manifold')
-        
-        # [V2.4 Manifold Protocol] 
-        # 根据 dynamic_state 切换观测流形
-        if dynamic_state in ['ACTIVATED', 'TRANSFORMED', 'VOLATILE']:
-            activated_manifold = feature_anchors.get('activated_manifold')
-            if activated_manifold:
-                manifold = activated_manifold
-                target_manifold_id = 'activated_manifold'
-                logger.info(f"Observer: Switching to 'activated_manifold' for {pattern_id} due to Phase Transition.")
+        return self._get_pattern_engine().pattern_recognition(
+            current_tensor, pattern_id, dynamic_state, sai
+        )
 
-        if not manifold:
-            return {
-                'matched': False,
-                'pattern_type': 'BROKEN',
-                'similarity': 0.0,
-                'anchor_id': None,
-                'resonance': False,
-                'description': f'格局 {pattern_id} 缺少观测流形 ({target_manifold_id})'
-            }
-        
-        mean_vector = manifold.get('mean_vector', manifold.get('vector', {})) # 兼容旧版
-        # 获取阈值配置：优先从manifold.thresholds，其次从feature_anchors根级，最后使用默认值
-        thresholds = manifold.get('thresholds', {})
-        # 如果manifold中没有thresholds，尝试从feature_anchors根级获取
-        if not thresholds:
-            thresholds = feature_anchors.get('thresholds', {})
-        
-        # [V3.0] 确保thresholds中的配置引用已解析（如果之前未解析）
-        if isinstance(thresholds, dict):
-            thresholds = self.resolve_config_refs_in_dict(thresholds)
-        
-        # V3.1修正：提高匹配阈值至0.7，避免泛化过度，将成格率控制在合理区间(10-18%)
-        match_threshold = thresholds.get('match_threshold', manifold.get('match_threshold', 0.7))
-        
-        # 调试日志：检查协方差矩阵是否存在
-        cov = manifold.get('covariance_matrix')
-        if not cov:
-            logger.warning(f"⚠️ 格局 {pattern_id} 的流形 {target_manifold_id} 缺少 covariance_matrix，将使用欧式距离")
-        
-        # [V1.5 Fix] 强制对齐特征锚点的尺度 (Scale Alignment)
-        # 如果特征锚点的总像素不为1.0，则进行归一化，确保马氏距离计算在同一物理空间
-        ref_total = sum(abs(v) for v in mean_vector.values())
-        if abs(ref_total - 1.0) > 0.05:
-            logger.info(f"Observer: Normalizing mean_vector scale ({ref_total:.4f} -> 1.0)")
-            mean_vector = tensor_normalize(mean_vector)
-
-        # 1. 计算余弦相似度 (Direction)
-        standard_similarity = calculate_cosine_similarity(current_tensor, mean_vector)
-        
-        # 2. [V1.5] 计算马氏距离 (Statistical Distribution)
-        m_dist = 0.0
-        precision_score = standard_similarity 
-        
-        import numpy as np
-        inv_cov = manifold.get('inverse_covariance')
-        cov = manifold.get('covariance_matrix')
-        
-        inv_cov_np = np.array(inv_cov) if inv_cov else None
-        cov_np = np.array(cov) if cov else None
-
-        if inv_cov_np is not None or cov_np is not None:
-            m_dist = calculate_mahalanobis_distance(
-                current_tensor, 
-                mean_vector, 
-                covariance_matrix=cov_np, 
-                inverse_covariance=inv_cov_np
-            )
-            
-            # 3. [FDS-V3.0] 计算精密评分 (Precision Score)
-            precision_score = calculate_precision_score(standard_similarity, m_dist, sai)
-            logger.info(f"FDS-V3.0 Precision Check: Similarity={standard_similarity:.4f}, M-Dist={m_dist:.4f}, Final Score={precision_score:.4f}")
-
-        # 4. 能量门控 (SAI Gating)
-        # [V3.0] 支持从thresholds获取，或从max_mahalanobis_dist_ref配置引用解析
-        min_sai = thresholds.get('min_sai_gating', 0.5)
-        # max_mahalanobis_dist_ref 应该已经在resolve_config_refs_in_dict中解析
-        max_m_dist = thresholds.get('max_mahalanobis_dist', thresholds.get('max_mahalanobis_dist_ref', 3.0))
-        
-        is_matched = precision_score > match_threshold
-        
-        # V2.4 精密判定：必须满足马氏距离与能量门控约束
-        if m_dist > max_m_dist:
-            logger.warning(f"Precision Gating: M-Dist {m_dist:.4f} exceeds threshold {max_m_dist}")
-            is_matched = False
-            
-        if sai < min_sai:
-            logger.warning(f"SAI Gating: SAI {sai:.4f} below threshold {min_sai}")
-            is_matched = False
-            
-        # 4. 判定决策 (Decision Logic V2.4)
-        perfect_threshold = thresholds.get('perfect_threshold', 0.92)
-        
-        # Check for singularities first
-        singularity_centroids = feature_anchors.get('singularity_centroids', [])
-        best_singularity = None
-        best_singularity_sim = 0.0
-        
-        for singularity in singularity_centroids:
-            sing_vec = singularity.get('vector', {})
-            sim = calculate_cosine_similarity(current_tensor, sing_vec)
-            if sim > best_singularity_sim:
-                best_singularity_sim = sim
-                best_singularity = singularity
-        
-        if best_singularity and best_singularity_sim > 0.90:
-            if best_singularity_sim > standard_similarity + 0.03:
-                return {
-                    'matched': True,
-                    'pattern_type': 'SINGULARITY',
-                    'similarity': best_singularity_sim,
-                    'anchor_id': best_singularity.get('sub_id', 'unknown'),
-                    'resonance': best_singularity_sim > perfect_threshold,
-                    'description': f"高度匹配奇点变体 {best_singularity.get('sub_id', 'unknown')}",
-                    'risk_level': best_singularity.get('risk_level', 'UNKNOWN'),
-                    'special_instruction': best_singularity.get('special_instruction')
-                }
-        
-        # Final Match Decision
-        if is_matched:
-            p_tag = 'STANDARD' if target_manifold_id == 'standard_manifold' else 'ACTIVATED'
-            return {
-                'matched': True,
-                'pattern_type': p_tag,
-                'similarity': standard_similarity,
-                'mahalanobis_dist': m_dist,
-                'precision_score': precision_score,
-                'anchor_id': target_manifold_id,
-                'resonance': precision_score > perfect_threshold,
-                'description': f"精密观测匹配 ({p_tag})，评分 {precision_score:.4f}",
-                'risk_level': None,
-                'special_instruction': None
-            }
-        
-        # 破格 (Broken) vs 边缘 (Marginal)
-        # V3.1修正：统一使用match_threshold判断，避免硬编码
-        if precision_score < match_threshold:
-            return {
-                'matched': False,
-                'pattern_type': 'BROKEN',
-                'similarity': standard_similarity,
-                'mahalanobis_dist': m_dist,
-                'precision_score': precision_score,
-                'anchor_id': None,
-                'resonance': False,
-                'description': f"物理破格，评分 {precision_score:.4f} < {match_threshold:.2f}",
-                'risk_level': None,
-                'special_instruction': None
-            }
-        
-        return {
-            'matched': False,
-            'pattern_type': 'MARGINAL',
-            'similarity': standard_similarity,
-            'mahalanobis_dist': m_dist,
-            'precision_score': precision_score,
-            'anchor_id': None,
-            'resonance': False,
-            'description': f"边缘状态，评分 {precision_score:.4f}",
-            'risk_level': None,
-            'special_instruction': None
-        }
-    
     def calculate_tensor_projection_from_registry(
         self,
         pattern_id: str,
@@ -676,221 +485,10 @@ class RegistryLoader:
         context: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
-        从注册表读取配置并计算五维张量投影
-        
-        这是核心函数：实现100%算法复原
-        
-        Args:
-            pattern_id: 格局ID（如'A-03'）
-            chart: 四柱八字
-            day_master: 日主
-            context: 上下文（大运、流年等，可选）
-            
-        Returns:
-            计算结果字典，包含：
-            - projection: 五维投影 {'E': float, 'O': float, 'M': float, 'S': float, 'R': float}
-            - sai: 系统对齐指数
-            - energies: 基础能量 {'E_blade': float, 'E_kill': float, 'E_seal': float}
-            - s_balance: 平衡度
-            - phase_change: 相变状态
-        """
-        # 1. 获取格局配置
-        pattern = self.get_pattern(pattern_id)
-        if not pattern:
-            return {'error': f'格局 {pattern_id} 不存在'}
-        
-        # 检查版本 (优先检查root，其次检查meta_info)
-        version = pattern.get('version')
-        if not version:
-            version = pattern.get('meta_info', {}).get('version', '1.0')
-            
-        is_v2 = str(version).startswith('2.')
-        is_v3 = str(version).startswith('3.')
-        has_matrix = pattern.get('physics_kernel', {}).get('transfer_matrix') is not None
-        
-        # [V3.0] 如果是V3.0，先解析所有@config引用
-        if is_v3:
-            pattern = self.resolve_config_refs_in_dict(pattern)
-        
-        # V2.1+/V1.5+/V3.0+: 使用transfer_matrix (Protocol V2.1, V2.2, V2.3, V2.5+, V3.0)
-        if is_v2 or is_v3 or str(version) >= '1.5' or has_matrix:
-            # [V2.5] Pattern Routing Protocol
-            active_pattern = pattern
-            sub_id = None
-            
-            router = pattern.get('matching_router', {})
-            if router and router.get('strategies'):
-                # Execute routing logic
-                for strategy in router['strategies']:
-                    target_id = strategy.get('target')
-                    logic = strategy.get('logic', '')
-                    
-                    if strategy.get('priority') == 3 and logic == 'default':
-                        # Standard Fallback
-                        break
-                    
-                    # Compute preliminary projection (V1.5 Heuristic)
-                    bj = compute_energy_flux(chart, day_master, "比肩")
-                    jc = compute_energy_flux(chart, day_master, "劫财")
-                    zy = compute_energy_flux(chart, day_master, "正印")
-                    py = compute_energy_flux(chart, day_master, "偏印")
-                    zc = compute_energy_flux(chart, day_master, "正财")
-                    pc = compute_energy_flux(chart, day_master, "偏财")
-                    
-                    # E = bj + jc + 0.8*resource
-                    # M = zc + pc
-                    # E = bj + jc + 0.8*resource
-                    # M = zc + pc
-                    e_est = bj + jc + 0.5 * (zy + py)
-                    m_est = zc + pc
-                    
-                    # O = dg + qg (Direct Officer + Seven Killings)
-                    dg = compute_energy_flux(chart, day_master, "正官")
-                    qg = compute_energy_flux(chart, day_master, "七杀")
-                    o_est = dg + qg
-
-                    # S & R Estimation (V2.4)
-                    clash_cnt = calculate_clash_count(chart)
-                    s_est = qg + 0.8 * clash_cnt - 0.5 * (zy + py) # Approx from D-02 Kernel
-
-                    # R Estimation
-                    # Simple combination count helper
-                    comb_cnt = 0
-                    branches = [p[1] for p in chart]
-                    for i in range(len(branches)):
-                        for j in range(i+1, len(branches)):
-                            from core.physics_engine import check_combination # Ensure import availability
-                            if check_combination(branches[i], branches[j]):
-                                comb_cnt += 1
-                                
-                    r_est = comb_cnt * 1.0 + bj * 0.5 + jc * 0.3 # Approx from D-02 Kernel_Row_R
-                    
-                    v_count = count_vaults_helper(chart)
-                    
-                    match = False
-                    
-                    # Protocol V2.5/V3.0: Support JSON Logic
-                    if isinstance(logic, dict) and logic.get("rules"):
-                        # V3.0 format: logic = {"condition": "AND", "rules": [...]}
-                        rules = logic.get("rules", [])
-                        condition_type = logic.get("condition", "AND").upper()
-                        conditions_met = []
-                        
-                        for cond in rules:
-                            axis = cond.get("axis")
-                            op = cond.get("operator")
-                            
-                            # [V3.0] 支持param_ref引用配置，fallback到value
-                            val = None
-                            if "param_ref" in cond:
-                                val = self.resolve_config_ref(cond["param_ref"])
-                            elif "value" in cond:
-                                val = cond["value"]
-                            else:
-                                logger.warning(f"路由规则缺少value或param_ref: {cond}")
-                                continue
-                            
-                            current_val = 0.0
-                            if axis == "E": current_val = e_est
-                            elif axis == "M": current_val = m_est
-                            elif axis == "O": current_val = o_est
-                            elif axis == "S": current_val = s_est
-                            elif axis == "R": current_val = r_est
-                            
-                            cond_result = False
-                            if op == "gt": cond_result = current_val > val
-                            elif op == "gte": cond_result = current_val >= val
-                            elif op == "lt": cond_result = current_val < val
-                            elif op == "lte": cond_result = current_val <= val
-                            elif op == "eq": cond_result = abs(current_val - val) < 0.01
-                            
-                            conditions_met.append(cond_result)
-                        
-                        # 根据condition类型判断
-                        if condition_type == "AND":
-                            match = all(conditions_met) if conditions_met else False
-                        elif condition_type == "OR":
-                            match = any(conditions_met) if conditions_met else False
-                        else:
-                            match = all(conditions_met) if conditions_met else False  # 默认AND
-                            
-                    elif isinstance(logic, list):
-                        # Legacy V2.5 format: logic = [{...}, {...}]
-                        conditions_met = True
-                        for cond in logic:
-                            axis = cond.get("axis")
-                            op = cond.get("operator")
-                            val = cond.get("value", 0.0)
-                            
-                            current_val = 0.0
-                            if axis == "E": current_val = e_est
-                            elif axis == "M": current_val = m_est
-                            elif axis == "O": current_val = o_est
-                            elif axis == "S": current_val = s_est
-                            elif axis == "R": current_val = r_est
-                            
-                            if op == "gt" and not (current_val > val): conditions_met = False
-                            elif op == "gte" and not (current_val >= val): conditions_met = False
-                            elif op == "lt" and not (current_val < val): conditions_met = False
-                            elif op == "lte" and not (current_val <= val): conditions_met = False
-                            
-                            if not conditions_met: break
-                        
-                        match = conditions_met
-
-                    # Legacy String Logic
-                    elif isinstance(logic, str):
-                        # D-01 Logic
-                        if "E < 0.15" in logic and e_est < 0.20 and m_est > 0.8: match = True
-                        if "vault_count >= 3" in logic and v_count >= 3: match = True
-                        
-                        # A-03 Logic (FDS-V1.5.1)
-                        if "vault_count >= 2" in logic and v_count >= 2: match = True
-                        
-                        if "E < 0.35" in logic and "O > 0.55" in logic:
-                             # SP_A03_OVERKILL
-                             if e_est < 0.40 and o_est > 0.50: match = True # Relaxed slightly for heuristics
-                        
-                        if "E > 0.65" in logic and "O < 0.25" in logic:
-                             # SP_A03_NO_CONTROL
-                             if e_est > 0.60 and o_est < 0.30: match = True
-                    
-                    if match:
-                        sub_patterns = pattern.get('sub_patterns_registry') or pattern.get('sub_patterns') or []
-                        for sp in sub_patterns:
-                            if sp.get('id') == target_id:
-                                active_pattern = sp
-                                sub_id = target_id
-                                # Apply matrix_override immediately for accurate final calculation
-                                override = sp.get('matrix_override', {})
-                                if override.get('transfer_matrix'):
-                                    transfer_matrix = override['transfer_matrix']
-                                logger.info(f"Router redirection triggered: {pattern_id} -> {sub_id}")
-                                break
-                        if sub_id: break
-
-            physics_kernel = pattern.get('physics_kernel', {})
-            # [V2.5] Support nested matrix_override
-            transfer_matrix = active_pattern.get('matrix_override', {}).get('transfer_matrix') or \
-                              physics_kernel.get('transfer_matrix')
-            
-            if transfer_matrix:
-                res = self._calculate_with_transfer_matrix(
-                    pattern_id, chart, day_master, transfer_matrix, context
-                )
-                if sub_id: res['sub_id'] = sub_id
                 return res
         
         # V2.0/V1.0: 使用旧的tensor_operator逻辑
         tensor_operator = pattern.get('tensor_operator', {})
-        if not tensor_operator:
-            return {'error': f'格局 {pattern_id} 缺少tensor_operator配置'}
-        
-        # 2. 获取权重（V2.0优先使用feature_anchors.standard_centroid.vector，否则使用tensor_operator.weights）
-        weights = None
-        if is_v2:
-            feature_anchors = self.get_feature_anchors(pattern_id)
-            if feature_anchors and feature_anchors.get('standard_centroid'):
                 weights = feature_anchors['standard_centroid'].get('vector')
                 logger.debug(f"使用V2.0 feature_anchors.standard_centroid.vector作为权重")
         
@@ -1034,14 +632,15 @@ class RegistryLoader:
         event_params: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
-        模拟动态事件（如流年冲刃）
+        模拟动态事件(如流年冲刃)
+
         
         Args:
             pattern_id: 格局ID
             chart: 四柱八字
             day_master: 日主
-            event_type: 事件类型（如'clash'）
-            event_params: 事件参数（如{'clash_branch': '子'}）
+            event_type: 事件类型(如'clash')
+            event_params: 事件参数(如{'clash_branch': '子'})
             
         Returns:
             仿真结果字典
@@ -1114,7 +713,7 @@ class RegistryLoader:
         alpha: float
     ) -> Dict[str, Any]:
         """
-        检查成格/破格状态（FDS-V1.4）
+        检查成格/破格状态(FDS-V1.4)
         
         Args:
             pattern: 格局配置
@@ -1126,7 +725,7 @@ class RegistryLoader:
             alpha: 结构完整性alpha值
             
         Returns:
-            格局状态字典，包含state、alpha、matrix等
+            格局状态字典, 包含state、alpha、matrix等
         """
         dynamic_states = pattern.get('dynamic_states', {})
         collapse_rules = dynamic_states.get('collapse_rules', [])
