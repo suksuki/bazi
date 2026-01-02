@@ -40,6 +40,21 @@ from core.trinity.core.middleware.temporal_factors import TemporalInjectionFacto
 from core.trinity.core.engines.structural_vibration import StructuralVibrationEngine
 from core.config import config
 
+# [FDS-LKV] 合规性路由器（延迟导入避免循环依赖）
+_compliance_router = None
+
+def _get_compliance_router():
+    """延迟获取合规性路由器（避免启动时循环导入）"""
+    global _compliance_router
+    if _compliance_router is None:
+        try:
+            from core.compliance_router import get_compliance_router
+            _compliance_router = get_compliance_router()
+        except ImportError:
+            logger.warning("⚠️ FDS-LKV 合规性路由器未安装，跳过合规性检查")
+            _compliance_router = None
+    return _compliance_router
+
 logger = logging.getLogger(__name__)
 
 def count_vaults_helper(chart: List[str]) -> int:
@@ -88,6 +103,8 @@ class RegistryLoader:
         self.registry_path = registry_path
         self.registry = None
         self.theme_id = theme_id
+        self._compliance_enabled = True  # [FDS-LKV] 合规性检查开关
+        self._singularity_cache = {}  # [FDS-LKV] 奇点预热缓存
         self._load_registry()
     
     def resolve_config_ref(self, ref_path: str) -> Any:
@@ -206,6 +223,137 @@ class RegistryLoader:
             格局配置字典，如果不存在则返回None
         """
         return self.get_pattern(pattern_id)
+    
+    # =========================================================================
+    # [FDS-LKV] 合规性路由与奇点预热
+    # =========================================================================
+    
+    def precheck_compliance(
+        self, 
+        pattern_id: str, 
+        pattern_config: Dict = None,
+        strict_mode: bool = False
+    ) -> Dict[str, Any]:
+        """
+        [FDS-LKV] 合规性先验检查 (Pre-check Protocol)
+        
+        检索语义库中的"三大物理公理"，验证格局配置是否符合规范。
+        
+        Args:
+            pattern_id: 格局 ID
+            pattern_config: 格局配置（如果为 None，自动从注册表获取）
+            strict_mode: 是否严格模式（违规时抛出异常）
+            
+        Returns:
+            检查结果字典
+        """
+        if not self._compliance_enabled:
+            return {"compliant": True, "skipped": True, "reason": "合规性检查已禁用"}
+        
+        router = _get_compliance_router()
+        if router is None:
+            return {"compliant": True, "skipped": True, "reason": "合规性路由器未就绪"}
+        
+        if pattern_config is None:
+            pattern_config = self.get_pattern(pattern_id) or {}
+        
+        try:
+            result = router.precheck_pattern(pattern_id, pattern_config, strict_mode)
+            if result.get("compliant"):
+                logger.debug(f"✅ 格局 {pattern_id} 通过合规性检查")
+            else:
+                logger.warning(f"⚠️ 格局 {pattern_id} 合规性检查发现问题: {result.get('violations')}")
+            return result
+        except Exception as e:
+            logger.warning(f"合规性检查异常: {e}")
+            return {"compliant": True, "skipped": True, "error": str(e)}
+    
+    def warmup_singularities(self, pattern_id: str) -> Dict[str, Any]:
+        """
+        [FDS-LKV] 奇点预热 (Singularity Warm-up)
+        
+        从奇点库预取与指定格局相关的奇点样本，缓存到内存中加速后续 KNN 检索。
+        
+        Args:
+            pattern_id: 格局 ID
+            
+        Returns:
+            预热结果
+        """
+        if pattern_id in self._singularity_cache:
+            return {"cached": True, "count": len(self._singularity_cache[pattern_id])}
+        
+        router = _get_compliance_router()
+        if router is None:
+            return {"cached": False, "error": "合规性路由器未就绪"}
+        
+        try:
+            from core.vault_manager import get_vault_manager
+            vault = get_vault_manager()
+            
+            # 检索该格局的所有奇点
+            results = vault.singularity_vault.get(
+                where={"pattern_id": pattern_id},
+                include=["embeddings", "metadatas"]
+            )
+            
+            if results and results.get("ids"):
+                benchmarks = []
+                embeddings = results.get("embeddings")
+                metadatas = results.get("metadatas")
+                for i, case_id in enumerate(results["ids"]):
+                    tensor = None
+                    if embeddings is not None and len(embeddings) > i:
+                        tensor = list(embeddings[i]) if hasattr(embeddings[i], 'tolist') else embeddings[i]
+                    meta = metadatas[i] if metadatas is not None and len(metadatas) > i else {}
+                    benchmarks.append({
+                        "case_id": case_id,
+                        "tensor": tensor,
+                        "metadata": meta
+                    })
+                self._singularity_cache[pattern_id] = benchmarks
+                logger.info(f"🔥 奇点预热完成: {pattern_id} ({len(benchmarks)} 样本)")
+                return {"cached": True, "count": len(benchmarks)}
+            else:
+                self._singularity_cache[pattern_id] = []
+                return {"cached": True, "count": 0}
+                
+        except Exception as e:
+            logger.warning(f"奇点预热失败: {e}")
+            return {"cached": False, "error": str(e)}
+    
+    def traceback_singularity(
+        self, 
+        tensor_5d: List[float],
+        mahalanobis_distance: float,
+        pattern_id: str = None,
+        threshold: float = 2.5
+    ) -> Optional[Dict[str, Any]]:
+        """
+        [FDS-LKV] 奇点溯源 (Trace-back Protocol)
+        
+        当马氏距离超过阈值时，检索最近的奇点样本。
+        
+        Args:
+            tensor_5d: 当前八字的 5D 张量
+            mahalanobis_distance: 计算得到的马氏距离
+            pattern_id: 格局 ID（可选，用于过滤）
+            threshold: 触发阈值
+            
+        Returns:
+            检索结果（如果未触发则返回 None）
+        """
+        router = _get_compliance_router()
+        if router is None:
+            return None
+        
+        return router.traceback_singularity(
+            tensor_5d=tensor_5d,
+            mahalanobis_distance=mahalanobis_distance,
+            threshold=threshold,
+            pattern_filter=pattern_id
+        )
+
     
     def get_feature_anchors(self, pattern_id: str) -> Optional[Dict]:
         """
