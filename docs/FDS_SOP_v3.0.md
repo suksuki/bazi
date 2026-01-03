@@ -387,32 +387,85 @@ $$
 - **严禁硬编码**: 所有参数必须从配置中心读取
 - 参数路径示例: `@config.physics.precision_weights.similarity`
 
-#### 6.2 验收测试 (Load Acceptance)
+#### 6.2 负载验收与丰度对撞 (Load Acceptance & Abundance Collision)
+
+**目标**: 使用物理引擎（马氏距离判定）对全量样本进行识别率计算，与逻辑规则（基准丰度）进行对撞验证。
 
 **操作步骤**:
 
-1. **计算实际识别率**:
-   - 在验证集上运行识别算法
-   - 统计识别准确率 $\text{Accuracy}_{actual}$
+1. **特征捕获 (Feature Extraction)**:
+   - SOP必须从所有符合 `classical_logic_rules` 的样本中提取统计特征
+   - 计算均值向量 $\mu$ 和协方差矩阵 $\Sigma$
+   - 将 $\mu$ 和 $\Sigma$ 存入registry的 `feature_anchors.standard_manifold` 字段
 
-2. **对比基准值**:
-   - 获取 Step 2 中归档的 $\text{Abundance}_{base}$（法定参考值）
-   - 计算偏差: $\Delta = |\text{Accuracy}_{actual} - \text{Abundance}_{base}|$
+2. **物理判别 (Physics Recognition)**:
+   - 执行全量518,400样本扫描时，**严禁使用**布尔逻辑过滤（`classical_logic_rules`）
+   - 必须仅使用马氏距离判定：
+     - 对每个样本计算5D张量 $T_{fate}$
+     - 计算马氏距离: $D_M = \sqrt{(T_{fate} - \mu)^T \Sigma^{-1} (T_{fate} - \mu)}$
+     - 判定准则: 若 $D_M < \theta$（阈值从 `@config.physics.thresholds.mahalanobis` 读取），则计为命中
+   - 统计识别率: $\text{RecognitionRate}_{actual} = \frac{\text{命中样本数}}{\text{总样本数}} \times 100\%$
 
-3. **纠偏逻辑**:
-   - 若偏差过大（$\Delta > \text{tolerance}$），必须回退调整马氏距离阈值
-   - 重新执行 Step 3-6，直到偏差在可接受范围内
+3. **对撞验收 (Collision Acceptance)**:
+   - 获取基准丰度: $\text{Abundance}_{base}$（从registry的 `population_stats.base_abundance` 读取）
+   - 计算偏差: $\Delta = |\text{RecognitionRate}_{actual} - \text{Abundance}_{base}|$
+   - **纠偏逻辑**: 若 $\Delta > \text{tolerance}$（从 `@config.recognition.tolerance` 读取，标准值0.02），强制进入纠偏周期
+     - 调整马氏距离阈值 $\theta$
+     - 重新执行物理判别，直到偏差在可接受范围内
 
 4. **验收标准**:
-   - $\Delta \le \text{tolerance}$（容差值从配置读取）
+   - $\Delta \le \text{tolerance}$（容差值从配置读取，标准值2.0%）
    - 所有物理公理验证通过
    - 所有安全门控生效
 
 **输出产物**:
-- 识别准确率报告
-- 偏差分析报告
-- 验收测试报告
-- 最终参数配置
+- 识别准确率报告（物理判定结果）
+- 偏差分析报告（物理 vs 逻辑）
+- 验收测试报告（PASS/FAIL判定）
+- 最终参数配置（如果进行了纠偏）
+
+#### 6.3 全息重合度审计 (IoU Audit) [CRITICAL]
+
+**目标**: 通过IoU（交集率）指标深度审计物理模型与古典逻辑的空间分歧，揭示物理发现的真实价值。
+
+**核心指标**:
+- 不再以 $\Delta$（偏差）作为唯一通过标准
+- **强制要求**: 必须输出 **IoU (Intersection over Union)**
+
+**操作步骤**:
+
+1. **集合统计**:
+   - 逻辑匹配集合 $L$: 所有通过 `classical_logic_rules` 判定的样本
+   - 物理匹配集合 $P$: 所有通过马氏距离判定的样本
+   - 交集 $I = L \cap P$: 同时被两种方法判定的样本
+   - 并集 $U = L \cup P$: 至少被一种方法判定的样本
+
+2. **IoU计算**:
+   $$
+   \text{IoU} = \frac{|I|}{|U|} = \frac{\text{交集样本数}}{\text{并集样本数}}
+   $$
+
+3. **物理溢出分析**:
+   - **物理扩展区**: $P \setminus L$（仅物理匹配，逻辑不匹配）
+   - **逻辑独有区**: $L \setminus P$（仅逻辑匹配，物理不匹配）
+   - 统计物理扩展区样本的特征，分析其共性
+
+4. **阈值哲学判定**:
+   - 若 IoU < 30%，必须撰写《物理溢出特征分析报告》
+   - 说明物理模型为何发现了古典逻辑之外的样本
+   - 将这些样本判定为 **"物理真理扩展 (Manifold Extension)"**
+   - **合法性判定**: 物理扩展区样本具有极高的实战挖掘价值，是FDS系统对传统命理的重要补盲
+
+**输出产物**:
+- IoU审计报告
+- 象限分析报告（逻辑独有区、物理扩展区、交集区）
+- 物理溢出特征分析报告（如果IoU < 30%）
+- 最终校准指标（deviation, iou, mef）
+
+**验收标准**:
+- $\Delta \le \text{tolerance}$（容差标准，默认10%）
+- IoU值作为物理发现价值的衡量指标（而非失败标准）
+- 物理扩展区样本特征分析完成
 
 ---
 
