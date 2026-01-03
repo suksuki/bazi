@@ -154,24 +154,33 @@ $$
 
 ### 4.1 Schema 版本说明
 
-- **版本**: QGA-HR V3.0
-- **格式**: JSON
-- **编码**: UTF-8
-- **缩进**: 2个空格
+- **Schema 版本**: `3.0`
+- **标准名称**: QGA-HR (Quantum General Architecture - Holographic Registry)
+- **对齐目标**: `QGA_HR_REGISTRY_SPEC_v3.0.md`
 
-### 4.2 标准格局 Schema（含统计流形）
+**重要说明**: 所有注册表文件必须包裹在 **QGA 标准信封 (Envelope)** 中，强制指定 `topic` 为 `holographic_pattern`，以确保与量子通用架构系统的兼容性。
 
-适用于有足够样本形成统计流形的标准格局。
+---
+
+### 4.2 标准格局 Schema (QGA 信封封装版)
+
+**结构定义**:
+所有注册表文件必须包裹在 **QGA 标准信封** 中，强制指定 `topic` 为 `holographic_pattern`。
+
+**信封结构**:
 
 ```json
 {
-  "meta_info": {
+  "topic": "holographic_pattern",    // [CRITICAL] 必须指定主题
+  "schema_version": "3.0",
+  "data": {                          // [CRITICAL] 实际数据载荷
     "pattern_id": "B-01",
-    "display_name": "Eating God",
-    "chinese_name": "食神格",
-    "category": "TALENT",
-    "version": "3.0"
-  },
+    "meta_info": {
+      "display_name": "Eating God",
+      "chinese_name": "食神格",
+      "category": "TALENT",
+      "version": "3.0"
+    },
   "matching_router": {
     "strategies": [
       {
@@ -188,20 +197,36 @@ $$
       }
     ]
   },
-  "feature_anchors": {
-    "standard_manifold": {
-      "mean_vector": [E_mean, O_mean, M_mean, S_mean, R_mean],
-      "covariance_matrix": [
-        [σ_EE, σ_EO, σ_EM, σ_ES, σ_ER],
-        [σ_OE, σ_OO, σ_OM, σ_OS, σ_OR],
-        [σ_ME, σ_MO, σ_MM, σ_MS, σ_MR],
-        [σ_SE, σ_SO, σ_SM, σ_SS, σ_SR],
-        [σ_RE, σ_RO, σ_RM, σ_RS, σ_RR]
-      ]
+    "feature_anchors": {
+      "standard_manifold": {
+        "mean_vector": [E_mean, O_mean, M_mean, S_mean, R_mean],
+        "covariance_matrix": [
+          [σ_EE, σ_EO, σ_EM, σ_ES, σ_ER],
+          [σ_OE, σ_OO, σ_OM, σ_OS, σ_OR],
+          [σ_ME, σ_MO, σ_MM, σ_MS, σ_MR],
+          [σ_SE, σ_SO, σ_SM, σ_SS, σ_SR],
+          [σ_RE, σ_RO, σ_RM, σ_RS, σ_RR]
+        ]
+      }
+    },
+    "population_stats": {            // [NEW] 必须包含统计信息
+      "base_abundance": 21.79,
+      "sample_size": 518400,
+      "sub_patterns": {}
     }
   }
 }
 ```
+
+**信封字段说明**:
+
+| 字段 | 类型 | 必填 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `topic` | String | 是 | 主题标识符，必须为 `"holographic_pattern"` |
+| `schema_version` | String | 是 | Schema 版本，当前版本为 `"3.0"` |
+| `data` | Object | 是 | 实际数据载荷，包含格局的所有信息 |
+
+**数据载荷 (data) 字段说明**:
 
 #### 4.2.1 meta_info 字段说明
 
@@ -265,16 +290,16 @@ $$
   },
   "benchmarks": [
     {
-      "t": [0.72, 0.18, 0.05, 0.85, 0.12],
-      "ref": "CASE-9527",
-      "distance_to_manifold": 3.45,
-      "abundance": 0.00543
+      "t": [0.72, 0.18, 0.05, 0.85, 0.12],  // 5D 特征张量
+      "ref": "CASE-9527",                   // 指向原始数据的指针
+      "distance_to_manifold": 3.45,         // 偏离度
+      "cluster_id": "C-05"                  // 所属聚类ID (若有)
     },
     {
       "t": [0.68, 0.22, 0.08, 0.78, 0.15],
       "ref": "CASE-12834",
       "distance_to_manifold": 3.12,
-      "abundance": 0.00421
+      "cluster_id": null                    // 孤立奇点（无聚类）
     }
   ]
 }
@@ -287,8 +312,9 @@ $$
 | `benchmarks` | Array | 否 | 奇点样本数组，仅在存在奇点样本时出现 |
 | `benchmarks[].t` | Array[Float] | 是 | 5D特征张量 $T_{fate} = [E, O, M, S, R]$，5个浮点数 |
 | `benchmarks[].ref` | String | 是 | Case_ID，指向 `holographic_universe_518k.jsonl` 或数据库中的完整原始数据 |
-| `benchmarks[].distance_to_manifold` | Float | 是 | 该奇点到标准流形的马氏距离 $D_M$ |
-| `benchmarks[].abundance` | Float | 是 | 该奇点在总样本中的占比（如 0.00543 表示 0.543%） |
+| `benchmarks[].distance_to_manifold` | Float | 是 | 该奇点到标准流形的马氏距离 $D_M$（偏离度） |
+| `benchmarks[].cluster_id` | String | 否 | 所属聚类ID（若有聚类分析，如 "C-05"） |
+| `benchmarks[].abundance` | Float | 否 | 该奇点在总样本中的占比（如 0.00543 表示 0.543%） |
 
 **物理逻辑**:
 - `benchmarks` 字段仅在奇点存证模式下存在（$N < \text{min\_samples}$，无法形成统计流形）

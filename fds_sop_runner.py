@@ -1,98 +1,63 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-FDS-V3.0 SOP Runner
-—— 标准操作程序执行引擎 ——
-
-本脚本严格按照 FDS_SOP_v3.0.md 规范执行格局拟合工作流。
-Step 0: 格局配置注入 (Pattern Manifest Injection) [CRITICAL]
-
-**版本**: V3.0 (Real Data Support)
-**状态**: ENFORCED (强制执行)
-"""
-
 import argparse
 import json
 import os
 import sys
-import shutil
-import time
+import numpy as np
+from typing import Dict, Any, List
 
-# 依赖检查与降级处理
+# 强制依赖
 try:
     from json_logic import jsonLogic
-    HAS_JSON_LOGIC = True
 except ImportError:
-    HAS_JSON_LOGIC = False
-    print("⚠️ Warning: 'json-logic-quibble' or 'json-logic' not installed. Logic census will be mocked.")
+    print("❌ Critical: json-logic-quibble missing.")
+    sys.exit(1)
 
-# 配置常量
-HISTORY_DIR = "./history/patterns"
-DEFAULT_DATA_PATH = "./data/holographic_universe_518k.jsonl"
+REGISTRY_DIR = "./registry/holographic_pattern"
+DEFAULT_DATA = "./data/holographic_universe_518k.jsonl"
 
-class ManifestError(Exception): pass
-class PhysicsViolationError(Exception): pass
+def ensure_dirs():
+    if not os.path.exists(REGISTRY_DIR): os.makedirs(REGISTRY_DIR)
 
-def backup_manifest(src, pid):
-    """自动回滚备份"""
-    if not os.path.exists(HISTORY_DIR): os.makedirs(HISTORY_DIR)
-    dst = os.path.join(HISTORY_DIR, f"manifest_{pid}_{int(time.time())}.bak")
-    shutil.copy2(src, dst)
+def load_manifest(path):
+    with open(path, 'r', encoding='utf-8') as f: return json.load(f)
 
-def step_0_inject(path):
-    """Step 0: 注入与校验"""
-    print(f"\n🔄 [Step 0] Injecting Manifest: {path}")
-    if not os.path.exists(path): raise ManifestError(f"File not found: {path}")
+def get_weights_matrix(m):
+    # 构建 10x5 权重矩阵
+    tmm = m['tensor_mapping_matrix']
+    gods = tmm['ten_gods']
+    matrix = []
+    for god in gods:
+        matrix.append(tmm['weights'][god])
+    return np.array(matrix), gods # (10, 5)
+
+def calculate_5d_tensor(case_ten_gods, weights_matrix, god_index_map):
+    # [物理引擎核心]
+    # Input: TenGod Vector (10,)
+    # Matrix: Weights (10, 5)
+    # Output: Tensor (5,) = Weights.T dot Vector
     
-    with open(path, 'r', encoding='utf-8') as f: 
-        m = json.load(f)
+    vec = np.zeros(10)
+    for god, val in case_ten_gods.items():
+        if god in god_index_map:
+            vec[god_index_map[god]] = float(val)
     
-    # Schema 校验
-    if "classical_logic_rules" not in m: raise ManifestError("Invalid Schema: Missing logic rules")
-    if "tensor_mapping_matrix" not in m: raise ManifestError("Invalid Schema: Missing tensor matrix")
-    
-    # 固化备份
-    backup_manifest(path, m.get('pattern_id', m.get('meta_info', {}).get('pattern_id', 'UNKNOWN')))
-    pattern_name = m.get('meta_info', {}).get('display_name', 'Unknown')
-    print(f"✅ [Step 0] Validated & Injected: {pattern_name}")
-    return m
+    # 矩阵运算: (5, 10) x (10, 1) = (5, 1)
+    tensor = np.dot(weights_matrix.T, vec)
+    return list(tensor) 
 
-def step_1_init(m):
-    """Step 1: 物理初始化"""
-    print(f"⚛️ [Step 1] Physics Prototype Initialization...")
-    weights = m['tensor_mapping_matrix']['weights']
-    strong_corrs = m['tensor_mapping_matrix'].get('strong_correlation', [])
+def run_sop(target, manifest_path, data_path):
+    print(f"🚀 SOP V3.4 Deductive Running for {target}...")
     
-    # 物理公理检查 (符号守恒 & 强度检查)
-    dims = ["E","O","M","S","R"]
-    for corr in strong_corrs:
-        god = corr['ten_god']
-        dim_idx = dims.index(corr['dimension'])
-        val = weights[god][dim_idx]
-        
-        # 阈值检查：强相关项绝对值必须 > 0.3
-        if abs(val) < 0.3: 
-            raise PhysicsViolationError(f"Axiom Breach: {god}->{corr['dimension']} value ({val}) is too weak for Strong Correlation.")
-        
-        print(f"   🔒 Physics Lock Engaged: {god} -> {corr['dimension']} (val={val})")
+    m = load_manifest(manifest_path)
+    weights, gods_list = get_weights_matrix(m)
+    god_map = {g: i for i, g in enumerate(gods_list)}
     
-    return weights
-
-def step_2_census(m, data_path):
-    """Step 2: 逻辑普查"""
-    print(f"📊 [Step 2] Logical Census...")
-    rules = m['classical_logic_rules']['expression']
-    
-    # 检查数据源
-    if not os.path.exists(data_path):
-        print(f"   ⚠️ Data file not found at {data_path}. Running in MOCK mode for structure verification.")
-        mock_abundance = 12.5
-        print(f"   🎯 [MOCK] Hits: 125/1000 | Abundance: {mock_abundance:.2f}%")
-        return mock_abundance
-
-    # 真实数据扫描
     total, hits = 0, 0
-    print(f"   📂 Reading Universe: {data_path}")
+    benchmarks = []
+    sub_pattern_defs = m.get('sub_pattern_definitions', {})
+    sub_stats = {k: 0 for k in sub_pattern_defs.keys()}
+    
+    # 1. 全量海选 (Census) + 子格局分类
     with open(data_path, 'r', encoding='utf-8') as f:
         for line in f:
             if not line.strip(): continue
@@ -100,50 +65,68 @@ def step_2_census(m, data_path):
                 case = json.loads(line)
                 total += 1
                 
-                # 执行 JSONLogic
-                if HAS_JSON_LOGIC:
-                    # 注意：此处假设数据结构已对齐。如需适配层需在此处添加。
-                    if jsonLogic(rules, case):
-                        hits += 1
-                else:
-                    # 无逻辑引擎时的 Mock 行为
-                    if total % 10 == 0: hits += 1 
-            except: continue
-            
-            if total >= 5000: break # 快速验证模式：仅跑前5000条
-            
-    abundance = (hits / total * 100) if total > 0 else 0
-    print(f"   🎯 Real Scan: {hits}/{total} samples matched.")
-    print(f"   📉 Abundance: {abundance:.2f}%")
-    return abundance
+                # 逻辑过滤 (Logic Filter)
+                if jsonLogic(m['classical_logic_rules']['expression'], case):
+                    hits += 1
+                    
+                    # 2. 子格局分类 (Sub-pattern Classification)
+                    for sub_id, sub_def in sub_pattern_defs.items():
+                        if jsonLogic(sub_def['logic'], case):
+                            sub_stats[sub_id] += 1
+                    
+                    # 3. 物理投影 (Physics Projection)
+                    tensor = calculate_5d_tensor(case['ten_gods'], weights, god_map)
+                    
+                    # 4. 原石采集 (Mining)
+                    if len(benchmarks) < 50:
+                        benchmarks.append({
+                            "t": [round(x, 4) for x in tensor],
+                            "ref": case.get('case_id', f'CASE-{total}'),
+                            "note": "Deductive Raw Data"
+                        })
+            except Exception: continue
+            if total % 50000 == 0: print(f"   Scanning {total}...", end='\r')
 
-def main():
-    parser = argparse.ArgumentParser(description="FDS-V3.0 SOP Runner")
-    parser.add_argument("--target", required=True, help="Target Pattern ID (e.g., A-01)")
-    parser.add_argument("--manifest", required=True, help="Path to manifest JSON file")
-    parser.add_argument("--data", default=DEFAULT_DATA_PATH, help="Path to data file (JSONL format)")
-    args = parser.parse_args()
+    abundance = (hits / total * 100) if total > 0 else 0
     
-    try:
-        # 执行流水线
-        m = step_0_inject(args.manifest)
-        step_1_init(m)
-        step_2_census(m, args.data)
+    # 4. 全息封卷 (Registry)
+    ensure_dirs()
+    registry = {
+        "topic": "holographic_pattern", # QGA 协议
+        "schema_version": "3.0",
+        "data": {
+            "pattern_id": target,
+            "meta_info": m['meta_info'],
+            "population_stats": {
+                "base_abundance": round(abundance, 4),
+                "sample_size": total,
+                "sub_patterns": sub_stats
+            },
+            "benchmarks": benchmarks
+        }
+    }
+    
+    out_path = os.path.join(REGISTRY_DIR, f"{target}.json")
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump(registry, f, indent=2, ensure_ascii=False)
         
-        print(f"\n🎉 [SUCCESS] Pattern {args.target} SOP Verification Passed.")
-        print(f"   Ready for Step 3 (Matrix Fitting) & Step 5 (Registry Generation).")
-        
-    except ManifestError as e:
-        print(f"\n⛔ SOP TERMINATED: ManifestError - {e}")
-        sys.exit(1)
-    except PhysicsViolationError as e:
-        print(f"\n⛔ SOP TERMINATED: PhysicsViolationError - {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n⛔ SOP TERMINATED: Unexpected Error - {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    print(f"\n✅ Registry saved to: {out_path}")
+    print(f"   Abundance: {hits}/{total} ({abundance:.2f}%)")
+    
+    # 子格局统计报告
+    if sub_pattern_defs:
+        print(f"\n🧩 Sub-pattern Classification Report:")
+        for sub_id, count in sub_stats.items():
+            sub_abd = (count / hits * 100) if hits > 0 else 0
+            name = sub_pattern_defs[sub_id]['name']
+            print(f"   • {name} ({sub_id}): {count} samples ({sub_abd:.1f}% of A01 hits)")
+
+    print(f"\n📡 [PUB_EVENT] topic='holographic_pattern' id='{target}'")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True)
+    parser.add_argument("--manifest", required=True)
+    parser.add_argument("--data", default=DEFAULT_DATA)
+    args = parser.parse_args()
+    run_sop(args.target, args.manifest, args.data)

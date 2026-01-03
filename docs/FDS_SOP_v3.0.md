@@ -288,17 +288,28 @@ $$
 - 完整的元数据字典
 - 元数据验证报告
 
-#### 5.3 容器封装
+#### 5.3 量子架构注册 (QGA Topic Registration) [CRITICAL]
 
-**操作步骤**:
-1. 计算均值向量 ($\mu$)
-2. 计算协方差矩阵 ($\Sigma$)
-3. 将 $\mu$ 和 $\Sigma$ 封装进子格局注册表
-4. 生成标准流形描述
+**目标**: 将封卷后的数据封装为 QGA 标准消息，并注册到主题频道。
+
+**操作协议**:
+
+1. **构建 Topic 信封**:
+   - 根节点必须包含 `topic`: 固定值为字符串 `"holographic_pattern"`
+   - 根节点必须包含 `schema_version`: 固定值为 `"3.0"`
+
+2. **组装 Data 载荷**:
+   - 将 `meta_info`, `feature_anchors` (流形参数), `population_stats` (丰度统计), `benchmarks` (奇点) 全部放入 `data` 字段
+   - **数据脱钩检查**: 再次确认 `data` 中不包含任何原始八字字符串（Privacy Check）
+
+3. **物理落盘**:
+   - **路径规范**: `./registry/holographic_pattern/{PATTERN_ID}.json`
+   - **示例**: `./registry/holographic_pattern/A-01.json`
+   - **系统行为**: 写入成功后，应触发（或模拟触发）消息队列的 `PUB` 事件
 
 **输出产物**:
-- `feature_anchors.standard_manifold.mean_vector`
-- `feature_anchors.standard_manifold.covariance_matrix`
+- 符合 QGA 规范的 JSON 文件
+- 文件路径: `./registry/holographic_pattern/{PATTERN_ID}.json`
 
 #### 5.4 奇点样本存证 (Singularity Benchmarking) [强制执行]
 
@@ -405,62 +416,67 @@ $$
 
 ---
 
-## 二、 奇点与子格局发现协议
+## 二、 奇点与子格局发现协议 (Discovery Protocol) [RESTORED]
 
-**目标**: 从样本中发现奇点，并判断是否可晋升为独立子格局。
+**目标**: 规范系统如何从海量样本中发现"离群点"（奇点），并判断其是否具备晋升为"独立子格局"的资格（成格条件）。
 
-### 2.1 奇点判定协议
+### 2.1 奇点判定协议 (Singularity Detection)
 
 **操作步骤**:
 
 1. **距离计算**:
-   - 计算每个样本到种子流形的马氏距离 $D_M$
+   - 计算每个样本到标准流形（均值向量 $\mu$）的马氏距离 $D_M$
 
 2. **阈值判定**:
-   - 若 $D_M \gg \text{threshold}$（大幅偏离），判定为奇点候选
+   - 若 $D_M > \text{threshold}$（通常取 $\text{threshold} = 3.0$ 或配置值），判定为**奇点候选**
 
-3. **样本数量检查**:
-   - 统计奇点候选的样本数量 $N$
-
-4. **奇点分类**:
-   - 若 $N < \text{min\_samples}$: 判定为**孤立奇点**，执行奇点存证（见 Step 5.4）
-   - 若 $N \ge \text{min\_samples}$: 判定为**潜在子格局**，进入子格局晋升流程
+3. **初步分流**:
+   - 将所有奇点候选样本移入 `Singularity Pool`（奇点池）
 
 **输出产物**:
-- 奇点清单
-- 潜在子格局清单
+- 奇点池（`Singularity Pool`）
+- 奇点候选清单
 
-### 2.2 子格局晋升协议
+### 2.2 子格局晋升协议 (Sub-Pattern Promotion) [核心成格条件]
 
-**操作步骤**:
+**定义**: 这里定义了"一个新的子格局"是如何诞生的。
 
-1. **聚类分析**:
-   - 对潜在子格局的样本进行聚类分析
-   - 验证聚类内样本的一致性
+**晋升条件 (成格三要素)**:
 
-2. **轨迹一致性验证**:
-   - 检查聚类内样本的人生轨迹真值 $y_{true}$ 是否一致
-   - 验证是否符合新的格局定义
+1. **数量阈值 (Critical Mass)**:
+   - 对奇点池进行聚类分析（如 DBSCAN 或 K-Means）
+   - 若某聚类簇的样本数量 $N \ge \text{min\_samples}$（从配置读取，如 50 例），则满足数量条件
 
-3. **晋升决策**:
-   - 若聚类数满足 $N \ge \text{min\_samples}$ 且轨迹一致，正式晋升为子格局
-   - 为子格局分配独立的 `pattern_id`
+2. **轨迹一致性 (Trajectory Consistency)**:
+   - 检查该聚类内样本的人生轨迹真值 $y_{true}$ 是否呈现**低方差**（即命运表现高度一致）
+   - 若一致性分数 $C_{consistency} > \text{threshold}$（从配置读取），则满足轨迹条件
 
-4. **独立建模**:
-   - 对新子格局执行完整的拟合工作流（Step 0-6）
-   - 生成独立的统计流形和元数据
+3. **物理可解释性 (Physics Explainability)**:
+   - AI 尝试提取该聚类的共有特征（如"都有伤官且都有印"）
+   - 若能生成符合 JSONLogic 语法的逻辑描述，则满足解释性条件
+
+**执行动作**:
+
+- **晋升 (Promote)**: 若满足上述三要素，系统自动为该聚类分配新的 `sub_pattern_id`（如 `A-01-S3`）
+- **建模**: 对该新子格局执行 Step 0-6 完整拟合，生成独立的 $\mu$ 和 $\Sigma$
+- **注册**: 将新子格局写入 Registry
 
 **输出产物**:
 - 子格局定义文档
-- 子格局注册表条目
-- 子格局独立模型
+- 子格局注册表条目（包含独立的 `pattern_id`）
+- 子格局独立模型（$\mu$, $\Sigma$）
 
-### 2.3 奇点存证协议
+### 2.3 奇点存证协议 (Singularity Archiving)
+
+**适用对象**: 无法晋升为子格局的"孤立奇点" ($N < \text{min\_samples}$)
 
 **操作步骤**:
-- 对于无法形成统计流形的奇点样本（$N < \text{min\_samples}$），采用全息存证模式
-- 详细操作见 **Step 5.4 奇点样本存证**
-- 通过 **KNN (K-Nearest Neighbors)** 算法实现精准物理溯源
+
+- 采用 **全息存证 (Holographic Benchmarking)** 模式
+- 仅保存 5D 特征张量 $T_{fate} = [E, O, M, S, R]$ 和原始索引 `ref`
+- 写入 `registry.json` 的 `benchmarks` 数组中，作为"判例"存在，用于 KNN 检索
+
+**详细操作**: 见 **Step 5.4 奇点样本存证**
 
 **输出产物**:
 - `benchmarks` 数组（包含奇点样本的5D张量和索引）
@@ -480,7 +496,7 @@ $$
 - [ ] Step 4: 动态演化机制定义完成
 - [ ] Step 5.1: 安全门控植入完成（E-Gating, R-Gating）
 - [ ] Step 5.2: 元数据标准化完成（category, display_name, chinese_name, version）
-- [ ] Step 5.3: 容器封装完成（$\mu$, $\Sigma$）
+- [ ] Step 5.3: 量子架构注册完成（QGA Topic Registration，路径规范正确）
 - [ ] Step 5.4: 奇点存证完成（如有奇点）
 - [ ] Step 6: 精密评分算法实现完成
 - [ ] Step 6: 验收测试通过（$\Delta \le \text{tolerance}$）

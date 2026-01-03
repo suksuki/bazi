@@ -68,40 +68,61 @@
    - **受众**: 后端开发工程师（Antigravity Engine开发者）
    - **关联**: 连接架构文档（Schema）和代码实现（Interface）
 
-### 历史文档（已废弃）
+---
 
-5. **FDS_MODELING_SPEC_v3.0.md** (215行)
-   - **状态**: 🔴 已废弃（Legacy / Deprecated）
-   - **说明**: 原始规范文档，内容已被分离并升级到Architecture和SOP
-   - **建议**: 归档到legacy/目录或删除，避免混淆
+## 三、 文档拓扑结构
 
-### 审阅与验收文档
+```
+🏛️ FDS 规范体系 (三层架构)
 
-6. **FDS_KMS_SPEC_v1.0_REVIEW.md** (329行)
-   - **性质**: 初始审阅报告
-   - **内容**: 对DRAFT版本的详细审阅，提出P0和P1问题
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: 核心规范 (Core Specifications)                    │
+│  ─────────────────────────────────────────────────────────  │
+│  • FDS_ARCHITECTURE_v3.0.md      (物理架构与理论框架)       │
+│  • FDS_SOP_v3.0.md                (标准操作程序)             │
+│  • FDS_KMS_SPEC_v1.0-BETA.md     (知识管理系统规范)         │
+│  • ALGORITHM_SUPPLEMENT_L3_PATTERNS.md (L3格局接口规范)     │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 2: 实现接口 (Implementation Interfaces)              │
+│  ─────────────────────────────────────────────────────────  │
+│  • ALGORITHM_SUPPLEMENT_L3_PATTERNS.md (格局拓扑协议)       │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: 文档索引 (Documentation Index)                    │
+│  ─────────────────────────────────────────────────────────  │
+│  • FDS_SPECIFICATION_INDEX.md (本文档)                      │
+└─────────────────────────────────────────────────────────────┘
+```
 
-7. **FDS_KMS_SPEC_v1.0_RC1_REVIEW.md** (277行)
-   - **性质**: RC1审阅报告
-   - **内容**: 对RC1版本的审阅，确认P0问题解决，提出P1问题
+---
 
-8. **FDS_KMS_SPEC_v1.0_RC2_FINAL_REVIEW.md** (262行)
-   - **性质**: RC2最终审阅报告
-   - **内容**: 对RC2版本的最终审阅，批准发布为V1.0-BETA
+## 四、 文档状态说明
 
-9. **FDS_KMS_SPEC_v1.0_FINAL_ACCEPTANCE.md**
-   - **性质**: 最终验收报告
-   - **内容**: Lead Architect的最终验收，确认晋升为V1.0-BETA
+| 文档 | 状态 | 说明 |
+|------|------|------|
+| FDS_ARCHITECTURE_v3.0.md | ✅ ACTIVE | 核心架构规范，强制执行 |
+| FDS_SOP_v3.0.md | ✅ ACTIVE | 标准操作程序，强制执行 |
+| FDS_KMS_SPEC_v1.0-BETA.md | ✅ ACTIVE | 知识管理系统规范（立法层） |
+| ALGORITHM_SUPPLEMENT_L3_PATTERNS.md | ✅ ACTIVE | L3格局接口规范（实现层） |
+| FDS_MODELING_SPEC_v3.0.md | ❌ ARCHIVED | 已归档，内容已拆分到其他规范 |
+| PATTERN_SPECIFICATION_REVIEW.md | 📦 ARCHIVED | 已归档，历史审阅记录 |
 
-### 总结与说明文档
+**归档目录**: `docs/archive/` (历史文档和审阅记录)
 
-10. **FDS_SEPARATION_SUMMARY.md**
-   - **性质**: 规范分离总结报告
-   - **内容**: 记录FDS_MODELING_SPEC_v3.0分离为Architecture和SOP的过程
+---
 
-11. **FDS_ABSTRACTION_UPDATE.md**
-    - **性质**: 抽象化修正报告
-    - **内容**: 记录SOP和Architecture从具体逻辑抽象为通用框架的修正过程
+## 五、 历史记录文档（已归档）
+
+**说明**: 以下文档记录了规范文档的演进历史，已移至 `docs/archive/` 目录。当前版本规范以核心规范文档为准。
+
+- `FDS_KMS_SPEC_v1.0_FINAL_ACCEPTANCE.md` - KMS规范的最终验收报告
+- `FDS_SEPARATION_SUMMARY.md` - 规范分离总结报告（记录MODELING_SPEC分离过程）
+- `FDS_ABSTRACTION_UPDATE.md` - 抽象化修正报告（记录SOP和Architecture抽象化过程）
+- `PATTERN_SPECIFICATION_REVIEW.md` - 格局规范审阅报告
+- `FDS_MODELING_SPEC_v3.0.md` - 已废弃的原始建模规范（内容已分离升级）
 
 ---
 
