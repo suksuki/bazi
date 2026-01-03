@@ -50,7 +50,7 @@ class TestQuantumSimulator(unittest.TestCase):
         """
         Test that strong Career stars result in high Career Expected Value.
         """
-        engine = QuantumEngine(self.gods_strong_career, self.no_reactions, self.empty_flux)
+        engine = QuantumSimulator(self.gods_strong_career, self.no_reactions, self.empty_flux)
         results = engine.simulate()
         
         career_res = results["事业 (Career)"]
@@ -61,7 +61,7 @@ class TestQuantumSimulator(unittest.TestCase):
         Test that High Flux Entropy increases the 'Uncertainty' (Sigma) of the result.
         """
         # Case 1: Low Entropy
-        engine_stable = QuantumEngine(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
+        engine_stable = QuantumSimulator(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
         res_stable = engine_stable.simulate()
         sigma_stable = res_stable["财富 (Wealth)"]["Uncertainty"]
         
@@ -73,7 +73,7 @@ class TestQuantumSimulator(unittest.TestCase):
                 'interactions': [{'type': 'clash'} for _ in range(10)]  # 10 interactions -> 50 entropy
             }
         }
-        engine_chaos = QuantumEngine(self.gods_strong_wealth, self.no_reactions, high_entropy_flux_data)
+        engine_chaos = QuantumSimulator(self.gods_strong_wealth, self.no_reactions, high_entropy_flux_data)
         res_chaos = engine_chaos.simulate()
         sigma_chaos = res_chaos["财富 (Wealth)"]["Uncertainty"]
         
@@ -88,11 +88,11 @@ class TestQuantumSimulator(unittest.TestCase):
         Test that a high number of chemical reactions increases Uncertainty.
         """
         # Case 1: No Reactions
-        engine_calm = QuantumEngine(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
+        engine_calm = QuantumSimulator(self.gods_strong_wealth, self.no_reactions, self.empty_flux)
         res_calm = engine_calm.simulate()
         
         # Case 2: Many Reactions
-        engine_wild = QuantumEngine(self.gods_strong_wealth, self.many_reactions, self.empty_flux)
+        engine_wild = QuantumSimulator(self.gods_strong_wealth, self.many_reactions, self.empty_flux)
         res_wild = engine_wild.simulate()
         
         self.assertGreater(res_wild["财富 (Wealth)"]["Uncertainty"], res_calm["财富 (Wealth)"]["Uncertainty"])

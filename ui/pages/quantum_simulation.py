@@ -64,13 +64,10 @@ def render():
 
     # --- [QGA V16.0] 动态物理模型注册表 (Layer-Based Discovery) ---
     # 仅展示 L3: TOPIC 层的业务专题
-    from core.logic_registry import LogicRegistry
-    registry = LogicRegistry()
-    topics = registry.get_items_by_layer("TOPIC")
-    
-    TRACK_ICONS = {t["reg_id"]: t.get("icon", "🧬") for t in topics}
-    TRACK_NAMES = {t["reg_id"]: t.get("display_name", t["reg_id"]) for t in topics}
-    TRACK_IDS = sorted(list(TRACK_ICONS.keys()))
+    # [已删除知识库系统] 使用硬编码的主题列表
+    TRACK_ICONS = {}
+    TRACK_NAMES = {}
+    TRACK_IDS = []
 
     # --- 侧边栏：核心控制 ---
     with st.sidebar:

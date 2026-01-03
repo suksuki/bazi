@@ -265,6 +265,35 @@ def render():
             active_docs = len(controller.get_documents_by_category(None, include_deprecated=False))
             deprecated_docs = total_docs - active_docs
             
+            # --- 1. SOVEREIGN CONSTITUTION SECTION (New V3.0) ---
+            st.markdown("""
+            <div style="margin-bottom: 20px; padding: 20px; background: rgba(0, 217, 255, 0.05); border: 1px solid rgba(0, 217, 255, 0.2); border-radius: 12px;">
+                <h3 style="color: #00D9FF; margin-top: 0;">🏛️ 三权分立 · 主权宪法 (Sovereign Constitution)</h3>
+                <p style="color: #8B949E; font-size: 0.9em; margin-bottom: 15px;">
+                    FDS-LKV 核心法律体系，确立了物理内核、逻辑协议与数据法典的最高权威。
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div style="background: rgba(22, 27, 34, 0.6); padding: 12px; border-radius: 8px; border-left: 3px solid #00D9FF;">
+                        <div style="font-size: 0.8em; color: #8B949E;">📘 物理宪法 (Kernel)</div>
+                        <div style="font-weight: bold; color: #F0F6FC;">FDS_PHYSICS_KERNEL_v3.0</div>
+                    </div>
+                    <div style="background: rgba(22, 27, 34, 0.6); padding: 12px; border-radius: 8px; border-left: 3px solid #7B61FF;">
+                        <div style="font-size: 0.8em; color: #8B949E;">📙 逻辑协议 (Logic)</div>
+                        <div style="font-weight: bold; color: #F0F6FC;">QGA_LOGIC_PROTOCOL_v2.0</div>
+                    </div>
+                    <div style="background: rgba(22, 27, 34, 0.6); padding: 12px; border-radius: 8px; border-left: 3px solid #FFD600;">
+                        <div style="font-size: 0.8em; color: #8B949E;">🗃️ 数据法典 (Data)</div>
+                        <div style="font-weight: bold; color: #F0F6FC;">QGA_REGISTRY_SCHEMA_v3.0</div>
+                    </div>
+                    <div style="background: rgba(22, 27, 34, 0.6); padding: 12px; border-radius: 8px; border-left: 3px solid #00E676;">
+                        <div style="font-size: 0.8em; color: #8B949E;">📗 执行手册 (SOP)</div>
+                        <div style="font-weight: bold; color: #F0F6FC;">FDS_LKV_JOINT_SOP</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            # ----------------------------------------------------
+
             # 显示列表页特有的 Metrics
             st.markdown(f"""
             <div class="doc-metric-grid">

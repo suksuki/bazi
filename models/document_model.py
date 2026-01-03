@@ -42,40 +42,34 @@ class DocumentModel:
     # 文档分类定义
     CATEGORIES = [
         DocumentCategory(
-            name="L1 宪法层",
+            name="L1 物理宪法",
             icon="⚖️",
-            description="系统核心物理公理和算法宪法",
-            pattern=r"CONSTITUTION"
+            description="[Constitution] 物理内核与不可变公理",
+            pattern=r"(FDS_PHYSICS_KERNEL|ALGORITHM_CONSTITUTION|CONSTITUTION)"
         ),
         DocumentCategory(
-            name="L2 场域层",
-            icon="🌌",
-            description="时空相对论、墓库拓扑、能量传导等场域物理补充",
-            pattern=r"L2_(SPACETIME|STOREHOUSE|ENERGY_CONDUCTION)"
+            name="L2 逻辑协议",
+            icon="📙",
+            description="[Logic] 验证标准与逻辑审计协议",
+            pattern=r"(QGA_LOGIC_PROTOCOL|QGA_VERIFICATION|FDS_LKV_SPEC)"
         ),
         DocumentCategory(
-            name="L3 格局层",
-            icon="🔮",
-            description="格局拓扑协议和物理接口标准",
-            pattern=r"L3_PATTERNS"
+            name="L3 数据法典",
+            icon="🗃️",
+            description="[Data] 注册表结构与数据存储规范",
+            pattern=r"(QGA_REGISTRY_SCHEMA|QGA_HR_REGISTRY)"
         ),
         DocumentCategory(
-            name="FDS 规范",
-            icon="📐",
-            description="FDS建模规范和QGA注册表规范",
-            pattern=r"(FDS_MODELING|QGA_HR_REGISTRY)"
-        ),
-        DocumentCategory(
-            name="系统概述",
-            icon="📊",
-            description="系统版本概述和架构说明",
-            pattern=r"(System_Overview|V3\.0.*Overview)"
+            name="L4 执行手册",
+            icon="📗",
+            description="[SOP] 标准作业程序与执行流水线",
+            pattern=r"(FDS_LKV_JOINT_SOP|SOP)"
         ),
         DocumentCategory(
             name="技术报告",
             icon="📝",
-            description="合规审查、迁移报告、修复文档等技术报告",
-            pattern=r"(REVIEW|REPORT|FIX|UPDATE|MIGRATION|COMPLETE)"
+            description="合规审查、迁移报告、修复文档等",
+            pattern=r"(REVIEW|REPORT|FIX|UPDATE|MIGRATION|COMPLETE|Overview)"
         ),
     ]
     
@@ -123,8 +117,6 @@ class DocumentModel:
                 
             metadata = self._extract_metadata(md_file)
             if metadata:
-                # 设置废弃状态
-                metadata.deprecated = metadata.filename in self._deprecated_set
                 self._documents.append(metadata)
         
         # 按分类和文件名排序（废弃文档排在最后）
@@ -142,6 +134,9 @@ class DocumentModel:
         """
         filename = file_path.name
         
+        # 从文件内容提取标题（前几行）
+        title, description, is_header_deprecated = self._extract_title_and_description(file_path)
+
         # 确定分类
         category = self._categorize_document(filename)
         if not category:
@@ -150,12 +145,12 @@ class DocumentModel:
         # 从文件名提取版本号
         version = self._extract_version(filename)
         
-        # 从文件内容提取标题（前几行）
-        title, description = self._extract_title_and_description(file_path)
-        
         # 获取最后修改时间
         last_modified = datetime.fromtimestamp(file_path.stat().st_mtime)
         
+        # 综合废弃状态：手动设置(JSON) 或 内容标记([DEPRECATED])
+        is_deprecated = (filename in self._deprecated_set) or is_header_deprecated
+
         return DocumentMetadata(
             title=title or filename.replace('.md', ''),
             filename=filename,
@@ -163,7 +158,8 @@ class DocumentModel:
             version=version,
             description=description,
             last_modified=last_modified,
-            file_path=file_path
+            file_path=file_path,
+            deprecated=is_deprecated
         )
     
     def _categorize_document(self, filename: str) -> Optional[str]:
@@ -185,33 +181,49 @@ class DocumentModel:
         从文件内容提取标题和描述
         
         Returns:
-            (title, description) 元组
+            (title, description, is_deprecated) 元组
         """
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                lines = [line.strip() for line in f.readlines()[:10] if line.strip()]
+                lines = [line.strip() for line in f.readlines()[:15] if line.strip()]
                 
                 # 查找第一个一级标题
                 title = None
+                is_deprecated = False
+                
                 for line in lines:
                     if line.startswith('# ') and not line.startswith('##'):
                         title = line.replace('# ', '').strip()
+                        if "[DEPRECATED]" in title or "已作废" in title:
+                            is_deprecated = True
                         break
                 
-                # 查找描述（标题后的第一段非空文本）
+                # 查找描述和废弃警告
                 description = None
                 for i, line in enumerate(lines):
-                    if title and line == title.replace('# ', '').strip():
-                        # 查找标题后的描述
-                        for j in range(i + 1, min(i + 5, len(lines))):
-                            if lines[j] and not lines[j].startswith('#') and not lines[j].startswith('*'):
-                                description = lines[j][:100]  # 限制长度
-                                break
-                        break
+                    # 检查警告块
+                    if line.startswith('>') and ("WARNING" in line or "superseded" in line or "作废" in line):
+                        is_deprecated = True
+                        if not description:
+                             description = line.replace('>', '').replace('**WARNING**:', '').strip()
+
+                    elif title and line == title.replace('# ', '').strip():
+                        continue # Skip title line
+                         
+                    elif not description and line and not line.startswith('#') and not line.startswith('*'):
+                         description = line[:100]
+
+                # 重新扫描描述（逻辑简化）
+                if not description:
+                     for k in range(len(lines)):
+                          if lines[k].startswith('#') or lines[k].startswith('*') or lines[k] == title or "[DEPRECATED]" in lines[k]: 
+                              continue
+                          description = lines[k][:100].replace('>', '').strip()
+                          break
                 
-                return title, description
+                return title, description, is_deprecated
         except Exception:
-            return None, None
+            return None, None, False
     
     def get_documents_by_category(self, category: Optional[str] = None, include_deprecated: bool = True) -> List[DocumentMetadata]:
         """

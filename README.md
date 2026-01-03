@@ -172,10 +172,13 @@ antigravity/
 │   │   └── treasury.py     # 墓库管理
 │   ├── quantum_engine.py   # Facade 入口
 │   └── config_schema.py    # DNA 配置
-├── ui/pages/               # UI 模块 (Trinity)
-│   ├── prediction_dashboard.py  # Dashboard
-│   ├── zeitgeist.py        # Cinema (命运影院)
-│   └── quantum_lab.py      # QuantumLab (验证室)
+├── ui/                   # UI 层
+│   ├── components/         # 可复用组件 (report renderers, etc.)
+│   └── pages/              # 页面控制器
+│       ├── prediction_dashboard.py
+│       ├── zeitgeist.py
+│       ├── quantum_lab.py
+│       └── quantum_simulation.py # 量子仿真中心
 ├── tests/                  # 测试套件 (190+)
 └── data/                   # 数据层
 ```

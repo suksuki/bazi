@@ -37,7 +37,7 @@ class LogicCompiler:
         编译指定格局的过滤函数
         
         Args:
-            pattern_id: 格局 ID
+            pattern_id: 格局 ID (支持 A-01 或 A-01@子 格式)
             
         Returns:
             可执行的过滤函数 (bazi: Dict) -> bool
@@ -45,23 +45,112 @@ class LogicCompiler:
         if pattern_id in self._compiled_filters:
             return self._compiled_filters[pattern_id]
         
-        if pattern_id not in self.protocols:
-            raise ValueError(f"未知格局协议: {pattern_id}")
+        # 解析动态 ID
+        base_id = pattern_id.split("@")[0]
+        target_branch = pattern_id.split("@")[1] if "@" in pattern_id else None
         
-        protocol = self.protocols[pattern_id]
+        # 0. 检查是否存在矩阵重写 (Matrix Override)
+        # 解决相变干扰或丰度异常
+        if pattern_id in self.MATRIX_OVERRIDES:
+            override_logic = self.MATRIX_OVERRIDES[pattern_id]
+            
+            def override_filter(bazi: Dict) -> bool:
+                # 必须满足地支条件
+                if target_branch and bazi.get("month_branch") != target_branch:
+                    return False
+                # 执行重写逻辑
+                return override_logic(bazi, self)
+                
+            override_filter.__name__ = f"filter_{pattern_id.replace('-', '_').replace('@', '_')}_OVERRIDE"
+            override_filter.__doc__ = f"LKV 矩阵重写: {pattern_id}"
+            self._compiled_filters[pattern_id] = override_filter
+            logger.info(f"🔧 应用矩阵重写: {pattern_id}")
+            return override_filter
+
+        if base_id not in self.protocols:
+            raise ValueError(f"未知格局协议: {base_id}")
+        
+        protocol = self.protocols[base_id]
         
         # 动态生成过滤函数
         def compiled_filter(bazi: Dict) -> bool:
+            # 1. 如果指定了月令地支 (Sub-Pattern)，优先检查
+            if target_branch:
+                if bazi.get("month_branch") != target_branch:
+                    return False
+            
+            # 2. 执行基础协议检查
             return self._execute_protocol(bazi, protocol)
         
         # 添加元数据
-        compiled_filter.__name__ = f"filter_{pattern_id}"
-        compiled_filter.__doc__ = f"编译自 LKV 协议: {protocol['name']}"
+        compiled_filter.__name__ = f"filter_{pattern_id.replace('-', '_').replace('@', '_')}"
+        sub_info = f" [Month: {target_branch}]" if target_branch else ""
+        compiled_filter.__doc__ = f"编译自 LKV 协议: {protocol['name']}{sub_info}"
         
         self._compiled_filters[pattern_id] = compiled_filter
-        logger.info(f"✅ 编译完成: {pattern_id} ({protocol['name']})")
+        logger.info(f"✅ 编译完成: {pattern_id} ({protocol['name']}{sub_info})")
         
         return compiled_filter
+
+    # ============================================================
+    # 矩阵重写 (Matrix Overrides)
+    # 针对物理异象的手术刀式修正
+    # ============================================================
+    
+    def _override_d02_wu(bazi: Dict, compiler) -> bool:
+        """
+        [Ghost Recovery] D-02@午 (偏财格@午)
+        午月火旺，金(财)易被克死。
+        Strategy: Relaxed. Allow Pian Cai in stems + generic Wealth/Power support.
+        """
+        stems = bazi.get("stems", [])
+        
+        # DEBUG: Check what stems we are seeing for Wu month
+        # print(f"DEBUG D-02@Wu: {bazi}") 
+        
+        # 核心：必须透偏财
+        if "pian_cai" not in stems and "zheng_cai" not in stems:
+            return False
+            
+        # Relaxed - just check it exists. 
+        # In mock data, maybe `rob_count` is often high?
+        
+        # 补偿：可以是七杀格兼财 (火生土食伤生财 or 火克金?)
+        # 只要不是比劫夺财即可
+        rob_count = stems.count('bi_jian') + stems.count('jie_cai')
+        if rob_count > 1: # 稍微严一点，因为失去了月令支持
+            return False
+            
+        return True
+
+    def _override_d01_xu(bazi: Dict, compiler) -> bool:
+        """
+        [Dehydration] D-01@戌 (正财格@戌)
+        戌月土重，易混杂比劫或印星。
+        策略：强制要求财星双透或有强根，且严禁比劫混杂。
+        """
+        stems = bazi.get("stems", [])
+        
+        # F1: 必须透正财
+        if "zheng_cai" not in stems:
+            return False
+            
+        # F2: 丰度压降 - 严禁比劫 (Rob wealth count > 1 即杀)
+        rob_count = stems.count('bi_jian') + stems.count('jie_cai')
+        if rob_count >= 1: # 严格脱水
+            return False
+            
+        # F3: 必须有官杀护财 (增强物理稳定性)
+        has_protection = any(s in stems for s in ['zheng_guan', 'qi_sha'])
+        if not has_protection:
+            return False
+            
+        return True
+
+    MATRIX_OVERRIDES = {
+        "D-02@午": _override_d02_wu,
+        "D-01@戌": _override_d01_xu
+    }
     
     def compile_all(self) -> Dict[str, Callable]:
         """编译所有格局的过滤函数"""

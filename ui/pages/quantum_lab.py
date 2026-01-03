@@ -900,14 +900,12 @@ def render():
 
     # [DETAIL VIEW] -> Topic Deep Dives (Now at Top)
     # Topic Navigation (Dynamic from Registry)
-    from core.logic_registry import LogicRegistry
-    reg = LogicRegistry()
-
+    # [已删除知识库系统] 使用硬编码的主题列表
     st.sidebar.divider()
     st.sidebar.markdown("### 🏹 主题导航 (Theme Orbit)")
-    themes = reg.get_themes()
-    theme_names = [t['name'] for t in themes.values()]
-    theme_ids = {t['name']: t_id for t_id, t in themes.items()}
+    themes = {}
+    theme_names = []
+    theme_ids = {}
 
     selected_theme_name = st.sidebar.selectbox(
         "选择分析主题 (Theme)",
@@ -919,11 +917,10 @@ def render():
 
     st.sidebar.markdown("### 🔮 专题罗盘 (Topic Compass)")
 
-    active_modules = reg.get_active_modules(theme_id=selected_theme_id) # Returns list of dicts with 'id', 'name', etc.
-
-    # Create a mapping for easy lookup
-    module_map = {m['name']: m for m in active_modules}
-    module_names = [m['name'] for m in active_modules]
+    # [已删除知识库系统] 使用空列表
+    active_modules = []
+    module_map = {}
+    module_names = []
 
     if not module_names:
         st.sidebar.warning("⚠️ 该主题下暂无活跃专题 (No active topics).")
@@ -1046,8 +1043,8 @@ def render():
             st.divider()
 
         # 3. Rule Registry (Nested Expander)
-        # We manually inline the logic of render_module_header here to keep it contained
-        all_rules = reg.get_all_active_rules()
+        # [已删除知识库系统] 使用空列表
+        all_rules = []
         linked_ids = current_module.get('linked_rules', [])
 
         if linked_ids:
@@ -3280,7 +3277,7 @@ def render():
     # 🏛️ QUANTUM UNIVERSAL FRAMEWORK CONSOLE (Relocated from Topic Module)
     with st.expander("🔮 量子通用框架控制台 (Quantum Universal Framework Console)", expanded=False):
         st.markdown("### 🏛️ 量子通用框架 (Quantum Universal Framework)")
-        st.caption(f"Quantum Universal Physics Engine V{reg.version} | Phase G Complete")
+        st.caption(f"Quantum Universal Physics Engine V3.0 | Phase G Complete")
         
         # Use static import from top of file
         global_arbitrator = quantum_framework
@@ -3546,5 +3543,5 @@ def render():
             st.info("请先选择或输入八字案例以执行量子通用框架仲裁。")
 
 
-    st.caption(f"Antigravity Quantum Universal System V{reg.version} (Precision Engine) | Phase G Complete")
+    st.caption(f"Antigravity Quantum Universal System V3.0 (Precision Engine) | Phase G Complete")
 

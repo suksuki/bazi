@@ -38,8 +38,16 @@ LOGIC_PROTOCOLS = {
         "category": "POWER",
         "mandatory": ["is_yang_stem(day_master)", "is_sheep_blade(day_master, month_branch)"],
         "optional_or": ["stems.contains('qi_sha')", "stems.contains('zheng_guan')"],
-        "forbidden": [],
+        "forbidden": ["wealth_count > 2"],
         "semantic_ref": "AXIOM_A-03"
+    },
+    "A-04": {
+        "name": "伤官伤尽格",
+        "category": "REBEL",
+        "mandatory": ["month_main == 'shang_guan'", "stems.contains('shang_guan')"],
+        "optional_or": ["stems.contains('zheng_cai')", "stems.contains('pian_cai')"],
+        "forbidden": ["stems.contains('zheng_guan')"],
+        "semantic_ref": "AXIOM_A-04"
     },
     "B-01": {
         "name": "食神格",

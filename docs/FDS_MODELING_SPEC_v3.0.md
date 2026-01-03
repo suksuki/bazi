@@ -1,4 +1,4 @@
-# 🏛️ QGA 正向拟合与建模规范 (FDS-V3.0 精密物理架构版)
+🏛️ QGA 正向拟合与建模规范 (FDS-V3.0 精密物理架构版)
 —— 全格局通用统计力学仿真标准 ——
 
 **版本**: V3.0 (Precision Physics & Statistical Manifolds)

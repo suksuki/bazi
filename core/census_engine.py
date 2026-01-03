@@ -55,172 +55,9 @@ class ClassicalCensusEngine:
         self.universe_path = universe_path or str(
             Path(__file__).parent / "data" / "holographic_universe_518k.jsonl"
         )
-        self._filters: Dict[str, Callable] = {}
-        self._register_builtin_filters()
-    
-    def _register_builtin_filters(self):
-        """注册内置过滤器"""
-        self._filters = {
-            'A-01': self._filter_a01_zheng_guan,
-            'A-02': self._filter_a02_qi_sha,
-            'A-03': self._filter_a03_yang_ren,
-            'B-01': self._filter_b01_shi_shen,
-            'B-02': self._filter_b02_shang_guan,
-            'C-01': self._filter_c01_zheng_yin,
-            'C-02': self._filter_c02_pian_yin,
-            'D-01': self._filter_d01_zheng_cai,
-            'D-02': self._filter_d02_pian_cai,
-        }
-    
-    # ================================================================
-    # A类：官杀系过滤器
-    # ================================================================
-    
-    def _filter_a01_zheng_guan(self, bazi: Dict) -> bool:
-        """A-01 正官格过滤器"""
-        # F1: 月令主气为正官
-        if bazi.get('month_main') != 'zheng_guan':
-            return False
-        # F2: 天干透正官
-        stems = bazi.get('stems', [])
-        if 'zheng_guan' not in stems:
-            return False
-        # F3: 天干不露伤官
-        if 'shang_guan' in stems:
-            return False
-        return True
-    
-    def _filter_a02_qi_sha(self, bazi: Dict) -> bool:
-        """A-02 七杀格过滤器"""
-        # F1: 月令主气为七杀
-        if bazi.get('month_main') != 'qi_sha':
-            return False
-        # F2: 天干透杀
-        stems = bazi.get('stems', [])
-        if 'qi_sha' not in stems:
-            return False
-        # F3: 有制化
-        has_control = any(s in stems for s in ['shi_shen', 'zheng_yin', 'pian_yin'])
-        if not has_control:
-            return False
-        return True
-    
-    def _filter_a03_yang_ren(self, bazi: Dict) -> bool:
-        """A-03 羊刃格过滤器"""
-        day_master = bazi.get('day_master', '')
-        # F1: 日主为阳干
-        if day_master not in ['甲', '丙', '戊', '庚', '壬']:
-            return False
-        # F2: 月令为羊刃
-        expected_blade = YANG_REN_MAP.get(day_master)
-        if bazi.get('month_branch') != expected_blade:
-            return False
-        # F3: 天干透官或杀
-        stems = bazi.get('stems', [])
-        if not any(s in stems for s in ['zheng_guan', 'qi_sha']):
-            return False
-        return True
-    
-    # ================================================================
-    # B类：食伤系过滤器
-    # ================================================================
-    
-    def _filter_b01_shi_shen(self, bazi: Dict) -> bool:
-        """B-01 食神格过滤器"""
-        # F1: 月令主气食神
-        if bazi.get('month_main') != 'shi_shen':
-            return False
-        # F2: 天干见财
-        stems = bazi.get('stems', [])
-        has_wealth = any(s in stems for s in ['zheng_cai', 'pian_cai'])
-        if not has_wealth:
-            return False
-        # F3: 若见枭，必须见偏财制
-        if 'pian_yin' in stems and 'pian_cai' not in stems:
-            return False
-        return True
-    
-    def _filter_b02_shang_guan(self, bazi: Dict) -> bool:
-        """B-02 伤官格过滤器"""
-        # F1: 月令主气伤官
-        if bazi.get('month_main') != 'shang_guan':
-            return False
-        # F2: 天干透伤官
-        stems = bazi.get('stems', [])
-        if 'shang_guan' not in stems:
-            return False
-        # F3: 若见正官，需有印星护
-        if 'zheng_guan' in stems and 'zheng_yin' not in stems:
-            return False
-        return True
-    
-    # ================================================================
-    # C类：印枭系过滤器
-    # ================================================================
-    
-    def _filter_c01_zheng_yin(self, bazi: Dict) -> bool:
-        """C-01 正印格过滤器"""
-        # F1: 月令主气正印
-        if bazi.get('month_main') != 'zheng_yin':
-            return False
-        # F2: 天干透印
-        stems = bazi.get('stems', [])
-        if 'zheng_yin' not in stems:
-            return False
-        # F3: 财星不可过旺
-        wealth_count = stems.count('zheng_cai') + stems.count('pian_cai')
-        if wealth_count > 2:
-            return False
-        return True
-    
-    def _filter_c02_pian_yin(self, bazi: Dict) -> bool:
-        """C-02 偏印格过滤器"""
-        # F1: 月令主气偏印
-        if bazi.get('month_main') != 'pian_yin':
-            return False
-        # F2: 天干透偏印
-        stems = bazi.get('stems', [])
-        if 'pian_yin' not in stems:
-            return False
-        # F3: 若有食神，必须有偏财制枭
-        if 'shi_shen' in stems and 'pian_cai' not in stems:
-            return False
-        return True
-    
-    # ================================================================
-    # D类：财星系过滤器
-    # ================================================================
-    
-    def _filter_d01_zheng_cai(self, bazi: Dict) -> bool:
-        """D-01 正财格过滤器"""
-        # F1: 月令主气正财
-        if bazi.get('month_main') != 'zheng_cai':
-            return False
-        # F2: 天干透财
-        stems = bazi.get('stems', [])
-        if 'zheng_cai' not in stems:
-            return False
-        # F3: 比劫不可过旺
-        rob_count = stems.count('bi_jian') + stems.count('jie_cai')
-        if rob_count > 2:
-            return False
-        return True
-    
-    def _filter_d02_pian_cai(self, bazi: Dict) -> bool:
-        """D-02 偏财格过滤器"""
-        # F1: 月令主气偏财
-        if bazi.get('month_main') != 'pian_cai':
-            return False
-        # F2: 天干透偏财
-        stems = bazi.get('stems', [])
-        if 'pian_cai' not in stems:
-            return False
-        # F3: 比劫过旺需有官杀护财
-        rob_count = stems.count('bi_jian') + stems.count('jie_cai')
-        has_protection = any(s in stems for s in ['zheng_guan', 'qi_sha'])
-        if rob_count > 2 and not has_protection:
-            return False
-        return True
+        # 初始化编译器
+        from core.logic_compiler import LogicCompiler
+        self.compiler = LogicCompiler()
     
     # ================================================================
     # 海选执行
@@ -236,17 +73,19 @@ class ClassicalCensusEngine:
         执行古典海选
         
         Args:
-            pattern_id: 格局 ID (如 'A-03')
+            pattern_id: 格局 ID (如 'A-03' 或 'A-03@寅')
             limit: 限制扫描样本数（测试用）
             include_tensor: 是否包含 5D 张量（Step 3 才需要）
             
         Returns:
             海选结果
         """
-        if pattern_id not in self._filters:
-            raise ValueError(f"未知格局: {pattern_id}")
+        try:
+            # 动态编译过滤器
+            filter_func = self.compiler.compile(pattern_id)
+        except ValueError as e:
+            raise ValueError(f"编译失败: {e}")
         
-        filter_func = self._filters[pattern_id]
         matched = []
         total_scanned = 0
         
@@ -334,6 +173,8 @@ class ClassicalCensusEngine:
             stems.append('bi_jian')
         if tensor.get("R", 0) > 0.4:
             stems.append('shi_shen')
+        if tensor.get("S", 0) > 0.4:
+            stems.append('shang_guan')
         
         return {
             "uid": uid,
