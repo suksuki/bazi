@@ -22,6 +22,18 @@ sys.path.insert(0, str(project_root))
 from controllers.quantum_framework_registry_controller import QuantumFrameworkRegistryController
 from ui.components.theme import apply_custom_header, COLORS
 
+# 注册表规范版本（与 FDS-SOP / QGA-HR 一致，统一为 3.0）
+REGISTRY_SCHEMA_VERSION = "3.0"
+
+
+def _subject_display_name(name: str, subjects: list) -> str:
+    """下拉框显示名：全息格局用中文，其余用原名 + 专题数"""
+    subject = next((s for s in subjects if s.get('name') == name), None)
+    count = subject.get('topics_count', 0) if subject else 0
+    if name == 'holographic_pattern':
+        return f"全息格局（正官格等）({count} 个专题)"
+    return f"{name} ({count} 个专题)"
+
 
 def render_subject_card(subject: dict):
     """渲染单个主体信息卡片"""
@@ -174,14 +186,17 @@ def render():
     
     controller = st.session_state.framework_registry_controller
     
-    # 刷新按钮
+    # 刷新按钮 + 版本信息
     col_header1, col_header2 = st.columns([3, 1])
     with col_header1:
         st.markdown("### 所有主体（Subjects）")
+        st.caption(f"📌 **注册表规范版本**: {REGISTRY_SCHEMA_VERSION} (QGA-HR)")
     with col_header2:
         if st.button("🔄 刷新", help="重新加载主体和专题信息"):
             controller.clear_cache()
             st.rerun()
+    
+    st.caption("💡 正官格 (A-01) 等全息格局的注册信息在主体 **「全息格局」** 下，数据来自 `registry/holographic_pattern/`。")
     
     # 获取所有主体
     subjects = controller.get_all_subjects()
@@ -209,12 +224,15 @@ def render():
     
     st.divider()
     
-    # 选择器：按主体名称选择
+    # 选择器：按主体名称选择（优先显示“全息格局”）
     subject_names = [s.get('name', 'UNKNOWN') for s in subjects]
+    # 将 holographic_pattern 排到第一位，便于找到正官格注册信息
+    if 'holographic_pattern' in subject_names:
+        subject_names = ['holographic_pattern'] + [n for n in subject_names if n != 'holographic_pattern']
     selected_subject_name = st.selectbox(
         "选择主体查看详细信息",
         options=subject_names,
-        format_func=lambda x: f"{x} ({next((s.get('topics_count', 0) for s in subjects if s.get('name') == x), 0)} 个专题)",
+        format_func=lambda x: _subject_display_name(x, subjects),
         key="selected_subject_name"
     )
     

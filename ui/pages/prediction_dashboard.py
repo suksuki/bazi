@@ -16,12 +16,51 @@ from ui.components.cards import DestinyCards
 # MVC
 from controllers.bazi_controller import BaziController
 from core.unified_engine import UnifiedEngine as QuantumEngine
+from core.fds_inference_engine import FDSInferenceEngine, ENGINE_NOTE_FALLBACK
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
 import numpy as np
 
 # Configure Logger
 logger = logging.getLogger(__name__)
+
+
+@st.cache_resource
+def get_fds_inference_engine() -> FDSInferenceEngine:
+    """Cache inference engine to avoid re-loading files every rerun."""
+    return FDSInferenceEngine()
+
+
+def build_ten_gods_from_flux(flux_data: dict) -> dict:
+    """
+    Extract Ten-Gods vector from flux/graph outputs and map to standard codes.
+    Accepts flat numeric values or {mean: x}.
+    """
+    if not flux_data:
+        return {}
+    mapping = {
+        "ZhengGuan": "ZG",
+        "QiSha": "PG",
+        "ZhengCai": "ZR",
+        "PianCai": "PR",
+        "ShiShen": "ZS",
+        "ShangGuan": "PS",
+        "ZhengYin": "ZC",
+        "PianYin": "PC",
+        "BiJian": "ZB",
+        "JieCai": "PB",
+    }
+    normalized = {}
+    for src, code in mapping.items():
+        if src in flux_data:
+            val = flux_data[src]
+            if isinstance(val, dict):
+                val = val.get("mean", val.get("strength", val.get("value", 0)))
+            try:
+                normalized[code] = float(val)
+            except Exception:
+                normalized[code] = 0.0
+    return normalized
 
 def render_prediction_dashboard():
     """
@@ -196,6 +235,107 @@ def render_prediction_dashboard():
             )])
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
             st.plotly_chart(fig, width='stretch')
+
+    # --- NEW: A-01 Manifold Mapping & Knowledge Injection ---
+    inference_engine = get_fds_inference_engine()
+    ten_gods_vector = build_ten_gods_from_flux(flux_data) if flux_data else {}
+    self_energy_ctx = flux_data.get("self_energy", {}) if flux_data else {}
+    logic_hit = (
+        inference_engine.matches_classical_logic(ten_gods_vector, self_energy_ctx)
+        if ten_gods_vector
+        else None
+    )
+    should_infer = bool(
+        ten_gods_vector
+        and (
+            logic_hit is True
+            or (logic_hit is None and ten_gods_vector.get("ZG", 0) >= 2)
+        )
+    )
+
+    if should_infer:
+        inference = inference_engine.infer(
+            ten_gods_vector, extra_context={"self_energy": self_energy_ctx}
+        )
+        if not FDSInferenceEngine.strict_logic_available():
+            st.caption(f"⚠️ {ENGINE_NOTE_FALLBACK}")
+        st.markdown(f"""
+            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['crystal_blue']};">
+                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🧭 A-01 流形归位 · 正官格</h4>
+            </div>
+        """, unsafe_allow_html=True)
+        mv = inference.get("matrix_version", "3.0")
+        st.caption(f"基于 **{mv}** 物理校准矩阵运算")
+
+        d_min = min(inference["distances"].values()) if inference.get("distances") else 0.0
+        if d_min > 3.0:
+            st.warning(
+                "**奇点预警 (Singularity Alert)** — 该命例展现出极高的物理独特性，"
+                "不完全符合现有 S1/S2 标准分布，建议手动分析其 5D 偏移向量。"
+            )
+        c_infer1, c_infer2, c_infer3 = st.columns([1, 1, 1])
+        with c_infer1:
+            st.metric("最优子格局", inference["best_subpattern"], help="基于5D欧氏距离的最近质心")
+            st.metric("相似度", f"{inference['similarity_percent']:.2f}%", help="距离占比换算的接近度")
+        with c_infer2:
+            st.metric("距 S1", f"{inference['distances'].get('A-01-S1', 0):.3f}")
+            st.metric("距 S2", f"{inference['distances'].get('A-01-S2', 0):.3f}")
+        with c_infer3:
+            st.metric("混合度", "Yes" if inference["is_hybrid"] else "No", help="两质心距离接近时标记混合态")
+            st.caption(f"偏移向量 | {inference_engine.format_offsets(inference['offset'])}")
+
+        dims = FDSInferenceEngine.DIM_KEYS
+        point_vals = [inference["point"].get(d, 0.0) for d in dims]
+        centroid_s1 = inference_engine.centroids.get("A-01-S1")
+        centroid_s2 = inference_engine.centroids.get("A-01-S2")
+        centroid_vals_s1 = [float(v) for v in centroid_s1] if centroid_s1 is not None else [0.0] * 5
+        centroid_vals_s2 = [float(v) for v in centroid_s2] if centroid_s2 is not None else [0.0] * 5
+
+        radar_fig = go.Figure()
+        radar_fig.add_trace(
+            go.Scatterpolar(
+                r=point_vals,
+                theta=dims,
+                fill="toself",
+                name="命例坐标 P",
+                line_color="#7F39FB",
+                fillcolor="rgba(127, 57, 251, 0.25)",
+            )
+        )
+        radar_fig.add_trace(
+            go.Scatterpolar(
+                r=centroid_vals_s1,
+                theta=dims,
+                fill="toself",
+                name="A-01-S1 质心 (Order)",
+                line_color="#2196F3",
+                fillcolor="rgba(33, 150, 243, 0.12)",
+            )
+        )
+        radar_fig.add_trace(
+            go.Scatterpolar(
+                r=centroid_vals_s2,
+                theta=dims,
+                fill="toself",
+                name="A-01-S2 质心 (Wealth)",
+                line_color="#FFD700",
+                fillcolor="rgba(255, 215, 0, 0.12)",
+            )
+        )
+        radar_fig.update_layout(
+            height=320,
+            margin=dict(l=20, r=20, t=10, b=10),
+            polar=dict(radialaxis=dict(visible=True)),
+            showlegend=True,
+        )
+        st.plotly_chart(radar_fig, width="stretch")
+
+        knowledge = inference.get("knowledge") or {}
+        if knowledge:
+            st.success(f"📜 全息判词 · {knowledge.get('name', inference['best_subpattern'])}")
+            st.write(knowledge.get("description", ""))
+    elif logic_hit is False:
+        st.info("正官格逻辑未触发，未执行流形归位。")
 
     # --- NEW: 触发规则分析 (Triggered Rules Analysis) ---
     st.markdown(f"""

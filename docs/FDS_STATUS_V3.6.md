@@ -127,20 +127,28 @@ FDS (Fate Destiny System) V3.6 是基于量子通用架构(QGA)的八字格局�
 
 ### 自动化测试套件
 
-- **测试文件**: `tests/test_fds_sop_v3_integration.py`
-- **测试覆盖**:
-  - ✅ Manifest文件存在性和Schema验证
-  - ✅ Registry文件存在性和QGA格式验证
-  - ✅ Benchmarks物理真实性验证
-  - ✅ 子格局统计验证
-  - ✅ UI注册验证
-  - ✅ 丰度范围验证
+- **集成测试**: `tests/test_fds_sop_v3_integration.py`（23 项断言）
+  - ✅ Manifest 存在性与 Schema
+  - ✅ Registry 存在性与 QGA 格式
+  - ✅ Benchmarks 物理真实性
+  - ✅ 子格局统计、丰度范围
+  - ✅ UI 注册、Step 8 报告可选、TMM 加载器、推理报告含 matrix_version
+- **单元测试**:
+  - `tests/unit/test_tensor_mapping_loader.py`（V4.0 优先、回退、版本获取）
+  - `tests/unit/test_fds_inference_engine.py`（十神归一化、5D 投影、归位、matrix_version）
+  - `tests/test_fds_lkv.py`（LKV 协议、LogicCompiler、CensusEngine、ProtocolChecker；VaultManager/QGAVV 依赖 chromadb 时自动 skip）
 
 ### 运行测试
 
 ```bash
+# 推荐先跑集成测试
 python3 tests/test_fds_sop_v3_integration.py
+
+# Pytest 单元与 LKV
+pytest tests/unit/test_tensor_mapping_loader.py tests/unit/test_fds_inference_engine.py tests/unit/test_flux.py tests/unit/test_ui_logic.py tests/test_fds_lkv.py -v
 ```
+
+详见 **`tests/README_TESTS.md`**。
 
 ---
 
@@ -154,6 +162,10 @@ python3 tests/test_fds_sop_v3_integration.py
 ### 核心脚本
 - SOP执行器: `fds_sop_runner.py`
 - 发现实验室: `fds_discovery_lab.py`
+- 矩阵灵敏度审计: `fds_matrix_backfitting_auditor.py`
+- 矩阵进化: `fds_matrix_evolver.py`
+- TMM 加载: `core/tensor_mapping_loader.py`
+- 推理引擎: `core/fds_inference_engine.py`
 - UI控制器: `controllers/quantum_framework_registry_controller.py`
 
 ---
@@ -168,6 +180,7 @@ python3 tests/test_fds_sop_v3_integration.py
 
 ## 变更历史
 
+- **V3.6+ (2026-02)**: Step 8 矩阵灵敏度审计、V4.0-BETA 物理校准矩阵、推理引擎流形归位、全息知识中心与注册表版本 3.0；全面测试与文档更新（README_TESTS.md、本状态文档）
 - **V3.6 (2026-01-02)**: A01格局完备大法，正式定义子格局
 - **V3.5 (2026-01-02)**: Genesis模式，先海选后定义
 - **V3.4 (2026-01-02)**: 架构归一化，单一真理源

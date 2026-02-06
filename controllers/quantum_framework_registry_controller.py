@@ -227,9 +227,14 @@ class QuantumFrameworkRegistryController:
             'path': str(qga_registry_dir),
             'registry_file': None,  # QGA格式不使用registry.json
             'metadata': {
-                'description': '全息格局主题 - 从QGA法定路径加载',
+                'name': '全息格局',
+                'name_en': 'Holographic Pattern',
+                'id': 'QGA.holographic_pattern',
+                'version': '3.0',
+                'schema_version': '3.0',
+                'description': '全息格局主题（含正官格 A-01 等）。从 QGA 法定路径 registry/holographic_pattern/ 加载，与 FDS-SOP v3.0 一致。',
                 'registry_path': str(qga_registry_dir),
-                'schema_version': '3.0'
+                'specification': {'source': 'FDS_SOP_v3.0', 'topic': 'holographic_pattern'}
             },
             'topics': {},
             'topics_count': 0,

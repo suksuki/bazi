@@ -226,7 +226,65 @@ class TestFDSSOPV3:
         except Exception as e:
             self.assert_test(False, "丰度范围验证", str(e))
             return False
-    
+
+    def test_09_step8_report_optional(self):
+        """测试9: Step 8 矩阵审计报告（可选存在）"""
+        print("\n[测试9] Step 8 矩阵审计报告可选验证")
+        report_path = self.project_root / "sop_output" / "matrix_backfitting_report.json"
+        if not report_path.exists():
+            self.assert_test(True, "Step 8 报告可选（当前未生成）")
+            return True
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                report = json.load(f)
+            has_calibration = "calibration_suggestions" in report
+            has_distance = "base_mean_distance_to_centroid" in report
+            self.assert_test(has_calibration and has_distance, "报告含 calibration_suggestions 与 base_mean_distance")
+            return has_calibration and has_distance
+        except Exception as e:
+            self.assert_test(False, "Step 8 报告解析", str(e))
+            return False
+
+    def test_10_tensor_mapping_loader(self):
+        """测试10: 全局 TMM 加载器（V4 优先）"""
+        print("\n[测试10] 张量映射加载器验证")
+        try:
+            from core.tensor_mapping_loader import load_tensor_mapping_matrix, get_matrix_version_used
+            manifest_path = self.project_root / TEST_CONFIG["manifest_path"]
+            with open(manifest_path, 'r', encoding='utf-8') as f:
+                manifest = json.load(f)
+            registry_path = self.project_root / TEST_CONFIG["registry_path"]
+            with open(registry_path, 'r', encoding='utf-8') as f:
+                registry = json.load(f)
+            tmm, version = load_tensor_mapping_matrix(manifest, registry=registry)
+            self.assert_test(bool(tmm.get("weights")), "TMM 含 weights")
+            self.assert_test(version in ("3.0", "4.0-BETA"), f"matrix_version 合法: {version}")
+            ver_used = get_matrix_version_used(manifest, registry=registry)
+            self.assert_test(ver_used in ("3.0", "4.0-BETA"), f"get_matrix_version_used 一致: {ver_used}")
+            return True
+        except Exception as e:
+            self.assert_test(False, "TMM 加载器", str(e))
+            return False
+
+    def test_11_inference_engine_report_structure(self):
+        """测试11: 推理引擎报告含 matrix_version"""
+        print("\n[测试11] 推理引擎报告结构验证")
+        try:
+            from core.fds_inference_engine import FDSInferenceEngine
+            engine = FDSInferenceEngine(
+                registry_path=self.project_root / TEST_CONFIG["registry_path"],
+                manifest_path=self.project_root / TEST_CONFIG["manifest_path"],
+                kb_path=self.project_root / "knowledge/holographic_pattern/A-01_kb.json",
+            )
+            result = engine.infer({"ZG": 2, "ZR": 1})
+            has_mv = "matrix_version" in result
+            self.assert_test(has_mv, "推理报告含 matrix_version", f"keys: {list(result.keys())}")
+            self.assert_test(result.get("best_subpattern") in ("A-01-S1", "A-01-S2"), "归位为 S1 或 S2")
+            return has_mv
+        except Exception as e:
+            self.assert_test(False, "推理引擎报告", str(e))
+            return False
+
     def run_all_tests(self):
         """运行所有测试"""
         print("=" * 60)
@@ -242,6 +300,9 @@ class TestFDSSOPV3:
         self.test_06_sub_pattern_stats()
         self.test_07_ui_registration()
         self.test_08_abundance_range()
+        self.test_09_step8_report_optional()
+        self.test_10_tensor_mapping_loader()
+        self.test_11_inference_engine_report_structure()
         
         # 生成报告
         self.print_report()

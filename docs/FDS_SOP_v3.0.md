@@ -311,6 +311,9 @@ $$
 - 符合 QGA 规范的 JSON 文件
 - 文件路径: `./registry/holographic_pattern/{PATTERN_ID}.json`
 
+**与量子通用架构 UI 的关系**:
+- 该路径为法定注册路径，**「量子通用架构注册信息」页面**（主体「全息格局」）会从 `registry/holographic_pattern/` 自动发现并展示所有格局，无需额外注册步骤；产出即注册。
+
 #### 5.4 奇点样本存证 (Singularity Benchmarking) [强制执行]
 
 **物理逻辑**:
@@ -469,6 +472,33 @@ $$
 
 ---
 
+### Step 8: 矩阵灵敏度审计 (Matrix Sensitivity Audit)
+
+**目的**: 利用大规模已知样本集，逆向验证十神转化矩阵（TMM）的解释效率，消除人为预设偏差。
+
+**操作程序**:
+
+1. **触发时机**: 格局完成 Step 6.2 负载验收后。
+2. **执行工具**: 运行 `fds_matrix_backfitting_auditor.py`。
+3. **关键指标**:
+   - **解释力得分**: 以成格样本在 5D 空间中的**平均欧氏距离（Mean Distance to Centroid）**作为度量；距离越小，表示该 TMM 对该格局的「凝聚力」越强。
+   - **改进增益 (Improvement)**: 若对某十神–轴权重的微调能显著降低簇内方差/平均距离，则该权重调整应被纳入下一版本（如 V4.0）矩阵更新提案。
+   - **轴级预警**: 若某轴（E/O/M/S/R）在成格样本上的标准差显著高于其余轴，须输出 `[MATRIX WARNING]`，提示该轴映射与格局标签相关性偏低，可能暴露古典定义或矩阵设定偏差。
+4. **归档要求**: 审计报告必须保存至 `sop_output/matrix_backfitting_report.json`，作为未来版本迭代的实证依据；可选生成热力图 `matrix_backfitting_report.heatmap.png`。
+
+**输出产物**:
+- 矩阵逆向拟合审计报告（JSON）
+- 校准建议列表（calibration_suggestions）
+- 十神×五维效能热力图（可选）
+- 轴级 [MATRIX WARNING] 清单
+
+**版本更替协议**:
+- 当二次验证（使用 `fds_matrix_evolver.py --verify`）得到 **improvement_pct > 3%** 且 **verification = PASS** 时，新矩阵视为通过校准。
+- 通过后须将新矩阵写入 `config/physics/tensor_mapping_matrix_V4.0_BETA.json`（或当版命名），并将当前生效矩阵版本号记录至系统配置（如 `system_profile.json` 或等效），供推理引擎与 HKB 生成器读取。
+- 推理引擎须**强制启用**该新矩阵（通过全局加载器优先读取 `config/physics/` 下对应文件），使全链路（归位、知识库生成）统一使用真理校准结果。
+
+---
+
 ## 二、 奇点与子格局发现协议 (Discovery Protocol) [RESTORED]
 
 **目标**: 规范系统如何从海量样本中发现"离群点"（奇点），并判断其是否具备晋升为"独立子格局"的资格（成格条件）。
@@ -538,7 +568,7 @@ $$
 
 ## 三、 操作检查清单 (Checklist)
 
-### 3.1 Step 0-6 完成度检查
+### 3.1 Step 0-8 完成度检查
 
 - [ ] Step 0: 格局配置注入完成，Manifest 文件已校验并加载
 - [ ] Step 1: 物理原型定义完成
@@ -553,6 +583,7 @@ $$
 - [ ] Step 5.4: 奇点存证完成（如有奇点）
 - [ ] Step 6: 精密评分算法实现完成
 - [ ] Step 6: 验收测试通过（$\Delta \le \text{tolerance}$）
+- [ ] Step 8: 矩阵灵敏度审计完成，报告已归档至 `sop_output/matrix_backfitting_report.json`
 
 ### 3.2 质量控制检查
 

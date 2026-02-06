@@ -122,6 +122,27 @@ def run_sop(target, manifest_path, data_path):
             print(f"   • {name} ({sub_id}): {count} samples ({sub_abd:.1f}% of A01 hits)")
 
     print(f"\n📡 [PUB_EVENT] topic='holographic_pattern' id='{target}'")
+    
+    # [第017号工程指令] 自动化流水线：Step 6.2后自动触发知识生成
+    print(f"\n🧠 [AUTO-PIPELINE] 触发HKB知识生成...")
+    try:
+        import subprocess
+        import sys
+        kb_generator_path = os.path.join(os.path.dirname(__file__), "fds_kb_generator.py")
+        result = subprocess.run(
+            [sys.executable, kb_generator_path, "--target", target],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5分钟超时
+        )
+        if result.returncode == 0:
+            print(f"✅ HKB知识生成完成")
+            if result.stdout:
+                print(result.stdout)
+        else:
+            print(f"⚠️ HKB知识生成失败（非阻塞）: {result.stderr}")
+    except Exception as e:
+        print(f"⚠️ HKB知识生成异常（非阻塞）: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
