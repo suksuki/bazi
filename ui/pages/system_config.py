@@ -4,10 +4,15 @@ import ollama
 def render_system_config(config_manager):
     """
     Renders the System Config page.
+    功能：对话模型/向量模型切换、Ollama 与 ChromaDB 状态检测、古籍 TXT 上传入库。
     Args:
         config_manager: Instance of ConfigManager.
     """
     from ui.components.theme import COLORS, GLASS_STYLE
+
+    # 从配置回填 session_state，便于输入框显示已保存值
+    if "ollama_host" not in st.session_state:
+        st.session_state["ollama_host"] = config_manager.get("ollama_host", "http://localhost:11434")
     
     st.markdown(f"""
         <div style="{GLASS_STYLE} padding: 25px; margin-bottom: 2rem; border-top: 4px solid {COLORS['mystic_gold']}; text-align: center;">
@@ -81,12 +86,33 @@ def render_system_config(config_manager):
     col_llm_1, col_llm_2 = st.columns([1, 1])
     
     with col_llm_1:
-         ollama_host = st.text_input("Ollama Server URL", value=st.session_state.get('ollama_host', 'http://localhost:11434'))
-    
-    # Update config
-    if ollama_host != st.session_state.get('ollama_host'):
-        st.session_state['ollama_host'] = ollama_host
+        ollama_host = st.text_input(
+            "Ollama Server URL",
+            value=st.session_state.get("ollama_host", "http://localhost:11434"),
+            help="GB10 本地或远程 Ollama 服务地址",
+        )
+    if ollama_host != st.session_state.get("ollama_host"):
+        st.session_state["ollama_host"] = ollama_host
         config_manager.save_config("ollama_host", ollama_host)
+
+    # ---------- 状态检测：Ollama + ChromaDB/向量库 ----------
+    st.markdown("**📡 连接状态**")
+    status_col1, status_col2 = st.columns(2)
+    with status_col1:
+        try:
+            client = ollama.Client(host=ollama_host)
+            client.list()
+            st.success("🟢 Ollama 已连接")
+        except Exception as e:
+            st.error(f"🔴 Ollama 未连接: {e}")
+    with status_col2:
+        try:
+            from data.vector_db import get_classical_db
+            db = get_classical_db()
+            n = db.count()
+            st.success(f"🟢 古籍向量库就绪（{n} 条）")
+        except Exception as e:
+            st.warning(f"🟡 向量库未就绪: {e}")
 
     with st.expander("🛠️ 高级连接调试", expanded=True):
         if st.button("📡 测试连接 & 刷新模型列表"):
@@ -128,9 +154,15 @@ def render_system_config(config_manager):
         if model_options:
             selected_model_name = st.selectbox("选择此服务器上的模型", model_options, index=index)
             
-            if selected_model_name != st.session_state.get('selected_model_name'):
-                st.session_state['selected_model_name'] = selected_model_name
+            if selected_model_name != st.session_state.get("selected_model_name"):
+                st.session_state["selected_model_name"] = selected_model_name
                 config_manager.save_config("selected_model_name", selected_model_name)
+                # 同步到 ai_engine.chat_model，供 AI 判词使用
+                ai_cfg = config_manager.get("ai_engine") or {}
+                if not isinstance(ai_cfg, dict):
+                    ai_cfg = {}
+                ai_cfg["chat_model"] = selected_model_name
+                config_manager.save_config("ai_engine", ai_cfg)
             
             # Quick Test Button
             if st.button("🟢 验证模型响应 (Test Run)"):
@@ -143,7 +175,77 @@ def render_system_config(config_manager):
                     st.error(f"模型无响应: {e}")
         else:
             if saved_model:
-                 st.info(f"上次使用的模型: {saved_model} (状态: 未连接)")
+                st.info(f"上次使用的模型: {saved_model} (状态: 未连接)")
             else:
-                 st.info("请先测试连接以加载模型列表")
+                st.info("请先测试连接以加载模型列表")
+
+    st.divider()
+
+    # ==================== 向量模型 (Embedding) ====================
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['crystal_blue']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📐 向量模型 (Embedding)</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    st.caption("与对话模型使用同一 Ollama 服务（上方 URL），在此选择用于古籍向量化的模型。")
+    emb_cfg = config_manager.get("embedding_engine") or {}
+    if not isinstance(emb_cfg, dict):
+        emb_cfg = {}
+    current_emb_model = emb_cfg.get("model") or "nomic-embed-text"
+    model_options = st.session_state.get("ollama_models", [])
+    emb_index = 0
+    if current_emb_model and current_emb_model in model_options:
+        emb_index = model_options.index(current_emb_model)
+    if model_options:
+        selected_emb_model = st.selectbox(
+            "选择向量模型（同服）",
+            model_options,
+            index=emb_index,
+            help="与对话模型同一 Ollama 服务上的模型，如 nomic-embed-text、bge-m3 等",
+        )
+        if selected_emb_model != current_emb_model:
+            config_manager.save_config("embedding_engine", {"model": selected_emb_model})
+            kv = config_manager.get("knowledge_vault") or {}
+            if not isinstance(kv, dict):
+                kv = {}
+            kv["embedding_model"] = selected_emb_model
+            config_manager.save_config("knowledge_vault", kv)
+            st.success(f"✅ 向量模型已设为 {selected_emb_model}")
+    else:
+        st.info("请先点击「测试连接 & 刷新模型列表」加载模型列表后，再选择向量模型。")
+        manual_emb = st.text_input("或手动输入向量模型名", value=current_emb_model, key="manual_emb_model")
+        if manual_emb and manual_emb != current_emb_model:
+            config_manager.save_config("embedding_engine", {"model": manual_emb})
+            st.success(f"✅ 向量模型已设为 {manual_emb}")
+
+    st.divider()
+
+    # ==================== 古籍入库 (Classical Canon Ingest) ====================
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['teal_mist']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📚 古籍入库 (Classical Canon)</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    st.caption("上传 TXT 古籍文件，将按段落切片并经当前向量模型入库，用于「古籍印证」检索。")
+    uploaded = st.file_uploader("上传古籍 TXT (UTF-8)", type=["txt"], key="classical_txt_upload")
+    book_col, chapter_col = st.columns(2)
+    with book_col:
+        ingest_book = st.text_input("书名（如《渊海子平》）", value="", key="ingest_source_book")
+    with chapter_col:
+        ingest_chapter = st.text_input("篇章（如《正官篇》）", value="", key="ingest_chapter")
+    if uploaded and st.button("🚀 执行向量化入库"):
+        try:
+            from pathlib import Path
+            import tempfile
+            from data.vector_db.classical_db import ingest_file
+            with tempfile.NamedTemporaryFile(mode="wb", suffix=".txt", delete=False) as tmp:
+                tmp.write(uploaded.getvalue())
+                tmp_path = Path(tmp.name)
+            source = ingest_book or uploaded.name.replace(".txt", "")
+            chapter = ingest_chapter or ""
+            result = ingest_file(tmp_path, source_book=source, chapter=chapter, chunk_by="paragraph")
+            tmp_path.unlink(missing_ok=True)
+            st.success(f"✅ 入库完成：新增 {result['added']} 条，失败 {result['errors']} 条。")
+        except Exception as e:
+            st.error(f"入库失败: {e}")
 

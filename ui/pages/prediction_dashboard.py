@@ -17,6 +17,7 @@ from ui.components.cards import DestinyCards
 from controllers.bazi_controller import BaziController
 from core.unified_engine import UnifiedEngine as QuantumEngine
 from core.fds_inference_engine import FDSInferenceEngine, ENGINE_NOTE_FALLBACK
+from core.ai_engine import generate_manifold_interpretation, stream_manifold_interpretation, is_ai_engine_available
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
 import numpy as np
@@ -164,8 +165,8 @@ def render_prediction_dashboard():
     """, unsafe_allow_html=True)
     
     current_year = datetime.datetime.now().year
-    c1, c2 = st.columns([2, 1])
-    
+    c1, c2, c3 = st.columns([2, 1, 1])
+
     # Da Yun Selection
     if luck_cycles:
         with c1:
@@ -177,17 +178,20 @@ def render_prediction_dashboard():
                     break
             selected_yun_str = st.selectbox("选择大运 (Da Yun)", yun_options, index=default_idx)
             selected_yun = luck_cycles[yun_options.index(selected_yun_str)]
-            
+
     # Liu Nian Selection
     with c2:
         sim_year = st.number_input("设置流年 (Year)", min_value=1900, max_value=2100, value=current_year, key="sim_year_input")
-        # Reuse ln_gz calculation for metric display
         offset = sim_year - base_year
         ln_gan = gd[offset % 10]
         ln_zhi = zhi[offset % 12]
         ln_gan_zhi = f"{ln_gan}{ln_zhi}"
         st.metric("演算流年", f"{sim_year} {ln_gan_zhi}")
-        
+
+    # 地理方位（动态演化·空间耦合）
+    with c3:
+        geo_direction = st.selectbox("地理方位", ["中", "东", "南", "西", "北"], index=0, key="dynamic_geo_direction", help="用于 5D 动态修正：南火、西金等")
+
     st.markdown("<br>", unsafe_allow_html=True)
 
     # 6. Core Analysis (Flux Data)
@@ -267,6 +271,123 @@ def render_prediction_dashboard():
         mv = inference.get("matrix_version", "3.0")
         st.caption(f"基于 **{mv}** 物理校准矩阵运算")
 
+        # --- A-01 古典语义立法（可折叠展示，来自 config/hkb/hkb_params.json）---
+        try:
+            import json
+            from pathlib import Path
+            _hkb_path = Path(__file__).resolve().parent.parent.parent / "config" / "hkb" / "hkb_params.json"
+            if _hkb_path.exists():
+                with open(_hkb_path, "r", encoding="utf-8") as f:
+                    _hkb = json.load(f)
+                _core = (_hkb.get("hkb") or {}).get("a01_semantic_core")
+                if isinstance(_core, dict):
+                    with st.expander("📜 A-01 古典语义立法（本页依据）", expanded=False):
+                        for _key in ("dimension_a_order_rigidity", "dimension_b_energy_carrier", "dimension_c_wealth_coupling"):
+                            _d = _core.get(_key)
+                            if not isinstance(_d, dict):
+                                continue
+                            _name = _d.get("name", _key)
+                            _axis = _d.get("axis") or ", ".join(_d.get("axes") or [])
+                            _def = _d.get("definition", "")
+                            _map = _d.get("physical_mapping", "")
+                            st.markdown(f"**{_name}**（轴：{_axis}）")
+                            st.caption(f"定义：{_def}")
+                            st.caption(f"物理映射：{_map}")
+                            st.markdown("")
+        except Exception:
+            pass
+
+        # --- 动态演化：大运+流年+地理（先算好，供 AI 与雷达图使用）---
+        luck_gan_zhi = (selected_yun.get("gan_zhi", "") if selected_yun else "") or ""
+        year_gan_zhi = f"{gd[(sim_year - base_year) % 10]}{zhi[(sim_year - base_year) % 12]}"
+        geo_direction = st.session_state.get("dynamic_geo_direction", "中")
+        dynamic_state = None
+        try:
+            from core.dynamic_engine import get_time_delta, get_geo_factor, calculate_dynamic_state, build_dynamic_context_for_prompt
+            time_delta = get_time_delta(luck_gan_zhi, year_gan_zhi)
+            geo_factor = get_geo_factor(geo_direction)
+            dynamic_state = calculate_dynamic_state(inference["point"], time_delta=time_delta, geo_factor=geo_factor)
+        except Exception as e:
+            logger.debug("dynamic_engine 跳过: %s", e)
+
+        # --- [AI 深度透视] 第一优先级：全息报告样式，置顶展示 ---
+        st.markdown(f"""
+            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['rose_magenta']};">
+                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔮 AI 深度透视 (Manifold-to-Text)</h4>
+            </div>
+        """, unsafe_allow_html=True)
+        if is_ai_engine_available():
+            from core.config_manager import ConfigManager
+            _cm = ConfigManager()
+            _ai_cfg = _cm.get("ai_engine")
+            _current_chat_model = (_ai_cfg.get("chat_model") if isinstance(_ai_cfg, dict) else None) or _cm.get("selected_model_name") or "qwen2.5:32b"
+            pt = inference["point"]
+            # 缓存键含模型 + 大运/流年/方位，切换时间或地理即重新生成动态趋势判词
+            _dyn_suffix = f"{luck_gan_zhi}_{year_gan_zhi}_{geo_direction}" if dynamic_state else "static"
+            ai_cache_key = "ai_interpret_{}_{:.2f}_{:.2f}_{:.2f}_{:.2f}_{:.2f}_{}_{}".format(
+                inference["best_subpattern"],
+                pt.get("E", 0), pt.get("O", 0), pt.get("M", 0), pt.get("S", 0), pt.get("R", 0),
+                _current_chat_model.replace(":", "_"),
+                _dyn_suffix,
+            )
+            import html
+            offset_str = inference_engine.format_offsets(inference["offset"])
+            st.caption(f"当前判词模型：**{_current_chat_model}**（在系统配置页切换后可立即用新模型重新生成）")
+            if ai_cache_key not in st.session_state:
+                st.info(f"**推理依据**：基于偏移向量 {offset_str} 的物理微调。")
+                ph = st.empty()
+                accumulated = ""
+                dynamic_context_str = None
+                if dynamic_state:
+                    dynamic_context_str = build_dynamic_context_for_prompt(
+                        inference["point"],
+                        dynamic_state["dynamic_point"],
+                        dynamic_state["time_delta"],
+                        dynamic_state["geo_factor"],
+                        luck_gan_zhi=luck_gan_zhi,
+                        year_gan_zhi=year_gan_zhi,
+                        direction=geo_direction,
+                    )
+                try:
+                    for chunk in stream_manifold_interpretation(
+                        point=inference["point"],
+                        offset=inference["offset"],
+                        best_subpattern=inference["best_subpattern"],
+                        matrix_version=inference.get("matrix_version", "4.0"),
+                        ten_gods=ten_gods_vector,
+                        dynamic_context=dynamic_context_str,
+                    ):
+                        accumulated += chunk
+                        safe = html.escape(accumulated).replace("\n", "<br/>")
+                        ph.markdown(f"""
+                            <div style="background: linear-gradient(135deg, rgba(127,57,251,0.08) 0%, rgba(33,150,243,0.06) 100%); 
+                                        border-radius: 12px; padding: 1rem 1.25rem; margin: 0.5rem 0; border: 1px solid rgba(127,57,251,0.25);">
+                                <p style="color: var(--text-color, #e0e0e0); line-height: 1.6; margin: 0;">{safe}</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    st.session_state[ai_cache_key] = {"success": True, "text": accumulated.strip(), "model": _current_chat_model}
+                    st.caption(f"由 **{_current_chat_model}** 基于 5D 偏移向量生成 · 全息报告")
+                except Exception as e:
+                    st.session_state[ai_cache_key] = {"success": False, "text": "", "model": "", "error": str(e)}
+                    ph.empty()
+                    st.warning(f"AI 判词暂不可用：{e}")
+            else:
+                ai_result = st.session_state[ai_cache_key]
+                if ai_result.get("success") and ai_result.get("text"):
+                    st.info(f"**推理依据**：基于偏移向量 {offset_str} 的物理微调。")
+                    safe_text = html.escape(ai_result["text"]).replace("\n", "<br/>")
+                    st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, rgba(127,57,251,0.08) 0%, rgba(33,150,243,0.06) 100%); 
+                                    border-radius: 12px; padding: 1rem 1.25rem; margin: 0.5rem 0; border: 1px solid rgba(127,57,251,0.25);">
+                            <p style="color: var(--text-color, #e0e0e0); line-height: 1.6; margin: 0;">{safe_text}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                    st.caption(f"由 **{ai_result.get('model', '')}** 基于 5D 偏移向量生成 · 全息报告")
+                elif ai_result.get("error"):
+                    st.warning(f"AI 判词暂不可用：{ai_result['error']}")
+        else:
+            st.info("未检测到本地 Ollama，请配置并拉取 Qwen-32B 后使用 AI 深度透视。")
+
         d_min = min(inference["distances"].values()) if inference.get("distances") else 0.0
         if d_min > 3.0:
             st.warning(
@@ -297,11 +418,23 @@ def render_prediction_dashboard():
                 r=point_vals,
                 theta=dims,
                 fill="toself",
-                name="命例坐标 P",
+                name="原局 P",
                 line_color="#7F39FB",
                 fillcolor="rgba(127, 57, 251, 0.25)",
             )
         )
+        if dynamic_state:
+            dynamic_vals = [dynamic_state["dynamic_point"].get(d, 0.0) for d in dims]
+            radar_fig.add_trace(
+                go.Scatterpolar(
+                    r=dynamic_vals,
+                    theta=dims,
+                    fill="toself",
+                    name="动态点 (大运+流年+地理)",
+                    line_color="#00E676",
+                    fillcolor="rgba(0, 230, 118, 0.15)",
+                )
+            )
         radar_fig.add_trace(
             go.Scatterpolar(
                 r=centroid_vals_s1,
@@ -329,11 +462,32 @@ def render_prediction_dashboard():
             showlegend=True,
         )
         st.plotly_chart(radar_fig, width="stretch")
+        if dynamic_state:
+            st.caption("原局 P：静态 5D；动态点：当前大运、流年、地理方位合成后的位移。")
 
         knowledge = inference.get("knowledge") or {}
         if knowledge:
             st.success(f"📜 全息判词 · {knowledge.get('name', inference['best_subpattern'])}")
             st.write(knowledge.get("description", ""))
+
+        # --- [古籍印证] 模块：向量池检索 ---
+        st.markdown(f"""
+            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['crystal_blue']};">
+                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">📚 古籍印证 (Classical Match)</h4>
+            </div>
+        """, unsafe_allow_html=True)
+        try:
+            from data.vector_db import find_classical_match
+            classical = find_classical_match(inference, n_results=1)
+            if classical:
+                st.markdown(f"**{classical.get('source', '古籍')}** · {classical.get('chapter', '')}")
+                st.write(classical.get("text", ""))
+            else:
+                st.caption("暂无匹配古籍条目，可向 data/vector_db/raw 添加文本并执行入库。")
+        except Exception as e:
+            logger.debug("古籍检索跳过: %s", e)
+            st.caption("古籍向量库未就绪或未入库，请参考 data/vector_db/README.md 预热。")
+
     elif logic_hit is False:
         st.info("正官格逻辑未触发，未执行流形归位。")
 
