@@ -5,14 +5,23 @@ from datetime import datetime
 
 class ProfileManager:
     def __init__(self, data_file="data/profiles.json"):
-        # Resolve absolute path relative to this file
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.file_path = os.path.join(base_dir, data_file)
+        self._resolve_data_dir(base_dir, data_file)
         self._ensure_file()
+
+    def _resolve_data_dir(self, base_dir, data_file):
+        """若 data 不是可用的目录（缺失、文件、或失效符号链接），改用 data_local。"""
+        parent = os.path.dirname(self.file_path)
+        if not os.path.isdir(parent):
+            fallback_dir = os.path.join(base_dir, "data_local")
+            self.file_path = os.path.join(fallback_dir, os.path.basename(data_file))
 
     def _ensure_file(self):
         if not os.path.exists(self.file_path):
-            os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
+            parent = os.path.dirname(self.file_path)
+            if not os.path.isdir(parent):
+                os.makedirs(parent, exist_ok=True)
             with open(self.file_path, 'w', encoding='utf-8') as f:
                 json.dump([], f)
 
