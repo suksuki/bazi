@@ -3,6 +3,7 @@ import datetime
 import plotly.graph_objects as go
 import logging
 import pandas as pd
+from typing import Optional
 
 # Helpers
 from ui.components.styles import (
@@ -27,9 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 @st.cache_resource
-def get_fds_inference_engine() -> FDSInferenceEngine:
-    """Cache inference engine to avoid re-loading files every rerun."""
-    return FDSInferenceEngine()
+def get_fds_inference_engine() -> Optional[FDSInferenceEngine]:
+    """Cache inference engine. 若缺少 registry/knowledge 等文件则返回 None，页面做降级展示。"""
+    try:
+        return FDSInferenceEngine()
+    except FileNotFoundError as e:
+        logger.warning("FDS inference engine 未加载（缺少配置文件）: %s", e)
+        return None
 
 
 def build_ten_gods_from_flux(flux_data: dict) -> dict:
@@ -242,22 +247,27 @@ def render_prediction_dashboard():
 
     # --- NEW: A-01 Manifold Mapping & Knowledge Injection ---
     inference_engine = get_fds_inference_engine()
-    ten_gods_vector = build_ten_gods_from_flux(flux_data) if flux_data else {}
-    self_energy_ctx = flux_data.get("self_energy", {}) if flux_data else {}
-    logic_hit = (
-        inference_engine.matches_classical_logic(ten_gods_vector, self_energy_ctx)
-        if ten_gods_vector
-        else None
-    )
-    should_infer = bool(
-        ten_gods_vector
-        and (
-            logic_hit is True
-            or (logic_hit is None and ten_gods_vector.get("ZG", 0) >= 2)
+    should_infer = False
+    logic_hit = None  # 避免 inference_engine 为 None 时后续 elif logic_hit is False 未定义
+    if inference_engine is None:
+        st.info("🧭 A-01 流形归位需配置 **registry** 与 **knowledge**。请将 `bazi_data_external` 中的 `registry/`、`knowledge/` 及 `config/patterns/` 拷到项目根目录下对应路径后刷新。")
+    else:
+        ten_gods_vector = build_ten_gods_from_flux(flux_data) if flux_data else {}
+        self_energy_ctx = flux_data.get("self_energy", {}) if flux_data else {}
+        logic_hit = (
+            inference_engine.matches_classical_logic(ten_gods_vector, self_energy_ctx)
+            if ten_gods_vector
+            else None
         )
-    )
+        should_infer = bool(
+            ten_gods_vector
+            and (
+                logic_hit is True
+                or (logic_hit is None and ten_gods_vector.get("ZG", 0) >= 2)
+            )
+        )
 
-    if should_infer:
+    if inference_engine and should_infer:
         inference = inference_engine.infer(
             ten_gods_vector, extra_context={"self_energy": self_energy_ctx}
         )
@@ -561,7 +571,7 @@ def render_prediction_dashboard():
     """, unsafe_allow_html=True)
 
     # Run Advanced Simulation (Graph Engine)
-    dynamic_context = {'year': current_gan_zhi, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
+    dynamic_context = {'year': ln_gz, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
     adv_result = controller.run_advanced_simulation(dynamic_context)
     
     if adv_result:

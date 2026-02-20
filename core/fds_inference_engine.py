@@ -33,12 +33,17 @@ ENGINE_NOTE_FALLBACK = (
 )
 
 
+def _project_root() -> Path:
+    """项目根目录（与 main.py 同层），避免相对路径依赖 cwd。"""
+    return Path(__file__).resolve().parent.parent
+
+
 class FDSInferenceEngine:
     """Manifold projection and sub-pattern mapping for A-01."""
 
-    DEFAULT_REGISTRY = Path("registry/holographic_pattern/A-01.json")
-    DEFAULT_KB = Path("knowledge/holographic_pattern/A-01_kb.json")
-    DEFAULT_MANIFEST = Path("config/patterns/manifest_A01.json")
+    DEFAULT_REGISTRY = None  # 运行时按项目根解析
+    DEFAULT_KB = None
+    DEFAULT_MANIFEST = None
 
     # UI/engine friendly aliases -> standard ten-god code
     TEN_GOD_ALIASES: Dict[str, str] = {
@@ -83,9 +88,10 @@ class FDSInferenceEngine:
         kb_path: Path | str | None = None,
         manifest_path: Path | str | None = None,
     ) -> None:
-        self.registry_path = Path(registry_path or self.DEFAULT_REGISTRY)
-        self.kb_path = Path(kb_path or self.DEFAULT_KB)
-        self.manifest_path = Path(manifest_path or self.DEFAULT_MANIFEST)
+        root = _project_root()
+        self.registry_path = Path(registry_path) if registry_path else (root / "registry" / "holographic_pattern" / "A-01.json")
+        self.kb_path = Path(kb_path) if kb_path else (root / "knowledge" / "holographic_pattern" / "A-01_kb.json")
+        self.manifest_path = Path(manifest_path) if manifest_path else (root / "config" / "patterns" / "manifest_A01.json")
 
         self.registry = self._load_json(self.registry_path)
         self.kb = self._load_json(self.kb_path)
@@ -131,6 +137,11 @@ class FDSInferenceEngine:
     # ------------------------------------------------------------------ #
     @staticmethod
     def _load_json(path: Path) -> Dict[str, Any]:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"缺少文件: {path}\n"
+                "若从 bazi_data_external 拷贝过数据，请将其中的 registry/ 与 knowledge/ 拷到项目根目录下同名路径。"
+            )
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
