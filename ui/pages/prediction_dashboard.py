@@ -461,6 +461,7 @@ def render_prediction_dashboard():
                         matrix_version=inference.get("matrix_version", "4.0"),
                         ten_gods=ten_gods_vector,
                         dynamic_context=dynamic_context_str,
+                        pattern_id=inference.get("pattern_id", "A-01"),
                     ):
                         accumulated += chunk
                         safe = html.escape(accumulated).replace("\n", "<br/>")

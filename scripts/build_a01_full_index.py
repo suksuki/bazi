@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-第 028 号工程指令：A-01 全量样本索引构建
-==========================================
-从 holographic_universe_518k.jsonl 中筛选 A-01 逻辑命中样本，计算 5D 张量并导出为
+第 028 号工程指令：全量样本索引构建（支持 A-01 / A-02）
+========================================================
+从 holographic_universe_518k.jsonl 中按格局 JsonLogic 筛选样本，计算 5D 张量并导出为
 可被 case_retriever 加载的缓存（.npz + .json），便于 KDTree 检索与 UI 流畅加载。
 
 用法:
-  python scripts/build_a01_full_index.py [--data path/to/518k.jsonl] [--out dir]
+  python scripts/build_a01_full_index.py [--pattern A-01] [--data path/to/518k.jsonl] [--out dir]
+  python scripts/build_a01_full_index.py --pattern A-02 [--data path/to/518k.jsonl] [--out dir]
 """
 
 from __future__ import annotations
@@ -34,10 +35,19 @@ def load_manifest(manifest_path: Path) -> dict:
         return json.load(f)
 
 
-def get_weights_matrix(manifest: dict) -> tuple:
+def get_weights_matrix(manifest: dict, manifest_path: Path | None = None) -> tuple:
+    """从 manifest 取 TMM；若 weights 为空（如 A-02 待分析师提供），则回退到 config/physics V4.0-BETA。"""
     tmm = manifest["tensor_mapping_matrix"]
     gods = tmm["ten_gods"]
-    matrix = [tmm["weights"][g] for g in gods]
+    weights = tmm.get("weights") or {}
+    if not weights and manifest_path and "A-02" in str(manifest_path):
+        v4_path = ROOT / "config" / "physics" / "tensor_mapping_matrix_V4.0_BETA.json"
+        if v4_path.exists():
+            with open(v4_path, "r", encoding="utf-8") as f:
+                v4 = json.load(f)
+            weights = v4.get("weights", {})
+            print("⚠️ A-02 manifest 未提供 weights，已回退使用 config/physics/tensor_mapping_matrix_V4.0_BETA.json")
+    matrix = [weights[g] for g in gods]
     return np.array(matrix), gods
 
 
@@ -62,20 +72,33 @@ def normalize_case_for_logic(case: dict) -> dict:
     return case
 
 
+def resolve_manifest_for_pattern(pattern_id: str) -> Path:
+    """按格局 ID 解析 manifest 路径。"""
+    if pattern_id.upper() == "A-02":
+        p = ROOT / "registry" / "holographic_pattern" / "A-02" / "A-02_manifest.json"
+        if p.exists():
+            return p
+    # A-01 或默认
+    return ROOT / "config" / "patterns" / "manifest_A01.json"
+
+
 def build_full_index(
     data_path: Path,
     manifest_path: Path,
     out_dir: Path,
     limit: int | None = None,
+    pattern_id: str = "A-01",
 ) -> tuple[int, Path, Path]:
     """
-    扫描 jsonl，筛选 A-01 样本，导出 points.npz 与 meta.json。
+    扫描 jsonl，按格局 JsonLogic 筛选样本，导出 points.npz 与 meta.json。
     返回 (样本数, points_path, meta_path)。
     """
     manifest = load_manifest(manifest_path)
-    weights, gods = get_weights_matrix(manifest)
+    weights, gods = get_weights_matrix(manifest, manifest_path)
     god_index_map = {g: i for i, g in enumerate(gods)}
-    logic_expr = manifest["classical_logic_rules"]["expression"]
+    rules = manifest.get("classical_logic_rules") or {}
+    logic_expr = rules.get("pipeline_expression") or rules.get("expression")
+    prefix = pattern_id.lower().replace("-", "")  # a01 / a02
 
     out_dir.mkdir(parents=True, exist_ok=True)
     points_list = []
@@ -98,7 +121,7 @@ def build_full_index(
                 matched += 1
                 tensor = calculate_5d_tensor(case["ten_gods"], weights, god_index_map)
                 points_list.append(tensor)
-                uid = case.get("uid") or case.get("id") or f"A01-{i}"
+                uid = case.get("uid") or case.get("id") or f"{pattern_id}-{i}"
                 meta_list.append({
                     "ref": str(uid),
                     "point": tensor.tolist(),
@@ -111,11 +134,11 @@ def build_full_index(
             if total % 50000 == 0:
                 print(f"   进度: {total:,} 行, 匹配: {matched:,}", end="\r")
 
-    print(f"\n✅ A-01 匹配: {matched:,} / {total:,}")
+    print(f"\n✅ {pattern_id} 匹配: {matched:,} / {total:,}")
 
     points = np.array(points_list, dtype=np.float64)
-    points_path = out_dir / "a01_full_points.npz"
-    meta_path = out_dir / "a01_full_meta.json"
+    points_path = out_dir / f"{prefix}_full_points.npz"
+    meta_path = out_dir / f"{prefix}_full_meta.json"
     np.savez_compressed(points_path, points=points)
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta_list, f, ensure_ascii=False, indent=0)
@@ -124,11 +147,16 @@ def build_full_index(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="A-01 全量样本索引构建")
+    parser = argparse.ArgumentParser(description="全量样本索引构建（A-01 / A-02）")
+    parser.add_argument("--pattern", type=str, default="A-01", help="格局 ID，如 A-01、A-02")
     parser.add_argument("--data", type=Path, default=None, help="518k jsonl 路径")
     parser.add_argument("--out", type=Path, default=None, help="输出目录，默认 data_local")
     parser.add_argument("--limit", type=int, default=None, help="最多导出样本数（测试用）")
     args = parser.parse_args()
+
+    pattern_id = args.pattern.strip().upper()
+    if pattern_id not in ("A-01", "A-02"):
+        print(f"⚠️ 未显式支持格局 {pattern_id}，将尝试 A-01 manifest 路径")
 
     data_path = args.data or ROOT / "data" / "holographic_universe_518k.jsonl"
     if not data_path.exists():
@@ -137,13 +165,15 @@ def main():
         print(f"❌ 未找到数据文件: {args.data or 'data/ 或 data_local/'}")
         sys.exit(1)
 
-    manifest_path = ROOT / "config" / "patterns" / "manifest_A01.json"
+    manifest_path = resolve_manifest_for_pattern(pattern_id)
     if not manifest_path.exists():
         print(f"❌ 未找到 manifest: {manifest_path}")
         sys.exit(1)
 
     out_dir = args.out or ROOT / "data_local"
-    n, p, m = build_full_index(data_path, manifest_path, out_dir, limit=args.limit)
+    n, p, m = build_full_index(
+        data_path, manifest_path, out_dir, limit=args.limit, pattern_id=pattern_id
+    )
     print(f"🎯 全量索引构建完成: {n:,} 条。请使用 CaseRetriever(cache_dir={out_dir}) 加载。")
 
 

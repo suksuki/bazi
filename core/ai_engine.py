@@ -52,7 +52,39 @@ SYSTEM_PROMPT_5D = """你是一位精通命理学与物理建模的「流形解�
 """
 
 # 默认 HKB 路径（A-01 语义核心从该文件注入）
-_DEFAULT_HKB_PATH = Path(__file__).resolve().parent.parent / "config" / "hkb" / "hkb_params.json"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_HKB_PATH = _PROJECT_ROOT / "config" / "hkb" / "hkb_params.json"
+_A02_MANIFEST_PATH = _PROJECT_ROOT / "registry" / "holographic_pattern" / "A-02" / "A-02_manifest.json"
+
+
+def _get_system_prompt_for_a02_semantic() -> str:
+    """Clause 0.3：A-02 七杀格语义核心由审计师签发，从 manifest 注入 System Prompt。"""
+    base = SYSTEM_PROMPT_5D
+    if not _A02_MANIFEST_PATH.exists():
+        return base
+    try:
+        with open(_A02_MANIFEST_PATH, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        core = manifest.get("semantic_core_dimensions") or {}
+        if not core:
+            return base
+        lines = [
+            "",
+            "## A-02 七杀格语义核心（审计师立法，必须遵循）",
+        ]
+        for key in ("A_stress_transform", "B_order_rebuild", "C_eruption_kinetic"):
+            d = core.get(key)
+            if not isinstance(d, dict):
+                continue
+            name = d.get("name", key)
+            mapping = d.get("physical_mapping", "")
+            classical = d.get("classical_by_gemini", "")
+            lines.append(f"- **{name}**（{mapping}）：{classical}")
+        if len(lines) > 2:
+            base = base + "\n".join(lines)
+    except Exception as e:
+        logger.debug("加载 A-02 语义核心失败: %s", e)
+    return base
 
 
 def _get_system_prompt_with_a01_semantic() -> str:
@@ -83,6 +115,13 @@ def _get_system_prompt_with_a01_semantic() -> str:
     except Exception as e:
         logger.debug("加载 A-01 语义核心失败，使用基础 Prompt: %s", e)
     return base
+
+
+def _get_system_prompt_for_pattern(pattern_id: Optional[str]) -> str:
+    """Clause 0.3：按格局 ID 返回带语义立法的 System Prompt；禁止执行端自行发明语义。"""
+    if pattern_id and str(pattern_id).strip().upper() == "A-02":
+        return _get_system_prompt_for_a02_semantic()
+    return _get_system_prompt_with_a01_semantic()
 
 
 def _get_ollama_client():
@@ -140,6 +179,7 @@ def generate_manifold_interpretation(
     model: Optional[str] = None,
     timeout_sec: int = 60,
     dynamic_context: Optional[str] = None,
+    pattern_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     根据 5D 坐标与偏移向量，调用本地大模型生成「物理偏移感应式」判词。
@@ -152,6 +192,7 @@ def generate_manifold_interpretation(
         ten_gods: 十神向量（可选），用于生成摘要
         model: 模型名，默认从配置读取或 qwen2.5:32b
         timeout_sec: 请求超时秒数
+        pattern_id: 格局 ID（如 A-01、A-02），用于加载该格局的语义立法作为 System Prompt；Clause 0.3
 
     Returns:
         {
@@ -188,7 +229,7 @@ def generate_manifold_interpretation(
         dynamic_context=dynamic_context,
     )
 
-    system_prompt = _get_system_prompt_with_a01_semantic()
+    system_prompt = _get_system_prompt_for_pattern(pattern_id)
     try:
         response = client.chat(
             model=model_name,
@@ -224,6 +265,7 @@ def stream_manifold_interpretation(
     ten_gods: Optional[Dict[str, Any]] = None,
     model: Optional[str] = None,
     dynamic_context: Optional[str] = None,
+    pattern_id: Optional[str] = None,
 ) -> Generator[str, None, None]:
     """
     流式生成判词，逐 chunk 产出，供 UI 打字机展示。
@@ -240,7 +282,7 @@ def stream_manifold_interpretation(
         parts = [f"{k}={v}" for k, v in sorted(ten_gods.items(), key=lambda x: -abs(x[1] if isinstance(x[1], (int, float)) else 0))[:6]]
         ten_gods_summary = ", ".join(parts)
     user_prompt = _build_user_prompt(point=point, offset=offset, best_subpattern=best_subpattern, matrix_version=matrix_version, ten_gods_summary=ten_gods_summary, dynamic_context=dynamic_context)
-    system_prompt = _get_system_prompt_with_a01_semantic()
+    system_prompt = _get_system_prompt_for_pattern(pattern_id)
     stream = client.chat(
         model=model_name,
         messages=[
