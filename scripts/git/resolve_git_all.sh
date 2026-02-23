@@ -96,7 +96,6 @@ git add docs/GRAPH_NETWORK_ENGINE_ARCHITECTURE.md
 git add docs/GRAPH_ENGINE_INTEGRATION_V33.md
 git add docs/ANTIGRAVITY_OPTIMIZATION_CONSTITUTION_V1.0.md
 git add scripts/AUTO_EVOLVE_README.md
-git add scripts/EVOLUTION_LAUNCH.md
 
 # 辅助脚本
 git add scripts/preflight_check.sh

@@ -949,13 +949,16 @@ def render():
         quantum_framework.translator.set_style(TranslationStyle.WONG_KAR_WAI)
 
     current_module = module_map.get(selected_name)
-    selected_topic_id = current_module.get('id') if current_module else None
+    if current_module is None:
+        current_module = {}
+        st.warning(f"未找到模块「{selected_name}」，请从左侧重新选择或等待配置加载。")
+    selected_topic_id = current_module.get('id')
 
     # Render Selected Module Content (Above Global Console)
     st.divider()
 
     # [REF] Single Collapsible Container for Entire Topic
-    with st.expander(f"📊 {current_module.get('name')}", expanded=True):
+    with st.expander(f"📊 {current_module.get('name', selected_name or '—')}", expanded=True):
 
         # 1. Topic Metadata (Description, Goal, Outcome)
         tm1, tm2 = st.columns([1, 1])
@@ -1054,7 +1057,7 @@ def render():
                     st.info(f"No active rules found matching spec: {linked_ids}")
                 else:
                     rule_names = [f"{rid} | {r.get('name')}" for rid, r in module_rules.items()]
-                    sel_rule = st.selectbox("查看规则详情", rule_names, key=f"sel_rule_{current_module['id']}")
+                    sel_rule = st.selectbox("查看规则详情", rule_names, key=f"sel_rule_{current_module.get('id', 'unknown')}")
                     if sel_rule:
                         rid = sel_rule.split(" | ")[0]
                         st.json(module_rules[rid])

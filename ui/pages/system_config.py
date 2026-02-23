@@ -249,3 +249,130 @@ def render_system_config(config_manager):
         except Exception as e:
             st.error(f"入库失败: {e}")
 
+    st.divider()
+
+    # ==================== 030: 矩阵微调实验区 (TMM Lab) ====================
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['mystic_gold']};">
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🔬 矩阵微调实验区 (TMM Lab)</h3>
+        </div>
+    """, unsafe_allow_html=True)
+    st.caption("十神→5D 映射矩阵（TMM）为 FDS 的「重力常数」。可切换推理用矩阵版本并微调权重；全量大模型审计与 V5 生成请运行 scripts/matrix_logic_auditor.py 或 matrix_backfitting_auditor.py。")
+    try:
+        from pathlib import Path
+        import json as _json
+        _root = Path(__file__).resolve().parent.parent.parent
+        _v4 = _root / "config" / "physics" / "tensor_mapping_matrix_V4.0_BETA.json"
+        _v5 = _root / "config" / "physics" / "tensor_mapping_matrix_V5.0_ALPHA.json"
+        _manifest = _root / "config" / "patterns" / "manifest_A01.json"
+        _physics = config_manager.get("physics") or {}
+        if not isinstance(_physics, dict):
+            _physics = {}
+        _saved_ver = _physics.get("matrix_version", "4.0-BETA")
+        _opts = ["4.0-BETA"]
+        if _v5.exists():
+            _opts.append("5.0-ALPHA")
+        _choice = st.radio("推理用矩阵", options=_opts, index=_opts.index(_saved_ver) if _saved_ver in _opts else 0, key="tmm_version_switch", horizontal=True)
+        if _choice != _saved_ver:
+            _physics["matrix_version"] = _choice
+            config_manager.save_config("physics", _physics)
+            st.success(f"已切换为 **{_choice}**，排盘与流形归位将使用该矩阵。")
+        _tmm = None
+        _ver = "3.0"
+        _source_label = ""
+        _source_path = ""
+        if _choice == "5.0-ALPHA" and _v5.exists():
+            with open(_v5, "r", encoding="utf-8") as _f:
+                _d = _json.load(_f)
+                _tmm = _d.get("tensor_mapping_matrix", _d)
+                _ver = _d.get("version", "5.0-ALPHA")
+                _source_label = "物理核心 (V5 校准)"
+                _source_path = "config/physics/tensor_mapping_matrix_V5.0_ALPHA.json"
+        if not _tmm and _v4.exists():
+            with open(_v4, "r", encoding="utf-8") as _f:
+                _d = _json.load(_f)
+                _tmm = _d.get("tensor_mapping_matrix", _d)
+                _ver = _d.get("version", "4.0-BETA")
+                _source_label = "物理核心 (全链路生效)"
+                _source_path = "config/physics/tensor_mapping_matrix_V4.0_BETA.json"
+        if not _tmm and _manifest.exists():
+            with open(_manifest, "r", encoding="utf-8") as _f:
+                _tmm = _json.load(_f).get("tensor_mapping_matrix")
+                _ver = "3.0"
+                _source_label = "法律基准 (manifest 出厂)"
+                _source_path = "config/patterns/manifest_A01.json"
+        if _tmm and _tmm.get("weights"):
+            _gods = _tmm.get("ten_gods", list(_tmm["weights"].keys()))
+            _dims = _tmm.get("dimensions", ["E", "O", "M", "S", "R"])
+            _labels = {"E": "能量E", "O": "秩序O", "M": "财富M", "S": "压力S", "R": "关系R"}
+            _god_cn = {"ZG": "正官", "PG": "七杀", "ZR": "正财", "PR": "偏财", "ZS": "食神", "PS": "伤官", "ZC": "正印", "PC": "枭神", "ZB": "比肩", "PB": "劫财"}
+            if st.session_state.get("tmm_edited_version") != _ver:
+                st.session_state["tmm_edited"] = {g: list(_tmm["weights"][g]) for g in _gods}
+                st.session_state["tmm_edited_version"] = _ver
+            edited = st.session_state["tmm_edited"]
+            st.info(f"**当前加载**：{_source_label} · 版本 **{_ver}** · `{_source_path}`")
+            st.caption("切换版本后，排盘与全息归位将使用所选矩阵；V4/V5 敏感度对比可运行：`scripts/matrix_logic_auditor.py --generate-v5 --compare`。")
+            st.caption("十神×5维 权重表（可编辑后保存草稿）")
+            for _g in _gods:
+                _row = list(edited.get(_g, [0] * 5)[:5])
+                _cols = st.columns(6)
+                with _cols[0]:
+                    _display = f"{_god_cn.get(_g, _g)} ({_g})"
+                    st.text_input("十神", value=_display, key=f"tmm_lab_{_g}", disabled=True, label_visibility="collapsed")
+                for _i, _dim in enumerate(_dims[:5]):
+                    with _cols[_i + 1]:
+                        _v = st.number_input(
+                            _labels.get(_dim, _dim),
+                            value=round(_row[_i], 2),
+                            format="%.2f",
+                            key=f"tmm_{_g}_{_dim}",
+                            label_visibility="visible",
+                        )
+                        _row[_i] = float(_v)
+                edited[_g] = _row
+            st.session_state["tmm_edited"] = edited
+            _sample_vec = [1.0] * 10
+            _p = [0.0] * 5
+            for _i, _g in enumerate(_gods):
+                _w = edited.get(_g, [0] * 5)
+                for _j in range(5):
+                    _p[_j] += _sample_vec[_i] * (_w[_j] if _j < len(_w) else 0)
+            with st.expander("📐 预览：标准向量 [1,1,…,1] 的 5D 投影", expanded=False):
+                st.write("E: {:.3f}, O: {:.3f}, M: {:.3f}, S: {:.3f}, R: {:.3f}".format(*_p))
+            _chat_model = (config_manager.get("ai_engine") or {}).get("chat_model", "qwen2.5:32b")
+            if st.button("🧠 请大模型给矩阵第一印象", key="btn_tmm_first_impression"):
+                try:
+                    _summary = _json.dumps(edited, ensure_ascii=False, indent=2)
+                    _prompt = (
+                        "作为命理物理学家，请对下面这份「十神→五维(E/O/M/S/R)」映射权重矩阵给出你的「第一印象」："
+                        "是否符合古典命理中十神与秩序/能量/财富/压力/关系的对应？用 2～4 句话概括。\n\n" + _summary
+                    )
+                    with st.spinner(f"大模型 ({_chat_model}) 正在阅读矩阵…"):
+                        _host = config_manager.get("ollama_host") or "http://localhost:11434"
+                        _client = ollama.Client(host=_host)
+                        _r = _client.chat(model=_chat_model, messages=[{"role": "user", "content": _prompt}], options={"num_predict": 300})
+                    if isinstance(_r, dict):
+                        _content = (_r.get("message") or {}).get("content") or ""
+                    else:
+                        _content = getattr(getattr(_r, "message", None), "content", None) or ""
+                    _content = (_content or "").strip()
+                    if _content:
+                        st.session_state["tmm_first_impression"] = _content
+                    else:
+                        st.error("模型返回为空。请确认 Ollama 已加载该模型且未超时；可到终端执行同模型对话测试。")
+                except Exception as _e:
+                    st.error(f"请求失败: {_e}")
+            if st.session_state.get("tmm_first_impression"):
+                with st.expander("📜 大模型对当前矩阵的第一印象", expanded=True):
+                    st.write(st.session_state["tmm_first_impression"])
+            if st.button("💾 保存为草稿 (tmm_draft.json)", key="btn_tmm_save_draft"):
+                _out = _root / "results" / "tmm_draft.json"
+                _out.parent.mkdir(parents=True, exist_ok=True)
+                with open(_out, "w", encoding="utf-8") as _f:
+                    _json.dump({"version": "draft", "ten_gods": _gods, "dimensions": _dims, "weights": edited}, _f, ensure_ascii=False, indent=2)
+                st.success(f"已保存至 {_out}。可用于 matrix_logic_auditor 或对比脚本。")
+        else:
+            st.caption("未找到 TMM 配置（manifest_A01.json 或 config/physics/tensor_mapping_matrix_V4.0_BETA.json）。")
+    except Exception as e:
+        st.caption(f"矩阵加载失败: {e}")
+

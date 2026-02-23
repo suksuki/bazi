@@ -18,7 +18,18 @@ from ui.components.cards import DestinyCards
 from controllers.bazi_controller import BaziController
 from core.unified_engine import UnifiedEngine as QuantumEngine
 from core.fds_inference_engine import FDSInferenceEngine, ENGINE_NOTE_FALLBACK
-from core.ai_engine import generate_manifold_interpretation, stream_manifold_interpretation, is_ai_engine_available
+from core.ai_engine import (
+    generate_manifold_interpretation,
+    stream_manifold_interpretation,
+    is_ai_engine_available,
+    simulate_dynamic_impact,
+    explain_classical_logic,
+    generate_case_comparison_blurb,
+    generate_repair_strategy,
+)
+from core.case_retriever import get_default_retriever
+from core.pathway_analyzer import analyze_repair_pathway
+from core.config_manager import ConfigManager
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
 import numpy as np
@@ -26,14 +37,27 @@ import numpy as np
 # Configure Logger
 logger = logging.getLogger(__name__)
 
+# 5D 轴标签（双层雷达图）
+AXIS_LABELS_5D = {"E": "能量 E", "O": "秩序 O", "M": "财富 M", "S": "压力 S", "R": "关系 R"}
+
 
 @st.cache_resource
-def get_fds_inference_engine() -> Optional[FDSInferenceEngine]:
-    """Cache inference engine. 若缺少 registry/knowledge 等文件则返回 None，页面做降级展示。"""
+def get_fds_inference_engine(matrix_version: Optional[str] = None) -> Optional[FDSInferenceEngine]:
+    """Cache inference engine 按矩阵版本隔离；若缺少 registry/knowledge 等文件则返回 None。"""
     try:
-        return FDSInferenceEngine()
+        return FDSInferenceEngine(preferred_matrix_version=matrix_version)
     except FileNotFoundError as e:
         logger.warning("FDS inference engine 未加载（缺少配置文件）: %s", e)
+        return None
+
+
+@st.cache_resource
+def get_case_retriever():
+    """A-01 案例对撞机：从 registry 与可选扩展样本构建最近邻检索器。"""
+    try:
+        return get_default_retriever()
+    except Exception as e:
+        logger.warning("Case retriever 未加载: %s", e)
         return None
 
 
@@ -74,7 +98,6 @@ def render_prediction_dashboard():
     Fully MVC compliant.
     """
     controller = BaziController()
-    selected_yun = None  # Initialize to prevent UnboundLocalError
     
     # 1. State Verification & Hydration
     # [Fix] Hydrate Controller from Session State (Form Data)
@@ -113,6 +136,28 @@ def render_prediction_dashboard():
     # 2. Get Data from Controller
     chart = controller.get_chart()
     luck_cycles = controller.get_luck_cycles()
+    
+    # 大运：用 session_state 持久化选择，保证表格与选择器一致（避免表里显示 ? 或与下拉不一致）
+    current_year = datetime.datetime.now().year
+    if luck_cycles:
+        yun_options = [f"{c['start_year']}~{c['end_year']} ({c['start_age']}岁): {c['gan_zhi']}" for c in luck_cycles]
+        default_idx = 0
+        for i, c in enumerate(luck_cycles):
+            if c['start_year'] <= current_year <= c['end_year']:
+                default_idx = i
+                break
+        default_str = yun_options[default_idx]
+        if "bazi_da_yun_choice" not in st.session_state:
+            st.session_state["bazi_da_yun_choice"] = default_str
+        selected_yun_str = st.session_state["bazi_da_yun_choice"]
+        if selected_yun_str not in yun_options:
+            selected_yun_str = default_str
+            st.session_state["bazi_da_yun_choice"] = default_str
+        selected_yun = luck_cycles[yun_options.index(selected_yun_str)]
+    else:
+        selected_yun = None
+        yun_options = []
+        default_idx = 0
     
     # User Info
     name = user_data.get('name', '未命名')
@@ -172,17 +217,10 @@ def render_prediction_dashboard():
     current_year = datetime.datetime.now().year
     c1, c2, c3 = st.columns([2, 1, 1])
 
-    # Da Yun Selection
+    # Da Yun Selection（与上方表格用同一 session_state，保证大运列与选择器一致）
     if luck_cycles:
         with c1:
-            yun_options = [f"{c['start_year']}~{c['end_year']} ({c['start_age']}岁): {c['gan_zhi']}" for c in luck_cycles]
-            default_idx = 0
-            for i, c in enumerate(luck_cycles):
-                if c['start_year'] <= current_year <= c['end_year']:
-                    default_idx = i
-                    break
-            selected_yun_str = st.selectbox("选择大运 (Da Yun)", yun_options, index=default_idx)
-            selected_yun = luck_cycles[yun_options.index(selected_yun_str)]
+            st.selectbox("选择大运 (Da Yun)", yun_options, key="bazi_da_yun_choice")
 
     # Liu Nian Selection
     with c2:
@@ -193,9 +231,15 @@ def render_prediction_dashboard():
         ln_gan_zhi = f"{ln_gan}{ln_zhi}"
         st.metric("演算流年", f"{sim_year} {ln_gan_zhi}")
 
-    # 地理方位（动态演化·空间耦合）
+    # 地理方位（动态演化·空间耦合）- 八方
     with c3:
-        geo_direction = st.selectbox("地理方位", ["中", "东", "南", "西", "北"], index=0, key="dynamic_geo_direction", help="用于 5D 动态修正：南火、西金等")
+        geo_direction = st.selectbox(
+            "地理方位",
+            ["中", "东", "南", "西", "北", "东南", "东北", "西南", "西北"],
+            index=0,
+            key="dynamic_geo_direction",
+            help="用于 5D 动态修正：南火、西金、东方木等",
+        )
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -243,10 +287,12 @@ def render_prediction_dashboard():
                 textposition='auto'
             )])
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
     # --- NEW: A-01 Manifold Mapping & Knowledge Injection ---
-    inference_engine = get_fds_inference_engine()
+    _physics = ConfigManager().get("physics") or {}
+    _matrix_ver = _physics.get("matrix_version") if isinstance(_physics, dict) else None
+    inference_engine = get_fds_inference_engine(_matrix_ver)
     should_infer = False
     logic_hit = None  # 避免 inference_engine 为 None 时后续 elif logic_hit is False 未定义
     if inference_engine is None:
@@ -319,6 +365,55 @@ def render_prediction_dashboard():
             dynamic_state = calculate_dynamic_state(inference["point"], time_delta=time_delta, geo_factor=geo_factor)
         except Exception as e:
             logger.debug("dynamic_engine 跳过: %s", e)
+
+        # --- 026: 5D 双层雷达图（原局 vs 推演）---
+        if dynamic_state:
+            st.markdown("#### 📐 5D 流形推演 (原局 vs 大运/流年/地理)")
+            base_pt = dynamic_state.get("base_point") or inference["point"]
+            dyn_pt = dynamic_state.get("dynamic_point") or base_pt
+            dims = ["E", "O", "M", "S", "R"]
+            r_base = [max(0, base_pt.get(k, 0)) for k in dims]
+            r_dyn = [max(0, dyn_pt.get(k, 0)) for k in dims]
+            fig_5d = go.Figure()
+            fig_5d.add_trace(go.Scatterpolar(
+                r=r_base,
+                theta=[AXIS_LABELS_5D.get(k, k) for k in dims],
+                fill='toself',
+                name='原局',
+                line=dict(color='#7F39FB', width=2),
+                fillcolor='rgba(127, 57, 251, 0.25)',
+            ))
+            fig_5d.add_trace(go.Scatterpolar(
+                r=r_dyn,
+                theta=[AXIS_LABELS_5D.get(k, k) for k in dims],
+                fill='toself',
+                name='推演后',
+                line=dict(color='#FF9800', width=1.5, dash='dash'),
+                fillcolor='rgba(255, 152, 0, 0.15)',
+            ))
+            fig_5d.update_layout(
+                polar=dict(radialaxis=dict(visible=True)),
+                showlegend=True,
+                height=320,
+                margin=dict(l=20, r=20, t=20, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+            )
+            st.plotly_chart(fig_5d, use_container_width=True)
+            # 推演描述：调用大模型解释位移
+            if is_ai_engine_available():
+                if st.button("🔄 生成推演描述", key="btn_simulate_dynamic"):
+                    with st.spinner("大模型推演中…"):
+                        disp = dynamic_state.get("displacement") or {k: 0.0 for k in dims}
+                        res = simulate_dynamic_impact(
+                            base_point=base_pt,
+                            delta_vector=disp,
+                            context_type="liunian",
+                        )
+                    if res.get("success"):
+                        st.success(res.get("text", ""))
+                    else:
+                        st.error(res.get("error", "推演失败"))
 
         # --- [AI 深度透视] 第一优先级：全息报告样式，置顶展示 ---
         st.markdown(f"""
@@ -396,7 +491,7 @@ def render_prediction_dashboard():
                 elif ai_result.get("error"):
                     st.warning(f"AI 判词暂不可用：{ai_result['error']}")
         else:
-            st.info("未检测到本地 Ollama，请配置并拉取 Qwen-32B 后使用 AI 深度透视。")
+            st.info("未检测到本地 Ollama，请在天机设置中配置对话模型后使用 AI 深度透视。")
 
         d_min = min(inference["distances"].values()) if inference.get("distances") else 0.0
         if d_min > 3.0:
@@ -471,7 +566,7 @@ def render_prediction_dashboard():
             polar=dict(radialaxis=dict(visible=True)),
             showlegend=True,
         )
-        st.plotly_chart(radar_fig, width="stretch")
+        st.plotly_chart(radar_fig, use_container_width=True)
         if dynamic_state:
             st.caption("原局 P：静态 5D；动态点：当前大运、流年、地理方位合成后的位移。")
 
@@ -479,6 +574,144 @@ def render_prediction_dashboard():
         if knowledge:
             st.success(f"📜 全息判词 · {knowledge.get('name', inference['best_subpattern'])}")
             st.write(knowledge.get("description", ""))
+
+        # --- 027: 全息相似案例（A-01 案例对撞机）---
+        with st.expander("🔬 全息相似案例 (Holographic Similar Case)", expanded=False):
+            st.caption("从全息案例库中匹配与当前 5D 坐标最近邻的典型案例，进行同类对比。")
+            pt = inference.get("point", {})
+            retriever = get_case_retriever()
+            if retriever and pt:
+                nearest = retriever.find_nearest_cases(pt, top_n=3)
+                if nearest:
+                    dims = list(AXIS_LABELS_5D.values())
+                    cols = st.columns(3)
+                    for i, case in enumerate(nearest):
+                        with cols[i]:
+                            vals = case.get("point") or []
+                            if isinstance(vals, dict):
+                                vals = [vals.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
+                            if len(vals) == 5:
+                                fig = go.Figure()
+                                fig.add_trace(
+                                    go.Scatterpolar(
+                                        r=vals + [vals[0]],
+                                        theta=dims + [dims[0]],
+                                        fill="toself",
+                                        name=case.get("ref", ""),
+                                        line_color="#2196F3",
+                                        fillcolor="rgba(33, 150, 243, 0.2)",
+                                    )
+                                )
+                                fig.update_layout(
+                                    polar=dict(radialaxis=dict(visible=True)),
+                                    height=180,
+                                    margin=dict(l=20, r=20, t=20, b=20),
+                                    showlegend=False,
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                            st.caption(f"**{case.get('ref', '')}** · {case.get('subpattern', '')} · 相似度 {case.get('similarity_pct', 0)}%")
+                            if case.get("is_singularity"):
+                                st.caption("⭐ 奇点样板")
+                    if is_ai_engine_available():
+                        if st.button("🤖 生成同类项对比文案", key="btn_case_comparison"):
+                            with st.spinner("大模型生成中…"):
+                                blurb = generate_case_comparison_blurb(pt, nearest)
+                            if blurb.get("success"):
+                                st.success(blurb.get("text", ""))
+                            else:
+                                st.error(blurb.get("error", "生成失败"))
+                    # 028: 全息侧写 — 选择案例查看详情与演化路径占位
+                    chosen = st.radio("选择案例查看全息侧写", options=[c.get("ref", "") for c in nearest], key="case_sidewalk", horizontal=True)
+                    if chosen:
+                        sel = next((c for c in nearest if c.get("ref") == chosen), None)
+                        if sel:
+                            with st.expander("📐 全息侧写 (Holographic Profile)", expanded=True):
+                                vals = sel.get("point") or []
+                                if isinstance(vals, dict):
+                                    vals = [vals.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
+                                if len(vals) == 5:
+                                    fig_big = go.Figure()
+                                    fig_big.add_trace(
+                                        go.Scatterpolar(
+                                            r=vals + [vals[0]],
+                                            theta=list(AXIS_LABELS_5D.values()) + [list(AXIS_LABELS_5D.values())[0]],
+                                            fill="toself",
+                                            name=chosen,
+                                            line_color="#9C27B0",
+                                            fillcolor="rgba(156, 39, 176, 0.25)",
+                                        )
+                                    )
+                                    fig_big.update_layout(polar=dict(radialaxis=dict(visible=True)), height=280, margin=dict(l=40, r=40, t=20, b=20))
+                                    st.plotly_chart(fig_big, use_container_width=True)
+                                st.caption(f"**{chosen}** · {sel.get('subpattern', '')} · 相似度 {sel.get('similarity_pct', 0)}%")
+                                st.caption("_历史演化路径：若该案例有大运流年数据将在此展示（当前样本库暂无）。_")
+                else:
+                    st.caption("案例库暂无样本，请确认 registry/holographic_pattern/A-01.json 中 benchmarks 已配置。")
+            else:
+                st.json({k: round(pt.get(k, 0), 3) for k in ["E", "O", "M", "S", "R"]})
+                if not retriever:
+                    st.caption("_案例检索器未就绪；请确认 A-01.json 存在。_")
+                else:
+                    st.caption("_当前无 5D 坐标时无法检索相似案例。_")
+            # 027/028: 奇点样板 + 英雄榜大模型剖析
+            if retriever and retriever.case_count > 0:
+                singularities = retriever.get_singularities(limit=10)
+                if singularities:
+                    hall = {}
+                    try:
+                        _hof = Path(__file__).resolve().parent.parent.parent / "registry" / "holographic_pattern" / "A-01_hall_of_fame.json"
+                        if _hof.exists():
+                            import json as _json
+                            with open(_hof, "r", encoding="utf-8") as _f:
+                                _d = _json.load(_f)
+                            for _s in _d.get("singularities", []):
+                                hall[_s.get("ref", "")] = _s.get("analysis", "")
+                    except Exception:
+                        pass
+                    with st.expander("⭐ 奇点样板 (Golden / Extreme Cases)", expanded=False):
+                        st.caption("案例库中预先标记的代表性命例；若已运行英雄榜脚本则展示大模型深度剖析。")
+                        for s in singularities:
+                            ref, sp = s.get("ref", ""), s.get("subpattern", "")
+                            pt_s = s.get("point", [])
+                            if isinstance(pt_s, dict):
+                                pt_s = [pt_s.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
+                            st.caption(f"**{ref}** · {sp}" + (f" · 5D={[round(x, 2) for x in pt_s]}" if len(pt_s) == 5 else ""))
+                            if ref and hall.get(ref):
+                                st.write(hall[ref])
+
+        # --- 029: 流形修复建议 (Manifold Repair) ---
+        if retriever and pt and retriever.case_count > 0:
+            pathway = analyze_repair_pathway(retriever, pt, top_repair=5)
+            deficit_info = pathway.get("deficit_info")
+            repair_vector = pathway.get("repair_vector")
+            if deficit_info and deficit_info.get("deficit", 0) > 0:
+                st.markdown(f"""
+                    <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['mystic_gold']};">
+                        <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔧 流形修复建议 (Manifold Repair)</h4>
+                    </div>
+                """, unsafe_allow_html=True)
+                axis_label = deficit_info.get("axis_label", deficit_info.get("axis", ""))
+                st.caption(f"**你的物理瓶颈**：{deficit_info.get('axis', '')} 轴（{axis_label}）")
+                st.caption(f"当前值：{deficit_info.get('current')} → 参考质心：{deficit_info.get('target_from_centroid')}（建议补齐：**+{deficit_info.get('deficit', 0):.2f}**）")
+                if repair_vector:
+                    delta = repair_vector.get("delta_vector") or {}
+                    st.caption(f"**目标位移 ΔV**：{delta}")
+                    if is_ai_engine_available():
+                        if st.button("🧭 生成 AI 导航建议", key="btn_repair_strategy"):
+                            with st.spinner("大模型生成修复路径…"):
+                                blurb = generate_repair_strategy(
+                                    deficit_info.get("axis", "O"),
+                                    delta,
+                                    user_point=pt,
+                                )
+                            if blurb.get("success"):
+                                st.success(blurb.get("text", ""))
+                            else:
+                                st.error(blurb.get("error", "生成失败"))
+                else:
+                    st.caption("_样本库中暂无与您相似且在该轴成功修复的案例，可扩大检索或待全量索引后重试。_")
+            elif deficit_info and deficit_info.get("deficit", 0) <= 0:
+                st.caption("_当前流形相对质心无显著短板，无需修复建议。_")
 
         # --- [古籍印证] 模块：向量池检索 ---
         st.markdown(f"""
@@ -492,6 +725,18 @@ def render_prediction_dashboard():
             if classical:
                 st.markdown(f"**{classical.get('source', '古籍')}** · {classical.get('chapter', '')}")
                 st.write(classical.get("text", ""))
+                # 026: 逻辑溯源 - 点击后大模型解析「为什么古人这么说」
+                if is_ai_engine_available():
+                    if st.button("🕵️ 物理逻辑解析（为什么古人这么说）", key="btn_classical_logic"):
+                        with st.spinner("大模型解析中…"):
+                            _res = explain_classical_logic(
+                                classical.get("text", ""),
+                                source=classical.get("source", "古籍"),
+                            )
+                        if _res.get("success"):
+                            st.success(_res.get("text", ""))
+                        else:
+                            st.error(_res.get("error", "解析失败"))
             else:
                 st.caption("暂无匹配古籍条目，可向 data/vector_db/raw 添加文本并执行入库。")
         except Exception as e:
@@ -618,7 +863,7 @@ def render_prediction_dashboard():
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)'
                 )
-                st.plotly_chart(fig_radar, width='stretch')
+                st.plotly_chart(fig_radar, use_container_width=True)
                 
                 # Show detailed values with uncertainty
                 st.caption("**十神详情 (ProbValue μ ± σ)**")

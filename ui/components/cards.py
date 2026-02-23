@@ -1,6 +1,7 @@
 
 import streamlit as st
-from .styles import get_theme, get_nature_color
+import streamlit.components.v1 as components
+from .styles import get_theme, get_nature_color, get_bazi_table_css
 from core.interactions import get_stem_interaction, get_branch_interaction
 
 class DestinyCards:
@@ -186,8 +187,8 @@ class DestinyCards:
         i_l_b = fmt_int(get_branch_interaction(l_b, d_b))
         i_n_b = fmt_int(get_branch_interaction(n_b, d_b))
 
-        # HTML Construction
-        st.markdown(f"""
+        # 用 components.html 渲染，避免部分环境下 markdown 把 HTML 当纯文本显示
+        table_body = f"""
         <div class="bazi-box">
             <table class="bazi-table">
                 <tr>
@@ -200,45 +201,37 @@ class DestinyCards:
                     <td><div class="bazi-header h-anim-liunian">🌊 流年</div></td>
                 </tr>
                 <tr>
-                    <!-- Year -->
                     <td class="pillar-cell">
                         <div class="stem" style="color: {get_nature_color(y_s)}">{y_s}</div>
                         <div class="branch" style="color: {get_nature_color(y_b)}">{y_b}</div>
                         <div class="energy-val">{pe[0] + pe[1]:.1f}</div>
                         <div class="int-container">{i_y_s}{i_y_b}</div>
                     </td>
-                    <!-- Month -->
                     <td class="pillar-cell">
                         <div class="stem" style="color: {get_nature_color(m_s)}">{m_s}</div>
                         <div class="branch" style="color: {get_nature_color(m_b)}">{m_b}</div>
                         <div class="energy-val">{pe[2] + pe[3]:.1f}</div>
                         <div class="int-container">{i_m_s}{i_m_b}</div>
                     </td>
-                    <!-- Day (Day Master) -->
                     <td class="pillar-cell dm-glow">
                         <div class="stem day-master" style="color: {get_nature_color(d_s)}">{d_s}</div>
                         <div class="branch day-master" style="color: {get_nature_color(d_b)}">{d_b}</div>
                         <div class="energy-val" style="color: #ffd700;">{pe[4] + pe[5]:.1f}</div>
                         <div class="int-container" style="color: #ffd700; font-size: 0.6rem;">✦ 命主 ✦</div>
                     </td>
-                    <!-- Hour -->
                     <td class="pillar-cell">
                         <div class="stem" style="color: {get_nature_color(h_s)}">{h_s}</div>
                         <div class="branch" style="color: {get_nature_color(h_b)}">{h_b}</div>
                         <div class="energy-val">{pe[6] + pe[7]:.1f}</div>
                         <div class="int-container">{i_h_s}{i_h_b}</div>
                     </td>
-                    
                     <td></td>
-                    
-                    <!-- Luck (Da Yun) -->
                     <td class="pillar-cell" style="opacity: 0.9;">
                         <div class="stem" style="color: {get_nature_color(l_s)}">{l_s}</div>
                         <div class="branch" style="color: {get_nature_color(l_b)}">{l_b}</div>
                         <div class="energy-val">-</div>
                         <div class="int-container">{i_l_s}{i_l_b}</div>
                     </td>
-                    <!-- Year (Liu Nian) -->
                     <td class="pillar-cell" style="opacity: 0.9; border-color: rgba(64, 224, 208, 0.3);">
                         <div class="stem" style="color: {get_nature_color(n_s)}">{n_s}</div>
                         <div class="branch" style="color: {get_nature_color(n_b)}">{n_b}</div>
@@ -253,7 +246,9 @@ class DestinyCards:
                 <span style="font-size: 0.8em; color: #666;">提示：🔗合 💥冲 ⚡刑 💔害 (相对于日柱)</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        full_html = f"""<!DOCTYPE html><html><head><meta charset="utf-8">{get_bazi_table_css()}</head><body>{table_body}</body></html>"""
+        components.html(full_html, height=420, scrolling=False)
 
     @staticmethod
     def render_ten_gods_metrics(dg, scale=0.08):

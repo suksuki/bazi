@@ -27,9 +27,10 @@ except ImportError:
     jsonLogic = None  # type: ignore
     _JSON_LOGIC_AVAILABLE = False
 
-# 当严格判定库缺失时，UI 可展示的降级提示
+# 当严格判定库缺失时，UI 可展示的降级提示（第 019 号工程指令：逻辑降级警示）
 ENGINE_NOTE_FALLBACK = (
-    "[ENGINE NOTE] 正在使用基础逻辑判定，建议安装严格判定库以激活 Manifest 法律全文校验。"
+    "正在使用基础逻辑判定；复杂变格可能抓不准。"
+    "激活严格模式请安装: pip install json-logic-qubit ，然后重启仪表盘。"
 )
 
 
@@ -87,6 +88,7 @@ class FDSInferenceEngine:
         registry_path: Path | str | None = None,
         kb_path: Path | str | None = None,
         manifest_path: Path | str | None = None,
+        preferred_matrix_version: str | None = None,
     ) -> None:
         root = _project_root()
         self.registry_path = Path(registry_path) if registry_path else (root / "registry" / "holographic_pattern" / "A-01.json")
@@ -97,9 +99,19 @@ class FDSInferenceEngine:
         self.kb = self._load_json(self.kb_path)
         self.manifest = self._load_json(self.manifest_path)
 
-        # 全局优先：V4.0-BETA 真理矩阵 > manifest > registry
+        # 全局优先：可按 preferred_matrix_version 或配置选 V5/V4，再 manifest > registry
+        _preferred = preferred_matrix_version
+        if _preferred is None:
+            try:
+                from core.config_manager import ConfigManager
+                _cfg = ConfigManager()
+                _physics = _cfg.get("physics") or {}
+                if isinstance(_physics, dict):
+                    _preferred = _physics.get("matrix_version")
+            except Exception:
+                pass
         self.tmm, self.matrix_version = load_tensor_mapping_matrix(
-            self.manifest, registry=self.registry
+            self.manifest, registry=self.registry, preferred_version=_preferred
         )
 
         self.ten_god_order: List[str] = self.tmm["ten_gods"]

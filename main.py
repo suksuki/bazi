@@ -20,7 +20,7 @@ apply_custom_header("🔮 吉普赛 · AI 命运占卜", "基于量子纠缠与�
 
 # 2.1 Navigation (Modern Segmented Control)
 st.markdown("<div style='margin-bottom: -15px;'>", unsafe_allow_html=True)
-nav_options = ["🔮 智能排盘", "💰 财运推演", "🌀 量子仿真", "🌙 自我进化", "📜 古籍挖掘", "✨ 量子真言", "🌟 命运回响", "🕯️ 悟性训练", "📋 档案审计", "🌌 全息格局", "🧠 全息知识中心", "🏛️ 量子架构注册", "📚 规范文档", "⚙️ 天机设置", "⚡ 架构师"]
+nav_options = ["🔮 智能排盘", "💰 财运推演", "🌀 量子仿真", "✨ 量子真言", "🌟 命运回响", "🕯️ 悟性训练", "📋 档案审计", "🌌 全息格局", "🧠 全息知识中心", "🏛️ 量子架构注册", "📚 规范文档", "⚙️ 天机设置", "⚡ 架构师"]
 
 # --- Smart Routing Fix ---
 # 如果 URL 带有文档或配置参数，强制跳转到规范文档页面
@@ -70,14 +70,6 @@ elif app_mode == "🌟 命运回响":
 elif app_mode == "🌀 量子仿真":
     from ui.pages.quantum_simulation import render
     render()
-
-elif app_mode == "🌙 自我进化":
-    from ui.pages.self_learning import render_self_learning
-    render_self_learning()
-
-elif app_mode == "📜 古籍挖掘":
-    from ui.pages.mining_console import render as render_mining_console
-    render_mining_console()
 
 elif app_mode == "💰 财运推演":
     from ui.pages.wealth_verification import render

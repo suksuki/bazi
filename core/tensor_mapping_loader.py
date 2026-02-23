@@ -14,23 +14,30 @@ from typing import Any, Dict, Tuple
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _V4_PATH = _PROJECT_ROOT / "config" / "physics" / "tensor_mapping_matrix_V4.0_BETA.json"
+_V5_PATH = _PROJECT_ROOT / "config" / "physics" / "tensor_mapping_matrix_V5.0_ALPHA.json"
 
 
 def load_tensor_mapping_matrix(
     manifest: Dict[str, Any],
     registry: Dict[str, Any] | None = None,
     v4_path: Path | None = None,
+    preferred_version: str | None = None,
 ) -> Tuple[Dict[str, Any], str]:
     """
-    加载 TMM：优先 V4.0-BETA 文件，否则 manifest，再否则 registry.data。
+    加载 TMM：可按 preferred_version 优先 V5.0-ALPHA 或 V4.0-BETA，否则 manifest，再否则 registry.data。
+
+    preferred_version: "5.0-ALPHA" 时优先加载 V5 文件；None 或 "4.0-BETA" 时优先 V4。
 
     Returns:
         (tmm_dict, matrix_version)
-        tmm_dict 含 ten_gods, dimensions, weights（与 manifest 中 tensor_mapping_matrix 同构）
-        matrix_version 如 "4.0-BETA" 或 "3.0"
     """
-    path = v4_path or _V4_PATH
-    if path.exists():
+    paths_to_try: list[tuple[Path, str]] = []
+    if preferred_version == "5.0-ALPHA" and _V5_PATH.exists():
+        paths_to_try.append((_V5_PATH, "5.0-ALPHA"))
+    paths_to_try.append((v4_path or _V4_PATH, "4.0-BETA"))
+    for path, version in paths_to_try:
+        if not path.exists():
+            continue
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -40,7 +47,7 @@ def load_tensor_mapping_matrix(
                 "weights": data.get("weights", {}),
             }
             if tmm["weights"] and tmm["ten_gods"]:
-                return tmm, data.get("version", "4.0-BETA")
+                return tmm, data.get("version", version)
         except Exception:
             pass
     tmm = (
@@ -56,8 +63,17 @@ def get_matrix_version_used(
     manifest: Dict[str, Any],
     registry: Dict[str, Any] | None = None,
     v4_path: Path | None = None,
+    preferred_version: str | None = None,
 ) -> str:
     """仅返回当前会使用的矩阵版本号，不加载完整 TMM。"""
+    if preferred_version == "5.0-ALPHA" and _V5_PATH.exists():
+        try:
+            with open(_V5_PATH, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if d.get("weights") and d.get("ten_gods"):
+                return d.get("version", "5.0-ALPHA")
+        except Exception:
+            pass
     path = v4_path or _V4_PATH
     if path.exists():
         try:

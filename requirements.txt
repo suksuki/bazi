@@ -1,0 +1,9 @@
+# FDS 严格模式（Manifest 法律全文校验）— 第 019 号工程指令
+# 注：PyPI 包名为 json-logic-qubit（提供 json_logic.jsonLogic）
+json-logic-qubit
+
+# 其他核心依赖（按需补充，如 streamlit / numpy / ollama 等）
+# streamlit
+# numpy
+# ollama
+# pydantic

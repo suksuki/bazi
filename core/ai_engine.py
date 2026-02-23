@@ -272,10 +272,325 @@ def is_ai_engine_available() -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# 动态推演引擎 (026: 位移矢量 → 32B 微分诊断)
+# ---------------------------------------------------------------------------
+
+CONTEXT_TYPE_LABELS = {
+    "liunian": "流年",
+    "dayun": "大运",
+    "geo": "地理方位",
+}
+
+SYSTEM_PROMPT_DYNAMIC_IMPACT = """你是「生命流形分析」的推演师。根据**原局 5D 坐标**与**位移矢量（delta_vector）**，给出该位移在现实中的物理含义与趋吉避凶建议。
+
+## A-01 语义核心三维度（必须遵循）
+- **O 轴（秩序）**：社会地位、克制力、法律边界。O 升=权柄巩固；O 降=秩序松动、易有是非。
+- **E 轴（能量）**：身强/身弱、生命力。E 升=抗压增强；E 降=易疲惫、需借印比。
+- **M 轴（财富）**：资源、物质。M 升=得财契机；M 降=宜守不宜攻。
+
+## 位移解读规则
+1. **S 轴（压力）**正向位移较大（如 +1.0 以上）：环境应力超过阈值 → 提示「结构性压力」或「逆境突围」可能，避免盲目扩张。
+2. **S 轴**负向或 O 轴坍缩：秩序受损 → 提示收缩战线、稳固根基。
+3. **M 轴**正向且 O 稳：财官相生 → 可简要提示机遇窗口。
+4. 结合古典法理（伤官见官、财能生官等）用 1～3 句概括该时段格局健康度与建议。禁止绝对化结论，控制在 120 字以内。"""
+
+
+def _build_dynamic_impact_prompt(
+    base_point: Dict[str, float],
+    delta_vector: Dict[str, float],
+    context_type: str,
+) -> str:
+    """构建动态推演的用户 Prompt。"""
+    # 推演后坐标 = 原局 + 位移
+    dims = ["E", "O", "M", "S", "R"]
+    projected = {
+        k: base_point.get(k, 0.0) + delta_vector.get(k, 0.0)
+        for k in dims
+    }
+    ctx_label = CONTEXT_TYPE_LABELS.get(context_type, context_type)
+    return "\n".join([
+        "请根据以下【原局坐标】与【位移矢量】给出推演解读：",
+        "",
+        "【原局 5D 坐标】",
+        json.dumps(base_point, ensure_ascii=False, indent=2),
+        "",
+        "【位移矢量 delta】（正=该轴增强，负=减弱）",
+        json.dumps(delta_vector, ensure_ascii=False, indent=2),
+        "",
+        "【推演后坐标】",
+        json.dumps(projected, ensure_ascii=False, indent=2),
+        "",
+        f"【推演类型】{ctx_label}",
+        "",
+        "请直接给出 1～3 句专业判定与建议，不要前言与免责句。",
+    ])
+
+
+def simulate_dynamic_impact(
+    base_point: Dict[str, float],
+    delta_vector: Dict[str, float],
+    context_type: str = "liunian",
+    model: Optional[str] = None,
+    timeout_sec: int = 45,
+) -> Dict[str, Any]:
+    """
+    动态推演：根据原局 5D 点与位移矢量，让 32B 解释「位移」的现实含义。
+
+    Args:
+        base_point: 原局 5D 坐标 {"E", "O", "M", "S", "R"}
+        delta_vector: 各轴位移量（如流年/大运/地理带来的增量）
+        context_type: "liunian" | "dayun" | "geo"
+        model: 模型名，默认从配置读取
+        timeout_sec: 超时
+
+    Returns:
+        { "success", "text", "model", "error" }
+    """
+    result = {"success": False, "text": "", "model": "", "error": None}
+    client = _get_ollama_client()
+    if not client:
+        result["error"] = "Ollama 未安装或不可用"
+        return result
+
+    cm = ConfigManager()
+    ai_cfg = cm.get("ai_engine")
+    model_name = model or (ai_cfg.get("chat_model") if isinstance(ai_cfg, dict) else None) or "qwen2.5:32b"
+
+    user_prompt = _build_dynamic_impact_prompt(base_point, delta_vector, context_type)
+    try:
+        response = client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT_DYNAMIC_IMPACT},
+                {"role": "user", "content": user_prompt},
+            ],
+            options={"num_predict": 300},
+        )
+        content = (
+            response.get("message", {}).get("content")
+            if isinstance(response, dict)
+            else (getattr(response, "message", None) and getattr(response.message, "content", None))
+        )
+        if content and isinstance(content, str):
+            result["success"] = True
+            result["text"] = content.strip()
+            result["model"] = model_name
+        else:
+            result["error"] = "模型返回内容为空"
+    except Exception as e:
+        logger.exception("动态推演 AI 调用失败")
+        result["error"] = str(e)
+    return result
+
+
+def explain_classical_logic(
+    classical_text: str,
+    source: str = "古籍",
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    古籍逻辑溯源：用 32B 解释「为什么古人这么说」的物理逻辑。
+    供 HKB 交互：点击古籍判词后弹出解析。
+
+    Returns:
+        { "success", "text", "model", "error" }
+    """
+    result = {"success": False, "text": "", "model": "", "error": None}
+    client = _get_ollama_client()
+    if not client:
+        result["error"] = "Ollama 未安装或不可用"
+        return result
+    cm = ConfigManager()
+    ai_cfg = cm.get("ai_engine")
+    model_name = model or (ai_cfg.get("chat_model") if isinstance(ai_cfg, dict) else None) or "qwen2.5:32b"
+
+    sys = "你是命理学与物理建模专家。用户会给出一段古籍中的判词。请用现代「物理/因果」语言解释：古人为何会得出这样的结论？背后的五行、十神、格局逻辑是什么？控制在 150 字以内，不要复读原文。"
+    user = f"【出处】{source}\n【原文】\n{classical_text}\n\n请写出「物理逻辑解析」："
+    try:
+        response = client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": sys},
+                {"role": "user", "content": user},
+            ],
+            options={"num_predict": 280},
+        )
+        content = (
+            response.get("message", {}).get("content")
+            if isinstance(response, dict)
+            else (getattr(response, "message", None) and getattr(response.message, "content", None))
+        )
+        if content and isinstance(content, str):
+            result["success"] = True
+            result["text"] = content.strip()
+            result["model"] = model_name
+        else:
+            result["error"] = "模型返回内容为空"
+    except Exception as e:
+        logger.exception("古籍逻辑解析调用失败")
+        result["error"] = str(e)
+    return result
+
+
+def generate_case_comparison_blurb(
+    user_point: Dict[str, float],
+    nearest_cases: List[Dict[str, Any]],
+    model: Optional[str] = None,
+    timeout_sec: int = 30,
+) -> Dict[str, Any]:
+    """
+    全息相似案例对比：用 32B 生成一句「您与案例库中某类命例的物理流形相似度与共同点」。
+    供 A-01 案例对撞机 UI 展示。
+
+    Args:
+        user_point: 当前用户 5D 坐标
+        nearest_cases: find_nearest_cases 返回的列表，每项含 ref, subpattern, similarity_pct, point 等
+
+    Returns:
+        { "success", "text", "model", "error" }
+    """
+    result = {"success": False, "text": "", "model": "", "error": None}
+    client = _get_ollama_client()
+    if not client:
+        result["error"] = "Ollama 未安装或不可用"
+        return result
+    if not nearest_cases:
+        result["error"] = "无相似案例"
+        return result
+
+    cm = ConfigManager()
+    ai_cfg = cm.get("ai_engine")
+    model_name = model or (ai_cfg.get("chat_model") if isinstance(ai_cfg, dict) else None) or "qwen2.5:32b"
+
+    sys = (
+        "你是命理学与物理建模专家。用户会给出自己的 5D 命运流形坐标，以及案例库中与之最相似的若干案例（含相似度、子格局、案例编号）。"
+        "请用 1～3 句话写出：用户与这些案例的「物理流形相似度」概括，以及主要共同点（例如 O 轴稳定、E 轴偏强等）。"
+        "不要输出 JSON 或列表，直接给出一段连贯的中文段落，控制在 120 字以内。"
+    )
+    cases_desc = []
+    for i, c in enumerate(nearest_cases[:3], 1):
+        sim = c.get("similarity_pct", 0)
+        sp = c.get("subpattern", "")
+        ref = c.get("ref", "")
+        pt = c.get("point", {})
+        if isinstance(pt, dict):
+            pt_str = json.dumps(pt, ensure_ascii=False)
+        else:
+            pt_str = str(pt)
+        cases_desc.append(f"案例{i}：{ref}，子格局 {sp}，相似度 {sim}%，5D 坐标 {pt_str}")
+    user = (
+        "【当前用户 5D 坐标】\n"
+        + json.dumps(user_point, ensure_ascii=False, indent=2)
+        + "\n\n【最相似案例】\n"
+        + "\n".join(cases_desc)
+        + "\n\n请写出「同类项」对比文案："
+    )
+    try:
+        response = client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": sys},
+                {"role": "user", "content": user},
+            ],
+            options={"num_predict": 200},
+        )
+        content = (
+            response.get("message", {}).get("content")
+            if isinstance(response, dict)
+            else (getattr(response, "message", None) and getattr(response.message, "content", None))
+        )
+        if content and isinstance(content, str):
+            result["success"] = True
+            result["text"] = content.strip()
+            result["model"] = model_name
+        else:
+            result["error"] = "模型返回内容为空"
+    except Exception as e:
+        logger.exception("案例对比文案调用失败")
+        result["error"] = str(e)
+    return result
+
+
+def generate_repair_strategy(
+    deficit_axis: str,
+    target_vector: Dict[str, float],
+    user_point: Optional[Dict[str, float]] = None,
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    第 029 号：流形修复建议。将物理位移 ΔV 翻译为现实行为指引。
+    例如：补齐 O 轴 → 加强职业合规、地理向西、色彩白色、心态契约导向。
+
+    Args:
+        deficit_axis: 瓶颈轴（E/O/M/S/R）
+        target_vector: 建议位移矢量，如 {"E":0,"O":0.8,"M":0,"S":0,"R":0}
+        user_point: 可选，当前 5D 供上下文
+
+    Returns:
+        { "success", "text", "model", "error" }
+    """
+    result = {"success": False, "text": "", "model": "", "error": None}
+    client = _get_ollama_client()
+    if not client:
+        result["error"] = "Ollama 未安装或不可用"
+        return result
+
+    cm = ConfigManager()
+    ai_cfg = cm.get("ai_engine")
+    model_name = model or (ai_cfg.get("chat_model") if isinstance(ai_cfg, dict) else None) or "qwen2.5:32b"
+
+    axis_names = {"E": "能量轴", "O": "秩序轴", "M": "财富轴", "S": "压力轴", "R": "关系轴"}
+    axis_label = axis_names.get(deficit_axis, deficit_axis)
+
+    sys_prompt = (
+        "你是命理学与物理建模专家。用户给出了「流形修复」的物理目标：在某一 5D 轴上需要补齐的位移量。"
+        "请将该物理位移翻译为**可执行的现实行为建议**，包括但不限于："
+        "地理方位（如向西、北方）、色彩/五行对应、心态取向（如契约导向、合规意识）、职业或生活习惯建议。"
+        "控制在 150 字以内，不要输出 JSON 或列表，直接给出一段连贯的中文导航文案。"
+    )
+    user_prompt = (
+        f"【瓶颈轴】{axis_label} ({deficit_axis})\n"
+        f"【建议位移矢量 ΔV】{json.dumps(target_vector, ensure_ascii=False)}\n"
+    )
+    if user_point:
+        user_prompt += f"【当前 5D 坐标】{json.dumps(user_point, ensure_ascii=False)}\n"
+    user_prompt += "\n请写出「流形修复」行为导航建议："
+
+    try:
+        response = client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            options={"num_predict": 280},
+        )
+        content = (
+            response.get("message", {}).get("content")
+            if isinstance(response, dict)
+            else (getattr(response, "message", None) and getattr(response.message, "content", None))
+        )
+        if content and isinstance(content, str):
+            result["success"] = True
+            result["text"] = content.strip()
+            result["model"] = model_name
+        else:
+            result["error"] = "模型返回内容为空"
+    except Exception as e:
+        logger.exception("流形修复建议调用失败")
+        result["error"] = str(e)
+    return result
+
+
 __all__ = [
     "generate_manifold_interpretation",
     "stream_manifold_interpretation",
     "is_ai_engine_available",
+    "simulate_dynamic_impact",
+    "explain_classical_logic",
+    "generate_case_comparison_blurb",
+    "generate_repair_strategy",
     "AXIS_SEMANTICS",
     "SYSTEM_PROMPT_5D",
 ]
