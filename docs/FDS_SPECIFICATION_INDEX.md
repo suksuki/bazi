@@ -180,6 +180,11 @@ pattern_manifest.json
   2. `FDS_SOP_v3.0.md` - 学习操作流程
   3. `FDS_KMS_SPEC_v1.0-BETA.md` - 了解知识库系统
 
+### 测试与回归
+- **测试说明与回归清单**: 见仓库根目录 `tests/README.md`
+- 覆盖：FDS 推理引擎、TMM、全息控制器 FDS 分支（A-01/A-02）、AI 判词/格局解读、全量索引 pipeline_expression、V4.0 回归
+- 运行: `pip install -r requirements-test.txt` 后执行 `python -m pytest tests/ -v` 或 `python tests/integration/test_fds_sop_v4_regression.py`
+
 ---
 
 ## ✅ 规范完整性检查

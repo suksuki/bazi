@@ -79,9 +79,30 @@ def render():
     </style>
     """, unsafe_allow_html=True)
     
-    apply_custom_header("全息格局观测站", "FDS-V3.0 Holographic Manifold Observatory")
+    apply_custom_header("全息格局观测站", "FDS-V4.0 Holographic Manifold Observatory")
     
     controller = HolographicPatternController()
+
+    # --- 格局审计看板（FDS SOP V4.0）：已审计 / 在审计 格局一览 ---
+    fds_patterns = controller.get_fds_sop_patterns()
+    if fds_patterns:
+        st.markdown("### 🏛️ 全息格局体系（FDS SOP V4.0）")
+        st.caption("来自 registry/holographic_pattern/ 的已审计与在审计格局")
+        cols = st.columns(min(len(fds_patterns), 4))
+        for i, p in enumerate(fds_patterns):
+            c = cols[i % len(cols)]
+            with c:
+                status_color = "#22c55e" if p["status"] == "已审计" else "#f59e0b"
+                st.markdown(f"""
+                <div style="background: rgba(64, 224, 208, 0.06); border: 1px solid rgba(64, 224, 208, 0.2); 
+                    border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                    <div style="font-weight: 600; color: #e0e0e0;">{p['pattern_id']} · {p['name_cn']}</div>
+                    <div style="font-size: 12px; color: #9ca3af;">版本 {p['version']}</div>
+                    <span style="display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; 
+                        font-size: 11px; background: {status_color}22; color: {status_color};">{p['status']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+        st.markdown("---")
     
     # --- Sidebar: Profile & Pattern Selection ---
     # [MVC ISOLATION] This page manages its own sidebar completely independently
@@ -340,28 +361,33 @@ def render():
 
         st.markdown("---")
         st.markdown("### 🧬 格局方案")
-        hierarchy = controller.get_pattern_hierarchy()
-        if not hierarchy:
-            st.info("📋 待命状态")
-            return
-            
+        # 优先展示 FDS SOP 格局（已审计/在审计），再合并原有 hierarchy
+        fds_patterns_sidebar = controller.get_fds_sop_patterns()
         pattern_options = {}
+        if fds_patterns_sidebar:
+            for p in fds_patterns_sidebar:
+                label = f"📐 {p['name_cn']} ({p['pattern_id']})"
+                pattern_options[label] = p["pattern_id"]
+        hierarchy = controller.get_pattern_hierarchy()
         for p_id, data in sorted(hierarchy.items()):
             main = data['main']
             pattern_options[f"{main['icon']} {main['name_cn']}"] = p_id
             for sub in data['subs']:
                 pattern_options[f"  └ {sub['icon']} {sub['name_cn']}"] = sub['id']
-                
+        if not pattern_options:
+            st.info("📋 待命状态")
+            return
         selected_pattern_name = st.selectbox(
-            "核心全息方案", 
+            "核心全息方案",
             options=list(pattern_options.keys()),
-            key=f"{PAGE_PREFIX}pattern_select"  # Page-specific key
+            key=f"{PAGE_PREFIX}pattern_select"
         )
         selected_pattern_id = pattern_options[selected_pattern_name]
         # 添加占位空间，确保下拉菜单有足够空间向下展开
         st.markdown("<br>", unsafe_allow_html=True)
         
         pattern_info = controller.get_pattern_by_id(selected_pattern_id)
+        fds_match = next((x for x in (fds_patterns_sidebar or []) if x["pattern_id"] == selected_pattern_id), None)
         if pattern_info:
             st.markdown(f"""
             <div style="background: rgba(64, 224, 208, 0.05); border-left: 3px solid #40e0d0; padding: 10px; font-size: 13px;">
@@ -369,9 +395,16 @@ def render():
                 <b>版本</b>: {pattern_info.get('version', 'N/A')} | <b>状态</b>: 已校准
             </div>
             """, unsafe_allow_html=True)
+        elif fds_match:
+            st.markdown(f"""
+            <div style="background: rgba(64, 224, 208, 0.05); border-left: 3px solid #40e0d0; padding: 10px; font-size: 13px;">
+                <b>格局</b>: {fds_match['name_cn']} ({fds_match['pattern_id']})<br>
+                <b>版本</b>: {fds_match['version']} | <b>状态</b>: {fds_match['status']}
+            </div>
+            """, unsafe_allow_html=True)
             
         st.markdown("---")
-        st.caption("FDS-V3.0 Observatory Kernel")
+        st.caption("FDS-V4.0 Observatory Kernel")
 
     # --- Main Content Area ---
     # Load Profile Data
@@ -413,6 +446,55 @@ def render():
             }
         })
         return
+
+    # --- 格局详情（FDS SOP）：已审计格局展示语义、子格局、强相关轴，并可调用 LLM 解读 ---
+    pattern_detail = controller.get_fds_pattern_detail(selected_pattern_id)
+    fds_status_for_selected = next((p["status"] for p in (fds_patterns or []) if p["pattern_id"] == selected_pattern_id), None)
+    if pattern_detail:
+        with st.expander("📜 格局详情（语义、子格局、强相关轴）", expanded=(fds_status_for_selected == "已审计")):
+            meta = pattern_detail.get("meta_info") or {}
+            rules = pattern_detail.get("classical_logic_rules") or {}
+            subs = pattern_detail.get("sub_pattern_definitions") or []
+            semantic = pattern_detail.get("semantic_core_dimensions") or {}
+            strong = pattern_detail.get("strong_correlation") or []
+            st.markdown(f"**{meta.get('chinese_name') or meta.get('display_name')}** · 版本 {pattern_detail.get('version', 'N/A')}")
+            st.caption(meta.get("source_ref", ""))
+            if rules.get("description"):
+                st.markdown("#### 古典逻辑")
+                st.markdown(rules["description"])
+            if subs:
+                st.markdown("#### 子格局")
+                for s in subs:
+                    st.markdown(f"- **{s.get('id', '')}** · {s.get('name', '')}")
+            if semantic:
+                st.markdown("#### 语义核心维度")
+                for k, v in (semantic.items() if isinstance(semantic, dict) else []):
+                    name = v.get("name", k) if isinstance(v, dict) else k
+                    desc = v.get("classical_by_gemini") or v.get("definition") or str(v) if isinstance(v, dict) else str(v)
+                    st.caption(f"**{name}**：{desc[:120]}{'…' if len(desc) > 120 else ''}")
+            if strong:
+                st.markdown("#### 强相关轴")
+                st.markdown(", ".join([f"{x.get('ten_god')}→{x.get('dimension')}" for x in strong]))
+            if fds_status_for_selected == "已审计":
+                st.markdown("---")
+                if st.button("🤖 用大模型生成格局解读", key=f"{PAGE_PREFIX}llm_overview_btn"):
+                    from core.ai_engine import generate_pattern_overview, is_ai_engine_available
+                    if is_ai_engine_available():
+                        with st.spinner("大模型生成中…"):
+                            res = generate_pattern_overview(selected_pattern_id, pattern_detail)
+                        if res.get("success"):
+                            st.session_state[f"{PAGE_PREFIX}llm_overview_text"] = res.get("text", "")
+                            st.session_state[f"{PAGE_PREFIX}llm_overview_model"] = res.get("model", "")
+                            st.rerun()
+                        else:
+                            st.error(res.get("error", "生成失败"))
+                    else:
+                        st.warning("未检测到 Ollama，无法生成解读")
+                if st.session_state.get(f"{PAGE_PREFIX}llm_overview_text"):
+                    st.markdown("**大模型格局解读**")
+                    st.markdown(st.session_state[f"{PAGE_PREFIX}llm_overview_text"])
+                    st.caption(f"由 {st.session_state.get(f'{PAGE_PREFIX}llm_overview_model', '')} 生成")
+        st.markdown("---")
 
     # Initialize BaziProfile
     try:
@@ -510,7 +592,9 @@ def render():
     
     with col_obs:
         st.markdown("#### 🪐 全息命运晶体 (Fate Tensor Crystal)")
-        ref_vector = pattern_info.get('feature_anchors', {}).get('standard_manifold', {}).get('mean_vector')
+        _fa = (pattern_info or {}).get('feature_anchors') or {}
+        _sm = _fa.get('standard_manifold') or {}
+        ref_vector = _sm.get('mean_vector') if isinstance(_sm, dict) else None
         fig = render_5d_manifold(projection, ref_vector, p_type, result.get('pattern_name'))
         st.plotly_chart(fig, use_container_width=True, height=600)
         
@@ -523,7 +607,7 @@ def render():
         st.markdown(f"🌀 **形态特征**: {desc['shape']}")
         st.markdown("---")
         st.markdown("#### 📜 格局解析")
-        st.write(pattern_info.get('semantic_seed', {}).get('description', '无扩展描述'))
+        st.write(((pattern_info or {}).get('semantic_seed') or {}).get('description', '无扩展描述'))
 
     # --- Step 5: Dynamic Sensors ---
     st.markdown("---")

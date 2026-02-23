@@ -179,7 +179,153 @@ class HolographicPatternController:
                 result.append(sub_pattern)
         
         return result
-    
+
+    def get_fds_sop_patterns(self) -> List[Dict[str, Any]]:
+        """
+        从 FDS SOP 法定路径 registry/holographic_pattern/ 发现所有格局及其审计状态。
+        用于全息格局页「格局审计看板」展示（FDS SOP V4.0）。
+        
+        Returns:
+            [{"pattern_id", "name_cn", "version", "status": "已审计"|"在审计", "source": "manifest"|"registry", "path"}]
+        """
+        project_root = Path(__file__).parent.parent
+        reg_dir = project_root / "registry" / "holographic_pattern"
+        out = []
+        if not reg_dir.exists():
+            return out
+        # 1) 根目录 *.json（如 A-01.json）
+        for j in sorted(reg_dir.glob("*.json")):
+            if j.name.startswith("_"):
+                continue
+            try:
+                with open(j, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            pid = data.get("pattern_id") or data.get("id") or j.stem
+            meta = data.get("meta_info") or {}
+            name_cn = meta.get("chinese_name") or meta.get("display_name") or pid
+            ver = data.get("version", "N/A")
+            # A-01 已审计；A-02 及其余为在审计中（显式约定）
+            if pid == "A-01":
+                status = "已审计"
+            else:
+                status = "在审计中"
+            out.append({
+                "pattern_id": pid,
+                "name_cn": name_cn,
+                "version": str(ver),
+                "status": status,
+                "source": "registry",
+                "path": str(j),
+            })
+        # 2) 子目录 */A-*_manifest.json（如 A-02/A-02_manifest.json）
+        for sub in sorted(reg_dir.iterdir()):
+            if not sub.is_dir():
+                continue
+            manifest = sub / f"{sub.name}_manifest.json"
+            if not manifest.exists():
+                manifest = next(sub.glob("*_manifest.json"), None)
+            if not manifest:
+                continue
+            try:
+                with open(manifest, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            pid = data.get("pattern_id") or sub.name
+            meta = data.get("meta_info") or {}
+            name_cn = meta.get("chinese_name") or meta.get("display_name") or pid
+            ver = data.get("version", "N/A")
+            # A-01 已审计；A-02 在审计中（显式约定）
+            status = "已审计" if pid == "A-01" else "在审计中"
+            out.append({
+                "pattern_id": pid,
+                "name_cn": name_cn,
+                "version": str(ver),
+                "status": status,
+                "source": "manifest",
+                "path": str(manifest),
+            })
+        # 3) 若 registry 中无 A-01，从 config/patterns/manifest_A01.json 补充，保证页面上可选 A-01
+        if not any(x["pattern_id"] == "A-01" for x in out):
+            manifest_a01 = project_root / "config" / "patterns" / "manifest_A01.json"
+            if manifest_a01.exists():
+                try:
+                    with open(manifest_a01, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    meta = data.get("meta_info") or {}
+                    out.append({
+                        "pattern_id": "A-01",
+                        "name_cn": meta.get("chinese_name") or meta.get("display_name") or "正官格",
+                        "version": str(data.get("version", "N/A")),
+                        "status": "已审计",
+                        "source": "manifest",
+                        "path": str(manifest_a01),
+                    })
+                except Exception:
+                    pass
+        out.sort(key=lambda x: (x["pattern_id"], x["source"]))
+        return out
+
+    def get_fds_pattern_detail(self, pattern_id: str) -> Optional[Dict[str, Any]]:
+        """
+        获取 FDS 格局完整详情（用于已审计格局的详情展示与 LLM 解读）。
+        来源：registry/holographic_pattern/ 或 config/patterns/manifest_A01.json（A-01）。
+        """
+        project_root = Path(__file__).parent.parent
+        reg_dir = project_root / "registry" / "holographic_pattern"
+        pid = (pattern_id or "").strip().upper()
+        data = None
+        if pid == "A-01":
+            for path in [reg_dir / "A-01.json", project_root / "config" / "patterns" / "manifest_A01.json"]:
+                if path.exists():
+                    try:
+                        with open(path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        break
+                    except Exception:
+                        continue
+        else:
+            sub_dir = reg_dir / pid
+            manifest = sub_dir / f"{pid}_manifest.json" if sub_dir.exists() else None
+            if manifest and manifest.exists():
+                try:
+                    with open(manifest, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    pass
+        if not data:
+            return None
+        meta = data.get("meta_info") or {}
+        rules = data.get("classical_logic_rules") or {}
+        subs = data.get("sub_pattern_definitions") or {}
+        semantic = data.get("semantic_core_dimensions") or {}
+        if not semantic and pid == "A-01":
+            try:
+                hkb_path = project_root / "config" / "hkb" / "hkb_params.json"
+                if hkb_path.exists():
+                    with open(hkb_path, "r", encoding="utf-8") as f:
+                        hkb = json.load(f)
+                    core = (hkb.get("hkb") or {}).get("a01_semantic_core") or {}
+                    semantic = {k: {"name": v.get("name", k), "definition": v.get("definition"), "physical_mapping": v.get("physical_mapping"), "classical_by_gemini": (v.get("definition") or "") + " " + (v.get("physical_mapping") or "")} for k, v in core.items() if isinstance(v, dict)}
+            except Exception:
+                pass
+        tmm = data.get("tensor_mapping_matrix") or {}
+        strong = tmm.get("strong_correlation") or []
+        sub_list = [{"id": k, "name": v.get("name", k)} for k, v in subs.items()]
+        return {
+            "pattern_id": data.get("pattern_id") or pid,
+            "version": data.get("version", "N/A"),
+            "meta_info": meta,
+            "classical_logic_rules": {"description": rules.get("description", ""), "expression": rules.get("expression")},
+            "sub_pattern_definitions": sub_list,
+            "semantic_core_dimensions": semantic,
+            "strong_correlation": strong,
+            "centroids": data.get("centroids"),
+            "benchmarks": data.get("benchmarks"),
+        }
+
     def get_pattern_hierarchy(self) -> Dict[str, Dict]:
         """
         获取格局层级结构（主格局 -> 子格局）
@@ -394,6 +540,90 @@ class HolographicPatternController:
         
         return None
     
+    def _chart_to_ten_gods(self, chart: List[str], day_master: str) -> Dict[str, float]:
+        """从四柱与日主计算十神能量向量（与 FDS/pattern_engine 一致），返回 ZG, PG, ..."""
+        from core.physics_engine import compute_energy_flux
+        en_to_code = {
+            "bi_jian": "ZB", "jie_cai": "PB", "shi_shen": "ZS", "shang_guan": "PS",
+            "zheng_cai": "ZR", "pian_cai": "PR", "zheng_guan": "ZG", "qi_sha": "PG",
+            "zheng_yin": "ZC", "pian_yin": "PC",
+        }
+        en_to_cn = {
+            "bi_jian": "比肩", "jie_cai": "劫财", "shi_shen": "食神", "shang_guan": "伤官",
+            "zheng_cai": "正财", "pian_cai": "偏财", "zheng_guan": "正官", "qi_sha": "七杀",
+            "zheng_yin": "正印", "pian_yin": "偏印",
+        }
+        out = {}
+        for en, code in en_to_code.items():
+            cn = en_to_cn.get(en, "")
+            if cn:
+                try:
+                    out[code] = float(compute_energy_flux(chart, day_master, cn))
+                except Exception:
+                    out[code] = 0.0
+        return out
+
+    def _calculate_fds_projection(self, pattern_id: str, chart: List[str], day_master: str, context: Optional[Dict]) -> Optional[Dict]:
+        """A-01/A-02 专用：用 FDS 推理或 TMM 投影，返回与 calculate_tensor_projection 一致的结构。"""
+        project_root = Path(__file__).parent.parent
+        ten_gods = self._chart_to_ten_gods(chart, day_master)
+        registry_path = project_root / "registry" / "holographic_pattern" / f"{pattern_id}.json"
+        manifest_path = project_root / "config" / "patterns" / "manifest_A01.json"
+        if pattern_id == "A-02":
+            manifest_path = project_root / "registry" / "holographic_pattern" / "A-02" / "A-02_manifest.json"
+        if registry_path.exists() and manifest_path.exists():
+            try:
+                from core.fds_inference_engine import FDSInferenceEngine
+                engine = FDSInferenceEngine(registry_path=registry_path, manifest_path=manifest_path)
+                inf = engine.infer(ten_gods, extra_context={"self_energy": {"E": 0.5}})
+                point = inf.get("point") or {}
+                best = inf.get("best_subpattern", "")
+                dists = inf.get("distances") or {}
+                return {
+                    "projection": point,
+                    "sai": float(inf.get("similarity_score") or (inf.get("similarity_percent", 0) / 100.0) or 0.5),
+                    "recognition": {
+                        "mahalanobis_dist": list(dists.values())[0] if dists else 0,
+                        "precision_score": (inf.get("similarity_percent") or 0) / 100.0,
+                        "pattern_type": "STANDARD" if best else "UNKNOWN",
+                        "description": (inf.get("knowledge") or {}).get("description", "流形归位"),
+                    },
+                    "sub_id": best,
+                    "pattern_name": "正官格" if pattern_id == "A-01" else "七杀格",
+                }
+            except Exception as e:
+                logger.warning("FDS 推理失败，回退 TMM 投影: %s", e)
+        try:
+            import numpy as np
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            tmm = (data.get("tensor_mapping_matrix") or {}).get("weights")
+            if not tmm:
+                from core.tensor_mapping_loader import load_tensor_mapping_matrix
+                tmm_dict, _ = load_tensor_mapping_matrix(data, None)
+                tmm = tmm_dict.get("weights", {})
+                order = tmm_dict.get("ten_gods", [])
+                dims = tmm_dict.get("dimensions", ["E", "O", "M", "S", "R"])
+            else:
+                order = (data.get("tensor_mapping_matrix") or {}).get("ten_gods", [])
+                dims = (data.get("tensor_mapping_matrix") or {}).get("dimensions", ["E", "O", "M", "S", "R"])
+            if not tmm or not order:
+                return None
+            weights = np.array([tmm[g] for g in order])
+            vec = np.array([float(ten_gods.get(g, 0)) for g in order])
+            point_5d = np.dot(weights.T, vec)
+            point = {d: float(point_5d[i]) for i, d in enumerate(dims)}
+            return {
+                "projection": point,
+                "sai": 0.5,
+                "recognition": {"mahalanobis_dist": 0, "precision_score": 0.5, "pattern_type": "STANDARD", "description": "基于 TMM 投影（无质心）"},
+                "sub_id": None,
+                "pattern_name": "正官格" if pattern_id == "A-01" else "七杀格",
+            }
+        except Exception as e:
+            logger.exception("TMM 投影回退失败: %s", e)
+        return None
+
     def calculate_tensor_projection(self, pattern_id: str, chart: List[str], 
                                    day_master: str, context: Optional[Dict] = None) -> Dict:
         """
@@ -408,7 +638,12 @@ class HolographicPatternController:
         Returns:
             五维张量投影结果
         """
-        # 获取格局信息
+        pid = (pattern_id or "").strip().upper()
+        if pid in ("A-01", "A-02"):
+            fds_result = self._calculate_fds_projection(pid, chart, day_master, context)
+            if fds_result:
+                return fds_result
+        # 获取格局信息（旧 registry）
         pattern = self.get_pattern_by_id(pattern_id)
         if not pattern:
             return {'error': f'格局 {pattern_id} 不存在'}

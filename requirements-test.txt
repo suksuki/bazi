@@ -1,0 +1,3 @@
+# 测试依赖（可选）：pip install -r requirements-test.txt
+-r requirements.txt
+pytest>=7.0

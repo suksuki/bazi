@@ -625,6 +625,66 @@ def generate_repair_strategy(
     return result
 
 
+def generate_pattern_overview(
+    pattern_id: str,
+    detail: Dict[str, Any],
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    根据格局详情调用大模型生成「格局解读」短文，用于已审计格局的语义展示。
+    """
+    result = {"success": False, "text": "", "model": "", "error": None}
+    client = _get_ollama_client()
+    if not client:
+        result["error"] = "Ollama 未安装或不可用"
+        return result
+    cm = ConfigManager()
+    ai_cfg = cm.get("ai_engine")
+    model_name = model or (ai_cfg.get("chat_model") if isinstance(ai_cfg, dict) else None) or "qwen2.5:32b"
+    meta = detail.get("meta_info") or {}
+    rules = detail.get("classical_logic_rules") or {}
+    subs = detail.get("sub_pattern_definitions") or []
+    semantic = detail.get("semantic_core_dimensions") or {}
+    strong = detail.get("strong_correlation") or []
+    sys_prompt = (
+        "你是命理学与 FDS 流形体系的解读师。请根据给出的格局结构化信息，"
+        "用 200 字以内写一段「格局解读」：概括该格局的古典含义、物理映射要点、子格局关系，"
+        "语言简洁、避免绝对化结论。直接输出一段连贯中文，不要 JSON 或列表。"
+    )
+    user_prompt = (
+        f"【格局】{detail.get('pattern_id', '')} {meta.get('chinese_name') or meta.get('display_name', '')}\n"
+        f"【古典逻辑描述】{rules.get('description', '')}\n"
+        f"【子格局】{json.dumps([s.get('name') for s in subs], ensure_ascii=False)}\n"
+        f"【语义核心维度】{json.dumps(semantic, ensure_ascii=False, indent=0)}\n"
+        f"【强相关轴】{json.dumps(strong, ensure_ascii=False)}\n"
+        "请写出格局解读："
+    )
+    try:
+        response = client.chat(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            options={"num_predict": 400},
+        )
+        content = (
+            response.get("message", {}).get("content")
+            if isinstance(response, dict)
+            else (getattr(response, "message", None) and getattr(response.message, "content", None))
+        )
+        if content and isinstance(content, str):
+            result["success"] = True
+            result["text"] = content.strip()
+            result["model"] = model_name
+        else:
+            result["error"] = "模型返回内容为空"
+    except Exception as e:
+        logger.exception("格局解读生成失败")
+        result["error"] = str(e)
+    return result
+
+
 __all__ = [
     "generate_manifold_interpretation",
     "stream_manifold_interpretation",
@@ -633,6 +693,7 @@ __all__ = [
     "explain_classical_logic",
     "generate_case_comparison_blurb",
     "generate_repair_strategy",
+    "generate_pattern_overview",
     "AXIS_SEMANTICS",
     "SYSTEM_PROMPT_5D",
 ]

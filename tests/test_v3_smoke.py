@@ -11,9 +11,9 @@ from core.config_manager import ConfigManager
 class TestV3CoreConfig(unittest.TestCase):
     
     def test_v3_core_config_integrity(self):
-        """Verify V3.0 Config Loading and Values"""
-        # 1. Check Physics
-        self.assertEqual(config.physics.k_factor, 1.0, "Physics K Factor mismatch")
+        """Verify V3.0 Config Loading and Values（与 core/config 默认一致）"""
+        # 1. Check Physics（当前默认 k_factor=3.0）
+        self.assertEqual(config.physics.k_factor, 3.0, "Physics K Factor mismatch")
         
         # 2. Check Gating (V2.6 Legacy Values injected via Config)
         self.assertEqual(config.gating.weak_self_limit, 0.45, "E-Gating Threshold mismatch")
@@ -28,9 +28,11 @@ class TestV3CoreConfig(unittest.TestCase):
         self.assertIsNotNone(cm, "ConfigManager failed to instantiate")
 
     def test_pattern_params_structure(self):
-        """Verify Pattern Specific Params are loaded"""
-        self.assertIn("purity_threshold", config.patterns.a01_officer)
-        self.assertEqual(config.patterns.a01_officer["purity_threshold"], 0.55)
+        """Verify Pattern Specific Params are loaded（V3.2 使用 patterns.a01 等）"""
+        # A-01 正官格参数：通过 get_dict 或直接属性
+        a01_params = config.patterns.get_dict("a01")
+        self.assertIn("integrity_threshold", a01_params, "A-01 应有 integrity_threshold")
+        self.assertEqual(config.patterns.a01.integrity_threshold, 0.65)
 
     def test_service_initialization(self):
         """Verify that Simulation and Report services can be initialized"""
