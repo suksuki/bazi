@@ -56,15 +56,25 @@ python tests/integration/test_fds_sop_v4_regression.py
 
 ---
 
+## 已清理（随已删页面移除的测试）
+
+以下测试已删除，对应已移除的页面或功能（如 knowledge_console、mining_console、registry_admin、self_learning、singularity_hunter_page 及相关视频/理论/侧栏逻辑）：
+
+- `unit/test_video_logic.py`（视频下载 / yt_dlp）
+- `unit/test_channel_workflow.py`（频道/视频工作流）
+- `unit/test_scheduler_logic.py`（视频任务 / knowledge_processor）
+- `integration/test_theory_history.py`（理论阅读历史）
+- `unit/test_ui_modules.py`（profile_section 私有 API）
+- `unit/test_ui_utils.py`（ui.utils streamlit mock）
+
 ## 全量测试与已知问题（最近一次运行）
 
-在项目根执行（排除 3 个 import 失败模块）：
+在项目根执行（排除 2 个 import 失败模块）：
 
 ```bash
 python -m pytest tests/ \
   --ignore=tests/final_arbitration_smoke_test.py \
   --ignore=tests/integration/test_meta_learning_integration.py \
-  --ignore=tests/unit/test_video_logic.py \
   -v --tb=short
 ```
 
@@ -74,17 +84,11 @@ python -m pytest tests/ \
 |------|------|
 | `final_arbitration_smoke_test.py` | 无法从 `unified_arbitrator_master` 导入 `UnifiedArbitratorMaster` |
 | `integration/test_meta_learning_integration.py` | 无模块 `core.bayesian_optimization` |
-| `unit/test_video_logic.py` | 无模块 `yt_dlp` |
 
-### 已知失败（与 FDS V4 无关，多为依赖/接口变更；最近一次约 10 failed / 155 passed）
+### 已知失败（与 FDS V4 无关；最近一次约 2 failed）
 
 - **test_jobs**：`QuantumEngine` 缺少 `calculate_chart`（扩展未加载）
-- **test_theory_history**：Mock 返回值断言（LearningDB）
-- **test_channel_workflow**：缺少 `youtube_transcript_api`
-- **test_scheduler_logic**：缺少 `learning.knowledge_processor`
 - **test_transformer_position_tuning**：`fuse_temporal_features` 形状 (5,) vs (10,) 不兼容
-- **test_ui_modules**：`profile_section` 无 `_sync_profile_to_session`
-- **test_ui_utils**：`ui.utils.st` 在 pytest 收集顺序下未正确 mock（streamlit）
 
 ### 仅跑 FDS + 核心通过用例
 
