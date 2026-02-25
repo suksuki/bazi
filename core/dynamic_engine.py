@@ -93,6 +93,27 @@ def get_time_delta(
     return out
 
 
+def calculate_temporal_displacement(
+    base_point: Dict[str, float],
+    luck_pillar: str,
+    year_pillar: str,
+    config: Optional[Dict] = None,
+) -> Dict[str, Any]:
+    """
+    第 038 号：流年/大运位移。将大运+流年十神力量转化为 ΔV_time，加持到 base_point。
+    返回 base_point、displaced_point、delta_vector，供雷达图绘制位移箭头与判词。
+    """
+    time_delta = get_time_delta(luck_pillar or "", year_pillar or "", config=config)
+    displaced = {}
+    for k in DIM_KEYS:
+        displaced[k] = float(base_point.get(k, 0)) + time_delta[k]
+    return {
+        "base_point": dict(base_point),
+        "displaced_point": displaced,
+        "delta_vector": time_delta,
+    }
+
+
 def get_geo_factor(direction: str, config: Optional[Dict] = None) -> Dict[str, float]:
     """
     地理方位 → 5D 修正因子。

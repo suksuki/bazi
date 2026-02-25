@@ -14,8 +14,15 @@ from functools import lru_cache
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
+from core.config_manager import ConfigManager
 from core.trinity.core.nexus.definitions import BaziParticleNexus
 from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
+
+
+def get_algorithm_iou_tolerance() -> float:
+    """从 config/physics/algorithm_params.json 读取 general.iou_tolerance，用于格局重叠等容差判定。"""
+    params = ConfigManager.get_algorithm_params()
+    return float((params.get("general") or {}).get("iou_tolerance", 0.02))
 
 
 # 冲合关系定义

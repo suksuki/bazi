@@ -45,6 +45,7 @@ server.log
 *.db
 *.sqlite
 *.sqlite3
+*.duckdb
 
 # OS
 .DS_Store

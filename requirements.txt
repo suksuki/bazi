@@ -2,6 +2,9 @@
 # 注：PyPI 包名为 json-logic-qubit（提供 json_logic.jsonLogic）
 json-logic-qubit
 
+# 第 045 号：FDS 双核 — DuckDB 特征计算层
+duckdb
+
 # 其他核心依赖（按需补充，如 streamlit / numpy / ollama 等）
 # streamlit
 # numpy

@@ -24,11 +24,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 def resolve_manifest(target: str) -> Path:
     t = target.strip().upper()
-    if t == "A-02":
-        p = ROOT / "registry" / "holographic_pattern" / "A-02" / "A-02_manifest.json"
-    else:
-        p = ROOT / "config" / "patterns" / "manifest_A01.json"
-    return p
+    if t != "A-01":
+        p = ROOT / "registry" / "holographic_pattern" / t / f"{t}_manifest.json"
+        if p.exists():
+            return p
+    return ROOT / "config" / "patterns" / "manifest_A01.json"
 
 
 def run_census(pattern_id: str) -> bool:
@@ -92,7 +92,9 @@ def main():
     print("--- Phase II: 全量索引构建 ---")
     out_dir = args.out or ROOT / "data_local"
     run_full_index(pattern_id, args.data, out_dir, args.limit)
-    print("🎯 A-02 七杀格创世纪扫描完成。" if pattern_id == "A-02" else "🎯 格局扫描完成。")
+    labels = {"A-01": "正官格", "A-02": "七杀格", "A-03": "偏财格", "A-04": "正财格", "A-05": "枭神格", "A-06": "食神格", "A-07": "伤官格", "A-08": "正印格", "A-09": "建禄格", "A-10": "阳刃格", "A-11": "从财格", "A-12": "从杀格", "A-13": "专旺格"}
+    name = labels.get(pattern_id, pattern_id)
+    print(f"🎯 {pattern_id} {name} 格局扫描完成。")
 
 
 if __name__ == "__main__":

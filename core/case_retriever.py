@@ -129,14 +129,15 @@ def load_extended_samples(path: Path) -> List[Dict]:
 def load_full_index_cache(
     cache_dir: Path,
     registry_path: Optional[Path] = None,
+    pattern_id: str = "A-01",
 ) -> Tuple[List[Dict], Dict[str, List[float]]]:
     """
-    第 028 号：从 scripts/build_a01_full_index 产出的缓存加载全量样本。
-    需存在 a01_full_points.npz 与 a01_full_meta.json。
-    返回 (cases, centroids)；cases 每项含 point, ref, subpattern, note 等，subpattern 由质心补全。
+    第 028/033 号：从全量索引缓存加载样本。支持 A-01（a01_*）与 A-02（a02_*）。
+    返回 (cases, centroids)；A-02 无质心时 centroids 为空。
     """
-    points_path = cache_dir / "a01_full_points.npz"
-    meta_path = cache_dir / "a01_full_meta.json"
+    prefix = pattern_id.strip().upper().replace("-", "").lower()  # A-02 -> a02
+    points_path = cache_dir / f"{prefix}_full_points.npz"
+    meta_path = cache_dir / f"{prefix}_full_meta.json"
     if not points_path.exists() or not meta_path.exists():
         return [], {}
 
@@ -147,19 +148,23 @@ def load_full_index_cache(
         logger.warning("Full index meta length != points length, skipping cache")
         return [], {}
 
-    _, centroids = load_registry_benchmarks(registry_path or _DEFAULT_REGISTRY)
+    centroids = {}
+    if pattern_id.strip().upper() == "A-01":
+        _, centroids = load_registry_benchmarks(registry_path or _DEFAULT_REGISTRY)
+    # A-02 等暂无 subpattern_centroids，保持空
+    ref_prefix = pattern_id.strip().upper().replace("-", "")
     cases = []
     for i, m in enumerate(meta_list):
         pt = points[i].tolist()
-        sp = m.get("subpattern") or _assign_subpattern_by_centroid(points[i], centroids)
+        sp = m.get("subpattern") or (_assign_subpattern_by_centroid(points[i], centroids) if centroids else "")
         cases.append({
             "point": pt,
-            "ref": m.get("ref", f"A01-{i}"),
+            "ref": m.get("ref", f"{ref_prefix}-{i}"),
             "note": m.get("note", ""),
             "subpattern": sp,
             "line_index": m.get("line_index"),
         })
-    logger.info("Loaded full index from cache: %d samples", len(cases))
+    logger.info("Loaded full index from cache: %d samples (pattern=%s)", len(cases), pattern_id)
     return cases, centroids
 
 
@@ -175,21 +180,24 @@ class CaseRetriever:
         extended_path: Optional[Path] = None,
         cache_dir: Optional[Path] = None,
         singularities: Optional[List[str]] = None,
+        pattern_id: str = "A-01",
     ):
         """
-        registry_path: A-01.json 路径
-        extended_path: 可选扩展样本 JSON 路径（含更多 5D 样本）
-        cache_dir: 第 028 号全量缓存目录（含 a01_full_points.npz + a01_full_meta.json）时优先加载
-        singularities: 奇点 case ref 列表，检索结果中会标记并优先展示
+        registry_path: A-01.json 路径（A-02 可传 None）
+        extended_path: 可选扩展样本 JSON 路径
+        cache_dir: 全量缓存目录（含 a01_* 或 a02_*）
+        singularities: 奇点 case ref 列表
+        pattern_id: 格局 ID，A-02 时加载 a02_full_*.npz/json
         """
         self._cases: List[Dict] = []
         self._centroids: Dict[str, List[float]] = {}
         self._singularities = set(singularities or [])
         self._points: Optional[np.ndarray] = None  # (N, 5)
         self._tree: Optional[Any] = None  # scipy.spatial.cKDTree
+        self._pattern_id = pattern_id.strip().upper()
 
         cache_dir = cache_dir or _PROJECT_ROOT / "data_local"
-        full_cases, self._centroids = load_full_index_cache(cache_dir, registry_path)
+        full_cases, self._centroids = load_full_index_cache(cache_dir, registry_path, pattern_id=self._pattern_id)
         if full_cases:
             self._cases = full_cases
             self._points = np.array([c["point"] for c in self._cases], dtype=np.float64)
@@ -201,20 +209,23 @@ class CaseRetriever:
             else:
                 logger.info("CaseRetriever loaded %d A-01 samples (full index)", len(self._cases))
         else:
-            cases, self._centroids = load_registry_benchmarks(registry_path)
-            if extended_path:
-                ext = load_extended_samples(extended_path)
-                by_ref = {c["ref"]: c for c in cases}
-                for c in ext:
-                    by_ref[c["ref"]] = {**c, "point": c.get("point") or c.get("t")}
-                cases = list(by_ref.values())
-            for c in cases:
-                c.setdefault("subpattern", _assign_subpattern_by_centroid(np.array(c["point"]), self._centroids))
-                c["is_singularity"] = c.get("ref", "") in self._singularities
-            self._cases = cases
-            if self._cases:
-                self._points = np.array([c["point"] for c in self._cases], dtype=float)
-            logger.info("CaseRetriever loaded %d A-01 samples", len(self._cases))
+            if self._pattern_id != "A-01":
+                logger.info("CaseRetriever: no cache for pattern %s, leaving empty", self._pattern_id)
+            else:
+                cases, self._centroids = load_registry_benchmarks(registry_path)
+                if extended_path:
+                    ext = load_extended_samples(extended_path)
+                    by_ref = {c["ref"]: c for c in cases}
+                    for c in ext:
+                        by_ref[c["ref"]] = {**c, "point": c.get("point") or c.get("t")}
+                    cases = list(by_ref.values())
+                for c in cases:
+                    c.setdefault("subpattern", _assign_subpattern_by_centroid(np.array(c["point"]), self._centroids))
+                    c["is_singularity"] = c.get("ref", "") in self._singularities
+                self._cases = cases
+                if self._cases:
+                    self._points = np.array([c["point"] for c in self._cases], dtype=float)
+                logger.info("CaseRetriever loaded %d A-01 samples", len(self._cases))
 
     def find_nearest_cases(
         self,

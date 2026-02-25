@@ -73,12 +73,12 @@ def normalize_case_for_logic(case: dict) -> dict:
 
 
 def resolve_manifest_for_pattern(pattern_id: str) -> Path:
-    """按格局 ID 解析 manifest 路径。"""
-    if pattern_id.upper() == "A-02":
-        p = ROOT / "registry" / "holographic_pattern" / "A-02" / "A-02_manifest.json"
+    """按格局 ID 解析 manifest 路径。A-02、A-03 等走 registry 子目录。"""
+    pid = pattern_id.strip().upper()
+    if pid not in ("A-01",):
+        p = ROOT / "registry" / "holographic_pattern" / pid / f"{pid}_manifest.json"
         if p.exists():
             return p
-    # A-01 或默认
     return ROOT / "config" / "patterns" / "manifest_A01.json"
 
 
@@ -155,8 +155,6 @@ def main():
     args = parser.parse_args()
 
     pattern_id = args.pattern.strip().upper()
-    if pattern_id not in ("A-01", "A-02"):
-        print(f"⚠️ 未显式支持格局 {pattern_id}，将尝试 A-01 manifest 路径")
 
     data_path = args.data or ROOT / "data" / "holographic_universe_518k.jsonl"
     if not data_path.exists():

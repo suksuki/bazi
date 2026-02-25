@@ -12,6 +12,7 @@ except ImportError:
     pass
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "tuning_params.json")
+ALGORITHM_PARAMS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "physics", "algorithm_params.json")
 
 # 默认参数 (如果文件不存在)
 DEFAULT_CONFIG = {
@@ -131,6 +132,31 @@ class ConfigManager:
                 ConfigManager._deep_update(base_dict[key], value)
             else:
                 base_dict[key] = value
+
+    @staticmethod
+    def get_algorithm_params() -> Dict[str, Any]:
+        """读取 config/physics/algorithm_params.json，供喜忌神引擎、雷达图等使用；文件不存在时返回内置默认。"""
+        defaults = {
+            "balance_auditor": {"overload_threshold": 1.2, "weak_threshold": -0.5, "inject_delta": 0.25, "bridge_m_min": 0.6, "conflict_s_offset": 0.2},
+            "pattern_collider": {"temperature": 1.0, "preload_on_first_use": True},
+            "controller": {"context_cache_max": 128},
+            "ui_radar": {"extreme_threshold": 1.2},
+            "general": {"iou_tolerance": 0.02},
+        }
+        if not os.path.exists(ALGORITHM_PARAMS_PATH):
+            return defaults
+        try:
+            with open(ALGORITHM_PARAMS_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # 深合并：文件中的键覆盖 defaults，未写的键保留默认
+            for k, v in defaults.items():
+                if k not in data or not isinstance(data[k], dict):
+                    continue
+                for kk, vv in v.items():
+                    data[k].setdefault(kk, vv)
+            return data
+        except Exception:
+            return defaults
 
     @staticmethod
     def get_param(section: str, key: str, default=None):

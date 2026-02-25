@@ -11,6 +11,7 @@ MVC Controller Layer - 负责全息格局的业务逻辑
 """
 
 import logging
+from collections import OrderedDict
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 import json
@@ -20,6 +21,7 @@ from core.trinity.core.engines.synthetic_bazi_engine import SyntheticBaziEngine
 from core.trinity.core.nexus.definitions import BaziParticleNexus
 from core.engine_graph.constants import TWELVE_LIFE_STAGES
 from core.trinity.core.intelligence.symbolic_stars import SymbolicStarsEngine
+from core.pattern_collider import run_pattern_collision
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,9 @@ class HolographicPatternController:
     
     def __init__(self):
         """初始化控制器"""
+        from core.config_manager import ConfigManager
+        algo = ConfigManager.get_algorithm_params() or {}
+        self._context_cache_max = int((algo.get("controller") or {}).get("context_cache_max", 128))
         # 使用新的"张量全息格局"注册表路径
         self.registry_path = Path(__file__).parent.parent / "core" / "subjects" / "holographic_pattern" / "registry.json"
         self.registry = None
@@ -44,7 +49,9 @@ class HolographicPatternController:
         # 初始化RegistryLoader用于V2.1+版本的计算
         from core.registry_loader import RegistryLoader
         self.registry_loader = RegistryLoader()
-        logger.info("HolographicPatternController initialized (全新张量全息格局系统)")
+        # 第 041 号：同八字 5D 投影结果 LRU 缓存，容量由 config/physics/algorithm_params.json 的 controller.context_cache_max 控制
+        self._context_cache: OrderedDict = OrderedDict()
+        logger.info("HolographicPatternController initialized (context_cache_max=%d)", self._context_cache_max)
     
     def load_registry(self) -> Dict:
         """
@@ -562,6 +569,54 @@ class HolographicPatternController:
                 except Exception:
                     out[code] = 0.0
         return out
+
+    def get_probabilistic_patterns(
+        self,
+        chart: List[str],
+        day_master: str,
+        temperature: float = 1.0,
+    ) -> List[Dict[str, Any]]:
+        """
+        全息格局对撞：对 QGA 注册格局做多矩阵投影与马氏距离置信度，返回概率化格局列表。
+        用于混合格局语义合成与五维运势展示。
+        """
+        ten_gods = self._chart_to_ten_gods(chart, day_master)
+        return run_pattern_collision(ten_gods, temperature=temperature)
+
+    def get_mixed_pattern_context(
+        self,
+        chart: List[str],
+        day_master: str,
+        temperature: float = 1.0,
+    ) -> Dict[str, Any]:
+        """
+        B 计划一站式：对撞 + 加权 5D 点，供混合格局判词与 pathway 使用。
+        返回 probabilistic_patterns、point_5d（按置信度加权的混合点）。
+        同八字+日主+temperature 命中 LRU 缓存时直接返回，减轻并发下重复计算。
+        """
+        cache_key = (tuple(chart), day_master, temperature)
+        if cache_key in self._context_cache:
+            self._context_cache.move_to_end(cache_key)
+            c = self._context_cache[cache_key]
+            return {"probabilistic_patterns": c["probabilistic_patterns"], "point_5d": dict(c["point_5d"])}
+        patterns = self.get_probabilistic_patterns(chart, day_master, temperature=temperature)
+        point_5d = {"E": 0.0, "O": 0.0, "M": 0.0, "S": 0.0, "R": 0.0}
+        total_w = 0.0
+        for p in patterns:
+            w = (p.get("confidence_pct") or 0) / 100.0
+            pt = p.get("point_5d") or {}
+            if isinstance(pt, dict):
+                for axis in point_5d:
+                    point_5d[axis] = point_5d[axis] + w * float(pt.get(axis, 0.0))
+                total_w += w
+        if total_w > 0:
+            for axis in point_5d:
+                point_5d[axis] = round(point_5d[axis] / total_w, 4)
+        result = {"probabilistic_patterns": patterns, "point_5d": point_5d}
+        self._context_cache[cache_key] = result
+        if len(self._context_cache) > self._context_cache_max:
+            self._context_cache.popitem(last=False)
+        return result
 
     def _calculate_fds_projection(self, pattern_id: str, chart: List[str], day_master: str, context: Optional[Dict]) -> Optional[Dict]:
         """A-01/A-02 专用：用 FDS 推理或 TMM 投影，返回与 calculate_tensor_projection 一致的结构。"""

@@ -1,5 +1,6 @@
 import streamlit as st
 import datetime
+import html
 import plotly.graph_objects as go
 import logging
 import pandas as pd
@@ -26,10 +27,24 @@ from core.ai_engine import (
     explain_classical_logic,
     generate_case_comparison_blurb,
     generate_repair_strategy,
+    generate_combined_pattern_verdict,
+    stream_combined_pattern_verdict,
 )
 from core.case_retriever import get_default_retriever
+from controllers.holographic_pattern_controller import HolographicPatternController
 from core.pathway_analyzer import analyze_repair_pathway
 from core.config_manager import ConfigManager
+
+def _get_radar_extreme_threshold() -> float:
+    """从 config/physics/algorithm_params.json 读取雷达图极值阈值。"""
+    params = ConfigManager.get_algorithm_params() or {}
+    return float((params.get("ui_radar") or {}).get("extreme_threshold", 1.2))
+from core.dynamic_engine import (
+    calculate_temporal_displacement,
+    get_geo_factor,
+    get_time_delta,
+)
+from core.manifold_visual_utils import get_manifold_band_for_pattern, get_axis_hover_text
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
 import numpy as np
@@ -39,6 +54,31 @@ logger = logging.getLogger(__name__)
 
 # 5D 轴标签（双层雷达图）
 AXIS_LABELS_5D = {"E": "能量 E", "O": "秩序 O", "M": "财富 M", "S": "压力 S", "R": "关系 R"}
+
+# 地域键名映射：侧栏/主区选择 -> geographic_factors.regions
+GEO_DIRECTION_TO_REGION = {
+    "中": "中原", "东": "东方", "南": "南方", "西": "西方", "北": "北方",
+    "东南": "东南", "东北": "东北", "西南": "西南", "西北": "西北",
+}
+
+
+def _get_region_offset_5d(direction: str) -> dict:
+    """从 config/physics/geographic_factors.json 读取地域 5D 修正；缺失则用 dynamic_engine.get_geo_factor。"""
+    from pathlib import Path
+    import json
+    path = Path(__file__).resolve().parent.parent.parent / "config" / "physics" / "geographic_factors.json"
+    if path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            regions = cfg.get("regions") or {}
+            key = GEO_DIRECTION_TO_REGION.get(direction, "中原")
+            d = regions.get(key) or regions.get("中原") or {}
+            if isinstance(d, dict):
+                return {k: float(d.get(k, 0)) for k in ["E", "O", "M", "S", "R"]}
+        except Exception:
+            pass
+    return get_geo_factor(direction)
 
 
 @st.cache_resource
@@ -289,463 +329,224 @@ def render_prediction_dashboard():
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
             st.plotly_chart(fig, use_container_width=True)
 
-    # --- NEW: A-01 Manifold Mapping & Knowledge Injection ---
-    _physics = ConfigManager().get("physics") or {}
-    _matrix_ver = _physics.get("matrix_version") if isinstance(_physics, dict) else None
-    inference_engine = get_fds_inference_engine(_matrix_ver)
-    should_infer = False
-    logic_hit = None  # 避免 inference_engine 为 None 时后续 elif logic_hit is False 未定义
-    if inference_engine is None:
-        st.info("🧭 A-01 流形归位需配置 **registry** 与 **knowledge**。请将 `bazi_data_external` 中的 `registry/`、`knowledge/` 及 `config/patterns/` 拷到项目根目录下对应路径后刷新。")
-    else:
-        ten_gods_vector = build_ten_gods_from_flux(flux_data) if flux_data else {}
-        self_energy_ctx = flux_data.get("self_energy", {}) if flux_data else {}
-        logic_hit = (
-            inference_engine.matches_classical_logic(ten_gods_vector, self_energy_ctx)
-            if ten_gods_vector
-            else None
-        )
-        should_infer = bool(
-            ten_gods_vector
-            and (
-                logic_hit is True
-                or (logic_hit is None and ten_gods_vector.get("ZG", 0) >= 2)
-            )
-        )
-
-    if inference_engine and should_infer:
-        inference = inference_engine.infer(
-            ten_gods_vector, extra_context={"self_energy": self_energy_ctx}
-        )
-        if not FDSInferenceEngine.strict_logic_available():
-            st.caption(f"⚠️ {ENGINE_NOTE_FALLBACK}")
-        st.markdown(f"""
-            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['crystal_blue']};">
-                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🧭 A-01 流形归位 · 正官格</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        mv = inference.get("matrix_version", "3.0")
-        st.caption(f"基于 **{mv}** 物理校准矩阵运算")
-
-        # --- A-01 古典语义立法（可折叠展示，来自 config/hkb/hkb_params.json）---
-        try:
-            import json
-            from pathlib import Path
-            _hkb_path = Path(__file__).resolve().parent.parent.parent / "config" / "hkb" / "hkb_params.json"
-            if _hkb_path.exists():
-                with open(_hkb_path, "r", encoding="utf-8") as f:
-                    _hkb = json.load(f)
-                _core = (_hkb.get("hkb") or {}).get("a01_semantic_core")
-                if isinstance(_core, dict):
-                    with st.expander("📜 A-01 古典语义立法（本页依据）", expanded=False):
-                        for _key in ("dimension_a_order_rigidity", "dimension_b_energy_carrier", "dimension_c_wealth_coupling"):
-                            _d = _core.get(_key)
-                            if not isinstance(_d, dict):
-                                continue
-                            _name = _d.get("name", _key)
-                            _axis = _d.get("axis") or ", ".join(_d.get("axes") or [])
-                            _def = _d.get("definition", "")
-                            _map = _d.get("physical_mapping", "")
-                            st.markdown(f"**{_name}**（轴：{_axis}）")
-                            st.caption(f"定义：{_def}")
-                            st.caption(f"物理映射：{_map}")
-                            st.markdown("")
-        except Exception:
-            pass
-
-        # --- 动态演化：大运+流年+地理（先算好，供 AI 与雷达图使用）---
-        luck_gan_zhi = (selected_yun.get("gan_zhi", "") if selected_yun else "") or ""
-        year_gan_zhi = f"{gd[(sim_year - base_year) % 10]}{zhi[(sim_year - base_year) % 12]}"
-        geo_direction = st.session_state.get("dynamic_geo_direction", "中")
-        dynamic_state = None
-        try:
-            from core.dynamic_engine import get_time_delta, get_geo_factor, calculate_dynamic_state, build_dynamic_context_for_prompt
-            time_delta = get_time_delta(luck_gan_zhi, year_gan_zhi)
-            geo_factor = get_geo_factor(geo_direction)
-            dynamic_state = calculate_dynamic_state(inference["point"], time_delta=time_delta, geo_factor=geo_factor)
-        except Exception as e:
-            logger.debug("dynamic_engine 跳过: %s", e)
-
-        # --- 026: 5D 双层雷达图（原局 vs 推演）---
-        if dynamic_state:
-            st.markdown("#### 📐 5D 流形推演 (原局 vs 大运/流年/地理)")
-            base_pt = dynamic_state.get("base_point") or inference["point"]
-            dyn_pt = dynamic_state.get("dynamic_point") or base_pt
-            dims = ["E", "O", "M", "S", "R"]
-            r_base = [max(0, base_pt.get(k, 0)) for k in dims]
-            r_dyn = [max(0, dyn_pt.get(k, 0)) for k in dims]
-            fig_5d = go.Figure()
-            fig_5d.add_trace(go.Scatterpolar(
-                r=r_base,
-                theta=[AXIS_LABELS_5D.get(k, k) for k in dims],
-                fill='toself',
-                name='原局',
-                line=dict(color='#7F39FB', width=2),
-                fillcolor='rgba(127, 57, 251, 0.25)',
-            ))
-            fig_5d.add_trace(go.Scatterpolar(
-                r=r_dyn,
-                theta=[AXIS_LABELS_5D.get(k, k) for k in dims],
-                fill='toself',
-                name='推演后',
-                line=dict(color='#FF9800', width=1.5, dash='dash'),
-                fillcolor='rgba(255, 152, 0, 0.15)',
-            ))
-            fig_5d.update_layout(
-                polar=dict(radialaxis=dict(visible=True)),
-                showlegend=True,
-                height=320,
-                margin=dict(l=20, r=20, t=20, b=20),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-            )
-            st.plotly_chart(fig_5d, use_container_width=True)
-            # 推演描述：调用大模型解释位移
-            if is_ai_engine_available():
-                if st.button("🔄 生成推演描述", key="btn_simulate_dynamic"):
-                    with st.spinner("大模型推演中…"):
-                        disp = dynamic_state.get("displacement") or {k: 0.0 for k in dims}
-                        res = simulate_dynamic_impact(
-                            base_point=base_pt,
-                            delta_vector=disp,
-                            context_type="liunian",
-                        )
-                    if res.get("success"):
-                        st.success(res.get("text", ""))
-                    else:
-                        st.error(res.get("error", "推演失败"))
-
-        # --- [AI 深度透视] 第一优先级：全息报告样式，置顶展示 ---
-        st.markdown(f"""
-            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['rose_magenta']};">
-                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔮 AI 深度透视 (Manifold-to-Text)</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        if is_ai_engine_available():
-            from core.config_manager import ConfigManager
-            _cm = ConfigManager()
-            _ai_cfg = _cm.get("ai_engine")
-            _current_chat_model = (_ai_cfg.get("chat_model") if isinstance(_ai_cfg, dict) else None) or _cm.get("selected_model_name") or "qwen2.5:32b"
-            pt = inference["point"]
-            # 缓存键含模型 + 大运/流年/方位，切换时间或地理即重新生成动态趋势判词
-            _dyn_suffix = f"{luck_gan_zhi}_{year_gan_zhi}_{geo_direction}" if dynamic_state else "static"
-            ai_cache_key = "ai_interpret_{}_{:.2f}_{:.2f}_{:.2f}_{:.2f}_{:.2f}_{}_{}".format(
-                inference["best_subpattern"],
-                pt.get("E", 0), pt.get("O", 0), pt.get("M", 0), pt.get("S", 0), pt.get("R", 0),
-                _current_chat_model.replace(":", "_"),
-                _dyn_suffix,
-            )
-            import html
-            offset_str = inference_engine.format_offsets(inference["offset"])
-            st.caption(f"当前判词模型：**{_current_chat_model}**（在系统配置页切换后可立即用新模型重新生成）")
-            if ai_cache_key not in st.session_state:
-                st.info(f"**推理依据**：基于偏移向量 {offset_str} 的物理微调。")
-                ph = st.empty()
-                accumulated = ""
-                dynamic_context_str = None
-                if dynamic_state:
-                    dynamic_context_str = build_dynamic_context_for_prompt(
-                        inference["point"],
-                        dynamic_state["dynamic_point"],
-                        dynamic_state["time_delta"],
-                        dynamic_state["geo_factor"],
-                        luck_gan_zhi=luck_gan_zhi,
-                        year_gan_zhi=year_gan_zhi,
-                        direction=geo_direction,
-                    )
-                try:
-                    for chunk in stream_manifold_interpretation(
-                        point=inference["point"],
-                        offset=inference["offset"],
-                        best_subpattern=inference["best_subpattern"],
-                        matrix_version=inference.get("matrix_version", "4.0"),
-                        ten_gods=ten_gods_vector,
-                        dynamic_context=dynamic_context_str,
-                        pattern_id=inference.get("pattern_id", "A-01"),
-                    ):
-                        accumulated += chunk
-                        safe = html.escape(accumulated).replace("\n", "<br/>")
-                        ph.markdown(f"""
-                            <div style="background: linear-gradient(135deg, rgba(127,57,251,0.08) 0%, rgba(33,150,243,0.06) 100%); 
-                                        border-radius: 12px; padding: 1rem 1.25rem; margin: 0.5rem 0; border: 1px solid rgba(127,57,251,0.25);">
-                                <p style="color: var(--text-color, #e0e0e0); line-height: 1.6; margin: 0;">{safe}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    st.session_state[ai_cache_key] = {"success": True, "text": accumulated.strip(), "model": _current_chat_model}
-                    st.caption(f"由 **{_current_chat_model}** 基于 5D 偏移向量生成 · 全息报告")
-                except Exception as e:
-                    st.session_state[ai_cache_key] = {"success": False, "text": "", "model": "", "error": str(e)}
-                    ph.empty()
-                    st.warning(f"AI 判词暂不可用：{e}")
-            else:
-                ai_result = st.session_state[ai_cache_key]
-                if ai_result.get("success") and ai_result.get("text"):
-                    st.info(f"**推理依据**：基于偏移向量 {offset_str} 的物理微调。")
-                    safe_text = html.escape(ai_result["text"]).replace("\n", "<br/>")
-                    st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, rgba(127,57,251,0.08) 0%, rgba(33,150,243,0.06) 100%); 
-                                    border-radius: 12px; padding: 1rem 1.25rem; margin: 0.5rem 0; border: 1px solid rgba(127,57,251,0.25);">
-                            <p style="color: var(--text-color, #e0e0e0); line-height: 1.6; margin: 0;">{safe_text}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    st.caption(f"由 **{ai_result.get('model', '')}** 基于 5D 偏移向量生成 · 全息报告")
-                elif ai_result.get("error"):
-                    st.warning(f"AI 判词暂不可用：{ai_result['error']}")
+    # --- 全息格局对撞（多格局通用，非 A-01 专属）---
+    st.markdown(f"""
+        <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['crystal_blue']};">
+            <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔀 全息格局对撞 · 流形可视化与混合判词</h4>
+        </div>
+    """, unsafe_allow_html=True)
+    st.caption("对 QGA 注册格局（A-01 / A-02 / A-03）做多矩阵投影与置信度评分，生成混合 5D 雷达图与 32B 综合判词。")
+    # 第 041 号：移动端雷达图限高，避免遮挡判词
+    st.markdown("""
+        <style>
+        @media (max-width: 768px) {
+            div[data-testid="stHorizontalBlock"] .stPlotlyChart { max-height: 260px !important; }
+            div[data-testid="column"] .stPlotlyChart { min-height: 200px !important; }
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    try:
+        c = controller.get_chart()
+        bazi_list = [
+            f"{c.get('year', {}).get('stem', '')}{c.get('year', {}).get('branch', '')}",
+            f"{c.get('month', {}).get('stem', '')}{c.get('month', {}).get('branch', '')}",
+            f"{c.get('day', {}).get('stem', '')}{c.get('day', {}).get('branch', '')}",
+            f"{c.get('hour', {}).get('stem', '')}{c.get('hour', {}).get('branch', '')}",
+        ]
+        day_master = (c.get("day") or {}).get("stem", "")
+        if not day_master or not all(bazi_list):
+            st.caption("_排盘数据不完整，无法进行格局对撞。_")
         else:
-            st.info("未检测到本地 Ollama，请在天机设置中配置对话模型后使用 AI 深度透视。")
-
-        d_min = min(inference["distances"].values()) if inference.get("distances") else 0.0
-        if d_min > 3.0:
-            st.warning(
-                "**奇点预警 (Singularity Alert)** — 该命例展现出极高的物理独特性，"
-                "不完全符合现有 S1/S2 标准分布，建议手动分析其 5D 偏移向量。"
-            )
-        c_infer1, c_infer2, c_infer3 = st.columns([1, 1, 1])
-        with c_infer1:
-            st.metric("最优子格局", inference["best_subpattern"], help="基于5D欧氏距离的最近质心")
-            st.metric("相似度", f"{inference['similarity_percent']:.2f}%", help="距离占比换算的接近度")
-        with c_infer2:
-            st.metric("距 S1", f"{inference['distances'].get('A-01-S1', 0):.3f}")
-            st.metric("距 S2", f"{inference['distances'].get('A-01-S2', 0):.3f}")
-        with c_infer3:
-            st.metric("混合度", "Yes" if inference["is_hybrid"] else "No", help="两质心距离接近时标记混合态")
-            st.caption(f"偏移向量 | {inference_engine.format_offsets(inference['offset'])}")
-
-        dims = FDSInferenceEngine.DIM_KEYS
-        point_vals = [inference["point"].get(d, 0.0) for d in dims]
-        centroid_s1 = inference_engine.centroids.get("A-01-S1")
-        centroid_s2 = inference_engine.centroids.get("A-01-S2")
-        centroid_vals_s1 = [float(v) for v in centroid_s1] if centroid_s1 is not None else [0.0] * 5
-        centroid_vals_s2 = [float(v) for v in centroid_s2] if centroid_s2 is not None else [0.0] * 5
-
-        radar_fig = go.Figure()
-        radar_fig.add_trace(
-            go.Scatterpolar(
-                r=point_vals,
-                theta=dims,
-                fill="toself",
-                name="原局 P",
-                line_color="#7F39FB",
-                fillcolor="rgba(127, 57, 251, 0.25)",
-            )
-        )
-        if dynamic_state:
-            dynamic_vals = [dynamic_state["dynamic_point"].get(d, 0.0) for d in dims]
-            radar_fig.add_trace(
-                go.Scatterpolar(
-                    r=dynamic_vals,
-                    theta=dims,
-                    fill="toself",
-                    name="动态点 (大运+流年+地理)",
-                    line_color="#00E676",
-                    fillcolor="rgba(0, 230, 118, 0.15)",
-                )
-            )
-        radar_fig.add_trace(
-            go.Scatterpolar(
-                r=centroid_vals_s1,
-                theta=dims,
-                fill="toself",
-                name="A-01-S1 质心 (Order)",
-                line_color="#2196F3",
-                fillcolor="rgba(33, 150, 243, 0.12)",
-            )
-        )
-        radar_fig.add_trace(
-            go.Scatterpolar(
-                r=centroid_vals_s2,
-                theta=dims,
-                fill="toself",
-                name="A-01-S2 质心 (Wealth)",
-                line_color="#FFD700",
-                fillcolor="rgba(255, 215, 0, 0.12)",
-            )
-        )
-        radar_fig.update_layout(
-            height=320,
-            margin=dict(l=20, r=20, t=10, b=10),
-            polar=dict(radialaxis=dict(visible=True)),
-            showlegend=True,
-        )
-        st.plotly_chart(radar_fig, use_container_width=True)
-        if dynamic_state:
-            st.caption("原局 P：静态 5D；动态点：当前大运、流年、地理方位合成后的位移。")
-
-        knowledge = inference.get("knowledge") or {}
-        if knowledge:
-            st.success(f"📜 全息判词 · {knowledge.get('name', inference['best_subpattern'])}")
-            st.write(knowledge.get("description", ""))
-
-        # --- 027: 全息相似案例（A-01 案例对撞机）---
-        with st.expander("🔬 全息相似案例 (Holographic Similar Case)", expanded=False):
-            st.caption("从全息案例库中匹配与当前 5D 坐标最近邻的典型案例，进行同类对比。")
-            pt = inference.get("point", {})
+            holo = HolographicPatternController()
+            ctx = holo.get_mixed_pattern_context(bazi_list, day_master)
+            patterns = ctx.get("probabilistic_patterns") or []
+            point_5d = ctx.get("point_5d") or {}
+            geo_direction = st.session_state.get("dynamic_geo_direction", "中")
+            region_offset = _get_region_offset_5d(geo_direction)
+            point_5d_with_geo = {k: point_5d.get(k, 0) + region_offset.get(k, 0) for k in ["E", "O", "M", "S", "R"]}
+            luck_gan_zhi = (selected_yun.get("gan_zhi", "") if selected_yun else "") or ""
+            try:
+                _off = sim_year - base_year
+                year_gan_zhi = f"{gd[_off % 10]}{zhi[_off % 12]}"
+            except Exception:
+                year_gan_zhi = ""
+            temporal = calculate_temporal_displacement(point_5d_with_geo, luck_gan_zhi, year_gan_zhi) if point_5d_with_geo else {}
+            displaced_point = temporal.get("displaced_point") or point_5d_with_geo
+            dims = ["E", "O", "M", "S", "R"]
+            theta_labels = [f"{d} · {AXIS_LABELS_5D.get(d, d)}" for d in dims]
+            extreme_threshold = _get_radar_extreme_threshold()
+            is_extreme = any(abs(displaced_point.get(d, 0)) >= extreme_threshold for d in dims)
             retriever = get_case_retriever()
-            if retriever and pt:
-                nearest = retriever.find_nearest_cases(pt, top_n=3)
-                if nearest:
-                    dims = list(AXIS_LABELS_5D.values())
-                    cols = st.columns(3)
-                    for i, case in enumerate(nearest):
-                        with cols[i]:
-                            vals = case.get("point") or []
-                            if isinstance(vals, dict):
-                                vals = [vals.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
-                            if len(vals) == 5:
-                                fig = go.Figure()
-                                fig.add_trace(
-                                    go.Scatterpolar(
-                                        r=vals + [vals[0]],
-                                        theta=dims + [dims[0]],
-                                        fill="toself",
-                                        name=case.get("ref", ""),
-                                        line_color="#2196F3",
-                                        fillcolor="rgba(33, 150, 243, 0.2)",
-                                    )
-                                )
-                                fig.update_layout(
-                                    polar=dict(radialaxis=dict(visible=True)),
-                                    height=180,
-                                    margin=dict(l=20, r=20, t=20, b=20),
-                                    showlegend=False,
-                                )
-                                st.plotly_chart(fig, use_container_width=True)
-                            st.caption(f"**{case.get('ref', '')}** · {case.get('subpattern', '')} · 相似度 {case.get('similarity_pct', 0)}%")
-                            if case.get("is_singularity"):
-                                st.caption("⭐ 奇点样板")
+            col_radar, col_verdict = st.columns([1, 1])
+            with col_radar:
+                fig_collider = go.Figure()
+                dominant_id = patterns[0].get("pattern_id") if patterns else None
+                band = get_manifold_band_for_pattern(dominant_id or "A-01") if dominant_id else None
+                if band:
+                    mu, std = band.get("mean"), band.get("std")
+                    if mu and std:
+                        r_lo = [max(0, mu.get(d, 0) - std.get(d, 0.5)) for d in dims]
+                        r_hi = [mu.get(d, 0) + std.get(d, 0.5) for d in dims]
+                        r_lo.append(r_lo[0])
+                        r_hi.append(r_hi[0])
+                        fig_collider.add_trace(go.Scatterpolar(
+                            r=r_hi, theta=theta_labels + [theta_labels[0]],
+                            fill="toself", name=f"{dominant_id or '格局'} μ+σ",
+                            line=dict(color="rgba(33,150,243,0.3)", width=1),
+                            fillcolor="rgba(33,150,243,0.12)",
+                        ))
+                        fig_collider.add_trace(go.Scatterpolar(
+                            r=r_lo, theta=theta_labels + [theta_labels[0]],
+                            fill="toself", name=f"{dominant_id or '格局'} μ−σ",
+                            line=dict(color="rgba(33,150,243,0.25)", width=1),
+                            fillcolor="rgba(33,150,243,0.06)",
+                        ))
+                r_base = [max(0, point_5d_with_geo.get(d, 0)) for d in dims]
+                r_base.append(r_base[0])
+                fig_collider.add_trace(go.Scatterpolar(
+                    r=r_base, theta=theta_labels + [theta_labels[0]],
+                    fill="toself", name="命主（含地域）",
+                    line=dict(color="#7F39FB", width=2), fillcolor="rgba(127,57,251,0.25)",
+                    hovertemplate="%{theta}<br>值=%{r:.2f}<extra></extra>",
+                ))
+                r_dyn = [max(0, displaced_point.get(d, 0)) for d in dims]
+                r_dyn.append(r_dyn[0])
+                fig_collider.add_trace(go.Scatterpolar(
+                    r=r_dyn, theta=theta_labels + [theta_labels[0]],
+                    fill="toself", name="流年/大运后" + (" ⚠ 极值区" if is_extreme else ""),
+                    line=dict(color="#FF9800" if is_extreme else "#00E676", width=1.5, dash="dash"),
+                    fillcolor="rgba(255,152,0,0.15)" if is_extreme else "rgba(0,230,118,0.15)",
+                    hovertemplate="%{theta}<br>值=%{r:.2f}<extra></extra>",
+                ))
+                fig_collider.update_layout(
+                    polar=dict(radialaxis=dict(visible=True)),
+                    showlegend=True, height=360, margin=dict(l=20, r=20, t=20, b=20),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(fig_collider, use_container_width=True)
+                st.caption("基准层：命主混合 5D+地域修正；背景：主格局 μ±σ；虚线：流年/大运位移，橙为极值区预警。")
+            with col_verdict:
+                if patterns:
+                    ratio_str = " · ".join([f"{p.get('pattern_id', '')} {p.get('confidence_pct', 0):.0f}%" for p in patterns[:5]])
+                    st.caption(f"**命中格局**：{ratio_str}")
+                    academic_mode = st.checkbox("学术模式（显示 5D 坐标与流形修复）", value=False, key="verdict_academic_mode")
+                    repair_vector = None
+                    if retriever and retriever.case_count > 0:
+                        pathway = analyze_repair_pathway(retriever, point_5d_with_geo, top_repair=5)
+                        repair_vector = pathway.get("repair_vector")
+                        if academic_mode and pathway.get("deficit_info") and pathway["deficit_info"].get("deficit", 0) > 0:
+                            st.caption(f"**流形修复**：{pathway['deficit_info'].get('axis_label', pathway['deficit_info'].get('axis', ''))} 轴建议补齐")
+                    if academic_mode:
+                        st.caption(f"**混合 5D（+地域）**：E={point_5d_with_geo.get('E', 0):.2f} O={point_5d_with_geo.get('O', 0):.2f} M={point_5d_with_geo.get('M', 0):.2f} S={point_5d_with_geo.get('S', 0):.2f} R={point_5d_with_geo.get('R', 0):.2f}")
                     if is_ai_engine_available():
-                        if st.button("🤖 生成同类项对比文案", key="btn_case_comparison"):
-                            with st.spinner("大模型生成中…"):
-                                blurb = generate_case_comparison_blurb(pt, nearest)
-                            if blurb.get("success"):
-                                st.success(blurb.get("text", ""))
-                            else:
-                                st.error(blurb.get("error", "生成失败"))
-                    # 028: 全息侧写 — 选择案例查看详情与演化路径占位
-                    chosen = st.radio("选择案例查看全息侧写", options=[c.get("ref", "") for c in nearest], key="case_sidewalk", horizontal=True)
-                    if chosen:
-                        sel = next((c for c in nearest if c.get("ref") == chosen), None)
-                        if sel:
-                            with st.expander("📐 全息侧写 (Holographic Profile)", expanded=True):
-                                vals = sel.get("point") or []
-                                if isinstance(vals, dict):
-                                    vals = [vals.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
-                                if len(vals) == 5:
-                                    fig_big = go.Figure()
-                                    fig_big.add_trace(
-                                        go.Scatterpolar(
-                                            r=vals + [vals[0]],
-                                            theta=list(AXIS_LABELS_5D.values()) + [list(AXIS_LABELS_5D.values())[0]],
-                                            fill="toself",
-                                            name=chosen,
-                                            line_color="#9C27B0",
-                                            fillcolor="rgba(156, 39, 176, 0.25)",
-                                        )
-                                    )
-                                    fig_big.update_layout(polar=dict(radialaxis=dict(visible=True)), height=280, margin=dict(l=40, r=40, t=20, b=20))
-                                    st.plotly_chart(fig_big, use_container_width=True)
-                                st.caption(f"**{chosen}** · {sel.get('subpattern', '')} · 相似度 {sel.get('similarity_pct', 0)}%")
-                                st.caption("_历史演化路径：若该案例有大运流年数据将在此展示（当前样本库暂无）。_")
-                else:
-                    st.caption("案例库暂无样本，请确认 registry/holographic_pattern/A-01.json 中 benchmarks 已配置。")
-            else:
-                st.json({k: round(pt.get(k, 0), 3) for k in ["E", "O", "M", "S", "R"]})
-                if not retriever:
-                    st.caption("_案例检索器未就绪；请确认 A-01.json 存在。_")
-                else:
-                    st.caption("_当前无 5D 坐标时无法检索相似案例。_")
-            # 027/028: 奇点样板 + 英雄榜大模型剖析
-            if retriever and retriever.case_count > 0:
-                singularities = retriever.get_singularities(limit=10)
-                if singularities:
-                    hall = {}
-                    try:
-                        _hof = Path(__file__).resolve().parent.parent.parent / "registry" / "holographic_pattern" / "A-01_hall_of_fame.json"
-                        if _hof.exists():
-                            import json as _json
-                            with open(_hof, "r", encoding="utf-8") as _f:
-                                _d = _json.load(_f)
-                            for _s in _d.get("singularities", []):
-                                hall[_s.get("ref", "")] = _s.get("analysis", "")
-                    except Exception:
-                        pass
-                    with st.expander("⭐ 奇点样板 (Golden / Extreme Cases)", expanded=False):
-                        st.caption("案例库中预先标记的代表性命例；若已运行英雄榜脚本则展示大模型深度剖析。")
-                        for s in singularities:
-                            ref, sp = s.get("ref", ""), s.get("subpattern", "")
-                            pt_s = s.get("point", [])
-                            if isinstance(pt_s, dict):
-                                pt_s = [pt_s.get(k, 0) for k in ["E", "O", "M", "S", "R"]]
-                            st.caption(f"**{ref}** · {sp}" + (f" · 5D={[round(x, 2) for x in pt_s]}" if len(pt_s) == 5 else ""))
-                            if ref and hall.get(ref):
-                                st.write(hall[ref])
-
-        # --- 029: 流形修复建议 (Manifold Repair) ---
-        if retriever and pt and retriever.case_count > 0:
-            pathway = analyze_repair_pathway(retriever, pt, top_repair=5)
-            deficit_info = pathway.get("deficit_info")
-            repair_vector = pathway.get("repair_vector")
-            if deficit_info and deficit_info.get("deficit", 0) > 0:
-                st.markdown(f"""
-                    <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['mystic_gold']};">
-                        <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔧 流形修复建议 (Manifold Repair)</h4>
-                    </div>
-                """, unsafe_allow_html=True)
-                axis_label = deficit_info.get("axis_label", deficit_info.get("axis", ""))
-                st.caption(f"**你的物理瓶颈**：{deficit_info.get('axis', '')} 轴（{axis_label}）")
-                st.caption(f"当前值：{deficit_info.get('current')} → 参考质心：{deficit_info.get('target_from_centroid')}（建议补齐：**+{deficit_info.get('deficit', 0):.2f}**）")
-                if repair_vector:
-                    delta = repair_vector.get("delta_vector") or {}
-                    st.caption(f"**目标位移 ΔV**：{delta}")
-                    if is_ai_engine_available():
-                        if st.button("🧭 生成 AI 导航建议", key="btn_repair_strategy"):
-                            with st.spinner("大模型生成修复路径…"):
-                                blurb = generate_repair_strategy(
-                                    deficit_info.get("axis", "O"),
-                                    delta,
-                                    user_point=pt,
-                                )
-                            if blurb.get("success"):
-                                st.success(blurb.get("text", ""))
-                            else:
-                                st.error(blurb.get("error", "生成失败"))
-                else:
-                    st.caption("_样本库中暂无与您相似且在该轴成功修复的案例，可扩大检索或待全量索引后重试。_")
-            elif deficit_info and deficit_info.get("deficit", 0) <= 0:
-                st.caption("_当前流形相对质心无显著短板，无需修复建议。_")
-
-        # --- [古籍印证] 模块：向量池检索 ---
-        st.markdown(f"""
-            <div style="{GLASS_STYLE} padding: 12px; margin: 1rem 0; border-left: 4px solid {COLORS['crystal_blue']};">
-                <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">📚 古籍印证 (Classical Match)</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        try:
-            from data.vector_db import find_classical_match
-            classical = find_classical_match(inference, n_results=1)
-            if classical:
-                st.markdown(f"**{classical.get('source', '古籍')}** · {classical.get('chapter', '')}")
-                st.write(classical.get("text", ""))
-                # 026: 逻辑溯源 - 点击后大模型解析「为什么古人这么说」
-                if is_ai_engine_available():
-                    if st.button("🕵️ 物理逻辑解析（为什么古人这么说）", key="btn_classical_logic"):
-                        with st.spinner("大模型解析中…"):
-                            _res = explain_classical_logic(
-                                classical.get("text", ""),
-                                source=classical.get("source", "古籍"),
+                        verdict_key = "combined_verdict_text"
+                        verdict_style = (
+                            'background: linear-gradient(135deg, rgba(127,57,251,0.12) 0%, rgba(33,150,243,0.08) 100%); '
+                            'border-radius: 12px; padding: 1rem 1.25rem; margin: 0.5rem 0; '
+                            'border: 1px solid rgba(127,57,251,0.35); '
+                            'font-family: "Noto Serif SC", serif; line-height: 1.7;'
+                        )
+                        # 喜忌神看板（第 040/041 号）：带「量子模拟中…」Loading，雷达图移动端不遮挡判词
+                        try:
+                            from core.balance_engine import run_balance_audit
+                            dominant_id = patterns[0].get("pattern_id") if patterns else None
+                            ten_gods = holo._chart_to_ten_gods(bazi_list, day_master) if dominant_id else None
+                            with st.spinner("量子模拟中…"):
+                                balance_audit = run_balance_audit(point_5d_with_geo, ten_gods or {}, dominant_id or "") if ten_gods and dominant_id else {}
+                            if balance_audit and (balance_audit.get("useful_god") or balance_audit.get("harmful_god")):
+                                st.markdown("**喜忌看板**")
+                                row_xi = st.columns(3)
+                                with row_xi[0]:
+                                    st.caption("🌟 **用神**：" + (balance_audit.get("useful_god") or "—"))
+                                with row_xi[1]:
+                                    st.caption("🚫 **忌神**：" + (balance_audit.get("harmful_god") or "—"))
+                                with row_xi[2]:
+                                    st.caption("🌉 **通关神**：" + (balance_audit.get("bridge_god") or "—"))
+                        except Exception as _e:
+                            logger.debug("喜忌看板未展示: %s", _e)
+                        if verdict_key in st.session_state and st.session_state[verdict_key]:
+                            safe = html.escape(st.session_state[verdict_key]).replace("\n", "<br/>")
+                            st.markdown(
+                                f'<div style="{verdict_style}">'
+                                f'<p style="color: var(--text-color, #e8e4e0); margin: 0;">{safe}</p></div>',
+                                unsafe_allow_html=True,
                             )
-                        if _res.get("success"):
-                            st.success(_res.get("text", ""))
-                        else:
-                            st.error(_res.get("error", "解析失败"))
-            else:
-                st.caption("暂无匹配古籍条目，可向 data/vector_db/raw 添加文本并执行入库。")
-        except Exception as e:
-            logger.debug("古籍检索跳过: %s", e)
-            st.caption("古籍向量库未就绪或未入库，请参考 data/vector_db/README.md 预热。")
+                            st.caption("由 **全息对撞** 生成 · 上一段判词")
+                        if st.button("📜 生成混合格局判词", key="btn_combined_verdict"):
+                            ph_verdict = st.empty()
+                            accumulated = ""
+                            ph_verdict.markdown(
+                                f'<div style="{verdict_style}">'
+                                '<p style="color: #b0a090; margin: 0;">▌ 正在生成判词…</p></div>',
+                                unsafe_allow_html=True,
+                            )
+                            try:
+                                ten_gods_for_verdict = holo._chart_to_ten_gods(bazi_list, day_master)
+                                dominant_for_verdict = patterns[0].get("pattern_id") if patterns else None
+                                for chunk in stream_combined_pattern_verdict(
+                                    probabilistic_patterns=patterns,
+                                    point_5d=point_5d_with_geo,
+                                    repair_vector=repair_vector,
+                                    ten_gods=ten_gods_for_verdict,
+                                    dominant_pattern_id=dominant_for_verdict,
+                                ):
+                                    accumulated += chunk
+                                    safe = html.escape(accumulated).replace("\n", "<br/>")
+                                    ph_verdict.markdown(
+                                        f'<div style="{verdict_style}">'
+                                        f'<p style="color: var(--text-color, #e8e4e0); margin: 0;">{safe}<span style="opacity:0.8;">▌</span></p></div>',
+                                        unsafe_allow_html=True,
+                                    )
+                                if accumulated.strip():
+                                    st.session_state[verdict_key] = accumulated.strip()
+                                    safe = html.escape(accumulated.strip()).replace("\n", "<br/>")
+                                    ph_verdict.markdown(
+                                        f'<div style="{verdict_style}">'
+                                        f'<p style="color: var(--text-color, #e8e4e0); margin: 0;">{safe}</p></div>',
+                                        unsafe_allow_html=True,
+                                    )
+                                    st.caption("由 **全息对撞** 生成 · 打字机展示")
+                                else:
+                                    res = generate_combined_pattern_verdict(
+                                        probabilistic_patterns=patterns,
+                                        point_5d=point_5d_with_geo,
+                                        repair_vector=repair_vector,
+                                        ten_gods=ten_gods_for_verdict,
+                                        dominant_pattern_id=dominant_for_verdict,
+                                    )
+                                    if res.get("success") and res.get("text"):
+                                        text = res["text"].strip()
+                                        st.session_state[verdict_key] = text
+                                        safe = html.escape(text).replace("\n", "<br/>")
+                                        ph_verdict.markdown(
+                                            f'<div style="{verdict_style}">'
+                                            f'<p style="color: var(--text-color, #e8e4e0); margin: 0;">{safe}</p></div>',
+                                            unsafe_allow_html=True,
+                                        )
+                                        st.caption("由 **全息对撞** 生成（非流式回退）")
+                                    else:
+                                        ph_verdict.markdown(
+                                            f'<div style="{verdict_style}">'
+                                            f'<p style="color: #c08080;">{html.escape(res.get("error", "模型未返回内容"))}</p></div>',
+                                            unsafe_allow_html=True,
+                                        )
+                            except Exception as e:
+                                logger.exception("混合格局判词流式调用失败")
+                                err_msg = str(e)
+                                ph_verdict.markdown(
+                                    f'<div style="{verdict_style}">'
+                                    f'<p style="color: #c08080;">生成失败：{html.escape(err_msg)}</p></div>',
+                                    unsafe_allow_html=True,
+                                )
+                                st.error(err_msg)
+                    else:
+                        st.info("未检测到本地 Ollama，请在天机设置中配置对话模型后使用混合判词。")
+                else:
+                    st.caption("_未命中已注册格局，请确认 registry/qga_manifest.json 与格局数据已配置。_")
+    except Exception as e:
+        logger.exception("全息格局对撞失败")
+        st.caption(f"_对撞或判词失败：{e}_")
 
-    elif logic_hit is False:
-        st.info("正官格逻辑未触发，未执行流形归位。")
 
     # --- NEW: 触发规则分析 (Triggered Rules Analysis) ---
     st.markdown(f"""

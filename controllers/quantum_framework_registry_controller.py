@@ -211,93 +211,116 @@ class QuantumFrameworkRegistryController:
     
     def _load_holographic_pattern_from_qga(self) -> Dict[str, Any]:
         """
-        架构归一化：从QGA法定路径读取holographic_pattern主题
-        
-        根据FDS_SOP_v3.0.md Step 5.3，registry/holographic_pattern/是唯一法定注册目录。
-        此方法直接读取该目录下的所有QGA信封格式文件，作为该主题的专题列表。
+        从 QGA 总表 qga_manifest.json 的 topics.holographic_pattern 读取专题列表（FDS SOP V5.0 Step 5.4）。
+        未在 qga_manifest 注册的格局不展示。若总表不存在或为空，则回退为扫描 registry/holographic_pattern/*.json。
         
         Returns:
             主体数据字典，包含topics和metadata
         """
         project_root = Path(__file__).parent.parent
+        qga_manifest_path = project_root / "registry" / "qga_manifest.json"
         qga_registry_dir = project_root / "registry" / "holographic_pattern"
         
         subject_data = {
             'name': 'holographic_pattern',
             'path': str(qga_registry_dir),
-            'registry_file': None,  # QGA格式不使用registry.json
+            'registry_file': str(qga_manifest_path) if qga_manifest_path.exists() else None,
             'metadata': {
                 'name': '全息格局',
                 'name_en': 'Holographic Pattern',
                 'id': 'QGA.holographic_pattern',
-                'version': '3.0',
+                'version': '5.0',
                 'schema_version': '3.0',
-                'description': '全息格局主题（含正官格 A-01 等）。从 QGA 法定路径 registry/holographic_pattern/ 加载，与 FDS-SOP v3.0 一致。',
-                'registry_path': str(qga_registry_dir),
-                'specification': {'source': 'FDS_SOP_v3.0', 'topic': 'holographic_pattern'}
+                'description': '全息格局主题（正官格 A-01、七杀格 A-02、偏财格 A-03 等）。专题列表来自 registry/qga_manifest.json（FDS SOP V5.0 Step 5.4）。',
+                'registry_path': str(qga_manifest_path),
+                'specification': {'source': 'FDS_SOP_v5.0', 'topic': 'holographic_pattern'}
             },
             'topics': {},
             'topics_count': 0,
-            'has_registry': qga_registry_dir.exists()
+            'has_registry': qga_manifest_path.exists() or qga_registry_dir.exists()
         }
-        
-        if not qga_registry_dir.exists():
-            logger.warning(f"QGA registry directory not found: {qga_registry_dir}")
-            return subject_data
         
         patterns = {}
         
-        # 扫描所有JSON文件（QGA信封格式）
-        for json_file in sorted(qga_registry_dir.glob("*.json")):
+        # 优先从 qga_manifest.json 的 topics.holographic_pattern 读取（SOP V5.0）
+        if qga_manifest_path.exists():
             try:
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    qga_data = json.load(f)
-                
-                # 校验QGA信封结构
-                if qga_data.get('topic') != 'holographic_pattern':
-                    logger.warning(f"Skipping {json_file.name}: topic mismatch (expected 'holographic_pattern')")
-                    continue
-                
-                if 'data' not in qga_data:
-                    logger.warning(f"Skipping {json_file.name}: missing 'data' field")
-                    continue
-                
-                # 提取格局数据
-                pattern_data = qga_data['data']
-                pattern_id = pattern_data.get('pattern_id')
-                if not pattern_id:
-                    logger.warning(f"Skipping {json_file.name}: missing pattern_id")
-                    continue
-                
-                meta_info = pattern_data.get('meta_info', {})
-                population_stats = pattern_data.get('population_stats', {})
-                
-                # 转换为内部格式
-                patterns[pattern_id] = {
-                    'name_cn': meta_info.get('chinese_name', meta_info.get('display_name', pattern_id)),
-                    'name_en': meta_info.get('display_name', pattern_id),
-                    'description': f"类别: {meta_info.get('category', 'N/A')} | 来源: {meta_info.get('source_ref', 'N/A')}",
-                    'category': meta_info.get('category', ''),
-                    'version': qga_data.get('schema_version', '3.0'),
-                    'abundance': population_stats.get('base_abundance', 0),
-                    'sample_size': population_stats.get('sample_size', 0),
-                    'sub_patterns': population_stats.get('sub_patterns', {}),
-                    'source_ref': meta_info.get('source_ref', ''),
-                    'qga_file': str(json_file)
-                }
-                
-                logger.debug(f"Loaded QGA pattern: {pattern_id} from {json_file.name}")
-                
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse QGA file {json_file.name}: {e}")
+                with open(qga_manifest_path, 'r', encoding='utf-8') as f:
+                    qga_manifest = json.load(f)
+                entries = (qga_manifest.get('topics') or {}).get('holographic_pattern') or []
+                for entry in entries:
+                    pattern_id = entry.get('pattern_id')
+                    if not pattern_id:
+                        continue
+                    manifest_ref = entry.get('manifest_ref', '')
+                    version = entry.get('version', '5.0')
+                    index_path = entry.get('index_path', '')
+                    manifest_path = project_root / manifest_ref if manifest_ref else None
+                    name_cn = pattern_id
+                    name_en = pattern_id
+                    category = ''
+                    source_ref = ''
+                    if manifest_path and manifest_path.exists():
+                        try:
+                            with open(manifest_path, 'r', encoding='utf-8') as mf:
+                                manifest = json.load(mf)
+                            meta = manifest.get('meta_info', manifest)
+                            name_cn = meta.get('chinese_name', meta.get('display_name', pattern_id))
+                            name_en = meta.get('display_name', pattern_id)
+                            category = meta.get('category', '')
+                            source_ref = meta.get('source_ref', '')
+                        except Exception:
+                            pass
+                    patterns[pattern_id] = {
+                        'name_cn': name_cn,
+                        'name_en': name_en,
+                        'description': f"类别: {category or 'N/A'} | manifest: {manifest_ref}",
+                        'category': category,
+                        'version': version,
+                        'abundance': 0,
+                        'sample_size': 0,
+                        'sub_patterns': {},
+                        'source_ref': source_ref,
+                        'qga_file': str(qga_manifest_path),
+                        'manifest_ref': manifest_ref,
+                        'index_path': index_path,
+                    }
+                logger.info(f"[SYSTEM] Loaded {len(patterns)} pattern(s) from qga_manifest.json (holographic_pattern)")
             except Exception as e:
-                logger.error(f"Error loading QGA file {json_file.name}: {e}")
+                logger.warning(f"Failed to load qga_manifest.json: {e}, falling back to directory scan")
+                patterns = {}
+        
+        # 回退：无 qga_manifest 或 未取到任何专题 时，扫描目录下 *.json（兼容旧版）
+        if not patterns and qga_registry_dir.exists():
+            for json_file in sorted(qga_registry_dir.glob("*.json")):
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        qga_data = json.load(f)
+                    if qga_data.get('topic') != 'holographic_pattern' or 'data' not in qga_data:
+                        continue
+                    pattern_data = qga_data['data']
+                    pattern_id = pattern_data.get('pattern_id')
+                    if not pattern_id:
+                        continue
+                    meta_info = pattern_data.get('meta_info', {})
+                    population_stats = pattern_data.get('population_stats', {})
+                    patterns[pattern_id] = {
+                        'name_cn': meta_info.get('chinese_name', meta_info.get('display_name', pattern_id)),
+                        'name_en': meta_info.get('display_name', pattern_id),
+                        'description': f"类别: {meta_info.get('category', 'N/A')} | 来源: {meta_info.get('source_ref', 'N/A')}",
+                        'category': meta_info.get('category', ''),
+                        'version': qga_data.get('schema_version', '3.0'),
+                        'abundance': population_stats.get('base_abundance', 0),
+                        'sample_size': population_stats.get('sample_size', 0),
+                        'sub_patterns': population_stats.get('sub_patterns', {}),
+                        'source_ref': meta_info.get('source_ref', ''),
+                        'qga_file': str(json_file)
+                    }
+                except Exception as e:
+                    logger.debug(f"Skipping {json_file.name}: {e}")
         
         subject_data['topics'] = patterns
         subject_data['topics_count'] = len(patterns)
-        
-        logger.info(f"[SYSTEM] Loaded {len(patterns)} pattern(s) from QGA registry: {qga_registry_dir}")
-        
         return subject_data
 
 
