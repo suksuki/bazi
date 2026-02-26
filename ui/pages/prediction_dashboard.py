@@ -39,11 +39,12 @@ def _get_radar_extreme_threshold() -> float:
     """从 config/physics/algorithm_params.json 读取雷达图极值阈值。"""
     params = ConfigManager.get_algorithm_params() or {}
     return float((params.get("ui_radar") or {}).get("extreme_threshold", 1.2))
-from core.dynamic_engine import (
-    calculate_temporal_displacement,
-    get_geo_factor,
-    get_time_delta,
+from core.physics.dynamic_engine import (
+    compute_dynamic_tensor,
+    manifold_capture,
+    collision_warning,
 )
+from core.dynamic_engine import get_geo_factor  # 仅用于 _get_region_offset_5d 回退
 from core.manifold_visual_utils import get_manifold_band_for_pattern, get_axis_hover_text
 from utils.notification_manager import get_notification_manager
 from core.processors.physics import GENERATION, CONTROL
@@ -59,6 +60,11 @@ AXIS_LABELS_5D = {"E": "能量 E", "O": "秩序 O", "M": "财富 M", "S": "压�
 GEO_DIRECTION_TO_REGION = {
     "中": "中原", "东": "东方", "南": "南方", "西": "西方", "北": "北方",
     "东南": "东南", "东北": "东北", "西南": "西南", "西北": "西北",
+}
+# 八方 -> 动态引擎 config 五方（东南/东北/西南/西北 用 中）
+GEO_DIRECTION_TO_ENGINE_REGION = {
+    "中": "中", "东": "东", "南": "南", "西": "西", "北": "北",
+    "东南": "中", "东北": "中", "西南": "中", "西北": "中",
 }
 
 
@@ -283,51 +289,15 @@ def render_prediction_dashboard():
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 6. Core Analysis (Flux Data)
-    from ui.components.theme import COLORS, GLASS_STYLE
-    st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['rose_magenta']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📊 核心能量解析 (Core Energy)</h3>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Use already computed current_flux
-    flux_data = current_flux
-    
-    if flux_data:
-        # A. Wang/Shuai
-        wang_shuai_str = controller.get_wang_shuai_str(flux_data)
-        col_ws1, col_ws2 = st.columns([1, 2])
-        with col_ws1:
-            if "身旺" in wang_shuai_str:
-                st.success(f"**日主判定**: {wang_shuai_str}")
-            elif "身弱" in wang_shuai_str:
-                st.warning(f"**日主判定**: {wang_shuai_str}")
-            else:
-                st.info(f"**日主判定**: {wang_shuai_str}")
-        
-        with col_ws2:
-             s_self = flux_data.get('BiJian', 0) + flux_data.get('JieCai', 0)
-             st.metric("日主能量", f"{(s_self * 0.08):.2f}", help="日主原局能量强度")
-
-        # B. Five Elements
-        element_energies = controller.get_five_element_energies(flux_data)
-        if element_energies:
-            st.markdown("#### 🌈 五行能量分布")
-            
-            # Simple Bar Chart
-            elements = list(element_energies.keys())
-            energies = list(element_energies.values())
-            colors = {'Wood': '#4CAF50', 'Fire': '#F44336', 'Earth': '#FF9800', 'Metal': '#2196F3', 'Water': '#00BCD4'}
-            
-            fig = go.Figure(data=[go.Bar(
-                x=elements, y=energies,
-                marker_color=[colors.get(e, '#aaa') for e in elements],
-                text=[f"{e:.2f}" for e in energies],
-                textposition='auto'
-            )])
-            fig.update_layout(height=250, margin=dict(l=20, r=20, t=10, b=20), xaxis_title="五行 (Elements)", yaxis_title="能量值 (Energy)")
-            st.plotly_chart(fig, use_container_width=True)
+    # 6. 核心能量（仅日主判定，五行分布已收拢到动态 5D）
+    if current_flux:
+        wang_shuai_str = controller.get_wang_shuai_str(current_flux)
+        if "身旺" in wang_shuai_str:
+            st.success(f"**日主判定**: {wang_shuai_str}")
+        elif "身弱" in wang_shuai_str:
+            st.warning(f"**日主判定**: {wang_shuai_str}")
+        else:
+            st.info(f"**日主判定**: {wang_shuai_str}")
 
     # --- 全息格局对撞（多格局通用，非 A-01 专属）---
     st.markdown(f"""
@@ -335,7 +305,7 @@ def render_prediction_dashboard():
             <h4 style="color: {COLORS['mystic_gold']}; margin: 0;">🔀 全息格局对撞 · 流形可视化与混合判词</h4>
         </div>
     """, unsafe_allow_html=True)
-    st.caption("对 QGA 注册格局（A-01 / A-02 / A-03）做多矩阵投影与置信度评分，生成混合 5D 雷达图与 32B 综合判词。")
+    st.caption("原局 5D + 大运/流年/地域 动态张量（引透·刑冲合化·地理阻尼），流形捕获与对撞预警。")
     # 第 041 号：移动端雷达图限高，避免遮挡判词
     st.markdown("""
         <style>
@@ -354,6 +324,7 @@ def render_prediction_dashboard():
             f"{c.get('hour', {}).get('stem', '')}{c.get('hour', {}).get('branch', '')}",
         ]
         day_master = (c.get("day") or {}).get("stem", "")
+        month_branch = (c.get("month") or {}).get("branch", "")
         if not day_master or not all(bazi_list):
             st.caption("_排盘数据不完整，无法进行格局对撞。_")
         else:
@@ -361,17 +332,24 @@ def render_prediction_dashboard():
             ctx = holo.get_mixed_pattern_context(bazi_list, day_master)
             patterns = ctx.get("probabilistic_patterns") or []
             point_5d = ctx.get("point_5d") or {}
-            geo_direction = st.session_state.get("dynamic_geo_direction", "中")
-            region_offset = _get_region_offset_5d(geo_direction)
-            point_5d_with_geo = {k: point_5d.get(k, 0) + region_offset.get(k, 0) for k in ["E", "O", "M", "S", "R"]}
-            luck_gan_zhi = (selected_yun.get("gan_zhi", "") if selected_yun else "") or ""
+            # 原局 5D 作为 natal（不加地域，由动态引擎内部做地域）
+            natal_5d = {k: point_5d.get(k, 0) for k in ["E", "O", "M", "S", "R"]}
+            major_pillar = (selected_yun.get("gan_zhi", "") if selected_yun else "") or ""
             try:
                 _off = sim_year - base_year
                 year_gan_zhi = f"{gd[_off % 10]}{zhi[_off % 12]}"
             except Exception:
                 year_gan_zhi = ""
-            temporal = calculate_temporal_displacement(point_5d_with_geo, luck_gan_zhi, year_gan_zhi) if point_5d_with_geo else {}
-            displaced_point = temporal.get("displaced_point") or point_5d_with_geo
+            geo_direction = st.session_state.get("dynamic_geo_direction", "中")
+            geo_region = GEO_DIRECTION_TO_ENGINE_REGION.get(geo_direction, "中")
+            tensor = compute_dynamic_tensor(
+                natal_5d, major_pillar=major_pillar, annual_pillar=year_gan_zhi,
+                geo_region=geo_region, month_branch=month_branch, day_master=day_master,
+            )
+            displaced_point = tensor.get("dynamic_point") or natal_5d
+            manifold_result = manifold_capture(displaced_point, natal_5d)
+            collision = collision_warning(displaced_point, manifold_result=manifold_result)
+            point_5d_with_geo = natal_5d
             dims = ["E", "O", "M", "S", "R"]
             theta_labels = [f"{d} · {AXIS_LABELS_5D.get(d, d)}" for d in dims]
             extreme_threshold = _get_radar_extreme_threshold()
@@ -401,11 +379,11 @@ def render_prediction_dashboard():
                             line=dict(color="rgba(33,150,243,0.25)", width=1),
                             fillcolor="rgba(33,150,243,0.06)",
                         ))
-                r_base = [max(0, point_5d_with_geo.get(d, 0)) for d in dims]
+                r_base = [max(0, natal_5d.get(d, 0)) for d in dims]
                 r_base.append(r_base[0])
                 fig_collider.add_trace(go.Scatterpolar(
                     r=r_base, theta=theta_labels + [theta_labels[0]],
-                    fill="toself", name="命主（含地域）",
+                    fill="toself", name="原局 5D",
                     line=dict(color="#7F39FB", width=2), fillcolor="rgba(127,57,251,0.25)",
                     hovertemplate="%{theta}<br>值=%{r:.2f}<extra></extra>",
                 ))
@@ -413,7 +391,7 @@ def render_prediction_dashboard():
                 r_dyn.append(r_dyn[0])
                 fig_collider.add_trace(go.Scatterpolar(
                     r=r_dyn, theta=theta_labels + [theta_labels[0]],
-                    fill="toself", name="流年/大运后" + (" ⚠ 极值区" if is_extreme else ""),
+                    fill="toself", name="动态 5D（大运+流年+地域）" + (" ⚠ 极值区" if is_extreme else ""),
                     line=dict(color="#FF9800" if is_extreme else "#00E676", width=1.5, dash="dash"),
                     fillcolor="rgba(255,152,0,0.15)" if is_extreme else "rgba(0,230,118,0.15)",
                     hovertemplate="%{theta}<br>值=%{r:.2f}<extra></extra>",
@@ -424,7 +402,15 @@ def render_prediction_dashboard():
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 )
                 st.plotly_chart(fig_collider, use_container_width=True)
-                st.caption("基准层：命主混合 5D+地域修正；背景：主格局 μ±σ；虚线：流年/大运位移，橙为极值区预警。")
+                # 流形捕获与对撞预警
+                cap_id = manifold_result.get("pattern_id") or "—"
+                cap_2 = manifold_result.get("second_pattern_id")
+                is_dbl = manifold_result.get("is_double_capture", False)
+                disp_vec = manifold_result.get("displacement_vector") or {}
+                st.caption(f"**流形捕获**：当前归属 {cap_id}" + (f" · 对撞态 {cap_id}↔{cap_2}" if is_dbl else "") + f"；位移矢量 E={disp_vec.get('E',0):.2f} O={disp_vec.get('O',0):.2f} …")
+                if collision.get("in_collision_zone"):
+                    st.warning(f"**对撞预警**：{collision.get('message', '')}（source={collision.get('source_pattern')}, target={collision.get('target_pattern')}, type={collision.get('collision_type')}）")
+                st.caption("基准：原局 5D；虚线：大运+流年+地域+刑冲合化后的动态 5D；橙为极值区。")
             with col_verdict:
                 if patterns:
                     ratio_str = " · ".join([f"{p.get('pattern_id', '')} {p.get('confidence_pct', 0):.0f}%" for p in patterns[:5]])
@@ -548,230 +534,152 @@ def render_prediction_dashboard():
         st.caption(f"_对撞或判词失败：{e}_")
 
 
-    # --- NEW: 触发规则分析 (Triggered Rules Analysis) ---
-    st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['mystic_gold']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">📜 触发神煞规则 (Activated Rules)</h3>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    try:
-        from core.rule_matcher import RuleMatcher, MatchedRule
-        
-        # Build bazi list from chart
-        bazi_list = [
-            f"{chart.get('year', {}).get('stem', '')}{chart.get('year', {}).get('branch', '')}",
-            f"{chart.get('month', {}).get('stem', '')}{chart.get('month', {}).get('branch', '')}",
-            f"{chart.get('day', {}).get('stem', '')}{chart.get('day', {}).get('branch', '')}",
-            f"{chart.get('hour', {}).get('stem', '')}{chart.get('hour', {}).get('branch', '')}"
-        ]
-        dm = chart.get('day', {}).get('stem', '')
-        
-        # Match rules
-        matcher = RuleMatcher()
-        matched_rules = matcher.match(bazi_list, dm)
-        summary = matcher.get_rule_summary(matched_rules)
-        
-        # Display summary metrics
-        col_r1, col_r2, col_r3, col_r4 = st.columns(4)
-        with col_r1:
-            st.metric("总规则数", summary['total'], help="触发的八字规则总数")
-        with col_r2:
-            st.metric("交互规则", summary['by_category'].get('B', 0), help="天干五合、六冲、三刑等")
-        with col_r3:
-            st.metric("墓库规则", summary['by_category'].get('D', 0), help="墓库开闭状态")
-        with col_r4:
-            active_count = len(summary['active_effects'])
-            st.metric("动态激活", active_count, help="非始终应用的规则")
-        
-        # Display active effects (dynamic rules)
-        if summary['active_effects']:
-            st.markdown("#### ⚡ 激活的动态规则")
-            for effect in summary['active_effects']:
-                st.info(f"🔹 {effect}")
-        
-        # Expandable rule details
-        with st.expander("📋 查看所有规则详情", expanded=False):
-            # Group by category
+    # 触发神煞规则（收起，减少冗余）
+    with st.expander("📜 触发神煞规则 (Activated Rules)", expanded=False):
+        try:
+            from core.rule_matcher import RuleMatcher, MatchedRule
+            bazi_list_r = [
+                f"{chart.get('year', {}).get('stem', '')}{chart.get('year', {}).get('branch', '')}",
+                f"{chart.get('month', {}).get('stem', '')}{chart.get('month', {}).get('branch', '')}",
+                f"{chart.get('day', {}).get('stem', '')}{chart.get('day', {}).get('branch', '')}",
+                f"{chart.get('hour', {}).get('stem', '')}{chart.get('hour', {}).get('branch', '')}"
+            ]
+            dm = chart.get('day', {}).get('stem', '')
+            matcher = RuleMatcher()
+            matched_rules = matcher.match(bazi_list_r, dm)
+            summary = matcher.get_rule_summary(matched_rules)
+            col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+            with col_r1:
+                st.metric("总规则数", summary['total'])
+            with col_r2:
+                st.metric("交互规则", summary['by_category'].get('B', 0))
+            with col_r3:
+                st.metric("墓库规则", summary['by_category'].get('D', 0))
+            with col_r4:
+                st.metric("动态激活", len(summary['active_effects']))
+            if summary['active_effects']:
+                for effect in summary['active_effects']:
+                    st.info(f"🔹 {effect}")
             categories = {'A': '基础物理', 'B': '几何交互', 'C': '能量流转', 'D': '墓库规则', 'E': '判定阈值'}
-            
             for cat, cat_name in categories.items():
                 cat_rules = [r for r in matched_rules if r.category == cat]
                 if cat_rules:
-                    st.markdown(f"**{cat}. {cat_name}** ({len(cat_rules)}条)")
+                    st.caption(f"**{cat}. {cat_name}** ({len(cat_rules)}条)")
                     for rule in cat_rules:
-                        participants_str = f" | 参与: {', '.join(rule.participants)}" if rule.participants else ""
                         effect_str = rule.effect if rule.effect != "始终应用" else "📌 基础规则"
-                        st.caption(f"• **{rule.rule_id} {rule.name_cn}**: {effect_str}{participants_str}")
-                    st.markdown("")
-                    
-    except Exception as e:
-        logger.error(f"Rule matching failed: {e}")
-        from ui.components.theme import render_crystal_notification
-        render_crystal_notification("规则匹配暂时不可用", "warning")
+                        st.caption(f"• {rule.rule_id} {rule.name_cn}: {effect_str}")
+        except Exception as e:
+            logger.error(f"Rule matching failed: {e}")
+            st.caption("规则匹配暂时不可用")
 
-    # 7. Quantum Physics Diagnostics (Advanced Smart Chart)
-    st.markdown(f"""
-        <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1.5rem; border-left: 4px solid {COLORS['crystal_blue']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🧬 深度命运诊断 (Pro Diagnostics)</h3>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Run Advanced Simulation (Graph Engine)
-    dynamic_context = {'year': ln_gz, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
-    adv_result = controller.run_advanced_simulation(dynamic_context)
-    
-    if adv_result:
-        # --- Section B: Ten Gods Radar ---
-        st.markdown("#### 📡 十神势力雷达 (Ten Gods Radar)")
-        c_radar, c_monitor = st.columns([1, 1])
-        
-        # Use proper Ten Gods data from controller
-        ten_gods = adv_result.get('ten_gods', {})
-        
-        if ten_gods:
-            tg_labels = list(ten_gods.keys())
-            tg_means = [v['mean'] for v in ten_gods.values()]
-            tg_stds = [v['std'] for v in ten_gods.values()]
-            
-            with c_radar:
-                # Radar Chart with error bars representation
-                fig_radar = go.Figure()
-                
-                # Main trace
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=tg_means,
-                    theta=tg_labels,
-                    fill='toself',
-                    name='μ (均值)',
-                    line_color='#7F39FB',
-                    fillcolor='rgba(127, 57, 251, 0.3)'
-                ))
-                
-                # Upper bound (mean + std)
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=[m + s for m, s in zip(tg_means, tg_stds)],
-                    theta=tg_labels,
-                    mode='lines',
-                    name='μ + σ',
-                    line=dict(color='rgba(127, 57, 251, 0.5)', dash='dash')
-                ))
-                
-                fig_radar.update_layout(
-                    polar=dict(radialaxis=dict(visible=True)),
-                    showlegend=True,
-                    height=350,
-                    margin=dict(l=20, r=20, t=20, b=20),
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_radar, use_container_width=True)
-                
-                # Show detailed values with uncertainty
-                st.caption("**十神详情 (ProbValue μ ± σ)**")
-                for label, vals in ten_gods.items():
-                    st.text(f"{label}: {vals['mean']:.2f} ± {vals['std']:.2f}")
-        else:
-            st.warning("十神数据未计算")
-        
-        # --- NEW: Node Energy Probability Table ---
-        nodes_data = adv_result.get('nodes', [])
-        if nodes_data:
-            with st.expander("🔬 节点能量概率值 (Node Energy ProbValue)", expanded=False):
-                st.caption("每个干支节点的能量值，以概率波函数表示 (μ ± σ)")
-                
-                # Build table data
-                table_data = []
-                for node in nodes_data:
-                    char = node.get('char', '?')
-                    elem = node.get('element', '?')
-                    mean = node.get('energy_mean', 0)
-                    std = node.get('energy_std', 0)
-                    ntype = node.get('type', '?')
-                    ten_god = node.get('ten_god', 'N/A')
-                    
-                    # Format energy as ProbValue string
-                    energy_str = f"{mean:.2f} ± {std:.2f}"
-                    
-                    table_data.append({
-                        '字符': char,
-                        '五行': elem,
-                        '类型': '天干' if ntype == 'stem' else '地支',
-                        '十神': ten_god,
-                        '能量 (μ ± σ)': energy_str,
-                        '均值': mean
-                    })
-                
-                # Sort by element for grouping
-                df_nodes = pd.DataFrame(table_data)
-                df_nodes = df_nodes.sort_values(by='均值', ascending=False)
-                
-                # Display with color coding by element
-                st.dataframe(
-                    df_nodes[['字符', '五行', '类型', '十神', '能量 (μ ± σ)']],
-                    width='stretch',
-                    hide_index=True
-                )
-                
-                # Summary stats
-                total_mean = sum(n.get('energy_mean', 0) for n in nodes_data)
-                st.metric("总能量", f"{total_mean:.2f}", help="所有节点能量均值之和")
-            
-            
-        with c_monitor:
-            st.markdown("#### 🛡️ 控制论反馈 (Cybernetics)")
-            feedback_stats = adv_result.get('feedback_stats', [])
-            
-            # Stats Aggregation
-            inv_control_count = sum(1 for f in feedback_stats if f.get('is_inverse'))
-            total_recoil = sum(f.get('recoil', 0) for f in feedback_stats)
-            avg_shield = np.mean([f.get('shield_efficiency', 0) for f in feedback_stats]) if feedback_stats else 0
-            
-            m1, m2, m3 = st.columns(3)
-            m1.metric("反克触发", f"{inv_control_count}次", delta_color="inverse")
-            m2.metric("反噬伤害", f"{total_recoil:.1f}", delta_color="inverse")
-            m3.metric("环境屏蔽", f"{avg_shield*100:.0f}%")
-            
+    # 7. 深度命运诊断（收起）
+    with st.expander("🧬 深度命运诊断 (Pro Diagnostics)", expanded=False):
+        dynamic_context = {'year': ln_gz, 'dayun': selected_yun['gan_zhi'] if selected_yun else '', 'luck_pillar': selected_yun['gan_zhi'] if selected_yun else ''}
+        adv_result = controller.run_advanced_simulation(dynamic_context)
+        if adv_result:
+            st.markdown("#### 📡 十神势力雷达 (Ten Gods Radar)")
+            c_radar, c_monitor = st.columns([1, 1])
+            ten_gods = adv_result.get('ten_gods', {})
+            if ten_gods:
+                tg_labels = list(ten_gods.keys())
+                tg_means = [v['mean'] for v in ten_gods.values()]
+                tg_stds = [v['std'] for v in ten_gods.values()]
+                with c_radar:
+                    fig_radar = go.Figure()
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=tg_means,
+                        theta=tg_labels,
+                        fill='toself',
+                        name='μ (均值)',
+                        line_color='#7F39FB',
+                        fillcolor='rgba(127, 57, 251, 0.3)'
+                    ))
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=[m + s for m, s in zip(tg_means, tg_stds)],
+                        theta=tg_labels,
+                        mode='lines',
+                        name='μ + σ',
+                        line=dict(color='rgba(127, 57, 251, 0.5)', dash='dash')
+                    ))
+                    fig_radar.update_layout(
+                        polar=dict(radialaxis=dict(visible=True)),
+                        showlegend=True,
+                        height=350,
+                        margin=dict(l=20, r=20, t=20, b=20),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)'
+                    )
+                    st.plotly_chart(fig_radar, use_container_width=True)
+                    st.caption("**十神详情 (ProbValue μ ± σ)**")
+                    for label, vals in ten_gods.items():
+                        st.text(f"{label}: {vals['mean']:.2f} ± {vals['std']:.2f}")
+            else:
+                st.warning("十神数据未计算")
+            nodes_data = adv_result.get('nodes', [])
+            if nodes_data:
+                with st.expander("🔬 节点能量概率值 (Node Energy ProbValue)", expanded=False):
+                    st.caption("每个干支节点的能量值，以概率波函数表示 (μ ± σ)")
+                    table_data = []
+                    for node in nodes_data:
+                        char = node.get('char', '?')
+                        elem = node.get('element', '?')
+                        mean = node.get('energy_mean', 0)
+                        std = node.get('energy_std', 0)
+                        ntype = node.get('type', '?')
+                        ten_god = node.get('ten_god', 'N/A')
+                        energy_str = f"{mean:.2f} ± {std:.2f}"
+                        table_data.append({
+                            '字符': char, '五行': elem, '类型': '天干' if ntype == 'stem' else '地支',
+                            '十神': ten_god, '能量 (μ ± σ)': energy_str, '均值': mean
+                        })
+                    df_nodes = pd.DataFrame(table_data)
+                    df_nodes = df_nodes.sort_values(by='均值', ascending=False)
+                    st.dataframe(
+                        df_nodes[['字符', '五行', '类型', '十神', '能量 (μ ± σ)']],
+                        width='stretch', hide_index=True
+                    )
+                    total_mean = sum(n.get('energy_mean', 0) for n in nodes_data)
+                    st.metric("总能量", f"{total_mean:.2f}", help="所有节点能量均值之和")
+            with c_monitor:
+                st.markdown("#### 🛡️ 控制论反馈 (Cybernetics)")
+                feedback_stats = adv_result.get('feedback_stats', [])
+                inv_control_count = sum(1 for f in feedback_stats if f.get('is_inverse'))
+                total_recoil = sum(f.get('recoil', 0) for f in feedback_stats)
+                avg_shield = np.mean([f.get('shield_efficiency', 0) for f in feedback_stats]) if feedback_stats else 0
+                m1, m2, m3 = st.columns(3)
+                m1.metric("反克触发", f"{inv_control_count}次", delta_color="inverse")
+                m2.metric("反噬伤害", f"{total_recoil:.1f}", delta_color="inverse")
+                m3.metric("环境屏蔽", f"{avg_shield*100:.0f}%")
+                if inv_control_count > 0:
+                    st.error(f"⚠️ 警告: 即使攻击者也受到 {total_recoil:.1f} 点反噬伤害 (Impedance Mismatch)!")
+                if avg_shield > 0.3:
+                    st.success("🛡️ 护盾激活: 环境气场屏蔽了部分克制伤害")
+            st.markdown("#### 🔮 量子断言 (Quantum Assertions)")
+            assertions = []
             if inv_control_count > 0:
-                st.error(f"⚠️ 警告: 即使攻击者也受到 {total_recoil:.1f} 点反噬伤害 (Impedance Mismatch)!")
-            if avg_shield > 0.3:
-                st.success("🛡️ 护盾激活: 环境气场屏蔽了部分克制伤害")
-                
-        # --- Section D: Quantum Assertions ---
-        st.markdown("#### 🔮 量子断言 (Quantum Assertions)")
-        assertions = []
-        if inv_control_count > 0:
-            assertions.append(f"⛔ **反克现象**: 弱木克土? 或者是弱金克木? 局中出现了以弱击强的【反克】现象 {inv_control_count} 次。")
-        if total_recoil > 10.0:
-            assertions.append(f"💥 **强烈反噬**: 攻击者受到严重反震，名为克制实为自损。建议以守为攻。")
-        if avg_shield > 0.5:
-            assertions.append(f"🔒 **得地得势**: 环境能量形成了天然护盾，外界压力难以穿透。")
-        
-        if not assertions:
-            assertions.append("✅ **系统平稳**: 能量流动符合经典物理模型，未检测到异常湍流。")
-            
-        for a in assertions:
-            st.info(a)
-            
-    else:
-        from ui.components.theme import render_crystal_notification
-        render_crystal_notification("Computing Advanced Physics...", "info")
+                assertions.append(f"⛔ **反克现象**: 局中出现【反克】现象 {inv_control_count} 次。")
+            if total_recoil > 10.0:
+                assertions.append(f"💥 **强烈反噬**: 攻击者受到严重反震，建议以守为攻。")
+            if avg_shield > 0.5:
+                assertions.append(f"🔒 **得地得势**: 环境能量形成天然护盾。")
+            if not assertions:
+                assertions.append("✅ **系统平稳**: 能量流动符合经典物理模型。")
+            for a in assertions:
+                st.info(a)
+        else:
+            from ui.components.theme import render_crystal_notification
+            render_crystal_notification("Computing Advanced Physics...", "info")
+        st.caption("注：雷达图展示该年运下十神能量；控制论面板显示深层物理交互。")
     
-    st.caption("注：雷达图展示了该年运下的十神能量相对强弱；控制论面板显示了深层物理交互状态。")
-    
-    # Uncertainty / MCP Era
     st.markdown("---")
-    
-    # Era Info from Controller
     era_info = controller.get_current_era_info()
     if era_info:
-        st.markdown("### 🌐 宏观场 (MCP: 时代上下文)")
-        cols = st.columns(4)
-        cols[0].metric("当前时代", era_info.get('desc', '未知'), f"周期 {era_info.get('period')}")
-        cols[1].metric("红利元素", era_info.get('era_element', 'None'))
-        cols[2].metric("红利加成", f"{era_info.get('era_bonus', 0)*100:.0f}%")
-        cols[3].metric("时代折损", f"{era_info.get('era_penalty', 0)*100:.0f}%")
-
+        with st.expander("🌐 宏观场 (MCP: 时代上下文)", expanded=False):
+            cols = st.columns(4)
+            cols[0].metric("当前时代", era_info.get('desc', '未知'), f"周期 {era_info.get('period')}")
+            cols[1].metric("红利元素", era_info.get('era_element', 'None'))
+            cols[2].metric("红利加成", f"{era_info.get('era_bonus', 0)*100:.0f}%")
+            cols[3].metric("时代折损", f"{era_info.get('era_penalty', 0)*100:.0f}%")
     # Layout Footer
     st.markdown("---")
     st.caption(f"天机·AI命理演算系统 {BaziController.VERSION if hasattr(BaziController, 'VERSION') else ''} | Powered by Gemini 2.0 Flash")

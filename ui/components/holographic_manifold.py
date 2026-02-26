@@ -19,11 +19,13 @@ def render_5d_manifold(
     current_tensor: Dict[str, float],
     reference_tensor: Optional[Dict[str, float]] = None,
     pattern_state: str = "STABLE",
-    pattern_name: str = "A-03"
+    pattern_name: str = "A-03",
+    overlay: Optional[List[Dict]] = None,
 ) -> go.Figure:
     """
     [V2.0] 渲染全息星图流形 (3D Tensor Crystal)
-    将5维张量映射为3D空间中的五角星体能量场
+    将5维张量映射为3D空间中的五角星体能量场。
+    [SOP V6.4] overlay: 前 top_k 叠加态 [{pattern_id, probability, ...}]，渲染引力波纹（匹配度越高光晕越强）。
     """
     # 1. 定义5维轴在3D空间中的向量 (Fibonacci Sphere Distribution)
     # 使用斐波那契球面算法在球面上生成数学级均匀分布的5个点
@@ -134,6 +136,44 @@ def render_5d_manifold(
         hovertemplate="维度: %{text}<br>强度: %{y:.2f}<extra></extra>",
         text=['E (能级)', 'O (秩序)', 'M (物质)', 'S (应力)', 'R (关联)']
     ))
+
+    # 4b. [SOP V6.4] 引力透镜：前 3 格局质心光晕（匹配度越高光晕越强）
+    if overlay and len(overlay) > 0:
+        try:
+            from core.engine import load_static_atlas
+            atlas = load_static_atlas()
+            patterns_atlas = { (p.get("pattern_id") or "").strip(): p for p in (atlas.get("patterns") or []) }
+            axis_keys = ['E', 'O', 'M', 'S', 'R']
+            for idx, item in enumerate(overlay[:3]):
+                pid = (item.get("pattern_id") or "").strip()
+                prob = float(item.get("probability") or 0)
+                if not pid or pid not in patterns_atlas:
+                    continue
+                cen = patterns_atlas[pid].get("centroid_5d")
+                if not cen or len(cen) < 5:
+                    continue
+                cen_dict = dict(zip(axis_keys, [float(cen[i]) for i in range(5)]))
+                pts = get_points(cen_dict)
+                cen_3d = np.mean(pts, axis=0)
+                # 光晕大小与透明度由概率决定
+                size = 8 + prob * 22
+                opacity = 0.15 + prob * 0.35
+                name_cn = (item.get("chinese_name") or patterns_atlas[pid].get("chinese_name") or pid)
+                fig.add_trace(go.Scatter3d(
+                    x=[cen_3d[0]], y=[cen_3d[1]], z=[cen_3d[2]],
+                    mode='markers',
+                    marker=dict(
+                        size=size,
+                        color='#40e0d0',
+                        opacity=opacity,
+                        symbol='circle',
+                        line=dict(color='rgba(64,224,208,0.4)', width=1)
+                    ),
+                    name=f'引力波纹 {name_cn} ({prob*100:.0f}%)',
+                    hovertemplate=f'{name_cn} ({pid})<br>匹配权重 {prob*100:.1f}%<extra></extra>'
+                ))
+        except Exception:
+            pass
 
     # 5. 布局优化
     fig.update_layout(

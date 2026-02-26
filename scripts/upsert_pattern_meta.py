@@ -22,12 +22,18 @@ def _manifest_path(pattern_id: str) -> Path | None:
     if pid == "A-01":
         p = ROOT / "config" / "patterns" / "manifest_A01.json"
     else:
+        # 优先 registry，否则 config/patterns（SOP V5.7 镜像立法）
         p = ROOT / "registry" / "holographic_pattern" / pid / f"{pid}_manifest.json"
+        if not p.exists():
+            num = pid.replace("-", "")
+            p = ROOT / "config" / "patterns" / f"manifest_{num}.json"
+        if not p.exists():
+            p = ROOT / "config" / "patterns" / f"manifest_A{pid.replace('A-', '')}.json"
     return p if p.exists() else None
 
 
 def upsert_one(registry: FDSRegistry, pattern_id: str) -> bool:
-    """将指定格局 Manifest 写入 SQLite；返回是否成功。"""
+    """将指定格局 Manifest 写入 SQLite；返回是否成功。支持 centroid_5d（SOP V5.7）。"""
     path = _manifest_path(pattern_id)
     if not path:
         print(f"⚠️ 未找到 manifest: {pattern_id}")
@@ -41,6 +47,8 @@ def upsert_one(registry: FDSRegistry, pattern_id: str) -> bool:
     if not ten_gods or not weights:
         print(f"⚠️ {pattern_id} 无 TMM，跳过")
         return False
+    centroid_5d = manifest.get("centroid_5d")
+    centroid_json = json.dumps(centroid_5d, ensure_ascii=False) if centroid_5d and len(centroid_5d) == 5 else None
     registry.upsert_pattern(
         pattern_id=pattern_id,
         chinese_name=meta.get("chinese_name") or pattern_id,
@@ -50,6 +58,7 @@ def upsert_one(registry: FDSRegistry, pattern_id: str) -> bool:
         category=meta.get("category"),
         sop_status="ENFORCED",
         source_ref=meta.get("source_ref"),
+        centroid_json=centroid_json,
     )
     return True
 

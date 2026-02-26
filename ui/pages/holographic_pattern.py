@@ -58,6 +58,8 @@ def render():
         border-color: #40e0d0;
         transform: translateY(-2px);
     }
+    .collapse-warn { color: #ff4b4b; font-weight: bold; animation: collapse-blink 1s ease-in-out infinite; }
+    @keyframes collapse-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
     .report-card {
         background: rgba(0, 0, 0, 0.2);
         border-left: 5px solid #40e0d0;
@@ -361,19 +363,18 @@ def render():
 
         st.markdown("---")
         st.markdown("### 🧬 格局方案")
-        # 优先展示 FDS SOP 格局（已审计/在审计），再合并原有 hierarchy
+        # 仅使用 FDS SOP 格局列表，按 pattern_id 排序，避免与 hierarchy 重复
         fds_patterns_sidebar = controller.get_fds_sop_patterns()
         pattern_options = {}
+        seen_ids = set()
         if fds_patterns_sidebar:
-            for p in fds_patterns_sidebar:
-                label = f"📐 {p['name_cn']} ({p['pattern_id']})"
-                pattern_options[label] = p["pattern_id"]
-        hierarchy = controller.get_pattern_hierarchy()
-        for p_id, data in sorted(hierarchy.items()):
-            main = data['main']
-            pattern_options[f"{main['icon']} {main['name_cn']}"] = p_id
-            for sub in data['subs']:
-                pattern_options[f"  └ {sub['icon']} {sub['name_cn']}"] = sub['id']
+            for p in sorted(fds_patterns_sidebar, key=lambda x: x["pattern_id"]):
+                pid = p["pattern_id"]
+                if pid in seen_ids:
+                    continue
+                seen_ids.add(pid)
+                label = f"📐 {p['name_cn']} ({pid})"
+                pattern_options[label] = pid
         if not pattern_options:
             st.info("📋 待命状态")
             return
@@ -496,6 +497,52 @@ def render():
                     st.caption(f"由 {st.session_state.get(f'{PAGE_PREFIX}llm_overview_model', '')} 生成")
         st.markdown("---")
 
+    # --- 双向匹配：档案↔格局（结合大运、流年、地域）---
+    _year = st.session_state.get(f'{PAGE_PREFIX}selected_year', datetime.now().year)
+    _city = st.session_state.get(f'{PAGE_PREFIX}selected_city', 'None')
+    _city_param = _city if _city != "None" else None
+    # 流年干支（仅依赖年份，供 dynamic_monitor 坍缩判定）
+    try:
+        from lunar_python import Solar
+        _annual_pillar = Solar.fromYmd(int(_year), 6, 15).getLunar().getYearInGanZhi()
+    except Exception:
+        _annual_pillar = ""
+
+    col_match1, col_match2 = st.columns(2)
+    with col_match1:
+        st.markdown("#### 📐 当前档案匹配的格局")
+        st.caption("结合大运、流年、地域，按匹配度从高到低")
+        patterns_for_profile = controller.get_patterns_for_profile(profile_data, year=_year, city=_city_param, top_k=20)
+        if patterns_for_profile:
+            from scripts.dynamic_monitor import run_dynamic_monitor
+            for i, row in enumerate(patterns_for_profile[:15], 1):
+                pid = row.get("pattern_id", "")
+                md = row.get("match_degree", 0)
+                collapse_alerts = run_dynamic_monitor(pid, _annual_pillar) if _annual_pillar else []
+                collapse = next((a for a in collapse_alerts if a.get("alert") == "CRITICAL_STRUCTURE_COLLAPSE"), None)
+                if i == 1 and collapse:
+                    verdict = collapse.get("verdict", "刑伤突发，险境难支")
+                    st.markdown(f"**{i}.** {row.get('chinese_name', '')} ({pid}) · 匹配度 <span class=\"collapse-warn\">**{md:.1f}%**</span> · D_M={row.get('D_M', 0):.4f}", unsafe_allow_html=True)
+                    st.caption(f"🔴 **结构坍缩预警**: {verdict}")
+                else:
+                    st.markdown(f"**{i}.** {row.get('chinese_name', '')} ({pid}) · 匹配度 **{md:.1f}%** · D_M={row.get('D_M', 0):.4f}")
+            if len(patterns_for_profile) > 15:
+                st.caption(f"…共 {len(patterns_for_profile)} 个格局，仅展示前 15")
+        else:
+            st.caption("暂无匹配格局或档案无法解析四柱")
+    with col_match2:
+        st.markdown("#### 📂 当前格局集中的档案")
+        st.caption("实测档案中归属该格局的命例，按匹配率从高到低")
+        profiles_for_pattern = controller.get_profiles_for_pattern(selected_pattern_id, profiles, top_k_per_profile=60)
+        if profiles_for_pattern:
+            for i, row in enumerate(profiles_for_pattern[:15], 1):
+                st.markdown(f"**{i}.** {row.get('name', '')} · 匹配率 **{row.get('match_rate', 0):.1f}%** · D_M={row.get('D_M', 0):.4f}")
+            if len(profiles_for_pattern) > 15:
+                st.caption(f"…共 {len(profiles_for_pattern)} 个档案，仅展示前 15")
+        else:
+            st.caption("暂无档案或档案库为空")
+    st.markdown("---")
+
     # Initialize BaziProfile
     try:
         profile_obj = None
@@ -563,18 +610,21 @@ def render():
     recognition = result.get('recognition', {})
     sai = result.get('sai', 0.0)
 
-    # --- Step 3: High-Precision Dashboard ---
-    st.markdown("### 🌟 FDS-V3.0 观测报告")
+    # --- Step 3: FDS 2.0 观测报告（static_atlas 流形追踪 + 识别态）---
+    from core.manifold_trace import compute_dm_cloud
+    trace = compute_dm_cloud(projection, top_k=3)
+    overlay = trace.get("overlay") or []
+    nearest = overlay[0] if overlay else {}
+    d_m = nearest.get("D_M", 0)
+    capture_id = nearest.get("pattern_id", "")
+    capture_name = nearest.get("chinese_name", capture_id)
+
+    st.markdown("### 🌟 FDS 2.0 观测报告")
+    st.caption("基于 60 格局静态图谱的流形距离 D_M 与叠加态（EDR_049 / 流形追踪 API）")
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("SAI (总对齐力)", f"{sai:.4f}")
-    m2.metric("M-Dist (马氏距离)", f"{recognition.get('mahalanobis_dist', 0):.4f}")
-    m3.metric("Precision (精密评分)", f"{recognition.get('precision_score', 0):.4f}")
-    
-    # [V2.5] Routing Trace
-    sub_id = result.get('sub_id')
-    if sub_id:
-        st.caption(f"🛣️ **路由追踪**: {selected_pattern_id} ➔ `{sub_id}` (奇点激活)")
-    
+    m1.metric("流形距离 D_M", f"{d_m:.4f}")
+    m2.metric("捕获格局", f"{capture_id}" if capture_id else "—")
+    m3.metric("系统对齐指数 SAI", f"{sai:.4f}")
     p_type = recognition.get('pattern_type', 'UNKNOWN')
     status_color = "#40e0d0" if "STANDARD" in p_type or "ACTIVATED" in p_type else "#ff6b6b"
     m4.markdown(f"""
@@ -584,7 +634,31 @@ def render():
     </div>
     """, unsafe_allow_html=True)
 
-    st.info(f"🔮 **AI 判言**: {recognition.get('description', '观测信号稳定')}")
+    # SOP V6.4：Top1 格局卡片挂载 dynamic_monitor — 若触发 CRITICAL_STRUCTURE_COLLAPSE 则红色坍缩预警
+    from scripts.dynamic_monitor import run_dynamic_monitor
+    _alerts = run_dynamic_monitor((capture_id or "").strip(), year_pillar or "")
+    _collapse = next((a for a in _alerts if a.get("alert") == "CRITICAL_STRUCTURE_COLLAPSE"), None)
+    if _collapse:
+        _verdict = _collapse.get("verdict", "刑伤突发，险境难支")
+        _match_pct = round(100.0 / (1.0 + float(d_m)), 1) if d_m is not None else 0
+        st.markdown(f"""
+        <div class="collapse-warn" style="background: rgba(255,75,75,0.15); border: 1px solid #ff4b4b; border-radius: 8px; padding: 12px; margin: 10px 0;">
+            <div style="font-size: 12px; color: #ff6b6b;">🔴 结构坍缩预警</div>
+            <div style="font-size: 14px; font-weight: bold; color: #ff4b4b;">{_verdict}</div>
+            <div style="font-size: 11px; color: #aaa;">当前捕获格局 {capture_id}（匹配度 <span class="collapse-warn">{_match_pct}%</span>）于流年 {year_pillar} 触刑，请关注应灾指引。</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 叠加态（前 3 格局）
+    if overlay:
+        with st.expander("📊 流形叠加态（前 3 格局）", expanded=True):
+            for i, o in enumerate(overlay):
+                st.markdown(f"**{i+1}.** {o.get('chinese_name', '')} ({o.get('pattern_id', '')}) · D_M={o.get('D_M', 0):.4f} · 权重 {o.get('probability', 0)*100:.1f}%")
+
+    sub_id = result.get('sub_id')
+    if sub_id:
+        st.caption(f"🛣️ **路由追踪**: {selected_pattern_id} ➔ `{sub_id}` (奇点激活)")
+    st.info(f"🔮 **判言**: {recognition.get('description', '观测信号稳定')}")
 
     # --- Step 4: Observatory (3D Manifold) ---
     st.markdown("---")
@@ -595,7 +669,7 @@ def render():
         _fa = (pattern_info or {}).get('feature_anchors') or {}
         _sm = _fa.get('standard_manifold') or {}
         ref_vector = _sm.get('mean_vector') if isinstance(_sm, dict) else None
-        fig = render_5d_manifold(projection, ref_vector, p_type, result.get('pattern_name'))
+        fig = render_5d_manifold(projection, ref_vector, p_type, result.get('pattern_name'), overlay=overlay)
         st.plotly_chart(fig, use_container_width=True, height=600)
         
     with col_dim:

@@ -28,7 +28,7 @@ E_MIN = 2.0
 def run_audit(db_path: Path = PHYSICS_DB) -> dict:
     if not db_path.exists():
         return {"error": "DuckDB 不存在", "n_total": 0}
-    conn = duckdb.connect(str(db_path))
+    conn = duckdb.connect(str(db_path), read_only=True)
     n_total = conn.execute(
         "SELECT COUNT(*) FROM pattern_points WHERE pattern_id = ?", [PATTERN_ID]
     ).fetchone()[0]

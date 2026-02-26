@@ -27,13 +27,24 @@ from core.database import PHYSICS_DB
 from core.database.fds_physics import FDSPhysics, DIM_ORDER
 
 
-def migrate_npz_to_duckdb(data_local: Path, physics_db_path: Path) -> dict:
+def migrate_npz_to_duckdb(
+    data_local: Path,
+    physics_db_path: Path,
+    *,
+    clear_first: bool = False,
+    single_transaction: bool = True,
+) -> dict:
     """
     扫描 data_local 下 *_full_points.npz，将对应 *_full_meta.json 的 ref/line_index 与 points 写入 DuckDB。
+    clear_first=True 时先清空 pattern_points；single_transaction=True 时全部插入后再统一 commit（推荐）。
     返回 { pattern_id: { "inserted": N, "npz_mean": list, "duckdb_mean": list, "max_diff": float } }
     """
     physics = FDSPhysics(physics_db_path)
     results = {}
+    if clear_first:
+        n_deleted = physics.clear_all_pattern_points()
+        print(f"  已清空 pattern_points（删除 {n_deleted:,} 行）")
+    do_commit = not single_transaction
 
     for npz_path in sorted(data_local.glob("*_full_points.npz")):
         # 例: a02_full_points.npz -> A-02
@@ -47,11 +58,13 @@ def migrate_npz_to_duckdb(data_local: Path, physics_db_path: Path) -> dict:
 
         data = np.load(npz_path)
         points = data["points"]
-        if points.shape[1] != 5:
-            print(f"⚠️ 跳过 {pattern_id}: points 列数 != 5")
+        if len(points.shape) < 2 or points.shape[1] != 5:
+            print(f"⚠️ 跳过 {pattern_id}: points 形状异常或列数 != 5")
             continue
-
         n_rows = points.shape[0]
+        if n_rows == 0:
+            print(f"⚠️ 跳过 {pattern_id}: 无样本 (0 行)")
+            continue
         refs = [f"{pattern_id}-{i}" for i in range(n_rows)]
         line_indices = list(range(n_rows))
         with open(meta_path, "r", encoding="utf-8") as f:
@@ -61,20 +74,24 @@ def migrate_npz_to_duckdb(data_local: Path, physics_db_path: Path) -> dict:
             line_indices = [m.get("line_index", i) for i, m in enumerate(meta)]
 
         print(f"  迁移 {pattern_id} ({points.shape[0]:,} 行)...", end=" ", flush=True)
-        n_insert = physics.insert_points(pattern_id, refs, line_indices, points)
+        n_insert = physics.insert_points(
+            pattern_id, refs, line_indices, points,
+            replace=not clear_first,
+            commit=do_commit,
+        )
         npz_mean = np.mean(points, axis=0)
+        results[pattern_id] = {"inserted": n_insert, "npz_mean": npz_mean.tolist(), "duckdb_mean": None, "max_diff": None}
+        print(f"✅ 插入 {n_insert:,} 行", flush=True)
+
+    if single_transaction and physics._conn is not None:
+        physics._conn.commit()
+        print("  已统一提交事务")
+    for pattern_id, r in results.items():
         cen = physics.get_centroid(pattern_id)
-        duckdb_mean = cen[0].tolist() if cen else None
-        max_diff = None
-        if duckdb_mean is not None:
-            max_diff = float(np.max(np.abs(np.array(duckdb_mean) - npz_mean)))
-        results[pattern_id] = {
-            "inserted": n_insert,
-            "npz_mean": npz_mean.tolist(),
-            "duckdb_mean": duckdb_mean,
-            "max_diff": max_diff,
-        }
-        print(f"✅ 插入 {n_insert:,} 行, max_diff={max_diff}", flush=True)
+        if cen:
+            r["duckdb_mean"] = cen[0].tolist()
+            r["max_diff"] = float(np.max(np.abs(np.array(r["duckdb_mean"]) - np.array(r["npz_mean"]))))
+        print(f"  {pattern_id} max_diff={r['max_diff']}")
 
     physics.close()
     return results
@@ -95,6 +112,11 @@ def run_equivalence_check(results: dict, tolerance: float = 1e-7) -> bool:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="NPZ → DuckDB 迁移（第 045/048 号）")
+    parser.add_argument("--clear", action="store_true", help="写入前清空 pattern_points 全表")
+    parser.add_argument("--no-single-tx", action="store_true", help="每格局单独提交（默认单事务）")
+    args = parser.parse_args()
     data_local = ROOT / "data_local"
     if not data_local.exists():
         print("❌ data_local 不存在")
@@ -102,7 +124,13 @@ def main():
     print("第 045 号：NPZ → DuckDB 迁移与物理等效性校验")
     print(f"  data_local: {data_local}")
     print(f"  DuckDB: {PHYSICS_DB}")
-    results = migrate_npz_to_duckdb(data_local, PHYSICS_DB)
+    if args.clear:
+        print("  --clear: 将先清空 pattern_points")
+    results = migrate_npz_to_duckdb(
+        data_local, PHYSICS_DB,
+        clear_first=args.clear,
+        single_transaction=not args.no_single_tx,
+    )
     if not results:
         print("未迁移任何格局，跳过等效性校验")
         sys.exit(0)

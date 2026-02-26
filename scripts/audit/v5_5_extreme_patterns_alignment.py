@@ -34,7 +34,7 @@ DIMS = ["E", "O", "M", "S", "R"]
 def run_alignment(db_path: Path = PHYSICS_DB) -> dict:
     if not db_path.exists():
         return {"error": "DuckDB 不存在", "patterns": []}
-    conn = duckdb.connect(str(db_path))
+    conn = duckdb.connect(str(db_path), read_only=True)
     rows = conn.execute("""
         SELECT pattern_id, COUNT(*) AS n,
                AVG(E) AS E, AVG(O) AS O, AVG(M) AS M, AVG(S) AS S, AVG(R) AS R

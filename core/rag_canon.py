@@ -41,13 +41,27 @@ def _get_client_and_embedding():
 
 
 def ingest_canon_from_config(config_path: Optional[Path] = None) -> int:
-    """从 JSON 配置灌入古典原话与判例到 ChromaDB。返回入库条数。"""
+    """从 JSON 配置灌入古典原话与判例到 ChromaDB。返回入库条数。支持多文件（主配置 + sop_v57 等 extra）。"""
     path = config_path or CANON_CONFIG
-    if not path.exists():
-        logger.warning("古典原典配置不存在: %s", path)
+    all_quotes: List[Dict[str, Any]] = []
+    all_precedents: List[Dict[str, Any]] = []
+    if path.exists():
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        all_quotes.extend(data.get("classical_quotes") or [])
+        all_precedents.extend(data.get("verdict_precedents") or [])
+    for extra_name in ["sop_v57_A14_A20_quotes.json", "sop_v57_A21_A30_quotes.json", "sop_v58_A31_A35_quotes.json"]:
+        extra = ROOT / "config" / "rag" / extra_name
+        if extra.exists():
+            try:
+                with open(extra, "r", encoding="utf-8") as f:
+                    ed = json.load(f)
+                all_quotes.extend(ed.get("classical_quotes") or [])
+            except Exception as e:
+                logger.debug("加载 SOP V5.7 原典 %s 失败: %s", extra_name, e)
+    if not all_quotes and not all_precedents:
+        logger.warning("古典原典配置无条目: %s（及 extra）", path)
         return 0
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
     client, embed_fn = _get_client_and_embedding()
     if not client or not embed_fn:
         logger.warning("ChromaDB 或 Embedding 不可用，跳过 RAG 灌入")
@@ -58,7 +72,7 @@ def ingest_canon_from_config(config_path: Optional[Path] = None) -> int:
         metadata={"description": "FDS 古典原话与判例，判词须含引证"},
     )
     count = 0
-    for item in data.get("classical_quotes", []) + data.get("verdict_precedents", []):
+    for item in all_quotes + all_precedents:
         doc_id = item.get("id", f"doc_{count}")
         text = item.get("text", "")
         if not text:

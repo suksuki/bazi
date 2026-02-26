@@ -72,6 +72,44 @@ def normalize_case_for_logic(case: dict) -> dict:
     return case
 
 
+# A-13 月劫格：仅用「月支 == 日干劫财之禄」作 L1 宽门（第 046 号松绑）
+JIE_CAI_LU = {
+    "甲": "卯", "乙": "寅", "丙": "午", "丁": "巳",
+    "戊": "午", "己": "巳", "庚": "酉", "辛": "申",
+    "壬": "子", "癸": "亥",
+}
+
+
+def is_yue_jie_basic(case: dict) -> bool:
+    """月劫格基础 L1：月支为日干劫财之禄（异性同五行）。不做清纯度/官杀强制校验。"""
+    bazi = case.get("bazi")
+    if not bazi or not isinstance(bazi, dict):
+        return False
+    month_pillar = bazi.get("month")
+    day_pillar = bazi.get("day")
+    month_branch = ""
+    day_master = ""
+    if isinstance(month_pillar, str) and len(month_pillar) >= 2:
+        month_branch = month_pillar[1]
+    elif isinstance(month_pillar, dict):
+        month_branch = (month_pillar.get("zhi") or month_pillar.get("branch") or "")
+    if isinstance(day_pillar, str) and len(day_pillar) >= 1:
+        day_master = day_pillar[0]
+    elif isinstance(day_pillar, dict):
+        day_master = (day_pillar.get("gan") or day_pillar.get("stem") or "")
+    if not day_master or not month_branch:
+        return False
+    return JIE_CAI_LU.get(day_master.strip()) == month_branch.strip()
+
+
+def use_classical_tougan_l1(pattern_id: str) -> bool:
+    """第 048 号：A-01～A-10 启用提纲+透干古典硬约束；A-11～A-13 不强制。"""
+    pid = (pattern_id or "").strip().upper()
+    return pid in (
+        "A-01", "A-02", "A-03", "A-04", "A-05", "A-06", "A-07", "A-08", "A-09", "A-10",
+    )
+
+
 def resolve_manifest_for_pattern(pattern_id: str) -> Path:
     """按格局 ID 解析 manifest 路径。A-02、A-03 等走 registry 子目录。"""
     pid = pattern_id.strip().upper()
@@ -82,15 +120,25 @@ def resolve_manifest_for_pattern(pattern_id: str) -> Path:
     return ROOT / "config" / "patterns" / "manifest_A01.json"
 
 
+def use_classical_tougan_l1(pattern_id: str) -> bool:
+    """第 048 号：A-01～A-10 启用提纲+透干古典硬约束；A-11～A-13 不强制。"""
+    pid = (pattern_id or "").strip().upper()
+    return pid in (
+        "A-01", "A-02", "A-03", "A-04", "A-05", "A-06", "A-07", "A-08", "A-09", "A-10",
+    )
+
+
 def build_full_index(
     data_path: Path,
     manifest_path: Path,
     out_dir: Path,
     limit: int | None = None,
     pattern_id: str = "A-01",
+    use_048_tougan: bool = True,
 ) -> tuple[int, Path, Path]:
     """
     扫描 jsonl，按格局 JsonLogic 筛选样本，导出 points.npz 与 meta.json。
+    第 048 号：use_048_tougan 且 A-01～A-10 时先过「提纲+透干」古典硬约束再过 JsonLogic。
     返回 (样本数, points_path, meta_path)。
     """
     manifest = load_manifest(manifest_path)
@@ -99,6 +147,13 @@ def build_full_index(
     rules = manifest.get("classical_logic_rules") or {}
     logic_expr = rules.get("pipeline_expression") or rules.get("expression")
     prefix = pattern_id.lower().replace("-", "")  # a01 / a02
+
+    try:
+        from core.classical_tougan import enrich_case_with_classical_l1, is_classical_pattern_achieved
+    except ImportError:
+        enrich_case_with_classical_l1 = None
+        is_classical_pattern_achieved = None
+    apply_048 = use_048_tougan and use_classical_tougan_l1(pattern_id) and is_classical_pattern_achieved is not None
 
     out_dir.mkdir(parents=True, exist_ok=True)
     points_list = []
@@ -116,12 +171,22 @@ def build_full_index(
             try:
                 case = json.loads(line)
                 case = normalize_case_for_logic(case)
-                if not jsonLogic(logic_expr, case):
-                    continue
+                if apply_048:
+                    if enrich_case_with_classical_l1:
+                        case = enrich_case_with_classical_l1(case)
+                    if not is_classical_pattern_achieved(case, pattern_id):
+                        continue
+                # A-13 月劫格：L1 宽门，仅「月支=劫财禄」；不做清纯度强制（第 046 号松绑）
+                if pattern_id == "A-13":
+                    if not is_yue_jie_basic(case):
+                        continue
+                else:
+                    if not jsonLogic(logic_expr, case):
+                        continue
                 matched += 1
                 tensor = calculate_5d_tensor(case["ten_gods"], weights, god_index_map)
                 points_list.append(tensor)
-                uid = case.get("uid") or case.get("id") or f"{pattern_id}-{i}"
+                uid = case.get("uid") or case.get("id") or case.get("case_id") or f"{pattern_id}-{i}"
                 meta_list.append({
                     "ref": str(uid),
                     "point": tensor.tolist(),

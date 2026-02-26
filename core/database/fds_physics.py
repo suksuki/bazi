@@ -64,21 +64,33 @@ class FDSPhysics:
         conn.commit()
         return cur.rowcount
 
+    def clear_all_pattern_points(self) -> int:
+        """清空 pattern_points 全表（第 048 号重刷前用）。返回删除行数。"""
+        conn = self._ensure_conn()
+        cur = conn.execute("DELETE FROM pattern_points")
+        conn.commit()
+        return cur.rowcount
+
     def insert_points(
         self,
         pattern_id: str,
         refs: List[str],
         line_indices: List[int],
         points: np.ndarray,
+        *,
+        replace: bool = True,
+        commit: bool = True,
     ) -> int:
         """
         批量插入 5D 点阵。points 形状 (N, 5)，顺序 E,O,M,S,R。
         优先用 DataFrame 整表写入（秒级），无 pandas 时回退为分块 executemany。
+        replace=False 时不执行 DELETE（全表清空后批量写入时用）；commit=False 时不提交（外层单事务用）。
         返回插入行数。
         """
         conn = self._ensure_conn()
         pattern_id = pattern_id.strip().upper()
-        conn.execute("DELETE FROM pattern_points WHERE pattern_id = ?", (pattern_id,))
+        if replace:
+            conn.execute("DELETE FROM pattern_points WHERE pattern_id = ?", (pattern_id,))
         n = len(refs)
         if n != points.shape[0] or points.shape[1] != 5:
             raise ValueError("refs 长度与 points 行数一致，且 points 列为 5")
@@ -122,7 +134,8 @@ class FDSPhysics:
                         for i in range(start, end)
                     ],
                 )
-        conn.commit()
+        if commit:
+            conn.commit()
         return n
 
     def get_centroid(self, pattern_id: str) -> Optional[Tuple[np.ndarray, int]]:

@@ -87,6 +87,12 @@ class PhysicsParams:
     precision_weights: PrecisionScoreWeights = None  # 相似度/距离权重 (L1默认: 0.5/0.5)
     precision_gaussian_sigma: float = 2.5            # 高斯衰减参数 σ (L1默认: 2.5)
     precision_energy_gate_k: float = 0.4             # SAI能量门控阈值 (L1默认: 0.4)
+    # SOP V5.9 从儿格 Gate 3：印/官杀低于此视为可忽略（清纯度）
+    ignore_threshold: float = 0.5                   # 印星或官杀和 ≤ 此值则通过 Gate 3
+    # EDR-055 A-34 填实坍缩：VOID_COLLAPSE_WARNING 时 S_dynamic = S_natal × (1 + collapse_factor)
+    collapse_factor: float = 0.5                    # 虚空坍缩时 S 轴放大系数（午字填实）
+    # EDR-055 A-35 从格临界点：E > cong_sha_e_critical 在动态审计中标记为假从/破格
+    cong_sha_e_critical: float = -4.0              # 从杀格 E 轴临界，高于此视为假从
     
     # Aliases for V3.1 Full Sync & Docs
     @property

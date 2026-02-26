@@ -140,11 +140,17 @@
 
 **第 046 号立法令**：A-11～A-13 古典定义与 TMM 由审计师签发；Cursor 只读式注库（Manifest、SQLite、RAG、HKB）。SOP V5.5 修正补丁：真值锁定协议 (V5.5-A)、立法流程强制化（审计师签发→指挥官审批→Cursor 镜像入库）。
 
-**Step 6 物理生产（深水区海选）**：① A-11 日主坍缩度审计 `scripts/audit/audit_a11_e_collapse.py`；② A-13 流形纯度审计 `scripts/audit/audit_a13_purity.py`；③ A-11/A-12/A-13 518k 海选并迁入 DuckDB `scripts/run_a11_a12_a13_scan_and_migrate.py`；④ 法理一致性终审 `scripts/audit/v5_5_extreme_patterns_alignment.py` → `audit_logs/v5_5_extreme_patterns_alignment.json`；⑤ A-12 RAG 判词抽检验收要点见 `docs/audit/A12_RAG_VERDICT_CHECKLIST.md`。
+**Step 6 物理生产（深水区海选）**：① A-11 日主坍缩度审计 `scripts/audit/audit_a11_e_collapse.py`；② A-13 流形纯度审计 `scripts/audit/audit_a13_purity.py`；③ A-11/A-12/A-13 518k 海选并迁入 DuckDB `scripts/run_a11_a12_a13_scan_and_migrate.py`；④ 法理一致性终审 `scripts/audit/v5_5_extreme_patterns_alignment.py` → `audit_logs/v5_5_extreme_patterns_alignment.json`；⑤ A-12 RAG 判词抽检验收要点见 `docs/audit/A12_RAG_VERDICT_CHECKLIST.md`。**审计师封卷导引**（物理奇点、临界点嘱托、封卷宣言、下一步战略目标）见 `docs/audit/FDS_046_封卷导引与物理奇点.md`。**第 046 号已进入法典封存状态。**
 
-封卷流程见 `docs/engineering/EDR_042_A04_A05_Manifest.md` 之「Step 6 终极封卷令」。  
+**后续建议（全量对撞测试）**：命例同时命中多格局时的判词验收，首轮案例 **A-07（伤官）∩ A-12（从杀）**（含「法理绞杀」下极致对冲建议）；A-13「能量孤岛」流形观测；验收标准与执行方式见上述封卷导引第三至六节。
+
+封卷流程见 `docs/engineering/EDR_042_A04_A05_Manifest.md` 之「Step 6 终极封卷令」。
+
+**第 049/050 号 动态时空位移引擎（SOP V5.6）**：原局为格、动变为局。`core/physics/dynamic_engine.py` 提供：动态张量（引透权重翻倍、刑冲合化、地理阻尼 λ）；流形捕获（位移矢量、格局对撞态）；对撞预警（S 轴 + 流形不稳定性），返回 `source_pattern`/`target_pattern`/`collision_type` 供 RAG。判词须含「此年由 X 格转入 Y 局，防范 Z 类风险」。配置见 `config/dynamic_manifold.json`（干支刑冲合化、geo_damping、double_capture_ratio_threshold）；设计见 `docs/engineering/EDR_049_Dynamic_Manifold_Engine.md`。  
 **第 043 号终极封卷**：物理溢出报告已归档至 `audit_logs/audit_043_shangguan_jian_guan_report.json`。三专项语义验收脚本：`scripts/seal_043_final_verification.py`。**UI 降噪**：默认以白话版呈现判词，学术模式可折叠。  
 **第 044 号纠偏（回归正八格法典）**：A-05→枭神格、A-09→建禄格、A-10→阳刃格；禁止十神名当格局名。**TMM 审计师签发**：四格局五维张量已按审计师真值覆盖（W_A05～W_A10）；L1 古典过滤器：阳刃=帝旺月令、建禄=临官月令（当前以十神强度为代理），枭神夺食预警已入 A-05。
+
+**第 048 号纠偏（古典提纲+透干）**：海选 A-01～A-10 须过「月令本气透干」硬约束（月令所藏透出天干方能论格），逻辑见 `core/classical_tougan.py`；`scripts/build_a01_full_index.py` 默认启用。禄刃 A-09/A-10 以十二长生（临官/帝旺）为纲。重刷后 A-01～A-10 总样本数不得超过 518k 的 20%，自检脚本 `scripts/audit/audit_048_abundance_check.py`。详见 `docs/audit/FDS_048_古典提纲透干纠偏.md`。
 
 #### V5.1 法理对齐校验位 (Classical Naming Seal)
 

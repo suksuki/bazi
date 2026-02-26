@@ -5,6 +5,10 @@ json-logic-qubit
 # 第 045 号：FDS 双核 — DuckDB 特征计算层
 duckdb
 
+# FDS 2.0 API（流形追踪 GET /api/v2/manifold/trace/{user_id}）
+fastapi
+uvicorn[standard]
+
 # 其他核心依赖（按需补充，如 streamlit / numpy / ollama 等）
 # streamlit
 # numpy

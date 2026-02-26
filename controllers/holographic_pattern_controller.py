@@ -187,17 +187,34 @@ class HolographicPatternController:
         
         return result
 
+    def _get_atlas_audited_ids(self) -> set:
+        """FDS 1.0 封卷：core/engine/static_atlas.json 中的格局视为已审计。"""
+        project_root = Path(__file__).parent.parent
+        atlas_path = project_root / "core" / "engine" / "static_atlas.json"
+        if not atlas_path.exists():
+            return set()
+        try:
+            with open(atlas_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            patterns = data.get("patterns") or []
+            return {(p.get("pattern_id") or "").strip().upper() for p in patterns if (p.get("pattern_id") or "").strip()}
+        except Exception:
+            return set()
+
     def get_fds_sop_patterns(self) -> List[Dict[str, Any]]:
         """
         从 FDS SOP 法定路径 registry/holographic_pattern/ 发现所有格局及其审计状态。
         用于全息格局页「格局审计看板」展示（FDS SOP V4.0）。
+        若格局在 static_atlas.json 中则标为「已审计」（FDS 1.0 封卷）。
         
         Returns:
             [{"pattern_id", "name_cn", "version", "status": "已审计"|"在审计", "source": "manifest"|"registry", "path"}]
         """
         project_root = Path(__file__).parent.parent
         reg_dir = project_root / "registry" / "holographic_pattern"
+        atlas_audited = self._get_atlas_audited_ids()
         out = []
+        seen_pids = set()
         if not reg_dir.exists():
             return out
         # 1) 根目录 *.json（如 A-01.json）
@@ -209,15 +226,14 @@ class HolographicPatternController:
                     data = json.load(f)
             except Exception:
                 continue
-            pid = data.get("pattern_id") or data.get("id") or j.stem
+            pid = (data.get("pattern_id") or data.get("id") or j.stem).strip().upper()
             meta = data.get("meta_info") or {}
             name_cn = meta.get("chinese_name") or meta.get("display_name") or pid
             ver = data.get("version", "N/A")
-            # A-01 已审计；A-02 及其余为在审计中（显式约定）
-            if pid == "A-01":
-                status = "已审计"
-            else:
-                status = "在审计中"
+            if pid in seen_pids:
+                continue
+            seen_pids.add(pid)
+            status = "已审计" if pid in atlas_audited else "在审计中"
             out.append({
                 "pattern_id": pid,
                 "name_cn": name_cn,
@@ -240,12 +256,14 @@ class HolographicPatternController:
                     data = json.load(f)
             except Exception:
                 continue
-            pid = data.get("pattern_id") or sub.name
+            pid = (data.get("pattern_id") or sub.name).strip().upper()
             meta = data.get("meta_info") or {}
             name_cn = meta.get("chinese_name") or meta.get("display_name") or pid
             ver = data.get("version", "N/A")
-            # A-01 已审计；A-02 在审计中（显式约定）
-            status = "已审计" if pid == "A-01" else "在审计中"
+            if pid in seen_pids:
+                continue
+            seen_pids.add(pid)
+            status = "已审计" if pid in atlas_audited else "在审计中"
             out.append({
                 "pattern_id": pid,
                 "name_cn": name_cn,
@@ -272,7 +290,49 @@ class HolographicPatternController:
                     })
                 except Exception:
                     pass
+        # 4) [SOP V5.7 全息并网] 扫描 config/patterns/manifest_A*.json，补入 A-14～A-30 等未在 registry 的格局
+        config_patterns_dir = project_root / "config" / "patterns"
+        if config_patterns_dir.exists():
+            seen_ids = {x["pattern_id"] for x in out}
+            for manifest_path in sorted(config_patterns_dir.glob("manifest_A*.json")):
+                if manifest_path.name.startswith("manifest_B"):
+                    continue
+                try:
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    pid = (data.get("pattern_id") or "").strip().upper()
+                    if not pid or pid in seen_ids:
+                        continue
+                    meta = data.get("meta_info") or {}
+                    name_cn = meta.get("chinese_name") or meta.get("display_name") or pid
+                    ver = str(data.get("version", "N/A"))
+                    status = "已审计" if pid in atlas_audited else ("已审计" if (ver and ("SOP" in ver or "ENFORCED" in ver)) else "在审计中")
+                    out.append({
+                        "pattern_id": pid,
+                        "name_cn": name_cn,
+                        "version": ver,
+                        "status": status,
+                        "source": "manifest",
+                        "path": str(manifest_path),
+                    })
+                    seen_ids.add(pid)
+                except Exception:
+                    continue
         out.sort(key=lambda x: (x["pattern_id"], x["source"]))
+        # 格局中文名回退：若 manifest 仅含编号，从 static_atlas 补全（解决 A-01/A-06～A-10 等卡片显示 A-xx·A-xx）
+        try:
+            from core.engine import load_static_atlas
+            atlas = load_static_atlas()
+            for p in atlas.get("patterns") or []:
+                pid = (p.get("pattern_id") or "").strip()
+                cn = (p.get("chinese_name") or "").strip()
+                if pid and cn and cn != pid:
+                    for item in out:
+                        if item.get("pattern_id") == pid and (not item.get("name_cn") or item.get("name_cn") == pid):
+                            item["name_cn"] = cn
+                            break
+        except Exception:
+            pass
         return out
 
     def get_fds_pattern_detail(self, pattern_id: str) -> Optional[Dict[str, Any]]:
@@ -302,6 +362,16 @@ class HolographicPatternController:
                         data = json.load(f)
                 except Exception:
                     pass
+            # [SOP V5.7 全息并网] 若 registry 无该格局，回退到 config/patterns/manifest_A{num}.json
+            if not data:
+                num = pid.replace("A-", "").replace("-", "").strip()
+                config_manifest = project_root / "config" / "patterns" / f"manifest_A{num}.json"
+                if config_manifest.exists():
+                    try:
+                        with open(config_manifest, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                    except Exception:
+                        pass
         if not data:
             return None
         meta = data.get("meta_info") or {}
@@ -617,6 +687,144 @@ class HolographicPatternController:
         if len(self._context_cache) > self._context_cache_max:
             self._context_cache.popitem(last=False)
         return result
+
+    def _chart_and_day_master_from_profile(self, profile_data: Dict[str, Any]) -> Optional[Tuple[List[str], str]]:
+        """从档案字典解析四柱与日主，供流形匹配使用。"""
+        if not profile_data:
+            return None
+        try:
+            from datetime import datetime
+            from core.bazi_profile import BaziProfile, VirtualBaziProfile
+            gender_val = 1 if profile_data.get("gender") == "男" else 0
+            profile_obj = None
+            if profile_data.get("year_pillar"):
+                pillars = {
+                    "year": profile_data.get("year_pillar", "??"),
+                    "month": profile_data.get("month_pillar", "??"),
+                    "day": profile_data.get("day_pillar", "??"),
+                    "hour": profile_data.get("hour_pillar", "??"),
+                }
+                profile_obj = VirtualBaziProfile(pillars, gender=gender_val)
+            if not profile_obj and profile_data.get("year") and profile_data.get("month") is not None and profile_data.get("day") is not None:
+                birth_date = datetime(
+                    int(profile_data["year"]),
+                    int(profile_data.get("month", 1)),
+                    int(profile_data.get("day", 1)),
+                    int(profile_data.get("hour", 12)),
+                )
+                profile_obj = BaziProfile(birth_date, gender_val)
+            if not profile_obj:
+                return None
+            p = profile_obj.pillars
+            chart = [p["year"], p["month"], p["day"], p["hour"]]
+            day_master = profile_obj.day_master
+            return (chart, day_master)
+        except Exception as e:
+            logger.warning("_chart_and_day_master_from_profile 解析失败: %s", e)
+            return None
+
+    def _resolve_pattern_display_name(self, pattern_id: str, atlas_name: Optional[str]) -> str:
+        """若 atlas 仅有编号（如 A-02），则从 registry/FDS/manifest 补全中文名。"""
+        if atlas_name and atlas_name.strip() and atlas_name != pattern_id:
+            return atlas_name.strip()
+        detail = self.get_pattern_by_id(pattern_id)
+        if detail:
+            meta = detail.get("meta_info") or {}
+            name = meta.get("chinese_name") or meta.get("display_name") or meta.get("name")
+            if name:
+                return name
+        # FDS 格局详情来自 registry/holographic_pattern 或 config/patterns/manifest_*.json
+        fds_detail = self.get_fds_pattern_detail(pattern_id)
+        if fds_detail:
+            meta = fds_detail.get("meta_info") or {}
+            name = meta.get("chinese_name") or meta.get("display_name") or meta.get("name")
+            if name:
+                return name
+        for p in (self.get_fds_sop_patterns() or []):
+            if p.get("pattern_id") == pattern_id and p.get("name_cn"):
+                return p["name_cn"]
+        return pattern_id
+
+    def get_patterns_for_profile(
+        self,
+        profile_data: Dict[str, Any],
+        year: Optional[int] = None,
+        city: Optional[str] = None,
+        top_k: int = 60,
+    ) -> List[Dict[str, Any]]:
+        """
+        结合大运、流年、地域，计算该档案与全量格局的匹配度，按匹配度从高到低排列。
+        匹配度 = 100/(1+D_M)，为绝对亲和度（不因 top_k 分摊而偏小）。
+        """
+        pair = self._chart_and_day_master_from_profile(profile_data)
+        if not pair:
+            return []
+        chart, day_master = pair
+        try:
+            ctx = self.get_mixed_pattern_context(chart, day_master)
+            point_5d = ctx.get("point_5d")
+            if not point_5d:
+                return []
+            from core.manifold_trace import compute_dm_cloud
+            trace = compute_dm_cloud(point_5d, top_k=top_k)
+            overlay = trace.get("overlay") or []
+            out = []
+            for o in overlay:
+                pid = o.get("pattern_id", "")
+                d_m = o.get("D_M", 0)
+                # 绝对匹配度：100/(1+D_M)，D_M 越小越接近 100%
+                match_degree = round(100.0 / (1.0 + float(d_m)), 2)
+                chinese_name = self._resolve_pattern_display_name(pid, o.get("chinese_name"))
+                out.append({
+                    "pattern_id": pid,
+                    "chinese_name": chinese_name,
+                    "D_M": d_m,
+                    "match_degree": match_degree,
+                })
+            return out
+        except Exception as e:
+            logger.exception("get_patterns_for_profile 失败: %s", e)
+            return []
+
+    def get_profiles_for_pattern(
+        self,
+        pattern_id: str,
+        profiles: List[Dict[str, Any]],
+        top_k_per_profile: int = 60,
+    ) -> List[Dict[str, Any]]:
+        """
+        计算档案库中哪些命例集中在该格局，按匹配率从高到低排列。
+        匹配率 = 1/(1+D_M)，D_M 为该档案 5D 点到此格局质心的流形距离。
+        """
+        from core.manifold_trace import compute_dm_cloud
+        results = []
+        for p in profiles:
+            pair = self._chart_and_day_master_from_profile(p)
+            if not pair:
+                continue
+            chart, day_master = pair
+            try:
+                ctx = self.get_mixed_pattern_context(chart, day_master)
+                point_5d = ctx.get("point_5d")
+                if not point_5d:
+                    continue
+                trace = compute_dm_cloud(point_5d, top_k=top_k_per_profile)
+                distances = trace.get("distances") or {}
+                d_m = distances.get(pattern_id)
+                if d_m is None:
+                    continue
+                match_rate = round(100.0 / (1.0 + float(d_m)), 2)
+                results.append({
+                    "profile_id": p.get("id", ""),
+                    "name": p.get("name", ""),
+                    "D_M": round(float(d_m), 4),
+                    "match_rate": match_rate,
+                })
+            except Exception as e:
+                logger.debug("get_profiles_for_pattern 单档案跳过: %s", e)
+                continue
+        results.sort(key=lambda x: x["match_rate"], reverse=True)
+        return results
 
     def _calculate_fds_projection(self, pattern_id: str, chart: List[str], day_master: str, context: Optional[Dict]) -> Optional[Dict]:
         """A-01/A-02 专用：用 FDS 推理或 TMM 投影，返回与 calculate_tensor_projection 一致的结构。"""
