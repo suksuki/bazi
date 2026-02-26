@@ -618,21 +618,41 @@ def render():
     d_m = nearest.get("D_M", 0)
     capture_id = nearest.get("pattern_id", "")
     capture_name = nearest.get("chinese_name", capture_id)
+    # SOP V6.5：引力俘获模型 — 四级主权状态（PURE/VERIFIED/DRIFTING/BROKEN）
+    capture_status = trace.get("capture_status") or nearest.get("status") or "BROKEN"
+    capture_verdict = trace.get("capture_verdict") or nearest.get("verdict") or "格局坍缩，已脱离该质心引力井。"
 
     st.markdown("### 🌟 FDS 2.0 观测报告")
-    st.caption("基于 60 格局静态图谱的流形距离 D_M 与叠加态（EDR_049 / 流形追踪 API）")
+    st.caption("基于 60 格局静态图谱的流形距离 D_M 与叠加态（EDR_049 / SOP V6.5 引力俘获）")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("流形距离 D_M", f"{d_m:.4f}")
     m2.metric("捕获格局", f"{capture_id}" if capture_id else "—")
     m3.metric("系统对齐指数 SAI", f"{sai:.4f}")
-    p_type = recognition.get('pattern_type', 'UNKNOWN')
-    status_color = "#40e0d0" if "STANDARD" in p_type or "ACTIVATED" in p_type else "#ff6b6b"
+    # 主权状态颜色：PURE/VERIFIED=绿，DRIFTING=黄，BROKEN=红
+    _s = capture_status.upper()
+    if _s in ("PURE", "VERIFIED"):
+        _cap_color = "#22c55e"
+    elif _s == "DRIFTING":
+        _cap_color = "#f59e0b"
+    else:
+        _cap_color = "#ff4b4b"
     m4.markdown(f"""
-    <div style="background: rgba(0,0,0,0.1); padding: 5px; border-radius: 5px; text-align: center; border-left: 3px solid {status_color};">
-        <div style="font-size: 10px; color: #888;">识别态</div>
-        <div style="font-size: 14px; font-weight: bold; color: {status_color};">{p_type}</div>
+    <div style="background: rgba(0,0,0,0.1); padding: 5px; border-radius: 5px; text-align: center; border-left: 3px solid {_cap_color};">
+        <div style="font-size: 10px; color: #888;">主权状态</div>
+        <div style="font-size: 14px; font-weight: bold; color: {_cap_color};">{capture_status}</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # SOP V6.5：BROKEN 时显示「格局坍缩、连接断开」红色区块
+    if _s == "BROKEN":
+        st.markdown(f"""
+        <div class="collapse-warn" style="background: rgba(255,75,75,0.12); border: 1px solid #ff4b4b; border-radius: 8px; padding: 10px 12px; margin: 8px 0;">
+            <div style="font-size: 12px; color: #ff6b6b;">⚠️ 格局坍缩 · 连接断开</div>
+            <div style="font-size: 13px; color: #ff4b4b;">{capture_verdict}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.caption(f"**{capture_verdict}**")
 
     # SOP V6.4：Top1 格局卡片挂载 dynamic_monitor — 若触发 CRITICAL_STRUCTURE_COLLAPSE 则红色坍缩预警
     from scripts.dynamic_monitor import run_dynamic_monitor
@@ -649,11 +669,12 @@ def render():
         </div>
         """, unsafe_allow_html=True)
 
-    # 叠加态（前 3 格局）
+    # 叠加态（前 3 格局）+ SOP V6.5 每格主权状态
     if overlay:
         with st.expander("📊 流形叠加态（前 3 格局）", expanded=True):
             for i, o in enumerate(overlay):
-                st.markdown(f"**{i+1}.** {o.get('chinese_name', '')} ({o.get('pattern_id', '')}) · D_M={o.get('D_M', 0):.4f} · 权重 {o.get('probability', 0)*100:.1f}%")
+                stt = (o.get("status") or "BROKEN").upper()
+                st.markdown(f"**{i+1}.** {o.get('chinese_name', '')} ({o.get('pattern_id', '')}) · D_M={o.get('D_M', 0):.4f} · 权重 {o.get('probability', 0)*100:.1f}% · **{stt}**")
 
     sub_id = result.get('sub_id')
     if sub_id:

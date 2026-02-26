@@ -1,15 +1,60 @@
 """
 FDS 2.0 流形追踪：基于 static_atlas 的 D_M 概率云与叠加态（前 3 格局）。
+SOP V6.5：引力俘获模型 — D_crit 四级判定（PURE / VERIFIED / DRIFTING / BROKEN）。
 GET /api/v2/manifold/trace/{user_id} 的底层实现。
 """
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from core.engine import load_static_atlas
 
 DIM_ORDER = ["E", "O", "M", "S", "R"]
+
+# 默认临界距离（未配置时）
+_DEFAULT_D_CRIT_PURE = 0.5
+_DEFAULT_D_CRIT_VERIFIED = 1.2
+_DEFAULT_D_CRIT_DRIFTING_MAX = 2.5
+_DEFAULT_VERDICTS = {
+    "PURE": "格局清纯，能量高度聚焦。",
+    "VERIFIED": "格局成立，具备该系物理特征。",
+    "DRIFTING": "格局不稳，受杂气或流年干扰。",
+    "BROKEN": "格局坍缩，已脱离该质心引力井。",
+}
+
+
+def _load_capture_config() -> Dict[str, Any]:
+    """从 config/dynamic_manifold.json 读取 manifold_capture 阈值与判语，零硬编码。"""
+    try:
+        root = Path(__file__).resolve().parent.parent.parent
+        path = root / "config" / "dynamic_manifold.json"
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("manifold_capture") or {}
+    except Exception:
+        pass
+    return {}
+
+
+def _status_from_d_m(d_m: float, config: Dict[str, Any]) -> str:
+    """
+    由 D_M 与配置阈值得到四级主权状态。
+    PURE: D_M <= D_CRIT_PURE; VERIFIED: D_M <= D_CRIT_VERIFIED; DRIFTING: D_M <= D_CRIT_DRIFTING_MAX; 否则 BROKEN。
+    """
+    d_pure = float(config.get("D_CRIT_PURE", _DEFAULT_D_CRIT_PURE))
+    d_verified = float(config.get("D_CRIT_VERIFIED", _DEFAULT_D_CRIT_VERIFIED))
+    d_drift_max = float(config.get("D_CRIT_DRIFTING_MAX", _DEFAULT_D_CRIT_DRIFTING_MAX))
+    if d_m <= d_pure:
+        return "PURE"
+    if d_m <= d_verified:
+        return "VERIFIED"
+    if d_m <= d_drift_max:
+        return "DRIFTING"
+    return "BROKEN"
 
 
 def _vec_5d(x: Any) -> List[float]:
@@ -60,15 +105,26 @@ def compute_dm_cloud(
     total = sum(inv)
     probs = [x / total if total > 0 else (1.0 / len(inv)) for x in inv]
 
+    capture_cfg = _load_capture_config()
+    verdicts = capture_cfg.get("verdicts") or _DEFAULT_VERDICTS
+
     overlay = []
     for i, pid in enumerate(top_ids):
         p_entry = next((x for x in patterns if (x.get("pattern_id") or "").strip() == pid), {})
+        d_m = distances[pid]
+        status = _status_from_d_m(d_m, capture_cfg)
         overlay.append({
             "pattern_id": pid,
             "chinese_name": p_entry.get("chinese_name") or pid,
-            "D_M": round(distances[pid], 6),
+            "D_M": round(d_m, 6),
             "probability": round(probs[i], 6),
+            "status": status,
+            "verdict": verdicts.get(status, _DEFAULT_VERDICTS.get(status, "")),
         })
+
+    # Top 1 主权判定：格成仅当 D_M <= D_CRIT_VERIFIED 且为最近格局
+    capture_status = overlay[0]["status"] if overlay else "BROKEN"
+    capture_verdict = overlay[0]["verdict"] if overlay else verdicts.get("BROKEN", _DEFAULT_VERDICTS["BROKEN"])
 
     return {
         "overlay": overlay,
@@ -76,6 +132,8 @@ def compute_dm_cloud(
         "point_5d": dict(zip(DIM_ORDER, vec)),
         "schema": atlas.get("schema", ""),
         "double_capture_ratio": double_capture_ratio,
+        "capture_status": capture_status,
+        "capture_verdict": capture_verdict,
     }
 
 
