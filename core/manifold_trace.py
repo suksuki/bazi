@@ -1,6 +1,7 @@
 """
 FDS 2.0 流形追踪：基于 static_atlas 的 D_M 概率云与叠加态（前 3 格局）。
 SOP V6.5：引力俘获模型 — D_crit 四级判定（PURE / VERIFIED / DRIFTING / BROKEN）。
+SOP V6.6：地域引力补偿 (Geo-Gravitational Patch) — 按格局五行与地域方位修正 D_M。
 GET /api/v2/manifold/trace/{user_id} 的底层实现。
 """
 from __future__ import annotations
@@ -40,6 +41,26 @@ def _load_capture_config() -> Dict[str, Any]:
     return {}
 
 
+def affinity_from_d_m(d_m: float, config: Optional[Dict[str, Any]] = None) -> float:
+    """
+    SOP V6.7：由 D_M 计算匹配度/亲和度百分比 (0~100)。
+    - linear: Affinity = 100/(1+D_M)
+    - exponential: Affinity = 100 * exp(-α*D_M)，α 为敏感度因子，可拉长中等匹配度区间
+    配置来自 manifold_capture.affinity_formula / affinity_alpha，零硬编码。
+    """
+    cfg = config if config is not None else _load_capture_config()
+    formula = (cfg.get("affinity_formula") or "linear").strip().lower()
+    alpha = float(cfg.get("affinity_alpha", 0.5))
+    d_m = float(d_m)
+    if formula == "exponential":
+        # 100 * e^(-α*D_M)，裁剪到 [0, 100]
+        raw = 100.0 * math.exp(-alpha * d_m)
+        return round(min(100.0, max(0.0, raw)), 2)
+    # linear (默认)
+    raw = 100.0 / (1.0 + d_m)
+    return round(min(100.0, max(0.0, raw)), 2)
+
+
 def _status_from_d_m(d_m: float, config: Dict[str, Any]) -> str:
     """
     由 D_M 与配置阈值得到四级主权状态。
@@ -72,16 +93,68 @@ def _dm(point: List[float], centroid: List[float]) -> float:
     return math.sqrt(sum((point[i] - centroid[i]) ** 2 for i in range(5)))
 
 
+# 地域方位规范化：中文/小写 -> 配置键 (East/South/North/West/Center)
+_GEO_REGION_ALIASES = {
+    "east": "East", "东": "East", "东方": "East",
+    "south": "South", "南": "South", "南方": "South",
+    "north": "North", "北": "North", "北方": "North",
+    "west": "West", "西": "West", "西方": "West",
+    "center": "Center", "central": "Center", "中": "Center", "中央": "Center",
+}
+# 格局五行 -> 配置中的补偿表键
+_ELEMENT_TO_COMP_KEY = {
+    "WOOD": "WOOD_PATTERNS", "木": "WOOD_PATTERNS",
+    "FIRE": "FIRE_PATTERNS", "火": "FIRE_PATTERNS",
+    "METAL": "METAL_PATTERNS", "金": "METAL_PATTERNS",
+    "WATER": "WATER_PATTERNS", "水": "WATER_PATTERNS",
+    "EARTH": "EARTH_PATTERNS", "土": "EARTH_PATTERNS",
+}
+
+
+def _geo_offset_for_pattern(
+    pid: str,
+    p_entry: Dict[str, Any],
+    geo_region: Optional[str],
+    capture_cfg: Dict[str, Any],
+) -> float:
+    """
+    根据格局五行与当前地域，返回 D_M 的修正量（加在 D_M 上）。
+    负值 = 距离减小 = 引力增强易俘获；正值 = 距离增大 = 易破格。
+    """
+    if not geo_region:
+        return 0.0
+    region_key = _GEO_REGION_ALIASES.get((geo_region or "").strip().lower()) or geo_region
+    comp = (capture_cfg or {}).get("geo_gravity_compensation") or {}
+    pattern_elem = (capture_cfg or {}).get("pattern_element") or {}
+    if isinstance(pattern_elem, dict) and "comment" in pattern_elem:
+        pattern_elem = {k: v for k, v in pattern_elem.items() if k != "comment"}
+    element = (p_entry or {}).get("element") or (pattern_elem.get(pid) if isinstance(pattern_elem, dict) else None)
+    if not element:
+        return 0.0
+    comp_key = _ELEMENT_TO_COMP_KEY.get((element or "").strip().upper()) or (f"{element}_PATTERNS" if element else None)
+    if not comp_key or comp_key not in comp:
+        return 0.0
+    row = comp.get(comp_key)
+    if not isinstance(row, dict):
+        return 0.0
+    offset = row.get(region_key)
+    if offset is None:
+        return 0.0
+    return float(offset)
+
+
 def compute_dm_cloud(
     point_5d: Any,
     *,
     atlas: Optional[Dict[str, Any]] = None,
     top_k: int = 3,
     double_capture_ratio: float = 1.2,
+    geo_region: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     计算当前 5D 点相对 60 个质心的 D_M 概率云，返回前 top_k 个格局的叠加态。
     与 v61 对撞逻辑一致：距离比 ≤ double_capture_ratio 的视为多重捕获，以概率权重表示叠加。
+    SOP V6.6：若传入 geo_region，按 config manifold_capture.geo_gravity_compensation 与 pattern_element 对 D_M 做地域修正。
     """
     atlas = atlas or load_static_atlas()
     patterns = atlas.get("patterns") or []
@@ -89,13 +162,16 @@ def compute_dm_cloud(
     if len(vec) != 5:
         return {"overlay": [], "distances": {}, "point_5d": vec, "schema": atlas.get("schema", "")}
 
+    capture_cfg = _load_capture_config()
     distances = {}
     for p in patterns:
         pid = (p.get("pattern_id") or "").strip()
         cen = p.get("centroid_5d")
         if not pid or not cen:
             continue
-        distances[pid] = _dm(vec, _vec_5d(cen))
+        d_m_base = _dm(vec, _vec_5d(cen))
+        offset = _geo_offset_for_pattern(pid, p, geo_region, capture_cfg)
+        distances[pid] = max(0.0, d_m_base + offset)
 
     sorted_ids = sorted(distances.keys(), key=lambda i: distances[i])
     # 取前 top_k，并基于距离转为权重（近者权大）：softmax(-distance) 或 1/(1+d)
@@ -105,7 +181,6 @@ def compute_dm_cloud(
     total = sum(inv)
     probs = [x / total if total > 0 else (1.0 / len(inv)) for x in inv]
 
-    capture_cfg = _load_capture_config()
     verdicts = capture_cfg.get("verdicts") or _DEFAULT_VERDICTS
 
     overlay = []

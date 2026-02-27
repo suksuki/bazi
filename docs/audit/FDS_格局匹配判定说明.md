@@ -75,10 +75,11 @@
 - **动作**：UI 显示 `Status: BROKEN`，并触发既有 **CRITICAL_STRUCTURE_COLLAPSE** 红色闪烁与应灾判词。  
 - 全息页在切换流年时，用**当前 5D 点**（含大运/流年/地域）做 `compute_dm_cloud`，故匹配度与 status 会随流年变化；进度条颜色由绿→黄→红，BROKEN 时断开连接并变红。
 
-### 3.4 地域修正（引力补偿，可选）
+### 3.4 地域引力补偿（SOP V6.6 已并网）
 
-- 若地域处于该格局五行所属方位（如某格属木火、地域在南方），可在计算 $D_M$ 时对该格局质心施加**引力补偿**（等效缩小 $D_M$）。  
-- 当前实现预留扩展点：`config/dynamic_manifold.json` 可增加 `geo_gravity_compensation` 等配置，由调用方或后续迭代接入。
+- 若地域处于该格局五行所属方位（如火系格局在南方），在计算 $D_M$ 时对该格局施加**引力补偿**：$D_{M\_final} = D_{M\_base} + \text{offset}$，offset 由配置表按「格局五行 × 地域方位」查得（负值=距离减小=易俘获，正值=易破格）。  
+- **配置**：`config/dynamic_manifold.json` → `manifold_capture.geo_gravity_compensation`（WOOD_PATTERNS/FIRE_PATTERNS 等 × East/South/North/West/Center）、`pattern_element`（格局 ID → 五行）。  
+- **实现**：`core/manifold_trace.py` 的 `compute_dm_cloud(..., geo_region=...)` 在计算每格局 D_M 后加上上述 offset；全息页「地理场修正」所选城市经 `GEO_CITY_MAP` 映射为主元素方位后传入。
 
 ## 四、相关代码位置
 
@@ -86,7 +87,8 @@
 - **流形距离与叠加态**：`core/manifold_trace.py` — `compute_dm_cloud`（D_M、overlay）
 - **指定格局的投影（含 context）**：`controllers/holographic_pattern_controller.py` — `calculate_tensor_projection`
 - **全息页「捕获格局」展示**：`ui/pages/holographic_pattern.py` — 用 overlay[0] 为 capture_id，与 selected_pattern_id 比较即等价「是否匹配该格局」
-- **匹配度公式**：`100/(1+D_M)`，D_M 为该 5D 点到该格局质心的欧氏距离（E,O,M,S,R 五维）
+- **匹配度公式**：由配置 `manifold_capture.affinity_formula` 决定。**linear**：`100/(1+D_M)`；**exponential**（SOP V6.7）：`Affinity = 100×e^{-α·D_M}`，α 为 `affinity_alpha`（如 0.5），可拉长中等匹配度区间、提升感官适配。D_M 为该 5D 点到该格局质心的欧氏距离（E,O,M,S,R 五维）。
+- **常性格（众生格）**：当 Top 1 匹配度 &lt; 20% 时，全息页提示「当前样本呈现出极强的通用性和平稳性，不落奇偏之格」。
 
 ## 五、小结
 

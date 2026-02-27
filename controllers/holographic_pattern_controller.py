@@ -26,6 +26,16 @@ from core.pattern_collider import run_pattern_collision
 logger = logging.getLogger(__name__)
 
 
+def _empty_trace() -> Dict[str, Any]:
+    """观测报告无数据时的占位 trace，与 manifold_trace.compute_dm_cloud 结构一致。"""
+    return {
+        "overlay": [],
+        "distances": {},
+        "capture_status": "BROKEN",
+        "capture_verdict": "格局坍缩，已脱离该质心引力井。",
+    }
+
+
 class HolographicPatternController:
     """
     全息格局控制器
@@ -723,6 +733,24 @@ class HolographicPatternController:
             logger.warning("_chart_and_day_master_from_profile 解析失败: %s", e)
             return None
 
+    def _city_to_geo_region(self, city: Optional[str]) -> Optional[str]:
+        """
+        SOP V6.6：将全息页选择的城市映射为地域方位（East/South/North/West/Center），供 compute_dm_cloud 地域引力补偿。
+        规则：从 GEO_CITY_MAP 取城市主元素，Fire->South, Water->North, Wood->East, Metal->West, Earth->Center。
+        """
+        if not city or city == "None":
+            return None
+        try:
+            from core.data.geo_cities import GEO_CITY_MAP
+            t = GEO_CITY_MAP.get(city)
+            if not t or not isinstance(t, (list, tuple)) or len(t) < 2:
+                return None
+            elem_str = (t[1] or "").strip().split("/")[0].strip()
+            elem_to_region = {"Fire": "South", "Water": "North", "Wood": "East", "Metal": "West", "Earth": "Center"}
+            return elem_to_region.get(elem_str)
+        except Exception:
+            return None
+
     def _resolve_pattern_display_name(self, pattern_id: str, atlas_name: Optional[str]) -> str:
         """若 atlas 仅有编号（如 A-02），则从 registry/FDS/manifest 补全中文名。"""
         if atlas_name and atlas_name.strip() and atlas_name != pattern_id:
@@ -751,29 +779,34 @@ class HolographicPatternController:
         year: Optional[int] = None,
         city: Optional[str] = None,
         top_k: int = 60,
-    ) -> List[Dict[str, Any]]:
+        *,
+        return_trace: bool = True,
+    ):
         """
         结合大运、流年、地域，计算该档案与全量格局的匹配度，按匹配度从高到低排列。
         匹配度 = 100/(1+D_M)，为绝对亲和度（不因 top_k 分摊而偏小）。
+        使用与「FDS 2.0 观测报告」同一套 5D（get_mixed_pattern_context + static_atlas），
+        保证「当前档案匹配格局」与观测报告前三名一致。
+        return_trace=True 时返回 {"items": list, "trace": trace}，trace 供观测报告复用。
         """
         pair = self._chart_and_day_master_from_profile(profile_data)
         if not pair:
-            return []
+            return [] if not return_trace else {"items": [], "trace": _empty_trace()}
         chart, day_master = pair
         try:
             ctx = self.get_mixed_pattern_context(chart, day_master)
             point_5d = ctx.get("point_5d")
             if not point_5d:
-                return []
-            from core.manifold_trace import compute_dm_cloud
-            trace = compute_dm_cloud(point_5d, top_k=top_k)
+                return [] if not return_trace else {"items": [], "trace": _empty_trace()}
+            from core.manifold_trace import compute_dm_cloud, affinity_from_d_m
+            geo_region = self._city_to_geo_region(city)
+            trace = compute_dm_cloud(point_5d, top_k=top_k, geo_region=geo_region)
             overlay = trace.get("overlay") or []
             out = []
             for o in overlay:
                 pid = o.get("pattern_id", "")
                 d_m = o.get("D_M", 0)
-                # 绝对匹配度：100/(1+D_M)，D_M 越小越接近 100%
-                match_degree = round(100.0 / (1.0 + float(d_m)), 2)
+                match_degree = affinity_from_d_m(float(d_m))
                 chinese_name = self._resolve_pattern_display_name(pid, o.get("chinese_name"))
                 out.append({
                     "pattern_id": pid,
@@ -781,22 +814,27 @@ class HolographicPatternController:
                     "D_M": d_m,
                     "match_degree": match_degree,
                 })
-            return out
+            if not return_trace:
+                return out
+            return {"items": out, "trace": trace}
         except Exception as e:
             logger.exception("get_patterns_for_profile 失败: %s", e)
-            return []
+            return [] if not return_trace else {"items": [], "trace": _empty_trace()}
 
     def get_profiles_for_pattern(
         self,
         pattern_id: str,
         profiles: List[Dict[str, Any]],
         top_k_per_profile: int = 60,
+        city: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         计算档案库中哪些命例集中在该格局，按匹配率从高到低排列。
         匹配率 = 1/(1+D_M)，D_M 为该档案 5D 点到此格局质心的流形距离。
+        若传入 city，与左列一致使用该地域做引力补偿（SOP V6.6）。
         """
-        from core.manifold_trace import compute_dm_cloud
+        from core.manifold_trace import compute_dm_cloud, affinity_from_d_m
+        geo_region = self._city_to_geo_region(city)
         results = []
         for p in profiles:
             pair = self._chart_and_day_master_from_profile(p)
@@ -808,12 +846,12 @@ class HolographicPatternController:
                 point_5d = ctx.get("point_5d")
                 if not point_5d:
                     continue
-                trace = compute_dm_cloud(point_5d, top_k=top_k_per_profile)
+                trace = compute_dm_cloud(point_5d, top_k=top_k_per_profile, geo_region=geo_region)
                 distances = trace.get("distances") or {}
                 d_m = distances.get(pattern_id)
                 if d_m is None:
                     continue
-                match_rate = round(100.0 / (1.0 + float(d_m)), 2)
+                match_rate = affinity_from_d_m(float(d_m))
                 results.append({
                     "profile_id": p.get("id", ""),
                     "name": p.get("name", ""),

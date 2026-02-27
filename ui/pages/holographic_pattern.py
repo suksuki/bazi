@@ -12,6 +12,8 @@ from ui.components.holographic_manifold import render_5d_manifold, get_manifold_
 from ui.components.phase_timeline import render_phase_timeline
 from ui.components.theme import COLORS, apply_custom_header
 from core.narrator import generate_holographic_report, generate_timeline_insight, stream_holographic_report
+from core.fds_verdict_narrator import stream_fds_verdict
+from core.fds_fusion import calculate_manifold_fusion_tensor, analyze_macro_indices
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -508,35 +510,88 @@ def render():
     except Exception:
         _annual_pillar = ""
 
+    # 匹配度级别图标：优先从 config 读取「展示用」分级（display_affinity_pct），否则用审计阈值对应百分比
+    def _load_display_bands() -> tuple:
+        try:
+            from pathlib import Path
+            import json
+            path = Path(__file__).resolve().parent.parent.parent / "config" / "dynamic_manifold.json"
+            if path.exists():
+                cfg = json.loads(path.read_text(encoding="utf-8"))
+                bands = (cfg.get("manifold_capture") or {}).get("display_affinity_pct")
+                if bands and isinstance(bands, dict):
+                    return (
+                        float(bands.get("PURE_min", 66)),
+                        float(bands.get("VERIFIED_min", 45)),
+                        float(bands.get("DRIFTING_min", 28)),
+                    )
+        except Exception:
+            pass
+        return (66.0, 45.0, 28.0)  # 审计阈值对应：D_M 0.5/1.2/2.5
+
+    _pure_min, _verified_min, _drift_min = _load_display_bands()
+
+    def _match_level_icon(pct: float) -> str:
+        if pct >= _pure_min:
+            return "🟢"
+        if pct >= _verified_min:
+            return "✅"
+        if pct >= _drift_min:
+            return "🟡"
+        return "🔴"
+
+    def _match_level_label(pct: float) -> str:
+        if pct >= _pure_min:
+            return "纯粹"
+        if pct >= _verified_min:
+            return "合规"
+        if pct >= _drift_min:
+            return "漂移"
+        return "破格"
+
     col_match1, col_match2 = st.columns(2)
+    # 使用与观测报告同一套 5D 的 trace，保证「档案匹配格局」与「FDS 2.0 观测报告」前三名一致
+    patterns_result = controller.get_patterns_for_profile(
+        profile_data, year=_year, city=_city_param, top_k=20, return_trace=True
+    )
+    patterns_for_profile = patterns_result.get("items", []) if isinstance(patterns_result, dict) else patterns_result
+    trace_for_report = patterns_result.get("trace") if isinstance(patterns_result, dict) else None
+
     with col_match1:
         st.markdown("#### 📐 当前档案匹配的格局")
-        st.caption("结合大运、流年、地域，按匹配度从高到低")
-        patterns_for_profile = controller.get_patterns_for_profile(profile_data, year=_year, city=_city_param, top_k=20)
+        st.caption("结合大运、流年、地域，按匹配度从高到低；图标表示级别：🟢纯粹 ✅合规 🟡漂移 🔴破格")
         if patterns_for_profile:
             from scripts.dynamic_monitor import run_dynamic_monitor
             for i, row in enumerate(patterns_for_profile[:15], 1):
                 pid = row.get("pattern_id", "")
                 md = row.get("match_degree", 0)
+                icon = _match_level_icon(md)
+                level = _match_level_label(md)
                 collapse_alerts = run_dynamic_monitor(pid, _annual_pillar) if _annual_pillar else []
                 collapse = next((a for a in collapse_alerts if a.get("alert") == "CRITICAL_STRUCTURE_COLLAPSE"), None)
                 if i == 1 and collapse:
                     verdict = collapse.get("verdict", "刑伤突发，险境难支")
-                    st.markdown(f"**{i}.** {row.get('chinese_name', '')} ({pid}) · 匹配度 <span class=\"collapse-warn\">**{md:.1f}%**</span> · D_M={row.get('D_M', 0):.4f}", unsafe_allow_html=True)
+                    st.markdown(f"**{i}.** {icon} **{level}** · {row.get('chinese_name', '')} ({pid}) · 匹配度 <span class=\"collapse-warn\">**{md:.1f}%**</span> · D_M={row.get('D_M', 0):.4f}", unsafe_allow_html=True)
                     st.caption(f"🔴 **结构坍缩预警**: {verdict}")
                 else:
-                    st.markdown(f"**{i}.** {row.get('chinese_name', '')} ({pid}) · 匹配度 **{md:.1f}%** · D_M={row.get('D_M', 0):.4f}")
+                    st.markdown(f"**{i}.** {icon} **{level}** · {row.get('chinese_name', '')} ({pid}) · 匹配度 **{md:.1f}%** · D_M={row.get('D_M', 0):.4f}")
+            best_md = (patterns_for_profile[0].get("match_degree", 0) or 0) if patterns_for_profile else 0
+            if best_md < 20:
+                st.caption("🌐 **常性格（众生格）**：当前样本呈现出极强的通用性和平稳性，不落奇偏之格。")
             if len(patterns_for_profile) > 15:
                 st.caption(f"…共 {len(patterns_for_profile)} 个格局，仅展示前 15")
         else:
             st.caption("暂无匹配格局或档案无法解析四柱")
     with col_match2:
         st.markdown("#### 📂 当前格局集中的档案")
-        st.caption("实测档案中归属该格局的命例，按匹配率从高到低")
-        profiles_for_pattern = controller.get_profiles_for_pattern(selected_pattern_id, profiles, top_k_per_profile=60)
+        st.caption("实测档案中归属该格局的命例，按匹配率从高到低；图标：🟢纯粹 ✅合规 🟡漂移 🔴破格")
+        profiles_for_pattern = controller.get_profiles_for_pattern(selected_pattern_id, profiles, top_k_per_profile=60, city=_city_param)
         if profiles_for_pattern:
             for i, row in enumerate(profiles_for_pattern[:15], 1):
-                st.markdown(f"**{i}.** {row.get('name', '')} · 匹配率 **{row.get('match_rate', 0):.1f}%** · D_M={row.get('D_M', 0):.4f}")
+                mr = row.get("match_rate", 0)
+                icon = _match_level_icon(mr)
+                level = _match_level_label(mr)
+                st.markdown(f"**{i}.** {icon} **{level}** · {row.get('name', '')} · 匹配率 **{mr:.1f}%** · D_M={row.get('D_M', 0):.4f}")
             if len(profiles_for_pattern) > 15:
                 st.caption(f"…共 {len(profiles_for_pattern)} 个档案，仅展示前 15")
         else:
@@ -610,10 +665,10 @@ def render():
     recognition = result.get('recognition', {})
     sai = result.get('sai', 0.0)
 
-    # --- Step 3: FDS 2.0 观测报告（static_atlas 流形追踪 + 识别态）---
+    # --- Step 3: FDS 2.0 观测报告（与「当前档案匹配格局」同源 trace，保证前三名一致）---
     from core.manifold_trace import compute_dm_cloud
-    trace = compute_dm_cloud(projection, top_k=3)
-    overlay = trace.get("overlay") or []
+    trace = trace_for_report if trace_for_report else compute_dm_cloud(projection, top_k=3)
+    overlay = (trace.get("overlay") or [])[:3]
     nearest = overlay[0] if overlay else {}
     d_m = nearest.get("D_M", 0)
     capture_id = nearest.get("pattern_id", "")
@@ -676,12 +731,82 @@ def render():
                 stt = (o.get("status") or "BROKEN").upper()
                 st.markdown(f"**{i+1}.** {o.get('chinese_name', '')} ({o.get('pattern_id', '')}) · D_M={o.get('D_M', 0):.4f} · 权重 {o.get('probability', 0)*100:.1f}% · **{stt}**")
 
+    # --- SOP V6.8：合成张量宏观指数（财富/事业/健康）---
+    p_final = calculate_manifold_fusion_tensor(overlay) if overlay else {}
+    macro_indices = analyze_macro_indices(p_final) if p_final else {}
+    if macro_indices:
+        st.markdown("### 📊 合成张量宏观指数（SOP V6.8）")
+        st.caption("由前 3 格局流形重心坍缩加权得到，0-100 分")
+        col_w, col_c, col_h = st.columns(3)
+        with col_w:
+            w = macro_indices.get("wealth", 0)
+            st.metric("💰 财富", f"{w:.0f} 分", None)
+            st.progress(min(1.0, w / 100.0))
+        with col_c:
+            c = macro_indices.get("career", 0)
+            st.metric("💼 事业", f"{c:.0f} 分", None)
+            st.progress(min(1.0, c / 100.0))
+        with col_h:
+            h = macro_indices.get("health", 0)
+            st.metric("🩺 健康", f"{h:.0f} 分", None)
+            st.progress(min(1.0, h / 100.0))
+        # SOP V6.9：高级命运指标（折叠展示）
+        try:
+            from pathlib import Path
+            import json
+            _cfg_path = Path(__file__).resolve().parent.parent.parent / "config" / "dynamic_manifold.json"
+            if _cfg_path.exists():
+                _cfg = json.loads(_cfg_path.read_text(encoding="utf-8"))
+                _adv = _cfg.get("advanced_macro_mapping") or {}
+                if _adv.get("enabled") and _adv.get("display_mode") == "folded":
+                    with st.expander("📐 显示高级命运指标（社交 / 学研 / 风险）", expanded=False):
+                        st.caption("SOP V6.9 高级语义映射：由 M/R、O/R、S-O 耦合得到的细分维度，供因果解释用")
+                        col_s, col_i, col_r = st.columns(3)
+                        with col_s:
+                            s = macro_indices.get("social", 0)
+                            st.metric("🤝 社交", f"{s:.0f} 分", None)
+                            st.progress(min(1.0, s / 100.0))
+                        with col_i:
+                            i = macro_indices.get("intellect", 0)
+                            st.metric("📚 学研", f"{i:.0f} 分", None)
+                            st.progress(min(1.0, i / 100.0))
+                        with col_r:
+                            r = macro_indices.get("risk", 0)
+                            st.metric("⚠️ 风险", f"{r:.0f} 分", "越高越需警惕")
+                            st.progress(min(1.0, r / 100.0))
+        except Exception:
+            pass
+        st.markdown("---")
+
+    # --- LLM 判词（结合大运、流年、地域，打字机展示）---
+    st.markdown("### 📜 LLM 判词")
+    st.caption("基于当前 5D 流形、大运、流年、地域与古典 RAG 原典，由 LLM 生成判词（打字机展示）")
+    geo_label = selected_city if selected_city != "None" else ""
+    with st.status("🔮 正在生成判词…", expanded=True) as verdict_status:
+        verdict_container = st.empty()
+        accumulated = ""
+        for char in stream_fds_verdict(
+            projection=projection,
+            overlay=overlay,
+            luck_pillar=luck_pillar or "—",
+            year_pillar=year_pillar or "—",
+            geo_label=geo_label,
+            typing_delay=0.03,
+            macro_indices=macro_indices if macro_indices else None,
+        ):
+            accumulated += char
+            verdict_container.markdown(accumulated)
+        verdict_status.update(label="✅ 判词生成完毕", state="complete", expanded=False)
+
     sub_id = result.get('sub_id')
     if sub_id:
         st.caption(f"🛣️ **路由追踪**: {selected_pattern_id} ➔ `{sub_id}` (奇点激活)")
     st.info(f"🔮 **判言**: {recognition.get('description', '观测信号稳定')}")
 
     # --- Step 4: Observatory (3D Manifold) ---
+    # 将 FDS 主权状态映射为组件可识别的 pattern_state（STABLE/COLLAPSED/MARGINAL）
+    _s = (capture_status or "BROKEN").upper()
+    p_type = "COLLAPSED" if _s == "BROKEN" else "MARGINAL" if _s == "DRIFTING" else "STABLE"
     st.markdown("---")
     col_obs, col_dim = st.columns([2, 1])
     
