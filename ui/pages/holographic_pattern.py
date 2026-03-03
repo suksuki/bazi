@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import logging
 import os
+from typing import Any, Dict, List
 
 from controllers.holographic_pattern_controller import HolographicPatternController
 from core.bazi_profile import BaziProfile
@@ -778,6 +779,101 @@ def render():
             pass
         st.markdown("---")
 
+    # --- SOP V7.0：古典格局八字判定（双模态：现代 FDS vs 古典法理）---
+    ranked_classical: List[Dict[str, Any]] = []
+    try:
+        from core.classical_matcher import get_classical_patterns, rank_classical_patterns
+        classical_ctx = {
+            "luck_pillar": luck_pillar,
+            "annual_pillar": year_pillar,
+            "geo_city": selected_city if selected_city != "None" else None,
+        }
+        classical_result = get_classical_patterns(chart, day_master, classical_ctx)
+        classical_items = classical_result.get("items") or []
+        by_classical = classical_result.get("by_pattern_id") or {}
+        pattern_change_trigger = classical_result.get("pattern_change_trigger") or []
+        # SOP V7.2：法理主权分排序，供 LLM 判词主次提示
+        ranked_classical = rank_classical_patterns(classical_items, classical_ctx, projection, day_master)
+
+        st.markdown("### 📜 古典格局八字判定")
+        _chart_str = " ".join(chart) if chart else "—"
+        st.caption(f"基于当前八字（四柱：{_chart_str}，日主 {day_master}）及大运/流年/地域，L1 古典法理判定与 FDS 5D 观测双模态对照。")
+        n_ok = len(classical_items)
+        if n_ok > 0:
+            st.caption(f"**古典格成**：{n_ok} 个格局命中；下方为与 FDS 前 3 的横向对照及格成列表。")
+        if pattern_change_trigger:
+            st.info("🕐 **SOP V7.5 岁运引发**：当前大运/流年导致格局成格或破格，判词将体现「岁运成格」或「岁运破格」。")
+        with st.expander("📜 古典格局观测（SOP V7.0 双模态）", expanded=True):
+            st.caption("法理分析器：L1 古典扫描与 Atlas 格局 ID 映射；与上方 FDS 2.0 观测对照。")
+            # 横向对比：FDS 前 3 与古典对照
+            if overlay:
+                for i, o in enumerate(overlay[:3]):
+                    pid = o.get("pattern_id", "")
+                    cl = by_classical.get(pid) or {}
+                    fds_status = (o.get("status") or "BROKEN").upper()
+                    fds_ok = fds_status in ("PURE", "VERIFIED")
+                    cl_ok = (cl.get("status") or "") == "格成"
+                    conflict = fds_ok and not cl_ok
+                    row_bg = "rgba(128,128,128,0.15)" if conflict else "rgba(255,255,255,0.03)"
+                    cl_vt = cl.get('verdict_type') or ''
+                    cl_vt_html = f' · <span style="color:#40e0d0;">{cl_vt}</span>' if cl_vt and cl_vt != '成格' else ''
+                    st.markdown(f"""
+                    <div style="background: {row_bg}; border: 1px solid rgba(64,224,208,0.2); border-radius: 8px; padding: 10px 12px; margin: 8px 0;">
+                        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <div><strong>现代 FDS</strong> · {o.get('chinese_name', '')} ({pid}) · D_M={o.get('D_M', 0):.4f} · <span style="color: {'#22c55e' if fds_ok else '#f59e0b' if fds_status == 'DRIFTING' else '#ff4b4b'};">{fds_status}</span></div>
+                            <div><strong>古典对照</strong> · {cl.get('classical_name', pid)} · 匹配度 <strong>{cl.get('affinity', 0):.0f}%</strong> · {cl.get('status', '—')}{cl_vt_html}</div>
+                        </div>
+                        <div style="font-size: 11px; color: #888; margin-top: 4px;">{cl.get('verdict_snippet', '')}</div>
+                        {('<div style="font-size: 11px; color: #f59e0b; margin-top: 6px;">⚠️ 此命局属法理变格，建议重点参考物理 5D 偏移。</div>' if conflict else '')}
+                    </div>
+                    """, unsafe_allow_html=True)
+            # SOP V7.6/V7.7：命定格局（Tier 1+2）高光；流年神煞（Tier 3）单独区；定性 100% + 能量丰度（成色）
+            mingding = [c for c in classical_items if c.get("tier", 3) in (1, 2)]
+            shensha = [c for c in classical_items if c.get("tier", 3) == 3]
+            _et_cn = {"high": "高", "mid": "中", "low": "低"}
+            if mingding:
+                st.markdown("**命定格局**（主权格局·定性）")
+                st.caption("逻辑结构成立即格成，定性 100%；成色表示能量丰度（高/中/低），供判词区分贵贱清浊。")
+                for c in mingding[:10]:
+                    vt = c.get("verdict_type", "")
+                    tag = f" · **{vt}**" if vt and vt != "成格" else ""
+                    et = _et_cn.get(c.get("energy_tier", "mid"), "中")
+                    rescue = " · 有救应" if c.get("structural_rescue") else ""
+                    ep = " · 瞬时态" if c.get("ephemeral") else ""
+                    st.markdown(f"- **{c.get('classical_name', '')}** ({c.get('pattern_id', '')}) · **定性 100%** · 成色 **{et}**{rescue}{ep}{tag} · {c.get('verdict_snippet', '')[:32]}…")
+            if shensha:
+                st.caption("**命带神煞**（辅星，非独立成格；V7.6 已加严）")
+                for c in shensha[:10]:
+                    et = _et_cn.get(c.get("energy_tier", "mid"), "中")
+                    st.markdown(f"- {c.get('classical_name', '')} ({c.get('pattern_id', '')}) · 定性 100% · 成色 {et} · {c.get('verdict_snippet', '')[:24]}…")
+            if not mingding and not shensha and not overlay:
+                st.caption("暂无 FDS 叠加态或古典命中；请确认四柱与日主有效。")
+            # 古典格局全量一览：定性（状态）+ 定量（成色）SOP V7.7
+            if by_classical:
+                st.markdown("**古典格局全量一览**（定性：格成/破格；定量：成色）")
+                rows = []
+                for pid in sorted(by_classical.keys()):
+                    cl = by_classical[pid]
+                    t = cl.get("tier", 3)
+                    tier_label = "命定" if t in (1, 2) else "神煞"
+                    et = cl.get("energy_tier", "")
+                    chengse = {"high": "高", "mid": "中", "low": "低"}.get(et, "—") if cl.get("status") == "格成" else "—"
+                    rows.append({
+                        "格局ID": pid,
+                        "格局名称": cl.get("classical_name", ""),
+                        "层级": tier_label,
+                        "状态(定性)": cl.get("status", "—"),
+                        "匹配度": f"{cl.get('affinity', 0):.0f}%",
+                        "成色(定量)": chengse,
+                    })
+                df = pd.DataFrame(rows)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+    except Exception as _e:
+        st.markdown("### 📜 古典格局八字判定")
+        st.caption("古典法理分析器暂不可用（依赖 L1 扫描与 classical_registry）。")
+        with st.expander("错误详情", expanded=False):
+            st.code(str(_e))
+
     # --- LLM 判词（结合大运、流年、地域，打字机展示）---
     st.markdown("### 📜 LLM 判词")
     st.caption("基于当前 5D 流形、大运、流年、地域与古典 RAG 原典，由 LLM 生成判词（打字机展示）")
@@ -793,6 +889,8 @@ def render():
             geo_label=geo_label,
             typing_delay=0.03,
             macro_indices=macro_indices if macro_indices else None,
+            ranked_classical=ranked_classical if ranked_classical else None,
+            pattern_change_trigger=pattern_change_trigger,
         ):
             accumulated += char
             verdict_container.markdown(accumulated)

@@ -42,6 +42,7 @@ python tests/integration/test_fds_sop_v4_regression.py
 | 单元 | `test_build_full_index_a02.py` | `resolve_manifest_for_pattern`(A-01/A-02)、`pipeline_expression` 优先、`get_weights_matrix`（A-02 回退） |
 | 集成 | `test_fds_sop_v3_integration.py` | Manifest 存在与 schema、SOP 流程、QGA 格式、子格局、UI 注册 |
 | 回归 | `test_fds_sop_v4_regression.py` | A-02 manifest、FDS 格局列表/详情、A-01 投影不报「格局不存在」、全量索引 A-02 表达式 |
+| 单元 | `test_classical_matcher_v77.py` | `get_classical_patterns` V7.7 弹性定性字段（qualitative_match/energy_tier/structural_rescue）、`rank_classical_patterns` 结构救应加权 |
 
 ## FDS V4.0 / A-02 相关断言要点
 

@@ -29,11 +29,14 @@ def build_fds_verdict_prompt(
     year_pillar: str = "",
     geo_label: str = "",
     macro_indices: Optional[Dict[str, float]] = None,
+    ranked_classical: Optional[List[Dict[str, Any]]] = None,
+    pattern_change_trigger: Optional[List[str]] = None,
 ) -> str:
     """
     构造三层嵌套 Prompt（证据层 + RAG 层 + 叙事层），
     注入大运、流年、地域供 LLM 结合时空写判词。
     SOP V6.8：若提供 macro_indices（财富/事业/健康 0-100），注入合成张量宏观指数，要求判词结合量化指向。
+    SOP V7.2：若提供 ranked_classical（按法理主权分排序的古典格成列表），要求判词按主次书写：主权格为主干叙事，修饰格为性情/风格，神煞格为细节注脚。
     """
     status = (status or "BROKEN").upper()
     state_map = {
@@ -106,6 +109,31 @@ def build_fds_verdict_prompt(
 【二、古典原典与判例（RAG Layer）】
 以下是与该格局相关的古典原话/判例，请在判词中至少引用或转译其中 1 条，并与上述 5D 物理状态相呼应：
 {rag_block}
+"""
+    if ranked_classical:
+        sovereign = [x for x in ranked_classical if x.get("llm_role") == "sovereign"]
+        modifier = [x for x in ranked_classical if x.get("llm_role") == "modifier"]
+        accessory = [x for x in ranked_classical if x.get("llm_role") == "accessory"]
+        lines = []
+        _et_cn = {"high": "高", "mid": "中", "low": "低"}
+        if sovereign:
+            parts = [f"{x.get('classical_name', '')}（成色：{_et_cn.get(x.get('energy_tier', 'mid'), '中')}）" for x in sovereign]
+            names = "、".join(parts)
+            lines.append(f"- **第一顺位（主权）**：{names}。作为判词主干，决定事业/地位/人生底色，请以「君之命局法理以……为主权」或等价表述开门见山。")
+        if modifier:
+            names = "、".join(x.get("classical_name", "") for x in modifier)
+            lines.append(f"- **第二/三顺位（修饰）**：{names}。作为性情与风格修饰，描述行事风骨、辅助主权格之成型，可写「兼具……之风骨」。")
+        if accessory:
+            names = "、".join(x.get("classical_name", "") for x in accessory)
+            lines.append(f"- **末尾顺位（注脚）**：{names}。作为细节彩蛋，可于流年或细节处一笔带过，如「流年更见……入局」。")
+        if lines:
+            prompt += """
+【古典法理主次（SOP V7.2）】以下格局已按法理主权分排序，判词须体现主次分明，不得胡子眉毛一把抓：
+""" + "\n".join(lines) + "\n"
+        # SOP V7.7 弹性定性：成色高可写「格成极真、富贵自天来」，成色低可写「格局虽成，然根基尚浅，需步步为营」
+        if sovereign or modifier:
+            prompt += "【定性描述（SOP V7.7）】成色 high 时可用「格成极真、富贵自天来」；成色 low 时须用「格局虽成，然根基尚浅，需步步为营」等弹性表述，名分在而贵贱由成色定。\n"
+    prompt += f"""
 
 ====================
 【三、叙事生成指令（Narrative Layer）】
@@ -113,7 +141,14 @@ def build_fds_verdict_prompt(
 2. 风格：{tone}
 3. 物理约束：必须在文中体现 D_M 与匹配度的含义；状态为 BROKEN 时须描述结构坍缩/引力场断裂，不得宣称必然灾祸。
 4. 语言：仅用简体中文，语气冷静、可带诗意，不煽情。长度 200～300 字。
-
+"""
+    if ranked_classical:
+        prompt += "5. 法理主次：若有上述「古典法理主次」列表，判词须按主权→修饰→注脚的顺序组织古典格局表述，使叙事有血有肉、层次分明。\n"
+    if pattern_change_trigger:
+        prompt += "\n【格局岁运迁移（SOP V7.5）】以下为岁运成格/岁运破格提示，判词中须有所体现：\n"
+        for t in pattern_change_trigger:
+            prompt += f"- {t}\n"
+    prompt += """
 请直接输出判词正文（Markdown 段落即可，无需重复标题）："""
     return prompt
 
@@ -127,6 +162,8 @@ def stream_fds_verdict(
     typing_delay: float = 0.03,
     breath_pause: float = 0.5,
     macro_indices: Optional[Dict[str, float]] = None,
+    ranked_classical: Optional[List[Dict[str, Any]]] = None,
+    pattern_change_trigger: Optional[List[str]] = None,
 ) -> Generator[str, None, None]:
     """
     根据当前 5D 投影与叠加态，结合大运、流年、地域，流式生成 LLM 判词；
@@ -158,6 +195,8 @@ def stream_fds_verdict(
         year_pillar=year_pillar,
         geo_label=geo_label,
         macro_indices=macro_indices,
+        ranked_classical=ranked_classical,
+        pattern_change_trigger=pattern_change_trigger,
     )
 
     try:
