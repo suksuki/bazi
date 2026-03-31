@@ -1,6 +1,6 @@
 # FDS 规范文档索引 (FDS Specification Index)
 
-**最后更新**: 2026-02  
+**最后更新**: 2026-03  
 **版本**: V5.5 智能数仓驱动  
 **状态**: ✅ 核心规范就绪；SOP 执行以 **V5.5** 为准（以库治律、一键注库、OLAP 压力审计、流形健康度监测）；V5.1 已由 V5.5 继承
 
@@ -71,6 +71,13 @@
    - **定位**: L3级代码接口规范，定义格局模块的代码实现标准
    - **受众**: 后端开发工程师（Antigravity Engine开发者）
    - **关联**: 连接架构文档（Schema）和代码实现（Interface）
+
+### 战略与演进文档 (Strategy & Evolution)
+
+6. **strategy/FDS_Evolution_Expert_Deduction_2026-03-03.md**
+   - **性质**: 战略总纲 / 头脑风暴纪要
+   - **内容**: 从“机械判定”向“专家演绎”进化的总纲；核心痛点审计；双塔驱动架构（左塔刚性计算、右塔弹性意象）；专家协作与校验模型；关键 Skill 构想（Circuit-Scanner、Expert Mind-Sync、Fact-Anchor）；后续行动路线图与讨论预告
+   - **关联**: 与 SOP V7.x 古典格局弹性定性、双塔架构演进相衔接
 
 ---
 
@@ -319,6 +326,7 @@ pattern_manifest.json
 
 ## 📝 版本历史
 
+- **2026-03-03**: 战略总纲落盘：`docs/strategy/FDS_Evolution_Expert_Deduction_2026-03-03.md`。双塔驱动（左塔刚性计算、右塔弹性意象）、专家主导冷启动、知识沉淀与 Skill 构想（Circuit-Scanner / Expert Mind-Sync / Fact-Anchor）、金标准私有库与专家钩子路线图
 - **2026-02**: SOP 升级至 V5.5 智能数仓驱动版；以库治律、一键注库（upsert_pattern_meta.py）、OLAP 压力审计（DuckDB 极值 Top100 + 判词回测）、流形健康度监测；审计脚本库 `scripts/audit/`；执行以 V5.5 为准
 - **2026-02-24**: 第 044 号纠偏：回归正八格法典。A-05→枭神格、A-09→建禄格、A-10→阳刃格；manifest/判词模板/索引统一古典正名，禁止「比肩格」「劫财格」
 - **2026-02-24**: A-06～A-10 终极封卷完成；物理溢出报告归档 `audit_logs/`；格局状态切换为 ENFORCED；三专项验收红线入表

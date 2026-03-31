@@ -18,9 +18,9 @@
     "test_key": "test_value",
     "test_key2": "test_value2",
     "ollama_host": "http://192.168.0.10:11434",
-    "selected_model_name": "qwen2.5:32b-instruct",
+    "selected_model_name": "qwen3.5:9b",
     "ai_engine": {
-        "chat_model": "qwen2.5:32b-instruct"
+        "chat_model": "qwen3.5:9b"
     },
     "embedding_engine": {
         "provider": "ollama",

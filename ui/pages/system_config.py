@@ -77,19 +77,20 @@ def render_system_config(config_manager):
     
     st.divider()
     
-    # ==================== LLM配置 ====================
+    # ==================== LLM 配置 ====================
     st.markdown(f"""
         <div style="{GLASS_STYLE} padding: 15px; margin-bottom: 1rem; border-left: 4px solid {COLORS['rose_magenta']};">
-            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🤖 大模型神启 (LLM Core)</h3>
+            <h3 style="color: {COLORS['mystic_gold']}; margin: 0;">🤖 大模型神启（LLM 核心）</h3>
         </div>
     """, unsafe_allow_html=True)
+    st.caption("所选对话模型将用于「全息格局」页的 LLM 判词与格局解读；系统会要求模型以**简体中文**输出。若为 Qwen 3.5 等思考模型，判词将自动以「关闭思考流」方式调用，直接输出正文。")
     col_llm_1, col_llm_2 = st.columns([1, 1])
     
     with col_llm_1:
         ollama_host = st.text_input(
-            "Ollama Server URL",
+            "Ollama 服务地址",
             value=st.session_state.get("ollama_host", "http://localhost:11434"),
-            help="GB10 本地或远程 Ollama 服务地址",
+            help="本地或远程 Ollama 服务 URL，如 http://localhost:11434",
         )
     if ollama_host != st.session_state.get("ollama_host"):
         st.session_state["ollama_host"] = ollama_host
@@ -114,16 +115,13 @@ def render_system_config(config_manager):
         except Exception as e:
             st.warning(f"🟡 向量库未就绪: {e}")
 
-    with st.expander("🛠️ 高级连接调试", expanded=True):
-        if st.button("📡 测试连接 & 刷新模型列表"):
-            # Check availability (We assume ollama library is available as this function is imported when needed)
+    with st.expander("🛠️ 连接与模型", expanded=True):
+        if st.button("📡 测试连接并刷新模型列表"):
             try:
                 client = ollama.Client(host=ollama_host)
                 resp = client.list()
-                # extract model names
                 models = []
                 model_list = resp.models if hasattr(resp, 'models') else resp.get('models', [])
-                
                 for m in model_list:
                     if hasattr(m, 'model'):
                         models.append(m.model)
@@ -131,53 +129,68 @@ def render_system_config(config_manager):
                         models.append(m.get('model') or m.get('name'))
                     else:
                         models.append(str(m))
-                        
                 st.session_state['ollama_models'] = models
-                st.success(f"连接成功! 发现 {len(models)} 个模型")
-                
-                # Save host on success
+                st.success(f"✅ 连接成功，发现 {len(models)} 个模型")
                 config_manager.save_config("ollama_host", ollama_host)
-                
             except Exception as e:
-                st.error(f"连接失败: {e}")
-    
-        # Model Selector
+                st.error(f"❌ 连接失败: {e}")
+
         model_options = st.session_state.get('ollama_models', [])
-        
         index = 0
-        current_selection = st.session_state.get('selected_model_name', '')
+        current_selection = st.session_state.get("selected_model_name", "")
         if current_selection and current_selection in model_options:
             index = model_options.index(current_selection)
-        
-        saved_model = config_manager.get("selected_model_name") # Read for display info
+        saved_model = config_manager.get("selected_model_name")
 
         if model_options:
-            selected_model_name = st.selectbox("选择此服务器上的模型", model_options, index=index)
-            
+            selected_model_name = st.selectbox(
+                "选择对话模型（用于判词与解读）",
+                model_options,
+                index=index,
+                help="该模型将在全息格局页生成 LLM 判词（简体中文）。Qwen 3.5 等思考模型会以 think=False 调用，判词直接输出正文。",
+            )
             if selected_model_name != st.session_state.get("selected_model_name"):
                 st.session_state["selected_model_name"] = selected_model_name
                 config_manager.save_config("selected_model_name", selected_model_name)
-                # 同步到 ai_engine.chat_model，供 AI 判词使用
                 ai_cfg = config_manager.get("ai_engine") or {}
                 if not isinstance(ai_cfg, dict):
                     ai_cfg = {}
                 ai_cfg["chat_model"] = selected_model_name
                 config_manager.save_config("ai_engine", ai_cfg)
-            
-            # Quick Test Button
-            if st.button("🟢 验证模型响应 (Test Run)"):
+
+            if st.button("🟢 验证模型响应（测试）"):
                 try:
-                    with st.spinner("正在发送测试信号..."):
+                    with st.spinner("正在发送测试请求（简体中文）…"):
                         client = ollama.Client(host=ollama_host)
-                        res = client.generate(model=selected_model_name, prompt="Say 'Ready' in Chinese", stream=False)
-                        st.success(f"模型响应正常: {res['response']}")
+                        kwargs = {
+                            "model": selected_model_name,
+                            "messages": [{"role": "user", "content": "请用一句简体中文回复：已就绪。"}],
+                            "stream": False,
+                        }
+                        try:
+                            res = client.chat(**{**kwargs, "think": False})
+                        except TypeError:
+                            res = client.chat(**kwargs)
+                        # 兼容 chat 返回 message.content 与 generate 返回 response
+                        text = ""
+                        if hasattr(res, "message") and res.message is not None:
+                            text = getattr(res.message, "content", None) or ""
+                        if not text and hasattr(res, "response"):
+                            text = res.response or ""
+                        if not text and isinstance(res, dict):
+                            msg = res.get("message") or {}
+                            text = msg.get("content", "") if isinstance(msg, dict) else ""
+                        if not text:
+                            text = "（无文本）"
+                        text = (text or "").strip() or "（无文本）"
+                        st.success(f"✅ 模型响应正常：{text[:200]}{'…' if len(text) > 200 else ''}")
                 except Exception as e:
-                    st.error(f"模型无响应: {e}")
+                    st.error(f"❌ 模型无响应或超时：{e}")
         else:
             if saved_model:
-                st.info(f"上次使用的模型: {saved_model} (状态: 未连接)")
+                st.info(f"上次使用的模型：{saved_model}（请先测试连接以刷新列表）")
             else:
-                st.info("请先测试连接以加载模型列表")
+                st.info("请先点击「测试连接并刷新模型列表」以加载模型列表。")
 
     st.divider()
 

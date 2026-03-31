@@ -876,7 +876,15 @@ def render():
 
     # --- LLM 判词（结合大运、流年、地域，打字机展示）---
     st.markdown("### 📜 LLM 判词")
-    st.caption("基于当前 5D 流形、大运、流年、地域与古典 RAG 原典，由 LLM 生成判词（打字机展示）")
+    try:
+        from core.config_manager import ConfigManager
+        _cm = ConfigManager()
+        _model_label = _cm.get("selected_model_name") or ((_cm.get("ai_engine") or {}).get("chat_model")) or "qwen2.5:32b"
+        st.caption(f"当前大模型：`{_model_label}`（由「天机设置」页面配置）")
+    except Exception:
+        st.caption("基于当前 5D 流形、大运、流年、地域与古典 RAG 原典，由 LLM 生成判词（打字机展示）")
+    else:
+        st.caption("基于当前 5D 流形、大运、流年、地域与古典 RAG 原典，由所选大模型生成判词（打字机展示）")
     geo_label = selected_city if selected_city != "None" else ""
     with st.status("🔮 正在生成判词…", expanded=True) as verdict_status:
         verdict_container = st.empty()
