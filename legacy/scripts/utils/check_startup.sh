@@ -40,7 +40,11 @@ else
     echo "   ✅ streamlit 已安装"
 fi
 
-$PYTHON_CMD -c "from ui.utils import load_css" 2>/dev/null
+$PYTHON_CMD -c "
+import sys
+sys.path.insert(0, 'legacy')
+sys.path.insert(0, '.')
+from ui.utils import load_css" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "   ⚠️  无法导入 ui.utils，可能有依赖问题"
     echo "   请运行: $PYTHON_CMD -m pip install -r requirements.txt"
@@ -73,25 +77,26 @@ else
     echo "   ⚠️  无法检查端口（缺少 lsof/netstat）"
 fi
 
-# 5. 检查 main.py
+# 5. 检查 legacy/main.py（老系统 Streamlit）
 echo ""
-echo "5️⃣ 检查 main.py..."
-if [ ! -f "main.py" ]; then
-    echo "   ❌ main.py 不存在！"
+echo "5️⃣ 检查 legacy/main.py..."
+if [ ! -f "legacy/main.py" ]; then
+    echo "   ❌ legacy/main.py 不存在！"
     exit 1
 else
-    echo "   ✅ main.py 存在"
+    echo "   ✅ legacy/main.py 存在"
 fi
 
-# 6. 尝试导入测试
+# 6. 尝试导入 Streamlit 应用模块（不执行页面）
 echo ""
-echo "6️⃣ 测试导入 main.py..."
+echo "6️⃣ 测试 legacy 路径与 ui 导入..."
 $PYTHON_CMD -c "
 import sys
+sys.path.insert(0, 'legacy')
 sys.path.insert(0, '.')
 try:
-    import main
-    print('   ✅ main.py 可以正常导入')
+    from ui.utils import load_css
+    print('   ✅ legacy/ui 可导入')
 except Exception as e:
     print(f'   ❌ 导入失败: {e}')
     sys.exit(1)
@@ -107,8 +112,8 @@ fi
 echo ""
 echo "✅ 诊断完成：未发现明显问题"
 echo ""
-echo "💡 建议的启动方式："
-echo "   bash run_bazi_stable.sh"
-echo "   或"
-echo "   $PYTHON_CMD -m streamlit run main.py --server.port 8501"
+echo "💡 老系统启动："
+echo "   $PYTHON_CMD -m streamlit run legacy/main.py --server.port 8501"
+echo "💡 新系统（Qiazhi API）："
+echo "   $PYTHON_CMD qiazhi/main.py"
 

@@ -1,43 +1,13 @@
-# Antigravity V3.0 - System Rules
-# Version: 3.0 (The Logic-Data Separation Protocol)
-# Persona: System Architect & Physics Engine
-# Language: Python (Backend) + Streamlit (Frontend)
+# Antigravity / Qiazhi-Bazi — 协作规则
 
----
+## Qiazhi 优先（忘记老系统为默认心智）
 
-## 🏛️ 公理一：物理纯洁性 (The Law of Pure Physics)
-1. **宪法至上**: 所有算法逻辑必须严格依据 `ALGORITHM_CONSTITUTION_v3.0.md` 及其 L2/L3 附录。
-2. **零硬编码 (Zero Hardcoding)**:
-   - 严禁在 Python 代码 (.py) 或 Markdown 文档中写入具体的物理参数（如 `1.35`, `0.6`, `threshold=5`）。
-   - **唯一真理**: 所有的权重、系数、阈值，必须且只能从 `core/config` (配置文件) 或 `AlgoParams` 对象中读取。
-3. **去参数化**: 文档只描述“如何运作”（物理模型），不描述“数值是多少”（具体参数）。
+- **默认**以 `qiazhi/`、`qiazhi_core` 为叙事与改动的中心；**不要**默认假设要改 `legacy/` 或讨论老 Streamlit 界面。
+- **仅在任务明确要求**或**确需复用历法/排盘/配置/对照数据**时，再打开 `legacy/` 并引用；参见根目录 `QIAZHI_BAZI_MASTER_PLAN.md` §1.1。
 
----
+## 物理与结构（仍适用于全仓）
 
-## 🏗️ 公理二：结构严密性 (The Law of Strict Structure)
-1. **MVC 隔离**:
-   - **UI 层** (`ui/`): 只负责调用 Controller 并渲染结果。**严禁**包含任何五行生克、强弱判断的 `if-else` 逻辑。
-   - **Core 层** (`core/`): 只负责计算。**严禁**包含任何 UI 渲染代码。
-2. **L3 协议执行**:
-   - 所有格局 (Pattern) 开发必须强制实现 `Gating` (门控)、`Topology` (拓扑)、`Safety` (安全阀) 三要素接口。
-   - 禁止创建不符合 L3 接口的孤立算法模块。
-3. **模块化**: 单个文件建议不超过 500 行。复杂逻辑必须拆分为子模块。
-
----
-
-## 🎲 公理三：量子概率性 (The Law of Quantum Probability)
-1. **拒绝二元论**: 系统不得输出简单的 `True/False` (是/否) 结论。
-2. **概率输出**: 所有判定必须返回包含以下维度的对象：
-   - `score` (Float): 能量值/概率强度。
-   - `level` (String): 强度分级 (e.g., "Critical", "Stable").
-   - `meta` (Dict): 详细的物理描述与风险提示。
-3. **波动支持**: 算法必须兼容非线性能量波动（如“身弱但有印”的特殊通道），通过配置参数控制。
-
----
-
-## 🎨 工程与美学 (Engineering & Aesthetics)
-1. **单一真理源**: 任何对算法的修改，必须通过修改配置文件实现，而不是修改代码逻辑（除非逻辑本身有误）。
-2. **汉化优先**: UI 界面必须使用**简体中文**。
-3. **神秘美学**: UI 风格应保持 "Mystic/Elegant" (水墨/简洁)，避免复杂的表格堆砌。
-
----
+1. **宪法与零硬编码**：算法须符合 `legacy/docs/ALGORITHM_CONSTITUTION_v3.0.md` 等规范；权重、系数、阈值只从 `legacy/config` 或配置对象读取，不在 `.py` 中写死物理常数。
+2. **MVC**：`legacy/ui/` 只渲染；`legacy/core/` 只计算；Qiazhi 前端不塞进 legacy UI。
+3. **概率输出**：判定优先用 score / level / meta，避免简单 True/False。
+4. **界面语言**：面向用户的 Streamlit 文案用简体中文。

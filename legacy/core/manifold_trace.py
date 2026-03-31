@@ -30,7 +30,8 @@ _DEFAULT_VERDICTS = {
 def _load_capture_config() -> Dict[str, Any]:
     """从 config/dynamic_manifold.json 读取 manifold_capture 阈值与判语，零硬编码。"""
     try:
-        root = Path(__file__).resolve().parent.parent.parent
+        # legacy/core/manifold_trace.py → legacy 根为 parent.parent（config 在 legacy/config）
+        root = Path(__file__).resolve().parent.parent
         path = root / "config" / "dynamic_manifold.json"
         if path.exists():
             with open(path, "r", encoding="utf-8") as f:

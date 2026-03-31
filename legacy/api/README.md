@@ -1,23 +1,21 @@
-# FDS 2.0 API — 全量流形追踪
-
-## 启动生产服务（端口暴露给前端）
+# FDS 老系统 API（仅 v2）
 
 在项目根目录执行：
 
 ```bash
-uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
+cd legacy && uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- `--host 0.0.0.0`：对外暴露端口，前端/其他主机可访问。
-- 默认端口 `8000`，可按需改为 `--port 8080` 等。
+或：
 
-## 主要端点
+```bash
+PYTHONPATH=legacy uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+## 端点
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v2/manifold/trace/{user_id}` | 流形追踪：60 格局 D_M 概率云，返回前 top_k 叠加态。可选查询参数 `dynamic_5d`（JSON）、`top_k`（默认 3）。 |
+| GET | `/api/v2/manifold/trace/{user_id}` | 流形追踪 |
 
-## 健康检查
-
-- `GET /docs` — Swagger 文档
-- `GET /openapi.json` — OpenAPI 规范
+掐指八字（Qiazhi-Bazi）请使用 **独立进程**：`uvicorn qiazhi.api.app:app --port 8001`（见仓库根 `REPO_LAYOUT.md`）。

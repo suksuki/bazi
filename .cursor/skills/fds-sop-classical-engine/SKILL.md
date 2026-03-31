@@ -1,6 +1,6 @@
 ---
 name: fds-sop-classical-engine
-description: Encodes the FDS SOPs (V7.x) for classical pattern matching and ranking in this repo. Use when editing core/classical_matcher.py, classical_registry.json, holographic_pattern UI around classical patterns, or any logic about tiers, integrity, structural rescue, geographic adjustment or dynamic state (岁运成格/破格).
+description: Encodes the FDS SOPs (V7.x) for classical pattern matching and ranking in this repo. Use when editing legacy/core/classical_matcher.py, classical_registry.json, holographic_pattern UI around classical patterns, or any logic about tiers, integrity, structural rescue, geographic adjustment or dynamic state (岁运成格/破格).
 ---
 
 # FDS Classical Engine SOP Skill
@@ -8,8 +8,8 @@ description: Encodes the FDS SOPs (V7.x) for classical pattern matching and rank
 ## Scope
 
 - This skill applies when the agent:
-  - Edits `core/classical_matcher.py`, `config/classical_registry.json`, or related helpers.
-  - Touches UI sections that display classical格局 (especially在 `holographic_pattern.py`).
+  - Edits `legacy/core/classical_matcher.py`, `legacy/config/classical_registry.json`, or related helpers.
+  - Touches UI sections that display classical格局 (especially在 `legacy/ui/pages/holographic_pattern.py`).
   - Implements or refactors logic for:
     - 动态格局状态机（原局 vs 合成场、岁运成格/岁运破格）—— SOP V7.5
     - 神煞格加严（将星格/驿马格/天乙格）—— SOP V7.6

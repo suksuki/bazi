@@ -1,6 +1,6 @@
 ---
 name: fds-sop-llm-verdict
-description: Captures the FDS SOPs for holographic LLM verdicts, Ollama/Qwen integration, streaming, and Chinese-only narrative. Use when editing core/fds_verdict_narrator.py, ui/pages/holographic_pattern.py LLM section, or system_config LLM settings.
+description: Captures the FDS SOPs for holographic LLM verdicts, Ollama/Qwen integration, streaming, and Chinese-only narrative. Use when editing legacy/core/fds_verdict_narrator.py, legacy/ui/pages/holographic_pattern.py LLM section, or system_config LLM settings.
 ---
 
 # FDS LLM Verdict & Ollama Skill
@@ -9,9 +9,9 @@ description: Captures the FDS SOPs for holographic LLM verdicts, Ollama/Qwen int
 
 Use this skill when:
 
-- Modifying `core/fds_verdict_narrator.py` (判词 prompt、流式输出、Qwen/Ollama 集成)。
-- 修改 `ui/pages/holographic_pattern.py` 中的 LLM 判词展示区。
-- 修改 `ui/pages/system_config.py` 中 LLM/Ollama 配置与测试逻辑。
+- Modifying `legacy/core/fds_verdict_narrator.py` (判词 prompt、流式输出、Qwen/Ollama 集成)。
+- 修改 `legacy/ui/pages/holographic_pattern.py` 中的 LLM 判词展示区。
+- 修改 `legacy/ui/pages/system_config.py` 中 LLM/Ollama 配置与测试逻辑。
 
 目标：确保全息页 LLM 判词**稳定、中文、与物理证据/SOP 对齐**，并兼容 Qwen 3.5 + Ollama 的实际行为。
 

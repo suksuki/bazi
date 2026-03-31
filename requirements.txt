@@ -9,8 +9,17 @@ duckdb
 fastapi
 uvicorn[standard]
 
+# Qiazhi-Bazi：元数据协议（Pydantic v2）
+pydantic>=2.0
+
 # 其他核心依赖（按需补充，如 streamlit / numpy / ollama 等）
 # streamlit
 # numpy
 # ollama
-# pydantic
+
+httpx
+
+sqlmodel
+psycopg[binary]
+psycopg2-binary
+lunar_python

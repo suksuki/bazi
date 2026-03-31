@@ -87,3 +87,13 @@ sources/
 
 # FDS-V3.0: 全息宇宙样本数据库（大数据文件，不提交到版本控制）
 data/holographic_universe_518k.jsonl
+
+# Qiazhi-Bazi 裁决链日志（本地）
+data/qiazhi/decisions.jsonl
+qiazhi/data/decisions.jsonl
+
+# 普查脚本生成的临时报告
+legacy/census_preview_report.md
+
+# 勿在仓库根提交误生成的 config（唯一真源为 legacy/config）
+/config/

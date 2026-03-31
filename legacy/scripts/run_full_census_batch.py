@@ -24,7 +24,7 @@ BRANCH_EN_MAP = {
 }
 
 BATCH_LIMIT = 50000  # Scan limit per task
-REPORT_PATH = "census_preview_report.md"
+REPORT_PATH = "legacy/census_preview_report.md"
 
 def run_full_census():
     """

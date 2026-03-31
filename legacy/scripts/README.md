@@ -231,7 +231,7 @@ bash scripts/git/force_push.sh
 - 检查 Python 路径
 - 检查关键依赖
 - 检查端口占用
-- 测试导入 main.py
+- 测试导入：见 `legacy/scripts/utils/check_startup.sh`（检查 `legacy/main.py`）
 
 ```bash
 bash scripts/utils/check_startup.sh
