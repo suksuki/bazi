@@ -27,7 +27,15 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
   const selectedCards = cards.filter((c) => selectedIds[c.id]);
 
   useEffect(() => {
-    setSelectedIds({});
+    // 卡片内容可能因翻译或流式更新变化；仅移除不存在的 id，避免勾选被瞬间清空。
+    setSelectedIds((prev) => {
+      const validIds = new Set(cards.map((c) => c.id));
+      const next: Record<string, boolean> = {};
+      Object.entries(prev).forEach(([id, checked]) => {
+        if (validIds.has(id)) next[id] = checked;
+      });
+      return next;
+    });
   }, [cards]);
 
   async function execute() {
