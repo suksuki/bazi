@@ -1,0 +1,5 @@
+case,cf_floating_decay,alignment_score,structured_hit,repair_mode,bijian_score,top_anomaly,diagnosis,sql_patch
+baseline_1990_seed,0.1,35.0,False,fallback,19.62,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_dingsi_yisi,0.1,35.0,False,fallback,15.96,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_1990_seed,0.3,35.0,False,fallback,19.62,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_dingsi_yisi,0.3,42.0,True,strict_json,15.96,CF_FLOATING_DECAY(0.3) 与 A_PROTRUSION(1.0) 的数值冲突,根气汇总显示目标天干'乙木'无根且应用了0.3的浮动衰减系数，但季节系数中'A_PROTRUSION'（外显突起）参数为1.0，这在物理命理逻辑上构成严重矛盾：无根之木不应具备全幅度的外显能量，且衰减因子与突起系数未进行耦合修正。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';

@@ -10,19 +10,54 @@ type Card = {
   markdown: string;
   conflictDetail?: string;
   displayText?: string;
+  cardType?: "conflict" | "auditor-proposal" | "proposal";
+  proposal?: unknown;
 };
 
 type Props = {
   cards: Card[];
   resultLogs: string[];
+  verdictBody?: string;
+  verdictChangeLog?: {
+    physics_diff?: string[];
+    consensus_diff?: string[];
+    text_diff_hint?: string;
+  };
+  logicalEvidence?: string[];
   highlightVerdict?: boolean;
   onExecuteDecision: (selected: Card[]) => Promise<void>;
+  onVerdictDeityClick?: (deity: string) => void;
+  onEvidenceClick?: (evidence: string) => void;
+  onShowVersionHistory?: () => void;
+  hasVerdictHistory?: boolean;
+  selectionResetToken?: number;
+  summaryVersionLabel?: string;
+  summaryChanged?: boolean;
+  l1Certified?: boolean;
   t?: (s: string) => string;
 };
 
-export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onExecuteDecision, t = (s) => s }: Props) {
+export function DecisionInbox({
+  cards,
+  resultLogs,
+  verdictBody = "",
+  verdictChangeLog = {},
+  logicalEvidence = [],
+  highlightVerdict = false,
+  onExecuteDecision,
+  onVerdictDeityClick,
+  onEvidenceClick,
+  onShowVersionHistory,
+  hasVerdictHistory = false,
+  selectionResetToken = 0,
+  summaryVersionLabel,
+  summaryChanged = false,
+  l1Certified = false,
+  t = (s) => s,
+}: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [executing, setExecuting] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
 
   const selectedCards = cards.filter((c) => selectedIds[c.id]);
 
@@ -38,6 +73,10 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
     });
   }, [cards]);
 
+  useEffect(() => {
+    setSelectedIds({});
+  }, [selectionResetToken]);
+
   async function execute() {
     setExecuting(true);
     try {
@@ -45,6 +84,61 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
     } finally {
       setExecuting(false);
     }
+  }
+
+  const DEITIES = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"];
+  function evidenceTone(evidence: string) {
+    const text = String(evidence || "");
+    const m = text.match(/Abs=([0-9]+(?:\.[0-9]+)?)/);
+    const abs = m ? Number(m[1]) : NaN;
+    if (Number.isFinite(abs)) {
+      if (abs < 0.5) {
+        return "border-zinc-600 bg-zinc-950 text-zinc-300 animate-pulse";
+      }
+      if (abs < 2.0) {
+        return "border-orange-700/70 bg-orange-950/40 text-orange-300";
+      }
+      if (abs < 5.0) {
+        return "border-sky-700/70 bg-sky-950/40 text-sky-300";
+      }
+      return "border-fuchsia-600/70 bg-fuchsia-950/35 text-fuchsia-300";
+    }
+    if (text.includes("状态:熄灭")) return "border-zinc-600 bg-zinc-950 text-zinc-300 animate-pulse";
+    if (text.includes("状态:衰微")) return "border-orange-700/70 bg-orange-950/40 text-orange-300";
+    if (text.includes("状态:中和")) return "border-sky-700/70 bg-sky-950/40 text-sky-300";
+    if (text.includes("状态:强旺")) return "border-fuchsia-600/70 bg-fuchsia-950/35 text-fuchsia-300";
+    return "border-zinc-800 bg-zinc-950 text-zinc-400";
+  }
+  function renderVerdictLine(line: string, idx: number) {
+    const parts = line.split(new RegExp(`(${DEITIES.join("|")})`, "g"));
+    return (
+      <p
+        key={`${idx}-${line.slice(0, 12)}`}
+        className={`whitespace-pre-wrap leading-relaxed ${
+          summaryChanged
+            ? "rounded-md bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-transparent px-2 py-1 text-emerald-200"
+            : "text-emerald-300"
+        } ${
+          highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
+        }`}
+      >
+        {parts.map((part, i) => (
+          DEITIES.includes(part) ? (
+            <button
+              key={`${idx}-${i}-${part}`}
+              type="button"
+              onClick={() => onVerdictDeityClick?.(part)}
+              className="mx-[1px] rounded border border-sky-500/30 bg-sky-500/10 px-1 text-sky-200 hover:bg-sky-500/20"
+              title={`查看 ${part} 的演算路径`}
+            >
+              {part}
+            </button>
+          ) : (
+            <span key={`${idx}-${i}`}>{part}</span>
+          )
+        ))}
+      </p>
+    );
   }
 
   return (
@@ -66,13 +160,19 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
             <p className="mt-1 text-xs text-zinc-400">{t("批量勾选后，一次性执行全局裁决。")}</p>
             <div className="mt-3 space-y-2">
               {cards.length === 0 ? <p className="text-xs text-zinc-500">{t("暂无可裁决冲合项。")}</p> : null}
+              <AnimatePresence initial={false}>
               {cards.map((card) => (
                 (() => {
                   const labelText = card.displayText ?? card.conflictDetail ?? card.title;
                   const element = detectElementFromText(labelText);
+                  const isAuditorProposal = card.cardType === "auditor-proposal" || card.cardType === "proposal";
                   return (
-                <label
+                <motion.label
                   key={card.id}
+                  initial={{ opacity: 0, x: 18 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -100 }}
+                  transition={{ duration: 0.22 }}
                   className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs ${
                     selectedIds[card.id]
                       ? "border-emerald-500/40 bg-emerald-500/10"
@@ -84,6 +184,11 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
                       <span className={`mr-1 inline-block h-2 w-2 rounded-full ${elementColorClass(element)}`} />
                     </span>
                     {labelText}
+                    {isAuditorProposal ? (
+                      <span className="ml-2 rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-300">
+                        [Auditor 提案]
+                      </span>
+                    ) : null}
                   </span>
                   <span className="flex items-center gap-2">
                     {selectedIds[card.id] ? <span className="text-[11px] text-emerald-300">{t("已认同")}</span> : null}
@@ -106,10 +211,11 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
                       ✓
                     </button>
                   </span>
-                </label>
+                </motion.label>
                   );
                 })()
               ))}
+              </AnimatePresence>
             </div>
             <button
               type="button"
@@ -128,19 +234,81 @@ export function DecisionInbox({ cards, resultLogs, highlightVerdict = false, onE
           highlightVerdict ? "border-2 border-amber-400/70 shadow-[0_0_18px_rgba(251,191,36,0.25)]" : "border border-zinc-800"
         }`}
       >
-        <h4 className="text-sm font-semibold text-zinc-200">{t("Result Summary")}</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-zinc-200">{t("Result Summary")}</h4>
+          <div className="flex items-center gap-2">
+            {hasVerdictHistory ? (
+              <button
+                type="button"
+                onClick={() => onShowVersionHistory?.()}
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800"
+              >
+                查看历史版本
+              </button>
+            ) : null}
+            {summaryVersionLabel ? (
+              <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-400">
+                {summaryVersionLabel}
+              </span>
+            ) : null}
+          </div>
+        </div>
         <div className="mt-2 space-y-1">
-          {resultLogs.length === 0 ? <p className="text-xs text-zinc-500">{t("等待确认后生成阶段结论…")}</p> : null}
-          {resultLogs.map((x, i) => (
-            <p
-              key={`${i}-${x.slice(0, 12)}`}
-              className={`whitespace-pre-wrap leading-relaxed text-emerald-300 ${
-                highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
-              }`}
-            >
-              {x}
-            </p>
-          ))}
+          {l1Certified ? (
+            <div className="mb-2 inline-flex items-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+              L1 Certified
+            </div>
+          ) : null}
+          {!verdictBody && resultLogs.length === 0 ? <p className="text-xs text-zinc-500">{t("等待确认后生成阶段结论…")}</p> : null}
+          {verdictBody
+            ? verdictBody.split("\n").map((x, i) => renderVerdictLine(x, i))
+            : resultLogs.map((x, i) => renderVerdictLine(x, i))}
+          {(verdictChangeLog.physics_diff?.length || verdictChangeLog.consensus_diff?.length || verdictChangeLog.text_diff_hint) ? (
+            <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
+                  <p className="mb-1 text-zinc-300">物理场变动</p>
+                  {(verdictChangeLog.physics_diff || []).length === 0 ? <p className="text-zinc-500">- 无</p> : null}
+                  {(verdictChangeLog.physics_diff || []).map((x, i) => <p key={`pd-${i}`} className="text-zinc-400">- {x}</p>)}
+                </div>
+                <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
+                  <p className="mb-1 text-zinc-300">共识固化</p>
+                  {(verdictChangeLog.consensus_diff || []).length === 0 ? <p className="text-zinc-500">- 无</p> : null}
+                  {(verdictChangeLog.consensus_diff || []).map((x, i) => <p key={`cd-${i}`} className="text-zinc-400">- {x}</p>)}
+                </div>
+                <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
+                  <p className="mb-1 text-zinc-300">判词修正</p>
+                  <p className="text-zinc-400">{verdictChangeLog.text_diff_hint || "无"}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {logicalEvidence.length > 0 ? (
+            <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setEvidenceOpen((v) => !v)}
+                className="rounded border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-zinc-300 hover:bg-zinc-800"
+              >
+                {evidenceOpen ? "收起证据快照" : "展开证据快照"}
+              </button>
+              {evidenceOpen ? (
+                <div className="mt-2 max-h-40 space-y-1 overflow-auto">
+                  {logicalEvidence.map((x, i) => (
+                    <button
+                      key={`ev-${i}`}
+                      type="button"
+                      onClick={() => onEvidenceClick?.(x)}
+                      className={`block w-full rounded border px-2 py-1 text-left hover:border-sky-500/40 hover:text-sky-200 ${evidenceTone(x)}`}
+                      title="点击下钻证据"
+                    >
+                      {x}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
     </section>

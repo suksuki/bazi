@@ -5,7 +5,7 @@ export default function AdminHomePage() {
     <div className="space-y-5">
       <div className="rounded-2xl border border-zinc-800 bg-gradient-to-r from-zinc-900 to-zinc-900/50 p-5">
         <h2 className="text-xl font-semibold tracking-tight">管理端总览</h2>
-        <p className="mt-1 text-sm text-zinc-400">监控 0.13 数据库与 0.10 大模型连通状态，支持快速体检与审计入口。</p>
+        <p className="mt-1 text-sm text-zinc-400">监控本地数据库与 0.10 大模型连通状态，支持快速体检与审计入口。</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

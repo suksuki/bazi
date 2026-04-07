@@ -407,7 +407,7 @@ export default function AdminSettingsPage() {
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/20">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-medium">数据库监控（0.13）</h3>
+          <h3 className="text-base font-medium">数据库监控（本地）</h3>
           <div className="flex gap-2">
             <button
               type="button"
@@ -433,7 +433,7 @@ export default function AdminSettingsPage() {
               onClick={usePgPreset}
               className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs"
             >
-              使用 0.13 预设
+              使用本地预设
             </button>
           </div>
           <div className="grid gap-2 md:grid-cols-2">

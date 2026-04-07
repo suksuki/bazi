@@ -1,0 +1,7 @@
+case,cf_floating_decay,alignment_score,structured_hit,repair_mode,bijian_score,top_anomaly,diagnosis,sql_patch
+baseline_1990_seed,0.1,35.0,False,fallback,19.62,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_dingsi_yisi,0.1,35.0,False,fallback,15.96,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_1990_seed,0.2,35.0,False,fallback,19.62,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_dingsi_yisi,0.2,35.0,False,fallback,15.96,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_1990_seed,0.3,35.0,False,fallback,19.62,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';
+baseline_dingsi_yisi,0.3,35.0,False,fallback,15.96,未拿到结构化审计结论，请检查 LLM 返回格式。,结构化审计回退：LLM 未返回可解析 JSON，已启用默认评分策略。,UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key='CF_FLOATING_DECAY';

@@ -6,8 +6,11 @@ import { mapConflictDetail } from "@/constants/termMap";
 import { AuditSidebar, type AuditItem } from "@/components/AuditSidebar";
 import { BaziCard } from "@/components/BaziCard";
 import { DecisionInbox } from "@/components/DecisionInbox";
+import { TenGodNumericList } from "@/components/TenGodNumericList";
+import { ArbiterLogicDrawer } from "@/components/ArbiterLogicDrawer";
 import { LogDrawer } from "@/components/LogDrawer";
 import { SeedInput } from "@/components/SeedInput";
+import { AuditorBriefing } from "@/components/AuditorBriefing";
 import type { BaziMetadata, DecisionStep, Lang, TimelineSnapshot } from "@/types/bazi";
 
 const API_BASE = process.env.NEXT_PUBLIC_QIAZHI_API ?? "http://127.0.0.1:8001";
@@ -58,7 +61,7 @@ const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "暂无冲突点。": "No conflict points.",
     "Audit Sidebar": "Audit Sidebar",
     "权力三角：Arbiter / Core / Auditor": "Power Triangle: Arbiter / Core / Auditor",
-    "DB(0.13)": "DB(0.13)",
+    "DB(本地)": "DB(本地)",
     "LLM(0.10)": "LLM(0.10)",
     "等待交互步骤…": "Waiting for interaction steps...",
     "Step": "Step",
@@ -102,7 +105,7 @@ const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "暂无冲突点。": "충돌 포인트 없음.",
     "Audit Sidebar": "감사 사이드바",
     "权力三角：Arbiter / Core / Auditor": "권한 삼각: Arbiter / Core / Auditor",
-    "DB(0.13)": "DB(0.13)",
+    "DB(本地)": "DB(本地)",
     "LLM(0.10)": "LLM(0.10)",
     "等待交互步骤…": "상호작용 단계를 기다리는 중…",
     "Step": "단계",
@@ -131,6 +134,24 @@ const STATIC_I18N: Record<Lang, Record<string, string>> = {
 };
 
 export function StreamBoard() {
+  type LogicProposal = {
+    title?: string;
+    param_key?: string;
+    suggested_value?: number;
+    reason?: string;
+    expected_impact?: string;
+    sql_patch?: string;
+    source_role?: string;
+  };
+  type InboxCard = {
+    id: string;
+    title: string;
+    markdown: string;
+    conflictDetail?: string;
+    displayText?: string;
+    cardType?: "conflict" | "auditor-proposal" | "proposal";
+    proposal?: LogicProposal;
+  };
   const [lang, setLang] = useState<Lang>("ZH");
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -141,6 +162,7 @@ export function StreamBoard() {
   const [consultationId, setConsultationId] = useState<number | null>(null);
   const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
   const [health, setHealth] = useState({ dbOk: false, llmOk: false });
+  const [llmModelName, setLlmModelName] = useState<string>("LLM");
   const [resultLogs, setResultLogs] = useState<string[]>([]);
   const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const [firstPromptText, setFirstPromptText] = useState("");
@@ -149,6 +171,64 @@ export function StreamBoard() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [i18nCalls, setI18nCalls] = useState(0);
+  const [deityScores, setDeityScores] = useState<Record<string, number>>({});
+  const [deityEnergyAxes, setDeityEnergyAxes] = useState<Record<string, { absolute_energy?: number; relative_percentage?: number }>>({});
+  const [deityComponents, setDeityComponents] = useState<Record<string, {
+    total_score?: number;
+    stem_score?: number;
+    root_score?: number;
+    root_sources?: string[];
+    stem_sources?: string[];
+    is_floating?: boolean;
+  }>>({});
+  const [deityTraceDetails, setDeityTraceDetails] = useState<Record<string, Record<string, unknown>>>({});
+  const [hoveredDeity, setHoveredDeity] = useState<string | undefined>(undefined);
+  const [physicsAudit, setPhysicsAudit] = useState<Record<string, unknown> | null>(null);
+  const [showPhysicsAudit, setShowPhysicsAudit] = useState(false);
+  const [llmDiagnosticLoading, setLlmDiagnosticLoading] = useState(false);
+  const [llmDiagnosticError, setLlmDiagnosticError] = useState("");
+  const [llmDiagnosticData, setLlmDiagnosticData] = useState<{
+    diagnosis?: string;
+    alignment_score?: number;
+    top_anomaly?: string;
+    causal_reasoning?: string;
+    tuning_suggestions?: string[];
+    sql_patch?: string;
+    refresh_hint?: string;
+    structured_hit?: boolean;
+    repair_mode?: string;
+    logic_proposal?: LogicProposal;
+  } | null>(null);
+  const [lastSeedPayload, setLastSeedPayload] = useState<{ date: string; time: string; calendar: "solar" | "lunar" } | null>(null);
+  const [auditorProposalCards, setAuditorProposalCards] = useState<InboxCard[]>([]);
+  const [physicsParams, setPhysicsParams] = useState<Record<string, number>>({});
+  const [autoConvertedParamKey, setAutoConvertedParamKey] = useState<string | null>(null);
+  const [resolvedCardIds, setResolvedCardIds] = useState<string[]>([]);
+  const [selectionResetToken, setSelectionResetToken] = useState(0);
+  const [conclusionVersion, setConclusionVersion] = useState(0);
+  const [lastConclusionText, setLastConclusionText] = useState("");
+  const [summaryChanged, setSummaryChanged] = useState(false);
+  const [consensusHistory, setConsensusHistory] = useState<Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>>([]);
+  const [finalVerdictBody, setFinalVerdictBody] = useState("");
+  const [finalVerdictChangeLog, setFinalVerdictChangeLog] = useState<{
+    physics_diff?: string[];
+    consensus_diff?: string[];
+    text_diff_hint?: string;
+  }>({});
+  const [finalVerdictVersionId, setFinalVerdictVersionId] = useState("");
+  const [finalLogicalEvidence, setFinalLogicalEvidence] = useState<string[]>([]);
+  const [finalVerdictHistory, setFinalVerdictHistory] = useState<Array<{
+    versionId: string;
+    body: string;
+    changeLog: { physics_diff?: string[]; consensus_diff?: string[]; text_diff_hint?: string };
+    logicalEvidence: string[];
+    createdAt: string;
+  }>>([]);
+  const [logicDrawerOpen, setLogicDrawerOpen] = useState(false);
+  const [logicDrawerTitle, setLogicDrawerTitle] = useState("Arbiter Logic Drawer");
+  const [logicDrawerFocus, setLogicDrawerFocus] = useState("");
+  const [logicDrawerDetails, setLogicDrawerDetails] = useState<string[]>([]);
+  const [logicDrawerTrace, setLogicDrawerTrace] = useState<Record<string, unknown> | null>(null);
   const translationCacheRef = useRef<Map<string, string>>(new Map());
   const pendingTextsRef = useRef<Set<string>>(new Set());
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -164,7 +244,7 @@ export function StreamBoard() {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   }, []);
 
-  const cards = useMemo(() => {
+  const cards = useMemo<InboxCard[]>(() => {
     if (!metadata) return [];
     const detected = metadata.conflict_matrix.points.map((p, i) => ({
       id: `conflict-${i}-${p.detail}`,
@@ -172,6 +252,7 @@ export function StreamBoard() {
       conflictDetail: p.detail,
       markdown: mapConflictDetail(`系统检测到 ${p.detail}。请选择是否深入分析该局部。`, lang),
       displayText: mapConflictDetail(p.detail, lang),
+      cardType: "conflict" as const,
     }));
     const sentenceItems = firstPromptText
       .replace(/\r/g, "")
@@ -186,18 +267,36 @@ export function StreamBoard() {
         conflictDetail: text,
         markdown: text,
         displayText: text,
+        cardType: "conflict" as const,
       }));
-    if (detected.length > 0 || sentenceItems.length > 0) return [...detected, ...sentenceItems];
-    return [
+    const proposalCards = auditorProposalCards.map((c, idx) => ({
+      ...c,
+      id: c.id || `auditor-proposal-${idx}-${c.title}`,
+      cardType: "auditor-proposal" as const,
+    }));
+    let mergedCards: InboxCard[];
+    if (detected.length > 0 || sentenceItems.length > 0 || proposalCards.length > 0) {
+      mergedCards = [...proposalCards, ...detected, ...sentenceItems];
+    } else {
+      mergedCards = [
       {
         id: "fallback-deep-scan",
         title: "继续深度扫描",
         conflictDetail: "未见明显冲合，进入深层扫描",
         markdown: "当前未检测到六冲/六合，是否继续执行深层结构扫描？",
         displayText: t("未见明显冲合，进入深层扫描"),
+        cardType: "conflict" as const,
       },
-    ];
-  }, [metadata, firstPromptText, lang, translations]);
+      ];
+    }
+    return mergedCards.filter((c) => !resolvedCardIds.includes(c.id));
+  }, [metadata, firstPromptText, lang, translations, auditorProposalCards, t, resolvedCardIds]);
+  const pendingDecisionCount = cards.filter((c) => c.id !== "fallback-deep-scan").length;
+  const l1Certified = Boolean(llmDiagnosticData?.alignment_score && llmDiagnosticData.alignment_score > 80) && pendingDecisionCount === 0;
+  const hardRouteLogs = useMemo<string[]>(
+    () => ((((physicsAudit as { trace?: { hard_route_logs?: string[] } } | null)?.trace?.hard_route_logs) || []) as string[]),
+    [physicsAudit]
+  );
 
   function cacheKey(l: Lang, text: string) {
     return `${l}::${text}`;
@@ -318,7 +417,7 @@ export function StreamBoard() {
       "暂无冲突点。",
       "Audit Sidebar",
       "权力三角：Arbiter / Core / Auditor",
-      "DB(0.13)",
+      "DB(本地)",
       "LLM(0.10)",
       "等待交互步骤…",
       "Step",
@@ -381,6 +480,7 @@ export function StreamBoard() {
       const cfgR = await fetch(`${API_BASE}/api/admin/runtime-config`, { headers: adminHeaders });
       const cfgJ = await cfgR.json();
       const llm = cfgJ?.config?.llm ?? {};
+      setLlmModelName(String(llm.model || "LLM"));
       const mR = await fetch(`${API_BASE}/api/admin/llm-models`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...adminHeaders },
@@ -390,22 +490,44 @@ export function StreamBoard() {
       llmOk = Boolean(mJ?.ok && Array.isArray(mJ?.models));
     } catch {
       llmOk = false;
+      setLlmModelName("LLM");
     }
     setHealth({ dbOk, llmOk });
   }
 
   async function onSeedSubmit(payload: { date: string; time: string; calendar: "solar" | "lunar" }) {
+    setLastSeedPayload(payload);
     setBusy(true);
     setIsStreaming(true);
+    setAutoConvertedParamKey(null);
     setStreamingText("");
     setAuditItems([]);
     setResultLogs([]);
+    setDeityScores({});
+    setDeityEnergyAxes({});
+    setDeityComponents({});
+    setDeityTraceDetails({});
+    setHoveredDeity(undefined);
+    setPhysicsAudit(null);
+    setShowPhysicsAudit(false);
+    setAuditorProposalCards([]);
+    setResolvedCardIds([]);
+    setPhysicsParams({});
     setConfirmedConflicts([]);
     setFirstPromptText("");
     setTimeline(null);
     setI18nCalls(0);
+    setLlmDiagnosticLoading(false);
+    setLlmDiagnosticError("");
+    setLlmDiagnosticData(null);
+    setFinalVerdictBody("");
+    setFinalVerdictChangeLog({});
+    setFinalVerdictVersionId("");
+    setFinalLogicalEvidence([]);
+    setFinalVerdictHistory([]);
     await refreshHealth();
     try {
+      let currentSessionId = consultationId;
       setStreamingText(t("第一波：物理排盘中…"));
       setAuditItems([
         {
@@ -429,6 +551,7 @@ export function StreamBoard() {
         if (c.ok) {
           const cj = await c.json();
           setConsultationId(cj.id as number);
+          currentSessionId = cj.id as number;
         }
       } catch {
         // 记录失败不应阻断推演主链路
@@ -441,6 +564,7 @@ export function StreamBoard() {
         lang,
         latitude: 31.2304,
         longitude: 121.4737,
+        session_id: currentSessionId ?? undefined,
       };
       const r = await fetch(`${API_BASE}/api/v1/analyze-seed`, {
         method: "POST",
@@ -451,6 +575,95 @@ export function StreamBoard() {
       const j = await r.json();
       setMetadata(j.metadata as BaziMetadata);
       setTimeline((j.timeline ?? null) as TimelineSnapshot | null);
+      if (j.physics_tensor?.normalized) {
+        const n = j.physics_tensor.normalized as Record<string, number>;
+        setResultLogs((prev) => [
+          ...prev,
+          `⚙️ 能量矩阵(木火土金水)：${n.wood ?? 0}/${n.fire ?? 0}/${n.earth ?? 0}/${n.metal ?? 0}/${n.water ?? 0}`,
+        ]);
+      }
+      if (j.physics_tensor?.deity_scores) {
+        setDeityScores(j.physics_tensor.deity_scores as Record<string, number>);
+      }
+      if (j.physics_tensor?.deity_energy_axes) {
+        setDeityEnergyAxes(j.physics_tensor.deity_energy_axes as Record<string, { absolute_energy?: number; relative_percentage?: number }>);
+      } else {
+        setDeityEnergyAxes({});
+      }
+      if (j.physics_tensor?.deity_components) {
+        setDeityComponents(j.physics_tensor.deity_components as Record<string, {
+          total_score?: number;
+          stem_score?: number;
+          root_score?: number;
+          root_sources?: string[];
+          stem_sources?: string[];
+          is_floating?: boolean;
+        }>);
+      } else {
+        setDeityComponents({});
+      }
+      if (j.physics_tensor?.deity_trace_details) {
+        setDeityTraceDetails(j.physics_tensor.deity_trace_details as Record<string, Record<string, unknown>>);
+      } else if (j.physics_tensor?.meta?.deity_trace_details) {
+        setDeityTraceDetails(j.physics_tensor.meta.deity_trace_details as Record<string, Record<string, unknown>>);
+      } else {
+        setDeityTraceDetails({});
+      }
+      if (j.physics_tensor?.audit_log) {
+        setPhysicsAudit(j.physics_tensor.audit_log as Record<string, unknown>);
+      }
+      if (j.physics_tensor?.meta?.params) {
+        setPhysicsParams(j.physics_tensor.meta.params as Record<string, number>);
+      }
+      if (j.metadata && j.physics_tensor) {
+        setLlmDiagnosticLoading(true);
+        setLlmDiagnosticError("");
+        try {
+          const auditR = await fetch(`${API_BASE}/api/v1/audit-physics-with-llm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              metadata: j.metadata,
+              physics_tensor: j.physics_tensor,
+              lang,
+              consensus_history: consensusHistory,
+              session_id: currentSessionId ?? undefined,
+            }),
+          });
+          const auditJ = await auditR.json();
+          if (!auditR.ok) {
+            throw new Error(String(auditJ?.detail ?? "audit-physics-with-llm failed"));
+          }
+
+          // 智能预案：严重偏差时自动把提案塞入 Decision Inbox，供角色1统一勾选裁决
+          const lp = auditJ?.logic_proposal as LogicProposal | undefined;
+          const structuredHit = Boolean(auditJ?.structured_hit);
+          const alignment = typeof auditJ?.alignment_score === "number" ? auditJ.alignment_score : Number(auditJ?.alignment_score);
+          const shouldAutoConvert =
+            Boolean(lp?.param_key) && structuredHit && Number.isFinite(alignment) && alignment < 40.0;
+          if (shouldAutoConvert && lp) {
+            setAutoConvertedParamKey(lp.param_key || null);
+            addAuditorProposalToInbox(lp);
+          }
+
+          setLlmDiagnosticData({
+            diagnosis: auditJ?.diagnosis,
+            alignment_score: auditJ?.alignment_score,
+            top_anomaly: auditJ?.top_anomaly,
+            causal_reasoning: auditJ?.causal_reasoning,
+            tuning_suggestions: auditJ?.tuning_suggestions,
+            sql_patch: auditJ?.sql_patch,
+            refresh_hint: auditJ?.refresh_hint,
+            logic_proposal: auditJ?.logic_proposal,
+            structured_hit: auditJ?.structured_hit,
+            repair_mode: auditJ?.repair_mode,
+          });
+        } catch (err) {
+          setLlmDiagnosticError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setLlmDiagnosticLoading(false);
+        }
+      }
       const incoming = (j.audit_summary ?? []) as Array<{
         step?: string;
         role: "Arbiter" | "Core" | "Auditor";
@@ -465,7 +678,17 @@ export function StreamBoard() {
           role: x.role,
           action: x.action,
           timestamp: x.timestamp,
-          payload: x.payload,
+          payload: x.role === "Auditor"
+            ? {
+                ...(x.payload && typeof x.payload === "object" ? (x.payload as Record<string, unknown>) : {}),
+                model_name: String(
+                  (x.payload && typeof x.payload === "object" && "model_name" in x.payload)
+                    ? (x.payload as { model_name?: string }).model_name || llmModelName
+                    : llmModelName
+                ),
+                param_version_id: String(j?.physics_tensor?.audit_log?.param_version_id || "--"),
+              }
+            : x.payload,
         }));
         // 步进式渲染：先 01，再 02，再 03
         setAuditItems([mapped[0]]);
@@ -508,85 +731,103 @@ export function StreamBoard() {
     setIsStreaming(false);
   }
 
-  async function generateFinalVerdict(conflicts: string[]) {
-    const pillars = metadata?.pillars;
-    const pillarText = pillars
-      ? `${pillars.year.stem}${pillars.year.branch} / ${pillars.month.stem}${pillars.month.branch} / ${pillars.day.stem}${pillars.day.branch} / ${pillars.hour.stem}${pillars.hour.branch}`
-      : "未知";
-    const timelineText = timeline
-      ? `大运=${timeline.dayun}，流年(${timeline.reference_year})=${timeline.liunian}`
-      : "大运流年未知";
-    const fireEnergy = calculateFireEnergyAfterConflicts(pillars, conflicts);
-    const langConstraint =
-      lang === "EN"
-        ? "Please output strictly in English Markdown."
-        : lang === "KO"
-          ? "한국어 마크다운으로만 출력해 주세요."
-          : "请严格使用中文 Markdown 输出。";
+  async function generateFinalVerdict(conflicts: string[], selectedCards: InboxCard[] = []) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), VERDICT_TIMEOUT_MS);
-      const r = await fetch(`${API_BASE}/api/llm/chat`, {
+      const selectedPayload = selectedCards.map((c) => ({
+        id: c.id,
+        title: c.title,
+        cardType: c.cardType || "conflict",
+        displayText: c.displayText || c.conflictDetail || c.title,
+      }));
+      const r = await fetch(`${API_BASE}/api/v1/final-verdict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content:
-                "你是Qiazhi-Bazi系统首席审计员。请基于确定物理事实生成详细终极判词。"
-                + "输出必须是 Markdown，并包含小节：命局总览、冲突机制与能量损耗、格局重心与用忌、大运流年触发点、行动建议。"
-                + "不要输出思考过程，内容要具体、有判断，不要空话。建议长度 280~420 字。"
-                + "禁止使用不确定词：可能、也许、大概、我觉得、从…来看。请使用确定性断语。"
-                + langConstraint,
-            },
-            {
-              role: "user",
-              content:
-                `四柱：${pillarText}\n`
-                + `已确认冲突：${conflicts.join("、")}\n`
-                + `时空上下文：${timelineText}\n`
-                + `当前午火能量已衰减至 ${fireEnergy}%，请据此判定护卫能力。\n`
-                + "请给出详细终极判词。",
-            },
-          ],
-          temperature: 0.35,
-          max_tokens: 900,
+          metadata: metadata || {},
+          physics_tensor: {
+            deity_scores: deityScores,
+            deity_energy_axes: deityEnergyAxes,
+            deity_components: deityComponents,
+            deity_trace_details: deityTraceDetails,
+            audit_log: physicsAudit || {},
+            top_anomaly: llmDiagnosticData?.top_anomaly || "",
+            causal_reasoning: llmDiagnosticData?.causal_reasoning || "",
+            tuning_suggestions: llmDiagnosticData?.tuning_suggestions || [],
+            timeline: timeline || {},
+            conflict_list: conflicts || [],
+            fire_energy_after_conflict: calculateFireEnergyAfterConflicts(metadata?.pillars, conflicts),
+          },
+          selected_cards: selectedPayload,
+          consensus_history: consensusHistory,
+          previous_verdict: finalVerdictBody || lastConclusionText || "",
+          previous_logical_evidence: finalLogicalEvidence,
+          consultation_id: consultationId ?? undefined,
           lang,
         }),
       });
       clearTimeout(timer);
       const j = await r.json();
-      if (r.ok && j?.content) return String(j.content);
+      if (r.ok && j?.verdict_body) {
+        return {
+          body: String(j.verdict_body),
+          changeLog: {
+            physics_diff: Array.isArray(j?.change_log?.physics_diff) ? j.change_log.physics_diff.map((x: unknown) => String(x)) : [],
+            consensus_diff: Array.isArray(j?.change_log?.consensus_diff) ? j.change_log.consensus_diff.map((x: unknown) => String(x)) : [],
+            text_diff_hint: String(j?.change_log?.text_diff_hint || ""),
+          },
+          logicalEvidence: Array.isArray(j.logical_evidence) ? j.logical_evidence.map((x: unknown) => String(x)) : [],
+          versionId: String(j.version_id || ""),
+        };
+      }
     } catch {
       // fallback
     }
-    return [
-      "### 命局总览",
-      `四柱主轴受 ${conflicts.join("、")} 牵动，结构进入高张力区。`,
-      "### 冲突机制与能量损耗",
-      "冲合并发会放大主轴耗泄，先稳住受损最重的核心位，再谈放大优势。",
-      "### 格局重心与用忌",
-      "当前宜以“调候+制衡”为优先，避免继续叠加耗泄与逆势扩张。",
-      "### 大运流年触发点",
-      timelineText,
-      "### 行动建议",
-      "执行节奏应“先稳后进”：先修结构短板，再借顺势年份做放大决策。",
-    ].join("\n");
+    return {
+      body: [
+        "### 核心气象",
+        `四柱主轴受 ${conflicts.join("、") || "既定校准项"} 牵动，结构进入高张力区。`,
+        "### 裁决共识",
+        "已依据本轮确认项完成参数校准并重算，当前断言以更新后物理真值为准。",
+        "### 行为指引",
+        "执行节奏应先稳后进：先修结构短板，再借顺势年份做放大决策。",
+      ].join("\n"),
+      changeLog: { text_diff_hint: "Fallback：终判服务异常，已使用保底全量断言。" },
+      logicalEvidence: [],
+      versionId: "",
+    };
   }
 
-  async function onExecuteDecision(selected: Array<{ id: string; conflictDetail?: string }>) {
+  async function onExecuteDecision(selected: any[]) {
     setIsExecuting(true);
     try {
+      const selectedCards = selected as InboxCard[];
       const now = new Date().toISOString();
-      const conflicts = selected.map((x) => x.conflictDetail).filter(Boolean) as string[];
-      if (conflicts.length === 0) {
-        await typewriterResultLine("⚪ 未选择任何冲合项，本轮不触发终极判词。");
+      const conflicts = selectedCards.map((x) => x.conflictDetail).filter(Boolean) as string[];
+      const proposals = selectedCards.filter((x) => x.cardType === "auditor-proposal" && x.proposal?.sql_patch);
+      if (proposals.length > 0) {
+        setConsensusHistory((prev) => [
+          ...prev,
+          ...proposals
+            .map((p) => ({
+              decision_key: String(p.proposal?.param_key || ""),
+              confirmed_value: typeof p.proposal?.suggested_value === "number" ? p.proposal?.suggested_value : undefined,
+              reasoning: String(p.proposal?.reason || p.proposal?.expected_impact || ""),
+            }))
+            .filter((x) => x.decision_key),
+        ]);
+      }
+      const hasAny = conflicts.length > 0 || proposals.length > 0;
+      if (!hasAny) {
+        await typewriterResultLine("⚪ 未选择任何冲合项/提案，本轮不触发终极判词。");
         return;
       }
       setConfirmedConflicts(conflicts);
-      const answer = `批量确认 ${conflicts.length} 项`;
+      setResolvedCardIds((prev) => [...new Set([...prev, ...selectedCards.map((x) => x.id)])]);
+
+      const answer = proposals.length > 0 && conflicts.length === 0 ? `确认 ${proposals.length} 项审计员提案` : `批量确认 ${conflicts.length} 项`;
       const newStep: DecisionStep = {
         id: `execute-decision-${now}`,
         title: "execute-decision",
@@ -594,7 +835,11 @@ export function StreamBoard() {
         createdAt: now,
       };
       setSteps((prev) => [newStep, ...prev]);
-      setStreamingText(`${t("已确认")} ${conflicts.join("、")}${t("，正在执行全局裁决…")}`);
+      setStreamingText(
+        proposals.length > 0 && conflicts.length === 0
+          ? `${t("已确认")} 审计员提案，正在执行参数校准…`
+          : `${t("已确认")} ${conflicts.join("、")}${t("，正在执行全局裁决…")}`
+      );
       if (consultationId) {
         try {
           await fetch(`${API_BASE}/api/decision-steps`, {
@@ -604,19 +849,98 @@ export function StreamBoard() {
               consultation_id: consultationId,
               step_type: "execute-decision",
               raw_data: { metadata, selected_conflicts: conflicts },
-              human_choice: { action: "execute", selected_conflicts: conflicts },
+              human_choice: {
+                action: "execute",
+                selected_conflicts: conflicts,
+                selected_proposals: proposals.map((p) => p.proposal),
+              },
             }),
           });
         } catch {
           // DB 离线时走前端内存态，避免阻塞终极判词生成
         }
       }
-      const verdict = await generateFinalVerdict(conflicts);
-      const safeVerdict = verdict.trim()
-        ? verdict
-        : (lang === "KO" ? t("[KO] 결과 추출에 실패했습니다. (结果提取失败)") : "结果提取失败，请稍后重试。");
-      await typewriterResultLine(`${t("✅ 终极判词：")}${safeVerdict}`, 18);
-      setStreamingText(t("全局裁决完成，终极判词已生成。"));
+      for (const p of proposals) {
+        const ret = await applyPhysicsSqlPatch(p.proposal?.sql_patch || "");
+        if (!ret.ok) {
+          await typewriterResultLine(`❌ 参数建议执行失败：${ret.error}`);
+          setStreamingText(`参数校准失败：${ret.error}`);
+          return;
+        }
+      }
+
+      if (proposals.length > 0 && lastSeedPayload) {
+        await typewriterResultLine("🧬 参数校准已执行，系统正在按新物理常数重算…", 18);
+        setStreamingText("系统逻辑已接收裁决，正在自动重算...");
+        await onSeedSubmit(lastSeedPayload);
+        setAuditorProposalCards([]);
+        setSelectionResetToken((n) => n + 1);
+
+        const recalculatedVerdict = await generateFinalVerdict(conflicts, selectedCards);
+        if ((recalculatedVerdict.body || "").trim()) {
+          await typewriterResultLine(`${t("✅ 终极判词：")}${recalculatedVerdict.body}`, 18);
+          setStreamingText(t("全局裁决完成，终极判词已生成。"));
+          setConclusionVersion((v) => v + 1);
+          setSummaryChanged(Boolean(lastConclusionText && lastConclusionText !== recalculatedVerdict.body));
+          setLastConclusionText(recalculatedVerdict.body);
+          setFinalVerdictBody(recalculatedVerdict.body);
+          setFinalVerdictChangeLog(recalculatedVerdict.changeLog || {});
+          setFinalLogicalEvidence(recalculatedVerdict.logicalEvidence || []);
+          setFinalVerdictVersionId(recalculatedVerdict.versionId || "");
+          setFinalVerdictHistory((prev) => [
+            ...prev,
+            {
+              versionId: recalculatedVerdict.versionId || `v1.${conclusionVersion + 1}`,
+              body: recalculatedVerdict.body,
+              changeLog: recalculatedVerdict.changeLog || {},
+              logicalEvidence: recalculatedVerdict.logicalEvidence || [],
+              createdAt: new Date().toISOString(),
+            },
+          ]);
+        }
+
+        setAuditItems((prev) => [
+          ...prev,
+          {
+            id: `arbiter-step-${Date.now()}`,
+            step: "04",
+            role: "Arbiter",
+            action: `执行审计员提案参数校准（共确认 ${proposals.length} 项）`,
+            timestamp: now,
+            payload: { selected_proposals: proposals.map((p) => p.proposal) },
+          },
+        ]);
+        await mutate();
+        return;
+      }
+
+      if (conflicts.length > 0) {
+        const verdict = await generateFinalVerdict(conflicts, selectedCards);
+        const safeVerdict = (verdict.body || "").trim()
+          ? verdict.body
+          : (lang === "KO" ? t("[KO] 결과 추출에 실패했습니다. (结果提取失败)") : "结果提取失败，请稍后重试。");
+        await typewriterResultLine(`${t("✅ 终极判词：")}${safeVerdict}`, 18);
+        setStreamingText(t("全局裁决完成，终极判词已生成。"));
+        setConclusionVersion((v) => v + 1);
+        setSummaryChanged(Boolean(lastConclusionText && lastConclusionText !== safeVerdict));
+        setLastConclusionText(safeVerdict);
+        setFinalVerdictBody(safeVerdict);
+        setFinalVerdictChangeLog(verdict.changeLog || {});
+        setFinalLogicalEvidence(verdict.logicalEvidence || []);
+        setFinalVerdictVersionId(verdict.versionId || "");
+        setFinalVerdictHistory((prev) => [
+          ...prev,
+          {
+            versionId: verdict.versionId || `v1.${conclusionVersion + 1}`,
+            body: safeVerdict,
+            changeLog: verdict.changeLog || {},
+            logicalEvidence: verdict.logicalEvidence || [],
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+      }
+      setAuditorProposalCards((prev) => prev.filter((c) => !selectedCards.some((s) => s.id === c.id)));
+      setSelectionResetToken((n) => n + 1);
       setAuditItems((prev) => [
         ...prev,
         {
@@ -677,12 +1001,116 @@ export function StreamBoard() {
 
   const mergedSteps = historyData?.items?.length ? [...steps, ...historyData.items] : steps;
 
+  async function applyPhysicsSqlPatch(sqlPatch: string): Promise<{ ok: boolean; error?: string }> {
+    if (!sqlPatch.trim()) {
+      return { ok: false, error: "缺少可执行 SQL 补丁" };
+    }
+    const r = await fetch(`${API_BASE}/api/admin/apply-physics-sql`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminHeaders },
+      body: JSON.stringify({ sql_patch: sqlPatch, auto_refresh: true }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j?.ok) {
+      const maybeAuthHint =
+        r.status === 401
+          ? "（请检查 NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN / QIAZHI_ADMIN_TOKEN 配置）"
+          : "";
+      return { ok: false, error: `${String(j?.detail ?? "apply physics sql failed")}${maybeAuthHint}` };
+    }
+    setResultLogs((prev) => [
+      ...prev,
+      `🛠️ 已应用参数建议：${j?.updated?.param_key ?? "unknown"} -> ${j?.updated?.new_value ?? "?"}`,
+    ]);
+    return { ok: true };
+  }
+
+  function addAuditorProposalToInbox(proposal: LogicProposal) {
+    const paramKey = proposal?.param_key || "";
+    if (!paramKey) return;
+    setAuditorProposalCards((prev) => {
+      const already = prev.some((c) => c.proposal?.param_key === paramKey);
+      if (already) return prev;
+      return [
+        {
+          id: `auditor-proposal-${Date.now()}`,
+          title: proposal.title?.trim() ? proposal.title : "参数校准",
+          markdown: `${proposal.reason || ""}\n预期影响：${proposal.expected_impact || ""}`.trim(),
+          conflictDetail: proposal.reason || "",
+          displayText: proposal.param_key ? `参数校准：${proposal.param_key}` : "Auditor 提案参数校准",
+          cardType: "auditor-proposal",
+          proposal,
+        },
+        ...prev,
+      ];
+    });
+  }
+
+  function openLogicDrawer(payload: { title: string; focus: string; details: string[]; deityTrace?: Record<string, unknown> }) {
+    setLogicDrawerTitle(payload.title);
+    setLogicDrawerFocus(payload.focus);
+    setLogicDrawerDetails(payload.details);
+    setLogicDrawerTrace(payload.deityTrace || null);
+    setLogicDrawerOpen(true);
+  }
+
+  function openLogicDrawerByDeity(deity: string) {
+    const trace = deityTraceDetails?.[deity] as Record<string, unknown> | undefined;
+    openLogicDrawer({
+      title: `${deity} 演算路径`,
+      focus: deity,
+      details: [`${deity}: ${Number(deityScores[deity] ?? 0).toFixed(2)}%`, "来自 Result Summary 点击下钻。"],
+      deityTrace: trace,
+    });
+  }
+
+  function onEvidenceItemClick(evidence: string) {
+    const text = String(evidence || "");
+    const deityNames = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"];
+    const hit = deityNames.find((d) => text.includes(d));
+    if (hit) {
+      openLogicDrawerByDeity(hit);
+      return;
+    }
+    openLogicDrawer({
+      title: "证据条目下钻",
+      focus: "Logical Evidence",
+      details: [text, "该证据暂未映射到特定十神，已展示原始条目。"],
+    });
+  }
+
+  function showVerdictHistory() {
+    if (finalVerdictHistory.length === 0) return;
+    const lines = finalVerdictHistory
+      .map((x, idx) => `#${idx + 1} ${x.versionId} @ ${new Date(x.createdAt).toLocaleString()}`)
+      .concat(["---"])
+      .concat(
+        finalVerdictHistory.flatMap((x) => [
+          `【${x.versionId}】`,
+          x.body,
+          ...((x.changeLog?.physics_diff || []).map((c) => `[物理] ${c}`)),
+          ...((x.changeLog?.consensus_diff || []).map((c) => `[共识] ${c}`)),
+          ...(x.changeLog?.text_diff_hint ? [`[判词] ${x.changeLog.text_diff_hint}`] : []),
+          ...((x.logicalEvidence || []).slice(0, 6).map((e) => `[证据] ${e}`)),
+          "",
+        ])
+      );
+    openLogicDrawer({
+      title: "Result Summary 版本回放",
+      focus: "Final Verdict History",
+      details: lines,
+    });
+  }
+
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[1400px] px-3 py-4">
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
           <p className="text-xs text-zinc-500">{t(I18N[lang].subtitle)}</p>
+          <span className="mt-1 inline-flex rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+            Layer 1 Fully Aligned
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {(["ZH", "EN", "KO"] as const).map((k) => (
@@ -709,38 +1137,112 @@ export function StreamBoard() {
           items={auditItems}
           dbOk={health.dbOk}
           llmOk={health.llmOk}
+          llmModelName={llmModelName}
           i18nCalls={i18nCalls}
           sessionId={consultationId}
           t={t}
+          topSlot={(
+            <BaziCard
+              metadata={metadata}
+              timeline={timeline}
+              deityScores={deityScores}
+              deityEnergyAxes={deityEnergyAxes}
+              rootDetailsByDeity={deityComponents}
+              hoveredDeity={hoveredDeity}
+              selected={selectedBranch}
+              confirmedConflictDetails={confirmedConflicts}
+              onPickBranch={setSelectedBranch}
+              t={t}
+              lang={lang}
+            />
+          )}
+          middleSlot={Object.keys(deityScores).length > 0 ? (
+            <div className="relative">
+              <TenGodNumericList
+                deityScores={deityScores}
+                deityEnergyAxes={deityEnergyAxes}
+                deityComponents={deityComponents}
+                deityTraceDetails={deityTraceDetails}
+                topAnomaly={llmDiagnosticData?.top_anomaly}
+                consensusHistory={consensusHistory}
+                hardRouteLogs={hardRouteLogs}
+                onOpenLogic={openLogicDrawer}
+                onHoverDeity={setHoveredDeity}
+              />
+            </div>
+          ) : null}
         />
         <div className="flex-1 space-y-3">
           <SeedInput onSubmit={onSeedSubmit} busy={busy} t={t} />
-          <section className="grid gap-3 xl:grid-cols-12">
-            <div className="xl:col-span-5">
-              <BaziCard
-                metadata={metadata}
-                timeline={timeline}
-                selected={selectedBranch}
-                confirmedConflictDetails={confirmedConflicts}
-                onPickBranch={setSelectedBranch}
-                t={t}
-                lang={lang}
-              />
+          {llmDiagnosticData?.logic_proposal ? (
+            <AuditorBriefing
+              t={t}
+              causalReasoning={llmDiagnosticData.causal_reasoning}
+              tuningSuggestions={llmDiagnosticData.tuning_suggestions}
+              logicProposal={llmDiagnosticData.logic_proposal}
+              currentParams={physicsParams}
+              alreadyAdded={auditorProposalCards.some((c) => c.proposal?.param_key === llmDiagnosticData.logic_proposal?.param_key)}
+              autoConverted={autoConvertedParamKey === llmDiagnosticData.logic_proposal?.param_key}
+              alignmentScore={llmDiagnosticData.alignment_score}
+              structuredHit={llmDiagnosticData.structured_hit}
+              repairMode={llmDiagnosticData.repair_mode}
+              onAddToInbox={(proposal) => addAuditorProposalToInbox(proposal)}
+            />
+          ) : null}
+          <DecisionInbox
+            cards={cards}
+            resultLogs={resultLogs}
+            verdictBody={finalVerdictBody}
+            verdictChangeLog={finalVerdictChangeLog}
+            logicalEvidence={finalLogicalEvidence}
+            highlightVerdict={false}
+            onExecuteDecision={onExecuteDecision}
+            onVerdictDeityClick={openLogicDrawerByDeity}
+            onEvidenceClick={onEvidenceItemClick}
+            onShowVersionHistory={showVerdictHistory}
+            hasVerdictHistory={finalVerdictHistory.length > 1}
+            selectionResetToken={selectionResetToken}
+            summaryVersionLabel={`${finalVerdictVersionId || `Conclusion v1.${conclusionVersion}`} (Based on Physics v${String((physicsAudit as { param_version_id?: string } | null)?.param_version_id || "--").slice(0, 8)})`}
+            summaryChanged={summaryChanged}
+            l1Certified={l1Certified}
+            t={t}
+          />
+          {physicsAudit ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3">
+              <button
+                type="button"
+                onClick={() => setShowPhysicsAudit((v) => !v)}
+                className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
+              >
+                {showPhysicsAudit ? "隐藏审计链路" : "查看审计链路"}
+              </button>
+              {showPhysicsAudit ? (
+                <pre className="mt-2 max-h-64 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-2 text-[11px] text-zinc-300">
+                  {JSON.stringify(physicsAudit, null, 2)}
+                </pre>
+              ) : null}
             </div>
-            <div className="xl:col-span-7">
-              <DecisionInbox
-                cards={cards}
-                resultLogs={resultLogs}
-                highlightVerdict={false}
-                onExecuteDecision={onExecuteDecision}
-                t={t}
-              />
-            </div>
-          </section>
+          ) : null}
         </div>
       </div>
 
       <LogDrawer open={drawerOpen} steps={mergedSteps} onClose={() => setDrawerOpen(false)} onRollback={onRollback} t={t} />
+      <ArbiterLogicDrawer
+        open={logicDrawerOpen}
+        title={logicDrawerTitle}
+        focus={logicDrawerFocus}
+        details={logicDrawerDetails.length ? logicDrawerDetails : [llmDiagnosticData?.causal_reasoning || "暂无批注内容。"]}
+        deityTrace={logicDrawerTrace}
+        auditSource={physicsAudit}
+        onClose={() => setLogicDrawerOpen(false)}
+        onApplySql={async () => {
+          const ret = await applyPhysicsSqlPatch(llmDiagnosticData?.sql_patch || "");
+          if (!ret.ok) {
+            await typewriterResultLine(`❌ 参数建议执行失败：${ret.error}`);
+            setStreamingText(`参数校准失败：${ret.error}`);
+          }
+        }}
+      />
     </main>
   );
 }

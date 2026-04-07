@@ -1,4 +1,4 @@
-"""基础设施握手脚本：检测 DB(0.13) + LLM(0.10) 连通性。"""
+"""基础设施握手脚本：检测本地 DB + LLM(0.10) 连通性。"""
 from __future__ import annotations
 
 import asyncio

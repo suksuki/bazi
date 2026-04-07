@@ -8,8 +8,9 @@
 
 | 变量 | 说明 |
 |------|------|
-| `DATABASE_URL` | 默认读取该变量；建议 `postgresql://postgres:***@192.168.0.13:5432/qiazhi_bazi` |
+| `DATABASE_URL` | 默认读取该变量；建议本地 `postgresql://postgres:***@127.0.0.1:5432/qiazhi_bazi` |
 | `QIAZHI_BAZI_DB_URL` | 兼容旧变量；未设置 `DATABASE_URL` 时才会读取 |
+| `QIAZHI_ALLOWED_DB_HOSTS` | 可选，逗号分隔数据库白名单（默认仅 `127.0.0.1,localhost`） |
 | `QIAZHI_CORS_ORIGINS` | 逗号分隔，默认 `http://localhost:3000` |
 | `QIAZHI_BAZI_LLM_BASE_URL` | OpenAI 兼容根，如 `http://192.168.0.10:8000/v1` |
 | `QIAZHI_BAZI_LLM_API_KEY` | 本地可填 `empty` |

@@ -47,3 +47,50 @@ class DecisionStep(SQLModel, table=True):
         description="裁决人打钩/选项结果",
     )
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PhysicsPositionWeight(SQLModel, table=True):
+    """四柱位置权重（年/月/日/时）。"""
+
+    __tablename__ = "physics_position_weights"
+
+    pillar_type: str = Field(primary_key=True)
+    weight: float = Field(default=0.25)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PhysicsSeasonalMatrix(SQLModel, table=True):
+    """节气对五行修正系数。"""
+
+    __tablename__ = "physics_seasonal_matrix"
+
+    solar_term: str = Field(primary_key=True)
+    element_wood: float = Field(default=1.0)
+    element_fire: float = Field(default=1.0)
+    element_earth: float = Field(default=1.0)
+    element_metal: float = Field(default=1.0)
+    element_water: float = Field(default=1.0)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PhysicsInteractionParam(SQLModel, table=True):
+    """交互衰减/激发等超参数。"""
+
+    __tablename__ = "physics_interaction_params"
+
+    param_key: str = Field(primary_key=True)
+    param_value: float = Field(default=1.0)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SessionConsensus(SQLModel, table=True):
+    """Session 级共识追踪：记录裁决人已确认的原子决策。"""
+
+    __tablename__ = "session_consensus"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(index=True)
+    decision_key: str = Field(index=True)
+    confirmed_value: Optional[float] = Field(default=None)
+    reasoning: str = Field(default="")
+    created_at: datetime = Field(default_factory=datetime.utcnow)

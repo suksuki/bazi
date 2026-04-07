@@ -1,4 +1,4 @@
-"""数据库会话：仅允许连接 0.13 PostgreSQL。"""
+"""数据库会话：仅允许连接白名单内 PostgreSQL（默认本地）。"""
 from __future__ import annotations
 
 import os
@@ -14,8 +14,16 @@ if not DB_URL:
 parsed = urlparse(DB_URL)
 if parsed.scheme not in {"postgresql", "postgresql+psycopg2", "postgresql+psycopg"}:
     raise RuntimeError(f"数据库协议不合法: {parsed.scheme}。仅允许 PostgreSQL。")
-if parsed.hostname != "192.168.0.13" or (parsed.port not in (None, 5432)):
-    raise RuntimeError("数据库地址不合法。仅允许 192.168.0.13:5432。")
+allowed_hosts = {"127.0.0.1", "localhost"}
+extra_hosts = os.getenv("QIAZHI_ALLOWED_DB_HOSTS", "").strip()
+if extra_hosts:
+    allowed_hosts.update({h.strip().lower() for h in extra_hosts.split(",") if h.strip()})
+
+host = (parsed.hostname or "").lower()
+if host not in allowed_hosts or (parsed.port not in (None, 5432)):
+    raise RuntimeError(
+        f"数据库地址不合法。仅允许 {', '.join(sorted(allowed_hosts))}:5432（或省略端口）。"
+    )
 
 _engine = create_engine(
     DB_URL,
@@ -27,8 +35,10 @@ _engine = create_engine(
 def init_db() -> None:
     # 延迟导入模型以注册 metadata
     from app.db import models  # noqa: F401
+    from app.skills.physics_engine import seed_physics_defaults
 
     SQLModel.metadata.create_all(_engine)
+    seed_physics_defaults()
 
 
 @contextmanager

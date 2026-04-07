@@ -10,12 +10,15 @@ from urllib.parse import urlparse, urlunparse
 from typing import Any, Dict, List, Optional
 
 from app.core.runtime_config import get_runtime_config, set_runtime_config
+from app.db.models import PhysicsInteractionParam
 from app.db.session import DB_URL, _engine, init_db
+from app.db.session import session_scope
 from app.llm.client import QwenClient
+from app.skills.physics_engine import PhysicsInferenceSkill
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import text
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, select
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -43,6 +46,11 @@ class LlmModelsRequest(BaseModel):
 
 class RuntimeConfigRequest(BaseModel):
     llm: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ApplyPhysicsSqlRequest(BaseModel):
+    sql_patch: str = Field(..., description="仅允许更新 physics_interaction_params 的单条 UPDATE")
+    auto_refresh: bool = Field(default=True, description="执行后是否自动 refresh physics cache")
 
 
 def _strip_reasoning(raw: str) -> str:
@@ -170,7 +178,7 @@ async def _ollama_chat_no_think(
 
 
 def _allowed_hosts() -> set[str]:
-    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost,192.168.0.10,192.168.0.13")
+    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost,192.168.0.10")
     return {x.strip().lower() for x in raw.split(",") if x.strip()}
 
 
@@ -219,8 +227,14 @@ def _get_db_status_with_url(target_db_url: Optional[str]) -> Dict[str, Any]:
     url = target_db_url or DB_URL
     _validate_target_url(url, {"postgresql", "postgresql+psycopg2", "postgresql+psycopg"})
     p = urlparse(url)
-    if p.hostname != "192.168.0.13" or (p.port not in (None, 5432)):
-        raise HTTPException(status_code=403, detail="数据库地址必须为 192.168.0.13:5432")
+    allowed_db_hosts = {"127.0.0.1", "localhost"}
+    extra_hosts = os.getenv("QIAZHI_ALLOWED_DB_HOSTS", "").strip()
+    if extra_hosts:
+        allowed_db_hosts.update({h.strip().lower() for h in extra_hosts.split(",") if h.strip()})
+    host = (p.hostname or "").lower()
+    if host not in allowed_db_hosts or (p.port not in (None, 5432)):
+        allowed_str = ", ".join(sorted(allowed_db_hosts))
+        raise HTTPException(status_code=403, detail=f"数据库地址必须在白名单内：{allowed_str}:5432")
     engine = _engine if not target_db_url else create_engine(url, echo=False)
     start = time.perf_counter()
     with engine.connect() as conn:
@@ -273,7 +287,7 @@ def db_status(_: None = Depends(_admin_guard)) -> Dict[str, Any]:
             "ok": False,
             "db_url": _masked_db_url(DB_URL),
             "error": str(e),
-            "hint": "连接失败。请检查账号密码、网络可达性，并确认 0.13 的 pg_hba.conf 已允许该客户端与用户。",
+            "hint": "连接失败。请检查账号密码、数据库服务状态与目标地址是否在白名单内。",
         }
 
 
@@ -286,7 +300,7 @@ def db_status_with_override(body: DbStatusRequest, _: None = Depends(_admin_guar
             "ok": False,
             "db_url": _masked_db_url(body.db_url or DB_URL),
             "error": str(e),
-            "hint": "连接失败。请检查账号密码、网络可达性，并确认 0.13 的 pg_hba.conf 已允许该客户端与用户。",
+            "hint": "连接失败。请检查账号密码、数据库服务状态与目标地址是否在白名单内。",
         }
 
 
@@ -432,3 +446,64 @@ def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(_admin_guar
         _validate_target_url(base_url.strip(), {"http", "https"})
     updated = set_runtime_config({"llm": body.llm})
     return {"ok": True, "config": updated}
+
+
+@router.post("/refresh-physics")
+def refresh_physics(_: None = Depends(_admin_guard)) -> Dict[str, Any]:
+    PhysicsInferenceSkill.instance().refresh_and_recalculate()
+    return {"ok": True, "message": "physics cache refreshed"}
+
+
+def _parse_allowed_param_update(sql_patch: str) -> tuple[str, float]:
+    raw = (sql_patch or "").strip().rstrip(";")
+    pattern = re.compile(
+        r"^UPDATE\s+physics_interaction_params\s+SET\s+param_value\s*=\s*([0-9]*\.?[0-9]+)\s+WHERE\s+param_key\s*=\s*'([A-Za-z0-9_]+)'$",
+        re.IGNORECASE,
+    )
+    m = pattern.match(raw)
+    if not m:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "仅允许格式：UPDATE physics_interaction_params "
+                "SET param_value=<number> WHERE param_key='<KEY>';"
+            ),
+        )
+    val = float(m.group(1))
+    key = m.group(2)
+    if key not in {
+        "CF_FLOATING_DECAY",
+        "A_PROTRUSION",
+        "EFF_EXHAUSTING",
+        "EFF_RESTRAINING",
+        "EFF_CONSUMING",
+        "root_decay_lambda",
+        "through_stem_boost",
+        "conflict_penalty_gamma",
+    }:
+        raise HTTPException(status_code=400, detail=f"不允许更新参数: {key}")
+    if not (0.0 <= val <= 2.0):
+        raise HTTPException(status_code=400, detail=f"参数值越界: {val}（允许范围 0.0~2.0）")
+    return key, val
+
+
+@router.post("/apply-physics-sql")
+def apply_physics_sql(body: ApplyPhysicsSqlRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+    key, val = _parse_allowed_param_update(body.sql_patch)
+    with session_scope() as s:
+        row = s.exec(select(PhysicsInteractionParam).where(PhysicsInteractionParam.param_key == key)).first()
+        if row is None:
+            row = PhysicsInteractionParam(param_key=key, param_value=val)
+            s.add(row)
+            old_val = None
+        else:
+            old_val = float(row.param_value)
+            row.param_value = val
+            s.add(row)
+    if body.auto_refresh:
+        PhysicsInferenceSkill.instance().refresh_and_recalculate()
+    return {
+        "ok": True,
+        "updated": {"param_key": key, "old_value": old_val, "new_value": val},
+        "auto_refresh": body.auto_refresh,
+    }
