@@ -1,0 +1,4 @@
+interface:
+  display_name: "Qiazhi Architecture"
+  short_description: "Guide repo refactors, module boundaries, and architecture docs"
+  default_prompt: "Use the qiazhi-bazi-architecture skill to keep refactors aligned with the repo's frontend MVC and backend router-service-helper structure, then update the required architecture docs."

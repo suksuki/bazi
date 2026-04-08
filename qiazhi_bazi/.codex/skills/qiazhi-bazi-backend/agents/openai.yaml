@@ -1,0 +1,4 @@
+interface:
+  display_name: "Qiazhi Backend"
+  short_description: "Work on FastAPI routes, services, helpers, and engine flows"
+  default_prompt: "Use the qiazhi-bazi-backend skill to keep backend changes aligned with thin routers, service orchestration, helper extraction, and the repo's backend test strategy."

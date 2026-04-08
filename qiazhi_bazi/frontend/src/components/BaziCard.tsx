@@ -4,6 +4,15 @@ import { motion } from "framer-motion";
 import type { BaziMetadata, ConflictPoint, TimelineSnapshot } from "@/types/bazi";
 import type { Lang } from "@/types/bazi";
 import { mapBranch, mapConflictDetail, mapStem } from "@/constants/termMap";
+import { BRANCH_HIDDEN_STEMS, BRANCH_MAIN_STEM, PILLAR_ORDER } from "@/features/bazi-card/constants";
+import {
+  branchInConflict,
+  computeBranchEnergy,
+  computeRootState,
+  deityAbbr,
+  resolveTimelineStem,
+  splitGanZhi,
+} from "@/features/bazi-card/utils";
 
 type Props = {
   metadata: BaziMetadata | null;
@@ -18,60 +27,6 @@ type Props = {
   t?: (s: string) => string;
   lang?: Lang;
 };
-
-const PILLAR_ORDER: Array<keyof NonNullable<BaziMetadata["pillars"]>> = ["year", "month", "day", "hour"];
-
-function branchInConflict(branch: string, points: ConflictPoint[]): boolean {
-  return points.some((p) => p.detail.includes(branch));
-}
-
-function splitGanZhi(gz: string): { stem: string; branch: string } {
-  if (gz && gz.length >= 2) {
-    return { stem: gz[0], branch: gz[1] };
-  }
-  return { stem: "?", branch: gz || "?" };
-}
-
-function clampEnergy(v: number) {
-  return Math.max(0, Math.min(100, Math.round(v)));
-}
-
-const STEM_ELEMENT: Record<string, "wood" | "fire" | "earth" | "metal" | "water"> = {
-  甲: "wood", 乙: "wood", 丙: "fire", 丁: "fire", 戊: "earth", 己: "earth", 庚: "metal", 辛: "metal", 壬: "water", 癸: "water",
-};
-const STEM_POLARITY: Record<string, "yang" | "yin"> = {
-  甲: "yang", 丙: "yang", 戊: "yang", 庚: "yang", 壬: "yang",
-  乙: "yin", 丁: "yin", 己: "yin", 辛: "yin", 癸: "yin",
-};
-const ELEMENT_GENERATES: Record<string, string> = { wood: "fire", fire: "earth", earth: "metal", metal: "water", water: "wood" };
-const ELEMENT_CONTROLS: Record<string, string> = { wood: "earth", fire: "metal", earth: "water", metal: "wood", water: "fire" };
-const BRANCH_MAIN_STEM: Record<string, string> = {
-  子: "癸", 丑: "己", 寅: "甲", 卯: "乙", 辰: "戊", 巳: "丙", 午: "丁", 未: "己", 申: "庚", 酉: "辛", 戌: "戊", 亥: "壬",
-};
-const BRANCH_HIDDEN_STEMS: Record<string, string[]> = {
-  子: ["癸"], 丑: ["己", "癸", "辛"], 寅: ["甲", "丙", "戊"], 卯: ["乙"], 辰: ["戊", "乙", "癸"], 巳: ["丙", "戊", "庚"],
-  午: ["丁", "己"], 未: ["己", "丁", "乙"], 申: ["庚", "壬", "戊"], 酉: ["辛"], 戌: ["戊", "辛", "丁"], 亥: ["壬", "甲"],
-};
-const DEITY_ABBR: Record<string, string> = {
-  比肩: "比", 劫财: "劫", 食神: "食", 伤官: "伤", 正财: "财", 偏财: "才", 正官: "官", 七杀: "杀", 正印: "印", 偏印: "枭",
-};
-
-function deityByDayAndTarget(dayStem: string, targetStem: string): string {
-  const selfEl = STEM_ELEMENT[dayStem];
-  const tarEl = STEM_ELEMENT[targetStem];
-  const dayPol = STEM_POLARITY[dayStem];
-  const tarPol = STEM_POLARITY[targetStem];
-  if (!selfEl || !tarEl || !dayPol || !tarPol) return "比肩";
-  if (selfEl === tarEl) return tarPol === dayPol ? "比肩" : "劫财";
-  if (ELEMENT_GENERATES[selfEl] === tarEl) return tarPol === dayPol ? "食神" : "伤官";
-  if (ELEMENT_CONTROLS[selfEl] === tarEl) return tarPol === dayPol ? "偏财" : "正财";
-  if (ELEMENT_CONTROLS[tarEl] === selfEl) return tarPol === dayPol ? "七杀" : "正官";
-  return tarPol === dayPol ? "偏印" : "正印";
-}
-
-function deityAbbr(dayStem: string, targetStem: string) {
-  return DEITY_ABBR[deityByDayAndTarget(dayStem, targetStem)] || "比";
-}
 
 export function BaziCard({
   metadata,
@@ -100,57 +55,16 @@ export function BaziCard({
   const hoveredRoot = hoveredDeity ? (rootDetailsByDeity[hoveredDeity] || {}) : {};
   const hoveredRootSources = new Set<string>((hoveredRoot.root_sources || []) as string[]);
   const hoveredStemSources = new Set<string>((hoveredRoot.stem_sources || []) as string[]);
-  const selfEnergy = Math.max(0, Math.min(100, Number(deityScores["比肩"] ?? 0) + Number(deityScores["劫财"] ?? 0)));
-  const selfAbs = Number(deityEnergyAxes["比肩"]?.absolute_energy ?? 0) + Number(deityEnergyAxes["劫财"]?.absolute_energy ?? 0);
-  const dayRootBranches: Record<string, string[]> = {
-    甲: ["寅", "卯", "辰", "未", "亥"],
-    乙: ["寅", "卯", "辰", "未"],
-    丙: ["巳", "午", "寅", "未"],
-    丁: ["巳", "午", "未", "戌"],
-    戊: ["辰", "戌", "丑", "未", "巳", "午"],
-    己: ["辰", "戌", "丑", "未", "午"],
-    庚: ["申", "酉", "戌", "丑"],
-    辛: ["申", "酉", "戌", "丑"],
-    壬: ["亥", "子", "申", "辰"],
-    癸: ["亥", "子", "丑", "辰"],
-  };
-  const roots = dayRootBranches[dayStem] ?? [];
-  const hasRootInNatal = [pillars.year.branch, pillars.month.branch, pillars.day.branch, pillars.hour.branch].some((b) => roots.includes(b));
-  const unstableRoot = confirmedConflictDetails.some((x) => x.includes("冲"));
-  const hasGengLuck = (timeline?.dayun || "").includes("庚");
-  const hasBingWuYear = (timeline?.liunian || "").includes("丙午");
-  const extremeExhausted = !hasRootInNatal && (hasBingWuYear || unstableRoot || selfEnergy <= 16.0 || selfAbs < 0.5);
-  const selfGlow = extremeExhausted ? 0.30 : (0.25 + selfEnergy / 130);
-  const branchEnergy: Record<string, number> = {
-    year_branch: pillars.year.energy_value ?? 100,
-    month_branch: pillars.month.energy_value ?? 100,
-    day_branch: pillars.day.energy_value ?? 100,
-    hour_branch: pillars.hour.energy_value ?? 100,
-  };
-  points.forEach((p) => {
-    if (!confirmedConflictDetails.includes(p.detail)) return;
-    if (p.kind === "clash") {
-      if (p.detail.includes("子午冲") && p.positions.length === 2) {
-        const [a, b] = p.positions;
-        const aBranch = (pillars as Record<string, { branch: string }>)[a.replace("_branch", "")]?.branch;
-        const bBranch = (pillars as Record<string, { branch: string }>)[b.replace("_branch", "")]?.branch;
-        if (aBranch === "子") {
-          branchEnergy[a] = clampEnergy(branchEnergy[a] - 30);
-          branchEnergy[b] = clampEnergy(branchEnergy[b] - 60);
-        } else if (bBranch === "子") {
-          branchEnergy[a] = clampEnergy(branchEnergy[a] - 60);
-          branchEnergy[b] = clampEnergy(branchEnergy[b] - 30);
-        } else {
-          branchEnergy[a] = clampEnergy(branchEnergy[a] - 45);
-          branchEnergy[b] = clampEnergy(branchEnergy[b] - 45);
-        }
-      } else {
-        p.positions.forEach((pos) => {
-          branchEnergy[pos] = clampEnergy((branchEnergy[pos] ?? 100) - 40);
-        });
-      }
-    }
-  });
+  const { roots, hasRootInNatal, unstableRoot, hasGengLuck, hasBingWuYear, selfEnergy, extremeExhausted, selfGlow } =
+    computeRootState({
+      dayStem,
+      pillars,
+      timeline,
+      confirmedConflictDetails,
+      deityScores,
+      deityEnergyAxes,
+    });
+  const branchEnergy = computeBranchEnergy({ pillars, points, confirmedConflictDetails });
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -277,7 +191,7 @@ export function BaziCard({
                 <div className="mt-0.5 text-[10px] text-zinc-400">{deityAbbr(dayStem, gb.stem)}</div>
                 <div className="mt-1 rounded-md border border-zinc-700 px-2 py-1 text-base">{mapBranch(gb.branch, lang)}</div>
                 <div className="mt-0.5 text-[10px] text-zinc-500">
-                  {deityAbbr(dayStem, BRANCH_MAIN_STEM[gb.branch] || gb.stem)}
+                  {deityAbbr(dayStem, resolveTimelineStem(gb.branch, gb.stem))}
                   {BRANCH_HIDDEN_STEMS[gb.branch]?.length ? (
                     <span className="ml-1 text-[9px] text-zinc-600">
                       ({BRANCH_HIDDEN_STEMS[gb.branch].map((s) => deityAbbr(dayStem, s)).join("/")})

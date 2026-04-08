@@ -1,14 +1,7 @@
 "use client";
 
-type LogicProposal = {
-  title?: string;
-  param_key?: string;
-  suggested_value?: number;
-  reason?: string;
-  expected_impact?: string;
-  sql_patch?: string;
-  source_role?: string;
-};
+import { LogicProposal } from "@/features/auditor-briefing/types";
+import { formatVal, getAuditorBriefingState } from "@/features/auditor-briefing/utils";
 
 type Props = {
   causalReasoning?: string;
@@ -23,11 +16,6 @@ type Props = {
   alreadyAdded?: boolean;
   onAddToInbox?: (proposal: LogicProposal) => void;
 };
-
-function formatVal(v: number | undefined) {
-  if (typeof v !== "number" || Number.isNaN(v)) return "—";
-  return v.toFixed(2);
-}
 
 export function AuditorBriefing({
   causalReasoning,
@@ -46,12 +34,14 @@ export function AuditorBriefing({
   // 用户手动转入 Decision Inbox 后，临时语义窗口必须消失；
   // 但“自动转法案”需要在气泡中给出可视反馈，因此允许保留（autoConverted=true）。
   if (alreadyAdded && !autoConverted) return null;
-  const key = logicProposal.param_key || "";
-  const cur = key ? currentParams?.[key] : undefined;
-  const next = logicProposal.suggested_value;
-  const hasSqlPatch = Boolean(logicProposal.sql_patch);
-  const aligned = Boolean(structuredHit) && typeof alignmentScore === "number" && alignmentScore >= 60.0;
-  const disableByState = alreadyAdded || autoConverted;
+  const { key, currentValue, nextValue, hasSqlPatch, aligned, disableByState } = getAuditorBriefingState({
+    logicProposal,
+    currentParams,
+    alignmentScore,
+    structuredHit,
+    autoConverted,
+    alreadyAdded,
+  });
 
   return (
     <section className="rounded-2xl border border-amber-500/35 bg-amber-950/35 p-4 shadow-[0_0_26px_rgba(245,158,11,0.08)]">
@@ -86,14 +76,14 @@ export function AuditorBriefing({
           <div className="flex items-center justify-between gap-3 text-[11px] text-amber-200">
             <span>物理参数对比预览</span>
             <span>
-              {key}: {formatVal(cur)} -&gt; {formatVal(next)}
+              {key}: {formatVal(currentValue)} -&gt; {formatVal(nextValue)}
             </span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded bg-zinc-800">
             <div
               className="h-full bg-amber-400/80"
               style={{
-                width: `${Math.max(0, Math.min(100, (Number(next ?? 0) / 2.0) * 100))}%`,
+                width: `${Math.max(0, Math.min(100, (Number(nextValue ?? 0) / 2.0) * 100))}%`,
               }}
             />
           </div>
@@ -144,4 +134,3 @@ export function AuditorBriefing({
     </section>
   );
 }
-

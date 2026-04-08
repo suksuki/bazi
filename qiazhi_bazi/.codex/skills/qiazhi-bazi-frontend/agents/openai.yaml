@@ -1,0 +1,4 @@
+interface:
+  display_name: "Qiazhi Frontend"
+  short_description: "Work on the Next.js frontend with feature-oriented MVC patterns"
+  default_prompt: "Use the qiazhi-bazi-frontend skill to implement or refactor frontend features with page, controller hook, view, and helper splits, then validate with frontend tests and build."

@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 class AuditLog(BaseModel):
     skill_id: str
     skill_version: str
+    rule_version: str = "unversioned"
     param_version_id: str
     formula_refs: list[str] = Field(default_factory=list)
     param_snapshot: Dict[str, float] = Field(default_factory=dict)

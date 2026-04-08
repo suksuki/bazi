@@ -1,5 +1,8 @@
 "use client";
 
+import { ALL_DEITIES, TEN_GOD_ORDER } from "@/features/ten-god-list/constants";
+import { buildConsensusText, buildLockedDeitySet, extractHardRouteKeys } from "@/features/ten-god-list/utils";
+
 type Props = {
   deityScores: Record<string, number>;
   deityEnergyAxes?: Record<string, { absolute_energy?: number; relative_percentage?: number }>;
@@ -28,59 +31,6 @@ type Props = {
   onHoverDeity?: (deityName?: string) => void;
 };
 
-const ORDER = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"];
-
-const ALL_DEITIES = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"] as const;
-
-function extractHardRouteKeys(hardRouteLogs: string[]): string[] {
-  const keys = new Set<string>();
-  hardRouteLogs.forEach((line) => {
-    const hit = String(line || "").match(/Param '([^']+)'/);
-    if (hit?.[1]) keys.add(hit[1]);
-  });
-  return Array.from(keys);
-}
-
-function buildLockedDeitySet(hardRouteLogs: string[]): Set<string> {
-  const locked = new Set<string>();
-  const keys = extractHardRouteKeys(hardRouteLogs);
-  const joinedLogs = hardRouteLogs.join(" ");
-
-  keys.forEach((key) => {
-    if (key === "CF_FLOATING_DECAY") {
-      locked.add("比肩");
-      locked.add("劫财");
-      return;
-    }
-    if (key === "A_PROTRUSION") {
-      ALL_DEITIES.forEach((d) => {
-        if (joinedLogs.includes(d)) locked.add(d);
-      });
-      return;
-    }
-    if (key.startsWith("EFF_RESTRAINING")) {
-      ["正官", "七杀", "比肩", "劫财"].forEach((d) => locked.add(d));
-      return;
-    }
-    if (key.startsWith("EFF_EXHAUSTING")) {
-      ["比肩", "劫财", "食神", "伤官"].forEach((d) => locked.add(d));
-      return;
-    }
-    if (key.startsWith("EFF_CONSUMING")) {
-      ["比肩", "劫财", "正财", "偏财"].forEach((d) => locked.add(d));
-      return;
-    }
-    if (key.startsWith("EFF_GENERATING")) {
-      ["正印", "偏印", "比肩", "劫财"].forEach((d) => locked.add(d));
-    }
-  });
-
-  ALL_DEITIES.forEach((d) => {
-    if (joinedLogs.includes(d)) locked.add(d);
-  });
-  return locked;
-}
-
 function LockIcon({ title }: { title: string }) {
   return (
     <span title={title} className="inline-flex items-center text-sky-300 transition-colors hover:text-sky-200" aria-label={title}>
@@ -105,9 +55,7 @@ export function TenGodNumericList({
   onHoverDeity,
 }: Props) {
   const anomalyTag = (topAnomaly || "").trim();
-  const consensusText = consensusHistory
-    .map((x) => `${x.decision_key}=${typeof x.confirmed_value === "number" ? x.confirmed_value.toFixed(2) : "?"}`)
-    .join("; ");
+  const consensusText = buildConsensusText(consensusHistory);
   const lockedByKeys = extractHardRouteKeys(hardRouteLogs);
   const lockedDeities = buildLockedDeitySet(hardRouteLogs);
   return (
@@ -127,7 +75,7 @@ export function TenGodNumericList({
         </div>
       </div>
       <div className="space-y-2">
-        {ORDER.map((name) => {
+        {TEN_GOD_ORDER.map((name) => {
           const relPct = Number((deityEnergyAxes[name]?.relative_percentage ?? deityScores[name]) ?? 0);
           const absEnergy = Number((deityEnergyAxes[name]?.absolute_energy ?? 0) ?? 0);
           const comp = deityComponents[name] || {};

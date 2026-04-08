@@ -2,30 +2,27 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { detectElementFromText, elementColorClass } from "@/constants/termMap";
-
-type Card = {
-  id: string;
-  title: string;
-  markdown: string;
-  conflictDetail?: string;
-  displayText?: string;
-  cardType?: "conflict" | "auditor-proposal" | "proposal";
-  proposal?: unknown;
-};
+import { elementColorClass } from "@/constants/termMap";
+import { DecisionInboxCard, VerdictChangeLog } from "@/features/decision-inbox/types";
+import {
+  getCardElement,
+  getCardLabel,
+  getEvidenceTone,
+  isAuditorProposal,
+  isVerdictDeity,
+  pruneSelectedIds,
+  splitVerdictLine,
+} from "@/features/decision-inbox/utils";
 
 type Props = {
-  cards: Card[];
+  cards: DecisionInboxCard[];
   resultLogs: string[];
   verdictBody?: string;
-  verdictChangeLog?: {
-    physics_diff?: string[];
-    consensus_diff?: string[];
-    text_diff_hint?: string;
-  };
+  verdictChangeLog?: VerdictChangeLog;
   logicalEvidence?: string[];
+  workVector?: Record<string, unknown>;
   highlightVerdict?: boolean;
-  onExecuteDecision: (selected: Card[]) => Promise<void>;
+  onExecuteDecision: (selected: DecisionInboxCard[]) => Promise<void>;
   onVerdictDeityClick?: (deity: string) => void;
   onEvidenceClick?: (evidence: string) => void;
   onShowVersionHistory?: () => void;
@@ -43,6 +40,7 @@ export function DecisionInbox({
   verdictBody = "",
   verdictChangeLog = {},
   logicalEvidence = [],
+  workVector = {},
   highlightVerdict = false,
   onExecuteDecision,
   onVerdictDeityClick,
@@ -63,14 +61,7 @@ export function DecisionInbox({
 
   useEffect(() => {
     // 卡片内容可能因翻译或流式更新变化；仅移除不存在的 id，避免勾选被瞬间清空。
-    setSelectedIds((prev) => {
-      const validIds = new Set(cards.map((c) => c.id));
-      const next: Record<string, boolean> = {};
-      Object.entries(prev).forEach(([id, checked]) => {
-        if (validIds.has(id)) next[id] = checked;
-      });
-      return next;
-    });
+    setSelectedIds((prev) => pruneSelectedIds(prev, cards.map((card) => card.id)));
   }, [cards]);
 
   useEffect(() => {
@@ -86,31 +77,8 @@ export function DecisionInbox({
     }
   }
 
-  const DEITIES = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"];
-  function evidenceTone(evidence: string) {
-    const text = String(evidence || "");
-    const m = text.match(/Abs=([0-9]+(?:\.[0-9]+)?)/);
-    const abs = m ? Number(m[1]) : NaN;
-    if (Number.isFinite(abs)) {
-      if (abs < 0.5) {
-        return "border-zinc-600 bg-zinc-950 text-zinc-300 animate-pulse";
-      }
-      if (abs < 2.0) {
-        return "border-orange-700/70 bg-orange-950/40 text-orange-300";
-      }
-      if (abs < 5.0) {
-        return "border-sky-700/70 bg-sky-950/40 text-sky-300";
-      }
-      return "border-fuchsia-600/70 bg-fuchsia-950/35 text-fuchsia-300";
-    }
-    if (text.includes("状态:熄灭")) return "border-zinc-600 bg-zinc-950 text-zinc-300 animate-pulse";
-    if (text.includes("状态:衰微")) return "border-orange-700/70 bg-orange-950/40 text-orange-300";
-    if (text.includes("状态:中和")) return "border-sky-700/70 bg-sky-950/40 text-sky-300";
-    if (text.includes("状态:强旺")) return "border-fuchsia-600/70 bg-fuchsia-950/35 text-fuchsia-300";
-    return "border-zinc-800 bg-zinc-950 text-zinc-400";
-  }
   function renderVerdictLine(line: string, idx: number) {
-    const parts = line.split(new RegExp(`(${DEITIES.join("|")})`, "g"));
+    const parts = splitVerdictLine(line);
     return (
       <p
         key={`${idx}-${line.slice(0, 12)}`}
@@ -123,7 +91,7 @@ export function DecisionInbox({
         }`}
       >
         {parts.map((part, i) => (
-          DEITIES.includes(part) ? (
+          isVerdictDeity(part) ? (
             <button
               key={`${idx}-${i}-${part}`}
               type="button"
@@ -163,9 +131,9 @@ export function DecisionInbox({
               <AnimatePresence initial={false}>
               {cards.map((card) => (
                 (() => {
-                  const labelText = card.displayText ?? card.conflictDetail ?? card.title;
-                  const element = detectElementFromText(labelText);
-                  const isAuditorProposal = card.cardType === "auditor-proposal" || card.cardType === "proposal";
+                  const labelText = getCardLabel(card);
+                  const element = getCardElement(card);
+                  const isProposal = isAuditorProposal(card.cardType);
                   return (
                 <motion.label
                   key={card.id}
@@ -184,7 +152,7 @@ export function DecisionInbox({
                       <span className={`mr-1 inline-block h-2 w-2 rounded-full ${elementColorClass(element)}`} />
                     </span>
                     {labelText}
-                    {isAuditorProposal ? (
+                    {isProposal ? (
                       <span className="ml-2 rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-300">
                         [Auditor 提案]
                       </span>
@@ -299,7 +267,7 @@ export function DecisionInbox({
                       key={`ev-${i}`}
                       type="button"
                       onClick={() => onEvidenceClick?.(x)}
-                      className={`block w-full rounded border px-2 py-1 text-left hover:border-sky-500/40 hover:text-sky-200 ${evidenceTone(x)}`}
+                      className={`block w-full rounded border px-2 py-1 text-left hover:border-sky-500/40 hover:text-sky-200 ${getEvidenceTone(x)}`}
                       title="点击下钻证据"
                     >
                       {x}
@@ -309,6 +277,30 @@ export function DecisionInbox({
               ) : null}
             </div>
           ) : null}
+          {Array.isArray((workVector as { work_vectors?: unknown[] })?.work_vectors)
+            && ((workVector as { work_vectors?: unknown[] })?.work_vectors || []).length > 0 ? (
+              <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
+                <p className="mb-1 text-zinc-300">盲派做功链路图（L2）</p>
+                <div className="space-y-1">
+                  {((workVector as { work_vectors?: Array<Record<string, unknown>> }).work_vectors || []).slice(0, 3).map((item, idx) => {
+                    const net = Number(item.expected_work ?? 0);
+                    const tone = net > 0 ? "text-cyan-300" : (net < 0 ? "text-orange-300" : "text-zinc-300");
+                    const trigger = String(item.detail || item.type || "冲");
+                    return (
+                      <p key={`wv-${idx}`} className={tone}>
+                        触发: {trigger}
+                        {" -> "}
+                        释放: {Number(item.released_energy ?? 0).toFixed(2)}
+                        {" -> "}
+                        损耗: -{Number(item.backfire_risk ?? 0).toFixed(2)}
+                        {" -> "}
+                        净值: {net >= 0 ? "+" : ""}{net.toFixed(2)}
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
         </div>
       </section>
     </section>

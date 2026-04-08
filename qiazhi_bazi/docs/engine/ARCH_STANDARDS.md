@@ -6,7 +6,7 @@
 ## 1. 目标与原则
 
 - 单一真值源：所有能量相关计算以 `physics_tensor` 为唯一真值源（SSOT）。
-- 数据即逻辑：业务阈值、系数、规则必须在 PostgreSQL 中管理，不得硬编码。
+- 数据即逻辑：业务阈值、系数、规则必须在 PostgreSQL 中管理，不得在运行链路硬编码。
 - 可追溯：每次推演都能追溯到参数版本、规则版本和插件版本。
 - 可回退：参数异常时可降级、可回滚、可审计。
 
@@ -31,12 +31,12 @@
 
 ## 4. Plugin Protocol（强制接口）
 
-所有插件必须实现统一协议（可通过抽象基类或约定实现）：
+计算类插件必须实现统一协议（可通过抽象基类或约定实现）；叙事/生成类插件可使用 `generate(...)` 约定，但仍需可追溯：
 
 - `consume(context) -> dict`
   - 声明依赖输入（例如 `StructureSkill` 必须消费 `deity_scores`）
 - `produce(context) -> dict`
-  - 输出必须包含：`confidence`、`evidence`
+  - 计算类输出建议包含：`confidence`、`evidence`（可渐进落地）
 - `audit(context) -> dict`
   - 返回可审计链路：公式、参数键、关键中间值
 
@@ -54,6 +54,7 @@
   - 上游 `physics_tensor` 或
   - DB 参数键（如 `EFF_*`）
 - 插件内出现业务常数（如 `0.6`、`1.2`）视为违规。
+- 允许在 `DEFAULT_*` 种子配置中声明初始值，仅用于首次入库；运行态必须以 DB 参数为准。
 
 ### 5.1 物理常数封版记录
 
@@ -70,6 +71,17 @@
   - `payload_json`（条件与阈值）
   - `updated_at`
 - 所有写入必须可审计（建议保留历史版本表或变更日志）。
+
+### 6.1 Parameter Sovereignty（参数主权）
+
+- 严禁在 `app/skills` 中直接写死业务权重与风险常量（包括 luck/year 权重、反噬风险、墓库锁定率）。
+- 统一参数来源优先级：
+  1. 请求级 `physics_config`（实验热注入）
+  2. 系统默认常量中心（`app/core/config/physics_settings.py`）
+  3. 历史兼容默认值（仅回退用）
+- 所有运行时参数必须进入审计链：
+  - `physics_tensor.meta.runtime_physics_config`
+  - `physics_tensor.audit_log.trace.runtime_physics_config`
 
 ## 7. 错误与回退机制
 
@@ -108,6 +120,24 @@
 3. 插件实现仅引用 DB + 上游张量。
 4. 用基准样例（如 1990 案例）回归验证。
 5. 更新 `skill_version` / `rule_version`，记录变更摘要。
+
+## 9.1 L2 Blind-School Standards（V1）
+
+- `BODY`（体）：`比肩` `劫财` `正印` `偏印`
+- `USE`（用）：`食神` `伤官` `正财` `偏财` `正官` `七杀`
+- `work_vector.eta`：做功效率系数，表示释放能量转化为有效做功的比例。
+- `expected_work`（V1）：
+  - `expected_work = unlock_gain - backfire_risk`
+  - `unlock_gain = released_energy * eta`
+  - `backfire_risk = released_energy * risk_factor`
+- `risk_factor`（V1）：
+  - 默认 `0.20`
+  - 当 `BODY_Abs < 1.5` 且 `released_energy > 4.0`，上调到 `0.35`
+- `net_effect`：
+  - `gain` / `neutral` / `risk`
+- LLM 强制约束：
+  - 必须引用 `net_effect` 与 `backfire_risk` 做辩证分析。
+  - 当 `backfire_risk > unlock_gain * 0.40`，禁止单边褒义判词，必须说明“代价/震荡”。
 
 ## 10. 当前基准样例
 

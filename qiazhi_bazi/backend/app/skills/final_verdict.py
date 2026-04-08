@@ -9,13 +9,16 @@ from typing import Any, Dict, List
 
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
+from app.skills.base import AuditLog, BaseSkill
+from app.skills.blind_work_evaluator import evaluate_blind_work
 
 
-class FinalVerdictSkill:
+class FinalVerdictSkill(BaseSkill):
     _instance: "FinalVerdictSkill | None" = None
     _lock = Lock()
     skill_id = "final_verdict_skill"
     skill_version = "1.0.0"
+    rule_version = "final_verdict_rules.v1"
 
     @classmethod
     def instance(cls) -> "FinalVerdictSkill":
@@ -109,6 +112,18 @@ class FinalVerdictSkill:
             selected_cards=selected_cards,
             consensus_history=consensus_history,
         )
+        blind_work = evaluate_blind_work(metadata, physics_tensor)
+        work_lines = []
+        for idx, vector in enumerate(blind_work.get("work_vectors", [])):
+            work_lines.append(
+                f"做功.{idx+1}={vector.get('type')}|{vector.get('direction')}|eta={vector.get('eta')}|gain={vector.get('unlock_gain')}|risk={vector.get('backfire_risk')}|E={vector.get('expected_work')}"
+            )
+        work_lines.append(f"做功.total={blind_work.get('work_expectation', 0.0)}")
+        work_lines.append(f"做功.gain={blind_work.get('unlock_gain', 0.0)}")
+        work_lines.append(f"做功.risk={blind_work.get('backfire_risk', 0.0)}")
+        work_lines.append(f"做功.risk_ratio={blind_work.get('risk_ratio', 0.0)}")
+        work_lines.append(f"做功.net_effect={blind_work.get('net_effect', 'neutral')}")
+        work_lines.append(f"做功.hint={blind_work.get('llm_hint', '劳而无功')}")
         system = (
             "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
             "你必须每次返回一份全量、唯一、可执行的终判，不允许追加旧内容。"
@@ -118,11 +133,15 @@ class FinalVerdictSkill:
             "输出严格 JSON："
             '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""}}。'
             "change_log 仅写相对上一版的变化；若无上一版则写当前基线要点。"
+            "请根据 [Blind Work Vector] 评估日主获取能量效率：做功值为负偏向“劳而无功”，为正偏向“取财有道”。"
+            "必须引用 net_effect 做辩证分析；当 backfire_risk 超过 unlock_gain 的40%时，严禁只给单边褒义结论，必须说明代价与震荡。"
             f"{lang_hint}"
         )
         user = (
             "[Physical Evidence]\n"
             + "\n".join(f"- {x}" for x in logical_evidence)
+            + "\n[Blind Work Vector]\n"
+            + "\n".join(f"- {x}" for x in work_lines)
             + "\n[User Consensus]\n"
             + "\n".join(f"- {x}" for x in FinalVerdictSkill.get_logical_evidence(
                 metadata={},
@@ -142,6 +161,49 @@ class FinalVerdictSkill:
             "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
         )
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+    def consume(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "metadata": context.get("metadata") or {},
+            "physics_tensor": context.get("physics_tensor") or {},
+            "selected_cards": list(context.get("selected_cards") or []),
+            "consensus_history": list(context.get("consensus_history") or []),
+            "previous_verdict": str(context.get("previous_verdict") or ""),
+            "previous_logical_evidence": list(context.get("previous_logical_evidence") or []),
+            "lang": str(context.get("lang") or "ZH"),
+        }
+
+    def produce(self, consumed: Dict[str, Any]) -> Dict[str, Any]:
+        # 非流式协议适配：保持与 generate 一致的返回骨架。
+        return {
+            "version_id": "",
+            "verdict_body": "",
+            "change_log": {"physics_diff": [], "consensus_diff": [], "text_diff_hint": ""},
+            "logical_evidence": self.get_logical_evidence(
+                metadata=consumed.get("metadata") or {},
+                physics_tensor=consumed.get("physics_tensor") or {},
+                selected_cards=consumed.get("selected_cards") or [],
+                consensus_history=consumed.get("consensus_history") or [],
+            ),
+        }
+
+    def audit(self, consumed: Dict[str, Any], produced: Dict[str, Any]) -> AuditLog:
+        return AuditLog(
+            skill_id=self.skill_id,
+            skill_version=self.skill_version,
+            rule_version=self.rule_version,
+            param_version_id=str(
+                (((consumed.get("physics_tensor") or {}).get("audit_log") or {}).get("param_version_id") or "unknown")
+            ),
+            formula_refs=["final_verdict.prompt_json_contract", "final_verdict.logical_evidence_diff"],
+            trace={
+                "lang": consumed.get("lang", "ZH"),
+                "selected_cards_count": len(consumed.get("selected_cards") or []),
+                "consensus_count": len(consumed.get("consensus_history") or []),
+                "has_previous_verdict": bool(str(consumed.get("previous_verdict") or "").strip()),
+                "generated_version_id": produced.get("version_id"),
+            },
+        )
 
     async def generate(
         self,
@@ -192,6 +254,13 @@ class FinalVerdictSkill:
             selected_cards=selected_cards,
             consensus_history=consensus_history,
         )
+        blind_work = evaluate_blind_work(metadata, physics_tensor)
+        logical_evidence.extend(
+            [
+                f"做功.total={blind_work.get('work_expectation', 0.0)}",
+                f"做功.hint={blind_work.get('llm_hint', '劳而无功')}",
+            ]
+        )
         prev_evidence = [str(x).strip() for x in (previous_logical_evidence or []) if str(x).strip()]
         prev_map: Dict[str, str] = {}
         curr_map: Dict[str, str] = {}
@@ -237,11 +306,33 @@ class FinalVerdictSkill:
             )
         if not change_log.get("physics_diff") and not change_log.get("consensus_diff"):
             change_log["text_diff_hint"] = change_log.get("text_diff_hint") or "已生成全量重写终判（非追加模式）。"
-        return {
-            "version_id": datetime.utcnow().strftime("v2.%m%d%H%M%S"),
+        version_id = datetime.utcnow().strftime("v2.%m%d%H%M%S")
+        consumed = self.consume(
+            {
+                "metadata": metadata,
+                "physics_tensor": physics_tensor,
+                "selected_cards": selected_cards,
+                "consensus_history": consensus_history,
+                "previous_verdict": previous_verdict,
+                "previous_logical_evidence": previous_logical_evidence or [],
+                "lang": lang,
+            }
+        )
+        produced = {
+            "version_id": version_id,
             "verdict_body": verdict_body,
             "change_log": change_log,
             "logical_evidence": logical_evidence,
+            "work_vector": blind_work,
+        }
+        audit_log = self.audit(consumed, produced).model_dump()
+        return {
+            "version_id": version_id,
+            "verdict_body": verdict_body,
+            "change_log": change_log,
+            "logical_evidence": logical_evidence,
+            "work_vector": blind_work,
+            "audit_log": audit_log,
             "raw": raw,
         }
 

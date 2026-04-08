@@ -92,6 +92,29 @@ export function AuditSidebar({
                   {String((x.payload as { snapshot_summary?: string }).snapshot_summary || "")}
                 </p>
               ) : null}
+              {x.role === "Auditor"
+                && typeof x.payload === "object"
+                && x.payload !== null
+                && "physics_confidence" in x.payload ? (
+                  <p className="mt-1 text-[10px] text-zinc-500">
+                    physics confidence: {(() => {
+                      const raw = (x.payload as { physics_confidence?: number | null }).physics_confidence;
+                      return typeof raw === "number" ? `${Math.round(raw * 100)}%` : "--";
+                    })()}
+                  </p>
+                ) : null}
+              {x.role === "Auditor"
+                && typeof x.payload === "object"
+                && x.payload !== null
+                && "final_verdict_version_id" in x.payload ? (
+                  <p className="mt-1 text-[10px] text-zinc-500">
+                    final verdict: {String((x.payload as { final_verdict_version_id?: string }).final_verdict_version_id || "--")}
+                    {" | "}
+                    {String((x.payload as { skill_id?: string }).skill_id || "final_verdict_skill")}
+                    {" | "}
+                    {String((x.payload as { rule_version?: string }).rule_version || "unversioned")}
+                  </p>
+                ) : null}
               {x.role === "Core"
                 && typeof x.payload === "object"
                 && x.payload !== null
