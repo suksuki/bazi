@@ -7,6 +7,8 @@ from typing import Any, Dict, List
 
 from sqlmodel import select
 
+from app.plugins.blind_school.core import run_blind_school_plugin
+from app.core.plugins.registry import PluginRegistry
 from app.api.contracts import AnalyzeClashRequest, AnalyzeSeedRequest, FinalVerdictRequest, TranslateRequest
 from app.api.router_helpers import apply_energy_preview, guess_text_lang, physics_snapshot
 from app.core.runtime_config import get_runtime_config
@@ -14,6 +16,7 @@ from app.core.scanner import Scanner
 from app.db.models import SessionConsensus
 from app.llm.client import QwenClient, build_first_observation_messages
 from app.schemas.bazi_metadata import BaziMetadata, FlowState
+from app.schemas.bazi_metadata import FourPillars
 from app.services.helpers.analysis_helpers import (
     build_seed_audit_summary,
     build_translation_messages,
@@ -23,6 +26,9 @@ from app.services.helpers.analysis_helpers import (
 )
 from app.skills.final_verdict import FinalVerdictSkill
 from app.skills.physics_engine import PhysicsInferenceSkill
+from app.skills.structure_final_decision import build_structure_final_decision_v0
+from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
+from app.skills.energy_topology_skill import EnergyTopologySkill
 
 
 async def translate_text_items(body: TranslateRequest) -> Dict[str, List[str]]:
@@ -94,6 +100,17 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         }
     )
     physics_tensor = physics_skill.produce(consumed)
+    registry = PluginRegistry()
+    plugin_outputs = registry.run_hook(
+        hook="on_physics_complete",
+        enabled_plugins=body.enabled_plugins,
+        context={"physics_tensor": physics_tensor, "metadata": metadata_obj.model_dump()},
+    )
+    physics_tensor.setdefault("meta", {})
+    if isinstance(physics_tensor.get("meta"), dict):
+        physics_tensor["meta"]["enabled_plugins"] = list(body.enabled_plugins or [])
+        physics_tensor["meta"]["plugin_specs"] = registry.list_specs()
+    physics_tensor["plugin_outputs"] = plugin_outputs
     return {
         "metadata": metadata_obj.model_dump(),
         "llm_prompt": llm_text,
@@ -108,7 +125,12 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
 
 async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timeline_snapshot: Any, now_iso_value: str) -> Dict[str, Any]:
     pillars = get_bazi(body.date, body.time, body.calendar)
-    timeline = get_timeline_snapshot(body.date, body.time, body.calendar)
+    timeline = get_timeline_snapshot(
+        body.date,
+        body.time,
+        body.calendar,
+        1 if body.gender == "male" else 0,
+    )
     result = await analyze_clash_flow(
         AnalyzeClashRequest(
             pillars=pillars,
@@ -119,9 +141,11 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
             dayun=(timeline or {}).get("dayun"),
             liunian=(timeline or {}).get("liunian"),
             physics_config=body.physics_config,
+            enabled_plugins=body.enabled_plugins,
         )
     )
     metadata = result["metadata"]
+    metadata["gender"] = body.gender
     llm_meta = result.get("llm_meta", {})
     snapshot_summary = physics_snapshot(result.get("physics_tensor", {}) or {})
     result["audit_summary"] = build_seed_audit_summary(
@@ -169,14 +193,18 @@ def resolve_consensus_history(
 
 async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: List[Dict[str, Any]]) -> Dict[str, Any]:
     skill = FinalVerdictSkill.instance()
+    clear_flag = bool(body.clear_previous_verdict or body.force_clear_cache)
+    previous_verdict = "" if clear_flag else (body.previous_verdict or "")
+    previous_logical_evidence = [] if clear_flag else (body.previous_logical_evidence or [])
     out = await skill.generate(
         metadata=body.metadata or {},
         physics_tensor=body.physics_tensor or {},
         selected_cards=body.selected_cards or [],
         consensus_history=consensus_history,
-        previous_verdict=body.previous_verdict or "",
-        previous_logical_evidence=body.previous_logical_evidence or [],
+        previous_verdict=previous_verdict,
+        previous_logical_evidence=previous_logical_evidence,
         lang=body.lang,
+        plugin_weights=body.plugin_weights or {},
     )
     return {
         "ok": True,
@@ -185,5 +213,94 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         "change_log": out.get("change_log", []),
         "logical_evidence": out.get("logical_evidence", []),
         "work_vector": out.get("work_vector", {}),
+        "topology_graph_v1": out.get("topology_graph_v1", {}),
+        "structure_candidates_v0": out.get("structure_candidates_v0", {}),
+        "structure_final_decision_v0": out.get("structure_final_decision_v0", {}),
+        "plugin_outputs_verdict_ready": out.get("plugin_outputs_verdict_ready", {}),
+        "plugin_conflict_report": out.get("plugin_conflict_report", {}),
         "audit_log": out.get("audit_log", {}),
+    }
+
+
+def _hit_rollback_triggers(triggers: List[str], self_abs: float, work_vector: Dict[str, Any]) -> List[str]:
+    hits: List[str] = []
+    risk = float(work_vector.get("backfire_risk", 0.0) or 0.0)
+    gain = float(work_vector.get("unlock_gain", 0.0) or 0.0)
+    released = float(work_vector.get("released_energy", 0.0) or 0.0)
+    for t in triggers:
+        line = str(t)
+        if "Self_Abs > 1.2" in line and self_abs > 1.2:
+            hits.append(line)
+        elif "Self_Abs < 2.0" in line and self_abs < 2.0:
+            hits.append(line)
+        elif "released_energy > 6.0" in line and released > 6.0 and risk > gain * 0.5:
+            hits.append(line)
+        elif "net_effect == risk" in line and str(work_vector.get("net_effect")) == "risk":
+            hits.append(line)
+    return hits
+
+
+async def run_stress_test(body: Any) -> Dict[str, Any]:
+    metadata = body.metadata or {}
+    pillars = metadata.get("pillars") or {}
+    conflicts = ((metadata.get("conflict_matrix") or {}).get("points") or [])
+    if not pillars:
+        return {"ok": False, "detail": "metadata.pillars missing"}
+
+    baseline_resp = await analyze_clash_flow(
+        AnalyzeClashRequest(
+            pillars=FourPillars(**pillars),
+            lang=body.lang,
+            physics_config=body.physics_config,
+            enabled_plugins=body.enabled_plugins,
+        )
+    )
+    stress_resp = await analyze_clash_flow(
+        AnalyzeClashRequest(
+            pillars=FourPillars(**pillars),
+            lang=body.lang,
+            dayun=body.luck_pillar,
+            liunian=body.year_pillar,
+            physics_config=body.physics_config,
+            enabled_plugins=body.enabled_plugins,
+        )
+    )
+    baseline_tensor = baseline_resp.get("physics_tensor", {}) or {}
+    stress_tensor = stress_resp.get("physics_tensor", {}) or {}
+    baseline_work = run_blind_school_plugin(physics_tensor=baseline_tensor, metadata=metadata)
+    stress_work = run_blind_school_plugin(physics_tensor=stress_tensor, metadata=metadata)
+    stress_topology = EnergyTopologySkill().produce({"metadata": metadata, "physics_tensor": stress_tensor})
+    baseline_candidates = resolve_structure_candidates_v0(physics_tensor=baseline_tensor, work_vector=baseline_work)
+    stress_candidates = resolve_structure_candidates_v0(physics_tensor=stress_tensor, work_vector=stress_work)
+    baseline_decision = body.baseline_structure_final_decision or build_structure_final_decision_v0(
+        structure_candidates_v0=baseline_candidates,
+        work_vector=baseline_work,
+    )
+    stress_decision = build_structure_final_decision_v0(
+        structure_candidates_v0=stress_candidates,
+        work_vector=stress_work,
+    )
+    baseline_self_abs = float(baseline_candidates.get("self_abs", 0.0) or 0.0)
+    stress_self_abs = float(stress_candidates.get("self_abs", 0.0) or 0.0)
+    hit_triggers = _hit_rollback_triggers(
+        list((baseline_decision or {}).get("rollback_triggers") or []),
+        stress_self_abs,
+        stress_work,
+    )
+    return {
+        "ok": True,
+        "gender": body.gender,
+        "luck_pillar": body.luck_pillar,
+        "year_pillar": body.year_pillar,
+        "delta_abs": round(stress_self_abs - baseline_self_abs, 4),
+        "structure_stability_shift": {
+            "from": baseline_decision.get("stability_risk"),
+            "to": stress_decision.get("stability_risk"),
+        },
+        "rollback_triggered": len(hit_triggers) > 0,
+        "hit_triggers": hit_triggers,
+        "stress_structure_final_decision_v0": stress_decision,
+        "stress_topology_graph_v1": stress_topology,
+        "stress_work_vector": stress_work,
+        "baseline_conflicts_count": len(conflicts),
     }

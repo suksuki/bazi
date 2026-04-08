@@ -22,6 +22,10 @@ type Props = {
   topAnomaly?: string;
   consensusHistory?: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;
   hardRouteLogs?: string[];
+  tombLockRate?: number;
+  tombReleased?: boolean;
+  climateIntensity?: number;
+  climateSeason?: string;
   onOpenLogic?: (payload: {
     title: string;
     focus: string;
@@ -51,6 +55,10 @@ export function TenGodNumericList({
   topAnomaly,
   consensusHistory = [],
   hardRouteLogs = [],
+  tombLockRate = 0.9,
+  tombReleased = false,
+  climateIntensity = 0,
+  climateSeason = "",
   onOpenLogic,
   onHoverDeity,
 }: Props) {
@@ -71,6 +79,9 @@ export function TenGodNumericList({
               共识已对齐
             </span>
           ) : null}
+          <span className={`rounded-md border px-2 py-0.5 text-[10px] ${tombReleased ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300" : "border-zinc-700 bg-zinc-800 text-zinc-300"}`}>
+            {tombReleased ? "[Released]" : `[Locked ${Math.round(tombLockRate * 100)}%]`}
+          </span>
           <span className="text-[11px] text-zinc-500">[十神名 | 能量条 | 百分比]</span>
         </div>
       </div>
@@ -88,6 +99,15 @@ export function TenGodNumericList({
           const rootWidth = `${Math.max(0, Math.min(100, totalAbsWidth * ratioRoot))}%`;
           const stemWidth = `${Math.max(0, Math.min(100, totalAbsWidth * ratioStem))}%`;
           const hit = anomalyTag && (anomalyTag.includes(name) || (name === "比肩" && anomalyTag.includes("比劫")));
+          const seasonIcon = climateSeason === "winter"
+            ? "❄"
+            : climateSeason === "summer"
+              ? "☀"
+              : climateSeason === "autumn"
+                ? "🍂"
+                : climateSeason === "spring"
+                  ? "🌱"
+                  : "";
           return (
             <button
               key={name}
@@ -121,6 +141,7 @@ export function TenGodNumericList({
                   <span className="text-zinc-400">
                     {totalScore.toFixed(2)}%{" "}
                     <span className="text-sky-300">(Abs: {absEnergy.toFixed(2)})</span>
+                    {climateIntensity > 0 ? <span className="ml-1 text-[10px] text-zinc-500" title="调候硬修正已启用">{seasonIcon || "☁"}</span> : null}
                   </span>
                 </span>
               </div>

@@ -1,5 +1,6 @@
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FourPillars, StemBranchPair
 from app.skills.physics_calculations import (
+    apply_climate_correction,
     build_energy_fields,
     calculate_deity_scores,
     resolve_seasonal_factor,
@@ -79,3 +80,23 @@ def test_build_energy_fields_and_deity_scores_return_traceable_payloads():
     assert "比肩" in components
     assert "比肩" in axes
     assert "比肩" in trace
+
+
+def test_apply_climate_correction_penalizes_opposing_element_in_winter():
+    metadata = _metadata()  # 子月 -> winter, opposing element should be fire.
+    vector = {"wood": 10.0, "fire": 10.0, "earth": 10.0, "metal": 10.0, "water": 10.0}
+    raw_deity_energy = {"比肩": 5.0, "劫财": 0.0, "食神": 0.0, "伤官": 0.0, "正财": 0.0, "偏财": 0.0, "正官": 0.0, "七杀": 0.0, "正印": 0.0, "偏印": 0.0}
+    sources = {
+        "比肩": [{"source": "month.stem:丙", "contribution_energy": 5.0}],  # fire
+    }
+    corrected_vector, corrected_deity, trace = apply_climate_correction(
+        metadata=metadata,
+        vector=vector,
+        raw_deity_energy=raw_deity_energy,
+        deity_contribution_sources=sources,
+        climate_enabled=True,
+        climate_factors={"wood": 1.0, "fire": 0.7, "earth": 1.0, "metal": 1.0, "water": 1.0},
+    )
+    assert corrected_vector["fire"] == 7.0
+    assert corrected_deity["比肩"] == 3.5
+    assert trace["factors"]["fire"] == 0.7

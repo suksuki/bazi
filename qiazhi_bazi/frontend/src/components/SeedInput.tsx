@@ -8,6 +8,7 @@ type Props = {
     date: string;
     time: string;
     calendar: "solar" | "lunar";
+    gender: "male" | "female";
   }) => Promise<void>;
   busy: boolean;
   t?: (s: string) => string;
@@ -20,11 +21,12 @@ export function SeedInput({ onSubmit, busy, t = (s) => s }: Props) {
   const [hour, setHour] = useState("00");
   const [minute, setMinute] = useState("00");
   const [calendar, setCalendar] = useState<"solar" | "lunar">("solar");
+  const [gender, setGender] = useState<"male" | "female">("male");
 
   async function submit() {
     const date = `${year}-${month}-${day}`;
     const time = `${hour}:${minute}`;
-    await onSubmit({ date, time, calendar });
+    await onSubmit({ date, time, calendar, gender });
   }
 
   const years = Array.from({ length: 81 }, (_, i) => String(1950 + i));
@@ -70,6 +72,22 @@ export function SeedInput({ onSubmit, busy, t = (s) => s }: Props) {
         </button>
       </div>
       <label className="mt-2 block text-xs text-zinc-500">{t("日期时刻")}</label>
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setGender("male")}
+          className={`rounded-lg px-3 py-1.5 text-xs ${gender === "male" ? "bg-cyan-500 text-zinc-950" : "bg-zinc-800 text-zinc-300"}`}
+        >
+          乾造（男）
+        </button>
+        <button
+          type="button"
+          onClick={() => setGender("female")}
+          className={`rounded-lg px-3 py-1.5 text-xs ${gender === "female" ? "bg-fuchsia-500 text-zinc-950" : "bg-zinc-800 text-zinc-300"}`}
+        >
+          坤造（女）
+        </button>
+      </div>
       <div className="mt-1 grid grid-cols-2 gap-2 md:grid-cols-5">
         <select
           value={year}

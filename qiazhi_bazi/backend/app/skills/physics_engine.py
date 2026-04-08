@@ -14,7 +14,9 @@ from app.db.session import session_scope
 from app.core.config.physics_settings import resolve_physics_settings
 from app.schemas.bazi_metadata import BaziMetadata
 from app.skills.base import AuditLog, BaseSkill
+from app.skills.climate_inference import ClimateInferenceSkill
 from app.skills.physics_calculations import (
+    apply_climate_correction,
     build_energy_fields,
     calculate_deity_scores,
     resolve_seasonal_factor,
@@ -258,6 +260,23 @@ class PhysicsInferenceSkill(BaseSkill):
             weight_luck=runtime_settings["WEIGHT_LUCK"],
             weight_year=runtime_settings["WEIGHT_YEAR"],
         )
+        pre_climate_vector = {k: float(v) for k, v in vector.items()}
+        pre_climate_deity_energy = {k: float(v) for k, v in raw_deity_energy.items()}
+        vector, raw_deity_energy, climate_trace = apply_climate_correction(
+            metadata=metadata,
+            vector=vector,
+            raw_deity_energy=raw_deity_energy,
+            deity_contribution_sources=deity_contribution_sources,
+            climate_enabled=bool(runtime_settings.get("ENABLE_CLIMATE_HARD_FACTOR", 1.0)),
+            climate_factors=ClimateInferenceSkill.infer(
+                metadata=metadata,
+                climate_intensity=float(runtime_settings.get("CLIMATE_INTENSITY", 1.0)),
+            ).get("factors", {}),
+        )
+        climate_trace["vector_before"] = pre_climate_vector
+        climate_trace["vector_after"] = {k: float(v) for k, v in vector.items()}
+        climate_trace["deity_before"] = pre_climate_deity_energy
+        climate_trace["deity_after"] = {k: float(v) for k, v in raw_deity_energy.items()}
 
         vector = {k: round(v, 4) for k, v in vector.items()}
         total = sum(vector.values()) or 1.0
@@ -274,6 +293,8 @@ class PhysicsInferenceSkill(BaseSkill):
             f"conflict_count={conflict_count}",
             f"root.no_root={bool(root_trace.get('no_root', False))}",
             f"param_version={self._cache.version_id}",
+            f"climate.enabled={bool(climate_trace.get('enabled', False))}",
+            f"climate.factors={climate_trace.get('factors', {})}",
         ]
         confidence = 0.92
         if conflict_count >= 3:
@@ -314,6 +335,7 @@ class PhysicsInferenceSkill(BaseSkill):
                 "deity_trace_details": deity_trace_details,
                 "baseline_regression": baseline_regression,
                 "runtime_physics_config": runtime_settings,
+                "climate_adjustment": climate_trace,
             },
         )
         return {
@@ -354,6 +376,7 @@ class PhysicsInferenceSkill(BaseSkill):
                 },
                 "baseline_regression": baseline_regression,
                 "runtime_physics_config": runtime_settings,
+                "climate_adjustment": climate_trace,
             },
             "audit_log": audit_log.model_dump(),
         }

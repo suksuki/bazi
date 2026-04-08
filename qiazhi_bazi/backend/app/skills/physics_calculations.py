@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
+import re
 from typing import Any, Dict, List, Tuple
 
 from app.schemas.bazi_metadata import BaziMetadata
@@ -247,6 +248,59 @@ def inject_disturbance(
                 "contribution_energy": round(adjusted_hidden, 4),
             }
         )
+
+
+def apply_climate_correction(
+    *,
+    metadata: BaziMetadata,
+    vector: Dict[str, float],
+    raw_deity_energy: Dict[str, float],
+    deity_contribution_sources: Dict[str, List[Dict[str, Any]]],
+    climate_enabled: bool,
+    climate_factors: Dict[str, float] | None = None,
+) -> tuple[Dict[str, float], Dict[str, float], Dict[str, Any]]:
+    """
+    Apply month-branch climate hard correction to elemental vector and deity Abs.
+    Opposing element in current season is penalized (e.g. 子月 suppresses fire).
+    """
+    month_branch = metadata.pillars.month.branch
+    season = MONTH_BRANCH_TO_SEASON.get(month_branch, "spring")
+    factors = {el: 1.0 for el in ("wood", "fire", "earth", "metal", "water")}
+    if climate_enabled and isinstance(climate_factors, dict):
+        for el in factors.keys():
+            factors[el] = float(climate_factors.get(el, 1.0))
+
+    corrected_vector = {
+        el: float(vector.get(el, 0.0)) * float(factors.get(el, 1.0))
+        for el in ("wood", "fire", "earth", "metal", "water")
+    }
+
+    def _source_element(source: str) -> str:
+        match = re.search(r"(?:\.stem:|\.hidden:)(.)", source or "")
+        if match:
+            return STEM_TO_ELEMENT.get(match.group(1), "earth")
+        return "earth"
+
+    corrected_deity: Dict[str, float] = {}
+    for deity in TEN_DEITIES:
+        entries = list((deity_contribution_sources or {}).get(deity) or [])
+        if not entries:
+            corrected_deity[deity] = float(raw_deity_energy.get(deity, 0.0))
+            continue
+        total = 0.0
+        for item in entries:
+            source = str(item.get("source", ""))
+            contribution = float(item.get("contribution_energy", 0.0))
+            total += contribution * float(factors.get(_source_element(source), 1.0))
+        corrected_deity[deity] = total
+
+    trace = {
+        "enabled": bool(climate_enabled),
+        "month_branch": month_branch,
+        "season": season,
+        "factors": factors,
+    }
+    return corrected_vector, corrected_deity, trace
 
 
 def calculate_deity_scores(

@@ -5,6 +5,7 @@ export type SeedPayload = {
   date: string;
   time: string;
   calendar: "solar" | "lunar";
+  gender: "male" | "female";
 };
 
 export type LogicProposal = {
@@ -60,6 +61,30 @@ export type PhysicsLabConfig = {
   BASE_BACKFIRE_RISK: number;
   HIGH_IMBALANCE_RISK: number;
   TOMB_LOCK_RATE: number;
+  CLIMATE_INTENSITY: number;
+  STEM_RESONANCE_BOOST: number;
+  TRANSFER_DISTANCE_DECAY: number;
+  WORK_MIN_THRESHOLD: number;
+  SHOW_WEAK_WORK_PATHS: number;
+};
+
+export type PluginSwitches = {
+  blindSchool: boolean;
+  wangshuai: boolean;
+  wealthRisk: boolean;
+};
+
+export type PluginWeights = {
+  blindSchool: number;
+  wangshuai: number;
+};
+
+export type StreamThemeChroma = {
+  bgColor: string;
+  blindRatio: number;
+  wangshuaiRatio: number;
+  isConflictOverload: boolean;
+  hasPolarityReversal: boolean;
 };
 
 export type FinalVerdictChangeLog = {
@@ -74,6 +99,9 @@ export type FinalVerdictResult = {
   logicalEvidence: string[];
   versionId: string;
   workVector?: Record<string, unknown>;
+  topologyGraphV1?: Record<string, unknown>;
+  structureCandidatesV0?: Record<string, unknown>;
+  structureFinalDecisionV0?: Record<string, unknown>;
   auditLog?: Record<string, unknown>;
 };
 
@@ -83,6 +111,25 @@ export type FinalVerdictHistoryItem = {
   changeLog: FinalVerdictChangeLog;
   logicalEvidence: string[];
   createdAt: string;
+};
+
+export type StressTestResult = {
+  rollback_triggered?: boolean;
+  hit_triggers?: string[];
+  delta_abs?: number;
+  structure_stability_shift?: { from?: string; to?: string };
+};
+
+export type GenderComparisonResult = {
+  male_dayun?: string;
+  female_dayun?: string;
+  male_peak_abs?: number;
+  female_peak_abs?: number;
+  male_work_net?: number;
+  female_work_net?: number;
+  male_path_break_score?: number;
+  female_path_break_score?: number;
+  summary?: string;
 };
 
 export type StreamBoardViewModel = {
@@ -118,6 +165,11 @@ export type StreamBoardViewModel = {
   finalVerdictChangeLog: FinalVerdictChangeLog;
   finalLogicalEvidence: string[];
   finalWorkVector: Record<string, unknown> | null;
+  finalTopologyGraphV1: Record<string, unknown> | null;
+  finalStructureCandidatesV0: Record<string, unknown> | null;
+  finalStructureFinalDecisionV0: Record<string, unknown> | null;
+  stressTestResult: StressTestResult | null;
+  genderComparisonResult: GenderComparisonResult | null;
   finalVerdictHistory: FinalVerdictHistoryItem[];
   selectionResetToken: number;
   finalVerdictVersionId: string;
@@ -131,6 +183,12 @@ export type StreamBoardViewModel = {
   setLabConfig: Dispatch<SetStateAction<PhysicsLabConfig>>;
   showPhysicsAudit: boolean;
   setShowPhysicsAudit: Dispatch<SetStateAction<boolean>>;
+  pluginSwitches: PluginSwitches;
+  setPluginSwitches: Dispatch<SetStateAction<PluginSwitches>>;
+  pluginWeights: PluginWeights;
+  setPluginWeights: Dispatch<SetStateAction<PluginWeights>>;
+  streamThemeChroma: StreamThemeChroma;
+  rerunFinalVerdictWithWeights: () => Promise<void>;
   mergedSteps: DecisionStep[];
   logicDrawerOpen: boolean;
   logicDrawerTitle: string;
@@ -148,5 +206,7 @@ export type StreamBoardViewModel = {
   onRollback: (id: string) => Promise<void>;
   applyCurrentSqlPatch: () => Promise<void>;
   applyLabConfigAndRecalculate: () => Promise<void>;
+  runStressTest: (scenario: string) => Promise<void>;
+  runGenderComparison: () => Promise<void>;
   t: (text: string) => string;
 };

@@ -5,6 +5,7 @@ import json
 import os
 from contextlib import contextmanager
 from unittest.mock import patch
+from unittest.mock import AsyncMock
 
 os.environ.setdefault("DATABASE_URL", "postgresql://tester:tester@127.0.0.1/qiazhi_test")
 
@@ -46,7 +47,27 @@ class _FakeVerdictSkill:
             "change_log": ["调整一"],
             "logical_evidence": ["证据一"],
             "work_vector": {"work_expectation": 1.23, "llm_hint": "取财有道"},
+            "topology_graph_v1": {"edges": [{"final_work": 1.1}]},
+            "structure_candidates_v0": {"hud": {"stable_pct": 40.0, "follower_pct": 30.0, "leap_pct": 30.0}},
+            "structure_final_decision_v0": {"primary_structure": "FOLLOW_WEALTH_POWER", "decision_confidence": 0.86},
             "audit_log": {"skill_id": "final_verdict_skill", "param_version_id": "p-1"},
+        }
+
+
+class _CaptureVerdictSkill:
+    def __init__(self) -> None:
+        self.kwargs = {}
+
+    async def generate(self, **kwargs):
+        self.kwargs = kwargs
+        return {
+            "version_id": "ver-x",
+            "verdict_body": "x",
+            "change_log": [],
+            "logical_evidence": [],
+            "work_vector": {},
+            "structure_candidates_v0": {},
+            "audit_log": {},
         }
 
 
@@ -85,7 +106,7 @@ def test_analyze_seed_flow_builds_audit_summary():
         hour=StemBranchPair(stem="庚", branch="子"),
     )
     fake_matrix = ConflictMatrix(points=[ConflictPoint(kind="clash", positions=["month_branch", "year_branch"], detail="寅申冲")])
-    body = AnalyzeSeedRequest(date="1977-05-08", time="18:00", calendar="solar")
+    body = AnalyzeSeedRequest(date="1977-05-08", time="18:00", calendar="solar", gender="male")
 
     with patch.object(analysis_service, "QwenClient", return_value=_FakeClient()), patch.object(
         analysis_service.Scanner, "scan", return_value=fake_matrix
@@ -130,6 +151,9 @@ def test_load_consensus_history_and_generate_final_verdict():
     assert payload["version_id"] == "ver-1"
     assert payload["verdict_body"] == "适合推进"
     assert payload["work_vector"]["llm_hint"] == "取财有道"
+    assert payload["topology_graph_v1"]["edges"][0]["final_work"] == 1.1
+    assert payload["structure_candidates_v0"]["hud"]["leap_pct"] == 30.0
+    assert payload["structure_final_decision_v0"]["primary_structure"] == "FOLLOW_WEALTH_POWER"
     assert payload["audit_log"]["skill_id"] == "final_verdict_skill"
 
 
@@ -159,3 +183,68 @@ def test_resolve_consensus_history_falls_back_to_db():
         session_scope=fake_scope,
     )
     assert resolved[0]["decision_key"] == "root_factor"
+
+
+def test_generate_final_verdict_clear_previous_forces_rewrite():
+    skill = _CaptureVerdictSkill()
+    with patch.object(analysis_service.FinalVerdictSkill, "instance", return_value=skill):
+        payload = asyncio.run(
+            analysis_service.generate_final_verdict(
+                FinalVerdictRequest(
+                    metadata={},
+                    physics_tensor={},
+                    selected_cards=[],
+                    consensus_history=[],
+                    previous_verdict="old",
+                    previous_logical_evidence=["old-evidence"],
+                    clear_previous_verdict=True,
+                    lang="ZH",
+                ),
+                [],
+            )
+        )
+    assert payload["ok"] is True
+    assert skill.kwargs.get("previous_verdict") == ""
+    assert skill.kwargs.get("previous_logical_evidence") == []
+
+
+def test_run_stress_test_returns_rollback_signal():
+    fake_payload = {
+        "physics_tensor": {
+            "deity_energy_axes": {
+                "比肩": {"absolute_energy": 0.2},
+                "正财": {"absolute_energy": 6.0},
+            },
+            "meta": {"runtime_physics_config": {}},
+        }
+    }
+
+    with patch.object(analysis_service, "analyze_clash_flow", new=AsyncMock(side_effect=[fake_payload, fake_payload])):
+        payload = asyncio.run(
+            analysis_service.run_stress_test(
+                type(
+                    "Req",
+                    (),
+                    {
+                        "metadata": {
+                            "pillars": {
+                                "year": {"stem": "甲", "branch": "子", "energy_value": 100},
+                                "month": {"stem": "丙", "branch": "寅", "energy_value": 100},
+                                "day": {"stem": "戊", "branch": "午", "energy_value": 100},
+                                "hour": {"stem": "庚", "branch": "申", "energy_value": 100},
+                            },
+                            "conflict_matrix": {"points": [{"detail": "寅午冲"}]},
+                        },
+                        "physics_config": None,
+                        "gender": "male",
+                        "baseline_structure_final_decision": {"rollback_triggers": ["if Self_Abs > 1.2 -> CollapseFollowerStructure"]},
+                        "luck_pillar": "壬辰",
+                        "year_pillar": "庚子",
+                        "lang": "ZH",
+                        "enabled_plugins": [],
+                    },
+                )()
+            )
+        )
+    assert payload["ok"] is True
+    assert "rollback_triggered" in payload

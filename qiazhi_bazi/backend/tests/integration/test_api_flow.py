@@ -183,7 +183,7 @@ def test_analyze_seed_end_to_end(monkeypatch, tmp_path: Path):
     )
     result = asyncio.run(
         router_module.analyze_seed(
-            AnalyzeSeedRequest(date="1977-05-08", time="18:00", calendar="solar")
+            AnalyzeSeedRequest(date="1977-05-08", time="18:00", calendar="solar", gender="male")
         )
     )
     assert result["metadata"]["pillars"]["year"]["stem"] in "甲乙丙丁戊己庚辛壬癸"

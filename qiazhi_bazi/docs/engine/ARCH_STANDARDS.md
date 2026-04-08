@@ -135,9 +135,38 @@
   - 当 `BODY_Abs < 1.5` 且 `released_energy > 4.0`，上调到 `0.35`
 - `net_effect`：
   - `gain` / `neutral` / `risk`
+- [V1 Tomb Dynamics]
+  - `TOMB_LOCK_RATE` 决定墓库势能锁定比例：
+    - `potential_energy_locked = base_energy * TOMB_LOCK_RATE`
+  - `clash_only_v1` 触发释放：
+    - 仅当关系为“冲”且命中墓库支（辰戌丑未）时进入解锁路径
+  - `unlock_confidence` 阶梯：
+    - 冲神 `Abs >= 5.0` -> `0.95`
+    - 冲神 `Abs <= 0.5` -> `0.20`
+    - 其余区间线性插值
+  - `released_energy = residual_energy + potential_energy_locked * unlock_confidence`
+  - `unlock_gain <= potential_energy_locked * unlock_confidence`（能量守恒审计）
 - LLM 强制约束：
   - 必须引用 `net_effect` 与 `backfire_risk` 做辩证分析。
-  - 当 `backfire_risk > unlock_gain * 0.40`，禁止单边褒义判词，必须说明“代价/震荡”。
+  - 当 `backfire_risk > unlock_gain * 0.50`，必须输出 `[DANGEROUS_TURBULENCE]` 并说明“代价/震荡”。
+  - 当 `unlock_failed == true`，禁止讨论“库中之物已兑现”，只能讨论“能量淤积/怀才不遇”。
+
+## 9.2 Climate Correction Protocol（L1 Hard）
+
+- 调候必须进入 L1 计算主链，禁止仅作为 LLM 软提示。
+- 核心公式：
+  - `Abs_final = Abs_raw * Climate_Factor`
+- 系数区间（运行时可调）：
+  - 旺相（得令）：`1.05 ~ 1.15`
+  - 失令（受制）：`0.85 ~ 0.95`
+  - 中和：`1.00`
+- 参数来源：
+  - `ENABLE_CLIMATE_HARD_FACTOR`
+  - `CLIMATE_INTENSITY`（0~1，控制修正强度）
+- 审计要求：
+  - `physics_tensor.meta.climate_adjustment`
+  - `physics_tensor.audit_log.trace.climate_adjustment`
+  - `logical_evidence` 必须包含 `Before` 与 `Climate_Factor` 线索
 
 ## 10. 当前基准样例
 

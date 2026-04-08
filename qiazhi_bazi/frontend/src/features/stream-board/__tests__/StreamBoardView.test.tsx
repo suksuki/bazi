@@ -22,8 +22,8 @@ vi.mock("@/components/TenGodNumericList", () => ({
 }));
 
 vi.mock("@/components/SeedInput", () => ({
-  SeedInput: ({ onSubmit }: { onSubmit: (payload: { date: string; time: string; calendar: "solar" | "lunar" }) => Promise<void> }) => (
-    <button type="button" onClick={() => void onSubmit({ date: "1990-01-01", time: "00:00", calendar: "solar" })}>
+  SeedInput: ({ onSubmit }: { onSubmit: (payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => Promise<void> }) => (
+    <button type="button" onClick={() => void onSubmit({ date: "1990-01-01", time: "00:00", calendar: "solar", gender: "male" })}>
       submit-seed
     </button>
   ),
@@ -84,6 +84,11 @@ function createViewModel(overrides: Partial<StreamBoardViewModel> = {}): StreamB
     finalVerdictChangeLog: {},
     finalLogicalEvidence: [],
     finalWorkVector: null,
+    finalTopologyGraphV1: null,
+    finalStructureCandidatesV0: null,
+    finalStructureFinalDecisionV0: null,
+    stressTestResult: null,
+    genderComparisonResult: null,
     finalVerdictHistory: [],
     selectionResetToken: 0,
     finalVerdictVersionId: "",
@@ -99,10 +104,34 @@ function createViewModel(overrides: Partial<StreamBoardViewModel> = {}): StreamB
       BASE_BACKFIRE_RISK: 0.2,
       HIGH_IMBALANCE_RISK: 0.35,
       TOMB_LOCK_RATE: 0.9,
+      CLIMATE_INTENSITY: 1.0,
+      STEM_RESONANCE_BOOST: 1.5,
+      TRANSFER_DISTANCE_DECAY: 0.1,
+      WORK_MIN_THRESHOLD: 0.5,
+      SHOW_WEAK_WORK_PATHS: 1,
     },
     setLabConfig: vi.fn(),
     showPhysicsAudit: false,
     setShowPhysicsAudit: vi.fn(),
+    pluginSwitches: {
+      blindSchool: true,
+      wangshuai: true,
+      wealthRisk: false,
+    },
+    setPluginSwitches: vi.fn(),
+    pluginWeights: {
+      blindSchool: 0.8,
+      wangshuai: 0.6,
+    },
+    setPluginWeights: vi.fn(),
+    streamThemeChroma: {
+      bgColor: "#1f2a1f",
+      blindRatio: 0.57,
+      wangshuaiRatio: 0.43,
+      isConflictOverload: false,
+      hasPolarityReversal: false,
+    },
+    rerunFinalVerdictWithWeights: vi.fn().mockResolvedValue(undefined),
     mergedSteps: [],
     logicDrawerOpen: false,
     logicDrawerTitle: "Logic",
@@ -120,6 +149,8 @@ function createViewModel(overrides: Partial<StreamBoardViewModel> = {}): StreamB
     onRollback: vi.fn().mockResolvedValue(undefined),
     applyCurrentSqlPatch: vi.fn().mockResolvedValue(undefined),
     applyLabConfigAndRecalculate: vi.fn().mockResolvedValue(undefined),
+    runStressTest: vi.fn().mockResolvedValue(undefined),
+    runGenderComparison: vi.fn().mockResolvedValue(undefined),
     t: (text) => text,
     ...overrides,
   };
@@ -173,5 +204,76 @@ describe("StreamBoardView", () => {
     expect(screen.getByText("Physics Confidence:")).toBeInTheDocument();
     expect(screen.getByText("87%")).toBeInTheDocument();
     expect(screen.getByText(/solar_term=立春/)).toBeInTheDocument();
+  });
+
+  it("applies blind-school extreme theme when blind weight dominates near 100%", () => {
+    render(
+      <StreamBoardView
+        {...createViewModel({
+          streamThemeChroma: {
+            bgColor: "#1a1a1a",
+            blindRatio: 0.9,
+            wangshuaiRatio: 0.1,
+            isConflictOverload: false,
+            hasPolarityReversal: false,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("stream-board-root")).toHaveStyle("--stream-bg-color: #1a1a1a");
+  });
+
+  it("applies wangshuai extreme theme when wangshuai weight dominates near 100%", () => {
+    render(
+      <StreamBoardView
+        {...createViewModel({
+          streamThemeChroma: {
+            bgColor: "#2d4f1e",
+            blindRatio: 0.1,
+            wangshuaiRatio: 0.9,
+            isConflictOverload: false,
+            hasPolarityReversal: false,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("stream-board-root")).toHaveStyle("--stream-bg-color: #2d4f1e");
+  });
+
+  it("keeps neutral theme when no plugin weight is at extreme dominance", () => {
+    render(
+      <StreamBoardView
+        {...createViewModel({
+          streamThemeChroma: {
+            bgColor: "#223322",
+            blindRatio: 0.53,
+            wangshuaiRatio: 0.47,
+            isConflictOverload: false,
+            hasPolarityReversal: false,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("stream-board-root")).toHaveStyle("--stream-bg-color: #223322");
+  });
+
+  it("shows glitch overlay in overload polarity-reversal window", async () => {
+    render(
+      <StreamBoardView
+        {...createViewModel({
+          streamThemeChroma: {
+            bgColor: "#1f1f1f",
+            blindRatio: 0.5,
+            wangshuaiRatio: 0.5,
+            isConflictOverload: true,
+            hasPolarityReversal: true,
+          },
+        })}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId("logic-glitch-overlay")).toBeInTheDocument());
   });
 });

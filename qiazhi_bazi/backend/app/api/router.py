@@ -16,6 +16,7 @@ from app.api.contracts import (
     DecisionRollbackRequest,
     DecisionStepCreate,
     FinalVerdictRequest,
+    StressTestRequest,
     TranslateRequest,
 )
 from app.api.router_helpers import now_iso
@@ -32,6 +33,7 @@ from app.services.analysis_service import (
     analyze_clash_flow,
     analyze_seed_flow,
     generate_final_verdict,
+    run_stress_test,
     resolve_consensus_history,
     translate_text_items,
 )
@@ -159,3 +161,8 @@ async def final_verdict(body: FinalVerdictRequest) -> dict:
         session_scope=session_scope,
     )
     return await generate_final_verdict(body, consensus_history)
+
+
+@router.post("/v1/analyze/stress-test", response_model=dict)
+async def stress_test(body: StressTestRequest) -> dict:
+    return await run_stress_test(body)

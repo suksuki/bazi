@@ -6,6 +6,7 @@ import { AuditSidebar } from "@/components/AuditSidebar";
 import { AuditorBriefing } from "@/components/AuditorBriefing";
 import { BaziCard } from "@/components/BaziCard";
 import { DecisionInbox } from "@/components/DecisionInbox";
+import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
 import { LogDrawer } from "@/components/LogDrawer";
 import { SeedInput } from "@/components/SeedInput";
 import { TenGodNumericList } from "@/components/TenGodNumericList";
@@ -46,6 +47,11 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     finalVerdictChangeLog,
     finalLogicalEvidence,
     finalWorkVector,
+    finalTopologyGraphV1,
+    finalStructureCandidatesV0,
+    finalStructureFinalDecisionV0,
+    stressTestResult,
+    genderComparisonResult,
     finalVerdictHistory,
     selectionResetToken,
     finalVerdictVersionId,
@@ -59,6 +65,12 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setLabConfig,
     showPhysicsAudit,
     setShowPhysicsAudit,
+    pluginSwitches,
+    setPluginSwitches,
+    pluginWeights,
+    setPluginWeights,
+    streamThemeChroma,
+    rerunFinalVerdictWithWeights,
     mergedSteps,
     logicDrawerOpen,
     logicDrawerTitle,
@@ -76,13 +88,71 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     onRollback,
     applyCurrentSqlPatch,
     applyLabConfigAndRecalculate,
+    runStressTest,
+    runGenderComparison,
     t,
   } = viewModel;
 
   const hardRouteLogs = ((((physicsAudit as { trace?: { hard_route_logs?: string[] } } | null)?.trace?.hard_route_logs) || []) as string[]);
+  const climateSeason = String(
+    ((((physicsAudit as { trace?: { climate_adjustment?: { season?: string } } } | null)?.trace?.climate_adjustment?.season) || "")),
+  );
+  const [labOpen, setLabOpen] = React.useState(true);
+  const [labGroupsOpen, setLabGroupsOpen] = React.useState({
+    timing: true,
+    riskTomb: true,
+    climateTopology: true,
+  });
+  const streamThemeStyle = {
+    "--stream-bg-color": streamThemeChroma.bgColor,
+    "--stream-overload-color": streamThemeChroma.isConflictOverload ? "rgba(130,0,20,0.35)" : "transparent",
+  } as React.CSSProperties;
+
+  const labGroups = [
+    {
+      key: "timing" as const,
+      title: "时运权重",
+      items: [
+        ["WEIGHT_LUCK", 0, 1, 0.01],
+        ["WEIGHT_YEAR", 0, 1, 0.01],
+      ],
+    },
+    {
+      key: "riskTomb" as const,
+      title: "风险与墓库",
+      items: [
+        ["BASE_BACKFIRE_RISK", 0, 1, 0.01],
+        ["HIGH_IMBALANCE_RISK", 0, 1, 0.01],
+        ["TOMB_LOCK_RATE", 0, 1, 0.01],
+      ],
+    },
+    {
+      key: "climateTopology" as const,
+      title: "气候与拓扑",
+      items: [
+        ["CLIMATE_INTENSITY", 0, 1, 0.01],
+        ["STEM_RESONANCE_BOOST", 1, 3, 0.05],
+        ["TRANSFER_DISTANCE_DECAY", 0, 0.5, 0.01],
+        ["WORK_MIN_THRESHOLD", 0, 3, 0.1],
+      ],
+    },
+  ];
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[1400px] px-3 py-4">
+    <main
+      data-testid="stream-board-root"
+      style={streamThemeStyle}
+      className="mx-auto min-h-dvh w-full max-w-[1400px] px-3 py-4 transition-colors duration-500"
+    >
+      <div
+        className="fixed inset-0 -z-10 transition-all duration-500"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 80% 10%, rgba(255,215,120,0.06), transparent 52%), linear-gradient(135deg, var(--stream-bg-color), #0f0f12 65%)",
+          boxShadow: `inset 0 0 80px var(--stream-overload-color)`,
+        }}
+      />
+      <LogicGlitchOverlay active={streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal} />
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
@@ -146,6 +216,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 topAnomaly={llmDiagnosticData?.top_anomaly}
                 consensusHistory={consensusHistory}
                 hardRouteLogs={hardRouteLogs}
+                tombLockRate={labConfig.TOMB_LOCK_RATE}
+                tombReleased={Number((finalWorkVector || {}).released_energy || 0) > 0}
+                climateIntensity={labConfig.CLIMATE_INTENSITY}
+                climateSeason={climateSeason}
                 onOpenLogic={openLogicDrawer}
                 onHoverDeity={setHoveredDeity}
               />
@@ -156,43 +230,118 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         <div className="flex-1 space-y-3">
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-zinc-200">Lab Console</h3>
               <button
                 type="button"
-                onClick={() => void applyLabConfigAndRecalculate()}
-                className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200"
+                onClick={() => setLabOpen((v) => !v)}
+                className="flex flex-1 items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
               >
-                应用并重算
+                <span className="text-sm font-medium text-zinc-200">Lab Console</span>
+                <span>{labOpen ? "收起" : "展开"}</span>
               </button>
             </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {[
-                ["WEIGHT_LUCK", 0, 1, 0.01],
-                ["WEIGHT_YEAR", 0, 1, 0.01],
-                ["BASE_BACKFIRE_RISK", 0, 1, 0.01],
-                ["HIGH_IMBALANCE_RISK", 0, 1, 0.01],
-                ["TOMB_LOCK_RATE", 0, 1, 0.01],
-              ].map(([key, min, max, step]) => (
-                <label key={key} className="text-xs text-zinc-300">
-                  <div className="mb-1 flex items-center justify-between">
-                    <span>{key}</span>
-                    <span className="text-zinc-500">{Number(labConfig[key as keyof typeof labConfig]).toFixed(2)}</span>
+            {labOpen ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                    <span>插件管理</span>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={pluginSwitches.blindSchool}
+                        onChange={(e) => setPluginSwitches((prev) => ({ ...prev, blindSchool: e.target.checked }))}
+                      />
+                      盲派
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={pluginSwitches.wangshuai}
+                        onChange={(e) => setPluginSwitches((prev) => ({ ...prev, wangshuai: e.target.checked }))}
+                      />
+                      旺衰
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        checked={pluginSwitches.wealthRisk}
+                        onChange={(e) => setPluginSwitches((prev) => ({ ...prev, wealthRisk: e.target.checked }))}
+                      />
+                      财富评估
+                    </label>
                   </div>
-                  <input
-                    type="range"
-                    min={Number(min)}
-                    max={Number(max)}
-                    step={Number(step)}
-                    value={Number(labConfig[key as keyof typeof labConfig])}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      setLabConfig((prev) => ({ ...prev, [key]: value }));
-                    }}
-                    className="w-full"
-                  />
-                </label>
-              ))}
-            </div>
+                  <label className="inline-flex items-center gap-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={Number(labConfig.SHOW_WEAK_WORK_PATHS || 0) > 0.5}
+                      onChange={(e) => {
+                        setLabConfig((prev) => ({
+                          ...prev,
+                          SHOW_WEAK_WORK_PATHS: e.target.checked ? 1 : 0,
+                        }));
+                      }}
+                    />
+                    逻辑透深（显示微弱路径）
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setLabGroupsOpen({ timing: true, riskTomb: true, climateTopology: true })}
+                    className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800"
+                  >
+                    展开全部参数组
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLabGroupsOpen({ timing: false, riskTomb: false, climateTopology: false })}
+                    className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800"
+                  >
+                    收起全部参数组
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyLabConfigAndRecalculate()}
+                    className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200"
+                  >
+                    应用并重算
+                  </button>
+                </div>
+                {labGroups.map((group) => (
+                  <div key={group.key} className="rounded-xl border border-zinc-800 bg-zinc-950 p-2">
+                    <button
+                      type="button"
+                      onClick={() => setLabGroupsOpen((prev) => ({ ...prev, [group.key]: !prev[group.key] }))}
+                      className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
+                    >
+                      <span>{group.title}</span>
+                      <span>{labGroupsOpen[group.key] ? "收起" : "展开"}</span>
+                    </button>
+                    {labGroupsOpen[group.key] ? (
+                      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                        {group.items.map(([key, min, max, step]) => (
+                          <label key={key} className="text-xs text-zinc-300">
+                            <div className="mb-1 flex items-center justify-between">
+                              <span>{key}</span>
+                              <span className="text-zinc-500">{Number(labConfig[key as keyof typeof labConfig]).toFixed(2)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min={Number(min)}
+                              max={Number(max)}
+                              step={Number(step)}
+                              value={Number(labConfig[key as keyof typeof labConfig])}
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                setLabConfig((prev) => ({ ...prev, [key]: value }));
+                              }}
+                              className="w-full"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </section>
           <SeedInput onSubmit={onSeedSubmit} busy={busy} t={t} />
           {llmDiagnosticData?.logic_proposal ? (
@@ -217,9 +366,16 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
             verdictChangeLog={finalVerdictChangeLog}
             logicalEvidence={finalLogicalEvidence}
             workVector={finalWorkVector || {}}
+            topologyGraph={finalTopologyGraphV1 || {}}
+            structureCandidates={finalStructureCandidatesV0 || {}}
+            structureFinalDecision={finalStructureFinalDecisionV0 || {}}
+            metadata={metadata || {}}
+            stressTestResult={stressTestResult || {}}
+            genderComparisonResult={genderComparisonResult || {}}
             highlightVerdict={false}
             onExecuteDecision={(selected) => onExecuteDecision(selected as InboxCard[])}
             onVerdictDeityClick={openLogicDrawerByDeity}
+            onStrategicDeityHover={setHoveredDeity}
             onEvidenceClick={onEvidenceItemClick}
             onShowVersionHistory={showVerdictHistory}
             hasVerdictHistory={finalVerdictHistory.length > 1}
@@ -228,6 +384,11 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
             summaryChanged={summaryChanged}
             l1Certified={l1Certified}
             t={t}
+            onStressTest={runStressTest}
+            onGenderCompare={runGenderComparison}
+            pluginWeights={pluginWeights}
+            onPluginWeightsChange={setPluginWeights}
+            onApplyPluginWeights={rerunFinalVerdictWithWeights}
           />
 
           {physicsAudit ? (

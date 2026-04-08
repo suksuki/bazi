@@ -1,7 +1,7 @@
 """Shared API request/response contracts."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,11 @@ class PhysicsConfig(BaseModel):
     BASE_BACKFIRE_RISK: Optional[float] = None
     HIGH_IMBALANCE_RISK: Optional[float] = None
     TOMB_LOCK_RATE: Optional[float] = None
+    CLIMATE_INTENSITY: Optional[float] = None
+    STEM_RESONANCE_BOOST: Optional[float] = None
+    TRANSFER_DISTANCE_DECAY: Optional[float] = None
+    WORK_MIN_THRESHOLD: Optional[float] = None
+    SHOW_WEAK_WORK_PATHS: Optional[float] = None
 
 
 class ConsultationCreate(BaseModel):
@@ -56,17 +61,20 @@ class AnalyzeClashRequest(BaseModel):
     dayun: Optional[str] = None
     liunian: Optional[str] = None
     physics_config: Optional[PhysicsConfig] = None
+    enabled_plugins: List[str] = Field(default_factory=list)
 
 
 class AnalyzeSeedRequest(BaseModel):
     date: str
     time: str = "12:00"
     calendar: str = "solar"
+    gender: Literal["male", "female"]
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     lang: str = "ZH"
     session_id: Optional[int] = None
     physics_config: Optional[PhysicsConfig] = None
+    enabled_plugins: List[str] = Field(default_factory=list)
 
 
 class AuditPhysicsWithLlmRequest(BaseModel):
@@ -103,6 +111,21 @@ class FinalVerdictRequest(BaseModel):
     previous_logical_evidence: List[str] = Field(default_factory=list)
     consultation_id: Optional[int] = None
     lang: str = "ZH"
+    clear_previous_verdict: bool = False
+    force_clear_cache: bool = False
+    enabled_plugins: List[str] = Field(default_factory=list)
+    plugin_weights: Dict[str, float] = Field(default_factory=dict)
+
+
+class StressTestRequest(BaseModel):
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    gender: Literal["male", "female"]
+    physics_config: Optional[PhysicsConfig] = None
+    baseline_structure_final_decision: Dict[str, Any] = Field(default_factory=dict)
+    luck_pillar: Optional[str] = None
+    year_pillar: Optional[str] = None
+    lang: str = "ZH"
+    enabled_plugins: List[str] = Field(default_factory=list)
 
 
 class LlmTestRequest(BaseModel):

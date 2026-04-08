@@ -7,7 +7,7 @@ def test_evaluate_blind_work_builds_vectors():
     metadata = {
         "conflict_matrix": {
             "points": [
-                {"detail": "寅申冲"},
+                {"detail": "辰戌冲"},
                 {"detail": "巳申穿"},
             ]
         }
@@ -22,6 +22,8 @@ def test_evaluate_blind_work_builds_vectors():
     }
     result = evaluate_blind_work(metadata, physics_tensor)
     assert result["work_expectation"] > 0
+    assert result["potential_energy_locked"] >= 0
+    assert result["released_energy"] >= 0
     assert result["unlock_gain"] > 0
     assert result["backfire_risk"] > 0
     assert result["net_effect"] in {"gain", "neutral", "risk"}
@@ -29,3 +31,14 @@ def test_evaluate_blind_work_builds_vectors():
     assert result["work_vectors"][0]["direction"] in {"Host->Guest", "Guest->Host"}
     assert "unlock_gain" in result["work_vectors"][0]
     assert "backfire_risk" in result["work_vectors"][0]
+    assert "unlock_confidence" in result["work_vectors"][0]
+    assert "source_deity" in result["work_vectors"][0]
+    assert "target_deity" in result["work_vectors"][0]
+    assert "abs_contribution" in result["work_vectors"][0]
+    assert "is_micro_path" in result["work_vectors"][0]
+    assert "saturation_penalty" in result["work_vectors"][0]
+    assert result["work_vectors"][0]["momentum_direction"] in {"FORWARD", "REBOUND"}
+    assert isinstance((result.get("topology_audit") or {}).get("momentum_directions", []), list)
+    assert isinstance((result.get("body_damage_estimation") or {}).get("nodes", []), list)
+    assert "collapse_triggered" in (result.get("body_damage_estimation") or {})
+    assert isinstance(result.get("morphing_hints", []), list)

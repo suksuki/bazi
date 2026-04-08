@@ -1,0 +1,156 @@
+"""Energy topology skill: path discovery + impedance calculation."""
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+from app.core.config.physics_settings import resolve_physics_settings
+from app.skills.base import AuditLog, BaseSkill
+
+
+RELATION_GAIN = {
+    "冲": 1.0,
+    "合": 0.85,
+    "刑": 0.8,
+    "穿": 0.95,
+    "害": 0.7,
+    "破": 0.65,
+    "生": 0.75,
+    "克": 0.9,
+}
+RELATION_TYPE = {
+    "冲": "clash",
+    "合": "combination",
+    "刑": "punishment",
+    "穿": "pierce",
+    "害": "harm",
+    "破": "break",
+    "生": "generate",
+    "克": "control",
+}
+
+
+class EnergyTopologySkill(BaseSkill):
+    skill_id = "energy_topology_skill"
+    skill_version = "0.1.0"
+    rule_version = "etrm_rules.v1"
+
+    def consume(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "metadata": context.get("metadata") or {},
+            "physics_tensor": context.get("physics_tensor") or {},
+        }
+
+    def produce(self, consumed: Dict[str, Any]) -> Dict[str, Any]:
+        return self.build_topology(
+            metadata=consumed["metadata"],
+            physics_tensor=consumed["physics_tensor"],
+        )
+
+    def audit(self, consumed: Dict[str, Any], produced: Dict[str, Any]) -> AuditLog:
+        return AuditLog(
+            skill_id=self.skill_id,
+            skill_version=self.skill_version,
+            rule_version=self.rule_version,
+            param_version_id=str((((consumed.get("physics_tensor") or {}).get("audit_log") or {}).get("param_version_id") or "unknown")),
+            formula_refs=[
+                "effective_energy = raw_energy * resonance_boost * relation_gain * distance_decay",
+                "distance_decay = max(0.1, 1 - decay_per_column * distance)",
+            ],
+            trace={"edge_count": len((produced.get("edges") or []))},
+        )
+
+    @staticmethod
+    def _relation(detail: str) -> str:
+        for key in ("穿", "冲", "刑", "害", "破", "合", "生", "克"):
+            if key in detail:
+                return key
+        return "冲"
+
+    @classmethod
+    def build_topology(cls, *, metadata: Dict[str, Any], physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+        pillars = (metadata or {}).get("pillars") or {}
+        conflicts = (((metadata or {}).get("conflict_matrix") or {}).get("points") or [])
+        deity_axes = ((physics_tensor or {}).get("deity_energy_axes") or {})
+        runtime_cfg = (((physics_tensor or {}).get("meta") or {}).get("runtime_physics_config") or {})
+        settings = resolve_physics_settings(runtime_cfg)
+        boost = float(settings.get("STEM_RESONANCE_BOOST", 1.5))
+        decay = float(settings.get("TRANSFER_DISTANCE_DECAY", 0.1))
+        threshold = float(settings.get("WORK_MIN_THRESHOLD", 0.5))
+        climate_intensity = float(settings.get("CLIMATE_INTENSITY", 1.0))
+
+        # 12-node simplified ring from visible stems/branches.
+        nodes: List[Dict[str, Any]] = []
+        for key in ("year", "month", "day", "hour"):
+            p = pillars.get(key) or {}
+            stem = str(p.get("stem", ""))
+            branch = str(p.get("branch", ""))
+            nodes.append({"id": f"{key}_stem", "label": stem, "kind": "stem", "abs_final": 0.0})
+            nodes.append({"id": f"{key}_branch", "label": branch, "kind": "branch", "abs_final": 0.0})
+
+        # Use total Abs mean as base potential for now.
+        abs_values = [float((v or {}).get("absolute_energy", 0.0) or 0.0) for v in deity_axes.values() if isinstance(v, dict)]
+        base_abs = (sum(abs_values) / len(abs_values)) if abs_values else 1.0
+        for node in nodes:
+            # V1: branch nodes hold stronger manifested potential than stem nodes.
+            if node.get("kind") == "branch":
+                node["abs_final"] = round(base_abs * 1.1, 4)
+            else:
+                node["abs_final"] = round(base_abs * 0.9, 4)
+
+        edges: List[Dict[str, Any]] = []
+        topology_audit: List[Dict[str, Any]] = []
+        for point in conflicts:
+            if not isinstance(point, dict):
+                continue
+            detail = str(point.get("detail") or "")
+            relation = cls._relation(detail)
+            raw_energy = base_abs * RELATION_GAIN.get(relation, 0.8)
+            resonance_boost = boost if relation in {"穿", "冲"} else 1.0
+            # "盖头截脚": branch-like relations have stronger attenuation.
+            distance = 1.0
+            distance_decay = max(0.1, 1.0 - decay * distance)
+            if relation in {"刑", "害", "破"}:
+                distance_decay = max(0.1, distance_decay - 0.1)
+            final_work = raw_energy * resonance_boost * distance_decay
+            if final_work < threshold:
+                continue
+            efficiency = max(0.0, min(1.0, (resonance_boost * distance_decay) / max(boost, 0.0001)))
+            edge = {
+                "from": "month_branch",
+                "to": "day_branch",
+                "relation": relation,
+                "relation_type": RELATION_TYPE.get(relation, "clash"),
+                "stem_resonance": bool(relation in {"穿", "冲"}),
+                "flow_direction": "month_branch->day_branch",
+                "raw_energy": round(raw_energy, 4),
+                "resonance_boost": round(resonance_boost, 4),
+                "resonance_multiplier": round(resonance_boost * distance_decay, 4),
+                "distance_decay": round(distance_decay, 4),
+                "efficiency_score": round(efficiency, 4),
+                "clash_vibration_flag": bool(relation == "冲"),
+                "final_work": round(final_work, 4),
+                "detail": detail,
+            }
+            edges.append(edge)
+            topology_audit.append(
+                {
+                    "detail": detail,
+                    "Raw_Energy": round(raw_energy, 4),
+                    "Resonance_Boost": round(resonance_boost, 4),
+                    "Decay": round(distance_decay, 4),
+                    "Final_Work": round(final_work, 4),
+                }
+            )
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "topology_audit": topology_audit,
+            "threshold": threshold,
+            "params": {
+                "STEM_RESONANCE_BOOST": boost,
+                "TRANSFER_DISTANCE_DECAY": decay,
+                "WORK_MIN_THRESHOLD": threshold,
+                "CLIMATE_INTENSITY": climate_intensity,
+            },
+        }

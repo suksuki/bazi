@@ -23,6 +23,26 @@ import { useTranslationQueue } from "./useTranslationQueue";
 
 type ConsensusItem = { decision_key: string; confirmed_value?: number; reasoning?: string };
 
+function interpolateColor(startHex: string, endHex: string, ratio: number): string {
+  const normalized = Math.max(0, Math.min(1, ratio));
+  const parse = (hex: string) => {
+    const v = hex.replace("#", "");
+    const full = v.length === 3 ? v.split("").map((x) => `${x}${x}`).join("") : v;
+    return {
+      r: parseInt(full.slice(0, 2), 16),
+      g: parseInt(full.slice(2, 4), 16),
+      b: parseInt(full.slice(4, 6), 16),
+    };
+  };
+  const a = parse(startHex);
+  const b = parse(endHex);
+  const toHex = (v: number) => Math.round(v).toString(16).padStart(2, "0");
+  const r = a.r + (b.r - a.r) * normalized;
+  const g = a.g + (b.g - a.g) * normalized;
+  const bVal = a.b + (b.b - a.b) * normalized;
+  return `#${toHex(r)}${toHex(g)}${toHex(bVal)}`;
+}
+
 export function useStreamBoardController(): StreamBoardViewModel {
   const [lang, setLang] = useState<Lang>("ZH");
   const [busy, setBusy] = useState(false);
@@ -55,8 +75,22 @@ export function useStreamBoardController(): StreamBoardViewModel {
     BASE_BACKFIRE_RISK: 0.2,
     HIGH_IMBALANCE_RISK: 0.35,
     TOMB_LOCK_RATE: 0.9,
+    CLIMATE_INTENSITY: 1.0,
+    STEM_RESONANCE_BOOST: 1.5,
+    TRANSFER_DISTANCE_DECAY: 0.1,
+    WORK_MIN_THRESHOLD: 0.5,
+    SHOW_WEAK_WORK_PATHS: 1,
   });
   const [showPhysicsAudit, setShowPhysicsAudit] = useState(false);
+  const [pluginSwitches, setPluginSwitches] = useState({
+    blindSchool: true,
+    wangshuai: true,
+    wealthRisk: false,
+  });
+  const [pluginWeights, setPluginWeights] = useState({
+    blindSchool: 0.8,
+    wangshuai: 0.6,
+  });
   const [llmDiagnosticData, setLlmDiagnosticData] = useState<LlmDiagnosticData | null>(null);
   const [lastSeedPayload, setLastSeedPayload] = useState<SeedPayload | null>(null);
   const [auditorProposalCards, setAuditorProposalCards] = useState<InboxCard[]>([]);
@@ -73,7 +107,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [finalVerdictVersionId, setFinalVerdictVersionId] = useState("");
   const [finalLogicalEvidence, setFinalLogicalEvidence] = useState<string[]>([]);
   const [finalWorkVector, setFinalWorkVector] = useState<Record<string, unknown> | null>(null);
+  const [finalTopologyGraphV1, setFinalTopologyGraphV1] = useState<Record<string, unknown> | null>(null);
+  const [finalStructureCandidatesV0, setFinalStructureCandidatesV0] = useState<Record<string, unknown> | null>(null);
+  const [finalStructureFinalDecisionV0, setFinalStructureFinalDecisionV0] = useState<Record<string, unknown> | null>(null);
   const [finalVerdictHistory, setFinalVerdictHistory] = useState<FinalVerdictHistoryItem[]>([]);
+  const [stressTestResult, setStressTestResult] = useState<Record<string, unknown> | null>(null);
+  const [genderComparisonResult, setGenderComparisonResult] = useState<Record<string, unknown> | null>(null);
   const [logicDrawerOpen, setLogicDrawerOpen] = useState(false);
   const [logicDrawerTitle, setLogicDrawerTitle] = useState("Arbiter Logic Drawer");
   const [logicDrawerFocus, setLogicDrawerFocus] = useState("");
@@ -201,12 +240,30 @@ export function useStreamBoardController(): StreamBoardViewModel {
             timeline: timeline || {},
             conflict_list: conflicts || [],
             fire_energy_after_conflict: calculateFireEnergyAfterConflicts(metadata?.pillars, conflicts),
+            meta: {
+              enabled_plugins: [
+                ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+                ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+                ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+              ],
+            },
           },
           selected_cards: selectedPayload,
           consensus_history: consensusHistory,
           previous_verdict: finalVerdictBody || lastConclusionText || "",
           previous_logical_evidence: finalLogicalEvidence,
           consultation_id: consultationId ?? undefined,
+          clear_previous_verdict: true,
+          force_clear_cache: true,
+          enabled_plugins: [
+            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+          ],
+          plugin_weights: {
+            "classical.blind_school.v1": Number(pluginWeights.blindSchool || 0),
+            "classical.wangshuai.v1": Number(pluginWeights.wangshuai || 0),
+          },
           lang,
         }),
       });
@@ -224,6 +281,15 @@ export function useStreamBoardController(): StreamBoardViewModel {
           logicalEvidence: Array.isArray(data.logical_evidence) ? data.logical_evidence.map((item: unknown) => String(item)) : [],
           versionId: String(data.version_id || ""),
           workVector: (data?.work_vector && typeof data.work_vector === "object") ? data.work_vector as Record<string, unknown> : {},
+          topologyGraphV1: (data?.topology_graph_v1 && typeof data.topology_graph_v1 === "object")
+            ? data.topology_graph_v1 as Record<string, unknown>
+            : {},
+          structureCandidatesV0: (data?.structure_candidates_v0 && typeof data.structure_candidates_v0 === "object")
+            ? data.structure_candidates_v0 as Record<string, unknown>
+            : {},
+          structureFinalDecisionV0: (data?.structure_final_decision_v0 && typeof data.structure_final_decision_v0 === "object")
+            ? data.structure_final_decision_v0 as Record<string, unknown>
+            : {},
           auditLog: (data?.audit_log && typeof data.audit_log === "object") ? data.audit_log as Record<string, unknown> : {},
         };
       }
@@ -376,7 +442,13 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setFinalVerdictVersionId("");
     setFinalLogicalEvidence([]);
     setFinalWorkVector(null);
+    setFinalTopologyGraphV1(null);
+    setFinalStructureCandidatesV0(null);
+    setFinalStructureFinalDecisionV0(null);
     setFinalVerdictHistory([]);
+    setStressTestResult(null);
+    setGenderComparisonResult(null);
+    setConsensusHistory([]);
 
     await refreshHealth();
 
@@ -420,11 +492,17 @@ export function useStreamBoardController(): StreamBoardViewModel {
           date: payload.date,
           time: payload.time,
           calendar: payload.calendar,
+          gender: payload.gender,
           lang,
           latitude: 31.2304,
           longitude: 121.4737,
           session_id: currentSessionId ?? undefined,
           physics_config: labConfig,
+          enabled_plugins: [
+            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+          ],
         }),
       });
 
@@ -665,6 +743,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
           setFinalVerdictChangeLog(verdict.changeLog || {});
           setFinalLogicalEvidence(verdict.logicalEvidence || []);
           setFinalWorkVector((verdict.workVector as Record<string, unknown>) || null);
+          setFinalTopologyGraphV1((verdict.topologyGraphV1 as Record<string, unknown>) || null);
+          setFinalStructureCandidatesV0((verdict.structureCandidatesV0 as Record<string, unknown>) || null);
+          setFinalStructureFinalDecisionV0((verdict.structureFinalDecisionV0 as Record<string, unknown>) || null);
           setFinalVerdictVersionId(verdict.versionId || "");
           setFinalVerdictHistory((prev) => [
             ...prev,
@@ -708,6 +789,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
         setFinalVerdictChangeLog(verdict.changeLog || {});
         setFinalLogicalEvidence(verdict.logicalEvidence || []);
         setFinalWorkVector((verdict.workVector as Record<string, unknown>) || null);
+        setFinalTopologyGraphV1((verdict.topologyGraphV1 as Record<string, unknown>) || null);
+        setFinalStructureCandidatesV0((verdict.structureCandidatesV0 as Record<string, unknown>) || null);
+        setFinalStructureFinalDecisionV0((verdict.structureFinalDecisionV0 as Record<string, unknown>) || null);
         setFinalVerdictVersionId(verdict.versionId || "");
         setFinalVerdictHistory((prev) => [
           ...prev,
@@ -792,11 +876,203 @@ export function useStreamBoardController(): StreamBoardViewModel {
 
   async function applyLabConfigAndRecalculate() {
     if (!lastSeedPayload) return;
-    setResultLogs((prev) => [...prev, `🧪 实验参数已应用：luck=${labConfig.WEIGHT_LUCK}, year=${labConfig.WEIGHT_YEAR}`]);
+    setResultLogs((prev) => [
+      ...prev,
+      `🧪 实验参数已应用：luck=${labConfig.WEIGHT_LUCK}, year=${labConfig.WEIGHT_YEAR}, climate=${labConfig.CLIMATE_INTENSITY}`,
+    ]);
     await onSeedSubmit(lastSeedPayload);
   }
 
+  async function runStressTest(scenario: string) {
+    if (!metadata) return;
+    const parts = String(scenario || "").split(/[,\s/]+/).filter(Boolean);
+    const yearPillar = parts[0] || "";
+    const luckPillar = parts[1] || "";
+    const response = await fetch(`${API_BASE}/api/v1/analyze/stress-test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        metadata,
+        gender: ((metadata as Record<string, unknown>)?.gender as string) || "male",
+        physics_config: labConfig,
+        baseline_structure_final_decision: finalStructureFinalDecisionV0 || {},
+        year_pillar: yearPillar,
+        luck_pillar: luckPillar,
+        enabled_plugins: [
+          ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+          ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+          ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+        ],
+        lang,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data?.ok) {
+      setStressTestResult(data as Record<string, unknown>);
+      setResultLogs((prev) => [
+        ...prev,
+        `🧪 压力测试 ${yearPillar}${luckPillar ? `/${luckPillar}` : ""} -> rollback=${Boolean(data.rollback_triggered)} ΔAbs=${Number(data.delta_abs || 0).toFixed(2)}`,
+      ]);
+    } else {
+      setResultLogs((prev) => [...prev, `❌ 压力测试失败：${String(data?.detail || "unknown")}`]);
+    }
+  }
+
+  async function runGenderComparison() {
+    if (!lastSeedPayload) return;
+    const base = {
+      date: lastSeedPayload.date,
+      time: lastSeedPayload.time,
+      calendar: lastSeedPayload.calendar,
+      lang,
+      latitude: 31.2304,
+      longitude: 121.4737,
+      physics_config: labConfig,
+      enabled_plugins: [
+        ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+        ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+        ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+      ],
+    };
+    const [maleResp, femaleResp] = await Promise.all([
+      fetch(`${API_BASE}/api/v1/analyze-seed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...base, gender: "male" }),
+      }),
+      fetch(`${API_BASE}/api/v1/analyze-seed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...base, gender: "female" }),
+      }),
+    ]);
+    const maleData = await maleResp.json().catch(() => ({}));
+    const femaleData = await femaleResp.json().catch(() => ({}));
+    const maleAxes = (maleData?.physics_tensor?.deity_energy_axes || {}) as Record<string, { absolute_energy?: number }>;
+    const femaleAxes = (femaleData?.physics_tensor?.deity_energy_axes || {}) as Record<string, { absolute_energy?: number }>;
+    const malePeakAbs = Math.max(0, ...Object.values(maleAxes).map((v) => Number(v?.absolute_energy || 0)));
+    const femalePeakAbs = Math.max(0, ...Object.values(femaleAxes).map((v) => Number(v?.absolute_energy || 0)));
+
+    const [maleVerdictResp, femaleVerdictResp] = await Promise.all([
+      fetch(`${API_BASE}/api/v1/final-verdict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: maleData?.metadata || {},
+          physics_tensor: maleData?.physics_tensor || {},
+          selected_cards: [],
+          consensus_history: [],
+          enabled_plugins: [
+            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+          ],
+          plugin_weights: {
+            "classical.blind_school.v1": Number(pluginWeights.blindSchool || 0),
+            "classical.wangshuai.v1": Number(pluginWeights.wangshuai || 0),
+          },
+          clear_previous_verdict: true,
+          force_clear_cache: true,
+          lang,
+        }),
+      }),
+      fetch(`${API_BASE}/api/v1/final-verdict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: femaleData?.metadata || {},
+          physics_tensor: femaleData?.physics_tensor || {},
+          selected_cards: [],
+          consensus_history: [],
+          enabled_plugins: [
+            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+          ],
+          plugin_weights: {
+            "classical.blind_school.v1": Number(pluginWeights.blindSchool || 0),
+            "classical.wangshuai.v1": Number(pluginWeights.wangshuai || 0),
+          },
+          clear_previous_verdict: true,
+          force_clear_cache: true,
+          lang,
+        }),
+      }),
+    ]);
+    const maleVerdict = await maleVerdictResp.json().catch(() => ({}));
+    const femaleVerdict = await femaleVerdictResp.json().catch(() => ({}));
+    const maleWork = Number(maleVerdict?.work_vector?.work_expectation || 0);
+    const femaleWork = Number(femaleVerdict?.work_vector?.work_expectation || 0);
+    const toPathBreakScore = (verdict: Record<string, unknown>) => {
+      const vectors = (((verdict?.work_vector as { work_vectors?: Array<Record<string, unknown>> } | undefined)?.work_vectors) || []);
+      const ziwu = vectors.filter((item) => String(item?.detail || "").includes("子午冲"));
+      if (ziwu.length === 0) return 0;
+      const scores = ziwu.map((item) => {
+        const gain = Number(item?.unlock_gain || 0);
+        const risk = Number(item?.backfire_risk || 0);
+        if (gain <= 0) return 1;
+        return Math.max(0, Math.min(1, risk / gain));
+      });
+      return Math.max(...scores);
+    };
+    const malePathBreakScore = toPathBreakScore(maleVerdict as Record<string, unknown>);
+    const femalePathBreakScore = toPathBreakScore(femaleVerdict as Record<string, unknown>);
+    const totalWeight = Math.max(0.0001, Number(pluginWeights.blindSchool || 0) + Number(pluginWeights.wangshuai || 0));
+    const blindRatio = Number(pluginWeights.blindSchool || 0) / totalWeight;
+    const maleThemeColor = interpolateColor("#2D4F1E", "#1A1A1A", blindRatio);
+    const femaleThemeColor = interpolateColor("#2D4F1E", "#1A1A1A", 1 - blindRatio);
+    const summary = `若为坤造（女），当前做功净值从 ${maleWork.toFixed(2)} 变化为 ${femaleWork.toFixed(2)}；子午冲损毁度 男${Math.round(malePathBreakScore * 100)}% / 女${Math.round(femalePathBreakScore * 100)}%。`;
+
+    setGenderComparisonResult({
+      male_dayun: String(maleData?.timeline?.dayun || ""),
+      female_dayun: String(femaleData?.timeline?.dayun || ""),
+      male_peak_abs: malePeakAbs,
+      female_peak_abs: femalePeakAbs,
+      male_work_net: maleWork,
+      female_work_net: femaleWork,
+      male_path_break_score: malePathBreakScore,
+      female_path_break_score: femalePathBreakScore,
+      male_theme_color: maleThemeColor,
+      female_theme_color: femaleThemeColor,
+      summary,
+    });
+    setResultLogs((prev) => [...prev, `🧭 性别镜像对比完成：男(${maleWork.toFixed(2)}) vs 女(${femaleWork.toFixed(2)})`]);
+  }
+
+  async function rerunFinalVerdictWithWeights() {
+    const conflicts = confirmedConflicts || [];
+    const verdict = await generateFinalVerdict(conflicts, []);
+    const safeVerdict = (verdict.body || "").trim() ? verdict.body : "结果提取失败，请稍后重试。";
+    setFinalVerdictBody(safeVerdict);
+    setFinalVerdictChangeLog(verdict.changeLog || {});
+    setFinalLogicalEvidence(verdict.logicalEvidence || []);
+    setFinalWorkVector((verdict.workVector as Record<string, unknown>) || null);
+    setFinalTopologyGraphV1((verdict.topologyGraphV1 as Record<string, unknown>) || null);
+    setFinalStructureCandidatesV0((verdict.structureCandidatesV0 as Record<string, unknown>) || null);
+    setFinalStructureFinalDecisionV0((verdict.structureFinalDecisionV0 as Record<string, unknown>) || null);
+    setFinalVerdictVersionId(verdict.versionId || "");
+  }
+
   const mergedSteps = historyData?.items?.length ? [...steps, ...historyData.items] : steps;
+  const streamThemeChroma = useMemo(() => {
+    const blindWeight = Number(pluginWeights.blindSchool || 0);
+    const wanshuaiWeight = Number(pluginWeights.wangshuai || 0);
+    const total = Math.max(0.0001, blindWeight + wanshuaiWeight);
+    const blindRatio = blindWeight / total;
+    const wangshuaiRatio = wanshuaiWeight / total;
+    const bgColor = interpolateColor(
+      "#2D4F1E", // WangShuai green
+      "#1A1A1A", // BlindSchool black
+      blindRatio,
+    );
+    const conflictReport = ((finalStructureFinalDecisionV0 as {
+      plugin_conflict_report?: { tension_level?: number; zone?: string; has_polarity_reversal?: boolean };
+    } | null)?.plugin_conflict_report || {});
+    const tension = Number(conflictReport.tension_level || 0);
+    const isConflictOverload = String(conflictReport.zone || "BLUE") === "RED" && tension > 0.8;
+    const hasPolarityReversal = Boolean(conflictReport.has_polarity_reversal);
+    return { bgColor, blindRatio, wangshuaiRatio, isConflictOverload, hasPolarityReversal };
+  }, [pluginWeights.blindSchool, pluginWeights.wangshuai, finalStructureFinalDecisionV0]);
 
   return {
     lang,
@@ -831,6 +1107,11 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalVerdictChangeLog,
     finalLogicalEvidence,
     finalWorkVector,
+    finalTopologyGraphV1,
+    finalStructureCandidatesV0,
+    finalStructureFinalDecisionV0,
+    stressTestResult,
+    genderComparisonResult,
     finalVerdictHistory,
     selectionResetToken,
     finalVerdictVersionId,
@@ -844,6 +1125,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setLabConfig,
     showPhysicsAudit,
     setShowPhysicsAudit,
+    pluginSwitches,
+    setPluginSwitches,
+    pluginWeights,
+    setPluginWeights,
+    streamThemeChroma,
+    rerunFinalVerdictWithWeights,
     mergedSteps,
     logicDrawerOpen,
     logicDrawerTitle,
@@ -861,6 +1148,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     onRollback,
     applyCurrentSqlPatch,
     applyLabConfigAndRecalculate,
+    runStressTest,
+    runGenderComparison,
     t,
   };
 }
