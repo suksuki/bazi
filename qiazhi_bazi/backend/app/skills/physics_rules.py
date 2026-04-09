@@ -1,7 +1,7 @@
 """Static physics rules and pure helper functions."""
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Tuple
 
 DEFAULT_POSITION_WEIGHTS: Dict[str, float] = {
     "year": 0.20,
@@ -28,6 +28,11 @@ DEFAULT_INTERACTION_PARAMS: Dict[str, float] = {
     "EFF_CONSUMING_DIFF": 0.9,
     "CF_FLOATING_DECAY": 0.1,
     "A_PROTRUSION": 1.0,
+    "L1_PUNISH_FRICTION_SANXING": 0.22,
+    "L1_PUNISH_FRICTION_ZIXING": 0.18,
+    "L1_CLASH_INTENSITY": 1.0,
+    "L1_COMBINE_LOCK_RATIO": 0.3,
+    "L1_PIERCE_RATIO": 0.45,
 }
 
 WEIGHT_LUCK = 0.4
@@ -62,6 +67,41 @@ STEM_TO_ELEMENT = {
     "庚": "metal", "辛": "metal",
     "壬": "water", "癸": "water",
 }
+
+# 日干之墓支（L1 墓库插件定位用，结构规则非可调系数）
+STEM_TOMB_BRANCH: Dict[str, str] = {
+    "甲": "未",
+    "乙": "未",
+    "丙": "戌",
+    "丁": "戌",
+    "戊": "戌",
+    "己": "戌",
+    "庚": "丑",
+    "辛": "丑",
+    "壬": "辰",
+    "癸": "辰",
+}
+
+# 三合局（全支齐现时标记 AGGREGATED + composite 场强）
+SANHE_GROUPS: Tuple[frozenset[str], ...] = (
+    frozenset({"寅", "午", "戌"}),
+    frozenset({"申", "子", "辰"}),
+    frozenset({"亥", "卯", "未"}),
+    frozenset({"巳", "酉", "丑"}),
+)
+
+# 三刑边（任两支同现于盘中则施加扭力边）
+SANXING_EDGES: tuple[tuple[str, str], ...] = (
+    ("寅", "巳"),
+    ("巳", "申"),
+    ("寅", "申"),
+    ("丑", "戌"),
+    ("戌", "未"),
+    ("丑", "未"),
+    ("子", "卯"),
+)
+
+SELF_PUNISH_BRANCHES: frozenset[str] = frozenset({"辰", "午", "酉", "亥"})
 
 STEM_YIN_YANG = {
     "甲": "yang",

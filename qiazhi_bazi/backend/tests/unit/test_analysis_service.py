@@ -26,6 +26,11 @@ class _FakePhysicsSkill:
     def consume(self, payload):
         return payload
 
+    def get_interaction_params(self):
+        from app.skills.physics_rules import DEFAULT_INTERACTION_PARAMS
+
+        return dict(DEFAULT_INTERACTION_PARAMS)
+
     def produce(self, consumed):
         return {
             "audit_log": {

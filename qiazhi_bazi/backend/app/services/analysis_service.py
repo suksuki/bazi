@@ -24,6 +24,7 @@ from app.services.helpers.analysis_helpers import (
     normalize_translation_texts,
     parse_translation_response,
 )
+from app.services.helpers.interaction_pipeline import evaluate_interactions
 from app.skills.final_verdict import FinalVerdictSkill
 from app.skills.physics_engine import PhysicsInferenceSkill
 from app.skills.structure_final_decision import build_structure_final_decision_v0
@@ -100,6 +101,12 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         }
     )
     physics_tensor = physics_skill.produce(consumed)
+    evaluate_interactions(
+        physics_tensor=physics_tensor,
+        metadata=metadata_obj,
+        interaction_params=physics_skill.get_interaction_params(),
+        physics_config=body.physics_config.model_dump(exclude_none=True) if body.physics_config else {},
+    )
     registry = PluginRegistry()
     plugin_outputs = registry.run_hook(
         hook="on_physics_complete",

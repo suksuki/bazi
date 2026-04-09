@@ -148,6 +148,10 @@ class PhysicsInferenceSkill(BaseSkill):
         self._cache.seasonal_matrix = terms
         self._cache.version_id = version_id
 
+    def get_interaction_params(self) -> Dict[str, float]:
+        """供 L1 流水线读取当前 DB/默认融合后的交互参数字典。"""
+        return dict(self._cache.interaction_params)
+
     def refresh_and_recalculate(self) -> None:
         """
         兼容“系统反馈闭环”的语义接口。
