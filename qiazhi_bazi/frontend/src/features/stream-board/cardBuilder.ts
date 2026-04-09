@@ -1,5 +1,4 @@
-import { mapConflictDetail } from "@/constants/termMap";
-import type { BaziMetadata, Lang } from "@/types/bazi";
+import type { BaziMetadata } from "@/types/bazi";
 import type { InboxCard, LogicProposal } from "./models";
 
 export function buildInboxCards(params: {
@@ -7,20 +6,10 @@ export function buildInboxCards(params: {
   firstPromptText: string;
   auditorProposalCards: InboxCard[];
   resolvedCardIds: string[];
-  lang: Lang;
   t: (text: string) => string;
 }): InboxCard[] {
-  const { metadata, firstPromptText, auditorProposalCards, resolvedCardIds, lang, t } = params;
+  const { metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t } = params;
   if (!metadata) return [];
-
-  const detected = metadata.conflict_matrix.points.map((point, index) => ({
-    id: `conflict-${index}-${point.detail}`,
-    title: `冲突确认：${point.detail}`,
-    conflictDetail: point.detail,
-    markdown: mapConflictDetail(`系统检测到 ${point.detail}。请选择是否深入分析该局部。`, lang),
-    displayText: mapConflictDetail(point.detail, lang),
-    cardType: "conflict" as const,
-  }));
 
   const sentenceItems = firstPromptText
     .replace(/\r/g, "")
@@ -44,14 +33,14 @@ export function buildInboxCards(params: {
     cardType: "auditor-proposal" as const,
   }));
 
-  const mergedCards = detected.length > 0 || sentenceItems.length > 0 || proposalCards.length > 0
-    ? [...proposalCards, ...detected, ...sentenceItems]
+  const mergedCards = sentenceItems.length > 0 || proposalCards.length > 0
+    ? [...proposalCards, ...sentenceItems]
     : [{
         id: "fallback-deep-scan",
         title: "继续深度扫描",
-        conflictDetail: "未见明显冲合，进入深层扫描",
-        markdown: "当前未检测到六冲/六合，是否继续执行深层结构扫描？",
-        displayText: t("未见明显冲合，进入深层扫描"),
+        conflictDetail: "进入深层扫描",
+        markdown: "当前无可展示决策项，是否继续执行深层结构扫描？",
+        displayText: t("进入深层扫描"),
         cardType: "conflict" as const,
       }];
 

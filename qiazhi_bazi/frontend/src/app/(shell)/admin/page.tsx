@@ -1,12 +1,27 @@
 import Link from "next/link";
+import { EngineRoomPanel } from "@/features/admin/EngineRoomPanel";
+import { WaterfallTopology } from "@/features/admin/components/WaterfallTopology";
 
 export default function AdminHomePage() {
   return (
     <div className="space-y-5">
+      <nav className="flex flex-wrap gap-2">
+        <Link href="/admin" className="rounded-lg border border-zinc-700 bg-zinc-800/70 px-3 py-1.5 text-xs text-zinc-200">
+          系统设置
+        </Link>
+        <Link href="/admin/plugins" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200">
+          插件管理
+        </Link>
+      </nav>
+
       <div className="rounded-2xl border border-zinc-800 bg-gradient-to-r from-zinc-900 to-zinc-900/50 p-5">
-        <h2 className="text-xl font-semibold tracking-tight">管理端总览</h2>
-        <p className="mt-1 text-sm text-zinc-400">监控本地数据库与 0.10 大模型连通状态，支持快速体检与审计入口。</p>
+        <h2 className="text-xl font-semibold tracking-tight">管理端总览 · 机房</h2>
+        <p className="mt-1 text-sm text-zinc-400">物理参数与插件与主实验室共享同一会话状态（LabConfig）。</p>
       </div>
+
+      <WaterfallTopology />
+
+      <EngineRoomPanel />
 
       <div className="grid gap-4 md:grid-cols-2">
         <article className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/20">

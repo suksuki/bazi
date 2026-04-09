@@ -22,10 +22,12 @@ def run_punish(
     k = max(0.0, float(friction_coeff or 0.0))
     coupling = min(src, tgt)
     loss = coupling * k
+    impact_torque = round(loss, 4)
     return {
         "effect": "punish",
         "mode": mode,
-        "abs_loss": round(loss, 4),
+        "abs_loss": impact_torque,
         "abs_gain": 0.0,
+        "impact_torque": impact_torque,
         "vector": "torsional_friction",
     }

@@ -37,8 +37,17 @@ def test_pipeline_sanhe_aggregated_lab01_shape():
     assert len(clusters) == 1
     assert clusters[0]["energy_vault_status"] == EnergyVaultStatus.AGGREGATED.value
     assert abs(clusters[0]["cluster_abs"] - 214.55) < 0.01
+    pipe = tensor.get("l1_atomic_pipeline") or {}
+    assert pipe.get("composite_consistency_check", {}).get("ok") is True
+    phi_steps = [s for s in (pipe.get("steps") or []) if s.get("plugin") == "composite.aggregated_phi"]
+    assert len(phi_steps) == 4
+    assert all(s.get("phi_work") == 0.0 for s in phi_steps)
+    assert tensor.get("meta", {}).get("work_eligible") is False
+    ge = float((tensor.get("meta") or {}).get("global_entropy") or 0)
+    assert 0.0 <= ge <= 1.0
+    assert (tensor.get("meta") or {}).get("global_entropy_metrics")
     # 乙木墓在未；此盘无未支，不应产生墓库插件步骤
-    steps = (tensor.get("l1_atomic_pipeline") or {}).get("steps") or []
+    steps = pipe.get("steps") or []
     assert not any(s.get("plugin") == "base.grave" for s in steps)
 
 
@@ -59,6 +68,8 @@ def test_pipeline_grave_locked_when_tomb_branch_present():
         }
     }
     evaluate_interactions(physics_tensor=tensor, metadata=meta, interaction_params={}, physics_config={"GRAVE_BURST_MULTIPLIER": 1.3})
+    assert tensor.get("meta", {}).get("work_eligible") is False
+    assert 0.0 <= float((tensor.get("meta") or {}).get("global_entropy") or 0) <= 1.0
     steps = (tensor.get("l1_atomic_pipeline") or {}).get("steps") or []
     grave_steps = [s for s in steps if s.get("plugin") == "base.grave"]
     assert len(grave_steps) == 1
@@ -93,3 +104,49 @@ def test_pipeline_clash_step():
     clash = [s for s in steps if s.get("plugin") == "base.clash"]
     assert len(clash) == 1
     assert clash[0]["delta"]["effect"] == "clash"
+
+
+def test_pipeline_trinity_sanhe_sanxing_grave_locked():
+    """三合 + 寅巳刑 + 辛金墓于丑且无冲丑：扭力入账、聚合 φ=0、墓库 LOCKED、work_eligible 全局假。"""
+    pillars = FourPillars(
+        year=StemBranchPair(stem="甲", branch="寅"),
+        month=StemBranchPair(stem="乙", branch="酉"),
+        day=StemBranchPair(stem="辛", branch="丑"),
+        hour=StemBranchPair(stem="丁", branch="巳"),
+    )
+    meta = BaziMetadata(pillars=pillars, conflict_matrix=ConflictMatrix(points=[]))
+    tensor = {
+        "by_pillar": {
+            "year": {"raw_energy": 44.0},
+            "month": {"raw_energy": 55.0},
+            "day": {"raw_energy": 66.0},
+            "hour": {"raw_energy": 77.0},
+        },
+        "audit_log": {"skill_id": "physics_inference_skill"},
+    }
+    params = {
+        "L1_PUNISH_FRICTION_SANXING": 0.2,
+        "L1_PUNISH_FRICTION_ZIXING": 0.15,
+        "L1_SANHE_PHI_CLAMP": 1.0,
+        "L1_SANHE_PHI_UNLOCK_ON_CLASH": 1.0,
+    }
+    evaluate_interactions(physics_tensor=tensor, metadata=meta, interaction_params=params, physics_config={})
+    audit = tensor.get("audit_log") or {}
+    assert audit.get("skill_id") == "physics_inference_skill"
+    assert float(audit.get("l1_impact_torque_total") or 0) > 0
+    assert any(set(e.get("edge") or []) == {"year", "hour"} for e in (audit.get("l1_punish_torque_trace") or []))
+    comp = tensor.get("composite_field_impact") or {}
+    assert len(comp.get("sanhe_clusters") or []) == 1
+    cluster = comp["sanhe_clusters"][0]
+    assert set(cluster["branches"]) == {"丑", "巳", "酉"}
+    assert abs(cluster["cluster_abs"] - (55.0 + 66.0 + 77.0)) < 0.01
+    pipe = tensor.get("l1_atomic_pipeline") or {}
+    assert pipe.get("composite_consistency_check", {}).get("ok") is True
+    grave = [s for s in (pipe.get("steps") or []) if s.get("plugin") == "base.grave"]
+    assert len(grave) == 1
+    assert grave[0]["delta"]["energy_vault_status"] == EnergyVaultStatus.LOCKED.value
+    phi_steps = [s for s in (pipe.get("steps") or []) if s.get("plugin") == "composite.aggregated_phi"]
+    assert len(phi_steps) == 3
+    assert all(s.get("phi_work") == 0.0 for s in phi_steps)
+    assert tensor.get("meta", {}).get("work_eligible") is False
+    assert float((tensor.get("meta") or {}).get("global_entropy") or 0) > 0.15

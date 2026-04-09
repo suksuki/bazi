@@ -141,7 +141,7 @@ def test_load_consensus_history_and_generate_final_verdict():
             analysis_service.generate_final_verdict(
                 FinalVerdictRequest(
                     metadata={"foo": "bar"},
-                    physics_tensor={"score": 1},
+                    physics_tensor={"score": 1, "meta": {}, "abs_nodes": {"比肩": 1.0}},
                     selected_cards=[],
                     consensus_history=[],
                     previous_verdict="",
@@ -197,7 +197,7 @@ def test_generate_final_verdict_clear_previous_forces_rewrite():
             analysis_service.generate_final_verdict(
                 FinalVerdictRequest(
                     metadata={},
-                    physics_tensor={},
+                    physics_tensor={"meta": {}, "abs_nodes": {"比肩": 1.0}},
                     selected_cards=[],
                     consensus_history=[],
                     previous_verdict="old",

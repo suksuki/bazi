@@ -33,6 +33,14 @@ DEFAULT_INTERACTION_PARAMS: Dict[str, float] = {
     "L1_CLASH_INTENSITY": 1.0,
     "L1_COMBINE_LOCK_RATIO": 0.3,
     "L1_PIERCE_RATIO": 0.45,
+    # 1.0：三合聚合节点在 L1 显式 φ=0；若岁运扫描中出现冲及合局支，读参数关闭钳制
+    "L1_SANHE_PHI_CLAMP": 1.0,
+    "L1_SANHE_PHI_UNLOCK_ON_CLASH": 1.0,
+    "ENTROPY_W_TORQUE": 0.4,
+    "ENTROPY_W_CLAMP": 0.3,
+    "ENTROPY_W_CLASH": 0.3,
+    "ENTROPY_TORQUE_REF": 180.0,
+    "ENTROPY_CLASH_REF": 160.0,
 }
 
 WEIGHT_LUCK = 0.4

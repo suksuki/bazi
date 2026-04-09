@@ -48,11 +48,10 @@ describe("stream-board utils", () => {
         },
       ],
       resolvedCardIds: ["llm-observe-1"],
-      lang: "ZH",
       t: (text) => text,
     });
 
-    expect(cards.map((card) => card.id)).toEqual(["proposal-1", "conflict-0-子午冲", "llm-observe-0", "llm-observe-2"]);
+    expect(cards.map((card) => card.id)).toEqual(["proposal-1", "llm-observe-0", "llm-observe-2"]);
   });
 
   it("returns a stable fallback verdict payload", () => {

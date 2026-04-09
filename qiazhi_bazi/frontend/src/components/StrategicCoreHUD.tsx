@@ -6,6 +6,8 @@ type Props = {
   onPickDeity?: (deity: string) => void;
   hasReboundRisk?: boolean;
   energyPeak?: number;
+  /** L1 global_entropy：越高顶部应力条脉冲越快 */
+  globalEntropy?: number | null;
   diagnosticHint?: string;
   genderLabel?: string;
 };
@@ -16,6 +18,7 @@ export function StrategicCoreHUD({
   onPickDeity,
   hasReboundRisk = false,
   energyPeak = 0,
+  globalEntropy = null,
   diagnosticHint = "",
   genderLabel = "",
 }: Props) {
@@ -43,10 +46,23 @@ export function StrategicCoreHUD({
   const totalWeight = Math.max(0.0001, Number(pluginWeights.blindSchool || 0) + Number(pluginWeights.wangshuai || 0));
   const blindPct = Math.round((Number(pluginWeights.blindSchool || 0) / totalWeight) * 100);
   const wanshuaiPct = 100 - blindPct;
+  const entropyPulseSec =
+    typeof globalEntropy === "number" && Number.isFinite(globalEntropy)
+      ? Math.max(0.75, 2.1 - globalEntropy * 1.65)
+      : null;
+  const entropyStress = typeof globalEntropy === "number" && globalEntropy >= 0.4;
   if (!useful.length && !obstacle.length && !climate.summary) return null;
   return (
-    <section className={`mb-3 rounded-xl border border-zinc-700 bg-zinc-950 p-3 transition-all ${overloaded ? "animate-pulse shadow-[0_0_18px_rgba(130,0,20,0.45)]" : ""}`}>
-      <div className={`mb-2 h-1 w-full rounded bg-gradient-to-r ${conflictColor} ${zone === "RED" ? "animate-pulse" : ""}`} style={{ opacity: Math.max(0.35, Math.min(1, tensionLevel)) }} />
+    <section
+      className={`mb-3 rounded-xl border border-zinc-700 bg-zinc-950 p-3 transition-all ${overloaded ? "animate-pulse shadow-[0_0_18px_rgba(130,0,20,0.45)]" : ""} ${entropyStress ? "shadow-[0_0_14px_rgba(220,90,40,0.22)]" : ""}`}
+    >
+      <div
+        className={`mb-2 h-1 w-full rounded bg-gradient-to-r ${conflictColor} ${zone === "RED" || entropyStress ? "animate-pulse" : ""}`}
+        style={{
+          opacity: Math.max(0.35, Math.min(1, tensionLevel)),
+          ...(entropyPulseSec ? { animationDuration: `${entropyPulseSec}s` } : {}),
+        }}
+      />
       <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
         话语权占比：盲派 {blindPct}% | 旺衰 {wanshuaiPct}%
       </div>

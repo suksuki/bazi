@@ -10,7 +10,7 @@ from sqlmodel import select
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.core.plugins.registry import PluginRegistry
 from app.api.contracts import AnalyzeClashRequest, AnalyzeSeedRequest, FinalVerdictRequest, TranslateRequest
-from app.api.router_helpers import apply_energy_preview, guess_text_lang, physics_snapshot
+from app.api.router_helpers import guess_text_lang, physics_snapshot
 from app.core.runtime_config import get_runtime_config
 from app.core.scanner import Scanner
 from app.db.models import SessionConsensus
@@ -60,8 +60,6 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         flow_state=FlowState.UNKNOWN,
         notes="已完成原子探测（六冲+六合）",
     )
-    apply_energy_preview(metadata_obj)
-
     location_hint = ""
     if body.latitude is not None and body.longitude is not None:
         location_hint = f" 当前地理参考为纬度{body.latitude}、经度{body.longitude}。"
@@ -199,13 +197,68 @@ def resolve_consensus_history(
 
 
 async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+    physics_tensor = body.physics_tensor or {}
+    if not isinstance(physics_tensor, dict):
+        raise ValueError("physics_tensor 必须为对象")
+    if not isinstance(physics_tensor.get("meta"), dict):
+        raise ValueError("physics_tensor.meta 缺失")
+    if "abs_nodes" not in physics_tensor:
+        # 兼容旧结构：若存在 deity_energy_axes 则自动镜像为 abs_nodes；否则视为缺失
+        axes = physics_tensor.get("deity_energy_axes")
+        if isinstance(axes, dict) and axes:
+            composite = physics_tensor.get("composite_field_impact")
+
+            def _cluster_effective_abs(name: str, raw_abs: float) -> float | None:
+                if not isinstance(composite, dict):
+                    return None
+                sanhe_clusters = composite.get("sanhe_clusters")
+                if not isinstance(sanhe_clusters, list):
+                    return None
+                for cluster in sanhe_clusters:
+                    if not isinstance(cluster, dict):
+                        continue
+                    for map_key in ("effective_abs_nodes", "abs_nodes", "node_effective_abs"):
+                        m = cluster.get(map_key)
+                        if isinstance(m, dict) and isinstance(m.get(name), (int, float)):
+                            return float(m.get(name))
+                    nodes = cluster.get("nodes")
+                    if isinstance(nodes, list):
+                        for node in nodes:
+                            if not isinstance(node, dict):
+                                continue
+                            node_name = str(node.get("name") or node.get("node") or node.get("deity") or "")
+                            if node_name != name:
+                                continue
+                            for val_key in ("effective_abs", "effective_energy", "effective_field_abs"):
+                                if isinstance(node.get(val_key), (int, float)):
+                                    return float(node.get(val_key))
+                            if isinstance(node.get("raw_energy"), (int, float)):
+                                unlocked = bool(cluster.get("cluster_phi_unlock", False))
+                                return float(node.get("raw_energy")) if unlocked else 0.0
+                    if bool(cluster.get("cluster_phi_unlock", False)) is False and (
+                        isinstance(cluster.get("energy_vault_status"), str)
+                        and str(cluster.get("energy_vault_status")).upper() == "AGGREGATED"
+                    ):
+                        if isinstance(cluster.get("deities"), list) and name in [str(x) for x in cluster.get("deities")]:
+                            return max(0.0, raw_abs * 0.0)
+                return None
+
+            mirrored: Dict[str, float] = {}
+            for k, v in axes.items():
+                raw_abs = float(((v or {}).get("absolute_energy", 0.0) if isinstance(v, dict) else 0.0) or 0.0)
+                effective = _cluster_effective_abs(k, raw_abs)
+                mirrored[k] = float(effective if effective is not None else raw_abs)
+            physics_tensor["abs_nodes"] = mirrored
+        else:
+            raise ValueError("physics_tensor.abs_nodes 缺失")
+
     skill = FinalVerdictSkill.instance()
     clear_flag = bool(body.clear_previous_verdict or body.force_clear_cache)
     previous_verdict = "" if clear_flag else (body.previous_verdict or "")
     previous_logical_evidence = [] if clear_flag else (body.previous_logical_evidence or [])
     out = await skill.generate(
         metadata=body.metadata or {},
-        physics_tensor=body.physics_tensor or {},
+        physics_tensor=physics_tensor,
         selected_cards=body.selected_cards or [],
         consensus_history=consensus_history,
         previous_verdict=previous_verdict,
@@ -226,6 +279,7 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         "plugin_outputs_verdict_ready": out.get("plugin_outputs_verdict_ready", {}),
         "plugin_conflict_report": out.get("plugin_conflict_report", {}),
         "audit_log": out.get("audit_log", {}),
+        "confirmed_decisions": out.get("confirmed_decisions", []),
     }
 
 

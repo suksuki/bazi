@@ -6,7 +6,6 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List
 
-from app.core.physics import calculate_clash_loss
 from app.schemas.bazi_metadata import BaziMetadata
 
 from .contracts import AuditLlmStructuredResponse
@@ -188,24 +187,3 @@ def physics_snapshot(physics_tensor: Dict[str, Any]) -> str:
     return f"[Self: {self_score:.1f} | Root: {root_state} | Season: {season}]"
 
 
-def apply_energy_preview(metadata: BaziMetadata) -> None:
-    if not metadata.pillars:
-        return
-    pillars_map = {
-        "year_branch": metadata.pillars.year,
-        "month_branch": metadata.pillars.month,
-        "day_branch": metadata.pillars.day,
-        "hour_branch": metadata.pillars.hour,
-    }
-    month_branch = metadata.pillars.month.branch
-    for point in metadata.conflict_matrix.points:
-        if point.kind != "clash" or len(point.positions) != 2:
-            continue
-        a_pos, b_pos = point.positions
-        a = pillars_map.get(a_pos)
-        b = pillars_map.get(b_pos)
-        if not a or not b:
-            continue
-        loss = calculate_clash_loss(a.branch, b.branch, month_branch=month_branch)
-        a.energy_value = max(0, int(a.energy_value) - int(loss.get(a.branch, 0)))
-        b.energy_value = max(0, int(b.energy_value) - int(loss.get(b.branch, 0)))

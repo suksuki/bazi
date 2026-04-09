@@ -32,6 +32,7 @@ def test_base_punish_friction_loss():
     assert out["effect"] == "punish"
     assert out["vector"] == "torsional_friction"
     assert out["abs_loss"] == 2.0
+    assert out["impact_torque"] == 2.0
 
 
 def test_base_grave_locked_vs_unlocked():

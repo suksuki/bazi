@@ -21,6 +21,10 @@ from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
 
+PRIMARY_WILL_TAGS = ("[CONFIRMED_DECISION]", "confirmed_decisions")
+WILL_PRESERVATION_WINDOW = 48
+IMMUTABLE_WILL_TAGS = ("IMMUTABLE_WILL", '"is_confirmed": true', "is_confirmed: true")
+
 
 class FinalVerdictSkill(BaseSkill):
     _instance: "FinalVerdictSkill | None" = None
@@ -247,6 +251,10 @@ class FinalVerdictSkill(BaseSkill):
             "严禁跳过 L1_Junction 直接下‘伤官见官’结论；必须先引用 [L1 Junction Flags]。"
             f"{lang_hint}"
         )
+        logical_evidence = FinalVerdictSkill._clean_context_lines(logical_evidence)
+        work_lines = FinalVerdictSkill._clean_context_lines(work_lines)
+        structure_lines = FinalVerdictSkill._clean_context_lines(structure_lines)
+
         user = (
             "[Physical Evidence]\n"
             + "\n".join(f"- {x}" for x in logical_evidence)
@@ -270,6 +278,38 @@ class FinalVerdictSkill(BaseSkill):
                 selected_cards=selected_cards,
                 consensus_history=[],
             ))
+            + "\n[CONFIRMED_DECISION]\n"
+            + (
+                "confirmed_decisions="
+                + json.dumps(
+                    [
+                        {
+                            "id": str((c or {}).get("id") or ""),
+                            "title": str((c or {}).get("title") or ""),
+                            "displayText": str((c or {}).get("displayText") or ""),
+                            "is_confirmed": True,
+                        }
+                        for c in (selected_cards or [])
+                        if isinstance(c, dict)
+                    ],
+                    ensure_ascii=False,
+                )
+            )
+            + "\n[IMMUTABLE_WILL]\n"
+            + (
+                "confirmed_decisions="
+                + json.dumps(
+                    [
+                        {
+                            "id": str((c or {}).get("id") or ""),
+                            "is_confirmed": True,
+                        }
+                        for c in (selected_cards or [])
+                        if isinstance(c, dict)
+                    ],
+                    ensure_ascii=False,
+                )
+            )
             + "\n[Plugin Weight Guidance]\n"
             + f"- classical.blind_school.v1={weight_blind:.2f}\n"
             + f"- classical.wangshuai.v1={weight_wangshuai:.2f}\n"
@@ -285,6 +325,54 @@ class FinalVerdictSkill(BaseSkill):
             "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
         )
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+    @staticmethod
+    def _clean_context_lines(lines: List[str], max_tokens: int = 4000) -> List[str]:
+        """
+        ContextCleaner:
+        - 避免逻辑证据无限膨胀导致断言中断
+        - 超阈值后仅保留核心 L1/L2 旗标 + 最近片段
+        """
+        cleaned = [str(x).strip() for x in (lines or []) if str(x).strip()]
+        ranked: List[tuple[int, str]] = []
+        for x in cleaned:
+            priority = 0
+            if any(tag in x for tag in PRIMARY_WILL_TAGS):
+                priority = 2_147_483_647
+            if any(tag in x for tag in IMMUTABLE_WILL_TAGS):
+                priority = 2_147_483_647
+            elif (
+                "L1_Junction" in x
+                or "SHANG_GUAN_JIAN_GUAN" in x
+                or "插件.conflict_zone" in x
+                or "插件.tension_level" in x
+                or "四柱=" in x
+            ):
+                priority = 200
+            ranked.append((priority, x))
+        primary_will_lines = [x for p, x in ranked if p == 2_147_483_647]
+        if len(primary_will_lines) > WILL_PRESERVATION_WINDOW:
+            primary_will_lines = primary_will_lines[-WILL_PRESERVATION_WINDOW:]
+        approx_tokens = sum(max(1, len(x) // 2) for x in cleaned)
+        if approx_tokens <= max_tokens:
+            merged_full: List[str] = []
+            seen_full = set()
+            for item in [*primary_will_lines, *cleaned]:
+                if item in seen_full:
+                    continue
+                seen_full.add(item)
+                merged_full.append(item)
+            return merged_full
+        keep_prefix = [x for p, x in ranked if p >= 200 and p < 2_147_483_647][:18]
+        tail = cleaned[-60:]
+        merged: List[str] = []
+        seen = set()
+        for item in [*primary_will_lines, *keep_prefix, *tail]:
+            if item in seen:
+                continue
+            seen.add(item)
+            merged.append(item)
+        return merged
 
     def consume(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -505,6 +593,16 @@ class FinalVerdictSkill(BaseSkill):
         if not change_log.get("physics_diff") and not change_log.get("consensus_diff"):
             change_log["text_diff_hint"] = change_log.get("text_diff_hint") or "已生成全量重写终判（非追加模式）。"
         version_id = datetime.utcnow().strftime("v2.%m%d%H%M%S")
+        confirmed_decisions = [
+            {
+                "id": str((c or {}).get("id") or ""),
+                "label": str((c or {}).get("displayText") or (c or {}).get("title") or ""),
+                "is_confirmed": True,
+                "confirmed_at": datetime.utcnow().isoformat(),
+            }
+            for c in (selected_cards or [])
+            if isinstance(c, dict)
+        ]
         consumed = self.consume(
             {
                 "metadata": metadata,
@@ -543,6 +641,7 @@ class FinalVerdictSkill(BaseSkill):
             "plugin_conflict_report": conflict_report,
             "l1_junction_flags": l1_flags,
             "audit_log": audit_log,
+            "confirmed_decisions": confirmed_decisions,
             "raw": raw,
         }
 

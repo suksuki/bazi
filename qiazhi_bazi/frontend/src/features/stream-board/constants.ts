@@ -4,7 +4,7 @@ export const API_BASE = process.env.NEXT_PUBLIC_QIAZHI_API ?? "http://127.0.0.1:
 export const ADMIN_TOKEN = process.env.NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN ?? "";
 export const adminHeaders: Record<string, string> = ADMIN_TOKEN ? { "X-Admin-Token": ADMIN_TOKEN } : {};
 export const fetcher = (url: string) => fetch(url).then((r) => r.json());
-export const VERDICT_TIMEOUT_MS = 15000;
+export const VERDICT_TIMEOUT_MS = 45000;
 export const TRANSLATION_DEBOUNCE_MS = 500;
 export const TRANSLATION_CACHE_MAX = 200;
 

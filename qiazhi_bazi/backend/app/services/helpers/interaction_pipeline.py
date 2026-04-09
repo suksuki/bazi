@@ -1,21 +1,11 @@
 """L1 原子交互流水线：按序执行 base 层插件并写入 physics_tensor。"""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set
 
 from app.core.config.physics_settings import resolve_physics_settings
 from app.core.rules.junction import EnergyVaultStatus
-from app.plugins.base.interactions.clash import run_clash
-from app.plugins.base.interactions.combine import run_combine
-from app.plugins.base.interactions.grave import run_grave
-from app.plugins.base.interactions.pierce import run_pierce
-from app.plugins.base.interactions.punish import run_punish
-from app.skills.physics_rules import (
-    SANHE_GROUPS,
-    SANXING_EDGES,
-    SELF_PUNISH_BRANCHES,
-    STEM_TOMB_BRANCH,
-)
+from app.plugins.base.interactions.l1_atomic_plugin import run_l1_atomic_plugin_pool
 
 
 def _pillars_blob(metadata: Any) -> Dict[str, Any]:
@@ -71,11 +61,108 @@ def _conflict_points(metadata: Any) -> List[Any]:
     return []
 
 
-def _pos_to_pillar(pos: str) -> str:
-    s = str(pos)
-    if s.endswith("_branch"):
-        return s.replace("_branch", "")
-    return s
+def _clamp_node_metric(
+    *,
+    composite: Dict[str, Any],
+    steps: List[Dict[str, Any]],
+    branches: Dict[str, str],
+) -> float:
+    """AGGREGATED 或墓库 LOCKED 所触及柱位占四柱比例，归一化到 0..1。"""
+    touched: Set[str] = set()
+    for cl in composite.get("sanhe_clusters") or []:
+        for node in cl.get("nodes") or []:
+            p = str(node.get("pillar") or "")
+            if p:
+                touched.add(p)
+    for s in steps:
+        if s.get("plugin") != "base.grave":
+            continue
+        d = s.get("delta") or {}
+        if str(d.get("energy_vault_status") or "") != EnergyVaultStatus.LOCKED.value:
+            continue
+        tb = str(s.get("tomb_branch") or "")
+        for pname, br in branches.items():
+            if br == tb:
+                touched.add(pname)
+    return min(1.0, len(touched) / 4.0)
+
+
+def _synthesize_global_entropy(
+    *,
+    params: Dict[str, float],
+    steps: List[Dict[str, Any]],
+    audit: Dict[str, Any],
+    composite: Dict[str, Any],
+    branches: Dict[str, str],
+) -> Dict[str, Any]:
+    """L1 审计指标加权合成全局熵，系数来自 interaction_params。"""
+    w_t = float(params.get("ENTROPY_W_TORQUE", 0.4))
+    w_c = float(params.get("ENTROPY_W_CLAMP", 0.3))
+    w_k = float(params.get("ENTROPY_W_CLASH", 0.3))
+    ref_torque = max(1e-6, float(params.get("ENTROPY_TORQUE_REF", 180.0)))
+    ref_clash = max(1e-6, float(params.get("ENTROPY_CLASH_REF", 160.0)))
+
+    torque_total = float(audit.get("l1_impact_torque_total") or 0.0)
+    m_torque = min(1.0, torque_total / ref_torque)
+
+    m_clamp = _clamp_node_metric(composite=composite, steps=steps, branches=branches)
+
+    clash_loss = 0.0
+    for s in steps:
+        if s.get("plugin") != "base.clash":
+            continue
+        clash_loss += float((s.get("delta") or {}).get("abs_loss") or 0.0)
+    m_clash = min(1.0, clash_loss / ref_clash)
+
+    raw = w_t * m_torque + w_c * m_clamp + w_k * m_clash
+    entropy = max(0.0, min(1.0, raw))
+    return {
+        "value": round(entropy, 4),
+        "metrics": {
+            "m_torque": round(m_torque, 4),
+            "m_clamp": round(m_clamp, 4),
+            "m_clash": round(m_clash, 4),
+            "torque_total": round(torque_total, 4),
+            "clash_abs_loss_total": round(clash_loss, 4),
+        },
+    }
+
+
+def _composite_consistency_check(
+    *,
+    clusters: List[Dict[str, Any]],
+    steps: List[Dict[str, Any]],
+    clamp_on: bool,
+) -> Dict[str, Any]:
+    """校验：AGGREGATED 节点在流水线上 φ 显式为 0，除非对应 cluster 已标记解锁。"""
+    gates = [
+        s
+        for s in steps
+        if s.get("plugin") == "composite.aggregated_phi"
+    ]
+    if not clamp_on:
+        return {"ok": True, "reasons": [], "phi_gate_count": len(gates), "skipped_clamp": True}
+    ok = True
+    reasons: List[str] = []
+    for cl in clusters:
+        if (cl.get("energy_vault_status") or "") != EnergyVaultStatus.AGGREGATED.value:
+            continue
+        unlocked = bool(cl.get("cluster_phi_unlock", False))
+        for node in cl.get("nodes") or []:
+            pname = str(node.get("pillar") or "")
+            found = [g for g in gates if g.get("pillar") == pname]
+            if not found:
+                ok = False
+                reasons.append(f"missing_phi_gate:{pname}")
+                continue
+            phi = float(found[0].get("phi_work", -1.0))
+            if clamp_on and not unlocked and phi != 0.0:
+                ok = False
+                reasons.append(f"phi_not_zero:{pname}")
+            if clamp_on and unlocked and phi != 1.0:
+                ok = False
+                reasons.append(f"phi_not_released:{pname}")
+    return {"ok": ok, "reasons": reasons, "phi_gate_count": len(gates)}
 
 
 def evaluate_interactions(
@@ -98,131 +185,34 @@ def evaluate_interactions(
     branches = _branch_map(pillars)
     day_stem = _day_stem(pillars)
     points = _conflict_points(metadata)
-    steps: List[Dict[str, Any]] = []
+    steps, punish_torque_trace, composite = run_l1_atomic_plugin_pool(
+        points=points,
+        branches=branches,
+        day_stem=day_stem,
+        pillar_raw=pillar_raw,
+        params=params,
+        settings=settings,
+    )
+    clamp_on = float(params.get("L1_SANHE_PHI_CLAMP", 1.0)) >= 1.0
 
-    for pt in points:
-        kind = getattr(pt, "kind", None) or (pt.get("kind") if isinstance(pt, dict) else None)
-        positions = getattr(pt, "positions", None) or (pt.get("positions") if isinstance(pt, dict) else None) or []
-        if len(positions) < 2:
-            continue
-        p0, p1 = _pos_to_pillar(str(positions[0])), _pos_to_pillar(str(positions[1]))
-        a0, a1 = pillar_raw(p0), pillar_raw(p1)
-        if kind == "clash":
-            out = run_clash(
-                source_abs=a0,
-                target_abs=a1,
-                intensity=float(params.get("L1_CLASH_INTENSITY", 1.0)),
-            )
-            steps.append({"plugin": "base.clash", "edge": [p0, p1], "delta": out})
-        elif kind == "combine":
-            out = run_combine(
-                source_abs=a0,
-                target_abs=a1,
-                lock_ratio=float(params.get("L1_COMBINE_LOCK_RATIO", 0.3)),
-            )
-            steps.append({"plugin": "base.combine", "edge": [p0, p1], "delta": out})
+    consistency = _composite_consistency_check(
+        clusters=list(composite.get("sanhe_clusters") or []),
+        steps=steps,
+        clamp_on=clamp_on,
+    )
 
-    for pt in points:
-        kind = getattr(pt, "kind", None) or (pt.get("kind") if isinstance(pt, dict) else None)
-        if kind != "harm":
-            continue
-        positions = getattr(pt, "positions", None) or (pt.get("positions") if isinstance(pt, dict) else None) or []
-        if len(positions) < 2:
-            continue
-        p0, p1 = _pos_to_pillar(str(positions[0])), _pos_to_pillar(str(positions[1]))
-        out = run_pierce(
-            source_abs=pillar_raw(p0),
-            target_abs=pillar_raw(p1),
-            penetration_ratio=float(params.get("L1_PIERCE_RATIO", 0.45)),
+    audit = physics_tensor.setdefault("audit_log", {})
+    if isinstance(audit, dict):
+        audit["l1_punish_torque_trace"] = punish_torque_trace
+        audit["l1_impact_torque_total"] = round(
+            sum(float(x.get("impact_torque") or 0.0) for x in punish_torque_trace),
+            4,
         )
-        steps.append({"plugin": "base.pierce", "edge": [p0, p1], "delta": out})
-
-    k_san = float(params.get("L1_PUNISH_FRICTION_SANXING", 0.22))
-    k_zi = float(params.get("L1_PUNISH_FRICTION_ZIXING", 0.18))
-    branch_positions: Dict[str, List[str]] = {}
-    for pname, br in branches.items():
-        branch_positions.setdefault(br, []).append(pname)
-
-    seen_punish: Set[Tuple[str, str]] = set()
-    for b1, b2 in SANXING_EDGES:
-        pnames_a = branch_positions.get(b1, [])
-        pnames_b = branch_positions.get(b2, [])
-        if not pnames_a or not pnames_b:
-            continue
-        for pa in pnames_a:
-            for pb in pnames_b:
-                if pa == pb:
-                    continue
-                edge_key = tuple(sorted((pa, pb)))
-                if edge_key in seen_punish:
-                    continue
-                seen_punish.add(edge_key)
-                out = run_punish(
-                    source_abs=pillar_raw(pa),
-                    target_abs=pillar_raw(pb),
-                    friction_coeff=k_san,
-                    mode="sanxing",
-                )
-                steps.append({"plugin": "base.punish", "edge": [pa, pb], "mode": "sanxing", "delta": out})
-
-    for br, pnames in branch_positions.items():
-        if br not in SELF_PUNISH_BRANCHES or len(pnames) < 2:
-            continue
-        for i in range(len(pnames)):
-            for j in range(i + 1, len(pnames)):
-                pa, pb = pnames[i], pnames[j]
-                out = run_punish(
-                    source_abs=pillar_raw(pa),
-                    target_abs=pillar_raw(pb),
-                    friction_coeff=k_zi,
-                    mode="zixing",
-                )
-                steps.append({"plugin": "base.punish", "edge": [pa, pb], "mode": "zixing", "delta": out})
-
-    present = frozenset(branches.values())
-    composite: Dict[str, Any] = {"sanhe_clusters": []}
-    for group in SANHE_GROUPS:
-        if not group.issubset(present):
-            continue
-        cluster_abs = 0.0
-        nodes: List[Dict[str, Any]] = []
-        for pname, br in branches.items():
-            if br in group:
-                r = pillar_raw(pname)
-                cluster_abs += r
-                nodes.append({"pillar": pname, "branch": br, "raw_energy": round(r, 4)})
-        composite["sanhe_clusters"].append(
-            {
-                "branches": sorted(group),
-                "cluster_abs": round(cluster_abs, 4),
-                "energy_vault_status": EnergyVaultStatus.AGGREGATED.value,
-                "nodes": nodes,
-            }
-        )
-
-    tomb_branch = STEM_TOMB_BRANCH.get(day_stem, "")
-    if tomb_branch and tomb_branch in branches.values():
-        tomb_pillars = [pn for pn, br in branches.items() if br == tomb_branch]
-        base_abs = max((pillar_raw(pn) for pn in tomb_pillars), default=0.0)
-        clash_branch_pairs: Set[Tuple[str, str]] = set()
-        for pt in points:
-            kind = getattr(pt, "kind", None) or (pt.get("kind") if isinstance(pt, dict) else None)
-            if kind != "clash":
-                continue
-            positions = getattr(pt, "positions", None) or (pt.get("positions") if isinstance(pt, dict) else None) or []
-            if len(positions) < 2:
-                continue
-            pa, pb = _pos_to_pillar(str(positions[0])), _pos_to_pillar(str(positions[1]))
-            b_a, b_b = branches.get(pa, ""), branches.get(pb, "")
-            clash_branch_pairs.add(tuple(sorted((b_a, b_b))))
-        unlocked = any(tomb_branch in pair for pair in clash_branch_pairs if len(pair) == 2)
-        burst_mult = float(settings.get("GRAVE_BURST_MULTIPLIER", 1.3))
-        gout = run_grave(base_abs=base_abs, unlocked=unlocked, burst_multiplier=burst_mult)
-        steps.append({"plugin": "base.grave", "tomb_branch": tomb_branch, "delta": gout})
 
     physics_tensor["l1_atomic_pipeline"] = {
         "version": "l1_pipeline.v1",
         "steps": steps,
+        "composite_consistency_check": consistency,
     }
     physics_tensor["composite_field_impact"] = composite
     meta = physics_tensor.setdefault("meta", {})
@@ -230,4 +220,27 @@ def evaluate_interactions(
         meta["energy_vault_flags"] = {
             "sanhe_aggregated": len(composite.get("sanhe_clusters") or []) > 0,
         }
+        grave_locked = any(
+            s.get("plugin") == "base.grave"
+            and (s.get("delta") or {}).get("energy_vault_status") == EnergyVaultStatus.LOCKED.value
+            for s in steps
+        )
+        agg_clamps_work = False
+        if clamp_on:
+            for cl in composite.get("sanhe_clusters") or []:
+                if (cl.get("energy_vault_status") or "") == EnergyVaultStatus.AGGREGATED.value and not cl.get(
+                    "cluster_phi_unlock", False
+                ):
+                    agg_clamps_work = True
+                    break
+        meta["work_eligible"] = not (agg_clamps_work or grave_locked)
+        synth = _synthesize_global_entropy(
+            params=params,
+            steps=steps,
+            audit=audit if isinstance(audit, dict) else {},
+            composite=composite,
+            branches=branches,
+        )
+        meta["global_entropy"] = synth["value"]
+        meta["global_entropy_metrics"] = synth["metrics"]
     return physics_tensor

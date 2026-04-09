@@ -37,6 +37,7 @@ from app.services.analysis_service import (
     resolve_consensus_history,
     translate_text_items,
 )
+from app.core.plugins.registry import PluginRegistry
 from app.services.audit_service import audit_physics_with_llm_flow
 from app.services.consultation_service import (
     confirm_structure_for_consultation,
@@ -160,9 +161,26 @@ async def final_verdict(body: FinalVerdictRequest) -> dict:
         consultation_id=body.consultation_id,
         session_scope=session_scope,
     )
-    return await generate_final_verdict(body, consensus_history)
+    try:
+        return await generate_final_verdict(body, consensus_history)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/v1/analyze/stress-test", response_model=dict)
 async def stress_test(body: StressTestRequest) -> dict:
     return await run_stress_test(body)
+
+
+@router.get("/v1/plugins/manifest", response_model=dict)
+def plugins_manifest(enabled_plugins: Optional[str] = None) -> dict:
+    """
+    插件清单单一事实源（SSOT）：
+    - plugins: 元数据 + 层级 + 状态 + 性能快照
+    - dependency_links: 依赖连线（供拓扑图绘制）
+    """
+    parsed: List[str] = []
+    if enabled_plugins:
+        parsed = [item.strip() for item in enabled_plugins.split(",") if item.strip()]
+    registry = PluginRegistry()
+    return registry.get_manifest(enabled_plugins=parsed or None)

@@ -15,13 +15,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href="/admin"
                 className="block rounded-xl border border-zinc-800/80 bg-zinc-900/50 px-4 py-3 text-zinc-200 transition hover:border-zinc-700 hover:bg-zinc-800/60"
               >
-                管理概览
+                驾驶舱总览
               </Link>
               <Link
                 href="/admin/settings"
                 className="block rounded-xl border border-zinc-800/80 bg-zinc-900/50 px-4 py-3 text-zinc-200 transition hover:border-amber-500/40 hover:bg-zinc-800/60"
               >
-                基础设施设置
+                规则中心
+              </Link>
+              <Link
+                href="/admin/plugins"
+                className="block rounded-xl border border-zinc-800/80 bg-zinc-900/50 px-4 py-3 text-zinc-200 transition hover:border-cyan-500/40 hover:bg-zinc-800/60"
+              >
+                插件治理
+              </Link>
+              <Link
+                href="/docs"
+                className="block rounded-xl border border-zinc-800/80 bg-zinc-900/50 px-4 py-3 text-zinc-200 transition hover:border-violet-500/40 hover:bg-zinc-800/60"
+              >
+                理论库
               </Link>
             </nav>
             <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-xs text-zinc-400">
@@ -35,6 +47,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Admin Console</p>
                   <p className="text-sm text-zinc-300">Infrastructure & Audit Workspace</p>
+                  <div className="mt-2 flex flex-wrap gap-1 md:hidden">
+                    <Link href="/admin" className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] text-violet-200">
+                      驾驶舱
+                    </Link>
+                    <Link href="/admin/plugins" className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                      插件
+                    </Link>
+                    <Link href="/admin/settings" className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                      规则
+                    </Link>
+                    <Link href="/docs" className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
+                      文档
+                    </Link>
+                  </div>
                 </div>
                 <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
                   实时联调模式

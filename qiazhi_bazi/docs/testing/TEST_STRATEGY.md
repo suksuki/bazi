@@ -1,6 +1,6 @@
 # Test Strategy
 
-更新时间：`2026-04-08`
+更新时间：`2026-04-09`
 
 ## 1. 目标
 
@@ -76,8 +76,8 @@ pytest tests/unit tests/integration -q
 
 ```bash
 cd qiazhi_bazi/frontend
-npm test
-npm run build
+pnpm test
+pnpm run build
 ```
 
 ## 4. 执行清单
@@ -90,8 +90,8 @@ npm run build
 
 ### 前端改动后
 
-1. 跑 `npm test`
-2. 跑 `npm run build`
+1. 跑 `pnpm test`
+2. 跑 `pnpm run build`
 3. 如果改到 controller，确认有 `fetch/localStorage/timer` 覆盖
 4. 如果改到纯 helper，确认有单测
 

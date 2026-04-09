@@ -1,0 +1,214 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type Mode = "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY";
+
+type Props = {
+  mode: Mode;
+  globalEntropy?: number | null;
+  decisionDirty?: boolean;
+  autoSync: boolean;
+  onToggleAutoSync: (next: boolean) => void;
+  onRun: () => void | Promise<void>;
+  disabled?: boolean;
+};
+
+export function UnifiedActionBar({
+  mode,
+  globalEntropy,
+  decisionDirty = false,
+  autoSync,
+  onToggleAutoSync,
+  onRun,
+  disabled = false,
+}: Props) {
+  const label =
+    mode === "SYNCING"
+      ? "逻辑坍缩中..."
+      : mode === "FULL"
+        ? "物理排盘：开启因果"
+        : mode === "PARAMETER_DIRTY"
+          ? "[因果确认：执行裁决]"
+        : "语义重构：重新裁决";
+  const entropyPct = typeof globalEntropy === "number" && Number.isFinite(globalEntropy)
+    ? Math.max(0, Math.min(100, Math.round(globalEntropy * 100)))
+    : 0;
+  const entropy = typeof globalEntropy === "number" && Number.isFinite(globalEntropy) ? Math.max(0, Math.min(1, globalEntropy)) : 0;
+  const activeMotion = mode === "SYNCING";
+  const tremorIntensity = activeMotion && entropy > 0.8 ? Math.max(0, Math.min(1, (entropy - 0.8) / 0.2)) : 0;
+  const glitchIntensity = activeMotion && entropy > 0.85 ? Math.max(0, Math.min(1, (entropy - 0.85) / 0.15)) : 0;
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [glitchOn, setGlitchOn] = useState(false);
+  const [burstOn, setBurstOn] = useState(false);
+  const [willPulseOn, setWillPulseOn] = useState(false);
+  const jitterTimerRef = useRef<number | null>(null);
+  const glitchTimerRef = useRef<number | null>(null);
+  const burstTimerRef = useRef<number | null>(null);
+  const willPulseTimerRef = useRef<number | null>(null);
+
+  const reducedMotion = useMemo(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const ambientTremor = !reducedMotion && mode === "SYNCING" && entropy > 0.8;
+  const decisionDirtyPulse = !reducedMotion && mode === "PARAMETER_DIRTY" && decisionDirty;
+  const tremorStartedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!decisionDirtyPulse) {
+      setWillPulseOn(false);
+      if (willPulseTimerRef.current) window.clearInterval(willPulseTimerRef.current);
+      willPulseTimerRef.current = null;
+      return;
+    }
+    const interval = Math.max(360, 1080 - Math.round(entropy * 520));
+    if (willPulseTimerRef.current) window.clearInterval(willPulseTimerRef.current);
+    willPulseTimerRef.current = window.setInterval(() => {
+      setWillPulseOn((prev) => !prev);
+    }, interval);
+    return () => {
+      if (willPulseTimerRef.current) window.clearInterval(willPulseTimerRef.current);
+    };
+  }, [decisionDirtyPulse, entropy]);
+
+  useEffect(() => {
+    if (!ambientTremor) {
+      setOffset({ x: 0, y: 0 });
+      tremorStartedAtRef.current = null;
+      if (jitterTimerRef.current) window.clearInterval(jitterTimerRef.current);
+      jitterTimerRef.current = null;
+      return;
+    }
+    if (!tremorStartedAtRef.current) tremorStartedAtRef.current = Date.now();
+    const maxShift = 1.5;
+    if (jitterTimerRef.current) window.clearInterval(jitterTimerRef.current);
+    jitterTimerRef.current = window.setInterval(() => {
+      if (tremorStartedAtRef.current && Date.now() - tremorStartedAtRef.current > 1200) {
+        setOffset({ x: 0, y: 0 });
+        if (jitterTimerRef.current) window.clearInterval(jitterTimerRef.current);
+        jitterTimerRef.current = null;
+        return;
+      }
+      const x = (Math.random() * 2 - 1) * maxShift;
+      const y = (Math.random() * 2 - 1) * maxShift;
+      setOffset({ x, y });
+    }, 145);
+    return () => {
+      if (jitterTimerRef.current) window.clearInterval(jitterTimerRef.current);
+    };
+  }, [ambientTremor, entropy, mode]);
+
+  useEffect(() => {
+    if (reducedMotion || glitchIntensity <= 0) {
+      setGlitchOn(false);
+      if (glitchTimerRef.current) window.clearInterval(glitchTimerRef.current);
+      glitchTimerRef.current = null;
+      return;
+    }
+    if (glitchTimerRef.current) window.clearInterval(glitchTimerRef.current);
+    glitchTimerRef.current = window.setInterval(() => {
+      setGlitchOn(true);
+      window.setTimeout(() => setGlitchOn(false), 150);
+    }, Math.max(500, 900 - Math.round(glitchIntensity * 260)));
+    return () => {
+      if (glitchTimerRef.current) window.clearInterval(glitchTimerRef.current);
+    };
+  }, [reducedMotion, glitchIntensity]);
+
+  useEffect(() => {
+    if (!activeMotion) {
+      setOffset({ x: 0, y: 0 });
+      setGlitchOn(false);
+    }
+  }, [activeMotion]);
+
+  useEffect(() => {
+    return () => {
+      if (burstTimerRef.current) window.clearTimeout(burstTimerRef.current);
+    };
+  }, []);
+
+  const handleRun = () => {
+    if (!reducedMotion) {
+      setBurstOn(true);
+      setGlitchOn(true);
+      if (burstTimerRef.current) window.clearTimeout(burstTimerRef.current);
+      burstTimerRef.current = window.setTimeout(() => {
+        setBurstOn(false);
+        if (glitchIntensity <= 0) setGlitchOn(false);
+      }, 180);
+    }
+    void onRun();
+  };
+  const glitchSlice = `polygon(0 ${12 + Math.random() * 40}%, 100% ${6 + Math.random() * 30}%, 100% ${48 + Math.random() * 30}%, 0 ${55 + Math.random() * 28}%)`;
+
+  return (
+    <section
+      className="sticky bottom-[4.7rem] rounded-2xl border border-zinc-700 bg-zinc-950/92 p-3 backdrop-blur-md transition-transform duration-150"
+      style={{ transform: `translate(${offset.x}px, ${offset.y}px)`, zIndex: glitchOn || burstOn ? 60 : 30 }}
+    >
+      <div className="mb-2 h-1.5 w-full overflow-hidden rounded bg-zinc-800">
+        <div
+          className={`h-full rounded transition-all ${mode === "SYNCING" ? "animate-pulse bg-gradient-to-r from-violet-500 via-fuchsia-500 to-amber-400" : "bg-gradient-to-r from-cyan-500 to-violet-500"}`}
+          style={{ width: `${entropyPct}%` }}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative flex-1">
+          <button
+            type="button"
+            disabled={disabled || mode === "SYNCING"}
+            onClick={handleRun}
+            className="relative z-10 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+            style={decisionDirtyPulse ? {
+              border: `1px solid rgba(168,85,247,${willPulseOn ? 0.95 : 0.45})`,
+              boxShadow: `0 0 ${willPulseOn ? 14 : 8}px rgba(168,85,247,${willPulseOn ? 0.42 : 0.18})`,
+            } : undefined}
+          >
+            {label}
+          </button>
+          {glitchOn || burstOn ? (
+            <>
+              <div
+                className="pointer-events-none absolute inset-0 z-20 rounded-xl bg-fuchsia-400/15"
+                style={{
+                  clipPath: glitchSlice,
+                  transform: `translateX(${(Math.random() * 2 - 1) * (2 + glitchIntensity * 3)}px)`,
+                  mixBlendMode: "exclusion",
+                  filter: "contrast(120%) saturate(150%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30 rounded-xl"
+                style={{
+                  background: "rgba(255, 0, 80, 0.05)",
+                  clipPath: glitchSlice,
+                  transform: "translateX(-1.5px)",
+                  mixBlendMode: "screen",
+                  filter: "contrast(120%) saturate(150%)",
+                }}
+              />
+              <div
+                className="pointer-events-none absolute inset-0 z-30 rounded-xl"
+                style={{
+                  background: "rgba(0, 180, 255, 0.05)",
+                  clipPath: glitchSlice,
+                  transform: "translateX(1.5px)",
+                  mixBlendMode: "screen",
+                  filter: "contrast(120%) saturate(150%)",
+                }}
+              />
+            </>
+          ) : null}
+        </div>
+        <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-300">
+          <input type="checkbox" checked={autoSync} onChange={(e) => onToggleAutoSync(e.target.checked)} />
+          Auto-Sync
+        </label>
+      </div>
+    </section>
+  );
+}
+

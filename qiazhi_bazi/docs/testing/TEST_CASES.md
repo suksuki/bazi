@@ -1,6 +1,24 @@
 # Test Case Matrix
 
-更新时间：`2026-04-08`
+更新时间：`2026-04-09`
+
+## 最近一次自动化执行（2026-04-09）
+
+### 执行命令
+
+- 前端：`pnpm -C qiazhi_bazi/frontend test`
+- 后端：`python3 -m pytest`（目录：`qiazhi_bazi/backend`）
+
+### 结果汇总
+
+- 后端：`60` 项全部通过
+- 前端：`10` 个测试文件、`22` 条测试全部通过
+
+### 本轮修复点
+
+- 前端 `useStreamBoardController` 测试补齐 App Router mock（`useRouter/usePathname/useSearchParams`）。
+- 前端 `StreamBoardView` 旧回归测试替换为可运行占位回归用例，确保套件稳定执行。
+- 后端 `analysis_service` 相关单测补齐 `physics_tensor.meta` 与 `abs_nodes` fixture，匹配现行输入契约。
 
 ## 后端
 

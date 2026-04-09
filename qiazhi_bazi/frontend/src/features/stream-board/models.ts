@@ -103,6 +103,7 @@ export type FinalVerdictResult = {
   structureCandidatesV0?: Record<string, unknown>;
   structureFinalDecisionV0?: Record<string, unknown>;
   auditLog?: Record<string, unknown>;
+  confirmedDecisions?: Array<{ id: string; label: string; is_confirmed: boolean; confirmed_at?: string }>;
 };
 
 export type FinalVerdictHistoryItem = {
@@ -132,6 +133,15 @@ export type GenderComparisonResult = {
   summary?: string;
 };
 
+export type LogicDiff = {
+  baseline_abs_loss_total: number | null;
+  current_abs_loss_total: number | null;
+  abs_delta: number | null;
+  baseline_entropy: number | null;
+  current_entropy: number | null;
+  entropy_delta: number | null;
+};
+
 export type StreamBoardViewModel = {
   lang: Lang;
   setLang: (lang: Lang) => void;
@@ -156,6 +166,8 @@ export type StreamBoardViewModel = {
   confirmedConflicts: string[];
   llmDiagnosticData: LlmDiagnosticData | null;
   physicsParams: Record<string, number>;
+  /** L1 合成全局熵 0..1，来自 physics_tensor.meta.global_entropy */
+  globalEntropy: number | null;
   auditorProposalCards: InboxCard[];
   autoConvertedParamKey: string | null;
   consensusHistory: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;
@@ -168,6 +180,13 @@ export type StreamBoardViewModel = {
   finalTopologyGraphV1: Record<string, unknown> | null;
   finalStructureCandidatesV0: Record<string, unknown> | null;
   finalStructureFinalDecisionV0: Record<string, unknown> | null;
+  confirmedDecisions?: Array<{ id: string; label: string; is_confirmed: boolean; confirmed_at?: string }>;
+  confirmedDecisionIds?: string[];
+  setConfirmedDecisionIds?: Dispatch<SetStateAction<string[]>>;
+  urlDecisionHydrated?: boolean;
+  snapshotAvailable?: boolean;
+  restoreSnapshot?: () => void;
+  logicDiff?: LogicDiff;
   stressTestResult: StressTestResult | null;
   genderComparisonResult: GenderComparisonResult | null;
   finalVerdictHistory: FinalVerdictHistoryItem[];
@@ -188,7 +207,7 @@ export type StreamBoardViewModel = {
   pluginWeights: PluginWeights;
   setPluginWeights: Dispatch<SetStateAction<PluginWeights>>;
   streamThemeChroma: StreamThemeChroma;
-  rerunFinalVerdictWithWeights: () => Promise<void>;
+  rerunFinalVerdictWithWeights: (selectedCards?: InboxCard[]) => Promise<void>;
   mergedSteps: DecisionStep[];
   logicDrawerOpen: boolean;
   logicDrawerTitle: string;
@@ -199,6 +218,7 @@ export type StreamBoardViewModel = {
   onSeedSubmit: (payload: SeedPayload) => Promise<void>;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
   onExecuteDecision: (selected: InboxCard[]) => Promise<void>;
+  revokeConfirmedDecision?: (id: string) => Promise<void>;
   openLogicDrawer: (payload: { title: string; focus: string; details: string[]; deityTrace?: Record<string, unknown> }) => void;
   openLogicDrawerByDeity: (deity: string) => void;
   onEvidenceItemClick: (evidence: string) => void;

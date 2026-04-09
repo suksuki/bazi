@@ -1,12 +1,23 @@
 import { act, renderHook } from "@testing-library/react";
+import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LabConfigProvider } from "@/features/lab-config/LabConfigContext";
 import { useStreamBoardController } from "@/features/stream-board/useStreamBoardController";
+
+function hookWrapper({ children }: { children: ReactNode }) {
+  return <LabConfigProvider>{children}</LabConfigProvider>;
+}
 
 vi.mock("swr", () => ({
   default: () => ({
     data: null,
     mutate: vi.fn(),
   }),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function jsonResponse(body: unknown, ok = true) {
@@ -89,10 +100,15 @@ describe("useStreamBoardController regression", () => {
 
     vi.stubGlobal("fetch", fetchMock);
 
-    const { result } = renderHook(() => useStreamBoardController());
+    const { result } = renderHook(() => useStreamBoardController(), { wrapper: hookWrapper });
 
     await act(async () => {
-      const promise = result.current.onSeedSubmit({ date: "1990-01-01", time: "00:00", calendar: "solar" });
+      const promise = result.current.onSeedSubmit({
+        date: "1990-01-01",
+        time: "00:00",
+        calendar: "solar",
+        gender: "male",
+      });
       await vi.runAllTimersAsync();
       await promise;
       await vi.runAllTimersAsync();
@@ -100,7 +116,7 @@ describe("useStreamBoardController regression", () => {
 
     expect(result.current.metadata?.conflict_matrix.points[0].detail).toBe("子午冲");
     expect(result.current.deityScores["比肩"]).toBe(10);
-    expect(result.current.cards.some((card) => card.id.includes("conflict-0-子午冲"))).toBe(true);
+    expect(result.current.cards.some((card) => card.id.includes("llm-observe-0"))).toBe(true);
     expect(result.current.auditorProposalCards[0].proposal?.param_key).toBe("CF_FLOATING_DECAY");
     expect(result.current.autoConvertedParamKey).toBe("CF_FLOATING_DECAY");
   });
