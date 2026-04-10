@@ -3,6 +3,7 @@
 ## 1) Layered Sovereignty
 
 ### L1: Base Physics (shared public layer)
+
 - Scope: absolute energy metric (`Abs`) and neutral interaction math.
 - Includes:
   - Five-element absolute energy field.
@@ -11,6 +12,7 @@
 - Non-goal: no direct good/bad judgment.
 
 ### L2-A: Balance School (旺衰)
+
 - Scope: day-master centered balance and stability audit.
 - Rules:
   - Strength evaluation by `Self_Abs`.
@@ -18,6 +20,7 @@
   - Causal chain: imbalance -> pressure -> risk; harmony -> stability.
 
 ### L2-B: Work School (盲派)
+
 - Scope: body/use energy exchange efficiency.
 - Rules:
   - 宾主/体用 segmentation.
@@ -26,22 +29,24 @@
 
 ## 2) Rule Differentiation
 
-| Rule | L2-A (Balance) | L2-B (Work) |
-| --- | --- | --- |
-| 冲 (Clash) | instability and loss | work trigger / displacement capture |
-| 穿/害 (Pierce) | structural damage | high-efficiency capture or destructive claim |
-| 墓库 (Tomb) | convergence/weakening | potential reservoir, unlock for release |
-| 合 (Combine) | tie-up/constraint | lock or gain depending on body/use ownership |
+
+| Rule         | L2-A (Balance)        | L2-B (Work)                                  |
+| ------------ | --------------------- | -------------------------------------------- |
+| 冲 (Clash)    | instability and loss  | work trigger / displacement capture          |
+| 穿/害 (Pierce) | structural damage     | high-efficiency capture or destructive claim |
+| 墓库 (Tomb)    | convergence/weakening | potential reservoir, unlock for release      |
+| 合 (Combine)  | tie-up/constraint     | lock or gain depending on body/use ownership |
+
 
 ## 3) Final Synthesis Protocol
 
 1. Physics first: read L1 `Abs` as shared truth.
 2. Dual audit:
-   - Balance audit -> `balance_verdict`
-   - Work audit -> `work_verdict`
+  - Balance audit -> `balance_verdict`
+  - Work audit -> `work_verdict`
 3. Strategy merge:
-   - Balance strategy: reduce overload via 泄/耗.
-   - Work strategy: open valid path and avoid rebound.
+  - Balance strategy: reduce overload via 泄/耗.
+  - Work strategy: open valid path and avoid rebound.
 
 ## 4) Implementation Contract (current)
 
@@ -59,4 +64,3 @@
   - `Self_Abs >= 20`: high-risk overload band
   - `Self_Abs >= 24`: extreme overload band (near physical-collapse zone)
 - The Chinese full version is maintained in `docs/engine/BAZI_LOGIC_CONSTITUTION.md` and should be kept in sync.
-

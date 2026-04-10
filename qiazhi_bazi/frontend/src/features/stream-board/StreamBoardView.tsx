@@ -20,6 +20,21 @@ import { SnapshotBanner } from "@/features/stream-board/components/SnapshotBanne
 import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
 import { I18N } from "./constants";
 import type { InboxCard, StreamBoardViewModel } from "./models";
+import { useLabStore } from "./stores/useLabStore";
+
+function Loading() {
+  return (
+    <div className="flex h-dvh w-full flex-col items-center justify-center bg-[#0f0f12]">
+      <div className="relative h-12 w-12">
+        <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
+        <div className="absolute inset-0 animate-pulse rounded-full border-2 border-amber-500/40" />
+      </div>
+      <p className="mt-4 animate-pulse text-xs font-medium tracking-widest text-amber-200/60 transition-opacity">
+        HYDRATING VAULT...
+      </p>
+    </div>
+  );
+}
 
 const STEM_META: Record<string, { element: "wood" | "fire" | "earth" | "metal" | "water"; yinYang: "yang" | "yin" }> = {
   甲: { element: "wood", yinYang: "yang" },
@@ -58,6 +73,8 @@ const ELEMENT_STYLE = {
 };
 
 export function StreamBoardView(viewModel: StreamBoardViewModel) {
+  if (!useLabStore.persist.hasHydrated()) return <Loading />;
+
   const {
     lang,
     setLang,
@@ -97,7 +114,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setConfirmedDecisionIds,
     urlDecisionHydrated,
     snapshotAvailable,
-    restoreSnapshot,
+    setAsBaseline,
     logicDiff,
     stressTestResult,
     genderComparisonResult,
@@ -123,6 +140,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     logicDrawerTrace,
     setLogicDrawerOpen,
     onSeedSubmit,
+    executeDecisionAndRefresh,
+    appendSystemAuditLog,
     revokeConfirmedDecision,
     openLogicDrawer,
     openLogicDrawerByDeity,
@@ -145,7 +164,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [viewMode, setViewMode] = React.useState<"VISION" | "COMMAND">("COMMAND");
   /** 默认展开：生辰八字（地法）必须始终可达，避免误折叠后「无处输入」 */
   const [seedPanelOpen, setSeedPanelOpen] = React.useState(true);
-  const [autoSync, setAutoSync] = React.useState(false);
   const [actionSyncing, setActionSyncing] = React.useState(false);
   const [revokeGlitch, setRevokeGlitch] = React.useState(false);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
@@ -156,7 +174,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [lastAppliedParamSignature, setLastAppliedParamSignature] = React.useState("");
   const [lastAppliedDecisionsSignature, setLastAppliedDecisionsSignature] = React.useState("[]");
   const [snapshotTag, setSnapshotTag] = React.useState("");
-  const autoSyncTimerRef = React.useRef<number | null>(null);
+  const [revertEntropyDelta, setRevertEntropyDelta] = React.useState<number | null>(null);
+  const [pendingRevertEntropyCapture, setPendingRevertEntropyCapture] = React.useState(false);
   const touchStartX = React.useRef<number | null>(null);
 
   const goToSeedInput = React.useCallback(() => {
@@ -183,6 +202,20 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const normalizeDecisionIds = (list: string[]) => [...new Set(list.map((item) => String(item || "").trim()).filter(Boolean))].sort();
   const currentDecisionsSignature = JSON.stringify(normalizeDecisionIds(decisionIds));
   const isDecisionDirty = currentDecisionsSignature !== lastAppliedDecisionsSignature;
+  const handleSeedPayloadChange = React.useCallback((payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => {
+    setDraftSeed((prev) => {
+      if (
+        prev
+        && prev.date === payload.date
+        && prev.time === payload.time
+        && prev.calendar === payload.calendar
+        && prev.gender === payload.gender
+      ) {
+        return prev;
+      }
+      return payload;
+    });
+  }, []);
   const simpleBoard = React.useMemo(() => {
     const pillars = metadata?.pillars;
     if (!pillars) return null;
@@ -246,21 +279,34 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     }
   }, [rerunFinalVerdictWithWeights, pluginWeights]);
 
+  const runDecisionExecution = React.useCallback(async (decisions: InboxCard[]) => {
+    if (decisions.length === 0) return;
+    setActionSyncing(true);
+    try {
+      setLastSubmittedDecisionIds(decisions.map((item) => item.id));
+      await executeDecisionAndRefresh(decisions);
+      setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
+      setLastAppliedDecisionsSignature(JSON.stringify(normalizeDecisionIds(decisionIds)));
+    } finally {
+      setActionSyncing(false);
+    }
+  }, [executeDecisionAndRefresh, pluginWeights, decisionIds]);
+
   const handleSemanticRecompute = React.useCallback(async () => {
     const selectedByIds = decisionIds
       .map((id) => cards.find((card) => card.id === id))
       .filter((item): item is InboxCard => Boolean(item));
     const selected = selectedByIds.length > 0 ? selectedByIds : currentDecisions;
-    await runSemanticRecompute(selected);
-    if (selected.length > 0 || currentDecisions.length > 0) {
-      setCurrentDecisions([]);
-      setDecisionIds([]);
-      setChecklistResetToken((v) => v + 1);
-    }
-  }, [runSemanticRecompute, decisionIds, cards, currentDecisions, setDecisionIds]);
+    await runDecisionExecution(selected);
+  }, [runDecisionExecution, decisionIds, cards, currentDecisions]);
+
+  React.useEffect(() => {
+    setCurrentDecisions([]);
+  }, [selectionResetToken]);
 
   const handleRevokeDecision = React.useCallback(async (id: string) => {
     setRevokeGlitch(true);
+    setPendingRevertEntropyCapture(true);
     const next = currentDecisions.filter((item) => item.id !== id);
     setCurrentDecisions(next);
     setDecisionIds(next.map((item) => item.id));
@@ -270,6 +316,15 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     await runSemanticRecompute(next);
     window.setTimeout(() => setRevokeGlitch(false), 180);
   }, [currentDecisions, setDecisionIds, revokeConfirmedDecision, runSemanticRecompute]);
+
+  React.useEffect(() => {
+    if (!pendingRevertEntropyCapture || actionSyncing) return;
+    const delta = Number(logicDiff?.entropy_delta || 0);
+    setRevertEntropyDelta(delta);
+    appendSystemAuditLog(`[REVERSION_IMPACT] entropy_rebound: ${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`);
+    setPendingRevertEntropyCapture(false);
+    window.setTimeout(() => setRevertEntropyDelta(null), 1800);
+  }, [pendingRevertEntropyCapture, actionSyncing, logicDiff?.entropy_delta, appendSystemAuditLog]);
 
   React.useEffect(() => {
     if (!lastAppliedParamSignature) {
@@ -295,33 +350,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       });
     }
   }, [decisionHydrated, cards, decisionIds]);
-
-  React.useEffect(() => {
-    if (!decisionHydrated) return;
-    if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
-    autoSyncTimerRef.current = window.setTimeout(() => {
-      const selected = decisionIds
-        .map((id) => cards.find((card) => card.id === id))
-        .filter((item): item is InboxCard => Boolean(item));
-      if (autoSync && !seedDirty && (paramDirty || isDecisionDirty) && !busy && !actionSyncing) {
-        void runSemanticRecompute(selected);
-      }
-    }, 380);
-    return () => {
-      if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
-    };
-  }, [
-    decisionHydrated,
-    autoSync,
-    seedDirty,
-    paramDirty,
-    isDecisionDirty,
-    busy,
-    actionSyncing,
-    cards,
-    decisionIds,
-    runSemanticRecompute,
-  ]);
 
   const streamThemeStyle = {
     "--stream-bg-color": streamThemeChroma.bgColor,
@@ -382,13 +410,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
             {t("历史")}
           </button>
           {snapshotAvailable ? (
-            <button
-              type="button"
-              onClick={() => restoreSnapshot?.()}
-              className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200 hover:bg-cyan-500/20"
-            >
-              恢复上次会话
-            </button>
+            <span className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">会话已驻留</span>
           ) : null}
           <button
             type="button"
@@ -554,7 +576,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                         busy={busy}
                         t={t}
                         hideSubmitButton
-                        onPayloadChange={(payload) => setDraftSeed(payload)}
+                        onPayloadChange={handleSeedPayloadChange}
                         rightSummarySlot={(
                           <div className="h-full bg-transparent px-1 py-1">
                             {simpleBoard ? (
@@ -609,9 +631,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   mode={actionMode}
                   globalEntropy={globalEntropy}
                   decisionDirty={isDecisionDirty}
-                  autoSync={autoSync}
-                  onToggleAutoSync={setAutoSync}
                   onRun={() => (seedDirty ? handleFullCalculate() : handleSemanticRecompute())}
+                  onSetBaseline={setAsBaseline}
                   disabled={actionMode === "FULL" && !draftSeed}
                 />
                 <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
@@ -655,11 +676,14 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   globalEntropy={globalEntropy}
                   logicDiff={logicDiff}
                   actionMode={actionMode}
-                  autoSync={autoSync}
                   autoSyncIdle={!actionSyncing}
                   hideStrategicPanel
                 />
-                <WillReplayPanel items={confirmedDecisions || []} onRevoke={handleRevokeDecision} />
+                <WillReplayPanel
+                  items={confirmedDecisions || []}
+                  onRevoke={handleRevokeDecision}
+                  revertEntropyDelta={revertEntropyDelta}
+                />
 
                 {finalWorkVector && Object.keys(finalWorkVector).length > 0 ? (
                   <div className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-950/30 p-3 text-[11px] text-zinc-300">

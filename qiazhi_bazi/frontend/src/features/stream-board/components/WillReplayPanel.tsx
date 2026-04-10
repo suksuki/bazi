@@ -12,9 +12,10 @@ type ConfirmedDecisionItem = {
 type Props = {
   items: ConfirmedDecisionItem[];
   onRevoke?: (id: string) => void | Promise<void>;
+  revertEntropyDelta?: number | null;
 };
 
-export function WillReplayPanel({ items, onRevoke }: Props) {
+export function WillReplayPanel({ items, onRevoke, revertEntropyDelta = null }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const sorted = useMemo(
     () => [...items].sort((a, b) => new Date(b.confirmed_at || 0).getTime() - new Date(a.confirmed_at || 0).getTime()),
@@ -37,6 +38,13 @@ export function WillReplayPanel({ items, onRevoke }: Props) {
       </button>
       {!collapsed ? (
         <ol className="mt-3">
+          {typeof revertEntropyDelta === "number" ? (
+            <li className="mb-2 pl-6">
+              <span className="inline-flex animate-pulse rounded border border-fuchsia-500/45 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] text-fuchsia-200">
+                {`Entropy ${revertEntropyDelta >= 0 ? "+" : ""}${revertEntropyDelta.toFixed(2)} ${revertEntropyDelta >= 0 ? "↑" : "↓"}`}
+              </span>
+            </li>
+          ) : null}
           {sorted.map((item, index) => (
             <li key={item.id} className="relative pl-6">
               {index < sorted.length - 1 ? (

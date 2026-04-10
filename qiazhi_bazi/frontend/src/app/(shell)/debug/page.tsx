@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-const SNAPSHOT_KEY = "qiazhi_lab_snapshot";
+import { useMemo, useState } from "react";
+import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { StateSentinel } from "@/app/(shell)/debug/components/StateSentinel";
 
 type Snapshot = {
   ts?: number;
@@ -31,27 +31,9 @@ type Snapshot = {
 };
 
 export default function DebugPage() {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const { state } = useLabStore();
+  const snapshot = useMemo(() => (state.snapshot || null) as Snapshot | null, [state.snapshot]);
   const [tensorOpen, setTensorOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("qiazhi_return_restore_once", "1");
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(SNAPSHOT_KEY);
-      if (raw) {
-        setSnapshot(JSON.parse(raw) as Snapshot);
-      }
-    } catch {
-      setSnapshot(null);
-    }
-  }, []);
 
   const tensor = snapshot?.physics_tensor;
   const deityAxes = (tensor?.deity_energy_axes || {}) as Record<string, { absolute_energy?: number; relative_percentage?: number }>;
@@ -103,7 +85,7 @@ export default function DebugPage() {
         <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Black Box · L1</p>
         <h1 className="text-lg font-semibold text-zinc-100">黑匣子</h1>
         <p className="mt-1 text-xs text-zinc-500">审计流、物理张量快照与全局熵（最近一次主实验室排盘）。</p>
-        <Link href="/?resume=1" className="mt-2 inline-block text-xs text-amber-400/90 underline-offset-2 hover:underline">
+        <Link href="/" className="mt-2 inline-block text-xs text-amber-400/90 underline-offset-2 hover:underline">
           ← 返回实验室
         </Link>
       </header>
@@ -294,6 +276,7 @@ export default function DebugPage() {
               </pre>
             ) : null}
           </section>
+          <StateSentinel />
         </div>
       )}
     </main>

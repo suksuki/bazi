@@ -8,9 +8,8 @@ type Props = {
   mode: Mode;
   globalEntropy?: number | null;
   decisionDirty?: boolean;
-  autoSync: boolean;
-  onToggleAutoSync: (next: boolean) => void;
   onRun: () => void | Promise<void>;
+  onSetBaseline?: () => void;
   disabled?: boolean;
 };
 
@@ -18,9 +17,8 @@ export function UnifiedActionBar({
   mode,
   globalEntropy,
   decisionDirty = false,
-  autoSync,
-  onToggleAutoSync,
   onRun,
+  onSetBaseline,
   disabled = false,
 }: Props) {
   const label =
@@ -42,6 +40,8 @@ export function UnifiedActionBar({
   const [glitchOn, setGlitchOn] = useState(false);
   const [burstOn, setBurstOn] = useState(false);
   const [willPulseOn, setWillPulseOn] = useState(false);
+  const [baselineFlash, setBaselineFlash] = useState(false);
+  const [baselineHint, setBaselineHint] = useState("");
   const jitterTimerRef = useRef<number | null>(null);
   const glitchTimerRef = useRef<number | null>(null);
   const burstTimerRef = useRef<number | null>(null);
@@ -142,6 +142,18 @@ export function UnifiedActionBar({
     }
     void onRun();
   };
+  const handleSetBaseline = () => {
+    if (!onSetBaseline) return;
+    onSetBaseline();
+    setBaselineFlash(true);
+    setGlitchOn(true);
+    setBaselineHint("因果锚点已固化");
+    window.setTimeout(() => {
+      setBaselineFlash(false);
+      if (glitchIntensity <= 0) setGlitchOn(false);
+    }, 150);
+    window.setTimeout(() => setBaselineHint(""), 1200);
+  };
   const glitchSlice = `polygon(0 ${12 + Math.random() * 40}%, 100% ${6 + Math.random() * 30}%, 100% ${48 + Math.random() * 30}%, 0 ${55 + Math.random() * 28}%)`;
 
   return (
@@ -203,11 +215,22 @@ export function UnifiedActionBar({
             </>
           ) : null}
         </div>
-        <label className="flex shrink-0 items-center gap-2 text-xs text-zinc-300">
-          <input type="checkbox" checked={autoSync} onChange={(e) => onToggleAutoSync(e.target.checked)} />
-          Auto-Sync
-        </label>
+        <button
+          type="button"
+          onClick={handleSetBaseline}
+          disabled={!onSetBaseline || disabled || mode === "SYNCING"}
+          aria-label="设置当前为基线"
+          className={`shrink-0 rounded-md border px-2 py-1 text-xs transition ${
+            baselineFlash
+              ? "border-[#A855F7] bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(168,85,247,0.55)]"
+              : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+          } disabled:cursor-not-allowed disabled:opacity-50`}
+          title={baselineHint || "设置当前为基线"}
+        >
+          ⚓
+        </button>
       </div>
+      {baselineHint ? <p className="mt-1 text-[10px] text-fuchsia-300">{baselineHint}</p> : null}
     </section>
   );
 }

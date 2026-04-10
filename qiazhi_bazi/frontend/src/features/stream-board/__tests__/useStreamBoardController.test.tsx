@@ -3,9 +3,14 @@ import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LabConfigProvider } from "@/features/lab-config/LabConfigContext";
 import { useStreamBoardController } from "@/features/stream-board/useStreamBoardController";
+import { LabStoreProvider } from "@/features/stream-board/stores/useLabStore";
 
 function hookWrapper({ children }: { children: ReactNode }) {
-  return <LabConfigProvider>{children}</LabConfigProvider>;
+  return (
+    <LabStoreProvider>
+      <LabConfigProvider>{children}</LabConfigProvider>
+    </LabStoreProvider>
+  );
 }
 
 vi.mock("swr", () => ({

@@ -55,7 +55,6 @@ type Props = {
   hideStrategicPanel?: boolean;
   logicDiff?: LogicDiff;
   actionMode?: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY";
-  autoSync?: boolean;
   autoSyncIdle?: boolean;
   t?: (s: string) => string;
 };
@@ -93,7 +92,6 @@ export function DecisionInbox({
   hideStrategicPanel = false,
   logicDiff,
   actionMode = "SEMANTIC",
-  autoSync = false,
   autoSyncIdle = true,
   t = (s) => s,
 }: Props) {
@@ -191,6 +189,7 @@ export function DecisionInbox({
 
   function renderVerdictLine(line: string, idx: number) {
     const parts = splitVerdictLine(line);
+    const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
     return (
       <p
         key={`${idx}-${line.slice(0, 12)}`}
@@ -200,6 +199,8 @@ export function DecisionInbox({
             : "text-emerald-300"
         } ${
           highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
+        } ${
+          isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
         }`}
       >
         {parts.map((part, i) => (
@@ -327,7 +328,7 @@ export function DecisionInbox({
                   const labelText = getCardLabel(card);
                   const element = getCardElement(card);
                   const isProposal = isAuditorProposal(card.cardType);
-                  const showDeltaBadge = actionMode === "PARAMETER_DIRTY" && autoSync && autoSyncIdle;
+                  const showDeltaBadge = actionMode === "PARAMETER_DIRTY" && autoSyncIdle;
                   return (
                     <motion.label
                       key={card.id}

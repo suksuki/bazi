@@ -8,33 +8,37 @@
 
 **合成公式**（`interaction_pipeline` 末尾 `EntropySynthesizer` 等价实现）：
 
-\[
-\text{global\_entropy} = \mathrm{clamp}\Big(\sum_i M_i \cdot w_i,\ 0,\ 1\Big)
-\]
 
-- **\(M_{\text{torque}}\)**：扭力审计总量 `audit_log.l1_impact_torque_total` 除以参数 `ENTROPY_TORQUE_REF` 后限幅到 1。
-- **\(M_{\text{clamp}}\)**：处于 **三合 AGGREGATED** 或 **墓库 LOCKED** 所触及的**柱位**占四柱（4）的比例，0..1。
-- **\(M_{\text{clash}}\)**：所有 `base.clash` 步的 `abs_loss` 之和除以 `ENTROPY_CLASH_REF` 后限幅到 1。
+\text{globalentropy} = \mathrm{clamp}\Big(\sum_i M_i \cdot w_i,\ 0,\ 1\Big)
+
+
+- **M_{\text{torque}}**：扭力审计总量 `audit_log.l1_impact_torque_total` 除以参数 `ENTROPY_TORQUE_REF` 后限幅到 1。
+- **M_{\text{clamp}}**：处于 **三合 AGGREGATED** 或 **墓库 LOCKED** 所触及的**柱位**占四柱（4）的比例，0..1。
+- **M_{\text{clash}}**：所有 `base.clash` 步的 `abs_loss` 之和除以 `ENTROPY_CLASH_REF` 后限幅到 1。
 
 **默认权重**（可通过 DB 覆盖）：
 
-| 参数 | 默认值 |
-|------|--------|
-| `ENTROPY_W_TORQUE` | 0.4 |
-| `ENTROPY_W_CLAMP` | 0.3 |
-| `ENTROPY_W_CLASH` | 0.3 |
-| `ENTROPY_TORQUE_REF` | 180.0 |
-| `ENTROPY_CLASH_REF` | 160.0 |
 
-**诊断分解**：`meta.global_entropy_metrics` 携带 \(M_{\text{torque}}\)、\(M_{\text{clamp}}\)、\(M_{\text{clash}}\) 及原始标量，便于审计与调参。
+| 参数                   | 默认值   |
+| -------------------- | ----- |
+| `ENTROPY_W_TORQUE`   | 0.4   |
+| `ENTROPY_W_CLAMP`    | 0.3   |
+| `ENTROPY_W_CLASH`    | 0.3   |
+| `ENTROPY_TORQUE_REF` | 180.0 |
+| `ENTROPY_CLASH_REF`  | 160.0 |
+
+
+**诊断分解**：`meta.global_entropy_metrics` 携带 M_{\text{torque}}、M_{\text{clamp}}、M_{\text{clash}} 及原始标量，便于审计与调参。
 
 ## UI 语义映射（建议）
 
-| 区间 | 建议表现 |
-|------|----------|
-| 0.0 – 0.3 | 平稳、低动效 |
+
+| 区间        | 建议表现                                  |
+| --------- | ------------------------------------- |
+| 0.0 – 0.3 | 平稳、低动效                                |
 | 0.4 – 0.7 | 张力条加速脉冲（`StrategicCoreHUD`）、轻量 Glitch |
 | 0.8 – 1.0 | 强 Glitch、可选触觉反馈（`LogicGlitchOverlay`） |
+
 
 前端从 `physics_tensor.meta.global_entropy` 读取；具体阈值以产品设计为准，可独立于后端权重迭代。
 

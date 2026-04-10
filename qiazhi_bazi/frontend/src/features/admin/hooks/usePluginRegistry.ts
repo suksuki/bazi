@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { useMemo } from "react";
 
 export type PluginManifestItem = {
   id: string;
@@ -20,7 +21,23 @@ export type PluginManifest = {
   refreshed_at?: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8001";
+const API_BASE_RAW = (process.env.NEXT_PUBLIC_QIAZHI_API ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const resolveApiBase = () => {
+  if (!API_BASE_RAW) return "";
+  if (API_BASE_RAW === "/api") return "";
+  if (API_BASE_RAW.startsWith("/")) return API_BASE_RAW;
+  if (typeof window === "undefined") return API_BASE_RAW;
+  try {
+    const apiHost = new URL(API_BASE_RAW).hostname;
+    const pageHost = window.location.hostname;
+    if (LOOPBACK_HOSTS.has(apiHost) && !LOOPBACK_HOSTS.has(pageHost)) return "";
+  } catch {
+    return "";
+  }
+  return API_BASE_RAW;
+};
+const API_BASE = resolveApiBase();
 
 const fetcher = async (url: string): Promise<PluginManifest> => {
   const res = await fetch(url);
@@ -29,10 +46,41 @@ const fetcher = async (url: string): Promise<PluginManifest> => {
 };
 
 export function usePluginRegistry() {
-  const { data, error, isLoading, mutate } = useSWR<PluginManifest>(`${API_BASE}/api/v1/plugins/manifest`, fetcher, {
-    refreshInterval: 8000,
-    revalidateOnFocus: true,
+  const shouldFetchManifest = useMemo(() => {
+    if (typeof window === "undefined") return true;
+    if (!API_BASE) return true;
+    if (API_BASE.startsWith("/")) return true;
+    let apiHost = "";
+    try {
+      apiHost = new URL(API_BASE).hostname;
+    } catch {
+      return true;
+    }
+    const pageHost = window.location.hostname;
+    const apiIsLoopback = LOOPBACK_HOSTS.has(apiHost);
+    const pageIsLoopback = LOOPBACK_HOSTS.has(pageHost);
+    // 外域页面访问 loopback 地址会被浏览器私网策略拦截，直接停用拉取避免反复报错/重试。
+    if (apiIsLoopback && !pageIsLoopback) return false;
+    return true;
+  }, []);
+
+  const swrKey = shouldFetchManifest ? `${API_BASE}/api/v1/plugins/manifest` : null;
+  const { data, error, isLoading, mutate } = useSWR<PluginManifest>(swrKey, fetcher, {
+    refreshInterval: shouldFetchManifest ? 8000 : 0,
+    revalidateOnFocus: shouldFetchManifest,
+    shouldRetryOnError: false,
+    revalidateOnReconnect: shouldFetchManifest,
   });
-  return { manifest: data, error, isLoading, refresh: () => mutate() };
+
+  const blockedError = !shouldFetchManifest
+    ? new Error("Plugin manifest disabled: page origin cannot access loopback API.")
+    : undefined;
+
+  return {
+    manifest: data,
+    error: error || blockedError,
+    isLoading: shouldFetchManifest ? isLoading : false,
+    refresh: () => (shouldFetchManifest ? mutate() : Promise.resolve(undefined)),
+  };
 }
 

@@ -185,7 +185,7 @@ export type StreamBoardViewModel = {
   setConfirmedDecisionIds?: Dispatch<SetStateAction<string[]>>;
   urlDecisionHydrated?: boolean;
   snapshotAvailable?: boolean;
-  restoreSnapshot?: () => void;
+  setAsBaseline?: () => void;
   logicDiff?: LogicDiff;
   stressTestResult: StressTestResult | null;
   genderComparisonResult: GenderComparisonResult | null;
@@ -218,6 +218,9 @@ export type StreamBoardViewModel = {
   onSeedSubmit: (payload: SeedPayload) => Promise<void>;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
   onExecuteDecision: (selected: InboxCard[]) => Promise<void>;
+  refreshVerdict: (selected: InboxCard[]) => Promise<void>;
+  executeDecisionAndRefresh: (selected: InboxCard[]) => Promise<void>;
+  appendSystemAuditLog: (line: string) => void;
   revokeConfirmedDecision?: (id: string) => Promise<void>;
   openLogicDrawer: (payload: { title: string; focus: string; details: string[]; deityTrace?: Record<string, unknown> }) => void;
   openLogicDrawerByDeity: (deity: string) => void;
