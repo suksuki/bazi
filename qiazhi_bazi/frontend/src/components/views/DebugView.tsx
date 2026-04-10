@@ -76,8 +76,9 @@ export function DebugView() {
         did.startsWith("physics:")
           ? [...decisionIds].some((id) => id.startsWith("llm-observe"))
           : decisionIds.has(did);
+      const impactAbs = `[Abs 修正值: ${absStr}${checked ? " [WILL_INFUSED]" : ""}]`;
       rows.push(
-        `[物理匹配: ${detail}] → [Skill: ${sid}] → [Decision ID: ${did}] → [用户状态: ${checked ? "已勾选" : "未勾选"}] → [Abs 修正值: ${absStr}]`,
+        `[物理匹配: ${detail}] → [Skill: ${sid}] → [Decision ID: ${did}] → [用户状态: ${checked ? "已勾选" : "未勾选"}] → ${impactAbs}`,
       );
     });
 
@@ -86,8 +87,19 @@ export function DebugView() {
       pierceSem.forEach((raw, j) => {
         const item = raw as { detail?: string; semantic_intensity?: number; skill_id?: string };
         const si = Number(item.semantic_intensity ?? 0);
+        const detailStr = String(item.detail || "—");
+        const pendingMatch = pending.find((c) => {
+          const title = String((c as { title?: string }).title || "");
+          return title && (detailStr.includes(title.slice(0, 4)) || title.includes(detailStr.slice(0, 4)));
+        }) as { id?: string } | undefined;
+        const did = pendingMatch?.id ? String(pendingMatch.id) : `pierce:${j}`;
+        const pierceChecked =
+          did.startsWith("physics:")
+            ? [...decisionIds].some((id) => id.startsWith("llm-observe"))
+            : decisionIds.has(did);
+        const pierceImpact = `[Abs 修正值: ${absStr}${pierceChecked ? " [WILL_INFUSED]" : ""}]`;
         rows.push(
-          `[物理匹配: 穿局 ${String(item.detail || "—")} · semantic_intensity=${Number.isFinite(si) ? si.toFixed(4) : "—"}] → [Skill: ${String(item.skill_id || "mp_pierce_01")}] → [Decision ID: pierce:${j}] → [用户状态: 见 Inbox 与 llm-observe 勾选] → [Abs 修正值: ${absStr}]`,
+          `[物理匹配: 穿局 ${detailStr} · semantic_intensity=${Number.isFinite(si) ? si.toFixed(4) : "—"}] → [Skill: ${String(item.skill_id || "mp_pierce_01")}] → [Decision ID: ${did}] → [用户状态: ${pierceChecked ? "已勾选" : "未勾选"}] → ${pierceImpact}`,
         );
       });
     }
@@ -101,6 +113,11 @@ export function DebugView() {
   }, [snapshot, hub, ld, meta.mangpai_pierce_semantics]);
 
   const hubCausalTraceLines = useMemo(() => {
+    const decisionIdSet = new Set(
+      Array.isArray(snapshot?.decision_selection_ids)
+        ? snapshot.decision_selection_ids.map((x) => String(x))
+        : [],
+    );
     const baseAbs = ld?.baseline_abs_loss_total;
     const curAbs = ld?.current_abs_loss_total;
     let impact = "—";
@@ -137,8 +154,10 @@ export function DebugView() {
       const decision = extractDecisionId(blob);
       const resolved = /决策|decision|confirm|勾选|resolved|决议|同步因果/i.test(blob);
       const actionLabel = resolved ? "Decision Resolved" : `Audit (${step || "trace"})`;
+      const willInfused =
+        decision !== "—" && decisionIdSet.has(decision) ? " [WILL_INFUSED]" : "";
       rows.push(
-        `[Triggered]: Skill ID (${skill}) -> [Action]: ${actionLabel} (${decision !== "—" ? `ID_${decision}` : "ID_—"}) -> [Impact]: Abs Modified (${impact})`,
+        `[Triggered]: Skill ID (${skill}) -> [Action]: ${actionLabel} (${decision !== "—" ? `ID_${decision}` : "ID_—"}) -> [Impact]: Abs Modified (${impact})${willInfused}`,
       );
     });
 
@@ -153,8 +172,10 @@ export function DebugView() {
       ) {
         const skill = skillFromHubBlob(log);
         const decision = extractDecisionId(log);
+        const willInfused =
+          decision !== "—" && decisionIdSet.has(decision) ? " [WILL_INFUSED]" : "";
         rows.push(
-          `[Triggered]: Skill ID (${skill}) -> [Action]: Hub log -> (${decision !== "—" ? `ID_${decision}` : "ID_—"}) -> [Impact]: Abs Modified (${impact})`,
+          `[Triggered]: Skill ID (${skill}) -> [Action]: Hub log -> (${decision !== "—" ? `ID_${decision}` : "ID_—"}) -> [Impact]: Abs Modified (${impact})${willInfused}`,
         );
       }
     });
@@ -165,7 +186,7 @@ export function DebugView() {
       );
     }
     return rows.slice(-24);
-  }, [hub?.audit_items, hub?.result_logs, ld]);
+  }, [hub?.audit_items, hub?.result_logs, ld, snapshot?.decision_selection_ids]);
 
   const copyAll = async () => {
     if (!snapshot) return;

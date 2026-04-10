@@ -57,6 +57,16 @@ def collect_pierce_semantics(work_vectors: List[Dict[str, Any]]) -> List[Dict[st
     return out
 
 
+def _pierce_semantic_prefix(semantic_intensity: float) -> str:
+    """按 semantic_intensity 分级前缀，供 LLM 对齐语气与物理损耗严重度。"""
+    si = float(semantic_intensity)
+    if si > 0.8:
+        return "[CRITICAL_PIERCE] 剧烈穿倒"
+    if si > 0.4:
+        return "[STABLE_PIERCE] 稳态穿破"
+    return "[TRACE_PIERCE] 微弱穿扰"
+
+
 def resolve_pierce_eta(settings: Dict[str, float]) -> float:
     """穿局物理损耗下限 η_pierce（与 blind_work_evaluator 穿支升格一致）。"""
     return float(settings.get("MANGPAI_ETA_PIERCE", settings.get("MANGPAI_SIX_HARM_ETA", 0.99)))
@@ -101,7 +111,8 @@ def pierce_chip_logs_from_work_vectors(work_vectors: List[Dict[str, Any]]) -> Li
             continue
         detail = str(v.get("detail") or "").strip() or "未命名穿局"
         si = float(v.get("semantic_intensity") or _compute_pierce_semantic_intensity(v))
+        tier = _pierce_semantic_prefix(si)
         logs.append(
-            f"[MANGPAI_CHIP] 发现穿局：{detail}，semantic_intensity={si:.4f}（mp_pierce_01），能量发生物理折损。"
+            f"{tier} [MANGPAI_CHIP] 发现穿局：{detail}，semantic_intensity={si:.4f}（mp_pierce_01），能量发生物理折损。"
         )
     return logs

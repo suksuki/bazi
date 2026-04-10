@@ -6,7 +6,7 @@ import { useBlindSkillHighlight } from "@/features/stream-board/context/BlindSki
 /**
  * 从断言行文本推断应对应高亮的盲派 Skill 徽章 id（与 blindSkillRuntime / skill_manifest 一致）。
  */
-export function inferSkillHintFromAssertionLine(line: string): string | null {
+function inferSkillHintFromAssertionLine(line: string): string | null {
   const t = String(line || "");
   if (t.includes("穿") || /子未|丑午|寅巳|卯辰|申亥|酉戌/.test(t)) return "mp_pierce_01";
   if (t.includes("墓库") || t.includes("闭库")) return "mp_tomb_01";

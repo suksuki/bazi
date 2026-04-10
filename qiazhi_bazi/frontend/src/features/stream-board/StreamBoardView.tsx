@@ -542,7 +542,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                       {String((timeline as { liunian?: string } | null)?.liunian || "--")}
                     </p>
                   </div>
-                  <BlindSkillBadgeRow badges={blindSkillBadges} />
+                  {/* md+ 与指令舱顶栏徽章去重：桌面端仅在 Command 模式展示 BlindSkillBadgeRow */}
+                  <div className="md:hidden">
+                    <BlindSkillBadgeRow badges={blindSkillBadges} />
+                  </div>
                   <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
                       <BaziCard

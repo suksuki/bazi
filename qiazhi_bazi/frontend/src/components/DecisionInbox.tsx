@@ -376,7 +376,7 @@ export function DecisionInbox({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ duration: 0.22 }}
-                      className={`block ${interactionLocked ? "pointer-events-none opacity-60" : ""}`}
+                      className={`block ${interactionLocked ? "opacity-60" : ""}`}
                     >
                       <DecisionItem
                         label={labelText}
@@ -386,6 +386,7 @@ export function DecisionInbox({
                         deltaAbs={logicDiff?.abs_delta}
                         showDeltaBadge={showDeltaBadge}
                         skillId={card.skillId}
+                        toggleDisabled={interactionLocked}
                         onToggle={() =>
                           applySelection({
                             ...selectedIds,

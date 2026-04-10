@@ -10,6 +10,8 @@ type Props = {
   showDeltaBadge?: boolean;
   /** 盲派 / L1 Skill 注册表 ID，右上角展示 */
   skillId?: string;
+  /** 终审锁定等：禁止切换勾选，但不阻断卡片内其它指针事件（如悬停联动徽章） */
+  toggleDisabled?: boolean;
 };
 
 export function DecisionItem({
@@ -21,6 +23,7 @@ export function DecisionItem({
   deltaAbs = null,
   showDeltaBadge = false,
   skillId,
+  toggleDisabled = false,
 }: Props) {
   const hasDelta = showDeltaBadge && selected && typeof deltaAbs === "number" && Number.isFinite(deltaAbs) && Math.abs(deltaAbs) > 0.0001;
   const positive = (deltaAbs || 0) > 0;
@@ -70,12 +73,13 @@ export function DecisionItem({
         <button
           type="button"
           aria-pressed={selected}
+          disabled={toggleDisabled}
           onClick={onToggle}
           className={`flex h-5 w-5 items-center justify-center rounded border text-[12px] font-bold ${
             selected
               ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
               : "border-zinc-500 bg-zinc-950 text-transparent"
-          }`}
+          } ${toggleDisabled ? "cursor-not-allowed opacity-50" : ""}`}
         >
           ✓
         </button>
