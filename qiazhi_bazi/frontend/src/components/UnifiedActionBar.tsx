@@ -158,7 +158,7 @@ export function UnifiedActionBar({
 
   return (
     <section
-      className="sticky bottom-[4.7rem] rounded-2xl border border-zinc-700 bg-zinc-950/92 p-3 backdrop-blur-md transition-transform duration-150"
+      className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom))] rounded-2xl border border-zinc-700 bg-zinc-950/92 p-3 backdrop-blur-md transition-transform duration-150"
       style={{ transform: `translate(${offset.x}px, ${offset.y}px)`, zIndex: glitchOn || burstOn ? 60 : 30 }}
     >
       <div className="mb-2 h-1.5 w-full overflow-hidden rounded bg-zinc-800">

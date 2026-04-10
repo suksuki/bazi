@@ -1,9 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { AuditItem } from "@/components/AuditSidebar";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { AuditItem, AuditRole } from "@/components/AuditSidebar";
 import type { BaziMetadata, DecisionStep, Lang, TimelineSnapshot } from "@/types/bazi";
 import { adminHeaders, API_BASE, fetcher, VERDICT_TIMEOUT_MS } from "./constants";
 import { buildInboxCards, createAuditorProposalCard } from "./cardBuilder";
@@ -20,9 +19,10 @@ import type {
   StreamBoardViewModel,
 } from "./models";
 import { buildFallbackVerdict, calculateFireEnergyAfterConflicts } from "./utils";
+import { useClientSearchParams } from "./useClientSearchParams";
 import { useTranslationQueue } from "./useTranslationQueue";
 import { useLabConfig } from "@/features/lab-config/LabConfigContext";
-import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { useLabStore, useUiLang } from "@/features/stream-board/stores/useLabStore";
 
 type ConsensusItem = { decision_key: string; confirmed_value?: number; reasoning?: string };
 type ConfirmedDecisionItem = { id: string; label: string; is_confirmed: boolean; confirmed_at?: string };
@@ -55,14 +55,11 @@ function interpolateColor(startHex: string, endHex: string, ratio: number): stri
 }
 
 export function useStreamBoardController(): StreamBoardViewModel {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useClientSearchParams();
   const {
     state: labState,
     mergeSnapshot,
     setLastSeedPayload: persistLastSeedToStore,
-    consumeSessionRestoreMarker,
   } = useLabStore();
   const initialSnapshot = (labState.snapshot || null) as {
     physics_tensor?: Record<string, unknown>;
@@ -78,7 +75,21 @@ export function useStreamBoardController(): StreamBoardViewModel {
     };
     decision_selection_ids?: string[];
   } | null;
-  const [lang, setLang] = useState<Lang>("ZH");
+  const { uiLang, setUiLang } = useUiLang();
+  const [lang, setLangState] = useState<Lang>("ZH");
+  const langRef = useRef<Lang>("ZH");
+  const lastSeedPayloadRef = useRef<SeedPayload | null>(null);
+  const metadataRef = useRef<BaziMetadata | null>(null);
+  const busyRef = useRef(false);
+  const isStreamingRef = useRef(false);
+  const isExecutingRef = useRef(false);
+
+  useEffect(() => {
+    if (uiLang === langRef.current) return;
+    langRef.current = uiLang;
+    setLangState(uiLang);
+  }, [uiLang]);
+
   const [busy, setBusy] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string>();
@@ -149,10 +160,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [confirmedDecisionIds, setConfirmedDecisionIds] = useState<string[]>(
     () => [...new Set((initialSnapshot?.decision_selection_ids || []).map((x) => String(x).trim()).filter(Boolean))].sort(),
   );
-  const [urlDecisionHydrated, setUrlDecisionHydrated] = useState(false);
-  const decisionUrlTimerRef = useRef<number | null>(null);
-  const skipFirstUrlWriteRef = useRef(true);
-  const isInitializingRef = useRef(true);
+  const urlDecisionHydrated = true;
   const isSnapshotRestoringRef = useRef(false);
   const navHandledRef = useRef(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -716,19 +724,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
   async function onSeedSubmit(payload: SeedPayload) {
     setLastSeedPayload(payload);
     persistLastSeedToStore(payload);
-    const vaultRestoreAudit: AuditItem | null = labState.sessionRestoredFromVault
-      ? (() => {
-          const sid = String(labState.snapshot?.active_session_id ?? consultationId ?? "--");
-          consumeSessionRestoreMarker();
-          return {
-            id: `system-vault-${Date.now()}`,
-            step: "00",
-            role: "Core",
-            action: `[SYSTEM] 成功从持久化快照中找回因果现场 (SessionID: ${sid})`,
-            timestamp: new Date().toISOString(),
-          };
-        })()
-      : null;
     setBusy(true);
     setIsStreaming(true);
     setAutoConvertedParamKey(null);
@@ -765,13 +760,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setGenderComparisonResult(null);
     setConsensusHistory([]);
 
-      const latestHealth = await refreshHealth();
+    const latestHealth = await refreshHealth();
 
     try {
       let currentSessionId = consultationId;
       setStreamingText(t("第一波：物理排盘中…"));
       setAuditItems([
-        ...(vaultRestoreAudit ? [vaultRestoreAudit] : []),
         {
           id: `arbiter-submit-${Date.now()}`,
           step: "01",
@@ -1018,6 +1012,22 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const lastCausalRevertHandledRef = useRef(0);
   const onSeedSubmitRef = useRef(onSeedSubmit);
   onSeedSubmitRef.current = onSeedSubmit;
+
+  const setLang = useCallback(
+    (next: Lang) => {
+      if (next === langRef.current) return;
+      langRef.current = next;
+      setLangState(next);
+      setUiLang(next);
+      queueMicrotask(() => {
+        const p = lastSeedPayloadRef.current;
+        if (!p || !metadataRef.current) return;
+        if (busyRef.current || isStreamingRef.current || isExecutingRef.current) return;
+        void onSeedSubmitRef.current(p);
+      });
+    },
+    [setUiLang],
+  );
 
   useEffect(() => {
     if (isSnapshotRestoringRef.current) return;
@@ -1502,47 +1512,161 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setConfirmedDecisionIds((prev) => prev.filter((item) => item !== id));
   }
 
+  /**
+   * 实验室 store 里 mergeSnapshot 已有完整因果现场，但本 hook 内大量 useState 默认空。
+   * 任意导致 StreamBoard 重挂载的情况都必须从 snapshot 灌回，否则界面像「全丢」。
+   */
   useLayoutEffect(() => {
-    if (urlDecisionHydrated) return;
-    const raw = (searchParams?.get("decisions") || "").trim();
-    if (raw) {
-      setConfirmedDecisionIds(normalizeDecisionIds(raw.split(",")));
-    }
-    setUrlDecisionHydrated(true);
-    isInitializingRef.current = false;
-  }, [urlDecisionHydrated, searchParams]);
+    if (metadata !== null) return;
+    const snap = labState.snapshot;
+    if (!snap?.metadata) return;
 
-  useEffect(() => {
-    if (!urlDecisionHydrated) return;
-    if (isInitializingRef.current) return;
-    if (skipFirstUrlWriteRef.current) {
-      skipFirstUrlWriteRef.current = false;
-      return;
+    isSnapshotRestoringRef.current = true;
+    try {
+      const rawMeta = snap.metadata as Record<string, unknown>;
+      const points = (rawMeta.conflict_matrix as { points?: unknown } | undefined)?.points;
+      const nextMeta: BaziMetadata = {
+        version: String(rawMeta.version ?? "1"),
+        pillars: (rawMeta.pillars ?? null) as BaziMetadata["pillars"],
+        conflict_matrix: {
+          points: Array.isArray(points) ? (points as BaziMetadata["conflict_matrix"]["points"]) : [],
+        },
+        flow_state: String(rawMeta.flow_state ?? "ready"),
+        notes: String(rawMeta.notes ?? ""),
+      };
+      setMetadata(nextMeta);
+
+      setTimeline((snap.timeline as TimelineSnapshot) ?? null);
+      setFirstPromptText(String(snap.llm_prompt || ""));
+
+      const hub = snap.interaction_hub;
+      if (hub?.consultation_id != null && typeof hub.consultation_id === "number") {
+        setConsultationId(hub.consultation_id);
+      } else if (snap.active_session_id) {
+        const n = Number(String(snap.active_session_id));
+        if (Number.isFinite(n)) setConsultationId(n);
+      }
+
+      if (hub?.health) {
+        setHealth({ dbOk: Boolean(hub.health.db_ok), llmOk: Boolean(hub.health.llm_ok) });
+      }
+
+      const rawItems = hub?.audit_items;
+      if (Array.isArray(rawItems) && rawItems.length > 0) {
+        setAuditItems(
+          rawItems.map((item, idx) => ({
+            id: String(item?.id ?? `audit-${idx}`),
+            step: item?.step,
+            role: (String(item?.role ?? "Core") as AuditRole),
+            action: String(item?.action ?? item?.step ?? "—"),
+            timestamp: String(item?.timestamp ?? ""),
+          })),
+        );
+      }
+
+      if (Array.isArray(hub?.result_logs)) {
+        setResultLogs(hub.result_logs.map((x) => String(x)));
+      }
+
+      const briefing = hub?.auditor_briefing;
+      if (briefing && typeof briefing === "object") {
+        const b = briefing as Record<string, unknown>;
+        const proposal = b.logic_proposal as LogicProposal | undefined;
+        const nextDiag: LlmDiagnosticData = {
+          alignment_score: typeof b.alignment_score === "number" ? b.alignment_score : undefined,
+          structured_hit: typeof b.structured_hit === "boolean" ? b.structured_hit : undefined,
+          repair_mode: b.repair_mode != null ? String(b.repair_mode) : undefined,
+          top_anomaly: b.top_anomaly != null ? String(b.top_anomaly) : undefined,
+          causal_reasoning: b.causal_reasoning != null ? String(b.causal_reasoning) : undefined,
+          tuning_suggestions: Array.isArray(b.tuning_suggestions) ? b.tuning_suggestions.map((x) => String(x)) : undefined,
+          logic_proposal: proposal,
+          sql_patch: b.sql_patch != null ? String(b.sql_patch) : undefined,
+        };
+        setLlmDiagnosticData(nextDiag);
+      }
+
+      const tensor = snap.physics_tensor as Record<string, unknown> | undefined;
+      if (tensor && typeof tensor === "object") {
+        if (tensor.deity_scores && typeof tensor.deity_scores === "object") {
+          setDeityScores(tensor.deity_scores as Record<string, number>);
+        }
+        if (tensor.deity_energy_axes && typeof tensor.deity_energy_axes === "object") {
+          setDeityEnergyAxes(tensor.deity_energy_axes as Record<string, DeityEnergyAxis>);
+        }
+        if (tensor.deity_components && typeof tensor.deity_components === "object") {
+          setDeityComponents(tensor.deity_components as Record<string, DeityComponent>);
+        }
+        if (tensor.deity_trace_details && typeof tensor.deity_trace_details === "object") {
+          setDeityTraceDetails(tensor.deity_trace_details as Record<string, Record<string, unknown>>);
+        }
+        const pMeta = (tensor.meta || {}) as Record<string, unknown>;
+        if (pMeta.deity_trace_details && typeof pMeta.deity_trace_details === "object" && !tensor.deity_trace_details) {
+          setDeityTraceDetails(pMeta.deity_trace_details as Record<string, Record<string, unknown>>);
+        }
+        if (tensor.audit_log && typeof tensor.audit_log === "object") {
+          setPhysicsAudit(tensor.audit_log as Record<string, unknown>);
+        }
+        setPhysicsConfidence(typeof tensor.confidence === "number" ? tensor.confidence : null);
+        if (Array.isArray(tensor.evidence)) {
+          setPhysicsEvidence(tensor.evidence.map((x) => String(x)));
+        } else {
+          setPhysicsEvidence([]);
+        }
+        if (pMeta.params && typeof pMeta.params === "object") {
+          setPhysicsParams(pMeta.params as Record<string, number>);
+        }
+        const ge = pMeta.global_entropy;
+        setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
+      }
+
+      const fv = snap.final_verdict;
+      if (fv && typeof fv === "object") {
+        setFinalVerdictBody(String(fv.body ?? ""));
+        setFinalVerdictChangeLog((fv.change_log || {}) as FinalVerdictChangeLog);
+        setFinalVerdictVersionId(String(fv.version_id ?? ""));
+        setFinalLogicalEvidence(Array.isArray(fv.logical_evidence) ? fv.logical_evidence.map((x) => String(x)) : []);
+        setFinalWorkVector((fv.work_vector as Record<string, unknown>) || null);
+        setFinalTopologyGraphV1((fv.topology_graph_v1 as Record<string, unknown>) || null);
+        setFinalStructureCandidatesV0((fv.structure_candidates_v0 as Record<string, unknown>) || null);
+        setFinalStructureFinalDecisionV0((fv.structure_final_decision_v0 as Record<string, unknown>) || null);
+      }
+
+      if (Array.isArray(snap.resolved_card_ids)) {
+        setResolvedCardIds(snap.resolved_card_ids.map((x) => String(x)));
+      }
+      if (Array.isArray(snap.decision_selection_ids)) {
+        setConfirmedDecisionIds(normalizeDecisionIds(snap.decision_selection_ids.map((x) => String(x))));
+      }
+
+      const ld = snap.logic_diff;
+      if (ld) {
+        setLogicDiff({
+          baseline_abs_loss_total: ld.baseline_abs_loss_total ?? null,
+          current_abs_loss_total: ld.current_abs_loss_total ?? null,
+          abs_delta: ld.abs_delta ?? null,
+          baseline_entropy: ld.baseline_entropy ?? null,
+          current_entropy: ld.current_entropy ?? null,
+          entropy_delta: ld.entropy_delta ?? null,
+        });
+      }
+
+      if (labState.lastSeedPayload) {
+        setLastSeedPayload(labState.lastSeedPayload);
+      }
+
+      setSnapshotAvailable(true);
+    } finally {
+      queueMicrotask(() => {
+        isSnapshotRestoringRef.current = false;
+      });
     }
-    if (decisionUrlTimerRef.current) window.clearTimeout(decisionUrlTimerRef.current);
-    decisionUrlTimerRef.current = window.setTimeout(() => {
-      const nextIds = normalizeDecisionIds(confirmedDecisionIds);
-      const current = (searchParams?.get("decisions") || "").trim();
-      const next = nextIds.join(",");
-      if (next === current) return;
-      const params = new URLSearchParams(searchParams?.toString() || "");
-      if (next) params.set("decisions", next);
-      else params.delete("decisions");
-      const query = params.toString();
-      const basePath = pathname || "/";
-      router.replace(query ? `${basePath}?${query}` : basePath, { scroll: false });
-    }, 380);
-    return () => {
-      if (decisionUrlTimerRef.current) window.clearTimeout(decisionUrlTimerRef.current);
-    };
-  }, [confirmedDecisionIds, searchParams, pathname, router, urlDecisionHydrated]);
+  }, [labState.snapshot, labState.lastSeedPayload, metadata]);
 
   useLayoutEffect(() => {
     if (navHandledRef.current) return;
     if (typeof window === "undefined") return;
     navHandledRef.current = true;
     const params = new URLSearchParams(window.location.search);
-    const decisionsInUrl = (params.get("decisions") || "").trim().length > 0;
     const hasSnapshot = Boolean(labState.snapshot);
     const hasActiveSession = Boolean(labState.snapshot?.active_session_id);
     const hasValidSnapshot = hasSnapshot && hasActiveSession;
@@ -1550,18 +1674,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     const navType = ((navEntry?.type || "unknown") as NavigationInfo["navType"]);
     const isReload = navType === "reload";
     const isBackForward = navType === "back_forward";
-    const referrerPath = (() => {
-      try {
-        return new URL(document.referrer || "").pathname || "";
-      } catch {
-        return "";
-      }
-    })();
-    const internalReturn = referrerPath.startsWith("/debug") || referrerPath.startsWith("/admin");
     const resumeFromMarker = false;
     let intent: NavigationInfo["intent"] = "FRESH_START";
 
-    if (hasValidSnapshot && (isReload || isBackForward || internalReturn || resumeFromMarker)) {
+    if (hasValidSnapshot && (isReload || isBackForward || resumeFromMarker)) {
       intent = "RESTORE_AUDIT";
     } else {
       intent = "FRESH_START";
@@ -1585,6 +1701,19 @@ export function useStreamBoardController(): StreamBoardViewModel {
   }, [labState.snapshot]);
 
   const mergedSteps = historyData?.items?.length ? [...steps, ...historyData.items] : steps;
+  langRef.current = lang;
+  lastSeedPayloadRef.current = lastSeedPayload;
+  metadataRef.current = metadata;
+  busyRef.current = busy;
+  isStreamingRef.current = isStreaming;
+  isExecutingRef.current = isExecuting;
+
+  const snapshotUrlTag = useMemo(() => {
+    const raw = (searchParams.get("tag") || "").trim();
+    if (!raw) return "";
+    return raw.replace(/[^\w\-:.]/g, "").slice(0, 48);
+  }, [searchParams]);
+
   const streamThemeChroma = useMemo(() => {
     const blindWeight = Number(pluginWeights.blindSchool || 0);
     const wanshuaiWeight = Number(pluginWeights.wangshuai || 0);
@@ -1646,6 +1775,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     confirmedDecisionIds,
     setConfirmedDecisionIds,
     urlDecisionHydrated,
+    snapshotUrlTag,
     snapshotAvailable,
     setAsBaseline,
     logicDiff,

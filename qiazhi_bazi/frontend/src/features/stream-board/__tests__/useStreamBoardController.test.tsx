@@ -20,9 +20,7 @@ vi.mock("swr", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   usePathname: () => "/",
-  useSearchParams: () => new URLSearchParams(),
 }));
 
 function jsonResponse(body: unknown, ok = true) {

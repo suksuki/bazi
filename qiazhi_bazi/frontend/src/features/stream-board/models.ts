@@ -184,6 +184,8 @@ export type StreamBoardViewModel = {
   confirmedDecisionIds?: string[];
   setConfirmedDecisionIds?: Dispatch<SetStateAction<string[]>>;
   urlDecisionHydrated?: boolean;
+  /** 来自 URL ?tag=，供 SnapshotBanner 展示，避免子组件使用 useSearchParams 触发 Suspense */
+  snapshotUrlTag?: string;
   snapshotAvailable?: boolean;
   setAsBaseline?: () => void;
   logicDiff?: LogicDiff;

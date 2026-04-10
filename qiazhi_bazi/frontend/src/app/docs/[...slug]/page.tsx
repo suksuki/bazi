@@ -48,4 +48,3 @@ export default async function DocViewerPage({ params }: Props) {
     </main>
   );
 }
-

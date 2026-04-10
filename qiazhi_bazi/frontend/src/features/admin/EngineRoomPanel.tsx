@@ -1,12 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LabEngineConsole } from "@/features/admin-lab/LabEngineConsole";
 import { useLabConfig } from "@/features/lab-config/LabConfigContext";
+import { useActiveView } from "@/components/layout/ActiveViewContext";
 
 export function EngineRoomPanel() {
-  const router = useRouter();
+  const { setActiveView } = useActiveView();
   const { labConfig, setLabConfig, pluginSwitches, setPluginSwitches } = useLabConfig();
   const [labOpen, setLabOpen] = useState(true);
   const [labGroupsOpen, setLabGroupsOpen] = useState({
@@ -26,7 +26,7 @@ export function EngineRoomPanel() {
       setLabConfig={setLabConfig}
       pluginSwitches={pluginSwitches}
       setPluginSwitches={setPluginSwitches}
-      onApplyRecalculate={() => router.push("/")}
+      onApplyRecalculate={() => setActiveView("lab")}
     />
   );
 }

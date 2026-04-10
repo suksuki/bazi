@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArbiterLogicDrawer } from "@/components/ArbiterLogicDrawer";
 import { AuditSidebar } from "@/components/AuditSidebar";
@@ -20,21 +19,7 @@ import { SnapshotBanner } from "@/features/stream-board/components/SnapshotBanne
 import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
 import { I18N } from "./constants";
 import type { InboxCard, StreamBoardViewModel } from "./models";
-import { useLabStore } from "./stores/useLabStore";
-
-function Loading() {
-  return (
-    <div className="flex h-dvh w-full flex-col items-center justify-center bg-[#0f0f12]">
-      <div className="relative h-12 w-12">
-        <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
-        <div className="absolute inset-0 animate-pulse rounded-full border-2 border-amber-500/40" />
-      </div>
-      <p className="mt-4 animate-pulse text-xs font-medium tracking-widest text-amber-200/60 transition-opacity">
-        HYDRATING VAULT...
-      </p>
-    </div>
-  );
-}
+import { useActiveView } from "@/components/layout/ActiveViewContext";
 
 const STEM_META: Record<string, { element: "wood" | "fire" | "earth" | "metal" | "water"; yinYang: "yang" | "yin" }> = {
   甲: { element: "wood", yinYang: "yang" },
@@ -73,8 +58,7 @@ const ELEMENT_STYLE = {
 };
 
 export function StreamBoardView(viewModel: StreamBoardViewModel) {
-  if (!useLabStore.persist.hasHydrated()) return <Loading />;
-
+  const { setActiveView } = useActiveView();
   const {
     lang,
     setLang,
@@ -113,6 +97,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     confirmedDecisionIds,
     setConfirmedDecisionIds,
     urlDecisionHydrated,
+    snapshotUrlTag,
     snapshotAvailable,
     setAsBaseline,
     logicDiff,
@@ -183,16 +168,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setSeedPanelOpen(true);
   }, []);
   const copySnapshotLink = React.useCallback(async () => {
-    const tagInput = window.prompt("输入快照标签（可选）", snapshotTag) || "";
+    const tagInput = window.prompt(t("输入快照标签（可选）"), snapshotTag) || "";
     const tag = tagInput.trim();
-    const url = new URL(window.location.href);
+    const url = new URL("/", typeof window !== "undefined" ? window.location.origin : "");
     if (tag) url.searchParams.set("tag", tag);
-    else url.searchParams.delete("tag");
-    const query = url.searchParams.toString();
-    window.history.replaceState({}, "", query ? `${url.pathname}?${query}` : url.pathname);
     setSnapshotTag(tag);
     await navigator.clipboard.writeText(url.toString());
-  }, [snapshotTag]);
+  }, [snapshotTag, t]);
 
   const hasBoard = Boolean(metadata?.pillars);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
@@ -378,10 +360,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
-          <SnapshotBanner />
+          <SnapshotBanner tag={snapshotUrlTag ?? ""} />
           <p className="text-xs text-zinc-500">{t(I18N[lang].subtitle)}</p>
           <span className="mt-1 inline-flex rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
-            Layer 1 Fully Aligned
+            {t("第一层完全对齐")}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -400,7 +382,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
             onClick={goToSeedInput}
             className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 hover:bg-amber-500/20"
           >
-            生辰
+            {t("生辰")}
           </button>
           <button
             type="button"
@@ -410,14 +392,14 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
             {t("历史")}
           </button>
           {snapshotAvailable ? (
-            <span className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">会话已驻留</span>
+            <span className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">{t("会话已驻留")}</span>
           ) : null}
           <button
             type="button"
             onClick={() => { void copySnapshotLink(); }}
             className="ml-1 rounded-md border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
           >
-            复制快照链接
+            {t("复制快照链接")}
           </button>
         </div>
       </header>
@@ -446,7 +428,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 }`}
                 onClick={() => setViewMode("VISION")}
               >
-                视觉仪表盘
+                {t("视觉仪表盘")}
               </button>
               <button
                 type="button"
@@ -455,13 +437,17 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 }`}
                 onClick={() => setViewMode("COMMAND")}
               >
-                指令舱
+                {t("指令舱")}
               </button>
             </div>
-            <p className="text-[10px] text-zinc-500 md:hidden">滑动主区域切换视图，或点右下角浮动按钮</p>
-            <Link href="/debug" className="text-[10px] text-zinc-500 underline-offset-2 hover:text-amber-300/90 hover:underline">
-              黑匣子（L1 审计）→
-            </Link>
+            <p className="text-[10px] text-zinc-500 md:hidden">{t("滑动主区域切换视图，或点右下角浮动按钮")}</p>
+            <button
+              type="button"
+              onClick={() => setActiveView("debug")}
+              className="text-left text-[10px] text-zinc-500 underline-offset-2 hover:text-amber-300/90 hover:underline"
+            >
+              {t("黑匣子（L1 审计）→")}
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
@@ -475,18 +461,19 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 className="flex min-h-[calc(100dvh-11rem)] flex-col gap-2"
               >
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-100/90">
-                  视觉场 · 全局熵 {globalEntropy != null ? globalEntropy.toFixed(3) : "—"}（沉浸式看盘）
+                  {t("视觉场 · 全局熵")} {globalEntropy != null ? globalEntropy.toFixed(3) : "—"}
+                  {t("（沉浸式看盘）")}
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-500/25 bg-cyan-950/40 px-3 py-2 text-[11px] text-cyan-100/95">
                   <span className="text-zinc-400">
-                    {hasBoard ? "当前已有排盘结果，可随时修改生辰重算。" : "尚未排盘：请先录入生辰八字。"}
+                    {hasBoard ? t("当前已有排盘结果，可随时修改生辰重算。") : t("尚未排盘：请先录入生辰八字。")}
                   </span>
                   <button
                     type="button"
                     onClick={goToSeedInput}
                     className="shrink-0 rounded-lg border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-100 hover:bg-cyan-500/25"
                   >
-                    {hasBoard ? "修改生辰" : "录入生辰（地法）"}
+                    {hasBoard ? t("修改生辰") : t("录入生辰（地法）")}
                   </button>
                 </div>
                 <div className="sticky top-0 z-20 -mx-1 rounded-xl border border-zinc-800/80 bg-zinc-950/85 px-1 py-1 shadow-lg shadow-black/30 backdrop-blur-md">
@@ -503,9 +490,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 </div>
                 <section className="rounded-2xl border border-cyan-500/25 bg-zinc-950/70 p-2">
                   <div className="mb-2 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/70 px-2 py-1.5">
-                    <p className="text-xs font-medium text-cyan-200">命盘仪表盘</p>
+                    <p className="text-xs font-medium text-cyan-200">{t("命盘仪表盘")}</p>
                     <p className="text-[11px] text-zinc-400">
-                      大运 {String((timeline as { dayun?: string } | null)?.dayun || "--")} · 流年{" "}
+                      {t("大运")} {String((timeline as { dayun?: string } | null)?.dayun || "--")} · {t("流年")}{" "}
                       {String((timeline as { liunian?: string } | null)?.liunian || "--")}
                     </p>
                   </div>
@@ -566,8 +553,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                     onClick={() => setSeedPanelOpen((v) => !v)}
                     className="flex w-full items-center justify-between rounded-t-2xl px-3 py-2.5 text-left text-xs font-medium text-amber-100/95 hover:bg-zinc-800/60"
                   >
-                    <span>生辰八字 · 地法（The Seed）</span>
-                    <span className="text-zinc-500">{seedPanelOpen ? "收起表单" : "展开表单"}</span>
+                    <span>{t("生辰八字 · 地法（The Seed）")}</span>
+                    <span className="text-zinc-500">{seedPanelOpen ? t("收起表单") : t("展开表单")}</span>
                   </button>
                   {seedPanelOpen ? (
                     <div className="border-t border-zinc-800 px-1 pb-2 pt-1">
@@ -596,7 +583,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                                       const branchStyle = branchMeta ? ELEMENT_STYLE[branchMeta.element][branchMeta.yinYang] : null;
                                       return (
                                         <div key={item.key} className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900/70 px-1 py-1 text-center">
-                                          <p className="mb-1 text-[10px] text-zinc-500">{item.key}</p>
+                                          <p className="mb-1 text-[10px] text-zinc-500">{t(item.key)}</p>
                                           <p
                                             className="rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
                                             style={stemStyle ? { color: stemStyle.color, backgroundColor: stemStyle.bg, border: `1px solid ${stemStyle.border}` } : undefined}
@@ -615,7 +602,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-sm text-zinc-500">掐指一算后在此显示：四柱 / 大运 / 流年</p>
+                              <p className="text-sm text-zinc-500">{t("掐指一算后在此显示：四柱 / 大运 / 流年")}</p>
                             )}
                           </div>
                         )}
@@ -623,7 +610,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                     </div>
                   ) : (
                     <p className="px-3 pb-3 text-[11px] leading-relaxed text-zinc-500">
-                      表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。
+                      {t("表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。")}
                     </p>
                   )}
                 </div>
@@ -636,7 +623,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   disabled={actionMode === "FULL" && !draftSeed}
                 />
                 <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
-                  提交 IDs：{lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
+                  {t("提交 IDs：")}{" "}
+                  {lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
                 </div>
                 <DecisionInbox
                   key={`decision-inbox-${checklistResetToken}`}
@@ -687,16 +675,19 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
 
                 {finalWorkVector && Object.keys(finalWorkVector).length > 0 ? (
                   <div className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-950/30 p-3 text-[11px] text-zinc-300">
-                    <p className="mb-2 font-medium text-fuchsia-200/95">做功路径摘要</p>
+                    <p className="mb-2 font-medium text-fuchsia-200/95">{t("做功路径摘要")}</p>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       <div>
-                        <span className="text-zinc-500">期望</span> <span className="text-zinc-100">{workExpectation.toFixed(2)}</span>
+                        <span className="text-zinc-500">{t("期望")}</span>{" "}
+                        <span className="text-zinc-100">{workExpectation.toFixed(2)}</span>
                       </div>
                       <div>
-                        <span className="text-zinc-500">反噬风险</span> <span className="text-zinc-100">{backfireRiskVal.toFixed(2)}</span>
+                        <span className="text-zinc-500">{t("反噬风险")}</span>{" "}
+                        <span className="text-zinc-100">{backfireRiskVal.toFixed(2)}</span>
                       </div>
                       <div>
-                        <span className="text-zinc-500">释放能</span> <span className="text-zinc-100">{releasedEnergyVal.toFixed(2)}</span>
+                        <span className="text-zinc-500">{t("释放能")}</span>{" "}
+                        <span className="text-zinc-100">{releasedEnergyVal.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -713,9 +704,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                         <span className="ml-2 text-[11px] text-zinc-500">Evidence: {physicsEvidence.slice(0, 2).join(" | ")}</span>
                       ) : null}
                     </p>
-                    <Link href="/debug" className="text-amber-400/90 underline-offset-2 hover:underline">
-                      在「黑匣子」查看完整 L1 流水线与物理张量 JSON →
-                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("debug")}
+                      className="text-left text-amber-400/90 underline-offset-2 hover:underline"
+                    >
+                      {t("在「黑匣子」查看完整 L1 流水线与物理张量 JSON →")}
+                    </button>
                   </div>
                 ) : null}
               </motion.div>
@@ -729,7 +724,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         open={logicDrawerOpen}
         title={logicDrawerTitle}
         focus={logicDrawerFocus}
-        details={logicDrawerDetails.length ? logicDrawerDetails : [llmDiagnosticData?.causal_reasoning || "暂无批注内容。"]}
+        details={logicDrawerDetails.length ? logicDrawerDetails : [llmDiagnosticData?.causal_reasoning || t("暂无批注内容。")]}
         deityTrace={logicDrawerTrace}
         auditSource={physicsAudit}
         onClose={() => setLogicDrawerOpen(false)}

@@ -18,6 +18,8 @@ BACKEND_ENV="$BACKEND_DIR/.env"
 BACKEND_PORT="${BACKEND_PORT:-8001}"
 FRONTEND_PORT="${FRONTEND_PORT:-3001}"
 FRONTEND_MODE="${FRONTEND_MODE:-prod}" # dev | prod
+# 生产模式下跳过前端 pnpm build（仅重启进程；需已有 frontend/.next）
+SKIP_BUILD="${SKIP_BUILD:-0}"
 
 mkdir -p "$LOG_DIR"
 
@@ -68,7 +70,9 @@ sleep 1
 echo "[3/5] Prepare frontend runtime ($FRONTEND_MODE)..."
 FRONTEND_LOG="$LOG_DIR/frontend-$FRONTEND_PORT.log"
 if [ "$FRONTEND_MODE" = "prod" ]; then
-  if command -v pnpm >/dev/null 2>&1; then
+  if [ "$SKIP_BUILD" = "1" ]; then
+    echo "SKIP_BUILD=1 → 跳过 pnpm build（使用现有 .next）"
+  elif command -v pnpm >/dev/null 2>&1; then
     (cd "$FRONTEND_DIR" && pnpm build)
   else
     (cd "$FRONTEND_DIR" && npm run build)

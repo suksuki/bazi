@@ -15,7 +15,7 @@ export function LabViewModeFab({ viewMode, onToggle }: Props) {
       type="button"
       aria-label={nextIsCommand ? "切换到指令舱" : "切换到视觉仪表盘"}
       onClick={onToggle}
-      className="fixed bottom-[5.5rem] right-4 z-[45] flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/50 bg-zinc-950/95 text-xl shadow-lg shadow-amber-900/20 backdrop-blur-md transition hover:border-amber-400/70 hover:bg-zinc-900 md:hidden"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[45] flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/50 bg-zinc-950/95 text-xl shadow-lg shadow-amber-900/20 backdrop-blur-md transition hover:border-amber-400/70 hover:bg-zinc-900 md:hidden"
     >
       <span className="sr-only">{nextIsCommand ? "指令舱" : "视觉仪表盘"}</span>
       {nextIsCommand ? (
