@@ -105,7 +105,10 @@ def evaluate_blind_work(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]
     settings = resolve_physics_settings(runtime_cfg)
     body_abs = round(_sum_abs(deity_axes, BODY_DEITIES), 4)
     use_abs = round(_sum_abs(deity_axes, USE_DEITIES), 4)
-    tomb_lock_rate = max(0.0, min(1.0, float(settings.get("TOMB_LOCK_RATE", 0.9))))
+    tomb_lock_rate = max(
+        0.0,
+        min(1.0, float(settings.get("MANGPAI_ETA_TOMB", settings.get("TOMB_LOCK_RATE", 0.9)))),
+    )
     body_labels = ["比肩", "劫财", "正印", "偏印"]
     use_labels = ["食神", "伤官", "正财", "偏财", "正官", "七杀"]
     top_body = _pick_top_deity(deity_axes, body_labels)
@@ -120,6 +123,11 @@ def evaluate_blind_work(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]
         detail = str(point.get("detail") or "")
         relation = _relation_type(detail)
         eta = ETA_MAP.get(relation, 0.8)
+        if relation == "穿":
+            pierce_floor = float(
+                settings.get("MANGPAI_ETA_PIERCE", settings.get("MANGPAI_SIX_HARM_ETA", 0.99))
+            )
+            eta = min(1.0, max(eta, pierce_floor))
         direction = "Host->Guest" if body_abs >= use_abs else "Guest->Host"
         host_abs = body_abs if body_abs >= use_abs else use_abs
         guest_abs = use_abs if body_abs >= use_abs else body_abs
@@ -272,4 +280,16 @@ def evaluate_blind_work(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]
             "momentum_directions": [str(v.get("momentum_direction", "FORWARD")) for v in work_vectors],
         },
         "runtime_physics_config": settings,
+    }
+
+
+def build_mangpai_interaction_hub_overlay(work_vector: Dict[str, Any]) -> Dict[str, Any]:
+    """宾主红利写入 work_vector 时，同步生成可并入 interaction_hub 的审计切片。"""
+    raw = (work_vector or {}).get("causal_dividend_index")
+    if not isinstance(raw, (int, float)):
+        return {}
+    v = float(raw)
+    return {
+        "causal_dividend_index": round(v, 4),
+        "sovereignty_dominant": v > 0.8,
     }

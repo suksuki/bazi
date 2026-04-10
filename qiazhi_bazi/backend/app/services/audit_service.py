@@ -12,6 +12,7 @@ from app.api.router_helpers import (
 )
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
+from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.services.helpers.audit_helpers import fallback_audit_response, normalize_audit_result
 from app.skills.physics_engine import PhysicsInferenceSkill
 
@@ -39,12 +40,14 @@ def build_audit_prompt_payload(
         "solar_term": (physics_tensor or {}).get("meta", {}).get("solar_term", "derived_from_month_branch"),
         "params": (physics_tensor or {}).get("meta", {}).get("params", {}),
     }
+    blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)
     prompt = build_physics_audit_prompt(
         deity_scores=deity_scores,
         root_check=root_check if isinstance(root_check, dict) else {},
         seasonal_factors=seasonal_factors,
         consensus_history=body.consensus_history or [],
         lang=body.lang,
+        blind_skill_system_suffix=blind_skill_block,
     )
     return prompt, {
         "deity_scores": deity_scores,

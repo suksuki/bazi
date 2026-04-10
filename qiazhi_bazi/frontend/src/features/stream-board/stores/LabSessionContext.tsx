@@ -6,16 +6,58 @@ import React, {
   useContext,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from "react";
-import type { FinalVerdictChangeLog, SeedPayload } from "@/features/stream-board/models";
+import type {
+  FinalVerdictChangeLog,
+  PhysicsLabConfig,
+  PluginSwitches,
+  PluginWeights,
+  SeedPayload,
+} from "@/features/stream-board/models";
+import { computeVerdictEffectiveBlindSkillIds } from "@/features/stream-board/utils/blindSkillRuntime";
 import type { Lang } from "@/types/bazi";
 
 export type { ShellActiveView } from "@/components/layout/ActiveViewContext";
 export { useActiveView } from "@/components/layout/ActiveViewContext";
 
+const DEFAULT_LAB_RUNTIME: PhysicsLabConfig = {
+  WEIGHT_LUCK: 0.4,
+  WEIGHT_YEAR: 0.2,
+  BASE_BACKFIRE_RISK: 0.2,
+  HIGH_IMBALANCE_RISK: 0.35,
+  TOMB_LOCK_RATE: 0.9,
+  CLIMATE_INTENSITY: 1.0,
+  STEM_RESONANCE_BOOST: 1.5,
+  TRANSFER_DISTANCE_DECAY: 0.1,
+  WORK_MIN_THRESHOLD: 0.5,
+  SHOW_WEAK_WORK_PATHS: 1,
+};
+
+const DEFAULT_SWITCHES_RUNTIME: PluginSwitches = {
+  blindSchool: true,
+  wangshuai: true,
+  wealthRisk: false,
+  blindSchoolPierceHarm: true,
+  blindSchoolTombVault: true,
+  blindSchoolHostGuest: true,
+};
+
+const DEFAULT_WEIGHTS_RUNTIME: PluginWeights = {
+  blindSchool: 0.8,
+  wangshuai: 0.6,
+};
+
+export type LabRuntimeConfig = {
+  labConfig: PhysicsLabConfig;
+  pluginSwitches: PluginSwitches;
+  pluginWeights: PluginWeights;
+};
+
 export type LabSnapshot = {
   ts?: number;
+  seed_signature?: string;
   active_session_id?: string | null;
   physics_tensor?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
@@ -46,6 +88,10 @@ export type LabSnapshot = {
     pending_cards?: Array<{ id?: string; title?: string; card_type?: string }>;
     resolved_card_ids?: string[];
     auditor_briefing?: Record<string, unknown>;
+    /** 宾主红利指数（盲派 Skill 审计同步） */
+    causal_dividend_index?: number;
+    /** 红利 > 0.8 时实验室置顶「主权占优」 */
+    sovereignty_dominant?: boolean;
   };
   final_verdict?: {
     body?: string;
@@ -71,45 +117,131 @@ type LabUpdateRow = {
   decisionMutation?: boolean;
 };
 
+export type FinalizationReport = {
+  hash: string;
+  committedAt: number;
+  /** 签发时生效的盲派 Skill ID（与 skill_manifest / 物理层对齐） */
+  effectiveSkillIds?: string[];
+};
+
 export type LabStoreState = {
   snapshot: LabSnapshot | null;
   updates: LabUpdateRow[];
   causalRevertNonce: number;
+  inboxResetNonce: number;
   lastSeedPayload: SeedPayload | null;
   uiLang: Lang;
+  runtimeConfig: LabRuntimeConfig;
+  /** 终审已签发：冻结运行时配置写入与快照合并（同宇宙内） */
+  isFinalized: boolean;
+  finalizationReport: FinalizationReport | null;
+  /** 物理静默重算与终判 LLM 协调后的单调序列（供屏障与排障） */
+  syncBarrierSeq: number;
 };
+
+const defaultRuntimeConfig = (): LabRuntimeConfig => ({
+  labConfig: { ...DEFAULT_LAB_RUNTIME },
+  pluginSwitches: { ...DEFAULT_SWITCHES_RUNTIME },
+  pluginWeights: { ...DEFAULT_WEIGHTS_RUNTIME },
+});
 
 const emptyState = (): LabStoreState => ({
   snapshot: null,
   updates: [],
   causalRevertNonce: 0,
+  inboxResetNonce: 0,
   lastSeedPayload: null,
   uiLang: "ZH",
+  runtimeConfig: defaultRuntimeConfig(),
+  isFinalized: false,
+  finalizationReport: null,
+  syncBarrierSeq: 0,
 });
 
 type LabAction =
   | { type: "mergeSnapshot"; payload: Partial<LabSnapshot> }
+  | { type: "injectSnapshotText"; payload: string }
   | { type: "clearSnapshot" }
   | { type: "requestCausalRevert" }
   | { type: "setLastSeedPayload"; payload: SeedPayload | null }
-  | { type: "setUiLang"; lang: Lang };
+  | { type: "setUiLang"; lang: Lang }
+  | { type: "setRuntimeConfig"; payload: LabRuntimeConfig }
+  | { type: "addConfirmedDecision"; payload: string[] }
+  | { type: "clearDecisionInbox" }
+  | { type: "finalizeVerdict"; payload: FinalizationReport }
+  | { type: "bumpSyncBarrierSeq" };
+
+function normalizeDecisionIds(ids: unknown[]): string[] {
+  return Array.from(new Set(ids.map((x) => String(x || "").trim()).filter(Boolean))).sort();
+}
+
+async function sha256HexOfText(text: string): Promise<string> {
+  const buf = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
   switch (action.type) {
+    case "injectSnapshotText": {
+      if (state.isFinalized) return state;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(action.payload);
+      } catch {
+        return state;
+      }
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return state;
+      }
+      return labReducer(state, { type: "mergeSnapshot", payload: parsed as Partial<LabSnapshot> });
+    }
     case "mergeSnapshot": {
-      const payload = action.payload;
+      const raw = { ...action.payload };
+      if (raw.decision_selection_ids != null && Array.isArray(raw.decision_selection_ids)) {
+        raw.decision_selection_ids = normalizeDecisionIds(raw.decision_selection_ids);
+      }
+      const nextSeedSig =
+        typeof raw.seed_signature === "string" && raw.seed_signature.trim() !== ""
+          ? raw.seed_signature.trim()
+          : undefined;
+      const prevSeedSig =
+        typeof state.snapshot?.seed_signature === "string" && state.snapshot.seed_signature.trim() !== ""
+          ? state.snapshot.seed_signature.trim()
+          : null;
+
+      const seedUniverseChanged =
+        Boolean(nextSeedSig && prevSeedSig && nextSeedSig !== prevSeedSig);
+
+      if (state.isFinalized && !seedUniverseChanged) {
+        return state;
+      }
+
       const nextSnapshot: LabSnapshot = {
         ...(state.snapshot || {}),
-        ...payload,
+        ...raw,
         ts: Date.now(),
       };
+
+      if (seedUniverseChanged) {
+        nextSnapshot.decision_selection_ids = [];
+        nextSnapshot.resolved_card_ids = [];
+        nextSnapshot.interaction_hub = {
+          ...(nextSnapshot.interaction_hub || {}),
+          pending_cards: [],
+          resolved_card_ids: [],
+        };
+      }
+
       const absDeltaRaw = (nextSnapshot.logic_diff || {}).abs_delta;
       const absDelta = typeof absDeltaRaw === "number" && Number.isFinite(absDeltaRaw) ? absDeltaRaw : null;
       const logs = Array.isArray((nextSnapshot.interaction_hub || {}).result_logs)
         ? ((nextSnapshot.interaction_hub || {}).result_logs as string[])
         : [];
       const lastLog = logs.length > 0 ? String(logs[logs.length - 1]) : "";
-      const keys = Object.keys(payload || {});
+      const keys = Object.keys(action.payload || {});
       const decisionMutation = keys.some(
         (k) => k === "final_verdict" || k === "resolved_card_ids" || k === "decision_selection_ids",
       );
@@ -127,11 +259,15 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         ...state,
         snapshot: nextSnapshot,
         updates: [updateRow, ...state.updates].slice(0, 5),
+        inboxResetNonce: seedUniverseChanged ? state.inboxResetNonce + 1 : state.inboxResetNonce,
+        isFinalized: seedUniverseChanged ? false : state.isFinalized,
+        finalizationReport: seedUniverseChanged ? null : state.finalizationReport,
       };
     }
     case "clearSnapshot":
       return { ...emptyState(), uiLang: state.uiLang };
     case "requestCausalRevert": {
+      if (state.isFinalized) return state;
       const snap = state.snapshot;
       if (!snap?.baseline_snapshot) return state;
       const b = snap.baseline_snapshot;
@@ -184,6 +320,99 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
     }
     case "setUiLang":
       return { ...state, uiLang: action.lang };
+    case "setRuntimeConfig":
+      if (state.isFinalized) return state;
+      return { ...state, runtimeConfig: action.payload };
+    case "addConfirmedDecision": {
+      if (state.isFinalized) return state;
+      const snap = state.snapshot;
+      if (!snap) return state;
+      const incoming = normalizeDecisionIds(action.payload);
+      const prev = Array.isArray(snap.decision_selection_ids) ? snap.decision_selection_ids : [];
+      const nextIds = normalizeDecisionIds([...prev, ...incoming]);
+      const nextSnapshot: LabSnapshot = {
+        ...snap,
+        decision_selection_ids: nextIds,
+        ts: Date.now(),
+      };
+      const absDeltaRaw = (nextSnapshot.logic_diff || {}).abs_delta;
+      const absDelta = typeof absDeltaRaw === "number" && Number.isFinite(absDeltaRaw) ? absDeltaRaw : null;
+      const updateRow: LabUpdateRow = {
+        id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ts: Date.now(),
+        keys: ["decision_selection_ids"],
+        abs_delta: absDelta,
+        overload: typeof absDelta === "number" && absDelta > 100,
+        decisionMutation: true,
+      };
+      return {
+        ...state,
+        snapshot: nextSnapshot,
+        updates: [updateRow, ...state.updates].slice(0, 5),
+      };
+    }
+    case "clearDecisionInbox": {
+      if (state.isFinalized) return state;
+      const snap = state.snapshot;
+      if (!snap) return state;
+      const nextSnapshot: LabSnapshot = {
+        ...snap,
+        decision_selection_ids: [],
+        resolved_card_ids: [],
+        interaction_hub: {
+          ...(snap.interaction_hub || {}),
+          pending_cards: [],
+          resolved_card_ids: [],
+        },
+        ts: Date.now(),
+      };
+      return {
+        ...state,
+        snapshot: nextSnapshot,
+        inboxResetNonce: state.inboxResetNonce + 1,
+      };
+    }
+    case "finalizeVerdict": {
+      if (!state.snapshot || state.isFinalized) return state;
+      const { hash, committedAt, effectiveSkillIds } = action.payload;
+      const hub = state.snapshot.interaction_hub || {};
+      const prevLogs = Array.isArray(hub.result_logs) ? hub.result_logs.map((x) => String(x)) : [];
+      const logLine = `[FINAL_DECISION_ISSUED] 因果链条已锁定，指纹: ${hash}`;
+      const nextLogs = prevLogs.some((l) => l.includes("[FINAL_DECISION_ISSUED]"))
+        ? prevLogs
+        : [...prevLogs, logLine].slice(-24);
+      const nextSnapshot: LabSnapshot = {
+        ...state.snapshot,
+        metadata: {
+          ...(state.snapshot.metadata || {}),
+          finalization: { hash, committed_at: committedAt },
+          verdict_effective_skill_ids: effectiveSkillIds ?? [],
+        },
+        interaction_hub: {
+          ...hub,
+          result_logs: nextLogs,
+        },
+        ts: Date.now(),
+      };
+      const updateRow: LabUpdateRow = {
+        id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ts: Date.now(),
+        keys: ["finalizeVerdict", "metadata.finalization"],
+        abs_delta: typeof (nextSnapshot.logic_diff || {}).abs_delta === "number" ? (nextSnapshot.logic_diff as { abs_delta: number }).abs_delta : null,
+        overload: false,
+        decisionMutation: true,
+      };
+      return {
+        ...state,
+        isFinalized: true,
+        finalizationReport: action.payload,
+        snapshot: nextSnapshot,
+        updates: [updateRow, ...state.updates].slice(0, 5),
+        syncBarrierSeq: state.syncBarrierSeq + 1,
+      };
+    }
+    case "bumpSyncBarrierSeq":
+      return { ...state, syncBarrierSeq: state.syncBarrierSeq + 1 };
     default:
       return state;
   }
@@ -192,19 +421,30 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
 export type LabStoreValue = {
   state: LabStoreState;
   mergeSnapshot: (payload: Partial<LabSnapshot>) => void;
+  injectSnapshotText: (text: string) => void;
   clearSnapshot: () => void;
   requestCausalRevert: () => void;
   setLastSeedPayload: (payload: SeedPayload | null) => void;
   setUiLang: (lang: Lang) => void;
+  setRuntimeConfig: (payload: LabRuntimeConfig) => void;
+  addConfirmedDecision: (ids: string[]) => void;
+  clearDecisionInbox: () => void;
+  finalizeVerdict: () => Promise<void>;
+  bumpSyncBarrierSeq: () => void;
 };
 
 const LabSessionContext = createContext<LabStoreValue | null>(null);
 
 export function LabStoreProvider({ children }: { children: ReactNode }) {
   const [st, dispatch] = useReducer(labReducer, undefined, emptyState);
+  const storeRef = useRef(st);
+  storeRef.current = st;
 
   const mergeSnapshot = useCallback((payload: Partial<LabSnapshot>) => {
     dispatch({ type: "mergeSnapshot", payload });
+  }, []);
+  const injectSnapshotText = useCallback((text: string) => {
+    dispatch({ type: "injectSnapshotText", payload: text });
   }, []);
   const clearSnapshot = useCallback(() => {
     dispatch({ type: "clearSnapshot" });
@@ -218,17 +458,65 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
   const setUiLang = useCallback((lang: Lang) => {
     dispatch({ type: "setUiLang", lang });
   }, []);
+  const setRuntimeConfig = useCallback((payload: LabRuntimeConfig) => {
+    dispatch({ type: "setRuntimeConfig", payload });
+  }, []);
+  const addConfirmedDecision = useCallback((ids: string[]) => {
+    dispatch({ type: "addConfirmedDecision", payload: ids });
+  }, []);
+  const clearDecisionInbox = useCallback(() => {
+    dispatch({ type: "clearDecisionInbox" });
+  }, []);
+  const finalizeVerdict = useCallback(async () => {
+    const s = storeRef.current;
+    if (!s.snapshot || s.isFinalized) return;
+    const effectiveSkillIds = computeVerdictEffectiveBlindSkillIds(s.snapshot);
+    const snapshotForHash = {
+      ...s.snapshot,
+      metadata: {
+        ...(s.snapshot.metadata || {}),
+        verdict_effective_skill_ids: effectiveSkillIds,
+      },
+    };
+    const hash = await sha256HexOfText(JSON.stringify(snapshotForHash));
+    dispatch({
+      type: "finalizeVerdict",
+      payload: { hash, committedAt: Date.now(), effectiveSkillIds },
+    });
+  }, []);
+  const bumpSyncBarrierSeq = useCallback(() => {
+    dispatch({ type: "bumpSyncBarrierSeq" });
+  }, []);
 
   const value = useMemo<LabStoreValue>(
     () => ({
       state: st,
       mergeSnapshot,
+      injectSnapshotText,
       clearSnapshot,
       requestCausalRevert,
       setLastSeedPayload,
       setUiLang,
+      setRuntimeConfig,
+      addConfirmedDecision,
+      clearDecisionInbox,
+      finalizeVerdict,
+      bumpSyncBarrierSeq,
     }),
-    [st, mergeSnapshot, clearSnapshot, requestCausalRevert, setLastSeedPayload, setUiLang],
+    [
+      st,
+      mergeSnapshot,
+      injectSnapshotText,
+      clearSnapshot,
+      requestCausalRevert,
+      setLastSeedPayload,
+      setUiLang,
+      setRuntimeConfig,
+      addConfirmedDecision,
+      clearDecisionInbox,
+      finalizeVerdict,
+      bumpSyncBarrierSeq,
+    ],
   );
 
   return <LabSessionContext.Provider value={value}>{children}</LabSessionContext.Provider>;

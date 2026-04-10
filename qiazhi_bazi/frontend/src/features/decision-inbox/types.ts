@@ -6,6 +6,7 @@ export type DecisionInboxCard = {
   displayText?: string;
   cardType?: "conflict" | "auditor-proposal" | "proposal";
   proposal?: unknown;
+  skillId?: string;
 };
 
 export type VerdictChangeLog = {

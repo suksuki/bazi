@@ -8,18 +8,22 @@ import { BaziCard } from "@/components/BaziCard";
 import { BlindLogicMirror } from "@/components/BlindLogicMirror";
 import { DecisionInbox } from "@/components/DecisionInbox";
 import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
-import { LogDrawer } from "@/components/LogDrawer";
 import { SeedInput } from "@/components/SeedInput";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { LabViewModeFab } from "@/components/layout/LabViewModeFab";
+import { BlindSkillBadgeRow } from "@/features/stream-board/components/BlindSkillBadgeRow";
 import { SnapshotBanner } from "@/features/stream-board/components/SnapshotBanner";
+import { VerdictCertificate } from "@/features/stream-board/components/VerdictCertificate";
 import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
-import { I18N } from "./constants";
+import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
+import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
 import type { InboxCard, StreamBoardViewModel } from "./models";
+import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
+import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
 const STEM_META: Record<string, { element: "wood" | "fire" | "earth" | "metal" | "water"; yinYang: "yang" | "yin" }> = {
   甲: { element: "wood", yinYang: "yang" },
@@ -63,8 +67,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     lang,
     setLang,
     busy,
-    drawerOpen,
-    setDrawerOpen,
     consultationId,
     metadata,
     timeline,
@@ -117,7 +119,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setPluginWeights,
     streamThemeChroma,
     rerunFinalVerdictWithWeights,
-    mergedSteps,
     logicDrawerOpen,
     logicDrawerTitle,
     logicDrawerFocus,
@@ -132,15 +133,28 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     openLogicDrawerByDeity,
     onEvidenceItemClick,
     showVerdictHistory,
-    onRollback,
     applyCurrentSqlPatch,
     runStressTest,
     runGenderComparison,
     t,
+    inboxResetNonce,
+    sigShiftFlashKey,
+    isFinalized,
+    finalizeVerdict,
   } = viewModel;
   const decisionIds = confirmedDecisionIds || [];
   const setDecisionIds = setConfirmedDecisionIds || (() => undefined);
   const decisionHydrated = Boolean(urlDecisionHydrated);
+  const { state: labUiState } = useLabStore();
+  const sovereigntyDominant = Boolean(labUiState.snapshot?.interaction_hub?.sovereignty_dominant);
+  const blindSkillBadges = useMemo(
+    () =>
+      computeBlindSkillBadges(
+        labUiState.snapshot?.physics_tensor as Record<string, unknown> | undefined,
+        finalWorkVector,
+      ),
+    [labUiState.snapshot?.physics_tensor, finalWorkVector],
+  );
 
   const hardRouteLogs = ((((physicsAudit as { trace?: { hard_route_logs?: string[] } } | null)?.trace?.hard_route_logs) || []) as string[]);
   const climateSeason = String(
@@ -158,7 +172,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [lastAppliedSeedSignature, setLastAppliedSeedSignature] = React.useState("");
   const [lastAppliedParamSignature, setLastAppliedParamSignature] = React.useState("");
   const [lastAppliedDecisionsSignature, setLastAppliedDecisionsSignature] = React.useState("[]");
-  const [snapshotTag, setSnapshotTag] = React.useState("");
   const [revertEntropyDelta, setRevertEntropyDelta] = React.useState<number | null>(null);
   const [pendingRevertEntropyCapture, setPendingRevertEntropyCapture] = React.useState(false);
   const touchStartX = React.useRef<number | null>(null);
@@ -167,15 +180,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setViewMode("COMMAND");
     setSeedPanelOpen(true);
   }, []);
-  const copySnapshotLink = React.useCallback(async () => {
-    const tagInput = window.prompt(t("输入快照标签（可选）"), snapshotTag) || "";
-    const tag = tagInput.trim();
-    const url = new URL("/", typeof window !== "undefined" ? window.location.origin : "");
-    if (tag) url.searchParams.set("tag", tag);
-    setSnapshotTag(tag);
-    await navigator.clipboard.writeText(url.toString());
-  }, [snapshotTag, t]);
-
   const hasBoard = Boolean(metadata?.pillars);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
   const currentParamSignature = JSON.stringify(pluginWeights || {});
@@ -236,6 +240,31 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         ? "PARAMETER_DIRTY"
         : "SEMANTIC";
 
+  const unresolvedConflictCount = cards.length;
+  const absDeltaRaw = logicDiff?.abs_delta;
+  const absDeltaLow =
+    typeof absDeltaRaw === "number" &&
+    Number.isFinite(absDeltaRaw) &&
+    Math.abs(absDeltaRaw) < FINAL_VERDICT_ABS_DELTA_THRESHOLD;
+  const canIssueFinal =
+    Boolean(hasBoard) &&
+    !isFinalized &&
+    !seedDirty &&
+    unresolvedConflictCount === 0 &&
+    absDeltaLow;
+
+  const primaryLabelOverride = isFinalized
+    ? "已签发 (Issued)"
+    : actionSyncing || busy
+      ? undefined
+      : seedDirty
+        ? undefined
+        : unresolvedConflictCount > 0
+          ? "同步因果"
+          : canIssueFinal
+            ? "签发终审"
+            : undefined;
+
   const handleFullCalculate = React.useCallback(async () => {
     if (!draftSeed) return;
     setActionSyncing(true);
@@ -281,6 +310,31 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     const selected = selectedByIds.length > 0 ? selectedByIds : currentDecisions;
     await runDecisionExecution(selected);
   }, [runDecisionExecution, decisionIds, cards, currentDecisions]);
+
+  const handleMainBarRun = React.useCallback(async () => {
+    if (isFinalized) return;
+    if (seedDirty) {
+      await handleFullCalculate();
+      return;
+    }
+    if (unresolvedConflictCount > 0) {
+      await handleSemanticRecompute();
+      return;
+    }
+    if (canIssueFinal) {
+      await finalizeVerdict();
+      return;
+    }
+    await handleSemanticRecompute();
+  }, [
+    isFinalized,
+    seedDirty,
+    unresolvedConflictCount,
+    canIssueFinal,
+    finalizeVerdict,
+    handleFullCalculate,
+    handleSemanticRecompute,
+  ]);
 
   React.useEffect(() => {
     setCurrentDecisions([]);
@@ -352,6 +406,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
           boxShadow: `inset 0 0 80px var(--stream-overload-color)`,
         }}
       />
+      <BlindSkillHighlightProvider>
       <LogicGlitchOverlay
         active={(streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal) || revokeGlitch}
         entropy={revokeGlitch ? 0.9 : globalEntropy}
@@ -360,6 +415,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
+          <p className="mt-1 font-mono text-[11px] text-amber-200/90">
+            Unresolved Conflicts: {unresolvedConflictCount}
+          </p>
           <SnapshotBanner tag={snapshotUrlTag ?? ""} />
           <p className="text-xs text-zinc-500">{t(I18N[lang].subtitle)}</p>
           <span className="mt-1 inline-flex rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
@@ -377,32 +435,20 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
               {item}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={goToSeedInput}
-            className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-xs text-amber-200 hover:bg-amber-500/20"
-          >
-            {t("生辰")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="ml-1 rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300"
-          >
-            {t("历史")}
-          </button>
           {snapshotAvailable ? (
             <span className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">{t("会话已驻留")}</span>
           ) : null}
-          <button
-            type="button"
-            onClick={() => { void copySnapshotLink(); }}
-            className="ml-1 rounded-md border border-fuchsia-500/35 bg-fuchsia-500/10 px-2 py-1 text-xs text-fuchsia-200 hover:bg-fuchsia-500/20"
-          >
-            {t("复制快照链接")}
-          </button>
         </div>
       </header>
+
+      {sovereigntyDominant ? (
+        <div
+          className="mb-2 rounded-lg border border-amber-400/55 bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-amber-600/10 px-3 py-2 text-center text-[11px] font-semibold tracking-[0.2em] text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.18)]"
+          data-testid="sovereignty-dominant-banner"
+        >
+          主权占优
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 md:flex-row">
         <div
@@ -496,6 +542,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                       {String((timeline as { liunian?: string } | null)?.liunian || "--")}
                     </p>
                   </div>
+                  <BlindSkillBadgeRow badges={blindSkillBadges} />
                   <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
                       <BaziCard
@@ -610,7 +657,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                     </div>
                   ) : (
                     <p className="px-3 pb-3 text-[11px] leading-relaxed text-zinc-500">
-                      {t("表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。")}
+                      {t("表单已收起。点击「展开表单」可再次录入/修改公历、农历、时刻与性别并重新排盘。")}
                     </p>
                   )}
                 </div>
@@ -618,14 +665,19 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   mode={actionMode}
                   globalEntropy={globalEntropy}
                   decisionDirty={isDecisionDirty}
-                  onRun={() => (seedDirty ? handleFullCalculate() : handleSemanticRecompute())}
+                  onRun={handleMainBarRun}
                   onSetBaseline={setAsBaseline}
-                  disabled={actionMode === "FULL" && !draftSeed}
+                  disabled={(actionMode === "FULL" && !draftSeed) || isFinalized}
+                  sigShiftFlashKey={sigShiftFlashKey}
+                  labelOverride={primaryLabelOverride}
+                  issued={isFinalized}
+                  issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy}
                 />
                 <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
                   {t("提交 IDs：")}{" "}
                   {lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
                 </div>
+                <BlindSkillBadgeRow badges={blindSkillBadges} />
                 <DecisionInbox
                   key={`decision-inbox-${checklistResetToken}`}
                   cards={cards}
@@ -666,6 +718,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   actionMode={actionMode}
                   autoSyncIdle={!actionSyncing}
                   hideStrategicPanel
+                  inboxResetNonce={inboxResetNonce}
+                  interactionLocked={isFinalized}
                 />
                 <WillReplayPanel
                   items={confirmedDecisions || []}
@@ -719,7 +773,30 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         </div>
       </div>
 
-      <LogDrawer open={drawerOpen} steps={mergedSteps} onClose={() => setDrawerOpen(false)} onRollback={onRollback} t={t} />
+      {labUiState.isFinalized && labUiState.finalizationReport?.hash ? (
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-0 mt-8 border-t border-zinc-800/90 pt-6 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]"
+        >
+          <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-[0.25em] text-zinc-500">
+            终审已签发 · 公文压底
+          </p>
+          <VerdictCertificate
+            hash={labUiState.finalizationReport.hash}
+            committedAt={labUiState.finalizationReport.committedAt}
+            logicDiff={logicDiff}
+            effectiveSkillIds={
+              labUiState.finalizationReport.effectiveSkillIds ??
+              (labUiState.snapshot?.metadata?.verdict_effective_skill_ids as string[] | undefined)
+            }
+          />
+        </motion.div>
+      ) : null}
+
+      </BlindSkillHighlightProvider>
+
       <ArbiterLogicDrawer
         open={logicDrawerOpen}
         title={logicDrawerTitle}

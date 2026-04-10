@@ -1,14 +1,19 @@
 import { act, renderHook } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ActiveViewContext } from "@/components/layout/ActiveViewContext";
 import { LabConfigProvider } from "@/features/lab-config/LabConfigContext";
 import { useStreamBoardController } from "@/features/stream-board/useStreamBoardController";
 import { LabStoreProvider } from "@/features/stream-board/stores/useLabStore";
 
+const testActiveView = { activeView: "lab" as const, setActiveView: () => undefined };
+
 function hookWrapper({ children }: { children: ReactNode }) {
   return (
     <LabStoreProvider>
-      <LabConfigProvider>{children}</LabConfigProvider>
+      <ActiveViewContext.Provider value={testActiveView}>
+        <LabConfigProvider>{children}</LabConfigProvider>
+      </ActiveViewContext.Provider>
     </LabStoreProvider>
   );
 }

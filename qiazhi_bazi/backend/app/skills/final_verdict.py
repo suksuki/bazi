@@ -8,6 +8,7 @@ from threading import Lock
 from typing import Any, Dict, List
 
 from app.plugins.blind_school.core import run_blind_school_plugin
+from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.plugins.conflict_evaluator import evaluate_plugin_conflict
 from app.core.plugins.registry import PluginRegistry
 from app.core.rules.junction import detect_universal_flags
@@ -251,6 +252,9 @@ class FinalVerdictSkill(BaseSkill):
             "严禁跳过 L1_Junction 直接下‘伤官见官’结论；必须先引用 [L1 Junction Flags]。"
             f"{lang_hint}"
         )
+        blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)
+        if blind_skill_block:
+            system = f"{system}\n{blind_skill_block}"
         logical_evidence = FinalVerdictSkill._clean_context_lines(logical_evidence)
         work_lines = FinalVerdictSkill._clean_context_lines(work_lines)
         structure_lines = FinalVerdictSkill._clean_context_lines(structure_lines)

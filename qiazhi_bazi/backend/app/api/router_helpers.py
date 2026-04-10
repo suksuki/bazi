@@ -46,6 +46,7 @@ def build_physics_audit_prompt(
     seasonal_factors: Dict[str, Any],
     consensus_history: List[Dict[str, Any]],
     lang: str,
+    blind_skill_system_suffix: str = "",
 ) -> List[Dict[str, str]]:
     lang_hint = lang_output_instruction(lang)
     system_text = (
@@ -54,6 +55,9 @@ def build_physics_audit_prompt(
         '{"diagnosis":"","alignment_score":0,"top_anomaly":"","causal_reasoning":"","tuning_suggestions":[""],"sql_patch":"","refresh_hint":"","logic_proposal":{"title":"","param_key":"","suggested_value":0,"reason":"","expected_impact":"","sql_patch":"","source_role":"LLM"}}'
         "若 top_anomaly 非空，则 alignment_score 必须 < 60。"
     )
+    extra = (blind_skill_system_suffix or "").strip()
+    if extra:
+        system_text = f"{system_text}\n{extra}"
     user_text = (
         f"Input. 十神分值={json.dumps(deity_scores, ensure_ascii=False)}；"
         f"根气汇总={json.dumps(root_check, ensure_ascii=False)}；"

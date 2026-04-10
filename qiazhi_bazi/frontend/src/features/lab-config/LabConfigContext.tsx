@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { PhysicsLabConfig } from "@/features/stream-board/models";
 import type { PluginSwitches, PluginWeights } from "@/features/stream-board/models";
+import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
 const DEFAULT_LAB: PhysicsLabConfig = {
   WEIGHT_LUCK: 0.4,
@@ -21,6 +22,9 @@ const DEFAULT_SWITCHES: PluginSwitches = {
   blindSchool: true,
   wangshuai: true,
   wealthRisk: false,
+  blindSchoolPierceHarm: true,
+  blindSchoolTombVault: true,
+  blindSchoolHostGuest: true,
 };
 
 const DEFAULT_WEIGHTS: PluginWeights = {
@@ -42,9 +46,20 @@ type LabConfigValue = {
 const LabConfigContext = createContext<LabConfigValue | null>(null);
 
 export function LabConfigProvider({ children }: { children: React.ReactNode }) {
+  const { setRuntimeConfig, state: labStoreState } = useLabStore();
   const [labConfig, setLabConfig] = useState<PhysicsLabConfig>(DEFAULT_LAB);
   const [pluginSwitches, setPluginSwitches] = useState<PluginSwitches>(DEFAULT_SWITCHES);
   const [pluginWeights, setPluginWeights] = useState<PluginWeights>(DEFAULT_WEIGHTS);
+  const lastRuntimeSigRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (labStoreState.isFinalized) return;
+    const payload = { labConfig, pluginSwitches, pluginWeights };
+    const sig = JSON.stringify(payload);
+    if (lastRuntimeSigRef.current === sig) return;
+    lastRuntimeSigRef.current = sig;
+    setRuntimeConfig(payload);
+  }, [labConfig, pluginSwitches, pluginWeights, setRuntimeConfig, labStoreState.isFinalized]);
 
   function togglePlugin(key: keyof PluginSwitches) {
     setPluginSwitches((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -52,11 +67,21 @@ export function LabConfigProvider({ children }: { children: React.ReactNode }) {
 
   function applyPreset(preset: "blind_practical" | "health_audit") {
     if (preset === "blind_practical") {
-      setPluginSwitches({ blindSchool: true, wangshuai: true, wealthRisk: false });
+      setPluginSwitches((prev) => ({
+        ...prev,
+        blindSchool: true,
+        wangshuai: true,
+        wealthRisk: false,
+      }));
       setPluginWeights({ blindSchool: 0.9, wangshuai: 0.1 });
       return;
     }
-    setPluginSwitches({ blindSchool: true, wangshuai: true, wealthRisk: true });
+    setPluginSwitches((prev) => ({
+      ...prev,
+      blindSchool: true,
+      wangshuai: true,
+      wealthRisk: true,
+    }));
     setPluginWeights({ blindSchool: 0.2, wangshuai: 0.8 });
   }
 

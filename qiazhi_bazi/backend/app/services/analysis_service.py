@@ -9,13 +9,19 @@ from sqlmodel import select
 
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.core.plugins.registry import PluginRegistry
-from app.api.contracts import AnalyzeClashRequest, AnalyzeSeedRequest, FinalVerdictRequest, TranslateRequest
+from app.api.contracts import (
+    AnalyzeClashRequest,
+    AnalyzeSeedRequest,
+    BlindSchoolFeatureFlags,
+    FinalVerdictRequest,
+    TranslateRequest,
+)
 from app.api.router_helpers import guess_text_lang, physics_snapshot
 from app.core.runtime_config import get_runtime_config
 from app.core.scanner import Scanner
 from app.db.models import SessionConsensus
 from app.llm.client import QwenClient, build_first_observation_messages
-from app.schemas.bazi_metadata import BaziMetadata, FlowState
+from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FlowState
 from app.schemas.bazi_metadata import FourPillars
 from app.services.helpers.analysis_helpers import (
     build_seed_audit_summary,
@@ -54,11 +60,21 @@ async def translate_text_items(body: TranslateRequest) -> Dict[str, List[str]]:
 
 async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     matrix = Scanner().scan(body.pillars)
+    points = list(matrix.points)
+    blind_flags = (
+        body.blind_school_features.model_dump()
+        if body.blind_school_features
+        else BlindSchoolFeatureFlags().model_dump()
+    )
+    if blind_flags.get("enable_pierce_harm", True) and "classical.blind_school.v1" in (body.enabled_plugins or []):
+        from app.plugins.blind_school.mangpai_engine import scan_six_harm_points
+
+        points.extend(scan_six_harm_points(body.pillars))
     metadata_obj = BaziMetadata(
         pillars=body.pillars,
-        conflict_matrix=matrix,
+        conflict_matrix=ConflictMatrix(points=points),
         flow_state=FlowState.UNKNOWN,
-        notes="已完成原子探测（六冲+六合）",
+        notes="已完成原子探测（六冲+六合+盲派六穿可选）",
     )
     location_hint = ""
     if body.latitude is not None and body.longitude is not None:
@@ -109,12 +125,27 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     plugin_outputs = registry.run_hook(
         hook="on_physics_complete",
         enabled_plugins=body.enabled_plugins,
-        context={"physics_tensor": physics_tensor, "metadata": metadata_obj.model_dump()},
+        context={
+            "physics_tensor": physics_tensor,
+            "metadata": metadata_obj.model_dump(),
+            "blind_school_features": blind_flags,
+        },
     )
     physics_tensor.setdefault("meta", {})
     if isinstance(physics_tensor.get("meta"), dict):
         physics_tensor["meta"]["enabled_plugins"] = list(body.enabled_plugins or [])
         physics_tensor["meta"]["plugin_specs"] = registry.list_specs()
+        physics_tensor["meta"]["blind_school_features"] = blind_flags
+        blind_payload = (plugin_outputs.get("classical.blind_school.v1") or {}).get("payload") or {}
+        chips = blind_payload.get("mangpai_chip_logs") or []
+        if chips:
+            physics_tensor["meta"]["mangpai_chip_logs"] = list(chips)
+        hub_mangpai = blind_payload.get("interaction_hub_overlay_mangpai")
+        if isinstance(hub_mangpai, dict) and hub_mangpai:
+            physics_tensor["meta"]["interaction_hub_mangpai"] = dict(hub_mangpai)
+        pierce_sem = blind_payload.get("mangpai_pierce_semantics")
+        if isinstance(pierce_sem, list) and pierce_sem:
+            physics_tensor["meta"]["mangpai_pierce_semantics"] = list(pierce_sem)
     physics_tensor["plugin_outputs"] = plugin_outputs
     return {
         "metadata": metadata_obj.model_dump(),
@@ -147,6 +178,7 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
             liunian=(timeline or {}).get("liunian"),
             physics_config=body.physics_config,
             enabled_plugins=body.enabled_plugins,
+            blind_school_features=body.blind_school_features,
         )
     )
     metadata = result["metadata"]

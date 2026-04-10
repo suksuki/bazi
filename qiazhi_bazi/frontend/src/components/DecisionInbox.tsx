@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BlindLogicMirror } from "@/components/BlindLogicMirror";
 import { ComparisonBridgeModal } from "@/components/ComparisonBridgeModal";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
@@ -19,6 +19,7 @@ import {
   pruneSelectedIds,
   splitVerdictLine,
 } from "@/features/decision-inbox/utils";
+import { SkillLinkedAssertionLine } from "@/features/stream-board/components/ResultInterpretation";
 
 type Props = {
   cards: DecisionInboxCard[];
@@ -57,6 +58,9 @@ type Props = {
   actionMode?: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY";
   autoSyncIdle?: boolean;
   t?: (s: string) => string;
+  inboxResetNonce?: number;
+  /** 终审已签发：冻结勾选与语义权重滑杆 */
+  interactionLocked?: boolean;
 };
 
 export function DecisionInbox({
@@ -94,6 +98,8 @@ export function DecisionInbox({
   actionMode = "SEMANTIC",
   autoSyncIdle = true,
   t = (s) => s,
+  inboxResetNonce = 0,
+  interactionLocked = false,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -111,6 +117,8 @@ export function DecisionInbox({
   });
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [weighting, setWeighting] = useState(pluginWeights);
+  const [inboxResetWaveKey, setInboxResetWaveKey] = useState(0);
+  const inboxNoncePrevRef = useRef<number | null>(null);
   const normalizeDeityList = (value: unknown): string[] => {
     if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
     if (typeof value === "string") {
@@ -151,6 +159,7 @@ export function DecisionInbox({
 
   const selectedCards = cards.filter((c) => selectedIds[c.id]);
   function applySelection(next: Record<string, boolean>) {
+    if (interactionLocked) return;
     setSelectedIds(next);
     const nextSelected = cards.filter((card) => Boolean(next[card.id]));
     onSelectionChange?.(nextSelected);
@@ -181,6 +190,17 @@ export function DecisionInbox({
     setSelectedIds({});
   }, [selectionResetToken]);
   useEffect(() => {
+    const prev = inboxNoncePrevRef.current;
+    if (prev === null) {
+      inboxNoncePrevRef.current = inboxResetNonce;
+      return;
+    }
+    if (inboxResetNonce > prev) {
+      setInboxResetWaveKey((k) => k + 1);
+    }
+    inboxNoncePrevRef.current = inboxResetNonce;
+  }, [inboxResetNonce]);
+  useEffect(() => {
     setWeighting(pluginWeights);
   }, [pluginWeights.blindSchool, pluginWeights.wangshuai]);
   async function runStress() {
@@ -190,19 +210,17 @@ export function DecisionInbox({
   function renderVerdictLine(line: string, idx: number) {
     const parts = splitVerdictLine(line);
     const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
+    const lineClass = `whitespace-pre-wrap leading-relaxed ${
+      summaryChanged
+        ? "rounded-md bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-transparent px-2 py-1 text-emerald-200"
+        : "text-emerald-300"
+    } ${
+      highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
+    } ${
+      isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
+    }`;
     return (
-      <p
-        key={`${idx}-${line.slice(0, 12)}`}
-        className={`whitespace-pre-wrap leading-relaxed ${
-          summaryChanged
-            ? "rounded-md bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-transparent px-2 py-1 text-emerald-200"
-            : "text-emerald-300"
-        } ${
-          highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
-        } ${
-          isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
-        }`}
-      >
+      <SkillLinkedAssertionLine key={`${idx}-${line.slice(0, 12)}`} line={line} className={lineClass}>
         {parts.map((part, i) => (
           isVerdictDeity(part) ? (
             <button
@@ -218,7 +236,7 @@ export function DecisionInbox({
             <span key={`${idx}-${i}`}>{part}</span>
           )
         ))}
-      </p>
+      </SkillLinkedAssertionLine>
     );
   }
 
@@ -231,7 +249,23 @@ export function DecisionInbox({
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
+      <AnimatePresence>
+        {inboxResetWaveKey > 0 ? (
+          <motion.div
+            key={inboxResetWaveKey}
+            className="pointer-events-none absolute inset-0 z-[1] rounded-2xl"
+            initial={{ opacity: 0.48, scale: 0.9 }}
+            animate={{ opacity: 0, scale: 1.42 }}
+            transition={{ duration: 0.88, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              background: "radial-gradient(circle at 50% 32%, rgba(168, 85, 247, 0.42), transparent 72%)",
+              boxShadow: "inset 0 0 88px rgba(168, 85, 247, 0.28)",
+            }}
+          />
+        ) : null}
+      </AnimatePresence>
+    <section className="relative z-10 p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-medium">{t("Decision Inbox")}</h3>
         <span className="text-xs text-zinc-500">{t("流式对话与决策卡片")}</span>
@@ -272,12 +306,14 @@ export function DecisionInbox({
                     max={1}
                     step={0.05}
                     value={weighting.blindSchool}
+                    disabled={interactionLocked}
                     onChange={(e) => setWeighting((prev) => ({ ...prev, blindSchool: Number(e.target.value) }))}
                     onMouseUp={async () => {
+                      if (interactionLocked) return;
                       onPluginWeightsChange?.(weighting);
                       await onApplyPluginWeights?.();
                     }}
-                    className="w-full"
+                    className="w-full disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </label>
                 <label>
@@ -288,21 +324,25 @@ export function DecisionInbox({
                     max={1}
                     step={0.05}
                     value={weighting.wangshuai}
+                    disabled={interactionLocked}
                     onChange={(e) => setWeighting((prev) => ({ ...prev, wangshuai: Number(e.target.value) }))}
                     onMouseUp={async () => {
+                      if (interactionLocked) return;
                       onPluginWeightsChange?.(weighting);
                       await onApplyPluginWeights?.();
                     }}
-                    className="w-full"
+                    className="w-full disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </label>
                 <button
                   type="button"
+                  disabled={interactionLocked}
                   onClick={async () => {
+                    if (interactionLocked) return;
                     onPluginWeightsChange?.(weighting);
                     await onApplyPluginWeights?.();
                   }}
-                  className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 hover:bg-zinc-700"
+                  className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   应用权重并重算
                 </button>
@@ -336,7 +376,7 @@ export function DecisionInbox({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ duration: 0.22 }}
-                      className="block"
+                      className={`block ${interactionLocked ? "pointer-events-none opacity-60" : ""}`}
                     >
                       <DecisionItem
                         label={labelText}
@@ -345,6 +385,7 @@ export function DecisionInbox({
                         dotClassName={elementColorClass(element)}
                         deltaAbs={logicDiff?.abs_delta}
                         showDeltaBadge={showDeltaBadge}
+                        skillId={card.skillId}
                         onToggle={() =>
                           applySelection({
                             ...selectedIds,
@@ -649,5 +690,6 @@ export function DecisionInbox({
         currentGender={String((metadata as { gender?: string }).gender || "")}
       />
     </section>
+    </div>
   );
 }

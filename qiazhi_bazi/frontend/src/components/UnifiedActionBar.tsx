@@ -11,6 +11,13 @@ type Props = {
   onRun: () => void | Promise<void>;
   onSetBaseline?: () => void;
   disabled?: boolean;
+  sigShiftFlashKey?: number;
+  /** 覆盖主按钮文案（终审状态机等） */
+  labelOverride?: string;
+  /** 已签发：主按钮锁定 */
+  issued?: boolean;
+  /** 可签发终审：紫色呼吸主按钮 */
+  issueFinalPurplePulse?: boolean;
 };
 
 export function UnifiedActionBar({
@@ -20,15 +27,20 @@ export function UnifiedActionBar({
   onRun,
   onSetBaseline,
   disabled = false,
+  sigShiftFlashKey = 0,
+  labelOverride,
+  issued = false,
+  issueFinalPurplePulse = false,
 }: Props) {
   const label =
-    mode === "SYNCING"
+    labelOverride ??
+    (mode === "SYNCING"
       ? "逻辑坍缩中..."
       : mode === "FULL"
         ? "物理排盘：开启因果"
         : mode === "PARAMETER_DIRTY"
           ? "[因果确认：执行裁决]"
-        : "语义重构：重新裁决";
+        : "语义重构：重新裁决");
   const entropyPct = typeof globalEntropy === "number" && Number.isFinite(globalEntropy)
     ? Math.max(0, Math.min(100, Math.round(globalEntropy * 100)))
     : 0;
@@ -42,6 +54,8 @@ export function UnifiedActionBar({
   const [willPulseOn, setWillPulseOn] = useState(false);
   const [baselineFlash, setBaselineFlash] = useState(false);
   const [baselineHint, setBaselineHint] = useState("");
+  const [sigShiftShow, setSigShiftShow] = useState(false);
+  const [sigShiftBright, setSigShiftBright] = useState(true);
   const jitterTimerRef = useRef<number | null>(null);
   const glitchTimerRef = useRef<number | null>(null);
   const burstTimerRef = useRef<number | null>(null);
@@ -53,7 +67,9 @@ export function UnifiedActionBar({
   }, []);
 
   const ambientTremor = !reducedMotion && mode === "SYNCING" && entropy > 0.8;
-  const decisionDirtyPulse = !reducedMotion && mode === "PARAMETER_DIRTY" && decisionDirty;
+  const decisionDirtyPulse = !reducedMotion && mode === "PARAMETER_DIRTY" && decisionDirty && !issueFinalPurplePulse;
+  const issuePulse = !reducedMotion && issueFinalPurplePulse && mode !== "SYNCING" && !issued;
+  const [issuePulseOn, setIssuePulseOn] = useState(false);
   const tremorStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -72,6 +88,16 @@ export function UnifiedActionBar({
       if (willPulseTimerRef.current) window.clearInterval(willPulseTimerRef.current);
     };
   }, [decisionDirtyPulse, entropy]);
+
+  useEffect(() => {
+    if (!issuePulse) {
+      setIssuePulseOn(false);
+      return;
+    }
+    const interval = 520;
+    const iv = window.setInterval(() => setIssuePulseOn((v) => !v), interval);
+    return () => window.clearInterval(iv);
+  }, [issuePulse]);
 
   useEffect(() => {
     if (!ambientTremor) {
@@ -130,6 +156,21 @@ export function UnifiedActionBar({
     };
   }, []);
 
+  useEffect(() => {
+    if (sigShiftFlashKey < 1) return;
+    setSigShiftShow(true);
+    let ticks = 0;
+    const iv = window.setInterval(() => {
+      ticks += 1;
+      setSigShiftBright((b) => !b);
+      if (ticks >= 12) {
+        window.clearInterval(iv);
+        setSigShiftShow(false);
+      }
+    }, 200);
+    return () => window.clearInterval(iv);
+  }, [sigShiftFlashKey]);
+
   const handleRun = () => {
     if (!reducedMotion) {
       setBurstOn(true);
@@ -171,9 +212,17 @@ export function UnifiedActionBar({
         <div className="relative flex-1">
           <button
             type="button"
-            disabled={disabled || mode === "SYNCING"}
+            disabled={disabled || mode === "SYNCING" || issued}
             onClick={handleRun}
-            className="relative z-10 w-full rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`relative z-10 w-full rounded-xl py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+              issued
+                ? "bg-zinc-700 text-zinc-200"
+                : issueFinalPurplePulse
+                  ? `bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition-[box-shadow,filter] duration-500 ${
+                      issuePulseOn ? "shadow-[0_0_22px_rgba(168,85,247,0.55)] brightness-110" : "shadow-[0_0_10px_rgba(168,85,247,0.25)]"
+                    }`
+                  : "bg-amber-500 text-zinc-950"
+            }`}
             style={decisionDirtyPulse ? {
               border: `1px solid rgba(168,85,247,${willPulseOn ? 0.95 : 0.45})`,
               boxShadow: `0 0 ${willPulseOn ? 14 : 8}px rgba(168,85,247,${willPulseOn ? 0.42 : 0.18})`,
@@ -218,7 +267,7 @@ export function UnifiedActionBar({
         <button
           type="button"
           onClick={handleSetBaseline}
-          disabled={!onSetBaseline || disabled || mode === "SYNCING"}
+          disabled={!onSetBaseline || disabled || mode === "SYNCING" || issued}
           aria-label="设置当前为基线"
           className={`shrink-0 rounded-md border px-2 py-1 text-xs transition ${
             baselineFlash
@@ -231,6 +280,15 @@ export function UnifiedActionBar({
         </button>
       </div>
       {baselineHint ? <p className="mt-1 text-[10px] text-fuchsia-300">{baselineHint}</p> : null}
+      {sigShiftShow ? (
+        <p
+          className={`mt-1 text-center font-mono text-[10px] text-[#A855F7] transition-opacity duration-150 ${
+            sigShiftBright ? "opacity-100" : "opacity-30"
+          }`}
+        >
+          [SIG_SHIFT]
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -8,6 +8,14 @@ from pydantic import BaseModel, Field
 from app.schemas.bazi_metadata import BaziMetadata, FourPillars
 
 
+class BlindSchoolFeatureFlags(BaseModel):
+    """盲派子开关：可由前端 Plugin 面板传入。"""
+
+    enable_pierce_harm: bool = True
+    enable_tomb_vault: bool = True
+    enable_host_guest_bonus: bool = True
+
+
 class PhysicsConfig(BaseModel):
     WEIGHT_LUCK: Optional[float] = None
     WEIGHT_YEAR: Optional[float] = None
@@ -62,6 +70,7 @@ class AnalyzeClashRequest(BaseModel):
     liunian: Optional[str] = None
     physics_config: Optional[PhysicsConfig] = None
     enabled_plugins: List[str] = Field(default_factory=list)
+    blind_school_features: Optional[BlindSchoolFeatureFlags] = None
 
 
 class AnalyzeSeedRequest(BaseModel):
@@ -75,6 +84,7 @@ class AnalyzeSeedRequest(BaseModel):
     session_id: Optional[int] = None
     physics_config: Optional[PhysicsConfig] = None
     enabled_plugins: List[str] = Field(default_factory=list)
+    blind_school_features: Optional[BlindSchoolFeatureFlags] = None
 
 
 class AuditPhysicsWithLlmRequest(BaseModel):

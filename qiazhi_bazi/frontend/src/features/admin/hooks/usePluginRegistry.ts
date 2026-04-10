@@ -3,13 +3,28 @@
 import useSWR from "swr";
 import { useMemo } from "react";
 
+export type BlindSchoolSkillItem = {
+  id: string;
+  name: string;
+  description: string;
+  impact_factor: string;
+  assertion_template: string;
+  physics_setting_key?: string;
+};
+
 export type PluginManifestItem = {
   id: string;
   layer: "L1" | "L2" | "L3" | "L4";
   category: string;
   status: "HEALTHY" | "IDLE" | "ERROR";
   dependencies: string[];
-  metadata: { label: string; doc_path: string; priority: number; hook: string };
+  metadata: {
+    label: string;
+    doc_path: string;
+    priority: number;
+    hook: string;
+    skills?: BlindSchoolSkillItem[];
+  };
   performance_snapshot?: { last_latency_ms?: number | null; p50_ms?: number | null; p95_ms?: number | null; error_rate?: number | null };
 };
 

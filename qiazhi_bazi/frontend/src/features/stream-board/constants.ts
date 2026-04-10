@@ -21,6 +21,8 @@ export const ADMIN_TOKEN = process.env.NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN ?? "";
 export const adminHeaders: Record<string, string> = ADMIN_TOKEN ? { "X-Admin-Token": ADMIN_TOKEN } : {};
 export const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export const VERDICT_TIMEOUT_MS = 45000;
+/** 终审签发：|logic_diff.abs_delta| 低于此值且 Inbox 无剩余项时主按钮进入「签发终审」态（纯 UI 门闩，非物理常数） */
+export const FINAL_VERDICT_ABS_DELTA_THRESHOLD = 30;
 export const TRANSLATION_DEBOUNCE_MS = 500;
 export const TRANSLATION_CACHE_MAX = 200;
 
@@ -35,7 +37,6 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "Layer 1 Fully Aligned": "第一层完全对齐",
   },
   EN: {
-    "历史": "History",
     "流式对话与决策卡片": "Streaming dialogue and decision cards",
     "批量勾选后，一次性执行全局裁决。": "Select in batch, then execute a global decision once.",
     "暂无可裁决冲合项。": "No actionable clash/combine items.",
@@ -57,11 +58,6 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "LLM(0.10)": "LLM(0.10)",
     "等待交互步骤…": "Waiting for interaction steps...",
     "Step": "Step",
-    "Decision History": "Decision History",
-    "关闭": "Close",
-    "暂无历史记录。": "No history records.",
-    "记录回滚事件": "Record rollback event",
-    "仅本地撤销": "Local undo only",
     "The Seed": "The Seed",
     "输入生日后，系统将进入流式推演。": "After entering birth data, the system starts streaming inference.",
     "公历": "Solar",
@@ -84,9 +80,7 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "左": "L",
     "右": "R",
     "正在重组因果现场...": "Rebinding causal scene...",
-    "生辰": "Birth",
     "会话已驻留": "Session pinned",
-    "复制快照链接": "Copy snapshot link",
     "视觉仪表盘": "Vision",
     "指令舱": "Command",
     "黑匣子（L1 审计）→": "Black box (L1) →",
@@ -103,8 +97,8 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "收起表单": "Collapse form",
     "展开表单": "Expand form",
     "掐指一算后在此显示：四柱 / 大运 / 流年": "After analyze: pillars / luck / annual appear here.",
-    "表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。":
-      "Form collapsed. Use “Expand form” or the Birth button to edit solar/lunar, time, gender and recalculate.",
+    "表单已收起。点击「展开表单」可再次录入/修改公历、农历、时刻与性别并重新排盘。":
+      "Form collapsed. Use “Expand form” to edit solar/lunar, time, gender and recalculate.",
     "提交 IDs：": "Submitted IDs:",
     "做功路径摘要": "Work path summary",
     "期望": "Expectation",
@@ -112,10 +106,8 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "释放能": "Released energy",
     "在「黑匣子」查看完整 L1 流水线与物理张量 JSON →": "Open Black Box for full L1 pipeline & physics tensor JSON →",
     "暂无批注内容。": "No annotations yet.",
-    "输入快照标签（可选）": "Snapshot label (optional)",
   },
   KO: {
-    "历史": "기록",
     "流式对话与决策卡片": "스트리밍 대화 및 의사결정 카드",
     "批量勾选后，一次性执行全局裁决。": "일괄 선택 후 전역 판정을 한 번에 실행합니다.",
     "暂无可裁决冲合项。": "판정 가능한 충·합 항목이 없습니다.",
@@ -137,11 +129,6 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "LLM(0.10)": "LLM(0.10)",
     "等待交互步骤…": "상호작용 단계를 기다리는 중…",
     "Step": "단계",
-    "Decision History": "결정 이력",
-    "关闭": "닫기",
-    "暂无历史记录。": "이력 없음.",
-    "记录回滚事件": "롤백 이벤트 기록",
-    "仅本地撤销": "로컬만 취소",
     "The Seed": "입력 시드",
     "输入生日后，系统将进入流式推演。": "생년월일 입력 후 시스템이 스트리밍 추론을 시작합니다.",
     "公历": "양력",
@@ -165,9 +152,7 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "左": "좌",
     "右": "우",
     "正在重组因果现场...": "인과 장면을 재구성하는 중...",
-    "生辰": "생辰",
     "会话已驻留": "세션 고정됨",
-    "复制快照链接": "스냅샷 링크 복사",
     "视觉仪表盘": "비전",
     "指令舱": "커맨드",
     "黑匣子（L1 审计）→": "블랙박스(L1)→",
@@ -184,8 +169,8 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "收起表单": "폼 접기",
     "展开表单": "폼 펼치기",
     "掐指一算后在此显示：四柱 / 大运 / 流年": "분석 후: 사주 / 대운 / 세운이 여기 표시됩니다.",
-    "表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。":
-      "폼이 접혀 있습니다. 「폼 펼치기」 또는 상단 「생辰」으로 양력/음력·시각·성별을 수정하고 재배반할 수 있습니다.",
+    "表单已收起。点击「展开表单」可再次录入/修改公历、农历、时刻与性别并重新排盘。":
+      "폼이 접혀 있습니다. 「폼 펼치기」로 양력/음력·시각·성별을 수정하고 재배반할 수 있습니다.",
     "提交 IDs：": "제출 ID:",
     "做功路径摘要": "작업 경로 요약",
     "期望": "기대",
@@ -193,7 +178,6 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "释放能": "방출 에너지",
     "在「黑匣子」查看完整 L1 流水线与物理张量 JSON →": "블랙박스에서 전체 L1 파이프라인·물리 텐서 JSON →",
     "暂无批注内容。": "아직 주석이 없습니다.",
-    "输入快照标签（可选）": "스냅샷 라벨(선택)",
   },
 };
 
@@ -206,7 +190,6 @@ export function staticT(lang: Lang, zhKey: string): string {
 export const PRELOAD_UI_TEXTS = [
   "掐指一算",
   "对话即推演，卡片即逻辑",
-  "历史",
   "流式对话与决策卡片",
   "批量勾选后，一次性执行全局裁决。",
   "暂无可裁决冲合项。",
@@ -228,11 +211,6 @@ export const PRELOAD_UI_TEXTS = [
   "LLM(0.10)",
   "等待交互步骤…",
   "Step",
-  "Decision History",
-  "关闭",
-  "暂无历史记录。",
-  "记录回滚事件",
-  "仅本地撤销",
   "The Seed",
   "输入生日后，系统将进入流式推演。",
   "公历",
@@ -249,8 +227,6 @@ export const PRELOAD_UI_TEXTS = [
   "扫描完毕，发现",
   "处冲合特征，正在生成首条判词…",
   "全局裁决完成，终极判词已生成。",
-  "已记录回滚事件（审计追加，不删除历史）。",
-  "回滚事件写入失败：",
   "已确认",
   "，正在执行全局裁决…",
   "✅ 终极判词：",
@@ -262,9 +238,7 @@ export const PRELOAD_UI_TEXTS = [
   "左",
   "右",
   "正在重组因果现场...",
-  "生辰",
   "会话已驻留",
-  "复制快照链接",
   "视觉仪表盘",
   "指令舱",
   "黑匣子（L1 审计）→",
@@ -281,7 +255,7 @@ export const PRELOAD_UI_TEXTS = [
   "收起表单",
   "展开表单",
   "掐指一算后在此显示：四柱 / 大运 / 流年",
-  "表单已收起。点击「展开表单」或顶部「生辰」按钮可再次录入/修改公历、农历、时刻与性别并重新排盘。",
+  "表单已收起。点击「展开表单」可再次录入/修改公历、农历、时刻与性别并重新排盘。",
   "提交 IDs：",
   "做功路径摘要",
   "期望",
@@ -289,5 +263,4 @@ export const PRELOAD_UI_TEXTS = [
   "释放能",
   "在「黑匣子」查看完整 L1 流水线与物理张量 JSON →",
   "暂无批注内容。",
-  "输入快照标签（可选）",
 ] as const;

@@ -8,6 +8,8 @@ type Props = {
   onToggle: () => void;
   deltaAbs?: number | null;
   showDeltaBadge?: boolean;
+  /** 盲派 / L1 Skill 注册表 ID，右上角展示 */
+  skillId?: string;
 };
 
 export function DecisionItem({
@@ -18,6 +20,7 @@ export function DecisionItem({
   onToggle,
   deltaAbs = null,
   showDeltaBadge = false,
+  skillId,
 }: Props) {
   const hasDelta = showDeltaBadge && selected && typeof deltaAbs === "number" && Number.isFinite(deltaAbs) && Math.abs(deltaAbs) > 0.0001;
   const positive = (deltaAbs || 0) > 0;
@@ -32,10 +35,18 @@ export function DecisionItem({
         : "text-emerald-300";
   return (
     <div
-      className={`relative flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs ${
-        selected ? "border-emerald-500/40 bg-emerald-500/10" : "border-zinc-700 bg-zinc-900"
-      }`}
+      className={`relative flex items-center justify-between gap-3 rounded-lg border px-3 text-xs ${
+        skillId ? "pb-2 pt-6" : "py-2"
+      } ${selected ? "border-emerald-500/40 bg-emerald-500/10" : "border-zinc-700 bg-zinc-900"}`}
     >
+      {skillId ? (
+        <span
+          className="absolute left-2 top-1 max-w-[min(130px,48%)] truncate rounded border border-violet-500/35 bg-violet-950/80 px-1.5 py-0.5 font-mono text-[9px] font-medium text-violet-200/95"
+          title={`Skill: ${skillId}`}
+        >
+          {skillId}
+        </span>
+      ) : null}
       {hasDelta ? (
         <span
           className={`absolute right-11 top-1 rounded px-1.5 py-0.5 text-[10px] ${badgeClass}`}

@@ -6,6 +6,7 @@ import time
 from typing import Any, Callable, Dict, List, Literal
 
 from app.plugins.blind_school.core import run_blind_school_plugin
+from app.plugins.blind_school.skill_manifest_loader import list_blind_skills
 from app.plugins.modern_wealth_risk.core import run_modern_wealth_risk_plugin
 from app.plugins.wangshuai.core import run_wangshuai_plugin
 
@@ -47,6 +48,7 @@ class PluginRegistry:
                 runner=lambda **ctx: run_blind_school_plugin(
                     physics_tensor=ctx.get("physics_tensor") or {},
                     metadata=ctx.get("metadata") or {},
+                    feature_flags=ctx.get("blind_school_features"),
                 ),
             )
         )
@@ -155,6 +157,14 @@ class PluginRegistry:
             error_rate = round(err_count / total, 4)
             status = "HEALTHY" if enabled and deps_ok and error_rate < 0.2 else ("IDLE" if not enabled else "ERROR")
             doc_slug = spec.audit_source.replace(".md", "")
+            meta: Dict[str, Any] = {
+                "label": spec.label,
+                "doc_path": f"/docs/{doc_slug}",
+                "priority": spec.priority,
+                "hook": spec.hook,
+            }
+            if spec.plugin_id == "classical.blind_school.v1":
+                meta["skills"] = list_blind_skills()
             plugins.append(
                 {
                     "id": spec.plugin_id,
@@ -162,12 +172,7 @@ class PluginRegistry:
                     "category": spec.category,
                     "status": status,
                     "dependencies": list(spec.dependencies),
-                    "metadata": {
-                        "label": spec.label,
-                        "doc_path": f"/docs/{doc_slug}",
-                        "priority": spec.priority,
-                        "hook": spec.hook,
-                    },
+                    "metadata": meta,
                     "performance_snapshot": {
                         "last_latency_ms": round(float(last_latency), 3) if isinstance(last_latency, (int, float)) else None,
                         "p50_ms": p50,

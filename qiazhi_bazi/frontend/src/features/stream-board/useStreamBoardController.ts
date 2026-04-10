@@ -1,10 +1,9 @@
 "use client";
 
-import useSWR from "swr";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuditItem, AuditRole } from "@/components/AuditSidebar";
-import type { BaziMetadata, DecisionStep, Lang, TimelineSnapshot } from "@/types/bazi";
-import { adminHeaders, API_BASE, fetcher, VERDICT_TIMEOUT_MS } from "./constants";
+import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
+import { adminHeaders, API_BASE, VERDICT_TIMEOUT_MS } from "./constants";
 import { buildInboxCards, createAuditorProposalCard } from "./cardBuilder";
 import type {
   DeityComponent,
@@ -15,18 +14,71 @@ import type {
   LogicDiff,
   LlmDiagnosticData,
   LogicProposal,
+  PhysicsLabConfig,
+  PluginSwitches,
+  PluginWeights,
   SeedPayload,
   StreamBoardViewModel,
 } from "./models";
 import { buildFallbackVerdict, calculateFireEnergyAfterConflicts } from "./utils";
 import { useClientSearchParams } from "./useClientSearchParams";
 import { useTranslationQueue } from "./useTranslationQueue";
+import { useActiveView, type ShellActiveView } from "@/components/layout/ActiveViewContext";
 import { useLabConfig } from "@/features/lab-config/LabConfigContext";
 import { useLabStore, useUiLang } from "@/features/stream-board/stores/useLabStore";
 
 type ConsensusItem = { decision_key: string; confirmed_value?: number; reasoning?: string };
 type ConfirmedDecisionItem = { id: string; label: string; is_confirmed: boolean; confirmed_at?: string };
 type MetricSnapshot = { absLossTotal: number | null; entropy: number | null };
+
+type SilentBoardCtx = {
+  consultationId: number | null;
+  labConfig: PhysicsLabConfig;
+  pluginSwitches: PluginSwitches;
+  pluginWeights: PluginWeights;
+  lang: Lang;
+  baselineMetrics: MetricSnapshot | null;
+  confirmedDecisionIds: string[];
+};
+
+function buildBlindSchoolFeaturesPayload(sw: PluginSwitches) {
+  return {
+    enable_pierce_harm: sw.blindSchoolPierceHarm !== false,
+    enable_tomb_vault: sw.blindSchoolTombVault !== false,
+    enable_host_guest_bonus: sw.blindSchoolHostGuest !== false,
+  };
+}
+
+function extractMetricSnapshotFromPhysics(physicsTensor: Record<string, unknown> | null | undefined): MetricSnapshot {
+  const auditLog = (physicsTensor?.audit_log as Record<string, unknown> | undefined) || {};
+  const trace = (auditLog.trace as Record<string, unknown> | undefined) || {};
+  const meta = (physicsTensor?.meta as Record<string, unknown> | undefined) || {};
+  const absRaw = trace.clash_abs_loss_total ?? auditLog.clash_abs_loss_total ?? meta.clash_abs_loss_total ?? meta.abs_loss_total;
+  const entropyRaw = meta.global_entropy;
+  return {
+    absLossTotal: typeof absRaw === "number" && Number.isFinite(absRaw) ? absRaw : null,
+    entropy: typeof entropyRaw === "number" && Number.isFinite(entropyRaw) ? entropyRaw : null,
+  };
+}
+
+/** 后端 meta.interaction_hub_mangpai → 并入实验室 interaction_hub（主权占优金标等） */
+function extractInteractionHubMangpai(physicsTensor: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  if (!physicsTensor || typeof physicsTensor !== "object") return {};
+  const meta = physicsTensor.meta as Record<string, unknown> | undefined;
+  const m = meta?.interaction_hub_mangpai;
+  if (!m || typeof m !== "object" || Array.isArray(m)) return {};
+  return m as Record<string, unknown>;
+}
+
+function seedPayloadSignature(seed: SeedPayload | null | undefined): string | null {
+  if (!seed) return null;
+  return JSON.stringify({
+    date: seed.date,
+    time: seed.time,
+    calendar: seed.calendar,
+    gender: seed.gender,
+  });
+}
 
 type NavigationInfo = {
   navType: "reload" | "navigate" | "back_forward" | "unknown";
@@ -60,7 +112,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     state: labState,
     mergeSnapshot,
     setLastSeedPayload: persistLastSeedToStore,
+    finalizeVerdict,
+    bumpSyncBarrierSeq,
   } = useLabStore();
+  const { activeView } = useActiveView();
+  const labStateRef = useRef(labState);
+  labStateRef.current = labState;
   const initialSnapshot = (labState.snapshot || null) as {
     physics_tensor?: Record<string, unknown>;
     final_verdict?: {
@@ -91,11 +148,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
   }, [uiLang]);
 
   const [busy, setBusy] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string>();
   const [metadata, setMetadata] = useState<BaziMetadata | null>(null);
   const [streamingText, setStreamingText] = useState("");
-  const [steps, setSteps] = useState<DecisionStep[]>([]);
   const [consultationId, setConsultationId] = useState<number | null>(null);
   const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
   const [health, setHealth] = useState({ dbOk: false, llmOk: false });
@@ -132,6 +187,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [autoConvertedParamKey, setAutoConvertedParamKey] = useState<string | null>(null);
   const [resolvedCardIds, setResolvedCardIds] = useState<string[]>([]);
   const [selectionResetToken, setSelectionResetToken] = useState(0);
+  const [sigShiftFlashKey, setSigShiftFlashKey] = useState(0);
   const [conclusionVersion, setConclusionVersion] = useState(0);
   const [lastConclusionText, setLastConclusionText] = useState("");
   const [summaryChanged, setSummaryChanged] = useState(false);
@@ -162,6 +218,56 @@ export function useStreamBoardController(): StreamBoardViewModel {
   );
   const urlDecisionHydrated = true;
   const isSnapshotRestoringRef = useRef(false);
+  const reCalculateAbsSilentlyImplRef = useRef<() => Promise<void>>(async () => {});
+  const runtimeConfigSerializedRef = useRef<string | null>(null);
+  const pluginRecalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silentRecalcInFlightRef = useRef(false);
+  const inboxNonceHandledRef = useRef(0);
+  const verdictRecalcBarrierRef = useRef(false);
+  const silentRecalcDeferredRef = useRef(false);
+  const reCalculateAbsRef = useRef<() => Promise<void>>(async () => {});
+  const prevActiveViewRef = useRef<ShellActiveView | null>(null);
+  const isRestoringRef = useRef(false);
+  const silentCtxRef = useRef<SilentBoardCtx>({
+    consultationId: null,
+    labConfig: {
+      WEIGHT_LUCK: 0.4,
+      WEIGHT_YEAR: 0.2,
+      BASE_BACKFIRE_RISK: 0.2,
+      HIGH_IMBALANCE_RISK: 0.35,
+      TOMB_LOCK_RATE: 0.9,
+      CLIMATE_INTENSITY: 1.0,
+      STEM_RESONANCE_BOOST: 1.5,
+      TRANSFER_DISTANCE_DECAY: 0.1,
+      WORK_MIN_THRESHOLD: 0.5,
+      SHOW_WEAK_WORK_PATHS: 1,
+    },
+    pluginSwitches: {
+      blindSchool: true,
+      wangshuai: true,
+      wealthRisk: false,
+      blindSchoolPierceHarm: true,
+      blindSchoolTombVault: true,
+      blindSchoolHostGuest: true,
+    },
+    pluginWeights: { blindSchool: 0.8, wangshuai: 0.6 },
+    lang: "ZH",
+    baselineMetrics: null,
+    confirmedDecisionIds: [],
+  });
+  const settersRef = useRef({
+    setMetadata: (_m: BaziMetadata | null) => {},
+    setTimeline: (_t: TimelineSnapshot | null) => {},
+    setDeityScores: (_s: Record<string, number>) => {},
+    setDeityEnergyAxes: (_a: Record<string, DeityEnergyAxis>) => {},
+    setDeityComponents: (_c: Record<string, DeityComponent>) => {},
+    setDeityTraceDetails: (_d: Record<string, Record<string, unknown>>) => {},
+    setPhysicsAudit: (_a: Record<string, unknown> | null) => {},
+    setPhysicsConfidence: (_n: number | null) => {},
+    setPhysicsEvidence: (_e: string[]) => {},
+    setPhysicsParams: (_p: Record<string, number>) => {},
+    setGlobalEntropy: (_g: number | null) => {},
+  });
   const navHandledRef = useRef(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [baselineMetrics, setBaselineMetrics] = useState<MetricSnapshot | null>(null);
@@ -182,12 +288,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [logicDrawerDetails, setLogicDrawerDetails] = useState<string[]>([]);
   const [logicDrawerTrace, setLogicDrawerTrace] = useState<Record<string, unknown> | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
-
-  const { data: historyData, mutate } = useSWR<{ items: DecisionStep[] } | null>(
-    `${API_BASE}/api/history`,
-    fetcher,
-    { revalidateOnFocus: false, shouldRetryOnError: false },
-  );
 
   const { i18nCalls, t } = useTranslationQueue({
     lang,
@@ -213,17 +313,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     [metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t],
   );
   const normalizeDecisionIds = (list: string[]) => [...new Set(list.map((item) => String(item || "").trim()).filter(Boolean))].sort();
-  const extractMetricSnapshotFromPhysics = (physicsTensor: Record<string, unknown> | null | undefined): MetricSnapshot => {
-    const auditLog = (physicsTensor?.audit_log as Record<string, unknown> | undefined) || {};
-    const trace = (auditLog.trace as Record<string, unknown> | undefined) || {};
-    const meta = (physicsTensor?.meta as Record<string, unknown> | undefined) || {};
-    const absRaw = trace.clash_abs_loss_total ?? auditLog.clash_abs_loss_total ?? meta.clash_abs_loss_total ?? meta.abs_loss_total;
-    const entropyRaw = meta.global_entropy;
-    return {
-      absLossTotal: typeof absRaw === "number" && Number.isFinite(absRaw) ? absRaw : null,
-      entropy: typeof entropyRaw === "number" && Number.isFinite(entropyRaw) ? entropyRaw : null,
-    };
-  };
   const updateLogicDiff = (current: MetricSnapshot, forceBaseline = false): LogicDiff => {
     const baselineFromStore = (() => {
       const b = labState.snapshot?.baseline_snapshot;
@@ -253,6 +342,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     mergeSnapshot({ logic_diff: nextDiff });
     return nextDiff;
   };
+  const updateLogicDiffRef = useRef(updateLogicDiff);
+  updateLogicDiffRef.current = updateLogicDiff;
   const setAsBaseline = () => {
     const currentTensor = (labState.snapshot?.physics_tensor || null) as Record<string, unknown> | null;
     const snapshot: MetricSnapshot = {
@@ -303,6 +394,15 @@ export function useStreamBoardController(): StreamBoardViewModel {
       return next;
     });
   };
+
+  useEffect(() => {
+    if (!labState.isFinalized || !labState.finalizationReport?.hash) return;
+    const line = `[FINAL_DECISION_ISSUED] 因果链条已锁定，指纹: ${labState.finalizationReport.hash}`;
+    setResultLogs((prev) => {
+      if (prev.some((l) => String(l).includes("[FINAL_DECISION_ISSUED]"))) return prev;
+      return [...prev, line];
+    });
+  }, [labState.isFinalized, labState.finalizationReport?.hash]);
 
   const pendingDecisionCount = cards.filter((card) => card.id !== "fallback-deep-scan").length;
   const l1Certified = Boolean(llmDiagnosticData?.alignment_score && llmDiagnosticData.alignment_score > 80) && pendingDecisionCount === 0;
@@ -363,6 +463,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     consultationIdOverride?: number | null;
     healthOverride?: { dbOk: boolean; llmOk: boolean };
     auditorBriefingOverride?: Record<string, unknown> | null;
+    seedSignatureOverride?: string | null;
     finalVerdictOverride?: {
       body?: string;
       change_log?: FinalVerdictChangeLog;
@@ -375,7 +476,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     };
   }) => {
     if (isSnapshotRestoringRef.current || isRestoring) return;
+    if (labStateRef.current.isFinalized) return;
     const previousFinalVerdict = (labState.snapshot?.final_verdict || null) as Record<string, unknown> | null;
+    const seedSig =
+      payload.seedSignatureOverride !== undefined
+        ? payload.seedSignatureOverride
+        : seedPayloadSignature(lastSeedPayload);
     mergeSnapshot({
       active_session_id: payload.consultationIdOverride != null
         ? String(payload.consultationIdOverride)
@@ -385,13 +491,17 @@ export function useStreamBoardController(): StreamBoardViewModel {
       timeline: payload.timeline ?? null,
       llm_prompt: payload.llm_prompt || "",
       audit_summary: payload.audit_summary,
+      ...(seedSig ? { seed_signature: seedSig } : {}),
       resolved_card_ids: resolvedCardIds.slice(-240),
       decision_selection_ids: normalizeDecisionIds(confirmedDecisionIds),
-      interaction_hub: buildInteractionHub({
-        consultationIdOverride: payload.consultationIdOverride,
-        healthOverride: payload.healthOverride,
-        auditorBriefingOverride: payload.auditorBriefingOverride,
-      }),
+      interaction_hub: {
+        ...buildInteractionHub({
+          consultationIdOverride: payload.consultationIdOverride,
+          healthOverride: payload.healthOverride,
+          auditorBriefingOverride: payload.auditorBriefingOverride,
+        }),
+        ...extractInteractionHubMangpai(payload.physics_tensor),
+      },
       final_verdict: payload.finalVerdictOverride || previousFinalVerdict || {
         body: finalVerdictBody,
         change_log: finalVerdictChangeLog,
@@ -405,6 +515,32 @@ export function useStreamBoardController(): StreamBoardViewModel {
     });
     setSnapshotAvailable(true);
   };
+
+  const persistSnapshotRef = useRef(persistSnapshot);
+  persistSnapshotRef.current = persistSnapshot;
+
+  /** 等 React 提交 audit_items / result_logs 后再写入 interaction_hub，否则黑匣子一直是空 hub。 */
+  const scheduleInteractionHubPersist = useCallback(() => {
+    window.setTimeout(() => {
+      if (labStateRef.current.isFinalized) return;
+      const snap = labStateRef.current.snapshot;
+      if (!snap?.physics_tensor) return;
+      const sidRaw = snap.active_session_id;
+      let consultationIdOverride: number | null = null;
+      if (sidRaw != null && String(sidRaw).trim() !== "") {
+        const n = Number(String(sidRaw));
+        if (Number.isFinite(n)) consultationIdOverride = n;
+      }
+      persistSnapshotRef.current({
+        physics_tensor: snap.physics_tensor as Record<string, unknown>,
+        metadata: (snap.metadata ?? {}) as Record<string, unknown>,
+        timeline: (snap.timeline ?? null) as Record<string, unknown> | null,
+        llm_prompt: String(snap.llm_prompt || ""),
+        audit_summary: snap.audit_summary,
+        consultationIdOverride,
+      });
+    }, 0);
+  }, []);
 
   const markActiveSession = (sessionId?: number | null) => {
     const sid = sessionId != null ? String(sessionId) : (labState.snapshot?.active_session_id || `session-${Date.now()}`);
@@ -465,6 +601,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return next;
   }
 
+  const refreshHealthRef = useRef(refreshHealth);
+  refreshHealthRef.current = refreshHealth;
+
   async function typewriter(fullText: string) {
     for (let index = 0; index < fullText.length; index += 1) {
       setStreamingText(fullText.slice(0, index + 1));
@@ -488,7 +627,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
   }
 
   async function generateFinalVerdict(conflicts: string[], selectedCards: InboxCard[] = []) {
+    while (silentRecalcInFlightRef.current) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    verdictRecalcBarrierRef.current = true;
     try {
+      try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), VERDICT_TIMEOUT_MS);
       const selectedPayload = selectedCards.map((card) => ({
@@ -534,6 +678,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
                 ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
                 ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
               ],
+              blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
             },
           },
           selected_cards: selectedPayload,
@@ -606,6 +751,14 @@ export function useStreamBoardController(): StreamBoardViewModel {
     }
 
     return buildFallbackVerdict(conflicts);
+      } finally {
+        verdictRecalcBarrierRef.current = false;
+        bumpSyncBarrierSeq();
+        if (silentRecalcDeferredRef.current) {
+          silentRecalcDeferredRef.current = false;
+          void reCalculateAbsRef.current();
+        }
+      }
   }
 
   async function applyPhysicsSqlPatch(sqlPatch: string): Promise<{ ok: boolean; error?: string }> {
@@ -813,6 +966,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
             ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
             ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
           ],
+          blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
         }),
       });
 
@@ -863,6 +1017,13 @@ export function useStreamBoardController(): StreamBoardViewModel {
       }
       const geRaw = (data.physics_tensor?.meta as { global_entropy?: unknown } | undefined)?.global_entropy;
       setGlobalEntropy(typeof geRaw === "number" && Number.isFinite(geRaw) ? geRaw : null);
+      const mangpaiChips = (data.physics_tensor?.meta as { mangpai_chip_logs?: unknown } | undefined)?.mangpai_chip_logs;
+      if (Array.isArray(mangpaiChips)) {
+        for (const line of mangpaiChips) {
+          const s = String(line || "").trim();
+          if (s) appendSystemAuditLog(s);
+        }
+      }
       const currentMetric = extractMetricSnapshotFromPhysics((data.physics_tensor as Record<string, unknown> | undefined) || null);
       const diff = updateLogicDiff(currentMetric, confirmedDecisionIds.length === 0 || !baselineMetrics);
       const absDelta = diff.abs_delta;
@@ -998,6 +1159,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
         setAuditItems([mapped[0], mapped[1], mapped[2]]);
       }
 
+      if (data.physics_tensor) {
+        scheduleInteractionHubPersist();
+      }
+
       setStreamingText(`${t("扫描完毕，发现")} ${(data.metadata?.conflict_matrix?.points ?? []).length} ${t("处冲合特征，正在生成首条判词…")}`);
       setFirstPromptText(data.llm_prompt || "");
       await typewriter(data.llm_prompt || "");
@@ -1070,19 +1235,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
 
       setConfirmedConflicts(conflicts);
       setResolvedCardIds((prev) => [...new Set([...prev, ...selectedCards.map((card) => card.id)])]);
-
-      const answer = proposals.length > 0 && conflicts.length === 0
-        ? `确认 ${proposals.length} 项审计员提案`
-        : `批量确认 ${conflicts.length} 项`;
-      setSteps((prev) => [
-        {
-          id: `execute-decision-${now}`,
-          title: "execute-decision",
-          answer,
-          createdAt: now,
-        },
-        ...prev,
-      ]);
 
       setStreamingText(
         proposals.length > 0 && conflicts.length === 0
@@ -1168,7 +1320,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
             payload: { selected_proposals: proposals.map((proposalCard) => proposalCard.proposal) },
           },
         ]);
-        await mutate();
+        scheduleInteractionHubPersist();
         return;
       }
 
@@ -1218,51 +1370,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
           payload: { selected_conflicts: conflicts },
         },
       ]);
-      await mutate();
+      scheduleInteractionHubPersist();
     } finally {
       setIsExecuting(false);
     }
-  }
-
-  async function onRollback(id: string) {
-    if (id.startsWith("db-")) {
-      const targetId = Number(id.slice(3));
-      if (Number.isFinite(targetId) && targetId > 0) {
-        try {
-          const response = await fetch(`${API_BASE}/api/decision-steps/rollback`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              target_step_id: targetId,
-              reason: "user rollback from drawer",
-            }),
-          });
-          if (!response.ok) {
-            throw new Error(await response.text());
-          }
-          await mutate();
-          setStreamingText(t("已记录回滚事件（审计追加，不删除历史）。"));
-          await typewriterResultLine(`↩️ 已记录回滚事件：step#${targetId}，请重新选择裁决路径。`);
-          setAuditItems((prev) => [
-            ...prev,
-            {
-              id: `arbiter-rollback-${Date.now()}`,
-              step: "05",
-              role: "Arbiter",
-              action: `触发回滚事件：step#${targetId}`,
-              timestamp: new Date().toISOString(),
-              payload: { target_step_id: targetId },
-            },
-          ]);
-          return;
-        } catch (error) {
-          setStreamingText(`${t("回滚事件写入失败：")}${error instanceof Error ? error.message : String(error)}`);
-          return;
-        }
-      }
-    }
-
-    setSteps((prev) => prev.filter((step) => step.id !== id));
   }
 
   async function applyCurrentSqlPatch() {
@@ -1332,6 +1443,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
         ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
         ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
       ],
+      blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
     };
     const [maleResp, femaleResp] = await Promise.all([
       fetch(`${API_BASE}/api/v1/analyze-seed`, {
@@ -1700,13 +1812,245 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setSnapshotAvailable(Boolean(labState.snapshot));
   }, [labState.snapshot]);
 
-  const mergedSteps = historyData?.items?.length ? [...steps, ...historyData.items] : steps;
+  const reCalculateAbs = useCallback(async () => {
+    await reCalculateAbsSilentlyImplRef.current();
+  }, []);
+  reCalculateAbsRef.current = reCalculateAbs;
+
+  const onPluginConfigChange = useCallback(() => {
+    const prevJson = runtimeConfigSerializedRef.current;
+    if (prevJson) {
+      try {
+        const prevCfg = JSON.parse(prevJson) as { pluginWeights?: PluginWeights };
+        const pw = prevCfg.pluginWeights;
+        const next = labStateRef.current.runtimeConfig.pluginWeights;
+        if (
+          pw &&
+          typeof pw.blindSchool === "number" &&
+          Number.isFinite(pw.blindSchool) &&
+          typeof pw.wangshuai === "number" &&
+          Number.isFinite(pw.wangshuai) &&
+          (Math.abs(next.blindSchool - pw.blindSchool) > 0.2 ||
+            Math.abs(next.wangshuai - pw.wangshuai) > 0.2)
+        ) {
+          setSigShiftFlashKey((k) => k + 1);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    runtimeConfigSerializedRef.current = JSON.stringify(labStateRef.current.runtimeConfig);
+    void reCalculateAbs();
+  }, [reCalculateAbs]);
+
+  useEffect(() => {
+    const sig = JSON.stringify(labState.runtimeConfig);
+    if (runtimeConfigSerializedRef.current === null) {
+      runtimeConfigSerializedRef.current = sig;
+    }
+    const prevView = prevActiveViewRef.current;
+    const enteredLab = activeView === "lab" && prevView !== null && prevView !== "lab";
+    prevActiveViewRef.current = activeView;
+
+    if (activeView !== "lab") {
+      return () => {
+        if (pluginRecalcTimerRef.current) {
+          clearTimeout(pluginRecalcTimerRef.current);
+          pluginRecalcTimerRef.current = null;
+        }
+      };
+    }
+    if (!lastSeedPayload || busy || isStreaming || isExecuting) {
+      return () => {
+        if (pluginRecalcTimerRef.current) {
+          clearTimeout(pluginRecalcTimerRef.current);
+          pluginRecalcTimerRef.current = null;
+        }
+      };
+    }
+
+    const drift = runtimeConfigSerializedRef.current !== sig;
+
+    const runNow = () => {
+      if (pluginRecalcTimerRef.current) {
+        clearTimeout(pluginRecalcTimerRef.current);
+        pluginRecalcTimerRef.current = null;
+      }
+      onPluginConfigChange();
+    };
+
+    if (enteredLab) {
+      runNow();
+      return () => {
+        if (pluginRecalcTimerRef.current) {
+          clearTimeout(pluginRecalcTimerRef.current);
+          pluginRecalcTimerRef.current = null;
+        }
+      };
+    }
+
+    if (drift) {
+      if (pluginRecalcTimerRef.current) clearTimeout(pluginRecalcTimerRef.current);
+      pluginRecalcTimerRef.current = setTimeout(runNow, 280);
+    }
+
+    return () => {
+      if (pluginRecalcTimerRef.current) {
+        clearTimeout(pluginRecalcTimerRef.current);
+        pluginRecalcTimerRef.current = null;
+      }
+    };
+  }, [
+    labState.runtimeConfig,
+    activeView,
+    lastSeedPayload,
+    busy,
+    isStreaming,
+    isExecuting,
+    onPluginConfigChange,
+  ]);
+
+  useLayoutEffect(() => {
+    const n = labState.inboxResetNonce;
+    if (n === 0 || n === inboxNonceHandledRef.current) return;
+    inboxNonceHandledRef.current = n;
+    setConfirmedDecisionIds(normalizeDecisionIds(labState.snapshot?.decision_selection_ids || []));
+    setResolvedCardIds((labState.snapshot?.resolved_card_ids || []).map((x) => String(x)));
+    setSelectionResetToken((v) => v + 1);
+  }, [
+    labState.inboxResetNonce,
+    labState.snapshot?.decision_selection_ids,
+    labState.snapshot?.resolved_card_ids,
+  ]);
+
+  useLayoutEffect(() => {
+    reCalculateAbsSilentlyImplRef.current = async () => {
+      const seed = lastSeedPayloadRef.current;
+      if (!seed || isSnapshotRestoringRef.current || isRestoringRef.current) return;
+      if (labStateRef.current.isFinalized) return;
+      if (verdictRecalcBarrierRef.current) {
+        silentRecalcDeferredRef.current = true;
+        return;
+      }
+      if (silentRecalcInFlightRef.current) return;
+      silentRecalcInFlightRef.current = true;
+      const c = silentCtxRef.current;
+      const set = settersRef.current;
+      try {
+        const latestHealth = await refreshHealthRef.current();
+        const response = await fetch(`${API_BASE}/api/v1/analyze-seed`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: seed.date,
+            time: seed.time,
+            calendar: seed.calendar,
+            gender: seed.gender,
+            lang: c.lang,
+            latitude: 31.2304,
+            longitude: 121.4737,
+            session_id: c.consultationId ?? undefined,
+            physics_config: c.labConfig,
+            enabled_plugins: [
+              ...(c.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+              ...(c.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+              ...(c.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+            ],
+            blind_school_features: buildBlindSchoolFeaturesPayload(c.pluginSwitches),
+          }),
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const tensor = (data.physics_tensor || null) as Record<string, unknown> | null;
+        if (!tensor || typeof tensor !== "object") return;
+
+        set.setMetadata(data.metadata as BaziMetadata);
+        set.setTimeline((data.timeline ?? null) as TimelineSnapshot | null);
+        if (tensor.deity_scores && typeof tensor.deity_scores === "object") {
+          set.setDeityScores(tensor.deity_scores as Record<string, number>);
+        }
+        if (tensor.deity_energy_axes && typeof tensor.deity_energy_axes === "object") {
+          set.setDeityEnergyAxes(tensor.deity_energy_axes as Record<string, DeityEnergyAxis>);
+        }
+        if (tensor.deity_components && typeof tensor.deity_components === "object") {
+          set.setDeityComponents(tensor.deity_components as Record<string, DeityComponent>);
+        }
+        if (tensor.deity_trace_details && typeof tensor.deity_trace_details === "object") {
+          set.setDeityTraceDetails(tensor.deity_trace_details as Record<string, Record<string, unknown>>);
+        } else if ((tensor.meta as Record<string, unknown> | undefined)?.deity_trace_details) {
+          set.setDeityTraceDetails(
+            (tensor.meta as Record<string, unknown>).deity_trace_details as Record<string, Record<string, unknown>>,
+          );
+        } else {
+          set.setDeityTraceDetails({});
+        }
+        if (tensor.audit_log && typeof tensor.audit_log === "object") {
+          set.setPhysicsAudit(tensor.audit_log as Record<string, unknown>);
+        }
+        set.setPhysicsConfidence(typeof tensor.confidence === "number" ? tensor.confidence : null);
+        if (Array.isArray(tensor.evidence)) {
+          set.setPhysicsEvidence(tensor.evidence.map((item: unknown) => String(item)));
+        } else {
+          set.setPhysicsEvidence([]);
+        }
+        const pMeta = (tensor.meta || {}) as Record<string, unknown>;
+        if (pMeta.params && typeof pMeta.params === "object") {
+          set.setPhysicsParams(pMeta.params as Record<string, number>);
+        }
+        const ge = pMeta.global_entropy;
+        set.setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
+
+        const currentMetric = extractMetricSnapshotFromPhysics(tensor);
+        updateLogicDiffRef.current(currentMetric, c.confirmedDecisionIds.length === 0 || !c.baselineMetrics);
+        persistSnapshotRef.current({
+          physics_tensor: tensor,
+          metadata: data.metadata as Record<string, unknown>,
+          timeline: (data.timeline ?? null) as Record<string, unknown> | null,
+          llm_prompt: data.llm_prompt || "",
+          audit_summary: data.audit_summary,
+          consultationIdOverride: c.consultationId,
+          healthOverride: latestHealth,
+          seedSignatureOverride: seedPayloadSignature(seed),
+        });
+        bumpSyncBarrierSeq();
+        scheduleInteractionHubPersist();
+      } catch {
+        /* silent */
+      } finally {
+        silentRecalcInFlightRef.current = false;
+      }
+    };
+  }, [bumpSyncBarrierSeq, scheduleInteractionHubPersist]);
+
   langRef.current = lang;
   lastSeedPayloadRef.current = lastSeedPayload;
   metadataRef.current = metadata;
   busyRef.current = busy;
   isStreamingRef.current = isStreaming;
   isExecutingRef.current = isExecuting;
+  isRestoringRef.current = isRestoring;
+  silentCtxRef.current = {
+    consultationId,
+    labConfig,
+    pluginSwitches,
+    pluginWeights,
+    lang,
+    baselineMetrics,
+    confirmedDecisionIds,
+  };
+  settersRef.current = {
+    setMetadata,
+    setTimeline,
+    setDeityScores,
+    setDeityEnergyAxes,
+    setDeityComponents,
+    setDeityTraceDetails,
+    setPhysicsAudit,
+    setPhysicsConfidence,
+    setPhysicsEvidence,
+    setPhysicsParams,
+    setGlobalEntropy,
+  };
 
   const snapshotUrlTag = useMemo(() => {
     const raw = (searchParams.get("tag") || "").trim();
@@ -1738,8 +2082,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     lang,
     setLang,
     busy,
-    drawerOpen,
-    setDrawerOpen,
     consultationId,
     metadata,
     timeline,
@@ -1800,7 +2142,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPluginWeights,
     streamThemeChroma,
     rerunFinalVerdictWithWeights,
-    mergedSteps,
     logicDrawerOpen,
     logicDrawerTitle,
     logicDrawerFocus,
@@ -1818,11 +2159,16 @@ export function useStreamBoardController(): StreamBoardViewModel {
     openLogicDrawerByDeity,
     onEvidenceItemClick,
     showVerdictHistory,
-    onRollback,
     applyCurrentSqlPatch,
     applyLabConfigAndRecalculate,
+    reCalculateAbs,
     runStressTest,
     runGenderComparison,
     t,
+    inboxResetNonce: labState.inboxResetNonce,
+    sigShiftFlashKey,
+    isFinalized: labState.isFinalized,
+    finalizeVerdict,
+    syncBarrierSeq: labState.syncBarrierSeq,
   };
 }

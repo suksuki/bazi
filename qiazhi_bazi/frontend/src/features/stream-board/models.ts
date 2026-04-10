@@ -1,4 +1,4 @@
-import type { BaziMetadata, DecisionStep, Lang, TimelineSnapshot } from "@/types/bazi";
+import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
 import type { Dispatch, SetStateAction } from "react";
 
 export type SeedPayload = {
@@ -26,6 +26,8 @@ export type InboxCard = {
   displayText?: string;
   cardType?: "conflict" | "auditor-proposal" | "proposal";
   proposal?: LogicProposal;
+  /** 与盲派 skill_manifest 对齐，可由 UI 推断或上游写入 */
+  skillId?: string;
 };
 
 export type DeityEnergyAxis = {
@@ -72,6 +74,12 @@ export type PluginSwitches = {
   blindSchool: boolean;
   wangshuai: boolean;
   wealthRisk: boolean;
+  /** 盲派子开关：穿破六害扫描 */
+  blindSchoolPierceHarm: boolean;
+  /** 盲派子开关：墓库闭库断言 */
+  blindSchoolTombVault: boolean;
+  /** 盲派子开关：宾主财官红利 */
+  blindSchoolHostGuest: boolean;
 };
 
 export type PluginWeights = {
@@ -146,8 +154,6 @@ export type StreamBoardViewModel = {
   lang: Lang;
   setLang: (lang: Lang) => void;
   busy: boolean;
-  drawerOpen: boolean;
-  setDrawerOpen: Dispatch<SetStateAction<boolean>>;
   consultationId: number | null;
   metadata: BaziMetadata | null;
   timeline: TimelineSnapshot | null;
@@ -210,7 +216,6 @@ export type StreamBoardViewModel = {
   setPluginWeights: Dispatch<SetStateAction<PluginWeights>>;
   streamThemeChroma: StreamThemeChroma;
   rerunFinalVerdictWithWeights: (selectedCards?: InboxCard[]) => Promise<void>;
-  mergedSteps: DecisionStep[];
   logicDrawerOpen: boolean;
   logicDrawerTitle: string;
   logicDrawerFocus: string;
@@ -228,10 +233,16 @@ export type StreamBoardViewModel = {
   openLogicDrawerByDeity: (deity: string) => void;
   onEvidenceItemClick: (evidence: string) => void;
   showVerdictHistory: () => void;
-  onRollback: (id: string) => Promise<void>;
   applyCurrentSqlPatch: () => Promise<void>;
   applyLabConfigAndRecalculate: () => Promise<void>;
+  /** 静默重算 Abs：按当前 runtimeConfig 重拉 analyze-seed，不进入流式叙事 */
+  reCalculateAbs: () => Promise<void>;
   runStressTest: (scenario: string) => Promise<void>;
   runGenderComparison: () => Promise<void>;
   t: (text: string) => string;
+  inboxResetNonce: number;
+  sigShiftFlashKey: number;
+  isFinalized: boolean;
+  finalizeVerdict: () => Promise<void>;
+  syncBarrierSeq: number;
 };
