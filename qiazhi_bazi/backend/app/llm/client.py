@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, AsyncIterator, Dict, List, Optional
+import time
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import httpx
 from urllib.parse import urlparse
@@ -84,18 +85,32 @@ class QwenClient:
             content = ((data.get("message") or {}).get("content") or "").strip()
             return content or None
 
-    async def chat(
+    def _telemetry_from_text(self, text: str, elapsed_ms: float, usage: Any) -> Dict[str, Any]:
+        approx = round(len(text) / 1.8, 2) if text else 0.0
+        u: Dict[str, Any] = {}
+        if isinstance(usage, dict):
+            u = {k: usage.get(k) for k in ("prompt_tokens", "completion_tokens", "total_tokens") if usage.get(k) is not None}
+        return {
+            "elapsed_ms": round(float(elapsed_ms), 2),
+            "approx_tokens": float(approx),
+            "usage": u,
+        }
+
+    async def chat_with_telemetry(
         self,
         messages: List[Dict[str, str]],
         temperature: float = 0.4,
         max_tokens: int = 2048,
         stop: Optional[List[str]] = None,
-    ) -> str:
+    ) -> Tuple[str, Dict[str, Any]]:
+        t0 = time.perf_counter()
+        usage: Any = None
         if self._is_ollama():
             native = await self._chat_via_ollama_native(messages, temperature, max_tokens)
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
             if native:
-                return native
-
+                return native, self._telemetry_from_text(native, elapsed_ms, usage)
+            # fall through to OpenAI-compatible path
         url = f"{self.base_url}/chat/completions"
         payload: Dict[str, Any] = {
             "model": self.model,
@@ -110,19 +125,32 @@ class QwenClient:
             r = await client.post(url, headers=self._headers(), json=payload)
             r.raise_for_status()
             data = r.json()
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        usage = data.get("usage") if isinstance(data, dict) else None
         choice = (data.get("choices") or [{}])[0]
         msg = choice.get("message") or {}
         content = (msg.get("content") or "").strip()
         if content:
-            return content
-        # 兼容部分“推理模型”仅回传 reasoning/reasoning_content 的场景
+            return content, self._telemetry_from_text(content, elapsed_ms, usage)
         reasoning = (msg.get("reasoning") or msg.get("reasoning_content") or "").strip()
         if reasoning:
-            return reasoning
+            return reasoning, self._telemetry_from_text(reasoning, elapsed_ms, usage)
         text = (choice.get("text") or "").strip()
         if text:
-            return text
-        return ""
+            return text, self._telemetry_from_text(text, elapsed_ms, usage)
+        return "", self._telemetry_from_text("", elapsed_ms, usage)
+
+    async def chat(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.4,
+        max_tokens: int = 2048,
+        stop: Optional[List[str]] = None,
+    ) -> str:
+        text, _ = await self.chat_with_telemetry(
+            messages, temperature=temperature, max_tokens=max_tokens, stop=stop
+        )
+        return text
 
     async def stream_chat(
         self,

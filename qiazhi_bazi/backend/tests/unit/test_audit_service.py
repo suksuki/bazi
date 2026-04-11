@@ -39,13 +39,18 @@ class _FakePhysicsSkill:
 
 class _StrictJsonClient:
     async def chat(self, messages, temperature, max_tokens, stop):
-        return (
+        text, _ = await self.chat_with_telemetry(messages, temperature, max_tokens, stop)
+        return text
+
+    async def chat_with_telemetry(self, messages, temperature, max_tokens, stop):
+        text = (
             '{"diagnosis":"正常","alignment_score":88,"top_anomaly":"比肩偏高","causal_reasoning":"无根导致虚浮",'
             '"tuning_suggestions":["UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key=\'CF_FLOATING_DECAY\';"],'
             '"sql_patch":"UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key=\'CF_FLOATING_DECAY\';",'
             '"refresh_hint":"POST /api/admin/refresh-physics",'
             '"logic_proposal":{"param_key":"CF_FLOATING_DECAY","suggested_value":0.2,"sql_patch":"UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key=\'CF_FLOATING_DECAY\';"}}'
         )
+        return text, {"elapsed_ms": 1.0, "approx_tokens": 2.0, "usage": {}}
 
 
 class _RetryClient:
@@ -53,19 +58,28 @@ class _RetryClient:
         self.calls = 0
 
     async def chat(self, messages, temperature, max_tokens, stop):
+        text, _ = await self.chat_with_telemetry(messages, temperature, max_tokens, stop)
+        return text
+
+    async def chat_with_telemetry(self, messages, temperature, max_tokens, stop):
         self.calls += 1
         if self.calls == 1:
-            return "not-json"
-        return (
+            return "not-json", {"elapsed_ms": 1.0, "approx_tokens": 1.0, "usage": {}}
+        text = (
             '{"diagnosis":"重试成功","alignment_score":66,"top_anomaly":"虚浮","causal_reasoning":"需要回退",'
             '"tuning_suggestions":[],"sql_patch":"UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key=\'CF_FLOATING_DECAY\';",'
             '"refresh_hint":"POST /api/admin/refresh-physics","logic_proposal":{"sql_patch":"UPDATE physics_interaction_params SET param_value=0.20 WHERE param_key=\'CF_FLOATING_DECAY\';"}}'
         )
+        return text, {"elapsed_ms": 2.0, "approx_tokens": 3.0, "usage": {}}
 
 
 class _FallbackClient:
     async def chat(self, messages, temperature, max_tokens, stop):
-        return "still-not-json"
+        text, _ = await self.chat_with_telemetry(messages, temperature, max_tokens, stop)
+        return text
+
+    async def chat_with_telemetry(self, messages, temperature, max_tokens, stop):
+        return "still-not-json", {"elapsed_ms": 1.0, "approx_tokens": 1.0, "usage": {}}
 
 
 def test_ensure_physics_tensor_uses_skill_when_missing():

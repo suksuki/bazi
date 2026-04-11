@@ -17,9 +17,14 @@ from app.services import analysis_service
 
 class _FakeClient:
     async def chat(self, messages, temperature, max_tokens, stop):
+        text, _ = await self.chat_with_telemetry(messages, temperature, max_tokens, stop)
+        return text
+
+    async def chat_with_telemetry(self, messages, temperature, max_tokens, stop):
         if isinstance(messages, list) and messages and isinstance(messages[0], dict) and "translation engine" in messages[0]["content"]:
-            return json.dumps({"items": ["hello", "world"]}, ensure_ascii=False)
-        return "观察到寅申冲，建议继续分析。"
+            raw = json.dumps({"items": ["hello", "world"]}, ensure_ascii=False)
+            return raw, {"elapsed_ms": 1.0, "approx_tokens": 1.0, "usage": {}}
+        return "观察到寅申冲，建议继续分析。", {"elapsed_ms": 2.0, "approx_tokens": 3.0, "usage": {}}
 
 
 class _FakePhysicsSkill:

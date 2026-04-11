@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import time
-from typing import Any, Callable, Dict, List, Literal
+from typing import Any, Callable, Dict, List, Literal, Set, Tuple
 
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_manifest_loader import list_blind_skills
@@ -27,6 +27,11 @@ class PluginSpec:
 
 
 _PLUGIN_STATS: Dict[str, Dict[str, Any]] = {}
+
+# 预留：互斥插件对（同开时写入 manifest 警告，供前端/LLM 提高警觉）
+_PLUGIN_MUTEX_PAIRS: Tuple[Tuple[str, str, str], ...] = (
+    # ("plugin_a", "plugin_b", "同开时推理前提可能冲突，建议提高 backfire_risk 权重"),
+)
 
 
 class PluginRegistry:
@@ -133,6 +138,15 @@ class PluginRegistry:
         idx = max(0, min(len(ordered) - 1, int(round((len(ordered) - 1) * q))))
         return float(ordered[idx])
 
+    @staticmethod
+    def collect_mutex_warnings(enabled_ids: Set[str]) -> List[str]:
+        """若启用集合同时命中某互斥对，返回人可读警告（当前默认无对，仅保留扩展点）。"""
+        warnings: List[str] = []
+        for a, b, msg in _PLUGIN_MUTEX_PAIRS:
+            if a in enabled_ids and b in enabled_ids:
+                warnings.append(f"{a} + {b}: {msg}")
+        return warnings
+
     def get_manifest(self, enabled_plugins: List[str] | None = None) -> Dict[str, Any]:
         selected = set(enabled_plugins or [])
         specs = sorted(self._plugins.values(), key=lambda x: x.priority, reverse=True)
@@ -189,6 +203,7 @@ class PluginRegistry:
         if perf_rows:
             peak = max(perf_rows)
             tension = min(1.0, peak / 400.0)
+        mutex_warnings = self.collect_mutex_warnings(active_ids)
         return {
             "plugins": plugins,
             "dependency_links": dependency_links,
@@ -197,6 +212,7 @@ class PluginRegistry:
                 "max_last_latency_ms": round(max(perf_rows), 3) if perf_rows else None,
             },
             "global_conflict_tension": round(float(tension), 4),
+            "plugin_mutex_warnings": mutex_warnings,
             "refreshed_at": time.time(),
         }
 

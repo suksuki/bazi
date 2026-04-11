@@ -23,6 +23,12 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     # 默认与 TOMB_LOCK_RATE 一致；可在 overrides 中单独覆盖 MANGPAI_ETA_TOMB
     "MANGPAI_ETA_TOMB": 0.90,
     "MANGPAI_ETA_HOST_GUEST": 1.0,
+    # 伤官见官 L1：余气通道 Abs 损耗率上限；干支坐标畸变基准与衰减系数
+    "SGJG_MINOR_ABS_LOSS_CAP_RATIO": 0.02,
+    "SGJG_COORDINATE_DISTORTION_BASE": 1.0,
+    "SGJG_COORDINATE_DISTORTION_DECAY": 0.3,
+    # Decision Inbox：低于该 Abs 损耗估计且无 CRITICAL 时不推送判词观察项
+    "GLOBAL_DECISION_ABS_THRESHOLD": 5.0,
 }
 
 

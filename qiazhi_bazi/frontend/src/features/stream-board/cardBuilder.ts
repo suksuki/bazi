@@ -2,18 +2,24 @@ import type { BaziMetadata } from "@/types/bazi";
 import { inferDecisionSkillId } from "@/features/decision-inbox/skillInference";
 import type { InboxCard, LogicProposal } from "./models";
 
+export type DecisionSignalToNoiseMeta = {
+  inbox_conflict_cards_eligible?: boolean;
+};
+
 export function buildInboxCards(params: {
   metadata: BaziMetadata | null;
   firstPromptText: string;
   auditorProposalCards: InboxCard[];
   resolvedCardIds: string[];
   t: (text: string) => string;
+  /** physics_tensor.meta.decision_signal_to_noise：低信噪且无 CRITICAL 时不生成判词观察项 */
+  decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
 }): InboxCard[] {
-  const { metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t } = params;
+  const { metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t, decisionSignalToNoise } = params;
   if (!metadata) return [];
   const conflictPoints = metadata.conflict_matrix?.points ?? [];
 
-  const sentenceItems = firstPromptText
+  let sentenceItems = firstPromptText
     .replace(/\r/g, "")
     .split(/\n+/)
     .flatMap((line) => line.split(/(?<=[。！？!?])/))
@@ -31,6 +37,10 @@ export function buildInboxCards(params: {
       };
       return { ...base, skillId: inferDecisionSkillId(base, conflictPoints) };
     });
+
+  if (decisionSignalToNoise?.inbox_conflict_cards_eligible === false) {
+    sentenceItems = [];
+  }
 
   const proposalCards = auditorProposalCards.map((card, index) => {
     const id = card.id || `auditor-proposal-${index}-${card.title}`;

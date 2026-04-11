@@ -3,7 +3,7 @@ import React, { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ActiveViewContext } from "@/components/layout/ActiveViewContext";
 import { LabConfigProvider } from "@/features/lab-config/LabConfigContext";
-import { useStreamBoardController } from "@/features/stream-board/useStreamBoardController";
+import { useStreamBoardController } from "@/features/stream-board";
 import { LabStoreProvider } from "@/features/stream-board/stores/useLabStore";
 
 const testActiveView = { activeView: "lab" as const, setActiveView: () => undefined };

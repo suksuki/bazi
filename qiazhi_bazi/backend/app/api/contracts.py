@@ -14,6 +14,7 @@ class BlindSchoolFeatureFlags(BaseModel):
     enable_pierce_harm: bool = True
     enable_tomb_vault: bool = True
     enable_host_guest_bonus: bool = True
+    enable_standard_overlap: bool = True
 
 
 class PhysicsConfig(BaseModel):

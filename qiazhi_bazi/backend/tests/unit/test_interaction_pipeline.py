@@ -46,6 +46,9 @@ def test_pipeline_sanhe_aggregated_lab01_shape():
     ge = float((tensor.get("meta") or {}).get("global_entropy") or 0)
     assert 0.0 <= ge <= 1.0
     assert (tensor.get("meta") or {}).get("global_entropy_metrics")
+    dsn = (tensor.get("meta") or {}).get("decision_signal_to_noise") or {}
+    assert "inbox_conflict_cards_eligible" in dsn
+    assert "threshold" in dsn
     # 乙木墓在未；此盘无未支，不应产生墓库插件步骤
     steps = pipe.get("steps") or []
     assert not any(s.get("plugin") == "base.grave" for s in steps)

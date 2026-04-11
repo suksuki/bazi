@@ -23,6 +23,7 @@ _DEFAULT_BLIND_FLAGS: Dict[str, bool] = {
     "enable_pierce_harm": True,
     "enable_tomb_vault": True,
     "enable_host_guest_bonus": True,
+    "enable_standard_overlap": True,
 }
 
 

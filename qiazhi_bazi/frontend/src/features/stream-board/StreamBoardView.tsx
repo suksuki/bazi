@@ -22,6 +22,7 @@ import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPa
 import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
 import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
 import type { InboxCard, StreamBoardViewModel } from "./models";
+import { buildStreamBoardViewDerivedState } from "./viewModel";
 import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
 import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
@@ -167,11 +168,20 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       ),
     [labUiState.snapshot?.physics_tensor, finalWorkVector],
   );
+  const l1JunctionFlags = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
+    ?.l1_junction_flags as Record<string, unknown> | undefined;
 
-  const hardRouteLogs = ((((physicsAudit as { trace?: { hard_route_logs?: string[] } } | null)?.trace?.hard_route_logs) || []) as string[]);
-  const climateSeason = String(
-    ((((physicsAudit as { trace?: { climate_adjustment?: { season?: string } } } | null)?.trace?.climate_adjustment?.season) || "")),
-  );
+  const {
+    hardRouteLogs,
+    climateSeason,
+    energyPeakAbs,
+    workExpectation,
+    backfireRiskVal,
+    releasedEnergyVal,
+    streamThemeStyle,
+    summaryVersionLabel,
+    hasVerdictHistory,
+  } = buildStreamBoardViewDerivedState(viewModel);
   const [viewMode, setViewMode] = React.useState<"VISION" | "COMMAND">("COMMAND");
   const [actionSyncing, setActionSyncing] = React.useState(false);
   const [revokeGlitch, setRevokeGlitch] = React.useState(false);
@@ -267,13 +277,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     };
   }, [metadata?.pillars, timeline, seedPreviewPillars, seedPreviewTimeline]);
 
-  const energyPeakAbs = useMemo(
-    () => Math.max(0, ...Object.values(deityEnergyAxes).map((v) => Number(v?.absolute_energy || 0))),
-    [deityEnergyAxes],
-  );
-  const workExpectation = Number((finalWorkVector || {}).work_expectation || 0);
-  const backfireRiskVal = Number((finalWorkVector || {}).backfire_risk || 0);
-  const releasedEnergyVal = Number((finalWorkVector || {}).released_energy || 0);
+
   const weakPathEnabled = Number(labConfig.SHOW_WEAK_WORK_PATHS || 0) > 0.5;
   const visionDiagnosticHint =
     energyPeakAbs > 10 && Math.abs(workExpectation) < 0.1
@@ -434,11 +438,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       });
     }
   }, [decisionHydrated, cards, decisionIds]);
-
-  const streamThemeStyle = {
-    "--stream-bg-color": streamThemeChroma.bgColor,
-    "--stream-overload-color": streamThemeChroma.isConflictOverload ? "rgba(130,0,20,0.35)" : "transparent",
-  } as React.CSSProperties;
 
   return (
     <main
@@ -785,9 +784,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   onStrategicDeityHover={setHoveredDeity}
                   onEvidenceClick={onEvidenceItemClick}
                   onShowVersionHistory={showVerdictHistory}
-                  hasVerdictHistory={finalVerdictHistory.length > 1}
+                  hasVerdictHistory={hasVerdictHistory}
                   selectionResetToken={selectionResetToken}
-                  summaryVersionLabel={`${finalVerdictVersionId || `Conclusion v1.${conclusionVersion}`} (Based on Physics v${String((physicsAudit as { param_version_id?: string } | null)?.param_version_id || "--").slice(0, 8)})`}
+                  summaryVersionLabel={summaryVersionLabel}
                   summaryChanged={summaryChanged}
                   l1Certified={l1Certified}
                   t={t}
@@ -803,6 +802,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   hideStrategicPanel
                   inboxResetNonce={inboxResetNonce}
                   interactionLocked={isFinalized}
+                  l1JunctionFlags={l1JunctionFlags}
                 />
                 <WillReplayPanel
                   items={confirmedDecisions || []}

@@ -11,7 +11,7 @@ from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.plugins.conflict_evaluator import evaluate_plugin_conflict
 from app.core.plugins.registry import PluginRegistry
-from app.core.rules.junction import detect_universal_flags
+from app.core.rules.junction import sync_l1_junction_flags_to_meta
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
 from app.skills.base import AuditLog, BaseSkill
@@ -138,7 +138,7 @@ class FinalVerdictSkill(BaseSkill):
             selected_cards=selected_cards,
             consensus_history=consensus_history,
         )
-        l1_flags = detect_universal_flags(metadata=metadata, physics_tensor=physics_tensor)
+        l1_flags = sync_l1_junction_flags_to_meta(metadata=metadata, physics_tensor=physics_tensor)
         blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=metadata)
         weight_blind = float((plugin_weights or {}).get("classical.blind_school.v1", 0.0) or 0.0)
         weight_wangshuai = float((plugin_weights or {}).get("classical.wangshuai.v1", 0.0) or 0.0)
@@ -448,7 +448,7 @@ class FinalVerdictSkill(BaseSkill):
             lang=lang,
             plugin_weights=plugin_weights,
         )
-        raw = await client.chat(prompt, temperature=0.2, max_tokens=900, stop=None)
+        raw, _tel = await client.chat_with_telemetry(prompt, temperature=0.2, max_tokens=900, stop=None)
         obj = self._extract_json(raw)
         verdict_body = str(obj.get("verdict_body") or "").strip()
         raw_change_log = obj.get("change_log")
@@ -472,7 +472,7 @@ class FinalVerdictSkill(BaseSkill):
             selected_cards=selected_cards,
             consensus_history=consensus_history,
         )
-        l1_flags = detect_universal_flags(metadata=metadata, physics_tensor=physics_tensor)
+        l1_flags = sync_l1_junction_flags_to_meta(metadata=metadata, physics_tensor=physics_tensor)
         blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=metadata)
         enc_audit = audit_host_guest_vectors(work_vector=blind_work)
         blind_work["encyclopedia_audit"] = enc_audit

@@ -1,7 +1,6 @@
 "use client";
 
-import { StreamBoardView } from "@/features/stream-board/StreamBoardView";
-import { useStreamBoardController } from "@/features/stream-board/useStreamBoardController";
+import { StreamBoardView, useStreamBoardController } from "@/features/stream-board";
 
 export function StreamBoard() {
   const viewModel = useStreamBoardController();

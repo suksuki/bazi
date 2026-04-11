@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import time
 from typing import Any, Dict, List
 
 from app.api.contracts import AuditLlmStructuredResponse, AuditPhysicsWithLlmRequest
@@ -72,10 +71,9 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
     llm_elapsed_ms = 0.0
     llm_approx_tokens = 0.0
     try:
-        t0 = time.perf_counter()
-        raw = await client.chat(prompt, temperature=0.2, max_tokens=700, stop=None)
-        llm_elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
-        llm_approx_tokens = round(len(raw) / 1.8, 2)
+        raw, tel = await client.chat_with_telemetry(prompt, temperature=0.2, max_tokens=700, stop=None)
+        llm_elapsed_ms = float(tel.get("elapsed_ms") or 0.0)
+        llm_approx_tokens = float(tel.get("approx_tokens") or 0.0)
         parsed = AuditLlmStructuredResponse.model_validate(json.loads(extract_first_json_object(raw)))
         structured_hit = True
         repair_mode = "strict_json"
@@ -85,10 +83,9 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
                 {"role": "system", "content": "Only output strict JSON object. No prose."},
                 {"role": "user", "content": f"基于上一轮分析，输出JSON：{raw[:1800]}"},
             ]
-            t1 = time.perf_counter()
-            retry_raw = await client.chat(retry_prompt, temperature=0.0, max_tokens=180, stop=None)
-            llm_elapsed_ms = round((llm_elapsed_ms or 0.0) + (time.perf_counter() - t1) * 1000, 2)
-            llm_approx_tokens = round((llm_approx_tokens or 0.0) + len(retry_raw) / 1.8, 2)
+            retry_raw, tel2 = await client.chat_with_telemetry(retry_prompt, temperature=0.0, max_tokens=180, stop=None)
+            llm_elapsed_ms = round((llm_elapsed_ms or 0.0) + float(tel2.get("elapsed_ms") or 0.0), 2)
+            llm_approx_tokens = round((llm_approx_tokens or 0.0) + float(tel2.get("approx_tokens") or 0.0), 2)
             raw = retry_raw
             parsed = AuditLlmStructuredResponse.model_validate(json.loads(extract_first_json_object(retry_raw)))
             structured_hit = True

@@ -10,6 +10,8 @@ type Props = {
   showDeltaBadge?: boolean;
   /** 盲派 / L1 Skill 注册表 ID，右上角展示 */
   skillId?: string;
+  /** 伤官见官等 L1 能级（如 Level: Surface (明)） */
+  energeticLevelLabel?: string;
   /** 终审锁定等：禁止切换勾选，但不阻断卡片内其它指针事件（如悬停联动徽章） */
   toggleDisabled?: boolean;
 };
@@ -23,8 +25,17 @@ export function DecisionItem({
   deltaAbs = null,
   showDeltaBadge = false,
   skillId,
+  energeticLevelLabel,
   toggleDisabled = false,
 }: Props) {
+  const levelSurface =
+    Boolean(energeticLevelLabel) &&
+    (energeticLevelLabel!.includes("Surface") || energeticLevelLabel!.includes("(明)"));
+  const levelDeep =
+    Boolean(energeticLevelLabel) &&
+    (energeticLevelLabel!.includes("Deep") || energeticLevelLabel!.includes("(藏)"));
+  const hasTopBadges = Boolean(skillId || energeticLevelLabel);
+  const hasDoubleTopBadges = Boolean(skillId && energeticLevelLabel);
   const hasDelta = showDeltaBadge && selected && typeof deltaAbs === "number" && Number.isFinite(deltaAbs) && Math.abs(deltaAbs) > 0.0001;
   const positive = (deltaAbs || 0) > 0;
   const highLoss = typeof deltaAbs === "number" && deltaAbs > 100;
@@ -39,7 +50,7 @@ export function DecisionItem({
   return (
     <div
       className={`relative flex items-center justify-between gap-3 rounded-lg border px-3 text-xs ${
-        skillId ? "pb-2 pt-6" : "py-2"
+        hasTopBadges ? (hasDoubleTopBadges ? "pb-2 pt-10" : "pb-2 pt-6") : "py-2"
       } ${selected ? "border-emerald-500/40 bg-emerald-500/10" : "border-zinc-700 bg-zinc-900"}`}
     >
       {skillId ? (
@@ -48,6 +59,16 @@ export function DecisionItem({
           title={`Skill: ${skillId}`}
         >
           {skillId}
+        </span>
+      ) : null}
+      {energeticLevelLabel ? (
+        <span
+          className={`absolute left-2 max-w-[calc(100%-5rem)] truncate rounded border border-amber-500/40 px-1.5 py-0.5 font-mono text-[9px] font-medium ${
+            levelDeep ? "bg-amber-950/45 text-amber-100/80 opacity-80" : "bg-amber-950/75 text-amber-100/95"
+          } ${levelSurface ? "animate-pulse" : ""} ${skillId ? "top-6" : "top-1"}`}
+          title={energeticLevelLabel}
+        >
+          {energeticLevelLabel}
         </span>
       ) : null}
       {hasDelta ? (

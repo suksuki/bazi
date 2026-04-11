@@ -1,5 +1,7 @@
 import { detectElementFromText } from "@/constants/termMap";
 
+import type { DecisionInboxCard } from "./types";
+
 const DEITIES = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"] as const;
 
 export function pruneSelectedIds(selectedIds: Record<string, boolean>, validCardIds: string[]) {
@@ -46,4 +48,16 @@ export function getCardElement(card: { displayText?: string; conflictDetail?: st
 
 export function isAuditorProposal(cardType?: string) {
   return cardType === "auditor-proposal" || cardType === "proposal";
+}
+
+/** 判词/卡片文案含「伤官见官」且 L1 已标记时，展示 physics 下发的能级标签 */
+export function sgjgEnergeticLabelForCard(
+  card: DecisionInboxCard,
+  l1JunctionFlags: Record<string, unknown> | undefined,
+): string | undefined {
+  if (!l1JunctionFlags || !l1JunctionFlags.SHANG_GUAN_JIAN_GUAN) return undefined;
+  const blob = `${card.title} ${card.displayText ?? ""} ${card.conflictDetail ?? ""} ${card.markdown ?? ""}`;
+  if (!blob.includes("伤官见官")) return undefined;
+  const label = l1JunctionFlags.sgjg_level_label;
+  return typeof label === "string" && label.trim() ? label : undefined;
 }

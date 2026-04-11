@@ -17,6 +17,7 @@ import {
   isAuditorProposal,
   isVerdictDeity,
   pruneSelectedIds,
+  sgjgEnergeticLabelForCard,
   splitVerdictLine,
 } from "@/features/decision-inbox/utils";
 import { SkillLinkedAssertionLine } from "@/features/stream-board/components/ResultInterpretation";
@@ -61,6 +62,8 @@ type Props = {
   inboxResetNonce?: number;
   /** 终审已签发：冻结勾选与语义权重滑杆 */
   interactionLocked?: boolean;
+  /** physics_tensor.meta.l1_junction_flags：伤官见官能级等 */
+  l1JunctionFlags?: Record<string, unknown>;
 };
 
 export function DecisionInbox({
@@ -100,6 +103,7 @@ export function DecisionInbox({
   t = (s) => s,
   inboxResetNonce = 0,
   interactionLocked = false,
+  l1JunctionFlags,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -386,6 +390,7 @@ export function DecisionInbox({
                         deltaAbs={logicDiff?.abs_delta}
                         showDeltaBadge={showDeltaBadge}
                         skillId={card.skillId}
+                        energeticLevelLabel={sgjgEnergeticLabelForCard(card, l1JunctionFlags)}
                         toggleDisabled={interactionLocked}
                         onToggle={() =>
                           applySelection({

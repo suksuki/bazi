@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from app.plugins.blind_school.rules.rule_host_guest import compute_causal_dividend_index, host_guest_chip_logs
 from app.plugins.blind_school.rules.rule_pierce import pierce_chip_logs_from_work_vectors, scan_six_harm_points
+from app.plugins.blind_school.rules.rule_standard_overlap import standard_overlap_chip_logs
 from app.plugins.blind_school.rules.rule_tomb import tomb_chip_logs
 
 __all__ = ["scan_six_harm_points", "compute_causal_dividend_index", "merge_mangpai_chip_logs"]
@@ -25,4 +26,6 @@ def merge_mangpai_chip_logs(
         logs.extend(tomb_chip_logs(metadata))
     if feature_flags.get("enable_host_guest_bonus", True):
         logs.extend(host_guest_chip_logs(physics_tensor))
+    if feature_flags.get("enable_standard_overlap", True):
+        logs.extend(standard_overlap_chip_logs(physics_tensor=physics_tensor))
     return logs

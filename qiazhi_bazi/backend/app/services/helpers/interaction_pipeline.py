@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Set
 
 from app.core.config.physics_settings import resolve_physics_settings
-from app.core.rules.junction import EnergyVaultStatus
+from app.core.rules.junction import EnergyVaultStatus, sync_l1_junction_flags_to_meta
 from app.plugins.base.interactions.l1_atomic_plugin import run_l1_atomic_plugin_pool
 
 
@@ -243,4 +243,8 @@ def evaluate_interactions(
         )
         meta["global_entropy"] = synth["value"]
         meta["global_entropy_metrics"] = synth["metrics"]
+        md = metadata.model_dump() if hasattr(metadata, "model_dump") else dict(metadata or {})
+        sync_l1_junction_flags_to_meta(
+            metadata=md, physics_tensor=physics_tensor, physics_settings=settings
+        )
     return physics_tensor

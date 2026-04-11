@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuditItem } from "@/components/AuditSidebar";
 import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
 import { API_BASE, VERDICT_TIMEOUT_MS } from "./constants";
@@ -10,10 +10,7 @@ import {
   finalVerdictHttpFallbackLog,
   parseFinalVerdictFromApiData,
 } from "./controller/finalVerdictPayload";
-import {
-  applyLabSnapshotHydrationPatch,
-  buildLabSnapshotHydrationPatch,
-} from "./controller/labSnapshotHydration";
+import type { LabSnapshotHydrationSinks } from "./controller/labSnapshotHydration";
 import {
   buildBlindSchoolFeaturesPayload,
   extractInteractionHubMangpai,
@@ -28,18 +25,17 @@ import type {
   ConfirmedDecisionItem,
   ConsensusItem,
   MetricSnapshot,
-  NavigationInfo,
   SilentBoardCtx,
+  SilentRecalcPhysicsSetters,
 } from "./controller/streamBoardTypes";
 import { useSeedPreviewModule } from "./controller/useSeedPreviewModule";
 import { useStreamBoardExecution, type StreamBoardExecutionContext } from "./controller/useStreamBoardExecution";
 import { useStreamBoardHealth } from "./controller/useStreamBoardHealth";
-import { buildInboxCards, createAuditorProposalCard } from "./cardBuilder";
+import { buildInboxCards, createAuditorProposalCard, type DecisionSignalToNoiseMeta } from "./cardBuilder";
 import type {
   DeityComponent,
   DeityEnergyAxis,
   FinalVerdictChangeLog,
-  FinalVerdictHistoryItem,
   InboxCard,
   LogicDiff,
   LlmDiagnosticData,
@@ -53,6 +49,13 @@ import { useClientSearchParams } from "./useClientSearchParams";
 import { useTranslationQueue } from "./useTranslationQueue";
 import { useActiveView, type ShellActiveView } from "@/components/layout/ActiveViewContext";
 import { useLabConfig } from "@/features/lab-config/LabConfigContext";
+import { useStreamBoardLabSnapshotEffects } from "@/features/stream-board/hooks/useStreamBoardLabSnapshotEffects";
+import { useStreamBoardSilentRecalculateLayout } from "@/features/stream-board/hooks/useStreamBoardSilentRecalculateLayout";
+import { useStreamBoardAuditUiState } from "@/features/stream-board/hooks/useStreamBoardAuditUiState";
+import { useStreamBoardLogicDrawerState } from "@/features/stream-board/hooks/useStreamBoardLogicDrawerState";
+import { useStreamBoardPhysicsState } from "@/features/stream-board/hooks/useStreamBoardPhysicsState";
+import type { StreamBoardHydrationSnapshot } from "@/features/stream-board/hooks/streamBoardSnapshotTypes";
+import { useStreamBoardVerdictState } from "@/features/stream-board/hooks/useStreamBoardVerdictState";
 import { useLabStore, useUiLang } from "@/features/stream-board/stores/useLabStore";
 
 export function useStreamBoardController(): StreamBoardViewModel {
@@ -83,20 +86,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     resetSeedPreviewState,
   } = useSeedPreviewModule(API_BASE);
 
-  const initialSnapshot = (labState.snapshot || null) as {
-    physics_tensor?: Record<string, unknown>;
-    final_verdict?: {
-      body?: string;
-      change_log?: FinalVerdictChangeLog;
-      logical_evidence?: string[];
-      work_vector?: Record<string, unknown>;
-      topology_graph_v1?: Record<string, unknown>;
-      structure_candidates_v0?: Record<string, unknown>;
-      structure_final_decision_v0?: Record<string, unknown>;
-      version_id?: string;
-    };
-    decision_selection_ids?: string[];
-  } | null;
+  const initialSnapshot = (labState.snapshot || null) as StreamBoardHydrationSnapshot;
   const { uiLang, setUiLang } = useUiLang();
   const [lang, setLangState] = useState<Lang>("ZH");
   const langRef = useRef<Lang>("ZH");
@@ -112,69 +102,98 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setLangState(uiLang);
   }, [uiLang]);
 
+  const {
+    conclusionVersion,
+    setConclusionVersion,
+    lastConclusionText,
+    setLastConclusionText,
+    summaryChanged,
+    setSummaryChanged,
+    finalVerdictBody,
+    setFinalVerdictBody,
+    finalVerdictChangeLog,
+    setFinalVerdictChangeLog,
+    finalVerdictVersionId,
+    setFinalVerdictVersionId,
+    finalLogicalEvidence,
+    setFinalLogicalEvidence,
+    finalWorkVector,
+    setFinalWorkVector,
+    finalTopologyGraphV1,
+    setFinalTopologyGraphV1,
+    finalStructureCandidatesV0,
+    setFinalStructureCandidatesV0,
+    finalStructureFinalDecisionV0,
+    setFinalStructureFinalDecisionV0,
+    finalVerdictHistory,
+    setFinalVerdictHistory,
+  } = useStreamBoardVerdictState(initialSnapshot);
+
+  const {
+    deityScores,
+    setDeityScores,
+    deityEnergyAxes,
+    setDeityEnergyAxes,
+    deityComponents,
+    setDeityComponents,
+    deityTraceDetails,
+    setDeityTraceDetails,
+    physicsAudit,
+    setPhysicsAudit,
+    physicsConfidence,
+    setPhysicsConfidence,
+    physicsEvidence,
+    setPhysicsEvidence,
+    physicsParams,
+    setPhysicsParams,
+    globalEntropy,
+    setGlobalEntropy,
+  } = useStreamBoardPhysicsState(initialSnapshot);
+
+  const {
+    streamingText,
+    setStreamingText,
+    auditItems,
+    setAuditItems,
+    resultLogs,
+    setResultLogs,
+    showPhysicsAudit,
+    setShowPhysicsAudit,
+    llmDiagnosticData,
+    setLlmDiagnosticData,
+  } = useStreamBoardAuditUiState();
+
+  const {
+    logicDrawerOpen,
+    setLogicDrawerOpen,
+    logicDrawerTitle,
+    setLogicDrawerTitle,
+    logicDrawerFocus,
+    setLogicDrawerFocus,
+    logicDrawerDetails,
+    setLogicDrawerDetails,
+    logicDrawerTrace,
+    setLogicDrawerTrace,
+  } = useStreamBoardLogicDrawerState();
+
   const [busy, setBusy] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string>();
   const [metadata, setMetadata] = useState<BaziMetadata | null>(null);
-  const [streamingText, setStreamingText] = useState("");
   const [consultationId, setConsultationId] = useState<number | null>(null);
-  const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
-  const [resultLogs, setResultLogs] = useState<string[]>([]);
   const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const [firstPromptText, setFirstPromptText] = useState("");
   const [timeline, setTimeline] = useState<TimelineSnapshot | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [deityScores, setDeityScores] = useState<Record<string, number>>(
-    () => ((initialSnapshot?.physics_tensor?.deity_scores as Record<string, number> | undefined) || {}),
-  );
-  const [deityEnergyAxes, setDeityEnergyAxes] = useState<Record<string, DeityEnergyAxis>>(
-    () => ((initialSnapshot?.physics_tensor?.deity_energy_axes as Record<string, DeityEnergyAxis> | undefined) || {}),
-  );
-  const [deityComponents, setDeityComponents] = useState<Record<string, DeityComponent>>(
-    () => ((initialSnapshot?.physics_tensor?.deity_components as Record<string, DeityComponent> | undefined) || {}),
-  );
-  const [deityTraceDetails, setDeityTraceDetails] = useState<Record<string, Record<string, unknown>>>(
-    () => ((initialSnapshot?.physics_tensor?.deity_trace_details as Record<string, Record<string, unknown>> | undefined) || {}),
-  );
   const [hoveredDeity, setHoveredDeity] = useState<string>();
-  const [physicsAudit, setPhysicsAudit] = useState<Record<string, unknown> | null>(null);
-  const [physicsConfidence, setPhysicsConfidence] = useState<number | null>(null);
-  const [physicsEvidence, setPhysicsEvidence] = useState<string[]>([]);
   const { labConfig, setLabConfig, pluginSwitches, setPluginSwitches, pluginWeights, setPluginWeights } = useLabConfig();
-  const [showPhysicsAudit, setShowPhysicsAudit] = useState(false);
-  const [llmDiagnosticData, setLlmDiagnosticData] = useState<LlmDiagnosticData | null>(null);
   const [lastSeedPayload, setLastSeedPayload] = useState<SeedPayload | null>(null);
   const [auditorProposalCards, setAuditorProposalCards] = useState<InboxCard[]>([]);
-  const [physicsParams, setPhysicsParams] = useState<Record<string, number>>({});
-  const [globalEntropy, setGlobalEntropy] = useState<number | null>(null);
   const [autoConvertedParamKey, setAutoConvertedParamKey] = useState<string | null>(null);
   const [resolvedCardIds, setResolvedCardIds] = useState<string[]>([]);
   const [selectionResetToken, setSelectionResetToken] = useState(0);
   const [sigShiftFlashKey, setSigShiftFlashKey] = useState(0);
-  const [conclusionVersion, setConclusionVersion] = useState(0);
-  const [lastConclusionText, setLastConclusionText] = useState("");
-  const [summaryChanged, setSummaryChanged] = useState(false);
   const [consensusHistory, setConsensusHistory] = useState<ConsensusItem[]>([]);
-  const [finalVerdictBody, setFinalVerdictBody] = useState(() => String(initialSnapshot?.final_verdict?.body || ""));
-  const [finalVerdictChangeLog, setFinalVerdictChangeLog] = useState<FinalVerdictChangeLog>(
-    () => (initialSnapshot?.final_verdict?.change_log || {}) as FinalVerdictChangeLog,
-  );
-  const [finalVerdictVersionId, setFinalVerdictVersionId] = useState(() => String(initialSnapshot?.final_verdict?.version_id || ""));
-  const [finalLogicalEvidence, setFinalLogicalEvidence] = useState<string[]>(
-    () => (Array.isArray(initialSnapshot?.final_verdict?.logical_evidence) ? initialSnapshot.final_verdict.logical_evidence.map((x) => String(x)) : []),
-  );
-  const [finalWorkVector, setFinalWorkVector] = useState<Record<string, unknown> | null>(
-    () => (initialSnapshot?.final_verdict?.work_vector as Record<string, unknown>) || null,
-  );
-  const [finalTopologyGraphV1, setFinalTopologyGraphV1] = useState<Record<string, unknown> | null>(
-    () => (initialSnapshot?.final_verdict?.topology_graph_v1 as Record<string, unknown>) || null,
-  );
-  const [finalStructureCandidatesV0, setFinalStructureCandidatesV0] = useState<Record<string, unknown> | null>(
-    () => (initialSnapshot?.final_verdict?.structure_candidates_v0 as Record<string, unknown>) || null,
-  );
-  const [finalStructureFinalDecisionV0, setFinalStructureFinalDecisionV0] = useState<Record<string, unknown> | null>(
-    () => (initialSnapshot?.final_verdict?.structure_final_decision_v0 as Record<string, unknown>) || null,
-  );
   const [confirmedDecisions, setConfirmedDecisions] = useState<ConfirmedDecisionItem[]>([]);
   const [confirmedDecisionIds, setConfirmedDecisionIds] = useState<string[]>(
     () => normalizedSnapshotDecisionIds(initialSnapshot?.decision_selection_ids),
@@ -218,7 +237,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     baselineMetrics: null,
     confirmedDecisionIds: [],
   });
-  const settersRef = useRef({
+  const settersRef = useRef<SilentRecalcPhysicsSetters>({
     setMetadata: (_m: BaziMetadata | null) => {},
     setTimeline: (_t: TimelineSnapshot | null) => {},
     setDeityScores: (_s: Record<string, number>) => {},
@@ -243,15 +262,58 @@ export function useStreamBoardController(): StreamBoardViewModel {
     current_entropy: null,
     entropy_delta: null,
   });
-  const [finalVerdictHistory, setFinalVerdictHistory] = useState<FinalVerdictHistoryItem[]>([]);
   const [stressTestResult, setStressTestResult] = useState<Record<string, unknown> | null>(null);
   const [genderComparisonResult, setGenderComparisonResult] = useState<Record<string, unknown> | null>(null);
-  const [logicDrawerOpen, setLogicDrawerOpen] = useState(false);
-  const [logicDrawerTitle, setLogicDrawerTitle] = useState("Arbiter Logic Drawer");
-  const [logicDrawerFocus, setLogicDrawerFocus] = useState("");
-  const [logicDrawerDetails, setLogicDrawerDetails] = useState<string[]>([]);
-  const [logicDrawerTrace, setLogicDrawerTrace] = useState<Record<string, unknown> | null>(null);
   const [snapshotAvailable, setSnapshotAvailable] = useState(false);
+
+  const hydrationSinksRef = useRef({} as LabSnapshotHydrationSinks);
+  hydrationSinksRef.current = {
+    setMetadata,
+    setTimeline,
+    setFirstPromptText,
+    setConsultationId,
+    setHealth,
+    setAuditItems,
+    setResultLogs,
+    setLlmDiagnosticData,
+    setDeityScores,
+    setDeityEnergyAxes,
+    setDeityComponents,
+    setDeityTraceDetails,
+    setPhysicsAudit,
+    setPhysicsConfidence,
+    setPhysicsEvidence,
+    setPhysicsParams,
+    setGlobalEntropy,
+    setFinalVerdictBody,
+    setFinalVerdictChangeLog,
+    setFinalVerdictVersionId,
+    setFinalLogicalEvidence,
+    setFinalWorkVector,
+    setFinalTopologyGraphV1,
+    setFinalStructureCandidatesV0,
+    setFinalStructureFinalDecisionV0,
+    setResolvedCardIds,
+    setConfirmedDecisionIds,
+    setLogicDiff,
+    setLastSeedPayload,
+    setSnapshotAvailable,
+  };
+
+  useStreamBoardLabSnapshotEffects({
+    metadata,
+    labSnapshot: labState.snapshot,
+    lastSeedPayload: labState.lastSeedPayload,
+    inboxResetNonce: labState.inboxResetNonce,
+    isSnapshotRestoringRef,
+    inboxNonceHandledRef,
+    navHandledRef,
+    hydrationSinksRef,
+    setSnapshotAvailable,
+    setConfirmedDecisionIds,
+    setResolvedCardIds,
+    setSelectionResetToken,
+  });
 
   const { i18nCalls, t } = useTranslationQueue({
     lang,
@@ -272,9 +334,24 @@ export function useStreamBoardController(): StreamBoardViewModel {
     ],
   });
 
+  const decisionSignalToNoise = useMemo((): DecisionSignalToNoiseMeta | undefined => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const raw = meta?.decision_signal_to_noise;
+    if (raw && typeof raw === "object") return raw as DecisionSignalToNoiseMeta;
+    return undefined;
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
   const cards = useMemo(
-    () => buildInboxCards({ metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t }),
-    [metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t],
+    () =>
+      buildInboxCards({
+        metadata,
+        firstPromptText,
+        auditorProposalCards,
+        resolvedCardIds,
+        t,
+        decisionSignalToNoise,
+      }),
+    [metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t, decisionSignalToNoise],
   );
   const updateLogicDiff = (current: MetricSnapshot, forceBaseline = false): LogicDiff => {
     const baselineFromStore = (() => {
@@ -1323,95 +1400,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setConfirmedDecisionIds((prev) => prev.filter((item) => item !== id));
   }
 
-  /**
-   * 实验室 store 里 mergeSnapshot 已有完整因果现场，但本 hook 内大量 useState 默认空。
-   * 任意导致 StreamBoard 重挂载的情况都必须从 snapshot 灌回，否则界面像「全丢」。
-   */
-  useLayoutEffect(() => {
-    if (metadata !== null) return;
-    const snap = labState.snapshot;
-    const patch = buildLabSnapshotHydrationPatch(snap, labState.lastSeedPayload);
-    if (!patch) return;
-
-    isSnapshotRestoringRef.current = true;
-    try {
-      applyLabSnapshotHydrationPatch(patch, {
-        setMetadata,
-        setTimeline,
-        setFirstPromptText,
-        setConsultationId,
-        setHealth,
-        setAuditItems,
-        setResultLogs,
-        setLlmDiagnosticData,
-        setDeityScores,
-        setDeityEnergyAxes,
-        setDeityComponents,
-        setDeityTraceDetails,
-        setPhysicsAudit,
-        setPhysicsConfidence,
-        setPhysicsEvidence,
-        setPhysicsParams,
-        setGlobalEntropy,
-        setFinalVerdictBody,
-        setFinalVerdictChangeLog,
-        setFinalVerdictVersionId,
-        setFinalLogicalEvidence,
-        setFinalWorkVector,
-        setFinalTopologyGraphV1,
-        setFinalStructureCandidatesV0,
-        setFinalStructureFinalDecisionV0,
-        setResolvedCardIds,
-        setConfirmedDecisionIds,
-        setLogicDiff,
-        setLastSeedPayload,
-        setSnapshotAvailable,
-      });
-    } finally {
-      queueMicrotask(() => {
-        isSnapshotRestoringRef.current = false;
-      });
-    }
-  }, [labState.snapshot, labState.lastSeedPayload, metadata]);
-
-  useLayoutEffect(() => {
-    if (navHandledRef.current) return;
-    if (typeof window === "undefined") return;
-    navHandledRef.current = true;
-    const params = new URLSearchParams(window.location.search);
-    const hasSnapshot = Boolean(labState.snapshot);
-    const hasActiveSession = Boolean(labState.snapshot?.active_session_id);
-    const hasValidSnapshot = hasSnapshot && hasActiveSession;
-    const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-    const navType = ((navEntry?.type || "unknown") as NavigationInfo["navType"]);
-    const isReload = navType === "reload";
-    const isBackForward = navType === "back_forward";
-    const resumeFromMarker = false;
-    let intent: NavigationInfo["intent"] = "FRESH_START";
-
-    if (hasValidSnapshot && (isReload || isBackForward || resumeFromMarker)) {
-      intent = "RESTORE_AUDIT";
-    } else {
-      intent = "FRESH_START";
-    }
-
-    const navInfo: NavigationInfo = {
-      navType,
-      hasValidSnapshot,
-      intent,
-    };
-    const debugMode = (params.get("debug") || "").trim() === "1";
-    if (debugMode) {
-      // State Recovery Auditor: deterministic diagnostics for recovery decisions.
-      // eslint-disable-next-line no-console
-      console.info("[StateRecoveryAuditor]", navInfo);
-    }
-  }, [labState.snapshot]);
-
-  useEffect(() => {
-    setSnapshotAvailable(Boolean(labState.snapshot));
-  }, [labState.snapshot]);
-
   const reCalculateAbs = useCallback(async () => {
     await reCalculateAbsSilentlyImplRef.current();
   }, []);
@@ -1510,118 +1498,24 @@ export function useStreamBoardController(): StreamBoardViewModel {
     onPluginConfigChange,
   ]);
 
-  useLayoutEffect(() => {
-    const n = labState.inboxResetNonce;
-    if (n === 0 || n === inboxNonceHandledRef.current) return;
-    inboxNonceHandledRef.current = n;
-    setConfirmedDecisionIds(normalizedSnapshotDecisionIds(labState.snapshot?.decision_selection_ids));
-    setResolvedCardIds((labState.snapshot?.resolved_card_ids || []).map((x) => String(x)));
-    setSelectionResetToken((v) => v + 1);
-  }, [
-    labState.inboxResetNonce,
-    labState.snapshot?.decision_selection_ids,
-    labState.snapshot?.resolved_card_ids,
-  ]);
-
-  useLayoutEffect(() => {
-    reCalculateAbsSilentlyImplRef.current = async () => {
-      const seed = lastSeedPayloadRef.current;
-      if (!seed || isSnapshotRestoringRef.current || isRestoringRef.current) return;
-      if (labStateRef.current.isFinalized) return;
-      if (verdictRecalcBarrierRef.current) {
-        silentRecalcDeferredRef.current = true;
-        return;
-      }
-      if (silentRecalcInFlightRef.current) return;
-      silentRecalcInFlightRef.current = true;
-      const c = silentCtxRef.current;
-      const set = settersRef.current;
-      try {
-        const latestHealth = await refreshHealthRef.current();
-        const response = await fetch(`${API_BASE}/api/v1/analyze-seed`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: seed.date,
-            time: seed.time,
-            calendar: seed.calendar,
-            gender: seed.gender,
-            lang: c.lang,
-            latitude: 31.2304,
-            longitude: 121.4737,
-            session_id: c.consultationId ?? undefined,
-            physics_config: c.labConfig,
-            enabled_plugins: [
-              ...(c.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-              ...(c.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-              ...(c.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-            ],
-            blind_school_features: buildBlindSchoolFeaturesPayload(c.pluginSwitches),
-            reference_year: referenceYearRef.current,
-          }),
-        });
-        if (!response.ok) return;
-        const data = await response.json();
-        const tensor = (data.physics_tensor || null) as Record<string, unknown> | null;
-        if (!tensor || typeof tensor !== "object") return;
-
-        set.setMetadata(data.metadata as BaziMetadata);
-        set.setTimeline((data.timeline ?? null) as TimelineSnapshot | null);
-        if (tensor.deity_scores && typeof tensor.deity_scores === "object") {
-          set.setDeityScores(tensor.deity_scores as Record<string, number>);
-        }
-        if (tensor.deity_energy_axes && typeof tensor.deity_energy_axes === "object") {
-          set.setDeityEnergyAxes(tensor.deity_energy_axes as Record<string, DeityEnergyAxis>);
-        }
-        if (tensor.deity_components && typeof tensor.deity_components === "object") {
-          set.setDeityComponents(tensor.deity_components as Record<string, DeityComponent>);
-        }
-        if (tensor.deity_trace_details && typeof tensor.deity_trace_details === "object") {
-          set.setDeityTraceDetails(tensor.deity_trace_details as Record<string, Record<string, unknown>>);
-        } else if ((tensor.meta as Record<string, unknown> | undefined)?.deity_trace_details) {
-          set.setDeityTraceDetails(
-            (tensor.meta as Record<string, unknown>).deity_trace_details as Record<string, Record<string, unknown>>,
-          );
-        } else {
-          set.setDeityTraceDetails({});
-        }
-        if (tensor.audit_log && typeof tensor.audit_log === "object") {
-          set.setPhysicsAudit(tensor.audit_log as Record<string, unknown>);
-        }
-        set.setPhysicsConfidence(typeof tensor.confidence === "number" ? tensor.confidence : null);
-        if (Array.isArray(tensor.evidence)) {
-          set.setPhysicsEvidence(tensor.evidence.map((item: unknown) => String(item)));
-        } else {
-          set.setPhysicsEvidence([]);
-        }
-        const pMeta = (tensor.meta || {}) as Record<string, unknown>;
-        if (pMeta.params && typeof pMeta.params === "object") {
-          set.setPhysicsParams(pMeta.params as Record<string, number>);
-        }
-        const ge = pMeta.global_entropy;
-        set.setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
-
-        const currentMetric = extractMetricSnapshotFromPhysics(tensor);
-        updateLogicDiffRef.current(currentMetric, c.confirmedDecisionIds.length === 0 || !c.baselineMetrics);
-        persistSnapshotRef.current({
-          physics_tensor: tensor,
-          metadata: data.metadata as Record<string, unknown>,
-          timeline: (data.timeline ?? null) as Record<string, unknown> | null,
-          llm_prompt: data.llm_prompt || "",
-          audit_summary: data.audit_summary,
-          consultationIdOverride: c.consultationId,
-          healthOverride: latestHealth,
-          seedSignatureOverride: seedPayloadSignature(seed),
-        });
-        bumpSyncBarrierSeq();
-        scheduleInteractionHubPersist();
-      } catch {
-        /* silent */
-      } finally {
-        silentRecalcInFlightRef.current = false;
-      }
-    };
-  }, [bumpSyncBarrierSeq, scheduleInteractionHubPersist]);
+  useStreamBoardSilentRecalculateLayout({
+    reCalculateAbsSilentlyImplRef,
+    lastSeedPayloadRef,
+    isSnapshotRestoringRef,
+    isRestoringRef,
+    labStateRef,
+    verdictRecalcBarrierRef,
+    silentRecalcDeferredRef,
+    silentRecalcInFlightRef,
+    silentCtxRef,
+    settersRef,
+    refreshHealthRef,
+    referenceYearRef,
+    updateLogicDiffRef,
+    persistSnapshotRef,
+    bumpSyncBarrierSeq,
+    scheduleInteractionHubPersist,
+  });
 
   useEffect(() => {
     if (busy || isStreaming || isExecuting) return;

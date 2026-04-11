@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any, Dict, List
 
@@ -30,12 +31,16 @@ from app.services.helpers.analysis_helpers import (
     normalize_translation_texts,
     parse_translation_response,
 )
+from app.core.errors import DatabaseFetchError
 from app.services.helpers.interaction_pipeline import evaluate_interactions
+from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
 from app.skills.final_verdict import FinalVerdictSkill
 from app.skills.physics_engine import PhysicsInferenceSkill
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
 from app.skills.energy_topology_skill import EnergyTopologySkill
+
+_LOG = logging.getLogger(__name__)
 
 
 async def translate_text_items(body: TranslateRequest) -> Dict[str, List[str]]:
@@ -49,7 +54,7 @@ async def translate_text_items(body: TranslateRequest) -> Dict[str, List[str]]:
         api_key=cfg.get("api_key"),
         model=cfg.get("model") or None,
     )
-    raw = await client.chat(
+    raw, _tel = await client.chat_with_telemetry(
         build_translation_messages(texts, body.target_lang),
         temperature=0.1,
         max_tokens=1500,
@@ -89,18 +94,18 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     )
     llm_elapsed_ms = 0.0
     llm_approx_tokens = 0.0
-    t0 = time.perf_counter()
     try:
-        llm_text = await client.chat(
+        llm_text, tel = await client.chat_with_telemetry(
             build_first_observation_messages(metadata_obj.model_dump(), location_hint=location_hint, lang=body.lang),
             temperature=0.3,
             max_tokens=512,
             stop=["Thinking Process:", "Reasoning:", "思考过程", "推理过程"],
         )
-        llm_elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
-        llm_approx_tokens = round(len(llm_text) / 1.8, 2)
+        llm_elapsed_ms = float(tel.get("elapsed_ms") or 0.0)
+        llm_approx_tokens = float(tel.get("approx_tokens") or 0.0)
     except Exception:
-        llm_elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
+        llm_elapsed_ms = 0.0
+        llm_approx_tokens = 0.0
         observed = [point.detail for point in metadata_obj.conflict_matrix.points]
         llm_text = fallback_clash_prompt(observed)
 
@@ -218,13 +223,20 @@ def resolve_consensus_history(
     explicit_history: List[Dict[str, Any]] | None,
     consultation_id: int | None,
     session_scope: Any,
+    rethrow_db: bool = False,
 ) -> List[Dict[str, Any]]:
     history = list(explicit_history or [])
     if consultation_id and not history:
         try:
             with session_scope() as s:
                 history = load_consensus_history(s, consultation_id)
-        except Exception:
+        except Exception as exc:
+            _LOG.exception(
+                "consensus_history_db_fetch_failed consultation_id=%s",
+                consultation_id,
+            )
+            if rethrow_db:
+                raise DatabaseFetchError("读取会话共识历史失败") from exc
             history = []
     return history
 
@@ -236,54 +248,10 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
     if not isinstance(physics_tensor.get("meta"), dict):
         raise ValueError("physics_tensor.meta 缺失")
     if "abs_nodes" not in physics_tensor:
-        # 兼容旧结构：若存在 deity_energy_axes 则自动镜像为 abs_nodes；否则视为缺失
-        axes = physics_tensor.get("deity_energy_axes")
-        if isinstance(axes, dict) and axes:
-            composite = physics_tensor.get("composite_field_impact")
-
-            def _cluster_effective_abs(name: str, raw_abs: float) -> float | None:
-                if not isinstance(composite, dict):
-                    return None
-                sanhe_clusters = composite.get("sanhe_clusters")
-                if not isinstance(sanhe_clusters, list):
-                    return None
-                for cluster in sanhe_clusters:
-                    if not isinstance(cluster, dict):
-                        continue
-                    for map_key in ("effective_abs_nodes", "abs_nodes", "node_effective_abs"):
-                        m = cluster.get(map_key)
-                        if isinstance(m, dict) and isinstance(m.get(name), (int, float)):
-                            return float(m.get(name))
-                    nodes = cluster.get("nodes")
-                    if isinstance(nodes, list):
-                        for node in nodes:
-                            if not isinstance(node, dict):
-                                continue
-                            node_name = str(node.get("name") or node.get("node") or node.get("deity") or "")
-                            if node_name != name:
-                                continue
-                            for val_key in ("effective_abs", "effective_energy", "effective_field_abs"):
-                                if isinstance(node.get(val_key), (int, float)):
-                                    return float(node.get(val_key))
-                            if isinstance(node.get("raw_energy"), (int, float)):
-                                unlocked = bool(cluster.get("cluster_phi_unlock", False))
-                                return float(node.get("raw_energy")) if unlocked else 0.0
-                    if bool(cluster.get("cluster_phi_unlock", False)) is False and (
-                        isinstance(cluster.get("energy_vault_status"), str)
-                        and str(cluster.get("energy_vault_status")).upper() == "AGGREGATED"
-                    ):
-                        if isinstance(cluster.get("deities"), list) and name in [str(x) for x in cluster.get("deities")]:
-                            return max(0.0, raw_abs * 0.0)
-                return None
-
-            mirrored: Dict[str, float] = {}
-            for k, v in axes.items():
-                raw_abs = float(((v or {}).get("absolute_energy", 0.0) if isinstance(v, dict) else 0.0) or 0.0)
-                effective = _cluster_effective_abs(k, raw_abs)
-                mirrored[k] = float(effective if effective is not None else raw_abs)
-            physics_tensor["abs_nodes"] = mirrored
-        else:
-            raise ValueError("physics_tensor.abs_nodes 缺失")
+        try:
+            ensure_abs_nodes_on_physics_tensor(physics_tensor)
+        except ValueError as exc:
+            raise ValueError("physics_tensor.abs_nodes 缺失") from exc
 
     skill = FinalVerdictSkill.instance()
     clear_flag = bool(body.clear_previous_verdict or body.force_clear_cache)

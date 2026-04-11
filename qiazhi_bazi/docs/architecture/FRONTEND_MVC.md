@@ -59,3 +59,15 @@ src/features/<feature>/
 - `useStreamBoardController`：controller 回归测试
 - `admin-settings`：controller 集成测试
 - `decision-inbox / bazi-card / ten-god-list / auditor-briefing`：helper 单测
+
+## 7. Stream Board 控制器重构约定（2026-04）
+
+- **`useStreamBoardController.ts` 仅作编排（Facade）**：禁止再向该文件堆叠新业务分支；新逻辑放入 `features/stream-board/hooks/useStreamBoard*.ts` 或 `controller/*` 纯函数。
+- **子域 Hook（已实现）**：
+  - `hooks/useStreamBoardVerdictState.ts`：终审正文、结构候选、版本与历史
+  - `hooks/useStreamBoardPhysicsState.ts`：`physics_tensor` 在 UI 上的切片（十神分、审计、熵）
+  - `hooks/useStreamBoardAuditUiState.ts`：流式判词、审计侧栏、诊断
+  - `hooks/useStreamBoardLogicDrawerState.ts`：Arbiter 逻辑抽屉
+  - `hooks/useStreamBoardLabSnapshotEffects.ts`：实验室 `snapshot` 灌回、导航恢复诊断、Inbox 重置与 `snapshotAvailable`（`useLayoutEffect` / `useEffect`）
+- **数据流（简图）**：`LabStore.snapshot` → 子域 state 初始化 → `mergeSnapshot` / API 回写 → View；Hydration 与持久化仍由主编排 hook 内 `useEffect` 协调，子 hook 不直接访问 `localStorage`。
+- **新增 UI 状态**：先判断属于哪一子域，再决定放进哪个 `useStreamBoard*State`，避免上帝对象回潮。

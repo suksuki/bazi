@@ -54,6 +54,24 @@ describe("stream-board utils", () => {
     expect(cards.map((card) => card.id)).toEqual(["proposal-1", "llm-observe-0", "llm-observe-2"]);
   });
 
+  it("suppresses LLM observation cards when decision signal-to-noise gate is closed", () => {
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+      },
+      firstPromptText: "第一句。第二句。",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      t: (text) => text,
+      decisionSignalToNoise: { inbox_conflict_cards_eligible: false },
+    });
+    expect(cards.map((c) => c.id)).toEqual(["fallback-deep-scan"]);
+  });
+
   it("returns a stable fallback verdict payload", () => {
     const verdict = buildFallbackVerdict(["子午冲"]);
     expect(verdict.body).toContain("子午冲");
