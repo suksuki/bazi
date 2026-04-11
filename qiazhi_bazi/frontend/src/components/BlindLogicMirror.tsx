@@ -21,6 +21,7 @@ type WorkVectorItem = {
 
 type Props = {
   workVector?: Record<string, unknown>;
+  t?: (s: string) => string;
 };
 
 type CampCard = { name: string; abs: number; state: string; tone: string };
@@ -46,7 +47,7 @@ function buildCamp(nameList: string[], absTotal: number, isBody: boolean): CampC
   });
 }
 
-export function BlindLogicMirror({ workVector = {} }: Props) {
+export function BlindLogicMirror({ workVector = {}, t = (s: string) => s }: Props) {
   const workVectors = ((workVector as { work_vectors?: WorkVectorItem[] }).work_vectors || []);
   const hostAbs = Number(workVectors.reduce((acc, item) => acc + Number(item.host_abs || 0), 0)) || 0;
   const guestAbs = Number(workVectors.reduce((acc, item) => acc + Number(item.guest_abs || 0), 0)) || 0;
@@ -66,7 +67,7 @@ export function BlindLogicMirror({ workVector = {} }: Props) {
   const showWeakPaths = Number((((workVector as { runtime_physics_config?: Record<string, unknown> }).runtime_physics_config || {}).SHOW_WEAK_WORK_PATHS) || 0) > 0.5;
   const workExpectation = Number((workVector as { work_expectation?: number }).work_expectation || 0);
   const emptyHint = (!workVectors.length && maxAxisAbs > 100 && workExpectation <= 0.05)
-    ? "做功工具（午火）受大运（子水）压制，路径断裂。"
+    ? t("做功工具（午火）受大运（子水）压制，路径断裂。")
     : undefined;
   const spatialAudit = ((workVector as { spatial_audit?: Record<string, unknown> }).spatial_audit || {});
   const spatialLockWarning = String(spatialAudit.lock_warning || "");
@@ -86,10 +87,10 @@ export function BlindLogicMirror({ workVector = {} }: Props) {
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-      <h4 className="text-sm font-medium text-zinc-100">盲派体用对垒仪表盘</h4>
+      <h4 className="text-sm font-medium text-zinc-100">{t("盲派体用对垒仪表盘")}</h4>
       <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3">
         <motion.div initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-2">
-          <p className="text-xs text-cyan-300">体（BODY） [家里/INTERNAL]</p>
+          <p className="text-xs text-cyan-300">{t("体（BODY） [家里/INTERNAL]")}</p>
           {bodyCards.map((card, idx) => (
             (() => {
               const damage = damageMap.get(card.name);
@@ -107,7 +108,7 @@ export function BlindLogicMirror({ workVector = {} }: Props) {
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-zinc-100">{card.name}</span>
                 <span className="rounded border border-zinc-600 px-1 text-[10px] text-zinc-300">
-                  [{card.state}{critical ? " / CRITICAL_STRESS" : ""}]
+                  [{t(card.state)}{critical ? " / CRITICAL_STRESS" : ""}]
                 </span>
               </div>
               <div className="h-1.5 rounded bg-zinc-800">
@@ -127,20 +128,27 @@ export function BlindLogicMirror({ workVector = {} }: Props) {
         </motion.div>
 
         <div className={`rounded border bg-zinc-900 p-2 ${isExitLocked ? "border-rose-500/60 shadow-[0_0_18px_rgba(244,63,94,0.25)]" : "border-zinc-700"}`}>
-          <p className="mb-1 text-xs text-zinc-300">做功空腔（Working Chamber）</p>
+          <p className="mb-1 text-xs text-zinc-300">{t("做功空腔（Working Chamber）")}</p>
           {isExitLocked ? (
             <div className="mb-2 rounded border border-rose-500/50 bg-gradient-to-r from-rose-500/20 via-red-500/10 to-transparent px-2 py-1 text-[11px] text-rose-200">
               <span className="mr-1 inline-block animate-pulse">⚡</span>
-              [出口被封锁：能量内溢风险]
-              {blockingElements.length ? ` 阻滞点：${blockingElements.join(" / ")}` : ""}
+              {t("[出口被封锁：能量内溢风险]")}
+              {blockingElements.length ? `${t(" 阻滞点：")}${blockingElements.join(" / ")}` : ""}
             </div>
           ) : null}
           {spatialLockWarning ? (
             <p className="mb-2 rounded border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
-              {spatialLockWarning}
+              {t(spatialLockWarning)}
             </p>
           ) : null}
-          <EnergyBridge vectors={workVectors} bodyLabels={bodyLabels} useLabels={useLabels} showWeakPaths={showWeakPaths} emptyHint={emptyHint} />
+          <EnergyBridge
+            vectors={workVectors}
+            bodyLabels={bodyLabels}
+            useLabels={useLabels}
+            showWeakPaths={showWeakPaths}
+            emptyHint={emptyHint}
+            t={t}
+          />
           <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
             <p className="rounded border border-cyan-700/30 bg-cyan-500/10 p-1 text-cyan-200">Input: {gain.toFixed(2)}</p>
             <p className="rounded border border-orange-700/30 bg-orange-500/10 p-1 text-orange-200">Tax: {risk.toFixed(2)}</p>
@@ -150,26 +158,26 @@ export function BlindLogicMirror({ workVector = {} }: Props) {
           </div>
           {unlockAdvice.length > 0 ? (
             <div className="mt-2 rounded border border-cyan-700/40 bg-cyan-500/10 p-2 text-[11px] text-cyan-200">
-              <p className="mb-1">解锁建议（Strategic Strike）</p>
+              <p className="mb-1">{t("解锁建议（Strategic Strike）")}</p>
               {unlockAdvice.slice(0, 3).map((item, idx) => (
-                <p key={`unlock-${idx}`}>- {String(item.action || "")}</p>
+                <p key={`unlock-${idx}`}>- {t(String(item.action || ""))}</p>
               ))}
             </div>
           ) : null}
         </div>
 
         <motion.div initial={{ x: 24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-2">
-          <p className="text-xs text-amber-300">用（USE） [家外/EXTERNAL]</p>
+          <p className="text-xs text-amber-300">{t("用（USE） [家外/EXTERNAL]")}</p>
           {isExitLocked ? (
             <div className="rounded border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-[10px] text-rose-200">
-              时柱出口告警：门被焊死（高压态）
+              {t("时柱出口告警：门被焊死（高压态）")}
             </div>
           ) : null}
           {useCards.map((card, idx) => (
             <div key={`use-${card.name}-${idx}`} className={`rounded border border-amber-700/40 bg-gradient-to-r ${card.tone} p-2`}>
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-zinc-100">{card.name}</span>
-                <span className="rounded border border-zinc-600 px-1 text-[10px] text-zinc-300">[{card.state}]</span>
+                <span className="rounded border border-zinc-600 px-1 text-[10px] text-zinc-300">[{t(card.state)}]</span>
               </div>
               <div className="h-1.5 rounded bg-zinc-800">
                 <div className="h-full rounded bg-amber-400/80" style={{ width: `${Math.max(6, Math.min(100, card.abs * 10))}%` }} />

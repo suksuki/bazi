@@ -4,12 +4,12 @@ import { motion } from "framer-motion";
 import { useBlindSkillHighlight } from "@/features/stream-board/context/BlindSkillHighlightContext";
 import type { BlindSkillBadge } from "@/features/stream-board/utils/blindSkillRuntime";
 
-export function BlindSkillBadgeRow({ badges }: { badges: BlindSkillBadge[] }) {
+export function BlindSkillBadgeRow({ badges, t = (s: string) => s }: { badges: BlindSkillBadge[]; t?: (s: string) => string }) {
   const { highlightedBadgeId } = useBlindSkillHighlight();
   if (!badges.length) return null;
   return (
     <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-violet-500/25 bg-violet-950/30 px-2 py-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">盲派 Skill</span>
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">{t("盲派 Skill")}</span>
       {badges.map((b) => {
         const dim = !b.armed;
         const hot = b.armed && b.hit;
@@ -17,7 +17,7 @@ export function BlindSkillBadgeRow({ badges }: { badges: BlindSkillBadge[] }) {
         return (
           <motion.span
             key={b.id}
-            title={`${b.id}${b.hit ? " · 本局已命中信号" : b.armed ? " · 已武装" : " · 未启用"}`}
+            title={`${b.id}${b.hit ? t(" · 本局已命中信号") : b.armed ? t(" · 已武装") : t(" · 未启用")}`}
             animate={{ scale: pulse ? 1.14 : 1 }}
             transition={{ type: "spring", stiffness: 460, damping: 20 }}
             className={`inline-block rounded-md border px-2 py-0.5 text-[10px] font-bold transition-shadow ${

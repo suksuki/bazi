@@ -10,6 +10,7 @@ type Props = {
   globalEntropy?: number | null;
   diagnosticHint?: string;
   genderLabel?: string;
+  t?: (s: string) => string;
 };
 
 export function StrategicCoreHUD({
@@ -21,22 +22,23 @@ export function StrategicCoreHUD({
   globalEntropy = null,
   diagnosticHint = "",
   genderLabel = "",
+  t = (s: string) => s,
 }: Props) {
   const useful = ((structureFinalDecision as { utility_god?: string[] }).utility_god || []) as string[];
   const obstacle = ((structureFinalDecision as { obstacle_god?: string[] }).obstacle_god || []) as string[];
   const climate = ((structureFinalDecision as { climate_adjustment?: { summary?: string } }).climate_adjustment || {});
   const title = String((structureFinalDecision as { primary_structure_humanized?: string }).primary_structure_humanized || "");
   const summary = title.includes("建禄")
-    ? "当前为【建禄格】，物理能量处于溢出状态，排水（泄耗）是优先策略。"
+    ? t("当前为【建禄格】，物理能量处于溢出状态，排水（泄耗）是优先策略。")
     : title.includes("月劫")
-      ? "当前为【月劫格】，争夺态明显，需以食伤泄压并谨慎控风险。"
+      ? t("当前为【月劫格】，争夺态明显，需以食伤泄压并谨慎控风险。")
       : title.includes("身强无依")
-        ? "当前为【身强无依】，核能空转，必须建立有效做功出口。"
+        ? t("当前为【身强无依】，核能空转，必须建立有效做功出口。")
         : "";
   const roleHint = genderLabel === "female"
-    ? "女性语义：官杀常映射事业/伴侣压力轴；用忌建议侧重官杀链路稳定性。"
+    ? t("女性语义：官杀常映射事业/伴侣压力轴；用忌建议侧重官杀链路稳定性。")
     : genderLabel === "male"
-      ? "男性语义：财星常映射财富/伴侣压力轴；用忌建议侧重财星链路稳定性。"
+      ? t("男性语义：财星常映射财富/伴侣压力轴；用忌建议侧重财星链路稳定性。")
       : "";
   const conflictReport = ((structureFinalDecision as { plugin_conflict_report?: { tension_level?: number; zone?: string; divergence_notes?: string[] } }).plugin_conflict_report || {});
   const tensionLevel = Number(conflictReport.tension_level || 0);
@@ -64,17 +66,18 @@ export function StrategicCoreHUD({
         }}
       />
       <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
-        话语权占比：盲派 {blindPct}% | 旺衰 {wanshuaiPct}%
+        {t("话语权占比：盲派 {blPct}% | 旺衰 {wPct}%").replace("{blPct}", String(blindPct)).replace("{wPct}", String(wanshuaiPct))}
       </div>
-      <p className="mb-2 text-xs text-zinc-400">战略核心看板（Strategic HUD）</p>
+      <p className="mb-2 text-xs text-zinc-400">{t("战略核心看板（Strategic HUD）")}</p>
       {Array.isArray(conflictReport.divergence_notes) && conflictReport.divergence_notes.length > 0 ? (
         <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-300">
-          {String(conflictReport.divergence_notes[0] || "")}
+          {t(String(conflictReport.divergence_notes[0] || ""))}
         </div>
       ) : null}
       {genderLabel ? (
         <div className="mb-2 inline-flex rounded border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[11px] text-zinc-300">
-          性别坐标：{genderLabel === "male" ? "乾造（男）" : "坤造（女）"}
+          {t("性别坐标：")}
+          {genderLabel === "male" ? t("乾造（男）") : t("坤造（女）")}
         </div>
       ) : null}
       {roleHint ? (
@@ -84,7 +87,8 @@ export function StrategicCoreHUD({
       ) : null}
       {summary ? (
         <div className={`mb-2 rounded border px-2 py-1 text-[11px] ${title.includes("身强无依") ? "border-amber-500/40 bg-amber-500/10 text-amber-200" : "border-zinc-700 bg-zinc-900 text-zinc-300"}`}>
-          {title.includes("身强无依") ? "⚠ " : ""}{summary}
+          {title.includes("身强无依") ? "⚠ " : ""}
+          {summary}
         </div>
       ) : null}
       {diagnosticHint ? (
@@ -94,7 +98,9 @@ export function StrategicCoreHUD({
       ) : null}
       {energyPeak > 0 ? (
         <div className="mb-2 rounded border border-fuchsia-600/40 bg-fuchsia-500/10 px-2 py-1 text-[11px] text-fuchsia-200">
-          <p className="mb-1">峰值能量（Abs）: {energyPeak.toFixed(2)}</p>
+          <p className="mb-1">
+            {t("峰值能量（Abs）:")} {energyPeak.toFixed(2)}
+          </p>
           <div className="h-1.5 w-full overflow-hidden rounded bg-zinc-800">
             <div className="h-full bg-fuchsia-400/80" style={{ width: `${Math.max(5, Math.min(100, energyPeak))}%` }} />
           </div>
@@ -102,7 +108,7 @@ export function StrategicCoreHUD({
       ) : null}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         <div className="rounded border border-emerald-600/40 bg-emerald-500/10 p-2 text-[11px] text-emerald-200">
-          <p className="mb-1">用神（能量出口）</p>
+          <p className="mb-1">{t("用神（能量出口）")}</p>
           <p>
             {(useful.length ? useful : ["-"]).map((item, idx) => (
               <button key={`use-${idx}`} type="button" className="mr-1 underline decoration-dotted" onMouseEnter={() => onPickDeity?.(item)} onClick={() => onPickDeity?.(item)}>
@@ -112,7 +118,7 @@ export function StrategicCoreHUD({
           </p>
         </div>
         <div className={`rounded border border-rose-600/40 bg-rose-500/10 p-2 text-[11px] text-rose-200 ${hasReboundRisk ? "animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.35)]" : ""}`}>
-          <p className="mb-1">忌神（坍塌风险）</p>
+          <p className="mb-1">{t("忌神（坍塌风险）")}</p>
           <p>
             {(obstacle.length ? obstacle : ["-"]).map((item, idx) => (
               <button key={`obs-${idx}`} type="button" className="mr-1 underline decoration-dotted" onMouseEnter={() => onPickDeity?.(item)} onClick={() => onPickDeity?.(item)}>
@@ -122,8 +128,8 @@ export function StrategicCoreHUD({
           </p>
         </div>
         <div className="rounded border border-sky-600/40 bg-sky-500/10 p-2 text-[11px] text-sky-200">
-          <p className="mb-1">调候（硬修正）</p>
-          <p>{String(climate.summary || "已启用")}</p>
+          <p className="mb-1">{t("调候（硬修正）")}</p>
+          <p>{climate.summary ? t(String(climate.summary)) : t("已启用")}</p>
         </div>
       </div>
     </section>

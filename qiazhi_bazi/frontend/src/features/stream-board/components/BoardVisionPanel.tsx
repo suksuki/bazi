@@ -99,7 +99,7 @@ export function BoardVisionPanel({
         {t("视觉场 · 全局熵")} {globalEntropy != null ? globalEntropy.toFixed(3) : "—"}
         {t("（沉浸式看盘）")}
       </div>
-      <LogicSummary physicsAudit={physicsAudit} />
+      <LogicSummary physicsAudit={physicsAudit} t={t} />
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-500/25 bg-cyan-950/40 px-3 py-2 text-[11px] text-cyan-100/95">
         <span className="text-zinc-400">
           {hasBoard ? t("当前已有排盘结果，可随时修改生辰重算。") : t("尚未排盘：请先录入生辰八字。")}
@@ -122,6 +122,7 @@ export function BoardVisionPanel({
           globalEntropy={globalEntropy}
           diagnosticHint={visionDiagnosticHint}
           genderLabel={String((metadata as { gender?: string } | null)?.gender || "")}
+          t={t}
         />
       </div>
       <section className="rounded-2xl border border-cyan-500/25 bg-zinc-950/70 p-2">
@@ -147,6 +148,7 @@ export function BoardVisionPanel({
                 timeline={timeline}
                 disabled={Boolean(busy || isFinalized)}
                 className="w-full min-w-[200px] max-w-md"
+                t={t}
               />
             ) : null}
             {isPreviewBoard ? (
@@ -156,7 +158,7 @@ export function BoardVisionPanel({
         </div>
         {/* md+ 与指令舱顶栏徽章去重：桌面端仅在 Command 模式展示 BlindSkillBadgeRow */}
         <div className="md:hidden">
-          <BlindSkillBadgeRow badges={blindSkillBadges} />
+          <BlindSkillBadgeRow badges={blindSkillBadges} t={t} />
         </div>
         <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
@@ -195,12 +197,13 @@ export function BoardVisionPanel({
               pivotDeity={pivotDeity}
               pivotDefenseSemantic={pivotDefenseSemantic}
               fluxKey={referenceYear}
+              t={t}
             />
           </div>
         </div>
       </section>
       <div className="min-h-[min(52dvh,420px)] flex-1 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-2">
-        <BlindLogicMirror workVector={finalWorkVector || {}} />
+        <BlindLogicMirror workVector={finalWorkVector || {}} t={t} />
       </div>
       <div className="flex min-h-[min(42dvh,360px)] flex-1 flex-col rounded-2xl border border-zinc-800 bg-zinc-950/50 p-2">
         <TopologyMapV1 graph={finalTopologyGraphV1 || {}} />

@@ -70,7 +70,13 @@ function skillIdFromRow(row: unknown): string {
   return part || String(r.step ?? "");
 }
 
-export function LogicSummary({ physicsAudit }: { physicsAudit: Record<string, unknown> | null | undefined }) {
+export function LogicSummary({
+  physicsAudit,
+  t = (s: string) => s,
+}: {
+  physicsAudit: Record<string, unknown> | null | undefined;
+  t?: (s: string) => string;
+}) {
   const top = useMemo(() => {
     const rows = collectAuditRows(physicsAudit ?? null);
     const scored = rows.map((row) => ({
@@ -86,17 +92,18 @@ export function LogicSummary({ physicsAudit }: { physicsAudit: Record<string, un
   if (!top.length) {
     return (
       <div className="rounded-lg border border-zinc-800/90 bg-zinc-950/50 px-2 py-2 text-[10px] text-zinc-500">
-        暂无 physics_audit 条目；提交命盘后展示 Skill 能量贡献 Top5。
+        {t("暂无 physics_audit 条目；提交命盘后展示 Skill 能量贡献 Top5。")}
       </div>
     );
   }
 
   return (
     <div className="rounded-lg border border-emerald-500/25 bg-emerald-950/20 px-2 py-2">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-300/90">逻辑概览 · Skill 贡献 Top5</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-300/90">{t("逻辑概览 · Skill 贡献 Top5")}</p>
       <ol className="mt-1.5 space-y-1 text-[11px] text-emerald-100/90">
         {top.map((item, idx) => {
-          const label = SKILL_LABELS[item.skillId] || item.skillId || "Skill";
+          const rawLabel = SKILL_LABELS[item.skillId] || item.skillId || "Skill";
+          const label = SKILL_LABELS[item.skillId] ? t(SKILL_LABELS[item.skillId]) : rawLabel;
           const v = item.signed;
           const sign = v >= 0 ? "+" : "";
           return (

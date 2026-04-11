@@ -162,6 +162,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     hasVerdictHistory,
   } = buildStreamBoardViewDerivedState(viewModel);
   const [viewMode, setViewMode] = React.useState<"VISION" | "COMMAND">("COMMAND");
+  const [seedFlowPhase, setSeedFlowPhase] = React.useState<"entry" | "main">("entry");
+  const [seedEntryMountKey, setSeedEntryMountKey] = React.useState(0);
   const [actionSyncing, setActionSyncing] = React.useState(false);
   const [revokeGlitch, setRevokeGlitch] = React.useState(false);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
@@ -177,8 +179,25 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
 
   const goToSeedInput = React.useCallback(() => {
     setViewMode("COMMAND");
+    setSeedFlowPhase("main");
   }, []);
   const hasBoard = Boolean(metadata?.pillars);
+
+  React.useEffect(() => {
+    if (metadata?.pillars) setSeedFlowPhase("main");
+  }, [metadata?.pillars]);
+
+  React.useEffect(() => {
+    if (seedFlowPhase === "entry") setViewMode("COMMAND");
+  }, [seedFlowPhase]);
+
+  const handleBackToSeedEntry = React.useCallback(() => {
+    if (isFinalized) return;
+    clearLabPipelineForSeedDraft();
+    setSeedFlowPhase("entry");
+    setSeedEntryMountKey((k) => k + 1);
+    setLastAppliedSeedSignature("");
+  }, [isFinalized, clearLabPipelineForSeedDraft]);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
   const currentParamSignature = JSON.stringify(pluginWeights || {});
   const seedDirty = Boolean(currentSeedSignature && currentSeedSignature !== lastAppliedSeedSignature);
@@ -260,7 +279,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const weakPathEnabled = Number(labConfig.SHOW_WEAK_WORK_PATHS || 0) > 0.5;
   const visionDiagnosticHint =
     energyPeakAbs > 10 && Math.abs(workExpectation) < 0.1
-      ? `检测到能量高度淤积（Abs: ${energyPeakAbs.toFixed(2)}），做功路径受阻。${weakPathEnabled ? "已开启逻辑透深。" : ""}`
+      ? `${t("检测到能量高度淤积（Abs: {abs}），做功路径受阻。").replace("{abs}", energyPeakAbs.toFixed(2))}${
+          weakPathEnabled ? t("已开启逻辑透深。") : ""
+        }`
       : "";
   const hasReboundRisk = backfireRiskVal > 0.35;
   const actionMode: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY" = actionSyncing || busy
@@ -285,16 +306,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     absDeltaLow;
 
   const primaryLabelOverride = isFinalized
-    ? "已签发 (Issued)"
+    ? t("已签发 (Issued)")
     : actionSyncing || busy
       ? undefined
-      : seedDirty
-        ? t("测算八字")
-        : unresolvedConflictCount > 0
-          ? "同步因果"
-          : canIssueFinal
-            ? "签发终审"
-            : undefined;
+      : t("掐指一算");
 
   const handleFullCalculate = React.useCallback(async () => {
     if (!draftSeed) return;
@@ -437,12 +452,15 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         active={(streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal) || revokeGlitch}
         entropy={revokeGlitch ? 0.9 : globalEntropy}
       />
-      <LabViewModeFab viewMode={viewMode} onToggle={() => setViewMode((m) => (m === "VISION" ? "COMMAND" : "VISION"))} />
+      {seedFlowPhase === "main" ? (
+        <LabViewModeFab viewMode={viewMode} onToggle={() => setViewMode((m) => (m === "VISION" ? "COMMAND" : "VISION"))} />
+      ) : null}
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
           <p className="mt-1 font-mono text-[11px] text-amber-200/90">
-            Unresolved Conflicts: {unresolvedConflictCount}
+            {t("未决冲突：")}
+            {unresolvedConflictCount}
           </p>
           <SnapshotBanner tag={snapshotUrlTag ?? ""} />
           <p className="text-xs text-zinc-500">{t(I18N[lang].subtitle)}</p>
@@ -464,113 +482,148 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         </div>
       </header>
 
-      {hasBoard ? <PatternStatus profile={patternProfile as PatternProfileSlice | null} className="mb-3" /> : null}
+      {hasBoard ? <PatternStatus profile={patternProfile as PatternProfileSlice | null} className="mb-3" t={t} /> : null}
 
       {sovereigntyDominant ? (
         <div
           className="mb-2 rounded-lg border border-amber-400/55 bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-amber-600/10 px-3 py-2 text-center text-[11px] font-semibold tracking-[0.2em] text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.18)]"
           data-testid="sovereignty-dominant-banner"
         >
-          主权占优
+          {t("主权占优")}
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 md:flex-row">
-        <div
-          className="flex-1 space-y-3"
-          onTouchStart={(e) => {
-            touchStartX.current = e.changedTouches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            const x0 = touchStartX.current;
-            touchStartX.current = null;
-            if (x0 == null) return;
-            const dx = e.changedTouches[0].clientX - x0;
-            if (dx > 56) setViewMode("VISION");
-            if (dx < -56) setViewMode("COMMAND");
-          }}
+      {seedFlowPhase === "entry" ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto w-full max-w-xl space-y-3"
         >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="hidden rounded-lg border border-zinc-700 bg-zinc-900 p-0.5 md:flex">
+          <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/80 shadow-[0_0_0_1px_rgba(251,191,36,0.08)]">
+            <div className="border-b border-zinc-800 px-3 py-2.5 text-xs font-medium text-amber-100/95">
+              {t("生辰八字 · 地法（The Seed）")}
+            </div>
+            <div className="p-3">
+              <SeedInput
+                key={seedEntryMountKey}
+                hydrateFrom={draftSeed}
+                onSubmit={onSeedSubmit}
+                busy={busy}
+                t={t}
+                hideSubmitButton
+                entryCommitAction={{
+                  label: t("选定开始测算"),
+                  busy: seedPreviewBusy,
+                  onClick: async (p) => {
+                    handleSeedPayloadChange(p);
+                    await refreshSeedPreview(p);
+                    setSeedFlowPhase("main");
+                    setViewMode("COMMAND");
+                  },
+                }}
+                onPayloadChange={handleSeedPayloadChange}
+              />
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <div className="flex flex-col gap-3 md:flex-row">
+          <div
+            className="flex-1 space-y-3"
+            onTouchStart={(e) => {
+              touchStartX.current = e.changedTouches[0].clientX;
+            }}
+            onTouchEnd={(e) => {
+              const x0 = touchStartX.current;
+              touchStartX.current = null;
+              if (x0 == null) return;
+              const dx = e.changedTouches[0].clientX - x0;
+              if (dx > 56) setViewMode("VISION");
+              if (dx < -56) setViewMode("COMMAND");
+            }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="hidden rounded-lg border border-zinc-700 bg-zinc-900 p-0.5 md:flex">
+                <button
+                  type="button"
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    viewMode === "VISION" ? "bg-amber-500/25 text-amber-200" : "text-zinc-500"
+                  }`}
+                  onClick={() => setViewMode("VISION")}
+                >
+                  {t("视觉仪表盘")}
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    viewMode === "COMMAND" ? "bg-cyan-500/20 text-cyan-200" : "text-zinc-500"
+                  }`}
+                  onClick={() => setViewMode("COMMAND")}
+                >
+                  {t("指令舱")}
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-500 md:hidden">{t("滑动主区域切换视图，或点右下角浮动按钮")}</p>
               <button
                 type="button"
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
-                  viewMode === "VISION" ? "bg-amber-500/25 text-amber-200" : "text-zinc-500"
-                }`}
-                onClick={() => setViewMode("VISION")}
+                onClick={() => setActiveView("debug")}
+                className="text-left text-[10px] text-zinc-500 underline-offset-2 hover:text-amber-300/90 hover:underline"
               >
-                {t("视觉仪表盘")}
-              </button>
-              <button
-                type="button"
-                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
-                  viewMode === "COMMAND" ? "bg-cyan-500/20 text-cyan-200" : "text-zinc-500"
-                }`}
-                onClick={() => setViewMode("COMMAND")}
-              >
-                {t("指令舱")}
+                {t("黑匣子（L1 审计）→")}
               </button>
             </div>
-            <p className="text-[10px] text-zinc-500 md:hidden">{t("滑动主区域切换视图，或点右下角浮动按钮")}</p>
-            <button
-              type="button"
-              onClick={() => setActiveView("debug")}
-              className="text-left text-[10px] text-zinc-500 underline-offset-2 hover:text-amber-300/90 hover:underline"
-            >
-              {t("黑匣子（L1 审计）→")}
-            </button>
-          </div>
 
-          <AnimatePresence mode="wait">
-            {viewMode === "VISION" ? (
-              <BoardVisionPanel
-                viewModel={viewModel}
-                hasBoard={hasBoard}
-                isPreviewBoard={isPreviewBoard}
-                globalEntropy={globalEntropy}
-                visionDiagnosticHint={visionDiagnosticHint}
-                hasReboundRisk={hasReboundRisk}
-                energyPeakAbs={energyPeakAbs}
-                blindSkillBadges={blindSkillBadges}
-                goToSeedInput={goToSeedInput}
-                hardRouteLogs={hardRouteLogs}
-                climateSeason={climateSeason}
-                releasedEnergyVal={releasedEnergyVal}
-              />
-            ) : (
-              <BoardCommandPanel
-                viewModel={viewModel}
-                draftSeed={draftSeed}
-                simpleBoard={simpleBoard}
-                isPreviewBoard={isPreviewBoard}
-                seedPreviewBusy={seedPreviewBusy}
-                seedPreviewError={seedPreviewError}
-                handleSeedPayloadChange={handleSeedPayloadChange}
-                lastSubmittedDecisionIds={lastSubmittedDecisionIds}
-                blindSkillBadges={blindSkillBadges}
-                setCurrentDecisions={setCurrentDecisions}
-                setDecisionIds={setDecisionIds}
-                handleMainBarRun={handleMainBarRun}
-                handleRevokeDecision={handleRevokeDecision}
-                revertEntropyDelta={revertEntropyDelta}
-                actionMode={actionMode}
-                isDecisionDirty={isDecisionDirty}
-                actionSyncing={actionSyncing}
-                primaryLabelOverride={primaryLabelOverride}
-                canIssueFinal={canIssueFinal}
-                checklistResetToken={checklistResetToken}
-                workExpectation={workExpectation}
-                backfireRiskVal={backfireRiskVal}
-                releasedEnergyVal={releasedEnergyVal}
-                hasVerdictHistory={hasVerdictHistory}
-                summaryVersionLabel={summaryVersionLabel}
-                l1JunctionFlags={l1JunctionFlags}
-                decisionSignalToNoise={decisionSignalToNoise}
-              />
-            )}
-          </AnimatePresence>
+            <AnimatePresence mode="wait">
+              {viewMode === "VISION" ? (
+                <BoardVisionPanel
+                  viewModel={viewModel}
+                  hasBoard={hasBoard}
+                  isPreviewBoard={isPreviewBoard}
+                  globalEntropy={globalEntropy}
+                  visionDiagnosticHint={visionDiagnosticHint}
+                  hasReboundRisk={hasReboundRisk}
+                  energyPeakAbs={energyPeakAbs}
+                  blindSkillBadges={blindSkillBadges}
+                  goToSeedInput={goToSeedInput}
+                  hardRouteLogs={hardRouteLogs}
+                  climateSeason={climateSeason}
+                  releasedEnergyVal={releasedEnergyVal}
+                />
+              ) : (
+                <BoardCommandPanel
+                  viewModel={viewModel}
+                  draftSeed={draftSeed}
+                  simpleBoard={simpleBoard}
+                  isPreviewBoard={isPreviewBoard}
+                  seedPreviewBusy={seedPreviewBusy}
+                  seedPreviewError={seedPreviewError}
+                  lastSubmittedDecisionIds={lastSubmittedDecisionIds}
+                  blindSkillBadges={blindSkillBadges}
+                  setCurrentDecisions={setCurrentDecisions}
+                  setDecisionIds={setDecisionIds}
+                  handleMainBarRun={handleMainBarRun}
+                  handleRevokeDecision={handleRevokeDecision}
+                  revertEntropyDelta={revertEntropyDelta}
+                  actionMode={actionMode}
+                  isDecisionDirty={isDecisionDirty}
+                  actionSyncing={actionSyncing}
+                  primaryLabelOverride={primaryLabelOverride}
+                  canIssueFinal={canIssueFinal}
+                  checklistResetToken={checklistResetToken}
+                  workExpectation={workExpectation}
+                  backfireRiskVal={backfireRiskVal}
+                  releasedEnergyVal={releasedEnergyVal}
+                  hasVerdictHistory={hasVerdictHistory}
+                  summaryVersionLabel={summaryVersionLabel}
+                  l1JunctionFlags={l1JunctionFlags}
+                  decisionSignalToNoise={decisionSignalToNoise}
+                  onBackToSeedEntry={handleBackToSeedEntry}
+                />
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      )}
 
       {labUiState.isFinalized && labUiState.finalizationReport?.hash ? (
         <motion.div
@@ -580,7 +633,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
           className="relative z-0 mt-8 border-t border-zinc-800/90 pt-6 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]"
         >
           <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-[0.25em] text-zinc-500">
-            终审已签发 · 公文压底
+            {t("终审已签发 · 公文压底")}
           </p>
           <VerdictCertificate
             hash={labUiState.finalizationReport.hash}
@@ -609,6 +662,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
               })()
             }
             causalSovereignty={causalSovereigntyForCert ?? undefined}
+            t={t}
           />
         </motion.div>
       ) : null}

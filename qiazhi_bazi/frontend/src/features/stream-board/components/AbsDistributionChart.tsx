@@ -5,6 +5,21 @@ import { TEN_GOD_ORDER } from "@/features/ten-god-list/constants";
 import { buildLockedDeitySet, extractHardRouteKeys } from "@/features/ten-god-list/utils";
 import { buildRoutingHighlightDeities, ROUTING_CONFLICT_TOOLTIP } from "../utils/routingConflictHighlight";
 
+function RoutingLightningIcon({ title }: { title: string }) {
+  return (
+    <span
+      title={title}
+      className="pointer-events-auto inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/40"
+      style={{ color: "#F59E0B" }}
+      aria-label={title}
+    >
+      <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-current" aria-hidden>
+        <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" />
+      </svg>
+    </span>
+  );
+}
+
 type Axis = { absolute_energy?: number; relative_percentage?: number };
 type Comp = {
   total_score?: number;
@@ -45,21 +60,6 @@ function FusionLinkIcon({ title }: { title: string }) {
   );
 }
 
-function RoutingLightningIcon() {
-  return (
-    <span
-      title={ROUTING_CONFLICT_TOOLTIP}
-      className="pointer-events-auto inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500/15 ring-1 ring-amber-500/40"
-      style={{ color: "#F59E0B" }}
-      aria-label={ROUTING_CONFLICT_TOOLTIP}
-    >
-      <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="currentColor" aria-hidden>
-        <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" />
-      </svg>
-    </span>
-  );
-}
-
 export type AbsDistributionChartProps = {
   deityScores: Record<string, number>;
   deityEnergyAxes?: Record<string, Axis>;
@@ -86,6 +86,7 @@ export type AbsDistributionChartProps = {
   pivotDeity?: string | null;
   /** physics_tensor.meta.pivot_defense_v1：枢纽语义（命脉受损 / 枢纽稳固） */
   pivotDefenseSemantic?: string | null;
+  t?: (s: string) => string;
 };
 
 export function AbsDistributionChart({
@@ -104,6 +105,7 @@ export function AbsDistributionChart({
   l1StatusPerDeity = null,
   pivotDeity = null,
   pivotDefenseSemantic = null,
+  t = (s: string) => s,
 }: AbsDistributionChartProps) {
   const anomalyTag = (topAnomaly || "").trim();
   const lockedByKeys = extractHardRouteKeys(hardRouteLogs);
@@ -142,7 +144,9 @@ export function AbsDistributionChart({
         const showRouting = routingMarks.has(name);
         const fusionEntry = fusionLinks.find((l) => Array.isArray(l.deities) && l.deities.includes(name));
         const fusionTitle = fusionEntry
-          ? `天干五合：${(fusionEntry.stems || []).join("+")}（${fusionEntry.mode === "transformed" ? "化气" : "合而不化"}）`
+          ? t("天干五合：{stems}（{mode}）")
+              .replace("{stems}", (fusionEntry.stems || []).join("+"))
+              .replace("{mode}", fusionEntry.mode === "transformed" ? t("化气") : t("合而不化"))
           : "";
         const workEff = l1StatusPerDeity?.[name]?.work_efficiency;
         const effNum = typeof workEff === "number" && Number.isFinite(workEff) ? workEff : null;
@@ -151,10 +155,10 @@ export function AbsDistributionChart({
         const effLabel =
           effNum != null
             ? effNum >= 1.15
-              ? "巅峰"
+              ? t("巅峰")
               : effNum <= 0.55
-                ? "低谷"
-                : "平区"
+                ? t("低谷")
+                : t("平区")
             : "";
         const isPivot = Boolean(pivotDeity && name === pivotDeity);
 
@@ -162,22 +166,24 @@ export function AbsDistributionChart({
           <div key={name} className="relative pt-2">
             {showRouting ? (
               <div className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 justify-center">
-                <RoutingLightningIcon />
+                <RoutingLightningIcon title={t(ROUTING_CONFLICT_TOOLTIP)} />
               </div>
             ) : null}
             <button
               type="button"
               onClick={() =>
                 onOpenLogic?.({
-                  title: `${name} 数值审计`,
+                  title: `${name}${t(" 数值审计")}`,
                   focus: name,
                   details: [
                     `${name}: ${totalScore.toFixed(2)}% (Abs: ${absEnergy.toFixed(2)})`,
                     isPivot
-                      ? `[枢纽] ${pivotDefenseSemantic || "旺衰引擎标定的 Target_Pivot（用神侧能量×能效）"}`
+                      ? `${t("[枢纽] ")}${t(
+                          pivotDefenseSemantic || "旺衰引擎标定的 Target_Pivot（用神侧能量×能效）",
+                        )}`
                       : "",
-                    hit ? `[审计预警] ${anomalyTag}` : "当前未命中该项异常关键词。",
-                    "点击后可查看：基础动能 / 物理干预 / 归一化校准",
+                    hit ? `${t("[审计预警] ")}${t(anomalyTag)}` : t("当前未命中该项异常关键词。"),
+                    t("点击后可查看：基础动能 / 物理干预 / 归一化校准"),
                   ].filter(Boolean),
                   deityTrace: deityTraceDetails[name] as Record<string, unknown> | undefined,
                 })
@@ -187,7 +193,11 @@ export function AbsDistributionChart({
                   ? "border-amber-400/85 shadow-[0_0_0_2px_rgba(251,191,36,0.45),0_0_14px_rgba(251,191,36,0.18)] ring-2 ring-amber-400/70 ring-offset-2 ring-offset-zinc-950"
                   : "border-zinc-800"
               }`}
-              title={isPivot ? `枢纽十神（${pivotDefenseSemantic || "Target_Pivot"}）` : "点击查看演算路径"}
+              title={
+                isPivot
+                  ? t("枢纽十神（{s}）").replace("{s}", pivotDefenseSemantic || "Target_Pivot")
+                  : t("点击查看演算路径")
+              }
               onMouseEnter={() => onHoverDeity?.(name)}
               onMouseLeave={() => onHoverDeity?.(undefined)}
             >
@@ -196,16 +206,20 @@ export function AbsDistributionChart({
                 <span className="flex items-center gap-2">
                   {hit ? (
                     <span className="rounded-full border border-rose-500/60 bg-rose-500/20 px-2 py-0.5 text-[10px] text-rose-300">
-                      ! 挑刺
+                      {t("! 挑刺")}
                     </span>
                   ) : null}
-                  {lockedDeities.has(name) ? <LockIcon title={`该能量场已根据共识参数 ${lockedByKeys.join(", ") || "N/A"} 锁定`} /> : null}
+                  {lockedDeities.has(name) ? (
+                    <LockIcon
+                      title={`${t("该能量场已根据共识参数 ")}${lockedByKeys.join(", ") || "N/A"}${t(" 锁定")}`}
+                    />
+                  ) : null}
                   {fusionEntry ? <FusionLinkIcon title={fusionTitle} /> : null}
                   <span className="text-zinc-400">
                     {totalScore.toFixed(2)}%{" "}
                     <span className="text-sky-300">(Abs: {absEnergy.toFixed(2)})</span>
                     {climateIntensity > 0 ? (
-                      <span className="ml-1 text-[10px] text-zinc-500" title="调候硬修正已启用">
+                      <span className="ml-1 text-[10px] text-zinc-500" title={t("调候硬修正已启用")}>
                         {seasonIcon || "☁"}
                       </span>
                     ) : null}
@@ -221,7 +235,7 @@ export function AbsDistributionChart({
               {effPct != null ? (
                 <div
                   className="mt-1 h-1 w-full overflow-hidden rounded bg-zinc-800"
-                  title={`十二长生能效 Work_Efficiency=${effNum?.toFixed(2)}（约 0.4 低谷 — 1.25 巅峰）`}
+                  title={`${t("十二长生能效 Work_Efficiency=")}${effNum?.toFixed(2)}${t("（约 0.4 低谷 — 1.25 巅峰）")}`}
                 >
                   <div
                     className={`h-full rounded transition-[width,background-color,filter] duration-500 ease-in-out ${
@@ -233,11 +247,16 @@ export function AbsDistributionChart({
                     }`}
                     style={{ width: `${effPct}%` }}
                   />
-                  <div className="sr-only">长生能效 {effLabel}</div>
+                  <div className="sr-only">
+                    {t("长生能效 ")}
+                    {effLabel}
+                  </div>
                 </div>
               ) : null}
               <div className="mt-1 text-[10px] text-zinc-500">
-                (透:{stemScore.toFixed(2)} | 根:{rootScore.toFixed(2)})
+                ({t("透:")}
+                {stemScore.toFixed(2)} | {t("根:")}
+                {rootScore.toFixed(2)})
               </div>
             </button>
           </div>

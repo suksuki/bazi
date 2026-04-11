@@ -10,6 +10,7 @@ import { elementColorClass } from "@/constants/termMap";
 import { DecisionItem } from "@/features/decision-engine/components/DecisionItem";
 import { DecisionInboxCard, VerdictChangeLog } from "@/features/decision-inbox/types";
 import type { DecisionSignalToNoiseMeta, LogicDiff } from "@/features/stream-board/models";
+import type { Lang } from "@/types/bazi";
 import {
   getCardElement,
   getCardLabel,
@@ -66,6 +67,8 @@ type Props = {
   l1JunctionFlags?: Record<string, unknown>;
   /** physics_tensor.meta.decision_signal_to_noise：信噪比门控（阈值等） */
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
+  /** 非中文界面：判词整行走翻译；十神可点击拆句仅在中文下保留 */
+  lang?: Lang;
 };
 
 export function DecisionInbox({
@@ -107,6 +110,7 @@ export function DecisionInbox({
   interactionLocked = false,
   l1JunctionFlags,
   decisionSignalToNoise,
+  lang = "ZH",
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -157,7 +161,7 @@ export function DecisionInbox({
   const baseRecommendation = String(
     ((structureFinalDecision as { strategic_advice?: { recommendation?: string } }).strategic_advice?.recommendation) || "",
   ).trim();
-  const energyRiskHint = "风险提示：当前物理能耗过高（abs_delta > 100），应优先执行降耗与稳态校准。";
+  const energyRiskHint = t("风险提示：当前物理能耗过高（abs_delta > 100），应优先执行降耗与稳态校准。");
   const strategicRecommendation = baseRecommendation
     ? (extremeAbsLoss && !baseRecommendation.includes("物理能耗过高")
       ? `${baseRecommendation} ${energyRiskHint}`
@@ -184,9 +188,12 @@ export function DecisionInbox({
   );
   const workExpectation = Number((workVector as { work_expectation?: number }).work_expectation || 0);
   const weakPathEnabled = Number((((workVector as { runtime_physics_config?: Record<string, unknown> }).runtime_physics_config || {}).SHOW_WEAK_WORK_PATHS) || 0) > 0.5;
-  const diagnosticHint = (energyPeakAbs > 10 && Math.abs(workExpectation) < 0.1)
-    ? `检测到能量高度淤积（Abs: ${energyPeakAbs.toFixed(2)}），做功路径已被岁运阻断。${weakPathEnabled ? "当前已开启逻辑透深。" : "建议开启“逻辑透深”检查被隐藏的内耗路径。"}`
-    : "";
+  const diagnosticHint =
+    energyPeakAbs > 10 && Math.abs(workExpectation) < 0.1
+      ? `${t("检测到能量高度淤积（Abs: {abs}），做功路径已被岁运阻断。").replace("{abs}", energyPeakAbs.toFixed(2))}${
+          weakPathEnabled ? t("当前已开启逻辑透深。") : t("建议开启“逻辑透深”检查被隐藏的内耗路径。")
+        }`
+      : "";
 
   useEffect(() => {
     // 卡片内容可能因翻译或流式更新变化；仅移除不存在的 id，避免勾选被瞬间清空。
@@ -221,7 +228,7 @@ export function DecisionInbox({
   );
 
   function renderVerdictLine(line: string, idx: number) {
-    const parts = splitVerdictLine(line);
+    const parts = lang === "ZH" ? splitVerdictLine(line) : [t(line)];
     const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
     const lineClass = `whitespace-pre-wrap leading-relaxed ${
       summaryChanged
@@ -240,6 +247,7 @@ export function DecisionInbox({
         assertionIndex={idx}
         sessionHint={feedbackSessionHint}
         interactionLocked={interactionLocked}
+        t={t}
       >
         {parts.map((part, i) => (
           isVerdictDeity(part) ? (
@@ -248,7 +256,7 @@ export function DecisionInbox({
               type="button"
               onClick={() => onVerdictDeityClick?.(part)}
               className="mx-[1px] rounded border border-sky-500/30 bg-sky-500/10 px-1 text-sky-200 hover:bg-sky-500/20"
-              title={`查看 ${part} 的演算路径`}
+              title={t("查看 {deity} 的演算路径").replace("{deity}", part)}
             >
               {part}
             </button>
@@ -297,8 +305,8 @@ export function DecisionInbox({
           onClick={() => toggleSection("strategic")}
           className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
         >
-          <span>核心看板（Strategic HUD + 盲派镜像）</span>
-          <span>{sectionOpen.strategic ? "收起" : "展开"}</span>
+          <span>{t("核心看板（Strategic HUD + 盲派镜像）")}</span>
+          <span>{sectionOpen.strategic ? t("收起") : t("展开")}</span>
         </button>
         {sectionOpen.strategic ? (
           <div className="mt-2">
@@ -310,16 +318,18 @@ export function DecisionInbox({
               globalEntropy={globalEntropy}
               genderLabel={String((metadata as { gender?: string }).gender || "")}
               diagnosticHint={diagnosticHint}
+              t={t}
               onPickDeity={(deity) => {
                 onVerdictDeityClick?.(deity);
                 onStrategicDeityHover?.(deity);
               }}
             />
             <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 p-2 text-[11px] text-zinc-300">
-              <p className="mb-1">语义权重滑杆（Plugin Weights）</p>
+              <p className="mb-1">{t("语义权重滑杆（Plugin Weights）")}</p>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <label>
-                  盲派 {weighting.blindSchool.toFixed(2)}
+                  {t("盲派 ")}
+                  {weighting.blindSchool.toFixed(2)}
                   <input
                     type="range"
                     min={0}
@@ -337,7 +347,8 @@ export function DecisionInbox({
                   />
                 </label>
                 <label>
-                  旺衰 {weighting.wangshuai.toFixed(2)}
+                  {t("旺衰 ")}
+                  {weighting.wangshuai.toFixed(2)}
                   <input
                     type="range"
                     min={0}
@@ -364,13 +375,11 @@ export function DecisionInbox({
                   }}
                   className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  应用权重并重算
+                  {t("应用权重并重算")}
                 </button>
               </div>
             </div>
-            <BlindLogicMirror
-              workVector={workVector}
-            />
+            <BlindLogicMirror workVector={workVector} t={t} />
           </div>
         ) : null}
         </div>
@@ -382,7 +391,7 @@ export function DecisionInbox({
           <p className="mt-1 text-xs text-zinc-400">{t("勾选决策项后可在统一动作条触发语义裁决。")}</p>
           {decisionSignalToNoise?.inbox_conflict_cards_eligible === false && metadata && Object.keys(metadata).length > 0 ? (
             <p className="mt-2 font-mono text-[10px] leading-relaxed text-zinc-600">
-              [SIGNAL_GATE_ACTIVE]: 微弱因果噪声已物理屏蔽，阈值:{" "}
+              {t("[SIGNAL_GATE_ACTIVE]: 微弱因果噪声已物理屏蔽，阈值:")}{" "}
               {typeof decisionSignalToNoise.threshold === "number"
                 ? decisionSignalToNoise.threshold.toFixed(1)
                 : "5.0"}{" "}
@@ -439,8 +448,8 @@ export function DecisionInbox({
           onClick={() => toggleSection("summary")}
           className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
         >
-          <span>结果总览（Result Summary）</span>
-          <span>{sectionOpen.summary ? "收起" : "展开"}</span>
+          <span>{t("结果总览（Result Summary）")}</span>
+          <span>{sectionOpen.summary ? t("收起") : t("展开")}</span>
         </button>
         {sectionOpen.summary ? (
       <div
@@ -457,7 +466,7 @@ export function DecisionInbox({
                 onClick={() => onShowVersionHistory?.()}
                 className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800"
               >
-                查看历史版本
+                {t("查看历史版本")}
               </button>
             ) : null}
             {summaryVersionLabel ? (
@@ -470,16 +479,18 @@ export function DecisionInbox({
         <div className="mt-2 space-y-1">
           <div className="mb-2 grid grid-cols-1 gap-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 md:grid-cols-3">
             <div className="rounded border border-emerald-600/40 bg-emerald-500/10 px-2 py-1">
-              <p className="text-[10px] text-emerald-300/90">用神</p>
+              <p className="text-[10px] text-emerald-300/90">{t("用神")}</p>
               <p className="text-xs font-medium text-emerald-100">{useful.length ? useful.join(" / ") : "--"}</p>
             </div>
             <div className="rounded border border-rose-600/40 bg-rose-500/10 px-2 py-1">
-              <p className="text-[10px] text-rose-300/90">忌神</p>
+              <p className="text-[10px] text-rose-300/90">{t("忌神")}</p>
               <p className="text-xs font-medium text-rose-100">{obstacle.length ? obstacle.join(" / ") : "--"}</p>
             </div>
             <div className="rounded border border-sky-600/40 bg-sky-500/10 px-2 py-1">
-              <p className="text-[10px] text-sky-300/90">调候</p>
-              <p className="text-xs font-medium text-sky-100">{climateSummary}</p>
+              <p className="text-[10px] text-sky-300/90">{t("调候")}</p>
+              <p className="text-xs font-medium text-sky-100">
+                {climateSummary === "--" ? "--" : t(climateSummary)}
+              </p>
             </div>
           </div>
           {l1Certified ? (
@@ -498,24 +509,34 @@ export function DecisionInbox({
                 onClick={() => toggleSummary("diff")}
                 className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-zinc-300 hover:bg-zinc-800"
               >
-                <span>变更差分（Physics / Consensus / Text）</span>
-                <span>{summaryOpen.diff ? "收起" : "展开"}</span>
+                <span>{t("变更差分（Physics / Consensus / Text）")}</span>
+                <span>{summaryOpen.diff ? t("收起") : t("展开")}</span>
               </button>
               {summaryOpen.diff ? (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
-                  <p className="mb-1 text-zinc-300">物理场变动</p>
-                  {(verdictChangeLog.physics_diff || []).length === 0 ? <p className="text-zinc-500">- 无</p> : null}
-                  {(verdictChangeLog.physics_diff || []).map((x, i) => <p key={`pd-${i}`} className="text-zinc-400">- {x}</p>)}
+                  <p className="mb-1 text-zinc-300">{t("物理场变动")}</p>
+                  {(verdictChangeLog.physics_diff || []).length === 0 ? <p className="text-zinc-500">{t("- 无")}</p> : null}
+                  {(verdictChangeLog.physics_diff || []).map((x, i) => (
+                    <p key={`pd-${i}`} className="text-zinc-400">
+                      - {t(x)}
+                    </p>
+                  ))}
                 </div>
                 <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
-                  <p className="mb-1 text-zinc-300">共识固化</p>
-                  {(verdictChangeLog.consensus_diff || []).length === 0 ? <p className="text-zinc-500">- 无</p> : null}
-                  {(verdictChangeLog.consensus_diff || []).map((x, i) => <p key={`cd-${i}`} className="text-zinc-400">- {x}</p>)}
+                  <p className="mb-1 text-zinc-300">{t("共识固化")}</p>
+                  {(verdictChangeLog.consensus_diff || []).length === 0 ? <p className="text-zinc-500">{t("- 无")}</p> : null}
+                  {(verdictChangeLog.consensus_diff || []).map((x, i) => (
+                    <p key={`cd-${i}`} className="text-zinc-400">
+                      - {t(x)}
+                    </p>
+                  ))}
                 </div>
                 <div className="rounded border border-zinc-700 bg-zinc-950 p-2">
-                  <p className="mb-1 text-zinc-300">判词修正</p>
-                  <p className="text-zinc-400">{verdictChangeLog.text_diff_hint || "无"}</p>
+                  <p className="mb-1 text-zinc-300">{t("判词修正")}</p>
+                  <p className="text-zinc-400">
+                    {verdictChangeLog.text_diff_hint ? t(verdictChangeLog.text_diff_hint) : t("无")}
+                  </p>
                 </div>
               </div>
               ) : null}
@@ -531,14 +552,14 @@ export function DecisionInbox({
                 }}
                 className="rounded border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-zinc-300 hover:bg-zinc-800"
               >
-                {evidenceOpen ? "收起证据快照" : "展开证据快照"}
+                {evidenceOpen ? t("收起证据快照") : t("展开证据快照")}
               </button>
               <button
                 type="button"
                 onClick={() => toggleSummary("evidence")}
                 className="ml-2 rounded border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-zinc-300 hover:bg-zinc-800"
               >
-                {summaryOpen.evidence ? "隐藏模块" : "显示模块"}
+                {summaryOpen.evidence ? t("隐藏模块") : t("显示模块")}
               </button>
               {evidenceOpen && summaryOpen.evidence ? (
                 <div className="mt-2 max-h-40 space-y-1 overflow-auto">
@@ -548,9 +569,9 @@ export function DecisionInbox({
                       type="button"
                       onClick={() => onEvidenceClick?.(x)}
                       className={`block w-full rounded border px-2 py-1 text-left hover:border-sky-500/40 hover:text-sky-200 ${getEvidenceTone(x)}`}
-                      title="点击下钻证据"
+                      title={t("点击下钻证据")}
                     >
-                      {x}
+                      {t(x)}
                     </button>
                   ))}
                 </div>
@@ -565,8 +586,8 @@ export function DecisionInbox({
                   onClick={() => toggleSummary("work")}
                   className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
                 >
-                  <span>盲派做功链路图（L2）</span>
-                  <span>{summaryOpen.work ? "收起" : "展开"}</span>
+                  <span>{t("盲派做功链路图（L2）")}</span>
+                  <span>{summaryOpen.work ? t("收起") : t("展开")}</span>
                 </button>
                 {summaryOpen.work ? <div className="space-y-1">
                   {((workVector as { work_vectors?: Array<Record<string, unknown>> }).work_vectors || []).slice(0, 3).map((item, idx) => {
@@ -576,14 +597,15 @@ export function DecisionInbox({
                     const unlockFailed = Boolean(item.unlock_failed);
                     return (
                       <p key={`wv-${idx}`} className={`${tone} ${unlockFailed ? "line-through decoration-dashed" : ""}`}>
-                        触发: {trigger}
+                        {t("触发:")} {trigger}
                         {" -> "}
-                        释放: {Number(item.released_energy ?? 0).toFixed(2)}
+                        {t("释放:")} {Number(item.released_energy ?? 0).toFixed(2)}
                         {" -> "}
-                        损耗: -{Number(item.backfire_risk ?? 0).toFixed(2)}
+                        {t("损耗:")} -{Number(item.backfire_risk ?? 0).toFixed(2)}
                         {" -> "}
-                        净值: {net >= 0 ? "+" : ""}{net.toFixed(2)}
-                        {unlockFailed ? " [解锁失败/链路断裂]" : ""}
+                        {t("净值:")} {net >= 0 ? "+" : ""}
+                        {net.toFixed(2)}
+                        {unlockFailed ? ` ${t("[解锁失败/链路断裂]")}` : ""}
                       </p>
                     );
                   })}
@@ -596,18 +618,24 @@ export function DecisionInbox({
               onClick={() => toggleSummary("topology")}
               className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
             >
-              <span>拓扑图（Topology）</span>
-              <span>{summaryOpen.topology ? "收起" : "展开"}</span>
+              <span>{t("拓扑图（Topology）")}</span>
+              <span>{summaryOpen.topology ? t("收起") : t("展开")}</span>
             </button>
             {summaryOpen.topology ? <TopologyMapV1 graph={topologyGraph} /> : null}
           </div>
           {typeof (structureCandidates as { hud?: unknown }).hud === "object" ? (
             <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
-              <p className="mb-1 text-zinc-300">格局态射仪表盘（V0）</p>
+              <p className="mb-1 text-zinc-300">{t("格局态射仪表盘（V0）")}</p>
               <div className="grid grid-cols-1 gap-1 text-zinc-400 md:grid-cols-3">
-                <p>正格倾向: {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).stable_pct || 0).toFixed(2)}%</p>
-                <p>从格倾向: {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).follower_pct || 0).toFixed(2)}%</p>
-                <p>跃迁倾向: {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).leap_pct || 0).toFixed(2)}%</p>
+                <p>
+                  {t("正格倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).stable_pct || 0).toFixed(2)}%
+                </p>
+                <p>
+                  {t("从格倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).follower_pct || 0).toFixed(2)}%
+                </p>
+                <p>
+                  {t("跃迁倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).leap_pct || 0).toFixed(2)}%
+                </p>
               </div>
             </div>
           ) : null}
@@ -618,8 +646,8 @@ export function DecisionInbox({
                 onClick={() => toggleSummary("structure")}
                 className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
               >
-                <span>L2 格局终审结果（V0）</span>
-                <span>{summaryOpen.structure ? "收起" : "展开"}</span>
+                <span>{t("L2 格局终审结果（V0）")}</span>
+                <span>{summaryOpen.structure ? t("收起") : t("展开")}</span>
               </button>
               {summaryOpen.structure ? <>
               <p className={`text-sm font-semibold ${Boolean((stressTestResult as { rollback_triggered?: boolean }).rollback_triggered) ? "animate-pulse rounded bg-rose-500/20 px-2 py-0.5 text-rose-300" : "text-zinc-200"}`}>
@@ -627,11 +655,13 @@ export function DecisionInbox({
               </p>
               {Number((structureCandidates as { self_abs?: number }).self_abs || 0) > 5 ? (
                 <p className="mt-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
-                  当前日主能量过剩（{Number((structureCandidates as { self_abs?: number }).self_abs || 0).toFixed(2)}），急需通过做功泄耗，否则易固执与内耗。
+                  {t("当前日主能量过剩（")}
+                  {Number((structureCandidates as { self_abs?: number }).self_abs || 0).toFixed(2)}
+                  {t("），急需通过做功泄耗，否则易固执与内耗。")}
                 </p>
               ) : null}
               <p className="mt-1 text-zinc-400">
-                置信度: {Math.round(Number((structureFinalDecision as { decision_confidence?: number }).decision_confidence || 0) * 100)}%
+                {t("置信度:")} {Math.round(Number((structureFinalDecision as { decision_confidence?: number }).decision_confidence || 0) * 100)}%
               </p>
               <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-zinc-800">
                 <div
@@ -639,16 +669,20 @@ export function DecisionInbox({
                   style={{ width: `${Math.max(0, Math.min(100, Number((structureFinalDecision as { decision_confidence?: number }).decision_confidence || 0) * 100))}%` }}
                 />
               </div>
-              <p className="mt-2 text-zinc-400">理由链</p>
+              <p className="mt-2 text-zinc-400">{t("理由链")}</p>
               <div className="space-y-1">
                 {((structureFinalDecision as { logical_reasoning_chain?: string[] }).logical_reasoning_chain || []).map((line, idx) => (
-                  <p key={`reason-${idx}`} className="text-zinc-500">{line}</p>
+                  <p key={`reason-${idx}`} className="text-zinc-500">
+                    {t(line)}
+                  </p>
                 ))}
               </div>
-              <p className="mt-2 text-zinc-400">回滚触发器</p>
+              <p className="mt-2 text-zinc-400">{t("回滚触发器")}</p>
               <div className="space-y-1">
                 {((structureFinalDecision as { rollback_triggers?: string[] }).rollback_triggers || []).map((line, idx) => (
-                  <p key={`rollback-${idx}`} className="text-amber-300">⚠ {line}</p>
+                  <p key={`rollback-${idx}`} className="text-amber-300">
+                    ⚠ {t(line)}
+                  </p>
                 ))}
               </div>
               {strategicRecommendation ? (
@@ -659,11 +693,11 @@ export function DecisionInbox({
                       : "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
                   }`}
                 >
-                  {strategicRecommendation}
+                  {t(strategicRecommendation)}
                 </div>
               ) : null}
               <div className="mt-2 rounded border border-zinc-700 bg-zinc-950 p-2">
-                <p className="text-zinc-300">压力测试模拟器（预埋）</p>
+                <p className="text-zinc-300">{t("压力测试模拟器（预埋）")}</p>
                 <div className="mt-1 flex items-center gap-2">
                   <input
                     value={stressInput}
@@ -675,9 +709,10 @@ export function DecisionInbox({
                     type="button"
                     onClick={() => void runStress()}
                     className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-zinc-300 hover:bg-zinc-800"
-                    title="执行岁运压力测试"
+                    title={t("执行岁运压力测试")}
                   >
-                    模拟大运：{stressInput || "壬辰"}
+                    {t("模拟大运：")}
+                    {stressInput || "壬辰"}
                   </button>
                   <button
                     type="button"
@@ -686,23 +721,27 @@ export function DecisionInbox({
                       setComparisonOpen(true);
                     }}
                     className="rounded border border-fuchsia-700/40 bg-fuchsia-500/10 px-2 py-1 text-fuchsia-200 hover:bg-fuchsia-500/20"
-                    title="对比同盘男女路径差异"
+                    title={t("对比同盘男女路径差异")}
                   >
-                    对比镜像性别结果
+                    {t("对比镜像性别结果")}
                   </button>
                 </div>
                 {Boolean((stressTestResult as { rollback_triggered?: boolean }).rollback_triggered) ? (
                   <div className="mt-2 rounded border border-rose-500/40 bg-rose-500/10 p-2 text-rose-300">
-                    [RED_COLLAPSE] {((stressTestResult as { hit_triggers?: string[] }).hit_triggers || []).join(" | ") || "触发回滚"}
+                    [RED_COLLAPSE] {((stressTestResult as { hit_triggers?: string[] }).hit_triggers || []).join(" | ") || t("触发回滚")}
                   </div>
                 ) : null}
                 {typeof (genderComparisonResult as { summary?: string }).summary === "string" && (genderComparisonResult as { summary?: string }).summary ? (
                   <div className="mt-2 rounded border border-fuchsia-500/40 bg-fuchsia-500/10 p-2 text-fuchsia-200">
-                    {(genderComparisonResult as { summary?: string }).summary}
+                    {t(String((genderComparisonResult as { summary?: string }).summary || ""))}
                     <p className="mt-1 text-[11px] text-fuchsia-300">
-                      男：{String((genderComparisonResult as { male_dayun?: string }).male_dayun || "--")} / 峰值Abs {Number((genderComparisonResult as { male_peak_abs?: number }).male_peak_abs || 0).toFixed(2)}
+                      {t("男：")}
+                      {String((genderComparisonResult as { male_dayun?: string }).male_dayun || "--")} / {t("峰值Abs")}{" "}
+                      {Number((genderComparisonResult as { male_peak_abs?: number }).male_peak_abs || 0).toFixed(2)}
                       {" | "}
-                      女：{String((genderComparisonResult as { female_dayun?: string }).female_dayun || "--")} / 峰值Abs {Number((genderComparisonResult as { female_peak_abs?: number }).female_peak_abs || 0).toFixed(2)}
+                      {t("女：")}
+                      {String((genderComparisonResult as { female_dayun?: string }).female_dayun || "--")} / {t("峰值Abs")}{" "}
+                      {Number((genderComparisonResult as { female_peak_abs?: number }).female_peak_abs || 0).toFixed(2)}
                     </p>
                   </div>
                 ) : null}

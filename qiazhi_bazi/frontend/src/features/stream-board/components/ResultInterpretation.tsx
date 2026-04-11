@@ -34,9 +34,10 @@ type SemanticAnchorProps = {
   linePreview: string;
   sessionHint: string;
   disabled?: boolean;
+  t?: (s: string) => string;
 };
 
-function SemanticFeedbackAnchor({ skillId, lineIndex, linePreview, sessionHint, disabled }: SemanticAnchorProps) {
+function SemanticFeedbackAnchor({ skillId, lineIndex, linePreview, sessionHint, disabled, t = (s) => s }: SemanticAnchorProps) {
   const [local, setLocal] = useState<"idle" | "precise" | "drift">("idle");
   const [busy, setBusy] = useState(false);
 
@@ -68,7 +69,7 @@ function SemanticFeedbackAnchor({ skillId, lineIndex, linePreview, sessionHint, 
   );
 
   return (
-    <span className="ml-1 inline-flex shrink-0 items-center gap-0.5 align-top" title="逻辑锚点：关联 Skill 的语义反馈">
+    <span className="ml-1 inline-flex shrink-0 items-center gap-0.5 align-top" title={t("逻辑锚点：关联 Skill 的语义反馈")}>
       <span className="text-zinc-600" aria-hidden>
         <IconLogicAnchor className="h-3.5 w-3.5" />
       </span>
@@ -76,24 +77,24 @@ function SemanticFeedbackAnchor({ skillId, lineIndex, linePreview, sessionHint, 
         <button
           type="button"
           disabled={disabled || busy}
-          title="精准"
+          title={t("精准")}
           onClick={() => send("precise")}
           className={`rounded px-1 py-0 text-[8px] font-medium leading-none ${
             local === "precise" ? "bg-emerald-500/25 text-emerald-200" : "bg-zinc-800/90 text-zinc-500 hover:text-zinc-300"
           }`}
         >
-          准
+          {t("准")}
         </button>
         <button
           type="button"
           disabled={disabled || busy}
-          title="偏移"
+          title={t("偏移")}
           onClick={() => send("drift")}
           className={`rounded px-1 py-0 text-[8px] font-medium leading-none ${
             local === "drift" ? "bg-amber-500/25 text-amber-200" : "bg-zinc-800/90 text-zinc-500 hover:text-zinc-300"
           }`}
         >
-          偏
+          {t("偏")}
         </button>
       </span>
     </span>
@@ -113,6 +114,7 @@ type SkillLinkedLineProps = {
   interactionLocked?: boolean;
   /** 为 false 时不展示语义锚点（例如非盲派关联行） */
   enableSemanticFeedback?: boolean;
+  t?: (s: string) => string;
 };
 
 /**
@@ -127,6 +129,7 @@ export function SkillLinkedAssertionLine({
   sessionHint = "",
   interactionLocked,
   enableSemanticFeedback = true,
+  t = (s) => s,
 }: SkillLinkedLineProps) {
   const { setHighlightedBadgeId } = useBlindSkillHighlight();
   const trimmedProp = skillIdProp && String(skillIdProp).trim() ? String(skillIdProp).trim() : null;
@@ -149,6 +152,7 @@ export function SkillLinkedAssertionLine({
           linePreview={line}
           sessionHint={sessionHint}
           disabled={Boolean(interactionLocked)}
+          t={t}
         />
       ) : null}
     </p>

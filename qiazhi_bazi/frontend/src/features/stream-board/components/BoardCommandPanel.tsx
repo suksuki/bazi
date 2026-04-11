@@ -2,7 +2,6 @@ import React from "react";
 import { motion } from "framer-motion";
 import { DecisionInbox } from "@/components/DecisionInbox";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
-import { SeedInput } from "@/components/SeedInput";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
@@ -55,7 +54,6 @@ export interface BoardCommandPanelProps {
   isPreviewBoard: boolean;
   seedPreviewBusy: boolean;
   seedPreviewError: string | null;
-  handleSeedPayloadChange: (payload: any) => void;
   lastSubmittedDecisionIds: string[];
   blindSkillBadges: any[];
   setCurrentDecisions: (decisions: InboxCard[]) => void;
@@ -76,6 +74,8 @@ export interface BoardCommandPanelProps {
   summaryVersionLabel: string;
   l1JunctionFlags: Record<string, unknown> | undefined;
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
+  /** 返回仅生辰入口（清空命盘与流水线） */
+  onBackToSeedEntry?: () => void;
 }
 
 export function BoardCommandPanel({
@@ -85,7 +85,6 @@ export function BoardCommandPanel({
   isPreviewBoard,
   seedPreviewBusy,
   seedPreviewError,
-  handleSeedPayloadChange,
   lastSubmittedDecisionIds,
   blindSkillBadges,
   setCurrentDecisions,
@@ -106,13 +105,13 @@ export function BoardCommandPanel({
   summaryVersionLabel,
   l1JunctionFlags,
   decisionSignalToNoise,
+  onBackToSeedEntry,
 }: BoardCommandPanelProps) {
   const { setActiveView } = useActiveView();
   const {
     t,
+    lang,
     busy,
-    onSeedSubmit,
-    refreshSeedPreview,
     referenceYear,
     setReferenceYear,
     metadata,
@@ -165,121 +164,116 @@ export function BoardCommandPanel({
       className="space-y-3"
     >
       <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/80 shadow-[0_0_0_1px_rgba(251,191,36,0.08)]">
-        <div className="border-b border-zinc-800 px-3 py-2.5 text-xs font-medium text-amber-100/95">
-          {t("生辰八字 · 地法（The Seed）")}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 px-3 py-2.5">
+          <span className="text-xs font-medium text-amber-100/95">{t("命盘 · 六柱与流年")}</span>
+          {onBackToSeedEntry ? (
+            <button
+              type="button"
+              onClick={onBackToSeedEntry}
+              disabled={Boolean(busy || isFinalized)}
+              className="shrink-0 rounded-lg border border-zinc-600 bg-zinc-800/90 px-2.5 py-1 text-[10px] font-medium text-zinc-200 hover:border-amber-500/40 hover:text-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("返回重新测算")}
+            </button>
+          ) : null}
         </div>
-        <div className="px-1 pb-2 pt-1">
-          <SeedInput
-            onSubmit={onSeedSubmit}
-            busy={busy}
+        <div className="px-2 pb-2 pt-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
+              <span>{t("流年（参考年）")}</span>
+              <ReferenceYearSelect
+                value={referenceYear}
+                onChange={setReferenceYear}
+                className="w-[4.75rem] rounded border border-zinc-600 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
+              <span title={t("地理场演示：南强化火、北强化水（需重新测算）")}>{t("环境方位")}</span>
+              <select
+                value={labConfig.user_target_direction ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  setLabConfig((prev) => ({ ...prev, user_target_direction: v || undefined }));
+                }}
+                className="max-w-[5.5rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[11px] text-zinc-100"
+              >
+                <option value="">—</option>
+                <option value="东">{t("东")}</option>
+                <option value="南">{t("南")}</option>
+                <option value="西">{t("西")}</option>
+                <option value="北">{t("北")}</option>
+                <option value="中">{t("中")}</option>
+              </select>
+            </label>
+            <span className="w-full text-[9px] leading-snug text-zinc-600 sm:w-auto" title={t("流年参考年说明")}>
+              {t("流年参考年说明")}
+            </span>
+            {isPreviewBoard ? (
+              <span className="rounded border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-200">
+                {t("预览")}
+              </span>
+            ) : null}
+            {seedPreviewBusy ? (
+              <span className="text-[10px] text-zinc-500">{t("推演中…")}</span>
+            ) : null}
+            {seedPreviewError && !metadata ? (
+              <span className="text-[10px] text-red-400/90" title={seedPreviewError}>
+                {t("预览加载失败")}
+              </span>
+            ) : null}
+          </div>
+          {simpleBoard ? (
+            <TemporalYearSlider
+              referenceYear={referenceYear}
+              onYearChange={setReferenceYear}
+              timeline={timeline}
+              disabled={Boolean(busy || isFinalized)}
+              className="mb-2"
+              t={t}
+            />
+          ) : null}
+          <EnergyFlowChainStrip
+            audit={energyFlowAudit}
+            motionKey={referenceYear}
+            className="mb-2 transition-opacity duration-500 ease-out"
             t={t}
-            hideSubmitButton
-            splitActions={{
-              onPreview: (p) => void refreshSeedPreview(p),
-              previewBusy: seedPreviewBusy,
-            }}
-            onPayloadChange={handleSeedPayloadChange}
-            rightSummarySlot={
-              <div className="h-full bg-transparent px-1 py-1">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
-                    <span>{t("流年（参考年）")}</span>
-                    <ReferenceYearSelect
-                      value={referenceYear}
-                      onChange={setReferenceYear}
-                      className="w-[4.75rem] rounded border border-zinc-600 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-100"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
-                    <span title="地理场演示：南强化火、北强化水（需重新测算）">{t("环境方位")}</span>
-                    <select
-                      value={labConfig.user_target_direction ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value.trim();
-                        setLabConfig((prev) => ({ ...prev, user_target_direction: v || undefined }));
-                      }}
-                      className="max-w-[5.5rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[11px] text-zinc-100"
-                    >
-                      <option value="">—</option>
-                      <option value="东">东</option>
-                      <option value="南">南</option>
-                      <option value="西">西</option>
-                      <option value="北">北</option>
-                      <option value="中">中</option>
-                    </select>
-                  </label>
-                  <span className="w-full text-[9px] leading-snug text-zinc-600 sm:w-auto" title={t("流年参考年说明")}>
-                    {t("流年参考年说明")}
-                  </span>
-                  {isPreviewBoard ? (
-                    <span className="rounded border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-200">
-                      {t("预览")}
-                    </span>
-                  ) : null}
-                  {seedPreviewBusy ? (
-                    <span className="text-[10px] text-zinc-500">{t("推演中…")}</span>
-                  ) : null}
-                  {seedPreviewError && !metadata ? (
-                    <span className="text-[10px] text-red-400/90" title={seedPreviewError}>
-                      {t("预览加载失败")}
-                    </span>
-                  ) : null}
-                </div>
-                {metadata?.pillars ? (
-                  <TemporalYearSlider
-                    referenceYear={referenceYear}
-                    onYearChange={setReferenceYear}
-                    timeline={timeline}
-                    disabled={Boolean(busy || isFinalized)}
-                    className="mb-2"
-                  />
-                ) : null}
-                <EnergyFlowChainStrip
-                  audit={energyFlowAudit}
-                  motionKey={referenceYear}
-                  className="mb-2 transition-opacity duration-500 ease-out"
-                />
-                {simpleBoard ? (
-                  <div className="h-full">
-                    <div className="grid h-full grid-cols-9 gap-1.5">
-                      {[
-                        { key: "年", value: simpleBoard.year },
-                        { key: "月", value: simpleBoard.month },
-                        { key: "日", value: simpleBoard.day },
-                        { key: "时", value: simpleBoard.hour },
-                        { key: "大运", value: simpleBoard.dayun },
-                        { key: "流年", value: simpleBoard.liunian },
-                      ].map((item) => {
-                        const stemMeta = STEM_META[item.value.stem];
-                        const branchMeta = BRANCH_META[item.value.branch];
-                        const stemStyle = stemMeta ? ELEMENT_STYLE[stemMeta.element][stemMeta.yinYang] : null;
-                        const branchStyle = branchMeta ? ELEMENT_STYLE[branchMeta.element][branchMeta.yinYang] : null;
-                        return (
-                          <div key={item.key} className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900/70 px-1 py-1 text-center">
-                            <p className="mb-1 text-[10px] text-zinc-500">{t(item.key)}</p>
-                            <p
-                              className="rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
-                              style={stemStyle ? { color: stemStyle.color, backgroundColor: stemStyle.bg, border: `1px solid ${stemStyle.border}` } : undefined}
-                            >
-                              {item.value.stem}
-                            </p>
-                            <p
-                              className="mt-1 rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
-                              style={branchStyle ? { color: branchStyle.color, backgroundColor: branchStyle.bg, border: `1px solid ${branchStyle.border}` } : undefined}
-                            >
-                              {item.value.branch}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-zinc-500">{t("掐指一算后在此显示：四柱 / 大运 / 流年")}</p>
-                )}
-              </div>
-            }
           />
+          {simpleBoard ? (
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 md:grid-cols-9">
+              {[
+                { key: "年", value: simpleBoard.year },
+                { key: "月", value: simpleBoard.month },
+                { key: "日", value: simpleBoard.day },
+                { key: "时", value: simpleBoard.hour },
+                { key: "大运", value: simpleBoard.dayun },
+                { key: "流年", value: simpleBoard.liunian },
+              ].map((item) => {
+                const stemMeta = STEM_META[item.value.stem];
+                const branchMeta = BRANCH_META[item.value.branch];
+                const stemStyle = stemMeta ? ELEMENT_STYLE[stemMeta.element][stemMeta.yinYang] : null;
+                const branchStyle = branchMeta ? ELEMENT_STYLE[branchMeta.element][branchMeta.yinYang] : null;
+                return (
+                  <div key={item.key} className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900/70 px-1 py-1 text-center">
+                    <p className="mb-1 text-[10px] text-zinc-500">{t(item.key)}</p>
+                    <p
+                      className="rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
+                      style={stemStyle ? { color: stemStyle.color, backgroundColor: stemStyle.bg, border: `1px solid ${stemStyle.border}` } : undefined}
+                    >
+                      {item.value.stem}
+                    </p>
+                    <p
+                      className="mt-1 rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
+                      style={branchStyle ? { color: branchStyle.color, backgroundColor: branchStyle.bg, border: `1px solid ${branchStyle.border}` } : undefined}
+                    >
+                      {item.value.branch}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">{t("掐指一算后在此显示：四柱 / 大运 / 流年")}</p>
+          )}
         </div>
       </div>
       <UnifiedActionBar
@@ -293,12 +287,13 @@ export function BoardCommandPanel({
         labelOverride={primaryLabelOverride}
         issued={isFinalized}
         issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy}
+        t={t}
       />
       <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
         {t("提交 IDs：")}{" "}
         {lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
       </div>
-      <BlindSkillBadgeRow badges={blindSkillBadges} />
+      <BlindSkillBadgeRow badges={blindSkillBadges} t={t} />
       <DecisionInbox
         key={`decision-inbox-${checklistResetToken}`}
         cards={cards}
@@ -343,11 +338,13 @@ export function BoardCommandPanel({
         interactionLocked={isFinalized}
         l1JunctionFlags={l1JunctionFlags}
         decisionSignalToNoise={decisionSignalToNoise}
+        lang={lang}
       />
       <WillReplayPanel
         items={confirmedDecisions || []}
         onRevoke={handleRevokeDecision}
         revertEntropyDelta={revertEntropyDelta}
+        t={t}
       />
 
       {finalWorkVector && Object.keys(finalWorkVector).length > 0 ? (

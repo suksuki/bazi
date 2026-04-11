@@ -8,20 +8,21 @@ type Props = {
   timeline: TimelineSnapshot | null;
   disabled?: boolean;
   className?: string;
+  t?: (s: string) => string;
 };
 
 const MIN_Y = 1940;
 const MAX_Y = 2040;
 
-export function TemporalYearSlider({ referenceYear, onYearChange, timeline, disabled, className = "" }: Props) {
+export function TemporalYearSlider({ referenceYear, onYearChange, timeline, disabled, className = "", t = (s: string) => s }: Props) {
   const liu = timeline?.liunian ? String(timeline.liunian) : "—";
   const dy = timeline?.dayun ? String(timeline.dayun) : "—";
   return (
     <div className={`rounded-lg border border-cyan-900/50 bg-cyan-950/25 px-2 py-2 ${className}`} data-testid="temporal-year-slider">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-[10px] text-cyan-100/90">
-        <span className="font-medium tracking-wide">时空模拟（大运 / 流年）</span>
+        <span className="font-medium tracking-wide">{t("时空模拟（大运 / 流年）")}</span>
         <span className="font-mono text-cyan-300/90">
-          流年 {liu} · 大运 {dy}
+          {t("流年 {liu} · 大运 {dy}").replace("{liu}", liu).replace("{dy}", dy)}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -34,7 +35,7 @@ export function TemporalYearSlider({ referenceYear, onYearChange, timeline, disa
           disabled={disabled}
           onChange={(e) => onYearChange(Number(e.target.value))}
           className="h-2 flex-1 cursor-pointer accent-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
-          aria-label="模拟公历参考年"
+          aria-label={t("模拟公历参考年")}
         />
         <input
           type="number"
@@ -51,7 +52,9 @@ export function TemporalYearSlider({ referenceYear, onYearChange, timeline, disa
         />
       </div>
       <p className="mt-1 text-[9px] leading-snug text-zinc-500">
-        拖动将静默重算物理张量，并把当前大运/流年干支作为 <span className="font-mono text-zinc-400">external_overrides</span> 提交后端。
+        {t("拖动将静默重算物理张量，并把当前大运/流年干支作为 ")}
+        <span className="font-mono text-zinc-400">external_overrides</span>
+        {t(" 提交后端。")}
       </p>
     </div>
   );

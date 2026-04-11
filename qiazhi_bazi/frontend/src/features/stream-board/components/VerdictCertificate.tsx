@@ -59,13 +59,14 @@ export function VerdictCertificate(props: {
   solidGhostRatio?: SolidGhostRatioSlice;
   /** 因果路由策略 + 意志注入占比（由快照推导） */
   causalSovereignty?: CausalSovereigntySlice | null;
+  t?: (s: string) => string;
 }) {
-  const { hash, committedAt, logicDiff, effectiveSkillIds, solidGhostRatio, causalSovereignty } = props;
+  const { hash, committedAt, logicDiff, effectiveSkillIds, solidGhostRatio, causalSovereignty, t = (s: string) => s } = props;
   const when = committedAt ? new Date(committedAt).toLocaleString() : "—";
 
   const absRaw = logicDiff && typeof logicDiff === "object" ? logicDiff.abs_delta : null;
   const absDelta = typeof absRaw === "number" && Number.isFinite(absRaw) ? absRaw : NaN;
-  const evaluation = getVerdictEvaluation(absDelta);
+  const evaluation = t(getVerdictEvaluation(absDelta));
 
   const [flash, setFlash] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -93,12 +94,12 @@ export function VerdictCertificate(props: {
       }}
     >
       <div className="border-b border-[#A855F7]/35 bg-zinc-950/60 px-4 py-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#A855F7]">因果定格 · 终审存证</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#A855F7]">{t("因果定格 · 终审存证")}</p>
         <p className="mt-0.5 text-[10px] text-zinc-500">Causal chain sealed — humanistic footnote</p>
       </div>
       <div className="space-y-3 px-4 py-3 text-xs text-zinc-200">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">SHA-256（缩写 · 点击拷贝完整指纹）</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("SHA-256（缩写 · 点击拷贝完整指纹）")}</p>
           <button
             type="button"
             onClick={() => void copyHash()}
@@ -117,39 +118,41 @@ export function VerdictCertificate(props: {
           <p className="mt-2 font-mono text-[10px] break-all text-zinc-600">{hash}</p>
         </div>
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">签发时间</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("签发时间")}</p>
           <p className="mt-1 font-mono text-[12px] text-zinc-300">{when}</p>
         </div>
         <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/50 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">logic_diff 最终摘要</p>
-          <p className="mt-1.5 leading-relaxed text-[11px] text-zinc-300">{summarizeLogicDiff(logicDiff)}</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("logic_diff 最终摘要")}</p>
+          <p className="mt-1.5 leading-relaxed text-[11px] text-zinc-300">{t(summarizeLogicDiff(logicDiff))}</p>
         </div>
         <div className="rounded-lg border border-cyan-500/25 bg-cyan-950/20 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-200/85">虚实比（Solid / Ghost）</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-200/85">{t("虚实比（Solid / Ghost）")}</p>
           {solidGhostRatio &&
           typeof solidGhostRatio.solid_fraction === "number" &&
           Number.isFinite(solidGhostRatio.solid_fraction) ? (
             <div className="mt-1.5 space-y-1 font-mono text-[11px] text-cyan-100/90">
               <p>
-                实（Solid）：{(solidGhostRatio.solid_fraction * 100).toFixed(1)}% · 虚（Ghost）：{" "}
+                {t("实（Solid）：")}
+                {(solidGhostRatio.solid_fraction * 100).toFixed(1)}%{t(" · 虚（Ghost）：")}
                 {(solidGhostRatio.ghost_fraction * 100).toFixed(1)}%
               </p>
               {typeof solidGhostRatio.avg_effective_conductivity === "number" &&
               Number.isFinite(solidGhostRatio.avg_effective_conductivity) ? (
                 <p className="text-[10px] text-zinc-500">
-                  平均有效传导：{solidGhostRatio.avg_effective_conductivity.toFixed(4)}
+                  {t("平均有效传导：")}
+                  {solidGhostRatio.avg_effective_conductivity.toFixed(4)}
                 </p>
               ) : null}
               <p className="text-[10px] font-normal leading-relaxed text-zinc-500">
-                记录该局干支维轴下因果能量的落地程度（越高越「实」）。
+                {t("记录该局干支维轴下因果能量的落地程度（越高越「实」）。")}
               </p>
             </div>
           ) : (
-            <p className="mt-1 text-[11px] text-zinc-500">本证书快照未含 solid_ghost_ratio（需排盘后 physics meta）。</p>
+            <p className="mt-1 text-[11px] text-zinc-500">{t("本证书快照未含 solid_ghost_ratio（需排盘后 physics meta）。")}</p>
           )}
         </div>
         <div className="rounded-lg border border-amber-500/25 bg-amber-950/20 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-amber-200/80">生效 Skill ID（规则索引）</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-amber-200/80">{t("生效 Skill ID（规则索引）")}</p>
           {effectiveSkillIds && effectiveSkillIds.length > 0 ? (
             <ul className="mt-1.5 flex flex-wrap gap-1.5">
               {effectiveSkillIds.map((id) => (
@@ -162,23 +165,23 @@ export function VerdictCertificate(props: {
               ))}
             </ul>
           ) : (
-            <p className="mt-1 text-[11px] text-zinc-500">本快照未记录盲派 Skill 列表（或非盲派会话）。</p>
+            <p className="mt-1 text-[11px] text-zinc-500">{t("本快照未记录盲派 Skill 列表（或非盲派会话）。")}</p>
           )}
         </div>
         {causalSovereignty ? (
           <div className="rounded-lg border border-violet-500/30 bg-violet-950/25 px-3 py-2">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/90">因果主权（Causal Sovereignty）</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/90">{t("因果主权（Causal Sovereignty）")}</p>
             <div className="mt-1.5 space-y-1 text-[11px] text-violet-100/90">
               <p>
-                <span className="text-zinc-500">路由策略：</span>
+                <span className="text-zinc-500">{t("路由策略：")}</span>
                 {causalSovereignty.strategyLabel}
               </p>
               <p>
-                <span className="text-zinc-500">意志贡献度（WILL_INFUSED）：</span>
-                {causalSovereignty.willInfusedPct != null ? `${causalSovereignty.willInfusedPct}%` : "—（无冲突矩阵锚点）"}
+                <span className="text-zinc-500">{t("意志贡献度（WILL_INFUSED）：")}</span>
+                {causalSovereignty.willInfusedPct != null ? `${causalSovereignty.willInfusedPct}%` : t("—（无冲突矩阵锚点）")}
               </p>
               {causalSovereignty.routingDigest ? (
-                <p className="text-[10px] leading-relaxed text-zinc-500">{causalSovereignty.routingDigest}</p>
+                <p className="text-[10px] leading-relaxed text-zinc-500">{t(causalSovereignty.routingDigest)}</p>
               ) : null}
             </div>
           </div>

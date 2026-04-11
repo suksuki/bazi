@@ -13,12 +13,14 @@ export type PatternProfileSlice = {
 type Props = {
   profile: PatternProfileSlice | null | undefined;
   className?: string;
+  t?: (s: string) => string;
 };
 
-export function PatternStatus({ profile, className = "" }: Props) {
+export function PatternStatus({ profile, className = "", t = (s: string) => s }: Props) {
   const [open, setOpen] = useState(false);
   if (!profile || typeof profile !== "object") return null;
-  const name = String(profile.pattern_name_zh || "").trim() || "平常局";
+  const nameRaw = String(profile.pattern_name_zh || "").trim() || "平常局";
+  const name = nameRaw === "平常局" ? t("平常局") : t(nameRaw);
   const kind = String(profile.pattern_kind || "none");
   const ratio =
     typeof profile.dominance_ratio === "number" && Number.isFinite(profile.dominance_ratio)
@@ -40,27 +42,27 @@ export function PatternStatus({ profile, className = "" }: Props) {
       tabIndex={0}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-300/90">当前格局</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-300/90">{t("当前格局")}</span>
         {sov ? (
           <span className="rounded border border-amber-500/50 bg-amber-950/50 px-1.5 py-0.5 font-mono text-[9px] text-amber-200">
-            格局主权
+            {t("格局主权")}
           </span>
         ) : null}
       </div>
       <p className="mt-1 text-sm font-semibold text-zinc-100">{name}</p>
       <p className="mt-0.5 font-mono text-[10px] text-zinc-500">
         kind={kind}
-        {ratio != null ? ` · 集中度 ${(ratio * 100).toFixed(1)}%` : ""}
+        {ratio != null ? `${t(" · 集中度 ")}${(ratio * 100).toFixed(1)}%` : ""}
       </p>
       {open && lines.length > 0 ? (
         <div
           className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-zinc-600 bg-zinc-950/98 p-2 text-[11px] leading-relaxed text-zinc-200 shadow-xl backdrop-blur-sm"
           role="tooltip"
         >
-          <p className="mb-1 text-[10px] font-medium text-violet-300/90">喜忌反转说明（悬浮）</p>
+          <p className="mb-1 text-[10px] font-medium text-violet-300/90">{t("喜忌反转说明（悬浮）")}</p>
           <ul className="list-disc space-y-1 pl-4">
             {lines.map((line, i) => (
-              <li key={i}>{line}</li>
+              <li key={i}>{t(line)}</li>
             ))}
           </ul>
         </div>

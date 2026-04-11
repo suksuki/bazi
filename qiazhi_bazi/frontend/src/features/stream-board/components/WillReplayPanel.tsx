@@ -13,9 +13,10 @@ type Props = {
   items: ConfirmedDecisionItem[];
   onRevoke?: (id: string) => void | Promise<void>;
   revertEntropyDelta?: number | null;
+  t?: (s: string) => string;
 };
 
-export function WillReplayPanel({ items, onRevoke, revertEntropyDelta = null }: Props) {
+export function WillReplayPanel({ items, onRevoke, revertEntropyDelta = null, t = (s) => s }: Props) {
   const [collapsed, setCollapsed] = useState(true);
   const sorted = useMemo(
     () => [...items].sort((a, b) => new Date(b.confirmed_at || 0).getTime() - new Date(a.confirmed_at || 0).getTime()),
@@ -31,10 +32,10 @@ export function WillReplayPanel({ items, onRevoke, revertEntropyDelta = null }: 
         className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left"
       >
         <span className="flex items-center gap-2 text-sm font-medium text-zinc-100">
-          意志回放
+          {t("意志回放")}
           {collapsed ? <span className="inline-block h-2 w-2 rounded-full bg-red-500" aria-hidden="true" /> : null}
         </span>
-        <span className="text-xs text-zinc-400">{collapsed ? "展开" : "收起"}</span>
+        <span className="text-xs text-zinc-400">{collapsed ? t("展开") : t("收起")}</span>
       </button>
       {!collapsed ? (
         <ol className="mt-3">

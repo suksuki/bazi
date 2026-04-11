@@ -18,6 +18,8 @@ type Props = {
   issued?: boolean;
   /** 可签发终审：紫色呼吸主按钮 */
   issueFinalPurplePulse?: boolean;
+  /** UI 文案（ZH 为恒等，EN/KO 走静态表或翻译队列） */
+  t?: (s: string) => string;
 };
 
 export function UnifiedActionBar({
@@ -31,16 +33,17 @@ export function UnifiedActionBar({
   labelOverride,
   issued = false,
   issueFinalPurplePulse = false,
+  t = (s: string) => s,
 }: Props) {
   const label =
     labelOverride ??
     (mode === "SYNCING"
-      ? "逻辑坍缩中..."
+      ? t("逻辑坍缩中...")
       : mode === "FULL"
-        ? "物理排盘：开启因果"
+        ? t("物理排盘：开启因果")
         : mode === "PARAMETER_DIRTY"
-          ? "[因果确认：执行裁决]"
-        : "语义重构：重新裁决");
+          ? t("[因果确认：执行裁决]")
+        : t("语义重构：重新裁决"));
   const entropyPct = typeof globalEntropy === "number" && Number.isFinite(globalEntropy)
     ? Math.max(0, Math.min(100, Math.round(globalEntropy * 100)))
     : 0;
@@ -188,7 +191,7 @@ export function UnifiedActionBar({
     onSetBaseline();
     setBaselineFlash(true);
     setGlitchOn(true);
-    setBaselineHint("因果锚点已固化");
+    setBaselineHint(t("因果锚点已固化"));
     window.setTimeout(() => {
       setBaselineFlash(false);
       if (glitchIntensity <= 0) setGlitchOn(false);
@@ -268,13 +271,13 @@ export function UnifiedActionBar({
           type="button"
           onClick={handleSetBaseline}
           disabled={!onSetBaseline || disabled || mode === "SYNCING" || issued}
-          aria-label="设置当前为基线"
+          aria-label={t("设置当前为基线")}
           className={`shrink-0 rounded-md border px-2 py-1 text-xs transition ${
             baselineFlash
               ? "border-[#A855F7] bg-fuchsia-500/20 text-fuchsia-100 shadow-[0_0_14px_rgba(168,85,247,0.55)]"
               : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
           } disabled:cursor-not-allowed disabled:opacity-50`}
-          title={baselineHint || "设置当前为基线"}
+          title={baselineHint || t("设置当前为基线")}
         >
           ⚓
         </button>

@@ -21,6 +21,7 @@ type Props = {
   useLabels: string[];
   showWeakPaths?: boolean;
   emptyHint?: string;
+  t?: (s: string) => string;
 };
 
 function edgeColor(type: string): string {
@@ -35,7 +36,7 @@ function yFor(index: number, total: number): number {
   return 25 + index * gap;
 }
 
-export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = false, emptyHint }: Props) {
+export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = false, emptyHint, t = (s: string) => s }: Props) {
   const width = 300;
   const height = 140;
 
@@ -43,7 +44,7 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
   if (!visibleVectors.length) {
     return (
       <div className="flex h-28 w-full items-center justify-center rounded bg-zinc-950 text-[11px] text-zinc-400">
-        {emptyHint || (showWeakPaths ? "[能量空转 / 无功可受]" : "[能量空转 / 微观路径已隐藏]")}
+        {emptyHint || (showWeakPaths ? t("[能量空转 / 无功可受]") : t("[能量空转 / 微观路径已隐藏]"))}
       </div>
     );
   }
@@ -89,7 +90,13 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
         return (
           <g key={`edge-${i}`}>
             <title>
-              {(v.source_deity || "体")} [{v.type || "冲"}] {(v.target_deity || "用")}：基础能量 {gain.toFixed(1)} - 损耗 {risk.toFixed(1)} - 最终做功 {net >= 0 ? "+" : ""}
+              {t(String(v.source_deity || "体"))} [{t(String(v.type || "冲"))}] {t(String(v.target_deity || "用"))}
+              {t("：基础能量 ")}
+              {gain.toFixed(1)}
+              {t(" - 损耗 ")}
+              {risk.toFixed(1)}
+              {t(" - 最终做功 ")}
+              {net >= 0 ? "+" : ""}
               {net.toFixed(1)}
               {typeof v.work_score === "number" ? ` · Work_Score ${workScore >= 0 ? "+" : ""}${workScore.toFixed(2)}` : ""}
             </title>
@@ -124,7 +131,7 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
                 </circle>
                 {isPathBroken ? (
                   <text x={midX - 40} y={midY + 12} fontSize="9" fill="#FCA5A5">
-                    食伤泄秀功能坍缩
+                    {t("食伤泄秀功能坍缩")}
                   </text>
                 ) : null}
               </g>

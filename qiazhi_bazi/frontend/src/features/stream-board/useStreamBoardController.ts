@@ -335,6 +335,41 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setSelectionResetToken,
   });
 
+  const structureReasonLines = useMemo(() => {
+    const chain = (finalStructureFinalDecisionV0 as { logical_reasoning_chain?: unknown } | null | undefined)
+      ?.logical_reasoning_chain;
+    if (!Array.isArray(chain)) return [] as string[];
+    return chain.map((x) => String(x || "").trim()).filter(Boolean).slice(0, 40);
+  }, [finalStructureFinalDecisionV0]);
+
+  const verdictBodyLines = useMemo(() => {
+    const raw = String(finalVerdictBody || "").trim();
+    if (!raw) return [] as string[];
+    return raw.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 120);
+  }, [finalVerdictBody]);
+
+  const patternNameZh = useMemo(() => {
+    const raw = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const pp = raw?.pattern_profile;
+    if (!pp || typeof pp !== "object" || Array.isArray(pp)) return "";
+    return String((pp as Record<string, unknown>).pattern_name_zh || "").trim();
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
+  const structureStrategicRec = useMemo(() => {
+    const rec = (finalStructureFinalDecisionV0 as { strategic_advice?: { recommendation?: string } } | null | undefined)
+      ?.strategic_advice?.recommendation;
+    const s = String(rec || "").trim();
+    return s ? [s] : [];
+  }, [finalStructureFinalDecisionV0]);
+
+  const structureDivergenceFirst = useMemo(() => {
+    const rep = (finalStructureFinalDecisionV0 as { plugin_conflict_report?: { divergence_notes?: string[] } } | null | undefined)
+      ?.plugin_conflict_report?.divergence_notes;
+    if (!Array.isArray(rep) || !rep.length) return [] as string[];
+    const first = String(rep[0] || "").trim();
+    return first ? [first] : [];
+  }, [finalStructureFinalDecisionV0]);
+
   const { i18nCalls, t } = useTranslationQueue({
     lang,
     isExecuting,
@@ -351,6 +386,15 @@ export function useStreamBoardController(): StreamBoardViewModel {
       ...auditorProposalCards.map((card) => card.conflictDetail || card.title),
       ...auditItems.map((item) => item.action),
       ...resultLogs,
+      ...verdictBodyLines,
+      ...finalLogicalEvidence,
+      ...(finalVerdictChangeLog.physics_diff || []),
+      ...(finalVerdictChangeLog.consensus_diff || []),
+      ...(finalVerdictChangeLog.text_diff_hint ? [finalVerdictChangeLog.text_diff_hint] : []),
+      ...structureReasonLines,
+      ...(patternNameZh ? [patternNameZh] : []),
+      ...structureStrategicRec,
+      ...structureDivergenceFirst,
     ],
   });
 

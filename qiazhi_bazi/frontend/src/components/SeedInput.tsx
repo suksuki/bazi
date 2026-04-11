@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { SEED_YEAR_STRINGS } from "@/components/seedYearRange";
 
@@ -17,12 +17,20 @@ type Props = {
   busy: boolean;
   rightSummarySlot?: ReactNode;
   hideSubmitButton?: boolean;
+  /** 入口页主按钮：选定生辰后进入主界面（与 splitActions 二选一展示） */
+  entryCommitAction?: {
+    label: string;
+    busy?: boolean;
+    onClick: (payload: SeedFormPayload) => void | Promise<void>;
+  };
   /** 仅拉预览；正式「测算八字」由主栏 UnifiedActionBar 触发 onSeedSubmit */
   splitActions?: {
     onPreview: (payload: SeedFormPayload) => void | Promise<void>;
     previewBusy?: boolean;
   };
   onPayloadChange?: (payload: SeedFormPayload) => void;
+  /** 返回入口页时回填上次生辰（不随每次 render 反复覆盖） */
+  hydrateFrom?: SeedFormPayload | null;
   t?: (s: string) => string;
 };
 
@@ -31,8 +39,10 @@ export function SeedInput({
   busy,
   rightSummarySlot,
   hideSubmitButton = false,
+  entryCommitAction,
   splitActions,
   onPayloadChange,
+  hydrateFrom = null,
   t = (s) => s,
 }: Props) {
   const [year, setYear] = useState("1990");
@@ -81,6 +91,23 @@ export function SeedInput({
     }
   }, [day, daysInMonth]);
 
+  const hydratedSigRef = useRef("");
+  useEffect(() => {
+    if (!hydrateFrom) return;
+    const sig = `${hydrateFrom.date}|${hydrateFrom.time}|${hydrateFrom.calendar}|${hydrateFrom.gender}`;
+    if (hydratedSigRef.current === sig) return;
+    hydratedSigRef.current = sig;
+    const [y, m, d] = hydrateFrom.date.split("-").map((x) => x.trim());
+    const [hh, mm] = hydrateFrom.time.split(":").map((x) => x.trim());
+    if (y) setYear(y.padStart(4, "0").slice(0, 4));
+    if (m) setMonth(m.padStart(2, "0").slice(0, 2));
+    if (d) setDay(d.padStart(2, "0").slice(0, 2));
+    if (hh) setHour(hh.padStart(2, "0").slice(0, 2));
+    if (mm) setMinute(mm.padStart(2, "0").slice(0, 2));
+    setCalendar(hydrateFrom.calendar);
+    setGender(hydrateFrom.gender);
+  }, [hydrateFrom]);
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -121,14 +148,14 @@ export function SeedInput({
               onClick={() => setGender("male")}
               className={`rounded-lg px-3 py-1.5 text-xs ${gender === "male" ? "bg-cyan-500 text-zinc-950" : "bg-zinc-800 text-zinc-300"}`}
             >
-              乾造（男）
+              {t("乾造（男）")}
             </button>
             <button
               type="button"
               onClick={() => setGender("female")}
               className={`rounded-lg px-3 py-1.5 text-xs ${gender === "female" ? "bg-fuchsia-500 text-zinc-950" : "bg-zinc-800 text-zinc-300"}`}
             >
-              坤造（女）
+              {t("坤造（女）")}
             </button>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-5">
@@ -188,7 +215,18 @@ export function SeedInput({
               ))}
             </select>
           </div>
-          {splitActions && hideSubmitButton ? (
+          {entryCommitAction && hideSubmitButton ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                disabled={Boolean(busy || entryCommitAction.busy)}
+                onClick={() => void entryCommitAction.onClick(buildPayload())}
+                className="w-full rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500/90 to-amber-600/85 py-2.5 text-sm font-semibold text-zinc-950 shadow-md shadow-amber-900/30 hover:from-amber-400 hover:to-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {entryCommitAction.busy ? t("推演中…") : entryCommitAction.label}
+              </button>
+            </div>
+          ) : splitActions && hideSubmitButton ? (
             <div className="mt-3">
               <button
                 type="button"
