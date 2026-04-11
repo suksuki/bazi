@@ -51,7 +51,10 @@ export type PluginManifest = {
   default_physics_settings?: Record<string, number>;
   /** 与 `manifests/l1_physics_manifest.json` 同源，供蓝图 Modal 与 LLM 对齐 */
   l1_physics_manifest?: Record<string, unknown>;
-  /** `base_physics/skill_manifest.json` 全量 skills，含 `description_tags` */
+  /**
+   * `base_physics/skill_manifest.json` 全量 skills（扁平注册表，供 DNA/LLM/一致性校验）。
+   * L1 算子卡片的 `metadata.skills` 仅含该算子映射的一行，二者数据源相同但用途不同，管理台勿合并为重复卡片。
+   */
   base_physics_skills?: BasePhysicsSkillRow[];
   refreshed_at?: number;
 };

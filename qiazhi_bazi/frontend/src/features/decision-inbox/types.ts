@@ -7,6 +7,7 @@ export type DecisionInboxCard = {
   cardType?: "conflict" | "auditor-proposal" | "proposal";
   proposal?: unknown;
   skillId?: string;
+  sovereigntyMark?: "PATTERN_SOVEREIGNTY";
 };
 
 export type VerdictChangeLog = {

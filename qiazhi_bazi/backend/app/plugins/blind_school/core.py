@@ -16,6 +16,7 @@ from app.plugins.blind_school.blind_work_evaluator import (
     build_mangpai_interaction_hub_overlay,
     evaluate_blind_work,
 )
+from app.plugins.blind_school.op_work_logic import apply_work_intensity_and_meta_audit
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.unlock_advice import build_unlock_advice
 
@@ -122,6 +123,8 @@ class BlindSchoolPlugin:
             "plugin_version": self.plugin_version,
             "rule_source": "BLIND_SCHOOL_SYSTEM.md",
         }
+        if isinstance(physics_tensor, dict):
+            apply_work_intensity_and_meta_audit(work_vector=work_vector, physics_tensor=physics_tensor)
         return work_vector
 
 

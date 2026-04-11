@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_BASE, PRELOAD_UI_TEXTS, STATIC_I18N, TRANSLATION_CACHE_MAX, TRANSLATION_DEBOUNCE_MS } from "./constants";
 import { cacheKey, isAlreadyTargetLanguage, resolveLocalTermTranslation } from "./utils";
 import type { Lang } from "@/types/bazi";
@@ -25,7 +25,16 @@ export function useTranslationQueue({ lang, isExecuting, isStreaming, dynamicTex
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   }, []);
 
-  async function flushTranslationQueue() {
+  const writeTranslationCache = useCallback((key: string, value: string) => {
+    const cache = translationCacheRef.current;
+    cache.set(key, value);
+    if (cache.size > TRANSLATION_CACHE_MAX) {
+      const oldestKey = cache.keys().next().value as string | undefined;
+      if (oldestKey) cache.delete(oldestKey);
+    }
+  }, []);
+
+  const flushTranslationQueue = useCallback(async () => {
     if (lang === "ZH" || isExecuting || isStreaming) return;
 
     const queued = Array.from(pendingTextsRef.current);
@@ -90,30 +99,24 @@ export function useTranslationQueue({ lang, isExecuting, isStreaming, dynamicTex
     } catch {
       // Ignore translation failures so the main inference flow stays available.
     }
-  }
+  }, [lang, isExecuting, isStreaming, writeTranslationCache]);
 
-  function writeTranslationCache(key: string, value: string) {
-    const cache = translationCacheRef.current;
-    cache.set(key, value);
-    if (cache.size > TRANSLATION_CACHE_MAX) {
-      const oldestKey = cache.keys().next().value as string | undefined;
-      if (oldestKey) cache.delete(oldestKey);
-    }
-  }
+  const enqueueTranslations = useCallback(
+    (texts: string[]) => {
+      if (lang === "ZH" || isExecuting || isStreaming) return;
 
-  function enqueueTranslations(texts: string[]) {
-    if (lang === "ZH" || isExecuting || isStreaming) return;
+      texts.forEach((text) => {
+        const value = (text || "").trim();
+        if (value) pendingTextsRef.current.add(value);
+      });
 
-    texts.forEach((text) => {
-      const value = (text || "").trim();
-      if (value) pendingTextsRef.current.add(value);
-    });
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      void flushTranslationQueue();
-    }, TRANSLATION_DEBOUNCE_MS);
-  }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        void flushTranslationQueue();
+      }, TRANSLATION_DEBOUNCE_MS);
+    },
+    [lang, isExecuting, isStreaming, flushTranslationQueue],
+  );
 
   useEffect(() => {
     if (lang === "ZH") {
@@ -121,12 +124,12 @@ export function useTranslationQueue({ lang, isExecuting, isStreaming, dynamicTex
       return;
     }
     enqueueTranslations([...PRELOAD_UI_TEXTS]);
-  }, [lang]);
+  }, [lang, enqueueTranslations]);
 
   useEffect(() => {
     if (lang === "ZH" || isExecuting) return;
     enqueueTranslations(dynamicTexts);
-  }, [lang, dynamicTexts, isExecuting, isStreaming]);
+  }, [lang, dynamicTexts, isExecuting, isStreaming, enqueueTranslations]);
 
   return { i18nCalls, t };
 }

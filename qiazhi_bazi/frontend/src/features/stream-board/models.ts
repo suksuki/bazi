@@ -28,6 +28,8 @@ export type InboxCard = {
   proposal?: LogicProposal;
   /** 与盲派 skill_manifest 对齐，可由 UI 推断或上游写入 */
   skillId?: string;
+  /** 格局主权与 L1 冲突时：Decision Inbox 角标与路由语义 */
+  sovereigntyMark?: "PATTERN_SOVEREIGNTY";
 };
 
 export type DeityEnergyAxis = {
@@ -92,6 +94,14 @@ export type PhysicsLabConfig = {
   L1_GOV_KILL_EFFICIENCY_LOSS?: number;
   /** Junction 伤官见官坐标畸变衰减（与 SGJG_* 协议对齐） */
   SGJG_COORDINATE_DISTORTION_DECAY?: number;
+  /** 墓库冲开倍率（op_grave / skill l1_grave_vault_01） */
+  GRAVE_BURST_MULTIPLIER?: number;
+  /** 三合 φ 门控强度（op_phi_clamp） */
+  L1_SANHE_PHI_CLAMP?: number;
+  /** 十二长生状态缩放峰值乘子（op_status） */
+  STATUS_BOOST_MULTIPLIER?: number;
+  /** 用户环境方位：东/南/西/北/中；触发后端 L1_OP_GEOGRAPHY 场强演示 */
+  user_target_direction?: string;
 };
 
 export type PluginSwitches = {
@@ -224,6 +234,10 @@ export type StreamBoardViewModel = {
   globalEntropy: number | null;
   /** 多插件因果路由包，来自 physics_tensor.meta.causal_routing */
   causalRouting: Record<string, unknown> | null;
+  /** physics_tensor.meta.pattern_profile：从格/化格候选等 */
+  patternProfile: Record<string, unknown> | null;
+  /** physics_tensor.meta.energy_flow_audit：五行相生流通审计 */
+  energyFlowAudit: Record<string, unknown> | null;
   auditorProposalCards: InboxCard[];
   autoConvertedParamKey: string | null;
   consensusHistory: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;

@@ -4,11 +4,14 @@ from . import (
     op_connection,
     op_destruction,
     op_gov_kill_mix,
+    op_geography,
+    op_sub_branch_interaction,
     op_interdimensional,
     op_owl_food,
     op_production,
     op_robber_wealth,
     op_status,
+    op_stem_fusion,
     op_wealth_seal,
 )
 from .op_interdimensional import StemBranchCouplingEngine
@@ -20,10 +23,13 @@ __all__ = [
     "op_connection",
     "op_interdimensional",
     "op_status",
+    "op_stem_fusion",
     "op_owl_food",
     "op_wealth_seal",
     "op_blade_clash",
     "op_robber_wealth",
     "op_gov_kill_mix",
+    "op_geography",
+    "op_sub_branch_interaction",
     "StemBranchCouplingEngine",
 ]

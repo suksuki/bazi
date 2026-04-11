@@ -54,6 +54,30 @@ describe("stream-board utils", () => {
     expect(cards.map((card) => card.id)).toEqual(["proposal-1", "llm-observe-0", "llm-observe-2"]);
   });
 
+  it("prepends PATTERN_SOVEREIGNTY card when从格主权与伤官见官同时成立", () => {
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+      },
+      firstPromptText: "",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      t: (text) => text,
+      patternProfile: {
+        sovereignty_priority: true,
+        xi_ji_reversal_lines: ["测试：喜忌反转说明"],
+      },
+      l1JunctionFlags: { SHANG_GUAN_JIAN_GUAN: true },
+    });
+    expect(cards[0]?.id).toBe("inbox-pattern-sovereignty");
+    expect(cards[0]?.skillId).toBe("PATTERN_SOVEREIGNTY");
+    expect(cards[0]?.sovereigntyMark).toBe("PATTERN_SOVEREIGNTY");
+  });
+
   it("suppresses LLM observation cards when decision signal-to-noise gate is closed", () => {
     const cards = buildInboxCards({
       metadata: {

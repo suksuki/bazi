@@ -1,4 +1,4 @@
-import type { PluginSwitches, SeedPayload } from "@/features/stream-board/models";
+import type { PhysicsLabConfig, PluginSwitches, SeedPayload } from "@/features/stream-board/models";
 import type { MetricSnapshot } from "./streamBoardTypes";
 
 /** 与 persistSnapshot / mergeSnapshot 使用的 seed 签名一致（不含 reference_year） */
@@ -31,6 +31,20 @@ export function buildBlindSchoolFeaturesPayload(sw: PluginSwitches) {
     enable_tomb_vault: sw.blindSchoolTombVault !== false,
     enable_host_guest_bonus: sw.blindSchoolHostGuest !== false,
   };
+}
+
+const ALLOWED_USER_DIRECTIONS = new Set(["东", "南", "西", "北", "中"]);
+
+/** analyze-seed / 静默重算：仅合法方位写入 physics_config，避免后端校验噪声 */
+export function buildPhysicsConfigPayload(lab: PhysicsLabConfig): Record<string, unknown> {
+  const cfg: Record<string, unknown> = { ...lab };
+  const dir = String(cfg.user_target_direction || "").trim();
+  if (!dir || !ALLOWED_USER_DIRECTIONS.has(dir)) {
+    delete cfg.user_target_direction;
+  } else {
+    cfg.user_target_direction = dir;
+  }
+  return cfg;
 }
 
 export function extractMetricSnapshotFromPhysics(physicsTensor: Record<string, unknown> | null | undefined): MetricSnapshot {

@@ -1,7 +1,7 @@
 """Shared API request/response contracts."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -43,6 +43,10 @@ class PhysicsConfig(BaseModel):
     INTERDIMENSIONAL_SHIELD_ENABLE: Optional[float] = Field(default=None, description="1=启用维度屏蔽，0=关闭")
     STEM_BRANCH_ROOT_RESONANCE_ENABLE: Optional[float] = Field(default=None, description="1=启用通根谐振")
     STEM_BRANCH_VERTICAL_CRUSH_ENABLE: Optional[float] = Field(default=None, description="1=启用盖头截脚损耗")
+    user_target_direction: Optional[str] = Field(
+        default=None,
+        description="用户环境方位：东/南/西/北/中；空或未知则不应用地理算子",
+    )
 
 
 class ConsultationCreate(BaseModel):
@@ -87,6 +91,10 @@ class AnalyzeClashRequest(BaseModel):
     physics_config: Optional[PhysicsConfig] = None
     enabled_plugins: List[str] = Field(default_factory=list)
     blind_school_features: Optional[BlindSchoolFeatureFlags] = None
+    temporal_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Chronos V2：流年/大运干支上下文（引动审计）",
+    )
 
 
 class AnalyzeSeedRequest(BaseModel):
@@ -103,6 +111,10 @@ class AnalyzeSeedRequest(BaseModel):
     physics_config: Optional[PhysicsConfig] = None
     enabled_plugins: List[str] = Field(default_factory=list)
     blind_school_features: Optional[BlindSchoolFeatureFlags] = None
+    external_overrides: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="模拟时空：干支字符串键 liunian_ganzhi/dayun_ganzhi（如丙午），写入 temporal_context",
+    )
 
 
 class AuditPhysicsWithLlmRequest(BaseModel):

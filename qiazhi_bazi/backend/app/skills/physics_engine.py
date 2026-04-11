@@ -1,4 +1,7 @@
-"""PhysicsInferenceSkill: 物理参数读取、缓存与能量张量推断。"""
+"""PhysicsInferenceSkill: 物理参数读取、缓存与能量张量推断。
+
+神煞（symbolic stars）不在本模块计算；展示层标签由 interpretation_helper 在终判 LLM 前注入 metadata。
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

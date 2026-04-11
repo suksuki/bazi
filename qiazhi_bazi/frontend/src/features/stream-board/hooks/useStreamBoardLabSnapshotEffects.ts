@@ -45,7 +45,7 @@ export function useStreamBoardLabSnapshotEffects(p: Params) {
         p.isSnapshotRestoringRef.current = false;
       });
     }
-  }, [p.labSnapshot, p.lastSeedPayload, p.metadata]);
+  }, [p.labSnapshot, p.lastSeedPayload, p.metadata, p.hydrationSinksRef, p.isSnapshotRestoringRef]);
 
   useLayoutEffect(() => {
     if (p.navHandledRef.current) return;
@@ -78,7 +78,7 @@ export function useStreamBoardLabSnapshotEffects(p: Params) {
       // eslint-disable-next-line no-console
       console.info("[StateRecoveryAuditor]", navInfo);
     }
-  }, [p.labSnapshot]);
+  }, [p.labSnapshot, p.navHandledRef]);
 
   useLayoutEffect(() => {
     const n = p.inboxResetNonce;
@@ -87,6 +87,8 @@ export function useStreamBoardLabSnapshotEffects(p: Params) {
     p.setConfirmedDecisionIds(normalizedSnapshotDecisionIds(p.labSnapshot?.decision_selection_ids));
     p.setResolvedCardIds((p.labSnapshot?.resolved_card_ids || []).map((x) => String(x)));
     p.setSelectionResetToken((v) => v + 1);
+    // 依赖刻意拆到具体字段：整包 `p` 常在父组件每次渲染新建，会误触发 inbox 重置。
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- narrow deps; full `p` unstable from parent
   }, [
     p.inboxResetNonce,
     p.labSnapshot?.decision_selection_ids,

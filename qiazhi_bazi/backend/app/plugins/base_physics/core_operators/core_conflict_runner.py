@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Mapping, MutableMapping
 
 from app.plugins.base_physics.core_operators.op_blade_clash import apply_op_blade_clash
 from app.plugins.base_physics.core_operators.op_gov_kill_mix import apply_op_gov_kill_mix
+from app.plugins.base_physics.core_operators.op_geography import apply_op_geography
 from app.plugins.base_physics.core_operators.op_owl_food import apply_op_owl_food
 from app.plugins.base_physics.core_operators.op_robber_wealth import apply_op_robber_wealth
 from app.plugins.base_physics.core_operators.op_wealth_seal import apply_op_wealth_seal
@@ -16,6 +17,7 @@ def apply_l1_core_conflict_operators(
     metadata: Any,
     settings: Mapping[str, float],
     conflict_points: List[Any],
+    physics_config: Mapping[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     meta = physics_tensor.setdefault("meta", {})
     if isinstance(meta, dict):
@@ -26,4 +28,5 @@ def apply_l1_core_conflict_operators(
     steps.extend(apply_op_blade_clash(physics_tensor=physics_tensor, metadata=metadata, settings=settings, conflict_points=conflict_points))
     steps.extend(apply_op_robber_wealth(physics_tensor=physics_tensor, metadata=metadata, settings=settings))
     steps.extend(apply_op_gov_kill_mix(physics_tensor=physics_tensor, metadata=metadata, settings=settings))
+    steps.extend(apply_op_geography(physics_tensor=physics_tensor, physics_config=physics_config, settings=settings))
     return steps

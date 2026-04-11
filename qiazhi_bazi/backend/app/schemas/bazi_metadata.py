@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -58,6 +58,10 @@ class BaziMetadata(BaseModel):
     conflict_matrix: ConflictMatrix = Field(default_factory=ConflictMatrix)
     flow_state: FlowState = FlowState.UNKNOWN
     notes: str = Field(default="", description="可选备注")
+    temporal_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Chronos V2：大运/流年干支与参考年，供引动审计",
+    )
 
 
 _SIX_CLASH = {

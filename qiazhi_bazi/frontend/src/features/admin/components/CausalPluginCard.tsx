@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import type { PluginSwitches, PluginWeights } from "@/features/stream-board/models";
+import {
+  boundsForPhysicsSettingKey,
+  physicsSliderBindingForKey,
+} from "@/features/admin/constants/physicsSkillSliderBounds";
 import type { PluginManifestItem } from "@/features/admin/hooks/usePluginRegistry";
+import { runtimePhysicsNumber } from "@/features/admin/utils/runtimePhysicsNumber";
+import type { PhysicsLabConfig, PluginSwitches, PluginWeights } from "@/features/stream-board/models";
 
 function IconZap({ className }: { className?: string }) {
   return (
@@ -46,6 +51,12 @@ type Props = {
   extraBody?: ReactNode;
   /** 依赖 / p95 等巡检信息，置于 Body 末尾 */
   diagnosticsSlot?: ReactNode;
+  /** 与 `metadata.skills[].physics_setting_key` 联动：在卡片内渲染实验滑块 */
+  labConfig?: PhysicsLabConfig;
+  setLabConfig?: Dispatch<SetStateAction<PhysicsLabConfig>>;
+  defaultPhysicsSettings?: Record<string, number>;
+  /** 最近一次快照 physics_tensor，用于 η 实时读数 */
+  physicsTensor?: Record<string, unknown> | undefined;
 };
 
 export function CausalPluginCard({
@@ -58,8 +69,13 @@ export function CausalPluginCard({
   openBlueprint,
   extraBody,
   diagnosticsSlot,
+  labConfig,
+  setLabConfig,
+  defaultPhysicsSettings,
+  physicsTensor,
 }: Props) {
   const [canonOpen, setCanonOpen] = useState(false);
+  const [labInteractOpen, setLabInteractOpen] = useState(false);
   const meta = plugin.metadata || ({} as PluginManifestItem["metadata"]);
   const display = meta.display_name || meta.label || plugin.id;
   const useCase = meta.use_case || "";
@@ -68,6 +84,20 @@ export function CausalPluginCard({
   const canonMd = [detailed, meta.governance_notes ? `**裁决合规**\n${meta.governance_notes}` : ""].filter(Boolean).join("\n\n---\n\n");
 
   const footerSkills = useMemo(() => (Array.isArray(meta.skills) ? meta.skills : []), [meta.skills]);
+
+  const physicsSliderRows = useMemo(() => {
+    if (!setLabConfig) return [];
+    return footerSkills
+      .map((s) => {
+        const pkRaw = s.physics_setting_key?.trim();
+        if (!pkRaw) return null;
+        const binding = physicsSliderBindingForKey(pkRaw);
+        const bounds = boundsForPhysicsSettingKey(pkRaw);
+        if (!binding || !bounds) return null;
+        return { skill: s, pk: pkRaw as keyof PhysicsLabConfig, bounds, binding };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null);
+  }, [footerSkills, setLabConfig]);
 
   return (
     <article
@@ -179,6 +209,59 @@ export function CausalPluginCard({
             {canonOpen ? (
               <div className="mt-1.5 max-h-48 overflow-y-auto rounded-md border border-zinc-700/80 bg-zinc-950/90 p-2 whitespace-pre-wrap text-[10px] text-zinc-400">
                 {canonMd}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {physicsSliderRows.length > 0 && labConfig && setLabConfig ? (
+          <div
+            className={`rounded-lg border border-cyan-900/45 bg-cyan-950/25 px-2 py-2 ${
+              isFinalized ? "pointer-events-none opacity-55 grayscale-[0.35]" : ""
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setLabInteractOpen((o) => !o)}
+              className="text-[10px] font-medium text-cyan-200/90 underline-offset-2 hover:underline"
+            >
+              {labInteractOpen ? "收起实验交互" : "展开实验交互（physics_setting_key）"}
+            </button>
+            {labInteractOpen ? (
+              <div className="mt-2 space-y-2.5">
+                {physicsSliderRows.map(({ skill, pk, bounds, binding }) => {
+                  const cur =
+                    typeof labConfig[pk] === "number" && Number.isFinite(labConfig[pk] as number)
+                      ? (labConfig[pk] as number)
+                      : (defaultPhysicsSettings?.[pk as string] ?? bounds[0]);
+                  const live = runtimePhysicsNumber(physicsTensor, pk as string);
+                  const titleLine = binding.label ? binding.label : skill.name;
+                  return (
+                    <label key={`${skill.id}-${pk}`} className="block text-[10px] text-zinc-300">
+                      <span className="font-medium text-cyan-100/90">{titleLine}</span>
+                      {binding.label ? (
+                        <span className="ml-1 text-[9px] text-zinc-500">（{skill.name}）</span>
+                      ) : null}
+                      <span className="ml-1 font-mono text-[9px] text-zinc-500">{pk as string}</span>
+                      {live != null ? (
+                        <span className="ml-1 font-mono text-[9px] text-amber-200/85">η≈{live.toFixed(2)}</span>
+                      ) : null}
+                      <span className="ml-1 text-zinc-500">= {Number(cur).toFixed(2)}</span>
+                      <input
+                        type="range"
+                        min={bounds[0]}
+                        max={bounds[1]}
+                        step={bounds[2]}
+                        disabled={isFinalized}
+                        value={cur}
+                        onChange={(e) => {
+                          const next = Number(e.target.value);
+                          setLabConfig((prev) => ({ ...prev, [pk]: next } as PhysicsLabConfig));
+                        }}
+                        className="mt-1 w-full accent-cyan-500/80"
+                      />
+                    </label>
+                  );
+                })}
               </div>
             ) : null}
           </div>

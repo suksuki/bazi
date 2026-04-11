@@ -35,6 +35,15 @@ type Props = {
     deityTrace?: Record<string, unknown>;
   }) => void;
   onHoverDeity?: (deityName?: string) => void;
+  /** physics_tensor.meta.stem_fusion_v1 */
+  stemFusionMeta?: Record<string, unknown> | null;
+  /** physics_tensor.meta.l1_status_v1.per_deity */
+  l1StatusPerDeity?: Record<string, { work_efficiency?: number }> | null;
+  /** physics_tensor.meta.pivot_defense_v1 */
+  pivotDeity?: string | null;
+  pivotDefenseSemantic?: string | null;
+  /** 流年参考年等：驱动子图过渡与轻微重挂载 */
+  fluxKey?: number;
 };
 
 export function TenGodNumericList({
@@ -52,6 +61,11 @@ export function TenGodNumericList({
   climateSeason = "",
   onOpenLogic,
   onHoverDeity,
+  stemFusionMeta = null,
+  l1StatusPerDeity = null,
+  pivotDeity = null,
+  pivotDefenseSemantic = null,
+  fluxKey,
 }: Props) {
   const anomalyTag = (topAnomaly || "").trim();
   const consensusText = buildConsensusText(consensusHistory);
@@ -75,6 +89,7 @@ export function TenGodNumericList({
         </div>
       </div>
       <AbsDistributionChart
+        key={fluxKey != null ? `abs-${fluxKey}` : undefined}
         deityScores={deityScores}
         deityEnergyAxes={deityEnergyAxes}
         deityComponents={deityComponents}
@@ -86,6 +101,10 @@ export function TenGodNumericList({
         onOpenLogic={onOpenLogic}
         onHoverDeity={onHoverDeity}
         deityTraceDetails={deityTraceDetails}
+        stemFusionMeta={stemFusionMeta}
+        l1StatusPerDeity={l1StatusPerDeity}
+        pivotDeity={pivotDeity}
+        pivotDefenseSemantic={pivotDefenseSemantic}
       />
       <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-[11px] text-zinc-500">
         [L2 Structure Skill: Waiting for Alignment...]

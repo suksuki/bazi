@@ -8,8 +8,13 @@ from app.core.config.physics_settings import resolve_physics_settings
 from app.core.rules.junction import EnergyVaultStatus, build_l1_operator_audit_items_from_steps, sync_l1_junction_flags_to_meta
 from app.plugins.base.interactions.l1_atomic_plugin import run_l1_atomic_plugin_pool
 from app.plugins.base_physics.core_operators.core_conflict_runner import apply_l1_core_conflict_operators
+from app.plugins.base_physics.core_operators.op_stem_fusion import apply_op_stem_fusion
+from app.plugins.base_physics.core_operators.op_sub_branch_interaction import apply_op_sub_branch_interaction
+from app.core.routing.pattern_recognition_router import evaluate_pattern_profile
+from app.services.helpers.flow_auditor import apply_energy_flow_audit
 from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to_physics_tensor
 from app.plugins.chronos.core import run_chronos_plugin
+from app.plugins.chronos.temporal_v2 import append_temporal_trigger_audits
 from app.plugins.base_physics.core_operators.op_interdimensional import compute_solid_ghost_ratio
 
 
@@ -244,8 +249,21 @@ def evaluate_interactions(
         metadata=metadata,
         settings=settings,
         conflict_points=points,
+        physics_config=physics_config,
     )
-    combined_steps = list(steps) + list(status_steps or []) + list(conflict_steps or [])
+    fusion_steps = apply_op_stem_fusion(physics_tensor=physics_tensor, metadata=metadata, settings=settings)
+    combined_steps = list(steps) + list(status_steps or []) + list(conflict_steps or []) + list(fusion_steps or [])
+    combined_steps.extend(
+        apply_op_sub_branch_interaction(
+            physics_tensor=physics_tensor,
+            metadata=metadata,
+            settings=settings,
+            combined_steps=list(combined_steps),
+            composite=composite,
+            branches=branches,
+            pillars=pillars,
+        )
+    )
     clamp_on = float(params.get("L1_SANHE_PHI_CLAMP", 1.0)) >= 1.0
 
     consistency = _composite_consistency_check(
@@ -269,7 +287,13 @@ def evaluate_interactions(
         )
         chrono_rows = list(chrono_out.get("audit_items") or [])
         audit["chronos_audit_items"] = chrono_rows
-        audit["l1_operator_audit_items"] = l1_rows + chrono_rows
+        temporal_rows = append_temporal_trigger_audits(
+            physics_tensor=physics_tensor,
+            metadata=metadata,
+            branches=branches,
+            settings=settings,
+        )
+        audit["l1_operator_audit_items"] = l1_rows + chrono_rows + temporal_rows
         audit["dimensional_shield_logs"] = list(dimensional_shield_logs or [])
 
     physics_tensor["l1_atomic_pipeline"] = {
@@ -315,4 +339,6 @@ def evaluate_interactions(
         sync_l1_junction_flags_to_meta(
             metadata=md, physics_tensor=physics_tensor, physics_settings=settings
         )
+        apply_energy_flow_audit(physics_tensor=physics_tensor, physics_config=physics_config)
+        evaluate_pattern_profile(physics_tensor=physics_tensor, metadata=md, settings=settings)
     return physics_tensor

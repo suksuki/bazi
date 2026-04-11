@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, MutableMapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, cast
 
 from app.core.runtime_config import get_runtime_config
 
@@ -168,6 +168,57 @@ class CausalConflictEvent:
 class CausalRouter:
     routing_config: Dict[str, Any] = field(default_factory=load_routing_config)
 
+    def apply_pattern_override(
+        self,
+        merged: MutableMapping[str, float],
+        physics_tensor: Optional[Dict[str, Any]],
+    ) -> Dict[str, float]:
+        """从格等格局主权：对路由合并向量中「喜用反转」十神做幅值翻转增强（克泄在合并域转为顺势增益）。"""
+        out = dict(merged)
+        if not physics_tensor or not isinstance(physics_tensor, dict):
+            return out
+        meta = physics_tensor.get("meta")
+        if not isinstance(meta, dict):
+            return out
+        pp = meta.get("pattern_profile")
+        if not isinstance(pp, dict) or not pp.get("sovereignty_priority"):
+            return out
+        gain = float(pp.get("eta_flip_gain") or 1.12)
+        gain = max(1.0, min(2.0, gain))
+        fav = {str(x) for x in (pp.get("favorable_deities") or []) if x}
+        for d, v in list(out.items()):
+            if d not in fav:
+                continue
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            if fv < 0:
+                out[d] = round(abs(fv) * gain, 4)
+        meta["pattern_router_applied"] = {"merged_eta_flip": True, "gain": round(gain, 4)}
+        return out
+
+    def _apply_stem_fusion_lock_to_merged(
+        self,
+        merged: MutableMapping[str, float],
+        physics_tensor: Optional[Dict[str, Any]],
+    ) -> None:
+        """天干五合不化：锁死十神在合并路由中的对外影响量（不参与生克合成）。"""
+        if not physics_tensor or not isinstance(physics_tensor, dict):
+            return
+        meta = physics_tensor.get("meta")
+        if not isinstance(meta, dict):
+            return
+        sf = meta.get("stem_fusion_v1")
+        if not isinstance(sf, dict) or not sf.get("is_locked"):
+            return
+        for d in sf.get("locked_deities") or []:
+            ds = str(d).strip()
+            if not ds:
+                continue
+            if ds in merged:
+                merged[ds] = 0.0
+
     def negotiate_impact(
         self,
         plugin_outputs: Dict[str, Dict[str, Any]],
@@ -225,6 +276,7 @@ class CausalRouter:
                 "routing_decision": routing_decision,
                 "skill_sovereignty_rank": skill_rank,
                 "per_plugin_vectors": {k: {kk: round(vv, 4) for kk, vv in v.items()} for k, v in per_plugin.items()},
+                "pattern_assertion_keywords": [],
             }
 
         if strategy == "school_priority" or school_sov:
@@ -264,7 +316,17 @@ class CausalRouter:
 
         _apply_wealth_seal_merge_bias(merged, physics_tensor, cfg)
 
+        self._apply_stem_fusion_lock_to_merged(cast(MutableMapping[str, float], merged), physics_tensor)
+
+        merged = self.apply_pattern_override(cast(MutableMapping[str, float], merged), physics_tensor)
+
         skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged)
+        pp = (
+            (physics_tensor.get("meta") or {}).get("pattern_profile")
+            if isinstance(physics_tensor, dict) and isinstance(physics_tensor.get("meta"), dict)
+            else None
+        )
+        pattern_kw = list(pp.get("assertion_keywords") or []) if isinstance(pp, dict) else []
         return {
             "strategy_applied": "school_priority" if (strategy == "school_priority" or school_sov) else "weighted_sum",
             "conflict_events": [e.to_dict() for e in events],
@@ -272,6 +334,7 @@ class CausalRouter:
             "routing_decision": routing_decision,
             "skill_sovereignty_rank": skill_rank,
             "per_plugin_vectors": {k: {kk: round(vv, 4) for kk, vv in v.items()} for k, v in per_plugin.items()},
+            "pattern_assertion_keywords": pattern_kw,
         }
 
     def _skill_sovereignty_rank(

@@ -5,6 +5,8 @@ import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { SeedInput } from "@/components/SeedInput";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
+import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
+import { TemporalYearSlider } from "./TemporalYearSlider";
 import { WillReplayPanel } from "./WillReplayPanel";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
@@ -140,6 +142,10 @@ export function BoardCommandPanel({
     runGenderComparison,
     pluginWeights,
     setPluginWeights,
+    labConfig,
+    setLabConfig,
+    energyFlowAudit,
+    timeline,
     rerunFinalVerdictWithWeights,
     logicDiff,
     inboxResetNonce,
@@ -184,6 +190,24 @@ export function BoardCommandPanel({
                       className="w-[4.75rem] rounded border border-zinc-600 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-100"
                     />
                   </label>
+                  <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
+                    <span title="地理场演示：南强化火、北强化水（需重新测算）">{t("环境方位")}</span>
+                    <select
+                      value={labConfig.user_target_direction ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value.trim();
+                        setLabConfig((prev) => ({ ...prev, user_target_direction: v || undefined }));
+                      }}
+                      className="max-w-[5.5rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[11px] text-zinc-100"
+                    >
+                      <option value="">—</option>
+                      <option value="东">东</option>
+                      <option value="南">南</option>
+                      <option value="西">西</option>
+                      <option value="北">北</option>
+                      <option value="中">中</option>
+                    </select>
+                  </label>
                   <span className="w-full text-[9px] leading-snug text-zinc-600 sm:w-auto" title={t("流年参考年说明")}>
                     {t("流年参考年说明")}
                   </span>
@@ -201,6 +225,20 @@ export function BoardCommandPanel({
                     </span>
                   ) : null}
                 </div>
+                {metadata?.pillars ? (
+                  <TemporalYearSlider
+                    referenceYear={referenceYear}
+                    onYearChange={setReferenceYear}
+                    timeline={timeline}
+                    disabled={Boolean(busy || isFinalized)}
+                    className="mb-2"
+                  />
+                ) : null}
+                <EnergyFlowChainStrip
+                  audit={energyFlowAudit}
+                  motionKey={referenceYear}
+                  className="mb-2 transition-opacity duration-500 ease-out"
+                />
                 {simpleBoard ? (
                   <div className="h-full">
                     <div className="grid h-full grid-cols-9 gap-1.5">

@@ -182,9 +182,15 @@ async def seed_preview(body: AnalyzeSeedRequest) -> dict:
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"日期格式错误: {e}") from e
+    timeline_out = dict(timeline) if isinstance(timeline, dict) else {}
+    eo = body.external_overrides if isinstance(getattr(body, "external_overrides", None), dict) else {}
+    if eo.get("liunian_ganzhi"):
+        timeline_out["liunian"] = str(eo["liunian_ganzhi"]).strip()
+    if eo.get("dayun_ganzhi"):
+        timeline_out["dayun"] = str(eo["dayun_ganzhi"]).strip()
     return {
         "pillars": pillars.model_dump(),
-        "timeline": timeline,
+        "timeline": timeline_out,
     }
 
 

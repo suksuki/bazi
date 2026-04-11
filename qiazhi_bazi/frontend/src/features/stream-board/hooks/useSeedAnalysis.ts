@@ -7,6 +7,7 @@ import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
 import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
+  buildPhysicsConfigPayload,
   extractMetricSnapshotFromPhysics,
 } from "@/features/stream-board/controller/streamBoardPure";
 import type { ConsensusItem, MetricSnapshot } from "@/features/stream-board/controller/streamBoardTypes";
@@ -187,7 +188,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
             latitude: 31.2304,
             longitude: 121.4737,
             session_id: currentSessionId ?? undefined,
-            physics_config: d.labConfig,
+            physics_config: buildPhysicsConfigPayload(d.labConfig),
             enabled_plugins: [
               ...(d.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
               ...(d.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),

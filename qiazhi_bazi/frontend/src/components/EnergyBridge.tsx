@@ -4,6 +4,9 @@ type WorkVectorItem = {
   detail?: string;
   type?: string;
   expected_work?: number;
+  /** 贼捕阶梯：expected_work × work_intensity（与后端 op_work_logic 对齐） */
+  work_score?: number;
+  work_intensity?: number;
   backfire_risk?: number;
   unlock_gain?: number;
   source_deity?: string;
@@ -77,7 +80,8 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
         const path = `M ${x1} ${y1} C ${cx1} ${y1}, ${cx2} ${y2}, ${x2} ${y2}`;
         const color = isPathBroken ? "#FB7185" : (isBackfire ? "#FF4D4F" : edgeColor(v.type || ""));
         const net = Number(v.expected_work || 0);
-        const strokeWidth = Math.max(1, 1 + Math.abs(net) * 2);
+        const workScore = Number(v.work_score != null ? v.work_score : v.expected_work || 0);
+        const strokeWidth = Math.max(1, 1 + Math.abs(workScore) * 2);
         const microOpacity = v.is_micro_path ? 0.2 : 0.9;
         const dur = `${Math.max(1.2, 3.2 - Math.min(2, Math.abs(net)))}s`;
         const midX = (x1 + x2) / 2;
@@ -87,6 +91,7 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
             <title>
               {(v.source_deity || "体")} [{v.type || "冲"}] {(v.target_deity || "用")}：基础能量 {gain.toFixed(1)} - 损耗 {risk.toFixed(1)} - 最终做功 {net >= 0 ? "+" : ""}
               {net.toFixed(1)}
+              {typeof v.work_score === "number" ? ` · Work_Score ${workScore >= 0 ? "+" : ""}${workScore.toFixed(2)}` : ""}
             </title>
             <path
               d={path}
@@ -101,6 +106,10 @@ export function EnergyBridge({ vectors, bodyLabels, useLabels, showWeakPaths = f
                 [PATH_BROKEN]
               </text>
             ) : null}
+            <text x={midX - 22} y={midY + 12 + (i % 4) * 3} fontSize="8" fill="#EAB308" opacity="0.92">
+              WS {workScore >= 0 ? "+" : ""}
+              {workScore.toFixed(2)}
+            </text>
             <circle r="2.8" fill={color} filter="url(#eb-glow)">
               <animateMotion dur={dur} repeatCount="indefinite" path={path} />
             </circle>

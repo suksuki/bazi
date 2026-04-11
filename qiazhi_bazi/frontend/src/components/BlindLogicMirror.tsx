@@ -9,6 +9,8 @@ type WorkVectorItem = {
   type?: string;
   direction?: string;
   expected_work?: number;
+  work_score?: number;
+  work_intensity?: number;
   backfire_risk?: number;
   host_abs?: number;
   guest_abs?: number;

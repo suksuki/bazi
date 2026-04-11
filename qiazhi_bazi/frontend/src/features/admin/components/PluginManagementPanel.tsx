@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { CausalPluginCard } from "@/features/admin/components/CausalPluginCard";
 import { PluginBlueprintModal } from "@/features/admin/components/PluginBlueprintModal";
 import { useLabConfig } from "@/features/lab-config/LabConfigContext";
+import { runtimePhysicsNumber } from "@/features/admin/utils/runtimePhysicsNumber";
 import {
   buildPluginManifestUrl,
   usePluginRegistry,
@@ -38,25 +40,46 @@ const ETA_ALIGNMENT_KEYS = [
   "STEM_BRANCH_VERTICAL_CRUSH_ENABLE",
 ] as const satisfies readonly (keyof PhysicsLabConfig)[];
 
-/** 核心冲突簇卡片绑定的 Lab 键 → [min, max, step] */
-const CORE_CONFLICT_SLIDER_BOUNDS: Partial<
-  Record<Exclude<keyof PhysicsLabConfig, "L1_CORE_CONFLICT_OPS_ENABLE">, [number, number, number]>
-> = {
-  SGJG_COORDINATE_DISTORTION_DECAY: [0.05, 1.0, 0.05],
-  L1_OWL_FOOD_DAMPING: [0, 0.95, 0.01],
-  L1_WEALTH_SEAL_COLLAPSE: [0, 0.95, 0.01],
-  L1_BLADE_CLASH_INSTABILITY: [0, 2, 0.05],
-  L1_ROBBER_WEALTH_ALLOC_LOSS: [0, 0.95, 0.01],
-  L1_GOV_KILL_EFFICIENCY_LOSS: [0, 1, 0.01],
-};
-
+/** core_conflict 技能列表：伤官见官（id 含 shangguan）置顶 */
 function sortCoreConflictSkills(rows: BasePhysicsSkillRow[]): BasePhysicsSkillRow[] {
   return [...rows].sort((a, b) => {
-    const aFirst = a.description_tags?.includes("SHANG_GUAN_JIAN_GUAN") ? 0 : 1;
-    const bFirst = b.description_tags?.includes("SHANG_GUAN_JIAN_GUAN") ? 0 : 1;
-    if (aFirst !== bFirst) return aFirst - bFirst;
+    const aSg = a.id.toLowerCase().includes("shangguan") ? 0 : 1;
+    const bSg = b.id.toLowerCase().includes("shangguan") ? 0 : 1;
+    if (aSg !== bSg) return aSg - bSg;
     return a.name.localeCompare(b.name, "zh-Hans-CN");
   });
+}
+
+type ManifestPluginRow = PluginManifestItem & {
+  switchKey?: keyof PluginSwitches;
+  weightKey?: keyof PluginWeights;
+  mutable: boolean;
+  enabled: boolean;
+};
+
+/** L1 网格：伤官见官算子卡片优先，其次其它 CoreConflict，再其余 L1 */
+function compareL1PluginsForGrid(a: ManifestPluginRow, b: ManifestPluginRow): number {
+  const rank = (p: ManifestPluginRow) => {
+    const skills = p.metadata?.skills ?? [];
+    const tags = p.metadata?.description_tags ?? [];
+    const pid = (p.id || "").toLowerCase();
+    const shangguan =
+      skills.some((s) => String(s.id).toLowerCase().includes("shangguan")) || pid.includes("shangguan");
+    const core =
+      tags.includes("core_conflict") ||
+      String(p.category || "").includes("CoreConflict") ||
+      skills.some((s) => Array.isArray(s.description_tags) && s.description_tags.includes("core_conflict"));
+    if (shangguan) return 0;
+    if (core) return 1;
+    return 2;
+  };
+  const ra = rank(a);
+  const rb = rank(b);
+  if (ra !== rb) return ra - rb;
+  const pa = Number(a.metadata?.priority ?? 0);
+  const pb = Number(b.metadata?.priority ?? 0);
+  if (pa !== pb) return pb - pa;
+  return a.id.localeCompare(b.id);
 }
 
 function labPhysicsEffective(
@@ -68,24 +91,6 @@ function labPhysicsEffective(
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   const d = defaults?.[k as string];
   return typeof d === "number" && Number.isFinite(d) ? d : null;
-}
-
-function runtimePhysicsNumber(
-  pt: Record<string, unknown> | undefined,
-  key: string,
-): number | null {
-  if (!pt) return null;
-  const meta = (pt.meta || {}) as Record<string, unknown>;
-  const rcfg = (meta.runtime_physics_config || {}) as Record<string, unknown>;
-  const v = rcfg[key];
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  const plugins = (pt.plugin_outputs || {}) as Record<string, unknown>;
-  const blind = (plugins["classical.blind_school.v1"] || {}) as Record<string, unknown>;
-  const payload = (blind.payload || {}) as Record<string, unknown>;
-  const wvCfg = (payload.runtime_physics_config || {}) as Record<string, unknown>;
-  const w = wvCfg[key];
-  if (typeof w === "number" && Number.isFinite(w)) return w;
-  return null;
 }
 
 function BlindSchoolSkillList({
@@ -300,6 +305,18 @@ export function PluginManagementPanel() {
     return sortCoreConflictSkills(tagged);
   }, [manifest?.base_physics_skills]);
 
+  const skillIdToOperatorPluginId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of manifest?.plugins ?? []) {
+      const skills = p.metadata?.skills;
+      if (!Array.isArray(skills)) continue;
+      for (const s of skills) {
+        if (s?.id) m.set(String(s.id), p.id);
+      }
+    }
+    return m;
+  }, [manifest?.plugins]);
+
   return (
     <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -469,7 +486,7 @@ export function PluginManagementPanel() {
           <p className="mt-1 text-[11px] text-sky-100/80">
             本区开关与滑块仅调节
             <span className="font-medium text-sky-50/95">物理传导路径</span>
-            （跨柱衰减、屏障、谐振、盖头截脚与人工传导率），不绑定任一十神标签；十神语义冲突请见下方「核心冲突算子簇」。
+            （跨柱衰减、屏障、谐振、盖头截脚与人工传导率），不绑定任一十神标签；十神语义冲突算子请在对应 L1 算子卡片内展开「实验交互」调节。
           </p>
           <div className={`mt-3 space-y-2 text-[11px] text-sky-100/90 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
             <label className="flex cursor-pointer items-center gap-2">
@@ -542,8 +559,9 @@ export function PluginManagementPanel() {
         </p>
         {isFinalized ? <p className="mt-1 text-[10px] text-zinc-500">终审已签发 · 参数已锁定</p> : null}
         <p className="mt-1 text-[11px] text-amber-100/85">
-          与 L1 Junction / <span className="font-mono text-[10px]">core_operators</span> 对齐；卡片来自 manifest{" "}
-          <span className="font-mono text-[10px]">description_tags: core_conflict</span>。
+          与 L1 Junction / <span className="font-mono text-[10px]">core_operators</span> 对齐；各算子 η 在对应 L1 插件卡片的「实验交互」区调节（与{" "}
+          <span className="font-mono text-[10px]">skill_manifest.physics_setting_key</span> 一致）。下方索引按{" "}
+          <span className="font-mono text-[10px]">core_conflict</span> 聚合，伤官见官置顶。
         </p>
         <label className={`mt-3 flex cursor-pointer items-center gap-2 text-[11px] text-amber-50/95 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
           <input
@@ -562,54 +580,26 @@ export function PluginManagementPanel() {
         {!manifest?.base_physics_skills?.length && !isLoading ? (
           <p className="mt-2 text-[10px] text-zinc-500">当前 manifest 未包含 base_physics_skills，请刷新注册表或升级后端。</p>
         ) : null}
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {coreConflictSkills.map((s) => {
-            const pkRaw = s.physics_setting_key;
-            const pk = pkRaw as keyof PhysicsLabConfig | undefined;
-            const bounds =
-              pk && pk in CORE_CONFLICT_SLIDER_BOUNDS
-                ? CORE_CONFLICT_SLIDER_BOUNDS[pk as keyof typeof CORE_CONFLICT_SLIDER_BOUNDS]
-                : undefined;
-            const live =
-              pkRaw != null && pkRaw !== ""
-                ? runtimePhysicsNumber(labState.snapshot?.physics_tensor as Record<string, unknown> | undefined, pkRaw)
-                : null;
-            const cur =
-              pk != null && typeof labConfig[pk] === "number" && Number.isFinite(labConfig[pk] as number)
-                ? (labConfig[pk] as number)
-                : (manifest?.default_physics_settings?.[pkRaw as string] ?? 0);
+            const cardId = skillIdToOperatorPluginId.get(s.id);
             return (
               <div
                 key={s.id}
-                className="rounded-lg border border-amber-600/30 bg-zinc-950/50 px-2.5 py-2 shadow-sm shadow-amber-950/20"
+                className="rounded-lg border border-amber-600/30 bg-zinc-950/50 px-2.5 py-2 text-[10px] text-zinc-300 shadow-sm shadow-amber-950/20"
               >
                 <p className="text-[11px] font-semibold text-amber-50/95">{s.name}</p>
-                <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-zinc-400">{s.description}</p>
-                <p className="mt-1.5 font-mono text-[9px] text-amber-200/80">
-                  {s.id}
-                  {pkRaw ? ` · ${pkRaw}` : ""}
-                  {live != null ? <span className="ml-1 text-cyan-200/85">η≈{live.toFixed(2)}</span> : null}
-                </p>
-                {bounds && pk ? (
-                  <label className="mt-2 block text-[10px] text-zinc-300">
-                    <span className="text-zinc-500">Lab </span>
-                    <span className="font-mono text-amber-100/90">{pkRaw}</span>
-                    <span className="ml-1 text-zinc-400">= {cur.toFixed(2)}</span>
-                    <input
-                      type="range"
-                      min={bounds[0]}
-                      max={bounds[1]}
-                      step={bounds[2]}
-                      disabled={isFinalized}
-                      value={cur}
-                      onChange={(e) =>
-                        setLabConfig((prev) => ({ ...prev, [pk]: Number(e.target.value) } as PhysicsLabConfig))
-                      }
-                      className="mt-1 w-full accent-amber-500"
-                    />
-                  </label>
+                <p className="mt-1 line-clamp-2 leading-snug text-zinc-500">{s.description}</p>
+                <p className="mt-1 font-mono text-[9px] text-amber-200/80">{s.id}</p>
+                {cardId ? (
+                  <Link
+                    href={`#card-${cardId}`}
+                    className="mt-2 inline-block text-[10px] text-amber-300/90 underline underline-offset-2 hover:text-amber-200"
+                  >
+                    跳转 L1 卡片
+                  </Link>
                 ) : (
-                  <p className="mt-2 text-[9px] text-zinc-600">（无独立滑块绑定，见 Junction / 算子实现）</p>
+                  <p className="mt-2 text-[9px] text-zinc-600">（暂无算子卡片映射）</p>
                 )}
               </div>
             );
@@ -628,9 +618,10 @@ export function PluginManagementPanel() {
         <div key={layer} className="space-y-2">
           <h4 className="text-sm font-medium text-zinc-200">{LAYER_LABEL[layer]}</h4>
           <div className="grid gap-3 md:grid-cols-2">
-            {rendered
-              .filter((p) => p.layer === layer)
-              .map((plugin) => (
+            {(layer === "L1"
+              ? [...rendered.filter((p) => p.layer === "L1")].sort(compareL1PluginsForGrid)
+              : rendered.filter((p) => p.layer === layer)
+            ).map((plugin) => (
                 <CausalPluginCard
                   key={plugin.id}
                   plugin={plugin}
@@ -640,6 +631,10 @@ export function PluginManagementPanel() {
                   setPluginWeights={setPluginWeights}
                   togglePlugin={togglePlugin}
                   openBlueprint={openBlueprint}
+                  labConfig={labConfig}
+                  setLabConfig={setLabConfig}
+                  defaultPhysicsSettings={manifest?.default_physics_settings}
+                  physicsTensor={labState.snapshot?.physics_tensor as Record<string, unknown> | undefined}
                   diagnosticsSlot={
                     <div className="flex flex-wrap gap-2 text-[10px] text-zinc-500">
                       <span className="rounded border border-zinc-700/80 bg-zinc-900/60 px-1.5 py-0.5">

@@ -91,6 +91,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [lang, setLangState] = useState<Lang>("ZH");
   const langRef = useRef<Lang>("ZH");
   const lastSeedPayloadRef = useRef<SeedPayload | null>(null);
+  const referenceYearRecalcInitRef = useRef(false);
   const metadataRef = useRef<BaziMetadata | null>(null);
   const busyRef = useRef(false);
   const isStreamingRef = useRef(false);
@@ -258,6 +259,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     lang: "ZH",
     baselineMetrics: null,
     confirmedDecisionIds: [],
+    temporalGanzhiOverride: null,
   });
   const settersRef = useRef<SilentRecalcPhysicsSetters>({
     setMetadata: (_m: BaziMetadata | null) => {},
@@ -365,6 +367,18 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return cr && typeof cr === "object" ? (cr as Record<string, unknown>) : null;
   }, [labState.snapshot?.physics_tensor?.meta]);
 
+  const patternProfile = useMemo((): Record<string, unknown> | null => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const raw = meta?.pattern_profile;
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
+  const l1JunctionFlagsForInbox = useMemo((): Record<string, unknown> | null => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const raw = meta?.l1_junction_flags;
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
   const cards = useMemo(
     () =>
       buildInboxCards({
@@ -374,8 +388,19 @@ export function useStreamBoardController(): StreamBoardViewModel {
         resolvedCardIds,
         t,
         decisionSignalToNoise,
+        patternProfile,
+        l1JunctionFlags: l1JunctionFlagsForInbox,
       }),
-    [metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t, decisionSignalToNoise],
+    [
+      metadata,
+      firstPromptText,
+      auditorProposalCards,
+      resolvedCardIds,
+      t,
+      decisionSignalToNoise,
+      patternProfile,
+      l1JunctionFlagsForInbox,
+    ],
   );
   const updateLogicDiffRef = useRef(updateLogicDiff);
   updateLogicDiffRef.current = updateLogicDiff;
@@ -402,7 +427,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
       if (prev.some((l) => String(l).includes("[FINAL_DECISION_ISSUED]"))) return prev;
       return [...prev, line];
     });
-  }, [labState.isFinalized, labState.finalizationReport?.hash]);
+  }, [labState.isFinalized, labState.finalizationReport?.hash, setResultLogs]);
 
   const pendingDecisionCount = cards.filter((card) => card.id !== "fallback-deep-scan").length;
   const l1Certified = Boolean(llmDiagnosticData?.alignment_score && llmDiagnosticData.alignment_score > 80) && pendingDecisionCount === 0;
@@ -632,7 +657,29 @@ export function useStreamBoardController(): StreamBoardViewModel {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [referenceYear, metadata, lastSeedPayload, busy, isStreaming, isExecuting, mergeSnapshot]);
+  }, [referenceYear, referenceYearRef, metadata, lastSeedPayload, busy, isStreaming, isExecuting, mergeSnapshot]);
+
+  const seedSigForRecalcReset = useMemo(
+    () => (lastSeedPayload ? seedPayloadSignature(lastSeedPayload) : ""),
+    [lastSeedPayload],
+  );
+  useEffect(() => {
+    referenceYearRecalcInitRef.current = false;
+  }, [seedSigForRecalcReset]);
+
+  useEffect(() => {
+    if (busy || isStreaming || isExecuting) return;
+    if (!metadata || !lastSeedPayload) return;
+    if (labStateRef.current.isFinalized) return;
+    if (!referenceYearRecalcInitRef.current) {
+      referenceYearRecalcInitRef.current = true;
+      return;
+    }
+    const t = window.setTimeout(() => {
+      void reCalculateAbsRef.current();
+    }, 480);
+    return () => window.clearTimeout(t);
+  }, [referenceYear, metadata, lastSeedPayload, busy, isStreaming, isExecuting]);
 
   langRef.current = lang;
   lastSeedPayloadRef.current = lastSeedPayload;
@@ -649,6 +696,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
     lang,
     baselineMetrics,
     confirmedDecisionIds,
+    temporalGanzhiOverride: timeline
+      ? { liunian: String(timeline.liunian ?? ""), dayun: String(timeline.dayun ?? "") }
+      : null,
   };
   settersRef.current = {
     setMetadata,
@@ -878,6 +928,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
 
   const lastCommittedSeedSignature = useMemo(() => seedPayloadSignature(lastSeedPayload), [lastSeedPayload]);
 
+  const energyFlowAudit = useMemo(() => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const raw = meta?.energy_flow_audit;
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
+  }, [labState.snapshot?.physics_tensor]);
+
   return {
     lang,
     setLang,
@@ -912,6 +968,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     physicsParams,
     globalEntropy,
     causalRouting,
+    patternProfile,
+    energyFlowAudit,
     auditorProposalCards,
     autoConvertedParamKey,
     consensusHistory,

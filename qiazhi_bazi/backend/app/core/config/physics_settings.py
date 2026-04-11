@@ -16,6 +16,12 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     "TRANSFER_DISTANCE_DECAY": 0.1,
     "WORK_MIN_THRESHOLD": 0.5,
     "SHOW_WEAK_WORK_PATHS": 0.0,
+    # 盲派贼捕做功：受制方十二长生分组 → Work_Intensity 标度（plugins/blind_school/op_work_logic.py）
+    "BLIND_WORK_INTENSITY_DEAD_TOMB": 1.5,
+    "BLIND_WORK_INTENSITY_GROWTH": 0.5,
+    "BLIND_WORK_INTENSITY_NEUTRAL": 1.0,
+    # 旺衰枢纽：self_abs 低于该阈值时用神池偏向印比，否则偏向食伤财官（op_pivot_defense）
+    "WS_PIVOT_SELF_WEAK_THRESHOLD": 5.0,
     # 盲派六穿（害）：η 下限，高于普通「害」档（见 blind_work_evaluator.ETA_MAP）
     "MANGPAI_SIX_HARM_ETA": 0.99,
     # 盲派微模块 η：可独立调参（pierce 默认与 MANGPAI_SIX_HARM_ETA 对齐）
@@ -51,10 +57,21 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     # Chronos（月令司令 / 余气进气 meta，见 plugins/chronos）
     "CHRONOS_COMMAND_LEVER": 0.0,
     "CHRONOS_RESIDUAL_LEVER": 0.12,
+    "CHRONOS_V2_TEMPORAL_ENABLE": 1.0,
     # 十二长生状态算子（见 op_status + manifests/l1_status_manifest.json）
     "L1_STATUS_OP_ENABLE": 1.0,
     "STATUS_BOOST_MULTIPLIER": 1.15,
     "STATUS_DRAIN_MULTIPLIER": 0.85,
+    # 长生状态机 Work_Efficiency（与 op_status.status_work_efficiency 对齐；勿在算子内写死）
+    "STATUS_EFFICIENCY_PEAK": 1.25,
+    "STATUS_EFFICIENCY_VALLEY": 0.4,
+    "STATUS_EFFICIENCY_TOMB": 0.72,
+    "STATUS_EFFICIENCY_NEUTRAL": 1.0,
+    "STATUS_EFFICIENCY_LIN_GUAN": 1.12,
+    # 天干五合（邻柱；见 op_stem_fusion）
+    "L1_STEM_FUSION_ENABLE": 1.0,
+    "STEM_FUSION_BRANCH_SUPPORT_RATIO": 0.26,
+    "STEM_FUSION_VECTOR_LEAK_RATIO": 0.12,
     # L1 核心冲突算子族（见 core_operators/op_*_*.py；总开关 L1_CORE_CONFLICT_OPS_ENABLE）
     "L1_CORE_CONFLICT_OPS_ENABLE": 1.0,
     "L1_OWL_FOOD_DAMPING": 0.15,
@@ -67,6 +84,21 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     # 全局熵：羊刃冲不稳定性进入 metrics 的权重与归一化参考
     "ENTROPY_W_BLADE": 0.25,
     "ENTROPY_BLADE_REF": 0.6,
+    # 地理方位算子 L1_OP_GEOGRAPHY：场强增益比例（南→火、北→水）
+    "L1_OP_GEOGRAPHY_ENABLE": 1.0,
+    "GEOG_DIRECTION_ABS_BOOST": 0.15,
+    # 五行相生流通审计：归一化场强阈值（两端均大于则段为 FLOWING）
+    "FLOW_AUDITOR_ABS_THRESHOLD": 0.06,
+    # 深度地支算子 L1_OP_SUB_BRANCH_INTERACTION（系数走配置，不在算子内写死）
+    "L1_SUB_BRANCH_OP_ENABLE": 1.0,
+    "SUB_BRANCH_SANHE_ABS_BOOST": 0.06,
+    "SUB_BRANCH_LIUHE_ABS_BOOST": 0.04,
+    "SUB_BRANCH_SANXING_ABS_DAMP": 0.97,
+    "SUB_BRANCH_ANHE_ABS_DAMP": 0.985,
+    "MUKU_DEITY_DAMPING": 0.8,
+    # 格局识别：从格能量集中度阈值与路由 η 翻转增益
+    "PATTERN_CONG_DOMINANCE": 0.52,
+    "PATTERN_ETA_FLIP_GAIN": 1.12,
 }
 
 

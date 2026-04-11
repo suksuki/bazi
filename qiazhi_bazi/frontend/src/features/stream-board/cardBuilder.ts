@@ -4,6 +4,35 @@ import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./mode
 
 export type { DecisionSignalToNoiseMeta };
 
+function buildPatternSovereigntyCard(
+  patternProfile: Record<string, unknown> | null | undefined,
+  l1JunctionFlags: Record<string, unknown> | null | undefined,
+): InboxCard | null {
+  if (!patternProfile || typeof patternProfile !== "object") return null;
+  if (!patternProfile.sovereignty_priority) return null;
+  if (!l1JunctionFlags || typeof l1JunctionFlags !== "object") return null;
+  if (!Boolean(l1JunctionFlags.SHANG_GUAN_JIAN_GUAN)) return null;
+  const rawLines = patternProfile.xi_ji_reversal_lines;
+  const lines = Array.isArray(rawLines)
+    ? rawLines.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
+  const md = [
+    "**格局优先（Pattern Sovereignty）**",
+    "格局判定与 L1「伤官见官」同时成立：已执行「格局优先」，合并域 η 对顺势管道做反转增强；L1 对抗叙事不单独接管结论域。",
+    ...lines.map((l) => `- ${l}`),
+  ].join("\n");
+  return {
+    id: "inbox-pattern-sovereignty",
+    title: "格局优先 · 主权覆盖 L1",
+    displayText: "PATTERN_SOVEREIGNTY：从格主权下「被克泄」可转为顺势增益",
+    conflictDetail: "格局优先：从格主权压制 L1 伤官见官的对抗解读",
+    markdown: md,
+    cardType: "conflict",
+    skillId: "PATTERN_SOVEREIGNTY",
+    sovereigntyMark: "PATTERN_SOVEREIGNTY",
+  };
+}
+
 export function buildInboxCards(params: {
   metadata: BaziMetadata | null;
   firstPromptText: string;
@@ -12,8 +41,21 @@ export function buildInboxCards(params: {
   t: (text: string) => string;
   /** physics_tensor.meta.decision_signal_to_noise：低信噪且无 CRITICAL 时不生成判词观察项 */
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
+  /** physics_tensor.meta.pattern_profile */
+  patternProfile?: Record<string, unknown> | null;
+  /** physics_tensor.meta.l1_junction_flags：与格局主权冲突检测 */
+  l1JunctionFlags?: Record<string, unknown> | null;
 }): InboxCard[] {
-  const { metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t, decisionSignalToNoise } = params;
+  const {
+    metadata,
+    firstPromptText,
+    auditorProposalCards,
+    resolvedCardIds,
+    t,
+    decisionSignalToNoise,
+    patternProfile,
+    l1JunctionFlags,
+  } = params;
   if (!metadata) return [];
   const conflictPoints = metadata.conflict_matrix?.points ?? [];
 
@@ -75,7 +117,11 @@ export function buildInboxCards(params: {
           return [{ ...fb, skillId: inferDecisionSkillId(fb, conflictPoints) }];
         })();
 
-  return mergedCards.filter((card) => !resolvedCardIds.includes(card.id));
+  const patternCard = buildPatternSovereigntyCard(patternProfile, l1JunctionFlags);
+  const withSovereignty = patternCard
+    ? [patternCard, ...mergedCards.filter((c) => c.id !== patternCard.id)]
+    : mergedCards;
+  return withSovereignty.filter((card) => !resolvedCardIds.includes(card.id));
 }
 
 export function createAuditorProposalCard(proposal: LogicProposal): InboxCard | null {

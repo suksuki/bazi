@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
+from app.services.helpers.interpretation_helper import merge_interpretation_metadata_for_llm
 from app.skills.blind_school_encyclopedia import audit_host_guest_vectors, build_blind_school_digest
 from app.skills.dual_school_auditor import build_dual_school_audit
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
@@ -31,14 +32,15 @@ def build_final_verdict_messages(
         lang_hint = "Please output strictly in English."
     elif (lang or "ZH").upper() == "KO":
         lang_hint = "최종 출력은 반드시 한국어로만 작성하세요."
+    md_for_llm = merge_interpretation_metadata_for_llm(dict(metadata))
     logical_evidence = get_logical_evidence(
-        metadata=metadata,
+        metadata=md_for_llm,
         physics_tensor=physics_tensor,
         selected_cards=selected_cards,
         consensus_history=consensus_history,
     )
-    l1_flags = sync_l1_junction_flags_to_meta(metadata=metadata, physics_tensor=physics_tensor)
-    blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=metadata)
+    l1_flags = sync_l1_junction_flags_to_meta(metadata=md_for_llm, physics_tensor=physics_tensor)
+    blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=md_for_llm)
     weight_blind = float((plugin_weights or {}).get("classical.blind_school.v1", 0.0) or 0.0)
     weight_wangshuai = float((plugin_weights or {}).get("classical.wangshuai.v1", 0.0) or 0.0)
     total_weight = max(0.0001, weight_blind + weight_wangshuai)
@@ -164,6 +166,34 @@ def build_final_verdict_messages(
     work_lines = clean_context_lines(work_lines)
     structure_lines = clean_context_lines(structure_lines)
 
+    shen_block_lines: List[str] = []
+    interp = md_for_llm.get("interpretation") if isinstance(md_for_llm.get("interpretation"), dict) else {}
+    shen = interp.get("shensha") if isinstance(interp.get("shensha"), dict) else {}
+    for tag in shen.get("active_tags") or []:
+        if isinstance(tag, dict):
+            shen_block_lines.append(f"{tag.get('name')} @支{tag.get('branch')}")
+    shen_section = (
+        "\n[神煞标签·展示层]\n"
+        + (
+            "（仅供叙事参考，未参与物理能量计算）\n" + "\n".join(f"- {x}" for x in shen_block_lines)
+            if shen_block_lines
+            else "- （无）\n"
+        )
+    )
+    flow_audit = (physics_tensor.get("meta") or {}).get("energy_flow_audit") if isinstance(physics_tensor.get("meta"), dict) else None
+    flow_lines: List[str] = []
+    if isinstance(flow_audit, dict):
+        for seg in flow_audit.get("segments") or []:
+            if not isinstance(seg, dict):
+                continue
+            st = str(seg.get("state") or "")
+            arrow = "→" if st == "FLOWING" else "✗"
+            flow_lines.append(
+                f"- {seg.get('from')} 生 {seg.get('to')} : {st} {arrow} "
+                f"(from_abs={seg.get('from_abs')}, to_abs={seg.get('to_abs')}, thr={seg.get('threshold')})"
+            )
+    flow_section = "\n[因果流通链·五行相生]\n" + ("\n".join(flow_lines) if flow_lines else "- （无审计数据）\n")
+
     user = (
         "[Physical Evidence]\n"
         + "\n".join(f"- {x}" for x in logical_evidence)
@@ -173,6 +203,8 @@ def build_final_verdict_messages(
         + "\n".join(f"- {x}" for x in structure_lines)
         + "\n[Knowledge Base Digest]\n"
         + "\n".join(f"- {x}" for x in knowledge_lines)
+        + shen_section
+        + flow_section
         + "\n[User Consensus]\n"
         + "\n".join(
             f"- {x}"
@@ -235,8 +267,29 @@ def build_final_verdict_messages(
         + f"- SHANG_GUAN_JIAN_GUAN={bool(l1_flags.get('SHANG_GUAN_JIAN_GUAN', False))}\n"
         + f"- control_energy={l1_flags.get('control_energy', 0.0)}\n"
         + f"- source={l1_flags.get('source', 'L1_Junction')}\n"
+    )
+    meta_pt = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+    pp_raw = meta_pt.get("pattern_profile") if isinstance(meta_pt, dict) else None
+    pp = pp_raw if isinstance(pp_raw, dict) else {}
+    cr_raw = meta_pt.get("causal_routing") if isinstance(meta_pt, dict) else None
+    cr = cr_raw if isinstance(cr_raw, dict) else {}
+    pk = [str(x) for x in (cr.get("pattern_assertion_keywords") or []) if x]
+    pattern_lines = [
+        f"- pattern_name_zh={pp.get('pattern_name_zh', '')}",
+        f"- sovereignty_priority={bool(pp.get('sovereignty_priority'))}",
+        f"- pattern_kind={pp.get('pattern_kind', 'none')}",
+    ]
+    for line in pp.get("xi_ji_reversal_lines") or []:
+        if isinstance(line, str) and line.strip():
+            pattern_lines.append(f"- 喜忌反转: {line.strip()}")
+    user = (
+        user
+        + "\n[格局路由 PatternRouter]\n"
+        + "\n".join(f"- {x}" for x in pattern_lines)
+        + "\n[格局断言关键词]\n"
+        + ("\n".join(f"- {k}" for k in pk) if pk else "- （无）\n")
         + "\n"
-        f"Previous_Verdict={previous_verdict or ''}\n"
-        "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
+        + f"Previous_Verdict={previous_verdict or ''}\n"
+        + "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

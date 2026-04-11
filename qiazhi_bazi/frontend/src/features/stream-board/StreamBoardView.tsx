@@ -29,6 +29,7 @@ import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 import { BoardVisionPanel } from "./components/BoardVisionPanel";
 import { BoardCommandPanel } from "./components/BoardCommandPanel";
+import { PatternStatus, type PatternProfileSlice } from "./components/PatternStatus";
 
 
 
@@ -66,6 +67,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     confirmedConflicts,
     llmDiagnosticData,
     globalEntropy,
+    patternProfile,
     consensusHistory,
     cards,
     resultLogs,
@@ -122,8 +124,11 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     isFinalized,
     finalizeVerdict,
   } = viewModel;
-  const decisionIds = confirmedDecisionIds || [];
-  const setDecisionIds = setConfirmedDecisionIds || (() => undefined);
+  const decisionIds = React.useMemo(() => confirmedDecisionIds || [], [confirmedDecisionIds]);
+  const setDecisionIds = React.useMemo(
+    () => setConfirmedDecisionIds ?? (() => undefined),
+    [setConfirmedDecisionIds],
+  );
   const decisionHydrated = Boolean(urlDecisionHydrated);
   const { state: labUiState } = useLabStore();
   const sovereigntyDominant = Boolean(labUiState.snapshot?.interaction_hub?.sovereignty_dominant);
@@ -458,6 +463,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
           ))}
         </div>
       </header>
+
+      {hasBoard ? <PatternStatus profile={patternProfile as PatternProfileSlice | null} className="mb-3" /> : null}
 
       {sovereigntyDominant ? (
         <div

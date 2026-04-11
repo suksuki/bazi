@@ -5,6 +5,7 @@ import type { BaziMetadata, TimelineSnapshot } from "@/types/bazi";
 import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
+  buildPhysicsConfigPayload,
   extractMetricSnapshotFromPhysics,
   seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
@@ -73,27 +74,32 @@ export function useStreamBoardSilentRecalculateLayout({
       const set = settersRef.current;
       try {
         const latestHealth = await refreshHealthRef.current();
+        const eo: Record<string, string> = {};
+        if (c.temporalGanzhiOverride?.liunian?.trim()) eo.liunian_ganzhi = c.temporalGanzhiOverride.liunian.trim();
+        if (c.temporalGanzhiOverride?.dayun?.trim()) eo.dayun_ganzhi = c.temporalGanzhiOverride.dayun.trim();
+        const body: Record<string, unknown> = {
+          date: seed.date,
+          time: seed.time,
+          calendar: seed.calendar,
+          gender: seed.gender,
+          lang: c.lang,
+          latitude: 31.2304,
+          longitude: 121.4737,
+          session_id: c.consultationId ?? undefined,
+          physics_config: buildPhysicsConfigPayload(c.labConfig),
+          enabled_plugins: [
+            ...(c.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
+            ...(c.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
+            ...(c.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+          ],
+          blind_school_features: buildBlindSchoolFeaturesPayload(c.pluginSwitches),
+          reference_year: referenceYearRef.current,
+        };
+        if (Object.keys(eo).length) body.external_overrides = eo;
         const response = await fetch(`${API_BASE}/api/v1/analyze-seed`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: seed.date,
-            time: seed.time,
-            calendar: seed.calendar,
-            gender: seed.gender,
-            lang: c.lang,
-            latitude: 31.2304,
-            longitude: 121.4737,
-            session_id: c.consultationId ?? undefined,
-            physics_config: c.labConfig,
-            enabled_plugins: [
-              ...(c.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-              ...(c.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-              ...(c.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-            ],
-            blind_school_features: buildBlindSchoolFeaturesPayload(c.pluginSwitches),
-            reference_year: referenceYearRef.current,
-          }),
+          body: JSON.stringify(body),
         });
         if (!response.ok) return;
         const data = await response.json();

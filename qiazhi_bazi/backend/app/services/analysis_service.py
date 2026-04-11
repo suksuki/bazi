@@ -82,6 +82,7 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         conflict_matrix=ConflictMatrix(points=points),
         flow_state=FlowState.UNKNOWN,
         notes="已完成原子探测（六冲+六合+盲派六穿可选）",
+        temporal_context=body.temporal_context,
     )
     location_hint = ""
     if body.latitude is not None and body.longitude is not None:
@@ -186,6 +187,21 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
         1 if body.gender == "male" else 0,
         body.reference_year,
     )
+    timeline_out: Dict[str, Any] = dict(timeline) if isinstance(timeline, dict) else {}
+    eo = body.external_overrides if isinstance(getattr(body, "external_overrides", None), dict) else {}
+    liu = str(timeline_out.get("liunian") or "")
+    dy = str(timeline_out.get("dayun") or "")
+    if eo.get("liunian_ganzhi"):
+        liu = str(eo["liunian_ganzhi"]).strip()
+        timeline_out["liunian"] = liu
+    if eo.get("dayun_ganzhi"):
+        dy = str(eo["dayun_ganzhi"]).strip()
+        timeline_out["dayun"] = dy
+    temporal_ctx: Dict[str, Any] = {
+        "reference_year": body.reference_year,
+        "liunian_ganzhi": liu or None,
+        "dayun_ganzhi": dy or None,
+    }
     result = await analyze_clash_flow(
         AnalyzeClashRequest(
             pillars=pillars,
@@ -193,11 +209,12 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
             longitude=body.longitude,
             lang=body.lang,
             session_id=body.session_id,
-            dayun=(timeline or {}).get("dayun"),
-            liunian=(timeline or {}).get("liunian"),
+            dayun=dy or None,
+            liunian=liu or None,
             physics_config=body.physics_config,
             enabled_plugins=body.enabled_plugins,
             blind_school_features=body.blind_school_features,
+            temporal_context=temporal_ctx,
         )
     )
     metadata = result["metadata"]
@@ -213,7 +230,7 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
         now_iso_value,
         snapshot_summary,
     )
-    result["timeline"] = timeline
+    result["timeline"] = timeline_out
     return result
 
 

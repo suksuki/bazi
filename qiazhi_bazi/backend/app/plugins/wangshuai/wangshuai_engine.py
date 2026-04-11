@@ -4,6 +4,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
+from app.core.config.physics_settings import resolve_physics_settings
+from app.plugins.wangshuai.op_pivot_defense import compute_pivot_defense
+
 PLUGIN_ID = "classical.wangshuai.v1"
 
 _SELF_PARTY = frozenset({"比肩", "劫财", "正印", "偏印"})
@@ -69,6 +72,14 @@ def evaluate_wangshuai(
         confidence = 0.79
 
     ts = _utc_audit_ts()
+    meta_rc = (((physics_tensor or {}).get("meta") or {}).get("runtime_physics_config") or {})
+    ws_settings = resolve_physics_settings(meta_rc if isinstance(meta_rc, dict) else None)
+    pivot_blob = compute_pivot_defense(
+        physics_tensor=physics_tensor if isinstance(physics_tensor, dict) else {},
+        self_abs=self_abs,
+        settings=ws_settings,
+    )
+
     scale = self_abs / split_sum if split_sum > 1e-9 else 0.0
     contrib_season = round(ws_season * scale, 4) if scale else round(ws_season, 4)
     contrib_root = round(ws_root * scale, 4) if scale else round(ws_root, 4)
@@ -121,6 +132,7 @@ def evaluate_wangshuai(
 
     return {
         "self_abs": round(self_abs, 4),
+        "pivot_defense_v1": pivot_blob,
         "verdict": verdict,
         "confidence_score": confidence,
         "evidence": [
@@ -128,6 +140,8 @@ def evaluate_wangshuai(
             f"ws_season_raw={ws_season:.2f}",
             f"ws_root_raw={ws_root:.2f}",
             f"ws_support_raw={ws_support:.2f}",
+            f"pivot={pivot_blob.get('target_pivot', '')}",
+            f"pivot_tags={','.join(pivot_blob.get('llm_assertion_tags') or [])}",
             "rule_source=plugins/wangshuai/readme.md",
         ],
         "rule_source": "plugins/wangshuai/readme.md",

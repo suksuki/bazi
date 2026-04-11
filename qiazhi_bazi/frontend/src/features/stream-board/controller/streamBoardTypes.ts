@@ -23,6 +23,8 @@ export type SilentBoardCtx = {
   lang: Lang;
   baselineMetrics: MetricSnapshot | null;
   confirmedDecisionIds: string[];
+  /** 与 seed-preview / 排盘大运流年一致，静默 analyze-seed 写入 external_overrides */
+  temporalGanzhiOverride: { liunian: string; dayun: string } | null;
 };
 
 export type NavigationInfo = {

@@ -257,7 +257,7 @@ export function useAdminSettingsController() {
       void loadModels(false);
     }, 450);
     return () => clearTimeout(timer);
-  }, [effectiveBaseUrl, llmApiKey]);
+  }, [effectiveBaseUrl, llmApiKey, loadModels]);
 
   useEffect(() => {
     const payload = buildSavedSettings({
@@ -287,7 +287,7 @@ export function useAdminSettingsController() {
       void syncRuntimeConfig({ showSavedMessage: false });
     }, 500);
     return () => clearTimeout(timer);
-  }, [effectiveBaseUrl, llmApiKey, llmModel]);
+  }, [effectiveBaseUrl, llmApiKey, llmModel, syncRuntimeConfig]);
 
   return {
     db,

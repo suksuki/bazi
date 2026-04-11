@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Lang, BaziMetadata } from "@/types/bazi";
 import type { PhysicsLabConfig, PluginSwitches, PluginWeights, SeedPayload } from "@/features/stream-board/models";
 import { API_BASE } from "../constants";
-import { buildBlindSchoolFeaturesPayload } from "./streamBoardPure";
+import { buildBlindSchoolFeaturesPayload, buildPhysicsConfigPayload } from "./streamBoardPure";
 import { interpolateColor } from "./streamBoardPure";
 
 export interface StreamBoardDiagnosticDeps {
@@ -32,7 +32,7 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
       body: JSON.stringify({
         metadata: deps.metadata,
         gender: ((deps.metadata as Record<string, unknown>)?.gender as string) || "male",
-        physics_config: deps.labConfig,
+        physics_config: buildPhysicsConfigPayload(deps.labConfig),
         baseline_structure_final_decision: deps.finalStructureFinalDecisionV0 || {},
         year_pillar: yearPillar,
         luck_pillar: luckPillar,
@@ -66,7 +66,7 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
       lang: deps.lang,
       latitude: 31.2304,
       longitude: 121.4737,
-      physics_config: deps.labConfig,
+      physics_config: buildPhysicsConfigPayload(deps.labConfig),
       enabled_plugins: [
         ...(deps.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
         ...(deps.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),

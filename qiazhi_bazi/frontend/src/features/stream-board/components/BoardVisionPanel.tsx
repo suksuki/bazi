@@ -7,8 +7,10 @@ import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
+import { TemporalYearSlider } from "./TemporalYearSlider";
 import { LogicSummary } from "./LogicSummary";
 import type { StreamBoardViewModel } from "../models";
+import { useLabStore } from "../stores/useLabStore";
 
 export interface BoardVisionPanelProps {
   viewModel: StreamBoardViewModel;
@@ -62,11 +64,27 @@ export function BoardVisionPanel({
     labConfig,
     openLogicDrawer,
     setHoveredDeity,
+    busy,
+    isFinalized,
     finalWorkVector,
     finalTopologyGraphV1,
     physicsAudit,
     causalRouting,
   } = viewModel;
+
+  const { state: labState } = useLabStore();
+  const snapMeta = React.useMemo(() => {
+    const m = labState.snapshot?.physics_tensor?.meta;
+    return m && typeof m === "object" ? (m as Record<string, unknown>) : {};
+  }, [labState.snapshot?.physics_tensor?.meta]);
+  const stemFusionMeta = (snapMeta.stem_fusion_v1 || null) as Record<string, unknown> | null;
+  const l1StatusBlock = snapMeta.l1_status_v1 as { per_deity?: Record<string, { work_efficiency?: number }> } | undefined;
+  const l1StatusPerDeity = l1StatusBlock?.per_deity ?? null;
+  const pivotBlock = snapMeta.pivot_defense_v1 as
+    | { target_pivot?: string; defense_semantic?: string }
+    | undefined;
+  const pivotDeity = (pivotBlock?.target_pivot && String(pivotBlock.target_pivot)) || null;
+  const pivotDefenseSemantic = (pivotBlock?.defense_semantic && String(pivotBlock.defense_semantic)) || null;
 
   return (
     <motion.div
@@ -122,6 +140,15 @@ export function BoardVisionPanel({
                 className="w-[4.25rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-100"
               />
             </label>
+            {metadata?.pillars ? (
+              <TemporalYearSlider
+                referenceYear={referenceYear}
+                onYearChange={setReferenceYear}
+                timeline={timeline}
+                disabled={Boolean(busy || isFinalized)}
+                className="w-full min-w-[200px] max-w-md"
+              />
+            ) : null}
             {isPreviewBoard ? (
               <span className="rounded border border-amber-500/45 bg-amber-500/12 px-1 py-0.5 text-[9px] text-amber-200">{t("预览")}</span>
             ) : null}
@@ -163,6 +190,11 @@ export function BoardVisionPanel({
               climateSeason={climateSeason}
               onOpenLogic={openLogicDrawer}
               onHoverDeity={setHoveredDeity}
+              stemFusionMeta={stemFusionMeta}
+              l1StatusPerDeity={l1StatusPerDeity}
+              pivotDeity={pivotDeity}
+              pivotDefenseSemantic={pivotDefenseSemantic}
+              fluxKey={referenceYear}
             />
           </div>
         </div>

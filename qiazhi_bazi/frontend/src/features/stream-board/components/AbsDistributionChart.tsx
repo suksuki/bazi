@@ -24,6 +24,27 @@ function LockIcon({ title }: { title: string }) {
   );
 }
 
+function FusionLinkIcon({ title }: { title: string }) {
+  return (
+    <span title={title} className="inline-flex text-cyan-400/90" aria-label={title}>
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M10 13a5 5 0 0 1 7.07 0l1.41 1.42M14 11l1.41-1.42a5 5 0 0 0-7.07 0L7 11"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M7 11H5a2 2 0 0 0 0 4h2M17 13h2a2 2 0 0 1 0 4h-2"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function RoutingLightningIcon() {
   return (
     <span
@@ -57,6 +78,14 @@ export type AbsDistributionChartProps = {
   }) => void;
   onHoverDeity?: (deityName?: string) => void;
   deityTraceDetails?: Record<string, Record<string, unknown>>;
+  /** physics_tensor.meta.stem_fusion_v1：邻柱天干五合展示 */
+  stemFusionMeta?: Record<string, unknown> | null;
+  /** physics_tensor.meta.l1_status_v1.per_deity：长生状态 Work_Efficiency */
+  l1StatusPerDeity?: Record<string, { work_efficiency?: number }> | null;
+  /** physics_tensor.meta.pivot_defense_v1.target_pivot：枢纽十神金色描边 */
+  pivotDeity?: string | null;
+  /** physics_tensor.meta.pivot_defense_v1：枢纽语义（命脉受损 / 枢纽稳固） */
+  pivotDefenseSemantic?: string | null;
 };
 
 export function AbsDistributionChart({
@@ -71,11 +100,19 @@ export function AbsDistributionChart({
   onOpenLogic,
   onHoverDeity,
   deityTraceDetails = {},
+  stemFusionMeta = null,
+  l1StatusPerDeity = null,
+  pivotDeity = null,
+  pivotDefenseSemantic = null,
 }: AbsDistributionChartProps) {
   const anomalyTag = (topAnomaly || "").trim();
   const lockedByKeys = extractHardRouteKeys(hardRouteLogs);
   const lockedDeities = buildLockedDeitySet(hardRouteLogs);
   const routingMarks = useMemo(() => buildRoutingHighlightDeities(causalRouting), [causalRouting]);
+  const fusionLinks = useMemo(() => {
+    const raw = stemFusionMeta && typeof stemFusionMeta === "object" ? stemFusionMeta.display_links : null;
+    return Array.isArray(raw) ? (raw as { deities?: string[]; stems?: string[]; mode?: string }[]) : [];
+  }, [stemFusionMeta]);
 
   return (
     <div className="space-y-2">
@@ -103,6 +140,23 @@ export function AbsDistributionChart({
                   ? "🌱"
                   : "";
         const showRouting = routingMarks.has(name);
+        const fusionEntry = fusionLinks.find((l) => Array.isArray(l.deities) && l.deities.includes(name));
+        const fusionTitle = fusionEntry
+          ? `天干五合：${(fusionEntry.stems || []).join("+")}（${fusionEntry.mode === "transformed" ? "化气" : "合而不化"}）`
+          : "";
+        const workEff = l1StatusPerDeity?.[name]?.work_efficiency;
+        const effNum = typeof workEff === "number" && Number.isFinite(workEff) ? workEff : null;
+        const effPct =
+          effNum != null ? Math.max(0, Math.min(100, ((effNum - 0.4) / (1.25 - 0.4)) * 100)) : null;
+        const effLabel =
+          effNum != null
+            ? effNum >= 1.15
+              ? "巅峰"
+              : effNum <= 0.55
+                ? "低谷"
+                : "平区"
+            : "";
+        const isPivot = Boolean(pivotDeity && name === pivotDeity);
 
         return (
           <div key={name} className="relative pt-2">
@@ -119,14 +173,21 @@ export function AbsDistributionChart({
                   focus: name,
                   details: [
                     `${name}: ${totalScore.toFixed(2)}% (Abs: ${absEnergy.toFixed(2)})`,
+                    isPivot
+                      ? `[枢纽] ${pivotDefenseSemantic || "旺衰引擎标定的 Target_Pivot（用神侧能量×能效）"}`
+                      : "",
                     hit ? `[审计预警] ${anomalyTag}` : "当前未命中该项异常关键词。",
                     "点击后可查看：基础动能 / 物理干预 / 归一化校准",
-                  ],
+                  ].filter(Boolean),
                   deityTrace: deityTraceDetails[name] as Record<string, unknown> | undefined,
                 })
               }
-              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-left transition-colors hover:bg-zinc-900/90"
-              title="点击查看演算路径"
+              className={`w-full rounded-lg border bg-zinc-950 px-2 py-2 text-left transition-colors hover:bg-zinc-900/90 ${
+                isPivot
+                  ? "border-amber-400/85 shadow-[0_0_0_2px_rgba(251,191,36,0.45),0_0_14px_rgba(251,191,36,0.18)] ring-2 ring-amber-400/70 ring-offset-2 ring-offset-zinc-950"
+                  : "border-zinc-800"
+              }`}
+              title={isPivot ? `枢纽十神（${pivotDefenseSemantic || "Target_Pivot"}）` : "点击查看演算路径"}
               onMouseEnter={() => onHoverDeity?.(name)}
               onMouseLeave={() => onHoverDeity?.(undefined)}
             >
@@ -139,6 +200,7 @@ export function AbsDistributionChart({
                     </span>
                   ) : null}
                   {lockedDeities.has(name) ? <LockIcon title={`该能量场已根据共识参数 ${lockedByKeys.join(", ") || "N/A"} 锁定`} /> : null}
+                  {fusionEntry ? <FusionLinkIcon title={fusionTitle} /> : null}
                   <span className="text-zinc-400">
                     {totalScore.toFixed(2)}%{" "}
                     <span className="text-sky-300">(Abs: {absEnergy.toFixed(2)})</span>
@@ -156,6 +218,24 @@ export function AbsDistributionChart({
                   <div className="h-full bg-amber-300/45" style={{ width: stemWidth }} />
                 </div>
               </div>
+              {effPct != null ? (
+                <div
+                  className="mt-1 h-1 w-full overflow-hidden rounded bg-zinc-800"
+                  title={`十二长生能效 Work_Efficiency=${effNum?.toFixed(2)}（约 0.4 低谷 — 1.25 巅峰）`}
+                >
+                  <div
+                    className={`h-full rounded transition-[width,background-color,filter] duration-500 ease-in-out ${
+                      effNum != null && effNum >= 1.15
+                        ? "bg-emerald-500/85 brightness-110"
+                        : effNum != null && effNum <= 0.55
+                          ? "bg-rose-600/80 brightness-90"
+                          : "bg-sky-500/70"
+                    }`}
+                    style={{ width: `${effPct}%` }}
+                  />
+                  <div className="sr-only">长生能效 {effLabel}</div>
+                </div>
+              ) : null}
               <div className="mt-1 text-[10px] text-zinc-500">
                 (透:{stemScore.toFixed(2)} | 根:{rootScore.toFixed(2)})
               </div>
