@@ -1,4 +1,9 @@
-"""干支维轴算子：同柱盖头截脚、跨柱传导 Conductivity、通根透干谐振（与 L1 对接）。"""
+"""干支维轴算子：同柱盖头截脚、跨柱传导 Conductivity、通根透干谐振（与 L1 对接）。
+
+Conductivity 与 `INTERDIMENSIONAL_*` 门控仅依赖柱位几何（通根、冲刑激活、柱距、屏障等），
+不按十神分支；凡经 `resolve_stem_branch_pair` 与 `StemBranchCouplingEngine` 参与传导的冲突边
+（冲 / 害 / 合等）均走同一套标度。十神层面的「核心冲突」由 `junction` 与 `core_conflict_*` 算子簇处理。
+"""
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
@@ -204,7 +209,11 @@ class StemBranchCouplingEngine:
         interdimensional_alpha: float,
         activation_conflict_points: Optional[List[Any]] = None,
     ) -> Tuple[float, float]:
-        """返回 (physics_c, effective_after_blend)。若关闭维度屏蔽则 (1,1)。"""
+        """返回 (physics_c, effective_after_blend)。
+
+        `INTERDIMENSIONAL_SHIELD_ENABLE` 为全局开关：<0.5 时跳过几何屏蔽（恒 (1,1)）；
+        否则先算物理传导再与人工 alpha 混合。不对十神或 Deity 标签做特判。
+        """
         if float(self.cfg.get("INTERDIMENSIONAL_SHIELD_ENABLE", 1.0)) < 0.5:
             return 1.0, 1.0
         c_phys = self.causal_conductivity_base(

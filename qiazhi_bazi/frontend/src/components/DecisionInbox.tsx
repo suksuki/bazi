@@ -209,7 +209,7 @@ export function DecisionInbox({
   }, [inboxResetNonce]);
   useEffect(() => {
     setWeighting(pluginWeights);
-  }, [pluginWeights.blindSchool, pluginWeights.wangshuai]);
+  }, [pluginWeights]);
   async function runStress() {
     await onStressTest?.(stressInput);
   }

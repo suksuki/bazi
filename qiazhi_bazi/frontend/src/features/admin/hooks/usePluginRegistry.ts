@@ -11,7 +11,11 @@ export type BlindSchoolSkillItem = {
   assertion_template: string;
   physics_setting_key?: string;
   physics_weight?: number;
+  /** 例如 `core_conflict`、`SHANG_GUAN_JIAN_GUAN`，供管理台路由分组 */
+  description_tags?: string[];
 };
+
+export type BasePhysicsSkillRow = BlindSchoolSkillItem;
 
 export type PluginManifestItem = {
   id: string;
@@ -47,6 +51,8 @@ export type PluginManifest = {
   default_physics_settings?: Record<string, number>;
   /** 与 `manifests/l1_physics_manifest.json` 同源，供蓝图 Modal 与 LLM 对齐 */
   l1_physics_manifest?: Record<string, unknown>;
+  /** `base_physics/skill_manifest.json` 全量 skills，含 `description_tags` */
+  base_physics_skills?: BasePhysicsSkillRow[];
   refreshed_at?: number;
 };
 

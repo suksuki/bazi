@@ -288,7 +288,10 @@ def _control_energy_for_pair(
 
 
 class VisibilityFilter:
-    """L1 核心十神交互的能级过滤：双侧天干/本气为 Surface(明)，否则 Deep(藏)；坐标畸变仅用于伤官见官对撞。"""
+    """L1 核心十神交互的能级过滤：双侧天干/本气为 Surface(明)，否则 Deep(藏)。
+
+    坐标畸变（SGJG_*）仅在 Junction 的伤官×正官对撞路径上启用；与干支维轴 `INTERDIMENSIONAL_*` 传导协议独立。
+    """
 
     __slots__ = ()
 

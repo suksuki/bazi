@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Set
 from app.core.config.physics_settings import resolve_physics_settings
 from app.core.rules.junction import EnergyVaultStatus, build_l1_operator_audit_items_from_steps, sync_l1_junction_flags_to_meta
 from app.plugins.base.interactions.l1_atomic_plugin import run_l1_atomic_plugin_pool
+from app.plugins.base_physics.core_operators.core_conflict_runner import apply_l1_core_conflict_operators
 from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to_physics_tensor
 from app.plugins.chronos.core import run_chronos_plugin
 from app.plugins.base_physics.core_operators.op_interdimensional import compute_solid_ghost_ratio
@@ -122,7 +123,16 @@ def _synthesize_global_entropy(
         clash_loss += float((s.get("delta") or {}).get("abs_loss") or 0.0)
     m_clash = min(1.0, clash_loss / ref_clash)
 
-    raw = w_t * m_torque + w_c * m_clamp + w_k * m_clash
+    blade_raw = 0.0
+    for s in steps:
+        if s.get("plugin") != "base.core_conflict.blade_clash":
+            continue
+        blade_raw += float((s.get("delta") or {}).get("instability_score") or 0.0)
+    w_blade = float(params.get("ENTROPY_W_BLADE", 0.25))
+    ref_blade = max(1e-6, float(params.get("ENTROPY_BLADE_REF", 0.6)))
+    m_blade = min(1.0, blade_raw / ref_blade)
+
+    raw = w_t * m_torque + w_c * m_clamp + w_k * m_clash + w_blade * m_blade
     damp = float(params.get("governance_constraint_damping", 1.0))
     damp = max(0.0, min(2.0, damp))
     entropy = max(0.0, min(1.0, raw * damp))
@@ -132,6 +142,8 @@ def _synthesize_global_entropy(
             "m_torque": round(m_torque, 4),
             "m_clamp": round(m_clamp, 4),
             "m_clash": round(m_clash, 4),
+            "m_blade_instability": round(m_blade, 4),
+            "blade_instability_raw": round(blade_raw, 4),
             "torque_total": round(torque_total, 4),
             "clash_abs_loss_total": round(clash_loss, 4),
             "raw_entropy_mix": round(raw, 4),
@@ -204,6 +216,9 @@ def evaluate_interactions(
     for _k in _idim_keys:
         if _k not in params:
             params[_k] = float(settings.get(_k, 0.0))
+    for _ek in ("ENTROPY_W_BLADE", "ENTROPY_BLADE_REF"):
+        if _ek not in params:
+            params[_ek] = float(settings.get(_ek, 0.25 if _ek == "ENTROPY_W_BLADE" else 0.6))
     by_pillar = (physics_tensor or {}).get("by_pillar") or {}
 
     def pillar_raw(name: str) -> float:
@@ -224,7 +239,13 @@ def evaluate_interactions(
         settings=settings,
     )
     status_steps = apply_l1_status_to_physics_tensor(physics_tensor=physics_tensor, metadata=metadata, settings=settings)
-    combined_steps = list(steps) + list(status_steps or [])
+    conflict_steps = apply_l1_core_conflict_operators(
+        physics_tensor=physics_tensor,
+        metadata=metadata,
+        settings=settings,
+        conflict_points=points,
+    )
+    combined_steps = list(steps) + list(status_steps or []) + list(conflict_steps or [])
     clamp_on = float(params.get("L1_SANHE_PHI_CLAMP", 1.0)) >= 1.0
 
     consistency = _composite_consistency_check(

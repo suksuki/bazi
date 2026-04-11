@@ -83,6 +83,15 @@ export type PhysicsLabConfig = {
   INTERDIMENSIONAL_SHIELD_ENABLE?: number;
   STEM_BRANCH_ROOT_RESONANCE_ENABLE?: number;
   STEM_BRANCH_VERTICAL_CRUSH_ENABLE?: number;
+  /** L1 核心冲突算子簇总开关与分项 η（与 DEFAULT_PHYSICS_SETTINGS / skill_manifest 对齐） */
+  L1_CORE_CONFLICT_OPS_ENABLE?: number;
+  L1_OWL_FOOD_DAMPING?: number;
+  L1_WEALTH_SEAL_COLLAPSE?: number;
+  L1_BLADE_CLASH_INSTABILITY?: number;
+  L1_ROBBER_WEALTH_ALLOC_LOSS?: number;
+  L1_GOV_KILL_EFFICIENCY_LOSS?: number;
+  /** Junction 伤官见官坐标畸变衰减（与 SGJG_* 协议对齐） */
+  SGJG_COORDINATE_DISTORTION_DECAY?: number;
 };
 
 export type PluginSwitches = {

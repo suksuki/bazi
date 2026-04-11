@@ -328,6 +328,7 @@ class PluginRegistry:
             "global_conflict_tension": round(float(tension), 4),
             "plugin_mutex_warnings": mutex_warnings,
             "l1_physics_manifest": l1_physics_manifest,
+            "base_physics_skills": skill_rows,
             "default_physics_settings": {k: float(v) for k, v in DEFAULT_PHYSICS_SETTINGS.items()},
             "refreshed_at": time.time(),
         }
@@ -341,6 +342,7 @@ class PluginRegistry:
                         "plugin": p,
                         "blueprint_markdown": str(meta.get("blueprint_markdown") or ""),
                         "skills": list(skills),
+                        "base_physics_skills": list(result.get("base_physics_skills") or []),
                         "default_physics_settings": dict(result.get("default_physics_settings") or {}),
                         "refreshed_at": result["refreshed_at"],
                     }
@@ -348,6 +350,7 @@ class PluginRegistry:
                 "plugin": None,
                 "blueprint_markdown": "",
                 "skills": [],
+                "base_physics_skills": list(result.get("base_physics_skills") or []),
                 "default_physics_settings": dict(result.get("default_physics_settings") or {}),
                 "error": "not_found",
                 "refreshed_at": result["refreshed_at"],

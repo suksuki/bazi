@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional
 
 from app.core.runtime_config import get_runtime_config
 
@@ -77,6 +77,60 @@ def _extract_wangshuai_party_signed(payload: Dict[str, Any]) -> Dict[str, float]
     v = sign * mag
     n = max(1, len(_SELF_PARTY))
     return {d: v / n for d in _SELF_PARTY}
+
+
+def _read_l1_polarity_seeds(physics_tensor: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not physics_tensor or not isinstance(physics_tensor, dict):
+        return []
+    meta = physics_tensor.get("meta")
+    if not isinstance(meta, dict):
+        return []
+    raw = meta.get("l1_polarity_routing_seeds")
+    return list(raw) if isinstance(raw, list) else []
+
+
+def _append_l1_polarity_seeds_to_events(
+    events: List[CausalConflictEvent],
+    physics_tensor: Optional[Dict[str, Any]],
+) -> None:
+    for seed in _read_l1_polarity_seeds(physics_tensor):
+        d = str(seed.get("deity") or "").strip()
+        if not d:
+            continue
+        events.append(
+            CausalConflictEvent(
+                deity=d,
+                plugin_a=str(seed.get("plugin_a") or "base.l1.core_conflict"),
+                delta_a=float(seed.get("delta_a") or 0.2),
+                plugin_b=str(seed.get("plugin_b") or "base.physics.tensor"),
+                delta_b=float(seed.get("delta_b") or -0.2),
+                note="Polarity_Flip",
+            )
+        )
+
+
+def _apply_wealth_seal_merge_bias(
+    merged: MutableMapping[str, float],
+    physics_tensor: Optional[Dict[str, Any]],
+    cfg: Mapping[str, Any],
+) -> None:
+    """财星破印：在已合成的 merged 上压低印、抬高财（系数来自 physics meta 或 runtime 默认）。"""
+    if not physics_tensor or not isinstance(physics_tensor, dict):
+        return
+    meta = physics_tensor.get("meta")
+    if not isinstance(meta, dict) or not meta.get("wealth_seal_routing"):
+        return
+    wr = meta.get("wealth_seal_routing")
+    if not isinstance(wr, dict):
+        return
+    yin_f = float(wr.get("yin_factor") or 0.82)
+    cai_f = float(wr.get("cai_factor") or 1.08)
+    for d in ("正印", "偏印"):
+        if d in merged:
+            merged[d] = round(float(merged[d]) * yin_f, 4)
+    for d in ("正财", "偏财"):
+        if d in merged:
+            merged[d] = round(float(merged[d]) * cai_f, 4)
 
 
 def _extract_plugin_vector(plugin_id: str, out: Dict[str, Any]) -> Dict[str, float]:
@@ -155,6 +209,8 @@ class CausalRouter:
                             )
                         )
 
+        _append_l1_polarity_seeds_to_events(events, physics_tensor)
+
         merged: Dict[str, float] = {}
         if strategy == "manual_arbitration":
             routing_decision = (
@@ -205,6 +261,8 @@ class CausalRouter:
                 f"插件权比 base≈{cfg.get('priority_base_physics')} / blind≈{cfg.get('priority_blind_school')}；"
                 f"检出 {len(events)} 个 Causal_Conflict_Event，已按权重融合。"
             )
+
+        _apply_wealth_seal_merge_bias(merged, physics_tensor, cfg)
 
         skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged)
         return {

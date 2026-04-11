@@ -7,6 +7,7 @@ import { useLabConfig } from "@/features/lab-config/LabConfigContext";
 import {
   buildPluginManifestUrl,
   usePluginRegistry,
+  type BasePhysicsSkillRow,
   type BlindSchoolSkillItem,
   type PluginManifestItem,
 } from "@/features/admin/hooks/usePluginRegistry";
@@ -36,6 +37,27 @@ const ETA_ALIGNMENT_KEYS = [
   "STEM_BRANCH_ROOT_RESONANCE_ENABLE",
   "STEM_BRANCH_VERTICAL_CRUSH_ENABLE",
 ] as const satisfies readonly (keyof PhysicsLabConfig)[];
+
+/** 核心冲突簇卡片绑定的 Lab 键 → [min, max, step] */
+const CORE_CONFLICT_SLIDER_BOUNDS: Partial<
+  Record<Exclude<keyof PhysicsLabConfig, "L1_CORE_CONFLICT_OPS_ENABLE">, [number, number, number]>
+> = {
+  SGJG_COORDINATE_DISTORTION_DECAY: [0.05, 1.0, 0.05],
+  L1_OWL_FOOD_DAMPING: [0, 0.95, 0.01],
+  L1_WEALTH_SEAL_COLLAPSE: [0, 0.95, 0.01],
+  L1_BLADE_CLASH_INSTABILITY: [0, 2, 0.05],
+  L1_ROBBER_WEALTH_ALLOC_LOSS: [0, 0.95, 0.01],
+  L1_GOV_KILL_EFFICIENCY_LOSS: [0, 1, 0.01],
+};
+
+function sortCoreConflictSkills(rows: BasePhysicsSkillRow[]): BasePhysicsSkillRow[] {
+  return [...rows].sort((a, b) => {
+    const aFirst = a.description_tags?.includes("SHANG_GUAN_JIAN_GUAN") ? 0 : 1;
+    const bFirst = b.description_tags?.includes("SHANG_GUAN_JIAN_GUAN") ? 0 : 1;
+    if (aFirst !== bFirst) return aFirst - bFirst;
+    return a.name.localeCompare(b.name, "zh-Hans-CN");
+  });
+}
 
 function labPhysicsEffective(
   cfg: PhysicsLabConfig,
@@ -269,6 +291,15 @@ export function PluginManagementPanel() {
     return { snap, repo };
   }, [labState.snapshot?.physics_tensor, manifest?.default_physics_settings]);
 
+  const coreConflictSkills = useMemo(() => {
+    const rows = manifest?.base_physics_skills ?? [];
+    const tagged = rows.filter(
+      (r): r is BasePhysicsSkillRow =>
+        Array.isArray(r.description_tags) && r.description_tags.includes("core_conflict"),
+    );
+    return sortCoreConflictSkills(tagged);
+  }, [manifest?.base_physics_skills]);
+
   return (
     <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -435,7 +466,11 @@ export function PluginManagementPanel() {
 
         <div className="mt-4 border-t border-sky-800/50 pt-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-sky-300/95">干支维轴算子</p>
-          <p className="mt-1 text-[11px] text-sky-100/80">维度屏蔽、通根谐振、盖头截脚与跨维传导灵敏度（写入 physics_config）。</p>
+          <p className="mt-1 text-[11px] text-sky-100/80">
+            本区开关与滑块仅调节
+            <span className="font-medium text-sky-50/95">物理传导路径</span>
+            （跨柱衰减、屏障、谐振、盖头截脚与人工传导率），不绑定任一十神标签；十神语义冲突请见下方「核心冲突算子簇」。
+          </p>
           <div className={`mt-3 space-y-2 text-[11px] text-sky-100/90 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
             <label className="flex cursor-pointer items-center gap-2">
               <input
@@ -447,7 +482,7 @@ export function PluginManagementPanel() {
                 }
                 className="accent-[#3B82F6]"
               />
-              <span>启用维度屏蔽（防止伤官见官滥用）</span>
+              <span>启用跨维度屏蔽（通用协议）</span>
             </label>
             <label className="flex cursor-pointer items-center gap-2">
               <input
@@ -492,6 +527,93 @@ export function PluginManagementPanel() {
               className="mt-1 w-full accent-[#3B82F6]"
             />
           </label>
+        </div>
+      </div>
+
+      <div
+        className={`rounded-xl border border-amber-500/35 bg-amber-950/20 px-3 py-3 ${
+          isFinalized
+            ? "pointer-events-none border-zinc-600/80 bg-zinc-950/80 opacity-60 grayscale-[0.4] ring-1 ring-zinc-700/60"
+            : ""
+        }`}
+      >
+        <p className="text-[10px] font-medium uppercase tracking-wide text-amber-200/95">
+          CORE_CONFLICT · 十神核心冲突算子簇
+        </p>
+        {isFinalized ? <p className="mt-1 text-[10px] text-zinc-500">终审已签发 · 参数已锁定</p> : null}
+        <p className="mt-1 text-[11px] text-amber-100/85">
+          与 L1 Junction / <span className="font-mono text-[10px]">core_operators</span> 对齐；卡片来自 manifest{" "}
+          <span className="font-mono text-[10px]">description_tags: core_conflict</span>。
+        </p>
+        <label className={`mt-3 flex cursor-pointer items-center gap-2 text-[11px] text-amber-50/95 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
+          <input
+            type="checkbox"
+            disabled={isFinalized}
+            checked={(labConfig.L1_CORE_CONFLICT_OPS_ENABLE ?? 1) >= 0.5}
+            onChange={(e) =>
+              setLabConfig((prev) => ({ ...prev, L1_CORE_CONFLICT_OPS_ENABLE: e.target.checked ? 1 : 0 }))
+            }
+            className="accent-amber-400"
+          />
+          <span>
+            启用核心冲突算子簇（<span className="font-mono text-[10px]">L1_CORE_CONFLICT_OPS_ENABLE</span>）
+          </span>
+        </label>
+        {!manifest?.base_physics_skills?.length && !isLoading ? (
+          <p className="mt-2 text-[10px] text-zinc-500">当前 manifest 未包含 base_physics_skills，请刷新注册表或升级后端。</p>
+        ) : null}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {coreConflictSkills.map((s) => {
+            const pkRaw = s.physics_setting_key;
+            const pk = pkRaw as keyof PhysicsLabConfig | undefined;
+            const bounds =
+              pk && pk in CORE_CONFLICT_SLIDER_BOUNDS
+                ? CORE_CONFLICT_SLIDER_BOUNDS[pk as keyof typeof CORE_CONFLICT_SLIDER_BOUNDS]
+                : undefined;
+            const live =
+              pkRaw != null && pkRaw !== ""
+                ? runtimePhysicsNumber(labState.snapshot?.physics_tensor as Record<string, unknown> | undefined, pkRaw)
+                : null;
+            const cur =
+              pk != null && typeof labConfig[pk] === "number" && Number.isFinite(labConfig[pk] as number)
+                ? (labConfig[pk] as number)
+                : (manifest?.default_physics_settings?.[pkRaw as string] ?? 0);
+            return (
+              <div
+                key={s.id}
+                className="rounded-lg border border-amber-600/30 bg-zinc-950/50 px-2.5 py-2 shadow-sm shadow-amber-950/20"
+              >
+                <p className="text-[11px] font-semibold text-amber-50/95">{s.name}</p>
+                <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-zinc-400">{s.description}</p>
+                <p className="mt-1.5 font-mono text-[9px] text-amber-200/80">
+                  {s.id}
+                  {pkRaw ? ` · ${pkRaw}` : ""}
+                  {live != null ? <span className="ml-1 text-cyan-200/85">η≈{live.toFixed(2)}</span> : null}
+                </p>
+                {bounds && pk ? (
+                  <label className="mt-2 block text-[10px] text-zinc-300">
+                    <span className="text-zinc-500">Lab </span>
+                    <span className="font-mono text-amber-100/90">{pkRaw}</span>
+                    <span className="ml-1 text-zinc-400">= {cur.toFixed(2)}</span>
+                    <input
+                      type="range"
+                      min={bounds[0]}
+                      max={bounds[1]}
+                      step={bounds[2]}
+                      disabled={isFinalized}
+                      value={cur}
+                      onChange={(e) =>
+                        setLabConfig((prev) => ({ ...prev, [pk]: Number(e.target.value) } as PhysicsLabConfig))
+                      }
+                      className="mt-1 w-full accent-amber-500"
+                    />
+                  </label>
+                ) : (
+                  <p className="mt-2 text-[9px] text-zinc-600">（无独立滑块绑定，见 Junction / 算子实现）</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

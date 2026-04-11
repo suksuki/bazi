@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ADMIN_HEADERS, API_BASE, SETTINGS_KEY } from "./constants";
 import { DbStatus, LlmResp, SaveState, SavedSettings } from "./types";
@@ -139,7 +139,7 @@ export function useAdminSettingsController() {
     );
   }
 
-  async function loadModels(showSuccessMsg = true) {
+  const loadModels = useCallback(async (showSuccessMsg = true) => {
     setLoadingModels(true);
     setLlmErr("");
     if (showSuccessMsg) setModelLoadMsg("");
@@ -167,9 +167,9 @@ export function useAdminSettingsController() {
     } finally {
       setLoadingModels(false);
     }
-  }
+  }, [effectiveBaseUrl, llmApiKey]);
 
-  async function syncRuntimeConfig({ showSavedMessage }: { showSavedMessage: boolean }) {
+  const syncRuntimeConfig = useCallback(async ({ showSavedMessage }: { showSavedMessage: boolean }) => {
     setSaveState("saving");
     try {
       const response = await fetch(`${API_BASE}/api/admin/runtime-config`, {
@@ -211,7 +211,7 @@ export function useAdminSettingsController() {
       }
       return false;
     }
-  }
+  }, [effectiveBaseUrl, llmApiKey, llmModel]);
 
   async function testLlm() {
     setLoadingLlm(true);
