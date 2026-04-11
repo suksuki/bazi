@@ -26,7 +26,8 @@ def _active_skill_rows(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
     meta = (physics_tensor or {}).get("meta") or {}
     flags = meta.get("blind_school_features") if isinstance(meta, dict) else None
     if not isinstance(flags, dict):
-        return list(all_skills)
+        rows = [r for r in all_skills if isinstance(r, dict)]
+        return _sort_skills_by_routing(rows, physics_tensor)
     keymap = {
         "mp_pierce_01": bool(flags.get("enable_pierce_harm", True)),
         "mp_tomb_01": bool(flags.get("enable_tomb_vault", True)),
@@ -39,7 +40,27 @@ def _active_skill_rows(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
         sid = str(row.get("id") or "")
         if keymap.get(sid, True):
             out.append(row)
-    return out
+    return _sort_skills_by_routing(out, physics_tensor)
+
+
+def _sort_skills_by_routing(rows: List[Dict[str, Any]], physics_tensor: Dict[str, Any] | None) -> List[Dict[str, Any]]:
+    """按 CausalRouter 输出的 sovereignty 排序：高主权 Skill 模板优先供 LLM 断言。"""
+    if not rows:
+        return rows
+    meta = (physics_tensor or {}).get("meta") if isinstance(physics_tensor, dict) else None
+    cr = meta.get("causal_routing") if isinstance(meta, dict) else None
+    rank = cr.get("skill_sovereignty_rank") if isinstance(cr, dict) else None
+    if not isinstance(rank, list) or not rank:
+        return rows
+    score_by: Dict[str, float] = {}
+    for item in rank:
+        if not isinstance(item, dict):
+            continue
+        sid = str(item.get("skill_id") or "").strip()
+        if not sid:
+            continue
+        score_by[sid] = float(item.get("sovereignty", 0.0) or 0.0)
+    return sorted(rows, key=lambda r: -score_by.get(str(r.get("id") or ""), 0.5))
 
 
 def format_blind_skill_registry_for_prompt(physics_tensor: Dict[str, Any] | None) -> str:
@@ -54,6 +75,7 @@ def format_blind_skill_registry_for_prompt(physics_tensor: Dict[str, Any] | None
     lines: List[str] = [
         "## 盲派 Skill 注册表（物理引擎已挂载 classical.blind_school.v1）",
         "生成与盲派相关的自然语言断言时：必须引用下方 skill_id；句式应优先贴合 assertion_template 的语义，不得自造与模板冲突的定性。",
+        "下列顺序已按因果路由 sovereignty 排序：越靠前表示路由判定为「高主权」模板，应优先用于断言生成。",
     ]
     for s in rows:
         sid = str(s.get("id") or "")

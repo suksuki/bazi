@@ -54,6 +54,31 @@ def fallback_clash_prompt(observed: List[str]) -> str:
     )
 
 
+def _l1_operator_audit_extension(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
+    audit = (physics_tensor or {}).get("audit_log") if isinstance(physics_tensor, dict) else None
+    if not isinstance(audit, dict):
+        return []
+    raw = audit.get("l1_operator_audit_items")
+    rows = [dict(x) for x in raw] if isinstance(raw, list) else []
+    seen = {r.get("id") for r in rows}
+
+    def _merge_extra(key: str) -> None:
+        nonlocal rows
+        extra = audit.get(key)
+        if not isinstance(extra, list):
+            return
+        for item in extra:
+            iid = item.get("id")
+            if iid in seen:
+                continue
+            seen.add(iid)
+            rows.append(dict(item))
+
+    _merge_extra("chronos_audit_items")
+    _merge_extra("wangshuai_audit_items")
+    return rows
+
+
 def build_seed_audit_summary(
     body: Any,
     metadata: Dict[str, Any],
@@ -74,7 +99,8 @@ def build_seed_audit_summary(
     local_decay_applied = bool(root_check.get("no_root", False))
     points = metadata.get("conflict_matrix", {}).get("points", [])
     point_labels = [point.get("detail", "") for point in points]
-    return [
+    l1_ext = _l1_operator_audit_extension(physics_tensor if isinstance(physics_tensor, dict) else {})
+    core_rows: List[Dict[str, Any]] = [
         {
             "step": "01",
             "role": "Arbiter",
@@ -121,3 +147,4 @@ def build_seed_audit_summary(
             },
         },
     ]
+    return core_rows + l1_ext

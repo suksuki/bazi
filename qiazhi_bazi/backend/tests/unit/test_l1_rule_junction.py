@@ -1,4 +1,4 @@
-from app.core.rules.junction import detect_universal_flags
+from app.core.rules.junction import calculate_interaction_visibility, detect_universal_flags
 
 
 def test_detect_shangguan_jian_guan_flag_from_l1_tensor():
@@ -97,4 +97,37 @@ def test_coordinate_distortion_decays_without_tong_gen_or_banhe():
     assert flags["sgjg_coordinate_distortion_applied"] is True
     assert flags["sgjg_coordinate_distortion_factor"] == 0.3
     assert flags["control_energy"] == round(min(6.0, 5.0) * 0.3, 4)
+
+
+def test_calculate_interaction_visibility_surface_when_bilateral_stem():
+    trace = {
+        "伤官": {
+            "base_energy": {
+                "contribution_sources": [{"source": "month.stem:丁", "contribution_energy": 1.0}],
+            }
+        },
+        "正官": {
+            "base_energy": {
+                "contribution_sources": [{"source": "year.stem:庚", "contribution_energy": 1.0}],
+            }
+        },
+    }
+    vis = calculate_interaction_visibility("伤官", "正官", trace_map=trace)
+    assert vis["visibility"] == "surface"
+    assert vis["trace_resolved"] is True
+
+
+def test_detect_flags_includes_l1_core_interactions():
+    flags = detect_universal_flags(
+        metadata={},
+        physics_tensor={
+            "deity_energy_axes": {
+                "伤官": {"absolute_energy": 2.4},
+                "正官": {"absolute_energy": 1.1},
+            }
+        },
+    )
+    assert isinstance(flags.get("l1_core_interactions"), list)
+    assert len(flags["l1_core_interactions"]) >= 3
+    assert "l1_inbox_signal_bypass" in flags
 

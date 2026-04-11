@@ -1,6 +1,6 @@
 # Qiazhi-Bazi Architecture Overview
 
-更新时间：`2026-04-08`
+更新时间：`2026-04-11`
 
 ## 1. 总览
 
@@ -46,7 +46,13 @@ Qiazhi-Bazi 当前采用单仓单体结构：
 1. 前端 `admin/settings`
 2. 后端 `db-status / db-init`
 3. 后端 `llm-models / llm-test`
-4. 后端 `runtime-config`
+4. 后端 `runtime-config`（含 `causal_routing` 片段，与 `CausalRouter` 默认策略对齐）
+
+### 因果路由与演化审计（主链路旁路）
+
+- **`CausalRouter`**：在 `analyze-clash` 等编排中读取 `runtime_config.causal_routing`，对多插件输出做 `negotiate_impact`，结果写入 `physics_tensor.meta.causal_routing`，并通过 **`append_routing_audit_item`** 追加到 `audit_log.causal_routing_audit_items`，供排障与演化侧消费。
+- **盲派 LLM 片段**：`skill_prompt` 按 `meta.causal_routing.skill_sovereignty_rank` 对 Skill 模板排序，高主权条目优先进入 system 提示。
+- **演化与 DNA**：`dna_registry` 管理 `RuleGene` 与准入开关；后台可提供演化批跑与反馈入口（详见 `backend/README` 管理 API 表）。
 
 ## 4. 已完成的主要拆分
 

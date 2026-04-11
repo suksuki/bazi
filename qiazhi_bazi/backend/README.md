@@ -36,6 +36,19 @@ backend/
 | `QIAZHI_BAZI_LLM_API_KEY` | 本地可填 `empty` |
 | `QIAZHI_BAZI_LLM_MODEL` | 推理模型名 |
 | `QIAZHI_ADMIN_TOKEN` | 可选，admin 路由访问令牌 |
+| `QIAZHI_DNA_REGISTRY_PATH` | 可选，规则基因 JSON 路径（演化覆盖物理系数） |
+| `QIAZHI_EVOLUTION_ADMISSION_PATH` / `QIAZHI_EVOLUTION_ADMIT` | 可选，演化结果是否准入覆盖 |
+
+`runtime_config.json`（或由 Admin 写入的等价配置）中的 **`causal_routing`** 与 `app/core/routing/causal_router.py` 默认字典深度合并；单独 PATCH 某字段不会抹掉其余键。
+
+## 管理端与演化相关 API（节选）
+
+除 `runtime-config`、`db-status` 等外，典型还包括：
+
+- `PUT /api/admin/runtime-config`：请求体可带 `causal_routing` 对象，与磁盘上 `llm` 等并存合并。
+- 演化批跑、反馈等以 `app/api/admin.py` 与 `contracts` 为准；需 `QIAZHI_ADMIN_TOKEN` 时按中间件校验。
+
+具体路径以 OpenAPI（`/docs`）或集成测试 `tests/integration/test_api_flow.py` 为准。
 
 ## 启动
 

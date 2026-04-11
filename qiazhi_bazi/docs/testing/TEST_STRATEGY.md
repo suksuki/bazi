@@ -30,6 +30,10 @@
 - `llm_service`
 - `physics_rules`
 - `physics_calculations`
+- `causal_router`（`negotiate_impact` 与 `load_routing_config`）
+- `dna_registry`（准入、`append_routing_audit_item`）
+- `runtime_config`（`causal_routing` 深度合并）
+- `skill_prompt`（sovereignty 排序与盲派注册表片段）
 
 ### 后端集成测试
 

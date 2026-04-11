@@ -71,7 +71,6 @@ function createSinksRef(): MutableRefObject<LabSnapshotHydrationSinks> {
     setConfirmedDecisionIds: vi.fn(),
     setLogicDiff: vi.fn(),
     setLastSeedPayload: vi.fn(),
-    setSnapshotAvailable: vi.fn(),
   };
   return { current };
 }
@@ -92,7 +91,6 @@ describe("useStreamBoardLabSnapshotEffects", () => {
     const isSnapshotRestoringRef = { current: false };
     const inboxNonceHandledRef = { current: 0 };
     const navHandledRef = { current: true };
-    const setSnapshotAvailable = vi.fn();
     const setConfirmedDecisionIds = vi.fn();
     const setResolvedCardIds = vi.fn();
     const setSelectionResetToken = vi.fn();
@@ -108,7 +106,6 @@ describe("useStreamBoardLabSnapshotEffects", () => {
           inboxNonceHandledRef,
           navHandledRef,
           hydrationSinksRef,
-          setSnapshotAvailable,
           setConfirmedDecisionIds,
           setResolvedCardIds,
           setSelectionResetToken,
@@ -145,7 +142,6 @@ describe("useStreamBoardLabSnapshotEffects", () => {
         inboxNonceHandledRef,
         navHandledRef,
         hydrationSinksRef,
-        setSnapshotAvailable: vi.fn(),
         setConfirmedDecisionIds: vi.fn(),
         setResolvedCardIds: vi.fn(),
         setSelectionResetToken: vi.fn(),
@@ -156,38 +152,6 @@ describe("useStreamBoardLabSnapshotEffects", () => {
       await Promise.resolve();
     });
     expect(isSnapshotRestoringRef.current).toBe(false);
-  });
-
-  it("reflects snapshot presence via setSnapshotAvailable", () => {
-    const setSnapshotAvailable = vi.fn();
-    const hydrationSinksRef = createSinksRef();
-    const isSnapshotRestoringRef = { current: false };
-    const inboxNonceHandledRef = { current: 0 };
-    const navHandledRef = { current: true };
-
-    const { rerender } = renderHook(
-      (snap: LabSnapshot | null) =>
-        useStreamBoardLabSnapshotEffects({
-          metadata: null,
-          labSnapshot: snap,
-          lastSeedPayload: null,
-          inboxResetNonce: 0,
-          isSnapshotRestoringRef,
-          inboxNonceHandledRef,
-          navHandledRef,
-          hydrationSinksRef,
-          setSnapshotAvailable,
-          setConfirmedDecisionIds: vi.fn(),
-          setResolvedCardIds: vi.fn(),
-          setSelectionResetToken: vi.fn(),
-        }),
-      { initialProps: labSnap() as LabSnapshot | null },
-    );
-
-    expect(setSnapshotAvailable).toHaveBeenLastCalledWith(true);
-    setSnapshotAvailable.mockClear();
-    rerender(null);
-    expect(setSnapshotAvailable).toHaveBeenLastCalledWith(false);
   });
 
   it("on inboxResetNonce bump, syncs decision/card ids and bumps selection token", () => {
@@ -222,7 +186,6 @@ describe("useStreamBoardLabSnapshotEffects", () => {
           inboxNonceHandledRef,
           navHandledRef,
           hydrationSinksRef,
-          setSnapshotAvailable: vi.fn(),
           setConfirmedDecisionIds,
           setResolvedCardIds,
           setSelectionResetToken,

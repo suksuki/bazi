@@ -7,6 +7,7 @@ import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
+import { LogicSummary } from "./LogicSummary";
 import type { StreamBoardViewModel } from "../models";
 
 export interface BoardVisionPanelProps {
@@ -63,6 +64,8 @@ export function BoardVisionPanel({
     setHoveredDeity,
     finalWorkVector,
     finalTopologyGraphV1,
+    physicsAudit,
+    causalRouting,
   } = viewModel;
 
   return (
@@ -78,6 +81,7 @@ export function BoardVisionPanel({
         {t("视觉场 · 全局熵")} {globalEntropy != null ? globalEntropy.toFixed(3) : "—"}
         {t("（沉浸式看盘）")}
       </div>
+      <LogicSummary physicsAudit={physicsAudit} />
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-500/25 bg-cyan-950/40 px-3 py-2 text-[11px] text-cyan-100/95">
         <span className="text-zinc-400">
           {hasBoard ? t("当前已有排盘结果，可随时修改生辰重算。") : t("尚未排盘：请先录入生辰八字。")}
@@ -146,6 +150,7 @@ export function BoardVisionPanel({
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
             <TenGodNumericList
               deityScores={deityScores}
+              causalRouting={causalRouting}
               deityEnergyAxes={deityEnergyAxes}
               deityComponents={deityComponents}
               deityTraceDetails={deityTraceDetails}

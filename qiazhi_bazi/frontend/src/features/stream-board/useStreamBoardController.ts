@@ -233,6 +233,18 @@ export function useStreamBoardController(): StreamBoardViewModel {
       TRANSFER_DISTANCE_DECAY: 0.1,
       WORK_MIN_THRESHOLD: 0.5,
       SHOW_WEAK_WORK_PATHS: 1,
+      L1_OP_PROD_ETA: 1.0,
+      L1_OP_DEST_ETA: 1.0,
+      L1_OP_CONN_ETA: 1.0,
+      INTERDIMENSIONAL_CONDUCTIVITY: 0.0,
+      INTERDIMENSIONAL_BARRIER_STRENGTH: 1.0,
+      CONDUCTIVITY_DECAY_RATE: 0.7,
+      GHOST_ENERGY_DAMPING: 0.3,
+      MANGPAI_ETA_DIMENSIONAL_CRUSH: 0.6,
+      MANGPAI_ROOT_RESONANCE: 1.2,
+      INTERDIMENSIONAL_SHIELD_ENABLE: 1.0,
+      STEM_BRANCH_ROOT_RESONANCE_ENABLE: 1.0,
+      STEM_BRANCH_VERTICAL_CRUSH_ENABLE: 1.0,
     },
     pluginSwitches: {
       blindSchool: true,
@@ -274,8 +286,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
   });
   const [stressTestResult, setStressTestResult] = useState<Record<string, unknown> | null>(null);
   const [genderComparisonResult, setGenderComparisonResult] = useState<Record<string, unknown> | null>(null);
-  const [snapshotAvailable, setSnapshotAvailable] = useState(false);
-
   const hydrationSinksRef = useRef({} as LabSnapshotHydrationSinks);
   hydrationSinksRef.current = {
     setMetadata,
@@ -307,7 +317,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setConfirmedDecisionIds,
     setLogicDiff,
     setLastSeedPayload,
-    setSnapshotAvailable,
   };
 
   useStreamBoardLabSnapshotEffects({
@@ -319,7 +328,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     inboxNonceHandledRef,
     navHandledRef,
     hydrationSinksRef,
-    setSnapshotAvailable,
     setConfirmedDecisionIds,
     setResolvedCardIds,
     setSelectionResetToken,
@@ -349,6 +357,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     const raw = meta?.decision_signal_to_noise;
     if (raw && typeof raw === "object") return raw as DecisionSignalToNoiseMeta;
     return undefined;
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
+  const causalRouting = useMemo((): Record<string, unknown> | null => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const cr = meta?.causal_routing;
+    return cr && typeof cr === "object" ? (cr as Record<string, unknown>) : null;
   }, [labState.snapshot?.physics_tensor?.meta]);
 
   const cards = useMemo(
@@ -790,7 +804,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalStructureCandidatesV0: finalStructureCandidatesV0 as Record<string, unknown> | null,
     finalStructureFinalDecisionV0: finalStructureFinalDecisionV0 as Record<string, unknown> | null,
     finalVerdictVersionId,
-    setSnapshotAvailable,
   };
 
   executionCtxRef.current = {
@@ -898,6 +911,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     llmDiagnosticData,
     physicsParams,
     globalEntropy,
+    causalRouting,
     auditorProposalCards,
     autoConvertedParamKey,
     consensusHistory,
@@ -915,7 +929,6 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setConfirmedDecisionIds,
     urlDecisionHydrated,
     snapshotUrlTag,
-    snapshotAvailable,
     setAsBaseline,
     logicDiff,
     stressTestResult,

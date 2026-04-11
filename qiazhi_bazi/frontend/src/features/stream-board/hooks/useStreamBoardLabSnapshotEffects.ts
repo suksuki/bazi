@@ -1,6 +1,6 @@
 "use client";
 
-import { type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useLayoutEffect } from "react";
+import { type Dispatch, type MutableRefObject, type SetStateAction, useLayoutEffect } from "react";
 
 import type { NavigationInfo } from "../controller/streamBoardTypes";
 import {
@@ -23,14 +23,13 @@ type Params = {
   navHandledRef: MutableRefObject<boolean>;
   /** 每帧更新 current，避免把 sinks 对象放进 effect 依赖导致无限重跑 */
   hydrationSinksRef: MutableRefObject<LabSnapshotHydrationSinks>;
-  setSnapshotAvailable: (v: boolean) => void;
   setConfirmedDecisionIds: (v: string[]) => void;
   setResolvedCardIds: (v: string[]) => void;
   setSelectionResetToken: Dispatch<SetStateAction<number>>;
 };
 
 /**
- * 实验室 snapshot → 本地 React 状态：首屏灌回、导航诊断、Inbox 与 snapshot 可用标志。
+ * 实验室 snapshot → 本地 React 状态：首屏灌回、导航诊断、Inbox 同步。
  */
 export function useStreamBoardLabSnapshotEffects(p: Params) {
   useLayoutEffect(() => {
@@ -80,10 +79,6 @@ export function useStreamBoardLabSnapshotEffects(p: Params) {
       console.info("[StateRecoveryAuditor]", navInfo);
     }
   }, [p.labSnapshot]);
-
-  useEffect(() => {
-    p.setSnapshotAvailable(Boolean(p.labSnapshot));
-  }, [p.labSnapshot, p.setSnapshotAvailable]);
 
   useLayoutEffect(() => {
     const n = p.inboxResetNonce;

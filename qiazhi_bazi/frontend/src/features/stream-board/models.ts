@@ -68,6 +68,21 @@ export type PhysicsLabConfig = {
   TRANSFER_DISTANCE_DECAY: number;
   WORK_MIN_THRESHOLD: number;
   SHOW_WEAK_WORK_PATHS: number;
+  /** L1 base_physics 原子算子 η，与后端 PhysicsConfig / DEFAULT_PHYSICS_SETTINGS 对齐 */
+  L1_OP_PROD_ETA?: number;
+  L1_OP_DEST_ETA?: number;
+  L1_OP_CONN_ETA?: number;
+  /** 跨柱干支传导灵敏度（0..2），与 interaction_params / physics_settings 对齐 */
+  INTERDIMENSIONAL_CONDUCTIVITY?: number;
+  INTERDIMENSIONAL_BARRIER_STRENGTH?: number;
+  CONDUCTIVITY_DECAY_RATE?: number;
+  GHOST_ENERGY_DAMPING?: number;
+  MANGPAI_ETA_DIMENSIONAL_CRUSH?: number;
+  MANGPAI_ROOT_RESONANCE?: number;
+  /** 1=启用，0=关闭（与后端 physics_config 浮点开关一致） */
+  INTERDIMENSIONAL_SHIELD_ENABLE?: number;
+  STEM_BRANCH_ROOT_RESONANCE_ENABLE?: number;
+  STEM_BRANCH_VERTICAL_CRUSH_ENABLE?: number;
 };
 
 export type PluginSwitches = {
@@ -150,6 +165,14 @@ export type LogicDiff = {
   entropy_delta: number | null;
 };
 
+/** physics_tensor.meta.decision_signal_to_noise：Inbox 判词观察项门控 */
+export type DecisionSignalToNoiseMeta = {
+  inbox_conflict_cards_eligible?: boolean;
+  threshold?: number;
+  abs_estimate?: number | null;
+  has_critical_marker?: boolean;
+};
+
 export type StreamBoardViewModel = {
   lang: Lang;
   setLang: (lang: Lang) => void;
@@ -190,6 +213,8 @@ export type StreamBoardViewModel = {
   physicsParams: Record<string, number>;
   /** L1 合成全局熵 0..1，来自 physics_tensor.meta.global_entropy */
   globalEntropy: number | null;
+  /** 多插件因果路由包，来自 physics_tensor.meta.causal_routing */
+  causalRouting: Record<string, unknown> | null;
   auditorProposalCards: InboxCard[];
   autoConvertedParamKey: string | null;
   consensusHistory: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;
@@ -208,7 +233,6 @@ export type StreamBoardViewModel = {
   urlDecisionHydrated?: boolean;
   /** 来自 URL ?tag=，供 SnapshotBanner 展示，避免子组件使用 useSearchParams 触发 Suspense */
   snapshotUrlTag?: string;
-  snapshotAvailable?: boolean;
   setAsBaseline?: () => void;
   logicDiff?: LogicDiff;
   stressTestResult: StressTestResult | null;

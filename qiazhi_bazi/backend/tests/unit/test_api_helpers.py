@@ -27,6 +27,10 @@ def test_parse_allowed_param_accepts_default_interaction_keys():
     assert parse_allowed_param_update(sql) == ("governance_constraint_damping", 0.88)
     sql2 = "UPDATE physics_interaction_params SET param_value=1.05 WHERE param_key='L1_CLASH_INTENSITY';"
     assert parse_allowed_param_update(sql2) == ("L1_CLASH_INTENSITY", 1.05)
+    sql3 = "UPDATE physics_interaction_params SET param_value=1.2 WHERE param_key='L1_OP_DEST_ETA';"
+    assert parse_allowed_param_update(sql3) == ("L1_OP_DEST_ETA", 1.2)
+    sql4 = "UPDATE physics_interaction_params SET param_value=0.5 WHERE param_key='INTERDIMENSIONAL_CONDUCTIVITY';"
+    assert parse_allowed_param_update(sql4) == ("INTERDIMENSIONAL_CONDUCTIVITY", 0.5)
 
 
 def test_parse_allowed_param_rejects_unknown_key():

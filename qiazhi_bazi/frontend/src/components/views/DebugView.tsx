@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { skillIdForConflictPoint } from "@/features/decision-inbox/skillInference";
 import { VerdictCertificate } from "@/features/stream-board/components/VerdictCertificate";
+import { API_BASE } from "@/features/stream-board/constants";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { buildCausalSovereigntySlice } from "@/features/stream-board/utils/causalSovereigntyFromSnapshot";
 import type { ConflictPoint } from "@/types/bazi";
 
 function safeJson(obj: unknown, space = 2): string {
@@ -30,6 +32,53 @@ export function DebugView() {
   const lastSeed = state.lastSeedPayload;
 
   const [showRaw, setShowRaw] = useState(false);
+  const [evoGeneStats, setEvoGeneStats] = useState<{ n: number; levelPct: number } | null>(null);
+
+  /** 仅在「是否有快照 + 会话标识」变化时拉取演化热力图，避免依赖不稳定的 snapshot 引用又满足 exhaustive-deps */
+  const evolutionFetchKey = useMemo(() => {
+    if (!snapshot) return "";
+    const ts = snapshot.ts != null ? String(snapshot.ts) : "";
+    const sid = String((snapshot as { active_session_id?: unknown }).active_session_id ?? "");
+    return `${ts}\0${sid}`;
+  }, [snapshot]);
+
+  useEffect(() => {
+    if (!evolutionFetchKey) {
+      setEvoGeneStats(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!API_BASE) {
+          if (!cancelled) setEvoGeneStats(null);
+          return;
+        }
+        const r = await fetch(`${API_BASE}/api/v1/evolution/state`);
+        if (!r.ok || cancelled) return;
+        const data = (await r.json()) as { heatmap?: Array<{ maturity?: number }> };
+        const hm = Array.isArray(data.heatmap) ? data.heatmap : [];
+        const n = hm.length;
+        const levelPct =
+          n > 0
+            ? Math.round(
+                (hm.reduce((s, row) => s + Math.min(1, Math.max(0, Number(row?.maturity ?? 0))), 0) / n) * 100,
+              )
+            : 0;
+        if (!cancelled) setEvoGeneStats({ n, levelPct });
+      } catch {
+        if (!cancelled) setEvoGeneStats(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [evolutionFetchKey]);
+
+  const causalSovereigntyForCert = useMemo(
+    () => buildCausalSovereigntySlice(snapshot as Record<string, unknown> | null | undefined),
+    [snapshot],
+  );
 
   const hub = snapshot?.interaction_hub;
   const physics = snapshot?.physics_tensor as Record<string, unknown> | undefined;
@@ -113,6 +162,12 @@ export function DebugView() {
   }, [snapshot, hub, ld, meta.mangpai_pierce_semantics]);
 
   const hubCausalTraceLines = useMemo(() => {
+    const physics = snapshot?.physics_tensor as Record<string, unknown> | undefined;
+    const auditLogPhys = (physics?.audit_log as Record<string, unknown> | undefined) || {};
+    const dimensionalShieldLogs = Array.isArray(auditLogPhys.dimensional_shield_logs)
+      ? (auditLogPhys.dimensional_shield_logs as unknown[]).map((x) => String(x)).filter(Boolean)
+      : [];
+
     const decisionIdSet = new Set(
       Array.isArray(snapshot?.decision_selection_ids)
         ? snapshot.decision_selection_ids.map((x) => String(x))
@@ -145,6 +200,7 @@ export function DebugView() {
     };
 
     const rows: string[] = [];
+    dimensionalShieldLogs.forEach((line) => rows.push(line));
     const auditItems = Array.isArray(hub?.audit_items) ? hub.audit_items : [];
     auditItems.forEach((item) => {
       const action = String(item?.action ?? "");
@@ -186,7 +242,7 @@ export function DebugView() {
       );
     }
     return rows.slice(-24);
-  }, [hub?.audit_items, hub?.result_logs, ld, snapshot?.decision_selection_ids]);
+  }, [hub?.audit_items, hub?.result_logs, ld, snapshot?.decision_selection_ids, snapshot?.physics_tensor]);
 
   const copyAll = async () => {
     if (!snapshot) return;
@@ -217,6 +273,25 @@ export function DebugView() {
             finalizationReport.effectiveSkillIds ??
             (snapshot?.metadata?.verdict_effective_skill_ids as string[] | undefined)
           }
+          solidGhostRatio={
+            (() => {
+              const m = snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+              const raw = m?.solid_ghost_ratio as Record<string, unknown> | undefined;
+              if (!raw || typeof raw.solid_fraction !== "number" || !Number.isFinite(raw.solid_fraction)) return null;
+              return {
+                solid_fraction: raw.solid_fraction as number,
+                ghost_fraction:
+                  typeof raw.ghost_fraction === "number" && Number.isFinite(raw.ghost_fraction)
+                    ? (raw.ghost_fraction as number)
+                    : 1 - (raw.solid_fraction as number),
+                avg_effective_conductivity:
+                  typeof raw.avg_effective_conductivity === "number" && Number.isFinite(raw.avg_effective_conductivity)
+                    ? (raw.avg_effective_conductivity as number)
+                    : undefined,
+              };
+            })()
+          }
+          causalSovereignty={causalSovereigntyForCert ?? undefined}
         />
       ) : null}
       {!state.isFinalized && (finalizationReport || metaFinal?.hash) ? (
@@ -406,6 +481,15 @@ export function DebugView() {
             <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
               物理匹配 → Skill 注册项 → Decision 锚点 → 勾选状态 → 相对基线的 Abs 比例（与 logic_diff 对齐）。
             </p>
+            {evoGeneStats ? (
+              <p className="mt-2 rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-2 py-1.5 font-mono text-[10px] leading-snug text-emerald-100/95">
+                [EVOLUTION_STATUS]: 当前逻辑链包含 {evoGeneStats.n} 个已演化基因，成熟度: {evoGeneStats.levelPct}%
+              </p>
+            ) : snapshot ? (
+              <p className="mt-2 font-mono text-[10px] text-zinc-600">
+                [EVOLUTION_STATUS]: gene_maturity_heatmap 未就绪（检查 API 或网络）。
+              </p>
+            ) : null}
             <ul className="mt-3 max-h-64 space-y-2 overflow-auto border-t border-cyan-900/40 pt-2">
               {causalTraceRows.map((line, idx) => (
                 <li
@@ -424,14 +508,21 @@ export function DebugView() {
               从 audit_items 与 result_logs 抽取：Triggered → Action → Decision 锚点 → Abs 影响（与 logic_diff 同源百分比）。
             </p>
             <ul className="mt-3 max-h-72 space-y-2 overflow-auto border-t border-fuchsia-900/40 pt-2">
-              {hubCausalTraceLines.map((line, idx) => (
-                <li
-                  key={`hub-ct-${idx}-${line.slice(0, 20)}`}
-                  className="rounded border border-fuchsia-900/50 bg-zinc-950/75 px-2 py-1.5 font-mono text-[10px] leading-snug text-fuchsia-100/90"
-                >
-                  {line}
-                </li>
-              ))}
+              {hubCausalTraceLines.map((line, idx) => {
+                const shielded = line.startsWith("[CAUSAL_SHIELDED]");
+                return (
+                  <li
+                    key={`hub-ct-${idx}-${line.slice(0, 20)}`}
+                    className={
+                      shielded
+                        ? "rounded border border-zinc-700/60 bg-zinc-950/80 px-2 py-1.5 font-mono text-[10px] leading-snug text-zinc-500"
+                        : "rounded border border-fuchsia-900/50 bg-zinc-950/75 px-2 py-1.5 font-mono text-[10px] leading-snug text-fuchsia-100/90"
+                    }
+                  >
+                    {line}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 

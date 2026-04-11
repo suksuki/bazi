@@ -29,3 +29,18 @@ def test_standard_overlap_skips_minor_interference():
         }
     }
     assert standard_overlap_chip_logs(physics_tensor=physics) == []
+
+
+def test_standard_overlap_emits_xiaoshen_when_surface_eligible():
+    physics = {
+        "meta": {
+            "l1_junction_flags": {
+                "l1_core_interactions": [
+                    {"id": "XIAO_SHEN_DUO_SHI", "blind_rule_premium_eligible": True},
+                ],
+            }
+        }
+    }
+    lines = standard_overlap_chip_logs(physics_tensor=physics)
+    assert len(lines) == 1
+    assert "枭神夺食" in lines[0]

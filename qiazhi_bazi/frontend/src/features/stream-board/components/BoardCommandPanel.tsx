@@ -7,7 +7,7 @@ import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { WillReplayPanel } from "./WillReplayPanel";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
-import type { StreamBoardViewModel, InboxCard } from "../models";
+import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
 
 // Recreate these constants to avoid dependencies if needed, or import from somewhere.
 const STEM_META: Record<string, { element: "wood" | "fire" | "earth" | "metal" | "water"; yinYang: "yang" | "yin" }> = {
@@ -73,6 +73,7 @@ export interface BoardCommandPanelProps {
   hasVerdictHistory: boolean;
   summaryVersionLabel: string;
   l1JunctionFlags: Record<string, unknown> | undefined;
+  decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
 }
 
 export function BoardCommandPanel({
@@ -102,6 +103,7 @@ export function BoardCommandPanel({
   hasVerdictHistory,
   summaryVersionLabel,
   l1JunctionFlags,
+  decisionSignalToNoise,
 }: BoardCommandPanelProps) {
   const { setActiveView } = useActiveView();
   const {
@@ -302,6 +304,7 @@ export function BoardCommandPanel({
         inboxResetNonce={inboxResetNonce}
         interactionLocked={isFinalized}
         l1JunctionFlags={l1JunctionFlags}
+        decisionSignalToNoise={decisionSignalToNoise}
       />
       <WillReplayPanel
         items={confirmedDecisions || []}

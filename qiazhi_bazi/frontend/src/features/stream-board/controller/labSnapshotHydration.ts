@@ -219,7 +219,6 @@ export type LabSnapshotHydrationSinks = {
   setConfirmedDecisionIds: (v: string[]) => void;
   setLogicDiff: (v: LogicDiff) => void;
   setLastSeedPayload: (v: SeedPayload | null) => void;
-  setSnapshotAvailable: (v: boolean) => void;
 };
 
 export function applyLabSnapshotHydrationPatch(patch: LabSnapshotHydrationPatch, sinks: LabSnapshotHydrationSinks): void {
@@ -258,6 +257,4 @@ export function applyLabSnapshotHydrationPatch(patch: LabSnapshotHydrationPatch,
   if (patch.confirmedDecisionIds !== undefined) sinks.setConfirmedDecisionIds(patch.confirmedDecisionIds);
   if (patch.logicDiff !== undefined) sinks.setLogicDiff(patch.logicDiff);
   if (patch.lastSeedPayload) sinks.setLastSeedPayload(patch.lastSeedPayload);
-
-  sinks.setSnapshotAvailable(true);
 }

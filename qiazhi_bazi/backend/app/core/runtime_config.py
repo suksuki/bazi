@@ -11,7 +11,15 @@ _DEFAULT = {
         "api_key": "ollama",
         "model": "",
         "provider": "ollama",
-    }
+    },
+    "causal_routing": {
+        "conflict_strategy": "conservative",
+        "school_sovereignty": False,
+        "priority_base_physics": 100,
+        "priority_blind_school": 80,
+        "layer_L1": 100,
+        "layer_L2": 80,
+    },
 }
 
 _CONFIG_FILE = Path(__file__).resolve().parents[2] / "runtime_config.json"
@@ -30,6 +38,12 @@ def get_runtime_config() -> Dict[str, Any]:
             llm = dict(_DEFAULT["llm"])
             llm.update(merged.get("llm", {}))
             merged["llm"] = llm
+        if "causal_routing" in merged and isinstance(_DEFAULT.get("causal_routing"), dict):
+            cr = dict(_DEFAULT["causal_routing"])
+            raw_cr = merged.get("causal_routing")
+            if isinstance(raw_cr, dict):
+                cr.update(raw_cr)
+            merged["causal_routing"] = cr
         return merged
     except Exception:
         return dict(_DEFAULT)
@@ -43,5 +57,9 @@ def set_runtime_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         llm = dict(current.get("llm", {}))
         llm.update(payload["llm"])
         merged["llm"] = llm
+    if "causal_routing" in payload and isinstance(payload["causal_routing"], dict):
+        base_cr = dict(current.get("causal_routing") or _DEFAULT.get("causal_routing") or {})
+        base_cr.update(payload["causal_routing"])
+        merged["causal_routing"] = base_cr
     _CONFIG_FILE.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
     return merged

@@ -11,11 +11,13 @@
 
 ### 结果汇总
 
-- 后端：`74` 项全部通过（`tests/unit` + `tests/integration`）
-- 前端：`npm run test:ci` 全绿：`typecheck`、`lint`（见下述告警）、`vitest run`（`14` 个测试文件、`35` 条用例）、`next build`
+- 后端：`104` 项全部通过（`tests/unit` + `tests/integration`），含 `append_routing_audit_item`、`runtime_config` 中 `causal_routing` 合并、`skill_prompt` sovereignty 排序、以及 `l1_physics_manifest.json` 合法 JSON 校验。
+- 前端：`npm run test:ci` 全绿：`typecheck`、`lint`（仅有 `react-hooks/exhaustive-deps` 告警）、`vitest run`（`14` 个测试文件、`34` 条用例）、`next build`。
 
 ### 本轮说明
 
+- 后端单测补充：`dna_registry.append_routing_audit_item`、`runtime_config` 中 `causal_routing` 与 `llm` 并存合并、`skill_prompt` 按 `causal_routing.skill_sovereignty_rank` 排序盲派模板。
+- 架构文档 `OVERVIEW` 与 `backend/README` 已同步因果路由、演化环境变量与管理 API 说明。
 - 前端新增 `npm run test:ci`（`typecheck` + `lint` + 全量 Vitest + `build`）与 `npm run test:stream-board`（Stream Board 子树）。
 - 前端补齐 `.eslintrc.json` 与 `eslint` / `eslint-config-next`，`next lint` 可在非交互环境执行；当前仓库仍存在若干 `react-hooks/exhaustive-deps` 告警（不阻断 CI），后续可逐项收敛。
 - 新增 `useStreamBoardPipeline` 契约单测，与 Stream Board 拆分文档对齐。
@@ -33,6 +35,9 @@
 | unit | physics rules | `backend/tests/unit/test_physics_rules.py` |
 | unit | physics calculations | `backend/tests/unit/test_physics_calculations.py` |
 | unit | runtime config | `backend/tests/unit/test_runtime_config.py` |
+| unit | causal router negotiate | `backend/tests/unit/test_causal_router.py` |
+| unit | DNA registry / admission / routing audit append | `backend/tests/unit/test_dna_registry.py` |
+| unit | blind skill_prompt sovereignty sort | `backend/tests/unit/test_skill_prompt_routing.py` |
 | integration | admin runtime-config roundtrip | `backend/tests/integration/test_api_flow.py` |
 | integration | analyze-clash without live llm | `backend/tests/integration/test_api_flow.py` |
 | integration | decision step write / rollback write | `backend/tests/integration/test_api_flow.py` |

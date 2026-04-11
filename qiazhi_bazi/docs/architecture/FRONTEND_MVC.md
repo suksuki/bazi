@@ -74,6 +74,6 @@ src/features/<feature>/
   - `hooks/useStreamBoardPhysicsState.ts`：`physics_tensor` 在 UI 上的切片（十神分、审计、熵）
   - `hooks/useStreamBoardAuditUiState.ts`：流式判词、审计侧栏、诊断
   - `hooks/useStreamBoardLogicDrawerState.ts`：Arbiter 逻辑抽屉
-  - `hooks/useStreamBoardLabSnapshotEffects.ts`：实验室 `snapshot` 灌回、导航恢复诊断、Inbox 重置与 `snapshotAvailable`（`useLayoutEffect` / `useEffect`）
+  - `hooks/useStreamBoardLabSnapshotEffects.ts`：实验室 `snapshot` 灌回、导航恢复诊断、Inbox 重置（`useLayoutEffect` / `useEffect`）
 - **数据流（简图）**：`LabStore.snapshot` → 子域 state 初始化 → `mergeSnapshot` / API 回写 → View；Hydration 与持久化仍由主编排 hook 内 `useEffect` 协调，子 hook 不直接访问 `localStorage`。
 - **新增 UI 状态**：先判断属于哪一子域，再决定放进哪个 `useStreamBoard*State`，避免上帝对象回潮。

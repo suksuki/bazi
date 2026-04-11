@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { CausalSovereigntySlice } from "../utils/causalSovereigntyFromSnapshot";
 
 type LogicDiffSlice = {
   baseline_abs_loss_total?: number | null;
@@ -42,14 +43,24 @@ function summarizeLogicDiff(ld: LogicDiffSlice): string {
   return parts.join(" · ");
 }
 
+export type SolidGhostRatioSlice = {
+  solid_fraction: number;
+  ghost_fraction: number;
+  avg_effective_conductivity?: number;
+} | null;
+
 export function VerdictCertificate(props: {
   hash: string;
   committedAt: number;
   logicDiff: LogicDiffSlice;
   /** 终审时固化的盲派 Skill ID 列表（与 skill_manifest 一致） */
   effectiveSkillIds?: string[];
+  /** 来自 physics_tensor.meta.solid_ghost_ratio：能量虚实落地存证 */
+  solidGhostRatio?: SolidGhostRatioSlice;
+  /** 因果路由策略 + 意志注入占比（由快照推导） */
+  causalSovereignty?: CausalSovereigntySlice | null;
 }) {
-  const { hash, committedAt, logicDiff, effectiveSkillIds } = props;
+  const { hash, committedAt, logicDiff, effectiveSkillIds, solidGhostRatio, causalSovereignty } = props;
   const when = committedAt ? new Date(committedAt).toLocaleString() : "—";
 
   const absRaw = logicDiff && typeof logicDiff === "object" ? logicDiff.abs_delta : null;
@@ -113,6 +124,30 @@ export function VerdictCertificate(props: {
           <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">logic_diff 最终摘要</p>
           <p className="mt-1.5 leading-relaxed text-[11px] text-zinc-300">{summarizeLogicDiff(logicDiff)}</p>
         </div>
+        <div className="rounded-lg border border-cyan-500/25 bg-cyan-950/20 px-3 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-200/85">虚实比（Solid / Ghost）</p>
+          {solidGhostRatio &&
+          typeof solidGhostRatio.solid_fraction === "number" &&
+          Number.isFinite(solidGhostRatio.solid_fraction) ? (
+            <div className="mt-1.5 space-y-1 font-mono text-[11px] text-cyan-100/90">
+              <p>
+                实（Solid）：{(solidGhostRatio.solid_fraction * 100).toFixed(1)}% · 虚（Ghost）：{" "}
+                {(solidGhostRatio.ghost_fraction * 100).toFixed(1)}%
+              </p>
+              {typeof solidGhostRatio.avg_effective_conductivity === "number" &&
+              Number.isFinite(solidGhostRatio.avg_effective_conductivity) ? (
+                <p className="text-[10px] text-zinc-500">
+                  平均有效传导：{solidGhostRatio.avg_effective_conductivity.toFixed(4)}
+                </p>
+              ) : null}
+              <p className="text-[10px] font-normal leading-relaxed text-zinc-500">
+                记录该局干支维轴下因果能量的落地程度（越高越「实」）。
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-[11px] text-zinc-500">本证书快照未含 solid_ghost_ratio（需排盘后 physics meta）。</p>
+          )}
+        </div>
         <div className="rounded-lg border border-amber-500/25 bg-amber-950/20 px-3 py-2">
           <p className="text-[10px] font-medium uppercase tracking-wide text-amber-200/80">生效 Skill ID（规则索引）</p>
           {effectiveSkillIds && effectiveSkillIds.length > 0 ? (
@@ -130,6 +165,24 @@ export function VerdictCertificate(props: {
             <p className="mt-1 text-[11px] text-zinc-500">本快照未记录盲派 Skill 列表（或非盲派会话）。</p>
           )}
         </div>
+        {causalSovereignty ? (
+          <div className="rounded-lg border border-violet-500/30 bg-violet-950/25 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-violet-200/90">因果主权（Causal Sovereignty）</p>
+            <div className="mt-1.5 space-y-1 text-[11px] text-violet-100/90">
+              <p>
+                <span className="text-zinc-500">路由策略：</span>
+                {causalSovereignty.strategyLabel}
+              </p>
+              <p>
+                <span className="text-zinc-500">意志贡献度（WILL_INFUSED）：</span>
+                {causalSovereignty.willInfusedPct != null ? `${causalSovereignty.willInfusedPct}%` : "—（无冲突矩阵锚点）"}
+              </p>
+              {causalSovereignty.routingDigest ? (
+                <p className="text-[10px] leading-relaxed text-zinc-500">{causalSovereignty.routingDigest}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

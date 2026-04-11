@@ -28,6 +28,21 @@ class PhysicsConfig(BaseModel):
     TRANSFER_DISTANCE_DECAY: Optional[float] = None
     WORK_MIN_THRESHOLD: Optional[float] = None
     SHOW_WEAK_WORK_PATHS: Optional[float] = None
+    L1_OP_PROD_ETA: Optional[float] = Field(default=None, description="相生效率 η（L1_OP_PROD）")
+    L1_OP_DEST_ETA: Optional[float] = Field(default=None, description="相克损耗 η（L1_OP_DEST）")
+    L1_OP_CONN_ETA: Optional[float] = Field(default=None, description="合化能量系数 η（L1_OP_CONN）")
+    INTERDIMENSIONAL_CONDUCTIVITY: Optional[float] = Field(
+        default=None,
+        description="跨柱干支传导灵敏度（0..2 映射至 blend 权重，默认 0）",
+    )
+    INTERDIMENSIONAL_BARRIER_STRENGTH: Optional[float] = None
+    CONDUCTIVITY_DECAY_RATE: Optional[float] = None
+    GHOST_ENERGY_DAMPING: Optional[float] = None
+    MANGPAI_ETA_DIMENSIONAL_CRUSH: Optional[float] = None
+    MANGPAI_ROOT_RESONANCE: Optional[float] = None
+    INTERDIMENSIONAL_SHIELD_ENABLE: Optional[float] = Field(default=None, description="1=启用维度屏蔽，0=关闭")
+    STEM_BRANCH_ROOT_RESONANCE_ENABLE: Optional[float] = Field(default=None, description="1=启用通根谐振")
+    STEM_BRANCH_VERTICAL_CRUSH_ENABLE: Optional[float] = Field(default=None, description="1=启用盖头截脚损耗")
 
 
 class ConsultationCreate(BaseModel):
@@ -130,6 +145,36 @@ class FinalVerdictRequest(BaseModel):
     plugin_weights: Dict[str, float] = Field(default_factory=dict)
 
 
+class ResolveConflictRequest(BaseModel):
+    """裁决人意志指纹：冲突处理选择写入 decision_audit_logs（进化训练集）。"""
+
+    consultation_id: Optional[int] = None
+    skill_id: str = Field(..., min_length=1)
+    abs_delta: float = 0.0
+    processing_preference: str = Field(default="", max_length=120)
+    extra: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EvolutionAdmissionRequest(BaseModel):
+    admit_evolved_to_mainnet: bool
+
+
+class EvolutionBatchRunRequest(BaseModel):
+    """静默批次：随机种子数（服务端上限防阻塞）。"""
+
+    n_seeds: int = Field(default=20, ge=1, le=120)
+
+
+class SkillFeedbackRequest(BaseModel):
+    """裁决人对单条断言的语义反馈，关联 Skill ID 供进化适应度使用。"""
+
+    skill_id: str = Field(..., min_length=1, description="盲派 / L1 skill_manifest 中的 id")
+    line_index: int = Field(ge=0, description="断言在 verdict 文本中的行下标")
+    rating: Literal["precise", "drift"] = Field(..., description="精准 / 偏移")
+    line_preview: str = Field(default="", max_length=400, description="断言片段摘要")
+    session_hint: str = Field(default="", max_length=200, description="可选：咨询 id / 前端会话标识")
+
+
 class StressTestRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     gender: Literal["male", "female"]
@@ -163,6 +208,7 @@ class LlmModelsRequest(BaseModel):
 
 class RuntimeConfigRequest(BaseModel):
     llm: Dict[str, Any] = Field(default_factory=dict)
+    causal_routing: Optional[Dict[str, Any]] = Field(default=None, description="因果路由：策略、主权、权比等")
 
 
 class ApplyPhysicsSqlRequest(BaseModel):

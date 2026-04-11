@@ -63,7 +63,6 @@ function createMockSinks(): LabSnapshotHydrationSinks {
     setConfirmedDecisionIds: vi.fn(),
     setLogicDiff: vi.fn(),
     setLastSeedPayload: vi.fn(),
-    setSnapshotAvailable: vi.fn(),
   };
 }
 
@@ -103,7 +102,7 @@ describe("buildLabSnapshotHydrationPatch", () => {
 });
 
 describe("applyLabSnapshotHydrationPatch", () => {
-  it("writes through sinks and marks snapshot available", () => {
+  it("writes through sinks", () => {
     const sinks = createMockSinks();
     const patch: LabSnapshotHydrationPatch = buildLabSnapshotHydrationPatch(minimalSnapshot(), minimalSeed)!;
     applyLabSnapshotHydrationPatch(patch, sinks);
@@ -113,6 +112,5 @@ describe("applyLabSnapshotHydrationPatch", () => {
     expect(sinks.setFirstPromptText).toHaveBeenCalledWith("hello");
     expect(sinks.setConsultationId).toHaveBeenCalledWith(42);
     expect(sinks.setLastSeedPayload).toHaveBeenCalledWith(minimalSeed);
-    expect(sinks.setSnapshotAvailable).toHaveBeenCalledWith(true);
   });
 });

@@ -11,13 +11,13 @@ def apply_decision_inbox_signal_gate(
     clash_abs_loss_total: Optional[float],
 ) -> Dict[str, Any]:
     """
-    使用 L1 合成中的冲战 Abs 损耗估计与伤官见官能级：
-    - 若 abs_estimate < GLOBAL_DECISION_ABS_THRESHOLD 且不含 sgjg CRITICAL，则不向 Inbox 推送冲突观察项。
-    - CRITICAL：meta.l1_junction_flags.sgjg_severity == \"CRITICAL\"（明面伤官见官）。
+    使用 L1 合成中的冲战 Abs 损耗估计与 L1 能级：
+    - 若 abs_estimate < GLOBAL_DECISION_ABS_THRESHOLD 且无「可绕过门控」的 CRITICAL，则不向 Inbox 推送冲突观察项。
+    - 可绕过：伤官见官 CRITICAL，或任意双侧 Surface 的其它 L1 核心冲突（见 l1_inbox_signal_bypass）。
     """
     threshold = float(settings.get("GLOBAL_DECISION_ABS_THRESHOLD", 5.0))
     jf = meta.get("l1_junction_flags") if isinstance(meta.get("l1_junction_flags"), dict) else {}
-    has_critical = str(jf.get("sgjg_severity") or "") == "CRITICAL"
+    has_critical = bool(jf.get("l1_inbox_signal_bypass")) or str(jf.get("sgjg_severity") or "") == "CRITICAL"
     if clash_abs_loss_total is None:
         eligible = True
     else:

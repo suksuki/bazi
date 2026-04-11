@@ -10,6 +10,7 @@ export type BlindSchoolSkillItem = {
   impact_factor: string;
   assertion_template: string;
   physics_setting_key?: string;
+  physics_weight?: number;
 };
 
 export type PluginManifestItem = {
@@ -23,7 +24,16 @@ export type PluginManifestItem = {
     doc_path: string;
     priority: number;
     hook: string;
+    display_name?: string;
+    use_case?: string;
+    detailed_description?: string;
+    physical_impact?: string;
+    governance_notes?: string;
+    description_tags?: string[];
     skills?: BlindSchoolSkillItem[];
+    blueprint_markdown?: string;
+    l1_physics_operator?: boolean;
+    op_id?: string;
   };
   performance_snapshot?: { last_latency_ms?: number | null; p50_ms?: number | null; p95_ms?: number | null; error_rate?: number | null };
 };
@@ -33,12 +43,16 @@ export type PluginManifest = {
   dependency_links: Array<{ from: string; to: string }>;
   performance_snapshot?: { plugin_count?: number; max_last_latency_ms?: number | null };
   global_conflict_tension?: number;
+  /** 后端 `DEFAULT_PHYSICS_SETTINGS` 快照，供 Lab 与运行时 η 对齐校验 */
+  default_physics_settings?: Record<string, number>;
+  /** 与 `manifests/l1_physics_manifest.json` 同源，供蓝图 Modal 与 LLM 对齐 */
+  l1_physics_manifest?: Record<string, unknown>;
   refreshed_at?: number;
 };
 
 const API_BASE_RAW = (process.env.NEXT_PUBLIC_QIAZHI_API ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
-const resolveApiBase = () => {
+export const resolveQiazhiApiBasePrefix = () => {
   if (!API_BASE_RAW) return "";
   if (API_BASE_RAW === "/api") return "";
   if (API_BASE_RAW.startsWith("/")) return API_BASE_RAW;
@@ -52,7 +66,12 @@ const resolveApiBase = () => {
   }
   return API_BASE_RAW;
 };
-const API_BASE = resolveApiBase();
+const API_BASE = resolveQiazhiApiBasePrefix();
+
+/** 单插件蓝图（GET `/api/v1/plugins/manifest?plugin_id=`） */
+export function buildPluginManifestUrl(pluginId: string): string {
+  return `${API_BASE}/api/v1/plugins/manifest?plugin_id=${encodeURIComponent(pluginId)}`;
+}
 
 const fetcher = async (url: string): Promise<PluginManifest> => {
   const res = await fetch(url);

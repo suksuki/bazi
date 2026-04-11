@@ -15,7 +15,11 @@ from app.api.contracts import (
     ConsultationCreate,
     DecisionRollbackRequest,
     DecisionStepCreate,
+    EvolutionAdmissionRequest,
+    EvolutionBatchRunRequest,
     FinalVerdictRequest,
+    ResolveConflictRequest,
+    SkillFeedbackRequest,
     StressTestRequest,
     TranslateRequest,
 )
@@ -37,7 +41,17 @@ from app.services.analysis_service import (
     resolve_consensus_history,
     translate_text_items,
 )
+from app.core.evolution.combination_space import TOTAL_BAZI_COMBINATION_SPACE
+from app.core.evolution.dna_registry import (
+    gene_maturity_heatmap,
+    is_evolution_admitted_to_mainnet,
+    load_rule_genes,
+    set_evolution_admission,
+)
+from app.core.evolution.worker import EvolutionaryBatchRunner
 from app.core.plugins.registry import PluginRegistry
+from app.services.decision_service import resolve_conflict
+from app.services.evolution_feedback_service import append_skill_feedback
 from app.services.audit_service import audit_physics_with_llm_flow
 from app.services.consultation_service import (
     confirm_structure_for_consultation,
@@ -197,15 +211,68 @@ async def stress_test(body: StressTestRequest) -> dict:
     return await run_stress_test(body)
 
 
+@router.get("/v1/plugins/conflict-hotspots", response_model=dict)
+def plugins_conflict_hotspots(top_n: int = 24) -> dict:
+    """Decision Inbox 门控遥测：Skill/插件签名与 eligible vs gated 频次。"""
+    registry = PluginRegistry()
+    return registry.get_conflict_hotspots(top_n=top_n)
+
+
+@router.post("/v1/evolution/skill-feedback", response_model=dict)
+def evolution_skill_feedback(body: SkillFeedbackRequest) -> dict:
+    path = append_skill_feedback(body.model_dump())
+    return {"ok": True, "path": str(path)}
+
+
+@router.get("/v1/evolution/state", response_model=dict)
+def evolution_state() -> dict:
+    genes = load_rule_genes()
+    return {
+        "combination_space_total": TOTAL_BAZI_COMBINATION_SPACE,
+        "admission": is_evolution_admitted_to_mainnet(),
+        "heatmap": gene_maturity_heatmap(genes),
+        "genes": [g.to_json() for g in genes],
+    }
+
+
+@router.put("/v1/evolution/admission", response_model=dict)
+def evolution_admission(body: EvolutionAdmissionRequest) -> dict:
+    set_evolution_admission(bool(body.admit_evolved_to_mainnet))
+    return {"ok": True, "admission": is_evolution_admitted_to_mainnet()}
+
+
+@router.post("/v1/evolution/run-batch", response_model=dict)
+def evolution_run_batch(body: EvolutionBatchRunRequest) -> dict:
+    runner = EvolutionaryBatchRunner()
+    result = runner.run_once(n_seeds=int(body.n_seeds))
+    return {"ok": True, "summary": result.summary, "sample_count": len(result.samples)}
+
+
+@router.post("/v1/decision/resolve-conflict", response_model=dict)
+def decision_resolve_conflict(body: ResolveConflictRequest) -> dict:
+    return resolve_conflict(
+        consultation_id=body.consultation_id,
+        skill_id=body.skill_id,
+        abs_delta=float(body.abs_delta),
+        processing_preference=body.processing_preference,
+        extra=body.extra,
+    )
+
+
 @router.get("/v1/plugins/manifest", response_model=dict)
-def plugins_manifest(enabled_plugins: Optional[str] = None) -> dict:
+def plugins_manifest(enabled_plugins: Optional[str] = None, plugin_id: Optional[str] = None) -> dict:
     """
     插件清单单一事实源（SSOT）：
     - plugins: 元数据 + 层级 + 状态 + 性能快照
     - dependency_links: 依赖连线（供拓扑图绘制）
+    - plugin_id: 若提供则仅返回该插件切片（含 blueprint_markdown），供逻辑蓝图 Modal
     """
     parsed: List[str] = []
     if enabled_plugins:
         parsed = [item.strip() for item in enabled_plugins.split(",") if item.strip()]
     registry = PluginRegistry()
-    return registry.get_manifest(enabled_plugins=parsed or None)
+    pid = plugin_id.strip() if isinstance(plugin_id, str) and plugin_id.strip() else None
+    payload = registry.get_manifest(enabled_plugins=parsed or None, plugin_id=pid)
+    if pid and payload.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail=f"unknown plugin_id={pid}")
+    return payload

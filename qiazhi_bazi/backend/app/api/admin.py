@@ -181,7 +181,12 @@ def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(_admin_guar
     base_url = llm.get("base_url")
     if isinstance(base_url, str) and base_url.strip():
         validate_target_url(base_url.strip(), {"http", "https"})
-    updated = set_runtime_config({"llm": body.llm})
+    patch: Dict[str, Any] = {}
+    if body.llm:
+        patch["llm"] = body.llm
+    if body.causal_routing is not None:
+        patch["causal_routing"] = body.causal_routing
+    updated = set_runtime_config(patch)
     return {"ok": True, "config": updated}
 
 

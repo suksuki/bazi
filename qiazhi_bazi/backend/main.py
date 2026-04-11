@@ -24,6 +24,7 @@ if str(_BACKEND) not in sys.path:
 from app.api.router import router as api_router
 from app.api.admin import router as admin_router
 from app.db.session import init_db
+from app.plugins.base_physics.manifest_loader import load_l1_physics_manifest
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -57,6 +58,11 @@ def _startup() -> None:
         print(f"[startup] init_db failed: {e}")
         _startup_state["db_init_ok"] = False
         _startup_state["db_init_error"] = str(e)
+        raise
+    try:
+        load_l1_physics_manifest()
+    except Exception as e:  # noqa: BLE001
+        print(f"[startup] l1_physics_manifest load failed: {e}")
         raise
 
 

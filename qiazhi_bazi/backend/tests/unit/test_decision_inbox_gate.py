@@ -28,3 +28,15 @@ def test_gate_permissive_when_clash_metric_missing():
     settings = {"GLOBAL_DECISION_ABS_THRESHOLD": 5.0}
     out = apply_decision_inbox_signal_gate(meta=meta, settings=settings, clash_abs_loss_total=None)
     assert out["inbox_conflict_cards_eligible"] is True
+
+
+def test_gate_passes_when_l1_inbox_signal_bypass_surface_other_than_sgjg():
+    meta: dict = {
+        "l1_junction_flags": {
+            "sgjg_severity": "MINOR_INTERFERENCE",
+            "l1_inbox_signal_bypass": True,
+        }
+    }
+    settings = {"GLOBAL_DECISION_ABS_THRESHOLD": 5.0}
+    out = apply_decision_inbox_signal_gate(meta=meta, settings=settings, clash_abs_loss_total=0.5)
+    assert out["inbox_conflict_cards_eligible"] is True

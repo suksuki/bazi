@@ -1,11 +1,19 @@
 """L1 原子交互流水线：按序执行 base 层插件并写入 physics_tensor。"""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Set
 
 from app.core.config.physics_settings import resolve_physics_settings
-from app.core.rules.junction import EnergyVaultStatus, sync_l1_junction_flags_to_meta
+from app.core.rules.junction import EnergyVaultStatus, build_l1_operator_audit_items_from_steps, sync_l1_junction_flags_to_meta
 from app.plugins.base.interactions.l1_atomic_plugin import run_l1_atomic_plugin_pool
+from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to_physics_tensor
+from app.plugins.chronos.core import run_chronos_plugin
+from app.plugins.base_physics.core_operators.op_interdimensional import compute_solid_ghost_ratio
+
+
+def _utc_audit_ts() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _pillars_blob(metadata: Any) -> Dict[str, Any]:
@@ -179,6 +187,23 @@ def evaluate_interactions(
     """遍历 L1 原子插件，结果写入 `physics_tensor`（原地）。"""
     settings = resolve_physics_settings(physics_config or {})
     params = dict(interaction_params or {})
+    for k in ("L1_OP_PROD_ETA", "L1_OP_DEST_ETA", "L1_OP_CONN_ETA"):
+        if k not in params:
+            params[k] = float(settings.get(k, 1.0))
+    _idim_keys = (
+        "INTERDIMENSIONAL_CONDUCTIVITY",
+        "INTERDIMENSIONAL_BARRIER_STRENGTH",
+        "CONDUCTIVITY_DECAY_RATE",
+        "GHOST_ENERGY_DAMPING",
+        "MANGPAI_ETA_DIMENSIONAL_CRUSH",
+        "MANGPAI_ROOT_RESONANCE",
+        "INTERDIMENSIONAL_SHIELD_ENABLE",
+        "STEM_BRANCH_ROOT_RESONANCE_ENABLE",
+        "STEM_BRANCH_VERTICAL_CRUSH_ENABLE",
+    )
+    for _k in _idim_keys:
+        if _k not in params:
+            params[_k] = float(settings.get(_k, 0.0))
     by_pillar = (physics_tensor or {}).get("by_pillar") or {}
 
     def pillar_raw(name: str) -> float:
@@ -189,19 +214,22 @@ def evaluate_interactions(
     branches = _branch_map(pillars)
     day_stem = _day_stem(pillars)
     points = _conflict_points(metadata)
-    steps, punish_torque_trace, composite = run_l1_atomic_plugin_pool(
+    steps, punish_torque_trace, composite, dimensional_shield_logs = run_l1_atomic_plugin_pool(
         points=points,
         branches=branches,
+        pillars=pillars,
         day_stem=day_stem,
         pillar_raw=pillar_raw,
         params=params,
         settings=settings,
     )
+    status_steps = apply_l1_status_to_physics_tensor(physics_tensor=physics_tensor, metadata=metadata, settings=settings)
+    combined_steps = list(steps) + list(status_steps or [])
     clamp_on = float(params.get("L1_SANHE_PHI_CLAMP", 1.0)) >= 1.0
 
     consistency = _composite_consistency_check(
         clusters=list(composite.get("sanhe_clusters") or []),
-        steps=steps,
+        steps=combined_steps,
         clamp_on=clamp_on,
     )
 
@@ -212,10 +240,20 @@ def evaluate_interactions(
             sum(float(x.get("impact_torque") or 0.0) for x in punish_torque_trace),
             4,
         )
+        l1_rows = build_l1_operator_audit_items_from_steps(combined_steps, timestamp=_utc_audit_ts())
+        chrono_out = run_chronos_plugin(
+            physics_tensor=physics_tensor,
+            metadata=metadata,
+            physics_config=physics_config,
+        )
+        chrono_rows = list(chrono_out.get("audit_items") or [])
+        audit["chronos_audit_items"] = chrono_rows
+        audit["l1_operator_audit_items"] = l1_rows + chrono_rows
+        audit["dimensional_shield_logs"] = list(dimensional_shield_logs or [])
 
     physics_tensor["l1_atomic_pipeline"] = {
         "version": "l1_pipeline.v1",
-        "steps": steps,
+        "steps": combined_steps,
         "composite_consistency_check": consistency,
     }
     physics_tensor["composite_field_impact"] = composite
@@ -227,7 +265,7 @@ def evaluate_interactions(
         grave_locked = any(
             s.get("plugin") == "base.grave"
             and (s.get("delta") or {}).get("energy_vault_status") == EnergyVaultStatus.LOCKED.value
-            for s in steps
+            for s in combined_steps
         )
         agg_clamps_work = False
         if clamp_on:
@@ -240,13 +278,18 @@ def evaluate_interactions(
         meta["work_eligible"] = not (agg_clamps_work or grave_locked)
         synth = _synthesize_global_entropy(
             params=params,
-            steps=steps,
+            steps=combined_steps,
             audit=audit if isinstance(audit, dict) else {},
             composite=composite,
             branches=branches,
         )
         meta["global_entropy"] = synth["value"]
         meta["global_entropy_metrics"] = synth["metrics"]
+        meta["solid_ghost_ratio"] = compute_solid_ghost_ratio(
+            steps=combined_steps,
+            dimensional_shield_logs=list(dimensional_shield_logs or []),
+            ghost_damping=float(settings.get("GHOST_ENERGY_DAMPING", 0.3)),
+        )
         md = metadata.model_dump() if hasattr(metadata, "model_dump") else dict(metadata or {})
         sync_l1_junction_flags_to_meta(
             metadata=md, physics_tensor=physics_tensor, physics_settings=settings

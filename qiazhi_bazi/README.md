@@ -6,11 +6,13 @@
 
 ```text
 qiazhi_bazi/
-├── backend/                     # FastAPI API / service / skills / tests
+├── backend/                     # FastAPI API / service / skills / tests（含 CausalRouter、演化 DNA）
 ├── frontend/                    # Next.js App Router / feature controllers / views / tests
 ├── docs/                        # 设计、架构、测试、命理引擎规范
 └── .codex/skills/               # 仓库级协作 skills（本轮新增）
 ```
+
+因果路由配置存于运行时 `runtime_config.causal_routing`，与 Admin 保存路径一致；推演结果中见 `physics_tensor.meta.causal_routing` 与 `audit_log.causal_routing_audit_items`（详见 `docs/architecture/OVERVIEW.md`）。
 
 ## 开发原则
 

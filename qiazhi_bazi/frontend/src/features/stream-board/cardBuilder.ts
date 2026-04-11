@@ -1,10 +1,8 @@
 import type { BaziMetadata } from "@/types/bazi";
 import { inferDecisionSkillId } from "@/features/decision-inbox/skillInference";
-import type { InboxCard, LogicProposal } from "./models";
+import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./models";
 
-export type DecisionSignalToNoiseMeta = {
-  inbox_conflict_cards_eligible?: boolean;
-};
+export type { DecisionSignalToNoiseMeta };
 
 export function buildInboxCards(params: {
   metadata: BaziMetadata | null;

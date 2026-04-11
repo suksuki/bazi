@@ -83,6 +83,21 @@ class PhysicsInteractionParam(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class DecisionAuditLog(SQLModel, table=True):
+    """裁决意志与进化训练集：记录冲突处理指纹等。"""
+
+    __tablename__ = "decision_audit_logs"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    consultation_id: Optional[int] = Field(default=None, index=True)
+    record_type: str = Field(
+        index=True,
+        description="如 evolution_training_set、manual_audit",
+    )
+    payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(_JSON_TYPE))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class SessionConsensus(SQLModel, table=True):
     """Session 级共识追踪：记录裁决人已确认的原子决策。"""
 

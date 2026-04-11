@@ -11,7 +11,6 @@ import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { SeedInput } from "@/components/SeedInput";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
-import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { LabViewModeFab } from "@/components/layout/LabViewModeFab";
@@ -21,7 +20,8 @@ import { VerdictCertificate } from "@/features/stream-board/components/VerdictCe
 import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
 import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
 import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
-import { StreamBoardViewModel, InboxCard } from "./models";
+import { type DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "./models";
+import { buildCausalSovereigntySlice } from "./utils/causalSovereigntyFromSnapshot";
 import { buildStreamBoardViewDerivedState } from "./viewModel";
 import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
 import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
@@ -81,7 +81,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setConfirmedDecisionIds,
     urlDecisionHydrated,
     snapshotUrlTag,
-    snapshotAvailable,
     setAsBaseline,
     logicDiff,
     stressTestResult,
@@ -138,6 +137,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   );
   const l1JunctionFlags = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
     ?.l1_junction_flags as Record<string, unknown> | undefined;
+  const decisionSignalToNoise = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
+    ?.decision_signal_to_noise as DecisionSignalToNoiseMeta | undefined;
+
+  const causalSovereigntyForCert = useMemo(
+    () => buildCausalSovereigntySlice(labUiState.snapshot as Record<string, unknown> | null | undefined),
+    [labUiState.snapshot],
+  );
 
   const {
     hardRouteLogs,
@@ -450,9 +456,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
               {item}
             </button>
           ))}
-          {snapshotAvailable ? (
-            <span className="ml-1 rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">{t("会话已驻留")}</span>
-          ) : null}
         </div>
       </header>
 
@@ -555,6 +558,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 hasVerdictHistory={hasVerdictHistory}
                 summaryVersionLabel={summaryVersionLabel}
                 l1JunctionFlags={l1JunctionFlags}
+                decisionSignalToNoise={decisionSignalToNoise}
               />
             )}
           </AnimatePresence>
@@ -579,6 +583,25 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
               labUiState.finalizationReport.effectiveSkillIds ??
               (labUiState.snapshot?.metadata?.verdict_effective_skill_ids as string[] | undefined)
             }
+            solidGhostRatio={
+              (() => {
+                const m = labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+                const raw = m?.solid_ghost_ratio as Record<string, unknown> | undefined;
+                if (!raw || typeof raw.solid_fraction !== "number" || !Number.isFinite(raw.solid_fraction)) return null;
+                return {
+                  solid_fraction: raw.solid_fraction as number,
+                  ghost_fraction:
+                    typeof raw.ghost_fraction === "number" && Number.isFinite(raw.ghost_fraction)
+                      ? (raw.ghost_fraction as number)
+                      : 1 - (raw.solid_fraction as number),
+                  avg_effective_conductivity:
+                    typeof raw.avg_effective_conductivity === "number" && Number.isFinite(raw.avg_effective_conductivity)
+                      ? (raw.avg_effective_conductivity as number)
+                      : undefined,
+                };
+              })()
+            }
+            causalSovereignty={causalSovereigntyForCert ?? undefined}
           />
         </motion.div>
       ) : null}

@@ -32,6 +32,11 @@ def test_pipeline_sanhe_aggregated_lab01_shape():
         "L1_PIERCE_RATIO": 0.45,
     }
     evaluate_interactions(physics_tensor=tensor, metadata=meta, interaction_params=params, physics_config={})
+    ch = (tensor.get("meta") or {}).get("chronos_v1") or {}
+    assert ch.get("applied") is True
+    assert ch.get("month_branch") == "巳"
+    audit_items = ((tensor.get("audit_log") or {}).get("l1_operator_audit_items") or [])
+    assert any((x.get("payload") or {}).get("skill_id") == "mp_chronos_command" for x in audit_items)
     comp = tensor.get("composite_field_impact") or {}
     clusters = comp.get("sanhe_clusters") or []
     assert len(clusters) == 1

@@ -31,6 +31,20 @@ DEFAULT_INTERACTION_PARAMS: Dict[str, float] = {
     "L1_PUNISH_FRICTION_SANXING": 0.22,
     "L1_PUNISH_FRICTION_ZIXING": 0.18,
     "L1_CLASH_INTENSITY": 1.0,
+    # L1 原子算子 η（与 physics_settings / PhysicsConfig 对齐；1.0=标度不变）
+    "L1_OP_PROD_ETA": 1.0,
+    "L1_OP_DEST_ETA": 1.0,
+    "L1_OP_CONN_ETA": 1.0,
+    # 维度隔离协议：跨柱干↔支传导人工微调（默认 0；与 physics_settings 对齐）
+    "INTERDIMENSIONAL_CONDUCTIVITY": 0.0,
+    "INTERDIMENSIONAL_BARRIER_STRENGTH": 1.0,
+    "CONDUCTIVITY_DECAY_RATE": 0.7,
+    "GHOST_ENERGY_DAMPING": 0.3,
+    "MANGPAI_ETA_DIMENSIONAL_CRUSH": 0.6,
+    "MANGPAI_ROOT_RESONANCE": 1.2,
+    "INTERDIMENSIONAL_SHIELD_ENABLE": 1.0,
+    "STEM_BRANCH_ROOT_RESONANCE_ENABLE": 1.0,
+    "STEM_BRANCH_VERTICAL_CRUSH_ENABLE": 1.0,
     "L1_COMBINE_LOCK_RATIO": 0.3,
     "L1_PIERCE_RATIO": 0.45,
     # 1.0：三合聚合节点在 L1 显式 φ=0；若岁运扫描中出现冲及合局支，读参数关闭钳制

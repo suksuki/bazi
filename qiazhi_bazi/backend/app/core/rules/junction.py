@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from app.core.config.physics_settings import resolve_physics_settings
+from app.plugins.base_physics.skill_manifest_loader import skill_id_for_l1_operator
 from app.core.rules.decision_inbox_gate import apply_decision_inbox_signal_gate
 from app.skills.physics_rules import BRANCH_HIDDEN_STEMS, ELEMENT_GENERATES, ROOT_MAP, STEM_TO_ELEMENT
 
@@ -204,8 +205,90 @@ def _coordinate_distortion_factor(
     return decay, True
 
 
+def calculate_interaction_visibility(
+    deity_a: str,
+    deity_b: str,
+    *,
+    trace_map: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    双侧十神在 trace 中的「明 / 藏」能级：双侧均含天干或地支本气为 Surface，否则 Deep；
+    任一侧无 contribution_sources 视为 unresolved（与旧版伤官见官门控一致：按 CRITICAL 处理）。
+    """
+    ca = _contributions_for_deity(trace_map, deity_a)
+    cb = _contributions_for_deity(trace_map, deity_b)
+    trace_resolved = bool(ca) and bool(cb)
+    if not trace_resolved:
+        return {
+            "visibility": "unresolved",
+            "trace_resolved": False,
+            "both_surface": False,
+            "deity_a": deity_a,
+            "deity_b": deity_b,
+        }
+    both_surface = _has_surface_channel(ca) and _has_surface_channel(cb)
+    vis: Literal["surface", "deep"] = "surface" if both_surface else "deep"
+    return {
+        "visibility": vis,
+        "trace_resolved": True,
+        "both_surface": both_surface,
+        "deity_a": deity_a,
+        "deity_b": deity_b,
+    }
+
+
+def _axis_abs(axes: Dict[str, Any], deity: str) -> float:
+    block = (axes or {}).get(deity) if isinstance(axes, dict) else None
+    if not isinstance(block, dict):
+        return 0.0
+    try:
+        return float(block.get("absolute_energy", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _dominant_deity(axes: Dict[str, Any], candidates: Tuple[str, ...]) -> Tuple[str, float]:
+    best = candidates[0]
+    best_v = _axis_abs(axes, best)
+    for d in candidates[1:]:
+        v = _axis_abs(axes, d)
+        if v > best_v:
+            best, best_v = d, v
+    return best, best_v
+
+
+def _severity_from_visibility(vis: str, *, trace_resolved: bool) -> str:
+    if not trace_resolved or vis == "unresolved":
+        return "CRITICAL"
+    if vis == "surface":
+        return "CRITICAL"
+    return "MINOR_INTERFERENCE"
+
+
+def _control_energy_for_pair(
+    *,
+    raw_min: float,
+    max_axis: float,
+    severity: str,
+    coord_factor: float,
+    settings: Dict[str, float],
+    trace_resolved: bool,
+    visibility: str,
+) -> float:
+    """Deep 且 trace 已解析时，对基础项乘以 L1_DEEP_VISIBILITY_ABS_DECAY；MINOR 仍受余气 cap。"""
+    minor_ratio = float(settings.get("SGJG_MINOR_ABS_LOSS_CAP_RATIO", 0.02))
+    deep_decay = float(settings.get("L1_DEEP_VISIBILITY_ABS_DECAY", 0.2))
+    apply_deep = trace_resolved and visibility == "deep" and severity == "MINOR_INTERFERENCE"
+    decay = deep_decay if apply_deep else 1.0
+    scaled = raw_min * coord_factor * decay
+    if severity == "MINOR_INTERFERENCE":
+        cap_abs = minor_ratio * max_axis if max_axis > 0 else 0.0
+        return round(min(scaled, cap_abs), 4)
+    return round(scaled, 4)
+
+
 class VisibilityFilter:
-    """伤官见官能级过滤：明面本气 vs 藏干余气 vs 干支坐标畸变。"""
+    """L1 核心十神交互的能级过滤：双侧天干/本气为 Surface(明)，否则 Deep(藏)；坐标畸变仅用于伤官见官对撞。"""
 
     __slots__ = ()
 
@@ -233,8 +316,115 @@ def sync_l1_junction_flags_to_meta(
                     clash = float(ge["clash_abs_loss_total"])
                 except (TypeError, ValueError):
                     clash = None
-            apply_decision_inbox_signal_gate(meta=meta, settings=settings, clash_abs_loss_total=clash)
+            block = apply_decision_inbox_signal_gate(meta=meta, settings=settings, clash_abs_loss_total=clash)
+            try:
+                from app.core.plugins.conflict_telemetry import record_decision_inbox_signal
+
+                enabled = meta.get("enabled_plugins")
+                parts: list[str] = []
+                if isinstance(enabled, list):
+                    parts.extend(sorted(str(x) for x in enabled))
+                blind = meta.get("blind_school_features")
+                if isinstance(blind, dict):
+                    for k in sorted(blind.keys()):
+                        parts.append(f"{k}={blind.get(k)}")
+                sig = "||".join(parts) if parts else "unknown_plugins"
+                record_decision_inbox_signal(
+                    signature=sig,
+                    eligible=bool(block.get("inbox_conflict_cards_eligible")),
+                )
+            except Exception:
+                pass
     return flags
+
+
+def _append_core_interaction(
+    out: List[Dict[str, Any]],
+    *,
+    interaction_id: str,
+    label_zh: str,
+    deity_a: str,
+    deity_b: str,
+    axes: Dict[str, Any],
+    trace_map: Dict[str, Any],
+    metadata: Dict[str, Any],
+    settings: Dict[str, float],
+    apply_sg_coordinate_distortion: bool,
+) -> None:
+    a_abs = _axis_abs(axes, deity_a)
+    b_abs = _axis_abs(axes, deity_b)
+    active = a_abs > 0.0 and b_abs > 0.0
+    if not active:
+        out.append(
+            {
+                "id": interaction_id,
+                "label_zh": label_zh,
+                "deity_a": deity_a,
+                "deity_b": deity_b,
+                "active": False,
+                "severity": "NONE",
+                "visibility": "none",
+                "trace_resolved": False,
+                "control_energy": 0.0,
+                "blind_rule_premium_eligible": False,
+            }
+        )
+        return
+
+    vis_info = calculate_interaction_visibility(deity_a, deity_b, trace_map=trace_map)
+    vis_raw = str(vis_info.get("visibility") or "unresolved")
+    trace_resolved_pair = bool(vis_info.get("trace_resolved"))
+    severity = _severity_from_visibility(vis_raw, trace_resolved=trace_resolved_pair)
+    vis_norm = "deep" if vis_raw == "deep" else "surface"
+    coord_factor, coord_applied = (1.0, False)
+    if apply_sg_coordinate_distortion and trace_resolved_pair and isinstance(metadata, dict):
+        sg_c = _contributions_for_deity(trace_map, "伤官")
+        zg_c = _contributions_for_deity(trace_map, "正官")
+        coord_factor, coord_applied = _coordinate_distortion_factor(
+            metadata=metadata, sg_contrib=sg_c, zg_contrib=zg_c, settings=settings
+        )
+
+    raw_min = min(a_abs, b_abs)
+    max_axis = max(a_abs, b_abs)
+    control_energy = _control_energy_for_pair(
+        raw_min=raw_min,
+        max_axis=max_axis,
+        severity=severity,
+        coord_factor=coord_factor,
+        settings=settings,
+        trace_resolved=trace_resolved_pair,
+        visibility=vis_norm,
+    )
+
+    blind_ok = False
+    if interaction_id == "SHANG_GUAN_JIAN_GUAN":
+        blind_ok = severity != "MINOR_INTERFERENCE"
+    else:
+        blind_ok = (
+            severity == "CRITICAL"
+            and trace_resolved_pair
+            and vis_norm == "surface"
+        )
+
+    ui_level = "Level: Surface (明)" if severity == "CRITICAL" else ("Level: Deep (藏)" if severity == "MINOR_INTERFERENCE" else "")
+
+    out.append(
+        {
+            "id": interaction_id,
+            "label_zh": label_zh,
+            "deity_a": deity_a,
+            "deity_b": deity_b,
+            "active": True,
+            "severity": severity,
+            "visibility": vis_raw if vis_raw in ("surface", "deep", "unresolved") else "unresolved",
+            "trace_resolved": trace_resolved_pair,
+            "control_energy": control_energy,
+            "coordinate_distortion_factor": round(coord_factor, 4) if apply_sg_coordinate_distortion else 1.0,
+            "coordinate_distortion_applied": bool(coord_applied) if apply_sg_coordinate_distortion else False,
+            "blind_rule_premium_eligible": blind_ok,
+            "ui_level_label": ui_level,
+        }
+    )
 
 
 def detect_universal_flags(
@@ -244,58 +434,107 @@ def detect_universal_flags(
     physics_settings: Dict[str, float] | None = None,
 ) -> Dict[str, Any]:
     axes = ((physics_tensor or {}).get("deity_energy_axes") or {}) if isinstance(physics_tensor, dict) else {}
-    shangguan_abs = float((((axes or {}).get("伤官") or {}).get("absolute_energy", 0.0) or 0.0))
-    zhengguan_abs = float((((axes or {}).get("正官") or {}).get("absolute_energy", 0.0) or 0.0))
-    active = shangguan_abs > 0.0 and zhengguan_abs > 0.0
     settings = _physics_settings(physics_tensor if isinstance(physics_tensor, dict) else {}, physics_settings)
-
     trace_map = _trace_map(physics_tensor if isinstance(physics_tensor, dict) else {})
-    sg_c = _contributions_for_deity(trace_map, "伤官")
-    zg_c = _contributions_for_deity(trace_map, "正官")
-    trace_resolved = bool(sg_c) and bool(zg_c)
+    md = metadata if isinstance(metadata, dict) else {}
 
-    has_surface_sg = _has_surface_channel(sg_c) if sg_c else True
-    has_surface_zg = _has_surface_channel(zg_c) if zg_c else True
-    both_surface = has_surface_sg and has_surface_zg
+    l1_core: List[Dict[str, Any]] = []
+    _append_core_interaction(
+        l1_core,
+        interaction_id="SHANG_GUAN_JIAN_GUAN",
+        label_zh="伤官见官",
+        deity_a="伤官",
+        deity_b="正官",
+        axes=axes,
+        trace_map=trace_map,
+        metadata=md,
+        settings=settings,
+        apply_sg_coordinate_distortion=True,
+    )
 
-    coord_factor, coord_applied = (1.0, False)
-    if trace_resolved and isinstance(metadata, dict):
-        coord_factor, coord_applied = _coordinate_distortion_factor(
-            metadata=metadata, sg_contrib=sg_c, zg_contrib=zg_c, settings=settings
+    cai_max = max(_axis_abs(axes, "正财"), _axis_abs(axes, "偏财"))
+    yin_max = max(_axis_abs(axes, "正印"), _axis_abs(axes, "偏印"))
+    if cai_max > 0.0 and yin_max > 0.0:
+        d_cai, _ = _dominant_deity(axes, ("正财", "偏财"))
+        d_yin, _ = _dominant_deity(axes, ("正印", "偏印"))
+        _append_core_interaction(
+            l1_core,
+            interaction_id="CAI_XING_PO_YIN",
+            label_zh="财星破印",
+            deity_a=d_cai,
+            deity_b=d_yin,
+            axes=axes,
+            trace_map=trace_map,
+            metadata=md,
+            settings=settings,
+            apply_sg_coordinate_distortion=False,
         )
 
+    _append_core_interaction(
+        l1_core,
+        interaction_id="XIAO_SHEN_DUO_SHI",
+        label_zh="枭神夺食",
+        deity_a="偏印",
+        deity_b="食神",
+        axes=axes,
+        trace_map=trace_map,
+        metadata=md,
+        settings=settings,
+        apply_sg_coordinate_distortion=False,
+    )
+
+    _append_core_interaction(
+        l1_core,
+        interaction_id="YANG_REN_FENG_CHONG",
+        label_zh="羊刃逢冲",
+        deity_a="劫财",
+        deity_b="七杀",
+        axes=axes,
+        trace_map=trace_map,
+        metadata=md,
+        settings=settings,
+        apply_sg_coordinate_distortion=False,
+    )
+
+    sg_entry = next((x for x in l1_core if x.get("id") == "SHANG_GUAN_JIAN_GUAN"), {})
+    shangguan_abs = round(_axis_abs(axes, "伤官"), 4)
+    zhengguan_abs = round(_axis_abs(axes, "正官"), 4)
+    control_energy = float(sg_entry.get("control_energy") or 0.0)
+    severity = str(sg_entry.get("severity") or "NONE")
+    shangguan_jian_guan = bool(sg_entry.get("active"))
+    trace_resolved = bool(sg_entry.get("trace_resolved"))
+    sg_c = _contributions_for_deity(trace_map, "伤官")
+    zg_c = _contributions_for_deity(trace_map, "正官")
+    has_surface_sg = _has_surface_channel(sg_c) if sg_c else True
+    has_surface_zg = _has_surface_channel(zg_c) if zg_c else True
+    both_surface = bool(has_surface_sg and has_surface_zg) if trace_resolved else False
+    coord_factor = float(sg_entry.get("coordinate_distortion_factor") or 1.0)
+    coord_applied = bool(sg_entry.get("coordinate_distortion_applied"))
     minor_ratio = float(settings.get("SGJG_MINOR_ABS_LOSS_CAP_RATIO", 0.02))
+    ui_level = str(sg_entry.get("ui_level_label") or "")
 
-    if not active:
-        severity = "NONE"
-        ui_level = ""
-    elif not trace_resolved:
-        severity = "CRITICAL"
-        ui_level = "Level: Surface (明)"
-    elif both_surface:
-        severity = "CRITICAL"
-        ui_level = "Level: Surface (明)"
-    else:
-        severity = "MINOR_INTERFERENCE"
-        ui_level = "Level: Deep (藏)"
-
-    raw_control = min(shangguan_abs, zhengguan_abs) if active else 0.0
-    if not active:
-        control_energy = 0.0
-    elif not trace_resolved:
-        control_energy = round(raw_control * coord_factor, 4)
-    elif severity == "CRITICAL":
-        control_energy = round(raw_control * coord_factor, 4)
-    else:
-        cap_abs = minor_ratio * max(shangguan_abs, zhengguan_abs)
-        control_energy = round(min(raw_control * coord_factor, cap_abs), 4)
-
-    shangguan_jian_guan = bool(active)
+    l1_inbox_signal_bypass = False
+    for it in l1_core:
+        if not it.get("active"):
+            continue
+        if str(it.get("severity") or "") != "CRITICAL":
+            continue
+        iid = str(it.get("id") or "")
+        vis_i = str(it.get("visibility") or "")
+        if iid == "SHANG_GUAN_JIAN_GUAN":
+            l1_inbox_signal_bypass = True
+            break
+        if vis_i == "surface":
+            l1_inbox_signal_bypass = True
+            break
 
     return {
         "SHANG_GUAN_JIAN_GUAN": bool(shangguan_jian_guan),
-        "shangguan_abs": round(shangguan_abs, 4),
-        "zhengguan_abs": round(zhengguan_abs, 4),
+        "XIAO_SHEN_DUO_SHI": bool(next((x for x in l1_core if x.get("id") == "XIAO_SHEN_DUO_SHI"), {}).get("active")),
+        "CAI_XING_PO_YIN": bool(next((x for x in l1_core if x.get("id") == "CAI_XING_PO_YIN"), {}).get("active")),
+        "YANG_REN_FENG_CHONG": bool(next((x for x in l1_core if x.get("id") == "YANG_REN_FENG_CHONG"), {}).get("active")),
+        "shangguan_abs": shangguan_abs,
+        "zhengguan_abs": zhengguan_abs,
         "control_energy": control_energy,
         "source": "L1_Junction",
         "sgjg_severity": severity,
@@ -306,6 +545,8 @@ def detect_universal_flags(
         "sgjg_coordinate_distortion_factor": round(coord_factor, 4),
         "sgjg_coordinate_distortion_applied": bool(coord_applied),
         "sgjg_abs_loss_rate_cap": minor_ratio if severity == "MINOR_INTERFERENCE" else None,
+        "l1_core_interactions": l1_core,
+        "l1_inbox_signal_bypass": bool(l1_inbox_signal_bypass),
         "VisibilityFilter": {
             "trace_resolved": trace_resolved,
             "rule_surface_critical": both_surface if trace_resolved else None,
@@ -316,3 +557,70 @@ def detect_universal_flags(
             },
         },
     }
+
+
+# L1 原子算子 ID（与 plugins/base_physics/core_operators 及 audit 对齐）
+L1_OP_PROD = "L1_OP_PROD"
+L1_OP_DEST = "L1_OP_DEST"
+L1_OP_CONN = "L1_OP_CONN"
+
+
+def build_l1_operator_audit_items_from_steps(
+    steps: List[Dict[str, Any]],
+    *,
+    timestamp: str,
+) -> List[Dict[str, Any]]:
+    """由 L1 流水线 steps 生成可并入 audit_summary 的条目，便于因果脉冲追溯到子算子。"""
+    rows: List[Dict[str, Any]] = []
+    for idx, step in enumerate(steps):
+        ids = step.get("l1_operator_ids")
+        if not isinstance(ids, list) or not ids:
+            pid = step.get("l1_operator_id")
+            ids = [pid] if pid else []
+        ids = [str(x) for x in ids if x]
+        skill_ids_raw = step.get("skill_ids")
+        skill_ids = [str(x) for x in skill_ids_raw] if isinstance(skill_ids_raw, list) else []
+        lone_skill = str(step.get("skill_id") or "").strip()
+        plugin = str(step.get("plugin") or "")
+        edge = step.get("edge") if step.get("edge") is not None else step.get("tomb_branch")
+        delta = step.get("delta") if isinstance(step.get("delta"), dict) else {}
+        if not ids and lone_skill:
+            rows.append(
+                {
+                    "id": f"l1op-{idx}-skill",
+                    "step": f"L1-{idx + 1:02d}",
+                    "role": "Physics",
+                    "action": f"{lone_skill} · {plugin}",
+                    "timestamp": timestamp,
+                    "payload": {
+                        "skill_id": lone_skill,
+                        "plugin": plugin,
+                        "edge": edge,
+                        "delta_keys": sorted(delta.keys()) if isinstance(delta, dict) else [],
+                        "delta": delta,
+                    },
+                }
+            )
+            continue
+        if not ids:
+            continue
+        for j, oid in enumerate(ids):
+            skill_id = skill_ids[j] if j < len(skill_ids) else skill_id_for_l1_operator(oid)
+            rows.append(
+                {
+                    "id": f"l1op-{idx}-{oid}",
+                    "step": f"L1-{idx + 1:02d}",
+                    "role": "Physics",
+                    "action": f"{skill_id} · {oid} · {plugin}",
+                    "timestamp": timestamp,
+                    "payload": {
+                        "skill_id": skill_id,
+                        "l1_operator_id": oid,
+                        "plugin": plugin,
+                        "edge": edge,
+                        "delta_keys": sorted(delta.keys()) if isinstance(delta, dict) else [],
+                        "delta": delta,
+                    },
+                }
+            )
+    return rows

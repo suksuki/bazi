@@ -38,7 +38,6 @@ export interface StreamBoardSnapshotPersistDeps {
   finalStructureCandidatesV0?: Record<string, unknown> | null;
   finalStructureFinalDecisionV0?: Record<string, unknown> | null;
   finalVerdictVersionId?: string;
-  setSnapshotAvailable: (val: boolean) => void;
 }
 
 export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<StreamBoardSnapshotPersistDeps>) {
@@ -216,7 +215,6 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
         version_id: deps.finalVerdictVersionId,
       },
     });
-    deps.setSnapshotAvailable(true);
   }, [depsRef, buildInteractionHub]);
 
   const scheduleInteractionHubPersist = useCallback(() => {

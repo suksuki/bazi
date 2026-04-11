@@ -9,7 +9,9 @@ from typing import Any, Dict, List
 from sqlmodel import select
 
 from app.plugins.blind_school.core import run_blind_school_plugin
+from app.core.evolution.dna_registry import append_routing_audit_item
 from app.core.plugins.registry import PluginRegistry
+from app.core.routing.causal_router import CausalRouter, load_routing_config
 from app.api.contracts import (
     AnalyzeClashRequest,
     AnalyzeSeedRequest,
@@ -151,6 +153,17 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         pierce_sem = blind_payload.get("mangpai_pierce_semantics")
         if isinstance(pierce_sem, list) and pierce_sem:
             physics_tensor["meta"]["mangpai_pierce_semantics"] = list(pierce_sem)
+    try:
+        negotiated = CausalRouter(routing_config=load_routing_config()).negotiate_impact(
+            plugin_outputs,
+            physics_tensor=physics_tensor,
+        )
+        meta = physics_tensor.get("meta")
+        if isinstance(meta, dict):
+            meta["causal_routing"] = negotiated
+        append_routing_audit_item(physics_tensor, negotiated)
+    except Exception:
+        pass
     physics_tensor["plugin_outputs"] = plugin_outputs
     return {
         "metadata": metadata_obj.model_dump(),

@@ -1,16 +1,6 @@
-"""
-全局物理/决策配置入口（兼容路径）。
-
-单一数据源仍为 `app.core.config.physics_settings`；此处仅做便捷 re-export。
-"""
+"""兼容入口：文档中若引用 `app.physics_settings`，由此转发至 `app.core.config.physics_settings`。"""
 from __future__ import annotations
 
 from app.core.config.physics_settings import DEFAULT_PHYSICS_SETTINGS, resolve_physics_settings
 
-GLOBAL_DECISION_ABS_THRESHOLD = float(DEFAULT_PHYSICS_SETTINGS["GLOBAL_DECISION_ABS_THRESHOLD"])
-
-__all__ = [
-    "DEFAULT_PHYSICS_SETTINGS",
-    "GLOBAL_DECISION_ABS_THRESHOLD",
-    "resolve_physics_settings",
-]
+__all__ = ["DEFAULT_PHYSICS_SETTINGS", "resolve_physics_settings"]

@@ -9,7 +9,7 @@ import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { elementColorClass } from "@/constants/termMap";
 import { DecisionItem } from "@/features/decision-engine/components/DecisionItem";
 import { DecisionInboxCard, VerdictChangeLog } from "@/features/decision-inbox/types";
-import type { LogicDiff } from "@/features/stream-board/models";
+import type { DecisionSignalToNoiseMeta, LogicDiff } from "@/features/stream-board/models";
 import {
   getCardElement,
   getCardLabel,
@@ -64,6 +64,8 @@ type Props = {
   interactionLocked?: boolean;
   /** physics_tensor.meta.l1_junction_flags：伤官见官能级等 */
   l1JunctionFlags?: Record<string, unknown>;
+  /** physics_tensor.meta.decision_signal_to_noise：信噪比门控（阈值等） */
+  decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
 };
 
 export function DecisionInbox({
@@ -104,6 +106,7 @@ export function DecisionInbox({
   inboxResetNonce = 0,
   interactionLocked = false,
   l1JunctionFlags,
+  decisionSignalToNoise,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -211,6 +214,12 @@ export function DecisionInbox({
     await onStressTest?.(stressInput);
   }
 
+  const feedbackSessionHint = String(
+    (metadata as { consultation_id?: unknown; session_id?: unknown }).consultation_id ??
+      (metadata as { session_id?: unknown }).session_id ??
+      "",
+  );
+
   function renderVerdictLine(line: string, idx: number) {
     const parts = splitVerdictLine(line);
     const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
@@ -224,7 +233,14 @@ export function DecisionInbox({
       isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
     }`;
     return (
-      <SkillLinkedAssertionLine key={`${idx}-${line.slice(0, 12)}`} line={line} className={lineClass}>
+      <SkillLinkedAssertionLine
+        key={`${idx}-${line.slice(0, 12)}`}
+        line={line}
+        className={lineClass}
+        assertionIndex={idx}
+        sessionHint={feedbackSessionHint}
+        interactionLocked={interactionLocked}
+      >
         {parts.map((part, i) => (
           isVerdictDeity(part) ? (
             <button
@@ -364,6 +380,15 @@ export function DecisionInbox({
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <h4 className="text-sm font-medium text-zinc-100">Decision Items</h4>
           <p className="mt-1 text-xs text-zinc-400">{t("勾选决策项后可在统一动作条触发语义裁决。")}</p>
+          {decisionSignalToNoise?.inbox_conflict_cards_eligible === false && metadata && Object.keys(metadata).length > 0 ? (
+            <p className="mt-2 font-mono text-[10px] leading-relaxed text-zinc-600">
+              [SIGNAL_GATE_ACTIVE]: 微弱因果噪声已物理屏蔽，阈值:{" "}
+              {typeof decisionSignalToNoise.threshold === "number"
+                ? decisionSignalToNoise.threshold.toFixed(1)
+                : "5.0"}{" "}
+              Abs
+            </p>
+          ) : null}
           <div className="mt-3 space-y-2">
             {cards.length === 0 ? <p className="text-xs text-zinc-500">{t("暂无可执行决策项。")}</p> : null}
             <AnimatePresence initial={false}>

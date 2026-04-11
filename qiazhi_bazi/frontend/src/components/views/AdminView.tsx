@@ -3,18 +3,22 @@
 import { useState } from "react";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { EngineRoomPanel } from "@/features/admin/EngineRoomPanel";
+import { EvolutionPanel } from "@/features/admin/components/EvolutionPanel";
 import { PluginManagementPanel } from "@/features/admin/components/PluginManagementPanel";
+import { RoutingMatrixPanel } from "@/features/admin/components/RoutingMatrixPanel";
 import { AdminSettingsView } from "@/features/admin-settings/AdminSettingsView";
 import { useAdminSettingsController } from "@/features/admin-settings/useAdminSettingsController";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
-type AdminSection = "overview" | "engine" | "infra" | "plugins";
+type AdminSection = "overview" | "engine" | "infra" | "plugins" | "evolution" | "routing";
 
 const sections: { id: AdminSection; label: string }[] = [
   { id: "overview", label: "概览" },
   { id: "engine", label: "引擎" },
   { id: "infra", label: "基础设施" },
   { id: "plugins", label: "插件" },
+  { id: "routing", label: "路由" },
+  { id: "evolution", label: "演化" },
 ];
 
 export function AdminView() {
@@ -92,6 +96,14 @@ export function AdminView() {
 
       <div className={section === "plugins" ? "block" : "hidden"}>
         <PluginManagementPanel />
+      </div>
+
+      <div className={section === "routing" ? "block" : "hidden"}>
+        <RoutingMatrixPanel />
+      </div>
+
+      <div className={section === "evolution" ? "block" : "hidden"}>
+        <EvolutionPanel />
       </div>
     </div>
   );
