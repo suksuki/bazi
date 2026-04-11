@@ -166,6 +166,7 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
         body.time,
         body.calendar,
         1 if body.gender == "male" else 0,
+        body.reference_year,
     )
     result = await analyze_clash_flow(
         AnalyzeClashRequest(

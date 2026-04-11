@@ -78,6 +78,8 @@ class AnalyzeSeedRequest(BaseModel):
     time: str = "12:00"
     calendar: str = "solar"
     gender: Literal["male", "female"]
+    """用于大运/流年：公历参考年；不传则用服务器当前年。"""
+    reference_year: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     lang: str = "ZH"

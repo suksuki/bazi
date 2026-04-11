@@ -8,6 +8,7 @@ import { BaziCard } from "@/components/BaziCard";
 import { BlindLogicMirror } from "@/components/BlindLogicMirror";
 import { DecisionInbox } from "@/components/DecisionInbox";
 import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
+import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { SeedInput } from "@/components/SeedInput";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TenGodNumericList } from "@/components/TenGodNumericList";
@@ -22,6 +23,7 @@ import { BlindSkillHighlightProvider } from "@/features/stream-board/context/Bli
 import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
 import type { InboxCard, StreamBoardViewModel } from "./models";
 import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
+import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
@@ -70,6 +72,16 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     consultationId,
     metadata,
     timeline,
+    referenceYear,
+    setReferenceYear,
+    seedPreviewPillars,
+    seedPreviewTimeline,
+    seedPreviewBusy,
+    seedPreviewError,
+    scheduleSeedDraftPreview,
+    refreshSeedPreview,
+    clearLabPipelineForSeedDraft,
+    lastCommittedSeedSignature,
     selectedBranch,
     setSelectedBranch,
     auditItems,
@@ -161,8 +173,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     ((((physicsAudit as { trace?: { climate_adjustment?: { season?: string } } } | null)?.trace?.climate_adjustment?.season) || "")),
   );
   const [viewMode, setViewMode] = React.useState<"VISION" | "COMMAND">("COMMAND");
-  /** 默认展开：生辰八字（地法）必须始终可达，避免误折叠后「无处输入」 */
-  const [seedPanelOpen, setSeedPanelOpen] = React.useState(true);
   const [actionSyncing, setActionSyncing] = React.useState(false);
   const [revokeGlitch, setRevokeGlitch] = React.useState(false);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
@@ -178,33 +188,71 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
 
   const goToSeedInput = React.useCallback(() => {
     setViewMode("COMMAND");
-    setSeedPanelOpen(true);
   }, []);
   const hasBoard = Boolean(metadata?.pillars);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
   const currentParamSignature = JSON.stringify(pluginWeights || {});
   const seedDirty = Boolean(currentSeedSignature && currentSeedSignature !== lastAppliedSeedSignature);
   const paramDirty = currentParamSignature !== lastAppliedParamSignature;
-  const normalizeDecisionIds = (list: string[]) => [...new Set(list.map((item) => String(item || "").trim()).filter(Boolean))].sort();
-  const currentDecisionsSignature = JSON.stringify(normalizeDecisionIds(decisionIds));
+  const currentDecisionsSignature = decisionIdsSignature(decisionIds);
   const isDecisionDirty = currentDecisionsSignature !== lastAppliedDecisionsSignature;
-  const handleSeedPayloadChange = React.useCallback((payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => {
-    setDraftSeed((prev) => {
-      if (
-        prev
-        && prev.date === payload.date
-        && prev.time === payload.time
-        && prev.calendar === payload.calendar
-        && prev.gender === payload.gender
-      ) {
-        return prev;
+  const handleSeedPayloadChange = React.useCallback(
+    (payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => {
+      const sig = JSON.stringify({
+        date: payload.date,
+        time: payload.time,
+        calendar: payload.calendar,
+        gender: payload.gender,
+      });
+      if (metadata && lastCommittedSeedSignature && sig !== lastCommittedSeedSignature && !isFinalized) {
+        clearLabPipelineForSeedDraft();
       }
-      return payload;
-    });
-  }, []);
+      setDraftSeed((prev) => {
+        if (
+          prev
+          && prev.date === payload.date
+          && prev.time === payload.time
+          && prev.calendar === payload.calendar
+          && prev.gender === payload.gender
+        ) {
+          return prev;
+        }
+        return payload;
+      });
+    },
+    [metadata, lastCommittedSeedSignature, clearLabPipelineForSeedDraft, isFinalized],
+  );
+
+  React.useEffect(() => {
+    if (!metadata) {
+      setLastAppliedSeedSignature("");
+    }
+  }, [metadata]);
+
+  React.useEffect(() => {
+    if (metadata && lastCommittedSeedSignature) {
+      setLastAppliedSeedSignature(lastCommittedSeedSignature);
+    }
+  }, [metadata, lastCommittedSeedSignature]);
+
+  React.useEffect(() => {
+    if (metadata) {
+      scheduleSeedDraftPreview(null);
+      return;
+    }
+    if (draftSeed) {
+      scheduleSeedDraftPreview(draftSeed);
+    } else {
+      scheduleSeedDraftPreview(null);
+    }
+  }, [metadata, draftSeed, referenceYear, scheduleSeedDraftPreview]);
+
+  const isPreviewBoard = Boolean(!metadata?.pillars && seedPreviewPillars);
+
   const simpleBoard = React.useMemo(() => {
-    const pillars = metadata?.pillars;
+    const pillars = metadata?.pillars ?? seedPreviewPillars;
     if (!pillars) return null;
+    const tl = metadata?.pillars ? timeline : seedPreviewTimeline;
     const parseGanZhi = (text: string) => {
       const chars = Array.from(String(text || "").trim());
       return { stem: chars[0] || "-", branch: chars[1] || "-" };
@@ -214,10 +262,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       month: { stem: pillars.month?.stem || "-", branch: pillars.month?.branch || "-" },
       day: { stem: pillars.day?.stem || "-", branch: pillars.day?.branch || "-" },
       hour: { stem: pillars.hour?.stem || "-", branch: pillars.hour?.branch || "-" },
-      dayun: parseGanZhi(String(timeline?.dayun || "--")),
-      liunian: parseGanZhi(String(timeline?.liunian || "--")),
+      dayun: parseGanZhi(String(tl?.dayun || "--")),
+      liunian: parseGanZhi(String(tl?.liunian || "--")),
     };
-  }, [metadata?.pillars, timeline?.dayun, timeline?.liunian]);
+  }, [metadata?.pillars, timeline, seedPreviewPillars, seedPreviewTimeline]);
 
   const energyPeakAbs = useMemo(
     () => Math.max(0, ...Object.values(deityEnergyAxes).map((v) => Number(v?.absolute_energy || 0))),
@@ -258,7 +306,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     : actionSyncing || busy
       ? undefined
       : seedDirty
-        ? undefined
+        ? t("测算八字")
         : unresolvedConflictCount > 0
           ? "同步因果"
           : canIssueFinal
@@ -284,7 +332,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       setLastSubmittedDecisionIds(decisions.map((item) => item.id));
       await rerunFinalVerdictWithWeights(decisions);
       setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
-      setLastAppliedDecisionsSignature(JSON.stringify(normalizeDecisionIds(decisions.map((item) => item.id))));
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisions.map((item) => item.id)));
     } finally {
       setActionSyncing(false);
     }
@@ -297,7 +345,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       setLastSubmittedDecisionIds(decisions.map((item) => item.id));
       await executeDecisionAndRefresh(decisions);
       setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
-      setLastAppliedDecisionsSignature(JSON.stringify(normalizeDecisionIds(decisionIds)));
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisionIds));
     } finally {
       setActionSyncing(false);
     }
@@ -369,7 +417,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   }, [lastAppliedParamSignature, pluginWeights]);
   React.useEffect(() => {
     if (!lastAppliedDecisionsSignature) {
-      setLastAppliedDecisionsSignature(JSON.stringify(normalizeDecisionIds(decisionIds)));
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisionIds));
     }
   }, [lastAppliedDecisionsSignature, decisionIds]);
 
@@ -537,10 +585,23 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 <section className="rounded-2xl border border-cyan-500/25 bg-zinc-950/70 p-2">
                   <div className="mb-2 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/70 px-2 py-1.5">
                     <p className="text-xs font-medium text-cyan-200">{t("命盘仪表盘")}</p>
-                    <p className="text-[11px] text-zinc-400">
-                      {t("大运")} {String((timeline as { dayun?: string } | null)?.dayun || "--")} · {t("流年")}{" "}
-                      {String((timeline as { liunian?: string } | null)?.liunian || "--")}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+                      <span>
+                        {t("大运")} {String((timeline as { dayun?: string } | null)?.dayun || "--")} · {t("流年")}{" "}
+                        {String((timeline as { liunian?: string } | null)?.liunian || "--")}
+                      </span>
+                      <label className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
+                        <span>{t("流年（参考年）")}</span>
+                        <ReferenceYearSelect
+                          value={referenceYear}
+                          onChange={setReferenceYear}
+                          className="w-[4.25rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-100"
+                        />
+                      </label>
+                      {isPreviewBoard ? (
+                        <span className="rounded border border-amber-500/45 bg-amber-500/12 px-1 py-0.5 text-[9px] text-amber-200">{t("预览")}</span>
+                      ) : null}
+                    </div>
                   </div>
                   {/* md+ 与指令舱顶栏徽章去重：桌面端仅在 Command 模式展示 BlindSkillBadgeRow */}
                   <div className="md:hidden">
@@ -598,71 +659,90 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                 className="space-y-3"
               >
                 <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/80 shadow-[0_0_0_1px_rgba(251,191,36,0.08)]">
-                  <button
-                    type="button"
-                    onClick={() => setSeedPanelOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-t-2xl px-3 py-2.5 text-left text-xs font-medium text-amber-100/95 hover:bg-zinc-800/60"
-                  >
-                    <span>{t("生辰八字 · 地法（The Seed）")}</span>
-                    <span className="text-zinc-500">{seedPanelOpen ? t("收起表单") : t("展开表单")}</span>
-                  </button>
-                  {seedPanelOpen ? (
-                    <div className="border-t border-zinc-800 px-1 pb-2 pt-1">
-                      <SeedInput
-                        onSubmit={onSeedSubmit}
-                        busy={busy}
-                        t={t}
-                        hideSubmitButton
-                        onPayloadChange={handleSeedPayloadChange}
-                        rightSummarySlot={(
-                          <div className="h-full bg-transparent px-1 py-1">
-                            {simpleBoard ? (
-                              <div className="h-full">
-                                <div className="grid h-full grid-cols-9 gap-1.5">
-                                    {[
-                                      { key: "年", value: simpleBoard.year, type: "pillar" as const },
-                                      { key: "月", value: simpleBoard.month, type: "pillar" as const },
-                                      { key: "日", value: simpleBoard.day, type: "pillar" as const },
-                                      { key: "时", value: simpleBoard.hour, type: "pillar" as const },
-                                      { key: "大运", value: simpleBoard.dayun, type: "pillar" as const },
-                                      { key: "流年", value: simpleBoard.liunian, type: "pillar" as const },
-                                    ].map((item) => {
-                                      const stemMeta = STEM_META[item.value.stem];
-                                      const branchMeta = BRANCH_META[item.value.branch];
-                                      const stemStyle = stemMeta ? ELEMENT_STYLE[stemMeta.element][stemMeta.yinYang] : null;
-                                      const branchStyle = branchMeta ? ELEMENT_STYLE[branchMeta.element][branchMeta.yinYang] : null;
-                                      return (
-                                        <div key={item.key} className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900/70 px-1 py-1 text-center">
-                                          <p className="mb-1 text-[10px] text-zinc-500">{t(item.key)}</p>
-                                          <p
-                                            className="rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
-                                            style={stemStyle ? { color: stemStyle.color, backgroundColor: stemStyle.bg, border: `1px solid ${stemStyle.border}` } : undefined}
-                                          >
-                                            {item.value.stem}
-                                          </p>
-                                          <p
-                                            className="mt-1 rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
-                                            style={branchStyle ? { color: branchStyle.color, backgroundColor: branchStyle.bg, border: `1px solid ${branchStyle.border}` } : undefined}
-                                          >
-                                            {item.value.branch}
-                                          </p>
-                                        </div>
-                                      );
-                                    })}
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-zinc-500">{t("掐指一算后在此显示：四柱 / 大运 / 流年")}</p>
-                            )}
+                  <div className="border-b border-zinc-800 px-3 py-2.5 text-xs font-medium text-amber-100/95">
+                    {t("生辰八字 · 地法（The Seed）")}
+                  </div>
+                  <div className="px-1 pb-2 pt-1">
+                    <SeedInput
+                      onSubmit={onSeedSubmit}
+                      busy={busy}
+                      t={t}
+                      hideSubmitButton
+                      splitActions={{
+                        onPreview: (p) => void refreshSeedPreview(p),
+                        previewBusy: seedPreviewBusy,
+                      }}
+                      onPayloadChange={handleSeedPayloadChange}
+                      rightSummarySlot={(
+                        <div className="h-full bg-transparent px-1 py-1">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <label className="flex flex-col gap-0.5 text-[10px] text-zinc-400 sm:flex-row sm:items-center sm:gap-1.5">
+                              <span>{t("流年（参考年）")}</span>
+                              <ReferenceYearSelect
+                                value={referenceYear}
+                                onChange={setReferenceYear}
+                                className="w-[4.75rem] rounded border border-zinc-600 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-100"
+                              />
+                            </label>
+                            <span className="w-full text-[9px] leading-snug text-zinc-600 sm:w-auto" title={t("流年参考年说明")}>
+                              {t("流年参考年说明")}
+                            </span>
+                            {isPreviewBoard ? (
+                              <span className="rounded border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-200">
+                                {t("预览")}
+                              </span>
+                            ) : null}
+                            {seedPreviewBusy ? (
+                              <span className="text-[10px] text-zinc-500">{t("推演中…")}</span>
+                            ) : null}
+                            {seedPreviewError && !metadata ? (
+                              <span className="text-[10px] text-red-400/90" title={seedPreviewError}>
+                                {t("预览加载失败")}
+                              </span>
+                            ) : null}
                           </div>
-                        )}
-                      />
-                    </div>
-                  ) : (
-                    <p className="px-3 pb-3 text-[11px] leading-relaxed text-zinc-500">
-                      {t("表单已收起。点击「展开表单」可再次录入/修改公历、农历、时刻与性别并重新排盘。")}
-                    </p>
-                  )}
+                          {simpleBoard ? (
+                            <div className="h-full">
+                              <div className="grid h-full grid-cols-9 gap-1.5">
+                                {[
+                                  { key: "年", value: simpleBoard.year },
+                                  { key: "月", value: simpleBoard.month },
+                                  { key: "日", value: simpleBoard.day },
+                                  { key: "时", value: simpleBoard.hour },
+                                  { key: "大运", value: simpleBoard.dayun },
+                                  { key: "流年", value: simpleBoard.liunian },
+                                ].map((item) => {
+                                  const stemMeta = STEM_META[item.value.stem];
+                                  const branchMeta = BRANCH_META[item.value.branch];
+                                  const stemStyle = stemMeta ? ELEMENT_STYLE[stemMeta.element][stemMeta.yinYang] : null;
+                                  const branchStyle = branchMeta ? ELEMENT_STYLE[branchMeta.element][branchMeta.yinYang] : null;
+                                  return (
+                                    <div key={item.key} className="min-w-0 rounded-md border border-zinc-700 bg-zinc-900/70 px-1 py-1 text-center">
+                                      <p className="mb-1 text-[10px] text-zinc-500">{t(item.key)}</p>
+                                      <p
+                                        className="rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
+                                        style={stemStyle ? { color: stemStyle.color, backgroundColor: stemStyle.bg, border: `1px solid ${stemStyle.border}` } : undefined}
+                                      >
+                                        {item.value.stem}
+                                      </p>
+                                      <p
+                                        className="mt-1 rounded px-1 py-0.5 text-[2.1rem] font-semibold leading-none"
+                                        style={branchStyle ? { color: branchStyle.color, backgroundColor: branchStyle.bg, border: `1px solid ${branchStyle.border}` } : undefined}
+                                      >
+                                        {item.value.branch}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-zinc-500">{t("掐指一算后在此显示：四柱 / 大运 / 流年")}</p>
+                          )}
+                        </div>
+                      )}
+                    />
+                  </div>
                 </div>
                 <UnifiedActionBar
                   mode={actionMode}

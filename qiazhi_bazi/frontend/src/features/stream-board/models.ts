@@ -1,4 +1,4 @@
-import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
+import type { BaziMetadata, FourPillars, Lang, TimelineSnapshot } from "@/types/bazi";
 import type { Dispatch, SetStateAction } from "react";
 
 export type SeedPayload = {
@@ -157,6 +157,22 @@ export type StreamBoardViewModel = {
   consultationId: number | null;
   metadata: BaziMetadata | null;
   timeline: TimelineSnapshot | null;
+  /** 公历参考年：驱动大运/流年展示；与后端 get_timeline_snapshot(reference_year) 一致 */
+  referenceYear: number;
+  setReferenceYear: Dispatch<SetStateAction<number>>;
+  /** 正式排盘前的轻量四柱+大运流年（/v1/seed-preview） */
+  seedPreviewPillars: FourPillars | null;
+  seedPreviewTimeline: TimelineSnapshot | null;
+  seedPreviewBusy: boolean;
+  seedPreviewError: string | null;
+  /** 草稿生辰变化时防抖请求预览；传 null 清空预览态 */
+  scheduleSeedDraftPreview: (payload: SeedPayload | null) => void;
+  /** 立即请求 /v1/seed-preview（「选择出生日期」按钮，不经防抖） */
+  refreshSeedPreview: (payload: SeedPayload) => Promise<void>;
+  /** 已有正式结果时用户改草稿：清空排盘/终判等，直至再次测算 */
+  clearLabPipelineForSeedDraft: () => void;
+  /** 当前实验室记录的上次已提交生辰（与 metadata 对齐）；用于判断是否草稿偏离 */
+  lastCommittedSeedSignature: string | null;
   selectedBranch?: string;
   setSelectedBranch: Dispatch<SetStateAction<string | undefined>>;
   auditItems: import("@/components/AuditSidebar").AuditItem[];

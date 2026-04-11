@@ -1,4 +1,4 @@
-from app.services.bazi_engine import get_bazi
+from app.services.bazi_engine import get_bazi, get_timeline_snapshot
 
 
 def test_get_bazi_returns_four_pillars():
@@ -15,3 +15,10 @@ def test_get_bazi_sample_case_matches_expected():
     assert f"{pillars.month.stem}{pillars.month.branch}" == "乙巳"
     assert f"{pillars.day.stem}{pillars.day.branch}" == "乙丑"
     assert f"{pillars.hour.stem}{pillars.hour.branch}" == "乙酉"
+
+
+def test_get_timeline_snapshot_respects_reference_year():
+    y2020 = get_timeline_snapshot("1990-01-01", "12:00", "solar", 1, 2020)
+    y2026 = get_timeline_snapshot("1990-01-01", "12:00", "solar", 1, 2026)
+    assert "dayun" in y2020 and "liunian" in y2020
+    assert y2020["liunian"] != y2026["liunian"]

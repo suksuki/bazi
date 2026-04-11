@@ -38,3 +38,11 @@ qiazhi_bazi/
 - 后端：`pytest tests/unit tests/integration -q`
 - 前端：`npm test`
 - 前端构建：`npm run build`
+
+## 远程环境清理
+
+- 仅清理运行产物，不影响业务源码：
+  - `./scripts/clean-runtime-artifacts.sh`
+- 先预览将执行的动作：
+  - `DRY_RUN=1 ./scripts/clean-runtime-artifacts.sh`
+- 建议在重启前执行一次，避免 `.next` / `__pycache__` / `.pytest_cache` 和旧日志干扰。

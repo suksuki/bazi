@@ -3,23 +3,26 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { SEED_YEAR_STRINGS } from "@/components/seedYearRange";
+
+export type SeedFormPayload = {
+  date: string;
+  time: string;
+  calendar: "solar" | "lunar";
+  gender: "male" | "female";
+};
 
 type Props = {
-  onSubmit: (payload: {
-    date: string;
-    time: string;
-    calendar: "solar" | "lunar";
-    gender: "male" | "female";
-  }) => Promise<void>;
+  onSubmit: (payload: SeedFormPayload) => Promise<void>;
   busy: boolean;
   rightSummarySlot?: ReactNode;
   hideSubmitButton?: boolean;
-  onPayloadChange?: (payload: {
-    date: string;
-    time: string;
-    calendar: "solar" | "lunar";
-    gender: "male" | "female";
-  }) => void;
+  /** 仅拉预览；正式「测算八字」由主栏 UnifiedActionBar 触发 onSeedSubmit */
+  splitActions?: {
+    onPreview: (payload: SeedFormPayload) => void | Promise<void>;
+    previewBusy?: boolean;
+  };
+  onPayloadChange?: (payload: SeedFormPayload) => void;
   t?: (s: string) => string;
 };
 
@@ -28,6 +31,7 @@ export function SeedInput({
   busy,
   rightSummarySlot,
   hideSubmitButton = false,
+  splitActions,
   onPayloadChange,
   t = (s) => s,
 }: Props) {
@@ -39,10 +43,15 @@ export function SeedInput({
   const [calendar, setCalendar] = useState<"solar" | "lunar">("solar");
   const [gender, setGender] = useState<"male" | "female">("male");
 
+  const buildPayload = (): SeedFormPayload => ({
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}`,
+    calendar,
+    gender,
+  });
+
   async function submit() {
-    const date = `${year}-${month}-${day}`;
-    const time = `${hour}:${minute}`;
-    await onSubmit({ date, time, calendar, gender });
+    await onSubmit(buildPayload());
   }
 
   useEffect(() => {
@@ -54,7 +63,7 @@ export function SeedInput({
     });
   }, [year, month, day, hour, minute, calendar, gender, onPayloadChange]);
 
-  const years = Array.from({ length: 81 }, (_, i) => String(1950 + i));
+  const years = SEED_YEAR_STRINGS;
   const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
   const daysInMonth = useMemo(() => {
     if (calendar === "lunar") return 30;
@@ -179,7 +188,18 @@ export function SeedInput({
               ))}
             </select>
           </div>
-          {!hideSubmitButton ? (
+          {splitActions && hideSubmitButton ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                disabled={Boolean(splitActions.previewBusy)}
+                onClick={() => void splitActions.onPreview(buildPayload())}
+                className="w-full rounded-xl border border-zinc-600 bg-zinc-800/90 py-2.5 text-sm font-medium text-zinc-100 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {splitActions.previewBusy ? t("预览更新中…") : t("选择出生日期")}
+              </button>
+            </div>
+          ) : !hideSubmitButton ? (
             <button
               type="button"
               disabled={busy}

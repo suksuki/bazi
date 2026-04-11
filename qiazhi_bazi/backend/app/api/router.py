@@ -149,6 +149,31 @@ async def analyze_seed(body: AnalyzeSeedRequest) -> dict:
         raise HTTPException(status_code=400, detail=f"日期格式错误: {e}") from e
 
 
+@router.post("/v1/seed-preview", response_model=dict)
+async def seed_preview(body: AnalyzeSeedRequest) -> dict:
+    """
+    轻量排盘：仅四柱 + 大运/流年（按 reference_year），无 LLM、无物理张量。
+    供前端在正式「测算八字」前展示六柱预览。
+    """
+    from app.services.bazi_engine import get_bazi, get_timeline_snapshot
+
+    try:
+        pillars = get_bazi(body.date, body.time, body.calendar)
+        timeline = get_timeline_snapshot(
+            body.date,
+            body.time,
+            body.calendar,
+            1 if body.gender == "male" else 0,
+            body.reference_year,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"日期格式错误: {e}") from e
+    return {
+        "pillars": pillars.model_dump(),
+        "timeline": timeline,
+    }
+
+
 @router.post("/v1/audit-physics-with-llm", response_model=dict)
 async def audit_physics_with_llm(body: AuditPhysicsWithLlmRequest) -> dict:
     return await audit_physics_with_llm_flow(body)

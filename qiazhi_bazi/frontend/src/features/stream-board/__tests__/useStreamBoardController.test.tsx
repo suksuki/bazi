@@ -86,6 +86,17 @@ describe("useStreamBoardController regression", () => {
           },
         });
       }
+      if (url.endsWith("/api/v1/seed-preview")) {
+        return jsonResponse({
+          pillars: {
+            year: { stem: "庚", branch: "午" },
+            month: { stem: "甲", branch: "子" },
+            day: { stem: "丙", branch: "寅" },
+            hour: { stem: "辛", branch: "酉" },
+          },
+          timeline: { dayun: "庚申", liunian: "丙午" },
+        });
+      }
       if (url.endsWith("/api/v1/audit-physics-with-llm")) {
         return jsonResponse({
           alignment_score: 20,

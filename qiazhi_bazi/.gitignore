@@ -1,0 +1,10 @@
+# Runtime artifacts
+.runlogs/*.log
+
+# Backend runtime cache
+backend/**/__pycache__/
+backend/.pytest_cache/
+
+# Frontend build cache
+frontend/.next/
+frontend/**/tsconfig.tsbuildinfo
