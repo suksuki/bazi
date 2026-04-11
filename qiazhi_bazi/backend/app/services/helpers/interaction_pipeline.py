@@ -115,7 +115,9 @@ def _synthesize_global_entropy(
     m_clash = min(1.0, clash_loss / ref_clash)
 
     raw = w_t * m_torque + w_c * m_clamp + w_k * m_clash
-    entropy = max(0.0, min(1.0, raw))
+    damp = float(params.get("governance_constraint_damping", 1.0))
+    damp = max(0.0, min(2.0, damp))
+    entropy = max(0.0, min(1.0, raw * damp))
     return {
         "value": round(entropy, 4),
         "metrics": {
@@ -124,6 +126,8 @@ def _synthesize_global_entropy(
             "m_clash": round(m_clash, 4),
             "torque_total": round(torque_total, 4),
             "clash_abs_loss_total": round(clash_loss, 4),
+            "raw_entropy_mix": round(raw, 4),
+            "governance_constraint_damping": round(damp, 4),
         },
     }
 

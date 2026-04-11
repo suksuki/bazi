@@ -7,6 +7,8 @@ from app.core.config.physics_settings import resolve_physics_settings
 from app.skills.base import AuditLog, BaseSkill
 
 
+from app.skills.relation_nodes import RelationNodeFactory
+
 RELATION_GAIN = {
     "冲": 1.0,
     "合": 0.85,
@@ -16,16 +18,6 @@ RELATION_GAIN = {
     "破": 0.65,
     "生": 0.75,
     "克": 0.9,
-}
-RELATION_TYPE = {
-    "冲": "clash",
-    "合": "combination",
-    "刑": "punishment",
-    "穿": "pierce",
-    "害": "harm",
-    "破": "break",
-    "生": "generate",
-    "克": "control",
 }
 
 
@@ -59,12 +51,7 @@ class EnergyTopologySkill(BaseSkill):
             trace={"edge_count": len((produced.get("edges") or []))},
         )
 
-    @staticmethod
-    def _relation(detail: str) -> str:
-        for key in ("穿", "冲", "刑", "害", "破", "合", "生", "克"):
-            if key in detail:
-                return key
-        return "冲"
+
 
     @classmethod
     def build_topology(cls, *, metadata: Dict[str, Any], physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
@@ -103,15 +90,21 @@ class EnergyTopologySkill(BaseSkill):
             if not isinstance(point, dict):
                 continue
             detail = str(point.get("detail") or "")
-            relation = cls._relation(detail)
+            rule_node = RelationNodeFactory.get_rule_from_detail(detail)
+            relation = rule_node.relation_key
             raw_energy = base_abs * RELATION_GAIN.get(relation, 0.8)
-            resonance_boost = boost if relation in {"穿", "冲"} else 1.0
-            # "盖头截脚": branch-like relations have stronger attenuation.
             distance = 1.0
-            distance_decay = max(0.1, 1.0 - decay * distance)
-            if relation in {"刑", "害", "破"}:
-                distance_decay = max(0.1, distance_decay - 0.1)
-            final_work = raw_energy * resonance_boost * distance_decay
+
+            topology_result = rule_node.apply_topology(
+                raw_energy=raw_energy,
+                boost_setting=boost,
+                decay_setting=decay,
+                distance=distance
+            )
+            resonance_boost = topology_result.get("resonance_boost", 1.0)
+            distance_decay = topology_result.get("distance_decay", 1.0)
+            final_work = topology_result.get("final_work", raw_energy)
+
             if final_work < threshold:
                 continue
             efficiency = max(0.0, min(1.0, (resonance_boost * distance_decay) / max(boost, 0.0001)))
@@ -119,16 +112,16 @@ class EnergyTopologySkill(BaseSkill):
                 "from": "month_branch",
                 "to": "day_branch",
                 "relation": relation,
-                "relation_type": RELATION_TYPE.get(relation, "clash"),
-                "stem_resonance": bool(relation in {"穿", "冲"}),
+                "relation_type": rule_node.relation_type,
+                "stem_resonance": topology_result.get("stem_resonance", False),
                 "flow_direction": "month_branch->day_branch",
                 "raw_energy": round(raw_energy, 4),
-                "resonance_boost": round(resonance_boost, 4),
+                "resonance_boost": resonance_boost,
                 "resonance_multiplier": round(resonance_boost * distance_decay, 4),
-                "distance_decay": round(distance_decay, 4),
+                "distance_decay": distance_decay,
                 "efficiency_score": round(efficiency, 4),
-                "clash_vibration_flag": bool(relation == "冲"),
-                "final_work": round(final_work, 4),
+                "clash_vibration_flag": topology_result.get("clash_vibration_flag", False),
+                "final_work": final_work,
                 "detail": detail,
             }
             edges.append(edge)

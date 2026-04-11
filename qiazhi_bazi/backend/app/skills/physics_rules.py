@@ -41,6 +41,8 @@ DEFAULT_INTERACTION_PARAMS: Dict[str, float] = {
     "ENTROPY_W_CLASH": 0.3,
     "ENTROPY_TORQUE_REF": 180.0,
     "ENTROPY_CLASH_REF": 160.0,
+    # 治理层对合成全局熵的标量阻尼（1.0=不改；<1 压低读数以缓和「伤官见官」等强冲突叙事下的数值尖峰）
+    "governance_constraint_damping": 1.0,
 }
 
 WEIGHT_LUCK = 0.4

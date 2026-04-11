@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Tuple
 from app.core.config.physics_settings import resolve_physics_settings
 
 
+from app.skills.relation_nodes import RelationNodeFactory
+
 BODY_DEITIES = {"比肩", "劫财", "正印", "偏印"}
 USE_DEITIES = {"食神", "伤官", "正财", "偏财", "正官", "七杀"}
 ETA_MAP = {
@@ -53,11 +55,7 @@ def _sum_abs(deity_axes: Dict[str, Dict[str, float]], deities: set[str]) -> floa
     return sum(float((deity_axes.get(name) or {}).get("absolute_energy", 0.0) or 0.0) for name in deities)
 
 
-def _relation_type(detail: str) -> str:
-    for key in ("穿", "冲", "刑", "害", "破", "合"):
-        if key in detail:
-            return key
-    return "冲"
+
 
 
 def _pick_top_deity(deity_axes: Dict[str, Dict[str, float]], candidates: List[str]) -> str:
@@ -121,13 +119,19 @@ def evaluate_blind_work(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]
         if not isinstance(point, dict):
             continue
         detail = str(point.get("detail") or "")
-        relation = _relation_type(detail)
-        eta = ETA_MAP.get(relation, 0.8)
-        if relation == "穿":
-            pierce_floor = float(
-                settings.get("MANGPAI_ETA_PIERCE", settings.get("MANGPAI_SIX_HARM_ETA", 0.99))
-            )
-            eta = min(1.0, max(eta, pierce_floor))
+        
+        rule_node = RelationNodeFactory.get_rule_from_detail(detail)
+        relation = rule_node.relation_key
+        tomb_branches = _extract_branches(detail)
+
+        evaluator_result = rule_node.apply_evaluator(
+            detail=detail,
+            base_eta=ETA_MAP.get(relation, 0.8),
+            settings=settings,
+            tomb_branches=tomb_branches
+        )
+        eta = evaluator_result.get("eta", ETA_MAP.get(relation, 0.8))
+        unlock_source = evaluator_result.get("unlock_source", "")
         direction = "Host->Guest" if body_abs >= use_abs else "Guest->Host"
         host_abs = body_abs if body_abs >= use_abs else use_abs
         guest_abs = use_abs if body_abs >= use_abs else body_abs
@@ -139,8 +143,7 @@ def evaluate_blind_work(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]
         base_energy = max((host_abs * guest_abs) / 10.0, abs_contribution)
         potential_energy_locked = base_energy * tomb_lock_rate
         residual_energy = base_energy * (1.0 - tomb_lock_rate)
-        tomb_branches = _extract_branches(detail)
-        unlock_source = detail if relation == "冲" and tomb_branches else ""
+        
         striker_abs = max(host_abs, guest_abs)
         unlock_confidence = _unlock_confidence_by_abs(striker_abs) if unlock_source else 0.0
         released_energy = residual_energy + (potential_energy_locked * unlock_confidence if unlock_source else 0.0)

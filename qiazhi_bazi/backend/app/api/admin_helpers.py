@@ -10,7 +10,11 @@ from urllib.parse import urlparse, urlunparse
 
 from fastapi import HTTPException
 
+from app.skills.physics_rules import DEFAULT_INTERACTION_PARAMS
+
 logger = logging.getLogger(__name__)
+
+_ALLOWED_PHYSICS_PARAM_KEYS = frozenset(DEFAULT_INTERACTION_PARAMS.keys())
 
 
 def strip_reasoning(raw: str) -> str:
@@ -117,16 +121,7 @@ def parse_allowed_param_update(sql_patch: str) -> tuple[str, float]:
         )
     value = float(match.group(1))
     key = match.group(2)
-    if key not in {
-        "CF_FLOATING_DECAY",
-        "A_PROTRUSION",
-        "EFF_EXHAUSTING",
-        "EFF_RESTRAINING",
-        "EFF_CONSUMING",
-        "root_decay_lambda",
-        "through_stem_boost",
-        "conflict_penalty_gamma",
-    }:
+    if key not in _ALLOWED_PHYSICS_PARAM_KEYS:
         raise HTTPException(status_code=400, detail=f"不允许更新参数: {key}")
     if not (0.0 <= value <= 2.0):
         raise HTTPException(status_code=400, detail=f"参数值越界: {value}（允许范围 0.0~2.0）")

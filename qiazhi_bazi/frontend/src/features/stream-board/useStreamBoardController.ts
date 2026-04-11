@@ -25,6 +25,10 @@ import type {
 } from "./controller/streamBoardTypes";
 import { useSeedPreviewModule } from "./controller/useSeedPreviewModule";
 import { useStreamBoardExecution, type StreamBoardExecutionContext } from "./controller/useStreamBoardExecution";
+import { useStreamBoardDiagnosticActions, type StreamBoardDiagnosticDeps } from "./controller/useStreamBoardDiagnosticActions";
+import { useStreamBoardDrawerActions, type StreamBoardDrawerDeps } from "./controller/useStreamBoardDrawerActions";
+import { useStreamBoardSnapshotPersist, type StreamBoardSnapshotPersistDeps } from "./controller/useStreamBoardSnapshotPersist";
+import { useStreamBoardPipeline } from "./controller/useStreamBoardPipeline";
 import { useStreamBoardHealth } from "./controller/useStreamBoardHealth";
 import { buildInboxCards, createAuditorProposalCard, type DecisionSignalToNoiseMeta } from "./cardBuilder";
 import type {
@@ -208,6 +212,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const { generateFinalVerdict } = useVerdictExecution(verdictDepsRef);
   const seedAnalysisDepsRef = useRef<SeedAnalysisDeps>({} as SeedAnalysisDeps);
   const { onSeedSubmit } = useSeedAnalysis(seedAnalysisDepsRef);
+  const diagnosticDepsRef = useRef<StreamBoardDiagnosticDeps>({} as StreamBoardDiagnosticDeps);
+  const { runStressTest, runGenderComparison } = useStreamBoardDiagnosticActions(diagnosticDepsRef);
+  const drawerDepsRef = useRef<StreamBoardDrawerDeps>({} as StreamBoardDrawerDeps);
+  const { openLogicDrawer, openLogicDrawerByDeity, onEvidenceItemClick, showVerdictHistory } = useStreamBoardDrawerActions(drawerDepsRef);
+  const snapshotPersistDepsRef = useRef<StreamBoardSnapshotPersistDeps>({} as StreamBoardSnapshotPersistDeps);
+  const { updateLogicDiff, setAsBaseline, persistSnapshot, scheduleInteractionHubPersist, markActiveSession } = useStreamBoardSnapshotPersist(snapshotPersistDepsRef);
   const prevActiveViewRef = useRef<ShellActiveView | null>(null);
   const isRestoringRef = useRef(false);
   const silentCtxRef = useRef<SilentBoardCtx>({
@@ -353,72 +363,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
       }),
     [metadata, firstPromptText, auditorProposalCards, resolvedCardIds, t, decisionSignalToNoise],
   );
-  const updateLogicDiff = (current: MetricSnapshot, forceBaseline = false): LogicDiff => {
-    const baselineFromStore = (() => {
-      const b = labState.snapshot?.baseline_snapshot;
-      if (!b) return null;
-      const absLoss = typeof b.abs_loss_total === "number"
-        ? b.abs_loss_total
-        : extractMetricSnapshotFromPhysics((b.physics_tensor || null) as Record<string, unknown> | null).absLossTotal;
-      const entropy = typeof b.global_entropy === "number"
-        ? b.global_entropy
-        : extractMetricSnapshotFromPhysics((b.physics_tensor || null) as Record<string, unknown> | null).entropy;
-      return { absLossTotal: absLoss ?? null, entropy: entropy ?? null } as MetricSnapshot;
-    })();
-    const shouldSetBaseline = forceBaseline || (!baselineFromStore && !baselineMetrics);
-    const base = shouldSetBaseline ? current : (baselineFromStore || baselineMetrics);
-    if (shouldSetBaseline) setBaselineMetrics(current);
-    const baseAbs = base?.absLossTotal ?? null;
-    const baseEntropy = base?.entropy ?? null;
-    const nextDiff: LogicDiff = {
-      baseline_abs_loss_total: baseAbs,
-      current_abs_loss_total: current.absLossTotal,
-      abs_delta: baseAbs !== null && current.absLossTotal !== null ? current.absLossTotal - baseAbs : null,
-      baseline_entropy: baseEntropy,
-      current_entropy: current.entropy,
-      entropy_delta: baseEntropy !== null && current.entropy !== null ? current.entropy - baseEntropy : null,
-    };
-    setLogicDiff(nextDiff);
-    mergeSnapshot({ logic_diff: nextDiff });
-    return nextDiff;
-  };
   const updateLogicDiffRef = useRef(updateLogicDiff);
   updateLogicDiffRef.current = updateLogicDiff;
-  const setAsBaseline = () => {
-    const currentTensor = (labState.snapshot?.physics_tensor || null) as Record<string, unknown> | null;
-    const snapshot: MetricSnapshot = {
-      absLossTotal: typeof (finalWorkVector as { backfire_risk?: unknown } | null)?.backfire_risk === "number"
-        ? Number((finalWorkVector as { backfire_risk?: number }).backfire_risk)
-        : null,
-      entropy: globalEntropy,
-    };
-    setBaselineMetrics(snapshot);
-    setLogicDiff({
-      baseline_abs_loss_total: snapshot.absLossTotal,
-      current_abs_loss_total: snapshot.absLossTotal,
-      abs_delta: 0,
-      baseline_entropy: snapshot.entropy,
-      current_entropy: snapshot.entropy,
-      entropy_delta: 0,
-    });
-    mergeSnapshot({
-      baseline_snapshot: {
-        physics_tensor: currentTensor ? JSON.parse(JSON.stringify(currentTensor)) as Record<string, unknown> : null,
-        global_entropy: snapshot.entropy,
-        abs_loss_total: snapshot.absLossTotal,
-        at: Date.now(),
-      },
-      logic_diff: {
-        baseline_abs_loss_total: snapshot.absLossTotal,
-        current_abs_loss_total: snapshot.absLossTotal,
-        abs_delta: 0,
-        baseline_entropy: snapshot.entropy,
-        current_entropy: snapshot.entropy,
-        entropy_delta: 0,
-      },
-    });
-    setResultLogs((prev) => [...prev, "因果锚点已固化"]);
-  };
 
   const appendSystemAuditLog = (line: string) => {
     const text = String(line || "").trim();
@@ -451,141 +397,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     [physicsAudit],
   );
 
-  const buildInteractionHub = (opts?: {
-    consultationIdOverride?: number | null;
-    healthOverride?: { dbOk: boolean; llmOk: boolean };
-    auditorBriefingOverride?: Record<string, unknown> | null;
-  }) => {
-    const h = opts?.healthOverride || health;
-    const briefing = opts?.auditorBriefingOverride || (llmDiagnosticData ? {
-      alignment_score: llmDiagnosticData.alignment_score,
-      structured_hit: llmDiagnosticData.structured_hit,
-      repair_mode: llmDiagnosticData.repair_mode,
-      top_anomaly: llmDiagnosticData.top_anomaly,
-      causal_reasoning: llmDiagnosticData.causal_reasoning,
-      tuning_suggestions: llmDiagnosticData.tuning_suggestions,
-      logic_proposal: llmDiagnosticData.logic_proposal,
-      auto_joined_decision_box: Boolean(llmDiagnosticData.logic_proposal?.param_key),
-    } : null);
-    return {
-      consultation_id: opts?.consultationIdOverride ?? consultationId ?? null,
-      health: {
-        db_ok: Boolean(h.dbOk),
-        llm_ok: Boolean(h.llmOk),
-      },
-      i18n_calls: i18nCalls,
-      audit_items: auditItems.map((item) => ({
-        id: item.id,
-        step: item.step || "",
-        role: item.role,
-        action: item.action,
-        timestamp: item.timestamp,
-      })),
-      result_logs: resultLogs.slice(-24),
-      pending_cards: cards
-        .filter((card) => card.id !== "fallback-deep-scan")
-        .map((card) => ({
-          id: card.id,
-          title: card.title,
-          card_type: card.cardType || "conflict",
-        })),
-      resolved_card_ids: resolvedCardIds.slice(-120),
-      auditor_briefing: briefing || undefined,
-    };
-  };
-
-  const persistSnapshot = (payload: {
-    physics_tensor: Record<string, unknown>;
-    metadata?: Record<string, unknown>;
-    timeline?: Record<string, unknown> | null;
-    llm_prompt?: string;
-    audit_summary?: unknown;
-    consultationIdOverride?: number | null;
-    healthOverride?: { dbOk: boolean; llmOk: boolean };
-    auditorBriefingOverride?: Record<string, unknown> | null;
-    seedSignatureOverride?: string | null;
-    finalVerdictOverride?: {
-      body?: string;
-      change_log?: FinalVerdictChangeLog;
-      logical_evidence?: string[];
-      work_vector?: Record<string, unknown> | null;
-      topology_graph_v1?: Record<string, unknown> | null;
-      structure_candidates_v0?: Record<string, unknown> | null;
-      structure_final_decision_v0?: Record<string, unknown> | null;
-      version_id?: string;
-    };
-  }) => {
-    if (isSnapshotRestoringRef.current || isRestoring) return;
-    if (labStateRef.current.isFinalized) return;
-    const previousFinalVerdict = (labState.snapshot?.final_verdict || null) as Record<string, unknown> | null;
-    const seedSig =
-      payload.seedSignatureOverride !== undefined
-        ? payload.seedSignatureOverride
-        : seedPayloadSignature(lastSeedPayload);
-    mergeSnapshot({
-      active_session_id: payload.consultationIdOverride != null
-        ? String(payload.consultationIdOverride)
-        : (labState.snapshot?.active_session_id || `session-${Date.now()}`),
-      physics_tensor: payload.physics_tensor,
-      metadata: payload.metadata,
-      timeline: payload.timeline ?? null,
-      llm_prompt: payload.llm_prompt || "",
-      audit_summary: payload.audit_summary,
-      ...(seedSig ? { seed_signature: seedSig } : {}),
-      resolved_card_ids: resolvedCardIds.slice(-240),
-      decision_selection_ids: normalizeDecisionIds(confirmedDecisionIds),
-      interaction_hub: {
-        ...buildInteractionHub({
-          consultationIdOverride: payload.consultationIdOverride,
-          healthOverride: payload.healthOverride,
-          auditorBriefingOverride: payload.auditorBriefingOverride,
-        }),
-        ...extractInteractionHubMangpai(payload.physics_tensor),
-      },
-      final_verdict: payload.finalVerdictOverride || previousFinalVerdict || {
-        body: finalVerdictBody,
-        change_log: finalVerdictChangeLog,
-        logical_evidence: finalLogicalEvidence,
-        work_vector: finalWorkVector,
-        topology_graph_v1: finalTopologyGraphV1,
-        structure_candidates_v0: finalStructureCandidatesV0,
-        structure_final_decision_v0: finalStructureFinalDecisionV0,
-        version_id: finalVerdictVersionId,
-      },
-    });
-    setSnapshotAvailable(true);
-  };
-
   const persistSnapshotRef = useRef(persistSnapshot);
   persistSnapshotRef.current = persistSnapshot;
 
-  /** 等 React 提交 audit_items / result_logs 后再写入 interaction_hub，否则黑匣子一直是空 hub。 */
-  const scheduleInteractionHubPersist = useCallback(() => {
-    window.setTimeout(() => {
-      if (labStateRef.current.isFinalized) return;
-      const snap = labStateRef.current.snapshot;
-      if (!snap?.physics_tensor) return;
-      const sidRaw = snap.active_session_id;
-      let consultationIdOverride: number | null = null;
-      if (sidRaw != null && String(sidRaw).trim() !== "") {
-        const n = Number(String(sidRaw));
-        if (Number.isFinite(n)) consultationIdOverride = n;
-      }
-      persistSnapshotRef.current({
-        physics_tensor: snap.physics_tensor as Record<string, unknown>,
-        metadata: (snap.metadata ?? {}) as Record<string, unknown>,
-        timeline: (snap.timeline ?? null) as Record<string, unknown> | null,
-        llm_prompt: String(snap.llm_prompt || ""),
-        audit_summary: snap.audit_summary,
-        consultationIdOverride,
-      });
-    }, 0);
-  }, []);
 
-  const markActiveSession = (sessionId?: number | null) => {
-    const sid = sessionId != null ? String(sessionId) : (labState.snapshot?.active_session_id || `session-${Date.now()}`);
-    mergeSnapshot({ active_session_id: sid });
-  };
 
   const mergeSnapshotRef = useRef(mergeSnapshot);
   mergeSnapshotRef.current = mergeSnapshot;
@@ -651,64 +466,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     });
   }
 
-  function openLogicDrawer(payload: { title: string; focus: string; details: string[]; deityTrace?: Record<string, unknown> }) {
-    setLogicDrawerTitle(payload.title);
-    setLogicDrawerFocus(payload.focus);
-    setLogicDrawerDetails(payload.details);
-    setLogicDrawerTrace(payload.deityTrace || null);
-    setLogicDrawerOpen(true);
-  }
 
-  function openLogicDrawerByDeity(deity: string) {
-    const trace = deityTraceDetails?.[deity] as Record<string, unknown> | undefined;
-    openLogicDrawer({
-      title: `${deity} 演算路径`,
-      focus: deity,
-      details: [`${deity}: ${Number(deityScores[deity] ?? 0).toFixed(2)}%`, "来自 Result Summary 点击下钻。"],
-      deityTrace: trace,
-    });
-  }
-
-  function onEvidenceItemClick(evidence: string) {
-    const text = String(evidence || "");
-    const deityNames = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"];
-    const hit = deityNames.find((name) => text.includes(name));
-    if (hit) {
-      openLogicDrawerByDeity(hit);
-      return;
-    }
-
-    openLogicDrawer({
-      title: "证据条目下钻",
-      focus: "Logical Evidence",
-      details: [text, "该证据暂未映射到特定十神，已展示原始条目。"],
-    });
-  }
-
-  function showVerdictHistory() {
-    if (finalVerdictHistory.length === 0) return;
-
-    const lines = finalVerdictHistory
-      .map((item, index) => `#${index + 1} ${item.versionId} @ ${new Date(item.createdAt).toLocaleString()}`)
-      .concat(["---"])
-      .concat(
-        finalVerdictHistory.flatMap((item) => [
-          `【${item.versionId}】`,
-          item.body,
-          ...(item.changeLog.physics_diff || []).map((change) => `[物理] ${change}`),
-          ...(item.changeLog.consensus_diff || []).map((change) => `[共识] ${change}`),
-          ...(item.changeLog.text_diff_hint ? [`[判词] ${item.changeLog.text_diff_hint}`] : []),
-          ...(item.logicalEvidence || []).slice(0, 6).map((evidence) => `[证据] ${evidence}`),
-          "",
-        ]),
-      );
-
-    openLogicDrawer({
-      title: "Result Summary 版本回放",
-      focus: "Final Verdict History",
-      details: lines,
-    });
-  }
 
   function appendFinalVerdictAuditItem(versionId: string, auditLog: Record<string, unknown> | undefined, timestamp: string) {
     setAuditItems((prev) => [
@@ -728,403 +486,86 @@ export function useStreamBoardController(): StreamBoardViewModel {
     ]);
   }
 
-  const clearLabPipelineForSeedDraft = useCallback(() => {
-    if (labStateRef.current.isFinalized) return;
-    setLastSeedPayload(null);
-    persistLastSeedToStore(null);
-    setMetadata(null);
-    setStreamingText("");
-    setAuditItems([]);
-    setResultLogs([]);
-    setDeityScores({});
-    setDeityEnergyAxes({});
-    setDeityComponents({});
-    setDeityTraceDetails({});
-    setHoveredDeity(undefined);
-    setPhysicsAudit(null);
-    setPhysicsConfidence(null);
-    setPhysicsEvidence([]);
-    setShowPhysicsAudit(false);
-    setAuditorProposalCards([]);
-    setResolvedCardIds([]);
-    setPhysicsParams({});
-    setGlobalEntropy(null);
-    setConfirmedConflicts([]);
-    setFirstPromptText("");
-    setTimeline(null);
-    setLlmDiagnosticData(null);
-    setFinalVerdictBody("");
-    setFinalVerdictChangeLog({});
-    setFinalVerdictVersionId("");
-    setFinalLogicalEvidence([]);
-    setFinalWorkVector(null);
-    setFinalTopologyGraphV1(null);
-    setFinalStructureCandidatesV0(null);
-    setFinalStructureFinalDecisionV0(null);
-    setFinalVerdictHistory([]);
-    setStressTestResult(null);
-    setGenderComparisonResult(null);
-    setConsensusHistory([]);
-    setConfirmedDecisions([]);
-    setConfirmedDecisionIds([]);
-    resetSeedPreviewState();
-    setConsultationId(null);
-    setSelectionResetToken((v) => v + 1);
-    setLogicDiff({
-      baseline_abs_loss_total: null,
-      current_abs_loss_total: null,
-      abs_delta: null,
-      baseline_entropy: null,
-      current_entropy: null,
-      entropy_delta: null,
-    });
-    const hub = labStateRef.current.snapshot?.interaction_hub || {};
-    mergeSnapshot({
-      metadata: undefined,
-      physics_tensor: undefined,
-      timeline: undefined,
-      final_verdict: undefined,
-      audit_summary: undefined,
-      llm_prompt: undefined,
-      seed_signature: undefined,
-      active_session_id: undefined,
-      logic_diff: {
-        baseline_abs_loss_total: null,
-        current_abs_loss_total: null,
-        abs_delta: null,
-        baseline_entropy: null,
-        current_entropy: null,
-        entropy_delta: null,
-      },
-      decision_selection_ids: [],
-      resolved_card_ids: [],
-      interaction_hub: {
-        ...hub,
-        consultation_id: null,
-        pending_cards: [],
-        resolved_card_ids: [],
-        result_logs: [],
-        audit_items: [],
-      },
-    });
-    clearDecisionInbox();
-  }, [mergeSnapshot, clearDecisionInbox, persistLastSeedToStore, resetSeedPreviewState]);
-
-  const lastCausalRevertHandledRef = useRef(0);
-  const onSeedSubmitRef = useRef(onSeedSubmit);
-  onSeedSubmitRef.current = onSeedSubmit;
-
-  const setLang = useCallback(
-    (next: Lang) => {
-      if (next === langRef.current) return;
-      langRef.current = next;
-      setLangState(next);
-      setUiLang(next);
-      queueMicrotask(() => {
-        const p = lastSeedPayloadRef.current;
-        if (!p || !metadataRef.current) return;
-        if (busyRef.current || isStreamingRef.current || isExecutingRef.current) return;
-        void onSeedSubmitRef.current(p);
-      });
-    },
-    [setUiLang],
-  );
-
-  useEffect(() => {
-    if (isSnapshotRestoringRef.current) return;
-    if (labState.causalRevertNonce === 0) {
-      lastCausalRevertHandledRef.current = 0;
-      return;
-    }
-    const n = labState.causalRevertNonce;
-    if (n === lastCausalRevertHandledRef.current) return;
-    lastCausalRevertHandledRef.current = n;
-    const payload = labState.lastSeedPayload;
-    if (!payload) return;
-    void onSeedSubmitRef.current(payload);
-  }, [labState.causalRevertNonce, labState.lastSeedPayload]);
-
-  const { onExecuteDecision, rerunFinalVerdictWithWeights, refreshVerdict, executeDecisionAndRefresh } =
-    useStreamBoardExecution(executionCtxRef);
-
-  async function applyCurrentSqlPatch() {
-    const result = await applyPhysicsSqlPatch(llmDiagnosticData?.sql_patch || "");
-    if (!result.ok) {
-      await typewriterResultLine(`❌ 参数建议执行失败：${result.error}`);
-      setStreamingText(`参数校准失败：${result.error}`);
-    }
-  }
-
-  async function applyLabConfigAndRecalculate() {
-    if (!lastSeedPayload) return;
-    setResultLogs((prev) => [
-      ...prev,
-      `🧪 实验参数已应用：luck=${labConfig.WEIGHT_LUCK}, year=${labConfig.WEIGHT_YEAR}, climate=${labConfig.CLIMATE_INTENSITY}`,
-    ]);
-    await onSeedSubmit(lastSeedPayload);
-  }
-
-  async function runStressTest(scenario: string) {
-    if (!metadata) return;
-    const parts = String(scenario || "").split(/[,\s/]+/).filter(Boolean);
-    const yearPillar = parts[0] || "";
-    const luckPillar = parts[1] || "";
-    const response = await fetch(`${API_BASE}/api/v1/analyze/stress-test`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        metadata,
-        gender: ((metadata as Record<string, unknown>)?.gender as string) || "male",
-        physics_config: labConfig,
-        baseline_structure_final_decision: finalStructureFinalDecisionV0 || {},
-        year_pillar: yearPillar,
-        luck_pillar: luckPillar,
-        enabled_plugins: [
-          ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-          ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-          ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-        ],
-        lang,
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok && data?.ok) {
-      setStressTestResult(data as Record<string, unknown>);
-      setResultLogs((prev) => [
-        ...prev,
-        `🧪 压力测试 ${yearPillar}${luckPillar ? `/${luckPillar}` : ""} -> rollback=${Boolean(data.rollback_triggered)} ΔAbs=${Number(data.delta_abs || 0).toFixed(2)}`,
-      ]);
-    } else {
-      setResultLogs((prev) => [...prev, `❌ 压力测试失败：${String(data?.detail || "unknown")}`]);
-    }
-  }
-
-  async function runGenderComparison() {
-    if (!lastSeedPayload) return;
-    const base = {
-      date: lastSeedPayload.date,
-      time: lastSeedPayload.time,
-      calendar: lastSeedPayload.calendar,
-      lang,
-      latitude: 31.2304,
-      longitude: 121.4737,
-      physics_config: labConfig,
-      enabled_plugins: [
-        ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-        ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-        ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-      ],
-      blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
-      reference_year: referenceYearRef.current,
-    };
-    const [maleResp, femaleResp] = await Promise.all([
-      fetch(`${API_BASE}/api/v1/analyze-seed`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...base, gender: "male" }),
-      }),
-      fetch(`${API_BASE}/api/v1/analyze-seed`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...base, gender: "female" }),
-      }),
-    ]);
-    const maleData = await maleResp.json().catch(() => ({}));
-    const femaleData = await femaleResp.json().catch(() => ({}));
-    const maleAxes = (maleData?.physics_tensor?.deity_energy_axes || {}) as Record<string, { absolute_energy?: number }>;
-    const femaleAxes = (femaleData?.physics_tensor?.deity_energy_axes || {}) as Record<string, { absolute_energy?: number }>;
-    const malePeakAbs = Math.max(0, ...Object.values(maleAxes).map((v) => Number(v?.absolute_energy || 0)));
-    const femalePeakAbs = Math.max(0, ...Object.values(femaleAxes).map((v) => Number(v?.absolute_energy || 0)));
-
-    const [maleVerdictResp, femaleVerdictResp] = await Promise.all([
-      fetch(`${API_BASE}/api/v1/final-verdict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          metadata: maleData?.metadata || {},
-          physics_tensor: maleData?.physics_tensor || {},
-          selected_cards: [],
-          consensus_history: [],
-          enabled_plugins: [
-            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
-          plugin_weights: {
-            "classical.blind_school.v1": Number(pluginWeights.blindSchool || 0),
-            "classical.wangshuai.v1": Number(pluginWeights.wangshuai || 0),
-          },
-          clear_previous_verdict: true,
-          force_clear_cache: true,
-          lang,
-        }),
-      }),
-      fetch(`${API_BASE}/api/v1/final-verdict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          metadata: femaleData?.metadata || {},
-          physics_tensor: femaleData?.physics_tensor || {},
-          selected_cards: [],
-          consensus_history: [],
-          enabled_plugins: [
-            ...(pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
-          plugin_weights: {
-            "classical.blind_school.v1": Number(pluginWeights.blindSchool || 0),
-            "classical.wangshuai.v1": Number(pluginWeights.wangshuai || 0),
-          },
-          clear_previous_verdict: true,
-          force_clear_cache: true,
-          lang,
-        }),
-      }),
-    ]);
-    const maleVerdict = await maleVerdictResp.json().catch(() => ({}));
-    const femaleVerdict = await femaleVerdictResp.json().catch(() => ({}));
-    const maleWork = Number(maleVerdict?.work_vector?.work_expectation || 0);
-    const femaleWork = Number(femaleVerdict?.work_vector?.work_expectation || 0);
-    const toPathBreakScore = (verdict: Record<string, unknown>) => {
-      const vectors = (((verdict?.work_vector as { work_vectors?: Array<Record<string, unknown>> } | undefined)?.work_vectors) || []);
-      const ziwu = vectors.filter((item) => String(item?.detail || "").includes("子午冲"));
-      if (ziwu.length === 0) return 0;
-      const scores = ziwu.map((item) => {
-        const gain = Number(item?.unlock_gain || 0);
-        const risk = Number(item?.backfire_risk || 0);
-        if (gain <= 0) return 1;
-        return Math.max(0, Math.min(1, risk / gain));
-      });
-      return Math.max(...scores);
-    };
-    const malePathBreakScore = toPathBreakScore(maleVerdict as Record<string, unknown>);
-    const femalePathBreakScore = toPathBreakScore(femaleVerdict as Record<string, unknown>);
-    const totalWeight = Math.max(0.0001, Number(pluginWeights.blindSchool || 0) + Number(pluginWeights.wangshuai || 0));
-    const blindRatio = Number(pluginWeights.blindSchool || 0) / totalWeight;
-    const maleThemeColor = interpolateColor("#2D4F1E", "#1A1A1A", blindRatio);
-    const femaleThemeColor = interpolateColor("#2D4F1E", "#1A1A1A", 1 - blindRatio);
-    const summary = `若为坤造（女），当前做功净值从 ${maleWork.toFixed(2)} 变化为 ${femaleWork.toFixed(2)}；子午冲损毁度 男${Math.round(malePathBreakScore * 100)}% / 女${Math.round(femalePathBreakScore * 100)}%。`;
-
-    setGenderComparisonResult({
-      male_dayun: String(maleData?.timeline?.dayun || ""),
-      female_dayun: String(femaleData?.timeline?.dayun || ""),
-      male_peak_abs: malePeakAbs,
-      female_peak_abs: femalePeakAbs,
-      male_work_net: maleWork,
-      female_work_net: femaleWork,
-      male_path_break_score: malePathBreakScore,
-      female_path_break_score: femalePathBreakScore,
-      male_theme_color: maleThemeColor,
-      female_theme_color: femaleThemeColor,
-      summary,
-    });
-    setResultLogs((prev) => [...prev, `🧭 性别镜像对比完成：男(${maleWork.toFixed(2)}) vs 女(${femaleWork.toFixed(2)})`]);
-  }
-
-  async function revokeConfirmedDecision(id: string) {
-    const nextDecisions = confirmedDecisions.filter((item) => item.id !== id);
-    setConfirmedDecisions(nextDecisions);
-    setConfirmedDecisionIds((prev) => prev.filter((item) => item !== id));
-  }
-
-  const reCalculateAbs = useCallback(async () => {
-    await reCalculateAbsSilentlyImplRef.current();
-  }, []);
-  reCalculateAbsRef.current = reCalculateAbs;
-
-  const onPluginConfigChange = useCallback(() => {
-    const prevJson = runtimeConfigSerializedRef.current;
-    if (prevJson) {
-      try {
-        const prevCfg = JSON.parse(prevJson) as { pluginWeights?: PluginWeights };
-        const pw = prevCfg.pluginWeights;
-        const next = labStateRef.current.runtimeConfig.pluginWeights;
-        if (
-          pw &&
-          typeof pw.blindSchool === "number" &&
-          Number.isFinite(pw.blindSchool) &&
-          typeof pw.wangshuai === "number" &&
-          Number.isFinite(pw.wangshuai) &&
-          (Math.abs(next.blindSchool - pw.blindSchool) > 0.2 ||
-            Math.abs(next.wangshuai - pw.wangshuai) > 0.2)
-        ) {
-          setSigShiftFlashKey((k) => k + 1);
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    runtimeConfigSerializedRef.current = JSON.stringify(labStateRef.current.runtimeConfig);
-    void reCalculateAbs();
-  }, [reCalculateAbs]);
-
-  useEffect(() => {
-    const sig = JSON.stringify(labState.runtimeConfig);
-    if (runtimeConfigSerializedRef.current === null) {
-      runtimeConfigSerializedRef.current = sig;
-    }
-    const prevView = prevActiveViewRef.current;
-    const enteredLab = activeView === "lab" && prevView !== null && prevView !== "lab";
-    prevActiveViewRef.current = activeView;
-
-    if (activeView !== "lab") {
-      return () => {
-        if (pluginRecalcTimerRef.current) {
-          clearTimeout(pluginRecalcTimerRef.current);
-          pluginRecalcTimerRef.current = null;
-        }
-      };
-    }
-    if (!lastSeedPayload || busy || isStreaming || isExecuting) {
-      return () => {
-        if (pluginRecalcTimerRef.current) {
-          clearTimeout(pluginRecalcTimerRef.current);
-          pluginRecalcTimerRef.current = null;
-        }
-      };
-    }
-
-    const drift = runtimeConfigSerializedRef.current !== sig;
-
-    const runNow = () => {
-      if (pluginRecalcTimerRef.current) {
-        clearTimeout(pluginRecalcTimerRef.current);
-        pluginRecalcTimerRef.current = null;
-      }
-      onPluginConfigChange();
-    };
-
-    if (enteredLab) {
-      runNow();
-      return () => {
-        if (pluginRecalcTimerRef.current) {
-          clearTimeout(pluginRecalcTimerRef.current);
-          pluginRecalcTimerRef.current = null;
-        }
-      };
-    }
-
-    if (drift) {
-      if (pluginRecalcTimerRef.current) clearTimeout(pluginRecalcTimerRef.current);
-      pluginRecalcTimerRef.current = setTimeout(runNow, 280);
-    }
-
-    return () => {
-      if (pluginRecalcTimerRef.current) {
-        clearTimeout(pluginRecalcTimerRef.current);
-        pluginRecalcTimerRef.current = null;
-      }
-    };
-  }, [
-    labState.runtimeConfig,
-    activeView,
+  const {
+    clearLabPipelineForSeedDraft,
+    setLang,
+    applyCurrentSqlPatch,
+    applyLabConfigAndRecalculate,
+    revokeConfirmedDecision,
+    reCalculateAbs,
+  } = useStreamBoardPipeline({
+    labStateRef,
+    labState,
+    setLastSeedPayload,
+    persistLastSeedToStore,
+    setMetadata,
+    setStreamingText,
+    setAuditItems,
+    setResultLogs,
+    setDeityScores,
+    setDeityEnergyAxes,
+    setDeityComponents,
+    setDeityTraceDetails,
+    setHoveredDeity,
+    setPhysicsAudit,
+    setPhysicsConfidence,
+    setPhysicsEvidence,
+    setShowPhysicsAudit,
+    setAuditorProposalCards,
+    setResolvedCardIds,
+    setPhysicsParams,
+    setGlobalEntropy,
+    setConfirmedConflicts,
+    setFirstPromptText,
+    setTimeline,
+    setLlmDiagnosticData,
+    setFinalVerdictBody,
+    setFinalVerdictChangeLog,
+    setFinalVerdictVersionId,
+    setFinalLogicalEvidence,
+    setFinalWorkVector,
+    setFinalTopologyGraphV1,
+    setFinalStructureCandidatesV0,
+    setFinalStructureFinalDecisionV0,
+    setFinalVerdictHistory,
+    setStressTestResult,
+    setGenderComparisonResult,
+    setConsensusHistory,
+    setConfirmedDecisions,
+    setConfirmedDecisionIds,
+    resetSeedPreviewState,
+    setConsultationId,
+    setSelectionResetToken,
+    setLogicDiff,
+    mergeSnapshot,
+    clearDecisionInbox,
+    onSeedSubmit,
+    langRef,
+    setLangState,
+    setUiLang,
+    lastSeedPayloadRef,
+    metadataRef,
+    busyRef,
+    isStreamingRef,
+    isExecutingRef,
+    isSnapshotRestoringRef,
+    applyPhysicsSqlPatch,
+    llmDiagnosticData,
+    typewriterResultLine,
+    labConfig,
     lastSeedPayload,
+    confirmedDecisions,
+    reCalculateAbsRef,
+    reCalculateAbsSilentlyImplRef,
+    setSigShiftFlashKey,
+    activeView: activeView || "",
     busy,
     isStreaming,
     isExecuting,
-    onPluginConfigChange,
-  ]);
+  });
+
+  const { onExecuteDecision, rerunFinalVerdictWithWeights, refreshVerdict, executeDecisionAndRefresh } =
+    useStreamBoardExecution(executionCtxRef);
 
   useStreamBoardSilentRecalculateLayout({
     reCalculateAbsSilentlyImplRef,
@@ -1293,6 +734,63 @@ export function useStreamBoardController(): StreamBoardViewModel {
     updateLogicDiff,
     scheduleInteractionHubPersist,
     llmModelName,
+  };
+
+  diagnosticDepsRef.current = {
+    metadata,
+    lastSeedPayload,
+    labConfig,
+    pluginSwitches,
+    pluginWeights,
+    lang,
+    finalStructureFinalDecisionV0: finalStructureFinalDecisionV0 as Record<string, unknown> | null,
+    referenceYearRef,
+    setStressTestResult,
+    setGenderComparisonResult,
+    setResultLogs,
+  };
+
+  drawerDepsRef.current = {
+    deityScores,
+    deityTraceDetails,
+    finalVerdictHistory,
+    setLogicDrawerTitle,
+    setLogicDrawerFocus,
+    setLogicDrawerDetails,
+    setLogicDrawerTrace,
+    setLogicDrawerOpen,
+  };
+
+  snapshotPersistDepsRef.current = {
+    labStateRef,
+    labState,
+    mergeSnapshot,
+    setBaselineMetrics,
+    baselineMetrics,
+    setLogicDiff,
+    setResultLogs,
+    finalWorkVector: finalWorkVector as Record<string, unknown> | null,
+    globalEntropy,
+    isSnapshotRestoringRef,
+    isRestoring,
+    lastSeedPayload,
+    resolvedCardIds,
+    confirmedDecisionIds,
+    health,
+    i18nCalls,
+    auditItems,
+    resultLogs,
+    cards,
+    consultationId,
+    llmDiagnosticData: llmDiagnosticData as Record<string, unknown> | null,
+    finalVerdictBody: finalVerdictBody || undefined,
+    finalVerdictChangeLog,
+    finalLogicalEvidence,
+    finalTopologyGraphV1: finalTopologyGraphV1 as Record<string, unknown> | null,
+    finalStructureCandidatesV0: finalStructureCandidatesV0 as Record<string, unknown> | null,
+    finalStructureFinalDecisionV0: finalStructureFinalDecisionV0 as Record<string, unknown> | null,
+    finalVerdictVersionId,
+    setSnapshotAvailable,
   };
 
   executionCtxRef.current = {
