@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import {
   boundsForPhysicsSettingKey,
   physicsSliderBindingForKey,
 } from "@/features/admin/constants/physicsSkillSliderBounds";
+import { ADMIN_HEADERS, ADMIN_TOKEN, API_BASE } from "@/features/admin-settings/constants";
 import type { PluginManifestItem } from "@/features/admin/hooks/usePluginRegistry";
 import { runtimePhysicsNumber } from "@/features/admin/utils/runtimePhysicsNumber";
 import type { PhysicsLabConfig, PluginSwitches, PluginWeights } from "@/features/stream-board/models";
@@ -31,6 +32,22 @@ function statusTagClass(status: "HEALTHY" | "IDLE" | "ERROR"): string {
   if (status === "HEALTHY") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
   if (status === "ERROR") return "border-rose-500/40 bg-rose-500/10 text-rose-300";
   return "border-zinc-700 bg-zinc-800/80 text-zinc-300";
+}
+
+/** 干支交互 Admin 卡：逻辑分类色带（与 manifest description_tags 对齐） */
+function logicCategoryTagClass(tag: string): string | null {
+  if (tag === "[Fusion]") return "border-teal-500/50 bg-teal-500/12 text-teal-100/95";
+  if (tag === "[Conflict]") return "border-rose-500/45 bg-rose-500/12 text-rose-100/90";
+  if (tag === "[Support]") return "border-violet-500/45 bg-violet-500/12 text-violet-100/90";
+  return null;
+}
+
+function descriptionTagPillClass(tag: string): string {
+  const cat = logicCategoryTagClass(tag);
+  if (cat) return `${cat} rounded border px-1 py-0 text-[9px] font-medium`;
+  if (tag === "priority_high") return "rounded border border-amber-500/45 bg-amber-500/10 px-1 py-0 text-[9px] text-amber-200/90";
+  if (tag === "priority_mid") return "rounded border border-zinc-600/80 bg-zinc-800/80 px-1 py-0 text-[9px] text-zinc-400";
+  return "rounded border border-zinc-700/80 px-1 py-0 text-[9px] text-zinc-500";
 }
 
 export type CausalPluginCardPlugin = PluginManifestItem & {
@@ -76,6 +93,19 @@ export function CausalPluginCard({
 }: Props) {
   const [canonOpen, setCanonOpen] = useState(false);
   const [labInteractOpen, setLabInteractOpen] = useState(false);
+  const [persistBusy, setPersistBusy] = useState(false);
+  const [persistMsg, setPersistMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const match = () => {
+      const h = (window.location.hash || "").replace(/^#/, "");
+      if (h === `card-${plugin.id}`) setLabInteractOpen(true);
+    };
+    match();
+    window.addEventListener("hashchange", match);
+    return () => window.removeEventListener("hashchange", match);
+  }, [plugin.id]);
   const meta = plugin.metadata || ({} as PluginManifestItem["metadata"]);
   const display = meta.display_name || meta.label || plugin.id;
   const useCase = meta.use_case || "";
@@ -99,6 +129,39 @@ export function CausalPluginCard({
       .filter((row): row is NonNullable<typeof row> => row != null);
   }, [footerSkills, setLabConfig]);
 
+  const persistPhysicsBaseline = async () => {
+    if (!labConfig || physicsSliderRows.length === 0) return;
+    setPersistMsg(null);
+    setPersistBusy(true);
+    try {
+      const items = physicsSliderRows.map(({ pk, bounds }) => {
+        const raw =
+          typeof labConfig[pk] === "number" && Number.isFinite(labConfig[pk] as number)
+            ? (labConfig[pk] as number)
+            : (defaultPhysicsSettings?.[pk as string] ?? bounds[0]);
+        return { key: pk as string, value: Number(raw) };
+      });
+      const url = `${API_BASE}/api/v1/admin/settings`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
+        body: JSON.stringify({ items }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; changed?: string[]; detail?: string };
+      if (!res.ok || !data?.ok) {
+        const hint = res.status === 401 ? "（请配置 NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN）" : "";
+        setPersistMsg(`${String(data?.detail ?? "保存失败")}${hint}`);
+        return;
+      }
+      const n = Array.isArray(data.changed) ? data.changed.length : 0;
+      setPersistMsg(n > 0 ? `已写入 ${n} 项系统基准` : "无有效键写入（仅允许 DEFAULT_PHYSICS_SETTINGS 中的键）");
+    } catch (e) {
+      setPersistMsg(e instanceof Error ? e.message : "网络错误");
+    } finally {
+      setPersistBusy(false);
+    }
+  };
+
   return (
     <article
       id={`card-${plugin.id}`}
@@ -111,7 +174,7 @@ export function CausalPluginCard({
           {meta.description_tags && meta.description_tags.length > 0 ? (
             <div className="mt-1 flex flex-wrap gap-1">
               {meta.description_tags.map((tag) => (
-                <span key={tag} className="rounded border border-zinc-700/80 px-1 py-0 text-[9px] text-zinc-500">
+                <span key={tag} className={descriptionTagPillClass(tag)}>
                   {tag}
                 </span>
               ))}
@@ -262,6 +325,20 @@ export function CausalPluginCard({
                     </label>
                   );
                 })}
+                <div className="border-t border-cyan-900/40 pt-2">
+                  <button
+                    type="button"
+                    disabled={isFinalized || persistBusy || !ADMIN_TOKEN.trim()}
+                    onClick={() => void persistPhysicsBaseline()}
+                    title={
+                      !ADMIN_TOKEN.trim() ? "需配置 NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN 才能写入服务端" : undefined
+                    }
+                    className="rounded-md border border-cyan-600/50 bg-cyan-950/50 px-2 py-1 text-[10px] text-cyan-100/95 hover:bg-cyan-900/40 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    {persistBusy ? "保存中…" : "保存到系统基准"}
+                  </button>
+                  {persistMsg ? <p className="mt-1 text-[9px] text-zinc-400">{persistMsg}</p> : null}
+                </div>
               </div>
             ) : null}
           </div>

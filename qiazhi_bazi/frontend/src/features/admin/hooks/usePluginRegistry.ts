@@ -19,7 +19,7 @@ export type BasePhysicsSkillRow = BlindSchoolSkillItem;
 
 export type PluginManifestItem = {
   id: string;
-  layer: "L1" | "L2" | "L3" | "L4";
+  layer: "L0" | "L1" | "L2" | "L3" | "L4";
   category: string;
   status: "HEALTHY" | "IDLE" | "ERROR";
   dependencies: string[];

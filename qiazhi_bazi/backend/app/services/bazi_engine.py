@@ -1,4 +1,8 @@
-"""基础排盘引擎：输入日期时间，生成四柱干支，并提供大运/流年摘要。"""
+"""基础排盘引擎：输入日期时间，生成四柱干支，并提供大运/流年摘要。
+
+L0 原子元数据（藏干、通根系数）在物理推断链路入口装载，见 `app.core.bazi.engine` /
+`PhysicsInferenceSkill.infer` 中的 `ensure_l0_for_physics`。
+"""
 from __future__ import annotations
 
 from datetime import datetime

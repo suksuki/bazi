@@ -6,8 +6,13 @@ import re
 from typing import Any, Dict, List, Tuple
 
 from app.schemas.bazi_metadata import BaziMetadata
+from app.core.bazi.engine import (
+    blend_position_weights_l0,
+    branch_hidden_stems_effective,
+    ensure_l0_for_physics,
+    get_root_resonance,
+)
 from app.skills.physics_rules import (
-    BRANCH_HIDDEN_STEMS,
     DEFAULT_POSITION_WEIGHTS,
     DEFAULT_SEASONAL_BASE,
     MONTH_BRANCH_TO_SEASON,
@@ -95,7 +100,15 @@ def build_energy_fields(
     liunian: str | None,
     weight_luck: float = WEIGHT_LUCK,
     weight_year: float = WEIGHT_YEAR,
+    runtime_physics: Dict[str, float] | None = None,
 ) -> tuple[Dict[str, Dict[str, float]], Dict[str, float], Dict[str, float], Dict[str, List[Dict[str, Any]]]]:
+    ensure_l0_for_physics()
+    rp = runtime_physics or {}
+    hidden_table = branch_hidden_stems_effective()
+    pos_weights = blend_position_weights_l0(position_weights, rp)
+    pillar_branches = [str(getattr(metadata.pillars, p).branch) for p in ("year", "month", "day", "hour")]
+    l0_hidden_scale = float(rp.get("L0_HIDDEN_ENERGY_SCALE", 1.0))
+
     result_by_pillar: Dict[str, Dict[str, float]] = {}
     vector = {"wood": 0.0, "fire": 0.0, "earth": 0.0, "metal": 0.0, "water": 0.0}
     raw_deity_energy: Dict[str, float] = {key: 0.0 for key in TEN_DEITIES}
@@ -103,12 +116,13 @@ def build_energy_fields(
 
     for pillar in ("year", "month", "day", "hour"):
         pair = getattr(metadata.pillars, pillar)
-        pos_weight = position_weights.get(pillar, DEFAULT_POSITION_WEIGHTS[pillar])
+        pos_weight = pos_weights.get(pillar, DEFAULT_POSITION_WEIGHTS[pillar])
         stem_char = pair.stem
         stem_element = STEM_TO_ELEMENT.get(stem_char, "earth")
         seasonal_el = float(seasonal_factor.get(stem_element, 1.0))
         raw = float(pair.energy_value)
-        stem_energy = raw * pos_weight * seasonal_el * stem_boost * root_decay * conflict_factor * protrusion
+        root_fac = get_root_resonance(stem_char, pillar_branches, rp)
+        stem_energy = raw * pos_weight * seasonal_el * stem_boost * root_decay * conflict_factor * protrusion * root_fac
 
         vector[stem_element] += stem_energy
         deity_stem = deity_from_self_and_target_stem(day_stem=day_stem, target_stem=stem_char)
@@ -129,11 +143,23 @@ def build_energy_fields(
             adjusted_stem_energy = stem_energy
 
         branch_char = pair.branch
-        hidden = BRANCH_HIDDEN_STEMS.get(branch_char, {})
+        hidden = hidden_table.get(branch_char, {})
         for hidden_stem, ratio in hidden.items():
             hidden_element = STEM_TO_ELEMENT.get(hidden_stem, "earth")
             seasonal_h = float(seasonal_factor.get(hidden_element, 1.0))
-            hidden_energy = raw * (float(ratio) / 100.0) * pos_weight * seasonal_h * stem_boost * root_decay * conflict_factor * protrusion
+            hid_root = get_root_resonance(hidden_stem, pillar_branches, rp)
+            hidden_energy = (
+                raw
+                * (float(ratio) / 100.0)
+                * pos_weight
+                * seasonal_h
+                * stem_boost
+                * root_decay
+                * conflict_factor
+                * protrusion
+                * l0_hidden_scale
+                * hid_root
+            )
             vector[hidden_element] += hidden_energy
             deity_hidden = deity_from_self_and_target_stem(day_stem=day_stem, target_stem=hidden_stem)
             adjusted_hidden_energy = hidden_energy * root_decay_factor if deity_hidden in floating_deities else hidden_energy
@@ -172,6 +198,8 @@ def build_energy_fields(
         protrusion=protrusion,
         floating_deities=floating_deities,
         root_decay_factor=root_decay_factor,
+        branch_hidden=hidden_table,
+        runtime_physics=rp,
     )
     inject_disturbance(
         ganzhi=liunian,
@@ -188,6 +216,8 @@ def build_energy_fields(
         protrusion=protrusion,
         floating_deities=floating_deities,
         root_decay_factor=root_decay_factor,
+        branch_hidden=hidden_table,
+        runtime_physics=rp,
     )
     return result_by_pillar, vector, raw_deity_energy, deity_contribution_sources
 
@@ -208,14 +238,29 @@ def inject_disturbance(
     protrusion: float,
     floating_deities: set[str],
     root_decay_factor: float,
+    branch_hidden: Dict[str, Dict[str, float]] | None = None,
+    runtime_physics: Dict[str, float] | None = None,
 ) -> None:
     if not ganzhi or len(str(ganzhi)) < 2:
         return
+    ensure_l0_for_physics()
+    rp = runtime_physics or {}
+    ht = branch_hidden if branch_hidden is not None else branch_hidden_stems_effective()
+    l0_hidden_scale = float(rp.get("L0_HIDDEN_ENERGY_SCALE", 1.0))
     stem_char = str(ganzhi)[0]
     branch_char = str(ganzhi)[1]
     stem_element = STEM_TO_ELEMENT.get(stem_char, "earth")
     seasonal_stem = float(seasonal_factor.get(stem_element, 1.0))
-    stem_energy = 100.0 * weight * seasonal_stem * stem_boost * root_decay * conflict_factor * protrusion
+    stem_energy = (
+        100.0
+        * weight
+        * seasonal_stem
+        * stem_boost
+        * root_decay
+        * conflict_factor
+        * protrusion
+        * get_root_resonance(stem_char, [branch_char], rp)
+    )
     stem_deity = deity_from_self_and_target_stem(day_stem=day_stem, target_stem=stem_char)
     adjusted_stem = stem_energy * root_decay_factor if stem_deity in floating_deities else stem_energy
     vector[stem_element] += adjusted_stem
@@ -230,10 +275,21 @@ def inject_disturbance(
             "contribution_energy": round(adjusted_stem, 4),
         }
     )
-    for hidden_stem, ratio in BRANCH_HIDDEN_STEMS.get(branch_char, {}).items():
+    for hidden_stem, ratio in ht.get(branch_char, {}).items():
         hidden_element = STEM_TO_ELEMENT.get(hidden_stem, "earth")
         seasonal_hidden = float(seasonal_factor.get(hidden_element, 1.0))
-        hidden_energy = 100.0 * weight * (float(ratio) / 100.0) * seasonal_hidden * stem_boost * root_decay * conflict_factor * protrusion
+        hidden_energy = (
+            100.0
+            * weight
+            * (float(ratio) / 100.0)
+            * seasonal_hidden
+            * stem_boost
+            * root_decay
+            * conflict_factor
+            * protrusion
+            * l0_hidden_scale
+            * get_root_resonance(hidden_stem, [branch_char], rp)
+        )
         hidden_deity = deity_from_self_and_target_stem(day_stem=day_stem, target_stem=hidden_stem)
         adjusted_hidden = hidden_energy * root_decay_factor if hidden_deity in floating_deities else hidden_energy
         vector[hidden_element] += adjusted_hidden

@@ -37,6 +37,8 @@ type Props = {
   onHoverDeity?: (deityName?: string) => void;
   /** physics_tensor.meta.stem_fusion_v1 */
   stemFusionMeta?: Record<string, unknown> | null;
+  /** physics_tensor.meta.interaction_marks_per_deity */
+  interactionMarksPerDeity?: Record<string, string[]> | null;
   /** physics_tensor.meta.l1_status_v1.per_deity */
   l1StatusPerDeity?: Record<string, { work_efficiency?: number }> | null;
   /** physics_tensor.meta.pivot_defense_v1 */
@@ -63,6 +65,7 @@ export function TenGodNumericList({
   onOpenLogic,
   onHoverDeity,
   stemFusionMeta = null,
+  interactionMarksPerDeity = null,
   l1StatusPerDeity = null,
   pivotDeity = null,
   pivotDefenseSemantic = null,
@@ -104,6 +107,7 @@ export function TenGodNumericList({
         onHoverDeity={onHoverDeity}
         deityTraceDetails={deityTraceDetails}
         stemFusionMeta={stemFusionMeta}
+        interactionMarksPerDeity={interactionMarksPerDeity}
         l1StatusPerDeity={l1StatusPerDeity}
         pivotDeity={pivotDeity}
         pivotDefenseSemantic={pivotDefenseSemantic}

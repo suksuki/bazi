@@ -8,23 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Mapping, MutableMapping, Optional, Tuple
 
-from app.skills.physics_rules import BRANCH_HIDDEN_STEMS, STEM_TO_ELEMENT
-
-# 地支本气天干（用于透干判定）
-BRANCH_MAIN_STEM: Dict[str, str] = {
-    "子": "癸",
-    "丑": "己",
-    "寅": "甲",
-    "卯": "乙",
-    "辰": "戊",
-    "巳": "丙",
-    "午": "丁",
-    "未": "己",
-    "申": "庚",
-    "酉": "辛",
-    "戌": "戊",
-    "亥": "壬",
-}
+from app.core.bazi.engine import branch_hidden_stems_effective, branch_main_stem_effective, ensure_l0_for_physics
+from app.skills.physics_rules import STEM_TO_ELEMENT
 
 PILLAR_KEYS = frozenset({"year", "month", "day", "hour"})
 PILLAR_ORDER = ("year", "month", "day", "hour")
@@ -105,7 +90,8 @@ def stem_element(stem: str) -> str:
 
 
 def branch_main_element(branch_char: str) -> str:
-    main = BRANCH_MAIN_STEM.get(str(branch_char), "")
+    ensure_l0_for_physics()
+    main = branch_main_stem_effective().get(str(branch_char), "")
     return stem_element(main) if main else ""
 
 
@@ -137,6 +123,9 @@ class StemBranchCouplingEngine:
         self.stems = dict(stems_by_pillar)
         self.branches = dict(branches_by_pillar)
         self.cfg = dict(merged_config)
+        ensure_l0_for_physics()
+        self._branch_hidden = branch_hidden_stems_effective()
+        self._branch_main_stem = branch_main_stem_effective()
 
     def _pillar_index(self, pillar: str) -> int:
         try:
@@ -153,14 +142,14 @@ class StemBranchCouplingEngine:
         if not s:
             return False
         for br in self.branches.values():
-            hidden = BRANCH_HIDDEN_STEMS.get(str(br), {})
+            hidden = self._branch_hidden.get(str(br), {})
             if s in hidden:
                 return True
         return False
 
     def main_qi_penetrates_stems(self, branch_char: str) -> bool:
         """透干：该支本气天干在四柱天干中出现。"""
-        main = BRANCH_MAIN_STEM.get(str(branch_char), "")
+        main = self._branch_main_stem.get(str(branch_char), "")
         if not main:
             return False
         return any(v == main for v in self.stems.values())

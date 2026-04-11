@@ -16,10 +16,55 @@ from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to
 from app.plugins.chronos.core import run_chronos_plugin
 from app.plugins.chronos.temporal_v2 import append_temporal_trigger_audits
 from app.plugins.base_physics.core_operators.op_interdimensional import compute_solid_ghost_ratio
+from app.skills.physics_rules import TEN_DEITIES
 
 
 def _utc_audit_ts() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _refresh_deity_axis_percentages(physics_tensor: Dict[str, Any]) -> None:
+    axes = physics_tensor.get("deity_energy_axes")
+    if not isinstance(axes, dict):
+        return
+    total = sum(
+        float((axes.get(d) or {}).get("absolute_energy") or 0.0) for d in TEN_DEITIES if isinstance(axes.get(d), dict)
+    ) or 1.0
+    for d in TEN_DEITIES:
+        blk = axes.get(d)
+        if isinstance(blk, dict):
+            ae = float(blk.get("absolute_energy") or 0.0)
+            blk["relative_percentage"] = round(100.0 * ae / total, 2)
+
+
+def _reconcile_robber_wealth_under_pattern_sovereignty(physics_tensor: Dict[str, Any]) -> None:
+    """从格等格局主权：在 pattern_profile 已定型后，撤销劫财见财对正财 Abs 的损耗记账（与 CausalRouter 反转一致）。"""
+    meta = physics_tensor.get("meta")
+    if not isinstance(meta, dict):
+        return
+    pp = meta.get("pattern_profile")
+    rw = meta.get("l1_robber_wealth_v1")
+    if not isinstance(pp, dict) or not pp.get("sovereignty_priority"):
+        return
+    if not isinstance(rw, dict) or rw.get("sovereignty_gain"):
+        return
+    pk = str(pp.get("pattern_kind") or "")
+    if not pk.startswith("cong_"):
+        return
+    axes = physics_tensor.get("deity_energy_axes")
+    before = rw.get("正财_abs_before")
+    if isinstance(axes, dict) and isinstance(axes.get("正财"), dict) and before is not None:
+        try:
+            axes["正财"]["absolute_energy"] = round(float(before), 4)
+        except (TypeError, ValueError):
+            pass
+    meta["l1_robber_wealth_v1"] = {
+        **rw,
+        "sovereignty_gain": True,
+        "alloc_loss_effective": 0.0,
+        "note": "格局主权(从势)：劫财见财之 L1 损耗在格局层纠偏为主权增益记账",
+    }
+    _refresh_deity_axis_percentages(physics_tensor)
 
 
 def _pillars_blob(metadata: Any) -> Dict[str, Any]:
@@ -341,4 +386,5 @@ def evaluate_interactions(
         )
         apply_energy_flow_audit(physics_tensor=physics_tensor, physics_config=physics_config)
         evaluate_pattern_profile(physics_tensor=physics_tensor, metadata=md, settings=settings)
+        _reconcile_robber_wealth_under_pattern_sovereignty(physics_tensor)
     return physics_tensor

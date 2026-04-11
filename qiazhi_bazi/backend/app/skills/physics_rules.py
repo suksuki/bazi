@@ -140,6 +140,7 @@ STEM_YIN_YANG = {
     "癸": "yin",
 }
 
+# 出厂默认藏干配比；运行时优先读 DB `l0_branch_hidden_schema`（见 `app.core.bazi.engine.branch_hidden_stems_effective`）。
 BRANCH_HIDDEN_STEMS: Dict[str, Dict[str, float]] = {
     "子": {"癸": 100.0},
     "丑": {"己": 60.0, "癸": 30.0, "辛": 10.0},

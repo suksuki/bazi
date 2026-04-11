@@ -102,6 +102,26 @@ export type PhysicsLabConfig = {
   STATUS_BOOST_MULTIPLIER?: number;
   /** 用户环境方位：东/南/西/北/中；触发后端 L1_OP_GEOGRAPHY 场强演示 */
   user_target_direction?: string;
+  /** 深度地支 / 天干五合：与 DEFAULT_PHYSICS_SETTINGS 对齐，供 Admin 实验滑块写入 analyze-seed */
+  L1_SUB_BRANCH_OP_ENABLE?: number;
+  SUB_BRANCH_BANHE_PHI?: number;
+  SUB_BRANCH_BANHE_ABS_BOOST?: number;
+  SUB_BRANCH_BANHE_VECTOR_BOOST?: number;
+  SUB_BRANCH_SANHE_ABS_BOOST?: number;
+  SUB_BRANCH_LIUHE_ABS_BOOST?: number;
+  SUB_BRANCH_SANXING_ABS_DAMP?: number;
+  SUB_BRANCH_LIUCHONG_ABS_DAMP?: number;
+  SUB_BRANCH_LIUHAI_ABS_DAMP?: number;
+  SUB_BRANCH_LIUPO_ABS_DAMP?: number;
+  SUB_BRANCH_LIUHAI_ENABLE?: number;
+  SUB_BRANCH_LIUPO_ENABLE?: number;
+  L1_STEM_FUSION_ENABLE?: number;
+  STEM_FUSION_VECTOR_LEAK_RATIO?: number;
+  STEM_FUSION_BRANCH_SUPPORT_RATIO?: number;
+  /** L0 原子层：与后端 DEFAULT_PHYSICS_SETTINGS / l0_* 表对齐 */
+  L0_HIDDEN_ENERGY_SCALE?: number;
+  L0_ROOT_BOOST_FACTOR?: number;
+  L0_YM_DH_WEIGHT_RATIO?: number;
 };
 
 export type PluginSwitches = {

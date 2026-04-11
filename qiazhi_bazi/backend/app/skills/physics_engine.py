@@ -14,6 +14,7 @@ from sqlmodel import select
 
 from app.db.models import PhysicsInteractionParam, PhysicsPositionWeight, PhysicsSeasonalMatrix, SessionConsensus
 from app.db.session import session_scope
+from app.core.bazi.engine import ensure_l0_for_physics
 from app.core.config.physics_settings import resolve_physics_settings
 from app.schemas.bazi_metadata import BaziMetadata
 from app.skills.base import AuditLog, BaseSkill
@@ -230,6 +231,7 @@ class PhysicsInferenceSkill(BaseSkill):
         if metadata.pillars is None:
             return {"vector": {}, "by_pillar": {}, "meta": {"reason": "pillars_missing"}}
 
+        ensure_l0_for_physics()
         params = dict(self._cache.interaction_params)
         runtime_settings = resolve_physics_settings(physics_config)
         for k, v in (consensus_overrides or {}).items():
@@ -266,6 +268,7 @@ class PhysicsInferenceSkill(BaseSkill):
             liunian=liunian,
             weight_luck=runtime_settings["WEIGHT_LUCK"],
             weight_year=runtime_settings["WEIGHT_YEAR"],
+            runtime_physics=runtime_settings,
         )
         pre_climate_vector = {k: float(v) for k, v in vector.items()}
         pre_climate_deity_energy = {k: float(v) for k, v in raw_deity_energy.items()}

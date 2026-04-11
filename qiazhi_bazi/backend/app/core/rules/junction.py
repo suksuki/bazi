@@ -7,7 +7,8 @@ from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 from app.core.config.physics_settings import resolve_physics_settings
 from app.plugins.base_physics.skill_manifest_loader import skill_id_for_l1_operator
 from app.core.rules.decision_inbox_gate import apply_decision_inbox_signal_gate
-from app.skills.physics_rules import BRANCH_HIDDEN_STEMS, ELEMENT_GENERATES, ROOT_MAP, STEM_TO_ELEMENT
+from app.core.bazi.engine import branch_hidden_stems_effective
+from app.skills.physics_rules import ELEMENT_GENERATES, ROOT_MAP, STEM_TO_ELEMENT
 
 
 class EnergyVaultStatus(str, Enum):
@@ -72,7 +73,7 @@ def _contributions_for_deity(trace_map: Dict[str, Any], deity: str) -> List[Dict
 
 def _hidden_tier(branch: str, stem: str) -> str:
     """本气 / 中气 / 余气：按藏干比例排序，最小比例为余气。"""
-    hidden = BRANCH_HIDDEN_STEMS.get(branch) or {}
+    hidden = branch_hidden_stems_effective().get(branch) or {}
     if stem not in hidden:
         return "main"
     ratios = sorted(((s, float(r)) for s, r in hidden.items()), key=lambda x: -x[1])

@@ -16,8 +16,10 @@ import {
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 import type { PhysicsLabConfig, PluginSwitches, PluginWeights } from "@/features/stream-board/models";
 
-type UiLayer = "L1" | "L2" | "L3" | "L4";
+type UiLayer = "L0" | "L1" | "L2" | "L3" | "L4";
+const LAYER_ORDER: UiLayer[] = ["L0", "L1", "L2", "L3", "L4"];
 const LAYER_LABEL: Record<UiLayer, string> = {
+  L0: "L0 原子层 (Atom)",
   L1: "L1 基础 (Base)",
   L2: "L2 功能 (Functional)",
   L3: "L3 现代 (Modern)",
@@ -57,6 +59,27 @@ type ManifestPluginRow = PluginManifestItem & {
   enabled: boolean;
 };
 
+/** L1 因果算子网格：与旧「物理实验参数」分组对齐的快速筛选 */
+type AdminL1FilterTab = "all" | "base" | "interaction" | "spacetime";
+
+function matchesAdminL1Filter(plugin: ManifestPluginRow, tab: AdminL1FilterTab): boolean {
+  if (tab === "all") return true;
+  const cat = (plugin.category || "").toLowerCase();
+  const id = plugin.id;
+  if (tab === "spacetime") return cat.includes("labspacetime") || id.includes("op_lab_");
+  if (tab === "interaction") return cat.includes("coreconflict") || cat.includes("junction");
+  if (cat.includes("coreconflict") || cat.includes("junction")) return false;
+  if (cat.includes("labspacetime") || id.includes("op_lab_")) return false;
+  return true;
+}
+
+const ADMIN_L1_FILTER_TABS: { id: AdminL1FilterTab; label: string; hint: string }[] = [
+  { id: "all", label: "全部 L1", hint: "含实验室时空卡" },
+  { id: "base", label: "基础物理", hint: "生克合绊、长生、维轴、墓库 φ 等" },
+  { id: "interaction", label: "刑冲合害", hint: "核心冲突、地支交互、天干五合" },
+  { id: "spacetime", label: "时空动态", hint: "时运权重、风险墓库、气候拓扑、微弱路径" },
+];
+
 /** L1 网格：伤官见官算子卡片优先，其次其它 CoreConflict，再其余 L1 */
 function compareL1PluginsForGrid(a: ManifestPluginRow, b: ManifestPluginRow): number {
   const rank = (p: ManifestPluginRow) => {
@@ -67,10 +90,16 @@ function compareL1PluginsForGrid(a: ManifestPluginRow, b: ManifestPluginRow): nu
       skills.some((s) => String(s.id).toLowerCase().includes("shangguan")) || pid.includes("shangguan");
     const core =
       tags.includes("core_conflict") ||
+      tags.includes("branch_interaction_ext") ||
       String(p.category || "").includes("CoreConflict") ||
-      skills.some((s) => Array.isArray(s.description_tags) && s.description_tags.includes("core_conflict"));
+      skills.some((s) => Array.isArray(s.description_tags) && s.description_tags.includes("core_conflict")) ||
+      skills.some(
+        (s) => Array.isArray(s.description_tags) && s.description_tags.includes("branch_interaction_ext"),
+      );
+    const labRuntime = String(p.category || "").toLowerCase().includes("labspacetime") || pid.includes("op_lab_");
     if (shangguan) return 0;
     if (core) return 1;
+    if (labRuntime) return 3;
     return 2;
   };
   const ra = rank(a);
@@ -178,6 +207,7 @@ export function PluginManagementPanel() {
   const [blueprintOpen, setBlueprintOpen] = useState(false);
   const [blueprintTitle, setBlueprintTitle] = useState("");
   const [blueprintMd, setBlueprintMd] = useState("");
+  const [l1AdminFilter, setL1AdminFilter] = useState<AdminL1FilterTab>("all");
 
   const openBlueprint = useCallback(
     async (plugin: PluginManifestItem) => {
@@ -300,7 +330,11 @@ export function PluginManagementPanel() {
     const rows = manifest?.base_physics_skills ?? [];
     const tagged = rows.filter(
       (r): r is BasePhysicsSkillRow =>
-        Array.isArray(r.description_tags) && r.description_tags.includes("core_conflict"),
+        ((Array.isArray(r.description_tags) && r.description_tags.includes("core_conflict")) ||
+          (Array.isArray(r.description_tags) && r.description_tags.includes("branch_interaction_ext"))) &&
+        !(Array.isArray(r.description_tags) && r.description_tags.includes("aux_slider")) &&
+        !(Array.isArray(r.description_tags) && r.description_tags.includes("lab_global")) &&
+        !(Array.isArray(r.description_tags) && r.description_tags.includes("interdimensional_expose")),
     );
     return sortCoreConflictSkills(tagged);
   }, [manifest?.base_physics_skills]);
@@ -311,7 +345,8 @@ export function PluginManagementPanel() {
       const skills = p.metadata?.skills;
       if (!Array.isArray(skills)) continue;
       for (const s of skills) {
-        if (s?.id) m.set(String(s.id), p.id);
+        const sid = s?.id ? String(s.id) : "";
+        if (sid && !m.has(sid)) m.set(sid, p.id);
       }
     }
     return m;
@@ -419,135 +454,6 @@ export function PluginManagementPanel() {
       {error ? <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">manifest 拉取失败：{String(error)}</div> : null}
 
       <div
-        className={`rounded-xl border border-sky-500/35 bg-sky-950/30 px-3 py-3 ${
-          isFinalized
-            ? "pointer-events-none border-zinc-600/80 bg-zinc-950/80 opacity-60 grayscale-[0.4] ring-1 ring-zinc-700/60"
-            : ""
-        }`}
-      >
-        <p className="text-[10px] font-medium uppercase tracking-wide text-sky-300/95">base_physics · L1 原子算子</p>
-        {isFinalized ? <p className="mt-1 text-[10px] text-zinc-500">终审已签发 · 参数已锁定</p> : null}
-        <p className="mt-1 text-[11px] text-sky-100/85">
-          相生效率（L1_OP_PROD）、相克损耗（L1_OP_DEST）、合化能量系数（L1_OP_CONN）独立 η，写入 physics_config 参与 analyze-seed。
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <label className="block text-[11px] text-sky-100/90">
-            <span className="font-mono text-[10px] text-sky-200/80">L1_OP_PROD_ETA</span>
-            <span className="ml-1 text-zinc-400">相生效率 {(labConfig.L1_OP_PROD_ETA ?? 1).toFixed(2)}</span>
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={0.05}
-              disabled={isFinalized}
-              value={labConfig.L1_OP_PROD_ETA ?? 1}
-              onChange={(e) =>
-                setLabConfig((prev) => ({ ...prev, L1_OP_PROD_ETA: Number(e.target.value) }))
-              }
-              className="mt-1 w-full accent-[#3B82F6]"
-            />
-          </label>
-          <label className="block text-[11px] text-sky-100/90">
-            <span className="font-mono text-[10px] text-sky-200/80">L1_OP_DEST_ETA</span>
-            <span className="ml-1 text-zinc-400">相克损耗 {(labConfig.L1_OP_DEST_ETA ?? 1).toFixed(2)}</span>
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={0.05}
-              disabled={isFinalized}
-              value={labConfig.L1_OP_DEST_ETA ?? 1}
-              onChange={(e) =>
-                setLabConfig((prev) => ({ ...prev, L1_OP_DEST_ETA: Number(e.target.value) }))
-              }
-              className="mt-1 w-full accent-[#3B82F6]"
-            />
-          </label>
-          <label className="block text-[11px] text-sky-100/90">
-            <span className="font-mono text-[10px] text-sky-200/80">L1_OP_CONN_ETA</span>
-            <span className="ml-1 text-zinc-400">合化能量 {(labConfig.L1_OP_CONN_ETA ?? 1).toFixed(2)}</span>
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={0.05}
-              disabled={isFinalized}
-              value={labConfig.L1_OP_CONN_ETA ?? 1}
-              onChange={(e) =>
-                setLabConfig((prev) => ({ ...prev, L1_OP_CONN_ETA: Number(e.target.value) }))
-              }
-              className="mt-1 w-full accent-[#3B82F6]"
-            />
-          </label>
-        </div>
-
-        <div className="mt-4 border-t border-sky-800/50 pt-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-sky-300/95">干支维轴算子</p>
-          <p className="mt-1 text-[11px] text-sky-100/80">
-            本区开关与滑块仅调节
-            <span className="font-medium text-sky-50/95">物理传导路径</span>
-            （跨柱衰减、屏障、谐振、盖头截脚与人工传导率），不绑定任一十神标签；十神语义冲突算子请在对应 L1 算子卡片内展开「实验交互」调节。
-          </p>
-          <div className={`mt-3 space-y-2 text-[11px] text-sky-100/90 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={isFinalized}
-                checked={(labConfig.INTERDIMENSIONAL_SHIELD_ENABLE ?? 1) >= 0.5}
-                onChange={(e) =>
-                  setLabConfig((prev) => ({ ...prev, INTERDIMENSIONAL_SHIELD_ENABLE: e.target.checked ? 1 : 0 }))
-                }
-                className="accent-[#3B82F6]"
-              />
-              <span>启用跨维度屏蔽（通用协议）</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={isFinalized}
-                checked={(labConfig.STEM_BRANCH_ROOT_RESONANCE_ENABLE ?? 1) >= 0.5}
-                onChange={(e) =>
-                  setLabConfig((prev) => ({ ...prev, STEM_BRANCH_ROOT_RESONANCE_ENABLE: e.target.checked ? 1 : 0 }))
-                }
-                className="accent-[#3B82F6]"
-              />
-              <span>启用通根谐振判定</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                disabled={isFinalized}
-                checked={(labConfig.STEM_BRANCH_VERTICAL_CRUSH_ENABLE ?? 1) >= 0.5}
-                onChange={(e) =>
-                  setLabConfig((prev) => ({ ...prev, STEM_BRANCH_VERTICAL_CRUSH_ENABLE: e.target.checked ? 1 : 0 }))
-                }
-                className="accent-[#3B82F6]"
-              />
-              <span>启用盖头截脚损耗</span>
-            </label>
-          </div>
-          <label className="mt-3 block text-[11px] text-sky-100/90">
-            <span className="font-mono text-[10px] text-sky-200/80">INTERDIMENSIONAL_CONDUCTIVITY</span>
-            <span className="ml-1 text-zinc-400">
-              传导灵敏度（跨维渗透）{(labConfig.INTERDIMENSIONAL_CONDUCTIVITY ?? 0).toFixed(2)}
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.05}
-              disabled={isFinalized}
-              value={labConfig.INTERDIMENSIONAL_CONDUCTIVITY ?? 0}
-              onChange={(e) =>
-                setLabConfig((prev) => ({ ...prev, INTERDIMENSIONAL_CONDUCTIVITY: Number(e.target.value) }))
-              }
-              className="mt-1 w-full accent-[#3B82F6]"
-            />
-          </label>
-        </div>
-      </div>
-
-      <div
         className={`rounded-xl border border-amber-500/35 bg-amber-950/20 px-3 py-3 ${
           isFinalized
             ? "pointer-events-none border-zinc-600/80 bg-zinc-950/80 opacity-60 grayscale-[0.4] ring-1 ring-zinc-700/60"
@@ -560,8 +466,10 @@ export function PluginManagementPanel() {
         {isFinalized ? <p className="mt-1 text-[10px] text-zinc-500">终审已签发 · 参数已锁定</p> : null}
         <p className="mt-1 text-[11px] text-amber-100/85">
           与 L1 Junction / <span className="font-mono text-[10px]">core_operators</span> 对齐；各算子 η 在对应 L1 插件卡片的「实验交互」区调节（与{" "}
-          <span className="font-mono text-[10px]">skill_manifest.physics_setting_key</span> 一致）。下方索引按{" "}
-          <span className="font-mono text-[10px]">core_conflict</span> 聚合，伤官见官置顶。
+          <span className="font-mono text-[10px]">skill_manifest.physics_setting_key</span> 一致）。上方 L1 网格已按 manifest 拆分为独立卡片（含{" "}
+          <span className="font-mono text-[10px]">l1_branch_*</span> / <span className="font-mono text-[10px]">l1_stem_*</span>）；下方索引按{" "}
+          <span className="font-mono text-[10px]">core_conflict</span> /{" "}
+          <span className="font-mono text-[10px]">branch_interaction_ext</span> 聚合（排除辅助滑块 Skill），伤官见官置顶。
         </p>
         <label className={`mt-3 flex cursor-pointer items-center gap-2 text-[11px] text-amber-50/95 ${isFinalized ? "pointer-events-none opacity-60" : ""}`}>
           <input
@@ -614,14 +522,51 @@ export function PluginManagementPanel() {
         onClose={() => setBlueprintOpen(false)}
       />
 
-      {(Object.keys(LAYER_LABEL) as UiLayer[]).map((layer) => (
+      {LAYER_ORDER.map((layer) => {
+        const sortedL1 = [...rendered.filter((p) => p.layer === "L1")].sort(compareL1PluginsForGrid);
+        const baseRow =
+          layer === "L1" ? sortedL1 : rendered.filter((p) => p.layer === layer);
+        const pluginsForLayer =
+          layer === "L1" && l1AdminFilter !== "all"
+            ? baseRow.filter((p) => matchesAdminL1Filter(p, l1AdminFilter))
+            : baseRow;
+
+        return (
         <div key={layer} className="space-y-2">
           <h4 className="text-sm font-medium text-zinc-200">{LAYER_LABEL[layer]}</h4>
+          {layer === "L0" ? (
+            <p className="text-[10px] leading-snug text-zinc-500">
+              藏干比例与通根分层系数存于 PostgreSQL <span className="font-mono text-zinc-400">l0_*</span> 表；启动时由常量
+              Upsert。下列卡片滑块写入 <span className="font-mono text-zinc-400">physics_settings_registry</span>（与「保存到系统基准」一致）。
+            </p>
+          ) : null}
+          {layer === "L1" ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-zinc-700/80 bg-zinc-950/50 px-2 py-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">L1 插件筛选</p>
+              <div className="flex flex-wrap gap-1.5">
+                {ADMIN_L1_FILTER_TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setL1AdminFilter(t.id)}
+                    title={t.hint}
+                    className={`rounded-md border px-2.5 py-1 text-[11px] transition-colors ${
+                      l1AdminFilter === t.id
+                        ? "border-cyan-500/50 bg-cyan-500/15 text-cyan-100"
+                        : "border-zinc-600 bg-zinc-900/80 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] leading-snug text-zinc-500">
+                原「物理实验参数」区已废弃：时运 / 风险墓库 / 气候拓扑 / 微弱路径请选「时空动态」；生克合绊与维轴见「基础物理」卡片内「实验交互」。
+              </p>
+            </div>
+          ) : null}
           <div className="grid gap-3 md:grid-cols-2">
-            {(layer === "L1"
-              ? [...rendered.filter((p) => p.layer === "L1")].sort(compareL1PluginsForGrid)
-              : rendered.filter((p) => p.layer === layer)
-            ).map((plugin) => (
+            {pluginsForLayer.map((plugin) => (
                 <CausalPluginCard
                   key={plugin.id}
                   plugin={plugin}
@@ -731,7 +676,8 @@ export function PluginManagementPanel() {
               ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </section>
   );
 }

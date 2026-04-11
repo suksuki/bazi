@@ -45,6 +45,8 @@ def test_stem_fusion_locked_when_hua_not_supported() -> None:
     assert len(steps) == 1
     sf = (tensor.get("meta") or {}).get("stem_fusion_v1") or {}
     assert sf.get("is_locked") is True
+    assert sf.get("has_stuck") is True
+    assert any(c.get("mode") == "stuck" for c in (sf.get("cases") or []))
     assert len(sf.get("locked_deities") or []) >= 1
 
 

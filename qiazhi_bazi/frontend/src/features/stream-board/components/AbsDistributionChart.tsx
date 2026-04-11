@@ -39,6 +39,42 @@ function LockIcon({ title }: { title: string }) {
   );
 }
 
+const BRANCH_MARK_LABEL: Record<string, string> = {
+  he: "合",
+  chong: "冲",
+  xing: "刑",
+  hai: "害",
+  po: "破",
+};
+
+function BranchMarkStrip({ marks, t }: { marks: string[]; t: (s: string) => string }) {
+  if (!marks.length) return null;
+  return (
+    <span className="ml-1 inline-flex flex-wrap gap-0.5 align-middle" title={t("地支合冲刑害破标记（与 Abs 阈值无关）")}>
+      {marks.map((k) => (
+        <span
+          key={k}
+          className={`inline-flex min-w-[1rem] items-center justify-center rounded px-0.5 text-[9px] font-semibold leading-none ring-1 ring-inset ${
+            k === "he"
+              ? "bg-sky-500/20 text-sky-200 ring-sky-500/35"
+              : k === "chong"
+                ? "bg-rose-500/20 text-rose-200 ring-rose-500/35"
+                : k === "xing"
+                  ? "bg-amber-500/20 text-amber-100 ring-amber-500/35"
+                  : k === "hai"
+                    ? "bg-violet-500/20 text-violet-100 ring-violet-500/35"
+                    : k === "po"
+                      ? "bg-zinc-600/40 text-zinc-200 ring-zinc-500/40"
+                      : "bg-zinc-700/50 text-zinc-300 ring-zinc-600/40"
+          }`}
+        >
+          {BRANCH_MARK_LABEL[k] || k}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function FusionLinkIcon({ title }: { title: string }) {
   return (
     <span title={title} className="inline-flex text-cyan-400/90" aria-label={title}>
@@ -86,6 +122,8 @@ export type AbsDistributionChartProps = {
   pivotDeity?: string | null;
   /** physics_tensor.meta.pivot_defense_v1：枢纽语义（命脉受损 / 枢纽稳固） */
   pivotDefenseSemantic?: string | null;
+  /** physics_tensor.meta.interaction_marks_per_deity：合冲刑害破 → 十神微型标（不依赖 Abs 阈值） */
+  interactionMarksPerDeity?: Record<string, string[]> | null;
   t?: (s: string) => string;
 };
 
@@ -105,6 +143,7 @@ export function AbsDistributionChart({
   l1StatusPerDeity = null,
   pivotDeity = null,
   pivotDefenseSemantic = null,
+  interactionMarksPerDeity = null,
   t = (s: string) => s,
 }: AbsDistributionChartProps) {
   const anomalyTag = (topAnomaly || "").trim();
@@ -146,8 +185,20 @@ export function AbsDistributionChart({
         const fusionTitle = fusionEntry
           ? t("天干五合：{stems}（{mode}）")
               .replace("{stems}", (fusionEntry.stems || []).join("+"))
-              .replace("{mode}", fusionEntry.mode === "transformed" ? t("化气") : t("合而不化"))
+              .replace(
+                "{mode}",
+                fusionEntry.mode === "transformed"
+                  ? t("化气")
+                  : fusionEntry.mode === "stuck"
+                    ? t("羁绊")
+                    : t("合而不化"),
+              )
           : "";
+        const branchMarks =
+          interactionMarksPerDeity && typeof interactionMarksPerDeity === "object"
+            ? (interactionMarksPerDeity[name] as string[] | undefined)
+            : undefined;
+        const branchMarkList = Array.isArray(branchMarks) ? branchMarks : [];
         const workEff = l1StatusPerDeity?.[name]?.work_efficiency;
         const effNum = typeof workEff === "number" && Number.isFinite(workEff) ? workEff : null;
         const effPct =
@@ -215,6 +266,7 @@ export function AbsDistributionChart({
                     />
                   ) : null}
                   {fusionEntry ? <FusionLinkIcon title={fusionTitle} /> : null}
+                  {branchMarkList.length > 0 ? <BranchMarkStrip marks={branchMarkList} t={t} /> : null}
                   <span className="text-zinc-400">
                     {totalScore.toFixed(2)}%{" "}
                     <span className="text-sky-300">(Abs: {absEnergy.toFixed(2)})</span>

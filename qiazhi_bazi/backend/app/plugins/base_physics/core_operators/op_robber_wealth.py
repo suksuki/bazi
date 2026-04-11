@@ -61,7 +61,12 @@ def apply_op_robber_wealth(
     if isinstance(meta, dict):
         append_polarity_seed(meta, pattern="JIE_JIAN_ZHENG_CAI", deity="正财", delta_a=0.3, delta_b=-0.3, plugin_a=OP_ID)
         record_applied(meta, OP_ID)
-        meta["l1_robber_wealth_v1"] = {"alloc_loss": round(loss, 4), "same_pillar": same_pillar, "co_stem": co_stem}
+        meta["l1_robber_wealth_v1"] = {
+            "alloc_loss": round(loss, 4),
+            "same_pillar": same_pillar,
+            "co_stem": co_stem,
+            "正财_abs_before": round(old, 4),
+        }
 
     total = sum(float((axes.get(d) or {}).get("absolute_energy") or 0.0) for d in axes if isinstance(axes.get(d), dict)) or 1.0
     for d, b in list(axes.items()):

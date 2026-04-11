@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from app.api.admin_auth import admin_token_guard
 from app.api.contracts import (
     AnalyzeClashRequest,
     AnalyzeSeedRequest,
@@ -18,6 +19,7 @@ from app.api.contracts import (
     EvolutionAdmissionRequest,
     EvolutionBatchRunRequest,
     FinalVerdictRequest,
+    PhysicsSettingsPersistRequest,
     ResolveConflictRequest,
     SkillFeedbackRequest,
     StressTestRequest,
@@ -61,6 +63,7 @@ from app.services.consultation_service import (
     rollback_decision_step_record,
 )
 from app.services.llm_service import run_chat_completion, stream_chat_events
+from app.core.physics.settings_manager import list_physics_registry_rows, persist_physics_registry_updates_from_body
 
 router = APIRouter(tags=["qiazhi-bazi"])
 
@@ -215,6 +218,21 @@ async def final_verdict(body: FinalVerdictRequest) -> dict:
 @router.post("/v1/analyze/stress-test", response_model=dict)
 async def stress_test(body: StressTestRequest) -> dict:
     return await run_stress_test(body)
+
+
+@router.get("/v1/admin/settings", response_model=dict)
+def admin_physics_settings_list(_: None = Depends(admin_token_guard)) -> dict:
+    return {"ok": True, "settings": list_physics_registry_rows()}
+
+
+@router.post("/v1/admin/settings", response_model=dict)
+def admin_physics_settings_persist(
+    body: PhysicsSettingsPersistRequest,
+    _: None = Depends(admin_token_guard),
+) -> dict:
+    raw = [i.model_dump() for i in body.items]
+    changed = persist_physics_registry_updates_from_body(raw)
+    return {"ok": True, "changed": changed}
 
 
 @router.get("/v1/plugins/conflict-hotspots", response_model=dict)

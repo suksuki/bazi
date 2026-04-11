@@ -16,7 +16,7 @@ from app.plugins.chronos.skill_manifest_loader import list_chronos_skills
 from app.plugins.wangshuai.core import run_wangshuai_plugin
 from app.plugins.wangshuai.skill_manifest_loader import list_wangshuai_skills
 
-from app.core.config.physics_settings import DEFAULT_PHYSICS_SETTINGS
+from app.core.config.physics_settings import resolve_physics_settings
 from app.core.plugins.plugin_metadata_loader import merge_plugin_manifest_into_metadata, plugin_manifest_for_operator_card
 
 HookName = Literal["on_physics_complete", "on_verdict_ready"]
@@ -67,6 +67,77 @@ _PLUGIN_STATS: Dict[str, Dict[str, Any]] = {}
 _PLUGIN_MUTEX_PAIRS: Tuple[Tuple[str, str, str], ...] = (
     # ("plugin_a", "plugin_b", "同开时推理前提可能冲突，建议提高 backfire_risk 权重"),
 )
+
+
+def _l0_atomic_manifest_rows() -> List[Dict[str, Any]]:
+    """Admin「L0 原子层」三卡：与 `DEFAULT_PHYSICS_SETTINGS` 中 L0_* 键及 DB l0_* 表对齐。"""
+    perf_empty: Dict[str, Any] = {
+        "last_latency_ms": None,
+        "p50_ms": None,
+        "p95_ms": None,
+        "error_rate": 0.0,
+        "last_run_at": None,
+    }
+
+    def one(pid: str, title: str, key: str, sid: str, desc: str, use_case: str) -> Dict[str, Any]:
+        return {
+            "id": pid,
+            "layer": "L0",
+            "category": "L0/Atom",
+            "status": "HEALTHY",
+            "dependencies": [],
+            "metadata": {
+                "label": title,
+                "display_name": title,
+                "doc_path": "/docs/causal-pulse/l0_atom_layer.md",
+                "priority": 0.99,
+                "hook": "on_physics_complete",
+                "description_tags": ["L0", "Atom", "l0_domain"],
+                "use_case": use_case,
+                "detailed_description": desc,
+                "physical_impact": "影响 `build_energy_fields` / `get_root_resonance` 与 DB `l0_*` 表。",
+                "skills": [
+                    {
+                        "id": sid,
+                        "name": title,
+                        "description": desc,
+                        "impact_factor": "L0",
+                        "physics_setting_key": key,
+                        "assertion_template": "",
+                        "physics_weight": 0.0,
+                        "description_tags": ["l0_atom", "aux_slider"],
+                    }
+                ],
+            },
+            "performance_snapshot": perf_empty,
+        }
+
+    return [
+        one(
+            "l0.hidden_schema",
+            "L0 藏干分发",
+            "L0_HIDDEN_ENERGY_SCALE",
+            "l0_skill_hidden_scale",
+            "整体缩放四柱与岁运通道中的藏干支能量（藏干比例由 DB `l0_branch_hidden_schema` 维护）。",
+            "调节地支人元诸干对标能量的总标度。",
+        ),
+        one(
+            "l0.root_resonance",
+            "L0 通根强度",
+            "L0_ROOT_BOOST_FACTOR",
+            "l0_skill_root_boost",
+            "通根共振总乘子：叠在 `get_root_resonance` 上，调节天干从地支藏干获得的反哺。",
+            "调节干透根伏的 Abs 反哺强度。",
+        ),
+        one(
+            "l0.pillar_time",
+            "L0 时柱加权",
+            "L0_YM_DH_WEIGHT_RATIO",
+            "l0_skill_ym_dh",
+            "年月相对日时柱位权重比：>1 增强年、月柱 position_weight，<1 则偏强日、时，再归一化。",
+            "调节四柱宫位势能主轴与时间纵深。",
+        ),
+    ]
 
 
 class PluginRegistry:
@@ -255,6 +326,8 @@ class PluginRegistry:
             for dep in spec.dependencies:
                 dependency_links.append({"from": dep, "to": spec.plugin_id})
 
+        plugins = _l0_atomic_manifest_rows() + plugins
+
         tension = 0.0
         if perf_rows:
             peak = max(perf_rows)
@@ -281,9 +354,24 @@ class PluginRegistry:
             if not oid:
                 continue
             op_id_str = str(op.get("op_id") or "")
-            sid = op_to_skill.get(op_id_str)
-            op_skills = [skill_index[sid]] if sid and sid in skill_index else []
+            extra_sids = op.get("skill_ids")
+            if isinstance(extra_sids, list) and extra_sids:
+                op_skills = [skill_index[str(sid)] for sid in extra_sids if str(sid) in skill_index]
+            else:
+                sid = op_to_skill.get(op_id_str)
+                op_skills = [skill_index[sid]] if sid and sid in skill_index else []
             op_card = plugin_manifest_for_operator_card(oid)
+            base_desc_tags = ["L1", "Atomic", op_id_str or oid]
+            op_manifest_tags = op.get("description_tags")
+            if isinstance(op_manifest_tags, list):
+                merged_tags = list(base_desc_tags)
+                for t in op_manifest_tags:
+                    ts = str(t).strip()
+                    if ts and ts not in merged_tags:
+                        merged_tags.append(ts)
+                desc_tags_out = merged_tags
+            else:
+                desc_tags_out = base_desc_tags
             entry_meta: Dict[str, Any] = {
                 "label": str(op.get("title") or oid),
                 "doc_path": "/docs/causal-pulse/v0.13_interdimensional_protocol.md",
@@ -292,7 +380,7 @@ class PluginRegistry:
                 "l1_physics_operator": True,
                 "op_id": op.get("op_id"),
                 "blueprint_markdown": str(op.get("blueprint_markdown") or ""),
-                "description_tags": ["L1", "Atomic", op_id_str or oid],
+                "description_tags": desc_tags_out,
                 "skills": op_skills,
             }
             for _k in ("display_name", "use_case", "detailed_description", "physical_impact", "governance_notes"):
@@ -329,7 +417,7 @@ class PluginRegistry:
             "plugin_mutex_warnings": mutex_warnings,
             "l1_physics_manifest": l1_physics_manifest,
             "base_physics_skills": skill_rows,
-            "default_physics_settings": {k: float(v) for k, v in DEFAULT_PHYSICS_SETTINGS.items()},
+            "default_physics_settings": {k: float(v) for k, v in resolve_physics_settings(None).items()},
             "refreshed_at": time.time(),
         }
         if plugin_id:

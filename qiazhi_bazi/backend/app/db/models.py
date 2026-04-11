@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -109,3 +109,72 @@ class SessionConsensus(SQLModel, table=True):
     confirmed_value: Optional[float] = Field(default=None)
     reasoning: str = Field(default="")
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PhysicsSettingsRegistry(SQLModel, table=True):
+    """物理键全局基准：DB 持久化层（API 单次请求覆盖优先级更高）。"""
+
+    __tablename__ = "physics_settings_registry"
+
+    key: str = Field(primary_key=True, max_length=128)
+    value: float = Field(default=0.0, description="当前生效的全局基准值")
+    default_value: float = Field(default=0.0, description="与代码 DEFAULT 同步的出厂默认")
+    category: str = Field(default="base.physics", max_length=256, index=True, description="归口插件 ID")
+    description: str = Field(default="", description="参数物理意义")
+
+
+class CausalManifestMeta(SQLModel, table=True):
+    """Skill manifest 片段（如 operator_to_skill），支持零代码覆盖。"""
+
+    __tablename__ = "causal_manifest_meta"
+
+    scope: str = Field(primary_key=True, max_length=128)
+    payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(_JSON_TYPE))
+
+
+class CausalSkill(SQLModel, table=True):
+    """因果 Skill 定义（可由 DB 覆盖磁盘 skill_manifest）。"""
+
+    __tablename__ = "causal_skills"
+
+    skill_id: str = Field(primary_key=True, max_length=128)
+    scope: str = Field(default="base_physics", max_length=64, index=True)
+    name: str = Field(default="", max_length=512)
+    description: str = Field(default="")
+    impact_factor: str = Field(default="", max_length=256)
+    physics_weight: Optional[float] = Field(default=None)
+    physics_setting_key: Optional[str] = Field(default=None, max_length=128)
+    assertion_template: str = Field(default="")
+    description_tags: List[Any] = Field(default_factory=list, sa_column=Column(_JSON_TYPE))
+
+
+class L0ElementRegistry(SQLModel, table=True):
+    """L0：天干/地支 → 阴阳、五行（可 DB 覆盖，缺行则回退代码常量）。"""
+
+    __tablename__ = "l0_element_registry"
+
+    glyph: str = Field(primary_key=True, max_length=8)
+    kind: str = Field(max_length=16, index=True, description="stem | branch")
+    element: str = Field(max_length=32, description="wood/fire/earth/metal/water")
+    polarity: Optional[str] = Field(default=None, max_length=16, description="yang | yin，支可为空")
+
+
+class L0BranchHiddenSchema(SQLModel, table=True):
+    """L0：地支藏干比例（本/中/余 + 百分比）。"""
+
+    __tablename__ = "l0_branch_hidden_schema"
+
+    branch: str = Field(primary_key=True, max_length=8)
+    hidden_stem: str = Field(primary_key=True, max_length=8)
+    ratio_pct: float = Field(ge=0.0, description="0..100")
+    tier: str = Field(default="main", max_length=16, description="main | middle | residual")
+
+
+class L0ResonanceRules(SQLModel, table=True):
+    """L0：透干通根等加权系数（与 `get_root_resonance` 对齐）。"""
+
+    __tablename__ = "l0_resonance_rules"
+
+    rule_key: str = Field(primary_key=True, max_length=128)
+    coefficient: float = Field(default=1.0)
+    description: str = Field(default="", max_length=2000)

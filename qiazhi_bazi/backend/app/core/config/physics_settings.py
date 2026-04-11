@@ -95,15 +95,32 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     "SUB_BRANCH_LIUHE_ABS_BOOST": 0.04,
     "SUB_BRANCH_SANXING_ABS_DAMP": 0.97,
     "SUB_BRANCH_ANHE_ABS_DAMP": 0.985,
+    # 半合（两支成局缺一支）：合化能量系数 Phi 与 Abs/向量微调（见 op_sub_branch_interaction）
+    "SUB_BRANCH_BANHE_PHI": 0.6,
+    "SUB_BRANCH_BANHE_ABS_BOOST": 0.02,
+    "SUB_BRANCH_BANHE_VECTOR_BOOST": 0.028,
+    # 六害 / 六破：Abs 阻尼极轻，但必须写入 branch_interaction_audit；ENABLE<0.5 时跳过害/破判定与 UI 标
+    "SUB_BRANCH_LIUHAI_ENABLE": 1.0,
+    "SUB_BRANCH_LIUPO_ENABLE": 1.0,
+    "SUB_BRANCH_LIUHAI_ABS_DAMP": 0.998,
+    "SUB_BRANCH_LIUPO_ABS_DAMP": 0.998,
+    # 六冲：Abs 总乘子（默认 1.0 不改变既有行为）
+    "SUB_BRANCH_LIUCHONG_ABS_DAMP": 1.0,
     "MUKU_DEITY_DAMPING": 0.8,
     # 格局识别：从格能量集中度阈值与路由 η 翻转增益
     "PATTERN_CONG_DOMINANCE": 0.52,
     "PATTERN_ETA_FLIP_GAIN": 1.12,
+    # L0 原子层（藏干表走 DB，以下为标量乘子 / 柱位偏置，与 Admin L0 卡片对齐）
+    "L0_HIDDEN_ENERGY_SCALE": 1.0,
+    "L0_ROOT_BOOST_FACTOR": 1.0,
+    "L0_YM_DH_WEIGHT_RATIO": 1.0,
 }
 
 
 def resolve_physics_settings(overrides: Dict[str, Any] | None) -> Dict[str, float]:
-    settings = dict(DEFAULT_PHYSICS_SETTINGS)
+    from app.core.physics.settings_manager import apply_db_layer_to_settings
+
+    settings = apply_db_layer_to_settings(dict(DEFAULT_PHYSICS_SETTINGS))
     for key in settings.keys():
         if overrides and key in overrides:
             try:

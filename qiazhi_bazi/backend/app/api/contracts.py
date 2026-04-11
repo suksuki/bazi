@@ -47,6 +47,36 @@ class PhysicsConfig(BaseModel):
         default=None,
         description="用户环境方位：东/南/西/北/中；空或未知则不应用地理算子",
     )
+    WS_PIVOT_SELF_WEAK_THRESHOLD: Optional[float] = Field(
+        default=None,
+        description="旺衰枢纽：self_abs 低于该阈值时用神池偏向印比（physics_settings）",
+    )
+    PATTERN_CONG_DOMINANCE: Optional[float] = Field(
+        default=None,
+        description="从格能量集中度阈值（physics_settings）",
+    )
+    FLOW_AUDITOR_ABS_THRESHOLD: Optional[float] = Field(
+        default=None,
+        description="五行流通审计相邻段 Abs 阈值（physics_settings）",
+    )
+    L1_SUB_BRANCH_OP_ENABLE: Optional[float] = None
+    SUB_BRANCH_BANHE_PHI: Optional[float] = None
+    SUB_BRANCH_BANHE_ABS_BOOST: Optional[float] = None
+    SUB_BRANCH_BANHE_VECTOR_BOOST: Optional[float] = None
+    SUB_BRANCH_SANHE_ABS_BOOST: Optional[float] = None
+    SUB_BRANCH_LIUHE_ABS_BOOST: Optional[float] = None
+    SUB_BRANCH_SANXING_ABS_DAMP: Optional[float] = None
+    SUB_BRANCH_LIUCHONG_ABS_DAMP: Optional[float] = None
+    SUB_BRANCH_LIUHAI_ABS_DAMP: Optional[float] = None
+    SUB_BRANCH_LIUPO_ABS_DAMP: Optional[float] = None
+    SUB_BRANCH_LIUHAI_ENABLE: Optional[float] = None
+    SUB_BRANCH_LIUPO_ENABLE: Optional[float] = None
+    L1_STEM_FUSION_ENABLE: Optional[float] = None
+    STEM_FUSION_VECTOR_LEAK_RATIO: Optional[float] = None
+    STEM_FUSION_BRANCH_SUPPORT_RATIO: Optional[float] = None
+    L0_HIDDEN_ENERGY_SCALE: Optional[float] = Field(default=None, description="L0 藏干支能量总标度")
+    L0_ROOT_BOOST_FACTOR: Optional[float] = Field(default=None, description="L0 通根反哺乘子")
+    L0_YM_DH_WEIGHT_RATIO: Optional[float] = Field(default=None, description="L0 年月相对日时柱位权重比")
 
 
 class ConsultationCreate(BaseModel):
@@ -226,3 +256,14 @@ class RuntimeConfigRequest(BaseModel):
 class ApplyPhysicsSqlRequest(BaseModel):
     sql_patch: str = Field(..., description="仅允许更新 physics_interaction_params 的单条 UPDATE")
     auto_refresh: bool = Field(default=True, description="执行后是否自动 refresh physics cache")
+
+
+class PhysicsSettingPersistItem(BaseModel):
+    key: str = Field(..., min_length=1, max_length=128)
+    value: float
+
+
+class PhysicsSettingsPersistRequest(BaseModel):
+    """写入 `physics_settings_registry`，作为全局 DB 基准（单次请求 API 覆盖仍优先）。"""
+
+    items: List[PhysicsSettingPersistItem] = Field(default_factory=list)

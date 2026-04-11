@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, Optional
 
 from app.core.config.physics_settings import resolve_physics_settings
-from app.skills.physics_rules import BRANCH_HIDDEN_STEMS, MONTH_BRANCH_TO_SEASON, STEM_TO_ELEMENT
+from app.core.bazi.engine import branch_hidden_stems_effective
+from app.skills.physics_rules import MONTH_BRANCH_TO_SEASON, STEM_TO_ELEMENT
 
 PLUGIN_ID = "base.chronos"
 
@@ -43,7 +44,7 @@ def _month_branch(pillars: Mapping[str, Any]) -> str:
 
 def _main_qi_split(branch: str) -> tuple[str, float, float]:
     """返回 (本气天干, 本气占比, 余气+中气占比之和)。"""
-    hidden = BRANCH_HIDDEN_STEMS.get(branch) or {}
+    hidden = branch_hidden_stems_effective().get(branch) or {}
     if not hidden:
         return "", 0.0, 0.0
     total = float(sum(hidden.values()) or 1.0)

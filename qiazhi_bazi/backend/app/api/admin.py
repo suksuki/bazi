@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 
+from app.api.admin_auth import admin_token_guard
 from app.api.admin_helpers import (
     hard_compact_conclusion,
     parse_allowed_param_update,
@@ -98,31 +98,23 @@ async def _ollama_chat_no_think(
     return (data.get("message") or {}).get("content", "").strip()
 
 
-def _admin_guard(x_admin_token: Optional[str] = Header(default=None)) -> None:
-    expected = os.getenv("QIAZHI_ADMIN_TOKEN")
-    # 未配置 token 时兼容本地开发；生产应配置
-    if not expected:
-        return
-    if not x_admin_token or x_admin_token != expected:
-        raise HTTPException(status_code=401, detail="admin token 无效")
-
 @router.get("/db-status")
-def db_status(_: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def db_status(_: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     return get_db_status_response(None)
 
 
 @router.post("/db-status")
-def db_status_with_override(body: DbStatusRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def db_status_with_override(body: DbStatusRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     return get_db_status_response(body)
 
 
 @router.post("/db-init")
-def db_init(body: Optional[DbStatusRequest] = None, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def db_init(body: Optional[DbStatusRequest] = None, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     return initialize_database(body)
 
 
 @router.post("/llm-test")
-async def llm_test(body: LlmTestRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+async def llm_test(body: LlmTestRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     return await execute_llm_test(
         body,
         rewrite_final_only=_rewrite_final_only,
@@ -133,7 +125,7 @@ async def llm_test(body: LlmTestRequest, _: None = Depends(_admin_guard)) -> Dic
 
 
 @router.post("/llm-models")
-async def llm_models(body: LlmModelsRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+async def llm_models(body: LlmModelsRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     """
     拉取模型列表（优先 OpenAI `/models`，兼容 Ollama `/api/tags`）。
     """
@@ -171,12 +163,12 @@ async def llm_models(body: LlmModelsRequest, _: None = Depends(_admin_guard)) ->
 
 
 @router.get("/runtime-config")
-def runtime_config_get(_: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def runtime_config_get(_: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     return {"ok": True, "config": get_runtime_config()}
 
 
 @router.put("/runtime-config")
-def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     llm = body.llm or {}
     base_url = llm.get("base_url")
     if isinstance(base_url, str) and base_url.strip():
@@ -191,11 +183,11 @@ def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(_admin_guar
 
 
 @router.post("/refresh-physics")
-def refresh_physics(_: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def refresh_physics(_: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     PhysicsInferenceSkill.instance().refresh_and_recalculate()
     return {"ok": True, "message": "physics cache refreshed"}
 @router.post("/apply-physics-sql")
-def apply_physics_sql(body: ApplyPhysicsSqlRequest, _: None = Depends(_admin_guard)) -> Dict[str, Any]:
+def apply_physics_sql(body: ApplyPhysicsSqlRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
     key, val = parse_allowed_param_update(body.sql_patch)
     with session_scope() as s:
         row = s.exec(select(PhysicsInteractionParam).where(PhysicsInteractionParam.param_key == key)).first()

@@ -39,6 +39,18 @@ def init_db() -> None:
 
     SQLModel.metadata.create_all(_engine)
     seed_physics_defaults()
+    try:
+        from app.core.physics.settings_manager import DynamicSettingsProvider
+
+        DynamicSettingsProvider.sync_defaults_on_startup()
+    except Exception as e:  # noqa: BLE001
+        print(f"[startup] DynamicSettingsProvider.sync_defaults_on_startup failed: {e}")
+    try:
+        from app.core.bazi.l0_manager import sync_l0_from_defaults
+
+        sync_l0_from_defaults()
+    except Exception as e:  # noqa: BLE001
+        print(f"[startup] sync_l0_from_defaults failed: {e}")
 
 
 @contextmanager

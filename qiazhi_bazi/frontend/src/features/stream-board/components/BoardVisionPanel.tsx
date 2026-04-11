@@ -78,6 +78,7 @@ export function BoardVisionPanel({
     return m && typeof m === "object" ? (m as Record<string, unknown>) : {};
   }, [labState.snapshot?.physics_tensor?.meta]);
   const stemFusionMeta = (snapMeta.stem_fusion_v1 || null) as Record<string, unknown> | null;
+  const interactionMarksPerDeity = (snapMeta.interaction_marks_per_deity || null) as Record<string, string[]> | null;
   const l1StatusBlock = snapMeta.l1_status_v1 as { per_deity?: Record<string, { work_efficiency?: number }> } | undefined;
   const l1StatusPerDeity = l1StatusBlock?.per_deity ?? null;
   const pivotBlock = snapMeta.pivot_defense_v1 as
@@ -193,6 +194,7 @@ export function BoardVisionPanel({
               onOpenLogic={openLogicDrawer}
               onHoverDeity={setHoveredDeity}
               stemFusionMeta={stemFusionMeta}
+              interactionMarksPerDeity={interactionMarksPerDeity}
               l1StatusPerDeity={l1StatusPerDeity}
               pivotDeity={pivotDeity}
               pivotDefenseSemantic={pivotDefenseSemantic}

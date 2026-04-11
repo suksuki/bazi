@@ -1,4 +1,4 @@
-"""天干五合：邻柱合、化神约束；合而不化则路由锁死，化真则标记 Deprecated 并向化神五行泄漏向量。"""
+"""天干五合：邻柱合、化神约束；不化则 STUCK（羁绊）路由锁死，化真则标记 Deprecated 并向化神五行泄漏向量。"""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Tuple
 from app.skills.physics_rules import STEM_TO_ELEMENT, TEN_DEITIES, deity_from_self_and_target_stem
 
 OP_ID = "L1_OP_STEM_FUSION"
-SKILL_ID = "l1_stem_fusion_01"
 
 # (干甲, 干乙, 化气五行 key 与 physics vector 一致)
 _FUSION_ROWS: Tuple[Tuple[str, str, str], ...] = (
@@ -195,14 +194,14 @@ def apply_op_stem_fusion(
                 {
                     "pillars": [pa, pb],
                     "stems": [sa, sb],
-                    "mode": "locked",
+                    "mode": "stuck",
                     "hua_element": hua_el,
                     "month_stem_supports": month_supports,
                     "branch_hua_ratio": round(branch_ratio, 4),
                     "locked_deities": pair_deities,
                 }
             )
-            display_links.append({"deities": pair_deities, "stems": [sa, sb], "mode": "locked"})
+            display_links.append({"deities": pair_deities, "stems": [sa, sb], "mode": "stuck"})
 
     meta = physics_tensor.setdefault("meta", {})
     if not isinstance(meta, dict):
@@ -211,13 +210,23 @@ def apply_op_stem_fusion(
     out = {
         "version": "stem_fusion.v1",
         "cases": cases,
-        "is_locked": any(c.get("mode") == "locked" for c in cases),
+        "is_locked": any(c.get("mode") in ("stuck", "locked") for c in cases),
+        "has_stuck": any(c.get("mode") == "stuck" for c in cases),
         "has_transform": any(c.get("mode") == "transformed" for c in cases),
         "locked_deities": sorted(set(locked_deities)),
         "deprecated_abs_snapshot": deprecated,
         "display_links": display_links,
     }
     meta["stem_fusion_v1"] = out
+
+    skill_ids_step: List[str] = []
+    if out.get("has_transform"):
+        skill_ids_step.append("l1_stem_fusion_transformed")
+    if out.get("has_stuck"):
+        skill_ids_step.append("l1_stem_fusion_stuck")
+    if not skill_ids_step:
+        skill_ids_step.append("l1_stem_fusion_transformed")
+
     if deprecated:
         dep = meta.setdefault("deity_deprecation_flags", {})
         if isinstance(dep, dict):
@@ -231,9 +240,10 @@ def apply_op_stem_fusion(
             "case_count": len(cases),
             "locked_deities": out["locked_deities"],
             "has_transform": out["has_transform"],
+            "has_stuck": out["has_stuck"],
         },
         "l1_operator_id": OP_ID,
         "l1_operator_ids": [OP_ID],
-        "skill_ids": [SKILL_ID],
+        "skill_ids": skill_ids_step,
     }
     return [step] if cases else []
