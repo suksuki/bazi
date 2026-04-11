@@ -1,72 +1,88 @@
-import { useCallback, useRef, useEffect } from "react";
-import { type Lang } from "@/types/bazi";
+import { useCallback, useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import type { AuditItem } from "@/components/AuditSidebar";
+import type { ShellActiveView } from "@/components/layout/ActiveViewContext";
+import type { Lang, BaziMetadata, TimelineSnapshot } from "@/types/bazi";
+import type { LabStoreState } from "@/features/stream-board/stores/useLabStore";
+import type { ConfirmedDecisionItem, ConsensusItem } from "@/features/stream-board/controller/streamBoardTypes";
+import type {
+  DeityComponent,
+  DeityEnergyAxis,
+  FinalVerdictChangeLog,
+  FinalVerdictHistoryItem,
+  InboxCard,
+  LogicDiff,
+  LlmDiagnosticData,
+  PhysicsLabConfig,
+  PluginWeights,
+  SeedPayload,
+} from "@/features/stream-board/models";
 
 export interface StreamBoardPipelineParams {
-  labStateRef: React.MutableRefObject<any>;
-  labState: any;
-  setLastSeedPayload: (p: any) => void;
-  persistLastSeedToStore: (p: any) => void;
-  setMetadata: (m: any) => void;
-  setStreamingText: (s: string) => void;
-  setAuditItems: React.Dispatch<React.SetStateAction<any[]>>;
-  setResultLogs: React.Dispatch<React.SetStateAction<any[]>>;
-  setDeityScores: (s: any) => void;
-  setDeityEnergyAxes: (s: any) => void;
-  setDeityComponents: (c: any) => void;
-  setDeityTraceDetails: (d: any) => void;
-  setHoveredDeity: (d: any) => void;
-  setPhysicsAudit: (a: any) => void;
-  setPhysicsConfidence: (c: any) => void;
-  setPhysicsEvidence: (e: any[]) => void;
-  setShowPhysicsAudit: (s: boolean) => void;
-  setAuditorProposalCards: (c: any[]) => void;
-  setResolvedCardIds: (c: any[]) => void;
-  setPhysicsParams: (p: any) => void;
-  setGlobalEntropy: (e: any) => void;
-  setConfirmedConflicts: (c: any[]) => void;
-  setFirstPromptText: (p: string) => void;
-  setTimeline: (t: any) => void;
-  setLlmDiagnosticData: (d: any) => void;
-  setFinalVerdictBody: (b: string) => void;
-  setFinalVerdictChangeLog: (c: any) => void;
-  setFinalVerdictVersionId: (v: string) => void;
-  setFinalLogicalEvidence: (e: any[]) => void;
-  setFinalWorkVector: (w: any) => void;
-  setFinalTopologyGraphV1: (g: any) => void;
-  setFinalStructureCandidatesV0: (c: any) => void;
-  setFinalStructureFinalDecisionV0: (d: any) => void;
-  setFinalVerdictHistory: (h: any[]) => void;
-  setStressTestResult: (r: any) => void;
-  setGenderComparisonResult: (r: any) => void;
-  setConsensusHistory: (h: any[]) => void;
-  setConfirmedDecisions: (d: any[]) => void;
-  setConfirmedDecisionIds: (ids: any) => void;
+  labStateRef: MutableRefObject<LabStoreState>;
+  labState: LabStoreState;
+  setLastSeedPayload: Dispatch<SetStateAction<SeedPayload | null>>;
+  persistLastSeedToStore: (p: SeedPayload | null) => void;
+  setMetadata: Dispatch<SetStateAction<BaziMetadata | null>>;
+  setStreamingText: Dispatch<SetStateAction<string>>;
+  setAuditItems: Dispatch<SetStateAction<AuditItem[]>>;
+  setResultLogs: Dispatch<SetStateAction<string[]>>;
+  setDeityScores: Dispatch<SetStateAction<Record<string, number>>>;
+  setDeityEnergyAxes: Dispatch<SetStateAction<Record<string, DeityEnergyAxis>>>;
+  setDeityComponents: Dispatch<SetStateAction<Record<string, DeityComponent>>>;
+  setDeityTraceDetails: Dispatch<SetStateAction<Record<string, Record<string, unknown>>>>;
+  setHoveredDeity: Dispatch<SetStateAction<string | undefined>>;
+  setPhysicsAudit: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setPhysicsConfidence: Dispatch<SetStateAction<number | null>>;
+  setPhysicsEvidence: Dispatch<SetStateAction<string[]>>;
+  setShowPhysicsAudit: Dispatch<SetStateAction<boolean>>;
+  setAuditorProposalCards: Dispatch<SetStateAction<InboxCard[]>>;
+  setResolvedCardIds: Dispatch<SetStateAction<string[]>>;
+  setPhysicsParams: Dispatch<SetStateAction<Record<string, number>>>;
+  setGlobalEntropy: Dispatch<SetStateAction<number | null>>;
+  setConfirmedConflicts: Dispatch<SetStateAction<string[]>>;
+  setFirstPromptText: Dispatch<SetStateAction<string>>;
+  setTimeline: Dispatch<SetStateAction<TimelineSnapshot | null>>;
+  setLlmDiagnosticData: Dispatch<SetStateAction<LlmDiagnosticData | null>>;
+  setFinalVerdictBody: Dispatch<SetStateAction<string>>;
+  setFinalVerdictChangeLog: Dispatch<SetStateAction<FinalVerdictChangeLog>>;
+  setFinalVerdictVersionId: Dispatch<SetStateAction<string>>;
+  setFinalLogicalEvidence: Dispatch<SetStateAction<string[]>>;
+  setFinalWorkVector: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setFinalTopologyGraphV1: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setFinalStructureCandidatesV0: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setFinalStructureFinalDecisionV0: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setFinalVerdictHistory: Dispatch<SetStateAction<FinalVerdictHistoryItem[]>>;
+  setStressTestResult: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setGenderComparisonResult: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setConsensusHistory: Dispatch<SetStateAction<ConsensusItem[]>>;
+  setConfirmedDecisions: Dispatch<SetStateAction<ConfirmedDecisionItem[]>>;
+  setConfirmedDecisionIds: Dispatch<SetStateAction<string[]>>;
   resetSeedPreviewState: () => void;
-  setConsultationId: (id: any) => void;
-  setSelectionResetToken: (t: any) => void;
-  setLogicDiff: (d: any) => void;
-  mergeSnapshot: (s: any) => void;
+  setConsultationId: Dispatch<SetStateAction<number | null>>;
+  setSelectionResetToken: Dispatch<SetStateAction<number>>;
+  setLogicDiff: Dispatch<SetStateAction<LogicDiff>>;
+  mergeSnapshot: (diff: Record<string, unknown>) => void;
   clearDecisionInbox: () => void;
-  onSeedSubmit: (p: any) => Promise<void>;
-  langRef: React.MutableRefObject<Lang>;
+  onSeedSubmit: (p: SeedPayload) => Promise<void>;
+  langRef: MutableRefObject<Lang>;
   setLangState: (l: Lang) => void;
   setUiLang: (l: Lang) => void;
-  lastSeedPayloadRef: React.MutableRefObject<any>;
-  metadataRef: React.MutableRefObject<any>;
-  busyRef: React.MutableRefObject<boolean>;
-  isStreamingRef: React.MutableRefObject<boolean>;
-  isExecutingRef: React.MutableRefObject<boolean>;
-  isSnapshotRestoringRef: React.MutableRefObject<boolean>;
-  applyPhysicsSqlPatch: (s: string) => Promise<any>;
-  llmDiagnosticData: any;
-  typewriterResultLine: (s: string) => Promise<void>;
-  labConfig: any;
-  lastSeedPayload: any;
-  confirmedDecisions: any[];
-  reCalculateAbsRef: React.MutableRefObject<any>;
-  reCalculateAbsSilentlyImplRef: React.MutableRefObject<any>;
-  setSigShiftFlashKey: (v: any) => void;
-  activeView: string;
+  lastSeedPayloadRef: MutableRefObject<SeedPayload | null>;
+  metadataRef: MutableRefObject<BaziMetadata | null>;
+  busyRef: MutableRefObject<boolean>;
+  isStreamingRef: MutableRefObject<boolean>;
+  isExecutingRef: MutableRefObject<boolean>;
+  isSnapshotRestoringRef: MutableRefObject<boolean>;
+  applyPhysicsSqlPatch: (s: string) => Promise<{ ok: boolean; error?: string }>;
+  llmDiagnosticData: LlmDiagnosticData | null;
+  typewriterResultLine: (s: string, delayMs?: number) => Promise<void>;
+  labConfig: PhysicsLabConfig;
+  lastSeedPayload: SeedPayload | null;
+  confirmedDecisions: ConfirmedDecisionItem[];
+  reCalculateAbsRef: MutableRefObject<() => Promise<void>>;
+  reCalculateAbsSilentlyImplRef: MutableRefObject<() => Promise<void>>;
+  setSigShiftFlashKey: Dispatch<SetStateAction<number>>;
+  activeView: ShellActiveView;
   busy: boolean;
   isStreaming: boolean;
   isExecuting: boolean;
@@ -185,7 +201,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setConfirmedDecisionIds([]);
     resetSeedPreviewState();
     setConsultationId(null);
-    setSelectionResetToken((v: number) => v + 1);
+    setSelectionResetToken((v) => v + 1);
     setLogicDiff({
       baseline_abs_loss_total: null,
       current_abs_loss_total: null,
@@ -224,8 +240,52 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       },
     });
     clearDecisionInbox();
-  }, [mergeSnapshot, clearDecisionInbox, persistLastSeedToStore, resetSeedPreviewState,
-      labStateRef, setLastSeedPayload, setMetadata, setStreamingText, setAuditItems, setResultLogs, setDeityScores, setDeityEnergyAxes, setDeityComponents, setDeityTraceDetails, setHoveredDeity, setPhysicsAudit, setPhysicsConfidence, setPhysicsEvidence, setShowPhysicsAudit, setAuditorProposalCards, setResolvedCardIds, setPhysicsParams, setGlobalEntropy, setConfirmedConflicts, setFirstPromptText, setTimeline, setLlmDiagnosticData, setFinalVerdictBody, setFinalVerdictChangeLog, setFinalVerdictVersionId, setFinalLogicalEvidence, setFinalWorkVector, setFinalTopologyGraphV1, setFinalStructureCandidatesV0, setFinalStructureFinalDecisionV0, setFinalVerdictHistory, setStressTestResult, setGenderComparisonResult, setConsensusHistory, setConfirmedDecisions, setConfirmedDecisionIds, setConsultationId, setSelectionResetToken, setLogicDiff]);
+  }, [
+    mergeSnapshot,
+    clearDecisionInbox,
+    persistLastSeedToStore,
+    resetSeedPreviewState,
+    labStateRef,
+    setLastSeedPayload,
+    setMetadata,
+    setStreamingText,
+    setAuditItems,
+    setResultLogs,
+    setDeityScores,
+    setDeityEnergyAxes,
+    setDeityComponents,
+    setDeityTraceDetails,
+    setHoveredDeity,
+    setPhysicsAudit,
+    setPhysicsConfidence,
+    setPhysicsEvidence,
+    setShowPhysicsAudit,
+    setAuditorProposalCards,
+    setResolvedCardIds,
+    setPhysicsParams,
+    setGlobalEntropy,
+    setConfirmedConflicts,
+    setFirstPromptText,
+    setTimeline,
+    setLlmDiagnosticData,
+    setFinalVerdictBody,
+    setFinalVerdictChangeLog,
+    setFinalVerdictVersionId,
+    setFinalLogicalEvidence,
+    setFinalWorkVector,
+    setFinalTopologyGraphV1,
+    setFinalStructureCandidatesV0,
+    setFinalStructureFinalDecisionV0,
+    setFinalVerdictHistory,
+    setStressTestResult,
+    setGenderComparisonResult,
+    setConsensusHistory,
+    setConfirmedDecisions,
+    setConfirmedDecisionIds,
+    setConsultationId,
+    setSelectionResetToken,
+    setLogicDiff,
+  ]);
 
   const lastCausalRevertHandledRef = useRef(0);
   const onSeedSubmitRef = useRef(onSeedSubmit);
@@ -271,7 +331,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
 
   async function applyLabConfigAndRecalculate() {
     if (!lastSeedPayload) return;
-    setResultLogs((prev: any) => [
+    setResultLogs((prev) => [
       ...prev,
       `🧪 实验参数已应用：luck=${labConfig.WEIGHT_LUCK}, year=${labConfig.WEIGHT_YEAR}, climate=${labConfig.CLIMATE_INTENSITY}`,
     ]);
@@ -281,24 +341,24 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
   async function revokeConfirmedDecision(id: string) {
     const nextDecisions = confirmedDecisions.filter((item) => item.id !== id);
     setConfirmedDecisions(nextDecisions);
-    setConfirmedDecisionIds((prev: any) => prev.filter((item: string) => item !== id));
+    setConfirmedDecisionIds((prev) => prev.filter((item) => item !== id));
   }
 
   const reCalculateAbs = useCallback(async () => {
     await reCalculateAbsSilentlyImplRef.current();
   }, [reCalculateAbsSilentlyImplRef]);
   reCalculateAbsRef.current = reCalculateAbs;
-  reCalculateAbsRef.current = reCalculateAbs;
 
   const runtimeConfigSerializedRef = useRef<string | null>(null);
+  /** 浏览器下 setTimeout 句柄为 number；避免与 NodeJS.Timeout 混用导致类型冲突 */
   const pluginRecalcTimerRef = useRef<number | null>(null);
-  const prevActiveViewRef = useRef<string | null>(null);
+  const prevActiveViewRef = useRef<ShellActiveView | null>(null);
 
   const onPluginConfigChange = useCallback(() => {
     const prevJson = runtimeConfigSerializedRef.current;
     if (prevJson) {
       try {
-        const prevCfg = JSON.parse(prevJson) as { pluginWeights?: any };
+        const prevCfg = JSON.parse(prevJson) as { pluginWeights?: PluginWeights };
         const pw = prevCfg.pluginWeights;
         const next = labStateRef.current.runtimeConfig.pluginWeights;
         if (
@@ -310,7 +370,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
           (Math.abs(next.blindSchool - pw.blindSchool) > 0.2 ||
             Math.abs(next.wangshuai - pw.wangshuai) > 0.2)
         ) {
-          setSigShiftFlashKey((k: number) => k + 1);
+          setSigShiftFlashKey((k) => k + 1);
         }
       } catch {
         /* ignore */

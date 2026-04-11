@@ -558,7 +558,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     reCalculateAbsRef,
     reCalculateAbsSilentlyImplRef,
     setSigShiftFlashKey,
-    activeView: activeView || "",
+    activeView,
     busy,
     isStreaming,
     isExecuting,

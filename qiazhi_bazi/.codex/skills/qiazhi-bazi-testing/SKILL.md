@@ -26,9 +26,10 @@ pytest tests/unit tests/integration -q
 
 ```bash
 cd qiazhi_bazi/frontend
-npm test
-npm run build
+npm run test:ci
 ```
+
+等价拆分：`npm run typecheck && npm run lint && npm test && npm run build`。仅 Stream Board：`npm run test:stream-board`。
 
 ## Coverage expectations
 

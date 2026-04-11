@@ -1,24 +1,24 @@
 # Test Case Matrix
 
-更新时间：`2026-04-09`
+更新时间：`2026-04-11`
 
-## 最近一次自动化执行（2026-04-09）
+## 最近一次自动化执行（2026-04-11）
 
 ### 执行命令
 
-- 前端：`pnpm -C qiazhi_bazi/frontend test`
-- 后端：`python3 -m pytest`（目录：`qiazhi_bazi/backend`）
+- 后端：`cd qiazhi_bazi/backend && python3 -m pytest tests/unit tests/integration -q`
+- 前端（单元 + 集成风格 Vitest + 类型 + 静态检查 + 构建回归）：`cd qiazhi_bazi/frontend && npm run test:ci`
 
 ### 结果汇总
 
-- 后端：`60` 项全部通过
-- 前端：`10` 个测试文件、`22` 条测试全部通过
+- 后端：`74` 项全部通过（`tests/unit` + `tests/integration`）
+- 前端：`npm run test:ci` 全绿：`typecheck`、`lint`（见下述告警）、`vitest run`（`14` 个测试文件、`35` 条用例）、`next build`
 
-### 本轮修复点
+### 本轮说明
 
-- 前端 `useStreamBoardController` 测试补齐 App Router mock（`useRouter/usePathname/useSearchParams`）。
-- 前端 `StreamBoardView` 旧回归测试替换为可运行占位回归用例，确保套件稳定执行。
-- 后端 `analysis_service` 相关单测补齐 `physics_tensor.meta` 与 `abs_nodes` fixture，匹配现行输入契约。
+- 前端新增 `npm run test:ci`（`typecheck` + `lint` + 全量 Vitest + `build`）与 `npm run test:stream-board`（Stream Board 子树）。
+- 前端补齐 `.eslintrc.json` 与 `eslint` / `eslint-config-next`，`next lint` 可在非交互环境执行；当前仓库仍存在若干 `react-hooks/exhaustive-deps` 告警（不阻断 CI），后续可逐项收敛。
+- 新增 `useStreamBoardPipeline` 契约单测，与 Stream Board 拆分文档对齐。
 
 ## 后端
 
@@ -50,8 +50,13 @@
 | 层级 | 用例 | 文件 |
 |---|---|---|
 | unit | stream-board utils | `frontend/src/features/stream-board/__tests__/utils.test.ts` |
+| unit | stream-board viewModel 映射 | `frontend/src/features/stream-board/__tests__/viewModel.test.ts` |
+| unit | stream-board lab snapshot 纯函数灌回 | `frontend/src/features/stream-board/controller/__tests__/labSnapshotHydration.test.ts` |
+| unit | stream-board pipeline 模块契约 | `frontend/src/features/stream-board/controller/__tests__/useStreamBoardPipeline.test.ts` |
+| integration | stream-board lab snapshot 副作用 | `frontend/src/features/stream-board/hooks/__tests__/useStreamBoardLabSnapshotEffects.test.tsx` |
 | integration | stream-board controller regression | `frontend/src/features/stream-board/__tests__/useStreamBoardController.test.tsx` |
 | integration | stream-board view wiring | `frontend/src/features/stream-board/__tests__/StreamBoardView.test.tsx` |
+| unit | AuditSidebar | `frontend/src/components/__tests__/AuditSidebar.test.tsx` |
 | unit | admin-settings utils | `frontend/src/features/admin-settings/utils.test.ts` |
 | integration | admin-settings controller hydrate + save | `frontend/src/features/admin-settings/__tests__/useAdminSettingsController.test.tsx` |
 | unit | decision-inbox helpers | `frontend/src/features/decision-inbox/utils.test.ts` |
@@ -61,7 +66,8 @@
 
 ### 前端回归关注点
 
-- `StreamBoard` 提交生辰后仍能生成卡片、审计和 verdict 链路
+- `StreamBoard` 提交生辰后仍能生成卡片、审计和 verdict 链路；`activeView` 与 `ShellActiveView` 一致（不得用空字符串冒充 tab）
+- `next build` 通过（类型与 App Router 导入错误在构建期暴露）
 - `admin-settings` 仍能恢复本地配置、拉取模型、测试并保存 runtime config
 - `DecisionInbox` 卡片选择和 verdict 文本高亮不回归
 - `BaziCard` 根气、时间线和 branch energy 可视化逻辑不回归

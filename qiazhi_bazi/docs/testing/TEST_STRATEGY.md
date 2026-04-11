@@ -1,6 +1,6 @@
 # Test Strategy
 
-更新时间：`2026-04-09`
+更新时间：`2026-04-11`
 
 ## 1. 目标
 
@@ -51,33 +51,50 @@
 
 覆盖：
 
-- controller hooks
-- view wiring
+- controller hooks（含 `useStreamBoardController` 对 `useStreamBoardPipeline` 的编排）
+- view wiring（`StreamBoardView`、子域 snapshot 副作用 hook）
 - fetch/localStorage/timer 副作用
 
 ### 回归测试
 
 覆盖：
 
-- StreamBoard analyze-seed 主链路
+- StreamBoard analyze-seed 主链路（controller 集成用例 + 纯函数 `labSnapshotHydration`）
 - physics/service fallback 行为
 - admin settings runtime-config 流程
+- 前端 `npm run build` 作为构建期回归（路由与类型导入错误会在此暴露）
 
 ## 3. 当前执行命令
 
-### 后端
+### 后端（单元 + 集成）
 
 ```bash
 cd qiazhi_bazi/backend
 pytest tests/unit tests/integration -q
 ```
 
-### 前端
+### 前端（推荐 PR 前一条命令跑全量）
 
 ```bash
 cd qiazhi_bazi/frontend
-pnpm test
-pnpm run build
+npm run test:ci
+```
+
+等价拆解（与 `pnpm` 可互换，任选其一包管理器）：
+
+```bash
+cd qiazhi_bazi/frontend
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+仅 Stream Board 子树（加快迭代）：
+
+```bash
+cd qiazhi_bazi/frontend
+npm run test:stream-board
 ```
 
 ## 4. 执行清单
@@ -90,10 +107,10 @@ pnpm run build
 
 ### 前端改动后
 
-1. 跑 `pnpm test`
-2. 跑 `pnpm run build`
+1. 跑 `npm run test:ci`（或至少 `npm run typecheck && npm test`）
+2. 若只动 `stream-board`，可跑 `npm run test:stream-board` 再补全量
 3. 如果改到 controller，确认有 `fetch/localStorage/timer` 覆盖
-4. 如果改到纯 helper，确认有单测
+4. 如果改到纯 helper / viewModel，确认有单测
 
 ### 文档/skills 改动后
 

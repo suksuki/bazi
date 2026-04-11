@@ -33,9 +33,15 @@ npm run dev
 
 ```bash
 cd qiazhi_bazi/frontend
-npm test
+npm run typecheck   # TypeScript，无产物
+npm run lint        # Next.js ESLint
+npm test            # Vitest 全量（单元 + 集成风格用例）
+npm run test:stream-board   # 仅 stream-board 相关，加快反馈
+npm run test:ci     # 提 PR 前推荐：typecheck + lint + test + build
 npm run build
 ```
+
+说明：`test:ci` 覆盖类型检查、静态检查、全部 Vitest 与生产构建，作为前端回归基线；与仓库根文档中的后端 `pytest` 命令一起构成全栈自动化验证。
 
 ## 设计文档
 

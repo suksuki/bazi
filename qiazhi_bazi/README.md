@@ -35,9 +35,11 @@ qiazhi_bazi/
 
 ## 当前验证基线
 
-- 后端：`pytest tests/unit tests/integration -q`
-- 前端：`npm test`
-- 前端构建：`npm run build`
+- 后端（单元 + 集成）：`cd qiazhi_bazi/backend && pytest tests/unit tests/integration -q`
+- 前端（类型 + 规范 + 单测 + 构建）：`cd qiazhi_bazi/frontend && npm run test:ci`
+- 前端快速子集：`cd qiazhi_bazi/frontend && npm run test:stream-board`
+
+全量说明见 [docs/testing/TEST_STRATEGY.md](docs/testing/TEST_STRATEGY.md) 与 [docs/testing/TEST_CASES.md](docs/testing/TEST_CASES.md)。
 
 ## 远程环境清理
 

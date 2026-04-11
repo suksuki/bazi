@@ -1,6 +1,6 @@
 # Frontend MVC Guide
 
-更新时间：`2026-04-08`
+更新时间：`2026-04-11`
 
 ## 1. 目标
 
@@ -28,8 +28,10 @@ src/features/<feature>/
 ### Stream Board
 
 - 入口：[frontend/src/components/StreamBoard.tsx](/home/hlsystem/bazi/qiazhi_bazi/frontend/src/components/StreamBoard.tsx:1)
-- Controller：[frontend/src/features/stream-board/useStreamBoardController.ts](/home/hlsystem/bazi/qiazhi_bazi/frontend/src/features/stream-board/useStreamBoardController.ts:1)
+- Controller（Facade）：[frontend/src/features/stream-board/useStreamBoardController.ts](/home/hlsystem/bazi/qiazhi_bazi/frontend/src/features/stream-board/useStreamBoardController.ts:1)
+- 编排子模块：`controller/useStreamBoardPipeline.ts`（副作用管线：`activeView`、插件重算定时器、语言切换等；入参为强类型 `StreamBoardPipelineParams`，由 Facade 注入 setter/ref）
 - View：[frontend/src/features/stream-board/StreamBoardView.tsx](/home/hlsystem/bazi/qiazhi_bazi/frontend/src/features/stream-board/StreamBoardView.tsx:1)
+- 展示用纯映射：`viewModel.ts`（便于单测与 View 瘦身）
 
 ### Admin Settings
 
@@ -56,7 +58,11 @@ src/features/<feature>/
 ## 6. 当前前端测试分层
 
 - `StreamBoardView`：view 级交互测试
-- `useStreamBoardController`：controller 回归测试
+- `useStreamBoardController`：controller 回归测试（analyze-seed 主链路）
+- `useStreamBoardLabSnapshotEffects`：实验室 snapshot 灌回副作用
+- `labSnapshotHydration` / `viewModel`：纯函数与映射单测
+- `useStreamBoardPipeline`：模块契约与 `activeView` 类型字面量单测
+- `AuditSidebar`：组件级单测
 - `admin-settings`：controller 集成测试
 - `decision-inbox / bazi-card / ten-god-list / auditor-briefing`：helper 单测
 
