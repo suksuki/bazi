@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from app.skills.final_verdict_parts.json_extract import coerce_verdict_body_display
+from app.skills.final_verdict_parts.narrative_guard import evidence_ref_allowed_for_verdict_parse
+
 _EARTHLY: Set[str] = set("子丑寅卯辰巳午未申酉戌亥")
 _PILLAR_KEYS = ("year", "month", "day", "hour")
 
@@ -61,17 +64,21 @@ def _heuristic_evidence_refs(text: str, metadata: Dict[str, Any]) -> List[str]:
         text,
     ):
         refs.append(m.group(0))
+    for m in re.finditer(r"\bVF\d+\b", text, flags=re.IGNORECASE):
+        refs.append(m.group(0).upper())
     return sorted(set(refs))[:48]
 
 
 def _merge_evidence_refs_into_row(row: Dict[str, Any], metadata: Dict[str, Any]) -> None:
     base = [str(x).strip() for x in (row.get("evidence_refs") or []) if str(x).strip()]
     extra = _heuristic_evidence_refs(str(row.get("text") or ""), metadata)
-    row["evidence_refs"] = sorted(set(base) | set(extra))[:48]
+    merged = sorted(set(base) | set(extra))[:48]
+    allowed = [r for r in merged if evidence_ref_allowed_for_verdict_parse(r)]
+    row["evidence_refs"] = allowed if allowed else merged[:48]
 
 
 def _normalize_assertion_row(raw: Dict[str, Any], idx: int) -> Optional[Dict[str, Any]]:
-    text = str(raw.get("text") or raw.get("assertion") or "").strip()
+    text = coerce_verdict_body_display(str(raw.get("text") or raw.get("assertion") or "").strip())
     if not text:
         return None
     aid = str(raw.get("assertion_id") or raw.get("id") or f"a{idx}").strip() or f"a{idx}"
@@ -95,13 +102,15 @@ def parse_verdict_anchor_layer(
         for i, item in enumerate(raw_list):
             if not isinstance(item, dict):
                 if isinstance(item, str) and item.strip():
-                    rows.append(
-                        {
-                            "assertion_id": f"a{i}",
-                            "text": str(item).strip()[:8000],
-                            "evidence_refs": [],
-                        }
-                    )
+                    st = coerce_verdict_body_display(str(item).strip())
+                    if st:
+                        rows.append(
+                            {
+                                "assertion_id": f"a{i}",
+                                "text": st[:8000],
+                                "evidence_refs": [],
+                            }
+                        )
                 continue
             row = _normalize_assertion_row(item, i)
             if row:

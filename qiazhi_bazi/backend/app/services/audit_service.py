@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 from app.api.contracts import AuditLlmStructuredResponse, AuditPhysicsWithLlmRequest
 from app.api.router_helpers import (
@@ -12,8 +15,10 @@ from app.api.router_helpers import (
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
 from app.prompts.audit import AUDIT_JSON_REPAIR_SYSTEM
+from app.utils.semantic_firewall import strip_float_literals
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.services.helpers.audit_helpers import fallback_audit_response, normalize_audit_result
+from app.services.helpers.tensor_adapters import collect_conflict_matrix_points_for_llm
 
 
 def _resolve_audit_prompt_tier(body: AuditPhysicsWithLlmRequest, cfg: Dict[str, Any]) -> str:
@@ -45,6 +50,7 @@ def build_audit_prompt_payload(
 ) -> tuple[List[Dict[str, str]], Dict[str, Any], str]:
     cfg = get_runtime_config().get("llm", {}) or {}
     tier = _resolve_audit_prompt_tier(body, cfg)
+    conflict_points = collect_conflict_matrix_points_for_llm(body.metadata, physics_tensor)
     deity_scores = (physics_tensor or {}).get("deity_scores", {}) or {}
     audit_log = (physics_tensor or {}).get("audit_log", {}) or {}
     trace = (audit_log.get("trace", {}) if isinstance(audit_log, dict) else {}) or {}
@@ -62,6 +68,7 @@ def build_audit_prompt_payload(
         inf_trace = raw_it if isinstance(raw_it, dict) else None
     except Exception:
         inf_trace = None
+    duel_ctx = str(getattr(body, "will_conflict_duel_context", None) or "").strip()
     prompt = build_physics_audit_prompt(
         deity_scores=deity_scores,
         root_check=root_check if isinstance(root_check, dict) else {},
@@ -72,7 +79,23 @@ def build_audit_prompt_payload(
         tier=tier,
         high_reasoning=high_reasoning,
         inference_trace=inf_trace,
+        conflict_points=conflict_points,
+        will_conflict_duel_context=duel_ctx,
     )
+    label_lines: List[str] = []
+    meta_pt = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+    bud = meta_pt.get("semantic_label_bundle_v1") if isinstance(meta_pt.get("semantic_label_bundle_v1"), dict) else {}
+    for line in (bud.get("verified_fact_lines") or [])[:28]:
+        s = str(line or "").strip()
+        if s:
+            label_lines.append(s)
+    if label_lines and len(prompt) > 1 and isinstance(prompt[1], dict):
+        prefix = "[Verified Facts·语义标签工厂]\n" + "\n".join(label_lines) + "\n\n"
+        prompt = [
+            prompt[0],
+            {**prompt[1], "content": prefix + str(prompt[1].get("content") or "")},
+        ]
+    prompt = [{"role": m["role"], "content": strip_float_literals(str(m.get("content") or ""))} for m in prompt]
     return (
         prompt,
         {
@@ -94,6 +117,7 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
         model=cfg.get("model") or None,
     )
     raw = ""
+    retry_raw = ""
     parsed: AuditLlmStructuredResponse | None = None
     structured_hit = False
     repair_mode = "fallback"
@@ -106,7 +130,14 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
         parsed = AuditLlmStructuredResponse.model_validate(json.loads(extract_first_json_object(raw)))
         structured_hit = True
         repair_mode = "strict_json"
-    except Exception:
+    except Exception as exc_primary:
+        logger.warning(
+            "audit_physics_llm primary_json_parse_failed tier=%s err=%s detail=%s raw_prefix=%r",
+            audit_prompt_tier,
+            type(exc_primary).__name__,
+            str(exc_primary)[:400],
+            (raw or "")[:400],
+        )
         try:
             retry_prompt = [
                 {"role": "system", "content": AUDIT_JSON_REPAIR_SYSTEM},
@@ -119,7 +150,14 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
             parsed = AuditLlmStructuredResponse.model_validate(json.loads(extract_first_json_object(retry_raw)))
             structured_hit = True
             repair_mode = "retry_json"
-        except Exception:
+        except Exception as exc_retry:
+            logger.warning(
+                "audit_physics_llm retry_json_failed tier=%s err=%s detail=%s retry_raw_prefix=%r",
+                audit_prompt_tier,
+                type(exc_retry).__name__,
+                str(exc_retry)[:400],
+                str(retry_raw or "")[:400],
+            )
             parsed = None
 
     parsed_obj = parsed or fallback_audit_response()
@@ -132,6 +170,16 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
         llm_approx_tokens,
         prompt,
         physics_tensor,
+        audit_prompt_tier,
     )
     result["audit_prompt_tier"] = audit_prompt_tier
+    lm = result.get("llm_meta") if isinstance(result.get("llm_meta"), dict) else {}
+    logger.info(
+        "audit_physics_llm done tier=%s structured_hit=%s repair_mode=%s elapsed_ms=%.1f approx_tokens=%.1f",
+        audit_prompt_tier,
+        bool(result.get("structured_hit")),
+        result.get("repair_mode"),
+        float(lm.get("elapsed_ms") or 0.0),
+        float(lm.get("approx_tokens") or 0.0),
+    )
     return result

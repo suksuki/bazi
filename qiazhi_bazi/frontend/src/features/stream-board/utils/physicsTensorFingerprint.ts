@@ -1,4 +1,45 @@
 /**
+ * physics_tensor.meta 中参与物理收敛对比的键（数值/结构/节气等），不含 LLM 叙事。
+ */
+const META_CONVERGENCE_KEYS = new Set([
+  "params",
+  "solar_term",
+  "climate_season",
+  "global_entropy",
+  "l1_junction_flags",
+  "pattern_profile",
+  "energy_flow_audit",
+  "causal_routing",
+]);
+
+/** 顶层物理数值/结构字段（排除 audit_log、evidence 文本、plugin 内 LLM 块等） */
+const TENSOR_TOP_CONVERGENCE_KEYS = ["normalized", "deity_scores", "deity_energy_axes", "deity_components", "confidence"] as const;
+
+/**
+ * 从 physics_tensor 抽出「物理收敛」子树：仅能量矩阵、神煞分、轴/组件、置信度及 meta 白名单。
+ * 严格排除 diagnosis、causal_reasoning、tuning_suggestions、判词遥测等一切易随 LLM 抖动的字段。
+ */
+export function extractPhysicsTensorConvergenceCore(tensor: unknown): Record<string, unknown> | null {
+  if (!tensor || typeof tensor !== "object" || Array.isArray(tensor)) return null;
+  const t = tensor as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of TENSOR_TOP_CONVERGENCE_KEYS) {
+    if (t[k] !== undefined) out[k] = t[k];
+  }
+  const metaRaw = t.meta;
+  if (metaRaw && typeof metaRaw === "object" && !Array.isArray(metaRaw)) {
+    const m = metaRaw as Record<string, unknown>;
+    const slim: Record<string, unknown> = {};
+    const keys = Object.keys(m).filter((k) => META_CONVERGENCE_KEYS.has(k)).sort();
+    for (const k of keys) {
+      slim[k] = m[k];
+    }
+    if (Object.keys(slim).length > 0) out.meta = slim;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/**
  * 稳定序列化 physics_tensor 用于「前后两次是否完全一致」对比（键排序、深度上限防环）。
  */
 export function stableStringifyForHash(value: unknown, depth = 0): string {
@@ -39,11 +80,15 @@ export function buildFullRecalcInputBundle(input: {
   });
 }
 
-/** 返回十六进制指纹；tensor 缺失时为 "" */
+/**
+ * 物理收敛指纹：仅对 {@link extractPhysicsTensorConvergenceCore} 子树哈希。
+ * LLM 诊断/因果叙事等不参与对比，避免断言文案随机性误判「物理未收敛」。
+ */
 export function physicsTensorFingerprint(tensor: unknown): string {
-  if (!tensor || typeof tensor !== "object") return "";
+  const core = extractPhysicsTensorConvergenceCore(tensor);
+  if (!core) return "";
   try {
-    const s = stableStringifyForHash(tensor);
+    const s = stableStringifyForHash(core);
     let h = 2166136261;
     for (let i = 0; i < s.length; i++) {
       h ^= s.charCodeAt(i);

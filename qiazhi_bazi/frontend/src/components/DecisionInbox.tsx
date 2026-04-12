@@ -9,24 +9,26 @@ import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { elementColorClass } from "@/constants/termMap";
 import { DecisionItem } from "@/features/decision-engine/components/DecisionItem";
 import { DecisionInboxCard, VerdictChangeLog } from "@/features/decision-inbox/types";
-import type { DecisionSignalToNoiseMeta, LogicDiff } from "@/features/stream-board/models";
+import type { DecisionSignalToNoiseMeta, DeityEnergyAxis, LogicDiff } from "@/features/stream-board/models";
 import type { Lang } from "@/types/bazi";
 import {
   getCardElement,
   getCardLabel,
   getEvidenceTone,
   isAuditorProposal,
-  isVerdictDeity,
   pruneSelectedIds,
   sgjgEnergeticLabelForCard,
-  splitVerdictLine,
 } from "@/features/decision-inbox/utils";
-import { SkillLinkedAssertionLine } from "@/features/stream-board/components/ResultInterpretation";
+import { LiveVerdictDisplay } from "@/features/stream-board/components/LiveVerdictDisplay";
+import { LogicEvolutionAxis } from "@/features/stream-board/components/LogicEvolutionAxis";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 
 type Props = {
   cards: DecisionInboxCard[];
   resultLogs: string[];
   verdictBody?: string;
+  /** 物理预判 Markdown 骨架（Orchestrator / 无 LLM）；优先于终判正文展示占位 */
+  verdictSkeleton?: string | null;
   verdictChangeLog?: VerdictChangeLog;
   logicalEvidence?: string[];
   workVector?: Record<string, unknown>;
@@ -71,12 +73,33 @@ type Props = {
   lang?: Lang;
   /** 从 Inbox L1 卡片跳转到 Debug「插件碰撞」并滚动到对应 plugin_outputs 行 */
   onOpenPluginAudit?: (pluginId: string) => void;
+  /** 全量测算结束递增，驱动主断言区骨架首秒高亮 */
+  calculationNonce?: number;
+  /** 终判流式/合并完成后递增，驱动 LiveVerdictDisplay 强制刷新 */
+  verdictBodyRenderNonce?: number;
+  streamingText?: string;
+  skeletonContentKey?: string;
+  traceChipLogs?: string[];
+  traceConflictLabels?: string[];
+  preInjectionDeityDisplay?: {
+    deity_scores?: Record<string, number>;
+    deity_energy_axes?: Record<string, DeityEnergyAxis>;
+  } | null;
+  showPreInjectionAbsSnapshot?: boolean;
+  onShowPreInjectionAbsSnapshotChange?: (next: boolean) => void;
+  /** 当前十神分（与注塑前快照对比，用于意志 Toast） */
+  deityScores?: Record<string, number>;
+  /** 追加型决策日志，供逻辑演化轴展示 */
+  decisionJournal?: DecisionJournalEntry[];
+  /** 物理审计 LLM diagnosis（含从 logic_proposal 提拔），裁决舱「审计备忘」即时展示 */
+  physicsAuditDiagnosis?: string | null;
 };
 
 export function DecisionInbox({
   cards,
   resultLogs,
   verdictBody = "",
+  verdictSkeleton = null,
   verdictChangeLog = {},
   logicalEvidence = [],
   workVector = {},
@@ -114,18 +137,31 @@ export function DecisionInbox({
   decisionSignalToNoise,
   lang = "ZH",
   onOpenPluginAudit,
+  calculationNonce = 0,
+  verdictBodyRenderNonce = 0,
+  streamingText = "",
+  skeletonContentKey = "",
+  traceChipLogs = [],
+  traceConflictLabels = [],
+  preInjectionDeityDisplay = null,
+  showPreInjectionAbsSnapshot = false,
+  onShowPreInjectionAbsSnapshotChange,
+  deityScores = {},
+  decisionJournal = [],
+  physicsAuditDiagnosis = null,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
+  const [physResonanceTick, setPhysResonanceTick] = useState(0);
+  const [willToast, setWillToast] = useState<string | null>(null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [stressInput, setStressInput] = useState("壬辰");
   const [sectionOpen, setSectionOpen] = useState({
-    strategic: true,
+    strategic: false,
     summary: true,
   });
   const [summaryOpen, setSummaryOpen] = useState({
     diff: true,
     evidence: false,
-    work: true,
     topology: false,
     structure: true,
   });
@@ -175,9 +211,34 @@ export function DecisionInbox({
   function applySelection(next: Record<string, boolean>) {
     if (interactionLocked) return;
     setSelectedIds(next);
+    setPhysResonanceTick((v) => v + 1);
     const nextSelected = cards.filter((card) => Boolean(next[card.id]));
     onSelectionChange?.(nextSelected);
   }
+
+  useEffect(() => {
+    if (physResonanceTick === 0) return;
+    const pre = preInjectionDeityDisplay?.deity_scores;
+    if (!pre || !deityScores || Object.keys(deityScores).length === 0) return;
+    let bestName = "";
+    let bestPct = 0;
+    for (const k of Object.keys(deityScores)) {
+      const cur = Number(deityScores[k] ?? 0);
+      const base = Number(pre[k] ?? 0);
+      const denom = Math.max(1e-6, Math.abs(base));
+      const pct = ((cur - base) / denom) * 100;
+      if (Math.abs(pct) > Math.abs(bestPct)) {
+        bestPct = pct;
+        bestName = k;
+      }
+    }
+    if (!bestName || Math.abs(bestPct) < 0.35) return;
+    const sign = bestPct > 0 ? "+" : "";
+    const rounded = Math.abs(bestPct) >= 10 ? bestPct.toFixed(0) : bestPct.toFixed(1);
+    setWillToast(t("意志注塑成功：{deity} 能量 {sign}{pct}%").replace("{deity}", bestName).replace("{sign}", sign).replace("{pct}", rounded));
+    const id = window.setTimeout(() => setWillToast(null), 2600);
+    return () => window.clearTimeout(id);
+  }, [physResonanceTick, deityScores, preInjectionDeityDisplay, t]);
   const hasReboundRisk = (((workVector as { work_vectors?: Array<Record<string, unknown>> }).work_vectors) || [])
     .some((item) => {
       const gain = Number(item.unlock_gain ?? 0);
@@ -224,56 +285,6 @@ export function DecisionInbox({
     await onStressTest?.(stressInput);
   }
 
-  const feedbackSessionHint = String(
-    (metadata as { consultation_id?: unknown; session_id?: unknown }).consultation_id ??
-      (metadata as { session_id?: unknown }).session_id ??
-      "",
-  );
-
-  function renderVerdictLine(line: string, idx: number) {
-    const parts = lang === "ZH" ? splitVerdictLine(line) : [t(line)];
-    const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
-    const isFingerprintLine = line.includes("qiazhi-fingerprint");
-    const lineClass = `whitespace-pre-wrap leading-relaxed ${
-      summaryChanged
-        ? "rounded-md bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-transparent px-2 py-1 text-emerald-200"
-        : "text-emerald-300"
-    } ${
-      highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
-    } ${
-      isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
-    } ${
-      isFingerprintLine ? "break-all font-mono text-[10px] text-zinc-500" : "break-words"
-    }`;
-    return (
-      <SkillLinkedAssertionLine
-        key={`${idx}-${line.slice(0, 12)}`}
-        line={line}
-        className={lineClass}
-        assertionIndex={idx}
-        sessionHint={feedbackSessionHint}
-        interactionLocked={interactionLocked}
-        t={t}
-      >
-        {parts.map((part, i) => (
-          isVerdictDeity(part) ? (
-            <button
-              key={`${idx}-${i}-${part}`}
-              type="button"
-              onClick={() => onVerdictDeityClick?.(part)}
-              className="mx-[1px] rounded border border-sky-500/30 bg-sky-500/10 px-1 text-sky-200 hover:bg-sky-500/20"
-              title={t("查看 {deity} 的演算路径").replace("{deity}", part)}
-            >
-              {part}
-            </button>
-          ) : (
-            <span key={`${idx}-${i}`}>{part}</span>
-          )
-        ))}
-      </SkillLinkedAssertionLine>
-    );
-  }
-
   function toggleSection(key: keyof typeof sectionOpen) {
     setSectionOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   }
@@ -304,92 +315,19 @@ export function DecisionInbox({
         <h3 className="text-sm font-medium">{t("Decision Inbox")}</h3>
         <span className="text-xs text-zinc-500">{t("流式对话与决策卡片")}</span>
       </div>
-      {!hideStrategicPanel ? (
-        <div className="mb-3 rounded-xl border border-zinc-800 bg-zinc-950 p-2">
-        <button
-          type="button"
-          onClick={() => toggleSection("strategic")}
-          className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
-        >
-          <span>{t("核心看板（Strategic HUD + 盲派镜像）")}</span>
-          <span>{sectionOpen.strategic ? t("收起") : t("展开")}</span>
-        </button>
-        {sectionOpen.strategic ? (
-          <div className="mt-2">
-            <StrategicCoreHUD
-              structureFinalDecision={structureFinalDecision}
-              pluginWeights={pluginWeights}
-              hasReboundRisk={hasReboundRisk}
-              energyPeak={energyPeakAbs}
-              globalEntropy={globalEntropy}
-              genderLabel={String((metadata as { gender?: string }).gender || "")}
-              diagnosticHint={diagnosticHint}
-              t={t}
-              onPickDeity={(deity) => {
-                onVerdictDeityClick?.(deity);
-                onStrategicDeityHover?.(deity);
-              }}
-            />
-            <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 p-2 text-[11px] text-zinc-300">
-              <p className="mb-1">{t("语义权重滑杆（Plugin Weights）")}</p>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <label>
-                  {t("盲派 ")}
-                  {weighting.blindSchool.toFixed(2)}
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={weighting.blindSchool}
-                    disabled={interactionLocked}
-                    onChange={(e) => setWeighting((prev) => ({ ...prev, blindSchool: Number(e.target.value) }))}
-                    onMouseUp={async () => {
-                      if (interactionLocked) return;
-                      onPluginWeightsChange?.(weighting);
-                      await onApplyPluginWeights?.();
-                    }}
-                    className="w-full disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </label>
-                <label>
-                  {t("旺衰 ")}
-                  {weighting.wangshuai.toFixed(2)}
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={weighting.wangshuai}
-                    disabled={interactionLocked}
-                    onChange={(e) => setWeighting((prev) => ({ ...prev, wangshuai: Number(e.target.value) }))}
-                    onMouseUp={async () => {
-                      if (interactionLocked) return;
-                      onPluginWeightsChange?.(weighting);
-                      await onApplyPluginWeights?.();
-                    }}
-                    className="w-full disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={interactionLocked}
-                  onClick={async () => {
-                    if (interactionLocked) return;
-                    onPluginWeightsChange?.(weighting);
-                    await onApplyPluginWeights?.();
-                  }}
-                  className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {t("应用权重并重算")}
-                </button>
-              </div>
-            </div>
-            <BlindLogicMirror workVector={workVector} t={t} />
-          </div>
-        ) : null}
+      {willToast ? (
+        <div className="pointer-events-none fixed left-1/2 top-14 z-[60] max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-lg border border-fuchsia-500/50 bg-fuchsia-950/95 px-3 py-2 text-center text-[11px] font-medium text-fuchsia-50 shadow-xl">
+          {willToast}
         </div>
       ) : null}
+      <div className="mb-3">
+        <LogicEvolutionAxis
+          resultLogs={resultLogs}
+          decisionJournal={decisionJournal}
+          metadata={metadata}
+          t={t}
+        />
+      </div>
 
       <div className="space-y-3 pb-20">
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
@@ -459,6 +397,93 @@ export function DecisionInbox({
         </div>
       </div>
 
+      {!hideStrategicPanel ? (
+        <div className="mb-3 rounded-xl border border-zinc-800 bg-zinc-950 p-2">
+          <button
+            type="button"
+            onClick={() => toggleSection("strategic")}
+            className="flex w-full items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
+          >
+            <span>{t("核心看板（Strategic HUD + 盲派镜像）")}</span>
+            <span>{sectionOpen.strategic ? t("收起") : t("展开")}</span>
+          </button>
+          {sectionOpen.strategic ? (
+            <div className="mt-2">
+              <StrategicCoreHUD
+                structureFinalDecision={structureFinalDecision}
+                pluginWeights={pluginWeights}
+                hasReboundRisk={hasReboundRisk}
+                energyPeak={energyPeakAbs}
+                globalEntropy={globalEntropy}
+                genderLabel={String((metadata as { gender?: string }).gender || "")}
+                diagnosticHint={diagnosticHint}
+                t={t}
+                onPickDeity={(deity) => {
+                  onVerdictDeityClick?.(deity);
+                  onStrategicDeityHover?.(deity);
+                }}
+              />
+              <div className="mb-2 rounded border border-zinc-700 bg-zinc-900 p-2 text-[11px] text-zinc-300">
+                <p className="mb-1">{t("语义权重滑杆（Plugin Weights）")}</p>
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <label>
+                    {t("盲派 ")}
+                    {weighting.blindSchool.toFixed(2)}
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={weighting.blindSchool}
+                      disabled={interactionLocked}
+                      onChange={(e) => setWeighting((prev) => ({ ...prev, blindSchool: Number(e.target.value) }))}
+                      onMouseUp={async () => {
+                        if (interactionLocked) return;
+                        onPluginWeightsChange?.(weighting);
+                        await onApplyPluginWeights?.();
+                      }}
+                      className="w-full disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </label>
+                  <label>
+                    {t("旺衰 ")}
+                    {weighting.wangshuai.toFixed(2)}
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={weighting.wangshuai}
+                      disabled={interactionLocked}
+                      onChange={(e) => setWeighting((prev) => ({ ...prev, wangshuai: Number(e.target.value) }))}
+                      onMouseUp={async () => {
+                        if (interactionLocked) return;
+                        onPluginWeightsChange?.(weighting);
+                        await onApplyPluginWeights?.();
+                      }}
+                      className="w-full disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    disabled={interactionLocked}
+                    onClick={async () => {
+                      if (interactionLocked) return;
+                      onPluginWeightsChange?.(weighting);
+                      await onApplyPluginWeights?.();
+                    }}
+                    className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t("应用权重并重算")}
+                  </button>
+                </div>
+              </div>
+              <BlindLogicMirror workVector={workVector} t={t} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <section className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-2">
         <button
           type="button"
@@ -515,10 +540,28 @@ export function DecisionInbox({
               L1 Certified
             </div>
           ) : null}
-          {!verdictBody && resultLogs.length === 0 ? <p className="text-xs text-zinc-500">{t("等待确认后生成阶段结论…")}</p> : null}
-          {verdictBody
-            ? verdictBody.split("\n").map((x, i) => renderVerdictLine(x, i))
-            : resultLogs.map((x, i) => renderVerdictLine(x, i))}
+          <LiveVerdictDisplay
+            verdictSkeleton={verdictSkeleton ?? null}
+            verdictBody={verdictBody}
+            physicsAuditDiagnosis={physicsAuditDiagnosis}
+            metadata={metadata}
+            streamingText={streamingText}
+            calculationNonce={calculationNonce}
+            verdictBodyRenderNonce={verdictBodyRenderNonce}
+            skeletonContentKey={skeletonContentKey}
+            physResonanceKey={physResonanceTick}
+            highlightVerdict={highlightVerdict}
+            summaryChanged={summaryChanged}
+            lang={lang}
+            t={t}
+            onVerdictDeityClick={onVerdictDeityClick}
+            traceResultLogs={resultLogs}
+            traceChipLogs={traceChipLogs}
+            traceConflictLabels={traceConflictLabels}
+            preInjectionDeityDisplay={preInjectionDeityDisplay}
+            showPreInjectionAbsSnapshot={showPreInjectionAbsSnapshot}
+            onShowPreInjectionAbsSnapshotChange={onShowPreInjectionAbsSnapshotChange}
+          />
           {(verdictChangeLog.physics_diff?.length || verdictChangeLog.consensus_diff?.length || verdictChangeLog.text_diff_hint) ? (
             <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
               <button
@@ -595,40 +638,6 @@ export function DecisionInbox({
               ) : null}
             </div>
           ) : null}
-          {Array.isArray((workVector as { work_vectors?: unknown[] })?.work_vectors)
-            && ((workVector as { work_vectors?: unknown[] })?.work_vectors || []).length > 0 ? (
-              <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => toggleSummary("work")}
-                  className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
-                >
-                  <span>{t("盲派做功链路图（L2）")}</span>
-                  <span>{summaryOpen.work ? t("收起") : t("展开")}</span>
-                </button>
-                {summaryOpen.work ? <div className="space-y-1">
-                  {((workVector as { work_vectors?: Array<Record<string, unknown>> }).work_vectors || []).slice(0, 3).map((item, idx) => {
-                    const net = Number(item.expected_work ?? 0);
-                    const tone = net > 0 ? "text-cyan-300" : (net < 0 ? "text-orange-300" : "text-zinc-300");
-                    const trigger = String(item.detail || item.type || "冲");
-                    const unlockFailed = Boolean(item.unlock_failed);
-                    return (
-                      <p key={`wv-${idx}`} className={`${tone} ${unlockFailed ? "line-through decoration-dashed" : ""}`}>
-                        {t("触发:")} {trigger}
-                        {" -> "}
-                        {t("释放:")} {Number(item.released_energy ?? 0).toFixed(2)}
-                        {" -> "}
-                        {t("损耗:")} -{Number(item.backfire_risk ?? 0).toFixed(2)}
-                        {" -> "}
-                        {t("净值:")} {net >= 0 ? "+" : ""}
-                        {net.toFixed(2)}
-                        {unlockFailed ? ` ${t("[解锁失败/链路断裂]")}` : ""}
-                      </p>
-                    );
-                  })}
-                </div> : null}
-              </div>
-            ) : null}
           <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
             <button
               type="button"

@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from threading import Lock
-from typing import Any, Dict, List
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from app.core.plugins.conflict_evaluator import evaluate_plugin_conflict
 from app.core.runtime_config import get_runtime_config
@@ -23,9 +23,13 @@ from app.skills.final_verdict_parts.constants import (
 )
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
 from app.skills.final_verdict_parts.evidence import get_logical_evidence as get_logical_evidence_fn
-from app.skills.final_verdict_parts.json_extract import extract_json_from_llm_text
+from app.skills.final_verdict_parts.json_extract import (
+    coerce_verdict_body_display,
+    extract_json_from_llm_text,
+    extract_verdict_body_relaxed,
+)
 from app.skills.final_verdict_parts.narrative_anchors import build_verdict_narrative_chunks
-from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat
+from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat, run_final_verdict_chat_stream
 from app.skills.final_verdict_parts.narrative_guard import (
     extract_reasoning_feedback_loop,
     weak_mode_requires_physics_fallback,
@@ -109,6 +113,7 @@ class FinalVerdictSkill(BaseSkill):
             previous_verdict=previous_verdict,
             lang=lang,
             plugin_weights=plugin_weights,
+            mandatory_final_synthesis=False,
         )
 
     @staticmethod
@@ -169,6 +174,8 @@ class FinalVerdictSkill(BaseSkill):
         lang: str = "ZH",
         plugin_weights: Dict[str, float] | None = None,
         regeneration_context: Dict[str, Any] | None = None,
+        mandatory_final_synthesis: bool = False,
+        stream_tokens: Optional[Callable[[str], Awaitable[None]]] = None,
     ) -> Dict[str, Any]:
         messages = build_final_verdict_messages(
             metadata=metadata,
@@ -178,11 +185,26 @@ class FinalVerdictSkill(BaseSkill):
             previous_verdict=previous_verdict,
             lang=lang,
             plugin_weights=plugin_weights,
+            mandatory_final_synthesis=bool(mandatory_final_synthesis),
         )
         _cfg = get_runtime_config().get("llm", {})
-        llm_meta: Dict[str, Any] = {"model_name": str(_cfg.get("model") or "LLM")}
+        if bool(mandatory_final_synthesis):
+            _ps = "final_verdict_mandatory_synthesis"
+        elif regeneration_context:
+            _ps = "final_verdict_regeneration"
+        else:
+            _ps = "final_verdict_decision"
+        llm_meta: Dict[str, Any] = {"model_name": str(_cfg.get("model") or "LLM"), "prompt_scenario": _ps}
         try:
-            raw, tel = await run_final_verdict_chat(messages)
+            if stream_tokens is not None:
+                pieces: List[str] = []
+                async for _piece in run_final_verdict_chat_stream(messages):
+                    pieces.append(_piece)
+                    await stream_tokens(_piece)
+                raw = "".join(pieces)
+                tel = {}
+            else:
+                raw, tel = await run_final_verdict_chat(messages)
         except Exception as exc:
             _LOG.warning("final_verdict_llm_chat_failed: %s", exc)
             raw = ""
@@ -201,11 +223,17 @@ class FinalVerdictSkill(BaseSkill):
         resolved_model_id = (
             str(llm_meta.get("model_name") or "").strip() or str(_cfg.get("model") or "").strip() or "unknown"
         )
+        raw_llm_snapshot = str(raw or "")
         if not str(raw or "").strip():
             raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
             llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "physics_fallback_empty_response"
         obj = extract_json_from_llm_text(raw)
         verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+        if not str(verdict_body or "").strip():
+            recovered = extract_verdict_body_relaxed(str(raw or ""))
+            if str(recovered or "").strip():
+                verdict_body = recovered.strip()
+                llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "regex_verdict_body_recovery"
         if not str(verdict_body or "").strip():
             raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
             obj = extract_json_from_llm_text(raw)
@@ -345,6 +373,7 @@ class FinalVerdictSkill(BaseSkill):
             )
         if not change_log.get("physics_diff") and not change_log.get("consensus_diff"):
             change_log["text_diff_hint"] = change_log.get("text_diff_hint") or "已生成全量重写终判（非追加模式）。"
+        verdict_body = coerce_verdict_body_display(str(verdict_body or ""))
         reasoning_fb = extract_reasoning_feedback_loop(obj)
         version_id = datetime.utcnow().strftime("v2.%m%d%H%M%S")
         md_for_anchors = metadata if isinstance(metadata, dict) else {}
@@ -367,6 +396,12 @@ class FinalVerdictSkill(BaseSkill):
                 raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
                 obj = extract_json_from_llm_text(raw)
                 verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+            if not str(verdict_body or "").strip():
+                recovered_wm = extract_verdict_body_relaxed(raw_llm_snapshot)
+                if str(recovered_wm or "").strip():
+                    verdict_body = recovered_wm.strip()
+                    llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "regex_verdict_body_recovery"
+            verdict_body = coerce_verdict_body_display(str(verdict_body or ""))
             narrative_chunks = build_verdict_narrative_chunks(verdict_body, md_for_anchors)
             anchor_layer_dict = parse_verdict_anchor_layer(
                 obj,
@@ -375,6 +410,12 @@ class FinalVerdictSkill(BaseSkill):
                 metadata=md_for_anchors,
             )
             llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "physics_fallback_narrative_guard"
+        fv_from_json = ""
+        if isinstance(obj, dict) and obj.get("final_verdict") is not None:
+            fv_from_json = coerce_verdict_body_display(str(obj.get("final_verdict") or ""))
+        clean_body_for_meta = coerce_verdict_body_display(str(verdict_body or "").strip())
+        if isinstance(anchor_layer_dict, dict):
+            anchor_layer_dict["final_verdict"] = (fv_from_json or clean_body_for_meta)[:12000]
         assertions_for_fp = (
             anchor_layer_dict.get("assertions") if isinstance(anchor_layer_dict.get("assertions"), list) else None
         )

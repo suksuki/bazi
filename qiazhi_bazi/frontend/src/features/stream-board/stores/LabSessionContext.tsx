@@ -19,6 +19,8 @@ import type {
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 import { normalizeDecisionJournalEntries } from "@/features/stream-board/decisionJournal";
 import { expandResolvedInboxIds } from "@/features/stream-board/cardBuilder";
+import { syncLlmRoundsCanonical } from "@/features/stream-board/controller/labLlmRounds";
+import type { LabLlmRoundEntry } from "@/features/stream-board/controller/labLlmRounds";
 import { computeVerdictEffectiveBlindSkillIds } from "@/features/stream-board/utils/blindSkillRuntime";
 import type { Lang } from "@/types/bazi";
 
@@ -101,6 +103,8 @@ export type LabSnapshot = {
   metadata?: Record<string, unknown>;
   timeline?: Record<string, unknown> | null;
   llm_prompt?: string;
+  /** 多轮 LLM 往返（由 canonical 字段同步；Debug 页主数据源） */
+  llm_rounds?: LabLlmRoundEntry[];
   /** analyze-seed 首观 LLM：完整 messages + 模型回复 + 遥测 */
   first_observation_llm?: LabLlmRoundSnapshot;
   /** /v1/audit-physics-with-llm 结构化审计（含重试则以后端返回为准） */
@@ -265,6 +269,8 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         return state;
       }
 
+      const keys = Object.keys(action.payload || {});
+
       let nextSnapshot: LabSnapshot = {
         ...(state.snapshot || {}),
         ...raw,
@@ -273,6 +279,8 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
       if (journalReplace !== undefined) {
         nextSnapshot = { ...nextSnapshot, decision_journal: journalReplace };
       }
+
+      nextSnapshot.llm_rounds = syncLlmRoundsCanonical(state.snapshot, nextSnapshot, seedUniverseChanged);
 
       if (seedUniverseChanged) {
         nextSnapshot.decision_selection_ids = [];
@@ -291,7 +299,6 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         ? ((nextSnapshot.interaction_hub || {}).result_logs as string[])
         : [];
       const lastLog = logs.length > 0 ? String(logs[logs.length - 1]) : "";
-      const keys = Object.keys(action.payload || {});
       const decisionMutation = keys.some(
         (k) =>
           k === "final_verdict" ||
@@ -524,7 +531,7 @@ export type LabStoreValue = {
   setRuntimeConfig: (payload: LabRuntimeConfig) => void;
   addConfirmedDecision: (ids: string[]) => void;
   clearDecisionInbox: () => void;
-  finalizeVerdict: () => Promise<void>;
+  finalizeVerdict: () => Promise<boolean>;
   bumpSyncBarrierSeq: () => void;
 };
 
@@ -561,7 +568,7 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
   }, []);
   const finalizeVerdict = useCallback(async () => {
     const s = storeRef.current;
-    if (!s.snapshot || s.isFinalized) return;
+    if (!s.snapshot || s.isFinalized) return false;
     const effectiveSkillIds = computeVerdictEffectiveBlindSkillIds(s.snapshot);
     const snapshotForHash = {
       ...s.snapshot,
@@ -575,6 +582,7 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
       type: "finalizeVerdict",
       payload: { hash, committedAt: Date.now(), effectiveSkillIds },
     });
+    return true;
   }, []);
   const bumpSyncBarrierSeq = useCallback(() => {
     dispatch({ type: "bumpSyncBarrierSeq" });

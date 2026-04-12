@@ -11,6 +11,7 @@ from app.api.contracts import (
     AnalyzeClashRequest,
     AnalyzeSeedRequest,
     AuditPhysicsWithLlmRequest,
+    BlindSchoolFeatureFlags,
     ChatRequest,
     ConfirmStructureRequest,
     ConsultationCreate,
@@ -19,6 +20,7 @@ from app.api.contracts import (
     EvolutionAdmissionRequest,
     EvolutionBatchRunRequest,
     FinalVerdictRequest,
+    OrchestratorInternalLoopRequest,
     PhysicsSettingsPersistRequest,
     ResolveConflictRequest,
     SkillFeedbackRequest,
@@ -39,10 +41,12 @@ from app.services.analysis_service import (
     analyze_clash_flow,
     analyze_seed_flow,
     generate_final_verdict,
+    iter_final_verdict_ndjson,
     run_stress_test,
     resolve_consensus_history,
     translate_text_items,
 )
+from app.services.orchestrator_service import OrchestratorService
 from app.core.evolution.combination_space import TOTAL_BAZI_COMBINATION_SPACE
 from app.core.evolution.dna_registry import (
     gene_maturity_heatmap,
@@ -153,6 +157,40 @@ async def analyze_clash(body: AnalyzeClashRequest) -> dict:
     return await analyze_clash_flow(body)
 
 
+@router.post("/v1/orchestrator/internal-loop", response_model=dict)
+async def orchestrator_internal_loop(body: OrchestratorInternalLoopRequest) -> dict:
+    """
+    Inbox 勾选等触发的静默物理重算：仅 Orchestrator 内部环，不调 LLM。
+    返回 metadata（含 verdict_skeleton）、physics_tensor、VF 摘要等。
+    """
+    blind_flags = (
+        body.blind_school_features.model_dump()
+        if body.blind_school_features
+        else BlindSchoolFeatureFlags().model_dump()
+    )
+    physics_cfg = body.physics_config.model_dump(exclude_none=True) if body.physics_config else {}
+    out = OrchestratorService.run_internal_loop(
+        metadata_obj=body.metadata,
+        enabled_plugins=list(body.enabled_plugins or []),
+        blind_school_features=blind_flags,
+        physics_config=physics_cfg,
+        session_id=body.session_id,
+        dayun=body.dayun,
+        liunian=body.liunian,
+    )
+    md = out["metadata"]
+    return {
+        "metadata": md.model_dump(),
+        "physics_tensor": out["physics_tensor"],
+        "plugin_outputs": out.get("plugin_outputs") or {},
+        "semantic_label_bundle_v1": out.get("semantic_label_bundle_v1") or {},
+        "verified_fact_lines": out.get("verified_fact_lines") or [],
+        "verdict_skeleton": out.get("verdict_skeleton") or "",
+        "requires_narrative_refresh": bool(out.get("requires_narrative_refresh")),
+        "pre_injection_deity_display": out.get("pre_injection_deity_display") or {},
+    }
+
+
 @router.post("/v1/analyze-seed", response_model=dict)
 async def analyze_seed(body: AnalyzeSeedRequest) -> dict:
     """
@@ -213,6 +251,20 @@ async def final_verdict(body: FinalVerdictRequest) -> dict:
         return await generate_final_verdict(body, consensus_history)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/v1/final-verdict/stream")
+async def final_verdict_stream(body: FinalVerdictRequest) -> StreamingResponse:
+    """NDJSON 流式终判：token 行为 LLM 增量，末帧 complete 与 POST /final-verdict JSON 同构。"""
+    consensus_history = resolve_consensus_history(
+        explicit_history=body.consensus_history,
+        consultation_id=body.consultation_id,
+        session_scope=session_scope,
+    )
+    return StreamingResponse(
+        iter_final_verdict_ndjson(body, consensus_history),
+        media_type="application/x-ndjson",
+    )
 
 
 @router.post("/v1/analyze/stress-test", response_model=dict)

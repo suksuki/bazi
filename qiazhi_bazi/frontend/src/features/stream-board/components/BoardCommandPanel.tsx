@@ -1,12 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { DecisionInbox } from "@/components/DecisionInbox";
+import { PulseReplayOverlay } from "@/features/stream-board/components/PulseReplayOverlay";
+import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContext";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
-import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
 import { TemporalYearSlider } from "./TemporalYearSlider";
-import { WillReplayPanel } from "./WillReplayPanel";
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
 
@@ -73,13 +73,9 @@ export interface BoardCommandPanelProps {
   isPreviewBoard: boolean;
   seedPreviewBusy: boolean;
   seedPreviewError: string | null;
-  lastSubmittedDecisionIds: string[];
-  blindSkillBadges: any[];
   setCurrentDecisions: (decisions: InboxCard[]) => void;
   setDecisionIds: (ids: string[]) => void;
   handleMainBarRun: () => void;
-  handleRevokeDecision: (id: string) => void;
-  revertEntropyDelta: number | null;
   actionMode: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY";
   isDecisionDirty: boolean;
   actionSyncing: boolean;
@@ -94,11 +90,8 @@ export interface BoardCommandPanelProps {
   runSuccessFootnote?: string;
   /** 全量排盘 / analyze-seed 失败时的错误提示 */
   fullRunErrorFootnote?: string;
-  /** 掐指一算三段式：0/1/2，2 时主栏锁定 */
-  calculationCount: 0 | 1 | 2;
-  workExpectation: number;
-  backfireRiskVal: number;
-  releasedEnergyVal: number;
+  /** 全量掐指（analyze-seed）成功次数（无上限；仅签发后主栏由 issued 锁定） */
+  calculationCount: number;
   hasVerdictHistory: boolean;
   summaryVersionLabel: string;
   l1JunctionFlags: Record<string, unknown> | undefined;
@@ -116,13 +109,9 @@ export function BoardCommandPanel({
   isPreviewBoard,
   seedPreviewBusy,
   seedPreviewError,
-  lastSubmittedDecisionIds,
-  blindSkillBadges,
   setCurrentDecisions,
   setDecisionIds,
   handleMainBarRun,
-  handleRevokeDecision,
-  revertEntropyDelta,
   actionMode,
   isDecisionDirty,
   actionSyncing,
@@ -134,9 +123,6 @@ export function BoardCommandPanel({
   runSuccessFootnote,
   fullRunErrorFootnote,
   calculationCount,
-  workExpectation,
-  backfireRiskVal,
-  releasedEnergyVal,
   hasVerdictHistory,
   summaryVersionLabel,
   l1JunctionFlags,
@@ -144,6 +130,7 @@ export function BoardCommandPanel({
   onBackToSeedEntry,
   onOpenPluginAudit,
 }: BoardCommandPanelProps) {
+  const pulseReplay = usePulseReplay();
   const {
     t,
     lang,
@@ -184,12 +171,19 @@ export function BoardCommandPanel({
     rerunFinalVerdictWithWeights,
     logicDiff,
     inboxResetNonce,
-    confirmedDecisions,
-    physicsAudit,
-    physicsConfidence,
-    physicsEvidence,
     decisionJournal,
     mergeLabSnapshot,
+    streamingText,
+    auditInboxConfirmationBlockedReason,
+    verdictSkeletonContentKey,
+    verdictBodyRenderNonce,
+    mangpaiChipLogsForTrace,
+    conflictScanLabels,
+    showPreInjectionAbsSnapshot,
+    setShowPreInjectionAbsSnapshot,
+    preInjectionDeityDisplay,
+    deityScores,
+    llmDiagnosticData,
   } = viewModel;
 
   const prevInboxSelectionIdsRef = React.useRef<string[]>([]);
@@ -330,21 +324,16 @@ export function BoardCommandPanel({
         decisionDirty={isDecisionDirty}
         onRun={handleMainBarRun}
         onSetBaseline={setAsBaseline}
-        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized || calculationCount === 2}
+        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized}
         sigShiftFlashKey={sigShiftFlashKey}
         labelOverride={primaryLabelOverride}
         issued={isFinalized}
-        issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy && calculationCount < 2}
-        mainActionConverged={!isFinalized && calculationCount === 2}
+        issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy}
+        mainActionConverged={false}
         t={t}
         successFootnote={runSuccessFootnote}
         errorFootnote={fullRunErrorFootnote}
       />
-      <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
-        {t("提交 IDs：")}{" "}
-        {lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
-      </div>
-      <BlindSkillBadgeRow badges={blindSkillBadges} t={t} />
       <div
         className={`relative rounded-xl transition-[box-shadow,opacity] duration-300 ${
           inboxScanActive
@@ -352,11 +341,29 @@ export function BoardCommandPanel({
             : ""
         }`}
       >
+      {auditInboxConfirmationBlockedReason ? (
+        <div className="mb-2 rounded-lg border border-amber-600/40 bg-amber-950/40 px-2 py-1.5 text-[11px] text-amber-100/95">
+          {auditInboxConfirmationBlockedReason}
+        </div>
+      ) : null}
       <DecisionInbox
         key={`decision-inbox-${checklistResetToken}-${calculationNonce}`}
+        physicsAuditDiagnosis={typeof llmDiagnosticData?.diagnosis === "string" ? llmDiagnosticData.diagnosis : null}
         cards={cards}
+        deityScores={deityScores}
+        decisionJournal={decisionJournal}
         resultLogs={resultLogs}
         verdictBody={finalVerdictBody}
+        verdictSkeleton={metadata?.verdict_anchor_layer?.verdict_skeleton ?? null}
+        calculationNonce={calculationNonce}
+        verdictBodyRenderNonce={verdictBodyRenderNonce ?? 0}
+        streamingText={streamingText}
+        skeletonContentKey={verdictSkeletonContentKey}
+        traceChipLogs={mangpaiChipLogsForTrace}
+        traceConflictLabels={conflictScanLabels}
+        preInjectionDeityDisplay={preInjectionDeityDisplay ?? null}
+        showPreInjectionAbsSnapshot={showPreInjectionAbsSnapshot}
+        onShowPreInjectionAbsSnapshotChange={setShowPreInjectionAbsSnapshot}
         verdictChangeLog={finalVerdictChangeLog}
         logicalEvidence={finalLogicalEvidence}
         workVector={finalWorkVector || {}}
@@ -372,7 +379,7 @@ export function BoardCommandPanel({
           const ids = picked.map((item) => item.id);
           const prev = prevInboxSelectionIdsRef.current;
           prevInboxSelectionIdsRef.current = ids;
-          /** 追加型 decision_journal：不在「仅换勾选」时按 removedIds 回删 suppress_inbox，否则取消 A 去选 B 会误删 A 的抑制记录导致 A「复活」。撤销抑制走 WillReplay/撤销裁决等显式路径。 */
+          /** 追加型 decision_journal：不在「仅换勾选」时按 removedIds 回删 suppress_inbox，否则取消 A 去选 B 会误删 A 的抑制记录导致 A「复活」。撤销抑制走裁决撤销 / decision_journal 等显式路径。 */
           const baseJournal = decisionJournal ?? [];
           if (mergeLabSnapshot) {
             const keyed = new Set(baseJournal.map(journalEntryKey).filter(Boolean));
@@ -405,6 +412,9 @@ export function BoardCommandPanel({
           }
           setCurrentDecisions(picked);
           setDecisionIds(ids);
+          queueMicrotask(() => {
+            viewModel.scheduleSilentInternalLoopOnApprovalSelection?.(picked);
+          });
         }}
         onVerdictDeityClick={openLogicDrawerByDeity}
         onStrategicDeityHover={setHoveredDeity}
@@ -427,52 +437,15 @@ export function BoardCommandPanel({
         autoSyncIdle={!actionSyncing}
         hideStrategicPanel
         inboxResetNonce={inboxResetNonce}
-        interactionLocked={isFinalized}
+        interactionLocked={isFinalized || Boolean(auditInboxConfirmationBlockedReason)}
         l1JunctionFlags={l1JunctionFlags}
         decisionSignalToNoise={decisionSignalToNoise}
         lang={lang}
         onOpenPluginAudit={onOpenPluginAudit}
       />
       </div>
-      <WillReplayPanel
-        items={confirmedDecisions || []}
-        onRevoke={handleRevokeDecision}
-        revertEntropyDelta={revertEntropyDelta}
-        t={t}
-      />
-
-      {finalWorkVector && Object.keys(finalWorkVector).length > 0 ? (
-        <div className="rounded-xl border border-fuchsia-500/35 bg-fuchsia-950/30 p-3 text-[11px] text-zinc-300">
-          <p className="mb-2 font-medium text-fuchsia-200/95">{t("做功路径摘要")}</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div>
-              <span className="text-zinc-500">{t("期望")}</span>{" "}
-              <span className="text-zinc-100">{workExpectation.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-zinc-500">{t("反噬风险")}</span>{" "}
-              <span className="text-zinc-100">{backfireRiskVal.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-zinc-500">{t("释放能")}</span>{" "}
-              <span className="text-zinc-100">{releasedEnergyVal.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {physicsAudit ? (
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
-          <p className="mb-2">
-            Physics Confidence:{" "}
-            <span className="text-emerald-300">
-              {physicsConfidence !== null ? `${Math.round(physicsConfidence * 100)}%` : "--"}
-            </span>
-            {physicsEvidence.length > 0 ? (
-              <span className="ml-2 text-[11px] text-zinc-500">Evidence: {physicsEvidence.slice(0, 2).join(" | ")}</span>
-            ) : null}
-          </p>
-        </div>
+      {pulseReplay?.overlay ? (
+        <PulseReplayOverlay overlay={pulseReplay.overlay} onClose={pulseReplay.closePulseReplay} t={t} />
       ) : null}
     </motion.div>
   );

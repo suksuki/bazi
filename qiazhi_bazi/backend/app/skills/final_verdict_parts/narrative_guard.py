@@ -27,8 +27,37 @@ def filter_logical_evidence_for_narrative_factory(lines: List[str], *, high_reas
     return out
 
 
+_VF_REF = re.compile(r"^VF\d+", re.IGNORECASE)
+
+
+def _weak_mode_evidence_anchor_ok(ref: Any) -> bool:
+    """弱模型：断言须锚定 Context 中已编号的 VF、柱位、矩阵、插件等短键之一。"""
+    s = str(ref or "").strip()
+    if not s:
+        return False
+    if s.startswith("plugin."):
+        return True
+    if _VF_REF.match(s):
+        return True
+    if s.startswith("conflict_matrix."):
+        return True
+    if s.startswith("meta."):
+        return True
+    if s.startswith("branch."):
+        return True
+    for pk in ("year.", "month.", "day.", "hour."):
+        if s.startswith(pk):
+            return True
+    return False
+
+
+def evidence_ref_allowed_for_verdict_parse(ref: Any) -> bool:
+    """终判 JSON parse 阶段裁剪非法 evidence_refs 时复用与弱守卫一致的白名单。"""
+    return _weak_mode_evidence_anchor_ok(ref)
+
+
 def weak_mode_requires_physics_fallback(obj: Dict[str, Any], *, high_reasoning: bool) -> bool:
-    """高推理模式跳过；弱模式下每条断言须至少含一个 plugin.* 证据锚。"""
+    """高推理模式跳过；弱模式下每条断言须至少含一个可解析的短证据锚。"""
     if high_reasoning:
         return False
     assertions = obj.get("assertions")
@@ -40,7 +69,7 @@ def weak_mode_requires_physics_fallback(obj: Dict[str, Any], *, high_reasoning: 
         refs = item.get("evidence_refs") or []
         if not isinstance(refs, list) or not refs:
             return True
-        if not any(str(r).strip().startswith("plugin.") for r in refs):
+        if not any(_weak_mode_evidence_anchor_ok(r) for r in refs):
             return True
     return False
 

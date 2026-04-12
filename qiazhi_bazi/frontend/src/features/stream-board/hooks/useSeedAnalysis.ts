@@ -8,9 +8,17 @@ import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
   buildPhysicsConfigPayload,
+  coerceLogicProposalParamKey,
+  mergeLlmDiagnosticSameSeedPreserve,
   extractMetricSnapshotFromPhysics,
+  hoistPhysicsAuditDiagnosis,
+  isPhysicsAuditFallbackUi,
   seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
+import {
+  applyManualEnergyPatchesToDisplay,
+  mergeAnalyzeSeedMetadata,
+} from "@/features/stream-board/controller/individualAdjustment";
 import type { ConsensusItem, MetricSnapshot } from "@/features/stream-board/controller/streamBoardTypes";
 import type {
   DeityComponent,
@@ -27,6 +35,8 @@ import type {
 } from "../models";
 import type { LabLlmRoundSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import { parseFirstObservationLlmFromAnalyze, parsePhysicsAuditorLlm } from "@/features/stream-board/controller/labLlmSnapshotParse";
+import type { StreamPipelineEventKind } from "@/features/stream-board/models";
+import { augmentDiagnosisWithMangpaiManifest } from "@/features/stream-board/mangpaiChipManifest";
 
 export type SeedAnalysisDeps = {
   persistLastSeedToStore: (p: SeedPayload | null) => void;
@@ -77,6 +87,8 @@ export type SeedAnalysisDeps = {
   pluginSwitches: PluginSwitches;
   lang: Lang;
   markActiveSession: (sessionId?: number | null) => void;
+  /** V3 中枢状态机：与 `reducePipelinePhase` 对齐 */
+  reportPipelineEvent?: (event: StreamPipelineEventKind) => void;
   resetSeedPreviewState: () => void;
   confirmedDecisionIds: string[];
   baselineMetrics: MetricSnapshot | null;
@@ -94,7 +106,14 @@ export type SeedAnalysisDeps = {
     seedSignatureOverride?: string | null;
   }) => void;
   appendSystemAuditLog: (line: string) => void;
+  getMetadata: () => BaziMetadata | null;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
+  addPhysicsAuditSemanticDiagnosisToInbox: (payload: {
+    diagnosis: string;
+    top_anomaly?: string;
+    causal_reasoning?: string;
+  }) => void;
+  addPhysicsAuditSemanticVerdictToInbox: (payload: { diagnosis: string }) => void;
   typewriter: (fullText: string) => Promise<void>;
   updateLogicDiff: (current: MetricSnapshot, forceBaseline?: boolean) => LogicDiff;
   scheduleInteractionHubPersist: () => void;
@@ -113,6 +132,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
       const d = depsRef.current;
       const incomingSig = seedPayloadSignature(payload);
       const priorSig = d.seedShieldSigRef.current;
+      const sameSeedResubmit = priorSig !== null && incomingSig !== null && priorSig === incomingSig;
       if (priorSig !== null && incomingSig !== null && priorSig !== incomingSig) {
         d.mergeSnapshot({ decision_journal: [] });
       }
@@ -120,10 +140,13 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
       d.persistLastSeedToStore(payload);
       d.setBusy(true);
       d.setIsStreaming(true);
+      d.reportPipelineEvent?.("SCAN_STARTED");
       d.setAutoConvertedParamKey(null);
       d.setStreamingText("");
       d.setAuditItems([]);
-      d.setResultLogs([]);
+      if (!sameSeedResubmit) {
+        d.setResultLogs([]);
+      }
       d.setDeityScores({});
       d.setDeityEnergyAxes({});
       d.setDeityComponents({});
@@ -138,9 +161,13 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
       d.setPhysicsParams({});
       d.setGlobalEntropy(null);
       d.setConfirmedConflicts([]);
-      d.setFirstPromptText("");
+      if (!sameSeedResubmit) {
+        d.setFirstPromptText("");
+      }
       d.setTimeline(null);
-      d.setLlmDiagnosticData(null);
+      if (!sameSeedResubmit) {
+        d.setLlmDiagnosticData(null);
+      }
       d.setFinalVerdictBody("");
       d.setFinalVerdictChangeLog({});
       d.setFinalVerdictVersionId("");
@@ -158,7 +185,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
 
       try {
         let currentSessionId = d.consultationId;
-        d.setStreamingText(d.t("第一波：物理排盘中…"));
+        d.setStreamingText(d.t("物理引擎排盘中…"));
         d.setAuditItems([
           {
             id: `arbiter-submit-${Date.now()}`,
@@ -188,7 +215,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
           /* consultation logging should not block main flow */
         }
 
-        d.setStreamingText(d.t("第二波：特征扫描中…"));
+        d.setStreamingText(d.t("多轮 LLM 与物理审计准备中…"));
         const response = await fetch(`${API_BASE}/api/v1/analyze-seed`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -214,11 +241,18 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
 
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
+        d.reportPipelineEvent?.("SCAN_COMPLETED");
         if (incomingSig) {
           d.seedShieldSigRef.current = incomingSig;
         }
         d.markActiveSession(currentSessionId ?? d.consultationId ?? null);
-        d.setMetadata(data.metadata as BaziMetadata);
+        const mergedMeta = mergeAnalyzeSeedMetadata(
+          data.metadata as BaziMetadata,
+          d.getMetadata(),
+          incomingSig,
+          { sameSeedResubmit },
+        );
+        d.setMetadata(mergedMeta);
         const tl = (data.timeline ?? null) as TimelineSnapshot | null;
         d.setTimeline(tl);
         d.resetSeedPreviewState();
@@ -238,10 +272,19 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
           ]);
         }
         if (data.physics_tensor?.deity_scores) {
-          d.setDeityScores(data.physics_tensor.deity_scores as Record<string, number>);
-        }
-        if (data.physics_tensor?.deity_energy_axes) {
-          d.setDeityEnergyAxes(data.physics_tensor.deity_energy_axes as Record<string, DeityEnergyAxis>);
+          const rawScores = data.physics_tensor.deity_scores as Record<string, number>;
+          const rawAxes =
+            data.physics_tensor.deity_energy_axes && typeof data.physics_tensor.deity_energy_axes === "object"
+              ? (data.physics_tensor.deity_energy_axes as Record<string, DeityEnergyAxis>)
+              : {};
+          const applied = applyManualEnergyPatchesToDisplay(
+            rawScores,
+            rawAxes,
+            mergedMeta.manual_energy_patch ?? null,
+            incomingSig,
+          );
+          d.setDeityScores(applied.scores);
+          d.setDeityEnergyAxes(applied.axes);
         }
         if (data.physics_tensor?.deity_components) {
           d.setDeityComponents(data.physics_tensor.deity_components as Record<string, DeityComponent>);
@@ -294,7 +337,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
             const dataRec = data as Record<string, unknown>;
             d.persistSnapshot({
               physics_tensor: data.physics_tensor as Record<string, unknown>,
-              metadata: data.metadata as Record<string, unknown>,
+              metadata: mergedMeta as unknown as Record<string, unknown>,
               timeline: (data.timeline ?? null) as Record<string, unknown> | null,
               llm_prompt: typeof data.llm_prompt === "string" ? data.llm_prompt : "",
               first_observation_llm: parseFirstObservationLlmFromAnalyze(dataRec),
@@ -313,7 +356,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                metadata: data.metadata,
+                metadata: mergedMeta,
                 physics_tensor: data.physics_tensor,
                 lang: d.lang,
                 consensus_history: d.consensusHistory,
@@ -325,33 +368,61 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
               throw new Error(String(auditData?.detail ?? "audit-physics-with-llm failed"));
             }
 
-            const logicProposal = auditData?.logic_proposal as LogicProposal | undefined;
+            const auditRec = auditData as Record<string, unknown>;
+            const diagnosisRaw = hoistPhysicsAuditDiagnosis(auditRec);
+            const metaPt = data.physics_tensor as Record<string, unknown> | undefined;
+            const metaInner =
+              metaPt && typeof metaPt.meta === "object" && metaPt.meta !== null
+                ? (metaPt.meta as Record<string, unknown>)
+                : {};
+            const chipLogsRaw = metaInner.mangpai_chip_logs;
+            const mangpaiChipLogs = Array.isArray(chipLogsRaw) ? chipLogsRaw.map((x) => String(x || "")) : [];
+            const diagnosisAugmented = diagnosisRaw
+              ? augmentDiagnosisWithMangpaiManifest(diagnosisRaw, mangpaiChipLogs)
+              : "";
+            if (diagnosisAugmented && !isPhysicsAuditFallbackUi(auditRec)) {
+              d.addPhysicsAuditSemanticDiagnosisToInbox({
+                diagnosis: diagnosisAugmented,
+                top_anomaly: typeof auditData?.top_anomaly === "string" ? auditData.top_anomaly : undefined,
+                causal_reasoning: typeof auditData?.causal_reasoning === "string" ? auditData.causal_reasoning : undefined,
+              });
+              d.addPhysicsAuditSemanticVerdictToInbox({ diagnosis: diagnosisAugmented });
+            }
+
+            const rawLp = auditData?.logic_proposal as LogicProposal | undefined;
+            const logicProposal = rawLp && typeof rawLp === "object" ? coerceLogicProposalParamKey(rawLp) : undefined;
             if (logicProposal?.param_key) {
               d.setAutoConvertedParamKey(logicProposal.param_key);
-              d.addAuditorProposalToInbox(logicProposal);
+              d.addAuditorProposalToInbox({
+                ...logicProposal,
+                ...(diagnosisAugmented ? { diagnosis: diagnosisAugmented } : {}),
+              });
             } else {
               d.setAutoConvertedParamKey(null);
             }
 
-            d.setLlmDiagnosticData({
-              diagnosis: auditData?.diagnosis,
-              alignment_score: auditData?.alignment_score,
-              top_anomaly: auditData?.top_anomaly,
-              causal_reasoning: auditData?.causal_reasoning,
-              tuning_suggestions: auditData?.tuning_suggestions,
-              sql_patch: auditData?.sql_patch,
-              refresh_hint: auditData?.refresh_hint,
-              logic_proposal: auditData?.logic_proposal,
-              structured_hit: auditData?.structured_hit,
-              repair_mode: auditData?.repair_mode,
-            });
+            d.setLlmDiagnosticData((prev) =>
+              mergeLlmDiagnosticSameSeedPreserve(sameSeedResubmit, prev, {
+                ...(auditData as Record<string, unknown>),
+                ...(diagnosisAugmented ? { diagnosis: diagnosisAugmented } : {}),
+              }),
+            );
+            if (diagnosisAugmented) {
+              d.setResultLogs((prev) => [...prev, `[PHYSICS_AUDIT] ${diagnosisAugmented.slice(0, 420)}`].slice(-48));
+            }
+            if (process.env.NODE_ENV === "development") {
+              console.debug("[qiazhi/audit-physics]", {
+                structured_hit: auditData?.structured_hit,
+                repair_mode: auditData?.repair_mode,
+                fallback_ui: isPhysicsAuditFallbackUi(auditRec),
+              });
+            }
             try {
               if (data.physics_tensor) {
                 const dataRec = data as Record<string, unknown>;
-                const auditRec = auditData as Record<string, unknown>;
                 d.persistSnapshot({
                   physics_tensor: data.physics_tensor as Record<string, unknown>,
-                  metadata: data.metadata as Record<string, unknown>,
+                  metadata: mergedMeta as unknown as Record<string, unknown>,
                   timeline: (data.timeline ?? null) as Record<string, unknown> | null,
                   llm_prompt: data.llm_prompt || "",
                   first_observation_llm: parseFirstObservationLlmFromAnalyze(dataRec),
@@ -367,7 +438,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
                     causal_reasoning: auditData?.causal_reasoning,
                     tuning_suggestions: auditData?.tuning_suggestions,
                     logic_proposal: auditData?.logic_proposal,
-                    auto_joined_decision_box: Boolean(logicProposal?.param_key),
+                    auto_joined_decision_box: Boolean(diagnosisRaw || logicProposal?.param_key),
                   },
                 });
               }
@@ -378,6 +449,7 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
             /* keep board usable if auditor fails */
           }
         }
+        d.reportPipelineEvent?.("AUDIT_COMPLETED");
 
         const incoming = (data.audit_summary ?? []) as Array<{
           step?: string;

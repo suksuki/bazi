@@ -8,6 +8,7 @@ import { applyPhysicsSqlPatch as requestApplyPhysicsSqlPatch } from "./controlle
 import type { LabSnapshotHydrationSinks } from "./controller/labSnapshotHydration";
 import {
   buildBlindSchoolFeaturesPayload,
+  coerceLogicProposalParamKey,
   extractInteractionHubMangpai,
   extractMetricSnapshotFromPhysics,
   interpolateColor,
@@ -15,6 +16,7 @@ import {
   normalizeDecisionIds,
   normalizedSnapshotDecisionIds,
   seedPayloadSignature,
+  isTrustworthyPhysicsAuditDiagnosis,
 } from "./controller/streamBoardPure";
 import type {
   ConfirmedDecisionItem,
@@ -23,16 +25,24 @@ import type {
   SilentBoardCtx,
   SilentRecalcPhysicsSetters,
 } from "./controller/streamBoardTypes";
+import type { StreamPipelineEventKind, StreamPipelinePhase } from "./models";
 import { useSeedPreviewModule } from "./controller/useSeedPreviewModule";
 import { useStreamBoardExecution, type StreamBoardExecutionContext } from "./controller/useStreamBoardExecution";
 import { useStreamBoardDiagnosticActions, type StreamBoardDiagnosticDeps } from "./controller/useStreamBoardDiagnosticActions";
 import { useStreamBoardDrawerActions, type StreamBoardDrawerDeps } from "./controller/useStreamBoardDrawerActions";
 import { useStreamBoardSnapshotPersist, type StreamBoardSnapshotPersistDeps } from "./controller/useStreamBoardSnapshotPersist";
-import { useStreamBoardPipeline } from "./controller/useStreamBoardPipeline";
+import { useStreamBoardPipeline, reducePipelinePhase } from "./controller/useStreamBoardPipeline";
 import { useStreamBoardHealth } from "./controller/useStreamBoardHealth";
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 import { normalizeDecisionJournalEntries } from "@/features/stream-board/decisionJournal";
-import { buildInboxCards, createAuditorProposalCard, type DecisionSignalToNoiseMeta } from "./cardBuilder";
+import {
+  buildInboxCards,
+  createAuditorProposalCard,
+  createPhysicsAuditSemanticDiagnosisCard,
+  createPhysicsAuditSemanticVerdictCard,
+  type DecisionSignalToNoiseMeta,
+} from "./cardBuilder";
+import { augmentDiagnosisWithMangpaiManifest } from "./mangpaiChipManifest";
 import { SILENT_PHYSICS_RECALC_EVENT } from "./physicsRecalcDispatch";
 import type {
   DeityComponent,
@@ -67,7 +77,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     state: labState,
     mergeSnapshot,
     setLastSeedPayload: persistLastSeedToStore,
-    finalizeVerdict,
+    finalizeVerdict: finalizeVerdictFromLab,
     bumpSyncBarrierSeq,
     clearDecisionInbox,
   } = useLabStore();
@@ -166,6 +176,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     llmDiagnosticData,
     setLlmDiagnosticData,
   } = useStreamBoardAuditUiState();
+  const [verdictBodyRenderNonce, setVerdictBodyRenderNonce] = useState(0);
   const appendSilentAnalyzeLogRef = useRef<(line: string) => void>(() => {});
   appendSilentAnalyzeLogRef.current = (line: string) => {
     setResultLogs((prev) => [...prev, line].slice(-48));
@@ -193,6 +204,16 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [timeline, setTimeline] = useState<TimelineSnapshot | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pipelinePhase, setPipelinePhase] = useState<StreamPipelinePhase>("READY");
+  const [narrativeReshapeActive, setNarrativeReshapeActive] = useState(false);
+  const reportPipelineEvent = useCallback((event: StreamPipelineEventKind) => {
+    setPipelinePhase((prev) => reducePipelinePhase(prev, event));
+  }, []);
+  const finalizeVerdict = useCallback(async () => {
+    const ok = await finalizeVerdictFromLab();
+    if (ok) setPipelinePhase("DECIDED");
+    return ok;
+  }, [finalizeVerdictFromLab]);
   const [hoveredDeity, setHoveredDeity] = useState<string>();
   const { labConfig, setLabConfig, pluginSwitches, setPluginSwitches, pluginWeights, setPluginWeights } = useLabConfig();
   const [lastSeedPayload, setLastSeedPayload] = useState<SeedPayload | null>(null);
@@ -202,10 +223,18 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [selectionResetToken, setSelectionResetToken] = useState(0);
   const [sigShiftFlashKey, setSigShiftFlashKey] = useState(0);
   const [consensusHistory, setConsensusHistory] = useState<ConsensusItem[]>([]);
+  const [preInjectionDeityDisplay, setPreInjectionDeityDisplay] = useState<{
+    deity_scores?: Record<string, number>;
+    deity_energy_axes?: Record<string, DeityEnergyAxis>;
+  } | null>(null);
+  const [showPreInjectionAbsSnapshot, setShowPreInjectionAbsSnapshot] = useState(false);
   const [confirmedDecisions, setConfirmedDecisions] = useState<ConfirmedDecisionItem[]>([]);
   const [confirmedDecisionIds, setConfirmedDecisionIds] = useState<string[]>(
     () => normalizedSnapshotDecisionIds(initialSnapshot?.decision_selection_ids),
   );
+  useEffect(() => {
+    if (!metadata?.pillars) setPreInjectionDeityDisplay(null);
+  }, [metadata?.pillars]);
   const urlDecisionHydrated = true;
   const isSnapshotRestoringRef = useRef(false);
   const reCalculateAbsSilentlyImplRef = useRef<() => Promise<void>>(async () => {});
@@ -273,7 +302,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     temporalGanzhiOverride: null,
   });
   const settersRef = useRef<SilentRecalcPhysicsSetters>({
-    setMetadata: (_m: BaziMetadata | null) => {},
+    setMetadata: (_m) => {},
     setTimeline: (_t: TimelineSnapshot | null) => {},
     setDeityScores: (_s: Record<string, number>) => {},
     setDeityEnergyAxes: (_a: Record<string, DeityEnergyAxis>) => {},
@@ -284,7 +313,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPhysicsEvidence: (_e: string[]) => {},
     setPhysicsParams: (_p: Record<string, number>) => {},
     setGlobalEntropy: (_g: number | null) => {},
-  });
+  } as SilentRecalcPhysicsSetters);
   const executionCtxRef = useRef<StreamBoardExecutionContext>(null as unknown as StreamBoardExecutionContext);
   const navHandledRef = useRef(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -502,6 +531,14 @@ export function useStreamBoardController(): StreamBoardViewModel {
 
   const pendingDecisionCount = cards.filter((card) => card.id !== "fallback-deep-scan").length;
   const l1Certified = Boolean(llmDiagnosticData?.alignment_score && llmDiagnosticData.alignment_score > 80) && pendingDecisionCount === 0;
+  const auditInboxConfirmationBlockedReason = useMemo(() => {
+    const needsAuditVoice = auditorProposalCards.some(
+      (c) => c.cardType === "energy-patch" || c.cardType === "auditor-proposal",
+    );
+    if (!needsAuditVoice) return null;
+    if (isTrustworthyPhysicsAuditDiagnosis(llmDiagnosticData?.diagnosis, llmDiagnosticData?.top_anomaly)) return null;
+    return t("审计失败，请重算");
+  }, [auditorProposalCards, llmDiagnosticData, t]);
   const hardRouteLogs = useMemo<string[]>(
     () => ((((physicsAudit as { trace?: { hard_route_logs?: string[] } } | null)?.trace?.hard_route_logs) || []) as string[]),
     [physicsAudit],
@@ -566,12 +603,59 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return { ok: true };
   }
 
+  function addPhysicsAuditSemanticDiagnosisToInbox(payload: {
+    diagnosis: string;
+    top_anomaly?: string;
+    causal_reasoning?: string;
+  }) {
+    const chipLogs = (() => {
+      const pt = labStateRef.current?.snapshot?.physics_tensor as Record<string, unknown> | undefined;
+      const m = pt?.meta as Record<string, unknown> | undefined;
+      const r = m?.mangpai_chip_logs;
+      return Array.isArray(r) ? r.map((x) => String(x || "")) : [];
+    })();
+    const diagnosis = augmentDiagnosisWithMangpaiManifest(payload.diagnosis, chipLogs);
+    const card = createPhysicsAuditSemanticDiagnosisCard({ ...payload, diagnosis });
+    if (!card) return;
+    setAuditorProposalCards((prev) => {
+      const rest = prev.filter((item) => item.id !== "physics-audit-diag");
+      return [card, ...rest];
+    });
+  }
+
+  function addPhysicsAuditSemanticVerdictToInbox(payload: { diagnosis: string }) {
+    const chipLogs = (() => {
+      const pt = labStateRef.current?.snapshot?.physics_tensor as Record<string, unknown> | undefined;
+      const m = pt?.meta as Record<string, unknown> | undefined;
+      const r = m?.mangpai_chip_logs;
+      return Array.isArray(r) ? r.map((x) => String(x || "")) : [];
+    })();
+    const diagnosis = augmentDiagnosisWithMangpaiManifest(payload.diagnosis, chipLogs);
+    const card = createPhysicsAuditSemanticVerdictCard({ ...payload, diagnosis });
+    if (!card) return;
+    setAuditorProposalCards((prev) => {
+      const rest = prev.filter((item) => item.id !== "physics-audit-semver");
+      return [card, ...rest];
+    });
+  }
+
   function addAuditorProposalToInbox(proposal: LogicProposal) {
-    const card = createAuditorProposalCard(proposal);
+    const chipLogs = (() => {
+      const pt = labStateRef.current?.snapshot?.physics_tensor as Record<string, unknown> | undefined;
+      const m = pt?.meta as Record<string, unknown> | undefined;
+      const r = m?.mangpai_chip_logs;
+      return Array.isArray(r) ? r.map((x) => String(x || "")) : [];
+    })();
+    const withDx =
+      typeof proposal.diagnosis === "string" && proposal.diagnosis.trim()
+        ? { ...proposal, diagnosis: augmentDiagnosisWithMangpaiManifest(proposal.diagnosis, chipLogs) }
+        : proposal;
+    const coerced = coerceLogicProposalParamKey(withDx);
+    const card = createAuditorProposalCard(coerced);
     if (!card) return;
 
     setAuditorProposalCards((prev) => {
-      const alreadyAdded = prev.some((item) => item.proposal?.param_key === proposal.param_key);
+      const alreadyAdded = prev.some((item) => item.proposal?.param_key === coerced.param_key);
       return alreadyAdded ? prev : [card, ...prev];
     });
   }
@@ -675,8 +759,14 @@ export function useStreamBoardController(): StreamBoardViewModel {
     isExecuting,
   });
 
-  const { onExecuteDecision, rerunFinalVerdictWithWeights, refreshVerdict, executeDecisionAndRefresh } =
-    useStreamBoardExecution(executionCtxRef);
+  const {
+    onExecuteDecision,
+    rerunFinalVerdictWithWeights,
+    refreshVerdict,
+    executeDecisionAndRefresh,
+    runFinalVerdictSynthesis,
+    scheduleSilentInternalLoopOnApprovalSelection,
+  } = useStreamBoardExecution(executionCtxRef);
 
   useStreamBoardSilentRecalculateLayout({
     reCalculateAbsSilentlyImplRef,
@@ -818,6 +908,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     pluginWeights,
     lang,
     setResultLogs,
+    setStreamingText,
   };
 
   seedAnalysisDepsRef.current = {
@@ -874,13 +965,17 @@ export function useStreamBoardController(): StreamBoardViewModel {
     baselineMetrics,
     persistSnapshot,
     appendSystemAuditLog,
+    getMetadata: () => metadataRef.current,
     addAuditorProposalToInbox,
+    addPhysicsAuditSemanticDiagnosisToInbox,
+    addPhysicsAuditSemanticVerdictToInbox,
     typewriter,
     updateLogicDiff,
     scheduleInteractionHubPersist,
     llmModelName,
     mergeSnapshot,
     seedShieldSigRef,
+    reportPipelineEvent,
   };
 
   diagnosticDepsRef.current = {
@@ -946,6 +1041,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     apiBase: API_BASE,
     metadata,
     consultationId,
+    confirmedDecisionIds,
+    baselineMetrics,
     lastSeedPayload,
     lastConclusionText,
     conclusionVersion,
@@ -957,6 +1054,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setConfirmedConflicts,
     setResolvedCardIds,
     setStreamingText,
+    bumpVerdictBodyRenderNonce: () => setVerdictBodyRenderNonce((n) => n + 1),
     setConclusionVersion,
     setSummaryChanged,
     setLastConclusionText,
@@ -985,6 +1083,34 @@ export function useStreamBoardController(): StreamBoardViewModel {
     typewriterResultLine,
     mergeLabSnapshot: mergeSnapshot,
     setMetadata,
+    setDeityScores,
+    setDeityEnergyAxes,
+    physicsTensor: (labState.snapshot?.physics_tensor as Record<string, unknown> | null) ?? null,
+    llmDiagnosticData,
+    pipelinePhase,
+    reportPipelineEvent,
+    labConfig,
+    pluginSwitches,
+    referenceYearRef,
+    timeline,
+    isFinalized: labState.isFinalized,
+    setDeityComponents,
+    setDeityTraceDetails,
+    setPhysicsAudit,
+    setPhysicsConfidence,
+    setPhysicsEvidence,
+    setPhysicsParams,
+    setGlobalEntropy,
+    consensusHistory,
+    setLlmDiagnosticData,
+    addPhysicsAuditSemanticDiagnosisToInbox,
+    addPhysicsAuditSemanticVerdictToInbox,
+    addAuditorProposalToInbox,
+    setAutoConvertedParamKey,
+    setPreInjectionDeityDisplay,
+    setNarrativeReshapeActive,
+    cards,
+    snapshotMetadata: (labState.snapshot?.metadata as Record<string, unknown> | null | undefined) ?? null,
   };
 
   const snapshotUrlTag = useMemo(() => {
@@ -1021,10 +1147,46 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
   }, [labState.snapshot?.physics_tensor]);
 
+  useEffect(() => {
+    if (!preInjectionDeityDisplay) setShowPreInjectionAbsSnapshot(false);
+  }, [preInjectionDeityDisplay]);
+
+  useEffect(() => {
+    if (labState.isFinalized) setPipelinePhase("DECIDED");
+    else setPipelinePhase((p) => (p === "DECIDED" ? "READY" : p));
+  }, [labState.isFinalized]);
+
+  const mangpaiChipLogsForTrace = useMemo(() => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    if (!meta) return [] as string[];
+    const raw = meta.mangpai_chip_logs;
+    return Array.isArray(raw) ? raw.map((x) => String(x)).filter(Boolean) : [];
+  }, [labState.snapshot?.physics_tensor?.meta]);
+
+  const conflictScanLabels = useMemo(() => {
+    const pts = (metadata as { conflict_matrix?: { points?: unknown[] } } | null)?.conflict_matrix?.points;
+    if (!Array.isArray(pts)) return [] as string[];
+    return pts
+      .map((p) => {
+        if (p && typeof p === "object" && "detail" in p) return String((p as { detail?: string }).detail || "").trim();
+        return "";
+      })
+      .filter(Boolean)
+      .slice(0, 32);
+  }, [metadata]);
+
+  const verdictSkeletonContentKey = useMemo(() => {
+    const sk = (metadata as { verdict_anchor_layer?: { verdict_skeleton?: string } } | null)?.verdict_anchor_layer
+      ?.verdict_skeleton;
+    return typeof sk === "string" ? sk : "";
+  }, [metadata]);
+
   return {
     lang,
     setLang,
     busy,
+    pipelinePhase,
+    narrativeReshapeActive,
     consultationId,
     metadata,
     timeline,
@@ -1051,10 +1213,17 @@ export function useStreamBoardController(): StreamBoardViewModel {
     hoveredDeity,
     setHoveredDeity,
     confirmedConflicts,
+    auditInboxConfirmationBlockedReason,
     llmDiagnosticData,
     physicsParams,
     globalEntropy,
     causalRouting,
+    preInjectionDeityDisplay,
+    showPreInjectionAbsSnapshot,
+    setShowPreInjectionAbsSnapshot,
+    mangpaiChipLogsForTrace,
+    conflictScanLabels,
+    verdictSkeletonContentKey,
     patternProfile,
     energyFlowAudit,
     auditorProposalCards,
@@ -1062,6 +1231,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     consensusHistory,
     cards,
     resultLogs,
+    streamingText,
+    verdictBodyRenderNonce,
     finalVerdictBody,
     finalVerdictChangeLog,
     finalLogicalEvidence,
@@ -1107,7 +1278,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setLogicDrawerOpen,
     onSeedSubmit,
     addAuditorProposalToInbox,
+    addPhysicsAuditSemanticDiagnosisToInbox,
     onExecuteDecision,
+    scheduleSilentInternalLoopOnApprovalSelection,
+    runFinalVerdictSynthesis,
     refreshVerdict,
     executeDecisionAndRefresh,
     appendSystemAuditLog,

@@ -132,6 +132,18 @@ class AnalyzeClashRequest(BaseModel):
     )
 
 
+class OrchestratorInternalLoopRequest(BaseModel):
+    """无 LLM：仅跑 OrchestratorService.run_internal_loop（物理 + 插件 + VF + verdict_skeleton）。"""
+
+    metadata: BaziMetadata
+    enabled_plugins: List[str] = Field(default_factory=list)
+    blind_school_features: Optional[BlindSchoolFeatureFlags] = None
+    physics_config: Optional[PhysicsConfig] = None
+    session_id: Optional[int] = None
+    dayun: Optional[str] = None
+    liunian: Optional[str] = None
+
+
 class AuditDiagnoseRequest(BaseModel):
     """逻辑检察院：跑 L1 原子流 + 插件，对照终判文本（可选）。"""
 
@@ -186,6 +198,10 @@ class AuditPhysicsWithLlmRequest(BaseModel):
         default=None,
         description="审计提示词档位：compact 适合弱模型；省略则使用 runtime_config.llm.audit_prompt_tier",
     )
+    will_conflict_duel_context: Optional[str] = Field(
+        default=None,
+        description="意志对垒：当前意志与系统基准张力（如 verdict_skeleton 风险段），供审计 LLM 专评",
+    )
 
 
 class AuditLlmStructuredResponse(BaseModel):
@@ -226,6 +242,10 @@ class FinalVerdictRequest(BaseModel):
     enabled_plugins: List[str] = Field(default_factory=list)
     plugin_weights: Dict[str, float] = Field(default_factory=dict)
     regeneration_context: Optional[RegenerationContext] = None
+    mandatory_final_synthesis: bool = Field(
+        default=False,
+        description="为 True 时在 user 提示中强制注入「终审官」语义整合块（四柱/冲突点/已归档断语），不因 conflict_list 为空而跳过终判 LLM",
+    )
 
 
 class ResolveConflictRequest(BaseModel):

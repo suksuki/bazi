@@ -13,7 +13,7 @@ from app.prompts.evolution_contracts import (
     PHYSICS_AUDIT_HIGH_REASONING_SQL_DISCIPLINE,
 )
 from app.prompts.first_observation import FIRST_OBSERVATION_SYSTEM_PROMPT
-from app.prompts.physics_audit import AUDIT_JSON_SCHEMA_LINE
+from app.prompts.physics_audit_contracts import AUDIT_JSON_SCHEMA_LINE
 from app.prompts.translation import TRANSLATION_SYSTEM_PROMPT
 
 _PROMPTS: Final[dict[str, str]] = {

@@ -46,6 +46,12 @@ type Props = {
   pivotDefenseSemantic?: string | null;
   /** 流年参考年等：驱动子图过渡与轻微重挂载 */
   fluxKey?: number;
+  manualInterventionDeities?: ReadonlySet<string> | null;
+  /** 意志注塑前引擎十神配比（静默环返回），用于虚线锚点 */
+  preInjectionDeityScores?: Record<string, number> | null;
+  preInjectionDeityEnergyAxes?: Record<string, { absolute_energy?: number; relative_percentage?: number }> | null;
+  /** 为 true 时在能量条上叠化注塑前虚线锚点 */
+  preInjectionReferenceActive?: boolean;
   t?: (s: string) => string;
 };
 
@@ -70,6 +76,10 @@ export function TenGodNumericList({
   pivotDeity = null,
   pivotDefenseSemantic = null,
   fluxKey,
+  manualInterventionDeities = null,
+  preInjectionDeityScores = null,
+  preInjectionDeityEnergyAxes = null,
+  preInjectionReferenceActive = false,
   t = (s: string) => s,
 }: Props) {
   const anomalyTag = (topAnomaly || "").trim();
@@ -111,6 +121,10 @@ export function TenGodNumericList({
         l1StatusPerDeity={l1StatusPerDeity}
         pivotDeity={pivotDeity}
         pivotDefenseSemantic={pivotDefenseSemantic}
+        manualInterventionDeities={manualInterventionDeities}
+        preInjectionDeityScores={preInjectionDeityScores}
+        preInjectionDeityEnergyAxes={preInjectionDeityEnergyAxes}
+        preInjectionReferenceActive={preInjectionReferenceActive}
         t={t}
       />
       <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-[11px] text-zinc-500">

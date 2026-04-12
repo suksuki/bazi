@@ -36,8 +36,17 @@ def test_language_engine_structured_en_contains_chinese_logic() -> None:
 def test_final_verdict_system_merges_heading_rules_into_json_contract_only() -> None:
     sys_hi = build_final_verdict_system_message(high_reasoning=True, lang="ZH")
     sys_lo = build_final_verdict_system_message(high_reasoning=False, lang="ZH")
+    assert "[STRICT_JSON_ONLY]" in sys_hi
     assert "### 核心气象" in sys_hi
-    assert "全量逻辑溯源" in sys_hi
-    assert "插件语义碎片" in sys_lo
+    assert "Final Narrator" in sys_hi
+    assert "Verified Facts" in sys_lo and "VF01" in sys_lo
     assert FIRST_OBSERVATION_SYSTEM_PROMPT not in sys_hi
-    assert "学习标注" in sys_lo and "reasoning_feedback_loop" in sys_hi
+    assert "reasoning_feedback_loop" in sys_hi
+    assert "Structural Observer" in FIRST_OBSERVATION_SYSTEM_PROMPT
+
+
+def test_final_verdict_contract_polish_mode_inserts_contract_mode() -> None:
+    s = build_final_verdict_system_message(high_reasoning=False, lang="ZH", contract_polish_mode=True)
+    assert "[CONTRACT_MODE]" in s
+    assert "语义润色代理" in s
+    assert "VF01" in s

@@ -5,7 +5,7 @@ from app.prompts.audit import AUDIT_JSON_REPAIR_SYSTEM
 from app.prompts.chat import CHAT_DEFAULT_SYSTEM_PROMPT
 from app.prompts.first_observation import FIRST_OBSERVATION_SYSTEM_PROMPT
 from app.prompts.language import LanguageEngine
-from app.prompts.physics_audit import AUDIT_JSON_SCHEMA_LINE
+from app.prompts.physics_audit_contracts import AUDIT_JSON_SCHEMA_LINE
 from app.prompts.registry import get_prompt, list_prompt_ids
 from app.prompts.translation import TRANSLATION_SYSTEM_PROMPT
 

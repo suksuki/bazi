@@ -47,7 +47,7 @@ export function getCardElement(card: { displayText?: string; conflictDetail?: st
 }
 
 export function isAuditorProposal(cardType?: string) {
-  return cardType === "auditor-proposal" || cardType === "proposal";
+  return cardType === "auditor-proposal" || cardType === "proposal" || cardType === "energy-patch";
 }
 
 /** 判词/卡片文案含「伤官见官」且 L1 已标记时，展示 physics 下发的能级标签 */

@@ -1,15 +1,13 @@
 """Analysis service layer for translation, clash scanning, and verdict orchestration."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, AsyncIterator, Dict, List
 
 from app.plugins.blind_school.core import run_blind_school_plugin
-from app.core.evolution.dna_registry import append_routing_audit_item
-from app.core.plugins.registry import PluginRegistry
-from app.core.routing.causal_router import CausalRouter, load_routing_config
 from app.api.contracts import (
     AnalyzeClashRequest,
     AnalyzeSeedRequest,
@@ -31,11 +29,9 @@ from app.services.helpers.analysis_helpers import (
     parse_translation_response,
 )
 from app.services.helpers.session_consensus_query import fetch_latest_session_consensus_rows
-from app.core.errors import DatabaseFetchError
-from app.services.helpers.interaction_pipeline import evaluate_interactions
-from app.services.decision_inbox_plugin_service import apply_decision_inbox_pipeline
-from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
+from app.core.errors import DatabaseFetchError
+from app.services.orchestrator_service import OrchestratorService
 from app.skills.final_verdict import FinalVerdictSkill
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
@@ -89,13 +85,35 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
 
     cfg = get_runtime_config().get("llm", {})
     model_name = str(cfg.get("model") or "LLM")
+
+    physics_cfg = body.physics_config.model_dump(exclude_none=True) if body.physics_config else {}
+    loop_out = OrchestratorService.run_internal_loop(
+        metadata_obj=metadata_obj,
+        enabled_plugins=list(body.enabled_plugins or []),
+        blind_school_features=blind_flags,
+        physics_config=physics_cfg,
+        session_id=body.session_id,
+        dayun=body.dayun,
+        liunian=body.liunian,
+    )
+    metadata_obj = loop_out["metadata"]
+    physics_tensor = loop_out["physics_tensor"]
+    _bundle = loop_out.get("semantic_label_bundle_v1") or {}
+
+    from app.semantic_translator.labels import format_bundle_for_first_observation
+
+    _label_hint = format_bundle_for_first_observation(_bundle) if isinstance(_bundle, dict) else ""
+
     client = QwenClient(
         base_url=cfg.get("base_url"),
         api_key=cfg.get("api_key"),
         model=cfg.get("model") or None,
     )
     first_messages = build_first_observation_messages(
-        metadata_obj.model_dump(), location_hint=location_hint, lang=body.lang
+        metadata_obj.model_dump(),
+        location_hint=location_hint,
+        lang=body.lang,
+        semantic_label_json=_label_hint or None,
     )
     llm_elapsed_ms = 0.0
     llm_approx_tokens = 0.0
@@ -114,103 +132,13 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         observed = [point.detail for point in metadata_obj.conflict_matrix.points]
         llm_text = fallback_clash_prompt(observed)
 
-    # 延迟导入：避免 app.services 包初始化 ↔ physics_engine 的循环依赖（helpers 子模块会触发 services/__init__）
-    from app.skills.physics_engine import PhysicsInferenceSkill
-
-    physics_skill = PhysicsInferenceSkill.instance()
-    consumed = physics_skill.consume(
-        {
-            "metadata": metadata_obj,
-            "session_id": body.session_id,
-            "dayun": body.dayun,
-            "liunian": body.liunian,
-            "physics_config": body.physics_config.model_dump(exclude_none=True) if body.physics_config else {},
-        }
-    )
-    physics_tensor = physics_skill.produce(consumed)
-    evaluate_interactions(
-        physics_tensor=physics_tensor,
-        metadata=metadata_obj,
-        interaction_params=physics_skill.get_interaction_params(),
-        physics_config=body.physics_config.model_dump(exclude_none=True) if body.physics_config else {},
-    )
-    try:
-        from app.services.helpers.metadata_enrichment import sync_metadata_pillar_energy_from_tensor
-
-        sync_metadata_pillar_energy_from_tensor(metadata_obj, physics_tensor)
-    except Exception:
-        pass
-    registry = PluginRegistry()
-    plugin_outputs = registry.run_hook(
-        hook="on_physics_complete",
-        enabled_plugins=body.enabled_plugins,
-        context={
-            "physics_tensor": physics_tensor,
-            "metadata": metadata_obj.model_dump(),
-            "blind_school_features": blind_flags,
-        },
-    )
-    physics_tensor.setdefault("meta", {})
-    if isinstance(physics_tensor.get("meta"), dict):
-        physics_tensor["meta"]["enabled_plugins"] = list(body.enabled_plugins or [])
-        physics_tensor["meta"]["plugin_specs"] = registry.list_specs()
-        physics_tensor["meta"]["blind_school_features"] = blind_flags
-        blind_payload = (plugin_outputs.get("classical.blind_school.v1") or {}).get("payload") or {}
-        chips = blind_payload.get("mangpai_chip_logs") or []
-        if chips:
-            physics_tensor["meta"]["mangpai_chip_logs"] = list(chips)
-        hub_mangpai = blind_payload.get("interaction_hub_overlay_mangpai")
-        if isinstance(hub_mangpai, dict) and hub_mangpai:
-            physics_tensor["meta"]["interaction_hub_mangpai"] = dict(hub_mangpai)
-        pierce_sem = blind_payload.get("mangpai_pierce_semantics")
-        if isinstance(pierce_sem, list) and pierce_sem:
-            physics_tensor["meta"]["mangpai_pierce_semantics"] = list(pierce_sem)
-    try:
-        negotiated = CausalRouter(routing_config=load_routing_config()).negotiate_impact(
-            plugin_outputs,
-            physics_tensor=physics_tensor,
-        )
-        meta = physics_tensor.get("meta")
-        if isinstance(meta, dict):
-            meta["causal_routing"] = negotiated
-        append_routing_audit_item(physics_tensor, negotiated)
-    except Exception:
-        pass
-    physics_tensor["plugin_outputs"] = plugin_outputs
-    try:
-        apply_decision_inbox_pipeline(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
-    except Exception:
-        pass
-    try:
-        from app.services.helpers.metadata_enrichment import (
-            attach_plugin_selection_trace_to_metadata,
-            build_plugin_selection_trace,
-        )
-
-        _pst = build_plugin_selection_trace(
-            registry=registry, plugin_outputs=plugin_outputs, physics_tensor=physics_tensor
-        )
-        attach_plugin_selection_trace_to_metadata(metadata_obj, _pst)
-    except Exception:
-        pass
-    try:
-        from app.services.helpers.metadata_enrichment import attach_inference_trace_to_metadata, build_inference_trace
-
-        _inf = build_inference_trace(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
-        metadata_obj = attach_inference_trace_to_metadata(metadata_obj, _inf) or metadata_obj
-    except Exception:
-        pass
-    try:
-        if "abs_nodes" not in physics_tensor:
-            ensure_abs_nodes_on_physics_tensor(physics_tensor)
-    except ValueError:
-        pass
-    if isinstance(physics_tensor, dict):
-        physics_tensor.pop(SYS_CORE_PHYSICS_BUNDLE_SRC_KEY, None)
+    prompt_variant = "with_semantic_labels" if str(_label_hint or "").strip() else "minimal"
     llm_meta = {
         "model_name": model_name,
         "elapsed_ms": llm_elapsed_ms,
         "approx_tokens": llm_approx_tokens,
+        "prompt_scenario": "first_observation",
+        "prompt_variant": prompt_variant,
     }
     return {
         "metadata": metadata_obj.model_dump(),
@@ -310,6 +238,31 @@ def resolve_consensus_history(
     return history
 
 
+def pack_final_verdict_http_response(out: Dict[str, Any]) -> Dict[str, Any]:
+    """与 POST /v1/final-verdict JSON 响应字段一致。"""
+    return {
+        "ok": True,
+        "version_id": out.get("version_id"),
+        "verdict_body": out.get("verdict_body"),
+        "change_log": out.get("change_log", []),
+        "logical_evidence": out.get("logical_evidence", []),
+        "work_vector": out.get("work_vector", {}),
+        "topology_graph_v1": out.get("topology_graph_v1", {}),
+        "structure_candidates_v0": out.get("structure_candidates_v0", {}),
+        "structure_final_decision_v0": out.get("structure_final_decision_v0", {}),
+        "plugin_outputs_verdict_ready": out.get("plugin_outputs_verdict_ready", {}),
+        "plugin_conflict_report": out.get("plugin_conflict_report", {}),
+        "audit_log": out.get("audit_log", {}),
+        "confirmed_decisions": out.get("confirmed_decisions", []),
+        "llm_request_messages": out.get("llm_request_messages") or [],
+        "llm_raw_response": str(out.get("llm_raw_response") or out.get("raw") or ""),
+        "llm_meta": out.get("llm_meta") or {},
+        "narrative_chunks": out.get("narrative_chunks") or [],
+        "metadata_memory_patch": out.get("metadata_memory_patch") or {},
+        "l1_junction_flags": out.get("l1_junction_flags") or {},
+    }
+
+
 async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: List[Dict[str, Any]]) -> Dict[str, Any]:
     physics_tensor = body.physics_tensor or {}
     if not isinstance(physics_tensor, dict):
@@ -337,28 +290,74 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         lang=body.lang,
         plugin_weights=body.plugin_weights or {},
         regeneration_context=reg_ctx,
+        mandatory_final_synthesis=bool(body.mandatory_final_synthesis),
     )
-    return {
-        "ok": True,
-        "version_id": out.get("version_id"),
-        "verdict_body": out.get("verdict_body"),
-        "change_log": out.get("change_log", []),
-        "logical_evidence": out.get("logical_evidence", []),
-        "work_vector": out.get("work_vector", {}),
-        "topology_graph_v1": out.get("topology_graph_v1", {}),
-        "structure_candidates_v0": out.get("structure_candidates_v0", {}),
-        "structure_final_decision_v0": out.get("structure_final_decision_v0", {}),
-        "plugin_outputs_verdict_ready": out.get("plugin_outputs_verdict_ready", {}),
-        "plugin_conflict_report": out.get("plugin_conflict_report", {}),
-        "audit_log": out.get("audit_log", {}),
-        "confirmed_decisions": out.get("confirmed_decisions", []),
-        "llm_request_messages": out.get("llm_request_messages") or [],
-        "llm_raw_response": str(out.get("llm_raw_response") or out.get("raw") or ""),
-        "llm_meta": out.get("llm_meta") or {},
-        "narrative_chunks": out.get("narrative_chunks") or [],
-        "metadata_memory_patch": out.get("metadata_memory_patch") or {},
-        "l1_junction_flags": out.get("l1_junction_flags") or {},
-    }
+    return pack_final_verdict_http_response(out)
+
+
+async def iter_final_verdict_ndjson(
+    body: FinalVerdictRequest,
+    consensus_history: List[Dict[str, Any]],
+) -> AsyncIterator[bytes]:
+    """NDJSON：多行 `{"type":"token","text":"..."}`，末行 `{"type":"complete","data":{...}}` 或 error。"""
+    physics_tensor = body.physics_tensor or {}
+    if not isinstance(physics_tensor, dict):
+        yield (json.dumps({"type": "error", "detail": "physics_tensor 必须为对象"}, ensure_ascii=False) + "\n").encode("utf-8")
+        return
+    if not isinstance(physics_tensor.get("meta"), dict):
+        yield (json.dumps({"type": "error", "detail": "physics_tensor.meta 缺失"}, ensure_ascii=False) + "\n").encode("utf-8")
+        return
+    if "abs_nodes" not in physics_tensor:
+        try:
+            ensure_abs_nodes_on_physics_tensor(physics_tensor)
+        except ValueError as exc:
+            yield (json.dumps({"type": "error", "detail": str(exc)}, ensure_ascii=False) + "\n").encode("utf-8")
+            return
+
+    skill = FinalVerdictSkill.instance()
+    clear_flag = bool(body.clear_previous_verdict or body.force_clear_cache)
+    previous_verdict = "" if clear_flag else (body.previous_verdict or "")
+    previous_logical_evidence = [] if clear_flag else (body.previous_logical_evidence or [])
+    reg_ctx = body.regeneration_context.model_dump() if body.regeneration_context is not None else None
+
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def emit_tok(s: str) -> None:
+        await queue.put({"type": "token", "text": s})
+
+    async def worker() -> None:
+        try:
+            out = await skill.generate(
+                metadata=body.metadata or {},
+                physics_tensor=physics_tensor,
+                selected_cards=body.selected_cards or [],
+                consensus_history=consensus_history,
+                previous_verdict=previous_verdict,
+                previous_logical_evidence=previous_logical_evidence,
+                lang=body.lang,
+                plugin_weights=body.plugin_weights or {},
+                regeneration_context=reg_ctx,
+                mandatory_final_synthesis=bool(body.mandatory_final_synthesis),
+                stream_tokens=emit_tok,
+            )
+            await queue.put({"type": "complete", "data": pack_final_verdict_http_response(out)})
+        except Exception as exc:
+            await queue.put({"type": "error", "detail": str(exc)})
+        finally:
+            await queue.put(None)
+
+    task = asyncio.create_task(worker())
+    try:
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            yield (json.dumps(item, ensure_ascii=False) + "\n").encode("utf-8")
+    finally:
+        try:
+            await task
+        except Exception:
+            _LOG.debug("final_verdict_stream_task_cleanup", exc_info=True)
 
 
 def _hit_rollback_triggers(triggers: List[str], self_abs: float, work_vector: Dict[str, Any]) -> List[str]:

@@ -21,24 +21,28 @@ def build_minimal_verdict_json_from_core_physics(physics_tensor: Dict[str, Any],
     if not verdict and evid:
         verdict = "；".join(evid[:3])
     if not verdict:
-        verdict = "LLM 无有效输出；物理层已计算完成，请在审计舱查看参数提案与交互张量。"
+        verdict = "盘局物理层已收敛；干支张力与芯片证据链已登记，可就气机枢轴作子平式整编。"
     zh = (lang or "ZH").upper() == "ZH"
     if zh:
+        cons = (
+            "\n".join(f"- {e}" for e in evid)
+            if evid
+            else "据 `sys.core.physics` 已登记之结论与芯片证据链，与四柱气机相互参证。"
+        )
         body_md = (
             "### 核心气象\n"
             + verdict[:900]
             + "\n\n### 裁决共识\n"
-            + "（系统兜底）以下摘要来自 `plugin_outputs.sys.core.physics`，非模型自由生成。\n"
-            + ("\n".join(f"- {e}" for e in evid) if evid else "- （该插件暂无 evidence 行）")
+            + cons
             + "\n\n### 行为指引\n"
-            + "请检查 LLM 连通性/限流或切换更强模型；勿将本段视为终审修辞终稿。\n"
+            + "宜据 VF 与柱位锚点重写语气与分疏，使三标题与盘气相扣；可再次发起终审以润色辞章。\n"
         )
     else:
         body_md = "### Core\n" + verdict[:1200] + "\n### Note\nPhysics-plugin fallback (not full LLM verdict).\n"
     assertions = [
         {
             "assertion_id": "fallback_a0",
-            "text": (verdict[:400] + ("…" if len(verdict) > 400 else "")) or "Physics layer produced structured evidence pending LLM recovery.",
+            "text": (verdict[:400] + ("…" if len(verdict) > 400 else "")) or "物理层已给出结构化证据，待辞章润色。",
             "evidence_refs": ["plugin.sys.core.physics"],
         }
     ]

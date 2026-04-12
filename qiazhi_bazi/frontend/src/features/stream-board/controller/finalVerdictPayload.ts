@@ -41,6 +41,10 @@ export type FinalVerdictRequestBuildInput = {
   pluginWeights: PluginWeights;
   lang: Lang;
   regenerationContext?: RegenerationContextInput | null;
+  /** 与后端 mandatory_final_synthesis 对齐：注入终审官整合提示块 */
+  mandatoryFinalSynthesis?: boolean;
+  /** 覆盖请求体中的 metadata（如终审前合并快照 persistence_layer 与最新 Inbox 勾选） */
+  metadataForRequest?: BaziMetadata | null;
 };
 
 /** 将终判返回的 metadata_memory_patch 合并进当前 BaziMetadata（浅合并 + 覆盖锚点层）。 */
@@ -56,7 +60,12 @@ export function mergeBaziMetadataMemoryPatch(
   if (typeof ver === "string" && ver.trim()) b.memory_schema_version = ver.trim();
   const layer = patch.verdict_anchor_layer;
   if (layer && typeof layer === "object" && !Array.isArray(layer)) {
-    b.verdict_anchor_layer = layer as BaziMetadata["verdict_anchor_layer"];
+    const prevLayer = b.verdict_anchor_layer;
+    if (prevLayer && typeof prevLayer === "object" && !Array.isArray(prevLayer)) {
+      b.verdict_anchor_layer = { ...prevLayer, ...layer } as BaziMetadata["verdict_anchor_layer"];
+    } else {
+      b.verdict_anchor_layer = layer as BaziMetadata["verdict_anchor_layer"];
+    }
   }
   const hcPatch = patch.history_context;
   if (hcPatch && typeof hcPatch === "object" && !Array.isArray(hcPatch)) {
@@ -124,8 +133,9 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
   );
   const absNodes = Object.keys(absNodesFromAxes).length > 0 ? absNodesFromAxes : absNodesFromScores;
 
+  const md = (input.metadataForRequest ?? input.metadata) || {};
   const body: Record<string, unknown> = {
-    metadata: input.metadata || {},
+    metadata: md,
     physics_tensor: {
       abs_nodes: absNodes,
       deity_scores: input.deityScores,
@@ -138,7 +148,7 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
       tuning_suggestions: input.llmDiagnosticData?.tuning_suggestions || [],
       timeline: input.timeline || {},
       conflict_list: input.conflicts || [],
-      fire_energy_after_conflict: calculateFireEnergyAfterConflicts(input.metadata?.pillars, input.conflicts),
+      fire_energy_after_conflict: calculateFireEnergyAfterConflicts((md as BaziMetadata)?.pillars, input.conflicts),
       meta: {
         enabled_plugins: [
           ...(input.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
@@ -174,6 +184,9 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
       previous_version_id: String(reg.previous_version_id || "").slice(0, 64),
     };
   }
+  if (input.mandatoryFinalSynthesis) {
+    body.mandatory_final_synthesis = true;
+  }
   return body;
 }
 
@@ -205,6 +218,37 @@ function parseLlmMessages(raw: unknown): LlmChatMessage[] | undefined {
   return out;
 }
 
+/** 与后端 `coerce_verdict_body_display` 对齐：剥离误入正文的 ```json 契约壳 */
+function stripVerdictDisplayArtifact(raw: string): string {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const head = s.slice(0, 200).toLowerCase();
+  if (!head.includes("```json") && !head.startsWith("```") && !(s.startsWith("{") && s.includes('"verdict_body"'))) {
+    return s.slice(0, 20000);
+  }
+  const m = s.match(/"verdict_body"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+  if (m?.[1]) {
+    return m[1]
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\")
+      .trim()
+      .slice(0, 20000);
+  }
+  const stripped = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+  if (stripped.startsWith("{")) {
+    try {
+      const o = JSON.parse(stripped) as { verdict_body?: string };
+      const vb = typeof o.verdict_body === "string" ? o.verdict_body.trim() : "";
+      if (vb) return vb.slice(0, 20000);
+    } catch {
+      /* fall through */
+    }
+  }
+  return s.slice(0, 20000);
+}
+
 export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const d = data as Record<string, unknown>;
@@ -212,7 +256,7 @@ export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult 
   const changeLogRaw = d.change_log as Record<string, unknown> | undefined;
   const llmMeta = d.llm_meta && typeof d.llm_meta === "object" && !Array.isArray(d.llm_meta) ? (d.llm_meta as Record<string, unknown>) : undefined;
   return {
-    body: String(d.verdict_body),
+    body: stripVerdictDisplayArtifact(String(d.verdict_body)),
     changeLog: {
       physics_diff: Array.isArray(changeLogRaw?.physics_diff)
         ? changeLogRaw.physics_diff.map((item: unknown) => String(item))

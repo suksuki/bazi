@@ -40,6 +40,9 @@ export function inferDecisionSkillId(
   if (card.cardType === "L1_STRUCTURE" || String(card.id || "").startsWith("inbox-sanhe-")) {
     return L1_SANHE_SKILL_ID;
   }
+  if (card.cardType === "semantic-audit") return "mp_semantic_layer";
+  if (card.cardType === "semantic-verdict") return "mp_semantic_layer";
+  if (card.cardType === "energy-patch") return "mp_l1_param";
   if (card.cardType === "auditor-proposal") return "mp_l1_param";
   if (card.id === "fallback-deep-scan") return "mp_deep_scan";
   const blob = `${card.conflictDetail || ""} ${card.displayText || ""} ${card.title}`;

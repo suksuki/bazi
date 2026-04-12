@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildPluginInteractionRollup,
   DecisionTimeline,
@@ -16,6 +16,8 @@ import { sysCorePhysicsPayload } from "@/features/stream-board/sysCorePhysics";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 import { buildCausalSovereigntySlice } from "@/features/stream-board/utils/causalSovereigntyFromSnapshot";
 import type { LabLlmRoundSnapshot, LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
+import { syncLlmRoundsCanonical, type LabLlmRoundEntry } from "@/features/stream-board/controller/labLlmRounds";
+import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContext";
 import type { TimelineSnapshot } from "@/types/bazi";
 
 const DEBUG_PLUGIN_FOCUS_KEY = "qiazhi_debug_plugin_focus";
@@ -60,6 +62,105 @@ function safeJson(obj: unknown, space = 2): string {
   } catch {
     return String(obj);
   }
+}
+
+/** 多轮 LLM：优先读快照 llm_rounds；旧会话无该字段时由 canonical 字段即时重建 */
+function displayLlmRounds(snapshot: LabSnapshot): LabLlmRoundEntry[] {
+  if (Array.isArray(snapshot.llm_rounds) && snapshot.llm_rounds.length > 0) return snapshot.llm_rounds;
+  return syncLlmRoundsCanonical(null, snapshot, false);
+}
+
+type LogicPulseKind = "silent" | "llm" | "round";
+
+export type PulseLogicEvent = {
+  id: string;
+  label: string;
+  kind: LogicPulseKind;
+  /** LLM 轮次时间戳，用于与主界面环形缓冲对齐 */
+  at?: number;
+  hubLine?: string;
+  hubIndex?: number;
+  roundEntry?: LabLlmRoundEntry | null;
+};
+
+/** 从 interaction_hub.result_logs 与 llm_rounds 推断静默重算 / LLM 往返，供「逻辑脉冲」打点 */
+function buildLogicPulseEvents(snapshot: LabSnapshot): PulseLogicEvent[] {
+  const hub = snapshot.interaction_hub as Record<string, unknown> | undefined;
+  const rawLogs = hub?.result_logs;
+  const logs = Array.isArray(rawLogs) ? rawLogs.map((x) => String(x)) : [];
+  const out: PulseLogicEvent[] = [];
+  logs.forEach((line, i) => {
+    const silent = /\[SILENT_ANALYZE\]|静默|内向环|orchestrator|internal-loop|参数校准|实验参数已应用|RECALC|系统逻辑已接收|🧬/i.test(
+      line,
+    );
+    const llm = /\[LLM_AUDIT\]|终判|final_synthesis|audit-physics|首观|润色|语义整合|GLOBAL/si.test(line);
+    if (silent) out.push({ id: `hub-${i}`, label: line.slice(0, 56), kind: "silent", hubLine: line, hubIndex: i });
+    else if (llm) out.push({ id: `hub-${i}-l`, label: line.slice(0, 56), kind: "llm", hubLine: line, hubIndex: i });
+  });
+  const rounds = displayLlmRounds(snapshot);
+  rounds.forEach((r) => {
+    const meta = r.meta && typeof r.meta === "object" && !Array.isArray(r.meta) ? (r.meta as Record<string, unknown>) : {};
+    const msgs = Array.isArray((r as { messages?: unknown }).messages) ? (r as { messages: unknown[] }).messages : [];
+    const resp = String((r as { response_text?: string }).response_text || "").trim();
+    if (msgs.length > 0 || resp || Object.keys(meta).length > 0) {
+      const at = typeof r.at === "number" && Number.isFinite(r.at) ? r.at : undefined;
+      out.push({ id: `round-${r.id}`, label: r.title_zh || r.id, kind: "round", at, roundEntry: r });
+    }
+  });
+  return out;
+}
+
+function LogicPulseChart({
+  snapshot,
+  onPulsePoint,
+}: {
+  snapshot: LabSnapshot;
+  onPulsePoint?: (ev: PulseLogicEvent) => void;
+}) {
+  const pulses = useMemo(() => buildLogicPulseEvents(snapshot), [snapshot]);
+  if (pulses.length === 0) {
+    return (
+      <p className="text-[11px] text-zinc-500">
+        暂无脉冲点（静默重算或 LLM 往返后，<code className="font-mono text-zinc-400">interaction_hub.result_logs</code> 与{" "}
+        <code className="font-mono text-zinc-400">llm_rounds</code> 将在此累积）。
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] text-zinc-500">
+        横轴为时间顺序：琥珀 ≈ 静默/重算，青绿 ≈ 终判与审计日志，紫 ≈ 独立 LLM 轮次。悬停可看摘要；点击可在主界面指令舱打开能量/骨架回放浮层（与演化轴联动）。
+      </p>
+      <div className="flex min-h-[3.25rem] flex-wrap items-end gap-x-1 gap-y-1 rounded-lg border border-zinc-800/90 bg-black/35 px-2 py-2">
+        {pulses.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            title={p.label}
+            aria-label={`逻辑脉冲 ${p.label}`}
+            disabled={!onPulsePoint}
+            onClick={() => onPulsePoint?.(p)}
+            className="group flex flex-col items-center gap-0.5 rounded-md border border-transparent p-0.5 hover:border-cyan-700/50 hover:bg-cyan-950/20 disabled:pointer-events-none disabled:opacity-60"
+          >
+            <span
+              className={`block rounded-full transition-transform group-hover:scale-125 ${
+                p.kind === "silent"
+                  ? "h-2.5 w-2.5 bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.45)]"
+                  : p.kind === "llm"
+                    ? "h-2.5 w-2.5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]"
+                    : "h-2.5 w-2.5 bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.42)]"
+              }`}
+              style={{ marginBottom: `${(i % 4) * 3}px` }}
+            />
+            <span className="max-w-[3rem] truncate text-[7px] font-mono text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100">
+              {p.kind}
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="text-[9px] text-zinc-600">共 {pulses.length} 个事件（与下方「模型交互记录」同源快照）。</p>
+    </div>
+  );
 }
 
 const LLM_ROLE_ZH: Record<string, string> = {
@@ -836,6 +937,35 @@ function DebugBaziMetadataPanel(props: {
 export function DebugView() {
   const { state } = useLabStore();
   const snapshot = useMemo(() => state.snapshot ?? null, [state.snapshot]);
+  const pulseReplay = usePulseReplay();
+  const handlePulsePoint = useCallback(
+    (ev: PulseLogicEvent) => {
+      if (!pulseReplay || !snapshot) return;
+      const at = typeof ev.at === "number" && Number.isFinite(ev.at) ? ev.at : Date.now();
+      const row = pulseReplay.pickSnapshotNear(at);
+      const metaLayer = snapshot.metadata as { verdict_anchor_layer?: { verdict_skeleton?: string } } | undefined;
+      const liveSk =
+        typeof metaLayer?.verdict_anchor_layer?.verdict_skeleton === "string"
+          ? metaLayer.verdict_anchor_layer.verdict_skeleton
+          : null;
+      const ptScores = (() => {
+        const ds = (snapshot.physics_tensor as { deity_scores?: Record<string, number> } | undefined)?.deity_scores;
+        if (ds && typeof ds === "object" && !Array.isArray(ds)) return { ...ds };
+        return null;
+      })();
+      pulseReplay.openPulseReplay({
+        pulseId: ev.id,
+        label: ev.label,
+        kind: ev.kind,
+        hubLine: ev.hubLine,
+        roundEntry: ev.roundEntry ?? undefined,
+        energy: row?.deityScores ?? ptScores,
+        skeleton: row?.skeleton ?? liveSk,
+        bufferMiss: !row,
+      });
+    },
+    [pulseReplay, snapshot],
+  );
   const [pluginFocusId, setPluginFocusId] = useState<string | null>(null);
   const [metaBranchFocus, setMetaBranchFocus] = useState<string | null>(null);
   const [debugTab, setDebugTab] = useState<DebugTabId>("verdict");
@@ -1012,50 +1142,36 @@ export function DebugView() {
                   <AuditChamberPanel />
                 </div>
               </SemanticAccordion>
-              <SemanticAccordion title="模型交互记录" subtitle="首观 / 物理审计 / 终审 LLM" defaultOpen={false}>
+              <SemanticAccordion title="模型交互记录（多轮）" subtitle="按场景聚合：首观 / 物理审计 / 终审…" defaultOpen={false}>
                 <div className="space-y-3">
-                  <LlmRoundCompact
-                    title="首观 LLM"
-                    subtitle="analyze-seed / 首条判词来源"
-                    round={snapshot.first_observation_llm}
-                    promptFallback={typeof snapshot.llm_prompt === "string" ? snapshot.llm_prompt : undefined}
-                  />
-                  <LlmRoundCompact title="物理审计 LLM" subtitle="audit-physics-with-llm" round={snapshot.physics_auditor_llm} />
-                  <SemanticAccordion title="终审 LLM 往返" subtitle="messages 与模型原始返回" defaultOpen={false}>
-                    {(() => {
-                      const finalMsgs = normalizeLlmMessages(fv?.llm_request_messages);
-                      const finalPrompt = formatLlmMessagesAsPrompt(finalMsgs);
-                      const finalRaw =
-                        fv && typeof fv.llm_raw_response === "string" ? fv.llm_raw_response.trim() : "";
-                      if (!fv || (!finalPrompt && !finalRaw)) {
-                        return <p className="text-xs text-zinc-500">暂无终审 LLM 记录。</p>;
-                      }
+                  <div className="rounded-lg border border-cyan-900/45 bg-gradient-to-br from-cyan-950/25 via-zinc-950/40 to-violet-950/20 p-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-200/95">实时逻辑脉冲图</p>
+                    <p className="mb-2 text-[9px] text-zinc-500">静默重算与 LLM 润色打点（interaction_hub.result_logs + llm_rounds）</p>
+                    <LogicPulseChart snapshot={snapshot as LabSnapshot} onPulsePoint={pulseReplay ? handlePulsePoint : undefined} />
+                  </div>
+                  {(() => {
+                    const llmRounds = displayLlmRounds(snapshot as LabSnapshot);
+                    if (llmRounds.length === 0) {
+                      return <p className="text-xs text-zinc-500">暂无 LLM 往返（需完成 analyze-seed 或终判）。</p>;
+                    }
+                    return llmRounds.map((r) => {
+                      const meta = r.meta && typeof r.meta === "object" && !Array.isArray(r.meta) ? (r.meta as Record<string, unknown>) : {};
+                      const ps = typeof meta.prompt_scenario === "string" ? meta.prompt_scenario : r.scenario;
                       return (
-                        <div className="space-y-3 text-xs">
-                          {finalPrompt ? (
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-sky-400/90">发给模型的提示词（messages）</p>
-                              <div className="mt-1 max-h-[min(42dvh,380px)] overflow-auto whitespace-pre-wrap rounded-lg border border-sky-900/40 bg-sky-950/20 p-3 text-[11px] leading-relaxed text-sky-50/95">
-                                {finalPrompt}
-                              </div>
-                            </div>
-                          ) : null}
-                          <div>
-                            <p className="text-[10px] uppercase tracking-wide text-zinc-500">模型原始返回</p>
-                            <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-violet-900/35 bg-zinc-950/80 p-2 font-mono text-[10px] text-violet-100/90">
-                              {finalRaw || "—"}
-                            </pre>
-                          </div>
-                          <details className="rounded border border-zinc-800 bg-zinc-950/60">
-                            <summary className="cursor-pointer px-2 py-1.5 text-[10px] text-zinc-500">原始 llm_request_messages JSON</summary>
-                            <pre className="max-h-48 overflow-auto border-t border-zinc-800 p-2 font-mono text-[9px] text-zinc-400">
-                              {safeJson(fv.llm_request_messages ?? [])}
-                            </pre>
-                          </details>
-                        </div>
+                        <LlmRoundCompact
+                          key={r.id}
+                          title={r.title_zh}
+                          subtitle={`${r.id} · prompt_scenario=${ps}`}
+                          round={r}
+                          promptFallback={
+                            r.id === "round:first_observation" && typeof snapshot.llm_prompt === "string"
+                              ? snapshot.llm_prompt
+                              : undefined
+                          }
+                        />
                       );
-                    })()}
-                  </SemanticAccordion>
+                    });
+                  })()}
                 </div>
               </SemanticAccordion>
             </div>

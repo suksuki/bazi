@@ -90,6 +90,8 @@ def format_blind_skill_registry_for_prompt(physics_tensor: Dict[str, Any] | None
         name = str(s.get("name") or "")
         desc = str(s.get("description") or "").strip()
         tmpl = str(s.get("assertion_template") or "").strip()
+        if "{index:.2f}" in tmpl:
+            tmpl = tmpl.replace("{index:.2f}", "因果红利指标（定性，勿写小数）")
         impact = str(s.get("impact_factor") or "").strip()
         lines.append(f"### {sid} · {name}")
         if impact:

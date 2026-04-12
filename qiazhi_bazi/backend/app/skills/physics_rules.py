@@ -28,6 +28,10 @@ DEFAULT_INTERACTION_PARAMS: Dict[str, float] = {
     "EFF_CONSUMING_DIFF": 0.9,
     "CF_FLOATING_DECAY": 0.1,
     "A_PROTRUSION": 1.0,
+    # 官杀克制修正（1.0=标度不变；<1 增强对官杀场的约束阻尼，供审计 LLM 微调）
+    "OFFICER_RESTRAINT_ALPHA": 1.0,
+    # 权重分布修正（1.0=中性；偏离 1.0 时略平抑过强十神簇，供审计 LLM 微调）
+    "POWER_DISTRIBUTION_GAMMA": 1.0,
     "L1_PUNISH_FRICTION_SANXING": 0.22,
     "L1_PUNISH_FRICTION_ZIXING": 0.18,
     "L1_CLASH_INTENSITY": 1.0,

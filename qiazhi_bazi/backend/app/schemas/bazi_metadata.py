@@ -71,6 +71,14 @@ class ConfirmedVerdictRecord(BaseModel):
         default_factory=list,
         description="终判签发时从 resolved_card_ids 等汇总的 Inbox 卡片屏蔽 id，供叙事工厂复现时过滤",
     )
+    decision_kinds: List[str] = Field(
+        default_factory=list,
+        description="结构化意志类型，如 UPDATE_PHYSICS_PARAM（与 persistence_layer.confirmed_verdicts 对齐）",
+    )
+    physics_param_payload: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="UPDATE_PHYSICS_PARAM 时写入 physics_config / interaction 覆盖的键值",
+    )
 
 
 class VerdictRegenerationEvent(BaseModel):
@@ -145,12 +153,96 @@ class VerdictAnchorLayer(BaseModel):
 
     narrative_version_id: str = Field(default="", description="与终判 version_id 对齐")
     assertions: List[VerdictAssertionAnchor] = Field(default_factory=list)
+    final_verdict: str = Field(
+        default="",
+        description="终审 LLM 整合后的主判词纯文本（写入前不含指纹注释；供断言区首位展示）",
+    )
+    verdict_skeleton: str = Field(
+        default="",
+        description="物理预判 Markdown 骨架：由 VF 经 semantic_translator.build_verdict_skeleton 生成；Orchestrator 每轮刷新",
+    )
+
+
+class ManualEnergyPatchEntry(BaseModel):
+    """单条个人能量补丁：在 deity_scores 展示层上做加减，不修改全局物理常数表。"""
+
+    delta_by_deity: Dict[str, float] = Field(default_factory=dict, description="十神名 -> 分值偏移")
+    param_key: str = Field(default="", description="来源物理审计键（白名单之一）")
+    suggested_value: float = Field(default=1.0, description="LLM 建议的目标参数值（仅溯源）")
+    reason: str = Field(default="", description="采纳理由摘要")
+    confirmed_at: str = Field(default="", description="ISO 时间")
+    source_card_id: str = Field(default="", description="Decision Inbox 卡片 id")
+
+
+class ManualEnergyPatchState(BaseModel):
+    """manual_energy_patch 协议：与 seed 指纹绑定的一组补丁。"""
+
+    patch_protocol: str = Field(default="manual_energy_patch.v1", description="协议版本")
+    seed_hash: str = Field(default="", description="与前端 seedPayloadSignature 对齐")
+    entries: List[ManualEnergyPatchEntry] = Field(default_factory=list)
+
+
+class SemanticVerdictArchiveEntry(BaseModel):
+    """用户确认后的断语归档。"""
+
+    id: str = Field(default="", description="稳定 id（uuid 或业务键）")
+    text: str = Field(default="", description="归档正文")
+    seed_hash: str = Field(default="", description="生辰指纹")
+    confirmed_at: str = Field(default="", description="ISO 时间")
+    source_card_id: str = Field(default="", description="来源 Inbox 卡片 id")
+
+
+class PersistenceConfirmedPhysicsWill(BaseModel):
+    """持久化侧车中的结构化意志项（与 semantic_verdicts 并列）。"""
+
+    verdict_id: str = Field(default="", description="业务锚 id，可与终判 version 对齐")
+    kinds: List[str] = Field(
+        default_factory=list,
+        description="勾选类型；含 UPDATE_PHYSICS_PARAM 时将 payload 强制写入 physics/interaction",
+    )
+    payload: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="PhysicsConfig 与 interaction_param 白名单键的并集；由 Will Injection 拆分",
+    )
+
+
+class PersistenceLayer(BaseModel):
+    """持久化侧车：与命例实例绑定、跨引擎重算保留。"""
+
+    persistence_protocol: str = Field(default="persistence_layer.v1", description="协议版本")
+    semantic_verdicts: List[SemanticVerdictArchiveEntry] = Field(
+        default_factory=list,
+        description="已确认语义断语（与 seed_hash 逐项对齐）",
+    )
+    confirmed_verdicts: List[PersistenceConfirmedPhysicsWill] = Field(
+        default_factory=list,
+        description="结构化意志归档（含 UPDATE_PHYSICS_PARAM 等）；Orchestrator 静默环读取",
+    )
+    will_temporal_anchor_dayun: str = Field(
+        default="",
+        description="用户确认意志时的大运干支锚；与当前 temporal_context/dayun 不一致时提示复核",
+    )
 
 
 class ConflictMatrix(BaseModel):
     """盘面扫描出的刑冲合化潜在点集合。"""
 
     points: List[ConflictPoint] = Field(default_factory=list)
+
+
+class ActiveVerdictSkeleton(BaseModel):
+    """语义快照：引擎预判骨架 + 用户意志硬编码（中控终判 v1；见 SEMANTIC_SNAPSHOT_AND_MANDATORY_NARRATION_v1.md）。"""
+
+    protocol: str = Field(default="active_verdict_skeleton.v1", description="子协议版本")
+    engine_bullets: List[str] = Field(
+        default_factory=list,
+        description="由 conflict_matrix、四柱、[semantic_label_bundle] VF 脱水行等拼装的因果标签行",
+    )
+    user_will_lines: List[str] = Field(
+        default_factory=list,
+        description="Decision Inbox 勾选文本；由终判入口与 analyze 后刷新合并",
+    )
+    updated_at: str = Field(default="", description="ISO8601 UTC，物理或意志变更时刷新")
 
 
 class BaziMetadata(BaseModel):
@@ -185,6 +277,18 @@ class BaziMetadata(BaseModel):
     reasoning_feedback_loop: Optional[Any] = Field(
         default=None,
         description="强模型可选回写的推理摘要（与终判 JSON 顶级字段对齐，供进化管线）",
+    )
+    manual_energy_patch: Optional[ManualEnergyPatchState] = Field(
+        default=None,
+        description="当前命例上的十神展示层柔性干预（与 seed 指纹绑定；不由 analyze-seed 覆盖）",
+    )
+    persistence_layer: Optional[PersistenceLayer] = Field(
+        default=None,
+        description="用户确认断语等侧车持久化（与 seed 指纹逐项绑定）",
+    )
+    active_verdict_skeleton: Optional[ActiveVerdictSkeleton] = Field(
+        default=None,
+        description="中控语义快照：物理/插件更新即刷新；终判前合并 Inbox 意志",
     )
 
 

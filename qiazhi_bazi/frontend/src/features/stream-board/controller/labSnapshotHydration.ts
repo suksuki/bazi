@@ -10,8 +10,9 @@ import type {
   SeedPayload,
 } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
-import type { BaziMetadata, TimelineSnapshot } from "@/types/bazi";
-import { mergeDecisionIdsPreferLocal, normalizedSnapshotDecisionIds } from "./streamBoardPure";
+import type { BaziMetadata, ManualEnergyPatchState, PersistenceLayer, TimelineSnapshot } from "@/types/bazi";
+import { mergeDecisionIdsPreferLocal, normalizedSnapshotDecisionIds, seedPayloadSignature } from "./streamBoardPure";
+import { applyManualEnergyPatchesToDisplay } from "@/features/stream-board/controller/individualAdjustment";
 
 export type LabSnapshotHydrationPatch = {
   metadata: BaziMetadata;
@@ -61,6 +62,16 @@ export function buildLabSnapshotHydrationPatch(
     },
     flow_state: String(rawMeta.flow_state ?? "ready"),
     notes: String(rawMeta.notes ?? ""),
+    manual_energy_patch: (rawMeta.manual_energy_patch ?? null) as ManualEnergyPatchState | null | undefined,
+    persistence_layer: (rawMeta.persistence_layer ?? null) as PersistenceLayer | null | undefined,
+    verdict_anchor_layer: rawMeta.verdict_anchor_layer as BaziMetadata["verdict_anchor_layer"] | undefined,
+    plugin_selection_trace: rawMeta.plugin_selection_trace as BaziMetadata["plugin_selection_trace"] | undefined,
+    memory_schema_version:
+      rawMeta.memory_schema_version != null ? String(rawMeta.memory_schema_version) : undefined,
+    temporal_context: rawMeta.temporal_context as BaziMetadata["temporal_context"] | undefined,
+    history_context: rawMeta.history_context as BaziMetadata["history_context"] | undefined,
+    inference_trace: rawMeta.inference_trace as BaziMetadata["inference_trace"] | undefined,
+    reasoning_feedback_loop: rawMeta.reasoning_feedback_loop,
   };
 
   const hub = snap.interaction_hub;
@@ -148,6 +159,18 @@ export function buildLabSnapshotHydrationPatch(
     patch.globalEntropy = typeof ge === "number" && Number.isFinite(ge) ? ge : null;
     if (patch.deityTraceDetails === undefined) {
       patch.deityTraceDetails = {};
+    }
+    const seedSig = lastSeedPayload ? seedPayloadSignature(lastSeedPayload) : null;
+    if (seedSig && patch.deityScores && metadata.manual_energy_patch) {
+      const axesIn = patch.deityEnergyAxes || {};
+      const applied = applyManualEnergyPatchesToDisplay(
+        patch.deityScores,
+        axesIn,
+        metadata.manual_energy_patch,
+        seedSig,
+      );
+      patch.deityScores = applied.scores;
+      patch.deityEnergyAxes = applied.axes;
     }
   }
 

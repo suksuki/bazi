@@ -6,11 +6,11 @@ import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
-import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { TemporalYearSlider } from "./TemporalYearSlider";
 import { LogicSummary } from "./LogicSummary";
 import type { StreamBoardViewModel } from "../models";
 import { useLabStore } from "../stores/useLabStore";
+import { manualInterventionDeityKeys } from "@/features/stream-board/controller/individualAdjustment";
 
 export interface BoardVisionPanelProps {
   viewModel: StreamBoardViewModel;
@@ -20,7 +20,6 @@ export interface BoardVisionPanelProps {
   visionDiagnosticHint: string;
   hasReboundRisk: boolean;
   energyPeakAbs: number;
-  blindSkillBadges: any[];
   goToSeedInput: () => void;
   hardRouteLogs: string[];
   climateSeason: string;
@@ -35,7 +34,6 @@ export function BoardVisionPanel({
   visionDiagnosticHint,
   hasReboundRisk,
   energyPeakAbs,
-  blindSkillBadges,
   goToSeedInput,
   hardRouteLogs,
   climateSeason,
@@ -70,6 +68,8 @@ export function BoardVisionPanel({
     finalTopologyGraphV1,
     physicsAudit,
     causalRouting,
+    preInjectionDeityDisplay,
+    showPreInjectionAbsSnapshot,
   } = viewModel;
 
   const { state: labState } = useLabStore();
@@ -86,6 +86,13 @@ export function BoardVisionPanel({
     | undefined;
   const pivotDeity = (pivotBlock?.target_pivot && String(pivotBlock.target_pivot)) || null;
   const pivotDefenseSemantic = (pivotBlock?.defense_semantic && String(pivotBlock.defense_semantic)) || null;
+
+  const manualInterventionDeities = React.useMemo(() => {
+    const patch = metadata?.manual_energy_patch;
+    if (!patch?.entries?.length || !viewModel.lastCommittedSeedSignature) return null;
+    if (patch.seed_hash !== viewModel.lastCommittedSeedSignature) return null;
+    return manualInterventionDeityKeys(patch.entries);
+  }, [metadata?.manual_energy_patch, viewModel.lastCommittedSeedSignature]);
 
   return (
     <motion.div
@@ -157,10 +164,6 @@ export function BoardVisionPanel({
             ) : null}
           </div>
         </div>
-        {/* md+ 与指令舱顶栏徽章去重：桌面端仅在 Command 模式展示 BlindSkillBadgeRow */}
-        <div className="md:hidden">
-          <BlindSkillBadgeRow badges={blindSkillBadges} t={t} />
-        </div>
         <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
             <BaziCard
@@ -199,6 +202,10 @@ export function BoardVisionPanel({
               pivotDeity={pivotDeity}
               pivotDefenseSemantic={pivotDefenseSemantic}
               fluxKey={referenceYear}
+              manualInterventionDeities={manualInterventionDeities}
+              preInjectionDeityScores={preInjectionDeityDisplay?.deity_scores ?? null}
+              preInjectionDeityEnergyAxes={preInjectionDeityDisplay?.deity_energy_axes ?? null}
+              preInjectionReferenceActive={Boolean(showPreInjectionAbsSnapshot)}
               t={t}
             />
           </div>

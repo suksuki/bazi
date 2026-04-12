@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 import json
 import os
 from contextlib import contextmanager
@@ -203,6 +204,22 @@ def test_resolve_consensus_history_falls_back_to_db():
         session_scope=fake_scope,
     )
     assert resolved[0]["decision_key"] == "root_factor"
+
+
+def test_final_verdict_mandatory_final_synthesis_passes_to_skill() -> None:
+    skill = _CaptureVerdictSkill()
+    with patch.object(analysis_service.FinalVerdictSkill, "instance", return_value=skill):
+        asyncio.run(
+            analysis_service.generate_final_verdict(
+                FinalVerdictRequest(
+                    metadata={"pillars": {"year": {"stem": "甲", "branch": "子"}}},
+                    physics_tensor={"meta": {}, "abs_nodes": {"比肩": 1.0}},
+                    mandatory_final_synthesis=True,
+                ),
+                [],
+            )
+        )
+    assert skill.kwargs.get("mandatory_final_synthesis") is True
 
 
 def test_final_verdict_request_regeneration_context_serializes_to_skill() -> None:

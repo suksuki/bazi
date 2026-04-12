@@ -109,7 +109,7 @@ def format_audit_snapshot_inline(
                 ten_bits.append(f"{d}:{float(v):.3f}")
     ten_s = ",".join(ten_bits[:10])[:280]
     if redact_ten_god_abs:
-        return f"[快照|干={stem_s}|支={branch_s}|十神Abs=叙事工厂已省略数值|档位见[Physical Evidence]·语义.十神.*]"
+        return f"[快照|干={stem_s}|支={branch_s}|十神Abs=已省略数值|档位见 Verified Facts·语义.十神.*]"
     return f"[快照|干={stem_s}|支={branch_s}|十神Abs={ten_s}]"
 
 
@@ -184,7 +184,7 @@ def format_deity_abs_semantic_slices(
             lines.append(f"语义.十神.{d}={label}（Abs≈{abs_energy:.2f}）")
     if lines:
         overview = (
-            "语义.十神总览=以下为能量档位叙事锚（无数值）；断言须引用插件切片 plugin.* 与柱位/冲突矩阵锚，禁止自行推算 Abs。"
+            "语义.十神总览=以下为能量档位叙事锚（无数值）；断言请绑定插件切片 plugin.* 与柱位/冲突矩阵等 Context 短锚。"
             if label_only
             else "语义.十神总览=以下为能量档位叙事锚，与十神.*.Abs 数值行一致；断言请引用 plugin.sys.core.physics 或柱位锚。"
         )
@@ -207,7 +207,7 @@ def get_logical_evidence(
     sanhe_block = _collect_sanhe_evidence_lines(physics_tensor if isinstance(physics_tensor, dict) else {})
     lines.extend(sanhe_block)
     lines.extend(
-        format_deity_abs_semantic_slices(physics_tensor if isinstance(physics_tensor, dict) else {}, label_only=False)
+        format_deity_abs_semantic_slices(physics_tensor if isinstance(physics_tensor, dict) else {}, label_only=True)
     )
     pillars = ((metadata or {}).get("pillars", {}) if isinstance(metadata, dict) else {}) or {}
     if pillars:
@@ -221,25 +221,14 @@ def get_logical_evidence(
         )
     if isinstance(metadata, dict) and metadata.get("gender"):
         lines.append(f"性别={metadata.get('gender')}")
-    deity_axes = (physics_tensor.get("deity_energy_axes", {}) if isinstance(physics_tensor, dict) else {}) or {}
     climate_trace = (
         (((physics_tensor.get("meta", {}) or {}).get("climate_adjustment", {})) if isinstance(physics_tensor, dict) else {})
         or {}
     )
     deity_before = (climate_trace.get("deity_before", {}) if isinstance(climate_trace, dict) else {}) or {}
     deity_after = (climate_trace.get("deity_after", {}) if isinstance(climate_trace, dict) else {}) or {}
-    for deity in ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"]:
-        axis = deity_axes.get(deity) if isinstance(deity_axes, dict) else None
-        if isinstance(axis, dict):
-            abs_energy = float(axis.get("absolute_energy", 0.0) or 0.0)
-            qualifier = strength_qualifier(abs_energy)
-            before = float(deity_before.get(deity, 0.0) or 0.0)
-            after = float(deity_after.get(deity, abs_energy) or abs_energy)
-            factor = (after / before) if before > 0 else 1.0
-            lines.append(
-                f"十神.{deity}.Abs={abs_energy:.2f} "
-                f"(Before:{before:.2f}, Climate_Factor:{factor:.2f}) [状态:{qualifier}]"
-            )
+    if (deity_before or deity_after) and isinstance(climate_trace, dict):
+        lines.append("气候调节=已对十神能量施加司令修正（无数值展开；档位见语义.十神行）")
     root_check = (
         (((physics_tensor.get("audit_log", {}) or {}).get("trace", {}) or {}).get("root_check", {}))
         if isinstance(physics_tensor, dict)
@@ -247,7 +236,12 @@ def get_logical_evidence(
     ) or {}
     if isinstance(root_check, dict):
         lines.append(f"根气.no_root={bool(root_check.get('no_root', False))}")
-        lines.append(f"根气.decay_factor={root_check.get('decay_factor', 'N/A')}")
+        df = root_check.get("decay_factor", "N/A")
+        lines.append(
+            "根气.decay_factor=（已省略数值）"
+            if isinstance(df, (int, float))
+            else f"根气.decay_factor={df}"
+        )
         lines.append(f"根气.record={str(root_check.get('record', ''))[:180]}")
     for i, c in enumerate(consensus_history or []):
         if isinstance(c, dict):

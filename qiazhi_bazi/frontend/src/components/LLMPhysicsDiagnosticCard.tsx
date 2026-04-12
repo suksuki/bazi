@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 
 type Props = {
   loading?: boolean;
@@ -12,6 +11,7 @@ type Props = {
     refresh_hint?: string;
   } | null;
   onRefreshPhysics?: () => Promise<void> | void;
+  /** @deprecated 保留签名以兼容旧调用；SQL 直改已废弃 */
   onApplySqlPatch?: (sqlPatch: string) => Promise<void> | void;
 };
 
@@ -20,28 +20,13 @@ export function LLMPhysicsDiagnosticCard({
   error,
   data,
   onRefreshPhysics,
-  onApplySqlPatch,
+  onApplySqlPatch: _onApplySqlPatch,
 }: Props) {
-  const [applyMsg, setApplyMsg] = useState("");
-
   async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
       // ignore clipboard failures
-    }
-  }
-
-  async function handleApplySql() {
-    const sql = data?.sql_patch || "";
-    if (!sql) return;
-    const ok = window.confirm(`确认执行以下 SQL 建议？\n\n${sql}`);
-    if (!ok) return;
-    try {
-      await onApplySqlPatch?.(sql);
-      setApplyMsg("SQL 建议已执行。");
-    } catch (e) {
-      setApplyMsg(`执行失败：${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -87,31 +72,38 @@ export function LLMPhysicsDiagnosticCard({
           </div>
 
           {data.sql_patch ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => copyText(data.sql_patch || "")}
-                className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300"
-              >
-                复制 SQL 脚本
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleApplySql()}
-                className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-300"
-              >
-                一键应用 SQL 建议
-              </button>
-              <button
-                type="button"
-                onClick={() => void onRefreshPhysics?.()}
-                className="rounded border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[11px] text-sky-300"
-              >
-                刷新物理参数缓存
-              </button>
+            <div className="space-y-2 rounded-lg border border-zinc-700 bg-zinc-950/80 p-2">
+              <p className="text-[11px] leading-relaxed text-zinc-400">
+                全局 <code className="text-zinc-300">UPDATE physics_interaction_params</code>{" "}
+                路径已废弃。请将 LLM 建议转为 Decision Inbox 的「个人能量补丁」卡片，勾选后执行裁决以写入{" "}
+                <code className="text-zinc-300">manual_energy_patch</code>（仅影响当前命盘展示）。
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyText(data.sql_patch || "")}
+                  className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300"
+                >
+                  复制 SQL（审计留档）
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  title="已废弃：请使用 Inbox 个人能量补丁"
+                  className="cursor-not-allowed rounded border border-zinc-700 bg-zinc-800/60 px-2 py-1 text-[11px] text-zinc-500"
+                >
+                  一键应用 SQL（已禁用）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onRefreshPhysics?.()}
+                  className="rounded border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[11px] text-sky-300"
+                >
+                  刷新物理参数缓存
+                </button>
+              </div>
             </div>
           ) : null}
-          {applyMsg ? <p className="text-[11px] text-zinc-400">{applyMsg}</p> : null}
         </div>
       ) : null}
     </section>

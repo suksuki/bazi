@@ -18,6 +18,7 @@ from app.skills.final_verdict_parts.narrative_guard import (
     inject_label_only_semantic_slices,
 )
 from app.skills.final_verdict_parts.physics_fallback import build_minimal_verdict_json_from_core_physics
+from app.utils.semantic_firewall import strip_float_literals as _semantic_firewall_strip_float_literals
 
 
 def test_sanitize_metadata_strips_audit_keys() -> None:
@@ -76,7 +77,7 @@ def test_format_audit_snapshot_redacts_ten_god_abs() -> None:
     red = format_audit_snapshot_inline(meta, pt, redact_ten_god_abs=True)
     assert "9.900" in full or "9.9" in full
     assert "9.9" not in red and "9.900" not in red
-    assert "叙事工厂已省略数值" in red
+    assert "已省略数值" in red
 
 
 def test_get_logical_evidence_redact_drops_ten_god_abs_lines() -> None:
@@ -111,6 +112,14 @@ def test_get_logical_evidence_includes_semantic_header() -> None:
     assert any("语义.十神" in x for x in lines)
 
 
+def test_semantic_firewall_strips_float_literals() -> None:
+    s = _semantic_firewall_strip_float_literals("risk=0.4079 与 eta=12 及 3.14e-2")
+    assert "0.4079" not in s
+    assert "3.14" not in s
+    assert "12" in s
+    assert "·" in s
+
+
 def test_physics_fallback_json_parseable() -> None:
     pt = {
         "plugin_outputs": {
@@ -123,4 +132,5 @@ def test_physics_fallback_json_parseable() -> None:
     raw = build_minimal_verdict_json_from_core_physics(pt, lang="ZH")
     obj = json.loads(raw)
     assert "核心气象" in obj["verdict_body"]
+    assert "系统兜底" not in obj["verdict_body"]
     assert obj["assertions"][0]["evidence_refs"] == ["plugin.sys.core.physics"]

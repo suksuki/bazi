@@ -1,17 +1,20 @@
 """本地 Qwen（OpenAI 兼容）异步客户端，支持流式输出。"""
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
+import httpcore
 import httpx
 
 from app.core.llm_ollama import looks_like_native_ollama_base_url, merge_ollama_chat_options
 from app.core.runtime_config import get_runtime_config
 from app.prompts.first_observation import FIRST_OBSERVATION_SYSTEM_PROMPT
 from app.prompts.language import LanguageEngine
+from app.utils.semantic_firewall import strip_float_literals
 
 # FIRST_OBSERVATION_SYSTEM_PROMPT 仍可从本模块 import（定义见 app.prompts.first_observation）
 
@@ -26,6 +29,7 @@ class QwenClient:
         QIAZHI_BAZI_LLM_API_KEY
         QIAZHI_BAZI_LLM_MODEL
         QIAZHI_OLLAMA_NATIVE_PORTS（可选，逗号分隔；用于判定是否走 Ollama /api/chat）
+        QIAZHI_LLM_HTTP_RETRIES（可选，默认 3）：对 httpx 传输层瞬时错误（含 LocalProtocolError）重试次数。
     """
 
     def __init__(
@@ -40,11 +44,50 @@ class QwenClient:
         self.model = model or os.getenv("QIAZHI_BAZI_LLM_MODEL", "")
         self._timeout = timeout_s
 
+    def _transport_retry_attempts(self) -> int:
+        raw = (os.getenv("QIAZHI_LLM_HTTP_RETRIES", "") or "3").strip()
+        try:
+            n = int(raw)
+        except ValueError:
+            n = 3
+        return max(1, min(5, n))
+
+    def _async_client(self) -> httpx.AsyncClient:
+        # 显式 HTTP/1.1：部分反向代理 / 推理服务在 h2 或连接复用上会触发 LocalProtocolError
+        return httpx.AsyncClient(
+            timeout=self._timeout,
+            http2=False,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=20),
+        )
+
+    async def _post_json_with_transport_retry(
+        self,
+        url: str,
+        *,
+        headers: Dict[str, str],
+        json_body: Dict[str, Any],
+    ) -> httpx.Response:
+        attempts = self._transport_retry_attempts()
+        last: BaseException | None = None
+        for i in range(attempts):
+            try:
+                async with self._async_client() as client:
+                    return await client.post(url, headers=headers, json=json_body)
+            except (httpx.TimeoutException, httpx.TransportError, httpcore.ProtocolError) as exc:
+                last = exc
+                if i + 1 >= attempts:
+                    raise
+                await asyncio.sleep(0.2 * (2**i))
+        assert last is not None
+        raise last
+
     def _headers(self) -> Dict[str, str]:
-        return {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        # 空 api_key 时禁止发送「Authorization: Bearer 」——httpx/httpcore 会报 Illegal header value（日志里误显为 LocalProtocolError）
+        h: Dict[str, str] = {"Content-Type": "application/json"}
+        key = (self.api_key or "").strip()
+        if key:
+            h["Authorization"] = f"Bearer {key}"
+        return h
 
     def _is_ollama(self) -> bool:
         return looks_like_native_ollama_base_url(self.base_url)
@@ -83,13 +126,12 @@ class QwenClient:
         }
         if (os.getenv("QIAZHI_OLLAMA_CHAT_THINK_FALSE", "") or "").lower() in ("1", "true", "yes"):
             payload["think"] = False
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            r = await client.post(url, json=payload)
-            if r.status_code >= 400:
-                return None
-            data = r.json()
-            content = ((data.get("message") or {}).get("content") or "").strip()
-            return content or None
+        r = await self._post_json_with_transport_retry(url, headers={}, json_body=payload)
+        if r.status_code >= 400:
+            return None
+        data = r.json()
+        content = ((data.get("message") or {}).get("content") or "").strip()
+        return content or None
 
     def _telemetry_from_text(self, text: str, elapsed_ms: float, usage: Any) -> Dict[str, Any]:
         approx = round(len(text) / 1.8, 2) if text else 0.0
@@ -127,10 +169,9 @@ class QwenClient:
         }
         if stop:
             payload["stop"] = stop
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            r = await client.post(url, headers=self._headers(), json=payload)
-            r.raise_for_status()
-            data = r.json()
+        r = await self._post_json_with_transport_retry(url, headers=self._headers(), json_body=payload)
+        r.raise_for_status()
+        data = r.json()
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
         usage = data.get("usage") if isinstance(data, dict) else None
         choice = (data.get("choices") or [{}])[0]
@@ -176,7 +217,7 @@ class QwenClient:
         }
         if stop:
             payload["stop"] = stop
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
+        async with self._async_client() as client:
             async with client.stream("POST", url, headers=self._headers(), json=payload) as resp:
                 resp.raise_for_status()
                 async for line in resp.aiter_lines():
@@ -199,25 +240,25 @@ def build_first_observation_messages(
     metadata: Dict[str, Any],
     location_hint: str = "",
     lang: str = "ZH",
+    *,
+    semantic_label_json: str | None = None,
 ) -> List[Dict[str, str]]:
-    """生成首轮“只观察不下结论”的提示词。"""
+    """生成首轮“只观察不下结论”的提示词（物理收敛后调用；可注入语义标签-only 块）。"""
     lang_u = (lang or "ZH").upper()
     zh_guard = ""
     if lang_u == "ZH":
-        zh_guard = (
-            "除 JSON 已列字段外不得引入新实体；勿写星座/行星/占星盘/天体运行；"
-            "勿把经纬度解释成新的冲合刑害理由；勿输出多段「分析建议」清单。\n"
-        )
+        zh_guard = "语境仅限干支与 JSON 已列字段；地理信息仅作地点标签，不衍生新冲合关系。\n"
+    label_block = (semantic_label_json or "").strip()
+    meta_blob = json.dumps(metadata, ensure_ascii=False)
+    user_raw = (
+        (f"{label_block}\n\n" if label_block else "")
+        + "以下为 BaziMetadata；请严格按 System 要求输出关系条列，不下终局判断：\n"
+        f"{meta_blob}\n"
+        f"{location_hint}\n"
+        f"{zh_guard}"
+        f"{LanguageEngine.first_observation_output_hint(lang)}"
+    )
     return [
-        {"role": "system", "content": FIRST_OBSERVATION_SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": (
-                "以下是 BaziMetadata，请仅做观察与提问，不要给最终判断：\n"
-                f"{json.dumps(metadata, ensure_ascii=False)}\n"
-                f"{location_hint}\n"
-                f"{zh_guard}"
-                f"{LanguageEngine.first_observation_output_hint(lang)}"
-            ),
-        },
+        {"role": "system", "content": strip_float_literals(FIRST_OBSERVATION_SYSTEM_PROMPT)},
+        {"role": "user", "content": strip_float_literals(user_raw)},
     ]

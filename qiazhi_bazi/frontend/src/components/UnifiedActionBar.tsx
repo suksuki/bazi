@@ -26,7 +26,7 @@ type Props = {
   errorFootnote?: string;
   /** 成功/结果脚注（如「计算完成」或收敛稳态） */
   successFootnote?: string;
-  /** 掐指三段式终局：主按钮灰态（与 issued 区分） */
+  /** 预留：主按钮额外灰态（与 issued 区分）；当前流式盘面对外恒为 false */
   mainActionConverged?: boolean;
 };
 
@@ -171,6 +171,8 @@ export function UnifiedActionBar({
     };
   }, []);
 
+  const mainButtonDisabled = disabled || mode === "SYNCING" || issued || mainActionConverged;
+
   useEffect(() => {
     if (sigShiftFlashKey < 1) return;
     setSigShiftShow(true);
@@ -228,13 +230,13 @@ export function UnifiedActionBar({
         <div className="relative flex-1">
           <button
             type="button"
-            disabled={disabled || mode === "SYNCING" || issued || mainActionConverged}
+            disabled={mainButtonDisabled}
             onClick={handleRun}
             className={`relative z-10 w-full rounded-xl py-2.5 text-sm font-semibold disabled:cursor-not-allowed ${
               issued
                 ? "bg-zinc-700 text-zinc-200 disabled:opacity-60"
                 : mainActionConverged && mode !== "SYNCING"
-                  ? "cursor-not-allowed bg-zinc-600 text-zinc-400 opacity-50 disabled:opacity-50"
+                  ? "cursor-not-allowed border border-zinc-600 bg-zinc-700 text-zinc-200 opacity-90 disabled:opacity-90"
                   : issueFinalPurplePulse
                     ? `bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition-[box-shadow,filter] duration-500 disabled:opacity-60 ${
                         issuePulseOn ? "shadow-[0_0_22px_rgba(168,85,247,0.55)] brightness-110" : "shadow-[0_0_10px_rgba(168,85,247,0.25)]"

@@ -9,6 +9,10 @@ import {
   extractMetricSnapshotFromPhysics,
   seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
+import {
+  applyManualEnergyPatchesToDisplay,
+  mergeAnalyzeSeedMetadata,
+} from "@/features/stream-board/controller/individualAdjustment";
 import type {
   MetricSnapshot,
   SilentBoardCtx,
@@ -124,13 +128,33 @@ export function useStreamBoardSilentRecalculateLayout({
           return;
         }
 
-        set.setMetadata(data.metadata as BaziMetadata);
+        const incomingSig = seedPayloadSignature(seed);
+        const prevSnapMeta = (labStateRef.current.snapshot?.metadata as BaziMetadata | null) ?? null;
+        const incomingMeta = data.metadata as BaziMetadata;
+        const pillarsEqual = Boolean(
+          prevSnapMeta?.pillars &&
+            incomingMeta?.pillars &&
+            JSON.stringify(prevSnapMeta.pillars) === JSON.stringify(incomingMeta.pillars),
+        );
+        const mergedMeta = mergeAnalyzeSeedMetadata(incomingMeta, prevSnapMeta, incomingSig, {
+          sameSeedResubmit: pillarsEqual,
+        });
+        set.setMetadata(mergedMeta);
         set.setTimeline((data.timeline ?? null) as TimelineSnapshot | null);
         if (tensor.deity_scores && typeof tensor.deity_scores === "object") {
-          set.setDeityScores(tensor.deity_scores as Record<string, number>);
-        }
-        if (tensor.deity_energy_axes && typeof tensor.deity_energy_axes === "object") {
-          set.setDeityEnergyAxes(tensor.deity_energy_axes as Record<string, DeityEnergyAxis>);
+          const rawScores = tensor.deity_scores as Record<string, number>;
+          const rawAxes =
+            tensor.deity_energy_axes && typeof tensor.deity_energy_axes === "object"
+              ? (tensor.deity_energy_axes as Record<string, DeityEnergyAxis>)
+              : {};
+          const applied = applyManualEnergyPatchesToDisplay(
+            rawScores,
+            rawAxes,
+            mergedMeta.manual_energy_patch ?? null,
+            incomingSig,
+          );
+          set.setDeityScores(applied.scores);
+          set.setDeityEnergyAxes(applied.axes);
         }
         if (tensor.deity_components && typeof tensor.deity_components === "object") {
           set.setDeityComponents(tensor.deity_components as Record<string, DeityComponent>);
@@ -167,7 +191,7 @@ export function useStreamBoardSilentRecalculateLayout({
         const auditorLlm = labStateRef.current.snapshot?.physics_auditor_llm;
         persistSnapshotRef.current({
           physics_tensor: tensor,
-          metadata: data.metadata as Record<string, unknown>,
+          metadata: mergedMeta as unknown as Record<string, unknown>,
           timeline: (data.timeline ?? null) as Record<string, unknown> | null,
           llm_prompt: data.llm_prompt || "",
           ...(firstLlm ? { first_observation_llm: firstLlm } : {}),

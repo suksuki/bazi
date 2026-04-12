@@ -4,7 +4,14 @@ export type DecisionInboxCard = {
   markdown: string;
   conflictDetail?: string;
   displayText?: string;
-  cardType?: "conflict" | "auditor-proposal" | "proposal" | "L1_STRUCTURE";
+  cardType?:
+    | "conflict"
+    | "auditor-proposal"
+    | "proposal"
+    | "L1_STRUCTURE"
+    | "semantic-audit"
+    | "semantic-verdict"
+    | "energy-patch";
   proposal?: unknown;
   skillId?: string;
   pluginAuditAnchorId?: string;

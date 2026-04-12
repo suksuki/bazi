@@ -5,6 +5,7 @@ import { inboxIdsSuppressedByJournal } from "@/features/stream-board/decisionJou
 import { normalizeDecisionIds } from "@/features/stream-board/controller/streamBoardPure";
 import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./models";
 import { sysCorePhysicsPayload } from "./sysCorePhysics";
+import { buildEnergyDeltasFromLogicProposal } from "@/features/stream-board/controller/individualAdjustment";
 
 export type { DecisionSignalToNoiseMeta };
 
@@ -260,8 +261,13 @@ export function buildInboxCards(params: {
 
   const proposalCards = auditorProposalCards.map((card, index) => {
     const id = card.id || `auditor-proposal-${index}-${card.title}`;
-    const merged = { ...card, id, cardType: "auditor-proposal" as const };
-    return { ...merged, skillId: inferDecisionSkillId(merged, conflictPoints) };
+    const nextType =
+      card.cardType === "semantic-audit" ? ("semantic-audit" as const) : ("auditor-proposal" as const);
+    const merged = { ...card, id, cardType: nextType };
+    return {
+      ...merged,
+      skillId: merged.skillId || inferDecisionSkillId(merged, conflictPoints),
+    };
   });
 
   const byId = new Map<string, InboxCard>();
@@ -278,8 +284,17 @@ export function buildInboxCards(params: {
   const mergedCards =
     mergedList.length > 0
       ? [
+          ...mergedList.filter((c) => c.cardType === "semantic-audit"),
+          ...mergedList.filter((c) => c.cardType === "semantic-verdict"),
+          ...mergedList.filter((c) => c.cardType === "energy-patch"),
           ...mergedList.filter((c) => c.cardType === "auditor-proposal"),
-          ...mergedList.filter((c) => c.cardType !== "auditor-proposal"),
+          ...mergedList.filter(
+            (c) =>
+              c.cardType !== "semantic-audit" &&
+              c.cardType !== "semantic-verdict" &&
+              c.cardType !== "energy-patch" &&
+              c.cardType !== "auditor-proposal",
+          ),
         ]
       : (() => {
           const fb = {
@@ -300,17 +315,84 @@ export function buildInboxCards(params: {
   return [...sanheCards, ...withSovereignty].filter(keepCard);
 }
 
+/** 物理审计 diagnosis 语义层：固定 id 便于同一会话内替换更新 */
+export function createPhysicsAuditSemanticDiagnosisCard(input: {
+  diagnosis: string;
+  top_anomaly?: string;
+  causal_reasoning?: string;
+}): InboxCard | null {
+  const diagnosis = String(input.diagnosis || "").trim();
+  if (!diagnosis) return null;
+  const lines = [
+    diagnosis,
+    String(input.top_anomaly || "").trim() ? `**主要矛盾**：${String(input.top_anomaly).trim()}` : "",
+    String(input.causal_reasoning || "").trim() ? `**因果链**：${String(input.causal_reasoning).trim()}` : "",
+  ].filter(Boolean);
+  const base: InboxCard = {
+    id: "physics-audit-diag",
+    title: "物理审计 · 诊断摘要",
+    displayText: diagnosis.length > 96 ? `${diagnosis.slice(0, 96)}…` : diagnosis,
+    conflictDetail: diagnosis.slice(0, 240),
+    markdown: lines.join("\n\n"),
+    cardType: "semantic-audit",
+    skillId: "mp_semantic_layer",
+  };
+  return base;
+}
+
 export function createAuditorProposalCard(proposal: LogicProposal): InboxCard | null {
   const paramKey = proposal?.param_key || "";
   if (!paramKey) return null;
+  const energyDeltas =
+    proposal.energy_deltas && Object.keys(proposal.energy_deltas).length > 0
+      ? proposal.energy_deltas
+      : buildEnergyDeltasFromLogicProposal(paramKey, proposal.suggested_value);
+  const enriched: LogicProposal = {
+    ...proposal,
+    adjustment_type: "ENERGY_PATCH",
+    energy_deltas: energyDeltas,
+    sql_patch: undefined,
+  };
+  const dx = String(enriched.diagnosis || "").trim();
+  const diagBlock = dx ? `**审计诊断（盲派语义锚）**\n\n${dx}\n\n` : "";
   const base: InboxCard = {
-    id: `auditor-proposal-${Date.now()}`,
-    title: proposal.title?.trim() ? proposal.title : "参数校准",
-    markdown: `${proposal.reason || ""}\n预期影响：${proposal.expected_impact || ""}`.trim(),
-    conflictDetail: proposal.reason || "",
-    displayText: proposal.param_key ? `参数校准：${proposal.param_key}` : "Auditor 提案参数校准",
-    cardType: "auditor-proposal",
-    proposal,
+    id: `auditor-energy-${paramKey}`,
+    title: enriched.title?.trim() ? enriched.title : "个人能量补丁",
+    markdown: [
+      diagBlock,
+      "**个体干预（ENERGY_PATCH）**：在十神分值展示层做小步修正，不写入全局物理常数表。",
+      enriched.reason || "",
+      enriched.expected_impact ? `**预期**：${enriched.expected_impact}` : "",
+      `**来源键**：\`${paramKey}\` → 建议值 ${typeof enriched.suggested_value === "number" ? enriched.suggested_value.toFixed(2) : "—"}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    conflictDetail: dx
+      ? `${dx.slice(0, 140)}${dx.length > 140 ? "…" : ""} · ${String(enriched.reason || paramKey).slice(0, 80)}`
+      : enriched.reason || `ENERGY_PATCH:${paramKey}`,
+    displayText: `个人能量补丁：${paramKey}`,
+    cardType: "energy-patch",
+    proposal: enriched,
   };
   return { ...base, skillId: inferDecisionSkillId(base, []) };
+}
+
+/** 可归档的断语卡片（与 physics-audit-diag 语义摘要区分：本卡用于用户勾选后写入 persistence_layer） */
+export function createPhysicsAuditSemanticVerdictCard(input: { diagnosis: string }): InboxCard | null {
+  const text = String(input.diagnosis || "").trim();
+  if (!text) return null;
+  const excerpt = text.length > 560 ? `${text.slice(0, 560)}…` : text;
+  const base: InboxCard = {
+    id: "physics-audit-semver",
+    title: "物理审计判词",
+    displayText: excerpt.length > 96 ? `${excerpt.slice(0, 96)}…` : excerpt,
+    conflictDetail: excerpt.slice(0, 240),
+    markdown: [
+      "**SEMANTIC_VERDICT**：勾选「执行裁决」后，将把下列诊断文本写入 persistence_layer，并与当前生辰指纹绑定；引擎重算不会清除该归档。",
+      excerpt,
+    ].join("\n\n"),
+    cardType: "semantic-verdict",
+    skillId: "mp_semantic_layer",
+  };
+  return base;
 }

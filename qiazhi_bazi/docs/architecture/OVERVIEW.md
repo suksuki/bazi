@@ -1,6 +1,6 @@
 # Qiazhi-Bazi Architecture Overview
 
-更新时间：`2026-04-11`
+更新时间：`2026-04-12`
 
 ## 1. 总览
 
@@ -40,6 +40,10 @@ Qiazhi-Bazi 当前采用单仓单体结构：
 4. 后端 `audit-physics-with-llm`
 5. 用户/系统产生 decision cards
 6. 后端 `final-verdict`
+
+### ILD 框架（Intelligence-Led Decision）
+
+**ILD** 与终判链路已实现 **语义防火墙** 与 **物理浮点脱钩**（终判请求发送前剔除浮点字面量，第三阶段只吃文本标签与 VF 编号证据），并确立了以 **「意志补丁」**（用户勾选、归档语义、`manual_energy_patch` 等持久化输入）为核心的 **终审叙事标准**。规格与闭环见 `INTELLIGENCE_LED_DECISION_FRAMEWORK_v2.md`；提示词与防火墙索引见 `../analysts/LLM_PROMPTS_REVIEW.md`（v2.1）。
 
 ### 管理端链路
 

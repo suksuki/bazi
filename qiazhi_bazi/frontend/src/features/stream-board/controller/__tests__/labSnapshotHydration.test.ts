@@ -82,6 +82,20 @@ describe("buildLabSnapshotHydrationPatch", () => {
     expect(patch!.lastSeedPayload).toEqual(minimalSeed);
   });
 
+  it("hydrates verdict_anchor_layer from snapshot metadata", () => {
+    const base = minimalSnapshot();
+    const patch = buildLabSnapshotHydrationPatch(
+      minimalSnapshot({
+        metadata: {
+          ...(base.metadata as Record<string, unknown>),
+          verdict_anchor_layer: { assertions: [{ text: "快照里的锚点" }] },
+        },
+      }),
+      minimalSeed,
+    );
+    expect(patch!.metadata.verdict_anchor_layer?.assertions?.[0]?.text).toBe("快照里的锚点");
+  });
+
   it("prefers interaction_hub.consultation_id when numeric", () => {
     const patch = buildLabSnapshotHydrationPatch(
       minimalSnapshot({

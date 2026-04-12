@@ -1,7 +1,7 @@
 """physics_tensor 字段兼容：旧 deity_energy_axes / 新 abs_nodes 与三合 cluster 有效 Abs。"""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 def sanhe_clusters_from_physics_tensor(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -24,6 +24,58 @@ def sanhe_clusters_from_physics_tensor(physics_tensor: Dict[str, Any]) -> List[D
         if isinstance(raw2, list):
             return [c for c in raw2 if isinstance(c, dict)]
     return []
+
+
+def _sanhe_detail_from_cluster(cluster: Dict[str, Any]) -> str:
+    brs = [str(x) for x in (cluster.get("branches") or []) if x is not None]
+    if not brs:
+        return "三合簇"
+    ev = str(cluster.get("energy_vault_status") or "").strip()
+    core = f"三合局·支池[{'、'.join(brs)}]"
+    return f"{core}·{ev}".strip("·") if ev else core
+
+
+def collect_conflict_matrix_points_for_llm(
+    metadata: Any,
+    physics_tensor: Optional[Dict[str, Any]],
+    *,
+    limit: int = 48,
+) -> List[Dict[str, Any]]:
+    """供物理审计/终判提示词使用：优先 metadata.conflict_matrix；若为空则从 physics_tensor 插件载荷回补三合等，避免与 UI 脱节。"""
+    out: List[Dict[str, Any]] = []
+    pt = physics_tensor if isinstance(physics_tensor, dict) else {}
+
+    raw_pts: List[Any] = []
+    cm = getattr(metadata, "conflict_matrix", None) if metadata is not None else None
+    if cm is not None and hasattr(cm, "points"):
+        raw_pts = list(cm.points or [])
+    elif isinstance(metadata, dict):
+        raw_pts = list(((metadata.get("conflict_matrix") or {}).get("points")) or [])
+
+    for p in raw_pts:
+        if hasattr(p, "model_dump"):
+            dumped = p.model_dump(exclude_none=True)
+            if isinstance(dumped, dict):
+                out.append(dumped)
+        elif isinstance(p, dict):
+            out.append(dict(p))
+
+    if out:
+        return out[:limit]
+
+    for i, cl in enumerate(sanhe_clusters_from_physics_tensor(pt)):
+        if not isinstance(cl, dict):
+            continue
+        out.append(
+            {
+                "id": f"sanhe_physics_sync_{i}",
+                "kind": "sanhe",
+                "positions": [],
+                "detail": _sanhe_detail_from_cluster(cl),
+                "source": "physics_tensor_sync",
+            }
+        )
+    return out[:limit]
 
 
 def cluster_effective_abs_for_deity(

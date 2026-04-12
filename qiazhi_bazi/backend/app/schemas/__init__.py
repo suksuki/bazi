@@ -1,5 +1,9 @@
 from app.schemas.bazi_metadata import (
     BaziMetadata,
+    ManualEnergyPatchEntry,
+    ManualEnergyPatchState,
+    PersistenceLayer,
+    SemanticVerdictArchiveEntry,
     ConfirmedVerdictRecord,
     VerdictModelStamp,
     VerdictRegenerationEvent,
@@ -20,6 +24,10 @@ from app.schemas.bazi_metadata import (
 
 __all__ = [
     "BaziMetadata",
+    "ManualEnergyPatchEntry",
+    "ManualEnergyPatchState",
+    "PersistenceLayer",
+    "SemanticVerdictArchiveEntry",
     "ConfirmedVerdictRecord",
     "VerdictModelStamp",
     "VerdictRegenerationEvent",

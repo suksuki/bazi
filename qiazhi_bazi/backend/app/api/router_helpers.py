@@ -45,6 +45,8 @@ def build_physics_audit_prompt(
     tier: str = "compact",
     high_reasoning: bool = False,
     inference_trace: Dict[str, Any] | None = None,
+    conflict_points: List[Dict[str, Any]] | None = None,
+    will_conflict_duel_context: str = "",
 ) -> List[Dict[str, str]]:
     """委托 ``app.prompts.physics_audit``，保留函数名供路由与审计服务。"""
     return build_physics_audit_messages(
@@ -57,6 +59,8 @@ def build_physics_audit_prompt(
         tier=tier,
         high_reasoning=high_reasoning,
         inference_trace=inference_trace,
+        conflict_points=conflict_points,
+        will_conflict_duel_context=will_conflict_duel_context,
     )
 
 
@@ -116,7 +120,11 @@ def patch_audit_json_from_text(raw_text: str, draft: AuditLlmStructuredResponse)
             result.sql_patch = match.group(1).strip()
             changed = True
         if not result.sql_patch:
-            kv_match = re.search(r"(CF_FLOATING_DECAY|A_PROTRUSION)\s*[:：=]\s*([0-9]*\.?[0-9]+)", text, flags=re.IGNORECASE)
+            kv_match = re.search(
+                r"(CF_FLOATING_DECAY|A_PROTRUSION|OFFICER_RESTRAINT_ALPHA|POWER_DISTRIBUTION_GAMMA)\s*[:：=]\s*([0-9]*\.?[0-9]+)",
+                text,
+                flags=re.IGNORECASE,
+            )
             if kv_match:
                 key = kv_match.group(1)
                 value = float(kv_match.group(2))

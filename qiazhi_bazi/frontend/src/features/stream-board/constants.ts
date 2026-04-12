@@ -6,6 +6,10 @@ export const ADMIN_TOKEN = process.env.NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN ?? "";
 export const adminHeaders: Record<string, string> = ADMIN_TOKEN ? { "X-Admin-Token": ADMIN_TOKEN } : {};
 export const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export const VERDICT_TIMEOUT_MS = 45000;
+/** 设为 1 时终判走 `/api/v1/final-verdict/stream`（NDJSON），失败则回退普通 JSON POST */
+export const FINAL_VERDICT_TRY_NDJSON_STREAM =
+  typeof process !== "undefined" &&
+  String(process.env.NEXT_PUBLIC_QIAZHI_FINAL_VERDICT_NDJSON || "").toLowerCase() === "1";
 /** 终审签发：|logic_diff.abs_delta| 低于此值且 Inbox 无剩余项时主按钮进入「签发终审」态（纯 UI 门闩，非物理常数） */
 export const FINAL_VERDICT_ABS_DELTA_THRESHOLD = 30;
 export const TRANSLATION_DEBOUNCE_MS = 500;
@@ -57,8 +61,41 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "掐指一算": "Analyze",
     "掐指再算": "Calculate again",
     "下次再算": "Another time",
-    "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。":
-      "Logic converged — the run is complete. Proceed to formal adjudication.",
+    "意志正在重塑现实…": "Will is reshaping the narrative…",
+    "意志注塑中…": "Will injection in progress…",
+    "物理骨架与终审判词并行展示（不等待 LLM 正文）":
+      "Physics skeleton shown alongside final verdict (does not wait for LLM body).",
+    "引擎直出": "Engine-direct",
+    "物理层 · 事实": "Physics layer · facts",
+    "语义层 · 解释": "Semantic layer · narrative",
+    "流式叙事；与上方物理事实可对照，不替代引擎结论":
+      "Streaming narrative; contrast with physics above — does not replace engine conclusions.",
+    "逻辑检察院 · 实时监控中": "Logic prosecutor · live monitoring",
+    "审计备忘": "Audit memo",
+    "物理审计 LLM 定性（终审前即可见）": "Physics-audit LLM rationale (visible before final verdict)",
+    "物理审计": "Physics audit",
+    "点击条目展开本轮完整 diagnosis / 模型输出": "Tap a row to expand full diagnosis / model output for that round.",
+    "查看逻辑指纹": "Show logic fingerprint",
+    "收起逻辑指纹": "Hide logic fingerprint",
+    "指纹已写入 DOM 注释，亦可在展开区复制用于审计。":
+      "Fingerprint is also in a DOM HTML comment; expand here to copy for audits.",
+    "意志注塑成功：{deity} 能量 {sign}{pct}%": "Will injection success: {deity} energy {sign}{pct}%",
+    "逻辑演化轴": "Logic evolution axis",
+    "逻辑演化轴：尚无审计或意志记录；勾选 Inbox 或触发静默环后将在此堆叠。":
+      "No audit or will records yet; Inbox selections or silent loops will stack here.",
+    "逻辑脉冲回放": "Logic pulse replay",
+    "关闭": "Close",
+    "脉冲回放：环形缓冲未命中，以下为最近可得快照或空态。":
+      "Ring buffer miss — showing nearest available snapshot or empty state.",
+    "能量图快照": "Energy chart snapshot",
+    "引擎骨架快照": "Engine skeleton snapshot",
+    "无十神能量条可展示": "No deity energy bars to display",
+    "无 verdict_skeleton": "No verdict_skeleton",
+    "该轮次模型回复摘录": "Model reply excerpt (this round)",
+    "已确认意志项": "Confirmed will item",
+    "撤销此条": "Revoke this entry",
+    "✨ 物理已收敛：终审整合已执行。你可无限次「掐指再算」；改参或改运后将重新进入初算节拍。":
+      "Physics converged — final narrative merge ran. You can tap “recalculate” without limit; changing seed or luck-year resets the first-pass cadence.",
     "逻辑已收敛，当前参数下物理态保持稳定。":
       "Logic converged: under current parameters the physical state is stable.",
     "计算超时（120s），请检查网络或后端。":
@@ -369,8 +406,41 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "掐指一算": "분석 시작",
     "掐指再算": "다시 계산",
     "下次再算": "다음에",
-    "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。":
-      "논리가 수렴했습니다. 공식 판정을 진행하세요.",
+    "意志正在重塑现实…": "의지가 서사를 재구성하는 중…",
+    "意志注塑中…": "의지 주입 처리 중…",
+    "物理骨架与终审判词并行展示（不等待 LLM 正文）":
+      "물리 골격과 최종 판시를 병행 표시(LLM 본문을 기다리지 않음).",
+    "引擎直出": "엔진 직출",
+    "物理层 · 事实": "물리층 · 사실",
+    "语义层 · 解释": "의미층 · 해석",
+    "流式叙事；与上方物理事实可对照，不替代引擎结论":
+      "스트리밍 서술; 위 물리 사실과 대조하며 엔진 결론을 대체하지 않습니다.",
+    "逻辑检察院 · 实时监控中": "논리 검찰 · 실시간 감시",
+    "审计备忘": "감사 메모",
+    "物理审计 LLM 定性（终审前即可见）": "물리 감사 LLM 서술(최종 판결 전에도 표시)",
+    "物理审计": "물리 감사",
+    "点击条目展开本轮完整 diagnosis / 模型输出": "행을 눌러 해당 라운드 diagnosis / 모델 출력 전문을 펼칩니다.",
+    "查看逻辑指纹": "논리 지문 보기",
+    "收起逻辑指纹": "논리 지문 접기",
+    "指纹已写入 DOM 注释，亦可在展开区复制用于审计。":
+      "지문은 DOM 주석에도 있으며, 여기서 펼쳐 복사해 감사에 사용할 수 있습니다.",
+    "意志注塑成功：{deity} 能量 {sign}{pct}%": "의지 주입 성공: {deity} 에너지 {sign}{pct}%",
+    "逻辑演化轴": "논리 진화 축",
+    "逻辑演化轴：尚无审计或意志记录；勾选 Inbox 或触发静默环后将在此堆叠。":
+      "감사·의지 기록이 아직 없습니다. 인박스 선택 또는 무음 루프 후 여기에 누적됩니다.",
+    "逻辑脉冲回放": "논리 펄스 재생",
+    "关闭": "닫기",
+    "脉冲回放：环形缓冲未命中，以下为最近可得快照或空态。":
+      "링 버퍼 미적중 — 가장 가까운 스냅샷 또는 빈 상태.",
+    "能量图快照": "에너지 차트 스냅샷",
+    "引擎骨架快照": "엔진 골격 스냅샷",
+    "无十神能量条可展示": "표시할 십신 에너지 막대 없음",
+    "无 verdict_skeleton": "verdict_skeleton 없음",
+    "该轮次模型回复摘录": "해당 라운드 모델 응답 발췌",
+    "已确认意志项": "확인된 의지 항목",
+    "撤销此条": "이 항목 취소",
+    "✨ 物理已收敛：终审整合已执行。你可无限次「掐指再算」；改参或改运后将重新进入初算节拍。":
+      "물리가 수렴했습니다. 최종 서술 병합이 실행되었습니다. 「다시 계산」은 무제한이며, 생년 또는 운세 연도를 바꾸면 첫 단계 리듬으로 돌아갑니다.",
     "逻辑已收敛，当前参数下物理态保持稳定。":
       "논리가 수렴했습니다. 현재 매개변수에서 물리 상태는 안정적입니다.",
     "计算超时（120s），请检查网络或后端。":
@@ -657,7 +727,35 @@ export const PRELOAD_UI_TEXTS = [
   "掐指一算",
   "掐指再算",
   "下次再算",
-  "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。",
+  "意志正在重塑现实…",
+  "意志注塑中…",
+  "物理骨架与终审判词并行展示（不等待 LLM 正文）",
+  "引擎直出",
+  "物理层 · 事实",
+  "语义层 · 解释",
+  "流式叙事；与上方物理事实可对照，不替代引擎结论",
+  "逻辑检察院 · 实时监控中",
+  "审计备忘",
+  "物理审计 LLM 定性（终审前即可见）",
+  "物理审计",
+  "点击条目展开本轮完整 diagnosis / 模型输出",
+  "查看逻辑指纹",
+  "收起逻辑指纹",
+  "指纹已写入 DOM 注释，亦可在展开区复制用于审计。",
+  "意志注塑成功：{deity} 能量 {sign}{pct}%",
+  "逻辑演化轴",
+  "逻辑演化轴：尚无审计或意志记录；勾选 Inbox 或触发静默环后将在此堆叠。",
+  "逻辑脉冲回放",
+  "关闭",
+  "脉冲回放：环形缓冲未命中，以下为最近可得快照或空态。",
+  "能量图快照",
+  "引擎骨架快照",
+  "无十神能量条可展示",
+  "无 verdict_skeleton",
+  "该轮次模型回复摘录",
+  "已确认意志项",
+  "撤销此条",
+  "✨ 物理已收敛：终审整合已执行。你可无限次「掐指再算」；改参或改运后将重新进入初算节拍。",
   "逻辑已收敛，当前参数下物理态保持稳定。",
   "计算完成，已更新逻辑视图",
   "✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。",

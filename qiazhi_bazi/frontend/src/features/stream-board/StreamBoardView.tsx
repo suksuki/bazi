@@ -1,22 +1,19 @@
 "use client";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArbiterLogicDrawer } from "@/components/ArbiterLogicDrawer";
 import { AuditSidebar } from "@/components/AuditSidebar";
 import { BaziCard } from "@/components/BaziCard";
 import { BlindLogicMirror } from "@/components/BlindLogicMirror";
-import { DecisionInbox } from "@/components/DecisionInbox";
 import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { SeedInput } from "@/components/SeedInput";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { LabViewModeFab } from "@/components/layout/LabViewModeFab";
-import { BlindSkillBadgeRow } from "@/features/stream-board/components/BlindSkillBadgeRow";
 import { SnapshotBanner } from "@/features/stream-board/components/SnapshotBanner";
 import { VerdictCertificate } from "@/features/stream-board/components/VerdictCertificate";
-import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
 import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
 import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
 import {
@@ -29,10 +26,10 @@ import {
 import { buildCausalSovereigntySlice } from "./utils/causalSovereigntyFromSnapshot";
 import { buildFullRecalcInputBundle, physicsTensorFingerprint } from "./utils/physicsTensorFingerprint";
 import { buildStreamBoardViewDerivedState } from "./viewModel";
-import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
 import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContext";
 import { BoardVisionPanel } from "./components/BoardVisionPanel";
 import { BoardCommandPanel } from "./components/BoardCommandPanel";
 import { PatternStatus, type PatternProfileSlice } from "./components/PatternStatus";
@@ -56,6 +53,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     lang,
     setLang,
     busy,
+    narrativeReshapeActive,
     consultationId,
     metadata,
     timeline,
@@ -88,14 +86,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     consensusHistory,
     cards,
     resultLogs,
-    finalVerdictBody,
-    finalVerdictChangeLog,
-    finalLogicalEvidence,
-    finalWorkVector,
-    finalTopologyGraphV1,
-    finalStructureCandidatesV0,
-    finalStructureFinalDecisionV0,
-    confirmedDecisions,
     confirmedDecisionIds,
     setConfirmedDecisionIds,
     urlDecisionHydrated,
@@ -111,7 +101,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     summaryChanged,
     l1Certified,
     physicsAudit,
-    physicsConfidence,
     physicsEvidence,
     labConfig,
     pluginWeights,
@@ -126,8 +115,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setLogicDrawerOpen,
     onSeedSubmit,
     executeDecisionAndRefresh,
+    runFinalVerdictSynthesis,
     appendSystemAuditLog,
-    revokeConfirmedDecision,
     openLogicDrawer,
     openLogicDrawerByDeity,
     onEvidenceItemClick,
@@ -140,6 +129,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     sigShiftFlashKey,
     isFinalized,
     finalizeVerdict,
+    verdictSkeletonContentKey,
   } = viewModel;
   const decisionIds = React.useMemo(() => confirmedDecisionIds || [], [confirmedDecisionIds]);
   const setDecisionIds = React.useMemo(
@@ -151,14 +141,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const labSnapshotRef = React.useRef(labUiState.snapshot);
   labSnapshotRef.current = labUiState.snapshot;
   const sovereigntyDominant = Boolean(labUiState.snapshot?.interaction_hub?.sovereignty_dominant);
-  const blindSkillBadges = useMemo(
-    () =>
-      computeBlindSkillBadges(
-        labUiState.snapshot?.physics_tensor as Record<string, unknown> | undefined,
-        finalWorkVector,
-      ),
-    [labUiState.snapshot?.physics_tensor, finalWorkVector],
-  );
   const l1JunctionFlags = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
     ?.l1_junction_flags as Record<string, unknown> | undefined;
   const decisionSignalToNoise = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
@@ -186,17 +168,32 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [actionSyncing, setActionSyncing] = React.useState(false);
   /** 掐指一算（全量 analyze-seed）专用 Loading，与语义重算 actionSyncing 分离 */
   const [isCalculating, setIsCalculating] = React.useState(false);
-  /** 掐指一算三段式：0 初算 / 1 再算 / 2 收敛终局（主栏锁定至参数变化） */
-  const [calculationCount, setCalculationCount] = React.useState<0 | 1 | 2>(0);
+  /** 全量掐指（analyze-seed）成功次数：0 尚未成功；≥1 可持续「掐指再算」，无轮次上限（仅签发后锁定） */
+  const [calculationCount, setCalculationCount] = React.useState(0);
   const [lastSuccessfulInputBundle, setLastSuccessfulInputBundle] = React.useState<string | null>(null);
-  const calculationCountRef = React.useRef<0 | 1 | 2>(0);
+  /** 供 analyze-seed 异步结束后读取「上一拍」成功 bundle，避免闭包陈旧；也用于同参复核时的物理收敛判定 */
+  const lastSuccessfulInputBundleRef = React.useRef<string | null>(null);
+  const calculationCountRef = React.useRef(0);
   const [calculationNonce, setCalculationNonce] = React.useState(0);
+  const pulseReplay = usePulseReplay();
+  useEffect(() => {
+    if (!pulseReplay?.recordLabPulseSnapshot) return;
+    if (!metadata?.pillars) return;
+    const sk = String(verdictSkeletonContentKey || "").trim() || null;
+    pulseReplay.recordLabPulseSnapshot({
+      ts: Date.now(),
+      deityScores: { ...deityScores },
+      skeleton: sk,
+    });
+  }, [pulseReplay, calculationNonce, verdictSkeletonContentKey, metadata?.pillars, deityScores]);
   const [inboxScanActive, setInboxScanActive] = React.useState(false);
   const [runSuccessFootnote, setRunSuccessFootnote] = React.useState("");
   const [fullRunErrorFootnote, setFullRunErrorFootnote] = React.useState("");
   const inboxPulseTimerRef = React.useRef<number | null>(null);
   const runSuccessClearRef = React.useRef<number | null>(null);
   const fullRunErrorClearRef = React.useRef<number | null>(null);
+  /** 物理收敛并触发终审整合后的短窗：忽略 bundle 字符串瞬时失配导致的成功次数复位 */
+  const bundleTier2ResetSuppressedUntilRef = React.useRef(0);
 
   React.useEffect(
     () => () => {
@@ -206,16 +203,12 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     },
     [],
   );
-  const [revokeGlitch, setRevokeGlitch] = React.useState(false);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
   const [checklistResetToken, setChecklistResetToken] = React.useState(0);
-  const [lastSubmittedDecisionIds, setLastSubmittedDecisionIds] = React.useState<string[]>([]);
   const [draftSeed, setDraftSeed] = React.useState<{ date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" } | null>(null);
   const [lastAppliedSeedSignature, setLastAppliedSeedSignature] = React.useState("");
   const [lastAppliedParamSignature, setLastAppliedParamSignature] = React.useState("");
   const [lastAppliedDecisionsSignature, setLastAppliedDecisionsSignature] = React.useState("[]");
-  const [revertEntropyDelta, setRevertEntropyDelta] = React.useState<number | null>(null);
-  const [pendingRevertEntropyCapture, setPendingRevertEntropyCapture] = React.useState(false);
   const touchStartX = React.useRef<number | null>(null);
 
   const goToSeedInput = React.useCallback(() => {
@@ -250,6 +243,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     calculationCountRef.current = 0;
     setLastSuccessfulInputBundle(null);
     setRunSuccessFootnote("");
+    bundleTier2ResetSuppressedUntilRef.current = 0;
   }, [isFinalized, clearLabPipelineForSeedDraft]);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
   const currentParamSignature = JSON.stringify(pluginWeights || {});
@@ -272,17 +266,21 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   React.useEffect(() => {
     if (isFinalized) return;
     if (lastSuccessfulInputBundle === null) return;
-    if (fullRecalcInputBundle !== lastSuccessfulInputBundle) {
-      setCalculationCount(0);
-      calculationCountRef.current = 0;
-      setRunSuccessFootnote("");
-      if (runSuccessClearRef.current) {
-        window.clearTimeout(runSuccessClearRef.current);
-        runSuccessClearRef.current = null;
-      }
+    if (fullRecalcInputBundle === lastSuccessfulInputBundle) return;
+    if (Date.now() < bundleTier2ResetSuppressedUntilRef.current) {
+      return;
+    }
+    setCalculationCount(0);
+    calculationCountRef.current = 0;
+    bundleTier2ResetSuppressedUntilRef.current = 0;
+    setRunSuccessFootnote("");
+    if (runSuccessClearRef.current) {
+      window.clearTimeout(runSuccessClearRef.current);
+      runSuccessClearRef.current = null;
     }
   }, [fullRecalcInputBundle, lastSuccessfulInputBundle, isFinalized]);
 
+  lastSuccessfulInputBundleRef.current = lastSuccessfulInputBundle;
   calculationCountRef.current = calculationCount;
 
   const handleSeedPayloadChange = React.useCallback(
@@ -318,6 +316,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       setCalculationCount(0);
       calculationCountRef.current = 0;
       setLastSuccessfulInputBundle(null);
+      bundleTier2ResetSuppressedUntilRef.current = 0;
     }
   }, [metadata]);
 
@@ -393,11 +392,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     ? t("已签发 (Issued)")
     : actionSyncing || busy || isCalculating
       ? undefined
-      : calculationCount === 2
-        ? t("下次再算")
-        : calculationCount === 1
-          ? t("掐指再算")
-          : t("掐指一算");
+      : calculationCount >= 1
+        ? t("掐指再算")
+        : t("掐指一算");
 
   const handleFullCalculate = React.useCallback(async () => {
     if (!draftSeed) return;
@@ -439,10 +436,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         error: e instanceof Error ? e.message : t("排盘过程异常中断。"),
       }));
 
-      const elapsedAfterFetch = Date.now() - t0;
-      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedAfterFetch)));
-
       if (!result.ok) {
+        const elapsedErr = Date.now() - t0;
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedErr)));
         setFullRunErrorFootnote(result.error);
         fullRunErrorClearRef.current = window.setTimeout(() => {
           setFullRunErrorFootnote("");
@@ -451,24 +447,58 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         return;
       }
 
+      // 1) 先判定物理收敛（与 LLM 叙事解耦），立即提交档位与成功 bundle，再进入最短 UI 节拍
       const nextHash = physicsTensorFingerprint(result.physics_tensor);
-      const physicsUnchanged = prevHash !== "" && nextHash !== "" && prevHash === nextHash;
+      /** 物理收敛核指纹一致（双端非空），与 LLM 叙事解耦 */
+      const physicsFingerprintMatch = prevHash !== "" && nextHash !== "" && prevHash === nextHash;
 
+      const seedSig = JSON.stringify(draftSeed);
+      const paramSig = JSON.stringify(pluginWeights || {});
+      const bundleAfterSuccess = buildFullRecalcInputBundle({
+        seedSignature: seedSig,
+        paramSignature: paramSig,
+        referenceYear,
+        labConfig,
+      });
       const prevCount = calculationCountRef.current;
-      const nextCount: 0 | 1 | 2 =
-        prevCount === 0 ? 1 : prevCount === 1 ? (physicsUnchanged ? 2 : 1) : prevCount;
+      /** 同参再次全量：bundle 与上次成功一致时的收敛兜底（tensor 指纹噪声下仍视为稳态） */
+      const samePhysicsBundleSecondTap =
+        prevCount >= 1 &&
+        lastSuccessfulInputBundleRef.current !== null &&
+        bundleAfterSuccess === lastSuccessfulInputBundleRef.current;
+      const tierConverged = physicsFingerprintMatch || samePhysicsBundleSecondTap;
+      const nextCount = prevCount + 1;
+      /** 与旧「第二轮收敛」一致：至少完成过一次全量后的收敛才触发终审整合，首轮指纹一致只提示稳态 */
+      const shouldRunFinalVerdictSynthesis = tierConverged && prevCount >= 1;
+
       setCalculationCount(nextCount);
       calculationCountRef.current = nextCount;
+      if (shouldRunFinalVerdictSynthesis) {
+        bundleTier2ResetSuppressedUntilRef.current = Date.now() + 2800;
+      }
 
-      if (nextCount === 2) {
+      setLastAppliedSeedSignature(seedSig);
+      setLastAppliedParamSignature(paramSig);
+      setLastSuccessfulInputBundle(bundleAfterSuccess);
+      lastSuccessfulInputBundleRef.current = bundleAfterSuccess;
+
+      const elapsedAfterFetch = Date.now() - t0;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedAfterFetch)));
+
+      if (shouldRunFinalVerdictSynthesis) {
         if (runSuccessClearRef.current) {
           window.clearTimeout(runSuccessClearRef.current);
           runSuccessClearRef.current = null;
         }
-        setRunSuccessFootnote(t("✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。"));
+        setRunSuccessFootnote(
+          t("✨ 物理已收敛：终审整合已执行。你可无限次「掐指再算」；改参或改运后将重新进入初算节拍。"),
+        );
+        window.setTimeout(() => {
+          void runFinalVerdictSynthesis({ delayMs: 1000, trigger: "physics_converged" });
+        }, 160);
       } else {
         setRunSuccessFootnote(
-          physicsUnchanged
+          tierConverged && !samePhysicsBundleSecondTap
             ? t("✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。")
             : t("计算完成，已更新逻辑视图"),
         );
@@ -477,30 +507,15 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
           runSuccessClearRef.current = null;
         }, 10_000);
       }
-
-      const seedSig = JSON.stringify(draftSeed);
-      const paramSig = JSON.stringify(pluginWeights || {});
-      setLastAppliedSeedSignature(seedSig);
-      setLastAppliedParamSignature(paramSig);
-
-      setLastSuccessfulInputBundle(
-        buildFullRecalcInputBundle({
-          seedSignature: seedSig,
-          paramSignature: paramSig,
-          referenceYear,
-          labConfig,
-        }),
-      );
     } finally {
       setIsCalculating(false);
       setCalculationNonce((prev) => prev + 1);
     }
-  }, [draftSeed, onSeedSubmit, pluginWeights, referenceYear, labConfig, t]);
+  }, [draftSeed, onSeedSubmit, pluginWeights, referenceYear, labConfig, t, runFinalVerdictSynthesis]);
 
   const runSemanticRecompute = React.useCallback(async (decisions: InboxCard[]) => {
     setActionSyncing(true);
     try {
-      setLastSubmittedDecisionIds(decisions.map((item) => item.id));
       await rerunFinalVerdictWithWeights(decisions);
       setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
       setLastAppliedDecisionsSignature(decisionIdsSignature(decisions.map((item) => item.id)));
@@ -513,7 +528,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     if (decisions.length === 0) return;
     setActionSyncing(true);
     try {
-      setLastSubmittedDecisionIds(decisions.map((item) => item.id));
       await executeDecisionAndRefresh(decisions);
       setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
       setLastAppliedDecisionsSignature(decisionIdsSignature(decisionIds));
@@ -530,13 +544,18 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     await runDecisionExecution(selected);
   }, [runDecisionExecution, decisionIds, cards, currentDecisions]);
 
+  /**
+   * 主栏点击分流（严格优先级，勿随意调换）：
+   * 1 生辰脏全量 → 2 未决冲突语义/裁决管线 → 3 可签发则签发 → 4 默认再次全量掐指（无限轮）
+   */
   const handleMainBarRun = React.useCallback(async () => {
     if (isFinalized) return;
-    if (calculationCountRef.current === 2) return;
+
     if (seedDirty) {
       await handleFullCalculate();
       return;
     }
+
     if (unresolvedConflictCount > 0) {
       await handleSemanticRecompute();
       return;
@@ -545,7 +564,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       await finalizeVerdict();
       return;
     }
-    await handleSemanticRecompute();
+    await handleFullCalculate();
   }, [
     isFinalized,
     seedDirty,
@@ -559,28 +578,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   React.useEffect(() => {
     setCurrentDecisions([]);
   }, [selectionResetToken]);
-
-  const handleRevokeDecision = React.useCallback(async (id: string) => {
-    setRevokeGlitch(true);
-    setPendingRevertEntropyCapture(true);
-    const next = currentDecisions.filter((item) => item.id !== id);
-    setCurrentDecisions(next);
-    setDecisionIds(next.map((item) => item.id));
-    if (revokeConfirmedDecision) {
-      await revokeConfirmedDecision(id);
-    }
-    await runSemanticRecompute(next);
-    window.setTimeout(() => setRevokeGlitch(false), 180);
-  }, [currentDecisions, setDecisionIds, revokeConfirmedDecision, runSemanticRecompute]);
-
-  React.useEffect(() => {
-    if (!pendingRevertEntropyCapture || actionSyncing || isCalculating) return;
-    const delta = Number(logicDiff?.entropy_delta || 0);
-    setRevertEntropyDelta(delta);
-    appendSystemAuditLog(`[REVERSION_IMPACT] entropy_rebound: ${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`);
-    setPendingRevertEntropyCapture(false);
-    window.setTimeout(() => setRevertEntropyDelta(null), 1800);
-  }, [pendingRevertEntropyCapture, actionSyncing, isCalculating, logicDiff?.entropy_delta, appendSystemAuditLog]);
 
   React.useEffect(() => {
     if (!lastAppliedParamSignature) {
@@ -623,8 +620,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       />
       <BlindSkillHighlightProvider>
       <LogicGlitchOverlay
-        active={(streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal) || revokeGlitch}
-        entropy={revokeGlitch ? 0.9 : globalEntropy}
+        active={Boolean(streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal)}
+        entropy={globalEntropy}
       />
       {seedFlowPhase === "main" ? (
         <LabViewModeFab viewMode={viewMode} onToggle={() => setViewMode((m) => (m === "VISION" ? "COMMAND" : "VISION"))} />
@@ -655,6 +652,26 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
           ))}
         </div>
       </header>
+
+      {narrativeReshapeActive ? (
+        <div
+          className="mb-3 overflow-hidden rounded-lg border border-fuchsia-500/45 bg-gradient-to-r from-fuchsia-950/55 via-violet-950/45 to-cyan-950/35 px-3 py-2 shadow-[inset_0_0_28px_rgba(217,70,239,0.12)]"
+          data-testid="narrative-reshape-banner"
+        >
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[11px] font-semibold tracking-wide text-fuchsia-50/95">{t("意志正在重塑现实…")}</p>
+            <p className="text-[10px] text-fuchsia-200/75">{t("意志注塑中…")}</p>
+          </div>
+          <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-zinc-900/90">
+            <motion.div
+              className="absolute left-0 top-0 h-full w-2/5 rounded-full bg-gradient-to-r from-transparent via-fuchsia-400/85 to-cyan-300/70"
+              initial={{ x: "-40%" }}
+              animate={{ x: ["-40%", "120%", "-40%"] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {hasBoard ? <PatternStatus profile={patternProfile as PatternProfileSlice | null} className="mb-3" t={t} /> : null}
 
@@ -757,7 +774,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   visionDiagnosticHint={visionDiagnosticHint}
                   hasReboundRisk={hasReboundRisk}
                   energyPeakAbs={energyPeakAbs}
-                  blindSkillBadges={blindSkillBadges}
                   goToSeedInput={goToSeedInput}
                   hardRouteLogs={hardRouteLogs}
                   climateSeason={climateSeason}
@@ -771,13 +787,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   isPreviewBoard={isPreviewBoard}
                   seedPreviewBusy={seedPreviewBusy}
                   seedPreviewError={seedPreviewError}
-                  lastSubmittedDecisionIds={lastSubmittedDecisionIds}
-                  blindSkillBadges={blindSkillBadges}
                   setCurrentDecisions={setCurrentDecisions}
                   setDecisionIds={setDecisionIds}
                   handleMainBarRun={handleMainBarRun}
-                  handleRevokeDecision={handleRevokeDecision}
-                  revertEntropyDelta={revertEntropyDelta}
                   actionMode={actionMode}
                   isDecisionDirty={isDecisionDirty}
                   actionSyncing={actionSyncing || isCalculating}
@@ -789,9 +801,6 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   runSuccessFootnote={runSuccessFootnote}
                   fullRunErrorFootnote={fullRunErrorFootnote}
                   calculationCount={calculationCount}
-                  workExpectation={workExpectation}
-                  backfireRiskVal={backfireRiskVal}
-                  releasedEnergyVal={releasedEnergyVal}
                   hasVerdictHistory={hasVerdictHistory}
                   summaryVersionLabel={summaryVersionLabel}
                   l1JunctionFlags={l1JunctionFlags}

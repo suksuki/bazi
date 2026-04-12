@@ -21,14 +21,32 @@ def test_filter_logical_evidence_strips_ten_god_abs_in_weak_mode() -> None:
     assert any("十神.比肩.Abs=" in x for x in strong)
 
 
-def test_weak_mode_requires_fallback_without_plugin_ref() -> None:
+def test_weak_mode_requires_fallback_without_valid_anchor() -> None:
+    obj = {
+        "assertions": [
+            {"assertion_id": "a1", "text": "x", "evidence_refs": ["not.a.real.anchor"]},
+        ]
+    }
+    assert weak_mode_requires_physics_fallback(obj, high_reasoning=False) is True
+    assert weak_mode_requires_physics_fallback(obj, high_reasoning=True) is False
+
+
+def test_weak_mode_ok_with_year_branch_ref() -> None:
     obj = {
         "assertions": [
             {"assertion_id": "a1", "text": "x", "evidence_refs": ["year.branch"]},
         ]
     }
-    assert weak_mode_requires_physics_fallback(obj, high_reasoning=False) is True
-    assert weak_mode_requires_physics_fallback(obj, high_reasoning=True) is False
+    assert weak_mode_requires_physics_fallback(obj, high_reasoning=False) is False
+
+
+def test_weak_mode_ok_with_vf_ref() -> None:
+    obj = {
+        "assertions": [
+            {"assertion_id": "a1", "text": "x", "evidence_refs": ["VF03"]},
+        ]
+    }
+    assert weak_mode_requires_physics_fallback(obj, high_reasoning=False) is False
 
 
 def test_weak_mode_ok_with_plugin_ref() -> None:

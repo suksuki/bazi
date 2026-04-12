@@ -16,14 +16,37 @@ export type SeedSubmitResult =
   | { ok: true; physics_tensor: Record<string, unknown> | null }
   | { ok: false; error: string };
 
+/** 实验室管线四态：中枢计算 / 润色 / 待命 / 已结案 */
+export type StreamPipelinePhase = "READY" | "THINKING" | "POLISHING" | "DECIDED";
+
+export type StreamPipelineEventKind =
+  | "SCAN_STARTED"
+  | "SCAN_COMPLETED"
+  | "AUDIT_COMPLETED"
+  | "RECALC_STARTED"
+  | "RECALC_COMPLETED"
+  | "FINAL_SYNTHESIS_STARTED"
+  | "FINAL_SYNTHESIS_COMPLETED"
+  /** 意志注塑 / requires_narrative_refresh：中枢进入「再思考」节拍（与终审润色衔接） */
+  | "NARRATIVE_REFRESH_STARTED";
+
+/** LLM / Inbox 个体干预类型（对齐 IndividualAdjustment 协议） */
+export type IndividualAdjustmentKind = "ENERGY_PATCH" | "SEMANTIC_VERDICT";
+
 export type LogicProposal = {
   title?: string;
   param_key?: string;
   suggested_value?: number;
   reason?: string;
   expected_impact?: string;
+  /** @deprecated 全局库 UPDATE；新流程使用 energy_deltas + manual_energy_patch */
   sql_patch?: string;
   source_role?: string;
+  adjustment_type?: IndividualAdjustmentKind;
+  /** 勾选后在 deity_scores 上累加的十神偏移 */
+  energy_deltas?: Record<string, number>;
+  /** 物理审计 LLM 诊断正文（勾选能量补丁时一并归档到 persistence_layer） */
+  diagnosis?: string;
 };
 
 export type InboxCard = {
@@ -32,7 +55,14 @@ export type InboxCard = {
   markdown: string;
   conflictDetail?: string;
   displayText?: string;
-  cardType?: "conflict" | "auditor-proposal" | "proposal" | "L1_STRUCTURE";
+  cardType?:
+    | "conflict"
+    | "auditor-proposal"
+    | "proposal"
+    | "L1_STRUCTURE"
+    | "semantic-audit"
+    | "semantic-verdict"
+    | "energy-patch";
   proposal?: LogicProposal;
   /** 与盲派 skill_manifest 对齐，可由 UI 推断或上游写入 */
   skillId?: string;
@@ -177,6 +207,9 @@ export type VerdictNarrativeChunk = {
   conflict_point_ids?: string[];
 };
 
+/** 终审语义整合（mandatory_final_synthesis）成功时的正文与完整载荷 */
+export type FinalVerdictSynthesisResult = { body: string; verdict: FinalVerdictResult };
+
 export type FinalVerdictResult = {
   body: string;
   changeLog: FinalVerdictChangeLog;
@@ -249,6 +282,9 @@ export type StreamBoardViewModel = {
   lang: Lang;
   setLang: (lang: Lang) => void;
   busy: boolean;
+  pipelinePhase: StreamPipelinePhase;
+  /** requires_narrative_refresh 触发的意志重塑：顶栏流式条与 THINKING 联动 */
+  narrativeReshapeActive: boolean;
   consultationId: number | null;
   metadata: BaziMetadata | null;
   timeline: TimelineSnapshot | null;
@@ -281,12 +317,28 @@ export type StreamBoardViewModel = {
   hoveredDeity?: string;
   setHoveredDeity: Dispatch<SetStateAction<string | undefined>>;
   confirmedConflicts: string[];
+  /** 审计 diagnosis 不可信时冻结 Inbox 中与补丁相关的勾选，并提示重算 */
+  auditInboxConfirmationBlockedReason?: string | null;
   llmDiagnosticData: LlmDiagnosticData | null;
   physicsParams: Record<string, number>;
   /** L1 合成全局熵 0..1，来自 physics_tensor.meta.global_entropy */
   globalEntropy: number | null;
   /** 多插件因果路由包，来自 physics_tensor.meta.causal_routing */
   causalRouting: Record<string, unknown> | null;
+  /** 意志注塑前引擎十神快照（仅静默环有注塑时由后端返回） */
+  preInjectionDeityDisplay?: {
+    deity_scores?: Record<string, number>;
+    deity_energy_axes?: Record<string, DeityEnergyAxis>;
+  } | null;
+  /** 与 LiveVerdictDisplay 联动：十神条是否叠化注塑前虚线参考 */
+  showPreInjectionAbsSnapshot: boolean;
+  setShowPreInjectionAbsSnapshot: Dispatch<SetStateAction<boolean>>;
+  /** 逻辑溯源抽屉：盲派芯片日志（physics_tensor.meta） */
+  mangpaiChipLogsForTrace: string[];
+  /** 逻辑溯源：冲突矩阵要点 */
+  conflictScanLabels: string[];
+  /** 骨架正文指纹，驱动骨架独立刷新时的闪显 */
+  verdictSkeletonContentKey: string;
   /** physics_tensor.meta.pattern_profile：从格/化格候选等 */
   patternProfile: Record<string, unknown> | null;
   /** physics_tensor.meta.energy_flow_audit：五行相生流通审计 */
@@ -296,6 +348,10 @@ export type StreamBoardViewModel = {
   consensusHistory: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;
   cards: InboxCard[];
   resultLogs: string[];
+  /** 管线/终审等短状态文案（如「终审语义整合中…」） */
+  streamingText: string;
+  /** 终判正文强制重挂载计数（与 calculationNonce 解耦） */
+  verdictBodyRenderNonce?: number;
   finalVerdictBody: string;
   finalVerdictChangeLog: FinalVerdictChangeLog;
   finalLogicalEvidence: string[];
@@ -344,7 +400,20 @@ export type StreamBoardViewModel = {
   setLogicDrawerOpen: Dispatch<SetStateAction<boolean>>;
   onSeedSubmit: (payload: SeedPayload) => Promise<SeedSubmitResult>;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
+  /** 物理审计 diagnosis 语义层卡片（mp_semantic_layer），与可执行 param 提案解耦 */
+  addPhysicsAuditSemanticDiagnosisToInbox: (payload: {
+    diagnosis: string;
+    top_anomaly?: string;
+    causal_reasoning?: string;
+  }) => void;
   onExecuteDecision: (selected: InboxCard[]) => Promise<void>;
+  /** Inbox 勾选（Approval）后静默调用 orchestrator internal-loop，不阻塞 UI */
+  scheduleSilentInternalLoopOnApprovalSelection?: (selected: InboxCard[]) => void;
+  /** Tier-2 收敛或 Inbox 语义沉淀后：强制调用终判 LLM 做语义整合 */
+  runFinalVerdictSynthesis: (opts?: {
+    delayMs?: number;
+    trigger?: string;
+  }) => Promise<FinalVerdictSynthesisResult | null>;
   refreshVerdict: (selected: InboxCard[]) => Promise<void>;
   executeDecisionAndRefresh: (selected: InboxCard[]) => Promise<void>;
   appendSystemAuditLog: (line: string) => void;
@@ -363,6 +432,6 @@ export type StreamBoardViewModel = {
   inboxResetNonce: number;
   sigShiftFlashKey: number;
   isFinalized: boolean;
-  finalizeVerdict: () => Promise<void>;
+  finalizeVerdict: () => Promise<boolean>;
   syncBarrierSeq: number;
 };

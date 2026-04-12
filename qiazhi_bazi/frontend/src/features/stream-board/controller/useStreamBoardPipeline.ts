@@ -16,7 +16,31 @@ import type {
   PluginWeights,
   SeedPayload,
   SeedSubmitResult,
+  StreamPipelineEventKind,
+  StreamPipelinePhase,
 } from "@/features/stream-board/models";
+
+export type { StreamPipelineEventKind, StreamPipelinePhase } from "@/features/stream-board/models";
+
+export function reducePipelinePhase(phase: StreamPipelinePhase, event: StreamPipelineEventKind): StreamPipelinePhase {
+  switch (event) {
+    case "SCAN_STARTED":
+    case "RECALC_STARTED":
+    case "NARRATIVE_REFRESH_STARTED":
+      return "THINKING";
+    case "SCAN_COMPLETED":
+    case "AUDIT_COMPLETED":
+    case "RECALC_COMPLETED":
+      return "READY";
+    case "FINAL_SYNTHESIS_STARTED":
+      return "POLISHING";
+    case "FINAL_SYNTHESIS_COMPLETED":
+      return "READY";
+    default:
+      return phase;
+  }
+}
+
 export interface StreamBoardPipelineParams {
   labStateRef: MutableRefObject<LabStoreState>;
   labState: LabStoreState;
@@ -222,6 +246,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       final_verdict: undefined,
       audit_summary: undefined,
       llm_prompt: undefined,
+      llm_rounds: [],
       first_observation_llm: undefined,
       physics_auditor_llm: undefined,
       seed_signature: undefined,

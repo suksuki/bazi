@@ -132,8 +132,8 @@ def test_physics_audit_prompt_high_reasoning_adds_sql_discipline_and_inference_t
         },
     )
     cmp = build_physics_audit_prompt(**kwargs, tier="compact")
-    assert "高推理·SQL 纪律" in cmp[0]["content"]
-    assert "高推理·因果溯源" in cmp[0]["content"]
+    assert "【高推理·SQL】" in cmp[0]["content"]
+    assert "【高推理·因果】" in cmp[0]["content"]
     assert "InferenceTrace" in cmp[1]["content"]
     assert "sys.core.physics" in cmp[1]["content"]
 
@@ -149,12 +149,12 @@ def test_physics_audit_prompt_compact_drops_english_mandatory_and_input_prefix()
     )
     std = build_physics_audit_prompt(**kwargs, tier="standard")
     cmp = build_physics_audit_prompt(**kwargs, tier="compact")
-    assert "Mandatory" in std[1]["content"]
-    assert "Mandatory" not in cmp[1]["content"]
-    assert std[1]["content"].lstrip().startswith("Input.")
-    assert not cmp[1]["content"].lstrip().startswith("Input.")
-    assert "首席物理命理审计官" in std[0]["content"]
-    assert "物理命理审计助手" in cmp[0]["content"]
+    assert "共识" in std[1]["content"]
+    assert "中文字段，仅输出 JSON" in cmp[1]["content"]
+    assert "语义.十神" in cmp[1]["content"]
+    assert '"比肩": 1.0' not in cmp[1]["content"]
+    assert "Diagnostic Auditor（逻辑质检·标准档）" in std[0]["content"]
+    assert "Diagnostic Auditor（逻辑质检）" in cmp[0]["content"]
 
 
 def test_audit_flow_falls_back_and_normalizes_defaults():
@@ -164,3 +164,75 @@ def test_audit_flow_falls_back_and_normalizes_defaults():
     assert payload["ok"] is True
     assert payload["sql_patch"].startswith("UPDATE physics_interaction_params")
     assert payload["logic_proposal"]["source_role"] == "LLM"
+
+
+def test_normalize_audit_result_coerces_illegal_param_key_from_whitelisted_sql():
+    from app.api.contracts import AuditLlmStructuredResponse
+    from app.services.helpers.audit_helpers import normalize_audit_result
+
+    parsed = AuditLlmStructuredResponse(
+        diagnosis="食伤过旺",
+        alignment_score=55.0,
+        top_anomaly="失衡",
+        causal_reasoning="能量淤积",
+        tuning_suggestions=[],
+        sql_patch="UPDATE physics_interaction_params SET param_value=0.35 WHERE param_key='THROUGH_STEM_BOOST';",
+        refresh_hint="",
+        logic_proposal={
+            "title": "非法键",
+            "param_key": "印星系数",
+            "suggested_value": 0.35,
+            "reason": "LLM 杜撰",
+            "expected_impact": "未知",
+            "sql_patch": "UPDATE physics_interaction_params SET param_value=0.35 WHERE param_key='THROUGH_STEM_BOOST';",
+            "source_role": "LLM",
+        },
+    )
+    out = normalize_audit_result(parsed, "", True, "strict_json", 0.0, 0.0, [], {})
+    assert out["logic_proposal"]["param_key"] == "THROUGH_STEM_BOOST"
+
+
+def test_normalize_audit_result_coerces_illegal_param_key_to_default_when_sql_not_whitelisted():
+    from app.api.contracts import AuditLlmStructuredResponse
+    from app.services.helpers.audit_helpers import normalize_audit_result
+
+    parsed = AuditLlmStructuredResponse(
+        diagnosis="仅诊断",
+        alignment_score=50.0,
+        top_anomaly="x",
+        causal_reasoning="y",
+        tuning_suggestions=[],
+        sql_patch="UPDATE physics_interaction_params SET param_value=0.2 WHERE param_key='L1_CLASH_INTENSITY';",
+        refresh_hint="",
+        logic_proposal={
+            "param_key": "印星系数",
+            "sql_patch": "UPDATE physics_interaction_params SET param_value=0.2 WHERE param_key='L1_CLASH_INTENSITY';",
+            "source_role": "LLM",
+        },
+    )
+    out = normalize_audit_result(parsed, "", True, "strict_json", 0.0, 0.0, [], {})
+    assert out["logic_proposal"]["param_key"] == "CF_FLOATING_DECAY"
+
+
+def test_normalize_audit_heals_empty_diagnosis_and_accepts_officer_key():
+    from app.api.contracts import AuditLlmStructuredResponse
+    from app.services.helpers.audit_helpers import normalize_audit_result
+
+    parsed = AuditLlmStructuredResponse(
+        diagnosis="",
+        alignment_score=50.0,
+        top_anomaly="官杀独强",
+        causal_reasoning="结构偏枯",
+        tuning_suggestions=[],
+        sql_patch="UPDATE physics_interaction_params SET param_value=0.88 WHERE param_key='OFFICER_RESTRAINT_ALPHA';",
+        refresh_hint="",
+        logic_proposal={
+            "param_key": "OFFICER_RESTRAINT_ALPHA",
+            "suggested_value": 0.88,
+            "sql_patch": "UPDATE physics_interaction_params SET param_value=0.88 WHERE param_key='OFFICER_RESTRAINT_ALPHA';",
+            "source_role": "LLM",
+        },
+    )
+    out = normalize_audit_result(parsed, "", True, "strict_json", 0.0, 0.0, [], {})
+    assert "官杀独强" in out["diagnosis"]
+    assert out["logic_proposal"]["param_key"] == "OFFICER_RESTRAINT_ALPHA"

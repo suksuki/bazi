@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react";
 import type {
   DeityComponent,
   DeityEnergyAxis,
@@ -36,7 +37,7 @@ export type NavigationInfo = {
 
 /** 静默 analyze-seed 成功后写入 physics/tensor 相关 state */
 export type SilentRecalcPhysicsSetters = {
-  setMetadata: (v: BaziMetadata | null) => void;
+  setMetadata: Dispatch<SetStateAction<BaziMetadata | null>>;
   setTimeline: (v: TimelineSnapshot | null) => void;
   setDeityScores: (v: Record<string, number>) => void;
   setDeityEnergyAxes: (v: Record<string, DeityEnergyAxis>) => void;

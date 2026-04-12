@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildFullRecalcInputBundle, physicsTensorFingerprint, stableStringifyForHash } from "../physicsTensorFingerprint";
+import {
+  buildFullRecalcInputBundle,
+  extractPhysicsTensorConvergenceCore,
+  physicsTensorFingerprint,
+  stableStringifyForHash,
+} from "../physicsTensorFingerprint";
 
 describe("stableStringifyForHash", () => {
   it("sorts object keys so different declaration order yields same string", () => {
@@ -34,6 +39,18 @@ describe("buildFullRecalcInputBundle", () => {
   });
 });
 
+describe("extractPhysicsTensorConvergenceCore", () => {
+  it("drops meta keys that are not physics-convergence allowlist", () => {
+    const t = {
+      normalized: { wood: 1 },
+      meta: { diagnosis: "x", causal_reasoning: "y", solar_term: "立春" },
+    };
+    const c = extractPhysicsTensorConvergenceCore(t);
+    expect(c?.meta).toEqual({ solar_term: "立春" });
+    expect((c?.meta as Record<string, unknown>).diagnosis).toBeUndefined();
+  });
+});
+
 describe("physicsTensorFingerprint", () => {
   it("returns empty string for null/undefined/primitive", () => {
     expect(physicsTensorFingerprint(null)).toBe("");
@@ -42,20 +59,42 @@ describe("physicsTensorFingerprint", () => {
     expect(physicsTensorFingerprint(42)).toBe("");
   });
 
-  it("is stable for same semantic tensor with different key order", () => {
-    const t1 = { confidence: 0.5, meta: { b: 1, a: 2 } };
-    const t2 = { meta: { a: 2, b: 1 }, confidence: 0.5 };
+  it("returns empty when tensor has no convergence-relevant fields", () => {
+    expect(physicsTensorFingerprint({ audit_log: { trace: "noise" } })).toBe("");
+  });
+
+  it("is stable for same semantic convergence core with different key order", () => {
+    const t1 = { confidence: 0.5, normalized: { b: 1, a: 2 } };
+    const t2 = { normalized: { a: 2, b: 1 }, confidence: 0.5 };
     expect(physicsTensorFingerprint(t1)).toBe(physicsTensorFingerprint(t2));
   });
 
-  it("changes when a nested value changes", () => {
-    const t1 = { confidence: 0.5, meta: { x: 1 } };
-    const t2 = { confidence: 0.5, meta: { x: 2 } };
+  it("changes when normalized numeric value changes", () => {
+    const t1 = { normalized: { x: 1 } };
+    const t2 = { normalized: { x: 2 } };
+    expect(physicsTensorFingerprint(t1)).not.toBe(physicsTensorFingerprint(t2));
+  });
+
+  it("ignores LLM-only meta fields when normalized is unchanged", () => {
+    const t1 = {
+      normalized: { wood: 1, fire: 0.5 },
+      meta: { diagnosis: "版本A", causal_reasoning: "长文本A" },
+    };
+    const t2 = {
+      normalized: { wood: 1, fire: 0.5 },
+      meta: { diagnosis: "版本B", causal_reasoning: "长文本B" },
+    };
+    expect(physicsTensorFingerprint(t1)).toBe(physicsTensorFingerprint(t2));
+  });
+
+  it("changes when allowlisted meta field changes", () => {
+    const t1 = { normalized: { wood: 1 }, meta: { solar_term: "立春" } };
+    const t2 = { normalized: { wood: 1 }, meta: { solar_term: "雨水" } };
     expect(physicsTensorFingerprint(t1)).not.toBe(physicsTensorFingerprint(t2));
   });
 
   it("returns 8-char lowercase hex", () => {
-    const fp = physicsTensorFingerprint({ a: 1 });
+    const fp = physicsTensorFingerprint({ normalized: { wood: 1 } });
     expect(fp).toMatch(/^[0-9a-f]{8}$/);
   });
 });

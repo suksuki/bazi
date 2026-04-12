@@ -149,7 +149,9 @@ class PhysicsInferenceSkill(BaseSkill):
             version_id = datetime.utcnow().isoformat()
 
         self._cache.position_weights = positions or dict(DEFAULT_POSITION_WEIGHTS)
-        self._cache.interaction_params = params or dict(DEFAULT_INTERACTION_PARAMS)
+        merged_params = dict(DEFAULT_INTERACTION_PARAMS)
+        merged_params.update(params)
+        self._cache.interaction_params = merged_params
         self._cache.seasonal_matrix = terms
         self._cache.version_id = version_id
 
@@ -331,7 +333,15 @@ class PhysicsInferenceSkill(BaseSkill):
                 "E_self_final = E_self_new * EFF_RESTRAINING * EFF_EXHAUSTING * EFF_CONSUMING",
                 "hidden_stem_energy = raw * ratio * position_weight * seasonal * through_stem_boost * root_decay * conflict_factor",
             ],
-            param_snapshot={k: float(v) for k, v in params.items() if k.startswith("EFF_") or k.startswith("CF_") or k == "A_PROTRUSION"},
+            param_snapshot={
+                k: float(v)
+                for k, v in params.items()
+                if k.startswith("EFF_")
+                or k.startswith("CF_")
+                or k.startswith("OFFICER_")
+                or k.startswith("POWER_")
+                or k == "A_PROTRUSION"
+            },
             trace={
                 "day_stem": metadata.pillars.day.stem,
                 "conflict_count": conflict_count,

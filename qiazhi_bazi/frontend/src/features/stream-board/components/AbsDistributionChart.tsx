@@ -124,6 +124,13 @@ export type AbsDistributionChartProps = {
   pivotDefenseSemantic?: string | null;
   /** physics_tensor.meta.interaction_marks_per_deity：合冲刑害破 → 十神微型标（不依赖 Abs 阈值） */
   interactionMarksPerDeity?: Record<string, string[]> | null;
+  /** 已确认「个人能量补丁」累加影响的十神（metadata.manual_energy_patch） */
+  manualInterventionDeities?: ReadonlySet<string> | null;
+  /** 意志注塑前：与 deityScores 同口径的相对配比，用于虚线框对比 */
+  preInjectionDeityScores?: Record<string, number> | null;
+  preInjectionDeityEnergyAxes?: Record<string, Axis> | null;
+  /** 为 false 时不渲染注塑前虚线参考（由主断言区 Toggle 控制） */
+  preInjectionReferenceActive?: boolean;
   t?: (s: string) => string;
 };
 
@@ -144,6 +151,10 @@ export function AbsDistributionChart({
   pivotDeity = null,
   pivotDefenseSemantic = null,
   interactionMarksPerDeity = null,
+  manualInterventionDeities = null,
+  preInjectionDeityScores = null,
+  preInjectionDeityEnergyAxes = null,
+  preInjectionReferenceActive = false,
   t = (s: string) => s,
 }: AbsDistributionChartProps) {
   const anomalyTag = (topAnomaly || "").trim();
@@ -212,6 +223,11 @@ export function AbsDistributionChart({
                 : t("平区")
             : "";
         const isPivot = Boolean(pivotDeity && name === pivotDeity);
+        const baseRelRaw = Number(
+          (preInjectionDeityEnergyAxes?.[name]?.relative_percentage ?? preInjectionDeityScores?.[name]) ?? NaN,
+        );
+        const injectionBaselinePct =
+          preInjectionDeityScores && Number.isFinite(baseRelRaw) ? Math.max(0, Math.min(100, baseRelRaw)) : null;
 
         return (
           <div key={name} className="relative pt-2">
@@ -266,6 +282,15 @@ export function AbsDistributionChart({
                     />
                   ) : null}
                   {fusionEntry ? <FusionLinkIcon title={fusionTitle} /> : null}
+                  {manualInterventionDeities?.has(name) ? (
+                    <span
+                      title={t("人工修正：已采纳个人能量补丁（展示层）")}
+                      className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-violet-500/25 text-[10px] font-bold leading-none text-violet-200 ring-1 ring-violet-400/50"
+                      aria-label={t("人工修正")}
+                    >
+                      ∆
+                    </span>
+                  ) : null}
                   {branchMarkList.length > 0 ? <BranchMarkStrip marks={branchMarkList} t={t} /> : null}
                   <span className="text-zinc-400">
                     {totalScore.toFixed(2)}%{" "}
@@ -278,6 +303,21 @@ export function AbsDistributionChart({
                   </span>
                 </span>
               </div>
+              {injectionBaselinePct != null && preInjectionReferenceActive ? (
+                <div
+                  className="relative mt-1 h-1 w-full overflow-hidden rounded bg-zinc-900 ring-1 ring-zinc-700/80"
+                  title={t("意志注塑前：十神相对配比参考（与当前实条对比）")}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-y-0 left-0 rounded border border-dashed border-cyan-400/65 bg-cyan-500/10"
+                    style={{ width: `${injectionBaselinePct}%` }}
+                  />
+                  <div
+                    className="relative h-full rounded bg-sky-500/75"
+                    style={{ width: `${Math.max(0, Math.min(100, relPct))}%` }}
+                  />
+                </div>
+              ) : null}
               <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded bg-zinc-800">
                 <div className="flex h-full w-full">
                   <div className="h-full bg-amber-500/90" style={{ width: rootWidth }} />
