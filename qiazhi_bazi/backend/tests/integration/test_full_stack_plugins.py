@@ -119,7 +119,10 @@ def test_execution_order_status_before_conflict_and_geography_before_fusion() ->
             physics_config=PhysicsConfig(user_target_direction="南"),
         )
         out_rob = await analyze_clash_flow(body_rob)
-        steps_rob = ((out_rob.get("physics_tensor") or {}).get("l1_atomic_pipeline") or {}).get("steps") or []
+        pt_rob = out_rob.get("physics_tensor") or {}
+        po_rob = pt_rob.get("plugin_outputs") or {}
+        core_rob = (po_rob.get("sys.core.physics") or {}).get("payload") or {}
+        steps_rob = ((core_rob.get("l1_atomic_pipeline") or {}).get("steps") or [])
         i_status = _step_index(steps_rob, op_id="L1_OP_STATUS")
         i_robber = _step_index(steps_rob, op_id="L1_OP_ROBBER_WEALTH")
         assert i_status is not None, "期望流水线含 L1_OP_STATUS"
@@ -133,7 +136,10 @@ def test_execution_order_status_before_conflict_and_geography_before_fusion() ->
             physics_config=PhysicsConfig(user_target_direction="南"),
         )
         out_fuse = await analyze_clash_flow(body_fuse)
-        steps_fuse = ((out_fuse.get("physics_tensor") or {}).get("l1_atomic_pipeline") or {}).get("steps") or []
+        pt_fuse = out_fuse.get("physics_tensor") or {}
+        po_fuse = pt_fuse.get("plugin_outputs") or {}
+        core_fuse = (po_fuse.get("sys.core.physics") or {}).get("payload") or {}
+        steps_fuse = ((core_fuse.get("l1_atomic_pipeline") or {}).get("steps") or [])
         i_geo = _step_index(steps_fuse, op_id="L1_OP_GEOGRAPHY")
         i_fusion = _step_index_plugin(steps_fuse, plugin="base.stem_fusion")
         assert i_geo is not None and i_fusion is not None
@@ -404,8 +410,16 @@ def test_complex_chart_structural_signals() -> None:
         out = await analyze_clash_flow(body)
         tensor = out["physics_tensor"] or {}
         meta = tensor.get("meta") if isinstance(tensor.get("meta"), dict) else {}
-        comp = tensor.get("composite_field_impact") or {}
-        sanhe_n = len(comp.get("sanhe_clusters") or [])
+        po = tensor.get("plugin_outputs") or {}
+        sn = po.get("sys.core.physics") if isinstance(po, dict) else None
+        pl = (sn or {}).get("payload") if isinstance(sn, dict) else {}
+        clusters = pl.get("sanhe_clusters") if isinstance(pl, dict) else []
+        sanhe_n = len(clusters) if isinstance(clusters, list) else 0
+        from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
+
+        assert not tensor.get("composite_field_impact")
+        assert not tensor.get("l1_atomic_pipeline")
+        assert not tensor.get(SYS_CORE_PHYSICS_BUNDLE_SRC_KEY)
         jf = meta.get("l1_junction_flags") or {}
         sf = meta.get("stem_fusion_v1") or {}
         assert sanhe_n >= 1

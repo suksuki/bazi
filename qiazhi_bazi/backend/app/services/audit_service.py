@@ -16,6 +16,16 @@ from app.services.helpers.audit_helpers import fallback_audit_response, normaliz
 from app.skills.physics_engine import PhysicsInferenceSkill
 
 
+def _resolve_audit_prompt_tier(body: AuditPhysicsWithLlmRequest, cfg: Dict[str, Any]) -> str:
+    raw = getattr(body, "audit_prompt_tier", None)
+    if raw is not None:
+        s = str(raw).strip().lower()
+        if s in ("standard", "compact"):
+            return s
+    s = str((cfg or {}).get("audit_prompt_tier") or "compact").strip().lower()
+    return s if s in ("standard", "compact") else "compact"
+
+
 def ensure_physics_tensor(body: AuditPhysicsWithLlmRequest) -> Dict[str, Any]:
     physics_tensor = body.physics_tensor
     if physics_tensor:
@@ -30,7 +40,9 @@ def ensure_physics_tensor(body: AuditPhysicsWithLlmRequest) -> Dict[str, Any]:
 def build_audit_prompt_payload(
     body: AuditPhysicsWithLlmRequest,
     physics_tensor: Dict[str, Any],
-) -> tuple[List[Dict[str, str]], Dict[str, Any]]:
+) -> tuple[List[Dict[str, str]], Dict[str, Any], str]:
+    cfg = get_runtime_config().get("llm", {}) or {}
+    tier = _resolve_audit_prompt_tier(body, cfg)
     deity_scores = (physics_tensor or {}).get("deity_scores", {}) or {}
     audit_log = (physics_tensor or {}).get("audit_log", {}) or {}
     trace = (audit_log.get("trace", {}) if isinstance(audit_log, dict) else {}) or {}
@@ -39,7 +51,7 @@ def build_audit_prompt_payload(
         "solar_term": (physics_tensor or {}).get("meta", {}).get("solar_term", "derived_from_month_branch"),
         "params": (physics_tensor or {}).get("meta", {}).get("params", {}),
     }
-    blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)
+    blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor, compact=(tier == "compact"))
     prompt = build_physics_audit_prompt(
         deity_scores=deity_scores,
         root_check=root_check if isinstance(root_check, dict) else {},
@@ -47,18 +59,23 @@ def build_audit_prompt_payload(
         consensus_history=body.consensus_history or [],
         lang=body.lang,
         blind_skill_system_suffix=blind_skill_block,
+        tier=tier,
     )
-    return prompt, {
-        "deity_scores": deity_scores,
-        "root_check": root_check,
-        "seasonal_factors": seasonal_factors,
-    }
+    return (
+        prompt,
+        {
+            "deity_scores": deity_scores,
+            "root_check": root_check,
+            "seasonal_factors": seasonal_factors,
+        },
+        tier,
+    )
 
 async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[str, Any]:
     physics_tensor = ensure_physics_tensor(body)
-    prompt, _context = build_audit_prompt_payload(body, physics_tensor)
+    prompt, _context, audit_prompt_tier = build_audit_prompt_payload(body, physics_tensor)
 
-    cfg = get_runtime_config().get("llm", {})
+    cfg = get_runtime_config().get("llm", {}) or {}
     client = QwenClient(
         base_url=cfg.get("base_url"),
         api_key=cfg.get("api_key"),
@@ -94,7 +111,7 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
             parsed = None
 
     parsed_obj = parsed or fallback_audit_response()
-    return normalize_audit_result(
+    result = normalize_audit_result(
         parsed_obj,
         raw,
         structured_hit,
@@ -104,3 +121,5 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
         prompt,
         physics_tensor,
     )
+    result["audit_prompt_tier"] = audit_prompt_tier
+    return result

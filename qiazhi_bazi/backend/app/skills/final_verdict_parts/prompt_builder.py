@@ -10,7 +10,7 @@ from app.services.helpers.interpretation_helper import merge_interpretation_meta
 from app.skills.blind_school_encyclopedia import audit_host_guest_vectors, build_blind_school_digest
 from app.skills.dual_school_auditor import build_dual_school_audit
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
-from app.skills.final_verdict_parts.evidence import get_logical_evidence
+from app.skills.final_verdict_parts.evidence import format_audit_snapshot_inline, get_logical_evidence
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
@@ -212,8 +212,11 @@ def build_final_verdict_messages(
             )
     flow_section = "\n[因果流通链·五行相生]\n" + ("\n".join(flow_lines) if flow_lines else "- （无审计数据）\n")
 
+    audit_snap = format_audit_snapshot_inline(md_for_llm, physics_tensor)
     user = (
-        "[Physical Evidence]\n"
+        "[八字元数据快照·全卷锚点]\n"
+        + f"- {audit_snap}\n"
+        + "[Physical Evidence]\n"
         + "\n".join(f"- {x}" for x in logical_evidence)
         + "\n[盲派硬核证据]\n"
         + "\n".join(f"- {x}" for x in work_lines)

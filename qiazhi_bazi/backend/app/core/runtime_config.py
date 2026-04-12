@@ -13,6 +13,8 @@ def _default_llm() -> Dict[str, Any]:
         "api_key": os.getenv("QIAZHI_BAZI_LLM_API_KEY", ""),
         "model": os.getenv("QIAZHI_BAZI_LLM_MODEL", ""),
         "provider": os.getenv("QIAZHI_LLM_PROVIDER", "ollama"),
+        # 物理审计 LLM：compact 缩短 system/user、压缩盲派注册表，利于弱模型输出合法 JSON
+        "audit_prompt_tier": (os.getenv("QIAZHI_AUDIT_PROMPT_TIER", "compact") or "compact").strip().lower(),
     }
 
 

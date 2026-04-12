@@ -41,10 +41,10 @@ def _sanhe_nodes_labels(nodes: List[Any]) -> str:
 
 def _collect_sanhe_evidence_lines(physics_tensor: Dict[str, Any]) -> List[str]:
     """地支三合脱水行（供 [Physical Evidence] 置顶，避免被十神长列表淹没）。"""
+    from app.services.helpers.tensor_adapters import sanhe_clusters_from_physics_tensor
+
     out: List[str] = []
-    comp = (physics_tensor.get("composite_field_impact") or {}) if isinstance(physics_tensor, dict) else {}
-    raw_clusters = comp.get("sanhe_clusters") if isinstance(comp, dict) else None
-    clusters: List[Dict[str, Any]] = list(raw_clusters) if isinstance(raw_clusters, list) else []
+    clusters: List[Dict[str, Any]] = sanhe_clusters_from_physics_tensor(physics_tensor)
     if not clusters and isinstance(physics_tensor, dict):
         meta_iv = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
         iv2 = meta_iv.get("interaction_v2") if isinstance(meta_iv.get("interaction_v2"), dict) else {}
@@ -73,6 +73,44 @@ def _collect_sanhe_evidence_lines(physics_tensor: Dict[str, Any]) -> List[str]:
         nodes_out = _sanhe_nodes_labels(nodes)
         out.append(f"地支.三合.{energy_type}={branch_key}|Status={stat}|Nodes={nodes_out}")
     return out
+
+
+def format_audit_snapshot_inline(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]) -> str:
+    """八字元数据一行快照：四柱干/支 + 十神 Abs（供断语 1:1 审计）。"""
+    pillars = (metadata or {}).get("pillars") if isinstance((metadata or {}).get("pillars"), dict) else {}
+    stems: List[str] = []
+    branches: List[str] = []
+    for k in ("year", "month", "day", "hour"):
+        col = pillars.get(k) if isinstance(pillars.get(k), dict) else {}
+        stems.append(str(col.get("stem") or "?"))
+        branches.append(str(col.get("branch") or "?"))
+    stem_s = "".join(stems)
+    branch_s = "".join(branches)
+    abs_nodes = physics_tensor.get("abs_nodes") if isinstance(physics_tensor.get("abs_nodes"), dict) else {}
+    axes = physics_tensor.get("deity_energy_axes") if isinstance(physics_tensor.get("deity_energy_axes"), dict) else {}
+    ten_bits: List[str] = []
+    for d in ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"]:
+        v = abs_nodes.get(d) if isinstance(abs_nodes.get(d), (int, float)) else None
+        if v is None and isinstance(axes.get(d), dict):
+            try:
+                v = float((axes.get(d) or {}).get("absolute_energy") or 0.0)
+            except (TypeError, ValueError):
+                v = None
+        if isinstance(v, (int, float)):
+            ten_bits.append(f"{d}:{float(v):.3f}")
+    ten_s = ",".join(ten_bits[:10])[:280]
+    return f"[快照|干={stem_s}|支={branch_s}|十神Abs={ten_s}]"
+
+
+def _annotate_evidence_line(line: str, snap: str) -> str:
+    s = str(line or "")
+    if not s:
+        return s
+    if s.startswith("四柱=") or s.startswith("性别=") or s.startswith("共识."):
+        return s
+    if s.startswith("十神.") or s.startswith("地支.") or s.startswith("裁决项.") or s.startswith("根气."):
+        return f"{snap} :: {s}"
+    return s
 
 
 def strength_qualifier(abs_energy: float) -> str:
@@ -146,4 +184,5 @@ def get_logical_evidence(
     for i, s in enumerate(selected_cards or []):
         if isinstance(s, dict):
             lines.append(f"裁决项.{i + 1}={s.get('cardType', 'conflict')}|{s.get('displayText') or s.get('title') or ''}")
-    return lines
+    snap = format_audit_snapshot_inline(metadata or {}, physics_tensor if isinstance(physics_tensor, dict) else {})
+    return [_annotate_evidence_line(x, snap) for x in lines]

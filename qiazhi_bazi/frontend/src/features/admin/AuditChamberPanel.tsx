@@ -17,8 +17,12 @@ type AuditHistoryItem = {
 type DiagnoseResponse = {
   ok?: boolean;
   logical_evidence?: string[];
-  l1_atomic_pipeline?: { steps?: unknown[]; version?: string };
-  composite_field_impact?: { sanhe_clusters?: unknown[] };
+  sys_core_physics?: {
+    plugin_id?: string;
+    l1_atomic_pipeline?: { steps?: unknown[]; version?: string };
+    composite_field_impact?: { sanhe_clusters?: unknown[] };
+    sanhe_clusters?: unknown[];
+  };
   decision_inbox_gate?: Record<string, unknown>;
   l1_junction_flags?: Record<string, unknown>;
   narrative_diff?: { missing_evidence_lines?: { line: string; attribution: string }[]; verdict_provided?: boolean };
@@ -124,8 +128,9 @@ export function AuditChamberPanel() {
     [pillars, verdict, question, pillarsLabel],
   );
 
-  const steps = result?.l1_atomic_pipeline?.steps ?? [];
-  const sanhe = result?.composite_field_impact?.sanhe_clusters ?? [];
+  const core = result?.sys_core_physics ?? {};
+  const steps = core.l1_atomic_pipeline?.steps ?? [];
+  const sanhe = core.sanhe_clusters ?? core.composite_field_impact?.sanhe_clusters ?? [];
   const gate = result?.decision_inbox_gate ?? {};
 
   return (

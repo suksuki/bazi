@@ -47,7 +47,9 @@ describe("useAdminSettingsController", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/admin/runtime-config") && (!init || init.method === undefined)) {
-        return jsonResponse({ config: { llm: { base_url: "http://10.0.0.8:11434/v1", api_key: "server-key", model: "server-model" } } });
+        return jsonResponse({
+          config: { llm: { base_url: "http://10.0.0.8:11434/v1", api_key: "", api_key_configured: true, model: "server-model" } },
+        });
       }
       if (url.endsWith("/api/admin/llm-models")) {
         return jsonResponse({ models: ["server-model", "other-model"] });
@@ -71,7 +73,8 @@ describe("useAdminSettingsController", () => {
     expect(result.current.lang).toBe("KO");
     expect(result.current.ollamaHost).toBe("http://10.0.0.8:11434");
     expect(result.current.llmModel).toBe("server-model");
-    expect(result.current.llmApiKey).toBe("server-key");
+    expect(result.current.llmApiKey).toBe("local-key");
+    expect(result.current.serverApiKeyConfigured).toBe(true);
     expect(result.current.modelOptions).toContain("server-model");
   });
 
@@ -79,7 +82,7 @@ describe("useAdminSettingsController", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/admin/runtime-config") && (!init || init.method === undefined)) {
-        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", model: "qwen2.5:32b" } } });
+        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", api_key_configured: false, model: "qwen2.5:32b" } } });
       }
       if (url.endsWith("/api/admin/llm-models")) {
         return jsonResponse({ models: ["qwen2.5:32b"] });
@@ -116,7 +119,7 @@ describe("useAdminSettingsController", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/admin/runtime-config") && (!init || init.method === undefined)) {
-        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", model: "qwen2.5:32b" } } });
+        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", api_key_configured: false, model: "qwen2.5:32b" } } });
       }
       if (url.endsWith("/api/admin/llm-models")) {
         return jsonResponse({ models: ["qwen2.5:32b"] });

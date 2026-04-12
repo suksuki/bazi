@@ -27,7 +27,7 @@ export function SanheStructurePanel({ clusters, activeDetail }: Props) {
         id="sanhe-cluster-panel"
         className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 text-[11px] text-zinc-600"
       >
-        当前命例未登记三合合成场（composite_field_impact.sanhe_clusters 为空）。
+        当前命例未登记三合合成场（plugin_outputs.sys.core.physics 无有效簇）。
       </div>
     );
   }

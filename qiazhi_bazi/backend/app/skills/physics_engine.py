@@ -12,8 +12,9 @@ from typing import Any, Dict
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
-from app.db.models import PhysicsInteractionParam, PhysicsPositionWeight, PhysicsSeasonalMatrix, SessionConsensus
+from app.db.models import PhysicsInteractionParam, PhysicsPositionWeight, PhysicsSeasonalMatrix
 from app.db.session import session_scope
+from app.services.helpers.session_consensus_query import fetch_latest_session_consensus_rows
 from app.core.bazi.engine import ensure_l0_for_physics
 from app.core.config.physics_settings import resolve_physics_settings
 from app.schemas.bazi_metadata import BaziMetadata
@@ -174,15 +175,14 @@ class PhysicsInferenceSkill(BaseSkill):
         if isinstance(session_id, int) and session_id > 0:
             try:
                 with session_scope() as s:
-                    rows = s.exec(select(SessionConsensus).where(SessionConsensus.session_id == session_id)).all()
-                    for row in rows:
-                        key = str(row.decision_key or "").strip()
+                    for item in fetch_latest_session_consensus_rows(s, int(session_id)):
+                        key = str(item.get("decision_key") or "").strip()
                         if not key:
                             continue
-                        if row.confirmed_value is None:
+                        raw_v = item.get("confirmed_value")
+                        if raw_v is None:
                             continue
-                        val = float(row.confirmed_value)
-                        consensus_overrides[key] = val
+                        consensus_overrides[key] = float(raw_v)
                 for k, v in consensus_overrides.items():
                     hard_route_logs.append(
                         f"[HARD_ROUTE] Param '{k}' overridden by user consensus session#{session_id} => {v:.2f}."

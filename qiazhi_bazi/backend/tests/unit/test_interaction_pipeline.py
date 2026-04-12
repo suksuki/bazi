@@ -1,6 +1,21 @@
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, ConflictPoint, FourPillars, StemBranchPair
 from app.services.helpers.interaction_pipeline import evaluate_interactions
+from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.core.rules.junction import EnergyVaultStatus
+
+
+def _bundle(tensor: dict) -> dict:
+    return tensor.get(SYS_CORE_PHYSICS_BUNDLE_SRC_KEY) or {}
+
+
+def _bundle_comp(tensor: dict) -> dict:
+    b = _bundle(tensor)
+    return b.get("composite_field_impact") or {}
+
+
+def _bundle_pipe(tensor: dict) -> dict:
+    b = _bundle(tensor)
+    return b.get("l1_atomic_pipeline") or {}
 
 
 def _pillars_dingsi_yisi() -> FourPillars:
@@ -37,12 +52,12 @@ def test_pipeline_sanhe_aggregated_lab01_shape():
     assert ch.get("month_branch") == "巳"
     audit_items = ((tensor.get("audit_log") or {}).get("l1_operator_audit_items") or [])
     assert any((x.get("payload") or {}).get("skill_id") == "mp_chronos_command" for x in audit_items)
-    comp = tensor.get("composite_field_impact") or {}
+    comp = _bundle_comp(tensor)
     clusters = comp.get("sanhe_clusters") or []
     assert len(clusters) == 1
     assert clusters[0]["energy_vault_status"] == EnergyVaultStatus.AGGREGATED.value
     assert abs(clusters[0]["cluster_abs"] - 214.55) < 0.01
-    pipe = tensor.get("l1_atomic_pipeline") or {}
+    pipe = _bundle_pipe(tensor)
     assert pipe.get("composite_consistency_check", {}).get("ok") is True
     phi_steps = [s for s in (pipe.get("steps") or []) if s.get("plugin") == "composite.aggregated_phi"]
     assert len(phi_steps) == 4
@@ -78,7 +93,7 @@ def test_pipeline_grave_locked_when_tomb_branch_present():
     evaluate_interactions(physics_tensor=tensor, metadata=meta, interaction_params={}, physics_config={"GRAVE_BURST_MULTIPLIER": 1.3})
     assert tensor.get("meta", {}).get("work_eligible") is False
     assert 0.0 <= float((tensor.get("meta") or {}).get("global_entropy") or 0) <= 1.0
-    steps = (tensor.get("l1_atomic_pipeline") or {}).get("steps") or []
+    steps = (_bundle_pipe(tensor).get("steps") or [])
     grave_steps = [s for s in steps if s.get("plugin") == "base.grave"]
     assert len(grave_steps) == 1
     assert grave_steps[0]["delta"]["energy_vault_status"] == EnergyVaultStatus.LOCKED.value
@@ -108,7 +123,7 @@ def test_pipeline_clash_step():
         }
     }
     evaluate_interactions(physics_tensor=tensor, metadata=meta, interaction_params={"L1_CLASH_INTENSITY": 1.0}, physics_config={})
-    steps = (tensor.get("l1_atomic_pipeline") or {}).get("steps") or []
+    steps = (_bundle_pipe(tensor).get("steps") or [])
     clash = [s for s in steps if s.get("plugin") == "base.clash"]
     assert len(clash) == 1
     assert clash[0]["delta"]["effect"] == "clash"
@@ -143,12 +158,12 @@ def test_pipeline_trinity_sanhe_sanxing_grave_locked():
     assert audit.get("skill_id") == "physics_inference_skill"
     assert float(audit.get("l1_impact_torque_total") or 0) > 0
     assert any(set(e.get("edge") or []) == {"year", "hour"} for e in (audit.get("l1_punish_torque_trace") or []))
-    comp = tensor.get("composite_field_impact") or {}
+    comp = _bundle_comp(tensor)
     assert len(comp.get("sanhe_clusters") or []) == 1
     cluster = comp["sanhe_clusters"][0]
     assert set(cluster["branches"]) == {"丑", "巳", "酉"}
     assert abs(cluster["cluster_abs"] - (55.0 + 66.0 + 77.0)) < 0.01
-    pipe = tensor.get("l1_atomic_pipeline") or {}
+    pipe = _bundle_pipe(tensor)
     assert pipe.get("composite_consistency_check", {}).get("ok") is True
     grave = [s for s in (pipe.get("steps") or []) if s.get("plugin") == "base.grave"]
     assert len(grave) == 1
@@ -187,7 +202,7 @@ def test_pipeline_sanhe_with_liunian_branch_completes_metal_trine():
         interaction_params={"SUB_BRANCH_SANHE_REQ_WANG_ZHI": 0.0},
         physics_config={"SANHE_INCLUDE_TEMPORAL_BRANCHES": 1.0},
     )
-    comp = tensor.get("composite_field_impact") or {}
+    comp = _bundle_comp(tensor)
     clusters = comp.get("sanhe_clusters") or []
     assert len(clusters) == 1
     assert set(clusters[0].get("branches") or []) == {"丑", "巳", "酉"}

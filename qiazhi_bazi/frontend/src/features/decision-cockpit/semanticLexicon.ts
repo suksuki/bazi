@@ -7,6 +7,11 @@ export const PLUGIN_DISPLAY_NAMES: Record<string, string> = {
   "classical.wangshuai.v1": "子平旺衰模型",
   "modern.wealth_risk.v1": "现代财富风险模块",
   "base.chronos": "大运流年时空轴（Chronos）",
+  "sys.core.physics": "物理引擎（L1 总线）",
+  "l1_branch_sanhe": "L1 · 地支三合局",
+  "l1_branch_liuhe": "L1 · 地支六合",
+  "l1_branch_liuchong": "L1 · 地支六冲",
+  "l1_branch_gov_kill_mix": "L1 · 官杀混杂",
 };
 
 /** 判语 / 证据行内可能出现的英文码 → 人话标题（作 Item Title） */

@@ -14,3 +14,4 @@ export {
   PLUGIN_DISPLAY_NAMES,
 } from "./semanticLexicon";
 export { inferDeityEnergyAttribution, isSpike } from "./inferEnergyAttribution";
+export { buildPluginInteractionRollup, type PluginInteractionHit } from "./interactionPluginRollup";

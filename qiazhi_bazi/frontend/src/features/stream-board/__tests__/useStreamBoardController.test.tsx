@@ -51,7 +51,9 @@ describe("useStreamBoardController regression", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/admin/db-status")) return jsonResponse({ ok: true });
-      if (url.endsWith("/api/admin/runtime-config")) return jsonResponse({ config: { llm: { model: "gpt-5", base_url: "http://llm", api_key: "key" } } });
+      if (url.endsWith("/api/admin/runtime-config")) {
+        return jsonResponse({ config: { llm: { model: "gpt-5", base_url: "http://llm", api_key: "", api_key_configured: true } } });
+      }
       if (url.endsWith("/api/admin/llm-models")) return jsonResponse({ ok: true, models: ["gpt-5"] });
       if (url.endsWith("/api/consultations")) return jsonResponse({ id: 99 });
       if (url.endsWith("/api/v1/analyze-seed")) {

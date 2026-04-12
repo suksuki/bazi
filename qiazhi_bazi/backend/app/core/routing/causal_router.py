@@ -10,6 +10,9 @@ from app.core.runtime_config import get_runtime_config
 
 _BLIND_ID = "classical.blind_school.v1"
 _WS_ID = "classical.wangshuai.v1"
+_SYS_CORE_PHYSICS_ID = "sys.core.physics"
+_SYS_L1_SANHE_ID = "sys.core.physics"
+_L1_SANHE_SKILL = "l1_branch_sanhe"
 _SELF_PARTY = frozenset({"比肩", "劫财", "正印", "偏印"})
 
 _DEFAULT_ROUTING: Dict[str, Any] = {
@@ -33,7 +36,12 @@ def load_routing_config() -> Dict[str, Any]:
 
 def _layer_weight(plugin_id: str, cfg: Mapping[str, Any]) -> float:
     pid = str(plugin_id)
-    if pid.startswith("base."):
+    if (
+        pid.startswith("base.")
+        or pid == _SYS_CORE_PHYSICS_ID
+        or pid.startswith("sys.core.physics")
+        or pid.startswith("l1_branch_")
+    ):
         return float(cfg.get("layer_L1", 100))
     return float(cfg.get("layer_L2", 80))
 
@@ -44,7 +52,12 @@ def _plugin_weight(plugin_id: str, cfg: Mapping[str, Any]) -> float:
         return float(cfg.get("priority_blind_school", 80))
     if _WS_ID in pid or "wangshuai" in pid:
         return float(cfg.get("priority_blind_school", 80)) * 0.98
-    if pid.startswith("base."):
+    if (
+        pid.startswith("base.")
+        or pid == _SYS_CORE_PHYSICS_ID
+        or pid.startswith("sys.core.physics")
+        or pid.startswith("l1_branch_")
+    ):
         return float(cfg.get("priority_base_physics", 100))
     return float(cfg.get("layer_L2", 80))
 
@@ -268,7 +281,7 @@ class CausalRouter:
                 "冲突解决策略为「人工仲裁」：未自动合并十神影响量，"
                 f"检测到 {len(events)} 个极性冲突事件，请裁决人裁定后再写入共识。"
             )
-            skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged)
+            skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged, plugin_outputs=plugin_outputs)
             return {
                 "strategy_applied": "manual_arbitration",
                 "conflict_events": [e.to_dict() for e in events],
@@ -320,7 +333,7 @@ class CausalRouter:
 
         merged = self.apply_pattern_override(cast(MutableMapping[str, float], merged), physics_tensor)
 
-        skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged)
+        skill_rank = self._skill_sovereignty_rank(per_plugin, cfg, events, merged, plugin_outputs=plugin_outputs)
         pp = (
             (physics_tensor.get("meta") or {}).get("pattern_profile")
             if isinstance(physics_tensor, dict) and isinstance(physics_tensor.get("meta"), dict)
@@ -343,6 +356,8 @@ class CausalRouter:
         cfg: Mapping[str, Any],
         events: List[CausalConflictEvent],
         merged: Mapping[str, float],
+        *,
+        plugin_outputs: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """盲派 Skill 模板排序：流派优先/主权时抬高 mp_*。"""
         blind_vec = per_plugin.get(_BLIND_ID) or {}
@@ -364,5 +379,24 @@ class CausalRouter:
                 sov += 0.12
             sov = round(min(1.0, sov * base_boost), 4)
             rank.append({"skill_id": sid, "label": label, "sovereignty": sov, "high_sovereignty": sov >= 0.75})
+        row = (plugin_outputs or {}).get(_SYS_L1_SANHE_ID) if plugin_outputs else None
+        pl = row.get("payload") if isinstance(row, dict) else None
+        sc_list = None
+        if isinstance(pl, dict):
+            sc_list = pl.get("sanhe_clusters")
+            if not isinstance(sc_list, list) or not sc_list:
+                comp = pl.get("composite_field_impact")
+                if isinstance(comp, dict):
+                    sc_list = comp.get("sanhe_clusters")
+        has_sanhe = isinstance(sc_list, list) and len(sc_list) > 0
+        if has_sanhe and not any(str(r.get("skill_id")) == _L1_SANHE_SKILL for r in rank):
+            rank.append(
+                {
+                    "skill_id": _L1_SANHE_SKILL,
+                    "label": "三合",
+                    "sovereignty": 0.7,
+                    "high_sovereignty": False,
+                }
+            )
         rank.sort(key=lambda x: -float(x["sovereignty"]))
         return rank

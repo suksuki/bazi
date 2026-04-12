@@ -42,18 +42,22 @@ def test_energy_topology_skill_emits_sanhe_cluster_edges():
             "physics_tensor": {
                 "deity_energy_axes": {"比肩": {"absolute_energy": 2.0}},
                 "meta": {"runtime_physics_config": {"WORK_MIN_THRESHOLD": 0.1}},
-                "composite_field_impact": {
-                    "sanhe_clusters": [
-                        {
-                            "branches": ["寅", "午", "戌"],
-                            "cluster_abs": 3.5,
-                            "nodes": [
-                                {"pillar": "year", "branch": "寅"},
-                                {"pillar": "month", "branch": "午"},
-                                {"pillar": "day", "branch": "戌"},
-                            ],
+                "plugin_outputs": {
+                    "sys.core.physics": {
+                        "payload": {
+                            "sanhe_clusters": [
+                                {
+                                    "branches": ["寅", "午", "戌"],
+                                    "cluster_abs": 3.5,
+                                    "nodes": [
+                                        {"pillar": "year", "branch": "寅"},
+                                        {"pillar": "month", "branch": "午"},
+                                        {"pillar": "day", "branch": "戌"},
+                                    ],
+                                }
+                            ]
                         }
-                    ]
+                    }
                 },
                 "audit_log": {"param_version_id": "p-s"},
             },

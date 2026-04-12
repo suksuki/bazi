@@ -75,6 +75,8 @@ export interface BoardCommandPanelProps {
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
   /** 返回仅生辰入口（清空命盘与流水线） */
   onBackToSeedEntry?: () => void;
+  /** Inbox L1 卡片 → Debug 插件碰撞锚点 */
+  onOpenPluginAudit?: (pluginId: string) => void;
 }
 
 export function BoardCommandPanel({
@@ -105,6 +107,7 @@ export function BoardCommandPanel({
   l1JunctionFlags,
   decisionSignalToNoise,
   onBackToSeedEntry,
+  onOpenPluginAudit,
 }: BoardCommandPanelProps) {
   const {
     t,
@@ -337,6 +340,7 @@ export function BoardCommandPanel({
         l1JunctionFlags={l1JunctionFlags}
         decisionSignalToNoise={decisionSignalToNoise}
         lang={lang}
+        onOpenPluginAudit={onOpenPluginAudit}
       />
       <WillReplayPanel
         items={confirmedDecisions || []}

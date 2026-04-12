@@ -1,11 +1,14 @@
+import { sysCorePhysicsPayload } from "@/features/stream-board/sysCorePhysics";
+
 /**
  * 从 audit_log / evidence / 合成场 中抽取与十神能量波动相关的简短归因（中文）。
  */
 
 function pickSanheHint(physics: Record<string, unknown> | null | undefined): string | null {
   if (!physics) return null;
-  const comp = physics.composite_field_impact as Record<string, unknown> | undefined;
-  const clusters = Array.isArray(comp?.sanhe_clusters) ? (comp.sanhe_clusters as unknown[]) : [];
+  const po = physics.plugin_outputs as Record<string, unknown> | undefined;
+  const payload = sysCorePhysicsPayload(po);
+  const clusters = payload && Array.isArray(payload.sanhe_clusters) ? (payload.sanhe_clusters as unknown[]) : [];
   for (const c of clusters) {
     if (!c || typeof c !== "object") continue;
     const row = c as Record<string, unknown>;

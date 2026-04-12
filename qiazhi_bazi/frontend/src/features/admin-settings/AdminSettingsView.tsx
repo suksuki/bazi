@@ -112,7 +112,7 @@ function DbSection({ controller }: { controller: Controller }) {
 }
 
 function LlmSection({ controller }: { controller: Controller }) {
-  const { effectiveBaseUrl, lang, llmApiKey, llmErr, llmFastPath, llmModel, llmResult, llmSaveMsg, loadingLlm, loadingModels, modelLoadMsg, modelOptions, ollamaHost, saveState, setLang, setLlmApiKey, setLlmFastPath, setLlmModel, setOllamaHost, setSystemPrompt, setUserPrompt, systemPrompt, testLlm, loadModels, userPrompt } = controller;
+  const { effectiveBaseUrl, lang, llmApiKey, serverApiKeyConfigured, llmErr, llmFastPath, llmModel, llmResult, llmSaveMsg, loadingLlm, loadingModels, modelLoadMsg, modelOptions, ollamaHost, saveState, setLang, setLlmApiKey, setLlmFastPath, setLlmModel, setOllamaHost, setSystemPrompt, setUserPrompt, systemPrompt, testLlm, loadModels, userPrompt } = controller;
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/20">
       <div className="mb-4 flex items-center justify-between">
@@ -145,7 +145,13 @@ function LlmSection({ controller }: { controller: Controller }) {
       </div>
       <div className="mt-4">
         <label className="text-xs text-zinc-400">API Key</label>
-        <input value={llmApiKey} onChange={(e) => setLlmApiKey(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-amber-500/80" />
+        <input
+          value={llmApiKey}
+          onChange={(e) => setLlmApiKey(e.target.value)}
+          placeholder={serverApiKeyConfigured && !llmApiKey ? "服务端已保存密钥（不回显）；填写新值可覆盖" : "可选，OpenAI 兼容网关 Bearer"}
+          className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-amber-500/80"
+        />
+        {serverApiKeyConfigured ? <p className="mt-1 text-[11px] text-zinc-500">当前运行时已配置 API Key（列表/测试仍使用你在此输入的值；留空保存不会清除服务端密钥）。</p> : null}
       </div>
       <div className="mt-2">
         <button type="button" onClick={() => loadModels(true)} className="rounded-md bg-zinc-800 px-3 py-2 text-xs">{loadingModels ? "连接中..." : "重新读取模型列表"}</button>

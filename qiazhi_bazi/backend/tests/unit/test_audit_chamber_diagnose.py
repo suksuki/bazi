@@ -20,9 +20,11 @@ def test_audit_diagnose_returns_pipeline_and_evidence() -> None:
     out = run_audit_diagnose(body)
     assert out.get("ok") is True
     assert isinstance(out.get("logical_evidence"), list)
-    pipe = out.get("l1_atomic_pipeline") or {}
+    sc = out.get("sys_core_physics") or {}
+    assert isinstance(sc, dict)
+    assert sc.get("plugin_id") == "sys.core.physics"
+    pipe = sc.get("l1_atomic_pipeline") or {}
     assert isinstance(pipe.get("steps"), list)
-    assert "composite_field_impact" in out
     assert "decision_inbox_gate" in out
 
 

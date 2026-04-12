@@ -7,6 +7,7 @@ export type DecisionInboxCard = {
   cardType?: "conflict" | "auditor-proposal" | "proposal" | "L1_STRUCTURE";
   proposal?: unknown;
   skillId?: string;
+  pluginAuditAnchorId?: string;
   sovereigntyMark?: "PATTERN_SOVEREIGNTY";
 };
 

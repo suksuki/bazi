@@ -46,7 +46,7 @@ backend/
 除 `runtime-config`、`db-status` 等外，典型还包括：
 
 - `PUT /api/admin/runtime-config`：请求体可带 `causal_routing` 对象，与磁盘上 `llm` 等并存合并。
-- 演化批跑、反馈等以 `app/api/admin.py` 与 `contracts` 为准；需 `QIAZHI_ADMIN_TOKEN` 时按中间件校验。
+- 演化批跑、反馈等以 `app/api/admin.py` 与 `contracts` 为准；**`QIAZHI_ADMIN_TOKEN` 必须为非空字符串**，否则全部 `/api/admin/*` 返回 503（禁止未配置即放行）。
 
 具体路径以 OpenAPI（`/docs`）或集成测试 `tests/integration/test_api_flow.py` 为准。
 

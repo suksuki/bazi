@@ -28,3 +28,20 @@ def test_format_blind_skill_order_respects_sovereignty(monkeypatch) -> None:
     i_high = out.index("### high_skill")
     i_low = out.index("### low_skill")
     assert i_high < i_low
+
+
+def test_format_blind_skill_compact_mode_truncates_templates(monkeypatch) -> None:
+    monkeypatch.setattr(
+        sp,
+        "list_blind_skills",
+        lambda: [
+            {"id": "mp_tomb_01", "name": "墓库", "description": "很长说明" * 20, "assertion_template": "x"},
+        ],
+    )
+    pt = {"meta": {"enabled_plugins": ["classical.blind_school.v1"]}}
+    full = sp.format_blind_skill_registry_for_prompt(pt, compact=False)
+    short = sp.format_blind_skill_registry_for_prompt(pt, compact=True)
+    assert "assertion_template" in full
+    assert "assertion_template" not in short
+    assert "mp_tomb_01" in short
+    assert len(short) < len(full) // 2

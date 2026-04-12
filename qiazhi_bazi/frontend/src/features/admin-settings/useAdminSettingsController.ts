@@ -24,6 +24,8 @@ export function useAdminSettingsController() {
   const [ollamaHost, setOllamaHost] = useState("");
   const [llmModel, setLlmModel] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
+  /** 服务端已持久化 api_key（GET 不再回显明文） */
+  const [serverApiKeyConfigured, setServerApiKeyConfigured] = useState(false);
   /** 默认开启：跳过后端二次 LLM 重写/压缩，减轻弱模型与 nginx 超时压力 */
   const [llmFastPath, setLlmFastPath] = useState(true);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
@@ -77,7 +79,7 @@ export function useAdminSettingsController() {
         if (typeof llm.base_url === "string" && llm.base_url) {
           setOllamaHost(llm.base_url.endsWith("/v1") ? llm.base_url.slice(0, -3) : llm.base_url);
         }
-        if (typeof llm.api_key === "string") setLlmApiKey(llm.api_key);
+        setServerApiKeyConfigured(Boolean(llm.api_key_configured));
         if (typeof llm.model === "string") setLlmModel(llm.model);
       } catch {
         // ignore backend outages on page load
@@ -216,34 +218,34 @@ export function useAdminSettingsController() {
     }
     setSaveState("saving");
     try {
+      const llmPayload: Record<string, unknown> = {
+        provider: "ollama",
+        base_url: effectiveBaseUrl,
+        model: llmModel,
+      };
+      if (llmApiKey.trim()) {
+        llmPayload.api_key = llmApiKey.trim();
+      }
       const response = await fetch(`${API_BASE}/api/admin/runtime-config`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
-        body: JSON.stringify({
-          llm: {
-            provider: "ollama",
-            base_url: effectiveBaseUrl,
-            api_key: llmApiKey,
-            model: llmModel,
-          },
-        }),
+        body: JSON.stringify({ llm: llmPayload }),
       });
       if (!response.ok) throw new Error("save failed");
       if (showSavedMessage) {
         const verifyResponse = await fetch(`${API_BASE}/api/admin/runtime-config`, { headers: { ...ADMIN_HEADERS } });
         const verifyJson = await verifyResponse.json();
         const llm = verifyJson?.config?.llm ?? {};
-        const ok =
-          String(llm?.base_url ?? "") === String(effectiveBaseUrl) &&
-          String(llm?.model ?? "") === String(llmModel) &&
-          String(llm?.api_key ?? "") === String(llmApiKey);
-        if (!ok) {
+        const baseModelOk =
+          String(llm?.base_url ?? "") === String(effectiveBaseUrl) && String(llm?.model ?? "") === String(llmModel);
+        if (!baseModelOk) {
           setSaveState("error");
           setLlmSaveMsg("测试已通过，但配置回读校验失败（未真正保存）。");
           return false;
         }
         setSaveState("saved");
         setLlmSaveMsg("测试通过，配置已保存并与主程序同步。");
+        setServerApiKeyConfigured(Boolean(llm?.api_key_configured));
         return true;
       }
       setSaveState("saved");
@@ -367,6 +369,7 @@ export function useAdminSettingsController() {
     effectiveBaseUrl,
     lang,
     llmApiKey,
+    serverApiKeyConfigured,
     llmErr,
     llmFastPath,
     llmModel,

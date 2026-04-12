@@ -1,6 +1,7 @@
 import type { BaziMetadata } from "@/types/bazi";
 import { inferDecisionSkillId } from "@/features/decision-inbox/skillInference";
 import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./models";
+import { sysCorePhysicsPayload } from "./sysCorePhysics";
 
 export type { DecisionSignalToNoiseMeta };
 
@@ -26,7 +27,7 @@ function _sanheTendencyMarkdown(bureauTitle: string): string {
     "三合聚轴会抬高对应五行的**场强权重**，使参与支位在冲合刑害叙事中更「成局」、更难被单点冲散；请在终判中结合根气、透干与岁运评估地支结构的稳定性。";
   if (bureauTitle.includes("金局")) {
     return (
-      `${bureauTitle}已在 L1 聚能登记（composite_field_impact）。**能量增益**：金气聚轴带来肃杀、规则与收敛做功；` +
+      `${bureauTitle}已在 L1 聚能登记（plugin_outputs.sys.core.physics）。**能量增益**：金气聚轴带来肃杀、规则与收敛做功；` +
       `**稳定性**：${stability}若木火为喜用，需评估合局对食伤透发与柔性的压制；若金为喜用，则利于决断与资源固化。`
     );
   }
@@ -45,21 +46,10 @@ function _sanheTendencyMarkdown(bureauTitle: string): string {
 /** 由 physics_tensor 装配地支三合 Decision 卡片（不受 Inbox 信噪比门控清空判词观察项的影响）。 */
 export function buildSanheStructureCards(physicsTensor: Record<string, unknown> | null | undefined): InboxCard[] {
   if (!physicsTensor || typeof physicsTensor !== "object") return [];
-  const comp = physicsTensor.composite_field_impact as Record<string, unknown> | undefined;
-  const raw = comp?.sanhe_clusters;
-  let clusters: unknown[] = Array.isArray(raw) ? raw : [];
-  if (clusters.length === 0) {
-    const meta = physicsTensor.meta as Record<string, unknown> | undefined;
-    const iv2 = meta?.interaction_v2 as Record<string, unknown> | undefined;
-    const collapse = Array.isArray(iv2?.attribute_collapse) ? iv2.attribute_collapse : [];
-    for (const item of collapse) {
-      if (!item || typeof item !== "object") continue;
-      const row = item as Record<string, unknown>;
-      if (String(row.kind || "") !== "sanhe") continue;
-      const brs = Array.isArray(row.branches) ? row.branches.map((x) => String(x)) : [];
-      if (brs.length >= 3) clusters.push({ branches: brs, energy_vault_status: "AGGREGATED", nodes: [] });
-    }
-  }
+  const po = physicsTensor.plugin_outputs as Record<string, unknown> | undefined;
+  const payload = sysCorePhysicsPayload(po);
+  const raw = payload && Array.isArray(payload.sanhe_clusters) ? payload.sanhe_clusters : [];
+  const clusters: unknown[] = Array.isArray(raw) ? raw : [];
   const out: InboxCard[] = [];
   clusters.forEach((cl, idx) => {
     if (!cl || typeof cl !== "object") return;
@@ -87,6 +77,7 @@ export function buildSanheStructureCards(physicsTensor: Record<string, unknown> 
       conflictDetail: `nodes=${nodeLine || "—"}`,
       markdown: _sanheTendencyMarkdown(bureauTitle),
       cardType: "L1_STRUCTURE",
+      pluginAuditAnchorId: "sys.core.physics",
     };
     out.push({ ...base, skillId: inferDecisionSkillId(base, []) });
   });

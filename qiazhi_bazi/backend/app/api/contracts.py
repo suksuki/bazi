@@ -182,6 +182,10 @@ class AuditPhysicsWithLlmRequest(BaseModel):
     lang: str = "ZH"
     consensus_history: List[Dict[str, Any]] = Field(default_factory=list)
     session_id: Optional[int] = None
+    audit_prompt_tier: Optional[Literal["standard", "compact"]] = Field(
+        default=None,
+        description="审计提示词档位：compact 适合弱模型；省略则使用 runtime_config.llm.audit_prompt_tier",
+    )
 
 
 class AuditLlmStructuredResponse(BaseModel):

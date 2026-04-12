@@ -53,6 +53,8 @@ export function VerdictCertificate(props: {
   hash: string;
   committedAt: number;
   logicDiff: LogicDiffSlice;
+  /** 为 false 时隐藏 Δabs 遥测块（仍用于气质文案计算）；Debug 裁决舱等场景可关 */
+  showAbsTelemetry?: boolean;
   /** 终审时固化的盲派 Skill ID 列表（与 skill_manifest 一致） */
   effectiveSkillIds?: string[];
   /** 来自 physics_tensor.meta.solid_ghost_ratio：能量虚实落地存证 */
@@ -61,7 +63,16 @@ export function VerdictCertificate(props: {
   causalSovereignty?: CausalSovereigntySlice | null;
   t?: (s: string) => string;
 }) {
-  const { hash, committedAt, logicDiff, effectiveSkillIds, solidGhostRatio, causalSovereignty, t = (s: string) => s } = props;
+  const {
+    hash,
+    committedAt,
+    logicDiff,
+    showAbsTelemetry = true,
+    effectiveSkillIds,
+    solidGhostRatio,
+    causalSovereignty,
+    t = (s: string) => s,
+  } = props;
   const when = committedAt ? new Date(committedAt).toLocaleString() : "—";
 
   const absRaw = logicDiff && typeof logicDiff === "object" ? logicDiff.abs_delta : null;
@@ -121,10 +132,12 @@ export function VerdictCertificate(props: {
           <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("签发时间")}</p>
           <p className="mt-1 font-mono text-[12px] text-zinc-300">{when}</p>
         </div>
-        <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/50 px-3 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("logic_diff 最终摘要")}</p>
-          <p className="mt-1.5 leading-relaxed text-[11px] text-zinc-300">{t(summarizeLogicDiff(logicDiff))}</p>
-        </div>
+        {showAbsTelemetry ? (
+          <div className="rounded-lg border border-zinc-700/80 bg-zinc-950/50 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">{t("logic_diff 最终摘要")}</p>
+            <p className="mt-1.5 leading-relaxed text-[11px] text-zinc-300">{t(summarizeLogicDiff(logicDiff))}</p>
+          </div>
+        ) : null}
         <div className="rounded-lg border border-cyan-500/25 bg-cyan-950/20 px-3 py-2">
           <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-200/85">{t("虚实比（Solid / Ghost）")}</p>
           {solidGhostRatio &&

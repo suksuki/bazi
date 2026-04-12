@@ -69,6 +69,11 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
     };
     deps.setLogicDiff(nextDiff);
     deps.mergeSnapshot({ logic_diff: nextDiff });
+    if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+      // 基线遥测：UI 已降噪，开发态仍可在控制台审计 logic_diff
+      // eslint-disable-next-line no-console
+      console.debug("[telemetry] logic_diff", nextDiff);
+    }
     return nextDiff;
   }, [depsRef]);
 

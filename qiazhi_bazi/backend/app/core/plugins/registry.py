@@ -25,6 +25,18 @@ from app.plugins.base_physics.core_operators.op_sub_branch_interaction import (
 
 HookName = Literal["on_physics_complete", "on_verdict_ready"]
 
+PluginLayer = Literal["L0", "L1", "L2", "L3", "L4"]
+
+
+def _run_sys_core_physics_bundle_lazy(**ctx: Any) -> Dict[str, Any]:
+    """延迟导入，避免 registry ↔ services 包循环依赖。"""
+    from app.services.helpers.sys_core_physics_plugin import run_sys_core_physics_bundle_plugin
+
+    return run_sys_core_physics_bundle_plugin(**ctx)
+
+# 与 enabled_plugins 无关：每次 on_physics_complete 必跑（显式名单 ∪ 全部 L0）
+_ALWAYS_ON_PHYSICS_COMPLETE: frozenset[str] = frozenset({"sys.core.physics"})
+
 
 def _chronos_registry_runner(**ctx: Any) -> Dict[str, Any]:
     """L1 流水线已写入时跳过；仅跑 physics 而无 pipeline 时在此补写 meta 与审计行。"""
@@ -56,7 +68,7 @@ def _chronos_registry_runner(**ctx: Any) -> Dict[str, Any]:
 class PluginSpec:
     plugin_id: str
     category: str
-    layer_id: Literal["L1", "L2", "L3", "L4"]
+    layer_id: PluginLayer
     label: str
     dependencies: List[str]
     priority: float
@@ -154,13 +166,26 @@ class PluginRegistry:
             PluginSpec(
                 plugin_id="base.chronos",
                 category="Base/Chronos",
-                layer_id="L1",
+                layer_id="L0",
                 label="时空权重（司令 / 余气）",
                 dependencies=[],
                 priority=0.95,
                 audit_source="plugins/chronos/readme.md",
                 hook="on_physics_complete",
                 runner=_chronos_registry_runner,
+            )
+        )
+        self.register(
+            PluginSpec(
+                plugin_id="sys.core.physics",
+                category="Base/L0Engine",
+                layer_id="L0",
+                label="L0 物理引擎（原生 · 合成场 / 流水线 / physics_trace）",
+                dependencies=["base.physics_l1"],
+                priority=0.996,
+                audit_source="docs/causal-pulse/sys_core_physics.md",
+                hook="on_physics_complete",
+                runner=_run_sys_core_physics_bundle_lazy,
             )
         )
         self.register(
@@ -184,7 +209,7 @@ class PluginRegistry:
             PluginSpec(
                 plugin_id="modern.wealth_risk.v1",
                 category="Functional/Modern",
-                layer_id="L3",
+                layer_id="L4",
                 label="现代财富风险画像",
                 dependencies=["base.physics_l1", "classical.blind_school.v1"],
                 priority=0.55,
@@ -201,7 +226,7 @@ class PluginRegistry:
             PluginSpec(
                 plugin_id="classical.wangshuai.v1",
                 category="Functional/Classical",
-                layer_id="L2",
+                layer_id="L1",
                 label="旺衰平衡解析引擎",
                 dependencies=["base.physics_l1", "base.chronos"],
                 priority=0.6,
@@ -224,6 +249,7 @@ class PluginRegistry:
                 "label": s.label,
                 "category": s.category,
                 "layer_id": s.layer_id,
+                "layer": s.layer_id,
                 "dependencies": s.dependencies,
                 "priority": s.priority,
                 "audit_source": s.audit_source,
@@ -475,7 +501,14 @@ class PluginRegistry:
         for spec in sorted(self._plugins.values(), key=lambda x: x.priority, reverse=True):
             if spec.hook != hook:
                 continue
-            if selected and spec.plugin_id not in selected:
+            if (
+                selected
+                and spec.plugin_id not in selected
+                and not (
+                    hook == "on_physics_complete"
+                    and (spec.plugin_id in _ALWAYS_ON_PHYSICS_COMPLETE or spec.layer_id == "L0")
+                )
+            ):
                 continue
             started = time.perf_counter()
             ok = True

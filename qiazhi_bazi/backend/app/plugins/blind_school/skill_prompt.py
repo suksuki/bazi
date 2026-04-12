@@ -63,15 +63,23 @@ def _sort_skills_by_routing(rows: List[Dict[str, Any]], physics_tensor: Dict[str
     return sorted(rows, key=lambda r: -score_by.get(str(r.get("id") or ""), 0.5))
 
 
-def format_blind_skill_registry_for_prompt(physics_tensor: Dict[str, Any] | None) -> str:
+def format_blind_skill_registry_for_prompt(physics_tensor: Dict[str, Any] | None, *, compact: bool = False) -> str:
     """
     注入 description + assertion_template，约束 LLM 断言与引擎 chip / skill_id 语义一致。
+    compact=True 时仅保留 skill_id 列表与一句约束，供弱模型减 tokens。
     """
     if not blind_school_plugin_active(physics_tensor):
         return ""
     rows = _active_skill_rows(physics_tensor or {})
     if not rows:
         return ""
+    if compact:
+        ids = [str(s.get("id") or "").strip() for s in rows if isinstance(s, dict) and str(s.get("id") or "").strip()]
+        joined = "、".join(ids) if ids else "（当前无盲派子算子）"
+        return (
+            "【盲派 Skill】引擎已挂载 classical.blind_school.v1。"
+            f"若 diagnosis / causal_reasoning 涉及墓库、穿局或宾主红利，请写出 skill_id（{joined}），一句即可。"
+        )
     lines: List[str] = [
         "## 盲派 Skill 注册表（物理引擎已挂载 classical.blind_school.v1）",
         "生成与盲派相关的自然语言断言时：必须引用下方 skill_id；句式应优先贴合 assertion_template 的语义，不得自造与模板冲突的定性。",

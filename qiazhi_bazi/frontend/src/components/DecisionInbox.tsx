@@ -69,6 +69,8 @@ type Props = {
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
   /** 非中文界面：判词整行走翻译；十神可点击拆句仅在中文下保留 */
   lang?: Lang;
+  /** 从 Inbox L1 卡片跳转到 Debug「插件碰撞」并滚动到对应 plugin_outputs 行 */
+  onOpenPluginAudit?: (pluginId: string) => void;
 };
 
 export function DecisionInbox({
@@ -111,6 +113,7 @@ export function DecisionInbox({
   l1JunctionFlags,
   decisionSignalToNoise,
   lang = "ZH",
+  onOpenPluginAudit,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -408,32 +411,43 @@ export function DecisionInbox({
                   const isProposal = isAuditorProposal(card.cardType);
                   const showDeltaBadge = actionMode === "PARAMETER_DIRTY" && autoSyncIdle;
                   return (
-                    <motion.label
+                    <motion.div
                       key={card.id}
                       initial={{ opacity: 0, x: 18 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ duration: 0.22 }}
-                      className={`block ${interactionLocked ? "opacity-60" : ""}`}
+                      className={`space-y-1 ${interactionLocked ? "opacity-60" : ""}`}
                     >
-                      <DecisionItem
-                        label={labelText}
-                        selected={Boolean(selectedIds[card.id])}
-                        isProposal={isProposal}
-                        dotClassName={elementColorClass(element)}
-                        deltaAbs={logicDiff?.abs_delta}
-                        showDeltaBadge={showDeltaBadge}
-                        skillId={card.skillId}
-                        energeticLevelLabel={sgjgEnergeticLabelForCard(card, l1JunctionFlags)}
-                        toggleDisabled={interactionLocked}
-                        onToggle={() =>
-                          applySelection({
-                            ...selectedIds,
-                            [card.id]: !selectedIds[card.id],
-                          })
-                        }
-                      />
-                    </motion.label>
+                      <label className="block">
+                        <DecisionItem
+                          label={labelText}
+                          selected={Boolean(selectedIds[card.id])}
+                          isProposal={isProposal}
+                          dotClassName={elementColorClass(element)}
+                          deltaAbs={logicDiff?.abs_delta}
+                          showDeltaBadge={showDeltaBadge}
+                          skillId={card.skillId}
+                          energeticLevelLabel={sgjgEnergeticLabelForCard(card, l1JunctionFlags)}
+                          toggleDisabled={interactionLocked}
+                          onToggle={() =>
+                            applySelection({
+                              ...selectedIds,
+                              [card.id]: !selectedIds[card.id],
+                            })
+                          }
+                        />
+                      </label>
+                      {card.pluginAuditAnchorId && onOpenPluginAudit ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpenPluginAudit(String(card.pluginAuditAnchorId))}
+                          className="ml-1 text-left text-[10px] text-cyan-400/90 underline-offset-2 hover:text-cyan-200 hover:underline"
+                        >
+                          {t("跳转插件碰撞审计")}
+                        </button>
+                      ) : null}
+                    </motion.div>
                   );
                 })()
               ))}

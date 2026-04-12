@@ -1,7 +1,29 @@
 """physics_tensor 字段兼容：旧 deity_energy_axes / 新 abs_nodes 与三合 cluster 有效 Abs。"""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
+
+
+def sanhe_clusters_from_physics_tensor(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """仅从 `plugin_outputs.sys.core.physics.payload` 读取三合簇（禁止 tensor 顶栏回退）。"""
+    po = physics_tensor.get("plugin_outputs")
+    if not isinstance(po, dict):
+        return []
+    row = po.get("sys.core.physics")
+    if not isinstance(row, dict):
+        return []
+    pl = row.get("payload")
+    if not isinstance(pl, dict):
+        return []
+    raw = pl.get("sanhe_clusters")
+    if isinstance(raw, list) and raw:
+        return [c for c in raw if isinstance(c, dict)]
+    comp = pl.get("composite_field_impact")
+    if isinstance(comp, dict):
+        raw2 = comp.get("sanhe_clusters")
+        if isinstance(raw2, list):
+            return [c for c in raw2 if isinstance(c, dict)]
+    return []
 
 
 def cluster_effective_abs_for_deity(
@@ -48,18 +70,19 @@ def cluster_effective_abs_for_deity(
 
 def mirror_abs_nodes_from_deity_axes(physics_tensor: Dict[str, Any]) -> Dict[str, float]:
     """
-    由 deity_energy_axes 与 composite_field_impact 生成 abs_nodes 映射。
+    由 deity_energy_axes 与 `plugin_outputs.sys.core.physics` 中的三合簇生成 abs_nodes 映射。
     调用方负责在写入前检查 physics_tensor 是否已有 abs_nodes。
     """
     axes = physics_tensor.get("deity_energy_axes")
     if not isinstance(axes, dict) or not axes:
         raise ValueError("physics_tensor.deity_energy_axes 缺失或为空，无法镜像 abs_nodes")
-    composite = physics_tensor.get("composite_field_impact")
+    clusters = sanhe_clusters_from_physics_tensor(physics_tensor)
+    composite_for_deity: Dict[str, Any] | None = {"sanhe_clusters": clusters} if clusters else None
     mirrored: Dict[str, float] = {}
     for k, v in axes.items():
         raw_abs = float(((v or {}).get("absolute_energy", 0.0) if isinstance(v, dict) else 0.0) or 0.0)
         effective = cluster_effective_abs_for_deity(
-            composite=composite if isinstance(composite, dict) else None,
+            composite=composite_for_deity,
             deity_name=str(k),
             raw_abs=raw_abs,
         )

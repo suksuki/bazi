@@ -301,7 +301,9 @@ def main() -> int:
         decays = [float(x.strip()) for x in args.decays.split(",") if x.strip()]
     except Exception as e:
         raise SystemExit(f"Invalid --decays: {e}") from e
-    token = os.getenv("QIAZHI_ADMIN_TOKEN")
+    token = (os.getenv("QIAZHI_ADMIN_TOKEN") or "").strip()
+    if not token:
+        raise SystemExit("请设置非空环境变量 QIAZHI_ADMIN_TOKEN（本脚本需调用 /api/admin/refresh-physics）。")
     run(
         base_url=args.base_url.rstrip("/"),
         output_csv=Path(args.output),

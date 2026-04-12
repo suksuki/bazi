@@ -113,24 +113,32 @@ describe("stream-board utils", () => {
       t: (text) => text,
       decisionSignalToNoise: { inbox_conflict_cards_eligible: false },
       physicsTensor: {
-        composite_field_impact: {
-          sanhe_clusters: [
-            {
-              branches: ["丑", "巳", "酉"],
-              energy_vault_status: "AGGREGATED",
-              nodes: [
-                { pillar: "year", branch: "巳" },
-                { pillar: "day", branch: "丑" },
-                { pillar: "hour", branch: "酉" },
+        plugin_outputs: {
+          "sys.core.physics": {
+            verdict: "三合",
+            evidence: [],
+            confidence_score: 0.95,
+            payload: {
+              sanhe_clusters: [
+                {
+                  branches: ["丑", "巳", "酉"],
+                  energy_vault_status: "AGGREGATED",
+                  nodes: [
+                    { pillar: "year", branch: "巳" },
+                    { pillar: "day", branch: "丑" },
+                    { pillar: "hour", branch: "酉" },
+                  ],
+                },
               ],
             },
-          ],
+          },
         },
       },
     });
     expect(cards[0]?.id).toBe("inbox-sanhe-0");
     expect(cards[0]?.cardType).toBe("L1_STRUCTURE");
     expect(cards[0]?.skillId).toBe("l1_branch_sanhe");
+    expect(cards[0]?.pluginAuditAnchorId).toBe("sys.core.physics");
     expect(cards.some((c) => c.id === "fallback-deep-scan")).toBe(true);
   });
 

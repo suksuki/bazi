@@ -17,7 +17,8 @@ frontend/
 | 变量 | 说明 |
 |------|------|
 | `NEXT_PUBLIC_QIAZHI_API` | 后端根 URL，默认 `http://127.0.0.1:8001` |
-| `NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN` | 可选，admin 页面调用后端时携带 |
+| `NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN` | 仅内网/单人调试：浏览器请求头 `X-Admin-Token`。**切勿**在公网多用户环境依赖此前端变量保管密钥；生产应走后端代理或仅服务端持有 token |
+| （后端）`QIAZHI_ADMIN_TOKEN` | **必填**非空后 `/api/admin/*` 才可用；未配置时管理接口返回 503 |
 
 ## 开发
 

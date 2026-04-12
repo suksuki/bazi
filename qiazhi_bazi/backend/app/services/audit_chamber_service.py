@@ -10,7 +10,9 @@ from app.core.plugins.registry import PluginRegistry
 from app.core.routing.causal_router import CausalRouter, load_routing_config
 from app.core.scanner import Scanner
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FlowState
+from app.services.decision_inbox_plugin_service import apply_decision_inbox_pipeline
 from app.services.helpers.interaction_pipeline import evaluate_interactions
+from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
 from app.skills.final_verdict_parts.evidence import get_logical_evidence
 from app.skills.physics_engine import PhysicsInferenceSkill
@@ -137,7 +139,7 @@ def _confront_draft_answer(question: str, ctx: Dict[str, Any]) -> str:
     low = f"当前门控：`eligible={gate.get('inbox_conflict_cards_eligible')}`，`abs_estimate={gate.get('abs_estimate')}`。"
     if "三合" in q or "合局" in q:
         if sanhe == 0:
-            return f"物理层 `composite_field_impact.sanhe_clusters` 为空（未凑齐三支或未触发登记）。{low}"
+            return f"插件 `plugin_outputs.sys.core.physics.payload.sanhe_clusters` 为空（未凑齐三支或未触发登记）。{low}"
         return f"物理层已登记 **{sanhe}** 组三合簇；若终判未写，多为叙事裁剪或未强制引用证据行。{low}"
     if "门控" in q or "η" in q or "eta" in q.lower():
         return (
@@ -210,6 +212,12 @@ def run_audit_diagnose(body: AuditDiagnoseRequest) -> Dict[str, Any]:
     except Exception:
         pass
     physics_tensor["plugin_outputs"] = plugin_outputs
+    try:
+        apply_decision_inbox_pipeline(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
+    except Exception:
+        pass
+    if isinstance(physics_tensor, dict):
+        physics_tensor.pop(SYS_CORE_PHYSICS_BUNDLE_SRC_KEY, None)
 
     md = metadata_obj.model_dump()
     logical_evidence = get_logical_evidence(
@@ -229,10 +237,15 @@ def run_audit_diagnose(body: AuditDiagnoseRequest) -> Dict[str, Any]:
         if verdict_norm and not _line_covered_by_verdict(line, verdict_norm):
             missing.append({"line": line, "attribution": _gap_attribution(line=line, gate=gate, meta=meta)})
 
-    pipe = physics_tensor.get("l1_atomic_pipeline") or {}
-    comp = physics_tensor.get("composite_field_impact") or {}
-    clusters = comp.get("sanhe_clusters") if isinstance(comp, dict) else []
-    sanhe_n = len(clusters) if isinstance(clusters, list) else 0
+    po = physics_tensor.get("plugin_outputs") or {}
+    core_row = po.get("sys.core.physics") if isinstance(po, dict) else None
+    core_pl = (core_row or {}).get("payload") if isinstance(core_row, dict) else None
+    core_pl = core_pl if isinstance(core_pl, dict) else {}
+    pipe = core_pl.get("l1_atomic_pipeline") if isinstance(core_pl.get("l1_atomic_pipeline"), dict) else {}
+    sn_clusters = core_pl.get("sanhe_clusters") if isinstance(core_pl.get("sanhe_clusters"), list) else []
+    if not sn_clusters and isinstance(core_pl.get("composite_field_impact"), dict):
+        sn_clusters = (core_pl["composite_field_impact"].get("sanhe_clusters") or [])
+    sanhe_n = len(sn_clusters) if isinstance(sn_clusters, list) else 0
     steps = pipe.get("steps") if isinstance(pipe, dict) else []
     steps_n = len(steps) if isinstance(steps, list) else 0
     l1_flags = meta.get("l1_junction_flags") if isinstance(meta.get("l1_junction_flags"), dict) else {}
@@ -246,8 +259,14 @@ def run_audit_diagnose(body: AuditDiagnoseRequest) -> Dict[str, Any]:
         "ok": True,
         "metadata": md,
         "logical_evidence": logical_evidence,
-        "l1_atomic_pipeline": pipe,
-        "composite_field_impact": comp if isinstance(comp, dict) else {},
+        "sys_core_physics": {
+            "plugin_id": "sys.core.physics",
+            "l1_atomic_pipeline": pipe,
+            "composite_field_impact": core_pl.get("composite_field_impact")
+            if isinstance(core_pl.get("composite_field_impact"), dict)
+            else {},
+            "sanhe_clusters": sn_clusters if isinstance(sn_clusters, list) else [],
+        },
         "decision_inbox_gate": gate,
         "l1_junction_flags": l1_flags,
         "narrative_diff": narrative_diff,

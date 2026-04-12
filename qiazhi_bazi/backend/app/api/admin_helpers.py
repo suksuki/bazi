@@ -1,6 +1,7 @@
 """Helper functions for admin endpoints."""
 from __future__ import annotations
 
+import copy
 import ipaddress
 import logging
 import os
@@ -143,3 +144,17 @@ def jsonb_check_payload(*, latency_ms: float, url: str, counts: Dict[str, Any], 
             "ok": set(jsonb_columns) == {"raw_data", "human_choice"},
         },
     }
+
+
+def redact_runtime_config_for_api_response(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Admin API 响应：不返回 llm.api_key 明文，仅标记是否已配置（由服务端落盘保存）。"""
+    out = copy.deepcopy(config) if isinstance(config, dict) else {}
+    llm = out.get("llm")
+    if isinstance(llm, dict):
+        raw_key = llm.get("api_key")
+        configured = bool(str(raw_key or "").strip())
+        llm_out = dict(llm)
+        llm_out["api_key"] = ""
+        llm_out["api_key_configured"] = configured
+        out["llm"] = llm_out
+    return out

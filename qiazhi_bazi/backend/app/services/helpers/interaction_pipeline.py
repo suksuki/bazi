@@ -17,6 +17,7 @@ from app.plugins.base_physics.core_operators.op_sub_branch_interaction import (
 from app.core.routing.pattern_recognition_router import evaluate_pattern_profile
 from app.services.helpers.flow_auditor import apply_energy_flow_audit
 from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to_physics_tensor
+from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.plugins.chronos.core import run_chronos_plugin
 from app.plugins.chronos.temporal_v2 import append_temporal_trigger_audits
 from app.plugins.base_physics.core_operators.op_interdimensional import compute_solid_ghost_ratio
@@ -328,12 +329,14 @@ def evaluate_interactions(
         audit["l1_operator_audit_items"] = l1_rows + chrono_rows + temporal_rows
         audit["dimensional_shield_logs"] = list(dimensional_shield_logs or [])
 
-    physics_tensor["l1_atomic_pipeline"] = {
-        "version": "l1_pipeline.v1",
-        "steps": combined_steps,
-        "composite_consistency_check": consistency,
+    physics_tensor[SYS_CORE_PHYSICS_BUNDLE_SRC_KEY] = {
+        "composite_field_impact": composite,
+        "l1_atomic_pipeline": {
+            "version": "l1_pipeline.v1",
+            "steps": combined_steps,
+            "composite_consistency_check": consistency,
+        },
     }
-    physics_tensor["composite_field_impact"] = composite
     meta = physics_tensor.setdefault("meta", {})
     if isinstance(meta, dict):
         meta["energy_vault_flags"] = {
@@ -368,8 +371,12 @@ def evaluate_interactions(
             ghost_damping=float(settings.get("GHOST_ENERGY_DAMPING", 0.3)),
         )
         md = metadata.model_dump() if hasattr(metadata, "model_dump") else dict(metadata or {})
+        sc_gate = [c for c in (composite.get("sanhe_clusters") or []) if isinstance(c, dict)]
         sync_l1_junction_flags_to_meta(
-            metadata=md, physics_tensor=physics_tensor, physics_settings=settings
+            metadata=md,
+            physics_tensor=physics_tensor,
+            physics_settings=settings,
+            sanhe_clusters_precomputed=sc_gate,
         )
         apply_energy_flow_audit(physics_tensor=physics_tensor, physics_config=physics_config)
         evaluate_pattern_profile(physics_tensor=physics_tensor, metadata=md, settings=settings)

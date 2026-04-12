@@ -8,6 +8,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://tester:tester@127.0.0.1/qiaz
 
 from app.api.contracts import AuditPhysicsWithLlmRequest
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FlowState, FourPillars, StemBranchPair
+from app.api.router_helpers import build_physics_audit_prompt
 from app.services import audit_service
 
 
@@ -97,6 +98,7 @@ def test_audit_flow_parses_strict_json():
     assert payload["repair_mode"] == "strict_json"
     assert payload["diagnosis"] == "正常"
     assert payload["sql_patch"].startswith("UPDATE physics_interaction_params")
+    assert payload.get("audit_prompt_tier") in ("standard", "compact")
 
 
 def test_audit_flow_uses_retry_json():
@@ -106,6 +108,25 @@ def test_audit_flow_uses_retry_json():
     assert payload["structured_hit"] is True
     assert payload["repair_mode"] == "retry_json"
     assert payload["diagnosis"] == "重试成功"
+
+
+def test_physics_audit_prompt_compact_drops_english_mandatory_and_input_prefix():
+    kwargs = dict(
+        deity_scores={"比肩": 1.0},
+        root_check={"no_root": True},
+        seasonal_factors={"solar_term": "立春", "params": {}},
+        consensus_history=[{"decision_key": "CF_FLOATING_DECAY", "confirmed_value": 0.2, "reasoning": "x"}],
+        lang="ZH",
+        blind_skill_system_suffix="",
+    )
+    std = build_physics_audit_prompt(**kwargs, tier="standard")
+    cmp = build_physics_audit_prompt(**kwargs, tier="compact")
+    assert "Mandatory" in std[1]["content"]
+    assert "Mandatory" not in cmp[1]["content"]
+    assert std[1]["content"].lstrip().startswith("Input.")
+    assert not cmp[1]["content"].lstrip().startswith("Input.")
+    assert "首席物理命理审计官" in std[0]["content"]
+    assert "物理命理审计助手" in cmp[0]["content"]
 
 
 def test_audit_flow_falls_back_and_normalizes_defaults():

@@ -1,11 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { StreamBoard } from "@/components/StreamBoard";
 import { ActiveViewContext, type ShellActiveView } from "@/components/layout/ActiveViewContext";
 import { ShellDashboardTabs } from "@/components/layout/ShellDashboardTabs";
-import { AdminView } from "@/components/views/AdminView";
-import { DebugView } from "@/components/views/DebugView";
+
+const DebugView = dynamic(() => import("@/components/views/DebugView").then((m) => m.DebugView), { ssr: false });
+const AdminView = dynamic(() => import("@/components/views/AdminView").then((m) => m.AdminView), { ssr: false });
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState<ShellActiveView>("lab");
@@ -16,17 +18,13 @@ export default function HomePage() {
       <div className="flex min-h-dvh flex-col">
         <ShellDashboardTabs />
         <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom,0px)]">
-          <div className={activeView === "lab" ? "block" : "hidden"} aria-hidden={activeView !== "lab"}>
+          {activeView === "lab" ? (
             <div className="flex min-h-dvh flex-col">
               <StreamBoard />
             </div>
-          </div>
-          <div className={activeView === "debug" ? "block" : "hidden"} aria-hidden={activeView !== "debug"}>
-            <DebugView />
-          </div>
-          <div className={activeView === "admin" ? "block" : "hidden"} aria-hidden={activeView !== "admin"}>
-            <AdminView />
-          </div>
+          ) : null}
+          {activeView === "debug" ? <DebugView /> : null}
+          {activeView === "admin" ? <AdminView /> : null}
         </div>
       </div>
     </ActiveViewContext.Provider>

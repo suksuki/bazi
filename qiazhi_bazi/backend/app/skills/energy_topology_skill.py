@@ -8,6 +8,7 @@ from app.skills.base import AuditLog, BaseSkill
 
 
 from app.skills.relation_nodes import RelationNodeFactory
+from app.services.helpers.tensor_adapters import sanhe_clusters_from_physics_tensor
 
 RELATION_GAIN = {
     "冲": 1.0,
@@ -169,12 +170,9 @@ class EnergyTopologySkill(BaseSkill):
         boost: float,
         decay: float,
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """将 composite_field_impact.sanhe_clusters 转为拓扑边（relation_type=sanhe_cluster，供前端金色渲染）。"""
-        comp = (physics_tensor or {}).get("composite_field_impact")
-        if not isinstance(comp, dict):
-            return [], []
-        raw = comp.get("sanhe_clusters")
-        if not isinstance(raw, list):
+        """三合簇边：仅从 `plugin_outputs.sys.core.physics.payload` 读取。"""
+        raw = sanhe_clusters_from_physics_tensor(physics_tensor or {})
+        if not isinstance(raw, list) or not raw:
             return [], []
         extra_edges: List[Dict[str, Any]] = []
         extra_audit: List[Dict[str, Any]] = []

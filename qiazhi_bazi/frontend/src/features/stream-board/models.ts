@@ -28,6 +28,8 @@ export type InboxCard = {
   proposal?: LogicProposal;
   /** 与盲派 skill_manifest 对齐，可由 UI 推断或上游写入 */
   skillId?: string;
+  /** 跳转 Debug「插件碰撞」时滚动定位的 plugin_outputs 键（物理引擎为 sys.core.physics） */
+  pluginAuditAnchorId?: string;
   /** 格局主权与 L1 冲突时：Decision Inbox 角标与路由语义 */
   sovereigntyMark?: "PATTERN_SOVEREIGNTY";
 };

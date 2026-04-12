@@ -1,5 +1,10 @@
 import type { ConflictPoint } from "@/types/bazi";
 
+/** 与后端 `sys.core.physics.payload.facets.sanhe.skill_id` 及 L1 结构卡片一致 */
+export const L1_SANHE_SKILL_ID = "l1_branch_sanhe" as const;
+export const L1_LIUHE_SKILL_ID = "l1_branch_liuhe" as const;
+export const L1_LIUCHONG_SKILL_ID = "l1_branch_liuchong" as const;
+
 /** 与 backend skill_manifest 中盲派 Skill ID 对齐 */
 export function skillIdForConflictPoint(p: ConflictPoint): string {
   const d = String(p.detail || "");
@@ -33,7 +38,7 @@ export function inferDecisionSkillId(
   points: ConflictPoint[] | undefined,
 ): string {
   if (card.cardType === "L1_STRUCTURE" || String(card.id || "").startsWith("inbox-sanhe-")) {
-    return "l1_branch_sanhe";
+    return L1_SANHE_SKILL_ID;
   }
   if (card.cardType === "auditor-proposal") return "mp_l1_param";
   if (card.id === "fallback-deep-scan") return "mp_deep_scan";

@@ -6,8 +6,6 @@ import logging
 import time
 from typing import Any, Dict, List
 
-from sqlmodel import select
-
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.core.evolution.dna_registry import append_routing_audit_item
 from app.core.plugins.registry import PluginRegistry
@@ -22,7 +20,6 @@ from app.api.contracts import (
 from app.api.router_helpers import guess_text_lang, physics_snapshot
 from app.core.runtime_config import get_runtime_config
 from app.core.scanner import Scanner
-from app.db.models import SessionConsensus
 from app.llm.client import QwenClient, build_first_observation_messages
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FlowState
 from app.schemas.bazi_metadata import FourPillars
@@ -33,8 +30,11 @@ from app.services.helpers.analysis_helpers import (
     normalize_translation_texts,
     parse_translation_response,
 )
+from app.services.helpers.session_consensus_query import fetch_latest_session_consensus_rows
 from app.core.errors import DatabaseFetchError
 from app.services.helpers.interaction_pipeline import evaluate_interactions
+from app.services.decision_inbox_plugin_service import apply_decision_inbox_pipeline
+from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
 from app.skills.final_verdict import FinalVerdictSkill
 from app.skills.physics_engine import PhysicsInferenceSkill
@@ -169,6 +169,17 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     except Exception:
         pass
     physics_tensor["plugin_outputs"] = plugin_outputs
+    try:
+        apply_decision_inbox_pipeline(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
+    except Exception:
+        pass
+    try:
+        if "abs_nodes" not in physics_tensor:
+            ensure_abs_nodes_on_physics_tensor(physics_tensor)
+    except ValueError:
+        pass
+    if isinstance(physics_tensor, dict):
+        physics_tensor.pop(SYS_CORE_PHYSICS_BUNDLE_SRC_KEY, None)
     llm_meta = {
         "model_name": model_name,
         "elapsed_ms": llm_elapsed_ms,
@@ -246,15 +257,7 @@ async def analyze_seed_flow(body: AnalyzeSeedRequest, get_bazi: Any, get_timelin
 def load_consensus_history(session: Any, consultation_id: int | None) -> List[Dict[str, Any]]:
     if not consultation_id:
         return []
-    rows = session.exec(select(SessionConsensus).where(SessionConsensus.session_id == consultation_id)).all()
-    return [
-        {
-            "decision_key": str(row.decision_key or ""),
-            "confirmed_value": float(row.confirmed_value) if row.confirmed_value is not None else None,
-            "reasoning": str(row.reasoning or ""),
-        }
-        for row in rows
-    ]
+    return fetch_latest_session_consensus_rows(session, int(consultation_id))
 
 
 def resolve_consensus_history(

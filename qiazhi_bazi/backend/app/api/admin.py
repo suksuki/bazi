@@ -11,6 +11,7 @@ from app.api.admin_auth import admin_token_guard
 from app.api.admin_helpers import (
     hard_compact_conclusion,
     parse_allowed_param_update,
+    redact_runtime_config_for_api_response,
     strip_reasoning,
     validate_target_url,
 )
@@ -251,7 +252,7 @@ async def llm_models(body: LlmModelsRequest, _: None = Depends(admin_token_guard
 
 @router.get("/runtime-config")
 def runtime_config_get(_: None = Depends(admin_token_guard)) -> Dict[str, Any]:
-    return {"ok": True, "config": get_runtime_config()}
+    return {"ok": True, "config": redact_runtime_config_for_api_response(get_runtime_config())}
 
 
 @router.put("/runtime-config")
@@ -266,7 +267,7 @@ def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(admin_token
     if body.causal_routing is not None:
         patch["causal_routing"] = body.causal_routing
     updated = set_runtime_config(patch)
-    return {"ok": True, "config": updated}
+    return {"ok": True, "config": redact_runtime_config_for_api_response(updated)}
 
 
 @router.post("/refresh-physics")

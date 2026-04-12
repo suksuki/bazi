@@ -1,4 +1,6 @@
-/** 与 cardBuilder 对齐：从 physics_tensor 解析三合簇（供黑匣子结构面板与拓扑联动）。 */
+import { sysCorePhysicsPayload } from "@/features/stream-board/sysCorePhysics";
+
+/** 与 cardBuilder 对齐：仅从 `plugin_outputs.sys.core.physics` 解析三合簇。 */
 export type SanheClusterRow = {
   key: string;
   branches: string[];
@@ -10,21 +12,10 @@ export type SanheClusterRow = {
 
 export function extractSanheClusters(physics: Record<string, unknown> | null | undefined): SanheClusterRow[] {
   if (!physics || typeof physics !== "object") return [];
-  const comp = physics.composite_field_impact as Record<string, unknown> | undefined;
-  const raw = comp?.sanhe_clusters;
-  let clusters: unknown[] = Array.isArray(raw) ? raw : [];
-  if (clusters.length === 0) {
-    const meta = physics.meta as Record<string, unknown> | undefined;
-    const iv2 = meta?.interaction_v2 as Record<string, unknown> | undefined;
-    const collapse = Array.isArray(iv2?.attribute_collapse) ? iv2.attribute_collapse : [];
-    for (const item of collapse) {
-      if (!item || typeof item !== "object") continue;
-      const row = item as Record<string, unknown>;
-      if (String(row.kind || "") !== "sanhe") continue;
-      const brs = Array.isArray(row.branches) ? row.branches.map((x) => String(x)) : [];
-      if (brs.length >= 3) clusters.push({ branches: brs, energy_vault_status: "AGGREGATED", nodes: [] });
-    }
-  }
+  const po = physics.plugin_outputs as Record<string, unknown> | undefined;
+  const sysPayload = sysCorePhysicsPayload(po);
+  const raw = sysPayload && Array.isArray(sysPayload.sanhe_clusters) ? sysPayload.sanhe_clusters : [];
+  const clusters: unknown[] = Array.isArray(raw) ? raw : [];
   const out: SanheClusterRow[] = [];
   clusters.forEach((cl, idx) => {
     if (!cl || typeof cl !== "object") return;

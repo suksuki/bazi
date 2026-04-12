@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArbiterLogicDrawer } from "@/components/ArbiterLogicDrawer";
 import { AuditSidebar } from "@/components/AuditSidebar";
@@ -35,6 +35,17 @@ import { PatternStatus, type PatternProfileSlice } from "./components/PatternSta
 
 export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const { setActiveView } = useActiveView();
+  const handleOpenPluginAudit = useCallback(
+    (pluginId: string) => {
+      try {
+        sessionStorage.setItem("qiazhi_debug_plugin_focus", pluginId);
+      } catch {
+        /* ignore quota / private mode */
+      }
+      setActiveView("debug");
+    },
+    [setActiveView],
+  );
   const {
     lang,
     setLang,
@@ -619,6 +630,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   l1JunctionFlags={l1JunctionFlags}
                   decisionSignalToNoise={decisionSignalToNoise}
                   onBackToSeedEntry={handleBackToSeedEntry}
+                  onOpenPluginAudit={handleOpenPluginAudit}
                 />
               )}
             </AnimatePresence>

@@ -99,6 +99,18 @@ def test_admin_runtime_config_roundtrip(monkeypatch, tmp_path: Path):
     assert put_r["ok"] is True
     get_r = admin_module.runtime_config_get()
     assert get_r["config"]["llm"]["model"] == "qwen2.5:3b"
+    assert get_r["config"]["llm"].get("api_key") in ("", None)
+    assert get_r["config"]["llm"].get("api_key_configured") is False
+
+
+def test_admin_runtime_config_redacts_api_key(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(runtime_config, "_CONFIG_FILE", tmp_path / "runtime_config.json")
+    runtime_config.set_runtime_config({"llm": {"base_url": "http://127.0.0.1:1/v1", "api_key": "secret-key", "model": "m"}})
+    get_r = admin_module.runtime_config_get()
+    assert get_r["config"]["llm"].get("api_key") in ("", None)
+    assert get_r["config"]["llm"].get("api_key_configured") is True
+    disk = runtime_config.get_runtime_config()
+    assert disk["llm"]["api_key"] == "secret-key"
 
 
 def test_analyze_clash_returns_atomic_points_without_llm(monkeypatch, tmp_path: Path):

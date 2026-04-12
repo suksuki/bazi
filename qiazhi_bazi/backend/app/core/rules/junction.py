@@ -302,6 +302,7 @@ def sync_l1_junction_flags_to_meta(
     metadata: Dict[str, Any],
     physics_tensor: Dict[str, Any],
     physics_settings: Dict[str, float] | None = None,
+    sanhe_clusters_precomputed: List[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """计算 L1 伤官见官等联结标志并写入 physics_tensor.meta，供盲派 chip 与前端 Inbox 读取。"""
     settings_for_flags = _physics_settings(physics_tensor, physics_settings)
@@ -320,9 +321,13 @@ def sync_l1_junction_flags_to_meta(
                     clash = float(ge["clash_abs_loss_total"])
                 except (TypeError, ValueError):
                     clash = None
-            comp = physics_tensor.get("composite_field_impact") if isinstance(physics_tensor.get("composite_field_impact"), dict) else {}
-            sc = comp.get("sanhe_clusters") if isinstance(comp, dict) else None
-            has_sanhe_cluster = isinstance(sc, list) and len(sc) > 0
+            if sanhe_clusters_precomputed is not None:
+                sc = [c for c in sanhe_clusters_precomputed if isinstance(c, dict)]
+            else:
+                from app.services.helpers.tensor_adapters import sanhe_clusters_from_physics_tensor
+
+                sc = sanhe_clusters_from_physics_tensor(physics_tensor)
+            has_sanhe_cluster = len(sc) > 0
             block = apply_decision_inbox_signal_gate(
                 meta=meta,
                 settings=settings,
