@@ -36,12 +36,107 @@ class FourPillars(BaseModel):
 class ConflictPoint(BaseModel):
     """刑冲合化等潜在作用点（扫描结果之一）。"""
 
-    kind: str = Field(..., description="如 clash、combine、punish、harm")
+    id: Optional[str] = Field(default=None, description="稳定锚点 ID，供终判段落与 Debug 联动")
+    kind: str = Field(..., description="如 clash、combine、punish、harm、sanhe")
     positions: List[str] = Field(
         default_factory=list,
         description="涉及柱位或地支，如 [month_branch, day_branch]",
     )
     detail: str = Field(default="", description="人可读说明，如 寅申冲")
+    source: Optional[str] = Field(default=None, description="scanner=初始扫描；l1_physics=L1 流水线/合成场回写")
+
+
+class PluginSelectionTraceEntry(BaseModel):
+    """L0–L4 插件入选轨迹（审计用）。"""
+
+    plugin_id: str = Field(default="", description="插件 ID，如 classical.blind_school.v1")
+    layer_id: str = Field(default="", description="L0 / L1 / …")
+    status: str = Field(default="", description="ALWAYS_ON | SELECTED 等")
+    reason: str = Field(default="", description="入选或常驻理由（含 MatchScore 因子摘要）")
+
+
+class ConfirmedVerdictRecord(BaseModel):
+    """用户签发后归档的断言记忆。"""
+
+    verdict_id: str = Field(default="", description="终判 version_id 或业务主键")
+    body_excerpt: str = Field(default="", description="正文摘录")
+    confirmed_at: str = Field(default="", description="ISO 时间")
+    source_metadata_hash: str = Field(default="", description="签发时元数据指纹（与终判证书 hash 对齐或独立）")
+    evidence_refs: List[str] = Field(default_factory=list, description="归档时的证据锚点列表")
+    model_id: str = Field(
+        default="unknown",
+        description="签发或归档时的 LLM 模型 id（runtime_config.llm.model；禁止空串）",
+    )
+
+
+class VerdictRegenerationEvent(BaseModel):
+    """终判再生/重写审计（如 Regenerate、η 微调后静默重算）。"""
+
+    occurred_at: str = Field(default="", description="ISO 时间")
+    reason: str = Field(default="", description="人可读原因，如 η 参数微调触发重写")
+    trigger: str = Field(default="", description="manual_regenerate | physics_recalc | inbox_execute 等")
+    model_id: str = Field(default="unknown", description="本次推理所用 LLM 模型 id（禁止空串）")
+    version_id: str = Field(default="", description="本次终判 version_id")
+    previous_version_id: str = Field(default="", description="上一版 version_id，无则空")
+
+
+class VerdictModelStamp(BaseModel):
+    """每次终判生成强制落库的模型指纹（含首版），供弱/强模型同命例对比。"""
+
+    occurred_at: str = Field(default="", description="ISO 时间")
+    model_id: str = Field(default="unknown", description="runtime_config.llm.model 或等价标识")
+    version_id: str = Field(default="", description="本次终判 version_id")
+
+
+class HistoryContext(BaseModel):
+    """断言记忆体：已确认终判、再生轨迹与元数据指纹。"""
+
+    confirmed_verdicts: List[ConfirmedVerdictRecord] = Field(default_factory=list)
+    regeneration_events: List[VerdictRegenerationEvent] = Field(
+        default_factory=list,
+        description="每次 Regenerate / 物理重算触发的终判重写记录",
+    )
+    verdict_model_stamps: List[VerdictModelStamp] = Field(
+        default_factory=list,
+        description="每次终判成功即追加一条（与 regeneration 独立）；跨会话审计用",
+    )
+
+
+class InferenceTraceStep(BaseModel):
+    """单步：输入摘要 → 匹配分 → 输出摘要 → 因果仲裁备注。"""
+
+    step_index: int = Field(default=0, description="全局序号")
+    layer_id: str = Field(default="", description="L0–L4")
+    plugin_id: str = Field(default="", description="插件 ID")
+    input_summary: str = Field(default="", description="触发输入 / 上下文摘要")
+    match_score: Optional[float] = Field(default=None, description="Inbox MatchScore，无则 null")
+    output_summary: str = Field(default="", description="输出 / 轨迹摘要")
+    arbitration_note: str = Field(default="", description="causal_routing 或路由审计一句话")
+
+
+class InferenceTrace(BaseModel):
+    """L0–L4 全量因果轨迹（可回放）。"""
+
+    version: str = Field(default="1.0", description="轨迹格式版本")
+    steps: List[InferenceTraceStep] = Field(default_factory=list)
+
+
+class VerdictAssertionAnchor(BaseModel):
+    """单句断言及其元数据锚点（LLM 或启发式回填）。"""
+
+    assertion_id: str = Field(default="", description="a0 / 行号等")
+    text: str = Field(default="", description="断语文本")
+    evidence_refs: List[str] = Field(
+        default_factory=list,
+        description="如 year.branch、conflict_matrix.sanhe_cluster_0、plugin.classical.blind_school.v1",
+    )
+
+
+class VerdictAnchorLayer(BaseModel):
+    """断言层：与 BaziMetadata 同步的锚点集合。"""
+
+    narrative_version_id: str = Field(default="", description="与终判 version_id 对齐")
+    assertions: List[VerdictAssertionAnchor] = Field(default_factory=list)
 
 
 class ConflictMatrix(BaseModel):
@@ -51,9 +146,10 @@ class ConflictMatrix(BaseModel):
 
 
 class BaziMetadata(BaseModel):
-    """v1.0 协议根对象。"""
+    """四柱元数据根对象：v1 核心 + v2 记忆体（history / inference / verdict_anchor）。"""
 
-    version: str = Field(default="1.0", description="协议版本")
+    version: str = Field(default="1.0", description="四柱协议主版本（与历史 API 对齐）")
+    memory_schema_version: str = Field(default="2.0", description="记忆体与因果轨迹扩展版本")
     pillars: Optional[FourPillars] = None
     conflict_matrix: ConflictMatrix = Field(default_factory=ConflictMatrix)
     flow_state: FlowState = FlowState.UNKNOWN
@@ -61,6 +157,22 @@ class BaziMetadata(BaseModel):
     temporal_context: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Chronos V2：大运/流年干支与参考年，供引动审计",
+    )
+    plugin_selection_trace: List[PluginSelectionTraceEntry] = Field(
+        default_factory=list,
+        description="L0–L4 插件入选与常驻理由，供黑匣子元数据审计",
+    )
+    history_context: HistoryContext = Field(
+        default_factory=HistoryContext,
+        description="经用户确认的断言记忆与 source_metadata_hash",
+    )
+    inference_trace: InferenceTrace = Field(
+        default_factory=InferenceTrace,
+        description="L0–L4 Input→MatchScore→Output→Arbitration 全链路",
+    )
+    verdict_anchor_layer: VerdictAnchorLayer = Field(
+        default_factory=VerdictAnchorLayer,
+        description="当前终判断言与 evidence_refs，与 Debug 回放联动",
     )
 
 

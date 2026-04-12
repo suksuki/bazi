@@ -90,7 +90,8 @@ export function StateMonitor({ metadata, timeline, physicsTensor }: Props) {
   const [axisHistory, setAxisHistory] = useState<Record<string, AxisSample[]>>({});
   const lastSigRef = useRef<string>("");
 
-  const pillars = (metadata?.pillars || {}) as Record<string, { stem?: string; branch?: string }>;
+  const pillars = (metadata?.pillars || {}) as Record<string, { stem?: string; branch?: string; energy_value?: number }>;
+  const byPillar = (physicsTensor?.by_pillar || {}) as Record<string, { raw_energy?: number }>;
 
   const deityAxes = useMemo(() => {
     const raw = physicsTensor?.deity_energy_axes;
@@ -130,12 +131,18 @@ export function StateMonitor({ metadata, timeline, physicsTensor }: Props) {
   return (
     <div className="rounded-xl border border-cyan-900/40 bg-zinc-950/60 p-3">
       <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-300/90">实时状态 · 元数据与十神 Abs</p>
-      <p className="mt-1 text-[11px] text-zinc-500">岁运与四柱激活态；静默重算后追加 Sparkline 样本（最多 32 点）。悬停曲线节点可查看 η / 运行参数快照。</p>
+      <p className="mt-1 text-[11px] text-zinc-500">
+        岁运与四柱激活态；柱侧「柱能」与 <code className="text-zinc-400">metadata.pillars.*.energy_value</code> 同源（由{" "}
+        <code className="text-zinc-400">by_pillar.raw_energy</code> 归一化回写）。Sparkline 仍为十神 Abs 轨迹。
+      </p>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {(Object.keys(PILLAR_LABEL) as PillarKey[]).map((pk) => {
           const p = pillars[pk] || {};
           const active = Boolean(p.stem || p.branch);
+          const evMeta = typeof p.energy_value === "number" && Number.isFinite(p.energy_value) ? p.energy_value : null;
+          const raw = byPillar[pk]?.raw_energy;
+          const rawDisp = typeof raw === "number" && Number.isFinite(raw) ? raw.toFixed(2) : null;
           return (
             <div
               key={pk}
@@ -148,6 +155,14 @@ export function StateMonitor({ metadata, timeline, physicsTensor }: Props) {
                 {p.stem || "—"}
                 {p.branch || "—"}
               </p>
+              {evMeta != null ? (
+                <p className="mt-0.5 font-mono text-[10px] text-amber-200/90">柱能 {evMeta}</p>
+              ) : null}
+              {rawDisp != null ? (
+                <p className="mt-0.5 font-mono text-[9px] text-zinc-500" title="physics_tensor.by_pillar.raw_energy">
+                  raw {rawDisp}
+                </p>
+              ) : null}
               <p className="mt-0.5 text-[9px] text-zinc-500">{active ? "已激活" : "未排盘"}</p>
             </div>
           );

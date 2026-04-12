@@ -35,7 +35,7 @@ backend/
 | `QIAZHI_BAZI_LLM_BASE_URL` | OpenAI 兼容 LLM 根地址 |
 | `QIAZHI_BAZI_LLM_API_KEY` | 本地可填 `empty` |
 | `QIAZHI_BAZI_LLM_MODEL` | 推理模型名 |
-| `QIAZHI_ADMIN_TOKEN` | 可选，admin 路由访问令牌 |
+| `QIAZHI_ADMIN_TOKEN` | **必配**：非空字符串；未配置则全部 `/api/admin/*` 返回 503（禁止未配置即放行） |
 | `QIAZHI_DNA_REGISTRY_PATH` | 可选，规则基因 JSON 路径（演化覆盖物理系数） |
 | `QIAZHI_EVOLUTION_ADMISSION_PATH` / `QIAZHI_EVOLUTION_ADMIT` | 可选，演化结果是否准入覆盖 |
 

@@ -257,6 +257,11 @@ def runtime_config_get(_: None = Depends(admin_token_guard)) -> Dict[str, Any]:
 
 @router.put("/runtime-config")
 def runtime_config_put(body: RuntimeConfigRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
+    """合并写入 ``runtime_config.json``。
+
+    ``llm`` 可选字段 ``is_high_reasoning_mode``（bool）：为 true 时终判 ``prompt_builder`` 使用全量插件
+    evidence 溯源档位，不做短句碎片化截断（强模型切换前可预置）。
+    """
     llm = body.llm or {}
     base_url = llm.get("base_url")
     if isinstance(base_url, str) and base_url.strip():

@@ -17,6 +17,7 @@ from app.plugins.base_physics.core_operators.op_sub_branch_interaction import (
 from app.core.routing.pattern_recognition_router import evaluate_pattern_profile
 from app.services.helpers.flow_auditor import apply_energy_flow_audit
 from app.plugins.base_physics.core_operators.op_status import apply_l1_status_to_physics_tensor
+from app.services.helpers.metadata_enrichment import enrich_metadata_conflict_matrix_from_pipeline
 from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.plugins.chronos.core import run_chronos_plugin
 from app.plugins.chronos.temporal_v2 import append_temporal_trigger_audits
@@ -381,4 +382,13 @@ def evaluate_interactions(
         apply_energy_flow_audit(physics_tensor=physics_tensor, physics_config=physics_config)
         evaluate_pattern_profile(physics_tensor=physics_tensor, metadata=md, settings=settings)
         _reconcile_robber_wealth_under_pattern_sovereignty(physics_tensor)
+    try:
+        enrich_metadata_conflict_matrix_from_pipeline(
+            metadata,
+            steps=combined_steps,
+            composite=composite,
+            branches=branches,
+        )
+    except Exception:
+        pass
     return physics_tensor

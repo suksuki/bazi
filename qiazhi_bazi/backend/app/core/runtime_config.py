@@ -15,6 +15,10 @@ def _default_llm() -> Dict[str, Any]:
         "provider": os.getenv("QIAZHI_LLM_PROVIDER", "ollama"),
         # 物理审计 LLM：compact 缩短 system/user、压缩盲派注册表，利于弱模型输出合法 JSON
         "audit_prompt_tier": (os.getenv("QIAZHI_AUDIT_PROMPT_TIER", "compact") or "compact").strip().lower(),
+        # 终判 Prompt：开启后 plugin evidence 不做碎片化截断，走全量逻辑溯源（强模型日切）
+        "is_high_reasoning_mode": (
+            str(os.getenv("QIAZHI_LLM_HIGH_REASONING", "") or "").strip().lower() in ("1", "true", "yes")
+        ),
     }
 
 

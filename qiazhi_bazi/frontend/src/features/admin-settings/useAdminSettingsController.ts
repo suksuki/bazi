@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ADMIN_HEADERS, API_BASE, SETTINGS_KEY } from "./constants";
-import { DbStatus, LlmResp, SaveState, SavedSettings } from "./types";
-import { buildSavedSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
+import { DbStatus, LlmResp, PersistedAdminSettings, SaveState } from "./types";
+import { buildPersistedAdminSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
 
 export function useAdminSettingsController() {
   const [db, setDb] = useState<DbStatus | null>(null);
@@ -48,20 +48,32 @@ export function useAdminSettingsController() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (!raw) return;
-      const s = JSON.parse(raw) as Partial<SavedSettings>;
-      if (s.dbUrl) setDbUrl(s.dbUrl);
-      if (s.pgHost) setPgHost(s.pgHost);
-      if (s.pgPort) setPgPort(s.pgPort);
-      if (s.pgDatabase) setPgDatabase(s.pgDatabase);
-      if (s.pgUser) setPgUser(s.pgUser);
-      if (typeof s.pgPassword === "string") setPgPassword(s.pgPassword);
-      if (s.pgSslMode) setPgSslMode(s.pgSslMode);
-      if (s.systemPrompt) setSystemPrompt(s.systemPrompt);
-      if (s.userPrompt) setUserPrompt(s.userPrompt);
-      if (s.lang) setLang(s.lang);
-      if (s.ollamaHost) setOllamaHost(s.ollamaHost);
-      if (s.llmModel) setLlmModel(s.llmModel);
-      if (typeof s.llmApiKey === "string") setLlmApiKey(s.llmApiKey);
+      const parsed = JSON.parse(raw) as Partial<PersistedAdminSettings> & { llmApiKey?: string };
+      let migrated = false;
+      if ("llmApiKey" in parsed) {
+        delete (parsed as { llmApiKey?: string }).llmApiKey;
+        migrated = true;
+      }
+      if (migrated) {
+        try {
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed));
+        } catch {
+          /* ignore quota / private mode */
+        }
+      }
+      if (parsed.dbUrl) setDbUrl(parsed.dbUrl);
+      if (parsed.pgHost) setPgHost(parsed.pgHost);
+      if (parsed.pgPort) setPgPort(parsed.pgPort);
+      if (parsed.pgDatabase) setPgDatabase(parsed.pgDatabase);
+      if (parsed.pgUser) setPgUser(parsed.pgUser);
+      if (typeof parsed.pgPassword === "string") setPgPassword(parsed.pgPassword);
+      if (parsed.pgSslMode) setPgSslMode(parsed.pgSslMode);
+      if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
+      if (parsed.userPrompt) setUserPrompt(parsed.userPrompt);
+      if (parsed.lang) setLang(parsed.lang);
+      if (parsed.ollamaHost) setOllamaHost(parsed.ollamaHost);
+      if (parsed.llmModel) setLlmModel(parsed.llmModel);
+      /* llmApiKey 仅内存态，不从 localStorage 回填、也不持久化 */
     } catch {
       // ignore broken local cache
     }
@@ -332,7 +344,7 @@ export function useAdminSettingsController() {
   }, [effectiveBaseUrl, llmApiKey, loadModels]);
 
   useEffect(() => {
-    const payload = buildSavedSettings({
+    const payload = buildPersistedAdminSettings({
       dbUrl,
       pgHost,
       pgPort,
@@ -345,14 +357,13 @@ export function useAdminSettingsController() {
       lang,
       ollamaHost,
       llmModel,
-      llmApiKey,
     });
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
     } catch {
       // ignore local storage failures
     }
-  }, [dbUrl, pgHost, pgPort, pgDatabase, pgUser, pgPassword, pgSslMode, systemPrompt, userPrompt, lang, ollamaHost, llmModel, llmApiKey]);
+  }, [dbUrl, pgHost, pgPort, pgDatabase, pgUser, pgPassword, pgSslMode, systemPrompt, userPrompt, lang, ollamaHost, llmModel]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

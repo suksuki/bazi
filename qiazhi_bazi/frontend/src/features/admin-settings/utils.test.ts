@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildSavedSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
+import { buildPersistedAdminSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
 
 describe("admin settings utils", () => {
   it("builds postgres urls with encoded password", () => {
@@ -16,8 +16,8 @@ describe("admin settings utils", () => {
     ).toBe("postgresql://tester:a%40b@127.0.0.1:5432/demo?sslmode=disable");
   });
 
-  it("returns a stable saved settings payload", () => {
-    const payload = buildSavedSettings({
+  it("returns a stable persisted admin settings payload (no api key field)", () => {
+    const payload = buildPersistedAdminSettings({
       dbUrl: "postgresql://demo",
       pgHost: "127.0.0.1",
       pgPort: "5432",
@@ -30,10 +30,10 @@ describe("admin settings utils", () => {
       lang: "ZH",
       ollamaHost: "http://127.0.0.1:11434",
       llmModel: "qwen",
-      llmApiKey: "key",
     });
     expect(payload.pgDatabase).toBe("demo");
     expect(payload.llmModel).toBe("qwen");
+    expect("llmApiKey" in payload).toBe(false);
   });
 });
 

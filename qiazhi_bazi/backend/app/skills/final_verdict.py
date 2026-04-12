@@ -22,9 +22,11 @@ from app.skills.final_verdict_parts.constants import (
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
 from app.skills.final_verdict_parts.evidence import get_logical_evidence as get_logical_evidence_fn
 from app.skills.final_verdict_parts.json_extract import extract_json_from_llm_text
+from app.skills.final_verdict_parts.narrative_anchors import build_verdict_narrative_chunks
 from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat
 from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_messages
-from app.skills.final_verdict_parts.verdict_parse import parse_verdict_body_and_changelog
+from app.skills.final_verdict_parts.verdict_fingerprint import append_verdict_fingerprint_html_comment
+from app.skills.final_verdict_parts.verdict_parse import parse_verdict_anchor_layer, parse_verdict_body_and_changelog
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
@@ -148,6 +150,7 @@ class FinalVerdictSkill(BaseSkill):
         previous_logical_evidence: List[str] | None = None,
         lang: str = "ZH",
         plugin_weights: Dict[str, float] | None = None,
+        regeneration_context: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         messages = build_final_verdict_messages(
             metadata=metadata,
@@ -169,6 +172,9 @@ class FinalVerdictSkill(BaseSkill):
             usage = tel.get("usage")
             if isinstance(usage, dict) and usage:
                 llm_meta["usage"] = usage
+        resolved_model_id = (
+            str(llm_meta.get("model_name") or "").strip() or str(_cfg.get("model") or "").strip() or "unknown"
+        )
         obj = extract_json_from_llm_text(raw)
         verdict_body, change_log = parse_verdict_body_and_changelog(obj)
 
@@ -306,6 +312,47 @@ class FinalVerdictSkill(BaseSkill):
         if not change_log.get("physics_diff") and not change_log.get("consensus_diff"):
             change_log["text_diff_hint"] = change_log.get("text_diff_hint") or "已生成全量重写终判（非追加模式）。"
         version_id = datetime.utcnow().strftime("v2.%m%d%H%M%S")
+        md_for_anchors = metadata if isinstance(metadata, dict) else {}
+        narrative_chunks = build_verdict_narrative_chunks(verdict_body, md_for_anchors)
+        anchor_layer_dict = parse_verdict_anchor_layer(
+            obj,
+            verdict_body=verdict_body,
+            version_id=version_id,
+            metadata=md_for_anchors,
+        )
+        verdict_body = append_verdict_fingerprint_html_comment(
+            verdict_body,
+            physics_tensor=physics_tensor,
+            metadata=md_for_anchors,
+        )
+        metadata_memory_patch: Dict[str, Any] = {
+            "verdict_anchor_layer": anchor_layer_dict,
+            "memory_schema_version": "2.0",
+            "history_context": {
+                "verdict_model_stamps": [
+                    {
+                        "occurred_at": datetime.utcnow().isoformat(),
+                        "model_id": resolved_model_id,
+                        "version_id": version_id,
+                    }
+                ]
+            },
+        }
+        reg_in = regeneration_context if isinstance(regeneration_context, dict) else {}
+        reason = str(reg_in.get("reason") or "").strip()
+        trigger = str(reg_in.get("trigger") or "").strip()
+        prev_vid = str(reg_in.get("previous_version_id") or "").strip()
+        if (reason or trigger) and prev_vid:
+            metadata_memory_patch["history_context"]["regeneration_events"] = [
+                {
+                    "occurred_at": datetime.utcnow().isoformat(),
+                    "reason": reason or "未说明",
+                    "trigger": trigger or "unspecified",
+                    "model_id": resolved_model_id,
+                    "version_id": version_id,
+                    "previous_version_id": prev_vid,
+                }
+            ]
         confirmed_decisions = [
             {
                 "id": str((c or {}).get("id") or ""),
@@ -339,6 +386,8 @@ class FinalVerdictSkill(BaseSkill):
             "plugin_outputs_verdict_ready": verdict_plugin_outputs,
             "plugin_conflict_report": conflict_report,
             "l1_junction_flags": l1_flags,
+            "narrative_chunks": narrative_chunks,
+            "metadata_memory_patch": metadata_memory_patch,
         }
         audit_log = self.audit(consumed, produced).model_dump()
         safe_messages = [
@@ -362,4 +411,6 @@ class FinalVerdictSkill(BaseSkill):
             "llm_request_messages": safe_messages,
             "llm_raw_response": raw,
             "llm_meta": llm_meta,
+            "narrative_chunks": narrative_chunks,
+            "metadata_memory_patch": metadata_memory_patch,
         }

@@ -1,6 +1,6 @@
 # Debug 页面可视化与状态管理审计白皮书 (v0.3)
 
-**版本**: v0.3  
+**版本**: v0.3.1（增补 §10 记忆体协议；原 §10 运维章节顺延为 §11）  
 **日期**: 2026-04-11  
 **范围**: Qiazhi 前端 Shell（实验室 / 黑匣子 / 机房）中与「实验性物理滑块」、Decision Inbox、能量展示、拓扑图、系统基准持久化相关的数据流。  
 **说明**: 「Debug」在代码中对应 `DebugView`（黑匣子）；「收起/展开实验交互」滑块位于 **机房 → PluginManagementPanel → CausalPluginCard**。二者共享全局 `LabStore` + `LabConfigContext`，但自动重算触发条件不同，不可混为一谈。
@@ -216,7 +216,52 @@ flowchart LR
 
 ---
 
-## 10. 运维与 Admin LLM 联调（后端）
+## 10. 决策回溯与元数据记忆体协议（v2.0）
+
+**目的**：在切换强模型、跨会话复盘时，保持「断言 ↔ 物理证据 ↔ 插件轨迹 ↔ 所用模型」的坐标系一致；弱模型输出非标准 Markdown/JSON 时仍能落锚。
+
+### 10.1 记忆体根节点（`BaziMetadata`）
+
+| 字段 | 含义 |
+|------|------|
+| `memory_schema_version` | 记忆体扩展版本，当前 `2.0`。 |
+| `history_context` | 用户签发、再生原因、**每次终判的模型指纹链**（见下）。 |
+| `inference_trace` | L0–L4：`Input → MatchScore → Output → Causal Arbitration` 可回放步骤。 |
+| `verdict_anchor_layer` | 当前终判的断言层：`narrative_version_id` + `assertions[]`。 |
+
+### 10.2 `evidence_refs` 坐标系（断言锚点）
+
+以下为系统与 Debug「决策回溯」高亮识别的**推荐语法**（可多锚并存；启发式会并集补全）。
+
+| 锚点模式 | 语义 | 示例 |
+|----------|------|------|
+| `{pillar}.branch` | 四柱之一的地支列（年/月/日/时支） | `year.branch` 指向年支；与命盘 `metadata.pillars.year.branch` 对齐。 |
+| `{pillar}.stem` | 四柱之一的天干列 | `month.stem`。 |
+| `{pillar}.pillar` | 整柱（干+支）叙事锚；兼容旧提示词 | `day.pillar`。 |
+| `branch.{支}` | 地支字面在正文中共现 | `branch.子`。 |
+| `conflict_matrix.{id}` | 矛盾矩阵扫描点或 L1 回写点的稳定 `id` | `conflict_matrix.sanhe_cluster_0`。 |
+| `plugin.{plugin_id}` | 插件实例 ID（与 `physics_tensor.meta.enabled_plugins` / `plugin_outputs` 键一致） | `plugin.classical.blind_school.v1`。 |
+| `meta.*` / 其他 | 可扩展；终判 Prompt 契约中声明的键均可写入 | 如 `meta.global_entropy`（若业务定义）。 |
+
+**弱模型鲁棒性**：`parse_verdict_anchor_layer` 在解析 LLM `assertions[]` 后，对每条断言的 `text` 与 `metadata` 做**启发式并集**（柱支共现、冲突 `detail` 子串、`plugin.*` 正则扫描、关键词→盲派/旺衰/财风险插件映射），即使 JSON 缺字段或 Markdown 不标准，仍尽量填满 `evidence_refs`。
+
+### 10.3 模型指纹（跨模型对比）
+
+- **`history_context.verdict_model_stamps`**：`FinalVerdictSkill` 在**每次**终判成功返回时追加一条 `{ occurred_at, model_id, version_id }`。`model_id` 取自运行时 LLM 配置（`runtime_config.llm.model` / `llm_meta.model_name`），**禁止空串**，缺省为字面 `unknown`。
+- **`history_context.regeneration_events`**：仅当请求携带 `regeneration_context.previous_version_id`（非空）时记录再生（如 Inbox 执行、语义 Regenerate、SQL 提案后重算）；含同一 `model_id` 字段。
+- **`history_context.confirmed_verdicts[].model_id`**：用户**签发终审**时写入，来源为快照中 `final_verdict.llm_meta.model_name`，缺省为 `unknown`。
+- **Markdown 尾部隐藏指纹**：终判正文末尾追加 HTML 注释 `<!--qiazhi-fingerprint:v1 BASE64-->`，载荷 JSON 含 `pillar_energy_snapshot` 与 `active_plugins`，供离线对比「当时物理面 + 插件面」。
+
+### 10.4 前端合并与黑匣子
+
+- `mergeBaziMetadataMemoryPatch`：**追加** `regeneration_events`、`verdict_model_stamps`（有上限截断），避免覆盖整段 `history_context`。
+- Debug「八字元数据 → 决策回溯」：展示核心断言、`verdict_model_stamps`、再生记录、`inference_trace`；点击断言按 `evidence_refs` 高亮四柱 / 矛盾矩阵 / 轨迹行（含 `.branch` / `.stem`）。
+
+**相关代码**：`backend/app/schemas/bazi_metadata.py`、`backend/app/skills/final_verdict.py`、`backend/app/skills/final_verdict_parts/verdict_parse.py`、`verdict_fingerprint.py`、`frontend/.../finalVerdictPayload.ts`、`LabSessionContext.tsx`、`DebugView.tsx`。
+
+---
+
+## 11. 运维与 Admin LLM 联调（后端）
 
 **日期**: 2026-04-11 起迭代
 

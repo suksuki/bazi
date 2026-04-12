@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
+from app.core.runtime_config import get_runtime_config
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
@@ -11,6 +12,7 @@ from app.skills.blind_school_encyclopedia import audit_host_guest_vectors, build
 from app.skills.dual_school_auditor import build_dual_school_audit
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
 from app.skills.final_verdict_parts.evidence import format_audit_snapshot_inline, get_logical_evidence
+from app.skills.final_verdict_parts.evidence_chunking import format_plugin_evidence_chunks
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
@@ -43,6 +45,24 @@ def build_final_verdict_messages(
         lang_hint = "Please output strictly in English."
     elif (lang or "ZH").upper() == "KO":
         lang_hint = "최종 출력은 반드시 한국어로만 작성하세요."
+    _cfg = get_runtime_config()
+    _cfg_llm = _cfg.get("llm") if isinstance(_cfg.get("llm"), dict) else {}
+    high_reasoning = bool(_cfg_llm.get("is_high_reasoning_mode"))
+    if high_reasoning:
+        evidence_mode_hint = (
+            "若提供 [Evidence Slices·全量逻辑溯源]，请对每条证据行做字段级完整溯源："
+            "在 assertions 中引用对应 plugin.<plugin_id> 锚点，串联 verdict_body 与证据原文中的数值、标签，不得因篇幅省略关键信息。"
+        )
+        evidence_block_heading = "Evidence Slices·全量逻辑溯源"
+    else:
+        evidence_mode_hint = (
+            "若提供 [Evidence Slices·插件语义碎片]，请把这些短句当作拼图素材：在 assertions 中引用对应 plugin.<plugin_id> 锚点，"
+            "用自然语言缝合进 verdict_body，勿要求读者理解原始 JSON。"
+        )
+        evidence_block_heading = "Evidence Slices·插件语义碎片"
+    opener = "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
+    if high_reasoning:
+        opener += "【高推理模式】插件 evidence 为全量条线，不做碎片化截断；须逐条映射到 assertions.evidence_refs。"
     md_for_llm = merge_interpretation_metadata_for_llm(dict(metadata))
     logical_evidence = get_logical_evidence(
         metadata=md_for_llm,
@@ -152,14 +172,15 @@ def build_final_verdict_messages(
     knowledge_lines.extend(
         [f"知识.百科.{i + 1}={_trim_prompt_blob(x, 100)}" for i, x in enumerate(blind_digest)]
     )
-    system = (
-        "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
+    system = opener + (
         "你必须每次返回一份全量、唯一、可执行的终判，不允许追加旧内容。"
         "必须引用具体物理数值（十神绝对能量 Abs）作为依据；禁止空泛修辞。"
         "你生成的每一句命理断语，必须能在 [Physical Evidence] 里找到数值或标签支撑。"
         "若与 [User Consensus] 冲突，必须以 [User Consensus] 为准。"
         "输出严格 JSON："
-        '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""}}。'
+        '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""},'
+        '"assertions":[{"assertion_id":"a0","text":"一句完整断语","evidence_refs":["year.branch","conflict_matrix.cp_scan_0","plugin.classical.blind_school.v1"]}]}。'
+        "assertions 为必填：每句断语一条；evidence_refs 使用锚点字符串（柱位 year.stem/month.branch、conflict_matrix.<id>、plugin.<plugin_id>、meta.global_entropy 等），须可溯源到上文证据。"
         "change_log 仅写相对上一版的变化；若无上一版则写当前基线要点。"
         "请根据 [盲派硬核证据] 评估日主获取能量效率：做功值为负偏向“劳而无功”，为正偏向“取财有道”。"
         "必须引用 net_effect 做辩证分析；当 backfire_risk 超过 unlock_gain 的50%时，严禁只给单边褒义结论，必须说明代价与震荡。"
@@ -175,6 +196,7 @@ def build_final_verdict_messages(
         "若 [Physical Evidence] 中出现以「地支.三合.」开头的证据行，必须在「核心气象」或「裁决共识」中评估该三合局对整体格调、"
         "五行场强分布及做功门态（如墓库/合局聚能）的影响，不得忽略。"
         "只要盘中存在地支三合局（证据行已给出），必须显式评估其对当前格调与做功逻辑的支撑或对冲作用，禁止仅用套话带过。"
+        f"{evidence_mode_hint}"
         f"{lang_hint}"
     )
     blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)
@@ -213,11 +235,19 @@ def build_final_verdict_messages(
     flow_section = "\n[因果流通链·五行相生]\n" + ("\n".join(flow_lines) if flow_lines else "- （无审计数据）\n")
 
     audit_snap = format_audit_snapshot_inline(md_for_llm, physics_tensor)
+    plugin_out = physics_tensor.get("plugin_outputs") if isinstance(physics_tensor.get("plugin_outputs"), dict) else {}
+    evidence_chunks = format_plugin_evidence_chunks(plugin_out, high_reasoning=high_reasoning)
+    evidence_block = f"\n[{evidence_block_heading}]\n"
+    if evidence_chunks:
+        evidence_block += "\n".join(f"- {x}" for x in evidence_chunks) + "\n"
+    else:
+        evidence_block += "- （各插件暂无结构化 evidence 列表；可忽略本段）\n"
     user = (
         "[八字元数据快照·全卷锚点]\n"
         + f"- {audit_snap}\n"
         + "[Physical Evidence]\n"
         + "\n".join(f"- {x}" for x in logical_evidence)
+        + evidence_block
         + "\n[盲派硬核证据]\n"
         + "\n".join(f"- {x}" for x in work_lines)
         + "\n[Structure Candidates V0]\n"

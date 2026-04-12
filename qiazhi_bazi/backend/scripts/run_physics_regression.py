@@ -93,7 +93,12 @@ def _case_specs() -> List[CaseSpec]:
 
 
 def run(base_url: str, output_csv: Path, decay_values: List[float], admin_token: str | None) -> None:
-    headers = {"X-Admin-Token": admin_token or ""}
+    if not (admin_token or "").strip():
+        raise SystemExit(
+            "缺少 QIAZHI_ADMIN_TOKEN：本脚本必须调用 /api/admin/refresh-physics（需 X-Admin-Token）。"
+            "请 export 非空 QIAZHI_ADMIN_TOKEN 后再运行。"
+        )
+    headers = {"X-Admin-Token": admin_token.strip()}
     rows: List[Dict[str, Any]] = []
     for decay in decay_values:
         _set_decay(decay)

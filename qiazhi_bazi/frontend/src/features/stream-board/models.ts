@@ -161,11 +161,21 @@ export type FinalVerdictChangeLog = {
 
 export type LlmChatMessage = { role: string; content: string };
 
+export type VerdictNarrativeChunk = {
+  chunk_id: string;
+  text: string;
+  branch_chars?: string[];
+  pillar_keys?: string[];
+  conflict_point_ids?: string[];
+};
+
 export type FinalVerdictResult = {
   body: string;
   changeLog: FinalVerdictChangeLog;
   logicalEvidence: string[];
   versionId: string;
+  /** 终判段落与地支 / conflict_point 的弱锚点（后端启发式） */
+  narrativeChunks?: VerdictNarrativeChunk[];
   workVector?: Record<string, unknown>;
   topologyGraphV1?: Record<string, unknown>;
   structureCandidatesV0?: Record<string, unknown>;
@@ -177,6 +187,8 @@ export type FinalVerdictResult = {
   /** 模型原始返回（多为 JSON 包裹的 Markdown） */
   llmRawResponse?: string;
   llmMeta?: Record<string, unknown>;
+  /** 终判回写：断言锚点层等，供 merge 进 snapshot.metadata */
+  metadataMemoryPatch?: Record<string, unknown>;
 };
 
 export type FinalVerdictHistoryItem = {

@@ -17,7 +17,8 @@ export type LlmResp = {
   content: string;
 };
 
-export type SavedSettings = {
+/** 可安全写入 localStorage 的管理页字段（不含 LLM API Key） */
+export type PersistedAdminSettings = {
   dbUrl: string;
   pgHost: string;
   pgPort: string;
@@ -30,7 +31,6 @@ export type SavedSettings = {
   lang: "ZH" | "EN" | "KO";
   ollamaHost: string;
   llmModel: string;
-  llmApiKey: string;
 };
 
 export type SaveState = "idle" | "saving" | "saved" | "error";

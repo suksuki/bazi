@@ -144,6 +144,14 @@ export type LabSnapshot = {
     llm_request_messages?: Array<{ role: string; content: string }>;
     llm_raw_response?: string;
     llm_meta?: Record<string, unknown>;
+    /** 终判段落锚点（地支 / conflict_point），供八字元数据 Tab 联动 */
+    narrative_chunks?: Array<{
+      chunk_id: string;
+      text: string;
+      branch_chars?: string[];
+      pillar_keys?: string[];
+      conflict_point_ids?: string[];
+    }>;
   };
   decision_selection_ids?: string[];
 };
@@ -409,12 +417,43 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
       const nextLogs = prevLogs.some((l) => l.includes("[FINAL_DECISION_ISSUED]"))
         ? prevLogs
         : [...prevLogs, logLine].slice(-24);
+      const prevMeta = (state.snapshot.metadata || {}) as Record<string, unknown>;
+      const fv = (state.snapshot.final_verdict || {}) as Record<string, unknown>;
+      const anchorLayer = (prevMeta.verdict_anchor_layer || {}) as { assertions?: unknown[] };
+      const assertions = Array.isArray(anchorLayer.assertions) ? anchorLayer.assertions : [];
+      const evidenceRefs: string[] = [];
+      for (const a of assertions) {
+        if (!a || typeof a !== "object" || Array.isArray(a)) continue;
+        const er = (a as { evidence_refs?: unknown }).evidence_refs;
+        if (Array.isArray(er)) for (const r of er) evidenceRefs.push(String(r));
+      }
+      const uniqRefs = Array.from(new Set(evidenceRefs)).slice(0, 64);
+      const bodyStr = typeof fv.body === "string" ? fv.body : "";
+      const versionId = typeof fv.version_id === "string" ? fv.version_id : "";
+      const llmMeta = fv.llm_meta && typeof fv.llm_meta === "object" && !Array.isArray(fv.llm_meta) ? (fv.llm_meta as Record<string, unknown>) : {};
+      const modelIdRaw = typeof llmMeta.model_name === "string" ? llmMeta.model_name.trim() : "";
+      const modelId = modelIdRaw || "unknown";
+      const confirmedRecord = {
+        verdict_id: versionId || hash.slice(0, 24),
+        body_excerpt: bodyStr.slice(0, 480),
+        confirmed_at: new Date(committedAt).toISOString(),
+        source_metadata_hash: hash,
+        evidence_refs: uniqRefs,
+        model_id: modelId,
+      };
+      const prevHc = (prevMeta.history_context || {}) as { confirmed_verdicts?: unknown[] };
+      const prevCv = Array.isArray(prevHc.confirmed_verdicts) ? [...prevHc.confirmed_verdicts] : [];
+      const nextCv = [...prevCv, confirmedRecord].slice(-24);
       const nextSnapshot: LabSnapshot = {
         ...state.snapshot,
         metadata: {
-          ...(state.snapshot.metadata || {}),
+          ...prevMeta,
           finalization: { hash, committed_at: committedAt },
           verdict_effective_skill_ids: effectiveSkillIds ?? [],
+          history_context: {
+            ...prevHc,
+            confirmed_verdicts: nextCv,
+          },
         },
         interaction_hub: {
           ...hub,

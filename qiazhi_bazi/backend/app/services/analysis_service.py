@@ -37,7 +37,6 @@ from app.services.decision_inbox_plugin_service import apply_decision_inbox_pipe
 from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
 from app.skills.final_verdict import FinalVerdictSkill
-from app.skills.physics_engine import PhysicsInferenceSkill
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
 from app.skills.energy_topology_skill import EnergyTopologySkill
@@ -115,6 +114,9 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         observed = [point.detail for point in metadata_obj.conflict_matrix.points]
         llm_text = fallback_clash_prompt(observed)
 
+    # 延迟导入：避免 app.services 包初始化 ↔ physics_engine 的循环依赖（helpers 子模块会触发 services/__init__）
+    from app.skills.physics_engine import PhysicsInferenceSkill
+
     physics_skill = PhysicsInferenceSkill.instance()
     consumed = physics_skill.consume(
         {
@@ -132,6 +134,12 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         interaction_params=physics_skill.get_interaction_params(),
         physics_config=body.physics_config.model_dump(exclude_none=True) if body.physics_config else {},
     )
+    try:
+        from app.services.helpers.metadata_enrichment import sync_metadata_pillar_energy_from_tensor
+
+        sync_metadata_pillar_energy_from_tensor(metadata_obj, physics_tensor)
+    except Exception:
+        pass
     registry = PluginRegistry()
     plugin_outputs = registry.run_hook(
         hook="on_physics_complete",
@@ -171,6 +179,25 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     physics_tensor["plugin_outputs"] = plugin_outputs
     try:
         apply_decision_inbox_pipeline(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
+    except Exception:
+        pass
+    try:
+        from app.services.helpers.metadata_enrichment import (
+            attach_plugin_selection_trace_to_metadata,
+            build_plugin_selection_trace,
+        )
+
+        _pst = build_plugin_selection_trace(
+            registry=registry, plugin_outputs=plugin_outputs, physics_tensor=physics_tensor
+        )
+        attach_plugin_selection_trace_to_metadata(metadata_obj, _pst)
+    except Exception:
+        pass
+    try:
+        from app.services.helpers.metadata_enrichment import attach_inference_trace_to_metadata, build_inference_trace
+
+        _inf = build_inference_trace(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=registry)
+        metadata_obj = attach_inference_trace_to_metadata(metadata_obj, _inf) or metadata_obj
     except Exception:
         pass
     try:
@@ -299,6 +326,7 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
     clear_flag = bool(body.clear_previous_verdict or body.force_clear_cache)
     previous_verdict = "" if clear_flag else (body.previous_verdict or "")
     previous_logical_evidence = [] if clear_flag else (body.previous_logical_evidence or [])
+    reg_ctx = body.regeneration_context.model_dump() if body.regeneration_context is not None else None
     out = await skill.generate(
         metadata=body.metadata or {},
         physics_tensor=physics_tensor,
@@ -308,6 +336,7 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         previous_logical_evidence=previous_logical_evidence,
         lang=body.lang,
         plugin_weights=body.plugin_weights or {},
+        regeneration_context=reg_ctx,
     )
     return {
         "ok": True,
@@ -326,6 +355,9 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         "llm_request_messages": out.get("llm_request_messages") or [],
         "llm_raw_response": str(out.get("llm_raw_response") or out.get("raw") or ""),
         "llm_meta": out.get("llm_meta") or {},
+        "narrative_chunks": out.get("narrative_chunks") or [],
+        "metadata_memory_patch": out.get("metadata_memory_patch") or {},
+        "l1_junction_flags": out.get("l1_junction_flags") or {},
     }
 
 

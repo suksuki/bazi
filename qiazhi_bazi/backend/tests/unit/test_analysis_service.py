@@ -9,9 +9,10 @@ from unittest.mock import AsyncMock
 
 os.environ.setdefault("DATABASE_URL", "postgresql://tester:tester@127.0.0.1/qiazhi_test")
 
-from app.api.contracts import AnalyzeSeedRequest, FinalVerdictRequest, TranslateRequest
+from app.api.contracts import AnalyzeSeedRequest, FinalVerdictRequest, RegenerationContext, TranslateRequest
 from app.db.models import SessionConsensus
 from app.schemas.bazi_metadata import ConflictMatrix, ConflictPoint, FourPillars, StemBranchPair
+from app.skills import physics_engine as physics_engine_module
 from app.services import analysis_service
 
 
@@ -123,7 +124,7 @@ def test_analyze_seed_flow_builds_audit_summary():
 
     with patch.object(analysis_service, "QwenClient", return_value=_FakeClient()), patch.object(
         analysis_service.Scanner, "scan", return_value=fake_matrix
-    ), patch.object(analysis_service.PhysicsInferenceSkill, "instance", return_value=_FakePhysicsSkill()):
+    ), patch.object(physics_engine_module.PhysicsInferenceSkill, "instance", return_value=_FakePhysicsSkill()):
         payload = asyncio.run(
             analysis_service.analyze_seed_flow(
                 body,
@@ -202,6 +203,36 @@ def test_resolve_consensus_history_falls_back_to_db():
         session_scope=fake_scope,
     )
     assert resolved[0]["decision_key"] == "root_factor"
+
+
+def test_final_verdict_request_regeneration_context_serializes_to_skill() -> None:
+    skill = _CaptureVerdictSkill()
+    reg = RegenerationContext(
+        reason="η 微调",
+        trigger="physics_recalc",
+        previous_version_id="ver-prev",
+    )
+    assert reg.model_dump() == {
+        "reason": "η 微调",
+        "trigger": "physics_recalc",
+        "previous_version_id": "ver-prev",
+    }
+    with patch.object(analysis_service.FinalVerdictSkill, "instance", return_value=skill):
+        asyncio.run(
+            analysis_service.generate_final_verdict(
+                FinalVerdictRequest(
+                    metadata={},
+                    physics_tensor={"meta": {}, "abs_nodes": {"比肩": 1.0}},
+                    selected_cards=[],
+                    consensus_history=[],
+                    previous_verdict="",
+                    regeneration_context=reg,
+                    lang="ZH",
+                ),
+                [],
+            )
+        )
+    assert skill.kwargs.get("regeneration_context") == reg.model_dump()
 
 
 def test_generate_final_verdict_clear_previous_forces_rewrite():

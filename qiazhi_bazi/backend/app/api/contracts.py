@@ -204,6 +204,14 @@ class TranslateRequest(BaseModel):
     target_lang: str = "ZH"
 
 
+class RegenerationContext(BaseModel):
+    """终判再生原因（写入 metadata.history_context.regeneration_events）。"""
+
+    reason: str = Field(default="", max_length=480, description="人可读原因，如 η 微调后静默重算触发重写")
+    trigger: str = Field(default="", max_length=64, description="manual_regenerate | physics_recalc | inbox_execute 等")
+    previous_version_id: str = Field(default="", max_length=64, description="上一版终判 version_id")
+
+
 class FinalVerdictRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     physics_tensor: Dict[str, Any] = Field(default_factory=dict)
@@ -217,6 +225,7 @@ class FinalVerdictRequest(BaseModel):
     force_clear_cache: bool = False
     enabled_plugins: List[str] = Field(default_factory=list)
     plugin_weights: Dict[str, float] = Field(default_factory=dict)
+    regeneration_context: Optional[RegenerationContext] = None
 
 
 class ResolveConflictRequest(BaseModel):
@@ -285,7 +294,13 @@ class LlmModelsRequest(BaseModel):
 
 
 class RuntimeConfigRequest(BaseModel):
-    llm: Dict[str, Any] = Field(default_factory=dict)
+    llm: Dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "LLM 连接与行为开关：base_url、model、provider、audit_prompt_tier、"
+            "is_high_reasoning_mode（bool，开启时终判 Prompt 中插件 evidence 不做碎片化截断）等"
+        ),
+    )
     causal_routing: Optional[Dict[str, Any]] = Field(default=None, description="因果路由：策略、主权、权比等")
 
 

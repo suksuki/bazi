@@ -13,6 +13,7 @@ import type {
 import type { FinalVerdictResult } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { ConfirmedDecisionItem, ConsensusItem, MetricSnapshot } from "./streamBoardTypes";
+import { mergeBaziMetadataMemoryPatch, type RegenerationContextInput } from "./finalVerdictPayload";
 
 function labFinalVerdictFromParsed(verdict: FinalVerdictResult, bodyText: string): NonNullable<LabSnapshot["final_verdict"]> {
   return {
@@ -27,6 +28,7 @@ function labFinalVerdictFromParsed(verdict: FinalVerdictResult, bodyText: string
     llm_request_messages: verdict.llmRequestMessages ?? [],
     llm_raw_response: verdict.llmRawResponse ?? "",
     llm_meta: verdict.llmMeta,
+    narrative_chunks: verdict.narrativeChunks,
   };
 }
 
@@ -58,6 +60,8 @@ export type StreamBoardExecutionContext = {
   setFinalStructureCandidatesV0: (v: Record<string, unknown> | null) => void;
   setFinalStructureFinalDecisionV0: (v: Record<string, unknown> | null) => void;
   setFinalVerdictVersionId: (v: string) => void;
+  /** 发起再生终判时作为 previous_version_id 传入 */
+  finalVerdictVersionId: string;
   setConfirmedDecisions: (v: ConfirmedDecisionItem[]) => void;
   setFinalVerdictHistory: Dispatch<SetStateAction<FinalVerdictHistoryItem[]>>;
   setAuditorProposalCards: Dispatch<SetStateAction<InboxCard[]>>;
@@ -67,13 +71,32 @@ export type StreamBoardExecutionContext = {
   setResultLogs: Dispatch<SetStateAction<string[]>>;
   applyPhysicsSqlPatch: (sql: string) => Promise<{ ok: boolean; error?: string }>;
   onSeedSubmit: (payload: SeedPayload) => Promise<void>;
-  generateFinalVerdict: (conflicts: string[], selectedCards?: InboxCard[]) => Promise<FinalVerdictResult>;
+  generateFinalVerdict: (
+    conflicts: string[],
+    selectedCards?: InboxCard[],
+    opts?: { regenerationContext?: RegenerationContextInput | null },
+  ) => Promise<FinalVerdictResult>;
   appendFinalVerdictAuditItem: (versionId: string, auditLog: Record<string, unknown> | undefined, timestamp: string) => void;
   scheduleInteractionHubPersist: () => void;
   updateLogicDiff: (current: MetricSnapshot, forceBaseline?: boolean) => LogicDiff;
   typewriterResultLine: (line: string, delayMs?: number) => Promise<void>;
   mergeLabSnapshot: (patch: Partial<LabSnapshot>) => void;
+  setMetadata: (v: BaziMetadata | null) => void;
 };
+
+function mergeVerdictIntoLabSnapshot(
+  x: StreamBoardExecutionContext,
+  verdict: FinalVerdictResult,
+  bodyText: string,
+) {
+  const fv = labFinalVerdictFromParsed(verdict, bodyText);
+  const mergedMeta = mergeBaziMetadataMemoryPatch(x.metadata, verdict.metadataMemoryPatch);
+  x.mergeLabSnapshot({
+    final_verdict: fv,
+    metadata: mergedMeta as unknown as Record<string, unknown>,
+  });
+  x.setMetadata(mergedMeta);
+}
 
 export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExecutionContext>) {
   const onExecuteDecision = useCallback(async (selected: InboxCard[]) => {
@@ -149,7 +172,19 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
         x.setConfirmedDecisionIds([]);
         x.setSelectionResetToken((value) => value + 1);
 
-        const verdict = await x.generateFinalVerdict(conflicts, selectedCards);
+        const verdict = await x.generateFinalVerdict(
+          conflicts,
+          selectedCards,
+          x.finalVerdictVersionId?.trim()
+            ? {
+                regenerationContext: {
+                  reason: "审计员 SQL 提案已应用并完成静默重算",
+                  trigger: "physics_sql_patch",
+                  previous_version_id: x.finalVerdictVersionId,
+                },
+              }
+            : undefined,
+        );
         if ((verdict.body || "").trim()) {
           await x.typewriterResultLine(`${x.t("✅ 终极判词：")}${verdict.body}`, 18);
           x.setStreamingText(x.t("全局裁决完成，终极判词已生成。"));
@@ -176,7 +211,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
             },
           ]);
           x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
-          x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, verdict.body) });
+          mergeVerdictIntoLabSnapshot(x, verdict, verdict.body);
         }
 
         x.setAuditItems((prev) => [
@@ -195,7 +230,19 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
       }
 
       if (conflicts.length > 0) {
-        const verdict = await x.generateFinalVerdict(conflicts, selectedCards);
+        const verdict = await x.generateFinalVerdict(
+          conflicts,
+          selectedCards,
+          x.finalVerdictVersionId?.trim()
+            ? {
+                regenerationContext: {
+                  reason: "已确认 Inbox 冲合/卡片并执行全局裁决",
+                  trigger: "inbox_execute",
+                  previous_version_id: x.finalVerdictVersionId,
+                },
+              }
+            : undefined,
+        );
         const safeVerdict = (verdict.body || "").trim()
           ? verdict.body
           : (x.lang === "KO" ? x.t("[KO] 结果提取失败。") : "结果提取失败，请稍后重试。");
@@ -224,7 +271,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
           },
         ]);
         x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
-        x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, safeVerdict) });
+        mergeVerdictIntoLabSnapshot(x, verdict, safeVerdict);
       }
 
       x.setAuditorProposalCards((prev) => prev.filter((card) => !selectedCards.some((selectedCard) => selectedCard.id === card.id)));
@@ -252,7 +299,19 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
       const x = ctxRef.current;
       const selectedConflicts = selectedCards.map((card) => String(card.conflictDetail || "").trim()).filter(Boolean);
       const conflicts = selectedConflicts.length > 0 ? selectedConflicts : (x.confirmedConflicts || []);
-      const verdict = await x.generateFinalVerdict(conflicts, selectedCards);
+      const verdict = await x.generateFinalVerdict(
+        conflicts,
+        selectedCards,
+        x.finalVerdictVersionId?.trim()
+          ? {
+              regenerationContext: {
+                reason: "用户触发语义重算（Regenerate）或插件权重调整后再裁决",
+                trigger: "manual_regenerate",
+                previous_version_id: x.finalVerdictVersionId,
+              },
+            }
+          : undefined,
+      );
       const safeVerdict = (verdict.body || "").trim() ? verdict.body : "结果提取失败，请稍后重试。";
       x.setFinalVerdictBody(safeVerdict);
       x.setFinalVerdictChangeLog(verdict.changeLog || {});
@@ -301,7 +360,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
           `[CRITICAL] [ENERGY_OVERLOAD] abs_delta: ${absDelta.toFixed(2)} | Source: ${source}`,
         ]);
       }
-      x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, safeVerdict) });
+      mergeVerdictIntoLabSnapshot(x, verdict, safeVerdict);
     },
     [ctxRef],
   );

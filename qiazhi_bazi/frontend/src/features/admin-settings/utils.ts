@@ -1,4 +1,4 @@
-import { SavedSettings } from "./types";
+import type { PersistedAdminSettings } from "./types";
 
 export function makePgUrl(args: {
   host: string;
@@ -13,7 +13,7 @@ export function makePgUrl(args: {
   return `postgresql://${args.user}:${pwd}@${args.host}:${args.port}/${args.database}${ssl}`;
 }
 
-export function buildSavedSettings(input: SavedSettings): SavedSettings {
+export function buildPersistedAdminSettings(input: PersistedAdminSettings): PersistedAdminSettings {
   return { ...input };
 }
 

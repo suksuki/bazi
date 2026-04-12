@@ -8,6 +8,7 @@ import {
   buildFinalVerdictRequestBody,
   finalVerdictHttpFallbackLog,
   parseFinalVerdictFromApiData,
+  type RegenerationContextInput,
 } from "@/features/stream-board/controller/finalVerdictPayload";
 import { buildFallbackVerdict } from "@/features/stream-board/utils";
 import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
@@ -45,7 +46,11 @@ export type VerdictExecutionDeps = {
  */
 export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDeps>) {
   const generateFinalVerdict = useCallback(
-    async (conflicts: string[], selectedCards: InboxCard[] = []) => {
+    async (
+      conflicts: string[],
+      selectedCards: InboxCard[] = [],
+      opts?: { regenerationContext?: RegenerationContextInput | null },
+    ) => {
       const d = depsRef.current;
       while (d.silentRecalcInFlightRef.current) {
         await new Promise((r) => setTimeout(r, 25));
@@ -80,6 +85,7 @@ export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDe
                 pluginSwitches: d.pluginSwitches,
                 pluginWeights: d.pluginWeights,
                 lang: d.lang,
+                regenerationContext: opts?.regenerationContext,
               }),
             ),
           });

@@ -947,6 +947,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setFinalStructureCandidatesV0,
     setFinalStructureFinalDecisionV0,
     setFinalVerdictVersionId,
+    finalVerdictVersionId,
     setConfirmedDecisions,
     setFinalVerdictHistory,
     setAuditorProposalCards,
@@ -962,6 +963,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     updateLogicDiff,
     typewriterResultLine,
     mergeLabSnapshot: mergeSnapshot,
+    setMetadata,
   };
 
   const snapshotUrlTag = useMemo(() => {

@@ -2,6 +2,7 @@
 L1 物理引擎：**唯一**对外结构面为 `plugin_outputs["sys.core.physics"]`。
 
 `interaction_pipeline` 将合成场与原子流水线写入 `physics_tensor[SYS_CORE_PHYSICS_BUNDLE_SRC_KEY]`，
+并在同函数末尾将三合簇与关键原子步摘要 **回写** 至 `metadata.conflict_matrix.points`（供八字元数据审计）。
 本插件在 `on_physics_complete` 中消费该 bundle 并 `pop` 清理；外界禁止再依赖 tensor 顶层的
 `composite_field_impact` / `l1_atomic_pipeline`。
 """

@@ -9,6 +9,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://tester:tester@127.0.0.1/qiaz
 from app.api.contracts import AuditPhysicsWithLlmRequest
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FlowState, FourPillars, StemBranchPair
 from app.api.router_helpers import build_physics_audit_prompt
+from app.skills import physics_engine as physics_engine_module
 from app.services import audit_service
 
 
@@ -85,7 +86,7 @@ class _FallbackClient:
 
 def test_ensure_physics_tensor_uses_skill_when_missing():
     body = AuditPhysicsWithLlmRequest(metadata=_metadata(), physics_tensor=None, solar_term="立春")
-    with patch.object(audit_service.PhysicsInferenceSkill, "instance", return_value=_FakePhysicsSkill()):
+    with patch.object(physics_engine_module.PhysicsInferenceSkill, "instance", return_value=_FakePhysicsSkill()):
         tensor = audit_service.ensure_physics_tensor(body)
     assert tensor["meta"]["solar_term"] == "立春"
 

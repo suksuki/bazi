@@ -9,10 +9,17 @@ import type {
   PluginWeights,
   SeedPayload,
 } from "@/features/stream-board/models";
-import type { FinalVerdictResult, LlmChatMessage } from "@/features/stream-board/models";
+import type { FinalVerdictResult, LlmChatMessage, VerdictNarrativeChunk } from "@/features/stream-board/models";
 import { calculateFireEnergyAfterConflicts } from "@/features/stream-board/utils";
 import { buildBlindSchoolFeaturesPayload } from "./streamBoardPure";
 import type { ConfirmedDecisionItem, ConsensusItem } from "./streamBoardTypes";
+
+/** 与后端 `RegenerationContext` 对齐，供 history_context.regeneration_events 审计 */
+export type RegenerationContextInput = {
+  reason: string;
+  trigger: string;
+  previous_version_id?: string;
+};
 
 export type FinalVerdictRequestBuildInput = {
   metadata: BaziMetadata | null;
@@ -33,7 +40,51 @@ export type FinalVerdictRequestBuildInput = {
   pluginSwitches: PluginSwitches;
   pluginWeights: PluginWeights;
   lang: Lang;
+  regenerationContext?: RegenerationContextInput | null;
 };
+
+/** 将终判返回的 metadata_memory_patch 合并进当前 BaziMetadata（浅合并 + 覆盖锚点层）。 */
+export function mergeBaziMetadataMemoryPatch(
+  base: BaziMetadata | null | undefined,
+  patch: Record<string, unknown> | null | undefined,
+): BaziMetadata {
+  const b = { ...(base || ({} as BaziMetadata)) } as Record<string, unknown>;
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    return b as BaziMetadata;
+  }
+  const ver = patch.memory_schema_version;
+  if (typeof ver === "string" && ver.trim()) b.memory_schema_version = ver.trim();
+  const layer = patch.verdict_anchor_layer;
+  if (layer && typeof layer === "object" && !Array.isArray(layer)) {
+    b.verdict_anchor_layer = layer as BaziMetadata["verdict_anchor_layer"];
+  }
+  const hcPatch = patch.history_context;
+  if (hcPatch && typeof hcPatch === "object" && !Array.isArray(hcPatch)) {
+    const inc = hcPatch as {
+      regeneration_events?: unknown[];
+      confirmed_verdicts?: unknown[];
+      verdict_model_stamps?: unknown[];
+    };
+    const baseHc = { ...(typeof b.history_context === "object" && b.history_context ? b.history_context : {}) } as {
+      regeneration_events?: unknown[];
+      confirmed_verdicts?: unknown[];
+      verdict_model_stamps?: unknown[];
+    };
+    if (Array.isArray(inc.regeneration_events) && inc.regeneration_events.length > 0) {
+      const prev = Array.isArray(baseHc.regeneration_events) ? baseHc.regeneration_events : [];
+      baseHc.regeneration_events = [...prev, ...inc.regeneration_events].slice(-48);
+    }
+    if (Array.isArray(inc.verdict_model_stamps) && inc.verdict_model_stamps.length > 0) {
+      const prevS = Array.isArray(baseHc.verdict_model_stamps) ? baseHc.verdict_model_stamps : [];
+      baseHc.verdict_model_stamps = [...prevS, ...inc.verdict_model_stamps].slice(-96);
+    }
+    if (Array.isArray(inc.confirmed_verdicts)) {
+      baseHc.confirmed_verdicts = inc.confirmed_verdicts;
+    }
+    b.history_context = baseHc as BaziMetadata["history_context"];
+  }
+  return b as BaziMetadata;
+}
 
 export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInput): Record<string, unknown> {
   const selectedPayload = input.selectedCards.map((card) => ({
@@ -54,7 +105,7 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
   );
   const absNodes = Object.keys(absNodesFromAxes).length > 0 ? absNodesFromAxes : absNodesFromScores;
 
-  return {
+  const body: Record<string, unknown> = {
     metadata: input.metadata || {},
     physics_tensor: {
       abs_nodes: absNodes,
@@ -96,6 +147,32 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
     },
     lang: input.lang,
   };
+  const reg = input.regenerationContext;
+  if (reg && (String(reg.reason || "").trim() || String(reg.trigger || "").trim())) {
+    body.regeneration_context = {
+      reason: String(reg.reason || "").slice(0, 480),
+      trigger: String(reg.trigger || "").slice(0, 64),
+      previous_version_id: String(reg.previous_version_id || "").slice(0, 64),
+    };
+  }
+  return body;
+}
+
+function parseNarrativeChunks(raw: unknown): VerdictNarrativeChunk[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: VerdictNarrativeChunk[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item as Record<string, unknown>;
+    out.push({
+      chunk_id: String(o.chunk_id ?? ""),
+      text: String(o.text ?? ""),
+      branch_chars: Array.isArray(o.branch_chars) ? o.branch_chars.map((x) => String(x)) : undefined,
+      pillar_keys: Array.isArray(o.pillar_keys) ? o.pillar_keys.map((x) => String(x)) : undefined,
+      conflict_point_ids: Array.isArray(o.conflict_point_ids) ? o.conflict_point_ids.map((x) => String(x)) : undefined,
+    });
+  }
+  return out.length ? out : undefined;
 }
 
 function parseLlmMessages(raw: unknown): LlmChatMessage[] | undefined {
@@ -159,6 +236,11 @@ export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult 
     llmRequestMessages: parseLlmMessages(d.llm_request_messages),
     llmRawResponse: typeof d.llm_raw_response === "string" ? d.llm_raw_response : "",
     llmMeta,
+    narrativeChunks: parseNarrativeChunks(d.narrative_chunks),
+    metadataMemoryPatch:
+      d.metadata_memory_patch && typeof d.metadata_memory_patch === "object" && !Array.isArray(d.metadata_memory_patch)
+        ? (d.metadata_memory_patch as Record<string, unknown>)
+        : undefined,
   };
 }
 

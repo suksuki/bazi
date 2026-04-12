@@ -13,7 +13,6 @@ from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.services.helpers.audit_helpers import fallback_audit_response, normalize_audit_result
-from app.skills.physics_engine import PhysicsInferenceSkill
 
 
 def _resolve_audit_prompt_tier(body: AuditPhysicsWithLlmRequest, cfg: Dict[str, Any]) -> str:
@@ -30,6 +29,8 @@ def ensure_physics_tensor(body: AuditPhysicsWithLlmRequest) -> Dict[str, Any]:
     physics_tensor = body.physics_tensor
     if physics_tensor:
         return physics_tensor
+    from app.skills.physics_engine import PhysicsInferenceSkill
+
     physics_skill = PhysicsInferenceSkill.instance()
     consumed = physics_skill.consume(
         {"metadata": body.metadata, "solar_term": body.solar_term, "session_id": body.session_id}
