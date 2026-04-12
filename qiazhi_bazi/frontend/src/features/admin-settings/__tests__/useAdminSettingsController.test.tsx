@@ -1,6 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../constants", () => ({
+  API_BASE: "http://127.0.0.1:8001",
+  ADMIN_HEADERS: {},
+  SETTINGS_KEY: "qiazhi_admin_settings_v2",
+}));
+
 import { useAdminSettingsController } from "../useAdminSettingsController";
 
 function jsonResponse(body: unknown, ok = true) {
@@ -73,7 +79,7 @@ describe("useAdminSettingsController", () => {
     expect(result.current.lang).toBe("KO");
     expect(result.current.ollamaHost).toBe("http://10.0.0.8:11434");
     expect(result.current.llmModel).toBe("server-model");
-    expect(result.current.llmApiKey).toBe("local-key");
+    expect(result.current.llmApiKey).toBe("");
     expect(result.current.serverApiKeyConfigured).toBe(true);
     expect(result.current.modelOptions).toContain("server-model");
   });
@@ -156,5 +162,45 @@ describe("useAdminSettingsController", () => {
     expect(result.current.llmErr).toContain("不是合法 JSON");
     expect(result.current.llmErr).toContain("原文片段");
     expect(result.current.llmErr).toContain("<html>");
+  });
+
+  it("testDb sends wizard-built db_url when URL box stale but wizard has password", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/runtime-config") && (!init || init.method === undefined)) {
+        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", api_key_configured: false, model: "m" } } });
+      }
+      if (url.endsWith("/api/admin/llm-models")) {
+        return jsonResponse({ models: ["m"] });
+      }
+      if (url.endsWith("/api/admin/db-status") && init?.method === "POST") {
+        const body = JSON.parse(String((init as RequestInit).body)) as { db_url?: string };
+        expect(body.db_url).toBe("postgresql://u:p%40x@127.0.0.1:5432/qiazhi_bazi?sslmode=disable");
+        return jsonResponse({ ok: true, latency_ms: 1, db_url: "masked" });
+      }
+      if (url.endsWith("/api/admin/runtime-config") && init?.method === "PUT") {
+        return jsonResponse({ ok: true });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAdminSettingsController());
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    act(() => {
+      result.current.setDbUrl("postgresql://:@127.0.0.1:5432/qiazhi_bazi?sslmode=disable");
+      result.current.setPgUser("u");
+      result.current.setPgPassword("p@x");
+    });
+
+    await act(async () => {
+      await result.current.testDb();
+    });
+
+    expect(result.current.db?.ok).toBe(true);
   });
 });

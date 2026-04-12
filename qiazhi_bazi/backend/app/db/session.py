@@ -1,6 +1,7 @@
-"""数据库会话：仅允许连接白名单内 PostgreSQL（默认本地）。"""
+"""数据库会话：PostgreSQL；默认同环回/私网任意端口；可 QIAZHI_TRUST_ANY_HOST 跳过主机校验。"""
 from __future__ import annotations
 
+import ipaddress
 import os
 from contextlib import contextmanager
 from urllib.parse import urlparse
@@ -14,15 +15,39 @@ if not DB_URL:
 parsed = urlparse(DB_URL)
 if parsed.scheme not in {"postgresql", "postgresql+psycopg2", "postgresql+psycopg"}:
     raise RuntimeError(f"数据库协议不合法: {parsed.scheme}。仅允许 PostgreSQL。")
-allowed_hosts = {"127.0.0.1", "localhost"}
-extra_hosts = os.getenv("QIAZHI_ALLOWED_DB_HOSTS", "").strip()
-if extra_hosts:
-    allowed_hosts.update({h.strip().lower() for h in extra_hosts.split(",") if h.strip()})
 
-host = (parsed.hostname or "").lower()
-if host not in allowed_hosts or (parsed.port not in (None, 5432)):
+_TRUST_ANY = os.getenv("QIAZHI_TRUST_ANY_HOST", "").lower() in ("1", "true", "yes")
+_STRICT_DB = os.getenv("QIAZHI_STRICT_DB_HOSTS", "").lower() in ("1", "true", "yes")
+
+allowed_hosts = {"127.0.0.1", "localhost", "::1", "host.docker.internal"}
+_extra = os.getenv("QIAZHI_ALLOWED_DB_HOSTS", "").strip()
+if _extra:
+    allowed_hosts.update({h.strip().lower() for h in _extra.split(",") if h.strip()})
+
+_host = (parsed.hostname or "").lower()
+
+
+def _startup_db_host_ok() -> bool:
+    if _TRUST_ANY:
+        return True
+    if _host in allowed_hosts:
+        return True
+    if not _STRICT_DB:
+        try:
+            ip = ipaddress.ip_address(_host)
+            # RFC1918 / 环回 / 链路本地等，与 ipaddress.is_private 语义一致（含 10/8, 172.16/12, 192.168/16）
+            return bool(ip.is_private or ip.is_loopback or ip.is_link_local)
+        except ValueError:
+            return False
+    return False
+
+
+if not _startup_db_host_ok():
     raise RuntimeError(
-        f"数据库地址不合法。仅允许 {', '.join(sorted(allowed_hosts))}:5432（或省略端口）。"
+        f"数据库地址不合法：主机 {_host!r} 未放行。"
+        "默认可用 localhost/127.0.0.1/::1 及私网 IP、任意端口；"
+        "任意主机名可设 QIAZHI_TRUST_ANY_HOST=true，或把主机名加入 QIAZHI_ALLOWED_DB_HOSTS。"
+        + (" 已启用 QIAZHI_STRICT_DB_HOSTS。" if _STRICT_DB else "")
     )
 
 _engine = create_engine(

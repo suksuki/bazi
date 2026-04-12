@@ -1,6 +1,7 @@
 """Service helpers for admin infrastructure and LLM diagnostics."""
 from __future__ import annotations
 
+import ipaddress
 import os
 import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional
@@ -15,6 +16,7 @@ from app.api.admin_helpers import (
     jsonb_check_payload,
     masked_db_url,
     strip_reasoning,
+    trust_any_host,
     validate_target_url,
 )
 from app.api.contracts import DbStatusRequest, LlmTestRequest
@@ -27,18 +29,36 @@ CompressFn = Callable[[QwenClient, str, str], Awaitable[str]]
 OllamaFn = Callable[[str, str, List[Dict[str, str]], float, int], Awaitable[str]]
 
 
+def _admin_db_host_allowed(hostname: str, allowed_db_hosts: set[str]) -> bool:
+    if trust_any_host():
+        return True
+    h = (hostname or "").lower()
+    if h in allowed_db_hosts:
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            return not (os.getenv("QIAZHI_STRICT_DB_HOSTS", "").lower() in ("1", "true", "yes"))
+    except ValueError:
+        pass
+    return False
+
+
 def get_db_status_payload(target_db_url: Optional[str]) -> Dict[str, Any]:
     url = target_db_url or DB_URL
     validate_target_url(url, {"postgresql", "postgresql+psycopg2", "postgresql+psycopg"})
     parsed = urlparse(url)
-    allowed_db_hosts = {"127.0.0.1", "localhost"}
+    allowed_db_hosts = {"127.0.0.1", "localhost", "::1", "host.docker.internal"}
     extra_hosts = os.getenv("QIAZHI_ALLOWED_DB_HOSTS", "").strip()
     if extra_hosts:
         allowed_db_hosts.update({host.strip().lower() for host in extra_hosts.split(",") if host.strip()})
     host = (parsed.hostname or "").lower()
-    if host not in allowed_db_hosts or (parsed.port not in (None, 5432)):
+    if not _admin_db_host_allowed(host, allowed_db_hosts):
         allowed_str = ", ".join(sorted(allowed_db_hosts))
-        raise HTTPException(status_code=403, detail=f"数据库地址必须在白名单内：{allowed_str}:5432")
+        raise HTTPException(
+            status_code=403,
+            detail=f"数据库主机未放行：{host}。默认可用 127.0.0.1/localhost 及私网 IP；域名请写入 QIAZHI_ALLOWED_DB_HOSTS。",
+        )
 
     engine = _engine if not target_db_url else create_engine(url, echo=False)
     start = time.perf_counter()

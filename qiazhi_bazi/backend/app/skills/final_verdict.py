@@ -1,6 +1,8 @@
 """FinalVerdictSkill: 基于物理真值生成终判与变更摘要（编排层；Prompt/LLM/解析见 final_verdict_parts）。"""
 from __future__ import annotations
 
+import json
+import logging
 from datetime import datetime
 from threading import Lock
 from typing import Any, Dict, List
@@ -24,12 +26,24 @@ from app.skills.final_verdict_parts.evidence import get_logical_evidence as get_
 from app.skills.final_verdict_parts.json_extract import extract_json_from_llm_text
 from app.skills.final_verdict_parts.narrative_anchors import build_verdict_narrative_chunks
 from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat
+from app.skills.final_verdict_parts.physics_fallback import build_minimal_verdict_json_from_core_physics
 from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_messages
 from app.skills.final_verdict_parts.verdict_fingerprint import append_verdict_fingerprint_html_comment
 from app.skills.final_verdict_parts.verdict_parse import parse_verdict_anchor_layer, parse_verdict_body_and_changelog
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
 from app.skills.structure_final_decision import build_structure_final_decision_v0
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
+
+_LOG = logging.getLogger(__name__)
+
+
+def _json_hint(val: Any, max_len: int = 200) -> str:
+    try:
+        s = val if isinstance(val, str) else json.dumps(val, ensure_ascii=False)
+    except (TypeError, ValueError):
+        s = str(val)
+    return (s[: max_len - 1] + "…") if len(s) > max_len else s
+
 
 __all__ = [
     "IMMUTABLE_WILL_TAGS",
@@ -161,9 +175,17 @@ class FinalVerdictSkill(BaseSkill):
             lang=lang,
             plugin_weights=plugin_weights,
         )
-        raw, tel = await run_final_verdict_chat(messages)
         _cfg = get_runtime_config().get("llm", {})
         llm_meta: Dict[str, Any] = {"model_name": str(_cfg.get("model") or "LLM")}
+        try:
+            raw, tel = await run_final_verdict_chat(messages)
+        except Exception as exc:
+            _LOG.warning("final_verdict_llm_chat_failed: %s", exc)
+            raw = ""
+            tel = {}
+            llm_meta["repair_mode"] = "physics_fallback_llm_exception"
+        if not isinstance(tel, dict):
+            tel = {}
         if isinstance(tel, dict):
             if tel.get("elapsed_ms") is not None:
                 llm_meta["elapsed_ms"] = tel.get("elapsed_ms")
@@ -175,8 +197,16 @@ class FinalVerdictSkill(BaseSkill):
         resolved_model_id = (
             str(llm_meta.get("model_name") or "").strip() or str(_cfg.get("model") or "").strip() or "unknown"
         )
+        if not str(raw or "").strip():
+            raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
+            llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "physics_fallback_empty_response"
         obj = extract_json_from_llm_text(raw)
         verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+        if not str(verdict_body or "").strip():
+            raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
+            obj = extract_json_from_llm_text(raw)
+            verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+            llm_meta["repair_mode"] = "physics_fallback_empty_verdict_body"
 
         logical_evidence = self.get_logical_evidence(
             metadata=metadata,
@@ -243,16 +273,16 @@ class FinalVerdictSkill(BaseSkill):
                 f"Climate.opposing={climate_trace.get('opposing_element', 'unknown')} factor={((climate_trace.get('factors', {}) or {}).get(climate_trace.get('opposing_element', ''), 1.0))}",
                 f"做功.total={blind_work.get('work_expectation', 0.0)}",
                 f"做功.morphing_hints={','.join(blind_work.get('morphing_hints', []) or [])}",
-                f"做功.body_damage={blind_work.get('body_damage_estimation', {})}",
+                f"做功.body_damage={_json_hint(blind_work.get('body_damage_estimation', {}), 200)}",
                 f"做功.hint={blind_work.get('llm_hint', '劳而无功')}",
-                f"格局V0.hud={structure_v0.get('hud', {})}",
+                f"格局V0.hud={_json_hint(structure_v0.get('hud', {}), 200)}",
                 f"Topology.edges={len(topology.get('edges', []))}",
                 f"格局终审V0.primary={final_decision_v0.get('primary_structure')}",
                 f"格局终审V0.risk={final_decision_v0.get('stability_risk')}",
                 f"空间.gain_paths={spatial_audit.get('gain_path_count', 0)}",
                 f"空间.loss_paths={spatial_audit.get('loss_path_count', 0)}",
                 f"百科.gain_vectors={enc_audit.get('gain_vector_count', 0)}",
-                f"解锁.options={strike_options}",
+                f"解锁.options={_json_hint(strike_options, 220)}",
                 school_audit.get("balance_line", "[BALANCE_SCHOOL] 未提供"),
                 school_audit.get("work_line", "[WORK_SCHOOL] 未提供"),
             ]

@@ -99,10 +99,18 @@ def test_get_db_status_payload_collects_counts(monkeypatch):
 
 
 def test_get_db_status_response_masks_error_for_bad_host():
-    response = admin_service.get_db_status_response(DbStatusRequest(db_url="postgresql://x:x@10.0.0.5/test"))
+    # 公网单播；勿用 203.0.113.0/24 等文档地址——在 Python 中 is_private 为 True，会误走连库逻辑导致超时
+    response = admin_service.get_db_status_response(DbStatusRequest(db_url="postgresql://x:x@1.1.1.1/test"))
     assert response["ok"] is False
-    assert "白名单" in response["error"]
+    assert "未放行" in response["error"] or "白名单" in response["error"] or "未在白名单" in response["error"]
     assert "***" in response["db_url"]
+
+
+def test_get_db_status_response_allows_rfc1918_without_extra_env(monkeypatch):
+    monkeypatch.setattr(admin_service, "_engine", _FakeEngine())
+    monkeypatch.setattr(admin_service, "create_engine", lambda *_a, **_k: _FakeEngine())
+    payload = admin_service.get_db_status_payload("postgresql://tester:tester@10.0.0.5:15432/qiazhi_test")
+    assert payload["ok"] is True
 
 
 def test_initialize_database_wraps_errors(monkeypatch):

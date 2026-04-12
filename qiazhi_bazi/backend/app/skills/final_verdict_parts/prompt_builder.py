@@ -8,6 +8,11 @@ from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
 from app.services.helpers.interpretation_helper import merge_interpretation_metadata_for_llm
+from app.skills.final_verdict_parts.metadata_sanitize import (
+    sanitize_metadata_for_verdict_llm,
+    scrub_previous_verdict_sql,
+    shallow_physics_for_llm_evidence,
+)
 from app.skills.blind_school_encyclopedia import audit_host_guest_vectors, build_blind_school_digest
 from app.skills.dual_school_auditor import build_dual_school_audit
 from app.skills.final_verdict_parts.context_trim import clean_context_lines
@@ -63,10 +68,12 @@ def build_final_verdict_messages(
     opener = "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
     if high_reasoning:
         opener += "【高推理模式】插件 evidence 为全量条线，不做碎片化截断；须逐条映射到 assertions.evidence_refs。"
-    md_for_llm = merge_interpretation_metadata_for_llm(dict(metadata))
+    prev_scrubbed = scrub_previous_verdict_sql(previous_verdict or "")
+    md_for_llm = merge_interpretation_metadata_for_llm(sanitize_metadata_for_verdict_llm(dict(metadata)))
+    pt_evidence = shallow_physics_for_llm_evidence(physics_tensor if isinstance(physics_tensor, dict) else {})
     logical_evidence = get_logical_evidence(
         metadata=md_for_llm,
-        physics_tensor=physics_tensor,
+        physics_tensor=pt_evidence,
         selected_cards=selected_cards,
         consensus_history=consensus_history,
     )
@@ -234,7 +241,7 @@ def build_final_verdict_messages(
             )
     flow_section = "\n[因果流通链·五行相生]\n" + ("\n".join(flow_lines) if flow_lines else "- （无审计数据）\n")
 
-    audit_snap = format_audit_snapshot_inline(md_for_llm, physics_tensor)
+    audit_snap = format_audit_snapshot_inline(md_for_llm, pt_evidence)
     plugin_out = physics_tensor.get("plugin_outputs") if isinstance(physics_tensor.get("plugin_outputs"), dict) else {}
     evidence_chunks = format_plugin_evidence_chunks(plugin_out, high_reasoning=high_reasoning)
     evidence_block = f"\n[{evidence_block_heading}]\n"
@@ -340,7 +347,7 @@ def build_final_verdict_messages(
         + "\n[格局断言关键词]\n"
         + ("\n".join(f"- {k}" for k in pk) if pk else "- （无）\n")
         + "\n"
-        + f"Previous_Verdict={previous_verdict or ''}\n"
+        + f"Previous_Verdict={prev_scrubbed}\n"
         + "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

@@ -6,13 +6,16 @@ from typing import Optional
 
 from fastapi import Header, HTTPException
 
+# 与 restart_local_services.sh / frontend .env.local.example 对齐；未配置 env 时不再 503，仍须请求头匹配。
+_FALLBACK_ADMIN_TOKEN = "local-dev-qiazhi-admin"
+
+
+def _expected_admin_token() -> str:
+    raw = (os.getenv("QIAZHI_ADMIN_TOKEN") or "").strip()
+    return raw if raw else _FALLBACK_ADMIN_TOKEN
+
 
 def admin_token_guard(x_admin_token: Optional[str] = Header(default=None)) -> None:
-    expected = (os.getenv("QIAZHI_ADMIN_TOKEN") or "").strip()
-    if not expected:
-        raise HTTPException(
-            status_code=503,
-            detail="Admin API 已禁用：请在服务端设置非空环境变量 QIAZHI_ADMIN_TOKEN 后再访问 /api/admin/*。",
-        )
+    expected = _expected_admin_token()
     if not x_admin_token or str(x_admin_token).strip() != expected:
         raise HTTPException(status_code=401, detail="admin token 无效")

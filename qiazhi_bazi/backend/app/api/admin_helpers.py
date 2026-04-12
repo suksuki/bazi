@@ -75,8 +75,13 @@ def hard_compact_conclusion(text: str, max_len: int = 120) -> str:
 
 
 def allowed_hosts() -> set[str]:
-    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost")
+    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost,::1,host.docker.internal")
     return {item.strip().lower() for item in raw.split(",") if item.strip()}
+
+
+def trust_any_host() -> bool:
+    """为 true 时跳过 HTTP(S)/PostgreSQL 等目标主机校验（仅保留协议与 sqlite 禁止）。"""
+    return os.getenv("QIAZHI_TRUST_ANY_HOST", "").lower() in ("1", "true", "yes")
 
 
 def validate_target_url(raw_url: str, scheme_allow: set[str]) -> None:
@@ -87,6 +92,8 @@ def validate_target_url(raw_url: str, scheme_allow: set[str]) -> None:
         raise HTTPException(status_code=400, detail="禁止 SQLite。仅允许 PostgreSQL。")
     if not parsed.hostname:
         raise HTTPException(status_code=400, detail="URL 缺少主机名")
+    if trust_any_host():
+        return
     host = parsed.hostname.lower()
     allowed = allowed_hosts()
     if host in allowed:
@@ -97,6 +104,14 @@ def validate_target_url(raw_url: str, scheme_allow: set[str]) -> None:
             return
     except ValueError:
         pass
+    strict = os.getenv("QIAZHI_STRICT_ADMIN_URLS", "").lower() in ("1", "true", "yes")
+    if not strict:
+        try:
+            ip = ipaddress.ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local:
+                return
+        except ValueError:
+            pass
     raise HTTPException(status_code=403, detail=f"目标主机未在白名单内: {host}")
 
 

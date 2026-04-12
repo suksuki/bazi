@@ -3,6 +3,9 @@ set -euo pipefail
 
 # Qiazhi-Bazi services restart (backend 8001, frontend 3001 by default)
 #
+# 若机房页 /api/admin 返回 503：多为未设置 QIAZHI_ADMIN_TOKEN。本脚本在未配置时会注入本机弱默认
+# local-dev-qiazhi-admin，并导出 NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN / NEXT_PUBLIC_QIAZHI_API 供前端 build/start。
+#
 # 不会重启 Nginx（仅本机 Node/Python）。改 Nginx 请自行 systemctl reload nginx。
 #
 # 若出现「首页 200 但 /_next/static 400」或 EADDRINUSE：多为旧 next-server 没被干掉。
@@ -135,19 +138,22 @@ if port_in_use "$BACKEND_PORT"; then
   exit 1
 fi
 
-echo "[2/5] Start backend ($BACKEND_PORT)..."
+echo "[2/5] Load env for frontend build + runtime..."
 if [ -f "$BACKEND_ENV" ]; then
   set -a && source "$BACKEND_ENV" && set +a
 fi
+# Admin API 未配置时 FastAPI 对 /api/admin/* 一律返回 503；本脚本为本地开发注入弱默认（公网部署必须在 backend/.env 设置强 token）。
+if [ -z "${QIAZHI_ADMIN_TOKEN:-}" ]; then
+  export QIAZHI_ADMIN_TOKEN="local-dev-qiazhi-admin"
+  echo "[restart] 提示: 未设置非空 QIAZHI_ADMIN_TOKEN，本次已使用本机默认（勿用于公网）。"
+fi
+# 前端 prod build 需在同一 shell 内可见 NEXT_PUBLIC_*（勿依赖未创建的 .env.local）
+export NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN="${NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN:-$QIAZHI_ADMIN_TOKEN}"
+export NEXT_PUBLIC_QIAZHI_API="${NEXT_PUBLIC_QIAZHI_API:-http://127.0.0.1:${BACKEND_PORT}}"
 
-nohup bash -lc "cd '$BACKEND_DIR' && set -a && source '$BACKEND_ENV' 2>/dev/null && set +a && PYTHONPATH=. python3 -m uvicorn main:app --host 0.0.0.0 --port '$BACKEND_PORT'" \
-  > "$LOG_DIR/backend-$BACKEND_PORT.log" 2>&1 &
-BACKEND_PID=$!
-
-sleep 1
-
-echo "[3/5] Prepare frontend runtime ($FRONTEND_MODE)..."
 FRONTEND_LOG="$LOG_DIR/frontend-$FRONTEND_PORT.log"
+
+echo "[3/5] Prepare frontend ($FRONTEND_MODE)..."
 if [ "$FRONTEND_MODE" = "prod" ]; then
   if [ "$SKIP_BUILD" = "1" ]; then
     echo "SKIP_BUILD=1 → 跳过 pnpm build（使用现有 .next）"
@@ -158,25 +164,33 @@ if [ "$FRONTEND_MODE" = "prod" ]; then
   fi
 fi
 
-echo "[4/5] Start frontend ($FRONTEND_PORT, mode=$FRONTEND_MODE)..."
+echo "[4/5] Start backend ($BACKEND_PORT)..."
+nohup bash -lc "cd \"$BACKEND_DIR\" && set -a && source \"$BACKEND_ENV\" 2>/dev/null && set +a && if [ -z \"\${QIAZHI_ADMIN_TOKEN:-}\" ]; then export QIAZHI_ADMIN_TOKEN=local-dev-qiazhi-admin; fi && PYTHONPATH=. python3 -m uvicorn main:app --host 0.0.0.0 --port $BACKEND_PORT" \
+  > "$LOG_DIR/backend-$BACKEND_PORT.log" 2>&1 &
+BACKEND_PID=$!
+
+# 给 uvicorn 绑定端口留时间（慢盘/首次 import 时 1s 不够）
+sleep 2
+
+echo "[5/5] Start frontend ($FRONTEND_PORT, mode=$FRONTEND_MODE)..."
 if [ "$FRONTEND_MODE" = "dev" ]; then
   if command -v pnpm >/dev/null 2>&1; then
-    nohup bash -lc "cd '$FRONTEND_DIR' && pnpm dev -- -p '$FRONTEND_PORT'" > "$FRONTEND_LOG" 2>&1 &
+    nohup bash -lc "cd \"$FRONTEND_DIR\" && export NEXT_PUBLIC_QIAZHI_API=\"$NEXT_PUBLIC_QIAZHI_API\" NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN=\"$NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN\" && pnpm dev -- -p $FRONTEND_PORT" > "$FRONTEND_LOG" 2>&1 &
   else
-    nohup bash -lc "cd '$FRONTEND_DIR' && npm run dev -- -p '$FRONTEND_PORT'" > "$FRONTEND_LOG" 2>&1 &
+    nohup bash -lc "cd \"$FRONTEND_DIR\" && export NEXT_PUBLIC_QIAZHI_API=\"$NEXT_PUBLIC_QIAZHI_API\" NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN=\"$NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN\" && npm run dev -- -p $FRONTEND_PORT" > "$FRONTEND_LOG" 2>&1 &
   fi
 else
   if command -v pnpm >/dev/null 2>&1; then
-    nohup bash -lc "cd '$FRONTEND_DIR' && pnpm start -p '$FRONTEND_PORT'" > "$FRONTEND_LOG" 2>&1 &
+    nohup bash -lc "cd \"$FRONTEND_DIR\" && export NEXT_PUBLIC_QIAZHI_API=\"$NEXT_PUBLIC_QIAZHI_API\" NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN=\"$NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN\" && pnpm start -p $FRONTEND_PORT" > "$FRONTEND_LOG" 2>&1 &
   else
-    nohup bash -lc "cd '$FRONTEND_DIR' && npm run start -- -p '$FRONTEND_PORT'" > "$FRONTEND_LOG" 2>&1 &
+    nohup bash -lc "cd \"$FRONTEND_DIR\" && export NEXT_PUBLIC_QIAZHI_API=\"$NEXT_PUBLIC_QIAZHI_API\" NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN=\"$NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN\" && npm run start -- -p $FRONTEND_PORT" > "$FRONTEND_LOG" 2>&1 &
   fi
 fi
 FRONTEND_PID=$!
 
 sleep 2
 
-echo "[5/5] Health checks..."
+echo "Health checks..."
 BACKEND_HEALTH="FAIL"
 FRONTEND_HEALTH="FAIL"
 BACKEND_HTTP_CODE=""
@@ -202,4 +216,15 @@ echo "FrontendMode: $FRONTEND_MODE"
 echo "Backend Log : $LOG_DIR/backend-$BACKEND_PORT.log"
 echo "Frontend Log: $FRONTEND_LOG"
 echo "=================================="
+
+if [ "$BACKEND_HEALTH" != "OK" ]; then
+  echo "" >&2
+  echo "后端未通过 /health（常见：旧逻辑下 init_db 失败会直接退出；已在新版 main 中改为降级启动）。最近日志：" >&2
+  tail -n 30 "$LOG_DIR/backend-$BACKEND_PORT.log" 2>/dev/null >&2 || true
+fi
+if [ "$FRONTEND_HEALTH" != "OK" ]; then
+  echo "" >&2
+  echo "前端未返回 200。最近日志：" >&2
+  tail -n 25 "$FRONTEND_LOG" 2>/dev/null >&2 || true
+fi
 

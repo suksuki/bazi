@@ -123,6 +123,52 @@ def strength_qualifier(abs_energy: float) -> str:
     return "强旺/执拗"
 
 
+def format_deity_abs_semantic_slices(physics_tensor: Dict[str, Any]) -> List[str]:
+    """十神 Abs → 短中文档位行，供弱模型在 [Physical Evidence] 顶部做语义锚（非原始 JSON）。"""
+    if not isinstance(physics_tensor, dict):
+        return []
+    axes = physics_tensor.get("deity_energy_axes") if isinstance(physics_tensor.get("deity_energy_axes"), dict) else {}
+    abs_nodes = physics_tensor.get("abs_nodes") if isinstance(physics_tensor.get("abs_nodes"), dict) else {}
+    deities = ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"]
+    lines: List[str] = []
+    for d in deities:
+        abs_energy: float | None = None
+        axis = axes.get(d) if isinstance(axes, dict) else None
+        if isinstance(axis, dict):
+            try:
+                abs_energy = float(axis.get("absolute_energy") or 0.0)
+            except (TypeError, ValueError):
+                abs_energy = None
+        if abs_energy is None:
+            raw = abs_nodes.get(d)
+            if isinstance(raw, (int, float)):
+                try:
+                    abs_energy = float(raw)
+                except (TypeError, ValueError):
+                    abs_energy = None
+        if abs_energy is None:
+            continue
+        if abs_energy < 0.15:
+            label = "全无/可忽略"
+        elif abs_energy < 1.0:
+            label = "极弱"
+        elif abs_energy < 2.5:
+            label = "偏弱"
+        elif abs_energy < 5.0:
+            label = "中庸可用"
+        elif abs_energy < 12.0:
+            label = "偏强"
+        else:
+            label = "独强/执拗"
+        lines.append(f"语义.十神.{d}={label}（Abs≈{abs_energy:.2f}）")
+    if lines:
+        lines.insert(
+            0,
+            "语义.十神总览=以下为能量档位叙事锚，与十神.*.Abs 数值行一致；断言请引用 plugin.sys.core.physics 或柱位锚。",
+        )
+    return lines
+
+
 def get_logical_evidence(
     *,
     metadata: Dict[str, Any],
@@ -136,6 +182,7 @@ def get_logical_evidence(
     lines: List[str] = []
     sanhe_block = _collect_sanhe_evidence_lines(physics_tensor if isinstance(physics_tensor, dict) else {})
     lines.extend(sanhe_block)
+    lines.extend(format_deity_abs_semantic_slices(physics_tensor if isinstance(physics_tensor, dict) else {}))
     pillars = ((metadata or {}).get("pillars", {}) if isinstance(metadata, dict) else {}) or {}
     if pillars:
         y = pillars.get("year", {})

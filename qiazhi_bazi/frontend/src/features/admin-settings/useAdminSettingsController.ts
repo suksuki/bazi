@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ADMIN_HEADERS, API_BASE, SETTINGS_KEY } from "./constants";
 import { DbStatus, LlmResp, PersistedAdminSettings, SaveState } from "./types";
-import { buildPersistedAdminSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
+import {
+  buildPersistedAdminSettings,
+  looksLikeTutorialDatabaseUrl,
+  makePgUrl,
+  normalizeOllamaHostInput,
+  parsePostgresUrlForWizard,
+  resolveDatabaseUrlForTest,
+} from "./utils";
 
 export function useAdminSettingsController() {
   const [db, setDb] = useState<DbStatus | null>(null);
@@ -61,17 +68,24 @@ export function useAdminSettingsController() {
           /* ignore quota / private mode */
         }
       }
+      const urlParts = parsed.dbUrl ? parsePostgresUrlForWizard(parsed.dbUrl) : null;
       if (parsed.dbUrl) setDbUrl(parsed.dbUrl);
       if (parsed.pgHost) setPgHost(parsed.pgHost);
+      else if (urlParts?.pgHost) setPgHost(urlParts.pgHost);
       if (parsed.pgPort) setPgPort(parsed.pgPort);
+      else if (urlParts?.pgPort) setPgPort(urlParts.pgPort);
       if (parsed.pgDatabase) setPgDatabase(parsed.pgDatabase);
-      if (parsed.pgUser) setPgUser(parsed.pgUser);
-      if (typeof parsed.pgPassword === "string") setPgPassword(parsed.pgPassword);
+      else if (urlParts?.pgDatabase) setPgDatabase(urlParts.pgDatabase);
+      if (parsed.pgUser !== undefined && String(parsed.pgUser).trim() !== "") setPgUser(String(parsed.pgUser));
+      else if (urlParts) setPgUser(urlParts.pgUser);
+      if (typeof parsed.pgPassword === "string" && parsed.pgPassword !== "") setPgPassword(parsed.pgPassword);
+      else if (urlParts) setPgPassword(urlParts.pgPassword);
       if (parsed.pgSslMode) setPgSslMode(parsed.pgSslMode);
+      else if (urlParts?.pgSslMode) setPgSslMode(urlParts.pgSslMode);
       if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
       if (parsed.userPrompt) setUserPrompt(parsed.userPrompt);
       if (parsed.lang) setLang(parsed.lang);
-      if (parsed.ollamaHost) setOllamaHost(parsed.ollamaHost);
+      if (parsed.ollamaHost) setOllamaHost(normalizeOllamaHostInput(parsed.ollamaHost));
       if (parsed.llmModel) setLlmModel(parsed.llmModel);
       /* llmApiKey 仅内存态，不从 localStorage 回填、也不持久化 */
     } catch {
@@ -89,7 +103,8 @@ export function useAdminSettingsController() {
         const llm = json?.config?.llm ?? {};
         if (cancelled) return;
         if (typeof llm.base_url === "string" && llm.base_url) {
-          setOllamaHost(llm.base_url.endsWith("/v1") ? llm.base_url.slice(0, -3) : llm.base_url);
+          const root = llm.base_url.endsWith("/v1") ? llm.base_url.slice(0, -3) : llm.base_url;
+          setOllamaHost(normalizeOllamaHostInput(root));
         }
         setServerApiKeyConfigured(Boolean(llm.api_key_configured));
         if (typeof llm.model === "string") setLlmModel(llm.model);
@@ -103,15 +118,74 @@ export function useAdminSettingsController() {
     };
   }, []);
 
+  function wizardPgFields() {
+    return {
+      host: pgHost,
+      port: pgPort,
+      database: pgDatabase,
+      user: pgUser,
+      password: pgPassword,
+      sslMode: pgSslMode,
+    };
+  }
+
   async function testDb() {
     setLoadingDb(true);
     try {
+      const effectiveUrl = resolveDatabaseUrlForTest(dbUrl, wizardPgFields());
+      if (effectiveUrl.trim() !== dbUrl.trim()) {
+        setDbUrl(effectiveUrl);
+      }
+      if (looksLikeTutorialDatabaseUrl(effectiveUrl)) {
+        setDb({
+          ok: false,
+          error: "Database URL 仍是文档示例占位符",
+          hint: "向导里用户名/密码为空，且连接串里是字面量 user:password@host。请填写真实账号并点「生成 DATABASE_URL」，或粘贴真实 postgresql:// 连接串。",
+        });
+        return;
+      }
       const response = await fetch(`${API_BASE}/api/admin/db-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
-        body: JSON.stringify({ db_url: dbUrl.trim() || undefined }),
+        body: JSON.stringify({ db_url: effectiveUrl.trim() || undefined }),
       });
-      setDb((await response.json()) as DbStatus);
+      const raw = await response.text();
+      let json: Record<string, unknown>;
+      try {
+        json = raw.trim() ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      } catch {
+        const snippet = raw.replace(/\s+/g, " ").trim().slice(0, 400);
+        setDb({
+          ok: false,
+          error: `响应不是合法 JSON（HTTP ${response.status}）`,
+          hint: `多为管理接口未指到 FastAPI、未带 X-Admin-Token（NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN）或网关返回了 HTML。片段：${snippet || "(空)"}`,
+        });
+        return;
+      }
+      if (!response.ok) {
+        const d = json.detail;
+        const detailStr =
+          d == null
+            ? ""
+            : typeof d === "string"
+              ? d
+              : Array.isArray(d)
+                ? d.map((x) => (typeof x === "object" && x && "msg" in x ? String((x as { msg: string }).msg) : String(x))).join("; ")
+                : JSON.stringify(d);
+        setDb({
+          ok: false,
+          error: detailStr || `Test DB 失败（HTTP ${response.status}）`,
+          hint: "请确认 FastAPI 已启动、NEXT_PUBLIC_QIAZHI_API 指向后端，且前后端 QIAZHI_ADMIN_TOKEN / NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN 一致。",
+        });
+        return;
+      }
+      setDb(json as DbStatus);
+    } catch (error) {
+      setDb({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+        hint: "浏览器无法访问 API（Failed to fetch 等）。请检查 NEXT_PUBLIC_QIAZHI_API、HTTPS/混合内容、防火墙与后端是否监听。",
+      });
     } finally {
       setLoadingDb(false);
     }
@@ -119,10 +193,14 @@ export function useAdminSettingsController() {
 
   async function initDb() {
     setDbInitMsg("执行中…");
+    const effectiveUrl = resolveDatabaseUrlForTest(dbUrl, wizardPgFields());
+    if (effectiveUrl.trim() !== dbUrl.trim()) {
+      setDbUrl(effectiveUrl);
+    }
     const response = await fetch(`${API_BASE}/api/admin/db-init`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
-      body: JSON.stringify({ db_url: dbUrl.trim() || undefined }),
+      body: JSON.stringify({ db_url: effectiveUrl.trim() || undefined }),
     });
     const json = await response.json();
     setDbInitMsg(response.ok ? json.message || "完成" : `失败：${json.detail ?? "unknown error"}`);
@@ -265,7 +343,9 @@ export function useAdminSettingsController() {
     } catch {
       setSaveState("error");
       if (showSavedMessage) {
-        setLlmSaveMsg("测试通过，但保存异常。请检查 8001 或网络连接。");
+        setLlmSaveMsg(
+          `测试通过，但保存 runtime_config 失败。请确认 FastAPI 已启动、${API_BASE || "NEXT_PUBLIC_QIAZHI_API"} 可访问，并已配置 NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN。`,
+        );
       }
       return false;
     }

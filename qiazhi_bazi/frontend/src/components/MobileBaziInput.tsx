@@ -2,23 +2,9 @@
 
 import { useState } from "react";
 
-const API_BASE_RAW = (process.env.NEXT_PUBLIC_QIAZHI_API ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
-const resolveApiBase = () => {
-  if (!API_BASE_RAW) return "";
-  if (API_BASE_RAW === "/api") return "";
-  if (API_BASE_RAW.startsWith("/")) return API_BASE_RAW;
-  if (typeof window === "undefined") return API_BASE_RAW;
-  try {
-    const apiHost = new URL(API_BASE_RAW).hostname;
-    const pageHost = window.location.hostname;
-    if (LOOPBACK_HOSTS.has(apiHost) && !LOOPBACK_HOSTS.has(pageHost)) return "";
-  } catch {
-    return "";
-  }
-  return API_BASE_RAW;
-};
-const API_BASE = resolveApiBase();
+import { resolveQiazhiApiBase } from "@/lib/qiazhiApiBase";
+
+const API_BASE = resolveQiazhiApiBase();
 
 export function MobileBaziInput() {
   const [date, setDate] = useState("");

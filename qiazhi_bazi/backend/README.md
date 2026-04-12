@@ -30,12 +30,17 @@ backend/
 |------|------|
 | `DATABASE_URL` | 默认数据库连接串，当前架构禁止 SQLite 回退 |
 | `QIAZHI_BAZI_DB_URL` | 兼容旧变量；未设置 `DATABASE_URL` 时才读取 |
-| `QIAZHI_ALLOWED_DB_HOSTS` | 可选，逗号分隔数据库白名单，默认 `127.0.0.1,localhost` |
-| `QIAZHI_CORS_ORIGINS` | 逗号分隔，默认 `http://localhost:3000` |
+| `QIAZHI_ALLOWED_DB_HOSTS` | 可选，逗号分隔数据库主机名白名单；另默认可连私网/环回 IP，端口不限 |
+| `QIAZHI_STRICT_DB_HOSTS` | 设为 `1` 时仅允许 `QIAZHI_ALLOWED_DB_HOSTS` 与内置名，不再自动放行私网 IP |
+| `QIAZHI_ALLOWED_HOSTS` | 管理接口校验 LLM/HTTP 目标主机，默认含 `127.0.0.1,localhost,::1,host.docker.internal` |
+| `QIAZHI_STRICT_ADMIN_URLS` | 设为 `1` 时仅允许上述白名单主机，不再自动放行私网/环回 IP（防 SSRF） |
+| `QIAZHI_TRUST_ANY_HOST` | 设为 `true`/`1` 时跳过 DB 与 LLM 目标主机校验（仅禁止 sqlite）；公网部署慎用 |
+| `QIAZHI_CORS_ORIGINS` | 可选；与内置默认（本机 3000/3001、`https://dblife.com` / `www`）合并 |
+| `QIAZHI_CORS_EXTRA_ORIGINS` | 可选；逗号分隔，再并入上列 |
 | `QIAZHI_BAZI_LLM_BASE_URL` | OpenAI 兼容 LLM 根地址 |
 | `QIAZHI_BAZI_LLM_API_KEY` | 本地可填 `empty` |
 | `QIAZHI_BAZI_LLM_MODEL` | 推理模型名 |
-| `QIAZHI_ADMIN_TOKEN` | **必配**：非空字符串；未配置则全部 `/api/admin/*` 返回 503（禁止未配置即放行） |
+| `QIAZHI_ADMIN_TOKEN` | 非空则用之；未配置或空白时使用弱默认 `local-dev-qiazhi-admin`（公网务必改成强随机并同步前端 `NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN`） |
 | `QIAZHI_DNA_REGISTRY_PATH` | 可选，规则基因 JSON 路径（演化覆盖物理系数） |
 | `QIAZHI_EVOLUTION_ADMISSION_PATH` / `QIAZHI_EVOLUTION_ADMIT` | 可选，演化结果是否准入覆盖 |
 
@@ -46,7 +51,7 @@ backend/
 除 `runtime-config`、`db-status` 等外，典型还包括：
 
 - `PUT /api/admin/runtime-config`：请求体可带 `causal_routing` 对象，与磁盘上 `llm` 等并存合并。
-- 演化批跑、反馈等以 `app/api/admin.py` 与 `contracts` 为准；**`QIAZHI_ADMIN_TOKEN` 必须为非空字符串**，否则全部 `/api/admin/*` 返回 503（禁止未配置即放行）。
+- 演化批跑、反馈等以 `app/api/admin.py` 与 `contracts` 为准；未设置 `QIAZHI_ADMIN_TOKEN` 时管理接口使用弱默认 token，请求头仍须 `X-Admin-Token` 匹配。
 
 具体路径以 OpenAPI（`/docs`）或集成测试 `tests/integration/test_api_flow.py` 为准。
 

@@ -16,9 +16,18 @@ frontend/
 
 | 变量 | 说明 |
 |------|------|
-| `NEXT_PUBLIC_QIAZHI_API` | 后端根 URL，默认 `http://127.0.0.1:8001` |
+| `NEXT_PUBLIC_QIAZHI_API` | 后端根 URL；未配置且 `NODE_ENV=development` 且页面为环回主机时默认 `http://127.0.0.1:8001`。公网**不要**填 `127.0.0.1`；与 Nginx 同域反代 `/api` 时**留空** |
+| `NEXT_PUBLIC_QIAZHI_SAME_ORIGIN_PROXY` | 设为 `1` 时强制由 Next 把 `/api` 反写到 `QIAZHI_INTERNAL_API_URL`（仅当 Nginx **未**单独反代 `/api` 时用） |
+| `NEXT_PUBLIC_QIAZHI_DISABLE_SAME_ORIGIN_REWRITE` | 设为 `1` 时关闭生产构建里自动开启的 `/api` rewrite（**Nginx 已 `location /api` 到 uvicorn 时必须设**） |
+| `QIAZHI_INTERNAL_API_URL` | 仅 `next build` 时 Node 使用；Next 反代 `/api` 时的上游，默认 `http://127.0.0.1:8001` |
 | `NEXT_PUBLIC_QIAZHI_ADMIN_TOKEN` | 仅内网/单人调试：浏览器请求头 `X-Admin-Token`。**切勿**在公网多用户环境依赖此前端变量保管密钥；生产应走后端代理或仅服务端持有 token |
-| （后端）`QIAZHI_ADMIN_TOKEN` | **必填**非空后 `/api/admin/*` 才可用；未配置时管理接口返回 503 |
+| （后端）`QIAZHI_ADMIN_TOKEN` | 未配置时后端使用弱默认 `local-dev-qiazhi-admin`；公网请改为强随机并与本表上一行前端变量一致 |
+
+### 生产（Nginx 把 `/api` 交给 FastAPI，Next 只出页面）
+
+1. 按 `../deploy/nginx-qiazhi-dblife.example.conf` 改站点：``location /api/`` → uvicorn 端口，``location /`` → Next 端口。  
+2. 将本目录下 `.env.production.example` 复制为 `.env.production`，按需改 token。  
+3. 在服务器执行 `pnpm build` 后启动 `pnpm start`（或你的进程管理器）。
 
 ## 开发
 

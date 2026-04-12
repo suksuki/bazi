@@ -88,8 +88,8 @@ export function PluginCollisionHub({ physicsTensor, highlightPluginId }: Props) 
     return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
   }, [cr.skill_sovereignty_rank]);
 
-  const plugins = (physicsTensor?.plugin_outputs as Record<string, unknown> | undefined) || {};
   const pluginRows = useMemo(() => {
+    const plugins = (physicsTensor?.plugin_outputs as Record<string, unknown> | undefined) || {};
     return sortPluginEntries(Object.entries(plugins)).map(([id, row]) => {
       const r = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
       return {
@@ -99,7 +99,7 @@ export function PluginCollisionHub({ physicsTensor, highlightPluginId }: Props) 
         reason: extractMatchReason(r),
       } satisfies PluginAuditRow;
     });
-  }, [plugins]);
+  }, [physicsTensor?.plugin_outputs]);
 
   const hasRouter = Object.keys(cr).length > 0;
 

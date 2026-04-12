@@ -71,21 +71,42 @@ function DbSection({ controller }: { controller: Controller }) {
       <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs uppercase tracking-wide text-zinc-500">PostgreSQL 向导</p>
-          <button type="button" onClick={usePgPreset} className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs">
+          <button type="button" onClick={usePgPreset} className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs" title="会清空用户名与密码，仅填本机常用主机与库名">
             使用本地预设
           </button>
         </div>
-        <div className="grid gap-2 md:grid-cols-2">
-          <input value={pgHost} onChange={(e) => setPgHost(e.target.value)} placeholder="Host" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80" />
-          <input value={pgPort} onChange={(e) => setPgPort(e.target.value)} placeholder="Port" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80" />
-          <input value={pgDatabase} onChange={(e) => setPgDatabase(e.target.value)} placeholder="Database" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80" />
-          <input value={pgUser} onChange={(e) => setPgUser(e.target.value)} placeholder="User" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80" />
-          <input value={pgPassword} onChange={(e) => setPgPassword(e.target.value)} type="password" placeholder="Password" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80" />
-          <select value={pgSslMode} onChange={(e) => setPgSslMode(e.target.value)} className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs outline-none focus:border-amber-500/80">
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+          「使用本地预设」会保留 127.0.0.1 / qiazhi_bazi 等默认值并清空用户名与密码；凭据只存在本页与 localStorage，从未由他人远程改写。点「Test DB」时：若下方连接串缺用户名或密码，会自动用向导字段拼串（不必先点「生成」）；若连接串已含完整 user:pass，则以连接串为准。Test DB 需先能访问 FastAPI（见页顶 API 说明）。
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            主机
+            <input value={pgHost} onChange={(e) => setPgHost(e.target.value)} placeholder="127.0.0.1" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            端口
+            <input value={pgPort} onChange={(e) => setPgPort(e.target.value)} placeholder="5432" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            数据库名
+            <input value={pgDatabase} onChange={(e) => setPgDatabase(e.target.value)} placeholder="qiazhi_bazi" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-400">
+            SSL
+            <select value={pgSslMode} onChange={(e) => setPgSslMode(e.target.value)} className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80">
             <option value="disable">sslmode=disable</option>
             <option value="prefer">sslmode=prefer</option>
             <option value="require">sslmode=require</option>
           </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-400 md:col-span-2">
+            用户名
+            <input value={pgUser} onChange={(e) => setPgUser(e.target.value)} placeholder="PostgreSQL 用户名" autoComplete="off" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-zinc-400 md:col-span-2">
+            密码
+            <input value={pgPassword} onChange={(e) => setPgPassword(e.target.value)} type="password" placeholder="数据库密码（仅保存在本机 localStorage 的向导字段中）" autoComplete="new-password" className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 outline-none focus:border-amber-500/80" />
+          </label>
         </div>
         <button type="button" onClick={buildPgUrlFromFields} className="mt-2 rounded-md bg-zinc-800 px-3 py-2 text-xs">
           生成 DATABASE_URL
@@ -134,7 +155,13 @@ function LlmSection({ controller }: { controller: Controller }) {
           </div>
         </div>
         <p className="mt-2 text-xs text-zinc-500">URL 自动补全 `/v1`，模型会自动从服务端读取。</p>
-        <p className="mt-2 text-xs text-zinc-400">运行配置同步：{saveState === "saving" ? "保存中..." : null}{saveState === "saved" ? "已保存到后端（用户端生效）" : null}{saveState === "error" ? "保存失败（检查 8001）" : null}{saveState === "idle" ? "待同步" : null}</p>
+        <p className="mt-2 text-xs text-zinc-400">
+          运行配置同步：
+          {saveState === "saving" ? "保存中..." : null}
+          {saveState === "saved" ? "已保存到后端（用户端生效）" : null}
+          {saveState === "error" ? "保存失败（后端不可达、401 或见页顶 API 说明）" : null}
+          {saveState === "idle" ? "待同步" : null}
+        </p>
       </div>
       <div>
         <label className="text-xs text-zinc-400">Model（自动从 URL 拉取）</label>

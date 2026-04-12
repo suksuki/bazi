@@ -212,7 +212,7 @@ flowchart LR
 - **PluginCollisionHub**（插件碰撞审计）：匹配插件中文名、`confidence_score`/payload 置信度百分比、`matcher_logic` → evidence/verdict/error 降级理由；`meta.causal_routing` 文案经 `stripTimelineEnumJargon`。
 - **NarrativeProvenancePanel**：`humanizeProvenanceSnippet` 生成人话 `displayTitle`；系统（蓝）/ LLM（紫）片段 + Trace；**TopologyMapV1** 三合金边联动 **SanheStructurePanel**。
 - **SemanticAccordion**：各区块可折叠；默认展开决策时序与判语血统，默认折叠「原始张量（完整 JSON）」。
-- **逻辑检察院**：`AuditChamberPanel.tsx` 全功能嵌入 DebugView 对应 Accordion（原 AuditChamber 页仍 re-export 同组件）。
+- **逻辑检察院**：`AuditChamberPanel.tsx` 全功能嵌入 DebugView 对应 Accordion（机房 Admin 不再挂载；仅黑匣子入口）。
 
 ---
 

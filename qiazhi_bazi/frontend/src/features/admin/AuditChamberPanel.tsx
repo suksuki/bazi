@@ -57,7 +57,7 @@ function saveHistory(items: AuditHistoryItem[]) {
   }
 }
 
-/** 原「逻辑检察院」完整 UI，可嵌入 DebugView 或独立机房页。 */
+/** 「逻辑检察院」完整 UI，嵌入 DebugView（黑匣子）；机房 Admin 不再挂载。 */
 export function AuditChamberPanel() {
   const { state } = useLabStore();
   const labMetadata = state.snapshot?.metadata;

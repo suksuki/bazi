@@ -57,6 +57,9 @@ def format_plugin_evidence_chunks(
             else:
                 line = str(item).strip()
             line = line.replace("\n", " ").replace("\r", " ")[:max_line_len]
+            low = line.lower()
+            if "update" in low and "physics_interaction" in low.replace(" ", ""):
+                continue
             if line:
                 lines.append(f"证据切片.{pid}[{i}] {line}")
     return lines
