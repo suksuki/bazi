@@ -77,8 +77,8 @@ describe("useAdminSettingsController", () => {
     expect(result.current.dbUrl).toBe("postgresql://local");
     expect(result.current.pgHost).toBe("127.0.0.2");
     expect(result.current.lang).toBe("KO");
-    expect(result.current.ollamaHost).toBe("http://10.0.0.8:11434");
-    expect(result.current.llmModel).toBe("server-model");
+    expect(result.current.ollamaHost).toBe("http://127.0.0.1:11435");
+    expect(result.current.llmModel).toBe("local-model");
     expect(result.current.llmApiKey).toBe("");
     expect(result.current.serverApiKeyConfigured).toBe(true);
     expect(result.current.modelOptions).toContain("server-model");

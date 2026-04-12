@@ -29,6 +29,8 @@ frontend/
 2. 将本目录下 `.env.production.example` 复制为 `.env.production`，按需改 token。  
 3. 在服务器执行 `pnpm build` 后启动 `pnpm start`（或你的进程管理器）。
 
+一次完整踩坑与根因综述（CORS、同源反代、端口占死导致 `_next` 404 等）：[`../docs/operations/PRODUCTION_DEPLOY_AND_INCIDENT_SYNOPSIS_v1.md`](../docs/operations/PRODUCTION_DEPLOY_AND_INCIDENT_SYNOPSIS_v1.md)。
+
 ## 开发
 
 ```bash

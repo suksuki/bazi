@@ -1,0 +1,3 @@
+≈DATABASE_URL=postgresql+psycopg2://qiazhi_admin:jin8858@localhost:5432/qiazhi_bazi
+# QIAZHI_BAZI_LLM_BASE_URL=  # 例如 http://127.0.0.1:11434/v1（Ollama）或自有网关，勿提交真实机房地址
+QIAZHI_CORS_ORIGINS=http://192.168.0.13:3001,http://127.0.0.1:3001,http://localhost:3001

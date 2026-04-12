@@ -68,15 +68,24 @@ export function makePgUrl(args: PgWizardFields) {
 /**
  * Test DB / Init 请求体用：避免向导里已填账号密码但 Database URL 输入框仍是旧串或未点「生成」导致连错库。
  * - `dbUrl` 为空时用向导拼串；
- * - 若 URL 中**尚未同时包含**用户名与密码（含 `postgresql://:@host` 仅主机），且向导里填了用户名或密码，则用向导拼串；
- * - 若 URL 已同时含用户名与密码，则以输入框为准（便于只粘贴连接串、不碰向导）。
+ * - 若 URL 与向导中的**用户名或密码**不一致（常见：向导已改正拼写，URL 框仍为 `qizzhi_admin` 等旧串），以向导为准；
+ * - 若 URL 已同时含用户名与密码且与向导一致，则以输入框为准（便于只粘贴连接串；向导留空即可）。
  */
 export function resolveDatabaseUrlForTest(dbUrl: string, wizard: PgWizardFields): string {
   const trimmed = dbUrl.trim();
   const fromWizard = makePgUrl(wizard);
   if (!trimmed) return fromWizard;
   const parsed = parsePostgresUrlForWizard(trimmed);
-  const urlHasFullUserinfo = Boolean(parsed && parsed.pgUser.trim() && parsed.pgPassword.trim());
+  if (!parsed) {
+    if (wizard.user.trim() || wizard.password.trim()) return fromWizard;
+    return trimmed;
+  }
+  const urlHasFullUserinfo = Boolean(parsed.pgUser.trim() && parsed.pgPassword.trim());
+  const wUser = wizard.user.trim();
+  const wPass = wizard.password;
+  const userMismatch = Boolean(wUser && parsed.pgUser.trim() !== wUser);
+  const passMismatch = Boolean(wPass && parsed.pgPassword !== wPass);
+  if (userMismatch || passMismatch) return fromWizard;
   if (urlHasFullUserinfo) return trimmed;
   if (wizard.user.trim() || wizard.password.trim()) return fromWizard;
   return trimmed;

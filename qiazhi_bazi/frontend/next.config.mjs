@@ -37,6 +37,15 @@ const nextConfig = {
     if (!sameOriginApiProxy) return [];
     return [{ source: "/api/:path*", destination: `${internalApi}/api/:path*` }];
   },
+  /** 减轻「已缓存旧 HTML + 新 BUILD_ID」导致的 Server Action / RSC 500；静态 chunk 仍走默认长缓存 */
+  async headers() {
+    return [
+      {
+        source: "/",
+        headers: [{ key: "Cache-Control", value: "private, max-age=0, must-revalidate" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

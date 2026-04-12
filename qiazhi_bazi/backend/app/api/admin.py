@@ -76,41 +76,39 @@ async def _ollama_chat_no_think(
     messages: List[Dict[str, str]],
     temperature: float,
     max_tokens: int,
+    *,
+    request_options: Optional[Dict[str, Any]] = None,
+    runtime_options: Optional[Dict[str, Any]] = None,
 ) -> str:
     import httpx
+
+    from app.core.llm_ollama import merge_ollama_chat_options
 
     root = base_url.rstrip("/")
     if root.endswith("/v1"):
         root = root[:-3]
     url = f"{root}/api/chat"
+    opts = merge_ollama_chat_options(
+        temperature=temperature,
+        num_predict=max_tokens,
+        request_options=request_options,
+        runtime_options=runtime_options,
+    )
     base_payload: Dict[str, Any] = {
         "model": model,
         "messages": messages,
         "stream": False,
-        "options": {
-            "temperature": temperature,
-            "num_predict": max_tokens,
-        },
+        "options": opts,
     }
-    # 新版 Ollama 支持 think:false；旧版会因未知字段 400，故先带 think 再降级重试
+    # 常见指令小模型无 think；推理模型需压思考链时设 QIAZHI_OLLAMA_CHAT_THINK_FALSE=1。
+    if os.getenv("QIAZHI_OLLAMA_CHAT_THINK_FALSE", "").lower() in ("1", "true", "yes"):
+        base_payload = {**base_payload, "think": False}
     timeout_sec = float(os.getenv("QIAZHI_ADMIN_OLLAMA_TIMEOUT_SEC", "240") or "240")
     async with httpx.AsyncClient(timeout=timeout_sec) as client:
-        last_exc: Exception | None = None
-        for extra in ({"think": False}, {}):
-            payload = {**base_payload, **extra}
-            try:
-                r = await client.post(url, json=payload)
-                r.raise_for_status()
-                data = r.json()
-                out = (data.get("message") or {}).get("content", "").strip()
-                if out:
-                    return out
-            except Exception as exc:  # noqa: BLE001
-                last_exc = exc
-                continue
-        if last_exc:
-            raise last_exc
-    return ""
+        r = await client.post(url, json=base_payload)
+        r.raise_for_status()
+        data = r.json()
+        return (data.get("message") or {}).get("content", "").strip()
 
 
 @router.get("/db-status")

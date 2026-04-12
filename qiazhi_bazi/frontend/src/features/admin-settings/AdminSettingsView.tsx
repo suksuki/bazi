@@ -34,6 +34,7 @@ function MetricsCards({ controller }: { controller: Controller }) {
 function DbSection({ controller }: { controller: Controller }) {
   const {
     db,
+    lastDbVerifySummary,
     dbInitMsg,
     dbUrl,
     loadingDb,
@@ -76,8 +77,13 @@ function DbSection({ controller }: { controller: Controller }) {
           </button>
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-          「使用本地预设」会保留 127.0.0.1 / qiazhi_bazi 等默认值并清空用户名与密码；凭据只存在本页与 localStorage，从未由他人远程改写。点「Test DB」时：若下方连接串缺用户名或密码，会自动用向导字段拼串（不必先点「生成」）；若连接串已含完整 user:pass，则以连接串为准。Test DB 需先能访问 FastAPI（见页顶 API 说明）。
+          「使用本地预设」会保留 127.0.0.1 / qiazhi_bazi 等默认值并清空用户名与密码。本页向导、连接串、提示词、Ollama 地址与模型等会写入本机 <code className="text-zinc-400">localStorage</code>（键名见代码常量），下次进入同一浏览器会自动恢复；换机或无痕模式需重新填写。点「Test DB」时：若连接串缺用户名或密码会自动用向导拼串；若连接串与向导的账号或密码不一致，以向导为准并会回写连接串。Test DB 需先能访问 FastAPI（见页顶 API 说明）。
         </p>
+        {lastDbVerifySummary ? (
+          <p className="mt-2 text-[11px] text-zinc-400" role="status">
+            {lastDbVerifySummary}；当前表格为本次会话检测结果，点「Test DB」可刷新。
+          </p>
+        ) : null}
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1 text-xs text-zinc-400">
             主机
@@ -133,7 +139,36 @@ function DbSection({ controller }: { controller: Controller }) {
 }
 
 function LlmSection({ controller }: { controller: Controller }) {
-  const { effectiveBaseUrl, lang, llmApiKey, serverApiKeyConfigured, llmErr, llmFastPath, llmModel, llmResult, llmSaveMsg, loadingLlm, loadingModels, modelLoadMsg, modelOptions, ollamaHost, saveState, setLang, setLlmApiKey, setLlmFastPath, setLlmModel, setOllamaHost, setSystemPrompt, setUserPrompt, systemPrompt, testLlm, loadModels, userPrompt } = controller;
+  const {
+    effectiveBaseUrl,
+    lang,
+    llmApiKey,
+    serverApiKeyConfigured,
+    llmErr,
+    llmFastPath,
+    llmModel,
+    ollamaOptionsJson,
+    llmResult,
+    llmSaveMsg,
+    loadingLlm,
+    loadingModels,
+    modelLoadMsg,
+    modelOptions,
+    ollamaHost,
+    saveState,
+    setLang,
+    setLlmApiKey,
+    setLlmFastPath,
+    setLlmModel,
+    setOllamaOptionsJson,
+    setOllamaHost,
+    setSystemPrompt,
+    setUserPrompt,
+    systemPrompt,
+    testLlm,
+    loadModels,
+    userPrompt,
+  } = controller;
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/20">
       <div className="mb-4 flex items-center justify-between">
@@ -198,6 +233,19 @@ function LlmSection({ controller }: { controller: Controller }) {
           弱模型兼容（单次主调用，跳过后端二次整理 LLM）
         </label>
       </div>
+      <div className="mt-4">
+        <label className="text-xs text-zinc-400">Ollama options（JSON，可选）</label>
+        <textarea
+          value={ollamaOptionsJson}
+          onChange={(e) => setOllamaOptionsJson(e.target.value)}
+          rows={2}
+          placeholder='{"num_ctx":2048,"num_batch":128}  小模型可收紧 num_ctx 加快 prefill；留空则仅用后端环境变量 / runtime'
+          className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-200 outline-none focus:border-amber-500/80"
+        />
+        <p className="mt-1 text-[11px] text-zinc-500">
+          后端会合并 <code className="text-zinc-400">QIAZHI_OLLAMA_FAST_LITE</code>、<code className="text-zinc-400">QIAZHI_OLLAMA_OPTIONS_JSON</code> 与已保存的 runtime；此处填写对单次 Test 与保存后的主程序 Ollama 请求均生效。
+        </p>
+      </div>
       {llmErr ? <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{llmErr}</p> : null}
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-800">
         <table className="min-w-full text-left text-sm"><tbody className="divide-y divide-zinc-800">
@@ -217,7 +265,7 @@ export function AdminSettingsView({ controller }: { controller: Controller }) {
     <div className="space-y-6">
       <div className="rounded-2xl border border-zinc-800 bg-gradient-to-r from-zinc-900 to-zinc-900/40 p-5">
         <h2 className="text-xl font-semibold tracking-tight">基础设施设置</h2>
-        <p className="mt-1 text-sm text-zinc-400">先配地址，再点测试。默认不预填账号密码，避免敏感信息泄露。</p>
+        <p className="mt-1 text-sm text-zinc-400">先配地址，再点测试。默认不预填账号密码；曾保存的配置会在本机浏览器自动回填（见数据库区块说明）。</p>
       </div>
       <MetricsCards controller={controller} />
       <DbSection controller={controller} />

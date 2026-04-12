@@ -68,8 +68,15 @@ describe("admin settings utils", () => {
     );
   });
 
-  it("resolveDatabaseUrlForTest keeps pasted url when it already has user and password", () => {
-    const pasted = "postgresql://a:b@127.0.0.1:5432/otherdb?sslmode=require";
+  it("resolveDatabaseUrlForTest prefers wizard when url username differs (e.g. qizzhi typo in url box)", () => {
+    const typoUrl = "postgresql://qizzhi_admin:secret@127.0.0.1:5432/qiazhi_bazi?sslmode=disable";
+    expect(resolveDatabaseUrlForTest(typoUrl, demoWizard)).toBe(
+      "postgresql://qiazhi_admin:secret@127.0.0.1:5432/qiazhi_bazi?sslmode=disable"
+    );
+  });
+
+  it("resolveDatabaseUrlForTest keeps pasted url when user and password match wizard", () => {
+    const pasted = "postgresql://qiazhi_admin:secret@127.0.0.1:5432/otherdb?sslmode=require";
     expect(resolveDatabaseUrlForTest(pasted, demoWizard)).toBe(pasted);
   });
 

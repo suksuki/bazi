@@ -21,12 +21,13 @@ from app.api.admin_helpers import (
 )
 from app.api.contracts import DbStatusRequest, LlmTestRequest
 from app.core.llm_ollama import looks_like_native_ollama_base_url
+from app.core.runtime_config import get_runtime_config
 from app.db.session import DB_URL, _engine, init_db
 from app.llm.client import QwenClient
 
 RewriteFn = Callable[[QwenClient, str, str], Awaitable[str]]
 CompressFn = Callable[[QwenClient, str, str], Awaitable[str]]
-OllamaFn = Callable[[str, str, List[Dict[str, str]], float, int], Awaitable[str]]
+OllamaFn = Callable[..., Awaitable[str]]
 
 
 def _admin_db_host_allowed(hostname: str, allowed_db_hosts: set[str]) -> bool:
@@ -164,12 +165,17 @@ async def execute_llm_test(
         raw_content = ""
         if body.base_url and body.model and looks_like_native_ollama_base_url(body.base_url):
             try:
+                runtime_llm = get_runtime_config().get("llm") or {}
+                ro = runtime_llm.get("ollama_options") if isinstance(runtime_llm, dict) else None
+                runtime_opts = ro if isinstance(ro, dict) else None
                 raw_content = await ollama_chat_no_think(
                     body.base_url,
                     body.model,
                     messages,
                     body.temperature,
                     body.max_tokens,
+                    request_options=body.ollama_options,
+                    runtime_options=runtime_opts,
                 )
             except Exception:
                 raw_content = ""

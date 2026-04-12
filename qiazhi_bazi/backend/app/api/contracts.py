@@ -279,8 +279,12 @@ class LlmTestRequest(BaseModel):
     api_key: Optional[str] = Field(default=None, description="可覆盖 API Key")
     model: Optional[str] = Field(default=None, description="可覆盖模型名")
     fast_path: bool = Field(
-        default=False,
-        description="为 True 时只做一次主模型调用，跳过二次 LLM 重写/压缩，仅本地 strip 与 hard_compact；弱模型或网关超时较严时建议开启。",
+        default=True,
+        description="为 True 时只做一次主模型调用，跳过二次 LLM 重写/压缩，仅本地 strip 与 hard_compact；与基础设施页默认「弱模型兼容」一致。显式传 False 时，长回答会再走一次压缩用 LLM。",
+    )
+    ollama_options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="并入 Ollama /api/chat 的 options（如 num_ctx、num_batch）；与 QIAZHI_OLLAMA_OPTIONS_JSON、runtime llm.ollama_options 合并，本字段同名键优先。",
     )
 
 
@@ -298,7 +302,8 @@ class RuntimeConfigRequest(BaseModel):
         default_factory=dict,
         description=(
             "LLM 连接与行为开关：base_url、model、provider、audit_prompt_tier、"
-            "is_high_reasoning_mode（bool，开启时终判 Prompt 中插件 evidence 不做碎片化截断）等"
+            "is_high_reasoning_mode（bool，开启时终判 Prompt 中插件 evidence 不做碎片化截断）、"
+            "ollama_options（object，并入 Ollama /api/chat 的 options，如 num_ctx）等"
         ),
     )
     causal_routing: Optional[Dict[str, Any]] = Field(default=None, description="因果路由：策略、主权、权比等")

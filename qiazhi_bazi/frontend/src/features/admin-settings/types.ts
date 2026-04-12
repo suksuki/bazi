@@ -31,6 +31,13 @@ export type PersistedAdminSettings = {
   lang: "ZH" | "EN" | "KO";
   ollamaHost: string;
   llmModel: string;
+  /** Ollama `options` JSON（如 {"num_ctx":2048}），与后端 runtime / 环境变量合并 */
+  ollamaOptionsJson?: string;
+  /** 弱模型兼容开关；缺省由前端默认 true 处理 */
+  llmFastPath?: boolean;
+  /** 上次在本页点击 Test DB 的结果与时间（ISO），便于再次进入时提示 */
+  lastDbVerifyOk?: boolean;
+  lastDbVerifyAt?: string;
 };
 
 export type SaveState = "idle" | "saving" | "saved" | "error";

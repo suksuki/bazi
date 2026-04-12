@@ -8,14 +8,19 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import httpx
 
-from app.core.llm_ollama import looks_like_native_ollama_base_url
+from app.core.llm_ollama import looks_like_native_ollama_base_url, merge_ollama_chat_options
+from app.core.runtime_config import get_runtime_config
 
 FIRST_OBSERVATION_SYSTEM_PROMPT = (
-    "你现在是一个逻辑严密的命理分析师。"
-    "当你收到 BaziMetadata 时，不要直接下结论。"
-    "请先列出你观察到的物理冲突点/组合点，"
-    "最后向裁决人发起引导提问："
-    "“我发现 A 与 B 正在对撞，我们是否需要深入分析这个局部？”"
+    "你是子平/干支语境下的分析师（只做 BaziMetadata 字段级观察；禁止西洋十二星座、行星宫位、紫微斗数等本任务未给出的体系）。"
+    "收到 JSON 后：不下吉凶/运势/人际后果等结论；只复述 conflict_matrix.points、四柱干支等 JSON 已载信息；"
+    "未出现的组合关系一律不得虚构。"
+    "若附地理经纬度，仅作地点标注，不得据此发明「与经纬度对撞」「星座」「星象」「天体位置」等机制。"
+    "输出固定为两段、总字数约 260 字内："
+    "第一段用短句或条列列出观察到的物理冲突点/组合点（仅 JSON 有据可查者；若无点则明确写矩阵当前无探测点）。"
+    "第二段仅一句向裁决人提问，须与第一段一致，语义贴近：「我发现 A 与 B 形成××关系，我们是否需要深入分析这个局部？」"
+    "其中 A、B 为干支或柱位，×× 与 points[].detail 用词一致。"
+    "禁止编号展开（如 1.2.3.）、「建议从以下几方面」「仅供参考」等泛化清单或咨询套话。"
 )
 
 
@@ -65,26 +70,34 @@ class QwenClient:
         max_tokens: int,
     ) -> Optional[str]:
         """
-        对 Ollama 推理模型强制关闭思考输出，直接取结论。
+        Ollama 原生 /api/chat（非流式）。默认不传 think（与常见指令模型一致）；
+        需 think:false 时设环境变量 QIAZHI_OLLAMA_CHAT_THINK_FALSE=1。
         """
         url = f"{self._ollama_root()}/api/chat"
-        base: Dict[str, Any] = {
+        cfg = get_runtime_config().get("llm") or {}
+        ro = cfg.get("ollama_options") if isinstance(cfg, dict) else None
+        runtime_opts = ro if isinstance(ro, dict) else None
+        opts = merge_ollama_chat_options(
+            temperature=temperature,
+            num_predict=max_tokens,
+            request_options=None,
+            runtime_options=runtime_opts,
+        )
+        payload: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": temperature, "num_predict": max_tokens},
+            "options": opts,
         }
+        if (os.getenv("QIAZHI_OLLAMA_CHAT_THINK_FALSE", "") or "").lower() in ("1", "true", "yes"):
+            payload["think"] = False
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            for extra in ({"think": False}, {}):
-                payload = {**base, **extra}
-                r = await client.post(url, json=payload)
-                if r.status_code >= 400:
-                    continue
-                data = r.json()
-                content = ((data.get("message") or {}).get("content") or "").strip()
-                if content:
-                    return content
-        return None
+            r = await client.post(url, json=payload)
+            if r.status_code >= 400:
+                return None
+            data = r.json()
+            content = ((data.get("message") or {}).get("content") or "").strip()
+            return content or None
 
     def _telemetry_from_text(self, text: str, elapsed_ms: float, usage: Any) -> Dict[str, Any]:
         approx = round(len(text) / 1.8, 2) if text else 0.0
@@ -201,6 +214,13 @@ def build_first_observation_messages(
         "EN": "Please output strictly in English. Use standard academic Pinyin for specific Chinese metaphysics terms if no direct English equivalent exists.",
         "KO": "최종 출력은 반드시 한국어로만 작성하세요.",
     }
+    lang_u = (lang or "ZH").upper()
+    zh_guard = ""
+    if lang_u == "ZH":
+        zh_guard = (
+            "除 JSON 已列字段外不得引入新实体；勿写星座/行星/占星盘/天体运行；"
+            "勿把经纬度解释成新的冲合刑害理由；勿输出多段「分析建议」清单。\n"
+        )
     return [
         {"role": "system", "content": FIRST_OBSERVATION_SYSTEM_PROMPT},
         {
@@ -209,6 +229,7 @@ def build_first_observation_messages(
                 "以下是 BaziMetadata，请仅做观察与提问，不要给最终判断：\n"
                 f"{json.dumps(metadata, ensure_ascii=False)}\n"
                 f"{location_hint}\n"
+                f"{zh_guard}"
                 f"{output_hint.get(lang, output_hint['ZH'])}"
             ),
         },

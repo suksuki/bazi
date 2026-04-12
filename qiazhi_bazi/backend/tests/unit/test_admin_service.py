@@ -192,6 +192,7 @@ def test_execute_llm_test_uses_rewrite_fallback():
                     language="ZH",
                     temperature=0.1,
                     max_tokens=64,
+                    fast_path=False,
                 ),
                 rewrite_final_only=_rewrite,
                 compress_final_only=_compress,

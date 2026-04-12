@@ -266,7 +266,7 @@ flowchart LR
 **日期**: 2026-04-11 起迭代
 
 - **`POST /api/admin/llm-models`**（`app/api/admin.py::_collect_llm_model_names`）：对端口 **11434** 优先 `GET …/api/tags`；`base_url` 无 `/v1` 后缀时补试 `{url}/v1/models` 再 `{url}/models`，缓解仅填 `https://api.openai.com` 时的误配 502；超时 30s、`follow_redirects=True`；失败 `detail` 串联各次尝试错误摘要。
-- **`POST /api/admin/llm-test`** 稳定性：`strip_reasoning` 不再因正文任意位置出现子串 `reasoning` 整段清空（避免误判空结论）；Ollama `/api/chat` 先带 `think: false`，失败则**不带 `think`** 重试（`admin.py::_ollama_chat_no_think` 与 `app/llm/client.py::_chat_via_ollama_native`）。
+- **`POST /api/admin/llm-test`** 稳定性：`strip_reasoning` 不再因正文任意位置出现子串 `reasoning` 整段清空（避免误判空结论）；Ollama `/api/chat` **默认不传 `think`**（常见指令小模型无 think）；若推理模型需压思考链，可设环境变量 `QIAZHI_OLLAMA_CHAT_THINK_FALSE=1` 单次附带 `think:false`（`admin.py::_ollama_chat_no_think` 与 `app/llm/client.py::_chat_via_ollama_native`）。
 
 **单元测试**：`tests/unit/test_api_helpers.py`（strip_reasoning）、`tests/unit/test_admin_llm_model_collect.py`（llm-models 收集顺序与 URL 组合）。
 
