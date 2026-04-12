@@ -1,9 +1,24 @@
 import type { BaziMetadata } from "@/types/bazi";
 import { inferDecisionSkillId } from "@/features/decision-inbox/skillInference";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
+import { inboxIdsSuppressedByJournal } from "@/features/stream-board/decisionJournal";
+import { normalizeDecisionIds } from "@/features/stream-board/controller/streamBoardPure";
 import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./models";
 import { sysCorePhysicsPayload } from "./sysCorePhysics";
 
 export type { DecisionSignalToNoiseMeta };
+
+/** 地支字符 NFKC 归一化，消除兼容区/全角等导致的 id 抖动 */
+export function normalizeBranchToken(s: string): string {
+  return String(s || "").normalize("NFKC").trim();
+}
+
+function logFinalGuardSuppressed(cardId: string): void {
+  if (typeof process !== "undefined" && process.env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.log(`[Final Guard] id=${cardId} status=SUPPRESSED`);
+  }
+}
 
 /** 与后端 SANHE_GROUPS 一致：地支 Unicode 排序后的拼接键 → 局名 */
 const SANHE_SORTED_KEY_TO_TITLE: Record<string, string> = {
@@ -13,8 +28,63 @@ const SANHE_SORTED_KEY_TO_TITLE: Record<string, string> = {
   丑巳酉: "巳酉丑金局",
 };
 
+export function sortedSanheBranchKey(branches: string[]): string {
+  return [...new Set(branches.map(normalizeBranchToken))].filter(Boolean).sort().join("");
+}
+
+/** 与地支参与支集合幂等对应：物理重算后簇顺序变化也不改变 Inbox 卡片 id */
+export function stableSanheInboxCardId(branches: string[]): string {
+  return `inbox-sanhe-${sortedSanheBranchKey(branches)}`;
+}
+
 function _sortedBranchKey(branches: string[]): string {
-  return [...new Set(branches)].sort().join("");
+  return sortedSanheBranchKey(branches);
+}
+
+function _sanheClustersFromPhysics(physicsTensor: Record<string, unknown> | null | undefined): unknown[] {
+  if (!physicsTensor || typeof physicsTensor !== "object") return [];
+  const po = physicsTensor.plugin_outputs as Record<string, unknown> | undefined;
+  const payload = sysCorePhysicsPayload(po);
+  const raw = payload && Array.isArray(payload.sanhe_clusters) ? payload.sanhe_clusters : [];
+  return Array.isArray(raw) ? raw : [];
+}
+
+/**
+ * 将历史 `inbox-sanhe-<索引>` 解析为当前物理张量下的稳定 id，避免静默重算后 resolved 失配。
+ */
+export function expandResolvedInboxIds(
+  resolvedCardIds: readonly string[],
+  physicsTensor: Record<string, unknown> | null | undefined,
+): Set<string> {
+  const s = new Set(resolvedCardIds.map((x) => String(x || "").trim()).filter(Boolean));
+  const clusters = _sanheClustersFromPhysics(physicsTensor);
+  for (const id of resolvedCardIds) {
+    const m = /^inbox-sanhe-(\d+)$/.exec(String(id || "").trim());
+    if (!m) continue;
+    const idx = parseInt(m[1], 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= clusters.length) continue;
+    const cl = clusters[idx];
+    if (!cl || typeof cl !== "object") continue;
+    const brs = Array.isArray((cl as Record<string, unknown>).branches)
+      ? ((cl as Record<string, unknown>).branches as unknown[]).map((x) => String(x))
+      : [];
+    if (brs.length >= 3) s.add(stableSanheInboxCardId(brs));
+  }
+  return s;
+}
+
+function collectSuppressedInboxIdsFromConfirmedVerdicts(metadata: BaziMetadata | null | undefined): string[] {
+  const hc = metadata?.history_context as { confirmed_verdicts?: unknown[] } | undefined;
+  const cv = hc?.confirmed_verdicts;
+  if (!Array.isArray(cv)) return [];
+  const out: string[] = [];
+  for (const r of cv) {
+    if (!r || typeof r !== "object" || Array.isArray(r)) continue;
+    const rec = r as Record<string, unknown>;
+    const arr = rec.suppressed_inbox_card_ids;
+    if (Array.isArray(arr)) for (const x of arr) out.push(String(x));
+  }
+  return out;
 }
 
 function _sanheBureauTitle(branches: string[]): string {
@@ -45,13 +115,9 @@ function _sanheTendencyMarkdown(bureauTitle: string): string {
 
 /** 由 physics_tensor 装配地支三合 Decision 卡片（不受 Inbox 信噪比门控清空判词观察项的影响）。 */
 export function buildSanheStructureCards(physicsTensor: Record<string, unknown> | null | undefined): InboxCard[] {
-  if (!physicsTensor || typeof physicsTensor !== "object") return [];
-  const po = physicsTensor.plugin_outputs as Record<string, unknown> | undefined;
-  const payload = sysCorePhysicsPayload(po);
-  const raw = payload && Array.isArray(payload.sanhe_clusters) ? payload.sanhe_clusters : [];
-  const clusters: unknown[] = Array.isArray(raw) ? raw : [];
+  const clusters = _sanheClustersFromPhysics(physicsTensor);
   const out: InboxCard[] = [];
-  clusters.forEach((cl, idx) => {
+  clusters.forEach((cl) => {
     if (!cl || typeof cl !== "object") return;
     const row = cl as Record<string, unknown>;
     const brs = Array.isArray(row.branches) ? row.branches.map((x) => String(x)) : [];
@@ -69,7 +135,11 @@ export function buildSanheStructureCards(physicsTensor: Record<string, unknown> 
       })
       .filter(Boolean)
       .join("，");
-    const id = `inbox-sanhe-${idx}`;
+    const id = stableSanheInboxCardId(brs);
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log("[StableID Check]", id);
+    }
     const base: InboxCard = {
       id,
       title: "地支三合局锁定",
@@ -118,6 +188,8 @@ export function buildInboxCards(params: {
   firstPromptText: string;
   auditorProposalCards: InboxCard[];
   resolvedCardIds: string[];
+  /** 与快照 `decision_selection_ids` 对齐：已勾选「认同」的卡片立即从 Inbox 过滤 */
+  decisionSelectionIds?: string[];
   t: (text: string) => string;
   /** physics_tensor.meta.decision_signal_to_noise：低信噪且无 CRITICAL 时不生成判词观察项 */
   decisionSignalToNoise?: DecisionSignalToNoiseMeta | null;
@@ -127,21 +199,39 @@ export function buildInboxCards(params: {
   l1JunctionFlags?: Record<string, unknown> | null;
   /** physics_tensor：装配三合 L1_STRUCTURE 卡片 */
   physicsTensor?: Record<string, unknown> | null;
+  /** 实验室快照中的追加型决策日志（语义抑制） */
+  decisionJournal?: DecisionJournalEntry[];
 }): InboxCard[] {
   const {
     metadata,
     firstPromptText,
     auditorProposalCards,
     resolvedCardIds,
+    decisionSelectionIds,
     t,
     decisionSignalToNoise,
     patternProfile,
     l1JunctionFlags,
     physicsTensor,
+    decisionJournal,
   } = params;
   const sanheCards = buildSanheStructureCards(physicsTensor ?? null);
+  const fromVerdicts = collectSuppressedInboxIdsFromConfirmedVerdicts(metadata);
+  const selectionForSuppress = normalizeDecisionIds(decisionSelectionIds ?? []);
+  const journalSuppressedIds = inboxIdsSuppressedByJournal(decisionJournal);
+  const resolvedEffective = expandResolvedInboxIds(
+    [...resolvedCardIds, ...fromVerdicts, ...selectionForSuppress, ...journalSuppressedIds],
+    physicsTensor ?? null,
+  );
+  const keepCard = (card: InboxCard): boolean => {
+    if (resolvedEffective.has(card.id)) {
+      logFinalGuardSuppressed(card.id);
+      return false;
+    }
+    return true;
+  };
   if (!metadata) {
-    return sanheCards.filter((card) => !resolvedCardIds.includes(card.id));
+    return sanheCards.filter(keepCard);
   }
   const conflictPoints = metadata.conflict_matrix?.points ?? [];
 
@@ -207,7 +297,7 @@ export function buildInboxCards(params: {
   const withSovereignty = patternCard
     ? [patternCard, ...mergedCards.filter((c) => c.id !== patternCard.id)]
     : mergedCards;
-  return [...sanheCards, ...withSovereignty].filter((card) => !resolvedCardIds.includes(card.id));
+  return [...sanheCards, ...withSovereignty].filter(keepCard);
 }
 
 export function createAuditorProposalCard(proposal: LogicProposal): InboxCard | null {

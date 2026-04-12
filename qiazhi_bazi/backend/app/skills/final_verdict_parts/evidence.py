@@ -75,8 +75,16 @@ def _collect_sanhe_evidence_lines(physics_tensor: Dict[str, Any]) -> List[str]:
     return out
 
 
-def format_audit_snapshot_inline(metadata: Dict[str, Any], physics_tensor: Dict[str, Any]) -> str:
-    """八字元数据一行快照：四柱干/支 + 十神 Abs（供断语 1:1 审计）。"""
+def format_audit_snapshot_inline(
+    metadata: Dict[str, Any],
+    physics_tensor: Dict[str, Any],
+    *,
+    redact_ten_god_abs: bool = False,
+) -> str:
+    """八字元数据一行快照：四柱干/支 + 十神 Abs（供断语 1:1 审计）。
+
+    redact_ten_god_abs=True：叙事工厂弱模式，不输出十神 Abs 数值串，避免经「快照 ::」前缀泄漏。
+    """
     pillars = (metadata or {}).get("pillars") if isinstance((metadata or {}).get("pillars"), dict) else {}
     stems: List[str] = []
     branches: List[str] = []
@@ -89,16 +97,19 @@ def format_audit_snapshot_inline(metadata: Dict[str, Any], physics_tensor: Dict[
     abs_nodes = physics_tensor.get("abs_nodes") if isinstance(physics_tensor.get("abs_nodes"), dict) else {}
     axes = physics_tensor.get("deity_energy_axes") if isinstance(physics_tensor.get("deity_energy_axes"), dict) else {}
     ten_bits: List[str] = []
-    for d in ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"]:
-        v = abs_nodes.get(d) if isinstance(abs_nodes.get(d), (int, float)) else None
-        if v is None and isinstance(axes.get(d), dict):
-            try:
-                v = float((axes.get(d) or {}).get("absolute_energy") or 0.0)
-            except (TypeError, ValueError):
-                v = None
-        if isinstance(v, (int, float)):
-            ten_bits.append(f"{d}:{float(v):.3f}")
+    if not redact_ten_god_abs:
+        for d in ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"]:
+            v = abs_nodes.get(d) if isinstance(abs_nodes.get(d), (int, float)) else None
+            if v is None and isinstance(axes.get(d), dict):
+                try:
+                    v = float((axes.get(d) or {}).get("absolute_energy") or 0.0)
+                except (TypeError, ValueError):
+                    v = None
+            if isinstance(v, (int, float)):
+                ten_bits.append(f"{d}:{float(v):.3f}")
     ten_s = ",".join(ten_bits[:10])[:280]
+    if redact_ten_god_abs:
+        return f"[快照|干={stem_s}|支={branch_s}|十神Abs=叙事工厂已省略数值|档位见[Physical Evidence]·语义.十神.*]"
     return f"[快照|干={stem_s}|支={branch_s}|十神Abs={ten_s}]"
 
 
@@ -123,8 +134,15 @@ def strength_qualifier(abs_energy: float) -> str:
     return "强旺/执拗"
 
 
-def format_deity_abs_semantic_slices(physics_tensor: Dict[str, Any]) -> List[str]:
-    """十神 Abs → 短中文档位行，供弱模型在 [Physical Evidence] 顶部做语义锚（非原始 JSON）。"""
+def format_deity_abs_semantic_slices(
+    physics_tensor: Dict[str, Any],
+    *,
+    label_only: bool = False,
+) -> List[str]:
+    """十神 Abs → 短中文档位行，供弱模型在 [Physical Evidence] 顶部做语义锚（非原始 JSON）。
+
+    label_only=True（叙事工厂弱模式）：只输出档位词，不附带 Abs 数值，避免模型现场重算。
+    """
     if not isinstance(physics_tensor, dict):
         return []
     axes = physics_tensor.get("deity_energy_axes") if isinstance(physics_tensor.get("deity_energy_axes"), dict) else {}
@@ -160,12 +178,17 @@ def format_deity_abs_semantic_slices(physics_tensor: Dict[str, Any]) -> List[str
             label = "偏强"
         else:
             label = "独强/执拗"
-        lines.append(f"语义.十神.{d}={label}（Abs≈{abs_energy:.2f}）")
+        if label_only:
+            lines.append(f"语义.十神.{d}={label}")
+        else:
+            lines.append(f"语义.十神.{d}={label}（Abs≈{abs_energy:.2f}）")
     if lines:
-        lines.insert(
-            0,
-            "语义.十神总览=以下为能量档位叙事锚，与十神.*.Abs 数值行一致；断言请引用 plugin.sys.core.physics 或柱位锚。",
+        overview = (
+            "语义.十神总览=以下为能量档位叙事锚（无数值）；断言须引用插件切片 plugin.* 与柱位/冲突矩阵锚，禁止自行推算 Abs。"
+            if label_only
+            else "语义.十神总览=以下为能量档位叙事锚，与十神.*.Abs 数值行一致；断言请引用 plugin.sys.core.physics 或柱位锚。"
         )
+        lines.insert(0, overview)
     return lines
 
 
@@ -175,6 +198,7 @@ def get_logical_evidence(
     physics_tensor: Dict[str, Any],
     selected_cards: List[Dict[str, Any]],
     consensus_history: List[Dict[str, Any]],
+    redact_audit_snapshot_abs: bool = False,
 ) -> List[str]:
     """
     元数据投影：把复杂 JSON 脱水为 Key-Value 证据行，便于 LLM 读取。
@@ -182,7 +206,9 @@ def get_logical_evidence(
     lines: List[str] = []
     sanhe_block = _collect_sanhe_evidence_lines(physics_tensor if isinstance(physics_tensor, dict) else {})
     lines.extend(sanhe_block)
-    lines.extend(format_deity_abs_semantic_slices(physics_tensor if isinstance(physics_tensor, dict) else {}))
+    lines.extend(
+        format_deity_abs_semantic_slices(physics_tensor if isinstance(physics_tensor, dict) else {}, label_only=False)
+    )
     pillars = ((metadata or {}).get("pillars", {}) if isinstance(metadata, dict) else {}) or {}
     if pillars:
         y = pillars.get("year", {})
@@ -231,5 +257,9 @@ def get_logical_evidence(
     for i, s in enumerate(selected_cards or []):
         if isinstance(s, dict):
             lines.append(f"裁决项.{i + 1}={s.get('cardType', 'conflict')}|{s.get('displayText') or s.get('title') or ''}")
-    snap = format_audit_snapshot_inline(metadata or {}, physics_tensor if isinstance(physics_tensor, dict) else {})
+    snap = format_audit_snapshot_inline(
+        metadata or {},
+        physics_tensor if isinstance(physics_tensor, dict) else {},
+        redact_ten_god_abs=redact_audit_snapshot_abs,
+    )
     return [_annotate_evidence_line(x, snap) for x in lines]

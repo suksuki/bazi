@@ -1,5 +1,6 @@
 import type { BaziMetadata, FourPillars, Lang, TimelineSnapshot } from "@/types/bazi";
 import type { Dispatch, SetStateAction } from "react";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 
 export type SeedPayload = {
   date: string;
@@ -7,6 +8,13 @@ export type SeedPayload = {
   calendar: "solar" | "lunar";
   gender: "male" | "female";
 };
+
+/**
+ * analyze-seed 结束态：成功含 tensor 供指纹对比；失败带可读错误（主栏/入口须展示，避免静默失败）。
+ */
+export type SeedSubmitResult =
+  | { ok: true; physics_tensor: Record<string, unknown> | null }
+  | { ok: false; error: string };
 
 export type LogicProposal = {
   title?: string;
@@ -297,6 +305,10 @@ export type StreamBoardViewModel = {
   finalStructureFinalDecisionV0: Record<string, unknown> | null;
   confirmedDecisions?: Array<{ id: string; label: string; is_confirmed: boolean; confirmed_at?: string }>;
   confirmedDecisionIds?: string[];
+  /** 实验室快照中的追加型决策日志（语义抑制） */
+  decisionJournal?: DecisionJournalEntry[];
+  /** 写入实验室快照（含 decision_journal） */
+  mergeLabSnapshot?: (diff: Record<string, unknown>) => void;
   setConfirmedDecisionIds?: Dispatch<SetStateAction<string[]>>;
   urlDecisionHydrated?: boolean;
   /** 来自 URL ?tag=，供 SnapshotBanner 展示，避免子组件使用 useSearchParams 触发 Suspense */
@@ -330,7 +342,7 @@ export type StreamBoardViewModel = {
   logicDrawerDetails: string[];
   logicDrawerTrace: Record<string, unknown> | null;
   setLogicDrawerOpen: Dispatch<SetStateAction<boolean>>;
-  onSeedSubmit: (payload: SeedPayload) => Promise<void>;
+  onSeedSubmit: (payload: SeedPayload) => Promise<SeedSubmitResult>;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
   onExecuteDecision: (selected: InboxCard[]) => Promise<void>;
   refreshVerdict: (selected: InboxCard[]) => Promise<void>;

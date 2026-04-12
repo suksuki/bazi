@@ -5,19 +5,21 @@ import json
 from typing import Any, AsyncIterator, Dict, List
 
 from app.api.contracts import ChatRequest
-from app.api.router_helpers import lang_output_instruction
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
+from app.prompts.chat import CHAT_DEFAULT_SYSTEM_PROMPT
+from app.prompts.language import LanguageEngine
 
 STOP_WORDS = ["Thinking Process:", "Reasoning:", "思考过程", "推理过程"]
-SYSTEM_PROMPT = "你是严谨命理分析助手，必须基于中文术语体系进行推演。"
+# 兼容旧名：等同 CHAT_DEFAULT_SYSTEM_PROMPT
+SYSTEM_PROMPT = CHAT_DEFAULT_SYSTEM_PROMPT
 
 
 def build_chat_messages(body: ChatRequest) -> List[Dict[str, str]]:
     return [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": CHAT_DEFAULT_SYSTEM_PROMPT},
         *body.messages,
-        {"role": "user", "content": lang_output_instruction(body.lang)},
+        {"role": "user", "content": LanguageEngine.output_directive_for_structured_flow(body.lang)},
     ]
 
 

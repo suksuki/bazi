@@ -233,6 +233,7 @@ export function DecisionInbox({
   function renderVerdictLine(line: string, idx: number) {
     const parts = lang === "ZH" ? splitVerdictLine(line) : [t(line)];
     const isFallbackLine = line.includes("[SYSTEM_FALLBACK]");
+    const isFingerprintLine = line.includes("qiazhi-fingerprint");
     const lineClass = `whitespace-pre-wrap leading-relaxed ${
       summaryChanged
         ? "rounded-md bg-gradient-to-r from-amber-500/10 via-emerald-500/5 to-transparent px-2 py-1 text-emerald-200"
@@ -241,6 +242,8 @@ export function DecisionInbox({
       highlightVerdict ? "text-[1.2rem] font-semibold" : "text-sm"
     } ${
       isFallbackLine ? "animate-pulse rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-rose-300" : ""
+    } ${
+      isFingerprintLine ? "break-all font-mono text-[10px] text-zinc-500" : "break-words"
     }`;
     return (
       <SkillLinkedAssertionLine
@@ -280,7 +283,7 @@ export function DecisionInbox({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
+    <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
       <AnimatePresence>
         {inboxResetWaveKey > 0 ? (
           <motion.div
@@ -467,7 +470,7 @@ export function DecisionInbox({
         </button>
         {sectionOpen.summary ? (
       <div
-        className={`mt-2 rounded-xl bg-zinc-950 p-3 ${
+        className={`mt-2 min-w-0 max-w-full overflow-x-hidden rounded-xl bg-zinc-950 p-3 ${
           highlightVerdict ? "border-2 border-amber-400/70 shadow-[0_0_18px_rgba(251,191,36,0.25)]" : "border border-zinc-800"
         }`}
       >
@@ -490,7 +493,7 @@ export function DecisionInbox({
             ) : null}
           </div>
         </div>
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 min-w-0 max-w-full space-y-1">
           <div className="mb-2 grid grid-cols-1 gap-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 md:grid-cols-3">
             <div className="rounded border border-emerald-600/40 bg-emerald-500/10 px-2 py-1">
               <p className="text-[10px] text-emerald-300/90">{t("用神")}</p>

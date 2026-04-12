@@ -957,11 +957,11 @@ export function DebugView() {
               >
                 <div className="overflow-hidden rounded-xl border border-fuchsia-900/35 bg-gradient-to-b from-zinc-950 to-zinc-900/90 p-4 shadow-[0_0_24px_rgba(192,38,211,0.08)]">
                   {verdictBody ? (
-                    <article className="max-h-[min(52dvh,560px)] overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-zinc-100">
+                    <article className="max-h-[min(52dvh,560px)] min-w-0 max-w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-100 [overflow-wrap:anywhere]">
                       {verdictBody}
                     </article>
                   ) : llmPrompt ? (
-                    <article className="max-h-[min(40dvh,400px)] overflow-auto whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+                    <article className="max-h-[min(40dvh,400px)] min-w-0 max-w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
                       {llmPrompt}
                     </article>
                   ) : (

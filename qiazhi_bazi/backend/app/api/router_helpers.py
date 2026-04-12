@@ -1,7 +1,6 @@
 """Helpers for qiazhi-bazi router orchestration."""
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime
 from typing import Any, Dict, List
@@ -9,6 +8,9 @@ from typing import Any, Dict, List
 from app.schemas.bazi_metadata import BaziMetadata
 
 from .contracts import AuditLlmStructuredResponse
+
+from app.prompts.language import LanguageEngine
+from app.prompts.physics_audit import build_physics_audit_messages
 
 
 def guess_text_lang(text: str) -> str:
@@ -27,25 +29,9 @@ def now_iso() -> str:
     return datetime.utcnow().isoformat()
 
 
-# 与 AuditLlmStructuredResponse 对齐的单行示例（键名层级须一致）
-_AUDIT_JSON_SCHEMA_LINE = (
-    '{"diagnosis":"","alignment_score":0,"top_anomaly":"","causal_reasoning":"",'
-    '"tuning_suggestions":[""],"sql_patch":"","refresh_hint":"",'
-    '"logic_proposal":{"title":"","param_key":"","suggested_value":0,"reason":"","expected_impact":"",'
-    '"sql_patch":"","source_role":"LLM"}}'
-)
-
-
 def lang_output_instruction(lang: str) -> str:
-    upper = (lang or "ZH").upper()
-    if upper == "EN":
-        return (
-            "请基于中文命理逻辑推演，但最终只用英文输出。"
-            "若术语无直接对等词，使用标准学术拼音并保留术语一致性。"
-        )
-    if upper == "KO":
-        return "请基于中文命理逻辑推演，但最终只用韩语输出，并使用韩语术语。请务必以“최종 결론:”开头。"
-    return "请基于中文命理逻辑推演，并只用中文输出。"
+    """委托 LanguageEngine，保持函数名供路由与旧代码引用。"""
+    return LanguageEngine.output_directive_for_structured_flow(lang)
 
 
 def build_physics_audit_prompt(
@@ -57,58 +43,21 @@ def build_physics_audit_prompt(
     lang: str,
     blind_skill_system_suffix: str = "",
     tier: str = "compact",
+    high_reasoning: bool = False,
+    inference_trace: Dict[str, Any] | None = None,
 ) -> List[Dict[str, str]]:
-    lang_hint = lang_output_instruction(lang)
-    t = (tier or "compact").strip().lower()
-    if t not in ("standard", "compact"):
-        t = "compact"
-    extra = (blind_skill_system_suffix or "").strip()
-
-    if t == "compact":
-        system_text = (
-            "你是物理命理审计助手。请只输出一个 JSON 对象：不要使用 markdown 代码围栏，不要在 JSON 前后写任何说明。"
-            "键名与嵌套必须与下例完全一致："
-            f"{_AUDIT_JSON_SCHEMA_LINE}"
-            "规则：若 top_anomaly 非空，则 alignment_score 必须小于 60；"
-            "sql_patch 只能是单条 UPDATE physics_interaction_params SET param_value=<小数> WHERE param_key='<键>';。"
-        )
-        if extra:
-            system_text = f"{system_text}\n{extra}"
-        user_text = (
-            "用中文填各字符串字段，只输出 JSON。\n"
-            f"十神:{json.dumps(deity_scores, ensure_ascii=False)} "
-            f"根气:{json.dumps(root_check, ensure_ascii=False)} "
-            f"季节:{json.dumps(seasonal_factors, ensure_ascii=False)} "
-            f"共识:{json.dumps(consensus_history or [], ensure_ascii=False)}\n"
-            "top_anomaly=主要矛盾一句；causal_reasoning=原因；"
-            "logic_proposal 含 title/param_key/suggested_value/reason/expected_impact/sql_patch/source_role；"
-            "sql_patch 单条 UPDATE physics_interaction_params…；已共识参数勿再否定其数值。"
-            f"{lang_hint}"
-        )
-        return [{"role": "system", "content": system_text}, {"role": "user", "content": user_text}]
-
-    system_text = (
-        "你是 0.13 实验室的首席物理命理审计官。只输出严格 JSON，不输出任何非 JSON 文本。"
-        "字段固定（字段名/层级必须一致）："
-        f"{_AUDIT_JSON_SCHEMA_LINE}"
-        "若 top_anomaly 非空，则 alignment_score 必须 < 60。"
+    """委托 ``app.prompts.physics_audit``，保留函数名供路由与审计服务。"""
+    return build_physics_audit_messages(
+        deity_scores=deity_scores,
+        root_check=root_check,
+        seasonal_factors=seasonal_factors,
+        consensus_history=consensus_history,
+        lang=lang,
+        blind_skill_system_suffix=blind_skill_system_suffix,
+        tier=tier,
+        high_reasoning=high_reasoning,
+        inference_trace=inference_trace,
     )
-    if extra:
-        system_text = f"{system_text}\n{extra}"
-    user_text = (
-        f"Input. 十神分值={json.dumps(deity_scores, ensure_ascii=False)}；"
-        f"根气汇总={json.dumps(root_check, ensure_ascii=False)}；"
-        f"季节系数={json.dumps(seasonal_factors, ensure_ascii=False)}。\n"
-        f"## 已达成逻辑共识\n{json.dumps(consensus_history or [], ensure_ascii=False)}\n"
-        "Mandatory: "
-        "1) top_anomaly: 最核心不匹配；"
-        "2) causal_reasoning: 解释其违背的能量规律；"
-        "3) sql_patch: 仅允许 UPDATE physics_interaction_params SET param_value=<float> WHERE param_key='<KEY>';"
-        "4) logic_proposal: 必须含 title/param_key/suggested_value/reason/expected_impact/sql_patch/source_role；"
-        "5) 对于已达成逻辑共识中的参数，不得重复质疑其已确认值，应在其基础上分析尚未共识的矛盾；"
-        f"{lang_hint}"
-    )
-    return [{"role": "system", "content": system_text}, {"role": "user", "content": user_text}]
 
 
 def extract_first_json_object(raw: str) -> str:

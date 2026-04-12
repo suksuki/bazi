@@ -26,6 +26,10 @@ from app.skills.final_verdict_parts.evidence import get_logical_evidence as get_
 from app.skills.final_verdict_parts.json_extract import extract_json_from_llm_text
 from app.skills.final_verdict_parts.narrative_anchors import build_verdict_narrative_chunks
 from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat
+from app.skills.final_verdict_parts.narrative_guard import (
+    extract_reasoning_feedback_loop,
+    weak_mode_requires_physics_fallback,
+)
 from app.skills.final_verdict_parts.physics_fallback import build_minimal_verdict_json_from_core_physics
 from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_messages
 from app.skills.final_verdict_parts.verdict_fingerprint import append_verdict_fingerprint_html_comment
@@ -341,6 +345,7 @@ class FinalVerdictSkill(BaseSkill):
             )
         if not change_log.get("physics_diff") and not change_log.get("consensus_diff"):
             change_log["text_diff_hint"] = change_log.get("text_diff_hint") or "已生成全量重写终判（非追加模式）。"
+        reasoning_fb = extract_reasoning_feedback_loop(obj)
         version_id = datetime.utcnow().strftime("v2.%m%d%H%M%S")
         md_for_anchors = metadata if isinstance(metadata, dict) else {}
         narrative_chunks = build_verdict_narrative_chunks(verdict_body, md_for_anchors)
@@ -350,30 +355,50 @@ class FinalVerdictSkill(BaseSkill):
             version_id=version_id,
             metadata=md_for_anchors,
         )
+        high_reasoning = bool(isinstance(_cfg, dict) and _cfg.get("is_high_reasoning_mode"))
+        if weak_mode_requires_physics_fallback(
+            {"assertions": anchor_layer_dict.get("assertions")},
+            high_reasoning=high_reasoning,
+        ):
+            raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
+            obj = extract_json_from_llm_text(raw)
+            verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+            if not str(verdict_body or "").strip():
+                raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
+                obj = extract_json_from_llm_text(raw)
+                verdict_body, change_log = parse_verdict_body_and_changelog(obj)
+            narrative_chunks = build_verdict_narrative_chunks(verdict_body, md_for_anchors)
+            anchor_layer_dict = parse_verdict_anchor_layer(
+                obj,
+                verdict_body=verdict_body,
+                version_id=version_id,
+                metadata=md_for_anchors,
+            )
+            llm_meta["repair_mode"] = llm_meta.get("repair_mode") or "physics_fallback_narrative_guard"
+        assertions_for_fp = (
+            anchor_layer_dict.get("assertions") if isinstance(anchor_layer_dict.get("assertions"), list) else None
+        )
         verdict_body = append_verdict_fingerprint_html_comment(
             verdict_body,
             physics_tensor=physics_tensor,
             metadata=md_for_anchors,
+            assertions=assertions_for_fp,
         )
-        metadata_memory_patch: Dict[str, Any] = {
-            "verdict_anchor_layer": anchor_layer_dict,
-            "memory_schema_version": "2.0",
-            "history_context": {
-                "verdict_model_stamps": [
-                    {
-                        "occurred_at": datetime.utcnow().isoformat(),
-                        "model_id": resolved_model_id,
-                        "version_id": version_id,
-                    }
-                ]
-            },
-        }
         reg_in = regeneration_context if isinstance(regeneration_context, dict) else {}
         reason = str(reg_in.get("reason") or "").strip()
         trigger = str(reg_in.get("trigger") or "").strip()
         prev_vid = str(reg_in.get("previous_version_id") or "").strip()
+        history_context_patch: Dict[str, Any] = {
+            "verdict_model_stamps": [
+                {
+                    "occurred_at": datetime.utcnow().isoformat(),
+                    "model_id": resolved_model_id,
+                    "version_id": version_id,
+                }
+            ]
+        }
         if (reason or trigger) and prev_vid:
-            metadata_memory_patch["history_context"]["regeneration_events"] = [
+            history_context_patch["regeneration_events"] = [
                 {
                     "occurred_at": datetime.utcnow().isoformat(),
                     "reason": reason or "未说明",
@@ -383,6 +408,39 @@ class FinalVerdictSkill(BaseSkill):
                     "previous_version_id": prev_vid,
                 }
             ]
+        if (reason or trigger) and (prev_vid or str(previous_verdict or "").strip()):
+            prev_anchor = md_for_anchors.get("verdict_anchor_layer") if isinstance(md_for_anchors.get("verdict_anchor_layer"), dict) else {}
+            prev_rows = prev_anchor.get("assertions") if isinstance(prev_anchor.get("assertions"), list) else []
+            prev_ids = [str((x or {}).get("assertion_id") or "") for x in prev_rows if isinstance(x, dict)][:48]
+            new_rows = anchor_layer_dict.get("assertions") if isinstance(anchor_layer_dict.get("assertions"), list) else []
+            new_ids = [str((x or {}).get("assertion_id") or "") for x in new_rows if isinstance(x, dict)][:48]
+            history_context_patch["learning_annotation"] = {
+                "schema": "learning_annotation.v1",
+                "entries": [
+                    {
+                        "occurred_at": datetime.utcnow().isoformat(),
+                        "kind": "regenerate_or_revision",
+                        "version_id": version_id,
+                        "model_id": resolved_model_id,
+                        "previous_version_id": prev_vid,
+                        "reason": reason or "",
+                        "trigger": trigger or "",
+                        "diff": {
+                            "previous_verdict_excerpt": str(previous_verdict or "")[:1600],
+                            "new_verdict_excerpt": str(verdict_body or "")[:1600],
+                            "previous_assertion_ids": prev_ids,
+                            "new_assertion_ids": new_ids,
+                        },
+                    }
+                ],
+            }
+        metadata_memory_patch: Dict[str, Any] = {
+            "verdict_anchor_layer": anchor_layer_dict,
+            "memory_schema_version": "2.0",
+            "history_context": history_context_patch,
+        }
+        if reasoning_fb is not None:
+            metadata_memory_patch["reasoning_feedback_loop"] = reasoning_fb
         confirmed_decisions = [
             {
                 "id": str((c or {}).get("id") or ""),

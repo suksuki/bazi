@@ -1,26 +1,26 @@
 # Test Case Matrix
 
-更新时间：`2026-04-11`
+更新时间：`2026-04-12`
 
-## 最近一次自动化执行（2026-04-11）
+## 最近一次自动化执行（2026-04-12）
 
 ### 执行命令
 
-- 后端：`cd qiazhi_bazi/backend && python3 -m pytest tests/unit tests/integration -q`
-- 前端（单元 + 集成风格 Vitest + 类型 + 静态检查 + 构建回归）：`cd qiazhi_bazi/frontend && npm run test:ci`
+- 后端单元：`cd qiazhi_bazi/backend && python3 -m pytest tests/unit -q`
+- 后端集成（快速子集）：`cd qiazhi_bazi/backend && python3 -m pytest tests/integration/test_api_flow.py -q`
+- 前端：`cd qiazhi_bazi/frontend && npm run typecheck && npx vitest run`
+- 全量 CI 参考：`cd qiazhi_bazi/frontend && npm run test:ci`（含 `lint`、`next build`）；后端全量 `pytest tests/unit tests/integration`（集成中含长耗时与物理断言用例，见下）。
 
 ### 结果汇总
 
-- 后端：`104` 项全部通过（`tests/unit` + `tests/integration`），含 `append_routing_audit_item`、`runtime_config` 中 `causal_routing` 合并、`skill_prompt` sovereignty 排序、以及 `l1_physics_manifest.json` 合法 JSON 校验。
-- 前端：`npm run test:ci` 全绿：`typecheck`、`lint`（仅有 `react-hooks/exhaustive-deps` 告警）、`vitest run`（`14` 个测试文件、`34` 条用例）、`next build`。
+- 后端单元：`188` 项通过（`tests/unit`，约 `3.5s`）。
+- 后端集成：`tests/integration/test_api_flow.py` **`7` 项通过**（约 `2s`）。`test_causal_logic_cases` 等用例依赖完整物理/枢纽输出，当前环境中 **`test_case_01_tan_cai_huai_yin_pivot_and_work` 可能因 `target_pivot` 与期望不一致失败**（与前端 Stream Board UI 改动无关）；`test_full_stack_plugins` / `test_plugin_full_sovereignty` 耗时可至数分钟以上，适合夜间或 CI 全量跑。
+- 前端：`tsc --noEmit` 通过；`vitest run`：**`16` 个测试文件、`70` 条用例**全部通过（含新增 `physicsTensorFingerprint` 单测）。
 
 ### 本轮说明
 
-- 后端单测补充：`dna_registry.append_routing_audit_item`、`runtime_config` 中 `causal_routing` 与 `llm` 并存合并、`skill_prompt` 按 `causal_routing.skill_sovereignty_rank` 排序盲派模板。
-- 架构文档 `OVERVIEW` 与 `backend/README` 已同步因果路由、演化环境变量与管理 API 说明。
-- 前端新增 `npm run test:ci`（`typecheck` + `lint` + 全量 Vitest + `build`）与 `npm run test:stream-board`（Stream Board 子树）。
-- 前端补齐 `.eslintrc.json` 与 `eslint` / `eslint-config-next`，`next lint` 可在非交互环境执行；当前仓库仍存在若干 `react-hooks/exhaustive-deps` 告警（不阻断 CI），后续可逐项收敛。
-- 新增 `useStreamBoardPipeline` 契约单测，与 Stream Board 拆分文档对齐。
+- Stream Board：**`utils/physicsTensorFingerprint`** 稳定指纹单测；`StreamBoardView.test.tsx` 注明与 controller/指纹单测的分工；架构说明见 `docs/architecture/FRONTEND_MVC.md`（掐指一算 Loading、`decision_journal` 追加语义、`SeedSubmitResult` 与脚注 UX）。
+- 历史条目：2026-04-11 批次仍见下文「后端 / 前端」矩阵；矩阵中文件路径仍有效，用例行数以本节「结果汇总」为准。
 
 ## 后端
 
@@ -55,6 +55,7 @@
 | 层级 | 用例 | 文件 |
 |---|---|---|
 | unit | stream-board utils | `frontend/src/features/stream-board/__tests__/utils.test.ts` |
+| unit | stream-board physics_tensor 指纹（收敛判定） | `frontend/src/features/stream-board/utils/__tests__/physicsTensorFingerprint.test.ts` |
 | unit | stream-board viewModel 映射 | `frontend/src/features/stream-board/__tests__/viewModel.test.ts` |
 | unit | stream-board lab snapshot 纯函数灌回 | `frontend/src/features/stream-board/controller/__tests__/labSnapshotHydration.test.ts` |
 | unit | stream-board pipeline 模块契约 | `frontend/src/features/stream-board/controller/__tests__/useStreamBoardPipeline.test.ts` |
@@ -74,7 +75,7 @@
 - `StreamBoard` 提交生辰后仍能生成卡片、审计和 verdict 链路；`activeView` 与 `ShellActiveView` 一致（不得用空字符串冒充 tab）
 - `next build` 通过（类型与 App Router 导入错误在构建期暴露）
 - `admin-settings` 仍能恢复本地配置、拉取模型、测试并保存 runtime config
-- `DecisionInbox` 卡片选择和 verdict 文本高亮不回归
+- `DecisionInbox` 卡片选择和 verdict 文本高亮不回归；`decision_journal` 追加抑制与全量测算脚注行为见 `FRONTEND_MVC.md`
 - `BaziCard` 根气、时间线和 branch energy 可视化逻辑不回归
 - `TenGodNumericList` 锁定态和 anomaly badge 不回归
 - `AuditorBriefing` 自动转决策项/已对齐/已加入状态不回归

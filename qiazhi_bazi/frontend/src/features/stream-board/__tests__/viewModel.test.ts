@@ -107,7 +107,7 @@ function createViewModel(overrides: Partial<StreamBoardViewModel> = {}): StreamB
     logicDrawerDetails: [],
     logicDrawerTrace: null,
     setLogicDrawerOpen: vi.fn(),
-    onSeedSubmit: vi.fn().mockResolvedValue(undefined),
+    onSeedSubmit: vi.fn().mockResolvedValue({ ok: true, physics_tensor: null }),
     executeDecisionAndRefresh: vi.fn().mockResolvedValue(undefined),
     appendSystemAuditLog: vi.fn(),
     revokeConfirmedDecision: vi.fn().mockResolvedValue(undefined),

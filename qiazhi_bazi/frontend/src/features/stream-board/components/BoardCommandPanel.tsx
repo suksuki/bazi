@@ -7,7 +7,27 @@ import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
 import { TemporalYearSlider } from "./TemporalYearSlider";
 import { WillReplayPanel } from "./WillReplayPanel";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
+
+function journalEntryFromInboxCard(card: InboxCard): DecisionJournalEntry | null {
+  const id = String(card.id || "").trim();
+  if (!id) return null;
+  const m = /^inbox-sanhe-(.+)$/.exec(id);
+  const branch_set_key = m ? m[1].normalize("NFKC") : undefined;
+  return {
+    ts: Date.now(),
+    action: "suppress_inbox",
+    branch_set_key,
+    inbox_card_id: id.normalize("NFKC"),
+  };
+}
+
+function journalEntryKey(e: DecisionJournalEntry): string {
+  if (e.inbox_card_id?.trim()) return `id:${e.inbox_card_id.trim()}`;
+  if (e.branch_set_key?.trim()) return `b:${e.branch_set_key.trim()}`;
+  return "";
+}
 
 // Recreate these constants to avoid dependencies if needed, or import from somewhere.
 const STEM_META: Record<string, { element: "wood" | "fire" | "earth" | "metal" | "water"; yinYang: "yang" | "yin" }> = {
@@ -66,6 +86,16 @@ export interface BoardCommandPanelProps {
   primaryLabelOverride?: string;
   canIssueFinal: boolean;
   checklistResetToken: number;
+  /** 每次全量测算结束递增，用于 Inbox / ActionBar key 与重振 */
+  calculationNonce: number;
+  /** Decision Inbox 区域短暂扫描脉冲 */
+  inboxScanActive: boolean;
+  /** 全量测算成功后的结果提示（完成更新 / 收敛稳态） */
+  runSuccessFootnote?: string;
+  /** 全量排盘 / analyze-seed 失败时的错误提示 */
+  fullRunErrorFootnote?: string;
+  /** 掐指一算三段式：0/1/2，2 时主栏锁定 */
+  calculationCount: 0 | 1 | 2;
   workExpectation: number;
   backfireRiskVal: number;
   releasedEnergyVal: number;
@@ -99,6 +129,11 @@ export function BoardCommandPanel({
   primaryLabelOverride,
   canIssueFinal,
   checklistResetToken,
+  calculationNonce,
+  inboxScanActive,
+  runSuccessFootnote,
+  fullRunErrorFootnote,
+  calculationCount,
   workExpectation,
   backfireRiskVal,
   releasedEnergyVal,
@@ -153,7 +188,18 @@ export function BoardCommandPanel({
     physicsAudit,
     physicsConfidence,
     physicsEvidence,
+    decisionJournal,
+    mergeLabSnapshot,
   } = viewModel;
+
+  const prevInboxSelectionIdsRef = React.useRef<string[]>([]);
+  React.useEffect(() => {
+    prevInboxSelectionIdsRef.current = [];
+  }, [selectionResetToken]);
+  /** DecisionInbox 因 calculationNonce 重挂载时，内部勾选状态会清空，须同步 ref 避免误判「取消勾选」并误删 journal */
+  React.useEffect(() => {
+    prevInboxSelectionIdsRef.current = [];
+  }, [calculationNonce]);
 
   return (
     <motion.div
@@ -278,25 +324,36 @@ export function BoardCommandPanel({
         </div>
       </div>
       <UnifiedActionBar
+        key={`unified-action-${calculationNonce}`}
         mode={actionMode}
         globalEntropy={globalEntropy}
         decisionDirty={isDecisionDirty}
         onRun={handleMainBarRun}
         onSetBaseline={setAsBaseline}
-        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized}
+        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized || calculationCount === 2}
         sigShiftFlashKey={sigShiftFlashKey}
         labelOverride={primaryLabelOverride}
         issued={isFinalized}
-        issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy}
+        issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy && calculationCount < 2}
+        mainActionConverged={!isFinalized && calculationCount === 2}
         t={t}
+        successFootnote={runSuccessFootnote}
+        errorFootnote={fullRunErrorFootnote}
       />
       <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
         {t("提交 IDs：")}{" "}
         {lastSubmittedDecisionIds.length ? lastSubmittedDecisionIds.join(", ") : "[]"}
       </div>
       <BlindSkillBadgeRow badges={blindSkillBadges} t={t} />
+      <div
+        className={`relative rounded-xl transition-[box-shadow,opacity] duration-300 ${
+          inboxScanActive
+            ? "shadow-[inset_0_0_28px_rgba(34,211,238,0.12)] ring-1 ring-cyan-500/25 animate-pulse"
+            : ""
+        }`}
+      >
       <DecisionInbox
-        key={`decision-inbox-${checklistResetToken}`}
+        key={`decision-inbox-${checklistResetToken}-${calculationNonce}`}
         cards={cards}
         resultLogs={resultLogs}
         verdictBody={finalVerdictBody}
@@ -312,8 +369,42 @@ export function BoardCommandPanel({
         highlightVerdict={false}
         onSelectionChange={(selected) => {
           const picked = selected as InboxCard[];
+          const ids = picked.map((item) => item.id);
+          const prev = prevInboxSelectionIdsRef.current;
+          prevInboxSelectionIdsRef.current = ids;
+          /** 追加型 decision_journal：不在「仅换勾选」时按 removedIds 回删 suppress_inbox，否则取消 A 去选 B 会误删 A 的抑制记录导致 A「复活」。撤销抑制走 WillReplay/撤销裁决等显式路径。 */
+          const baseJournal = decisionJournal ?? [];
+          if (mergeLabSnapshot) {
+            const keyed = new Set(baseJournal.map(journalEntryKey).filter(Boolean));
+            const newEntries = picked
+              .map(journalEntryFromInboxCard)
+              .filter((e): e is DecisionJournalEntry => Boolean(e))
+              .filter((e) => !keyed.has(journalEntryKey(e)));
+            if (newEntries.length) {
+              mergeLabSnapshot({ decision_journal: [...baseJournal, ...newEntries] });
+            }
+          }
+          if (process.env.NODE_ENV === "development") {
+            const cardIdSet = new Set(cards.map((c) => c.id));
+            for (const p of picked) {
+              const inCards = cardIdSet.has(p.id);
+              // eslint-disable-next-line no-console
+              console.log("[Decision Debug]", {
+                selectionId: p.id,
+                matchedInInboxCards: inCards,
+                cardIdStrictEqual: inCards ? p.id === cards.find((c) => c.id === p.id)?.id : false,
+              });
+            }
+            for (const c of cards) {
+              const on = ids.includes(c.id);
+              if (on) {
+                // eslint-disable-next-line no-console
+                console.log("[Decision Debug]", { cardId: c.id, inSelection: true, idsMatch: ids.includes(c.id) });
+              }
+            }
+          }
           setCurrentDecisions(picked);
-          setDecisionIds(picked.map((item) => item.id));
+          setDecisionIds(ids);
         }}
         onVerdictDeityClick={openLogicDrawerByDeity}
         onStrategicDeityHover={setHoveredDeity}
@@ -342,6 +433,7 @@ export function BoardCommandPanel({
         lang={lang}
         onOpenPluginAudit={onOpenPluginAudit}
       />
+      </div>
       <WillReplayPanel
         items={confirmedDecisions || []}
         onRevoke={handleRevokeDecision}

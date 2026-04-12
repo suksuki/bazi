@@ -2,8 +2,26 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
+
+
+def _assertion_fingerprints(assertions: Optional[List[Any]]) -> List[Dict[str, Any]]:
+    """每条断言：短 id + 文本摘要哈希 + 锚点列表，便于模型迭代后仍审计出厂逻辑。"""
+    out: List[Dict[str, Any]] = []
+    if not isinstance(assertions, list):
+        return out
+    for a in assertions[:64]:
+        if not isinstance(a, dict):
+            continue
+        aid = str(a.get("assertion_id") or "")[:64]
+        text = str(a.get("text") or "")[:800]
+        refs = a.get("evidence_refs") if isinstance(a.get("evidence_refs"), list) else []
+        ref_s = [str(x) for x in refs[:16] if str(x).strip()]
+        h = hashlib.sha256(text.encode("utf-8")).hexdigest()[:20] if text else ""
+        out.append({"assertion_id": aid, "text_sha256_20": h, "evidence_refs": ref_s})
+    return out
 
 
 def build_pillar_energy_snapshot(physics_tensor: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -41,12 +59,14 @@ def append_verdict_fingerprint_html_comment(
     *,
     physics_tensor: Dict[str, Any],
     metadata: Dict[str, Any],
+    assertions: Optional[List[Any]] = None,
 ) -> str:
     """在 Markdown 末尾追加隐藏 HTML 注释；载荷为 URL-Safe Base64(JSON)，避免 `--` 破坏注释。"""
     fp: Dict[str, Any] = {
-        "schema": "qiazhi.verdict_fingerprint.v1",
+        "schema": "qiazhi.verdict_fingerprint.v2",
         "pillar_energy_snapshot": build_pillar_energy_snapshot(physics_tensor, metadata),
         "active_plugins": build_active_plugins_list(physics_tensor),
+        "assertion_fingerprints": _assertion_fingerprints(assertions),
     }
     raw = json.dumps(fp, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
     b64 = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")

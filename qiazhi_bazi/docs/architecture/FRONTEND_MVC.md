@@ -1,6 +1,6 @@
 # Frontend MVC Guide
 
-更新时间：`2026-04-11`
+更新时间：`2026-04-12`（掐指 `calculationCount` 三段式补充）
 
 ## 1. 目标
 
@@ -32,6 +32,12 @@ src/features/<feature>/
 - 编排子模块：`controller/useStreamBoardPipeline.ts`（副作用管线：`activeView`、插件重算定时器、语言切换等；入参为强类型 `StreamBoardPipelineParams`，由 Facade 注入 setter/ref）
 - View：[frontend/src/features/stream-board/StreamBoardView.tsx](/home/hlsystem/bazi/qiazhi_bazi/frontend/src/features/stream-board/StreamBoardView.tsx:1)
 - 展示用纯映射：`viewModel.ts`（便于单测与 View 瘦身）
+- **指令舱「掐指一算」与 Decision Inbox（2026-04）**
+  - View：`StreamBoardView.tsx` 中 `handleFullCalculate`：`isCalculating` 与主栏 `actionMode` 对齐；请求返回后 **至少 800ms** 的强制 Loading 窗口；`Promise.race` 超时与 `SeedSubmitResult`（`useSeedAnalysis`）错误态在 **`UnifiedActionBar` 的 `errorFootnote`** 展示；成功路径用 **`successFootnote`** 区分「计算完成，已更新逻辑视图」与「物理逻辑收敛稳态」文案（依据 `utils/physicsTensorFingerprint.ts` 对 `physics_tensor` 的前后指纹）。
+  - **掐指三段式 `calculationCount`（0/1/2）**：0 主文案「掐指一算」→ 首次成功后 1「掐指再算」→ 第二次测算且 tensor 指纹不变则 2「下次再算」并 **主栏整组 `disabled`**（`UnifiedActionBar` 的 `mainActionConverged` 灰底）；终局脚注「✨ 逻辑已收敛，推演已至终局…」。生辰 / 插件权重 / 实验室 `labConfig` / 参考年 / Inbox 勾选任一相对上次成功快照变化则 **`lastSuccessfulInputBundle` 失配**，`calculationCount` 复位为 0。
+  - 每次全量测算结束在 `finally` 中 **`calculationNonce` 自增**，驱动 `BoardCommandPanel` 内 `DecisionInbox` / `UnifiedActionBar` 的 `key` 重振，避免 UI 与快照脱节。
+  - **`decision_journal`**：`mergeSnapshot` 对 `decision_journal` 为整段替换；`BoardCommandPanel` 勾选时仅 **追加** `suppress_inbox` 条目，**不因换勾选而按 removedIds 回删**，避免「选 B 后 A 复活」；显式撤销仍走 `revokeConfirmedDecision` 等路径。
+  - 静默重算：`hooks/useStreamBoardSilentRecalculateLayout.ts` 失败时经 `appendSilentAnalyzeLogRef` 写入 `result_logs`（`[SILENT_ANALYZE]` 前缀）。
 
 ### Admin Settings
 
@@ -61,6 +67,7 @@ src/features/<feature>/
 - `useStreamBoardController`：controller 回归测试（analyze-seed 主链路）
 - `useStreamBoardLabSnapshotEffects`：实验室 snapshot 灌回副作用
 - `labSnapshotHydration` / `viewModel`：纯函数与映射单测
+- `utils/physicsTensorFingerprint`：`physics_tensor` 稳定指纹（全量测算收敛判定）
 - `useStreamBoardPipeline`：模块契约与 `activeView` 类型字面量单测
 - `AuditSidebar`：组件级单测
 - `admin-settings`：controller 集成测试

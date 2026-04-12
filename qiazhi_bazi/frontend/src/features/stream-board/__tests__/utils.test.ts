@@ -1,6 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { buildInboxCards } from "@/features/stream-board/cardBuilder";
+import {
+  buildInboxCards,
+  expandResolvedInboxIds,
+  normalizeBranchToken,
+  stableSanheInboxCardId,
+} from "@/features/stream-board/cardBuilder";
+import { mergeDecisionIdsPreferLocal } from "@/features/stream-board/controller/streamBoardPure";
 import { buildFallbackVerdict, calculateFireEnergyAfterConflicts } from "@/features/stream-board/utils";
+
+describe("normalizeBranchToken / stableSanheInboxCardId", () => {
+  it("trims ideographic space around branch chars", () => {
+    expect(normalizeBranchToken("\u3000丑\u3000")).toBe("丑");
+  });
+  it("stable sanhe id is stable under NFKC-equivalent branch spellings when applicable", () => {
+    expect(stableSanheInboxCardId(["丑", "巳", "酉"])).toMatch(/^inbox-sanhe-/);
+  });
+});
+
+describe("mergeDecisionIdsPreferLocal", () => {
+  it("keeps local ids when snapshot omits them (stale hydrate)", () => {
+    expect(mergeDecisionIdsPreferLocal(["inbox-sanhe-丑巳酉"], [])).toEqual(["inbox-sanhe-丑巳酉"]);
+  });
+  it("merges when snapshot is a superset of local", () => {
+    expect(mergeDecisionIdsPreferLocal(["a"], ["a", "b"])).toEqual(["a", "b"]);
+  });
+});
 
 describe("stream-board utils", () => {
   it("calculates fire energy after zi-wu clash based on month branch", () => {
@@ -98,6 +122,70 @@ describe("stream-board utils", () => {
     expect(cards.map((c) => c.id)).toEqual(["fallback-deep-scan"]);
   });
 
+  it("hides sanhe card when decision_journal records semantic suppress without selection/resolved", () => {
+    const physicsTensor = {
+      plugin_outputs: {
+        "sys.core.physics": {
+          payload: {
+            sanhe_clusters: [{ branches: ["丑", "巳", "酉"], energy_vault_status: "AGGREGATED", nodes: [] }],
+          },
+        },
+      },
+    };
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+      },
+      firstPromptText: "",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      decisionSelectionIds: [],
+      decisionJournal: [
+        {
+          ts: 1,
+          action: "suppress_inbox",
+          branch_set_key: "丑巳酉",
+          inbox_card_id: "inbox-sanhe-丑巳酉",
+        },
+      ],
+      t: (text) => text,
+      physicsTensor,
+    });
+    expect(cards.some((c) => c.id === "inbox-sanhe-丑巳酉")).toBe(false);
+  });
+
+  it("hides inbox card ids listed in decisionSelectionIds without waiting for resolved_card_ids", () => {
+    const physicsTensor = {
+      plugin_outputs: {
+        "sys.core.physics": {
+          payload: {
+            sanhe_clusters: [{ branches: ["丑", "巳", "酉"], energy_vault_status: "AGGREGATED", nodes: [] }],
+          },
+        },
+      },
+    };
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+      },
+      firstPromptText: "",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      decisionSelectionIds: ["inbox-sanhe-丑巳酉"],
+      t: (text) => text,
+      physicsTensor,
+    });
+    expect(cards.some((c) => c.id === "inbox-sanhe-丑巳酉")).toBe(false);
+  });
+
   it("prepends L1_STRUCTURE sanhe cards from physics_tensor even when inbox gate is closed", () => {
     const cards = buildInboxCards({
       metadata: {
@@ -135,11 +223,69 @@ describe("stream-board utils", () => {
         },
       },
     });
-    expect(cards[0]?.id).toBe("inbox-sanhe-0");
+    expect(cards[0]?.id).toBe("inbox-sanhe-丑巳酉");
     expect(cards[0]?.cardType).toBe("L1_STRUCTURE");
     expect(cards[0]?.skillId).toBe("l1_branch_sanhe");
     expect(cards[0]?.pluginAuditAnchorId).toBe("sys.core.physics");
     expect(cards.some((c) => c.id === "fallback-deep-scan")).toBe(true);
+  });
+
+  it("stable sanhe id is independent of branch order in payload", () => {
+    expect(stableSanheInboxCardId(["丑", "巳", "酉"])).toBe(stableSanheInboxCardId(["酉", "丑", "巳"]));
+  });
+
+  it("expandResolvedInboxIds maps legacy index id to stable id for filtering", () => {
+    const pt = {
+      plugin_outputs: {
+        "sys.core.physics": {
+          payload: {
+            sanhe_clusters: [{ branches: ["丑", "巳", "酉"], energy_vault_status: "X", nodes: [] }],
+          },
+        },
+      },
+    } as Record<string, unknown>;
+    const s = expandResolvedInboxIds(["inbox-sanhe-0"], pt);
+    expect(s.has("inbox-sanhe-0")).toBe(true);
+    expect(s.has("inbox-sanhe-丑巳酉")).toBe(true);
+  });
+
+  it("hides sanhe card when confirmed_verdicts carries suppressed_inbox_card_ids", () => {
+    const physicsTensor = {
+      plugin_outputs: {
+        "sys.core.physics": {
+          payload: {
+            sanhe_clusters: [{ branches: ["丑", "巳", "酉"], energy_vault_status: "AGGREGATED", nodes: [] }],
+          },
+        },
+      },
+    };
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+        history_context: {
+          confirmed_verdicts: [
+            {
+              verdict_id: "v1",
+              body_excerpt: "",
+              confirmed_at: "2026-01-01",
+              source_metadata_hash: "h",
+              evidence_refs: [],
+              suppressed_inbox_card_ids: ["inbox-sanhe-丑巳酉"],
+            },
+          ],
+        },
+      },
+      firstPromptText: "",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      t: (text) => text,
+      physicsTensor,
+    });
+    expect(cards.some((c) => c.id === "inbox-sanhe-丑巳酉")).toBe(false);
   });
 
   it("returns a stable fallback verdict payload", () => {

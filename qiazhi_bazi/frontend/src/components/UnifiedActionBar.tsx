@@ -20,6 +20,14 @@ type Props = {
   issueFinalPurplePulse?: boolean;
   /** UI 文案（ZH 为恒等，EN/KO 走静态表或翻译队列） */
   t?: (s: string) => string;
+  /** 主操作下方脚注（如物理态「无变化」提示） */
+  actionFootnote?: string;
+  /** 错误脚注（优先于 successFootnote / actionFootnote 展示） */
+  errorFootnote?: string;
+  /** 成功/结果脚注（如「计算完成」或收敛稳态） */
+  successFootnote?: string;
+  /** 掐指三段式终局：主按钮灰态（与 issued 区分） */
+  mainActionConverged?: boolean;
 };
 
 export function UnifiedActionBar({
@@ -34,6 +42,10 @@ export function UnifiedActionBar({
   issued = false,
   issueFinalPurplePulse = false,
   t = (s: string) => s,
+  actionFootnote,
+  errorFootnote,
+  successFootnote,
+  mainActionConverged = false,
 }: Props) {
   const label =
     labelOverride ??
@@ -175,6 +187,7 @@ export function UnifiedActionBar({
   }, [sigShiftFlashKey]);
 
   const handleRun = () => {
+    if (mainActionConverged && mode !== "SYNCING") return;
     if (!reducedMotion) {
       setBurstOn(true);
       setGlitchOn(true);
@@ -215,16 +228,18 @@ export function UnifiedActionBar({
         <div className="relative flex-1">
           <button
             type="button"
-            disabled={disabled || mode === "SYNCING" || issued}
+            disabled={disabled || mode === "SYNCING" || issued || mainActionConverged}
             onClick={handleRun}
-            className={`relative z-10 w-full rounded-xl py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`relative z-10 w-full rounded-xl py-2.5 text-sm font-semibold disabled:cursor-not-allowed ${
               issued
-                ? "bg-zinc-700 text-zinc-200"
-                : issueFinalPurplePulse
-                  ? `bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition-[box-shadow,filter] duration-500 ${
-                      issuePulseOn ? "shadow-[0_0_22px_rgba(168,85,247,0.55)] brightness-110" : "shadow-[0_0_10px_rgba(168,85,247,0.25)]"
-                    }`
-                  : "bg-amber-500 text-zinc-950"
+                ? "bg-zinc-700 text-zinc-200 disabled:opacity-60"
+                : mainActionConverged && mode !== "SYNCING"
+                  ? "cursor-not-allowed bg-zinc-600 text-zinc-400 opacity-50 disabled:opacity-50"
+                  : issueFinalPurplePulse
+                    ? `bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg transition-[box-shadow,filter] duration-500 disabled:opacity-60 ${
+                        issuePulseOn ? "shadow-[0_0_22px_rgba(168,85,247,0.55)] brightness-110" : "shadow-[0_0_10px_rgba(168,85,247,0.25)]"
+                      }`
+                    : "bg-amber-500 text-zinc-950 disabled:opacity-60"
             }`}
             style={decisionDirtyPulse ? {
               border: `1px solid rgba(168,85,247,${willPulseOn ? 0.95 : 0.45})`,
@@ -282,6 +297,13 @@ export function UnifiedActionBar({
           ⚓
         </button>
       </div>
+      {errorFootnote ? (
+        <p className="mt-1 text-center text-[10px] leading-snug text-rose-300">{errorFootnote}</p>
+      ) : successFootnote ? (
+        <p className="mt-1 text-center text-[10px] leading-snug text-emerald-200/95">{successFootnote}</p>
+      ) : actionFootnote ? (
+        <p className="mt-1 text-center text-[10px] leading-snug text-cyan-200/90">{actionFootnote}</p>
+      ) : null}
       {baselineHint ? <p className="mt-1 text-[10px] text-fuchsia-300">{baselineHint}</p> : null}
       {sigShiftShow ? (
         <p

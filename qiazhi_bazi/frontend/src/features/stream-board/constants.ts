@@ -55,6 +55,18 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "分": "Min",
     "推演中…": "Inferring...",
     "掐指一算": "Analyze",
+    "掐指再算": "Calculate again",
+    "下次再算": "Another time",
+    "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。":
+      "Logic converged — the run is complete. Proceed to formal adjudication.",
+    "逻辑已收敛，当前参数下物理态保持稳定。":
+      "Logic converged: under current parameters the physical state is stable.",
+    "计算超时（120s），请检查网络或后端。":
+      "Timed out after 120s — check network or backend.",
+    "排盘过程异常中断。": "The chart run stopped unexpectedly.",
+    "计算完成，已更新逻辑视图": "Calculation finished — logic view refreshed.",
+    "✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。":
+      "Physics logic has converged; current parameters are already optimal.",
     "Decision Inbox": "Decision Inbox",
     "Atomic Conflicts Checklist": "Atomic Conflicts Checklist",
     "Result Summary": "Result Summary",
@@ -355,6 +367,18 @@ export const STATIC_I18N: Record<Lang, Record<string, string>> = {
     "分": "분",
     "推演中…": "추론 중…",
     "掐指一算": "분석 시작",
+    "掐指再算": "다시 계산",
+    "下次再算": "다음에",
+    "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。":
+      "논리가 수렴했습니다. 공식 판정을 진행하세요.",
+    "逻辑已收敛，当前参数下物理态保持稳定。":
+      "논리가 수렴했습니다. 현재 매개변수에서 물리 상태는 안정적입니다.",
+    "计算超时（120s），请检查网络或后端。":
+      "120초 초과 — 네트워크 또는 백엔드를 확인하세요.",
+    "排盘过程异常中断。": "명반 계산이 예기치 않게 중단되었습니다.",
+    "计算完成，已更新逻辑视图": "계산 완료 — 논리 뷰가 갱신되었습니다.",
+    "✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。":
+      "물리 논리가 수렴 안정 상태이며, 현재 매개변수가 이미 최적입니다.",
     "Decision Inbox": "결정 인박스",
     "Atomic Conflicts Checklist": "원자 충돌 체크리스트",
     "Result Summary": "결과 요약",
@@ -631,6 +655,12 @@ export function staticT(lang: Lang, zhKey: string): string {
 
 export const PRELOAD_UI_TEXTS = [
   "掐指一算",
+  "掐指再算",
+  "下次再算",
+  "✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。",
+  "逻辑已收敛，当前参数下物理态保持稳定。",
+  "计算完成，已更新逻辑视图",
+  "✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。",
   "对话即推演，卡片即逻辑",
   "流式对话与决策卡片",
   "批量勾选后，一次性执行全局裁决。",

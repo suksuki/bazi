@@ -30,6 +30,8 @@ import { useStreamBoardDrawerActions, type StreamBoardDrawerDeps } from "./contr
 import { useStreamBoardSnapshotPersist, type StreamBoardSnapshotPersistDeps } from "./controller/useStreamBoardSnapshotPersist";
 import { useStreamBoardPipeline } from "./controller/useStreamBoardPipeline";
 import { useStreamBoardHealth } from "./controller/useStreamBoardHealth";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
+import { normalizeDecisionJournalEntries } from "@/features/stream-board/decisionJournal";
 import { buildInboxCards, createAuditorProposalCard, type DecisionSignalToNoiseMeta } from "./cardBuilder";
 import { SILENT_PHYSICS_RECALC_EVENT } from "./physicsRecalcDispatch";
 import type {
@@ -164,6 +166,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     llmDiagnosticData,
     setLlmDiagnosticData,
   } = useStreamBoardAuditUiState();
+  const appendSilentAnalyzeLogRef = useRef<(line: string) => void>(() => {});
+  appendSilentAnalyzeLogRef.current = (line: string) => {
+    setResultLogs((prev) => [...prev, line].slice(-48));
+  };
 
   const {
     logicDrawerOpen,
@@ -207,6 +213,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const pluginRecalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silentRecalcInFlightRef = useRef(false);
   const inboxNonceHandledRef = useRef(0);
+  const seedShieldSigRef = useRef<string | null>(null);
   const verdictRecalcBarrierRef = useRef(false);
   const silentRecalcDeferredRef = useRef(false);
   const reCalculateAbsRef = useRef<() => Promise<void>>(async () => {});
@@ -432,6 +439,11 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return pt && typeof pt === "object" ? (pt as Record<string, unknown>) : null;
   }, [labState.snapshot?.physics_tensor]);
 
+  const decisionJournal = useMemo((): DecisionJournalEntry[] => {
+    const raw = labState.snapshot?.decision_journal;
+    return normalizeDecisionJournalEntries(Array.isArray(raw) ? raw : []);
+  }, [labState.snapshot?.decision_journal]);
+
   const cards = useMemo(
     () =>
       buildInboxCards({
@@ -439,6 +451,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
         firstPromptText,
         auditorProposalCards,
         resolvedCardIds,
+        decisionSelectionIds: confirmedDecisionIds,
+        decisionJournal,
         t,
         decisionSignalToNoise,
         patternProfile,
@@ -450,6 +464,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
       firstPromptText,
       auditorProposalCards,
       resolvedCardIds,
+      confirmedDecisionIds,
+      decisionJournal,
       t,
       decisionSignalToNoise,
       patternProfile,
@@ -632,6 +648,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setSelectionResetToken,
     setLogicDiff,
     mergeSnapshot,
+    seedShieldSigRef,
     clearDecisionInbox,
     onSeedSubmit,
     langRef,
@@ -678,6 +695,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     persistSnapshotRef,
     bumpSyncBarrierSeq,
     scheduleInteractionHubPersist,
+    appendSilentAnalyzeLogRef,
   });
 
   useEffect(() => {
@@ -861,6 +879,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     updateLogicDiff,
     scheduleInteractionHubPersist,
     llmModelName,
+    mergeSnapshot,
+    seedShieldSigRef,
   };
 
   diagnosticDepsRef.current = {
@@ -903,6 +923,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     lastSeedPayload,
     resolvedCardIds,
     confirmedDecisionIds,
+    decisionJournal,
     health,
     i18nCalls,
     auditItems,
@@ -1050,6 +1071,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalStructureFinalDecisionV0,
     confirmedDecisions,
     confirmedDecisionIds,
+    decisionJournal,
+    mergeLabSnapshot: mergeSnapshot,
     setConfirmedDecisionIds,
     urlDecisionHydrated,
     snapshotUrlTag,

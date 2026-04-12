@@ -9,6 +9,7 @@ import type {
   InboxCard,
   LogicDiff,
   SeedPayload,
+  SeedSubmitResult,
 } from "@/features/stream-board/models";
 import type { FinalVerdictResult } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
@@ -65,12 +66,12 @@ export type StreamBoardExecutionContext = {
   setConfirmedDecisions: (v: ConfirmedDecisionItem[]) => void;
   setFinalVerdictHistory: Dispatch<SetStateAction<FinalVerdictHistoryItem[]>>;
   setAuditorProposalCards: Dispatch<SetStateAction<InboxCard[]>>;
-  setConfirmedDecisionIds: (v: string[]) => void;
+  setConfirmedDecisionIds: Dispatch<SetStateAction<string[]>>;
   setSelectionResetToken: Dispatch<SetStateAction<number>>;
   setAuditItems: Dispatch<SetStateAction<AuditItem[]>>;
   setResultLogs: Dispatch<SetStateAction<string[]>>;
   applyPhysicsSqlPatch: (sql: string) => Promise<{ ok: boolean; error?: string }>;
-  onSeedSubmit: (payload: SeedPayload) => Promise<void>;
+  onSeedSubmit: (payload: SeedPayload) => Promise<SeedSubmitResult>;
   generateFinalVerdict: (
     conflicts: string[],
     selectedCards?: InboxCard[],
@@ -96,6 +97,26 @@ function mergeVerdictIntoLabSnapshot(
     metadata: mergedMeta as unknown as Record<string, unknown>,
   });
   x.setMetadata(mergedMeta);
+}
+
+/** 与 rerunFinalVerdictWithWeights 对齐：终判后按 work_vector 刷新 logic_diff 与过载审计 */
+function applyPostVerdictMetrics(x: StreamBoardExecutionContext, verdict: FinalVerdictResult, selectedCards: InboxCard[]) {
+  const currentMetric: MetricSnapshot = {
+    absLossTotal:
+      typeof (verdict.workVector as { backfire_risk?: unknown } | undefined)?.backfire_risk === "number"
+        ? Number((verdict.workVector as { backfire_risk?: number }).backfire_risk)
+        : null,
+    entropy: x.globalEntropy,
+  };
+  const diff = x.updateLogicDiff(currentMetric);
+  const absDelta = diff.abs_delta;
+  if (typeof absDelta === "number" && absDelta > 100) {
+    const source = selectedCards.map((card) => card.id).join(",") || "none";
+    x.setResultLogs((prev) => [
+      ...prev,
+      `[CRITICAL] [ENERGY_OVERLOAD] abs_delta: ${absDelta.toFixed(2)} | Source: ${source}`,
+    ]);
+  }
 }
 
 export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExecutionContext>) {
@@ -212,6 +233,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
           ]);
           x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
           mergeVerdictIntoLabSnapshot(x, verdict, verdict.body);
+          applyPostVerdictMetrics(x, verdict, selectedCards);
         }
 
         x.setAuditItems((prev) => [
@@ -230,6 +252,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
       }
 
       if (conflicts.length > 0) {
+        x.setFinalVerdictBody("");
         const verdict = await x.generateFinalVerdict(
           conflicts,
           selectedCards,
@@ -272,6 +295,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
         ]);
         x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
         mergeVerdictIntoLabSnapshot(x, verdict, safeVerdict);
+        applyPostVerdictMetrics(x, verdict, selectedCards);
       }
 
       x.setAuditorProposalCards((prev) => prev.filter((card) => !selectedCards.some((selectedCard) => selectedCard.id === card.id)));
@@ -374,10 +398,10 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
 
   const executeDecisionAndRefresh = useCallback(
     async (selected: InboxCard[]) => {
+      // 曾在此处串联 refreshVerdict → 第二次终判请求；小模型下易覆盖首次已打字展示的正文，造成「判词突然变短/消失」。
       await onExecuteDecision(selected);
-      await refreshVerdict(selected);
     },
-    [onExecuteDecision, refreshVerdict],
+    [onExecuteDecision],
   );
 
   return {

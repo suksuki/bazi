@@ -49,7 +49,10 @@ export function ArbiterLogicDrawer({
         <div className="mt-2 space-y-2">
           {details.length === 0 ? <p className="text-xs text-zinc-500">暂无对话内容。</p> : null}
           {details.map((x, i) => (
-            <p key={`${i}-${x}`} className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-300">
+            <p
+              key={`drawer-detail-${i}`}
+              className="min-w-0 max-w-full break-words whitespace-pre-wrap rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-300 [overflow-wrap:anywhere]"
+            >
               {x}
             </p>
           ))}

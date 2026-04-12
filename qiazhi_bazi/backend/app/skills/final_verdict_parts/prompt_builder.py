@@ -7,7 +7,10 @@ from app.core.runtime_config import get_runtime_config
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
-from app.services.helpers.interpretation_helper import merge_interpretation_metadata_for_llm
+from app.prompts.final_verdict_contracts import (
+    build_final_verdict_system_message,
+    evidence_user_block_heading,
+)
 from app.skills.final_verdict_parts.metadata_sanitize import (
     sanitize_metadata_for_verdict_llm,
     scrub_previous_verdict_sql,
@@ -44,30 +47,13 @@ def build_final_verdict_messages(
     lang: str,
     plugin_weights: Dict[str, float] | None = None,
 ) -> List[Dict[str, str]]:
-    """构建终判 LLM 的 system/user 消息列表（原 FinalVerdictSkill._build_prompt）。"""
-    lang_hint = "请仅使用中文输出。"
-    if (lang or "ZH").upper() == "EN":
-        lang_hint = "Please output strictly in English."
-    elif (lang or "ZH").upper() == "KO":
-        lang_hint = "최종 출력은 반드시 한국어로만 작성하세요."
+    """构建终判 LLM 的 system/user 消息列表。"""
+    from app.services.helpers.interpretation_helper import merge_interpretation_metadata_for_llm
+
     _cfg = get_runtime_config()
     _cfg_llm = _cfg.get("llm") if isinstance(_cfg.get("llm"), dict) else {}
     high_reasoning = bool(_cfg_llm.get("is_high_reasoning_mode"))
-    if high_reasoning:
-        evidence_mode_hint = (
-            "若提供 [Evidence Slices·全量逻辑溯源]，请对每条证据行做字段级完整溯源："
-            "在 assertions 中引用对应 plugin.<plugin_id> 锚点，串联 verdict_body 与证据原文中的数值、标签，不得因篇幅省略关键信息。"
-        )
-        evidence_block_heading = "Evidence Slices·全量逻辑溯源"
-    else:
-        evidence_mode_hint = (
-            "若提供 [Evidence Slices·插件语义碎片]，请把这些短句当作拼图素材：在 assertions 中引用对应 plugin.<plugin_id> 锚点，"
-            "用自然语言缝合进 verdict_body，勿要求读者理解原始 JSON。"
-        )
-        evidence_block_heading = "Evidence Slices·插件语义碎片"
-    opener = "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
-    if high_reasoning:
-        opener += "【高推理模式】插件 evidence 为全量条线，不做碎片化截断；须逐条映射到 assertions.evidence_refs。"
+
     prev_scrubbed = scrub_previous_verdict_sql(previous_verdict or "")
     md_for_llm = merge_interpretation_metadata_for_llm(sanitize_metadata_for_verdict_llm(dict(metadata)))
     pt_evidence = shallow_physics_for_llm_evidence(physics_tensor if isinstance(physics_tensor, dict) else {})
@@ -76,6 +62,21 @@ def build_final_verdict_messages(
         physics_tensor=pt_evidence,
         selected_cards=selected_cards,
         consensus_history=consensus_history,
+        redact_audit_snapshot_abs=not high_reasoning,
+    )
+    from app.skills.final_verdict_parts.narrative_guard import (
+        filter_logical_evidence_for_narrative_factory,
+        inject_label_only_semantic_slices,
+    )
+
+    logical_evidence = filter_logical_evidence_for_narrative_factory(
+        logical_evidence,
+        high_reasoning=high_reasoning,
+    )
+    logical_evidence = inject_label_only_semantic_slices(
+        logical_evidence,
+        physics_tensor=pt_evidence,
+        enabled=not high_reasoning,
     )
     l1_flags = sync_l1_junction_flags_to_meta(metadata=md_for_llm, physics_tensor=physics_tensor)
     blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=md_for_llm)
@@ -97,7 +98,7 @@ def build_final_verdict_messages(
     blind_work["spatial_audit"] = spatial_audit
     unlock_advice = (blind_work.get("unlock_advice", {}) if isinstance(blind_work, dict) else {}) or {}
     strike_options = list(unlock_advice.get("strategic_strike_options", []) or [])
-    work_lines = []
+    work_lines: List[str] = []
     for idx, vector in enumerate(blind_work.get("work_vectors", [])):
         work_lines.append(
             f"做功.{idx + 1}={vector.get('type')}|{vector.get('direction')}|eta={vector.get('eta')}|"
@@ -129,11 +130,18 @@ def build_final_verdict_messages(
     )
     self_abs = float(structure_v0.get("self_abs", 0.0) or 0.0)
     work_net = float(blind_work.get("work_expectation", 0.0) or 0.0)
-    structure_lines = [
-        f"structure.self_abs={structure_v0.get('self_abs', 0.0)}",
-        f"structure.root_score={structure_v0.get('root_score', 0.0)}",
-        f"structure.hud={_trim_prompt_blob(structure_v0.get('hud', {}), 160)}",
-    ]
+    if high_reasoning:
+        structure_lines = [
+            f"structure.self_abs={structure_v0.get('self_abs', 0.0)}",
+            f"structure.root_score={structure_v0.get('root_score', 0.0)}",
+            f"structure.hud={_trim_prompt_blob(structure_v0.get('hud', {}), 160)}",
+        ]
+    else:
+        structure_lines = [
+            "structure.self_abs=(叙事工厂·Self_Abs数值已省略；档位见[Physical Evidence])",
+            "structure.root_score=(叙事工厂·数值已省略)",
+            f"structure.hud={_trim_prompt_blob(structure_v0.get('hud', {}), 160)}",
+        ]
     for i, c in enumerate(structure_v0.get("candidates", [])):
         if isinstance(c, dict):
             structure_lines.append(
@@ -179,36 +187,12 @@ def build_final_verdict_messages(
     knowledge_lines.extend(
         [f"知识.百科.{i + 1}={_trim_prompt_blob(x, 100)}" for i, x in enumerate(blind_digest)]
     )
-    system = opener + (
-        "你必须每次返回一份全量、唯一、可执行的终判，不允许追加旧内容。"
-        "必须引用具体物理数值（十神绝对能量 Abs）作为依据；禁止空泛修辞。"
-        "你生成的每一句命理断语，必须能在 [Physical Evidence] 里找到数值或标签支撑。"
-        "若与 [User Consensus] 冲突，必须以 [User Consensus] 为准。"
-        "输出严格 JSON："
-        '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""},'
-        '"assertions":[{"assertion_id":"a0","text":"一句完整断语","evidence_refs":["year.branch","conflict_matrix.cp_scan_0","plugin.classical.blind_school.v1"]}]}。'
-        "assertions 为必填：每句断语一条；evidence_refs 使用锚点字符串（柱位 year.stem/month.branch、conflict_matrix.<id>、plugin.<plugin_id>、meta.global_entropy 等），须可溯源到上文证据。"
-        "change_log 仅写相对上一版的变化；若无上一版则写当前基线要点。"
-        "请根据 [盲派硬核证据] 评估日主获取能量效率：做功值为负偏向“劳而无功”，为正偏向“取财有道”。"
-        "必须引用 net_effect 做辩证分析；当 backfire_risk 超过 unlock_gain 的50%时，严禁只给单边褒义结论，必须说明代价与震荡。"
-        "当出现 [BROKEN_LINK] 时，禁止讨论“库中之物已兑现”，只能讨论“能量淤积/怀才不遇”。"
-        "请分析 [Structure Candidates V0]。若出现 QuantumLeap，必须讨论岁运态射风险。"
-        "第一段必须先报告 Self_Abs 与 Tomb_State，再进入叙事。"
-        "如果 [PHYSICS_CONSTRAINT] 出现，则不得出现“补印比/生扶日主”等建议。"
-        "如果 [BLIND_WORK_CONSTRAINT] 出现，则不得给出单边乐观结论。"
-        "如果 [BODY_DAMAGE_CONSTRAINT] 出现，必须明确指出体阵营受损节点及其代价，不得轻描淡写。"
-        "若出现 [LOGIC_CONFLICT_WARNING]，必须在“裁决共识”段显式写出两派冲突与折中路径。"
-        "你必须严格遵循 [Plugin Weight Guidance] 的语气和叙述重心。"
-        "严禁跳过 L1_Junction 直接下‘伤官见官’结论；必须先引用 [L1 Junction Flags]。"
-        "若 [Physical Evidence] 中出现以「地支.三合.」开头的证据行，必须在「核心气象」或「裁决共识」中评估该三合局对整体格调、"
-        "五行场强分布及做功门态（如墓库/合局聚能）的影响，不得忽略。"
-        "只要盘中存在地支三合局（证据行已给出），必须显式评估其对当前格调与做功逻辑的支撑或对冲作用，禁止仅用套话带过。"
-        f"{evidence_mode_hint}"
-        f"{lang_hint}"
-    )
+
+    system = build_final_verdict_system_message(high_reasoning=high_reasoning, lang=lang)
     blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)
     if blind_skill_block:
         system = f"{system}\n{blind_skill_block}"
+
     logical_evidence = clean_context_lines(logical_evidence)
     work_lines = clean_context_lines(work_lines)
     structure_lines = clean_context_lines(structure_lines)
@@ -235,25 +219,51 @@ def build_final_verdict_messages(
                 continue
             st = str(seg.get("state") or "")
             arrow = "→" if st == "FLOWING" else "✗"
-            flow_lines.append(
-                f"- {seg.get('from')} 生 {seg.get('to')} : {st} {arrow} "
-                f"(from_abs={seg.get('from_abs')}, to_abs={seg.get('to_abs')}, thr={seg.get('threshold')})"
-            )
+            if high_reasoning:
+                flow_lines.append(
+                    f"- {seg.get('from')} 生 {seg.get('to')} : {st} {arrow} "
+                    f"(from_abs={seg.get('from_abs')}, to_abs={seg.get('to_abs')}, thr={seg.get('threshold')})"
+                )
+            else:
+                flow_lines.append(f"- {seg.get('from')} 生 {seg.get('to')} : {st} {arrow} (能级Abs数值已省略)")
     flow_section = "\n[因果流通链·五行相生]\n" + ("\n".join(flow_lines) if flow_lines else "- （无审计数据）\n")
 
-    audit_snap = format_audit_snapshot_inline(md_for_llm, pt_evidence)
+    trace_section = ""
+    if high_reasoning:
+        it = md_for_llm.get("inference_trace") if isinstance(md_for_llm.get("inference_trace"), dict) else {}
+        steps = it.get("steps") if isinstance(it.get("steps"), list) else []
+        if steps:
+            try:
+                payload = {"version": it.get("version", "1.0"), "steps": steps[:160]}
+                blob = json.dumps(payload, ensure_ascii=False)
+            except (TypeError, ValueError):
+                blob = "{}"
+            if len(blob) > 14000:
+                blob = blob[:14000] + "…"
+            trace_section = f"\n[InferenceTrace·全量]\n{blob}\n"
+
+    audit_snap = format_audit_snapshot_inline(
+        md_for_llm,
+        pt_evidence,
+        redact_ten_god_abs=not high_reasoning,
+    )
     plugin_out = physics_tensor.get("plugin_outputs") if isinstance(physics_tensor.get("plugin_outputs"), dict) else {}
     evidence_chunks = format_plugin_evidence_chunks(plugin_out, high_reasoning=high_reasoning)
-    evidence_block = f"\n[{evidence_block_heading}]\n"
+    evidence_heading = evidence_user_block_heading(high_reasoning=high_reasoning)
+    evidence_block = f"\n[{evidence_heading}]\n"
     if evidence_chunks:
         evidence_block += "\n".join(f"- {x}" for x in evidence_chunks) + "\n"
     else:
         evidence_block += "- （各插件暂无结构化 evidence 列表；可忽略本段）\n"
+
+    # EvidenceDedup：物理/共识/裁决项已由单次 get_logical_evidence 合入 [Physical Evidence]，不再重复列出 UserConsensus/Selected 区段。
     user = (
         "[八字元数据快照·全卷锚点]\n"
         + f"- {audit_snap}\n"
         + "[Physical Evidence]\n"
         + "\n".join(f"- {x}" for x in logical_evidence)
+        + "\n[EvidenceDedup]\n"
+        + "- 共识.* 与 裁决项.* 已包含于上方 [Physical Evidence]；请勿假设存在第二份独立共识列表。\n"
         + evidence_block
         + "\n[盲派硬核证据]\n"
         + "\n".join(f"- {x}" for x in work_lines)
@@ -263,26 +273,7 @@ def build_final_verdict_messages(
         + "\n".join(f"- {x}" for x in knowledge_lines)
         + shen_section
         + flow_section
-        + "\n[User Consensus]\n"
-        + "\n".join(
-            f"- {x}"
-            for x in get_logical_evidence(
-                metadata={},
-                physics_tensor={},
-                selected_cards=[],
-                consensus_history=consensus_history,
-            )
-        )
-        + "\n[Selected Decisions]\n"
-        + "\n".join(
-            f"- {x}"
-            for x in get_logical_evidence(
-                metadata={},
-                physics_tensor={},
-                selected_cards=selected_cards,
-                consensus_history=[],
-            )
-        )
+        + trace_section
         + "\n[CONFIRMED_DECISION]\n"
         + (
             "confirmed_decisions="
@@ -340,14 +331,37 @@ def build_final_verdict_messages(
     for line in pp.get("xi_ji_reversal_lines") or []:
         if isinstance(line, str) and line.strip():
             pattern_lines.append(f"- 喜忌反转: {line.strip()}")
+    learning_section = ""
+    hc_llm = md_for_llm.get("history_context") if isinstance(md_for_llm.get("history_context"), dict) else {}
+    la_raw = hc_llm.get("learning_annotation") if isinstance(hc_llm.get("learning_annotation"), dict) else {}
+    la_entries = la_raw.get("entries") if isinstance(la_raw.get("entries"), list) else []
+    if la_entries:
+        try:
+            la_blob = json.dumps(
+                {
+                    "schema": la_raw.get("schema"),
+                    "last_entries": la_entries[-5:],
+                },
+                ensure_ascii=False,
+            )
+        except (TypeError, ValueError):
+            la_blob = "{}"
+        if len(la_blob) > 3200:
+            la_blob = la_blob[:3200] + "…"
+        lr_hint = "高推理下可更积极对齐历史取向，但仍禁止与插件证据矛盾。" if high_reasoning else "弱模型下仅允许影响语气与折中表述，事实仍以 Evidence 与 plugin.* 为准。"
+        learning_section = (
+            f"\n[LearningAnnotation·裁决者修正上下文]\n{la_blob}\n"
+            f"（{lr_hint}）\n"
+        )
+
     user = (
         user
         + "\n[格局路由 PatternRouter]\n"
         + "\n".join(f"- {x}" for x in pattern_lines)
         + "\n[格局断言关键词]\n"
         + ("\n".join(f"- {k}" for k in pk) if pk else "- （无）\n")
+        + learning_section
         + "\n"
         + f"Previous_Verdict={prev_scrubbed}\n"
-        + "请输出三段 markdown 小节：### 核心气象 / ### 裁决共识 / ### 行为指引。"
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]

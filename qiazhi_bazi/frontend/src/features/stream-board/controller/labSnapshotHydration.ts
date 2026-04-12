@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react";
 import type { AuditItem, AuditRole } from "@/components/AuditSidebar";
 import type {
   DeityComponent,
@@ -10,7 +11,7 @@ import type {
 } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { BaziMetadata, TimelineSnapshot } from "@/types/bazi";
-import { normalizedSnapshotDecisionIds } from "./streamBoardPure";
+import { mergeDecisionIdsPreferLocal, normalizedSnapshotDecisionIds } from "./streamBoardPure";
 
 export type LabSnapshotHydrationPatch = {
   metadata: BaziMetadata;
@@ -215,8 +216,8 @@ export type LabSnapshotHydrationSinks = {
   setFinalTopologyGraphV1: (v: Record<string, unknown> | null) => void;
   setFinalStructureCandidatesV0: (v: Record<string, unknown> | null) => void;
   setFinalStructureFinalDecisionV0: (v: Record<string, unknown> | null) => void;
-  setResolvedCardIds: (v: string[]) => void;
-  setConfirmedDecisionIds: (v: string[]) => void;
+  setResolvedCardIds: Dispatch<SetStateAction<string[]>>;
+  setConfirmedDecisionIds: Dispatch<SetStateAction<string[]>>;
   setLogicDiff: (v: LogicDiff) => void;
   setLastSeedPayload: (v: SeedPayload | null) => void;
 };
@@ -253,8 +254,14 @@ export function applyLabSnapshotHydrationPatch(patch: LabSnapshotHydrationPatch,
     sinks.setFinalStructureFinalDecisionV0(patch.finalStructureFinalDecisionV0);
   }
 
-  if (patch.resolvedCardIds !== undefined) sinks.setResolvedCardIds(patch.resolvedCardIds);
-  if (patch.confirmedDecisionIds !== undefined) sinks.setConfirmedDecisionIds(patch.confirmedDecisionIds);
+  if (patch.resolvedCardIds !== undefined) {
+    const incoming = patch.resolvedCardIds;
+    sinks.setResolvedCardIds((prev) => [...new Set([...prev, ...incoming])]);
+  }
+  if (patch.confirmedDecisionIds !== undefined) {
+    const snap = patch.confirmedDecisionIds;
+    sinks.setConfirmedDecisionIds((prev) => mergeDecisionIdsPreferLocal(prev, snap));
+  }
   if (patch.logicDiff !== undefined) sinks.setLogicDiff(patch.logicDiff);
   if (patch.lastSeedPayload) sinks.setLastSeedPayload(patch.lastSeedPayload);
 }

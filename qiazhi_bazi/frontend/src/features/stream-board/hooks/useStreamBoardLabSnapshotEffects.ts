@@ -1,6 +1,11 @@
 "use client";
 
-import { type Dispatch, type MutableRefObject, type SetStateAction, useLayoutEffect } from "react";
+import {
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+  useLayoutEffect,
+} from "react";
 
 import type { NavigationInfo } from "../controller/streamBoardTypes";
 import {
@@ -10,7 +15,7 @@ import {
 } from "../controller/labSnapshotHydration";
 import type { LabSnapshot } from "../stores/LabSessionContext";
 import type { BaziMetadata } from "@/types/bazi";
-import { normalizedSnapshotDecisionIds } from "../controller/streamBoardPure";
+import { mergeDecisionIdsPreferLocal, normalizedSnapshotDecisionIds } from "../controller/streamBoardPure";
 import type { SeedPayload } from "../models";
 
 type Params = {
@@ -23,8 +28,9 @@ type Params = {
   navHandledRef: MutableRefObject<boolean>;
   /** 每帧更新 current，避免把 sinks 对象放进 effect 依赖导致无限重跑 */
   hydrationSinksRef: MutableRefObject<LabSnapshotHydrationSinks>;
-  setConfirmedDecisionIds: (v: string[]) => void;
-  setResolvedCardIds: (v: string[]) => void;
+  setConfirmedDecisionIds: Dispatch<SetStateAction<string[]>>;
+  /** 与 useState 一致，支持函数式更新（inbox 重置时与快照并集，避免冲掉本地已裁决） */
+  setResolvedCardIds: Dispatch<SetStateAction<string[]>>;
   setSelectionResetToken: Dispatch<SetStateAction<number>>;
 };
 
@@ -84,8 +90,10 @@ export function useStreamBoardLabSnapshotEffects(p: Params) {
     const n = p.inboxResetNonce;
     if (n === 0 || n === p.inboxNonceHandledRef.current) return;
     p.inboxNonceHandledRef.current = n;
-    p.setConfirmedDecisionIds(normalizedSnapshotDecisionIds(p.labSnapshot?.decision_selection_ids));
-    p.setResolvedCardIds((p.labSnapshot?.resolved_card_ids || []).map((x) => String(x)));
+    const snapIds = normalizedSnapshotDecisionIds(p.labSnapshot?.decision_selection_ids);
+    p.setConfirmedDecisionIds((prev) => mergeDecisionIdsPreferLocal(prev, snapIds));
+    const incoming = (p.labSnapshot?.resolved_card_ids || []).map((x) => String(x));
+    p.setResolvedCardIds((prev) => [...new Set([...prev, ...incoming])]);
     p.setSelectionResetToken((v) => v + 1);
     // 依赖刻意拆到具体字段：整包 `p` 常在父组件每次渲染新建，会误触发 inbox 重置。
     // eslint-disable-next-line react-hooks/exhaustive-deps -- narrow deps; full `p` unstable from parent

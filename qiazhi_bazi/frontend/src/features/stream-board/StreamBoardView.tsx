@@ -12,7 +12,6 @@ import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { SeedInput } from "@/components/SeedInput";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
-import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { LabViewModeFab } from "@/components/layout/LabViewModeFab";
 import { BlindSkillBadgeRow } from "@/features/stream-board/components/BlindSkillBadgeRow";
 import { SnapshotBanner } from "@/features/stream-board/components/SnapshotBanner";
@@ -20,8 +19,15 @@ import { VerdictCertificate } from "@/features/stream-board/components/VerdictCe
 import { WillReplayPanel } from "@/features/stream-board/components/WillReplayPanel";
 import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
 import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
-import { type DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "./models";
+import {
+  type DecisionSignalToNoiseMeta,
+  StreamBoardViewModel,
+  InboxCard,
+  type SeedPayload,
+  type SeedSubmitResult,
+} from "./models";
 import { buildCausalSovereigntySlice } from "./utils/causalSovereigntyFromSnapshot";
+import { buildFullRecalcInputBundle, physicsTensorFingerprint } from "./utils/physicsTensorFingerprint";
 import { buildStreamBoardViewDerivedState } from "./viewModel";
 import { computeBlindSkillBadges } from "@/features/stream-board/utils/blindSkillRuntime";
 import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
@@ -142,6 +148,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   );
   const decisionHydrated = Boolean(urlDecisionHydrated);
   const { state: labUiState } = useLabStore();
+  const labSnapshotRef = React.useRef(labUiState.snapshot);
+  labSnapshotRef.current = labUiState.snapshot;
   const sovereigntyDominant = Boolean(labUiState.snapshot?.interaction_hub?.sovereignty_dominant);
   const blindSkillBadges = useMemo(
     () =>
@@ -176,6 +184,28 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [seedFlowPhase, setSeedFlowPhase] = React.useState<"entry" | "main">("entry");
   const [seedEntryMountKey, setSeedEntryMountKey] = React.useState(0);
   const [actionSyncing, setActionSyncing] = React.useState(false);
+  /** 掐指一算（全量 analyze-seed）专用 Loading，与语义重算 actionSyncing 分离 */
+  const [isCalculating, setIsCalculating] = React.useState(false);
+  /** 掐指一算三段式：0 初算 / 1 再算 / 2 收敛终局（主栏锁定至参数变化） */
+  const [calculationCount, setCalculationCount] = React.useState<0 | 1 | 2>(0);
+  const [lastSuccessfulInputBundle, setLastSuccessfulInputBundle] = React.useState<string | null>(null);
+  const calculationCountRef = React.useRef<0 | 1 | 2>(0);
+  const [calculationNonce, setCalculationNonce] = React.useState(0);
+  const [inboxScanActive, setInboxScanActive] = React.useState(false);
+  const [runSuccessFootnote, setRunSuccessFootnote] = React.useState("");
+  const [fullRunErrorFootnote, setFullRunErrorFootnote] = React.useState("");
+  const inboxPulseTimerRef = React.useRef<number | null>(null);
+  const runSuccessClearRef = React.useRef<number | null>(null);
+  const fullRunErrorClearRef = React.useRef<number | null>(null);
+
+  React.useEffect(
+    () => () => {
+      if (inboxPulseTimerRef.current) window.clearTimeout(inboxPulseTimerRef.current);
+      if (runSuccessClearRef.current) window.clearTimeout(runSuccessClearRef.current);
+      if (fullRunErrorClearRef.current) window.clearTimeout(fullRunErrorClearRef.current);
+    },
+    [],
+  );
   const [revokeGlitch, setRevokeGlitch] = React.useState(false);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
   const [checklistResetToken, setChecklistResetToken] = React.useState(0);
@@ -202,6 +232,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     if (seedFlowPhase === "entry") setViewMode("COMMAND");
   }, [seedFlowPhase]);
 
+  const handleSeedFormSubmitForEntry = React.useCallback(
+    async (p: SeedPayload): Promise<void> => {
+      await onSeedSubmit(p);
+    },
+    [onSeedSubmit],
+  );
+
   const handleBackToSeedEntry = React.useCallback(() => {
     if (isFinalized) return;
     clearLabPipelineForSeedDraft();
@@ -209,6 +246,10 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setSeedFlowPhase("entry");
     setSeedEntryMountKey((k) => k + 1);
     setLastAppliedSeedSignature("");
+    setCalculationCount(0);
+    calculationCountRef.current = 0;
+    setLastSuccessfulInputBundle(null);
+    setRunSuccessFootnote("");
   }, [isFinalized, clearLabPipelineForSeedDraft]);
   const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
   const currentParamSignature = JSON.stringify(pluginWeights || {});
@@ -216,6 +257,34 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const paramDirty = currentParamSignature !== lastAppliedParamSignature;
   const currentDecisionsSignature = decisionIdsSignature(decisionIds);
   const isDecisionDirty = currentDecisionsSignature !== lastAppliedDecisionsSignature;
+
+  const fullRecalcInputBundle = React.useMemo(
+    () =>
+      buildFullRecalcInputBundle({
+        seedSignature: currentSeedSignature,
+        paramSignature: currentParamSignature,
+        referenceYear,
+        labConfig,
+      }),
+    [currentSeedSignature, currentParamSignature, referenceYear, labConfig],
+  );
+
+  React.useEffect(() => {
+    if (isFinalized) return;
+    if (lastSuccessfulInputBundle === null) return;
+    if (fullRecalcInputBundle !== lastSuccessfulInputBundle) {
+      setCalculationCount(0);
+      calculationCountRef.current = 0;
+      setRunSuccessFootnote("");
+      if (runSuccessClearRef.current) {
+        window.clearTimeout(runSuccessClearRef.current);
+        runSuccessClearRef.current = null;
+      }
+    }
+  }, [fullRecalcInputBundle, lastSuccessfulInputBundle, isFinalized]);
+
+  calculationCountRef.current = calculationCount;
+
   const handleSeedPayloadChange = React.useCallback(
     (payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => {
       const sig = JSON.stringify({
@@ -246,6 +315,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   React.useEffect(() => {
     if (!metadata) {
       setLastAppliedSeedSignature("");
+      setCalculationCount(0);
+      calculationCountRef.current = 0;
+      setLastSuccessfulInputBundle(null);
     }
   }, [metadata]);
 
@@ -296,7 +368,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         }`
       : "";
   const hasReboundRisk = backfireRiskVal > 0.35;
-  const actionMode: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY" = actionSyncing || busy
+  const actionMode: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY" = actionSyncing || busy || isCalculating
     ? "SYNCING"
     : seedDirty
       ? "FULL"
@@ -319,22 +391,111 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
 
   const primaryLabelOverride = isFinalized
     ? t("已签发 (Issued)")
-    : actionSyncing || busy
+    : actionSyncing || busy || isCalculating
       ? undefined
-      : t("掐指一算");
+      : calculationCount === 2
+        ? t("下次再算")
+        : calculationCount === 1
+          ? t("掐指再算")
+          : t("掐指一算");
 
   const handleFullCalculate = React.useCallback(async () => {
     if (!draftSeed) return;
-    setActionSyncing(true);
-    try {
-      await onSeedSubmit(draftSeed);
-      const seedSig = JSON.stringify(draftSeed);
-      setLastAppliedSeedSignature(seedSig);
-      setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
-    } finally {
-      setActionSyncing(false);
+    const t0 = Date.now();
+    setIsCalculating(true);
+    setInboxScanActive(true);
+    if (inboxPulseTimerRef.current) window.clearTimeout(inboxPulseTimerRef.current);
+    inboxPulseTimerRef.current = window.setTimeout(() => {
+      setInboxScanActive(false);
+      inboxPulseTimerRef.current = null;
+    }, 950);
+
+    if (runSuccessClearRef.current) {
+      window.clearTimeout(runSuccessClearRef.current);
+      runSuccessClearRef.current = null;
     }
-  }, [draftSeed, onSeedSubmit, pluginWeights]);
+    setRunSuccessFootnote("");
+    setFullRunErrorFootnote("");
+    if (fullRunErrorClearRef.current) {
+      window.clearTimeout(fullRunErrorClearRef.current);
+      fullRunErrorClearRef.current = null;
+    }
+
+    const prevTensor = labSnapshotRef.current?.physics_tensor;
+    const prevHash = physicsTensorFingerprint(prevTensor);
+
+    try {
+      const timeoutMs = 120_000;
+      const result: SeedSubmitResult = await Promise.race([
+        onSeedSubmit(draftSeed),
+        new Promise<SeedSubmitResult>((resolve) => {
+          window.setTimeout(
+            () => resolve({ ok: false, error: t("计算超时（120s），请检查网络或后端。") }),
+            timeoutMs,
+          );
+        }),
+      ]).catch((e: unknown) => ({
+        ok: false as const,
+        error: e instanceof Error ? e.message : t("排盘过程异常中断。"),
+      }));
+
+      const elapsedAfterFetch = Date.now() - t0;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedAfterFetch)));
+
+      if (!result.ok) {
+        setFullRunErrorFootnote(result.error);
+        fullRunErrorClearRef.current = window.setTimeout(() => {
+          setFullRunErrorFootnote("");
+          fullRunErrorClearRef.current = null;
+        }, 10_000);
+        return;
+      }
+
+      const nextHash = physicsTensorFingerprint(result.physics_tensor);
+      const physicsUnchanged = prevHash !== "" && nextHash !== "" && prevHash === nextHash;
+
+      const prevCount = calculationCountRef.current;
+      const nextCount: 0 | 1 | 2 =
+        prevCount === 0 ? 1 : prevCount === 1 ? (physicsUnchanged ? 2 : 1) : prevCount;
+      setCalculationCount(nextCount);
+      calculationCountRef.current = nextCount;
+
+      if (nextCount === 2) {
+        if (runSuccessClearRef.current) {
+          window.clearTimeout(runSuccessClearRef.current);
+          runSuccessClearRef.current = null;
+        }
+        setRunSuccessFootnote(t("✨ 逻辑已收敛，推演已至终局。请开始进行正式裁决。"));
+      } else {
+        setRunSuccessFootnote(
+          physicsUnchanged
+            ? t("✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。")
+            : t("计算完成，已更新逻辑视图"),
+        );
+        runSuccessClearRef.current = window.setTimeout(() => {
+          setRunSuccessFootnote("");
+          runSuccessClearRef.current = null;
+        }, 10_000);
+      }
+
+      const seedSig = JSON.stringify(draftSeed);
+      const paramSig = JSON.stringify(pluginWeights || {});
+      setLastAppliedSeedSignature(seedSig);
+      setLastAppliedParamSignature(paramSig);
+
+      setLastSuccessfulInputBundle(
+        buildFullRecalcInputBundle({
+          seedSignature: seedSig,
+          paramSignature: paramSig,
+          referenceYear,
+          labConfig,
+        }),
+      );
+    } finally {
+      setIsCalculating(false);
+      setCalculationNonce((prev) => prev + 1);
+    }
+  }, [draftSeed, onSeedSubmit, pluginWeights, referenceYear, labConfig, t]);
 
   const runSemanticRecompute = React.useCallback(async (decisions: InboxCard[]) => {
     setActionSyncing(true);
@@ -371,6 +532,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
 
   const handleMainBarRun = React.useCallback(async () => {
     if (isFinalized) return;
+    if (calculationCountRef.current === 2) return;
     if (seedDirty) {
       await handleFullCalculate();
       return;
@@ -412,13 +574,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   }, [currentDecisions, setDecisionIds, revokeConfirmedDecision, runSemanticRecompute]);
 
   React.useEffect(() => {
-    if (!pendingRevertEntropyCapture || actionSyncing) return;
+    if (!pendingRevertEntropyCapture || actionSyncing || isCalculating) return;
     const delta = Number(logicDiff?.entropy_delta || 0);
     setRevertEntropyDelta(delta);
     appendSystemAuditLog(`[REVERSION_IMPACT] entropy_rebound: ${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`);
     setPendingRevertEntropyCapture(false);
     window.setTimeout(() => setRevertEntropyDelta(null), 1800);
-  }, [pendingRevertEntropyCapture, actionSyncing, logicDiff?.entropy_delta, appendSystemAuditLog]);
+  }, [pendingRevertEntropyCapture, actionSyncing, isCalculating, logicDiff?.entropy_delta, appendSystemAuditLog]);
 
   React.useEffect(() => {
     if (!lastAppliedParamSignature) {
@@ -519,7 +681,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
               <SeedInput
                 key={seedEntryMountKey}
                 hydrateFrom={draftSeed}
-                onSubmit={onSeedSubmit}
+                onSubmit={handleSeedFormSubmitForEntry}
                 busy={busy}
                 t={t}
                 hideSubmitButton
@@ -618,10 +780,15 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   revertEntropyDelta={revertEntropyDelta}
                   actionMode={actionMode}
                   isDecisionDirty={isDecisionDirty}
-                  actionSyncing={actionSyncing}
+                  actionSyncing={actionSyncing || isCalculating}
                   primaryLabelOverride={primaryLabelOverride}
                   canIssueFinal={canIssueFinal}
                   checklistResetToken={checklistResetToken}
+                  calculationNonce={calculationNonce}
+                  inboxScanActive={inboxScanActive}
+                  runSuccessFootnote={runSuccessFootnote}
+                  fullRunErrorFootnote={fullRunErrorFootnote}
+                  calculationCount={calculationCount}
                   workExpectation={workExpectation}
                   backfireRiskVal={backfireRiskVal}
                   releasedEnergyVal={releasedEnergyVal}

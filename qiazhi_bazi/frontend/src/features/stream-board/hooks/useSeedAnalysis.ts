@@ -9,6 +9,7 @@ import {
   buildBlindSchoolFeaturesPayload,
   buildPhysicsConfigPayload,
   extractMetricSnapshotFromPhysics,
+  seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
 import type { ConsensusItem, MetricSnapshot } from "@/features/stream-board/controller/streamBoardTypes";
 import type {
@@ -98,6 +99,9 @@ export type SeedAnalysisDeps = {
   updateLogicDiff: (current: MetricSnapshot, forceBaseline?: boolean) => LogicDiff;
   scheduleInteractionHubPersist: () => void;
   llmModelName: string;
+  mergeSnapshot: (diff: Record<string, unknown>) => void;
+  /** 最近一次成功 analyze-seed 的 seed 签名；用于区分「校准重算」与「用户更换生辰」 */
+  seedShieldSigRef: MutableRefObject<string | null>;
 };
 
 /**
@@ -107,6 +111,11 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
   const onSeedSubmit = useCallback(
     async (payload: SeedPayload) => {
       const d = depsRef.current;
+      const incomingSig = seedPayloadSignature(payload);
+      const priorSig = d.seedShieldSigRef.current;
+      if (priorSig !== null && incomingSig !== null && priorSig !== incomingSig) {
+        d.mergeSnapshot({ decision_journal: [] });
+      }
       d.setLastSeedPayload(payload);
       d.persistLastSeedToStore(payload);
       d.setBusy(true);
@@ -205,6 +214,9 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
 
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json();
+        if (incomingSig) {
+          d.seedShieldSigRef.current = incomingSig;
+        }
         d.markActiveSession(currentSessionId ?? d.consultationId ?? null);
         d.setMetadata(data.metadata as BaziMetadata);
         const tl = (data.timeline ?? null) as TimelineSnapshot | null;
@@ -416,8 +428,16 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
         );
         d.setFirstPromptText(data.llm_prompt || "");
         await d.typewriter(data.llm_prompt || "");
+        const pt = data.physics_tensor;
+        return {
+          ok: true as const,
+          physics_tensor:
+            pt && typeof pt === "object" ? (pt as Record<string, unknown>) : null,
+        };
       } catch (error) {
-        await d.typewriter(`${d.t("连接后端失败：")}${error instanceof Error ? error.message : String(error)}`);
+        const msg = `${d.t("连接后端失败：")}${error instanceof Error ? error.message : String(error)}`;
+        await d.typewriter(msg);
+        return { ok: false as const, error: msg };
       } finally {
         d.setBusy(false);
         d.setIsStreaming(false);

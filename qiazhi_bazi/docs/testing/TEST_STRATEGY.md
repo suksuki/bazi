@@ -1,6 +1,6 @@
 # Test Strategy
 
-更新时间：`2026-04-11`
+更新时间：`2026-04-12`
 
 ## 1. 目标
 
@@ -63,7 +63,7 @@
 
 覆盖：
 
-- StreamBoard analyze-seed 主链路（controller 集成用例 + 纯函数 `labSnapshotHydration`）
+- StreamBoard analyze-seed 主链路（controller 集成用例 + 纯函数 `labSnapshotHydration` + `physicsTensorFingerprint` 单元测）
 - physics/service fallback 行为
 - admin settings runtime-config 流程
 - 前端 `npm run build` 作为构建期回归（路由与类型导入错误会在此暴露）

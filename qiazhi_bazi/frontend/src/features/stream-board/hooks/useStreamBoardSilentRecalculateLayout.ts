@@ -36,6 +36,8 @@ export type UseStreamBoardSilentRecalculateLayoutParams = {
   persistSnapshotRef: MutableRefObject<(payload: SilentRecalcPersistSnapshotPayload) => void>;
   bumpSyncBarrierSeq: () => void;
   scheduleInteractionHubPersist: () => void;
+  /** 静默 analyze-seed 失败时写入 result_logs，避免完全无声 */
+  appendSilentAnalyzeLogRef?: MutableRefObject<(line: string) => void>;
 };
 
 /**
@@ -59,6 +61,7 @@ export function useStreamBoardSilentRecalculateLayout({
   persistSnapshotRef,
   bumpSyncBarrierSeq,
   scheduleInteractionHubPersist,
+  appendSilentAnalyzeLogRef,
 }: UseStreamBoardSilentRecalculateLayoutParams) {
   useLayoutEffect(() => {
     reCalculateAbsSilentlyImplRef.current = async () => {
@@ -102,10 +105,24 @@ export function useStreamBoardSilentRecalculateLayout({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          let detail = "";
+          try {
+            detail = await response.text();
+          } catch {
+            /* ignore */
+          }
+          appendSilentAnalyzeLogRef?.current?.(
+            `[SILENT_ANALYZE] HTTP ${response.status}${detail ? `: ${detail.slice(0, 240)}` : ""}`,
+          );
+          return;
+        }
         const data = await response.json();
         const tensor = (data.physics_tensor || null) as Record<string, unknown> | null;
-        if (!tensor || typeof tensor !== "object") return;
+        if (!tensor || typeof tensor !== "object") {
+          appendSilentAnalyzeLogRef?.current?.("[SILENT_ANALYZE] 响应缺少 physics_tensor，已跳过静默灌入。");
+          return;
+        }
 
         set.setMetadata(data.metadata as BaziMetadata);
         set.setTimeline((data.timeline ?? null) as TimelineSnapshot | null);
@@ -162,8 +179,10 @@ export function useStreamBoardSilentRecalculateLayout({
         });
         bumpSyncBarrierSeq();
         scheduleInteractionHubPersist();
-      } catch {
-        /* silent */
+      } catch (e) {
+        appendSilentAnalyzeLogRef?.current?.(
+          `[SILENT_ANALYZE] ${e instanceof Error ? e.message : String(e)}`,
+        );
       } finally {
         silentRecalcInFlightRef.current = false;
       }

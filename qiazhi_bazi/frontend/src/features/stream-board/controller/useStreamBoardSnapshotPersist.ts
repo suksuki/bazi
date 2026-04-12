@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import type { LabLlmRoundSnapshot, LabStoreState } from "@/features/stream-board/stores/LabSessionContext";
 import type { SeedPayload, InboxCard, FinalVerdictChangeLog, LogicDiff } from "@/features/stream-board/models";
 import type { MetricSnapshot } from "./streamBoardTypes";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
+import { normalizeDecisionJournalEntries } from "@/features/stream-board/decisionJournal";
 import {
   extractMetricSnapshotFromPhysics,
   seedPayloadSignature,
@@ -29,6 +31,7 @@ export interface StreamBoardSnapshotPersistDeps {
   auditItems: Array<{ id?: string; step?: string; role?: string; action?: string; timestamp?: string }>;
   resultLogs: string[];
   cards: InboxCard[];
+  decisionJournal: DecisionJournalEntry[];
   consultationId: number | null;
   llmDiagnosticData: Record<string, unknown> | null;
   finalVerdictBody?: string;
@@ -212,6 +215,7 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
       ...(seedSig ? { seed_signature: seedSig } : {}),
       resolved_card_ids: deps.resolvedCardIds.slice(-240),
       decision_selection_ids: normalizeDecisionIds(deps.confirmedDecisionIds),
+      decision_journal: normalizeDecisionJournalEntries(deps.decisionJournal as unknown[]),
       interaction_hub: {
         ...buildInteractionHub(ihOptions),
         ...extractInteractionHubMangpai(payload.physics_tensor),

@@ -15,8 +15,8 @@ import type {
   PhysicsLabConfig,
   PluginWeights,
   SeedPayload,
+  SeedSubmitResult,
 } from "@/features/stream-board/models";
-
 export interface StreamBoardPipelineParams {
   labStateRef: MutableRefObject<LabStoreState>;
   labState: LabStoreState;
@@ -62,8 +62,10 @@ export interface StreamBoardPipelineParams {
   setSelectionResetToken: Dispatch<SetStateAction<number>>;
   setLogicDiff: Dispatch<SetStateAction<LogicDiff>>;
   mergeSnapshot: (diff: Record<string, unknown>) => void;
+  /** 与 useSeedAnalysis 共享：仅在「生辰宇宙」变更时清空决策护盾签名 */
+  seedShieldSigRef: MutableRefObject<string | null>;
   clearDecisionInbox: () => void;
-  onSeedSubmit: (p: SeedPayload) => Promise<void>;
+  onSeedSubmit: (p: SeedPayload) => Promise<SeedSubmitResult>;
   langRef: MutableRefObject<Lang>;
   setLangState: (l: Lang) => void;
   setUiLang: (l: Lang) => void;
@@ -134,6 +136,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setSelectionResetToken,
     setLogicDiff,
     mergeSnapshot,
+    seedShieldSigRef,
     clearDecisionInbox,
     onSeedSubmit,
     langRef,
@@ -199,6 +202,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setConsensusHistory([]);
     setConfirmedDecisions([]);
     setConfirmedDecisionIds([]);
+    seedShieldSigRef.current = null;
     resetSeedPreviewState();
     setConsultationId(null);
     setSelectionResetToken((v) => v + 1);
@@ -232,6 +236,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       },
       decision_selection_ids: [],
       resolved_card_ids: [],
+      decision_journal: [],
       interaction_hub: {
         ...hub,
         consultation_id: null,
@@ -287,6 +292,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setConsultationId,
     setSelectionResetToken,
     setLogicDiff,
+    seedShieldSigRef,
   ]);
 
   const lastCausalRevertHandledRef = useRef(0);
@@ -341,6 +347,18 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
   }
 
   async function revokeConfirmedDecision(id: string) {
+    const snap = labStateRef.current.snapshot;
+    if (snap?.decision_journal?.length) {
+      const suffix = id.startsWith("inbox-sanhe-") ? id.slice("inbox-sanhe-".length) : null;
+      const filtered = snap.decision_journal.filter((e) => {
+        if (e.inbox_card_id === id) return false;
+        if (suffix && e.branch_set_key === suffix) return false;
+        return true;
+      });
+      if (filtered.length !== snap.decision_journal.length) {
+        mergeSnapshot({ decision_journal: filtered });
+      }
+    }
     const nextDecisions = confirmedDecisions.filter((item) => item.id !== id);
     setConfirmedDecisions(nextDecisions);
     setConfirmedDecisionIds((prev) => prev.filter((item) => item !== id));

@@ -27,6 +27,7 @@ from app.core.runtime_config import get_runtime_config, set_runtime_config
 from app.db.models import PhysicsInteractionParam
 from app.db.session import session_scope
 from app.llm.client import QwenClient
+from app.prompts.admin_surface import ADMIN_CONCLUSION_COMPRESSOR_SYSTEM, ADMIN_CONCLUSION_REWRITER_SYSTEM
 from app.skills.physics_engine import PhysicsInferenceSkill
 from app.services.admin_service import execute_llm_test, get_db_status_response, initialize_database
 
@@ -41,7 +42,7 @@ async def _rewrite_final_only(client: QwenClient, source_text: str, language: st
     messages = [
         {
             "role": "system",
-            "content": "你是结果整理器。只输出最终结论，不展示推理过程，不使用标题。",
+            "content": ADMIN_CONCLUSION_REWRITER_SYSTEM,
         },
         {
             "role": "user",
@@ -60,7 +61,7 @@ async def _compress_final_only(client: QwenClient, source_text: str, language: s
         return ""
     lang_hint = {"ZH": "中文", "EN": "English", "KO": "한국어"}
     messages = [
-        {"role": "system", "content": "你是结论压缩器。只输出最终结论，不要过程，不要标题，不要列表。"},
+        {"role": "system", "content": ADMIN_CONCLUSION_COMPRESSOR_SYSTEM},
         {
             "role": "user",
             "content": f"请用{lang_hint.get(language, '中文')}把下文压缩为120字以内结论：\n{source_text}",

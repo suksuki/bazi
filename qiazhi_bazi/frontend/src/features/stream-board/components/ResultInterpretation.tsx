@@ -138,13 +138,13 @@ export function SkillLinkedAssertionLine({
 
   return (
     <p
-      className={`flex gap-1 ${className}${hint ? " cursor-default rounded-md px-0.5 transition-colors hover:bg-violet-500/12" : ""}`}
+      className={`flex min-w-0 max-w-full gap-1 ${className}${hint ? " cursor-default rounded-md px-0.5 transition-colors hover:bg-violet-500/12" : ""}`}
       onMouseEnter={() => {
         if (hint) setHighlightedBadgeId(hint);
       }}
       onMouseLeave={() => setHighlightedBadgeId(null)}
     >
-      <span className="min-w-0 flex-1">{children}</span>
+      <span className="min-w-0 max-w-full flex-1 overflow-x-hidden">{children}</span>
       {showAnchor ? (
         <SemanticFeedbackAnchor
           skillId={hint}

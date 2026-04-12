@@ -25,6 +25,22 @@ export function decisionIdsSignature(list: string[]): string {
   return JSON.stringify(normalizeDecisionIds(list));
 }
 
+/**
+ * 合并快照中的 decision_selection_ids 与本地勾选：若快照缺少任一本地 id，视为陈旧回灌，保留本地；
+ * 否则与快照做并集，以吸收服务端新增的勾选。
+ */
+export function mergeDecisionIdsPreferLocal(prev: string[], snapshot: string[]): string[] {
+  const prevN = normalizeDecisionIds(prev);
+  const snapN = normalizeDecisionIds(snapshot);
+  const snapSet = new Set(snapN);
+  for (const id of prevN) {
+    if (!snapSet.has(id)) {
+      return prevN;
+    }
+  }
+  return normalizeDecisionIds([...prevN, ...snapN]);
+}
+
 export function buildBlindSchoolFeaturesPayload(sw: PluginSwitches) {
   return {
     enable_pierce_harm: sw.blindSchoolPierceHarm !== false,

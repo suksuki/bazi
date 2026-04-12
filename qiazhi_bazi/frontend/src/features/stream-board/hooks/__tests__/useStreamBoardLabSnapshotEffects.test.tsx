@@ -200,8 +200,13 @@ describe("useStreamBoardLabSnapshotEffects", () => {
       snap: labSnap({ decision_selection_ids: ["x"], resolved_card_ids: ["y"] }),
     });
 
-    expect(setConfirmedDecisionIds).toHaveBeenCalledWith(["x"]);
-    expect(setResolvedCardIds).toHaveBeenCalledWith(["y"]);
+    expect(setConfirmedDecisionIds).toHaveBeenCalledTimes(1);
+    const mergeConfirmed = setConfirmedDecisionIds.mock.calls[0][0] as (prev: string[]) => string[];
+    expect(mergeConfirmed([])).toEqual(["x"]);
+    expect(mergeConfirmed(["x", "local-only"])).toEqual(["local-only", "x"]);
+    expect(setResolvedCardIds).toHaveBeenCalledTimes(1);
+    const mergeResolved = setResolvedCardIds.mock.calls[0][0] as (prev: string[]) => string[];
+    expect(new Set(mergeResolved(["already-local"]))).toEqual(new Set(["already-local", "y"]));
     expect(setSelectionResetToken).toHaveBeenCalled();
     const updater = setSelectionResetToken.mock.calls[0][0] as (n: number) => number;
     expect(updater(3)).toBe(4);

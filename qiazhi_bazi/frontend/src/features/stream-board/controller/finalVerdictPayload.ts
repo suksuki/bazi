@@ -64,11 +64,13 @@ export function mergeBaziMetadataMemoryPatch(
       regeneration_events?: unknown[];
       confirmed_verdicts?: unknown[];
       verdict_model_stamps?: unknown[];
+      learning_annotation?: { schema?: string; entries?: unknown[] };
     };
     const baseHc = { ...(typeof b.history_context === "object" && b.history_context ? b.history_context : {}) } as {
       regeneration_events?: unknown[];
       confirmed_verdicts?: unknown[];
       verdict_model_stamps?: unknown[];
+      learning_annotation?: { schema?: string; entries?: unknown[] };
     };
     if (Array.isArray(inc.regeneration_events) && inc.regeneration_events.length > 0) {
       const prev = Array.isArray(baseHc.regeneration_events) ? baseHc.regeneration_events : [];
@@ -81,7 +83,24 @@ export function mergeBaziMetadataMemoryPatch(
     if (Array.isArray(inc.confirmed_verdicts)) {
       baseHc.confirmed_verdicts = inc.confirmed_verdicts;
     }
+    const laInc = inc.learning_annotation;
+    if (laInc && typeof laInc === "object" && !Array.isArray(laInc)) {
+      const prevLa = baseHc.learning_annotation && typeof baseHc.learning_annotation === "object" ? baseHc.learning_annotation : {};
+      const prevEntries = Array.isArray(prevLa.entries) ? prevLa.entries : [];
+      const incEntries = Array.isArray((laInc as { entries?: unknown[] }).entries)
+        ? (laInc as { entries: unknown[] }).entries
+        : [];
+      baseHc.learning_annotation = {
+        ...prevLa,
+        ...laInc,
+        entries: [...prevEntries, ...incEntries].slice(-200),
+      };
+    }
     b.history_context = baseHc as BaziMetadata["history_context"];
+  }
+  const rfb = patch.reasoning_feedback_loop;
+  if (rfb !== undefined && rfb !== null) {
+    b.reasoning_feedback_loop = rfb;
   }
   return b as BaziMetadata;
 }

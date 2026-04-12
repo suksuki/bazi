@@ -11,6 +11,7 @@ from app.api.router_helpers import (
 )
 from app.core.runtime_config import get_runtime_config
 from app.llm.client import QwenClient
+from app.prompts.audit import AUDIT_JSON_REPAIR_SYSTEM
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.services.helpers.audit_helpers import fallback_audit_response, normalize_audit_result
 
@@ -53,6 +54,14 @@ def build_audit_prompt_payload(
         "params": (physics_tensor or {}).get("meta", {}).get("params", {}),
     }
     blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor, compact=(tier == "compact"))
+    high_reasoning = bool((cfg or {}).get("is_high_reasoning_mode"))
+    inf_trace: Dict[str, Any] | None = None
+    try:
+        md_dump = body.metadata.model_dump(mode="python") if hasattr(body.metadata, "model_dump") else {}
+        raw_it = md_dump.get("inference_trace") if isinstance(md_dump, dict) else None
+        inf_trace = raw_it if isinstance(raw_it, dict) else None
+    except Exception:
+        inf_trace = None
     prompt = build_physics_audit_prompt(
         deity_scores=deity_scores,
         root_check=root_check if isinstance(root_check, dict) else {},
@@ -61,6 +70,8 @@ def build_audit_prompt_payload(
         lang=body.lang,
         blind_skill_system_suffix=blind_skill_block,
         tier=tier,
+        high_reasoning=high_reasoning,
+        inference_trace=inf_trace,
     )
     return (
         prompt,
@@ -98,7 +109,7 @@ async def audit_physics_with_llm_flow(body: AuditPhysicsWithLlmRequest) -> Dict[
     except Exception:
         try:
             retry_prompt = [
-                {"role": "system", "content": "Only output strict JSON object. No prose."},
+                {"role": "system", "content": AUDIT_JSON_REPAIR_SYSTEM},
                 {"role": "user", "content": f"基于上一轮分析，输出JSON：{raw[:1800]}"},
             ]
             retry_raw, tel2 = await client.chat_with_telemetry(retry_prompt, temperature=0.0, max_tokens=180, stop=None)

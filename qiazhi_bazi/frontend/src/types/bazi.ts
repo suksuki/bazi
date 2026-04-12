@@ -37,6 +37,8 @@ export type ConfirmedVerdictRecord = {
   evidence_refs: string[];
   /** 签发所用 LLM model id（与 llm_meta.model_name 对齐） */
   model_id?: string;
+  /** 语义裁决后不再展示的 Decision Inbox 卡片 id（如 inbox-sanhe-丑巳酉） */
+  suppressed_inbox_card_ids?: string[];
 };
 
 /** 终判再生审计（与后端 VerdictRegenerationEvent 对齐） */
@@ -54,6 +56,28 @@ export type VerdictModelStamp = {
   occurred_at?: string;
   model_id?: string;
   version_id?: string;
+};
+
+/** 与后端 history_context.learning_annotation 对齐（entries 由前端合并追加） */
+export type LearningAnnotationEntry = {
+  occurred_at?: string;
+  kind?: string;
+  version_id?: string;
+  model_id?: string;
+  previous_version_id?: string;
+  reason?: string;
+  trigger?: string;
+  diff?: {
+    previous_verdict_excerpt?: string;
+    new_verdict_excerpt?: string;
+    previous_assertion_ids?: string[];
+    new_assertion_ids?: string[];
+  };
+};
+
+export type LearningAnnotation = {
+  schema?: string;
+  entries?: LearningAnnotationEntry[];
 };
 
 export type VerdictAssertionAnchor = {
@@ -86,9 +110,12 @@ export type BaziMetadata = {
     confirmed_verdicts?: ConfirmedVerdictRecord[];
     regeneration_events?: VerdictRegenerationEvent[];
     verdict_model_stamps?: VerdictModelStamp[];
+    learning_annotation?: LearningAnnotation;
   };
   inference_trace?: { version?: string; steps?: InferenceTraceStep[] };
   verdict_anchor_layer?: { narrative_version_id?: string; assertions?: VerdictAssertionAnchor[] };
+  /** 强模型可选回写；与终判 JSON 顶级 reasoning_feedback_loop 对齐 */
+  reasoning_feedback_loop?: unknown;
 };
 
 export type TimelineSnapshot = {

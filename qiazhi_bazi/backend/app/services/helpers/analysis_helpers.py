@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Tuple
 
+from app.prompts.translation import TRANSLATION_SYSTEM_PROMPT
+
 
 def normalize_translation_texts(texts: List[str], target_lang: str, guess_lang: Any) -> Tuple[List[str], bool]:
     filtered = [item for item in texts if isinstance(item, str) and item.strip()]
@@ -22,10 +24,7 @@ def build_translation_messages(texts: List[str], target_lang: str) -> List[Dict[
     return [
         {
             "role": "system",
-            "content": (
-                "You are a translation engine. Return STRICT JSON only: "
-                '{"items":["..."]}. Keep same count and order, no explanation.'
-            ),
+            "content": TRANSLATION_SYSTEM_PROMPT,
         },
         {
             "role": "user",

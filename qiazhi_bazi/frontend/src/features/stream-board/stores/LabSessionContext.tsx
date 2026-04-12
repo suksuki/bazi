@@ -16,6 +16,9 @@ import type {
   PluginWeights,
   SeedPayload,
 } from "@/features/stream-board/models";
+import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
+import { normalizeDecisionJournalEntries } from "@/features/stream-board/decisionJournal";
+import { expandResolvedInboxIds } from "@/features/stream-board/cardBuilder";
 import { computeVerdictEffectiveBlindSkillIds } from "@/features/stream-board/utils/blindSkillRuntime";
 import type { Lang } from "@/types/bazi";
 
@@ -154,6 +157,8 @@ export type LabSnapshot = {
     }>;
   };
   decision_selection_ids?: string[];
+  /** 追加型决策日志：语义抑制 Inbox（如三合地支集合），与 physics 张量 id 漂移解耦 */
+  decision_journal?: DecisionJournalEntry[];
 };
 
 type LabUpdateRow = {
@@ -235,7 +240,12 @@ async function sha256HexOfText(text: string): Promise<string> {
 function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
   switch (action.type) {
     case "mergeSnapshot": {
-      const raw = { ...action.payload };
+      const raw = { ...action.payload } as Record<string, unknown> & Partial<LabSnapshot>;
+      let journalReplace: DecisionJournalEntry[] | undefined;
+      if (Array.isArray(raw.decision_journal)) {
+        journalReplace = normalizeDecisionJournalEntries(raw.decision_journal as unknown[]);
+        delete raw.decision_journal;
+      }
       if (raw.decision_selection_ids != null && Array.isArray(raw.decision_selection_ids)) {
         raw.decision_selection_ids = normalizeDecisionIds(raw.decision_selection_ids);
       }
@@ -255,15 +265,19 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         return state;
       }
 
-      const nextSnapshot: LabSnapshot = {
+      let nextSnapshot: LabSnapshot = {
         ...(state.snapshot || {}),
         ...raw,
         ts: Date.now(),
       };
+      if (journalReplace !== undefined) {
+        nextSnapshot = { ...nextSnapshot, decision_journal: journalReplace };
+      }
 
       if (seedUniverseChanged) {
         nextSnapshot.decision_selection_ids = [];
         nextSnapshot.resolved_card_ids = [];
+        nextSnapshot.decision_journal = [];
         nextSnapshot.interaction_hub = {
           ...(nextSnapshot.interaction_hub || {}),
           pending_cards: [],
@@ -279,7 +293,11 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
       const lastLog = logs.length > 0 ? String(logs[logs.length - 1]) : "";
       const keys = Object.keys(action.payload || {});
       const decisionMutation = keys.some(
-        (k) => k === "final_verdict" || k === "resolved_card_ids" || k === "decision_selection_ids",
+        (k) =>
+          k === "final_verdict" ||
+          k === "resolved_card_ids" ||
+          k === "decision_selection_ids" ||
+          k === "decision_journal",
       );
       const updateRow: LabUpdateRow = {
         id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -433,6 +451,16 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
       const llmMeta = fv.llm_meta && typeof fv.llm_meta === "object" && !Array.isArray(fv.llm_meta) ? (fv.llm_meta as Record<string, unknown>) : {};
       const modelIdRaw = typeof llmMeta.model_name === "string" ? llmMeta.model_name.trim() : "";
       const modelId = modelIdRaw || "unknown";
+      const resolvedIds = Array.isArray(state.snapshot.resolved_card_ids)
+        ? state.snapshot.resolved_card_ids.map((x) => String(x))
+        : [];
+      const decisionIds = Array.isArray(state.snapshot.decision_selection_ids)
+        ? state.snapshot.decision_selection_ids.map((x) => String(x))
+        : [];
+      const pt = state.snapshot.physics_tensor as Record<string, unknown> | undefined;
+      const suppressed_inbox_card_ids = Array.from(
+        expandResolvedInboxIds([...resolvedIds, ...decisionIds], pt ?? null),
+      ).slice(0, 64);
       const confirmedRecord = {
         verdict_id: versionId || hash.slice(0, 24),
         body_excerpt: bodyStr.slice(0, 480),
@@ -440,6 +468,7 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         source_metadata_hash: hash,
         evidence_refs: uniqRefs,
         model_id: modelId,
+        suppressed_inbox_card_ids,
       };
       const prevHc = (prevMeta.history_context || {}) as { confirmed_verdicts?: unknown[] };
       const prevCv = Array.isArray(prevHc.confirmed_verdicts) ? [...prevHc.confirmed_verdicts] : [];

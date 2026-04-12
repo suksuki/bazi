@@ -18,11 +18,13 @@ export default function HomePage() {
       <div className="flex min-h-dvh flex-col">
         <ShellDashboardTabs />
         <div className="min-h-0 flex-1 pb-[env(safe-area-inset-bottom,0px)]">
-          {activeView === "lab" ? (
-            <div className="flex min-h-dvh flex-col">
-              <StreamBoard />
-            </div>
-          ) : null}
+          {/* 实验室须保持挂载：用 Tab 切到黑匣子/机房再回来时，若此处曾渲染为 null 会卸载整棵 StreamBoard，排盘与终判等内存态会丢失。 */}
+          <div
+            className={activeView === "lab" ? "flex min-h-dvh flex-col" : "hidden"}
+            aria-hidden={activeView !== "lab"}
+          >
+            <StreamBoard />
+          </div>
           {activeView === "debug" ? <DebugView /> : null}
           {activeView === "admin" ? <AdminView /> : null}
         </div>

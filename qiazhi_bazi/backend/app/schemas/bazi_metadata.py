@@ -67,6 +67,10 @@ class ConfirmedVerdictRecord(BaseModel):
         default="unknown",
         description="签发或归档时的 LLM 模型 id（runtime_config.llm.model；禁止空串）",
     )
+    suppressed_inbox_card_ids: List[str] = Field(
+        default_factory=list,
+        description="终判签发时从 resolved_card_ids 等汇总的 Inbox 卡片屏蔽 id，供叙事工厂复现时过滤",
+    )
 
 
 class VerdictRegenerationEvent(BaseModel):
@@ -99,6 +103,10 @@ class HistoryContext(BaseModel):
     verdict_model_stamps: List[VerdictModelStamp] = Field(
         default_factory=list,
         description="每次终判成功即追加一条（与 regeneration 独立）；跨会话审计用",
+    )
+    learning_annotation: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="裁决者偏好与 Regenerate/修正差分；建议 schema=learning_annotation.v1，entries 为列表",
     )
 
 
@@ -173,6 +181,10 @@ class BaziMetadata(BaseModel):
     verdict_anchor_layer: VerdictAnchorLayer = Field(
         default_factory=VerdictAnchorLayer,
         description="当前终判断言与 evidence_refs，与 Debug 回放联动",
+    )
+    reasoning_feedback_loop: Optional[Any] = Field(
+        default=None,
+        description="强模型可选回写的推理摘要（与终判 JSON 顶级字段对齐，供进化管线）",
     )
 
 

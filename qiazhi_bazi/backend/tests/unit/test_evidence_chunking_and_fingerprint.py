@@ -53,6 +53,7 @@ def test_fingerprint_roundtrip_in_html_comment() -> None:
     pad = "=" * (-len(tail) % 4)
     raw = base64.urlsafe_b64decode(tail + pad)
     fp = json.loads(raw.decode("utf-8"))
-    assert fp["schema"] == "qiazhi.verdict_fingerprint.v1"
+    assert fp["schema"] == "qiazhi.verdict_fingerprint.v2"
     assert fp["pillar_energy_snapshot"]["year"]["raw_energy"] == 1.5
     assert "classical.blind_school.v1" in fp["active_plugins"]
+    assert fp.get("assertion_fingerprints") == []

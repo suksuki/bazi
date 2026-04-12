@@ -111,6 +111,33 @@ def test_audit_flow_uses_retry_json():
     assert payload["diagnosis"] == "重试成功"
 
 
+def test_physics_audit_prompt_high_reasoning_adds_sql_discipline_and_inference_trace():
+    kwargs = dict(
+        deity_scores={"正官": 50.0},
+        root_check={},
+        seasonal_factors={"solar_term": "立春", "params": {}},
+        consensus_history=[],
+        lang="ZH",
+        blind_skill_system_suffix="",
+        high_reasoning=True,
+        inference_trace={
+            "version": "1.0",
+            "steps": [
+                {
+                    "layer_id": "L2",
+                    "plugin_id": "sys.core.physics",
+                    "output_summary": "sanity_scan",
+                }
+            ],
+        },
+    )
+    cmp = build_physics_audit_prompt(**kwargs, tier="compact")
+    assert "高推理·SQL 纪律" in cmp[0]["content"]
+    assert "高推理·因果溯源" in cmp[0]["content"]
+    assert "InferenceTrace" in cmp[1]["content"]
+    assert "sys.core.physics" in cmp[1]["content"]
+
+
 def test_physics_audit_prompt_compact_drops_english_mandatory_and_input_prefix():
     kwargs = dict(
         deity_scores={"比肩": 1.0},
