@@ -218,6 +218,8 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       final_verdict: undefined,
       audit_summary: undefined,
       llm_prompt: undefined,
+      first_observation_llm: undefined,
+      physics_auditor_llm: undefined,
       seed_signature: undefined,
       active_session_id: undefined,
       logic_diff: {
@@ -386,17 +388,14 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       runtimeConfigSerializedRef.current = sig;
     }
     const prevView = prevActiveViewRef.current;
-    const enteredLab = activeView === "lab" && prevView !== null && prevView !== "lab";
+    /** 离开机房进入实验室/黑匣子时立即补一次重算，避免防抖尚未触发时快照滞后。 */
+    const shouldFlushViewEntry =
+      prevView !== null &&
+      prevView !== activeView &&
+      prevView === "admin" &&
+      (activeView === "lab" || activeView === "debug");
     prevActiveViewRef.current = activeView;
 
-    if (activeView !== "lab") {
-      return () => {
-        if (pluginRecalcTimerRef.current) {
-          clearTimeout(pluginRecalcTimerRef.current);
-          pluginRecalcTimerRef.current = null;
-        }
-      };
-    }
     if (!lastSeedPayload || busy || isStreaming || isExecuting) {
       return () => {
         if (pluginRecalcTimerRef.current) {
@@ -416,7 +415,7 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
       onPluginConfigChange();
     };
 
-    if (enteredLab) {
+    if (shouldFlushViewEntry) {
       runNow();
       return () => {
         if (pluginRecalcTimerRef.current) {

@@ -39,6 +39,19 @@ def _collect_l1_threats_against_pivot(
         threats.append({"code": "L1_SGJG", "detail": "伤官见官结构对官杀枢纽施压", "severity": 0.85})
     if meta.get("l1_owl_food_v1") and pivot == "食神":
         threats.append({"code": "L1_OWL_FOOD", "detail": "枭神夺食阻尼作用于食神枢纽", "severity": 0.8})
+    if (
+        isinstance(jf, dict)
+        and jf.get("XIAO_SHEN_DUO_SHI")
+        and pivot in {"正官", "七杀"}
+        and meta.get("l1_owl_food_v1")
+    ):
+        threats.append(
+            {
+                "code": "L1_XSDS_OFFICER_PIVOT",
+                "detail": "枭神夺食削弱食伤根气，与官杀枢纽同局叠加承压",
+                "severity": 0.42,
+            }
+        )
     ws = meta.get("l1_wealth_seal_v1")
     if isinstance(ws, dict) and pivot in {"正印", "偏印"}:
         touched = ws.get("deities_scaled")

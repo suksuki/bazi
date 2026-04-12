@@ -73,9 +73,11 @@ describe("stream-board utils", () => {
       },
       l1JunctionFlags: { SHANG_GUAN_JIAN_GUAN: true },
     });
-    expect(cards[0]?.id).toBe("inbox-pattern-sovereignty");
-    expect(cards[0]?.skillId).toBe("PATTERN_SOVEREIGNTY");
-    expect(cards[0]?.sovereigntyMark).toBe("PATTERN_SOVEREIGNTY");
+    const idx = cards.findIndex((c) => c.id === "inbox-pattern-sovereignty");
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const pc = cards[idx];
+    expect(pc?.skillId).toBe("PATTERN_SOVEREIGNTY");
+    expect(pc?.sovereigntyMark).toBe("PATTERN_SOVEREIGNTY");
   });
 
   it("suppresses LLM observation cards when decision signal-to-noise gate is closed", () => {
@@ -94,6 +96,42 @@ describe("stream-board utils", () => {
       decisionSignalToNoise: { inbox_conflict_cards_eligible: false },
     });
     expect(cards.map((c) => c.id)).toEqual(["fallback-deep-scan"]);
+  });
+
+  it("prepends L1_STRUCTURE sanhe cards from physics_tensor even when inbox gate is closed", () => {
+    const cards = buildInboxCards({
+      metadata: {
+        version: "1",
+        pillars: null,
+        flow_state: "ready",
+        notes: "",
+        conflict_matrix: { points: [] },
+      },
+      firstPromptText: "第一句。第二句。",
+      auditorProposalCards: [],
+      resolvedCardIds: [],
+      t: (text) => text,
+      decisionSignalToNoise: { inbox_conflict_cards_eligible: false },
+      physicsTensor: {
+        composite_field_impact: {
+          sanhe_clusters: [
+            {
+              branches: ["丑", "巳", "酉"],
+              energy_vault_status: "AGGREGATED",
+              nodes: [
+                { pillar: "year", branch: "巳" },
+                { pillar: "day", branch: "丑" },
+                { pillar: "hour", branch: "酉" },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(cards[0]?.id).toBe("inbox-sanhe-0");
+    expect(cards[0]?.cardType).toBe("L1_STRUCTURE");
+    expect(cards[0]?.skillId).toBe("l1_branch_sanhe");
+    expect(cards.some((c) => c.id === "fallback-deep-scan")).toBe(true);
   });
 
   it("returns a stable fallback verdict payload", () => {

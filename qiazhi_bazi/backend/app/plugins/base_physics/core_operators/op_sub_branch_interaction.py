@@ -1,75 +1,135 @@
 """深度地支交互：三合/六合/半合/六冲/三刑/六害/六破/暗合/墓库 的判定摘要、Abs 微调与 meta.interaction_v2 / 墓库门态。"""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, MutableMapping, Set, Tuple
+from typing import Any, Dict, FrozenSet, List, Mapping, MutableMapping, Set
 
 from app.core.rules.junction import EnergyVaultStatus
-from app.skills.physics_rules import (
-    SANHE_GROUPS,
-    SANXING_EDGES,
-    STEM_TOMB_BRANCH,
-    TEN_DEITIES,
-    deity_from_self_and_target_stem,
+from app.plugins.base_physics.core_operators.sub_branch_condition_eval import (
+    LIU_HAI_PAIRS,
+    LIU_PO_PAIRS,
+    eval_anhe_hits,
+    eval_banhe_hits,
+    eval_branch_pair_hits,
+    eval_liu_chong_hits,
+    eval_liuhe_hits,
+    sanhe_trine_allowed_by_wang_zhi_switch,
+    sanxing_detect_geometry,
+    sanxing_from_steps,
 )
+from app.skills.physics_rules import STEM_TOMB_BRANCH, TEN_DEITIES, deity_from_self_and_target_stem
 
 OP_ID = "L1_OP_SUB_BRANCH_INTERACTION"
 
-_LIUHE_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("子", "丑"),
-    ("寅", "亥"),
-    ("卯", "戌"),
-    ("辰", "酉"),
-    ("巳", "申"),
-    ("午", "未"),
-)
 
-# 常见地支暗合（两支同现即记 INTERNAL_LEAKAGE 审计）
-_ANHE_PAIRS: Tuple[frozenset[str], ...] = (
-    frozenset({"子", "巳"}),
-    frozenset({"丑", "午"}),
-    frozenset({"寅", "未"}),
-    frozenset({"卯", "申"}),
-    frozenset({"亥", "午"}),
-)
+def is_sanhe_triggered(
+    group: FrozenSet[str],
+    branches: Mapping[str, str],
+    settings: Mapping[str, Any],
+) -> bool:
+    """三合是否成立：三支在四柱中出现 + `SUB_BRANCH_SANHE_REQ_WANG_ZHI` 旺支门控（委托 `sanhe_trine_allowed_by_wang_zhi_switch`）。"""
+    present = frozenset(branches.values())
+    if not group.issubset(present):
+        return False
+    return sanhe_trine_allowed_by_wang_zhi_switch(group, branches, settings)
 
-# 半合：两支为三合之缺一支态（全三合齐现时不再记半合）
-_BANHE_TRIPLE: Tuple[Tuple[str, str, str], ...] = (
-    ("申", "子", "water"),
-    ("子", "辰", "water"),
-    ("亥", "卯", "wood"),
-    ("卯", "未", "wood"),
-    ("寅", "午", "fire"),
-    ("午", "戌", "fire"),
-    ("巳", "酉", "metal"),
-    ("酉", "丑", "metal"),
-)
 
-_LIU_CHONG_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("子", "午"),
-    ("丑", "未"),
-    ("寅", "申"),
-    ("卯", "酉"),
-    ("辰", "戌"),
-    ("巳", "亥"),
-)
+def verify_sanhe_phi_consistency(
+    *,
+    clusters: List[Dict[str, Any]],
+    steps: List[Dict[str, Any]],
+    clamp_on: bool,
+) -> Dict[str, Any]:
+    """校验：AGGREGATED 节点在流水线上 φ 显式为 0，除非对应 cluster 已标记解锁。"""
+    gates = [s for s in steps if s.get("plugin") == "composite.aggregated_phi"]
+    if not clamp_on:
+        return {"ok": True, "reasons": [], "phi_gate_count": len(gates), "skipped_clamp": True}
+    ok = True
+    reasons: List[str] = []
+    for cl in clusters:
+        if (cl.get("energy_vault_status") or "") != EnergyVaultStatus.AGGREGATED.value:
+            continue
+        unlocked = bool(cl.get("cluster_phi_unlock", False))
+        for node in cl.get("nodes") or []:
+            pname = str(node.get("pillar") or "")
+            found = [g for g in gates if g.get("pillar") == pname]
+            if not found:
+                ok = False
+                reasons.append(f"missing_phi_gate:{pname}")
+                continue
+            phi = float(found[0].get("phi_work", -1.0))
+            if clamp_on and not unlocked and phi != 0.0:
+                ok = False
+                reasons.append(f"phi_not_zero:{pname}")
+            if clamp_on and unlocked and phi != 1.0:
+                ok = False
+                reasons.append(f"phi_not_released:{pname}")
+    return {"ok": ok, "reasons": reasons, "phi_gate_count": len(gates)}
 
-_LIU_HAI_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("子", "未"),
-    ("丑", "午"),
-    ("寅", "巳"),
-    ("卯", "辰"),
-    ("申", "亥"),
-    ("酉", "戌"),
-)
 
-_LIU_PO_PAIRS: Tuple[Tuple[str, str], ...] = (
-    ("子", "酉"),
-    ("午", "卯"),
-    ("寅", "亥"),
-    ("巳", "申"),
-    ("辰", "丑"),
-    ("戌", "未"),
-)
+def clamp_node_metric_for_entropy(
+    *,
+    composite: Mapping[str, Any],
+    steps: List[Dict[str, Any]],
+    branches: Mapping[str, str],
+) -> float:
+    """AGGREGATED 或墓库 LOCKED 所触及柱位占四柱比例，归一化到 0..1（供全局熵 m_clamp）。"""
+    touched: Set[str] = set()
+    for cl in composite.get("sanhe_clusters") or []:
+        for node in cl.get("nodes") or []:
+            p = str(node.get("pillar") or "")
+            if p:
+                touched.add(p)
+    for s in steps:
+        if s.get("plugin") != "base.grave":
+            continue
+        d = s.get("delta") or {}
+        if str(d.get("energy_vault_status") or "") != EnergyVaultStatus.LOCKED.value:
+            continue
+        tb = str(s.get("tomb_branch") or "")
+        for pname, br in branches.items():
+            if br == tb:
+                touched.add(str(pname))
+    return min(1.0, len(touched) / 4.0)
+
+
+def judgment_protocol_dynamic_lines_for_sub_branch_operator(
+    operator_plugin_id: str,
+    settings: Mapping[str, Any],
+) -> List[str]:
+    """与 `apply_op_sub_branch_interaction` 及 composite 三合门控同源键值，供 Admin 卡片「判定协议」随 DB 解析结果刷新。"""
+    oid = str(operator_plugin_id)
+    out: List[str] = []
+
+    def g(key: str, default: float) -> float:
+        try:
+            return float(settings.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    out.append(f"[运行时] L1_SUB_BRANCH_OP_ENABLE={g('L1_SUB_BRANCH_OP_ENABLE', 1.0):.2f}（<0.5 跳过地支深度交互算子）")
+    if oid == "base.physics.op_branch_sanhe":
+        out.append(
+            f"[运行时] SUB_BRANCH_SANHE_REQ_WANG_ZHI={g('SUB_BRANCH_SANHE_REQ_WANG_ZHI', 0.0):.2f}（≥0.5 则三合中神须在月/日支）"
+        )
+        out.append(f"[运行时] SANHE_ALPHA_LEAKAGE={g('SANHE_ALPHA_LEAKAGE', 0.0):.3f}（Abs 有效 boost 乘 (1−α)）")
+        out.append(f"[运行时] SUB_BRANCH_SANHE_ABS_BOOST={g('SUB_BRANCH_SANHE_ABS_BOOST', 0.06):.4f}")
+    elif oid == "base.physics.op_branch_banhe":
+        out.append(f"[运行时] SUB_BRANCH_BANHE_PHI={g('SUB_BRANCH_BANHE_PHI', 0.6):.3f}")
+        out.append(f"[运行时] SUB_BRANCH_BANHE_ABS_BOOST={g('SUB_BRANCH_BANHE_ABS_BOOST', 0.02):.4f}")
+        out.append(f"[运行时] SUB_BRANCH_BANHE_VECTOR_BOOST={g('SUB_BRANCH_BANHE_VECTOR_BOOST', 0.028):.4f}")
+    elif oid == "base.physics.op_branch_liuhe":
+        out.append(f"[运行时] SUB_BRANCH_LIUHE_ABS_BOOST={g('SUB_BRANCH_LIUHE_ABS_BOOST', 0.04):.4f}")
+    elif oid == "base.physics.op_branch_liuchong":
+        out.append(f"[运行时] SUB_BRANCH_LIUCHONG_ABS_DAMP={g('SUB_BRANCH_LIUCHONG_ABS_DAMP', 1.0):.4f}")
+    elif oid == "base.physics.op_branch_sanxing":
+        out.append(f"[运行时] SUB_BRANCH_SANXING_ABS_DAMP={g('SUB_BRANCH_SANXING_ABS_DAMP', 0.97):.4f}")
+    elif oid == "base.physics.op_branch_liuhai":
+        out.append(f"[运行时] SUB_BRANCH_LIUHAI_ENABLE={g('SUB_BRANCH_LIUHAI_ENABLE', 1.0):.2f}（<0.5 不算六害）")
+        out.append(f"[运行时] SUB_BRANCH_LIUHAI_ABS_DAMP={g('SUB_BRANCH_LIUHAI_ABS_DAMP', 0.998):.5f}")
+    elif oid == "base.physics.op_branch_liupo":
+        out.append(f"[运行时] SUB_BRANCH_LIUPO_ENABLE={g('SUB_BRANCH_LIUPO_ENABLE', 1.0):.2f}（<0.5 不算六破）")
+        out.append(f"[运行时] SUB_BRANCH_LIUPO_ABS_DAMP={g('SUB_BRANCH_LIUPO_ABS_DAMP', 0.998):.5f}")
+    return out
 
 
 def _stem_of(pillars: Mapping[str, Any], key: str) -> str:
@@ -77,101 +137,6 @@ def _stem_of(pillars: Mapping[str, Any], key: str) -> str:
     if isinstance(col, dict):
         return str(col.get("stem") or "")
     return str(getattr(col, "stem", "") or "")
-
-
-def _pillars_branches(branches: Mapping[str, str]) -> Set[str]:
-    return set(branches.values())
-
-
-def _liuhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
-    present = _pillars_branches(branches)
-    hits: List[Dict[str, Any]] = []
-    for a, b in _LIUHE_PAIRS:
-        if a in present and b in present:
-            pa = next((p for p, br in branches.items() if br == a), "")
-            pb = next((p for p, br in branches.items() if br == b), "")
-            if pa and pb and pa != pb:
-                hits.append({"pair": [a, b], "pillars": sorted([pa, pb])})
-    return hits
-
-
-def _anhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
-    present = _pillars_branches(branches)
-    out: List[Dict[str, Any]] = []
-    for pair in _ANHE_PAIRS:
-        if not pair.issubset(present):
-            continue
-        b1, b2 = sorted(pair)
-        pa = next((p for p, br in branches.items() if br == b1), "")
-        pb = next((p for p, br in branches.items() if br == b2), "")
-        if pa and pb and pa != pb:
-            out.append({"pair": sorted(list(pair)), "pillars": sorted([pa, pb])})
-    return out
-
-
-def _sanxing_from_steps(combined_steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    out: List[Dict[str, Any]] = []
-    for s in combined_steps:
-        if s.get("plugin") != "base.punish":
-            continue
-        mode = str(s.get("mode") or "")
-        if mode != "sanxing":
-            continue
-        out.append({"edge": list(s.get("edge") or []), "mode": mode})
-    return out
-
-
-def _sanxing_detect(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
-    """与原子池一致：任两支成三刑边即记一条（若 steps 未覆盖则补记）。"""
-    present = _pillars_branches(branches)
-    hits: List[Dict[str, Any]] = []
-    seen: Set[Tuple[str, str]] = set()
-    for b1, b2 in SANXING_EDGES:
-        if b1 in present and b2 in present:
-            key = tuple(sorted((b1, b2)))
-            if key in seen:
-                continue
-            seen.add(key)
-            pa = next((p for p, br in branches.items() if br == b1), "")
-            pb = next((p for p, br in branches.items() if br == b2), "")
-            if pa and pb and pa != pb:
-                hits.append({"edge": sorted([pa, pb]), "branches": sorted([b1, b2])})
-    return hits
-
-
-def _sanhe_group_complete_for_pair(br1: str, br2: str, present: Set[str]) -> bool:
-    for g in SANHE_GROUPS:
-        if br1 in g and br2 in g:
-            return set(g).issubset(present)
-    return False
-
-
-def _banhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
-    present = set(branches.values())
-    hits: List[Dict[str, Any]] = []
-    for a, b, el in _BANHE_TRIPLE:
-        if a not in present or b not in present:
-            continue
-        if _sanhe_group_complete_for_pair(a, b, present):
-            continue
-        pa = next((p for p, br in branches.items() if br == a), "")
-        pb = next((p for p, br in branches.items() if br == b), "")
-        if pa and pb and pa != pb:
-            hits.append({"pair": sorted([a, b]), "pillars": sorted([pa, pb]), "element": el})
-    return hits
-
-
-def _branch_pair_hits(branches: Mapping[str, str], pairs: Tuple[Tuple[str, str], ...]) -> List[Dict[str, Any]]:
-    present = set(branches.values())
-    hits: List[Dict[str, Any]] = []
-    for a, b in pairs:
-        if a not in present or b not in present:
-            continue
-        pa = next((p for p, br in branches.items() if br == a), "")
-        pb = next((p for p, br in branches.items() if br == b), "")
-        if pa and pb and pa != pb:
-            hits.append({"pair": sorted([a, b]), "pillars": sorted([pa, pb])})
-    return hits
 
 
 def _apply_interaction_marks(
@@ -245,15 +210,15 @@ def apply_op_sub_branch_interaction(
         if (cl.get("energy_vault_status") or "") == EnergyVaultStatus.AGGREGATED.value:
             collapse.append({"kind": "sanhe", "branches": brs, "attribute_collapse": True})
 
-    liuhe = _liuhe_hits(branches)
+    liuhe = eval_liuhe_hits(branches)
     for h in liuhe:
         collapse.append({"kind": "liuhe", "pair": h.get("pair"), "attribute_collapse": True})
 
-    sanxing_steps = _sanxing_from_steps(combined_steps)
-    sanxing_geo = _sanxing_detect(branches)
+    sanxing_steps = sanxing_from_steps(combined_steps)
+    sanxing_geo = sanxing_detect_geometry(branches)
     sanxing_merged = sanxing_steps or [{"edge": x.get("edge"), "branches": x.get("branches")} for x in sanxing_geo]
 
-    anhe = _anhe_hits(branches)
+    anhe = eval_anhe_hits(branches)
     leakage_audit: List[Dict[str, Any]] = []
     for item in anhe:
         leakage_audit.append(
@@ -265,17 +230,17 @@ def apply_op_sub_branch_interaction(
             }
         )
 
-    banhe_raw = _banhe_hits(branches)
+    banhe_raw = eval_banhe_hits(branches)
     phi_banhe = max(0.0, min(1.0, float(settings.get("SUB_BRANCH_BANHE_PHI", 0.6))))
     banhe: List[Dict[str, Any]] = [{**dict(h), "phi": round(phi_banhe, 4)} for h in banhe_raw]
-    liu_chong = _branch_pair_hits(branches, _LIU_CHONG_PAIRS)
+    liu_chong = eval_liu_chong_hits(branches)
     liu_hai = (
-        _branch_pair_hits(branches, _LIU_HAI_PAIRS)
+        eval_branch_pair_hits(branches, LIU_HAI_PAIRS)
         if float(settings.get("SUB_BRANCH_LIUHAI_ENABLE", 1.0)) >= 0.5
         else []
     )
     liu_po = (
-        _branch_pair_hits(branches, _LIU_PO_PAIRS)
+        eval_branch_pair_hits(branches, LIU_PO_PAIRS)
         if float(settings.get("SUB_BRANCH_LIUPO_ENABLE", 1.0)) >= 0.5
         else []
     )
@@ -390,6 +355,7 @@ def apply_op_sub_branch_interaction(
             meta["MUKU_GATE_STATE"] = {"locked": False, "tomb_branch": tomb_branch, "damping": 1.0}
 
     sh_boost = max(0.0, float(settings.get("SUB_BRANCH_SANHE_ABS_BOOST", 0.06)))
+    sanhe_alpha = max(0.0, min(1.0, float(settings.get("SANHE_ALPHA_LEAKAGE", 0.0))))
     lh_boost = max(0.0, float(settings.get("SUB_BRANCH_LIUHE_ABS_BOOST", 0.04)))
     sx_damp = max(0.1, min(1.0, float(settings.get("SUB_BRANCH_SANXING_ABS_DAMP", 0.97))))
     an_damp = max(0.1, min(1.0, float(settings.get("SUB_BRANCH_ANHE_ABS_DAMP", 0.985))))
@@ -420,7 +386,8 @@ def apply_op_sub_branch_interaction(
         has_sanhe = any(c.get("kind") == "sanhe" for c in collapse)
         has_liuhe = any(c.get("kind") == "liuhe" for c in collapse)
         if has_sanhe:
-            f *= 1.0 + sh_boost
+            eff_sh = sh_boost * max(0.0, 1.0 - sanhe_alpha)
+            f *= 1.0 + eff_sh
         if has_liuhe:
             f *= 1.0 + lh_boost
     if banhe:

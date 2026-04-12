@@ -320,7 +320,15 @@ def sync_l1_junction_flags_to_meta(
                     clash = float(ge["clash_abs_loss_total"])
                 except (TypeError, ValueError):
                     clash = None
-            block = apply_decision_inbox_signal_gate(meta=meta, settings=settings, clash_abs_loss_total=clash)
+            comp = physics_tensor.get("composite_field_impact") if isinstance(physics_tensor.get("composite_field_impact"), dict) else {}
+            sc = comp.get("sanhe_clusters") if isinstance(comp, dict) else None
+            has_sanhe_cluster = isinstance(sc, list) and len(sc) > 0
+            block = apply_decision_inbox_signal_gate(
+                meta=meta,
+                settings=settings,
+                clash_abs_loss_total=clash,
+                has_sanhe_cluster=has_sanhe_cluster,
+            )
             try:
                 from app.core.plugins.conflict_telemetry import record_decision_inbox_signal
 

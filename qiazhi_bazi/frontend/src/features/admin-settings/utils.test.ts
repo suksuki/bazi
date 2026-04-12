@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildSavedSettings, makePgUrl } from "./utils";
+import { buildSavedSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
 
 describe("admin settings utils", () => {
   it("builds postgres urls with encoded password", () => {
@@ -34,5 +34,21 @@ describe("admin settings utils", () => {
     });
     expect(payload.pgDatabase).toBe("demo");
     expect(payload.llmModel).toBe("qwen");
+  });
+});
+
+describe("normalizeOllamaHostInput", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("returns empty when input empty and no origin env", () => {
+    vi.stubEnv("NEXT_PUBLIC_QIAZHI_OLLAMA_ORIGIN", "");
+    expect(normalizeOllamaHostInput("")).toBe("");
+  });
+
+  it("uses NEXT_PUBLIC_QIAZHI_OLLAMA_ORIGIN when input empty", () => {
+    vi.stubEnv("NEXT_PUBLIC_QIAZHI_OLLAMA_ORIGIN", "http://localhost:11434/");
+    expect(normalizeOllamaHostInput("")).toBe("http://localhost:11434");
   });
 });

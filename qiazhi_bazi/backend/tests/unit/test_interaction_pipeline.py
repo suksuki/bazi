@@ -158,3 +158,39 @@ def test_pipeline_trinity_sanhe_sanxing_grave_locked():
     assert all(s.get("phi_work") == 0.0 for s in phi_steps)
     assert tensor.get("meta", {}).get("work_eligible") is False
     assert float((tensor.get("meta") or {}).get("global_entropy") or 0) > 0.15
+
+
+def test_pipeline_sanhe_with_liunian_branch_completes_metal_trine():
+    """原局仅巳+酉，流年支丑凑齐巳酉丑；依赖 SANHE_INCLUDE_TEMPORAL_BRANCHES。"""
+    pillars = FourPillars(
+        year=StemBranchPair(stem="甲", branch="巳"),
+        month=StemBranchPair(stem="丙", branch="寅"),
+        day=StemBranchPair(stem="丁", branch="酉"),
+        hour=StemBranchPair(stem="戊", branch="子"),
+    )
+    meta = BaziMetadata(
+        pillars=pillars,
+        conflict_matrix=ConflictMatrix(points=[]),
+        temporal_context={"liunian_ganzhi": "辛丑"},
+    )
+    tensor = {
+        "by_pillar": {
+            "year": {"raw_energy": 10.0},
+            "month": {"raw_energy": 10.0},
+            "day": {"raw_energy": 20.0},
+            "hour": {"raw_energy": 15.0},
+        }
+    }
+    evaluate_interactions(
+        physics_tensor=tensor,
+        metadata=meta,
+        interaction_params={"SUB_BRANCH_SANHE_REQ_WANG_ZHI": 0.0},
+        physics_config={"SANHE_INCLUDE_TEMPORAL_BRANCHES": 1.0},
+    )
+    comp = tensor.get("composite_field_impact") or {}
+    clusters = comp.get("sanhe_clusters") or []
+    assert len(clusters) == 1
+    assert set(clusters[0].get("branches") or []) == {"丑", "巳", "酉"}
+    dsn = (tensor.get("meta") or {}).get("decision_signal_to_noise") or {}
+    assert dsn.get("inbox_conflict_cards_eligible") is True
+    assert dsn.get("sanhe_inbox_bypass") is True

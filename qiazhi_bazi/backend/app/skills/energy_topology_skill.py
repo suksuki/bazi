@@ -20,6 +20,8 @@ RELATION_GAIN = {
     "克": 0.9,
 }
 
+_BRANCH_CHARS = frozenset("子丑寅卯辰巳午未申酉戌亥")
+
 
 class EnergyTopologySkill(BaseSkill):
     skill_id = "energy_topology_skill"
@@ -135,6 +137,16 @@ class EnergyTopologySkill(BaseSkill):
                 }
             )
 
+        sanhe_edges, sanhe_audit = cls._sanhe_cluster_edges(
+            physics_tensor=physics_tensor or {},
+            base_abs=base_abs,
+            threshold=threshold,
+            boost=boost,
+            decay=decay,
+        )
+        edges.extend(sanhe_edges)
+        topology_audit.extend(sanhe_audit)
+
         return {
             "nodes": nodes,
             "edges": edges,
@@ -147,3 +159,86 @@ class EnergyTopologySkill(BaseSkill):
                 "CLIMATE_INTENSITY": climate_intensity,
             },
         }
+
+    @staticmethod
+    def _sanhe_cluster_edges(
+        *,
+        physics_tensor: Dict[str, Any],
+        base_abs: float,
+        threshold: float,
+        boost: float,
+        decay: float,
+    ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """将 composite_field_impact.sanhe_clusters 转为拓扑边（relation_type=sanhe_cluster，供前端金色渲染）。"""
+        comp = (physics_tensor or {}).get("composite_field_impact")
+        if not isinstance(comp, dict):
+            return [], []
+        raw = comp.get("sanhe_clusters")
+        if not isinstance(raw, list):
+            return [], []
+        extra_edges: List[Dict[str, Any]] = []
+        extra_audit: List[Dict[str, Any]] = []
+        floor_work = max(float(threshold) + 0.12, 1.05)
+
+        for idx, cl in enumerate(raw):
+            if not isinstance(cl, dict):
+                continue
+            labels: List[str] = []
+            nodes = cl.get("nodes") or []
+            if isinstance(nodes, list):
+                for n in nodes:
+                    if not isinstance(n, dict):
+                        continue
+                    br = str(n.get("branch") or "").strip()
+                    if len(br) == 1 and br in _BRANCH_CHARS:
+                        labels.append(br)
+            uniq: List[str] = []
+            seen: set[str] = set()
+            for b in labels:
+                if b not in seen:
+                    seen.add(b)
+                    uniq.append(b)
+            if len(uniq) < 2:
+                brs = cl.get("branches") or []
+                if isinstance(brs, list):
+                    for x in brs:
+                        b = str(x).strip()
+                        if len(b) == 1 and b in _BRANCH_CHARS and b not in seen:
+                            seen.add(b)
+                            uniq.append(b)
+            if len(uniq) < 2:
+                continue
+            bureau = "·".join(uniq)
+            cluster_abs = float(cl.get("cluster_abs") or 0.0)
+            for i in range(len(uniq)):
+                a, b = uniq[i], uniq[(i + 1) % len(uniq)]
+                if a == b:
+                    continue
+                work = max(floor_work, min(2.4, cluster_abs * 0.12 + 0.92))
+                raw_energy = base_abs * RELATION_GAIN.get("合", 0.85)
+                edge = {
+                    "from": a,
+                    "to": b,
+                    "relation": "三合",
+                    "relation_type": "sanhe_cluster",
+                    "stem_resonance": False,
+                    "flow_direction": f"{a}->{b}",
+                    "raw_energy": round(raw_energy, 4),
+                    "resonance_boost": boost,
+                    "distance_decay": decay,
+                    "resonance_multiplier": round(boost * decay, 4),
+                    "efficiency_score": 0.92,
+                    "clash_vibration_flag": False,
+                    "final_work": round(work, 4),
+                    "detail": f"合成场·三合局 [{bureau}]",
+                }
+                extra_edges.append(edge)
+                extra_audit.append(
+                    {
+                        "detail": edge["detail"],
+                        "kind": "sanhe_cluster",
+                        "cluster_index": idx,
+                        "Final_Work": round(work, 4),
+                    }
+                )
+        return extra_edges, extra_audit

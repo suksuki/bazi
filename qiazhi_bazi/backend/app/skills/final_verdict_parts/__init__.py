@@ -1,9 +1,15 @@
-"""终判技能拆分：证据行、Prompt、LLM 调用、JSON 解析（与 FinalVerdictSkill 编排层解耦）。"""
+"""终判技能拆分：证据行、Prompt、LLM 调用、JSON 解析（与 FinalVerdictSkill 编排层解耦）。
+
+`build_final_verdict_messages` 延迟导入，避免 `prompt_builder` → `services` 链在仅测 `evidence` 时触发循环依赖。
+"""
+
+from __future__ import annotations
+
+from typing import Any
 
 from app.skills.final_verdict_parts.evidence import get_logical_evidence
 from app.skills.final_verdict_parts.json_extract import extract_json_from_llm_text
 from app.skills.final_verdict_parts.llm_client import run_final_verdict_chat
-from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_messages
 from app.skills.final_verdict_parts.verdict_parse import parse_verdict_body_and_changelog
 
 __all__ = [
@@ -13,3 +19,15 @@ __all__ = [
     "parse_verdict_body_and_changelog",
     "run_final_verdict_chat",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "build_final_verdict_messages":
+        from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_messages
+
+        return build_final_verdict_messages
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__) | set(globals()))

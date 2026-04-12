@@ -193,3 +193,85 @@ def test_execute_llm_test_uses_rewrite_fallback():
         )
 
     assert result["content"] == "重写后的结论"
+
+
+def test_execute_llm_test_fast_path_skips_rewrite_when_strip_empty():
+    logger = _FakeLogger()
+
+    class _OnlyThinking(_FakeClient):
+        async def chat(self, *, messages, temperature, max_tokens, stop):
+            return "思考过程：略"
+
+    async def _rewrite(_client, _source, _language):
+        raise AssertionError("rewrite must not run in fast_path")
+
+    async def _compress(_client, content, _language):
+        raise AssertionError("compress must not run in fast_path")
+
+    async def _ollama(*args, **kwargs):
+        return ""
+
+    with patch.object(admin_service, "QwenClient", _OnlyThinking):
+        result = asyncio.run(
+            admin_service.execute_llm_test(
+                LlmTestRequest(
+                    base_url="http://127.0.0.1:9999/v1",
+                    api_key="x",
+                    model="demo",
+                    system_prompt="你是助手",
+                    user_prompt="给我结论",
+                    language="ZH",
+                    temperature=0.1,
+                    max_tokens=64,
+                    fast_path=True,
+                ),
+                rewrite_final_only=_rewrite,
+                compress_final_only=_compress,
+                ollama_chat_no_think=_ollama,
+                logger=logger,
+            )
+        )
+
+    assert result["ok"] is True
+    assert "未返回可提取" in result["content"]
+
+
+def test_execute_llm_test_fast_path_skips_compress_for_long_markers():
+    logger = _FakeLogger()
+
+    async def _rewrite(_client, _source, _language):
+        raise AssertionError("rewrite must not run")
+
+    async def _compress(_client, content, _language):
+        raise AssertionError("compress must not run in fast_path")
+
+    async def _ollama(*args, **kwargs):
+        return ""
+
+    class _Long(_FakeClient):
+        async def chat(self, *, messages, temperature, max_tokens, stop):
+            return "一、" + ("结" * 180)
+
+    with patch.object(admin_service, "QwenClient", _Long):
+        result = asyncio.run(
+            admin_service.execute_llm_test(
+                LlmTestRequest(
+                    base_url="http://127.0.0.1:9999/v1",
+                    api_key="x",
+                    model="demo",
+                    system_prompt="你是助手",
+                    user_prompt="给我结论",
+                    language="ZH",
+                    temperature=0.1,
+                    max_tokens=64,
+                    fast_path=True,
+                ),
+                rewrite_final_only=_rewrite,
+                compress_final_only=_compress,
+                ollama_chat_no_think=_ollama,
+                logger=logger,
+            )
+        )
+
+    assert result["ok"] is True
+    assert len(result["content"]) <= 130

@@ -44,3 +44,16 @@ def test_reasoning_strip_and_alignment_coercion():
     assert strip_reasoning("Final Answer: 保持谨慎。") == "保持谨慎。"
     assert coerce_alignment_score(88, "存在异常") == 59.0
     assert coerce_alignment_score(45, "") == 45.0
+
+
+def test_strip_reasoning_does_not_blank_body_for_midword_reasoning():
+    """正文中间出现 reasoning 一词时不得整段清空（曾导致 LLM 测试误判）。"""
+    text = "寅申冲为金木交战；英文语境下可称 reasoning about clash。以稳为主。"
+    out = strip_reasoning(text)
+    assert "reasoning" in out
+    assert "寅申冲" in out
+
+
+def test_strip_reasoning_still_blocks_leading_thinking_shell():
+    """以推理壳开头且无可用锚点时整段丢弃。"""
+    assert strip_reasoning("Thinking Process:\n略") == ""

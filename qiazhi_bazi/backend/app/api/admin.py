@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 
@@ -21,6 +21,7 @@ from app.api.contracts import (
     LlmTestRequest,
     RuntimeConfigRequest,
 )
+from app.core.llm_ollama import looks_like_native_ollama_base_url
 from app.core.runtime_config import get_runtime_config, set_runtime_config
 from app.db.models import PhysicsInteractionParam
 from app.db.session import session_scope
@@ -81,21 +82,34 @@ async def _ollama_chat_no_think(
     if root.endswith("/v1"):
         root = root[:-3]
     url = f"{root}/api/chat"
-    payload = {
+    base_payload: Dict[str, Any] = {
         "model": model,
         "messages": messages,
         "stream": False,
-        "think": False,
         "options": {
             "temperature": temperature,
             "num_predict": max_tokens,
         },
     }
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        r = await client.post(url, json=payload)
-        r.raise_for_status()
-        data = r.json()
-    return (data.get("message") or {}).get("content", "").strip()
+    # 新版 Ollama 支持 think:false；旧版会因未知字段 400，故先带 think 再降级重试
+    timeout_sec = float(os.getenv("QIAZHI_ADMIN_OLLAMA_TIMEOUT_SEC", "240") or "240")
+    async with httpx.AsyncClient(timeout=timeout_sec) as client:
+        last_exc: Exception | None = None
+        for extra in ({"think": False}, {}):
+            payload = {**base_payload, **extra}
+            try:
+                r = await client.post(url, json=payload)
+                r.raise_for_status()
+                data = r.json()
+                out = (data.get("message") or {}).get("content", "").strip()
+                if out:
+                    return out
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                continue
+        if last_exc:
+            raise last_exc
+    return ""
 
 
 @router.get("/db-status")
@@ -124,42 +138,115 @@ async def llm_test(body: LlmTestRequest, _: None = Depends(admin_token_guard)) -
     )
 
 
-@router.post("/llm-models")
-async def llm_models(body: LlmModelsRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
+async def _collect_llm_model_names(base_url: str, api_key: Optional[str]) -> List[str]:
     """
-    拉取模型列表（优先 OpenAI `/models`，兼容 Ollama `/api/tags`）。
+    兼容 OpenAI 风格 /v1/models 与 Ollama /api/tags。
+    - base_url 未带 /v1 时补试 /v1/models（修复仅填 https://api.openai.com 导致 502）。
+    - URL 命中 QIAZHI_OLLAMA_NATIVE_PORTS 所列端口时优先走 Ollama 原生接口（部分环境下 /v1/models 不可用）。
     """
     import httpx
 
-    url = body.base_url.rstrip("/")
+    url = (base_url or "").strip().rstrip("/")
+    if not url:
+        raise HTTPException(status_code=400, detail="base_url 不能为空")
     validate_target_url(url, {"http", "https"})
-    headers = {}
-    if body.api_key:
-        headers["Authorization"] = f"Bearer {body.api_key}"
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        # OpenAI compatible: /v1/models
+    headers: Dict[str, str] = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    try_ollama_first = looks_like_native_ollama_base_url(url)
+
+    def ollama_root(u: str) -> str:
+        return u[:-3] if u.endswith("/v1") else u
+
+    root = ollama_root(url).rstrip("/")
+    errs: List[str] = []
+
+    def _err_msg(exc: BaseException) -> str:
+        s = str(exc).strip()
+        return f"{type(exc).__name__}: {s}" if s else type(exc).__name__
+
+    openai_endpoints: List[str] = []
+    if url.endswith("/v1"):
+        openai_endpoints.append(f"{url}/models")
+    else:
+        openai_endpoints.append(f"{url}/v1/models")
+        openai_endpoints.append(f"{url}/models")
+
+    async def get_ollama_tags(client: httpx.AsyncClient) -> Optional[List[str]]:
+        ep = f"{root}/api/tags"
         try:
-            r = await client.get(f"{url}/models", headers=headers)
+            r = await client.get(ep)
             r.raise_for_status()
             data = r.json()
-            items = data.get("data", [])
-            names = [x.get("id") for x in items if x.get("id")]
-            return {"ok": True, "models": names}
-        except Exception:
-            pass
-
-        # Ollama native: /api/tags (when base url without /v1)
-        try:
-            fallback = url[:-3] if url.endswith("/v1") else url
-            r2 = await client.get(f"{fallback}/api/tags")
-            r2.raise_for_status()
-            data2 = r2.json()
-            models = data2.get("models", [])
-            names = [x.get("model") for x in models if x.get("model")]
-            return {"ok": True, "models": names}
         except Exception as e:  # noqa: BLE001
-            raise HTTPException(status_code=502, detail=f"模型列表获取失败: {e}") from e
+            errs.append(f"{ep}: {_err_msg(e)}")
+            return None
+        if not isinstance(data, dict):
+            errs.append(f"{ep}: 响应非 JSON 对象")
+            return None
+        models = data.get("models")
+        if not isinstance(models, list):
+            errs.append(f"{ep}: 缺少 models 数组")
+            return None
+        # Ollama 文档：ModelSummary 含 name / model（部分版本仅返回其一）
+        out: List[str] = []
+        for m in models:
+            if not isinstance(m, dict):
+                continue
+            mid = m.get("model") or m.get("name")
+            if mid:
+                out.append(str(mid).strip())
+        return out
+
+    async def get_openai_ids(client: httpx.AsyncClient, endpoint: str) -> Optional[List[str]]:
+        try:
+            r = await client.get(endpoint, headers=headers)
+            r.raise_for_status()
+            data = r.json()
+        except Exception as e:  # noqa: BLE001
+            errs.append(f"{endpoint}: {_err_msg(e)}")
+            return None
+        if not isinstance(data, dict):
+            errs.append(f"{endpoint}: 响应非 JSON 对象")
+            return None
+        items = data.get("data")
+        if items is None:
+            errs.append(f"{endpoint}: 缺少 data 字段")
+            return None
+        if not isinstance(items, list):
+            errs.append(f"{endpoint}: data 非数组")
+            return None
+        return [str(x["id"]) for x in items if isinstance(x, dict) and x.get("id")]
+
+    # 串行尝试多个端点，总超时过长会导致网关 502 / 前端一直「连接中」；收紧单次连接与读超时
+    _httpx_timeout = httpx.Timeout(12.0, connect=4.0)
+    async with httpx.AsyncClient(timeout=_httpx_timeout, follow_redirects=True) as client:
+        if try_ollama_first:
+            names = await get_ollama_tags(client)
+            # 仅当解析到至少一个模型名时才短路；[] 可能是未装模型，也可能是旧字段遗漏，继续试 OpenAI 兼容路径
+            if names:
+                return names
+
+        for ep in openai_endpoints:
+            names = await get_openai_ids(client, ep)
+            if names is not None:
+                return names
+
+        if not try_ollama_first:
+            names = await get_ollama_tags(client)
+            if names is not None:
+                return names
+
+    raise HTTPException(status_code=502, detail="模型列表获取失败: " + " | ".join(errs[:10]))
+
+
+@router.post("/llm-models")
+async def llm_models(body: LlmModelsRequest, _: None = Depends(admin_token_guard)) -> Dict[str, Any]:
+    """拉取模型列表（OpenAI 兼容 /v1/models 与 Ollama /api/tags，多路径容错）。"""
+    names = await _collect_llm_model_names(body.base_url, body.api_key)
+    return {"ok": True, "models": names}
 
 
 @router.get("/runtime-config")

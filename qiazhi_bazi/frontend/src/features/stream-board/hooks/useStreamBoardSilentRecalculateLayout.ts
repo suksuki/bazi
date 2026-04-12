@@ -15,6 +15,7 @@ import type {
   SilentRecalcPersistSnapshotPayload,
   SilentRecalcPhysicsSetters,
 } from "@/features/stream-board/controller/streamBoardTypes";
+import { parseFirstObservationLlmFromAnalyze } from "@/features/stream-board/controller/labLlmSnapshotParse";
 import type { DeityComponent, DeityEnergyAxis, LogicDiff, SeedPayload } from "@/features/stream-board/models";
 import type { LabStoreState } from "@/features/stream-board/stores/LabSessionContext";
 
@@ -144,11 +145,16 @@ export function useStreamBoardSilentRecalculateLayout({
 
         const currentMetric = extractMetricSnapshotFromPhysics(tensor);
         updateLogicDiffRef.current(currentMetric, c.confirmedDecisionIds.length === 0 || !c.baselineMetrics);
+        const dataRec = data as Record<string, unknown>;
+        const firstLlm = parseFirstObservationLlmFromAnalyze(dataRec);
+        const auditorLlm = labStateRef.current.snapshot?.physics_auditor_llm;
         persistSnapshotRef.current({
           physics_tensor: tensor,
           metadata: data.metadata as Record<string, unknown>,
           timeline: (data.timeline ?? null) as Record<string, unknown> | null,
           llm_prompt: data.llm_prompt || "",
+          ...(firstLlm ? { first_observation_llm: firstLlm } : {}),
+          ...(auditorLlm ? { physics_auditor_llm: auditorLlm } : {}),
           audit_summary: data.audit_summary,
           consultationIdOverride: c.consultationId,
           healthOverride: latestHealth,

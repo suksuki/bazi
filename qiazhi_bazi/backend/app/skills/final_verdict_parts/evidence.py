@@ -1,6 +1,78 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+
+# 与终判证据模板一致：EnergyType（五行局名）+ 地支按传统三合序拼接
+_SANHE_ENERGY_AND_BRANCH_KEY: Tuple[Tuple[frozenset[str], str, str], ...] = (
+    (frozenset({"寅", "午", "戌"}), "火局", "寅午戌"),
+    (frozenset({"申", "子", "辰"}), "水局", "申子辰"),
+    (frozenset({"亥", "卯", "未"}), "木局", "亥卯未"),
+    (frozenset({"巳", "酉", "丑"}), "金局", "巳酉丑"),
+)
+
+_PILLAR_KEY_TO_NODE_LABEL = {
+    "year": "Year",
+    "month": "Month",
+    "day": "Day",
+    "hour": "Hour",
+}
+
+
+def _sanhe_energy_type_and_branch_key(br_list: List[str]) -> Tuple[str, str]:
+    key = frozenset(br_list)
+    for grp, energy, bkey in _SANHE_ENERGY_AND_BRANCH_KEY:
+        if grp == key:
+            return energy, bkey
+    return "三合局", "".join(sorted(br_list))
+
+
+def _sanhe_nodes_labels(nodes: List[Any]) -> str:
+    """按 Year,Month,Day,Hour 顺序列出参与柱位；无则 UNKNOWN。"""
+    present: Dict[str, str] = {}
+    for n in nodes:
+        if not isinstance(n, dict):
+            continue
+        pk = str(n.get("pillar") or "").strip().lower()
+        if pk in _PILLAR_KEY_TO_NODE_LABEL:
+            present[pk] = _PILLAR_KEY_TO_NODE_LABEL[pk]
+    ordered = [present[k] for k in ("year", "month", "day", "hour") if k in present]
+    return ",".join(ordered) if ordered else "UNKNOWN"
+
+
+def _collect_sanhe_evidence_lines(physics_tensor: Dict[str, Any]) -> List[str]:
+    """地支三合脱水行（供 [Physical Evidence] 置顶，避免被十神长列表淹没）。"""
+    out: List[str] = []
+    comp = (physics_tensor.get("composite_field_impact") or {}) if isinstance(physics_tensor, dict) else {}
+    raw_clusters = comp.get("sanhe_clusters") if isinstance(comp, dict) else None
+    clusters: List[Dict[str, Any]] = list(raw_clusters) if isinstance(raw_clusters, list) else []
+    if not clusters and isinstance(physics_tensor, dict):
+        meta_iv = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+        iv2 = meta_iv.get("interaction_v2") if isinstance(meta_iv.get("interaction_v2"), dict) else {}
+        for item in iv2.get("attribute_collapse") or []:
+            if not isinstance(item, dict) or str(item.get("kind") or "") != "sanhe":
+                continue
+            brs = [str(x) for x in (item.get("branches") or []) if x]
+            if len(brs) >= 3:
+                clusters.append(
+                    {
+                        "branches": brs,
+                        "energy_vault_status": "AGGREGATED",
+                        "nodes": [],
+                    }
+                )
+    for cl in clusters:
+        if not isinstance(cl, dict):
+            continue
+        brs_raw = cl.get("branches") or []
+        brs = sorted({str(x) for x in brs_raw if x})
+        if len(brs) < 3:
+            continue
+        energy_type, branch_key = _sanhe_energy_type_and_branch_key(brs)
+        stat = str(cl.get("energy_vault_status") or "AGGREGATED").upper()
+        nodes = cl.get("nodes") if isinstance(cl.get("nodes"), list) else []
+        nodes_out = _sanhe_nodes_labels(nodes)
+        out.append(f"地支.三合.{energy_type}={branch_key}|Status={stat}|Nodes={nodes_out}")
+    return out
 
 
 def strength_qualifier(abs_energy: float) -> str:
@@ -24,6 +96,8 @@ def get_logical_evidence(
     元数据投影：把复杂 JSON 脱水为 Key-Value 证据行，便于 LLM 读取。
     """
     lines: List[str] = []
+    sanhe_block = _collect_sanhe_evidence_lines(physics_tensor if isinstance(physics_tensor, dict) else {})
+    lines.extend(sanhe_block)
     pillars = ((metadata or {}).get("pillars", {}) if isinstance(metadata, dict) else {}) or {}
     if pillars:
         y = pillars.get("year", {})

@@ -4,7 +4,7 @@ export type DecisionInboxCard = {
   markdown: string;
   conflictDetail?: string;
   displayText?: string;
-  cardType?: "conflict" | "auditor-proposal" | "proposal";
+  cardType?: "conflict" | "auditor-proposal" | "proposal" | "L1_STRUCTURE";
   proposal?: unknown;
   skillId?: string;
   sovereigntyMark?: "PATTERN_SOVEREIGNTY";

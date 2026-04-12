@@ -36,6 +36,8 @@ export type PluginManifestItem = {
     description_tags?: string[];
     skills?: BlindSchoolSkillItem[];
     blueprint_markdown?: string;
+    /** 与 l1_physics_manifest.judgment_protocol 对齐：干支交互判定要点（卡片上展示） */
+    judgment_protocol?: string[];
     l1_physics_operator?: boolean;
     op_id?: string;
   };

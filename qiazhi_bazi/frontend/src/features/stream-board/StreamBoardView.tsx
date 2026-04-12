@@ -194,6 +194,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const handleBackToSeedEntry = React.useCallback(() => {
     if (isFinalized) return;
     clearLabPipelineForSeedDraft();
+    setDraftSeed(null);
     setSeedFlowPhase("entry");
     setSeedEntryMountKey((k) => k + 1);
     setLastAppliedSeedSignature("");

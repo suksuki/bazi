@@ -16,6 +16,17 @@ from app.skills.structure_final_decision import build_structure_final_decision_v
 from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
 
 
+def _trim_prompt_blob(val: Any, max_len: int) -> str:
+    """压缩盲派/结构块中非核心 JSON，避免挤占 [Physical Evidence] 注意力预算。"""
+    try:
+        s = val if isinstance(val, str) else json.dumps(val, ensure_ascii=False)
+    except (TypeError, ValueError):
+        s = str(val)
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1] + "…"
+
+
 def build_final_verdict_messages(
     *,
     metadata: Dict[str, Any],
@@ -73,7 +84,7 @@ def build_final_verdict_messages(
     work_lines.append(f"空间.loss_paths={spatial_audit.get('loss_path_count', 0)}")
     if spatial_audit.get("lock_warning"):
         work_lines.append(f"空间.lock_warning={spatial_audit.get('lock_warning')}")
-    work_lines.append(f"解锁.options={strike_options}")
+    work_lines.append(f"解锁.options={_trim_prompt_blob(strike_options, 220)}")
     work_lines.append(f"墓库.locked={blind_work.get('potential_energy_locked', 0.0)}")
     work_lines.append(f"墓库.released={blind_work.get('released_energy', 0.0)}")
     work_lines.append(f"做功.gain={blind_work.get('unlock_gain', 0.0)}")
@@ -81,7 +92,9 @@ def build_final_verdict_messages(
     work_lines.append(f"做功.risk_ratio={blind_work.get('risk_ratio', 0.0)}")
     work_lines.append(f"做功.net_effect={blind_work.get('net_effect', 'neutral')}")
     work_lines.append(f"做功.morphing_hints={','.join(blind_work.get('morphing_hints', []) or [])}")
-    work_lines.append(f"做功.body_damage={blind_work.get('body_damage_estimation', {})}")
+    work_lines.append(
+        f"做功.body_damage={_trim_prompt_blob(blind_work.get('body_damage_estimation', {}), 220)}"
+    )
     work_lines.append(f"做功.hint={blind_work.get('llm_hint', '劳而无功')}")
     structure_v0 = resolve_structure_candidates_v0(
         physics_tensor=physics_tensor,
@@ -92,7 +105,7 @@ def build_final_verdict_messages(
     structure_lines = [
         f"structure.self_abs={structure_v0.get('self_abs', 0.0)}",
         f"structure.root_score={structure_v0.get('root_score', 0.0)}",
-        f"structure.hud={structure_v0.get('hud', {})}",
+        f"structure.hud={_trim_prompt_blob(structure_v0.get('hud', {}), 160)}",
     ]
     for i, c in enumerate(structure_v0.get("candidates", [])):
         if isinstance(c, dict):
@@ -136,7 +149,9 @@ def build_final_verdict_messages(
         "知识.体用=BODY(比劫印) USE(食伤财官)",
         "知识.虚浮阈值=Self_Abs<1.0且无根 -> 虚浮",
     ]
-    knowledge_lines.extend([f"知识.百科.{i + 1}={x}" for i, x in enumerate(blind_digest)])
+    knowledge_lines.extend(
+        [f"知识.百科.{i + 1}={_trim_prompt_blob(x, 100)}" for i, x in enumerate(blind_digest)]
+    )
     system = (
         "你是 Qiazhi-Bazi 的 FinalVerdictSkill。"
         "你必须每次返回一份全量、唯一、可执行的终判，不允许追加旧内容。"
@@ -157,6 +172,9 @@ def build_final_verdict_messages(
         "若出现 [LOGIC_CONFLICT_WARNING]，必须在“裁决共识”段显式写出两派冲突与折中路径。"
         "你必须严格遵循 [Plugin Weight Guidance] 的语气和叙述重心。"
         "严禁跳过 L1_Junction 直接下‘伤官见官’结论；必须先引用 [L1 Junction Flags]。"
+        "若 [Physical Evidence] 中出现以「地支.三合.」开头的证据行，必须在「核心气象」或「裁决共识」中评估该三合局对整体格调、"
+        "五行场强分布及做功门态（如墓库/合局聚能）的影响，不得忽略。"
+        "只要盘中存在地支三合局（证据行已给出），必须显式评估其对当前格调与做功逻辑的支撑或对冲作用，禁止仅用套话带过。"
         f"{lang_hint}"
     )
     blind_skill_block = format_blind_skill_registry_for_prompt(physics_tensor)

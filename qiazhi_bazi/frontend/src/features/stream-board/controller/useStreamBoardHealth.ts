@@ -27,11 +27,19 @@ export function useStreamBoardHealth(apiBase: string) {
       const llm = configData?.config?.llm ?? {};
       setLlmModelName(String(llm.model || "LLM"));
 
-      const modelsResponse = await fetch(`${apiBase}/api/admin/llm-models`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...adminHeaders },
-        body: JSON.stringify({ base_url: llm.base_url, api_key: llm.api_key }),
-      });
+      const ctrl = new AbortController();
+      const timer = window.setTimeout(() => ctrl.abort(), 45_000);
+      let modelsResponse: Response;
+      try {
+        modelsResponse = await fetch(`${apiBase}/api/admin/llm-models`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...adminHeaders },
+          body: JSON.stringify({ base_url: llm.base_url, api_key: llm.api_key }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        window.clearTimeout(timer);
+      }
       const modelsData = await modelsResponse.json();
       llmOk = Boolean(modelsData?.ok && Array.isArray(modelsData?.models));
     } catch {

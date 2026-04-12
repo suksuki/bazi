@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { LabStoreState } from "@/features/stream-board/stores/LabSessionContext";
+import type { LabLlmRoundSnapshot, LabStoreState } from "@/features/stream-board/stores/LabSessionContext";
 import type { SeedPayload, InboxCard, FinalVerdictChangeLog, LogicDiff } from "@/features/stream-board/models";
 import type { MetricSnapshot } from "./streamBoardTypes";
 import {
@@ -164,6 +164,8 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
     healthOverride?: { dbOk: boolean; llmOk: boolean };
     auditorBriefingOverride?: Record<string, unknown> | null;
     seedSignatureOverride?: string | null;
+    first_observation_llm?: LabLlmRoundSnapshot;
+    physics_auditor_llm?: LabLlmRoundSnapshot;
     finalVerdictOverride?: {
       body?: string;
       change_log?: FinalVerdictChangeLog;
@@ -173,6 +175,9 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
       structure_candidates_v0?: Record<string, unknown> | null;
       structure_final_decision_v0?: Record<string, unknown> | null;
       version_id?: string;
+      llm_request_messages?: Array<{ role: string; content: string }>;
+      llm_raw_response?: string;
+      llm_meta?: Record<string, unknown>;
     };
   }) => {
     const deps = depsRef.current;
@@ -196,6 +201,8 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
       metadata: payload.metadata,
       timeline: payload.timeline ?? null,
       llm_prompt: payload.llm_prompt || "",
+      ...(payload.first_observation_llm != null ? { first_observation_llm: payload.first_observation_llm } : {}),
+      ...(payload.physics_auditor_llm != null ? { physics_auditor_llm: payload.physics_auditor_llm } : {}),
       audit_summary: payload.audit_summary,
       ...(seedSig ? { seed_signature: seedSig } : {}),
       resolved_card_ids: deps.resolvedCardIds.slice(-240),
@@ -234,6 +241,8 @@ export function useStreamBoardSnapshotPersist(depsRef: React.MutableRefObject<St
         metadata: (snap.metadata ?? {}) as Record<string, unknown>,
         timeline: (snap.timeline ?? null) as Record<string, unknown> | null,
         llm_prompt: String(snap.llm_prompt || ""),
+        ...(snap.first_observation_llm != null ? { first_observation_llm: snap.first_observation_llm } : {}),
+        ...(snap.physics_auditor_llm != null ? { physics_auditor_llm: snap.physics_auditor_llm } : {}),
         audit_summary: snap.audit_summary,
         consultationIdOverride,
       });

@@ -37,6 +37,9 @@ export function resolveLocalTermTranslation(text: string, lang: Lang): string | 
 
 export function buildFallbackVerdict(conflicts: string[]): FinalVerdictResult {
   return {
+    llmRequestMessages: [],
+    llmRawResponse: "",
+    llmMeta: { source: "fallback" },
     body: [
       "[SYSTEM_FALLBACK] 物理层输出正常，但语义层请求超时/异常，当前显示为保底断言。",
       "### 核心气象",

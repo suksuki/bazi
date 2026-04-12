@@ -18,6 +18,10 @@ from app.plugins.wangshuai.skill_manifest_loader import list_wangshuai_skills
 
 from app.core.config.physics_settings import resolve_physics_settings
 from app.core.plugins.plugin_metadata_loader import merge_plugin_manifest_into_metadata, plugin_manifest_for_operator_card
+from app.plugins.base_physics.core_operators.op_stem_fusion import judgment_protocol_dynamic_lines_for_stem_fusion
+from app.plugins.base_physics.core_operators.op_sub_branch_interaction import (
+    judgment_protocol_dynamic_lines_for_sub_branch_operator,
+)
 
 HookName = Literal["on_physics_complete", "on_verdict_ready"]
 
@@ -335,6 +339,7 @@ class PluginRegistry:
         mutex_warnings = self.collect_mutex_warnings(active_ids)
 
         l1_physics_manifest = load_l1_physics_manifest()
+        l1_eff_settings = resolve_physics_settings(None)
         op_to_skill = load_base_physics_skill_manifest().get("operator_to_skill")
         if not isinstance(op_to_skill, dict):
             op_to_skill = {}
@@ -383,6 +388,19 @@ class PluginRegistry:
                 "description_tags": desc_tags_out,
                 "skills": op_skills,
             }
+            jp = op.get("judgment_protocol")
+            base_jp: List[str] = []
+            if isinstance(jp, list):
+                base_jp = [str(x).strip() for x in jp if str(x).strip()]
+            elif isinstance(jp, str) and jp.strip():
+                base_jp = [jp.strip()]
+            dyn_jp: List[str] = []
+            if oid.startswith("base.physics.op_branch_"):
+                dyn_jp = judgment_protocol_dynamic_lines_for_sub_branch_operator(oid, l1_eff_settings)
+            elif oid.startswith("base.physics.op_stem_fusion"):
+                dyn_jp = judgment_protocol_dynamic_lines_for_stem_fusion(oid, l1_eff_settings)
+            if base_jp or dyn_jp:
+                entry_meta["judgment_protocol"] = base_jp + dyn_jp
             for _k in ("display_name", "use_case", "detailed_description", "physical_impact", "governance_notes"):
                 if _k in op_card:
                     entry_meta[_k] = op_card[_k]
@@ -417,7 +435,7 @@ class PluginRegistry:
             "plugin_mutex_warnings": mutex_warnings,
             "l1_physics_manifest": l1_physics_manifest,
             "base_physics_skills": skill_rows,
-            "default_physics_settings": {k: float(v) for k, v in resolve_physics_settings(None).items()},
+            "default_physics_settings": {k: float(v) for k, v in l1_eff_settings.items()},
             "refreshed_at": time.time(),
         }
         if plugin_id:

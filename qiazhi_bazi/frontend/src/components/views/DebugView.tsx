@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useActiveView } from "@/components/layout/ActiveViewContext";
+import { TopologyMapV1 } from "@/components/TopologyMapV1";
+import {
+  DecisionTimeline,
+  NarrativeProvenancePanel,
+  PluginCollisionHub,
+  SanheStructurePanel,
+  SemanticAccordion,
+  StateMonitor,
+  extractSanheClusters,
+} from "@/features/decision-cockpit";
+import { AuditChamberPanel } from "@/features/admin/AuditChamberPanel";
 import { skillIdForConflictPoint } from "@/features/decision-inbox/skillInference";
 import { VerdictCertificate } from "@/features/stream-board/components/VerdictCertificate";
 import { API_BASE } from "@/features/stream-board/constants";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import type { LabLlmRoundSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import { buildCausalSovereigntySlice } from "@/features/stream-board/utils/causalSovereigntyFromSnapshot";
-import type { ConflictPoint } from "@/types/bazi";
+import type { ConflictPoint, TimelineSnapshot } from "@/types/bazi";
 
 function safeJson(obj: unknown, space = 2): string {
   try {
@@ -17,12 +28,65 @@ function safeJson(obj: unknown, space = 2): string {
   }
 }
 
-const mirrorBtnClass =
-  "flex items-center gap-1.5 px-2 py-1 bg-zinc-800/50 hover:bg-zinc-700/50 rounded-md border border-zinc-700/50 transition-colors text-xs text-zinc-200";
+type DebugTabId = "overview" | "chain" | "topology" | "trace" | "court" | "llm" | "raw";
+
+const DEBUG_TABS: { id: DebugTabId; label: string; short: string }[] = [
+  { id: "overview", label: "概览", short: "会话 · 健康 · 增量" },
+  { id: "chain", label: "推演链", short: "十神 · 时序 · 插件 · 判语 · 基线" },
+  { id: "topology", label: "拓扑结构", short: "拓扑图 · 三合" },
+  { id: "trace", label: "交互追踪", short: "Hub · 因果链 · 演化" },
+  { id: "court", label: "逻辑检察院", short: "审计台全功能" },
+  { id: "llm", label: "LLM 交互", short: "提示词与模型返回" },
+  { id: "raw", label: "原始数据", short: "种子 · JSON" },
+];
+
+function LlmRoundPanel(props: { title: string; subtitle: string; round: LabLlmRoundSnapshot | null | undefined }) {
+  const { title, subtitle, round } = props;
+  if (!round || (!round.messages?.length && !(round.response_text || "").trim())) {
+    return (
+      <SemanticAccordion title={title} subtitle={subtitle}>
+        <p className="text-xs text-zinc-500">暂无记录（需完成排盘/审计/终判且后端已返回该段 transcript）。</p>
+      </SemanticAccordion>
+    );
+  }
+  return (
+    <SemanticAccordion title={title} subtitle={subtitle}>
+      <div className="space-y-3 text-xs">
+        {round.repair_mode ? (
+          <p className="font-mono text-[10px] text-amber-200/90">repair_mode: {String(round.repair_mode)}</p>
+        ) : null}
+        {round.meta && Object.keys(round.meta).length > 0 ? (
+          <section>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">遥测 meta</p>
+            <pre className="mt-1 max-h-32 overflow-auto rounded-lg border border-zinc-800 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-400">
+              {safeJson(round.meta)}
+            </pre>
+          </section>
+        ) : null}
+        <section>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">请求 messages（完整 role/content）</p>
+          <pre className="mt-1 max-h-[min(40dvh,360px)] overflow-auto rounded-lg border border-zinc-800 bg-zinc-950/80 p-2 font-mono text-[10px] leading-relaxed text-zinc-300">
+            {safeJson(round.messages ?? [])}
+          </pre>
+        </section>
+        <section>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">模型返回正文</p>
+          <pre className="mt-1 max-h-[min(40dvh,360px)] overflow-auto whitespace-pre-wrap rounded-lg border border-emerald-900/40 bg-zinc-950/80 p-2 font-mono text-[10px] text-emerald-100/90">
+            {(round.response_text || "").trim() || "—"}
+          </pre>
+        </section>
+      </div>
+    </SemanticAccordion>
+  );
+}
+
+const tabBtnBase =
+  "rounded-lg border px-3 py-2 text-left text-xs transition-colors sm:min-w-[7.5rem] sm:text-center";
+const tabBtnIdle = "border-transparent bg-zinc-900/40 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/60";
+const tabBtnActive = "border-amber-500/50 bg-amber-500/10 text-amber-100";
 
 export function DebugView() {
-  const { setActiveView } = useActiveView();
-  const { state, injectSnapshotText } = useLabStore();
+  const { state } = useLabStore();
   const snapshot = useMemo(() => state.snapshot ?? null, [state.snapshot]);
   const finalizationReport = state.finalizationReport;
   const metaFinal = (snapshot?.metadata as Record<string, unknown> | undefined)?.finalization as
@@ -31,8 +95,9 @@ export function DebugView() {
   const updates = state.updates;
   const lastSeed = state.lastSeedPayload;
 
-  const [showRaw, setShowRaw] = useState(false);
   const [evoGeneStats, setEvoGeneStats] = useState<{ n: number; levelPct: number } | null>(null);
+  const [topologyFocusDetail, setTopologyFocusDetail] = useState<string | null>(null);
+  const [debugTab, setDebugTab] = useState<DebugTabId>("overview");
 
   /** 仅在「是否有快照 + 会话标识」变化时拉取演化热力图，避免依赖不稳定的 snapshot 引用又满足 exhaustive-deps */
   const evolutionFetchKey = useMemo(() => {
@@ -87,7 +152,6 @@ export function DebugView() {
   const ld = snapshot?.logic_diff;
   const baseline = snapshot?.baseline_snapshot;
 
-  const verdictPreview = fv?.body ? String(fv.body).slice(0, 800) : "";
   const entropy =
     typeof meta.global_entropy === "number" && Number.isFinite(meta.global_entropy)
       ? meta.global_entropy
@@ -244,26 +308,18 @@ export function DebugView() {
     return rows.slice(-24);
   }, [hub?.audit_items, hub?.result_logs, ld, snapshot?.decision_selection_ids, snapshot?.physics_tensor]);
 
-  const copyAll = async () => {
-    if (!snapshot) return;
-    try {
-      await navigator.clipboard.writeText(safeJson(snapshot));
-    } catch {
-      /* ignore */
-    }
-  };
+  const sanheClusters = useMemo(() => extractSanheClusters(physics), [physics]);
 
-  const pasteMirror = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      injectSnapshotText(text);
-    } catch {
-      /* ignore */
-    }
-  };
+  const topologyGraph = useMemo(() => {
+    const fv = snapshot?.final_verdict as Record<string, unknown> | undefined;
+    const g = fv?.topology_graph_v1;
+    return g && typeof g === "object" ? (g as Record<string, unknown>) : {};
+  }, [snapshot]);
+
+  const timelineSnap = (snapshot?.timeline ?? null) as TimelineSnapshot | null;
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-4xl px-3 py-4 text-zinc-200">
+    <div className="mx-auto min-h-dvh w-full max-w-6xl px-3 py-4 text-zinc-200">
       {state.isFinalized && finalizationReport?.hash ? (
         <VerdictCertificate
           hash={finalizationReport.hash}
@@ -311,247 +367,302 @@ export function DebugView() {
         </div>
       ) : null}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-        <div>
-          <h1 className="text-base font-semibold">黑匣子（调试）</h1>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            实验室会话摘要、最近合并键、因果更新流水与完整快照 JSON。
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowRaw((v) => !v)}
-            className="rounded border border-zinc-600 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
-          >
-            {showRaw ? "收起原始 JSON" : "展开原始 JSON"}
-          </button>
-          <button
-            type="button"
-            disabled={!snapshot}
-            onClick={() => void copyAll()}
-            className={`${mirrorBtnClass} disabled:cursor-not-allowed disabled:opacity-40`}
-          >
-            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <rect x="9" y="9" width="13" height="13" rx="2" />
-              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-            </svg>
-            复制快照 JSON
-          </button>
-          <button
-            type="button"
-            disabled={state.isFinalized}
-            onClick={() => void pasteMirror()}
-            className={`${mirrorBtnClass} disabled:cursor-not-allowed disabled:opacity-40`}
-          >
-            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-              <rect x="8" y="2" width="8" height="4" rx="1" />
-              <path d="M9 12h6M9 16h6" />
-            </svg>
-            文本黏贴
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView("lab")}
-            className="rounded border border-zinc-600 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
-          >
-            回实验室
-          </button>
-        </div>
+      <div className="mb-3 border-b border-zinc-800 pb-3">
+        <h1 className="text-base font-semibold">决策全景审计舱</h1>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          按 TAB 分区浏览：概览 → 推演链 → 拓扑 → 追踪 → 检察院 → LLM 交互 → 原始数据。
+        </p>
       </div>
 
       {!snapshot ? (
         <p className="text-sm text-zinc-500">暂无数据。请先在「实验室」完成排盘或推演。</p>
       ) : (
         <div className="space-y-4">
-          <section className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">会话</p>
-              <p className="mt-1 font-mono text-zinc-200">
-                active_session_id: {String(snapshot.active_session_id ?? "—")}
-              </p>
-              <p className="mt-1 font-mono text-zinc-400">consultation: {hub?.consultation_id ?? "—"}</p>
-              <p className="mt-1 text-zinc-500">
-                快照时间: {snapshot.ts ? new Date(snapshot.ts).toLocaleString() : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">健康 / 熵</p>
-              <p className="mt-1 text-zinc-300">
-                DB: {hub?.health?.db_ok === true ? "ok" : hub?.health?.db_ok === false ? "fail" : "—"} · LLM:{" "}
-                {hub?.health?.llm_ok === true ? "ok" : hub?.health?.llm_ok === false ? "fail" : "—"}
-              </p>
-              <p className="mt-1 text-cyan-200/90">
-                global_entropy: {entropy != null ? entropy.toFixed(4) : "—"}
-              </p>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">logic_diff</p>
-            <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400 sm:grid-cols-2">
-              <span>abs_delta: {ld?.abs_delta != null ? String(ld.abs_delta) : "—"}</span>
-              <span>entropy_delta: {ld?.entropy_delta != null ? String(ld.entropy_delta) : "—"}</span>
-              <span>baseline_abs: {ld?.baseline_abs_loss_total != null ? String(ld.baseline_abs_loss_total) : "—"}</span>
-              <span>current_abs: {ld?.current_abs_loss_total != null ? String(ld.current_abs_loss_total) : "—"}</span>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">基线锚点 baseline_snapshot</p>
-            {!baseline ? (
-              <p className="mt-2 text-zinc-500">尚未固化基线。</p>
-            ) : (
-              <div className="mt-2 space-y-1 font-mono text-[11px] text-zinc-400">
-                <p>at: {baseline.at ? new Date(baseline.at).toLocaleString() : "—"}</p>
-                <p>
-                  abs_loss_total:{" "}
-                  {typeof baseline.abs_loss_total === "number" ? baseline.abs_loss_total.toFixed(4) : "—"}
-                </p>
-                <p>
-                  global_entropy:{" "}
-                  {typeof baseline.global_entropy === "number" ? baseline.global_entropy.toFixed(4) : "—"}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {lastSeed ? (
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">最后种子 The Seed</p>
-              <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-zinc-400">
-                {safeJson(lastSeed)}
-              </pre>
-            </section>
-          ) : null}
-
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">终极判词摘要</p>
-            {verdictPreview ? (
-              <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">{verdictPreview}</p>
-            ) : (
-              <p className="mt-2 text-zinc-500">尚无 final_verdict.body。</p>
-            )}
-            {fv?.version_id ? (
-              <p className="mt-2 font-mono text-[11px] text-zinc-500">version_id: {String(fv.version_id)}</p>
-            ) : null}
-          </section>
-
-          <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">交互中枢 interaction_hub</p>
-            <div className="mt-2 space-y-1 text-[11px] text-zinc-400">
-              <p>result_logs 条数: {Array.isArray(hub?.result_logs) ? hub.result_logs.length : 0}</p>
-              <p>audit_items 条数: {Array.isArray(hub?.audit_items) ? hub.audit_items.length : 0}</p>
-              <p>pending_cards 条数: {Array.isArray(hub?.pending_cards) ? hub.pending_cards.length : 0}</p>
-            </div>
-            {Array.isArray(hub?.audit_items) && hub.audit_items.length > 0 ? (
-              <ul className="mt-3 max-h-48 space-y-2 overflow-auto border-t border-zinc-800/80 pt-2">
-                {hub.audit_items.map((item, idx) => (
-                  <li key={String(item?.id ?? idx)} className="rounded border border-zinc-800/60 bg-zinc-950/50 px-2 py-1.5">
-                    <p className="font-mono text-[10px] text-amber-200/90">
-                      {String(item?.role ?? "—")} · {String(item?.step ?? "—")}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-zinc-300">{String(item?.action ?? "—")}</p>
-                    {item?.timestamp ? (
-                      <p className="mt-0.5 font-mono text-[10px] text-zinc-600">{String(item.timestamp)}</p>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-[11px] text-zinc-600">暂无 audit_items（若刚排盘，请确认已写入会话快照）。</p>
-            )}
-            {Array.isArray(hub?.result_logs) && hub.result_logs.length > 0 ? (
-              <div className="mt-3 max-h-36 overflow-auto border-t border-zinc-800/80 pt-2">
-                <p className="mb-1 text-[10px] uppercase tracking-wide text-zinc-500">result_logs（尾部）</p>
-                <ul className="space-y-1 font-mono text-[10px] text-zinc-500">
-                  {hub.result_logs.slice(-12).map((line, i) => (
-                    <li key={`${i}-${String(line).slice(0, 24)}`} className="whitespace-pre-wrap break-all">
-                      {String(line)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-
-          <section className="rounded-xl border border-cyan-800/40 bg-cyan-950/25 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-cyan-300/90">因果追踪（Causal Trace）</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-              物理匹配 → Skill 注册项 → Decision 锚点 → 勾选状态 → 相对基线的 Abs 比例（与 logic_diff 对齐）。
-            </p>
-            {evoGeneStats ? (
-              <p className="mt-2 rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-2 py-1.5 font-mono text-[10px] leading-snug text-emerald-100/95">
-                [EVOLUTION_STATUS]: 当前逻辑链包含 {evoGeneStats.n} 个已演化基因，成熟度: {evoGeneStats.levelPct}%
-              </p>
-            ) : snapshot ? (
-              <p className="mt-2 font-mono text-[10px] text-zinc-600">
-                [EVOLUTION_STATUS]: gene_maturity_heatmap 未就绪（检查 API 或网络）。
-              </p>
-            ) : null}
-            <ul className="mt-3 max-h-64 space-y-2 overflow-auto border-t border-cyan-900/40 pt-2">
-              {causalTraceRows.map((line, idx) => (
-                <li
-                  key={`${idx}-${line.slice(0, 24)}`}
-                  className="rounded border border-cyan-900/50 bg-zinc-950/70 px-2 py-1.5 font-mono text-[10px] leading-snug text-cyan-100/90"
+          <div className="sticky top-0 z-10 -mx-1 border-b border-zinc-800/90 bg-zinc-950/95 px-1 pb-2 backdrop-blur-sm">
+            <div className="flex gap-1 overflow-x-auto pb-1 pt-0.5">
+              {DEBUG_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setDebugTab(t.id)}
+                  className={`${tabBtnBase} shrink-0 ${debugTab === t.id ? tabBtnActive : tabBtnIdle}`}
                 >
-                  {line}
-                </li>
+                  <span className="block font-medium">{t.label}</span>
+                  <span className="mt-0.5 hidden text-[10px] leading-tight text-zinc-500 sm:block">{t.short}</span>
+                </button>
               ))}
-            </ul>
-          </section>
+            </div>
+          </div>
 
-          <section className="rounded-xl border border-fuchsia-900/45 bg-fuchsia-950/20 p-3 text-xs">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-fuchsia-300/90">CausalTrace（interaction_hub）</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-              从 audit_items 与 result_logs 抽取：Triggered → Action → Decision 锚点 → Abs 影响（与 logic_diff 同源百分比）。
-            </p>
-            <ul className="mt-3 max-h-72 space-y-2 overflow-auto border-t border-fuchsia-900/40 pt-2">
-              {hubCausalTraceLines.map((line, idx) => {
-                const shielded = line.startsWith("[CAUSAL_SHIELDED]");
-                return (
-                  <li
-                    key={`hub-ct-${idx}-${line.slice(0, 20)}`}
-                    className={
-                      shielded
-                        ? "rounded border border-zinc-700/60 bg-zinc-950/80 px-2 py-1.5 font-mono text-[10px] leading-snug text-zinc-500"
-                        : "rounded border border-fuchsia-900/50 bg-zinc-950/75 px-2 py-1.5 font-mono text-[10px] leading-snug text-fuchsia-100/90"
-                    }
-                  >
-                    {line}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          {updates.length > 0 ? (
-            <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">最近因果更新（最多 5 条）</p>
-              <ul className="mt-2 space-y-2">
-                {updates.map((u) => (
-                  <li
-                    key={u.id}
-                    className="rounded border border-zinc-800/80 bg-zinc-950/60 px-2 py-1.5 font-mono text-[10px] text-zinc-400"
-                  >
-                    <span className="text-zinc-500">{new Date(u.ts).toLocaleTimeString()}</span> · keys:{" "}
-                    {u.keys.join(", ") || "—"} · Δabs {u.abs_delta ?? "—"}
-                    {u.overload ? " · overload" : ""}
-                    {u.decisionMutation ? " · decision" : ""}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {debugTab === "overview" ? (
+            <div className="space-y-4">
+              <SemanticAccordion title="会话与健康读数" subtitle="会话标识、咨询单号、快照时间、服务健康与全局熵">
+                <section className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">会话</p>
+                    <p className="mt-1 font-mono text-zinc-200">
+                      active_session_id: {String(snapshot.active_session_id ?? "—")}
+                    </p>
+                    <p className="mt-1 font-mono text-zinc-400">consultation: {hub?.consultation_id ?? "—"}</p>
+                    <p className="mt-1 text-zinc-500">
+                      快照时间: {snapshot.ts ? new Date(snapshot.ts).toLocaleString() : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">健康 / 熵</p>
+                    <p className="mt-1 text-zinc-300">
+                      DB: {hub?.health?.db_ok === true ? "ok" : hub?.health?.db_ok === false ? "fail" : "—"} · LLM:{" "}
+                      {hub?.health?.llm_ok === true ? "ok" : hub?.health?.llm_ok === false ? "fail" : "—"}
+                    </p>
+                    <p className="mt-1 text-cyan-200/90">
+                      global_entropy: {entropy != null ? entropy.toFixed(4) : "—"}
+                    </p>
+                  </div>
+                </section>
+              </SemanticAccordion>
+              {evoGeneStats ? (
+                <div className="rounded-xl border border-emerald-800/40 bg-emerald-950/25 p-3 text-xs text-emerald-100/90">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-400/90">演化基因（摘要）</p>
+                  <p className="mt-1 font-mono text-[11px]">
+                    基因数 {evoGeneStats.n} · 成熟度均值约 {evoGeneStats.levelPct}%（详情见「交互追踪」）
+                  </p>
+                </div>
+              ) : null}
+              {updates.length > 0 ? (
+                <SemanticAccordion title="最近因果更新" subtitle="最多保留 5 条">
+                  <ul className="space-y-2 text-xs">
+                    {updates.map((u) => (
+                      <li
+                        key={u.id}
+                        className="rounded border border-zinc-800/80 bg-zinc-950/60 px-2 py-1.5 font-mono text-[10px] text-zinc-400"
+                      >
+                        <span className="text-zinc-500">{new Date(u.ts).toLocaleTimeString()}</span> · keys:{" "}
+                        {u.keys.join(", ") || "—"} · Δabs {u.abs_delta ?? "—"}
+                        {u.overload ? " · overload" : ""}
+                        {u.decisionMutation ? " · decision" : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </SemanticAccordion>
+              ) : (
+                <p className="rounded-lg border border-dashed border-zinc-700/80 bg-zinc-900/30 px-3 py-2 text-xs text-zinc-500">
+                  暂无因果增量记录。
+                </p>
+              )}
+            </div>
           ) : null}
 
-          {showRaw ? (
-            <section className="rounded-xl border border-amber-900/40 bg-zinc-950/80 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-amber-600/90">完整快照 JSON</p>
-              <pre className="mt-2 max-h-[min(70dvh,720px)] overflow-auto text-[11px] leading-relaxed text-zinc-400">
-                {safeJson(snapshot)}
-              </pre>
-            </section>
+          {debugTab === "chain" ? (
+            <div className="space-y-4">
+              <SemanticAccordion title="十神监控与岁运轨迹" subtitle="四柱激活、大运流年、|Abs| Sparkline 与变动归因">
+                <StateMonitor metadata={snapshot.metadata as Record<string, unknown>} timeline={timelineSnap} physicsTensor={physics} />
+              </SemanticAccordion>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <SemanticAccordion title="决策时序轴" subtitle="物理层 → 插件 → 路由 → 终审的装配顺序">
+                  <DecisionTimeline snapshot={snapshot as Record<string, unknown>} />
+                </SemanticAccordion>
+                <SemanticAccordion title="插件碰撞审计" subtitle="匹配插件、置信度、命中理由与 CausalRouter 摘要">
+                  <PluginCollisionHub physicsTensor={physics} />
+                </SemanticAccordion>
+              </div>
+              <SemanticAccordion title="判语血统" subtitle="系统证据链与 LLM 终审片段">
+                <NarrativeProvenancePanel snapshot={snapshot as Record<string, unknown>} llmPrompt={snapshot.llm_prompt as string | undefined} />
+              </SemanticAccordion>
+              <SemanticAccordion title="误差与基线锚点" subtitle="logic_diff 与 baseline_snapshot">
+                <div className="space-y-3">
+                  <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">logic_diff</p>
+                    <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400 sm:grid-cols-2">
+                      <span>abs_delta: {ld?.abs_delta != null ? String(ld.abs_delta) : "—"}</span>
+                      <span>entropy_delta: {ld?.entropy_delta != null ? String(ld.entropy_delta) : "—"}</span>
+                      <span>baseline_abs: {ld?.baseline_abs_loss_total != null ? String(ld.baseline_abs_loss_total) : "—"}</span>
+                      <span>current_abs: {ld?.current_abs_loss_total != null ? String(ld.current_abs_loss_total) : "—"}</span>
+                    </div>
+                  </section>
+                  <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">基线锚点 baseline_snapshot</p>
+                    {!baseline ? (
+                      <p className="mt-2 text-zinc-500">尚未固化基线。</p>
+                    ) : (
+                      <div className="mt-2 space-y-1 font-mono text-[11px] text-zinc-400">
+                        <p>at: {baseline.at ? new Date(baseline.at).toLocaleString() : "—"}</p>
+                        <p>
+                          abs_loss_total:{" "}
+                          {typeof baseline.abs_loss_total === "number" ? baseline.abs_loss_total.toFixed(4) : "—"}
+                        </p>
+                        <p>
+                          global_entropy:{" "}
+                          {typeof baseline.global_entropy === "number" ? baseline.global_entropy.toFixed(4) : "—"}
+                        </p>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              </SemanticAccordion>
+            </div>
+          ) : null}
+
+          {debugTab === "topology" ? (
+            <div className="space-y-4">
+              <SemanticAccordion title="拓扑图与三合结构" subtitle="点击拓扑金边联动下方三合簇面板">
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="min-w-0">
+                    <TopologyMapV1
+                      graph={topologyGraph}
+                      activeEdgeKey={topologyFocusDetail}
+                      onActivateSanheEdge={(e) => {
+                        const d = String(e.detail || "").trim();
+                        setTopologyFocusDetail(d || `${String(e.from)}→${String(e.to)}`);
+                        requestAnimationFrame(() => {
+                          document.getElementById("sanhe-cluster-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        });
+                      }}
+                    />
+                  </div>
+                  <SanheStructurePanel clusters={sanheClusters} activeDetail={topologyFocusDetail} />
+                </div>
+              </SemanticAccordion>
+            </div>
+          ) : null}
+
+          {debugTab === "trace" ? (
+            <div className="space-y-4">
+              <SemanticAccordion title="交互中枢与因果追踪（文本）" subtitle="Hub 审计项、L1 冲突链、演化基因状态">
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-zinc-500">interaction_hub 计数</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">
+                      result_logs {Array.isArray(hub?.result_logs) ? hub.result_logs.length : 0} · audit_items{" "}
+                      {Array.isArray(hub?.audit_items) ? hub.audit_items.length : 0} · pending_cards{" "}
+                      {Array.isArray(hub?.pending_cards) ? hub.pending_cards.length : 0}
+                    </p>
+                    {fv?.version_id ? (
+                      <p className="mt-2 font-mono text-[10px] text-zinc-500">final_verdict.version_id: {String(fv.version_id)}</p>
+                    ) : null}
+                  </div>
+                  {Array.isArray(hub?.audit_items) && hub.audit_items.length > 0 ? (
+                    <ul className="max-h-48 space-y-2 overflow-auto">
+                      {hub.audit_items.map((item, idx) => (
+                        <li key={String(item?.id ?? idx)} className="rounded border border-zinc-800/60 bg-zinc-950/50 px-2 py-1.5">
+                          <p className="font-mono text-[10px] text-amber-200/90">
+                            {String(item?.role ?? "—")} · {String(item?.step ?? "—")}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-zinc-300">{String(item?.action ?? "—")}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {evoGeneStats ? (
+                    <p className="rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-2 py-1.5 font-mono text-[10px] text-emerald-100/95">
+                      [EVOLUTION_STATUS]: 基因 {evoGeneStats.n} · 成熟度 {evoGeneStats.levelPct}%
+                    </p>
+                  ) : null}
+                  <ul className="max-h-48 space-y-2 overflow-auto">
+                    {causalTraceRows.map((line, idx) => (
+                      <li
+                        key={`${idx}-${line.slice(0, 24)}`}
+                        className="rounded border border-cyan-900/40 bg-zinc-950/70 px-2 py-1.5 font-mono text-[10px] text-cyan-100/90"
+                      >
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                  <ul className="max-h-48 space-y-2 overflow-auto">
+                    {hubCausalTraceLines.map((line, idx) => (
+                      <li
+                        key={`hub-ct-${idx}-${line.slice(0, 20)}`}
+                        className="rounded border border-fuchsia-900/40 bg-zinc-950/75 px-2 py-1.5 font-mono text-[10px] text-fuchsia-100/90"
+                      >
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </SemanticAccordion>
+            </div>
+          ) : null}
+
+          {debugTab === "court" ? (
+            <div className="space-y-4">
+              <SemanticAccordion title="逻辑检察院（审计台）" subtitle="四柱诊断、证据瀑布、门控与对质">
+                <div className="max-h-[min(90dvh,920px)] overflow-y-auto pr-1">
+                  <AuditChamberPanel />
+                </div>
+              </SemanticAccordion>
+            </div>
+          ) : null}
+
+          {debugTab === "llm" ? (
+            <div className="space-y-4">
+              <p className="text-xs text-zinc-500">
+                下列为当前实验室快照内已持久化的 LLM 往返：首观（排盘）、物理结构化审计、终审。字段来自后端 API 与快照合并逻辑。
+              </p>
+              <LlmRoundPanel
+                title="首观 LLM（analyze-seed / 首条判词来源）"
+                subtitle="与 llm_prompt 同次的完整 messages"
+                round={snapshot.first_observation_llm}
+              />
+              <LlmRoundPanel
+                title="物理审计 LLM（audit-physics-with-llm）"
+                subtitle="含 repair_mode 与原始 JSON 诊断"
+                round={snapshot.physics_auditor_llm}
+              />
+              <SemanticAccordion title="终审 LLM（final-verdict）" subtitle="终判 Markdown 与模型原始 JSON 包裹">
+                {fv &&
+                ((fv.llm_request_messages && fv.llm_request_messages.length > 0) ||
+                  (fv.llm_raw_response && fv.llm_raw_response.trim())) ? (
+                  <div className="space-y-3 text-xs">
+                    {fv.llm_meta && Object.keys(fv.llm_meta).length > 0 ? (
+                      <section>
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">遥测 meta</p>
+                        <pre className="mt-1 max-h-32 overflow-auto rounded-lg border border-zinc-800 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-400">
+                          {safeJson(fv.llm_meta)}
+                        </pre>
+                      </section>
+                    ) : null}
+                    <section>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">请求 messages</p>
+                      <pre className="mt-1 max-h-[min(40dvh,360px)] overflow-auto rounded-lg border border-zinc-800 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                        {safeJson(fv.llm_request_messages ?? [])}
+                      </pre>
+                    </section>
+                    <section>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">模型原始返回（多为 JSON）</p>
+                      <pre className="mt-1 max-h-[min(40dvh,360px)] overflow-auto whitespace-pre-wrap rounded-lg border border-violet-900/40 bg-zinc-950/80 p-2 font-mono text-[10px] text-violet-100/90">
+                        {(fv.llm_raw_response || "").trim() || "—"}
+                      </pre>
+                    </section>
+                    <section>
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">解析后的判词正文（final_verdict.body）</p>
+                      <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg border border-zinc-800 bg-zinc-900/40 p-2 text-[11px] text-zinc-300">
+                        {(fv.body || "").trim() || "—"}
+                      </pre>
+                    </section>
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500">暂无终审 LLM 记录（需发起全局裁决且接口返回 llm_request_messages / llm_raw_response）。</p>
+                )}
+              </SemanticAccordion>
+            </div>
+          ) : null}
+
+          {debugTab === "raw" ? (
+            <div className="space-y-4">
+              {lastSeed ? (
+                <SemanticAccordion title="最后种子 The Seed" subtitle="最近一次 analyze 请求体">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 font-mono text-[11px] text-zinc-400">
+                    {safeJson(lastSeed)}
+                  </pre>
+                </SemanticAccordion>
+              ) : null}
+              <SemanticAccordion title="原始张量（完整 JSON）" subtitle="展开后可查看或自行复制">
+                <section className="rounded-xl border border-amber-900/40 bg-zinc-950/80 p-3">
+                  <pre className="max-h-[min(70dvh,720px)] overflow-auto text-[11px] leading-relaxed text-zinc-400">
+                    {safeJson(snapshot)}
+                  </pre>
+                </section>
+              </SemanticAccordion>
+            </div>
           ) : null}
         </div>
       )}

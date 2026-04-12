@@ -18,6 +18,8 @@ from app.schemas.bazi_metadata import FourPillars, StemBranchPair
 from app.services.analysis_service import analyze_clash_flow, analyze_seed_flow
 from app.services.helpers import interaction_pipeline as interaction_pipeline_mod
 
+pytestmark = pytest.mark.slow
+
 
 def _pillars(
     ys: str,
@@ -192,6 +194,9 @@ def test_pattern_sovereignty_reconciles_robber_wealth_alloc() -> None:
         rw = (tensor0.get("meta") or {}).get("l1_robber_wealth_v1") or {}
         assert rw.get("sovereignty_gain") is True
         assert rw.get("alloc_loss_effective") == 0.0
+        prot = meta0.get("PATTERN_SOVEREIGNTY_PROTECTION") or {}
+        assert prot.get("active") is True
+        assert str(prot.get("scope") or "") == "l1_robber_wealth_alloc"
         after_abs = float(((tensor0.get("deity_energy_axes") or {}).get("正财") or {}).get("absolute_energy") or 0.0)
         assert after_abs >= before_abs * 0.999, "纠偏后正财 Abs 不应低于纠偏前（损耗被撤销）"
 
@@ -225,7 +230,10 @@ def test_pivot_defense_accumulates_severity_and_crisis_gate() -> None:
         pv = meta.get("pivot_defense_v1") or {}
         threats = list(pv.get("threats") or [])
         sev_sum = float(pv.get("threat_severity_sum") or 0.0)
+        codes = [str(t.get("code") or "") for t in threats]
         assert len(threats) >= 2, f"期望多重威胁条目，实际 threats={threats}"
+        assert "L1_SGJG" in codes, f"期望伤官见官威胁码，实际 codes={codes}"
+        assert "L1_XSDS_OFFICER_PIVOT" in codes, f"期望枭神夺食与官杀枢纽叠加威胁码，实际 codes={codes}"
         assert sev_sum >= 1.15, f"期望 threat 累计接近危机阈 1.2，实际 sum={sev_sum}"
         assert pv.get("pivot_crisis") is True
         tags = list(pv.get("llm_assertion_tags") or [])

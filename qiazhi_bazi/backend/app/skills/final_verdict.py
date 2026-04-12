@@ -6,6 +6,7 @@ from threading import Lock
 from typing import Any, Dict, List
 
 from app.core.plugins.conflict_evaluator import evaluate_plugin_conflict
+from app.core.runtime_config import get_runtime_config
 from app.core.plugins.registry import PluginRegistry
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
 from app.plugins.blind_school.core import run_blind_school_plugin
@@ -157,7 +158,17 @@ class FinalVerdictSkill(BaseSkill):
             lang=lang,
             plugin_weights=plugin_weights,
         )
-        raw, _tel = await run_final_verdict_chat(messages)
+        raw, tel = await run_final_verdict_chat(messages)
+        _cfg = get_runtime_config().get("llm", {})
+        llm_meta: Dict[str, Any] = {"model_name": str(_cfg.get("model") or "LLM")}
+        if isinstance(tel, dict):
+            if tel.get("elapsed_ms") is not None:
+                llm_meta["elapsed_ms"] = tel.get("elapsed_ms")
+            if tel.get("approx_tokens") is not None:
+                llm_meta["approx_tokens"] = tel.get("approx_tokens")
+            usage = tel.get("usage")
+            if isinstance(usage, dict) and usage:
+                llm_meta["usage"] = usage
         obj = extract_json_from_llm_text(raw)
         verdict_body, change_log = parse_verdict_body_and_changelog(obj)
 
@@ -330,6 +341,9 @@ class FinalVerdictSkill(BaseSkill):
             "l1_junction_flags": l1_flags,
         }
         audit_log = self.audit(consumed, produced).model_dump()
+        safe_messages = [
+            {"role": str((m or {}).get("role") or ""), "content": str((m or {}).get("content") or "")} for m in messages
+        ]
         return {
             "version_id": version_id,
             "verdict_body": verdict_body,
@@ -345,4 +359,7 @@ class FinalVerdictSkill(BaseSkill):
             "audit_log": audit_log,
             "confirmed_decisions": confirmed_decisions,
             "raw": raw,
+            "llm_request_messages": safe_messages,
+            "llm_raw_response": raw,
+            "llm_meta": llm_meta,
         }

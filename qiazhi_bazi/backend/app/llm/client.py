@@ -7,7 +7,8 @@ import time
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import httpx
-from urllib.parse import urlparse
+
+from app.core.llm_ollama import looks_like_native_ollama_base_url
 
 FIRST_OBSERVATION_SYSTEM_PROMPT = (
     "你现在是一个逻辑严密的命理分析师。"
@@ -24,9 +25,10 @@ class QwenClient:
 
     环境变量::
 
-        QIAZHI_BAZI_LLM_BASE_URL=http://192.168.0.10:8000/v1
-        QIAZHI_BAZI_LLM_API_KEY=empty
-        QIAZHI_BAZI_LLM_MODEL=Qwen/Qwen2.5-32B-Instruct
+        QIAZHI_BAZI_LLM_BASE_URL（OpenAI 兼容根路径，通常以 /v1 结尾）
+        QIAZHI_BAZI_LLM_API_KEY
+        QIAZHI_BAZI_LLM_MODEL
+        QIAZHI_OLLAMA_NATIVE_PORTS（可选，逗号分隔；用于判定是否走 Ollama /api/chat）
     """
 
     def __init__(
@@ -36,9 +38,9 @@ class QwenClient:
         model: Optional[str] = None,
         timeout_s: float = 120.0,
     ) -> None:
-        self.base_url = (base_url or os.getenv("QIAZHI_BAZI_LLM_BASE_URL", "http://192.168.0.10:8000/v1")).rstrip("/")
-        self.api_key = api_key or os.getenv("QIAZHI_BAZI_LLM_API_KEY", "empty")
-        self.model = model or os.getenv("QIAZHI_BAZI_LLM_MODEL", "qwen")
+        self.base_url = (base_url or os.getenv("QIAZHI_BAZI_LLM_BASE_URL", "") or "").rstrip("/")
+        self.api_key = api_key if api_key is not None else (os.getenv("QIAZHI_BAZI_LLM_API_KEY", "") or "")
+        self.model = model or os.getenv("QIAZHI_BAZI_LLM_MODEL", "")
         self._timeout = timeout_s
 
     def _headers(self) -> Dict[str, str]:
@@ -48,11 +50,7 @@ class QwenClient:
         }
 
     def _is_ollama(self) -> bool:
-        try:
-            p = urlparse(self.base_url)
-            return p.port == 11434 or "11434" in self.base_url
-        except Exception:
-            return False
+        return looks_like_native_ollama_base_url(self.base_url)
 
     def _ollama_root(self) -> str:
         root = self.base_url.rstrip("/")
@@ -70,20 +68,23 @@ class QwenClient:
         对 Ollama 推理模型强制关闭思考输出，直接取结论。
         """
         url = f"{self._ollama_root()}/api/chat"
-        payload: Dict[str, Any] = {
+        base: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "stream": False,
-            "think": False,
             "options": {"temperature": temperature, "num_predict": max_tokens},
         }
         async with httpx.AsyncClient(timeout=self._timeout) as client:
-            r = await client.post(url, json=payload)
-            if r.status_code >= 400:
-                return None
-            data = r.json()
-            content = ((data.get("message") or {}).get("content") or "").strip()
-            return content or None
+            for extra in ({"think": False}, {}):
+                payload = {**base, **extra}
+                r = await client.post(url, json=payload)
+                if r.status_code >= 400:
+                    continue
+                data = r.json()
+                content = ((data.get("message") or {}).get("content") or "").strip()
+                if content:
+                    return content
+        return None
 
     def _telemetry_from_text(self, text: str, elapsed_ms: float, usage: Any) -> Dict[str, Any]:
         approx = round(len(text) / 1.8, 2) if text else 0.0

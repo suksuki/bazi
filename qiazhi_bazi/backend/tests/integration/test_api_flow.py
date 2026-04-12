@@ -90,8 +90,8 @@ def test_admin_runtime_config_roundtrip(monkeypatch, tmp_path: Path):
     put_r = admin_module.runtime_config_put(
         RuntimeConfigRequest(
             llm={
-                "base_url": "http://192.168.0.10:11434/v1",
-                "api_key": "ollama",
+                "base_url": "http://127.0.0.1:11434/v1",
+                "api_key": "",
                 "model": "qwen2.5:3b",
             }
         )

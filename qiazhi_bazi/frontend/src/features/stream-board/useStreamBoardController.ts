@@ -31,6 +31,7 @@ import { useStreamBoardSnapshotPersist, type StreamBoardSnapshotPersistDeps } fr
 import { useStreamBoardPipeline } from "./controller/useStreamBoardPipeline";
 import { useStreamBoardHealth } from "./controller/useStreamBoardHealth";
 import { buildInboxCards, createAuditorProposalCard, type DecisionSignalToNoiseMeta } from "./cardBuilder";
+import { SILENT_PHYSICS_RECALC_EVENT } from "./physicsRecalcDispatch";
 import type {
   DeityComponent,
   DeityEnergyAxis,
@@ -426,6 +427,11 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null;
   }, [labState.snapshot?.physics_tensor?.meta]);
 
+  const physicsTensorForInbox = useMemo((): Record<string, unknown> | null => {
+    const pt = labState.snapshot?.physics_tensor;
+    return pt && typeof pt === "object" ? (pt as Record<string, unknown>) : null;
+  }, [labState.snapshot?.physics_tensor]);
+
   const cards = useMemo(
     () =>
       buildInboxCards({
@@ -437,6 +443,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
         decisionSignalToNoise,
         patternProfile,
         l1JunctionFlags: l1JunctionFlagsForInbox,
+        physicsTensor: physicsTensorForInbox,
       }),
     [
       metadata,
@@ -447,6 +454,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
       decisionSignalToNoise,
       patternProfile,
       l1JunctionFlagsForInbox,
+      physicsTensorForInbox,
     ],
   );
   const updateLogicDiffRef = useRef(updateLogicDiff);
@@ -728,6 +736,14 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return () => window.clearTimeout(t);
   }, [referenceYear, metadata, lastSeedPayload, busy, isStreaming, isExecuting]);
 
+  useEffect(() => {
+    const onSilentRecalc = () => {
+      void reCalculateAbsRef.current();
+    };
+    window.addEventListener(SILENT_PHYSICS_RECALC_EVENT, onSilentRecalc);
+    return () => window.removeEventListener(SILENT_PHYSICS_RECALC_EVENT, onSilentRecalc);
+  }, []);
+
   langRef.current = lang;
   lastSeedPayloadRef.current = lastSeedPayload;
   metadataRef.current = metadata;
@@ -945,6 +961,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     scheduleInteractionHubPersist,
     updateLogicDiff,
     typewriterResultLine,
+    mergeLabSnapshot: mergeSnapshot,
   };
 
   const snapshotUrlTag = useMemo(() => {

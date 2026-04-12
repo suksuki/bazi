@@ -64,6 +64,11 @@ class PhysicsConfig(BaseModel):
     SUB_BRANCH_BANHE_ABS_BOOST: Optional[float] = None
     SUB_BRANCH_BANHE_VECTOR_BOOST: Optional[float] = None
     SUB_BRANCH_SANHE_ABS_BOOST: Optional[float] = None
+    SUB_BRANCH_SANHE_REQ_WANG_ZHI: Optional[float] = Field(
+        default=None,
+        description="≥0.5 时三合中神须落月或日支（见 sub_branch_condition_eval）",
+    )
+    SANHE_ALPHA_LEAKAGE: Optional[float] = Field(default=None, description="三合 Abs 增益泄漏比例 0..1")
     SUB_BRANCH_LIUHE_ABS_BOOST: Optional[float] = None
     SUB_BRANCH_SANXING_ABS_DAMP: Optional[float] = None
     SUB_BRANCH_LIUCHONG_ABS_DAMP: Optional[float] = None
@@ -125,6 +130,29 @@ class AnalyzeClashRequest(BaseModel):
         default=None,
         description="Chronos V2：流年/大运干支上下文（引动审计）",
     )
+
+
+class AuditDiagnoseRequest(BaseModel):
+    """逻辑检察院：跑 L1 原子流 + 插件，对照终判文本（可选）。"""
+
+    pillars: FourPillars
+    session_id: Optional[int] = None
+    dayun: Optional[str] = None
+    liunian: Optional[str] = None
+    physics_config: Optional[PhysicsConfig] = None
+    enabled_plugins: List[str] = Field(default_factory=list)
+    blind_school_features: Optional[BlindSchoolFeatureFlags] = None
+    temporal_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="与 analyze_clash 一致：流年/大运等干支上下文",
+    )
+    final_verdict_markdown: str = Field(
+        default="",
+        description="最近一次 Final Verdict 正文（markdown），用于叙事层缺失检测",
+    )
+    user_question: str = Field(default="", description="逻辑对质：简短追问，原型返回规则草稿")
+    generate_report: bool = Field(default=False, description="为 True 时附带 audit_report_markdown")
+    return_physics_tensor: bool = Field(default=False, description="为 True 时返回完整 physics_tensor（体积大）")
 
 
 class AnalyzeSeedRequest(BaseModel):
@@ -234,9 +262,13 @@ class LlmTestRequest(BaseModel):
     language: str = Field(default="ZH", description="ZH/EN/KO")
     temperature: float = 0.3
     max_tokens: int = 256
-    base_url: Optional[str] = Field(default=None, description="可覆盖 LLM 地址，如 http://192.168.0.10:8000/v1")
+    base_url: Optional[str] = Field(default=None, description="可覆盖 LLM OpenAI 兼容根地址（通常含 /v1）")
     api_key: Optional[str] = Field(default=None, description="可覆盖 API Key")
     model: Optional[str] = Field(default=None, description="可覆盖模型名")
+    fast_path: bool = Field(
+        default=False,
+        description="为 True 时只做一次主模型调用，跳过二次 LLM 重写/压缩，仅本地 strip 与 hard_compact；弱模型或网关超时较严时建议开启。",
+    )
 
 
 class DbStatusRequest(BaseModel):

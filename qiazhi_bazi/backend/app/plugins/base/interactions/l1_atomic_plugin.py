@@ -1,4 +1,8 @@
-"""L1 atomic plugin pool executor."""
+"""L1 atomic plugin pool executor.
+
+三合全支判定使用 `branches` 字典（由 `interaction_pipeline._branch_map_extended` 构建）：
+可含 `dayun` / `liunian` 键以支持岁运凑局；中神旺支门控见 `sanhe_trine_allowed_by_wang_zhi_switch`。
+"""
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Set, Tuple
@@ -10,6 +14,7 @@ from app.plugins.base.interactions.grave import run_grave
 from app.plugins.base.interactions.pierce import run_pierce
 from app.plugins.base.interactions.punish import run_punish
 from app.plugins.base_physics.core_operators import op_connection, op_destruction, op_interdimensional, op_production
+from app.plugins.base_physics.core_operators.op_sub_branch_interaction import is_sanhe_triggered
 from app.plugins.base_physics.skill_manifest_loader import skill_id_for_l1_operator
 from app.plugins.base_physics.core_operators.op_interdimensional import StemBranchCouplingEngine
 from app.skills.physics_rules import SANHE_GROUPS, SANXING_EDGES, SELF_PUNISH_BRANCHES, STEM_TOMB_BRANCH
@@ -261,10 +266,9 @@ def _run_composite_plugins(
     settings: Dict[str, Any],
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     steps: List[Dict[str, Any]] = []
-    present = frozenset(branches.values())
     composite: Dict[str, Any] = {"sanhe_clusters": []}
     for group in SANHE_GROUPS:
-        if not group.issubset(present):
+        if not is_sanhe_triggered(group, branches, settings):
             continue
         cluster_abs = 0.0
         nodes: List[Dict[str, Any]] = []
@@ -338,7 +342,45 @@ def _run_composite_plugins(
                         "skill_ids": [skill_id_for_l1_operator("L1_OP_PHI_CLAMP")],
                     }
                 )
+    _append_sanhe_protocol_audits(composite=composite, branches=branches, settings=settings)
     return steps, composite
+
+
+def _append_sanhe_protocol_audits(
+    *,
+    composite: Dict[str, Any],
+    branches: Dict[str, str],
+    settings: Dict[str, Any],
+) -> None:
+    """旺支门控开启时：记录未成立三合的协议跳过项，供 `audit_log.sanhe_protocol_audits` 与 0.17 因果闭环断言。"""
+    if float(settings.get("SUB_BRANCH_SANHE_REQ_WANG_ZHI", 0.0)) < 0.5:
+        return
+    present = frozenset(branches.values())
+    rows: List[Dict[str, Any]] = []
+    for group in SANHE_GROUPS:
+        if group.issubset(present):
+            if not is_sanhe_triggered(group, branches, settings):
+                rows.append(
+                    {
+                        "status": "SKIPPED_BY_PROTOCOL",
+                        "operator_ref": "L1_OP_SUB_BRANCH_SANHE",
+                        "group_branches": sorted(group),
+                        "reason": "WANG_ZHI_GATE",
+                        "detail_zh": "三支齐但中神不在月/日支（SUB_BRANCH_SANHE_REQ_WANG_ZHI）",
+                    }
+                )
+        elif len(group & present) == 2:
+            rows.append(
+                {
+                    "status": "SKIPPED_BY_PROTOCOL",
+                    "operator_ref": "L1_OP_SUB_BRANCH_SANHE",
+                    "group_branches": sorted(group),
+                    "reason": "INCOMPLETE_TRIAD",
+                    "detail_zh": "仅两支在局，未满足三合完整协议",
+                }
+            )
+    if rows:
+        composite["sanhe_protocol_audits"] = rows
 
 
 def run_l1_atomic_plugin_pool(

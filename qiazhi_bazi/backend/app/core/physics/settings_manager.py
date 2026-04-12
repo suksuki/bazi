@@ -87,6 +87,8 @@ def _build_key_category_and_description() -> Tuple[Dict[str, str], Dict[str, str
         ("L0_HIDDEN_ENERGY_SCALE", "l0.hidden_schema", "L0 藏干能量整体标度（乘在藏干支分量上）"),
         ("L0_ROOT_BOOST_FACTOR", "l0.root_resonance", "L0 通根反哺强度乘子（见 get_root_resonance）"),
         ("L0_YM_DH_WEIGHT_RATIO", "l0.pillar_time", "L0 年月相对日时柱位权重比（>1 偏强年月）"),
+        ("SUB_BRANCH_SANHE_REQ_WANG_ZHI", "base.physics.op_branch_sanhe", "三合中神须见月/日地支（帝旺支）"),
+        ("SANHE_ALPHA_LEAKAGE", "base.physics.op_branch_sanhe", "三合 Abs 增益的 α 泄漏（削弱有效 boost）"),
     ):
         cat.setdefault(pk, cid)
         desc.setdefault(pk, text)

@@ -9,11 +9,13 @@ def apply_decision_inbox_signal_gate(
     meta: Dict[str, Any],
     settings: Dict[str, float],
     clash_abs_loss_total: Optional[float],
+    has_sanhe_cluster: bool = False,
 ) -> Dict[str, Any]:
     """
     使用 L1 合成中的冲战 Abs 损耗估计与 L1 能级：
     - 若 abs_estimate < GLOBAL_DECISION_ABS_THRESHOLD 且无「可绕过门控」的 CRITICAL，则不向 Inbox 推送冲突观察项。
     - 可绕过：伤官见官 CRITICAL，或任意双侧 Surface 的其它 L1 核心冲突（见 l1_inbox_signal_bypass）。
+    - 三合聚能已登记（composite sanhe_clusters 非空）时强制放行判词观察项，避免重大结构被低冲战门控淹没。
     """
     threshold = float(settings.get("GLOBAL_DECISION_ABS_THRESHOLD", 5.0))
     jf = meta.get("l1_junction_flags") if isinstance(meta.get("l1_junction_flags"), dict) else {}
@@ -21,11 +23,14 @@ def apply_decision_inbox_signal_gate(
     if clash_abs_loss_total is None:
         eligible = True
     else:
-        eligible = (float(clash_abs_loss_total) >= threshold) or has_critical
+        eligible = (
+            (float(clash_abs_loss_total) >= threshold) or has_critical or bool(has_sanhe_cluster)
+        )
     block: Dict[str, Any] = {
         "abs_estimate": round(float(clash_abs_loss_total), 4) if clash_abs_loss_total is not None else None,
         "threshold": threshold,
         "has_critical_marker": has_critical,
+        "sanhe_inbox_bypass": bool(has_sanhe_cluster),
         "inbox_conflict_cards_eligible": eligible,
     }
     meta["decision_signal_to_noise"] = block

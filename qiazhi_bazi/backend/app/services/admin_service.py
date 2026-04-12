@@ -18,6 +18,7 @@ from app.api.admin_helpers import (
     validate_target_url,
 )
 from app.api.contracts import DbStatusRequest, LlmTestRequest
+from app.core.llm_ollama import looks_like_native_ollama_base_url
 from app.db.session import DB_URL, _engine, init_db
 from app.llm.client import QwenClient
 
@@ -141,7 +142,7 @@ async def execute_llm_test(
     start = time.perf_counter()
     try:
         raw_content = ""
-        if body.base_url and body.model and "11434" in body.base_url:
+        if body.base_url and body.model and looks_like_native_ollama_base_url(body.base_url):
             try:
                 raw_content = await ollama_chat_no_think(
                     body.base_url,
@@ -164,10 +165,13 @@ async def execute_llm_test(
         content = strip_reasoning(raw_content)
         if not content:
             logger.warning("llm_test strip_empty reason=no_anchor_or_blocked_keywords")
-            content = await rewrite_final_only(client, raw_content, body.language)
+            if body.fast_path:
+                content = "已隐藏模型推理过程。该模型当前未返回可提取的最终结论，建议切换非推理模型或在 Prompt 中明确“仅输出最终结论”。"
+            else:
+                content = await rewrite_final_only(client, raw_content, body.language)
         if not content:
             content = "已隐藏模型推理过程。该模型当前未返回可提取的最终结论，建议切换非推理模型或在 Prompt 中明确“仅输出最终结论”。"
-        elif len(content) > 220 or "###" in content or "一、" in content:
+        elif not body.fast_path and (len(content) > 220 or "###" in content or "一、" in content):
             concise = await compress_final_only(client, content, body.language)
             if concise:
                 content = concise

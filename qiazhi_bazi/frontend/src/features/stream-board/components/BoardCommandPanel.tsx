@@ -7,7 +7,6 @@ import { BlindSkillBadgeRow } from "./BlindSkillBadgeRow";
 import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
 import { TemporalYearSlider } from "./TemporalYearSlider";
 import { WillReplayPanel } from "./WillReplayPanel";
-import { useActiveView } from "@/components/layout/ActiveViewContext";
 import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
 
 // Recreate these constants to avoid dependencies if needed, or import from somewhere.
@@ -107,7 +106,6 @@ export function BoardCommandPanel({
   decisionSignalToNoise,
   onBackToSeedEntry,
 }: BoardCommandPanelProps) {
-  const { setActiveView } = useActiveView();
   const {
     t,
     lang,
@@ -378,13 +376,6 @@ export function BoardCommandPanel({
               <span className="ml-2 text-[11px] text-zinc-500">Evidence: {physicsEvidence.slice(0, 2).join(" | ")}</span>
             ) : null}
           </p>
-          <button
-            type="button"
-            onClick={() => setActiveView("debug")}
-            className="text-left text-amber-400/90 underline-offset-2 hover:underline"
-          >
-            {t("在「黑匣子」查看完整 L1 流水线与物理张量 JSON →")}
-          </button>
         </div>
       ) : null}
     </motion.div>

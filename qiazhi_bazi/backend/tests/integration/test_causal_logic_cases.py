@@ -15,6 +15,8 @@ from app.api.contracts import AnalyzeClashRequest, PhysicsConfig
 from app.schemas.bazi_metadata import FourPillars, StemBranchPair
 from app.services.analysis_service import analyze_clash_flow
 
+pytestmark = pytest.mark.slow
+
 
 def _pillars(
     ys: str,

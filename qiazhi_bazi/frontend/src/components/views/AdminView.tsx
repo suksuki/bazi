@@ -6,11 +6,12 @@ import { EngineRoomPanel } from "@/features/admin/EngineRoomPanel";
 import { EvolutionPanel } from "@/features/admin/components/EvolutionPanel";
 import { PluginManagementPanel } from "@/features/admin/components/PluginManagementPanel";
 import { RoutingMatrixPanel } from "@/features/admin/components/RoutingMatrixPanel";
+import { AuditChamber } from "@/features/admin/AuditChamber";
 import { AdminSettingsView } from "@/features/admin-settings/AdminSettingsView";
 import { useAdminSettingsController } from "@/features/admin-settings/useAdminSettingsController";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
-type AdminSection = "overview" | "engine" | "infra" | "plugins" | "evolution" | "routing";
+type AdminSection = "overview" | "engine" | "infra" | "plugins" | "evolution" | "routing" | "audit";
 
 const sections: { id: AdminSection; label: string }[] = [
   { id: "overview", label: "概览" },
@@ -19,6 +20,7 @@ const sections: { id: AdminSection; label: string }[] = [
   { id: "plugins", label: "插件" },
   { id: "routing", label: "路由" },
   { id: "evolution", label: "演化" },
+  { id: "audit", label: "逻辑检察院" },
 ];
 
 export function AdminView() {
@@ -104,6 +106,10 @@ export function AdminView() {
 
       <div className={section === "evolution" ? "block" : "hidden"}>
         <EvolutionPanel />
+      </div>
+
+      <div className={section === "audit" ? "block" : "hidden"}>
+        <AuditChamber />
       </div>
     </div>
   );

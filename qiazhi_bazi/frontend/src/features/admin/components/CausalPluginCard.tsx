@@ -10,6 +10,7 @@ import { ADMIN_HEADERS, ADMIN_TOKEN, API_BASE } from "@/features/admin-settings/
 import type { PluginManifestItem } from "@/features/admin/hooks/usePluginRegistry";
 import { runtimePhysicsNumber } from "@/features/admin/utils/runtimePhysicsNumber";
 import type { PhysicsLabConfig, PluginSwitches, PluginWeights } from "@/features/stream-board/models";
+import { dispatchSilentPhysicsRecalc } from "@/features/stream-board/physicsRecalcDispatch";
 
 function IconZap({ className }: { className?: string }) {
   return (
@@ -114,6 +115,11 @@ export function CausalPluginCard({
   const canonMd = [detailed, meta.governance_notes ? `**裁决合规**\n${meta.governance_notes}` : ""].filter(Boolean).join("\n\n---\n\n");
 
   const footerSkills = useMemo(() => (Array.isArray(meta.skills) ? meta.skills : []), [meta.skills]);
+  const judgmentProtocol = useMemo(() => {
+    const jp = meta.judgment_protocol;
+    if (!Array.isArray(jp)) return [] as string[];
+    return jp.map((x) => String(x).trim()).filter(Boolean);
+  }, [meta.judgment_protocol]);
 
   const physicsSliderRows = useMemo(() => {
     if (!setLabConfig) return [];
@@ -153,8 +159,18 @@ export function CausalPluginCard({
         setPersistMsg(`${String(data?.detail ?? "保存失败")}${hint}`);
         return;
       }
-      const n = Array.isArray(data.changed) ? data.changed.length : 0;
-      setPersistMsg(n > 0 ? `已写入 ${n} 项系统基准` : "无有效键写入（仅允许 DEFAULT_PHYSICS_SETTINGS 中的键）");
+      const changed = Array.isArray(data.changed) ? data.changed : [];
+      if (changed.length > 0) {
+        const pairs = changed.map((k) => {
+          const row = items.find((i) => i.key === k);
+          const v = row?.value;
+          return `${k}=${typeof v === "number" ? v.toFixed(4) : String(v ?? "?")}`;
+        });
+        setPersistMsg(`已写入 ${changed.length} 项系统基准：\n${pairs.join("\n")}`);
+      } else {
+        setPersistMsg("无有效键写入（仅允许 DEFAULT_PHYSICS_SETTINGS 中的键）");
+      }
+      dispatchSilentPhysicsRecalc();
     } catch (e) {
       setPersistMsg(e instanceof Error ? e.message : "网络错误");
     } finally {
@@ -260,6 +276,17 @@ export function CausalPluginCard({
             </div>
           </div>
         ) : null}
+        {judgmentProtocol.length > 0 ? (
+          <div className="rounded-md border border-sky-900/45 bg-sky-950/25 px-2 py-1.5">
+            <p className="text-[9px] font-medium uppercase tracking-wide text-sky-200/90">判定协议</p>
+            <p className="mt-0.5 text-[9px] text-sky-100/75">与蓝图同源（l1_physics_manifest）；邻柱/隔柱等几何前提如下。</p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5 text-[10px] leading-snug text-sky-50/90">
+              {judgmentProtocol.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {canonMd ? (
           <div>
             <button
@@ -337,7 +364,9 @@ export function CausalPluginCard({
                   >
                     {persistBusy ? "保存中…" : "保存到系统基准"}
                   </button>
-                  {persistMsg ? <p className="mt-1 text-[9px] text-zinc-400">{persistMsg}</p> : null}
+                  {persistMsg ? (
+                    <p className="mt-1 whitespace-pre-wrap break-all text-[9px] text-zinc-400">{persistMsg}</p>
+                  ) : null}
                 </div>
               </div>
             ) : null}

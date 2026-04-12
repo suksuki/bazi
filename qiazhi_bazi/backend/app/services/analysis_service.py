@@ -95,11 +95,14 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
         api_key=cfg.get("api_key"),
         model=cfg.get("model") or None,
     )
+    first_messages = build_first_observation_messages(
+        metadata_obj.model_dump(), location_hint=location_hint, lang=body.lang
+    )
     llm_elapsed_ms = 0.0
     llm_approx_tokens = 0.0
     try:
         llm_text, tel = await client.chat_with_telemetry(
-            build_first_observation_messages(metadata_obj.model_dump(), location_hint=location_hint, lang=body.lang),
+            first_messages,
             temperature=0.3,
             max_tokens=512,
             stop=["Thinking Process:", "Reasoning:", "思考过程", "推理过程"],
@@ -166,13 +169,19 @@ async def analyze_clash_flow(body: AnalyzeClashRequest) -> Dict[str, Any]:
     except Exception:
         pass
     physics_tensor["plugin_outputs"] = plugin_outputs
+    llm_meta = {
+        "model_name": model_name,
+        "elapsed_ms": llm_elapsed_ms,
+        "approx_tokens": llm_approx_tokens,
+    }
     return {
         "metadata": metadata_obj.model_dump(),
         "llm_prompt": llm_text,
-        "llm_meta": {
-            "model_name": model_name,
-            "elapsed_ms": llm_elapsed_ms,
-            "approx_tokens": llm_approx_tokens,
+        "llm_meta": llm_meta,
+        "first_observation_llm": {
+            "messages": first_messages,
+            "response_text": llm_text,
+            "meta": dict(llm_meta),
         },
         "physics_tensor": physics_tensor,
     }
@@ -311,6 +320,9 @@ async def generate_final_verdict(body: FinalVerdictRequest, consensus_history: L
         "plugin_conflict_report": out.get("plugin_conflict_report", {}),
         "audit_log": out.get("audit_log", {}),
         "confirmed_decisions": out.get("confirmed_decisions", []),
+        "llm_request_messages": out.get("llm_request_messages") or [],
+        "llm_raw_response": str(out.get("llm_raw_response") or out.get("raw") or ""),
+        "llm_meta": out.get("llm_meta") or {},
     }
 
 

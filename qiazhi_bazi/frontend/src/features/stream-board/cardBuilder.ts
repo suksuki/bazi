@@ -4,6 +4,95 @@ import type { DecisionSignalToNoiseMeta, InboxCard, LogicProposal } from "./mode
 
 export type { DecisionSignalToNoiseMeta };
 
+/** 与后端 SANHE_GROUPS 一致：地支 Unicode 排序后的拼接键 → 局名 */
+const SANHE_SORTED_KEY_TO_TITLE: Record<string, string> = {
+  午寅戌: "寅午戌火局",
+  子申辰: "申子辰水局",
+  卯亥未: "亥卯未木局",
+  丑巳酉: "巳酉丑金局",
+};
+
+function _sortedBranchKey(branches: string[]): string {
+  return [...new Set(branches)].sort().join("");
+}
+
+function _sanheBureauTitle(branches: string[]): string {
+  const key = _sortedBranchKey(branches);
+  return SANHE_SORTED_KEY_TO_TITLE[key] || `地支三合（${branches.join("、")}）`;
+}
+
+function _sanheTendencyMarkdown(bureauTitle: string): string {
+  const stability =
+    "三合聚轴会抬高对应五行的**场强权重**，使参与支位在冲合刑害叙事中更「成局」、更难被单点冲散；请在终判中结合根气、透干与岁运评估地支结构的稳定性。";
+  if (bureauTitle.includes("金局")) {
+    return (
+      `${bureauTitle}已在 L1 聚能登记（composite_field_impact）。**能量增益**：金气聚轴带来肃杀、规则与收敛做功；` +
+      `**稳定性**：${stability}若木火为喜用，需评估合局对食伤透发与柔性的压制；若金为喜用，则利于决断与资源固化。`
+    );
+  }
+  if (bureauTitle.includes("火局")) {
+    return `${bureauTitle}已登记。**能量增益**：火气聚轴增强表达、动能与「炎上」做功；**稳定性**：${stability}注意过燥对金水体的抽干。`;
+  }
+  if (bureauTitle.includes("水局")) {
+    return `${bureauTitle}已登记。**能量增益**：水气聚轴增强智略、渗透与「润下」做功；**稳定性**：${stability}注意过寒对火土的抑制。`;
+  }
+  if (bureauTitle.includes("木局")) {
+    return `${bureauTitle}已登记。**能量增益**：木气聚轴增强条达、进取与「曲直」做功；**稳定性**：${stability}注意过旺对土的克伐。`;
+  }
+  return `${bureauTitle}已登记。**能量增益**：合局抬升该五行场强；**稳定性**：${stability}请结合全局向量与十神轴评估格调抬升或偏枯。`;
+}
+
+/** 由 physics_tensor 装配地支三合 Decision 卡片（不受 Inbox 信噪比门控清空判词观察项的影响）。 */
+export function buildSanheStructureCards(physicsTensor: Record<string, unknown> | null | undefined): InboxCard[] {
+  if (!physicsTensor || typeof physicsTensor !== "object") return [];
+  const comp = physicsTensor.composite_field_impact as Record<string, unknown> | undefined;
+  const raw = comp?.sanhe_clusters;
+  let clusters: unknown[] = Array.isArray(raw) ? raw : [];
+  if (clusters.length === 0) {
+    const meta = physicsTensor.meta as Record<string, unknown> | undefined;
+    const iv2 = meta?.interaction_v2 as Record<string, unknown> | undefined;
+    const collapse = Array.isArray(iv2?.attribute_collapse) ? iv2.attribute_collapse : [];
+    for (const item of collapse) {
+      if (!item || typeof item !== "object") continue;
+      const row = item as Record<string, unknown>;
+      if (String(row.kind || "") !== "sanhe") continue;
+      const brs = Array.isArray(row.branches) ? row.branches.map((x) => String(x)) : [];
+      if (brs.length >= 3) clusters.push({ branches: brs, energy_vault_status: "AGGREGATED", nodes: [] });
+    }
+  }
+  const out: InboxCard[] = [];
+  clusters.forEach((cl, idx) => {
+    if (!cl || typeof cl !== "object") return;
+    const row = cl as Record<string, unknown>;
+    const brs = Array.isArray(row.branches) ? row.branches.map((x) => String(x)) : [];
+    if (brs.length < 3) return;
+    const bureauTitle = _sanheBureauTitle(brs);
+    const stat = String(row.energy_vault_status || "AGGREGATED");
+    const nodes = Array.isArray(row.nodes) ? row.nodes : [];
+    const nodeLine = nodes
+      .map((n) => {
+        if (!n || typeof n !== "object") return "";
+        const o = n as Record<string, unknown>;
+        const p = String(o.pillar || "");
+        const b = String(o.branch || "");
+        return p && b ? `${p}:${b}` : "";
+      })
+      .filter(Boolean)
+      .join("，");
+    const id = `inbox-sanhe-${idx}`;
+    const base: InboxCard = {
+      id,
+      title: "地支三合局锁定",
+      displayText: `${bureauTitle} · ${stat}`,
+      conflictDetail: `nodes=${nodeLine || "—"}`,
+      markdown: _sanheTendencyMarkdown(bureauTitle),
+      cardType: "L1_STRUCTURE",
+    };
+    out.push({ ...base, skillId: inferDecisionSkillId(base, []) });
+  });
+  return out;
+}
+
 function buildPatternSovereigntyCard(
   patternProfile: Record<string, unknown> | null | undefined,
   l1JunctionFlags: Record<string, unknown> | null | undefined,
@@ -45,6 +134,8 @@ export function buildInboxCards(params: {
   patternProfile?: Record<string, unknown> | null;
   /** physics_tensor.meta.l1_junction_flags：与格局主权冲突检测 */
   l1JunctionFlags?: Record<string, unknown> | null;
+  /** physics_tensor：装配三合 L1_STRUCTURE 卡片 */
+  physicsTensor?: Record<string, unknown> | null;
 }): InboxCard[] {
   const {
     metadata,
@@ -55,8 +146,12 @@ export function buildInboxCards(params: {
     decisionSignalToNoise,
     patternProfile,
     l1JunctionFlags,
+    physicsTensor,
   } = params;
-  if (!metadata) return [];
+  const sanheCards = buildSanheStructureCards(physicsTensor ?? null);
+  if (!metadata) {
+    return sanheCards.filter((card) => !resolvedCardIds.includes(card.id));
+  }
   const conflictPoints = metadata.conflict_matrix?.points ?? [];
 
   let sentenceItems = firstPromptText
@@ -121,7 +216,7 @@ export function buildInboxCards(params: {
   const withSovereignty = patternCard
     ? [patternCard, ...mergedCards.filter((c) => c.id !== patternCard.id)]
     : mergedCards;
-  return withSovereignty.filter((card) => !resolvedCardIds.includes(card.id));
+  return [...sanheCards, ...withSovereignty].filter((card) => !resolvedCardIds.includes(card.id));
 }
 
 export function createAuditorProposalCard(proposal: LogicProposal): InboxCard | null {

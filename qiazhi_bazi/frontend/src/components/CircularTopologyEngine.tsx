@@ -21,6 +21,7 @@ type Props = {
 };
 
 const BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+const BRANCH_LABELS = new Set(BRANCHES);
 
 export function CircularTopologyEngine({ nodes = [], edges = [], climateIntensity = 0, threshold = 0.5 }: Props) {
   const size = 320;
@@ -45,8 +46,18 @@ export function CircularTopologyEngine({ nodes = [], edges = [], climateIntensit
     nodeMap.set(n.label, { x: center + (radius - 35) * Math.cos(angle), y: center + (radius - 35) * Math.sin(angle), label: n.label });
   });
 
+  const idToLabel = new Map(nodes.map((n) => [n.id, n.label]));
+
   const pointOf = (token?: string) => {
-    const key = token?.includes("month") ? "寅" : token?.includes("day") ? "午" : "子";
+    const raw = (token || "").trim();
+    if (raw.length === 1 && BRANCH_LABELS.has(raw)) {
+      return nodeMap.get(raw) ?? nodeMap.get("子")!;
+    }
+    const fromId = idToLabel.get(raw || "");
+    if (fromId && BRANCH_LABELS.has(fromId)) {
+      return nodeMap.get(fromId)!;
+    }
+    const key = raw.includes("month") ? "寅" : raw.includes("day") ? "午" : "子";
     return nodeMap.get(key)!;
   };
 
@@ -57,7 +68,14 @@ export function CircularTopologyEngine({ nodes = [], edges = [], climateIntensit
     const width = Math.max(1, Math.min(7, work));
     const opacity = Math.max(0.2, Math.min(1, 0.35 + climateIntensity * 0.65));
     const clashLike = e.relation_type === "clash" || e.relation_type === "pierce";
-    const color = e.relation_type === "combination" ? "rgba(34,211,238,0.9)" : clashLike ? "rgba(251,113,133,0.9)" : "rgba(148,163,184,0.85)";
+    const color =
+      e.relation_type === "sanhe_cluster"
+        ? "rgba(250,204,21,0.95)"
+        : e.relation_type === "combination"
+          ? "rgba(34,211,238,0.9)"
+          : clashLike
+            ? "rgba(251,113,133,0.9)"
+            : "rgba(148,163,184,0.85)";
     const dash = e.stem_resonance ? "5 4" : undefined;
     const c1x = (s.x + t.x) / 2 + (s.y - t.y) * 0.12;
     const c1y = (s.y + t.y) / 2 + (t.x - s.x) * 0.12;

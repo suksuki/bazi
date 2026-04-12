@@ -9,7 +9,8 @@ docs/
 ├── architecture/
 │   ├── OVERVIEW.md
 │   ├── FRONTEND_MVC.md
-│   └── BACKEND_SERVICE_ARCH.md
+│   ├── BACKEND_SERVICE_ARCH.md
+│   └── PIPELINE_INBOX_LLM_WHITEPAPER.md
 ├── testing/
 │   ├── TEST_STRATEGY.md
 │   └── TEST_CASES.md
@@ -26,6 +27,7 @@ docs/
 3. [architecture/BACKEND_SERVICE_ARCH.md](/home/hlsystem/bazi/qiazhi_bazi/docs/architecture/BACKEND_SERVICE_ARCH.md)
 4. [testing/TEST_STRATEGY.md](/home/hlsystem/bazi/qiazhi_bazi/docs/testing/TEST_STRATEGY.md)
 5. [testing/TEST_CASES.md](/home/hlsystem/bazi/qiazhi_bazi/docs/testing/TEST_CASES.md)
+6. [architecture/PIPELINE_INBOX_LLM_WHITEPAPER.md](./architecture/PIPELINE_INBOX_LLM_WHITEPAPER.md) — 测算 → Inbox → 终判全链路审计白皮书（随架构迭代更新）
 
 ## 维护约定
 

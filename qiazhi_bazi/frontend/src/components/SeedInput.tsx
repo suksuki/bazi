@@ -92,20 +92,38 @@ export function SeedInput({
   }, [day, daysInMonth]);
 
   const hydratedSigRef = useRef("");
+  const prevHydrateRef = useRef<SeedFormPayload | null | undefined>(undefined);
+
   useEffect(() => {
-    if (!hydrateFrom) return;
-    const sig = `${hydrateFrom.date}|${hydrateFrom.time}|${hydrateFrom.calendar}|${hydrateFrom.gender}`;
-    if (hydratedSigRef.current === sig) return;
-    hydratedSigRef.current = sig;
-    const [y, m, d] = hydrateFrom.date.split("-").map((x) => x.trim());
-    const [hh, mm] = hydrateFrom.time.split(":").map((x) => x.trim());
-    if (y) setYear(y.padStart(4, "0").slice(0, 4));
-    if (m) setMonth(m.padStart(2, "0").slice(0, 2));
-    if (d) setDay(d.padStart(2, "0").slice(0, 2));
-    if (hh) setHour(hh.padStart(2, "0").slice(0, 2));
-    if (mm) setMinute(mm.padStart(2, "0").slice(0, 2));
-    setCalendar(hydrateFrom.calendar);
-    setGender(hydrateFrom.gender);
+    const prev = prevHydrateRef.current;
+    prevHydrateRef.current = hydrateFrom ?? null;
+
+    if (hydrateFrom) {
+      const sig = `${hydrateFrom.date}|${hydrateFrom.time}|${hydrateFrom.calendar}|${hydrateFrom.gender}`;
+      if (hydratedSigRef.current === sig) return;
+      hydratedSigRef.current = sig;
+      const [y, m, d] = hydrateFrom.date.split("-").map((x) => x.trim());
+      const [hh, mm] = hydrateFrom.time.split(":").map((x) => x.trim());
+      if (y) setYear(y.padStart(4, "0").slice(0, 4));
+      if (m) setMonth(m.padStart(2, "0").slice(0, 2));
+      if (d) setDay(d.padStart(2, "0").slice(0, 2));
+      if (hh) setHour(hh.padStart(2, "0").slice(0, 2));
+      if (mm) setMinute(mm.padStart(2, "0").slice(0, 2));
+      setCalendar(hydrateFrom.calendar);
+      setGender(hydrateFrom.gender);
+      return;
+    }
+
+    if (prev) {
+      hydratedSigRef.current = "";
+      setYear("1990");
+      setMonth("01");
+      setDay("01");
+      setHour("00");
+      setMinute("00");
+      setCalendar("solar");
+      setGender("male");
+    }
   }, [hydrateFrom]);
 
   return (

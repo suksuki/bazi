@@ -92,6 +92,13 @@ DEFAULT_PHYSICS_SETTINGS: Dict[str, float] = {
     # 深度地支算子 L1_OP_SUB_BRANCH_INTERACTION（系数走配置，不在算子内写死）
     "L1_SUB_BRANCH_OP_ENABLE": 1.0,
     "SUB_BRANCH_SANHE_ABS_BOOST": 0.06,
+    # 三合：中神（子午卯酉）须落月/日支才认聚能；合化后 Abs 增益的 α 泄漏
+    "SUB_BRANCH_SANHE_REQ_WANG_ZHI": 0.0,
+    # ≥0.5：大运/流年支并入三合判定池（interaction_pipeline._branch_map_extended）
+    "SANHE_INCLUDE_TEMPORAL_BRANCHES": 1.0,
+    # ≥0.5：旺支门控下中神可落在大运/流年键（dayun/liunian），与月日并列
+    "SANHE_TEMPORAL_WANG_ZHI_BRIDGE": 1.0,
+    "SANHE_ALPHA_LEAKAGE": 0.0,
     "SUB_BRANCH_LIUHE_ABS_BOOST": 0.04,
     "SUB_BRANCH_SANXING_ABS_DAMP": 0.97,
     "SUB_BRANCH_ANHE_ABS_DAMP": 0.985,

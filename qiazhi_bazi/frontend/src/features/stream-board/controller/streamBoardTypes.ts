@@ -5,6 +5,7 @@ import type {
   PluginSwitches,
   PluginWeights,
 } from "@/features/stream-board/models";
+import type { LabLlmRoundSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
 
 /** 与 SessionConsensus / 终判 payload 对齐的轻量结构 */
@@ -54,6 +55,8 @@ export type SilentRecalcPersistSnapshotPayload = {
   metadata: Record<string, unknown>;
   timeline: Record<string, unknown> | null;
   llm_prompt: string;
+  first_observation_llm?: LabLlmRoundSnapshot;
+  physics_auditor_llm?: LabLlmRoundSnapshot;
   audit_summary: unknown;
   consultationIdOverride: number | null;
   healthOverride: { dbOk: boolean; llmOk: boolean };

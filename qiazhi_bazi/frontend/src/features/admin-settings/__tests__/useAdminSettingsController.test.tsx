@@ -110,4 +110,48 @@ describe("useAdminSettingsController", () => {
     expect(result.current.llmSaveMsg).toContain("配置已保存");
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/api/admin/llm-test") && (init as RequestInit)?.method === "POST")).toBe(true);
   });
+
+  it("shows readable error when llm-test body is HTML not JSON", async () => {
+    vi.useRealTimers();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/admin/runtime-config") && (!init || init.method === undefined)) {
+        return jsonResponse({ config: { llm: { base_url: "http://127.0.0.1:11434/v1", api_key: "", model: "qwen2.5:32b" } } });
+      }
+      if (url.endsWith("/api/admin/llm-models")) {
+        return jsonResponse({ models: ["qwen2.5:32b"] });
+      }
+      if (url.endsWith("/api/admin/llm-test")) {
+        return {
+          ok: false,
+          status: 404,
+          text: async () => "<html><body>Not Found</body></html>",
+        } as Response;
+      }
+      if (url.endsWith("/api/admin/runtime-config") && init?.method === "PUT") {
+        return jsonResponse({ ok: true });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAdminSettingsController());
+
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(result.current.llmModel).toBe("qwen2.5:32b");
+
+    await act(async () => {
+      await result.current.testLlm();
+    });
+
+    expect(result.current.llmResult).toBeNull();
+    expect(result.current.llmErr).toContain("不是合法 JSON");
+    expect(result.current.llmErr).toContain("原文片段");
+    expect(result.current.llmErr).toContain("<html>");
+  });
 });

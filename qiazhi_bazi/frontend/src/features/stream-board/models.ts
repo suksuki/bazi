@@ -24,7 +24,7 @@ export type InboxCard = {
   markdown: string;
   conflictDetail?: string;
   displayText?: string;
-  cardType?: "conflict" | "auditor-proposal" | "proposal";
+  cardType?: "conflict" | "auditor-proposal" | "proposal" | "L1_STRUCTURE";
   proposal?: LogicProposal;
   /** 与盲派 skill_manifest 对齐，可由 UI 推断或上游写入 */
   skillId?: string;
@@ -108,6 +108,8 @@ export type PhysicsLabConfig = {
   SUB_BRANCH_BANHE_ABS_BOOST?: number;
   SUB_BRANCH_BANHE_VECTOR_BOOST?: number;
   SUB_BRANCH_SANHE_ABS_BOOST?: number;
+  SUB_BRANCH_SANHE_REQ_WANG_ZHI?: number;
+  SANHE_ALPHA_LEAKAGE?: number;
   SUB_BRANCH_LIUHE_ABS_BOOST?: number;
   SUB_BRANCH_SANXING_ABS_DAMP?: number;
   SUB_BRANCH_LIUCHONG_ABS_DAMP?: number;
@@ -155,6 +157,8 @@ export type FinalVerdictChangeLog = {
   text_diff_hint?: string;
 };
 
+export type LlmChatMessage = { role: string; content: string };
+
 export type FinalVerdictResult = {
   body: string;
   changeLog: FinalVerdictChangeLog;
@@ -166,6 +170,11 @@ export type FinalVerdictResult = {
   structureFinalDecisionV0?: Record<string, unknown>;
   auditLog?: Record<string, unknown>;
   confirmedDecisions?: Array<{ id: string; label: string; is_confirmed: boolean; confirmed_at?: string }>;
+  /** 终判单次请求的 messages（与 /v1/final-verdict 对齐） */
+  llmRequestMessages?: LlmChatMessage[];
+  /** 模型原始返回（多为 JSON 包裹的 Markdown） */
+  llmRawResponse?: string;
+  llmMeta?: Record<string, unknown>;
 };
 
 export type FinalVerdictHistoryItem = {
@@ -210,6 +219,8 @@ export type DecisionSignalToNoiseMeta = {
   threshold?: number;
   abs_estimate?: number | null;
   has_critical_marker?: boolean;
+  /** 三合聚能已登记时后端强制放行判词观察项 */
+  sanhe_inbox_bypass?: boolean;
 };
 
 export type StreamBoardViewModel = {

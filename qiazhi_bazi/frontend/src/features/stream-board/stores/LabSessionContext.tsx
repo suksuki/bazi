@@ -58,6 +58,8 @@ const DEFAULT_LAB_RUNTIME: PhysicsLabConfig = {
   GRAVE_BURST_MULTIPLIER: 1.3,
   L1_SANHE_PHI_CLAMP: 1.0,
   STATUS_BOOST_MULTIPLIER: 1.15,
+  SUB_BRANCH_SANHE_REQ_WANG_ZHI: 0.0,
+  SANHE_ALPHA_LEAKAGE: 0.0,
 };
 
 const DEFAULT_SWITCHES_RUNTIME: PluginSwitches = {
@@ -80,6 +82,14 @@ export type LabRuntimeConfig = {
   pluginWeights: PluginWeights;
 };
 
+/** 单次 LLM 往返（首观 / 审计等），供 Debug 与排障 */
+export type LabLlmRoundSnapshot = {
+  messages?: Array<{ role: string; content: string }>;
+  response_text?: string;
+  meta?: Record<string, unknown>;
+  repair_mode?: string;
+};
+
 export type LabSnapshot = {
   ts?: number;
   seed_signature?: string;
@@ -88,6 +98,10 @@ export type LabSnapshot = {
   metadata?: Record<string, unknown>;
   timeline?: Record<string, unknown> | null;
   llm_prompt?: string;
+  /** analyze-seed 首观 LLM：完整 messages + 模型回复 + 遥测 */
+  first_observation_llm?: LabLlmRoundSnapshot;
+  /** /v1/audit-physics-with-llm 结构化审计（含重试则以后端返回为准） */
+  physics_auditor_llm?: LabLlmRoundSnapshot;
   audit_summary?: unknown;
   resolved_card_ids?: string[];
   logic_diff?: {
@@ -127,6 +141,9 @@ export type LabSnapshot = {
     structure_candidates_v0?: Record<string, unknown> | null;
     structure_final_decision_v0?: Record<string, unknown> | null;
     version_id?: string;
+    llm_request_messages?: Array<{ role: string; content: string }>;
+    llm_raw_response?: string;
+    llm_meta?: Record<string, unknown>;
   };
   decision_selection_ids?: string[];
 };
@@ -185,7 +202,6 @@ const emptyState = (): LabStoreState => ({
 
 type LabAction =
   | { type: "mergeSnapshot"; payload: Partial<LabSnapshot> }
-  | { type: "injectSnapshotText"; payload: string }
   | { type: "clearSnapshot" }
   | { type: "requestCausalRevert" }
   | { type: "setLastSeedPayload"; payload: SeedPayload | null }
@@ -210,19 +226,6 @@ async function sha256HexOfText(text: string): Promise<string> {
 
 function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
   switch (action.type) {
-    case "injectSnapshotText": {
-      if (state.isFinalized) return state;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(action.payload);
-      } catch {
-        return state;
-      }
-      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-        return state;
-      }
-      return labReducer(state, { type: "mergeSnapshot", payload: parsed as Partial<LabSnapshot> });
-    }
     case "mergeSnapshot": {
       const raw = { ...action.payload };
       if (raw.decision_selection_ids != null && Array.isArray(raw.decision_selection_ids)) {
@@ -446,7 +449,6 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
 export type LabStoreValue = {
   state: LabStoreState;
   mergeSnapshot: (payload: Partial<LabSnapshot>) => void;
-  injectSnapshotText: (text: string) => void;
   clearSnapshot: () => void;
   requestCausalRevert: () => void;
   setLastSeedPayload: (payload: SeedPayload | null) => void;
@@ -467,9 +469,6 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
 
   const mergeSnapshot = useCallback((payload: Partial<LabSnapshot>) => {
     dispatch({ type: "mergeSnapshot", payload });
-  }, []);
-  const injectSnapshotText = useCallback((text: string) => {
-    dispatch({ type: "injectSnapshotText", payload: text });
   }, []);
   const clearSnapshot = useCallback(() => {
     dispatch({ type: "clearSnapshot" });
@@ -517,7 +516,6 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       state: st,
       mergeSnapshot,
-      injectSnapshotText,
       clearSnapshot,
       requestCausalRevert,
       setLastSeedPayload,
@@ -531,7 +529,6 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
     [
       st,
       mergeSnapshot,
-      injectSnapshotText,
       clearSnapshot,
       requestCausalRevert,
       setLastSeedPayload,

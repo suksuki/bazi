@@ -61,6 +61,9 @@ class _FakeVerdictSkill:
             "structure_candidates_v0": {"hud": {"stable_pct": 40.0, "follower_pct": 30.0, "leap_pct": 30.0}},
             "structure_final_decision_v0": {"primary_structure": "FOLLOW_WEALTH_POWER", "decision_confidence": 0.86},
             "audit_log": {"skill_id": "final_verdict_skill", "param_version_id": "p-1"},
+            "llm_request_messages": [{"role": "user", "content": "终判探针"}],
+            "llm_raw_response": '{"verdict_body":"适合推进"}',
+            "llm_meta": {"model_name": "stub", "elapsed_ms": 1.0},
         }
 
 
@@ -134,6 +137,9 @@ def test_analyze_seed_flow_builds_audit_summary():
     assert payload["audit_summary"][1]["role"] == "Core"
     assert payload["audit_summary"][2]["payload"]["param_version_id"] == "v-test"
     assert "寅申冲" in payload["llm_prompt"]
+    fo = payload.get("first_observation_llm") or {}
+    assert isinstance(fo.get("messages"), list) and len(fo["messages"]) >= 1
+    assert fo.get("response_text") == payload["llm_prompt"]
 
 
 def test_load_consensus_history_and_generate_final_verdict():
@@ -165,6 +171,9 @@ def test_load_consensus_history_and_generate_final_verdict():
     assert payload["structure_candidates_v0"]["hud"]["leap_pct"] == 30.0
     assert payload["structure_final_decision_v0"]["primary_structure"] == "FOLLOW_WEALTH_POWER"
     assert payload["audit_log"]["skill_id"] == "final_verdict_skill"
+    assert payload["llm_request_messages"][0]["role"] == "user"
+    assert "适合推进" in payload["llm_raw_response"]
+    assert payload["llm_meta"]["model_name"] == "stub"
 
 
 def test_resolve_consensus_history_prefers_explicit_history():

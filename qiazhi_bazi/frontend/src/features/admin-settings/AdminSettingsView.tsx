@@ -112,7 +112,7 @@ function DbSection({ controller }: { controller: Controller }) {
 }
 
 function LlmSection({ controller }: { controller: Controller }) {
-  const { effectiveBaseUrl, lang, llmApiKey, llmErr, llmModel, llmResult, llmSaveMsg, loadingLlm, loadingModels, modelLoadMsg, modelOptions, ollamaHost, saveState, setLang, setLlmApiKey, setLlmModel, setOllamaHost, setSystemPrompt, setUserPrompt, systemPrompt, testLlm, loadModels, userPrompt } = controller;
+  const { effectiveBaseUrl, lang, llmApiKey, llmErr, llmFastPath, llmModel, llmResult, llmSaveMsg, loadingLlm, loadingModels, modelLoadMsg, modelOptions, ollamaHost, saveState, setLang, setLlmApiKey, setLlmFastPath, setLlmModel, setOllamaHost, setSystemPrompt, setUserPrompt, systemPrompt, testLlm, loadModels, userPrompt } = controller;
   return (
     <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/20">
       <div className="mb-4 flex items-center justify-between">
@@ -126,7 +126,7 @@ function LlmSection({ controller }: { controller: Controller }) {
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div>
             <label className="text-xs text-zinc-400">Ollama Host</label>
-            <input value={ollamaHost} onChange={(e) => setOllamaHost(e.target.value)} placeholder="http://192.168.0.10:11434" className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-amber-500/80" />
+            <input value={ollamaHost} onChange={(e) => setOllamaHost(e.target.value)} placeholder="http://主机:端口（或仅主机名 + 环境变量补端口）" className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm outline-none focus:border-amber-500/80" />
           </div>
           <div>
             <label className="text-xs text-zinc-400">Effective Base URL</label>
@@ -156,10 +156,14 @@ function LlmSection({ controller }: { controller: Controller }) {
         <div><label className="text-xs text-zinc-400">System Prompt</label><textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-amber-500/80" /></div>
         <div><label className="text-xs text-zinc-400">User Prompt</label><textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} rows={4} className="mt-1 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-amber-500/80" /></div>
       </div>
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         {(["ZH", "EN", "KO"] as const).map((x) => (
           <button key={x} type="button" onClick={() => setLang(x)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${lang === x ? "bg-amber-500 text-zinc-950" : "border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}`}>{x}</button>
         ))}
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-400">
+          <input type="checkbox" checked={llmFastPath} onChange={(e) => setLlmFastPath(e.target.checked)} className="rounded border-zinc-600 bg-zinc-900" />
+          弱模型兼容（单次主调用，跳过后端二次整理 LLM）
+        </label>
       </div>
       {llmErr ? <p className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{llmErr}</p> : null}
       <div className="mt-4 overflow-hidden rounded-xl border border-zinc-800">

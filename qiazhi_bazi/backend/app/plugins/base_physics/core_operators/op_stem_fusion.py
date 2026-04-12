@@ -18,6 +18,27 @@ _FUSION_ROWS: Tuple[Tuple[str, str, str], ...] = (
 
 _ADJ_PILLARS: Tuple[Tuple[str, str], ...] = (("year", "month"), ("month", "day"), ("day", "hour"))
 
+
+def judgment_protocol_dynamic_lines_for_stem_fusion(
+    operator_plugin_id: str,
+    settings: Mapping[str, Any],
+) -> List[str]:
+    """与 `apply_op_stem_fusion` 中阈值同源，供卡片「判定协议」随 `resolve_physics_settings` 刷新。"""
+    _ = operator_plugin_id
+    en = float(settings.get("L1_STEM_FUSION_ENABLE", 1.0))
+    thr = float(settings.get("STEM_FUSION_BRANCH_SUPPORT_RATIO", 0.26))
+    leak = float(settings.get("STEM_FUSION_VECTOR_LEAK_RATIO", 0.12))
+    thr_c = max(0.15, min(0.85, thr))
+    leak_c = max(0.02, min(0.45, leak))
+    return [
+        f"[运行时] L1_STEM_FUSION_ENABLE={en:.2f}（<0.5 跳过五合算子）",
+        f"[运行时] 邻柱遍历固定集: {list(_ADJ_PILLARS)}",
+        f"[运行时] STEM_FUSION_BRANCH_SUPPORT_RATIO 生效值={thr_c:.3f}（化气支承门槛）",
+        f"[运行时] STEM_FUSION_VECTOR_LEAK_RATIO 生效值={leak_c:.3f}（化气向量泄漏）",
+        "[运行时] 化气判定: month_stem 五行==hua_el OR branch_hua_ratio>=thr",
+    ]
+
+
 # 地支配比：本气五行（与 hidden 表主气一致，供化神地支占比）
 _BRANCH_DOMINANT_ELEMENT: Dict[str, str] = {
     "子": "water",

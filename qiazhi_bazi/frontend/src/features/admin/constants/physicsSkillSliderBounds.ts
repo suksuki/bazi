@@ -45,6 +45,8 @@ export const PHYSICS_SKILL_SLIDER_BINDINGS: Partial<
   SUB_BRANCH_BANHE_ABS_BOOST: { min: 0, max: 0.12, step: 0.002, label: "半合 Abs 增益" },
   SUB_BRANCH_BANHE_VECTOR_BOOST: { min: 0, max: 0.08, step: 0.002, label: "半合向量补丁" },
   SUB_BRANCH_SANHE_ABS_BOOST: { min: 0, max: 0.2, step: 0.005, label: "三合 Abs 爆发" },
+  SUB_BRANCH_SANHE_REQ_WANG_ZHI: { min: 0, max: 1, step: 1, label: "三合须中神在月日（帝旺）" },
+  SANHE_ALPHA_LEAKAGE: { min: 0, max: 0.95, step: 0.02, label: "三合增益 α 泄漏" },
   SUB_BRANCH_LIUHE_ABS_BOOST: { min: 0, max: 0.15, step: 0.005, label: "六合 Abs 增益" },
   SUB_BRANCH_SANXING_ABS_DAMP: { min: 0.85, max: 1, step: 0.005, label: "三刑 Abs 阻尼" },
   SUB_BRANCH_LIUCHONG_ABS_DAMP: { min: 0.85, max: 1, step: 0.005, label: "六冲 Abs 阻尼" },

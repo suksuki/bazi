@@ -24,6 +24,8 @@ import type {
   PluginSwitches,
   SeedPayload,
 } from "../models";
+import type { LabLlmRoundSnapshot } from "@/features/stream-board/stores/LabSessionContext";
+import { parseFirstObservationLlmFromAnalyze, parsePhysicsAuditorLlm } from "@/features/stream-board/controller/labLlmSnapshotParse";
 
 export type SeedAnalysisDeps = {
   persistLastSeedToStore: (p: SeedPayload | null) => void;
@@ -82,6 +84,8 @@ export type SeedAnalysisDeps = {
     metadata?: Record<string, unknown>;
     timeline?: Record<string, unknown> | null;
     llm_prompt?: string;
+    first_observation_llm?: LabLlmRoundSnapshot;
+    physics_auditor_llm?: LabLlmRoundSnapshot;
     audit_summary?: unknown;
     consultationIdOverride?: number | null;
     healthOverride?: { dbOk: boolean; llmOk: boolean };
@@ -275,10 +279,13 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
 
         try {
           if (data.physics_tensor) {
+            const dataRec = data as Record<string, unknown>;
             d.persistSnapshot({
               physics_tensor: data.physics_tensor as Record<string, unknown>,
               metadata: data.metadata as Record<string, unknown>,
               timeline: (data.timeline ?? null) as Record<string, unknown> | null,
+              llm_prompt: typeof data.llm_prompt === "string" ? data.llm_prompt : "",
+              first_observation_llm: parseFirstObservationLlmFromAnalyze(dataRec),
               audit_summary: data.audit_summary,
               consultationIdOverride: currentSessionId ?? d.consultationId ?? null,
               healthOverride: latestHealth,
@@ -328,11 +335,15 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
             });
             try {
               if (data.physics_tensor) {
+                const dataRec = data as Record<string, unknown>;
+                const auditRec = auditData as Record<string, unknown>;
                 d.persistSnapshot({
                   physics_tensor: data.physics_tensor as Record<string, unknown>,
                   metadata: data.metadata as Record<string, unknown>,
                   timeline: (data.timeline ?? null) as Record<string, unknown> | null,
                   llm_prompt: data.llm_prompt || "",
+                  first_observation_llm: parseFirstObservationLlmFromAnalyze(dataRec),
+                  physics_auditor_llm: parsePhysicsAuditorLlm(auditRec),
                   audit_summary: data.audit_summary,
                   consultationIdOverride: currentSessionId ?? d.consultationId ?? null,
                   healthOverride: latestHealth,

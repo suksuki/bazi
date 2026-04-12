@@ -11,7 +11,24 @@ import type {
   SeedPayload,
 } from "@/features/stream-board/models";
 import type { FinalVerdictResult } from "@/features/stream-board/models";
+import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { ConfirmedDecisionItem, ConsensusItem, MetricSnapshot } from "./streamBoardTypes";
+
+function labFinalVerdictFromParsed(verdict: FinalVerdictResult, bodyText: string): NonNullable<LabSnapshot["final_verdict"]> {
+  return {
+    body: bodyText,
+    change_log: verdict.changeLog || {},
+    logical_evidence: verdict.logicalEvidence || [],
+    work_vector: verdict.workVector ?? null,
+    topology_graph_v1: verdict.topologyGraphV1 ?? null,
+    structure_candidates_v0: verdict.structureCandidatesV0 ?? null,
+    structure_final_decision_v0: verdict.structureFinalDecisionV0 ?? null,
+    version_id: verdict.versionId || "",
+    llm_request_messages: verdict.llmRequestMessages ?? [],
+    llm_raw_response: verdict.llmRawResponse ?? "",
+    llm_meta: verdict.llmMeta,
+  };
+}
 
 export type StreamBoardExecutionContext = {
   t: (text: string) => string;
@@ -55,6 +72,7 @@ export type StreamBoardExecutionContext = {
   scheduleInteractionHubPersist: () => void;
   updateLogicDiff: (current: MetricSnapshot, forceBaseline?: boolean) => LogicDiff;
   typewriterResultLine: (line: string, delayMs?: number) => Promise<void>;
+  mergeLabSnapshot: (patch: Partial<LabSnapshot>) => void;
 };
 
 export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExecutionContext>) {
@@ -158,6 +176,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
             },
           ]);
           x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
+          x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, verdict.body) });
         }
 
         x.setAuditItems((prev) => [
@@ -205,6 +224,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
           },
         ]);
         x.appendFinalVerdictAuditItem(verdict.versionId || `v1.${x.conclusionVersion + 1}`, verdict.auditLog, new Date().toISOString());
+        x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, safeVerdict) });
       }
 
       x.setAuditorProposalCards((prev) => prev.filter((card) => !selectedCards.some((selectedCard) => selectedCard.id === card.id)));
@@ -281,6 +301,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
           `[CRITICAL] [ENERGY_OVERLOAD] abs_delta: ${absDelta.toFixed(2)} | Source: ${source}`,
         ]);
       }
+      x.mergeLabSnapshot({ final_verdict: labFinalVerdictFromParsed(verdict, safeVerdict) });
     },
     [ctxRef],
   );

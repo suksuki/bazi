@@ -39,12 +39,15 @@ def strip_reasoning(raw: str) -> str:
         if index >= 0:
             return text[index + len(anchor):].strip()
     lower = text.lower()
+    head = lower[:800]
+    # 仅拦截「整段即推理壳」的开头，避免正文里出现英文 reasoning 一词被整段清空（会导致 LLM 测试误判失败）
     if (
         text.startswith("Thinking Process:")
         or text.startswith("思考过程")
-        or "thinking process" in lower
-        or "reasoning" in lower
-        or "사고 과정" in text
+        or text.startswith("Reasoning:")
+        or head.startswith("thinking process")
+        or head.startswith("reasoning:")
+        or "사고 과정" in text[:400]
     ):
         logger.warning("strip_reasoning blocked_reasoning_keywords")
         return ""
@@ -71,7 +74,7 @@ def hard_compact_conclusion(text: str, max_len: int = 120) -> str:
 
 
 def allowed_hosts() -> set[str]:
-    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost,192.168.0.10")
+    raw = os.getenv("QIAZHI_ALLOWED_HOSTS", "127.0.0.1,localhost")
     return {item.strip().lower() for item in raw.split(",") if item.strip()}
 
 

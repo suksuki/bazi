@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ADMIN_HEADERS, API_BASE, SETTINGS_KEY } from "./constants";
 import { DbStatus, LlmResp, SaveState, SavedSettings } from "./types";
-import { buildSavedSettings, makePgUrl } from "./utils";
+import { buildSavedSettings, makePgUrl, normalizeOllamaHostInput } from "./utils";
 
 export function useAdminSettingsController() {
   const [db, setDb] = useState<DbStatus | null>(null);
@@ -21,9 +21,11 @@ export function useAdminSettingsController() {
   const [systemPrompt, setSystemPrompt] = useState("你是严谨的命理分析助手。");
   const [userPrompt, setUserPrompt] = useState("请评估‘墓库开闭’对命盘稳定性的影响。");
   const [lang, setLang] = useState<"ZH" | "EN" | "KO">("ZH");
-  const [ollamaHost, setOllamaHost] = useState("http://127.0.0.1:11434");
-  const [llmModel, setLlmModel] = useState("qwen2.5:32b");
+  const [ollamaHost, setOllamaHost] = useState("");
+  const [llmModel, setLlmModel] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
+  /** 默认开启：跳过后端二次 LLM 重写/压缩，减轻弱模型与 nginx 超时压力 */
+  const [llmFastPath, setLlmFastPath] = useState(true);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelLoadMsg, setModelLoadMsg] = useState("");
@@ -33,7 +35,12 @@ export function useAdminSettingsController() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const dbConnected = Boolean(db?.ok);
-  const effectiveBaseUrl = useMemo(() => `${ollamaHost.replace(/\/$/, "")}/v1`, [ollamaHost]);
+  const normalizedOllamaHost = useMemo(() => normalizeOllamaHostInput(ollamaHost), [ollamaHost]);
+  const effectiveBaseUrl = useMemo(() => {
+    const root = normalizedOllamaHost.replace(/\/$/, "");
+    if (!root) return "";
+    return `${root}/v1`;
+  }, [normalizedOllamaHost]);
 
   useEffect(() => {
     try {
@@ -143,33 +150,70 @@ export function useAdminSettingsController() {
     setLoadingModels(true);
     setLlmErr("");
     if (showSuccessMsg) setModelLoadMsg("");
+    if (!effectiveBaseUrl.trim()) {
+      if (showSuccessMsg) {
+        setModelLoadMsg("请填写 LLM 服务地址，或设置 NEXT_PUBLIC_QIAZHI_OLLAMA_ORIGIN。");
+      }
+      setLoadingModels(false);
+      return;
+    }
     try {
-      const response = await fetch(`${API_BASE}/api/admin/llm-models`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
-        body: JSON.stringify({
-          base_url: effectiveBaseUrl,
-          api_key: llmApiKey.trim() || undefined,
-        }),
-      });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.detail ?? "模型列表读取失败");
+      const ctrl = new AbortController();
+      const timer = window.setTimeout(() => ctrl.abort(), 45_000);
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE}/api/admin/llm-models`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...ADMIN_HEADERS },
+          body: JSON.stringify({
+            base_url: effectiveBaseUrl,
+            api_key: llmApiKey.trim() || undefined,
+          }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        window.clearTimeout(timer);
+      }
+      let json: { detail?: unknown; models?: unknown } = {};
+      try {
+        json = (await response.json()) as typeof json;
+      } catch {
+        json = {};
+      }
+      const detailStr = (() => {
+        const d = json?.detail;
+        if (d == null) return "";
+        if (typeof d === "string") return d;
+        if (Array.isArray(d)) return d.map((x) => (typeof x === "object" && x && "msg" in x ? String((x as { msg: string }).msg) : String(x))).join("; ");
+        return JSON.stringify(d);
+      })();
+      if (!response.ok) throw new Error(detailStr || `模型列表读取失败（HTTP ${response.status}）`);
       const items = (json.models ?? []) as string[];
       setModelOptions(items);
       if (items.length > 0) {
         setLlmModel((prev) => (prev && items.includes(prev) ? prev : items[0]));
         if (showSuccessMsg) setModelLoadMsg(`已读取 ${items.length} 个模型`);
       } else if (showSuccessMsg) {
-        setModelLoadMsg("未读取到模型，请检查 URL 或服务状态");
+        setModelLoadMsg(
+          "未读取到模型：请确认服务已监听、后端 QIAZHI_ALLOWED_HOSTS 包含该主机，或在本机 backend 运行 scripts/smoke_llm_models_fetch.py 并传入 --base-url。",
+        );
       }
     } catch (error) {
-      setLlmErr(error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.name === "AbortError") {
+        setLlmErr("拉取模型超时（45s）。请检查 API 网关与后端到 Ollama 的网络。");
+      } else {
+        setLlmErr(error instanceof Error ? error.message : String(error));
+      }
     } finally {
       setLoadingModels(false);
     }
   }, [effectiveBaseUrl, llmApiKey]);
 
   const syncRuntimeConfig = useCallback(async ({ showSavedMessage }: { showSavedMessage: boolean }) => {
+    if (!effectiveBaseUrl.trim()) {
+      setSaveState("idle");
+      return true;
+    }
     setSaveState("saving");
     try {
       const response = await fetch(`${API_BASE}/api/admin/runtime-config`, {
@@ -218,6 +262,7 @@ export function useAdminSettingsController() {
     setLlmErr("");
     setLlmSaveMsg("");
     try {
+      if (!effectiveBaseUrl.trim()) throw new Error("请先填写 LLM 服务地址（或设置 NEXT_PUBLIC_QIAZHI_OLLAMA_ORIGIN）并读取模型列表");
       if (!llmModel) throw new Error("未找到可用模型，请先确认 URL 可访问并读取模型列表");
       const response = await fetch(`${API_BASE}/api/admin/llm-test`, {
         method: "POST",
@@ -231,11 +276,36 @@ export function useAdminSettingsController() {
           base_url: effectiveBaseUrl,
           api_key: llmApiKey.trim(),
           model: llmModel.trim(),
+          fast_path: llmFastPath,
         }),
       });
-      const json = await response.json();
+      const raw = await response.text();
+      let json: Record<string, unknown>;
+      try {
+        json = raw.trim() ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      } catch {
+        const snippet = raw.replace(/\s+/g, " ").trim().slice(0, 400);
+        const is504 = response.status === 504 || /504|Gateway Time-?out/i.test(snippet);
+        const nginxHint = is504
+          ? " 若为 nginx 504，多为上游推理超时：可提高 `proxy_read_timeout`（如 300s），并在本页开启「弱模型兼容」以只跑一次主模型。"
+          : "";
+        setLlmErr(
+          `响应不是合法 JSON（HTTP ${response.status}）。多为管理接口未指到 FastAPI 而返回了 HTML，或网关超时。请检查 NEXT_PUBLIC_QIAZHI_API / 反向代理。${nginxHint}原文片段：${snippet || "(空)"}`,
+        );
+        setLlmResult(null);
+        return;
+      }
       if (!response.ok) {
-        setLlmErr(json.detail ?? "LLM 测试失败");
+        const d = json.detail;
+        const detailStr =
+          d == null
+            ? ""
+            : typeof d === "string"
+              ? d
+              : Array.isArray(d)
+                ? d.map((x) => (typeof x === "object" && x && "msg" in x ? String((x as { msg: string }).msg) : String(x))).join("; ")
+                : JSON.stringify(d);
+        setLlmErr(detailStr || `LLM 测试失败（HTTP ${response.status}）`);
         setLlmResult(null);
         return;
       }
@@ -298,6 +368,7 @@ export function useAdminSettingsController() {
     lang,
     llmApiKey,
     llmErr,
+    llmFastPath,
     llmModel,
     llmResult,
     llmSaveMsg,
@@ -324,6 +395,7 @@ export function useAdminSettingsController() {
     setDbUrl,
     setLang,
     setLlmApiKey,
+    setLlmFastPath,
     setLlmModel,
     setOllamaHost,
     setPgDatabase,

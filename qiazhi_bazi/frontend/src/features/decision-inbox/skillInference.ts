@@ -32,6 +32,9 @@ export function inferDecisionSkillId(
   },
   points: ConflictPoint[] | undefined,
 ): string {
+  if (card.cardType === "L1_STRUCTURE" || String(card.id || "").startsWith("inbox-sanhe-")) {
+    return "l1_branch_sanhe";
+  }
   if (card.cardType === "auditor-proposal") return "mp_l1_param";
   if (card.id === "fallback-deep-scan") return "mp_deep_scan";
   const blob = `${card.conflictDetail || ""} ${card.displayText || ""} ${card.title}`;

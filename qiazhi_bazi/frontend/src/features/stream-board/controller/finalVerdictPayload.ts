@@ -9,7 +9,7 @@ import type {
   PluginWeights,
   SeedPayload,
 } from "@/features/stream-board/models";
-import type { FinalVerdictResult } from "@/features/stream-board/models";
+import type { FinalVerdictResult, LlmChatMessage } from "@/features/stream-board/models";
 import { calculateFireEnergyAfterConflicts } from "@/features/stream-board/utils";
 import { buildBlindSchoolFeaturesPayload } from "./streamBoardPure";
 import type { ConfirmedDecisionItem, ConsensusItem } from "./streamBoardTypes";
@@ -98,11 +98,23 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
   };
 }
 
+function parseLlmMessages(raw: unknown): LlmChatMessage[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: LlmChatMessage[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item as Record<string, unknown>;
+    out.push({ role: String(o.role ?? ""), content: String(o.content ?? "") });
+  }
+  return out;
+}
+
 export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const d = data as Record<string, unknown>;
   if (typeof d.verdict_body !== "string" || !d.verdict_body) return null;
   const changeLogRaw = d.change_log as Record<string, unknown> | undefined;
+  const llmMeta = d.llm_meta && typeof d.llm_meta === "object" && !Array.isArray(d.llm_meta) ? (d.llm_meta as Record<string, unknown>) : undefined;
   return {
     body: String(d.verdict_body),
     changeLog: {
@@ -144,6 +156,9 @@ export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult 
           })
           .filter((item: ConfirmedDecisionItem) => item.id)
       : [],
+    llmRequestMessages: parseLlmMessages(d.llm_request_messages),
+    llmRawResponse: typeof d.llm_raw_response === "string" ? d.llm_raw_response : "",
+    llmMeta,
   };
 }
 

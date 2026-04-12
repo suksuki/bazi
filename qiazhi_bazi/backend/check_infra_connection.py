@@ -13,9 +13,13 @@ from app.db.session import DB_URL, _engine, init_db
 
 
 async def check_llm() -> tuple[bool, str]:
-    base_url = os.getenv("QIAZHI_BAZI_LLM_BASE_URL", "http://192.168.0.10:8000/v1").rstrip("/")
-    api_key = os.getenv("QIAZHI_BAZI_LLM_API_KEY", "empty")
-    model = os.getenv("QIAZHI_BAZI_LLM_MODEL", "qwen")
+    base_url = (os.getenv("QIAZHI_BAZI_LLM_BASE_URL") or "").rstrip("/")
+    if not base_url:
+        return False, "未设置 QIAZHI_BAZI_LLM_BASE_URL，跳过 LLM 探测"
+    api_key = os.getenv("QIAZHI_BAZI_LLM_API_KEY", "")
+    model = os.getenv("QIAZHI_BAZI_LLM_MODEL", "")
+    if not model:
+        return False, "未设置 QIAZHI_BAZI_LLM_MODEL，跳过 LLM 探测"
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": "请用韩语说一句“你好”。"}],
@@ -50,7 +54,7 @@ def check_db() -> tuple[bool, str]:
 async def main() -> int:
     print("=== Qiazhi-Bazi Infra Handshake ===")
     print(f"DATABASE_URL: {DB_URL}")
-    print(f"LLM_BASE_URL: {os.getenv('QIAZHI_BAZI_LLM_BASE_URL', 'http://192.168.0.10:8000/v1')}")
+    print(f"LLM_BASE_URL: {os.getenv('QIAZHI_BAZI_LLM_BASE_URL', '(未设置)')}")
 
     db_ok, db_msg = check_db()
     print(f"[DB] {'OK' if db_ok else 'FAIL'}: {db_msg}")
@@ -60,15 +64,20 @@ async def main() -> int:
         print("[LLM] OK: /v1/chat/completions 有响应")
         print(f"[LLM-KR] {llm_msg}")
     else:
-        print(f"[LLM] FAIL: {llm_msg}")
+        print(f"[LLM] SKIP/FAIL: {llm_msg}")
 
+    llm_configured = bool((os.getenv("QIAZHI_BAZI_LLM_BASE_URL") or "").strip() and (os.getenv("QIAZHI_BAZI_LLM_MODEL") or "").strip())
     summary = {
         "db_ok": db_ok,
         "llm_ok": llm_ok,
         "llm_korean_preview": llm_msg if llm_ok else None,
     }
     print("[SUMMARY]", json.dumps(summary, ensure_ascii=False))
-    return 0 if db_ok and llm_ok else 1
+    if not db_ok:
+        return 1
+    if llm_configured and not llm_ok:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
