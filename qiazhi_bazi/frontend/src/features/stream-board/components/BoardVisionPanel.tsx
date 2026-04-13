@@ -73,6 +73,11 @@ export function BoardVisionPanel({
   } = viewModel;
 
   const { state: labState } = useLabStore();
+  const shadow = {
+    previewDeityScores: labState.previewDeityScores,
+    previewDeityEnergyAxes: labState.previewDeityEnergyAxes,
+    previewDeltaPctByDeity: labState.previewDeltaPctByDeity,
+  };
   const snapMeta = React.useMemo(() => {
     const m = labState.snapshot?.physics_tensor?.meta;
     return m && typeof m === "object" ? (m as Record<string, unknown>) : {};
@@ -183,6 +188,9 @@ export function BoardVisionPanel({
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-2">
             <TenGodNumericList
               deityScores={deityScores}
+              previewDeityScores={shadow.previewDeityScores}
+              previewDeityEnergyAxes={shadow.previewDeityEnergyAxes}
+              previewDeltaPctByDeity={shadow.previewDeltaPctByDeity}
               causalRouting={causalRouting}
               deityEnergyAxes={deityEnergyAxes}
               deityComponents={deityComponents}

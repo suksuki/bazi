@@ -1,6 +1,7 @@
 """API：健康检查、示例 BaziMetadata、LLM、决策链写入。"""
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -46,7 +47,7 @@ from app.services.analysis_service import (
     resolve_consensus_history,
     translate_text_items,
 )
-from app.services.orchestrator_service import OrchestratorService
+from app.services.orchestrator_service import OrchestratorService, run_full_cycle
 from app.core.evolution.combination_space import TOTAL_BAZI_COMBINATION_SPACE
 from app.core.evolution.dna_registry import (
     gene_maturity_heatmap,
@@ -67,6 +68,7 @@ from app.services.consultation_service import (
     rollback_decision_step_record,
 )
 from app.services.llm_service import run_chat_completion, stream_chat_events
+from app.services.recommendation_service import get_top_recommendations
 from app.core.physics.settings_manager import list_physics_registry_rows, persist_physics_registry_updates_from_body
 
 router = APIRouter(tags=["qiazhi-bazi"])
@@ -169,6 +171,7 @@ async def orchestrator_internal_loop(body: OrchestratorInternalLoopRequest) -> d
         else BlindSchoolFeatureFlags().model_dump()
     )
     physics_cfg = body.physics_config.model_dump(exclude_none=True) if body.physics_config else {}
+    sp = body.structural_preview.model_dump(exclude_none=True) if body.structural_preview else None
     out = OrchestratorService.run_internal_loop(
         metadata_obj=body.metadata,
         enabled_plugins=list(body.enabled_plugins or []),
@@ -177,9 +180,11 @@ async def orchestrator_internal_loop(body: OrchestratorInternalLoopRequest) -> d
         session_id=body.session_id,
         dayun=body.dayun,
         liunian=body.liunian,
+        is_preview=bool(body.is_preview),
+        structural_preview=sp,
     )
     md = out["metadata"]
-    return {
+    ret: dict = {
         "metadata": md.model_dump(),
         "physics_tensor": out["physics_tensor"],
         "plugin_outputs": out.get("plugin_outputs") or {},
@@ -188,7 +193,47 @@ async def orchestrator_internal_loop(body: OrchestratorInternalLoopRequest) -> d
         "verdict_skeleton": out.get("verdict_skeleton") or "",
         "requires_narrative_refresh": bool(out.get("requires_narrative_refresh")),
         "pre_injection_deity_display": out.get("pre_injection_deity_display") or {},
+        "is_preview": bool(body.is_preview),
     }
+    if body.is_preview:
+        ret["preview_pattern_alert"] = str(out.get("preview_pattern_alert") or "")
+        _pam = out.get("preview_pattern_alert_meta")
+        if isinstance(_pam, dict) and _pam:
+            ret["preview_pattern_alert_meta"] = _pam
+    return ret
+
+
+@router.post("/v1/orchestrator/full-cycle/stream")
+async def orchestrator_full_cycle_stream(body: OrchestratorInternalLoopRequest):
+    """
+    中枢全链路 SSE：physics_update / vf_discovered / audit_pulse 增量，末帧 `complete` 与 POST internal-loop JSON 同构。
+    """
+    blind_flags = (
+        body.blind_school_features.model_dump()
+        if body.blind_school_features
+        else BlindSchoolFeatureFlags().model_dump()
+    )
+    physics_cfg = body.physics_config.model_dump(exclude_none=True) if body.physics_config else {}
+    sp = body.structural_preview.model_dump(exclude_none=True) if body.structural_preview else None
+
+    async def event_gen():
+        async for item in run_full_cycle(
+            metadata_obj=body.metadata,
+            enabled_plugins=list(body.enabled_plugins or []),
+            blind_school_features=blind_flags,
+            physics_config=physics_cfg,
+            session_id=body.session_id,
+            dayun=body.dayun,
+            liunian=body.liunian,
+            is_preview=bool(body.is_preview),
+            structural_preview=sp,
+        ):
+            ev = str(item.get("event") or "message")
+            raw = item.get("data")
+            data_obj: Any = raw if isinstance(raw, dict) else {}
+            yield f"event: {ev}\ndata: {json.dumps(data_obj, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @router.post("/v1/analyze-seed", response_model=dict)
@@ -332,6 +377,30 @@ def decision_resolve_conflict(body: ResolveConflictRequest) -> dict:
         abs_delta=float(body.abs_delta),
         processing_preference=body.processing_preference,
         extra=body.extra,
+    )
+
+
+@router.post("/v1/recommendations/top-decisions", response_model=dict)
+def recommendations_top_decisions(body: Dict[str, Any]) -> dict:
+    """
+    V6.1：并行插件 dry-run + 内置配置补丁预览，返回因果评分最高的决策与 ``reason_templates`` 填充文案。
+    """
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="expected_json_object")
+    pt = body.get("physics_tensor") if isinstance(body.get("physics_tensor"), dict) else {}
+    md = body.get("metadata") if isinstance(body.get("metadata"), dict) else {}
+    bf = body.get("blind_school_features") if isinstance(body.get("blind_school_features"), dict) else {}
+    ep = body.get("enabled_plugins") if isinstance(body.get("enabled_plugins"), list) else []
+    cards = body.get("inbox_cards") if isinstance(body.get("inbox_cards"), list) else None
+    top_n = body.get("top_n")
+    tn = int(top_n) if isinstance(top_n, (int, float)) and not isinstance(top_n, bool) else 3
+    return get_top_recommendations(
+        physics_tensor=pt,
+        metadata=md,
+        blind_school_features=bf,
+        enabled_plugins=[str(x) for x in ep],
+        inbox_cards=[c for c in (cards or []) if isinstance(c, dict)],
+        top_n=max(1, min(12, tn)),
     )
 
 

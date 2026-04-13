@@ -83,6 +83,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     llmDiagnosticData,
     globalEntropy,
     patternProfile,
+    patternCodexHeadline,
     consensusHistory,
     cards,
     resultLogs,
@@ -673,7 +674,14 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         </div>
       ) : null}
 
-      {hasBoard ? <PatternStatus profile={patternProfile as PatternProfileSlice | null} className="mb-3" t={t} /> : null}
+      {hasBoard ? (
+        <PatternStatus
+          profile={patternProfile as PatternProfileSlice | null}
+          patternCodexHeadline={patternCodexHeadline}
+          className="mb-3"
+          t={t}
+        />
+      ) : null}
 
       {sovereigntyDominant ? (
         <div

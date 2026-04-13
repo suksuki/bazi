@@ -39,8 +39,8 @@ from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_me
 from app.skills.final_verdict_parts.verdict_fingerprint import append_verdict_fingerprint_html_comment
 from app.skills.final_verdict_parts.verdict_parse import parse_verdict_anchor_layer, parse_verdict_body_and_changelog
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
-from app.skills.structure_final_decision import build_structure_final_decision_v0
-from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
+from app.logic.patterns.l2_summary import sanitize_pattern_headline_zh
+from app.services.helpers.l2_structure_bundle import build_structure_bundle_with_l2
 
 _LOG = logging.getLogger(__name__)
 
@@ -255,12 +255,8 @@ class FinalVerdictSkill(BaseSkill):
         unlock_advice = (blind_work.get("unlock_advice", {}) if isinstance(blind_work, dict) else {}) or {}
         strike_options = list(unlock_advice.get("strategic_strike_options", []) or [])
         topology = EnergyTopologySkill().produce({"metadata": metadata, "physics_tensor": physics_tensor})
-        structure_v0 = resolve_structure_candidates_v0(
+        structure_v0, final_decision_v0 = build_structure_bundle_with_l2(
             physics_tensor=physics_tensor,
-            work_vector=blind_work,
-        )
-        final_decision_v0 = build_structure_final_decision_v0(
-            structure_candidates_v0=structure_v0,
             work_vector=blind_work,
         )
         final_decision_v0["strategic_strike_options"] = strike_options
@@ -307,10 +303,10 @@ class FinalVerdictSkill(BaseSkill):
                 f"做功.morphing_hints={','.join(blind_work.get('morphing_hints', []) or [])}",
                 f"做功.body_damage={_json_hint(blind_work.get('body_damage_estimation', {}), 200)}",
                 f"做功.hint={blind_work.get('llm_hint', '劳而无功')}",
-                f"格局V0.hud={_json_hint(structure_v0.get('hud', {}), 200)}",
+                f"格局L2.hud={_json_hint(structure_v0.get('hud', {}), 200)}",
                 f"Topology.edges={len(topology.get('edges', []))}",
-                f"格局终审V0.primary={final_decision_v0.get('primary_structure')}",
-                f"格局终审V0.risk={final_decision_v0.get('stability_risk')}",
+                f"格局终审L2.primary={final_decision_v0.get('primary_structure')}",
+                f"格局终审L2.risk={final_decision_v0.get('stability_risk')}",
                 f"空间.gain_paths={spatial_audit.get('gain_path_count', 0)}",
                 f"空间.loss_paths={spatial_audit.get('loss_path_count', 0)}",
                 f"百科.gain_vectors={enc_audit.get('gain_vector_count', 0)}",
@@ -503,6 +499,9 @@ class FinalVerdictSkill(BaseSkill):
                 "lang": lang,
             }
         )
+        _pmeta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+        _hit = str(_pmeta.get("hit_pattern_name") or _pmeta.get("l2_pattern_result_summary_v1") or "").strip()
+        hit_pattern_name = sanitize_pattern_headline_zh(_hit if _hit else "常规格")
         produced = {
             "version_id": version_id,
             "verdict_body": verdict_body,
@@ -510,6 +509,7 @@ class FinalVerdictSkill(BaseSkill):
             "logical_evidence": logical_evidence,
             "work_vector": blind_work,
             "topology_graph_v1": topology,
+            "hit_pattern_name": hit_pattern_name,
             "structure_candidates_v0": structure_v0,
             "structure_final_decision_v0": final_decision_v0,
             "plugin_outputs_verdict_ready": verdict_plugin_outputs,
@@ -529,6 +529,7 @@ class FinalVerdictSkill(BaseSkill):
             "logical_evidence": logical_evidence,
             "work_vector": blind_work,
             "topology_graph_v1": topology,
+            "hit_pattern_name": hit_pattern_name,
             "structure_candidates_v0": structure_v0,
             "structure_final_decision_v0": final_decision_v0,
             "plugin_outputs_verdict_ready": verdict_plugin_outputs,

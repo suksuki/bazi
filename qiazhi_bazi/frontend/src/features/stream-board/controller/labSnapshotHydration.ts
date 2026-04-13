@@ -7,11 +7,17 @@ import type {
   LogicDiff,
   LlmDiagnosticData,
   LogicProposal,
+  PatternThresholdRow,
   SeedPayload,
 } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { BaziMetadata, ManualEnergyPatchState, PersistenceLayer, TimelineSnapshot } from "@/types/bazi";
-import { mergeDecisionIdsPreferLocal, normalizedSnapshotDecisionIds, seedPayloadSignature } from "./streamBoardPure";
+import {
+  mergeDecisionIdsPreferLocal,
+  normalizedSnapshotDecisionIds,
+  parsePatternThresholdsPayload,
+  seedPayloadSignature,
+} from "./streamBoardPure";
 import { applyManualEnergyPatchesToDisplay } from "@/features/stream-board/controller/individualAdjustment";
 
 export type LabSnapshotHydrationPatch = {
@@ -32,6 +38,8 @@ export type LabSnapshotHydrationPatch = {
   physicsEvidence?: string[];
   physicsParams?: Record<string, number>;
   globalEntropy?: number | null;
+  patternThresholdRows?: PatternThresholdRow[];
+  patternThresholdsStatus?: string | null;
   finalVerdictBody?: string;
   finalVerdictChangeLog?: FinalVerdictChangeLog;
   finalVerdictVersionId?: string;
@@ -157,6 +165,19 @@ export function buildLabSnapshotHydrationPatch(
     }
     const ge = pMeta.global_entropy;
     patch.globalEntropy = typeof ge === "number" && Number.isFinite(ge) ? ge : null;
+    if (
+      Object.prototype.hasOwnProperty.call(pMeta, "pattern_thresholds") ||
+      Object.prototype.hasOwnProperty.call(pMeta, "pattern_thresholds_status")
+    ) {
+      patch.patternThresholdRows = parsePatternThresholdsPayload(pMeta.pattern_thresholds);
+      const st = pMeta.pattern_thresholds_status;
+      patch.patternThresholdsStatus =
+        typeof st === "string" && st.trim()
+          ? st.trim()
+          : patch.patternThresholdRows.length > 0
+            ? "OK"
+            : null;
+    }
     if (patch.deityTraceDetails === undefined) {
       patch.deityTraceDetails = {};
     }
@@ -231,6 +252,8 @@ export type LabSnapshotHydrationSinks = {
   setPhysicsEvidence: (v: string[]) => void;
   setPhysicsParams: (v: Record<string, number>) => void;
   setGlobalEntropy: (v: number | null) => void;
+  setPatternThresholds: Dispatch<SetStateAction<PatternThresholdRow[]>>;
+  setPatternThresholdsStatus: Dispatch<SetStateAction<string | null>>;
   setFinalVerdictBody: (v: string) => void;
   setFinalVerdictChangeLog: (v: FinalVerdictChangeLog) => void;
   setFinalVerdictVersionId: (v: string) => void;
@@ -265,6 +288,8 @@ export function applyLabSnapshotHydrationPatch(patch: LabSnapshotHydrationPatch,
   if (patch.physicsEvidence !== undefined) sinks.setPhysicsEvidence(patch.physicsEvidence);
   if (patch.physicsParams !== undefined) sinks.setPhysicsParams(patch.physicsParams);
   if (patch.globalEntropy !== undefined) sinks.setGlobalEntropy(patch.globalEntropy);
+  if (patch.patternThresholdRows !== undefined) sinks.setPatternThresholds(patch.patternThresholdRows);
+  if (patch.patternThresholdsStatus !== undefined) sinks.setPatternThresholdsStatus(patch.patternThresholdsStatus);
 
   if (patch.finalVerdictBody !== undefined) sinks.setFinalVerdictBody(patch.finalVerdictBody);
   if (patch.finalVerdictChangeLog !== undefined) sinks.setFinalVerdictChangeLog(patch.finalVerdictChangeLog);

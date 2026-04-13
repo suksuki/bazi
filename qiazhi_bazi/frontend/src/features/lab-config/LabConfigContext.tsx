@@ -43,6 +43,7 @@ const DEFAULT_LAB: PhysicsLabConfig = {
   STATUS_BOOST_MULTIPLIER: 1.15,
   SUB_BRANCH_SANHE_REQ_WANG_ZHI: 0.0,
   SANHE_ALPHA_LEAKAGE: 0.0,
+  user_intention: "seek_stability",
 };
 
 const DEFAULT_SWITCHES: PluginSwitches = {

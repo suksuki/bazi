@@ -9,6 +9,7 @@ from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_prompt import format_blind_skill_registry_for_prompt
 from app.core.rules.junction import sync_l1_junction_flags_to_meta
 from app.prompts.final_verdict_contracts import build_final_verdict_system_message
+from app.prompts.final_verdict_user_locale import FinalVerdictUserLocale
 from app.prompts.physics_audit import SYSTEM_FACT_CONFLICT_ANCHOR
 from app.services.helpers.tensor_adapters import collect_conflict_matrix_points_for_llm
 from app.skills.final_verdict_parts.metadata_sanitize import (
@@ -23,8 +24,7 @@ from app.skills.final_verdict_parts.core_logic_seed import format_core_logic_see
 from app.skills.final_verdict_parts.evidence import format_audit_snapshot_inline, get_logical_evidence
 from app.skills.final_verdict_parts.evidence_chunking import format_plugin_evidence_chunks
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
-from app.skills.structure_final_decision import build_structure_final_decision_v0
-from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
+from app.services.helpers.l2_structure_bundle import build_structure_bundle_with_l2
 from app.services.helpers.will_injection import UPDATE_PHYSICS_PARAM
 from app.utils.semantic_firewall import strip_float_literals as _semantic_firewall_strip_float_literals
 
@@ -62,11 +62,11 @@ def _pack_verified_facts(
     return out, n
 
 
-def _verdict_skeleton_confirmed_decisions_block(md_for_llm: Dict[str, Any]) -> str:
+def _verdict_skeleton_confirmed_decisions_block(md_for_llm: Dict[str, Any], loc: FinalVerdictUserLocale) -> str:
     """终判 Step5：物理定论骨架 + 用户结构化意志（与 CONTRACT_MODE 配对）。"""
     va = md_for_llm.get("verdict_anchor_layer") if isinstance(md_for_llm.get("verdict_anchor_layer"), dict) else {}
     sk = str(va.get("verdict_skeleton") or "").strip()
-    sk_disp = sk if sk else "（暂无物理定论骨架；仍以 [Verified Facts] 为准）"
+    sk_disp = sk if sk else loc.skeleton_empty_fallback()
     cd_lines: List[str] = []
     pl = md_for_llm.get("persistence_layer") if isinstance(md_for_llm.get("persistence_layer"), dict) else {}
     cv = pl.get("confirmed_verdicts") if isinstance(pl.get("confirmed_verdicts"), list) else []
@@ -104,16 +104,16 @@ def _verdict_skeleton_confirmed_decisions_block(md_for_llm: Dict[str, Any]) -> s
                 blob = str(pp)[:480]
         excerpt = str(e.get("body_excerpt") or "").strip()[:160]
         cd_lines.append(f"history#{i + 1:02d} {blob} excerpt={excerpt}")
-    cd_body = "\n".join(f"- {x}" for x in cd_lines) if cd_lines else "- （无结构化 UPDATE_PHYSICS_PARAM 意志项）"
+    cd_body = "\n".join(f"- {x}" for x in cd_lines) if cd_lines else loc.no_structured_will_items()
     return (
-        "[VerdictSkeleton]\n"
-        f"{sk_disp}\n\n"
-        "[ConfirmedDecisions · 用户意志]\n"
-        f"{cd_body}\n\n"
+        loc.banner_verdict_skeleton()
+        + f"{sk_disp}\n\n"
+        + loc.banner_confirmed_decisions()
+        + f"{cd_body}\n\n"
     )
 
 
-def _user_will_priority_block(md_for_llm: Dict[str, Any]) -> str:
+def _user_will_priority_block(md_for_llm: Dict[str, Any], loc: FinalVerdictUserLocale) -> str:
     """Step 5 终审：已存意志（persistence_layer）置于 User 消息最前，作为最高权重叙事约束。"""
     pl = md_for_llm.get("persistence_layer") if isinstance(md_for_llm.get("persistence_layer"), dict) else {}
     svs = pl.get("semantic_verdicts") if isinstance(pl.get("semantic_verdicts"), list) else []
@@ -126,13 +126,12 @@ def _user_will_priority_block(md_for_llm: Dict[str, Any]) -> str:
             rows.append(f"UW-{i + 1:02d}: {txt[:520]}")
     if not rows:
         return (
-            "[User Will · persistence_layer · 终审最高权重]\n"
-            "- （暂无已归档意志断语；事实边界仍以 [Verified Facts] 与插件证据为准。）\n\n"
+            loc.banner_user_will()
+            + f"{loc.user_will_empty_bullet()}\n\n"
         )
     return (
-        "[User Will · persistence_layer · 终审最高权重]\n"
-        "下列为用户已绑定当前生辰并已明示采纳的语义意志；终审判词须优先与此对齐，不得与之矛盾；"
-        "若与下列之外的插件推论冲突，以本块为准进行叙述折衷并在 verdict_body 中温和说明取舍。\n"
+        loc.banner_user_will()
+        + f"{loc.user_will_intro()}"
         + "\n".join(f"- {x}" for x in rows)
         + "\n\n"
     )
@@ -153,37 +152,43 @@ def _user_decision_lines(_md_for_llm: Dict[str, Any], selected_cards: List[Dict[
     return rows
 
 
-def _qualitative_blind_lines(blind_work: Dict[str, Any], *, lock_warning: str | None = None) -> List[str]:
+def _qualitative_blind_lines(
+    blind_work: Dict[str, Any],
+    *,
+    lock_warning: str | None = None,
+    loc: FinalVerdictUserLocale,
+) -> List[str]:
     out: List[str] = []
     for idx, vector in enumerate(blind_work.get("work_vectors", []) or []):
         if not isinstance(vector, dict):
             continue
         t = str(vector.get("type") or "—")
         d = str(vector.get("direction") or "—")
-        out.append(f"盲派做功·矢量{idx + 1}·类型={t}·向度={d}")
-    out.append(f"盲派·净效应标签={str(blind_work.get('net_effect') or 'neutral')}")
+        out.append(loc.blind_work_vector(idx + 1, t, d))
+    out.append(loc.blind_net_effect(str(blind_work.get("net_effect") or "neutral")))
     morph = blind_work.get("morphing_hints") or []
     if morph:
-        out.append("盲派·形变提示=" + "、".join(str(x) for x in morph[:6] if x))
+        out.append(loc.blind_morph_hints("、".join(str(x) for x in morph[:6] if x)))
     if blind_work.get("llm_hint"):
-        out.append(f"盲派·语气提示={blind_work.get('llm_hint')}")
+        out.append(loc.blind_llm_hint(str(blind_work.get("llm_hint"))))
     lw = (lock_warning or "").strip()
     if lw:
-        out.append(f"盲派·空间闸口={lw[:180]}")
+        out.append(loc.blind_spatial_gate(lw[:180]))
     return out
 
 
-def _tone_weight_qualitative(*, blind_ratio: float, wangshuai_ratio: float) -> str:
+def _tone_weight_qualitative(*, blind_ratio: float, wangshuai_ratio: float, loc: FinalVerdictUserLocale) -> str:
     if blind_ratio >= 0.65:
-        return "叙述权重：盲派主轴占优；语气偏冷酷、利己，重资源与成败。"
+        return loc.tone_blind_dominant()
     if wangshuai_ratio >= 0.65:
-        return "叙述权重：旺衰主轴占优；语气偏平和关怀，重健康与系统平衡。"
-    return "叙述权重：盲派与旺衰并重；仲裁式语气，兼顾收益与代价。"
+        return loc.tone_wangshuai_dominant()
+    return loc.tone_balanced()
 
 
 def _mandatory_synthesis_body_without_firewall(
     md_for_llm: Dict[str, Any],
     physics_tensor: Dict[str, Any],
+    loc: FinalVerdictUserLocale,
 ) -> str:
     """供 _build_mandatory_final_synthesis_block 拼装后再统一过防火墙。"""
     pillars = md_for_llm.get("pillars") if isinstance(md_for_llm.get("pillars"), dict) else {}
@@ -212,34 +217,30 @@ def _mandatory_synthesis_body_without_firewall(
     audit_diag = str(pt.get("top_anomaly") or "").strip()
     audit_causal = str(pt.get("causal_reasoning") or "").strip()
     pillar_blob = _trim_prompt_blob(pillars, 1400)
-    role = (
-        "【终审语义素材 · 内化专用】\n"
-        "下列块仅供压缩写入你最终 JSON 的 verdict_body（### 核心气象 / ### 裁决共识 / ### 行为指引 之下）；\n"
-        "禁止在本轮回答中单独输出下列 Markdown 长文或脱离 JSON 的先导段落；整轮回答仍须仅为一颗 JSON 对象。\n"
-        "素材范围仅限块内已出现的干支与标签句，不得发明未出现事实。\n"
-    )
+    role = loc.mandatory_synthesis_role()
     return (
         "\n\n======== MANDATORY_FINAL_SYNTHESIS ========\n"
         f"{role}\n"
-        f"[核心四柱 pillars JSON]\n{pillar_blob}\n"
-        "[物理芯片冲突点 conflict_matrix.points]\n"
-        + ("\n".join(diag_lines) if diag_lines else "- （无结构化冲突点）\n")
-        + "\n[用户已确认语义断言 persistence_layer.semantic_verdicts]\n"
-        + ("\n".join(verdict_lines) if verdict_lines else "- （暂无已归档断语；仍须基于标签材料给出终审式整合结论）\n")
-        + "\n[物理审计摘要（physics_tensor 顶层）]\n"
-        f"- top_anomaly: {audit_diag or '—'}\n"
-        f"- causal_reasoning: {audit_causal or '—'}\n"
-        "======== END_MANDATORY_FINAL_SYNTHESIS ========\n\n"
+        f"{loc.mandatory_pillars_title()}{pillar_blob}\n"
+        f"{loc.mandatory_conflict_title()}"
+        + ("\n".join(diag_lines) if diag_lines else loc.mandatory_conflict_empty())
+        + loc.mandatory_semantic_verdicts_title()
+        + ("\n".join(verdict_lines) if verdict_lines else loc.mandatory_semantic_verdicts_empty())
+        + loc.mandatory_physics_audit_title()
+        + f"- top_anomaly: {audit_diag or '—'}\n"
+        + f"- causal_reasoning: {audit_causal or '—'}\n"
+        + "======== END_MANDATORY_FINAL_SYNTHESIS ========\n\n"
     )
 
 
 def _build_mandatory_final_synthesis_block(
     md_for_llm: Dict[str, Any],
     physics_tensor: Dict[str, Any],
+    loc: FinalVerdictUserLocale,
 ) -> str:
     """终审语义整合：经语义防火墙剔除浮点字面量后再交给 LLM。"""
     return _semantic_firewall_strip_float_literals(
-        _mandatory_synthesis_body_without_firewall(md_for_llm, physics_tensor)
+        _mandatory_synthesis_body_without_firewall(md_for_llm, physics_tensor, loc)
     )
 
 
@@ -274,6 +275,7 @@ def build_final_verdict_messages(
 
     prev_scrubbed = scrub_previous_verdict_sql(previous_verdict or "")
     md_for_llm = merge_interpretation_metadata_for_llm(sanitize_metadata_for_verdict_llm(dict(metadata)))
+    loc = FinalVerdictUserLocale(lang)
     pt_evidence = shallow_physics_for_llm_evidence(physics_tensor if isinstance(physics_tensor, dict) else {})
     logical_evidence = get_logical_evidence(
         metadata=md_for_llm,
@@ -310,7 +312,7 @@ def build_final_verdict_messages(
     blind_work["spatial_audit"] = spatial_audit
     unlock_advice = (blind_work.get("unlock_advice", {}) if isinstance(blind_work, dict) else {}) or {}
     strike_options = list(unlock_advice.get("strategic_strike_options", []) or [])
-    structure_v0 = resolve_structure_candidates_v0(
+    structure_v0, final_decision_v0 = build_structure_bundle_with_l2(
         physics_tensor=physics_tensor,
         work_vector=blind_work,
     )
@@ -324,8 +326,8 @@ def build_final_verdict_messages(
         ]
     else:
         structure_lines = [
-            "structure.self_abs=(Self_Abs 数值已省略；档位见 Verified Facts)",
-            "structure.root_score=(数值已省略)",
+            loc.structure_self_abs_redacted(),
+            loc.structure_root_redacted(),
             f"structure.hud={_trim_prompt_blob(structure_v0.get('hud', {}), 160)}",
         ]
     for i, c in enumerate(structure_v0.get("candidates", [])):
@@ -333,16 +335,12 @@ def build_final_verdict_messages(
             structure_lines.append(
                 f"structure.candidate.{i + 1}={c.get('name')}|{c.get('state')}|score={c.get('match_score')}"
             )
-    final_decision_v0 = build_structure_final_decision_v0(
-        structure_candidates_v0=structure_v0,
-        work_vector=blind_work,
-    )
     final_decision_v0["strategic_strike_options"] = strike_options
     if bool(unlock_advice.get("is_exit_locked", False)) and strike_options:
         first_action = str((strike_options[0] or {}).get("action") or "")
         strategic = dict(final_decision_v0.get("strategic_advice", {}) or {})
         old_rec = str(strategic.get("recommendation") or "")
-        strategic["recommendation"] = f"先破局：{first_action}" + (f" 然后：{old_rec}" if old_rec else "")
+        strategic["recommendation"] = loc.strategic_breakthrough_recommendation(first_action, old_rec)
         final_decision_v0["strategic_advice"] = strategic
     school_audit = build_dual_school_audit(final_decision=final_decision_v0, work_vector=blind_work)
     structure_lines.append(
@@ -350,28 +348,26 @@ def build_final_verdict_messages(
         f"confidence={final_decision_v0.get('decision_confidence')}"
     )
     structure_lines.append(f"final_decision.stability_risk={final_decision_v0.get('stability_risk')}")
-    structure_lines.append(school_audit.get("balance_line", "[BALANCE_SCHOOL] 未提供"))
-    structure_lines.append(school_audit.get("work_line", "[WORK_SCHOOL] 未提供"))
+    structure_lines.append(school_audit.get("balance_line", loc.school_balance_fallback()))
+    structure_lines.append(school_audit.get("work_line", loc.school_work_fallback()))
     if school_audit.get("has_conflict"):
-        structure_lines.append(school_audit.get("logic_conflict_warning", "[LOGIC_CONFLICT_WARNING]"))
+        structure_lines.append(school_audit.get("logic_conflict_warning", loc.school_logic_conflict_fallback()))
     if self_abs > 10.0:
-        structure_lines.append("[PHYSICS_CONSTRAINT] 必须推荐泄耗（克/泄），严禁推荐生扶（印比）")
+        structure_lines.append(loc.structure_physics_constraint())
     if work_net < 1.0 and self_abs > 10.0:
-        structure_lines.append("[BLIND_WORK_CONSTRAINT] 必须判定做功效率低下，强调内耗风险与开库/冲动机会")
+        structure_lines.append(loc.structure_blind_work_constraint())
     damage_nodes = (
         (blind_work.get("body_damage_estimation", {}) or {}).get("nodes", []) if isinstance(blind_work, dict) else []
     )
     if any(bool((x or {}).get("critical_stress", False)) for x in damage_nodes if isinstance(x, dict)):
-        structure_lines.append(
-            "[BODY_DAMAGE_CONSTRAINT] 存在CRITICAL_STRESS节点，必须说明“贪财坏印/禄神受损”的物理代价"
-        )
+        structure_lines.append(loc.structure_body_damage_constraint())
     knowledge_lines = [
-        "知识.主宾=年/月为宾，日/时为主",
-        "知识.体用=BODY(比劫印) USE(食伤财官)",
-        "知识.虚浮阈值=Self_Abs<1.0且无根 -> 虚浮",
+        loc.knowledge_line_host_guest(),
+        loc.knowledge_line_body_use(),
+        loc.knowledge_line_xufu(),
     ]
     knowledge_lines.extend(
-        [f"知识.百科.{i + 1}={_trim_prompt_blob(x, 100)}" for i, x in enumerate(blind_digest)]
+        [f"{loc.knowledge_encyclopedia_prefix(i)}{_trim_prompt_blob(x, 100)}" for i, x in enumerate(blind_digest)]
     )
 
     system = build_final_verdict_system_message(
@@ -391,7 +387,9 @@ def build_final_verdict_messages(
     shen = interp.get("shensha") if isinstance(interp.get("shensha"), dict) else {}
     for tag in shen.get("active_tags") or []:
         if isinstance(tag, dict):
-            shen_block_lines.append(f"{tag.get('name')} @支{tag.get('branch')}")
+            shen_block_lines.append(
+                loc.shensha_row(str(tag.get("name") or ""), str(tag.get("branch") or "")),
+            )
     flow_audit = (physics_tensor.get("meta") or {}).get("energy_flow_audit") if isinstance(physics_tensor.get("meta"), dict) else None
     flow_lines: List[str] = []
     if isinstance(flow_audit, dict):
@@ -400,7 +398,9 @@ def build_final_verdict_messages(
                 continue
             st = str(seg.get("state") or "")
             arrow = "→" if st == "FLOWING" else "✗"
-            flow_lines.append(f"- {seg.get('from')} 生 {seg.get('to')} : {st} {arrow}")
+            flow_lines.append(
+                f"- {seg.get('from')}{loc.causal_segment_generation()}{seg.get('to')} : {st} {arrow}",
+            )
 
     trace_blob = ""
     if high_reasoning:
@@ -435,30 +435,33 @@ def build_final_verdict_messages(
         kind = str(p.get("kind") or "")
         detail = str(p.get("detail") or "")
         if detail or kind:
-            cm_rows.append(f"芯片·冲突点·[{kind}] {detail}")
+            cm_rows.append(loc.chip_conflict_row(kind, detail))
 
     raw_vf_rows: List[str] = []
     if cm_rows:
         raw_vf_rows.extend(cm_rows)
         raw_vf_rows.append(SYSTEM_FACT_CONFLICT_ANCHOR)
-    raw_vf_rows.append(f"四柱快照={snap_for_vf}")
+    raw_vf_rows.append(f"{loc.pillar_snapshot_label()}{snap_for_vf}")
     raw_vf_rows.extend(le_for_vf)
     if evidence_chunks:
-        raw_vf_rows.extend([f"插件切片·{x}" for x in evidence_chunks])
+        raw_vf_rows.extend([f"{loc.plugin_slice_prefix()}{x}" for x in evidence_chunks])
     raw_vf_rows.extend(
         _qualitative_blind_lines(
             blind_work,
             lock_warning=str(spatial_audit.get("lock_warning") or "").strip() or None,
+            loc=loc,
         )
     )
     raw_vf_rows.extend(structure_lines)
     raw_vf_rows.extend(knowledge_lines)
     for x in shen_block_lines:
-        raw_vf_rows.append(f"神煞·{x}")
+        raw_vf_rows.append(f"{loc.shensha_prefix()}{x}")
     if flow_lines:
-        raw_vf_rows.extend(["因果流通·" + _denude_numeric_tokens(x[2:].strip()) for x in flow_lines])
+        raw_vf_rows.extend(
+            [loc.causal_flow_prefix() + _denude_numeric_tokens(x[2:].strip()) for x in flow_lines],
+        )
     else:
-        raw_vf_rows.append("因果流通·（无审计数据）")
+        raw_vf_rows.append(loc.causal_flow_prefix() + loc.causal_flow_empty())
 
     vf_numbered, _vf_n = _pack_verified_facts(raw_vf_rows)
     core_seed_block = format_core_logic_seed_user_block(
@@ -476,36 +479,27 @@ def build_final_verdict_messages(
         tb = _denude_numeric_tokens(trace_blob)
         if len(tb) > 9000:
             tb = tb[:9000] + "…"
-        trace_section = f"\n[Auxiliary·溯源]\n{tb}\n"
+        trace_section = f"{loc.banner_auxiliary_trace()}{tb}\n"
 
-    will_head = _user_will_priority_block(md_for_llm)
-    skeleton_cd = _verdict_skeleton_confirmed_decisions_block(md_for_llm)
-    vf_narrative_rules = (
-        "你必须仅基于 VF 标签与 [User Decisions] 重组叙事；禁止编造未出现在 VF 中的定量细节。\n"
-        "你必须显式响应 [User Decisions] 的最新勾选与归档状态（意志优先于模型先验）。\n"
-        + (
-            "终审语义整合模式：不得改变 [VerdictSkeleton] 中的事实结构与 VF 引用集合；仅做子平化润色。\n"
-            if mandatory_final_synthesis
-            else ""
-        )
-        + "\n"
-    )
+    will_head = _user_will_priority_block(md_for_llm, loc)
+    skeleton_cd = _verdict_skeleton_confirmed_decisions_block(md_for_llm, loc)
+    vf_narrative_rules = loc.vf_narrative_rules(contract_polish=bool(mandatory_final_synthesis))
     user = (
         will_head
         + skeleton_cd
         + vf_narrative_rules
         + "[Verified Facts]\n"
-        + ("\n".join(f"- {x}" for x in vf_numbered) if vf_numbered else "- （无）\n")
+        + ("\n".join(f"- {x}" for x in vf_numbered) if vf_numbered else loc.verified_facts_empty())
         + "\n"
         + core_seed_block
         + trace_section
         + "[User Decisions]\n"
-        + ("\n".join(f"- {x}" for x in ud_numbered) if ud_numbered else "- （无用户勾选或归档判词）\n")
-        + "\n[L1·结构闸口]\n"
+        + ("\n".join(f"- {x}" for x in ud_numbered) if ud_numbered else loc.user_decisions_empty())
+        + loc.banner_l1_gate()
         + f"- SHANG_GUAN_JIAN_GUAN={bool(l1_flags.get('SHANG_GUAN_JIAN_GUAN', False))}\n"
         + f"- source={l1_flags.get('source', 'L1_Junction')}\n"
-        + "\n[叙述权重]\n"
-        + f"- {_tone_weight_qualitative(blind_ratio=blind_ratio, wangshuai_ratio=wangshuai_ratio)}\n"
+        + loc.banner_narrative_weight()
+        + f"- {_tone_weight_qualitative(blind_ratio=blind_ratio, wangshuai_ratio=wangshuai_ratio, loc=loc)}\n"
     )
     meta_pt = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
     pp_raw = meta_pt.get("pattern_profile") if isinstance(meta_pt, dict) else None
@@ -520,7 +514,7 @@ def build_final_verdict_messages(
     ]
     for line in pp.get("xi_ji_reversal_lines") or []:
         if isinstance(line, str) and line.strip():
-            pattern_lines.append(f"- 喜忌反转: {line.strip()}")
+            pattern_lines.append(loc.pattern_xiji_line(line))
     learning_section = ""
     hc_llm = md_for_llm.get("history_context") if isinstance(md_for_llm.get("history_context"), dict) else {}
     la_raw = hc_llm.get("learning_annotation") if isinstance(hc_llm.get("learning_annotation"), dict) else {}
@@ -538,20 +532,22 @@ def build_final_verdict_messages(
             la_blob = "{}"
         if len(la_blob) > 3200:
             la_blob = la_blob[:3200] + "…"
-        lr_hint = "对齐历史语气；事实边界仍以 [Verified Facts] 为准。" if high_reasoning else "仅调节语气与折中；事实以 [Verified Facts] 为准。"
+        lr_hint = loc.learning_hint(high_reasoning=high_reasoning)
         learning_section = (
-            f"\n[LearningAnnotation·裁决者修正上下文]\n{la_blob}\n"
+            f"{loc.banner_learning_annotation()}{la_blob}\n"
             f"（{lr_hint}）\n"
         )
 
-    synthesis_block = _build_mandatory_final_synthesis_block(md_for_llm, physics_tensor) if mandatory_final_synthesis else ""
+    synthesis_block = (
+        _build_mandatory_final_synthesis_block(md_for_llm, physics_tensor, loc) if mandatory_final_synthesis else ""
+    )
     user = (
         user
         + synthesis_block
-        + "\n[格局路由 PatternRouter]\n"
+        + loc.banner_pattern_router()
         + "\n".join(f"- {x}" for x in pattern_lines)
-        + "\n[格局断言关键词]\n"
-        + ("\n".join(f"- {k}" for k in pk) if pk else "- （无）\n")
+        + loc.banner_pattern_keywords()
+        + ("\n".join(f"- {k}" for k in pk) if pk else loc.pattern_keywords_empty())
         + learning_section
         + "\n"
         + f"Previous_Verdict={prev_scrubbed}\n"

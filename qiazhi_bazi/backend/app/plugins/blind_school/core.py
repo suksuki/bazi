@@ -74,6 +74,8 @@ class BlindSchoolPlugin:
         physics_tensor: Dict[str, Any],
         metadata: Dict[str, Any],
         feature_flags: Dict[str, Any] | None = None,
+        is_preview: bool = False,
+        dry_run: bool = False,
     ) -> Dict[str, Any]:
         meta = (physics_tensor or {}).get("meta") if isinstance(physics_tensor, dict) else None
         merged: Dict[str, Any] = {}
@@ -125,6 +127,8 @@ class BlindSchoolPlugin:
         }
         if isinstance(physics_tensor, dict):
             apply_work_intensity_and_meta_audit(work_vector=work_vector, physics_tensor=physics_tensor)
+        if is_preview or dry_run:
+            work_vector["shadow_preview_flags"] = {"is_preview": bool(is_preview), "dry_run": bool(dry_run)}
         return work_vector
 
 
@@ -133,10 +137,14 @@ def run_blind_school_plugin(
     physics_tensor: Dict[str, Any],
     metadata: Dict[str, Any],
     feature_flags: Dict[str, Any] | None = None,
+    is_preview: bool = False,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     return BlindSchoolPlugin().run(
         physics_tensor=physics_tensor,
         metadata=metadata,
         feature_flags=feature_flags,
+        is_preview=is_preview,
+        dry_run=dry_run,
     )
 

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { Lang, BaziMetadata } from "@/types/bazi";
 import type { PhysicsLabConfig, PluginSwitches, PluginWeights, SeedPayload } from "@/features/stream-board/models";
 import { API_BASE } from "../constants";
-import { buildBlindSchoolFeaturesPayload, buildPhysicsConfigPayload } from "./streamBoardPure";
+import { buildBlindSchoolFeaturesPayload, buildPhysicsConfigPayload, buildStreamBoardEnabledPlugins } from "./streamBoardPure";
 import { interpolateColor } from "./streamBoardPure";
 
 export interface StreamBoardDiagnosticDeps {
@@ -10,6 +10,8 @@ export interface StreamBoardDiagnosticDeps {
   lastSeedPayload: SeedPayload | null;
   labConfig: PhysicsLabConfig;
   pluginSwitches: PluginSwitches;
+  /** URL ``?pure_physics_audit=1`` 时省略格局插件 */
+  purePhysicsAudit?: boolean;
   pluginWeights: PluginWeights;
   lang: Lang;
   finalStructureFinalDecisionV0: Record<string, unknown> | null;
@@ -36,11 +38,9 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
         baseline_structure_final_decision: deps.finalStructureFinalDecisionV0 || {},
         year_pillar: yearPillar,
         luck_pillar: luckPillar,
-        enabled_plugins: [
-          ...(deps.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-          ...(deps.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-          ...(deps.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-        ],
+        enabled_plugins: buildStreamBoardEnabledPlugins(deps.pluginSwitches, {
+          purePhysicsAudit: Boolean(deps.purePhysicsAudit),
+        }),
         lang: deps.lang,
       }),
     });
@@ -67,11 +67,9 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
       latitude: 31.2304,
       longitude: 121.4737,
       physics_config: buildPhysicsConfigPayload(deps.labConfig),
-      enabled_plugins: [
-        ...(deps.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-        ...(deps.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-        ...(deps.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-      ],
+      enabled_plugins: buildStreamBoardEnabledPlugins(deps.pluginSwitches, {
+        purePhysicsAudit: Boolean(deps.purePhysicsAudit),
+      }),
       blind_school_features: buildBlindSchoolFeaturesPayload(deps.pluginSwitches),
       reference_year: deps.referenceYearRef.current,
     };
@@ -103,11 +101,9 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
           physics_tensor: maleData?.physics_tensor || {},
           selected_cards: [],
           consensus_history: [],
-          enabled_plugins: [
-            ...(deps.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(deps.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(deps.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
+          enabled_plugins: buildStreamBoardEnabledPlugins(deps.pluginSwitches, {
+            purePhysicsAudit: Boolean(deps.purePhysicsAudit),
+          }),
           plugin_weights: {
             "classical.blind_school.v1": Number(deps.pluginWeights.blindSchool || 0),
             "classical.wangshuai.v1": Number(deps.pluginWeights.wangshuai || 0),
@@ -125,11 +121,9 @@ export function useStreamBoardDiagnosticActions(depsRef: React.MutableRefObject<
           physics_tensor: femaleData?.physics_tensor || {},
           selected_cards: [],
           consensus_history: [],
-          enabled_plugins: [
-            ...(deps.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(deps.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(deps.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
+          enabled_plugins: buildStreamBoardEnabledPlugins(deps.pluginSwitches, {
+            purePhysicsAudit: Boolean(deps.purePhysicsAudit),
+          }),
           plugin_weights: {
             "classical.blind_school.v1": Number(deps.pluginWeights.blindSchool || 0),
             "classical.wangshuai.v1": Number(deps.pluginWeights.wangshuai || 0),

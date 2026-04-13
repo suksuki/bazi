@@ -4,19 +4,34 @@ import { useState } from "react";
 import { useActiveView } from "@/components/layout/ActiveViewContext";
 import { EngineRoomPanel } from "@/features/admin/EngineRoomPanel";
 import { EvolutionPanel } from "@/features/admin/components/EvolutionPanel";
+import { AdminClimateDashboard } from "@/features/admin/components/AdminClimateDashboard";
+import { AdminConflictDashboard } from "@/features/admin/components/AdminConflictDashboard";
+import { AdminPatternDashboard } from "@/features/admin/components/AdminPatternDashboard";
 import { PluginManagementPanel } from "@/features/admin/components/PluginManagementPanel";
 import { RoutingMatrixPanel } from "@/features/admin/components/RoutingMatrixPanel";
 import { AdminSettingsView } from "@/features/admin-settings/AdminSettingsView";
 import { useAdminSettingsController } from "@/features/admin-settings/useAdminSettingsController";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
 
-type AdminSection = "overview" | "engine" | "infra" | "plugins" | "evolution" | "routing";
+type AdminSection =
+  | "overview"
+  | "engine"
+  | "infra"
+  | "plugins"
+  | "patterns"
+  | "climate"
+  | "conflict"
+  | "evolution"
+  | "routing";
 
 const sections: { id: AdminSection; label: string }[] = [
   { id: "overview", label: "概览" },
   { id: "engine", label: "引擎" },
   { id: "infra", label: "基础设施" },
   { id: "plugins", label: "插件" },
+  { id: "patterns", label: "格局法典" },
+  { id: "climate", label: "调候法典" },
+  { id: "conflict", label: "冲突法典" },
   { id: "routing", label: "路由" },
   { id: "evolution", label: "演化" },
 ];
@@ -96,6 +111,18 @@ export function AdminView() {
 
       <div className={section === "plugins" ? "block" : "hidden"}>
         <PluginManagementPanel />
+      </div>
+
+      <div className={section === "patterns" ? "block" : "hidden"}>
+        <AdminPatternDashboard />
+      </div>
+
+      <div className={section === "climate" ? "block" : "hidden"}>
+        <AdminClimateDashboard />
+      </div>
+
+      <div className={section === "conflict" ? "block" : "hidden"}>
+        <AdminConflictDashboard />
       </div>
 
       <div className={section === "routing" ? "block" : "hidden"}>

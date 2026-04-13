@@ -1,9 +1,10 @@
 from app.schemas.bazi_metadata import BaziMetadata, ConflictMatrix, FourPillars, StemBranchPair
+from app.plugins.classical.climate_adjuster_v1 import apply_climate_manifest_to_meta
 from app.skills.physics_calculations import (
     apply_climate_correction,
     build_energy_fields,
     calculate_deity_scores,
-    resolve_seasonal_factor,
+    normalize_element_vector,
     root_coupling_check,
 )
 
@@ -27,13 +28,20 @@ def test_root_coupling_check_marks_rootless_wood_day_master():
     assert decay == 0.8
 
 
-def test_resolve_seasonal_factor_derives_from_month_branch_when_no_solar_term():
-    seasonal = resolve_seasonal_factor(
-        cache_seasonal_matrix={},
-        metadata=_metadata(),
-        solar_term=None,
-    )
-    assert seasonal["water"] > 1.0
+def test_climate_manifest_mods_for_month_branch_match_physics_meta_shape():
+    md = _metadata().model_dump(mode="json")
+    meta: dict = {}
+    mods = apply_climate_manifest_to_meta(meta, md)
+    assert meta["climate_field_correction_v1"]["month_branch"] == "子"
+    assert mods["water"] > 1.0
+    assert mods == meta["climate_field_correction_v1"]["element_mods"]
+
+
+def test_normalize_element_vector_sums_to_one():
+    v = {"wood": 1.0, "fire": 2.0, "earth": 3.0, "metal": 4.0, "water": 5.0}
+    n = normalize_element_vector(v)
+    assert abs(sum(n.values()) - 1.0) < 1e-6
+    assert n["water"] > n["wood"]
 
 
 def test_build_energy_fields_and_deity_scores_return_traceable_payloads():
@@ -42,7 +50,7 @@ def test_build_energy_fields_and_deity_scores_return_traceable_payloads():
     by_pillar, vector, raw_deity_energy, contribution_sources = build_energy_fields(
         metadata=metadata,
         position_weights={"year": 0.2, "month": 0.45, "day": 0.25, "hour": 0.1},
-        seasonal_factor={"wood": 1.0, "fire": 1.0, "earth": 1.0, "metal": 1.0, "water": 1.0},
+        climate_mods={"wood": 1.0, "fire": 1.0, "earth": 1.0, "metal": 1.0, "water": 1.0},
         day_stem="甲",
         stem_boost=1.05,
         root_decay=0.7,

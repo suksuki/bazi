@@ -10,11 +10,12 @@ from unittest.mock import AsyncMock
 
 os.environ.setdefault("DATABASE_URL", "postgresql://tester:tester@127.0.0.1/qiazhi_test")
 
-from app.api.contracts import AnalyzeSeedRequest, FinalVerdictRequest, RegenerationContext, TranslateRequest
+from app.api.contracts import AnalyzeClashRequest, AnalyzeSeedRequest, FinalVerdictRequest, RegenerationContext, TranslateRequest
 from app.db.models import SessionConsensus
 from app.schemas.bazi_metadata import ConflictMatrix, ConflictPoint, FourPillars, StemBranchPair
 from app.skills import physics_engine as physics_engine_module
 from app.services import analysis_service
+from app.services.bazi_engine import get_bazi
 
 
 class _FakeClient:
@@ -60,6 +61,7 @@ class _FakeVerdictSkill:
             "logical_evidence": ["证据一"],
             "work_vector": {"work_expectation": 1.23, "llm_hint": "取财有道"},
             "topology_graph_v1": {"edges": [{"final_work": 1.1}]},
+            "hit_pattern_name": "测试格 (亲和度 88.0%)",
             "structure_candidates_v0": {"hud": {"stable_pct": 40.0, "follower_pct": 30.0, "leap_pct": 30.0}},
             "structure_final_decision_v0": {"primary_structure": "FOLLOW_WEALTH_POWER", "decision_confidence": 0.86},
             "audit_log": {"skill_id": "final_verdict_skill", "param_version_id": "p-1"},
@@ -111,6 +113,32 @@ def test_translate_text_items_keeps_same_order():
             )
         )
     assert payload["items"] == ["hello", "world"]
+
+
+def test_analyze_clash_1990_06_14_officer_pattern_rows_with_blind_only_enabled_plugins_v82():
+    """V8.2：格局白名单常驻；enabled 仅盲派时 1990-06-14 样本仍须产出正官格 strict 行（与机房一致）。"""
+    pillars = get_bazi("1990-06-14", "12:00", "solar")
+    with patch.object(analysis_service, "QwenClient", return_value=_FakeClient()):
+        payload = asyncio.run(
+            analysis_service.analyze_clash_flow(
+                AnalyzeClashRequest(
+                    pillars=pillars,
+                    enabled_plugins=["classical.blind_school.v1"],
+                )
+            )
+        )
+    meta = (payload.get("physics_tensor") or {}).get("meta") or {}
+    assert meta.get("pattern_thresholds_status") == "OK"
+    rows = meta.get("pattern_thresholds") or []
+    assert isinstance(rows, list) and rows
+    ids = [str(r.get("pattern_id") or "") for r in rows if isinstance(r, dict)]
+    assert "GOV_PATTERN" in ids
+    gov = next(r for r in rows if isinstance(r, dict) and r.get("pattern_id") == "GOV_PATTERN")
+    assert str(gov.get("engine_v") or "") == "MANIFEST_V5.8_STRICT"
+    assert "正官" in str(gov.get("name") or "")
+    l2 = str(meta.get("l2_pattern_result_summary_v1") or "")
+    assert l2 == "正官格 (亲和度 100.0%)"
+    assert str(meta.get("hit_pattern_name") or "") == l2
 
 
 def test_analyze_seed_flow_builds_audit_summary():
@@ -170,6 +198,7 @@ def test_load_consensus_history_and_generate_final_verdict():
     assert payload["verdict_body"] == "适合推进"
     assert payload["work_vector"]["llm_hint"] == "取财有道"
     assert payload["topology_graph_v1"]["edges"][0]["final_work"] == 1.1
+    assert payload["hit_pattern_name"] == "测试格 (亲和度 88.0%)"
     assert payload["structure_candidates_v0"]["hud"]["leap_pct"] == 30.0
     assert payload["structure_final_decision_v0"]["primary_structure"] == "FOLLOW_WEALTH_POWER"
     assert payload["audit_log"]["skill_id"] == "final_verdict_skill"

@@ -36,6 +36,8 @@ export type VerdictExecutionDeps = {
   finalLogicalEvidence: string[];
   consultationId: number | null;
   pluginSwitches: PluginSwitches;
+  /** URL ``?pure_physics_audit=1`` */
+  purePhysicsAudit?: boolean;
   pluginWeights: PluginWeights;
   lang: Lang;
   setResultLogs: Dispatch<SetStateAction<string[]>>;
@@ -126,6 +128,7 @@ export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDe
               finalLogicalEvidence: d.finalLogicalEvidence,
               consultationId: d.consultationId,
               pluginSwitches: d.pluginSwitches,
+              purePhysicsAudit: d.purePhysicsAudit,
               pluginWeights: d.pluginWeights,
               lang: d.lang,
               regenerationContext: opts?.regenerationContext,

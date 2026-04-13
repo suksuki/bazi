@@ -20,11 +20,14 @@ from app.core.config.physics_settings import resolve_physics_settings
 from app.schemas.bazi_metadata import BaziMetadata
 from app.skills.base import AuditLog, BaseSkill
 from app.skills.climate_inference import ClimateInferenceSkill
+from app.plugins.classical.climate_adjuster_v1 import apply_climate_manifest_to_meta
+from app.logic.physics.branch_interactions import build_branch_interactions
+from app.plugins.classical.conflict_auditor_v1 import compute_conflict_topology_v1, merge_conflict_topology_into_meta
 from app.skills.physics_calculations import (
     apply_climate_correction,
     build_energy_fields,
     calculate_deity_scores,
-    resolve_seasonal_factor,
+    normalize_element_vector,
     root_coupling_check,
 )
 from app.skills.physics_rules import (
@@ -241,24 +244,38 @@ class PhysicsInferenceSkill(BaseSkill):
                 params[k] = float(v)
         root_decay = params.get("root_decay_lambda", 0.7)
         stem_boost = params.get("through_stem_boost", 1.05)
-        conflict_gamma = params.get("conflict_penalty_gamma", 0.12)
         floating_decay = params.get("CF_FLOATING_DECAY", 0.3)
         protrusion = params.get("A_PROTRUSION", 1.0)
         conflict_count = len(metadata.conflict_matrix.points)
-        conflict_factor = max(0.5, 1.0 - conflict_count * conflict_gamma)
 
         day_stem = metadata.pillars.day.stem
         root_trace, root_decay_factor = root_coupling_check(metadata=metadata, floating_decay=floating_decay)
         floating_deities = {"比肩", "劫财"} if bool(root_trace.get("no_root", False)) else set()
-        seasonal_factor = resolve_seasonal_factor(
-            cache_seasonal_matrix=self._cache.seasonal_matrix,
-            metadata=metadata,
-            solar_term=solar_term,
+        climate_meta_block: Dict[str, Any] = {}
+        md_dump = metadata.model_dump(mode="json")
+        branch_ix = build_branch_interactions(md_dump)
+        climate_meta_block["branch_interactions"] = branch_ix
+        topology = compute_conflict_topology_v1(
+            md_dump, physics_config=runtime_settings, branch_interactions=branch_ix
         )
+        conflict_factor = float(topology.get("aggregate_conflict_linear_factor") or 1.0)
+        raw_el = topology.get("element_conflict_mods")
+        if isinstance(raw_el, dict):
+            conflict_element_mods = {
+                k: float(raw_el.get(k, 1.0) or 1.0) for k in ("wood", "fire", "earth", "metal", "water")
+            }
+        else:
+            conflict_element_mods = {k: 1.0 for k in ("wood", "fire", "earth", "metal", "water")}
+        merge_conflict_topology_into_meta(climate_meta_block, topology)
+        apply_climate_manifest_to_meta(climate_meta_block, md_dump)
+        climate_mods = {
+            k: float(climate_meta_block["climate_field_correction_v1"]["element_mods"][k])
+            for k in ("wood", "fire", "earth", "metal", "water")
+        }
         result_by_pillar, vector, raw_deity_energy, deity_contribution_sources = build_energy_fields(
             metadata=metadata,
             position_weights=self._cache.position_weights,
-            seasonal_factor=seasonal_factor,
+            climate_mods=climate_mods,
             day_stem=day_stem,
             stem_boost=stem_boost,
             root_decay=root_decay,
@@ -271,7 +288,31 @@ class PhysicsInferenceSkill(BaseSkill):
             weight_luck=runtime_settings["WEIGHT_LUCK"],
             weight_year=runtime_settings["WEIGHT_YEAR"],
             runtime_physics=runtime_settings,
+            conflict_element_mods=conflict_element_mods,
         )
+        neutral_mods = {k: 1.0 for k in ("wood", "fire", "earth", "metal", "water")}
+        _, vector_pre_manifest, _, _ = build_energy_fields(
+            metadata=metadata,
+            position_weights=self._cache.position_weights,
+            climate_mods=neutral_mods,
+            day_stem=day_stem,
+            stem_boost=stem_boost,
+            root_decay=root_decay,
+            conflict_factor=conflict_factor,
+            protrusion=protrusion,
+            floating_deities=floating_deities,
+            root_decay_factor=root_decay_factor,
+            dayun=dayun,
+            liunian=liunian,
+            weight_luck=runtime_settings["WEIGHT_LUCK"],
+            weight_year=runtime_settings["WEIGHT_YEAR"],
+            runtime_physics=runtime_settings,
+            conflict_element_mods=conflict_element_mods,
+        )
+        climate_meta_block["climate_manifest_field_compare_v1"] = {
+            "normalized_pre_manifest": normalize_element_vector(vector_pre_manifest),
+            "normalized_post_manifest_pre_hard_climate": normalize_element_vector(dict(vector)),
+        }
         pre_climate_vector = {k: float(v) for k, v in vector.items()}
         pre_climate_deity_energy = {k: float(v) for k, v in raw_deity_energy.items()}
         vector, raw_deity_energy, climate_trace = apply_climate_correction(
@@ -303,6 +344,8 @@ class PhysicsInferenceSkill(BaseSkill):
         evidence = [
             f"solar_term={solar_term or 'derived_from_month_branch'}",
             f"conflict_count={conflict_count}",
+            f"conflict_topology.aggregate={topology.get('aggregate_conflict_linear_factor')}",
+            f"conflict_topology.element_mods={conflict_element_mods}",
             f"root.no_root={bool(root_trace.get('no_root', False))}",
             f"param_version={self._cache.version_id}",
             f"climate.enabled={bool(climate_trace.get('enabled', False))}",
@@ -331,7 +374,7 @@ class PhysicsInferenceSkill(BaseSkill):
             formula_refs=[
                 "E_self_new = E_self + E_support * (EFF_PROMOTING - 1)",
                 "E_self_final = E_self_new * EFF_RESTRAINING * EFF_EXHAUSTING * EFF_CONSUMING",
-                "hidden_stem_energy = raw * ratio * position_weight * seasonal * through_stem_boost * root_decay * conflict_factor",
+                "hidden_stem_energy = raw * ratio * ... * conflict_factor * conflict_element_mods[element]",
             ],
             param_snapshot={
                 k: float(v)
@@ -369,12 +412,12 @@ class PhysicsInferenceSkill(BaseSkill):
             "deity_trace_details": deity_trace_details,
             "by_pillar": result_by_pillar,
             "meta": {
+                **climate_meta_block,
                 "solar_term": solar_term or "derived_from_month_branch",
                 "conflict_count": conflict_count,
                 "params": {
                     "root_decay_lambda": root_decay,
                     "through_stem_boost": stem_boost,
-                    "conflict_penalty_gamma": conflict_gamma,
                     "CF_FLOATING_DECAY": floating_decay,
                     "A_PROTRUSION": protrusion,
                 },

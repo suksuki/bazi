@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
+UserIntentionId = Literal["seek_stability", "seek_wealth", "seek_fame"]
+
 from pydantic import BaseModel, Field
 
 from app.schemas.bazi_metadata import BaziMetadata, FourPillars
@@ -82,6 +84,10 @@ class PhysicsConfig(BaseModel):
     L0_HIDDEN_ENERGY_SCALE: Optional[float] = Field(default=None, description="L0 藏干支能量总标度")
     L0_ROOT_BOOST_FACTOR: Optional[float] = Field(default=None, description="L0 通根反哺乘子")
     L0_YM_DH_WEIGHT_RATIO: Optional[float] = Field(default=None, description="L0 年月相对日时柱位权重比")
+    user_intention: Optional[UserIntentionId] = Field(
+        default=None,
+        description="V10 WILL_PROXY：用户意志锚点（稳健避险 / 激进求财 / 中道求名），驱动物理参数字典与 L2 亲和度乘子",
+    )
 
 
 class ConsultationCreate(BaseModel):
@@ -132,6 +138,27 @@ class AnalyzeClashRequest(BaseModel):
     )
 
 
+class StructuralPreviewHint(BaseModel):
+    """影子预览：不修改 physics_param、仅表达结构/插件/逻辑意志的预判语义（SSE 注入）。"""
+
+    kind: str = Field(
+        ...,
+        description="L1_STRUCTURE | PLUGIN_ENABLE | LOGIC_OVERRIDE | SEMANTIC_VERDICT | PATTERN_SOVEREIGNTY",
+    )
+    card_id: str = Field(default="", description="来源 Inbox 卡片 id")
+    label: str = Field(default="", description="人可读标签，如 巳酉丑金局 · AGGREGATED")
+    plugin_id: str = Field(default="", description="PLUGIN_ENABLE 时的插件 id")
+    override_key: str = Field(default="", description="LOGIC_OVERRIDE 时的参数键")
+    baseline_pattern_kind: str = Field(
+        default="",
+        description="悬停前客户端快照的 pattern_kind，用于检测「已知格→混乱态」退化",
+    )
+    baseline_pattern_name_zh: str = Field(
+        default="",
+        description="悬停前客户端快照的 pattern_name_zh",
+    )
+
+
 class OrchestratorInternalLoopRequest(BaseModel):
     """无 LLM：仅跑 OrchestratorService.run_internal_loop（物理 + 插件 + VF + verdict_skeleton）。"""
 
@@ -142,6 +169,14 @@ class OrchestratorInternalLoopRequest(BaseModel):
     session_id: Optional[int] = None
     dayun: Optional[str] = None
     liunian: Optional[str] = None
+    is_preview: bool = Field(
+        default=False,
+        description="影子预览：不落库、不写学习批注、不触发叙事终审；physics_update 带 is_preview 标识",
+    )
+    structural_preview: Optional[StructuralPreviewHint] = Field(
+        default=None,
+        description="结构预览：在 vf_discovered 中前置注入预判行，并在 complete 中附带 preview_pattern_alert",
+    )
 
 
 class AuditDiagnoseRequest(BaseModel):

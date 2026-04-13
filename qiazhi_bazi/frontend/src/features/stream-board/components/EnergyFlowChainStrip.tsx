@@ -29,9 +29,20 @@ type Props = {
   /** 参考年等：变化时触发动画 key */
   motionKey?: string | number;
   t?: (s: string) => string;
+  /** 影子预览开启：仅展示层，不改 audit 真值 */
+  previewActive?: boolean;
+  /** 预览下假想「修补」的断裂段索引（与 segments 下标对齐） */
+  previewHealSegmentIndices?: ReadonlySet<number> | null;
 };
 
-export function EnergyFlowChainStrip({ audit, className = "", motionKey, t = (s: string) => s }: Props) {
+export function EnergyFlowChainStrip({
+  audit,
+  className = "",
+  motionKey,
+  t = (s: string) => s,
+  previewActive = false,
+  previewHealSegmentIndices = null,
+}: Props) {
   const segments = Array.isArray(audit?.segments) ? audit!.segments! : [];
   if (segments.length === 0) return null;
   const breaks = new Set(Array.isArray(audit?.break_indices) ? audit!.break_indices! : []);
@@ -46,18 +57,35 @@ export function EnergyFlowChainStrip({ audit, className = "", motionKey, t = (s:
           const from = String(seg.from || "");
           const to = String(seg.to || "");
           const broken = breaks.has(idx) || seg.state === "BROKEN";
+          const previewHeal = Boolean(previewActive && previewHealSegmentIndices?.has(idx));
           return (
             <span
               key={`${String(motionKey ?? "")}-${from}-${to}-${idx}`}
               className="inline-flex items-center gap-0.5 transition-colors duration-500 ease-in-out"
             >
               {idx > 0 ? <span className="text-zinc-600">·</span> : null}
-              <span className={broken ? "text-rose-400 font-semibold" : "text-emerald-300/90"}>
+              <span
+                className={
+                  previewHeal
+                    ? "font-semibold text-fuchsia-200/85"
+                    : broken
+                      ? "font-semibold text-rose-400"
+                      : "text-emerald-300/90"
+                }
+              >
                 {t(EL_LABEL[from] || from)}
                 <span className="text-zinc-500">→</span>
                 {t(EL_LABEL[to] || to)}
               </span>
-              {broken ? <span className="text-rose-500">✗</span> : <span className="text-emerald-500/80">✓</span>}
+              {broken && previewHeal ? (
+                <span className="text-fuchsia-300/70" title={t("energyFlow.preview.virtualLink")}>
+                  ✓
+                </span>
+              ) : broken ? (
+                <span className="text-rose-500">✗</span>
+              ) : (
+                <span className="text-emerald-500/80">✓</span>
+              )}
             </span>
           );
         })}

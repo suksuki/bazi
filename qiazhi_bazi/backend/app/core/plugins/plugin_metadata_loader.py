@@ -49,6 +49,13 @@ def plugin_manifest_for_registry_plugin(plugin_id: str) -> Dict[str, Any]:
 
 def merge_plugin_manifest_into_metadata(metadata: Dict[str, Any], plugin_id: str) -> None:
     block = plugin_manifest_for_registry_plugin(plugin_id)
-    for key in ("display_name", "use_case", "detailed_description", "physical_impact", "governance_notes"):
+    for key in (
+        "display_name",
+        "use_case",
+        "detailed_description",
+        "physical_impact",
+        "governance_notes",
+        "recommendation_logic",
+    ):
         if key in block and block[key] is not None:
             metadata[key] = block[key]

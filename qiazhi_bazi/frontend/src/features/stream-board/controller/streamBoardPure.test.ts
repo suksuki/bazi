@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildStreamBoardEnabledPlugins,
   hoistPhysicsAuditDiagnosis,
   isFinalVerdictPhysicsFallbackBody,
   isPhysicsAuditFallbackUi,
   isTrustworthyPhysicsAuditDiagnosis,
   PHYSICS_AUDIT_LOGIC_PROPOSAL_PARAM_KEYS,
+  RESIDENT_PATTERN_PLUGIN_ID,
 } from "./streamBoardPure";
 
 describe("hoistPhysicsAuditDiagnosis", () => {
@@ -58,5 +60,28 @@ describe("streamBoardPure audit guard", () => {
     const fb =
       "### 核心气象 盘局物理层已收敛；干支张力与芯片证据链已登记。 ### 裁决共识 据 `sys.core.physics` 已登记之结论与芯片证据链，与四柱气机相互参证。 ### 行为指引 宜据 VF 与柱位锚点重写语气与分疏；可再次发起终审以润色辞章。";
     expect(isFinalVerdictPhysicsFallbackBody(fb)).toBe(true);
+  });
+});
+
+describe("buildStreamBoardEnabledPlugins", () => {
+  const sw = {
+    blindSchool: true,
+    wangshuai: false,
+    wealthRisk: false,
+    blindSchoolPierceHarm: true,
+    blindSchoolTombVault: true,
+    blindSchoolHostGuest: true,
+  };
+
+  it("always appends pattern detector unless purePhysicsAudit", () => {
+    const ids = buildStreamBoardEnabledPlugins(sw);
+    expect(ids[0]).toBe(RESIDENT_PATTERN_PLUGIN_ID);
+    expect(ids).toContain(RESIDENT_PATTERN_PLUGIN_ID);
+    expect(ids).toContain("classical.blind_school.v1");
+  });
+
+  it("omits pattern detector when purePhysicsAudit", () => {
+    const ids = buildStreamBoardEnabledPlugins(sw, { purePhysicsAudit: true });
+    expect(ids).not.toContain(RESIDENT_PATTERN_PLUGIN_ID);
   });
 });

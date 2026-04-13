@@ -45,6 +45,15 @@ def test_final_verdict_system_merges_heading_rules_into_json_contract_only() -> 
     assert "Structural Observer" in FIRST_OBSERVATION_SYSTEM_PROMPT
 
 
+def test_final_verdict_system_message_en_localizes_contract_headings() -> None:
+    sys_en = build_final_verdict_system_message(high_reasoning=True, lang="EN")
+    assert "[STRICT_JSON_ONLY]" in sys_en
+    assert "### Core climate" in sys_en
+    assert "Final Narrator" in sys_en
+    assert "VF01" in sys_en
+    assert "Please output strictly in English." in sys_en
+
+
 def test_final_verdict_contract_polish_mode_inserts_contract_mode() -> None:
     s = build_final_verdict_system_message(high_reasoning=False, lang="ZH", contract_polish_mode=True)
     assert "[CONTRACT_MODE]" in s

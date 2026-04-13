@@ -59,6 +59,8 @@ function createSinksRef(): MutableRefObject<LabSnapshotHydrationSinks> {
     setPhysicsEvidence: vi.fn(),
     setPhysicsParams: vi.fn(),
     setGlobalEntropy: vi.fn(),
+    setPatternThresholds: vi.fn(),
+    setPatternThresholdsStatus: vi.fn(),
     setFinalVerdictBody: vi.fn(),
     setFinalVerdictChangeLog: vi.fn(),
     setFinalVerdictVersionId: vi.fn(),

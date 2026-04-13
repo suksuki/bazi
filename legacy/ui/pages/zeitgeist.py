@@ -173,16 +173,16 @@ def reverse_lookup_bazi(target_bazi, start_year=1950, end_year=2030):
                 return f"{birth_date.year}-{birth_date.month}-{birth_date.day} {birth_date.hour}:00"
         
         # 如果新方法失败，回退到旧方法
-        return reverse_lookup_bazi_legacy(target_bazi, start_year, end_year)
+        return reverse_lookup_year_span_heuristic(target_bazi, start_year, end_year)
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
         logger.debug(f"使用新反推方法失败，回退到旧方法: {e}")
         # 回退到旧方法
-        return reverse_lookup_bazi_legacy(target_bazi, start_year, end_year)
+        return reverse_lookup_year_span_heuristic(target_bazi, start_year, end_year)
 
 
-def reverse_lookup_bazi_legacy(target_bazi, start_year=1950, end_year=2030):
+def reverse_lookup_year_span_heuristic(target_bazi, start_year=1950, end_year=2030):
     """
     [Legacy] 旧版反推方法（向后兼容）
     保留用于向后兼容，但建议使用 BaziReverseCalculator

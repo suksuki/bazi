@@ -2,23 +2,25 @@
 
 import { useCallback, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { AuditItem } from "@/components/AuditSidebar";
+import type { LabShadowPreviewPatch } from "@/features/stream-board/stores/LabSessionContext";
 import type { BaziMetadata, Lang, PersistenceLayer, TimelineSnapshot } from "@/types/bazi";
 import type {
   DeityComponent,
   DeityEnergyAxis,
   FinalVerdictChangeLog,
   FinalVerdictHistoryItem,
+  FinalVerdictResult,
   FinalVerdictSynthesisResult,
   InboxCard,
   LogicDiff,
   LogicProposal,
   LlmDiagnosticData,
+  PatternThresholdRow,
   PhysicsLabConfig,
   PluginSwitches,
   SeedPayload,
   SeedSubmitResult,
 } from "@/features/stream-board/models";
-import type { FinalVerdictResult } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import type { ConfirmedDecisionItem, ConsensusItem, MetricSnapshot } from "./streamBoardTypes";
 import { augmentDiagnosisWithMangpaiManifest } from "@/features/stream-board/mangpaiChipManifest";
@@ -32,16 +34,32 @@ import {
 import {
   buildBlindSchoolFeaturesPayload,
   buildPhysicsConfigPayload,
+  buildStreamBoardEnabledPlugins,
   coerceLogicProposalParamKey,
   extractMetricSnapshotFromPhysics,
   hoistPhysicsAuditDiagnosis,
   isPhysicsAuditFallbackUi,
   isTrustworthyPhysicsAuditDiagnosis,
   mergeLlmDiagnosticSameSeedPreserve,
+  parsePatternThresholdsPayload,
   seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
 import type { StreamPipelineEventKind, StreamPipelinePhase } from "@/features/stream-board/models";
-import { API_BASE } from "@/features/stream-board/constants";
+import { ORCHESTRATOR_USE_SSE_STREAM } from "@/features/stream-board/constants";
+import { consumeOrchestratorFullCycleSse } from "@/features/stream-board/utils/orchestratorFullCycleSse";
+import { detectPhaseTransitionSurge, maxPatternProgress } from "@/features/stream-board/utils/LogicWarpingAura";
+import {
+  dispatchGlobalEvent,
+  flashPhaseTransitionToast,
+  PHASE_LOCK_SHIMMER,
+} from "@/utils/globalUiEvents";
+import { computeDeityPreviewDeltaPercent } from "@/utils/logicDiff";
+import { buildMetadataForDecisionPreview } from "@/features/stream-board/controller/willPreviewMetadata";
+import {
+  buildStructuralPreviewHintForCard,
+  snapshotPatternProfileForStructuralPreview,
+} from "@/features/stream-board/controller/structuralPreviewHint";
+import { resolveShadowPreviewPatternAlert, resolveShadowPreviewVfLine } from "@/utils/shadowPreviewI18n";
 import {
   streamVerdictBodyIntoState,
   stripLeadingH3PrefixIfRedundant,
@@ -131,6 +149,8 @@ export type StreamBoardExecutionContext = {
   reportPipelineEvent: (event: StreamPipelineEventKind) => void;
   labConfig: PhysicsLabConfig;
   pluginSwitches: PluginSwitches;
+  /** URL ``?pure_physics_audit=1``：纯物理审计，不请求格局 manifest 插件 */
+  purePhysicsAudit: boolean;
   referenceYearRef: MutableRefObject<number>;
   timeline: TimelineSnapshot | null;
   isFinalized: boolean;
@@ -141,6 +161,8 @@ export type StreamBoardExecutionContext = {
   setPhysicsEvidence: Dispatch<SetStateAction<string[]>>;
   setPhysicsParams: Dispatch<SetStateAction<Record<string, number>>>;
   setGlobalEntropy: Dispatch<SetStateAction<number | null>>;
+  setPatternThresholds: Dispatch<SetStateAction<PatternThresholdRow[]>>;
+  setPatternThresholdsStatus: Dispatch<SetStateAction<string | null>>;
   consensusHistory: ConsensusItem[];
   setLlmDiagnosticData: Dispatch<SetStateAction<LlmDiagnosticData | null>>;
   addPhysicsAuditSemanticDiagnosisToInbox: (payload: {
@@ -157,6 +179,15 @@ export type StreamBoardExecutionContext = {
       deity_energy_axes?: Record<string, DeityEnergyAxis>;
     } | null>
   >;
+  /** 中枢 SSE：VF 行预览（压入 LiveVerdictDisplay 骨架前缀） */
+  setOrchestratorVfSkeletonLines: Dispatch<SetStateAction<string[]>>;
+  /** 中枢 SSE：因果路由审计备忘流式片段（逻辑演化轴顶栏） */
+  setOrchestratorCausalAuditPulse: Dispatch<SetStateAction<string>>;
+  /** 意志实验室影子预览（Lab store，不落 mergeSnapshot） */
+  setLabShadowPreview: (payload: LabShadowPreviewPatch) => void;
+  clearLabShadowPreview: () => void;
+  /** 当前仪表盘十神分，供预览 Δ% 基线 */
+  deityScores: Record<string, number>;
   /** 意志重塑顶栏：requires_narrative_refresh 与终审整合期间 */
   setNarrativeReshapeActive?: (v: boolean) => void;
   /** 与终判请求对齐：当前 Inbox 卡片（按勾选 id 过滤后传入 selected_cards） */
@@ -224,9 +255,319 @@ function applyPostVerdictMetrics(x: StreamBoardExecutionContext, verdict: FinalV
 
 const ORCH_DEBOUNCE_MS = 320;
 
+/** 中枢 SSE `physics_update` 合帧：避免后端推送过快时 React 跳过中间态，肉眼看不到「流式生长」 */
+const PHYS_UPDATE_MIN_RENDER_MS = 30;
+
+function scheduleCoalescedPhysicsRender(
+  payload: Record<string, unknown>,
+  opts: {
+    lastFireAtRef: MutableRefObject<number>;
+    timerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+    pendingRef: MutableRefObject<Record<string, unknown> | null>;
+    flush: (p: Record<string, unknown>) => void;
+  },
+): void {
+  const { lastFireAtRef, timerRef, pendingRef, flush } = opts;
+  pendingRef.current = payload;
+  const fire = () => {
+    const p = pendingRef.current;
+    pendingRef.current = null;
+    if (!p) return;
+    const run = () => {
+      lastFireAtRef.current = Date.now();
+      flush(p);
+    };
+    /** 对齐显示器刷新，减轻高刷多屏下 setState 与绘制相位差导致的轻微撕裂感 */
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(run);
+    } else {
+      run();
+    }
+  };
+  const now = Date.now();
+  const elapsed = now - lastFireAtRef.current;
+  if (elapsed >= PHYS_UPDATE_MIN_RENDER_MS) {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    fire();
+    return;
+  }
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+  }
+  timerRef.current = setTimeout(() => {
+    timerRef.current = null;
+    fire();
+  }, PHYS_UPDATE_MIN_RENDER_MS - elapsed);
+}
+
+type OrchestratorLoopResponse = {
+  metadata: BaziMetadata;
+  physics_tensor: Record<string, unknown>;
+  requires_narrative_refresh?: boolean;
+  pre_injection_deity_display?: {
+    deity_scores?: Record<string, number>;
+    deity_energy_axes?: Record<string, DeityEnergyAxis>;
+  };
+  is_preview?: boolean;
+};
+
+function ingestPatternThresholdsFromPayload(
+  x: Pick<StreamBoardExecutionContext, "setPatternThresholds" | "setPatternThresholdsStatus">,
+  payload: Record<string, unknown>,
+): void {
+  const hasPt = Object.prototype.hasOwnProperty.call(payload, "pattern_thresholds");
+  const hasSt = Object.prototype.hasOwnProperty.call(payload, "pattern_thresholds_status");
+  if (!hasPt && !hasSt) return;
+  if (hasPt) {
+    x.setPatternThresholds(parsePatternThresholdsPayload(payload.pattern_thresholds));
+  }
+  const rawSt = payload.pattern_thresholds_status;
+  if (hasSt && typeof rawSt === "string" && rawSt.trim()) {
+    x.setPatternThresholdsStatus(rawSt.trim());
+  } else if (hasPt) {
+    const pt = parsePatternThresholdsPayload(payload.pattern_thresholds);
+    x.setPatternThresholdsStatus(pt.length > 0 ? "OK" : null);
+  }
+}
+
+function applyOrchestratorPhysicsUpdateEvent(x: StreamBoardExecutionContext, payload: Record<string, unknown>): void {
+  if (x.isFinalized || !x.lastSeedPayload || !x.metadata?.pillars) return;
+  const incomingSig = seedPayloadSignature(x.lastSeedPayload);
+  const rawScores = (payload.deity_scores && typeof payload.deity_scores === "object"
+    ? payload.deity_scores
+    : {}) as Record<string, number>;
+  const rawAxes = (payload.deity_energy_axes && typeof payload.deity_energy_axes === "object"
+    ? payload.deity_energy_axes
+    : {}) as Record<string, DeityEnergyAxis>;
+  if (Object.keys(rawScores).length === 0 && Object.keys(rawAxes).length === 0) return;
+  const applied = applyManualEnergyPatchesToDisplay(
+    rawScores,
+    rawAxes,
+    x.metadata.manual_energy_patch ?? null,
+    incomingSig,
+  );
+  x.setDeityScores(applied.scores);
+  x.setDeityEnergyAxes(applied.axes);
+  const mp = payload.meta_params;
+  if (mp && typeof mp === "object") {
+    x.setPhysicsParams(mp as Record<string, number>);
+  }
+  const ge = payload.global_entropy;
+  x.setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
+  const cf = payload.confidence;
+  x.setPhysicsConfidence(typeof cf === "number" && Number.isFinite(cf) ? cf : null);
+  ingestPatternThresholdsFromPayload(x, payload);
+}
+
 export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExecutionContext>) {
   const orchDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const orchResponseSeqRef = useRef(0);
+  const orchPhysLastRef = useRef(0);
+  const orchPhysTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orchPhysPendingRef = useRef<Record<string, unknown> | null>(null);
+  const previewPhysLastRef = useRef(0);
+  const previewPhysTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewPhysPendingRef = useRef<Record<string, unknown> | null>(null);
+  /** 预览 SSE 格局达成度峰值，用于 `detectPhaseTransitionSurge`（与 LiveVerdict 解耦的闭环预埋） */
+  const previewPatternMaxSurgeRef = useRef<number | null>(null);
+  const orchPatternMaxSurgeRef = useRef<number | null>(null);
+  const previewAbortRef = useRef<AbortController | null>(null);
+  /** 每次中止/清空影子态递增，用于丢弃悬挂 SSE 回调（快滑 Hover + 网络抖动） */
+  const previewEpochRef = useRef(0);
+  const previewBaselineScoresRef = useRef<Record<string, number> | null>(null);
+  const previewVfBufRef = useRef<string[]>([]);
+
+  const clearPreview = useCallback(() => {
+    if (previewPhysTimerRef.current) {
+      clearTimeout(previewPhysTimerRef.current);
+      previewPhysTimerRef.current = null;
+    }
+    previewPhysPendingRef.current = null;
+    previewPhysLastRef.current = 0;
+    previewPatternMaxSurgeRef.current = null;
+    previewAbortRef.current?.abort();
+    previewAbortRef.current = null;
+    previewEpochRef.current += 1;
+    previewBaselineScoresRef.current = null;
+    previewVfBufRef.current = [];
+    ctxRef.current.clearLabShadowPreview();
+    requestAnimationFrame(() => {
+      ctxRef.current.clearLabShadowPreview();
+    });
+  }, [ctxRef]);
+
+  const previewDecision = useCallback(
+    async (patchId: string) => {
+      const x = ctxRef.current;
+      if (x.isFinalized || !x.metadata?.pillars || !x.lastSeedPayload || !patchId.trim()) return;
+      const card = (x.cards || []).find((c) => c.id === patchId);
+      if (!card) return;
+      const seedSig = seedPayloadSignature(x.lastSeedPayload);
+      const metaPatched = buildMetadataForDecisionPreview(x.metadata, card, seedSig);
+      const structuralHint = metaPatched ? null : buildStructuralPreviewHintForCard(card);
+      if (!metaPatched && !structuralHint) return;
+      if (orchDebounceTimerRef.current) {
+        clearTimeout(orchDebounceTimerRef.current);
+        orchDebounceTimerRef.current = null;
+      }
+      clearPreview();
+      const myEpoch = previewEpochRef.current;
+      previewBaselineScoresRef.current = { ...x.deityScores };
+      previewVfBufRef.current = [];
+      const ac = new AbortController();
+      previewAbortRef.current = ac;
+      x.setLabShadowPreview({
+        activePreviewId: patchId,
+        previewVfSkeleton: "",
+        previewDeityScores: null,
+        previewDeityEnergyAxes: null,
+        previewDeltaPctByDeity: {},
+        previewPatternAlert: "",
+        previewStructuralLinkActive: false,
+        previewPatternThresholds: null,
+      });
+      let streamFinishedOk = false;
+      try {
+        const url = `${x.apiBase}/api/v1/orchestrator/full-cycle/stream`;
+        const body: Record<string, unknown> = {
+          metadata: metaPatched ?? x.metadata,
+          enabled_plugins: buildStreamBoardEnabledPlugins(x.pluginSwitches, {
+            purePhysicsAudit: x.purePhysicsAudit,
+          }),
+          blind_school_features: buildBlindSchoolFeaturesPayload(x.pluginSwitches),
+          physics_config: buildPhysicsConfigPayload(x.labConfig),
+          session_id: x.consultationId ?? undefined,
+          dayun: x.timeline?.dayun ?? undefined,
+          liunian: x.timeline?.liunian ?? undefined,
+          is_preview: true,
+        };
+        if (structuralHint) {
+          const snap = snapshotPatternProfileForStructuralPreview(x.physicsTensor ?? undefined);
+          body.structural_preview = { ...structuralHint, ...snap };
+        }
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+          signal: ac.signal,
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          clearPreview();
+          return;
+        }
+        const ct = String(res.headers.get("content-type") || "");
+        if (!ct.includes("text/event-stream")) {
+          clearPreview();
+          return;
+        }
+        const lang = ctxRef.current.lang;
+        await consumeOrchestratorFullCycleSse(
+          res,
+          {
+            onPhysicsUpdate: (payload) => {
+              if (previewEpochRef.current !== myEpoch) return;
+              if (!payload.is_preview) return;
+              scheduleCoalescedPhysicsRender(payload, {
+                lastFireAtRef: previewPhysLastRef,
+                timerRef: previewPhysTimerRef,
+                pendingRef: previewPhysPendingRef,
+                flush: (p) => {
+                  if (previewEpochRef.current !== myEpoch) return;
+                  if (process.env.NODE_ENV !== "production") {
+                    console.log("[SSE] Received Preview Event: physics_update");
+                  }
+                  const raw = (p.deity_scores || {}) as Record<string, number>;
+                  const axes = (p.deity_energy_axes || {}) as Record<string, DeityEnergyAxis>;
+                  const base = previewBaselineScoresRef.current || ctxRef.current.deityScores;
+                  const deltas = computeDeityPreviewDeltaPercent(base, raw);
+                  const pt = parsePatternThresholdsPayload((p as { pattern_thresholds?: unknown }).pattern_thresholds);
+                  const nextMax = maxPatternProgress(pt);
+                  const prevSurge = previewPatternMaxSurgeRef.current;
+                  if (prevSurge !== null && detectPhaseTransitionSurge(prevSurge, nextMax)) {
+                    dispatchGlobalEvent(PHASE_LOCK_SHIMMER);
+                  }
+                  previewPatternMaxSurgeRef.current = nextMax;
+                  ctxRef.current.setLabShadowPreview({
+                    previewDeityScores: raw,
+                    previewDeityEnergyAxes: axes,
+                    previewDeltaPctByDeity: deltas,
+                    ...(pt.length ? { previewPatternThresholds: pt } : {}),
+                  });
+                },
+              });
+            },
+            onVfDiscovered: (p) => {
+              if (previewEpochRef.current !== myEpoch) return;
+              const raw = p as Record<string, unknown>;
+              const structGlow = raw.is_preview_structural === true;
+              const line = String(raw.line || "").trim();
+              const tmpl = typeof raw.i18n_template === "string" ? raw.i18n_template.trim() : "";
+              const ip = raw.i18n_params;
+              const params =
+                ip && typeof ip === "object" && !Array.isArray(ip)
+                  ? (Object.fromEntries(
+                      Object.entries(ip as Record<string, unknown>).map(([k, v]) => [k, String(v ?? "")]),
+                    ) as Record<string, string>)
+                  : undefined;
+              const displayLine = line ? resolveShadowPreviewVfLine(lang, line, tmpl || undefined, params) : "";
+              if (displayLine) previewVfBufRef.current.push(displayLine);
+              const block = previewVfBufRef.current.map((l) => `* ${l}`).join("\n");
+              const updates: LabShadowPreviewPatch = {};
+              if (structGlow) updates.previewStructuralLinkActive = true;
+              if (displayLine) updates.previewVfSkeleton = block;
+              if (structGlow || displayLine) ctxRef.current.setLabShadowPreview(updates);
+            },
+            onComplete: (raw) => {
+              if (previewEpochRef.current !== myEpoch) return;
+              if (!raw.is_preview) return;
+              const tensor = raw.physics_tensor as Record<string, unknown> | undefined;
+              if (!tensor || typeof tensor !== "object") return;
+              const rawScores = (tensor.deity_scores || {}) as Record<string, number>;
+              const rawAxes = (tensor.deity_energy_axes || {}) as Record<string, DeityEnergyAxis>;
+              const base = previewBaselineScoresRef.current || ctxRef.current.deityScores;
+              const deltas = computeDeityPreviewDeltaPercent(base, rawScores);
+              const palertRaw =
+                typeof raw.preview_pattern_alert === "string" ? String(raw.preview_pattern_alert).trim() : "";
+              const meta = raw.preview_pattern_alert_meta as Parameters<typeof resolveShadowPreviewPatternAlert>[2];
+              const palert = resolveShadowPreviewPatternAlert(lang, palertRaw, meta);
+              const tm = tensor.meta;
+              const ptDone = parsePatternThresholdsPayload(
+                tm && typeof tm === "object" && !Array.isArray(tm)
+                  ? (tm as Record<string, unknown>).pattern_thresholds
+                  : undefined,
+              );
+              ctxRef.current.setLabShadowPreview({
+                previewDeityScores: rawScores,
+                previewDeityEnergyAxes: rawAxes,
+                previewDeltaPctByDeity: deltas,
+                previewPatternAlert: palert,
+                ...(ptDone.length ? { previewPatternThresholds: ptDone } : {}),
+              });
+            },
+          },
+          { signal: ac.signal },
+        );
+        streamFinishedOk = true;
+        previewAbortRef.current = null;
+      } catch {
+        if (!ac.signal.aborted) {
+          clearPreview();
+        }
+      } finally {
+        if (!streamFinishedOk && ac.signal.aborted && previewAbortRef.current === ac) {
+          previewAbortRef.current = null;
+          ctxRef.current.clearLabShadowPreview();
+          requestAnimationFrame(() => {
+            ctxRef.current.clearLabShadowPreview();
+          });
+        }
+      }
+    },
+    [ctxRef, clearPreview],
+  );
 
   const runFinalVerdictSynthesis = useCallback(
     async (opts?: { delayMs?: number; trigger?: string }): Promise<FinalVerdictSynthesisResult | null> => {
@@ -320,42 +661,36 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
   );
 
   const runOrchestratorInternalLoopFromPendingSelection = useCallback(async () => {
-    const x = ctxRef.current;
-    if (x.isFinalized || !x.lastSeedPayload || !x.metadata?.pillars) return;
+    const x0 = ctxRef.current;
+    if (x0.isFinalized || !x0.lastSeedPayload || !x0.metadata?.pillars) return;
     const mySeq = ++orchResponseSeqRef.current;
-    try {
-      const res = await fetch(`${x.apiBase}/api/v1/orchestrator/internal-loop`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          metadata: x.metadata,
-          enabled_plugins: [
-            ...(x.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(x.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(x.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
-          blind_school_features: buildBlindSchoolFeaturesPayload(x.pluginSwitches),
-          physics_config: buildPhysicsConfigPayload(x.labConfig),
-          session_id: x.consultationId ?? undefined,
-          dayun: x.timeline?.dayun ?? undefined,
-          liunian: x.timeline?.liunian ?? undefined,
-        }),
-      });
-      if (!res.ok) return;
-      if (mySeq !== orchResponseSeqRef.current) return;
-      const data = (await res.json()) as {
-        metadata: BaziMetadata;
-        physics_tensor: Record<string, unknown>;
-        requires_narrative_refresh?: boolean;
-        pre_injection_deity_display?: {
-          deity_scores?: Record<string, number>;
-          deity_energy_axes?: Record<string, DeityEnergyAxis>;
-        };
-      };
+    if (orchPhysTimerRef.current) {
+      clearTimeout(orchPhysTimerRef.current);
+      orchPhysTimerRef.current = null;
+    }
+    orchPhysPendingRef.current = null;
+    orchPhysLastRef.current = 0;
+    orchPatternMaxSurgeRef.current = null;
+    x0.setOrchestratorVfSkeletonLines([]);
+    x0.setOrchestratorCausalAuditPulse("");
+
+    const requestBody = () => ({
+      metadata: ctxRef.current.metadata,
+      enabled_plugins: buildStreamBoardEnabledPlugins(ctxRef.current.pluginSwitches, {
+        purePhysicsAudit: ctxRef.current.purePhysicsAudit,
+      }),
+      blind_school_features: buildBlindSchoolFeaturesPayload(ctxRef.current.pluginSwitches),
+      physics_config: buildPhysicsConfigPayload(ctxRef.current.labConfig),
+      session_id: ctxRef.current.consultationId ?? undefined,
+      dayun: ctxRef.current.timeline?.dayun ?? undefined,
+      liunian: ctxRef.current.timeline?.liunian ?? undefined,
+    });
+
+    const applyLoopComplete = (x: StreamBoardExecutionContext, data: OrchestratorLoopResponse) => {
+      if (data.is_preview) return;
       const tensor = data.physics_tensor;
       if (!tensor || typeof tensor !== "object") return;
-      if (mySeq !== orchResponseSeqRef.current) return;
-
+      if (!x.lastSeedPayload) return;
       const incomingSig = seedPayloadSignature(x.lastSeedPayload);
       const mergedMeta = mergeAnalyzeSeedMetadata(data.metadata, x.metadata, incomingSig, {
         sameSeedResubmit: true,
@@ -408,6 +743,10 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
       }
       const ge = pMeta.global_entropy;
       x.setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
+      ingestPatternThresholdsFromPayload(x, {
+        pattern_thresholds: pMeta.pattern_thresholds,
+        pattern_thresholds_status: pMeta.pattern_thresholds_status,
+      });
 
       const currentMetric = extractMetricSnapshotFromPhysics(tensor);
       x.updateLogicDiff(currentMetric, x.confirmedDecisionIds.length === 0 || !x.baselineMetrics);
@@ -487,6 +826,80 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
         })();
         void runFinalVerdictSynthesis({ delayMs: 120, trigger: "will_injection_narrative_refresh" });
       }
+    };
+
+    try {
+      const x = ctxRef.current;
+      const url = ORCHESTRATOR_USE_SSE_STREAM
+        ? `${x.apiBase}/api/v1/orchestrator/full-cycle/stream`
+        : `${x.apiBase}/api/v1/orchestrator/internal-loop`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: ORCHESTRATOR_USE_SSE_STREAM
+          ? { "Content-Type": "application/json", Accept: "text/event-stream" }
+          : { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody()),
+      });
+      if (!res.ok) return;
+      if (mySeq !== orchResponseSeqRef.current) return;
+
+      const ct = String(res.headers.get("content-type") || "");
+      if (ORCHESTRATOR_USE_SSE_STREAM && ct.includes("text/event-stream")) {
+        await consumeOrchestratorFullCycleSse(
+          res,
+          {
+          onPhysicsUpdate: (payload) => {
+            if (mySeq !== orchResponseSeqRef.current) return;
+            if (payload.is_preview) return;
+            scheduleCoalescedPhysicsRender(payload, {
+              lastFireAtRef: orchPhysLastRef,
+              timerRef: orchPhysTimerRef,
+              pendingRef: orchPhysPendingRef,
+              flush: (p) => {
+                if (mySeq !== orchResponseSeqRef.current) return;
+                const pt = parsePatternThresholdsPayload((p as { pattern_thresholds?: unknown }).pattern_thresholds);
+                const nextMax = maxPatternProgress(pt);
+                const prevSurge = orchPatternMaxSurgeRef.current;
+                if (prevSurge !== null && detectPhaseTransitionSurge(prevSurge, nextMax)) {
+                  dispatchGlobalEvent(PHASE_LOCK_SHIMMER);
+                  flashPhaseTransitionToast(ctxRef.current.t("phase.lock.toast"));
+                }
+                orchPatternMaxSurgeRef.current = nextMax;
+                applyOrchestratorPhysicsUpdateEvent(ctxRef.current, p);
+              },
+            });
+          },
+          onVfDiscovered: (payload) => {
+            if (mySeq !== orchResponseSeqRef.current) return;
+            const line = String(payload.line || "").trim();
+            if (!line) return;
+            ctxRef.current.setOrchestratorVfSkeletonLines((prev) => (prev.includes(line) ? prev : [...prev, line]));
+          },
+          onAuditPulse: (payload) => {
+            if (mySeq !== orchResponseSeqRef.current) return;
+            const frag = String(payload.fragment || "");
+            if (!frag) return;
+            ctxRef.current.setOrchestratorCausalAuditPulse((prev) => (prev + frag).slice(-2400));
+          },
+          onFinalVerdictStream: (_payload) => {
+            /* 终判 token 仍由 /v1/final-verdict/stream（NDJSON）输出；中枢 SSE 仅占位协议对齐 */
+          },
+          onComplete: (raw) => {
+            if (mySeq !== orchResponseSeqRef.current) return;
+            const xr = ctxRef.current;
+            xr.setOrchestratorVfSkeletonLines([]);
+            xr.setOrchestratorCausalAuditPulse("");
+            applyLoopComplete(xr, raw as OrchestratorLoopResponse);
+          },
+        },
+          undefined,
+        );
+        return;
+      }
+
+      const data = (await res.json()) as OrchestratorLoopResponse;
+      if (mySeq !== orchResponseSeqRef.current) return;
+      applyLoopComplete(ctxRef.current, data);
     } catch {
       /* 静默失败：不打扰勾选流 */
     }
@@ -985,5 +1398,7 @@ export function useStreamBoardExecution(ctxRef: MutableRefObject<StreamBoardExec
     executeDecisionAndRefresh,
     runFinalVerdictSynthesis,
     scheduleSilentInternalLoopOnApprovalSelection,
+    previewDecision,
+    clearPreview,
   };
 }

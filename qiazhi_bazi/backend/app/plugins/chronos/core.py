@@ -59,6 +59,8 @@ def run_chronos_plugin(
     physics_tensor: Dict[str, Any],
     metadata: Any,
     physics_config: Dict[str, Any] | None = None,
+    is_preview: bool = False,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     """写入 `meta.chronos_v1` 并返回审计行；若已存在 `chronos_v1` 则幂等跳过。"""
     meta = physics_tensor.setdefault("meta", {})
@@ -102,6 +104,8 @@ def run_chronos_plugin(
         "raw_residual_ratio": round(r_residual, 6),
     }
     meta["chronos_v1"] = {"applied": True, **block}
+    if is_preview or dry_run:
+        meta["chronos_v1"]["shadow_preview"] = {"is_preview": bool(is_preview), "dry_run": bool(dry_run)}
 
     audit_items: List[Dict[str, Any]] = [
         {

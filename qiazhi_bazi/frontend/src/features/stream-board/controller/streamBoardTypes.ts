@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type {
   DeityComponent,
   DeityEnergyAxis,
+  PatternThresholdRow,
   PhysicsLabConfig,
   PluginSwitches,
   PluginWeights,
@@ -27,6 +28,8 @@ export type SilentBoardCtx = {
   confirmedDecisionIds: string[];
   /** 与 seed-preview / 排盘大运流年一致，静默 analyze-seed 写入 external_overrides */
   temporalGanzhiOverride: { liunian: string; dayun: string } | null;
+  /** URL ``?pure_physics_audit=1``：纯物理审计，不请求格局插件 */
+  purePhysicsAudit?: boolean;
 };
 
 export type NavigationInfo = {
@@ -48,6 +51,8 @@ export type SilentRecalcPhysicsSetters = {
   setPhysicsEvidence: (v: string[]) => void;
   setPhysicsParams: (v: Record<string, number>) => void;
   setGlobalEntropy: (v: number | null) => void;
+  setPatternThresholds: Dispatch<SetStateAction<PatternThresholdRow[]>>;
+  setPatternThresholdsStatus: Dispatch<SetStateAction<string | null>>;
 };
 
 /** 静默重算成功后交给 persistSnapshot 的固定字段子集 */

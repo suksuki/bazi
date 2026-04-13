@@ -1,9 +1,13 @@
-"""Pure calculation helpers for the physics engine."""
+"""Pure calculation helpers for the physics engine.
+
+月令季节矩阵缺省在 ``physics_rules.DEFAULT_SEASONAL_BASE`` 与 DB 种子表维护；
+本模块不重复定义季节系数。冲突折损由 ``conflict_auditor_v1`` 法典驱动，不在此实现 γ 惩罚分支。
+"""
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.schemas.bazi_metadata import BaziMetadata
 from app.core.bazi.engine import (
@@ -14,42 +18,32 @@ from app.core.bazi.engine import (
 )
 from app.skills.physics_rules import (
     DEFAULT_POSITION_WEIGHTS,
-    DEFAULT_SEASONAL_BASE,
     MONTH_BRANCH_TO_SEASON,
     ROOT_MAP,
     STEM_TO_ELEMENT,
     TEN_DEITIES,
-    TERM_TO_SEASON,
     WEIGHT_LUCK,
     WEIGHT_YEAR,
     deity_from_self_and_target_stem,
 )
 
+_ELEMENT_KEYS = ("wood", "fire", "earth", "metal", "water")
 
-def resolve_seasonal_factor(
-    *,
-    cache_seasonal_matrix: Dict[str, Dict[str, float]],
-    metadata: BaziMetadata,
-    solar_term: str | None,
-) -> Dict[str, float]:
-    if solar_term and solar_term in cache_seasonal_matrix:
-        return cache_seasonal_matrix.get(solar_term, DEFAULT_SEASONAL_BASE["default"])
 
-    month_branch = metadata.pillars.month.branch
-    derived_season = MONTH_BRANCH_TO_SEASON.get(month_branch, "spring")
-    terms = [term for term, season in TERM_TO_SEASON.items() if season == derived_season]
-    if cache_seasonal_matrix and terms:
-        accumulator = {"wood": 0.0, "fire": 0.0, "earth": 0.0, "metal": 0.0, "water": 0.0}
-        count = 0
-        for term in terms:
-            row = cache_seasonal_matrix.get(term)
-            if not row:
-                continue
-            for key in accumulator:
-                accumulator[key] += float(row.get(key, 1.0))
-            count += 1
-        return {key: (accumulator[key] / count if count else DEFAULT_SEASONAL_BASE[derived_season][key]) for key in accumulator}
-    return DEFAULT_SEASONAL_BASE[derived_season]
+def _element_conflict_scale(conflict_element_mods: Optional[Dict[str, float]], element: str) -> float:
+    """冲突法典五行折损：在全局 ``conflict_factor`` 之后按元素再乘（默认 1.0）。"""
+    if not conflict_element_mods:
+        return 1.0
+    try:
+        return max(0.0, float(conflict_element_mods.get(element, 1.0) or 1.0))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def normalize_element_vector(vector: Dict[str, float]) -> Dict[str, float]:
+    """将五行 raw 场强归一为分布（与 ``PhysicsInferenceSkill`` 最终 normalized 同形，供调候前后对比）。"""
+    t = sum(max(0.0, float(vector.get(k, 0.0))) for k in _ELEMENT_KEYS) or 1.0
+    return {k: round(max(0.0, float(vector.get(k, 0.0))) / t, 4) for k in _ELEMENT_KEYS}
 
 
 def root_coupling_check(metadata: BaziMetadata, floating_decay: float) -> tuple[Dict[str, Any], float]:
@@ -88,7 +82,7 @@ def build_energy_fields(
     *,
     metadata: BaziMetadata,
     position_weights: Dict[str, float],
-    seasonal_factor: Dict[str, float],
+    climate_mods: Dict[str, float],
     day_stem: str,
     stem_boost: float,
     root_decay: float,
@@ -101,6 +95,7 @@ def build_energy_fields(
     weight_luck: float = WEIGHT_LUCK,
     weight_year: float = WEIGHT_YEAR,
     runtime_physics: Dict[str, float] | None = None,
+    conflict_element_mods: Dict[str, float] | None = None,
 ) -> tuple[Dict[str, Dict[str, float]], Dict[str, float], Dict[str, float], Dict[str, List[Dict[str, Any]]]]:
     ensure_l0_for_physics()
     rp = runtime_physics or {}
@@ -119,10 +114,11 @@ def build_energy_fields(
         pos_weight = pos_weights.get(pillar, DEFAULT_POSITION_WEIGHTS[pillar])
         stem_char = pair.stem
         stem_element = STEM_TO_ELEMENT.get(stem_char, "earth")
-        seasonal_el = float(seasonal_factor.get(stem_element, 1.0))
+        climate_el = float(climate_mods.get(stem_element, 1.0))
         raw = float(pair.energy_value)
         root_fac = get_root_resonance(stem_char, pillar_branches, rp)
-        stem_energy = raw * pos_weight * seasonal_el * stem_boost * root_decay * conflict_factor * protrusion * root_fac
+        el_cf = _element_conflict_scale(conflict_element_mods, stem_element)
+        stem_energy = raw * pos_weight * climate_el * stem_boost * root_decay * conflict_factor * el_cf * protrusion * root_fac
 
         vector[stem_element] += stem_energy
         deity_stem = deity_from_self_and_target_stem(day_stem=day_stem, target_stem=stem_char)
@@ -134,7 +130,7 @@ def build_energy_fields(
                     "source": f"{pillar}.stem:{stem_char}",
                     "raw_energy": round(raw, 4),
                     "position_weight": round(pos_weight, 4),
-                    "seasonal_factor": round(seasonal_el, 4),
+                    "climate_mod": round(climate_el, 4),
                     "hidden_ratio": 1.0,
                     "contribution_energy": round(adjusted_stem_energy, 4),
                 }
@@ -146,16 +142,18 @@ def build_energy_fields(
         hidden = hidden_table.get(branch_char, {})
         for hidden_stem, ratio in hidden.items():
             hidden_element = STEM_TO_ELEMENT.get(hidden_stem, "earth")
-            seasonal_h = float(seasonal_factor.get(hidden_element, 1.0))
+            climate_h = float(climate_mods.get(hidden_element, 1.0))
             hid_root = get_root_resonance(hidden_stem, pillar_branches, rp)
+            h_cf = _element_conflict_scale(conflict_element_mods, hidden_element)
             hidden_energy = (
                 raw
                 * (float(ratio) / 100.0)
                 * pos_weight
-                * seasonal_h
+                * climate_h
                 * stem_boost
                 * root_decay
                 * conflict_factor
+                * h_cf
                 * protrusion
                 * l0_hidden_scale
                 * hid_root
@@ -169,7 +167,7 @@ def build_energy_fields(
                     "source": f"{pillar}.branch:{branch_char}.hidden:{hidden_stem}",
                     "raw_energy": round(raw, 4),
                     "position_weight": round(pos_weight, 4),
-                    "seasonal_factor": round(seasonal_h, 4),
+                    "climate_mod": round(climate_h, 4),
                     "hidden_ratio": round(float(ratio) / 100.0, 4),
                     "contribution_energy": round(adjusted_hidden_energy, 4),
                 }
@@ -179,7 +177,7 @@ def build_energy_fields(
             "element": stem_element,
             "raw_energy": raw,
             "weight": pos_weight,
-            "seasonal_factor": round(seasonal_el, 4),
+            "climate_mod": round(climate_el, 4),
             "stem_energy": round(adjusted_stem_energy, 4),
         }
 
@@ -190,7 +188,7 @@ def build_energy_fields(
         vector=vector,
         raw_deity_energy=raw_deity_energy,
         deity_contribution_sources=deity_contribution_sources,
-        seasonal_factor=seasonal_factor,
+        climate_mods=climate_mods,
         day_stem=day_stem,
         stem_boost=stem_boost,
         root_decay=root_decay,
@@ -200,6 +198,7 @@ def build_energy_fields(
         root_decay_factor=root_decay_factor,
         branch_hidden=hidden_table,
         runtime_physics=rp,
+        conflict_element_mods=conflict_element_mods,
     )
     inject_disturbance(
         ganzhi=liunian,
@@ -208,7 +207,7 @@ def build_energy_fields(
         vector=vector,
         raw_deity_energy=raw_deity_energy,
         deity_contribution_sources=deity_contribution_sources,
-        seasonal_factor=seasonal_factor,
+        climate_mods=climate_mods,
         day_stem=day_stem,
         stem_boost=stem_boost,
         root_decay=root_decay,
@@ -218,6 +217,7 @@ def build_energy_fields(
         root_decay_factor=root_decay_factor,
         branch_hidden=hidden_table,
         runtime_physics=rp,
+        conflict_element_mods=conflict_element_mods,
     )
     return result_by_pillar, vector, raw_deity_energy, deity_contribution_sources
 
@@ -230,7 +230,7 @@ def inject_disturbance(
     vector: Dict[str, float],
     raw_deity_energy: Dict[str, float],
     deity_contribution_sources: Dict[str, List[Dict[str, Any]]],
-    seasonal_factor: Dict[str, float],
+    climate_mods: Dict[str, float],
     day_stem: str,
     stem_boost: float,
     root_decay: float,
@@ -240,6 +240,7 @@ def inject_disturbance(
     root_decay_factor: float,
     branch_hidden: Dict[str, Dict[str, float]] | None = None,
     runtime_physics: Dict[str, float] | None = None,
+    conflict_element_mods: Dict[str, float] | None = None,
 ) -> None:
     if not ganzhi or len(str(ganzhi)) < 2:
         return
@@ -250,14 +251,16 @@ def inject_disturbance(
     stem_char = str(ganzhi)[0]
     branch_char = str(ganzhi)[1]
     stem_element = STEM_TO_ELEMENT.get(stem_char, "earth")
-    seasonal_stem = float(seasonal_factor.get(stem_element, 1.0))
+    climate_stem = float(climate_mods.get(stem_element, 1.0))
+    s_cf = _element_conflict_scale(conflict_element_mods, stem_element)
     stem_energy = (
         100.0
         * weight
-        * seasonal_stem
+        * climate_stem
         * stem_boost
         * root_decay
         * conflict_factor
+        * s_cf
         * protrusion
         * get_root_resonance(stem_char, [branch_char], rp)
     )
@@ -270,22 +273,24 @@ def inject_disturbance(
             "source": f"{tag}.stem:{stem_char}",
             "raw_energy": 100.0,
             "position_weight": round(weight, 4),
-            "seasonal_factor": round(seasonal_stem, 4),
+            "climate_mod": round(climate_stem, 4),
             "hidden_ratio": 1.0,
             "contribution_energy": round(adjusted_stem, 4),
         }
     )
     for hidden_stem, ratio in ht.get(branch_char, {}).items():
         hidden_element = STEM_TO_ELEMENT.get(hidden_stem, "earth")
-        seasonal_hidden = float(seasonal_factor.get(hidden_element, 1.0))
+        climate_hidden = float(climate_mods.get(hidden_element, 1.0))
+        hc = _element_conflict_scale(conflict_element_mods, hidden_element)
         hidden_energy = (
             100.0
             * weight
             * (float(ratio) / 100.0)
-            * seasonal_hidden
+            * climate_hidden
             * stem_boost
             * root_decay
             * conflict_factor
+            * hc
             * protrusion
             * l0_hidden_scale
             * get_root_resonance(hidden_stem, [branch_char], rp)
@@ -299,7 +304,7 @@ def inject_disturbance(
                 "source": f"{tag}.branch:{branch_char}.hidden:{hidden_stem}",
                 "raw_energy": 100.0,
                 "position_weight": round(weight, 4),
-                "seasonal_factor": round(seasonal_hidden, 4),
+                "climate_mod": round(climate_hidden, 4),
                 "hidden_ratio": round(float(ratio) / 100.0, 4),
                 "contribution_energy": round(adjusted_hidden, 4),
             }

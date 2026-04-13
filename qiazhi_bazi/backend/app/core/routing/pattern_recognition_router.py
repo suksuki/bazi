@@ -63,7 +63,11 @@ def evaluate_pattern_profile(
 
     norm = physics_tensor.get("normalized")
     if not isinstance(norm, dict):
-        profile: Dict[str, Any] = {"pattern_kind": "none", "pattern_name_zh": "平常局", "sovereignty_priority": False}
+        profile: Dict[str, Any] = {
+            "pattern_kind": "none",
+            "pattern_name_zh": "常规格",
+            "sovereignty_priority": False,
+        }
         meta["pattern_profile"] = profile
         return profile
 
@@ -82,7 +86,7 @@ def evaluate_pattern_profile(
 
     profile: Dict[str, Any] = {
         "pattern_kind": "none",
-        "pattern_name_zh": "平常局",
+        "pattern_name_zh": "常规格",
         "dominant_element": dom_el,
         "dominance_ratio": round(ratio, 4),
         "sovereignty_priority": False,

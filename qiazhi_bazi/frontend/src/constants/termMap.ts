@@ -29,7 +29,7 @@ const BRANCHES: Record<string, Record<Lang, string>> = {
 };
 
 const TEN_GODS: Record<string, Record<Lang, string>> = {
-  比肩: { ZH: "比肩", EN: "Bi Jian (Peer)", KO: "비견" },
+  比肩: { ZH: "比肩", EN: "Friend", KO: "비견" },
   劫财: { ZH: "劫财", EN: "Jie Cai (Rival Wealth)", KO: "겁재" },
   食神: { ZH: "食神", EN: "Shi Shen (Eating God)", KO: "식신" },
   伤官: { ZH: "伤官", EN: "Shang Guan (Hurting Officer)", KO: "상관" },
@@ -65,9 +65,16 @@ export function mapGanZhi(gz: string, lang: Lang): string {
 export function mapConflictDetail(detail: string, lang: Lang): string {
   let out = detail;
   if (lang !== "ZH") {
-    out = out.replace(/([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(冲|合|刑|害|破)/g, (_, a: string, b: string, rel: string) => {
-      const relEn: Record<string, string> = { 冲: "Clash", 合: "Combine", 刑: "Punishment", 害: "Harm", 破: "Destruction" };
-      const relKo: Record<string, string> = { 冲: "충", 合: "합", 刑: "형", 害: "해", 破: "파" };
+    out = out.replace(/([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(冲|合|刑|害|破|穿)/g, (_, a: string, b: string, rel: string) => {
+      const relEn: Record<string, string> = {
+        冲: "Clash",
+        合: "Combine",
+        刑: "Punishment",
+        害: "Harm",
+        破: "Destruction",
+        穿: "Pierce",
+      };
+      const relKo: Record<string, string> = { 冲: "충", 合: "합", 刑: "형", 害: "해", 破: "파", 穿: "관통" };
       if (lang === "EN") return `${mapBranch(a, lang)}-${mapBranch(b, lang)} ${relEn[rel] ?? rel}`;
       return `${mapBranch(a, lang)}${mapBranch(b, lang)} ${relKo[rel] ?? rel}`;
     });

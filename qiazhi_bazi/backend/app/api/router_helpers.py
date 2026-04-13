@@ -38,7 +38,7 @@ def build_physics_audit_prompt(
     *,
     deity_scores: Dict[str, float],
     root_check: Dict[str, Any],
-    seasonal_factors: Dict[str, Any],
+    climate_season_context: Dict[str, Any],
     consensus_history: List[Dict[str, Any]],
     lang: str,
     blind_skill_system_suffix: str = "",
@@ -52,7 +52,7 @@ def build_physics_audit_prompt(
     return build_physics_audit_messages(
         deity_scores=deity_scores,
         root_check=root_check,
-        seasonal_factors=seasonal_factors,
+        climate_season_context=climate_season_context,
         consensus_history=consensus_history,
         lang=lang,
         blind_skill_system_suffix=blind_skill_system_suffix,

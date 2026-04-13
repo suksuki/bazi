@@ -55,7 +55,7 @@ def build_audit_prompt_payload(
     audit_log = (physics_tensor or {}).get("audit_log", {}) or {}
     trace = (audit_log.get("trace", {}) if isinstance(audit_log, dict) else {}) or {}
     root_check = trace.get("root_check", {}) if isinstance(trace, dict) else {}
-    seasonal_factors = {
+    climate_season_context = {
         "solar_term": (physics_tensor or {}).get("meta", {}).get("solar_term", "derived_from_month_branch"),
         "params": (physics_tensor or {}).get("meta", {}).get("params", {}),
     }
@@ -72,7 +72,7 @@ def build_audit_prompt_payload(
     prompt = build_physics_audit_prompt(
         deity_scores=deity_scores,
         root_check=root_check if isinstance(root_check, dict) else {},
-        seasonal_factors=seasonal_factors,
+        climate_season_context=climate_season_context,
         consensus_history=body.consensus_history or [],
         lang=body.lang,
         blind_skill_system_suffix=blind_skill_block,
@@ -101,7 +101,7 @@ def build_audit_prompt_payload(
         {
             "deity_scores": deity_scores,
             "root_check": root_check,
-            "seasonal_factors": seasonal_factors,
+            "climate_season_context": climate_season_context,
         },
         tier,
     )

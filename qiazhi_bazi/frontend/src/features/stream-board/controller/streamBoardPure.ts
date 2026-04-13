@@ -1,4 +1,11 @@
-import type { LogicProposal, LlmDiagnosticData, PhysicsLabConfig, PluginSwitches, SeedPayload } from "@/features/stream-board/models";
+import type {
+  LogicProposal,
+  LlmDiagnosticData,
+  PatternThresholdRow,
+  PhysicsLabConfig,
+  PluginSwitches,
+  SeedPayload,
+} from "@/features/stream-board/models";
 import type { MetricSnapshot } from "./streamBoardTypes";
 
 /** 与 persistSnapshot / mergeSnapshot 使用的 seed 签名一致（不含 reference_year） */
@@ -62,6 +69,28 @@ export function mergeDecisionIdsPreferLocal(prev: string[], snapshot: string[]):
   return normalizeDecisionIds([...prevN, ...snapN]);
 }
 
+/** V8.1：manifest 格局引擎常驻 ID（与 Registry `classical.pattern_detector.v2` 对齐） */
+export const RESIDENT_PATTERN_PLUGIN_ID = "classical.pattern_detector.v2" as const;
+
+/**
+ * 拼装 ``enabled_plugins``：V8.2 格局引擎首位 + UI 开关去重。
+ * 仅当 ``?pure_physics_audit=1`` 时省略格局插件（纯物理审计）。
+ */
+export function buildStreamBoardEnabledPlugins(
+  switches: PluginSwitches,
+  opts?: { purePhysicsAudit?: boolean },
+): string[] {
+  const uiSwitches = [
+    ...(switches.blindSchool ? ["classical.blind_school.v1"] : []),
+    ...(switches.wangshuai ? ["classical.wangshuai.v1"] : []),
+    ...(switches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
+  ];
+  if (opts?.purePhysicsAudit) {
+    return uiSwitches;
+  }
+  return [...new Set([RESIDENT_PATTERN_PLUGIN_ID, ...uiSwitches])];
+}
+
 export function buildBlindSchoolFeaturesPayload(sw: PluginSwitches) {
   return {
     enable_pierce_harm: sw.blindSchoolPierceHarm !== false,
@@ -71,6 +100,8 @@ export function buildBlindSchoolFeaturesPayload(sw: PluginSwitches) {
 }
 
 const ALLOWED_USER_DIRECTIONS = new Set(["东", "南", "西", "北", "中"]);
+
+const ALLOWED_USER_INTENTIONS = new Set(["seek_stability", "seek_wealth", "seek_fame"]);
 
 /** 与后端 `audit_helpers.ALLOWED_LOGIC_PROPOSAL_PARAM_KEYS` 一致：物理审计可改参键白名单 */
 export const PHYSICS_AUDIT_LOGIC_PROPOSAL_PARAM_KEYS = new Set([
@@ -193,6 +224,12 @@ export function buildPhysicsConfigPayload(lab: PhysicsLabConfig): Record<string,
   } else {
     cfg.user_target_direction = dir;
   }
+  const intent = String(cfg.user_intention || "").trim();
+  if (!intent || !ALLOWED_USER_INTENTIONS.has(intent)) {
+    delete cfg.user_intention;
+  } else {
+    cfg.user_intention = intent;
+  }
   return cfg;
 }
 
@@ -301,4 +338,97 @@ export function interpolateColor(startHex: string, endHex: string, ratio: number
   const g = a.g + (b.g - a.g) * normalized;
   const bVal = a.b + (b.b - a.b) * normalized;
   return `#${toHex(r)}${toHex(g)}${toHex(bVal)}`;
+}
+
+/** 解析 `physics_update.pattern_thresholds`（宽松容忍缺字段） */
+export function parsePatternThresholdsPayload(payload: unknown): PatternThresholdRow[] {
+  if (!Array.isArray(payload)) return [];
+  const out: PatternThresholdRow[] = [];
+  for (const item of payload) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const o = item as Record<string, unknown>;
+    const name = String(o.name ?? "").trim();
+    const progress = Number(o.progress);
+    const stability = Number(o.stability);
+    const tvRaw = Number(o.temporal_volatility);
+    const temporal_volatility = Number.isFinite(tvRaw) ? Math.max(0, Math.min(1, tvRaw)) : undefined;
+    const affRaw = Number(o.affinity_score);
+    const affinity_score = Number.isFinite(affRaw) ? Math.max(0, Math.min(1, affRaw)) : undefined;
+    const preWillRaw = Number(o.affinity_pre_will_proxy);
+    const affinity_pre_will_proxy = Number.isFinite(preWillRaw) ? Math.max(0, Math.min(1, preWillRaw)) : undefined;
+    const preRaw = Number(o.pre_exclusion_affinity);
+    const pre_exclusion_affinity = Number.isFinite(preRaw) ? Math.max(0, Math.min(1, preRaw)) : undefined;
+    const exclusion_hit = o.exclusion_hit === true;
+    const i18n_key = typeof o.i18n_key === "string" && o.i18n_key.trim() ? String(o.i18n_key).trim() : undefined;
+    const pattern_id = typeof o.pattern_id === "string" && o.pattern_id.trim() ? String(o.pattern_id).trim() : undefined;
+    const engineV = String(o.engine_v ?? "").trim();
+    if (engineV !== "MANIFEST_V5.8_STRICT") continue;
+    const primary_axis =
+      typeof o.primary_axis === "string" && o.primary_axis.trim() ? String(o.primary_axis).trim() : undefined;
+    const pae = Number(o.primary_axis_energy);
+    const primary_axis_energy = Number.isFinite(pae) ? pae : undefined;
+    let gating_min_energy: number | undefined = undefined;
+    if (o.gating_min_energy != null) {
+      const gmin = Number(o.gating_min_energy);
+      if (Number.isFinite(gmin)) gating_min_energy = Math.max(0, Math.min(1, gmin));
+    }
+    let gating_max_self_energy: number | undefined = undefined;
+    if (o.gating_max_self_energy != null) {
+      const gmax = Number(o.gating_max_self_energy);
+      if (Number.isFinite(gmax)) gating_max_self_energy = Math.max(0, Math.min(1, gmax));
+    }
+    const snapsRaw = o.exclusion_axis_snapshots;
+    let exclusion_axis_snapshots: PatternThresholdRow["exclusion_axis_snapshots"] = undefined;
+    if (Array.isArray(snapsRaw)) {
+      exclusion_axis_snapshots = [];
+      for (const s of snapsRaw) {
+        if (!s || typeof s !== "object" || Array.isArray(s)) continue;
+        const sn = s as Record<string, unknown>;
+        const axis = String(sn.axis ?? "").trim();
+        if (!axis) continue;
+        const energy = Number(sn.energy);
+        const threshold = Number(sn.threshold);
+        exclusion_axis_snapshots.push({
+          axis,
+          label_zh: typeof sn.label_zh === "string" ? sn.label_zh : undefined,
+          energy: Number.isFinite(energy) ? energy : 0,
+          threshold: Number.isFinite(threshold) ? threshold : 0,
+          triggered: sn.triggered === true,
+        });
+      }
+      if (exclusion_axis_snapshots.length === 0) exclusion_axis_snapshots = undefined;
+    }
+    const trace_raw = o.trace_logic;
+    const trace_logic =
+      Array.isArray(trace_raw) && trace_raw.every((x) => typeof x === "string")
+        ? (trace_raw as string[])
+        : undefined;
+    const trace_zh_raw = o.trace_display_zh;
+    const trace_display_zh =
+      Array.isArray(trace_zh_raw) && trace_zh_raw.every((x) => typeof x === "string")
+        ? (trace_zh_raw as string[])
+        : undefined;
+    if (!name || !Number.isFinite(progress)) continue;
+    out.push({
+      name,
+      progress: Math.max(0, Math.min(1, progress)),
+      stability: Number.isFinite(stability) ? Math.max(0, Math.min(1, stability)) : 0.5,
+      ...(temporal_volatility !== undefined ? { temporal_volatility } : {}),
+      ...(affinity_score !== undefined ? { affinity_score } : {}),
+      ...(affinity_pre_will_proxy !== undefined ? { affinity_pre_will_proxy } : {}),
+      ...(pre_exclusion_affinity !== undefined ? { pre_exclusion_affinity } : {}),
+      ...(exclusion_hit ? { exclusion_hit: true } : {}),
+      ...(trace_logic ? { trace_logic } : {}),
+      ...(trace_display_zh ? { trace_display_zh } : {}),
+      ...(i18n_key ? { i18n_key } : {}),
+      ...(pattern_id ? { pattern_id } : {}),
+      ...(primary_axis !== undefined ? { primary_axis } : {}),
+      ...(primary_axis_energy !== undefined ? { primary_axis_energy } : {}),
+      ...(gating_min_energy !== undefined ? { gating_min_energy } : {}),
+      ...(gating_max_self_energy !== undefined ? { gating_max_self_energy } : {}),
+      ...(exclusion_axis_snapshots ? { exclusion_axis_snapshots } : {}),
+      engine_v: engineV,
+    });
+  }
+  return out;
 }

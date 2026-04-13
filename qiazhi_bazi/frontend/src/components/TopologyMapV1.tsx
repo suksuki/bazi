@@ -16,6 +16,9 @@ type Props = {
   onActivateSanheEdge?: (edge: Edge) => void;
   /** 与 edge.detail 或 `${from}->${to}` 对齐的高亮键 */
   activeEdgeKey?: string | null;
+  /** V11：意志拓扑 inverse factor（>1 外虚线，<1 内虚线） */
+  willInverseFactor?: number;
+  t?: (s: string) => string;
 };
 
 function selectEdgesForHud(raw: Edge[]): Edge[] {
@@ -30,7 +33,7 @@ function edgeKey(e: Edge, idx: number): string {
   return `${String(e.from)}->${String(e.to)}:${idx}`;
 }
 
-export function TopologyMapV1({ graph = {}, onActivateSanheEdge, activeEdgeKey }: Props) {
+export function TopologyMapV1({ graph = {}, onActivateSanheEdge, activeEdgeKey, willInverseFactor, t = (s) => s }: Props) {
   const rawEdges = ((graph as { edges?: Edge[] }).edges || []) as Edge[];
   const edges = selectEdgesForHud(rawEdges);
   const nodes = ((graph as { nodes?: Array<{ id: string; label: string; kind?: string }> }).nodes || []);
@@ -47,7 +50,14 @@ export function TopologyMapV1({ graph = {}, onActivateSanheEdge, activeEdgeKey }
   return (
     <div className="rounded border border-zinc-700 bg-zinc-950 p-2 text-[11px]">
       <p className="mb-1 text-zinc-300">ETRM 拓扑图（V1）</p>
-      <CircularTopologyEngine nodes={nodes} edges={edges} threshold={threshold} climateIntensity={climateIntensity} />
+      <CircularTopologyEngine
+        nodes={nodes as Array<{ id: string; label: string; kind?: string; pre_will_energy?: number; abs_final?: number }>}
+        edges={edges}
+        threshold={threshold}
+        climateIntensity={climateIntensity}
+        willInverseFactor={willInverseFactor}
+        t={t}
+      />
       <div className="space-y-1">
         {edges.map((e, idx) => {
           const work = Number(e.final_work || 0);

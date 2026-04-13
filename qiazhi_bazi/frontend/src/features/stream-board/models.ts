@@ -9,6 +9,10 @@ export type SeedPayload = {
   gender: "male" | "female";
 };
 
+/** V10 WILL_PROXY：与后端 `UserIntentionId` / `physics_config.user_intention` 对齐 */
+export const USER_INTENTION_IDS = ["seek_stability", "seek_wealth", "seek_fame"] as const;
+export type UserIntentionId = (typeof USER_INTENTION_IDS)[number];
+
 /**
  * analyze-seed 结束态：成功含 tensor 供指纹对比；失败带可读错误（主栏/入口须展示，避免静默失败）。
  */
@@ -18,6 +22,45 @@ export type SeedSubmitResult =
 
 /** 实验室管线四态：中枢计算 / 润色 / 待命 / 已结案 */
 export type StreamPipelinePhase = "READY" | "THINKING" | "POLISHING" | "DECIDED";
+
+/** 中枢 SSE physics_update：格局引力水位（name + 达成度 progress + stability） */
+export type PatternThresholdRow = {
+  name: string;
+  progress: number;
+  stability: number;
+  /** 后端根据冲突矩阵估算的时空波动率 ∈[0,1]，用于水位线风险态 */
+  temporal_volatility?: number;
+  /** L2 manifest 引擎：与 progress 对齐的亲和度；用于 UI 分档 */
+  affinity_score?: number;
+  /** WILL_PROXY 应用意志倍率前的亲和度（与 affinity_score 并存时 UI 可画虚线对照） */
+  affinity_pre_will_proxy?: number;
+  /** 拦截前得分（用于 exclusion 抖动门控） */
+  pre_exclusion_affinity?: number;
+  exclusion_hit?: boolean;
+  trace_logic?: string[];
+  /** 后端 manifest 引擎生成的人读拦截句（如「[拦截] 印星…」） */
+  trace_display_zh?: string[];
+  i18n_key?: string;
+  pattern_id?: string;
+  /** L2 manifest 严格指纹；仅 MANIFEST_V5.8_STRICT 可进水位线渲染 */
+  engine_v?: string;
+  /** 法典 primary_axis（如 Output_Axis） */
+  primary_axis?: string | null;
+  /** 当前张量主轴能量（与 gating 对照） */
+  primary_axis_energy?: number;
+  /** 法典 gating.min_energy */
+  gating_min_energy?: number | null;
+  /** 法典 gating.max_self_energy */
+  gating_max_self_energy?: number | null;
+  /** L2 排除红线快照（与后端 exclusion_axis_snapshots 对齐） */
+  exclusion_axis_snapshots?: Array<{
+    axis: string;
+    label_zh?: string;
+    energy: number;
+    threshold: number;
+    triggered: boolean;
+  }>;
+};
 
 export type StreamPipelineEventKind =
   | "SCAN_STARTED"
@@ -31,7 +74,12 @@ export type StreamPipelineEventKind =
   | "NARRATIVE_REFRESH_STARTED";
 
 /** LLM / Inbox 个体干预类型（对齐 IndividualAdjustment 协议） */
-export type IndividualAdjustmentKind = "ENERGY_PATCH" | "SEMANTIC_VERDICT";
+export type IndividualAdjustmentKind =
+  | "ENERGY_PATCH"
+  | "SEMANTIC_VERDICT"
+  /** 结构影子预览 / 意志归档扩展（与后端 structural_preview 白名单对齐） */
+  | "PLUGIN_ENABLE"
+  | "LOGIC_OVERRIDE";
 
 export type LogicProposal = {
   title?: string;
@@ -47,6 +95,8 @@ export type LogicProposal = {
   energy_deltas?: Record<string, number>;
   /** 物理审计 LLM 诊断正文（勾选能量补丁时一并归档到 persistence_layer） */
   diagnosis?: string;
+  /** PLUGIN_ENABLE 结构预览 / 归档用插件 id */
+  plugin_id?: string;
 };
 
 export type InboxCard = {
@@ -142,6 +192,8 @@ export type PhysicsLabConfig = {
   STATUS_BOOST_MULTIPLIER?: number;
   /** 用户环境方位：东/南/西/北/中；触发后端 L1_OP_GEOGRAPHY 场强演示 */
   user_target_direction?: string;
+  /** V10：意志锚点 → WILL_PROXY / L2 affinity 加成 */
+  user_intention?: UserIntentionId;
   /** 深度地支 / 天干五合：与 DEFAULT_PHYSICS_SETTINGS 对齐，供 Admin 实验滑块写入 analyze-seed */
   L1_SUB_BRANCH_OP_ENABLE?: number;
   SUB_BRANCH_BANHE_PHI?: number;
@@ -164,6 +216,11 @@ export type PhysicsLabConfig = {
   L0_HIDDEN_ENERGY_SCALE?: number;
   L0_ROOT_BOOST_FACTOR?: number;
   L0_YM_DH_WEIGHT_RATIO?: number;
+};
+
+/** analyze-seed：与当前 lab 合并后再 `buildPhysicsConfigPayload`（解决 setState 与请求时序） */
+export type SeedSubmitOptions = {
+  physics_config_merge?: Partial<PhysicsLabConfig>;
 };
 
 export type PluginSwitches = {
@@ -285,6 +342,10 @@ export type StreamBoardViewModel = {
   pipelinePhase: StreamPipelinePhase;
   /** requires_narrative_refresh 触发的意志重塑：顶栏流式条与 THINKING 联动 */
   narrativeReshapeActive: boolean;
+  /** 中枢 SSE `vf_discovered`：压入判词骨架前缀的已验事实行 */
+  orchestratorVfSkeletonLines: string[];
+  /** 中枢 SSE `audit_pulse`：因果路由备忘流（逻辑演化轴顶栏） */
+  orchestratorCausalAuditPulse: string;
   consultationId: number | null;
   metadata: BaziMetadata | null;
   timeline: TimelineSnapshot | null;
@@ -341,8 +402,14 @@ export type StreamBoardViewModel = {
   verdictSkeletonContentKey: string;
   /** physics_tensor.meta.pattern_profile：从格/化格候选等 */
   patternProfile: Record<string, unknown> | null;
+  /** 与 meta.hit_pattern_name / l2_pattern_result_summary_v1 对齐；缺省为「常规格」（顶栏 + 法典水位区同文案） */
+  patternCodexHeadline: string;
   /** physics_tensor.meta.energy_flow_audit：五行相生流通审计 */
   energyFlowAudit: Record<string, unknown> | null;
+  /** 中枢 physics_update / meta：格局引力水位线 */
+  patternThresholds: PatternThresholdRow[];
+  /** V6.9：EMPTY_NO_DATA 时水位线显式空态，禁止静默混用旧算法 */
+  patternThresholdsStatus: string | null;
   auditorProposalCards: InboxCard[];
   autoConvertedParamKey: string | null;
   consensusHistory: Array<{ decision_key: string; confirmed_value?: number; reasoning?: string }>;
@@ -387,6 +454,10 @@ export type StreamBoardViewModel = {
   showPhysicsAudit: boolean;
   setShowPhysicsAudit: Dispatch<SetStateAction<boolean>>;
   pluginSwitches: PluginSwitches;
+  /** URL ``?pure_physics_audit=1``：纯物理审计，不声明格局 manifest 插件 */
+  purePhysicsAudit: boolean;
+  /** 实验室快照 physics_tensor：供 V6.1 推荐等只读派生请求 */
+  physicsTensorSnapshot: Record<string, unknown> | null;
   setPluginSwitches: Dispatch<SetStateAction<PluginSwitches>>;
   pluginWeights: PluginWeights;
   setPluginWeights: Dispatch<SetStateAction<PluginWeights>>;
@@ -398,7 +469,7 @@ export type StreamBoardViewModel = {
   logicDrawerDetails: string[];
   logicDrawerTrace: Record<string, unknown> | null;
   setLogicDrawerOpen: Dispatch<SetStateAction<boolean>>;
-  onSeedSubmit: (payload: SeedPayload) => Promise<SeedSubmitResult>;
+  onSeedSubmit: (payload: SeedPayload, options?: SeedSubmitOptions) => Promise<SeedSubmitResult>;
   addAuditorProposalToInbox: (proposal: LogicProposal) => void;
   /** 物理审计 diagnosis 语义层卡片（mp_semantic_layer），与可执行 param 提案解耦 */
   addPhysicsAuditSemanticDiagnosisToInbox: (payload: {
@@ -407,6 +478,9 @@ export type StreamBoardViewModel = {
     causal_reasoning?: string;
   }) => void;
   onExecuteDecision: (selected: InboxCard[]) => Promise<void>;
+  /** 悬停 Inbox 卡：影子预览（SSE is_preview，不落库） */
+  previewDecision: (patchId: string) => Promise<void>;
+  clearPreview: () => void;
   /** Inbox 勾选（Approval）后静默调用 orchestrator internal-loop，不阻塞 UI */
   scheduleSilentInternalLoopOnApprovalSelection?: (selected: InboxCard[]) => void;
   /** Tier-2 收敛或 Inbox 语义沉淀后：强制调用终判 LLM 做语义整合 */

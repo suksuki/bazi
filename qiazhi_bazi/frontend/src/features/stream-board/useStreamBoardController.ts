@@ -52,6 +52,7 @@ import type {
   LogicDiff,
   LlmDiagnosticData,
   LogicProposal,
+  PatternThresholdRow,
   PluginWeights,
   SeedPayload,
   StreamBoardViewModel,
@@ -73,6 +74,11 @@ import { useLabStore, useUiLang } from "@/features/stream-board/stores/useLabSto
 
 export function useStreamBoardController(): StreamBoardViewModel {
   const searchParams = useClientSearchParams();
+  const purePhysicsAudit = useMemo(
+    () =>
+      (searchParams.get("pure_physics_audit") || searchParams.get("purePhysicsAudit") || "").trim() === "1",
+    [searchParams],
+  );
   const {
     state: labState,
     mergeSnapshot,
@@ -80,6 +86,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalizeVerdict: finalizeVerdictFromLab,
     bumpSyncBarrierSeq,
     clearDecisionInbox,
+    setShadowPreview,
+    clearShadowPreview,
   } = useLabStore();
   const { activeView } = useActiveView();
   const labStateRef = useRef(labState);
@@ -177,6 +185,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setLlmDiagnosticData,
   } = useStreamBoardAuditUiState();
   const [verdictBodyRenderNonce, setVerdictBodyRenderNonce] = useState(0);
+  const [patternThresholds, setPatternThresholds] = useState<PatternThresholdRow[]>([]);
+  const [patternThresholdsStatus, setPatternThresholdsStatus] = useState<string | null>(null);
   const appendSilentAnalyzeLogRef = useRef<(line: string) => void>(() => {});
   appendSilentAnalyzeLogRef.current = (line: string) => {
     setResultLogs((prev) => [...prev, line].slice(-48));
@@ -206,6 +216,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [isStreaming, setIsStreaming] = useState(false);
   const [pipelinePhase, setPipelinePhase] = useState<StreamPipelinePhase>("READY");
   const [narrativeReshapeActive, setNarrativeReshapeActive] = useState(false);
+  const [orchestratorVfSkeletonLines, setOrchestratorVfSkeletonLines] = useState<string[]>([]);
+  const [orchestratorCausalAuditPulse, setOrchestratorCausalAuditPulse] = useState("");
   const reportPipelineEvent = useCallback((event: StreamPipelineEventKind) => {
     setPipelinePhase((prev) => reducePipelinePhase(prev, event));
   }, []);
@@ -233,8 +245,13 @@ export function useStreamBoardController(): StreamBoardViewModel {
     () => normalizedSnapshotDecisionIds(initialSnapshot?.decision_selection_ids),
   );
   useEffect(() => {
-    if (!metadata?.pillars) setPreInjectionDeityDisplay(null);
-  }, [metadata?.pillars]);
+    if (!metadata?.pillars) {
+      setPreInjectionDeityDisplay(null);
+      setOrchestratorVfSkeletonLines([]);
+      setOrchestratorCausalAuditPulse("");
+      clearShadowPreview();
+    }
+  }, [metadata?.pillars, clearShadowPreview]);
   const urlDecisionHydrated = true;
   const isSnapshotRestoringRef = useRef(false);
   const reCalculateAbsSilentlyImplRef = useRef<() => Promise<void>>(async () => {});
@@ -260,6 +277,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const isRestoringRef = useRef(false);
   const silentCtxRef = useRef<SilentBoardCtx>({
     consultationId: null,
+    purePhysicsAudit: false,
     labConfig: {
       WEIGHT_LUCK: 0.4,
       WEIGHT_YEAR: 0.2,
@@ -313,7 +331,9 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPhysicsEvidence: (_e: string[]) => {},
     setPhysicsParams: (_p: Record<string, number>) => {},
     setGlobalEntropy: (_g: number | null) => {},
-  } as SilentRecalcPhysicsSetters);
+    setPatternThresholds: (_x) => {},
+    setPatternThresholdsStatus: (_x) => {},
+  });
   const executionCtxRef = useRef<StreamBoardExecutionContext>(null as unknown as StreamBoardExecutionContext);
   const navHandledRef = useRef(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -347,6 +367,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPhysicsEvidence,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     setFinalVerdictBody,
     setFinalVerdictChangeLog,
     setFinalVerdictVersionId,
@@ -388,12 +410,16 @@ export function useStreamBoardController(): StreamBoardViewModel {
     return raw.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 120);
   }, [finalVerdictBody]);
 
-  const patternNameZh = useMemo(() => {
-    const raw = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
-    const pp = raw?.pattern_profile;
-    if (!pp || typeof pp !== "object" || Array.isArray(pp)) return "";
-    return String((pp as Record<string, unknown>).pattern_name_zh || "").trim();
+  const patternCodexHeadline = useMemo((): string => {
+    const meta = labState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const hit = typeof meta?.hit_pattern_name === "string" ? meta.hit_pattern_name.trim() : "";
+    const l2 = typeof meta?.l2_pattern_result_summary_v1 === "string" ? meta.l2_pattern_result_summary_v1.trim() : "";
+    const raw = hit || l2 || "常规格";
+    if (!raw || raw === "平常局" || raw.startsWith("平常局")) return "常规格";
+    return raw;
   }, [labState.snapshot?.physics_tensor?.meta]);
+
+  const patternNameZh = patternCodexHeadline;
 
   const structureStrategicRec = useMemo(() => {
     const rec = (finalStructureFinalDecisionV0 as { strategic_advice?: { recommendation?: string } } | null | undefined)
@@ -709,6 +735,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setResolvedCardIds,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     setConfirmedConflicts,
     setFirstPromptText,
     setTimeline,
@@ -766,6 +794,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     executeDecisionAndRefresh,
     runFinalVerdictSynthesis,
     scheduleSilentInternalLoopOnApprovalSelection,
+    previewDecision,
+    clearPreview,
   } = useStreamBoardExecution(executionCtxRef);
 
   useStreamBoardSilentRecalculateLayout({
@@ -861,6 +891,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
   isRestoringRef.current = isRestoring;
   silentCtxRef.current = {
     consultationId,
+    purePhysicsAudit,
     labConfig,
     pluginSwitches,
     pluginWeights,
@@ -883,6 +914,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPhysicsEvidence,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
   };
 
   verdictDepsRef.current = {
@@ -905,6 +938,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalLogicalEvidence,
     consultationId,
     pluginSwitches,
+    purePhysicsAudit,
     pluginWeights,
     lang,
     setResultLogs,
@@ -935,6 +969,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setResolvedCardIds,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     setConfirmedConflicts,
     setFirstPromptText,
     setTimeline,
@@ -976,6 +1012,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     mergeSnapshot,
     seedShieldSigRef,
     reportPipelineEvent,
+    purePhysicsAudit,
   };
 
   diagnosticDepsRef.current = {
@@ -983,6 +1020,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     lastSeedPayload,
     labConfig,
     pluginSwitches,
+    purePhysicsAudit,
     pluginWeights,
     lang,
     finalStructureFinalDecisionV0: finalStructureFinalDecisionV0 as Record<string, unknown> | null,
@@ -1091,6 +1129,7 @@ export function useStreamBoardController(): StreamBoardViewModel {
     reportPipelineEvent,
     labConfig,
     pluginSwitches,
+    purePhysicsAudit,
     referenceYearRef,
     timeline,
     isFinalized: labState.isFinalized,
@@ -1101,6 +1140,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setPhysicsEvidence,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     consensusHistory,
     setLlmDiagnosticData,
     addPhysicsAuditSemanticDiagnosisToInbox,
@@ -1108,6 +1149,11 @@ export function useStreamBoardController(): StreamBoardViewModel {
     addAuditorProposalToInbox,
     setAutoConvertedParamKey,
     setPreInjectionDeityDisplay,
+    setOrchestratorVfSkeletonLines,
+    setOrchestratorCausalAuditPulse,
+    setLabShadowPreview: setShadowPreview,
+    clearLabShadowPreview: clearShadowPreview,
+    deityScores,
     setNarrativeReshapeActive,
     cards,
     snapshotMetadata: (labState.snapshot?.metadata as Record<string, unknown> | null | undefined) ?? null,
@@ -1187,6 +1233,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     busy,
     pipelinePhase,
     narrativeReshapeActive,
+    orchestratorVfSkeletonLines,
+    orchestratorCausalAuditPulse,
     consultationId,
     metadata,
     timeline,
@@ -1225,7 +1273,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     conflictScanLabels,
     verdictSkeletonContentKey,
     patternProfile,
+    patternCodexHeadline,
     energyFlowAudit,
+    patternThresholds,
+    patternThresholdsStatus,
     auditorProposalCards,
     autoConvertedParamKey,
     consensusHistory,
@@ -1265,6 +1316,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     showPhysicsAudit,
     setShowPhysicsAudit,
     pluginSwitches,
+    purePhysicsAudit: Boolean(purePhysicsAudit),
+    physicsTensorSnapshot: (labState.snapshot?.physics_tensor as Record<string, unknown> | null) ?? null,
     setPluginSwitches,
     pluginWeights,
     setPluginWeights,
@@ -1280,6 +1333,8 @@ export function useStreamBoardController(): StreamBoardViewModel {
     addAuditorProposalToInbox,
     addPhysicsAuditSemanticDiagnosisToInbox,
     onExecuteDecision,
+    previewDecision,
+    clearPreview,
     scheduleSilentInternalLoopOnApprovalSelection,
     runFinalVerdictSynthesis,
     refreshVerdict,

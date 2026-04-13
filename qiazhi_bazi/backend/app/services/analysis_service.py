@@ -33,8 +33,7 @@ from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_ten
 from app.core.errors import DatabaseFetchError
 from app.services.orchestrator_service import OrchestratorService
 from app.skills.final_verdict import FinalVerdictSkill
-from app.skills.structure_final_decision import build_structure_final_decision_v0
-from app.skills.structure_resolver_v0 import resolve_structure_candidates_v0
+from app.services.helpers.l2_structure_bundle import build_structure_bundle_with_l2
 from app.skills.energy_topology_skill import EnergyTopologySkill
 
 _LOG = logging.getLogger(__name__)
@@ -239,7 +238,11 @@ def resolve_consensus_history(
 
 
 def pack_final_verdict_http_response(out: Dict[str, Any]) -> Dict[str, Any]:
-    """与 POST /v1/final-verdict JSON 响应字段一致。"""
+    """与 POST /v1/final-verdict JSON 响应字段一致。
+
+    ``hit_pattern_name``：L2 法典顶栏口径（与 ``physics_tensor.meta`` 同步）。
+    ``structure_*_v0`` 键名仅为历史兼容，负载由 ``build_structure_bundle_with_l2`` 写入，不经过已移除的 V0 manifest 链。
+    """
     return {
         "ok": True,
         "version_id": out.get("version_id"),
@@ -248,6 +251,7 @@ def pack_final_verdict_http_response(out: Dict[str, Any]) -> Dict[str, Any]:
         "logical_evidence": out.get("logical_evidence", []),
         "work_vector": out.get("work_vector", {}),
         "topology_graph_v1": out.get("topology_graph_v1", {}),
+        "hit_pattern_name": out.get("hit_pattern_name", ""),
         "structure_candidates_v0": out.get("structure_candidates_v0", {}),
         "structure_final_decision_v0": out.get("structure_final_decision_v0", {}),
         "plugin_outputs_verdict_ready": out.get("plugin_outputs_verdict_ready", {}),
@@ -408,16 +412,13 @@ async def run_stress_test(body: Any) -> Dict[str, Any]:
     baseline_work = run_blind_school_plugin(physics_tensor=baseline_tensor, metadata=metadata)
     stress_work = run_blind_school_plugin(physics_tensor=stress_tensor, metadata=metadata)
     stress_topology = EnergyTopologySkill().produce({"metadata": metadata, "physics_tensor": stress_tensor})
-    baseline_candidates = resolve_structure_candidates_v0(physics_tensor=baseline_tensor, work_vector=baseline_work)
-    stress_candidates = resolve_structure_candidates_v0(physics_tensor=stress_tensor, work_vector=stress_work)
-    baseline_decision = body.baseline_structure_final_decision or build_structure_final_decision_v0(
-        structure_candidates_v0=baseline_candidates,
-        work_vector=baseline_work,
+    baseline_candidates, computed_baseline = build_structure_bundle_with_l2(
+        physics_tensor=baseline_tensor, work_vector=baseline_work
     )
-    stress_decision = build_structure_final_decision_v0(
-        structure_candidates_v0=stress_candidates,
-        work_vector=stress_work,
+    stress_candidates, stress_decision = build_structure_bundle_with_l2(
+        physics_tensor=stress_tensor, work_vector=stress_work
     )
+    baseline_decision = body.baseline_structure_final_decision or computed_baseline
     baseline_self_abs = float(baseline_candidates.get("self_abs", 0.0) or 0.0)
     stress_self_abs = float(stress_candidates.get("self_abs", 0.0) or 0.0)
     hit_triggers = _hit_rollback_triggers(

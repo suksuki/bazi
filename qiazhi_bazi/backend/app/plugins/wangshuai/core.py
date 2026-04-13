@@ -6,7 +6,13 @@ from typing import Any, Dict
 from app.plugins.wangshuai.wangshuai_engine import evaluate_wangshuai
 
 
-def run_wangshuai_plugin(*, physics_tensor: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
+def run_wangshuai_plugin(
+    *,
+    physics_tensor: Dict[str, Any],
+    metadata: Dict[str, Any],
+    is_preview: bool = False,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
     out = evaluate_wangshuai(physics_tensor=physics_tensor or {}, metadata=metadata or {})
     audit_items = list(out.get("audit_items") or [])
     audit = (physics_tensor or {}).setdefault("audit_log", {})

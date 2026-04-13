@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BlindLogicMirror } from "@/components/BlindLogicMirror";
 import { ComparisonBridgeModal } from "@/components/ComparisonBridgeModal";
 import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
@@ -9,7 +9,12 @@ import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { elementColorClass } from "@/constants/termMap";
 import { DecisionItem } from "@/features/decision-engine/components/DecisionItem";
 import { DecisionInboxCard, VerdictChangeLog } from "@/features/decision-inbox/types";
-import type { DecisionSignalToNoiseMeta, DeityEnergyAxis, LogicDiff } from "@/features/stream-board/models";
+import type {
+  DecisionSignalToNoiseMeta,
+  DeityEnergyAxis,
+  LogicDiff,
+  UserIntentionId,
+} from "@/features/stream-board/models";
 import type { Lang } from "@/types/bazi";
 import {
   getCardElement,
@@ -20,6 +25,9 @@ import {
   sgjgEnergeticLabelForCard,
 } from "@/features/decision-inbox/utils";
 import { LiveVerdictDisplay } from "@/features/stream-board/components/LiveVerdictDisplay";
+import { PatternWaterlinePanel } from "@/features/stream-board/components/PatternWaterlinePanel";
+import { WillIntentionSelector } from "@/features/stream-board/components/WillIntentionSelector";
+import type { PatternThresholdRow } from "@/features/stream-board/models";
 import { LogicEvolutionAxis } from "@/features/stream-board/components/LogicEvolutionAxis";
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 
@@ -29,6 +37,20 @@ type Props = {
   verdictBody?: string;
   /** 物理预判 Markdown 骨架（Orchestrator / 无 LLM）；优先于终判正文展示占位 */
   verdictSkeleton?: string | null;
+  /** 影子预览：悬停卡发现的 VF 行（淡紫斜体 + PREVIEW） */
+  previewVfSkeleton?: string | null;
+  /** 结构预览：格局预警（PREVIEW） */
+  previewPatternAlert?: string | null;
+  /** 中枢 physics_update：格局引力水位（稳态） */
+  patternThresholds?: PatternThresholdRow[];
+  /** V6.9：与 `pattern_thresholds_status` 对齐（EMPTY_NO_DATA 等） */
+  patternThresholdsStatus?: string | null;
+  /** V9.1：与顶栏 `patternCodexHeadline` 同源，法典水位区命中名展示 */
+  codexHitSummary?: string;
+  /** 影子预览：悬停时的格局水位 */
+  previewPatternThresholds?: PatternThresholdRow[] | null;
+  /** 影子预览激活（用于水位线「意志步进」脉动） */
+  patternPreviewShadowActive?: boolean;
   verdictChangeLog?: VerdictChangeLog;
   logicalEvidence?: string[];
   workVector?: Record<string, unknown>;
@@ -73,6 +95,13 @@ type Props = {
   lang?: Lang;
   /** 从 Inbox L1 卡片跳转到 Debug「插件碰撞」并滚动到对应 plugin_outputs 行 */
   onOpenPluginAudit?: (pluginId: string) => void;
+  /** 悬停卡片：影子预览（能量补丁 + 结构类白名单） */
+  onDecisionCardPreviewEnter?: (patchId: string) => void;
+  onDecisionCardPreviewLeave?: () => void;
+  /** 结构预览链已建立：当前 Hover 卡片外沿极弱紫晕 */
+  previewGlowCardId?: string | null;
+  /** 中枢 SSE audit_pulse：因果路由备忘流，展示于逻辑演化轴顶栏 */
+  orchestratorCausalAuditPulse?: string | null;
   /** 全量测算结束递增，驱动主断言区骨架首秒高亮 */
   calculationNonce?: number;
   /** 终判流式/合并完成后递增，驱动 LiveVerdictDisplay 强制刷新 */
@@ -93,13 +122,56 @@ type Props = {
   decisionJournal?: DecisionJournalEntry[];
   /** 物理审计 LLM diagnosis（含从 logic_proposal 提拔），裁决舱「审计备忘」即时展示 */
   physicsAuditDiagnosis?: string | null;
+  /** V6.1：卡片 id → 已填充的 AI 推荐理由（前缀另加 t("ai.recommend.reason")） */
+  aiRecommendationHints?: Record<string, string>;
+  /** V6.3：全知推荐请求进行中（展示细进度流光） */
+  aiRecommendationsBusy?: boolean;
+  /** V10：意志锚点（WILL_PROXY） */
+  userIntention?: UserIntentionId | "" | undefined;
+  onUserIntentionChange?: (next: UserIntentionId) => void;
+  userIntentionDisabled?: boolean;
+  /** V11：meta.intention_context.topology_node_will_inverse_factor，拓扑虚线与节点报告 */
+  topologyWillInverseFactor?: number;
 };
+
+const PREVIEW_HOVER_DEBOUNCE_MS = 50;
+
+/** 推荐理由中的百分比数字加粗（如 稳定性+12.3%、达成度+4.0%、约 72%） */
+function boldNumericPercentsInText(text: string): ReactNode[] {
+  const re = /(约\s*\d+(?:\.\d+)?[%％]|[+-]?\d+(?:\.\d+)?[%％])/g;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let k = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      out.push(text.slice(last, m.index));
+    }
+    out.push(
+      <strong key={`ai-reason-num-${k++}`} className="font-semibold text-amber-200/95">
+        {m[1]}
+      </strong>,
+    );
+    last = re.lastIndex;
+  }
+  if (last < text.length) {
+    out.push(text.slice(last));
+  }
+  return out.length ? out : [text];
+}
 
 export function DecisionInbox({
   cards,
   resultLogs,
   verdictBody = "",
   verdictSkeleton = null,
+  previewVfSkeleton = null,
+  previewPatternAlert = null,
+  patternThresholds = [],
+  patternThresholdsStatus = null,
+  codexHitSummary = "",
+  previewPatternThresholds = null,
+  patternPreviewShadowActive = false,
   verdictChangeLog = {},
   logicalEvidence = [],
   workVector = {},
@@ -137,6 +209,10 @@ export function DecisionInbox({
   decisionSignalToNoise,
   lang = "ZH",
   onOpenPluginAudit,
+  onDecisionCardPreviewEnter,
+  onDecisionCardPreviewLeave,
+  previewGlowCardId = null,
+  orchestratorCausalAuditPulse = null,
   calculationNonce = 0,
   verdictBodyRenderNonce = 0,
   streamingText = "",
@@ -149,6 +225,12 @@ export function DecisionInbox({
   deityScores = {},
   decisionJournal = [],
   physicsAuditDiagnosis = null,
+  aiRecommendationHints = {},
+  aiRecommendationsBusy = false,
+  userIntention,
+  onUserIntentionChange,
+  userIntentionDisabled = false,
+  topologyWillInverseFactor,
 }: Props) {
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
   const [physResonanceTick, setPhysResonanceTick] = useState(0);
@@ -164,11 +246,25 @@ export function DecisionInbox({
     evidence: false,
     topology: false,
     structure: true,
+    /** 格局引力水位线：多格局亲和排行（与 L2 终审主结论对照） */
+    patternGravity: true,
   });
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [weighting, setWeighting] = useState(pluginWeights);
   const [inboxResetWaveKey, setInboxResetWaveKey] = useState(0);
   const inboxNoncePrevRef = useRef<number | null>(null);
+  const previewEnterDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (previewEnterDebounceRef.current) {
+        clearTimeout(previewEnterDebounceRef.current);
+        previewEnterDebounceRef.current = null;
+      }
+    },
+    [],
+  );
+
   const normalizeDeityList = (value: unknown): string[] => {
     if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
     if (typeof value === "string") {
@@ -315,6 +411,16 @@ export function DecisionInbox({
         <h3 className="text-sm font-medium">{t("Decision Inbox")}</h3>
         <span className="text-xs text-zinc-500">{t("流式对话与决策卡片")}</span>
       </div>
+      {onUserIntentionChange ? (
+        <div className="mb-3">
+          <WillIntentionSelector
+            value={userIntention}
+            onChange={onUserIntentionChange}
+            disabled={userIntentionDisabled}
+            t={t}
+          />
+        </div>
+      ) : null}
       {willToast ? (
         <div className="pointer-events-none fixed left-1/2 top-14 z-[60] max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-lg border border-fuchsia-500/50 bg-fuchsia-950/95 px-3 py-2 text-center text-[11px] font-medium text-fuchsia-50 shadow-xl">
           {willToast}
@@ -325,6 +431,7 @@ export function DecisionInbox({
           resultLogs={resultLogs}
           decisionJournal={decisionJournal}
           metadata={metadata}
+          liveCausalPulse={orchestratorCausalAuditPulse}
           t={t}
         />
       </div>
@@ -342,6 +449,18 @@ export function DecisionInbox({
               Abs
             </p>
           ) : null}
+          {aiRecommendationsBusy ? (
+            <div className="mt-2 space-y-1" role="status" aria-live="polite">
+              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-amber-500/85">{t("ai.recommend.loading")}</p>
+              <div className="relative h-px w-full overflow-hidden rounded-full bg-zinc-800/95">
+                <motion.div
+                  className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-transparent via-amber-400/75 to-transparent"
+                  animate={{ x: ["-40%", "220%"] }}
+                  transition={{ duration: 2.1, repeat: Infinity, ease: "linear" }}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="mt-3 space-y-2">
             {cards.length === 0 ? <p className="text-xs text-zinc-500">{t("暂无可执行决策项。")}</p> : null}
             <AnimatePresence initial={false}>
@@ -351,6 +470,7 @@ export function DecisionInbox({
                   const element = getCardElement(card);
                   const isProposal = isAuditorProposal(card.cardType);
                   const showDeltaBadge = actionMode === "PARAMETER_DIRTY" && autoSyncIdle;
+                  const aiReco = aiRecommendationHints[card.id];
                   return (
                     <motion.div
                       key={card.id}
@@ -358,9 +478,80 @@ export function DecisionInbox({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       transition={{ duration: 0.22 }}
-                      className={`space-y-1 ${interactionLocked ? "opacity-60" : ""}`}
+                      className={`relative space-y-1 overflow-hidden rounded-lg pr-9 ${interactionLocked ? "opacity-60" : ""} ${
+                        previewGlowCardId && previewGlowCardId === card.id
+                          ? "ring-1 ring-violet-500/20 shadow-[0_0_22px_rgba(139,92,246,0.14)]"
+                          : ""
+                      }${aiReco ? " ring-1 ring-amber-500/18 shadow-[0_0_20px_rgba(251,191,36,0.08)]" : ""}`}
+                      onPointerEnter={() => {
+                        if (interactionLocked || !onDecisionCardPreviewEnter) return;
+                        if (previewEnterDebounceRef.current) clearTimeout(previewEnterDebounceRef.current);
+                        previewEnterDebounceRef.current = setTimeout(() => {
+                          previewEnterDebounceRef.current = null;
+                          onDecisionCardPreviewEnter(card.id);
+                        }, PREVIEW_HOVER_DEBOUNCE_MS);
+                      }}
+                      onPointerLeave={() => {
+                        if (previewEnterDebounceRef.current) {
+                          clearTimeout(previewEnterDebounceRef.current);
+                          previewEnterDebounceRef.current = null;
+                        }
+                        if (!onDecisionCardPreviewLeave) return;
+                        onDecisionCardPreviewLeave();
+                      }}
                     >
-                      <label className="block">
+                      {aiReco ? (
+                        <motion.div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 z-0 rounded-lg"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 1.2 }}
+                        >
+                          <motion.div
+                            className="absolute -left-[18%] -top-[22%] h-[150%] w-[150%] blur-2xl"
+                            style={{
+                              background:
+                                "radial-gradient(circle at 30% 32%, rgba(251,191,36,0.14), transparent 46%), radial-gradient(circle at 74% 70%, rgba(168,85,247,0.11), transparent 48%), radial-gradient(circle at 50% 50%, rgba(34,211,238,0.06), transparent 55%)",
+                            }}
+                            animate={{ x: ["-3%", "4%", "-3%"], y: ["-2%", "3%", "-2%"] }}
+                            transition={{ duration: 56, repeat: Infinity, ease: "easeInOut" }}
+                          />
+                        </motion.div>
+                      ) : null}
+                      {aiReco ? (
+                        <div className="pointer-events-auto absolute right-1 top-1 z-20">
+                          <div className="group/aiSpark relative">
+                            <motion.span
+                              className="relative flex h-7 w-7 cursor-default items-center justify-center rounded-full border border-amber-400/45 bg-gradient-to-br from-amber-500/35 via-fuchsia-600/25 to-cyan-500/30 shadow-[0_0_14px_rgba(251,191,36,0.45)]"
+                              aria-label={t("AI 星火勋章")}
+                              animate={{
+                                boxShadow: [
+                                  "0 0 10px rgba(251,191,36,0.35)",
+                                  "0 0 18px rgba(168,85,247,0.55)",
+                                  "0 0 10px rgba(251,191,36,0.35)",
+                                ],
+                              }}
+                              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                              <motion.span
+                                className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/35 to-transparent opacity-70"
+                                animate={{ rotate: [0, 360] }}
+                                transition={{ duration: 4.5, repeat: Infinity, ease: "linear" }}
+                              />
+                              <span className="relative z-[1] text-[11px] leading-none text-amber-100">✦</span>
+                            </motion.span>
+                            <div
+                              className="pointer-events-none invisible absolute right-0 top-[calc(100%+6px)] z-[40] w-[min(20rem,78vw)] rounded-lg border border-amber-500/35 bg-zinc-950/98 px-2.5 py-2 text-left text-[10px] leading-snug text-zinc-100 shadow-xl backdrop-blur-sm group-hover/aiSpark:visible group-hover/aiSpark:pointer-events-auto"
+                              role="tooltip"
+                            >
+                              <span className="font-medium text-amber-200/95">{t("ai.recommend.reason")}</span>
+                              <span className="text-zinc-200">{boldNumericPercentsInText(aiReco)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <label className="relative z-10 block">
                         <DecisionItem
                           label={labelText}
                           selected={Boolean(selectedIds[card.id])}
@@ -383,7 +574,7 @@ export function DecisionInbox({
                         <button
                           type="button"
                           onClick={() => onOpenPluginAudit(String(card.pluginAuditAnchorId))}
-                          className="ml-1 text-left text-[10px] text-cyan-400/90 underline-offset-2 hover:text-cyan-200 hover:underline"
+                          className="relative z-10 ml-1 text-left text-[10px] text-cyan-400/90 underline-offset-2 hover:text-cyan-200 hover:underline"
                         >
                           {t("跳转插件碰撞审计")}
                         </button>
@@ -542,6 +733,9 @@ export function DecisionInbox({
           ) : null}
           <LiveVerdictDisplay
             verdictSkeleton={verdictSkeleton ?? null}
+            previewVfSkeleton={previewVfSkeleton}
+            previewPatternAlert={previewPatternAlert}
+            previewPatternThresholds={previewPatternThresholds}
             verdictBody={verdictBody}
             physicsAuditDiagnosis={physicsAuditDiagnosis}
             metadata={metadata}
@@ -561,6 +755,7 @@ export function DecisionInbox({
             preInjectionDeityDisplay={preInjectionDeityDisplay}
             showPreInjectionAbsSnapshot={showPreInjectionAbsSnapshot}
             onShowPreInjectionAbsSnapshotChange={onShowPreInjectionAbsSnapshotChange}
+            userIntention={userIntention}
           />
           {(verdictChangeLog.physics_diff?.length || verdictChangeLog.consensus_diff?.length || verdictChangeLog.text_diff_hint) ? (
             <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
@@ -647,24 +842,45 @@ export function DecisionInbox({
               <span>{t("拓扑图（Topology）")}</span>
               <span>{summaryOpen.topology ? t("收起") : t("展开")}</span>
             </button>
-            {summaryOpen.topology ? <TopologyMapV1 graph={topologyGraph} /> : null}
+            {summaryOpen.topology ? (
+              <TopologyMapV1 graph={topologyGraph} willInverseFactor={topologyWillInverseFactor} t={t} />
+            ) : null}
           </div>
-          {typeof (structureCandidates as { hud?: unknown }).hud === "object" ? (
-            <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
-              <p className="mb-1 text-zinc-300">{t("格局态射仪表盘（V0）")}</p>
-              <div className="grid grid-cols-1 gap-1 text-zinc-400 md:grid-cols-3">
-                <p>
-                  {t("正格倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).stable_pct || 0).toFixed(2)}%
-                </p>
-                <p>
-                  {t("从格倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).follower_pct || 0).toFixed(2)}%
-                </p>
-                <p>
-                  {t("跃迁倾向:")} {Number(((structureCandidates as { hud?: Record<string, unknown> }).hud || {}).leap_pct || 0).toFixed(2)}%
-                </p>
-              </div>
+          <LayoutGroup id="pattern-gravity-suite">
+            <div className="mt-2 rounded-md border border-violet-900/40 bg-zinc-900/95 p-2 text-[11px] shadow-md shadow-violet-950/20">
+              <button
+                type="button"
+                onClick={() => toggleSummary("patternGravity")}
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded border border-violet-800/40 bg-zinc-950/90 px-2 py-1 text-left text-zinc-300 hover:bg-violet-950/35"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-medium uppercase tracking-wider text-violet-300/90">
+                    {t("拓扑 · 格局引力")}
+                  </span>
+                  {!summaryOpen.patternGravity && codexHitSummary.trim() ? (
+                    <span className="mt-0.5 block truncate text-[10px] text-zinc-500" title={codexHitSummary.trim()}>
+                      {codexHitSummary.trim()}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="shrink-0 text-zinc-400">{summaryOpen.patternGravity ? t("收起") : t("展开")}</span>
+              </button>
+              {summaryOpen.patternGravity ? (
+                <motion.div layout layoutId="pattern-waterline-orbit">
+                  <PatternWaterlinePanel
+                    key={lang}
+                    committed={patternThresholds}
+                    preview={previewPatternThresholds}
+                    shadowActive={patternPreviewShadowActive}
+                    patternThresholdsStatus={patternThresholdsStatus}
+                    codexHitSummary={codexHitSummary}
+                    t={t}
+                    className="mt-0 border-0 bg-transparent p-0 shadow-none ring-0"
+                  />
+                </motion.div>
+              ) : null}
             </div>
-          ) : null}
+          </LayoutGroup>
           {typeof (structureFinalDecision as { primary_structure?: unknown }).primary_structure === "string" ? (
             <div className="mt-2 rounded-md border border-zinc-700 bg-zinc-900 p-2 text-[11px]">
               <button
@@ -672,7 +888,7 @@ export function DecisionInbox({
                 onClick={() => toggleSummary("structure")}
                 className="mb-2 flex w-full items-center justify-between rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-left text-zinc-300 hover:bg-zinc-800"
               >
-                <span>{t("L2 格局终审结果（V0）")}</span>
+                <span>{t("L2 格局终审结果")}</span>
                 <span>{summaryOpen.structure ? t("收起") : t("展开")}</span>
               </button>
               {summaryOpen.structure ? <>

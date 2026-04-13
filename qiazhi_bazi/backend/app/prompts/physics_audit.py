@@ -53,7 +53,7 @@ def build_physics_audit_messages(
     *,
     deity_scores: Dict[str, float],
     root_check: Dict[str, Any],
-    seasonal_factors: Dict[str, Any],
+    climate_season_context: Dict[str, Any],
     consensus_history: List[Dict[str, Any]],
     lang: str,
     blind_skill_system_suffix: str = "",
@@ -134,7 +134,7 @@ def build_physics_audit_messages(
             "[十神·仅语义档位，禁止复述 Abs 浮点或据此排序比大小]\n"
             f"{_deity_semantic_block_for_audit_user(deity_scores)}\n"
             f"根气:{json.dumps(root_check, ensure_ascii=False)} "
-            f"季节:{json.dumps(seasonal_factors, ensure_ascii=False)} "
+            f"季节:{json.dumps(climate_season_context, ensure_ascii=False)} "
             f"共识:{json.dumps(consensus_history or [], ensure_ascii=False)}\n"
             + trace_user
             + duel_user
@@ -163,7 +163,7 @@ def build_physics_audit_messages(
         "[十神·仅语义档位]\n"
         f"{_deity_semantic_block_for_audit_user(deity_scores)}\n"
         f"根气={json.dumps(root_check, ensure_ascii=False)}；"
-        f"季节={json.dumps(seasonal_factors, ensure_ascii=False)}。\n"
+        f"季节={json.dumps(climate_season_context, ensure_ascii=False)}。\n"
         f"共识\n{json.dumps(consensus_history or [], ensure_ascii=False)}\n"
         + trace_user
         + duel_user_std

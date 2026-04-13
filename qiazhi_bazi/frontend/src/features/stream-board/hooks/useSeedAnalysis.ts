@@ -8,9 +8,11 @@ import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
   buildPhysicsConfigPayload,
+  buildStreamBoardEnabledPlugins,
   coerceLogicProposalParamKey,
   mergeLlmDiagnosticSameSeedPreserve,
   extractMetricSnapshotFromPhysics,
+  parsePatternThresholdsPayload,
   hoistPhysicsAuditDiagnosis,
   isPhysicsAuditFallbackUi,
   seedPayloadSignature,
@@ -29,9 +31,11 @@ import type {
   LogicProposal,
   LlmDiagnosticData,
   FinalVerdictChangeLog,
+  PatternThresholdRow,
   PhysicsLabConfig,
   PluginSwitches,
   SeedPayload,
+  SeedSubmitOptions,
 } from "../models";
 import type { LabLlmRoundSnapshot } from "@/features/stream-board/stores/LabSessionContext";
 import { parseFirstObservationLlmFromAnalyze, parsePhysicsAuditorLlm } from "@/features/stream-board/controller/labLlmSnapshotParse";
@@ -62,6 +66,8 @@ export type SeedAnalysisDeps = {
   setResolvedCardIds: Dispatch<SetStateAction<string[]>>;
   setPhysicsParams: Dispatch<SetStateAction<Record<string, number>>>;
   setGlobalEntropy: Dispatch<SetStateAction<number | null>>;
+  setPatternThresholds: Dispatch<SetStateAction<PatternThresholdRow[]>>;
+  setPatternThresholdsStatus: Dispatch<SetStateAction<string | null>>;
   setConfirmedConflicts: Dispatch<SetStateAction<string[]>>;
   setFirstPromptText: Dispatch<SetStateAction<string>>;
   setTimeline: Dispatch<SetStateAction<TimelineSnapshot | null>>;
@@ -121,6 +127,8 @@ export type SeedAnalysisDeps = {
   mergeSnapshot: (diff: Record<string, unknown>) => void;
   /** 最近一次成功 analyze-seed 的 seed 签名；用于区分「校准重算」与「用户更换生辰」 */
   seedShieldSigRef: MutableRefObject<string | null>;
+  /** URL ``?pure_physics_audit=1``：纯物理审计，不挂载格局 manifest 插件 */
+  purePhysicsAudit?: boolean;
 };
 
 /**
@@ -128,8 +136,14 @@ export type SeedAnalysisDeps = {
  */
 export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
   const onSeedSubmit = useCallback(
-    async (payload: SeedPayload) => {
+    async (payload: SeedPayload, options?: SeedSubmitOptions) => {
       const d = depsRef.current;
+      const labMerged: PhysicsLabConfig = {
+        ...d.labConfig,
+        ...(options?.physics_config_merge && typeof options.physics_config_merge === "object"
+          ? options.physics_config_merge
+          : {}),
+      };
       const incomingSig = seedPayloadSignature(payload);
       const priorSig = d.seedShieldSigRef.current;
       const sameSeedResubmit = priorSig !== null && incomingSig !== null && priorSig === incomingSig;
@@ -228,12 +242,10 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
             latitude: 31.2304,
             longitude: 121.4737,
             session_id: currentSessionId ?? undefined,
-            physics_config: buildPhysicsConfigPayload(d.labConfig),
-            enabled_plugins: [
-              ...(d.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-              ...(d.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-              ...(d.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-            ],
+            physics_config: buildPhysicsConfigPayload(labMerged),
+            enabled_plugins: buildStreamBoardEnabledPlugins(d.pluginSwitches, {
+              purePhysicsAudit: Boolean(d.purePhysicsAudit),
+            }),
             blind_school_features: buildBlindSchoolFeaturesPayload(d.pluginSwitches),
             reference_year: d.referenceYearRef.current,
           }),
@@ -314,6 +326,22 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
         }
         const geRaw = (data.physics_tensor?.meta as { global_entropy?: unknown } | undefined)?.global_entropy;
         d.setGlobalEntropy(typeof geRaw === "number" && Number.isFinite(geRaw) ? geRaw : null);
+        const pMetaSeed = (data.physics_tensor?.meta || {}) as Record<string, unknown>;
+        if (
+          Object.prototype.hasOwnProperty.call(pMetaSeed, "pattern_thresholds") ||
+          Object.prototype.hasOwnProperty.call(pMetaSeed, "pattern_thresholds_status")
+        ) {
+          const ptRows = parsePatternThresholdsPayload(pMetaSeed.pattern_thresholds);
+          d.setPatternThresholds(ptRows);
+          const stSeed = pMetaSeed.pattern_thresholds_status;
+          d.setPatternThresholdsStatus(
+            typeof stSeed === "string" && stSeed.trim()
+              ? stSeed.trim()
+              : ptRows.length > 0
+                ? "OK"
+                : null,
+          );
+        }
         const mangpaiChips = (data.physics_tensor?.meta as { mangpai_chip_logs?: unknown } | undefined)?.mangpai_chip_logs;
         if (Array.isArray(mangpaiChips)) {
           for (const line of mangpaiChips) {

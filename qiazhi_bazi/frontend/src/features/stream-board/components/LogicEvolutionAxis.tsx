@@ -11,6 +11,8 @@ export type LogicEvolutionAxisProps = {
   decisionJournal: DecisionJournalEntry[];
   /** 与 BaziMetadata.history_context.learning_annotation.entries 对齐，中枢 / 终判等追加的叙事审计行 */
   metadata?: Record<string, unknown>;
+  /** 中枢 SSE `audit_pulse` 拼接的因果路由备忘（流式刷新） */
+  liveCausalPulse?: string | null;
   t: (s: string) => string;
 };
 
@@ -22,12 +24,27 @@ type AxisEv = {
 };
 
 /** 主界面「因果堆叠」时间轴：多轮 LLM 摘要 + 审计日志 + 抑制/勾选意志（可点击展开全文） */
-export function LogicEvolutionAxis({ resultLogs, decisionJournal, metadata = {}, t }: LogicEvolutionAxisProps) {
+export function LogicEvolutionAxis({
+  resultLogs,
+  decisionJournal,
+  metadata = {},
+  liveCausalPulse = null,
+  t,
+}: LogicEvolutionAxisProps) {
   const { state: labState } = useLabStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const events = useMemo(() => {
     const out: AxisEv[] = [];
+    const pulse = String(liveCausalPulse || "").trim();
+    if (pulse) {
+      out.push({
+        id: "orch-causal-pulse",
+        side: "system",
+        preview: `${t("审计备忘")} · ${pulse.slice(0, 140)}${pulse.length > 140 ? "…" : ""}`,
+        full: `${t("审计备忘")}（因果路由）\n\n${pulse}`,
+      });
+    }
     const rounds = Array.isArray(labState.snapshot?.llm_rounds)
       ? ([...(labState.snapshot!.llm_rounds as LabLlmRoundEntry[])] as LabLlmRoundEntry[])
       : [];
@@ -67,11 +84,11 @@ export function LogicEvolutionAxis({ resultLogs, decisionJournal, metadata = {},
       const line = String(raw || "").trim();
       if (!line) return;
       if (
-        /\[PHYSICS_AUDIT\]|\[LLM_AUDIT\]|\[SILENT_ANALYZE\]|终审|orchestrator|internal-loop|审计|提案|语义整合|首观/i.test(
+        /\[SYS\]\[WILL\]|\[PHYSICS_AUDIT\]|\[LLM_AUDIT\]|\[SILENT_ANALYZE\]|终审|orchestrator|internal-loop|审计|提案|语义整合|首观/i.test(
           line,
         )
       ) {
-        const full = line.replace(/^\[PHYSICS_AUDIT\]\s*/i, `${t("物理审计")} · `);
+        const full = line.trim();
         out.push({
           id: `log-${i}`,
           side: "system",
@@ -93,7 +110,7 @@ export function LogicEvolutionAxis({ resultLogs, decisionJournal, metadata = {},
       });
     });
     return out.slice(-48);
-  }, [resultLogs, decisionJournal, metadata, labState.snapshot?.llm_rounds, t]);
+  }, [resultLogs, decisionJournal, metadata, labState.snapshot?.llm_rounds, liveCausalPulse, t]);
 
   if (events.length === 0) {
     return (
@@ -125,7 +142,9 @@ export function LogicEvolutionAxis({ resultLogs, decisionJournal, metadata = {},
                 onClick={() => setExpandedId((cur) => (cur === ev.id ? null : ev.id))}
                 aria-expanded={open}
               >
-                <span className="shrink-0 font-mono text-[8px] text-zinc-600">{ev.side === "system" ? "SYS" : "YOU"}</span>
+                <span className="shrink-0 font-mono text-[8px] text-zinc-600">
+                  {ev.side === "system" ? "SYS" : t("用户决策")}
+                </span>
                 <span className="min-w-0 flex-1 break-words">{open ? ev.full : ev.preview}</span>
               </button>
             </li>

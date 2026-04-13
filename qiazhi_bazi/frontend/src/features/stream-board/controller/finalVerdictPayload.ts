@@ -11,7 +11,7 @@ import type {
 } from "@/features/stream-board/models";
 import type { FinalVerdictResult, LlmChatMessage, VerdictNarrativeChunk } from "@/features/stream-board/models";
 import { calculateFireEnergyAfterConflicts } from "@/features/stream-board/utils";
-import { buildBlindSchoolFeaturesPayload } from "./streamBoardPure";
+import { buildBlindSchoolFeaturesPayload, buildStreamBoardEnabledPlugins } from "./streamBoardPure";
 import type { ConfirmedDecisionItem, ConsensusItem } from "./streamBoardTypes";
 
 /** 与后端 `RegenerationContext` 对齐，供 history_context.regeneration_events 审计 */
@@ -45,6 +45,8 @@ export type FinalVerdictRequestBuildInput = {
   mandatoryFinalSynthesis?: boolean;
   /** 覆盖请求体中的 metadata（如终审前合并快照 persistence_layer 与最新 Inbox 勾选） */
   metadataForRequest?: BaziMetadata | null;
+  /** URL ``?pure_physics_audit=1``：纯物理审计，终判请求不声明格局插件 */
+  purePhysicsAudit?: boolean;
 };
 
 /** 将终判返回的 metadata_memory_patch 合并进当前 BaziMetadata（浅合并 + 覆盖锚点层）。 */
@@ -150,11 +152,9 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
       conflict_list: input.conflicts || [],
       fire_energy_after_conflict: calculateFireEnergyAfterConflicts((md as BaziMetadata)?.pillars, input.conflicts),
       meta: {
-        enabled_plugins: [
-          ...(input.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-          ...(input.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-          ...(input.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-        ],
+        enabled_plugins: buildStreamBoardEnabledPlugins(input.pluginSwitches, {
+          purePhysicsAudit: Boolean(input.purePhysicsAudit),
+        }),
         blind_school_features: buildBlindSchoolFeaturesPayload(input.pluginSwitches),
       },
     },
@@ -165,11 +165,9 @@ export function buildFinalVerdictRequestBody(input: FinalVerdictRequestBuildInpu
     consultation_id: input.consultationId ?? undefined,
     clear_previous_verdict: true,
     force_clear_cache: true,
-    enabled_plugins: [
-      ...(input.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-      ...(input.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-      ...(input.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-    ],
+    enabled_plugins: buildStreamBoardEnabledPlugins(input.pluginSwitches, {
+      purePhysicsAudit: Boolean(input.purePhysicsAudit),
+    }),
     plugin_weights: {
       "classical.blind_school.v1": Number(input.pluginWeights.blindSchool || 0),
       "classical.wangshuai.v1": Number(input.pluginWeights.wangshuai || 0),

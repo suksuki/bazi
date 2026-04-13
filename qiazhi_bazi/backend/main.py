@@ -25,6 +25,10 @@ if str(_BACKEND) not in sys.path:
 from app.api.router import router as api_router
 from app.api.admin import router as admin_router
 from app.api.audit_router import router as audit_router
+from app.api.v1.admin.climate import router as admin_climate_router
+from app.api.v1.admin.conflict import router as admin_conflict_router
+from app.api.v1.admin.patterns import router as admin_patterns_router
+from app.api.v1.patterns import router as patterns_json_router
 from app.db.session import init_db
 from app.plugins.base_physics.manifest_loader import load_l1_physics_manifest
 from fastapi import FastAPI
@@ -35,6 +39,10 @@ _logger = logging.getLogger(__name__)
 app = FastAPI(title="Qiazhi-Bazi API", version="1.0.0-mvp")
 app.include_router(api_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(admin_patterns_router, prefix="/api")
+app.include_router(admin_climate_router, prefix="/api")
+app.include_router(admin_conflict_router, prefix="/api")
+app.include_router(patterns_json_router, prefix="/api")
 app.include_router(audit_router, prefix="/api")
 
 _cors = os.environ.get("QIAZHI_CORS_ORIGINS", "")

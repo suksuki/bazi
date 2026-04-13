@@ -8,7 +8,25 @@ import { UnifiedActionBar } from "@/components/UnifiedActionBar";
 import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
 import { TemporalYearSlider } from "./TemporalYearSlider";
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
-import type { DecisionSignalToNoiseMeta, StreamBoardViewModel, InboxCard } from "../models";
+import type {
+  DecisionSignalToNoiseMeta,
+  StreamBoardViewModel,
+  InboxCard,
+  SeedPayload,
+  UserIntentionId,
+} from "../models";
+import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { inferPreviewHealSegmentIndices } from "@/utils/energyFlowPreviewHeal";
+import { API_BASE } from "@/features/stream-board/constants";
+import {
+  buildBlindSchoolFeaturesPayload,
+  buildStreamBoardEnabledPlugins,
+} from "@/features/stream-board/controller/streamBoardPure";
+import {
+  buildStructuralPreviewHintForCard,
+  snapshotPatternProfileForStructuralPreview,
+} from "@/features/stream-board/controller/structuralPreviewHint";
+import { buildWillIntentionSysLogLines } from "@/features/stream-board/components/LogicAuditNarrator";
 
 function journalEntryFromInboxCard(card: InboxCard): DecisionJournalEntry | null {
   const id = String(card.id || "").trim();
@@ -131,6 +149,14 @@ export function BoardCommandPanel({
   onOpenPluginAudit,
 }: BoardCommandPanelProps) {
   const pulseReplay = usePulseReplay();
+  const { state: labShadowState } = useLabStore();
+  const previewGlowCardId =
+    labShadowState.previewStructuralLinkActive && labShadowState.activePreviewId
+      ? labShadowState.activePreviewId
+      : null;
+  const energyFlowPreviewActive = Boolean(
+    labShadowState.previewDeityScores && Object.keys(labShadowState.previewDeityScores).length > 0,
+  );
   const {
     t,
     lang,
@@ -166,6 +192,7 @@ export function BoardCommandPanel({
     setPluginWeights,
     labConfig,
     setLabConfig,
+    onSeedSubmit,
     energyFlowAudit,
     timeline,
     rerunFinalVerdictWithWeights,
@@ -184,7 +211,138 @@ export function BoardCommandPanel({
     preInjectionDeityDisplay,
     deityScores,
     llmDiagnosticData,
+    orchestratorVfSkeletonLines,
+    orchestratorCausalAuditPulse,
+    previewDecision,
+    clearPreview,
+    patternThresholds,
+    patternThresholdsStatus,
+    patternCodexHeadline,
+    physicsTensorSnapshot,
+    pluginSwitches,
+    purePhysicsAudit,
+    appendSystemAuditLog,
   } = viewModel;
+
+  const topologyWillInverseFactor = React.useMemo(() => {
+    const m = physicsTensorSnapshot?.meta as Record<string, unknown> | undefined;
+    const ic = m?.intention_context as Record<string, unknown> | undefined;
+    const f = Number(ic?.topology_node_will_inverse_factor);
+    return Number.isFinite(f) && f > 0 ? f : undefined;
+  }, [physicsTensorSnapshot]);
+
+  const [aiRecommendationHints, setAiRecommendationHints] = React.useState<Record<string, string>>({});
+  const [aiRecommendationsBusy, setAiRecommendationsBusy] = React.useState(false);
+
+  const RECOMMEND_FETCH_DEBOUNCE_MS = 400;
+  React.useEffect(() => {
+    if (isFinalized || busy || !physicsTensorSnapshot || typeof physicsTensorSnapshot !== "object") {
+      setAiRecommendationHints({});
+      setAiRecommendationsBusy(false);
+      return;
+    }
+    const ac = new AbortController();
+    const debounceTimer = window.setTimeout(() => {
+      setAiRecommendationsBusy(true);
+      const enabled_plugins = buildStreamBoardEnabledPlugins(pluginSwitches, {
+        purePhysicsAudit: Boolean(purePhysicsAudit),
+      });
+      const snap = snapshotPatternProfileForStructuralPreview(physicsTensorSnapshot);
+      void (async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/recommendations/top-decisions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              physics_tensor: physicsTensorSnapshot,
+              metadata: metadata ?? {},
+              blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
+              enabled_plugins,
+              inbox_cards: cards.map((c) => {
+                const ic = c as InboxCard;
+                const hint = buildStructuralPreviewHintForCard(ic);
+                const base: Record<string, unknown> = {
+                  id: c.id,
+                  title: c.title,
+                  cardType: c.cardType,
+                  displayText: c.displayText,
+                  pluginAuditAnchorId: c.pluginAuditAnchorId,
+                  proposal: c.proposal,
+                };
+                if (hint) {
+                  base.structural_preview_hint = {
+                    ...hint,
+                    baseline_pattern_kind: snap.baseline_pattern_kind,
+                    baseline_pattern_name_zh: snap.baseline_pattern_name_zh,
+                  };
+                }
+                return base;
+              }),
+              top_n: 3,
+            }),
+            signal: ac.signal,
+          });
+          if (!res.ok) {
+            if (!ac.signal.aborted) setAiRecommendationHints({});
+            return;
+          }
+          const data = (await res.json()) as {
+            top?: Array<{ filled_reason?: string; matched_card_ids?: string[]; candidate_id?: string; enabled_plugins?: string[] }>;
+          };
+          const hints: Record<string, string> = {};
+          const tops = Array.isArray(data.top) ? data.top : [];
+          for (const row of tops) {
+            const fr = String(row.filled_reason || "").trim();
+            if (!fr) continue;
+            const ids = Array.isArray(row.matched_card_ids) ? row.matched_card_ids : [];
+            const cand = String(row.candidate_id || "");
+            const enablePid = cand.startsWith("enable:") ? cand.slice("enable:".length) : "";
+            for (const id of ids) {
+              if (id) hints[id] = fr;
+            }
+            if (!ids.length && enablePid) {
+              for (const c of cards) {
+                if (c.pluginAuditAnchorId === enablePid) hints[c.id] = fr;
+              }
+            }
+          }
+          if (!ac.signal.aborted) setAiRecommendationHints(hints);
+        } catch {
+          if (!ac.signal.aborted) setAiRecommendationHints({});
+        } finally {
+          if (!ac.signal.aborted) setAiRecommendationsBusy(false);
+        }
+      })();
+    }, RECOMMEND_FETCH_DEBOUNCE_MS);
+    return () => {
+      ac.abort();
+      window.clearTimeout(debounceTimer);
+      setAiRecommendationsBusy(false);
+    };
+  }, [
+    busy,
+    calculationNonce,
+    cards,
+    isFinalized,
+    metadata,
+    physicsTensorSnapshot,
+    pluginSwitches,
+    purePhysicsAudit,
+  ]);
+
+  const energyFlowPreviewHealIndices = React.useMemo(
+    () => inferPreviewHealSegmentIndices(energyFlowAudit, labShadowState.previewDeltaPctByDeity),
+    [energyFlowAudit, labShadowState.previewDeltaPctByDeity],
+  );
+
+  const verdictSkeletonMerged = React.useMemo(() => {
+    const base = metadata?.verdict_anchor_layer?.verdict_skeleton ?? null;
+    const lines = orchestratorVfSkeletonLines || [];
+    if (!lines.length) return base;
+    const block = `### VF · 流式收敛\n\n${lines.map((l) => `* ${l}`).join("\n")}`;
+    const b = base && String(base).trim() ? String(base) : "";
+    return b ? `${block}\n\n${b}` : block;
+  }, [metadata?.verdict_anchor_layer?.verdict_skeleton, orchestratorVfSkeletonLines]);
 
   const prevInboxSelectionIdsRef = React.useRef<string[]>([]);
   React.useEffect(() => {
@@ -278,6 +436,8 @@ export function BoardCommandPanel({
             motionKey={referenceYear}
             className="mb-2 transition-opacity duration-500 ease-out"
             t={t}
+            previewActive={energyFlowPreviewActive}
+            previewHealSegmentIndices={energyFlowPreviewHealIndices}
           />
           {simpleBoard ? (
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 md:grid-cols-9">
@@ -348,13 +508,48 @@ export function BoardCommandPanel({
       ) : null}
       <DecisionInbox
         key={`decision-inbox-${checklistResetToken}-${calculationNonce}`}
+        userIntention={labConfig.user_intention}
+        onUserIntentionChange={(id: UserIntentionId) => {
+          if (labConfig.user_intention === id) return;
+          const prevInt = labConfig.user_intention;
+          setLabConfig((c) => ({ ...c, user_intention: id }));
+          for (const line of buildWillIntentionSysLogLines(prevInt, id, t)) {
+            appendSystemAuditLog(line);
+          }
+          if (!draftSeed || isFinalized || calculationCount < 1) return;
+          if (busy || actionSyncing || seedPreviewBusy) return;
+          void onSeedSubmit(draftSeed as SeedPayload, { physics_config_merge: { user_intention: id } });
+        }}
+        topologyWillInverseFactor={topologyWillInverseFactor}
+        userIntentionDisabled={isFinalized || busy || actionSyncing || !draftSeed || seedPreviewBusy}
         physicsAuditDiagnosis={typeof llmDiagnosticData?.diagnosis === "string" ? llmDiagnosticData.diagnosis : null}
+        aiRecommendationHints={aiRecommendationHints}
+        aiRecommendationsBusy={aiRecommendationsBusy}
         cards={cards}
         deityScores={deityScores}
         decisionJournal={decisionJournal}
         resultLogs={resultLogs}
         verdictBody={finalVerdictBody}
-        verdictSkeleton={metadata?.verdict_anchor_layer?.verdict_skeleton ?? null}
+        verdictSkeleton={verdictSkeletonMerged}
+        previewVfSkeleton={labShadowState.previewVfSkeleton?.trim() ? labShadowState.previewVfSkeleton : null}
+        previewPatternAlert={
+          labShadowState.previewPatternAlert?.trim() ? labShadowState.previewPatternAlert : null
+        }
+        patternThresholds={patternThresholds}
+        patternThresholdsStatus={patternThresholdsStatus}
+        codexHitSummary={patternCodexHeadline}
+        previewPatternThresholds={labShadowState.previewPatternThresholds}
+        patternPreviewShadowActive={Boolean(
+          labShadowState.previewDeityScores && Object.keys(labShadowState.previewDeityScores).length > 0,
+        )}
+        orchestratorCausalAuditPulse={orchestratorCausalAuditPulse || null}
+        onDecisionCardPreviewEnter={
+          !isFinalized && !busy ? (patchId: string) => {
+            void previewDecision(patchId);
+          } : undefined
+        }
+        onDecisionCardPreviewLeave={!isFinalized && !busy ? clearPreview : undefined}
+        previewGlowCardId={previewGlowCardId}
         calculationNonce={calculationNonce}
         verdictBodyRenderNonce={verdictBodyRenderNonce ?? 0}
         streamingText={streamingText}

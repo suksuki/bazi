@@ -12,6 +12,7 @@ import type {
   InboxCard,
   LogicDiff,
   LlmDiagnosticData,
+  PatternThresholdRow,
   PhysicsLabConfig,
   PluginWeights,
   SeedPayload,
@@ -63,6 +64,8 @@ export interface StreamBoardPipelineParams {
   setResolvedCardIds: Dispatch<SetStateAction<string[]>>;
   setPhysicsParams: Dispatch<SetStateAction<Record<string, number>>>;
   setGlobalEntropy: Dispatch<SetStateAction<number | null>>;
+  setPatternThresholds: Dispatch<SetStateAction<PatternThresholdRow[]>>;
+  setPatternThresholdsStatus: Dispatch<SetStateAction<string | null>>;
   setConfirmedConflicts: Dispatch<SetStateAction<string[]>>;
   setFirstPromptText: Dispatch<SetStateAction<string>>;
   setTimeline: Dispatch<SetStateAction<TimelineSnapshot | null>>;
@@ -137,6 +140,8 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setResolvedCardIds,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     setConfirmedConflicts,
     setFirstPromptText,
     setTimeline,
@@ -208,6 +213,8 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setResolvedCardIds([]);
     setPhysicsParams({});
     setGlobalEntropy(null);
+    setPatternThresholds([]);
+    setPatternThresholdsStatus(null);
     setConfirmedConflicts([]);
     setFirstPromptText("");
     setTimeline(null);
@@ -296,6 +303,8 @@ export function useStreamBoardPipeline(params: StreamBoardPipelineParams) {
     setResolvedCardIds,
     setPhysicsParams,
     setGlobalEntropy,
+    setPatternThresholds,
+    setPatternThresholdsStatus,
     setConfirmedConflicts,
     setFirstPromptText,
     setTimeline,

@@ -6,7 +6,9 @@ import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
   buildPhysicsConfigPayload,
+  buildStreamBoardEnabledPlugins,
   extractMetricSnapshotFromPhysics,
+  parsePatternThresholdsPayload,
   seedPayloadSignature,
 } from "@/features/stream-board/controller/streamBoardPure";
 import {
@@ -95,11 +97,9 @@ export function useStreamBoardSilentRecalculateLayout({
           longitude: 121.4737,
           session_id: c.consultationId ?? undefined,
           physics_config: buildPhysicsConfigPayload(c.labConfig),
-          enabled_plugins: [
-            ...(c.pluginSwitches.blindSchool ? ["classical.blind_school.v1"] : []),
-            ...(c.pluginSwitches.wangshuai ? ["classical.wangshuai.v1"] : []),
-            ...(c.pluginSwitches.wealthRisk ? ["modern.wealth_risk.v1"] : []),
-          ],
+          enabled_plugins: buildStreamBoardEnabledPlugins(c.pluginSwitches, {
+            purePhysicsAudit: Boolean(c.purePhysicsAudit),
+          }),
           blind_school_features: buildBlindSchoolFeaturesPayload(c.pluginSwitches),
           reference_year: referenceYearRef.current,
         };
@@ -183,6 +183,17 @@ export function useStreamBoardSilentRecalculateLayout({
         }
         const ge = pMeta.global_entropy;
         set.setGlobalEntropy(typeof ge === "number" && Number.isFinite(ge) ? ge : null);
+        if (
+          Object.prototype.hasOwnProperty.call(pMeta, "pattern_thresholds") ||
+          Object.prototype.hasOwnProperty.call(pMeta, "pattern_thresholds_status")
+        ) {
+          const pt = parsePatternThresholdsPayload(pMeta.pattern_thresholds);
+          set.setPatternThresholds(pt);
+          const st = pMeta.pattern_thresholds_status;
+          set.setPatternThresholdsStatus(
+            typeof st === "string" && st.trim() ? st.trim() : pt.length > 0 ? "OK" : null,
+          );
+        }
 
         const currentMetric = extractMetricSnapshotFromPhysics(tensor);
         updateLogicDiffRef.current(currentMetric, c.confirmedDecisionIds.length === 0 || !c.baselineMetrics);

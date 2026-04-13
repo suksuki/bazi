@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import type {
   FinalVerdictChangeLog,
+  PatternThresholdRow,
   PhysicsLabConfig,
   PluginSwitches,
   PluginWeights,
@@ -65,6 +66,7 @@ const DEFAULT_LAB_RUNTIME: PhysicsLabConfig = {
   STATUS_BOOST_MULTIPLIER: 1.15,
   SUB_BRANCH_SANHE_REQ_WANG_ZHI: 0.0,
   SANHE_ALPHA_LEAKAGE: 0.0,
+  user_intention: "seek_stability",
 };
 
 const DEFAULT_SWITCHES_RUNTIME: PluginSwitches = {
@@ -183,6 +185,21 @@ export type FinalizationReport = {
   effectiveSkillIds?: string[];
 };
 
+/** 意志「影子预览」：悬停 Inbox 卡时临时展示，不落 mergeSnapshot */
+export type LabShadowPreviewPatch = {
+  activePreviewId?: string | null;
+  previewDeityScores?: Record<string, number> | null;
+  previewDeityEnergyAxes?: Record<string, { absolute_energy?: number; relative_percentage?: number }> | null;
+  previewVfSkeleton?: string;
+  previewDeltaPctByDeity?: Record<string, number>;
+  /** 结构预览：格局跃迁 / 平衡点重塑风险提示（PREVIEW） */
+  previewPatternAlert?: string;
+  /** 中枢已回传结构类 vf_discovered（预览链建立） */
+  previewStructuralLinkActive?: boolean;
+  /** 预览 physics_update：格局引力水位 */
+  previewPatternThresholds?: PatternThresholdRow[] | null;
+};
+
 export type LabStoreState = {
   snapshot: LabSnapshot | null;
   updates: LabUpdateRow[];
@@ -196,6 +213,15 @@ export type LabStoreState = {
   finalizationReport: FinalizationReport | null;
   /** 物理静默重算与终判 LLM 协调后的单调序列（供屏障与排障） */
   syncBarrierSeq: number;
+  /** 影子预览：当前悬停卡片 id */
+  activePreviewId: string | null;
+  previewDeityScores: Record<string, number> | null;
+  previewDeityEnergyAxes: Record<string, { absolute_energy?: number; relative_percentage?: number }> | null;
+  previewVfSkeleton: string;
+  previewDeltaPctByDeity: Record<string, number>;
+  previewPatternAlert: string;
+  previewStructuralLinkActive: boolean;
+  previewPatternThresholds: PatternThresholdRow[] | null;
 };
 
 const defaultRuntimeConfig = (): LabRuntimeConfig => ({
@@ -215,6 +241,14 @@ const emptyState = (): LabStoreState => ({
   isFinalized: false,
   finalizationReport: null,
   syncBarrierSeq: 0,
+  activePreviewId: null,
+  previewDeityScores: null,
+  previewDeityEnergyAxes: null,
+  previewVfSkeleton: "",
+  previewDeltaPctByDeity: {},
+  previewPatternAlert: "",
+  previewStructuralLinkActive: false,
+  previewPatternThresholds: null,
 });
 
 type LabAction =
@@ -227,7 +261,9 @@ type LabAction =
   | { type: "addConfirmedDecision"; payload: string[] }
   | { type: "clearDecisionInbox" }
   | { type: "finalizeVerdict"; payload: FinalizationReport }
-  | { type: "bumpSyncBarrierSeq" };
+  | { type: "bumpSyncBarrierSeq" }
+  | { type: "setShadowPreview"; payload: LabShadowPreviewPatch }
+  | { type: "clearShadowPreview" };
 
 function normalizeDecisionIds(ids: unknown[]): string[] {
   return Array.from(new Set(ids.map((x) => String(x || "").trim()).filter(Boolean))).sort();
@@ -323,6 +359,18 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         inboxResetNonce: seedUniverseChanged ? state.inboxResetNonce + 1 : state.inboxResetNonce,
         isFinalized: seedUniverseChanged ? false : state.isFinalized,
         finalizationReport: seedUniverseChanged ? null : state.finalizationReport,
+        ...(seedUniverseChanged
+          ? {
+              activePreviewId: null,
+              previewDeityScores: null,
+              previewDeityEnergyAxes: null,
+              previewVfSkeleton: "",
+              previewDeltaPctByDeity: {},
+              previewPatternAlert: "",
+              previewStructuralLinkActive: false,
+              previewPatternThresholds: null,
+            }
+          : {}),
       };
     }
     case "clearSnapshot":
@@ -512,10 +560,52 @@ function labReducer(state: LabStoreState, action: LabAction): LabStoreState {
         snapshot: nextSnapshot,
         updates: [updateRow, ...state.updates].slice(0, 5),
         syncBarrierSeq: state.syncBarrierSeq + 1,
+        activePreviewId: null,
+        previewDeityScores: null,
+        previewDeityEnergyAxes: null,
+        previewVfSkeleton: "",
+        previewDeltaPctByDeity: {},
+        previewPatternAlert: "",
+        previewStructuralLinkActive: false,
+        previewPatternThresholds: null,
       };
     }
     case "bumpSyncBarrierSeq":
       return { ...state, syncBarrierSeq: state.syncBarrierSeq + 1 };
+    case "setShadowPreview": {
+      const p = action.payload;
+      return {
+        ...state,
+        activePreviewId: p.activePreviewId !== undefined ? p.activePreviewId : state.activePreviewId,
+        previewDeityScores: p.previewDeityScores !== undefined ? p.previewDeityScores : state.previewDeityScores,
+        previewDeityEnergyAxes:
+          p.previewDeityEnergyAxes !== undefined ? p.previewDeityEnergyAxes : state.previewDeityEnergyAxes,
+        previewVfSkeleton: p.previewVfSkeleton !== undefined ? p.previewVfSkeleton : state.previewVfSkeleton,
+        previewDeltaPctByDeity:
+          p.previewDeltaPctByDeity !== undefined ? p.previewDeltaPctByDeity : state.previewDeltaPctByDeity,
+        previewPatternAlert:
+          p.previewPatternAlert !== undefined ? p.previewPatternAlert : state.previewPatternAlert,
+        previewStructuralLinkActive:
+          p.previewStructuralLinkActive !== undefined
+            ? p.previewStructuralLinkActive
+            : state.previewStructuralLinkActive,
+        previewPatternThresholds:
+          p.previewPatternThresholds !== undefined ? p.previewPatternThresholds : state.previewPatternThresholds,
+      };
+    }
+    // 影子层唯一出口：指针离开 / 新悬停前清场 / SSE 异常（见 useStreamBoardExecution.clearPreview + rAF 二次 flush）
+    case "clearShadowPreview":
+      return {
+        ...state,
+        activePreviewId: null,
+        previewDeityScores: null,
+        previewDeityEnergyAxes: null,
+        previewVfSkeleton: "",
+        previewDeltaPctByDeity: {},
+        previewPatternAlert: "",
+        previewStructuralLinkActive: false,
+        previewPatternThresholds: null,
+      };
     default:
       return state;
   }
@@ -533,6 +623,8 @@ export type LabStoreValue = {
   clearDecisionInbox: () => void;
   finalizeVerdict: () => Promise<boolean>;
   bumpSyncBarrierSeq: () => void;
+  setShadowPreview: (payload: LabShadowPreviewPatch) => void;
+  clearShadowPreview: () => void;
 };
 
 const LabSessionContext = createContext<LabStoreValue | null>(null);
@@ -587,6 +679,12 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
   const bumpSyncBarrierSeq = useCallback(() => {
     dispatch({ type: "bumpSyncBarrierSeq" });
   }, []);
+  const setShadowPreview = useCallback((payload: LabShadowPreviewPatch) => {
+    dispatch({ type: "setShadowPreview", payload });
+  }, []);
+  const clearShadowPreview = useCallback(() => {
+    dispatch({ type: "clearShadowPreview" });
+  }, []);
 
   const value = useMemo<LabStoreValue>(
     () => ({
@@ -601,6 +699,8 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
       clearDecisionInbox,
       finalizeVerdict,
       bumpSyncBarrierSeq,
+      setShadowPreview,
+      clearShadowPreview,
     }),
     [
       st,
@@ -614,6 +714,8 @@ export function LabStoreProvider({ children }: { children: ReactNode }) {
       clearDecisionInbox,
       finalizeVerdict,
       bumpSyncBarrierSeq,
+      setShadowPreview,
+      clearShadowPreview,
     ],
   );
 

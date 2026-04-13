@@ -87,6 +87,19 @@ class EnergyTopologySkill(BaseSkill):
             else:
                 node["abs_final"] = round(base_abs * 0.9, 4)
 
+        # V10.1：意志预研 — 由 WILL_PROXY 写入 inverse_factor，反推干预前节点能量供拓扑虚线框
+        meta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+        ic = meta.get("intention_context") if isinstance(meta.get("intention_context"), dict) else {}
+        if str(ic.get("active_intention") or "").strip():
+            try:
+                inv = float(ic.get("topology_node_will_inverse_factor") or 1.0)
+            except (TypeError, ValueError):
+                inv = 1.0
+            if inv > 0 and abs(inv - 1.0) > 1e-5:
+                for node in nodes:
+                    af = float(node.get("abs_final") or 0.0)
+                    node["pre_will_energy"] = round(af / inv, 4)
+
         edges: List[Dict[str, Any]] = []
         topology_audit: List[Dict[str, Any]] = []
         for point in conflicts:

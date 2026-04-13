@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
+
+const PreviewDeltaPercentBadge = lazy(() =>
+  import("./PreviewDeltaPercentBadge").then((m) => ({ default: m.PreviewDeltaPercentBadge })),
+);
 import { TEN_GOD_ORDER } from "@/features/ten-god-list/constants";
 import { buildLockedDeitySet, extractHardRouteKeys } from "@/features/ten-god-list/utils";
 import { buildRoutingHighlightDeities, ROUTING_CONFLICT_TOOLTIP } from "../utils/routingConflictHighlight";
@@ -131,6 +135,11 @@ export type AbsDistributionChartProps = {
   preInjectionDeityEnergyAxes?: Record<string, Axis> | null;
   /** 为 false 时不渲染注塑前虚线参考（由主断言区 Toggle 控制） */
   preInjectionReferenceActive?: boolean;
+  /** 影子预览：悬停意志补丁后的十神分（淡紫「影子指针」） */
+  previewDeityScores?: Record<string, number> | null;
+  previewDeityEnergyAxes?: Record<string, Axis> | null;
+  /** 与 `computeDeityPreviewDeltaPercent` 对齐的相对变化率（%） */
+  previewDeltaPctByDeity?: Record<string, number> | null;
   t?: (s: string) => string;
 };
 
@@ -155,6 +164,9 @@ export function AbsDistributionChart({
   preInjectionDeityScores = null,
   preInjectionDeityEnergyAxes = null,
   preInjectionReferenceActive = false,
+  previewDeityScores = null,
+  previewDeityEnergyAxes = null,
+  previewDeltaPctByDeity = null,
   t = (s: string) => s,
 }: AbsDistributionChartProps) {
   const anomalyTag = (topAnomaly || "").trim();
@@ -228,6 +240,18 @@ export function AbsDistributionChart({
         );
         const injectionBaselinePct =
           preInjectionDeityScores && Number.isFinite(baseRelRaw) ? Math.max(0, Math.min(100, baseRelRaw)) : null;
+
+        const previewRelRaw = Number(
+          (previewDeityEnergyAxes?.[name]?.relative_percentage ?? previewDeityScores?.[name]) ?? NaN,
+        );
+        const showShadowPreview =
+          Boolean(previewDeityScores && Object.keys(previewDeityScores).length > 0) && Number.isFinite(previewRelRaw);
+        const previewWidthPct = showShadowPreview ? Math.max(0, Math.min(100, previewRelRaw)) : 0;
+        const deltaPct = previewDeltaPctByDeity?.[name];
+        const deltaLabel =
+          typeof deltaPct === "number" && Number.isFinite(deltaPct) && Math.abs(deltaPct) > 0.05
+            ? `${deltaPct >= 0 ? "+" : ""}${deltaPct.toFixed(1)}%`
+            : "";
 
         return (
           <div key={name} className="relative pt-2">
@@ -324,6 +348,26 @@ export function AbsDistributionChart({
                   <div className="h-full bg-amber-300/45" style={{ width: stemWidth }} />
                 </div>
               </div>
+              {showShadowPreview ? (
+                <div className="relative z-[3] mt-1 h-1.5 w-full overflow-visible rounded bg-zinc-900/40 ring-1 ring-fuchsia-400/45">
+                  <div
+                    className="pointer-events-none h-full rounded bg-gradient-to-r from-fuchsia-500/45 via-fuchsia-300/55 to-fuchsia-500/45 blur-[0.45px] shadow-pointer"
+                    style={{ width: `${previewWidthPct}%` }}
+                    title={t("影子预览（未签发）")}
+                  />
+                  {deltaLabel ? (
+                    <Suspense
+                      fallback={
+                        <span className="pointer-events-none absolute -right-1 -top-4 z-[5] flex h-4 min-w-[2.5rem] items-center justify-end whitespace-nowrap text-[9px] font-semibold text-fuchsia-100 shadow-preview-delta-pct tabular-nums">
+                          {deltaLabel}
+                        </span>
+                      }
+                    >
+                      <PreviewDeltaPercentBadge deltaLabel={deltaLabel} />
+                    </Suspense>
+                  ) : null}
+                </div>
+              ) : null}
               {effPct != null ? (
                 <div
                   className="mt-1 h-1 w-full overflow-hidden rounded bg-zinc-800"

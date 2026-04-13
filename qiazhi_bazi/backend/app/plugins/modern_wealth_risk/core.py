@@ -93,8 +93,11 @@ def run_modern_wealth_risk_plugin(
     work_vector: Dict[str, Any],
     structure_final_decision: Dict[str, Any],
     metadata: Dict[str, Any],
+    is_preview: bool = False,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
     del metadata
+    _ = (is_preview, dry_run)
     host_abs = float((work_vector or {}).get("host_abs", 0.0) or 0.0)
     work_net = float((work_vector or {}).get("work_expectation", 0.0) or 0.0)
     is_locked = bool((((work_vector or {}).get("spatial_audit") or {}).get("is_exit_locked", False)))

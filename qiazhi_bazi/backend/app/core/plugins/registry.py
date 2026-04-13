@@ -1,9 +1,8 @@
 """Plugin registry and lifecycle hooks for Bazi OS."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import time
-from typing import Any, Callable, Dict, List, Literal, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from app.plugins.blind_school.core import run_blind_school_plugin
 from app.plugins.blind_school.skill_manifest_loader import list_blind_skills
@@ -15,6 +14,11 @@ from app.plugins.chronos.core import run_chronos_plugin
 from app.plugins.chronos.skill_manifest_loader import list_chronos_skills
 from app.plugins.wangshuai.core import run_wangshuai_plugin
 from app.plugins.wangshuai.skill_manifest_loader import list_wangshuai_skills
+from app.plugins.classical.climate_adjuster_v1 import run_climate_adjuster_v1
+from app.plugins.classical.conflict_auditor_v1 import run_conflict_auditor_v1
+from app.plugins.classical.pattern_detector_v2 import run_pattern_detector_v2
+from app.plugins.modern.will_proxy_v1 import run_will_proxy_v1
+from app.plugins.spec import HookName, PluginLayer, PluginSpec
 
 from app.core.config.physics_settings import resolve_physics_settings
 from app.core.plugins.plugin_metadata_loader import merge_plugin_manifest_into_metadata, plugin_manifest_for_operator_card
@@ -23,19 +27,21 @@ from app.plugins.base_physics.core_operators.op_sub_branch_interaction import (
     judgment_protocol_dynamic_lines_for_sub_branch_operator,
 )
 
-HookName = Literal["on_physics_complete", "on_verdict_ready"]
-
-PluginLayer = Literal["L0", "L1", "L2", "L3", "L4"]
-
-
 def _run_sys_core_physics_bundle_lazy(**ctx: Any) -> Dict[str, Any]:
     """延迟导入，避免 registry ↔ services 包循环依赖。"""
     from app.services.helpers.sys_core_physics_plugin import run_sys_core_physics_bundle_plugin
 
     return run_sys_core_physics_bundle_plugin(**ctx)
 
-# 与 enabled_plugins 无关：每次 on_physics_complete 必跑（显式名单 ∪ 全部 L0）
-_ALWAYS_ON_PHYSICS_COMPLETE: frozenset[str] = frozenset({"sys.core.physics"})
+# 与 enabled_plugins 无关：每次 on_physics_complete 必跑（显式名单 ∪ 全部 L0 ∪ 格局 manifest）
+_ALWAYS_ON_PHYSICS_COMPLETE: frozenset[str] = frozenset(
+    {
+        "sys.core.physics",
+        "modern.will_proxy.v1",
+        "classical.conflict_auditor.v1",
+        "classical.pattern_detector.v2",
+    }
+)
 
 
 def _chronos_registry_runner(**ctx: Any) -> Dict[str, Any]:
@@ -52,6 +58,8 @@ def _chronos_registry_runner(**ctx: Any) -> Dict[str, Any]:
         physics_tensor=pt,
         metadata=md,
         physics_config=rc if isinstance(rc, dict) else None,
+        is_preview=bool(ctx.get("is_preview")),
+        dry_run=bool(ctx.get("dry_run")),
     )
     ch = list(out.get("audit_items") or [])
     if ch:
@@ -64,25 +72,42 @@ def _chronos_registry_runner(**ctx: Any) -> Dict[str, Any]:
     return {"verdict": "", "evidence": [], "confidence_score": 1.0}
 
 
-@dataclass(frozen=True)
-class PluginSpec:
-    plugin_id: str
-    category: str
-    layer_id: PluginLayer
-    label: str
-    dependencies: List[str]
-    priority: float
-    audit_source: str
-    hook: HookName
-    runner: Callable[..., Dict[str, Any]]
-
-
 _PLUGIN_STATS: Dict[str, Dict[str, Any]] = {}
 
-# 预留：互斥插件对（同开时写入 manifest 警告，供前端/LLM 提高警觉）
-_PLUGIN_MUTEX_PAIRS: Tuple[Tuple[str, str, str], ...] = (
-    # ("plugin_a", "plugin_b", "同开时推理前提可能冲突，建议提高 backfire_risk 权重"),
-)
+# 互斥插件对（同开时写入 manifest 警告）。当前以 `_plugin_causal_tier` 为主门控；此处保留扩展点。
+_PLUGIN_MUTEX_PAIRS: Tuple[Tuple[str, str, str], ...] = ()
+
+
+def _plugin_causal_tier(plugin_id: str) -> int:
+    """
+    因果优先级（数值越大越先执行）：sys.core（内核）> base.chronos > classical.* > modern.*
+    与 `priority` 联合排序：(-tier, -priority)。
+    """
+    if plugin_id == "sys.core.physics":
+        return 400
+    if plugin_id == "base.chronos":
+        return 320
+    if plugin_id == "modern.will_proxy.v1":
+        return 210
+    if plugin_id.startswith("classical."):
+        return 200
+    if plugin_id.startswith("modern."):
+        return 100
+    return 150
+
+
+# L1 算子 id → 语义注入（V6 / AI 推荐占位符）
+_RECOMMENDATION_LOGIC_BY_OPERATOR_ID: Dict[str, Dict[str, str]] = {
+    "base.physics.op_branch_sanhe": {
+        "reason_template": "激活{structure}，提升格局稳定性，当前达成度：{progress}%",
+    },
+    "base.physics.op_branch_liuchong": {
+        "reason_template": "六冲发动时再分配能量，与「{structure}」达成度 {progress}% 存在张力，建议对照 causal_router。",
+    },
+    "base.physics.op_branch_liuhe": {
+        "reason_template": "六合拉拢可柔化冲刑路径，当前达成度：{progress}%。",
+    },
+}
 
 
 def _l0_atomic_manifest_rows() -> List[Dict[str, Any]]:
@@ -190,6 +215,79 @@ class PluginRegistry:
         )
         self.register(
             PluginSpec(
+                plugin_id="classical.climate_adjuster.v1",
+                category="Functional/Classical",
+                layer_id="L0",
+                label="月令场强调候（L2 前置 · climate_manifest）",
+                dependencies=["base.physics_l1"],
+                priority=0.9,
+                audit_source="app/plugins/classical/climate_manifest.json",
+                hook="on_physics_complete",
+                runner=lambda **ctx: run_climate_adjuster_v1(
+                    physics_tensor=ctx.get("physics_tensor") or {},
+                    metadata=ctx.get("metadata") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
+                ),
+            )
+        )
+        self.register(
+            PluginSpec(
+                plugin_id="classical.conflict_auditor.v1",
+                category="Functional/Classical",
+                layer_id="L0",
+                label="冲突拓扑审计（CONFLICT_MANIFEST · L0）",
+                dependencies=["base.physics_l1"],
+                priority=0.88,
+                audit_source="app/plugins/classical/conflict_manifest.json",
+                hook="on_physics_complete",
+                runner=lambda **ctx: run_conflict_auditor_v1(
+                    physics_tensor=ctx.get("physics_tensor") or {},
+                    metadata=ctx.get("metadata") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
+                ),
+            )
+        )
+        self.register(
+            PluginSpec(
+                plugin_id="modern.will_proxy.v1",
+                category="Functional/Modern",
+                layer_id="L3",
+                label="意志代理（WILL_PROXY · user_intention→物理/格局补丁）",
+                dependencies=["base.physics_l1"],
+                priority=0.94,
+                audit_source="app/plugins/modern/will_proxy_v1.py",
+                hook="on_physics_complete",
+                runner=lambda **ctx: run_will_proxy_v1(
+                    physics_tensor=ctx.get("physics_tensor") or {},
+                    metadata=ctx.get("metadata") or {},
+                    blind_school_features=ctx.get("blind_school_features") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
+                ),
+            )
+        )
+        self.register(
+            PluginSpec(
+                plugin_id="classical.pattern_detector.v2",
+                category="Functional/Classical",
+                layer_id="L2",
+                label="格局阈值引擎（manifest 驱动）",
+                dependencies=["base.physics_l1", "base.chronos"],
+                priority=0.82,
+                audit_source="app/logic/patterns/pattern_manifest.json",
+                hook="on_physics_complete",
+                runner=lambda **ctx: run_pattern_detector_v2(
+                    physics_tensor=ctx.get("physics_tensor") or {},
+                    metadata=ctx.get("metadata") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
+                ),
+            )
+        )
+        self.register(
+            PluginSpec(
                 plugin_id="classical.blind_school.v1",
                 category="Functional/Classical",
                 layer_id="L2",
@@ -202,6 +300,8 @@ class PluginRegistry:
                     physics_tensor=ctx.get("physics_tensor") or {},
                     metadata=ctx.get("metadata") or {},
                     feature_flags=ctx.get("blind_school_features"),
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
                 ),
             )
         )
@@ -219,6 +319,8 @@ class PluginRegistry:
                     work_vector=ctx.get("work_vector") or {},
                     structure_final_decision=ctx.get("structure_final_decision") or {},
                     metadata=ctx.get("metadata") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
                 ),
             )
         )
@@ -235,6 +337,8 @@ class PluginRegistry:
                 runner=lambda **ctx: run_wangshuai_plugin(
                     physics_tensor=ctx.get("physics_tensor") or {},
                     metadata=ctx.get("metadata") or {},
+                    is_preview=bool(ctx.get("is_preview")),
+                    dry_run=bool(ctx.get("dry_run")),
                 ),
             )
         )
@@ -432,6 +536,9 @@ class PluginRegistry:
                     entry_meta[_k] = op_card[_k]
             if "display_name" not in entry_meta:
                 entry_meta["display_name"] = str(op.get("title") or oid)
+            op_rec = _RECOMMENDATION_LOGIC_BY_OPERATOR_ID.get(oid)
+            if op_rec:
+                entry_meta["recommendation_logic"] = dict(op_rec)
             plugins.append(
                 {
                     "id": oid,
@@ -498,7 +605,14 @@ class PluginRegistry:
     ) -> Dict[str, Dict[str, Any]]:
         selected = set(enabled_plugins or [])
         outputs: Dict[str, Dict[str, Any]] = {}
-        for spec in sorted(self._plugins.values(), key=lambda x: x.priority, reverse=True):
+        ctx_run = dict(context)
+        ctx_run.setdefault("is_preview", False)
+        ctx_run.setdefault("dry_run", False)
+        specs_ordered = sorted(
+            self._plugins.values(),
+            key=lambda s: (-_plugin_causal_tier(s.plugin_id), -s.priority),
+        )
+        for spec in specs_ordered:
             if spec.hook != hook:
                 continue
             if (
@@ -513,7 +627,7 @@ class PluginRegistry:
             started = time.perf_counter()
             ok = True
             try:
-                payload = spec.runner(**context)
+                payload = spec.runner(**ctx_run)
             except Exception as exc:
                 ok = False
                 payload = {"verdict": "", "evidence": [f"plugin_error={exc}"], "confidence_score": 0.0, "error": str(exc)}

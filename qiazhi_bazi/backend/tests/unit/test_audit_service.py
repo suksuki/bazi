@@ -115,7 +115,7 @@ def test_physics_audit_prompt_high_reasoning_adds_sql_discipline_and_inference_t
     kwargs = dict(
         deity_scores={"正官": 50.0},
         root_check={},
-        seasonal_factors={"solar_term": "立春", "params": {}},
+        climate_season_context={"solar_term": "立春", "params": {}},
         consensus_history=[],
         lang="ZH",
         blind_skill_system_suffix="",
@@ -142,7 +142,7 @@ def test_physics_audit_prompt_compact_drops_english_mandatory_and_input_prefix()
     kwargs = dict(
         deity_scores={"比肩": 1.0},
         root_check={"no_root": True},
-        seasonal_factors={"solar_term": "立春", "params": {}},
+        climate_season_context={"solar_term": "立春", "params": {}},
         consensus_history=[{"decision_key": "CF_FLOATING_DECAY", "confirmed_value": 0.2, "reasoning": "x"}],
         lang="ZH",
         blind_skill_system_suffix="",

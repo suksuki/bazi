@@ -52,6 +52,9 @@ type Props = {
   preInjectionDeityEnergyAxes?: Record<string, { absolute_energy?: number; relative_percentage?: number }> | null;
   /** 为 true 时在能量条上叠化注塑前虚线锚点 */
   preInjectionReferenceActive?: boolean;
+  previewDeityScores?: Record<string, number> | null;
+  previewDeityEnergyAxes?: Record<string, { absolute_energy?: number; relative_percentage?: number }> | null;
+  previewDeltaPctByDeity?: Record<string, number> | null;
   t?: (s: string) => string;
 };
 
@@ -80,6 +83,9 @@ export function TenGodNumericList({
   preInjectionDeityScores = null,
   preInjectionDeityEnergyAxes = null,
   preInjectionReferenceActive = false,
+  previewDeityScores = null,
+  previewDeityEnergyAxes = null,
+  previewDeltaPctByDeity = null,
   t = (s: string) => s,
 }: Props) {
   const anomalyTag = (topAnomaly || "").trim();
@@ -103,7 +109,8 @@ export function TenGodNumericList({
           <span className="text-[11px] text-zinc-500">{t("[十神名 | 能量条 | 百分比]")}</span>
         </div>
       </div>
-      <AbsDistributionChart
+      <div className="relative z-[10] isolate">
+        <AbsDistributionChart
         key={fluxKey != null ? `abs-${fluxKey}` : undefined}
         deityScores={deityScores}
         deityEnergyAxes={deityEnergyAxes}
@@ -125,8 +132,12 @@ export function TenGodNumericList({
         preInjectionDeityScores={preInjectionDeityScores}
         preInjectionDeityEnergyAxes={preInjectionDeityEnergyAxes}
         preInjectionReferenceActive={preInjectionReferenceActive}
+        previewDeityScores={previewDeityScores}
+        previewDeityEnergyAxes={previewDeityEnergyAxes}
+        previewDeltaPctByDeity={previewDeltaPctByDeity}
         t={t}
-      />
+        />
+      </div>
       <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-[11px] text-zinc-500">
         [L2 Structure Skill: Waiting for Alignment...]
       </div>
