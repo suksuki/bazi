@@ -8,9 +8,12 @@ from urllib.parse import urlparse
 
 from sqlmodel import Session, SQLModel, create_engine
 
-DB_URL = os.getenv("DATABASE_URL", "").strip()
+# 与 backend/README 一致：优先 DATABASE_URL，兼容历史 QIAZHI_BAZI_DB_URL（避免仅改旧变量时进程读不到库）
+DB_URL = (os.getenv("DATABASE_URL") or os.getenv("QIAZHI_BAZI_DB_URL", "")).strip()
 if not DB_URL:
-    raise RuntimeError("DATABASE_URL 未配置。当前架构禁止 SQLite 回退。")
+    raise RuntimeError(
+        "DATABASE_URL（或兼容变量 QIAZHI_BAZI_DB_URL）未配置。当前架构禁止 SQLite 回退。"
+    )
 
 parsed = urlparse(DB_URL)
 if parsed.scheme not in {"postgresql", "postgresql+psycopg2", "postgresql+psycopg"}:
@@ -60,6 +63,7 @@ _engine = create_engine(
 def init_db() -> None:
     # 延迟导入模型以注册 metadata
     from app.db import models  # noqa: F401
+    from app.db import learning_ledger  # noqa: F401
     from app.skills.physics_engine import seed_physics_defaults
 
     SQLModel.metadata.create_all(_engine)

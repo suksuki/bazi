@@ -68,6 +68,11 @@ class _FakeVerdictSkill:
             "llm_request_messages": [{"role": "user", "content": "终判探针"}],
             "llm_raw_response": '{"verdict_body":"适合推进"}',
             "llm_meta": {"model_name": "stub", "elapsed_ms": 1.0},
+            "brain_hub": {"lineage": "HTN_DRIVEN", "seeds_matched": ["system_stress"], "htn_plan": {"plan": ["OBSERVE"]}},
+            "assertion_tree": {
+                "protocol": "assertion_tree.v1",
+                "nodes": [{"node_id": "n1", "node_type": "FACT", "text": "stub", "evidence_refs": []}],
+            },
         }
 
 
@@ -85,6 +90,11 @@ class _CaptureVerdictSkill:
             "work_vector": {},
             "structure_candidates_v0": {},
             "audit_log": {},
+            "brain_hub": {"lineage": "HTN_DRIVEN", "seeds_matched": ["system_stress"], "htn_plan": {"plan": ["OBSERVE"]}},
+            "assertion_tree": {
+                "protocol": "assertion_tree.v1",
+                "nodes": [{"node_id": "n1", "node_type": "FACT", "text": "stub", "evidence_refs": []}],
+            },
         }
 
 
@@ -139,6 +149,22 @@ def test_analyze_clash_1990_06_14_officer_pattern_rows_with_blind_only_enabled_p
     l2 = str(meta.get("l2_pattern_result_summary_v1") or "")
     assert l2 == "正官格 (亲和度 100.0%)"
     assert str(meta.get("hit_pattern_name") or "") == l2
+
+
+def test_arch_sentry_round_messages_under_300_chars():
+    pillars = get_bazi("1990-06-14", "12:00", "solar")
+    with patch.object(analysis_service, "QwenClient", return_value=_FakeClient()):
+        payload = asyncio.run(
+            analysis_service.analyze_clash_flow(
+                AnalyzeClashRequest(
+                    pillars=pillars,
+                    enabled_plugins=["classical.blind_school.v1"],
+                )
+            )
+        )
+    msgs = (((payload.get("first_observation_llm") or {}).get("messages")) or [])
+    assert isinstance(msgs, list) and msgs
+    assert all(len(str((m or {}).get("content") or "")) <= 300 for m in msgs)
 
 
 def test_analyze_seed_flow_builds_audit_summary():

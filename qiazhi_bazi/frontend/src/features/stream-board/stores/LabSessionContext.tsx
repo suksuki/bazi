@@ -153,6 +153,9 @@ export type LabSnapshot = {
     llm_request_messages?: Array<{ role: string; content: string }>;
     llm_raw_response?: string;
     llm_meta?: Record<string, unknown>;
+    brain_hub?: Record<string, unknown> | null;
+    assertion_tree?: Record<string, unknown> | null;
+    narrative_strategy?: string;
     /** 终判段落锚点（地支 / conflict_point），供八字元数据 Tab 联动 */
     narrative_chunks?: Array<{
       chunk_id: string;

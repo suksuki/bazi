@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import uuid
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from sqlalchemy.exc import SQLAlchemyError
+from app.core.v12_error_protocol import build_v12_error
 
 from app.api.admin_auth import admin_token_guard
 from app.api.contracts import (
@@ -23,12 +27,16 @@ from app.api.contracts import (
     FinalVerdictRequest,
     OrchestratorInternalLoopRequest,
     PhysicsSettingsPersistRequest,
+    ResumeCalculationRequest,
     ResolveConflictRequest,
     SkillFeedbackRequest,
     StressTestRequest,
+    StandardSeedRequest,
     TranslateRequest,
 )
 from app.api.router_helpers import now_iso
+from sqlmodel import select
+from sqlalchemy import desc, func
 from app.db.session import session_scope
 from app.schemas.bazi_metadata import (
     BaziMetadata,
@@ -47,6 +55,10 @@ from app.services.analysis_service import (
     resolve_consensus_history,
     translate_text_items,
 )
+from app.core.errors import V12SchemaViolationError
+from app.logic.brain.seeds import SEED_SHORT_CODE_MAP
+from app.db.learning_ledger import ArbiterPreferenceLedger
+from app.db.models import BrainDissentLedger, BrainHtnSnapshot, ResumePulseHistory
 from app.services.orchestrator_service import OrchestratorService, run_full_cycle
 from app.core.evolution.combination_space import TOTAL_BAZI_COMBINATION_SPACE
 from app.core.evolution.dna_registry import (
@@ -72,6 +84,25 @@ from app.services.recommendation_service import get_top_recommendations
 from app.core.physics.settings_manager import list_physics_registry_rows, persist_physics_registry_updates_from_body
 
 router = APIRouter(tags=["qiazhi-bazi"])
+_LOG = logging.getLogger(__name__)
+
+
+def require_db_initialized(request: Request) -> None:
+    """init_db 失败时禁止写库，避免裸 500；与 GET /ready 对齐。"""
+    if not getattr(request.app.state, "db_init_ok", False):
+        err = build_v12_error(
+            code="DB_ENV_PATH_NOT_READY",
+            user_message="数据库未就绪：当前环境的数据库路径不可达。",
+            diagnosis=str(getattr(request.app.state, "db_init_error", "") or ""),
+            hints=[
+                "检查 DATABASE_URL 主机是否为当前运行环境可达地址（容器内请避免 127.0.0.1 指向误解）。",
+                "可先访问 GET /ready，查看 checks.db_init.error 详情。",
+            ],
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=err,
+        )
 
 
 @router.get("/demo/metadata")
@@ -94,10 +125,25 @@ def demo_metadata() -> BaziMetadata:
     )
 
 
-@router.post("/consultations", response_model=dict)
+@router.post("/consultations", response_model=dict, dependencies=[Depends(require_db_initialized)])
 def create_consultation(body: ConsultationCreate) -> dict:
-    with session_scope() as s:
-        return create_consultation_record(s, body)
+    try:
+        with session_scope() as s:
+            return create_consultation_record(s, body)
+    except SQLAlchemyError:
+        _LOG.exception("create_consultation: database error")
+        err = build_v12_error(
+            code="DB_WRITE_PATH_FAILED",
+            user_message="数据库写入失败：更可能是环境路径/连通性问题，不是前端参数问题。",
+            hints=[
+                "确认 PostgreSQL 已监听且应用所在环境可达。",
+                "确认 consultation 表已创建并迁移完成。",
+            ],
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=err,
+        ) from None
 
 
 @router.post("/confirm-structure", response_model=dict)
@@ -111,12 +157,17 @@ def confirm_structure(body: ConfirmStructureRequest) -> dict:
             return confirm_structure_for_consultation(s, body)
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/decision-steps", response_model=dict)
 def create_decision_step(body: DecisionStepCreate) -> dict:
     with session_scope() as s:
-        return create_decision_step_record(s, body)
+        try:
+            return create_decision_step_record(s, body)
+        except PermissionError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/decision-steps/rollback", response_model=dict)
@@ -194,6 +245,8 @@ async def orchestrator_internal_loop(body: OrchestratorInternalLoopRequest) -> d
         "requires_narrative_refresh": bool(out.get("requires_narrative_refresh")),
         "pre_injection_deity_display": out.get("pre_injection_deity_display") or {},
         "is_preview": bool(body.is_preview),
+        "active_probing": out.get("active_probing") or {},
+        "interrupt_request": out.get("interrupt_request") or {},
     }
     if body.is_preview:
         ret["preview_pattern_alert"] = str(out.get("preview_pattern_alert") or "")
@@ -236,17 +289,161 @@ async def orchestrator_full_cycle_stream(body: OrchestratorInternalLoopRequest):
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
+@router.post("/v1/orchestrator/resume", response_model=dict, dependencies=[Depends(require_db_initialized)])
+async def orchestrator_resume(body: ResumeCalculationRequest) -> dict:
+    """中断恢复事务流：先落库确认，再从断点局部重算。"""
+    blind_flags = (
+        body.blind_school_features.model_dump()
+        if body.blind_school_features
+        else BlindSchoolFeatureFlags().model_dump()
+    )
+    physics_cfg = body.physics_config.model_dump(exclude_none=True) if body.physics_config else {}
+    try:
+        return OrchestratorService.resume_calculation(
+            session_id=body.session_id,
+            user_feedback=dict(body.user_feedback or {}),
+            metadata=body.metadata,
+            enabled_plugins=list(body.enabled_plugins or []),
+            blind_school_features=blind_flags,
+            physics_config=physics_cfg,
+            dayun=body.dayun,
+            liunian=body.liunian,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SQLAlchemyError:
+        _LOG.exception("orchestrator_resume: database error")
+        err = build_v12_error(
+            code="DB_RESUME_TX_FAILED",
+            user_message="中断恢复事务提交失败，请先检查数据库连通性。",
+            hints=["确认 consultation 可写。", "确认会话未被其他异常事务占用。"],
+        )
+        raise HTTPException(status_code=503, detail=err) from None
+
+
 @router.post("/v1/analyze-seed", response_model=dict)
-async def analyze_seed(body: AnalyzeSeedRequest) -> dict:
+async def analyze_seed(body: StandardSeedRequest, request: Request) -> dict:
     """
     输入生日（日期+时刻） -> 基础排盘 -> 冲合扫描 -> 首轮引导文案。
     """
     from app.services.bazi_engine import get_bazi, get_timeline_snapshot
+    req_id = (
+        str(request.headers.get("x-request-id") or "").strip()
+        or str(getattr(body, "request_id", "") or "").strip()
+        or str(uuid.uuid4())
+    )
+    body.request_id = req_id
 
+    flow_hint = str(body.flow_state or "").strip().lower()
+    if flow_hint in {"idle", "synthesis"}:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "ANALYZE_SEED_FLOW_STATE_CONFLICT",
+                "message": f"flow_state={flow_hint} 不允许进入 analyze-seed。",
+                "expected": {"flow_state": "probe_waiting"},
+            },
+        )
+    raw_seed = str(body.seed_short or "").strip()
+    if raw_seed:
+        short_values = {str(v).strip() for v in SEED_SHORT_CODE_MAP.values()}
+        legacy_values = set(SEED_SHORT_CODE_MAP.keys())
+        if raw_seed in legacy_values:
+            body.seed_short = str(SEED_SHORT_CODE_MAP.get(raw_seed) or "")
+        elif raw_seed not in short_values:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "ANALYZE_SEED_INVALID_SHORT_CODE",
+                    "message": f"seed_short={raw_seed} 非法。",
+                    "expected": {"seed_short": sorted(short_values)},
+                },
+            )
+    if isinstance(body.user_feedback, str):
+        body.user_feedback = body.user_feedback[:300]
     try:
         return await analyze_seed_flow(body, get_bazi, get_timeline_snapshot, now_iso())
+    except V12SchemaViolationError as exc:
+        err = build_v12_error(
+            code="V12_SCHEMA_VIOLATION_ERROR",
+            user_message="analyze-seed 触发 V12 结构锁，请修复节点链后重试。",
+            diagnosis=str(exc),
+            hints=["检查 AssertionTree 是否完整。", "检查首观 Node_Chain_Execution 是否产出节点。"],
+            extra={"pulse_id": exc.pulse_id},
+        )
+        raise HTTPException(status_code=422, detail=err) from exc
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"日期格式错误: {e}") from e
+        _LOG.warning(
+            "analyze_seed bad request request_id=%s: %s | body=%s",
+            req_id,
+            str(e),
+            body.model_dump(exclude_none=True),
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "ANALYZE_SEED_INVALID_INPUT",
+                "message": str(e),
+                "expected": {"date": "YYYY-MM-DD", "time": "HH:MM"},
+            },
+        ) from e
+
+
+@router.get("/v1/brain/m5-gold-stats", response_model=dict)
+def m5_gold_stats() -> dict:
+    fallback = {
+        "ok": True,
+        "degraded": True,
+        "gold_total": 0,
+        "current_entropy_reduction": 0.12,
+        "seed_hit_distribution": {},
+        "top3_assimilated_seeds": [],
+        "recent_sync_time": now_iso(),
+        "updated_at": now_iso(),
+    }
+    try:
+        with session_scope() as s:
+            gold_rows = s.exec(
+                select(ArbiterPreferenceLedger).where(ArbiterPreferenceLedger.preference_tier == "GOLD")
+            ).all()
+            snapshots = s.exec(select(BrainHtnSnapshot)).all()
+    except Exception:
+        _LOG.warning("m5_gold_stats degraded: db unavailable or schema not ready", exc_info=True)
+        return fallback
+    by_snapshot = {int(r.snapshot_id): r for r in gold_rows if r.snapshot_id is not None}
+    seed_hits: Dict[str, int] = {}
+    latest_entropy = 0.12
+    latest_ts = ""
+    for snap in snapshots:
+        sid = int(getattr(snap, "id", 0) or 0)
+        if sid not in by_snapshot:
+            continue
+        for code in list(getattr(snap, "seeds_matched", []) or []):
+            key = str(code or "").strip()
+            if not key:
+                continue
+            seed_hits[key] = int(seed_hits.get(key, 0)) + 1
+        ts = str(getattr(snap, "created_at", "") or "")
+        if ts and ts >= latest_ts:
+            latest_ts = ts
+            payload = getattr(snap, "snapshot_payload", {}) if isinstance(getattr(snap, "snapshot_payload", {}), dict) else {}
+            bh = payload.get("brain_hub") if isinstance(payload.get("brain_hub"), dict) else {}
+            ent = bh.get("entropy_reduction")
+            if isinstance(ent, (int, float)):
+                latest_entropy = float(ent)
+    top3 = sorted(seed_hits.items(), key=lambda x: (-int(x[1]), str(x[0])))[:3]
+    return {
+        "ok": True,
+        "degraded": False,
+        "gold_total": len(gold_rows),
+        "current_entropy_reduction": round(float(latest_entropy), 4),
+        "seed_hit_distribution": seed_hits,
+        "top3_assimilated_seeds": [str(k) for k, _ in top3],
+        "recent_sync_time": latest_ts or now_iso(),
+        "updated_at": latest_ts or now_iso(),
+    }
 
 
 @router.post("/v1/seed-preview", response_model=dict)
@@ -294,6 +491,24 @@ async def final_verdict(body: FinalVerdictRequest) -> dict:
     )
     try:
         return await generate_final_verdict(body, consensus_history)
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "FINAL_VERDICT_FLOW_STATE_CONFLICT",
+                "message": str(exc),
+                "expected": {"flow_state": "ready"},
+            },
+        ) from exc
+    except V12SchemaViolationError as exc:
+        err = build_v12_error(
+            code="V12_SCHEMA_VIOLATION_ERROR",
+            user_message="终判结构缺失 assertion_tree，已阻断回退。",
+            diagnosis=str(exc),
+            hints=["检查 assertion_tree.nodes 是否为空。", "检查终判路由是否被旧协议覆盖。"],
+            extra={"pulse_id": exc.pulse_id},
+        )
+        raise HTTPException(status_code=422, detail=err) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -310,6 +525,58 @@ async def final_verdict_stream(body: FinalVerdictRequest) -> StreamingResponse:
         iter_final_verdict_ndjson(body, consensus_history),
         media_type="application/x-ndjson",
     )
+
+
+@router.get("/v1/orchestrator/resume-pulse-history/{session_id}", response_model=dict)
+def get_resume_pulse_history(session_id: int) -> dict:
+    if session_id <= 0:
+        raise HTTPException(status_code=422, detail="session_id must be positive")
+    with session_scope() as s:
+        rows = s.exec(
+            select(ResumePulseHistory)
+            .where(ResumePulseHistory.session_id == session_id)
+            .order_by(ResumePulseHistory.resume_timestamp.asc())
+        ).all()
+    return {
+        "ok": True,
+        "items": [
+            {
+                "session_id": r.session_id,
+                "interrupted_node_id": r.interrupted_node_id,
+                "resume_timestamp": r.resume_timestamp.isoformat(),
+                "user_feedback_payload": r.user_feedback_payload,
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/v1/brain/learning-insights", response_model=dict)
+def brain_learning_insights(top_n: int = 5) -> dict:
+    limit_n = max(1, min(int(top_n or 5), 20))
+    with session_scope() as s:
+        rows = s.exec(
+            select(
+                BrainDissentLedger.reason_code,
+                func.count(BrainDissentLedger.id).label("count"),
+            )
+            .group_by(BrainDissentLedger.reason_code)
+            .order_by(desc("count"))
+            .limit(limit_n)
+        ).all()
+    rank = [{"reason_code": str(r[0] or "UNKNOWN"), "count": int(r[1] or 0)} for r in rows]
+    hints: list[str] = []
+    for item in rank:
+        rc = item["reason_code"]
+        if "LIG_AXIS_POS_MISMATCH" in rc:
+            hints.append("提高 PSV 语义门控阈值，压制与负向轴冲突的正向措辞。")
+        elif "WEALTH" in rc:
+            hints.append("下调财轴正向词模板权重，并提高比劫穿透比的拒稿惩罚。")
+        elif "OFFICER" in rc:
+            hints.append("增强官杀轴与 user_intention 的一致性约束，减少越轴叙事。")
+        else:
+            hints.append(f"为 {rc} 补充规则特征，纳入 RLHF-C 参数校准候选。")
+    return {"ok": True, "top_reject_dimensions": rank, "parameter_hints": hints[:limit_n]}
 
 
 @router.post("/v1/analyze/stress-test", response_model=dict)

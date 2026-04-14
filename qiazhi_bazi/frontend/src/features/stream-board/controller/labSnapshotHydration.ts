@@ -1,13 +1,16 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { AuditItem, AuditRole } from "@/components/AuditSidebar";
 import type {
+  BrainHubAudit,
   DeityComponent,
   DeityEnergyAxis,
+  DissentBlock,
   FinalVerdictChangeLog,
   LogicDiff,
   LlmDiagnosticData,
   LogicProposal,
   PatternThresholdRow,
+  PsvSignal,
   SeedPayload,
 } from "@/features/stream-board/models";
 import type { LabSnapshot } from "@/features/stream-board/stores/LabSessionContext";
@@ -257,6 +260,11 @@ export type LabSnapshotHydrationSinks = {
   setFinalVerdictBody: (v: string) => void;
   setFinalVerdictChangeLog: (v: FinalVerdictChangeLog) => void;
   setFinalVerdictVersionId: (v: string) => void;
+  /** V12 UI 扩展：仅由 runtime 主状态消费，快照回灌默认不覆盖 */
+  setInterruptRequest?: (v: Record<string, unknown> | null) => void;
+  setPsvSignals?: (v: PsvSignal[]) => void;
+  setBrainHubAudit?: (v: BrainHubAudit | null) => void;
+  setBrainHubDissentBlock?: (v: DissentBlock | null) => void;
   setFinalLogicalEvidence: (v: string[]) => void;
   setFinalWorkVector: (v: Record<string, unknown> | null) => void;
   setFinalTopologyGraphV1: (v: Record<string, unknown> | null) => void;

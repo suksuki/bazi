@@ -2,7 +2,7 @@
 
 `qiazhi_bazi/` 是当前默认开发入口，采用 `FastAPI + Next.js 14` 单体仓结构，按「独立开发、按需引用 legacy」原则演进。
 
-## 当前架构
+## 当前架构（V12 反应式大脑架构）
 
 ```text
 qiazhi_bazi/
@@ -12,6 +12,7 @@ qiazhi_bazi/
 └── .codex/skills/               # 仓库级协作 skills（本轮新增）
 ```
 
+V12 主链路采用「反应式大脑」闭环：`ActiveProbing -> BrainHub -> SemanticAuditor -> AssertionTree`，以中断恢复事务与脉冲轨迹驱动局部重算，禁止旧式静默回退。
 因果路由配置存于运行时 `runtime_config.causal_routing`，与 Admin 保存路径一致；推演结果中见 `physics_tensor.meta.causal_routing` 与 `audit_log.causal_routing_audit_items`（详见 `docs/architecture/OVERVIEW.md`）。
 
 ## 开发原则

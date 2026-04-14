@@ -6,8 +6,25 @@ L0 原子元数据（藏干、通根系数）在物理推断链路入口装载�
 from __future__ import annotations
 
 from datetime import datetime
+import re
 
 from app.schemas.bazi_metadata import FourPillars, StemBranchPair
+
+
+def _normalize_date_time(date_str: str, time_str: str) -> tuple[str, str]:
+    d = str(date_str or "").strip().replace("/", "-")
+    t = str(time_str or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+        raise ValueError(f"date must be YYYY-MM-DD, got: {date_str!r}")
+    if not t:
+        t = "12:00"
+    if re.fullmatch(r"\d{2}:\d{2}:\d{2}", t):
+        t = t[:5]
+    if re.fullmatch(r"\d{1}:\d{2}", t):
+        t = f"0{t}"
+    if not re.fullmatch(r"\d{2}:\d{2}", t):
+        raise ValueError(f"time must be HH:MM, got: {time_str!r}")
+    return d, t
 
 def _split_pillar(pillar: str) -> StemBranchPair:
     if not pillar or len(pillar) < 2:
@@ -21,13 +38,15 @@ def get_bazi(date_str: str, time_str: str = "12:00", calendar: str = "solar") ->
     - calendar=solar: date_str 为公历 YYYY-MM-DD
     - calendar=lunar: date_str 为农历 YYYY-MM-DD（暂按平年处理，不含闰月）
     """
-    dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    d, t = _normalize_date_time(date_str, time_str)
+    dt = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
     try:
         from lunar_python import Lunar, Solar
     except ImportError as exc:
         raise RuntimeError("缺少依赖 lunar_python，请先安装后再进行精确排盘。") from exc
 
-    if calendar == "lunar":
+    cal = str(calendar or "solar").strip().lower()
+    if cal == "lunar":
         lunar = Lunar.fromYmdHms(dt.year, dt.month, dt.day, dt.hour, dt.minute, 0)
         ec = lunar.getEightChar()
     else:
@@ -53,13 +72,15 @@ def get_timeline_snapshot(
     返回当前流年与当前大运摘要。
     说明：gender 先默认 1（男命）以输出可视化信息，后续可接前端性别输入。
     """
-    dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    d, t = _normalize_date_time(date_str, time_str)
+    dt = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
     try:
         from lunar_python import Lunar, Solar
     except ImportError as exc:
         raise RuntimeError("缺少依赖 lunar_python，请先安装后再进行精确排盘。") from exc
 
-    if calendar == "lunar":
+    cal = str(calendar or "solar").strip().lower()
+    if cal == "lunar":
         lunar = Lunar.fromYmdHms(dt.year, dt.month, dt.day, dt.hour, dt.minute, 0)
     else:
         solar = Solar.fromYmdHms(dt.year, dt.month, dt.day, dt.hour, dt.minute, 0)

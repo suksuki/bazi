@@ -123,6 +123,49 @@ class PhysicsSettingsRegistry(SQLModel, table=True):
     description: str = Field(default="", description="参数物理意义")
 
 
+class ResumePulseHistory(SQLModel, table=True):
+    """M5 基础：记录中断后恢复执行的脉冲重启点。"""
+
+    __tablename__ = "resume_pulse_history"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: int = Field(index=True)
+    interrupted_node_id: str = Field(default="", index=True)
+    resume_timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    user_feedback_payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(_JSON_TYPE))
+
+
+class BrainDissentLedger(SQLModel, table=True):
+    """M5 训练素材：监军 REJECT 的逻辑错题本。"""
+
+    __tablename__ = "brain_dissent_ledger"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: Optional[int] = Field(default=None, index=True)
+    pulse_id: str = Field(default="", index=True)
+    reason_code: str = Field(default="", index=True)
+    ai_raw_text: str = Field(default="")
+    psv_manifest: List[Dict[str, Any]] = Field(default_factory=list, sa_column=Column(_JSON_TYPE))
+    audit_payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(_JSON_TYPE))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
+class BrainHtnSnapshot(SQLModel, table=True):
+    """V12.92：HTN 脑快照（M5 复盘教材）。"""
+
+    __tablename__ = "brain_htn_snapshot"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: Optional[int] = Field(default=None, index=True)
+    version_id: str = Field(default="", index=True)
+    lineage: str = Field(default="", index=True)
+    assimilated: bool = Field(default=False, index=True)
+    full_path: List[str] = Field(default_factory=list, sa_column=Column(_JSON_TYPE))
+    seeds_matched: List[str] = Field(default_factory=list, sa_column=Column(_JSON_TYPE))
+    snapshot_payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(_JSON_TYPE))
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+
+
 class CausalManifestMeta(SQLModel, table=True):
     """Skill manifest 片段（如 operator_to_skill），支持零代码覆盖。"""
 

@@ -136,6 +136,7 @@ class AnalyzeClashRequest(BaseModel):
         default=None,
         description="Chronos V2：流年/大运干支上下文（引动审计）",
     )
+    request_id: Optional[str] = Field(default=None, description="链路追踪 request_id")
 
 
 class StructuralPreviewHint(BaseModel):
@@ -220,6 +221,22 @@ class AnalyzeSeedRequest(BaseModel):
         default=None,
         description="模拟时空：干支字符串键 liunian_ganzhi/dayun_ganzhi（如丙午），写入 temporal_context",
     )
+    request_id: Optional[str] = Field(default=None, description="链路追踪 request_id")
+
+
+class StandardSeedRequest(AnalyzeSeedRequest):
+    flow_state: Optional[str] = Field(
+        default=None,
+        description="V12.92：请求前端声明的流程状态；idle/synthesis 将被后端拒绝为 409",
+    )
+    seed_short: Optional[str] = Field(
+        default=None,
+        description="V12.92：标准种子短码（high_lock/marriage_clash/system_stress）",
+    )
+    user_feedback: Optional[str] = Field(
+        default=None,
+        description="V12.92：可选用户反馈，后端按 300 字节上限收敛",
+    )
 
 
 class AuditPhysicsWithLlmRequest(BaseModel):
@@ -291,6 +308,38 @@ class ResolveConflictRequest(BaseModel):
     abs_delta: float = 0.0
     processing_preference: str = Field(default="", max_length=120)
     extra: Dict[str, Any] = Field(default_factory=dict)
+
+
+class InterruptResolveRequest(BaseModel):
+    """M3：逻辑断点处理（确认/解决）。"""
+
+    consultation_id: Optional[int] = None
+    interrupt_id: str = Field(..., min_length=1)
+    action: Literal["acknowledge", "resolve"] = "resolve"
+    notes: str = ""
+    actor: str = "arbiter"
+
+
+class InterruptResumeRequest(BaseModel):
+    """M3：从 pending 挂起态恢复执行。"""
+
+    consultation_id: Optional[int] = None
+    interrupt_id: str = Field(..., min_length=1)
+    resume_token: str = Field(..., min_length=1)
+    actor: str = "arbiter"
+
+
+class ResumeCalculationRequest(BaseModel):
+    """V12：事务化 Resume（先持久化反馈，再从中断点局部重算）。"""
+
+    session_id: int = Field(..., ge=1)
+    user_feedback: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    enabled_plugins: List[str] = Field(default_factory=list)
+    blind_school_features: Optional[BlindSchoolFeatureFlags] = None
+    physics_config: Optional[PhysicsConfig] = None
+    dayun: Optional[str] = None
+    liunian: Optional[str] = None
 
 
 class EvolutionAdmissionRequest(BaseModel):

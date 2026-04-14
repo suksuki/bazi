@@ -6,7 +6,6 @@ import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
 import { TenGodNumericList } from "@/components/TenGodNumericList";
 import { TopologyMapV1 } from "@/components/TopologyMapV1";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
-import { TemporalYearSlider } from "./TemporalYearSlider";
 import { LogicSummary } from "./LogicSummary";
 import type { StreamBoardViewModel } from "../models";
 import { useLabStore } from "../stores/useLabStore";
@@ -154,16 +153,6 @@ export function BoardVisionPanel({
                 className="w-[4.25rem] rounded border border-zinc-600 bg-zinc-900 px-1 py-0.5 font-mono text-[10px] text-zinc-100"
               />
             </label>
-            {metadata?.pillars ? (
-              <TemporalYearSlider
-                referenceYear={referenceYear}
-                onYearChange={setReferenceYear}
-                timeline={timeline}
-                disabled={Boolean(busy || isFinalized)}
-                className="w-full min-w-[200px] max-w-md"
-                t={t}
-              />
-            ) : null}
             {isPreviewBoard ? (
               <span className="rounded border border-amber-500/45 bg-amber-500/12 px-1 py-0.5 text-[9px] text-amber-200">{t("预览")}</span>
             ) : null}

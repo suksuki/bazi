@@ -14,6 +14,15 @@ import { calculateFireEnergyAfterConflicts } from "@/features/stream-board/utils
 import { buildBlindSchoolFeaturesPayload, buildStreamBoardEnabledPlugins } from "./streamBoardPure";
 import type { ConfirmedDecisionItem, ConsensusItem } from "./streamBoardTypes";
 
+export const V12_SCHEMA_VIOLATION_ERROR = "V12_SCHEMA_VIOLATION_ERROR";
+
+export class V12SchemaViolationError extends Error {
+  constructor(message: string) {
+    super(`${V12_SCHEMA_VIOLATION_ERROR}: ${message}`);
+    this.name = V12_SCHEMA_VIOLATION_ERROR;
+  }
+}
+
 /** 与后端 `RegenerationContext` 对齐，供 history_context.regeneration_events 审计 */
 export type RegenerationContextInput = {
   reason: string;
@@ -253,6 +262,42 @@ export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult 
   if (typeof d.verdict_body !== "string" || !d.verdict_body) return null;
   const changeLogRaw = d.change_log as Record<string, unknown> | undefined;
   const llmMeta = d.llm_meta && typeof d.llm_meta === "object" && !Array.isArray(d.llm_meta) ? (d.llm_meta as Record<string, unknown>) : undefined;
+  const brainHubRaw =
+    d.brain_hub && typeof d.brain_hub === "object" && !Array.isArray(d.brain_hub)
+      ? (d.brain_hub as Record<string, unknown>)
+      : null;
+  const psvRaw = Array.isArray(brainHubRaw?.psv) ? brainHubRaw?.psv : [];
+  const assertionTreeRaw =
+    d.assertion_tree && typeof d.assertion_tree === "object" && !Array.isArray(d.assertion_tree)
+      ? (d.assertion_tree as Record<string, unknown>)
+      : null;
+  const assertionNodes = Array.isArray(assertionTreeRaw?.nodes) ? assertionTreeRaw?.nodes : [];
+  if (!assertionTreeRaw || assertionNodes.length === 0) {
+    throw new V12SchemaViolationError("final_verdict.assertion_tree is empty");
+  }
+  const brainHub =
+    brainHubRaw
+      ? {
+          psv: psvRaw
+            .filter((x) => x && typeof x === "object")
+            .map((x) => x as Record<string, unknown>)
+            .map((x) => ({
+              axis: String(x.axis || ""),
+              polarity: String(x.polarity || ""),
+              strength: Number(x.strength || 0),
+              evidence: Array.isArray(x.evidence) ? x.evidence.map((e) => String(e)) : [],
+            })),
+          audit:
+            brainHubRaw.audit && typeof brainHubRaw.audit === "object" && !Array.isArray(brainHubRaw.audit)
+              ? (brainHubRaw.audit as Record<string, unknown>)
+              : undefined,
+          retry_count: Number(brainHubRaw.retry_count || 0),
+          dissent_block:
+            brainHubRaw.dissent_block && typeof brainHubRaw.dissent_block === "object" && !Array.isArray(brainHubRaw.dissent_block)
+              ? (brainHubRaw.dissent_block as Record<string, unknown>)
+              : null,
+        }
+      : undefined;
   return {
     body: stripVerdictDisplayArtifact(String(d.verdict_body)),
     changeLog: {
@@ -298,6 +343,9 @@ export function parseFinalVerdictFromApiData(data: unknown): FinalVerdictResult 
     llmRawResponse: typeof d.llm_raw_response === "string" ? d.llm_raw_response : "",
     llmMeta,
     narrativeChunks: parseNarrativeChunks(d.narrative_chunks),
+    brainHub: brainHub as FinalVerdictResult["brainHub"],
+    assertionTree: assertionTreeRaw,
+    narrativeStrategy: typeof d.narrative_strategy === "string" ? d.narrative_strategy : "",
     metadataMemoryPatch:
       d.metadata_memory_patch && typeof d.metadata_memory_patch === "object" && !Array.isArray(d.metadata_memory_patch)
         ? (d.metadata_memory_patch as Record<string, unknown>)

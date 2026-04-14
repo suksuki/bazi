@@ -19,6 +19,7 @@ def _default_llm() -> Dict[str, Any]:
         "is_high_reasoning_mode": (
             str(os.getenv("QIAZHI_LLM_HIGH_REASONING", "") or "").strip().lower() in ("1", "true", "yes")
         ),
+        "narrative_strategy": (os.getenv("QIAZHI_NARRATIVE_STRATEGY", "assertion_tree") or "assertion_tree").strip(),
     }
 
 

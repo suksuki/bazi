@@ -23,6 +23,8 @@ import {
 } from "@/features/stream-board/controller/individualAdjustment";
 import type { ConsensusItem, MetricSnapshot } from "@/features/stream-board/controller/streamBoardTypes";
 import type {
+  BrainHubAudit,
+  DissentBlock,
   DeityComponent,
   DeityEnergyAxis,
   FinalVerdictHistoryItem,
@@ -34,6 +36,7 @@ import type {
   PatternThresholdRow,
   PhysicsLabConfig,
   PluginSwitches,
+  PsvSignal,
   SeedPayload,
   SeedSubmitOptions,
 } from "../models";
@@ -75,6 +78,10 @@ export type SeedAnalysisDeps = {
   setFinalVerdictBody: Dispatch<SetStateAction<string>>;
   setFinalVerdictChangeLog: Dispatch<SetStateAction<FinalVerdictChangeLog>>;
   setFinalVerdictVersionId: Dispatch<SetStateAction<string>>;
+  setInterruptRequest?: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  setPsvSignals?: Dispatch<SetStateAction<PsvSignal[]>>;
+  setBrainHubAudit?: Dispatch<SetStateAction<BrainHubAudit | null>>;
+  setBrainHubDissentBlock?: Dispatch<SetStateAction<DissentBlock | null>>;
   setFinalLogicalEvidence: Dispatch<SetStateAction<string[]>>;
   setFinalWorkVector: Dispatch<SetStateAction<Record<string, unknown> | null>>;
   setFinalTopologyGraphV1: Dispatch<SetStateAction<Record<string, unknown> | null>>;
@@ -199,6 +206,14 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
 
       try {
         let currentSessionId = d.consultationId;
+        const dateNorm = String(payload.date || "").trim();
+        const timeNorm = String(payload.time || "").trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateNorm)) {
+          throw new Error(`日期格式错误: ${dateNorm || "empty"}（应为 YYYY-MM-DD）`);
+        }
+        if (!/^\d{2}:\d{2}$/.test(timeNorm)) {
+          throw new Error(`时间格式错误: ${timeNorm || "empty"}（应为 HH:MM）`);
+        }
         d.setStreamingText(d.t("物理引擎排盘中…"));
         d.setAuditItems([
           {
@@ -234,8 +249,8 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            date: payload.date,
-            time: payload.time,
+            date: dateNorm,
+            time: timeNorm,
             calendar: payload.calendar,
             gender: payload.gender,
             lang: d.lang,
@@ -251,7 +266,25 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
           }),
         });
 
-        if (!response.ok) throw new Error(await response.text());
+        if (!response.ok) {
+          let detailCode = "";
+          let detailMessage = "";
+          try {
+            const errJson = (await response.json()) as { detail?: unknown };
+            const detail = errJson.detail as Record<string, unknown> | undefined;
+            detailCode = String(detail?.code || "");
+            detailMessage = String(detail?.user_message || detail?.message || "");
+          } catch {
+            detailMessage = await response.text();
+          }
+          if (response.status === 409 || detailCode === "ANALYZE_SEED_FLOW_STATE_CONFLICT") {
+            throw new Error("系统状态冲突，请尝试刷新重置");
+          }
+          if (response.status === 422 || detailCode === "V12_SCHEMA_VIOLATION_ERROR") {
+            throw new Error("逻辑断点异常，请检查 Fact 节点完整性");
+          }
+          throw new Error(detailMessage || `analyze-seed failed (HTTP ${response.status})`);
+        }
         const data = await response.json();
         d.reportPipelineEvent?.("SCAN_COMPLETED");
         if (incomingSig) {
@@ -265,6 +298,37 @@ export function useSeedAnalysis(depsRef: MutableRefObject<SeedAnalysisDeps>) {
           { sameSeedResubmit },
         );
         d.setMetadata(mergedMeta);
+        const interruptReq =
+          data.interrupt_request && typeof data.interrupt_request === "object" && !Array.isArray(data.interrupt_request)
+            ? (data.interrupt_request as Record<string, unknown>)
+            : null;
+        d.setInterruptRequest?.(interruptReq && Object.keys(interruptReq).length > 0 ? interruptReq : null);
+        const psvRaw = Array.isArray((data as Record<string, unknown>).psv_manifest)
+          ? ((data as Record<string, unknown>).psv_manifest as Array<Record<string, unknown>>)
+          : [];
+        d.setPsvSignals?.(
+          psvRaw.map((x) => ({
+            axis: String(x.axis || ""),
+            polarity: String(x.polarity || ""),
+            strength: Number(x.strength || 0),
+            evidence: Array.isArray(x.evidence) ? x.evidence.map((e) => String(e)) : [],
+          })),
+        );
+        const bh = (data as Record<string, unknown>).brain_hub_preview;
+        if (bh && typeof bh === "object" && !Array.isArray(bh)) {
+          const o = bh as Record<string, unknown>;
+          d.setBrainHubAudit?.(
+            o.audit && typeof o.audit === "object" && !Array.isArray(o.audit) ? (o.audit as BrainHubAudit) : null,
+          );
+          d.setBrainHubDissentBlock?.(
+            o.dissent_block && typeof o.dissent_block === "object" && !Array.isArray(o.dissent_block)
+              ? (o.dissent_block as DissentBlock)
+              : null,
+          );
+        } else {
+          d.setBrainHubAudit?.(null);
+          d.setBrainHubDissentBlock?.(null);
+        }
         const tl = (data.timeline ?? null) as TimelineSnapshot | null;
         d.setTimeline(tl);
         d.resetSeedPreviewState();

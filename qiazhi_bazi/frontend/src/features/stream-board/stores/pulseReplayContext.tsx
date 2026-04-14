@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { LabLlmRoundEntry } from "@/features/stream-board/controller/labLlmRounds";
 
-export type LogicPulseKind = "silent" | "llm" | "round";
+export type LogicPulseKind = "silent" | "llm" | "round" | "node" | "resume" | "introspection";
 
 export type PulseReplayOverlayState = {
   pulseId: string;
@@ -11,6 +11,15 @@ export type PulseReplayOverlayState = {
   kind: LogicPulseKind;
   hubLine?: string;
   roundEntry?: LabLlmRoundEntry | null;
+  assertionNodeId?: string;
+  assertionNodeType?: string;
+  resumeTimestamp?: string;
+  resumeFeedbackPayload?: Record<string, unknown> | null;
+  architectureViolation?: boolean;
+  targetNodeId?: string;
+  payloadPreview?: string;
+  introspectionWhy?: string;
+  probeStalled?: boolean;
   /** 环形缓冲中解析出的能量快照（可能为空） */
   energy: Record<string, number> | null;
   skeleton: string | null;

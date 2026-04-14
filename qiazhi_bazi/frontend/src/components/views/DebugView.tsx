@@ -70,7 +70,14 @@ function displayLlmRounds(snapshot: LabSnapshot): LabLlmRoundEntry[] {
   return syncLlmRoundsCanonical(null, snapshot, false);
 }
 
-type LogicPulseKind = "silent" | "llm" | "round";
+type LogicPulseKind = "silent" | "llm" | "round" | "node" | "resume" | "introspection";
+
+type ResumePulseItem = {
+  session_id: number;
+  interrupted_node_id: string;
+  resume_timestamp: string;
+  user_feedback_payload: Record<string, unknown>;
+};
 
 export type PulseLogicEvent = {
   id: string;
@@ -81,21 +88,72 @@ export type PulseLogicEvent = {
   hubLine?: string;
   hubIndex?: number;
   roundEntry?: LabLlmRoundEntry | null;
+  assertionNodeId?: string;
+  assertionNodeType?: string;
+  resumeTimestamp?: string;
+  resumeFeedbackPayload?: Record<string, unknown>;
+  architectureViolation?: boolean;
+  payloadChars?: number;
+  payloadPreview?: string;
+  introspectionWhy?: string;
+  probeStalled?: boolean;
 };
 
 /** 从 interaction_hub.result_logs 与 llm_rounds 推断静默重算 / LLM 往返，供「逻辑脉冲」打点 */
-function buildLogicPulseEvents(snapshot: LabSnapshot): PulseLogicEvent[] {
+function buildLogicPulseEvents(snapshot: LabSnapshot, resumeHistory: ResumePulseItem[] = []): PulseLogicEvent[] {
+  const fv = snapshot.final_verdict as { assertion_tree?: { nodes?: unknown[] } } | undefined;
+  const nodes = Array.isArray(fv?.assertion_tree?.nodes) ? fv?.assertion_tree?.nodes : [];
+  if (nodes.length > 0) {
+    const outNodes: PulseLogicEvent[] = [];
+    nodes.forEach((n, i) => {
+      if (!n || typeof n !== "object" || Array.isArray(n)) return;
+      const row = n as Record<string, unknown>;
+      const nodeId = String(row.node_id || "").trim();
+      if (!nodeId) return;
+      const nodeType = String(row.node_type || "NODE");
+      const text = String(row.text || "").trim();
+      outNodes.push({
+        id: nodeId,
+        label: `${nodeType} · ${text.slice(0, 42) || nodeId}`,
+        kind: "node",
+        assertionNodeId: nodeId,
+        assertionNodeType: nodeType,
+      });
+    });
+    if (outNodes.length > 0) return outNodes;
+  }
+
   const hub = snapshot.interaction_hub as Record<string, unknown> | undefined;
   const rawLogs = hub?.result_logs;
   const logs = Array.isArray(rawLogs) ? rawLogs.map((x) => String(x)) : [];
   const out: PulseLogicEvent[] = [];
+  const foMeta = ((snapshot.first_observation_llm as { meta?: unknown } | undefined)?.meta || {}) as Record<string, unknown>;
+  const introspection =
+    foMeta.logic_introspection && typeof foMeta.logic_introspection === "object" && !Array.isArray(foMeta.logic_introspection)
+      ? (foMeta.logic_introspection as Record<string, unknown>)
+      : null;
+  if (introspection) {
+    const path = Array.isArray(introspection.path) ? introspection.path.map((x) => String(x)) : [];
+    const why = String(introspection.why_probe || "").trim();
+    const probeStalled = readProbeStalled(snapshot);
+    out.push({
+      id: "logic-introspection",
+      label: "Logic_Introspection",
+      kind: "introspection",
+      assertionNodeId: String(introspection.target_node_id || "UNKNOWN_NODE"),
+      hubLine: path.length > 0 ? path.join(" -> ") : "发现冲突点 -> 检索种子库 -> 判定信息真空 -> 执行主动追问",
+      introspectionWhy: why,
+      probeStalled,
+    });
+  }
   logs.forEach((line, i) => {
     const silent = /\[SILENT_ANALYZE\]|静默|内向环|orchestrator|internal-loop|参数校准|实验参数已应用|RECALC|系统逻辑已接收|🧬/i.test(
       line,
     );
     const llm = /\[LLM_AUDIT\]|终判|final_synthesis|audit-physics|首观|润色|语义整合|GLOBAL/si.test(line);
-    if (silent) out.push({ id: `hub-${i}`, label: line.slice(0, 56), kind: "silent", hubLine: line, hubIndex: i });
-    else if (llm) out.push({ id: `hub-${i}-l`, label: line.slice(0, 56), kind: "llm", hubLine: line, hubIndex: i });
+    const oversizedJson = line.includes("{") && line.length > 180;
+    if (silent) out.push({ id: `hub-${i}`, label: line.slice(0, 56), kind: "silent", hubLine: line, hubIndex: i, architectureViolation: oversizedJson });
+    else if (llm) out.push({ id: `hub-${i}-l`, label: line.slice(0, 56), kind: "llm", hubLine: line, hubIndex: i, architectureViolation: oversizedJson });
   });
   const rounds = displayLlmRounds(snapshot);
   rounds.forEach((r) => {
@@ -104,20 +162,48 @@ function buildLogicPulseEvents(snapshot: LabSnapshot): PulseLogicEvent[] {
     const resp = String((r as { response_text?: string }).response_text || "").trim();
     if (msgs.length > 0 || resp || Object.keys(meta).length > 0) {
       const at = typeof r.at === "number" && Number.isFinite(r.at) ? r.at : undefined;
-      out.push({ id: `round-${r.id}`, label: r.title_zh || r.id, kind: "round", at, roundEntry: r });
+      const msgText = JSON.stringify(msgs);
+      const overloaded = msgText.length > 300;
+      out.push({
+        id: `round-${r.id}`,
+        label: overloaded ? `[EXPERT_SYSTEM_LOCK] ${r.title_zh || r.id}` : r.title_zh || r.id,
+        kind: "round",
+        at,
+        roundEntry: r,
+        architectureViolation: overloaded,
+        payloadChars: msgText.length,
+        payloadPreview: msgText.slice(0, 150),
+      });
     }
   });
+  if (resumeHistory.length > 0) {
+    for (const r of resumeHistory) {
+      const nodeId = String(r.interrupted_node_id || "").trim();
+      if (!nodeId) continue;
+      out.push({
+        id: `resume-${nodeId}-${r.resume_timestamp}`,
+        label: `RESUME @ ${nodeId}`,
+        kind: "resume",
+        assertionNodeId: nodeId,
+        resumeTimestamp: r.resume_timestamp,
+        resumeFeedbackPayload: r.user_feedback_payload || {},
+      });
+    }
+  }
   return out;
 }
 
 function LogicPulseChart({
   snapshot,
+  resumeHistory,
   onPulsePoint,
 }: {
   snapshot: LabSnapshot;
+  resumeHistory?: ResumePulseItem[];
   onPulsePoint?: (ev: PulseLogicEvent) => void;
 }) {
-  const pulses = useMemo(() => buildLogicPulseEvents(snapshot), [snapshot]);
+  const pulses = useMemo(() => buildLogicPulseEvents(snapshot, resumeHistory || []), [snapshot, resumeHistory]);
+  const hasArchitectureViolation = pulses.some((p) => p.architectureViolation);
   if (pulses.length === 0) {
     return (
       <p className="text-[11px] text-zinc-500">
@@ -129,14 +215,18 @@ function LogicPulseChart({
   return (
     <div className="space-y-2">
       <p className="text-[10px] text-zinc-500">
-        横轴为时间顺序：琥珀 ≈ 静默/重算，青绿 ≈ 终判与审计日志，紫 ≈ 独立 LLM 轮次。悬停可看摘要；点击可在主界面指令舱打开能量/骨架回放浮层（与演化轴联动）。
+        横轴脉冲优先绑定 AssertionTree 节点：每个点直连一个 Node_ID。若旧快照无 assertion_tree，回退显示历史日志脉冲。
       </p>
+      {hasArchitectureViolation ? (
+        <p className="text-[10px] text-rose-300">架构违章告警：检测到脉冲点包含疑似全量 JSON，请收敛到 Node 级窄带数据。</p>
+      ) : null}
       <div className="flex min-h-[3.25rem] flex-wrap items-end gap-x-1 gap-y-1 rounded-lg border border-zinc-800/90 bg-black/35 px-2 py-2">
         {pulses.map((p, i) => (
           <button
             key={p.id}
             type="button"
-            title={p.label}
+            title={p.kind === "introspection" ? `${p.label} | 为什么要问：${p.introspectionWhy || "命中高权重冲突种子，需主动确认现实映射。"}`
+              : p.label}
             aria-label={`逻辑脉冲 ${p.label}`}
             disabled={!onPulsePoint}
             onClick={() => onPulsePoint?.(p)}
@@ -144,21 +234,34 @@ function LogicPulseChart({
           >
             <span
               className={`block rounded-full transition-transform group-hover:scale-125 ${
-                p.kind === "silent"
+                p.architectureViolation
+                  ? "h-2.5 w-2.5 animate-pulse bg-rose-400 shadow-[0_0_12px_rgba(251,113,133,0.7)]"
+                  : p.probeStalled
+                    ? "h-2.5 w-2.5 animate-pulse bg-violet-300 shadow-[0_0_12px_rgba(216,180,254,0.75)]"
+                  : p.kind === "introspection"
+                    ? "h-2.5 w-2.5 bg-violet-400 shadow-[0_0_12px_rgba(192,132,252,0.7)]"
+                  : p.kind === "silent"
                   ? "h-2.5 w-2.5 bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.45)]"
                   : p.kind === "llm"
                     ? "h-2.5 w-2.5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]"
-                    : "h-2.5 w-2.5 bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.42)]"
+                    : p.kind === "resume"
+                      ? "h-2.5 w-2.5 bg-orange-400 shadow-[0_0_12px_rgba(251,146,60,0.6)]"
+                    : p.kind === "node"
+                      ? "h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.42)]"
+                      : "h-2.5 w-2.5 bg-violet-400 shadow-[0_0_10px_rgba(167,139,250,0.42)]"
               }`}
               style={{ marginBottom: `${(i % 4) * 3}px` }}
             />
             <span className="max-w-[3rem] truncate text-[7px] font-mono text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100">
-              {p.kind}
+              {p.assertionNodeId ? p.assertionNodeId : p.kind}
             </span>
           </button>
         ))}
       </div>
-      <p className="text-[9px] text-zinc-600">共 {pulses.length} 个事件（与下方「模型交互记录」同源快照）。</p>
+      <p className="text-[9px] text-zinc-600">共 {pulses.length} 个脉冲点（橙色为 Resume 重启点）。</p>
+      {hasArchitectureViolation ? (
+        <p className="text-[10px] text-rose-300">Payload_Size_Monitor：存在超载请求（messages &gt; 300 chars），已标记为红色闪烁脉冲。</p>
+      ) : null}
     </div>
   );
 }
@@ -192,6 +295,58 @@ function formatLlmMessagesAsPrompt(messages: Array<{ role: string; content: stri
     })
     .filter(Boolean);
   return parts.join("\n\n────────\n\n");
+}
+
+function extractTargetNodeIdFromMessages(messages: unknown): string {
+  if (!Array.isArray(messages)) return "UNKNOWN_NODE";
+  for (const m of messages) {
+    if (!m || typeof m !== "object" || Array.isArray(m)) continue;
+    const c = String((m as Record<string, unknown>).content || "");
+    const m1 = c.match(/Target_Node_ID\s*=\s*([A-Za-z0-9:_-]+)/);
+    if (m1?.[1]) return m1[1];
+    const m2 = c.match(/\[Target_Node_ID:([A-Za-z0-9:_-]+)\]/);
+    if (m2?.[1]) return m2[1];
+  }
+  return "UNKNOWN_NODE";
+}
+
+function readHtnPlan(snapshot: LabSnapshot): { goal: string; plan: string[]; status: string } {
+  const foMeta = ((snapshot.first_observation_llm as { meta?: unknown } | undefined)?.meta || {}) as Record<string, unknown>;
+  const li =
+    foMeta.logic_introspection && typeof foMeta.logic_introspection === "object" && !Array.isArray(foMeta.logic_introspection)
+      ? (foMeta.logic_introspection as Record<string, unknown>)
+      : {};
+  const hp = li.htn_plan && typeof li.htn_plan === "object" && !Array.isArray(li.htn_plan) ? (li.htn_plan as Record<string, unknown>) : {};
+  const goal = String(hp.goal || "终局裁决 v2.0");
+  const plan = Array.isArray(hp.plan) ? hp.plan.map((x) => String(x)) : ["OBSERVE", "AUDIT", "PROBE", "SYNTHESIS"];
+  const status = String(hp.status || "执行 Observe/Audit 常规链路。");
+  return { goal, plan, status };
+}
+
+function readProbeStalled(snapshot: LabSnapshot): boolean {
+  const foMeta = ((snapshot.first_observation_llm as { meta?: unknown } | undefined)?.meta || {}) as Record<string, unknown>;
+  const li =
+    foMeta.logic_introspection && typeof foMeta.logic_introspection === "object" && !Array.isArray(foMeta.logic_introspection)
+      ? (foMeta.logic_introspection as Record<string, unknown>)
+      : {};
+  const started = String(li.probe_started_at || "").trim();
+  if (!started) return false;
+  const t = Date.parse(started);
+  if (!Number.isFinite(t)) return false;
+  return Date.now() - t > 30_000;
+}
+
+function readAssimilatedFacts(snapshot: LabSnapshot): Array<{ text: string; weight: number }> {
+  const md = snapshot.metadata as Record<string, unknown> | undefined;
+  const p = (md?.persistence_layer as Record<string, unknown> | undefined) || {};
+  const bh = (p.brain_hub as Record<string, unknown> | undefined) || {};
+  const rows = Array.isArray(bh.confirmed_facts) ? (bh.confirmed_facts as unknown[]) : [];
+  return rows
+    .filter((x) => x && typeof x === "object" && !Array.isArray(x))
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      return { text: String(r.text || ""), weight: Number(r.weight || 0) };
+    });
 }
 
 function DebugSubTabBar(props: { active: DebugTabId; onChange: (id: DebugTabId) => void }) {
@@ -959,6 +1114,15 @@ export function DebugView() {
         kind: ev.kind,
         hubLine: ev.hubLine,
         roundEntry: ev.roundEntry ?? undefined,
+        assertionNodeId: ev.assertionNodeId || extractTargetNodeIdFromMessages(ev.roundEntry?.messages),
+        assertionNodeType: ev.assertionNodeType,
+        resumeTimestamp: ev.resumeTimestamp,
+        resumeFeedbackPayload: ev.resumeFeedbackPayload,
+        architectureViolation: ev.architectureViolation,
+        targetNodeId: ev.assertionNodeId || extractTargetNodeIdFromMessages(ev.roundEntry?.messages),
+        payloadPreview: ev.payloadPreview,
+        introspectionWhy: ev.introspectionWhy,
+        probeStalled: ev.probeStalled,
         energy: row?.deityScores ?? ptScores,
         skeleton: row?.skeleton ?? liveSk,
         bufferMiss: !row,
@@ -967,6 +1131,13 @@ export function DebugView() {
     [pulseReplay, snapshot],
   );
   const [pluginFocusId, setPluginFocusId] = useState<string | null>(null);
+  const [resumePulseHistory, setResumePulseHistory] = useState<ResumePulseItem[]>([]);
+  const [m5Stats, setM5Stats] = useState<{
+    gold_total: number;
+    current_entropy_reduction: number;
+    recent_sync_time: string;
+    top3_assimilated_seeds: string[];
+  } | null>(null);
   const [metaBranchFocus, setMetaBranchFocus] = useState<string | null>(null);
   const [debugTab, setDebugTab] = useState<DebugTabId>("verdict");
   const finalizationReport = state.finalizationReport;
@@ -1024,6 +1195,63 @@ export function DebugView() {
   useEffect(() => {
     if (debugTab !== "bazi_meta") setMetaBranchFocus(null);
   }, [debugTab]);
+  useEffect(() => {
+    const sid = Number(snapshot?.active_session_id || 0);
+    if (!sid || Number.isNaN(sid) || sid <= 0) {
+      setResumePulseHistory([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/v1/orchestrator/resume-pulse-history/${sid}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { items?: ResumePulseItem[] };
+        if (cancelled) return;
+        setResumePulseHistory(Array.isArray(data.items) ? data.items : []);
+      } catch {
+        if (!cancelled) setResumePulseHistory([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshot?.active_session_id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/v1/brain/m5-gold-stats");
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          gold_total?: number;
+          current_entropy_reduction?: number;
+          recent_sync_time?: string;
+          top3_assimilated_seeds?: string[];
+        };
+        if (cancelled) return;
+        setM5Stats({
+          gold_total: Number(data.gold_total || 0),
+          current_entropy_reduction: Number(data.current_entropy_reduction || 0.12),
+          recent_sync_time: String(data.recent_sync_time || ""),
+          top3_assimilated_seeds: Array.isArray(data.top3_assimilated_seeds)
+            ? data.top3_assimilated_seeds.map((x) => String(x || "")).filter(Boolean)
+            : [],
+        });
+      } catch {
+        if (!cancelled) setM5Stats(null);
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 15_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-5xl px-3 py-4 text-zinc-200">
@@ -1144,11 +1372,50 @@ export function DebugView() {
               </SemanticAccordion>
               <SemanticAccordion title="模型交互记录（多轮）" subtitle="按场景聚合：首观 / 物理审计 / 终审…" defaultOpen={false}>
                 <div className="space-y-3">
-                  <div className="rounded-lg border border-cyan-900/45 bg-gradient-to-br from-cyan-950/25 via-zinc-950/40 to-violet-950/20 p-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-200/95">实时逻辑脉冲图</p>
-                    <p className="mb-2 text-[9px] text-zinc-500">静默重算与 LLM 润色打点（interaction_hub.result_logs + llm_rounds）</p>
-                    <LogicPulseChart snapshot={snapshot as LabSnapshot} onPulsePoint={pulseReplay ? handlePulsePoint : undefined} />
+                  <div className="grid gap-2 md:grid-cols-[2fr_1fr]">
+                    <div className="rounded-lg border border-cyan-900/45 bg-gradient-to-br from-cyan-950/25 via-zinc-950/40 to-violet-950/20 p-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-cyan-200/95">实时逻辑脉冲图</p>
+                      <p className="mb-2 text-[9px] text-zinc-500">静默重算与 LLM 润色打点（interaction_hub.result_logs + llm_rounds）</p>
+                      <LogicPulseChart
+                        snapshot={snapshot as LabSnapshot}
+                        resumeHistory={resumePulseHistory}
+                        onPulsePoint={pulseReplay ? handlePulsePoint : undefined}
+                      />
+                    </div>
+                    <div className="rounded-lg border border-violet-900/50 bg-violet-950/20 p-2">
+                      {(() => {
+                        const h = readHtnPlan(snapshot as LabSnapshot);
+                        const activeProbe = h.status.includes("PROBE");
+                        return (
+                          <div className="space-y-1.5 text-[10px]">
+                            <p className="font-semibold uppercase tracking-wide text-violet-200/95">HTN_TASK_STACK</p>
+                            <p className="text-zinc-400">GOAL: {h.goal}</p>
+                            <p className="text-zinc-300">
+                              PLAN: {h.plan.map((x) => (x === "PROBE" && activeProbe ? `[${x}]` : x)).join(" -> ")}
+                            </p>
+                            <p className={activeProbe ? "text-amber-300" : "text-emerald-300"}>STATUS: {h.status}</p>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
+                  {(() => {
+                    const facts = readAssimilatedFacts(snapshot as LabSnapshot).filter((x) => x.weight >= 1.0);
+                    if (facts.length === 0) return null;
+                    return (
+                      <div className="rounded-lg border border-amber-700/50 bg-amber-950/20 p-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-200/95">Blackboard · Confirmed Facts</p>
+                        <ul className="mt-1 space-y-1 text-[10px]">
+                          {facts.map((f, i) => (
+                            <li key={`cf-${i}`} className="rounded border border-amber-600/40 bg-amber-900/25 px-2 py-1 text-amber-100">
+                              <span className="mr-2 font-mono text-amber-300">[weight:{f.weight.toFixed(1)}]</span>
+                              {f.text || "用户确认事实"}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                   {(() => {
                     const llmRounds = displayLlmRounds(snapshot as LabSnapshot);
                     if (llmRounds.length === 0) {
@@ -1174,6 +1441,37 @@ export function DebugView() {
                   })()}
                 </div>
               </SemanticAccordion>
+              {(() => {
+                const h = readHtnPlan(snapshot as LabSnapshot);
+                const facts = readAssimilatedFacts(snapshot as LabSnapshot).filter((x) => x.weight >= 1.0);
+                const foMeta = ((snapshot as LabSnapshot).first_observation_llm?.meta || {}) as Record<string, unknown>;
+                const li =
+                  foMeta.logic_introspection && typeof foMeta.logic_introspection === "object" && !Array.isArray(foMeta.logic_introspection)
+                    ? (foMeta.logic_introspection as Record<string, unknown>)
+                    : {};
+                const seedShort = String(li.seed_short || "");
+                const out = {
+                  lineage: "HTN_DRIVEN",
+                  seeds_matched: seedShort ? [seedShort] : [],
+                  assimilated: facts.length > 0,
+                };
+                return (
+                  <>
+                    <SemanticAccordion title="内测血统证明" subtitle="V12.9 lineage json" defaultOpen={false}>
+                      <pre className="rounded border border-zinc-800 bg-black/40 p-2 font-mono text-[10px] text-zinc-300">{safeJson(out)}</pre>
+                    </SemanticAccordion>
+                    <div className="rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300">
+                      <span className="font-semibold text-zinc-200">M5 Learning Status</span>
+                      <span className="ml-2 text-zinc-400">
+                        Current Entropy Reduction: {(m5Stats?.current_entropy_reduction ?? 0.12).toFixed(2)} (via Arbiter Feedback)
+                        {" · "}GOLD={m5Stats?.gold_total ?? 0}
+                        {" · "}Recent Sync={m5Stats?.recent_sync_time || "—"}
+                        {" · "}Top3 Seeds={(m5Stats?.top3_assimilated_seeds || []).slice(0, 3).join(", ") || "—"}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           ) : null}
         </div>

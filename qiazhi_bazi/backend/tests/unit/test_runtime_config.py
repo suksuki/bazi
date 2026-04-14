@@ -10,6 +10,7 @@ def test_runtime_config_defaults_when_missing(monkeypatch, tmp_path: Path):
     cfg = runtime_config.get_runtime_config()
     assert "llm" in cfg
     assert cfg["llm"]["provider"] == "ollama"
+    assert cfg["llm"]["narrative_strategy"] == "assertion_tree"
 
 
 def test_runtime_config_save_and_reload(monkeypatch, tmp_path: Path):

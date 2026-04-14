@@ -81,6 +81,8 @@ _startup_state = {
 
 @app.on_event("startup")
 def _startup() -> None:
+    app.state.db_init_ok = False
+    app.state.db_init_error = ""
     try:
         init_db()
         _startup_state["db_init_ok"] = True
@@ -93,6 +95,8 @@ def _startup() -> None:
         )
         _startup_state["db_init_ok"] = False
         _startup_state["db_init_error"] = str(e)
+    app.state.db_init_ok = bool(_startup_state["db_init_ok"])
+    app.state.db_init_error = str(_startup_state.get("db_init_error") or "")
     try:
         load_l1_physics_manifest()
     except Exception as e:  # noqa: BLE001

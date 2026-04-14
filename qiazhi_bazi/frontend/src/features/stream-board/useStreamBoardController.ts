@@ -8,6 +8,8 @@ import { applyPhysicsSqlPatch as requestApplyPhysicsSqlPatch } from "./controlle
 import type { LabSnapshotHydrationSinks } from "./controller/labSnapshotHydration";
 import {
   buildBlindSchoolFeaturesPayload,
+  buildPhysicsConfigPayload,
+  buildStreamBoardEnabledPlugins,
   coerceLogicProposalParamKey,
   extractInteractionHubMangpai,
   extractMetricSnapshotFromPhysics,
@@ -45,6 +47,8 @@ import {
 import { augmentDiagnosisWithMangpaiManifest } from "./mangpaiChipManifest";
 import { SILENT_PHYSICS_RECALC_EVENT } from "./physicsRecalcDispatch";
 import type {
+  BrainHubAudit,
+  DissentBlock,
   DeityComponent,
   DeityEnergyAxis,
   FinalVerdictChangeLog,
@@ -54,6 +58,7 @@ import type {
   LogicProposal,
   PatternThresholdRow,
   PluginWeights,
+  PsvSignal,
   SeedPayload,
   StreamBoardViewModel,
 } from "./models";
@@ -212,6 +217,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
   const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const [firstPromptText, setFirstPromptText] = useState("");
   const [timeline, setTimeline] = useState<TimelineSnapshot | null>(null);
+  const [interruptRequest, setInterruptRequest] = useState<Record<string, unknown> | null>(null);
+  const [psvSignals, setPsvSignals] = useState<PsvSignal[]>([]);
+  const [brainHubAudit, setBrainHubAudit] = useState<BrainHubAudit | null>(null);
+  const [brainHubDissentBlock, setBrainHubDissentBlock] = useState<DissentBlock | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pipelinePhase, setPipelinePhase] = useState<StreamPipelinePhase>("READY");
@@ -372,6 +381,10 @@ export function useStreamBoardController(): StreamBoardViewModel {
     setFinalVerdictBody,
     setFinalVerdictChangeLog,
     setFinalVerdictVersionId,
+    setInterruptRequest,
+    setPsvSignals,
+    setBrainHubAudit,
+    setBrainHubDissentBlock,
     setFinalLogicalEvidence,
     setFinalWorkVector,
     setFinalTopologyGraphV1,
@@ -545,6 +558,72 @@ export function useStreamBoardController(): StreamBoardViewModel {
       return next;
     });
   };
+
+  const resumeFromInterrupt = useCallback(
+    async (feedback: {
+      action: "confirm_conflict" | "adjust_energy" | "ignore_warning";
+      user_intention_id: string;
+      wealth_weight_delta: number;
+    }) => {
+      if (!consultationId) throw new Error("consultation id missing");
+      if (!metadata) throw new Error("metadata missing");
+      const compactFeedback = Object.fromEntries(
+        Object.entries(feedback).map(([k, v]) => [k, typeof v === "string" ? v.substring(0, 300) : v]),
+      ) as typeof feedback;
+      const response = await fetch(`${API_BASE}/api/v1/orchestrator/resume`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: consultationId,
+          user_feedback: compactFeedback,
+          metadata,
+          enabled_plugins: buildStreamBoardEnabledPlugins(pluginSwitches, {
+            purePhysicsAudit: Boolean(purePhysicsAudit),
+          }),
+          blind_school_features: buildBlindSchoolFeaturesPayload(pluginSwitches),
+          physics_config: buildPhysicsConfigPayload(labConfig),
+          dayun: timeline?.dayun || undefined,
+          liunian: timeline?.liunian || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "resume failed");
+      }
+      const data = (await response.json()) as Record<string, unknown>;
+      const nextMeta = (data.metadata || null) as BaziMetadata | null;
+      const nextTensor = (data.physics_tensor || null) as Record<string, unknown> | null;
+      if (nextMeta) setMetadata(nextMeta);
+      if (nextTensor) {
+        const scores = (nextTensor.deity_scores || {}) as Record<string, number>;
+        const axes = (nextTensor.deity_energy_axes || {}) as Record<string, DeityEnergyAxis>;
+        setDeityScores(scores);
+        setDeityEnergyAxes(axes);
+      }
+      const nextInterrupt = (data.interrupt_request || null) as Record<string, unknown> | null;
+      setInterruptRequest(nextInterrupt && Object.keys(nextInterrupt).length > 0 ? nextInterrupt : null);
+      mergeSnapshot({
+        metadata: (nextMeta || metadata) as unknown as Record<string, unknown>,
+        physics_tensor: (nextTensor || {}) as Record<string, unknown>,
+      });
+      appendSystemAuditLog("🧩 Resume 事务已提交：已从中断点执行局部重算。");
+    },
+    [
+      consultationId,
+      metadata,
+      API_BASE,
+      pluginSwitches,
+      purePhysicsAudit,
+      labConfig,
+      timeline?.dayun,
+      timeline?.liunian,
+      setMetadata,
+      setDeityScores,
+      setDeityEnergyAxes,
+      setInterruptRequest,
+      mergeSnapshot,
+    ],
+  );
 
   useEffect(() => {
     if (!labState.isFinalized || !labState.finalizationReport?.hash) return;
@@ -1305,6 +1384,12 @@ export function useStreamBoardController(): StreamBoardViewModel {
     finalVerdictHistory,
     selectionResetToken,
     finalVerdictVersionId,
+    interruptRequest,
+    setInterruptRequest,
+    resumeFromInterrupt,
+    psvSignals,
+    brainHubAudit,
+    brainHubDissentBlock,
     conclusionVersion,
     summaryChanged,
     l1Certified,

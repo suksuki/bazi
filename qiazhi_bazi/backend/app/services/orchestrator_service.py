@@ -8,7 +8,7 @@ from typing import Any, AsyncIterator, Callable, Dict, List, Optional, TypedDict
 
 from app.core.evolution.dna_registry import append_routing_audit_item
 from app.core.routing.causal_router import CausalRouter, load_routing_config
-from app.schemas.bazi_metadata import BaziMetadata
+from app.schemas.bazi_metadata import BaziMetadata, BrainHubPersistence, PersistenceLayer
 from app.services.decision_inbox_plugin_service import apply_decision_inbox_pipeline
 from app.services.helpers.sys_core_physics_plugin import SYS_CORE_PHYSICS_BUNDLE_SRC_KEY
 from app.services.helpers.tensor_adapters import ensure_abs_nodes_on_physics_tensor
@@ -22,6 +22,7 @@ from app.services.helpers.structural_preview_semantics import (
     build_structural_preview_vf_payloads,
     normalize_structural_preview_hint,
 )
+from app.logic.brain.active_probing import evaluate_active_probing
 
 _LOG = logging.getLogger(__name__)
 
@@ -122,6 +123,8 @@ class OrchestratorLoopResult(TypedDict, total=False):
     is_preview: bool
     preview_pattern_alert: str
     preview_pattern_alert_meta: Dict[str, Any]
+    active_probing: Dict[str, Any]
+    interrupt_request: Dict[str, Any]
 
 
 class OrchestratorService:
@@ -302,6 +305,21 @@ class OrchestratorService:
             apply_decision_inbox_pipeline(physics_tensor=physics_tensor, plugin_outputs=plugin_outputs, registry=ps.registry)
         except Exception:
             _LOG.debug("apply_decision_inbox_pipeline skipped", exc_info=True)
+        md_probe: Dict[str, Any] = {}
+        try:
+            md_probe = metadata_obj.model_dump(mode="python") if hasattr(metadata_obj, "model_dump") else {}
+        except Exception:
+            md_probe = {}
+        active_probing = evaluate_active_probing(
+            physics_tensor=physics_tensor,
+            plugin_outputs=plugin_outputs,
+            metadata=md_probe,
+        ).model_dump()
+        interrupt_request = active_probing.get("interrupt") if isinstance(active_probing.get("interrupt"), dict) else None
+        if isinstance(physics_tensor.get("meta"), dict):
+            physics_tensor["meta"]["active_probing_v1"] = active_probing
+            if interrupt_request:
+                physics_tensor["meta"]["interrupt_request_v1"] = interrupt_request
 
         if not is_preview:
             try:
@@ -432,8 +450,154 @@ class OrchestratorService:
             "is_preview": bool(is_preview),
             "preview_pattern_alert": preview_alert if is_preview else "",
             "preview_pattern_alert_meta": preview_pattern_alert_meta if is_preview else {},
+            "active_probing": active_probing,
+            "interrupt_request": interrupt_request or {},
         }
         return out
+
+    @staticmethod
+    def resume_calculation(
+        *,
+        session_id: int,
+        user_feedback: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        enabled_plugins: Optional[List[str]] = None,
+        blind_school_features: Optional[Dict[str, Any]] = None,
+        physics_config: Optional[Dict[str, Any]] = None,
+        dayun: Optional[str] = None,
+        liunian: Optional[str] = None,
+        plugin_service: Optional[PluginService] = None,
+    ) -> Dict[str, Any]:
+        """先持久化反馈，再从断点做局部重算。"""
+        from app.db.models import Consultation, ResumePulseHistory
+        from app.db.session import session_scope
+
+        if session_id <= 0:
+            raise ValueError("session_id must be a positive integer")
+        feedback = dict(user_feedback or {})
+        from app.logic.brain.hub import BrainHub
+        assimilation = BrainHub.assimilate_feedback(feedback)
+
+        with session_scope() as db:
+            consultation = db.get(Consultation, session_id)
+            if not consultation:
+                raise LookupError(f"consultation not found: {session_id}")
+
+            input_meta = dict(consultation.input_meta or {})
+            persistence = PersistenceLayer.model_validate(input_meta.get("persistence_layer") or {})
+            interrupt = dict(persistence.get("interrupt_request") or input_meta.get("interrupt_request") or {})
+            if str(interrupt.get("state") or "pending") != "pending":
+                raise PermissionError("resume requires a pending interrupt_request")
+
+            ack_tokens = list(persistence.get("bias_ack_tokens") or [])
+            ack_token = f"resume:{datetime.now(timezone.utc).isoformat()}"
+            ack_tokens.append(ack_token)
+            persistence["bias_ack_tokens"] = ack_tokens
+
+            intention = str(feedback.get("user_intention_id") or feedback.get("user_intention") or "").strip()
+            if intention:
+                persistence["user_intention_id"] = intention
+
+            feedback_history = list(persistence.resume_feedback_history or [])
+            feedback_history.append(
+                {
+                    "at": datetime.now(timezone.utc).isoformat(),
+                    "feedback": feedback,
+                    "ack_token": ack_token,
+                    "assimilation": assimilation,
+                }
+            )
+            persistence = persistence.model_copy(update={"resume_feedback_history": feedback_history})
+            brain_hub_state = (
+                persistence.brain_hub if isinstance(persistence.brain_hub, BrainHubPersistence) else BrainHubPersistence()
+            )
+            confirmed_facts = list(brain_hub_state.confirmed_facts or [])
+            sacred_refs = list(brain_hub_state.sacred_evidence_refs or [])
+            if bool(assimilation.get("confirmed")):
+                fact_item = dict(assimilation.get("fact") or {})
+                fact_item["at"] = datetime.now(timezone.utc).isoformat()
+                confirmed_facts.append(fact_item)
+                sacred_refs.append("brain_hub.confirmed_fact")
+            brain_hub_state = brain_hub_state.model_copy(
+                update={
+                    "confirmed_facts": confirmed_facts[-20:],
+                    "sacred_evidence_refs": list(dict.fromkeys([str(x) for x in sacred_refs if str(x).strip()]))[:20],
+                }
+            )
+            persistence = persistence.model_copy(update={"brain_hub": brain_hub_state})
+
+            interrupt["state"] = "resumed"
+            interrupt["resumed_at"] = datetime.now(timezone.utc).isoformat()
+            interrupt["resume_ack_token"] = ack_token
+            persistence = persistence.model_copy(update={"interrupt_request": interrupt})
+            input_meta["persistence_layer"] = persistence.model_dump()
+            interrupted_node_id = str(
+                interrupt.get("node_id")
+                or interrupt.get("interrupt_id")
+                or interrupt.get("reason_code")
+                or "UNKNOWN_NODE"
+            )
+            resume_row = ResumePulseHistory(
+                session_id=session_id,
+                interrupted_node_id=interrupted_node_id,
+                resume_timestamp=datetime.utcnow(),
+                user_feedback_payload=feedback,
+            )
+            db.add(resume_row)
+
+            md_payload = metadata if isinstance(metadata, dict) and metadata else input_meta
+            md_payload = dict(md_payload)
+            md_persistence = PersistenceLayer.model_validate(md_payload.get("persistence_layer") or {})
+            md_persistence = md_persistence.model_copy(
+                update={
+                    "brain_hub": persistence.brain_hub,
+                    "interrupt_request": persistence.interrupt_request,
+                    "resume_feedback_history": persistence.resume_feedback_history,
+                }
+            )
+            md_payload["persistence_layer"] = md_persistence.model_dump()
+
+            consultation.input_meta = input_meta
+            db.add(consultation)
+            db.flush()
+
+        metadata_obj = BaziMetadata.model_validate(md_payload)
+        loop_result = OrchestratorService.run_internal_loop(
+            metadata_obj=metadata_obj,
+            enabled_plugins=list(enabled_plugins or []),
+            blind_school_features=dict(blind_school_features or {}),
+            physics_config=dict(physics_config or {}),
+            session_id=session_id,
+            dayun=dayun,
+            liunian=liunian,
+            plugin_service=plugin_service,
+            emit=None,
+            is_preview=False,
+            structural_preview=None,
+        )
+        return {
+            "session_id": session_id,
+            "resume_ack_token": ack_token,
+            "metadata": loop_result["metadata"].model_dump(),
+            "physics_tensor": loop_result["physics_tensor"],
+            "plugin_outputs": loop_result.get("plugin_outputs") or {},
+            "semantic_label_bundle_v1": loop_result.get("semantic_label_bundle_v1") or {},
+            "verified_fact_lines": loop_result.get("verified_fact_lines") or [],
+            "verdict_skeleton": loop_result.get("verdict_skeleton") or "",
+            "requires_narrative_refresh": bool(loop_result.get("requires_narrative_refresh")),
+            "pre_injection_deity_display": loop_result.get("pre_injection_deity_display") or {},
+            "active_probing": loop_result.get("active_probing") or {},
+            "interrupt_request": loop_result.get("interrupt_request") or {},
+            "resume_pulse": {
+                "interrupted_node_id": interrupted_node_id,
+                "resume_timestamp": datetime.utcnow().isoformat(),
+                "user_feedback_payload": feedback,
+            },
+            "brain_hub": {
+                "confirmed_facts": ((loop_result["metadata"].model_dump().get("persistence_layer") or {}).get("brain_hub") or {}).get("confirmed_facts", []),
+                "sacred_evidence_refs": ((loop_result["metadata"].model_dump().get("persistence_layer") or {}).get("brain_hub") or {}).get("sacred_evidence_refs", []),
+            },
+        }
 
 
 def run_internal_loop(
@@ -516,6 +680,8 @@ async def run_full_cycle(
         "requires_narrative_refresh": bool(result.get("requires_narrative_refresh")),
         "pre_injection_deity_display": result.get("pre_injection_deity_display") or {},
         "is_preview": bool(is_preview),
+        "active_probing": result.get("active_probing") or {},
+        "interrupt_request": result.get("interrupt_request") or {},
     }
     if is_preview:
         complete_payload["preview_pattern_alert"] = str(result.get("preview_pattern_alert") or "")

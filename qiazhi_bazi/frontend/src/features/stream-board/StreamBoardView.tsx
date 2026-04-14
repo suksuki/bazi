@@ -33,6 +33,8 @@ import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContex
 import { BoardVisionPanel } from "./components/BoardVisionPanel";
 import { BoardCommandPanel } from "./components/BoardCommandPanel";
 import { PatternStatus, type PatternProfileSlice } from "./components/PatternStatus";
+import { InterruptOverlay } from "./components/InterruptOverlay";
+import { AuditHistoryTimeline } from "./components/AuditHistoryTimeline";
 
 
 
@@ -98,6 +100,11 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     finalVerdictHistory,
     selectionResetToken,
     finalVerdictVersionId,
+    interruptRequest,
+    resumeFromInterrupt,
+    psvSignals,
+    brainHubAudit,
+    brainHubDissentBlock,
     conclusionVersion,
     summaryChanged,
     l1Certified,
@@ -146,6 +153,42 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     ?.l1_junction_flags as Record<string, unknown> | undefined;
   const decisionSignalToNoise = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
     ?.decision_signal_to_noise as DecisionSignalToNoiseMeta | undefined;
+  const finalBrainHub = (
+    (labUiState.snapshot?.final_verdict as { brain_hub?: Record<string, unknown> } | undefined)?.brain_hub || {}
+  ) as Record<string, unknown>;
+  const finalAudit = (
+    finalBrainHub.audit && typeof finalBrainHub.audit === "object" && !Array.isArray(finalBrainHub.audit)
+      ? (finalBrainHub.audit as Record<string, unknown>)
+      : null
+  );
+  const finalDissent = (
+    finalBrainHub.dissent_block && typeof finalBrainHub.dissent_block === "object" && !Array.isArray(finalBrainHub.dissent_block)
+      ? (finalBrainHub.dissent_block as Record<string, unknown>)
+      : null
+  );
+  const livePsv = useMemo(() => {
+    const s = Array.isArray(finalBrainHub.psv) ? finalBrainHub.psv : [];
+    if (s.length > 0) {
+      return s
+        .filter((x) => x && typeof x === "object")
+        .map((x) => x as Record<string, unknown>)
+        .map((x) => ({
+          axis: String(x.axis || ""),
+          polarity: String(x.polarity || ""),
+          strength: Number(x.strength || 0),
+        }));
+    }
+    return (psvSignals || []).map((x) => ({
+      axis: String(x.axis || ""),
+      polarity: String(x.polarity || ""),
+      strength: Number(x.strength || 0),
+    }));
+  }, [finalBrainHub.psv, psvSignals]);
+  const hasLogicDissent = Boolean(
+    finalDissent ||
+      brainHubDissentBlock ||
+      String((finalAudit?.audit_state ?? brainHubAudit?.audit_state ?? "")).toUpperCase() === "FLAG",
+  );
 
   const causalSovereigntyForCert = useMemo(
     () => buildCausalSovereigntySlice(labUiState.snapshot as Record<string, unknown> | null | undefined),
@@ -190,6 +233,9 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
   const [inboxScanActive, setInboxScanActive] = React.useState(false);
   const [runSuccessFootnote, setRunSuccessFootnote] = React.useState("");
   const [fullRunErrorFootnote, setFullRunErrorFootnote] = React.useState("");
+  const [verdictFlowConflictHint, setVerdictFlowConflictHint] = React.useState("");
+  const [interruptNavPulse, setInterruptNavPulse] = React.useState(false);
+  const [resumeLock, setResumeLock] = React.useState(false);
   const inboxPulseTimerRef = React.useRef<number | null>(null);
   const runSuccessClearRef = React.useRef<number | null>(null);
   const fullRunErrorClearRef = React.useRef<number | null>(null);
@@ -204,6 +250,26 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     },
     [],
   );
+  React.useEffect(() => {
+    if (!interruptRequest) {
+      setResumeLock(false);
+    }
+  }, [interruptRequest]);
+  const navigateToInterruptOverlay = React.useCallback(() => {
+    const el = document.getElementById("interrupt-overlay-anchor");
+    if (!el) return;
+    setInterruptNavPulse(true);
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => setInterruptNavPulse(false), 1200);
+  }, []);
+  React.useEffect(() => {
+    const onFlowConflict = () => {
+      setVerdictFlowConflictHint("系统正在等待您的逻辑确认（PROBE_WAITING），请先完成反馈。");
+      navigateToInterruptOverlay();
+    };
+    window.addEventListener("qiazhi:verdict-flow-conflict", onFlowConflict as EventListener);
+    return () => window.removeEventListener("qiazhi:verdict-flow-conflict", onFlowConflict as EventListener);
+  }, [navigateToInterruptOverlay]);
   const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
   const [checklistResetToken, setChecklistResetToken] = React.useState(0);
   const [draftSeed, setDraftSeed] = React.useState<{ date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" } | null>(null);
@@ -217,6 +283,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     setSeedFlowPhase("main");
   }, []);
   const hasBoard = Boolean(metadata?.pillars);
+  const flowState = String(metadata?.flow_state || "").trim().toLowerCase();
+  const isProbeWaiting = flowState === "probe_waiting";
 
   React.useEffect(() => {
     if (metadata?.pillars) setSeedFlowPhase("main");
@@ -440,7 +508,13 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
       if (!result.ok) {
         const elapsedErr = Date.now() - t0;
         await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedErr)));
-        setFullRunErrorFootnote(result.error);
+        const errText = String(result.error || "");
+        const mappedErr = errText.includes("409")
+          ? "系统状态冲突，请尝试刷新重置"
+          : errText.includes("422")
+            ? "逻辑断点异常，请检查 Fact 节点完整性"
+            : errText;
+        setFullRunErrorFootnote(mappedErr);
         fullRunErrorClearRef.current = window.setTimeout(() => {
           setFullRunErrorFootnote("");
           fullRunErrorClearRef.current = null;
@@ -551,6 +625,11 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
    */
   const handleMainBarRun = React.useCallback(async () => {
     if (isFinalized) return;
+    if (isProbeWaiting) {
+      setVerdictFlowConflictHint("系统正在等待您的逻辑确认（PROBE_WAITING），请先完成反馈。");
+      navigateToInterruptOverlay();
+      return;
+    }
 
     if (seedDirty) {
       await handleFullCalculate();
@@ -574,6 +653,8 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
     finalizeVerdict,
     handleFullCalculate,
     handleSemanticRecompute,
+    isProbeWaiting,
+    navigateToInterruptOverlay,
   ]);
 
   React.useEffect(() => {
@@ -674,6 +755,94 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         </div>
       ) : null}
 
+      {interruptRequest ? (
+        <div
+          id="interrupt-overlay-anchor"
+          className={interruptNavPulse ? "rounded-xl ring-2 ring-violet-400/75 animate-pulse" : undefined}
+        >
+          <InterruptOverlay
+            interruptRequest={interruptRequest}
+            locked={resumeLock}
+            onResume={async (payload) => {
+              setResumeLock(true);
+              setVerdictFlowConflictHint("");
+              await resumeFromInterrupt(payload);
+            }}
+          />
+        </div>
+      ) : null}
+      {verdictFlowConflictHint ? (
+        <div className="mb-3 rounded-xl border border-violet-500/50 bg-violet-950/35 p-3 text-violet-100">
+          <p className="text-sm font-semibold">终判前置确认</p>
+          <p className="mt-1 text-xs text-violet-200/90">{verdictFlowConflictHint}</p>
+          <button
+            type="button"
+            onClick={() => {
+              navigateToInterruptOverlay();
+              setActiveView("debug");
+            }}
+            className="mt-2 rounded border border-violet-300/50 bg-violet-700/25 px-2 py-1 text-xs text-violet-50"
+          >
+            立即前往确认核心逻辑
+          </button>
+        </div>
+      ) : null}
+
+      {livePsv.length > 0 ? (
+        <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3">
+          <p className="text-sm font-semibold text-emerald-100">系统基调 (PSV)</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+            {livePsv.map((s, idx) => {
+              const pol = String(s.polarity || "");
+              const color =
+                pol.includes("NEGATIVE") ? "text-rose-300 border-rose-500/35" : pol.includes("POSITIVE") ? "text-emerald-300 border-emerald-500/35" : "text-zinc-300 border-zinc-500/35";
+              return (
+                <div key={`${s.axis}-${idx}`} className={`rounded-md border px-2 py-1.5 text-xs ${color}`}>
+                  <div className="font-semibold">{s.axis}</div>
+                  <div>{pol}</div>
+                  <div>strength={Number(s.strength || 0).toFixed(2)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {hasLogicDissent ? (
+        <div className="mb-3 rounded-xl border border-amber-500/45 bg-amber-950/35 p-3">
+          <p className="text-sm font-semibold text-amber-100">[逻辑异议]</p>
+          <p className="mt-1 text-xs text-amber-200/90">
+            审计状态：{String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "N/A")}；
+            原因：{String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || (finalDissent?.reason_code as string) || "")}
+          </p>
+          {(finalDissent || brainHubDissentBlock) ? (
+            <p className="mt-1 text-xs text-amber-100/90">
+              {String((finalDissent?.summary as string) || brainHubDissentBlock?.summary || "监军发现叙事与 PSV 存在偏差，请回看断言链。")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "").toUpperCase() === "REJECT" ? (
+        <div className="mb-3 rounded-xl border border-fuchsia-500/45 bg-fuchsia-950/30 p-3">
+          <p className="text-sm font-semibold text-fuchsia-100">审计历史（REJECT）</p>
+          <p className="mt-1 text-xs text-fuchsia-100/90">
+            监军已拒绝一次叙事输出，原因码：
+            {String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || "UNKNOWN")}
+          </p>
+          <p className="mt-1 text-xs text-fuchsia-200/90">
+            纠偏指令：{String((finalAudit?.feedback_for_llm as string) || brainHubAudit?.feedback_for_llm || "请回到 PSV 与 FACT 节点重写。")}
+          </p>
+        </div>
+      ) : null}
+      {String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "").toUpperCase() === "REJECT" ? (
+        <AuditHistoryTimeline
+          originalNarrative={String(finalAudit?.conflict_excerpt || "")}
+          reasonCode={String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || "LIG_AXIS_POS_MISMATCH")}
+          correctedNarrative={String(viewModel.finalVerdictBody || "")}
+        />
+      ) : null}
+
       {hasBoard ? (
         <PatternStatus
           profile={patternProfile as PatternProfileSlice | null}
@@ -692,6 +861,7 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
         </div>
       ) : null}
 
+      <div className={resumeLock ? "pointer-events-none opacity-70" : ""}>
       {seedFlowPhase === "entry" ? (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -815,12 +985,14 @@ export function StreamBoardView(viewModel: StreamBoardViewModel) {
                   decisionSignalToNoise={decisionSignalToNoise}
                   onBackToSeedEntry={handleBackToSeedEntry}
                   onOpenPluginAudit={handleOpenPluginAudit}
+                  probeWaiting={isProbeWaiting}
                 />
               )}
             </AnimatePresence>
           </div>
         </div>
       )}
+      </div>
 
       {labUiState.isFinalized && labUiState.finalizationReport?.hash ? (
         <motion.div

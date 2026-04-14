@@ -48,7 +48,8 @@ def _identity(*, high_reasoning: bool, lang: str) -> str:
             else ""
         )
         return (
-            "Role: Final Narrator (final verdict). Ziping metaphysics context; User payload is backend-devolved "
+            "Role: Final Narrator (final verdict synthesis slot only). "
+            "You are NOT a free-form writer. Ziping metaphysics context; User payload is backend-devolved "
             "without floating-point literals in physical facts."
             + tail
         )
@@ -59,12 +60,14 @@ def _identity(*, high_reasoning: bool, lang: str) -> str:
             else ""
         )
         return (
-            "역할: 최종 내레이터(종심). 자평(子平) 맥락; User 페이로드는 백엔드가 수치 리터럴 없이 요약한 물리 사실."
+            "역할: 최종 내레이터(종심, SYNTHESIS 슬롯 전용). 자유 서술 작가가 아닙니다. "
+            "자평(子平) 맥락; User 페이로드는 백엔드가 수치 리터럴 없이 요약한 물리 사실."
             + tail
         )
     tail = "高推理可展开 Auxiliary·溯源与 reasoning_feedback_loop 元字段。" if high_reasoning else ""
     return (
-        "角色：Final Narrator（终审）。简体中文子平语境；User 经后端脱水，无浮点物理字面量。"
+        "角色：Final Narrator（终审·仅SYNTHESIS槽位）。你不是自由写作器。"
+        "简体中文子平语境；User 经后端脱水，无浮点物理字面量。"
         + tail
     )
 
@@ -77,10 +80,10 @@ def _verdict_json_envelope_and_verdict_body_rules(*, high_reasoning: bool, lang:
             "Emit exactly one JSON object (no surrounding Markdown): "
             '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""},'
             '"assertions":[{"assertion_id":"a0","text":"one sentence","evidence_refs":["VF01","year.stem","plugin.sys.core.physics"]]}。'
-            "verdict_body must use exactly three level-3 Markdown headings, in this order: "
-            "### Core climate / ### Verdict consensus / ### Behavioral guidance; "
-            "change_log records deltas vs the previous version."
-            " Preserve every VF01, VF02, … token from [VerdictSkeleton] / [Verified Facts] verbatim in verdict_body (including the VF prefix and two digits)."
+            "BLACKOUT TEST MODE: verdict_body may contain ONLY one heading: "
+            "### SYNTHESIS. No extra sections, no free-writing expansion. "
+            "change_log records deltas vs the previous version. "
+            "Preserve every VF01, VF02, … token from [VerdictSkeleton] / [Verified Facts] verbatim in verdict_body."
             + tail
         )
     if u == "KO":
@@ -88,9 +91,9 @@ def _verdict_json_envelope_and_verdict_body_rules(*, high_reasoning: bool, lang:
             "출력은 JSON 객체 하나만(Markdown 펜스 없음): "
             '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""},'
             '"assertions":[{"assertion_id":"a0","text":"한 문장","evidence_refs":["VF01","year.stem","plugin.sys.core.physics"]]}。'
-            "verdict_body에는 반드시 다음 순서의 Markdown 3단 제목만 사용: "
-            "### 핵심 기상 / ### 판정 합의 / ### 행동 지침; change_log는 이전 버전 대비 차이."
-            " [VerdictSkeleton]/[Verified Facts]에 등장한 VF01, VF02 … 토큰은 verdict_body에 원문 그대로 보존(VF 접두어+두 자리 숫자)."
+            "BLACKOUT TEST MODE: verdict_body는 ### SYNTHESIS 한 개 섹션만 허용. "
+            "자유 서술 확장 금지. change_log는 이전 버전 대비 차이. "
+            "[VerdictSkeleton]/[Verified Facts]의 VF01, VF02 … 토큰은 원문 그대로 보존."
             + tail
         )
     tail_zh = " 可选顶层 reasoning_feedback_loop（勿写入 verdict_body）。" if high_reasoning else ""
@@ -98,7 +101,8 @@ def _verdict_json_envelope_and_verdict_body_rules(*, high_reasoning: bool, lang:
         "仅输出一个 JSON（前后无其它 Markdown）："
         '{"verdict_body":"markdown","change_log":{"physics_diff":[],"consensus_diff":[],"text_diff_hint":""},'
         '"assertions":[{"assertion_id":"a0","text":"一句断语","evidence_refs":["VF01","year.stem","plugin.sys.core.physics"]]}。'
-        "verdict_body 仅含三个三级标题：### 核心气象 / ### 裁决共识 / ### 行为指引；change_log 写相对上一版差异。"
+        "BLACKOUT 测试模式：verdict_body 仅允许一个三级标题 ### SYNTHESIS，"
+        "禁止自由写作扩展段落；change_log 写相对上一版差异。"
         + tail_zh
     )
 

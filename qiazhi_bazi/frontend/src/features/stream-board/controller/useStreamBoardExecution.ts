@@ -79,6 +79,9 @@ function labFinalVerdictFromParsed(verdict: FinalVerdictResult, bodyText: string
     llm_raw_response: verdict.llmRawResponse ?? "",
     llm_meta: verdict.llmMeta,
     narrative_chunks: verdict.narrativeChunks,
+    brain_hub: verdict.brainHub ?? null,
+    assertion_tree: verdict.assertionTree ?? null,
+    narrative_strategy: verdict.narrativeStrategy ?? "",
   };
 }
 

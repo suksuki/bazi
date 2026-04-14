@@ -6,23 +6,22 @@ from app.llm.client import FIRST_OBSERVATION_SYSTEM_PROMPT, build_first_observat
 
 
 def test_first_observation_system_is_structural_observer_template() -> None:
-    assert "Structural Observer" in FIRST_OBSERVATION_SYSTEM_PROMPT
-    assert "conflict_matrix.points" in FIRST_OBSERVATION_SYSTEM_PROMPT
-    assert "[位置]" in FIRST_OBSERVATION_SYSTEM_PROMPT
+    assert "Micro_Describer" in FIRST_OBSERVATION_SYSTEM_PROMPT
+    assert "冲突点" in FIRST_OBSERVATION_SYSTEM_PROMPT
 
 
-def test_build_first_observation_messages_zh_includes_metadata_and_positive_guard() -> None:
-    msgs = build_first_observation_messages({"pillars": {}, "conflict_matrix": {"points": []}}, "", "ZH")
+def test_build_first_observation_messages_zh_includes_node_chain_guard() -> None:
+    msgs = build_first_observation_messages("FACT_NODE:寅巳穿害，日支受损", "", "ZH")
     assert msgs[0]["role"] == "system"
     user = msgs[1]["content"]
-    assert "BaziMetadata" in user
-    assert "干支" in user or "JSON" in user
+    assert "Node_Chain_Execution" in user
+    assert "NODE_CONTEXT" in user
 
 
 def test_build_first_observation_messages_strips_float_literals_and_accepts_labels() -> None:
     hint = '[Verified Facts·语义标签-only]\n["VF·十神.比肩.Abs档=中庸可用"]'
     msgs = build_first_observation_messages(
-        {"pillars": {}, "conflict_matrix": {"points": []}, "x": 1.414},
+        "FACT_NODE:寅巳穿害，日支受损 x=1.414",
         "",
         "ZH",
         semantic_label_json=hint,

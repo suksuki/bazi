@@ -237,27 +237,23 @@ class QwenClient:
 
 
 def build_first_observation_messages(
-    metadata: Dict[str, Any],
+    node_context: str,
     location_hint: str = "",
     lang: str = "ZH",
     *,
     semantic_label_json: str | None = None,
 ) -> List[Dict[str, str]]:
-    """生成首轮“只观察不下结论”的提示词（物理收敛后调用；可注入语义标签-only 块）。"""
-    lang_u = (lang or "ZH").upper()
-    zh_guard = ""
-    if lang_u == "ZH":
-        zh_guard = "语境仅限干支与 JSON 已列字段；地理信息仅作地点标签，不衍生新冲合关系。\n"
+    """V12.2 Nano-Prompting：只允许注入节点级窄带上下文。"""
     label_block = (semantic_label_json or "").strip()
-    meta_blob = json.dumps(metadata, ensure_ascii=False)
+    node_line = str(node_context or "").strip()[:100]
     user_raw = (
         (f"{label_block}\n\n" if label_block else "")
-        + "以下为 BaziMetadata；请严格按 System 要求输出关系条列，不下终局判断：\n"
-        f"{meta_blob}\n"
+        + "Node_Chain_Execution: 仅将以下节点描述翻译为自然语言，不扩展、不断盘、不引入新事实。\n"
+        f"NODE_CONTEXT: {node_line}\n"
         f"{location_hint}\n"
-        f"{zh_guard}"
         f"{LanguageEngine.first_observation_output_hint(lang)}"
     )
+    user_raw = user_raw[:170]
     return [
         {"role": "system", "content": strip_float_literals(FIRST_OBSERVATION_SYSTEM_PROMPT)},
         {"role": "user", "content": strip_float_literals(user_raw)},

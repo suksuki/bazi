@@ -1,3 +1,10 @@
+from app.schemas.tri_layer_v12 import (
+    ArbiterBias as TriLayerArbiterBiasV12,
+    DynamicInference as TriLayerDynamicInferenceV12,
+    StaticFact as TriLayerStaticFactV12,
+    TriLayerMetadata as TriLayerMetadataV12,
+)
+
 from app.schemas.bazi_metadata import (
     BaziMetadata,
     ManualEnergyPatchEntry,
@@ -23,6 +30,10 @@ from app.schemas.bazi_metadata import (
 )
 
 __all__ = [
+    "TriLayerArbiterBiasV12",
+    "TriLayerDynamicInferenceV12",
+    "TriLayerMetadataV12",
+    "TriLayerStaticFactV12",
     "BaziMetadata",
     "ManualEnergyPatchEntry",
     "ManualEnergyPatchState",

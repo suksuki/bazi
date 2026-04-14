@@ -16,6 +16,7 @@ class FlowState(str, Enum):
     SAME = "比劫"
     OUTPUT = "泄"
     RESOURCE = "印"
+    PROBE_WAITING = "probe_waiting"
 
 
 class StemBranchPair(BaseModel):
@@ -161,6 +162,10 @@ class VerdictAnchorLayer(BaseModel):
         default="",
         description="物理预判 Markdown 骨架：由 VF 经 semantic_translator.build_verdict_skeleton 生成；Orchestrator 每轮刷新",
     )
+    assertion_tree: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="M4 碎片化断言树（FACT/LAW/WILL/SYNTHESIS）。",
+    )
 
 
 class ManualEnergyPatchEntry(BaseModel):
@@ -206,6 +211,16 @@ class PersistenceConfirmedPhysicsWill(BaseModel):
     )
 
 
+class BrainHubPersistence(BaseModel):
+    """BrainHub 侧车：HTN 血统、意志同化与证据锚。"""
+
+    lineage: str = Field(default="", description="HTN 血统标记，V12 要求为 HTN_DRIVEN")
+    seeds_matched: List[str] = Field(default_factory=list, description="命中的标准种子短码")
+    htn_plan: Dict[str, Any] = Field(default_factory=dict, description="HTN 任务全路径快照")
+    confirmed_facts: List[Dict[str, Any]] = Field(default_factory=list, description="用户确认后的神圣证据")
+    sacred_evidence_refs: List[str] = Field(default_factory=list, description="神圣证据引用键")
+
+
 class PersistenceLayer(BaseModel):
     """持久化侧车：与命例实例绑定、跨引擎重算保留。"""
 
@@ -222,6 +237,9 @@ class PersistenceLayer(BaseModel):
         default="",
         description="用户确认意志时的大运干支锚；与当前 temporal_context/dayun 不一致时提示复核",
     )
+    brain_hub: BrainHubPersistence = Field(default_factory=BrainHubPersistence, description="BrainHub 运行时持久化侧车")
+    interrupt_request: Dict[str, Any] = Field(default_factory=dict, description="中断请求快照")
+    resume_feedback_history: List[Dict[str, Any]] = Field(default_factory=list, description="Resume 反馈流水")
 
 
 class ConflictMatrix(BaseModel):

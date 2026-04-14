@@ -37,7 +37,7 @@ def test_final_verdict_system_merges_heading_rules_into_json_contract_only() -> 
     sys_hi = build_final_verdict_system_message(high_reasoning=True, lang="ZH")
     sys_lo = build_final_verdict_system_message(high_reasoning=False, lang="ZH")
     assert "[STRICT_JSON_ONLY]" in sys_hi
-    assert "### 核心气象" in sys_hi
+    assert "### SYNTHESIS" in sys_hi
     assert "Final Narrator" in sys_hi
     assert "Verified Facts" in sys_lo and "VF01" in sys_lo
     assert FIRST_OBSERVATION_SYSTEM_PROMPT not in sys_hi
@@ -48,7 +48,7 @@ def test_final_verdict_system_merges_heading_rules_into_json_contract_only() -> 
 def test_final_verdict_system_message_en_localizes_contract_headings() -> None:
     sys_en = build_final_verdict_system_message(high_reasoning=True, lang="EN")
     assert "[STRICT_JSON_ONLY]" in sys_en
-    assert "### Core climate" in sys_en
+    assert "### SYNTHESIS" in sys_en
     assert "Final Narrator" in sys_en
     assert "VF01" in sys_en
     assert "Please output strictly in English." in sys_en

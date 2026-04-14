@@ -46,6 +46,8 @@ type Props = {
 export function PulseReplayOverlay({ overlay, onClose, t }: Props) {
   const hasEnergy = overlay.energy && Object.keys(overlay.energy).length > 0;
   const hasSk = Boolean(overlay.skeleton?.trim());
+  const violationPreview = String(overlay.payloadPreview || "").slice(0, 150);
+  const targetNode = String(overlay.targetNodeId || overlay.assertionNodeId || "UNKNOWN_NODE");
 
   return (
     <div
@@ -77,7 +79,31 @@ export function PulseReplayOverlay({ overlay, onClose, t }: Props) {
       {overlay.hubLine ? (
         <p className="mb-2 rounded border border-zinc-800 bg-black/40 p-2 font-mono text-[9px] text-zinc-400">{overlay.hubLine}</p>
       ) : null}
-      <div className="grid max-h-[min(56vh,420px)] gap-3 overflow-y-auto sm:grid-cols-2">
+      {overlay.kind === "introspection" ? (
+        <div className="mb-2 rounded border border-violet-700/60 bg-violet-950/30 p-2 text-[10px] text-violet-100">
+          <p>为什么要问这个问题？</p>
+          <p className="mt-1 text-violet-200">{overlay.introspectionWhy || "命中高权重冲突种子，需先做现实确认再继续推理。"}</p>
+          {overlay.probeStalled ? <p className="mt-1 text-amber-300">PROBE 超时待机：超过 30 秒未收到反馈。</p> : null}
+        </div>
+      ) : null}
+      {overlay.architectureViolation ? (
+        <div className="mb-2 rounded border border-rose-700/60 bg-rose-950/35 p-2 text-[10px] text-rose-100">
+          <p className="font-mono">Target_Node_ID: {targetNode}</p>
+          <pre className="mt-1 max-h-20 overflow-auto whitespace-pre-wrap break-words font-mono text-[9px] text-rose-100/90">
+            {violationPreview || "N/A"}
+          </pre>
+          <p className="mt-1 text-rose-200">[EXPERT_SYSTEM_LOCK][ARCH_VIOLATION] 物理层禁运：由于体积超载，已阻断全量渲染</p>
+        </div>
+      ) : null}
+      {overlay.kind === "resume" ? (
+        <div className="mb-2 rounded border border-orange-700/50 bg-orange-950/25 p-2 text-[10px] text-orange-100">
+          <p>Resume 时间：{overlay.resumeTimestamp || "—"}</p>
+          <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap break-words font-mono text-[9px] text-orange-100/90">
+            {JSON.stringify(overlay.resumeFeedbackPayload || {}, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+      <div className={`grid max-h-[min(56vh,420px)] gap-3 overflow-y-auto sm:grid-cols-2 ${overlay.architectureViolation ? "hidden" : ""}`}>
         <div className="rounded-lg border border-zinc-800/90 bg-black/35 p-2">
           <p className="mb-1.5 text-[10px] font-medium text-cyan-100/90">{t("能量图快照")}</p>
           {hasEnergy ? (

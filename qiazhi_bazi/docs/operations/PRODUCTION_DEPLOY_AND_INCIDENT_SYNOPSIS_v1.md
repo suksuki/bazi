@@ -137,6 +137,20 @@ curl -sSI 'http://127.0.0.1:8001/同上路径'   # 仅当路径以 /api 开头�
 
 **措施**：改对密码或 `ALTER USER` 后重启 uvicorn。
 
+### 8.4 `Connection refused` 与「V12 后本地连不上」（多数非代码回归）
+
+**常见根因**：
+
+1. **运行环境变了**：管理页或 API 部署在云上/容器里时，`DATABASE_URL` 里的 `127.0.0.1` 指 **该进程所在机器**，不是开发用的笔记本；本机未起 Postgres 或端口未映射 → `Connection refused`。
+2. **仅配置了旧变量**：仓库 README 写明兼容 `QIAZHI_BAZI_DB_URL`；若只设了该变量而未设 `DATABASE_URL`，旧版 `session.py` 曾**不读取**兼容变量（易误判为「重构坏了」）。当前已在 `app/db/session.py` 合并读取。
+3. **V12 持久化**：`metadata.persistence_layer` / 三色 `ArbiterBias` **不参与**解析或覆盖 `DATABASE_URL`；若怀疑误配，应查 **容器/系统环境变量** 与 **Admin 页 POST 的 db_url**，而非 `persistence_layer`。
+
+**一键自检**：在 `backend` 下执行 `python3 scripts/audit_db_connectivity.py`（含 `ss`、TCP、`SELECT 1` 与上述说明）。
+
+**Docker 连宿主 Postgres**：见仓库 `deploy/docker-database-url.example.env`（`host.docker.internal` 或 compose 服务名）。
+
+**SSL / 驱动**：`OperationalError: connection refused` 为 **TCP 未接通**；若为证书/SSL 协商失败，文案多为 `SSL SYSCALL` / `no pg_hba.conf` 等，需改 `sslmode` 或 `pg_hba.conf`，与「连接池驱动升级」无必然关系；连接串仍支持 `postgresql+psycopg2` 与 `postgresql+psycopg`。
+
 ---
 
 ## 9. 相关文件索引
@@ -151,7 +165,9 @@ curl -sSI 'http://127.0.0.1:8001/同上路径'   # 仅当路径以 /api 开头�
 | 本机一键重启 | `restart_local_services.sh` |
 | CORS 默认与合并 | `backend/main.py` |
 | 前端 README 部署摘要 | `frontend/README.md` |
+| DB 连接回归自检脚本 | `backend/scripts/audit_db_connectivity.py` |
+| Docker 下 DATABASE_URL 示例 | `deploy/docker-database-url.example.env` |
 
 ---
 
-*文档版本：v1.3；与代码变更以仓库为准。*
+*文档版本：v1.4；与代码变更以仓库为准。*

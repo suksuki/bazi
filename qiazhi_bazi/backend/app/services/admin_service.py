@@ -20,6 +20,7 @@ from app.api.admin_helpers import (
     validate_target_url,
 )
 from app.api.contracts import DbStatusRequest, LlmTestRequest
+from app.core.v12_error_protocol import build_v12_error
 from app.core.llm_ollama import looks_like_native_ollama_base_url
 from app.core.runtime_config import get_runtime_config
 from app.db.session import DB_URL, _engine, init_db
@@ -43,6 +44,28 @@ def _admin_db_host_allowed(hostname: str, allowed_db_hosts: set[str]) -> bool:
     except ValueError:
         pass
     return False
+
+
+def _db_connection_hint(exc: BaseException, target_db_url: Optional[str]) -> str:
+    """在常见误配（远程部署仍填 127.0.0.1）时补充说明，减少「账号密码」误判。"""
+    base = "连接失败。请检查账号密码、数据库服务状态与目标地址是否在白名单内。"
+    msg = str(exc).lower()
+    if "connection refused" not in msg and "could not connect to server" not in msg:
+        return base
+    url = target_db_url or DB_URL or ""
+    try:
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
+    except Exception:
+        host = ""
+    if host in ("127.0.0.1", "localhost", "::1"):
+        base += (
+            " 补充：连接串使用本机回环地址时，「本机」指运行该后端进程的环境（云主机 / 容器内），"
+            "不是您浏览器所在电脑。若 PostgreSQL 在另一台机器或 Docker 的 db 服务上，"
+            "请改为该环境可达的主机名（例如 compose 中的服务名 `postgres`、内网 RDS 地址），"
+            "并确保 `postgresql.conf` 中 `listen_addresses` 与防火墙放行 5432。"
+        )
+    return base
 
 
 def get_db_status_payload(target_db_url: Optional[str]) -> Dict[str, Any]:
@@ -105,11 +128,21 @@ def get_db_status_response(body: Optional[DbStatusRequest]) -> Dict[str, Any]:
     try:
         return get_db_status_payload(target_db_url=target)
     except Exception as exc:  # noqa: BLE001
+        proto = build_v12_error(
+            code="DB_ENV_PATH_UNREACHABLE",
+            user_message="数据库连接失败：当前更像路径/环境可达性问题，而非单纯密码问题。",
+            diagnosis=str(exc),
+            hints=[
+                "若使用 127.0.0.1，请确认它指向的是后端运行环境本机。",
+                "Docker 场景可改 host.docker.internal 或 compose 服务名。",
+            ],
+        )
         return {
             "ok": False,
             "db_url": masked_db_url(target or DB_URL),
             "error": str(exc),
-            "hint": "连接失败。请检查账号密码、数据库服务状态与目标地址是否在白名单内。",
+            "error_protocol": proto,
+            "hint": _db_connection_hint(exc, target),
         }
 
 

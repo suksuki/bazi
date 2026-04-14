@@ -267,6 +267,30 @@ export type VerdictNarrativeChunk = {
 /** 终审语义整合（mandatory_final_synthesis）成功时的正文与完整载荷 */
 export type FinalVerdictSynthesisResult = { body: string; verdict: FinalVerdictResult };
 
+export type PsvSignal = {
+  axis: string;
+  polarity: string;
+  strength: number;
+  evidence?: string[];
+};
+
+export type BrainHubAudit = {
+  is_passed?: boolean;
+  reason_code?: string;
+  feedback_for_llm?: string;
+  audit_state?: "PASS" | "REJECT" | "FLAG" | string;
+  matched_rules?: string[];
+  conflict_excerpt?: string;
+};
+
+export type DissentBlock = {
+  block_kind?: string;
+  protocol?: string;
+  severity?: string;
+  reason_code?: string;
+  summary?: string;
+};
+
 export type FinalVerdictResult = {
   body: string;
   changeLog: FinalVerdictChangeLog;
@@ -274,6 +298,14 @@ export type FinalVerdictResult = {
   versionId: string;
   /** 终判段落与地支 / conflict_point 的弱锚点（后端启发式） */
   narrativeChunks?: VerdictNarrativeChunk[];
+  brainHub?: {
+    psv?: PsvSignal[];
+    audit?: BrainHubAudit;
+    retry_count?: number;
+    dissent_block?: DissentBlock | null;
+  };
+  assertionTree?: Record<string, unknown>;
+  narrativeStrategy?: string;
   workVector?: Record<string, unknown>;
   topologyGraphV1?: Record<string, unknown>;
   structureCandidatesV0?: Record<string, unknown>;
@@ -443,6 +475,16 @@ export type StreamBoardViewModel = {
   finalVerdictHistory: FinalVerdictHistoryItem[];
   selectionResetToken: number;
   finalVerdictVersionId: string;
+  interruptRequest: Record<string, unknown> | null;
+  setInterruptRequest: Dispatch<SetStateAction<Record<string, unknown> | null>>;
+  resumeFromInterrupt: (feedback: {
+    action: "confirm_conflict" | "adjust_energy" | "ignore_warning";
+    user_intention_id: string;
+    wealth_weight_delta: number;
+  }) => Promise<void>;
+  psvSignals: PsvSignal[];
+  brainHubAudit: BrainHubAudit | null;
+  brainHubDissentBlock: DissentBlock | null;
   conclusionVersion: number;
   summaryChanged: boolean;
   l1Certified: boolean;

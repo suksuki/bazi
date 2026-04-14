@@ -18,6 +18,9 @@ export type StreamBoardHydrationSnapshot = {
     structure_candidates_v0?: Record<string, unknown>;
     structure_final_decision_v0?: Record<string, unknown>;
     version_id?: string;
+    brain_hub?: Record<string, unknown>;
+    assertion_tree?: Record<string, unknown>;
+    narrative_strategy?: string;
   };
   decision_selection_ids?: string[];
 } | null;

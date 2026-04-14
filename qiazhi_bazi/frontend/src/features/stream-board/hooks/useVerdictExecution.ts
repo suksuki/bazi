@@ -8,6 +8,7 @@ import {
   buildFinalVerdictRequestBody,
   finalVerdictHttpFallbackLog,
   parseFinalVerdictFromApiData,
+  V12_SCHEMA_VIOLATION_ERROR,
   type RegenerationContextInput,
 } from "@/features/stream-board/controller/finalVerdictPayload";
 import { buildFallbackVerdict } from "@/features/stream-board/utils";
@@ -15,6 +16,26 @@ import type { BaziMetadata, Lang, TimelineSnapshot } from "@/types/bazi";
 import type { DeityComponent, DeityEnergyAxis, LlmDiagnosticData, PluginWeights } from "../models";
 import type { PluginSwitches } from "../models";
 import type { ConsensusItem } from "@/features/stream-board/controller/streamBoardTypes";
+
+function mapFinalVerdictError(status: number, detailCode: string): string {
+  const code = String(detailCode || "").trim();
+  if (status === 409 || code === "FINAL_VERDICT_FLOW_STATE_CONFLICT") {
+    return "系统正在等待您的逻辑确认（PROBE_WAITING），请先完成反馈。";
+  }
+  if (status === 422 || code === "V12_SCHEMA_VIOLATION_ERROR") {
+    return "断言结构违章（V12_SCHEMA_VIOLATION），已拦截非血统输出。";
+  }
+  return "";
+}
+
+function emitVerdictFlowConflictNavigationPulse(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("qiazhi:verdict-flow-conflict", {
+      detail: { code: "FINAL_VERDICT_FLOW_STATE_CONFLICT" },
+    }),
+  );
+}
 
 export type VerdictExecutionDeps = {
   silentRecalcInFlightRef: MutableRefObject<boolean>;
@@ -66,7 +87,7 @@ async function consumeFinalVerdictNdjsonStream(
       const line = buf.slice(0, nl).trim();
       buf = buf.slice(nl + 1);
       if (!line) continue;
-      let ev: { type?: string; text?: string; data?: unknown; detail?: string };
+      let ev: { type?: string; text?: string; data?: unknown; detail?: string; code?: string; status_code?: number };
       try {
         ev = JSON.parse(line) as typeof ev;
       } catch {
@@ -78,7 +99,11 @@ async function consumeFinalVerdictNdjsonStream(
       } else if (ev.type === "complete" && ev.data) {
         complete = ev.data;
       } else if (ev.type === "error") {
-        throw new Error(typeof ev.detail === "string" ? ev.detail : "ndjson error");
+        const mapped = mapFinalVerdictError(Number(ev.status_code || 0), String(ev.code || ""));
+        if (mapped && (Number(ev.status_code || 0) === 409 || String(ev.code || "") === "FINAL_VERDICT_FLOW_STATE_CONFLICT")) {
+          emitVerdictFlowConflictNavigationPulse();
+        }
+        throw new Error(mapped || (typeof ev.detail === "string" ? ev.detail : "ndjson error"));
       }
     }
   }
@@ -153,7 +178,10 @@ export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDe
                 const data = await consumeFinalVerdictNdjsonStream(sRes, (cum) => d.setStreamingText?.(cum));
                 const verdictParsed = parseFinalVerdictFromApiData(data);
                 if (verdictParsed) return verdictParsed;
-              } catch {
+              } catch (error) {
+                if (error instanceof Error && error.name === V12_SCHEMA_VIOLATION_ERROR) {
+                  throw error;
+                }
                 /* fall through to JSON POST */
               }
             }
@@ -165,8 +193,15 @@ export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDe
             signal: controller.signal,
             body: jsonBody,
           });
-
           const data = await response.json();
+          if (!response.ok) {
+            const detail = data?.detail && typeof data.detail === "object" ? data.detail : {};
+            const mapped = mapFinalVerdictError(Number(response.status || 0), String(detail?.code || ""));
+            if (mapped && (Number(response.status || 0) === 409 || String(detail?.code || "") === "FINAL_VERDICT_FLOW_STATE_CONFLICT")) {
+              emitVerdictFlowConflictNavigationPulse();
+            }
+            throw new Error(mapped || String(detail?.user_message || detail?.message || data?.detail || `HTTP ${response.status}`));
+          }
           const verdictParsed = parseFinalVerdictFromApiData(data);
           if (verdictParsed) {
             return verdictParsed;
@@ -176,8 +211,15 @@ export function useVerdictExecution(depsRef: MutableRefObject<VerdictExecutionDe
             clearTimeout(timer);
           }
         } catch (error) {
+          if (error instanceof Error && error.name === V12_SCHEMA_VIOLATION_ERROR) {
+            throw error;
+          }
           const hint = error instanceof Error ? error.message : "unknown";
-          d.setResultLogs((prev) => [...prev, `⚠️ 终判接口异常：${hint}；已进入保底断言。`]);
+          const isFlowConflict = hint.includes("PROBE_WAITING") || hint.includes("逻辑确认");
+          d.setResultLogs((prev) => [
+            ...prev,
+            isFlowConflict ? `🧭 终判等待确认：${hint}` : `⚠️ 终判接口异常：${hint}；已进入保底断言。`,
+          ]);
         }
 
         return buildFallbackVerdict(conflicts);

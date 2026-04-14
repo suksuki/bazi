@@ -5,8 +5,6 @@ import { PulseReplayOverlay } from "@/features/stream-board/components/PulseRepl
 import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContext";
 import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
 import { UnifiedActionBar } from "@/components/UnifiedActionBar";
-import { EnergyFlowChainStrip } from "./EnergyFlowChainStrip";
-import { TemporalYearSlider } from "./TemporalYearSlider";
 import type { DecisionJournalEntry } from "@/features/stream-board/decisionJournal";
 import type {
   DecisionSignalToNoiseMeta,
@@ -16,7 +14,6 @@ import type {
   UserIntentionId,
 } from "../models";
 import { useLabStore } from "@/features/stream-board/stores/useLabStore";
-import { inferPreviewHealSegmentIndices } from "@/utils/energyFlowPreviewHeal";
 import { API_BASE } from "@/features/stream-board/constants";
 import {
   buildBlindSchoolFeaturesPayload,
@@ -118,6 +115,8 @@ export interface BoardCommandPanelProps {
   onBackToSeedEntry?: () => void;
   /** Inbox L1 卡片 → Debug 插件碰撞锚点 */
   onOpenPluginAudit?: (pluginId: string) => void;
+  /** V12：PROBE_WAITING 时主动作条半锁定 */
+  probeWaiting?: boolean;
 }
 
 export function BoardCommandPanel({
@@ -147,6 +146,7 @@ export function BoardCommandPanel({
   decisionSignalToNoise,
   onBackToSeedEntry,
   onOpenPluginAudit,
+  probeWaiting,
 }: BoardCommandPanelProps) {
   const pulseReplay = usePulseReplay();
   const { state: labShadowState } = useLabStore();
@@ -154,9 +154,6 @@ export function BoardCommandPanel({
     labShadowState.previewStructuralLinkActive && labShadowState.activePreviewId
       ? labShadowState.activePreviewId
       : null;
-  const energyFlowPreviewActive = Boolean(
-    labShadowState.previewDeityScores && Object.keys(labShadowState.previewDeityScores).length > 0,
-  );
   const {
     t,
     lang,
@@ -193,7 +190,6 @@ export function BoardCommandPanel({
     labConfig,
     setLabConfig,
     onSeedSubmit,
-    energyFlowAudit,
     timeline,
     rerunFinalVerdictWithWeights,
     logicDiff,
@@ -330,11 +326,6 @@ export function BoardCommandPanel({
     purePhysicsAudit,
   ]);
 
-  const energyFlowPreviewHealIndices = React.useMemo(
-    () => inferPreviewHealSegmentIndices(energyFlowAudit, labShadowState.previewDeltaPctByDeity),
-    [energyFlowAudit, labShadowState.previewDeltaPctByDeity],
-  );
-
   const verdictSkeletonMerged = React.useMemo(() => {
     const base = metadata?.verdict_anchor_layer?.verdict_skeleton ?? null;
     const lines = orchestratorVfSkeletonLines || [];
@@ -422,24 +413,6 @@ export function BoardCommandPanel({
             ) : null}
           </div>
           {simpleBoard ? (
-            <TemporalYearSlider
-              referenceYear={referenceYear}
-              onYearChange={setReferenceYear}
-              timeline={timeline}
-              disabled={Boolean(busy || isFinalized)}
-              className="mb-2"
-              t={t}
-            />
-          ) : null}
-          <EnergyFlowChainStrip
-            audit={energyFlowAudit}
-            motionKey={referenceYear}
-            className="mb-2 transition-opacity duration-500 ease-out"
-            t={t}
-            previewActive={energyFlowPreviewActive}
-            previewHealSegmentIndices={energyFlowPreviewHealIndices}
-          />
-          {simpleBoard ? (
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 md:grid-cols-9">
               {[
                 { key: "年", value: simpleBoard.year },
@@ -484,9 +457,9 @@ export function BoardCommandPanel({
         decisionDirty={isDecisionDirty}
         onRun={handleMainBarRun}
         onSetBaseline={setAsBaseline}
-        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized}
+        disabled={(actionMode === "FULL" && !draftSeed) || isFinalized || Boolean(probeWaiting)}
         sigShiftFlashKey={sigShiftFlashKey}
-        labelOverride={primaryLabelOverride}
+        labelOverride={probeWaiting ? "⚠ 待逻辑确认（PROBE_WAITING）" : primaryLabelOverride}
         issued={isFinalized}
         issueFinalPurplePulse={canIssueFinal && !actionSyncing && !busy}
         mainActionConverged={false}

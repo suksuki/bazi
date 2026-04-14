@@ -39,6 +39,9 @@ from app.skills.final_verdict_parts.prompt_builder import build_final_verdict_me
 from app.skills.final_verdict_parts.verdict_fingerprint import append_verdict_fingerprint_html_comment
 from app.skills.final_verdict_parts.verdict_parse import parse_verdict_anchor_layer, parse_verdict_body_and_changelog
 from app.skills.spatial_sovereignty import audit_spatial_sovereignty
+from app.logic.brain.hub import BrainHub
+from app.logic.brain.semantic_auditor import AuditResult
+from app.logic.brain.assertion_tree import build_assertion_tree
 from app.logic.patterns.l2_summary import sanitize_pattern_headline_zh
 from app.services.helpers.l2_structure_bundle import build_structure_bundle_with_l2
 
@@ -120,6 +123,19 @@ class FinalVerdictSkill(BaseSkill):
     def _clean_context_lines(lines: List[str], max_tokens: int = 4000) -> List[str]:
         return clean_context_lines(lines, max_tokens=max_tokens)
 
+    @staticmethod
+    def _narrow_prompt_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """V12.2 Nano-Prompting：终判提示词只传节点级窄带上下文。"""
+        md = metadata if isinstance(metadata, dict) else {}
+        points = (((md.get("conflict_matrix") or {}).get("points") or []) if isinstance(md.get("conflict_matrix"), dict) else [])
+        first_point = points[0] if isinstance(points, list) and points else {}
+        node_line = str((first_point or {}).get("detail") or "局部冲合待复核").strip()
+        return {
+            "node_context_lines": [f"FACT_NODE:{node_line[:80]}"],
+            "conflict_matrix": {"points": [first_point] if isinstance(first_point, dict) else []},
+            "verdict_anchor_layer": {"verdict_skeleton": ""},
+        }
+
     def consume(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "metadata": context.get("metadata") or {},
@@ -177,8 +193,22 @@ class FinalVerdictSkill(BaseSkill):
         mandatory_final_synthesis: bool = False,
         stream_tokens: Optional[Callable[[str], Awaitable[None]]] = None,
     ) -> Dict[str, Any]:
+        _cfg = get_runtime_config().get("llm", {})
+        narrative_strategy = (
+            str(_cfg.get("narrative_strategy") or "assertion_tree").strip().lower()
+            if isinstance(_cfg, dict)
+            else "assertion_tree"
+        )
+        metadata_for_prompt = self._narrow_prompt_metadata(metadata if isinstance(metadata, dict) else {})
+        if narrative_strategy == "assertion_tree":
+            va = metadata_for_prompt.get("verdict_anchor_layer")
+            if isinstance(va, dict) and str(va.get("verdict_skeleton") or "").strip():
+                va_new = dict(va)
+                va_new["verdict_skeleton"] = ""
+                metadata_for_prompt = dict(metadata_for_prompt)
+                metadata_for_prompt["verdict_anchor_layer"] = va_new
         messages = build_final_verdict_messages(
-            metadata=metadata,
+            metadata=metadata_for_prompt,
             physics_tensor=physics_tensor,
             selected_cards=selected_cards,
             consensus_history=consensus_history,
@@ -187,7 +217,6 @@ class FinalVerdictSkill(BaseSkill):
             plugin_weights=plugin_weights,
             mandatory_final_synthesis=bool(mandatory_final_synthesis),
         )
-        _cfg = get_runtime_config().get("llm", {})
         if bool(mandatory_final_synthesis):
             _ps = "final_verdict_mandatory_synthesis"
         elif regeneration_context:
@@ -195,21 +224,146 @@ class FinalVerdictSkill(BaseSkill):
         else:
             _ps = "final_verdict_decision"
         llm_meta: Dict[str, Any] = {"model_name": str(_cfg.get("model") or "LLM"), "prompt_scenario": _ps}
-        try:
-            if stream_tokens is not None:
+        hub = BrainHub()
+        ctx = hub.build_context(
+            metadata=metadata if isinstance(metadata, dict) else {},
+            physics_tensor=physics_tensor if isinstance(physics_tensor, dict) else {},
+            user_intention=str((metadata or {}).get("user_intention") or ""),
+        )
+        node_state = str((metadata or {}).get("node_state") or (metadata or {}).get("flow_state") or "").strip()
+        local_fact_block = hub.build_local_fact_block(metadata if isinstance(metadata, dict) else {})
+        vf_tags = list((metadata or {}).get("vf_tags") or []) if isinstance((metadata or {}).get("vf_tags"), list) else []
+        bh = (((metadata or {}).get("persistence_layer") or {}).get("brain_hub") or {}) if isinstance((metadata or {}).get("persistence_layer"), dict) else {}
+        seeds_matched = [str(x).strip() for x in ((bh or {}).get("seeds_matched") or []) if str(x).strip()]
+        sacred_refs = [str(x).strip() for x in ((bh.get("sacred_evidence_refs") or []) if isinstance(bh, dict) else []) if str(x).strip()]
+        confirmed_fact_rows = [x for x in ((bh.get("confirmed_facts") or []) if isinstance(bh, dict) else []) if isinstance(x, dict)]
+        confirmed_facts = [str((x or {}).get("text") or "").strip() for x in confirmed_fact_rows]
+        if confirmed_facts and not any(cf and cf in local_fact_block for cf in confirmed_facts):
+            local_fact_block = f"{local_fact_block} | CONFIRMED_FACT:{confirmed_facts[0][:120]}".strip()
+        assimilated = len(confirmed_fact_rows) > 0
+        lineage_payload = hub.export_lineage(
+            seed_short=seeds_matched[0] if seeds_matched else "",
+            htn_plan=dict((bh or {}).get("htn_plan") or {}) if isinstance((bh or {}).get("htn_plan"), dict) else {},
+        )
+        lineage = str(lineage_payload.get("lineage") or "HTN_DRIVEN")
+        htn_plan = lineage_payload.get("htn_plan") if isinstance(lineage_payload.get("htn_plan"), dict) else {}
+        seeds_matched = [str(x).strip() for x in (lineage_payload.get("seeds_matched") or []) if str(x).strip()]
+        bounded_messages = hub.enforce_prompt_boundary(
+            local_fact_block=local_fact_block,
+            target_node_id="node:final_synthesis",
+            vf_tags=[str(x) for x in (vf_tags + sacred_refs)][:3],
+        )
+        blackboard_refs = hub.build_blackboard_refs(
+            local_fact_block=local_fact_block,
+            psv_list=ctx.psv_list,
+            logical_evidence=sacred_refs + confirmed_facts,
+        )
+        hub_retry_count = 0
+        hub_last_retry_prompt = ""
+        hub_audit: Dict[str, Any] = {}
+        hub_dissent: Dict[str, Any] | None = None
+        raw = ""
+        tel: Dict[str, Any] = {}
+        if not hub.llm_decision_allowed(node_state):
+            llm_meta["gate"] = "LLM_DISABLED_BY_NODE_STATE"
+            llm_meta["node_state"] = node_state or "UNKNOWN"
+            raw = build_minimal_verdict_json_from_core_physics(physics_tensor, lang=lang)
+            hub_audit = {
+                "is_passed": True,
+                "reason_code": "LIG_NODE_STATE_LOCKED",
+                "audit_state": "PASS",
+                "feedback_for_llm": "节点非模糊态，LLM 决策已禁用。",
+                "matched_rules": ["node_state.lock"],
+                "conflict_excerpt": "",
+            }
+            tel = {}
+        elif stream_tokens is not None:
+            try:
                 pieces: List[str] = []
-                async for _piece in run_final_verdict_chat_stream(messages):
+                async for _piece in run_final_verdict_chat_stream(bounded_messages):
                     pieces.append(_piece)
                     await stream_tokens(_piece)
                 raw = "".join(pieces)
-                tel = {}
-            else:
-                raw, tel = await run_final_verdict_chat(messages)
-        except Exception as exc:
-            _LOG.warning("final_verdict_llm_chat_failed: %s", exc)
-            raw = ""
-            tel = {}
-            llm_meta["repair_mode"] = "physics_fallback_llm_exception"
+            except Exception as exc:
+                _LOG.warning("final_verdict_llm_chat_stream_failed: %s", exc)
+                raw = ""
+                llm_meta["repair_mode"] = "physics_fallback_llm_exception"
+        else:
+            working_messages = list(bounded_messages)
+            for pass_index in range(hub.max_auto_retry + 1):
+                try:
+                    raw, tel = await run_final_verdict_chat(working_messages)
+                except Exception as exc:
+                    _LOG.warning("final_verdict_llm_chat_failed: %s", exc)
+                    raw = ""
+                    tel = {}
+                    llm_meta["repair_mode"] = "physics_fallback_llm_exception"
+                candidate_obj = extract_json_from_llm_text(raw)
+                candidate_body, _candidate_changelog = parse_verdict_body_and_changelog(candidate_obj)
+                if not str(candidate_body or "").strip():
+                    candidate_body = extract_verdict_body_relaxed(str(raw or ""))
+                candidate_refs = hub.extract_candidate_evidence_refs(candidate_obj if isinstance(candidate_obj, dict) else {})
+                if confirmed_facts and not any(cf and cf in local_fact_block for cf in confirmed_facts):
+                    audit = AuditResult(
+                        is_passed=False,
+                        reason_code="LIG_FAKE_EVIDENCE_CHAIN",
+                        feedback_for_llm="CONFIRMED_FACT 丢失，要求同步神圣证据并重试。",
+                        audit_state="REJECT",
+                        matched_rules=["blackboard.confirmed_fact_miss"],
+                        conflict_excerpt="confirmed_facts_missing_in_local_fact_block",
+                    )
+                    hub_retry_count = pass_index
+                    hub_audit = audit.model_dump()
+                    if pass_index >= hub.max_auto_retry:
+                        break
+                    hub_last_retry_prompt = hub.build_micro_user_message(
+                        target_node_id="node:final_synthesis",
+                        key_pairs={"reason_code": "LIG_FAKE_EVIDENCE_CHAIN", "feedback": "同步 CONFIRMED_FACT 后重试"},
+                    )
+                    working_messages = hub.append_auto_retry_prompt(
+                        messages,
+                        hub_last_retry_prompt,
+                        target_node_id="node:final_synthesis",
+                    )
+                    continue
+                ok_chain, missing_refs = hub.verify_evidence_chain(candidate_refs=candidate_refs, blackboard_refs=blackboard_refs)
+                if not ok_chain:
+                    audit = AuditResult(
+                        is_passed=False,
+                        reason_code="LIG_FAKE_EVIDENCE_CHAIN",
+                        feedback_for_llm=f"证据链不在黑板中：{','.join(missing_refs)}",
+                        audit_state="REJECT",
+                        matched_rules=["blackboard.evidence_miss"],
+                        conflict_excerpt=",".join(missing_refs),
+                    )
+                else:
+                    audit = hub.audit(str(candidate_body or ""), ctx.psv_list)
+                hub_retry_count = pass_index
+                hub_audit = audit.model_dump()
+                if audit.audit_state != "REJECT":
+                    break
+                if pass_index >= hub.max_auto_retry:
+                    settled = hub.conclude(audit=audit, retry_count=pass_index, auto_retry_prompt=hub_last_retry_prompt)
+                    hub_audit = settled.audit.model_dump()
+                    hub_dissent = settled.dissent_block.model_dump() if settled.dissent_block is not None else None
+                    break
+                target_node_id = "node:final_synthesis"
+                hub_last_retry_prompt = hub.build_micro_user_message(
+                    target_node_id=target_node_id,
+                    key_pairs={
+                        "reason_code": audit.reason_code,
+                        "feedback": audit.feedback_for_llm,
+                    },
+                )
+                working_messages = hub.append_auto_retry_prompt(
+                    messages,
+                    hub_last_retry_prompt,
+                    target_node_id=target_node_id,
+                )
+            if hub_retry_count > 0:
+                llm_meta["auto_retry_count"] = hub_retry_count
+            if hub_last_retry_prompt:
+                llm_meta["last_auto_retry_prompt"] = hub_last_retry_prompt
         if not isinstance(tel, dict):
             tel = {}
         if isinstance(tel, dict):
@@ -246,6 +400,8 @@ class FinalVerdictSkill(BaseSkill):
             selected_cards=selected_cards,
             consensus_history=consensus_history,
         )
+        if confirmed_facts:
+            logical_evidence.insert(0, f"神圣证据.CONFIRMED_FACT={' | '.join([x for x in confirmed_facts if x][:3])}")
         l1_flags = sync_l1_junction_flags_to_meta(metadata=metadata, physics_tensor=physics_tensor)
         blind_work = run_blind_school_plugin(physics_tensor=physics_tensor, metadata=metadata)
         enc_audit = audit_host_guest_vectors(work_vector=blind_work)
@@ -412,6 +568,22 @@ class FinalVerdictSkill(BaseSkill):
         clean_body_for_meta = coerce_verdict_body_display(str(verdict_body or "").strip())
         if isinstance(anchor_layer_dict, dict):
             anchor_layer_dict["final_verdict"] = (fv_from_json or clean_body_for_meta)[:12000]
+            if narrative_strategy == "assertion_tree":
+                base_assertions = anchor_layer_dict.get("assertions") if isinstance(anchor_layer_dict.get("assertions"), list) else []
+                sacred_assertions = [
+                    {
+                        "assertion_id": f"sacred-{i}",
+                        "text": str((row or {}).get("text") or "用户确认事实").strip(),
+                        "evidence_refs": ["brain_hub.confirmed_fact", "arbiter_bias.user_intention_id"],
+                    }
+                    for i, row in enumerate(confirmed_fact_rows)
+                ]
+                anchor_layer_dict["assertion_tree"] = build_assertion_tree(
+                    version_id=version_id,
+                    assertions=sacred_assertions + base_assertions,
+                    psv_list=ctx.psv_list,
+                    user_intention_id=str(ctx.tri.arbiter_bias.user_intention_id or ""),
+                )
         assertions_for_fp = (
             anchor_layer_dict.get("assertions") if isinstance(anchor_layer_dict.get("assertions"), list) else None
         )
@@ -517,10 +689,23 @@ class FinalVerdictSkill(BaseSkill):
             "l1_junction_flags": l1_flags,
             "narrative_chunks": narrative_chunks,
             "metadata_memory_patch": metadata_memory_patch,
+            "brain_hub": {
+                "psv": [s.model_dump() for s in ctx.psv_list],
+                "audit": hub_audit or {"reason_code": "PASS", "audit_state": "PASS", "is_passed": True},
+                "retry_count": hub_retry_count,
+                "dissent_block": hub_dissent,
+                "lineage": lineage,
+                "seeds_matched": seeds_matched,
+                "htn_plan": htn_plan,
+                "assimilated": assimilated,
+            },
+            "narrative_strategy": narrative_strategy,
+            "assertion_tree": anchor_layer_dict.get("assertion_tree") if isinstance(anchor_layer_dict, dict) else {},
         }
         audit_log = self.audit(consumed, produced).model_dump()
         safe_messages = [
-            {"role": str((m or {}).get("role") or ""), "content": str((m or {}).get("content") or "")} for m in messages
+            {"role": str((m or {}).get("role") or ""), "content": str((m or {}).get("content") or "")[:300]}
+            for m in bounded_messages
         ]
         return {
             "version_id": version_id,
@@ -543,4 +728,7 @@ class FinalVerdictSkill(BaseSkill):
             "llm_meta": llm_meta,
             "narrative_chunks": narrative_chunks,
             "metadata_memory_patch": metadata_memory_patch,
+            "brain_hub": produced.get("brain_hub"),
+            "narrative_strategy": narrative_strategy,
+            "assertion_tree": produced.get("assertion_tree") or {},
         }

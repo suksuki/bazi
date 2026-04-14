@@ -13,6 +13,16 @@ from app.api.contracts import (
 from app.db.models import Consultation, DecisionStep, SessionConsensus
 
 
+def _assert_session_write_unlocked(consultation: Consultation | None) -> None:
+    if not consultation:
+        return
+    meta = dict(consultation.input_meta or {})
+    persistence = dict(meta.get("persistence_layer") or {})
+    interrupt = dict(persistence.get("interrupt_request") or meta.get("interrupt_request") or {})
+    if str(interrupt.get("state") or "pending") == "pending":
+        raise PermissionError("session is locked by pending interrupt_request; resume is required before writes")
+
+
 def create_consultation_record(session: Any, body: ConsultationCreate) -> Dict[str, int]:
     consultation = Consultation(subject_ref=body.subject_ref, input_meta=body.input_meta)
     session.add(consultation)
@@ -25,6 +35,7 @@ def confirm_structure_for_consultation(session: Any, body: ConfirmStructureReque
     consultation = session.get(Consultation, body.consultation_id)
     if not consultation:
         raise LookupError("consultation not found")
+    _assert_session_write_unlocked(consultation)
 
     meta = dict(consultation.input_meta or {})
     meta["confirmed_structure"] = {
@@ -40,6 +51,7 @@ def confirm_structure_for_consultation(session: Any, body: ConfirmStructureReque
 
 def create_decision_step_record(session: Any, body: DecisionStepCreate) -> Dict[str, int]:
     consultation = session.get(Consultation, body.consultation_id)
+    _assert_session_write_unlocked(consultation)
     confirmed_structure = None
     if consultation:
         meta = consultation.input_meta or {}
