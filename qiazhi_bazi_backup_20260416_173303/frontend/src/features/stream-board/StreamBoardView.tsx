@@ -1,0 +1,1121 @@
+"use client";
+
+import React, { useCallback, useEffect, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArbiterLogicDrawer } from "@/components/ArbiterLogicDrawer";
+import { AuditSidebar } from "@/components/AuditSidebar";
+import { BaziCard } from "@/components/BaziCard";
+import { BlindLogicMirror } from "@/components/BlindLogicMirror";
+import { LogicGlitchOverlay } from "@/components/LogicGlitchOverlay";
+import { ReferenceYearSelect } from "@/components/ReferenceYearSelect";
+import { SeedInput } from "@/components/SeedInput";
+import { StrategicCoreHUD } from "@/components/StrategicCoreHUD";
+import { TopologyMapV1 } from "@/components/TopologyMapV1";
+import { LabViewModeFab } from "@/components/layout/LabViewModeFab";
+import { VerdictCertificate } from "@/features/stream-board/components/VerdictCertificate";
+import { BlindSkillHighlightProvider } from "@/features/stream-board/context/BlindSkillHighlightContext";
+import { FINAL_VERDICT_ABS_DELTA_THRESHOLD, I18N } from "./constants";
+import {
+  type DecisionSignalToNoiseMeta,
+  StreamBoardViewModel,
+  InboxCard,
+  type SeedPayload,
+  type SeedSubmitResult,
+} from "./models";
+import { buildCausalSovereigntySlice } from "./utils/causalSovereigntyFromSnapshot";
+import { buildFullRecalcInputBundle, physicsTensorFingerprint } from "./utils/physicsTensorFingerprint";
+import { buildStreamBoardViewDerivedState } from "./viewModel";
+import { decisionIdsSignature, normalizeDecisionIds } from "./controller/streamBoardPure";
+import { useActiveView } from "@/components/layout/ActiveViewContext";
+import { useLabStore } from "@/features/stream-board/stores/useLabStore";
+import { usePulseReplay } from "@/features/stream-board/stores/pulseReplayContext";
+import { BoardVisionPanel } from "./components/BoardVisionPanel";
+import { BoardCommandPanel } from "./components/BoardCommandPanel";
+import { PatternStatus, type PatternProfileSlice } from "./components/PatternStatus";
+import { InterruptOverlay } from "./components/InterruptOverlay";
+import { AuditHistoryTimeline } from "./components/AuditHistoryTimeline";
+
+
+
+export function StreamBoardView(viewModel: StreamBoardViewModel) {
+  const { setActiveView } = useActiveView();
+  const handleOpenPluginAudit = useCallback(
+    (pluginId: string) => {
+      try {
+        sessionStorage.setItem("qiazhi_debug_plugin_focus", pluginId);
+      } catch {
+        /* ignore quota / private mode */
+      }
+      setActiveView("debug");
+    },
+    [setActiveView],
+  );
+  const {
+    lang,
+    setLang,
+    busy,
+    consultationId,
+    metadata,
+    timeline,
+    referenceYear,
+    setReferenceYear,
+    seedPreviewPillars,
+    seedPreviewTimeline,
+    seedPreviewBusy,
+    seedPreviewError,
+    scheduleSeedDraftPreview,
+    refreshSeedPreview,
+    clearLabPipelineForSeedDraft,
+    lastCommittedSeedSignature,
+    selectedBranch,
+    setSelectedBranch,
+    auditItems,
+    health,
+    llmModelName,
+    i18nCalls,
+    deityScores,
+    deityEnergyAxes,
+    deityComponents,
+    deityTraceDetails,
+    hoveredDeity,
+    setHoveredDeity,
+    confirmedConflicts,
+    llmDiagnosticData,
+    globalEntropy,
+    patternProfile,
+    patternCodexHeadline,
+    consensusHistory,
+    cards,
+    pendingDecisionCount,
+    resultLogs,
+    confirmedDecisionIds,
+    setConfirmedDecisionIds,
+    urlDecisionHydrated,
+    setAsBaseline,
+    logicDiff,
+    stressTestResult,
+    genderComparisonResult,
+    finalVerdictHistory,
+    finalVerdictBody,
+    selectionResetToken,
+    finalVerdictVersionId,
+    interruptRequest,
+    resumeSubmitBusy,
+    resumeFromInterrupt,
+    psvSignals,
+    brainHubAudit,
+    brainHubDissentBlock,
+    conclusionVersion,
+    summaryChanged,
+    l1Certified,
+    physicsAudit,
+    physicsEvidence,
+    labConfig,
+    pluginWeights,
+    setPluginWeights,
+    streamThemeChroma,
+    rerunFinalVerdictWithWeights,
+    logicDrawerOpen,
+    logicDrawerTitle,
+    logicDrawerFocus,
+    logicDrawerDetails,
+    logicDrawerTrace,
+    setLogicDrawerOpen,
+    onSeedSubmit,
+    executeDecisionAndRefresh,
+    runFinalVerdictSynthesis,
+    appendSystemAuditLog,
+    openLogicDrawer,
+    openLogicDrawerByDeity,
+    onEvidenceItemClick,
+    showVerdictHistory,
+    applyCurrentSqlPatch,
+    runStressTest,
+    runGenderComparison,
+    t,
+    inboxResetNonce,
+    sigShiftFlashKey,
+    isFinalized,
+    finalizeVerdict,
+    verdictSkeletonContentKey,
+  } = viewModel;
+  const decisionIds = React.useMemo(() => confirmedDecisionIds || [], [confirmedDecisionIds]);
+  const setDecisionIds = React.useMemo(
+    () => setConfirmedDecisionIds ?? (() => undefined),
+    [setConfirmedDecisionIds],
+  );
+  const decisionHydrated = Boolean(urlDecisionHydrated);
+  const { state: labUiState } = useLabStore();
+  const labSnapshotRef = React.useRef(labUiState.snapshot);
+  labSnapshotRef.current = labUiState.snapshot;
+  const sovereigntyDominant = Boolean(labUiState.snapshot?.interaction_hub?.sovereignty_dominant);
+  const l1JunctionFlags = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
+    ?.l1_junction_flags as Record<string, unknown> | undefined;
+  const decisionSignalToNoise = (labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined)
+    ?.decision_signal_to_noise as DecisionSignalToNoiseMeta | undefined;
+  const m3ArbiterTopMatch = React.useMemo(() => {
+    const meta = labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+    const inbox = meta?.decision_inbox_v1 as Record<string, unknown> | undefined;
+    const raw = inbox?.match_scores;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    const rows = raw.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === "object" && !Array.isArray(x));
+    if (!rows.length) return null;
+    const sorted = [...rows].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+    const top = sorted[0];
+    const pid = String(top.plugin_id || "").trim();
+    if (!pid) return null;
+    return { plugin_id: pid, score: Number(top.score || 0) };
+  }, [labUiState.snapshot?.physics_tensor?.meta]);
+  const finalBrainHub = (
+    (labUiState.snapshot?.final_verdict as { brain_hub?: Record<string, unknown> } | undefined)?.brain_hub || {}
+  ) as Record<string, unknown>;
+  const finalAudit = (
+    finalBrainHub.audit && typeof finalBrainHub.audit === "object" && !Array.isArray(finalBrainHub.audit)
+      ? (finalBrainHub.audit as Record<string, unknown>)
+      : null
+  );
+  const finalDissent = (
+    finalBrainHub.dissent_block && typeof finalBrainHub.dissent_block === "object" && !Array.isArray(finalBrainHub.dissent_block)
+      ? (finalBrainHub.dissent_block as Record<string, unknown>)
+      : null
+  );
+  const livePsv = useMemo(() => {
+    const s = Array.isArray(finalBrainHub.psv) ? finalBrainHub.psv : [];
+    if (s.length > 0) {
+      return s
+        .filter((x) => x && typeof x === "object")
+        .map((x) => x as Record<string, unknown>)
+        .map((x) => ({
+          axis: String(x.axis || ""),
+          polarity: String(x.polarity || ""),
+          strength: Number(x.strength || 0),
+        }));
+    }
+    return (psvSignals || []).map((x) => ({
+      axis: String(x.axis || ""),
+      polarity: String(x.polarity || ""),
+      strength: Number(x.strength || 0),
+    }));
+  }, [finalBrainHub.psv, psvSignals]);
+  const hasLogicDissent = Boolean(
+    finalDissent ||
+      brainHubDissentBlock ||
+      String((finalAudit?.audit_state ?? brainHubAudit?.audit_state ?? "")).toUpperCase() === "FLAG",
+  );
+
+  const causalSovereigntyForCert = useMemo(
+    () => buildCausalSovereigntySlice(labUiState.snapshot as Record<string, unknown> | null | undefined),
+    [labUiState.snapshot],
+  );
+
+  const {
+    hardRouteLogs,
+    climateSeason,
+    energyPeakAbs,
+    workExpectation,
+    backfireRiskVal,
+    releasedEnergyVal,
+    streamThemeStyle,
+    summaryVersionLabel,
+    hasVerdictHistory,
+  } = buildStreamBoardViewDerivedState(viewModel);
+  const [viewMode, setViewMode] = React.useState<"VISION" | "COMMAND">("COMMAND");
+  const [seedFlowPhase, setSeedFlowPhase] = React.useState<"entry" | "main">("entry");
+  const [seedEntryMountKey, setSeedEntryMountKey] = React.useState(0);
+  const [actionSyncing, setActionSyncing] = React.useState(false);
+  /** 掐指一算（全量 analyze-seed）专用 Loading，与语义重算 actionSyncing 分离 */
+  const [isCalculating, setIsCalculating] = React.useState(false);
+  /** 全量掐指（analyze-seed）成功次数：0 尚未成功；≥1 可持续「掐指再算」，无轮次上限（仅签发后锁定） */
+  const [calculationCount, setCalculationCount] = React.useState(0);
+  const [lastSuccessfulInputBundle, setLastSuccessfulInputBundle] = React.useState<string | null>(null);
+  /** 供 analyze-seed 异步结束后读取「上一拍」成功 bundle，避免闭包陈旧；也用于同参复核时的物理收敛判定 */
+  const lastSuccessfulInputBundleRef = React.useRef<string | null>(null);
+  const calculationCountRef = React.useRef(0);
+  const [calculationNonce, setCalculationNonce] = React.useState(0);
+  const pulseReplay = usePulseReplay();
+  useEffect(() => {
+    if (!pulseReplay?.recordLabPulseSnapshot) return;
+    if (!metadata?.pillars) return;
+    const sk = String(verdictSkeletonContentKey || "").trim() || null;
+    pulseReplay.recordLabPulseSnapshot({
+      ts: Date.now(),
+      deityScores: { ...deityScores },
+      skeleton: sk,
+    });
+  }, [pulseReplay, calculationNonce, verdictSkeletonContentKey, metadata?.pillars, deityScores]);
+  const [autoRunStepIndex, setAutoRunStepIndex] = React.useState(0);
+  const [autoRunStepLabel, setAutoRunStepLabel] = React.useState("");
+  const [runSuccessFootnote, setRunSuccessFootnote] = React.useState("");
+  const [fullRunErrorFootnote, setFullRunErrorFootnote] = React.useState("");
+  const [verdictFlowConflictHint, setVerdictFlowConflictHint] = React.useState("");
+  const [interruptNavPulse, setInterruptNavPulse] = React.useState(false);
+  const runSuccessClearRef = React.useRef<number | null>(null);
+  const fullRunErrorClearRef = React.useRef<number | null>(null);
+  /** 物理收敛并触发终审整合后的短窗：忽略 bundle 字符串瞬时失配导致的成功次数复位 */
+  const bundleTier2ResetSuppressedUntilRef = React.useRef(0);
+
+  React.useEffect(
+    () => () => {
+      if (runSuccessClearRef.current) window.clearTimeout(runSuccessClearRef.current);
+      if (fullRunErrorClearRef.current) window.clearTimeout(fullRunErrorClearRef.current);
+    },
+    [],
+  );
+  const navigateToInterruptOverlay = React.useCallback(() => {
+    const el = document.getElementById("interrupt-overlay-anchor");
+    if (!el) return;
+    setInterruptNavPulse(true);
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => setInterruptNavPulse(false), 1200);
+  }, []);
+  React.useEffect(() => {
+    const onFlowConflict = () => {
+      setVerdictFlowConflictHint("系统正在等待您的逻辑确认（PROBE_WAITING），请先完成反馈。");
+      navigateToInterruptOverlay();
+    };
+    window.addEventListener("qiazhi:verdict-flow-conflict", onFlowConflict as EventListener);
+    return () => window.removeEventListener("qiazhi:verdict-flow-conflict", onFlowConflict as EventListener);
+  }, [navigateToInterruptOverlay]);
+  const [currentDecisions, setCurrentDecisions] = React.useState<InboxCard[]>([]);
+  const [checklistResetToken, setChecklistResetToken] = React.useState(0);
+  const [draftSeed, setDraftSeed] = React.useState<{ date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" } | null>(null);
+  const [lastAppliedSeedSignature, setLastAppliedSeedSignature] = React.useState("");
+  const [lastAppliedParamSignature, setLastAppliedParamSignature] = React.useState("");
+  const [lastAppliedDecisionsSignature, setLastAppliedDecisionsSignature] = React.useState("[]");
+  const touchStartX = React.useRef<number | null>(null);
+
+  const goToSeedInput = React.useCallback(() => {
+    setViewMode("COMMAND");
+    setSeedFlowPhase("main");
+  }, []);
+  const hasBoard = Boolean(metadata?.pillars);
+  const flowState = String(metadata?.flow_state || "").trim().toLowerCase();
+  const isProbeWaiting = flowState === "probe_waiting";
+  const effectiveInterruptRequest = React.useMemo<Record<string, unknown> | null>(() => {
+    if (interruptRequest && typeof interruptRequest === "object" && Object.keys(interruptRequest).length > 0) {
+      return interruptRequest;
+    }
+    if (!isProbeWaiting) return null;
+    const md = metadata as Record<string, unknown> | undefined;
+    const pl = md?.persistence_layer as Record<string, unknown> | undefined;
+    const pending = pl?.interrupt_request as Record<string, unknown> | undefined;
+    if (pending && typeof pending === "object" && String(pending.state || "").toLowerCase() === "pending") {
+      return pending;
+    }
+    const li = (metadata as { logic_introspection?: { probe_query?: string; why_probe?: string } } | null)
+      ?.logic_introspection;
+    const fromMeta = String(li?.probe_query || li?.why_probe || "").trim();
+    if (fromMeta) {
+      return {
+        interrupt_id: `metadata-introspection-${Date.now()}`,
+        source: "metadata_introspection_fallback",
+        reason_code: "INTRO_FROM_METADATA",
+        state: "pending",
+        probe_query: fromMeta.slice(0, 520),
+      };
+    }
+    return null;
+  }, [interruptRequest, isProbeWaiting, metadata]);
+  const probeSurfaceActive = Boolean(effectiveInterruptRequest);
+
+  React.useEffect(() => {
+    if (metadata?.pillars) setSeedFlowPhase("main");
+  }, [metadata?.pillars]);
+
+  React.useEffect(() => {
+    if (seedFlowPhase === "entry") setViewMode("COMMAND");
+  }, [seedFlowPhase]);
+
+  const handleSeedFormSubmitForEntry = React.useCallback(
+    async (p: SeedPayload): Promise<void> => {
+      await onSeedSubmit(p);
+    },
+    [onSeedSubmit],
+  );
+
+  const handleBackToSeedEntry = React.useCallback(() => {
+    if (isFinalized) return;
+    clearLabPipelineForSeedDraft();
+    setDraftSeed(null);
+    setSeedFlowPhase("entry");
+    setSeedEntryMountKey((k) => k + 1);
+    setLastAppliedSeedSignature("");
+    setCalculationCount(0);
+    calculationCountRef.current = 0;
+    setLastSuccessfulInputBundle(null);
+    setRunSuccessFootnote("");
+    bundleTier2ResetSuppressedUntilRef.current = 0;
+  }, [isFinalized, clearLabPipelineForSeedDraft]);
+  const currentSeedSignature = draftSeed ? JSON.stringify(draftSeed) : "";
+  const currentParamSignature = JSON.stringify(pluginWeights || {});
+  const seedDirty = Boolean(currentSeedSignature && currentSeedSignature !== lastAppliedSeedSignature);
+  const paramDirty = currentParamSignature !== lastAppliedParamSignature;
+  const currentDecisionsSignature = decisionIdsSignature(decisionIds);
+  const isDecisionDirty = currentDecisionsSignature !== lastAppliedDecisionsSignature;
+
+  const fullRecalcInputBundle = React.useMemo(
+    () =>
+      buildFullRecalcInputBundle({
+        seedSignature: currentSeedSignature,
+        paramSignature: currentParamSignature,
+        referenceYear,
+        labConfig,
+      }),
+    [currentSeedSignature, currentParamSignature, referenceYear, labConfig],
+  );
+
+  React.useEffect(() => {
+    if (isFinalized) return;
+    if (lastSuccessfulInputBundle === null) return;
+    if (fullRecalcInputBundle === lastSuccessfulInputBundle) return;
+    if (Date.now() < bundleTier2ResetSuppressedUntilRef.current) {
+      return;
+    }
+    setCalculationCount(0);
+    calculationCountRef.current = 0;
+    bundleTier2ResetSuppressedUntilRef.current = 0;
+    setRunSuccessFootnote("");
+    if (runSuccessClearRef.current) {
+      window.clearTimeout(runSuccessClearRef.current);
+      runSuccessClearRef.current = null;
+    }
+  }, [fullRecalcInputBundle, lastSuccessfulInputBundle, isFinalized]);
+
+  lastSuccessfulInputBundleRef.current = lastSuccessfulInputBundle;
+  calculationCountRef.current = calculationCount;
+
+  const handleSeedPayloadChange = React.useCallback(
+    (payload: { date: string; time: string; calendar: "solar" | "lunar"; gender: "male" | "female" }) => {
+      const sig = JSON.stringify({
+        date: payload.date,
+        time: payload.time,
+        calendar: payload.calendar,
+        gender: payload.gender,
+      });
+      if (metadata && lastCommittedSeedSignature && sig !== lastCommittedSeedSignature && !isFinalized) {
+        clearLabPipelineForSeedDraft();
+      }
+      setDraftSeed((prev) => {
+        if (
+          prev
+          && prev.date === payload.date
+          && prev.time === payload.time
+          && prev.calendar === payload.calendar
+          && prev.gender === payload.gender
+        ) {
+          return prev;
+        }
+        return payload;
+      });
+    },
+    [metadata, lastCommittedSeedSignature, clearLabPipelineForSeedDraft, isFinalized],
+  );
+
+  React.useEffect(() => {
+    if (!metadata) {
+      setLastAppliedSeedSignature("");
+      setCalculationCount(0);
+      calculationCountRef.current = 0;
+      setLastSuccessfulInputBundle(null);
+      bundleTier2ResetSuppressedUntilRef.current = 0;
+    }
+  }, [metadata]);
+
+  React.useEffect(() => {
+    if (metadata && lastCommittedSeedSignature) {
+      setLastAppliedSeedSignature(lastCommittedSeedSignature);
+    }
+  }, [metadata, lastCommittedSeedSignature]);
+
+  React.useEffect(() => {
+    if (metadata) {
+      scheduleSeedDraftPreview(null);
+      return;
+    }
+    if (draftSeed) {
+      scheduleSeedDraftPreview(draftSeed);
+    } else {
+      scheduleSeedDraftPreview(null);
+    }
+  }, [metadata, draftSeed, referenceYear, scheduleSeedDraftPreview]);
+
+  const isPreviewBoard = Boolean(!metadata?.pillars && seedPreviewPillars);
+
+  const simpleBoard = React.useMemo(() => {
+    const pillars = metadata?.pillars ?? seedPreviewPillars;
+    if (!pillars) return null;
+    const tl = metadata?.pillars ? timeline : seedPreviewTimeline;
+    const parseGanZhi = (text: string) => {
+      const chars = Array.from(String(text || "").trim());
+      return { stem: chars[0] || "-", branch: chars[1] || "-" };
+    };
+    return {
+      year: { stem: pillars.year?.stem || "-", branch: pillars.year?.branch || "-" },
+      month: { stem: pillars.month?.stem || "-", branch: pillars.month?.branch || "-" },
+      day: { stem: pillars.day?.stem || "-", branch: pillars.day?.branch || "-" },
+      hour: { stem: pillars.hour?.stem || "-", branch: pillars.hour?.branch || "-" },
+      dayun: parseGanZhi(String(tl?.dayun || "--")),
+      liunian: parseGanZhi(String(tl?.liunian || "--")),
+    };
+  }, [metadata?.pillars, timeline, seedPreviewPillars, seedPreviewTimeline]);
+
+
+  const weakPathEnabled = Number(labConfig.SHOW_WEAK_WORK_PATHS || 0) > 0.5;
+  const visionDiagnosticHint =
+    energyPeakAbs > 10 && Math.abs(workExpectation) < 0.1
+      ? `${t("检测到能量高度淤积（Abs: {abs}），做功路径受阻。").replace("{abs}", energyPeakAbs.toFixed(2))}${
+          weakPathEnabled ? t("已开启逻辑透深。") : ""
+        }`
+      : "";
+  const hasReboundRisk = backfireRiskVal > 0.35;
+  const actionMode: "FULL" | "SEMANTIC" | "SYNCING" | "PARAMETER_DIRTY" = actionSyncing || busy || isCalculating
+    ? "SYNCING"
+    : seedDirty
+      ? "FULL"
+      : (paramDirty || isDecisionDirty)
+        ? "PARAMETER_DIRTY"
+        : "SEMANTIC";
+
+  /** 须与 buildInboxCards / useStreamBoardController.pendingDecisionCount 一致：占位「继续深度扫描」不得阻塞终判与 LLM 管线 */
+  const unresolvedConflictCount = pendingDecisionCount;
+  const absDeltaRaw = logicDiff?.abs_delta;
+  const absDeltaLow =
+    typeof absDeltaRaw === "number" &&
+    Number.isFinite(absDeltaRaw) &&
+    Math.abs(absDeltaRaw) < FINAL_VERDICT_ABS_DELTA_THRESHOLD;
+  /** 伪锁态：flow_state=probe_waiting 但无可执行追问载荷，不应阻断终判。 */
+  const staleProbeWaiting = isProbeWaiting && !probeSurfaceActive;
+  /** 部分链路下 abs_delta 可能暂缺（null），不应让自动推演永久停在“无子任务”。 */
+  const absDeltaUnknown = absDeltaRaw == null || !Number.isFinite(Number(absDeltaRaw));
+  const canIssueFinal =
+    Boolean(hasBoard) &&
+    !isFinalized &&
+    !seedDirty &&
+    unresolvedConflictCount === 0 &&
+    (absDeltaLow || staleProbeWaiting || absDeltaUnknown);
+  const [autoRunLocked, setAutoRunLocked] = React.useState(false);
+
+  const primaryLabelOverride = isFinalized
+    ? t("已签发 (Issued)")
+    : actionSyncing || busy || isCalculating
+      ? isCalculating && viewModel.analyzeSeedThoughtPhase?.message
+        ? viewModel.analyzeSeedThoughtPhase.message
+        : undefined
+      : autoRunLocked
+        ? t("智能推演中...")
+      : calculationCount >= 1
+        ? t("掐指再算")
+        : t("掐指一算");
+
+  const handleFullCalculate = React.useCallback(async () => {
+    if (!draftSeed) return;
+    const t0 = Date.now();
+    setIsCalculating(true);
+    if (runSuccessClearRef.current) {
+      window.clearTimeout(runSuccessClearRef.current);
+      runSuccessClearRef.current = null;
+    }
+    setRunSuccessFootnote("");
+    setFullRunErrorFootnote("");
+    if (fullRunErrorClearRef.current) {
+      window.clearTimeout(fullRunErrorClearRef.current);
+      fullRunErrorClearRef.current = null;
+    }
+
+    const prevTensor = labSnapshotRef.current?.physics_tensor;
+    const prevHash = physicsTensorFingerprint(prevTensor);
+
+    try {
+      const timeoutMs = 120_000;
+      const result: SeedSubmitResult = await Promise.race([
+        onSeedSubmit(draftSeed),
+        new Promise<SeedSubmitResult>((resolve) => {
+          window.setTimeout(
+            () => resolve({ ok: false, error: t("计算超时（120s），请检查网络或后端。") }),
+            timeoutMs,
+          );
+        }),
+      ]).catch((e: unknown) => ({
+        ok: false as const,
+        error: e instanceof Error ? e.message : t("排盘过程异常中断。"),
+      }));
+
+      if (!result.ok) {
+        const elapsedErr = Date.now() - t0;
+        await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedErr)));
+        const errText = String(result.error || "");
+        const mappedErr = errText.includes("409")
+          ? "系统状态冲突，请尝试刷新重置"
+          : errText.includes("422")
+            ? "逻辑断点异常，请检查 Fact 节点完整性"
+            : errText;
+        setFullRunErrorFootnote(mappedErr);
+        fullRunErrorClearRef.current = window.setTimeout(() => {
+          setFullRunErrorFootnote("");
+          fullRunErrorClearRef.current = null;
+        }, 10_000);
+        return;
+      }
+
+      // 1) 先判定物理收敛（与 LLM 叙事解耦），立即提交档位与成功 bundle，再进入最短 UI 节拍
+      const nextHash = physicsTensorFingerprint(result.physics_tensor);
+      /** 物理收敛核指纹一致（双端非空），与 LLM 叙事解耦 */
+      const physicsFingerprintMatch = prevHash !== "" && nextHash !== "" && prevHash === nextHash;
+
+      const seedSig = JSON.stringify(draftSeed);
+      const paramSig = JSON.stringify(pluginWeights || {});
+      const bundleAfterSuccess = buildFullRecalcInputBundle({
+        seedSignature: seedSig,
+        paramSignature: paramSig,
+        referenceYear,
+        labConfig,
+      });
+      const prevCount = calculationCountRef.current;
+      /** 同参再次全量：bundle 与上次成功一致时的收敛兜底（tensor 指纹噪声下仍视为稳态） */
+      const samePhysicsBundleSecondTap =
+        prevCount >= 1 &&
+        lastSuccessfulInputBundleRef.current !== null &&
+        bundleAfterSuccess === lastSuccessfulInputBundleRef.current;
+      const tierConverged = physicsFingerprintMatch || samePhysicsBundleSecondTap;
+      const nextCount = prevCount + 1;
+      /** 与旧「第二轮收敛」一致：至少完成过一次全量后的收敛才触发终审整合，首轮指纹一致只提示稳态 */
+      const shouldRunFinalVerdictSynthesis = tierConverged && prevCount >= 1;
+
+      setCalculationCount(nextCount);
+      calculationCountRef.current = nextCount;
+      if (shouldRunFinalVerdictSynthesis) {
+        bundleTier2ResetSuppressedUntilRef.current = Date.now() + 2800;
+      }
+
+      setLastAppliedSeedSignature(seedSig);
+      setLastAppliedParamSignature(paramSig);
+      setLastSuccessfulInputBundle(bundleAfterSuccess);
+      lastSuccessfulInputBundleRef.current = bundleAfterSuccess;
+
+      const elapsedAfterFetch = Date.now() - t0;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - elapsedAfterFetch)));
+
+      if (shouldRunFinalVerdictSynthesis) {
+        if (runSuccessClearRef.current) {
+          window.clearTimeout(runSuccessClearRef.current);
+          runSuccessClearRef.current = null;
+        }
+        setRunSuccessFootnote(
+          t("✨ 物理已收敛：终审整合已执行。你可无限次「掐指再算」；改参或改运后将重新进入初算节拍。"),
+        );
+        window.setTimeout(() => {
+          void runFinalVerdictSynthesis({ delayMs: 1000, trigger: "physics_converged" });
+        }, 160);
+      } else {
+        setRunSuccessFootnote(
+          tierConverged && !samePhysicsBundleSecondTap
+            ? t("✨ 物理逻辑已达收敛稳态，当前参数配置已为最优解。")
+            : t("计算完成，已更新逻辑视图"),
+        );
+        runSuccessClearRef.current = window.setTimeout(() => {
+          setRunSuccessFootnote("");
+          runSuccessClearRef.current = null;
+        }, 10_000);
+      }
+    } finally {
+      setIsCalculating(false);
+      setCalculationNonce((prev) => prev + 1);
+    }
+  }, [draftSeed, onSeedSubmit, pluginWeights, referenceYear, labConfig, t, runFinalVerdictSynthesis]);
+
+  const runSemanticRecompute = React.useCallback(async (decisions: InboxCard[]) => {
+    setActionSyncing(true);
+    try {
+      await rerunFinalVerdictWithWeights(decisions);
+      setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisions.map((item) => item.id)));
+    } finally {
+      setActionSyncing(false);
+    }
+  }, [rerunFinalVerdictWithWeights, pluginWeights]);
+
+  const runDecisionExecution = React.useCallback(async (decisions: InboxCard[]) => {
+    if (decisions.length === 0) return;
+    setActionSyncing(true);
+    try {
+      await executeDecisionAndRefresh(decisions);
+      setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisionIds));
+    } finally {
+      setActionSyncing(false);
+    }
+  }, [executeDecisionAndRefresh, pluginWeights, decisionIds]);
+
+  const handleSemanticRecompute = React.useCallback(async () => {
+    const selectedByIds = decisionIds
+      .map((id) => cards.find((card) => card.id === id))
+      .filter((item): item is InboxCard => Boolean(item));
+    const selected = selectedByIds.length > 0 ? selectedByIds : currentDecisions;
+    await runDecisionExecution(selected);
+  }, [runDecisionExecution, decisionIds, cards, currentDecisions]);
+
+  const autoStateRef = React.useRef({
+    isFinalized,
+    isProbeWaiting,
+    probeSurfaceActive,
+    seedDirty,
+    unresolvedConflictCount,
+    canIssueFinal,
+  });
+  React.useEffect(() => {
+    autoStateRef.current = {
+      isFinalized,
+      isProbeWaiting,
+      probeSurfaceActive,
+      seedDirty,
+      unresolvedConflictCount,
+      canIssueFinal,
+    };
+  }, [isFinalized, isProbeWaiting, probeSurfaceActive, seedDirty, unresolvedConflictCount, canIssueFinal]);
+
+  const waitIdle = React.useCallback(async () => {
+    for (let i = 0; i < 80; i += 1) {
+      if (!busy && !actionSyncing && !isCalculating) return;
+      await new Promise((r) => setTimeout(r, 80));
+    }
+  }, [busy, actionSyncing, isCalculating]);
+
+  /**
+   * 主栏点击后自动连续执行：
+   * 首次掐指 -> 无需人工时继续语义裁决/终判 -> 直到需要人工干预或本轮结束。
+   */
+  const handleMainBarRun = React.useCallback(async () => {
+    if (autoRunLocked) return;
+    setAutoRunLocked(true);
+    setAutoRunStepIndex(0);
+    setAutoRunStepLabel("");
+    try {
+      let stepN = 0;
+      for (let guard = 0; guard < 8; guard += 1) {
+        const s = autoStateRef.current;
+        if (s.isFinalized) break;
+        if (s.isProbeWaiting && s.probeSurfaceActive) {
+          setVerdictFlowConflictHint("系统正在等待您的逻辑确认（PROBE_WAITING），请先完成反馈。");
+          navigateToInterruptOverlay();
+          break;
+        }
+        if (s.seedDirty) {
+          stepN += 1;
+          setAutoRunStepIndex(stepN);
+          setAutoRunStepLabel("全量测算");
+          await handleFullCalculate();
+          await waitIdle();
+          continue;
+        }
+        if (s.unresolvedConflictCount > 0) {
+          stepN += 1;
+          setAutoRunStepIndex(stepN);
+          setAutoRunStepLabel("语义裁决");
+          await handleSemanticRecompute();
+          await waitIdle();
+          continue;
+        }
+        if (s.canIssueFinal) {
+          stepN += 1;
+          setAutoRunStepIndex(stepN);
+          setAutoRunStepLabel("终判签发");
+          const verdictBodyReady =
+            String(finalVerdictBody || "").trim().length > 0 ||
+            String((labSnapshotRef.current?.final_verdict as { body?: string } | undefined)?.body || "").trim().length > 0;
+          if (!verdictBodyReady) {
+            await runFinalVerdictSynthesis({ delayMs: 0, trigger: "pre_finalize_guard" });
+            await waitIdle();
+          }
+          await finalizeVerdict();
+          await waitIdle();
+          continue;
+        }
+        break;
+      }
+    } finally {
+      setAutoRunLocked(false);
+      setAutoRunStepLabel("");
+      setAutoRunStepIndex(0);
+    }
+  }, [
+    autoRunLocked,
+    finalizeVerdict,
+    finalVerdictBody,
+    handleFullCalculate,
+    handleSemanticRecompute,
+    navigateToInterruptOverlay,
+    runFinalVerdictSynthesis,
+    waitIdle,
+  ]);
+
+  React.useEffect(() => {
+    setCurrentDecisions([]);
+  }, [selectionResetToken]);
+
+  React.useEffect(() => {
+    if (!lastAppliedParamSignature) {
+      setLastAppliedParamSignature(JSON.stringify(pluginWeights || {}));
+    }
+  }, [lastAppliedParamSignature, pluginWeights]);
+  React.useEffect(() => {
+    if (!lastAppliedDecisionsSignature) {
+      setLastAppliedDecisionsSignature(decisionIdsSignature(decisionIds));
+    }
+  }, [lastAppliedDecisionsSignature, decisionIds]);
+
+  React.useEffect(() => {
+    if (!decisionHydrated) return;
+    if (cards.length > 0) {
+      const recovered = decisionIds
+        .map((id) => cards.find((card) => card.id === id))
+        .filter((item): item is InboxCard => Boolean(item));
+      setCurrentDecisions((prev) => {
+        const prevSig = JSON.stringify([...new Set(prev.map((item) => item.id))].sort());
+        const nextSig = JSON.stringify([...new Set(recovered.map((item) => item.id))].sort());
+        return prevSig === nextSig ? prev : recovered;
+      });
+    }
+  }, [decisionHydrated, cards, decisionIds]);
+
+  return (
+    <main
+      data-testid="stream-board-root"
+      style={streamThemeStyle}
+      className="mx-auto min-h-dvh w-full max-w-[1400px] px-3 py-4 transition-colors duration-500"
+    >
+      <div
+        className="fixed inset-0 -z-10 transition-all duration-500"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 80% 10%, rgba(255,215,120,0.06), transparent 52%), linear-gradient(135deg, var(--stream-bg-color), #0f0f12 65%)",
+          boxShadow: `inset 0 0 80px var(--stream-overload-color)`,
+        }}
+      />
+      <BlindSkillHighlightProvider>
+      <LogicGlitchOverlay
+        active={Boolean(streamThemeChroma.isConflictOverload && streamThemeChroma.hasPolarityReversal)}
+        entropy={globalEntropy}
+      />
+      {seedFlowPhase === "main" ? (
+        <LabViewModeFab viewMode={viewMode} onToggle={() => setViewMode((m) => (m === "VISION" ? "COMMAND" : "VISION"))} />
+      ) : null}
+      <header className="mb-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">{t(I18N[lang].title)}</h1>
+          <p className="mt-1 font-mono text-[11px] text-amber-200/90">
+            {isProbeWaiting && probeSurfaceActive
+              ? `${t("强阻断")} · PROBE_WAITING`
+              : isProbeWaiting
+                ? `PROBE_WAITING · ${t("无追问载荷（可继续掐指或刷新）")}`
+                : `${t("逻辑分歧参考")}${hasBoard ? ` · ${unresolvedConflictCount}` : ""}`}
+          </p>
+          <p className="text-xs text-zinc-500">{t(I18N[lang].subtitle)}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          {(["ZH", "EN", "KO"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setLang(item)}
+              className={`rounded-md px-2 py-1 text-xs ${lang === item ? "bg-amber-500 text-zinc-950" : "bg-zinc-800 text-zinc-300"}`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {effectiveInterruptRequest ? (
+        <div
+          id="interrupt-overlay-anchor"
+          className={interruptNavPulse ? "rounded-xl ring-2 ring-violet-400/75 animate-pulse" : undefined}
+        >
+          <InterruptOverlay
+            interruptRequest={effectiveInterruptRequest}
+            locked={false}
+            submitCooldown={Boolean(resumeSubmitBusy)}
+            m3ArbiterTopMatch={m3ArbiterTopMatch}
+            onResume={async (payload) => {
+              setVerdictFlowConflictHint("");
+              await resumeFromInterrupt(payload);
+            }}
+          />
+        </div>
+      ) : null}
+      {verdictFlowConflictHint ? (
+        <div className="mb-3 rounded-xl border border-violet-500/50 bg-violet-950/35 p-3 text-violet-100">
+          <p className="text-sm font-semibold">终判前置确认</p>
+          <p className="mt-1 text-xs text-violet-200/90">{verdictFlowConflictHint}</p>
+          <button
+            type="button"
+            onClick={() => {
+              navigateToInterruptOverlay();
+              setActiveView("debug");
+            }}
+            className="mt-2 rounded border border-violet-300/50 bg-violet-700/25 px-2 py-1 text-xs text-violet-50"
+          >
+            立即前往确认核心逻辑
+          </button>
+        </div>
+      ) : null}
+
+      {livePsv.length > 0 ? (
+        <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3">
+          <p className="text-sm font-semibold text-emerald-100">系统基调 (PSV)</p>
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+            {livePsv.map((s, idx) => {
+              const pol = String(s.polarity || "");
+              const color =
+                pol.includes("NEGATIVE") ? "text-rose-300 border-rose-500/35" : pol.includes("POSITIVE") ? "text-emerald-300 border-emerald-500/35" : "text-zinc-300 border-zinc-500/35";
+              return (
+                <div key={`${s.axis}-${idx}`} className={`rounded-md border px-2 py-1.5 text-xs ${color}`}>
+                  <div className="font-semibold">{s.axis}</div>
+                  <div>{pol}</div>
+                  <div>strength={Number(s.strength || 0).toFixed(2)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {hasLogicDissent ? (
+        <div className="mb-3 rounded-xl border border-amber-500/45 bg-amber-950/35 p-3">
+          <p className="text-sm font-semibold text-amber-100">[逻辑异议]</p>
+          <p className="mt-1 text-xs text-amber-200/90">
+            审计状态：{String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "N/A")}；
+            原因：{String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || (finalDissent?.reason_code as string) || "")}
+          </p>
+          {(finalDissent || brainHubDissentBlock) ? (
+            <p className="mt-1 text-xs text-amber-100/90">
+              {String((finalDissent?.summary as string) || brainHubDissentBlock?.summary || "监军发现叙事与 PSV 存在偏差，请回看断言链。")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "").toUpperCase() === "REJECT" ? (
+        <div className="mb-3 rounded-xl border border-fuchsia-500/45 bg-fuchsia-950/30 p-3">
+          <p className="text-sm font-semibold text-fuchsia-100">审计历史（REJECT）</p>
+          <p className="mt-1 text-xs text-fuchsia-100/90">
+            监军已拒绝一次叙事输出，原因码：
+            {String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || "UNKNOWN")}
+          </p>
+          <p className="mt-1 text-xs text-fuchsia-200/90">
+            纠偏指令：{String((finalAudit?.feedback_for_llm as string) || brainHubAudit?.feedback_for_llm || "请回到 PSV 与 FACT 节点重写。")}
+          </p>
+        </div>
+      ) : null}
+      {String((finalAudit?.audit_state as string) || brainHubAudit?.audit_state || "").toUpperCase() === "REJECT" ? (
+        <AuditHistoryTimeline
+          originalNarrative={String(finalAudit?.conflict_excerpt || "")}
+          reasonCode={String((finalAudit?.reason_code as string) || brainHubAudit?.reason_code || "LIG_AXIS_POS_MISMATCH")}
+          correctedNarrative={String(viewModel.finalVerdictBody || "")}
+        />
+      ) : null}
+
+      {hasBoard ? (
+        <PatternStatus
+          profile={patternProfile as PatternProfileSlice | null}
+          patternCodexHeadline={patternCodexHeadline}
+          className="mb-3"
+          t={t}
+        />
+      ) : null}
+
+      {sovereigntyDominant ? (
+        <div
+          className="mb-2 rounded-lg border border-amber-400/55 bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-amber-600/10 px-3 py-2 text-center text-[11px] font-semibold tracking-[0.2em] text-amber-100 shadow-[0_0_24px_rgba(251,191,36,0.18)]"
+          data-testid="sovereignty-dominant-banner"
+        >
+          {t("主权占优")}
+        </div>
+      ) : null}
+
+      <div>
+      {seedFlowPhase === "entry" ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto w-full max-w-xl space-y-3"
+        >
+          <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/80 shadow-[0_0_0_1px_rgba(251,191,36,0.08)]">
+            <div className="border-b border-zinc-800 px-3 py-2.5 text-xs font-medium text-amber-100/95">
+              {t("生辰八字 · 地法（The Seed）")}
+            </div>
+            <div className="p-3">
+              <SeedInput
+                key={seedEntryMountKey}
+                hydrateFrom={draftSeed}
+                onSubmit={handleSeedFormSubmitForEntry}
+                busy={busy}
+                t={t}
+                hideSubmitButton
+                entryCommitAction={{
+                  label: t("选定开始测算"),
+                  busy: seedPreviewBusy,
+                  onClick: async (p) => {
+                    handleSeedPayloadChange(p);
+                    await refreshSeedPreview(p);
+                    setSeedFlowPhase("main");
+                    setViewMode("COMMAND");
+                  },
+                }}
+                onPayloadChange={handleSeedPayloadChange}
+              />
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <div className="flex flex-col gap-3 md:flex-row">
+          <div
+            className="flex-1 space-y-3"
+            onTouchStart={(e) => {
+              touchStartX.current = e.changedTouches[0].clientX;
+            }}
+            onTouchEnd={(e) => {
+              const x0 = touchStartX.current;
+              touchStartX.current = null;
+              if (x0 == null) return;
+              const dx = e.changedTouches[0].clientX - x0;
+              if (dx > 56) setViewMode("VISION");
+              if (dx < -56) setViewMode("COMMAND");
+            }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="hidden rounded-lg border border-zinc-700 bg-zinc-900 p-0.5 md:flex">
+                <button
+                  type="button"
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    viewMode === "VISION" ? "bg-amber-500/25 text-amber-200" : "text-zinc-500"
+                  }`}
+                  onClick={() => setViewMode("VISION")}
+                >
+                  {t("视觉仪表盘")}
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    viewMode === "COMMAND" ? "bg-cyan-500/20 text-cyan-200" : "text-zinc-500"
+                  }`}
+                  onClick={() => setViewMode("COMMAND")}
+                >
+                  {t("指令舱")}
+                </button>
+              </div>
+              <p className="text-[10px] text-zinc-500 md:hidden">{t("滑动主区域切换视图，或点右下角浮动按钮")}</p>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {viewMode === "VISION" ? (
+                <BoardVisionPanel
+                  viewModel={viewModel}
+                  hasBoard={hasBoard}
+                  isPreviewBoard={isPreviewBoard}
+                  globalEntropy={globalEntropy}
+                  visionDiagnosticHint={visionDiagnosticHint}
+                  hasReboundRisk={hasReboundRisk}
+                  energyPeakAbs={energyPeakAbs}
+                  goToSeedInput={goToSeedInput}
+                  hardRouteLogs={hardRouteLogs}
+                  climateSeason={climateSeason}
+                  releasedEnergyVal={releasedEnergyVal}
+                />
+              ) : (
+                <BoardCommandPanel
+                  viewModel={viewModel}
+                  draftSeed={draftSeed}
+                  simpleBoard={simpleBoard}
+                  isPreviewBoard={isPreviewBoard}
+                  seedPreviewBusy={seedPreviewBusy}
+                  seedPreviewError={seedPreviewError}
+                  setCurrentDecisions={setCurrentDecisions}
+                  setDecisionIds={setDecisionIds}
+                  handleMainBarRun={handleMainBarRun}
+                  actionMode={actionMode}
+                  isDecisionDirty={isDecisionDirty}
+                  actionSyncing={actionSyncing || isCalculating}
+                  primaryLabelOverride={primaryLabelOverride}
+                  canIssueFinal={canIssueFinal}
+                  autoRunLocked={autoRunLocked}
+                  checklistResetToken={checklistResetToken}
+                  calculationNonce={calculationNonce}
+                  autoRunStepIndex={autoRunStepIndex}
+                  autoRunStepLabel={autoRunStepLabel}
+                  runSuccessFootnote={runSuccessFootnote}
+                  fullRunErrorFootnote={fullRunErrorFootnote}
+                  calculationCount={calculationCount}
+                  hasVerdictHistory={hasVerdictHistory}
+                  summaryVersionLabel={summaryVersionLabel}
+                  l1JunctionFlags={l1JunctionFlags}
+                  decisionSignalToNoise={decisionSignalToNoise}
+                  onBackToSeedEntry={handleBackToSeedEntry}
+                  onOpenPluginAudit={handleOpenPluginAudit}
+                  probeWaiting={isProbeWaiting && probeSurfaceActive}
+                  analyzeSeedThoughtPhase={viewModel.analyzeSeedThoughtPhase}
+                  showSeedCalcSpinner={isCalculating}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+      </div>
+
+      {labUiState.isFinalized && labUiState.finalizationReport?.hash ? (
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="relative z-0 mt-8 border-t border-zinc-800/90 pt-6 shadow-[0_-12px_40px_rgba(0,0,0,0.35)]"
+        >
+          <p className="mb-2 text-center text-[10px] font-medium uppercase tracking-[0.25em] text-zinc-500">
+            {t("终审已签发 · 公文压底")}
+          </p>
+          <VerdictCertificate
+            hash={labUiState.finalizationReport.hash}
+            committedAt={labUiState.finalizationReport.committedAt}
+            logicDiff={logicDiff}
+            effectiveSkillIds={
+              labUiState.finalizationReport.effectiveSkillIds ??
+              (labUiState.snapshot?.metadata?.verdict_effective_skill_ids as string[] | undefined)
+            }
+            solidGhostRatio={
+              (() => {
+                const m = labUiState.snapshot?.physics_tensor?.meta as Record<string, unknown> | undefined;
+                const raw = m?.solid_ghost_ratio as Record<string, unknown> | undefined;
+                if (!raw || typeof raw.solid_fraction !== "number" || !Number.isFinite(raw.solid_fraction)) return null;
+                return {
+                  solid_fraction: raw.solid_fraction as number,
+                  ghost_fraction:
+                    typeof raw.ghost_fraction === "number" && Number.isFinite(raw.ghost_fraction)
+                      ? (raw.ghost_fraction as number)
+                      : 1 - (raw.solid_fraction as number),
+                  avg_effective_conductivity:
+                    typeof raw.avg_effective_conductivity === "number" && Number.isFinite(raw.avg_effective_conductivity)
+                      ? (raw.avg_effective_conductivity as number)
+                      : undefined,
+                };
+              })()
+            }
+            causalSovereignty={causalSovereigntyForCert ?? undefined}
+            t={t}
+          />
+        </motion.div>
+      ) : null}
+
+      </BlindSkillHighlightProvider>
+
+      <ArbiterLogicDrawer
+        open={logicDrawerOpen}
+        title={logicDrawerTitle}
+        focus={logicDrawerFocus}
+        details={logicDrawerDetails.length ? logicDrawerDetails : [llmDiagnosticData?.causal_reasoning || t("暂无批注内容。")]}
+        deityTrace={logicDrawerTrace}
+        auditSource={physicsAudit}
+        onClose={() => setLogicDrawerOpen(false)}
+        onApplySql={applyCurrentSqlPatch}
+      />
+    </main>
+  );
+}

@@ -11,3 +11,11 @@
 2. **MVC**：`legacy/ui/` 只渲染；`legacy/core/` 只计算；Qiazhi 前端不塞进 legacy UI。
 3. **概率输出**：判定优先用 score / level / meta，避免简单 True/False。
 4. **界面语言**：面向用户的 Streamlit 文案用简体中文。
+
+## V17_MANDATES（永久锚定）
+
+1. **叙事管线唯一合法路径**：`NarrativeSanitizer -> SemanticFusion(Micro-LLM) -> payload.render_text`。任何绕过管线的叙事生成都视为违规。
+2. **意志坍缩强约束**：所有实时判词必须显式接收 `will_proxy` 并做语气偏置，不允许输出“中性模板句”冒充实时极化。
+3. **禁止工程词上屏**：`VF.`、`Abs`、`Fact_ID`、`seed`、`node_id`、`verified_fact_lines` 等词汇不得出现在用户可见文本中。
+4. **协议锁**：前端只能消费 `payload.render_text`。无该字段的帧必须视为无效信号并丢弃。
+5. **首席法官执行权**：若代码尝试违反以上 V17 宪法，必须在编辑中标注错误并拒绝生成该违规实现。
