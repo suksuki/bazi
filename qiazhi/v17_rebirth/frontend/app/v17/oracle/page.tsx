@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Sparkles } from "lucide-react";
 
 import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
-import { useV17WebStream } from "@/hooks/useV17WebStream";
+import { mergeV17LlmMetaForUi, useV17WebStream } from "@/hooks/useV17WebStream";
 
 export default function OraclePage() {
   const [sessionId, setSessionId] = useState("");
   const [running, setRunning] = useState(false);
-  const [streamEndpoint, setStreamEndpoint] = useState<string | null>("/api/v17/stream?will_proxy=stable");
+  const [streamEndpoint, setStreamEndpoint] = useState<string | null>(
+    "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth",
+  );
   const [streamBody, setStreamBody] = useState<Record<string, unknown> | null>(null);
   const [userMessage, setUserMessage] = useState("");
   const [adoptedDecisions, setAdoptedDecisions] = useState<Array<{ id: string; label: string }>>([]);
@@ -21,6 +23,9 @@ export default function OraclePage() {
   const [traceOpen, setTraceOpen] = useState(false);
   const [selectedLuckYear, setSelectedLuckYear] = useState<number>(new Date().getFullYear());
   const [birthTimeISO, setBirthTimeISO] = useState("");
+  const [natalGender, setNatalGender] = useState<"male" | "female" | undefined>(undefined);
+  const [natalCalendar, setNatalCalendar] = useState<"solar" | "lunar" | undefined>(undefined);
+  const [connectTickMs, setConnectTickMs] = useState(0);
   const { frames } = useV17WebStream({
     endpoint: streamEndpoint,
     enabled: running,
@@ -39,30 +44,110 @@ export default function OraclePage() {
       ).trim(),
     [frames],
   );
-  const latestSnapshot = useMemo(
-    () => [...frames].reverse().find((f) => String(f?.layer || "").toUpperCase() === "SNAPSHOT"),
+  /** 仅「格局物理」快照含四柱/大运/流年；AUDIT_PREVIEW / llm_audit_preview 在后序出现，不能用「非 audit」误选。 */
+  const physicsSnapshot = useMemo(
+    () =>
+      [...frames].reverse().find((f) => {
+        if (String(f?.layer || "").toUpperCase() !== "SNAPSHOT") return false;
+        const sk = String((f?.payload as { snapshot_kind?: string })?.snapshot_kind || "").trim();
+        return sk === "physics" || sk === "physical_void" || sk === "system_init_failure";
+      }),
+    [frames],
+  );
+  const llmAuditSnapshot = useMemo(
+    () =>
+      [...frames].reverse().find((f) => {
+        if (String(f?.layer || "").toUpperCase() !== "SNAPSHOT") return false;
+        return String((f?.payload as { snapshot_kind?: string })?.snapshot_kind || "") === "llm_audit_preview";
+      }),
     [frames],
   );
   const latestNarrator = useMemo(
     () => [...frames].reverse().find((f) => String(f?.layer || "").toUpperCase() === "NARRATOR"),
     [frames],
   );
-  const traceHits = latestSnapshot?.payload?.debug_trace?.hits || [];
-  const traceFacts = (latestNarrator?.payload?.source_facts || latestSnapshot?.payload?.debug_trace?.facts || []).slice(0, 8);
-  const llmMeta = latestNarrator?.payload?.llm_meta || {};
-  const fourPillars = latestSnapshot?.payload?.four_pillars;
+  const narratorForAudit = useMemo(
+    () =>
+      [...frames].reverse().find((f) => {
+        if (String(f?.layer || "").toUpperCase() !== "NARRATOR") return false;
+        const p = f?.payload;
+        if (!p) return false;
+        const rt = String(p.render_text || "").trim();
+        const m = (p.llm_meta || {}) as Record<string, unknown>;
+        const sp = String(
+          m.llm_system_prompt || (m.full_prompt_trace as { system_role?: string } | undefined)?.system_role || "",
+        ).trim();
+        const unlock = m.prompt_dead_audit_unlock === true;
+        return rt.length > 0 || sp.length > 0 || unlock;
+      }) ||
+      [...frames].reverse().find((f) => {
+        if (String(f?.layer || "").toUpperCase() !== "SNAPSHOT") return false;
+        return String((f?.payload as { snapshot_kind?: string })?.snapshot_kind || "") === "llm_audit_preview";
+      }),
+    [frames],
+  );
+  const traceHits = physicsSnapshot?.payload?.debug_trace?.hits || [];
+  const traceFacts = (latestNarrator?.payload?.source_facts || physicsSnapshot?.payload?.debug_trace?.facts || []).slice(
+    0,
+    32,
+  );
+  const llmMeta = mergeV17LlmMetaForUi(narratorForAudit, latestNarrator, llmAuditSnapshot) as Record<
+    string,
+    unknown
+  >;
+  const narratorHasChunk = Boolean(String(latestNarrator?.payload?.render_text || "").trim());
+  const streamPartial = llmMeta.stream_partial === true;
+  const hasFinalLlmMeta =
+    !streamPartial && typeof llmMeta.elapsed_ms === "number" && !Number.isNaN(Number(llmMeta.elapsed_ms));
+  const modelLabel = String(llmMeta.model || "").trim() || "叙事引擎";
+  const connectPhase = running && !narratorHasChunk;
+  const collapsePhase = running && narratorHasChunk && !hasFinalLlmMeta;
+  const fullTrace = llmMeta.full_prompt_trace as Record<string, unknown> | undefined;
+
+  useEffect(() => {
+    if (!running) {
+      setConnectTickMs(0);
+      return;
+    }
+    const t0 = Date.now();
+    const id = window.setInterval(() => setConnectTickMs(Date.now() - t0), 80);
+    return () => window.clearInterval(id);
+  }, [running, streamEndpoint]);
+
+  const streamQuery = useMemo(() => {
+    const u = streamEndpoint || "";
+    try {
+      const q = u.includes("?") ? new URLSearchParams(u.split("?")[1] || "") : new URLSearchParams();
+      return {
+        will_proxy: q.get("will_proxy") || "",
+        birth_time: q.get("birth_time") || "",
+        gender: q.get("gender") || "",
+        flow_year: q.get("flow_year") || "",
+      };
+    } catch {
+      return { will_proxy: "", birth_time: "", gender: "", flow_year: "" };
+    }
+  }, [streamEndpoint]);
+  const fourPillars = physicsSnapshot?.payload?.four_pillars;
+  const luckPillarSnap = physicsSnapshot?.payload?.luck_pillar;
+  const flowPillarSnap = physicsSnapshot?.payload?.flow_pillar;
 
   function startRun(input: { birthTimeISO: string; gender: "male" | "female"; calendarType: "solar" | "lunar" }) {
+    const fy = new Date().getFullYear();
     const query = new URLSearchParams({
       will_proxy: "stable",
       birth_time: input.birthTimeISO,
       gender: input.gender,
+      flow_year: String(fy),
+      v17_origin: "v17_rebirth",
     });
     setStreamEndpoint(`/api/v17/stream?${query.toString()}`);
     const sid = crypto.randomUUID();
     setSessionId(sid);
     setBirthTimeISO(input.birthTimeISO);
-    setSelectedLuckYear(new Date().getFullYear());
+    setNatalGender(input.gender);
+    setNatalCalendar(input.calendarType);
+    setSelectedLuckYear(fy);
     setStreamBody({
       v17_origin: "v17_rebirth",
       calendar_type: input.calendarType,
@@ -81,6 +166,21 @@ export default function OraclePage() {
     setFreezeMsg("");
   }
 
+  useEffect(() => {
+    if (!running || !birthTimeISO || !natalGender) return;
+    const u = streamEndpoint ?? "";
+    const m = u.match(/[?&]flow_year=(\d+)/);
+    if (m && Number(m[1]) === selectedLuckYear) return;
+    const query = new URLSearchParams({
+      will_proxy: "stable",
+      birth_time: birthTimeISO,
+      gender: natalGender,
+      flow_year: String(selectedLuckYear),
+      v17_origin: "v17_rebirth",
+    });
+    setStreamEndpoint(`/api/v17/stream?${query.toString()}`);
+  }, [selectedLuckYear, running, birthTimeISO, natalGender, streamEndpoint]);
+
   async function injectConversation() {
     const msg = userMessage.trim();
     if (!msg) return;
@@ -95,7 +195,8 @@ export default function OraclePage() {
         v17_origin: "v17_rebirth",
       }),
     }).catch(() => undefined);
-    const base = streamEndpoint?.split("&_pulse=")[0] || "/api/v17/stream?will_proxy=stable";
+    const base =
+      streamEndpoint?.split("&_pulse=")[0] || "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth";
     setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
     setStreamBody((prev) => ({ ...(prev || {}), user_message: msg }));
     if (Date.now() - t0 > 100) {
@@ -109,14 +210,21 @@ export default function OraclePage() {
     const id = String(decision.id || decision.title || `d_${Date.now()}`);
     const label = String(decision.label || decision.title || "").trim();
     if (!label) return;
-    setAdoptedDecisions((prev) => (prev.some((x) => x.id === id) ? prev : [...prev, { id, label }]));
-    const base = streamEndpoint?.split("&_pulse=")[0] || "/api/v17/stream?will_proxy=stable";
-    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
-    setStreamBody((prev) => ({
-      ...(prev || {}),
-      session_id: sessionId || "default",
-      user_message: label,
-    }));
+    setAdoptedDecisions((prev) => {
+      if (prev.some((x) => x.id === id)) return prev;
+      const next = [...prev, { id, label }];
+      const base =
+        streamEndpoint?.split("&_pulse=")[0] || "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth";
+      setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+      setStreamBody((prevBody) => ({
+        ...(prevBody || {}),
+        v17_origin: "v17_rebirth",
+        session_id: sessionId || "default",
+        user_message: label,
+        decisions: next,
+      }));
+      return next;
+    });
   }
 
   async function freezeCausalReport() {
@@ -128,7 +236,7 @@ export default function OraclePage() {
     try {
       const resp = await fetch("/api/v17/freeze-report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", v17_origin: "v17_rebirth" },
         body: JSON.stringify({
           v17_origin: "v17_rebirth",
           render_text: latestRenderText,
@@ -174,11 +282,20 @@ export default function OraclePage() {
             <div className="w-full space-y-3">
               <V17_SixPillarsPanel
                 fourPillars={fourPillars}
+                luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
+                flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
                 birthTimeISO={birthTimeISO}
+                gender={natalGender}
+                calendarType={natalCalendar}
                 selectedYear={selectedLuckYear}
                 onYearChange={setSelectedLuckYear}
               />
-              <V17_PurpleVerdictCard frames={frames} onToggleTrace={() => setTraceOpen((v) => !v)} />
+              <V17_PurpleVerdictCard
+                frames={frames}
+                onToggleTrace={() => setTraceOpen((v) => !v)}
+                connectTickMs={connectTickMs}
+                running={running}
+              />
               <V17_DecisionInbox
                 frames={frames}
                 adoptedIds={adoptedDecisions.map((x) => x.id)}
@@ -218,9 +335,97 @@ export default function OraclePage() {
               <aside className="h-fit rounded-xl border border-cyan-500/40 bg-zinc-900/85 p-3">
                 <p className="mb-2 text-xs text-cyan-200">因果链路面板</p>
                 <div className="space-y-1 text-[11px] text-zinc-200">
-                  <p>模型：{String(llmMeta.model || "unknown")}</p>
-                  <p>耗时：{Number(llmMeta.elapsed_ms || 0)} ms</p>
-                  <p>状态：{String(llmMeta.engine_state || (llmMeta.ok ? "ok" : "unknown"))}</p>
+                  <p>
+                    模型：
+                    {connectPhase
+                      ? `${modelLabel}（连接中）`
+                      : String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎")}
+                  </p>
+                  <p>
+                    耗时：
+                    {connectPhase
+                      ? `正在连接 ${modelLabel}… (${connectTickMs} ms)`
+                      : collapsePhase
+                        ? "计时中…"
+                        : `${Number(llmMeta.elapsed_ms || 0)} ms`}
+                  </p>
+                  <p>
+                    状态：
+                    {connectPhase
+                      ? `正在连接 ${modelLabel}…`
+                      : collapsePhase
+                        ? "意志坍缩中…"
+                        : String(llmMeta.engine_state || (llmMeta.ok ? "ok" : "就绪"))}
+                  </p>
+                  {llmMeta.http_timeout_sec != null ? <p>HTTP 超时：{String(llmMeta.http_timeout_sec)} s</p> : null}
+                  {llmMeta.fuse_wait_timeout_sec != null ? <p>Fuse 等待：{String(llmMeta.fuse_wait_timeout_sec)} s</p> : null}
+                  {llmMeta.error ? <p className="text-rose-300/90">错误：{String(llmMeta.error)}</p> : null}
+                </div>
+                <div className="mt-3 space-y-2 border-t border-cyan-500/20 pt-3">
+                  <p className="text-[11px] text-cyan-300">初始请求参数</p>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                    {JSON.stringify(
+                      {
+                        birth_time: streamQuery.birth_time || birthTimeISO || null,
+                        gender: streamQuery.gender || natalGender || null,
+                        calendar_type: natalCalendar || (streamBody as { calendar_type?: string } | null)?.calendar_type || null,
+                        flow_year: streamQuery.flow_year || String(selectedLuckYear),
+                        will_proxy: streamQuery.will_proxy || null,
+                        stream_endpoint: streamEndpoint,
+                        session_id: (streamBody as { session_id?: string } | null)?.session_id || null,
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+                <div className="mt-3 space-y-2 border-t border-cyan-500/20 pt-3">
+                  {fullTrace ? (
+                    <p className="text-[10px] text-amber-200/90">
+                      full_prompt_trace：decision_anchor 位于 System Role —{" "}
+                      {fullTrace.decision_anchor_literal_in_system_role ? "已验证" : "未命中（锚点为空或未写入 System）"}
+                      {typeof fullTrace.decision_anchor_len === "number"
+                        ? `（锚点长度 ${String(fullTrace.decision_anchor_len)}）`
+                        : ""}
+                    </p>
+                  ) : collapsePhase || connectPhase ? (
+                    <p className="text-[10px] text-zinc-500">
+                      {llmAuditSnapshot
+                        ? "full_prompt_trace：已由 SNAPSHOT（llm_audit_preview）在 fuse 前下发…"
+                        : "full_prompt_trace：终帧到达后解锁审计字段…"}
+                    </p>
+                  ) : null}
+                  <p className="text-[11px] text-cyan-300">LLM 系统提示词</p>
+                  <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                    {String(
+                      fullTrace?.system_role ?? llmMeta.llm_system_prompt ?? "（本期帧未携带，可能为缓存帧或非 LLM 路径）",
+                    )}
+                  </pre>
+                  <p className="text-[11px] text-cyan-300">LLM 用户提示词</p>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                    {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? "（同上）")}
+                  </pre>
+                  {Array.isArray(llmMeta.llm_request_messages) ? (
+                    <details className="text-[11px] text-zinc-400">
+                      <summary className="cursor-pointer text-cyan-300/90">完整 messages JSON</summary>
+                      <pre className="mt-1 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-400">
+                        {JSON.stringify(llmMeta.llm_request_messages, null, 2)}
+                      </pre>
+                    </details>
+                  ) : null}
+                  <p className="text-[11px] text-cyan-300">LLM 返回（模型正文，未经 Sanitizer）</p>
+                  <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                    {(() => {
+                      const raw = String(llmMeta.llm_reply ?? "").trim();
+                      if (raw) return raw;
+                      if (llmMeta.ok === false) return "（LLM 调用失败，无模型正文；界面判词可能为降级拼接）";
+                      return String(latestNarrator?.payload?.render_text || "").trim() || "（空）";
+                    })()}
+                  </pre>
+                  <p className="text-[11px] text-cyan-300">上游原始 JSON / SSE（截断）</p>
+                  <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[9px] text-zinc-400">
+                    {String(llmMeta.llm_raw_response_json || "").trim() || "（无）"}
+                  </pre>
                 </div>
                 <div className="mt-3">
                   <p className="text-[11px] text-cyan-300">命中插件</p>
@@ -239,6 +444,32 @@ export default function OraclePage() {
                       <p className="text-[11px] text-zinc-500">暂无 Fact</p>
                     )}
                   </div>
+                </div>
+                <div className="mt-3 space-y-2 border-t border-cyan-500/20 pt-3">
+                  <details className="text-[11px] text-zinc-300">
+                    <summary className="cursor-pointer text-cyan-300/90">[查看完整提示词 (Prompt)]</summary>
+                    <p className="mt-1 text-[10px] text-cyan-400/80">System</p>
+                    <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                      {String(
+                        fullTrace?.system_role ?? llmMeta.llm_system_prompt ?? "（等待终帧 llm_meta）",
+                      )}
+                    </pre>
+                    <p className="mt-2 text-[10px] text-cyan-400/80">User</p>
+                    <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                      {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? "（等待终帧 llm_meta）")}
+                    </pre>
+                  </details>
+                  <details className="text-[11px] text-zinc-300">
+                    <summary className="cursor-pointer text-cyan-300/90">[查看原始回复 (Raw)]</summary>
+                    <p className="mt-1 text-[10px] text-zinc-500">模型正文（未经 Sanitizer）</p>
+                    <pre className="mt-0.5 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
+                      {String(llmMeta.llm_reply || "").trim() || "（空）"}
+                    </pre>
+                    <p className="mt-2 text-[10px] text-zinc-500">上游 JSON / SSE</p>
+                    <pre className="mt-0.5 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[9px] text-zinc-400">
+                      {String(llmMeta.llm_raw_response_json || "").trim() || "（无）"}
+                    </pre>
+                  </details>
                 </div>
               </aside>
             ) : null}

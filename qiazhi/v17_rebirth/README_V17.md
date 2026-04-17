@@ -37,6 +37,19 @@
 }
 ```
 
+## Python
+
+- **3.12+**：后端与脚本以该版本为准；`qiazhi/.python-version` 供 pyenv/asdf 对齐。
+- 首次或从旧版 venv 升级：在仓库根执行  
+  `./qiazhi/v17_rebirth/scripts/bootstrap_qiazhi_venv_312.sh`  
+  生成 `qiazhi/.venv` 后再跑 `scripts/restart_v17_stack_macos.sh`。
+
+### V17.16 可调环境变量（可选）
+
+- `QIAZHI_V17_FUSE_HARD_SEC`：LLM `fuse()` 整段请求硬熔断秒数，默认 `3.0`。
+- `QIAZHI_V17_LLM_TTFT_SEC`：首字（首 token）超时，默认 `5.0`（与总熔断取 `max(hard, ttft+2)` 对齐）。
+- `QIAZHI_V17_SSE_HEARTBEAT_SEC`：叙事流无 NARRATOR 产出时下发 `HEARTBEAT` 的间隔，默认 `5.0`。
+
 ## Boot Sequence (Current Milestone)
 
 - [x] Create vacuum workspace `v17_rebirth`.

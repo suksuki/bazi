@@ -1,81 +1,59 @@
+"""兼容层：转发至 `logic.plugin_discovery`（延迟 import，避免与 `plugins` 包 `__init__` 循环）。"""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, List
+from typing import Any, Dict, List
+
+from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact
+
+_pd_mod: Any = None
 
 
-@dataclass
-class V17PluginFact:
-    source: str
-    fact: str
-    decision_hint: str = ""
-    priority: float = 0.0
+def _pd() -> Any:
+    global _pd_mod
+    if _pd_mod is None:
+        from v17_rebirth.backend.logic import plugin_discovery as m
+
+        _pd_mod = m
+    return _pd_mod
 
 
-class V17PluginWrapper:
-    name: str = "base"
-
-    def collect_v17_facts(self, deity_scores: Dict[str, float]) -> List[V17PluginFact]:
-        return []
+def collect_spec_facts(physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+    return _pd().collect_all_spec_facts(physics_tensor)
 
 
-class ThreeHarmonyWrapper(V17PluginWrapper):
-    name = "three_harmony"
-
-    def collect_v17_facts(self, deity_scores: Dict[str, float]) -> List[V17PluginFact]:
-        food = float(deity_scores.get("食神", 0.0))
-        wealth = float(deity_scores.get("正财", 0.0) + deity_scores.get("偏财", 0.0))
-        if food >= 18 and wealth >= 14:
-            return [
-                V17PluginFact(
-                    source=self.name,
-                    fact="食神与财星形成协同，资源流动性正在升温。",
-                    decision_hint="将资源投放节奏改为两段式，先小规模验证再加码。",
-                    priority=0.84,
-                )
-            ]
-        return []
+def collect_spec_facts_and_record(physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+    return _pd().collect_all_spec_facts_and_record(physics_tensor)
 
 
-class SixPierceWrapper(V17PluginWrapper):
-    name = "six_pierce"
-
-    def collect_v17_facts(self, deity_scores: Dict[str, float]) -> List[V17PluginFact]:
-        peer = float(deity_scores.get("比肩", 0.0))
-        officer = float(deity_scores.get("正官", 0.0))
-        if abs(peer - officer) <= 4 and (peer > 10 or officer > 10):
-            return [
-                V17PluginFact(
-                    source=self.name,
-                    fact="约束力与自驱力形成穿透态，决策窗口偏短。",
-                    decision_hint="为关键决策设置二次确认，降低冲动型误判。",
-                    priority=0.76,
-                )
-            ]
-        return []
+def collect_pending_decisions_from_specs(facts: List[V17Fact]) -> List[V17Decision]:
+    return _pd().collect_pending_decisions_from_specs(facts)
 
 
-class OfficerConflictWrapper(V17PluginWrapper):
-    name = "officer_conflict"
-
-    def collect_v17_facts(self, deity_scores: Dict[str, float]) -> List[V17PluginFact]:
-        officer = float(deity_scores.get("正官", 0.0))
-        hurting = float(deity_scores.get("伤官", 0.0))
-        if officer >= 20 and hurting >= 16:
-            return [
-                V17PluginFact(
-                    source=self.name,
-                    fact="伤官见官触发张力，表达与秩序存在摩擦。",
-                    decision_hint="先统一沟通口径，再推进外部谈判动作。",
-                    priority=0.9,
-                )
-            ]
-        return []
+def iter_v17_plugin_specs() -> List[Any]:
+    return _pd().iter_all_plugin_specs()
 
 
-def collect_plugin_facts(deity_scores: Dict[str, float]) -> List[V17PluginFact]:
-    wrappers: List[V17PluginWrapper] = [ThreeHarmonyWrapper(), SixPierceWrapper(), OfficerConflictWrapper()]
-    rows: List[V17PluginFact] = []
-    for wrapper in wrappers:
-        rows.extend(wrapper.collect_v17_facts(deity_scores))
-    return rows
+def v17_fact_to_row(f: V17Fact) -> Dict[str, Any]:
+    return _pd().v17_fact_to_row(f)
+
+
+def v17_decision_to_row(d: V17Decision) -> Dict[str, Any]:
+    return _pd().v17_decision_to_row(d)
+
+
+def collect_plugin_facts(deity_scores: Dict[str, float]) -> List[Dict[str, Any]]:
+    tensor: Dict[str, Any] = {"deity_scores": deity_scores or {}}
+    return [v17_fact_to_row(f) for f in collect_spec_facts(tensor)]
+
+
+__all__ = [
+    "V17Fact",
+    "V17Decision",
+    "collect_spec_facts",
+    "collect_spec_facts_and_record",
+    "collect_pending_decisions_from_specs",
+    "iter_v17_plugin_specs",
+    "v17_fact_to_row",
+    "v17_decision_to_row",
+    "collect_plugin_facts",
+]

@@ -66,7 +66,8 @@ check_http_code() {
   local i
 
   for ((i = 1; i <= retries; i++)); do
-    code="$(curl -sS -m 5 -o /dev/null -w "%{http_code}" "${url}" || true)"
+    # 轮询期 stderr 静音：避免「首包未就绪」时刷屏 curl: (7) Couldn't connect
+    code="$(curl -sS -m 5 -o /dev/null -w "%{http_code}" "${url}" 2>/dev/null || true)"
     if [[ "${code}" =~ ^2|^3 ]]; then
       echo -e "${GREEN}${label} ready: HTTP ${code}${NC}"
       CHECK_HTTP_CODE_RESULT="${code}"
@@ -92,18 +93,41 @@ if (( node_major < 20 )); then
   exit 1
 fi
 
-if ! command -v uvicorn >/dev/null 2>&1; then
-  if [[ -x "${QIAZHI_ROOT}/.venv/bin/uvicorn" ]]; then
-    UVICORN_CMD="${QIAZHI_ROOT}/.venv/bin/uvicorn"
-  else
-    echo -e "${RED}uvicorn not found. Please activate python env or install uvicorn.${NC}"
-    exit 1
-  fi
+# 固定使用 qiazhi/.venv（Python 3.12），避免误用全局旧版解释器
+VENV_DIR="${QIAZHI_ROOT}/.venv"
+VENV_PY="${VENV_DIR}/bin/python"
+
+_venv_python_ok() {
+  [[ -x "${VENV_PY}" ]] || return 1
+  "${VENV_PY}" -c "import sys; raise SystemExit(0 if sys.version_info[:2] >= (3, 12) else 1)" 2>/dev/null
+}
+
+_venv_has_uvicorn() {
+  "${VENV_PY}" -c "import uvicorn" 2>/dev/null
+}
+
+if [[ -x "${VENV_PY}" ]] && _venv_python_ok && _venv_has_uvicorn; then
+  UVICORN_LAUNCH=("${VENV_PY}" "-m" "uvicorn")
+  echo -e "${BLUE}Backend Python:${NC} $("${VENV_PY}" -V) (${VENV_PY})"
+elif [[ -x "${VENV_PY}" ]] && ! _venv_python_ok; then
+  echo -e "${RED}发现 ${VENV_DIR} 但不是 Python 3.12+。请删除后重建:${NC}" >&2
+  echo -e "  rm -rf \"${VENV_DIR}\"" >&2
+  echo -e "  ./qiazhi/v17_rebirth/scripts/bootstrap_qiazhi_venv_312.sh" >&2
+  exit 1
+elif [[ -x "${VENV_PY}" ]] && _venv_python_ok && ! _venv_has_uvicorn; then
+  echo -e "${RED}${VENV_PY} 为 3.12 但未安装 uvicorn。请执行:${NC}" >&2
+  echo -e "  \"${VENV_PY}\" -m pip install 'uvicorn[standard]'" >&2
+  echo -e "  或重新跑: ./qiazhi/v17_rebirth/scripts/bootstrap_qiazhi_venv_312.sh" >&2
+  exit 1
 else
-  UVICORN_CMD="$(command -v uvicorn)"
+  echo -e "${RED}未找到 ${VENV_DIR}（需 Python 3.12 venv）。请先执行:${NC}" >&2
+  echo -e "  ./qiazhi/v17_rebirth/scripts/bootstrap_qiazhi_venv_312.sh" >&2
+  exit 1
 fi
 
 print_step "[1/5] Prepare process state..."
+# V17.16：清理可能占用 8017 或挂死的 gunicorn / 旧 worker（无进程时静默成功）
+pkill -f gunicorn 2>/dev/null || true
 kill_pid_file_if_alive "${BACKEND_PID_FILE}"
 kill_pid_file_if_alive "${FRONTEND_PID_FILE}"
 kill_port_listener "${BACKEND_PORT}"
@@ -128,11 +152,21 @@ else
 fi
 
 print_step "[3/5] Start backend + frontend..."
+# V17.16：Uvicorn 无 Gunicorn 式 --no-buffer；有 stdbuf 时行缓冲 stdout/stderr（否则仅 PYTHONUNBUFFERED）。
+# 注意：set -u 下勿展开空数组 "${arr[@]}"（macOS bash 3.2 会报 unbound variable），改用分支调用。
 (
   cd "${PROJECT_DIR}"
-  PYTHONPATH="${PROJECT_DIR%/v17_rebirth}" \
-  "${UVICORN_CMD}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
-    >> "${BACKEND_LOG}" 2>&1
+  export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
+  export PYTHONUNBUFFERED=1
+  if command -v stdbuf >/dev/null 2>&1; then
+    stdbuf -oL -eL "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
+      --proxy-headers --timeout-keep-alive 75 \
+      >> "${BACKEND_LOG}" 2>&1
+  else
+    "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
+      --proxy-headers --timeout-keep-alive 75 \
+      >> "${BACKEND_LOG}" 2>&1
+  fi
 ) &
 echo $! > "${BACKEND_PID_FILE}"
 
@@ -141,6 +175,9 @@ echo $! > "${BACKEND_PID_FILE}"
   "${FRONTEND_START_CMD[@]}" >> "${FRONTEND_LOG}" 2>&1
 ) &
 echo $! > "${FRONTEND_PID_FILE}"
+
+# 给 uvicorn / Next 一点时间 bind 端口，减少首轮 curl 失败
+sleep 0.6
 
 print_step "[4/5] Health checks..."
 BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}/health"

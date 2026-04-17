@@ -26,9 +26,14 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")), []);
 
   function start() {
-    const localDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0);
+    // 使用「本地历法时刻」字符串，避免 toISOString() 转成 UTC 导致日柱/时柱与所选不符。
+    const y = year.padStart(4, "0");
+    const m = month.padStart(2, "0");
+    const d = day.padStart(2, "0");
+    const h = hour.padStart(2, "0");
+    const birthTimeLocal = `${y}-${m}-${d}T${h}:00:00`;
     onStart({
-      birthTimeISO: localDate.toISOString(),
+      birthTimeISO: birthTimeLocal,
       gender,
       calendarType,
     });

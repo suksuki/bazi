@@ -5,16 +5,20 @@ import json
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib import request
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Query
 
+from v17_rebirth.backend.logic.plugin_discovery import annotate_causal_trace, registry_rows_for_admin
+from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_with_runtime
 from v17_rebirth.backend.services.verdict_orchestrator import restart_realtime_pipeline
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
+from v17_rebirth.paths import RUNTIME_DIR
 
 router = APIRouter(tags=["v17-admin"])
 
-_DB_STATE_FILE = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/db_bridge.json")
+_DB_STATE_FILE = RUNTIME_DIR / "db_bridge.json"
+_DB_FALLBACK_STATE_FILE = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/db_bridge.json")
 
 _DB_BRIDGE_STATE: Dict[str, Any] = {
     "driver": "postgres",
@@ -30,10 +34,11 @@ _DB_BRIDGE_STATE: Dict[str, Any] = {
 
 
 def _load_db_state() -> None:
-    if not _DB_STATE_FILE.exists():
+    path = _DB_STATE_FILE if _DB_STATE_FILE.exists() else _DB_FALLBACK_STATE_FILE
+    if not path.exists():
         return
     try:
-        blob = json.loads(_DB_STATE_FILE.read_text(encoding="utf-8"))
+        blob = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(blob, dict):
             _DB_BRIDGE_STATE.update(blob)
     except Exception:
@@ -54,6 +59,16 @@ _load_db_state()
 def _ensure_v17_origin(payload: Dict[str, Any]) -> None:
     origin = str(payload.get("v17_origin", "")).strip()
     if origin != "v17_rebirth":
+        raise HTTPException(status_code=403, detail="v17_origin validation failed")
+
+
+def _ensure_get_v17_origin(
+    *,
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> None:
+    o = str(v17_origin or v17_origin_header or "").strip()
+    if o != "v17_rebirth":
         raise HTTPException(status_code=403, detail="v17_origin validation failed")
 
 
@@ -164,21 +179,55 @@ def _probe_db(host: str, port: int) -> Dict[str, Any]:
         return {"reachable": True, "host": host, "port": int(port)}
 
 
+@router.get("/v17/admin/plugins")
+async def list_plugins(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    rows = merge_registry_with_runtime(registry_rows_for_admin())
+    annotate_causal_trace(rows)
+    enriched = [
+        {
+            **r,
+            "power_tier": int(r.get("causal_tier", 0) or 0),
+            "execution_order": int(r.get("execution_order", 0) or 0),
+        }
+        for r in rows
+    ]
+    return {"ok": True, "plugins": enriched}
+
+
 @router.get("/v17/admin/llm-node")
-async def get_llm_node() -> Dict[str, Any]:
+async def get_llm_node(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
     return {"ok": True, "node": get_runtime_llm_config()}
 
 
 @router.post("/v17/admin/llm-node")
 async def update_llm_node(payload: Dict[str, Any]) -> Dict[str, Any]:
     _ensure_v17_origin(payload if isinstance(payload, dict) else {})
+    p = payload if isinstance(payload, dict) else {}
+    prev = get_runtime_llm_config()
+
+    def _coalesce(key: str, default: str = "") -> str:
+        """表单未提交的字段保留上次持久化值，避免仅改 host/model 时清空密钥。"""
+        if key in p and p.get(key) is not None:
+            return str(p.get(key) or "").strip()
+        return str(prev.get(key, default) or "").strip()
+
     node = update_runtime_llm_config(
-        provider=str(payload.get("provider", "ollama")),
-        base_url=str(payload.get("base_url", "")),
-        username=str(payload.get("username", "")),
-        password=str(payload.get("password", "")),
-        api_key=str(payload.get("api_key", "")),
-        model=str(payload.get("model", "")),
+        provider=_coalesce("provider", "ollama") or "ollama",
+        base_url=_coalesce("base_url"),
+        username=_coalesce("username"),
+        password=_coalesce("password"),
+        api_key=_coalesce("api_key"),
+        model=_coalesce("model"),
+        http_timeout_sec=_coalesce("http_timeout_sec", ""),
+        fuse_wait_timeout_sec=_coalesce("fuse_wait_timeout_sec", ""),
     )
     pipeline_state = restart_realtime_pipeline()
     return {"ok": True, "node": node, **pipeline_state}
@@ -228,7 +277,11 @@ async def chat_test_llm(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.get("/v17/admin/db-bridge")
-async def get_db_bridge() -> Dict[str, Any]:
+async def get_db_bridge(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
     return {"ok": True, "bridge": dict(_DB_BRIDGE_STATE)}
 
 

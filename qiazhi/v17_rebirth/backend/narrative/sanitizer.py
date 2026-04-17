@@ -17,6 +17,7 @@ class NarrativeSanitizer:
         (re.compile(r"η\s*=\s*[0-9.]+", re.IGNORECASE), "当前能量流转的灵敏度"),
         (re.compile(r"\bnode_id\b|\bseed\b|\bverified_fact_lines\b", re.IGNORECASE), ""),
         (re.compile(r"勾选此项以修复", re.IGNORECASE), "建议调整此项以优化"),
+        (re.compile(r"赛博|极客|激光", re.IGNORECASE), ""),
     )
 
     def sanitize(self, text: str) -> str:

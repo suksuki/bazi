@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 @dataclass
 class PhysicsAdapter:
-    """Read-only adapter for core/physics deity signals."""
+    """V17.14：只读物理张量；十神分值 + L1 全带宽（interaction_v2 / interaction_delta）。"""
 
     root: Path
 
@@ -17,7 +17,6 @@ class PhysicsAdapter:
         }
 
     def read_deity_scores(self, raw_physics: Dict[str, Any]) -> Dict[str, float]:
-        # 只读信号模式：不触碰物理内核，直接消费上游计算结果
         src = raw_physics.get("deity_scores") if isinstance(raw_physics, dict) else {}
         if not isinstance(src, dict):
             return {}
@@ -31,3 +30,26 @@ class PhysicsAdapter:
             except (TypeError, ValueError):
                 continue
         return out
+
+    def read_interaction_v2(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(raw_physics, dict):
+            return {}
+        meta = raw_physics.get("meta")
+        if not isinstance(meta, dict):
+            return {}
+        v2 = meta.get("interaction_v2")
+        return dict(v2) if isinstance(v2, dict) else {}
+
+    def read_interaction_delta(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(raw_physics, dict):
+            return {}
+        d = raw_physics.get("interaction_delta")
+        return dict(d) if isinstance(d, dict) else {}
+
+    def read_physics_bundle(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
+        """供 collect_v17_facts 单点读取：十神 + 地支拓扑 + 冲突增量。"""
+        return {
+            "deity_scores": self.read_deity_scores(raw_physics),
+            "interaction_v2": self.read_interaction_v2(raw_physics),
+            "interaction_delta": self.read_interaction_delta(raw_physics),
+        }

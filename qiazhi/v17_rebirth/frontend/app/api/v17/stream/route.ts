@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const BACKEND_BASE = process.env.V17_BACKEND_INTERNAL_URL || "http://127.0.0.1:8017";
 
 async function forward(req: NextRequest) {
@@ -17,12 +19,17 @@ async function forward(req: NextRequest) {
   }
 
   const resp = await fetch(target.toString(), init);
+  const h = new Headers();
+  h.set("Content-Type", resp.headers.get("content-type") || "application/x-ndjson");
+  h.set("Cache-Control", "no-cache, no-store");
+  h.set("Pragma", "no-cache");
+  h.set("Connection", "keep-alive");
+  h.set("X-Accel-Buffering", "no");
+  const ab = resp.headers.get("x-accel-buffering");
+  if (ab) h.set("X-Accel-Buffering", ab);
   return new NextResponse(resp.body, {
     status: resp.status,
-    headers: {
-      "Content-Type": resp.headers.get("content-type") || "application/x-ndjson",
-      "Cache-Control": "no-store",
-    },
+    headers: h,
   });
 }
 

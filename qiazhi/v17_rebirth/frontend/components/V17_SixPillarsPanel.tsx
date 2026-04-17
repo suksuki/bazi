@@ -1,8 +1,5 @@
 "use client";
 
-const STEMS = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"] as const;
-const BRANCHES = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"] as const;
-
 type Pillar = { stem: string; branch: string };
 
 type FourPillars = {
@@ -11,6 +8,26 @@ type FourPillars = {
   day?: string;
   hour?: string;
 };
+
+/** 解析后端/表单传来的出生时刻：无时区后缀时按本地墙钟理解，与 NatalInput 一致。 */
+export function parseBirthTimeLocal(iso: string | undefined): Date | null {
+  const raw = String(iso || "").trim();
+  if (!raw) return null;
+  if (raw.endsWith("Z") || /[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return new Date(raw);
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(raw);
+  if (!m) return new Date(raw);
+  return new Date(
+    Number(m[1]),
+    Number(m[2]) - 1,
+    Number(m[3]),
+    Number(m[4]),
+    Number(m[5]),
+    m[6] ? Number(m[6]) : 0,
+    0,
+  );
+}
 
 const STEM_META: Record<string, { element: string; yinYang: "阳" | "阴" }> = {
   甲: { element: "木", yinYang: "阳" },
@@ -68,44 +85,38 @@ function colorForElement(el: string, yinYang: "阳" | "阴") {
 
 function parsePillar(raw: string | undefined): Pillar {
   const text = String(raw || "").trim();
+  if (text.length < 2) return { stem: "—", branch: "" };
   return { stem: text.slice(0, 1), branch: text.slice(1, 2) };
-}
-
-function wrapIndex(idx: number, size: number) {
-  return ((idx % size) + size) % size;
-}
-
-function pillarByIndex(idx: number): Pillar {
-  return {
-    stem: STEMS[wrapIndex(idx, STEMS.length)],
-    branch: BRANCHES[wrapIndex(idx, BRANCHES.length)],
-  };
 }
 
 export function V17_SixPillarsPanel({
   fourPillars,
+  luckPillarFromServer,
+  flowPillarFromServer,
   birthTimeISO,
+  gender,
+  calendarType,
   selectedYear,
   onYearChange,
 }: {
   fourPillars?: FourPillars;
+  /** 后端 lunar_python 大运（与所选流年对应） */
+  luckPillarFromServer?: string;
+  flowPillarFromServer?: string;
   birthTimeISO?: string;
+  gender?: "male" | "female";
+  calendarType?: "solar" | "lunar";
   selectedYear: number;
   onYearChange: (year: number) => void;
 }) {
-  const birth = birthTimeISO ? new Date(birthTimeISO) : null;
-  const birthYear = Number.isFinite(birth?.getFullYear()) ? Number(birth?.getFullYear()) : new Date().getFullYear();
-  const birthMonth = Number.isFinite(birth?.getMonth()) ? Number(birth?.getMonth()) + 1 : 1;
-  const monthIdx = birthYear * 12 + birthMonth;
-  const yearIdx = selectedYear;
-  const decadeStep = Math.floor((selectedYear - birthYear) / 10);
+  const birth = parseBirthTimeLocal(birthTimeISO);
 
   const yearP = parsePillar(fourPillars?.year);
   const monthP = parsePillar(fourPillars?.month);
   const dayP = parsePillar(fourPillars?.day);
   const hourP = parsePillar(fourPillars?.hour);
-  const luckP = pillarByIndex(monthIdx + decadeStep);
-  const flowP = pillarByIndex(yearIdx);
+  const luckP = parsePillar(luckPillarFromServer);
+  const flowP = parsePillar(flowPillarFromServer);
 
   const rows: Array<{ label: string; pillar: Pillar }> = [
     { label: "年柱", pillar: yearP },
@@ -118,10 +129,27 @@ export function V17_SixPillarsPanel({
 
   const yearChoices = Array.from({ length: 111 }, (_, i) => selectedYear - 80 + i);
 
+  const birthLabel =
+    birth != null
+      ? `${birth.getFullYear()}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")} ${String(birth.getHours()).padStart(2, "0")}:00`
+      : "—";
+  const genderLabel = gender === "male" ? "男" : gender === "female" ? "女" : "—";
+  const calendarLabel = calendarType === "lunar" ? "阴历" : calendarType === "solar" ? "阳历" : "—";
+
   return (
     <section className="rounded-xl border border-violet-700/40 bg-zinc-950/70 p-3">
+      <div className="mb-2 rounded-lg border border-violet-600/25 bg-zinc-900/50 px-2 py-1.5 text-[11px] text-zinc-300">
+        <span className="text-zinc-500">出生 </span>
+        <span className="text-violet-100">{birthLabel}</span>
+        <span className="mx-1.5 text-zinc-600">·</span>
+        <span className="text-zinc-500">性别 </span>
+        <span className="text-violet-100">{genderLabel}</span>
+        <span className="mx-1.5 text-zinc-600">·</span>
+        <span className="text-zinc-500">历法 </span>
+        <span className="text-violet-100">{calendarLabel}</span>
+      </div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs text-violet-200/80">命局六柱（四柱 + 大运 + 流年）</p>
+        <p className="text-xs text-violet-200/80">命局六柱（仅展示 NDJSON 快照中的服务端结果）</p>
         <label className="inline-flex items-center gap-2 text-xs text-zinc-300">
           <span>年份</span>
           <select

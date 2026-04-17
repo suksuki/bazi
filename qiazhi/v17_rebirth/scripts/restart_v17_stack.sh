@@ -36,6 +36,9 @@ if ! pnpm --dir "$FRONTEND_DIR" build; then
 fi
 
 echo -e "${BLUE}[2/4] Restart backend + frontend services...${NC}"
+sudo pkill -f gunicorn 2>/dev/null || true
+# v17-backend.service：Uvicorn 无 --no-buffer；以 PYTHONUNBUFFERED=1 + stdbuf -oL -eL（见 ExecStart）行缓冲日志/SSE 侧写。
+# 若改用 gunicorn：对 UvicornWorker 可加 --proxy-headers；Nginx 对 SSE location 建议 proxy_buffering off。
 sudo systemctl restart v17-backend.service v17-frontend.service
 
 echo -e "${BLUE}[3/4] Health checks...${NC}"
@@ -65,7 +68,7 @@ check_http_code() {
   echo -e "${YELLOW}${label}${NC}"
   for ((i = 1; i <= retries; i++)); do
     render_progress "$label" "$i" "$retries"
-    code="$(curl -sS -m 5 -o /dev/null -w "%{http_code}" "$url" || true)"
+    code="$(curl -sS -m 5 -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || true)"
     if [[ "$code" =~ ^2|^3 ]]; then
       render_progress "$label" "$retries" "$retries"
       printf "\n"
