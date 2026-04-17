@@ -6,10 +6,8 @@ type TabKey = "llm" | "db";
 
 type LlmNode = {
   provider: string;
-  base_url: string;
-  username: string;
-  password: string;
-  api_key: string;
+  host: string;
+  port: number;
   model: string;
 };
 
@@ -25,14 +23,15 @@ type DbBridge = {
   enabled: boolean;
 };
 
+type ActionKey = "loadModels" | "testLlm" | "testLlmChat" | "saveLlm" | "testDb" | "saveDb" | null;
+type LooseObject = Record<string, unknown>;
+
 export default function V17AdminPage() {
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({
     provider: "ollama",
-    base_url: "",
-    username: "",
-    password: "",
-    api_key: "",
+    host: "192.168.0.12",
+    port: 11434,
     model: "",
   });
   const [db, setDb] = useState<DbBridge>({
@@ -48,77 +47,153 @@ export default function V17AdminPage() {
   });
   const [msg, setMsg] = useState("");
   const [llmModels, setLlmModels] = useState<string[]>([]);
+  const [llmPrompt, setLlmPrompt] = useState("你好，请简单自我介绍。");
+  const [busy, setBusy] = useState<ActionKey>(null);
+
+  const llmBaseUrl = `http://${llm.host}:${llm.port}/v1`;
+
+  async function requestJson(url: string, init?: RequestInit) {
+    const resp = await fetch(url, init);
+    const text = await resp.text();
+    let data: unknown = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { ok: false, error: text.slice(0, 200) || "non-json response" };
+    }
+    return { resp, data };
+  }
+
+  const ghostBtn =
+    "cursor-pointer rounded-md border border-zinc-500 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-zinc-300 hover:bg-zinc-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const solidBtn =
+    "cursor-pointer rounded-md bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60";
 
   useEffect(() => {
     void (async () => {
-      const [llmResp, dbResp] = await Promise.all([
-        fetch("/v17/admin/llm-node"),
-        fetch("/v17/admin/db-bridge"),
+      const [{ data: llmData }, { data: dbData }] = await Promise.all([
+        requestJson("/api/v17-admin/llm-node"),
+        requestJson("/api/v17-admin/db-bridge"),
       ]);
-      const llmData = await llmResp.json();
-      const dbData = await dbResp.json();
-      if (llmData?.node) setLlm(llmData.node);
-      if (dbData?.bridge) setDb(dbData.bridge);
+      const llmObj = (llmData as LooseObject) || {};
+      const llmNode = (llmObj.node as LooseObject) || null;
+      const dbObj = (dbData as LooseObject) || {};
+      if (llmNode) {
+        const baseUrl = String(llmNode.base_url || "");
+        let host = "192.168.0.12";
+        let port = 11434;
+        try {
+          const parsed = new URL(baseUrl);
+          host = parsed.hostname || host;
+          port = Number(parsed.port || 11434);
+        } catch {}
+        setLlm({ provider: String(llmNode.provider || "ollama"), host, port, model: String(llmNode.model || "") });
+      }
+      if (dbObj.bridge) setDb(dbObj.bridge as DbBridge);
     })();
   }, []);
 
   async function saveLlm() {
-    const resp = await fetch("/v17/admin/llm-node", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...llm, v17_origin: "v17_rebirth" }),
-    });
-    const data = await resp.json();
-    setMsg(resp.ok ? `LLM 配置已保存，管线已重载 epoch=${data?.pipeline_epoch ?? "?"}` : `保存失败：${data?.detail || "unknown"}`);
+    setBusy("saveLlm");
+    try {
+      const { resp, data } = await requestJson("/api/v17-admin/llm-node", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: llm.provider, base_url: llmBaseUrl, model: llm.model, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      setMsg(resp.ok ? `LLM 配置已保存，管线已重载 epoch=${obj.pipeline_epoch ?? "?"}` : `保存失败：${obj.detail || obj.error || "unknown"}`);
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function testLlm() {
-    const resp = await fetch("/v17/admin/llm-node/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...llm, v17_origin: "v17_rebirth" }),
-    });
-    const data = await resp.json();
-    setMsg(data?.ok ? `LLM 测试成功：${data?.result?.probe_url} (${data?.result?.http_status})` : `LLM 测试失败：${data?.error || data?.detail || "unknown"}`);
+    setBusy("testLlm");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      const result = ((obj.result as LooseObject) || {}) as LooseObject;
+      setMsg(obj.ok ? `LLM 测试成功：${result.probe_url || ""} (${result.http_status || ""})` : `LLM 测试失败：${obj.error || obj.detail || "unknown"}`);
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function loadLlmModels() {
-    const resp = await fetch("/v17/admin/llm-node/models", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ base_url: llm.base_url, v17_origin: "v17_rebirth" }),
-    });
-    const data = await resp.json();
-    if (data?.ok) {
-      const models = Array.isArray(data?.result?.models) ? data.result.models : [];
-      setLlmModels(models);
-      if (!llm.model && models.length > 0) {
-        setLlm((s) => ({ ...s, model: String(models[0]) }));
+    setBusy("loadModels");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      const result = ((obj.result as LooseObject) || {}) as LooseObject;
+      if (obj.ok) {
+        const models = Array.isArray(result.models) ? (result.models as string[]) : [];
+        setLlmModels(models);
+        if (!llm.model && models.length > 0) {
+          setLlm((s) => ({ ...s, model: String(models[0]) }));
+        }
+        setMsg(`模型拉取完成：${models.length} 个`);
+      } else {
+        setMsg(`模型拉取失败：${obj.error || obj.detail || "unknown"}`);
       }
-      setMsg(`模型拉取完成：${models.length} 个`);
-    } else {
-      setMsg(`模型拉取失败：${data?.error || data?.detail || "unknown"}`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function testLlmChat() {
+    setBusy("testLlmChat");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/chat-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_url: llmBaseUrl, model: llm.model, prompt: llmPrompt, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      const result = ((obj.result as LooseObject) || {}) as LooseObject;
+      setMsg(obj.ok ? `LLM 回复：${result.reply || "(空回复)"}` : `LLM 对话测试失败：${obj.error || obj.detail || "unknown"}`);
+    } finally {
+      setBusy(null);
     }
   }
 
   async function saveDb() {
-    const resp = await fetch("/v17/admin/db-bridge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
-    });
-    const data = await resp.json();
-    setMsg(resp.ok ? "DB Bridge 配置已保存（V17 协议锁通过）" : `保存失败：${data?.detail || "unknown"}`);
+    setBusy("saveDb");
+    try {
+      const { resp, data } = await requestJson("/api/v17-admin/db-bridge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      setMsg(resp.ok ? "DB Bridge 配置已保存（V17 协议锁通过）" : `保存失败：${obj.detail || obj.error || "unknown"}`);
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function testDb() {
-    const resp = await fetch("/v17/admin/db-bridge/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
-    });
-    const data = await resp.json();
-    setMsg(data?.ok ? `DB 测试成功：${data?.result?.host}:${data?.result?.port}` : `DB 测试失败：${data?.error || data?.detail || "unknown"}`);
+    setBusy("testDb");
+    try {
+      const { data } = await requestJson("/api/v17-admin/db-bridge/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
+      });
+      const obj = (data as LooseObject) || {};
+      const result = ((obj.result as LooseObject) || {}) as LooseObject;
+      setMsg(obj.ok ? `DB 测试成功：${result.host || ""}:${result.port || ""}` : `DB 测试失败：${obj.error || obj.detail || "unknown"}`);
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
@@ -152,33 +227,23 @@ export default function V17AdminPage() {
                 value={llm.provider}
                 onChange={(e) => setLlm((s) => ({ ...s, provider: e.target.value }))}
               />
-              <input
-                className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
-                placeholder="url / base_url"
-                value={llm.base_url}
-                onChange={(e) => setLlm((s) => ({ ...s, base_url: e.target.value }))}
-              />
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
-                  placeholder="username"
-                  value={llm.username}
-                  onChange={(e) => setLlm((s) => ({ ...s, username: e.target.value }))}
+                  placeholder="ollama 地址 (如 192.168.0.12)"
+                  title="LLM 地址，例如 192.168.0.12"
+                  value={llm.host}
+                  onChange={(e) => setLlm((s) => ({ ...s, host: e.target.value }))}
                 />
                 <input
-                  type="password"
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
-                  placeholder="password"
-                  value={llm.password}
-                  onChange={(e) => setLlm((s) => ({ ...s, password: e.target.value }))}
+                  placeholder="端口 (默认 11434)"
+                  title="LLM 端口，Ollama 默认 11434"
+                  value={String(llm.port)}
+                  onChange={(e) => setLlm((s) => ({ ...s, port: Number(e.target.value || 11434) }))}
                 />
               </div>
-              <input
-                className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
-                placeholder="api_key"
-                value={llm.api_key}
-                onChange={(e) => setLlm((s) => ({ ...s, api_key: e.target.value }))}
-              />
+              <p className="text-xs text-zinc-400">当前连接：{llmBaseUrl}</p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
                 <select
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
@@ -192,18 +257,27 @@ export default function V17AdminPage() {
                     </option>
                   ))}
                 </select>
-                <button type="button" onClick={loadLlmModels} className="rounded-md border border-zinc-500 px-4 py-2 text-sm font-semibold text-zinc-200">
-                  拉取模型
+                <button type="button" disabled={busy !== null} onClick={loadLlmModels} className={ghostBtn}>
+                  {busy === "loadModels" ? "拉取中..." : "拉取模型"}
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={testLlm} className="rounded-md border border-zinc-500 px-4 py-2 text-sm font-semibold text-zinc-200">
-                  测试连接
+                <button type="button" disabled={busy !== null} onClick={testLlm} className={ghostBtn}>
+                  {busy === "testLlm" ? "测试中..." : "测试连接"}
                 </button>
-                <button type="button" onClick={saveLlm} className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900">
-                  保存
+                <button type="button" disabled={busy !== null || !llm.model} onClick={testLlmChat} className={ghostBtn}>
+                  {busy === "testLlmChat" ? "问答中..." : "测试问答"}
+                </button>
+                <button type="button" disabled={busy !== null || !llm.model} onClick={saveLlm} className={solidBtn}>
+                  {busy === "saveLlm" ? "保存中..." : "保存"}
                 </button>
               </div>
+              <textarea
+                className="min-h-[80px] w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
+                placeholder="输入测试问题"
+                value={llmPrompt}
+                onChange={(e) => setLlmPrompt(e.target.value)}
+              />
             </div>
           ) : (
             <div className="space-y-3">
@@ -212,12 +286,14 @@ export default function V17AdminPage() {
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="driver (postgres)"
+                  title="数据库驱动，一般为 postgres"
                   value={db.driver}
                   onChange={(e) => setDb((s) => ({ ...s, driver: e.target.value }))}
                 />
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="host"
+                  title="数据库地址，例如 127.0.0.1 或内网 IP"
                   value={db.host}
                   onChange={(e) => setDb((s) => ({ ...s, host: e.target.value }))}
                 />
@@ -226,12 +302,14 @@ export default function V17AdminPage() {
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="port"
+                  title="数据库端口，Postgres 默认 5432"
                   value={String(db.port)}
                   onChange={(e) => setDb((s) => ({ ...s, port: Number(e.target.value || 5432) }))}
                 />
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="database"
+                  title="数据库名称"
                   value={db.database}
                   onChange={(e) => setDb((s) => ({ ...s, database: e.target.value }))}
                 />
@@ -240,6 +318,7 @@ export default function V17AdminPage() {
                 <input
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="username"
+                  title="数据库用户名"
                   value={db.username}
                   onChange={(e) => setDb((s) => ({ ...s, username: e.target.value }))}
                 />
@@ -247,6 +326,7 @@ export default function V17AdminPage() {
                   type="password"
                   className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm"
                   placeholder="password"
+                  title="数据库密码"
                   value={db.password}
                   onChange={(e) => setDb((s) => ({ ...s, password: e.target.value }))}
                 />
@@ -268,11 +348,11 @@ export default function V17AdminPage() {
                 启用桥接
               </label>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={testDb} className="rounded-md border border-zinc-500 px-4 py-2 text-sm font-semibold text-zinc-200">
-                  测试连接
+                <button type="button" disabled={busy !== null} onClick={testDb} className={ghostBtn}>
+                  {busy === "testDb" ? "测试中..." : "测试连接"}
                 </button>
-                <button type="button" onClick={saveDb} className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900">
-                  保存
+                <button type="button" disabled={busy !== null} onClick={saveDb} className={solidBtn}>
+                  {busy === "saveDb" ? "保存中..." : "保存"}
                 </button>
               </div>
             </div>

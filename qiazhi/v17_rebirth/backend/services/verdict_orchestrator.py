@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import asyncio
+import importlib
+import pkgutil
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Dict, List
 
 from v17_rebirth.backend.adapters.physics_adapter import PhysicsAdapter
-from v17_rebirth.backend.narrative.pipeline import RealtimeNarrativePipeline
+from v17_rebirth.backend.narrative.pipeline import DialogueLayer, RealtimeNarrativePipeline
 from v17_rebirth.backend.narrative.sanitizer import NarrativeSanitizer
 from v17_rebirth.backend.narrative.semantic_fusion import SemanticFusion
 from v17_rebirth.infrastructure.llm_bridge import V17LlmBridge, get_runtime_revision
@@ -35,6 +38,7 @@ def _get_pipeline() -> RealtimeNarrativePipeline:
         _PIPELINE_CACHE = RealtimeNarrativePipeline(
             sanitizer=NarrativeSanitizer(),
             fusion=SemanticFusion(llm_client=V17MicroLlmClient(bridge=V17LlmBridge())),
+            dialogue=DialogueLayer(sanitizer=NarrativeSanitizer()),
         )
         _PIPELINE_CACHE_KEY = key
     return _PIPELINE_CACHE
@@ -66,6 +70,46 @@ class VerdictOrchestrator:
             *[str(x) for x in facts[:4]],
         ]
 
+    def _pending_decisions(self, deity_scores: Dict[str, float]) -> List[Dict[str, Any]]:
+        sanitizer = NarrativeSanitizer()
+        rows = self._collect_plugin_facts(deity_scores)
+        out: List[Dict[str, Any]] = []
+        for idx, row in enumerate(sorted(rows, key=lambda x: float(x.get("priority", 0.0)), reverse=True)[:4]):
+            label = sanitizer.sanitize(row.get("label", "") or row.get("fact", ""))
+            title = sanitizer.sanitize(row.get("fact", ""))
+            if not label:
+                continue
+            out.append(
+                {
+                    "id": f"{row.get('plugin','plugin')}_{idx}",
+                    "title": title or "建议动作",
+                    "label": label,
+                    "source": row.get("plugin", "plugin"),
+                    "priority": float(row.get("priority", 0.0)),
+                }
+            )
+        return out
+
+    def _collect_plugin_facts(self, deity_scores: Dict[str, float]) -> List[Dict[str, Any]]:
+        rows: List[Dict[str, Any]] = []
+        try:
+            import v17_rebirth.backend.logic as logic_pkg
+        except Exception:
+            return rows
+        for mod in pkgutil.iter_modules(logic_pkg.__path__):
+            if mod.name.startswith("_"):
+                continue
+            try:
+                m = importlib.import_module(f"v17_rebirth.backend.logic.{mod.name}")
+                fn = getattr(m, "collect_v17_facts", None)
+                if callable(fn):
+                    result = fn(deity_scores)
+                    if isinstance(result, list):
+                        rows.extend([x for x in result if isinstance(x, dict)])
+            except Exception:
+                continue
+        return rows
+
     def snapshot_frame(self, *, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
         adapter = PhysicsAdapter(root=__import__("pathlib").Path(self.repo_root))
         scores = adapter.read_deity_scores(raw_physics)
@@ -74,6 +118,10 @@ class VerdictOrchestrator:
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
         pattern = self._resolve_pattern(scores)
         tension = (max(scores.values()) - min(scores.values())) if scores else 0.0
+        plugin_rows = self._collect_plugin_facts(scores)
+        plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
+        plugin_hits = sorted({str(x.get("plugin", "")).strip() for x in plugin_rows if str(x.get("plugin", "")).strip()})
+        decisions = self._pending_decisions(scores)
         return {
             "timestamp": _now_iso(),
             "layer": "SNAPSHOT",
@@ -84,6 +132,11 @@ class VerdictOrchestrator:
                 "ten_gods": raw_physics.get("ten_gods", []),
                 "deity_scores": scores,
                 "physics_tension": tension,
+                "pending_decisions": decisions,
+                "debug_trace": {
+                    "hits": plugin_hits,
+                    "facts": plugin_facts[:10],
+                },
                 "god_rings": {
                     "god_of_use": god_of_use,
                     "god_of_taboo": god_of_taboo,
@@ -97,6 +150,9 @@ class VerdictOrchestrator:
         raw_physics: Dict[str, Any],
         facts: List[str],
         will_proxy: str,
+        user_message: str = "",
+        action_signal: bool = False,
+        decision_anchor: str = "",
     ) -> AsyncIterator[Dict[str, Any]]:
         adapter = PhysicsAdapter(root=__import__("pathlib").Path(self.repo_root))
         scores = adapter.read_deity_scores(raw_physics)
@@ -104,15 +160,22 @@ class VerdictOrchestrator:
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
         pattern = self._resolve_pattern(scores)
-        fragments = self._build_fragments(scores, facts, pattern)
+        plugin_rows = await asyncio.to_thread(self._collect_plugin_facts, scores)
+        plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
+        fragments = self._build_fragments(scores, [*facts, *plugin_facts], pattern)
         pipeline = _get_pipeline()
         frame = await pipeline.run(
             fact_fragments=fragments,
             will_proxy=will_proxy,
+            user_message=user_message,
+            action_signal=action_signal,
+            decision_anchor=decision_anchor,
             god_of_use=god_of_use,
             god_of_taboo=god_of_taboo,
         )
         text = str((((frame.get("payload") or {}).get("render_text")) or "")).strip()
+        llm_meta = (frame.get("payload") or {}).get("llm_meta", {})
+        source_facts = (frame.get("payload") or {}).get("source_facts", [])
         if not text:
             return
         # WebStream-style incremental reveal: one frame per sentence chunk.
@@ -124,6 +187,8 @@ class VerdictOrchestrator:
                 "payload": {
                     "render_text": text[: min(i, len(text))],
                     "will_proxy": str(will_proxy or "stable"),
+                    "llm_meta": llm_meta if isinstance(llm_meta, dict) else {},
+                    "source_facts": source_facts if isinstance(source_facts, list) else [],
                     "god_rings": {
                         "god_of_use": god_of_use,
                         "god_of_taboo": god_of_taboo,

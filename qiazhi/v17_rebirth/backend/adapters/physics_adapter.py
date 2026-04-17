@@ -12,11 +12,8 @@ class PhysicsAdapter:
     root: Path
 
     def available_sources(self) -> Dict[str, str]:
-        backup_src = self.root / "qiazhi_bazi_backup_20260416_173303" / "backend" / "app" / "core" / "physics"
-        legacy_src = self.root / "legacy" / "core" / "physics"
         return {
-            "backup_core_physics": str(backup_src),
-            "legacy_core_physics": str(legacy_src),
+            "v17_rebirth_internal": str(self.root / "qiazhi" / "v17_rebirth" / "backend" / "logic"),
         }
 
     def read_deity_scores(self, raw_physics: Dict[str, Any]) -> Dict[str, float]:

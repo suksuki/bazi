@@ -2,9 +2,39 @@ import { useEffect, useState } from "react";
 
 export type V17Frame = {
   layer?: string;
+  timestamp?: string;
   payload?: {
     render_text?: string;
+    will_flash?: boolean;
     deity_scores?: Record<string, number>;
+    four_pillars?: {
+      year?: string;
+      month?: string;
+      day?: string;
+      hour?: string;
+    };
+    debug_trace?: {
+      hits?: string[];
+      facts?: string[];
+    };
+    llm_meta?: {
+      ok?: boolean;
+      engine_state?: string;
+      elapsed_ms?: number;
+      model?: string;
+      provider?: string;
+      error_id?: string;
+      error?: string;
+      facts?: string[];
+    };
+    source_facts?: string[];
+    pending_decisions?: Array<{
+      id?: string;
+      title?: string;
+      label?: string;
+      source?: string;
+      priority?: number;
+    }>;
     god_rings?: {
       god_of_use?: string[];
       god_of_taboo?: string[];
@@ -13,7 +43,7 @@ export type V17Frame = {
 };
 
 export function useV17WebStream({
-  endpoint = "/v17/stream?will_proxy=stable",
+  endpoint = "/api/v17/stream?will_proxy=stable",
   enabled = true,
   method = "GET",
   body,

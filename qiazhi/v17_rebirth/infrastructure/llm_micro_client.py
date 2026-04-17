@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import time
+import uuid
 from dataclasses import dataclass
 from urllib import request
 
@@ -15,7 +17,7 @@ class V17MicroLlmClient:
 
     bridge: V17LlmBridge
 
-    async def fuse(self, *, fragments: list[str], will_proxy: str, max_tokens: int = 80) -> str:
+    async def fuse(self, *, fragments: list[str], will_proxy: str, max_tokens: int = 80) -> dict:
         cfg = self.bridge.resolve()
         polarity_rule = ""
         if will_proxy == "stable":
@@ -39,11 +41,39 @@ class V17MicroLlmClient:
             "temperature": 0.2,
             "max_tokens": int(max_tokens or 80),
         }
+        started = time.perf_counter()
         try:
-            return await asyncio.wait_for(self._chat(cfg["base_url"], cfg["api_key"], body), timeout=0.8)
-        except Exception:
-            # 保底：仍输出自然句，避免工程词泄漏。
-            return "局势火势偏旺，宜守中求进，先稳后发。"
+            text = await asyncio.wait_for(self._chat(cfg["base_url"], cfg["api_key"], body), timeout=3.0)
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            return {
+                "text": str(text or "").strip(),
+                "llm_meta": {
+                    "ok": True,
+                    "engine_state": "ok",
+                    "elapsed_ms": elapsed_ms,
+                    "model": str(cfg.get("model", "")).strip(),
+                    "provider": str(cfg.get("provider", "")).strip(),
+                    "error_id": "",
+                },
+            }
+        except Exception as exc:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            error_id = f"V17-LLM-{uuid.uuid4().hex[:8].upper()}"
+            raw_rows = [str(x).strip() for x in fragments if str(x).strip()][:6]
+            fail_text = f"[叙事引擎重连中][{error_id}] " + " | ".join(raw_rows)
+            return {
+                "text": fail_text.strip(),
+                "llm_meta": {
+                    "ok": False,
+                    "engine_state": "reconnecting",
+                    "elapsed_ms": elapsed_ms,
+                    "model": str(cfg.get("model", "")).strip(),
+                    "provider": str(cfg.get("provider", "")).strip(),
+                    "error_id": error_id,
+                    "error": str(exc),
+                    "facts": raw_rows,
+                },
+            }
 
     async def _chat(self, base_url: str, api_key: str, body: dict) -> str:
         def _sync_call() -> str:
