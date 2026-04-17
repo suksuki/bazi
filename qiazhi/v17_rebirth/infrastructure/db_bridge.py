@@ -9,7 +9,7 @@ from urllib.parse import quote_plus
 
 from v17_rebirth.paths import RUNTIME_DIR
 
-_DB_BRIDGE_FALLBACK = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/db_bridge.json")
+
 
 
 def _postgres_url_from_admin_blob(blob: dict[str, Any]) -> str | None:
@@ -32,8 +32,6 @@ def _postgres_url_from_admin_blob(blob: dict[str, Any]) -> str | None:
 
 def _admin_db_url_from_disk() -> str | None:
     path = RUNTIME_DIR / "db_bridge.json"
-    if not path.exists() and _DB_BRIDGE_FALLBACK.exists():
-        path = _DB_BRIDGE_FALLBACK
     if not path.exists():
         return None
     try:

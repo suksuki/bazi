@@ -13,6 +13,8 @@ type EvolutionFrame = {
     render_text?: string;
     pattern?: string;
     deity_scores?: Record<string, number>;
+    ten_gods_absolute_intensity?: Record<string, number>;
+    total_energy_index?: number;
     physics_tension?: number;
     will_flash?: boolean;
     debug_trace?: {
@@ -108,7 +110,7 @@ export function V17_PurpleVerdictCard({
   ).trim();
   const snapshotUse = physicsSnapshot?.payload?.god_rings?.god_of_use || [];
   const snapshotTaboo = physicsSnapshot?.payload?.god_rings?.god_of_taboo || [];
-  const scoreMap = physicsSnapshot?.payload?.deity_scores || {};
+  const scoreMap = physicsSnapshot?.payload?.ten_gods_absolute_intensity || physicsSnapshot?.payload?.deity_scores || {};
   const scoreRank = Object.entries(scoreMap || {})
     .map(([k, v]) => ({ k: String(k).trim(), v: Number(v || 0) }))
     .filter((x) => x.k && Number.isFinite(x.v))
@@ -148,9 +150,8 @@ export function V17_PurpleVerdictCard({
       className="rounded-xl border border-violet-700/60 bg-black p-4 relative overflow-hidden"
       animate={{ 
         boxShadow: tension > 25 ? ["0 0 10px #7c3aed44", "0 0 25px #7c3aed66", "0 0 10px #7c3aed44"] : "none",
-        y: tension > 40 ? [-1, 1, -1] : 0 
       }}
-      transition={{ duration: tension > 40 ? 0.3 : 1.5, repeat: Infinity }}
+      transition={{ duration: 1.5, repeat: Infinity }}
     >
       <motion.div 
         className="absolute inset-0 z-0 pointer-events-none opacity-20 bg-gradient-to-tr from-violet-900/50 to-transparent"

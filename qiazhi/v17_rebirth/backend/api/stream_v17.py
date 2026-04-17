@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import json
 import asyncio
+import fcntl
+import logging
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union
+
+from v17_rebirth.paths import RUNTIME_DIR
 
 from fastapi import APIRouter, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from v17_rebirth.infrastructure.stream_interrupt import ActionInterruptDuringStream
+from v17_rebirth.infrastructure.state_backend import get_state_backend
 
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import hydrate_v17_physics_tensor
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError, PhysicsService
@@ -20,19 +25,56 @@ from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVE
 router = APIRouter(tags=["v17"])
 _WILL_IMPACT_BUFFER: List[Dict[str, Any]] = []
 _ACTION_SEQ = 0
-_FREEZE_FILE = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/v17_causal_reports.json")
-_SESSION_QUEUES: Dict[str, "asyncio.Queue[Dict[str, Any]]"] = {}
+_FREEZE_FILE = RUNTIME_DIR / "v17_causal_reports.json"
+# V17.23-Red：_SESSION_QUEUES 已迁移到 StateBackend.subscribe_actions/publish_action
 # V17.20：六柱与流年锚点仅允许由服务端 physics core 写入，禁止 POST Body 覆盖。
 _PHYS_SSOT_KEYS = frozenset({"four_pillars", "luck_pillar", "flow_pillar", "flow_year"})
 
 
+_log = logging.getLogger(__name__)
+
+
+def _warn_if_multi_worker() -> None:
+    """V17.23：进程内 Queue / PhysicsService 在 multi-worker 下无法共享，启动时告警。"""
+    concurrency = str(os.getenv("WEB_CONCURRENCY", "") or "").strip()
+    workers_arg = str(os.getenv("UVICORN_WORKERS", "") or "").strip()
+    try:
+        if (concurrency and int(concurrency) > 1) or (workers_arg and int(workers_arg) > 1):
+            _log.warning(
+                "[V17-CRITICAL] Multi-worker mode detected (WEB_CONCURRENCY=%s / UVICORN_WORKERS=%s). "
+                "_SESSION_QUEUES and _SESSION_PHYSICS are in-process only — "
+                "Action signals WILL NOT reach streams in other workers. "
+                "Mitigation: set --workers 1, or migrate queues to Redis Pub/Sub.",
+                concurrency, workers_arg,
+            )
+    except (TypeError, ValueError):
+        pass
+
+
+_warn_if_multi_worker()
+
+
+
+
+def _v17_api_secret() -> str:
+    """
+    V17.23：从环境变量读取 API 密钥。
+    生产环境建议设置 QIAZHI_V17_API_SECRET 为一个随机高强度字符串。
+    未设置时退化为默认字符串（开发兼容）。
+    """
+    return str(os.getenv("QIAZHI_V17_API_SECRET", "v17_rebirth") or "v17_rebirth").strip()
+
+
 def _sovereignty_v17(origin: Optional[str]) -> bool:
-    return str(origin or "").strip() == "v17_rebirth"
+    """校验 v17_origin / X-V17-Origin 头是否与当前密钥匹配。"""
+    return str(origin or "").strip() == _v17_api_secret()
 
 
 def _default_payload() -> Dict[str, Any]:
     return {
         "deity_scores": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
+        "ten_gods_absolute_intensity": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
+        "total_energy_index": 85.74,
         "facts": [
             "五行火旺，结构张力上扬",
             "正官牵引秩序诉求增强",
@@ -41,21 +83,36 @@ def _default_payload() -> Dict[str, Any]:
     }
 
 
-def _append_freeze_report(entry: Dict[str, Any]) -> str:
+def _sync_append_freeze_report(entry: Dict[str, Any]) -> str:
+    """同步写入（在 asyncio.to_thread 中执行），带 fcntl 文件锁避免并发写入竞争。"""
     _FREEZE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    rows: List[Dict[str, Any]] = []
-    if _FREEZE_FILE.exists():
+    rid = f"v17r_{int(datetime.now(timezone.utc).timestamp() * 1000)}"
+    with open(_FREEZE_FILE, "a+", encoding="utf-8") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
         try:
-            raw = json.loads(_FREEZE_FILE.read_text(encoding="utf-8"))
-            if isinstance(raw, list):
-                rows = [x for x in raw if isinstance(x, dict)]
-        except Exception:
-            rows = []
-    rid = f"v17r_{int(datetime.utcnow().timestamp() * 1000)}"
-    rows.append({"report_id": rid, **entry})
-    rows = rows[-300:]
-    _FREEZE_FILE.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+            fh.seek(0)
+            raw = fh.read()
+            rows: List[Dict[str, Any]] = []
+            if raw.strip():
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        rows = [x for x in parsed if isinstance(x, dict)]
+                except Exception:
+                    rows = []
+            rows.append({"report_id": rid, **entry})
+            rows = rows[-300:]
+            fh.seek(0)
+            fh.truncate()
+            fh.write(json.dumps(rows, ensure_ascii=False, indent=2))
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
     return rid
+
+
+async def _append_freeze_report(entry: Dict[str, Any]) -> str:
+    """async 包装：将同步文件 I/O 卓罴到线程池，不阻塞事件循环。"""
+    return await asyncio.to_thread(_sync_append_freeze_report, entry)
 
 
 def _safe_parse_birth_time(value: Optional[str]) -> Optional[datetime]:
@@ -124,9 +181,12 @@ def _run_v17_physics_core(
     gender: Optional[str],
     flow_year: Optional[int] = None,
 ) -> Dict[str, Any]:
-    stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-    branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    dt = birth_time or datetime.utcnow()
+    from datetime import timezone as _tz
+    from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
+
+    _stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
+    _branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
+    dt = birth_time or datetime.now(_tz.utc).replace(tzinfo=None)
     gender_norm = "male" if str(gender or "").lower() == "male" else "female"
     fy = int(flow_year) if flow_year is not None else datetime.now().year
 
@@ -140,36 +200,47 @@ def _run_v17_physics_core(
         day_idx = dt.toordinal()
         hour_idx = day_idx * 12 + (dt.hour // 2)
         four_pillars = {
-            "year": _pillar(stems, branches, year_idx),
-            "month": _pillar(stems, branches, month_idx),
-            "day": _pillar(stems, branches, day_idx),
-            "hour": _pillar(stems, branches, hour_idx),
+            "year": _pillar(_stems, _branches, year_idx),
+            "month": _pillar(_stems, _branches, month_idx),
+            "day": _pillar(_stems, _branches, day_idx),
+            "hour": _pillar(_stems, _branches, hour_idx),
         }
 
-    base = {
-        "正官": 28.0 + (dt.month % 6) * 3.2,
-        "食神": 16.0 + (dt.day % 7) * 2.4,
-        "比肩": 10.0 + (dt.hour % 6) * 2.1,
-        "偏印": 8.0 + (dt.year % 5) * 1.8,
-        "正财": 12.0 + (dt.month % 4) * 2.0,
-    }
-    if gender_norm == "male":
-        base["正官"] += 2.2
-        base["比肩"] += 1.3
-    else:
-        base["食神"] += 2.0
-        base["正财"] += 1.1
-
-    scores = {k: round(v, 2) for k, v in base.items()}
-    ten_gods = [k for k, _ in sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:4]]
+    # 真实十神分值：基于日主干支阴阳五行生克关系（L0 层 ten_gods_engine）
+    scores, ten_gods, total_energy_index, energy_meta = calc_deity_scores(
+        four_pillars=four_pillars,
+        luck_pillar=luck_pillar,
+        flow_pillar=flow_pillar,
+        gender=gender_norm,
+        birth_time=dt,
+    )
     facts = [
-        f"四柱落位：年{four_pillars['year']} 月{four_pillars['month']} 日{four_pillars['day']} 时{four_pillars['hour']}",
-        f"大运（{fy}）：{luck_pillar}；流年：{flow_pillar}",
-        f"十神主轴：{'、'.join(ten_gods)}",
-        "命局主线已进入 V17 叙事织造阶段",
+        {
+            "fact": f"四柱落位：年{four_pillars['year']} 月{four_pillars['month']} 日{four_pillars['day']} 时{four_pillars['hour']}",
+            "weight": 0.98,
+            "tier": 0,
+        },
+        {
+            "fact": f"大运（{fy}）：{luck_pillar}；流年：{flow_pillar}",
+            "weight": 0.96,
+            "tier": 0,
+        },
+        {
+            "fact": f"十神主轴：{'、'.join(ten_gods)}",
+            "weight": 0.82,
+            "tier": 1,
+        },
+        {
+            "fact": "命局主线已进入 V17 叙事织造阶段",
+            "weight": 0.52,
+            "tier": 2,
+        },
     ]
     return {
         "deity_scores": scores,
+        "ten_gods_absolute_intensity": scores,
+        "total_energy_index": total_energy_index,
+        "energy_meta": energy_meta,
         "facts": facts,
         "four_pillars": four_pillars,
         "luck_pillar": luck_pillar,
@@ -223,6 +294,39 @@ async def _hydrate_physics_atomically(pl: Dict[str, Any]) -> None:
         hydrate_v17_physics_tensor(pl)
 
     await asyncio.to_thread(_sync)
+
+
+async def _self_heal_physics_if_missing(session_id: str, pl: Dict[str, Any]) -> bool:
+    """
+    Redis/StateBackend 读空时，现场同步重算一遍 physics core 并重新绑定，
+    尽量吸收前端请求快于后端持久化的竞态。
+    """
+    backend = get_state_backend()
+    current = await backend.get_physics(session_id)
+    if isinstance(current, dict) and current:
+        return False
+
+    _log.warning(
+        "[V17-HEAL] Session %s physics tensor missing in backend; forcing synchronous physics core rebuild",
+        session_id,
+    )
+    raw_flow_year = pl.get("flow_year")
+    try:
+        healed_flow_year = int(raw_flow_year) if raw_flow_year is not None else None
+    except (TypeError, ValueError):
+        healed_flow_year = None
+    healed_payload = _run_v17_physics_core(
+        birth_time=_safe_parse_birth_time(str(pl.get("birth_time") or "").strip() or None),
+        gender=str(pl.get("gender") or "").strip() or None,
+        flow_year=healed_flow_year,
+    )
+    pl.update(healed_payload)
+    PhysicsService.prime_local_tensor(session_id, pl)
+    await _hydrate_physics_atomically(pl)
+    VerdictOrchestrator().assert_six_pillars_physics(pl)
+    await PhysicsService.abind_session_tensor(session_id, pl)
+    await PhysicsService.ensure_stability(session_id, local_physics=pl)
+    return True
 
 
 def _sse_heartbeat_sec() -> float:
@@ -287,21 +391,93 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
     orchestrator = VerdictOrchestrator()
     pl = payload if isinstance(payload, dict) else {}
     session_id = str(pl.get("session_id", "")).strip() or "default"
+    print(f"[V17-TRACE] Stream Request In: {session_id}", flush=True)
+
+    # V17.24：Redis 活性探针——如果配置了 Redis 但连接失败，拒绝 SSE 启动（避免异常写入导致一系列下游报错）
+    backend = get_state_backend()
+    from v17_rebirth.infrastructure.state_backend import RedisStateBackend
+    if isinstance(backend, RedisStateBackend):
+        try:
+            redis_ok = await backend.ping()
+        except Exception:  # noqa: BLE001
+            redis_ok = False
+        if not redis_ok:
+            _log.error("[V17-FATAL] Redis backend unreachable for session=%s — refusing SSE stream", session_id)
+            yield (json.dumps({
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "layer": "SNAPSHOT",
+                "payload": {
+                    "snapshot_kind": "system_init_failure",
+                    "render_text": "[V17-FATAL] Redis 连接丢失，请查看后端 8017 日志。",
+                    "llm_meta": {"ok": False, "engine_state": "redis_unreachable"},
+                },
+            }, ensure_ascii=False) + "\n").encode("utf-8")
+            await asyncio.sleep(0)
+            return
+
     await _hydrate_physics_atomically(pl)
+    PhysicsService.prime_local_tensor(session_id, pl)
     try:
         orchestrator.assert_six_pillars_physics(pl)
+    except DataSovereigntyError:
+        # V17.24：因果残影——找出当前张量内容（帮助判断是数据未写入还是写错了地方）
+        _log.error(
+            "[V17-FATAL] Session %s assert_six_pillars_physics FAILED. "
+            "Current pl keys: %s  |  four_pillars: %s  |  luck_pillar: %s  |  flow_pillar: %s",
+            session_id,
+            list(pl.keys()),
+            pl.get("four_pillars"),
+            pl.get("luck_pillar"),
+            pl.get("flow_pillar"),
+        )
+        yield (json.dumps(_physical_void_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
+        await asyncio.sleep(0)
+        return
+    raw_physics = pl
+    try:
+        snap = orchestrator.snapshot_frame(
+            raw_physics=raw_physics,
+            session_id=session_id,
+            causal_anchor="local_memory",
+        )
     except DataSovereigntyError:
         yield (json.dumps(_physical_void_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
         await asyncio.sleep(0)
         return
-    PhysicsService.bind_session_tensor(session_id, pl)
+    _log.warning("[Local-Snapshot] session=%s causal_anchor=local_memory", session_id)
+    yield (json.dumps(snap, ensure_ascii=False) + "\n").encode("utf-8")
+    await asyncio.sleep(0)
+    # 第二动：Redis 锁定确认；未确认即视为主权失败
     try:
-        await PhysicsService.ensure_stability(session_id)
+        await PhysicsService.abind_session_tensor(session_id, raw_physics)
     except DataSovereigntyError:
+        _log.error("[V17-FATAL] Session %s Redis bind confirmation failed", session_id)
         yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
         await asyncio.sleep(0)
         return
-    raw_physics = pl
+    _log.warning("[Redis-Bind-Success] session=%s", session_id)
+    try:
+        await PhysicsService.ensure_stability(session_id, local_physics=raw_physics)
+    except DataSovereigntyError:
+        try:
+            healed = await _self_heal_physics_if_missing(session_id, raw_physics)
+        except DataSovereigntyError:
+            healed = False
+        if healed:
+            _log.warning("[V17-HEAL] Session %s recovered after backend MISS", session_id)
+        else:
+            # V17.24：因果残影——展示 Redis 里实际存的 key
+            try:
+                tensor_keys = await PhysicsService.get_physics_keys(session_id)
+            except Exception:  # noqa: BLE001
+                tensor_keys = ["<failed to query>"]
+            _log.error(
+                "[V17-FATAL] Session %s tensor keys in backend: %s",
+                session_id, tensor_keys,
+            )
+            yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
+            await asyncio.sleep(0)
+            return
     facts = pl.get("facts") if isinstance(pl.get("facts"), list) else []
     dec_raw = pl.get("decisions") if isinstance(pl.get("decisions"), list) else []
     decisions_rows: List[Dict[str, Any]] = []
@@ -312,72 +488,68 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
         if lab:
             decisions_rows.append({"id": str(x.get("id") or "").strip(), "label": lab, "title": str(x.get("title") or "").strip()})
     narrative_role = V17_ROLE_JUDGE if decisions_rows else V17_ROLE_WEAVER
-    queue = _SESSION_QUEUES.setdefault(session_id, asyncio.Queue())
-    # Frame 0: SNAPSHOT（柱位与 LLM 锚定同源：bind 后强读 PhysicsService；禁止空柱快照出闸）
-    try:
-        snap = orchestrator.snapshot_frame(raw_physics=raw_physics, session_id=session_id)
-    except DataSovereigntyError:
-        yield (json.dumps(_physical_void_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
-        await asyncio.sleep(0)
-        return
-    yield (json.dumps(snap, ensure_ascii=False) + "\n").encode("utf-8")
-    await asyncio.sleep(0)
-    # Frame 1..N: NARRATOR — LLM 真流式 + ActionQueue 内联 cancel，异常即 WILL_FLASH 重启
-    current_user_message = str(pl.get("user_message", "")).strip()
-    current_action_signal = bool(current_user_message)
-    current_proxy = str(will_proxy or "stable")
-    decision_anchor = current_user_message
-    while True:
-        restarted = False
-        try:
-            async for frame in _narrator_with_heartbeat(
-                orchestrator.narrator_frames(
-                    raw_physics=raw_physics,
-                    facts=[str(x) for x in facts if str(x).strip()],
-                    will_proxy=current_proxy,
-                    user_message=current_user_message,
-                    action_signal=current_action_signal,
-                    decision_anchor=decision_anchor,
-                    action_queue=queue,
-                    role_style=narrative_role,
-                    decisions=decisions_rows,
-                    session_id=session_id,
-                )
-            ):
-                yield (json.dumps(frame, ensure_ascii=False) + "\n").encode("utf-8")
+    # V17.23-Red：由 StateBackend 订阅事件（内存模式向后兼容，Redis 模式跨 worker）
+    async with get_state_backend().subscribe_actions(session_id) as queue:
+        _log.warning("[Narrator-Start] session=%s causal_anchor=redis_sync", session_id)
+        # Frame 1..N: NARRATOR — LLM 真流式 + ActionQueue 内联 cancel，异常即 WILL_FLASH 重启
+        current_user_message = str(pl.get("user_message", "")).strip()
+        current_action_signal = bool(current_user_message)
+        current_proxy = str(will_proxy or "stable")
+        decision_anchor = current_user_message
+        while True:
+            restarted = False
+            try:
+                async for frame in _narrator_with_heartbeat(
+                    orchestrator.narrator_frames(
+                        raw_physics=raw_physics,
+                        facts=[str(x) for x in facts if str(x).strip()],
+                        will_proxy=current_proxy,
+                        user_message=current_user_message,
+                        action_signal=current_action_signal,
+                        decision_anchor=decision_anchor,
+                        action_queue=queue,
+                        role_style=narrative_role,
+                        decisions=decisions_rows,
+                        session_id=session_id,
+                        causal_anchor="redis_sync",
+                        stability_checked=True,
+                    )
+                ):
+                    yield (json.dumps(frame, ensure_ascii=False) + "\n").encode("utf-8")
+                    await asyncio.sleep(0)
+            except DataSovereigntyError as _dse:
+                if str(_dse).strip() == "physics_metadata_unstable":
+                    yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
+                else:
+                    yield (json.dumps(_physical_void_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
                 await asyncio.sleep(0)
-        except DataSovereigntyError as _dse:
-            if str(_dse).strip() == "physics_metadata_unstable":
-                yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
-            else:
-                yield (json.dumps(_physical_void_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
-            await asyncio.sleep(0)
+                break
+            except ActionInterruptDuringStream as exc:
+                action_pl = exc.payload if isinstance(exc.payload, dict) else {}
+                current_user_message = str(action_pl.get("action", "")).strip()
+                decision_anchor = current_user_message
+                current_action_signal = True
+                if any(k in current_user_message for k in ["进", "冲", "突破", "加码"]):
+                    current_proxy = "aggressive"
+                elif any(k in current_user_message for k in ["稳", "守", "风控", "谨慎", "避险"]):
+                    current_proxy = "stable"
+                will_flash = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "layer": "WILL_FLASH",
+                    "payload": {
+                        "signal": "ACTION_TAKEN",
+                        "action": current_user_message,
+                        "will_proxy": current_proxy,
+                        "will_flash": True,
+                    },
+                }
+                yield (json.dumps(will_flash, ensure_ascii=False) + "\n").encode("utf-8")
+                await asyncio.sleep(0)
+                restarted = True
+            if restarted:
+                continue
             break
-        except ActionInterruptDuringStream as exc:
-            pl = exc.payload if isinstance(exc.payload, dict) else {}
-            current_user_message = str(pl.get("action", "")).strip()
-            decision_anchor = current_user_message
-            current_action_signal = True
-            if any(k in current_user_message for k in ["进", "冲", "突破", "加码"]):
-                current_proxy = "aggressive"
-            elif any(k in current_user_message for k in ["稳", "守", "风控", "谨慎", "避险"]):
-                current_proxy = "stable"
-            will_flash = {
-                "timestamp": datetime.utcnow().isoformat(),
-                "layer": "WILL_FLASH",
-                "payload": {
-                    "signal": "ACTION_TAKEN",
-                    "action": current_user_message,
-                    "will_proxy": current_proxy,
-                    "will_flash": True,
-                },
-            }
-            yield (json.dumps(will_flash, ensure_ascii=False) + "\n").encode("utf-8")
-            await asyncio.sleep(0)
-            restarted = True
-        if restarted:
-            continue
-        break
+
 
 
 @router.get("/v17/stream", response_model=None)
@@ -450,7 +622,7 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
     global _ACTION_SEQ
     body_origin = str(payload.get("v17_origin", "")).strip()
     header_origin = str(v17_origin or "").strip()
-    if body_origin != "v17_rebirth" and header_origin != "v17_rebirth":
+    if not _sovereignty_v17(body_origin) and not _sovereignty_v17(header_origin):
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
     signal = str(payload.get("signal", "")).strip().upper()
     action = str(payload.get("action", "")).strip()
@@ -458,16 +630,11 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         return JSONResponse({"ok": False, "detail": "invalid action signal"}, status_code=400)
     _ACTION_SEQ += 1
     session_id = str(payload.get("session_id", "")).strip() or "default"
-    event = {"signal": signal, "action": action, "ts": datetime.utcnow().isoformat(), "seq": _ACTION_SEQ, "session_id": session_id}
+    event = {"signal": signal, "action": action, "ts": datetime.now(timezone.utc).isoformat(), "seq": _ACTION_SEQ, "session_id": session_id}
     _WILL_IMPACT_BUFFER.append(event)
     _WILL_IMPACT_BUFFER[:] = _WILL_IMPACT_BUFFER[-20:]
-    q = _SESSION_QUEUES.setdefault(session_id, asyncio.Queue())
-    if q.qsize() > 20:
-        try:
-            q.get_nowait()
-        except asyncio.QueueEmpty:
-            pass
-    q.put_nowait(event)
+    # V17.23-Red：添加事件到 StateBackend（内存或 Redis Pub/Sub）而非进程级 Queue
+    await get_state_backend().publish_action(session_id, event)
     return JSONResponse({"ok": True, "signal": signal, "will_proxy_delta": "aggressive" if any(k in action for k in ["进", "冲", "加码"]) else "stable"})
 
 
@@ -478,7 +645,7 @@ async def freeze_report(
     v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
 ) -> JSONResponse:
     origin = str(payload.get("v17_origin", "")).strip() or str(v17_origin_header or "").strip()
-    if origin != "v17_rebirth":
+    if not _sovereignty_v17(origin):
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
     render_text = str(payload.get("render_text", "")).strip()
     decisions = payload.get("decisions")

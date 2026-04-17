@@ -22,8 +22,44 @@ LAYER_DIRS: Sequence[Tuple[str, str, int]] = (
 )
 
 
+def infer_salience_weight(
+    *,
+    plugin_id: str,
+    fact_text: str,
+    causal_tier: int,
+    priority: float,
+) -> float:
+    """
+    V17.26：按显著性阶梯为 Fact 注入权重。
+
+    Tier 0: 格局 / 三合六冲 / 月令主气 / 调候
+    Tier 1: 十神偏枯 / 五行强度 / 强力神煞
+    Tier 2: 一般结构关系
+    Tier 3: 纳音 / 空亡 / 琐碎信息
+    """
+    text = str(fact_text or "").strip()
+    pid = str(plugin_id or "").strip()
+    pr = max(0.0, min(1.0, float(priority or 0.0)))
+
+    tier0_hits = ("格局", "建禄格", "从儿格", "月令", "调候", "三合", "六冲")
+    tier1_hits = ("十神", "偏强", "偏枯", "五行", "强度", "天医", "将星", "神煞")
+    tier3_hits = ("纳音", "空亡")
+
+    if any(k in text for k in tier0_hits) or pid in {"ten_god_pattern", "three_harmony", "l1.physics.op_branch_liuchong", "classical.pattern_detector.v2"}:
+        return round(max(0.95, 0.95 + pr * 0.04), 4)
+    if any(k in text for k in tier3_hits) or pid in {"kong_wang"}:
+        return round(min(0.39, 0.18 + pr * 0.18), 4)
+    if any(k in text for k in tier1_hits) or pid in {"shensha", "chang_sheng_12"}:
+        return round(min(0.9, max(0.7, 0.7 + pr * 0.18)), 4)
+
+    base = 0.42 + max(0, min(5, int(causal_tier))) * 0.045
+    return round(min(0.69, max(0.4, base + pr * 0.12)), 4)
+
+
 def deity_scores_from_tensor(physics_tensor: Dict[str, Any]) -> Dict[str, float]:
-    src = physics_tensor.get("deity_scores") if isinstance(physics_tensor, dict) else {}
+    src = {}
+    if isinstance(physics_tensor, dict):
+        src = physics_tensor.get("ten_gods_absolute_intensity") or physics_tensor.get("deity_scores")
     if not isinstance(src, dict):
         return {}
     out: Dict[str, float] = {}
@@ -72,6 +108,12 @@ def rows_dict_to_v17_facts(
                 plugin_id=str(row.get("plugin", default_plugin_id)),
                 text=text,
                 causal_tier=int(causal_tier),
+                salience_weight=infer_salience_weight(
+                    plugin_id=str(row.get("plugin", default_plugin_id)),
+                    fact_text=text,
+                    causal_tier=int(causal_tier),
+                    priority=float(row.get("priority", 0.5) or 0.5),
+                ),
                 priority=float(row.get("priority", 0.5) or 0.5),
                 decision_hint=str(row.get("label", "") or "").strip(),
                 meta=meta,
@@ -218,6 +260,7 @@ def v17_fact_to_row(f: V17Fact) -> Dict[str, Any]:
         "plugin": f.plugin_id,
         "fact": f.text,
         "label": f.decision_hint or f.text,
+        "weight": float(f.salience_weight or 0.0),
         "priority": float(f.priority or 0.0),
     }
 

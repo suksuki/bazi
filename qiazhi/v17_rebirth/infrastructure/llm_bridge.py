@@ -22,8 +22,7 @@ _RUNTIME_CFG: dict[str, str] = {}
 _RUNTIME_REVISION = 0
 _RUNTIME_CFG_LOADED = False
 _LLM_CFG_FILE = RUNTIME_DIR / "llm_node.json"
-# 旧版写死路径；新包内路径无文件时尝试迁移读取一次
-_FALLBACK_LLM_CFG_FILE = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/llm_node.json")
+
 
 # 叙事微客户端超时：环境变量可覆盖；运行时 llm_node.json 可再覆盖（秒）
 _ENV_HTTP_TIMEOUT = "QIAZHI_V17_LLM_HTTP_TIMEOUT_SEC"
@@ -53,7 +52,7 @@ def _load_runtime_from_disk() -> None:
     global _RUNTIME_CFG_LOADED
     if _RUNTIME_CFG_LOADED:
         return
-    path = _LLM_CFG_FILE if _LLM_CFG_FILE.exists() else _FALLBACK_LLM_CFG_FILE
+    path = _LLM_CFG_FILE
     if path.exists():
         try:
             blob = json.loads(path.read_text(encoding="utf-8"))

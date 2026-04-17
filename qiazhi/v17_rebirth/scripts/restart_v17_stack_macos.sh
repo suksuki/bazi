@@ -7,6 +7,10 @@ BLUE="\033[0;34m"
 RED="\033[0;31m"
 NC="\033[0m"
 
+# V17.23-Red: Redis 状态后端配置
+# 若已设置 QIAZHI_REDIS_URL 环境变量则使用现有值；否则默认本机 Redis
+export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 QIAZHI_ROOT="${PROJECT_DIR%/v17_rebirth}"
@@ -158,6 +162,7 @@ print_step "[3/5] Start backend + frontend..."
   cd "${PROJECT_DIR}"
   export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
   export PYTHONUNBUFFERED=1
+  export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
   if command -v stdbuf >/dev/null 2>&1; then
     stdbuf -oL -eL "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
       --proxy-headers --timeout-keep-alive 75 \

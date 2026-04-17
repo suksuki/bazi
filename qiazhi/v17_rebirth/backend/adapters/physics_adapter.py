@@ -17,7 +17,9 @@ class PhysicsAdapter:
         }
 
     def read_deity_scores(self, raw_physics: Dict[str, Any]) -> Dict[str, float]:
-        src = raw_physics.get("deity_scores") if isinstance(raw_physics, dict) else {}
+        src = {}
+        if isinstance(raw_physics, dict):
+            src = raw_physics.get("ten_gods_absolute_intensity") or raw_physics.get("deity_scores")
         if not isinstance(src, dict):
             return {}
         out: Dict[str, float] = {}
@@ -50,6 +52,7 @@ class PhysicsAdapter:
         """供 collect_v17_facts 单点读取：十神 + 地支拓扑 + 冲突增量。"""
         return {
             "deity_scores": self.read_deity_scores(raw_physics),
+            "ten_gods_absolute_intensity": self.read_deity_scores(raw_physics),
             "interaction_v2": self.read_interaction_v2(raw_physics),
             "interaction_delta": self.read_interaction_delta(raw_physics),
         }

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import asyncio
 from datetime import datetime, timezone
+import json
+from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 from v17_rebirth.backend.adapters.physics_adapter import PhysicsAdapter
@@ -61,7 +63,7 @@ def _get_pipeline() -> RealtimeNarrativePipeline:
 
 @dataclass
 class VerdictOrchestrator:
-    repo_root: str = "/home/hlsystem/bazi"
+    repo_root: str = field(default_factory=lambda: str(Path(__file__).resolve().parents[3]))
 
     def _six_pillars_physics_ok(self, raw_physics: Any) -> bool:
         pt = raw_physics if isinstance(raw_physics, dict) else {}
@@ -85,14 +87,61 @@ class VerdictOrchestrator:
             return "财星主导格"
         return f"{name}主轴格"
 
-    def _build_fragments(self, deity_scores: Dict[str, float], facts: List[str], pattern: str) -> List[str]:
+    def _fact_row(self, item: Any) -> Dict[str, Any]:
+        if isinstance(item, dict):
+            text = str(item.get("fact") or item.get("text") or "").strip()
+            try:
+                weight = float(item.get("weight", item.get("salience_weight", 0.5)) or 0.5)
+            except (TypeError, ValueError):
+                weight = 0.5
+            return {"fact": text, "weight": max(0.0, min(1.0, weight))}
+        text = str(item or "").strip()
+        return {"fact": text, "weight": 0.5 if text else 0.0}
+
+    def _sorted_fact_rows(self, facts: List[Any]) -> List[Dict[str, Any]]:
+        rows = [self._fact_row(x) for x in facts]
+        rows = [r for r in rows if r.get("fact")]
+        rows.sort(key=lambda x: float(x.get("weight", 0.0)), reverse=True)
+        return rows[:80] if len(rows) > 100 else rows
+
+    def _build_fragments(
+        self,
+        deity_scores: Dict[str, float],
+        facts: List[Any],
+        pattern: str,
+        *,
+        total_energy_index: float = 0.0,
+    ) -> List[str]:
         ranked = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
         lead = [f"{k}偏强" for k, _ in ranked[:2]]
+        sorted_rows = self._sorted_fact_rows(facts)
+        top10 = [str(x.get("fact") or "") for x in sorted_rows[:10] if str(x.get("fact") or "").strip()]
+        tail_anchor = [str(x.get("fact") or "") for x in sorted_rows[:3] if str(x.get("fact") or "").strip()]
+        middle = [str(x.get("fact") or "") for x in sorted_rows[10:] if str(x.get("fact") or "").strip()]
+        energy_hint = (
+            f"当前十神能量为绝对物理强度，Total Energy Index={total_energy_index:.2f}。"
+            "若总能量偏低，应偏向漂泊、谨慎；若总能量偏高，应偏向刚毅、掌控。"
+        )
         return [
+            "以下提供的 160 条事实已按显著性（Salience）降序排列。排序越靠前的事实对命局的影响越具决定性。请务必优先回应前 10 条核心事实，将其作为你裁决的第一物理支点。",
             f"当前格局：{pattern}",
+            energy_hint,
             ("、".join(lead) + "，局势进入再平衡阶段") if lead else "当前能量分布尚在收敛",
-            *[str(x) for x in facts[:48]],
+            *top10,
+            *middle,
+            *tail_anchor,
         ]
+
+    def _physics_trace(self, raw_physics: Dict[str, Any], *, causal_anchor: str) -> Dict[str, Any]:
+        pt = raw_physics if isinstance(raw_physics, dict) else {}
+        try:
+            fingerprint = str(abs(hash(json.dumps(pt, ensure_ascii=False, sort_keys=True, default=str))))
+        except Exception:
+            fingerprint = "0"
+        return {
+            "causal_anchor": str(causal_anchor or "local_memory"),
+            "physics_fingerprint": fingerprint,
+        }
 
     def _pending_decisions(
         self,
@@ -122,7 +171,13 @@ class VerdictOrchestrator:
             deduped.append(item)
         return deduped[:64]
 
-    def snapshot_frame(self, *, raw_physics: Dict[str, Any], session_id: str = "") -> Dict[str, Any]:
+    def snapshot_frame(
+        self,
+        *,
+        raw_physics: Dict[str, Any],
+        session_id: str = "",
+        causal_anchor: str = "local_memory",
+    ) -> Dict[str, Any]:
         AutoScanner.ensure_loaded()
         if isinstance(raw_physics, dict):
             hydrate_v17_physics_tensor(raw_physics)
@@ -134,20 +189,24 @@ class VerdictOrchestrator:
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
         pattern = self._resolve_pattern(scores)
         tension = (max(scores.values()) - min(scores.values())) if scores else 0.0
+        total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
         pt = raw_physics if isinstance(raw_physics, dict) else {}
         if isinstance(pt.get("meta"), dict) and pt["meta"].get("hit_pattern_name"):
             pattern = str(pt["meta"]["hit_pattern_name"])
         spec_facts = logic_pd.collect_all_spec_facts_and_record(pt)
         spec_rows = [v17_fact_to_row(f) for f in spec_facts]
+        spec_rows.sort(key=lambda row: float(row.get("weight", 0.0)), reverse=True)
         plugin_rows = spec_rows
         plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
         plugin_hits = sorted({str(x.get("plugin", "")).strip() for x in plugin_rows if str(x.get("plugin", "")).strip()})
         decisions = self._pending_decisions(raw_physics, scores, spec_facts=spec_facts)
         fact_list = raw_physics.get("facts") if isinstance(raw_physics.get("facts"), list) else []
-        facts_out = [str(x).strip() for x in fact_list if str(x).strip()][:160]
+        sorted_fact_rows = self._sorted_fact_rows(fact_list)
+        facts_out = [str(x.get("fact") or "").strip() for x in sorted_fact_rows if str(x.get("fact") or "").strip()][:160]
         inner: Dict[str, Any] = {
             "snapshot_kind": "physics",
             "snapshot_contract": "v17.21_full_physics",
+            **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
             "physics_validation": {"state": "aligned", "gate": "six_pillars"},
             "render_text": f"格局快照已同步：{pattern}",
             "pattern": pattern,
@@ -157,9 +216,13 @@ class VerdictOrchestrator:
             "flow_year": raw_physics.get("flow_year"),
             "ten_gods": raw_physics.get("ten_gods", []),
             "deity_scores": scores,
+            "ten_gods_absolute_intensity": scores,
+            "total_energy_index": round(total_energy_index, 2),
+            "energy_meta": raw_physics.get("energy_meta", {}),
             "physics_tension": tension,
             "pending_decisions": decisions,
             "facts": facts_out,
+            "fact_rows": sorted_fact_rows[:160],
             "plugins": {
                 "hits": list(plugin_hits),
                 "rows": plugin_rows[:128],
@@ -173,15 +236,6 @@ class VerdictOrchestrator:
                 "god_of_taboo": god_of_taboo,
             },
         }
-        sid = str(session_id or "").strip()
-        if sid:
-            cols = PhysicsService.get_current_pillars(sid)
-            fp = cols.get("four_pillars") if isinstance(cols.get("four_pillars"), dict) else {}
-            inner["four_pillars"] = dict(fp)
-            inner["luck_pillar"] = cols.get("luck_pillar")
-            inner["flow_pillar"] = cols.get("flow_pillar")
-            if cols.get("flow_year") is not None:
-                inner["flow_year"] = cols.get("flow_year")
         inner["pillars"] = {
             "four_pillars": dict(inner.get("four_pillars") or {}),
             "luck_pillar": inner.get("luck_pillar"),
@@ -210,17 +264,24 @@ class VerdictOrchestrator:
         role_style: str = V17_ROLE_WEAVER,
         decisions: Optional[List[Dict[str, Any]]] = None,
         session_id: str = "",
+        causal_anchor: str = "redis_sync",
+        stability_checked: bool = False,
     ) -> AsyncIterator[Dict[str, Any]]:
         if isinstance(raw_physics, dict):
             hydrate_v17_physics_tensor(raw_physics)
         self.assert_six_pillars_physics(raw_physics)
-        await PhysicsService.ensure_stability(str(session_id or "").strip() or "default")
+        if not stability_checked:
+            await PhysicsService.ensure_stability(
+                str(session_id or "").strip() or "default",
+                local_physics=raw_physics if isinstance(raw_physics, dict) else None,
+            )
         adapter = PhysicsAdapter(root=__import__("pathlib").Path(self.repo_root))
         scores = adapter.read_deity_scores(raw_physics)
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
         pattern = self._resolve_pattern(scores)
+        total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
         if isinstance(raw_physics, dict):
             meta = raw_physics.get("meta") if isinstance(raw_physics.get("meta"), dict) else {}
             if meta.get("hit_pattern_name"):
@@ -231,8 +292,14 @@ class VerdictOrchestrator:
             return [v17_fact_to_row(f) for f in logic_pd.collect_all_spec_facts_and_record(pt)]
 
         plugin_rows = await asyncio.to_thread(_merge_rows)
+        plugin_rows.sort(key=lambda row: float(row.get("weight", 0.0)), reverse=True)
         plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
-        fragments = self._build_fragments(scores, [*facts, *plugin_facts], pattern)
+        fragments = self._build_fragments(
+            scores,
+            [*facts, *plugin_rows],
+            pattern,
+            total_energy_index=total_energy_index,
+        )
         rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
         if rid == V17_ROLE_JUDGE:
             for d in (decisions or [])[:32]:
@@ -270,6 +337,7 @@ class VerdictOrchestrator:
                 "layer": "SNAPSHOT",
                 "payload": {
                     "snapshot_kind": "AUDIT_PREVIEW",
+                    **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
                     "render_text": "叙事引擎已离埠，请求正渡上游。",
                     "will_proxy": str(will_proxy or "stable"),
                     "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
@@ -330,12 +398,14 @@ class VerdictOrchestrator:
             role_style=rid,
         )
         fpt = audit_blob.get("full_prompt_trace") if isinstance(audit_blob.get("full_prompt_trace"), dict) else {}
+        fpt = {**fpt, **self._physics_trace(raw_physics, causal_anchor=causal_anchor)}
         # 预发审计帧：在 await pipeline.run() 启动之前下发，前端可先见 full_prompt_trace（LLM 失败亦有据可查）。
         yield {
             "timestamp": _now_iso(),
             "layer": "SNAPSHOT",
             "payload": {
                 "snapshot_kind": "llm_audit_preview",
+                **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
                 "render_text": "引擎正在思考以下事实…",
                 **audit_blob,
                 "full_prompt_trace": fpt,
@@ -348,6 +418,7 @@ class VerdictOrchestrator:
                     "llm_system_prompt": str(audit_blob.get("llm_system_prompt") or ""),
                     "llm_user_prompt": str(audit_blob.get("llm_user_prompt") or ""),
                     "llm_request_messages": audit_blob.get("llm_request_messages") or [],
+                    **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
                 },
             },
         }
@@ -431,12 +502,14 @@ class VerdictOrchestrator:
                             pass
                         raise ActionInterruptDuringStream(ev)
                 else:
+                    # 超时：两侧均未就绪，安全取消后重试
                     for p in (p_task, a_task):
                         if not p.done():
                             p.cancel()
                         try:
                             await p
-                        except asyncio.CancelledError:
+                        except (asyncio.CancelledError, Exception):
+                            # done() 的 task 若持有普通异常也在此静默，避免穿透外层 generator
                             pass
                     await asyncio.sleep(0.003)
                     continue

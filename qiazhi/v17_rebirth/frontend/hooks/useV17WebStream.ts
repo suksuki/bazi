@@ -6,9 +6,12 @@ export type V17Frame = {
   layer?: string;
   timestamp?: string;
   payload?: {
+    snapshot_kind?: string;
     render_text?: string;
     will_flash?: boolean;
     deity_scores?: Record<string, number>;
+    ten_gods_absolute_intensity?: Record<string, number>;
+    total_energy_index?: number;
     four_pillars?: {
       year?: string;
       month?: string;
@@ -150,6 +153,8 @@ export function useV17WebStream({
   body?: Record<string, unknown> | null;
 } = {}) {
   const [frames, setFrames] = useState<V17Frame[]>([]);
+  // 将 body 序列化为稳定字符串，避免每次 render 产生新对象引用导致 effect 重新触发（SSE 重连）
+  const bodyKey = JSON.stringify(body ?? null);
 
   useEffect(() => {
     if (!enabled || !endpoint) {
@@ -165,7 +170,7 @@ export function useV17WebStream({
           method,
           signal: aborter.signal,
           headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
-          body: method === "POST" ? JSON.stringify(body || {}) : undefined,
+          body: method === "POST" ? bodyKey : undefined,
         });
         if (!resp.ok || !resp.body) {
           if (mounted) {
@@ -219,18 +224,32 @@ export function useV17WebStream({
             }
           }
         }
-      } catch {
-        // silent in demo mode
+      } catch (err) {
+        // 仅静默正常中止；其他错误推入错误帧以供调试
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (mounted) {
+          setFrames((prev) => [
+            ...prev,
+            {
+              timestamp: new Date().toISOString(),
+              layer: "NARRATOR",
+              payload: {
+                render_text: `[流错误] ${String(err)}`,
+                llm_meta: { ok: false, engine_state: "stream_runtime_error" },
+              },
+            },
+          ]);
+        }
       }
     }
-    
+
     // Do not setFrames([]) to keep the visual cache intact if moving between modes manually
     void run();
     return () => {
       mounted = false;
       aborter.abort();
     };
-  }, [enabled, endpoint, method, body]);
+  }, [enabled, endpoint, method, bodyKey]);
 
   return { frames };
 }

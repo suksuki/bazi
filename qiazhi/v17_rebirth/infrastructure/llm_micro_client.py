@@ -231,6 +231,7 @@ def build_llm_audit_payload(
         action_signal=bool(action_signal),
         role_style=rid,
         session_id=str(session_id or ""),
+        physics_tensor=physics_tensor if isinstance(physics_tensor, dict) else None,
     )
     user_prompt = build_role_user_prompt(
         rows,
@@ -273,6 +274,7 @@ def build_v17_system_prompt(
     action_signal: bool,
     role_style: str = V17_ROLE_WEAVER,
     session_id: str = "",
+    physics_tensor: Optional[Dict[str, Any]] = None,
 ) -> str:
     """多态角色 System；物理锚定仅经 PhysicsService.get_metadata(session_id)，禁止从 kwargs/body 注入柱位。"""
     from v17_rebirth.backend.narrative.semantic_fusion import build_v17_role_system_prompt
@@ -286,9 +288,12 @@ def build_v17_system_prompt(
         action_signal=action_signal,
     )
     sid = str(session_id or "").strip()
-    if not sid:
+    if isinstance(physics_tensor, dict) and physics_tensor:
+        p = dict(physics_tensor)
+    elif sid:
+        p = PhysicsService.get_metadata(sid)
+    else:
         return base
-    p = PhysicsService.get_metadata(sid)
     fp = p.get("four_pillars") if isinstance(p.get("four_pillars"), dict) else {}
     y, mo, d, h = fp.get("year"), fp.get("month"), fp.get("day"), fp.get("hour")
     luck, flow, fy = p.get("luck_pillar"), p.get("flow_pillar"), p.get("flow_year")
@@ -296,7 +301,27 @@ def build_v17_system_prompt(
         f"\n\n【元数据主权·仅服务端】"
         f"四柱：{y} / {mo} / {d} / {h}；大运：{luck}；流年：{flow}；流年锚年：{fy}。"
     )
-    return base + anchor
+    scores = p.get("ten_gods_absolute_intensity") or p.get("deity_scores")
+    try:
+        total_energy = float(p.get("total_energy_index"))
+    except (TypeError, ValueError):
+        total_energy = None
+    energy_lines: List[str] = [
+        "注意：当前提供的十神能量为绝对物理强度，非比例值。",
+        "若总能量指标过低，即便十神分布均衡，也应偏向“漂泊、谨慎、根基虚浮”的叙事。",
+        "若总能量指标偏高，则应偏向“刚毅、掌控、可定盘”的叙事。",
+    ]
+    if isinstance(scores, dict) and scores:
+        ranked = sorted(
+            ((str(k).strip(), float(v)) for k, v in scores.items() if str(k).strip()),
+            key=lambda kv: kv[1],
+            reverse=True,
+        )
+        if ranked:
+            energy_lines.append("十神绝对强度：" + "，".join(f"{name}:{value:.2f}" for name, value in ranked[:6]))
+    if total_energy is not None:
+        energy_lines.append(f"Total Energy Index：{total_energy:.2f}")
+    return base + anchor + "\n" + "\n".join(f"【能量量纲】{line}" for line in energy_lines)
 
 
 _SENSITIVE_PATTERNS = (
@@ -552,10 +577,10 @@ class V17MicroLlmClient:
         cfg = self.bridge.resolve()
         rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
         ttft = _fuse_ttft_sec()
-        hard = max(_fuse_hard_sec(), ttft + 2.0)
-        outer_fuse_sec = min(120.0, max(hard, ttft + 15.0, 45.0))
         fuse_wait_cfg = _parse_timeout(cfg, "fuse_wait_timeout_sec", 30.0)
-        http_timeout = min(120.0, max(_parse_timeout(cfg, "http_timeout_sec", 60.0), ttft + 5.0))
+        http_timeout = min(120.0, max(1.0, _parse_timeout(cfg, "http_timeout_sec", 60.0)))
+        hard = max(_fuse_hard_sec(), ttft + 2.0)
+        outer_fuse_sec = min(120.0, max(hard, fuse_wait_cfg + 5.0, http_timeout + 5.0))
         fuse_meta = min(fuse_wait_cfg, hard)
         system_prompt = build_v17_system_prompt(
             will_proxy=str(will_proxy or "stable"),
@@ -563,6 +588,7 @@ class V17MicroLlmClient:
             action_signal=bool(action_signal),
             role_style=rid,
             session_id=str(session_id or ""),
+            physics_tensor=physics_tensor if isinstance(physics_tensor, dict) else None,
         )
         row_in = [str(x).strip() for x in fragments if str(x).strip()]
         row_in = _merge_physics_ssot_rows(row_in, physics_tensor)

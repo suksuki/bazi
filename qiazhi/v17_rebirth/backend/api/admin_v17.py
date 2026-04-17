@@ -18,7 +18,7 @@ from v17_rebirth.paths import RUNTIME_DIR
 router = APIRouter(tags=["v17-admin"])
 
 _DB_STATE_FILE = RUNTIME_DIR / "db_bridge.json"
-_DB_FALLBACK_STATE_FILE = Path("/home/hlsystem/bazi/qiazhi/v17_rebirth/.runtime/db_bridge.json")
+
 
 _DB_BRIDGE_STATE: Dict[str, Any] = {
     "driver": "postgres",
@@ -34,7 +34,7 @@ _DB_BRIDGE_STATE: Dict[str, Any] = {
 
 
 def _load_db_state() -> None:
-    path = _DB_STATE_FILE if _DB_STATE_FILE.exists() else _DB_FALLBACK_STATE_FILE
+    path = _DB_STATE_FILE
     if not path.exists():
         return
     try:

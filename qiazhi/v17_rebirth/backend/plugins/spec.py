@@ -13,6 +13,7 @@ class V17Fact:
     plugin_id: str
     text: str
     causal_tier: int
+    salience_weight: float = 0.5
     priority: float = 0.5
     decision_hint: str = ""
     meta: Dict[str, Any] = field(default_factory=dict)
