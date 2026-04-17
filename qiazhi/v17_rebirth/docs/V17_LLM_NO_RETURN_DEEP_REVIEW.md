@@ -210,4 +210,24 @@ flowchart TB
 
 ---
 
+## 11. V17.21 / V17.22 已落地修复（与本文档对齐）
+
+以下项已在主线代码中落实，排障时优先对照当前实现而非历史行为。
+
+1. **元数据 SSOT 与 `ensure_stability`**：`PhysicsService.ensure_stability` 在首帧物理 SNAPSHOT / 开 LLM 前轮询 `V17PhysicsMetadata.is_stable()`；未稳抛 `DataSovereigntyError("physics_metadata_unstable")`。六柱完备定义见 `physics_canonical.six_pillars_tensor_complete`，稳定标志为 `meta.v17_physics_stable`。
+
+2. **`snapshot_frame` 合同**：`snapshot_contract == "v17.21_full_physics"`，`payload.plugins` / `debug_trace` / `pillars` 全量对齐，供前端与审计一致。
+
+3. **SSE 解析与首包活性**：`_sse_delta_content` 在无 `delta.content` 时回落 `reasoning_content` 等，避免上游只推推理增量时被误判为「无首字」。
+
+4. **编排层空 `render_text`**：`narrator_frames` 对空串须 `yield` 说明性 `NARRATOR`（见 §4），避免前端长期 `!narratorHasChunk`。
+
+5. **JUDGE 流式 `weaving`**：`llm_micro_client` 中 JUDGE 与 WEAVER 同样按增量走 `_yield_step(weaving)`，避免裁决卡长时间无 `partial_q` 正文。
+
+6. **前端 NDJSON 环形缓冲与钉帧**：`useV17WebStream` 在 HTTP 200 且 `body` 存在后、`getReader` 前 `setFrames([])`；钉 physics 时用 `localFrames.slice(-(NDJSON_TAIL_CAP - 1))` 保留**尾部**最新 NARRATOR，**禁止** `slice(0, cap-1)` 前缀截断（会导致判词被掐断）。`mergeV17LlmMetaForUi` 合并审计帧与最新 NARRATOR 的 `llm_meta` / `full_prompt_trace`。
+
+7. **自动化测试**：见同目录 [`TESTING.md`](./TESTING.md) — `pytest qiazhi/v17_rebirth/tests`、`pnpm test`（Vitest）。
+
+---
+
 **报告结束。** 若需把某一类失败（仅 TTFT、仅解析、仅代理）做成自动化探针脚本，可在后续迭代中单独立项。

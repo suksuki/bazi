@@ -44,6 +44,11 @@
   `./qiazhi/v17_rebirth/scripts/bootstrap_qiazhi_venv_312.sh`  
   生成 `qiazhi/.venv` 后再跑 `scripts/restart_v17_stack_macos.sh`。
 
+### 自动化测试
+
+- 说明与命令矩阵：[docs/TESTING.md](docs/TESTING.md)。  
+- 仓库根一键：`bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh`（`python3 -m pytest` + 前端 `pnpm run test:ci`）。
+
 ### V17.16 可调环境变量（可选）
 
 - `QIAZHI_V17_FUSE_HARD_SEC`：LLM `fuse()` 整段请求硬熔断秒数，默认 `3.0`。
