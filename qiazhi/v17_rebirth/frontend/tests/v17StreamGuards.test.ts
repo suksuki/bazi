@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isCanonPhysicsSnapshot,
   mergeV17LlmMetaForUi,
+  shouldReleaseDecisionInboxLock,
   type V17Frame,
 } from "../hooks/useV17WebStream";
 
@@ -40,5 +41,45 @@ describe("mergeV17LlmMetaForUi", () => {
     expect(merged.full_prompt_trace).toEqual({ system_role: "S" });
     expect(merged.llm_system_prompt).toBe("sys-audit");
     expect(merged.ok).toBe(true);
+  });
+});
+
+describe("shouldReleaseDecisionInboxLock", () => {
+  it("keeps the inbox locked until a newer LLM cycle reaches terminal state", () => {
+    const lockStartedAtMs = Date.parse("2026-04-18T09:00:00.000Z");
+    expect(
+      shouldReleaseDecisionInboxLock({
+        lockStartedAtMs,
+        latestFrameTimestamp: "2026-04-18T08:59:59.000Z",
+        hasFinalLlmMeta: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldReleaseDecisionInboxLock({
+        lockStartedAtMs,
+        latestFrameTimestamp: "2026-04-18T09:00:02.000Z",
+        hasFinalLlmMeta: false,
+        llmOk: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldReleaseDecisionInboxLock({
+        lockStartedAtMs,
+        latestFrameTimestamp: "2026-04-18T09:00:03.000Z",
+        hasFinalLlmMeta: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("releases the lock on a newer terminal error frame too", () => {
+    const lockStartedAtMs = Date.parse("2026-04-18T09:00:00.000Z");
+    expect(
+      shouldReleaseDecisionInboxLock({
+        lockStartedAtMs,
+        latestFrameTimestamp: "2026-04-18T09:00:01.000Z",
+        hasFinalLlmMeta: false,
+        llmOk: false,
+      }),
+    ).toBe(true);
   });
 });

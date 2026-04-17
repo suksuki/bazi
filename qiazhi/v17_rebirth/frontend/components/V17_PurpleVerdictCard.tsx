@@ -103,7 +103,9 @@ export function V17_PurpleVerdictCard({
         String(f?.layer || "").toUpperCase() === "SNAPSHOT" &&
         String(f?.payload?.snapshot_kind || "") === "llm_audit_preview",
     );
-  const renderText = String(latestNarrator?.payload?.render_text || "").trim();
+  const renderText = String(
+    latestNarrator?.payload?.render_text || physicsSnapshot?.payload?.render_text || "",
+  ).trim();
   const snapshotUse = physicsSnapshot?.payload?.god_rings?.god_of_use || [];
   const snapshotTaboo = physicsSnapshot?.payload?.god_rings?.god_of_taboo || [];
   const scoreMap = physicsSnapshot?.payload?.deity_scores || {};

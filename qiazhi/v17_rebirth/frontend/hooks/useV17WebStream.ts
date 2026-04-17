@@ -119,6 +119,25 @@ export function mergeV17LlmMetaForUi(
   };
 }
 
+export function shouldReleaseDecisionInboxLock({
+  lockStartedAtMs,
+  latestFrameTimestamp,
+  hasFinalLlmMeta,
+  llmOk,
+}: {
+  lockStartedAtMs: number | null;
+  latestFrameTimestamp?: string;
+  hasFinalLlmMeta: boolean;
+  llmOk?: boolean;
+}): boolean {
+  if (lockStartedAtMs == null) return false;
+  const latestFrameTs = Date.parse(String(latestFrameTimestamp || ""));
+  if (Number.isNaN(latestFrameTs) || latestFrameTs < lockStartedAtMs) {
+    return false;
+  }
+  return hasFinalLlmMeta || llmOk === false;
+}
+
 export function useV17WebStream({
   endpoint = "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth",
   enabled = true,

@@ -7,7 +7,7 @@ import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
-import { mergeV17LlmMetaForUi, useV17WebStream } from "@/hooks/useV17WebStream";
+import { mergeV17LlmMetaForUi, shouldReleaseDecisionInboxLock, useV17WebStream } from "@/hooks/useV17WebStream";
 
 export default function OraclePage() {
   const [sessionId, setSessionId] = useState("");
@@ -26,6 +26,7 @@ export default function OraclePage() {
   const [natalGender, setNatalGender] = useState<"male" | "female" | undefined>(undefined);
   const [natalCalendar, setNatalCalendar] = useState<"solar" | "lunar" | undefined>(undefined);
   const [connectTickMs, setConnectTickMs] = useState(0);
+  const [decisionLockStartedAtMs, setDecisionLockStartedAtMs] = useState<number | null>(null);
   const { frames } = useV17WebStream({
     endpoint: streamEndpoint,
     enabled: running,
@@ -99,10 +100,35 @@ export default function OraclePage() {
   const streamPartial = llmMeta.stream_partial === true;
   const hasFinalLlmMeta =
     !streamPartial && typeof llmMeta.elapsed_ms === "number" && !Number.isNaN(Number(llmMeta.elapsed_ms));
+  const llmTerminal = hasFinalLlmMeta || llmMeta.ok === false;
   const modelLabel = String(llmMeta.model || "").trim() || "叙事引擎";
   const connectPhase = running && !narratorHasChunk;
   const collapsePhase = running && narratorHasChunk && !hasFinalLlmMeta;
   const fullTrace = llmMeta.full_prompt_trace as Record<string, unknown> | undefined;
+  const latestFrameTimestamp = useMemo(
+    () => [...frames].reverse().find((f) => String(f?.timestamp || "").trim().length > 0)?.timestamp,
+    [frames],
+  );
+  const initialVerdictLocked = running && frames.length > 0 && decisionLockStartedAtMs == null && !llmTerminal;
+  const decisionInboxLocked = initialVerdictLocked || decisionLockStartedAtMs != null;
+  const decisionInboxLockMessage = decisionLockStartedAtMs != null
+    ? "上一条决策仍在织造中，待 LLM 完成后才可选择新的 item。"
+    : initialVerdictLocked
+      ? "首轮判词仍在织造中，待 LLM 完成后才可选择 decision item。"
+      : "";
+
+  useEffect(() => {
+    if (
+      shouldReleaseDecisionInboxLock({
+        lockStartedAtMs: decisionLockStartedAtMs,
+        latestFrameTimestamp,
+        hasFinalLlmMeta,
+        llmOk: llmMeta.ok as boolean | undefined,
+      })
+    ) {
+      setDecisionLockStartedAtMs(null);
+    }
+  }, [decisionLockStartedAtMs, latestFrameTimestamp, hasFinalLlmMeta, llmMeta.ok]);
 
   useEffect(() => {
     if (!running) {
@@ -153,6 +179,7 @@ export default function OraclePage() {
       calendar_type: input.calendarType,
       session_id: sid,
     });
+    setDecisionLockStartedAtMs(null);
     setAdoptedDecisions([]);
     setFreezeMsg("");
     setRunning(true);
@@ -163,6 +190,7 @@ export default function OraclePage() {
     setStreamBody(null);
     setUserMessage("");
     setAdoptedDecisions([]);
+    setDecisionLockStartedAtMs(null);
     setFreezeMsg("");
   }
 
@@ -209,7 +237,8 @@ export default function OraclePage() {
   function handleAdopted(decision: { id?: string; label?: string; title?: string }) {
     const id = String(decision.id || decision.title || `d_${Date.now()}`);
     const label = String(decision.label || decision.title || "").trim();
-    if (!label) return;
+    if (!label || decisionLockStartedAtMs != null) return;
+    setDecisionLockStartedAtMs(Date.now());
     setAdoptedDecisions((prev) => {
       if (prev.some((x) => x.id === id)) return prev;
       const next = [...prev, { id, label }];
@@ -300,6 +329,8 @@ export default function OraclePage() {
                 frames={frames}
                 adoptedIds={adoptedDecisions.map((x) => x.id)}
                 sessionId={sessionId}
+                locked={decisionInboxLocked}
+                lockMessage={decisionInboxLockMessage}
                 onAdopted={handleAdopted}
               />
               {!hasNarrative ? (
