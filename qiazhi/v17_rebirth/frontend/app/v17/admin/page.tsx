@@ -53,6 +53,15 @@ type PluginAdminRow = {
   is_standard_skill?: boolean;
 };
 
+type PluginRuntimeStatus = {
+  plugin_id: string;
+  fact_count?: number;
+  proposal_count?: number;
+  status?: string;
+  target_god?: string;
+  reason?: string;
+};
+
 const LAYER_TABS: { key: string; label: string }[] = [
   { key: "L0", label: "L0 基础场" },
   { key: "L1", label: "L1 原子算子" },
@@ -77,6 +86,7 @@ function tierLabel(tier: number | undefined) {
 
 type ActionKey = "loadModels" | "testLlm" | "testLlmChat" | "saveLlm" | "testDb" | "saveDb" | "loadPlugins" | "savePhysics" | "loadEvolution" | null;
 type LooseObject = Record<string, unknown>;
+const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
 async function requestJson(url: string, init?: RequestInit) {
   const resp = await fetch(url, init);
@@ -112,6 +122,10 @@ function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetSt
   });
 }
 
+function normalizePluginKey(value: string | undefined): string {
+  return String(value || "").trim().toLowerCase();
+}
+
 export default function V17AdminPage() {
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
@@ -121,12 +135,36 @@ export default function V17AdminPage() {
   const [llmPrompt, setLlmPrompt] = useState("你好，请简单自我介绍。");
   const [busy, setBusy] = useState<ActionKey>(null);
   const [plugins, setPlugins] = useState<PluginAdminRow[]>([]);
+  const [pluginStatuses, setPluginStatuses] = useState<PluginRuntimeStatus[]>([]);
+  const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
+  const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
   const [selectedPlugin, setSelectedPlugin] = useState<PluginAdminRow | null>(null);
   const [physicsConstants, setPhysicsConstants] = useState<LooseObject>({});
   const [evolutionLogs, setEvolutionLogs] = useState<any[]>([]);
   const [l0Locked, setL0Locked] = useState(true);
   const [localConfig, setLocalConfig] = useState<LooseObject>({});
   const [localEnabled, setLocalEnabled] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(ORACLE_SESSION_STORAGE_KEY);
+      if (stored && stored.trim()) {
+        setPluginRuntimeSessionId(stored.trim());
+      }
+    } catch {}
+
+    const syncFromStorage = () => {
+      try {
+        const stored = window.localStorage.getItem(ORACLE_SESSION_STORAGE_KEY);
+        if (stored && stored.trim()) {
+          setPluginRuntimeSessionId(stored.trim());
+        }
+      } catch {}
+    };
+
+    window.addEventListener("storage", syncFromStorage);
+    return () => window.removeEventListener("storage", syncFromStorage);
+  }, []);
 
   const llmBaseUrl = `http://${llm.host}:${llm.port}/v1`;
   const ghostBtn = "cursor-pointer rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50";
@@ -135,11 +173,17 @@ export default function V17AdminPage() {
   const loadPlugins = useCallback(async () => {
     setBusy("loadPlugins");
     try {
-      const { data } = await requestJson("/api/v17-admin/plugins?v17_origin=v17_rebirth");
+      const [{ data }, { data: statusData }] = await Promise.all([
+        requestJson("/api/v17-admin/plugins?v17_origin=v17_rebirth"),
+        requestJson(`/api/v17-admin/plugin-runtime-status?v17_origin=v17_rebirth&session_id=${encodeURIComponent(pluginRuntimeSessionId || "default")}`),
+      ]);
       const list = ((data as any).plugins || []) as PluginAdminRow[];
+      const statusList = ((statusData as any).statuses || []) as PluginRuntimeStatus[];
       setPlugins(list);
+      setPluginStatuses(statusList);
+      setResolvedPluginRuntimeSessionId(String((statusData as any).session_id || pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
-  }, []);
+  }, [pluginRuntimeSessionId]);
 
   const loadEvolution = useCallback(async () => {
     setBusy("loadEvolution");
@@ -279,9 +323,38 @@ export default function V17AdminPage() {
           {tab === "plugins" && (
             <div className="space-y-4">
                <h2 className="text-lg font-bold border-b border-zinc-800 pb-2">Plugin Causal Tiers (L0-L3)</h2>
+               <div className="flex items-center gap-2">
+                  <input
+                    className="bg-zinc-950 border border-zinc-800 p-2 rounded text-xs w-72"
+                    placeholder="session_id（留 default 自动回退最近活跃会话）"
+                    value={pluginRuntimeSessionId}
+                    onChange={e => setPluginRuntimeSessionId(e.target.value)}
+                  />
+                  <button onClick={() => void loadPlugins()} className={solidBtn}>刷新运行态</button>
+                  <span className="text-[10px] text-zinc-500">当前解析会话：{resolvedPluginRuntimeSessionId || "default"}</span>
+               </div>
                <div className="space-y-2">
-                  {plugins.map(p => (
-                    <div key={p.plugin_id} className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-xl flex justify-between items-center">
+                  {plugins.map(p => {
+                    const runtime = pluginStatuses.find((s) => {
+                      const sid = normalizePluginKey(s.plugin_id);
+                      const pid = normalizePluginKey(p.plugin_id);
+                      const mod = normalizePluginKey(p.module);
+                      return sid === pid || (sid && mod && (sid === mod || sid.endsWith(`.${mod}`) || mod.endsWith(`.${sid}`)));
+                    });
+                    const runtimeStatus = String(runtime?.status || "unknown");
+                    const runtimeTone =
+                      runtimeStatus === "auto_applied"
+                        ? "bg-emerald-900/40 text-emerald-300"
+                        : runtimeStatus === "proposal_pending"
+                          ? "bg-amber-900/40 text-amber-300"
+                          : runtimeStatus === "clamped"
+                            ? "bg-fuchsia-900/40 text-fuchsia-300"
+                            : runtimeStatus.startsWith("skipped")
+                              ? "bg-rose-900/40 text-rose-300"
+                              : "bg-zinc-800 text-zinc-400";
+                    return (
+                    <div key={p.plugin_id} className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-xl">
+                      <div className="flex justify-between items-center">
                        <div>
                           <div className="font-bold text-zinc-200">{p.definition_text || p.plugin_id}</div>
                           <div className="text-[10px] text-zinc-500">Tier: {p.causal_tier} · Order: {p.execution_order}</div>
@@ -289,8 +362,16 @@ export default function V17AdminPage() {
                        <div className={`px-2 py-0.5 rounded text-[10px] ${p.activated ? "bg-emerald-900/40 text-emerald-400" : "bg-zinc-800 text-zinc-500"}`}>
                           {p.activated ? "ACTIVE" : "IDLE"}
                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 text-[10px]">
+                        <span className={`rounded px-2 py-0.5 uppercase ${runtimeTone}`}>{runtimeStatus}</span>
+                        {runtime?.target_god ? <span className="text-zinc-500">target {runtime.target_god}</span> : null}
+                        {typeof runtime?.fact_count === "number" ? <span className="text-zinc-600">facts {runtime.fact_count}</span> : null}
+                        {typeof runtime?.proposal_count === "number" ? <span className="text-zinc-600">proposals {runtime.proposal_count}</span> : null}
+                      </div>
+                      <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || "暂无最近运行状态。打开 Oracle 跑一轮后会在这里同步。"}</div>
                     </div>
-                  ))}
+                  )})}
                </div>
             </div>
           )}

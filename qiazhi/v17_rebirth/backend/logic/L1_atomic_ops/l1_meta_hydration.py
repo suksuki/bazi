@@ -165,6 +165,74 @@ def _geometry_hits_to_decision_rows(pt: Dict[str, Any], hits: Dict[str, Any]) ->
         )
     return rows
 
+
+def _build_plugin_execution_statuses(
+    *,
+    facts: List[Any],
+    proposals: List[Dict[str, Any]],
+    previous_signatures: List[str],
+    clamped_gods: List[str],
+) -> List[Dict[str, Any]]:
+    facts_by_plugin: Dict[str, int] = {}
+    for fact in facts:
+        pid = str(getattr(fact, "plugin_id", "") or "").strip()
+        if not pid:
+            continue
+        facts_by_plugin[pid] = facts_by_plugin.get(pid, 0) + 1
+
+    proposals_by_plugin: Dict[str, List[Dict[str, Any]]] = {}
+    for proposal in proposals:
+        pid = str(proposal.get("plugin_id") or "").strip()
+        if not pid:
+            continue
+        proposals_by_plugin.setdefault(pid, []).append(dict(proposal))
+
+    prev_set = {str(x).strip() for x in previous_signatures if str(x).strip()}
+    clamped_set = {str(x).strip() for x in clamped_gods if str(x).strip()}
+    statuses: List[Dict[str, Any]] = []
+
+    for plugin_id in sorted(set([*facts_by_plugin.keys(), *proposals_by_plugin.keys()])):
+        plugin_proposals = proposals_by_plugin.get(plugin_id, [])
+        status = "fact_only"
+        reason = "插件命中，但未产出可结算的物理 proposal。"
+        target_god = ""
+        if plugin_proposals:
+            target_god = str(plugin_proposals[0].get("target_god") or "").strip()
+            system_proposals = [p for p in plugin_proposals if str(p.get("arbiter_type") or "").strip().lower() == "system"]
+            pending_proposals = [p for p in plugin_proposals if str(p.get("arbiter_type") or "").strip().lower() != "system"]
+            valid_system = [p for p in system_proposals if str(p.get("target_god") or "").strip()]
+            deduped_system = [p for p in valid_system if proposal_signature(p) in prev_set]
+            fresh_system = [p for p in valid_system if proposal_signature(p) not in prev_set]
+
+            if any(str(p.get("target_god") or "").strip() in clamped_set for p in valid_system):
+                status = "clamped"
+                reason = "插件已触发自动结算，但目标神位在护栏阶段被钳制。"
+            elif fresh_system:
+                status = "auto_applied"
+                reason = "插件 proposal 已进入自动结算并写入 runtime。"
+            elif deduped_system:
+                status = "skipped_dedup"
+                reason = "插件 proposal 与上一轮签名一致，本轮为防重复结算被跳过。"
+            elif system_proposals and not valid_system:
+                status = "skipped_no_target"
+                reason = "插件产出物理 proposal，但未能解析到合法 target_god。"
+            elif pending_proposals:
+                status = "proposal_pending"
+                reason = "插件 proposal 已生成，但当前需人工或 LLM 仲裁，尚未结算。"
+
+        statuses.append(
+            {
+                "plugin_id": plugin_id,
+                "fact_count": facts_by_plugin.get(plugin_id, 0),
+                "proposal_count": len(plugin_proposals),
+                "status": status,
+                "target_god": target_god,
+                "reason": reason,
+            }
+        )
+
+    return statuses
+
 def _get_god_to_element_map(dm: str) -> Dict[str, str]:
     _god_to_el = {}
     _dm_el = STEM_ELEMENT.get(dm, "")
@@ -447,6 +515,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     guardrails = get_v17_constants().get("PHYSICS_GUARDRAILS", {})
     e_min = float(guardrails.get("ENERGY_MIN", 0.1))
     e_max = float(guardrails.get("ENERGY_MAX", 1000.0))
+    clamped_gods: List[str] = []
 
     for tg in list(_runtime.keys()):
         val = _runtime[tg]
@@ -455,12 +524,19 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             val_clamped = 10.0 # 坏值安全复原
         else:
             val_clamped = max(e_min, min(e_max, val))
-        
+        if round(val_clamped, 2) != round(val, 2):
+            clamped_gods.append(str(tg))
         _runtime[tg] = round(val_clamped, 2)
 
     # 7. 终效同步与清理
     pt["ten_gods_base_l0"] = dict(_base)
     sync_runtime_aliases(pt, _runtime)
+    meta["plugin_execution_status"] = _build_plugin_execution_statuses(
+        facts=collected_facts,
+        proposals=modifier_proposals,
+        previous_signatures=previous_signatures,
+        clamped_gods=clamped_gods,
+    )
     meta["l1_manifest_hits"] = hits
     qsc = meta.get("qi_status_coeffs") if isinstance(meta.get("qi_status_coeffs"), dict) else {}
     if qsc:

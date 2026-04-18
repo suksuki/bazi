@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import socket
 import json
+import sqlite3
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib import request
@@ -14,6 +15,7 @@ from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_wit
 from v17_rebirth.backend.services.verdict_orchestrator import restart_realtime_pipeline
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
+from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.paths import RUNTIME_DIR
 
 router = APIRouter(tags=["v17-admin"])
@@ -304,7 +306,30 @@ async def update_db_bridge(payload: Dict[str, Any]) -> Dict[str, Any]:
             "enabled": bool(payload.get("enabled", _DB_BRIDGE_STATE["enabled"])),
         }
     )
-    _save_db_state()
+_save_db_state()
+
+
+def _resolve_runtime_session_id(raw_session_id: str) -> str:
+    sid = str(raw_session_id or "").strip()
+    if sid and sid != "default":
+        return sid
+    try:
+        with sqlite3.connect(evolution_storage.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT session_id
+                FROM evolution_ledger
+                WHERE session_id IS NOT NULL AND session_id != ''
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if row and str(row["session_id"] or "").strip():
+                return str(row["session_id"]).strip()
+    except Exception:
+        pass
+    return sid or "default"
     return {"ok": True, "bridge": dict(_DB_BRIDGE_STATE)}
 
 
@@ -399,6 +424,28 @@ async def get_evolution_logs(
     _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
     logs = evolution_storage.get_recent_evolution(limit=limit)
     return {"ok": True, "logs": logs}
+
+
+@router.get("/v17/admin/plugin-runtime-status")
+async def get_plugin_runtime_status(
+    session_id: str = Query(default="default"),
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    resolved_session_id = _resolve_runtime_session_id(session_id)
+    physics = await get_state_backend().get_physics(resolved_session_id)
+    meta = physics.get("meta") if isinstance(physics, dict) and isinstance(physics.get("meta"), dict) else {}
+    statuses = meta.get("plugin_execution_status") if isinstance(meta.get("plugin_execution_status"), list) else []
+    proposals = meta.get("plugin_modifier_proposals") if isinstance(meta.get("plugin_modifier_proposals"), list) else []
+    auto_ratios = meta.get("plugin_auto_ratio_totals") if isinstance(meta.get("plugin_auto_ratio_totals"), dict) else {}
+    return {
+        "ok": True,
+        "session_id": resolved_session_id,
+        "statuses": statuses,
+        "proposal_count": len(proposals),
+        "auto_ratio_totals": auto_ratios,
+    }
 
 
 @router.get("/v17/admin/rlhf-feedback")

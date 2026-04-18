@@ -102,6 +102,7 @@ export interface OracleSession {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 const DEFAULT_ENDPOINT = "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth";
+const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
 export function useOracleSession(): OracleSession {
   // Session state
@@ -319,6 +320,13 @@ export function useOracleSession(): OracleSession {
   }, [streamEndpoint]);
 
   // ── Flow year sync ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionId) return;
+    try {
+      window.localStorage.setItem(ORACLE_SESSION_STORAGE_KEY, sessionId);
+    } catch {}
+  }, [sessionId]);
+
   useEffect(() => {
     if (!running || !birthTimeISO || !natalGender) return;
     const u = streamEndpoint ?? "";

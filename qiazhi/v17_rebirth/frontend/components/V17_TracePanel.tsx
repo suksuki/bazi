@@ -74,6 +74,7 @@ interface TracePanelProps {
       plugins?: {
         hits?: unknown[];
         rows?: Array<Record<string, unknown>>;
+        statuses?: Array<Record<string, unknown>>;
       };
       manual_decisions?: Array<Record<string, unknown>>;
       auto_resolutions?: Array<Record<string, unknown>>;
@@ -236,6 +237,9 @@ export function V17_TracePanel({
     .join(" / ");
   const pluginRows = Array.isArray((physicsPayload.plugins as { rows?: unknown[] } | undefined)?.rows)
     ? (((physicsPayload.plugins as { rows?: unknown[] }).rows ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const pluginStatuses = Array.isArray((physicsPayload.plugins as { statuses?: unknown[] } | undefined)?.statuses)
+    ? (((physicsPayload.plugins as { statuses?: unknown[] }).statuses ?? []) as Array<Record<string, unknown>>)
     : [];
   const manualDecisions = Array.isArray(physicsPayload.manual_decisions)
     ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
@@ -496,6 +500,43 @@ export function V17_TracePanel({
           <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalPhysicsFp}</p>
           <p>审计快照：{causalAuditAnchor}</p>
           <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalAuditFp}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">插件执行状态</p>
+          <span className="text-[10px] text-zinc-500">{pluginStatuses.length} 条</span>
+        </div>
+        <div className="space-y-1">
+          {pluginStatuses.length ? pluginStatuses.slice(0, 10).map((row, idx) => {
+            const status = String(row.status || "fact_only").trim();
+            const statusTone =
+              status === "auto_applied"
+                ? "text-emerald-200 border-emerald-500/20 bg-emerald-950/20"
+                : status === "proposal_pending"
+                  ? "text-amber-200 border-amber-500/20 bg-amber-950/20"
+                  : status === "clamped"
+                    ? "text-fuchsia-200 border-fuchsia-500/20 bg-fuchsia-950/20"
+                    : status.startsWith("skipped")
+                      ? "text-rose-200 border-rose-500/20 bg-rose-950/20"
+                      : "text-zinc-200 border-zinc-700/60 bg-zinc-900/70";
+            return (
+              <div key={`plugin_status_${idx}`} className={`rounded-lg border px-2 py-2 ${statusTone}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] tracking-[0.18em]">{String(row.plugin_id || "unknown")}</p>
+                  <span className="font-mono text-[10px] uppercase">{status}</span>
+                </div>
+                <p className="mt-1 text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
+                <p className="mt-1 text-[10px] text-zinc-500">
+                  facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
+                  {String(row.target_god || "").trim() ? ` / target ${String(row.target_god)}` : ""}
+                </p>
+              </div>
+            );
+          }) : (
+            <p className="text-[11px] text-zinc-500">暂无插件状态标签</p>
+          )}
         </div>
       </div>
 

@@ -275,6 +275,7 @@ class VerdictOrchestrator:
             "plugins": {
                 "hits": list(plugin_hits),
                 "rows": plugin_rows[:128],
+                "statuses": list(((pt.get("meta") or {}).get("plugin_execution_status") or []))[:128],
             },
             "debug_trace": {
                 "hits": plugin_hits,
