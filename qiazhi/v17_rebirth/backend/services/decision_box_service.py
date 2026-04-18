@@ -3,7 +3,7 @@ V17.38 DecisionBoxService: 物理具身化动作处理器。
 
 实现分频架构中的“高频物理层”：
 1. 拦截动作请求
-2. 实时更新 Redis 快照中的十神能量 (delta_q)
+2. 实时更新 Redis 快照中的十神能量 (ratio_applied)
 3. 动态调整五行阻抗并重新执行 KCL 求解
 4. 记录物理演化账本 (EvolutionLedger)
 5. 广播 PHYSICS_UPDATE 信号
@@ -51,15 +51,18 @@ class DecisionBoxService:
             _log.info(f"[DecisionBox] Action {action_name} has no physical impact, skipping bypass.")
             return {"ok": True, "applied": False}
 
-        # 2. 应用原始能级变动 (delta_q)
+        # 2. 应用相对比例变动
         target_god = impact.get("target_god")
-        delta_q = impact.get("delta_q", 0.0)
+        impact_ratio = float(impact.get("impact_ratio", 0.0) or 0.0)
+        significance_weight = float(impact.get("significance_weight", 1.0) or 1.0)
+        ratio_applied = impact_ratio * significance_weight
+        old_val = 0.0
         
         ten_gods = pt.get("ten_gods_absolute", {})
         if target_god and target_god in ten_gods:
             old_val = ten_gods[target_god]
-            ten_gods[target_god] = round(old_val + delta_q, 2)
-            _log.info(f"[DecisionBox] Applied Delta_Q: {target_god} {old_val} -> {ten_gods[target_god]}")
+            ten_gods[target_god] = round(old_val * (1.0 + ratio_applied), 2)
+            _log.info(f"[DecisionBox] Applied Ratio: {target_god} {old_val} -> {ten_gods[target_god]} ({ratio_applied:+.4f})")
         
         # 3. 动态阻抗调制与 KCL 重算
         # 我们可以临时修改 clash_stress_map 或直接给 FlowEngine 传入调制参数
@@ -104,7 +107,17 @@ class DecisionBoxService:
         for g, val in ten_gods.items():
             if g not in ledger_data: ledger_data[g] = []
             reason = f"人为干预: [{action_name}] 物理导通"
-            entry = {"step": "L2_ACTION_IMPACT", "val": val, "delta": delta_q if g == target_god else deltas.get(g, 0), "reason": reason}
+            original_value = old_val if g == target_god else round(val - deltas.get(g, 0), 2)
+            entry = {
+                "step": "L2_ACTION_IMPACT",
+                "val": val,
+                "delta": round(val - original_value, 2),
+                "original_value": round(original_value, 2),
+                "ratio_applied": round(ratio_applied if g == target_god else ((val - original_value) / max(abs(original_value), 1.0)), 4),
+                "final_value": round(val, 2),
+                "visible_ratio_change": abs(ratio_applied if g == target_god else ((val - original_value) / max(abs(original_value), 1.0))) >= 0.005,
+                "reason": reason,
+            }
             ledger_data[g].append(entry)
             if len(ledger_data[g]) > 8: ledger_data[g].pop(1) # 保留基准，滚动删除
 

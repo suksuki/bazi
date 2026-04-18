@@ -72,7 +72,8 @@ class NarrativeMappingEngine:
                 val = _safe_float(entry.get("val"))
                 delta = _safe_float(entry.get("delta"))
                 prev_val = val - delta
-                ratio = abs(delta) / max(abs(prev_val), 1.0)
+                ratio_raw = _safe_float(entry.get("ratio_applied"), default=delta / max(abs(prev_val), 1.0))
+                ratio = abs(ratio_raw)
                 if ratio > 0.10:
                     out.append(
                         {

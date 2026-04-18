@@ -446,15 +446,24 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         _applied_count = 0
         for d in _decisions:
             if isinstance(d, dict) and d.get("applied") is True:
-                # 模拟逻辑：如果决策被选中，给与其相关的十神加成（暂时随机选中一个非空十神）
+                impact = d.get("physical_impact") if isinstance(d.get("physical_impact"), dict) else {}
                 _target_god = d.get("target_god") or list(_absolute.keys())[0] if _absolute else None
                 if _target_god and _target_god in _absolute:
-                    _boost = _absolute[_target_god] * 0.15 # 15% 决策爆发
-                    _absolute[_target_god] = round(_absolute[_target_god] + _boost, 2)
+                    _impact_ratio = float(impact.get("impact_ratio", 0.15) or 0.15)
+                    _significance_weight = float(impact.get("significance_weight", 1.0) or 1.0)
+                    _ratio_applied = _impact_ratio * _significance_weight
+                    _before = _absolute[_target_god]
+                    _absolute[_target_god] = round(_before * (1.0 + _ratio_applied), 2)
                     _applied_count += 1
                     if _ledger:
                         reason = f"决策生效: [{d.get('title')}] 导致能级提升"
-                        _ledger.append_entry(_target_god, _absolute[_target_god], "L2_ACTION_IMPACT", reason)
+                        _ledger.append_entry(
+                            _target_god,
+                            _absolute[_target_god],
+                            "L2_ACTION_IMPACT",
+                            reason,
+                            source="SRC_MANUAL",
+                        )
         
         # ── V17.37：源头清理 (Source-Level Sanitization) ──
         # 在 Hydration 结束前，必须将 EvolutionLedger 对象转为纯 JSON 数据

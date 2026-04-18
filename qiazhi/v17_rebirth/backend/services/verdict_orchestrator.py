@@ -41,6 +41,56 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _decision_relative_impact(title: str, target_god: str) -> Dict[str, Any]:
+    text = str(title or "").strip()
+    impact: Dict[str, Any] = {"target_god": str(target_god or "").strip()}
+    if not text:
+        return impact
+
+    if any(k in text for k in ["格局转换", "坍塌", "翻盘", "断裂"]):
+        return {
+            **impact,
+            "impact_ratio": 0.20,
+            "intensity_level": 4,
+            "significance_level": "L3",
+            "significance_weight": 1.0,
+            "resistance_mod": {"path": "pattern_shift", "factor": 0.35},
+        }
+    if any(k in text for k in ["冲", "刑", "破", "害", "克", "制", "杀"]):
+        return {
+            **impact,
+            "impact_ratio": 0.12,
+            "intensity_level": 3,
+            "significance_level": "L3",
+            "significance_weight": 1.0,
+            "resistance_mod": {"path": "auto_clash", "factor": 0.4},
+        }
+    if any(k in text for k in ["合", "化", "生", "助", "聚势", "护持"]):
+        return {
+            **impact,
+            "impact_ratio": 0.06,
+            "intensity_level": 2,
+            "significance_level": "L2",
+            "significance_weight": 1.0,
+            "resistance_mod": {"path": "auto_sheng", "factor": 0.75},
+        }
+    if any(k in text for k in ["节律", "边界", "确认", "校准", "承诺", "节奏"]):
+        return {
+            **impact,
+            "impact_ratio": 0.025,
+            "intensity_level": 1,
+            "significance_level": "L1",
+            "significance_weight": 0.8,
+        }
+    return {
+        **impact,
+        "impact_ratio": 0.015,
+        "intensity_level": 1,
+        "significance_level": "L0",
+        "significance_weight": 0.6,
+    }
+
+
 def restart_realtime_pipeline() -> dict[str, int]:
     global _PIPELINE_EPOCH, _PIPELINE_CACHE, _PIPELINE_CACHE_KEY
     _PIPELINE_EPOCH += 1
@@ -163,12 +213,7 @@ class VerdictOrchestrator:
             d["title"] = title
             
             # V17.38: 注入物理具身协议负载
-            p_impact = {}
-            if any(k in title for k in ["冲", "克", "制", "杀"]):
-                p_impact = {"target_god": d.get("target_god"), "delta_q": 18.5, "resistance_mod": {"path": "auto_clash", "factor": 0.4}}
-            elif any(k in title for k in ["合", "化", "生", "助"]):
-                p_impact = {"target_god": d.get("target_god"), "delta_q": 12.0, "resistance_mod": {"path": "auto_sheng", "factor": 0.75}}
-            
+            p_impact = _decision_relative_impact(title, str(d.get("target_god") or ""))
             d["physical_impact"] = p_impact
 
         merged: List[Dict[str, Any]] = list(spec_decisions)

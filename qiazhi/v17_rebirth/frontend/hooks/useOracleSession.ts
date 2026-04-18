@@ -23,7 +23,10 @@ export type Decision = {
   target_god?: string;
   physical_impact?: {
     target_god?: string;
-    delta_q?: number;
+    impact_ratio?: number;
+    significance_level?: string;
+    significance_weight?: number;
+    intensity_level?: number;
     resistance_mod?: Record<string, unknown>;
   };
 };
@@ -45,7 +48,7 @@ export interface OracleSession {
 
   // --- decisions ---
   adoptedDecisions: Decision[];
-  handleAdopted: (d: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; delta_q?: number; resistance_mod?: Record<string, unknown> } }) => Promise<void>;
+  handleAdopted: (d: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; impact_ratio?: number; significance_level?: string; significance_weight?: number; intensity_level?: number; resistance_mod?: Record<string, unknown> } }) => Promise<void>;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -356,7 +359,7 @@ export function useOracleSession(): OracleSession {
     setDecisionActionError("");
   }
 
-  async function handleAdopted(decision: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; delta_q?: number; resistance_mod?: Record<string, unknown> } }) {
+  async function handleAdopted(decision: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; impact_ratio?: number; significance_level?: string; significance_weight?: number; intensity_level?: number; resistance_mod?: Record<string, unknown> } }) {
     const id = String(decision.id || decision.title || `d_${Date.now()}`);
     const label = String(decision.label || decision.title || "").trim();
     if (!label || decisionLockStartedAtMs != null) return;

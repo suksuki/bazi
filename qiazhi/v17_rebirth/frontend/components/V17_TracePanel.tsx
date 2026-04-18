@@ -48,7 +48,18 @@ interface TracePanelProps {
       ten_gods?: unknown[];
       ten_gods_ledger?: Record<
         string,
-        Array<{ step: string; val: number; delta?: number; reason: string; source?: string; highlight_type?: string }>
+        Array<{
+          step: string;
+          val: number;
+          delta?: number;
+          reason: string;
+          source?: string;
+          highlight_type?: string;
+          ratio_applied?: number;
+          original_value?: number;
+          final_value?: number;
+          visible_ratio_change?: boolean;
+        }>
       >;
       flow_topology?: Array<{ from_el: string; to_el: string; current: number; rel: string; resistance?: number; stress?: number }>;
       pattern?: string;
@@ -109,6 +120,11 @@ export function V17_TracePanel({
       // V17.36: 相比上一次操作的变化 (Ledger 倒数第二条)
       const prevVal = history.length > 1 ? history[history.length - 2].val : (history.length > 0 ? history[0].val : currentVal);
       const deltaLast = currentVal - prevVal;
+      const ratioLastRaw =
+        history.length > 0 && typeof history[history.length - 1]?.ratio_applied === "number"
+          ? Number(history[history.length - 1]?.ratio_applied || 0)
+          : deltaLast / Math.max(Math.abs(prevVal), 1);
+      const ratioLast = Math.abs(ratioLastRaw) >= 0.005 ? ratioLastRaw : 0;
       const initialVal = history.length > 0 ? history[0].val : currentVal;
       const deltaTotal = currentVal - initialVal;
 
@@ -117,6 +133,7 @@ export function V17_TracePanel({
         score: currentVal, 
         prevScore: prevVal,
         delta: deltaLast, // 默认显示单步变动
+        ratioDelta: ratioLast,
         deltaTotal,
         history 
       };
@@ -256,15 +273,15 @@ export function V17_TracePanel({
                   <div className="mb-1 flex items-center justify-between text-[11px] text-zinc-200">
                     <span className="flex items-center gap-1">
                       {row.name}
-                      {Math.abs(row.delta) > 0.001 && (
+                      {Math.abs(row.ratioDelta) >= 0.005 && (
                         <span className={`text-[9px] font-bold ${row.delta > 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}>
-                          {row.delta > 0 ? "↑" : "↓"} {Math.abs(row.delta).toFixed(1)}
+                          {row.delta > 0 ? "↑" : "↓"} {(Math.abs(row.ratioDelta) * 100).toFixed(1)}%
                         </span>
                       )}
                     </span>
                     <span className="font-mono text-cyan-200">
                       {row.score.toFixed(2)}
-                      {Math.abs(row.delta) > 0.001 && (
+                      {Math.abs(row.ratioDelta) >= 0.005 && (
                          <span className="ml-1 text-[9px] text-zinc-500">
                            (was {row.prevScore.toFixed(0)})
                          </span>
@@ -282,7 +299,8 @@ export function V17_TracePanel({
                       className="absolute left-0 top-0 h-full rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.7),rgba(103,232,249,1))]"
                       style={{ 
                         width: `${Math.max(4, Math.min(100, (row.score / maxDeityScore) * 100))}%`,
-                        boxShadow: row.delta > 0 ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none'
+                        boxShadow: row.delta > 0 ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none',
+                        transition: 'width 320ms ease, box-shadow 220ms ease'
                       }}
                     />
                   </div>
@@ -293,7 +311,7 @@ export function V17_TracePanel({
                       EVOLUTION_LEDGER: {row.name} (CAP=8)
                     </p>
                     <div className="space-y-1">
-                      {row.history.map((entry, idx) => (
+                      {row.history.filter((entry, idx) => idx === 0 || entry.visible_ratio_change !== false).map((entry, idx) => (
                         <div
                           key={idx}
                           className={`font-mono text-[9px] leading-tight px-1 py-0.5 rounded ${
@@ -304,7 +322,11 @@ export function V17_TracePanel({
                         >
                           <span className={`${entry.step.startsWith('L1.5') ? 'text-cyan-400 font-bold' : 'text-zinc-500'}`}>[{entry.step}]</span>
                           <span className="mx-1 text-zinc-600">{"->"}</span>
-                          {entry.delta != null && (
+                          {typeof entry.ratio_applied === "number" && Math.abs(entry.ratio_applied) >= 0.005 ? (
+                            <span className={entry.ratio_applied > 0 ? "text-[#10B981]" : entry.ratio_applied < 0 ? "text-[#EF4444]" : "text-zinc-600"}>
+                              {entry.ratio_applied > 0 ? "+" : ""}{(entry.ratio_applied * 100).toFixed(1)}%
+                            </span>
+                          ) : entry.delta != null && (
                             <span className={entry.delta > 0 ? "text-[#10B981]" : entry.delta < 0 ? "text-[#EF4444]" : "text-zinc-600"}>
                               {entry.delta > 0 ? "+" : ""}{entry.delta.toFixed(2)}
                             </span>

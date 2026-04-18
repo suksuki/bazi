@@ -12,12 +12,52 @@ from __future__ import annotations
 import logging
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import FlowPhysicsEngine
 
 _log = logging.getLogger(__name__)
+
+_SIGNIFICANCE_WEIGHTS = {
+    "L0": 0.6,
+    "L1": 0.8,
+    "L2": 1.0,
+    "L3": 1.0,
+}
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _resolve_significance_weight(impact: Dict[str, Any], payload: Dict[str, Any]) -> float:
+    raw = impact.get("significance_weight", payload.get("significance_weight"))
+    parsed = _safe_float(raw, default=-1.0)
+    if parsed > 0:
+        return parsed
+    level = str(impact.get("significance_level", payload.get("significance_level", "L1"))).strip().upper()
+    return _SIGNIFICANCE_WEIGHTS.get(level, 1.0)
+
+
+def _compute_ratio_application(
+    *,
+    current_value: float,
+    impact: Dict[str, Any],
+    payload: Dict[str, Any],
+) -> Tuple[float, float]:
+    impact_ratio = _safe_float(impact.get("impact_ratio", payload.get("impact_ratio", 0.0)))
+    significance_weight = _resolve_significance_weight(impact, payload)
+    ratio_applied = impact_ratio * significance_weight
+    final_value = round(current_value * (1.0 + ratio_applied), 2)
+    return ratio_applied, final_value
+
+
+def _visible_ratio(value: float) -> bool:
+    return abs(value) >= 0.005
 
 
 def _ledger_has_cyan_highlight(ledger_data: Dict[str, Any]) -> bool:
@@ -60,12 +100,13 @@ class PhysicsKernel:
 
         _log.info(f"[Kernel] Dispatching Perturbation: SRC={source} CID={causality_id}")
 
-        # 2. 应用原始能级注入 (Qi Injection)
+        # 2. 应用相对比例注入 (Relative Ratio Injection)
         ten_gods = pt.get("ten_gods_absolute", {})
         impact = payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {}
-        delta_q = impact.get("delta_q", payload.get("delta_q", 0.0))
         target_god = impact.get("target_god", payload.get("target_god"))
         target_node = payload.get("node") # 支持五行节点名注入
+        target_original_value = None
+        target_ratio_applied = 0.0
 
         # 如果是五行节点注入，将其转化为该节点对应的十神（简单处理：首个匹配）
         if target_node and not target_god:
@@ -74,7 +115,13 @@ class PhysicsKernel:
              target_god = next((g for g, e in g2e.items() if e == target_node), None)
 
         if target_god and target_god in ten_gods:
-            ten_gods[target_god] = round(ten_gods[target_god] + delta_q, 2)
+            target_original_value = _safe_float(ten_gods[target_god])
+            target_ratio_applied, target_final_value = _compute_ratio_application(
+                current_value=target_original_value,
+                impact=impact,
+                payload=payload,
+            )
+            ten_gods[target_god] = target_final_value
 
         # 3. 动态阻抗调制
         res_mod = impact.get("resistance_mod", payload.get("resistance_mod", {}))
@@ -98,14 +145,29 @@ class PhysicsKernel:
         for g, val in ten_gods.items():
             if g not in ledger_data: ledger_data[g] = []
             reason = f"因果扰动: [{source}] -> {payload.get('reason', '系统内生演化')}"
+            original_value = target_original_value if g == target_god and target_original_value is not None else _safe_float(val) - _safe_float(flow_result["ten_god_deltas"].get(g, 0.0))
+            final_value = _safe_float(val)
+            ratio_applied = (
+                target_ratio_applied
+                if g == target_god and target_god is not None
+                else ((final_value - original_value) / max(abs(original_value), 1.0))
+            )
             entry = {
                 "step": source, 
                 "val": val, 
-                "delta": delta_q if g == target_god else flow_result["ten_god_deltas"].get(g, 0), 
+                "delta": round(final_value - original_value, 2),
+                "original_value": round(original_value, 2),
+                "ratio_applied": round(ratio_applied, 4),
+                "final_value": round(final_value, 2),
+                "visible_ratio_change": _visible_ratio(ratio_applied),
                 "reason": reason,
                 "cid": causality_id,
                 "source": source,
             }
+            if g == target_god:
+                entry["impact_ratio"] = round(_safe_float(impact.get("impact_ratio", payload.get("impact_ratio", 0.0))), 4)
+                entry["significance_level"] = str(impact.get("significance_level", payload.get("significance_level", "L1")))
+                entry["significance_weight"] = round(_resolve_significance_weight(impact, payload), 4)
             ledger_data[g].append(entry)
             if len(ledger_data[g]) > 8: ledger_data[g].pop(1)
 

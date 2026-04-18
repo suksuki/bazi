@@ -11,7 +11,10 @@ type Decision = {
   target_god?: string;
   physical_impact?: {
     target_god?: string;
-    delta_q?: number;
+    impact_ratio?: number;
+    significance_level?: string;
+    significance_weight?: number;
+    intensity_level?: number;
     resistance_mod?: Record<string, unknown>;
   };
 };
