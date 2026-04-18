@@ -34,6 +34,8 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     ten_god_from_stems,
 )
 from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
+from v17_rebirth.backend.services.claim_protocol import CLAIM_JSON_SCHEMA, compile_claims
+from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts, recommend_conflict_resolutions
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
 
@@ -430,6 +432,9 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 # 阻塞事实不进入 pt["facts"]，直到下一轮用户 Approve 后被处理
 
     modifier_proposals = compile_modifier_proposals(facts=collected_facts, physics_tensor=pt)
+    claim_rows = compile_claims(facts=collected_facts, physics_tensor=pt)
+    conflict_rows = detect_claim_conflicts(claim_rows)
+    conflict_resolutions = recommend_conflict_resolutions(claim_rows, conflict_rows)
     auto_signatures = sorted(
         proposal_signature(p)
         for p in modifier_proposals
@@ -442,6 +447,10 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         meta["plugin_auto_ratio_totals"] = ratio_totals
         meta["plugin_auto_settlement_signatures"] = auto_signatures
         meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
+        meta["plugin_claims"] = [dict(c) for c in claim_rows]
+        meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
+        meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
+        meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
         for row in applied_rows:
             tg = str(row.get("target_god") or "").strip()
             before = float(row.get("before", 0.0) or 0.0)
@@ -461,6 +470,10 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             )
     else:
         meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
+        meta["plugin_claims"] = [dict(c) for c in claim_rows]
+        meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
+        meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
+        meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
 
     _scanned_pids = [s.plugin_id for s in all_specs]
 

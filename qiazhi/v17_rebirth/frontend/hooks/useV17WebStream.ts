@@ -99,6 +99,14 @@ export type V17Frame = {
       god_of_use?: string[];
       god_of_taboo?: string[];
     };
+    plugins?: {
+      hits?: unknown[];
+      rows?: Array<Record<string, unknown>>;
+      statuses?: Array<Record<string, unknown>>;
+      claims?: Array<Record<string, unknown>>;
+      conflicts?: Array<Record<string, unknown>>;
+      conflict_resolutions?: Array<Record<string, unknown>>;
+    };
   };
 };
 

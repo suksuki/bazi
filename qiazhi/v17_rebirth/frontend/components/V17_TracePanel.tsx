@@ -75,6 +75,9 @@ interface TracePanelProps {
         hits?: unknown[];
         rows?: Array<Record<string, unknown>>;
         statuses?: Array<Record<string, unknown>>;
+        claims?: Array<Record<string, unknown>>;
+        conflicts?: Array<Record<string, unknown>>;
+        conflict_resolutions?: Array<Record<string, unknown>>;
       };
       manual_decisions?: Array<Record<string, unknown>>;
       auto_resolutions?: Array<Record<string, unknown>>;
@@ -127,6 +130,13 @@ function scoreEntries(map: Record<string, number> | undefined): Array<{ name: st
     .map(([name, score]) => ({ name: String(name), score: Number(score || 0) }))
     .filter((row) => row.name && Number.isFinite(row.score))
     .sort((a, b) => b.score - a.score);
+}
+
+function conflictTone(severity: string): string {
+  const value = String(severity || "").trim().toUpperCase();
+  if (value === "P1") return "text-rose-200 border-rose-500/25 bg-rose-950/20";
+  if (value === "P2") return "text-amber-200 border-amber-500/25 bg-amber-950/20";
+  return "text-cyan-200 border-cyan-500/25 bg-cyan-950/20";
 }
 
 export function V17_TracePanel({
@@ -240,6 +250,15 @@ export function V17_TracePanel({
     : [];
   const pluginStatuses = Array.isArray((physicsPayload.plugins as { statuses?: unknown[] } | undefined)?.statuses)
     ? (((physicsPayload.plugins as { statuses?: unknown[] }).statuses ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const pluginClaims = Array.isArray((physicsPayload.plugins as { claims?: unknown[] } | undefined)?.claims)
+    ? (((physicsPayload.plugins as { claims?: unknown[] }).claims ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const pluginConflicts = Array.isArray((physicsPayload.plugins as { conflicts?: unknown[] } | undefined)?.conflicts)
+    ? (((physicsPayload.plugins as { conflicts?: unknown[] }).conflicts ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const pluginConflictResolutions = Array.isArray((physicsPayload.plugins as { conflict_resolutions?: unknown[] } | undefined)?.conflict_resolutions)
+    ? (((physicsPayload.plugins as { conflict_resolutions?: unknown[] }).conflict_resolutions ?? []) as Array<Record<string, unknown>>)
     : [];
   const manualDecisions = Array.isArray(physicsPayload.manual_decisions)
     ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
@@ -536,6 +555,52 @@ export function V17_TracePanel({
             );
           }) : (
             <p className="text-[11px] text-zinc-500">暂无插件状态标签</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">主张与冲突层</p>
+          <span className="text-[10px] text-zinc-500">
+            claims {pluginClaims.length} / conflicts {pluginConflicts.length} / resolutions {pluginConflictResolutions.length}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {pluginConflicts.length ? (
+            pluginConflicts.slice(0, 8).map((row, idx) => {
+              const conflictId = String(row.conflict_id || `conflict_${idx}`).trim();
+              const resolution = pluginConflictResolutions.find((item) => String(item.conflict_id || "").trim() === conflictId);
+              const claims = Array.isArray(row.claims) ? row.claims : [];
+              const plugins = Array.isArray(row.plugins) ? row.plugins : [];
+              return (
+                <div key={conflictId} className={`rounded-lg border px-2 py-2 ${conflictTone(String(row.severity || "P3"))}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] tracking-[0.18em] uppercase">
+                      {String(row.conflict_type || "unknown")}
+                    </p>
+                    <span className="font-mono text-[10px] uppercase">
+                      {String(row.severity || "P3")} · {String(row.recommended_arbiter || "system")}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-zinc-300">{String(row.why_conflict || "—")}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">
+                    {String(row.target_god || "").trim() ? `target ${String(row.target_god)} / ` : ""}
+                    plugins {plugins.length} / claims {claims.length}
+                  </p>
+                  {plugins.length ? (
+                    <p className="mt-1 text-[10px] text-zinc-400">{plugins.slice(0, 4).join(" / ")}</p>
+                  ) : null}
+                  {resolution ? (
+                    <p className="mt-1 text-[10px] text-cyan-200/90">
+                      system suggestion: {String(resolution.policy || "—")} · keep {String(resolution.winner_claim_id || "—")}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-[11px] text-zinc-500">暂无挂起冲突；当前主张之间未检测到显著冲突。</p>
           )}
         </div>
       </div>
