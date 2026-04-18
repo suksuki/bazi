@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
 from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
+from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
 _LOGIC_ROOT = Path(__file__).resolve().parent
 
@@ -22,6 +23,7 @@ LAYER_DIRS: Sequence[Tuple[str, str, int]] = (
     ("L1_atomic_ops", "L1", 4),
     ("L2_structure_patterns", "L2", 3),
     ("L3_modern_narrative", "L3", 2),
+    ("L4_strategic_narrative", "L4", 1),
 )
 
 
@@ -60,25 +62,7 @@ def infer_salience_weight(
 
 
 def deity_scores_from_tensor(physics_tensor: Dict[str, Any]) -> Dict[str, float]:
-    src = {}
-    if isinstance(physics_tensor, dict):
-        src = (
-            physics_tensor.get("ten_gods_absolute")
-            or physics_tensor.get("ten_gods_absolute_intensity")
-            or physics_tensor.get("deity_scores")
-        )
-    if not isinstance(src, dict):
-        return {}
-    out: Dict[str, float] = {}
-    for k, v in src.items():
-        key = str(k).strip()
-        if not key:
-            continue
-        try:
-            out[key] = float(v)
-        except (TypeError, ValueError):
-            continue
-    return out
+    return read_runtime_scores(physics_tensor)
 
 
 def _conflict_level_to_tension(row: Dict[str, Any]) -> float:
@@ -149,14 +133,22 @@ def spec_execution_sort_key(s: V17PluginSpec) -> Tuple[int, float, str]:
 
 def _plugins_from_module(mod: Any) -> List[V17PluginSpec]:
     out: List[V17PluginSpec] = []
+    
+    # 动态检查：只要具备 collect_v17_facts 且有 plugin_id，我们就视其为 V17 插件
+    # 这可以规避由于模块重载导致的 isinstance 失败问题
+    def _is_v17_spec(p: Any) -> bool:
+        return hasattr(p, "collect_v17_facts") and hasattr(p, "plugin_id")
+
     multi = getattr(mod, "PLUGINS", None)
     if isinstance(multi, list):
         for p in multi:
-            if isinstance(p, V17PluginSpec):
+            if _is_v17_spec(p):
                 out.append(p)
+    
     plug = getattr(mod, "PLUGIN", None)
-    if isinstance(plug, V17PluginSpec):
+    if _is_v17_spec(plug):
         out.append(plug)
+        
     return out
 
 

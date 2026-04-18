@@ -32,9 +32,12 @@ export type V17Frame = {
     snapshot_kind?: string;
     render_text?: string;
     will_flash?: boolean;
+    ten_gods_base_l0?: Record<string, number>;
+    ten_gods_runtime?: Record<string, number>;
+    ten_gods_narrative?: Record<string, number>;
     deity_scores?: Record<string, number>;
     ten_gods_absolute_intensity?: Record<string, number>;
-    ten_gods_ledger?: Record<string, any[]>;
+    ten_gods_ledger?: Record<string, unknown[]>;
     total_energy_index?: number;
     four_pillars?: {
       year?: string;

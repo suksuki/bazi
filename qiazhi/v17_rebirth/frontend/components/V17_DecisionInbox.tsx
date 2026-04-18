@@ -2,30 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { Check, X, ShieldAlert, Cpu, Sparkles, Gavel } from "lucide-react";
 
-type Decision = {
-  id?: string;
-  title?: string;
-  label?: string;
-  source?: string;
-  source_label?: string;
-  priority?: number;
-  target_god?: string;
-  arbitration_trace?: string;
-  llm_resolution_policy?: string;
-  llm_resolution_result?: string;
-  resolved_from_llm?: boolean;
-  llm_resolution_state?: string;
-  llm_terminal_state?: string;
-  physical_impact?: {
-    target_god?: string;
-    impact_ratio?: number;
-    significance_level?: string;
-    significance_weight?: number;
-    intensity_level?: number;
-    resistance_mod?: Record<string, unknown>;
-  };
-};
+import type { Decision } from "@/hooks/useOracleSession";
 
 type BucketKind = "manual" | "system" | "llm";
 
@@ -167,7 +146,6 @@ function sourceLabel(decision: Decision): string {
   if (raw.includes("liuhe")) return "六合";
   if (raw.includes("liupo")) return "六破";
   if (raw.includes("sanxing")) return "三刑";
-  if (raw.includes("banhe")) return "半合";
   if (raw.includes("three_harmony")) return "三合";
   if (raw.includes("muku")) return "墓库";
   if (raw.includes("stem_fusion")) return "天干五合";
@@ -208,18 +186,16 @@ export function V17_DecisionInbox({
   sessionId: string;
   locked?: boolean;
   lockMessage?: string;
-  onAdopted?: (decision: Decision) => void | Promise<void>;
+  onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
 }) {
   const [busyId, setBusyId] = useState<string>("");
-  const latestSnapshot = useMemo(
-    () =>
-      [...(frames || [])].reverse().find((f) => {
-        if (String(f?.layer || "").toUpperCase() !== "SNAPSHOT") return false;
-        const sk = String((f?.payload as { snapshot_kind?: string })?.snapshot_kind || "").trim();
-        return sk === "physics" || sk === "physical_void" || sk === "system_init_failure";
-      }),
-    [frames],
-  );
+
+  const latestSnapshot = useMemo(() => 
+    [...(frames || [])].reverse().find(f => 
+      String(f?.layer || "").toUpperCase() === "SNAPSHOT" && 
+      ["physics", "physical_void", "system_init_failure"].includes(String((f?.payload as any)?.snapshot_kind || ""))
+    ), [frames]);
+
   const { visible: decisions, hiddenCount } = useMemo(() => {
     const source = latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
     const raw = source.filter((d, idx) => {
@@ -240,15 +216,19 @@ export function V17_DecisionInbox({
     [latestSnapshot?.payload?.llm_arbitration_context],
   );
 
-  async function onPick(decision: Decision) {
+  async function onVote(decision: Decision, status: "APPROVED" | "REJECTED") {
     if (locked || busyId) return;
-    const id = String(decision.id || decision.title || "pick");
+    const id = String(decision.id || decision.label || "vote");
     setBusyId(id);
     try {
-      await onAdopted?.(decision);
+      await onAdopted?.({ ...decision, status });
     } finally {
       setBusyId("");
     }
+  }
+
+  async function onPick(decision: Decision) {
+    onVote(decision, "APPROVED");
   }
 
   if (!decisions.length && !autoResolutions.length && !llmArbitration.length) return null;
@@ -299,42 +279,46 @@ export function V17_DecisionInbox({
                 const target = String(d.target_god || d.physical_impact?.target_god || "").trim();
                 const badge = statusBadge("manual", d);
                 return (
-                  <motion.button
-                    key={id}
-                    type="button"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => onPick(d)}
-                    disabled={locked || busyId !== ""}
-                    className="group min-w-[8rem] rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] px-3 py-2 text-left transition hover:border-violet-300/50 hover:bg-violet-700/20 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    <p className="text-xs text-violet-50">{(d.label || d.title || "行动建议").trim()}</p>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-violet-200/75">
-                      <span>{String(d.source || "manual")}</span>
-                      {target ? <span className="rounded-full border border-violet-400/25 px-1.5 py-0.5 text-[9px] text-violet-100">{target}</span> : null}
-                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
-                    </div>
-                    <p className="mt-1 text-[10px] text-zinc-400">{impactText(d)}</p>
-                    <p className="mt-1 font-mono text-[10px] text-violet-200/80">{arbitrationTrace("manual", d)}</p>
-                    <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{bucketReason("manual", d)}</p>
-                    {d.resolved_from_llm ? (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        <span className="rounded-full border border-cyan-500/20 bg-cyan-950/25 px-1.5 py-0.5 text-[9px] text-cyan-100">
-                          来自 LLM 仲裁
-                        </span>
-                        <span className="rounded-full border border-violet-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                          {String(d.llm_resolution_state || "promoted_to_manual")}
-                        </span>
+                    <div
+                      key={id}
+                      className="group relative min-w-[12rem] rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3 transition hover:border-violet-300/50 hover:bg-violet-700/20"
+                    >
+                      <p className="text-xs font-medium text-violet-50">{(d.label || d.title || "行动建议").trim()}</p>
+                      <div className="mt-1 flex items-center gap-1 text-[10px] text-violet-200/70">
+                        <span>{String(d.source || "manual")}</span>
+                        {target ? <span className="rounded-full border border-violet-400/25 px-1.5 py-0.5 text-[9px] text-violet-100">{target}</span> : null}
                       </div>
-                    ) : null}
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {decisionReasonTags("manual", d).map((tag) => (
-                        <span key={tag} className="rounded-full border border-violet-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                          {tag}
-                        </span>
-                      ))}
+                      <p className="mt-1 text-[10px] text-zinc-400">{impactText(d)}</p>
+                      
+                      {/* ── 裁决人操作区 (Tribunal Actions) ── */}
+                      <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => onVote(d, "REJECTED")}
+                          disabled={locked || busyId !== ""}
+                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-400 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                        >
+                          <X className="h-3 w-3" /> 否决
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onVote(d, "APPROVED")}
+                          disabled={locked || busyId !== ""}
+                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                        >
+                          <Check className="h-3 w-3" /> 通过
+                        </button>
+                      </div>
+
+                      <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">{bucketReason("manual", d)}</p>
+                      <div className="mt-2 flex flex-wrap gap-1 opacity-60">
+                        {decisionReasonTags("manual", d).map((tag) => (
+                          <span key={tag} className="rounded-full border border-violet-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[8px] text-zinc-400">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </motion.button>
                 );
               })}
             </div>

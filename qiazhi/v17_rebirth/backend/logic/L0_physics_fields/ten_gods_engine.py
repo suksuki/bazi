@@ -14,9 +14,13 @@ V17.30：十神绝对能量强度引擎（L0 层 — Mass Phase）。
 """
 from __future__ import annotations
 
+import logging
+import math
 from typing import Any, Dict, List, Optional, Tuple
 
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
+
+_log = logging.getLogger(__name__)
 
 
 # ── 天干基础表 ─────────────────────────────────────────────────────────────────
@@ -68,8 +72,14 @@ def _get_l0_consts() -> Dict[str, Any]:
 def _get_l0_val(key: str, default: float) -> float:
     return float(_get_l0_consts().get(key, default))
 
+def _get_guardrail_consts() -> Dict[str, Any]:
+    from v17_rebirth.backend.logic.configs.manager import get_v17_constants
+    return get_v17_constants().get("PHYSICS_GUARDRAILS", {})
+
+def _get_guardrail_val(key: str, default: float) -> float:
+    return float(_get_guardrail_consts().get(key, default))
+
 # ── V17.30 物理常数 (动态延迟加载占位) ────────────────────────────────────────────
-# 注意：以下变量在运行时会被 _get_l0_val 覆盖，此处仅保留类型暗示
 STEM_BASE: float = 10.0
 BRANCH_BASE: float = 12.0
 ROOTED_STEM_GAIN: float = 1.5
@@ -79,7 +89,8 @@ JIE_JIAO_FACTOR: float = 0.75
 VOID_REDUCTION_FACTOR: float = 0.3
 LUCK_PILLAR_FACTOR: float = 0.85
 FLOW_PILLAR_FACTOR: float = 0.65
-ENERGY_MIN: float = 0.01
+ENERGY_MIN: float = 0.1
+ENERGY_MAX: float = 1000.0
 GLOBAL_DAMPING: float = 0.95
 
 # 旧名兼容（供外部 import 使用）
@@ -271,7 +282,11 @@ def _accumulate_stem_energy(
     if rooted:
         energy *= _get_l0_val("ROOTED_GAIN", 1.5)
     god = ten_god_from_stems(daymaster, stem)
-    acc[god] = acc.get(god, 0.0) + energy
+    # V17.99: 数值护栏 — 安全累加
+    if math.isfinite(energy):
+        acc[god] = acc.get(god, 0.0) + energy
+    else:
+        _log.warning(f"[V17-PHYSICS-NAN] Attempted to add NaN energy for {god} at {pillar_label}干")
     if ledger is not None:
         parts = [f"{stem}→{god}"]
         if rooted:
@@ -309,7 +324,11 @@ def _accumulate_branch_energy(
         if exposed:
             energy *= _get_l0_val("EXPOSED_HIDDEN_GAIN", 1.2)
         god = ten_god_from_stems(daymaster, hidden_stem)
-        acc[god] = acc.get(god, 0.0) + energy
+        # V17.99: 数值护栏 — 安全累加
+        if math.isfinite(energy):
+            acc[god] = acc.get(god, 0.0) + energy
+        else:
+            _log.warning(f"[V17-PHYSICS-NAN] Attempted to add NaN energy for {god} at {pillar_label}支")
         if ledger is not None:
             parts = [f"{branch}藏{hidden_stem}→{god}"]
             if exposed:
@@ -491,14 +510,27 @@ def calc_deity_scores(
     damping = system_friction if damping_enabled and total_raw > 340.0 else 1.0
 
     
-    scored = {
-        k: round(v * damping, 2)
-        for k, v in sorted(acc.items(), key=lambda kv: (-kv[1], kv[0]))
-        if v >= ENERGY_MIN
+    # V17.99: 物理稳态钳制 (Numerical Guardrails Enforcement)
+    # 强制将所有十神能量压制在宏观物理允许的区间 [MIN, MAX]
+    e_min = _get_guardrail_val("ENERGY_MIN", 0.1)
+    e_max = _get_guardrail_val("ENERGY_MAX", 1000.0)
+
+    scored = {}
+    for k, v in acc.items():
+        v_final = v * damping
+        # 强制钳制
+        v_clamped = max(e_min, min(e_max, v_final))
+        if math.isfinite(v_clamped):
+            scored[k] = round(v_clamped, 2)
+            
+    # 按强度排序
+    sorted_scored = {
+        k: v for k, v in sorted(scored.items(), key=lambda kv: (-kv[1], kv[0]))
     }
-    total_energy_index = round(sum(scored.values()), 2)
-    ten_gods = list(scored)[:4]
-    return scored, ten_gods, total_energy_index, {
+
+    total_energy_index = round(sum(sorted_scored.values()), 2)
+    ten_gods = list(sorted_scored)[:4]
+    return sorted_scored, ten_gods, total_energy_index, {
         "month_command_god": month_command_god,
         "void_pillars": void_pillars,
         "void_branches": {k: v for k, v in xun_kong_map.items() if v},

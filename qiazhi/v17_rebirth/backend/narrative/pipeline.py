@@ -44,7 +44,7 @@ class RealtimeNarrativePipeline:
         user_message: str = "",
         action_signal: bool = False,
         decision_anchor: str = "",
-        max_tokens: int = 512,
+        max_tokens: int = 2048,
         role_style: str = V17_ROLE_WEAVER,
         physics_tensor: Optional[Dict[str, Any]] = None,
         session_id: str = "",

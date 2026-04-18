@@ -12,11 +12,11 @@ export type V17NatalInputValue = {
 export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValue) => void }) {
   const current = new Date();
   const currentYear = current.getFullYear();
-  const [year, setYear] = useState(String(currentYear));
-  const [month, setMonth] = useState(String(current.getMonth() + 1).padStart(2, "0"));
-  const [day, setDay] = useState(String(current.getDate()).padStart(2, "0"));
-  const [hour, setHour] = useState(String(current.getHours()).padStart(2, "0"));
-  const [gender, setGender] = useState<"male" | "female">("female");
+  const [year, setYear] = useState("1977");
+  const [month, setMonth] = useState("05");
+  const [day, setDay] = useState("08");
+  const [hour, setHour] = useState("18");
+  const [gender, setGender] = useState<"male" | "female">("male");
   const [calendarType, setCalendarType] = useState<"solar" | "lunar">("solar");
 
   const years = useMemo(() => Array.from({ length: currentYear - 1949 }, (_, i) => String(currentYear - i)), [currentYear]);

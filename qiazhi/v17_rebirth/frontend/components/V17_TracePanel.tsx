@@ -42,6 +42,9 @@ interface TracePanelProps {
     payload?: {
       causal_anchor?: unknown;
       physics_fingerprint?: unknown;
+      ten_gods_base_l0?: Record<string, number>;
+      ten_gods_runtime?: Record<string, number>;
+      ten_gods_narrative?: Record<string, number>;
       deity_scores?: Record<string, number>;
       ten_gods_absolute_intensity?: Record<string, number>;
       total_energy_index?: number;
@@ -118,6 +121,13 @@ function traceArbitrationChain(row: Record<string, unknown>, fallbackMode: "手�
   return `${source} -> L${level > 0 ? level : "?"} -> ${fallbackMode}`;
 }
 
+function scoreEntries(map: Record<string, number> | undefined): Array<{ name: string; score: number }> {
+  return Object.entries(map || {})
+    .map(([name, score]) => ({ name: String(name), score: Number(score || 0) }))
+    .filter((row) => row.name && Number.isFinite(row.score))
+    .sort((a, b) => b.score - a.score);
+}
+
 export function V17_TracePanel({
   collapsed,
   onToggle,
@@ -149,10 +159,15 @@ export function V17_TracePanel({
     llmAuditSnapshot && typeof llmAuditSnapshot === "object"
       ? (((llmAuditSnapshot as { payload?: Record<string, unknown> }).payload ?? {}) as Record<string, unknown>)
       : {};
-  const scoreMap =
-    physicsSnapshot?.payload?.ten_gods_absolute_intensity || physicsSnapshot?.payload?.deity_scores || {};
+  const baseScoreMap = physicsSnapshot?.payload?.ten_gods_base_l0 || {};
+  const runtimeScoreMap =
+    physicsSnapshot?.payload?.ten_gods_runtime ||
+    physicsSnapshot?.payload?.ten_gods_absolute_intensity ||
+    physicsSnapshot?.payload?.deity_scores ||
+    {};
+  const narrativeScoreMap = physicsSnapshot?.payload?.ten_gods_narrative || {};
   const ledgerRaw = physicsSnapshot?.payload?.ten_gods_ledger || {};
-  const deityScores = Object.entries(scoreMap)
+  const deityScores = Object.entries(runtimeScoreMap)
     .map(([name, score]) => {
       const history = ledgerRaw[name] || [];
       const currentVal = Number(score || 0);
@@ -179,7 +194,38 @@ export function V17_TracePanel({
     })
     .filter((row) => row.name && Number.isFinite(row.score))
     .sort((a, b) => b.score - a.score);
+  const baseScores = scoreEntries(baseScoreMap);
+  const narrativeScores = scoreEntries(narrativeScoreMap);
   const maxDeityScore = deityScores.length ? Math.max(...deityScores.map((row) => row.score), 1) : 1;
+  const layerCards = [
+    {
+      key: "base",
+      title: "L0 Base",
+      subtitle: "冻结基线",
+      rows: baseScores,
+      accent: "text-zinc-200",
+      border: "border-zinc-700/70",
+      bg: "bg-zinc-900/70",
+    },
+    {
+      key: "runtime",
+      title: "L1 Runtime",
+      subtitle: "客观运行态",
+      rows: deityScores.map((row) => ({ name: row.name, score: row.score })),
+      accent: "text-cyan-200",
+      border: "border-cyan-500/30",
+      bg: "bg-cyan-950/20",
+    },
+    {
+      key: "narrative",
+      title: "L2 Narrative",
+      subtitle: "主观镜头",
+      rows: narrativeScores,
+      accent: "text-fuchsia-200",
+      border: "border-fuchsia-500/30",
+      bg: "bg-fuchsia-950/20",
+    },
+  ];
   const tenGods = Array.isArray(physicsSnapshot?.payload?.ten_gods)
     ? physicsSnapshot?.payload?.ten_gods.map((x) => String(x || "").trim()).filter(Boolean)
     : [];
@@ -313,7 +359,29 @@ export function V17_TracePanel({
           <p>总能量指数：{Number(physicsSnapshot?.payload?.total_energy_index || 0).toFixed(2)}</p>
         </div>
         <div className="mt-2 space-y-1">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Absolute Intensity</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Three-Layer Energy</p>
+            <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-0.5 text-[9px] tracking-[0.2em] text-cyan-200">
+              主图: Runtime
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {layerCards.map((layer) => {
+              const total = layer.rows.reduce((sum, row) => sum + row.score, 0);
+              const leads = layer.rows.slice(0, 2).map((row) => `${row.name} ${row.score.toFixed(1)}`);
+              return (
+                <div key={layer.key} className={`rounded-lg border px-2 py-2 ${layer.border} ${layer.bg}`}>
+                  <p className={`text-[10px] tracking-[0.18em] ${layer.accent}`}>{layer.title}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{layer.subtitle}</p>
+                  <p className="mt-2 font-mono text-[11px] text-zinc-100">{total.toFixed(2)}</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">
+                    {leads.length ? leads.join(" / ") : "暂无样本"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Runtime Detail</p>
           {deityScores.length ? (
             <div className="space-y-1">
               {deityScores.map((row) => (

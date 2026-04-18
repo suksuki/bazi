@@ -8,6 +8,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from v17_rebirth.backend.services.physics_layers import read_runtime_scores
+
 _PHYS_DASH = "\u2014"
 
 
@@ -83,11 +85,7 @@ class PhysicsCanonicalService:
         if not isinstance(physics_tensor, dict):
             return rows
         total_energy = physics_tensor.get("total_energy_index")
-        scores = (
-            physics_tensor.get("ten_gods_absolute")
-            or physics_tensor.get("ten_gods_absolute_intensity")
-            or physics_tensor.get("deity_scores")
-        )
+        scores = read_runtime_scores(physics_tensor)
         if isinstance(scores, dict) and scores:
             ranked = sorted(
                 (

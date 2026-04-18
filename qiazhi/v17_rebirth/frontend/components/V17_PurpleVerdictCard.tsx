@@ -12,6 +12,9 @@ type EvolutionFrame = {
     snapshot_kind?: string;
     render_text?: string;
     pattern?: string;
+    ten_gods_base_l0?: Record<string, number>;
+    ten_gods_runtime?: Record<string, number>;
+    ten_gods_narrative?: Record<string, number>;
     deity_scores?: Record<string, number>;
     ten_gods_absolute_intensity?: Record<string, number>;
     total_energy_index?: number;
@@ -123,7 +126,13 @@ export function V17_PurpleVerdictCard({
   ).trim();
   const snapshotUse = physicsSnapshot?.payload?.god_rings?.god_of_use || [];
   const snapshotTaboo = physicsSnapshot?.payload?.god_rings?.god_of_taboo || [];
-  const scoreMap = physicsSnapshot?.payload?.ten_gods_absolute_intensity || physicsSnapshot?.payload?.deity_scores || {};
+  const scoreMap =
+    latestNarrator?.payload?.ten_gods_narrative ||
+    physicsSnapshot?.payload?.ten_gods_narrative ||
+    physicsSnapshot?.payload?.ten_gods_runtime ||
+    physicsSnapshot?.payload?.ten_gods_absolute_intensity ||
+    physicsSnapshot?.payload?.deity_scores ||
+    {};
   const scoreRank = Object.entries(scoreMap || {})
     .map(([k, v]) => ({ k: String(k).trim(), v: Number(v || 0) }))
     .filter((x) => x.k && Number.isFinite(x.v))

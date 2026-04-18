@@ -16,6 +16,8 @@ from typing import Any, Dict, Optional, Tuple
 
 from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import FlowPhysicsEngine
+from v17_rebirth.backend.services.physics_layers import read_base_scores, read_runtime_scores, sync_runtime_aliases
+from v17_rebirth.backend.logic.configs.manager import get_v17_constants
 
 _log = logging.getLogger(__name__)
 
@@ -52,6 +54,35 @@ def _compute_ratio_application(
     ratio_applied = impact_ratio * significance_weight
     final_value = round(current_value * (1.0 + ratio_applied), 2)
     return ratio_applied, final_value
+
+
+def _clamp_runtime_scores(runtime_scores: Dict[str, Any]) -> Dict[str, float]:
+    guardrails = get_v17_constants().get("PHYSICS_GUARDRAILS", {})
+    e_min = float(guardrails.get("ENERGY_MIN", 0.1))
+    e_max = float(guardrails.get("ENERGY_MAX", 1000.0))
+    clamped: Dict[str, float] = {}
+    for god, raw in runtime_scores.items():
+        val = _safe_float(raw, e_min)
+        if val != val or val in (float("inf"), float("-inf")):
+            val = e_min
+        clamped[god] = round(max(e_min, min(e_max, val)), 2)
+    return clamped
+
+
+def _runtime_anomaly_rows(base_scores: Dict[str, float], runtime_scores: Dict[str, float]) -> Dict[str, Dict[str, float]]:
+    anomalies: Dict[str, Dict[str, float]] = {}
+    for god, runtime_val in runtime_scores.items():
+        base_val = _safe_float(base_scores.get(god), 0.0)
+        if base_val <= 0:
+            continue
+        ratio = abs(_safe_float(runtime_val, 0.0) / base_val)
+        if ratio > 3.0:
+            anomalies[god] = {
+                "base": round(base_val, 2),
+                "runtime": round(_safe_float(runtime_val, 0.0), 2),
+                "ratio": round(ratio, 4),
+            }
+    return anomalies
 
 
 def _visible_ratio(value: float) -> bool:
@@ -99,7 +130,8 @@ class PhysicsKernel:
         _log.info(f"[Kernel] Dispatching Perturbation: SRC={source} CID={causality_id}")
 
         # 2. 应用相对比例注入 (Relative Ratio Injection)
-        ten_gods = pt.get("ten_gods_absolute", {})
+        base_gods = read_base_scores(pt)
+        ten_gods = read_runtime_scores(pt)
         impact = payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {}
         target_god = impact.get("target_god", payload.get("target_god"))
         target_node = payload.get("node") # 支持五行节点名注入
@@ -147,6 +179,24 @@ class PhysicsKernel:
             if g in ten_gods:
                 ten_gods[g] = round(ten_gods[g] + d, 2)
 
+        ten_gods = _clamp_runtime_scores(ten_gods)
+        anomaly_rows = _runtime_anomaly_rows(base_gods, ten_gods)
+        if anomaly_rows:
+            anomaly_event = {
+                "signal": "PHYSICS_ANOMALY",
+                "session_id": session_id,
+                "source": source,
+                "cid": causality_id,
+                "payload": {
+                    "type": "AnomalyFrame",
+                    "reason": "runtime_base_ratio_exceeded",
+                    "anomalies": anomaly_rows,
+                },
+            }
+            await backend.publish_action(session_id, anomaly_event)
+            _log.error(f"[Kernel] Circuit breaker triggered: {anomaly_rows}")
+            return False
+
         # 5. 更新账本 (Ledger Record)
         ledger_data = pt.get("ten_gods_ledger", {})
         for g, val in ten_gods.items():
@@ -179,9 +229,9 @@ class PhysicsKernel:
             if len(ledger_data[g]) > 8: ledger_data[g].pop(1)
 
         # 6. 状态同步并广播 PHYSICS_SYNC
-        pt["ten_gods_absolute"] = ten_gods
-        pt["ten_gods_absolute_intensity"] = ten_gods
-        pt["deity_scores"] = ten_gods
+        if base_gods:
+            pt["ten_gods_base_l0"] = dict(base_gods)
+        sync_runtime_aliases(pt, ten_gods)
         pt["ten_gods_ledger"] = ledger_data
         pt["last_causality_id"] = causality_id
         pt["total_energy_index"] = round(sum(ten_gods.values()), 2)
@@ -203,6 +253,8 @@ class PhysicsKernel:
             "cid": causality_id,
             "payload": _safe_trans({
                 "highlight_type": "cyan" if _ledger_has_cyan_highlight(ledger_data) else "",
+                "ten_gods_base_l0": pt.get("ten_gods_base_l0", {}),
+                "ten_gods_runtime": ten_gods,
                 "ten_gods_absolute": ten_gods,
                 "ten_gods_absolute_intensity": ten_gods,
                 "deity_scores": ten_gods,

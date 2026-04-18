@@ -25,11 +25,45 @@ from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVE
 from v17_rebirth.infrastructure.llm_micro_client import LlmStreamStep, V17MicroLlmClient, _normalize_fuse_role
 from v17_rebirth.infrastructure.stream_interrupt import ActionInterruptDuringStream
 from v17_rebirth.backend.services.physics_canonical import six_pillars_tensor_complete
+from v17_rebirth.backend.services.physics_layers import build_narrative_scores, read_base_scores, read_runtime_scores
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError, PhysicsService
 
 _PIPELINE_EPOCH = 0
 _PIPELINE_CACHE: RealtimeNarrativePipeline | None = None
 _PIPELINE_CACHE_KEY: tuple[int, int] | None = None
+
+
+async def _queue_llm_feedback_proposal(
+    *,
+    session_id: str,
+    raw_physics: Dict[str, Any],
+    tag: str,
+    element_or_god: str,
+    reason: str,
+) -> None:
+    from v17_rebirth.infrastructure.state_backend import get_state_backend
+
+    pt = raw_physics if isinstance(raw_physics, dict) else {}
+    queue = pt.get("pending_proposals")
+    if not isinstance(queue, list):
+        queue = []
+        pt["pending_proposals"] = queue
+    proposal = {
+        "id": f"llm_feedback_{tag.lower()}_{element_or_god}_{len(queue)}",
+        "source": "llm_feedback",
+        "arbiter_type": "llm",
+        "status": "pending",
+        "tag": str(tag).strip().upper(),
+        "target_node": str(element_or_god).strip(),
+        "reason": str(reason).strip(),
+        "weight": 0.0,
+    }
+    queue.append(proposal)
+    if str(session_id or "").strip():
+        try:
+            await get_state_backend().set_physics(str(session_id), pt)
+        except Exception:
+            pass
 
 
 def _six_pillars_physics_ok(raw_physics: Dict[str, Any]) -> bool:
@@ -178,15 +212,7 @@ class VerdictOrchestrator:
         causal_anchor: str = "local_memory",
     ) -> Dict[str, Any]:
         AutoScanner.ensure_loaded()
-        original_scores = (
-            dict(raw_physics.get("ten_gods_absolute_intensity") or {})
-            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("ten_gods_absolute_intensity"), dict)
-            else dict(raw_physics.get("ten_gods_absolute") or {})
-            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("ten_gods_absolute"), dict)
-            else dict(raw_physics.get("deity_scores") or {})
-            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("deity_scores"), dict)
-            else {}
-        )
+        original_scores = read_runtime_scores(raw_physics) if isinstance(raw_physics, dict) else {}
         if isinstance(raw_physics, dict):
             hydrate_v17_physics_tensor(raw_physics)
         self.assert_six_pillars_physics(raw_physics)
@@ -194,6 +220,8 @@ class VerdictOrchestrator:
         scores = adapter.read_deity_scores(raw_physics)
         if not scores and original_scores:
             scores = {str(k): float(v) for k, v in original_scores.items()}
+        base_scores = read_base_scores(raw_physics) if isinstance(raw_physics, dict) else {}
+        narrative_scores = build_narrative_scores(scores, str(raw_physics.get("will_proxy") or "stable")) if isinstance(raw_physics, dict) else {}
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
@@ -226,6 +254,9 @@ class VerdictOrchestrator:
             "flow_pillar": raw_physics.get("flow_pillar"),
             "flow_year": raw_physics.get("flow_year"),
             "ten_gods": raw_physics.get("ten_gods", []),
+            "ten_gods_base_l0": base_scores,
+            "ten_gods_runtime": scores,
+            "ten_gods_narrative": narrative_scores,
             "deity_scores": scores,
             "ten_gods_absolute_intensity": scores,
             "total_energy_index": round(total_energy_index, 2),
@@ -295,6 +326,7 @@ class VerdictOrchestrator:
             )
         adapter = PhysicsAdapter(root=__import__("pathlib").Path(self.repo_root))
         scores = adapter.read_deity_scores(raw_physics)
+        narrative_scores = build_narrative_scores(scores, will_proxy)
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
@@ -358,6 +390,7 @@ class VerdictOrchestrator:
                     **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
                     "render_text": "叙事引擎已离埠，请求正渡上游。",
                     "will_proxy": str(will_proxy or "stable"),
+                    "ten_gods_narrative": narrative_scores,
                     "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
                     "llm_meta": {
                         "audit_preview": True,
@@ -377,6 +410,7 @@ class VerdictOrchestrator:
                 "payload": {
                     "render_text": f"上游已握手（{ms} 毫秒）。",
                     "will_proxy": str(will_proxy or "stable"),
+                    "ten_gods_narrative": narrative_scores,
                     "llm_meta": {
                         "stream_partial": True,
                         "叙事节拍": "已联通",
@@ -436,6 +470,7 @@ class VerdictOrchestrator:
                 "render_text": "引擎正在思考以下事实…",
                 **audit_blob,
                 "physics_report": NarrativeMappingEngine.build_physics_report_lines(raw_physics),
+                "ten_gods_narrative": narrative_scores,
                 "full_prompt_trace": fpt,
                 "will_proxy": str(will_proxy or "stable"),
                 "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
@@ -493,15 +528,18 @@ class VerdictOrchestrator:
                                 m = re.search(r"\[(INTENSIFY|WEAKEN):([a-zA-Z\u4e00-\u9fa5]{1,2})\]", chunk)
                                 if m:
                                     at, el = m.groups()
-                                    from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel
-                                    asyncio.create_task(PhysicsKernel.dispatch_perturbation(
-                                        session_id=str(session_id), source="SRC_LLM_FEEDBACK",
-                                        payload={"node": el, "delta_q": 5.0 if at == "INTENSIFY" else -5.0, "reason": f"叙事洞察: {el}势态变化"}
-                                    ))
+                                    await _queue_llm_feedback_proposal(
+                                        session_id=str(session_id),
+                                        raw_physics=raw_physics if isinstance(raw_physics, dict) else {},
+                                        tag=at,
+                                        element_or_god=el,
+                                        reason=f"叙事洞察: {el}势态变化",
+                                    )
                             yield {
                                 "timestamp": _now_iso(), "layer": "NARRATOR",
                                 "payload": {
                                     "render_text": chunk, "will_proxy": str(will_proxy or "stable"),
+                                    "ten_gods_narrative": narrative_scores,
                                     "llm_meta": {"stream_partial": True, "model": _model_hint},
                                     "source_facts": [], "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
                                 }
@@ -541,6 +579,7 @@ class VerdictOrchestrator:
                         "timestamp": _now_iso(), "layer": "NARRATOR",
                         "payload": {
                             "render_text": chunk, "will_proxy": str(will_proxy or "stable"),
+                            "ten_gods_narrative": narrative_scores,
                             "llm_meta": {"stream_partial": True, "model": _model_hint},
                             "source_facts": [], "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
                         }
@@ -575,6 +614,7 @@ class VerdictOrchestrator:
                 "payload": {
                     "render_text": hint,
                     "will_proxy": str(will_proxy or "stable"),
+                    "ten_gods_narrative": narrative_scores,
                     "llm_meta": {
                         **(llm_meta if isinstance(llm_meta, dict) else {}),
                         "ok": False,
@@ -593,6 +633,7 @@ class VerdictOrchestrator:
                 "payload": {
                     "render_text": text,
                     "will_proxy": str(will_proxy or "stable"),
+                    "ten_gods_narrative": narrative_scores,
                     "llm_meta": llm_meta if isinstance(llm_meta, dict) else {},
                     "source_facts": source_facts if isinstance(source_facts, list) else [],
                     "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
@@ -607,6 +648,7 @@ class VerdictOrchestrator:
                 "payload": {
                     "render_text": text[: min(i, len(text))],
                     "will_proxy": str(will_proxy or "stable"),
+                    "ten_gods_narrative": narrative_scores,
                     "llm_meta": llm_meta if isinstance(llm_meta, dict) else {},
                     "source_facts": source_facts if isinstance(source_facts, list) else [],
                     "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from v17_rebirth.backend.plugins.spec import ArbiterType
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _manifest_hits_to_decision_rows
 from v17_rebirth.backend.plugins.spec import V17Fact
-from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration, compile_pending_decisions
+from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration, compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.target_god_resolver import infer_target_god_from_text, resolve_target_god
 
 
@@ -219,3 +220,39 @@ def test_compile_decision_arbitration_does_not_reseed_manual_relation_into_llm()
     assert len(arbitration["manual_decisions"]) == 1
     assert arbitration["manual_decisions"][0]["label"] == "六合"
     assert arbitration["llm_arbitration_context"] == []
+
+
+def test_compile_modifier_proposals_preserves_low_tier_system_auto_apply() -> None:
+    proposals = compile_modifier_proposals(
+        facts=[
+            V17Fact(
+                plugin_id="l0.physics.auto_boost",
+                text="底层自动校正：七杀 能级提升 20%。",
+                causal_tier=0,
+                suggested_arbiter=ArbiterType.SYSTEM,
+                meta={"impact_ratio": 0.2, "target_god": "七杀", "significance_weight": 1.0},
+            )
+        ],
+        physics_tensor={"ten_gods_base_l0": {"七杀": 10.0}},
+    )
+    assert len(proposals) == 1
+    assert proposals[0]["arbiter_type"] == "system"
+    assert proposals[0]["target_god"] == "七杀"
+    assert proposals[0]["impact_ratio"] == 0.2
+
+
+def test_compile_modifier_proposals_demotes_nonzero_tier_system_to_user() -> None:
+    proposals = compile_modifier_proposals(
+        facts=[
+            V17Fact(
+                plugin_id="l2.structure.review",
+                text="结构提示：正财 需要人工确认。",
+                causal_tier=2,
+                suggested_arbiter=ArbiterType.SYSTEM,
+                meta={"impact_ratio": 0.15, "target_god": "正财"},
+            )
+        ],
+        physics_tensor={"ten_gods_base_l0": {"正财": 10.0}},
+    )
+    assert len(proposals) == 1
+    assert proposals[0]["arbiter_type"] == "user"

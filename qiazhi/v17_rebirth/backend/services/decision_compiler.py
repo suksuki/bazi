@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact
@@ -132,7 +133,7 @@ def _arbitration_mode_label(mode: str) -> str:
 def _annotate_arbitration_trace(row: Dict[str, Any], mode: str) -> Dict[str, Any]:
     cloned = dict(row)
     impact = cloned.get("physical_impact") if isinstance(cloned.get("physical_impact"), dict) else {}
-    level = int(impact.get("intensity_level") or 0)
+    level = 0 if bool(cloned.get("physical_impact_inferred")) else int(impact.get("intensity_level") or 0)
     cloned["source_label"] = str(cloned.get("source_label") or _source_label(cloned.get("source") or cloned.get("plugin_id")))
     cloned["arbitration_mode"] = mode
     cloned["arbitration_trace"] = f"{cloned['source_label']} -> L{level if level > 0 else '?'} -> {_arbitration_mode_label(mode)}"
@@ -223,11 +224,16 @@ def compile_pending_decisions(
         row["target_god"] = target_god
         if not physical_impact:
             physical_impact = decision_relative_impact(row["title"], target_god)
+            row["physical_impact_inferred"] = True
         elif target_god and not str(physical_impact.get("target_god") or "").strip():
             physical_impact["target_god"] = target_god
+            row["physical_impact_inferred"] = False
+        else:
+            row["physical_impact_inferred"] = False
         row["physical_impact"] = physical_impact
-        if not row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
-            continue
+        row["physical_impact"] = physical_impact
+        # V17.99: 废除 Target God 歧视。
+        # 即便没有明确的目标神位移，描述性/诊断性的 L1-L4 事实也必须进入 Inbox。
         key = f"{str(row.get('source') or row.get('plugin_id') or 'legacy')}|{row['label']}"
         by_identity[key] = row
 
@@ -252,10 +258,14 @@ def compile_pending_decisions(
         }
         if not isinstance(row["physical_impact"], dict) or not row["physical_impact"]:
             row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
+            row["physical_impact_inferred"] = True
         elif row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
             row["physical_impact"]["target_god"] = row["target_god"]
-        if not row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
-            continue
+            row["physical_impact_inferred"] = False
+        else:
+            row["physical_impact_inferred"] = False
+        row["physical_impact"] = physical_impact
+        # V17.99: 废除归并层对 Target God 的强制要求
         key = f"{row['source']}|{row['label'] or row['title']}"
         prev = by_identity.get(key)
         if prev is None or float(row["priority"]) >= float(prev.get("priority", 0.0)):
@@ -292,10 +302,14 @@ def compile_pending_decisions(
         row["physical_impact"] = dict(existing_impact or meta or decision_relative_impact(row["title"], row["target_god"]))
         if not row["physical_impact"]:
             row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
+            row["physical_impact_inferred"] = True
         elif row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
             row["physical_impact"]["target_god"] = row["target_god"]
-        if not row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
-            continue
+            row["physical_impact_inferred"] = False
+        else:
+            row["physical_impact_inferred"] = not bool(existing_impact or meta)
+        
+        # V17.99: 废除归并层对 Target God 的最后一道分流限制
         by_identity[key] = row
 
     merged = list(by_identity.values())
@@ -303,19 +317,73 @@ def compile_pending_decisions(
     return merged[:64]
 
 
+def compile_modifier_proposals(
+    *,
+    facts: List[V17Fact],
+    physics_tensor: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    proposals: List[Dict[str, Any]] = []
+    for idx, fact in enumerate(facts):
+        meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
+        if "impact_ratio" not in meta:
+            continue
+        try:
+            impact_ratio = float(meta.get("impact_ratio", 0.0) or 0.0)
+            significance_weight = float(meta.get("significance_weight", 1.0) or 1.0)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(impact_ratio) or not math.isfinite(significance_weight):
+            continue
+        target_god = resolve_target_god(
+            row_target=fact.target_god,
+            impact=meta,
+            meta=meta,
+            title=fact.text,
+            label=fact.decision_hint or fact.text,
+            plugin_id=fact.plugin_id,
+            physics_tensor=physics_tensor,
+        )
+        arbiter = str(getattr(fact.suggested_arbiter, "value", fact.suggested_arbiter) or "system").strip().lower()
+        if int(fact.causal_tier or 0) >= 1 and arbiter == "system":
+            arbiter = "user"
+        proposals.append(
+            {
+                "id": f"{fact.plugin_id}_proposal_{idx}",
+                "plugin_id": str(fact.plugin_id or "").strip(),
+                "title": str(fact.text or "").strip(),
+                "reason": str(fact.text or "").strip(),
+                "target_god": target_god,
+                "impact_ratio": impact_ratio,
+                "significance_weight": significance_weight,
+                "arbiter_type": arbiter,
+                "causal_tier": int(fact.causal_tier or 0),
+            }
+        )
+    return proposals
+
+
 def _is_manual_candidate(row: Dict[str, Any]) -> bool:
+    # V17.99: 优先服从预设的裁决标签
+    arbiter_val = str(row.get("arbiter_type") or "").strip().lower()
+    if arbiter_val == "user":
+        return True
+    
     target_god = str(row.get("target_god") or "").strip()
     impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
-    if not target_god and not str(impact.get("target_god") or "").strip():
-        return False
+    # 如果没有预设标签，则回退到基础逻辑，但放宽目标神限制
     label = str(row.get("label") or row.get("hint") or "").strip()
     title = str(row.get("title") or "").strip()
     text = f"{label} {title}"
-    blockers = ("状态机", "烈度", "快照", "显影", "诊断", "报告", "映射")
+    blockers = ("状态机", "快照", "显影", "诊断", "报告", "映射")
     return not any(k in text for k in blockers)
 
 
 def _is_auto_candidate(row: Dict[str, Any]) -> bool:
+    # V17.99: 优先服从预设的裁决标签
+    arbiter_val = str(row.get("arbiter_type") or "").strip().lower()
+    if arbiter_val == "system":
+        return True
+    
     impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
     significance = str(impact.get("significance_level") or "").strip().upper()
     source = str(row.get("source") or row.get("plugin_id") or "").strip()

@@ -167,9 +167,9 @@ def _v1721_reasoning_suppressed_body_patch() -> Dict[str, Any]:
 
 
 def _fuse_max_tokens_default() -> int:
-    """叙事织造默认生成长度上限；默认 512 减轻本地 Ollama 卡顿。可用 QIAZHI_V17_FUSE_MAX_TOKENS 覆盖。"""
+    """叙事织造默认生成长度上限；默认 2048 适配 L1-L4 高复杂度裁决。"""
     try:
-        v = int(str(os.getenv("QIAZHI_V17_FUSE_MAX_TOKENS", "512") or "512").strip())
+        v = int(str(os.getenv("QIAZHI_V17_FUSE_MAX_TOKENS", "2048") or "2048").strip())
         return max(64, min(8192, v))
     except (TypeError, ValueError):
         return 512
@@ -203,7 +203,7 @@ def build_llm_audit_payload(
     will_proxy: str,
     decision_anchor: str,
     action_signal: bool,
-    max_tokens: int = 512,
+    max_tokens: int = 2048,
     role_style: str = V17_ROLE_WEAVER,
     physics_tensor: Optional[Dict[str, Any]] = None,
     session_id: str = "",
@@ -575,7 +575,7 @@ class V17MicroLlmClient:
         *,
         fragments: list[str],
         will_proxy: str,
-        max_tokens: int = 512,
+        max_tokens: int = 2048,
         decision_anchor: str = "",
         action_signal: bool = False,
         action_queue: Optional[asyncio.Queue[Dict[str, Any]]] = None,

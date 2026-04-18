@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
+from v17_rebirth.backend.services.physics_layers import read_runtime_scores
+
 
 @dataclass
 class PhysicsAdapter:
@@ -17,25 +19,7 @@ class PhysicsAdapter:
         }
 
     def read_deity_scores(self, raw_physics: Dict[str, Any]) -> Dict[str, float]:
-        src = {}
-        if isinstance(raw_physics, dict):
-            src = (
-                raw_physics.get("ten_gods_absolute")
-                or raw_physics.get("ten_gods_absolute_intensity")
-                or raw_physics.get("deity_scores")
-            )
-        if not isinstance(src, dict):
-            return {}
-        out: Dict[str, float] = {}
-        for k, v in src.items():
-            key = str(k).strip()
-            if not key:
-                continue
-            try:
-                out[key] = float(v)
-            except (TypeError, ValueError):
-                continue
-        return out
+        return read_runtime_scores(raw_physics)
 
     def read_interaction_v2(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(raw_physics, dict):

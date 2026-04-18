@@ -4,6 +4,8 @@ V17.99：物理水分抽取层（Hydration Hub）。
 """
 from __future__ import annotations
 import logging
+import math
+from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from typing import Any, Dict, List, Optional
 
 from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
@@ -32,7 +34,8 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     ten_god_from_stems,
 )
 from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
-from v17_rebirth.backend.services.decision_compiler import compile_pending_decisions
+from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
+from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
 
 _log = logging.getLogger(__name__)
 
@@ -53,8 +56,10 @@ def _register_manifest_hit(hits, plugin_id, fact, label, priority, evidence=None
         "label": label,
         "priority": priority,
         "evidence": evidence or {},
-        "activated": False,
-        "last_facts": []
+        "framework_standard": "v17_manifest_unified",
+        "hit_source": "l1_meta_hydration",
+        "activated": True, # V17.99: 强制激活，进入裁决视野
+        "last_facts": [fact] if fact else []
     }
 
 
@@ -195,11 +200,12 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     san_he = eval_sanhe_hits(branches) if branches else []
     ban_he = eval_banhe_hits(branches) if branches else []
     an_he = eval_anhe_hits(branches) if branches else []
+    muku_hits = [b for b in branches.values() if b in {"辰", "戌", "丑", "未"}] if branches else []
     sanxing_geo = sanxing_detect_geometry(branches) if branches else []
     stem_cases = detect_stem_fusion_cases(stems, branches) if stems else []
 
     # 2. 填充 interaction_v2 (用于插件探测源)
-    meta["interaction_v2"] = {
+    geom_data = {
         "version": "interaction_v2.v1",
         "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_chong],
         "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_hai],
@@ -209,79 +215,208 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in an_he],
         "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge")} for h in sanxing_geo],
     }
+    meta["interaction_v2"] = geom_data
+    pt["interaction_v2"] = geom_data # 增强型注入
+    
+    print(f"[V17-HYDRATION-GEOM] Sanhe: {len(san_he)} | Sanxing: {len(sanxing_geo)}")
 
     # 3. 填充基础 Hits (Legacy Admin UI 兼容)
     hits = {}
     if liu_chong: _register_manifest_hit(hits, "l1.physics.op_branch_liuchong", "", "六冲", 0.72)
     if san_he: _register_manifest_hit(hits, "l1.physics.op_branch_sanhe", "", "三合成局", 0.76)
+    if ban_he: _register_manifest_hit(hits, "l1.physics.op_branch_banhe", "", "半合聚势", 0.69)
+    if an_he: _register_manifest_hit(hits, "l1.physics.op_branch_anhe", "", "暗合", 0.68)
+    if muku_hits: _register_manifest_hit(hits, "l1.physics.op_branch_muku", "", "墓库门态", 0.73, {"branches": muku_hits})
     if liu_hai: _register_manifest_hit(hits, "l1.physics.op_branch_liuhai", "", "六害", 0.7)
     if sanxing_geo: _register_manifest_hit(hits, "l1.physics.op_branch_sanxing", "", "三刑", 0.71)
 
     # 4. 插件周期演化 (Plugin Lifecycle Loop)
-    deity_scores = pt.get("ten_gods_absolute") or pt.get("deity_scores") or {}
-    _absolute = dict(deity_scores)
+    _active_plugins = []
+    collected_facts = []
+    
+    # Phase 1：拆分基线层与运行态层。
+    _base = read_base_scores(pt)
+    _runtime = read_runtime_scores(pt)
+    if _base:
+        pass
+    else:
+        try:
+            from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
+            scored, _ten_gods, _total_energy_index, _calc_meta = calc_deity_scores(
+                four_pillars=pt.get("four_pillars", {}),
+                luck_pillar=pt.get("luck_pillar", ""),
+                flow_pillar=pt.get("flow_pillar", ""),
+                gender=str(pt.get("gender", "male")),
+            )
+            _base = {k: float(v) for k, v in scored.items()}
+        except Exception as e:
+            logging.getLogger("v17").error(f"[V17-HYDRATION-RECOVERY] Critical failure in natal reset: {e}")
+            _base = {}
+    if not _runtime:
+        _runtime = dict(_base)
+
+    # 宇宙常数初级钳制：确保初始基准有限
+    for bucket in (_base, _runtime):
+        for k in list(bucket.keys()):
+            if not math.isfinite(bucket[k]):
+                bucket[k] = 10.0
+
+    pt["ten_gods_base_l0"] = dict(_base)
+    pt["ten_gods_analysis_input"] = dict(_base)
+    pt["ten_gods_runtime"] = dict(_runtime)
+    # 插件阶段继续复用兼容字段，但这里强制它们指向 base，避免 runtime 污染分析输入。
+    pt["ten_gods_absolute"] = dict(_base)
+    pt["deity_scores"] = dict(_base)
+    pt["ten_gods_absolute_intensity"] = dict(_base)
+    session_id = str(pt.get("session_id", "default_ghost"))
+    pt.setdefault("facts", [])
+    pt.setdefault("pending_decisions", [])
+    
     _energy_meta = pt.get("energy_meta", {})
     _ledger = _energy_meta.get("ledger")
 
     from v17_rebirth.backend.logic.plugin_discovery import iter_all_plugin_specs
+    from v17_rebirth.backend.plugins.spec import ArbiterType, AuditStatus
     all_specs = iter_all_plugin_specs()
+    _scanned_pids = [s.plugin_id for s in all_specs]
+    print(f"[V17-TRIBUNAL-MANIFEST] Scanned {len(_scanned_pids)}: {', '.join(_scanned_pids)}")
+    
+    _active_plugins = []
     
     pt.setdefault("facts", [])
     pt.setdefault("pending_decisions", [])
-    collected_facts = []
-    existing_pending = pt.get("pending_decisions") if isinstance(pt.get("pending_decisions"), list) else []
+    
+    # [V17-PROBE] 关键数据探针
+    _scores = pt.get("ten_gods_analysis_input") or {}
+    print(f"[V17-PHYSICS-PROBE] pt_keys: {list(pt.keys())} | scores_sample: {list(_scores.keys())[:3]}")
     
     for spec in all_specs:
-        facts = spec.collect_v17_facts(pt)
-        if not facts: continue
+        try:
+            facts = spec.collect_v17_facts(pt)
+        except Exception as e:
+            print(f"[V17-TRIBUNAL-ERROR] Plugin {spec.plugin_id} CRASHED: {str(e)}")
+            continue
+            
+        if not facts:
+            print(f"[V17-TRIBUNAL-SILENT] Plugin {spec.plugin_id} returned no facts. Has ten_gods_analysis_input: {'ten_gods_analysis_input' in pt}")
+            continue
+            
+        _active_plugins.append(spec.plugin_id)
         collected_facts.extend(facts)
+        if spec.plugin_id not in hits:
+            _register_manifest_hit(hits, spec.plugin_id, "", str(getattr(spec, "plugin_id", "")).strip() or "规则命中", 0.55)
+        hits[spec.plugin_id]["activated"] = True
+        hits[spec.plugin_id]["last_facts"] = [str(f.text or "").strip() for f in facts if str(f.text or "").strip()]
+        if hits[spec.plugin_id]["last_facts"]:
+            hits[spec.plugin_id]["fact"] = hits[spec.plugin_id]["last_facts"][0]
         
-        # 将事实注入全局列表，供叙事引擎使用；保持 JSON-safe dict 形态
-        pt.setdefault("facts", []).extend(
-            {
-                "fact": str(f.text or "").strip(),
-                "weight": float(f.salience_weight or 0.0),
-                "tier": int(f.causal_tier or 0),
-                "plugin": str(f.plugin_id or "").strip(),
-            }
-            for f in facts
-            if str(f.text or "").strip()
-        )
-        
-        if spec.plugin_id in hits:
-            hits[spec.plugin_id]["activated"] = True
-            hits[spec.plugin_id]["last_facts"] = [f.text for f in facts]
-        
+        # ── V17.99: 裁决分流逻辑 (Tribunal Routing) ──
         for f in facts:
-            # 2. 注入物理能级影响 (Impact Application)
-            impact = f.meta.get("impact_ratio") if isinstance(f.meta, dict) else None
-            target = f.meta.get("target_god") if isinstance(f.meta, dict) else None
-            if impact and target and target in _absolute:
-                _absolute[target] = round(_absolute[target] * (1 + impact), 2)
-                
-                # 关键同步：确保 L2 插件能看到 L1 的变动
-                pt["ten_gods_absolute"] = _absolute
-                
-                if _ledger:
-                    _ledger.append_entry(target, _absolute[target], f"L{spec.causal_tier}_PLUGIN", f"{spec.plugin_id}: {f.text}")
+            # 记录基础事实，以便后续 L2+ 插件可见
+            pt["facts"].append({
+                "fact": str(f.text or "").strip(),
+                "weight": float(f.salience_weight or 1.0),
+                "tier": int(f.causal_tier or 0),
+                "plugin": str(f.plugin_id or spec.plugin_id).strip(),
+                "priority": float(f.priority or 0.5)
+            })
 
-    # 4.5 单一入口：将插件碰撞结果统一编译为 pending_decisions
-    pt["pending_decisions"] = compile_pending_decisions(
-        facts=collected_facts,
-        spec_decisions=collect_pending_decisions_from_specs(collected_facts),
-        existing_rows=[
-            *[dict(item) for item in existing_pending if isinstance(item, dict)],
-            *_manifest_hits_to_decision_rows(hits),
-            *_geometry_hits_to_decision_rows(pt, hits),
-        ],
-        physics_tensor=pt,
+            # 裁决人裁定
+            arbiter = f.suggested_arbiter
+            if spec.causal_tier >= 1:
+                if arbiter == ArbiterType.SYSTEM:
+                    arbiter = ArbiterType.USER
+            
+            tg = f.target_god or f.meta.get("target_god") or ""
+            
+            # V17.99: 智脑降级预测 — 绝不允许出现无主物理扰动
+            if not tg and isinstance(f.meta, dict) and f.meta.get("impact_ratio"):
+                from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
+                tg = resolve_target_god(
+                    row_target=f.target_god,
+                    impact=f.meta,
+                    title=f.text,
+                    label=f.decision_hint,
+                    plugin_id=spec.plugin_id,
+                    physics_tensor=pt
+                )
+
+            decision = {
+                "id": f"{spec.plugin_id}_{len(pt['pending_decisions'])}",
+                "plugin_id": spec.plugin_id,
+                "title": f.text,
+                "label": f.decision_hint or f.text,
+                "hint": f.decision_hint or "物理提示",
+                "priority": f.priority,
+                "target_god": tg,
+                "arbiter_type": arbiter.value,
+                "status": AuditStatus.PENDING.value,
+                "physical_impact": f.meta 
+            }
+            
+            if arbiter == ArbiterType.SYSTEM:
+                decision["status"] = AuditStatus.APPROVED.value
+            
+            # 无论自动与否，均进入案卷库，由后期分桶逻辑分发到 UI 不同栏位
+            pt["pending_decisions"].append(decision)
+                # 阻塞事实不进入 pt["facts"]，直到下一轮用户 Approve 后被处理
+
+    modifier_proposals = compile_modifier_proposals(facts=collected_facts, physics_tensor=pt)
+    auto_signatures = sorted(
+        proposal_signature(p)
+        for p in modifier_proposals
+        if str(p.get("arbiter_type") or "").strip().lower() == "system"
     )
+    previous_signatures = sorted(str(x).strip() for x in meta.get("plugin_auto_settlement_signatures", []) if str(x).strip())
+    if auto_signatures != previous_signatures:
+        settled_runtime, ratio_totals, applied_rows = settle_modifier_proposals(_runtime, modifier_proposals)
+        _runtime = settled_runtime
+        meta["plugin_auto_ratio_totals"] = ratio_totals
+        meta["plugin_auto_settlement_signatures"] = auto_signatures
+        meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
+        for row in applied_rows:
+            tg = str(row.get("target_god") or "").strip()
+            before = float(row.get("before", 0.0) or 0.0)
+            after = float(row.get("after", before) or before)
+            ratio_total = float(row.get("ratio_total", 0.0) or 0.0)
+            if _ledger:
+                _ledger.append_entry(tg, after, "L1_PLUGIN_SETTLEMENT", f"插件统一结算: {ratio_total:+.4f}")
+            evolution_storage.log_evolution(
+                session_id=session_id,
+                ten_god=tg,
+                step="L1_PLUGIN_SETTLEMENT",
+                old_val=before,
+                new_val=after,
+                reason=f"插件统一结算 {ratio_total:+.4f}",
+                plugin_id="hydration.plugin_settlement",
+                fingerprint={"will_proxy": pt.get("will_proxy", "stable")},
+            )
+    else:
+        meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
+
+    _scanned_pids = [s.plugin_id for s in all_specs]
+
+    # 4.5 V17.99: 案卷分选 (Bucketing for UI)
+    pt["pending_decisions"].extend([
+        *_manifest_hits_to_decision_rows(hits),
+        *_geometry_hits_to_decision_rows(pt, hits),
+    ])
+    _all_decisions = pt.get("pending_decisions", [])
+    pt["manual_decisions"] = [d for d in _all_decisions if d.get("arbiter_type", ArbiterType.USER.value) == ArbiterType.USER.value]
+    pt["auto_resolutions"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.SYSTEM.value]
+    pt["llm_arbitration_context"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.LLM.value]
+    
+    print(f"[V17-TRIBUNAL-DEBUG] Scanned: {len(_scanned_pids)} | Active: {len(_active_plugins)} ({', '.join(_active_plugins)}) | Total: {len(_all_decisions)} | Manual: {len(pt['manual_decisions'])}")
+
+    # 保持向后兼容：pending_decisions 默认展示手动项
+    pt["pending_decisions"] = pt["manual_decisions"]
+    sync_runtime_aliases(pt, _runtime)
 
     # 5. 物理引擎结算 (Stress & Flow)
     stress_map = build_clash_stress_map(
         daymaster=_daymaster,
         branches=branches,
-        ten_gods_absolute=_absolute,
+        ten_gods_absolute=_runtime,
         interaction_v2=meta["interaction_v2"],
     )
     meta["clash_stress_map"] = stress_map
@@ -291,39 +426,48 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         g2e = _get_god_to_element_map(_daymaster)
         dm_el = STEM_ELEMENT.get(_daymaster, "")
         engine = FlowPhysicsEngine(dm_el)
-        flow_result = engine.compute_flow(ten_gods_absolute=_absolute, clash_stress_map=stress_map, ten_god_to_el=g2e)
+        flow_result = engine.compute_flow(ten_gods_absolute=_runtime, clash_stress_map=stress_map, ten_god_to_el=g2e)
         for god, dq in flow_result.get("ten_god_deltas", {}).items():
-            if abs(dq) > 0.001 and god in _absolute:
-                _absolute[god] = round(_absolute[god] + dq, 2)
+            if abs(dq) > 0.001 and god in _runtime:
+                _runtime[god] = round(_runtime[god] + dq, 2)
                 if _ledger:
-                    _ledger.append_entry(god, _absolute[god], "L1.5_FLOW", "内生系统平衡流转")
+                    _ledger.append_entry(god, _runtime[god], "L1.5_FLOW", "内生系统平衡流转")
         meta["flow_topology"] = flow_result["topology"]
 
     # 6. Action Impact & Will Proxy
     _decisions = pt.get("pending_decisions", [])
     for d in _decisions:
         if isinstance(d, dict) and d.get("applied"):
-            impact = d.get("physical_impact", {})
-            tg = d.get("target_god")
-            if tg in _absolute:
-                ratio = float(impact.get("impact_ratio", 0.15)) * float(impact.get("significance_weight", 1.0))
-                _absolute[tg] = round(_absolute[tg] * (1.0 + ratio), 2)
-                if _ledger:
-                    _ledger.append_entry(tg, _absolute[tg], "L2_ACTION", f"决策生效: {d.get('title')}")
+            # 手动裁决的物理后果已经由 PhysicsKernel 固化到当前张量；
+            # hydration 只做透传，避免每次快照重复乘算。
+            d["impact_committed"] = True
 
-    _will = pt.get("will_proxy", "stable")
-    if _will == "stable":
-        for g in ["正官", "七杀", "正印", "偏印", "比肩", "劫财"]:
-            if g in _absolute: _absolute[g] = round(_absolute[g] * 1.15, 2)
-    elif _will == "aggressive":
-        for g in ["食神", "伤官", "正财", "偏财"]:
-            if g in _absolute: _absolute[g] = round(_absolute[g] * 1.25, 2)
+    # V17.99: 宇宙常数终极护栏 (The Final Cosmic Guardrail)
+    from v17_rebirth.backend.logic.configs.manager import get_v17_constants
+    guardrails = get_v17_constants().get("PHYSICS_GUARDRAILS", {})
+    e_min = float(guardrails.get("ENERGY_MIN", 0.1))
+    e_max = float(guardrails.get("ENERGY_MAX", 1000.0))
+
+    for tg in list(_runtime.keys()):
+        val = _runtime[tg]
+        # 强制钳制：[ENERGY_MIN, ENERGY_MAX] 且确保有限性
+        if not math.isfinite(val):
+            val_clamped = 10.0 # 坏值安全复原
+        else:
+            val_clamped = max(e_min, min(e_max, val))
+        
+        _runtime[tg] = round(val_clamped, 2)
 
     # 7. 终效同步与清理
-    pt["ten_gods_absolute"] = _absolute
-    pt["ten_gods_absolute_intensity"] = _absolute
-    pt["deity_scores"] = _absolute
+    pt["ten_gods_base_l0"] = dict(_base)
+    sync_runtime_aliases(pt, _runtime)
     meta["l1_manifest_hits"] = hits
+    qsc = meta.get("qi_status_coeffs") if isinstance(meta.get("qi_status_coeffs"), dict) else {}
+    if qsc:
+        meta["l1_status_v1"] = {
+            "phase": str(qsc.get("stage") or "").strip(),
+            "resistance": float(qsc.get("resistance", 1.0) or 1.0),
+        }
     meta["_v17_hydrated"] = True
 
     if _ledger:

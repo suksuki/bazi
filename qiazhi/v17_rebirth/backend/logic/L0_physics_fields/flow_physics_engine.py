@@ -98,13 +98,29 @@ class FlowPhysicsEngine:
                     continue # 暂不考虑反生反克
                 
                 # 应力调制：R_new = R_base * (1 + 1/F)
-                f = stress_matrix[i][j]
+                # V17.99: 物理奇点保护 — 将 1/F 重构为稳健的线性衰减调制
+                # 当应力 f=0 时，电阻保持由于 max(0.1, f) 限制在 11倍基准，确保有限性
+                f = float(stress_matrix[i][j])
                 modulation = (1.0 + (1.0 / max(0.1, f))) 
-                r_now = r_base * modulation
+                
+                # 再次防御：强制截断并确保有限
+                if not math.isfinite(modulation):
+                    modulation = 11.0
+                
+                r_now = r_base * min(11.0, modulation)
                 
                 # 欧姆定律计算电流 (从 i 指向 j)
                 v_diff = potentials[i] - potentials[j]
-                current = v_diff / r_now
+                
+                # 安全校验：若电位差本身异常，电流强制归零
+                if not math.isfinite(v_diff) or not math.isfinite(r_now) or r_now <= 0:
+                    current = 0.0
+                else:
+                    current = v_diff / r_now
+                
+                # V17.99: 分流钳制 — 防止支路电流溢出 (Max Delta Cap)
+                if current > 2000.0: current = 2000.0
+                if current < -2000.0: current = -2000.0
                 
                 # KCL 记录
                 node_net_currents[i] -= current # 流出
@@ -130,7 +146,12 @@ class FlowPhysicsEngine:
                 # 这里的 I_net 是净流入量
                 node_weight = val / max(0.1, potentials[idx])
                 god_dq = node_net_currents[idx] * FLOW_CONDUCTIVITY_ALPHA * node_weight
-                ten_god_deltas[god] = round(god_dq, 3)
+                
+                # V17.99: 终极大闸 — 确保回写能量变化量是有限的
+                if math.isfinite(god_dq):
+                    ten_god_deltas[god] = round(god_dq, 3)
+                else:
+                    ten_god_deltas[god] = 0.0
 
         return {
             "ten_god_deltas": ten_god_deltas,

@@ -24,16 +24,14 @@ class RiskMatrixPlugin(V17PluginSpec):
     causal_tier: int = 2
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        scores = physics_tensor.get("ten_gods_absolute", {})
         meta = physics_tensor.get("meta", {})
         iv2 = meta.get("interaction_v2", {})
-        scores = physics_tensor.get("ten_gods_absolute", {})
         results: List[V17Fact] = []
 
         # 1. 羊刃逢冲 (Blade Clash)
         clashes = iv2.get("liu_chong", [])
         if clashes:
-            # 简化判定：子午卯酉中神之冲，且对应十神为比劫/官杀等
-            # 这里我们检测是否有显著的剧烈冲动
             found_blade = False
             for cl in clashes:
                 brs = cl.get("pair") or []
@@ -46,27 +44,27 @@ class RiskMatrixPlugin(V17PluginSpec):
                     text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
                     causal_tier=self.causal_tier,
                     priority=0.95,
-                    decision_hint="建议配置【动态平衡阀】，防止系统因应力过大崩溃；在动作层降低冲动权重。",
+                    decision_hint="建议配置【动态平衡阀】，防止系统因应力过大崩溃。",
                     meta={"impact_ratio": 0.2, "target_god": "比肩"} 
                 ))
 
         # 2. 枭神夺食 (Owl Food)
-        owl = scores.get("偏印", 0)
-        food = scores.get("食神", 0)
-        if owl > food > 5:
+        owl = float(scores.get("偏印", 0))
+        food = float(scores.get("食神", 0))
+        if owl > food > 5.0:
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
                 text="结构呈现「枭神夺食」态势：输出通道受阻，存在内耗熵增。",
                 causal_tier=self.causal_tier,
                 priority=0.88,
-                decision_hint="优先疏通【偏财】通路缓解压制；或增加【劫财】作为缓冲层。",
+                decision_hint="优先疏通【偏财】通路缓解压制。",
                 meta={"impact_ratio": -0.15, "target_god": "食神"}
             ))
 
         # 3. 伤官见官 (Officer See Hurt)
-        hurt = scores.get("伤官", 0)
-        offist = scores.get("正官", 0)
-        if hurt > 15 and offist > 15:
+        hurt = float(scores.get("伤官", 0))
+        offist = float(scores.get("正官", 0))
+        if hurt > 10.0 and offist > 10.0:
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
                 text="检测到「伤官见官」：秩序约束与意志扩张发生剧烈摩擦。",

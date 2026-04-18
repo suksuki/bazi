@@ -43,7 +43,7 @@ class MicroLlmClient(Protocol):
         *,
         fragments: list[str],
         will_proxy: str,
-        max_tokens: int = 512,
+        max_tokens: int = 2048,
         decision_anchor: str = "",
         action_signal: bool = False,
         action_queue: Optional[asyncio.Queue[Dict[str, Any]]] = None,
@@ -231,7 +231,7 @@ class SemanticFusion:
         async for step in self.llm_client.fuse(
             fragments=rows,
             will_proxy=will_proxy,
-            max_tokens=512,
+            max_tokens=2048,
             decision_anchor=str(decision_anchor or ""),
             action_signal=bool(action_signal),
             action_queue=action_queue,

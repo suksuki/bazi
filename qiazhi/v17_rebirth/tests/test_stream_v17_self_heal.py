@@ -5,7 +5,7 @@ import json
 
 from v17_rebirth.backend.api import stream_v17
 from v17_rebirth.backend.services import physics_service
-from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrator
+from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrator, _queue_llm_feedback_proposal
 
 
 class _FakeBackend:
@@ -18,6 +18,9 @@ class _FakeBackend:
     async def set_physics(self, session_id: str, tensor: dict) -> bool:
         self.physics[session_id] = dict(tensor)
         return True
+
+    async def publish_action(self, _session_id: str, _event: dict) -> None:
+        return None
 
 
 def test_self_heal_physics_if_missing_rebuilds_backend_tensor(monkeypatch) -> None:
@@ -152,3 +155,27 @@ def test_stream_frames_emits_terminal_error_frame_on_unhandled_narrator_exceptio
     assert final["layer"] == "NARRATOR"
     assert final["payload"]["llm_meta"]["engine_state"] == "orchestrator_runtime_error"
     assert "llm_audit_dispatch" in final["payload"]["llm_meta"]["step_position"]
+
+
+def test_llm_feedback_is_queued_as_pending_proposal(monkeypatch) -> None:
+    backend = _FakeBackend()
+    monkeypatch.setattr("v17_rebirth.infrastructure.state_backend.get_state_backend", lambda: backend)
+
+    raw_physics = {"pending_proposals": []}
+    asyncio.run(
+        _queue_llm_feedback_proposal(
+            session_id="sid",
+            raw_physics=raw_physics,
+            tag="INTENSIFY",
+            element_or_god="七杀",
+            reason="叙事洞察: 七杀势态变化",
+        )
+    )
+
+    proposals = raw_physics["pending_proposals"]
+    assert len(proposals) == 1
+    assert proposals[0]["source"] == "llm_feedback"
+    assert proposals[0]["arbiter_type"] == "llm"
+    assert proposals[0]["status"] == "pending"
+    assert proposals[0]["tag"] == "INTENSIFY"
+    assert backend.physics["sid"]["pending_proposals"][0]["target_node"] == "七杀"

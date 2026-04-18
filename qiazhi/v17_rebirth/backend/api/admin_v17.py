@@ -13,6 +13,7 @@ from v17_rebirth.backend.logic.plugin_discovery import annotate_causal_trace, re
 from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_with_runtime
 from v17_rebirth.backend.services.verdict_orchestrator import restart_realtime_pipeline
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
+from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.paths import RUNTIME_DIR
 
 router = APIRouter(tags=["v17-admin"])
@@ -387,3 +388,29 @@ async def update_plugin_config_api(plugin_id: str, payload: Dict[str, Any]) -> D
 
     restart_realtime_pipeline()
     return {"ok": True, "config": new_config, "message": f"Plugin {plugin_id} config updated"}
+
+
+@router.get("/v17/admin/evolution-logs")
+async def get_evolution_logs(
+    limit: int = Query(default=50),
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    logs = evolution_storage.get_recent_evolution(limit=limit)
+    return {"ok": True, "logs": logs}
+
+
+@router.get("/v17/admin/rlhf-feedback")
+async def get_rlhf_feedback(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    # 暂时重用 evolution_storage 的方法，后续可扩展专用查询
+    import sqlite3
+    with sqlite3.connect(evolution_storage.db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM rlhf_feedback ORDER BY timestamp DESC LIMIT 100")
+        rows = [dict(row) for row in cursor.fetchall()]
+    return {"ok": True, "feedback": rows}

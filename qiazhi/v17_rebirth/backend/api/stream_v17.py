@@ -20,6 +20,9 @@ from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import hydrate_v17_physics_tensor
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError, PhysicsService
 from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrator
+from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
+from v17_rebirth.backend.services.physics_layers import sync_runtime_aliases
+from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
 from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
 
@@ -72,10 +75,13 @@ def _sovereignty_v17(origin: Optional[str]) -> bool:
 
 
 def _default_payload() -> Dict[str, Any]:
+    scores = {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4}
     return {
-        "deity_scores": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
-        "ten_gods_absolute_intensity": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
-        "ten_gods_absolute": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
+        "ten_gods_base_l0": dict(scores),
+        "ten_gods_runtime": dict(scores),
+        "deity_scores": dict(scores),
+        "ten_gods_absolute_intensity": dict(scores),
+        "ten_gods_absolute": dict(scores),
         "total_energy_index": 85.74,
         "facts": [
             "五行火旺，结构张力上扬",
@@ -188,7 +194,7 @@ def _run_v17_physics_core(
 
     _stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
     _branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    dt = birth_time or datetime.now(_tz.utc).replace(tzinfo=None)
+    dt = birth_time or datetime(1977, 5, 8, 18, 0, 0)
     gender_norm = "male" if str(gender or "").lower() == "male" else "female"
     fy = int(flow_year) if flow_year is not None else datetime.now().year
 
@@ -243,10 +249,9 @@ def _run_v17_physics_core(
     raw_ledger = energy_meta.pop("ledger", None)
     ten_gods_ledger = raw_ledger.to_dict() if isinstance(raw_ledger, EvolutionLedger) else {}
 
-    return {
-        "deity_scores": scores,
-        "ten_gods_absolute_intensity": scores,
-        "ten_gods_absolute": scores,
+    payload = {
+        "ten_gods_base_l0": dict(scores),
+        "ten_gods_runtime": dict(scores),
         "total_energy_index": total_energy_index,
         "energy_meta": energy_meta,
         "ten_gods_ledger": ten_gods_ledger,
@@ -259,6 +264,8 @@ def _run_v17_physics_core(
         "gender": gender_norm,
         "birth_time": dt.isoformat(),
     }
+    sync_runtime_aliases(payload, scores)
+    return payload
 
 
 def _physical_void_stop_frame() -> Dict[str, Any]:
@@ -595,7 +602,11 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
             await asyncio.sleep(0)
             return
     facts = pl.get("facts") if isinstance(pl.get("facts"), list) else []
-    dec_raw = pl.get("decisions") if isinstance(pl.get("decisions"), list) else []
+    # V17.99：从物理张量中提取全量案卷（跨 L1-L4）
+    dec_raw = pl.get("pending_decisions") if isinstance(pl.get("pending_decisions"), list) else []
+    if not dec_raw:
+        dec_raw = pl.get("decisions") if isinstance(pl.get("decisions"), list) else []
+    
     decisions_rows: List[Dict[str, Any]] = []
     for x in dec_raw:
         if not isinstance(x, dict):
@@ -718,7 +729,7 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
 async def stream_v17(
     will_proxy: str = Query(default="stable", pattern="^(stable|aggressive|neutral)$"),
     birth_time: Optional[str] = Query(default=None),
-    gender: Optional[str] = Query(default="female", pattern="^(male|female)$"),
+    gender: Optional[str] = Query(default="male", pattern="^(male|female)$"),
     flow_year: Optional[int] = Query(default=None, ge=1800, le=2200),
     v17_origin: Optional[str] = Query(default=None),
 ) -> Union[StreamingResponse, JSONResponse]:
@@ -746,7 +757,7 @@ async def stream_v17_post(
     payload: Dict[str, Any],
     will_proxy: str = Query(default="stable", pattern="^(stable|aggressive|neutral)$"),
     birth_time: Optional[str] = Query(default=None),
-    gender: Optional[str] = Query(default="female", pattern="^(male|female)$"),
+    gender: Optional[str] = Query(default="male", pattern="^(male|female)$"),
     flow_year: Optional[int] = Query(default=None, ge=1800, le=2200),
 ) -> Union[StreamingResponse, JSONResponse]:
     session_id = str((payload or {}).get("session_id", "")).strip() or "default"
@@ -802,52 +813,65 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel
         try:
             current_physics = await get_state_backend().get_physics(session_id)
+            vote_status = str(payload.get("status", "APPROVED")).upper() # 默认为 APPROVED (兼容旧版)
+            matched_decision = None
+
             if isinstance(current_physics, dict):
                 pending = current_physics.get("pending_decisions")
                 if isinstance(pending, list):
-                    matched_decision = None
                     for item in pending:
                         if not isinstance(item, dict):
                             continue
                         item_id = str(item.get("id", "")).strip()
                         item_label = str(item.get("label", "")).strip()
-                        item_title = str(item.get("title", "")).strip()
-                        if (decision_id and item_id == decision_id) or action in {item_label, item_title}:
+                        if (decision_id and item_id == decision_id) or action == item_label:
                             matched_decision = item
-                            item["applied"] = True
+                            # ── V17.99: 裁决状态写入案卷 ──
+                            item["status"] = vote_status
+                            if vote_status == "APPROVED":
+                                item["applied"] = True
                             break
-                    if isinstance(matched_decision, dict):
-                        if not isinstance(payload.get("physical_impact"), dict) and isinstance(matched_decision.get("physical_impact"), dict):
-                            payload["physical_impact"] = matched_decision.get("physical_impact")
-                        if not str(payload.get("target_god", "")).strip() and str(matched_decision.get("target_god", "")).strip():
-                            payload["target_god"] = matched_decision.get("target_god")
-                    
-                    # V17.99: 严格数据契约校验 - 禁止无主决策执行
-                    final_target = str(payload.get("target_god", "")).strip()
-                    if not final_target and isinstance(payload.get("physical_impact"), dict):
-                         final_target = str(payload["physical_impact"].get("target_god", "")).strip()
-                         if final_target:
-                             payload["target_god"] = final_target
-                    if not final_target:
-                         final_target = resolve_target_god(
-                             row_target=payload.get("target_god"),
-                             impact=payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {},
-                             title=payload.get("title") or payload.get("action"),
-                             label=matched_decision.get("label") if isinstance(matched_decision, dict) else "",
-                             plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
-                             physics_tensor=current_physics if isinstance(current_physics, dict) else {},
-                         )
-                         if final_target:
-                             payload["target_god"] = final_target
-                    if not final_target:
-                         _log.error("[V17-DATA-INTEGRITY] Rejected action %s due to NULL_TARGET", action)
-                         return JSONResponse({
-                             "ok": False, 
-                             "detail": "ERROR_NULL_TARGET", 
-                             "error_code": "NULL_TARGET_GOD"
-                         }, status_code=422)
-                    
+
+                if vote_status == "REJECTED":
+                    _log.info("[V17-TRIBUNAL] User REJECTED decision: %s", action)
+                    evolution_storage.log_feedback(
+                        session_id=session_id,
+                        decision_id=decision_id or action,
+                        action=action,
+                        status="REJECTED",
+                        meta={"trigger": "user_manual_reject"},
+                    )
                     await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse({"ok": True, "signal": "VOTE_REJECTED", "action": action})
+
+                if isinstance(matched_decision, dict):
+                    if not isinstance(payload.get("physical_impact"), dict) and isinstance(matched_decision.get("physical_impact"), dict):
+                        payload["physical_impact"] = matched_decision.get("physical_impact")
+
+                # 严格数据契约校验 - 禁止无主决策执行
+                final_target = str(payload.get("target_god", "")).strip()
+                if not final_target and isinstance(payload.get("physical_impact"), dict):
+                    final_target = str(payload["physical_impact"].get("target_god", "")).strip()
+                    if final_target:
+                        payload["target_god"] = final_target
+                if not final_target:
+                    final_target = resolve_target_god(
+                        row_target=payload.get("target_god"),
+                        impact=payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {},
+                        title=payload.get("title") or payload.get("action"),
+                        label=matched_decision.get("label") if isinstance(matched_decision, dict) else "",
+                        plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
+                        physics_tensor=current_physics if isinstance(current_physics, dict) else {},
+                    )
+                    if final_target:
+                        payload["target_god"] = final_target
+                if not final_target:
+                    await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
+
+                await get_state_backend().set_physics(session_id, current_physics)
             kernel_dispatch_ok = await PhysicsKernel.dispatch_perturbation(
                 session_id=session_id,
                 source="SRC_MANUAL",
@@ -878,6 +902,25 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
 
     # 发布原始事件（用于 Narrator 重启等逻辑）
     await get_state_backend().publish_action(session_id, event)
+    
+    # V17.99: 记录正反馈并捕获残差 (The Cerebrum)
+    if signal == "ACTION_TAKEN" and kernel_dispatch_ok:
+        try:
+            residual = float(payload.get("residual", 0.0))
+            evolution_storage.log_feedback(
+                session_id=session_id,
+                decision_id=decision_id or action,
+                action=action,
+                status="APPROVED",
+                residual=residual,
+                meta={
+                    "impact_ratio": payload.get("physical_impact", {}).get("impact_ratio"),
+                    "target_god": payload.get("target_god")
+                }
+            )
+        except Exception as e:
+            _log.error(f"[V17-EVOLUTION-LOG-FAIL] {e}")
+
     return JSONResponse({"ok": True, "signal": signal, "will_proxy_delta": "aggressive" if any(k in action for k in ["进", "冲", "加码"]) else "stable"})
 
 

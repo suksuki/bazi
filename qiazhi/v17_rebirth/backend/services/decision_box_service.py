@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import FlowPhysicsEngine
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
+from v17_rebirth.backend.services.physics_layers import read_runtime_scores, sync_runtime_aliases
 
 _log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class DecisionBoxService:
         ratio_applied = impact_ratio * significance_weight
         old_val = 0.0
         
-        ten_gods = pt.get("ten_gods_absolute", {})
+        ten_gods = read_runtime_scores(pt)
         if target_god and target_god in ten_gods:
             old_val = ten_gods[target_god]
             ten_gods[target_god] = round(old_val * (1.0 + ratio_applied), 2)
@@ -122,8 +123,7 @@ class DecisionBoxService:
             if len(ledger_data[g]) > 8: ledger_data[g].pop(1) # 保留基准，滚动删除
 
         # 5. 更新状态并发布信号
-        pt["ten_gods_absolute"] = ten_gods
-        pt["ten_gods_absolute_intensity"] = ten_gods
+        sync_runtime_aliases(pt, ten_gods)
         pt["ten_gods_ledger"] = ledger_data
         pt["total_energy_index"] = round(sum(ten_gods.values()), 2)
         pt["flow_topology"] = flow_result["topology"]
@@ -136,6 +136,7 @@ class DecisionBoxService:
             "session_id": session_id,
             "ts": datetime.now(timezone.utc).isoformat(),
             "payload": {
+                "ten_gods_runtime": ten_gods,
                 "ten_gods_absolute": ten_gods,
                 "ten_gods_ledger": ledger_data,
                 "total_energy_index": pt["total_energy_index"],

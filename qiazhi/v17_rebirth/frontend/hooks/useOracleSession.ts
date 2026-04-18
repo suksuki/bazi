@@ -17,10 +17,20 @@ import {
 // ─── Type helpers ─────────────────────────────────────────────────────────────
 
 export type Decision = {
-  id: string;
-  label: string;
+  id?: string;
+  label?: string;
   title?: string;
   target_god?: string;
+  source?: string;
+  source_label?: string;
+  priority?: number;
+  status?: "APPROVED" | "REJECTED" | "pending";
+  arbitration_trace?: string;
+  llm_resolution_policy?: string;
+  llm_resolution_result?: string;
+  resolved_from_llm?: boolean;
+  llm_resolution_state?: string;
+  llm_terminal_state?: string;
   physical_impact?: {
     target_god?: string;
     impact_ratio?: number;
@@ -48,7 +58,7 @@ export interface OracleSession {
 
   // --- decisions ---
   adoptedDecisions: Decision[];
-  handleAdopted: (d: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; impact_ratio?: number; significance_level?: string; significance_weight?: number; intensity_level?: number; resistance_mod?: Record<string, unknown> } }) => Promise<void>;
+  handleAdopted: (d: Decision & { status: "APPROVED" | "REJECTED" }) => Promise<void>;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -359,7 +369,7 @@ export function useOracleSession(): OracleSession {
     setDecisionActionError("");
   }
 
-  async function handleAdopted(decision: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; impact_ratio?: number; significance_level?: string; significance_weight?: number; intensity_level?: number; resistance_mod?: Record<string, unknown> } }) {
+  async function handleAdopted(decision: Decision & { status: "APPROVED" | "REJECTED" }) {
     const id = String(decision.id || decision.title || `d_${Date.now()}`);
     const label = String(decision.label || decision.title || "").trim();
     if (!label || decisionLockStartedAtMs != null) return;
@@ -375,6 +385,7 @@ export function useOracleSession(): OracleSession {
           session_id: sessionId || "default",
           decision_id: id,
           signal: "ACTION_TAKEN",
+          status: decision.status || "APPROVED",
           action: label,
           title: String(decision.title || "").trim(),
           target_god: String(decision.target_god || "").trim() || undefined,
