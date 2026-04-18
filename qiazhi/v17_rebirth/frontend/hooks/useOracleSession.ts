@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  deriveV17LlmLifecycle,
   mergeV17LlmMetaForUi,
   shouldReleaseDecisionInboxLock,
   useV17WebStream,
@@ -15,7 +16,17 @@ import {
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
 
-export type Decision = { id: string; label: string };
+export type Decision = {
+  id: string;
+  label: string;
+  title?: string;
+  target_god?: string;
+  physical_impact?: {
+    target_god?: string;
+    delta_q?: number;
+    resistance_mod?: Record<string, unknown>;
+  };
+};
 
 export interface OracleSession {
   // --- stream frames ---
@@ -34,7 +45,7 @@ export interface OracleSession {
 
   // --- decisions ---
   adoptedDecisions: Decision[];
-  handleAdopted: (d: { id?: string; label?: string; title?: string }) => void;
+  handleAdopted: (d: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; delta_q?: number; resistance_mod?: Record<string, unknown> } }) => Promise<void>;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -55,11 +66,15 @@ export interface OracleSession {
   fullTrace: Record<string, unknown> | undefined;
 
   // --- UI phase flags ---
-  connectPhase: boolean;
-  collapsePhase: boolean;
+  llmLifecyclePhase: ReturnType<typeof deriveV17LlmLifecycle>["phase"];
+  llmStatusText: string;
+  llmStatusDetail: string;
   llmTerminal: boolean;
   modelLabel: string;
   connectTickMs: number;
+  lastHeartbeatStep: string;
+  heartbeatHistory: ReturnType<typeof useV17WebStream>["streamState"]["heartbeatHistory"];
+  streamClosed: boolean;
 
   // --- endpoint helpers ---
   streamEndpoint: string | null;
@@ -91,6 +106,7 @@ export function useOracleSession(): OracleSession {
   // Decisions
   const [adoptedDecisions, setAdoptedDecisions] = useState<Decision[]>([]);
   const [decisionLockStartedAtMs, setDecisionLockStartedAtMs] = useState<number | null>(null);
+  const [decisionActionError, setDecisionActionError] = useState("");
 
   // Trace panel
   const [traceOpen, setTraceOpen] = useState(false);
@@ -99,7 +115,7 @@ export function useOracleSession(): OracleSession {
   const [connectTickMs, setConnectTickMs] = useState(0);
 
   // ── Stream ───────────────────────────────────────────────────────────────────
-  const { frames } = useV17WebStream({
+  const { frames, streamState } = useV17WebStream({
     endpoint: streamEndpoint,
     enabled: running,
     method: "POST",
@@ -128,7 +144,13 @@ export function useOracleSession(): OracleSession {
       [...frames].reverse().find((f) => {
         if (String(f?.layer || "").toUpperCase() !== "SNAPSHOT") return false;
         const sk = String((f?.payload as { snapshot_kind?: string })?.snapshot_kind || "").trim();
-        return sk === "physics" || sk === "physical_void" || sk === "system_init_failure";
+        const type = String((f?.payload as { type?: string })?.type || "").trim();
+        return (
+          sk === "physics" ||
+          sk === "physical_void" ||
+          sk === "system_init_failure" ||
+          type === "PHYSICS_SYNC"
+        );
       }),
     [frames],
   );
@@ -190,16 +212,23 @@ export function useOracleSession(): OracleSession {
   const fullTrace = llmMeta.full_prompt_trace as Record<string, unknown> | undefined;
 
   // ── UI phase flags ───────────────────────────────────────────────────────────
-  const narratorHasChunk = Boolean(String(latestNarrator?.payload?.render_text || "").trim());
+  const lifecycle = deriveV17LlmLifecycle({
+    running,
+    llmMeta,
+    latestNarrator,
+    hasAuditPreview: Boolean(llmAuditSnapshot),
+    streamState,
+  });
   const streamPartial = llmMeta.stream_partial === true;
   const hasFinalLlmMeta =
     !streamPartial &&
     typeof llmMeta.elapsed_ms === "number" &&
     !Number.isNaN(Number(llmMeta.elapsed_ms));
-  const llmTerminal = hasFinalLlmMeta || llmMeta.ok === false;
+  const llmTerminal = ["completed", "failed", "closed_without_output"].includes(lifecycle.phase);
   const modelLabel = String(llmMeta.model || "").trim() || "叙事引擎";
-  const connectPhase = running && !narratorHasChunk;
-  const collapsePhase = running && narratorHasChunk && !hasFinalLlmMeta;
+  const lastHeartbeatStep = String(streamState.lastHeartbeat?.stepPosition || "").trim();
+  const heartbeatHistory = streamState.heartbeatHistory;
+  const streamClosed = streamState.closed;
 
   // ── Decision lock ────────────────────────────────────────────────────────────
   const latestFrameTimestamp = useMemo(
@@ -211,17 +240,31 @@ export function useOracleSession(): OracleSession {
   );
 
   useEffect(() => {
+    const latestFrame = [...frames].reverse()[0];
+    const isPhysicsUpdate = latestFrame?.payload?.type === "PHYSICS_UPDATE" || latestFrame?.payload?.type === "PHYSICS_SYNC";
+    
     if (
       shouldReleaseDecisionInboxLock({
         lockStartedAtMs: decisionLockStartedAtMs,
         latestFrameTimestamp,
         hasFinalLlmMeta,
         llmOk: llmMeta.ok as boolean | undefined,
+        isPhysicsUpdate
       })
     ) {
       setDecisionLockStartedAtMs(null);
+      setDecisionActionError("");
     }
-  }, [decisionLockStartedAtMs, latestFrameTimestamp, hasFinalLlmMeta, llmMeta.ok]);
+  }, [frames, decisionLockStartedAtMs, latestFrameTimestamp, hasFinalLlmMeta, llmMeta.ok]);
+
+  useEffect(() => {
+    if (decisionLockStartedAtMs == null) return;
+    const timerId = window.setTimeout(() => {
+      setDecisionLockStartedAtMs(null);
+      setDecisionActionError("动作回执超时，已解除锁定，请重试该 decision item。");
+    }, 8000);
+    return () => window.clearTimeout(timerId);
+  }, [decisionLockStartedAtMs]);
 
   const initialVerdictLocked =
     running && frames.length > 0 && decisionLockStartedAtMs == null && !llmTerminal;
@@ -231,7 +274,7 @@ export function useOracleSession(): OracleSession {
       ? "上一条决策仍在织造中，待 LLM 完成后才可选择新的 item。"
       : initialVerdictLocked
         ? "首轮判词仍在织造中，待 LLM 完成后才可选择 decision item。"
-        : "";
+        : decisionActionError;
 
   // ── Connection tick ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -310,18 +353,61 @@ export function useOracleSession(): OracleSession {
     setStreamBody(null);
     setAdoptedDecisions([]);
     setDecisionLockStartedAtMs(null);
+    setDecisionActionError("");
   }
 
-  function handleAdopted(decision: { id?: string; label?: string; title?: string }) {
+  async function handleAdopted(decision: Decision | { id?: string; label?: string; title?: string; target_god?: string; physical_impact?: { target_god?: string; delta_q?: number; resistance_mod?: Record<string, unknown> } }) {
     const id = String(decision.id || decision.title || `d_${Date.now()}`);
     const label = String(decision.label || decision.title || "").trim();
     if (!label || decisionLockStartedAtMs != null) return;
+
+    setDecisionActionError("");
     setDecisionLockStartedAtMs(Date.now());
+
+    try {
+      const response = await fetch("/api/v17/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
+        body: JSON.stringify({
+          session_id: sessionId || "default",
+          decision_id: id,
+          signal: "ACTION_TAKEN",
+          action: label,
+          title: String(decision.title || "").trim(),
+          target_god: String(decision.target_god || "").trim() || undefined,
+          physical_impact: decision.physical_impact || undefined,
+          v17_origin: "v17_rebirth",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.ok === false) {
+        const detail =
+          typeof payload?.detail === "string" && payload.detail.trim().length > 0
+            ? payload.detail.trim()
+            : "动作提交失败";
+        throw new Error(detail);
+      }
+    } catch (error) {
+      console.error("[V17-ACTION-ERROR]", error);
+      setDecisionLockStartedAtMs(null);
+      setDecisionActionError("动作提交失败，已解除锁定，请稍后重试。");
+      return;
+    }
+
     setAdoptedDecisions((prev) => {
-      if (prev.some((x) => x.id === id)) return prev;
-      const next = [...prev, { id, label }];
-      const base =
-        streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
+      const next = prev.some((x) => x.id === id)
+        ? prev
+        : [
+            ...prev,
+            {
+              id,
+              label,
+              title: String(decision.title || "").trim(),
+              target_god: String(decision.target_god || "").trim() || undefined,
+              physical_impact: decision.physical_impact || undefined,
+            },
+          ];
+      const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
       setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
       setStreamBody((prevBody) => ({
         ...(prevBody || {}),
@@ -330,6 +416,7 @@ export function useOracleSession(): OracleSession {
         user_message: label,
         decisions: next,
       }));
+      setRunning(true);
       return next;
     });
   }
@@ -359,11 +446,15 @@ export function useOracleSession(): OracleSession {
     traceHits,
     traceFacts,
     fullTrace,
-    connectPhase,
-    collapsePhase,
+    llmLifecyclePhase: lifecycle.phase,
+    llmStatusText: lifecycle.statusText,
+    llmStatusDetail: lifecycle.detailText,
     llmTerminal,
     modelLabel,
     connectTickMs,
+    lastHeartbeatStep,
+    heartbeatHistory,
+    streamClosed,
     streamEndpoint,
     streamBody,
     streamQuery,

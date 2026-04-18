@@ -2,15 +2,39 @@ import { useEffect, useState } from "react";
 
 const NDJSON_TAIL_CAP = 120;
 
+export type V17HeartbeatSnapshot = {
+  stepPosition: string;
+  idleSec: number;
+  timestamp?: string;
+};
+
+export type V17StreamState = {
+  closed: boolean;
+  closeReason: "idle" | "http_error" | "runtime_error" | "stream_eof" | "aborted";
+  lastHeartbeat?: V17HeartbeatSnapshot;
+  heartbeatHistory: V17HeartbeatSnapshot[];
+};
+
+export type V17LlmLifecyclePhase =
+  | "idle"
+  | "connecting"
+  | "awaiting_first_token"
+  | "streaming"
+  | "completed"
+  | "failed"
+  | "closed_without_output";
+
 export type V17Frame = {
   layer?: string;
   timestamp?: string;
   payload?: {
+    type?: string;
     snapshot_kind?: string;
     render_text?: string;
     will_flash?: boolean;
     deity_scores?: Record<string, number>;
     ten_gods_absolute_intensity?: Record<string, number>;
+    ten_gods_ledger?: Record<string, any[]>;
     total_energy_index?: number;
     four_pillars?: {
       year?: string;
@@ -127,18 +151,125 @@ export function shouldReleaseDecisionInboxLock({
   latestFrameTimestamp,
   hasFinalLlmMeta,
   llmOk,
+  isPhysicsUpdate,
 }: {
   lockStartedAtMs: number | null;
   latestFrameTimestamp?: string;
   hasFinalLlmMeta: boolean;
   llmOk?: boolean;
+  isPhysicsUpdate?: boolean;
 }): boolean {
   if (lockStartedAtMs == null) return false;
+  
+  // V17.50: 如果是物理同步帧，立即释放锁
+  if (isPhysicsUpdate) return true;
+  
   const latestFrameTs = Date.parse(String(latestFrameTimestamp || ""));
-  if (Number.isNaN(latestFrameTs) || latestFrameTs < lockStartedAtMs) {
-    return false;
+  // V17.65: 增加 3 秒的时差容忍度，防止由于服务器时钟滞后导致的决策锁死
+  const isAfterLock = !Number.isNaN(latestFrameTs) && latestFrameTs > (lockStartedAtMs - 3000);
+  
+  if (hasFinalLlmMeta || llmOk === false) {
+    // LLM 已完成，只要不是明显陈旧的帧就释放
+    return isAfterLock || !latestFrameTimestamp;
   }
-  return hasFinalLlmMeta || llmOk === false;
+  
+  return false;
+}
+
+export function deriveV17LlmLifecycle({
+  running,
+  llmMeta,
+  latestNarrator,
+  hasAuditPreview,
+  streamState,
+}: {
+  running: boolean;
+  llmMeta: Record<string, unknown>;
+  latestNarrator?: { payload?: Record<string, unknown> } | undefined;
+  hasAuditPreview: boolean;
+  streamState: V17StreamState;
+}): {
+  phase: V17LlmLifecyclePhase;
+  statusText: string;
+  detailText: string;
+} {
+  const modelLabel = String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎").trim() || "叙事引擎";
+  const engineState = String(llmMeta.engine_state || "").trim();
+  const rhythmBeat = String(llmMeta["叙事节拍"] || "").trim();
+  const streamPartial = llmMeta.stream_partial === true;
+  const hasFinalLlmMeta =
+    !streamPartial &&
+    typeof llmMeta.elapsed_ms === "number" &&
+    !Number.isNaN(Number(llmMeta.elapsed_ms));
+  const latestNarratorPayload =
+    latestNarrator && typeof latestNarrator === "object" ? latestNarrator.payload ?? {} : {};
+  const hasNarratorFrame = Boolean(latestNarrator);
+  const narratorText = String(latestNarratorPayload.render_text || "").trim();
+  const hasNarratorText = narratorText.length > 0;
+  const heartbeatStep = String(streamState.lastHeartbeat?.stepPosition || "").trim();
+  const waitingUpstream =
+    hasAuditPreview ||
+    hasNarratorFrame ||
+    heartbeatStep.startsWith("NARRATOR:") ||
+    heartbeatStep.startsWith("SNAPSHOT:llm_audit_preview");
+
+  if (!running) {
+    return { phase: "idle", statusText: "待命", detailText: "尚未启动测算" };
+  }
+  if (llmMeta.ok === false) {
+    return {
+      phase: "failed",
+      statusText: String(llmMeta.error || engineState || "叙事引擎异常"),
+      detailText: `${modelLabel} · 已失败/降级`,
+    };
+  }
+  if (hasFinalLlmMeta) {
+    return {
+      phase: "completed",
+      statusText: "已完成",
+      detailText: `${modelLabel} · ${Number(llmMeta.elapsed_ms || 0)} ms`,
+    };
+  }
+  if (streamState.closed) {
+    return {
+      phase: "closed_without_output",
+      statusText: "流已结束，但未产出终局正文",
+      detailText: heartbeatStep || streamState.closeReason,
+    };
+  }
+  if (engineState === "awaiting_first_token" || rhythmBeat === "已联通") {
+    return {
+      phase: "awaiting_first_token",
+      statusText: "已联通，等待首字",
+      detailText: heartbeatStep || engineState || rhythmBeat,
+    };
+  }
+  if (engineState === "stream_stalled") {
+    return {
+      phase: "streaming",
+      statusText: "流式停顿中",
+      detailText: heartbeatStep || engineState,
+    };
+  }
+  if (streamPartial && hasNarratorText) {
+    return {
+      phase: "streaming",
+      statusText: "流式生成中",
+      detailText: heartbeatStep || engineState || "NARRATOR:streaming_partial",
+    };
+  }
+  if (waitingUpstream) {
+    return {
+      phase: "awaiting_first_token",
+      statusText: "已派发，等待首字",
+      detailText: heartbeatStep || engineState || "AUDIT_PREVIEW",
+    };
+  }
+  return {
+    phase: "connecting",
+    statusText: `正在连接 ${modelLabel}…`,
+    detailText: "尚未收到上游握手信号",
+  };
 }
 
 export function useV17WebStream({
@@ -153,11 +284,17 @@ export function useV17WebStream({
   body?: Record<string, unknown> | null;
 } = {}) {
   const [frames, setFrames] = useState<V17Frame[]>([]);
+  const [streamState, setStreamState] = useState<V17StreamState>({
+    closed: false,
+    closeReason: "idle",
+    heartbeatHistory: [],
+  });
   // 将 body 序列化为稳定字符串，避免每次 render 产生新对象引用导致 effect 重新触发（SSE 重连）
   const bodyKey = JSON.stringify(body ?? null);
 
   useEffect(() => {
     if (!enabled || !endpoint) {
+      setStreamState({ closed: false, closeReason: "idle", heartbeatHistory: [] });
       return;
     }
     const resolvedEndpoint = endpoint;
@@ -174,6 +311,7 @@ export function useV17WebStream({
         });
         if (!resp.ok || !resp.body) {
           if (mounted) {
+            setStreamState({ closed: true, closeReason: "http_error", heartbeatHistory: [] });
             const msg = `[流连接失败] HTTP ${resp.status}。请确认后端 8017 已启动，且 Next 代理 V17_BACKEND_INTERNAL_URL 指向正确（默认同机 127.0.0.1:8017）。`;
             setFrames((prev) => [
               ...prev,
@@ -188,6 +326,7 @@ export function useV17WebStream({
         }
         if (mounted) {
           setFrames([]);
+          setStreamState({ closed: false, closeReason: "idle", heartbeatHistory: [] });
         }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder("utf-8");
@@ -208,6 +347,25 @@ export function useV17WebStream({
             try {
               const frame = JSON.parse(s) as V17Frame;
               if (String(frame.layer || "").toUpperCase() === "HEARTBEAT") {
+                if (mounted) {
+                  const payload = (frame.payload ?? {}) as Record<string, unknown>;
+                  setStreamState((prev) => ({
+                    ...prev,
+                    lastHeartbeat: {
+                      stepPosition: String(payload.step_position || "HEARTBEAT"),
+                      idleSec: Number(payload.idle_sec || 0),
+                      timestamp: frame.timestamp,
+                    },
+                    heartbeatHistory: [
+                      ...prev.heartbeatHistory,
+                      {
+                        stepPosition: String(payload.step_position || "HEARTBEAT"),
+                        idleSec: Number(payload.idle_sec || 0),
+                        timestamp: frame.timestamp,
+                      },
+                    ].slice(-8),
+                  }));
+                }
                 continue;
               }
               if (isCanonPhysicsSnapshot(frame)) {
@@ -224,10 +382,23 @@ export function useV17WebStream({
             }
           }
         }
+        if (mounted) {
+          setStreamState((prev) => ({
+            ...prev,
+            closed: true,
+            closeReason: aborter.signal.aborted ? "aborted" : "stream_eof",
+          }));
+        }
       } catch (err) {
         // 仅静默正常中止；其他错误推入错误帧以供调试
-        if (err instanceof DOMException && err.name === "AbortError") return;
+        if (err instanceof DOMException && err.name === "AbortError") {
+          if (mounted) {
+            setStreamState((prev) => ({ ...prev, closed: true, closeReason: "aborted" }));
+          }
+          return;
+        }
         if (mounted) {
+          setStreamState((prev) => ({ ...prev, closed: true, closeReason: "runtime_error" }));
           setFrames((prev) => [
             ...prev,
             {
@@ -251,5 +422,5 @@ export function useV17WebStream({
     };
   }, [enabled, endpoint, method, bodyKey]);
 
-  return { frames };
+  return { frames, streamState };
 }

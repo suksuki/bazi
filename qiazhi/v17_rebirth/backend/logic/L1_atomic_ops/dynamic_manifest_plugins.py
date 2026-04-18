@@ -41,7 +41,16 @@ def _load_manifest_blob() -> Dict[str, Any]:
 class ManifestOperatorPlugin(V17PluginSpec):
     """单条 manifest 行 → 可执行 Spec；命中由 `l1_meta_hydration.hydrate_v17_physics_tensor` 写入 meta.l1_manifest_hits。"""
 
-    __slots__ = ("plugin_id", "causal_tier", "registry_priority", "manifest_summary", "manifest_rationale", "legacy_op_id")
+    __slots__ = (
+        "plugin_id",
+        "causal_tier",
+        "registry_priority",
+        "manifest_summary",
+        "manifest_rationale",
+        "legacy_op_id",
+        "operator_family",
+        "trigger_hint",
+    )
 
     def __init__(self, row: Dict[str, Any]) -> None:
         self.plugin_id = str(row.get("id") or "").strip() or "l1_manifest_unknown"
@@ -50,6 +59,8 @@ class ManifestOperatorPlugin(V17PluginSpec):
         self.manifest_summary = str(row.get("summary") or "").strip()
         self.manifest_rationale = str(row.get("rationale") or "").strip()
         self.legacy_op_id = str(row.get("legacy_op_id") or "").strip()
+        self.operator_family = str(row.get("operator_family") or "l1_manifest_operator").strip()
+        self.trigger_hint = str(row.get("trigger_hint") or "").strip()
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
         pt = physics_tensor if isinstance(physics_tensor, dict) else {}
@@ -70,7 +81,13 @@ class ManifestOperatorPlugin(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=float(hit.get("priority", 0.55) or 0.55),
                 decision_hint=str(hit.get("label") or "").strip(),
-                meta={"legacy_op_id": self.legacy_op_id} if self.legacy_op_id else {},
+                meta={
+                    "legacy_op_id": self.legacy_op_id,
+                    "operator_family": self.operator_family,
+                    "framework_standard": "v17_manifest_unified",
+                    "trigger_hint": self.trigger_hint,
+                    "hit_source": "meta.l1_manifest_hits",
+                },
             )
         ]
 

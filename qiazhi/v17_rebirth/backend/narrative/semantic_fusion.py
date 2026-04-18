@@ -154,12 +154,16 @@ def build_role_user_prompt(
     """按 role_id 物理隔离 User：织造唯事实；裁决为事实＋张力摘录。"""
     rows = [str(x).strip() for x in fact_rows if str(x).strip()]
     capped = rows[: max(1, list_cap)]
-    joined = " | ".join(capped)
+    joined = "\n".join(f"{idx + 1}. {row}" for idx, row in enumerate(capped))
     rid = str(role_id or "").strip().upper() or V17_ROLE_WEAVER
     anchor = str(decision_anchor or "").strip()
     if rid == V17_ROLE_JUDGE:
         conflicts = _conflict_lines(rows)
-        cj = " | ".join(conflicts) if conflicts else "（当前字面未显敏感刑冲字样；仍须据实录作全盘权衡。）"
+        cj = (
+            "\n".join(f"{idx + 1}. {row}" for idx, row in enumerate(conflicts))
+            if conflicts
+            else "（当前字面未显敏感刑冲字样；仍须据实录作全盘权衡。）"
+        )
         parts = [
             "【因事实录】",
             "下列为已定事实条目，义脉寓于字面：",

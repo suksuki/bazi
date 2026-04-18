@@ -6,7 +6,9 @@ V17.11–V17.12：递归扫描 L0–L3；支持 `PLUGIN` / `PLUGINS`；合并 L1
 from __future__ import annotations
 
 import importlib
+import inspect
 import pkgutil
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -59,7 +61,11 @@ def infer_salience_weight(
 def deity_scores_from_tensor(physics_tensor: Dict[str, Any]) -> Dict[str, float]:
     src = {}
     if isinstance(physics_tensor, dict):
-        src = physics_tensor.get("ten_gods_absolute_intensity") or physics_tensor.get("deity_scores")
+        src = (
+            physics_tensor.get("ten_gods_absolute")
+            or physics_tensor.get("ten_gods_absolute_intensity")
+            or physics_tensor.get("deity_scores")
+        )
     if not isinstance(src, dict):
         return {}
     out: Dict[str, float] = {}
@@ -305,6 +311,11 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
         if mod is not None:
             summary = summary or str(getattr(mod, "PLUGIN_SUMMARY", "") or getattr(mod, "PLUGIN_DESCRIPTION", "") or "").strip()
             rationale = rationale or str(getattr(mod, "PLUGIN_RATIONALE", "") or getattr(mod, "PLUGIN_DESIGN_RATIONALE", "") or "").strip()
+        module_doc = _compact_admin_text(inspect.getdoc(mod) if mod is not None else "")
+        spec_doc = _compact_admin_text(inspect.getdoc(spec.__class__) or "")
+        definition_text = summary or module_doc or spec_doc or "该插件已接入 V17 推理链路，但尚未补齐定义说明。"
+        trigger_condition_text = _plugin_trigger_condition_text(mod, fallback=module_doc or summary or spec_doc)
+        detail_description = rationale or summary or module_doc or spec_doc or "暂无补充说明。"
         kind = "manifest_row" if mod is None else "spec"
         rows.append(
             {
@@ -318,6 +329,11 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
                 "kind": kind,
                 "function_summary": summary,
                 "design_rationale": rationale,
+                "module_doc": module_doc,
+                "spec_doc": spec_doc,
+                "definition_text": definition_text,
+                "trigger_condition_text": trigger_condition_text,
+                "detail_description": detail_description,
             }
         )
     return sorted(rows, key=lambda r: (int(r.get("execution_order", 999)), str(r.get("plugin_id", ""))))
@@ -350,3 +366,58 @@ def annotate_causal_trace(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 + "；〔本期活跃路径〕本插件已输出事实碎屑，因果链在此节点发生实质做功。"
             )
     return rows
+
+
+def _compact_admin_text(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return re.sub(r"\s+", " ", text)
+
+
+def _plugin_trigger_condition_text(mod: Any, *, fallback: str = "") -> str:
+    if mod is None:
+        return _compact_admin_text(fallback) or "该插件由清单动态挂载，触发条件取决于对应物理命中项。"
+    doc = _compact_admin_text(inspect.getdoc(mod) or "")
+    if any(k in doc for k in ("触发", "判定", "检测", "超阈", "达到", "命中")):
+        return doc
+
+    fn = getattr(mod, "_collect_rows", None)
+    lines = _source_trigger_lines(fn)
+    if lines:
+        return "；".join(lines)
+
+    method = getattr(type(getattr(mod, "PLUGIN", None)), "collect_v17_facts", None)
+    lines = _source_trigger_lines(method)
+    if lines:
+        return "；".join(lines)
+    return _compact_admin_text(fallback) or "当前插件未显式声明触发条件。"
+
+
+def _source_trigger_lines(fn: Any) -> List[str]:
+    if fn is None:
+        return []
+    try:
+        source = inspect.getsource(fn)
+    except Exception:
+        return []
+    out: List[str] = []
+    for raw in source.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("def ") or line.startswith("@"):
+            continue
+        if line in {"return []", "return rows"}:
+            continue
+        if (
+            " if " in f" {line} "
+            or line.startswith("if ")
+            or any(token in line for token in (">=", "<=", ">", "<", "==", "!="))
+        ):
+            out.append(_compact_admin_text(line))
+        elif any(token in line for token in ("ratio =", "locked =", "pattern =", "score =", "priority =", "intensity =")):
+            out.append(_compact_admin_text(line))
+        if len(out) >= 4:
+            break
+    return out

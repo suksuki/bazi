@@ -79,6 +79,9 @@ export default function OraclePage() {
                 onToggleTrace={() => s.setTraceOpen((v) => !v)}
                 connectTickMs={s.connectTickMs}
                 running={s.running}
+                llmStatusText={s.llmStatusText}
+                llmStatusDetail={s.llmStatusDetail}
+                llmLifecyclePhase={s.llmLifecyclePhase}
               />
               <V17_DecisionInbox
                 frames={s.frames}
@@ -97,10 +100,14 @@ export default function OraclePage() {
               collapsed={!s.traceOpen}
               onToggle={() => s.setTraceOpen((v) => !v)}
               llmMeta={s.llmMeta}
-              connectPhase={s.connectPhase}
-              collapsePhase={s.collapsePhase}
+              llmLifecyclePhase={s.llmLifecyclePhase}
+              llmStatusText={s.llmStatusText}
+              llmStatusDetail={s.llmStatusDetail}
               modelLabel={s.modelLabel}
               connectTickMs={s.connectTickMs}
+              lastHeartbeatStep={s.lastHeartbeatStep}
+              heartbeatHistory={s.heartbeatHistory}
+              streamClosed={s.streamClosed}
               fullTrace={s.fullTrace}
               llmAuditSnapshot={s.llmAuditSnapshot}
               latestNarrator={s.latestNarrator as { payload?: Record<string, unknown> } | undefined}

@@ -8,6 +8,12 @@ type Decision = {
   title?: string;
   label?: string;
   priority?: number;
+  target_god?: string;
+  physical_impact?: {
+    target_god?: string;
+    delta_q?: number;
+    resistance_mod?: Record<string, unknown>;
+  };
 };
 
 type Frame = {
@@ -30,7 +36,7 @@ export function V17_DecisionInbox({
   sessionId: string;
   locked?: boolean;
   lockMessage?: string;
-  onAdopted?: (decision: Decision) => void;
+  onAdopted?: (decision: Decision) => void | Promise<void>;
 }) {
   const [busyId, setBusyId] = useState<string>("");
   const latestSnapshot = useMemo(
@@ -57,18 +63,8 @@ export function V17_DecisionInbox({
     if (locked || busyId) return;
     const id = String(decision.id || decision.title || "pick");
     setBusyId(id);
-    onAdopted?.(decision);
     try {
-      await fetch("/api/v17/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", v17_origin: "v17_rebirth" },
-        body: JSON.stringify({
-          signal: "ACTION_TAKEN",
-          action: String(decision.label || decision.title || "").trim(),
-          session_id: sessionId || "default",
-          v17_origin: "v17_rebirth",
-        }),
-      });
+      await onAdopted?.(decision);
     } finally {
       setBusyId("");
     }

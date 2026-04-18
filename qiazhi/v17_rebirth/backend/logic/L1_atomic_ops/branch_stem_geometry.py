@@ -34,6 +34,14 @@ LIUHE_PAIRS: Tuple[Tuple[str, str], ...] = (
     ("午", "未"),
 )
 
+ANHE_PAIR_SETS: Tuple[frozenset[str], ...] = (
+    frozenset({"子", "巳"}),
+    frozenset({"丑", "午"}),
+    frozenset({"寅", "未"}),
+    frozenset({"卯", "申"}),
+    frozenset({"亥", "午"}),
+)
+
 LIU_CHONG_PAIRS: Tuple[Tuple[str, str], ...] = (
     ("子", "午"),
     ("丑", "未"),
@@ -145,6 +153,31 @@ def eval_liuhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
         pb = next((p for p, br in branches.items() if br == b), "")
         if pa and pb and pa != pb:
             hits.append({"pair": [a, b], "pillars": sorted([pa, pb])})
+    return hits
+
+
+def eval_anhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
+    present = pillars_branches_set(branches)
+    hits: List[Dict[str, Any]] = []
+    for pair in ANHE_PAIR_SETS:
+        if not pair.issubset(present):
+            continue
+        a, b = sorted(pair)
+        pa = next((p for p, br in branches.items() if br == a), "")
+        pb = next((p for p, br in branches.items() if br == b), "")
+        if pa and pb and pa != pb:
+            hits.append({"pair": [a, b], "pillars": sorted([pa, pb])})
+    return hits
+
+
+def eval_sanhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
+    present = pillars_branches_set(branches)
+    hits: List[Dict[str, Any]] = []
+    for group in SANHE_GROUPS:
+        if not set(group).issubset(present):
+            continue
+        pillars = sorted([p for p, br in branches.items() if br in group])
+        hits.append({"group": sorted(group), "pillars": pillars})
     return hits
 
 

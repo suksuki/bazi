@@ -46,6 +46,11 @@ type PluginAdminRow = {
   design_rationale?: string;
   causal_trace_text?: string;
   executed_before_plugin_ids?: string[];
+  module_doc?: string;
+  spec_doc?: string;
+  definition_text?: string;
+  trigger_condition_text?: string;
+  detail_description?: string;
 };
 
 const LAYER_TABS: { key: string; label: string }[] = [
@@ -54,6 +59,25 @@ const LAYER_TABS: { key: string; label: string }[] = [
   { key: "L2", label: "L2 格局做功" },
   { key: "L3", label: "L3 现代叙事" },
 ];
+
+const KIND_LABELS: Record<string, string> = {
+  spec: "标准插件",
+  manifest_row: "清单挂载插件",
+};
+
+function tierLabel(tier: number | undefined) {
+  const value = Number(tier || 0);
+  if (value >= 5) return "最接近物理核";
+  if (value === 4) return "高强度原子层";
+  if (value === 3) return "结构判定层";
+  if (value === 2) return "叙事辅助层";
+  if (value === 1) return "话术收束层";
+  return "未标注";
+}
+
+function layerLabel(layer: string) {
+  return LAYER_TABS.find((item) => item.key === layer)?.label || layer;
+}
 
 type ActionKey =
   | "loadModels"
@@ -363,9 +387,14 @@ export default function V17AdminPage() {
                                     #{p.execution_order ?? "?"} · {p.plugin_id}
                                     {live ? " · 活跃" : ""}
                                   </span>
-                                  <span className="block text-zinc-100">{p.module}</span>
+                                  <span className="mt-1 block text-sm text-zinc-100">
+                                    {p.definition_text || p.function_summary || p.module_doc || p.module}
+                                  </span>
+                                  <span className="mt-1 block text-xs text-zinc-500">
+                                    模块：{p.module} · {p.activated ? "已触发" : "未触发"} · {KIND_LABELS[p.kind] || p.kind}
+                                  </span>
                                   <span className="text-xs text-zinc-500">
-                                    tier {p.causal_tier} · reg_p {p.registry_priority?.toFixed(2) ?? "—"} · {p.activated ? "已触发" : "未触发"}
+                                    因果层级 {p.causal_tier} · 同层优先级 {p.registry_priority?.toFixed(2) ?? "—"}
                                   </span>
                                 </button>
                               </li>
@@ -381,69 +410,108 @@ export default function V17AdminPage() {
                     <p className="text-zinc-500">请从左侧选择一个插件。</p>
                   ) : (
                     <>
-                      <p className="mb-1 font-semibold text-zinc-200">{selectedPlugin.plugin_id}</p>
-                      <p className="mb-3 text-xs text-zinc-500">
-                        模块 {selectedPlugin.module} · {selectedPlugin.layer_dir}
-                      </p>
-                      <dl className="space-y-2 text-zinc-300">
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-zinc-500">执行序（全管线）</dt>
-                          <dd
-                            className={`font-mono text-lg ${
-                              selectedPlugin.causal_active_path ? "text-emerald-300" : "text-sky-200"
-                            }`}
-                          >
-                            #{selectedPlugin.execution_order ?? "—"}
-                            {selectedPlugin.causal_active_path ? " · 本期有事实输出" : ""}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-zinc-500">权力等级（causal_tier）</dt>
-                          <dd className="font-mono text-lg text-amber-200">{selectedPlugin.power_tier ?? selectedPlugin.causal_tier}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-zinc-500">同层细排序（registry_priority）</dt>
-                          <dd className="font-mono text-sm text-zinc-200">{selectedPlugin.registry_priority?.toFixed(3) ?? "—"}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-zinc-500">因果溯源</dt>
-                          <dd className="text-sm leading-relaxed text-zinc-200">{selectedPlugin.causal_trace_text || "—"}</dd>
-                        </div>
-                        {selectedPlugin.executed_before_plugin_ids && selectedPlugin.executed_before_plugin_ids.length > 0 ? (
-                          <div>
-                            <dt className="text-xs uppercase tracking-wide text-zinc-500">上游插件 ID</dt>
-                            <dd className="break-all font-mono text-xs text-zinc-400">
-                              {selectedPlugin.executed_before_plugin_ids.join(" → ")}
-                            </dd>
-                          </div>
-                        ) : null}
-                        <div>
-                          <dt className="text-xs uppercase tracking-wide text-zinc-500">最近写入</dt>
-                          <dd className="font-mono text-xs text-zinc-400">{selectedPlugin.last_at || "—"}</dd>
-                        </div>
-                        <div>
-                          <dt className="mb-1 text-xs uppercase tracking-wide text-zinc-500">最近一次 Facts</dt>
-                          <dd>
-                            {(selectedPlugin.last_facts && selectedPlugin.last_facts.length > 0) ? (
-                              <ul className="list-inside list-disc space-y-1 text-zinc-200">
-                                {selectedPlugin.last_facts.map((t, i) => (
-                                  <li key={i}>{t}</li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <span className="text-zinc-500">本期测算尚未命中该插件（Hits 为空）。</span>
-                            )}
-                          </dd>
-                        </div>
-                        {!selectedPlugin.activated ? (
-                          <div className="mt-3 rounded-md border border-zinc-600 bg-zinc-900/80 p-3 text-zinc-200">
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400/90">未激活占位 · 功能描述</p>
-                            <p className="text-sm leading-relaxed">{selectedPlugin.function_summary || "（未配置 PLUGIN_SUMMARY）"}</p>
-                            <p className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-amber-400/90">设计初衷</p>
-                            <p className="text-sm leading-relaxed">{selectedPlugin.design_rationale || "（未配置 PLUGIN_RATIONALE）"}</p>
-                          </div>
-                        ) : null}
-                      </dl>
+                      <div className="mb-4 rounded-lg border border-zinc-700 bg-zinc-900/70 p-3">
+                        <p className="text-base font-semibold text-zinc-100">{selectedPlugin.definition_text || selectedPlugin.plugin_id}</p>
+                        <p className="mt-1 font-mono text-xs text-zinc-400">{selectedPlugin.plugin_id}</p>
+                        <p className="mt-2 text-xs text-zinc-500">
+                          {layerLabel(selectedPlugin.layer)} · {KIND_LABELS[selectedPlugin.kind] || selectedPlugin.kind} · 模块 {selectedPlugin.module}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-amber-300">插件定义</p>
+                          <p className="text-sm leading-6 text-zinc-200">
+                            {selectedPlugin.definition_text || selectedPlugin.function_summary || selectedPlugin.module_doc || "暂无定义说明。"}
+                          </p>
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-sky-300">功能描述</p>
+                          <p className="text-sm leading-6 text-zinc-200">
+                            {selectedPlugin.function_summary || selectedPlugin.detail_description || "暂无功能描述。"}
+                          </p>
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-emerald-300">触发条件</p>
+                          <p className="text-sm leading-6 text-zinc-200">
+                            {selectedPlugin.trigger_condition_text || selectedPlugin.causal_trace_text || "暂无触发条件说明。"}
+                          </p>
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-fuchsia-300">设计缘由</p>
+                          <p className="text-sm leading-6 text-zinc-200">
+                            {selectedPlugin.design_rationale || selectedPlugin.detail_description || "暂无设计缘由说明。"}
+                          </p>
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-zinc-300">运行信息</p>
+                          <dl className="space-y-2 text-zinc-300">
+                            <div>
+                              <dt className="text-xs text-zinc-500">执行序</dt>
+                              <dd
+                                className={`font-mono text-lg ${
+                                  selectedPlugin.causal_active_path ? "text-emerald-300" : "text-sky-200"
+                                }`}
+                              >
+                                #{selectedPlugin.execution_order ?? "—"}
+                                {selectedPlugin.causal_active_path ? " · 本期有事实输出" : ""}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-zinc-500">因果层级</dt>
+                              <dd className="text-sm text-zinc-200">
+                                {selectedPlugin.power_tier ?? selectedPlugin.causal_tier} · {tierLabel(selectedPlugin.power_tier ?? selectedPlugin.causal_tier)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-zinc-500">同层优先级</dt>
+                              <dd className="font-mono text-sm text-zinc-200">{selectedPlugin.registry_priority?.toFixed(3) ?? "—"}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-zinc-500">挂载位置</dt>
+                              <dd className="text-sm text-zinc-200">{selectedPlugin.layer_dir} / {selectedPlugin.module}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-zinc-500">运行状态</dt>
+                              <dd className="text-sm text-zinc-200">
+                                {selectedPlugin.activated ? "本期已触发" : "本期未触发"}
+                                {selectedPlugin.causal_active_path ? "，且已写出事实" : ""}
+                              </dd>
+                            </div>
+                          </dl>
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-zinc-300">因果链路</p>
+                          <p className="text-sm leading-6 text-zinc-200">{selectedPlugin.causal_trace_text || "暂无因果链路说明。"}</p>
+                          {selectedPlugin.executed_before_plugin_ids && selectedPlugin.executed_before_plugin_ids.length > 0 ? (
+                            <div className="mt-3">
+                              <p className="mb-1 text-xs text-zinc-500">上游插件链</p>
+                              <p className="break-all font-mono text-xs text-zinc-400">
+                                {selectedPlugin.executed_before_plugin_ids.join(" → ")}
+                              </p>
+                            </div>
+                          ) : null}
+                        </section>
+
+                        <section className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+                          <p className="mb-2 text-xs font-semibold tracking-wide text-zinc-300">最近一次命中</p>
+                          <p className="mb-2 font-mono text-xs text-zinc-400">最近写入：{selectedPlugin.last_at || "—"}</p>
+                          {(selectedPlugin.last_facts && selectedPlugin.last_facts.length > 0) ? (
+                            <ul className="list-inside list-disc space-y-1 text-zinc-200">
+                              {selectedPlugin.last_facts.map((t, i) => (
+                                <li key={i}>{t}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <span className="text-zinc-500">本期尚未命中该插件，暂无事实输出。</span>
+                          )}
+                        </section>
+                      </div>
                     </>
                   )}
                 </aside>

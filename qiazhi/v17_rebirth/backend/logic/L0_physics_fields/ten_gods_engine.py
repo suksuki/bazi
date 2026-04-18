@@ -1,16 +1,22 @@
 """
-V17.27：十神绝对能量强度引擎（L0 层）。
+V17.30：十神绝对能量强度引擎（L0 层 — Mass Phase）。
 
-废弃旧式「最强值拉到固定上限」的归一化思路，改为物理常数驱动：
-- 天干基础常数 = 10.0
-- 地支基础常数 = 12.0（按藏干占比分配）
-- 月令主气对同属性十神做绝对放大
-- 通根 / 透干按结构关系加成
-- 空亡按绝对能量折减
+彻底废弃任何「归一化到 100」思路，引擎输出纯物理绝对能量（单位：Qi）。
+- 天干基础常数 STEM_BASE = 10.0
+- 地支基础常数 BRANCH_BASE = 12.0（按藏干占比分配）
+- 月令对五行能量的放大倍数（Season Power）逐柱应用
+- 天干通根地支 → Energy *= 1.5
+- 地支透出天干 → Energy *= 1.2
+- 所在支空亡   → Energy *= 0.4
+
+返回值 `ten_gods_absolute` / `total_energy_index` 均为绝对累加值，
+典型范围 50.0 ～ 500.0+，量级与命局旺衰成正比。
 """
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
+
+from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
 
 
 # ── 天干基础表 ─────────────────────────────────────────────────────────────────
@@ -52,15 +58,64 @@ BRANCH_HIDDEN: Dict[str, List[Tuple[str, float]]] = {
     "亥": [("壬", 0.70), ("甲", 0.30)],
 }
 
-STEM_BASE_ENERGY: float = 10.0
-BRANCH_BASE_ENERGY: float = 12.0
-MONTH_COMMAND_AMPLIFIER: float = 4.0
-ROOTED_STEM_GAIN: float = 1.5
-EXPOSED_HIDDEN_GAIN: float = 1.2
-VOID_REDUCTION_FACTOR: float = 0.4
-LUCK_PILLAR_FACTOR: float = 0.85
-FLOW_PILLAR_FACTOR: float = 0.65
-ENERGY_MIN: float = 0.01
+# ── V17.30 物理常数 ────────────────────────────────────────────────────────────
+
+STEM_BASE: float = 10.0        # 天干基础能量（Qi）
+BRANCH_BASE: float = 12.0      # 地支基础能量（Qi）
+ROOTED_STEM_GAIN: float = 1.5  # 天干通根地支：Energy *= 1.5
+EXPOSED_HIDDEN_GAIN: float = 1.2  # 地支透出天干：Energy *= 1.2
+VOID_REDUCTION_FACTOR: float = 0.4  # 空亡折减：Energy *= 0.4
+LUCK_PILLAR_FACTOR: float = 0.85    # 大运权重衰减
+FLOW_PILLAR_FACTOR: float = 0.65    # 流年权重衰减
+ENERGY_MIN: float = 0.01            # 能量下限截断
+
+# 旧名兼容（供外部 import 使用）
+STEM_BASE_ENERGY: float = STEM_BASE
+BRANCH_BASE_ENERGY: float = BRANCH_BASE
+MONTH_COMMAND_AMPLIFIER: float = 1.0  # 已废弃：旧的一次性乘法放大系数不再使用
+
+
+# ── 月令令五行 Season Power（月支主气五行 → 当令倍率）──────────────────────
+
+# 月支五行对照表
+BRANCH_ELEMENT: Dict[str, str] = {
+    "子": "水", "丑": "土", "寅": "木", "卯": "木",
+    "辰": "土", "巳": "火", "午": "火", "未": "土",
+    "申": "金", "酉": "金", "戌": "土", "亥": "水",
+}
+
+# 当令五行的 Season Power 放大倍率
+SEASON_POWER_SAME: float = 2.5      # 与月令五行相同 → 得令
+SEASON_POWER_GENERATED: float = 1.8  # 月令五行所生 → 次旺
+SEASON_POWER_CONTROLLED: float = 0.6 # 月令五行所克 → 受制
+SEASON_POWER_DEFAULT: float = 1.0    # 其余（休囚一般）
+
+
+def _season_multiplier(target_element: str, month_branch: str) -> float:
+    """
+    根据目标天干五行与月令地支五行的关系，返回 Season Power 倍率。
+
+    同属五行 → 2.5（得令）
+    月令所生 → 1.8（次旺）
+    月令所克 → 0.6（受制）
+    其余     → 1.0
+    """
+    month_el = BRANCH_ELEMENT.get(month_branch, "")
+    if not month_el or not target_element:
+        return SEASON_POWER_DEFAULT
+    if target_element == month_el:
+        return SEASON_POWER_SAME
+    m_idx = ELEMENT_CYCLE.index(month_el) if month_el in ELEMENT_CYCLE else -1
+    t_idx = ELEMENT_CYCLE.index(target_element) if target_element in ELEMENT_CYCLE else -1
+    if m_idx < 0 or t_idx < 0:
+        return SEASON_POWER_DEFAULT
+    # 月令所生：月令的下一位 = 被月令生
+    if t_idx == (m_idx + 1) % 5:
+        return SEASON_POWER_GENERATED
+    # 月令所克：月令的+2位 = 被月令克
+    if t_idx == (m_idx + 2) % 5:
+        return SEASON_POWER_CONTROLLED
+    return SEASON_POWER_DEFAULT
 
 
 def ten_god_from_stems(daymaster: str, target: str) -> str:
@@ -162,16 +217,33 @@ def _accumulate_stem_energy(
     stem: str,
     daymaster: str,
     source_factor: float,
+    season_multiplier: float,
     rooted_stems: set[str],
     acc: Dict[str, float],
+    pillar_label: str = "",
+    ledger: Optional[EvolutionLedger] = None,
 ) -> None:
+    """
+    V17.30 能量累加器（天干）：
+      Energy = STEM_BASE * source_factor * season_multiplier
+      如果天干通根地支 → Energy *= 1.5
+    """
     if not stem:
         return
-    energy = STEM_BASE_ENERGY * source_factor
-    if stem in rooted_stems:
+    energy = STEM_BASE * source_factor * season_multiplier
+    rooted = stem in rooted_stems
+    if rooted:
         energy *= ROOTED_STEM_GAIN
     god = ten_god_from_stems(daymaster, stem)
     acc[god] = acc.get(god, 0.0) + energy
+    if ledger is not None:
+        parts = [f"{stem}→{god}"]
+        if rooted:
+            parts.append("通根×1.5")
+        if abs(season_multiplier - 1.0) > 0.01:
+            parts.append(f"季×{season_multiplier:.1f}")
+        reason = f"{pillar_label}干 {'·'.join(parts)}"
+        ledger.append_entry(god, acc[god], f"L0_STEM_{pillar_label}", reason)
 
 
 def _accumulate_branch_energy(
@@ -180,17 +252,38 @@ def _accumulate_branch_energy(
     daymaster: str,
     source_factor: float,
     void_factor: float,
+    season_multiplier_fn,
     visible_stems: List[str],
     acc: Dict[str, float],
+    pillar_label: str = "",
+    ledger: Optional[EvolutionLedger] = None,
 ) -> None:
+    """
+    V17.30 能量累加器（地支）：
+      Energy = BRANCH_BASE * hidden_weight * source_factor * season_multiplier * void_factor
+      如果地支透出天干 → Energy *= 1.2
+    """
     if not branch:
         return
     for hidden_stem, h_w in BRANCH_HIDDEN.get(branch, []):
-        energy = BRANCH_BASE_ENERGY * h_w * source_factor * void_factor
-        if hidden_stem in visible_stems:
+        hidden_element = STEM_ELEMENT.get(hidden_stem, "")
+        sm = season_multiplier_fn(hidden_element) if hidden_element else 1.0
+        energy = BRANCH_BASE * h_w * source_factor * sm * void_factor
+        exposed = hidden_stem in visible_stems
+        if exposed:
             energy *= EXPOSED_HIDDEN_GAIN
         god = ten_god_from_stems(daymaster, hidden_stem)
         acc[god] = acc.get(god, 0.0) + energy
+        if ledger is not None:
+            parts = [f"{branch}藏{hidden_stem}→{god}"]
+            if exposed:
+                parts.append("透干×1.2")
+            if void_factor < 1.0:
+                parts.append(f"空亡×{void_factor:.1f}")
+            if abs(sm - 1.0) > 0.01:
+                parts.append(f"季×{sm:.1f}")
+            reason = f"{pillar_label}支 {'·'.join(parts)}"
+            ledger.append_entry(god, acc[god], f"L0_BRANCH_{pillar_label}", reason)
 
 
 def calc_deity_scores(
@@ -202,31 +295,45 @@ def calc_deity_scores(
     birth_time: Optional[Any] = None,
 ) -> Tuple[Dict[str, float], List[str], float, Dict[str, Any]]:
     """
-    计算十神分值。
+    V17.30 Mass Phase：计算十神绝对能量分值。
 
     参数：
         four_pillars: {"year": "甲子", "month": "乙丑", "day": "丙寅", "hour": "丁卯"}
         luck_pillar:  大运干支字符串（"—" 或空字符串表示缺失）
         flow_pillar:  流年干支字符串
         gender:       "male" | "female"
+        birth_time:   出生时间（用于旬空计算）
 
     返回：
         (absolute_scores, top4_ten_gods, total_energy_index, energy_meta)
+
+    absolute_scores:    各十神绝对能量值 dict（单位：Qi），不做归一化
+    total_energy_index: 所有十神绝对能量的总和（预期范围：50.0 - 500.0+）
     """
     day_gz = str(four_pillars.get("day", "")).strip()
     daymaster, _ = _parse_gz(day_gz)
     if not daymaster:
         default: Dict[str, float] = {
-            "比肩": 10.0, "食神": 10.0, "正官": 10.0, "正财": 10.0, "正印": 10.0
+            "比肩": STEM_BASE, "食神": STEM_BASE, "正官": STEM_BASE, "正财": STEM_BASE, "正印": STEM_BASE
         }
         return default, list(default)[:4], round(sum(default.values()), 2), {"month_command_god": "", "void_pillars": []}
 
+    # ── Step 1：准备全局辅助数据 ──
     acc: Dict[str, float] = {}
     visible_stems = _collect_visible_stems(four_pillars, luck_pillar, flow_pillar)
     rooted_stems = _collect_rooted_stems(four_pillars, luck_pillar, flow_pillar)
     xun_kong_map = _get_xun_kong_map(birth_time=birth_time, four_pillars=four_pillars)
     void_pillars: List[str] = []
+    ledger = EvolutionLedger()
 
+    # ── Step 2：提取月支 → 构造 Season Power 偏函数 ──
+    _, month_branch = _parse_gz(str(four_pillars.get("month", "")).strip())
+
+    def _season_mul(target_element: str) -> float:
+        return _season_multiplier(target_element, month_branch)
+
+    # ── Step 3：遍历四柱累加 ──
+    pillar_cn = {"year": "年", "month": "月", "day": "日", "hour": "时"}
     for pillar_key in ("year", "month", "day", "hour"):
         gz = str(four_pillars.get(pillar_key, "")).strip()
         if not gz:
@@ -235,72 +342,91 @@ def calc_deity_scores(
         pillar_void_factor = _void_factor(branch, xun_kong_map.get(pillar_key, ""))
         if pillar_void_factor < 1.0:
             void_pillars.append(pillar_key)
-        if pillar_key == "day":
-            _accumulate_stem_energy(
-                stem=daymaster,
-                daymaster=daymaster,
-                source_factor=1.0,
-                rooted_stems=rooted_stems,
-                acc=acc,
-            )
-        else:
-            _accumulate_stem_energy(
-                stem=stem,
-                daymaster=daymaster,
-                source_factor=1.0,
-                rooted_stems=rooted_stems,
-                acc=acc,
-            )
+        p_label = pillar_cn.get(pillar_key, pillar_key)
+
+        # 天干能量
+        target_stem = daymaster if pillar_key == "day" else stem
+        stem_element = STEM_ELEMENT.get(target_stem, "")
+        stem_sm = _season_mul(stem_element) if stem_element else 1.0
+        _accumulate_stem_energy(
+            stem=target_stem,
+            daymaster=daymaster,
+            source_factor=1.0,
+            season_multiplier=stem_sm,
+            rooted_stems=rooted_stems,
+            acc=acc,
+            pillar_label=p_label,
+            ledger=ledger,
+        )
+        # 地支能量（藏干逐一累加，各自带 Season Power）
         _accumulate_branch_energy(
             branch=branch,
             daymaster=daymaster,
             source_factor=1.0,
             void_factor=pillar_void_factor,
+            season_multiplier_fn=_season_mul,
             visible_stems=visible_stems,
             acc=acc,
+            pillar_label=p_label,
+            ledger=ledger,
         )
 
-    for gz_val, source_factor in ((luck_pillar, LUCK_PILLAR_FACTOR), (flow_pillar, FLOW_PILLAR_FACTOR)):
+    # ── Step 4：大运 / 流年（带衰减系数，但同样受 Season Power 影响）──
+    for gz_val, source_factor, sf_label in (
+        (luck_pillar, LUCK_PILLAR_FACTOR, "运"),
+        (flow_pillar, FLOW_PILLAR_FACTOR, "流"),
+    ):
         if gz_val and gz_val not in ("—", "-"):
             stem, branch = _parse_gz(gz_val)
+            stem_element = STEM_ELEMENT.get(stem, "")
+            stem_sm = _season_mul(stem_element) if stem_element else 1.0
             _accumulate_stem_energy(
                 stem=stem,
                 daymaster=daymaster,
                 source_factor=source_factor,
+                season_multiplier=stem_sm,
                 rooted_stems=rooted_stems,
                 acc=acc,
+                pillar_label=sf_label,
+                ledger=ledger,
             )
             _accumulate_branch_energy(
                 branch=branch,
                 daymaster=daymaster,
                 source_factor=source_factor,
                 void_factor=1.0,
+                season_multiplier_fn=_season_mul,
                 visible_stems=visible_stems,
                 acc=acc,
+                pillar_label=sf_label,
+                ledger=ledger,
             )
 
-    month_stem, month_branch = _parse_gz(str(four_pillars.get("month", "")).strip())
+    # ── Step 5：月令主气额外标记（不再做 *= 放大，Season Power 已在 Step 3/4 逐柱应用）──
+    month_stem, _ = _parse_gz(str(four_pillars.get("month", "")).strip())
     month_command_god = ""
     month_hidden = BRANCH_HIDDEN.get(month_branch, [])
     if month_hidden:
         month_main_stem = month_hidden[0][0]
         month_command_god = ten_god_from_stems(daymaster, month_main_stem)
-        if month_command_god:
-            acc[month_command_god] = acc.get(month_command_god, 0.0) * MONTH_COMMAND_AMPLIFIER
     elif month_stem:
         month_command_god = ten_god_from_stems(daymaster, month_stem)
-        if month_command_god:
-            acc[month_command_god] = acc.get(month_command_god, 0.0) * MONTH_COMMAND_AMPLIFIER
 
+    # ── Step 6：性别微调（不影响量级，仅作定性偏移）──
     if gender == "male":
         acc["正官"] = acc.get("正官", 0.0) + 1.2
         acc["七杀"] = acc.get("七杀", 0.0) + 0.8
+        ledger.append_entry("正官", acc.get("正官", 0.0), "L0_GENDER", "男命正官性别微调+1.2")
+        ledger.append_entry("七杀", acc.get("七杀", 0.0), "L0_GENDER", "男命七杀性别微调+0.8")
     else:
         acc["食神"] = acc.get("食神", 0.0) + 1.2
         acc["伤官"] = acc.get("伤官", 0.0) + 0.8
+        ledger.append_entry("食神", acc.get("食神", 0.0), "L0_GENDER", "女命食神性别微调+1.2")
+        ledger.append_entry("伤官", acc.get("伤官", 0.0), "L0_GENDER", "女命伤官性别微调+0.8")
 
+    # ── Step 7：排序输出 ──
     if not acc:
-        return {"比肩": STEM_BASE_ENERGY}, ["比肩"], STEM_BASE_ENERGY, {"month_command_god": "", "void_pillars": void_pillars}
+        return {"比肩": STEM_BASE}, ["比肩"], STEM_BASE, {"month_command_god": "", "void_pillars": void_pillars}
     scored = {
         k: round(v, 2)
         for k, v in sorted(acc.items(), key=lambda kv: (-kv[1], kv[0]))
@@ -312,12 +438,19 @@ def calc_deity_scores(
         "month_command_god": month_command_god,
         "void_pillars": void_pillars,
         "void_branches": {k: v for k, v in xun_kong_map.items() if v},
+        "season_power": {
+            "month_branch": month_branch,
+            "month_element": BRANCH_ELEMENT.get(month_branch, ""),
+            "same": SEASON_POWER_SAME,
+            "generated": SEASON_POWER_GENERATED,
+            "controlled": SEASON_POWER_CONTROLLED,
+        },
         "constants": {
-            "stem_base_energy": STEM_BASE_ENERGY,
-            "branch_base_energy": BRANCH_BASE_ENERGY,
-            "month_command_amplifier": MONTH_COMMAND_AMPLIFIER,
+            "stem_base": STEM_BASE,
+            "branch_base": BRANCH_BASE,
             "rooted_stem_gain": ROOTED_STEM_GAIN,
             "exposed_hidden_gain": EXPOSED_HIDDEN_GAIN,
             "void_reduction_factor": VOID_REDUCTION_FACTOR,
         },
+        "ledger": ledger,
     }

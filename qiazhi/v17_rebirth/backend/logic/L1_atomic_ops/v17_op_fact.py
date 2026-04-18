@@ -15,11 +15,18 @@ _ABS_SCORE_PATTERNS = (
 
 _KIND_ZH = {
     "liu_chong": "地支六冲",
+    "sanhe": "地支三合",
     "sanxing": "地支三刑",
     "liu_hai": "地支六害",
     "liu_po": "地支六破",
     "liu_he": "地支六合",
     "ban_he": "地支半合",
+    "an_he": "地支暗合",
+    "muku": "墓库门态",
+    "status": "长生状态机",
+    "geography": "地理方位场",
+    "vertical_crush": "干支维轴",
+    "core_conflict": "核心冲突",
     "stem_stuck": "天干五合·羁绊",
     "stem_transform": "天干五合·化气",
     "pattern": "格局",

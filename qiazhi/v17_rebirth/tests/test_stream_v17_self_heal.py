@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 from v17_rebirth.backend.api import stream_v17
 from v17_rebirth.backend.services import physics_service
@@ -84,3 +85,70 @@ def test_snapshot_frame_marks_local_memory_anchor(monkeypatch) -> None:
     assert frame["payload"]["causal_anchor"] == "local_memory"
     assert frame["payload"]["four_pillars"]["year"] == "甲子"
     assert frame["payload"]["physics_fingerprint"]
+
+
+def test_stream_frames_emits_terminal_error_frame_on_unhandled_narrator_exception(monkeypatch) -> None:
+    class _FakeBackend:
+        async def ping(self) -> bool:
+            return True
+
+        async def set_physics(self, _session_id: str, _tensor: dict) -> bool:
+            return True
+
+        async def get_physics(self, _session_id: str) -> dict:
+            return {}
+
+        async def delete_physics(self, _session_id: str) -> None:
+            return None
+
+        async def get_physics_keys(self, _session_id: str) -> list[str]:
+            return []
+
+        def subscribe_actions(self, _session_id: str):
+            class _Ctx:
+                async def __aenter__(self):
+                    return asyncio.Queue()
+
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+
+            return _Ctx()
+
+    monkeypatch.setattr(stream_v17, "get_state_backend", lambda: _FakeBackend())
+    monkeypatch.setattr(stream_v17, "_hydrate_physics_atomically", lambda _pl: asyncio.sleep(0))
+    monkeypatch.setattr(stream_v17.PhysicsService, "prime_local_tensor", lambda *_a, **_k: None)
+    monkeypatch.setattr(stream_v17.PhysicsService, "abind_session_tensor", lambda *_a, **_k: asyncio.sleep(0))
+    monkeypatch.setattr(stream_v17.PhysicsService, "ensure_stability", lambda *_a, **_k: asyncio.sleep(0))
+    monkeypatch.setattr(VerdictOrchestrator, "assert_six_pillars_physics", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        VerdictOrchestrator,
+        "snapshot_frame",
+        lambda *_a, **_k: {"timestamp": "t0", "layer": "SNAPSHOT", "payload": {"snapshot_kind": "physics"}},
+    )
+
+    async def _boom(*_args, **_kwargs):
+        yield {"timestamp": "t1", "layer": "SNAPSHOT", "payload": {"snapshot_kind": "llm_audit_dispatch"}}
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(VerdictOrchestrator, "narrator_frames", _boom)
+
+    async def _collect() -> list[dict]:
+        rows: list[dict] = []
+        async for chunk in stream_v17._stream_frames(
+            will_proxy="stable",
+            payload={
+                "session_id": "sid",
+                "four_pillars": {"year": "甲子", "month": "乙丑", "day": "丙寅", "hour": "丁卯"},
+                "luck_pillar": "戊辰",
+                "flow_pillar": "己巳",
+                "flow_year": 2026,
+            },
+        ):
+            rows.append(json.loads(chunk.decode("utf-8").strip()))
+        return rows
+
+    frames = asyncio.run(_collect())
+    final = frames[-1]
+    assert final["layer"] == "NARRATOR"
+    assert final["payload"]["llm_meta"]["engine_state"] == "orchestrator_runtime_error"
+    assert "llm_audit_dispatch" in final["payload"]["llm_meta"]["step_position"]

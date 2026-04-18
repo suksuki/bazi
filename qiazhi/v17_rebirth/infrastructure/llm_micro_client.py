@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from .llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER, V17_ROLES, V17LlmBridge
 from v17_rebirth.backend.narrative.semantic_fusion import build_role_user_prompt
+from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
 
 
 def _normalize_fuse_role(role: str) -> str:
@@ -211,6 +212,11 @@ def build_llm_audit_payload(
     rows = [str(x).strip() for x in clean_fragments if str(x).strip()]
     rows = _merge_physics_ssot_rows(rows, physics_tensor)
     rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
+    physics_report = (
+        NarrativeMappingEngine.build_physics_report_lines(physics_tensor)
+        if isinstance(physics_tensor, dict)
+        else []
+    )
     if not rows:
         return {
             "audit_empty_fragments": True,
@@ -223,6 +229,7 @@ def build_llm_audit_payload(
             "llm_system_prompt": "",
             "llm_user_prompt": "",
             "llm_request_messages": [],
+            "physics_report": physics_report,
             **_fuse_role_extras(rid),
         }
     system_prompt = build_v17_system_prompt(
@@ -254,6 +261,7 @@ def build_llm_audit_payload(
         "llm_system_prompt": system_prompt,
         "llm_user_prompt": user_prompt,
         "llm_request_messages": messages,
+        "physics_report": physics_report,
         "max_tokens_preview": int(max_tokens or _fuse_max_tokens_default()),
         **_fuse_role_extras(rid),
     }
@@ -301,7 +309,7 @@ def build_v17_system_prompt(
         f"\n\n【元数据主权·仅服务端】"
         f"四柱：{y} / {mo} / {d} / {h}；大运：{luck}；流年：{flow}；流年锚年：{fy}。"
     )
-    scores = p.get("ten_gods_absolute_intensity") or p.get("deity_scores")
+    scores = p.get("ten_gods_absolute") or p.get("ten_gods_absolute_intensity") or p.get("deity_scores")
     try:
         total_energy = float(p.get("total_energy_index"))
     except (TypeError, ValueError):
@@ -321,7 +329,13 @@ def build_v17_system_prompt(
             energy_lines.append("十神绝对强度：" + "，".join(f"{name}:{value:.2f}" for name, value in ranked[:6]))
     if total_energy is not None:
         energy_lines.append(f"Total Energy Index：{total_energy:.2f}")
-    return base + anchor + "\n" + "\n".join(f"【能量量纲】{line}" for line in energy_lines)
+    physics_report_lines = NarrativeMappingEngine.build_physics_report_lines(p)
+    physics_report_block = (
+        "\n\n[PHYSICS_REPORT]\n" + "\n".join(physics_report_lines)
+        if physics_report_lines
+        else ""
+    )
+    return base + physics_report_block + anchor + "\n" + "\n".join(f"【能量量纲】{line}" for line in energy_lines)
 
 
 _SENSITIVE_PATTERNS = (
@@ -644,6 +658,10 @@ class V17MicroLlmClient:
 
         async def _event_stream() -> AsyncIterator[Dict[str, Any]]:
             _log_will_dispatch(str(cfg.get("model") or "unknown").strip() or "unknown")
+            print(
+                f"[V17-LLM] session={session_id or 'default'} event_stream_start provider={cfg.get('provider')} model={cfg.get('model')}",
+                flush=True,
+            )
             prompt_payload = {
                 "messages": messages,
                 "system_prompt": system_prompt,
@@ -694,10 +712,18 @@ class V17MicroLlmClient:
                 first_token_emitted = False
                 # 首包活性：_sse_delta_content 将 reasoning/thought 与 content 同等视为「已见增量」，避免长推理静默。
                 has_seen_delta = False
+                print(
+                    f"[V17-LLM] session={session_id or 'default'} post_begin endpoint={endpoint} timeout={http_timeout}s ttft={ttft}s",
+                    flush=True,
+                )
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     async with client.stream("POST", endpoint, json=body, headers=headers) as resp:
                         resp.raise_for_status()
                         lat_ms = int((time.perf_counter() - started) * 1000)
+                        print(
+                            f"[V17-LLM] session={session_id or 'default'} headers_ok status={resp.status_code} latency_ms={lat_ms}",
+                            flush=True,
+                        )
                         async for ev in _yield_step({"step": "handshake", "latency": lat_ms}):
                             yield ev
                         if on_llm_partial is not None:
@@ -732,6 +758,11 @@ class V17MicroLlmClient:
                             if eff:
                                 has_seen_delta = True
                                 saw_first_token = True
+                                if not first_token_emitted:
+                                    print(
+                                        f"[V17-LLM] session={session_id or 'default'} first_delta_seen",
+                                        flush=True,
+                                    )
                             if c_part:
                                 if not first_token_emitted:
                                     first_token_emitted = True
@@ -750,6 +781,10 @@ class V17MicroLlmClient:
             except Exception as exc:
                 elapsed_ms = int((time.perf_counter() - started) * 1000)
                 error_id = f"V17-LLM-{uuid.uuid4().hex[:8].upper()}"
+                print(
+                    f"[V17-LLM] session={session_id or 'default'} stream_fail type={type(exc).__name__} elapsed_ms={elapsed_ms}",
+                    flush=True,
+                )
                 raw_rows = [str(x).strip() for x in fragments if str(x).strip()][:6]
                 fail_text = f"[叙事引擎重连中][{error_id}] " + " | ".join(raw_rows)
                 raw_sse_joined = raw_sse_joined or "\n".join(sse_raw_lines)
@@ -790,6 +825,10 @@ class V17MicroLlmClient:
             text = "".join(acc).strip()
             raw_sse_joined = raw_sse_joined or "\n".join(sse_raw_lines)
             if not text:
+                print(
+                    f"[V17-LLM] session={session_id or 'default'} stream_empty_fallback elapsed_ms={elapsed_ms}",
+                    flush=True,
+                )
                 out_fb = await self._fuse_urllib_fallback(
                     cfg=cfg,
                     body={**body, "stream": False},
@@ -833,6 +872,10 @@ class V17MicroLlmClient:
                     extras=_fuse_role_extras(rid),
                 ),
             }
+            print(
+                f"[V17-LLM] session={session_id or 'default'} stream_complete elapsed_ms={elapsed_ms} text_len={len(text)}",
+                flush=True,
+            )
             async for ev in _yield_step({"step": "complete", "result": ok_payload}):
                 yield ev
 
@@ -844,6 +887,10 @@ class V17MicroLlmClient:
         except TimeoutError as exc:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             error_id = f"V17-LLM-{uuid.uuid4().hex[:8].upper()}"
+            print(
+                f"[V17-LLM] session={session_id or 'default'} outer_timeout elapsed_ms={elapsed_ms} budget={outer_fuse_sec}",
+                flush=True,
+            )
             raw_rows = [str(x).strip() for x in fragments if str(x).strip()][:6]
             timeout_payload = {
                 "text": f"[叙事引擎重连中][{error_id}] " + " | ".join(raw_rows),

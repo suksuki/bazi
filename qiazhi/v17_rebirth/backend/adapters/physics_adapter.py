@@ -19,7 +19,11 @@ class PhysicsAdapter:
     def read_deity_scores(self, raw_physics: Dict[str, Any]) -> Dict[str, float]:
         src = {}
         if isinstance(raw_physics, dict):
-            src = raw_physics.get("ten_gods_absolute_intensity") or raw_physics.get("deity_scores")
+            src = (
+                raw_physics.get("ten_gods_absolute")
+                or raw_physics.get("ten_gods_absolute_intensity")
+                or raw_physics.get("deity_scores")
+            )
         if not isinstance(src, dict):
             return {}
         out: Dict[str, float] = {}

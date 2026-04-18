@@ -74,6 +74,7 @@ def _default_payload() -> Dict[str, Any]:
     return {
         "deity_scores": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
         "ten_gods_absolute_intensity": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
+        "ten_gods_absolute": {"正官": 51.34, "食神": 20.1, "比肩": 8.9, "偏印": 5.4},
         "total_energy_index": 85.74,
         "facts": [
             "五行火旺，结构张力上扬",
@@ -236,11 +237,18 @@ def _run_v17_physics_core(
             "tier": 2,
         },
     ]
+    # V17.32: 序列化 Evolution Ledger（从 EvolutionLedger 对象转为 JSON-safe dict）
+    from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
+    raw_ledger = energy_meta.pop("ledger", None)
+    ten_gods_ledger = raw_ledger.to_dict() if isinstance(raw_ledger, EvolutionLedger) else {}
+
     return {
         "deity_scores": scores,
         "ten_gods_absolute_intensity": scores,
+        "ten_gods_absolute": scores,
         "total_energy_index": total_energy_index,
         "energy_meta": energy_meta,
+        "ten_gods_ledger": ten_gods_ledger,
         "facts": facts,
         "four_pillars": four_pillars,
         "luck_pillar": luck_pillar,
@@ -285,6 +293,38 @@ def _system_init_failure_stop_frame() -> Dict[str, Any]:
             },
         },
     }
+
+
+def _narrator_runtime_failure_frame(*, err: Exception, step_cursor: str = "") -> Dict[str, Any]:
+    err_name = type(err).__name__
+    err_text = str(err).strip()
+    detail = f"{err_name}: {err_text}" if err_text else err_name
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "layer": "NARRATOR",
+        "payload": {
+            "render_text": f"[叙事协程异常中止] {detail}",
+            "llm_meta": {
+                "ok": False,
+                "engine_state": "orchestrator_runtime_error",
+                "error": detail,
+                "step_position": str(step_cursor or "").strip(),
+            },
+        },
+    }
+
+
+def _is_terminal_narrator_frame(frame: Dict[str, Any]) -> bool:
+    if str(frame.get("layer") or "").strip().upper() != "NARRATOR":
+        return False
+    payload = frame.get("payload") if isinstance(frame.get("payload"), dict) else {}
+    llm_meta = payload.get("llm_meta") if isinstance(payload.get("llm_meta"), dict) else {}
+    if llm_meta.get("ok") is False:
+        return True
+    try:
+        return llm_meta.get("elapsed_ms") is not None and not bool(llm_meta.get("stream_partial"))
+    except Exception:
+        return False
 
 
 async def _hydrate_physics_atomically(pl: Dict[str, Any]) -> None:
@@ -364,6 +404,56 @@ def _frame_step_cursor(frame: Dict[str, Any]) -> str:
     return layer or "unknown"
 
 
+def _heartbeat_status_frame(*, step_cursor: str, idle_sec: float, idle_beats: int) -> Dict[str, Any] | None:
+    """长时间无正文时，补发一条可审计的 NARRATOR 状态帧，避免前端只能盲等 HEARTBEAT。"""
+    step = str(step_cursor or "START").strip() or "START"
+    if step.startswith("SNAPSHOT:llm_audit_preview") or step.startswith("NARRATOR:已联通"):
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "layer": "NARRATOR",
+            "payload": {
+                "render_text": "",
+                "llm_meta": {
+                    "stream_partial": True,
+                    "engine_state": "awaiting_first_token",
+                    "heartbeat_step": step,
+                    "idle_sec": idle_sec,
+                    "idle_beats": idle_beats,
+                },
+                "source_facts": [],
+            },
+        }
+    if step.startswith("NARRATOR:streaming_partial"):
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "layer": "NARRATOR",
+            "payload": {
+                "render_text": "",
+                "llm_meta": {
+                    "stream_partial": True,
+                    "engine_state": "stream_stalled",
+                    "heartbeat_step": step,
+                    "idle_sec": idle_sec,
+                    "idle_beats": idle_beats,
+                },
+                "source_facts": [],
+            },
+        }
+    return None
+
+
+def _should_retry_premature_close(step_cursor: str, retry_count: int) -> bool:
+    step = str(step_cursor or "").strip()
+    if retry_count >= 1:
+        return False
+    return (
+        step == "START"
+        or step.startswith("SNAPSHOT:llm_audit_dispatch")
+        or step.startswith("SNAPSHOT:llm_audit_preview")
+        or step.startswith("NARRATOR:已联通")
+    )
+
+
 async def _narrator_with_heartbeat(
     agen: AsyncIterator[Dict[str, Any]],
 ) -> AsyncIterator[Dict[str, Any]]:
@@ -371,20 +461,45 @@ async def _narrator_with_heartbeat(
     sec = _sse_heartbeat_sec()
     it = agen.__aiter__()
     step_cursor = "START"
+    idle_beats = 0
+    next_task: asyncio.Task[Dict[str, Any]] | None = None
     while True:
         try:
-            frame = await asyncio.wait_for(it.__anext__(), timeout=sec)
+            if next_task is None:
+                next_task = asyncio.create_task(it.__anext__())
+            done, _ = await asyncio.wait({next_task}, timeout=sec, return_when=asyncio.FIRST_COMPLETED)
+            if not done:
+                raise asyncio.TimeoutError()
+            frame = next_task.result()
+            next_task = None
         except StopAsyncIteration:
+            next_task = None
             break
         except asyncio.TimeoutError:
+            idle_beats += 1
             yield {
                 "timestamp": datetime.utcnow().isoformat(),
                 "layer": "HEARTBEAT",
                 "payload": {"signal": "sse_tick", "idle_sec": sec, "step_position": step_cursor},
             }
+            if idle_beats >= 2:
+                status_frame = _heartbeat_status_frame(
+                    step_cursor=step_cursor,
+                    idle_sec=sec,
+                    idle_beats=idle_beats,
+                )
+                if status_frame is not None:
+                    yield status_frame
             continue
         step_cursor = _frame_step_cursor(frame)
+        idle_beats = 0
         yield frame
+    if next_task is not None:
+        next_task.cancel()
+        try:
+            await next_task
+        except Exception:
+            pass
 
 
 async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIterator[bytes]:
@@ -496,13 +611,16 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
         current_action_signal = bool(current_user_message)
         current_proxy = str(will_proxy or "stable")
         decision_anchor = current_user_message
+        last_step_cursor = "START"
+        premature_close_retry_count = 0
         while True:
             restarted = False
+            saw_terminal_narrator = False
             try:
                 async for frame in _narrator_with_heartbeat(
                     orchestrator.narrator_frames(
                         raw_physics=raw_physics,
-                        facts=[str(x) for x in facts if str(x).strip()],
+                        facts=[x for x in facts if str(x).strip()],
                         will_proxy=current_proxy,
                         user_message=current_user_message,
                         action_signal=current_action_signal,
@@ -515,8 +633,39 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
                         stability_checked=True,
                     )
                 ):
+                    if isinstance(frame, dict):
+                        last_step_cursor = _frame_step_cursor(frame)
+                        if _is_terminal_narrator_frame(frame):
+                            saw_terminal_narrator = True
                     yield (json.dumps(frame, ensure_ascii=False) + "\n").encode("utf-8")
                     await asyncio.sleep(0)
+                if not restarted and not saw_terminal_narrator:
+                    if _should_retry_premature_close(last_step_cursor, premature_close_retry_count):
+                        premature_close_retry_count += 1
+                        _log.warning(
+                            "[V17-NARRATOR-SOFT-RETRY] session=%s step=%s retry=%s",
+                            session_id,
+                            last_step_cursor,
+                            premature_close_retry_count,
+                        )
+                        restarted = True
+                    else:
+                        _log.error(
+                            "[V17-NARRATOR-PREMATURE-CLOSE] session=%s step=%s",
+                            session_id,
+                            last_step_cursor,
+                        )
+                        yield (
+                            json.dumps(
+                                _narrator_runtime_failure_frame(
+                                    err=RuntimeError("narrator_stream_closed_without_terminal_frame"),
+                                    step_cursor=last_step_cursor,
+                                ),
+                                ensure_ascii=False,
+                            )
+                            + "\n"
+                        ).encode("utf-8")
+                        await asyncio.sleep(0)
             except DataSovereigntyError as _dse:
                 if str(_dse).strip() == "physics_metadata_unstable":
                     yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
@@ -546,6 +695,17 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
                 yield (json.dumps(will_flash, ensure_ascii=False) + "\n").encode("utf-8")
                 await asyncio.sleep(0)
                 restarted = True
+            except Exception as exc:  # noqa: BLE001
+                _log.exception("[V17-NARRATOR-CRASH] session=%s step=%s", session_id, last_step_cursor)
+                yield (
+                    json.dumps(
+                        _narrator_runtime_failure_frame(err=exc, step_cursor=last_step_cursor),
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+                await asyncio.sleep(0)
+                break
             if restarted:
                 continue
             break
@@ -588,7 +748,9 @@ async def stream_v17_post(
     gender: Optional[str] = Query(default="female", pattern="^(male|female)$"),
     flow_year: Optional[int] = Query(default=None, ge=1800, le=2200),
 ) -> Union[StreamingResponse, JSONResponse]:
-    merged_payload = _run_v17_physics_core(
+    session_id = str((payload or {}).get("session_id", "")).strip() or "default"
+    current_physics = await get_state_backend().get_physics(session_id)
+    merged_payload = dict(current_physics) if isinstance(current_physics, dict) and current_physics else _run_v17_physics_core(
         birth_time=_safe_parse_birth_time(birth_time),
         gender=gender,
         flow_year=flow_year,
@@ -630,10 +792,64 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         return JSONResponse({"ok": False, "detail": "invalid action signal"}, status_code=400)
     _ACTION_SEQ += 1
     session_id = str(payload.get("session_id", "")).strip() or "default"
+    decision_id = str(payload.get("decision_id", "")).strip()
     event = {"signal": signal, "action": action, "ts": datetime.now(timezone.utc).isoformat(), "seq": _ACTION_SEQ, "session_id": session_id}
-    _WILL_IMPACT_BUFFER.append(event)
-    _WILL_IMPACT_BUFFER[:] = _WILL_IMPACT_BUFFER[-20:]
-    # V17.23-Red：添加事件到 StateBackend（内存或 Redis Pub/Sub）而非进程级 Queue
+    kernel_dispatch_ok = True
+    kernel_dispatch_detail = ""
+    # V17.45: 全域因果调度 (SRC_MANUAL)
+    if signal == "ACTION_TAKEN":
+        from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel
+        try:
+            current_physics = await get_state_backend().get_physics(session_id)
+            if isinstance(current_physics, dict):
+                pending = current_physics.get("pending_decisions")
+                if isinstance(pending, list):
+                    matched_decision = None
+                    for item in pending:
+                        if not isinstance(item, dict):
+                            continue
+                        item_id = str(item.get("id", "")).strip()
+                        item_label = str(item.get("label", "")).strip()
+                        item_title = str(item.get("title", "")).strip()
+                        if (decision_id and item_id == decision_id) or action in {item_label, item_title}:
+                            matched_decision = item
+                            item["applied"] = True
+                            break
+                    if isinstance(matched_decision, dict):
+                        if not isinstance(payload.get("physical_impact"), dict) and isinstance(matched_decision.get("physical_impact"), dict):
+                            payload["physical_impact"] = matched_decision.get("physical_impact")
+                        if not str(payload.get("target_god", "")).strip() and str(matched_decision.get("target_god", "")).strip():
+                            payload["target_god"] = matched_decision.get("target_god")
+                    await get_state_backend().set_physics(session_id, current_physics)
+            kernel_dispatch_ok = await PhysicsKernel.dispatch_perturbation(
+                session_id=session_id,
+                source="SRC_MANUAL",
+                payload={**payload, "reason": f"手动激活动作: {action}"}
+            )
+            if not kernel_dispatch_ok:
+                kernel_dispatch_detail = "physics kernel rejected perturbation"
+                _log.error(
+                    "[V17-ACTION-REJECTED] session=%s action=%s detail=%s",
+                    session_id,
+                    action,
+                    kernel_dispatch_detail,
+                )
+        except Exception as e:
+            kernel_dispatch_ok = False
+            kernel_dispatch_detail = str(e)
+            _log.error(f"[V17-KERNEL-DISPATCH-FAIL] {e}")
+
+    if signal == "ACTION_TAKEN" and not kernel_dispatch_ok:
+        return JSONResponse(
+            {
+                "ok": False,
+                "detail": kernel_dispatch_detail or "physics kernel dispatch failed",
+                "signal": signal,
+            },
+            status_code=500,
+        )
+
+    # 发布原始事件（用于 Narrator 重启等逻辑）
     await get_state_backend().publish_action(session_id, event)
     return JSONResponse({"ok": True, "signal": signal, "will_proxy_delta": "aggressive" if any(k in action for k in ["进", "冲", "加码"]) else "stable"})
 

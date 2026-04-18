@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  deriveV17LlmLifecycle,
   isCanonPhysicsSnapshot,
   mergeV17LlmMetaForUi,
   shouldReleaseDecisionInboxLock,
@@ -50,7 +51,7 @@ describe("shouldReleaseDecisionInboxLock", () => {
     expect(
       shouldReleaseDecisionInboxLock({
         lockStartedAtMs,
-        latestFrameTimestamp: "2026-04-18T08:59:59.000Z",
+        latestFrameTimestamp: "2026-04-18T08:59:56.000Z",
         hasFinalLlmMeta: true,
       }),
     ).toBe(false);
@@ -81,5 +82,51 @@ describe("shouldReleaseDecisionInboxLock", () => {
         llmOk: false,
       }),
     ).toBe(true);
+  });
+});
+
+describe("deriveV17LlmLifecycle", () => {
+  it("marks audit-preview without narrator body as awaiting_first_token", () => {
+    const out = deriveV17LlmLifecycle({
+      running: true,
+      llmMeta: {},
+      latestNarrator: undefined,
+      hasAuditPreview: true,
+      streamState: {
+        closed: false,
+        closeReason: "idle",
+        lastHeartbeat: { stepPosition: "SNAPSHOT:llm_audit_preview", idleSec: 2 },
+        heartbeatHistory: [],
+      },
+    });
+    expect(out.phase).toBe("awaiting_first_token");
+  });
+
+  it("marks closed stream without final llm meta as closed_without_output", () => {
+    const out = deriveV17LlmLifecycle({
+      running: true,
+      llmMeta: {},
+      latestNarrator: undefined,
+      hasAuditPreview: true,
+      streamState: {
+        closed: true,
+        closeReason: "stream_eof",
+        lastHeartbeat: { stepPosition: "NARRATOR:已联通", idleSec: 2 },
+        heartbeatHistory: [],
+      },
+    });
+    expect(out.phase).toBe("closed_without_output");
+    expect(out.statusText).toContain("流已结束");
+  });
+
+  it("marks terminal error as failed even without narrator text", () => {
+    const out = deriveV17LlmLifecycle({
+      running: true,
+      llmMeta: { ok: false, error: "boom" },
+      latestNarrator: undefined,
+      hasAuditPreview: true,
+      streamState: { closed: true, closeReason: "runtime_error", heartbeatHistory: [] },
+    });
+    expect(out.phase).toBe("failed");
   });
 });

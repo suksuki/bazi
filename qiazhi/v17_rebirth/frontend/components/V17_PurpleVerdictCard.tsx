@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 
 import { mergeV17LlmMetaForUi } from "@/hooks/useV17WebStream";
@@ -62,12 +62,25 @@ export function V17_PurpleVerdictCard({
   onToggleTrace,
   connectTickMs = 0,
   running = false,
+  llmStatusText,
+  llmStatusDetail,
+  llmLifecyclePhase,
 }: {
   frames: EvolutionFrame[];
   onToggleTrace?: () => void;
   /** 测算开始后前端计时（ms），用于连接态跳动 */
   connectTickMs?: number;
   running?: boolean;
+  llmStatusText: string;
+  llmStatusDetail: string;
+  llmLifecyclePhase:
+    | "idle"
+    | "connecting"
+    | "awaiting_first_token"
+    | "streaming"
+    | "completed"
+    | "failed"
+    | "closed_without_output";
 }) {
   const ordered = [...(frames || [])];
   const llmAuditSnap = [...ordered].reverse().find(
@@ -128,17 +141,10 @@ export function V17_PurpleVerdictCard({
     rawFpt && typeof rawFpt === "object" ? (rawFpt as MergedFullPromptTrace) : undefined;
   const reconnecting = String(lm.engine_state || "") === "reconnecting";
   const errId = String(lm.error_id || "").trim();
-  const streamPartial = lm.stream_partial === true;
-  const hasFinalLlmMeta =
-    !streamPartial && typeof lm.elapsed_ms === "number" && !Number.isNaN(lm.elapsed_ms as number);
-  const latestNarratorFrame = useMemo(
-    () => [...(frames || [])].reverse().find((f) => String(f?.layer || "").toUpperCase() === "NARRATOR"),
-    [frames],
-  );
-  const narratorHasChunk = Boolean(String(latestNarratorFrame?.payload?.render_text || "").trim());
   const modelLabel = String(lm.model || "").trim() || "叙事引擎";
-  const connectPhase = running && !narratorHasChunk;
-  const collapsePhase = running && narratorHasChunk && !hasFinalLlmMeta;
+  const waitingPhase =
+    llmLifecyclePhase === "connecting" || llmLifecyclePhase === "awaiting_first_token";
+  const streamingPhase = llmLifecyclePhase === "streaming";
   const [reasonOpen, setReasonOpen] = useState(false);
   const reasonFacts = (physicsSnapshot?.payload?.debug_trace?.facts || []).filter(
     (x) => String(x || "").trim().length > 0,
@@ -210,17 +216,24 @@ export function V17_PurpleVerdictCard({
         />
       )}
       </motion.div>
-      {(connectPhase || collapsePhase) && running ? (
+      {(waitingPhase || streamingPhase || llmLifecyclePhase === "closed_without_output") && running ? (
         <div className="relative z-10 mt-2 text-[10px] leading-relaxed text-violet-200/85">
-          {connectPhase ? (
+          {waitingPhase ? (
             <>
-              <p>状态：正在连接 {modelLabel}…</p>
-              <p className="font-mono text-violet-300/90">耗时：正在连接 {modelLabel}… ({connectTickMs} ms)</p>
+              <p>状态：{llmStatusText}</p>
+              <p className="font-mono text-violet-300/90">
+                耗时：{modelLabel} · {connectTickMs} ms
+              </p>
+            </>
+          ) : streamingPhase ? (
+            <>
+              <p>状态：{llmStatusText}</p>
+              <p className="font-mono text-violet-300/90">链路：{llmStatusDetail}</p>
             </>
           ) : (
             <>
-              <p>状态：意志坍缩中…</p>
-              <p className="font-mono text-violet-300/90">耗时：计时中…</p>
+              <p>状态：{llmStatusText}</p>
+              <p className="font-mono text-violet-300/90">链路：{llmStatusDetail}</p>
             </>
           )}
         </div>
@@ -265,7 +278,7 @@ export function V17_PurpleVerdictCard({
           ) : (
             <p className="text-[11px] text-zinc-500">尚无插件事实（等待 SNAPSHOT 一帧）。</p>
           )}
-          {hasFinalLlmMeta ||
+          {typeof lm.elapsed_ms === "number" ||
           lm.prompt_dead_audit_unlock === true ||
           lm.audit_preview === true ||
           lm.llm_audit_preview === true ||

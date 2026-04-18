@@ -11,10 +11,21 @@ interface TracePanelProps {
   collapsed: boolean;
   onToggle: () => void;
   llmMeta: Record<string, unknown>;
-  connectPhase: boolean;
-  collapsePhase: boolean;
+  llmLifecyclePhase:
+    | "idle"
+    | "connecting"
+    | "awaiting_first_token"
+    | "streaming"
+    | "completed"
+    | "failed"
+    | "closed_without_output";
+  llmStatusText: string;
+  llmStatusDetail: string;
   modelLabel: string;
   connectTickMs: number;
+  lastHeartbeatStep: string;
+  heartbeatHistory: Array<{ stepPosition: string; idleSec: number; timestamp?: string }>;
+  streamClosed: boolean;
   fullTrace: Record<string, unknown> | undefined;
   llmAuditSnapshot: unknown;
   latestNarrator: { payload?: Record<string, unknown> } | undefined;
@@ -35,6 +46,11 @@ interface TracePanelProps {
       ten_gods_absolute_intensity?: Record<string, number>;
       total_energy_index?: number;
       ten_gods?: unknown[];
+      ten_gods_ledger?: Record<
+        string,
+        Array<{ step: string; val: number; delta?: number; reason: string; source?: string; highlight_type?: string }>
+      >;
+      flow_topology?: Array<{ from_el: string; to_el: string; current: number; rel: string; resistance?: number; stress?: number }>;
       pattern?: string;
       physics_tension?: number;
       four_pillars?: Record<string, unknown>;
@@ -56,10 +72,14 @@ export function V17_TracePanel({
   collapsed,
   onToggle,
   llmMeta,
-  connectPhase,
-  collapsePhase,
+  llmLifecyclePhase,
+  llmStatusText,
+  llmStatusDetail,
   modelLabel,
   connectTickMs,
+  lastHeartbeatStep,
+  heartbeatHistory,
+  streamClosed,
   fullTrace,
   llmAuditSnapshot,
   latestNarrator,
@@ -81,8 +101,26 @@ export function V17_TracePanel({
       : {};
   const scoreMap =
     physicsSnapshot?.payload?.ten_gods_absolute_intensity || physicsSnapshot?.payload?.deity_scores || {};
+  const ledgerRaw = physicsSnapshot?.payload?.ten_gods_ledger || {};
   const deityScores = Object.entries(scoreMap)
-    .map(([name, score]) => ({ name: String(name), score: Number(score || 0) }))
+    .map(([name, score]) => {
+      const history = ledgerRaw[name] || [];
+      const currentVal = Number(score || 0);
+      // V17.36: 相比上一次操作的变化 (Ledger 倒数第二条)
+      const prevVal = history.length > 1 ? history[history.length - 2].val : (history.length > 0 ? history[0].val : currentVal);
+      const deltaLast = currentVal - prevVal;
+      const initialVal = history.length > 0 ? history[0].val : currentVal;
+      const deltaTotal = currentVal - initialVal;
+
+      return { 
+        name: String(name), 
+        score: currentVal, 
+        prevScore: prevVal,
+        delta: deltaLast, // 默认显示单步变动
+        deltaTotal,
+        history 
+      };
+    })
     .filter((row) => row.name && Number.isFinite(row.score))
     .sort((a, b) => b.score - a.score);
   const maxDeityScore = deityScores.length ? Math.max(...deityScores.map((row) => row.score), 1) : 1;
@@ -121,6 +159,9 @@ export function V17_TracePanel({
     causalPhysicsAnchor !== "" &&
     causalAuditAnchor !== "" &&
     causalPhysicsFp === causalAuditFp;
+  const connectPhase =
+    llmLifecyclePhase === "connecting" || llmLifecyclePhase === "awaiting_first_token";
+  const collapsePhase = llmLifecyclePhase === "streaming";
   const timelineItems = [
     {
       label: "SNAPSHOT",
@@ -134,20 +175,25 @@ export function V17_TracePanel({
     },
     {
       label: "LLM",
-      state: connectPhase
-        ? "连接中"
-        : collapsePhase
-          ? "流式生成中"
-          : String(llmMeta.engine_state || (llmMeta.ok ? "ok" : "待命")),
-      meta: `${String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎")}`,
+      state: llmStatusText,
+      meta: `${String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎")} · ${llmStatusDetail}`,
     },
     {
       label: "TERMINAL",
-      state: llmMeta.ok === false ? "失败/降级" : llmMeta.elapsed_ms != null ? "完成" : "未终结",
+      state:
+        llmLifecyclePhase === "failed"
+          ? "失败/降级"
+          : llmLifecyclePhase === "completed"
+            ? "完成"
+            : llmLifecyclePhase === "closed_without_output"
+              ? "已关闭"
+              : "未终结",
       meta:
         llmMeta.error != null && String(llmMeta.error).trim()
           ? String(llmMeta.error)
-          : `${Number(llmMeta.elapsed_ms || 0)} ms`,
+          : streamClosed
+            ? lastHeartbeatStep || "stream_eof"
+            : `${Number(llmMeta.elapsed_ms || 0)} ms`,
     },
   ];
 
@@ -206,16 +252,86 @@ export function V17_TracePanel({
           {deityScores.length ? (
             <div className="space-y-1">
               {deityScores.map((row) => (
-                <div key={row.name} className="rounded-lg border border-cyan-500/15 bg-zinc-900/80 px-2 py-1.5">
+                <div key={row.name} className="group relative rounded-lg border border-cyan-500/15 bg-zinc-900/80 px-2 py-1.5 transition hover:border-cyan-500/40">
                   <div className="mb-1 flex items-center justify-between text-[11px] text-zinc-200">
-                    <span>{row.name}</span>
-                    <span className="font-mono text-cyan-200">{row.score.toFixed(2)}</span>
+                    <span className="flex items-center gap-1">
+                      {row.name}
+                      {Math.abs(row.delta) > 0.001 && (
+                        <span className={`text-[9px] font-bold ${row.delta > 0 ? "text-[#10B981]" : "text-[#EF4444]"}`}>
+                          {row.delta > 0 ? "↑" : "↓"} {Math.abs(row.delta).toFixed(1)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-mono text-cyan-200">
+                      {row.score.toFixed(2)}
+                      {Math.abs(row.delta) > 0.001 && (
+                         <span className="ml-1 text-[9px] text-zinc-500">
+                           (was {row.prevScore.toFixed(0)})
+                         </span>
+                      )}
+                    </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                  <div className="relative h-2 overflow-hidden rounded-full bg-zinc-800">
+                    {/* Ghost Bar: 上一次操作的能级 (背景条) */}
                     <div
-                      className="h-full rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.65),rgba(103,232,249,0.95))]"
-                      style={{ width: `${Math.max(4, Math.min(100, (row.score / maxDeityScore) * 100))}%` }}
+                      className="absolute left-0 top-0 h-full rounded-full bg-zinc-700/50"
+                      style={{ width: `${Math.max(2, Math.min(100, (row.prevScore / maxDeityScore) * 100))}%` }}
                     />
+                    {/* Current Bar: 当前能级 (主条) */}
+                    <div
+                      className="absolute left-0 top-0 h-full rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.7),rgba(103,232,249,1))]"
+                      style={{ 
+                        width: `${Math.max(4, Math.min(100, (row.score / maxDeityScore) * 100))}%`,
+                        boxShadow: row.delta > 0 ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* 终端风格演化回溯 Tooltip */}
+                  <div className="pointer-events-none absolute left-full top-0 z-[100] ml-2 hidden w-80 origin-left scale-95 rounded border border-cyan-500/30 bg-black/95 p-2 shadow-2xl backdrop-blur-md group-hover:block group-hover:scale-100 transition-all duration-150">
+                    <p className="mb-2 border-b border-cyan-500/20 pb-1 text-[9px] font-bold uppercase tracking-widest text-cyan-400">
+                      EVOLUTION_LEDGER: {row.name} (CAP=8)
+                    </p>
+                    <div className="space-y-1">
+                      {row.history.map((entry, idx) => (
+                        <div
+                          key={idx}
+                          className={`font-mono text-[9px] leading-tight px-1 py-0.5 rounded ${
+                            entry.highlight_type === "cyan" || entry.step === "L1.5_FLOW_SETTLEMENT"
+                              ? "bg-cyan-500/10 border-l border-cyan-500/50"
+                              : ""
+                          }`}
+                        >
+                          <span className={`${entry.step.startsWith('L1.5') ? 'text-cyan-400 font-bold' : 'text-zinc-500'}`}>[{entry.step}]</span>
+                          <span className="mx-1 text-zinc-600">{"->"}</span>
+                          {entry.delta != null && (
+                            <span className={entry.delta > 0 ? "text-[#10B981]" : entry.delta < 0 ? "text-[#EF4444]" : "text-zinc-600"}>
+                              {entry.delta > 0 ? "+" : ""}{entry.delta.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="mx-1 text-zinc-600">{"->"}</span>
+                          <span className="text-cyan-300">{entry.val.toFixed(2)}</span>
+                          <span className="mx-2 text-zinc-700">|</span>
+                          <span className="text-zinc-400 italic">{entry.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* V17.34：电流拓扑图简版 */}
+                    {physicsSnapshot?.payload?.flow_topology && (
+                      <div className="mt-3 border-t border-cyan-500/20 pt-2">
+                        <p className="mb-1 text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Global Current Topology (KCL)</p>
+                        <div className="grid grid-cols-1 gap-0.5 text-[8px] font-mono text-zinc-400">
+                           {(physicsSnapshot.payload.flow_topology as Array<{rel: string, from_el: string, to_el: string, current: number, resistance?: number, stress?: number}>).filter(f => f.from_el === row.name || f.to_el === row.name).slice(0, 6).map((flow, fidx) => (
+                             <div key={fidx} className="flex items-center gap-1">
+                                <span className={flow.rel === "生" ? "text-emerald-500" : "text-amber-500"}>{flow.from_el}</span>
+                                <span className="text-zinc-600">{"--("}{flow.rel}/I={flow.current.toFixed(1)}/R={(flow.resistance ?? 0).toFixed(2)}{")-->"}</span>
+                                <span className={flow.rel === "生" ? "text-emerald-500" : "text-amber-500"}>{flow.to_el}</span>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -258,6 +374,22 @@ export function V17_TracePanel({
             </div>
           ))}
         </div>
+        {heartbeatHistory.length ? (
+          <div className="mt-3 rounded-lg border border-cyan-500/10 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.22em] text-zinc-500">HEARTBEAT TRACE</p>
+            <div className="mt-2 space-y-1 font-mono text-[10px] text-zinc-400">
+              {heartbeatHistory.slice().reverse().map((beat, idx) => (
+                <div key={`${beat.timestamp || idx}_${beat.stepPosition}`} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-cyan-200/90">{beat.stepPosition}</span>
+                  <span className="shrink-0 text-zinc-500">
+                    {beat.idleSec.toFixed(1)}s
+                    {beat.timestamp ? ` · ${String(beat.timestamp).slice(11, 19)}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ── LLM 状态概览 ── */}
@@ -266,25 +398,25 @@ export function V17_TracePanel({
         <p>
           模型：
           {connectPhase
-            ? `${modelLabel}（连接中）`
+            ? `${modelLabel}（待首字）`
             : String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎")}
         </p>
         <p>
           耗时：
           {connectPhase
-            ? `正在连接 ${modelLabel}… (${connectTickMs} ms)`
+            ? `${modelLabel} · ${connectTickMs} ms`
             : collapsePhase
               ? "计时中…"
-              : `${Number(llmMeta.elapsed_ms || 0)} ms`}
+              : llmLifecyclePhase === "closed_without_output"
+                ? "流已结束"
+                : `${Number(llmMeta.elapsed_ms || 0)} ms`}
         </p>
         <p>
           状态：
-          {connectPhase
-            ? `正在连接 ${modelLabel}…`
-            : collapsePhase
-              ? "意志坍缩中…"
-              : String(llmMeta.engine_state || (llmMeta.ok ? "ok" : "就绪"))}
+          {llmStatusText}
         </p>
+        {llmStatusDetail ? <p>步进：{llmStatusDetail}</p> : null}
+        {lastHeartbeatStep ? <p>Heartbeat：{lastHeartbeatStep}</p> : null}
         {llmMeta.http_timeout_sec != null ? (
           <p>HTTP 超时：{String(llmMeta.http_timeout_sec)} s</p>
         ) : null}
@@ -328,7 +460,7 @@ export function V17_TracePanel({
               ? `（锚点长度 ${String(fullTrace.decision_anchor_len)}）`
               : ""}
           </p>
-        ) : collapsePhase || connectPhase ? (
+        ) : collapsePhase || connectPhase || llmLifecyclePhase === "closed_without_output" ? (
           <p className="text-[10px] text-zinc-500">
             {llmAuditSnapshot
               ? "full_prompt_trace：已由 SNAPSHOT（llm_audit_preview）在 fuse 前下发…"

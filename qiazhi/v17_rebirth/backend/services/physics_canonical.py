@@ -83,7 +83,11 @@ class PhysicsCanonicalService:
         if not isinstance(physics_tensor, dict):
             return rows
         total_energy = physics_tensor.get("total_energy_index")
-        scores = physics_tensor.get("ten_gods_absolute_intensity") or physics_tensor.get("deity_scores")
+        scores = (
+            physics_tensor.get("ten_gods_absolute")
+            or physics_tensor.get("ten_gods_absolute_intensity")
+            or physics_tensor.get("deity_scores")
+        )
         if isinstance(scores, dict) and scores:
             ranked = sorted(
                 (
@@ -96,7 +100,7 @@ class PhysicsCanonicalService:
             )
             top_rows = [f"{name}:{value:.2f}" for name, value in ranked[:6]]
             if top_rows:
-                rows.append(f"十神绝对强度（非比例）：{' | '.join(top_rows)}")
+                rows.append(f"十神绝对强度（非比例）：{'，'.join(top_rows)}")
         try:
             total_value = float(total_energy)
         except (TypeError, ValueError):

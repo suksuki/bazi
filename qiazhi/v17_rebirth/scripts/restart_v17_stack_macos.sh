@@ -23,8 +23,74 @@ BACKEND_LOG="${RUNLOG_DIR}/backend-${BACKEND_PORT}.log"
 FRONTEND_LOG="${RUNLOG_DIR}/frontend-${FRONTEND_PORT}.log"
 BACKEND_PID_FILE="${RUNLOG_DIR}/backend-${BACKEND_PORT}.pid"
 FRONTEND_PID_FILE="${RUNLOG_DIR}/frontend-${FRONTEND_PORT}.pid"
+LOCK_DIR="${RUNLOG_DIR}/restart.lock"
+
+DO_INSTALL=0
+DO_BUILD=0
+RESTART_BACKEND=1
+RESTART_FRONTEND=1
+
+usage() {
+  cat <<'EOF'
+Usage: restart_v17_stack_macos.sh [options]
+
+Options:
+  --install         Reinstall frontend dependencies before start
+  --build           Rebuild frontend before start
+  --backend-only    Restart backend only
+  --frontend-only   Restart frontend only
+  -h, --help        Show this help
+
+Default behavior:
+  - restart backend + frontend
+  - do NOT reinstall dependencies
+  - do NOT rebuild frontend unless build output is missing
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --install)
+      DO_INSTALL=1
+      shift
+      ;;
+    --build)
+      DO_BUILD=1
+      shift
+      ;;
+    --backend-only)
+      RESTART_BACKEND=1
+      RESTART_FRONTEND=0
+      shift
+      ;;
+    --frontend-only)
+      RESTART_BACKEND=0
+      RESTART_FRONTEND=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}Unknown option: $1${NC}"
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 mkdir -p "${RUNLOG_DIR}"
+
+if ! mkdir "${LOCK_DIR}" 2>/dev/null; then
+  echo -e "${RED}Another restart is already running. Lock: ${LOCK_DIR}${NC}"
+  exit 1
+fi
+
+cleanup_lock() {
+  rmdir "${LOCK_DIR}" 2>/dev/null || true
+}
+trap cleanup_lock EXIT
 
 print_step() {
   echo -e "${BLUE}$1${NC}"
@@ -132,54 +198,74 @@ fi
 print_step "[1/5] Prepare process state..."
 # V17.16：清理可能占用 8017 或挂死的 gunicorn / 旧 worker（无进程时静默成功）
 pkill -f gunicorn 2>/dev/null || true
-kill_pid_file_if_alive "${BACKEND_PID_FILE}"
-kill_pid_file_if_alive "${FRONTEND_PID_FILE}"
-kill_port_listener "${BACKEND_PORT}"
-kill_port_listener "${FRONTEND_PORT}"
+if [[ "${RESTART_BACKEND}" -eq 1 ]]; then
+  kill_pid_file_if_alive "${BACKEND_PID_FILE}"
+  kill_port_listener "${BACKEND_PORT}"
+fi
+if [[ "${RESTART_FRONTEND}" -eq 1 ]]; then
+  kill_pid_file_if_alive "${FRONTEND_PID_FILE}"
+  kill_port_listener "${FRONTEND_PORT}"
+fi
 
-print_step "[2/5] Build frontend (production)..."
-if command -v pnpm >/dev/null 2>&1; then
-  if [[ -f "${FRONTEND_DIR}/pnpm-lock.yaml" ]]; then
-    pnpm --dir "${FRONTEND_DIR}" install --frozen-lockfile
+print_step "[2/5] Prepare frontend runtime..."
+if [[ "${RESTART_FRONTEND}" -eq 1 ]]; then
+  if command -v pnpm >/dev/null 2>&1; then
+    if [[ "${DO_INSTALL}" -eq 1 ]]; then
+      if [[ -f "${FRONTEND_DIR}/pnpm-lock.yaml" ]]; then
+        pnpm --dir "${FRONTEND_DIR}" install --frozen-lockfile
+      else
+        pnpm --dir "${FRONTEND_DIR}" install
+      fi
+    fi
+    if [[ "${DO_BUILD}" -eq 1 || ! -f "${FRONTEND_DIR}/.next/BUILD_ID" ]]; then
+      pnpm --dir "${FRONTEND_DIR}" build
+    fi
+    FRONTEND_START_CMD=(pnpm start -p "${FRONTEND_PORT}")
+  elif command -v npm >/dev/null 2>&1; then
+    if [[ "${DO_INSTALL}" -eq 1 ]]; then
+      npm --prefix "${FRONTEND_DIR}" install
+    fi
+    if [[ "${DO_BUILD}" -eq 1 || ! -f "${FRONTEND_DIR}/.next/BUILD_ID" ]]; then
+      npm --prefix "${FRONTEND_DIR}" run build
+    fi
+    FRONTEND_START_CMD=(npm --prefix "${FRONTEND_DIR}" run start -- -p "${FRONTEND_PORT}")
   else
-    pnpm --dir "${FRONTEND_DIR}" install
+    echo -e "${RED}Neither pnpm nor npm found. Install one package manager first.${NC}"
+    exit 1
   fi
-  pnpm --dir "${FRONTEND_DIR}" build
-  FRONTEND_START_CMD=(pnpm start -p "${FRONTEND_PORT}")
-elif command -v npm >/dev/null 2>&1; then
-  npm --prefix "${FRONTEND_DIR}" install
-  npm --prefix "${FRONTEND_DIR}" run build
-  FRONTEND_START_CMD=(npm --prefix "${FRONTEND_DIR}" run start -- -p "${FRONTEND_PORT}")
 else
-  echo -e "${RED}Neither pnpm nor npm found. Install one package manager first.${NC}"
-  exit 1
+  FRONTEND_START_CMD=()
 fi
 
 print_step "[3/5] Start backend + frontend..."
 # V17.16：Uvicorn 无 Gunicorn 式 --no-buffer；有 stdbuf 时行缓冲 stdout/stderr（否则仅 PYTHONUNBUFFERED）。
 # 注意：set -u 下勿展开空数组 "${arr[@]}"（macOS bash 3.2 会报 unbound variable），改用分支调用。
-(
-  cd "${PROJECT_DIR}"
-  export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
-  export PYTHONUNBUFFERED=1
-  export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
-  if command -v stdbuf >/dev/null 2>&1; then
-    stdbuf -oL -eL "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
-      --proxy-headers --timeout-keep-alive 75 \
-      >> "${BACKEND_LOG}" 2>&1
-  else
-    "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
-      --proxy-headers --timeout-keep-alive 75 \
-      >> "${BACKEND_LOG}" 2>&1
-  fi
-) &
-echo $! > "${BACKEND_PID_FILE}"
+if [[ "${RESTART_BACKEND}" -eq 1 ]]; then
+  (
+    cd "${PROJECT_DIR}"
+    export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
+    export PYTHONUNBUFFERED=1
+    export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
+    if command -v stdbuf >/dev/null 2>&1; then
+      stdbuf -oL -eL "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
+        --proxy-headers --timeout-keep-alive 75 \
+        >> "${BACKEND_LOG}" 2>&1
+    else
+      "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
+        --proxy-headers --timeout-keep-alive 75 \
+        >> "${BACKEND_LOG}" 2>&1
+    fi
+  ) &
+  echo $! > "${BACKEND_PID_FILE}"
+fi
 
-(
-  cd "${FRONTEND_DIR}"
-  "${FRONTEND_START_CMD[@]}" >> "${FRONTEND_LOG}" 2>&1
-) &
-echo $! > "${FRONTEND_PID_FILE}"
+if [[ "${RESTART_FRONTEND}" -eq 1 ]]; then
+  (
+    cd "${FRONTEND_DIR}"
+    "${FRONTEND_START_CMD[@]}" >> "${FRONTEND_LOG}" 2>&1
+  ) &
+  echo $! > "${FRONTEND_PID_FILE}"
+fi
 
 # 给 uvicorn / Next 一点时间 bind 端口，减少首轮 curl 失败
 sleep 0.6
@@ -188,20 +274,38 @@ print_step "[4/5] Health checks..."
 BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}/health"
 FRONTEND_URL="http://${BACKEND_HOST}:${FRONTEND_PORT}/v17/oracle"
 
-check_http_code "backend" "${BACKEND_URL}" 15 1 || true
-BACKEND_CODE="${CHECK_HTTP_CODE_RESULT:-000}"
-check_http_code "frontend" "${FRONTEND_URL}" 20 1 || true
-FRONTEND_CODE="${CHECK_HTTP_CODE_RESULT:-000}"
+if [[ "${RESTART_BACKEND}" -eq 1 ]]; then
+  check_http_code "backend" "${BACKEND_URL}" 15 1 || true
+  BACKEND_CODE="${CHECK_HTTP_CODE_RESULT:-000}"
+else
+  BACKEND_CODE="skipped"
+fi
+
+if [[ "${RESTART_FRONTEND}" -eq 1 ]]; then
+  check_http_code "frontend" "${FRONTEND_URL}" 20 1 || true
+  FRONTEND_CODE="${CHECK_HTTP_CODE_RESULT:-000}"
+else
+  FRONTEND_CODE="skipped"
+fi
 
 print_step "[5/5] Final status..."
 echo -e "${BLUE}backend(${BACKEND_PORT}):${NC} ${BACKEND_CODE}"
 echo -e "${BLUE}frontend(${FRONTEND_PORT}):${NC} ${FRONTEND_CODE}"
-echo -e "${BLUE}backend pid:${NC} $(cat "${BACKEND_PID_FILE}")"
-echo -e "${BLUE}frontend pid:${NC} $(cat "${FRONTEND_PID_FILE}")"
+if [[ -f "${BACKEND_PID_FILE}" ]]; then
+  echo -e "${BLUE}backend pid:${NC} $(cat "${BACKEND_PID_FILE}")"
+fi
+if [[ -f "${FRONTEND_PID_FILE}" ]]; then
+  echo -e "${BLUE}frontend pid:${NC} $(cat "${FRONTEND_PID_FILE}")"
+fi
 echo -e "${BLUE}backend log:${NC} ${BACKEND_LOG}"
 echo -e "${BLUE}frontend log:${NC} ${FRONTEND_LOG}"
 
-if [[ ! "${BACKEND_CODE}" =~ ^2|^3 ]] || [[ ! "${FRONTEND_CODE}" =~ ^2|^3 ]]; then
+if [[ "${BACKEND_CODE}" != "skipped" && ! "${BACKEND_CODE}" =~ ^2|^3 ]]; then
+  echo -e "${YELLOW}One or more checks failed. Inspect logs above.${NC}"
+  exit 1
+fi
+
+if [[ "${FRONTEND_CODE}" != "skipped" && ! "${FRONTEND_CODE}" =~ ^2|^3 ]]; then
   echo -e "${YELLOW}One or more checks failed. Inspect logs above.${NC}"
   exit 1
 fi

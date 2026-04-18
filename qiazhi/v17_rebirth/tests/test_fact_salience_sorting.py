@@ -37,7 +37,10 @@ def test_build_fragments_orders_by_weight_and_caps_to_80() -> None:
     fragments = orch._build_fragments({"正官": 42.0, "食神": 18.0}, facts, "正官格势强")
 
     assert "显著性（Salience）" in fragments[0]
-    assert fragments[3] == "高权重0"
+    # [0] salience 头部, [1] 格局, [2] energy_hint, [3] lead 概要, [4+] facts
+    assert "Total Energy Index" in fragments[2]
+    assert fragments[3] == "正官偏强、食神偏强，局势进入再平衡阶段"
+    assert fragments[4] == "高权重0"
     assert "低权重94" not in fragments
     assert len([x for x in fragments if x.startswith("低权重") or x.startswith("高权重")]) <= 83
 
