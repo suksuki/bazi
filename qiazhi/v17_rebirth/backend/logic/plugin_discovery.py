@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
+from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
 
 _LOGIC_ROOT = Path(__file__).resolve().parent
 
@@ -106,9 +107,23 @@ def rows_dict_to_v17_facts(
         if not text:
             continue
         tension = _conflict_level_to_tension(row)
-        meta: Dict[str, Any] = {}
+        
+        # V17.99: 必须保留插件原生的 meta (如 target_god, impact_ratio 等)
+        original_meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
+        meta: Dict[str, Any] = {**original_meta}
+        
         if tension > 0.0:
             meta["physics_tension"] = tension
+        decision_hint = str(
+            row.get("decision_hint")
+            or row.get("label")
+            or infer_decision_hint(
+                plugin_id=str(row.get("plugin", default_plugin_id)),
+                fact_text=text,
+                meta=meta,
+            )
+            or ""
+        ).strip()
         facts.append(
             V17Fact(
                 plugin_id=str(row.get("plugin", default_plugin_id)),
@@ -121,13 +136,11 @@ def rows_dict_to_v17_facts(
                     priority=float(row.get("priority", 0.5) or 0.5),
                 ),
                 priority=float(row.get("priority", 0.5) or 0.5),
-                decision_hint=str(row.get("label", "") or "").strip(),
+                decision_hint=decision_hint,
                 meta=meta,
             )
         )
     return facts
-
-
 def spec_execution_sort_key(s: V17PluginSpec) -> Tuple[int, float, str]:
     """与运行时 `collect_all_spec_facts*` 遍历顺序一致。"""
     rp = float(getattr(s, "registry_priority", 0.5))
@@ -278,6 +291,8 @@ def v17_decision_to_row(d: V17Decision) -> Dict[str, Any]:
         "label": d.label,
         "source": d.source,
         "priority": d.priority,
+        "target_god": d.target_god,
+        "physical_impact": dict(d.physical_impact or {}),
     }
 
 
@@ -288,11 +303,17 @@ def collect_legacy_dict_rows(deity_scores: Dict[str, float]) -> List[Dict[str, A
 
 
 def registry_rows_for_admin() -> List[Dict[str, Any]]:
+    from v17_rebirth.backend.logic.spec_validator import SpecValidator
+    
+    # 扫描全量 Skill 规范
+    skills = {s["id"] or s["file_rel"]: s for s in SpecValidator.scan_all_plugins()}
+    
     order = plugin_execution_order_map()
     id_meta: Dict[str, Tuple[str, str, str]] = {}
     id_mod: Dict[str, Any] = {}
     for subdir, tag, tier, mod in iter_logic_modules():
-        stem = str(getattr(mod, "__name__", "")).split(".")[-1]
+        name = getattr(mod, "__name__", "")
+        stem = str(name).split(".")[-1]
         for plug in _plugins_from_module(mod):
             id_meta[plug.plugin_id] = (tag, subdir, stem)
             id_mod[plug.plugin_id] = mod
@@ -302,21 +323,37 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
         pid = spec.plugin_id
         mod = id_mod.get(pid)
         tag, subdir, stem = id_meta.get(pid, ("L1", "L1_atomic_ops", "manifest"))
+        
+        # 寻找对应的 Skill 规范
+        skill = skills.get(pid)
+        if not skill:
+            # 尝试通过模块名匹配
+            skill = skills.get(f"{subdir}/{stem}.py")
+
         summary = str(getattr(spec, "manifest_summary", "") or "").strip()
         rationale = str(getattr(spec, "manifest_rationale", "") or "").strip()
+        
+        if skill and skill.get("manifest"):
+            m = skill["manifest"]
+            summary = m.get("Description") or m.get("summary") or summary
+            rationale = m.get("Rationale") or m.get("rationale") or rationale
+
         if not summary:
             summary = str(getattr(spec, "doc_summary", "") or "").strip()
         if not rationale:
             rationale = str(getattr(spec, "doc_rationale", "") or "").strip()
+            
         if mod is not None:
             summary = summary or str(getattr(mod, "PLUGIN_SUMMARY", "") or getattr(mod, "PLUGIN_DESCRIPTION", "") or "").strip()
             rationale = rationale or str(getattr(mod, "PLUGIN_RATIONALE", "") or getattr(mod, "PLUGIN_DESIGN_RATIONALE", "") or "").strip()
+        
         module_doc = _compact_admin_text(inspect.getdoc(mod) if mod is not None else "")
         spec_doc = _compact_admin_text(inspect.getdoc(spec.__class__) or "")
         definition_text = summary or module_doc or spec_doc or "该插件已接入 V17 推理链路，但尚未补齐定义说明。"
         trigger_condition_text = _plugin_trigger_condition_text(mod, fallback=module_doc or summary or spec_doc)
         detail_description = rationale or summary or module_doc or spec_doc or "暂无补充说明。"
         kind = "manifest_row" if mod is None else "spec"
+        
         rows.append(
             {
                 "layer": tag,
@@ -334,6 +371,9 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
                 "definition_text": definition_text,
                 "trigger_condition_text": trigger_condition_text,
                 "detail_description": detail_description,
+                "declared_params": skill.get("params", {}) if skill else {},
+                "skill_manifest": skill.get("manifest", {}) if skill else {},
+                "is_standard_skill": bool(skill and skill.get("valid")),
             }
         )
     return sorted(rows, key=lambda r: (int(r.get("execution_order", 999)), str(r.get("plugin_id", ""))))

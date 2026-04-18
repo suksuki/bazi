@@ -20,6 +20,7 @@ from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import hydrate_v17_physics_tensor
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError, PhysicsService
 from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrator
+from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
 
 router = APIRouter(tags=["v17"])
@@ -820,6 +821,32 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                             payload["physical_impact"] = matched_decision.get("physical_impact")
                         if not str(payload.get("target_god", "")).strip() and str(matched_decision.get("target_god", "")).strip():
                             payload["target_god"] = matched_decision.get("target_god")
+                    
+                    # V17.99: 严格数据契约校验 - 禁止无主决策执行
+                    final_target = str(payload.get("target_god", "")).strip()
+                    if not final_target and isinstance(payload.get("physical_impact"), dict):
+                         final_target = str(payload["physical_impact"].get("target_god", "")).strip()
+                         if final_target:
+                             payload["target_god"] = final_target
+                    if not final_target:
+                         final_target = resolve_target_god(
+                             row_target=payload.get("target_god"),
+                             impact=payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {},
+                             title=payload.get("title") or payload.get("action"),
+                             label=matched_decision.get("label") if isinstance(matched_decision, dict) else "",
+                             plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
+                             physics_tensor=current_physics if isinstance(current_physics, dict) else {},
+                         )
+                         if final_target:
+                             payload["target_god"] = final_target
+                    if not final_target:
+                         _log.error("[V17-DATA-INTEGRITY] Rejected action %s due to NULL_TARGET", action)
+                         return JSONResponse({
+                             "ok": False, 
+                             "detail": "ERROR_NULL_TARGET", 
+                             "error_code": "NULL_TARGET_GOD"
+                         }, status_code=422)
+                    
                     await get_state_backend().set_physics(session_id, current_physics)
             kernel_dispatch_ok = await PhysicsKernel.dispatch_perturbation(
                 session_id=session_id,

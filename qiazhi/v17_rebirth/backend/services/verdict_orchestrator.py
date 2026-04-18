@@ -14,9 +14,9 @@ from v17_rebirth.backend.services.auto_scanner import AutoScanner
 from v17_rebirth.backend.plugins.spec import V17Fact
 from v17_rebirth.backend.plugins.v17_wrappers import (
     collect_pending_decisions_from_specs,
-    v17_decision_to_row,
     v17_fact_to_row,
 )
+from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration
 from v17_rebirth.backend.narrative.pipeline import DialogueLayer, RealtimeNarrativePipeline
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
 from v17_rebirth.backend.narrative.sanitizer import NarrativeSanitizer
@@ -39,58 +39,6 @@ def _six_pillars_physics_ok(raw_physics: Dict[str, Any]) -> bool:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _decision_relative_impact(title: str, target_god: str) -> Dict[str, Any]:
-    text = str(title or "").strip()
-    impact: Dict[str, Any] = {"target_god": str(target_god or "").strip()}
-    if not text:
-        return impact
-
-    if any(k in text for k in ["格局转换", "坍塌", "翻盘", "断裂"]):
-        return {
-            **impact,
-            "impact_ratio": 0.20,
-            "intensity_level": 4,
-            "significance_level": "L3",
-            "significance_weight": 1.0,
-            "resistance_mod": {"path": "pattern_shift", "factor": 0.35},
-        }
-    if any(k in text for k in ["冲", "刑", "破", "害", "克", "制", "杀"]):
-        return {
-            **impact,
-            "impact_ratio": 0.12,
-            "intensity_level": 3,
-            "significance_level": "L3",
-            "significance_weight": 1.0,
-            "resistance_mod": {"path": "auto_clash", "factor": 0.4},
-        }
-    if any(k in text for k in ["合", "化", "生", "助", "聚势", "护持"]):
-        return {
-            **impact,
-            "impact_ratio": 0.06,
-            "intensity_level": 2,
-            "significance_level": "L2",
-            "significance_weight": 1.0,
-            "resistance_mod": {"path": "auto_sheng", "factor": 0.75},
-        }
-    if any(k in text for k in ["节律", "边界", "确认", "校准", "承诺", "节奏"]):
-        return {
-            **impact,
-            "impact_ratio": 0.025,
-            "intensity_level": 1,
-            "significance_level": "L1",
-            "significance_weight": 0.8,
-        }
-    return {
-        **impact,
-        "impact_ratio": 0.015,
-        "intensity_level": 1,
-        "significance_level": "L0",
-        "significance_weight": 0.6,
-    }
-
-
 def restart_realtime_pipeline() -> dict[str, int]:
     global _PIPELINE_EPOCH, _PIPELINE_CACHE, _PIPELINE_CACHE_KEY
     _PIPELINE_EPOCH += 1
@@ -195,38 +143,32 @@ class VerdictOrchestrator:
             "physics_fingerprint": fingerprint,
         }
 
-    def _pending_decisions(
+    def _decision_arbitration(
         self,
         raw_physics: Dict[str, Any],
         _deity_scores: Dict[str, float],
         *,
         spec_facts: List[V17Fact] | None = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, List[Dict[str, Any]]]:
         sanitizer = NarrativeSanitizer()
         if spec_facts is None:
             pt = raw_physics if isinstance(raw_physics, dict) else {}
             spec_facts = logic_pd.collect_all_spec_facts_and_record(pt)
-        spec_decisions = [v17_decision_to_row(d) for d in collect_pending_decisions_from_specs(spec_facts)]
-        for d in spec_decisions:
-            title = sanitizer.sanitize(str(d.get("title", "")))
-            d["label"] = sanitizer.sanitize(str(d.get("label", "")))
-            d["title"] = title
-            
-            # V17.38: 注入物理具身协议负载
-            p_impact = _decision_relative_impact(title, str(d.get("target_god") or ""))
-            d["physical_impact"] = p_impact
-
-        merged: List[Dict[str, Any]] = list(spec_decisions)
-        merged.sort(key=lambda x: float(x.get("priority", 0.0)), reverse=True)
-        seen: set[str] = set()
-        deduped: List[Dict[str, Any]] = []
-        for item in merged:
-            key = f"{item.get('source','')}|{item.get('label','')}"
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(item)
-        return deduped[:64]
+        raw_pending = raw_physics.get("pending_decisions") if isinstance(raw_physics.get("pending_decisions"), list) else []
+        arbitration = compile_decision_arbitration(
+            facts=spec_facts,
+            spec_decisions=collect_pending_decisions_from_specs(spec_facts),
+            existing_rows=[dict(item) for item in raw_pending if isinstance(item, dict)],
+            physics_tensor=raw_physics,
+        )
+        for key in ("manual_decisions", "auto_resolutions", "llm_arbitration_context", "pending_decisions"):
+            items = arbitration.get(key) if isinstance(arbitration.get(key), list) else []
+            for d in items:
+                title = sanitizer.sanitize(str(d.get("title", "")))
+                label = sanitizer.sanitize(str(d.get("label", "") or d.get("hint", "") or d.get("title", "")))
+                d["label"] = label
+                d["title"] = title
+        return arbitration
 
     def snapshot_frame(
         self,
@@ -236,11 +178,22 @@ class VerdictOrchestrator:
         causal_anchor: str = "local_memory",
     ) -> Dict[str, Any]:
         AutoScanner.ensure_loaded()
+        original_scores = (
+            dict(raw_physics.get("ten_gods_absolute_intensity") or {})
+            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("ten_gods_absolute_intensity"), dict)
+            else dict(raw_physics.get("ten_gods_absolute") or {})
+            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("ten_gods_absolute"), dict)
+            else dict(raw_physics.get("deity_scores") or {})
+            if isinstance(raw_physics, dict) and isinstance(raw_physics.get("deity_scores"), dict)
+            else {}
+        )
         if isinstance(raw_physics, dict):
             hydrate_v17_physics_tensor(raw_physics)
         self.assert_six_pillars_physics(raw_physics)
         adapter = PhysicsAdapter(root=__import__("pathlib").Path(self.repo_root))
         scores = adapter.read_deity_scores(raw_physics)
+        if not scores and original_scores:
+            scores = {str(k): float(v) for k, v in original_scores.items()}
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
@@ -256,7 +209,8 @@ class VerdictOrchestrator:
         plugin_rows = spec_rows
         plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
         plugin_hits = sorted({str(x.get("plugin", "")).strip() for x in plugin_rows if str(x.get("plugin", "")).strip()})
-        decisions = self._pending_decisions(raw_physics, scores, spec_facts=spec_facts)
+        arbitration = self._decision_arbitration(raw_physics, scores, spec_facts=spec_facts)
+        decisions = arbitration.get("manual_decisions", [])
         fact_list = raw_physics.get("facts") if isinstance(raw_physics.get("facts"), list) else []
         sorted_fact_rows = self._sorted_fact_rows(fact_list)
         facts_out = [str(x.get("fact") or "").strip() for x in sorted_fact_rows if str(x.get("fact") or "").strip()][:160]
@@ -281,6 +235,9 @@ class VerdictOrchestrator:
             "flow_topology": raw_physics.get("flow_topology", []),
             "physics_report": NarrativeMappingEngine.build_physics_report_lines(raw_physics),
             "physics_tension": tension,
+            "manual_decisions": decisions,
+            "auto_resolutions": arbitration.get("auto_resolutions", []),
+            "llm_arbitration_context": arbitration.get("llm_arbitration_context", []),
             "pending_decisions": decisions,
             "facts": facts_out,
             "fact_rows": sorted_fact_rows[:160],
@@ -533,7 +490,7 @@ class VerdictOrchestrator:
                             streamed = True
                             if "[" in chunk and "]" in chunk:
                                 import re
-                                m = re.search(r"\[(INTENSIFY|WEAKEN):([一-龥]{1})\]", chunk)
+                                m = re.search(r"\[(INTENSIFY|WEAKEN):([a-zA-Z\u4e00-\u9fa5]{1,2})\]", chunk)
                                 if m:
                                     at, el = m.groups()
                                     from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel

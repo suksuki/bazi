@@ -72,11 +72,50 @@ interface TracePanelProps {
         hits?: unknown[];
         rows?: Array<Record<string, unknown>>;
       };
+      manual_decisions?: Array<Record<string, unknown>>;
+      auto_resolutions?: Array<Record<string, unknown>>;
+      llm_arbitration_context?: Array<Record<string, unknown>>;
       debug_trace?: {
         facts?: unknown[];
       };
     };
   };
+}
+
+function traceImpactText(row: Record<string, unknown>): string {
+  const impact =
+    row.physical_impact && typeof row.physical_impact === "object"
+      ? (row.physical_impact as Record<string, unknown>)
+      : {};
+  const ratio = Math.abs(Number(impact.impact_ratio || 0));
+  const level = Number(impact.intensity_level || 0);
+  if (ratio > 0) return `位移 ${(ratio * 100).toFixed(1)}% · L${level || "?"}`;
+  if (level > 0) return `烈度 L${level}`;
+  return "诊断参考";
+}
+
+function tracePromptPreview(row: Record<string, unknown>): string {
+  const impact =
+    row.physical_impact && typeof row.physical_impact === "object"
+      ? (row.physical_impact as Record<string, unknown>)
+      : {};
+  const target = String(row.target_god || impact.target_god || "未定目标").trim();
+  const source = String(row.source || row.plugin_id || "unknown").trim();
+  const ratio = Math.abs(Number(impact.impact_ratio || 0));
+  const movement = ratio > 0 ? `${(ratio * 100).toFixed(1)}% 位移` : "诊断引用";
+  return `${target} · ${movement} · ${source}`;
+}
+
+function traceArbitrationChain(row: Record<string, unknown>, fallbackMode: "手动" | "自动" | "LLM"): string {
+  const explicit = String(row.arbitration_trace || "").trim();
+  if (explicit) return explicit;
+  const impact =
+    row.physical_impact && typeof row.physical_impact === "object"
+      ? (row.physical_impact as Record<string, unknown>)
+      : {};
+  const source = String(row.source_label || row.source || row.plugin_id || "unknown").trim();
+  const level = Number(impact.intensity_level || 0);
+  return `${source} -> L${level > 0 ? level : "?"} -> ${fallbackMode}`;
 }
 
 export function V17_TracePanel({
@@ -151,6 +190,15 @@ export function V17_TracePanel({
     .join(" / ");
   const pluginRows = Array.isArray((physicsPayload.plugins as { rows?: unknown[] } | undefined)?.rows)
     ? (((physicsPayload.plugins as { rows?: unknown[] }).rows ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const manualDecisions = Array.isArray(physicsPayload.manual_decisions)
+    ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
+    : [];
+  const autoResolutions = Array.isArray(physicsPayload.auto_resolutions)
+    ? (physicsPayload.auto_resolutions as Array<Record<string, unknown>>)
+    : [];
+  const llmArbitrationContext = Array.isArray(physicsPayload.llm_arbitration_context)
+    ? (physicsPayload.llm_arbitration_context as Array<Record<string, unknown>>)
     : [];
   const groupedPlugins = pluginRows.reduce<Record<string, string[]>>((acc, row) => {
     const plugin = String(row.plugin || row.source || "unknown").trim() || "unknown";
@@ -380,6 +428,65 @@ export function V17_TracePanel({
           <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalPhysicsFp}</p>
           <p>审计快照：{causalAuditAnchor}</p>
           <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalAuditFp}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">仲裁分流</p>
+          <span className="text-[10px] text-zinc-500">
+            手动 {manualDecisions.length} / 系统 {autoResolutions.length} / LLM {llmArbitrationContext.length}
+          </span>
+        </div>
+        <div className="space-y-2">
+          <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL_DECISIONS</p>
+            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
+              {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => (
+                <div key={`manual_${idx}`} className="rounded border border-violet-500/10 bg-zinc-950/60 px-2 py-1">
+                  <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
+                  <p className="mt-0.5 text-zinc-500">
+                    {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
+                  </p>
+                  <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
+                  {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
+                  <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
+                </div>
+              )) : <p className="text-zinc-500">暂无手动裁决项</p>}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.2em] text-amber-200">AUTO_RESOLUTIONS</p>
+            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
+              {autoResolutions.length ? autoResolutions.slice(0, 8).map((row, idx) => (
+                <div key={`auto_${idx}`} className="rounded border border-amber-500/10 bg-zinc-950/60 px-2 py-1">
+                  <p className="text-amber-100">{String(row.label || row.title || "—")}</p>
+                  <p className="mt-0.5 text-zinc-500">{String(row.source || row.plugin_id || "unknown")}</p>
+                  <p className="mt-0.5 font-mono text-amber-200/80">{traceArbitrationChain(row, "自动")}</p>
+                  {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "collapsed_to_system")}</p> : null}
+                  <p className="mt-0.5 text-zinc-400">{tracePromptPreview(row)}</p>
+                </div>
+              )) : <p className="text-zinc-500">暂无系统自动裁决项</p>}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.2em] text-cyan-200">LLM_ARBITRATION_CONTEXT</p>
+            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
+              {llmArbitrationContext.length ? llmArbitrationContext.slice(0, 8).map((row, idx) => (
+                <div key={`llm_${idx}`} className="rounded border border-cyan-500/10 bg-zinc-950/60 px-2 py-1">
+                  <p className="text-cyan-100">{String(row.label || row.title || "—")}</p>
+                  <p className="mt-0.5 text-zinc-500">{String(row.source || row.plugin_id || "unknown")}</p>
+                  <p className="mt-0.5 font-mono text-cyan-200/80">{traceArbitrationChain(row, "LLM")}</p>
+                  <p className="mt-0.5 text-zinc-400">
+                    {String(row.llm_resolution_policy || "context_only")} · {String(row.llm_resolution_state || "pending_context")} · {String(row.llm_resolution_result || "consume_context")}
+                  </p>
+                  <p className="mt-0.5 text-zinc-400">{tracePromptPreview(row)}</p>
+                </div>
+              )) : <p className="text-zinc-500">暂无 LLM 仲裁上下文</p>}
+            </div>
+          </div>
         </div>
       </div>
 

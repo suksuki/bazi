@@ -60,14 +60,27 @@ BRANCH_HIDDEN: Dict[str, List[Tuple[str, float]]] = {
 
 # ── V17.30 物理常数 ────────────────────────────────────────────────────────────
 
-STEM_BASE: float = 10.0        # 天干基础能量（Qi）
-BRANCH_BASE: float = 12.0      # 地支基础能量（Qi）
-ROOTED_STEM_GAIN: float = 1.5  # 天干通根地支：Energy *= 1.5
-EXPOSED_HIDDEN_GAIN: float = 1.2  # 地支透出天干：Energy *= 1.2
-VOID_REDUCTION_FACTOR: float = 0.4  # 空亡折减：Energy *= 0.4
-LUCK_PILLAR_FACTOR: float = 0.85    # 大运权重衰减
-FLOW_PILLAR_FACTOR: float = 0.65    # 流年权重衰减
-ENERGY_MIN: float = 0.01            # 能量下限截断
+# --- V17 Core Configuration Hook ---
+def _get_l0_consts() -> Dict[str, Any]:
+    from v17_rebirth.backend.logic.configs.manager import get_v17_constants
+    return get_v17_constants().get("L0_FOUNDATION", {})
+
+def _get_l0_val(key: str, default: float) -> float:
+    return float(_get_l0_consts().get(key, default))
+
+# ── V17.30 物理常数 (动态延迟加载占位) ────────────────────────────────────────────
+# 注意：以下变量在运行时会被 _get_l0_val 覆盖，此处仅保留类型暗示
+STEM_BASE: float = 10.0
+BRANCH_BASE: float = 12.0
+ROOTED_STEM_GAIN: float = 1.5
+EXPOSED_HIDDEN_GAIN: float = 1.2
+GAI_TOU_FACTOR: float = 0.85
+JIE_JIAO_FACTOR: float = 0.75
+VOID_REDUCTION_FACTOR: float = 0.3
+LUCK_PILLAR_FACTOR: float = 0.85
+FLOW_PILLAR_FACTOR: float = 0.65
+ENERGY_MIN: float = 0.01
+GLOBAL_DAMPING: float = 0.95
 
 # 旧名兼容（供外部 import 使用）
 STEM_BASE_ENERGY: float = STEM_BASE
@@ -94,28 +107,29 @@ SEASON_POWER_DEFAULT: float = 1.0    # 其余（休囚一般）
 def _season_multiplier(target_element: str, month_branch: str) -> float:
     """
     根据目标天干五行与月令地支五行的关系，返回 Season Power 倍率。
-
-    同属五行 → 2.5（得令）
-    月令所生 → 1.8（次旺）
-    月令所克 → 0.6（受制）
-    其余     → 1.0
     """
+    consts = _get_l0_consts()
+    s_same = float(consts.get("SEASON_POWER_SAME", 2.5))
+    s_gen = float(consts.get("SEASON_POWER_GENERATED", 1.8))
+    s_ctrl = float(consts.get("SEASON_POWER_CONTROLLED", 0.6))
+    s_def = 1.0
+
     month_el = BRANCH_ELEMENT.get(month_branch, "")
     if not month_el or not target_element:
-        return SEASON_POWER_DEFAULT
+        return s_def
     if target_element == month_el:
-        return SEASON_POWER_SAME
+        return s_same
     m_idx = ELEMENT_CYCLE.index(month_el) if month_el in ELEMENT_CYCLE else -1
     t_idx = ELEMENT_CYCLE.index(target_element) if target_element in ELEMENT_CYCLE else -1
     if m_idx < 0 or t_idx < 0:
-        return SEASON_POWER_DEFAULT
+        return s_def
     # 月令所生：月令的下一位 = 被月令生
     if t_idx == (m_idx + 1) % 5:
-        return SEASON_POWER_GENERATED
+        return s_gen
     # 月令所克：月令的+2位 = 被月令克
     if t_idx == (m_idx + 2) % 5:
-        return SEASON_POWER_CONTROLLED
-    return SEASON_POWER_DEFAULT
+        return s_ctrl
+    return s_def
 
 
 def ten_god_from_stems(daymaster: str, target: str) -> str:
@@ -208,8 +222,30 @@ def _collect_rooted_stems(four_pillars: Dict[str, str], luck_pillar: str, flow_p
 
 def _void_factor(branch: str, void_branches: str) -> float:
     if branch and void_branches and branch in void_branches:
-        return VOID_REDUCTION_FACTOR
+        return _get_l0_val("VOID_EFFICIENCY", 0.3)
     return 1.0
+
+
+def _vertical_compression(stem: str, branch: str) -> Tuple[float, float]:
+    """计算同柱盖头截脚因子：返回 (stem_factor, branch_factor)"""
+    s_el = STEM_ELEMENT.get(stem, "")
+    b_el = BRANCH_ELEMENT.get(branch, "")
+    if not s_el or not b_el:
+        return 1.0, 1.0
+    
+    # 五行索引：木0, 火1, 土2, 金3, 水4
+    s_idx = ELEMENT_CYCLE.index(s_el)
+    b_idx = ELEMENT_CYCLE.index(b_el)
+    
+    # 盖头：干克支 (s_idx 克 b_idx) -> b_idx == (s_idx + 2) % 5
+    if b_idx == (s_idx + 2) % 5:
+        return 1.0, _get_l0_val("GAI_TOU_FACTOR", 0.85)
+    
+    # 截脚：支克干 (b_idx 克 s_idx) -> s_idx == (b_idx + 2) % 5
+    if s_idx == (b_idx + 2) % 5:
+        return _get_l0_val("JIE_JIAO_FACTOR", 0.75), 1.0
+        
+    return 1.0, 1.0
 
 
 def _accumulate_stem_energy(
@@ -230,10 +266,10 @@ def _accumulate_stem_energy(
     """
     if not stem:
         return
-    energy = STEM_BASE * source_factor * season_multiplier
+    energy = _get_l0_val("STEM_BASE", 10.0) * source_factor * season_multiplier
     rooted = stem in rooted_stems
     if rooted:
-        energy *= ROOTED_STEM_GAIN
+        energy *= _get_l0_val("ROOTED_GAIN", 1.5)
     god = ten_god_from_stems(daymaster, stem)
     acc[god] = acc.get(god, 0.0) + energy
     if ledger is not None:
@@ -268,10 +304,10 @@ def _accumulate_branch_energy(
     for hidden_stem, h_w in BRANCH_HIDDEN.get(branch, []):
         hidden_element = STEM_ELEMENT.get(hidden_stem, "")
         sm = season_multiplier_fn(hidden_element) if hidden_element else 1.0
-        energy = BRANCH_BASE * h_w * source_factor * sm * void_factor
+        energy = _get_l0_val("BRANCH_BASE", 12.0) * h_w * source_factor * sm * void_factor
         exposed = hidden_stem in visible_stems
         if exposed:
-            energy *= EXPOSED_HIDDEN_GAIN
+            energy *= _get_l0_val("EXPOSED_HIDDEN_GAIN", 1.2)
         god = ten_god_from_stems(daymaster, hidden_stem)
         acc[god] = acc.get(god, 0.0) + energy
         if ledger is not None:
@@ -340,6 +376,10 @@ def calc_deity_scores(
             continue
         stem, branch = _parse_gz(gz)
         pillar_void_factor = _void_factor(branch, xun_kong_map.get(pillar_key, ""))
+        
+        # V17.70：计算垂直压制因子
+        s_comp, b_comp = _vertical_compression(stem, branch)
+        
         if pillar_void_factor < 1.0:
             void_pillars.append(pillar_key)
         p_label = pillar_cn.get(pillar_key, pillar_key)
@@ -351,7 +391,7 @@ def calc_deity_scores(
         _accumulate_stem_energy(
             stem=target_stem,
             daymaster=daymaster,
-            source_factor=1.0,
+            source_factor=1.0 * s_comp,
             season_multiplier=stem_sm,
             rooted_stems=rooted_stems,
             acc=acc,
@@ -362,7 +402,7 @@ def calc_deity_scores(
         _accumulate_branch_energy(
             branch=branch,
             daymaster=daymaster,
-            source_factor=1.0,
+            source_factor=1.0 * b_comp,
             void_factor=pillar_void_factor,
             season_multiplier_fn=_season_mul,
             visible_stems=visible_stems,
@@ -372,9 +412,11 @@ def calc_deity_scores(
         )
 
     # ── Step 4：大运 / 流年（带衰减系数，但同样受 Season Power 影响）──
+    luck_f = _get_l0_val("LUCK_PILLAR_FACTOR", 0.85)
+    flow_f = _get_l0_val("FLOW_PILLAR_FACTOR", 0.65)
     for gz_val, source_factor, sf_label in (
-        (luck_pillar, LUCK_PILLAR_FACTOR, "运"),
-        (flow_pillar, FLOW_PILLAR_FACTOR, "流"),
+        (luck_pillar, luck_f, "运"),
+        (flow_pillar, flow_f, "流"),
     ):
         if gz_val and gz_val not in ("—", "-"):
             stem, branch = _parse_gz(gz_val)
@@ -424,11 +466,33 @@ def calc_deity_scores(
         ledger.append_entry("食神", acc.get("食神", 0.0), "L0_GENDER", "女命食神性别微调+1.2")
         ledger.append_entry("伤官", acc.get("伤官", 0.0), "L0_GENDER", "女命伤官性别微调+0.8")
 
-    # ── Step 7：排序输出 ──
+    # ── Step 7：全局阻尼与排序输出 ──
     if not acc:
         return {"比肩": STEM_BASE}, ["比肩"], STEM_BASE, {"month_command_god": "", "void_pillars": void_pillars}
+    
+    # V17.98+：从统一的双层配置架构（全局法典）读取安全阻尼策略
+    import json
+    from v17_rebirth.paths import V17_REBIRTH_ROOT
+    cfg_path = V17_REBIRTH_ROOT / "backend" / "logic" / "configs" / "v17_core_constants.json"
+    damping_enabled = True
+    system_friction = GLOBAL_DAMPING
+    if cfg_path.exists():
+        try:
+            with open(cfg_path, "r", encoding="utf-8") as f:
+
+                v17_cfg = json.load(f).get("constants", {})
+                sd = v17_cfg.get("PHYSICS_DAMPING", {})
+                damping_enabled = sd.get("SAFETY_CAP_ENABLED", True)
+                system_friction = sd.get("SYSTEM_FRICTION", GLOBAL_DAMPING)
+        except: pass
+
+    # 应用全局惯性阻尼（针对高能系统）
+    total_raw = sum(acc.values())
+    damping = system_friction if damping_enabled and total_raw > 340.0 else 1.0
+
+    
     scored = {
-        k: round(v, 2)
+        k: round(v * damping, 2)
         for k, v in sorted(acc.items(), key=lambda kv: (-kv[1], kv[0]))
         if v >= ENERGY_MIN
     }

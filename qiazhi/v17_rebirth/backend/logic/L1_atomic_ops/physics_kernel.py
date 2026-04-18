@@ -19,13 +19,6 @@ from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import Flow
 
 _log = logging.getLogger(__name__)
 
-_SIGNIFICANCE_WEIGHTS = {
-    "L0": 0.6,
-    "L1": 0.8,
-    "L2": 1.0,
-    "L3": 1.0,
-}
-
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
     try:
@@ -33,14 +26,19 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         return default
 
-
 def _resolve_significance_weight(impact: Dict[str, Any], payload: Dict[str, Any]) -> float:
     raw = impact.get("significance_weight", payload.get("significance_weight"))
     parsed = _safe_float(raw, default=-1.0)
     if parsed > 0:
         return parsed
+    
     level = str(impact.get("significance_level", payload.get("significance_level", "L1"))).strip().upper()
-    return _SIGNIFICANCE_WEIGHTS.get(level, 1.0)
+    
+    from v17_rebirth.backend.logic.configs.manager import get_v17_constants
+    weights = get_v17_constants().get("SIGNIFICANCE_LEVELS", {
+        "L0": 0.6, "L1": 0.8, "L2": 1.0, "L3": 1.0
+    })
+    return float(weights.get(level, 1.0))
 
 
 def _compute_ratio_application(
@@ -112,7 +110,10 @@ class PhysicsKernel:
         if target_node and not target_god:
              from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _get_god_to_element_map
              g2e = _get_god_to_element_map(pt.get("day_master_stem", "壬"))
-             target_god = next((g for g, e in g2e.items() if e == target_node), None)
+             if target_node in g2e:
+                 target_god = target_node
+             else:
+                 target_god = next((g for g, e in g2e.items() if e == target_node), None)
 
         if target_god and target_god in ten_gods:
             target_original_value = _safe_float(ten_gods[target_god])
@@ -121,6 +122,12 @@ class PhysicsKernel:
                 impact=impact,
                 payload=payload,
             )
+            # Support absolute delta_q from LLM narrative interventions if impact_ratio is 0
+            if target_ratio_applied == 0.0 and payload.get("delta_q") is not None:
+                delta_q = _safe_float(payload.get("delta_q"), 0.0)
+                target_final_value = target_original_value + delta_q
+                target_ratio_applied = (delta_q / max(abs(target_original_value), 1.0))
+                
             ten_gods[target_god] = target_final_value
 
         # 3. 动态阻抗调制

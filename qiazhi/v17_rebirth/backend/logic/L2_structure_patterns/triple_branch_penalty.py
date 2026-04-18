@@ -1,13 +1,22 @@
-"""寅巳申三刑：依赖四柱地支（physics_tensor.four_pillars），用于层级碰撞实验。"""
 from __future__ import annotations
-
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
-from typing import Any, Dict, List
-
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
-PLUGIN_SUMMARY = "检测寅巳申三刑齐见时的结构摩擦与突发张力。"
-PLUGIN_RATIONALE = "地支三刑为硬结构事件，应在十神格局标签之后给出独立风险事实。"
+# V17.99 Skill Specification
+V17_SKILL_MANIFEST = {
+    "id": "l1.physics.op_branch_sanxing",
+    "Layer": "L1",
+    "Skill_Type": "Atomic",
+    "Domain": "Physics",
+    "Description": "地支三刑硬结构冲突检测算法。",
+    "Rationale": "量化三刑导致的「活性熵增」损耗。"
+}
+
+DECLARED_PARAMS = {
+    "ENTROPY_LOSS": 0.12,          # 熵增损耗比例 (活性剥离)
+    "PENALTY_PRIORITY": 0.93        # 事实输出优先级
+}
 
 
 def _pillar_branches(four: Dict[str, Any]) -> str:
@@ -21,25 +30,32 @@ def _pillar_branches(four: Dict[str, Any]) -> str:
 
 @dataclass
 class TripleBranchPenaltyPlugin(V17PluginSpec):
-    plugin_id: str = "triple_branch_penalty"
+    plugin_id: str = "l1.physics.op_branch_sanxing"
     causal_tier: int = 3
     registry_priority: float = 0.85
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        from v17_rebirth.backend.logic.configs.manager import get_plugin_config
+        cfg = get_plugin_config(self.plugin_id)
+        loss = float(cfg.get("ENTROPY_LOSS", DECLARED_PARAMS["ENTROPY_LOSS"]))
+        prio = float(cfg.get("PENALTY_PRIORITY", DECLARED_PARAMS["PENALTY_PRIORITY"]))
+
         four = physics_tensor.get("four_pillars") if isinstance(physics_tensor, dict) else {}
         if not isinstance(four, dict):
             return []
         zs = _pillar_branches(four)
         if "寅" in zs and "巳" in zs and "申" in zs:
-            tension = 0.92
             return [
                 V17Fact(
                     plugin_id=self.plugin_id,
-                    text="寅巳申三刑齐见，结构摩擦与突发张力显著抬升。",
+                    text=f"三刑激发：{int(loss*100)}% 活跃能量转化为「物理张力」，该部分能级暂不可用。",
                     causal_tier=self.causal_tier,
-                    priority=0.93,
+                    priority=prio,
                     decision_hint="先守法度与契约边界，再谈突破；避免多线并行硬冲。",
-                    meta={"physics_tension": tension},
+                    meta={
+                        "entropy_loss": loss,
+                        "energy_state": "INACTIVE_STRESSED"
+                    },
                 )
             ]
         return []

@@ -28,6 +28,8 @@ class V17Decision:
     title: str
     source: str
     priority: float
+    target_god: str = ""
+    physical_impact: Dict[str, Any] = field(default_factory=dict)
 
 
 class V17PluginSpec(ABC):
@@ -62,6 +64,8 @@ class V17PluginSpec(ABC):
                     title=title,
                     source=self.plugin_id,
                     priority=float(f.priority or 0.0),
+                    target_god=str(f.meta.get("target_god", "")),
+                    physical_impact=dict(f.meta) if isinstance(f.meta, dict) else {},
                 )
             )
         return out

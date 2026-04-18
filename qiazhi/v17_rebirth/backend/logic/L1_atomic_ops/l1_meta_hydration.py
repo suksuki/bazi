@@ -1,9 +1,10 @@
 """
-V17.13：将四柱地支/天干几何判定写入 physics_tensor.meta，驱动 ManifestOperatorPlugin 从占位 → 命中。
+V17.99：物理水分抽取层（Hydration Hub）。
+负责将 L0 静态数据转化为 L1+ 动态张量，并统一执行插件生命周期。
 """
 from __future__ import annotations
-
-from typing import Any, Dict, List
+import logging
+from typing import Any, Dict, List, Optional
 
 from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
     branches_and_stems_from_four_pillars,
@@ -19,6 +20,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
     summarize_sanxing_branches,
 )
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import (
+    _branch_dominant_ten_god,
     build_clash_stress_map,
     boost_high_stress_facts,
 )
@@ -26,530 +28,310 @@ from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import Flow
 from v17_rebirth.backend.logic.L1_atomic_ops.v17_op_fact import generate_v17_fact_from_op
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     STEM_ELEMENT,
+    ELEMENT_CYCLE,
     ten_god_from_stems,
 )
+from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
+from v17_rebirth.backend.services.decision_compiler import compile_pending_decisions
 
+_log = logging.getLogger(__name__)
 
 def _scalar_intensity(count: int, *, per: float = 0.36, bump: float = 0.09) -> float:
-    """冲/害/破等：条数越多烈度越高，上限 1.0（内部标量，不上屏为 Abs）。"""
-    if count <= 0:
-        return 0.0
+    if count <= 0: return 0.0
     return min(1.0, per * count + max(0, count - 1) * bump)
 
-
 def _tier_cn(x: float) -> str:
-    if x >= 0.72:
-        return "猛"
-    if x >= 0.38:
-        return "中"
-    if x <= 1e-9:
-        return "无"
-    return "轻"
+    if x >= 0.8: return "猛"
+    if x >= 0.5: return "中"
+    if x >= 0.15: return "轻"
+    return "无"
 
-
-def _sanxing_intensity(n_edges: int, branches_present: set[str]) -> float:
-    if n_edges <= 0:
-        return 0.0
-    trip = all(b in branches_present for b in ("寅", "巳", "申"))
-    base = min(1.0, 0.26 * n_edges + (0.34 if trip else 0.0))
-    return min(1.0, base + (0.18 if n_edges >= 3 else 0.0))
-
-
-def _pair_labels(hits: List[Dict[str, Any]]) -> List[str]:
-    out: List[str] = []
-    for h in hits:
-        pr = h.get("pair")
-        if isinstance(pr, list) and len(pr) >= 2:
-            out.append(f"{pr[0]}{pr[1]}")
-    return out
-
-
-def _group_labels(hits: List[Dict[str, Any]], key: str = "group") -> List[str]:
-    out: List[str] = []
-    for h in hits:
-        rows = h.get(key)
-        if isinstance(rows, list) and rows:
-            out.append("".join(str(x) for x in rows))
-    return out
-
-
-def _muku_branches(branches: Dict[str, str]) -> List[str]:
-    return sorted({str(br) for br in branches.values() if str(br) in {"辰", "戌", "丑", "未"}})
-
-
-def _status_snapshot(deity_scores: Dict[str, Any], total_energy_index: float) -> Dict[str, Any]:
-    if not deity_scores:
-        return {}
-    try:
-        ranked = sorted(
-            ((str(k), float(v)) for k, v in deity_scores.items() if str(k).strip()),
-            key=lambda kv: kv[1],
-            reverse=True,
-        )
-    except (TypeError, ValueError):
-        return {}
-    if not ranked:
-        return {}
-    top_name, top_score = ranked[0]
-    if total_energy_index >= 120:
-        phase = "帝旺"
-    elif total_energy_index >= 85:
-        phase = "临官"
-    elif total_energy_index >= 55:
-        phase = "冠带"
-    elif total_energy_index >= 28:
-        phase = "墓"
-    else:
-        phase = "绝"
-    return {"phase": phase, "top_name": top_name, "top_score": round(top_score, 2)}
-
-
-def _register_manifest_hit(
-    hits: Dict[str, Dict[str, Any]],
-    *,
-    plugin_id: str,
-    fact: str,
-    label: str,
-    priority: float,
-    evidence: Dict[str, Any] | None = None,
-) -> None:
+def _register_manifest_hit(hits, plugin_id, fact, label, priority, evidence=None):
     hits[plugin_id] = {
-        "fact": str(fact or "").strip(),
-        "label": str(label or "").strip(),
-        "priority": float(priority or 0.0),
-        "framework_standard": "v17_manifest_unified",
-        "hit_source": "l1_meta_hydration",
-        "evidence": dict(evidence or {}),
+        "plugin_id": plugin_id,
+        "fact": fact,
+        "label": label,
+        "priority": priority,
+        "evidence": evidence or {},
+        "activated": False,
+        "last_facts": []
     }
 
 
-def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
-    """幂等：向 pt.meta 写入 interaction_v2 / l1_manifest_hits / L2 辅助键。"""
-    if not isinstance(pt, dict):
-        return
-    meta = pt.get("meta")
-    if isinstance(meta, dict) and meta.get("_v17_hydrated"):
-        meta.setdefault("v17_physics_stable", True)
-        return
+def _manifest_hits_to_decision_rows(hits: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for plugin_id, item in (hits or {}).items():
+        if not isinstance(item, dict):
+            continue
+        if not bool(item.get("activated")):
+            continue
+        title = ""
+        last_facts = item.get("last_facts")
+        if isinstance(last_facts, list):
+            title = next((str(x).strip() for x in last_facts if str(x).strip()), "")
+        if not title:
+            title = str(item.get("fact") or item.get("label") or "").strip()
+        label = str(item.get("label") or "").strip()
+        if not title and not label:
+            continue
+        rows.append(
+            {
+                "id": f"{plugin_id}_manifest",
+                "plugin_id": str(plugin_id),
+                "source": str(plugin_id),
+                "title": title or label,
+                "label": label or title,
+                "priority": float(item.get("priority", 0.0) or 0.0),
+            }
+        )
+    return rows
 
+
+def _geometry_hits_to_decision_rows(pt: Dict[str, Any], hits: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    meta = pt.get("meta") if isinstance(pt.get("meta"), dict) else {}
+    stress_map = meta.get("clash_stress_map") if isinstance(meta.get("clash_stress_map"), dict) else {}
+    stress_events = stress_map.get("events") if isinstance(stress_map.get("events"), list) else []
+    interaction_v2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
+    fp = pt.get("four_pillars") if isinstance(pt.get("four_pillars"), dict) else {}
+    day_gz = str(fp.get("day", "")).strip()
+    day_master = day_gz[0] if len(day_gz) >= 2 else "壬"
+
+    for ev in stress_events:
+        if not isinstance(ev, dict):
+            continue
+        if str(ev.get("source_key") or "") != "liu_chong":
+            continue
+        branches = ev.get("branches") if isinstance(ev.get("branches"), list) else []
+        if len(branches) < 2:
+            continue
+        label = "六冲"
+        title = f"检测到地支六冲 [{' '.join(str(x) for x in branches[:2])}]：局部结构对撞，{str(ev.get('god_j') or ev.get('god_i') or '目标神')} 受冲。"
+        target_god = str(ev.get("god_j") or ev.get("god_i") or "").strip()
+        rows.append(
+            {
+                "id": "l1.physics.op_branch_liuchong_geometry",
+                "plugin_id": "l1.physics.op_branch_liuchong",
+                "source": "l1.physics.op_branch_liuchong",
+                "title": title,
+                "label": label,
+                "hint": label,
+                "priority": float((hits.get("l1.physics.op_branch_liuchong") or {}).get("priority", 0.95) or 0.95),
+                "target_god": target_god,
+                "physical_impact": {
+                    "target_god": target_god,
+                    "impact_ratio": -0.12,
+                    "significance_level": "L3",
+                    "significance_weight": 1.0,
+                    "intensity_level": 3,
+                    "resistance_mod": {"path": "auto_clash", "factor": 0.4},
+                },
+            }
+        )
+        break
+
+    sanxing_hits = interaction_v2.get("sanxing") if isinstance(interaction_v2.get("sanxing"), list) else []
+    if sanxing_hits:
+        hit = sanxing_hits[0] if isinstance(sanxing_hits[0], dict) else {}
+        branches = hit.get("branches") if isinstance(hit.get("branches"), list) else []
+        target_branch = str(branches[-1] if branches else "").strip()
+        target_god = _branch_dominant_ten_god(target_branch, day_master) if target_branch else ""
+        label = "三刑"
+        title = f"检测到地支三刑 [{' '.join(str(x) for x in branches)}]：内压摩擦加剧，{target_god or '目标神'} 承压。"
+        rows.append(
+            {
+                "id": "l1.physics.op_branch_sanxing_geometry",
+                "plugin_id": "l1.physics.op_branch_sanxing",
+                "source": "l1.physics.op_branch_sanxing",
+                "title": title,
+                "label": label,
+                "hint": label,
+                "priority": float((hits.get("l1.physics.op_branch_sanxing") or {}).get("priority", 0.71) or 0.71),
+                "target_god": target_god,
+                "physical_impact": {
+                    "target_god": target_god,
+                    "impact_ratio": -0.10,
+                    "significance_level": "L3",
+                    "significance_weight": 1.0,
+                    "intensity_level": 3,
+                    "resistance_mod": {"path": "auto_clash", "factor": 0.45},
+                },
+            }
+        )
+    return rows
+
+def _get_god_to_element_map(dm: str) -> Dict[str, str]:
+    _god_to_el = {}
+    _dm_el = STEM_ELEMENT.get(dm, "")
+    if _dm_el in ELEMENT_CYCLE:
+        dm_idx = ELEMENT_CYCLE.index(_dm_el)
+        for idx in [0, 1, 2, 3, 4]:
+            el = ELEMENT_CYCLE[(dm_idx + idx) % 5]
+            names = ["比肩", "劫财"] if idx == 0 else \
+                    ["食神", "伤官"] if idx == 1 else \
+                    ["正财", "偏财"] if idx == 2 else \
+                    ["正官", "七杀"] if idx == 3 else \
+                    ["正印", "偏印"]
+            for n in names: _god_to_el[n] = el
+    return _god_to_el
+
+def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
+    if not isinstance(pt, dict): return
+    meta = pt.get("meta", {})
+    if not isinstance(meta, dict):
+        meta = {}
+    pt["meta"] = meta
+    if meta.get("_v17_hydrated"): return
+
+    # 1. 地支/天干几何关系检测 (Pure Geometry)
     branches, stems = branches_and_stems_from_four_pillars(pt.get("four_pillars"))
+    _fp = pt.get("four_pillars") if isinstance(pt.get("four_pillars"), dict) else {}
+    _day_gz = str(_fp.get("day", "")).strip()
+    _daymaster = _day_gz[0] if len(_day_gz) >= 2 else "壬"
+    
     liu_chong = eval_liu_chong_hits(branches) if branches else []
     liu_hai = eval_liu_hai_hits(branches) if branches else []
-    liu_po = eval_liu_po_hits(branches) if branches else []
     liu_he = eval_liuhe_hits(branches) if branches else []
-    an_he = eval_anhe_hits(branches) if branches else []
-    ban_he = eval_banhe_hits(branches) if branches else []
     san_he = eval_sanhe_hits(branches) if branches else []
+    ban_he = eval_banhe_hits(branches) if branches else []
+    an_he = eval_anhe_hits(branches) if branches else []
     sanxing_geo = sanxing_detect_geometry(branches) if branches else []
     stem_cases = detect_stem_fusion_cases(stems, branches) if stems else []
 
-    meta = pt.setdefault("meta", {})
-    if not isinstance(meta, dict):
-        return
-
+    # 2. 填充 interaction_v2 (用于插件探测源)
     meta["interaction_v2"] = {
         "version": "interaction_v2.v1",
         "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_chong],
         "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_hai],
-        "liu_po": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_po],
         "liu_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_he],
-        "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in an_he],
-        "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in ban_he],
         "san_he": [{"group": h.get("group"), "pillars": h.get("pillars")} for h in san_he],
+        "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in ban_he],
+        "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in an_he],
         "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge")} for h in sanxing_geo],
     }
 
-    meta["stem_fusion_v1"] = {
-        "version": "stem_fusion.v1",
-        "cases": stem_cases,
-        "has_stuck": any(str(c.get("mode")) == "stuck" for c in stem_cases),
-        "has_transform": any(str(c.get("mode")) == "transformed" for c in stem_cases),
-    }
+    # 3. 填充基础 Hits (Legacy Admin UI 兼容)
+    hits = {}
+    if liu_chong: _register_manifest_hit(hits, "l1.physics.op_branch_liuchong", "", "六冲", 0.72)
+    if san_he: _register_manifest_hit(hits, "l1.physics.op_branch_sanhe", "", "三合成局", 0.76)
+    if liu_hai: _register_manifest_hit(hits, "l1.physics.op_branch_liuhai", "", "六害", 0.7)
+    if sanxing_geo: _register_manifest_hit(hits, "l1.physics.op_branch_sanxing", "", "三刑", 0.71)
 
-    br_set = {str(b) for b in branches.values() if b}
-    ch_i = _scalar_intensity(len(liu_chong), per=0.39, bump=0.11)
-    hai_i = _scalar_intensity(len(liu_hai), per=0.33, bump=0.07)
-    po_i = _scalar_intensity(len(liu_po), per=0.33, bump=0.07)
-    he_i = _scalar_intensity(len(liu_he), per=0.28, bump=0.05)
-    ban_i = _scalar_intensity(len(ban_he), per=0.3, bump=0.06)
-    sx_i = _sanxing_intensity(len(sanxing_geo), br_set)
-    stem_i = _scalar_intensity(len(stem_cases), per=0.31, bump=0.04)
-
-    pt["interaction_delta"] = {
-        "version": "l1_delta.v2",
-        "n_liu_chong": len(liu_chong),
-        "n_liu_hai": len(liu_hai),
-        "n_liu_po": len(liu_po),
-        "n_liu_he": len(liu_he),
-        "n_ban_he": len(ban_he),
-        "n_sanxing_edges": len(sanxing_geo),
-        "n_stem_fusion_cases": len(stem_cases),
-        "chong_intensity": round(ch_i, 4),
-        "chong_tier": _tier_cn(ch_i),
-        "sanxing_intensity": round(sx_i, 4),
-        "sanxing_tier": _tier_cn(sx_i),
-        "hai_intensity": round(hai_i, 4),
-        "hai_tier": _tier_cn(hai_i),
-        "po_intensity": round(po_i, 4),
-        "po_tier": _tier_cn(po_i),
-        "he_intensity": round(he_i, 4),
-        "he_tier": _tier_cn(he_i),
-        "ban_he_intensity": round(ban_i, 4),
-        "ban_he_tier": _tier_cn(ban_i),
-        "stem_fusion_intensity": round(stem_i, 4),
-        "stem_fusion_tier": _tier_cn(stem_i),
-        "yin_si_shen_complete": all(b in br_set for b in ("寅", "巳", "申")),
-    }
-
-    hits: Dict[str, Dict[str, Any]] = {}
-
-    if liu_chong:
-        labs = _pair_labels(liu_chong)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_liuchong",
-            fact=generate_v17_fact_from_op(kind="liu_chong", detail="".join(labs)),
-            label="六冲",
-            priority=0.72,
-            evidence={"pairs": labs},
-        )
-
-    if sanxing_geo:
-        sx = summarize_sanxing_branches(sanxing_geo)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_sanxing",
-            fact=generate_v17_fact_from_op(kind="sanxing", branches=[sx] if sx else []),
-            label="三刑",
-            priority=0.71,
-            evidence={"branches": [sx] if sx else []},
-        )
-
-    if liu_hai:
-        labs = _pair_labels(liu_hai)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_liuhai",
-            fact=generate_v17_fact_from_op(kind="liu_hai", detail="".join(labs)),
-            label="六害",
-            priority=0.7,
-            evidence={"pairs": labs},
-        )
-
-    if liu_po:
-        labs = _pair_labels(liu_po)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_liupo",
-            fact=generate_v17_fact_from_op(kind="liu_po", detail="".join(labs)),
-            label="六破",
-            priority=0.69,
-            evidence={"pairs": labs},
-        )
-
-    if liu_he:
-        labs = _pair_labels(liu_he)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_liuhe",
-            fact=generate_v17_fact_from_op(kind="liu_he", detail="".join(labs)),
-            label="六合",
-            priority=0.68,
-            evidence={"pairs": labs},
-        )
-
-    if san_he:
-        groups = _group_labels(san_he)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_sanhe",
-            fact=generate_v17_fact_from_op(kind="sanhe", detail="、".join(groups)),
-            label="三合成局",
-            priority=0.76,
-            evidence={"groups": groups},
-        )
-
-    if ban_he:
-        labs = _pair_labels(ban_he)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_banhe",
-            fact=generate_v17_fact_from_op(kind="ban_he", detail="、".join(labs)),
-            label="半合聚势",
-            priority=0.75,
-            evidence={"pairs": labs},
-        )
-
-    if an_he:
-        labs = _pair_labels(an_he)
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_anhe",
-            fact=generate_v17_fact_from_op(kind="an_he", detail="、".join(labs)),
-            label="暗合潜线",
-            priority=0.74,
-            evidence={"pairs": labs},
-        )
-
-    for c in stem_cases:
-        mode = str(c.get("mode") or "")
-        sa, sb = (c.get("stems") or ["", ""])[:2]
-        hua = str(c.get("hua_element") or "")
-        detail = f"{sa}{sb}→{hua}" if hua else f"{sa}{sb}"
-        if mode == "stuck":
-            pid = "l1.physics.op_stem_fusion_stuck"
-            if pid not in hits:
-                _register_manifest_hit(
-                    hits,
-                    plugin_id=pid,
-                    fact=generate_v17_fact_from_op(kind="stem_stuck", detail=detail),
-                    label="天干羁绊",
-                    priority=0.67,
-                    evidence={"detail": detail, "mode": mode},
-                )
-        elif mode == "transformed":
-            pid = "l1.physics.op_stem_fusion_transform"
-            if pid not in hits:
-                _register_manifest_hit(
-                    hits,
-                    plugin_id=pid,
-                    fact=generate_v17_fact_from_op(kind="stem_transform", detail=detail),
-                    label="天干化气",
-                    priority=0.66,
-                    evidence={"detail": detail, "mode": mode},
-                )
-
-    muku = _muku_branches(branches)
-    if muku:
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_branch_muku",
-            fact=generate_v17_fact_from_op(kind="muku", detail="、".join(muku)),
-            label="墓库门态",
-            priority=0.73,
-            evidence={"branches": muku},
-        )
-
-    deity_scores = (
-        pt.get("ten_gods_absolute")
-        or pt.get("ten_gods_absolute_intensity")
-        or pt.get("deity_scores")
-    )
-    status = _status_snapshot(
-        deity_scores if isinstance(deity_scores, dict) else {},
-        float(pt.get("total_energy_index") or 0.0),
-    )
-    if status:
-        _register_manifest_hit(
-            hits,
-            plugin_id="l1.physics.op_status",
-            fact=generate_v17_fact_from_op(
-                kind="status",
-                detail=f"{status['phase']}·{status['top_name']}",
-            ),
-            label="状态机节律",
-            priority=0.79,
-            evidence=status,
-        )
-        meta["l1_status_v1"] = status
-
-    # ── V17.31：矢量冲突应力引擎 ──
-    # 从四柱提取日主，计算各柱位关系对的矢量应力
-    _fp = pt.get("four_pillars") if isinstance(pt.get("four_pillars"), dict) else {}
-    _day_gz = str(_fp.get("day", "")).strip()
-    _daymaster = _day_gz[0] if len(_day_gz) >= 2 else ""
-    _absolute = deity_scores if isinstance(deity_scores, dict) else {}
-    _iv2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
-    
-    # 获取演化账本对象
-    _energy_meta = pt.get("energy_meta") if isinstance(pt.get("energy_meta"), dict) else {}
+    # 4. 插件周期演化 (Plugin Lifecycle Loop)
+    deity_scores = pt.get("ten_gods_absolute") or pt.get("deity_scores") or {}
+    _absolute = dict(deity_scores)
+    _energy_meta = pt.get("energy_meta", {})
     _ledger = _energy_meta.get("ledger")
 
-    if _daymaster and branches and _absolute and _iv2:
-        stress_map = build_clash_stress_map(
-            daymaster=_daymaster,
-            branches=branches,
-            ten_gods_absolute=_absolute,
-            interaction_v2=_iv2,
-        )
-        meta["clash_stress_map"] = stress_map
-        # 将前 5 个最高应力事件的 Fact 权重提升至 Tier 0 (0.95)
-        boost_high_stress_facts(hits, stress_map)
+    from v17_rebirth.backend.logic.plugin_discovery import iter_all_plugin_specs
+    all_specs = iter_all_plugin_specs()
+    
+    pt.setdefault("facts", [])
+    pt.setdefault("pending_decisions", [])
+    collected_facts = []
+    existing_pending = pt.get("pending_decisions") if isinstance(pt.get("pending_decisions"), list) else []
+    
+    for spec in all_specs:
+        facts = spec.collect_v17_facts(pt)
+        if not facts: continue
+        collected_facts.extend(facts)
         
-        # ── V17.33：执行能量回写 (SettlementCenter) ──
-        # 将应力转化为数值增量并注入 L0 absolute 分数
-        _deltas_map = {}
-        for ev in stress_map.get("events", []):
-            rel_type = ev.get("relation_type", "unknown")
-            dq_god_i = 0.0
-            dq_god_j = 0.0
-            
-            # 使用校准后的 Alpha
-            from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import ALPHA_CLASH, ALPHA_COMBINATION, ALPHA_HARM
-            f_damped = ev.get("damped_stress", 0.0)
-            if rel_type == "combination":
-                dq = abs(f_damped) * ALPHA_COMBINATION
-            elif rel_type == "clash":
-                dq = f_damped * ALPHA_CLASH
-            else:
-                dq = f_damped * ALPHA_HARM
+        # 将事实注入全局列表，供叙事引擎使用；保持 JSON-safe dict 形态
+        pt.setdefault("facts", []).extend(
+            {
+                "fact": str(f.text or "").strip(),
+                "weight": float(f.salience_weight or 0.0),
+                "tier": int(f.causal_tier or 0),
+                "plugin": str(f.plugin_id or "").strip(),
+            }
+            for f in facts
+            if str(f.text or "").strip()
+        )
+        
+        if spec.plugin_id in hits:
+            hits[spec.plugin_id]["activated"] = True
+            hits[spec.plugin_id]["last_facts"] = [f.text for f in facts]
+        
+        for f in facts:
+            # 2. 注入物理能级影响 (Impact Application)
+            impact = f.meta.get("impact_ratio") if isinstance(f.meta, dict) else None
+            target = f.meta.get("target_god") if isinstance(f.meta, dict) else None
+            if impact and target and target in _absolute:
+                _absolute[target] = round(_absolute[target] * (1 + impact), 2)
                 
-            god_i, god_j = ev.get("god_i"), ev.get("god_j")
-            if god_i and god_j:
-                _absolute[god_i] = round(_absolute.get(god_i, 0.0) + dq / 2, 2)
-                _absolute[god_j] = round(_absolute.get(god_j, 0.0) + dq / 2, 2)
+                # 关键同步：确保 L2 插件能看到 L1 的变动
+                pt["ten_gods_absolute"] = _absolute
                 
                 if _ledger:
-                    from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
-                    if isinstance(_ledger, EvolutionLedger):
-                        reason = f"Interaction: {rel_type} ({ev.get('pillars', [])})"
-        # ── V17.50：建立映射并执行时间分片流转 ──
-        from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import STEM_ELEMENT, ELEMENT_CYCLE
-        _god_to_el = {}
-        _dm_el = STEM_ELEMENT.get(_daymaster, "")
-        if _dm_el in ELEMENT_CYCLE:
-            dm_idx = ELEMENT_CYCLE.index(_dm_el)
-            for idx in [0, 1, 2, 3, 4]:
-                el = ELEMENT_CYCLE[(dm_idx + idx) % 5]
-                if idx == 0: names = ["比肩", "劫财"]
-                elif idx == 1: names = ["食神", "伤官"]
-                elif idx == 2: names = ["正财", "偏财"]
-                elif idx == 3: names = ["正官", "七杀"]
-                else: names = ["正印", "偏印"]
-                for n in names: _god_to_el[n] = el
+                    _ledger.append_entry(target, _absolute[target], f"L{spec.causal_tier}_PLUGIN", f"{spec.plugin_id}: {f.text}")
 
-        if pt.get("_is_current_focus", True):
-            from v17_rebirth.backend.logic.L0_physics_fields.flow_physics_engine import FlowPhysicsEngine
-            engine = FlowPhysicsEngine(_dm_el)
-            flow_result = engine.compute_flow(
-                ten_gods_absolute=_absolute,
-                clash_stress_map=stress_map,
-                ten_god_to_el=_god_to_el
-            )
-            
-            _flow_deltas = flow_result.get("ten_god_deltas", {})
-            for god, dq in _flow_deltas.items():
-                if abs(dq) > 0.001 and god in _absolute:
-                    _absolute[god] = round(_absolute[god] + dq, 2)
-                    if _ledger:
-                        reason = "五行内生系统平衡流转"
-                        _ledger.append_entry(god, _absolute[god], "L1.5_FLOW_SETTLEMENT", reason)
-            
-            # 将流向拓扑图存入 meta，供前端展示
-            meta["flow_topology"] = flow_result["topology"]
-        else:
-            _log.debug("[V17-FLOW] Skipping non-focused temporal shard")
+    # 4.5 单一入口：将插件碰撞结果统一编译为 pending_decisions
+    pt["pending_decisions"] = compile_pending_decisions(
+        facts=collected_facts,
+        spec_decisions=collect_pending_decisions_from_specs(collected_facts),
+        existing_rows=[
+            *[dict(item) for item in existing_pending if isinstance(item, dict)],
+            *_manifest_hits_to_decision_rows(hits),
+            *_geometry_hits_to_decision_rows(pt, hits),
+        ],
+        physics_tensor=pt,
+    )
 
-        # ── V17.36：执行动作反馈 (Action Impact Loop) ──
-        # 检测用户选中的决策项并产生物理反馈
-        _decisions = pt.get("pending_decisions", [])
-        _applied_count = 0
-        for d in _decisions:
-            if isinstance(d, dict) and d.get("applied") is True:
-                impact = d.get("physical_impact") if isinstance(d.get("physical_impact"), dict) else {}
-                _target_god = d.get("target_god") or list(_absolute.keys())[0] if _absolute else None
-                if _target_god and _target_god in _absolute:
-                    _impact_ratio = float(impact.get("impact_ratio", 0.15) or 0.15)
-                    _significance_weight = float(impact.get("significance_weight", 1.0) or 1.0)
-                    _ratio_applied = _impact_ratio * _significance_weight
-                    _before = _absolute[_target_god]
-                    _absolute[_target_god] = round(_before * (1.0 + _ratio_applied), 2)
-                    _applied_count += 1
-                    if _ledger:
-                        reason = f"决策生效: [{d.get('title')}] 导致能级提升"
-                        _ledger.append_entry(
-                            _target_god,
-                            _absolute[_target_god],
-                            "L2_ACTION_IMPACT",
-                            reason,
-                            source="SRC_MANUAL",
-                        )
-        
-        # ── V17.37：源头清理 (Source-Level Sanitization) ──
-        # 在 Hydration 结束前，必须将 EvolutionLedger 对象转为纯 JSON 数据
-        # 否则下游 (LLM Prompt Builder / Redis Sync) 会因为无法序列化而崩溃
-        if _ledger:
-            from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
-            if isinstance(_ledger, EvolutionLedger):
-                # 1. 导出数据
-                pt["ten_gods_ledger"] = _ledger.to_dict()
-                # 2. 从物理张量中彻底移除原始对象引用
-                if "ledger" in _energy_meta:
-                    del _energy_meta["ledger"]
-        
-        # ── V17.50：时间分片逻辑 (Temporal Sharding) ──
-        # 仅对当前焦点时间（当前大运/流年）执行基尔霍夫结算
-        # 历史年份快照仅保留 L0 静态值，不参与实时流转动态重平衡
-        if pt.get("_is_current_focus", True):
-            # ... 此处是 L1.5_FLOW_SETTLEMENT ... (逻辑已在上方，此处确保 pt 被返回)
-            pass
+    # 5. 物理引擎结算 (Stress & Flow)
+    stress_map = build_clash_stress_map(
+        daymaster=_daymaster,
+        branches=branches,
+        ten_gods_absolute=_absolute,
+        interaction_v2=meta["interaction_v2"],
+    )
+    meta["clash_stress_map"] = stress_map
+    boost_high_stress_facts(hits, stress_map)
 
-        # ── V17.50：万能类型擦除 (Type Erasure) ──
-        # 处理电路模型可能产出的 np.float64, Decimal 等非标准类型
-        def _safe_json_dump(obj):
-            import json
-            try:
-                return json.loads(json.dumps(obj, default=str))
-            except Exception:
-                return obj
+    if pt.get("_is_current_focus", True):
+        g2e = _get_god_to_element_map(_daymaster)
+        dm_el = STEM_ELEMENT.get(_daymaster, "")
+        engine = FlowPhysicsEngine(dm_el)
+        flow_result = engine.compute_flow(ten_gods_absolute=_absolute, clash_stress_map=stress_map, ten_god_to_el=g2e)
+        for god, dq in flow_result.get("ten_god_deltas", {}).items():
+            if abs(dq) > 0.001 and god in _absolute:
+                _absolute[god] = round(_absolute[god] + dq, 2)
+                if _ledger:
+                    _ledger.append_entry(god, _absolute[god], "L1.5_FLOW", "内生系统平衡流转")
+        meta["flow_topology"] = flow_result["topology"]
 
-        pt["total_energy_index"] = round(sum(_absolute.values()), 2)
-        pt = _safe_json_dump(pt)
+    # 6. Action Impact & Will Proxy
+    _decisions = pt.get("pending_decisions", [])
+    for d in _decisions:
+        if isinstance(d, dict) and d.get("applied"):
+            impact = d.get("physical_impact", {})
+            tg = d.get("target_god")
+            if tg in _absolute:
+                ratio = float(impact.get("impact_ratio", 0.15)) * float(impact.get("significance_weight", 1.0))
+                _absolute[tg] = round(_absolute[tg] * (1.0 + ratio), 2)
+                if _ledger:
+                    _ledger.append_entry(tg, _absolute[tg], "L2_ACTION", f"决策生效: {d.get('title')}")
 
+    _will = pt.get("will_proxy", "stable")
+    if _will == "stable":
+        for g in ["正官", "七杀", "正印", "偏印", "比肩", "劫财"]:
+            if g in _absolute: _absolute[g] = round(_absolute[g] * 1.15, 2)
+    elif _will == "aggressive":
+        for g in ["食神", "伤官", "正财", "偏财"]:
+            if g in _absolute: _absolute[g] = round(_absolute[g] * 1.25, 2)
+
+    # 7. 终效同步与清理
+    pt["ten_gods_absolute"] = _absolute
+    pt["ten_gods_absolute_intensity"] = _absolute
+    pt["deity_scores"] = _absolute
     meta["l1_manifest_hits"] = hits
     meta["_v17_hydrated"] = True
-    meta["v17_physics_stable"] = True
-    return pt
 
+    if _ledger:
+        pt["ten_gods_ledger"] = _ledger.to_dict()
+        if "ledger" in _energy_meta: del _energy_meta["ledger"]
 
-def _resolve_pattern_label(deity_scores: Dict[str, Any]) -> str:
-    if not deity_scores:
-        return "未定格局"
-    try:
-        ranked = sorted(
-            ((str(k), float(v)) for k, v in deity_scores.items()),
-            key=lambda kv: kv[1],
-            reverse=True,
-        )
-    except (TypeError, ValueError):
-        return "未定格局"
-    if not ranked:
-        return "未定格局"
-    name, score = ranked[0]
-    if name == "正官" and score >= 40:
-        return "正官格势强"
-    if name in {"食神", "伤官"} and score >= 35:
-        return "食伤外放格"
-    if name in {"偏财", "正财"} and score >= 35:
-        return "财星主导格"
-    return f"{name}主轴格"
-
-
-def _blind_work_hint(
-    _branches: Dict[str, str],
-    sanxing: List[Dict[str, Any]],
-    chong: List[Dict[str, Any]],
-) -> str:
-    """极简盲派做功提示：三刑聚势 / 冲动做功。"""
-    sx = summarize_sanxing_branches(sanxing)
-    if sx and all(x in sx for x in ("寅", "巳", "申")):
-        return "无恩三刑聚势"
-    if chong:
-        return "支冲牵动做功"
-    return ""
-
-
-def _get_god_to_element_map(day_master: str = "壬") -> Dict[str, str]:
-    """返回十神到五行的映射（用于 KCL 结算）。"""
-    from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
-        STEM_ELEMENT,
-        ten_god_from_stems,
-    )
-    # 构造所有天干及其对应十神
-    stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
-    mapping = {}
-    for s in stems:
-        god = ten_god_from_stems(day_master, s)
-        el = STEM_ELEMENT[s]
-        mapping[god] = el
-    return mapping
+    # 最终类型擦除，防止 JSON 报错
+    import json
+    tmp = json.loads(json.dumps(pt, default=str))
+    pt.clear()
+    pt.update(tmp)

@@ -1,15 +1,17 @@
-"""V17.14 / 14b：PhysicsAdapter 全带宽 + interaction_delta 烈度剖面（仅中文档位上屏）。"""
-from __future__ import annotations
+# V17.99 Skill Specification
+V17_SKILL_MANIFEST = {
+    "id": "l1.physics.full_bandwidth",
+    "Layer": "L1",
+    "Skill_Type": "Atomic",
+    "Domain": "Physics",
+    "Description": "PhysicsAdapter 全带宽映射。深度扫描地支冲突烈度（轻/中/猛）。",
+    "Rationale": "作为 L1 原子算子，负责将 L0 的隐性物理张力转化为显性的烈度档位，不仅是信息显示，更是后续熵增计算的触发器。"
+}
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from v17_rebirth.backend.adapters.physics_adapter import PhysicsAdapter
-from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
-
-PLUGIN_SUMMARY = "PhysicsAdapter 直读 interaction_v2 / interaction_delta，含冲势/三刑等烈度档位。"
-PLUGIN_RATIONALE = "V17.14b：对 interaction_delta 做深度扫描，区分轻/中/猛，而非仅布尔命中。"
+DECLARED_PARAMS = {
+    "PRIORITY_NORMAL": 0.62,       # 普通烈度事实优先级
+    "PRIORITY_FIERCE": 0.65         # 剧烈爆发事实优先级
+}
 
 
 def _repo_root() -> Path:
@@ -29,6 +31,11 @@ class L1PhysicsBandwidthPlugin(V17PluginSpec):
     registry_priority: float = 0.735
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        from v17_rebirth.backend.logic.configs.manager import get_plugin_config
+        cfg = get_plugin_config(self.plugin_id)
+        pno = float(cfg.get("PRIORITY_NORMAL", DECLARED_PARAMS["PRIORITY_NORMAL"]))
+        pfe = float(cfg.get("PRIORITY_FIERCE", DECLARED_PARAMS["PRIORITY_FIERCE"]))
+
         ad = PhysicsAdapter(root=_repo_root())
         bundle = ad.read_physics_bundle(physics_tensor if isinstance(physics_tensor, dict) else {})
         v2 = bundle.get("interaction_v2") if isinstance(bundle.get("interaction_v2"), dict) else {}
@@ -68,9 +75,9 @@ class L1PhysicsBandwidthPlugin(V17PluginSpec):
                 plugin_id=self.plugin_id,
                 text=line,
                 causal_tier=int(self.causal_tier),
-                priority=0.65 if fierce else 0.62,
+                priority=pfe if fierce else pno,
                 decision_hint="地支场烈度",
-                meta={},
+                meta={"is_fierce": fierce},
             )
         ]
 

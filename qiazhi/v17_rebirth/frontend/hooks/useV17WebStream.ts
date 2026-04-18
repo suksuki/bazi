@@ -76,6 +76,15 @@ export type V17Frame = {
       llm_meta_redacted?: boolean;
     };
     source_facts?: string[];
+    manual_decisions?: Array<{
+      id?: string;
+      title?: string;
+      label?: string;
+      source?: string;
+      priority?: number;
+    }>;
+    auto_resolutions?: Array<Record<string, unknown>>;
+    llm_arbitration_context?: Array<Record<string, unknown>>;
     pending_decisions?: Array<{
       id?: string;
       title?: string;

@@ -319,3 +319,71 @@ async def test_db_bridge(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": True, "result": result}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+@router.get("/v17/admin/physics-constants")
+async def get_physics_constants(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    from v17_rebirth.backend.logic.configs.manager import get_v17_constants
+
+    constants = get_v17_constants()
+    return {"ok": True, "constants": constants}
+
+
+@router.post("/v17/admin/physics-constants")
+async def update_physics_constants(payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload)
+    from v17_rebirth.paths import V17_REBIRTH_ROOT
+
+    # 1. 验证新常数（Payload 中应包含 constants 字典）
+    new_constants = payload.get("constants")
+    if not isinstance(new_constants, dict):
+        raise HTTPException(status_code=400, detail="constants must be a dictionary")
+
+    # 2. 持久化至 v17_core_constants.json
+    cfg_path = V17_REBIRTH_ROOT / "backend" / "logic" / "configs" / "v17_core_constants.json"
+    full_json = {"protocol": "V17_ALPHA_STABLE", "constants": new_constants}
+    try:
+        cfg_path.write_text(json.dumps(full_json, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write config: {e}")
+
+    # 3. 强制重启 Narrative Pipeline 以同步缓存（逻辑对齐）
+    restart_realtime_pipeline()
+
+    return {"ok": True, "constants": new_constants, "message": "Physics constants updated and pipeline restarted"}
+
+
+@router.get("/v17/admin/plugin-config/{plugin_id}")
+async def get_plugin_config_api(
+    plugin_id: str,
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    from v17_rebirth.backend.logic.configs.manager import get_plugin_config
+
+    config = get_plugin_config(plugin_id)
+    return {"ok": True, "config": config}
+
+
+@router.post("/v17/admin/plugin-config/{plugin_id}")
+async def update_plugin_config_api(plugin_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload)
+    from v17_rebirth.paths import V17_REBIRTH_ROOT
+
+    new_config = payload.get("config")
+    if not isinstance(new_config, dict):
+        raise HTTPException(status_code=400, detail="config must be a dictionary")
+
+    cfg_path = V17_REBIRTH_ROOT / "backend" / "logic" / "configs" / f"{plugin_id}.json"
+    try:
+        cfg_path.write_text(json.dumps(new_config, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write plugin config: {e}")
+
+    restart_realtime_pipeline()
+    return {"ok": True, "config": new_config, "message": f"Plugin {plugin_id} config updated"}

@@ -1,31 +1,50 @@
-"""神煞场：官印财合成「扰动/护持」热度指标。"""
-from __future__ import annotations
+# V17.99 Skill Specification
+V17_SKILL_MANIFEST = {
+    "id": "shensha",
+    "Layer": "L2",
+    "Skill_Type": "Pattern",
+    "Domain": "Aura",
+    "Description": "把传统神煞语义压缩为可量化的物理场强 Buff/Debuff。",
+    "Rationale": "神煞是 L2 级的场变量修正项，它并不改变 L0/L1 的质量与矢量，但改变外部压力的感知强度。"
+}
 
-from dataclasses import dataclass
-from typing import Any, Dict, List
+DECLARED_PARAMS = {
+    "TIAN_YI_THRESHOLD": 40.0,     # 天乙显化所需正印能量
+    "YANG_REN_THRESHOLD": 45.0,     # 羊刃显化所需劫财能量
+    "RESISTANCE_BUFF": 0.1,         # 天乙抗性加成比例
+    "TENSION_MULTIPLIER": 1.4,      # 羊刃张力乘数
+    "PRIORITY_BASE": 0.94           # 事实输出优先级
+}
 
-from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
-from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
-PLUGIN_SUMMARY = "把传统神煞语义压缩为可排序的风险热度，供叙事层引用。"
-PLUGIN_RATIONALE = "作为 L2 辅助标签，不取代刑冲合害，而提示边界与节奏校准。"
+def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> List[dict]:
+    tian_yi_t = float(cfg.get("TIAN_YI_THRESHOLD", DECLARED_PARAMS["TIAN_YI_THRESHOLD"]))
+    yang_ren_t = float(cfg.get("YANG_REN_THRESHOLD", DECLARED_PARAMS["YANG_REN_THRESHOLD"]))
+    res_buff = float(cfg.get("RESISTANCE_BUFF", DECLARED_PARAMS["RESISTANCE_BUFF"]))
+    tens_mul = float(cfg.get("TENSION_MULTIPLIER", DECLARED_PARAMS["TENSION_MULTIPLIER"]))
+    prio = float(cfg.get("PRIORITY_BASE", DECLARED_PARAMS["PRIORITY_BASE"]))
 
-
-def _collect_rows(deity_scores: Dict[str, float]) -> List[dict]:
-    officer = float(deity_scores.get("正官", 0.0))
-    print_star = float(deity_scores.get("偏印", 0.0))
-    wealth = float(deity_scores.get("正财", 0.0) + deity_scores.get("偏财", 0.0))
-    shensha_heat = round((officer * 0.45 + print_star * 0.35 + wealth * 0.2) / 10.0, 3)
-    if shensha_heat <= 1.2:
-        return []
-    return [
-        {
+    has_tian_yi = deity_scores.get("正印", 0) > tian_yi_t
+    has_yang_ren = deity_scores.get("劫财", 0) > yang_ren_t
+    
+    rows = []
+    if has_tian_yi:
+        rows.append({
             "plugin": "shensha",
-            "fact": f"神煞场显化增强，护持/扰动强度 {shensha_heat:.2f}。",
-            "label": "先校准边界与节奏，再决定扩张或防守。",
-            "priority": min(0.95, 0.55 + shensha_heat / 5.0),
-        }
-    ]
+            "fact": f"天乙贵人显化：所在柱抗性 (Resistance) 额外提升 {int(res_buff*100)}%。",
+            "label": "护持/守御为主",
+            "priority": prio + 0.01,
+            "meta": {"resistance_buff": res_buff, "gate": "TIAN_YI_BUFF"}
+        })
+    if has_yang_ren:
+        rows.append({
+            "plugin": "shensha",
+            "fact": f"羊刃显化：所在场压张力系数 x {tens_mul}。",
+            "label": "校准节奏，防范剧烈冲突",
+            "priority": prio,
+            "meta": {"tension_multiplier": tens_mul, "gate": "YANG_REN_STRESS"}
+        })
+    return rows
 
 
 @dataclass
@@ -35,8 +54,10 @@ class ShenshaPlugin(V17PluginSpec):
     registry_priority: float = 0.52
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        from v17_rebirth.backend.logic.configs.manager import get_plugin_config
+        cfg = get_plugin_config(self.plugin_id)
         scores = deity_scores_from_tensor(physics_tensor)
-        return rows_dict_to_v17_facts(_collect_rows(scores), causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return rows_dict_to_v17_facts(_collect_rows(scores, cfg), causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 PLUGIN = ShenshaPlugin()

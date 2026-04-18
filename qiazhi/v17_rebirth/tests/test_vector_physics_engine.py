@@ -290,6 +290,58 @@ def test_hydration_stress_map_has_events_for_chong() -> None:
     assert any("子" in bp and "午" in bp for bp in branch_pairs), f"子午 clash not found: {branch_pairs}"
 
 
+def test_vector_physics_engine_three_branch_sanhe_and_muku() -> None:
+    """验证 sanhe 具有 3 个支时，所有 3 个都会被收录进 branches，不被截断 (V17修复测试)"""
+    interaction_v2: Dict[str, Any] = {
+        "sanhe": [{"pair": ["巳", "酉", "丑"], "pillars": ["year", "hour", "day"]}],
+    }
+    ten_gods: Dict[str, float] = {"伤官": 80.0, "七杀": 60.0, "偏财": 40.0}
+
+    events = compute_stress_events(
+        daymaster="丁",
+        branches={"year": "巳", "month": "戌", "day": "丑", "hour": "酉"},
+        ten_gods_absolute=ten_gods,
+        interaction_v2=interaction_v2,
+    )
+
+    sanhe_events = [e for e in events if e.relation_type == "combination" and e.source_key == "sanhe"]
+    assert len(sanhe_events) == 1
+    sanhe_event = sanhe_events[0]
+    
+    # Assert branches array has exactly 3 elements: ['巳', '酉', '丑']
+    assert len(sanhe_event.branches) == 3
+    assert sanhe_event.branches == ["巳", "酉", "丑"]
+
+
+def test_hydration_muku_impact_for_three_branch_sanhe() -> None:
+    """验证三合局中如果有第三个支是墓库，is_muku_impact 能够被激活 (V17修复测试)"""
+    pt: Dict[str, Any] = {
+        "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+        "luck_pillar": "—",
+        "flow_pillar": "—",
+        "ten_gods_absolute": {"伤官": 73.80, "七杀": 9.83, "偏财": 15.0},
+        "total_energy_index": 195.0,
+        "meta": {
+            "interaction_v2": {
+                "sanhe": [{"pair": ["巳", "酉", "丑"], "pillars": ["year", "hour", "day"]}],
+            }
+        }
+    }
+    
+    # This will trigger hydration which executes is_muku_impact which leverages the vector events
+    hydrate_v17_physics_tensor(pt)
+    csm = pt["meta"]["clash_stress_map"]
+    assert set(csm["events"][0]["branches"]) == {"巳", "酉", "丑"}
+    
+    # 验证本该因 sanhe multiplier 翻倍同时因 Muku 乘 0.2 的七杀
+    # 中神(酉) => 七杀.
+    # 之前是9.83.
+    # sanhe => mid_base(1.35) * ... + ind_factor
+    # 然后因为 is_muku => * 0.2
+    assert pt["ten_gods_absolute"]["七杀"] != 9.83
+
+
+
 def test_constants_match_specification() -> None:
     """验证物理常数与规格文档一致。"""
     assert RELATION_COEFFICIENT["clash"] == 1.0
