@@ -78,6 +78,8 @@ interface TracePanelProps {
         claims?: Array<Record<string, unknown>>;
         conflicts?: Array<Record<string, unknown>>;
         conflict_resolutions?: Array<Record<string, unknown>>;
+        knowledge_snapshot?: Record<string, unknown>;
+        brain_action_queue?: Array<Record<string, unknown>>;
       };
       manual_decisions?: Array<Record<string, unknown>>;
       auto_resolutions?: Array<Record<string, unknown>>;
@@ -137,6 +139,14 @@ function conflictTone(severity: string): string {
   if (value === "P1") return "text-rose-200 border-rose-500/25 bg-rose-950/20";
   if (value === "P2") return "text-amber-200 border-amber-500/25 bg-amber-950/20";
   return "text-cyan-200 border-cyan-500/25 bg-cyan-950/20";
+}
+
+function brainStepTone(kind: string): string {
+  const value = String(kind || "").trim().toLowerCase();
+  if (value.includes("manual") || value === "user") return "text-violet-200";
+  if (value.includes("system")) return "text-amber-200";
+  if (value.includes("llm")) return "text-cyan-200";
+  return "text-zinc-300";
 }
 
 export function V17_TracePanel({
@@ -260,6 +270,17 @@ export function V17_TracePanel({
   const pluginConflictResolutions = Array.isArray((physicsPayload.plugins as { conflict_resolutions?: unknown[] } | undefined)?.conflict_resolutions)
     ? (((physicsPayload.plugins as { conflict_resolutions?: unknown[] }).conflict_resolutions ?? []) as Array<Record<string, unknown>>)
     : [];
+  const knowledgeSnapshot =
+    (physicsPayload.plugins as { knowledge_snapshot?: Record<string, unknown> } | undefined)?.knowledge_snapshot || {};
+  const brainActionQueue = Array.isArray((physicsPayload.plugins as { brain_action_queue?: unknown[] } | undefined)?.brain_action_queue)
+    ? (((physicsPayload.plugins as { brain_action_queue?: unknown[] }).brain_action_queue ?? []) as Array<Record<string, unknown>>)
+    : [];
+  const brainTimeline = pluginConflicts.slice(0, 8).map((conflict) => {
+    const conflictId = String(conflict.conflict_id || "").trim();
+    const resolution = pluginConflictResolutions.find((item) => String(item.conflict_id || "").trim() === conflictId);
+    const action = brainActionQueue.find((item) => String(item.conflict_id || "").trim() === conflictId);
+    return { conflict, resolution, action };
+  }).filter((row) => String(row.conflict.conflict_id || "").trim());
   const manualDecisions = Array.isArray(physicsPayload.manual_decisions)
     ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
     : [];
@@ -566,6 +587,18 @@ export function V17_TracePanel({
             claims {pluginClaims.length} / conflicts {pluginConflicts.length} / resolutions {pluginConflictResolutions.length}
           </span>
         </div>
+        <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-2 py-2 text-[10px] text-zinc-400">
+          <div className="flex flex-wrap items-center gap-3">
+            <span>claims {Number((knowledgeSnapshot.claim_history as Record<string, unknown> | undefined)?.total_claims || 0)}</span>
+            <span>conflicts {Number((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.total_conflicts || 0)}</span>
+            <span>suggestions {Number((knowledgeSnapshot.resolution_preview as Record<string, unknown> | undefined)?.total_suggestions || 0)}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-zinc-500">
+            <span>arbiter bias system {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.recommended_arbiters as Record<string, unknown> | undefined)?.system || 0)}</span>
+            <span>llm {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.recommended_arbiters as Record<string, unknown> | undefined)?.llm || 0)}</span>
+            <span>user {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.recommended_arbiters as Record<string, unknown> | undefined)?.user || 0)}</span>
+          </div>
+        </div>
         <div className="space-y-2">
           {pluginConflicts.length ? (
             pluginConflicts.slice(0, 8).map((row, idx) => {
@@ -601,6 +634,71 @@ export function V17_TracePanel({
             })
           ) : (
             <p className="text-[11px] text-zinc-500">暂无挂起冲突；当前主张之间未检测到显著冲突。</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">大脑动作队列</p>
+          <span className="text-[10px] text-zinc-500">{brainActionQueue.length} 条</span>
+        </div>
+        <div className="space-y-1">
+          {brainActionQueue.length ? (
+            brainActionQueue.slice(0, 8).map((row, idx) => (
+              <div key={`brain_action_${idx}`} className="rounded-lg border border-sky-500/15 bg-zinc-900/60 px-2 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] tracking-[0.18em] text-sky-200 uppercase">{String(row.action_type || "brain_action")}</p>
+                  <span className="font-mono text-[10px] text-sky-100 uppercase">{String(row.queue || "llm")}</span>
+                </div>
+                <p className="mt-1 text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
+                <p className="mt-1 text-[10px] text-zinc-500">
+                  conflict {String(row.conflict_id || "—")} / confidence {Number(row.confidence || 0).toFixed(2)}
+                </p>
+                {Array.isArray(row.source_plugins) && row.source_plugins.length ? (
+                  <p className="mt-1 text-[10px] text-zinc-400">{(row.source_plugins as string[]).slice(0, 4).join(" / ")}</p>
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <p className="text-[11px] text-zinc-500">暂无脑动作；当前未形成可执行的后续路由建议。</p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">脑流时间线</p>
+          <span className="text-[10px] text-zinc-500">{brainTimeline.length} 条</span>
+        </div>
+        <div className="space-y-2">
+          {brainTimeline.length ? (
+            brainTimeline.map((row, idx) => (
+              <div key={`brain_timeline_${idx}`} className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 px-2 py-2">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-200">
+                  {String(row.conflict.conflict_type || "conflict")} · {String(row.conflict.conflict_id || "—")}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-zinc-400">
+                  <span className="rounded border border-rose-500/15 bg-rose-950/20 px-2 py-1">
+                    Conflict · {String(row.conflict.severity || "P?")}
+                  </span>
+                  <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(String(row.resolution?.resolved_by || row.conflict.recommended_arbiter || "llm"))}`}>
+                    Resolution · {String(row.resolution?.resolved_by || row.conflict.recommended_arbiter || "pending")}
+                  </span>
+                  <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(String(row.action?.queue || row.resolution?.next_queue || "llm"))}`}>
+                    Brain Action · {String(row.action?.action_type || row.resolution?.policy || "waiting")}
+                  </span>
+                  <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(String(row.action?.queue || row.resolution?.next_queue || "llm"))}`}>
+                    Queue · {String(row.action?.queue || row.resolution?.next_queue || "pending")}
+                  </span>
+                </div>
+                <p className="mt-2 text-[10px] text-zinc-500">
+                  {String(row.action?.reason || row.resolution?.reason || row.conflict.why_conflict || "—")}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-[11px] text-zinc-500">暂无脑流时间线；当前尚未形成从冲突到路由的完整链路。</p>
           )}
         </div>
       </div>

@@ -107,6 +107,16 @@ type KnowledgeSnapshot = {
   };
 };
 
+type BrainAction = {
+  action_id?: string;
+  conflict_id?: string;
+  action_type?: string;
+  queue?: string;
+  confidence?: number;
+  reason?: string;
+  source_plugins?: string[];
+};
+
 const LAYER_TABS: { key: string; label: string }[] = [
   { key: "L0", label: "L0 基础场" },
   { key: "L1", label: "L1 原子算子" },
@@ -192,6 +202,7 @@ export default function V17AdminPage() {
   const [pluginConflicts, setPluginConflicts] = useState<PluginConflict[]>([]);
   const [pluginConflictResolutions, setPluginConflictResolutions] = useState<PluginConflictResolution[]>([]);
   const [knowledgeSnapshot, setKnowledgeSnapshot] = useState<KnowledgeSnapshot>({});
+  const [brainActionQueue, setBrainActionQueue] = useState<BrainAction[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
   const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
   const [selectedPlugin, setSelectedPlugin] = useState<PluginAdminRow | null>(null);
@@ -239,12 +250,14 @@ export default function V17AdminPage() {
       const conflictList = ((statusData as any).conflicts || []) as PluginConflict[];
       const resolutionList = ((statusData as any).conflict_resolutions || []) as PluginConflictResolution[];
       const knowledge = ((statusData as any).knowledge_snapshot || {}) as KnowledgeSnapshot;
+      const actions = ((statusData as any).brain_action_queue || []) as BrainAction[];
       setPlugins(list);
       setPluginStatuses(statusList);
       setPluginClaims(claimList);
       setPluginConflicts(conflictList);
       setPluginConflictResolutions(resolutionList);
       setKnowledgeSnapshot(knowledge);
+      setBrainActionQueue(actions);
       setResolvedPluginRuntimeSessionId(String((statusData as any).session_id || pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
   }, [pluginRuntimeSessionId]);
@@ -421,6 +434,7 @@ export default function V17AdminPage() {
                    <span>claims {Number(knowledgeSnapshot.claim_history?.total_claims || 0)}</span>
                    <span>conflicts {Number(knowledgeSnapshot.conflict_history?.total_conflicts || 0)}</span>
                    <span>suggestions {Number(knowledgeSnapshot.resolution_preview?.total_suggestions || 0)}</span>
+                   <span>brain actions {brainActionQueue.length}</span>
                  </div>
                  <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-zinc-500">
                    <span>arbiter bias: system {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.system || 0)}</span>
@@ -428,6 +442,25 @@ export default function V17AdminPage() {
                    <span>user {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.user || 0)}</span>
                  </div>
                </div>
+               {brainActionQueue.length ? (
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="mb-2 text-[11px] font-semibold text-zinc-300">Brain Action Queue</div>
+                   <div className="space-y-2">
+                     {brainActionQueue.slice(0, 6).map((row, idx) => (
+                       <div key={row.action_id || `brain_${idx}`} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
+                         <div className="flex items-center justify-between gap-2">
+                           <span className="text-[10px] uppercase text-sky-300">{row.action_type || "brain_action"}</span>
+                           <span className="text-[10px] uppercase text-zinc-500">{row.queue || "llm"}</span>
+                         </div>
+                         <div className="mt-1 text-[10px] text-zinc-300">{row.reason || "—"}</div>
+                         <div className="mt-1 text-[10px] text-zinc-500">
+                           conflict {row.conflict_id || "—"} / confidence {Number(row.confidence || 0).toFixed(2)}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               ) : null}
                <div className="space-y-2">
                   {plugins.map(p => {
                     const pluginKey = normalizePluginKey(p.plugin_id);

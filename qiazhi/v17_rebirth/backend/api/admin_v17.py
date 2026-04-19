@@ -14,6 +14,14 @@ from v17_rebirth.backend.logic.plugin_discovery import annotate_causal_trace, re
 from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_with_runtime
 from v17_rebirth.backend.services.verdict_orchestrator import restart_realtime_pipeline
 from v17_rebirth.backend.services.conflict_resolution_service import apply_conflict_resolution
+from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapshot
+from v17_rebirth.backend.services.arbiter_router import route_conflicts
+from v17_rebirth.backend.services.llm_conflict_arbiter import (
+    apply_llm_conflict_result,
+    build_conflict_bundle,
+    build_llm_conflict_prompt,
+    parse_llm_conflict_reply,
+)
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.infrastructure.state_backend import get_state_backend
@@ -447,6 +455,7 @@ async def get_plugin_runtime_status(
         else []
     )
     knowledge_snapshot = meta.get("knowledge_snapshot") if isinstance(meta.get("knowledge_snapshot"), dict) else {}
+    brain_action_queue = meta.get("brain_action_queue") if isinstance(meta.get("brain_action_queue"), list) else []
     auto_ratios = meta.get("plugin_auto_ratio_totals") if isinstance(meta.get("plugin_auto_ratio_totals"), dict) else {}
     return {
         "ok": True,
@@ -457,6 +466,7 @@ async def get_plugin_runtime_status(
         "conflicts": conflicts,
         "conflict_resolutions": conflict_resolutions,
         "knowledge_snapshot": knowledge_snapshot,
+        "brain_action_queue": brain_action_queue,
         "auto_ratio_totals": auto_ratios,
     }
 
@@ -475,6 +485,54 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(physics, dict):
         raise HTTPException(status_code=404, detail="physics not found")
     meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+    if arbiter == "llm":
+        cfg = get_runtime_llm_config()
+        base_url = str(cfg.get("base_url") or "").strip()
+        model = str(cfg.get("model") or "").strip()
+        if not base_url or not model:
+            raise HTTPException(status_code=400, detail="llm config incomplete")
+        bundle = build_conflict_bundle(meta=meta, conflict_id=conflict_id)
+        prompt = build_llm_conflict_prompt(bundle=bundle)
+        try:
+            llm_result = _chat_llm(base_url, model, prompt)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"llm conflict arbitration failed: {exc}")
+        reply = str(llm_result.get("reply") or "").strip()
+        parsed = parse_llm_conflict_reply(reply=reply, bundle=bundle)
+        updated_meta = apply_llm_conflict_result(
+            meta=meta,
+            conflict_id=conflict_id,
+            bundle=bundle,
+            reply=reply,
+            parsed=parsed,
+        )
+        knowledge_snapshot = build_knowledge_snapshot(
+            claims=updated_meta.get("plugin_claims", []),
+            conflicts=updated_meta.get("plugin_conflicts", []),
+            conflict_resolutions=updated_meta.get("plugin_conflict_resolutions", []),
+        )
+        updated_meta["knowledge_snapshot"] = dict(knowledge_snapshot)
+        updated_meta["plugin_conflicts"] = route_conflicts(
+            conflicts=updated_meta.get("plugin_conflicts", []),
+            knowledge_snapshot=knowledge_snapshot,
+        )
+        physics["meta"] = updated_meta
+        await backend.set_physics(session_id, physics)
+        return {
+            "ok": True,
+            "session_id": session_id,
+            "conflict_id": conflict_id,
+            "arbiter": arbiter,
+            "bundle": bundle,
+            "prompt": prompt,
+            "llm_reply": reply,
+            "llm_result": parsed,
+            "brain_action_queue": updated_meta.get("brain_action_queue", []),
+            "knowledge_snapshot": updated_meta.get("knowledge_snapshot", {}),
+            "conflicts": updated_meta.get("plugin_conflicts", []),
+            "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
+        }
+
     updated_meta = apply_conflict_resolution(meta=meta, conflict_id=conflict_id, arbiter=arbiter)
     physics["meta"] = updated_meta
     await backend.set_physics(session_id, physics)

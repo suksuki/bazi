@@ -106,6 +106,8 @@ export type V17Frame = {
       claims?: Array<Record<string, unknown>>;
       conflicts?: Array<Record<string, unknown>>;
       conflict_resolutions?: Array<Record<string, unknown>>;
+      knowledge_snapshot?: Record<string, unknown>;
+      brain_action_queue?: Array<Record<string, unknown>>;
     };
   };
 };

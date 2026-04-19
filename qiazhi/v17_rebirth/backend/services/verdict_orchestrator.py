@@ -17,6 +17,7 @@ from v17_rebirth.backend.plugins.v17_wrappers import (
     v17_fact_to_row,
 )
 from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration
+from v17_rebirth.backend.services.brain_action_router import apply_brain_action_queue
 from v17_rebirth.backend.services.decision_batches import build_decision_batches
 from v17_rebirth.backend.narrative.pipeline import DialogueLayer, RealtimeNarrativePipeline
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
@@ -196,6 +197,8 @@ class VerdictOrchestrator:
             existing_rows=[dict(item) for item in raw_pending if isinstance(item, dict)],
             physics_tensor=raw_physics,
         )
+        meta = raw_physics.get("meta") if isinstance(raw_physics.get("meta"), dict) else {}
+        arbitration = apply_brain_action_queue(arbitration=arbitration, meta=meta)
         for key in ("manual_decisions", "auto_resolutions", "llm_arbitration_context", "pending_decisions"):
             items = arbitration.get(key) if isinstance(arbitration.get(key), list) else []
             for d in items:
@@ -284,6 +287,7 @@ class VerdictOrchestrator:
                 "conflicts": list(((pt.get("meta") or {}).get("plugin_conflicts") or []))[:128],
                 "conflict_resolutions": list(((pt.get("meta") or {}).get("plugin_conflict_resolutions") or []))[:128],
                 "knowledge_snapshot": dict(((pt.get("meta") or {}).get("knowledge_snapshot") or {})),
+                "brain_action_queue": list(((pt.get("meta") or {}).get("brain_action_queue") or []))[:128],
             },
             "debug_trace": {
                 "hits": plugin_hits,

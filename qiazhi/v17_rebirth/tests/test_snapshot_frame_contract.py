@@ -28,6 +28,7 @@ def test_snapshot_frame_v17_21_contract(bazi_repo_root: Path) -> None:
     assert isinstance((inner.get("plugins") or {}).get("conflicts"), list)
     assert isinstance((inner.get("plugins") or {}).get("conflict_resolutions"), list)
     assert isinstance((inner.get("plugins") or {}).get("knowledge_snapshot"), dict)
+    assert isinstance((inner.get("plugins") or {}).get("brain_action_queue"), list)
     assert "食神" in inner.get("ten_gods_base_l0", {})
     assert "食神" in inner.get("ten_gods_runtime", {})
     assert "食神" in inner.get("ten_gods_narrative", {})
