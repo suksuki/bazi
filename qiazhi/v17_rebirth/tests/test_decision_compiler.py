@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from v17_rebirth.backend.plugins.spec import ArbiterType
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _manifest_hits_to_decision_rows
-from v17_rebirth.backend.plugins.spec import V17Fact
+from v17_rebirth.backend.plugins.spec import V17Fact, V17Decision
 from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration, compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.target_god_resolver import infer_target_god_from_text, resolve_target_god
@@ -89,6 +89,49 @@ def test_compile_pending_decisions_infers_target_god_from_title_text() -> None:
     assert len(rows) == 1
     assert rows[0]["target_god"] == "正财"
     assert rows[0]["physical_impact"]["target_god"] == "正财"
+
+
+def test_compile_pending_decisions_clears_observational_impact_from_existing_classical_row() -> None:
+    rows = compile_pending_decisions(
+        facts=[],
+        spec_decisions=[],
+        existing_rows=[
+            {
+                "id": "c1",
+                "source": "classical.pattern.axis.v1",
+                "label": "格局轴线",
+                "title": "格局轴线：偏财 主轴明显。",
+                "priority": 0.66,
+                "physical_impact": {
+                    "target_god": "偏财",
+                    "impact_ratio": 0.25,
+                    "intensity_level": 3,
+                },
+            }
+        ],
+    )
+    assert len(rows) == 1
+    assert rows[0]["physical_impact"] == {}
+
+
+def test_compile_pending_decisions_clears_observational_impact_from_spec_decisions() -> None:
+    rows = compile_pending_decisions(
+        facts=[],
+        spec_decisions=[
+            V17Decision(
+                id="spec-1",
+                title="格局轴线：偏财 主轴明显。",
+                label="格局轴线",
+                hint="格局轴线",
+                priority=0.7,
+                target_god="偏财",
+                physical_impact={"target_god": "偏财", "impact_ratio": 0.25},
+                plugin_id="classical.pattern.axis.v1",
+            )
+        ],
+    )
+    assert len(rows) == 1
+    assert rows[0]["physical_impact"] == {}
 
 
 def test_compile_pending_decisions_does_not_infer_physics_for_classical_source() -> None:
@@ -202,7 +245,7 @@ def test_compile_decision_arbitration_assigns_llm_auto_apply_policy_for_low_risk
         existing_rows=[
             {
                 "id": "llm_auto_1",
-                "source": "classical.flow.report",
+                "source": "l1.physics.op_branch_sanxing",
                 "label": "流转报告",
                 "title": "流转报告：正财 能级微调 6%，建议小幅收敛。",
                 "priority": 0.62,
@@ -223,7 +266,7 @@ def test_compile_decision_arbitration_promotes_llm_suggest_only_item_to_manual()
         existing_rows=[
             {
                 "id": "llm_suggest_1",
-                "source": "classical.flow.review",
+                "source": "l1.physics.op_branch_liuchong",
                 "label": "边界复核报告",
                 "title": "边界复核报告：七杀 目标明确，但仍需你确认执行边界。",
                 "priority": 0.71,
@@ -290,6 +333,22 @@ def test_compile_modifier_proposals_demotes_nonzero_tier_system_to_user() -> Non
     )
     assert len(proposals) == 1
     assert proposals[0]["arbiter_type"] == "user"
+
+
+def test_compile_modifier_proposals_skips_classical_observations_even_with_impact_ratio() -> None:
+    proposals = compile_modifier_proposals(
+        facts=[
+            V17Fact(
+                plugin_id="classical.pattern.axis.v1",
+                text="格局轴线：正官 主轴已立。",
+                causal_tier=3,
+                suggested_arbiter=ArbiterType.SYSTEM,
+                meta={"impact_ratio": 0.33, "match_ratio": 0.75, "target_god": "正官"},
+            )
+        ],
+        physics_tensor={"ten_gods_base_l0": {"正官": 10.0}},
+    )
+    assert proposals == []
 
 
 def test_compile_modifier_proposals_tracks_claim_id_for_conflict_join() -> None:

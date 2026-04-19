@@ -6,8 +6,10 @@ from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, STEM_ELEMENT, ten_god_from_stems
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     build_static_basis,
+    detect_interaction_layer,
     collect_origin_types_from_rows,
     choose_dominant_origin_type,
+    infer_manifestation_state,
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
@@ -200,6 +202,17 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             effective_state = "supported"
             cond_mul = 0.72
         origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
+        manifestation_state = infer_manifestation_state(
+            rows=[dict(hit)] if isinstance(hit, dict) else [],
+            relation_family="sanhe",
+            member_set=branches,
+            origin_types=[str(condition.get("origin_type") or "")],
+        )
+        interaction_layer = detect_interaction_layer(
+            hit if isinstance(hit, dict) else None,
+            relation_family="sanhe",
+            member_key="group",
+        )
         visible_support_strength = _visible_element_support_strength(
             physics_tensor,
             target_element=STEM_ELEMENT.get(BRANCH_HIDDEN.get(mid_branch, [(dm, 1.0)])[0][0], ""),
@@ -241,6 +254,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "locked_energy": float(combo.get("abs_locked", 0.0) or 0.0),
                 "condition_state": effective_state,
                 "condition_blockers": list(condition["blockers"]),
+                "interaction_layer": interaction_layer,
+                "manifestation_state": manifestation_state,
                 "condition_mode": "natal_core_with_runtime_drag" if effective_state != condition["condition_state"] else "direct",
                 "condition_multiplier": cond_mul,
                 "visible_support_strength": round(visible_support_strength, 3),

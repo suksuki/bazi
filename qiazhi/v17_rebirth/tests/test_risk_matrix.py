@@ -88,3 +88,58 @@ def test_risk_matrix_reduces_officer_crush_when_officer_cluster_is_supported(mon
     assert officer.meta["officer_support_relief"] > 0.4
     assert officer.meta["risk_driver"] == "officer_hurt_contest"
     assert officer.meta["impact_ratio"] == 0.0
+
+
+def test_risk_matrix_exposes_layer_and_manifestation_profile(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.logic.configs.manager.get_plugin_config",
+        lambda _plugin_id: {
+            "BLADE_CLASH_IMPULSE": 2.2,
+            "OWL_FOOD_CAP": 0.4,
+            "OFFICER_CRUSH_LIMIT": 0.5,
+        },
+    )
+    facts = risk_matrix.PLUGIN.collect_v17_facts(
+        {
+            "ten_gods_absolute": {"伤官": 20.0, "正官": 18.0, "偏印": 9.0, "食神": 8.0},
+            "meta": {
+                "interaction_v2": {
+                    "liu_chong": [
+                        {
+                            "pair": ["子", "午"],
+                            "pillars": ["day", "luck"],
+                            "origin_type": "natal",
+                        }
+                    ]
+                }
+            },
+        }
+    )
+
+    blade = next(f for f in facts if f.meta.get("risk_driver") == "blade_clash")
+    assert blade.meta["interaction_layer"] == "branch"
+    assert blade.meta["manifestation_state"] in {"manifested", "supported", "contested", "latent"}
+    assert blade.meta["origin_type"] == "natal"
+
+
+def test_risk_matrix_marks_owl_manifestation_state(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.logic.configs.manager.get_plugin_config",
+        lambda _plugin_id: {
+            "BLADE_CLASH_IMPULSE": 2.2,
+            "OWL_FOOD_CAP": 0.25,
+            "OFFICER_CRUSH_LIMIT": 0.5,
+        },
+    )
+    facts = risk_matrix.PLUGIN.collect_v17_facts(
+        {
+            "ten_gods_absolute": {"偏印": 10.0, "食神": 6.0},
+            "meta": {"interaction_v2": {}},
+        }
+    )
+
+    assert len(facts) == 1
+    owl = facts[0]
+    assert owl.meta["risk_driver"] == "owl_food"
+    assert owl.meta["interaction_layer"] == "cross_layer"
+    assert owl.meta["manifestation_state"] in {"latent", "contested", "supported", "manifested"}

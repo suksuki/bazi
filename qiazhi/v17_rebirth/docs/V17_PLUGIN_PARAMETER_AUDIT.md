@@ -18,20 +18,34 @@
 
 `backend/logic/configs/<plugin_id>.json`
 
-但当前 `configs/` 目录里只有：
+`configs/` 目录里已覆盖到多数高频插件，包括：
 
-- `three_harmony.json`
+- `l1.physics.op_branch_sanhe.json`
+- `l1.physics.op_branch_liuhe.json`
+- `l1.physics.op_branch_liupo.json`
+- `l1.physics.op_branch_muku.json`
+- `l1.physics.op_branch_sanxing.json`
+- `l1.physics.op_status.json`
+- `l1.physics.op_stem_fusion.json`
+- `l2.risk.risk_matrix.json`
+- `classical.pattern.axis.v1.json`
+- `classical.pattern.jianlu_yuejie.v1.json`
+- `classical.pattern.congshi.v1.json`
+- `classical.pattern.finance_officer.v1.json`
+- `classical.blind.work_axis.v1.json`
+- `classical.blind.response_chain.v1.json`
+- `classical.blind.symbol_trigger.v1.json`
+- `classical.blind.timing_window.v1.json`
+- `classical.blind.summary.v1.json`
+- `classical.ziping.month_command.v1.json`
+- `classical.ziping.balance.v1.json`
+- `classical.ziping.yongshen.v1.json`
 - `v17_core_constants.json`
-
-其中 `three_harmony.json` 并不会被 `l1.physics.op_branch_sanhe` 自动读取，因为它期待的路径应当是：
-
-`backend/logic/configs/l1.physics.op_branch_sanhe.json`
 
 这意味着：
 
-- 大多数插件虽然代码写了 `get_plugin_config(...)`
-- 但运行时实际上仍然在吃 `DECLARED_PARAMS`
-- 参数“看起来可配置”，实际上多数仍是“伪可配置”
+- 很多插件已经完成了配置文件就位和读取链条，但仍有一批核心插件（例如 `shensha`、`kong_wang`）暂未补齐配置文件。
+- 需要继续把“可读可控”从少数高频插件扩展到全部高价值插件。
 
 ### B. 多个插件存在“声明了参数，但实际未消费”的情况
 
@@ -152,7 +166,14 @@
 | `l1.physics.op_branch_muku` | 2 | 是 | 否 | 实际仍吃默认值；存在未消费参数 |
 | `l1.physics.op_stem_fusion` | 2 | 是 | 否 | 需进一步核对参数是否全部接线 |
 | `l1.physics.op_status` | 3 | 是 | 否 | 实际仍吃默认值；属于观察型参数 |
-| `l2.risk.risk_matrix` | 3 | 否 | 否 | 参数已声明但当前未真正接入读取链 |
+| `l2.risk.risk_matrix` | 3 | 是 | 是 | 已外置配置并通过 `get_plugin_config` 接入 |
+| `classical.pattern.axis.v1` | 8 | 是 | 是 | 参数已外置，阈值/比例可配置 |
+| `classical.pattern.jianlu_yuejie.v1` | 2 | 是 | 是 | 参数已外置 |
+| `classical.pattern.congshi.v1` | 5 | 是 | 是 | 参数已外置，强度口径可配置 |
+| `classical.pattern.finance_officer.v1` | 2 | 是 | 是 | 参数已外置 |
+| `classical.pattern.resolver.v1` | 0 | 否 | 否 | 纯规则整合插件 |
+| `classical.pattern.formation_gate.v1` | 0 | 否 | 否 | 纯规则整合插件 |
+| `classical.pattern.break_guard.v1` | 0 | 否 | 否 | 纯规则整合插件 |
 | `officer_see_hurt` | 4 | 是 | 否 | 可配置结构完整，但当前无配置文件 |
 | `ten_god_pattern` | 4 | 是 | 否 | 可配置结构完整，但当前无配置文件 |
 | `shensha` | 5 | 是 | 否 | 参数较多，适合下一轮重点审计 |
@@ -190,6 +211,9 @@
 5. `l2.risk.risk_matrix`
 6. `officer_see_hurt`
 7. `ten_god_pattern`
+8. `classical.pattern.axis.v1`
+9. `classical.pattern.congshi.v1`
+10. `classical.pattern.finance_officer.v1`
 
 ## 第二轮：五个高价值插件的参数活性审计
 

@@ -118,6 +118,10 @@ type PluginConflict = {
   why_conflict?: string;
   recommended_arbiter?: string;
   resolution_status?: string;
+  routing_reason?: string;
+  routing_policy?: string;
+  routing_scores?: Record<string, number>;
+  meta?: LooseObject;
 };
 
 type PluginConflictResolution = {
@@ -167,31 +171,42 @@ type PluginPanelRow = {
   relatedConflicts: PluginConflict[];
 };
 
-const LAYER_TABS: { key: string; label: string }[] = [
-  { key: "L0", label: "L0 基础场" },
-  { key: "L1", label: "L1 原子算子" },
-  { key: "L2", label: "L2 格局做功" },
-  { key: "L3", label: "L3 现代叙事" },
-];
-
-const KIND_LABELS: Record<string, string> = {
-  spec: "标准插件",
-  manifest_row: "清单挂载插件",
+type PhysicsL0Foundation = {
+  STEM_BASE?: number;
+  BRANCH_BASE?: number;
 };
-
-function tierLabel(tier: number | undefined) {
-  const value = Number(tier || 0);
-  if (value >= 5) return "最接近物理核";
-  if (value === 4) return "高强度原子层";
-  if (value === 3) return "结构判定层";
-  if (value === 2) return "叙事辅助层";
-  if (value === 1) return "话术收束层";
-  return "未标注";
-}
+type EvolutionLogEntry = {
+  id?: string;
+  timestamp?: string;
+  ten_god?: string;
+  delta?: number;
+  plugin_id?: string;
+  step?: string;
+  reason?: string;
+};
 
 type ActionKey = "loadModels" | "testLlm" | "testLlmChat" | "saveLlm" | "testDb" | "saveDb" | "loadPlugins" | "savePhysics" | "loadEvolution" | null;
 type LooseObject = Record<string, unknown>;
 const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
+
+function asLooseObject(value: unknown): LooseObject {
+  return typeof value === "object" && value !== null ? (value as LooseObject) : {};
+}
+
+function asLooseRecord<T>(value: unknown, fallback: T[] = [] as T[]): T[] {
+  return Array.isArray(value) ? (value as T[]) : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  const raw = Number(value);
+  return Number.isFinite(raw) ? raw : fallback;
+}
+
+function asString(value: unknown, fallback = ""): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
+}
 
 async function requestJson(url: string, init?: RequestInit) {
   const resp = await fetch(url, init);
@@ -236,6 +251,23 @@ function conflictTone(severity: string | undefined): string {
   if (value === "P1") return "bg-rose-900/40 text-rose-300";
   if (value === "P2") return "bg-amber-900/40 text-amber-300";
   return "bg-cyan-900/40 text-cyan-300";
+}
+
+function compactRoutingScores(scores: Record<string, number> | undefined): string {
+  if (!scores) return "";
+  return Object.entries(scores)
+    .map(([name, value]) => `${name} ${(Number(value) || 0).toFixed(2)}`)
+    .filter(Boolean)
+    .sort()
+    .join(" · ");
+}
+
+function resolveRoutingPolicy(conflict: PluginConflict): string {
+  const policy = String(conflict.routing_policy || "").trim();
+  if (policy) return policy;
+  const reason = String(conflict.routing_reason || "").trim();
+  if (reason) return "explicit";
+  return "severity_plus_policy";
 }
 
 function brainStepTone(kind: string | undefined): string {
@@ -417,12 +449,9 @@ export default function V17AdminPage() {
   const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
   const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
-  const [selectedPlugin, setSelectedPlugin] = useState<PluginAdminRow | null>(null);
   const [physicsConstants, setPhysicsConstants] = useState<LooseObject>({});
-  const [evolutionLogs, setEvolutionLogs] = useState<any[]>([]);
+  const [evolutionLogs, setEvolutionLogs] = useState<EvolutionLogEntry[]>([]);
   const [l0Locked, setL0Locked] = useState(true);
-  const [localConfig, setLocalConfig] = useState<LooseObject>({});
-  const [localEnabled, setLocalEnabled] = useState(false);
   const [resolveBusyKeys, setResolveBusyKeys] = useState<string[]>([]);
   const [pluginPolicyFilter, setPluginPolicyFilter] = useState<"all" | "warn">("all");
 
@@ -458,14 +487,15 @@ export default function V17AdminPage() {
         requestJson("/api/v17-admin/plugins?v17_origin=v17_rebirth"),
         requestJson(`/api/v17-admin/plugin-runtime-status?v17_origin=v17_rebirth&session_id=${encodeURIComponent(pluginRuntimeSessionId || "default")}`),
       ]);
-      const list = ((data as any).plugins || []) as PluginAdminRow[];
-      const statusList = ((statusData as any).statuses || []) as PluginRuntimeStatus[];
-      const claimList = ((statusData as any).claims || []) as PluginClaim[];
-      const conflictList = ((statusData as any).conflicts || []) as PluginConflict[];
-      const resolutionList = ((statusData as any).conflict_resolutions || []) as PluginConflictResolution[];
-      const knowledge = ((statusData as any).knowledge_snapshot || {}) as KnowledgeSnapshot;
-      const actions = ((statusData as any).brain_action_queue || []) as BrainAction[];
-      const contributions = ((statusData as any).recompute_contributions || []) as RecomputeContribution[];
+      const statusPayload = asLooseObject(statusData);
+      const list = asLooseRecord<PluginAdminRow>(asLooseObject(data).plugins, []);
+      const statusList = asLooseRecord<PluginRuntimeStatus>(statusPayload.statuses, []);
+      const claimList = asLooseRecord<PluginClaim>(statusPayload.claims, []);
+      const conflictList = asLooseRecord<PluginConflict>(statusPayload.conflicts, []);
+      const resolutionList = asLooseRecord<PluginConflictResolution>(statusPayload.conflict_resolutions, []);
+      const knowledge = (statusPayload.knowledge_snapshot as KnowledgeSnapshot) || {};
+      const actions = asLooseRecord<BrainAction>(statusPayload.brain_action_queue, []);
+      const contributions = asLooseRecord<RecomputeContribution>(statusPayload.recompute_contributions, []);
       setPlugins(list);
       setPluginStatuses(statusList);
       setPluginClaims(claimList);
@@ -474,7 +504,7 @@ export default function V17AdminPage() {
       setKnowledgeSnapshot(knowledge);
       setBrainActionQueue(actions);
       setRecomputeContributions(contributions);
-      setResolvedPluginRuntimeSessionId(String((statusData as any).session_id || pluginRuntimeSessionId || "default"));
+      setResolvedPluginRuntimeSessionId(asString(statusPayload.session_id, pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
   }, [pluginRuntimeSessionId]);
 
@@ -518,7 +548,10 @@ export default function V17AdminPage() {
     setBusy("loadEvolution");
     try {
       const { data } = await requestJson("/api/v17/admin/evolution-logs?v17_origin=v17_rebirth&limit=50");
-      if ((data as any).ok) setEvolutionLogs((data as any).logs || []);
+      const payload = asLooseObject(data);
+      if (payload.ok) {
+        setEvolutionLogs(asLooseRecord<EvolutionLogEntry>(payload.logs, []));
+      }
     } finally { setBusy(null); }
   }, []);
 
@@ -529,9 +562,16 @@ export default function V17AdminPage() {
         requestJson("/api/v17-admin/db-bridge?v17_origin=v17_rebirth"),
         requestJson("/api/v17-admin/physics-constants?v17_origin=v17_rebirth"),
       ]);
-      applyLlmNodeToState(((llmData as any).node || null), setLlm);
-      if ((dbData as any).bridge) setDb((dbData as any).bridge);
-      if ((physicsData as any).constants) setPhysicsConstants((physicsData as any).constants);
+      const llmNode = asLooseObject(llmData).node;
+      applyLlmNodeToState(typeof llmNode === "object" && llmNode !== null ? (llmNode as LooseObject) : null, setLlm);
+      const bridge = asLooseObject(dbData).bridge;
+      if (typeof bridge === "object" && bridge !== null) {
+        setDb(bridge as DbBridge);
+      }
+      const constants = asLooseObject(physicsData).constants;
+      if (typeof constants === "object" && constants !== null) {
+        setPhysicsConstants(asLooseObject(constants));
+      }
     })();
   }, []);
 
@@ -543,7 +583,7 @@ export default function V17AdminPage() {
   async function saveLlm() {
     setBusy("saveLlm");
     try {
-      const { resp, data } = await requestJson("/api/v17-admin/llm-node", {
+      const { resp } = await requestJson("/api/v17-admin/llm-node", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...llm, base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
@@ -560,16 +600,18 @@ export default function V17AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
       });
-      if ((data as any).ok) {
-        const models = Array.isArray((data as any).result?.models) ? (data as any).result.models : [];
+      const payload = asLooseObject(data);
+      const result = asLooseObject(payload.result);
+      const models = asLooseRecord<string>(result.models, []);
+      if (payload.ok) {
         setLlmModels(models);
-        setLlmProbeMeta(`模型列表：${String((data as any).result?.models_url || llmBaseUrl)}`);
+        setLlmProbeMeta(`模型列表：${asString(result.models_url, llmBaseUrl)}`);
         if (!llm.model && models.length) {
           setLlm((prev) => ({ ...prev, model: String(models[0] || "") }));
         }
         setMsg(`已加载 ${models.length} 个模型`);
       } else {
-        setMsg(`加载模型失败：${String((data as any).error || "unknown error")}`);
+        setMsg(`加载模型失败：${asString(payload.error, "unknown error")}`);
       }
     } finally { setBusy(null); }
   }
@@ -582,12 +624,14 @@ export default function V17AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
       });
-      if ((data as any).ok) {
-        setLlmProbeMeta(`连通成功 · ${String((data as any).result?.probe_url || llmBaseUrl)} · HTTP ${String((data as any).result?.http_status || "")}`);
+      const payload = asLooseObject(data);
+      const result = asLooseObject(payload.result);
+      if (payload.ok) {
+        setLlmProbeMeta(`连通成功 · ${asString(result.probe_url, llmBaseUrl)} · HTTP ${asString(result.http_status, "")}`);
         setMsg("LLM 节点连通成功");
       } else {
         setLlmProbeMeta("");
-        setMsg(`LLM 连通失败：${String((data as any).error || "unknown error")}`);
+        setMsg(`LLM 连通失败：${asString(payload.error, "unknown error")}`);
       }
     } finally { setBusy(null); }
   }
@@ -600,17 +644,20 @@ export default function V17AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           base_url: llmBaseUrl,
-          model: llm.model,
-          prompt: llmPrompt,
-          v17_origin: "v17_rebirth",
-        }),
+        model: llm.model,
+        prompt: llmPrompt,
+        v17_origin: "v17_rebirth",
+      }),
       });
-      if ((data as any).ok) {
-        setLlmTestReply(String((data as any).result?.reply || "").trim());
+      const payload = asLooseObject(data);
+      const result = asLooseObject(payload.result);
+      if (payload.ok) {
+        const reply = asString(result.reply, "");
+        setLlmTestReply(reply.trim());
         setMsg("LLM 对话测试完成");
       } else {
         setLlmTestReply("");
-        setMsg(`LLM 对话测试失败：${String((data as any).error || "unknown error")}`);
+        setMsg(`LLM 对话测试失败：${asString(payload.error, "unknown error")}`);
       }
     } finally { setBusy(null); }
   }
@@ -623,11 +670,15 @@ export default function V17AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
       });
-      if (resp.ok && (data as any).ok) {
-        setDb((data as any).bridge || db);
+      const payload = asLooseObject(data);
+      const bridge = asLooseObject(payload.bridge);
+      if (resp.ok && payload.ok) {
+        if (Object.keys(bridge).length) {
+          setDb(bridge as DbBridge);
+        }
         setMsg("数据库桥接配置已保存");
       } else {
-        setMsg(`数据库桥接保存失败：${String((data as any).detail || (data as any).error || "unknown error")}`);
+        setMsg(`数据库桥接保存失败：${asString(payload.detail || payload.error, "unknown error")}`);
       }
     } finally { setBusy(null); }
   }
@@ -640,12 +691,13 @@ export default function V17AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ host: db.host, port: db.port, v17_origin: "v17_rebirth" }),
       });
-      if ((data as any).ok) {
+      const payload = asLooseObject(data);
+      if (payload.ok) {
         setDbProbeMeta(`连通成功 · ${db.host}:${db.port}`);
         setMsg("数据库桥接连通成功");
       } else {
         setDbProbeMeta("");
-        setMsg(`数据库桥接测试失败：${String((data as any).error || "unknown error")}`);
+        setMsg(`数据库桥接测试失败：${asString(payload.error, "unknown error")}`);
       }
     } finally { setBusy(null); }
   }
@@ -869,10 +921,37 @@ export default function V17AdminPage() {
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-zinc-950/40 p-4 border border-zinc-800 rounded-xl">
                     <h3 className="text-xs text-zinc-500 font-bold mb-4">L0 FOUNDATION</h3>
+                    {(() => {
+                      const l0Foundation = asLooseObject(physicsConstants.L0_FOUNDATION) as PhysicsL0Foundation;
+                      return (
+                      <>
                     <label className="block text-xs mb-1">STEM_BASE</label>
-                    <input type="number" disabled={l0Locked} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded mb-3" value={(physicsConstants.L0_FOUNDATION as any)?.STEM_BASE || 0} onChange={e => setPhysicsConstants(s => ({...s, L0_FOUNDATION: {...(s.L0_FOUNDATION as any), STEM_BASE: Number(e.target.value)}}))} />
+                    <input
+                      type="number"
+                      disabled={l0Locked}
+                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded mb-3"
+                      value={asNumber(l0Foundation.STEM_BASE, 0)}
+                      onChange={e =>
+                        setPhysicsConstants((s) => {
+                          const updatedFoundation = { ...asLooseObject(s.L0_FOUNDATION), STEM_BASE: asNumber(e.target.value, 0) };
+                          return { ...s, L0_FOUNDATION: updatedFoundation };
+                        })}
+                    />
                     <label className="block text-xs mb-1">BRANCH_BASE</label>
-                    <input type="number" disabled={l0Locked} className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded mb-3" value={(physicsConstants.L0_FOUNDATION as any)?.BRANCH_BASE || 0} onChange={e => setPhysicsConstants(s => ({...s, L0_FOUNDATION: {...(s.L0_FOUNDATION as any), BRANCH_BASE: Number(e.target.value)}}))} />
+                    <input
+                      type="number"
+                      disabled={l0Locked}
+                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded mb-3"
+                      value={asNumber(l0Foundation.BRANCH_BASE, 0)}
+                      onChange={e =>
+                        setPhysicsConstants((s) => {
+                          const updatedFoundation = { ...asLooseObject(s.L0_FOUNDATION), BRANCH_BASE: asNumber(e.target.value, 0) };
+                          return { ...s, L0_FOUNDATION: updatedFoundation };
+                        })}
+                    />
+                      </>
+                      );
+                    })()}
                 </div>
               </div>
               <button onClick={savePhysics} className={solidBtn}>Apply Universal Laws</button>
@@ -897,20 +976,25 @@ export default function V17AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-900">
-                    {evolutionLogs.map(log => (
-                      <tr key={log.id} className="hover:bg-zinc-800/20">
-                        <td className="px-4 py-3 text-zinc-500">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                        <td className="px-4 py-3 font-bold text-zinc-200">{log.ten_god}</td>
-                        <td className={`px-4 py-3 font-mono ${log.delta > 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {log.delta > 0 ? "+" : ""}{log.delta.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sky-400">{log.plugin_id}</span>
-                          <div className="text-[9px] text-zinc-600">{log.step}</div>
-                        </td>
-                        <td className="px-4 py-3 text-zinc-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{log.reason}</td>
-                      </tr>
-                    ))}
+                    {evolutionLogs.map((log) => {
+                      const evolutionTime = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : "—";
+                      const deltaValue = asNumber(log.delta, 0);
+                      const deltaText = `${deltaValue > 0 ? "+" : ""}${deltaValue.toFixed(2)}`;
+                      return (
+                        <tr key={log.id} className="hover:bg-zinc-800/20">
+                          <td className="px-4 py-3 text-zinc-500">{evolutionTime}</td>
+                          <td className="px-4 py-3 font-bold text-zinc-200">{log.ten_god}</td>
+                          <td className={`px-4 py-3 font-mono ${deltaValue > 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                            {deltaText}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sky-400">{log.plugin_id}</span>
+                            <div className="text-[9px] text-zinc-600">{log.step}</div>
+                          </td>
+                          <td className="px-4 py-3 text-zinc-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">{log.reason}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1021,8 +1105,16 @@ export default function V17AdminPage() {
                            </span>
                          </div>
                          <div className="mt-2 text-[10px] text-zinc-400">
-                           {row.action?.reason || row.resolution?.reason || row.conflict.why_conflict || "—"}
+                            {row.action?.reason || row.resolution?.reason || row.conflict.why_conflict || "—"}
                          </div>
+                          <div className="mt-1 text-[10px] text-zinc-500">
+                            policy {resolveRoutingPolicy(row.conflict)} · {row.conflict.routing_policy || row.conflict.routing_reason || "routing reason pending"}
+                          </div>
+                          {compactRoutingScores(row.conflict.routing_scores || undefined) ? (
+                            <div className="mt-1 text-[10px] text-zinc-500">
+                              路由候选分数 {compactRoutingScores(row.conflict.routing_scores || undefined)}
+                            </div>
+                          ) : null}
                        </div>
                      ))}
                    </div>
@@ -1180,6 +1272,14 @@ export default function V17AdminPage() {
                                     target {group.target_god} · {group.conflict_ids.length} 条
                                     · 评分 {group.max_conflict_score.toFixed(3)}
                                   </div>
+                                  <div className="mt-1 text-[10px] text-zinc-500">
+                                    policy {resolveRoutingPolicy(sample)} · {sample.routing_policy || sample.routing_reason || "routing reason pending"}
+                                  </div>
+                                  {compactRoutingScores(sample.routing_scores || undefined) ? (
+                                    <div className="mt-1 text-[10px] text-zinc-500">
+                                      路由候选分数 {compactRoutingScores(sample.routing_scores || undefined)}
+                                    </div>
+                                  ) : null}
                                   <div className="mt-1 text-[10px] text-zinc-500">
                                     {sample?.why_conflict || "—"}
                                   </div>

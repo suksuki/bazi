@@ -1,9 +1,12 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
+    detect_interaction_layer,
+    infer_manifestation_state,
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
@@ -26,10 +29,18 @@ DECLARED_PARAMS = {
 def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, float(value)))
 
+
+def _branch_only(token: Any) -> str:
+    raw = str(token or "").strip()
+    if len(raw) >= 2:
+        return raw[-1]
+    return raw
+
+
 def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     # 从 L0 探测结果中获取墓库地支
     branches = physics_tensor.get("four_pillars", {})
-    br_list = [str(b) for b in branches.values() if b]
+    br_list = [_branch_only(b) for b in branches.values() if str(b or "").strip()]
     muku_brs = [b for b in br_list if b in {"辰", "戌", "丑", "未"}]
     
     if not muku_brs:
@@ -61,6 +72,17 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             pair_or_group=[br],
             interaction_v2=iv2,
         )
+        manifestation_state = infer_manifestation_state(
+            rows=[{"pair": [br], "origin_type": condition.get("origin_type")}],
+            relation_family="muku",
+            member_set=[br],
+            origin_types=[str(condition.get("origin_type") or "")],
+        )
+        interaction_layer = detect_interaction_layer(
+            None,
+            relation_family="muku",
+            member_key="pair",
+        )
         cond_mul = relation_effect_multiplier(condition["condition_state"])
         origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
         open_ratio = _clamp(open_gate_boost - 1.0, 0.1, 0.8)
@@ -82,9 +104,17 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "match_ratio": round(_clamp((0.85 if is_open else 0.65) * cond_mul * origin_mul, 0.0, 1.0), 3),
             "condition_state": condition["condition_state"],
             "condition_blockers": list(condition["blockers"]),
+            "interaction_layer": interaction_layer,
+            "manifestation_state": manifestation_state,
             "condition_multiplier": cond_mul,
             "origin_type": condition.get("origin_type"),
             "origin_multiplier": round(origin_mul, 3),
+            "static_basis": build_static_basis(
+                physics_tensor=physics_tensor,
+                target_god=god,
+                relation_family="muku",
+                relation_members=[br],
+            ),
         }
         rows.append({
             "plugin": "l1.physics.op_branch_muku",

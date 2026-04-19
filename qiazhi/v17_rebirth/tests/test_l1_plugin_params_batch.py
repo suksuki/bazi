@@ -19,10 +19,14 @@ def test_muku_open_gate_boost_controls_open_state(monkeypatch: pytest.MonkeyPatc
         }
     )
 
-    assert len(facts) == 1
-    meta = facts[0].meta
-    assert meta["muku_state"] == "OPEN"
-    assert meta["impact_ratio"] > 0
+    assert len(facts) == 2
+    states = [str(f.meta.get("muku_state", "")) for f in facts]
+    assert "OPEN" in states
+    assert "CLOSED" in states
+    assert any(float(f.meta.get("impact_ratio", 0.0) or 0.0) > 0 for f in facts)
+    assert any(float(f.meta.get("impact_ratio", 0.0) or 0.0) <= 0 for f in facts)
+    open_meta = next(f.meta for f in facts if str(f.meta.get("muku_state")) == "OPEN")
+    meta = open_meta
     assert meta["condition_multiplier"] > 0
     assert meta["open_gate_boost"] == 1.6
 

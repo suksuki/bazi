@@ -654,6 +654,76 @@ def _collect_matched_decisions(
     return out
 
 
+def _resolve_target(row: Dict[str, Any], *, fallback_target: str = "") -> str:
+    if not isinstance(row, dict):
+        return ""
+    candidate = str(row.get("target_god") or "").strip()
+    if candidate:
+        return candidate
+    impact = row.get("physical_impact")
+    if isinstance(impact, dict):
+        candidate = str(impact.get("target_god") or "").strip()
+        if candidate:
+            return candidate
+    return str(fallback_target or "").strip()
+
+
+def _fallback_match_pending_decisions(
+    pt: Dict[str, Any],
+    *,
+    action: str,
+    fallback_target: str,
+    source_hint: str,
+) -> List[Dict[str, Any]]:
+    rows = _pick_pending_decisions(pt)
+    if not rows:
+        return []
+
+    normalized_target = str(fallback_target or "").strip()
+    normalized_action = str(action or "").strip().lower()
+    source_hint_norm = str(source_hint or "").strip().lower()
+
+    candidates: List[Dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("status") or "").strip().upper()
+        if status in {"APPROVED", "REJECTED", "COMMITTED", "FAILED", "DONE"}:
+            continue
+        row_target = _resolve_target(row, fallback_target=normalized_target)
+        if normalized_target and row_target != normalized_target:
+            continue
+
+        label = str(row.get("label") or "").strip().lower()
+        title = str(row.get("title") or "").strip().lower()
+        source = str(row.get("source") or "").strip().lower()
+        if not normalized_action:
+            candidates.append(row)
+            continue
+
+        action_match = (
+            normalized_action in label
+            or normalized_action in title
+            or label in normalized_action
+            or title in normalized_action
+            or source_hint_norm and source_hint_norm in source
+            or source in source_hint_norm
+        )
+        if action_match:
+            candidates.append(row)
+
+    deduped: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in candidates:
+        rid = str(row.get("id") or row.get("label") or row.get("title") or "").strip()
+        if rid and rid in seen_ids:
+            continue
+        if rid:
+            seen_ids.add(rid)
+        deduped.append(row)
+    return deduped
+
+
 def _resolve_batch_decisions(pt: Dict[str, Any], batch_ids: List[str]) -> List[Dict[str, Any]]:
     if not batch_ids:
         return []
@@ -1448,6 +1518,19 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                         }
                     )
             if not matched_decisions:
+                fallback_target = (
+                    str(payload.get("target_god") or "").strip()
+                    or str((payload.get("physical_impact") or {}).get("target_god") if isinstance(payload.get("physical_impact"), dict) else "").strip()
+                )
+                source_hint = str(payload.get("source") or anchor or "").strip()
+                matched_decisions = _fallback_match_pending_decisions(
+                    current_physics,
+                    action=action,
+                    fallback_target=fallback_target,
+                    source_hint=source_hint,
+                )
+
+            if not matched_decisions:
                 # 兼容旧流程：无匹配决策时直观触发叙事，不下发到物理层。
                 event["error"] = "decision_not_found"
                 await get_state_backend().set_physics(session_id, current_physics)
@@ -1455,7 +1538,9 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                     session_id,
                     _event_for_publish(event, physics_tensor=current_physics),
                 )
-                return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
+                return JSONResponse(
+                    {"ok": True, "signal": "DECISION_NOT_FOUND", "action": action, "detail": event["error"]},
+                )
 
             for each in matched_decisions:
                 each.setdefault("id", str(each.get("label") or each.get("title") or action).strip())

@@ -148,6 +148,52 @@ def _should_infer_physical_impact(*, source: str, plugin_id: str = "", meta: Dic
     return True
 
 
+def _is_observational_plugin_fact(*, plugin_id: str, meta: Dict[str, Any] | None = None) -> bool:
+    source_name = str(plugin_id or "").strip()
+    if source_name.startswith("classical."):
+        return True
+    if isinstance(meta, dict) and bool(meta.get("observe_only")):
+        return True
+    if meta:
+        claim_type = str(meta.get("claim_type") or "").strip()
+        entity_scope = str(meta.get("entity_scope") or "").strip().lower()
+        if claim_type == "pattern_candidate" and entity_scope == "pattern":
+            return True
+    if source_name == "ten_god_pattern":
+        return True
+    if source_name.startswith("classical.pattern."):
+        return True
+    if source_name.startswith("classical.ziping."):
+        return True
+    if source_name.startswith("classical.blind."):
+        return True
+    return False
+
+
+def _is_observational_row(
+    *,
+    source: str,
+    plugin_id: str | None = None,
+    meta: Dict[str, Any] | None = None,
+    physical_impact: Dict[str, Any] | None = None,
+) -> bool:
+    source_name = str(source or plugin_id or "").strip()
+    if _is_observational_plugin_fact(plugin_id=source_name, meta=meta):
+        return True
+    if isinstance(meta, dict) and bool(meta.get("observe_only")):
+        return True
+    if not isinstance(meta, dict) and isinstance(physical_impact, dict) and physical_impact.get("observe_only") is True:
+        return True
+    if source_name.startswith("classical.") or source_name == "ten_god_pattern":
+        return True
+    return False
+
+
+def _clear_observational_physics(row: Dict[str, Any]) -> None:
+    row["physical_impact"] = {}
+    row["physical_impact_inferred"] = False
+
+
 def _arbitration_mode_label(mode: str) -> str:
     if mode == "manual":
         return "手动"
@@ -244,7 +290,16 @@ def compile_pending_decisions(
             continue
         row["title"] = title or label
         row["label"] = label or title
+        row_meta = row.get("meta") if isinstance(row.get("meta"), dict) else None
         physical_impact = dict(row.get("physical_impact") or {}) if isinstance(row.get("physical_impact"), dict) else {}
+        if _is_observational_row(
+            source=str(row.get("source") or row.get("plugin_id") or "legacy"),
+            plugin_id=str(row.get("plugin_id") or row.get("source") or "legacy"),
+            meta=row_meta,
+            physical_impact=physical_impact,
+        ):
+            _clear_observational_physics(row)
+            physical_impact = {}
         target_god = resolve_target_god(
             row_target=row.get("target_god"),
             impact=physical_impact,
@@ -304,6 +359,14 @@ def compile_pending_decisions(
             "target_god": target_god,
             "physical_impact": physical_impact,
         }
+        if _is_observational_row(
+            source=row["source"],
+            plugin_id=decision.source,
+            meta=physical_impact,
+            physical_impact=physical_impact,
+        ):
+            _clear_observational_physics(row)
+            physical_impact = {}
         row["exclusivity_key"] = _resolve_exclusivity_key(
             source=row["source"],
             target_god=target_god,
@@ -348,6 +411,11 @@ def compile_pending_decisions(
             }
         )
         existing_impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
+        is_observational = _is_observational_row(source=fact.plugin_id, plugin_id=fact.plugin_id, meta=meta, physical_impact=existing_impact)
+        if is_observational:
+            row["physical_impact"] = {}
+            existing_impact = {}
+            row["physical_impact_inferred"] = False
         row["target_god"] = resolve_target_god(
             row_target=row.get("target_god"),
             impact=existing_impact,
@@ -357,7 +425,9 @@ def compile_pending_decisions(
             plugin_id=fact.plugin_id,
             physics_tensor=physics_tensor,
         )
-        if existing_impact or meta:
+        if is_observational:
+            row["physical_impact"] = {}
+        elif existing_impact or meta:
             row["physical_impact"] = dict(existing_impact or meta)
         elif _should_infer_physical_impact(source=fact.plugin_id, meta=meta):
             row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
@@ -398,6 +468,8 @@ def compile_modifier_proposals(
     for idx, fact in enumerate(facts):
         claim_id = f"{str(fact.plugin_id or '').strip()}_claim_{idx}"
         meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
+        if _is_observational_plugin_fact(plugin_id=str(fact.plugin_id or ""), meta=meta):
+            continue
         if "impact_ratio" not in meta:
             continue
         try:
@@ -443,7 +515,7 @@ def compile_modifier_proposals(
 def _is_manual_candidate(row: Dict[str, Any]) -> bool:
     arbiter_val = str(row.get("arbiter_type") or "").strip().lower()
     impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
-    target_god = str(row.get("target_god") or "").strip()
+    target_god = str(row.get("target_god") or impact.get("target_god") or "").strip()
     label = str(row.get("label") or row.get("hint") or "").strip()
     title = str(row.get("title") or "").strip()
     text = f"{label} {title}"
@@ -469,8 +541,12 @@ def _is_auto_candidate(row: Dict[str, Any]) -> bool:
     arbiter_val = str(row.get("arbiter_type") or "").strip().lower()
     if arbiter_val == "system":
         return True
-    
+
     impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
+    target_god = str(row.get("target_god") or impact.get("target_god") or "").strip()
+    if not target_god:
+        return False
+
     significance = str(impact.get("significance_level") or "").strip().upper()
     source = str(row.get("source") or row.get("plugin_id") or "").strip()
     return significance == "L3" and source.startswith("l2.")

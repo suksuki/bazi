@@ -54,6 +54,35 @@ def test_ten_god_pattern_respects_thresholds_and_priority(monkeypatch: pytest.Mo
     assert facts[0].priority == 0.88
 
 
+def test_ten_god_pattern_reports_mixed_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.logic.configs.manager.get_plugin_config",
+        lambda _plugin_id: {
+            "PROFILE_TOP_GODS": 3,
+            "PROFILE_MIN_SCORE": 10.0,
+            "PATTERN_PRIORITY": 0.88,
+            "GUAN_THRESHOLD": 40.0,
+            "SHI_SHANG_THRESHOLD": 35.0,
+            "CAI_THRESHOLD": 35.0,
+            "AXIS_ORIGIN_SCALE_MIN": 1.0,
+        },
+    )
+    facts = TenGodPatternPlugin.collect_v17_facts(
+        {
+            "ten_gods_absolute": {"伤官": 65.0, "正官": 45.0, "偏财": 22.0, "比肩": 8.0},
+            "ten_gods_runtime": {"伤官": 65.0, "正官": 45.0, "偏财": 22.0, "比肩": 8.0},
+        }
+    )
+
+    assert len(facts) == 1
+    profile = facts[0].meta.get("pattern_profile")
+    assert isinstance(profile, list) and len(profile) >= 2
+    families = [str(item.get("family") or "") for item in profile]
+    assert "食伤格" in families
+    assert "正官格" in families
+    assert facts[0].meta.get("pattern_mix_mode") == "soft_mix"
+    assert float(facts[0].meta.get("dominant_ratio", 0.0) or 0.0) > 1.0
+
 def test_shensha_respects_thresholds_and_payload(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "v17_rebirth.backend.logic.configs.manager.get_plugin_config",

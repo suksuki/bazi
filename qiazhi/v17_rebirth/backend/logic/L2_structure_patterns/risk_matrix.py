@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from dataclasses import dataclass
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     build_static_basis,
+    detect_interaction_layer,
     choose_dominant_origin_type,
     collect_origin_types_from_rows,
+    infer_manifestation_state,
     relation_origin_multiplier,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
@@ -115,6 +117,43 @@ def _origin_meta(rows: List[Dict[str, Any]], *, member_key: str, members: List[s
         "origin_multiplier": relation_origin_multiplier(origin_type),
     }
 
+
+def _manifestation_profile(*, rows: List[Dict[str, Any]], relation_family: str, member_set: List[str] | None, origin_types: List[str]) -> Dict[str, Any]:
+    has_pair = any("pair" in row and isinstance(row, dict) and row.get("pair") for row in rows)
+    interaction_layer = detect_interaction_layer(
+        row=rows[0] if rows else None,
+        relation_family=relation_family,
+        member_key="pair" if has_pair else "group",
+    )
+    return {
+        "interaction_layer": interaction_layer,
+        "manifestation_state": infer_manifestation_state(
+            rows=rows,
+            relation_family=relation_family,
+            member_set=member_set or [],
+            origin_types=origin_types,
+        ),
+    }
+
+
+def _officer_manifestation(*, hurt: float, offist: float, relief: float, cluster: float, is_contest: bool) -> str:
+    if offist >= 14.0 and hurt > 20.0 and (relief + cluster) >= 0.72:
+        return "manifested"
+    if offist > 10.0 and (is_contest or hurt > 25.0):
+        return "supported"
+    return "contested"
+
+
+def _owl_manifestation(*, food: float, owl: float, scores: Dict[str, Any]) -> str:
+    if food <= 0:
+        return "latent"
+    imbalance = owl / max(food, 1.0)
+    if imbalance >= 1.5 and (float(scores.get("比肩", 0.0) or 0.0) > 18.0):
+        return "supported"
+    if imbalance >= 1.25:
+        return "contested"
+    return "latent"
+
 @dataclass
 class RiskMatrixPlugin(V17PluginSpec):
     plugin_id: str = "l2.risk.risk_matrix"
@@ -155,43 +194,55 @@ class RiskMatrixPlugin(V17PluginSpec):
 
         # 1. 羊刃逢冲 (Blade Clash)
         clashes = iv2.get("liu_chong", [])
+        found_blade = False
         if clashes:
-            found_blade = False
             for cl in clashes:
                 brs = cl.get("pair") or []
                 if any(b in {"子", "午", "卯", "酉"} for b in brs):
                     found_blade = True
                     break
-            if found_blade:
-                origin_meta = _origin_meta(clashes, member_key="pair", members=["子", "午", "卯", "酉"])
-                match_ratio = _clamp01((0.52 + 0.08 * max(0, len(clashes) - 1)) * origin_meta["origin_multiplier"])
-                results.append(V17Fact(
-                    plugin_id=self.plugin_id,
-                    text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
-                    causal_tier=self.causal_tier,
-                    priority=0.95,
-                    decision_hint="优先作为结构风险描述，不直接改写十神底数。",
-                    meta={
-                        "impact_ratio": 0.0,
-                        "match_ratio": round(match_ratio, 3),
-                        "risk_driver": "blade_clash",
-                        "observe_only": True,
-                        **_projection_meta("比肩"),
-                        "static_basis": build_static_basis(
-                            physics_tensor=physics_tensor,
-                            target_god="比肩",
-                            relation_family="blade_clash",
-                            relation_members=["子", "午", "卯", "酉"],
-                        ),
-                        **origin_meta,
-                    }
-                ))
+        if found_blade:
+            origin_meta = _origin_meta(clashes, member_key="pair", members=["子", "午", "卯", "酉"])
+            manifestation = _manifestation_profile(
+                rows=clashes,
+                relation_family="liu_chong",
+                member_set=["子", "午", "卯", "酉"],
+                origin_types=[origin_meta["origin_type"]],
+            )
+            match_ratio = _clamp01((0.52 + 0.08 * max(0, len(clashes) - 1)) * origin_meta["origin_multiplier"])
+            results.append(V17Fact(
+                plugin_id=self.plugin_id,
+                text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
+                causal_tier=self.causal_tier,
+                priority=0.95,
+                decision_hint="优先作为结构风险描述，不直接改写十神底数。",
+                meta={
+                    "impact_ratio": 0.0,
+                    "observe_only": True,
+                    "claim_type": "risk_observation",
+                    "entity_scope": "risk",
+                    "exclusivity_key": "risk:blade_clash",
+                    "source_event": "blade_clash",
+                    "match_ratio": round(match_ratio, 3),
+                    "risk_driver": "blade_clash",
+                    **manifestation,
+                    **_projection_meta("比肩"),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god="比肩",
+                        relation_family="blade_clash",
+                        relation_members=["子", "午", "卯", "酉"],
+                    ),
+                    **origin_meta,
+                }
+            ))
 
         # 2. 枭神夺食 (Owl Food)
         owl = float(scores.get("偏印", 0))
         food = float(scores.get("食神", 0))
         owl_threshold = max(5.0, food * (1.0 + max(0.0, owl_food_cap)))
         if food > 0.0 and owl > owl_threshold:
+            manifestation_state = _owl_manifestation(food=food, owl=owl, scores=scores)
             match_ratio = _clamp01(0.45 + 0.4 * ((owl - owl_threshold) / max(owl, 1.0)))
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
@@ -201,8 +252,15 @@ class RiskMatrixPlugin(V17PluginSpec):
                 decision_hint="优先作为结构失衡描述，不直接按食神减损结算。",
                     meta={
                         "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "risk_observation",
+                        "entity_scope": "risk",
+                        "exclusivity_key": "risk:owl_food",
+                        "source_event": "owl_food",
                         "match_ratio": round(match_ratio, 3),
                         "risk_driver": "owl_food",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": manifestation_state,
                         "observe_only": True,
                         **_projection_meta("食神"),
                         "static_basis": build_static_basis(
@@ -223,6 +281,13 @@ class RiskMatrixPlugin(V17PluginSpec):
             overlap = min(hurt, offist)
             spread = max(hurt, offist)
             origin_meta = _origin_meta(clashes, member_key="pair")
+            manifestation_state = _officer_manifestation(
+                hurt=hurt,
+                offist=offist,
+                relief=officer_relief,
+                cluster=cluster_factor,
+                is_contest=offist >= 12.0 and (officer_relief + cluster_factor) >= 0.85,
+            )
             if offist >= 12.0 and (officer_relief + cluster_factor) >= 0.85:
                 match_ratio = _clamp01(
                     (0.46 + 0.28 * (overlap / max(spread, 1.0)))
@@ -237,8 +302,15 @@ class RiskMatrixPlugin(V17PluginSpec):
                     decision_hint="此处更适合作为结构对峙描述，不宜直接按官弱受损处理。",
                     meta={
                         "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "risk_observation",
+                        "entity_scope": "risk",
+                        "exclusivity_key": "risk:officer_hurt",
+                        "source_event": "officer_hurt_contest",
                         "match_ratio": round(match_ratio, 3),
                         "risk_driver": "officer_hurt_contest",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": manifestation_state,
                         "observe_only": True,
                         "officer_support_relief": round(officer_relief, 3),
                         "formed_officer_cluster_factor": round(cluster_factor, 3),
@@ -265,23 +337,30 @@ class RiskMatrixPlugin(V17PluginSpec):
                     causal_tier=self.causal_tier,
                     priority=0.9,
                     decision_hint="优先作为官伤冲突描述，不直接按官星减损结算。",
-                        meta={
-                            "impact_ratio": 0.0,
-                            "match_ratio": round(match_ratio, 3),
-                            "risk_driver": "officer_crush",
-                            "observe_only": True,
-                            "officer_support_relief": round(officer_relief, 3),
-                            "formed_officer_cluster_factor": round(cluster_factor, 3),
-                            **_projection_meta("正官"),
-                            "static_basis": build_static_basis(
-                                physics_tensor=physics_tensor,
-                                target_god="正官",
-                                relation_family="officer_crush",
-                                relation_members=[],
-                            ),
-                            **origin_meta,
-                        }
-                    ))
+                    meta={
+                        "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "risk_observation",
+                        "entity_scope": "risk",
+                        "exclusivity_key": "risk:officer_hurt",
+                        "source_event": "officer_crush",
+                        "match_ratio": round(match_ratio, 3),
+                        "risk_driver": "officer_crush",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": manifestation_state,
+                        "observe_only": True,
+                        "officer_support_relief": round(officer_relief, 3),
+                        "formed_officer_cluster_factor": round(cluster_factor, 3),
+                        **_projection_meta("正官"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="正官",
+                            relation_family="officer_crush",
+                            relation_members=[],
+                        ),
+                        **origin_meta,
+                    }
+                ))
 
         return results
 

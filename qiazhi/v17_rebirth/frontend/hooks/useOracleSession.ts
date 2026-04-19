@@ -556,6 +556,8 @@ export function useOracleSession(): OracleSession {
     const shouldHideFromManual =
       status === "REJECTED" ||
       signal === "PLAN_APPROVE" ||
+      signal === "NARRATIVE_TRIGGER" ||
+      signal === "VOTE_IGNORED" ||
       signal === "CONTEXT_CONSUMED" ||
       signal === "ACTION_TAKEN" ||
       signal === "VOTE_REJECTED" ||
@@ -578,6 +580,13 @@ export function useOracleSession(): OracleSession {
         }
         return next;
       });
+    }
+    if (signal === "DECISION_NOT_FOUND") {
+      setDecisionActionError(
+        `未命中该决策：${action}. 请确认卡片是否已被结算，或尝试手动刷新后重试。`,
+      );
+      setDecisionDirtySinceLastVerdict(false);
+      return;
     }
     setDecisionDirtySinceLastVerdict(true);
   }
@@ -652,6 +661,8 @@ export function useOracleSession(): OracleSession {
     const shouldHideFromManual =
       status !== "APPROVED" ||
       signal === "PLAN_APPROVE" ||
+      signal === "NARRATIVE_TRIGGER" ||
+      signal === "VOTE_IGNORED" ||
       signal === "CONTEXT_CONSUMED" ||
       signal === "ACTION_TAKEN" ||
       signal === "VOTE_REJECTED" ||
@@ -667,6 +678,13 @@ export function useOracleSession(): OracleSession {
         }
         return next;
       });
+    }
+    if (signal === "DECISION_NOT_FOUND") {
+      setDecisionActionError(
+        `未命中该决策分组${planId ? `（plan ${planId}）` : ""}，请检查页面是否有最新手动决策。`,
+      );
+      setDecisionDirtySinceLastVerdict(false);
+      return;
     }
     setDecisionDirtySinceLastVerdict(true);
   }

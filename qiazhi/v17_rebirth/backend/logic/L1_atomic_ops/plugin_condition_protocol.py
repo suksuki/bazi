@@ -14,6 +14,113 @@ _NATAL_PILLARS = {"year", "month", "day", "hour"}
 _RUNTIME_PILLARS = {"luck", "flow"}
 
 
+BRANCH_RELATION_FAMILIES = {
+    "liu_chong",
+    "liu_hai",
+    "liu_po",
+    "liu_he",
+    "ban_he",
+    "an_he",
+    "san_he",
+    "muku",
+    "sanxing",
+}
+
+STEM_RELATION_FAMILIES = {"stem_fusion"}
+HIDDEN_RELATION_FAMILIES = {"hidden_bridge", "hidden_root"}
+CROSS_LAYER_FAMILIES = {"status_machine", "officer_hurt", "owl_food", "blade_clash", "risk_matrix"}
+
+
+def _normalize_members(row: Any) -> set[str]:
+    if not isinstance(row, dict):
+        return set()
+    out: set[str] = set()
+    for key in ("pair", "group", "branches", "matched_branches", "branch"):
+        values = row.get(key)
+        if isinstance(values, (list, tuple, set)):
+            out.update({str(v).strip() for v in values if str(v).strip()})
+        elif str(values or "").strip():
+            out.add(str(values).strip())
+    return out
+
+
+def detect_interaction_layer(
+    row: Mapping[str, Any] | None,
+    *,
+    relation_family: str | None = None,
+    member_key: str | None = None,
+) -> str:
+    if row and isinstance(row, Mapping):
+        explicit = str(row.get("interaction_layer") or "").strip().lower()
+        if explicit in {"stem", "branch", "hidden", "cross_layer", "unknown"}:
+            return explicit
+
+    family = str(relation_family or "").strip().lower()
+    if family in STEM_RELATION_FAMILIES:
+        return "stem"
+    if family in HIDDEN_RELATION_FAMILIES:
+        return "hidden"
+    if family in CROSS_LAYER_FAMILIES:
+        return "cross_layer"
+
+    if family in BRANCH_RELATION_FAMILIES or (member_key in {"pair", "group", "branches", "matched_branches", "branch"}):
+        return "branch"
+
+    return "unknown"
+
+
+def infer_manifestation_state(
+    rows: List[Dict[str, Any]],
+    *,
+    relation_family: str,
+    member_set: Iterable[str] | None = None,
+    origin_types: Iterable[str] | None = None,
+) -> str:
+    family = str(relation_family or "").strip().lower()
+    candidates = [row for row in rows if isinstance(row, dict)]
+    if not candidates:
+        return "latent"
+
+    normalized_origin = {str(item).strip().lower() for item in (origin_types or []) if str(item or "").strip()}
+    if any(item == "natal" for item in normalized_origin):
+        return "manifested"
+
+    if family in {"stem_fusion", "stem_interlock"}:
+        for row in candidates:
+            mode = str(row.get("mode") or "").strip().lower()
+            if mode == "transformed":
+                return "manifested"
+            if mode == "activated":
+                return "supported"
+
+    if family in BRANCH_RELATION_FAMILIES:
+        # 地支关系默认先成立于显化链路，若同时有完整成员或高强度才算强显化。
+        target_members = {str(item).strip() for item in (member_set or []) if str(item).strip()}
+        has_full_membership = bool(target_members)
+        for row in candidates:
+            members = _normalize_members(row)
+            if has_full_membership and target_members.issubset(members):
+                return "manifested"
+            strength = float(
+                row.get("strength")
+                if row.get("strength") is not None
+                else row.get("stress")
+                if row.get("stress") is not None
+                else row.get("pivot_factor")
+                if row.get("pivot_factor") is not None
+                else 0.0
+            )
+            if strength >= 1.1:
+                return "manifested"
+            if strength >= 0.95:
+                return "supported"
+            if any(str(item).strip() in members for item in {"巳", "酉", "丑", "申", "子"}):
+                return "supported"
+
+    return "supported"
+
+
+
 def detect_relation_origin_type(pillars: List[str] | None) -> str:
     scoped = {str(x).strip().lower() for x in (pillars or []) if str(x).strip()}
     has_natal = bool(scoped & _NATAL_PILLARS)
@@ -38,21 +145,21 @@ def detect_relation_origin_type(pillars: List[str] | None) -> str:
 
 def relation_origin_multiplier(origin_type: str) -> float:
     value = str(origin_type or "").strip().lower()
-    if value == "luck_background":
-        return 1.08
     if value == "mixed":
-        return 1.03
+        return 0.94
+    if value == "luck_background":
+        return 0.98
+    if value == "luck_only":
+        return 0.98
     if value == "natal":
         return 1.0
     if value == "runtime_pair":
-        return 0.94
+        return 0.95
     if value == "flow_trigger":
         return 0.9
-    if value == "luck_only":
-        return 0.88
     if value == "flow_only":
         return 0.78
-    return 0.9
+    return 0.85
 
 
 def choose_dominant_origin_type(origins: Iterable[str]) -> str:

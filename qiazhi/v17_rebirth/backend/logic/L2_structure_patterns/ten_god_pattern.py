@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     choose_dominant_origin_type,
@@ -30,6 +30,24 @@ DECLARED_PARAMS = {
 }
 
 
+PATTERN_FAMILY_MAP = {
+    "正官": "正官格",
+    "七杀": "正官格",
+    "食神": "食伤格",
+    "伤官": "食伤格",
+    "偏财": "财官兼重",
+    "正财": "财官兼重",
+    "正印": "印绶格",
+    "偏印": "印绶格",
+    "比肩": "比劫格",
+    "劫财": "比劫格",
+}
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
+
+
 def judge_ten_god_pattern(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> str:
     if not deity_scores:
         return "未定格"
@@ -49,6 +67,50 @@ def judge_ten_god_pattern(deity_scores: Dict[str, float], cfg: Dict[str, Any] = 
     return f"{name}主轴格"
 
 
+def _build_pattern_profile(
+    deity_scores: Dict[str, float],
+    cfg: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    raw_top = sorted(deity_scores.items(), key=lambda kv: float(kv[1]), reverse=True)
+    min_score = float(cfg.get("PROFILE_MIN_SCORE", 10.0))
+    top_count = int(cfg.get("PROFILE_TOP_GODS", 3))
+    ranked: Sequence[tuple[str, float]] = tuple((str(name), float(score)) for name, score in raw_top if float(score) >= min_score)
+    if not ranked:
+        return []
+    selected = list(ranked[: top_count]) if top_count > 0 else list(ranked)
+    family_scores: Dict[str, Dict[str, Any]] = {}
+    for god, score in selected:
+        family = PATTERN_FAMILY_MAP.get(god, "综合格局")
+        entry = family_scores.setdefault(family, {"score": 0.0, "gods": []})
+        entry["score"] += score
+        entry["gods"].append(god)
+    total = sum(float(v["score"]) for v in family_scores.values())
+    if total <= 0:
+        return []
+    out: List[Dict[str, Any]] = []
+    for family, payload in sorted(family_scores.items(), key=lambda item: float(item[1]["score"]), reverse=True):
+        share = float(payload["score"]) / total
+        out.append(
+            {
+                "family": family,
+                "gods": payload["gods"],
+                "score": round(float(payload["score"]), 3),
+                "share": round(share, 4),
+                "percent": round(share * 100.0, 1),
+            }
+        )
+    return out
+
+
+def _format_pattern_profile_text(profile: List[Dict[str, Any]], primary: str) -> str:
+    if not profile:
+        return f"十神格局暂定：{primary}，更像未定格。"
+    compact = " / ".join(f"{item['family']} {int(item['percent']) if item['percent'].is_integer() else item['percent']}%" for item in profile)
+    if len(profile) == 1:
+        return f"十神格局表述：{compact}，兼具{primary}结构。"
+    return f"十神格局表述：{compact}；兼取{primary}为主向。"
+
+
 def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> List[dict]:
     prio = float(cfg.get("PATTERN_PRIORITY", DECLARED_PARAMS["PATTERN_PRIORITY"]))
     pattern = judge_ten_god_pattern(deity_scores, cfg)
@@ -59,18 +121,38 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
     top_score = float(top[0][1]) if top else 0.0
     second_score = float(top[1][1]) if len(top) >= 2 else 0.0
     dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
-    match_ratio = max(0.42, min(0.92, dominant_ratio / 2.2))
+    profile = _build_pattern_profile(deity_scores, cfg)
+    origin_scale = max(0.92, float(cfg.get("AXIS_ORIGIN_SCALE_MIN", 0.92)))
+    dominant_share = profile[0]["share"] if profile else 0.5
+    match_ratio = min(0.92, max(0.45, dominant_share * _clamp01(origin_scale)))
+    if not profile:
+        profile = [
+            {
+                "family": PATTERN_FAMILY_MAP.get(target_god, pattern),
+                "gods": [target_god] if target_god else [],
+                "score": round(top_score, 3),
+                "share": 1.0,
+                "percent": 100.0,
+            }
+        ]
     return [
         {
             "plugin": "ten_god_pattern",
-            "fact": f"十神格局判定：{pattern}。",
-            "label": "围绕主轴格局统一资源优先级，避免多线分散。",
-            "priority": prio,
-            "meta": {
-                "pattern_name": pattern,
-                "target_god": target_god,
-                "dominant_ratio": round(dominant_ratio, 3),
+            "fact": _format_pattern_profile_text(profile, pattern),
+                "label": "围绕主轴格局统一资源优先级，避免多线分散。",
+                "priority": prio,
+                "meta": {
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "pattern_family",
+                    "source_event": "pattern_family",
+                    "pattern_name": pattern,
+                    "target_god": target_god,
+                    "pattern_profile": profile,
+                    "dominant_ratio": round(dominant_ratio, 3),
                 "match_ratio": round(match_ratio, 3),
+                "pattern_mix_mode": "soft_mix",
             },
         }
     ]

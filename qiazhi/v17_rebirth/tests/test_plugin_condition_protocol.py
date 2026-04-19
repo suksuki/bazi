@@ -7,6 +7,7 @@ from v17_rebirth.backend.services.claim_protocol import compile_claims
 from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals
 from v17_rebirth.backend.services.physics_layers import settle_modifier_proposals
+from v17_rebirth.backend.logic.L1_atomic_ops import plugin_condition_protocol as protocol
 
 
 def test_hydration_populates_liu_po_and_stem_fusion_meta() -> None:
@@ -259,6 +260,64 @@ def test_risk_blind_and_pattern_plugins_emit_origin_type() -> None:
     assert by_plugin["classical.pattern.break_guard.v1"].meta.get("origin_type") in {"flow_trigger", "luck_background"}
 
 
+def test_pattern_dynamic_scope_reports_mixed_scope_on_luck_flow_rows() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "丁巳",
+            "month": "乙丑",
+            "day": "乙酉",
+            "hour": "乙亥",
+        },
+        "ten_gods_runtime": {
+            "伤官": 82.0,
+            "食神": 46.0,
+            "比肩": 17.0,
+            "偏财": 11.0,
+            "正官": 8.0,
+            "正印": 6.0,
+        },
+        "meta": {
+            "interaction_v2": {
+                "liu_chong": [
+                    {"pair": ["子", "午"], "pillars": ["luck", "flow"], "origin_type": "runtime_pair"},
+                ],
+                "sanxing": [
+                    {"branches": ["巳", "酉", "丑"], "pillars": ["year", "luck"], "origin_type": "luck_background"},
+                ],
+            }
+        },
+    }
+    facts = collect_all_spec_facts(pt)
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+    fact = by_plugin["classical.pattern.dynamic_scope.v1"]
+    assert fact.meta.get("pattern_scope") in {"mixed", "luck_background", "runtime_pair"}
+    assert fact.meta.get("candidate_count", 0) >= 1
+    assert isinstance(fact.meta.get("scope_weights"), dict)
+
+
+def test_detect_interaction_layer_rules() -> None:
+    assert protocol.detect_interaction_layer(row={"interaction_layer": "branch"}, relation_family="liu_hai") == "branch"
+    assert protocol.detect_interaction_layer(row=None, relation_family="stem_fusion") == "stem"
+    assert protocol.detect_interaction_layer(row=None, relation_family="liu_chong") == "branch"
+    assert protocol.detect_interaction_layer(row=None, relation_family="officer_hurt", member_key="pair") == "cross_layer"
+    assert protocol.detect_interaction_layer(row=None, relation_family="unknown", member_key="pair") == "branch"
+    assert protocol.detect_interaction_layer(row=None, relation_family="unknown") == "unknown"
+
+
+def test_infer_manifestation_state_for_cross_layer_and_branch_rows() -> None:
+    rows = [
+        {"pair": ["子", "午"], "origin_type": "flow_trigger", "strength": 0.97, "pillars": ["flow", "luck"]},
+        {"pair": ["子", "午"], "origin_type": "flow_trigger", "pillars": ["year", "day"], "pivot_factor": 1.05},
+    ]
+    assert protocol.infer_manifestation_state(rows, relation_family="liu_chong", member_set=["子", "午"]) == "manifested"
+
+    branch_rows = [{"pair": ["巳", "申"], "strength": 0.78}]
+    assert protocol.infer_manifestation_state(branch_rows, relation_family="liu_chong", member_set=["子", "午"]) == "supported"
+
+    stem_rows = [{"mode": "activated", "mode_confidence": 0.84}]
+    assert protocol.infer_manifestation_state(stem_rows, relation_family="stem_fusion", member_set=None) == "supported"
+
+
 def test_pattern_and_ziping_plugins_emit_cluster_projection_meta() -> None:
     pt = {
         "four_pillars": {
@@ -399,3 +458,40 @@ def test_natal_sanhe_projects_into_officer_kill_cluster_under_runtime_drag() -> 
     stem_fusion = next(f for f in facts if str(f.plugin_id or "") == "l1.physics.op_stem_fusion")
     assert stem_fusion.meta.get("condition_state") == "stuck"
     assert isinstance(stem_fusion.meta.get("static_basis"), dict)
+
+
+def test_sanhe_and_muku_emit_protocol_layers() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "丙子",
+            "month": "甲辰",
+            "day": "乙丑",
+            "hour": "戊辰",
+        },
+        "luck_pillar": "庚子",
+        "flow_pillar": "己丑",
+        "ten_gods_base_l0": {"伤官": 44.0, "正官": 37.0, "比肩": 33.0, "食神": 25.0},
+        "ten_gods_runtime": {"伤官": 44.0, "正官": 37.0, "比肩": 33.0, "食神": 25.0},
+        "meta": {
+            "interaction_v2": {
+                "san_he": [
+                    {"group": ["丑", "巳", "酉"], "pillars": ["day", "hour", "month"], "origin_type": "natal", "stress": 1.2}
+                ],
+                "ban_he": [],
+                "liu_chong": [],
+                "liu_po": [],
+                "liu_hai": [],
+                "sanxing": [],
+            }
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+
+    sanhe = by_plugin["l1.physics.op_branch_sanhe"]
+    muku = by_plugin["l1.physics.op_branch_muku"]
+    assert sanhe.meta.get("interaction_layer") == "branch"
+    assert sanhe.meta.get("manifestation_state") in {"manifested", "supported", "contested", "latent"}
+    assert muku.meta.get("interaction_layer") == "branch"
+    assert muku.meta.get("manifestation_state") in {"manifested", "supported", "contested", "latent"}

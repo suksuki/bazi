@@ -98,6 +98,13 @@
 - `l1.physics.op_branch_liuhai`
 - `l1.physics.op_branch_liupo`
 
+另外，盲派与子平专题也已接入同套元数据协议：
+
+- `interaction_layer`
+- `manifestation_state`
+- `static_basis`
+- `origin_type / origin_multiplier`
+
 ### 2.5 格局专题完成四层闭环
 
 格局专题当前已具备：
@@ -160,13 +167,22 @@ L1 Runtime = Recompute(L0 Base, approved proposals)
 
 当前默认权重口径已经调整为：
 
-- 大运：`0.95`
-- 流年：`0.38`
+- `natal = 1.0`
+- `luck_background = 0.98`
+- `mixed = 0.94`
+- `runtime_pair = 0.95`
+- `flow_trigger = 0.9`
+- `flow_only = 0.78`
 
 也就是说：
 
-- 大运更接近原局背景延续
-- 流年更偏触发与引动
+- 原局优先，运主背景优于流年引动
+- 流年在多数场景只做触发而非压倒原盘
+
+为防止回归，加入了自动回归测试：
+
+- `test_relation_layer_protocol_weights_follow_origin_priority`（文件：
+  `v17_rebirth/tests/test_relation_family_batch_regressions.py`）
 
 ### 2.8 簇投影协议完成全链路推广
 
@@ -317,6 +333,8 @@ L1 Runtime = Recompute(L0 Base, approved proposals)
 - [calibrate_plugin_match_cases.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_plugin_match_cases.py)
 - [calibrate_synthetic_sanhe_cases.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_synthetic_sanhe_cases.py)
 - [calibrate_synthetic_relation_cases.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_synthetic_relation_cases.py)
+- [relation_origin_trend_report.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/relation_origin_trend_report.py)
+- [关系来源趋势验收报告](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V17_RELATION_ORIGIN_TREND_V1_2026-04-19.md)
 
 ---
 
@@ -428,6 +446,7 @@ L1 Runtime = Recompute(L0 Base, approved proposals)
 
 最新关键测试结果：
 
+- `python3 -m pytest -q`
 - `test_plugin_condition_protocol.py`
 - `test_plugin_family_discovery.py`
 - `test_spec_validator.py`
@@ -440,7 +459,7 @@ L1 Runtime = Recompute(L0 Base, approved proposals)
 
 综合结果：
 
-- 后端：`181 passed`
+- 后端：`194 passed, 1 warning`
 - 前端：`npm run -s build` 通过
 
 ### 7.2 前端构建
@@ -474,3 +493,21 @@ L1 Runtime = Recompute(L0 Base, approved proposals)
 因此，本轮建议的正式结论是：
 
 **V17 插件主线可以收官，后续工作转入专题精修与案例校准。**
+
+---
+
+## 9. 上层架构对齐
+
+为避免后续专题继续“各做各的”，当前插件收官应与两份总文档一起理解：
+
+- [V17_SYSTEM_ARCHITECTURE.md](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V17_SYSTEM_ARCHITECTURE.md)
+- [V17_CROSS_LAYER_INTERACTION_PROTOCOL.md](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V17_CROSS_LAYER_INTERACTION_PROTOCOL.md)
+
+这两份文档负责补齐：
+
+1. 系统总分层
+2. 静态/动态职责边界
+3. 天干层、地支层、藏干层、显化跨层层的交互规则
+4. 命理师推理层与插件层之间的关系
+
+也就是说，插件体系现在已经不再是孤立工程，而是正式纳入了整套系统架构。

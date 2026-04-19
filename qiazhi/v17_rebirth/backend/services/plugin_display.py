@@ -145,6 +145,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "破格预警",
         "definition": "对格局候选是否受到冲刑害等结构干扰做专题预警。",
     },
+    "classical.pattern.dynamic_scope.v1": {
+        "display_name": "动态格局来源",
+        "definition": "按原局、运、流来源权重标注当前格局候选的动态生效来源。",
+    },
     "classical.climate_adjuster.v1": {
         "display_name": "调候专题",
         "definition": "把月令气候背景提升为专题解释层，而不是只做底层常数。",

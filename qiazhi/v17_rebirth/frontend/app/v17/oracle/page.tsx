@@ -277,7 +277,6 @@ export default function OraclePage() {
               <V17_DecisionInbox
                 frames={s.frames}
                 adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
-                sessionId={s.sessionId}
                 locked={s.decisionInboxLocked}
                 lockMessage={s.decisionInboxLockMessage}
                 onAdopted={s.handleAdopted}

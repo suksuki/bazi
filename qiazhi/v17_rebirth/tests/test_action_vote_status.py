@@ -121,6 +121,74 @@ def test_batch_vote_applies_each_decision(monkeypatch: pytest.MonkeyPatch) -> No
     assert backend.physics["sid"]["pending_decisions"][1]["status"] == "APPROVED"
 
 
+def test_action_fallback_match_by_target_god(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["pending_decisions"] = [
+        {"id": "d1", "label": "方案A", "physical_impact": {"target_god": "七杀", "impact_ratio": 0.2}},
+    ]
+
+    monkeypatch.setattr(stream_v17, "get_state_backend", lambda: backend)
+    called = {"kernel": 0}
+
+    async def _fake_dispatch(**_kwargs) -> bool:
+        called["kernel"] += 1
+        return True
+
+    monkeypatch.setattr(PhysicsKernel, "dispatch_perturbation", _fake_dispatch)
+    resp = asyncio.run(
+        stream_v17.v17_action(
+            {
+                "v17_origin": "v17_rebirth",
+                "signal": "PLAN_APPROVE",
+                "session_id": "sid",
+                "decision_ids": ["missing-id"],
+                "action": "方案A",
+                "target_god": "七杀",
+                "status": "APPROVED",
+            }
+        )
+    )
+    body = _decode_json_response(resp)
+
+    assert body["ok"] is True
+    assert called["kernel"] == 1
+    assert backend.physics["sid"]["pending_decisions"][0]["status"] == "APPROVED"
+
+
+def test_action_report_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["pending_decisions"] = [
+        {"id": "d1", "label": "方案A", "physical_impact": {"target_god": "七杀", "impact_ratio": 0.2}},
+    ]
+    monkeypatch.setattr(stream_v17, "get_state_backend", lambda: backend)
+
+    async def _fake_dispatch(**_kwargs) -> bool:
+        return True
+
+    monkeypatch.setattr(PhysicsKernel, "dispatch_perturbation", _fake_dispatch)
+    resp = asyncio.run(
+        stream_v17.v17_action(
+            {
+                "v17_origin": "v17_rebirth",
+                "signal": "PLAN_APPROVE",
+                "session_id": "sid",
+                "decision_ids": ["missing-id"],
+                "action": "没有匹配",
+                "target_god": "壬水",
+                "status": "APPROVED",
+            }
+        )
+    )
+    body = _decode_json_response(resp)
+
+    assert body["ok"] is True
+    assert body["signal"] == "DECISION_NOT_FOUND"
+
+
 async def _plan_action(
     backend: _FakeBackend,
     monkeypatch: pytest.MonkeyPatch,

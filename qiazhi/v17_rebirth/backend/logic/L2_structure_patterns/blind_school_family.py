@@ -5,19 +5,52 @@ from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     build_static_basis,
+    detect_interaction_layer,
     choose_dominant_origin_type,
     collect_origin_types_from_rows,
+    infer_manifestation_state,
     relation_origin_multiplier,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
+from v17_rebirth.backend.logic.configs.manager import get_plugin_config
 
 
 def _interaction_v2(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     meta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
     iv2 = meta.get("interaction_v2")
     return iv2 if isinstance(iv2, dict) else {}
+
+
+BLIND_MATCH_DEFAULTS = {
+    "classical.blind.work_axis.v1": {
+        "MATCH_RATIO_BASE": 0.68,
+        "MATCH_RATIO_CAP": 0.88,
+    },
+    "classical.blind.response_chain.v1": {
+        "MATCH_RATIO_BASE": 0.57,
+        "MATCH_RATIO_CAP": 0.8,
+    },
+    "classical.blind.symbol_trigger.v1": {
+        "MATCH_RATIO_BASE": 0.58,
+        "MATCH_RATIO_CAP": 0.8,
+    },
+    "classical.blind.timing_window.v1": {
+        "MATCH_RATIO_BASE": 0.53,
+        "MATCH_RATIO_CAP": 0.75,
+    },
+    "classical.blind.summary.v1": {
+        "MATCH_RATIO_BASE": 0.49,
+        "MATCH_RATIO_CAP": 0.71,
+    },
+}
+
+
+def _plugin_match_cfg(plugin_id: str, key: str, fallback: float) -> float:
+    cfg = get_plugin_config(plugin_id)
+    defaults = BLIND_MATCH_DEFAULTS.get(plugin_id, {})
+    return float(cfg.get(key, defaults.get(key, fallback)))
 
 
 def _top_god(scores: Dict[str, float]) -> str:
@@ -44,6 +77,39 @@ def _blind_match_ratio(iv2: Dict[str, Any], scores: Dict[str, float], *, base: f
         structure_boost = 0.06
     dominance_boost = min(0.08, max(0.0, (ratio - 1.0) * 0.08))
     return round(min(cap, max(0.42, base + structure_boost + dominance_boost)), 3)
+
+
+def _blind_relation_profile(iv2: Dict[str, Any]) -> Dict[str, Any]:
+    if iv2.get("liu_chong"):
+        rows = [row for row in iv2.get("liu_chong") if isinstance(row, dict)]
+        return {"relation_family": "liu_chong", "rows": rows, "interaction_layer_hint": "branch"}
+    if iv2.get("sanxing"):
+        rows = [row for row in iv2.get("sanxing") if isinstance(row, dict)]
+        return {"relation_family": "sanxing", "rows": rows, "interaction_layer_hint": "branch"}
+    if iv2.get("san_he"):
+        rows = [row for row in iv2.get("san_he") if isinstance(row, dict)]
+        return {"relation_family": "san_he", "rows": rows, "interaction_layer_hint": "branch"}
+    if iv2.get("ban_he"):
+        rows = [row for row in iv2.get("ban_he") if isinstance(row, dict)]
+        return {"relation_family": "ban_he", "rows": rows, "interaction_layer_hint": "branch"}
+    return {"relation_family": "blind", "rows": [], "interaction_layer_hint": "unknown"}
+
+
+def _blind_interaction_meta(iv2: Dict[str, Any], origin_meta: Dict[str, Any]) -> Dict[str, Any]:
+    profile = _blind_relation_profile(iv2)
+    return {
+        "interaction_layer": detect_interaction_layer(
+            {"interaction_layer": profile.get("interaction_layer_hint", "unknown")},
+            relation_family=str(profile.get("relation_family")),
+            member_key="pair",
+        ),
+        "manifestation_state": infer_manifestation_state(
+            rows=profile.get("rows", []),
+            relation_family=str(profile.get("relation_family")),
+            member_set=None,
+            origin_types=[str(origin_meta.get("origin_type") or "natal")],
+        ),
+    }
 
 
 def _blind_origin_meta(iv2: Dict[str, Any]) -> Dict[str, float | str]:
@@ -105,6 +171,9 @@ class BlindWorkAxisPlugin(V17PluginSpec):
             detail = "先看合局成势，做功重在资源如何被绑定与放大。"
         else:
             return []
+        relation_meta = _blind_interaction_meta(iv2, origin_meta)
+        match_ratio_base = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.68)
+        match_ratio_cap = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.88)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -113,14 +182,27 @@ class BlindWorkAxisPlugin(V17PluginSpec):
                 "label": "做功主轴",
                 "meta": {
                     "blind_axis": axis,
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "blind_family",
+                    "source_event": "blind_family",
                     **_blind_projection_meta(physics_tensor, _top_god(scores)),
-                    "match_ratio": round(min(0.88, _blind_match_ratio(iv2, scores, base=0.68, cap=0.88) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "match_ratio": round(
+                        min(
+                            match_ratio_cap,
+                            _blind_match_ratio(iv2, scores, base=match_ratio_base, cap=match_ratio_cap)
+                            * max(0.9, float(origin_meta["origin_multiplier"])),
+                        ),
+                        3,
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=_top_god(scores),
                         relation_family="blind_work_axis",
                         relation_members=[],
                     ),
+                    **relation_meta,
                     **origin_meta,
                 },
             }
@@ -149,6 +231,9 @@ class BlindResponseChainPlugin(V17PluginSpec):
             line = f"{top} 受刑压牵制，宜先论阻滞、卡点与代价。"
         else:
             return []
+        relation_meta = _blind_interaction_meta(iv2, origin_meta)
+        match_ratio_base = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.57)
+        match_ratio_cap = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.8)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -157,14 +242,27 @@ class BlindResponseChainPlugin(V17PluginSpec):
                 "label": "应链判断",
                 "meta": {
                     "response_top_god": top,
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "blind_family",
+                    "source_event": "blind_family",
                     **_blind_projection_meta(physics_tensor, top),
-                    "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.57, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "match_ratio": round(
+                        min(
+                            match_ratio_cap,
+                            _blind_match_ratio(iv2, scores, base=match_ratio_base, cap=match_ratio_cap)
+                            * max(0.9, float(origin_meta["origin_multiplier"])),
+                        ),
+                        3,
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=top,
                         relation_family="blind_response_chain",
                         relation_members=[],
                     ),
+                    **relation_meta,
                     **origin_meta,
                 },
             }
@@ -193,6 +291,9 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
             symbol = "压象先显"
         else:
             symbol = "主轴浮现"
+        relation_meta = _blind_interaction_meta(iv2, origin_meta)
+        match_ratio_base = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.58)
+        match_ratio_cap = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.8)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -202,14 +303,27 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
                 "meta": {
                     "symbol_top_god": top,
                     "blind_symbol": symbol,
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "blind_family",
+                    "source_event": "blind_family",
                     **_blind_projection_meta(physics_tensor, top),
-                    "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.58, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "match_ratio": round(
+                        min(
+                            match_ratio_cap,
+                            _blind_match_ratio(iv2, scores, base=match_ratio_base, cap=match_ratio_cap)
+                            * max(0.9, float(origin_meta["origin_multiplier"])),
+                        ),
+                        3,
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=top,
                         relation_family="blind_symbol_trigger",
                         relation_members=[],
                     ),
+                    **relation_meta,
                     **origin_meta,
                 },
             }
@@ -239,6 +353,9 @@ class BlindTimingWindowPlugin(V17PluginSpec):
             detail = "合势成局，事件常借助关系链与资源链逐步兑现。"
         else:
             return []
+        relation_meta = _blind_interaction_meta(iv2, origin_meta)
+        match_ratio_base = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.53)
+        match_ratio_cap = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.75)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -248,14 +365,27 @@ class BlindTimingWindowPlugin(V17PluginSpec):
                 "meta": {
                     "blind_phase": phase,
                     "timing_top_god": top,
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "blind_family",
+                    "source_event": "blind_family",
                     **_blind_projection_meta(physics_tensor, top),
-                    "match_ratio": round(min(0.75, _blind_match_ratio(iv2, scores, base=0.53, cap=0.75) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "match_ratio": round(
+                        min(
+                            match_ratio_cap,
+                            _blind_match_ratio(iv2, scores, base=match_ratio_base, cap=match_ratio_cap)
+                            * max(0.9, float(origin_meta["origin_multiplier"])),
+                        ),
+                        3,
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=top,
                         relation_family="blind_timing_window",
                         relation_members=[],
                     ),
+                    **relation_meta,
                     **origin_meta,
                 },
             }
@@ -284,6 +414,9 @@ class BlindSummaryPlugin(V17PluginSpec):
             route = "合成势，由主神牵动资源归并。"
         else:
             route = "主神浮现，可先以象定事。"
+        relation_meta = _blind_interaction_meta(iv2, origin_meta)
+        match_ratio_base = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.49)
+        match_ratio_cap = _plugin_match_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.71)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -293,14 +426,27 @@ class BlindSummaryPlugin(V17PluginSpec):
                 "meta": {
                     "blind_summary_top_god": top,
                     "blind_route": route,
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "blind_family",
+                    "source_event": "blind_family",
                     **_blind_projection_meta(physics_tensor, top),
-                    "match_ratio": round(min(0.71, _blind_match_ratio(iv2, scores, base=0.49, cap=0.71) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "match_ratio": round(
+                        min(
+                            match_ratio_cap,
+                            _blind_match_ratio(iv2, scores, base=match_ratio_base, cap=match_ratio_cap)
+                            * max(0.9, float(origin_meta["origin_multiplier"])),
+                        ),
+                        3,
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=top,
                         relation_family="blind_summary",
                         relation_members=[],
                     ),
+                    **relation_meta,
                     **origin_meta,
                 },
             }
