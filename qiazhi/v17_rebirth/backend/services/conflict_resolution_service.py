@@ -41,6 +41,7 @@ def apply_conflict_resolution(*, meta: Dict[str, Any], conflict_id: str, arbiter
         matched_resolution = True
 
     if not matched_resolution and found_conflict is not None:
+        winner_id = str(found_conflict.get("winner_claim_id") or "").strip()
         resolutions.append(
             {
                 "resolution_id": f"manual:{normalized_conflict}",
@@ -51,6 +52,7 @@ def apply_conflict_resolution(*, meta: Dict[str, Any], conflict_id: str, arbiter
                 "applied_to_settlement": normalized_arbiter == "system",
                 "reason": "由仲裁入口显式提交的冲突裁决。",
                 "policy": "explicit_conflict_resolution",
+                "winner_claim_ids": ([winner_id] if winner_id else []),
                 "resolved_at": _now_iso(),
             }
         )

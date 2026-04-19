@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 import math
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Tuple
 
 from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
     branches_and_stems_from_four_pillars,
@@ -168,6 +168,133 @@ def _geometry_hits_to_decision_rows(pt: Dict[str, Any], hits: Dict[str, Any]) ->
             }
         )
     return rows
+
+
+def _normalize_claim_id(raw: Any) -> str:
+    value = str(raw or "").strip()
+    return value if value else ""
+
+
+def _normalize_winner_claim_ids(row: Dict[str, Any]) -> List[str]:
+    winners: List[str] = []
+    for value in row.get("winner_claim_ids") or []:
+        winner = _normalize_claim_id(value)
+        if winner:
+            winners.append(winner)
+    if not winners:
+        winner = _normalize_claim_id(row.get("winner_claim_id"))
+        if winner:
+            winners.append(winner)
+    return winners
+
+
+def _extract_claims_resolution_plan(
+    *,
+    claim_rows: List[Dict[str, Any]],
+    conflict_resolutions: List[Dict[str, Any]],
+    current_proposals: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    claim_index: Dict[str, Dict[str, Any]] = {}
+    for row in claim_rows:
+        if not isinstance(row, dict):
+            continue
+        cid = _normalize_claim_id(row.get("claim_id"))
+        if not cid:
+            continue
+        claim_index[cid] = row
+
+    dropped_claim_ids: set[str] = set()
+    approved_winners: set[str] = set()
+    for resolution in conflict_resolutions:
+        if not bool(resolution.get("applied_to_settlement")):
+            continue
+        if str(resolution.get("resolved_by") or "").strip().lower() != "system":
+            continue
+        if str(resolution.get("status") or "").strip() not in {"approved", "resolved_system"}:
+            continue
+        winners = _normalize_winner_claim_ids(resolution)
+        conflict_claims = [
+            _normalize_claim_id(value)
+            for value in (resolution.get("claims") or [])
+            if _normalize_claim_id(value)
+        ]
+        dropped = [
+            _normalize_claim_id(value)
+            for value in (resolution.get("dropped_claim_ids") or [])
+            if _normalize_claim_id(value)
+        ]
+        if not winners and conflict_claims:
+            winners = [cid for cid in conflict_claims if cid not in dropped]
+
+        if winners:
+            approved_winners.update(winners)
+
+        if conflict_claims:
+            dropped_claim_ids.update(cid for cid in conflict_claims if cid not in set(winners))
+        dropped_claim_ids.update(dropped)
+
+    resolved_proposal_by_id: Dict[str, Dict[str, Any]] = {}
+    for row in current_proposals:
+        cid = _normalize_claim_id(row.get("claim_id"))
+        if cid:
+            resolved_proposal_by_id[cid] = dict(row)
+    filtered = [
+        row
+        for row in current_proposals
+        if _normalize_claim_id(row.get("claim_id")) not in dropped_claim_ids
+    ]
+
+    synthetic: List[Dict[str, Any]] = []
+    for winner_id in sorted(approved_winners):
+        if winner_id in dropped_claim_ids:
+            continue
+        existing = resolved_proposal_by_id.get(winner_id)
+        if existing and str(existing.get("arbiter_type") or "").strip().lower() == "system":
+            continue
+        claim = claim_index.get(winner_id)
+        if not isinstance(claim, dict):
+            continue
+        target_god = _normalize_claim_id(claim.get("target_god"))
+        if not target_god:
+            continue
+        intent = claim.get("intent_vector")
+        if not isinstance(intent, dict):
+            continue
+        raw_ratio = 0.0
+        for key, value in intent.items():
+            if str(key or "").strip() != target_god:
+                continue
+            try:
+                raw_ratio = float(value or 0.0)
+                break
+            except (TypeError, ValueError):
+                raw_ratio = 0.0
+                break
+        if not raw_ratio:
+            continue
+        synthetic.append(
+            {
+                "id": f"conflict:{winner_id}",
+                "claim_id": winner_id,
+                "plugin_id": str(claim.get("plugin_id") or "conflict_resolver").strip(),
+                "title": str(claim.get("claim_text") or "").strip(),
+                "reason": f"冲突裁决优先保留：{winner_id}",
+                "target_god": target_god,
+                "impact_ratio": raw_ratio,
+                "significance_weight": 1.0,
+                "arbiter_type": "system",
+                "causal_tier": 4,
+            }
+        )
+
+    return filtered + synthetic, {
+        "resolved_conflict_settlement": {
+            "applied_resolution_count": len([r for r in conflict_resolutions if bool(r.get("applied_to_settlement"))]),
+            "dropped_claim_count": len(dropped_claim_ids),
+            "winner_claim_count": len(approved_winners),
+            "synthetic_proposal_count": len(synthetic),
+        }
+    }
 
 
 def _build_plugin_execution_statuses(
@@ -443,23 +570,27 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         conflict_resolutions=conflict_resolutions,
     )
     conflict_rows = route_conflicts(conflicts=raw_conflict_rows, knowledge_snapshot=knowledge_snapshot)
+    adjusted_modifier_proposals, settlement_meta = _extract_claims_resolution_plan(
+        claim_rows=claim_rows,
+        conflict_resolutions=conflict_resolutions,
+        current_proposals=modifier_proposals,
+    )
     auto_signatures = sorted(
         proposal_signature(p)
-        for p in modifier_proposals
+        for p in adjusted_modifier_proposals
         if str(p.get("arbiter_type") or "").strip().lower() == "system"
     )
-    previous_signatures = sorted(str(x).strip() for x in meta.get("plugin_auto_settlement_signatures", []) if str(x).strip())
+    previous_signatures = sorted(
+        str(x).strip()
+        for x in meta.get("plugin_auto_settlement_signatures", [])
+        if str(x).strip()
+    )
+
     if auto_signatures != previous_signatures:
-        settled_runtime, ratio_totals, applied_rows = settle_modifier_proposals(_runtime, modifier_proposals)
+        settled_runtime, ratio_totals, applied_rows = settle_modifier_proposals(_runtime, adjusted_modifier_proposals)
         _runtime = settled_runtime
         meta["plugin_auto_ratio_totals"] = ratio_totals
         meta["plugin_auto_settlement_signatures"] = auto_signatures
-        meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
-        meta["plugin_claims"] = [dict(c) for c in claim_rows]
-        meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
-        meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
-        meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
-        meta["knowledge_snapshot"] = dict(knowledge_snapshot)
         for row in applied_rows:
             tg = str(row.get("target_god") or "").strip()
             before = float(row.get("before", 0.0) or 0.0)
@@ -477,13 +608,20 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 plugin_id="hydration.plugin_settlement",
                 fingerprint={"will_proxy": pt.get("will_proxy", "stable")},
             )
-    else:
-        meta["plugin_modifier_proposals"] = [dict(p) for p in modifier_proposals]
-        meta["plugin_claims"] = [dict(c) for c in claim_rows]
-        meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
-        meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
-        meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
-        meta["knowledge_snapshot"] = dict(knowledge_snapshot)
+
+    settlement_trace = settlement_meta.get("resolved_conflict_settlement", {})
+    meta["plugin_conflict_settlement_meta"] = {
+        "conflict_settlement_count": int(settlement_trace.get("applied_resolution_count", 0)),
+        "drop_count": int(settlement_trace.get("dropped_claim_count", 0)),
+        "winner_count": int(settlement_trace.get("winner_claim_count", 0)),
+        "synthetic_count": int(settlement_trace.get("synthetic_proposal_count", 0)),
+    }
+    meta["plugin_modifier_proposals"] = [dict(p) for p in adjusted_modifier_proposals]
+    meta["plugin_claims"] = [dict(c) for c in claim_rows]
+    meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
+    meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
+    meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
+    meta["knowledge_snapshot"] = dict(knowledge_snapshot)
 
     _scanned_pids = [s.plugin_id for s in all_specs]
 
@@ -556,7 +694,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     sync_runtime_aliases(pt, _runtime)
     meta["plugin_execution_status"] = _build_plugin_execution_statuses(
         facts=collected_facts,
-        proposals=modifier_proposals,
+        proposals=adjusted_modifier_proposals,
         previous_signatures=previous_signatures,
         clamped_gods=clamped_gods,
     )

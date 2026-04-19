@@ -88,6 +88,8 @@ type PluginConflictResolution = {
   policy?: string;
   winner_claim_id?: string;
   applied_to_settlement?: boolean;
+  next_queue?: string;
+  reason?: string;
 };
 
 type KnowledgeSnapshot = {
@@ -186,6 +188,14 @@ function conflictTone(severity: string | undefined): string {
   if (value === "P1") return "bg-rose-900/40 text-rose-300";
   if (value === "P2") return "bg-amber-900/40 text-amber-300";
   return "bg-cyan-900/40 text-cyan-300";
+}
+
+function brainStepTone(kind: string | undefined): string {
+  const value = String(kind || "").trim().toLowerCase();
+  if (value.includes("manual") || value === "user") return "text-violet-300";
+  if (value.includes("system")) return "text-amber-300";
+  if (value.includes("llm")) return "text-cyan-300";
+  return "text-zinc-400";
 }
 
 export default function V17AdminPage() {
@@ -331,6 +341,13 @@ export default function V17AdminPage() {
     } finally { setBusy(null); }
   }
 
+  const brainTimeline = pluginConflicts.slice(0, 10).map((conflict) => {
+    const conflictId = String(conflict.conflict_id || "").trim();
+    const resolution = pluginConflictResolutions.find((item) => item.conflict_id === conflictId);
+    const action = brainActionQueue.find((item) => String(item.conflict_id || "").trim() === conflictId);
+    return { conflict, resolution, action };
+  }).filter((row) => String(row.conflict.conflict_id || "").trim());
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-6 text-sm">
       <div className="mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
@@ -455,6 +472,37 @@ export default function V17AdminPage() {
                          <div className="mt-1 text-[10px] text-zinc-300">{row.reason || "—"}</div>
                          <div className="mt-1 text-[10px] text-zinc-500">
                            conflict {row.conflict_id || "—"} / confidence {Number(row.confidence || 0).toFixed(2)}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               ) : null}
+               {brainTimeline.length ? (
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="mb-2 text-[11px] font-semibold text-zinc-300">Brain Flow Timeline</div>
+                   <div className="space-y-2">
+                     {brainTimeline.map((row, idx) => (
+                       <div key={row.conflict.conflict_id || `timeline_${idx}`} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
+                         <div className="text-[10px] uppercase text-zinc-400">
+                           {row.conflict.conflict_type || "conflict"} · {row.conflict.conflict_id || "—"}
+                         </div>
+                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                           <span className="rounded border border-zinc-700 px-2 py-1 text-rose-300">
+                             Conflict · {row.conflict.severity || "P?"}
+                           </span>
+                           <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(row.resolution?.resolved_by || row.conflict.recommended_arbiter)}`}>
+                             Resolution · {row.resolution?.resolved_by || row.conflict.recommended_arbiter || "pending"}
+                           </span>
+                           <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(row.action?.action_type || row.resolution?.policy)}`}>
+                             Brain Action · {row.action?.action_type || row.resolution?.policy || "waiting"}
+                           </span>
+                           <span className={`rounded border border-zinc-700 px-2 py-1 ${brainStepTone(row.action?.queue || row.resolution?.resolved_by)}`}>
+                             Queue · {row.action?.queue || row.resolution?.next_queue || "pending"}
+                           </span>
+                         </div>
+                         <div className="mt-2 text-[10px] text-zinc-400">
+                           {row.action?.reason || row.resolution?.reason || row.conflict.why_conflict || "—"}
                          </div>
                        </div>
                      ))}

@@ -324,6 +324,7 @@ def compile_modifier_proposals(
 ) -> List[Dict[str, Any]]:
     proposals: List[Dict[str, Any]] = []
     for idx, fact in enumerate(facts):
+        claim_id = f"{str(fact.plugin_id or '').strip()}_claim_{idx}"
         meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
         if "impact_ratio" not in meta:
             continue
@@ -349,6 +350,7 @@ def compile_modifier_proposals(
         proposals.append(
             {
                 "id": f"{fact.plugin_id}_proposal_{idx}",
+                "claim_id": claim_id,
                 "plugin_id": str(fact.plugin_id or "").strip(),
                 "title": str(fact.text or "").strip(),
                 "reason": str(fact.text or "").strip(),

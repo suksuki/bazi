@@ -256,3 +256,19 @@ def test_compile_modifier_proposals_demotes_nonzero_tier_system_to_user() -> Non
     )
     assert len(proposals) == 1
     assert proposals[0]["arbiter_type"] == "user"
+
+
+def test_compile_modifier_proposals_tracks_claim_id_for_conflict_join() -> None:
+    proposals = compile_modifier_proposals(
+        facts=[
+            V17Fact(
+                plugin_id="l1.physics.op_branch_liuhe",
+                text="检测到地支六合：正财 能级提升 15%。",
+                causal_tier=4,
+                suggested_arbiter=ArbiterType.SYSTEM,
+                meta={"impact_ratio": 0.15, "target_god": "正财"},
+            )
+        ],
+        physics_tensor={"ten_gods_base_l0": {"正财": 10.0}},
+    )
+    assert proposals[0]["claim_id"] == "l1.physics.op_branch_liuhe_claim_0"

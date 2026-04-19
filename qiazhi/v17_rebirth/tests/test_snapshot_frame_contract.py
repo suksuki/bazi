@@ -47,3 +47,17 @@ def test_snapshot_frame_v17_21_contract(bazi_repo_root: Path) -> None:
     assert isinstance(inner.get("decision_prompt_batches"), list)
     if inner.get("manual_decisions"):
         assert "arbitration_trace" in inner["manual_decisions"][0]
+
+
+def test_decision_arbitration_tolerates_non_v17fact_inputs(bazi_repo_root: Path) -> None:
+    pd.clear_logic_module_cache()
+    orch = VerdictOrchestrator(repo_root=str(bazi_repo_root))
+    raw = {
+        "four_pillars": {"year": "丙寅", "month": "癸巳", "day": "戊申", "hour": "甲寅"},
+        "luck_pillar": "庚午",
+        "flow_pillar": "甲辰",
+        "ten_gods_absolute_intensity": {"食神": 45.0, "正官": 25.0},
+        "total_energy_index": 70.0,
+    }
+    arbitration = orch._decision_arbitration(raw, {"食神": 45.0, "正官": 25.0}, spec_facts=[{"fact": "not_v17fact"}])  # type: ignore[list-item]
+    assert isinstance(arbitration.get("manual_decisions"), list)

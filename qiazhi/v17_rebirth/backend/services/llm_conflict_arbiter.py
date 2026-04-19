@@ -163,6 +163,7 @@ def apply_llm_conflict_result(
         row["resolved_by"] = "llm"
         row["llm_reply"] = str(reply or "").strip()
         row["llm_result"] = dict(parsed)
+        row["winner_claim_ids"] = list(parsed.get("winner_claim_ids") or [])
         row["winner_claim_id"] = (parsed.get("winner_claim_ids") or [None])[0]
         row["dropped_claim_ids"] = list(parsed.get("dropped_claim_ids") or [])
         row["applied_to_settlement"] = False
@@ -177,6 +178,7 @@ def apply_llm_conflict_result(
                 "status": "resolved_llm",
                 "resolved_by": "llm",
                 "policy": "llm_conflict_bundle",
+                "winner_claim_ids": list(parsed.get("winner_claim_ids") or []),
                 "winner_claim_id": (parsed.get("winner_claim_ids") or [None])[0],
                 "dropped_claim_ids": list(parsed.get("dropped_claim_ids") or []),
                 "applied_to_settlement": False,

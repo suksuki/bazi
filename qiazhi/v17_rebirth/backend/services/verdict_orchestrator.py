@@ -187,7 +187,7 @@ class VerdictOrchestrator:
         spec_facts: List[V17Fact] | None = None,
     ) -> Dict[str, List[Dict[str, Any]]]:
         sanitizer = NarrativeSanitizer()
-        if spec_facts is None:
+        if spec_facts is None or not all(isinstance(f, V17Fact) for f in spec_facts):
             pt = raw_physics if isinstance(raw_physics, dict) else {}
             spec_facts = logic_pd.collect_all_spec_facts_and_record(pt)
         raw_pending = raw_physics.get("pending_decisions") if isinstance(raw_physics.get("pending_decisions"), list) else []
@@ -363,7 +363,11 @@ class VerdictOrchestrator:
             pattern,
             total_energy_index=total_energy_index,
         )
-        arbitration = self._decision_arbitration(raw_physics, scores, spec_facts=facts)
+        arbitration = self._decision_arbitration(
+            raw_physics,
+            scores,
+            spec_facts=facts if all(isinstance(f, V17Fact) for f in facts) else None,
+        )
         decision_batches = build_decision_batches(arbitration=arbitration)
         fragments.extend([str(x).strip() for x in decision_batches.get("prompt_lines", []) if str(x).strip()])
         rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
