@@ -186,6 +186,62 @@ def _chat_llm(base_url: str, model: str, prompt: str) -> Dict[str, Any]:
     return {"http_status": code, "reply": content, "endpoint": native_endpoint}
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _to_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _llm_conflict_feedback_quality(
+    *,
+    resolved_by: str,
+    resolution_type: str,
+    confidence: float,
+    conflict_score: float,
+) -> float:
+    # 将LLM裁决残差转为 [-1, 1] 质量信号，后续用于冲突路由学习。
+    quality = (_to_float(confidence) - 0.5) * 1.2
+    quality += 0.15 if str(resolved_by or "").strip().lower() == "system" else -0.05
+    if str(resolution_type or "").strip() in {"reject", "context_only"}:
+        quality -= 0.15
+    elif str(resolution_type or "").strip() == "escalate_user":
+        quality -= 0.35
+    quality += 0.25 * _clamp(_to_float(conflict_score), 0.0, 1.0)
+    return _clamp(quality, -1.0, 1.0)
+
+
+def _manual_conflict_feedback_quality(*, resolved_by: str, conflict_score: float) -> float:
+    # 手动裁决质量信号：默认有正反馈，但给低分冲突留一定惩罚空间。
+    arbiter_bias = {
+        "system": 0.12,
+        "llm": 0.0,
+        "user": 0.06,
+    }.get(str(resolved_by or "").strip().lower(), 0.0)
+    quality = -0.1 + 0.65 * _clamp(_to_float(conflict_score), 0.0, 1.0) + arbiter_bias
+    return _clamp(quality, -1.0, 1.0)
+
+
+def _find_conflict_row(conflicts: list[dict[str, Any]], conflict_id: str) -> dict[str, Any]:
+    target = str(conflict_id or "").strip()
+    for row in conflicts:
+        if str(row.get("conflict_id") or "").strip() == target:
+            return dict(row)
+    return {}
+
+
+def _find_resolution_row(rows: list[dict[str, Any]], conflict_id: str) -> dict[str, Any]:
+    target = str(conflict_id or "").strip()
+    for row in rows:
+        if str(row.get("conflict_id") or "").strip() == target:
+            return dict(row)
+    return {}
+
+
 def _probe_db(host: str, port: int) -> Dict[str, Any]:
     with socket.create_connection((host, int(port)), timeout=2.5):
         return {"reachable": True, "host": host, "port": int(port)}
@@ -521,22 +577,45 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
             parsed=parsed,
         )
         feedback_rows = evolution_storage.get_feedback(session_id=session_id, action="conflict_resolution", limit=200)
+        conflict_rows = updated_meta.get("plugin_conflicts") if isinstance(updated_meta.get("plugin_conflicts"), list) else []
+        resolution_rows = (
+            updated_meta.get("plugin_conflict_resolutions")
+            if isinstance(updated_meta.get("plugin_conflict_resolutions"), list)
+            else []
+        )
         for item_id in conflict_ids:
             row_status = "llm"
-            for resolution in updated_meta.get("plugin_conflict_resolutions", []) if isinstance(updated_meta.get("plugin_conflict_resolutions"), list) else []:
-                if str(resolution.get("conflict_id") or "").strip() != item_id:
-                    continue
-                resolved_by = str(resolution.get("resolved_by") or "").strip().lower()
-                if resolved_by in {"system", "llm", "user"}:
-                    row_status = resolved_by
-                break
+            conflict_row = _find_conflict_row(conflict_rows, item_id)
+            resolution_row = _find_resolution_row(resolution_rows, item_id)
+            resolved_by = str(resolution_row.get("resolved_by") or "llm").strip().lower()
+            if resolved_by in {"system", "llm", "user"}:
+                row_status = resolved_by
+            resolution_type = str(resolution_row.get("llm_resolution_type") or resolution_row.get("resolution_type") or "context_only")
+            llm_result = resolution_row.get("llm_result") if isinstance(resolution_row.get("llm_result"), dict) else {}
+            llm_confidence = _to_float(llm_result.get("confidence") or resolution_row.get("llm_confidence"))
+            conflict_score = _to_float(conflict_row.get("conflict_score"))
+            residual = _llm_conflict_feedback_quality(
+                resolved_by=row_status,
+                resolution_type=resolution_type,
+                confidence=llm_confidence,
+                conflict_score=conflict_score,
+            )
+            meta_payload = {
+                "route": "llm",
+                "arbiter": row_status,
+                "conflict_id": item_id,
+                "resolution_type": resolution_type,
+                "llm_confidence": round(llm_confidence, 4),
+                "conflict_score": round(conflict_score, 4),
+            }
             try:
                 evolution_storage.log_feedback(
                     session_id=session_id,
                     decision_id=item_id,
                     action="conflict_resolution",
                     status=row_status,
-                    meta={"route": "llm", "arbiter": row_status},
+                    residual=residual,
+                    meta=meta_payload,
                 )
                 feedback_rows.append(
                     {
@@ -544,8 +623,8 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
                         "decision_id": item_id,
                         "action": "conflict_resolution",
                         "status": row_status,
-                        "residual_correction": 0.0,
-                        "meta": {"route": "llm", "arbiter": row_status},
+                        "residual_correction": residual,
+                        "meta": meta_payload,
                     }
                 )
             except Exception:
@@ -580,19 +659,58 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     updated_meta = meta
+    manual_feedback_rows: list[dict[str, Any]] = []
     for item_id in conflict_ids:
         updated_meta = apply_conflict_resolution(meta=updated_meta, conflict_id=item_id, arbiter=arbiter)
+        conflict_rows = (
+            updated_meta.get("plugin_conflicts")
+            if isinstance(updated_meta.get("plugin_conflicts"), list)
+            else []
+        )
+        resolution_rows = (
+            updated_meta.get("plugin_conflict_resolutions")
+            if isinstance(updated_meta.get("plugin_conflict_resolutions"), list)
+            else []
+        )
+        conflict_row = _find_conflict_row(conflict_rows, item_id)
+        resolution_row = _find_resolution_row(resolution_rows, item_id)
+        resolved_by = str(conflict_row.get("resolved_by") or resolution_row.get("resolved_by") or arbiter).strip().lower()
+        if resolved_by not in {"system", "llm", "user"}:
+            resolved_by = arbiter
+        conflict_score = _to_float(conflict_row.get("conflict_score"))
+        residual = _manual_conflict_feedback_quality(
+            resolved_by=resolved_by,
+            conflict_score=conflict_score,
+        )
+        meta_payload = {
+            "route": "manual",
+            "arbiter": resolved_by,
+            "conflict_id": item_id,
+            "conflict_score": round(conflict_score, 4),
+        }
         try:
             evolution_storage.log_feedback(
                 session_id=session_id,
                 decision_id=item_id,
                 action="conflict_resolution",
-                status=arbiter,
-                meta={"route": "manual", "arbiter": arbiter},
+                status=resolved_by,
+                residual=residual,
+                meta=meta_payload,
             )
         except Exception:
             pass
+        manual_feedback_rows.append(
+            {
+                "session_id": session_id,
+                "decision_id": item_id,
+                "action": "conflict_resolution",
+                "status": resolved_by,
+                "residual_correction": residual,
+                "meta": meta_payload,
+            }
+        )
     feedback_rows = evolution_storage.get_feedback(session_id=session_id, action="conflict_resolution", limit=200)
+    feedback_rows.extend(manual_feedback_rows)
     knowledge_snapshot = build_knowledge_snapshot(
         claims=updated_meta.get("plugin_claims", []),
         conflicts=updated_meta.get("plugin_conflicts", []),

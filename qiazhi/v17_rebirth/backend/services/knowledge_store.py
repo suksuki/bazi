@@ -5,6 +5,10 @@ from typing import Any, Dict, List
 from typing import Iterable
 
 
+def _clamp(value: float, min_value: float, max_value: float) -> float:
+    return max(min_value, min(max_value, value))
+
+
 def _normalized(value: Any) -> str:
     return str(value or "").strip()
 
@@ -20,6 +24,11 @@ def _feedback_decay_weight(index: int, half_life: float = 24.0) -> float:
     # 最近事件权重更高：每经过 half_life 条反馈衰减一半。
     # index=0 -> 1.0, index=half_life -> 0.5, index=2*half_life -> 0.25
     return 2.0 ** (-index / max(half_life, 1.0))
+
+
+def _feedback_quality(residual: float) -> float:
+    # residual in [-1, 1] yields factor in [0.4, 1.6], preserving baseline preference while encoding quality.
+    return 1.0 + 0.6 * _clamp(float(residual), -1.0, 1.0)
 
 
 def build_knowledge_snapshot(
@@ -53,18 +62,14 @@ def build_knowledge_snapshot(
     for idx, item in enumerate(feedback_rows or []):
         residual = _to_float(item.get("residual_correction"))
         status = _normalized(item.get("status")).lower()
-        if status in {"system", "llm", "user", "resolved_system", "queued_llm", "queued_user"}:
+        if status in {"system", "llm", "user", "resolved_system", "resolved_user", "queued_llm", "queued_user"}:
+            if status.startswith("resolved_"):
+                status = status[len("resolved_") :]
             if status.startswith("queued_"):
                 status = status[len("queued_") :]
             feedback_arbiters[status] += 1
-            # 当前仅使用“反馈行为”权重（已记录事件会按顺序传入 get_feedback，并在上游做降序取新）。
-            # 使用行序索引衰减模拟时效性：最近的反馈更能塑造路由。
-            # 注意：feedback_rows 应由 get_feedback(action="conflict_resolution") 的降序返回；
-            # 使用 enumerate 能保证 0 是最近一次反馈，衰减后权重更低。
             feed_weight = _feedback_decay_weight(idx, half_life=12.0)
-            feedback_scores[status] += feed_weight
-            if residual < 0:
-                feedback_scores[status] -= 0.15 * feed_weight
+            feedback_scores[status] += feed_weight * _feedback_quality(residual)
 
     top_targets = [
         {"target_god": target, "count": count}

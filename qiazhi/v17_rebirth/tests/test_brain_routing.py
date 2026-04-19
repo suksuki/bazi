@@ -116,3 +116,35 @@ def test_route_conflicts_consume_feedback_scores() -> None:
     }
     routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
     assert routed[0]["recommended_arbiter"] == "llm"
+
+
+def test_feedback_residual_scales_arbiter_scores() -> None:
+    snapshot = build_knowledge_snapshot(
+        claims=[],
+        conflicts=[],
+        conflict_resolutions=[],
+        feedback_rows=[
+            {"status": "system", "residual_correction": 1.0},
+            {"status": "llm", "residual_correction": -1.0},
+        ],
+    )
+
+    assert snapshot["conflict_history"]["feedback_arbiter_scores"]["system"] > 1.0
+    assert snapshot["conflict_history"]["feedback_arbiter_scores"]["llm"] < 1.0
+    assert round(snapshot["conflict_history"]["feedback_arbiter_scores"]["system"], 3) == 1.6
+    assert round(snapshot["conflict_history"]["feedback_arbiter_scores"]["llm"], 3) == 0.378
+
+
+def test_route_conflicts_uses_feedback_quality() -> None:
+    conflicts = [
+        {"conflict_id": "c1", "severity": "P3", "recommended_arbiter": ""},
+    ]
+    knowledge_snapshot = {
+        "conflict_history": {
+            "feedback_arbiters": {"system": 1, "llm": 1, "user": 0},
+            "feedback_arbiter_scores": {"system": 1.6, "llm": 0.4, "user": 0.0},
+        }
+    }
+
+    routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
+    assert routed[0]["recommended_arbiter"] == "system"
