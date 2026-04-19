@@ -71,10 +71,14 @@ def _collect_rows(physics_tensor: Dict[str, Any], cfg: Dict[str, Any] = {}) -> L
     
     return [
         {
-            "plugin": "chang_sheng_12",
+            "plugin": "l1.physics.op_status",
             "fact": f"日主 {dm_stem} 位处「{stage}」位，抗性系数 {resistance:.1f}。",
             "label": "状态机节律",
             "priority": prio,
+            "meta": {
+                "stage_name": stage,
+                "resistance_ratio": resistance,
+            },
         }
     ]
 

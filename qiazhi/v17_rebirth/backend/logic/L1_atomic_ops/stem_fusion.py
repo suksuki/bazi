@@ -3,6 +3,10 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    relation_effect_multiplier,
+    summarize_stem_fusion_conditions,
+)
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_stem_fusion",
@@ -36,6 +40,7 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         mode = c.get("mode")
         stems = c.get("stems") or []
         lab = "".join(stems)
+        condition = summarize_stem_fusion_conditions(c)
         
         # 简单处理：如果是羁绊，对参与的第一个天干对应的十神产生减速
         # 如果是化气，对化出五行对应的十神产生增益
@@ -46,11 +51,20 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         
         if mode == "stuck":
             target_god = ten_god_from_stems(dm, stems[0]) if stems else "被合神"
+            cond_mul = relation_effect_multiplier(condition["condition_state"])
+            match_ratio = max(0.0, min(1.0, max(0.25, float(condition["branch_hua_ratio"] or 0.0) + 0.2) * cond_mul))
             rows.append({
                 "plugin": "l1.physics.op_stem_fusion",
-                "fact": f"天干羁绊 [{lab}]：能量处于僵持态，{target_god} 能级削减 {int(stuck_damp*100)}%。",
+                "fact": f"天干羁绊 [{lab}]：能量处于僵持态，{target_god} 能级削减 {int(stuck_damp*100)}%（{condition['condition_trigger']}）。",
                 "priority": 0.67,
-                "meta": {"impact_ratio": -stuck_damp, "target_god": target_god}
+                "meta": {
+                    "target_god": target_god,
+                    "match_ratio": round(match_ratio, 3),
+                    "condition_state": condition["condition_state"],
+                    "condition_trigger": condition["condition_trigger"],
+                    "branch_hua_ratio": condition["branch_hua_ratio"],
+                    "condition_multiplier": cond_mul,
+                }
             })
         elif mode == "transformed":
             hua_el = c.get("hua_element")
@@ -59,11 +73,23 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             g2e = _get_god_to_element_map(dm)
             target_god = next((g for g, e in g2e.items() if e == hua_el), "化气神")
             
+            cond_mul = relation_effect_multiplier(condition["condition_state"])
+            match_ratio = max(0.0, min(1.0, max(0.35, float(condition["branch_hua_ratio"] or 0.0) + (0.35 if condition["condition_state"] == "formed" else 0.0)) * max(cond_mul, 0.35)))
+            meta = {
+                "target_god": target_god,
+                "match_ratio": round(match_ratio, 3),
+                "condition_state": condition["condition_state"],
+                "condition_trigger": condition["condition_trigger"],
+                "branch_hua_ratio": condition["branch_hua_ratio"],
+                "condition_multiplier": cond_mul,
+            }
+            if condition["condition_state"] == "formed":
+                meta["impact_ratio"] = trans_eff * cond_mul
             rows.append({
                 "plugin": "l1.physics.op_stem_fusion",
-                "fact": f"天干化气 [{lab}→{hua_el}]：能量聚变成功，{target_god} 能级大幅提升。",
+                "fact": f"天干化气 [{lab}→{hua_el}]：能量聚变成功，{target_god} 能级大幅提升（{condition['condition_trigger']}）。",
                 "priority": 0.85,
-                "meta": {"impact_ratio": trans_eff, "target_god": target_god}
+                "meta": meta,
             })
             
     return rows

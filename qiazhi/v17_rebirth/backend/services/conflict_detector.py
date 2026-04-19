@@ -85,6 +85,34 @@ def detect_claim_conflicts(claims: List[Dict[str, Any]]) -> List[Dict[str, Any]]
             )
         )
 
+    # Rule 1.5: pattern family exclusivity
+    by_exclusive: Dict[str, List[Dict[str, Any]]] = {}
+    for claim in claims:
+        claim_type = str(claim.get("claim_type") or "").strip()
+        entity_scope = str(claim.get("entity_scope") or "").strip()
+        ex_key = str(claim.get("exclusivity_key") or "").strip()
+        if claim_type != "pattern_candidate" or entity_scope != "pattern" or not ex_key:
+            continue
+        by_exclusive.setdefault(ex_key, []).append(claim)
+    for ex_key, rows in by_exclusive.items():
+        unique_plugins = {str(c.get("plugin_id") or "").strip() for c in rows}
+        if len(rows) < 2 or len(unique_plugins) < 2:
+            continue
+        key = ("pattern_family_exclusive", ex_key)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            _conflict_row(
+                conflict_type="pattern_family_exclusive",
+                severity="P1",
+                claims=rows[:6],
+                why_conflict="格局候选属于同一互斥家族，不能在同轮内同时成立。",
+                recommended_arbiter="user",
+                anchor=ex_key,
+            )
+        )
+
     # Rule 2 & 3 on pairwise claims
     for idx, left in enumerate(claims):
         left_target = str(left.get("target_god") or "").strip()
@@ -141,7 +169,7 @@ def recommend_conflict_resolutions(claims: List[Dict[str, Any]], conflicts: List
 
     for conflict in conflicts:
         conflict_type = str(conflict.get("conflict_type") or "").strip()
-        if conflict_type != "same_event_duplicate":
+        if conflict_type not in {"same_event_duplicate", "pattern_family_exclusive"}:
             continue
         claim_ids = [
             str(cid).strip()
@@ -164,7 +192,11 @@ def recommend_conflict_resolutions(claims: List[Dict[str, Any]], conflicts: List
                 "applied_to_settlement": False,
                 "winner_claim_id": winner_id,
                 "dropped_claim_ids": dropped,
-                "reason": "同一 source_event 的重复主张已归并，建议保留优先级/置信度更高的一条。",
+                "reason": (
+                    "同一 source_event 的重复主张已归并，建议保留优先级/置信度更高的一条。"
+                    if conflict_type == "same_event_duplicate"
+                    else "同一格局家族的候选互斥，建议先保留优先级/置信度更高的一条。"
+                ),
                 "policy": "keep_highest_priority_claim",
             }
         )

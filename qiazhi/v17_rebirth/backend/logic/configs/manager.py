@@ -66,3 +66,17 @@ def get_plugin_config(plugin_id: str) -> Dict[str, Any]:
     except Exception:
         pass
     return {}
+
+
+def resolve_config_number(value: Any, fallback: float = 0.0) -> float:
+    """解析插件配置中的数字或 ref(global.KEY) 形式。"""
+    if isinstance(value, (int, float)):
+        return round(float(value), 4)
+    text = str(value or "").strip()
+    if text.startswith("ref(global.") and text.endswith(")"):
+        key = text[len("ref(global."):-1].strip()
+        return get_constant(key, fallback)
+    try:
+        return round(float(text), 4)
+    except (TypeError, ValueError):
+        return round(float(fallback), 4)

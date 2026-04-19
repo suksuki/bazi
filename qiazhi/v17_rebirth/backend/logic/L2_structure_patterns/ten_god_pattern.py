@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, List
+
+from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
+from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
+
 # V17.99 Skill Specification
 V17_SKILL_MANIFEST = {
     "id": "ten_god_pattern",
@@ -40,12 +48,22 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
     pattern = judge_ten_god_pattern(deity_scores, cfg)
     if pattern == "未定格":
         return []
+    top = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
+    top_score = float(top[0][1]) if top else 0.0
+    second_score = float(top[1][1]) if len(top) >= 2 else 0.0
+    dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
+    match_ratio = max(0.42, min(0.92, dominant_ratio / 2.2))
     return [
         {
             "plugin": "ten_god_pattern",
             "fact": f"十神格局判定：{pattern}。",
             "label": "围绕主轴格局统一资源优先级，避免多线分散。",
             "priority": prio,
+            "meta": {
+                "pattern_name": pattern,
+                "dominant_ratio": round(dominant_ratio, 3),
+                "match_ratio": round(match_ratio, 3),
+            },
         }
     ]
 

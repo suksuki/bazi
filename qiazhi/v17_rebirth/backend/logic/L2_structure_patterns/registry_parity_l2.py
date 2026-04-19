@@ -20,7 +20,21 @@ class ClimateAdjusterStub(V17PluginSpec):
     doc_rationale: str = "旧 run_climate_adjuster_v1 脱水入口。"
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
-        return []
+        pt = physics_tensor if isinstance(physics_tensor, dict) else {}
+        energy_meta = pt.get("energy_meta") if isinstance(pt.get("energy_meta"), dict) else {}
+        month_command_god = str(energy_meta.get("month_command_god") or "").strip()
+        if not month_command_god:
+            return []
+        return [
+            V17Fact(
+                plugin_id=self.plugin_id,
+                text=f"调候提示：当前月令主气落在 {month_command_god}，所有解释应先服从月令气候背景。",
+                causal_tier=int(self.causal_tier),
+                priority=0.82,
+                decision_hint="先调候，再取用",
+                meta={"month_command_god": month_command_god, "match_ratio": 0.86},
+            )
+        ]
 
 
 @dataclass
@@ -32,7 +46,35 @@ class ConflictAuditorStub(V17PluginSpec):
     doc_rationale: str = "旧 run_conflict_auditor_v1 脱水入口。"
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
-        return []
+        pt = physics_tensor if isinstance(physics_tensor, dict) else {}
+        meta = pt.get("meta") if isinstance(pt.get("meta"), dict) else {}
+        conflicts = [dict(row) for row in (meta.get("plugin_conflicts") or []) if isinstance(row, dict)]
+        resolutions = [dict(row) for row in (meta.get("plugin_conflict_resolutions") or []) if isinstance(row, dict)]
+        if not conflicts:
+            return []
+        unresolved = [
+            row for row in conflicts
+            if str(row.get("resolution_status") or "").strip() not in {"resolved_system", "resolved_llm", "resolved_user"}
+        ]
+        text = (
+            f"插件冲突审计：当前检测到 {len(conflicts)} 组冲突，未闭环 {len(unresolved)} 组，"
+            f"已有 {len(resolutions)} 条裁决建议。"
+        )
+        return [
+            V17Fact(
+                plugin_id=self.plugin_id,
+                text=text,
+                causal_tier=int(self.causal_tier),
+                priority=0.86,
+                decision_hint="优先处理冲突层",
+                meta={
+                    "conflict_count": len(conflicts),
+                    "unresolved_conflict_count": len(unresolved),
+                    "resolution_count": len(resolutions),
+                    "match_ratio": min(0.9, max(0.45, len(conflicts) / max(len(conflicts) + 1, 1))),
+                },
+            )
+        ]
 
 
 @dataclass
@@ -59,7 +101,7 @@ class PatternDetectorV2(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=0.84,
                 decision_hint="格局对焦",
-                meta={},
+                meta={"match_ratio": 0.78},
             )
         ]
 
@@ -88,7 +130,7 @@ class BlindSchoolV1(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=0.81,
                 decision_hint="做功检视",
-                meta={},
+                meta={"match_ratio": 0.74},
             )
         ]
 

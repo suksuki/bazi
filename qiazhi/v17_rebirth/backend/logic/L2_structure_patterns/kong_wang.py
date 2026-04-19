@@ -1,3 +1,11 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, List
+
+from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
+from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
+
 # V17.99 Skill Specification
 V17_SKILL_MANIFEST = {
     "id": "kong_wang",

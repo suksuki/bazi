@@ -10,6 +10,50 @@ from typing import Any, Dict, List, Optional
 from v17_rebirth.paths import V17_REBIRTH_ROOT
 
 LOGIC_ROOT = V17_REBIRTH_ROOT / "backend" / "logic"
+CONFIG_ROOT = LOGIC_ROOT / "configs"
+
+
+def _literal_eval_or_none(node: Optional[ast.AST]) -> Any:
+    if node is None:
+        return None
+    try:
+        return ast.literal_eval(node)
+    except Exception:
+        return None
+
+
+def _collect_plugin_field_values(tree: ast.AST) -> List[str]:
+    values: List[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for key_node, value_node in zip(node.keys, node.values):
+            key = _literal_eval_or_none(key_node)
+            if key != "plugin":
+                continue
+            value = _literal_eval_or_none(value_node)
+            if isinstance(value, str) and value.strip():
+                values.append(value.strip())
+    return sorted(set(values))
+
+
+def _collect_class_plugin_ids(tree: ast.AST) -> List[str]:
+    values: List[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for item in node.body:
+            value = None
+            if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name) and item.target.id == "plugin_id":
+                value = _literal_eval_or_none(item.value)
+            elif isinstance(item, ast.Assign):
+                for target in item.targets:
+                    if isinstance(target, ast.Name) and target.id == "plugin_id":
+                        value = _literal_eval_or_none(item.value)
+                        break
+            if isinstance(value, str) and value.strip():
+                values.append(value.strip())
+    return sorted(set(values))
 
 class SpecValidator:
     @staticmethod
@@ -20,7 +64,14 @@ class SpecValidator:
             "id": None,
             "manifest": {},
             "params": {},
-            "errors": []
+            "errors": [],
+            "policy_errors": [],
+            "plugin_output_ids": [],
+            "class_plugin_ids": [],
+            "config_required": False,
+            "config_file": "",
+            "config_exists": False,
+            "policy_valid": False,
         }
         
         try:
@@ -64,11 +115,40 @@ class SpecValidator:
                 for node in tree.body:
                     if isinstance(node, ast.FunctionDef) and node.name == "collect_v17_facts":
                         has_contract = True
+
+            results["plugin_output_ids"] = _collect_plugin_field_values(tree)
+            results["class_plugin_ids"] = _collect_class_plugin_ids(tree)
+
+            plugin_id = str(results["id"] or "").strip()
+            if not plugin_id and results["class_plugin_ids"]:
+                plugin_id = str(results["class_plugin_ids"][0] or "").strip()
+                results["id"] = plugin_id
+
+            if results["params"]:
+                results["config_required"] = True
+                if plugin_id:
+                    cfg_path = CONFIG_ROOT / f"{plugin_id}.json"
+                    results["config_file"] = str(cfg_path.relative_to(V17_REBIRTH_ROOT))
+                    results["config_exists"] = cfg_path.exists()
+                    if not cfg_path.exists():
+                        results["policy_errors"].append("Missing plugin config file")
+
+            if plugin_id:
+                mismatches = [
+                    pid for pid in results["plugin_output_ids"]
+                    if str(pid or "").strip() and str(pid).strip() != plugin_id
+                ]
+                if mismatches:
+                    results["policy_errors"].append(
+                        f"Plugin output id mismatch: expected {plugin_id}, found {', '.join(sorted(set(mismatches)))}"
+                    )
             
             if results["manifest"] and has_contract:
                 results["valid"] = True
             elif not results["manifest"]:
                 results["errors"].append("Missing V17_SKILL_MANIFEST")
+
+            results["policy_valid"] = bool(results["valid"] and not results["policy_errors"])
             
         except Exception as e:
             results["errors"].append(f"File parse failed: {e}")

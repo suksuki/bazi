@@ -124,6 +124,17 @@ def _source_label(source: Any) -> str:
     return plugin_source_label(raw)
 
 
+def _normalize_match_ratio(meta: Dict[str, Any], *, fallback: float = 1.0) -> float:
+    raw = meta.get("match_ratio", meta.get("pattern_match_ratio", fallback))
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = float(fallback)
+    if not math.isfinite(value):
+        value = float(fallback)
+    return max(0.0, min(1.0, value))
+
+
 def _arbitration_mode_label(mode: str) -> str:
     if mode == "manual":
         return "手动"
@@ -355,11 +366,13 @@ def compile_modifier_proposals(
         if "impact_ratio" not in meta:
             continue
         try:
-            impact_ratio = float(meta.get("impact_ratio", 0.0) or 0.0)
+            raw_impact_ratio = float(meta.get("impact_ratio", 0.0) or 0.0)
             significance_weight = float(meta.get("significance_weight", 1.0) or 1.0)
         except (TypeError, ValueError):
             continue
-        if not math.isfinite(impact_ratio) or not math.isfinite(significance_weight):
+        match_ratio = _normalize_match_ratio(meta, fallback=float(meta.get("confidence", 1.0) or 1.0))
+        impact_ratio = raw_impact_ratio * match_ratio
+        if not math.isfinite(raw_impact_ratio) or not math.isfinite(impact_ratio) or not math.isfinite(significance_weight):
             continue
         target_god = resolve_target_god(
             row_target=fact.target_god,
@@ -382,6 +395,8 @@ def compile_modifier_proposals(
                 "reason": str(fact.text or "").strip(),
                 "target_god": target_god,
                 "impact_ratio": impact_ratio,
+                "raw_impact_ratio": raw_impact_ratio,
+                "match_ratio": match_ratio,
                 "significance_weight": significance_weight,
                 "arbiter_type": arbiter,
                 "causal_tier": int(fact.causal_tier or 0),

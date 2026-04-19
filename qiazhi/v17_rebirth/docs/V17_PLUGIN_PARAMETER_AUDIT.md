@@ -213,50 +213,50 @@
 
 | 参数 | 默认值 | 现状 | 判断 |
 | --- | ---: | --- | --- |
-| `FUSION_MID_GAIN` | `1.45` | `_collect_rows()` 直接读取并生成 `impact_ratio` | 默认值暂时合理，建议保留 |
-| `LOCK_RATIO` | `0.35` | 只在 `run_three_harmony()` 中出现，主流程未接线 | 当前是伪参数 |
-| `MIN_HARMONY_STRESS` | `0.40` | 主流程完全未读取 | 当前是伪参数 |
+| `FUSION_MID_GAIN` | `1.45` | `_collect_rows()` 直接读取并生成聚势增益 | 现已有效 |
+| `LOCK_RATIO` | `0.35` | 已接入锁定能量计算，产出 `locked_energy` | 现已有效 |
+| `MIN_HARMONY_STRESS` | `0.40` | 已接入命中过滤，低于阈值的半合/三合不产出 facts | 现已有效 |
 
 结论：
 
-- 真正生效的只有 `FUSION_MID_GAIN`。
-- `LOCK_RATIO` 和 `MIN_HARMONY_STRESS` 要么接入 `interaction_v2` 判定与位移计算，要么删掉，避免误导。
+- `sanhe` 已从“3 个参数里只活 1 个”整改为“3 个参数全部已接线且可配置”。
+- 当前 `MIN_HARMONY_STRESS` 采用的是兼容性实现：优先读 hit 自带 `stress/strength`，若上游未提供，则按三合/半合给安全回退值。后续若 `interaction_v2` 输出更完整的强度字段，可以无缝升级。
 
 ### 2. `l1.physics.op_branch_liuhe` 六合协同
 
 | 参数 | 默认值 | 现状 | 判断 |
 | --- | ---: | --- | --- |
-| `HARMONY_GAIN` | `1.15` | 主流程已使用，影响六合增益 | 默认值暂时合理 |
-| `STABILITY_WEIGHT` | `0.85` | 仅在声明中存在，未进入 `_collect_rows()` | 当前是伪参数 |
+| `HARMONY_GAIN` | `1.15` | 主流程已使用，影响六合增益 | 现已有效 |
+| `STABILITY_WEIGHT` | `0.85` | 已接入锁定能量与增益折算 | 现已有效 |
 
 结论：
 
-- `HARMONY_GAIN` 是有效参数。
-- `STABILITY_WEIGHT` 当前没有任何做功路径，先不要把它当成真实可调项。
+- `liuhe` 已从“半参数化”整改为“双参数真接线”。
+- `STABILITY_WEIGHT` 现在不只是文案参数，而会直接影响 `locked_energy` 与 `impact_ratio`。
 
 ### 3. `l1.physics.op_branch_liupo` 六破关系
 
 | 参数 | 默认值 | 现状 | 判断 |
 | --- | ---: | --- | --- |
-| `BREAK_LOSS` | `0.08` | 主流程已使用，直接映射为负向 `impact_ratio` | 默认值暂时合理 |
-| `FRICTION_COEFF` | `0.25` | 只在注释与声明层存在，未进入计算 | 当前是伪参数 |
+| `BREAK_LOSS` | `0.08` | 主流程已使用，控制六破基础损耗 | 现已有效 |
+| `FRICTION_COEFF` | `0.25` | 已接入损耗放大与优先级调节 | 现已有效 |
 
 结论：
 
-- `BREAK_LOSS` 是真实有效参数。
-- `FRICTION_COEFF` 应当 either 接入平滑/阻尼模型，or 从当前版本移除。
+- `liupo` 已完成双参数接线，`FRICTION_COEFF` 不再是摆设。
+- 当前它表达的是“破局摩擦导致的损耗放大”，后续如果要更细分，可以拆成“损耗”和“决策阻尼”两类参数。
 
 ### 4. `l1.physics.op_branch_muku` 墓库门态
 
 | 参数 | 默认值 | 现状 | 判断 |
 | --- | ---: | --- | --- |
-| `STORAGE_EFFICIENCY` | `0.35` | 主流程已使用，影响墓库回笼收纳强度 | 默认值暂时合理 |
-| `OPEN_GATE_BOOST` | `1.50` | 当前没有开库分支，未进入计算 | 当前是伪参数 |
+| `STORAGE_EFFICIENCY` | `0.35` | 主流程已使用，控制墓库回笼收纳强度 | 现已有效 |
+| `OPEN_GATE_BOOST` | `1.50` | 已接入开库分支，控制冲开墓库时的正向释放幅度 | 现已有效 |
 
 结论：
 
-- 现阶段插件只实现了“闭库收纳”，没有实现“开库释放”。
-- 因此 `OPEN_GATE_BOOST` 现在只是未来设计，不应被当成已生效参数。
+- `muku` 已从“只实现闭库”升级为“闭库收纳 + 开库释放”双态模型。
+- 当前开库触发基于 `interaction_v2.liu_chong` 命中墓库支，后续如要更细分，可继续纳入刑、破等开门条件。
 
 ### 5. `l2.risk.risk_matrix` 官伤风险矩阵
 
@@ -278,17 +278,14 @@
 1. `l2.risk.risk_matrix`
 原因：已整改完成，现可作为参数治理模板。
 
-2. `l1.physics.op_branch_sanhe`
-原因：表面上有 3 个参数，实际上只用了 1 个，容易误导后续调参。
+2. `l1.physics.op_branch_liuhai`
+原因：已整改完成，现支持配置读取与全局常量引用解析，可作为 `ref(global.KEY)` 的治理模板。
 
-3. `l1.physics.op_branch_muku`
-原因：开库参数尚未实现，设计语义与当前代码不一致。
+3. `l1.physics.op_status`
+原因：已补同名配置文件，并统一回正式 `plugin_id`，当前主要工作转向默认值案例基线。
 
-4. `l1.physics.op_branch_liuhe`
-原因：`STABILITY_WEIGHT` 未接线，但主逻辑相对简单。
-
-5. `l1.physics.op_branch_liupo`
-原因：`FRICTION_COEFF` 未接线，但核心损耗逻辑已成立。
+4. `ten_god_pattern`
+原因：已补同名配置文件，当前主要工作转向阈值基线与案例校准。
 
 ## 关于“自我学习调参数”的最终判断
 
@@ -310,6 +307,27 @@
 - 工程清洗
 - 离线回放
 - 人工基线校准
+
+## 第二批规范化进展
+
+以下插件已完成“同名配置文件补齐”：
+
+- `l1.physics.op_status`
+- `ten_god_pattern`
+- `shensha`
+- `kong_wang`
+
+其中：
+
+- `l1.physics.op_status` 还额外完成了历史遗留规范化：
+  - facts 内的 `plugin` 已从旧别名 `chang_sheng_12` 统一回正式 `l1.physics.op_status`
+- `ten_god_pattern / shensha / kong_wang` 原本参数就已接线，这次重点是把它们从“默认值驱动”升级为“标准配置治理”
+
+当前这四支的工作重点，已经不再是“有没有接线”，而是：
+
+- 默认值是否合理
+- 阈值是否过宽或过窄
+- 是否需要更细的案例基线
 
 ## 已补工具
 

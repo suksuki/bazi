@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
+from v17_rebirth.backend.logic.configs.manager import get_plugin_config, resolve_config_number
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_branch_liuhai",
@@ -38,26 +39,42 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     if not pierce_hits:
         return []
     
+    cfg = get_plugin_config("l1.physics.op_branch_liuhai")
+    penetration_ratio = resolve_config_number(cfg.get("PENETRATION_RATIO", DECLARED_PARAMS["PENETRATION_RATIO"]), 0.45)
+    clash_loss_ratio = resolve_config_number(cfg.get("CLASH_LOSS_RATIO", DECLARED_PARAMS["CLASH_LOSS_RATIO"]), 0.12)
+
     rows = []
+    scores = physics_tensor.get("ten_gods_absolute", {})
     for hit in pierce_hits:
         pair = hit.get("pair") or []
+        br_i = pair[0] if len(pair) >= 1 else ""
         br_j = pair[1] if len(pair) >= 2 else ""
         
         from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import _branch_dominant_ten_god
         fp = physics_tensor.get("four_pillars", {})
         day_gz = str(fp.get("day", "")).strip()
         dm = day_gz[0] if len(day_gz) >= 2 else "壬"
+        god_i = _branch_dominant_ten_god(br_i, dm) if br_i else "源神"
         god_j = _branch_dominant_ten_god(br_j, dm) if br_j else "目标"
+        source_abs = float(scores.get(god_i, 0.0) or 0.0)
+        target_abs = float(scores.get(god_j, 0.0) or 0.0)
+        pierce = run_six_pierce(source_abs=source_abs, target_abs=target_abs, penetration_ratio=penetration_ratio)
+        effective_ratio = min(0.5, max(0.02, clash_loss_ratio * penetration_ratio))
+        match_ratio = min(1.0, max(0.0, 0.45 + penetration_ratio * 0.4))
 
         rows.append({
-            "plugin": "six_pierce",
-            "fact": f"地支六穿激活 -> 目标 {god_j} 产生 12% 局部应力损耗。",
+            "plugin": "l1.physics.op_branch_liuhai",
+            "fact": f"地支六穿激活 -> 目标 {god_j} 产生 {int(effective_ratio*100)}% 局部应力损耗。",
             "label": "关键动作加一层确认，压低冲动决策误差。",
-            "priority": 0.92,
+            "priority": round(min(0.96, 0.8 + effective_ratio), 3),
             "meta": {
-                "impact_ratio": -0.12,
+                "impact_ratio": round(-effective_ratio, 2),
+                "match_ratio": round(match_ratio, 3),
                 "target_god": god_j,
-                "shielding_status": "FAILED"
+                "shielding_status": "FAILED",
+                "penetration_ratio": round(penetration_ratio, 3),
+                "clash_loss_ratio": round(clash_loss_ratio, 3),
+                "abs_loss": float(pierce.get("abs_loss", 0.0) or 0.0),
             }
         })
     return rows

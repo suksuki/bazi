@@ -69,6 +69,90 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "旺衰框架",
         "definition": "经典旺衰评估框架的兼容占位插件。",
     },
+    "l0.foundation.hidden_stems.v1": {
+        "display_name": "藏干基线",
+        "definition": "把四柱地支的藏干结构投影为可审计的 L0 基础事实。",
+    },
+    "l0.foundation.rooted_stems.v1": {
+        "display_name": "通根基线",
+        "definition": "把天干在四柱、运流中的通根条件显影为 L0 基础事实。",
+    },
+    "l0.foundation.exposed_hidden_stems.v1": {
+        "display_name": "透干显影",
+        "definition": "识别藏干是否透出为明干，并作为 L0 基础事实输出。",
+    },
+    "l0.foundation.month_command.v1": {
+        "display_name": "月令主气",
+        "definition": "将月令主气显影为 L0 旺衰和专题判断的起点。",
+    },
+    "classical.blind.work_axis.v1": {
+        "display_name": "盲派做功主轴",
+        "definition": "以冲、刑、合等结构先定盲派做功的主观察轴。",
+    },
+    "classical.blind.response_chain.v1": {
+        "display_name": "盲派应链",
+        "definition": "围绕主轴与触发结构，输出盲派的一事一应链提示。",
+    },
+    "classical.blind.symbol_trigger.v1": {
+        "display_name": "盲派触发象",
+        "definition": "把当前最强结构和主神转换为盲派断事入口之象。",
+    },
+    "classical.blind.timing_window.v1": {
+        "display_name": "盲派应期窗",
+        "definition": "把冲、刑、合等结构映射为盲派的近应、迟应与联应窗口。",
+    },
+    "classical.blind.summary.v1": {
+        "display_name": "盲派断口收束",
+        "definition": "把做功、应期与象法汇总为一个可直接断事的盲派断口。",
+    },
+    "classical.ziping.month_command.v1": {
+        "display_name": "子平月令法",
+        "definition": "以月令主气为第一判断基准的子平专题插件。",
+    },
+    "classical.ziping.balance.v1": {
+        "display_name": "子平旺衰平衡",
+        "definition": "围绕主轴与次轴比例，对命局旺衰与偏枯做结构判断。",
+    },
+    "classical.ziping.yongshen.v1": {
+        "display_name": "子平用神建议",
+        "definition": "按当前强弱结构给出用神观察方向的专题插件。",
+    },
+    "classical.pattern.axis.v1": {
+        "display_name": "格局轴线",
+        "definition": "先给出当前命局最强主轴，作为格局专题第一候选。",
+    },
+    "classical.pattern.jianlu_yuejie.v1": {
+        "display_name": "建禄月劫候选",
+        "definition": "从月令主气切入，检测建禄与月劫方向的格局候选。",
+    },
+    "classical.pattern.congshi.v1": {
+        "display_name": "从势候选",
+        "definition": "识别一枝独强、具备从势倾向的格局候选。",
+    },
+    "classical.pattern.finance_officer.v1": {
+        "display_name": "财官协同",
+        "definition": "识别财官双线并举的格局候选。",
+    },
+    "classical.pattern.resolver.v1": {
+        "display_name": "格局裁决器",
+        "definition": "对多个格局候选并存时的冲突做专题审计与裁决提示。",
+    },
+    "classical.pattern.formation_gate.v1": {
+        "display_name": "成格条件",
+        "definition": "对格局候选是否具备成格条件做专题审计。",
+    },
+    "classical.pattern.break_guard.v1": {
+        "display_name": "破格预警",
+        "definition": "对格局候选是否受到冲刑害等结构干扰做专题预警。",
+    },
+    "classical.climate_adjuster.v1": {
+        "display_name": "调候专题",
+        "definition": "把月令气候背景提升为专题解释层，而不是只做底层常数。",
+    },
+    "classical.conflict_auditor.v1": {
+        "display_name": "冲突审计器",
+        "definition": "汇总插件主张、冲突与裁决建议，作为专题冲突总览。",
+    },
 }
 
 

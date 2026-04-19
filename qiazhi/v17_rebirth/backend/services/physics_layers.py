@@ -73,12 +73,14 @@ def build_narrative_scores(runtime_scores: Dict[str, float], will_proxy: str) ->
 def proposal_signature(proposal: Dict[str, Any]) -> str:
     impact_ratio = float(proposal.get("impact_ratio", 0.0) or 0.0)
     significance_weight = float(proposal.get("significance_weight", 1.0) or 1.0)
+    match_ratio = float(proposal.get("match_ratio", 1.0) or 1.0)
     return "|".join(
         [
             str(proposal.get("plugin_id") or "").strip(),
             str(proposal.get("target_god") or "").strip(),
             f"{impact_ratio:.6f}",
             f"{significance_weight:.6f}",
+            f"{match_ratio:.6f}",
             str(proposal.get("reason") or proposal.get("title") or "").strip(),
             str(proposal.get("arbiter_type") or "").strip(),
         ]
@@ -88,8 +90,11 @@ def proposal_signature(proposal: Dict[str, Any]) -> str:
 def settle_modifier_proposals(
     runtime_scores: Dict[str, float],
     proposals: List[Dict[str, Any]],
+    *,
+    base_scores: Dict[str, float] | None = None,
 ) -> Tuple[Dict[str, float], Dict[str, float], List[Dict[str, Any]]]:
-    runtime = clone_score_map(runtime_scores)
+    base = clone_score_map(base_scores) if isinstance(base_scores, dict) else {}
+    runtime = clone_score_map(base or runtime_scores)
     ratio_totals: Dict[str, float] = {}
     applied: List[Dict[str, Any]] = []
 
@@ -112,17 +117,19 @@ def settle_modifier_proposals(
         ratio_totals[target_god] = ratio_totals.get(target_god, 0.0) + ratio_applied
 
     for target_god, ratio_total in ratio_totals.items():
-        before = float(runtime.get(target_god, 0.0))
+        before = float((base or runtime).get(target_god, 0.0))
         after = round(before * (1.0 + ratio_total), 2)
         if not math.isfinite(after):
             continue
         runtime[target_god] = after
+        delta_abs = round(after - before, 2)
         applied.append(
             {
                 "target_god": target_god,
                 "before": before,
                 "after": after,
                 "ratio_total": ratio_total,
+                "delta_abs": delta_abs,
             }
         )
 

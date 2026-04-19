@@ -435,6 +435,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     
     liu_chong = eval_liu_chong_hits(branches) if branches else []
     liu_hai = eval_liu_hai_hits(branches) if branches else []
+    liu_po = eval_liu_po_hits(branches) if branches else []
     liu_he = eval_liuhe_hits(branches) if branches else []
     san_he = eval_sanhe_hits(branches) if branches else []
     ban_he = eval_banhe_hits(branches) if branches else []
@@ -448,6 +449,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         "version": "interaction_v2.v1",
         "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_chong],
         "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_hai],
+        "liu_po": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_po],
         "liu_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_he],
         "san_he": [{"group": h.get("group"), "pillars": h.get("pillars")} for h in san_he],
         "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in ban_he],
@@ -467,7 +469,11 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     if an_he: _register_manifest_hit(hits, "l1.physics.op_branch_anhe", "", "暗合", 0.68)
     if muku_hits: _register_manifest_hit(hits, "l1.physics.op_branch_muku", "", "墓库门态", 0.73, {"branches": muku_hits})
     if liu_hai: _register_manifest_hit(hits, "l1.physics.op_branch_liuhai", "", "六害", 0.7)
+    if liu_po: _register_manifest_hit(hits, "l1.physics.op_branch_liupo", "", "六破", 0.69)
     if sanxing_geo: _register_manifest_hit(hits, "l1.physics.op_branch_sanxing", "", "三刑", 0.71)
+    if stem_cases:
+        meta["stem_fusion_v1"] = {"cases": stem_cases}
+        _register_manifest_hit(hits, "l1.physics.op_stem_fusion", "", "天干五合", 0.74, {"cases": stem_cases})
 
     # 4. 插件周期演化 (Plugin Lifecycle Loop)
     _active_plugins = []
@@ -634,10 +640,16 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     )
 
     if auto_signatures != previous_signatures:
-        settled_runtime, ratio_totals, applied_rows = settle_modifier_proposals(_runtime, adjusted_modifier_proposals)
+        settled_runtime, ratio_totals, applied_rows = settle_modifier_proposals(
+            _runtime,
+            adjusted_modifier_proposals,
+            base_scores=_base,
+        )
         _runtime = settled_runtime
         meta["plugin_auto_ratio_totals"] = ratio_totals
         meta["plugin_auto_settlement_signatures"] = auto_signatures
+        meta["plugin_settlement_mode"] = "base_recompute"
+        meta["plugin_recompute_contributions"] = [dict(row) for row in applied_rows]
         for row in applied_rows:
             tg = str(row.get("target_god") or "").strip()
             before = float(row.get("before", 0.0) or 0.0)

@@ -380,6 +380,11 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
                 "declared_params": skill.get("params", {}) if skill else {},
                 "skill_manifest": skill.get("manifest", {}) if skill else {},
                 "is_standard_skill": bool(skill and skill.get("valid")),
+                "policy_valid": bool(skill.get("policy_valid", False)) if skill else False,
+                "policy_errors": list(skill.get("policy_errors", [])) if skill else [],
+                "config_required": bool(skill.get("config_required", False)) if skill else False,
+                "config_exists": bool(skill.get("config_exists", False)) if skill else False,
+                "config_file": str(skill.get("config_file", "") or "") if skill else "",
             }
         )
     return sorted(rows, key=lambda r: (int(r.get("execution_order", 999)), str(r.get("plugin_id", ""))))

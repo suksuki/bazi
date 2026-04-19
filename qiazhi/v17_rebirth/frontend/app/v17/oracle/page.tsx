@@ -23,6 +23,10 @@ function decisionPluginLabel(row: Record<string, unknown>): string {
   ).trim();
 }
 
+function normalizePluginKey(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
 export default function OraclePage() {
   const s = useOracleSession();
 
@@ -36,6 +40,17 @@ export default function OraclePage() {
   const manualRows = Array.isArray(payload.manual_inbox) ? payload.manual_inbox as Array<Record<string, unknown>> : [];
   const autoRows = Array.isArray(payload.auto_decisions) ? payload.auto_decisions as Array<Record<string, unknown>> : [];
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
+  const meta = payload.meta && typeof payload.meta === "object" ? payload.meta as Record<string, unknown> : {};
+  const pluginClaims = Array.isArray(meta.plugin_claims) ? meta.plugin_claims as Array<Record<string, unknown>> : [];
+  const recomputeContributions = Array.isArray(meta.plugin_recompute_contributions)
+    ? meta.plugin_recompute_contributions as Array<Record<string, unknown>>
+    : [];
+  const pluginLabelById = new Map<string, string>();
+  for (const row of allRows) {
+    const label = decisionPluginLabel(row);
+    const key = normalizePluginKey(row.plugin_id || row.source);
+    if (key && label && !pluginLabelById.has(key)) pluginLabelById.set(key, label);
+  }
   const uniquePlugins = Array.from(
     new Set(
       allRows
@@ -55,8 +70,26 @@ export default function OraclePage() {
       autoRows
         .map(decisionPluginLabel)
         .filter(Boolean),
-    ),
+      ),
   );
+  const pluginMatchRows = Array.from(
+    pluginClaims.reduce((acc, row) => {
+      const key = normalizePluginKey(row.plugin_id);
+      if (!key) return acc;
+      const current = acc.get(key) || { count: 0, sum: 0, pluginId: String(row.plugin_id || ""), label: pluginLabelById.get(key) || String(row.plugin_id || "") };
+      const ratio = Number(row.match_ratio || 0);
+      if (Number.isFinite(ratio) && ratio > 0) {
+        current.count += 1;
+        current.sum += ratio;
+      }
+      acc.set(key, current);
+      return acc;
+    }, new Map<string, { count: number; sum: number; pluginId: string; label: string }>() ).values(),
+  )
+    .map((row) => ({ ...row, avg: row.count ? row.sum / row.count : 0 }))
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 8);
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -160,6 +193,35 @@ export default function OraclePage() {
                       </div>
                     </div>
                   </div>
+                  {pluginMatchRows.length ? (
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-300">Plugin Match Ratio</div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {pluginMatchRows.map((row) => (
+                          <span key={`match_${row.pluginId}`} className="rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-100">
+                            {row.label} {Math.round(row.avg * 100)}%
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {recomputeContributions.length ? (
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-sky-300">Base Recompute Contributions</div>
+                      <div className="mt-2 grid gap-1">
+                        {recomputeContributions.slice(0, 8).map((row, idx) => (
+                          <div key={`recompute_${idx}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-300">
+                            <span>{String(row.target_god || "—")}</span>
+                            <span className="text-zinc-500">
+                              {Number(row.before || 0).toFixed(2)} → {Number(row.after || 0).toFixed(2)}
+                            </span>
+                            <span className="text-sky-300">delta {Number(row.delta_abs || 0).toFixed(2)}</span>
+                            <span className="text-zinc-500">ratio {Number(row.ratio_total || 0).toFixed(3)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <V17_DecisionInbox

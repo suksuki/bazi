@@ -513,6 +513,11 @@ async def get_plugin_runtime_status(
     knowledge_snapshot = meta.get("knowledge_snapshot") if isinstance(meta.get("knowledge_snapshot"), dict) else {}
     brain_action_queue = meta.get("brain_action_queue") if isinstance(meta.get("brain_action_queue"), list) else []
     auto_ratios = meta.get("plugin_auto_ratio_totals") if isinstance(meta.get("plugin_auto_ratio_totals"), dict) else {}
+    recompute_contributions = (
+        meta.get("plugin_recompute_contributions")
+        if isinstance(meta.get("plugin_recompute_contributions"), list)
+        else []
+    )
     return {
         "ok": True,
         "session_id": resolved_session_id,
@@ -524,6 +529,7 @@ async def get_plugin_runtime_status(
         "knowledge_snapshot": knowledge_snapshot,
         "brain_action_queue": brain_action_queue,
         "auto_ratio_totals": auto_ratios,
+        "recompute_contributions": recompute_contributions,
     }
 
 

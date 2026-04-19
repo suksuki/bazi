@@ -33,6 +33,7 @@ CLAIM_JSON_SCHEMA: Dict[str, Any] = {
         "intent_vector": {"type": "object"},
         "priority": {"type": "number"},
         "confidence": {"type": "number"},
+        "match_ratio": {"type": "number"},
     },
 }
 
@@ -86,6 +87,37 @@ def _exclusivity_key(plugin_id: str, meta: Dict[str, Any], target_god: str, sour
     return f"{plugin_id}|{target_god}"
 
 
+def _derive_match_ratio(
+    *,
+    meta: Dict[str, Any],
+    claim_type: str,
+    plugin_id: str,
+    impact_ratio: float,
+    salience_weight: float,
+) -> float:
+    if "match_ratio" in meta:
+        try:
+            value = float(meta.get("match_ratio", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            value = 0.0
+        return max(0.0, min(1.0, value))
+
+    confidence = 0.0
+    try:
+        confidence = float(meta.get("confidence", salience_weight or 0.5) or 0.5)
+    except (TypeError, ValueError):
+        confidence = float(salience_weight or 0.5)
+    confidence = max(0.0, min(1.0, confidence))
+
+    if claim_type == "pattern_candidate":
+        return max(0.45, min(0.9, confidence))
+    if impact_ratio:
+        return max(0.4, min(0.92, abs(impact_ratio) * 2.5))
+    if str(plugin_id).startswith("l0.foundation."):
+        return max(0.5, min(0.72, confidence))
+    return max(0.35, min(0.78, confidence))
+
+
 def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
     claims: List[Dict[str, Any]] = []
     for idx, fact in enumerate(facts):
@@ -106,6 +138,13 @@ def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | Non
             impact_ratio = 0.0
         source_event = _source_event(plugin_id, meta, fact)
         claim_type = _claim_type_from_meta(meta, impact_ratio)
+        match_ratio = _derive_match_ratio(
+            meta=meta,
+            claim_type=claim_type,
+            plugin_id=plugin_id,
+            impact_ratio=impact_ratio,
+            salience_weight=float(fact.salience_weight or 0.5),
+        )
         entity_scope = _entity_scope_from_meta(meta, target_god)
         intent_vector = meta.get("intent_vector") if isinstance(meta.get("intent_vector"), dict) else {}
         if not intent_vector and target_god and impact_ratio:
@@ -124,7 +163,8 @@ def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | Non
                 "arbiter_type": str(getattr(fact.suggested_arbiter, "value", fact.suggested_arbiter) or "system"),
                 "intent_vector": intent_vector,
                 "priority": float(fact.priority or 0.0),
-                "confidence": float(meta.get("confidence", fact.salience_weight or 0.5) or 0.5),
+                "confidence": float(meta.get("confidence", fact.salience_weight or 0.5) or 0.5) * max(0.35, match_ratio),
+                "match_ratio": match_ratio,
                 "causal_tier": int(fact.causal_tier or 0),
             }
         )

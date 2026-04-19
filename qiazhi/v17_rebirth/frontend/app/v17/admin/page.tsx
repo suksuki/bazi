@@ -56,6 +56,11 @@ type PluginAdminRow = {
   declared_params?: Record<string, unknown>;
   skill_manifest?: Record<string, unknown>;
   is_standard_skill?: boolean;
+  policy_valid?: boolean;
+  policy_errors?: string[];
+  config_required?: boolean;
+  config_exists?: boolean;
+  config_file?: string;
 };
 
 function pluginCardTitle(row: PluginAdminRow): string {
@@ -87,6 +92,15 @@ type PluginClaim = {
   logic_level?: string;
   claim_type?: string;
   source_event?: string;
+  match_ratio?: number;
+};
+
+type RecomputeContribution = {
+  target_god?: string;
+  before?: number;
+  after?: number;
+  ratio_total?: number;
+  delta_abs?: number;
 };
 
 type PluginConflict = {
@@ -385,6 +399,7 @@ export default function V17AdminPage() {
   const [pluginConflictResolutions, setPluginConflictResolutions] = useState<PluginConflictResolution[]>([]);
   const [knowledgeSnapshot, setKnowledgeSnapshot] = useState<KnowledgeSnapshot>({});
   const [brainActionQueue, setBrainActionQueue] = useState<BrainAction[]>([]);
+  const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
   const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
   const [selectedPlugin, setSelectedPlugin] = useState<PluginAdminRow | null>(null);
@@ -394,6 +409,7 @@ export default function V17AdminPage() {
   const [localConfig, setLocalConfig] = useState<LooseObject>({});
   const [localEnabled, setLocalEnabled] = useState(false);
   const [resolveBusyKeys, setResolveBusyKeys] = useState<string[]>([]);
+  const [pluginPolicyFilter, setPluginPolicyFilter] = useState<"all" | "warn">("all");
 
   useEffect(() => {
     try {
@@ -434,6 +450,7 @@ export default function V17AdminPage() {
       const resolutionList = ((statusData as any).conflict_resolutions || []) as PluginConflictResolution[];
       const knowledge = ((statusData as any).knowledge_snapshot || {}) as KnowledgeSnapshot;
       const actions = ((statusData as any).brain_action_queue || []) as BrainAction[];
+      const contributions = ((statusData as any).recompute_contributions || []) as RecomputeContribution[];
       setPlugins(list);
       setPluginStatuses(statusList);
       setPluginClaims(claimList);
@@ -441,6 +458,7 @@ export default function V17AdminPage() {
       setPluginConflictResolutions(resolutionList);
       setKnowledgeSnapshot(knowledge);
       setBrainActionQueue(actions);
+      setRecomputeContributions(contributions);
       setResolvedPluginRuntimeSessionId(String((statusData as any).session_id || pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
   }, [pluginRuntimeSessionId]);
@@ -558,15 +576,19 @@ export default function V17AdminPage() {
     });
     return { plugin, runtime, relatedClaims, relatedConflicts };
   });
-  const scannedPluginCount = pluginPanelRows.length;
-  const hitPluginRows = pluginPanelRows.filter((row) => {
+  const visiblePluginRows = pluginPanelRows.filter((row) =>
+    pluginPolicyFilter === "warn" ? row.plugin.policy_valid === false : true,
+  );
+  const scannedPluginCount = visiblePluginRows.length;
+  const hitPluginRows = visiblePluginRows.filter((row) => {
     const factCount = Number(row.runtime?.fact_count || 0);
     return factCount > 0 || isHitRuntimeStatus(row.runtime?.status) || row.plugin.activated;
   });
-  const inboxPluginRows = pluginPanelRows.filter((row) => {
+  const inboxPluginRows = visiblePluginRows.filter((row) => {
     const decisionCount = Number(row.runtime?.decision_count || 0);
     return decisionCount > 0 || isInboxRuntimeStatus(row.runtime?.status);
   });
+  const policyWarnCount = pluginPanelRows.filter((row) => row.plugin.policy_valid === false).length;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-6 text-sm">
@@ -671,11 +693,13 @@ export default function V17AdminPage() {
                    <span>scanned {scannedPluginCount}</span>
                    <span>hit {hitPluginRows.length}</span>
                    <span>inbox {inboxPluginRows.length}</span>
+                   <span>policy warn {policyWarnCount}</span>
                    <span>claims {Number(knowledgeSnapshot.claim_history?.total_claims || 0)}</span>
                    <span>conflicts {Number(knowledgeSnapshot.conflict_history?.total_conflicts || 0)}</span>
-                   <span>suggestions {Number(knowledgeSnapshot.resolution_preview?.total_suggestions || 0)}</span>
-                   <span>brain actions {brainActionQueue.length}</span>
-                 </div>
+                  <span>suggestions {Number(knowledgeSnapshot.resolution_preview?.total_suggestions || 0)}</span>
+                  <span>brain actions {brainActionQueue.length}</span>
+                  <span>recompute {recomputeContributions.length}</span>
+                </div>
                  <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-zinc-500">
                    <span>arbiter bias: system {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.system || 0)}</span>
                    <span>llm {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.llm || 0)}</span>
@@ -690,6 +714,25 @@ export default function V17AdminPage() {
                    <span>user {Number((knowledgeSnapshot.conflict_history?.feedback_arbiter_scores || {}).user || 0).toFixed(2)}</span>
                  </div>
                 </div>
+               <div className="flex items-center gap-2">
+                 <button
+                   type="button"
+                   onClick={() => setPluginPolicyFilter("all")}
+                   className={`rounded border px-3 py-1 text-xs ${pluginPolicyFilter === "all" ? "border-zinc-300 bg-zinc-100 text-zinc-900" : "border-zinc-700 bg-zinc-950 text-zinc-300"}`}
+                 >
+                   全部插件
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => setPluginPolicyFilter("warn")}
+                   className={`rounded border px-3 py-1 text-xs ${pluginPolicyFilter === "warn" ? "border-rose-300 bg-rose-100 text-rose-900" : "border-zinc-700 bg-zinc-950 text-zinc-300"}`}
+                 >
+                   只看 Policy Warn
+                 </button>
+                 <span className="text-[10px] text-zinc-500">
+                   当前视图：{pluginPolicyFilter === "warn" ? "仅显示制度告警插件" : "显示全部插件"}
+                 </span>
+               </div>
                {brainActionQueue.length ? (
                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
                    <div className="mb-2 text-[11px] font-semibold text-zinc-300">Brain Action Queue</div>
@@ -761,7 +804,7 @@ export default function V17AdminPage() {
                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
                    <div className="mb-2 text-[11px] font-semibold text-zinc-300">扫描到的插件</div>
                    <div className="space-y-1 text-[10px] text-zinc-500">
-                     {pluginPanelRows.slice(0, 12).map((row) => (
+                     {visiblePluginRows.slice(0, 12).map((row) => (
                        <div key={`scan_${row.plugin.plugin_id}`} className="flex items-center justify-between gap-2">
                          <span className="truncate">{pluginCardTitle(row.plugin)}</span>
                          <span className="text-zinc-700">L{row.plugin.causal_tier}</span>
@@ -793,9 +836,20 @@ export default function V17AdminPage() {
                  </div>
                </div>
                <div className="space-y-2">
-                  {pluginPanelRows.map(({ plugin: p, runtime, relatedClaims, relatedConflicts }) => {
+                  {visiblePluginRows.map(({ plugin: p, runtime, relatedClaims, relatedConflicts }) => {
                     const runtimeStatus = String(runtime?.status || "unknown");
                     const runtimeTone = runtimeStatusTone(runtimeStatus);
+                    const matchValues = relatedClaims
+                      .map((row) => Number(row.match_ratio || 0))
+                      .filter((value) => Number.isFinite(value) && value > 0);
+                    const avgMatch = matchValues.length
+                      ? matchValues.reduce((sum, value) => sum + value, 0) / matchValues.length
+                      : null;
+                    const pluginTargets = Array.from(new Set([
+                      String(runtime?.target_god || "").trim(),
+                      ...relatedClaims.map((row) => String(row.target_god || "").trim()),
+                    ].filter(Boolean)));
+                    const relatedContribution = recomputeContributions.find((row) => pluginTargets.includes(String(row.target_god || "").trim()));
                     return (
                     <div key={p.plugin_id} className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-xl">
                       <div className="flex justify-between items-center">
@@ -810,15 +864,39 @@ export default function V17AdminPage() {
                       </div>
                       <div className="mt-2 flex items-center gap-2 text-[10px]">
                         <span className={`rounded px-2 py-0.5 uppercase ${runtimeTone}`}>{runtimeStatusLabel(runtimeStatus)}</span>
+                        <span className={`rounded px-2 py-0.5 ${p.policy_valid === false ? "bg-rose-950/40 text-rose-300" : "bg-emerald-950/30 text-emerald-300"}`}>
+                          {p.policy_valid === false ? "policy_warn" : "policy_ok"}
+                        </span>
                         {runtime?.target_god ? <span className="text-zinc-500">target {runtime.target_god}</span> : null}
                         {typeof runtime?.fact_count === "number" ? <span className="text-zinc-600">facts {runtime.fact_count}</span> : null}
                         {typeof runtime?.proposal_count === "number" ? <span className="text-zinc-600">proposals {runtime.proposal_count}</span> : null}
                         {typeof runtime?.decision_count === "number" ? <span className="text-zinc-600">decisions {runtime.decision_count}</span> : null}
                         <span className="text-zinc-600">claims {relatedClaims.length}</span>
                         <span className="text-zinc-600">conflicts {relatedConflicts.length}</span>
+                        {avgMatch !== null ? <span className="text-emerald-300">match {(avgMatch * 100).toFixed(0)}%</span> : null}
+                        {relatedContribution ? <span className="text-sky-300">delta {Number(relatedContribution.delta_abs || 0).toFixed(2)}</span> : null}
                       </div>
                       <div className="mt-1 text-[10px] text-zinc-300">{pluginCardDefinition(p)}</div>
                       <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || pluginCardDescription(p)}</div>
+                      {relatedContribution ? (
+                        <div className="mt-1 text-[10px] text-zinc-400">
+                          重算贡献：{String(relatedContribution.target_god || "—")} {Number(relatedContribution.before || 0).toFixed(2)} → {Number(relatedContribution.after || 0).toFixed(2)}
+                          {" · "}ratio {Number(relatedContribution.ratio_total || 0).toFixed(3)}
+                          {" · "}delta {Number(relatedContribution.delta_abs || 0).toFixed(2)}
+                        </div>
+                      ) : null}
+                      {p.config_required ? (
+                        <div className="mt-1 text-[10px] text-zinc-500">
+                          config: {p.config_exists ? (p.config_file || "present") : "missing"}
+                        </div>
+                      ) : null}
+                      {Array.isArray(p.policy_errors) && p.policy_errors.length ? (
+                        <div className="mt-1 space-y-1 text-[10px] text-rose-300">
+                          {p.policy_errors.slice(0, 3).map((msg) => (
+                            <div key={`${p.plugin_id}_${msg}`}>policy: {msg}</div>
+                          ))}
+                        </div>
+                      ) : null}
                       {(() => {
                         const relatedGroups = buildConflictGroups(relatedConflicts, pluginConflictResolutions);
                         return relatedGroups.length ? (
