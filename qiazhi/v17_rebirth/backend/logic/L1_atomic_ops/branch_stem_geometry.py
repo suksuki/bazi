@@ -183,11 +183,42 @@ def eval_anhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
 def eval_sanhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
     present = pillars_branches_set(branches)
     hits: List[Dict[str, Any]] = []
+    scope_weights = {
+        "year": 0.88,
+        "month": 1.15,
+        "day": 0.95,
+        "hour": 1.0,
+        "luck": 1.05,
+        "flow": 0.78,
+    }
     for group in SANHE_GROUPS:
         if not set(group).issubset(present):
             continue
-        pillars = sorted([p for p, br in branches.items() if br in group])
-        hits.append({"group": sorted(group), "pillars": pillars})
+        matched = [(p, br) for p, br in branches.items() if br in group]
+        pillars = [p for p, _br in matched]
+        matched_branches = [br for _p, br in matched]
+        branch_counts: Dict[str, int] = {}
+        for br in matched_branches:
+            branch_counts[br] = branch_counts.get(br, 0) + 1
+        mid_branches = [br for br in group if br in {"子", "午", "卯", "酉"}]
+        mid_branch = mid_branches[0] if mid_branches else group[0]
+        pivot_factor = max(
+            [float(scope_weights.get(p, 0.9)) for p, br in matched if br == mid_branch] or [0.9]
+        )
+        duplicate_count = max(0, len(matched_branches) - len(set(group)))
+        strength = round(1.0 + 0.16 * duplicate_count + 0.14 * max(0.0, pivot_factor - 0.9), 3)
+        hits.append(
+            {
+                "group": sorted(group),
+                "pillars": pillars,
+                "matched_branches": matched_branches,
+                "branch_counts": branch_counts,
+                "mid_branch": mid_branch,
+                "duplicate_count": duplicate_count,
+                "pivot_factor": round(pivot_factor, 3),
+                "strength": strength,
+            }
+        )
     return hits
 
 

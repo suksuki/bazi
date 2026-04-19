@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import build_static_basis
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
@@ -71,6 +72,12 @@ class ZiPingMonthCommandPlugin(V17PluginSpec):
                     "month_branch": branch,
                     "match_ratio": match_ratio,
                     **_projection_meta(physics_tensor, god),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=god,
+                        relation_family="ziping_month_command",
+                        relation_members=[branch] if branch else [],
+                    ),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },
@@ -111,6 +118,12 @@ class ZiPingBalancePlugin(V17PluginSpec):
                     "dominant_ratio": round(ratio, 3),
                     "match_ratio": round(match_ratio, 3),
                     **_projection_meta(physics_tensor, g1),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=g1,
+                        relation_family="ziping_balance",
+                        relation_members=[],
+                    ),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },
@@ -155,6 +168,12 @@ class ZiPingYongShenPlugin(V17PluginSpec):
                         3,
                     ),
                     **_projection_meta(physics_tensor, god),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=god,
+                        relation_family="ziping_yongshen",
+                        relation_members=[],
+                    ),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },

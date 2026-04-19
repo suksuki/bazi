@@ -89,6 +89,8 @@ type PluginClaim = {
   claim_id: string;
   plugin_id: string;
   target_god?: string;
+  projection_share?: number;
+  cluster_projection?: Record<string, unknown>;
   logic_level?: string;
   claim_type?: string;
   source_event?: string;
@@ -367,6 +369,16 @@ function runtimeStatusTone(status: string | undefined): string {
   return "bg-zinc-800 text-zinc-400";
 }
 
+function compactProjection(projection: unknown): string {
+  if (!projection || typeof projection !== "object") return "";
+  const entries = Object.entries(projection as Record<string, unknown>)
+    .map(([key, value]) => [key, Number(value || 0)] as const)
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
+}
+
 function runtimeStatusLabel(status: string | undefined): string {
   const value = String(status || "").trim().toLowerCase();
   if (value === "manual_pending") return "待手动处理";
@@ -391,6 +403,9 @@ export default function V17AdminPage() {
   const [msg, setMsg] = useState("");
   const [llmModels, setLlmModels] = useState<string[]>([]);
   const [llmPrompt, setLlmPrompt] = useState("你好，请简单自我介绍。");
+  const [llmTestReply, setLlmTestReply] = useState("");
+  const [llmProbeMeta, setLlmProbeMeta] = useState("");
+  const [dbProbeMeta, setDbProbeMeta] = useState("");
   const [busy, setBusy] = useState<ActionKey>(null);
   const [plugins, setPlugins] = useState<PluginAdminRow[]>([]);
   const [pluginStatuses, setPluginStatuses] = useState<PluginRuntimeStatus[]>([]);
@@ -537,6 +552,104 @@ export default function V17AdminPage() {
     } finally { setBusy(null); }
   }
 
+  async function loadModels() {
+    setBusy("loadModels");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
+      });
+      if ((data as any).ok) {
+        const models = Array.isArray((data as any).result?.models) ? (data as any).result.models : [];
+        setLlmModels(models);
+        setLlmProbeMeta(`模型列表：${String((data as any).result?.models_url || llmBaseUrl)}`);
+        if (!llm.model && models.length) {
+          setLlm((prev) => ({ ...prev, model: String(models[0] || "") }));
+        }
+        setMsg(`已加载 ${models.length} 个模型`);
+      } else {
+        setMsg(`加载模型失败：${String((data as any).error || "unknown error")}`);
+      }
+    } finally { setBusy(null); }
+  }
+
+  async function testLlm() {
+    setBusy("testLlm");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
+      });
+      if ((data as any).ok) {
+        setLlmProbeMeta(`连通成功 · ${String((data as any).result?.probe_url || llmBaseUrl)} · HTTP ${String((data as any).result?.http_status || "")}`);
+        setMsg("LLM 节点连通成功");
+      } else {
+        setLlmProbeMeta("");
+        setMsg(`LLM 连通失败：${String((data as any).error || "unknown error")}`);
+      }
+    } finally { setBusy(null); }
+  }
+
+  async function testLlmChat() {
+    setBusy("testLlmChat");
+    try {
+      const { data } = await requestJson("/api/v17-admin/llm-node/chat-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base_url: llmBaseUrl,
+          model: llm.model,
+          prompt: llmPrompt,
+          v17_origin: "v17_rebirth",
+        }),
+      });
+      if ((data as any).ok) {
+        setLlmTestReply(String((data as any).result?.reply || "").trim());
+        setMsg("LLM 对话测试完成");
+      } else {
+        setLlmTestReply("");
+        setMsg(`LLM 对话测试失败：${String((data as any).error || "unknown error")}`);
+      }
+    } finally { setBusy(null); }
+  }
+
+  async function saveDb() {
+    setBusy("saveDb");
+    try {
+      const { resp, data } = await requestJson("/api/v17-admin/db-bridge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
+      });
+      if (resp.ok && (data as any).ok) {
+        setDb((data as any).bridge || db);
+        setMsg("数据库桥接配置已保存");
+      } else {
+        setMsg(`数据库桥接保存失败：${String((data as any).detail || (data as any).error || "unknown error")}`);
+      }
+    } finally { setBusy(null); }
+  }
+
+  async function testDb() {
+    setBusy("testDb");
+    try {
+      const { data } = await requestJson("/api/v17-admin/db-bridge/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host: db.host, port: db.port, v17_origin: "v17_rebirth" }),
+      });
+      if ((data as any).ok) {
+        setDbProbeMeta(`连通成功 · ${db.host}:${db.port}`);
+        setMsg("数据库桥接连通成功");
+      } else {
+        setDbProbeMeta("");
+        setMsg(`数据库桥接测试失败：${String((data as any).error || "unknown error")}`);
+      }
+    } finally { setBusy(null); }
+  }
+
   async function savePhysics() {
     setBusy("savePhysics");
     try {
@@ -612,11 +725,140 @@ export default function V17AdminPage() {
           {tab === "llm" && (
             <div className="space-y-4">
               <h2 className="text-lg font-bold border-b border-zinc-800 pb-2">LLM Node Config</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <input className="bg-zinc-950 border border-zinc-800 p-2 rounded" placeholder="Host" value={llm.host} onChange={e => setLlm(s => ({...s, host: e.target.value}))} />
-                <input className="bg-zinc-950 border border-zinc-800 p-2 rounded" placeholder="Port" value={llm.port} onChange={e => setLlm(s => ({...s, port: Number(e.target.value)}))} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="text-xs text-zinc-400">
+                      Provider
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.provider} onChange={e => setLlm(s => ({...s, provider: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Model
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.model} onChange={e => setLlm(s => ({...s, model: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Host
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.host} onChange={e => setLlm(s => ({...s, host: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Port
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.port} onChange={e => setLlm(s => ({...s, port: Number(e.target.value)}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      HTTP Timeout
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.httpTimeoutSec} onChange={e => setLlm(s => ({...s, httpTimeoutSec: Number(e.target.value)}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Fuse Wait
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.fuseWaitSec} onChange={e => setLlm(s => ({...s, fuseWaitSec: Number(e.target.value)}))} />
+                    </label>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[11px] text-zinc-400">
+                    Base URL: <span className="text-zinc-200">{llmBaseUrl}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={saveLlm} className={solidBtn} disabled={busy === "saveLlm"}>保存配置</button>
+                    <button onClick={testLlm} className={ghostBtn} disabled={busy === "testLlm"}>连通测试</button>
+                    <button onClick={loadModels} className={ghostBtn} disabled={busy === "loadModels"}>加载模型</button>
+                  </div>
+                  {llmProbeMeta ? <div className="text-xs text-emerald-300">{llmProbeMeta}</div> : null}
+                </div>
+                <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                  <div>
+                    <div className="mb-2 text-xs text-zinc-400">模型测试</div>
+                    <textarea
+                      className="min-h-[120px] w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm"
+                      value={llmPrompt}
+                      onChange={e => setLlmPrompt(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={testLlmChat} className={solidBtn} disabled={busy === "testLlmChat" || !llm.model}>测试对话</button>
+                  </div>
+                  {llmModels.length ? (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                      <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">Models</div>
+                      <div className="flex max-h-40 flex-wrap gap-2 overflow-auto">
+                        {llmModels.map((model) => (
+                          <button
+                            key={model}
+                            type="button"
+                            onClick={() => setLlm(s => ({ ...s, model }))}
+                            className={`rounded-full border px-2 py-1 text-[11px] ${llm.model === model ? "border-cyan-400 bg-cyan-950/40 text-cyan-100" : "border-zinc-700 bg-zinc-950 text-zinc-300"}`}
+                          >
+                            {model}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                    <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">Test Reply</div>
+                    <div className="min-h-[120px] whitespace-pre-wrap text-sm text-zinc-200">
+                      {llmTestReply || "尚未执行测试。"}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button onClick={saveLlm} className={solidBtn}>Save LLM Config</button>
+            </div>
+          )}
+
+          {tab === "db" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold border-b border-zinc-800 pb-2">Database Bridge</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="text-xs text-zinc-400">
+                      Driver
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.driver} onChange={e => setDb(s => ({...s, driver: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Host
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.host} onChange={e => setDb(s => ({...s, host: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Port
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.port} onChange={e => setDb(s => ({...s, port: Number(e.target.value)}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Database
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.database} onChange={e => setDb(s => ({...s, database: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Username
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.username} onChange={e => setDb(s => ({...s, username: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      Password
+                      <input type="password" className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.password} onChange={e => setDb(s => ({...s, password: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      SSL Mode
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.sslmode} onChange={e => setDb(s => ({...s, sslmode: e.target.value}))} />
+                    </label>
+                    <label className="text-xs text-zinc-400">
+                      URL
+                      <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={db.url} onChange={e => setDb(s => ({...s, url: e.target.value}))} />
+                    </label>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300">
+                    <input type="checkbox" checked={db.enabled} onChange={e => setDb(s => ({...s, enabled: e.target.checked}))} />
+                    启用数据库桥接
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={saveDb} className={solidBtn} disabled={busy === "saveDb"}>保存配置</button>
+                    <button onClick={testDb} className={ghostBtn} disabled={busy === "testDb"}>连通测试</button>
+                  </div>
+                  {dbProbeMeta ? <div className="text-xs text-emerald-300">{dbProbeMeta}</div> : null}
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+                  <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">Bridge State</div>
+                  <pre className="overflow-auto rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 text-xs text-zinc-300">
+                    {JSON.stringify(db, null, 2)}
+                  </pre>
+                </div>
+              </div>
             </div>
           )}
 
@@ -853,6 +1095,9 @@ export default function V17AdminPage() {
                       ...relatedClaims.map((row) => String(row.target_god || "").trim()),
                     ].filter(Boolean)));
                     const relatedContribution = recomputeContributions.find((row) => pluginTargets.includes(String(row.target_god || "").trim()));
+                    const topClaim = [...relatedClaims]
+                      .sort((a, b) => Number(b.match_ratio || 0) - Number(a.match_ratio || 0))[0];
+                    const projectionText = compactProjection(topClaim?.cluster_projection);
                     return (
                     <div key={p.plugin_id} className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-xl">
                       <div className="flex justify-between items-center">
@@ -881,6 +1126,18 @@ export default function V17AdminPage() {
                       </div>
                       <div className="mt-1 text-[10px] text-zinc-300">{pluginCardDefinition(p)}</div>
                       <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || pluginCardDescription(p)}</div>
+                      {topClaim ? (
+                        <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2 text-[10px] text-zinc-300">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-fuchsia-200">主落点 {String(topClaim.target_god || "未定目标")}</span>
+                            <span className="text-fuchsia-300">match {Math.round(Number(topClaim.match_ratio || 0) * 100)}%</span>
+                          </div>
+                          <div className="mt-1 text-zinc-500">
+                            占比 {Math.round(Number(topClaim.projection_share || 0) * 100)}%
+                            {projectionText ? ` · ${projectionText}` : ""}
+                          </div>
+                        </div>
+                      ) : null}
                       {relatedContribution ? (
                         <div className="mt-1 text-[10px] text-zinc-400">
                           重算贡献：{String(relatedContribution.target_god || "—")} {Number(relatedContribution.before || 0).toFixed(2)} → {Number(relatedContribution.after || 0).toFixed(2)}

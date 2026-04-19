@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import _branch_dominant_ten_god
-from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import relation_origin_multiplier
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import build_static_basis, relation_origin_multiplier
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -58,6 +58,12 @@ class SixClashPlugin(V17PluginSpec):
                         "relation_family": "liu_chong",
                         "origin_type": origin_type,
                         "origin_multiplier": round(origin_mul, 3),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god=target_god,
+                            relation_family="liu_chong",
+                            relation_members=pair[:2],
+                        ),
                     },
                 }
             )

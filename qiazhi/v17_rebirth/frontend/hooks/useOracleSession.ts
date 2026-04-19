@@ -404,8 +404,22 @@ export function useOracleSession(): OracleSession {
       flow_year: String(selectedLuckYear),
       v17_origin: "v17_rebirth",
     });
-    setStreamEndpoint(`/api/v17/stream?${query.toString()}`);
-  }, [selectedLuckYear, running, birthTimeISO, natalGender, streamEndpoint]);
+    setStreamEndpoint(`/api/v17/stream?${query.toString()}&_pulse=${Date.now()}`);
+    setStreamBody((prevBody) => ({
+      ...(prevBody || {}),
+      v17_origin: "v17_rebirth",
+      calendar_type: natalCalendar,
+      session_id: sessionId || "default",
+      suppress_narrator: false,
+      reset_stream_cache: true,
+      user_message: "",
+    }));
+    setAdoptedDecisions([]);
+    setDecisionDirtySinceLastVerdict(false);
+    setDecisionLockStartedAtMs(null);
+    setDecisionActionError("");
+    setRunning(true);
+  }, [selectedLuckYear, running, birthTimeISO, natalGender, natalCalendar, sessionId, streamEndpoint]);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   function startRun(input: {
@@ -428,7 +442,7 @@ export function useOracleSession(): OracleSession {
     setNatalGender(input.gender);
     setNatalCalendar(input.calendarType);
     setSelectedLuckYear(fy);
-    setStreamBody({ v17_origin: "v17_rebirth", calendar_type: input.calendarType, session_id: sid });
+    setStreamBody({ v17_origin: "v17_rebirth", calendar_type: input.calendarType, session_id: sid, reset_stream_cache: true });
     setDecisionLockStartedAtMs(null);
     setAdoptedDecisions([]);
     setRunning(true);

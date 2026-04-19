@@ -2,11 +2,13 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     choose_dominant_origin_type,
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import ten_god_from_stems
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 V17_SKILL_MANIFEST = {
@@ -31,6 +33,78 @@ def _clamp_ratio(value: float, *, low: float = -0.5, high: float = 0.5) -> float
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
+
+
+def _officer_support_relief(physics_tensor: Dict[str, Any], *, daymaster: str) -> float:
+    """官杀若已获成局金势或明透支持，伤官见官不应满额打压。"""
+    fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    visible_sources = [
+        ("year", str(fp.get("year", "")).strip()),
+        ("month", str(fp.get("month", "")).strip()),
+        ("day", str(fp.get("day", "")).strip()),
+        ("hour", str(fp.get("hour", "")).strip()),
+        ("luck", str(physics_tensor.get("luck_pillar", "")).strip()),
+        ("flow", str(physics_tensor.get("flow_pillar", "")).strip()),
+    ]
+    scope_weights = {
+        "year": 0.35,
+        "month": 0.45,
+        "day": 0.25,
+        "hour": 0.35,
+        "luck": 0.85,
+        "flow": 0.2,
+    }
+    support = 0.0
+    for scope, gz in visible_sources:
+        if len(gz) < 2:
+            continue
+        stem = gz[0]
+        god = ten_god_from_stems(daymaster, stem)
+        if god in {"正官", "七杀"}:
+            support += float(scope_weights.get(scope, 0.3))
+
+    iv2 = (physics_tensor.get("meta") or {}).get("interaction_v2") if isinstance((physics_tensor.get("meta") or {}).get("interaction_v2"), dict) else {}
+    for row in iv2.get("san_he") or []:
+        if not isinstance(row, dict):
+            continue
+        members = {str(item).strip() for item in (row.get("group") or []) if str(item).strip()}
+        if {"巳", "酉", "丑"}.issubset(members):
+            support += 1.2
+            break
+
+    stem_fusion_v1 = (physics_tensor.get("meta") or {}).get("stem_fusion_v1")
+    cases = stem_fusion_v1.get("cases") if isinstance(stem_fusion_v1, dict) else []
+    for case in cases or []:
+        if not isinstance(case, dict):
+            continue
+        stems = [str(x).strip() for x in (case.get("stems") or []) if str(x).strip()]
+        if "庚" in stems or "辛" in stems:
+            support += 0.25
+            break
+
+    return _clamp01(support / 3.0)
+
+
+def _formed_officer_cluster_factor(physics_tensor: Dict[str, Any]) -> float:
+    """原局已成金局且运上明透官星时，官杀簇不应被单一伤官结构近乎抹平。"""
+    meta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+    iv2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
+    has_natal_metal_sanhe = False
+    for row in iv2.get("san_he") or []:
+        if not isinstance(row, dict):
+            continue
+        group = {str(item).strip() for item in (row.get("group") or []) if str(item).strip()}
+        if {"巳", "酉", "丑"}.issubset(group) and str(row.get("origin_type") or "").strip().lower() == "natal":
+            has_natal_metal_sanhe = True
+            break
+    if not has_natal_metal_sanhe:
+        return 0.0
+
+    luck_gz = str(physics_tensor.get("luck_pillar", "")).strip()
+    luck_stem = luck_gz[0] if len(luck_gz) >= 2 else ""
+    if luck_stem not in {"庚", "辛"}:
+        return 0.0
+    return 0.22 if luck_stem == "庚" else 0.18
 
 
 def _origin_meta(rows: List[Dict[str, Any]], *, member_key: str, members: List[str] | None = None) -> Dict[str, Any]:
@@ -63,6 +137,8 @@ class RiskMatrixPlugin(V17PluginSpec):
         daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
         month_gz = str(four.get("month", "")).strip()
         month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+        officer_relief = _officer_support_relief(physics_tensor, daymaster=daymaster)
+        cluster_factor = _formed_officer_cluster_factor(physics_tensor)
 
         def _projection_meta(target_god: str) -> Dict[str, Any]:
             projection = god_cluster_projection(
@@ -87,7 +163,6 @@ class RiskMatrixPlugin(V17PluginSpec):
                     found_blade = True
                     break
             if found_blade:
-                blade_ratio = _clamp_ratio(blade_clash_impulse / 10.0, low=0.05, high=0.4)
                 origin_meta = _origin_meta(clashes, member_key="pair", members=["子", "午", "卯", "酉"])
                 match_ratio = _clamp01((0.52 + 0.08 * max(0, len(clashes) - 1)) * origin_meta["origin_multiplier"])
                 results.append(V17Fact(
@@ -95,12 +170,19 @@ class RiskMatrixPlugin(V17PluginSpec):
                     text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
                     causal_tier=self.causal_tier,
                     priority=0.95,
-                    decision_hint="建议配置【动态平衡阀】，防止系统因应力过大崩溃。",
+                    decision_hint="优先作为结构风险描述，不直接改写十神底数。",
                     meta={
-                        "impact_ratio": round(blade_ratio, 2),
+                        "impact_ratio": 0.0,
                         "match_ratio": round(match_ratio, 3),
                         "risk_driver": "blade_clash",
+                        "observe_only": True,
                         **_projection_meta("比肩"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="比肩",
+                            relation_family="blade_clash",
+                            relation_members=["子", "午", "卯", "酉"],
+                        ),
                         **origin_meta,
                     }
                 ))
@@ -116,12 +198,19 @@ class RiskMatrixPlugin(V17PluginSpec):
                 text="结构呈现「枭神夺食」态势：输出通道受阻，存在内耗熵增。",
                 causal_tier=self.causal_tier,
                 priority=0.88,
-                decision_hint="优先疏通【偏财】通路缓解压制。",
+                decision_hint="优先作为结构失衡描述，不直接按食神减损结算。",
                     meta={
-                        "impact_ratio": round(-_clamp_ratio(owl_food_cap, low=0.05, high=0.4), 2),
+                        "impact_ratio": 0.0,
                         "match_ratio": round(match_ratio, 3),
                         "risk_driver": "owl_food",
+                        "observe_only": True,
                         **_projection_meta("食神"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="食神",
+                            relation_family="owl_food",
+                            relation_members=[],
+                        ),
                         "origin_type": "natal",
                         "origin_multiplier": 1.0,
                     }
@@ -134,21 +223,65 @@ class RiskMatrixPlugin(V17PluginSpec):
             overlap = min(hurt, offist)
             spread = max(hurt, offist)
             origin_meta = _origin_meta(clashes, member_key="pair")
-            match_ratio = _clamp01((0.5 + 0.35 * (overlap / max(spread, 1.0))) * max(0.94, origin_meta["origin_multiplier"]))
-            results.append(V17Fact(
-                plugin_id=self.plugin_id,
-                text="检测到「伤官见官」：秩序约束与意志扩张发生剧烈摩擦。",
-                causal_tier=self.causal_tier,
-                priority=0.9,
-                decision_hint="引入【印星】进行调和调停；避免在当前时点发起系统性改革。",
+            if offist >= 12.0 and (officer_relief + cluster_factor) >= 0.85:
+                match_ratio = _clamp01(
+                    (0.46 + 0.28 * (overlap / max(spread, 1.0)))
+                    * max(0.94, origin_meta["origin_multiplier"])
+                    * (1.0 - 0.18 * max(0.0, min(1.0, cluster_factor)))
+                )
+                results.append(V17Fact(
+                    plugin_id=self.plugin_id,
+                    text="检测到「伤官见官」争衡态：伤官与官星互相争执，但官气已有成局与透干支撑。",
+                    causal_tier=self.causal_tier,
+                    priority=0.86,
+                    decision_hint="此处更适合作为结构对峙描述，不宜直接按官弱受损处理。",
                     meta={
-                        "impact_ratio": round(-_clamp_ratio(officer_crush_limit, low=0.1, high=0.5), 2),
+                        "impact_ratio": 0.0,
                         "match_ratio": round(match_ratio, 3),
-                        "risk_driver": "officer_crush",
+                        "risk_driver": "officer_hurt_contest",
+                        "observe_only": True,
+                        "officer_support_relief": round(officer_relief, 3),
+                        "formed_officer_cluster_factor": round(cluster_factor, 3),
                         **_projection_meta("正官"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="正官",
+                            relation_family="officer_hurt_contest",
+                            relation_members=[],
+                        ),
                         **origin_meta,
                     }
                 ))
+            else:
+                match_ratio = _clamp01(
+                    (0.5 + 0.35 * (overlap / max(spread, 1.0)))
+                    * max(0.94, origin_meta["origin_multiplier"])
+                    * (1.0 - 0.62 * officer_relief)
+                    * (1.0 - cluster_factor)
+                )
+                results.append(V17Fact(
+                    plugin_id=self.plugin_id,
+                    text="检测到「伤官见官」：秩序约束与意志扩张发生剧烈摩擦。",
+                    causal_tier=self.causal_tier,
+                    priority=0.9,
+                    decision_hint="优先作为官伤冲突描述，不直接按官星减损结算。",
+                        meta={
+                            "impact_ratio": 0.0,
+                            "match_ratio": round(match_ratio, 3),
+                            "risk_driver": "officer_crush",
+                            "observe_only": True,
+                            "officer_support_relief": round(officer_relief, 3),
+                            "formed_officer_cluster_factor": round(cluster_factor, 3),
+                            **_projection_meta("正官"),
+                            "static_basis": build_static_basis(
+                                physics_tensor=physics_tensor,
+                                target_god="正官",
+                                relation_family="officer_crush",
+                                relation_members=[],
+                            ),
+                            **origin_meta,
+                        }
+                    ))
 
         return results
 

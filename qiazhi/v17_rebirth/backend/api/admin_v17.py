@@ -371,7 +371,8 @@ async def update_db_bridge(payload: Dict[str, Any]) -> Dict[str, Any]:
             "enabled": bool(payload.get("enabled", _DB_BRIDGE_STATE["enabled"])),
         }
     )
-_save_db_state()
+    _save_db_state()
+    return {"ok": True, "bridge": dict(_DB_BRIDGE_STATE)}
 
 
 def _resolve_runtime_session_id(raw_session_id: str) -> str:
@@ -395,7 +396,6 @@ def _resolve_runtime_session_id(raw_session_id: str) -> str:
     except Exception:
         pass
     return sid or "default"
-    return {"ok": True, "bridge": dict(_DB_BRIDGE_STATE)}
 
 
 @router.post("/v17/admin/db-bridge/test")

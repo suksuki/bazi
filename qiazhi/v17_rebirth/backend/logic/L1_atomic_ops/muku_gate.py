@@ -78,6 +78,7 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "muku_state": state,
             "storage_efficiency": round(storage, 3),
             "open_gate_boost": round(open_gate_boost, 3),
+            "impact_ratio": impact_ratio,
             "match_ratio": round(_clamp((0.85 if is_open else 0.65) * cond_mul * origin_mul, 0.0, 1.0), 3),
             "condition_state": condition["condition_state"],
             "condition_blockers": list(condition["blockers"]),
@@ -85,8 +86,6 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "origin_type": condition.get("origin_type"),
             "origin_multiplier": round(origin_mul, 3),
         }
-        if condition["condition_state"] == "supported":
-            meta_payload["impact_ratio"] = impact_ratio
         rows.append({
             "plugin": "l1.physics.op_branch_muku",
             "fact": fact,

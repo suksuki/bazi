@@ -135,6 +135,19 @@ def _normalize_match_ratio(meta: Dict[str, Any], *, fallback: float = 1.0) -> fl
     return max(0.0, min(1.0, value))
 
 
+def _should_infer_physical_impact(*, source: str, plugin_id: str = "", meta: Dict[str, Any] | None = None) -> bool:
+    source_name = str(source or plugin_id or "").strip()
+    if isinstance(meta, dict) and bool(meta.get("observe_only")):
+        return False
+    if source_name.startswith("classical."):
+        return False
+    if source_name.startswith("l2."):
+        return False
+    if source_name in {"kong_wang", "shensha", "ten_god_pattern"}:
+        return False
+    return True
+
+
 def _arbitration_mode_label(mode: str) -> str:
     if mode == "manual":
         return "手动"
@@ -159,9 +172,15 @@ def _llm_resolution_policy(row: Dict[str, Any]) -> str:
     title = str(row.get("title") or "").strip()
     text = f"{label} {title}"
     level = int(impact.get("intensity_level") or 0)
+    try:
+        ratio = abs(float(impact.get("impact_ratio", 0.0) or 0.0))
+    except (TypeError, ValueError):
+        ratio = 0.0
     target_god = str(row.get("target_god") or impact.get("target_god") or "").strip()
     hard_risk_markers = ("格局", "坍塌", "转换", "翻盘", "断裂")
     if any(marker in text for marker in hard_risk_markers):
+        return "context_only"
+    if target_god and ratio <= 1e-6:
         return "context_only"
     if target_god and 0 < level <= 2:
         return "auto_apply"
@@ -242,8 +261,12 @@ def compile_pending_decisions(
             source_event=str(row.get("source_event") or ""),
         )
         if not physical_impact:
-            physical_impact = decision_relative_impact(row["title"], target_god)
-            row["physical_impact_inferred"] = True
+            if _should_infer_physical_impact(source=str(row.get("source") or row.get("plugin_id") or "legacy")):
+                physical_impact = decision_relative_impact(row["title"], target_god)
+                row["physical_impact_inferred"] = True
+            else:
+                physical_impact = {}
+                row["physical_impact_inferred"] = False
         elif target_god and not str(physical_impact.get("target_god") or "").strip():
             physical_impact["target_god"] = target_god
             row["physical_impact_inferred"] = False
@@ -288,8 +311,12 @@ def compile_pending_decisions(
             source_event=str(row.get("source_event") or ""),
         )
         if not isinstance(row["physical_impact"], dict) or not row["physical_impact"]:
-            row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
-            row["physical_impact_inferred"] = True
+            if _should_infer_physical_impact(source=row["source"]):
+                row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
+                row["physical_impact_inferred"] = True
+            else:
+                row["physical_impact"] = {}
+                row["physical_impact_inferred"] = False
         elif row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
             row["physical_impact"]["target_god"] = row["target_god"]
             row["physical_impact_inferred"] = False
@@ -330,7 +357,12 @@ def compile_pending_decisions(
             plugin_id=fact.plugin_id,
             physics_tensor=physics_tensor,
         )
-        row["physical_impact"] = dict(existing_impact or meta or decision_relative_impact(row["title"], row["target_god"]))
+        if existing_impact or meta:
+            row["physical_impact"] = dict(existing_impact or meta)
+        elif _should_infer_physical_impact(source=fact.plugin_id, meta=meta):
+            row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
+        else:
+            row["physical_impact"] = {}
         row["exclusivity_key"] = row.get("exclusivity_key") or _resolve_exclusivity_key(
             source=str(row.get("source") or row.get("plugin_id") or fact.plugin_id or "fact"),
             target_god=str(row.get("target_god") or ""),
@@ -338,8 +370,11 @@ def compile_pending_decisions(
             source_event=str(row.get("source_event") or ""),
         )
         if not row["physical_impact"]:
-            row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
-            row["physical_impact_inferred"] = True
+            if _should_infer_physical_impact(source=fact.plugin_id, meta=meta):
+                row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
+                row["physical_impact_inferred"] = True
+            else:
+                row["physical_impact_inferred"] = False
         elif row["target_god"] and not str(row["physical_impact"].get("target_god") or "").strip():
             row["physical_impact"]["target_god"] = row["target_god"]
             row["physical_impact_inferred"] = False
@@ -413,7 +448,11 @@ def _is_manual_candidate(row: Dict[str, Any]) -> bool:
     title = str(row.get("title") or "").strip()
     text = f"{label} {title}"
     has_ratio = "impact_ratio" in impact
-    executable = bool(target_god and has_ratio)
+    try:
+        impact_ratio = abs(float(impact.get("impact_ratio", 0.0) or 0.0))
+    except (TypeError, ValueError):
+        impact_ratio = 0.0
+    executable = bool(target_god and has_ratio and impact_ratio > 1e-6)
 
     # User-routed rows still need to be executable. Otherwise they should degrade to context.
     if arbiter_val == "user":

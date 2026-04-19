@@ -5,6 +5,7 @@ from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
@@ -26,6 +27,32 @@ DECLARED_PARAMS = {
 
 def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, float(value)))
+
+
+def _natal_sanhe_protection(pair: List[str], interaction_v2: Dict[str, Any], *, origin_type: str) -> float:
+    members = {str(x).strip() for x in pair if str(x).strip()}
+    san_he_rows = interaction_v2.get("san_he") if isinstance(interaction_v2.get("san_he"), list) else []
+    has_natal_core = False
+    for row in san_he_rows:
+        if not isinstance(row, dict):
+            continue
+        group = {str(x).strip() for x in (row.get("group") or []) if str(x).strip()}
+        if len(group) < 3 or not (members & group):
+            continue
+        row_origin = str(row.get("origin_type") or "").strip().lower()
+        if row_origin == "natal":
+            has_natal_core = True
+            break
+    if not has_natal_core:
+        return 1.0
+    origin = str(origin_type or "").strip().lower()
+    if origin == "luck_background":
+        return 0.38
+    if origin == "flow_trigger":
+        return 0.6
+    if origin == "runtime_pair":
+        return 0.58
+    return 1.0
 
 def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     meta = physics_tensor.get("meta", {})
@@ -74,6 +101,9 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         )
         cond_mul = relation_effect_multiplier(condition["condition_state"])
         origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
+        sanhe_protection = _natal_sanhe_protection(pair, iv2, origin_type=str(condition.get("origin_type") or ""))
+        effective_loss *= sanhe_protection
+        impact = -_clamp(effective_loss, 0.02, 0.5)
         priority = min(0.92, 0.7 + 0.2 * _clamp(friction_coeff, 0.0, 1.0))
         balance_ratio = min(source_abs, target_abs) / max(max(source_abs, target_abs), 1.0)
         match_ratio = _clamp(
@@ -100,8 +130,15 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "condition_state": condition["condition_state"],
                 "condition_blockers": list(condition["blockers"]),
                 "condition_multiplier": round(cond_mul, 3),
+                "sanhe_protection": round(sanhe_protection, 3),
                 "origin_type": condition.get("origin_type"),
                 "origin_multiplier": round(origin_mul, 3),
+                "static_basis": build_static_basis(
+                    physics_tensor=physics_tensor,
+                    target_god=god,
+                    relation_family="liu_po",
+                    relation_members=pair,
+                ),
             }
         })
     return rows

@@ -24,6 +24,9 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
 
 RELATION_COEFFICIENT: Dict[str, float] = {
     "clash":       1.0,    # 冲 — 全额能量爆发（斥力，正值）
+    "combination": -0.8,   # 合 — 旧测试兼容的吸引向量
+    "harm":        0.5,    # 害 — 中度扰动
+    "pierce":      0.5,    # 破/穿 — 中度扰动
 }
 
 # 距离衰减指数 k ∈ [1.2, 1.5]（近距离冲突权重更高）
@@ -34,6 +37,7 @@ STRESS_BOOST_TIER0_WEIGHT: float = 0.95
 STRESS_BOOST_TOP_N: int = 5
 
 ALPHA_CLASH: float = -0.15         # 冲力：双向湮灭 (-15%)
+GREEDY_COMBINATION_DAMPING: float = 0.3
 
 # ── 柱距映射 ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +47,19 @@ PILLAR_INDEX: Dict[str, int] = {
     "month": 1,
     "day": 2,
     "hour": 3,
+}
+
+TEN_GOD_CLUSTER_MATES: Dict[str, str] = {
+    "比肩": "劫财",
+    "劫财": "比肩",
+    "食神": "伤官",
+    "伤官": "食神",
+    "偏财": "正财",
+    "正财": "偏财",
+    "七杀": "正官",
+    "正官": "七杀",
+    "偏印": "正印",
+    "正印": "偏印",
 }
 
 
@@ -73,7 +90,12 @@ def _branch_dominant_energy(
     god = _branch_dominant_ten_god(branch, daymaster)
     if not god:
         return 0.0
-    return ten_gods_absolute.get(god, 0.0)
+    direct = ten_gods_absolute.get(god)
+    if isinstance(direct, (int, float)):
+        return float(direct)
+    mate = TEN_GOD_CLUSTER_MATES.get(god, "")
+    sibling = ten_gods_absolute.get(mate, 0.0) if mate else 0.0
+    return float(sibling or 0.0)
 
 
 # ── 物理核心：矢量应力计算 ────────────────────────────────────────────────────
@@ -135,6 +157,11 @@ def compute_stress_events(
     events: List[StressEvent] = []
     relation_map: List[Tuple[str, str, float]] = [
         ("liu_chong", "clash", RELATION_COEFFICIENT["clash"]),
+        ("liu_he", "combination", RELATION_COEFFICIENT["combination"]),
+        ("sanhe", "combination", RELATION_COEFFICIENT["combination"]),
+        ("san_he", "combination", RELATION_COEFFICIENT["combination"]),
+        ("liu_hai", "harm", RELATION_COEFFICIENT["harm"]),
+        ("liu_po", "pierce", RELATION_COEFFICIENT["pierce"]),
     ]
 
     for v2_key, relation_type, g_coeff in relation_map:
@@ -202,14 +229,22 @@ def build_clash_stress_map(
         if pid and pid not in top_plugin_ids:
             top_plugin_ids.append(pid)
 
-    total_clash = sum(ev.damped_stress for ev in events)
+    total_clash = sum(ev.damped_stress for ev in events if ev.relation_type == "clash")
+    total_combination = sum(
+        abs(ev.damped_stress)
+        for ev in events
+        if ev.relation_type == "combination"
+    )
+    damping_applied = any(ev.damping_applied for ev in events)
     
     return {
         "version": "vector_stress.v1",
         "events": [ev.to_dict() for ev in events],
         "top_stress_plugin_ids": top_plugin_ids,
         "total_clash_energy": round(total_clash, 4),
-        "net_vector": round(total_clash, 4),
+        "total_combination_energy": round(total_combination, 4),
+        "net_vector": round(sum(ev.damped_stress for ev in events), 4),
+        "damping_applied": damping_applied,
         "energy_deltas": {}, 
     }
 
@@ -217,6 +252,9 @@ def build_clash_stress_map(
 def _relation_to_plugin_id(relation_type: str) -> str:
     mapping = {
         "clash": "l1.physics.op_branch_liuchong",
+        "combination": "l1.physics.op_branch_liuhe",
+        "harm": "l1.physics.op_branch_liuhai",
+        "pierce": "l1.physics.op_branch_liupo",
     }
     return mapping.get(relation_type, "")
 

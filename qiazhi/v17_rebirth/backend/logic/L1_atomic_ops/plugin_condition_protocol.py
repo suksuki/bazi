@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Mapping
 
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
+    ELEMENT_CYCLE,
+    STEM_ELEMENT,
+    _collect_root_strengths,
+    _parse_gz,
+)
+
 
 _NATAL_PILLARS = {"year", "month", "day", "hour"}
 _RUNTIME_PILLARS = {"luck", "flow"}
@@ -178,3 +185,130 @@ def relation_effect_multiplier(condition_state: str) -> float:
     if state in {"contested", "stuck"}:
         return 0.65
     return 0.85
+
+
+def _day_master_from_tensor(physics_tensor: Mapping[str, Any]) -> str:
+    stem = str(physics_tensor.get("day_master_stem") or "").strip()
+    if stem:
+        return stem
+    fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    day_gz = str(fp.get("day") or "").strip()
+    return day_gz[0] if len(day_gz) >= 2 else ""
+
+
+def _god_to_element(day_master: str) -> Dict[str, str]:
+    dm_el = STEM_ELEMENT.get(day_master, "")
+    if dm_el not in ELEMENT_CYCLE:
+        return {}
+    dm_idx = ELEMENT_CYCLE.index(dm_el)
+    mapping: Dict[str, str] = {}
+    for idx in range(5):
+        el = ELEMENT_CYCLE[(dm_idx + idx) % 5]
+        gods = (
+            ["比肩", "劫财"] if idx == 0 else
+            ["食神", "伤官"] if idx == 1 else
+            ["正财", "偏财"] if idx == 2 else
+            ["正官", "七杀"] if idx == 3 else
+            ["正印", "偏印"]
+        )
+        for god in gods:
+            mapping[god] = el
+    return mapping
+
+
+def _visible_stems_with_scope(physics_tensor: Mapping[str, Any]) -> List[Dict[str, str]]:
+    fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    rows = [
+        ("year", str(fp.get("year") or "").strip()),
+        ("month", str(fp.get("month") or "").strip()),
+        ("day", str(fp.get("day") or "").strip()),
+        ("hour", str(fp.get("hour") or "").strip()),
+        ("luck", str(physics_tensor.get("luck_pillar") or "").strip()),
+        ("flow", str(physics_tensor.get("flow_pillar") or "").strip()),
+    ]
+    visible: List[Dict[str, str]] = []
+    for scope, gz in rows:
+        stem, branch = _parse_gz(gz)
+        if stem:
+            visible.append({"scope": scope, "stem": stem, "branch": branch})
+    return visible
+
+
+def build_static_basis(
+    *,
+    physics_tensor: Mapping[str, Any],
+    target_god: str,
+    relation_family: str,
+    relation_members: Iterable[str] | None = None,
+) -> Dict[str, Any]:
+    scores = physics_tensor.get("ten_gods_base_l0")
+    if not isinstance(scores, dict):
+        scores = physics_tensor.get("ten_gods_absolute")
+    scores = scores if isinstance(scores, dict) else {}
+    runtime_scores = physics_tensor.get("ten_gods_runtime") if isinstance(physics_tensor.get("ten_gods_runtime"), dict) else {}
+    meta = physics_tensor.get("energy_meta") if isinstance(physics_tensor.get("energy_meta"), dict) else {}
+    day_master = _day_master_from_tensor(physics_tensor)
+    god_to_el = _god_to_element(day_master)
+    target_element = str(god_to_el.get(target_god) or "")
+
+    fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    luck_pillar = str(physics_tensor.get("luck_pillar") or "").strip()
+    flow_pillar = str(physics_tensor.get("flow_pillar") or "").strip()
+    root_strengths = _collect_root_strengths(fp, luck_pillar, flow_pillar) if fp else {}
+
+    visible_rows = _visible_stems_with_scope(physics_tensor)
+    visible_support = [
+        row for row in visible_rows
+        if target_element and STEM_ELEMENT.get(str(row.get("stem") or "")) == target_element
+    ]
+    member_set = {str(item) for item in (relation_members or []) if str(item).strip()}
+    relation_support_rows = []
+    if member_set:
+        for row in visible_rows:
+            if str(row.get("branch") or "") in member_set:
+                relation_support_rows.append(row)
+
+    top_scores = sorted(
+        ((str(god), float(value or 0.0)) for god, value in scores.items() if str(god).strip()),
+        key=lambda item: (-item[1], item[0]),
+    )[:4]
+    structural_bonuses = meta.get("structural_bonuses") if isinstance(meta.get("structural_bonuses"), list) else []
+    related_bonus = next(
+        (
+            row for row in structural_bonuses
+            if isinstance(row, dict) and member_set and member_set <= {str(x) for x in (row.get("group") or []) if str(x).strip()}
+        ),
+        None,
+    )
+
+    return {
+        "relation_family": relation_family,
+        "target_god": target_god,
+        "target_element": target_element,
+        "base_score": round(float(scores.get(target_god, 0.0) or 0.0), 2),
+        "runtime_score": round(float(runtime_scores.get(target_god, scores.get(target_god, 0.0)) or 0.0), 2),
+        "month_command_god": str(meta.get("month_command_god") or ""),
+        "top_l0_gods": [{"god": god, "score": round(score, 2)} for god, score in top_scores],
+        "visible_support": [
+            {
+                "scope": str(row.get("scope") or ""),
+                "stem": str(row.get("stem") or ""),
+                "branch": str(row.get("branch") or ""),
+            }
+            for row in visible_support
+        ],
+        "relation_support_rows": [
+            {
+                "scope": str(row.get("scope") or ""),
+                "stem": str(row.get("stem") or ""),
+                "branch": str(row.get("branch") or ""),
+            }
+            for row in relation_support_rows
+        ],
+        "root_strengths": {
+            stem: round(float(root_strengths.get(stem, 0.0) or 0.0), 3)
+            for stem in sorted(root_strengths.keys())
+            if target_element and STEM_ELEMENT.get(stem) == target_element
+        },
+        "related_structural_bonus": dict(related_bonus) if isinstance(related_bonus, dict) else None,
+    }

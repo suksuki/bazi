@@ -340,6 +340,7 @@ export function useV17WebStream({
   });
   const framesRef = useRef<V17Frame[]>([]);
   const syncOnlyMode = body?.suppress_narrator === true;
+  const resetVisualCache = body?.reset_stream_cache === true;
 
   useEffect(() => {
     framesRef.current = frames;
@@ -381,6 +382,9 @@ export function useV17WebStream({
           return;
         }
         if (mounted) {
+          if (resetVisualCache && !syncOnlyMode) {
+            setFrames([]);
+          }
           // Keep visual cache until the first new frame arrives.
           setStreamState((prev) => ({
             ...prev,
@@ -393,7 +397,7 @@ export function useV17WebStream({
         const decoder = new TextDecoder("utf-8");
         let buf = "";
 
-        let localFrames: V17Frame[] = syncOnlyMode ? [...framesRef.current] : [];
+        let localFrames: V17Frame[] = syncOnlyMode ? [...framesRef.current] : resetVisualCache ? [] : [];
         let pinnedPhysics: V17Frame | null = localFrames.find(isCanonPhysicsSnapshot) || null;
 
         while (mounted) {
@@ -489,7 +493,7 @@ export function useV17WebStream({
       mounted = false;
       aborter.abort();
     };
-  }, [enabled, endpoint, method, bodyKey, syncOnlyMode]);
+  }, [enabled, endpoint, method, bodyKey, syncOnlyMode, resetVisualCache]);
 
   return { frames, streamState };
 }

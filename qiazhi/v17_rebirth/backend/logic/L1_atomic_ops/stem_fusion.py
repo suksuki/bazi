@@ -5,6 +5,7 @@ from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, STEM_ELEMENT, ten_god_from_stems
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     relation_effect_multiplier,
     summarize_stem_fusion_conditions,
 )
@@ -149,10 +150,16 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_state": condition["condition_state"],
                     "condition_trigger": condition["condition_trigger"],
                     "branch_hua_ratio": condition["branch_hua_ratio"],
-                    "condition_multiplier": cond_mul,
-                    "origin_type": condition.get("origin_type"),
-                    "origin_multiplier": round(origin_mul, 3),
-                }
+                "condition_multiplier": cond_mul,
+                "origin_type": condition.get("origin_type"),
+                "origin_multiplier": round(origin_mul, 3),
+                "static_basis": build_static_basis(
+                    physics_tensor=physics_tensor,
+                    target_god=target_god,
+                    relation_family="stem_fusion",
+                    relation_members=stems,
+                ),
+            }
             })
         elif mode == "transformed":
             hua_el = _normalize_element_name(str(c.get("hua_element") or ""))
@@ -193,6 +200,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_multiplier": cond_mul,
                     "origin_type": condition.get("origin_type"),
                     "origin_multiplier": round(origin_mul, 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=god,
+                        relation_family="stem_fusion",
+                        relation_members=stems,
+                    ),
                 }
                 if condition["condition_state"] == "formed":
                     meta["impact_ratio"] = round(trans_eff * cond_mul * max(0.28, float(share)), 3)

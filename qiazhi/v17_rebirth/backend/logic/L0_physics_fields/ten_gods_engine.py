@@ -19,6 +19,10 @@ import math
 from typing import Any, Dict, List, Optional, Tuple
 
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
+from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
+    branches_and_stems_from_runtime_pillars,
+    eval_sanhe_hits,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -45,19 +49,19 @@ STEM_YIN: Dict[str, bool] = {
 # 五行相生循环（木→火→土→金→水→木）
 ELEMENT_CYCLE: List[str] = ["木", "火", "土", "金", "水"]
 
-# ── 地支藏干表（主气 + 余气权重之和 = 1.0）──────────────────────────────────
+# ── 地支藏干表（主气 / 中气 / 余气；纯气支仅保留单一本气）────────────────────
 
 BRANCH_HIDDEN: Dict[str, List[Tuple[str, float]]] = {
-    "子": [("壬", 0.70), ("癸", 0.30)],
+    "子": [("癸", 1.00)],
     "丑": [("己", 0.60), ("癸", 0.20), ("辛", 0.20)],
     "寅": [("甲", 0.70), ("丙", 0.20), ("戊", 0.10)],
-    "卯": [("乙", 0.90), ("甲", 0.10)],
+    "卯": [("乙", 1.00)],
     "辰": [("戊", 0.60), ("乙", 0.20), ("癸", 0.20)],
     "巳": [("丙", 0.70), ("庚", 0.20), ("戊", 0.10)],
     "午": [("丁", 0.70), ("己", 0.30)],
     "未": [("己", 0.60), ("丁", 0.20), ("乙", 0.20)],
     "申": [("庚", 0.70), ("壬", 0.20), ("戊", 0.10)],
-    "酉": [("辛", 0.90), ("庚", 0.10)],
+    "酉": [("辛", 1.00)],
     "戌": [("戊", 0.60), ("辛", 0.20), ("丁", 0.20)],
     "亥": [("壬", 0.70), ("甲", 0.30)],
 }
@@ -92,6 +96,7 @@ FLOW_PILLAR_FACTOR: float = 0.65
 ENERGY_MIN: float = 0.1
 ENERGY_MAX: float = 1000.0
 GLOBAL_DAMPING: float = 0.95
+FLOATING_PEER_FACTOR: float = 0.72
 
 # 旧名兼容（供外部 import 使用）
 STEM_BASE_ENERGY: float = STEM_BASE
@@ -111,7 +116,7 @@ BRANCH_ELEMENT: Dict[str, str] = {
 # 当令五行的 Season Power 放大倍率
 SEASON_POWER_SAME: float = 2.5      # 与月令五行相同 → 得令
 SEASON_POWER_GENERATED: float = 1.8  # 月令五行所生 → 次旺
-SEASON_POWER_CONTROLLED: float = 0.6 # 月令五行所克 → 受制
+SEASON_POWER_CONTROLLED: float = 1.0 # L0 静态层不再直接压低被克元素，克制交给动态层
 SEASON_POWER_DEFAULT: float = 1.0    # 其余（休囚一般）
 
 
@@ -122,7 +127,7 @@ def _season_multiplier(target_element: str, month_branch: str) -> float:
     consts = _get_l0_consts()
     s_same = float(consts.get("SEASON_POWER_SAME", 2.5))
     s_gen = float(consts.get("SEASON_POWER_GENERATED", 1.8))
-    s_ctrl = float(consts.get("SEASON_POWER_CONTROLLED", 0.6))
+    s_ctrl = max(1.0, float(consts.get("SEASON_POWER_CONTROLLED", 1.0)))
     s_def = 1.0
 
     month_el = BRANCH_ELEMENT.get(month_branch, "")
@@ -137,7 +142,8 @@ def _season_multiplier(target_element: str, month_branch: str) -> float:
     # 月令所生：月令的下一位 = 被月令生
     if t_idx == (m_idx + 1) % 5:
         return s_gen
-    # 月令所克：月令的+2位 = 被月令克
+    # 月令所克：在 L0 静态层不直接压低本体，只保留“非加成”；
+    # 真正的克制、做功、流动，交由 L1/L2 动态层处理。
     if t_idx == (m_idx + 2) % 5:
         return s_ctrl
     return s_def
@@ -218,17 +224,192 @@ def _collect_visible_stems(four_pillars: Dict[str, str], luck_pillar: str, flow_
     return stems
 
 
-def _collect_rooted_stems(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> set[str]:
-    rooted: set[str] = set()
+def _collect_root_strengths(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> Dict[str, float]:
+    """
+    通根不能只按「有/无」判定。
+    余气、时支、流年支带来的根气应弱于月令、本气或大运背景。
+    """
+    scope_weights = {
+        "year": 0.48,
+        "month": 1.0,
+        "day": 0.68,
+        "hour": 0.82,
+        "luck": 0.92,
+        "flow": 0.42,
+    }
+    rooted: Dict[str, float] = {}
     for key in ("year", "month", "day", "hour"):
         _, branch = _parse_gz(str(four_pillars.get(key, "")).strip())
-        for hidden_stem, _h_w in BRANCH_HIDDEN.get(branch, []):
-            rooted.add(hidden_stem)
-    for gz in (luck_pillar, flow_pillar):
+        if not branch:
+            continue
+        scope = float(scope_weights.get(key, 0.5))
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
+            rooted[hidden_stem] = rooted.get(hidden_stem, 0.0) + float(hidden_weight) * scope
+    for scope_key, gz in (("luck", luck_pillar), ("flow", flow_pillar)):
         _, branch = _parse_gz(gz)
-        for hidden_stem, _h_w in BRANCH_HIDDEN.get(branch, []):
-            rooted.add(hidden_stem)
+        if not branch:
+            continue
+        scope = float(scope_weights.get(scope_key, 0.5))
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
+            rooted[hidden_stem] = rooted.get(hidden_stem, 0.0) + float(hidden_weight) * scope
     return rooted
+
+
+def _visible_stem_scope_weights(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> List[Tuple[str, str]]:
+    rows: List[Tuple[str, str]] = []
+    for key in ("year", "month", "day", "hour"):
+        stem, _ = _parse_gz(str(four_pillars.get(key, "")).strip())
+        if stem:
+            rows.append((key, stem))
+    for scope, gz in (("luck", luck_pillar), ("flow", flow_pillar)):
+        stem, _ = _parse_gz(gz)
+        if stem:
+            rows.append((scope, stem))
+    return rows
+
+
+def _sanhe_branch_role(branch: str, mid_branch: str) -> str:
+    if branch == mid_branch:
+        return "pivot"
+    if branch in {"辰", "戌", "丑", "未"}:
+        return "tomb"
+    return "starter"
+
+
+def _sanhe_projection_weights(
+    *,
+    hit: Dict[str, Any],
+    daymaster: str,
+    four_pillars: Dict[str, str],
+    luck_pillar: str,
+    flow_pillar: str,
+) -> Dict[str, float]:
+    mid_branch = str(hit.get("mid_branch") or "")
+    branches = [str(x) for x in (hit.get("matched_branches") or hit.get("group") or []) if str(x).strip()]
+    if not branches:
+        return {}
+    main_hidden = BRANCH_HIDDEN.get(mid_branch, [])
+    if not main_hidden:
+        return {}
+    target_element = STEM_ELEMENT.get(main_hidden[0][0], "")
+    if not target_element:
+        return {}
+    role_weights = {
+        "pivot": 1.25,
+        "tomb": 0.92,
+        "starter": 0.58,
+    }
+    pillar_weights = {
+        "year": 0.88,
+        "month": 1.18,
+        "day": 0.95,
+        "hour": 1.02,
+        "luck": 1.16,
+        "flow": 0.72,
+    }
+    branch_occurrences = list(
+        zip(
+            [str(p) for p in (hit.get("pillars") or []) if str(p).strip()],
+            branches,
+        )
+    )
+    weights: Dict[str, float] = {}
+    for pillar, branch in branch_occurrences:
+        role = _sanhe_branch_role(branch, mid_branch)
+        role_weight = float(role_weights.get(role, 0.6))
+        pillar_weight = float(pillar_weights.get(pillar, 0.9))
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
+            if STEM_ELEMENT.get(hidden_stem) != target_element:
+                continue
+            god = ten_god_from_stems(daymaster, hidden_stem)
+            weights[god] = weights.get(god, 0.0) + float(hidden_weight) * role_weight * pillar_weight
+
+    visible_scope_weights = {
+        "year": 0.55,
+        "month": 0.72,
+        "day": 0.45,
+        "hour": 0.58,
+        # 运上透神对成局后主神定向更强，流年只作引动。
+        "luck": 1.35,
+        "flow": 0.38,
+    }
+    for scope, stem in _visible_stem_scope_weights(four_pillars, luck_pillar, flow_pillar):
+        if STEM_ELEMENT.get(stem) != target_element:
+            continue
+        god = ten_god_from_stems(daymaster, stem)
+        weights[god] = weights.get(god, 0.0) + float(visible_scope_weights.get(scope, 0.55))
+
+    total = sum(weights.values())
+    if total <= 0:
+        return {}
+    return {god: weight / total for god, weight in weights.items() if weight > 0}
+
+
+def _apply_sanhe_foundation_bonus(
+    *,
+    acc: Dict[str, float],
+    daymaster: str,
+    four_pillars: Dict[str, str],
+    luck_pillar: str,
+    flow_pillar: str,
+    ledger: EvolutionLedger,
+) -> List[Dict[str, Any]]:
+    branches, _ = branches_and_stems_from_runtime_pillars(
+        four_pillars,
+        luck_pillar=luck_pillar,
+        flow_pillar=flow_pillar,
+    )
+    sanhe_hits = eval_sanhe_hits(branches) if branches else []
+    bonuses: List[Dict[str, Any]] = []
+    if not sanhe_hits:
+        return bonuses
+
+    for hit in sanhe_hits:
+        strength = float(hit.get("strength") or 1.0)
+        duplicate_count = max(0, int(hit.get("duplicate_count") or 0))
+        pivot_factor = float(hit.get("pivot_factor") or 0.9)
+        projection = _sanhe_projection_weights(
+            hit=hit,
+            daymaster=daymaster,
+            four_pillars=four_pillars,
+            luck_pillar=luck_pillar,
+            flow_pillar=flow_pillar,
+        )
+        if not projection:
+            continue
+        direct_support_strength = max(projection.values()) if projection else 0.0
+        bonus_total = (
+            _get_l0_val("BRANCH_BASE", 12.0)
+            * strength
+            * (1.0 + 0.24 * duplicate_count)
+            * (1.0 + 0.22 * max(0.0, pivot_factor - 0.9))
+            * (1.0 + 0.45 * direct_support_strength)
+        )
+        bonus_total = max(0.0, bonus_total)
+        for god, share in projection.items():
+            delta = bonus_total * float(share)
+            if not math.isfinite(delta) or delta <= 0.0:
+                continue
+            acc[god] = acc.get(god, 0.0) + delta
+            ledger.append_entry(
+                god,
+                acc[god],
+                "L0_SANHE_FORMATION",
+                f"三合成局基础回灌·{''.join(hit.get('group') or [])}·share={share:.2f}·dup={duplicate_count}",
+            )
+        bonuses.append(
+            {
+                "group": list(hit.get("group") or []),
+                "matched_branches": list(hit.get("matched_branches") or []),
+                "mid_branch": str(hit.get("mid_branch") or ""),
+                "duplicate_count": duplicate_count,
+                "pivot_factor": round(pivot_factor, 3),
+                "strength": round(strength, 3),
+                "bonus_total": round(bonus_total, 3),
+                "projection": {god: round(float(share), 4) for god, share in projection.items()},
+            }
+        )
+    return bonuses
 
 
 def _void_factor(branch: str, void_branches: str) -> float:
@@ -265,7 +446,7 @@ def _accumulate_stem_energy(
     daymaster: str,
     source_factor: float,
     season_multiplier: float,
-    rooted_stems: set[str],
+    root_strengths: Dict[str, float],
     acc: Dict[str, float],
     pillar_label: str = "",
     ledger: Optional[EvolutionLedger] = None,
@@ -278,10 +459,18 @@ def _accumulate_stem_energy(
     if not stem:
         return
     energy = _get_l0_val("STEM_BASE", 10.0) * source_factor * season_multiplier
-    rooted = stem in rooted_stems
-    if rooted:
-        energy *= _get_l0_val("ROOTED_GAIN", 1.5)
+    root_strength = max(0.0, float(root_strengths.get(stem, 0.0) or 0.0))
+    rooted = root_strength >= 0.18
+    if root_strength > 0.0:
+        rooted_gain = 1.0 + (_get_l0_val("ROOTED_GAIN", 1.5) - 1.0) * min(1.0, root_strength)
+        energy *= rooted_gain
     god = ten_god_from_stems(daymaster, stem)
+    # 无根明透的比劫容易虚浮。除日主本干外，对无根比肩/劫财做一次温和衰减。
+    if pillar_label != "日" and god in {"比肩", "劫财"} and root_strength < 0.35:
+        floating_floor = _get_l0_val("FLOATING_PEER_FACTOR", 0.72)
+        floating_ratio = max(0.0, min(1.0, root_strength / 0.35))
+        peer_factor = floating_floor + (1.0 - floating_floor) * floating_ratio
+        energy *= peer_factor
     # V17.99: 数值护栏 — 安全累加
     if math.isfinite(energy):
         acc[god] = acc.get(god, 0.0) + energy
@@ -289,8 +478,13 @@ def _accumulate_stem_energy(
         _log.warning(f"[V17-PHYSICS-NAN] Attempted to add NaN energy for {god} at {pillar_label}干")
     if ledger is not None:
         parts = [f"{stem}→{god}"]
-        if rooted:
-            parts.append("通根×1.5")
+        if root_strength > 0.0:
+            parts.append(f"根气×{min(1.0, root_strength):.2f}")
+        if pillar_label != "日" and god in {"比肩", "劫财"} and root_strength < 0.35:
+            floating_floor = _get_l0_val("FLOATING_PEER_FACTOR", 0.72)
+            floating_ratio = max(0.0, min(1.0, root_strength / 0.35))
+            peer_factor = floating_floor + (1.0 - floating_floor) * floating_ratio
+            parts.append(f"浮木×{peer_factor:.2f}")
         if abs(season_multiplier - 1.0) > 0.01:
             parts.append(f"季×{season_multiplier:.1f}")
         reason = f"{pillar_label}干 {'·'.join(parts)}"
@@ -376,7 +570,7 @@ def calc_deity_scores(
     # ── Step 1：准备全局辅助数据 ──
     acc: Dict[str, float] = {}
     visible_stems = _collect_visible_stems(four_pillars, luck_pillar, flow_pillar)
-    rooted_stems = _collect_rooted_stems(four_pillars, luck_pillar, flow_pillar)
+    root_strengths = _collect_root_strengths(four_pillars, luck_pillar, flow_pillar)
     xun_kong_map = _get_xun_kong_map(birth_time=birth_time, four_pillars=four_pillars)
     void_pillars: List[str] = []
     ledger = EvolutionLedger()
@@ -412,7 +606,7 @@ def calc_deity_scores(
             daymaster=daymaster,
             source_factor=1.0 * s_comp,
             season_multiplier=stem_sm,
-            rooted_stems=rooted_stems,
+            root_strengths=root_strengths,
             acc=acc,
             pillar_label=p_label,
             ledger=ledger,
@@ -446,7 +640,7 @@ def calc_deity_scores(
                 daymaster=daymaster,
                 source_factor=source_factor,
                 season_multiplier=stem_sm,
-                rooted_stems=rooted_stems,
+                root_strengths=root_strengths,
                 acc=acc,
                 pillar_label=sf_label,
                 ledger=ledger,
@@ -462,6 +656,15 @@ def calc_deity_scores(
                 pillar_label=sf_label,
                 ledger=ledger,
             )
+
+    structural_bonuses = _apply_sanhe_foundation_bonus(
+        acc=acc,
+        daymaster=daymaster,
+        four_pillars=four_pillars,
+        luck_pillar=luck_pillar,
+        flow_pillar=flow_pillar,
+        ledger=ledger,
+    )
 
     # ── Step 5：月令主气额外标记（不再做 *= 放大，Season Power 已在 Step 3/4 逐柱应用）──
     month_stem, _ = _parse_gz(str(four_pillars.get("month", "")).strip())
@@ -548,5 +751,6 @@ def calc_deity_scores(
             "exposed_hidden_gain": EXPOSED_HIDDEN_GAIN,
             "void_reduction_factor": VOID_REDUCTION_FACTOR,
         },
+        "structural_bonuses": structural_bonuses,
         "ledger": ledger,
     }

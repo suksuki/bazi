@@ -151,6 +151,16 @@ function brainStepTone(kind: string): string {
   return "text-zinc-300";
 }
 
+function compactProjection(projection: unknown): string {
+  if (!projection || typeof projection !== "object") return "";
+  const entries = Object.entries(projection as Record<string, unknown>)
+    .map(([key, value]) => [key, Number(value || 0)] as const)
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
+}
+
 export function V17_TracePanel({
   collapsed,
   onToggle,
@@ -310,6 +320,13 @@ export function V17_TracePanel({
     const fact = String(row.fact || row.label || row.title || "").trim();
     if (!fact) return acc;
     acc[plugin] = [...(acc[plugin] || []), fact];
+    return acc;
+  }, {});
+  const pluginClaimById = pluginClaims.reduce<Record<string, Record<string, unknown>>>((acc, row) => {
+    const key = String(row.plugin_id || "").trim();
+    if (!key) return acc;
+    const current = acc[key];
+    if (!current || Number(row.match_ratio || 0) > Number(current.match_ratio || 0)) acc[key] = row;
     return acc;
   }, {});
   const causalPhysicsAnchor = String(physicsPayload.causal_anchor || "—");
@@ -577,19 +594,31 @@ export function V17_TracePanel({
                       ? "text-rose-200 border-rose-500/20 bg-rose-950/20"
                       : "text-zinc-200 border-zinc-700/60 bg-zinc-900/70";
             return (
-              <div key={`plugin_status_${idx}`} className={`rounded-lg border px-2 py-2 ${statusTone}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] tracking-[0.18em]">{String(row.plugin_id || "unknown")}</p>
+              <div key={`plugin_status_${idx}`} className={`min-w-0 rounded-lg border px-2 py-2 ${statusTone}`}>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <p className="min-w-0 break-all text-[10px] tracking-[0.18em]">{String(row.plugin_id || "unknown")}</p>
                   <span className="font-mono text-[10px] uppercase">{status}</span>
                 </div>
-                <p className="mt-1 text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
-                <p className="mt-1 text-[10px] text-zinc-500">
-                  facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
-                  {String(row.target_god || "").trim() ? ` / target ${String(row.target_god)}` : ""}
-                </p>
-              </div>
-            );
-          }) : (
+                <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">
+                    facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
+                    {String(row.target_god || "").trim() ? ` / target ${String(row.target_god)}` : ""}
+                  </p>
+                  {(() => {
+                    const claim = pluginClaimById[String(row.plugin_id || "").trim()];
+                    if (!claim) return null;
+                    const projectionText = compactProjection(claim.cluster_projection);
+                    return (
+                      <p className="mt-1 break-words text-[10px] text-zinc-400">
+                        主落点 {String(claim.target_god || row.target_god || "未定目标")}
+                        {Number(claim.projection_share || 0) > 0 ? ` · 占比 ${Math.round(Number(claim.projection_share || 0) * 100)}%` : ""}
+                        {projectionText ? ` · ${projectionText}` : ""}
+                      </p>
+                    );
+                  })()}
+                </div>
+              );
+            }) : (
             <p className="text-[11px] text-zinc-500">暂无插件状态标签</p>
           )}
         </div>
@@ -630,25 +659,25 @@ export function V17_TracePanel({
               const claims = Array.isArray(row.claims) ? row.claims : [];
               const plugins = Array.isArray(row.plugins) ? row.plugins : [];
               return (
-                <div key={conflictId} className={`rounded-lg border px-2 py-2 ${conflictTone(String(row.severity || "P3"))}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[10px] tracking-[0.18em] uppercase">
+                <div key={conflictId} className={`min-w-0 rounded-lg border px-2 py-2 ${conflictTone(String(row.severity || "P3"))}`}>
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <p className="min-w-0 break-all text-[10px] tracking-[0.18em] uppercase">
                       {String(row.conflict_type || "unknown")}
                     </p>
                     <span className="font-mono text-[10px] uppercase">
                       {String(row.severity || "P3")} · {String(row.recommended_arbiter || "system")}
                     </span>
                   </div>
-                  <p className="mt-1 text-[10px] text-zinc-300">{String(row.why_conflict || "—")}</p>
+                  <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.why_conflict || "—")}</p>
                   <p className="mt-1 text-[10px] text-zinc-500">
                     {String(row.target_god || "").trim() ? `target ${String(row.target_god)} / ` : ""}
                     plugins {plugins.length} / claims {claims.length}
                   </p>
                   {plugins.length ? (
-                    <p className="mt-1 text-[10px] text-zinc-400">{plugins.slice(0, 4).join(" / ")}</p>
+                    <p className="mt-1 break-all text-[10px] text-zinc-400">{plugins.slice(0, 4).join(" / ")}</p>
                   ) : null}
                   {resolution ? (
-                    <p className="mt-1 text-[10px] text-cyan-200/90">
+                    <p className="mt-1 break-all text-[10px] text-cyan-200/90">
                       system suggestion: {String(resolution.policy || "—")} · keep {String(resolution.winner_claim_id || "—")}
                     </p>
                   ) : null}
@@ -697,8 +726,8 @@ export function V17_TracePanel({
         <div className="space-y-2">
           {brainTimeline.length ? (
             brainTimeline.map((row, idx) => (
-              <div key={`brain_timeline_${idx}`} className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 px-2 py-2">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-200">
+              <div key={`brain_timeline_${idx}`} className="min-w-0 rounded-lg border border-cyan-500/15 bg-zinc-900/60 px-2 py-2">
+                <p className="break-all text-[10px] uppercase tracking-[0.18em] text-cyan-200">
                   {String(row.conflict.conflict_type || "conflict")} · {String(row.conflict.conflict_id || "—")}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-zinc-400">
@@ -715,7 +744,7 @@ export function V17_TracePanel({
                     Queue · {String(row.action?.queue || row.resolution?.next_queue || "pending")}
                   </span>
                 </div>
-                <p className="mt-2 text-[10px] text-zinc-500">
+                <p className="mt-2 break-words text-[10px] text-zinc-500">
                   {String(row.action?.reason || row.resolution?.reason || row.conflict.why_conflict || "—")}
                 </p>
               </div>

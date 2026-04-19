@@ -27,6 +27,16 @@ function normalizePluginKey(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+function compactProjection(projection: unknown): string {
+  if (!projection || typeof projection !== "object") return "";
+  const entries = Object.entries(projection as Record<string, unknown>)
+    .map(([key, value]) => [key, Number(value || 0)] as const)
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
+}
+
 export default function OraclePage() {
   const s = useOracleSession();
 
@@ -90,6 +100,27 @@ export default function OraclePage() {
     .filter((row) => row.count > 0)
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 8);
+  const pluginFocusRows = Array.from(
+    pluginClaims.reduce((acc, row) => {
+      const key = normalizePluginKey(row.plugin_id);
+      if (!key) return acc;
+      const projectionText = compactProjection(row.cluster_projection);
+      const existing = acc.get(key);
+      const ratio = Number(row.match_ratio || 0);
+      const candidate = {
+        pluginId: String(row.plugin_id || ""),
+        label: pluginLabelById.get(key) || String(row.plugin_id || ""),
+        target: String(row.target_god || "").trim(),
+        ratio: Number.isFinite(ratio) ? ratio : 0,
+        projectionText,
+        share: Number(row.projection_share || 0),
+      };
+      if (!existing || candidate.ratio > existing.ratio) acc.set(key, candidate);
+      return acc;
+    }, new Map<string, { pluginId: string; label: string; target: string; ratio: number; projectionText: string; share: number }>() ).values(),
+  )
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, 6);
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -201,6 +232,25 @@ export default function OraclePage() {
                           <span key={`match_${row.pluginId}`} className="rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-100">
                             {row.label} {Math.round(row.avg * 100)}%
                           </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {pluginFocusRows.length ? (
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-fuchsia-300">Plugin Focus Map</div>
+                      <div className="mt-2 grid gap-1.5">
+                        {pluginFocusRows.map((row) => (
+                          <div key={`focus_${row.pluginId}`} className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-[10px] text-zinc-300">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-fuchsia-100">{row.label}</span>
+                              <span className="text-fuchsia-300">{Math.round(row.ratio * 100)}%</span>
+                            </div>
+                            <div className="mt-0.5 text-zinc-400">
+                              主落点 {row.target || "未定"}{row.share > 0 ? ` · 占比 ${Math.round(row.share * 100)}%` : ""}
+                            </div>
+                            {row.projectionText ? <div className="mt-0.5 text-zinc-500">{row.projectionText}</div> : null}
+                          </div>
                         ))}
                       </div>
                     </div>

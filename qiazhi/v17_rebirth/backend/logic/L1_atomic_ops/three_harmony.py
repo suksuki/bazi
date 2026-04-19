@@ -5,6 +5,7 @@ from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, STEM_ELEMENT, ten_god_from_stems
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     collect_origin_types_from_rows,
     choose_dominant_origin_type,
     relation_effect_multiplier,
@@ -46,20 +47,59 @@ def _parse_gz(gz: str) -> tuple[str, str]:
 def _visible_cluster_weights(physics_tensor: Dict[str, Any], *, target_element: str, day_master: str) -> Dict[str, float]:
     weights: Dict[str, float] = {}
     fp = physics_tensor.get("four_pillars", {}) if isinstance(physics_tensor.get("four_pillars"), dict) else {}
-    visible_gz = [fp.get(key, "") for key in ("year", "month", "day", "hour")]
-    visible_gz.extend([physics_tensor.get("luck_pillar", ""), physics_tensor.get("flow_pillar", "")])
-    for gz in visible_gz:
+    visible_gz = [
+        ("year", fp.get("year", "")),
+        ("month", fp.get("month", "")),
+        ("day", fp.get("day", "")),
+        ("hour", fp.get("hour", "")),
+        ("luck", physics_tensor.get("luck_pillar", "")),
+        ("flow", physics_tensor.get("flow_pillar", "")),
+    ]
+    scope_weights = {
+        "year": 0.55,
+        "month": 0.6,
+        "day": 0.45,
+        "hour": 0.55,
+        # 大运是背景延续，运上明透对合局化神的定向应明显强于流年。
+        "luck": 1.0,
+        "flow": 0.4,
+    }
+    for scope, gz in visible_gz:
         stem, _branch = _parse_gz(str(gz or ""))
         if not stem or STEM_ELEMENT.get(stem) != target_element:
             continue
         god = ten_god_from_stems(day_master, stem)
-        weights[god] = weights.get(god, 0.0) + 0.55
+        weights[god] = weights.get(god, 0.0) + float(scope_weights.get(scope, 0.55))
     return weights
 
 
-def _cluster_projection_weights(*, branches: List[str], day_master: str, physics_tensor: Dict[str, Any]) -> Dict[str, float]:
+def _visible_element_support_strength(physics_tensor: Dict[str, Any], *, target_element: str, day_master: str) -> float:
+    weights = _visible_cluster_weights(physics_tensor, target_element=target_element, day_master=day_master)
+    return max(0.0, min(1.0, sum(float(v) for v in weights.values()) / 1.8))
+
+
+def _occurrence_rows(hit: Dict[str, Any]) -> List[tuple[str, str]]:
+    pillars = [str(item) for item in (hit.get("pillars") or []) if str(item).strip()]
+    branches = [str(item) for item in (hit.get("matched_branches") or hit.get("group") or []) if str(item).strip()]
+    if not pillars or not branches:
+        return []
+    count = min(len(pillars), len(branches))
+    return [(branches[idx], pillars[idx]) for idx in range(count)]
+
+
+def _cluster_projection_weights(*, hit: Dict[str, Any], day_master: str, physics_tensor: Dict[str, Any]) -> Dict[str, float]:
+    occurrences = _occurrence_rows(hit)
+    branches = [branch for branch, _pillar in occurrences] or [str(item) for item in (hit.get("group") or []) if str(item).strip()]
     if not branches:
         return {}
+    pillar_scope_weights = {
+        "year": 0.88,
+        "month": 1.15,
+        "day": 0.95,
+        "hour": 1.0,
+        "luck": 1.05,
+        "flow": 0.78,
+    }
     mid_branches = [branch for branch in branches if branch in {"子", "午", "卯", "酉"}]
     anchor_branch = mid_branches[0] if mid_branches else branches[0]
     main_hidden = BRANCH_HIDDEN.get(anchor_branch, [])
@@ -67,12 +107,17 @@ def _cluster_projection_weights(*, branches: List[str], day_master: str, physics
     if not target_element:
         return {}
     weights: Dict[str, float] = {}
-    for branch in branches:
+    if occurrences:
+        iter_rows = occurrences
+    else:
+        iter_rows = [(branch, "hour") for branch in branches]
+    for branch, pillar in iter_rows:
+        pillar_weight = float(pillar_scope_weights.get(str(pillar), 0.9))
         for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
             if STEM_ELEMENT.get(hidden_stem) != target_element:
                 continue
             god = ten_god_from_stems(day_master, hidden_stem)
-            weights[god] = weights.get(god, 0.0) + float(hidden_weight)
+            weights[god] = weights.get(god, 0.0) + float(hidden_weight) * pillar_weight
     for god, weight in _visible_cluster_weights(physics_tensor, target_element=target_element, day_master=day_master).items():
         weights[god] = weights.get(god, 0.0) + weight
     total = sum(weights.values())
@@ -122,13 +167,13 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     scores = physics_tensor.get("ten_gods_absolute", {})
     for hit in harmony_hits:
         # 提取参与地支
-        branches = hit.get("group") or hit.get("pair") or []
+        branches = hit.get("matched_branches") or hit.get("group") or hit.get("pair") or []
         strength = float(hit.get("stress") or hit.get("strength") or (1.0 if len(branches) >= 3 else 0.55))
         if strength < min_harmony_stress:
             continue
         condition = summarize_relation_conditions(
             relation_family="sanhe",
-            pair_or_group=[str(x) for x in branches],
+            pair_or_group=[str(x) for x in (hit.get("group") or branches)],
             interaction_v2=iv2,
         )
         mid_branches = [b for b in branches if b in {"子", "午", "卯", "酉"}]
@@ -155,9 +200,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             effective_state = "supported"
             cond_mul = 0.72
         origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
-        impact_ratio = (mid_gain - 1.0) * max(0.5, strength) * cond_mul
+        visible_support_strength = _visible_element_support_strength(
+            physics_tensor,
+            target_element=STEM_ELEMENT.get(BRANCH_HIDDEN.get(mid_branch, [(dm, 1.0)])[0][0], ""),
+            day_master=dm,
+        )
+        duplicate_count = int(hit.get("duplicate_count") or max(0, len(branches) - 3))
+        pivot_factor = float(hit.get("pivot_factor") or 0.9)
+        duplicate_boost = 1.0 + 0.16 * max(0, duplicate_count)
+        pivot_boost = 1.0 + 0.18 * max(0.0, pivot_factor - 0.9)
+        support_boost = 1.0 + 0.22 * visible_support_strength
+        impact_ratio = (mid_gain - 1.0) * max(0.5, strength) * cond_mul * support_boost * duplicate_boost * pivot_boost
         priority = min(0.98, 0.78 + 0.17 * max(0.0, strength))
-        projection = _cluster_projection_weights(branches=[str(x) for x in branches], day_master=dm, physics_tensor=physics_tensor)
+        projection = _cluster_projection_weights(hit=hit, day_master=dm, physics_tensor=physics_tensor)
 
         target_shares = projection or {mid_god: 1.0}
         for god, share in sorted(target_shares.items(), key=lambda item: item[1], reverse=True):
@@ -188,8 +243,20 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "condition_blockers": list(condition["blockers"]),
                 "condition_mode": "natal_core_with_runtime_drag" if effective_state != condition["condition_state"] else "direct",
                 "condition_multiplier": cond_mul,
+                "visible_support_strength": round(visible_support_strength, 3),
+                "support_boost": round(support_boost, 3),
+                "duplicate_count": duplicate_count,
+                "duplicate_boost": round(duplicate_boost, 3),
+                "pivot_factor": round(pivot_factor, 3),
+                "pivot_boost": round(pivot_boost, 3),
                 "origin_type": condition.get("origin_type"),
                 "origin_multiplier": round(origin_mul, 3),
+                "static_basis": build_static_basis(
+                    physics_tensor=physics_tensor,
+                    target_god=god,
+                    relation_family="sanhe",
+                    relation_members=branches,
+                ),
             }
             if effective_state == "supported":
                 meta["impact_ratio"] = round(projected_impact, 2)

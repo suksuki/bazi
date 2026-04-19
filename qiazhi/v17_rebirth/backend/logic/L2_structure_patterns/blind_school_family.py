@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     choose_dominant_origin_type,
     collect_origin_types_from_rows,
     relation_origin_multiplier,
@@ -114,6 +115,12 @@ class BlindWorkAxisPlugin(V17PluginSpec):
                     "blind_axis": axis,
                     **_blind_projection_meta(physics_tensor, _top_god(scores)),
                     "match_ratio": round(min(0.88, _blind_match_ratio(iv2, scores, base=0.68, cap=0.88) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=_top_god(scores),
+                        relation_family="blind_work_axis",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -152,6 +159,12 @@ class BlindResponseChainPlugin(V17PluginSpec):
                     "response_top_god": top,
                     **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.57, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=top,
+                        relation_family="blind_response_chain",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -191,6 +204,12 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
                     "blind_symbol": symbol,
                     **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.58, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=top,
+                        relation_family="blind_symbol_trigger",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -231,6 +250,12 @@ class BlindTimingWindowPlugin(V17PluginSpec):
                     "timing_top_god": top,
                     **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.75, _blind_match_ratio(iv2, scores, base=0.53, cap=0.75) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=top,
+                        relation_family="blind_timing_window",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -270,6 +295,12 @@ class BlindSummaryPlugin(V17PluginSpec):
                     "blind_route": route,
                     **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.71, _blind_match_ratio(iv2, scores, base=0.49, cap=0.71) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=top,
+                        relation_family="blind_summary",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }

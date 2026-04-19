@@ -91,6 +91,26 @@ def test_compile_pending_decisions_infers_target_god_from_title_text() -> None:
     assert rows[0]["physical_impact"]["target_god"] == "正财"
 
 
+def test_compile_pending_decisions_does_not_infer_physics_for_classical_source() -> None:
+    rows = compile_pending_decisions(
+        facts=[],
+        spec_decisions=[],
+        existing_rows=[
+            {
+                "id": "d_classical",
+                "source": "classical.pattern.axis.v1",
+                "label": "格局轴线",
+                "title": "格局轴线：偏财 主轴明显，但当前更适合作为结构描述。",
+                "priority": 0.66,
+            }
+        ],
+    )
+    assert len(rows) == 1
+    assert rows[0]["target_god"] == "偏财"
+    assert rows[0]["physical_impact"] == {}
+    assert rows[0]["physical_impact_inferred"] is False
+
+
 def test_resolve_target_god_from_branch_and_day_master() -> None:
     resolved = resolve_target_god(
         title="检测到地支六合 [午未]：资源稳定绑定。",

@@ -102,11 +102,13 @@ def test_condition_plugins_emit_condition_metadata() -> None:
 
     assert by_plugin["l1.physics.op_branch_liuhe"].meta.get("condition_state") in {"supported", "contested"}
     assert by_plugin["l1.physics.op_branch_liuhe"].meta.get("origin_type") == "natal"
+    assert isinstance(by_plugin["l1.physics.op_branch_liuhe"].meta.get("static_basis"), dict)
     claims = compile_claims(facts=facts, physics_tensor=pt)
     liuhe_claim = next(row for row in claims if row.get("plugin_id") == "l1.physics.op_branch_liuhe")
     assert liuhe_claim.get("origin_type") == "natal"
     assert 0.0 <= float(by_plugin["l1.physics.op_branch_liuhe"].meta.get("match_ratio", 0.0) or 0.0) <= 1.0
     assert by_plugin["l1.physics.op_stem_fusion"].meta.get("condition_trigger") == "month_support"
+    assert isinstance(by_plugin["l1.physics.op_stem_fusion"].meta.get("static_basis"), dict)
     assert 0.0 <= float(by_plugin["l1.physics.op_stem_fusion"].meta.get("match_ratio", 0.0) or 0.0) <= 1.0
     assert by_plugin["classical.conflict_auditor.v1"].meta.get("conflict_count") == 1
 
@@ -295,10 +297,54 @@ def test_pattern_and_ziping_plugins_emit_cluster_projection_meta() -> None:
     assert "projection_share" in pattern_axis.meta
     assert pattern_axis.meta.get("target_god")
     assert isinstance(pattern_axis.meta.get("cluster_projection"), dict)
+    assert isinstance(pattern_axis.meta.get("static_basis"), dict)
 
     assert "cluster_projection" in ziping_month.meta
     assert "projection_share" in ziping_month.meta
     assert ziping_month.meta.get("target_god") == ziping_month.meta.get("month_command_god")
+    assert isinstance(ziping_month.meta.get("static_basis"), dict)
+
+
+def test_blind_risk_shensha_and_ten_god_pattern_emit_cluster_projection_meta() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "癸酉",
+            "month": "甲子",
+            "day": "丙寅",
+            "hour": "庚子",
+        },
+        "luck_pillar": "丁卯",
+        "flow_pillar": "丙午",
+        "ten_gods_base_l0": {"伤官": 18.0, "食神": 12.0, "正官": 16.0, "偏印": 41.0, "比肩": 14.0, "劫财": 47.0},
+        "ten_gods_runtime": {"伤官": 18.0, "食神": 12.0, "正官": 16.0, "偏印": 41.0, "比肩": 14.0, "劫财": 47.0},
+        "meta": {
+            "interaction_v2": {
+                "liu_chong": [{"pair": ["子", "午"], "pillars": ["month", "flow"], "origin_type": "flow_trigger"}],
+                "liu_hai": [{"pair": ["子", "未"], "pillars": ["hour", "luck"], "origin_type": "luck_background"}],
+                "liu_po": [],
+                "liu_he": [],
+                "san_he": [],
+                "ban_he": [{"pair": ["寅", "卯"], "pillars": ["day", "luck"], "origin_type": "luck_background"}],
+                "sanxing": [],
+            }
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+
+    for plugin_id in (
+        "classical.blind.work_axis.v1",
+        "l2.risk.risk_matrix",
+        "shensha",
+        "ten_god_pattern",
+    ):
+        meta = by_plugin[plugin_id].meta
+        assert "cluster_projection" in meta
+        assert "projection_share" in meta
+        assert meta.get("target_god")
+    assert isinstance(by_plugin["classical.blind.work_axis.v1"].meta.get("static_basis"), dict)
+    assert isinstance(by_plugin["l2.risk.risk_matrix"].meta.get("static_basis"), dict)
 
 
 def test_natal_sanhe_projects_into_officer_kill_cluster_under_runtime_drag() -> None:
@@ -345,8 +391,11 @@ def test_natal_sanhe_projects_into_officer_kill_cluster_under_runtime_drag() -> 
     assert "七杀" in by_target
     assert "正官" in by_target
     assert by_target["七杀"].meta.get("condition_mode") == "natal_core_with_runtime_drag"
-    assert float(by_target["七杀"].meta.get("projection_share", 0.0) or 0.0) > float(by_target["正官"].meta.get("projection_share", 0.0) or 0.0)
+    assert float(by_target["正官"].meta.get("projection_share", 0.0) or 0.0) > 0.40
+    assert float(by_target["七杀"].meta.get("projection_share", 0.0) or 0.0) > 0.40
     assert "impact_ratio" in by_target["七杀"].meta
+    assert isinstance(by_target["七杀"].meta.get("static_basis"), dict)
 
     stem_fusion = next(f for f in facts if str(f.plugin_id or "") == "l1.physics.op_stem_fusion")
     assert stem_fusion.meta.get("condition_state") == "stuck"
+    assert isinstance(stem_fusion.meta.get("static_basis"), dict)

@@ -53,6 +53,32 @@ def test_self_heal_physics_if_missing_rebuilds_backend_tensor(monkeypatch) -> No
     assert payload["meta"]["v17_physics_stable"] is True
 
 
+def test_should_rebuild_physics_core_when_flow_year_changes() -> None:
+    assert stream_v17._should_rebuild_physics_core(
+        current_physics={
+            "flow_year": 2026,
+            "gender": "male",
+            "birth_time": "1977-05-08T18:00:00",
+        },
+        birth_time="1977-05-08T18:00:00",
+        gender="male",
+        flow_year=2027,
+    ) is True
+
+
+def test_should_not_rebuild_physics_core_when_request_matches_current() -> None:
+    assert stream_v17._should_rebuild_physics_core(
+        current_physics={
+            "flow_year": 2026,
+            "gender": "male",
+            "birth_time": "1977-05-08T18:00:00",
+        },
+        birth_time="1977-05-08T18:00:00",
+        gender="male",
+        flow_year=2026,
+    ) is False
+
+
 def test_snapshot_frame_marks_local_memory_anchor(monkeypatch) -> None:
     monkeypatch.setattr("v17_rebirth.backend.services.verdict_orchestrator.AutoScanner.ensure_loaded", lambda: None)
     monkeypatch.setattr(

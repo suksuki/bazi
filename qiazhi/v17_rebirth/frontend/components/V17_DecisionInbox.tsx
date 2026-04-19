@@ -183,6 +183,24 @@ function promptPreview(decision: Decision): string {
   return `Prompt 将引用：${preview}，来源 ${source}。`;
 }
 
+function compactProjection(projection: unknown): string {
+  if (!projection || typeof projection !== "object") return "";
+  const entries = Object.entries(projection as Record<string, unknown>)
+    .map(([key, value]) => [key, Number(value || 0)] as const)
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+  return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
+}
+
+function decisionFocusPreview(decision: Decision): string {
+  const projectionText = compactProjection((decision as Decision & { cluster_projection?: Record<string, unknown> }).cluster_projection);
+  const share = Number((decision as Decision & { projection_share?: number }).projection_share || 0);
+  const target = String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim();
+  if (!projectionText && share <= 0) return "";
+  return `主落点 ${target}${share > 0 ? ` · 占比 ${Math.round(share * 100)}%` : ""}${projectionText ? ` · ${projectionText}` : ""}`;
+}
+
 function llmPolicyLabel(policy: string | undefined): string {
   if (policy === "auto_apply") return "可自动裁决";
   if (policy === "suggest_only") return "仅给建议";
@@ -190,15 +208,15 @@ function llmPolicyLabel(policy: string | undefined): string {
 }
 
 function llmResultLabel(result: string | undefined): string {
-  if (result === "collapse_system") return "将下沉到 SYSTEM";
-  if (result === "promote_manual") return "将升格到 MANUAL";
-  if (result === "consume_context") return "将被 LLM 消化";
+  if (result === "collapse_system") return "将转入自动处理";
+  if (result === "promote_manual") return "将升格到手动入口";
+  if (result === "consume_context") return "将被叙事层消化";
   return "继续等待";
 }
 
 function llmStateLabel(state: string | undefined): string {
-  if (state === "collapsed_to_system") return "已转入 SYSTEM";
-  if (state === "promoted_to_manual") return "已转入 MANUAL";
+  if (state === "collapsed_to_system") return "已转入自动处理";
+  if (state === "promoted_to_manual") return "已转入手动入口";
   if (state === "pending_context") return "等待模型消化";
   return "处理中";
 }
@@ -293,6 +311,21 @@ function isPassiveLlmContext(decision: Decision): boolean {
   const result = String(decision.llm_resolution_result || "").trim().toLowerCase();
   const state = String(decision.llm_resolution_state || "").trim().toLowerCase();
   return policy === "context_only" || result === "consume_context" || state === "pending_context";
+}
+
+function isActionableManualDecision(decision: Decision): boolean {
+  const status = String(decision.status || "").trim().toUpperCase();
+  if (status && !new Set(["PENDING", "AWAIT_REVIEW"]).has(status)) return false;
+  if (isPassiveLlmContext(decision)) return false;
+  const mode = String(decision.arbitration_mode || "manual").trim().toLowerCase();
+  if (mode && mode !== "manual") return false;
+  const impact = decision.physical_impact || {};
+  const hasRatio = Object.prototype.hasOwnProperty.call(impact, "impact_ratio");
+  const ratio = Math.abs(Number(impact.impact_ratio || 0));
+  if (hasRatio && ratio <= 1e-6) return false;
+  const llmState = String(decision.llm_resolution_state || "").trim().toLowerCase();
+  if (llmState === "promoted_to_manual" && !String(decision.id || "").trim()) return false;
+  return true;
 }
 
 function formatPlanDecisionTrace(trace: PlanDecisionTrace[]): string[] {
@@ -541,23 +574,17 @@ export function V17_DecisionInbox({
       ["physics", "physical_void", "system_init_failure"].includes(String((f?.payload as any)?.snapshot_kind || ""))
     ), [frames]);
 
-  const allDecisionsSource =
-    latestSnapshot?.payload?.all_decisions || latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || [];
   const manualSeed = useMemo(() => {
-    if (!allDecisionsSource.length) {
-      return latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
-    }
-    return allDecisionsSource.filter((decision) => {
-      const mode = String(decision.arbitration_mode || "manual").trim().toLowerCase();
-      return mode === "manual" || !mode;
-    });
-  }, [latestSnapshot?.payload?.all_decisions, latestSnapshot?.payload?.manual_inbox, latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions]);
+    const source =
+      latestSnapshot?.payload?.manual_inbox ||
+      latestSnapshot?.payload?.manual_decisions ||
+      latestSnapshot?.payload?.pending_decisions ||
+      [];
+    return source.filter((decision) => isActionableManualDecision(decision));
+  }, [latestSnapshot?.payload?.manual_inbox, latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions]);
 
   const { visible: sortedManualDecisions, hiddenCount } = useMemo(() => {
-    const source =
-      manualSeed.length
-        ? manualSeed
-        : latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
+    const source = manualSeed.length ? manualSeed : [];
     const raw = source.filter((d, idx) => {
       const id = normalizeDecisionId(d, idx);
       return !adoptedIds.includes(id);
@@ -566,7 +593,7 @@ export function V17_DecisionInbox({
     const DISPLAY_CAP = 14;
     const cap = Math.min(sorted.length, DISPLAY_CAP);
     return { visible: sorted.slice(0, cap), hiddenCount: Math.max(0, sorted.length - cap) };
-  }, [manualSeed, adoptedIds, latestSnapshot?.payload?.manual_inbox, latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions]);
+  }, [manualSeed, adoptedIds]);
 
   const decisions = useMemo(
     () =>
@@ -622,6 +649,8 @@ export function V17_DecisionInbox({
         ),
       );
       if (!batchDecisions.length) continue;
+      const netImpactRatio = Number(raw?.net_impact_ratio || 0);
+      if (!Number.isFinite(netImpactRatio) || Math.abs(netImpactRatio) <= 1e-6) continue;
       rows.push({
         batch_id: String(raw?.batch_id || `${bucket}:${raw?.source_anchor || "unknown"}:${decisionIds.join(",")}`).trim(),
         bucket: "manual",
@@ -630,7 +659,7 @@ export function V17_DecisionInbox({
         source_families: sourceFamilies,
         decisions: batchDecisions,
         decision_count: Number(raw?.decision_count || batchDecisions.length),
-        net_impact_ratio: Number(raw?.net_impact_ratio || 0),
+        net_impact_ratio: netImpactRatio,
         max_priority: Number(raw?.max_priority || 0),
         prompt_line: String(raw?.prompt_line || "").trim() || "自动批次已生成，可一次提交。",
         batch_ids: batchIds.length ? batchIds : undefined,
@@ -900,7 +929,7 @@ export function V17_DecisionInbox({
               const routingReason = String(plan.routing_reason || (plan.meta?.routing_reason as string) || "").trim();
               const routingPolicy = String(plan.routing_policy || (plan.meta?.routing_policy as string) || "").trim();
               const claim = plan.routing_claim || (plan.meta?.routing_claim as PlanDecisionClaim | undefined);
-              const approveLabel = routingLabel === "LLM 预审" ? "提交给系统执行" : "计划通过";
+              const approveLabel = routingLabel === "LLM 预审" ? "提交自动执行" : "计划通过";
               const rejectLabel = routingLabel === "LLM 预审" ? "否决预审" : "计划否决";
               return (
                 <div
@@ -936,7 +965,7 @@ export function V17_DecisionInbox({
                   ) : null}
                   {llmReviewPrompt ? (
                     <div className="mt-2 border-t border-zinc-700/20 pt-2">
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">LLM 仲裁提示</p>
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">模型预审提示</p>
                       <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap rounded-md border border-amber-500/20 bg-zinc-950/70 p-1.5 text-[9px] leading-tight text-amber-100">
                         {llmReviewPrompt}
                       </pre>
@@ -1012,6 +1041,7 @@ export function V17_DecisionInbox({
           <div className="space-y-1">
             {decisionTraceIndex.items.map((item) => {
               const route = String(item.routing || "system").trim().toUpperCase() || "SYSTEM";
+              const routeLabel = route === "LLM" ? "模型预审" : route === "SYSTEM" ? "自动处理" : route === "USER" ? "手动入口" : route;
               return (
                 <div key={item.plan_id} className="rounded-lg border border-zinc-700/25 bg-zinc-900/60 px-2 py-1.5 text-[10px] text-zinc-300">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1019,7 +1049,7 @@ export function V17_DecisionInbox({
                       {item.anchor || "未命名计划"} · {item.plan_id || "unknown"}
                     </p>
                     <span className="rounded-full border border-zinc-700/30 px-1.5 py-0.5 text-[9px] text-zinc-200">
-                      {route}
+                      {routeLabel}
                     </span>
                   </div>
                   <p className="mt-1 text-zinc-500">
@@ -1035,7 +1065,7 @@ export function V17_DecisionInbox({
                       原因 {String(item.routing_reason || "") || String(item.routing_policy || "")} · policy {String(item.routing_policy || "").trim() || "-"}
                     </p>
                   ) : null}
-                  {item.llm_prompt_preview ? <p className="mt-1 text-cyan-200/80">该 Plan 包含 LLM 提示词预审上下文</p> : null}
+                  {item.llm_prompt_preview ? <p className="mt-1 text-cyan-200/80">该计划包含模型预审提示上下文</p> : null}
                 </div>
               );
             })}
@@ -1204,6 +1234,9 @@ export function V17_DecisionInbox({
                           </span>
                         ))}
                       </div>
+                      {decisionFocusPreview(sampleDecision) ? (
+                        <p className="mt-2 text-[10px] text-fuchsia-200/90">{decisionFocusPreview(sampleDecision)}</p>
+                      ) : null}
 
                       <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
                         <button
@@ -1252,6 +1285,9 @@ export function V17_DecisionInbox({
                                 </button>
                               </div>
                             </div>
+                            {decisionFocusPreview(d) ? (
+                              <p className="mt-1 text-[9px] text-fuchsia-200/80">{decisionFocusPreview(d)}</p>
+                            ) : null}
                           </div>
                         ))}
                       </div>
@@ -1309,6 +1345,9 @@ export function V17_DecisionInbox({
                 <p className="mt-1 text-[10px] text-zinc-400">{impactText(row)}</p>
                 <p className="mt-1 font-mono text-[10px] text-amber-200/80">{arbitrationTrace("auto", row)}</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{bucketReason("auto", row)}</p>
+                {decisionFocusPreview(row) ? (
+                  <p className="mt-1 text-[10px] text-fuchsia-200/90">{decisionFocusPreview(row)}</p>
+                ) : null}
                 <div className="mt-1 flex flex-wrap gap-1">
                   {decisionReasonTags("auto", row).map((tag) => (
                     <span key={`${entry.key}:${tag}`} className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">

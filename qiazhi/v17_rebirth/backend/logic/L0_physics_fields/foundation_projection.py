@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     BRANCH_HIDDEN,
-    _collect_rooted_stems,
+    _collect_root_strengths,
     _collect_visible_stems,
     _parse_gz,
 )
@@ -64,7 +64,11 @@ class RootedStemsFoundationPlugin(V17PluginSpec):
         four = _four_pillars(physics_tensor)
         luck = str(physics_tensor.get("luck_pillar", "") or "")
         flow = str(physics_tensor.get("flow_pillar", "") or "")
-        rooted = sorted(_collect_rooted_stems(four, luck, flow))
+        rooted = sorted(
+            stem
+            for stem, strength in (_collect_root_strengths(four, luck, flow) or {}).items()
+            if float(strength or 0.0) >= 0.18
+        )
         if not rooted:
             return []
         rows = [

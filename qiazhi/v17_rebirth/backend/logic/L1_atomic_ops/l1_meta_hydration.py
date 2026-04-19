@@ -40,6 +40,7 @@ from v17_rebirth.backend.services.claim_protocol import CLAIM_JSON_SCHEMA, compi
 from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts, recommend_conflict_resolutions
 from v17_rebirth.backend.services.conflict_scoring import build_conflict_scores
 from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapshot
+from v17_rebirth.backend.services.master_reasoning import build_master_reasoning_trace
 from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
@@ -182,6 +183,21 @@ def _geometry_hits_to_decision_rows(pt: Dict[str, Any], hits: Dict[str, Any]) ->
 def _normalize_claim_id(raw: Any) -> str:
     value = str(raw or "").strip()
     return value if value else ""
+
+
+def _geometry_rows_with_origin(rows: List[Dict[str, Any]], *, member_key: str) -> List[Dict[str, Any]]:
+    payload: List[Dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        item = dict(row)
+        item["origin_type"] = detect_relation_origin_type(item.get("pillars") or [])
+        if member_key == "group":
+            item["matched_branches"] = [
+                str(value) for value in (item.get("matched_branches") or item.get("group") or []) if str(value).strip()
+            ]
+        payload.append(item)
+    return payload
 
 
 def _normalize_winner_claim_ids(row: Dict[str, Any]) -> List[str]:
@@ -458,13 +474,13 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "luck": str(pt.get("luck_pillar") or "").strip(),
             "flow": str(pt.get("flow_pillar") or "").strip(),
         },
-        "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_chong],
-        "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_hai],
-        "liu_po": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_po],
-        "liu_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_he],
-        "san_he": [{"group": h.get("group"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in san_he],
-        "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in ban_he],
-        "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in an_he],
+        "liu_chong": _geometry_rows_with_origin(liu_chong, member_key="pair"),
+        "liu_hai": _geometry_rows_with_origin(liu_hai, member_key="pair"),
+        "liu_po": _geometry_rows_with_origin(liu_po, member_key="pair"),
+        "liu_he": _geometry_rows_with_origin(liu_he, member_key="pair"),
+        "san_he": _geometry_rows_with_origin(san_he, member_key="group"),
+        "ban_he": _geometry_rows_with_origin(ban_he, member_key="pair"),
+        "an_he": _geometry_rows_with_origin(an_he, member_key="pair"),
         "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge"), "origin_type": detect_relation_origin_type(h.get("edge") or [])} for h in sanxing_geo],
     }
     meta["interaction_v2"] = geom_data
@@ -695,6 +711,9 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
     meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
     meta["knowledge_snapshot"] = dict(knowledge_snapshot)
+    master_reasoning = build_master_reasoning_trace(physics_tensor=pt, meta=meta)
+    meta["master_reasoning"] = dict(master_reasoning)
+    pt["master_reasoning"] = dict(master_reasoning)
 
     _scanned_pids = [s.plugin_id for s in all_specs]
 
@@ -768,6 +787,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     # 7. 终效同步与清理
     pt["ten_gods_base_l0"] = dict(_base)
     sync_runtime_aliases(pt, _runtime)
+    meta["v17_physics_stable"] = True
     meta["plugin_execution_status"] = _build_plugin_execution_statuses(
         facts=collected_facts,
         proposals=adjusted_modifier_proposals,

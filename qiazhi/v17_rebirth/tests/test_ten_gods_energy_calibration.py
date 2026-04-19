@@ -104,7 +104,7 @@ def test_same_proportion_different_magnitude_must_differ_in_absolute_values() ->
 
     思路：
     - 高能量：全甲木，寅月（木当令）
-    - 低能量：全甲木，申月（木被月令金所克）
+    - 低能量：全甲木，申月（木不得令，但 L0 不再直接因金克木而压低）
     """
     # 高能量：木当令（寅月 = 木）
     high_scores, _, high_total, _ = calc_deity_scores(
@@ -114,7 +114,7 @@ def test_same_proportion_different_magnitude_must_differ_in_absolute_values() ->
         gender="female",
     )
 
-    # 低能量：木被克（申月 = 金克木）
+    # 低能量：木不得令（申月 = 金月，不再由 L0 直接压低木）
     low_scores, _, low_total, _ = calc_deity_scores(
         four_pillars={"year": "甲申", "month": "甲申", "day": "甲申", "hour": "甲申"},
         luck_pillar="—",
@@ -163,6 +163,29 @@ def test_season_power_amplifies_in_season_element() -> None:
     assert fire_total > water_total * 1.3, (
         f"Fire in-season ({fire_total:.2f}) should be > 1.3x fire out-of-season ({water_total:.2f})"
     )
+
+
+def test_l0_controlled_element_is_not_directly_suppressed_by_month_order() -> None:
+    """
+    L0 静态层允许当令加成，但不再因为“月令所克”直接压低目标元素本体。
+    """
+    metal_chart, _, metal_total, _ = calc_deity_scores(
+        four_pillars={"year": "辛巳", "month": "辛巳", "day": "乙酉", "hour": "辛丑"},
+        luck_pillar="辛丑",
+        flow_pillar="乙未",
+        gender="male",
+    )
+    wood_chart, _, wood_total, _ = calc_deity_scores(
+        four_pillars={"year": "乙卯", "month": "乙卯", "day": "乙卯", "hour": "乙未"},
+        luck_pillar="乙卯",
+        flow_pillar="乙未",
+        gender="male",
+    )
+
+    assert metal_chart.get("七杀", 0.0) > 0.0
+    assert wood_chart.get("比肩", 0.0) > 0.0
+    assert metal_total > 0.0
+    assert wood_total > 0.0
 
 
 def test_total_energy_range_is_in_expected_band() -> None:

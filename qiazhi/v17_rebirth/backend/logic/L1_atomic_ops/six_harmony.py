@@ -5,6 +5,7 @@ from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
@@ -100,6 +101,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "condition_multiplier": cond_mul,
             "origin_type": condition.get("origin_type"),
             "origin_multiplier": round(origin_mul, 3),
+            "static_basis": build_static_basis(
+                physics_tensor=physics_tensor,
+                target_god=god,
+                relation_family="liuhe",
+                relation_members=pair,
+            ),
         }
         if condition["condition_state"] == "supported":
             meta["impact_ratio"] = round(impact, 2)

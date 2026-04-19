@@ -144,6 +144,41 @@ def _safe_parse_birth_time(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
+def _should_rebuild_physics_core(
+    *,
+    current_physics: Dict[str, Any] | None,
+    birth_time: Optional[str],
+    gender: Optional[str],
+    flow_year: Optional[int],
+) -> bool:
+    current = current_physics if isinstance(current_physics, dict) else {}
+    if not current:
+        return True
+
+    if flow_year is not None:
+        try:
+            current_flow_year = int(current.get("flow_year")) if current.get("flow_year") is not None else None
+        except (TypeError, ValueError):
+            current_flow_year = None
+        if current_flow_year != int(flow_year):
+            return True
+
+    if gender is not None:
+        current_gender = str(current.get("gender") or "").strip().lower() or None
+        request_gender = str(gender or "").strip().lower() or None
+        if current_gender != request_gender:
+            return True
+
+    if birth_time is not None:
+        current_birth = str(current.get("birth_time") or "").strip() or None
+        parsed_request = _safe_parse_birth_time(birth_time)
+        request_birth = parsed_request.isoformat() if parsed_request is not None else str(birth_time or "").strip() or None
+        if current_birth != request_birth:
+            return True
+
+    return False
+
+
 def _pillar(stems: List[str], branches: List[str], idx: int) -> str:
     return f"{stems[idx % len(stems)]}{branches[idx % len(branches)]}"
 
@@ -1259,11 +1294,23 @@ async def stream_v17_post(
 ) -> Union[StreamingResponse, JSONResponse]:
     session_id = str((payload or {}).get("session_id", "")).strip() or "default"
     current_physics = await get_state_backend().get_physics(session_id)
-    merged_payload = dict(current_physics) if isinstance(current_physics, dict) and current_physics else _run_v17_physics_core(
-        birth_time=_safe_parse_birth_time(birth_time),
+    if _should_rebuild_physics_core(
+        current_physics=current_physics if isinstance(current_physics, dict) else None,
+        birth_time=birth_time,
         gender=gender,
         flow_year=flow_year,
-    )
+    ):
+        merged_payload = _run_v17_physics_core(
+            birth_time=_safe_parse_birth_time(birth_time),
+            gender=gender,
+            flow_year=flow_year,
+        )
+    else:
+        merged_payload = dict(current_physics) if isinstance(current_physics, dict) and current_physics else _run_v17_physics_core(
+            birth_time=_safe_parse_birth_time(birth_time),
+            gender=gender,
+            flow_year=flow_year,
+        )
     if isinstance(payload, dict):
         for _k, _v in payload.items():
             if _k in _PHYS_SSOT_KEYS:

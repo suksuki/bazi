@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    build_static_basis,
     choose_dominant_origin_type,
     collect_origin_types_from_rows,
     relation_origin_multiplier,
@@ -153,6 +154,12 @@ class PatternAxisPlugin(V17PluginSpec):
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.77,
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=top[0],
+                        relation_family="pattern_axis",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -199,6 +206,12 @@ class JianLuYueJiePlugin(V17PluginSpec):
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.75,
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=month_god,
+                        relation_family="pattern_jianlu_yuejie",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -250,6 +263,12 @@ class CongShiPlugin(V17PluginSpec):
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.74,
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=g1,
+                        relation_family="pattern_congshi",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -300,6 +319,12 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.73,
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=dominant_god,
+                        relation_family="pattern_finance_officer",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -333,6 +358,12 @@ class PatternResolverPlugin(V17PluginSpec):
                     "pattern_candidate_count": len(unique_names),
                     "pattern_candidates": unique_names,
                     "pattern_axes": sorted(set(axis_names)),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=str(axis_names[0] if axis_names else ""),
+                        relation_family="pattern_resolver",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -377,6 +408,12 @@ class PatternFormationGatePlugin(V17PluginSpec):
                     "pattern_gate_reason": best_reason,
                     "dominant_ratio": top_ratio,
                     "month_main_god": month_god,
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=str(context.get("top_name") or month_god or ""),
+                        relation_family="pattern_formation_gate",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }
@@ -406,6 +443,12 @@ class PatternBreakGuardPlugin(V17PluginSpec):
                 "meta": {
                     "pattern_break_risks": blockers,
                     "pattern_candidate_count": len(candidates),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=str(context.get("top_name") or ""),
+                        relation_family="pattern_break_guard",
+                        relation_members=[],
+                    ),
                     **origin_meta,
                 },
             }

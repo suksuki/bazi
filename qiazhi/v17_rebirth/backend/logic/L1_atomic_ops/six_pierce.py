@@ -5,7 +5,7 @@ from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config, resolve_config_number
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
-from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import relation_effect_multiplier, summarize_relation_conditions
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import build_static_basis, relation_effect_multiplier, summarize_relation_conditions
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_branch_liuhai",
@@ -110,6 +110,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "condition_multiplier": round(cond_mul, 3),
                 "origin_type": condition.get("origin_type"),
                 "origin_multiplier": round(origin_mul, 3),
+                "static_basis": build_static_basis(
+                    physics_tensor=physics_tensor,
+                    target_god=god_j,
+                    relation_family="liuhai",
+                    relation_members=pair,
+                ),
             }
         })
     return rows
