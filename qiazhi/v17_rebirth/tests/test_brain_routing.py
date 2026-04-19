@@ -47,3 +47,26 @@ def test_route_conflicts_prefers_severity_policy_with_session_knowledge() -> Non
     assert routed[1]["recommended_arbiter"] == "llm"
     assert routed[2]["recommended_arbiter"] == "user"
     assert routed[0]["routing_policy"] == "severity_plus_session_preference"
+
+
+def test_route_conflicts_keeps_valid_explicit_recommendation() -> None:
+    conflicts = [
+        {"conflict_id": "c1", "severity": "P2", "recommended_arbiter": "user"},
+    ]
+    routed = route_conflicts(
+        conflicts=conflicts,
+        knowledge_snapshot={"conflict_history": {"recommended_arbiters": {"user": 9}}},
+    )
+    assert routed[0]["recommended_arbiter"] == "user"
+
+
+def test_route_conflicts_falls_back_when_explicit_arbiter_is_invalid() -> None:
+    conflicts = [
+        {"conflict_id": "c1", "severity": "P2", "recommended_arbiter": "auto"},
+        {"conflict_id": "c2", "severity": "P3", "recommended_arbiter": ""},
+        {"conflict_id": "c3", "severity": "", "recommended_arbiter": "invalid"},
+    ]
+    routed = route_conflicts(conflicts=conflicts, knowledge_snapshot={"conflict_history": {"recommended_arbiters": {"system": 0, "llm": 0}}})
+    assert routed[0]["recommended_arbiter"] == "llm"
+    assert routed[1]["recommended_arbiter"] == "system"
+    assert routed[2]["recommended_arbiter"] == "system"

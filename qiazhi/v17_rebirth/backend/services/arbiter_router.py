@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+_VALID_ARBITERS = {"system", "llm", "user"}
+
 
 def _normalized(value: Any) -> str:
     return str(value or "").strip().lower()
@@ -30,6 +32,7 @@ def route_conflicts(
         cloned = dict(row)
         severity = str(cloned.get("severity") or "").strip().upper()
         explicit = _normalized(cloned.get("recommended_arbiter"))
+        explicit = explicit if explicit in _VALID_ARBITERS else ""
         resolved = explicit or _default_arbiter_for_severity(severity)
 
         if severity == "P3" and int(preferred.get("system", 0) or 0) >= int(preferred.get("llm", 0) or 0):
