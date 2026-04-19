@@ -47,6 +47,25 @@ def infer_decision_hint(*, plugin_id: str, fact_text: str, meta: Dict[str, Any])
     return ""
 
 
+def _resolve_exclusivity_key(*, source: str, target_god: str, meta: Dict[str, Any] | None, source_event: str = "") -> str:
+    source_name = str(source or "").strip()
+    target_name = str(target_god or "").strip() or "any"
+    if not isinstance(meta, dict):
+        meta = {}
+    explicit = str(meta.get("exclusivity_key") or "").strip()
+    if explicit:
+        return explicit
+    explicit = str(meta.get("source_event") or meta.get("source_key") or "").strip()
+    if explicit:
+        return explicit
+    event = str(source_event or "").strip()
+    if event:
+        return event
+    if source_name:
+        return f"{source_name}|{target_name}"
+    return f"manual|{target_name}"
+
+
 def decision_relative_impact(title: str, target_god: str) -> Dict[str, Any]:
     text = str(title or "").strip()
     impact: Dict[str, Any] = {"target_god": str(target_god or "").strip()}
@@ -222,6 +241,12 @@ def compile_pending_decisions(
             physics_tensor=physics_tensor,
         )
         row["target_god"] = target_god
+        row["exclusivity_key"] = _resolve_exclusivity_key(
+            source=str(row.get("source") or row.get("plugin_id") or "legacy"),
+            target_god=target_god,
+            meta=physical_impact if isinstance(physical_impact, dict) else None,
+            source_event=str(row.get("source_event") or ""),
+        )
         if not physical_impact:
             physical_impact = decision_relative_impact(row["title"], target_god)
             row["physical_impact_inferred"] = True
@@ -232,6 +257,12 @@ def compile_pending_decisions(
             row["physical_impact_inferred"] = False
         row["physical_impact"] = physical_impact
         row["physical_impact"] = physical_impact
+        row["exclusivity_key"] = row.get("exclusivity_key") or _resolve_exclusivity_key(
+            source=str(row.get("source") or row.get("plugin_id") or "legacy"),
+            target_god=target_god,
+            meta=physical_impact if isinstance(physical_impact, dict) else None,
+            source_event=str(row.get("source_event") or ""),
+        )
         # V17.99: 废除 Target God 歧视。
         # 即便没有明确的目标神位移，描述性/诊断性的 L1-L4 事实也必须进入 Inbox。
         key = f"{str(row.get('source') or row.get('plugin_id') or 'legacy')}|{row['label']}"
@@ -256,6 +287,12 @@ def compile_pending_decisions(
             "target_god": target_god,
             "physical_impact": physical_impact,
         }
+        row["exclusivity_key"] = _resolve_exclusivity_key(
+            source=row["source"],
+            target_god=target_god,
+            meta=physical_impact if isinstance(physical_impact, dict) else None,
+            source_event=str(row.get("source_event") or ""),
+        )
         if not isinstance(row["physical_impact"], dict) or not row["physical_impact"]:
             row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
             row["physical_impact_inferred"] = True
@@ -300,6 +337,12 @@ def compile_pending_decisions(
             physics_tensor=physics_tensor,
         )
         row["physical_impact"] = dict(existing_impact or meta or decision_relative_impact(row["title"], row["target_god"]))
+        row["exclusivity_key"] = row.get("exclusivity_key") or _resolve_exclusivity_key(
+            source=str(row.get("source") or row.get("plugin_id") or fact.plugin_id or "fact"),
+            target_god=str(row.get("target_god") or ""),
+            meta=meta,
+            source_event=str(row.get("source_event") or ""),
+        )
         if not row["physical_impact"]:
             row["physical_impact"] = decision_relative_impact(row["title"], row["target_god"])
             row["physical_impact_inferred"] = True
@@ -405,6 +448,19 @@ def compile_decision_arbitration(
         existing_rows=existing_rows,
         physics_tensor=physics_tensor,
     )
+    def _ensure_exclusivity_key(row: Dict[str, Any]) -> None:
+        if row.get("exclusivity_key"):
+            return
+        source = str(row.get("source") or row.get("plugin_id") or "")
+        target = str(row.get("target_god") or (row.get("physical_impact") or {}).get("target_god") or "")
+        source_event = str(row.get("source_event") or row.get("source_key") or "")
+        impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else None
+        row["exclusivity_key"] = _resolve_exclusivity_key(
+            source=source,
+            target_god=target,
+            meta=impact if isinstance(impact, dict) else None,
+            source_event=source_event,
+        )
     llm_seed: List[Dict[str, Any]] = []
     for item in existing_rows or []:
         if not isinstance(item, dict):
@@ -414,6 +470,7 @@ def compile_decision_arbitration(
         row["label"] = str(row.get("label") or row.get("hint") or row.get("title") or "").strip()
         if not row["title"] and not row["label"]:
             continue
+        _ensure_exclusivity_key(row)
         llm_seed.append(row)
     for fact in facts:
         text = str(fact.text or "").strip()
@@ -441,6 +498,7 @@ def compile_decision_arbitration(
                 "physical_impact": dict(meta),
             }
         )
+        _ensure_exclusivity_key(llm_seed[-1])
     manual: List[Dict[str, Any]] = []
     auto: List[Dict[str, Any]] = []
     llm: List[Dict[str, Any]] = []
@@ -448,6 +506,7 @@ def compile_decision_arbitration(
     classified_seen: set[str] = set()
     for row in compiled:
         cloned = dict(row)
+        _ensure_exclusivity_key(cloned)
         key = f"{cloned.get('source','')}|{cloned.get('label','')}"
         if _is_auto_candidate(cloned):
             cloned = _annotate_arbitration_trace(cloned, "system")
@@ -480,6 +539,7 @@ def compile_decision_arbitration(
         if key in llm_seen or key in classified_seen:
             continue
         cloned = dict(row)
+        _ensure_exclusivity_key(cloned)
         if _is_manual_candidate(cloned) or _is_auto_candidate(cloned):
             continue
         cloned = _annotate_arbitration_trace(cloned, "llm")

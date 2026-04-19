@@ -36,6 +36,7 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
 from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
 from v17_rebirth.backend.services.claim_protocol import CLAIM_JSON_SCHEMA, compile_claims
 from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts, recommend_conflict_resolutions
+from v17_rebirth.backend.services.conflict_scoring import build_conflict_scores
 from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapshot
 from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
@@ -563,13 +564,20 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     modifier_proposals = compile_modifier_proposals(facts=collected_facts, physics_tensor=pt)
     claim_rows = compile_claims(facts=collected_facts, physics_tensor=pt)
     raw_conflict_rows = detect_claim_conflicts(claim_rows)
+    scored_conflict_rows = build_conflict_scores(conflicts=raw_conflict_rows, claim_rows=claim_rows)
     conflict_resolutions = recommend_conflict_resolutions(claim_rows, raw_conflict_rows)
+    conflict_feedback = evolution_storage.get_feedback(
+        session_id,
+        action="conflict_resolution",
+        limit=120,
+    )
     knowledge_snapshot = build_knowledge_snapshot(
         claims=claim_rows,
-        conflicts=raw_conflict_rows,
+        conflicts=scored_conflict_rows,
         conflict_resolutions=conflict_resolutions,
+        feedback_rows=conflict_feedback,
     )
-    conflict_rows = route_conflicts(conflicts=raw_conflict_rows, knowledge_snapshot=knowledge_snapshot)
+    conflict_rows = route_conflicts(conflicts=scored_conflict_rows, knowledge_snapshot=knowledge_snapshot)
     adjusted_modifier_proposals, settlement_meta = _extract_claims_resolution_plan(
         claim_rows=claim_rows,
         conflict_resolutions=conflict_resolutions,

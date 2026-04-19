@@ -17,8 +17,8 @@ from v17_rebirth.backend.services.conflict_resolution_service import apply_confl
 from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapshot
 from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.llm_conflict_arbiter import (
-    apply_llm_conflict_result,
-    build_conflict_bundle,
+    apply_llm_conflict_results,
+    build_conflict_bundles,
     build_llm_conflict_prompt,
     parse_llm_conflict_reply,
 )
@@ -477,8 +477,20 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
     session_id = str(payload.get("session_id", "")).strip() or "default"
     conflict_id = str(payload.get("conflict_id", "")).strip()
     arbiter = str(payload.get("arbiter", "system")).strip().lower() or "system"
-    if not conflict_id:
-        raise HTTPException(status_code=400, detail="conflict_id is required")
+    if arbiter not in {"system", "llm", "user"}:
+        arbiter = "system"
+    raw_conflict_ids = payload.get("conflict_ids", [])
+    conflict_ids: list[str] = []
+    if isinstance(raw_conflict_ids, (list, tuple)):
+        for item in raw_conflict_ids:
+            cid = str(item or "").strip()
+            if cid and cid not in conflict_ids:
+                conflict_ids.append(cid)
+    if conflict_id and conflict_id not in conflict_ids:
+        conflict_ids.insert(0, conflict_id)
+    if not conflict_ids:
+        raise HTTPException(status_code=400, detail="conflict_ids or conflict_id is required")
+    normalized_conflict_id = conflict_ids[0]
 
     backend = get_state_backend()
     physics = await backend.get_physics(session_id)
@@ -486,12 +498,14 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="physics not found")
     meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
     if arbiter == "llm":
+        bundle = build_conflict_bundles(meta=meta, conflict_ids=conflict_ids)
+        if not bundle.get("conflicts"):
+            raise HTTPException(status_code=404, detail="no valid conflicts in this request")
         cfg = get_runtime_llm_config()
         base_url = str(cfg.get("base_url") or "").strip()
         model = str(cfg.get("model") or "").strip()
         if not base_url or not model:
             raise HTTPException(status_code=400, detail="llm config incomplete")
-        bundle = build_conflict_bundle(meta=meta, conflict_id=conflict_id)
         prompt = build_llm_conflict_prompt(bundle=bundle)
         try:
             llm_result = _chat_llm(base_url, model, prompt)
@@ -499,17 +513,48 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
             raise HTTPException(status_code=502, detail=f"llm conflict arbitration failed: {exc}")
         reply = str(llm_result.get("reply") or "").strip()
         parsed = parse_llm_conflict_reply(reply=reply, bundle=bundle)
-        updated_meta = apply_llm_conflict_result(
+        updated_meta = apply_llm_conflict_results(
             meta=meta,
-            conflict_id=conflict_id,
+            conflict_ids=conflict_ids,
             bundle=bundle,
             reply=reply,
             parsed=parsed,
         )
+        feedback_rows = evolution_storage.get_feedback(session_id=session_id, action="conflict_resolution", limit=200)
+        for item_id in conflict_ids:
+            row_status = "llm"
+            for resolution in updated_meta.get("plugin_conflict_resolutions", []) if isinstance(updated_meta.get("plugin_conflict_resolutions"), list) else []:
+                if str(resolution.get("conflict_id") or "").strip() != item_id:
+                    continue
+                resolved_by = str(resolution.get("resolved_by") or "").strip().lower()
+                if resolved_by in {"system", "llm", "user"}:
+                    row_status = resolved_by
+                break
+            try:
+                evolution_storage.log_feedback(
+                    session_id=session_id,
+                    decision_id=item_id,
+                    action="conflict_resolution",
+                    status=row_status,
+                    meta={"route": "llm", "arbiter": row_status},
+                )
+                feedback_rows.append(
+                    {
+                        "session_id": session_id,
+                        "decision_id": item_id,
+                        "action": "conflict_resolution",
+                        "status": row_status,
+                        "residual_correction": 0.0,
+                        "meta": {"route": "llm", "arbiter": row_status},
+                    }
+                )
+            except Exception:
+                pass
         knowledge_snapshot = build_knowledge_snapshot(
             claims=updated_meta.get("plugin_claims", []),
             conflicts=updated_meta.get("plugin_conflicts", []),
             conflict_resolutions=updated_meta.get("plugin_conflict_resolutions", []),
+            feedback_rows=feedback_rows
         )
         updated_meta["knowledge_snapshot"] = dict(knowledge_snapshot)
         updated_meta["plugin_conflicts"] = route_conflicts(
@@ -521,7 +566,8 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "ok": True,
             "session_id": session_id,
-            "conflict_id": conflict_id,
+            "conflict_id": normalized_conflict_id,
+            "conflict_ids": conflict_ids,
             "arbiter": arbiter,
             "bundle": bundle,
             "prompt": prompt,
@@ -533,13 +579,38 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
             "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
         }
 
-    updated_meta = apply_conflict_resolution(meta=meta, conflict_id=conflict_id, arbiter=arbiter)
+    updated_meta = meta
+    for item_id in conflict_ids:
+        updated_meta = apply_conflict_resolution(meta=updated_meta, conflict_id=item_id, arbiter=arbiter)
+        try:
+            evolution_storage.log_feedback(
+                session_id=session_id,
+                decision_id=item_id,
+                action="conflict_resolution",
+                status=arbiter,
+                meta={"route": "manual", "arbiter": arbiter},
+            )
+        except Exception:
+            pass
+    feedback_rows = evolution_storage.get_feedback(session_id=session_id, action="conflict_resolution", limit=200)
+    knowledge_snapshot = build_knowledge_snapshot(
+        claims=updated_meta.get("plugin_claims", []),
+        conflicts=updated_meta.get("plugin_conflicts", []),
+        conflict_resolutions=updated_meta.get("plugin_conflict_resolutions", []),
+        feedback_rows=feedback_rows,
+    )
+    updated_meta["knowledge_snapshot"] = dict(knowledge_snapshot)
+    updated_meta["plugin_conflicts"] = route_conflicts(
+        conflicts=updated_meta.get("plugin_conflicts", []),
+        knowledge_snapshot=knowledge_snapshot,
+    )
     physics["meta"] = updated_meta
     await backend.set_physics(session_id, physics)
     return {
         "ok": True,
         "session_id": session_id,
-        "conflict_id": conflict_id,
+        "conflict_id": normalized_conflict_id,
+        "conflict_ids": conflict_ids,
         "arbiter": arbiter,
         "conflicts": updated_meta.get("plugin_conflicts", []),
         "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),

@@ -90,6 +90,7 @@ export default function OraclePage() {
                 locked={s.decisionInboxLocked}
                 lockMessage={s.decisionInboxLockMessage}
                 onAdopted={s.handleAdopted}
+                onAdoptedBatch={s.handleAdoptedBatch}
               />
               {!s.hasNarrative ? (
                 <p className="mt-3 text-xs text-violet-200/80">V17 织造启动中，正在同步快照与叙事流...</p>

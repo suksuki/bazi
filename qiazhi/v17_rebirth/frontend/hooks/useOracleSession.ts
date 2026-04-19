@@ -21,6 +21,9 @@ export type Decision = {
   label?: string;
   title?: string;
   target_god?: string;
+  exclusivity_key?: string;
+  source_event?: string;
+  plugin_id?: string;
   source?: string;
   source_label?: string;
   priority?: number;
@@ -59,6 +62,7 @@ export interface OracleSession {
   // --- decisions ---
   adoptedDecisions: Decision[];
   handleAdopted: (d: Decision & { status: "APPROVED" | "REJECTED" }) => Promise<void>;
+  handleAdoptedBatch: (decisions: Decision[], status: "APPROVED" | "REJECTED") => Promise<void>;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -377,10 +381,35 @@ export function useOracleSession(): OracleSession {
     setDecisionActionError("");
   }
 
-  async function handleAdopted(decision: Decision & { status: "APPROVED" | "REJECTED" }) {
-    const id = String(decision.id || decision.title || `d_${Date.now()}`);
-    const label = String(decision.label || decision.title || "").trim();
-    if (!label || decisionLockStartedAtMs != null) return;
+  async function handleAdoptedBatch(decisions: Decision[], status: "APPROVED" | "REJECTED") {
+    const normalized = decisions
+      .map((item, index) => {
+        const id = String(item.id || item.label || item.title || `d_${Date.now()}_${index}`).trim();
+        const title = String(item.title || "").trim();
+        const label = String(item.label || title || "").trim();
+        return {
+          ...item,
+          id,
+          title,
+          label,
+        };
+      })
+      .filter((item) => item.id && (item.label || item.title));
+
+    if (!normalized.length || decisionLockStartedAtMs != null) return;
+
+    const ids: string[] = [];
+    const seenIds = new Set<string>();
+    for (const item of normalized) {
+      if (item.id && !seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        ids.push(item.id);
+      }
+    }
+
+    const title = String(normalized[0]?.title || "").trim();
+    const action = String(normalized[0]?.label || title || "").trim();
+    if (!action || !ids.length) return;
 
     setDecisionActionError("");
     setDecisionLockStartedAtMs(Date.now());
@@ -391,13 +420,13 @@ export function useOracleSession(): OracleSession {
         headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
         body: JSON.stringify({
           session_id: sessionId || "default",
-          decision_id: id,
+          decision_ids: ids,
+          status,
+          action,
+          title,
+          target_god: String(normalized[0]?.target_god || "").trim() || undefined,
+          physical_impact: normalized[0]?.physical_impact || undefined,
           signal: "ACTION_TAKEN",
-          status: decision.status || "APPROVED",
-          action: label,
-          title: String(decision.title || "").trim(),
-          target_god: String(decision.target_god || "").trim() || undefined,
-          physical_impact: decision.physical_impact || undefined,
           v17_origin: "v17_rebirth",
         }),
       });
@@ -417,30 +446,36 @@ export function useOracleSession(): OracleSession {
     }
 
     setAdoptedDecisions((prev) => {
-      const next = prev.some((x) => x.id === id)
-        ? prev
-        : [
-            ...prev,
-            {
-              id,
-              label,
-              title: String(decision.title || "").trim(),
-              target_god: String(decision.target_god || "").trim() || undefined,
-              physical_impact: decision.physical_impact || undefined,
-            },
-          ];
-      const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
-      setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
-      setStreamBody((prevBody) => ({
-        ...(prevBody || {}),
-        v17_origin: "v17_rebirth",
-        session_id: sessionId || "default",
-        user_message: label,
-        decisions: next,
-      }));
+      const next = [...prev];
+      const idIndex = new Set(prev.map((item) => item.id).filter((value): value is string => Boolean(value)));
+      for (const item of normalized) {
+          if (item.id && !idIndex.has(item.id)) {
+            next.push({
+              id: item.id,
+              label: item.label,
+              title: item.title,
+              target_god: String(item.target_god || "").trim() || undefined,
+              physical_impact: item.physical_impact || undefined,
+            });
+            idIndex.add(item.id);
+          }
+        }
+        const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
+        setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+        setStreamBody((prevBody) => ({
+          ...(prevBody || {}),
+          v17_origin: "v17_rebirth",
+          session_id: sessionId || "default",
+          user_message: action,
+          decisions: next,
+        }));
       setRunning(true);
       return next;
     });
+  }
+
+  async function handleAdopted(decision: Decision & { status: "APPROVED" | "REJECTED" }) {
+    await handleAdoptedBatch([decision], decision.status || "APPROVED");
   }
 
   return {
@@ -454,6 +489,7 @@ export function useOracleSession(): OracleSession {
     setSelectedLuckYear,
     adoptedDecisions,
     handleAdopted,
+    handleAdoptedBatch,
     decisionInboxLocked,
     decisionInboxLockMessage,
     traceOpen,

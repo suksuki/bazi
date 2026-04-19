@@ -813,78 +813,143 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel
         try:
             current_physics = await get_state_backend().get_physics(session_id)
-            vote_status = str(payload.get("status", "APPROVED")).upper() # 默认为 APPROVED (兼容旧版)
-            matched_decision = None
+            vote_status = str(payload.get("status", "APPROVED")).upper()  # 默认为 APPROVED (兼容旧版)
+            batch_decision_ids: list[str] = []
+            raw_batch_ids = payload.get("decision_ids")
+            if isinstance(raw_batch_ids, list):
+                for raw_id in raw_batch_ids:
+                    sid = str(raw_id or "").strip()
+                    if sid and sid not in batch_decision_ids:
+                        batch_decision_ids.append(sid)
 
+            matched_decisions: list[dict[str, Any]] = []
             if isinstance(current_physics, dict):
                 pending = current_physics.get("pending_decisions")
                 if isinstance(pending, list):
-                    for item in pending:
-                        if not isinstance(item, dict):
-                            continue
-                        item_id = str(item.get("id", "")).strip()
-                        item_label = str(item.get("label", "")).strip()
-                        if (decision_id and item_id == decision_id) or action == item_label:
-                            matched_decision = item
-                            # ── V17.99: 裁决状态写入案卷 ──
-                            item["status"] = vote_status
-                            if vote_status == "APPROVED":
-                                item["applied"] = True
-                            break
+                    if batch_decision_ids:
+                        index: dict[str, dict[str, Any]] = {}
+                        label_index: dict[str, dict[str, Any]] = {}
+                        for item in pending:
+                            if not isinstance(item, dict):
+                                continue
+                            item_id = str(item.get("id", "")).strip()
+                            if item_id:
+                                index[item_id] = item
+                            item_label = str(item.get("label", "")).strip()
+                            if item_label:
+                                label_index[item_label] = item
+                        for item_id in batch_decision_ids:
+                            target = index.get(item_id)
+                            if target is None:
+                                target = label_index.get(item_id)
+                            if target is None:
+                                _log.warning("[V17-ACTION] batch id not found: %s", item_id)
+                                continue
+                            matched_decisions.append(target)
+                    else:
+                        for item in pending:
+                            if not isinstance(item, dict):
+                                continue
+                            item_id = str(item.get("id", "")).strip()
+                            item_label = str(item.get("label", "")).strip()
+                            if (decision_id and item_id == decision_id) or action == item_label:
+                                matched_decisions.append(item)
+                                break
 
-                if vote_status == "REJECTED":
-                    _log.info("[V17-TRIBUNAL] User REJECTED decision: %s", action)
+            if not matched_decisions:
+                # 兼容旧流程：无匹配决策时直接拒绝，避免空动作继续下沉。
+                event["error"] = "decision_not_found"
+                await get_state_backend().set_physics(session_id, current_physics)
+                await get_state_backend().publish_action(session_id, event)
+                return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
+
+            # 批量裁决统一上链：每个决策独立落库与物理扰动
+            if vote_status == "REJECTED":
+                _log.info("[V17-TRIBUNAL] User REJECTED %d decision(s): %s", len(matched_decisions), action)
+                for matched_decision in matched_decisions:
+                    matched_decision["status"] = "REJECTED"
                     evolution_storage.log_feedback(
                         session_id=session_id,
-                        decision_id=decision_id or action,
+                        decision_id=str(matched_decision.get("id", "") or decision_id or action),
                         action=action,
                         status="REJECTED",
-                        meta={"trigger": "user_manual_reject"},
+                        meta={"trigger": "user_manual_reject", "batch": bool(batch_decision_ids)},
                     )
-                    await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
-                    return JSONResponse({"ok": True, "signal": "VOTE_REJECTED", "action": action})
+                await get_state_backend().set_physics(session_id, current_physics)
+                await get_state_backend().publish_action(session_id, event)
+                return JSONResponse(
+                    {"ok": True, "signal": "VOTE_REJECTED", "action": action, "decision_count": len(matched_decisions)}
+                )
 
-                if isinstance(matched_decision, dict):
-                    if not isinstance(payload.get("physical_impact"), dict) and isinstance(matched_decision.get("physical_impact"), dict):
-                        payload["physical_impact"] = matched_decision.get("physical_impact")
+            # 逐条执行，避免单次事件失败污染全体
+            applied_ids: list[str] = []
+            for idx, matched_decision in enumerate(matched_decisions):
+                row_payload = dict(payload)
+                matched_label = str(matched_decision.get("label", "")).strip()
+                matched_title = str(matched_decision.get("title", "")).strip()
+                row_payload["action"] = matched_label or matched_title or action
+                row_payload.pop("decision_ids", None)
+                row_payload["decision_ids"] = [str(matched_decision.get("id", "")).strip()] if str(matched_decision.get("id", "")).strip() else []
 
-                # 严格数据契约校验 - 禁止无主决策执行
-                final_target = str(payload.get("target_god", "")).strip()
-                if not final_target and isinstance(payload.get("physical_impact"), dict):
-                    final_target = str(payload["physical_impact"].get("target_god", "")).strip()
+                if isinstance(matched_decision.get("physical_impact"), dict):
+                    row_payload["physical_impact"] = dict(matched_decision.get("physical_impact"))
+                elif isinstance(payload.get("physical_impact"), dict):
+                    row_payload["physical_impact"] = dict(payload.get("physical_impact"))
+                else:
+                    row_payload["physical_impact"] = {}
+
+                final_target = str(row_payload.get("target_god", "")).strip()
+                if not final_target and isinstance(row_payload.get("physical_impact"), dict):
+                    final_target = str(row_payload["physical_impact"].get("target_god", "")).strip()
                     if final_target:
-                        payload["target_god"] = final_target
+                        row_payload["target_god"] = final_target
                 if not final_target:
                     final_target = resolve_target_god(
-                        row_target=payload.get("target_god"),
-                        impact=payload.get("physical_impact") if isinstance(payload.get("physical_impact"), dict) else {},
-                        title=payload.get("title") or payload.get("action"),
-                        label=matched_decision.get("label") if isinstance(matched_decision, dict) else "",
+                        row_target=row_payload.get("target_god"),
+                        impact=row_payload.get("physical_impact") if isinstance(row_payload.get("physical_impact"), dict) else {},
+                        title=row_payload.get("title") or row_payload.get("action"),
+                        label=matched_label,
                         plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
                         physics_tensor=current_physics if isinstance(current_physics, dict) else {},
                     )
                     if final_target:
-                        payload["target_god"] = final_target
-                if not final_target:
-                    await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
-                    return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
+                        row_payload["target_god"] = final_target
 
-                await get_state_backend().set_physics(session_id, current_physics)
-            kernel_dispatch_ok = await PhysicsKernel.dispatch_perturbation(
-                session_id=session_id,
-                source="SRC_MANUAL",
-                payload={**payload, "reason": f"手动激活动作: {action}"}
-            )
-            if not kernel_dispatch_ok:
-                kernel_dispatch_detail = "physics kernel rejected perturbation"
-                _log.error(
-                    "[V17-ACTION-REJECTED] session=%s action=%s detail=%s",
-                    session_id,
-                    action,
-                    kernel_dispatch_detail,
+                if not final_target:
+                    _log.warning("[V17-ACTION] decision no target_god, skip kernel dispatch: %s", matched_label)
+                    continue
+
+                matched_decision["status"] = vote_status
+                matched_decision["applied"] = True
+                applied_ids.append(str(matched_decision.get("id", "").strip() or str(action)))
+                row_payload["decision_id"] = str(matched_decision.get("id", "").strip())
+                ok = await PhysicsKernel.dispatch_perturbation(
+                    session_id=session_id,
+                    source="SRC_MANUAL",
+                    payload={**row_payload, "reason": f"手动激活动作: {action}"},
+                    causality_id=f"manual_batch_{_ACTION_SEQ}_{idx}_{final_target}",
                 )
+                if not ok:
+                    kernel_dispatch_ok = False
+                    kernel_dispatch_detail = f"physics kernel rejected perturbation at index {idx}"
+                    _log.error(
+                        "[V17-ACTION-REJECTED] session=%s action=%s detail=%s",
+                        session_id,
+                        action,
+                        kernel_dispatch_detail,
+                    )
+                    break
+
+            if not applied_ids:
+                await get_state_backend().set_physics(session_id, current_physics)
+                await get_state_backend().publish_action(session_id, event)
+                return JSONResponse(
+                    {"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action, "decision_count": 0}
+                )
+
+            await get_state_backend().set_physics(session_id, current_physics)
+            event["decision_count"] = len(applied_ids)
+        
         except Exception as e:
             kernel_dispatch_ok = False
             kernel_dispatch_detail = str(e)
@@ -907,17 +972,52 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
     if signal == "ACTION_TAKEN" and kernel_dispatch_ok:
         try:
             residual = float(payload.get("residual", 0.0))
-            evolution_storage.log_feedback(
-                session_id=session_id,
-                decision_id=decision_id or action,
-                action=action,
-                status="APPROVED",
-                residual=residual,
-                meta={
-                    "impact_ratio": payload.get("physical_impact", {}).get("impact_ratio"),
-                    "target_god": payload.get("target_god")
-                }
-            )
+            decision_ids = payload.get("decision_ids")
+            id_lookup = {str(dec.get("id", "")).strip(): dec for dec in matched_decisions} if "matched_decisions" in locals() else {}
+            if isinstance(decision_ids, list) and decision_ids:
+                for each_id in decision_ids:
+                    each_sid = str(each_id or "").strip()
+                    if not each_sid:
+                        continue
+                    matched = id_lookup.get(each_sid, {})
+                    meta = {
+                        "impact_ratio": (
+                            matched.get("physical_impact", {}).get("impact_ratio")
+                            if isinstance(matched.get("physical_impact"), dict)
+                            else payload.get("physical_impact", {}).get("impact_ratio") if isinstance(payload.get("physical_impact"), dict) else None
+                        ),
+                        "target_god": (
+                            str(
+                                matched.get("target_god", "")
+                                or (
+                                    matched.get("physical_impact", {}).get("target_god")
+                                    if isinstance(matched.get("physical_impact"), dict)
+                                    else ""
+                                )
+                            ).strip()
+                            or payload.get("target_god")
+                        ),
+                    }
+                    evolution_storage.log_feedback(
+                        session_id=session_id,
+                        decision_id=each_sid,
+                        action=action,
+                        status="APPROVED",
+                        residual=residual,
+                        meta=meta,
+                    )
+            else:
+                evolution_storage.log_feedback(
+                    session_id=session_id,
+                    decision_id=decision_id or action,
+                    action=action,
+                    status="APPROVED",
+                    residual=residual,
+                    meta={
+                        "impact_ratio": payload.get("physical_impact", {}).get("impact_ratio"),
+                        "target_god": payload.get("target_god")
+                    }
+                )
         except Exception as e:
             _log.error(f"[V17-EVOLUTION-LOG-FAIL] {e}")
 

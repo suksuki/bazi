@@ -65,6 +65,38 @@ class EvolutionDB:
             """, (session_id, decision_id, action, status, residual, json.dumps(meta) if meta else None))
             conn.commit()
 
+    def get_feedback(
+        self,
+        session_id: str,
+        *,
+        action: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """获取会话反馈历史。可按 action 过滤（如 conflict_resolution）。"""
+        if not str(session_id or "").strip():
+            return []
+        sql = "SELECT * FROM rlhf_feedback WHERE session_id = ?"
+        params: List[Any] = [session_id]
+        if action:
+            sql += " AND action = ?"
+            params.append(action)
+        sql += " ORDER BY timestamp DESC LIMIT ?"
+        params.append(limit)
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(sql, params)
+            rows = []
+            for row in cursor.fetchall():
+                item = dict(row)
+                raw_meta = item.get("meta")
+                if isinstance(raw_meta, str):
+                    try:
+                        item["meta"] = json.loads(raw_meta)
+                    except Exception:
+                        item["meta"] = None
+                rows.append(item)
+            return rows
+
     def get_recent_evolution(self, limit: int = 50) -> List[Dict]:
         """获取最近的演化记录。"""
         with sqlite3.connect(self.db_path) as conn:

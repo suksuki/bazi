@@ -598,6 +598,14 @@ export function V17_TracePanel({
             <span>llm {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.recommended_arbiters as Record<string, unknown> | undefined)?.llm || 0)}</span>
             <span>user {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.recommended_arbiters as Record<string, unknown> | undefined)?.user || 0)}</span>
           </div>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-zinc-400">
+            <span>feedback system {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiters as Record<string, unknown> | undefined)?.system || 0)}</span>
+            <span>llm {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiters as Record<string, unknown> | undefined)?.llm || 0)}</span>
+            <span>user {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiters as Record<string, unknown> | undefined)?.user || 0)}</span>
+            <span>score system {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiter_scores as Record<string, unknown> | undefined)?.system || 0).toFixed(2)}</span>
+            <span>llm {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiter_scores as Record<string, unknown> | undefined)?.llm || 0).toFixed(2)}</span>
+            <span>user {Number(((knowledgeSnapshot.conflict_history as Record<string, unknown> | undefined)?.feedback_arbiter_scores as Record<string, unknown> | undefined)?.user || 0).toFixed(2)}</span>
+          </div>
         </div>
         <div className="space-y-2">
           {pluginConflicts.length ? (

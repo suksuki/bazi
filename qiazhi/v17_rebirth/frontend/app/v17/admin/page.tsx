@@ -75,11 +75,15 @@ type PluginConflict = {
   conflict_id: string;
   conflict_type?: string;
   severity?: string;
+  conflict_score?: number;
+  confidence_band?: string;
+  source_event?: string;
   claims?: string[];
   plugins?: string[];
   target_god?: string;
   why_conflict?: string;
   recommended_arbiter?: string;
+  resolution_status?: string;
 };
 
 type PluginConflictResolution = {
@@ -90,6 +94,7 @@ type PluginConflictResolution = {
   applied_to_settlement?: boolean;
   next_queue?: string;
   reason?: string;
+  status?: string;
 };
 
 type KnowledgeSnapshot = {
@@ -102,6 +107,8 @@ type KnowledgeSnapshot = {
     total_conflicts?: number;
     by_type?: Record<string, number>;
     recommended_arbiters?: Record<string, number>;
+    feedback_arbiters?: Record<string, number>;
+    feedback_arbiter_scores?: Record<string, number>;
   };
   resolution_preview?: {
     total_suggestions?: number;
@@ -198,6 +205,98 @@ function brainStepTone(kind: string | undefined): string {
   return "text-zinc-400";
 }
 
+type ConflictMergeGroup = {
+  key: string;
+  conflict_type: string;
+  severity: string;
+  target_god: string;
+  recommended_arbiter: string;
+  conflicts: PluginConflict[];
+  conflict_ids: string[];
+  max_conflict_score: number;
+};
+
+function isConflictPending(
+  conflict: PluginConflict,
+  resolution?: PluginConflictResolution | undefined,
+) {
+  const status = String(conflict.resolution_status || "").trim().toLowerCase();
+  if (status) {
+    if (status === "approved" || status === "resolved_system") return false;
+    if (status.startsWith("queued_")) return false;
+  }
+
+  const resolutionStatus = String(resolution?.status || "").trim().toLowerCase();
+  if (resolutionStatus) {
+    if (resolutionStatus === "approved" || resolutionStatus === "resolved_system") return false;
+    if (resolutionStatus.startsWith("queued_")) return false;
+  }
+  return true;
+}
+
+function conflictMergeKey(row: PluginConflict) {
+  const target = String(row.target_god || "未定目标").trim();
+  const severity = String(row.severity || "P3").trim().toUpperCase();
+  const type = String(row.conflict_type || "unknown").trim().toLowerCase();
+  const arbiter = String(row.recommended_arbiter || "system").trim().toLowerCase();
+  return `${type}#${target}#${severity}#${arbiter}`;
+}
+
+function buildConflictGroups(
+  conflicts: PluginConflict[],
+  resolutions: PluginConflictResolution[],
+): ConflictMergeGroup[] {
+  const resolutionByConflict = new Map<string, PluginConflictResolution>();
+  for (const resolution of resolutions || []) {
+    const conflictId = String(resolution.conflict_id || "").trim();
+    if (conflictId) resolutionByConflict.set(conflictId, resolution);
+  }
+
+  const bucket: Record<string, ConflictMergeGroup> = {};
+  for (const row of conflicts || []) {
+    const conflictId = String(row.conflict_id || "").trim();
+    if (!conflictId) continue;
+    const resolution = resolutionByConflict.get(conflictId);
+    if (!isConflictPending(row, resolution)) {
+      continue;
+    }
+    const key = conflictMergeKey(row);
+    if (!bucket[key]) {
+      bucket[key] = {
+        key,
+        conflict_type: String(row.conflict_type || "unknown").trim(),
+        severity: String(row.severity || "P3").trim(),
+        target_god: String(row.target_god || "未定目标").trim(),
+        recommended_arbiter: String(row.recommended_arbiter || "system").trim().toLowerCase(),
+        conflicts: [],
+        conflict_ids: [],
+        max_conflict_score: 0,
+      };
+    }
+    bucket[key].conflicts.push(row);
+    bucket[key].conflict_ids.push(conflictId);
+    bucket[key].max_conflict_score = Math.max(
+      bucket[key].max_conflict_score,
+      Number(row.conflict_score || 0),
+    );
+  }
+
+  const grouped = Object.values(bucket).sort((a, b) => {
+    const sevA = String(a.severity || "P3").toUpperCase();
+    const sevB = String(b.severity || "P3").toUpperCase();
+    const severityValue = { P1: 3, P2: 2, P3: 1 };
+    const score = (value: string) => severityValue[value as keyof typeof severityValue] || 0;
+    return (
+      score(sevB) - score(sevA) ||
+      b.max_conflict_score - a.max_conflict_score ||
+      b.conflict_ids.length - a.conflict_ids.length ||
+      b.target_god.localeCompare(a.target_god)
+    );
+  });
+
+  return grouped;
+}
+
 export default function V17AdminPage() {
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
@@ -221,6 +320,7 @@ export default function V17AdminPage() {
   const [l0Locked, setL0Locked] = useState(true);
   const [localConfig, setLocalConfig] = useState<LooseObject>({});
   const [localEnabled, setLocalEnabled] = useState(false);
+  const [resolveBusyKeys, setResolveBusyKeys] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -272,23 +372,40 @@ export default function V17AdminPage() {
     } finally { setBusy(null); }
   }, [pluginRuntimeSessionId]);
 
-  async function resolveConflict(conflictId: string, arbiter: "system" | "llm" | "user") {
-    const { resp, data } = await requestJson("/api/v17-admin/conflict-resolve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  async function resolveConflictBatch(
+    conflictIds: string[],
+    arbiter: "system" | "llm" | "user",
+    batchKey: string,
+  ) {
+    const ids = [...new Set((conflictIds || []).map((value) => String(value || "").trim()).filter(Boolean))];
+    if (!ids.length || resolveBusyKeys.includes(batchKey)) return;
+    setResolveBusyKeys((prev) => [...prev, batchKey]);
+    try {
+      const body: Record<string, unknown> = {
         session_id: resolvedPluginRuntimeSessionId || pluginRuntimeSessionId || "default",
-        conflict_id: conflictId,
         arbiter,
         v17_origin: "v17_rebirth",
-      }),
-    });
-    if (!resp.ok || !(data as { ok?: boolean }).ok) {
-      setMsg(`冲突裁决失败：${String((data as { detail?: string }).detail || "unknown error")}`);
-      return;
+      };
+      if (ids.length === 1) {
+        body.conflict_id = ids[0];
+      } else {
+        body.conflict_ids = ids;
+      }
+
+      const { resp, data } = await requestJson("/api/v17-admin/conflict-resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok || !(data as { ok?: boolean }).ok) {
+        setMsg(`冲突裁决失败：${String((data as { detail?: string }).detail || "unknown error")}`);
+        return;
+      }
+      setMsg(`已提交 ${ids.length} 条冲突给 ${arbiter.toUpperCase()}。`);
+      await loadPlugins();
+    } finally {
+      setResolveBusyKeys((prev) => prev.filter((item) => item !== batchKey));
     }
-    setMsg(`冲突 ${conflictId} 已提交给 ${arbiter.toUpperCase()}。`);
-    await loadPlugins();
   }
 
   const loadEvolution = useCallback(async () => {
@@ -458,7 +575,15 @@ export default function V17AdminPage() {
                    <span>llm {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.llm || 0)}</span>
                    <span>user {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.user || 0)}</span>
                  </div>
-               </div>
+                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-zinc-400">
+                   <span>feedback system {Number((knowledgeSnapshot.conflict_history?.feedback_arbiters || {}).system || 0)}</span>
+                   <span>llm {Number((knowledgeSnapshot.conflict_history?.feedback_arbiters || {}).llm || 0)}</span>
+                   <span>user {Number((knowledgeSnapshot.conflict_history?.feedback_arbiters || {}).user || 0)}</span>
+                   <span>score system {Number((knowledgeSnapshot.conflict_history?.feedback_arbiter_scores || {}).system || 0).toFixed(2)}</span>
+                   <span>llm {Number((knowledgeSnapshot.conflict_history?.feedback_arbiter_scores || {}).llm || 0).toFixed(2)}</span>
+                   <span>user {Number((knowledgeSnapshot.conflict_history?.feedback_arbiter_scores || {}).user || 0).toFixed(2)}</span>
+                 </div>
+                </div>
                {brainActionQueue.length ? (
                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
                    <div className="mb-2 text-[11px] font-semibold text-zinc-300">Brain Action Queue</div>
@@ -559,45 +684,79 @@ export default function V17AdminPage() {
                         <span className="text-zinc-600">conflicts {relatedConflicts.length}</span>
                       </div>
                       <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || "暂无最近运行状态。打开 Oracle 跑一轮后会在这里同步。"}</div>
-                      {relatedConflicts.length ? (
-                        <div className="mt-2 space-y-2">
-                          {relatedConflicts.slice(0, 3).map((row) => {
-                            const resolution = pluginConflictResolutions.find((item) => item.conflict_id === row.conflict_id);
-                            return (
-                              <div key={row.conflict_id} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className={`rounded px-2 py-0.5 text-[10px] uppercase ${conflictTone(row.severity)}`}>
-                                    {row.severity || "P3"} · {row.recommended_arbiter || "system"}
-                                  </span>
-                                  <span className="text-[10px] text-zinc-500">{row.conflict_type || "conflict"}</span>
-                                </div>
-                                <div className="mt-1 text-[10px] text-zinc-300">{row.why_conflict || "—"}</div>
-                                <div className="mt-1 text-[10px] text-zinc-500">
-                                  {row.target_god ? `target ${row.target_god} / ` : ""}
-                                  {Array.isArray(row.claims) ? `claims ${row.claims.length}` : "claims 0"}
-                                </div>
-                                {resolution ? (
-                                  <div className="mt-1 text-[10px] text-cyan-300">
-                                    system suggestion: {resolution.policy || "—"} · keep {resolution.winner_claim_id || "—"}
-                                    {resolution.applied_to_settlement ? " · applied" : " · preview only"}
+                      {(() => {
+                        const relatedGroups = buildConflictGroups(relatedConflicts, pluginConflictResolutions);
+                        return relatedGroups.length ? (
+                          <div className="mt-2 space-y-2">
+                            {relatedGroups.slice(0, 5).map((group) => {
+                              const sample = group.conflicts[0];
+                              const firstConflictId = String(sample.conflict_id || "").trim();
+                              const busyKey = `${p.plugin_id}|${group.key}`;
+                              const isBusy = resolveBusyKeys.includes(busyKey);
+                              return (
+                                <div key={group.key} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className={`rounded px-2 py-0.5 text-[10px] uppercase ${conflictTone(group.severity)}`}>
+                                      {group.severity || "P3"} · {group.recommended_arbiter || "system"}
+                                    </span>
+                                    <span className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-500">
+                                      {group.conflict_type || "conflict"}
+                                    </span>
                                   </div>
-                                ) : null}
-                                <div className="mt-2 flex items-center gap-2">
-                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "system")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
-                                    System 裁
-                                  </button>
-                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "llm")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
-                                    LLM 裁
-                                  </button>
-                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "user")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
-                                    用户裁
-                                  </button>
+                                  <div className="mt-1 text-[10px] text-zinc-300">
+                                    target {group.target_god} · {group.conflict_ids.length} 条
+                                    · 评分 {group.max_conflict_score.toFixed(3)}
+                                  </div>
+                                  <div className="mt-1 text-[10px] text-zinc-500">
+                                    {sample?.why_conflict || "—"}
+                                  </div>
+                                  {firstConflictId ? (
+                                    <div className="mt-1 text-[10px] text-zinc-500">
+                                      示例冲突 {firstConflictId}
+                                    </div>
+                                  ) : null}
+                                  {group.conflicts.slice(0, 2).map((conflict) => {
+                                    const plugins = Array.isArray(conflict.plugins) ? conflict.plugins : [];
+                                    return (
+                                      <div key={conflict.conflict_id} className="mt-1 text-[10px] text-zinc-400">
+                                        · {conflict.why_conflict || conflict.conflict_id || "—"}
+                                        {plugins.length ? `（来源插件 ${plugins.length} 个）` : ""}
+                                      </div>
+                                    );
+                                  })}
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => void resolveConflictBatch(group.conflict_ids, "system", busyKey)}
+                                      className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 disabled:opacity-40"
+                                    >
+                                      System 批裁
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => void resolveConflictBatch(group.conflict_ids, "llm", busyKey)}
+                                      className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 disabled:opacity-40"
+                                      title="按冲突批量提交给 LLM"
+                                    >
+                                      LLM 批裁
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => void resolveConflictBatch(group.conflict_ids, "user", busyKey)}
+                                      className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 disabled:opacity-40"
+                                    >
+                                      用户批裁
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
+                              );
+                            })}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   )})}
                </div>

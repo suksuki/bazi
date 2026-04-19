@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Check, X, ShieldAlert, Cpu, Sparkles, Gavel } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 import type { Decision } from "@/hooks/useOracleSession";
 
@@ -15,6 +14,19 @@ type Frame = {
     auto_resolutions?: Decision[];
     llm_arbitration_context?: Decision[];
     pending_decisions?: Decision[];
+    decision_batches?: Array<{
+      batch_id?: string;
+      bucket?: string;
+      target_god?: string;
+      source_anchor?: string;
+      source_families?: string[];
+      decision_ids?: string[];
+      decision_count?: number;
+      net_impact_ratio?: number;
+      max_priority?: number;
+      prompt_line?: string;
+      labels?: string[];
+    }>;
   };
 };
 
@@ -173,6 +185,85 @@ function arbitrationTrace(kind: BucketKind, decision: Decision): string {
   return `${source} -> ${levelText} -> ${arbitrationModeLabel(kind)}`;
 }
 
+type DecisionWithId = Decision & { _ui_id: string };
+
+type DecisionBatchGroup = {
+  key: string;
+  target: string;
+  source: string;
+  exclusivityKey: string;
+  decisions: DecisionWithId[];
+};
+
+type DecisionBatch = {
+  batch_id: string;
+  bucket: "manual" | "system" | "llm";
+  target: string;
+  source_anchor: string;
+  source_families: string[];
+  decisions: DecisionWithId[];
+  decision_count: number;
+  net_impact_ratio: number;
+  max_priority: number;
+  prompt_line: string;
+  labels: string[];
+};
+
+function normalizeDecisionId(decision: Decision, idx: number): string {
+  return String(decision.id || decision.label || `manual_${idx}`).trim() || `manual_${idx}`;
+}
+
+function resolveDecisionLookupKeys(decision: DecisionWithId): string[] {
+  const keys = new Set<string>();
+  if (decision.id) keys.add(String(decision.id).trim());
+  if (decision._ui_id) keys.add(String(decision._ui_id).trim());
+  if (decision.label) keys.add(String(decision.label).trim());
+  if (decision.title) keys.add(String(decision.title).trim());
+  keys.delete("");
+  return Array.from(keys);
+}
+
+function manualDecisionKey(decision: DecisionWithId): string {
+  const target = String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim();
+  const source = String(sourceLabel(decision)).trim() || "unknown";
+  const impact = decision.physical_impact || {};
+  const level = Number(impact.intensity_level || 0);
+  const ratio = Number(impact.impact_ratio || 0);
+  const ratioBucket = ratio >= 0.08 ? "high" : ratio <= -0.08 ? "low" : "mid";
+  const exclusivityKey = String(
+    decision.exclusivity_key || decision.source_event || `${decision.source || decision.plugin_id || "manual"}::${target}`,
+  ).trim();
+  const stableTag = exclusivityKey || "fallback";
+  return `${target}::${source}::${stableTag}::L${level}::${ratioBucket}`;
+}
+
+function buildManualDecisionGroups(decisions: DecisionWithId[]): DecisionBatchGroup[] {
+  const bucket: Record<string, DecisionBatchGroup> = {};
+  for (const decision of decisions) {
+    const key = manualDecisionKey(decision);
+    if (!bucket[key]) {
+      bucket[key] = {
+        key,
+        target: String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim() || "未定目标",
+        source: String(sourceLabel(decision)).trim() || "未知规则",
+        exclusivityKey: String(
+          decision.exclusivity_key ||
+            decision.source_event ||
+            `${decision.source || decision.plugin_id || "manual"}::${decision.target_god || ""}`.trim(),
+        ).trim() || "manual",
+        decisions: [],
+      };
+    }
+    bucket[key].decisions.push(decision);
+  }
+
+  return Object.values(bucket).sort((a, b) => {
+    const aLevel = Number(a.decisions[0]?.physical_impact?.intensity_level || 0);
+    const bLevel = Number(b.decisions[0]?.physical_impact?.intensity_level || 0);
+    return bLevel - aLevel || b.decisions.length - a.decisions.length || a.key.localeCompare(b.key);
+  });
+}
+
 export function V17_DecisionInbox({
   frames,
   adoptedIds,
@@ -180,6 +271,7 @@ export function V17_DecisionInbox({
   locked = false,
   lockMessage = "",
   onAdopted,
+  onAdoptedBatch,
 }: {
   frames: Frame[];
   adoptedIds: string[];
@@ -187,6 +279,7 @@ export function V17_DecisionInbox({
   locked?: boolean;
   lockMessage?: string;
   onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
+  onAdoptedBatch?: (decisions: Decision[], status: "APPROVED" | "REJECTED") => void | Promise<void>;
 }) {
   const [busyId, setBusyId] = useState<string>("");
 
@@ -196,10 +289,10 @@ export function V17_DecisionInbox({
       ["physics", "physical_void", "system_init_failure"].includes(String((f?.payload as any)?.snapshot_kind || ""))
     ), [frames]);
 
-  const { visible: decisions, hiddenCount } = useMemo(() => {
+  const { visible: sortedManualDecisions, hiddenCount } = useMemo(() => {
     const source = latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
     const raw = source.filter((d, idx) => {
-      const id = String(d?.id || idx);
+      const id = normalizeDecisionId(d, idx);
       return !adoptedIds.includes(id);
     });
     const sorted = [...raw].sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0));
@@ -207,6 +300,71 @@ export function V17_DecisionInbox({
     const cap = Math.min(sorted.length, DISPLAY_CAP);
     return { visible: sorted.slice(0, cap), hiddenCount: Math.max(0, sorted.length - cap) };
   }, [latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions, adoptedIds]);
+
+  const decisions = useMemo(
+    () =>
+      sortedManualDecisions.map((decision, idx) => ({
+        ...decision,
+        _ui_id: normalizeDecisionId(decision, idx),
+      })),
+    [sortedManualDecisions],
+  );
+  const manualGroups = useMemo(() => buildManualDecisionGroups(decisions), [decisions]);
+
+  const manualDecisionIndex = useMemo(() => {
+    const idx = new Map<string, DecisionWithId>();
+    for (const d of decisions) {
+      for (const key of resolveDecisionLookupKeys(d)) {
+        idx.set(key, d);
+      }
+    }
+    return idx;
+  }, [decisions]);
+
+  const batchRows = useMemo(() => latestSnapshot?.payload?.decision_batches || [], [latestSnapshot]);
+  const manualDecisionBatches = useMemo(() => {
+    if (!batchRows.length) return [];
+    const rows: DecisionBatch[] = [];
+    for (const raw of batchRows) {
+      const bucket = String(raw?.bucket || "manual").trim().toLowerCase();
+      if (bucket !== "manual") continue;
+      const sourceFamilies = Array.isArray(raw?.source_families)
+        ? raw.source_families.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
+      const decisionIds = Array.isArray(raw?.decision_ids)
+        ? raw.decision_ids.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
+      if (!decisionIds.length) continue;
+      const batchDecisions = Array.from(
+        new Set(
+          decisionIds
+            .map((id) => manualDecisionIndex.get(id))
+            .filter((item): item is DecisionWithId => Boolean(item)),
+        ),
+      );
+      if (!batchDecisions.length) continue;
+      rows.push({
+        batch_id: String(raw?.batch_id || `${bucket}:${raw?.source_anchor || "unknown"}:${decisionIds.join(",")}`).trim(),
+        bucket: "manual",
+        target: String(raw?.target_god || batchDecisions[0]?.target_god || batchDecisions[0]?.physical_impact?.target_god || "未定目标").trim(),
+        source_anchor: String(raw?.source_anchor || batchDecisions[0]?.source || batchDecisions[0]?.plugin_id || "").trim(),
+        source_families: sourceFamilies,
+        decisions: batchDecisions,
+        decision_count: Number(raw?.decision_count || batchDecisions.length),
+        net_impact_ratio: Number(raw?.net_impact_ratio || 0),
+        max_priority: Number(raw?.max_priority || 0),
+        prompt_line: String(raw?.prompt_line || "").trim() || "自动批次已生成，可一次提交。",
+        labels: (Array.isArray(raw?.labels) ? raw.labels : []).map((value) => String(value || "").trim()).filter(Boolean),
+      });
+    }
+    return rows.sort(
+      (a, b) =>
+        Math.abs(b.net_impact_ratio) - Math.abs(a.net_impact_ratio) ||
+        b.max_priority - a.max_priority ||
+        b.decision_count - a.decision_count,
+    );
+  }, [batchRows, manualDecisionIndex]);
+
   const autoResolutions = useMemo(
     () => (latestSnapshot?.payload?.auto_resolutions || []).slice(0, 6),
     [latestSnapshot?.payload?.auto_resolutions],
@@ -216,19 +374,29 @@ export function V17_DecisionInbox({
     [latestSnapshot?.payload?.llm_arbitration_context],
   );
 
-  async function onVote(decision: Decision, status: "APPROVED" | "REJECTED") {
+  async function onVote(decision: DecisionWithId, status: "APPROVED" | "REJECTED") {
     if (locked || busyId) return;
-    const id = String(decision.id || decision.label || "vote");
+    const id = String(decision.id || decision._ui_id || decision.label || "vote");
     setBusyId(id);
     try {
-      await onAdopted?.({ ...decision, status });
+      await onAdopted?.({ ...decision, id, status });
     } finally {
       setBusyId("");
     }
   }
 
-  async function onPick(decision: Decision) {
-    onVote(decision, "APPROVED");
+  async function onBatchVote(
+    group: { decisions: DecisionWithId[] },
+    status: "APPROVED" | "REJECTED",
+  ) {
+    if (locked || !group.decisions.length) return;
+    if (onAdoptedBatch) {
+      await onAdoptedBatch(group.decisions, status);
+      return;
+    }
+    for (const decision of group.decisions) {
+      await onVote(decision, status);
+    }
   }
 
   if (!decisions.length && !autoResolutions.length && !llmArbitration.length) return null;
@@ -273,54 +441,160 @@ export function V17_DecisionInbox({
             <span className="text-[10px] text-zinc-500">可点击执行</span>
           </div>
           {decisions.length ? (
-            <div className="flex flex-wrap gap-2">
-              {decisions.map((d, idx) => {
-                const id = String(d.id || idx);
-                const target = String(d.target_god || d.physical_impact?.target_god || "").trim();
-                const badge = statusBadge("manual", d);
-                return (
-                    <div
-                      key={id}
-                      className="group relative min-w-[12rem] rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3 transition hover:border-violet-300/50 hover:bg-violet-700/20"
-                    >
-                      <p className="text-xs font-medium text-violet-50">{(d.label || d.title || "行动建议").trim()}</p>
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-violet-200/70">
-                        <span>{String(d.source || "manual")}</span>
-                        {target ? <span className="rounded-full border border-violet-400/25 px-1.5 py-0.5 text-[9px] text-violet-100">{target}</span> : null}
+            <div className="space-y-2">
+              {manualDecisionBatches.length ? (
+                <>
+                  <p className="text-[10px] tracking-[0.15em] text-violet-300/70">自动整组入口（按批决策）</p>
+                  {manualDecisionBatches.map((group) => {
+                    const badge = statusBadge("manual", group.decisions[0]);
+                    const sourceText =
+                      group.source_families && group.source_families.length
+                        ? group.source_families.join(" / ")
+                        : group.source_anchor || "自动归并";
+                    const ratio = Number(group.net_impact_ratio || 0);
+                    return (
+                      <div
+                        key={group.batch_id}
+                        className="rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3"
+                      >
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-medium text-violet-50">目标 {group.target}</p>
+                            <p className="text-[10px] text-violet-300/80">
+                              来源 {sourceText} · 批次 {group.decision_count} 条 · 位移 {Math.abs(ratio) * 100 > 1000 ? ">=1000" : `${(Math.abs(ratio) * 100).toFixed(1)}%`}
+                            </p>
+                          </div>
+                          <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
+                        </div>
+
+                        <p className="text-[10px] leading-relaxed text-zinc-400">{group.prompt_line}</p>
+
+                        {group.labels.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1 opacity-80">
+                            {group.labels.map((label) => (
+                              <span
+                                key={`${group.batch_id}:${label}`}
+                                className="rounded-full border border-violet-500/25 bg-zinc-950/60 px-1.5 py-0.5 text-[8px] text-violet-100"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => onBatchVote(group, "REJECTED")}
+                            disabled={locked || busyId !== ""}
+                            className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-400 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                          >
+                            <X className="h-3 w-3" /> 批量否决
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onBatchVote(group, "APPROVED")}
+                            disabled={locked || busyId !== ""}
+                            className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                          >
+                            <Check className="h-3 w-3" /> 批量通过
+                          </button>
+                        </div>
                       </div>
-                      <p className="mt-1 text-[10px] text-zinc-400">{impactText(d)}</p>
-                      
-                      {/* ── 裁决人操作区 (Tribunal Actions) ── */}
-                      <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => onVote(d, "REJECTED")}
-                          disabled={locked || busyId !== ""}
-                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-400 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
-                        >
-                          <X className="h-3 w-3" /> 否决
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onVote(d, "APPROVED")}
-                          disabled={locked || busyId !== ""}
-                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
-                        >
-                          <Check className="h-3 w-3" /> 通过
-                        </button>
+                    );
+                  })}
+                </>
+              ) : manualGroups.length ? (
+                manualGroups.map((group) => {
+                  const sampleDecision = group.decisions[0];
+                  const badge = statusBadge("manual", sampleDecision);
+                  return (
+                    <div
+                      key={group.key}
+                      className="rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3"
+                    >
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-medium text-violet-50">目标 {group.target}</p>
+                          <p className="text-[10px] text-violet-300/80">来源 {group.source} · 冲突域 {group.exclusivityKey} · {group.decisions.length} 条</p>
+                        </div>
+                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
                       </div>
 
-                      <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">{bucketReason("manual", d)}</p>
-                      <div className="mt-2 flex flex-wrap gap-1 opacity-60">
-                        {decisionReasonTags("manual", d).map((tag) => (
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {group.decisions.map((d) => (
+                          <span key={d._ui_id} className="rounded-full border border-violet-500/25 bg-zinc-950/60 px-1.5 py-0.5 text-[8px] text-violet-100">
+                            {String(d.source || d.target_god || d.label || "待定").trim()}
+                          </span>
+                        ))}
+                      </div>
+
+                      <p className="text-[10px] leading-relaxed text-zinc-500">{bucketReason("manual", sampleDecision)}</p>
+
+                      <div className="mt-2 flex flex-wrap gap-1 opacity-80">
+                        {decisionReasonTags("manual", sampleDecision).map((tag) => (
                           <span key={tag} className="rounded-full border border-violet-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[8px] text-zinc-400">
                             {tag}
                           </span>
                         ))}
                       </div>
+
+                      <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => onBatchVote(group, "REJECTED")}
+                          disabled={locked || busyId !== ""}
+                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-400 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                        >
+                          <X className="h-3 w-3" /> 批量否决 {group.decisions.length > 1 ? `(${group.decisions.length})` : ""}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onBatchVote(group, "APPROVED")}
+                          disabled={locked || busyId !== ""}
+                          className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                        >
+                          <Check className="h-3 w-3" /> 批量通过 {group.decisions.length > 1 ? `(${group.decisions.length})` : ""}
+                        </button>
+                      </div>
+
+                      <div className="mt-2 space-y-1">
+                        {group.decisions.map((d) => (
+                          <div key={d._ui_id} className="rounded-lg border border-violet-500/25 bg-zinc-950/45 px-2 py-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] text-violet-100">{(d.label || d.title || "行动建议").trim()}</p>
+                              <span className="text-[9px] text-zinc-500">{impactText(d)}</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <span className="text-[9px] text-zinc-500">{String(d.source || "manual")}</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => onVote(d, "REJECTED")}
+                                  disabled={locked || busyId !== ""}
+                                  className="rounded border border-red-500/20 bg-red-950/20 px-1.5 py-1 text-[9px] text-red-300 disabled:opacity-30"
+                                >
+                                  否
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => onVote(d, "APPROVED")}
+                                  disabled={locked || busyId !== ""}
+                                  className="rounded border border-emerald-500/20 bg-emerald-950/20 px-1.5 py-1 text-[9px] text-emerald-300 disabled:opacity-30"
+                                >
+                                  过
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <p className="text-[11px] text-zinc-500">当前没有可批量归类的手动裁决。</p>
+              )}
             </div>
           ) : (
             <p className="text-[11px] text-zinc-500">当前没有需要你手动点按的裁决项。</p>

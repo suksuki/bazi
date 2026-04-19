@@ -1,26 +1,73 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
+
+
+def _normalize_conflict_ids(value: Iterable[str] | None) -> List[str]:
+    out: List[str] = []
+    for raw_id in value or ():
+        sid = str(raw_id or "").strip()
+        if sid and sid not in out:
+            out.append(sid)
+    return out
+
+
+def _read_indexed_rows(meta: Dict[str, Any], key: str) -> List[Dict[str, Any]]:
+    return [dict(row) for row in (meta.get(key) or []) if isinstance(row, dict)]
+
+
+def _normalize_single_resolution(raw_payload: Dict[str, Any]) -> Dict[str, Any]:
+    winners = [str(cid).strip() for cid in (raw_payload.get("winner_claim_ids") or []) if str(cid).strip()]
+    dropped = [
+        str(cid).strip()
+        for cid in (raw_payload.get("dropped_claim_ids") or [])
+        if str(cid).strip() and str(cid).strip() not in winners
+    ]
+    resolution_type = str(raw_payload.get("resolution_type") or "context_only").strip() or "context_only"
+    preferred_arbiter = str(raw_payload.get("preferred_arbiter") or "llm").strip() or "llm"
+    try:
+        confidence = float(raw_payload.get("confidence", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    return {
+        "resolution_type": resolution_type,
+        "preferred_arbiter": preferred_arbiter,
+        "winner_claim_ids": winners,
+        "dropped_claim_ids": dropped,
+        "reason": str(raw_payload.get("reason") or "").strip(),
+        "confidence": max(0.0, min(1.0, confidence)),
+    }
 
 
 def build_conflict_bundle(*, meta: Dict[str, Any], conflict_id: str) -> Dict[str, Any]:
-    claims = [dict(row) for row in (meta.get("plugin_claims") or []) if isinstance(row, dict)]
+    return build_conflict_bundles(meta=meta, conflict_ids=[conflict_id])
+
+
+def build_conflict_bundles(*, meta: Dict[str, Any], conflict_ids: Iterable[str]) -> Dict[str, Any]:
+    claims = _read_indexed_rows(meta, "plugin_claims")
     conflicts = [dict(row) for row in (meta.get("plugin_conflicts") or []) if isinstance(row, dict)]
     resolutions = [dict(row) for row in (meta.get("plugin_conflict_resolutions") or []) if isinstance(row, dict)]
     knowledge_snapshot = dict(meta.get("knowledge_snapshot") or {}) if isinstance(meta.get("knowledge_snapshot"), dict) else {}
 
-    target_conflict = next(
-        (row for row in conflicts if str(row.get("conflict_id") or "").strip() == str(conflict_id or "").strip()),
-        {},
+    target_ids = _normalize_conflict_ids(conflict_ids)
+    by_id = {str(row.get("conflict_id") or "").strip(): row for row in conflicts}
+    selected_conflicts: List[Dict[str, Any]] = [dict(by_id[cid]) for cid in target_ids if cid in by_id]
+    claim_ids = sorted(
+        {
+            str(cid).strip()
+            for conflict in selected_conflicts
+            for cid in (conflict.get("claims") or [])
+            if str(cid).strip()
+        }
     )
-    claim_ids = [str(cid).strip() for cid in (target_conflict.get("claims") or []) if str(cid).strip()]
     related_claims = [row for row in claims if str(row.get("claim_id") or "").strip() in claim_ids]
     related_resolutions = [
-        row for row in resolutions if str(row.get("conflict_id") or "").strip() == str(conflict_id or "").strip()
+        row for row in resolutions if str(row.get("conflict_id") or "").strip() in target_ids
     ]
     return {
-        "conflict": target_conflict,
+        "conflict_ids": target_ids,
+        "conflicts": selected_conflicts,
         "claims": related_claims,
         "resolutions": related_resolutions,
         "knowledge_snapshot": knowledge_snapshot,
@@ -28,7 +75,7 @@ def build_conflict_bundle(*, meta: Dict[str, Any], conflict_id: str) -> Dict[str
 
 
 def build_llm_conflict_prompt(*, bundle: Dict[str, Any]) -> str:
-    conflict = bundle.get("conflict") if isinstance(bundle.get("conflict"), dict) else {}
+    conflicts = bundle.get("conflicts") if isinstance(bundle.get("conflicts"), list) else []
     claims = bundle.get("claims") if isinstance(bundle.get("claims"), list) else []
     knowledge = bundle.get("knowledge_snapshot") if isinstance(bundle.get("knowledge_snapshot"), dict) else {}
     lines: List[str] = []
@@ -36,9 +83,13 @@ def build_llm_conflict_prompt(*, bundle: Dict[str, Any]) -> str:
     lines.append("目标：给出 resolution_type、preferred_arbiter、winner_claim_ids、dropped_claim_ids、reason、confidence。")
     lines.append("resolution_type 仅可为 merge / reject / escalate_user / context_only。")
     lines.append("preferred_arbiter 仅可为 system / llm / user。")
+    if len(conflicts) > 1:
+        lines.append("")
+        lines.append("说明：这是批量冲突包，请返回 results_by_conflict 字典，key 为 conflict_id。")
+        lines.append("每个条目需包含 resolution_type、preferred_arbiter、winner_claim_ids、dropped_claim_ids、reason、confidence。")
     lines.append("")
-    lines.append("## Conflict")
-    lines.append(json.dumps(conflict, ensure_ascii=False, indent=2))
+    lines.append("## Conflict" if len(conflicts) <= 1 else "## Conflicts")
+    lines.append(json.dumps(conflicts[0] if conflicts and len(conflicts) <= 1 else conflicts, ensure_ascii=False, indent=2))
     lines.append("")
     lines.append("## Claims")
     lines.append(json.dumps(claims, ensure_ascii=False, indent=2))
@@ -52,13 +103,15 @@ def build_llm_conflict_prompt(*, bundle: Dict[str, Any]) -> str:
 
 def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str, Any]:
     raw = str(reply or "").strip()
+    conflicts = bundle.get("conflicts") if isinstance(bundle.get("conflicts"), list) else []
+    conflict_ids = [str(row.get("conflict_id") or "").strip() for row in conflicts if str(row.get("conflict_id") or "").strip()]
     target_claim_ids = [
         str(row.get("claim_id") or "").strip()
         for row in (bundle.get("claims") or [])
         if isinstance(row, dict) and str(row.get("claim_id") or "").strip()
     ]
     if not raw:
-        return {
+        base = {
             "resolution_type": "context_only",
             "preferred_arbiter": "llm",
             "winner_claim_ids": [],
@@ -66,6 +119,9 @@ def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str,
             "reason": "LLM 未返回结构化内容，保留为上下文待复核。",
             "confidence": 0.0,
         }
+        if len(conflict_ids) > 1:
+            return {"results_by_conflict": {cid: dict(base) for cid in conflict_ids}}
+        return base
 
     payload: Dict[str, Any] | None = None
     for candidate in (raw, raw.strip("`"), raw.replace("```json", "").replace("```", "").strip()):
@@ -88,7 +144,7 @@ def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str,
         else:
             resolution_type = "merge"
             preferred_arbiter = "system"
-        return {
+        base = {
             "resolution_type": resolution_type,
             "preferred_arbiter": preferred_arbiter,
             "winner_claim_ids": target_claim_ids[:1],
@@ -96,31 +152,27 @@ def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str,
             "reason": raw[:300],
             "confidence": 0.35,
         }
+        if len(conflict_ids) > 1:
+            return {"results_by_conflict": {cid: dict(base) for cid in conflict_ids}}
+        return base
 
-    winners = [
-        str(cid).strip()
-        for cid in (payload.get("winner_claim_ids") or [])
-        if str(cid).strip() in target_claim_ids
-    ]
-    dropped = [
-        str(cid).strip()
-        for cid in (payload.get("dropped_claim_ids") or [])
-        if str(cid).strip() in target_claim_ids and str(cid).strip() not in winners
-    ]
-    resolution_type = str(payload.get("resolution_type") or "context_only").strip() or "context_only"
-    preferred_arbiter = str(payload.get("preferred_arbiter") or "llm").strip() or "llm"
-    try:
-        confidence = float(payload.get("confidence", 0.0) or 0.0)
-    except (TypeError, ValueError):
-        confidence = 0.0
-    return {
-        "resolution_type": resolution_type,
-        "preferred_arbiter": preferred_arbiter,
-        "winner_claim_ids": winners,
-        "dropped_claim_ids": dropped,
-        "reason": str(payload.get("reason") or "").strip(),
-        "confidence": max(0.0, min(1.0, confidence)),
-    }
+    if len(conflict_ids) > 1 and "results_by_conflict" in payload:
+        raw_map = payload.get("results_by_conflict") if isinstance(payload.get("results_by_conflict"), dict) else {}
+        parsed_map: Dict[str, Dict[str, Any]] = {}
+        for conflict_id, raw_item in raw_map.items():
+            sid = str(conflict_id or "").strip()
+            if not sid:
+                continue
+            if not isinstance(raw_item, dict):
+                continue
+            normalized = _normalize_single_resolution(raw_item)
+            parsed_map[sid] = normalized
+        return {"results_by_conflict": parsed_map}
+
+    parsed = _normalize_single_resolution(payload)
+    if len(conflict_ids) <= 1:
+        return parsed
+    return {"results_by_conflict": {cid: dict(parsed) for cid in conflict_ids}}
 
 
 def apply_llm_conflict_result(
@@ -222,3 +274,61 @@ def apply_llm_conflict_result(
     cloned["plugin_conflict_resolutions"] = resolutions
     cloned["brain_action_queue"] = brain_actions
     return cloned
+
+
+def apply_llm_conflict_results(
+    *,
+    meta: Dict[str, Any],
+    conflict_ids: List[str],
+    bundle: Dict[str, Any],
+    reply: str,
+    parsed: Dict[str, Any],
+) -> Dict[str, Any]:
+    normalized_conflict_ids = _normalize_conflict_ids(conflict_ids)
+    if not normalized_conflict_ids:
+        return dict(meta or {})
+    conflicts = [dict(row) for row in (bundle.get("conflicts") or []) if isinstance(row, dict)]
+    conflicts_by_id = {str(row.get("conflict_id") or "").strip(): row for row in conflicts if str(row.get("conflict_id") or "").strip()}
+    claims = [dict(row) for row in (bundle.get("claims") or []) if isinstance(row, dict)]
+    all_resolutions = [dict(row) for row in (bundle.get("resolutions") or []) if isinstance(row, dict)]
+    resolutions_by_conflict = {
+        str(row.get("conflict_id") or "").strip(): row
+        for row in all_resolutions
+        if str(row.get("conflict_id") or "").strip()
+    }
+    knowledge_snapshot = dict(bundle.get("knowledge_snapshot") or {})
+    results_by_conflict = parsed.get("results_by_conflict") if isinstance(parsed.get("results_by_conflict"), dict) else {}
+
+    out = dict(meta or {})
+    for conflict_id in normalized_conflict_ids:
+        if conflict_id not in conflicts_by_id:
+            continue
+        row = results_by_conflict.get(conflict_id) if isinstance(results_by_conflict, dict) else None
+        single_parsed = dict(row) if isinstance(row, dict) else dict(parsed)
+        if "results_by_conflict" in single_parsed:
+            del single_parsed["results_by_conflict"]
+        if not single_parsed:
+            single_parsed = {
+                "resolution_type": "context_only",
+                "preferred_arbiter": "llm",
+                "winner_claim_ids": [],
+                "dropped_claim_ids": [],
+                "reason": "LLM 未返回该冲突结构化结果，转入上下文待复核。",
+                "confidence": 0.0,
+            }
+        out = apply_llm_conflict_result(
+            meta=out,
+            conflict_id=conflict_id,
+            bundle={
+                "conflict_id": conflict_id,
+                "conflicts": [dict(conflicts_by_id[conflict_id])],
+                "claims": claims,
+                "resolutions": (
+                    [dict(row)] if (row := resolutions_by_conflict.get(conflict_id)) is not None else []
+                ),
+                "knowledge_snapshot": knowledge_snapshot,
+            },
+            reply=reply,
+            parsed=single_parsed,
+        )
+    return out

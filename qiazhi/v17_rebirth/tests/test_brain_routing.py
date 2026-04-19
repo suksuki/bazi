@@ -70,3 +70,49 @@ def test_route_conflicts_falls_back_when_explicit_arbiter_is_invalid() -> None:
     assert routed[0]["recommended_arbiter"] == "llm"
     assert routed[1]["recommended_arbiter"] == "system"
     assert routed[2]["recommended_arbiter"] == "system"
+
+
+def test_build_knowledge_snapshot_merges_feedback_arbiters() -> None:
+    snapshot = build_knowledge_snapshot(
+        claims=[],
+        conflicts=[],
+        conflict_resolutions=[],
+        feedback_rows=[
+            {"status": "llm"},
+            {"status": "user"},
+            {"status": "queued_llm", "meta": {"arbiter": "llm"}},
+        ],
+    )
+
+    assert snapshot["conflict_history"]["feedback_arbiters"]["llm"] == 2
+    assert snapshot["conflict_history"]["feedback_arbiters"]["user"] == 1
+    assert "feedback_arbiter_scores" in snapshot["conflict_history"]
+
+
+def test_route_conflicts_consume_feedback_arbiters() -> None:
+    conflicts = [
+        {"conflict_id": "c1", "severity": "P2", "recommended_arbiter": "system"},
+    ]
+    knowledge_snapshot = {
+        "conflict_history": {
+            "recommended_arbiters": {"system": 0, "llm": 1, "user": 0},
+            "feedback_arbiters": {"llm": 3, "system": 0, "user": 0},
+        }
+    }
+    routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
+    assert routed[0]["recommended_arbiter"] == "llm"
+
+
+def test_route_conflicts_consume_feedback_scores() -> None:
+    conflicts = [
+        {"conflict_id": "c1", "severity": "P2", "recommended_arbiter": "system"},
+    ]
+    knowledge_snapshot = {
+        "conflict_history": {
+            "recommended_arbiters": {"system": 0, "llm": 0, "user": 0},
+            "feedback_arbiters": {"llm": 1, "system": 0, "user": 0},
+            "feedback_arbiter_scores": {"llm": 0.92, "system": 0.00, "user": 0.00},
+        }
+    }
+    routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
+    assert routed[0]["recommended_arbiter"] == "llm"
