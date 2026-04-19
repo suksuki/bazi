@@ -32,6 +32,28 @@ def _unique(items: Iterable[str]) -> List[str]:
 
 
 @dataclass
+class DecisionRoutingClaim:
+    claim_id: str
+    severity: str
+    confidence: float
+    routing: str
+    routing_reason: str
+    rationale: str
+    signals: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "claim_id": self.claim_id,
+            "severity": self.severity,
+            "confidence": self.confidence,
+            "routing": self.routing,
+            "routing_reason": self.routing_reason,
+            "rationale": self.rationale,
+            "signals": dict(self.signals),
+        }
+
+
+@dataclass
 class DecisionBatch:
     batch_id: str
     bucket: str
@@ -147,6 +169,47 @@ class DecisionBrainPlan:
         }
 
 
+def build_plan_claim(*, routing: str, routing_reason: str, routing_features: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a compact claim object to drive arbitration explainability."""
+    conflict_pairs = int(routing_features.get("conflict_pairs") or 0)
+    duplicate_events = int(routing_features.get("duplicate_events") or 0)
+    decision_count = int(routing_features.get("decision_count") or 0)
+    total_abs_ratio = float(routing_features.get("total_abs_ratio") or 0.0)
+    max_abs_ratio = float(routing_features.get("max_abs_ratio") or 0.0)
+
+    risk = abs(max_abs_ratio) + max(0.0, total_abs_ratio)
+    risk += min(conflict_pairs, 3) * 0.28
+    risk += min(duplicate_events, 3) * 0.18
+    if risk > 1.0:
+        risk = 1.0
+
+    if routing == "user":
+        severity = "P1"
+        confidence = round(0.86 + max(0.0, min(0.13, risk * 0.2)), 3)
+    elif routing == "llm":
+        severity = "P2"
+        confidence = round(0.68 + max(0.0, min(0.26, (1.0 - risk) * 0.35)), 3)
+    else:
+        severity = "P3" if routing == "system" and (risk < 0.45 or decision_count <= 8) else "P2"
+        confidence = round(0.74 + max(0.0, min(0.22, (1.0 - risk) * 0.28)), 3)
+
+    return DecisionRoutingClaim(
+        claim_id=f"{routing}:{decision_count}:{decision_count and int(risk * 100)}",
+        severity=severity,
+        confidence=confidence,
+        routing=routing,
+        routing_reason=routing_reason,
+        rationale=f"按 routing={routing} 分流，综合 risk={risk:.3f}。",
+        signals={
+            "conflict_pairs": conflict_pairs,
+            "duplicate_events": duplicate_events,
+            "decision_count": decision_count,
+            "max_abs_ratio": round(max_abs_ratio, 4),
+            "total_abs_ratio": round(total_abs_ratio, 4),
+        },
+    ).to_dict()
+
+
 def normalize_plan_action(payload: Dict[str, Any]) -> Dict[str, Any]:
     signal = _normalize(payload.get("signal")).upper()
     if signal not in PLAN_SIGNALS:
@@ -171,4 +234,3 @@ def normalize_plan_action(payload: Dict[str, Any]) -> Dict[str, Any]:
         "residual_estimate": float(payload.get("residual_estimate") or 0.0),
         "meta": dict(payload.get("meta") or {}),
     }
-

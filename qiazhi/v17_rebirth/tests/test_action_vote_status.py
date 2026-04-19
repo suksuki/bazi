@@ -158,6 +158,14 @@ def _get_plan_status(backend: _FakeBackend) -> str:
     return str(queue[0].get("status") or "").strip()
 
 
+def _get_plan_meta(backend: _FakeBackend) -> dict[str, Any]:
+    queue = backend.physics.get("sid", {}).get("decision_brain_state", {}).get("plan_queue", [])
+    if not queue:
+        return {}
+    raw = queue[0].get("meta")
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
 def test_plan_approve_triggers_physics_and_commits(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
@@ -183,6 +191,84 @@ def test_plan_approve_triggers_physics_and_commits(monkeypatch: pytest.MonkeyPat
     assert result["called"]["kernel"] == 2
     assert backend.physics["sid"]["pending_decisions"][0]["status"] == "APPROVED"
     assert backend.physics["sid"]["pending_decisions"][1]["status"] == "APPROVED"
+    assert _get_plan_status(backend) == "COMMITTED"
+    plan_meta = _get_plan_meta(backend)
+    decision_trace = plan_meta.get("decision_trace")
+    assert isinstance(decision_trace, list)
+    assert {str(item.get("decision_id") or "") for item in decision_trace} >= {"p1", "p2"}
+
+
+def test_plan_approve_preserves_kernel_runtime_writeback(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["ten_gods_runtime"] = {"七杀": 8.5, "正官": 13.17}
+    backend.physics["sid"]["ten_gods_base_l0"] = {"七杀": 8.5, "正官": 13.17}
+    backend.physics["sid"]["pending_decisions"] = [
+        {"id": "p1", "label": "方案A", "physical_impact": {"target_god": "七杀", "impact_ratio": 0.2}},
+    ]
+
+    monkeypatch.setattr(stream_v17, "get_state_backend", lambda: backend)
+
+    async def _fake_dispatch(**_kwargs: Any) -> bool:
+        tensor = dict(backend.physics["sid"])
+        tensor["ten_gods_runtime"] = {"七杀": 10.2, "正官": 13.17}
+        tensor["ten_gods_absolute"] = {"七杀": 10.2, "正官": 13.17}
+        tensor["ten_gods_absolute_intensity"] = {"七杀": 10.2, "正官": 13.17}
+        tensor["deity_scores"] = {"七杀": 10.2, "正官": 13.17}
+        backend.physics["sid"] = tensor
+        return True
+
+    monkeypatch.setattr(PhysicsKernel, "dispatch_perturbation", _fake_dispatch)
+    resp = asyncio.run(
+        stream_v17.v17_action(
+            {
+                "v17_origin": "v17_rebirth",
+                "signal": "PLAN_APPROVE",
+                "session_id": "sid",
+                "status": "APPROVED",
+                "decision_ids": ["p1"],
+                "action": "测试方案",
+            }
+        )
+    )
+    body = _decode_json_response(resp)
+
+    assert body["ok"] is True
+    assert backend.physics["sid"]["ten_gods_runtime"]["七杀"] == 10.2
+    assert backend.physics["sid"]["pending_decisions"][0]["status"] == "APPROVED"
+    assert _get_plan_status(backend) == "COMMITTED"
+
+
+def test_plan_approve_untargeted_rows_consume_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["pending_decisions"] = [
+        {
+            "id": "p1",
+            "label": "状态机节律",
+            "plugin_id": "l1.physics.op_status",
+            "title": "日主处于病位，作为上下文观察。",
+            "physical_impact": {"impact_ratio": 0.015},
+        },
+    ]
+
+    result = asyncio.run(
+        _plan_action(
+            backend=backend,
+            monkeypatch=monkeypatch,
+            signal="PLAN_APPROVE",
+            decision_ids=["p1"],
+            action="处理上下文",
+            anchor="context-anchor",
+        ),
+    )
+
+    assert result["body"]["ok"] is True
+    assert result["body"]["signal"] == "CONTEXT_CONSUMED"
+    assert result["called"]["kernel"] == 0
+    assert backend.physics["sid"]["pending_decisions"][0]["status"] == "CONSUMED_CONTEXT"
     assert _get_plan_status(backend) == "COMMITTED"
 
 
@@ -210,7 +296,38 @@ def test_plan_reject_only_marks_decisions_and_no_physics(monkeypatch: pytest.Mon
     assert result["body"]["signal"] in {"VOTE_REJECTED", "VOTE_WITHDRAWN"}
     assert result["called"]["kernel"] == 0
     assert backend.physics["sid"]["pending_decisions"][0]["status"] == "REJECTED"
-    assert _get_plan_status(backend) == "REJECTED"
+
+
+def test_plan_routing_claim_on_system_path() -> None:
+    rows = [
+        {
+            "label": "安全路径",
+            "physical_impact": {"target_god": "正官", "impact_ratio": 0.1},
+            "exclusivity_key": "k1",
+        }
+    ]
+    route = stream_v17._decision_route_reason({}, rows)
+    claim = route.get("routing_claim")
+    assert isinstance(claim, dict)
+    assert route["routing"] == "system"
+    assert claim.get("severity") == "P3"
+    assert str(claim.get("routing_reason") or "").strip()
+
+
+def test_plan_routing_claim_with_explicit_user_route() -> None:
+    rows = [
+        {
+            "label": "高风险",
+            "physical_impact": {"target_god": "七杀", "impact_ratio": 0.05},
+            "exclusivity_key": "k1",
+        }
+    ]
+    route = stream_v17._decision_route_reason({"routing": "user"}, rows)
+    claim = route.get("routing_claim")
+    assert route["routing"] == "user"
+    assert isinstance(claim, dict)
+    assert claim.get("severity") == "P1"
+    assert float(claim.get("confidence", 0.0)) >= 0.86
 
 
 def test_plan_escalate_stays_await_review(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -324,6 +441,41 @@ def test_plan_submit_auto_executes_when_system_routing(monkeypatch: pytest.Monke
     assert _get_plan_status(backend) == "COMMITTED"
 
 
+def test_plan_submit_llm_routing_generates_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["pending_decisions"] = [
+        {
+            "id": "p1",
+            "label": "方案A",
+            "physical_impact": {"target_god": "七杀", "impact_ratio": 0.20},
+            "priority": 0.7,
+        }
+    ]
+
+    result = asyncio.run(
+        _plan_action(
+            backend=backend,
+            monkeypatch=monkeypatch,
+            signal="PLAN_SUBMIT",
+            decision_ids=["p1"],
+            action="LLM 路由用例",
+            anchor="llm-anchor",
+            status="PENDING",
+        ),
+    )
+
+    assert result["body"]["ok"] is True
+    assert result["body"]["signal"] == "PLAN_SUBMIT"
+    assert result["called"]["kernel"] == 0
+    assert result["body"].get("llm_review_prompt")
+    assert "LLM 路由用例" in str(result["body"].get("llm_review_prompt") or "")
+    assert _get_plan_status(backend) == "AWAIT_REVIEW"
+    assert _get_plan_meta(backend).get("llm_review_prompt")
+    assert isinstance(_get_plan_meta(backend).get("decision_trace"), list)
+
+
 def test_plan_submit_manual_route_stays_review(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
@@ -349,3 +501,32 @@ def test_plan_submit_manual_route_stays_review(monkeypatch: pytest.MonkeyPatch) 
     assert result["called"]["kernel"] == 0
     assert backend.physics["sid"]["pending_decisions"][0]["status"] == "AWAIT_REVIEW"
     assert _get_plan_status(backend) == "AWAIT_REVIEW"
+
+
+def test_plan_approve_without_verdict_publishes_physics_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+
+    backend = _FakeBackend()
+    backend.physics["sid"]["pending_decisions"] = [
+        {"id": "p1", "label": "方案A", "physical_impact": {"target_god": "七杀", "impact_ratio": 0.06}},
+    ]
+
+    result = asyncio.run(
+        _plan_action(
+            backend=backend,
+            monkeypatch=monkeypatch,
+            signal="PLAN_APPROVE",
+            decision_ids=["p1"],
+            action="同步验证",
+            anchor="sync-anchor",
+            request_verdict=False,
+        ),
+    )
+
+    assert result["body"]["ok"] is True
+    assert backend.events, "expected backend publish_action to be called"
+    last_event = backend.events[-1]
+    assert last_event.get("signal") == "PHYSICS_SYNC"
+    assert last_event.get("request_verdict") is False
+    assert isinstance(last_event.get("payload"), dict)
+    assert (last_event.get("payload") or {}).get("type") == "PHYSICS_SYNC"

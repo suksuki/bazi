@@ -4,6 +4,7 @@ import math
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact
+from v17_rebirth.backend.services.plugin_display import plugin_source_label
 from v17_rebirth.backend.services.target_god_resolver import infer_target_god_from_text, resolve_target_god
 
 
@@ -120,25 +121,7 @@ def _source_label(source: Any) -> str:
     raw = str(source or "").strip()
     if not raw:
         return "未知规则"
-    mapping = (
-        ("liuchong", "六冲"),
-        ("liuhe", "六合"),
-        ("liupo", "六破"),
-        ("sanxing", "三刑"),
-        ("banhe", "半合"),
-        ("three_harmony", "三合"),
-        ("muku", "墓库"),
-        ("stem_fusion", "天干五合"),
-        ("chang_sheng", "长生状态"),
-        ("geometry", "几何关系"),
-        ("manifest", "插件命中"),
-    )
-    for needle, label in mapping:
-        if needle in raw:
-            return label
-    if raw.startswith("l2."):
-        return raw.replace("l2.", "L2:", 1)
-    return raw
+    return plugin_source_label(raw)
 
 
 def _arbitration_mode_label(mode: str) -> str:
@@ -408,18 +391,22 @@ def compile_modifier_proposals(
 
 
 def _is_manual_candidate(row: Dict[str, Any]) -> bool:
-    # V17.99: 优先服从预设的裁决标签
     arbiter_val = str(row.get("arbiter_type") or "").strip().lower()
-    if arbiter_val == "user":
-        return True
-    
-    target_god = str(row.get("target_god") or "").strip()
     impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
-    # 如果没有预设标签，则回退到基础逻辑，但放宽目标神限制
+    target_god = str(row.get("target_god") or "").strip()
     label = str(row.get("label") or row.get("hint") or "").strip()
     title = str(row.get("title") or "").strip()
     text = f"{label} {title}"
-    blockers = ("状态机", "快照", "显影", "诊断", "报告", "映射")
+    has_ratio = "impact_ratio" in impact
+    executable = bool(target_god and has_ratio)
+
+    # User-routed rows still need to be executable. Otherwise they should degrade to context.
+    if arbiter_val == "user":
+        return executable
+
+    blockers = ("状态机", "快照", "显影", "诊断", "报告", "映射", "墓库", "观察")
+    if not executable:
+        return False
     return not any(k in text for k in blockers)
 
 

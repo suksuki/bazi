@@ -30,6 +30,11 @@ type PluginAdminRow = {
   layer_dir: string;
   module: string;
   plugin_id: string;
+  display_name?: string;
+  display_definition?: string;
+  display_description?: string;
+  technical_label?: string;
+  family_label?: string;
   causal_tier: number;
   power_tier?: number;
   execution_order?: number;
@@ -53,10 +58,23 @@ type PluginAdminRow = {
   is_standard_skill?: boolean;
 };
 
+function pluginCardTitle(row: PluginAdminRow): string {
+  return String(row.display_name || row.definition_text || row.plugin_id || "未命名插件").trim();
+}
+
+function pluginCardDefinition(row: PluginAdminRow): string {
+  return String(row.display_definition || row.definition_text || row.function_summary || row.plugin_id || "").trim();
+}
+
+function pluginCardDescription(row: PluginAdminRow): string {
+  return String(row.display_description || row.detail_description || row.design_rationale || "暂无补充说明。").trim();
+}
+
 type PluginRuntimeStatus = {
   plugin_id: string;
   fact_count?: number;
   proposal_count?: number;
+  decision_count?: number;
   status?: string;
   target_god?: string;
   reason?: string;
@@ -124,6 +142,13 @@ type BrainAction = {
   confidence?: number;
   reason?: string;
   source_plugins?: string[];
+};
+
+type PluginPanelRow = {
+  plugin: PluginAdminRow;
+  runtime?: PluginRuntimeStatus;
+  relatedClaims: PluginClaim[];
+  relatedConflicts: PluginConflict[];
 };
 
 const LAYER_TABS: { key: string; label: string }[] = [
@@ -297,6 +322,54 @@ function buildConflictGroups(
   return grouped;
 }
 
+function isInboxRuntimeStatus(status: string | undefined): boolean {
+  const value = String(status || "").trim().toLowerCase();
+  return new Set([
+    "manual_pending",
+    "manual_committed",
+    "manual_rejected",
+    "await_review",
+    "context_pending",
+    "context_consumed",
+    "proposal_pending",
+    "auto_applied",
+  ]).has(value);
+}
+
+function isHitRuntimeStatus(status: string | undefined): boolean {
+  const value = String(status || "").trim().toLowerCase();
+  return value !== "" && value !== "unknown";
+}
+
+function runtimeStatusTone(status: string | undefined): string {
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "auto_applied") return "bg-emerald-900/40 text-emerald-300";
+  if (value === "manual_committed") return "bg-cyan-900/40 text-cyan-300";
+  if (value === "manual_pending" || value === "await_review" || value === "proposal_pending") return "bg-amber-900/40 text-amber-300";
+  if (value === "context_pending" || value === "context_consumed") return "bg-sky-900/40 text-sky-300";
+  if (value === "manual_rejected") return "bg-rose-900/40 text-rose-300";
+  if (value === "clamped") return "bg-fuchsia-900/40 text-fuchsia-300";
+  if (value.startsWith("skipped")) return "bg-rose-900/40 text-rose-300";
+  return "bg-zinc-800 text-zinc-400";
+}
+
+function runtimeStatusLabel(status: string | undefined): string {
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "manual_pending") return "待手动处理";
+  if (value === "manual_committed") return "已人工结算";
+  if (value === "manual_rejected") return "已人工否决";
+  if (value === "await_review") return "等待复核";
+  if (value === "context_pending") return "上下文待消化";
+  if (value === "context_consumed") return "上下文已消化";
+  if (value === "proposal_pending") return "Proposal 待裁决";
+  if (value === "auto_applied") return "自动已结算";
+  if (value === "fact_only") return "仅命中事实";
+  if (value === "clamped") return "护栏钳制";
+  if (value === "skipped_dedup") return "重复跳过";
+  if (value === "skipped_no_target") return "无目标跳过";
+  return String(status || "unknown");
+}
+
 export default function V17AdminPage() {
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
@@ -465,6 +538,36 @@ export default function V17AdminPage() {
     return { conflict, resolution, action };
   }).filter((row) => String(row.conflict.conflict_id || "").trim());
 
+  const pluginPanelRows: PluginPanelRow[] = plugins.map((plugin) => {
+    const pluginKey = normalizePluginKey(plugin.plugin_id);
+    const moduleKey = normalizePluginKey(plugin.module);
+    const runtime = pluginStatuses.find((row) => {
+      const statusKey = normalizePluginKey(row.plugin_id);
+      return statusKey === pluginKey || (statusKey && moduleKey && (statusKey === moduleKey || statusKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${statusKey}`)));
+    });
+    const relatedClaims = pluginClaims.filter((row) => {
+      const rowKey = normalizePluginKey(row.plugin_id);
+      return rowKey === pluginKey || (rowKey && moduleKey && (rowKey === moduleKey || rowKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${rowKey}`)));
+    });
+    const relatedConflicts = pluginConflicts.filter((row) => {
+      const rows = Array.isArray(row.plugins) ? row.plugins : [];
+      return rows.some((item) => {
+        const itemKey = normalizePluginKey(item);
+        return itemKey === pluginKey || (itemKey && moduleKey && (itemKey === moduleKey || itemKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${itemKey}`)));
+      });
+    });
+    return { plugin, runtime, relatedClaims, relatedConflicts };
+  });
+  const scannedPluginCount = pluginPanelRows.length;
+  const hitPluginRows = pluginPanelRows.filter((row) => {
+    const factCount = Number(row.runtime?.fact_count || 0);
+    return factCount > 0 || isHitRuntimeStatus(row.runtime?.status) || row.plugin.activated;
+  });
+  const inboxPluginRows = pluginPanelRows.filter((row) => {
+    const decisionCount = Number(row.runtime?.decision_count || 0);
+    return decisionCount > 0 || isInboxRuntimeStatus(row.runtime?.status);
+  });
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 font-sans p-6 text-sm">
       <div className="mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
@@ -565,6 +668,9 @@ export default function V17AdminPage() {
                </div>
                <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 text-[11px] text-zinc-400">
                  <div className="flex flex-wrap items-center gap-4">
+                   <span>scanned {scannedPluginCount}</span>
+                   <span>hit {hitPluginRows.length}</span>
+                   <span>inbox {inboxPluginRows.length}</span>
                    <span>claims {Number(knowledgeSnapshot.claim_history?.total_claims || 0)}</span>
                    <span>conflicts {Number(knowledgeSnapshot.conflict_history?.total_conflicts || 0)}</span>
                    <span>suggestions {Number(knowledgeSnapshot.resolution_preview?.total_suggestions || 0)}</span>
@@ -632,58 +738,87 @@ export default function V17AdminPage() {
                        </div>
                      ))}
                    </div>
-                 </div>
+                </div>
                ) : null}
+               <div className="grid gap-3 md:grid-cols-3">
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="text-[11px] font-semibold text-zinc-300">扫描层</div>
+                   <div className="mt-1 text-[10px] text-zinc-500">插件注册表中被扫描到的总量。</div>
+                   <div className="mt-3 text-2xl font-semibold text-zinc-100">{scannedPluginCount}</div>
+                 </div>
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="text-[11px] font-semibold text-zinc-300">命中层</div>
+                   <div className="mt-1 text-[10px] text-zinc-500">本轮确实产出 facts / proposal / claim 的插件。</div>
+                   <div className="mt-3 text-2xl font-semibold text-emerald-300">{hitPluginRows.length}</div>
+                 </div>
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="text-[11px] font-semibold text-zinc-300">Inbox 层</div>
+                   <div className="mt-1 text-[10px] text-zinc-500">已经进入手动、自动或上下文队列的插件。</div>
+                   <div className="mt-3 text-2xl font-semibold text-amber-300">{inboxPluginRows.length}</div>
+                 </div>
+               </div>
+               <div className="grid gap-3 lg:grid-cols-3">
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="mb-2 text-[11px] font-semibold text-zinc-300">扫描到的插件</div>
+                   <div className="space-y-1 text-[10px] text-zinc-500">
+                     {pluginPanelRows.slice(0, 12).map((row) => (
+                       <div key={`scan_${row.plugin.plugin_id}`} className="flex items-center justify-between gap-2">
+                         <span className="truncate">{pluginCardTitle(row.plugin)}</span>
+                         <span className="text-zinc-700">L{row.plugin.causal_tier}</span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="mb-2 text-[11px] font-semibold text-zinc-300">命中并产出事实</div>
+                   <div className="space-y-1 text-[10px] text-zinc-500">
+                     {hitPluginRows.slice(0, 12).map((row) => (
+                       <div key={`hit_${row.plugin.plugin_id}`} className="flex items-center justify-between gap-2">
+                         <span className="truncate">{pluginCardTitle(row.plugin)}</span>
+                         <span>{Number(row.runtime?.fact_count || 0)} facts</span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+                   <div className="mb-2 text-[11px] font-semibold text-zinc-300">已进入 Inbox</div>
+                   <div className="space-y-1 text-[10px] text-zinc-500">
+                     {inboxPluginRows.slice(0, 12).map((row) => (
+                       <div key={`inbox_${row.plugin.plugin_id}`} className="flex items-center justify-between gap-2">
+                         <span className="truncate">{pluginCardTitle(row.plugin)}</span>
+                         <span>{runtimeStatusLabel(row.runtime?.status)}</span>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               </div>
                <div className="space-y-2">
-                  {plugins.map(p => {
-                    const pluginKey = normalizePluginKey(p.plugin_id);
-                    const moduleKey = normalizePluginKey(p.module);
-                    const runtime = pluginStatuses.find((s) => {
-                      const sid = normalizePluginKey(s.plugin_id);
-                      return sid === pluginKey || (sid && moduleKey && (sid === moduleKey || sid.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${sid}`)));
-                    });
-                    const relatedClaims = pluginClaims.filter((row) => {
-                      const rowKey = normalizePluginKey(row.plugin_id);
-                      return rowKey === pluginKey || (rowKey && moduleKey && (rowKey === moduleKey || rowKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${rowKey}`)));
-                    });
-                    const relatedConflicts = pluginConflicts.filter((row) => {
-                      const rows = Array.isArray(row.plugins) ? row.plugins : [];
-                      return rows.some((item) => {
-                        const itemKey = normalizePluginKey(item);
-                        return itemKey === pluginKey || (itemKey && moduleKey && (itemKey === moduleKey || itemKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${itemKey}`)));
-                      });
-                    });
+                  {pluginPanelRows.map(({ plugin: p, runtime, relatedClaims, relatedConflicts }) => {
                     const runtimeStatus = String(runtime?.status || "unknown");
-                    const runtimeTone =
-                      runtimeStatus === "auto_applied"
-                        ? "bg-emerald-900/40 text-emerald-300"
-                        : runtimeStatus === "proposal_pending"
-                          ? "bg-amber-900/40 text-amber-300"
-                          : runtimeStatus === "clamped"
-                            ? "bg-fuchsia-900/40 text-fuchsia-300"
-                            : runtimeStatus.startsWith("skipped")
-                              ? "bg-rose-900/40 text-rose-300"
-                              : "bg-zinc-800 text-zinc-400";
+                    const runtimeTone = runtimeStatusTone(runtimeStatus);
                     return (
                     <div key={p.plugin_id} className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-xl">
                       <div className="flex justify-between items-center">
                        <div>
-                          <div className="font-bold text-zinc-200">{p.definition_text || p.plugin_id}</div>
+                          <div className="font-bold text-zinc-200">{pluginCardTitle(p)}</div>
                           <div className="text-[10px] text-zinc-500">Tier: {p.causal_tier} · Order: {p.execution_order}</div>
+                          <div className="mt-1 text-[10px] text-zinc-400">{p.technical_label || p.plugin_id}</div>
                        </div>
                        <div className={`px-2 py-0.5 rounded text-[10px] ${p.activated ? "bg-emerald-900/40 text-emerald-400" : "bg-zinc-800 text-zinc-500"}`}>
                           {p.activated ? "ACTIVE" : "IDLE"}
                        </div>
                       </div>
                       <div className="mt-2 flex items-center gap-2 text-[10px]">
-                        <span className={`rounded px-2 py-0.5 uppercase ${runtimeTone}`}>{runtimeStatus}</span>
+                        <span className={`rounded px-2 py-0.5 uppercase ${runtimeTone}`}>{runtimeStatusLabel(runtimeStatus)}</span>
                         {runtime?.target_god ? <span className="text-zinc-500">target {runtime.target_god}</span> : null}
                         {typeof runtime?.fact_count === "number" ? <span className="text-zinc-600">facts {runtime.fact_count}</span> : null}
                         {typeof runtime?.proposal_count === "number" ? <span className="text-zinc-600">proposals {runtime.proposal_count}</span> : null}
+                        {typeof runtime?.decision_count === "number" ? <span className="text-zinc-600">decisions {runtime.decision_count}</span> : null}
                         <span className="text-zinc-600">claims {relatedClaims.length}</span>
                         <span className="text-zinc-600">conflicts {relatedConflicts.length}</span>
                       </div>
-                      <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || "暂无最近运行状态。打开 Oracle 跑一轮后会在这里同步。"}</div>
+                      <div className="mt-1 text-[10px] text-zinc-300">{pluginCardDefinition(p)}</div>
+                      <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || pluginCardDescription(p)}</div>
                       {(() => {
                         const relatedGroups = buildConflictGroups(relatedConflicts, pluginConflictResolutions);
                         return relatedGroups.length ? (

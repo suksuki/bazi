@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   deriveV17LlmLifecycle,
   mergeV17LlmMetaForUi,
@@ -35,6 +35,7 @@ export type Decision = {
   resolved_from_llm?: boolean;
   llm_resolution_state?: string;
   llm_terminal_state?: string;
+  arbitration_mode?: "manual" | "system" | "llm" | string;
   physical_impact?: {
     target_god?: string;
     impact_ratio?: number;
@@ -75,8 +76,15 @@ export interface OracleSession {
   // --- decisions ---
   adoptedDecisions: Decision[];
   handleAdopted: (d: Decision & { status: "APPROVED" | "REJECTED" }) => Promise<void>;
-  handleAdoptedBatch: (decisions: Decision[], status: "APPROVED" | "REJECTED") => Promise<void>;
+  handleAdoptedBatch: (
+    decisions: Decision[],
+    status: "APPROVED" | "REJECTED",
+    batchIds?: string[],
+  ) => Promise<void>;
   handlePlanAction: (plan: PlanActionInput, status: PlanActionStatus) => Promise<void>;
+  triggerVerdict: (reason?: string) => void;
+  pendingDecisionWorkCount: number;
+  canAutoGenerateVerdict: boolean;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -139,12 +147,26 @@ export function useOracleSession(): OracleSession {
   const [adoptedDecisions, setAdoptedDecisions] = useState<Decision[]>([]);
   const [decisionLockStartedAtMs, setDecisionLockStartedAtMs] = useState<number | null>(null);
   const [decisionActionError, setDecisionActionError] = useState("");
+  const [decisionDirtySinceLastVerdict, setDecisionDirtySinceLastVerdict] = useState(false);
 
   // Trace panel
   const [traceOpen, setTraceOpen] = useState(false);
 
   // Connection tick
   const [connectTickMs, setConnectTickMs] = useState(0);
+
+  const refreshPhysicsOnly = useCallback(() => {
+    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
+    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+    setStreamBody((prevBody) => ({
+      ...(prevBody || {}),
+      v17_origin: "v17_rebirth",
+      session_id: sessionId || "default",
+      suppress_narrator: true,
+      user_message: "",
+    }));
+    setRunning(true);
+  }, [sessionId, streamEndpoint]);
 
   // ── Stream ───────────────────────────────────────────────────────────────────
   const { frames, streamState } = useV17WebStream({
@@ -186,6 +208,31 @@ export function useOracleSession(): OracleSession {
       }),
     [frames],
   );
+
+  const pendingDecisionWorkCount = useMemo(() => {
+    const payload = (physicsSnapshot?.payload || {}) as Record<string, unknown>;
+    const pendingRows = Array.isArray(payload.pending_decisions)
+      ? payload.pending_decisions
+      : Array.isArray(payload.manual_inbox)
+        ? payload.manual_inbox
+        : Array.isArray(payload.manual_decisions)
+          ? payload.manual_decisions
+          : [];
+    const pendingManual = pendingRows.filter((row) => {
+      if (!row || typeof row !== "object") return false;
+      const status = String((row as { status?: string }).status || "").trim().toUpperCase();
+      return !status || status === "PENDING" || status === "AWAIT_REVIEW";
+    }).length;
+    const brain = payload.decision_brain_state as { plan_queue?: Array<{ status?: string }> } | undefined;
+    const planQueue = Array.isArray(brain?.plan_queue) ? brain.plan_queue : [];
+    const activePlans = planQueue.filter((plan) => {
+      const status = String(plan?.status || "").trim().toUpperCase();
+      return !status || !new Set(["COMPLETED", "DONE", "APPROVED", "REJECTED", "COMMITTED", "FAILED"]).has(status);
+    }).length;
+    return pendingManual + activePlans;
+  }, [physicsSnapshot]);
+
+  const canAutoGenerateVerdict = pendingDecisionWorkCount === 0;
 
   const llmAuditSnapshot = useMemo(
     () =>
@@ -393,9 +440,28 @@ export function useOracleSession(): OracleSession {
     setAdoptedDecisions([]);
     setDecisionLockStartedAtMs(null);
     setDecisionActionError("");
+    setDecisionDirtySinceLastVerdict(false);
   }
 
-  async function handleAdoptedBatch(decisions: Decision[], status: "APPROVED" | "REJECTED") {
+  const triggerVerdict = useCallback((reason: string = "请基于当前已结算决策，生成新的八字断言。") => {
+    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
+    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+    setStreamBody((prevBody) => ({
+      ...(prevBody || {}),
+      v17_origin: "v17_rebirth",
+      session_id: sessionId || "default",
+      suppress_narrator: false,
+      user_message: String(reason || "").trim() || "请生成新的八字断言。",
+    }));
+    setRunning(true);
+    setDecisionDirtySinceLastVerdict(false);
+  }, [sessionId, streamEndpoint]);
+
+  async function handleAdoptedBatch(
+    decisions: Decision[],
+    status: "APPROVED" | "REJECTED",
+    batchIds: string[] = [],
+  ) {
     const normalized = decisions
       .map((item, index) => {
         const id = String(item.id || item.label || item.title || `d_${Date.now()}_${index}`).trim();
@@ -425,8 +491,15 @@ export function useOracleSession(): OracleSession {
     const action = String(normalized[0]?.label || title || "").trim();
     if (!action || !ids.length) return;
 
+    const mergedBatchIds = [
+      ...normalized.map((item) => String(item.batch_id || "").trim()).filter(Boolean),
+      ...batchIds.map((item) => String(item || "").trim()).filter(Boolean),
+    ];
+    const uniqBatchIds = Array.from(new Set(mergedBatchIds));
+
     setDecisionActionError("");
     setDecisionLockStartedAtMs(Date.now());
+    let actionPayload: Record<string, unknown> | null = null;
 
     try {
       const response = await fetch("/api/v17/action", {
@@ -441,15 +514,16 @@ export function useOracleSession(): OracleSession {
           target_god: String(normalized[0]?.target_god || "").trim() || undefined,
           physical_impact: normalized[0]?.physical_impact || undefined,
           signal: status === "APPROVED" ? "PLAN_APPROVE" : "PLAN_REJECT",
-          batch_ids: normalized[0]?.batch_id ? [normalized[0]?.batch_id] : undefined,
+          batch_ids: uniqBatchIds.length ? uniqBatchIds : undefined,
+          request_verdict: false,
           v17_origin: "v17_rebirth",
         }),
       });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || payload?.ok === false) {
+      actionPayload = await response.json().catch(() => null);
+      if (!response.ok || actionPayload?.ok === false) {
         const detail =
-          typeof payload?.detail === "string" && payload.detail.trim().length > 0
-            ? payload.detail.trim()
+          typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
+            ? actionPayload.detail.trim()
             : "动作提交失败";
         throw new Error(detail);
       }
@@ -460,10 +534,23 @@ export function useOracleSession(): OracleSession {
       return;
     }
 
-    setAdoptedDecisions((prev) => {
-      const next = [...prev];
-      const idIndex = new Set(prev.map((item) => item.id).filter((value): value is string => Boolean(value)));
-      for (const item of normalized) {
+    setDecisionLockStartedAtMs(null);
+    setDecisionActionError("");
+    refreshPhysicsOnly();
+
+    const signal = String(actionPayload?.signal || "").trim().toUpperCase();
+    const shouldHideFromManual =
+      status === "REJECTED" ||
+      signal === "PLAN_APPROVE" ||
+      signal === "CONTEXT_CONSUMED" ||
+      signal === "ACTION_TAKEN" ||
+      signal === "VOTE_REJECTED" ||
+      signal === "VOTE_WITHDRAWN";
+    if (shouldHideFromManual) {
+      setAdoptedDecisions((prev) => {
+        const next = [...prev];
+        const idIndex = new Set(prev.map((item) => item.id).filter((value): value is string => Boolean(value)));
+        for (const item of normalized) {
           if (item.id && !idIndex.has(item.id)) {
             next.push({
               id: item.id,
@@ -475,18 +562,10 @@ export function useOracleSession(): OracleSession {
             idIndex.add(item.id);
           }
         }
-        const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
-        setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
-        setStreamBody((prevBody) => ({
-          ...(prevBody || {}),
-          v17_origin: "v17_rebirth",
-          session_id: sessionId || "default",
-          user_message: action,
-          decisions: next,
-        }));
-      setRunning(true);
-      return next;
-    });
+        return next;
+      });
+    }
+    setDecisionDirtySinceLastVerdict(true);
   }
 
   async function handleAdopted(decision: Decision & { status: "APPROVED" | "REJECTED" }) {
@@ -508,6 +587,7 @@ export function useOracleSession(): OracleSession {
 
     setDecisionActionError("");
     setDecisionLockStartedAtMs(Date.now());
+    let actionPayload: Record<string, unknown> | null = null;
 
     try {
       const signal =
@@ -531,14 +611,15 @@ export function useOracleSession(): OracleSession {
           signal,
           batch_ids: batchIds.length ? batchIds : undefined,
           decision_ids: decisionIds.length ? decisionIds : undefined,
+          request_verdict: false,
           v17_origin: "v17_rebirth",
         }),
       });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || payload?.ok === false) {
+      actionPayload = await response.json().catch(() => null);
+      if (!response.ok || actionPayload?.ok === false) {
         const detail =
-          typeof payload?.detail === "string" && payload.detail.trim().length > 0
-            ? payload.detail.trim()
+          typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
+            ? actionPayload.detail.trim()
             : "决策计划提交失败";
         throw new Error(detail);
       }
@@ -549,15 +630,19 @@ export function useOracleSession(): OracleSession {
       return;
     }
 
-    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
-    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
-    setStreamBody((prevBody) => ({
-      ...(prevBody || {}),
-      v17_origin: "v17_rebirth",
-      session_id: sessionId || "default",
-      user_message: action,
-    }));
-    if (decisionIds.length) {
+    setDecisionLockStartedAtMs(null);
+    setDecisionActionError("");
+    refreshPhysicsOnly();
+
+    const signal = String(actionPayload?.signal || "").trim().toUpperCase();
+    const shouldHideFromManual =
+      status !== "APPROVED" ||
+      signal === "PLAN_APPROVE" ||
+      signal === "CONTEXT_CONSUMED" ||
+      signal === "ACTION_TAKEN" ||
+      signal === "VOTE_REJECTED" ||
+      signal === "VOTE_WITHDRAWN";
+    if (decisionIds.length && shouldHideFromManual) {
       setAdoptedDecisions((prev) => {
         const next = [...prev];
         const idx = new Set(prev.map((item) => item.id).filter((value): value is string => Boolean(value)));
@@ -569,8 +654,15 @@ export function useOracleSession(): OracleSession {
         return next;
       });
     }
-    setRunning(true);
+    setDecisionDirtySinceLastVerdict(true);
   }
+
+  useEffect(() => {
+    if (!decisionDirtySinceLastVerdict) return;
+    if (decisionLockStartedAtMs != null) return;
+    if (!canAutoGenerateVerdict) return;
+    triggerVerdict("Decision Inbox 已结算完成，请生成新的八字断言。");
+  }, [decisionDirtySinceLastVerdict, decisionLockStartedAtMs, canAutoGenerateVerdict, triggerVerdict]);
 
   return {
     frames,
@@ -585,6 +677,9 @@ export function useOracleSession(): OracleSession {
     handleAdopted,
     handleAdoptedBatch,
     handlePlanAction,
+    triggerVerdict,
+    pendingDecisionWorkCount,
+    canAutoGenerateVerdict,
     decisionInboxLocked,
     decisionInboxLockMessage,
     traceOpen,

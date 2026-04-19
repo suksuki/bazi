@@ -122,6 +122,109 @@ class VerdictOrchestrator:
             return "财星主导格"
         return f"{name}主轴格"
 
+    def _snapshot_plan_trace_index(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
+        """给快照注入可检索的决策-计划溯源索引。"""
+        state = raw_physics.get("decision_brain_state") if isinstance(raw_physics, dict) else None
+        plans = state.get("plan_queue") if isinstance(state, dict) else None
+        if not isinstance(plans, list):
+            return {
+                "contract": "v17.decision.trace_index.v1",
+                "plan_count": 0,
+                "items": [],
+            }
+
+        rows: list[dict[str, Any]] = []
+        for row in plans[:20]:
+            if not isinstance(row, dict):
+                continue
+
+            plan_id = str(row.get("plan_id") or "").strip()
+            if not plan_id:
+                continue
+
+            meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
+            raw_trace = meta.get("decision_trace") if isinstance(meta.get("decision_trace"), list) else []
+            compact_trace = [
+                {k: item.get(k) for k in ("decision_id", "label", "source", "target_god", "impact_ratio") if isinstance(item, dict) and item.get(k) is not None}
+                for item in raw_trace[:3]
+                if isinstance(item, dict)
+            ]
+
+            decision_ids = [str(x).strip() for x in row.get("decision_ids") if str(x).strip()] if isinstance(row.get("decision_ids"), list) else []
+            if not decision_ids:
+                decision_ids = [
+                    str(item.get("decision_id") or "").strip()
+                    for item in compact_trace
+                    if isinstance(item, dict)
+                    and str(item.get("decision_id") or "").strip()
+                ]
+
+            row_out: Dict[str, Any] = {
+                "plan_id": plan_id,
+                "anchor": str(row.get("anchor") or "").strip() or None,
+                "status": str(row.get("status") or "").strip() or None,
+                "routing": str(row.get("routing") or "").strip() or None,
+                "updated_at": str(row.get("updated_at") or "").strip() or None,
+                "decision_count": int(meta.get("decision_count") or len(decision_ids)),
+                "decision_ids": decision_ids,
+                "batch_ids": [str(x).strip() for x in row.get("batch_ids") if str(x).strip()] if isinstance(row.get("batch_ids"), list) else [],
+                "impact_summary": dict(row.get("impact_summary") or {}),
+                "decision_trace_count": len(compact_trace),
+                "decision_trace": compact_trace,
+                "decision_trace_contract": "v17.decision.trace.v1",
+            }
+
+            if str(meta.get("routing_reason") or "").strip():
+                row_out["routing_reason"] = str(meta.get("routing_reason") or "").strip()
+            if str(meta.get("routing_policy") or "").strip():
+                row_out["routing_policy"] = str(meta.get("routing_policy") or "").strip()
+            if str(meta.get("llm_review_prompt") or "").strip():
+                row_out["llm_prompt_preview"] = True
+
+            rows.append(row_out)
+
+        return {
+            "contract": "v17.decision.trace_index.v1",
+            "plan_count": len(rows),
+            "items": rows,
+        }
+
+    def _build_auto_decisions(
+        self,
+        *,
+        auto_resolutions: List[Dict[str, Any]],
+        llm_arbitration_context: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        rows: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+
+        def _dedupe_key(row: Dict[str, Any]) -> str:
+            return "::".join(
+                [
+                    str(row.get("id") or "").strip(),
+                    str(row.get("source") or row.get("plugin_id") or "").strip(),
+                    str(row.get("label") or row.get("title") or "").strip(),
+                    str(row.get("target_god") or (row.get("physical_impact") or {}).get("target_god") or "").strip(),
+                ]
+            )
+
+        for channel, source_rows in (
+            ("system", auto_resolutions),
+            ("llm", llm_arbitration_context),
+        ):
+            for item in source_rows:
+                if not isinstance(item, dict):
+                    continue
+                row = dict(item)
+                key = _dedupe_key(row)
+                if key in seen:
+                    continue
+                seen.add(key)
+                row.setdefault("arbitration_mode", "auto")
+                row["auto_bucket"] = channel
+                rows.append(row)
+        return rows[:96]
+
     def _fact_row(self, item: Any) -> Dict[str, Any]:
         if isinstance(item, dict):
             text = str(item.get("fact") or item.get("text") or "").strip()
@@ -208,6 +311,120 @@ class VerdictOrchestrator:
                 d["title"] = title
         return arbitration
 
+    def _build_claim_conflict_graph(
+        self,
+        raw_physics: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        def _safe_number(value: Any, default: float = 0.0) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        meta = raw_physics.get("meta") if isinstance(raw_physics.get("meta"), dict) else {}
+        claims = [dict(row) for row in (meta.get("plugin_claims") or []) if isinstance(row, dict)]
+        conflicts = [dict(row) for row in (meta.get("plugin_conflicts") or []) if isinstance(row, dict)]
+        resolutions = [dict(row) for row in (meta.get("plugin_conflict_resolutions") or []) if isinstance(row, dict)]
+        conflict_index: Dict[str, Dict[str, Any]] = {str(row.get("conflict_id") or "").strip(): row for row in conflicts if str(row.get("conflict_id") or "").strip()}
+        resolutions_by_conflict: Dict[str, List[Dict[str, Any]]] = {}
+        for row in resolutions:
+            cid = str(row.get("conflict_id") or "").strip()
+            if cid:
+                resolutions_by_conflict.setdefault(cid, []).append(row)
+
+        claim_index: Dict[str, Dict[str, Any]] = {
+            str(row.get("claim_id") or "").strip(): row
+            for row in claims
+            if str(row.get("claim_id") or "").strip()
+        }
+
+        nodes: List[Dict[str, Any]] = []
+        for claim in claims:
+            cid = str(claim.get("claim_id") or "").strip()
+            if not cid:
+                continue
+            related_conflicts: List[str] = []
+            for conflict in conflicts:
+                conf_id = str(conflict.get("conflict_id") or "").strip()
+                claim_ids = [str(item).strip() for item in (conflict.get("claims") or []) if str(item).strip()]
+                if cid in claim_ids and conf_id:
+                    related_conflicts.append(conf_id)
+            nodes.append(
+                {
+                    "node_id": cid,
+                    "plugin_id": str(claim.get("plugin_id") or "").strip(),
+                    "claim_text": str(claim.get("claim_text") or claim.get("label") or "").strip(),
+                    "target_god": str(claim.get("target_god") or "").strip(),
+                    "logic_level": str(claim.get("logic_level") or "").strip(),
+                    "priority": _safe_number(claim.get("priority")),
+                    "confidence": _safe_number(claim.get("confidence")),
+                    "conflict_count": len(related_conflicts),
+                    "conflict_ids": related_conflicts,
+                }
+            )
+
+        claim_edges: List[Dict[str, Any]] = []
+        conflict_rows: List[Dict[str, Any]] = []
+        for conflict in conflicts:
+            cid = str(conflict.get("conflict_id") or "").strip()
+            if not cid:
+                continue
+            claim_ids = [str(item).strip() for item in (conflict.get("claims") or []) if str(item).strip()]
+            if len(claim_ids) < 2:
+                continue
+            resolved = False
+            for row in resolutions_by_conflict.get(cid, []):
+                status = str(row.get("status") or "").strip().lower()
+                resolved_by = str(row.get("resolved_by") or "").strip().lower()
+                if status in {"resolved_system", "approved", "resolved"} or resolved_by in {"system", "llm", "user", "manual"}:
+                    resolved = True
+                    break
+            conflict_rows.append(
+                {
+                    "conflict_id": cid,
+                    "conflict_type": str(conflict.get("conflict_type") or "unknown"),
+                    "severity": str(conflict.get("severity") or "P3"),
+                    "status": "resolved" if resolved else "open",
+                    "claims": claim_ids,
+                    "target_god": str(conflict.get("target_god") or "").strip(),
+                    "recommended_arbiter": str(conflict.get("recommended_arbiter") or "system").strip(),
+                    "why_conflict": str(conflict.get("why_conflict") or "").strip(),
+                    "resolution_count": len(resolutions_by_conflict.get(cid, [])),
+                    "resolution_ids": [
+                        str(row.get("resolution_id") or row.get("action_id") or "").strip()
+                        for row in resolutions_by_conflict.get(cid, [])
+                    ],
+                }
+            )
+            for i, src in enumerate(claim_ids):
+                for tgt in claim_ids[i + 1 :]:
+                    claim_edges.append(
+                        {
+                            "source_claim_id": src,
+                            "target_claim_id": tgt,
+                            "conflict_id": cid,
+                            "source": "claim_graph",
+                            "conflict_type": str(conflict.get("conflict_type") or "unknown"),
+                        }
+                    )
+
+        unresolved_count = sum(1 for row in conflict_rows if row.get("status") != "resolved")
+        summary: Dict[str, Any] = {
+            "node_count": len(nodes),
+            "claim_edge_count": len(claim_edges),
+            "conflict_count": len(conflict_rows),
+            "open_conflict_count": unresolved_count,
+            "resolved_conflict_count": len(conflict_rows) - unresolved_count,
+            "conflict_sample_count": min(4, len(conflict_rows)),
+        }
+        return {
+            "graph_version": "v17.claim_graph.1",
+            "nodes": nodes,
+            "edges": claim_edges,
+            "conflicts": conflict_rows,
+            "summary": summary,
+        }
+
     def snapshot_frame(
         self,
         *,
@@ -244,6 +461,47 @@ class VerdictOrchestrator:
         arbitration = self._decision_arbitration(raw_physics, scores, spec_facts=spec_facts)
         decision_batches = build_decision_batches(arbitration=arbitration)
         decisions = arbitration.get("manual_decisions", [])
+        auto_resolutions = arbitration.get("auto_resolutions", []) if isinstance(arbitration.get("auto_resolutions"), list) else []
+        llm_arbitration_context = (
+            arbitration.get("llm_arbitration_context", [])
+            if isinstance(arbitration.get("llm_arbitration_context"), list)
+            else []
+        )
+        auto_decisions = self._build_auto_decisions(
+            auto_resolutions=auto_resolutions,
+            llm_arbitration_context=llm_arbitration_context,
+        )
+        claim_conflict_graph = self._build_claim_conflict_graph(raw_physics)
+        all_decisions_raw = [
+            *(decisions if isinstance(decisions, list) else []),
+            *auto_decisions,
+        ]
+        all_decisions: list[dict[str, Any]] = []
+        seen_keys: set[str] = set()
+
+        def _dedupe_key(row: Dict[str, Any]) -> str:
+            rid = str(row.get("id") or "").strip()
+            source = str(row.get("source") or row.get("plugin_id") or "").strip()
+            label = str(row.get("label") or row.get("title") or "").strip()
+            target = str(
+                row.get("target_god")
+                or (row.get("physical_impact") or {}).get("target_god")
+                or row.get("source_event")
+                or ""
+            ).strip()
+            if not rid and not source and not label and not target:
+                return str(id(row))
+            return f"{rid}::{source}::{label}::{target}"
+
+        for row in all_decisions_raw:
+            if not isinstance(row, dict):
+                continue
+            key = _dedupe_key(row)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            all_decisions.append(dict(row))
+
         fact_list = raw_physics.get("facts") if isinstance(raw_physics.get("facts"), list) else []
         sorted_fact_rows = self._sorted_fact_rows(fact_list)
         facts_out = [str(x.get("fact") or "").strip() for x in sorted_fact_rows if str(x.get("fact") or "").strip()][:160]
@@ -271,9 +529,14 @@ class VerdictOrchestrator:
             "flow_topology": raw_physics.get("flow_topology", []),
             "physics_report": NarrativeMappingEngine.build_physics_report_lines(raw_physics),
             "physics_tension": tension,
+            "decision_inbox_contract": "v17.decision.inbox.v2",
             "manual_decisions": decisions,
-            "auto_resolutions": arbitration.get("auto_resolutions", []),
-            "llm_arbitration_context": arbitration.get("llm_arbitration_context", []),
+            "manual_inbox": decisions,
+            "auto_decisions": auto_decisions,
+            "auto_resolutions": auto_resolutions,
+            "llm_arbitration_context": llm_arbitration_context,
+            "all_decisions": all_decisions,
+            "claim_conflict_graph": claim_conflict_graph,
             "decision_batches": decision_batches.get("all", []),
             "decision_prompt_batches": decision_batches.get("prompt_lines", []),
             "pending_decisions": decisions,
@@ -290,6 +553,7 @@ class VerdictOrchestrator:
                 "brain_action_queue": list(((pt.get("meta") or {}).get("brain_action_queue") or []))[:128],
             },
             "decision_brain_state": dict((pt.get("decision_brain_state") or {})),
+            "decision_trace_index": self._snapshot_plan_trace_index(pt),
             "debug_trace": {
                 "hits": plugin_hits,
                 "facts": plugin_facts[:64],

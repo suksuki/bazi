@@ -17,12 +17,46 @@ import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
 import { useOracleSession } from "@/hooks/useOracleSession";
 
+function decisionPluginLabel(row: Record<string, unknown>): string {
+  return String(
+    row.source_label || row.display_name || row.definition_text || row.plugin_id || row.source || "",
+  ).trim();
+}
+
 export default function OraclePage() {
   const s = useOracleSession();
 
-  const fourPillars = s.physicsSnapshot?.payload?.four_pillars;
-  const luckPillarSnap = s.physicsSnapshot?.payload?.luck_pillar;
-  const flowPillarSnap = s.physicsSnapshot?.payload?.flow_pillar;
+  const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
+  const fourPillars =
+    payload.four_pillars && typeof payload.four_pillars === "object"
+      ? (payload.four_pillars as { year?: string; month?: string; day?: string; hour?: string })
+      : undefined;
+  const luckPillarSnap = payload.luck_pillar;
+  const flowPillarSnap = payload.flow_pillar;
+  const manualRows = Array.isArray(payload.manual_inbox) ? payload.manual_inbox as Array<Record<string, unknown>> : [];
+  const autoRows = Array.isArray(payload.auto_decisions) ? payload.auto_decisions as Array<Record<string, unknown>> : [];
+  const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
+  const uniquePlugins = Array.from(
+    new Set(
+      allRows
+        .map(decisionPluginLabel)
+        .filter(Boolean),
+    ),
+  );
+  const manualPlugins = Array.from(
+    new Set(
+      manualRows
+        .map(decisionPluginLabel)
+        .filter(Boolean),
+    ),
+  );
+  const autoPlugins = Array.from(
+    new Set(
+      autoRows
+        .map(decisionPluginLabel)
+        .filter(Boolean),
+    ),
+  );
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -83,6 +117,51 @@ export default function OraclePage() {
                 llmStatusDetail={s.llmStatusDetail}
                 llmLifecyclePhase={s.llmLifecyclePhase}
               />
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
+                <p className="text-xs text-zinc-400">
+                  待处理决策 {s.pendingDecisionWorkCount} 条
+                  {s.canAutoGenerateVerdict ? " · 已满足自动生成断言条件" : " · 处理完成后将自动生成新断言"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => s.triggerVerdict("请基于当前已通过的决策，生成新的八字断言。")}
+                  className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-950/25 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-900/35"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  显示八字断言
+                </button>
+              </div>
+              {uniquePlugins.length ? (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-300">
+                    <span>命中插件 {uniquePlugins.length}</span>
+                    <span>手动来源 {manualPlugins.length}</span>
+                    <span>自动/上下文 {autoPlugins.length}</span>
+                  </div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-amber-300">Manual Sources</div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {manualPlugins.length ? manualPlugins.map((name) => (
+                          <span key={`manual_${name}`} className="rounded-full border border-amber-900/50 bg-amber-950/30 px-2 py-0.5 text-[10px] text-amber-100">
+                            {name}
+                          </span>
+                        )) : <span className="text-[10px] text-zinc-500">当前没有手动来源插件。</span>}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                      <div className="text-[10px] uppercase tracking-wide text-sky-300">Auto / Context Sources</div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {autoPlugins.length ? autoPlugins.map((name) => (
+                          <span key={`auto_${name}`} className="rounded-full border border-sky-900/50 bg-sky-950/30 px-2 py-0.5 text-[10px] text-sky-100">
+                            {name}
+                          </span>
+                        )) : <span className="text-[10px] text-zinc-500">当前没有自动或上下文来源插件。</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <V17_DecisionInbox
                 frames={s.frames}
                 adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}

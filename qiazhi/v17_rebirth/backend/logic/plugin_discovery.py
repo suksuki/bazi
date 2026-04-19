@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
 from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
+from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
 _LOGIC_ROOT = Path(__file__).resolve().parent
@@ -341,9 +342,17 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
         
         module_doc = _compact_admin_text(inspect.getdoc(mod) if mod is not None else "")
         spec_doc = _compact_admin_text(inspect.getdoc(spec.__class__) or "")
-        definition_text = summary or module_doc or spec_doc or "该插件已接入 V17 推理链路，但尚未补齐定义说明。"
+        display_profile = plugin_display_profile(
+            plugin_id=pid,
+            manifest=skill.get("manifest", {}) if skill else {},
+            summary=summary,
+            rationale=rationale,
+            module_doc=module_doc,
+            spec_doc=spec_doc,
+        )
+        definition_text = display_profile["display_definition"]
         trigger_condition_text = _plugin_trigger_condition_text(mod, fallback=module_doc or summary or spec_doc)
-        detail_description = rationale or summary or module_doc or spec_doc or "暂无补充说明。"
+        detail_description = display_profile["display_description"]
         kind = "manifest_row" if mod is None else "spec"
         
         rows.append(
@@ -360,6 +369,11 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
                 "design_rationale": rationale,
                 "module_doc": module_doc,
                 "spec_doc": spec_doc,
+                "display_name": display_profile["display_name"],
+                "display_definition": display_profile["display_definition"],
+                "display_description": display_profile["display_description"],
+                "technical_label": display_profile["technical_label"],
+                "family_label": display_profile["family_label"],
                 "definition_text": definition_text,
                 "trigger_condition_text": trigger_condition_text,
                 "detail_description": detail_description,

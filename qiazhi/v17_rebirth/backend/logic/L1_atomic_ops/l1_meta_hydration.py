@@ -92,6 +92,12 @@ def _manifest_hits_to_decision_rows(hits: Dict[str, Any]) -> List[Dict[str, Any]
                 "title": title or label,
                 "label": label or title,
                 "priority": float(item.get("priority", 0.0) or 0.0),
+                # Manifest hit is an observation anchor, not an executable user action.
+                "arbiter_type": "llm",
+                "status": "PENDING",
+                "llm_resolution_type": "context_only",
+                "llm_resolution_state": "pending_context",
+                "llm_terminal_state": "consume_context",
             }
         )
     return rows
@@ -304,6 +310,7 @@ def _build_plugin_execution_statuses(
     proposals: List[Dict[str, Any]],
     previous_signatures: List[str],
     clamped_gods: List[str],
+    decisions: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     facts_by_plugin: Dict[str, int] = {}
     for fact in facts:
@@ -319,12 +326,22 @@ def _build_plugin_execution_statuses(
             continue
         proposals_by_plugin.setdefault(pid, []).append(dict(proposal))
 
+    decisions_by_plugin: Dict[str, List[Dict[str, Any]]] = {}
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            continue
+        pid = str(decision.get("plugin_id") or decision.get("source") or "").strip()
+        if not pid:
+            continue
+        decisions_by_plugin.setdefault(pid, []).append(dict(decision))
+
     prev_set = {str(x).strip() for x in previous_signatures if str(x).strip()}
     clamped_set = {str(x).strip() for x in clamped_gods if str(x).strip()}
     statuses: List[Dict[str, Any]] = []
 
     for plugin_id in sorted(set([*facts_by_plugin.keys(), *proposals_by_plugin.keys()])):
         plugin_proposals = proposals_by_plugin.get(plugin_id, [])
+        plugin_decisions = decisions_by_plugin.get(plugin_id, [])
         status = "fact_only"
         reason = "插件命中，但未产出可结算的物理 proposal。"
         target_god = ""
@@ -352,11 +369,33 @@ def _build_plugin_execution_statuses(
                 status = "proposal_pending"
                 reason = "插件 proposal 已生成，但当前需人工或 LLM 仲裁，尚未结算。"
 
+        if plugin_decisions:
+            statuses_upper = {str(row.get("status") or "").strip().upper() for row in plugin_decisions}
+            if "APPROVED" in statuses_upper:
+                status = "manual_committed"
+                reason = "插件对应的决策已通过人工结算，并已写入 runtime。"
+            elif "CONSUMED_CONTEXT" in statuses_upper:
+                status = "context_consumed"
+                reason = "插件输出已作为上下文素材消化，不再阻塞物理结算。"
+            elif "REJECTED" in statuses_upper:
+                status = "manual_rejected"
+                reason = "插件对应的决策已被否决，本轮不进入物理结算。"
+            elif "AWAIT_REVIEW" in statuses_upper:
+                status = "await_review"
+                reason = "插件对应的决策已入计划队列，等待进一步裁决。"
+            elif any(str(row.get("arbiter_type") or "").strip().lower() == "user" for row in plugin_decisions):
+                status = "manual_pending"
+                reason = "插件 proposal 已转为手动决策，当前仍在 Decision Inbox 中等待处理。"
+            elif any(str(row.get("llm_terminal_state") or "").strip() == "consume_context" for row in plugin_decisions):
+                status = "context_pending"
+                reason = "插件 proposal 已降级为上下文素材，等待叙事层引用。"
+
         statuses.append(
             {
                 "plugin_id": plugin_id,
                 "fact_count": facts_by_plugin.get(plugin_id, 0),
                 "proposal_count": len(plugin_proposals),
+                "decision_count": len(plugin_decisions),
                 "status": status,
                 "target_god": target_god,
                 "reason": reason,
@@ -642,6 +681,9 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     pt["manual_decisions"] = [d for d in _all_decisions if d.get("arbiter_type", ArbiterType.USER.value) == ArbiterType.USER.value]
     pt["auto_resolutions"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.SYSTEM.value]
     pt["llm_arbitration_context"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.LLM.value]
+    pt["manual_inbox"] = list(pt["manual_decisions"])
+    pt["auto_decisions"] = [*pt["auto_resolutions"], *pt["llm_arbitration_context"]]
+    pt["decision_inbox_contract"] = "v17.decision.inbox.v2"
     
     print(f"[V17-TRIBUNAL-DEBUG] Scanned: {len(_scanned_pids)} | Active: {len(_active_plugins)} ({', '.join(_active_plugins)}) | Total: {len(_all_decisions)} | Manual: {len(pt['manual_decisions'])}")
 
@@ -705,6 +747,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         proposals=adjusted_modifier_proposals,
         previous_signatures=previous_signatures,
         clamped_gods=clamped_gods,
+        decisions=_all_decisions,
     )
     meta["l1_manifest_hits"] = hits
     qsc = meta.get("qi_status_coeffs") if isinstance(meta.get("qi_status_coeffs"), dict) else {}

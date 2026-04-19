@@ -4,13 +4,48 @@ import { useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 
 import type { Decision } from "@/hooks/useOracleSession";
+import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
+import { V17PlanRoutingClaim, compactRoutingLabel } from "@/components/V17_PlanRoutingClaim";
 
-type BucketKind = "manual" | "system" | "llm";
+type BucketKind = "manual" | "auto" | "system" | "llm";
 
 type Frame = {
   layer?: string;
   payload?: {
+    decision_inbox_contract?: string;
+    manual_inbox?: Decision[];
+    auto_decisions?: Decision[];
     manual_decisions?: Decision[];
+    all_decisions?: Decision[];
+    claim_conflict_graph?: {
+      graph_version?: string;
+      summary?: {
+        node_count?: number;
+        claim_edge_count?: number;
+        conflict_count?: number;
+        open_conflict_count?: number;
+        resolved_conflict_count?: number;
+        conflict_sample_count?: number;
+      };
+      conflicts?: Array<{
+        conflict_id?: string;
+        conflict_type?: string;
+        severity?: string;
+        status?: string;
+        target_god?: string;
+        recommended_arbiter?: string;
+        resolution_count?: number;
+        why_conflict?: string;
+      }>;
+      nodes?: Array<{
+        node_id?: string;
+        plugin_id?: string;
+        claim_text?: string;
+        target_god?: string;
+        conflict_count?: number;
+      }>;
+      edges?: Array<Record<string, unknown>>;
+    };
     auto_resolutions?: Decision[];
     llm_arbitration_context?: Decision[];
     pending_decisions?: Decision[];
@@ -21,6 +56,7 @@ type Frame = {
       source_anchor?: string;
       source_families?: string[];
       decision_ids?: string[];
+      batch_ids?: string[];
       decision_count?: number;
       net_impact_ratio?: number;
       max_priority?: number;
@@ -33,12 +69,36 @@ type Frame = {
         anchor?: string;
         status?: string;
         routing?: string;
+        routing_reason?: string;
+        routing_policy?: string;
+        routing_features?: PlanDecisionRoutingFeatures;
+        routing_claim?: PlanDecisionClaim;
         decision_ids?: string[];
         impact_summary?: Record<string, number>;
         meta?: Record<string, unknown>;
         created_at?: string;
         updated_at?: string;
         batch_ids?: string[];
+      }>;
+    };
+    decision_trace_index?: {
+      contract?: string;
+      plan_count?: number;
+      items?: Array<{
+        plan_id?: string;
+        anchor?: string;
+        status?: string;
+        routing?: string;
+        updated_at?: string;
+        decision_count?: number;
+        decision_ids?: string[];
+        batch_ids?: string[];
+        routing_reason?: string;
+        routing_policy?: string;
+        decision_trace_count?: number;
+        decision_trace?: PlanDecisionTrace[];
+        impact_summary?: Record<string, number>;
+        llm_prompt_preview?: boolean;
       }>;
     };
   };
@@ -57,6 +117,9 @@ function bucketReason(kind: BucketKind, decision: Decision): string {
   const target = String(decision.target_god || decision.physical_impact?.target_god || "").trim();
   if (kind === "manual") {
     return target ? `已有明确目标神 ${target}，适合由你手动裁定。` : "保留给你手动定夺。";
+  }
+  if (kind === "auto") {
+    return target ? `系统已围绕 ${target} 完成静默处理或归档。` : "系统已将这条信息静默处理，不再占用你的决策位。";
   }
   if (kind === "system") {
     return target ? `目标神 ${target} 已明确，满足自动处理条件。` : "系统将继续观察并尝试自动收敛。";
@@ -78,6 +141,18 @@ function statusBadge(kind: BucketKind, decision: Decision): { label: string; cla
     return {
       label: "等待你确认",
       className: "border-violet-500/25 bg-violet-950/35 text-violet-100",
+    };
+  }
+  if (kind === "auto") {
+    if (decision.resolved_from_llm) {
+      return {
+        label: "已自动承接",
+        className: "border-cyan-500/25 bg-cyan-950/35 text-cyan-100",
+      };
+    }
+    return {
+      label: "后台静默处理",
+      className: "border-amber-500/25 bg-amber-950/35 text-amber-100",
     };
   }
   if (kind === "system") {
@@ -136,6 +211,13 @@ function arbitrationRule(kind: BucketKind): { title: string; detail: string; acc
       accent: "text-violet-100 border-violet-500/20 bg-violet-950/20",
     };
   }
+  if (kind === "auto") {
+    return {
+      title: "进入条件",
+      detail: "系统可自行结算、自动归档，或仅作为提示词素材保留，不再要求你逐条确认。",
+      accent: "text-amber-100 border-amber-500/20 bg-amber-950/20",
+    };
+  }
   if (kind === "system") {
     return {
       title: "进入条件",
@@ -160,18 +242,24 @@ function decisionReasonTags(kind: BucketKind, decision: Decision): string[] {
   if (level > 0) tags.push(`烈度:L${level}`);
   if (ratio > 0) tags.push(`位移:${(ratio * 100).toFixed(0)}%`);
   if (kind === "manual") tags.push("人工裁决");
+  if (kind === "auto") tags.push("后台处理");
   if (kind === "system") tags.push("自动收敛");
   if (kind === "llm") tags.push("叙事引用");
   return tags.slice(0, 4);
 }
 
 function sourceLabel(decision: Decision): string {
-  const raw = String(decision.source || "unknown").trim();
+  const explicit = String(decision.source_label || "").trim();
+  if (explicit) return explicit;
+  const raw = String(decision.source || decision.plugin_id || "unknown").trim();
   if (!raw) return "未知规则";
+  if (raw.includes("op_branch_sanhe")) return "三合成局";
+  if (raw.includes("risk_matrix")) return "官伤风险矩阵";
   if (raw.includes("liuchong")) return "六冲";
   if (raw.includes("liuhe")) return "六合";
   if (raw.includes("liupo")) return "六破";
   if (raw.includes("sanxing")) return "三刑";
+  if (raw.includes("op_status")) return "状态机节律";
   if (raw.includes("three_harmony")) return "三合";
   if (raw.includes("muku")) return "墓库";
   if (raw.includes("stem_fusion")) return "天干五合";
@@ -184,6 +272,7 @@ function sourceLabel(decision: Decision): string {
 
 function arbitrationModeLabel(kind: BucketKind): string {
   if (kind === "manual") return "手动";
+  if (kind === "auto") return "自动";
   if (kind === "system") return "自动";
   return "LLM";
 }
@@ -199,6 +288,31 @@ function arbitrationTrace(kind: BucketKind, decision: Decision): string {
   return `${source} -> ${levelText} -> ${arbitrationModeLabel(kind)}`;
 }
 
+function isPassiveLlmContext(decision: Decision): boolean {
+  const policy = String(decision.llm_resolution_policy || "").trim().toLowerCase();
+  const result = String(decision.llm_resolution_result || "").trim().toLowerCase();
+  const state = String(decision.llm_resolution_state || "").trim().toLowerCase();
+  return policy === "context_only" || result === "consume_context" || state === "pending_context";
+}
+
+function formatPlanDecisionTrace(trace: PlanDecisionTrace[]): string[] {
+  if (!trace.length) return [];
+  return trace
+    .slice(0, 8)
+    .map((item) => {
+      const idx = typeof item.trace_index === "number" ? item.trace_index + 1 : null;
+      const label = String(item.label || item.decision_id || "未命名").trim();
+      const source = String(item.source || "unknown").trim();
+      const target = String(item.target_god || "未定目标").trim();
+      const ratio = Number(item.impact_ratio || 0);
+      const ratioText =
+        ratio > 0 ? `↑${(ratio * 100).toFixed(1)}%` : ratio < 0 ? `↓${Math.abs(ratio * 100).toFixed(1)}%` : "观察";
+      const prefix = idx == null ? "" : `${idx}. `;
+      return `${prefix}${label} @${target} ${ratioText} / ${source}`;
+    })
+    .filter(Boolean);
+}
+
 type DecisionWithId = Decision & { _ui_id: string };
 
 type DecisionBatchGroup = {
@@ -211,6 +325,7 @@ type DecisionBatchGroup = {
 
 type DecisionBatch = {
   batch_id: string;
+  batch_ids?: string[];
   bucket: "manual" | "system" | "llm";
   target: string;
   source_anchor: string;
@@ -223,11 +338,28 @@ type DecisionBatch = {
   labels: string[];
 };
 
+type PlanDecisionTrace = {
+  trace_index?: number;
+  decision_id?: string;
+  label?: string;
+  source?: string;
+  target_god?: string;
+  impact_ratio?: number;
+  priority?: number;
+  routing_hint?: string;
+  exclusivity_key?: string;
+  source_event?: string;
+};
+
 type PlanQueueItem = {
   plan_id?: string;
   anchor?: string;
   status?: string;
   routing?: string;
+  routing_reason?: string;
+  routing_policy?: string;
+  routing_features?: PlanDecisionRoutingFeatures;
+  routing_claim?: PlanDecisionClaim;
   action?: string;
   decision_ids?: string[];
   impact_summary?: Record<string, number>;
@@ -235,6 +367,29 @@ type PlanQueueItem = {
   created_at?: string;
   updated_at?: string;
   batch_ids?: string[];
+};
+
+type PlanDecisionTraceIndexItem = {
+  plan_id?: string;
+  anchor?: string;
+  status?: string;
+  routing?: string;
+  updated_at?: string;
+  decision_count?: number;
+  decision_ids?: string[];
+  batch_ids?: string[];
+  routing_reason?: string;
+  routing_policy?: string;
+  decision_trace_count?: number;
+  decision_trace?: PlanDecisionTrace[];
+  impact_summary?: Record<string, number>;
+  llm_prompt_preview?: boolean;
+};
+
+type AutoInboxRow = {
+  key: string;
+  decision: Decision;
+  channel: "system" | "llm" | "context";
 };
 
 function planStatusTone(status?: string): string {
@@ -251,9 +406,41 @@ function planStatusTone(status?: string): string {
   return "border-violet-500/25 bg-violet-950/30 text-violet-100";
 }
 
+function planRoutingTone(routing?: string): string {
+  const normalized = String(routing || "system").trim().toLowerCase();
+  if (normalized === "llm") {
+    return "border-cyan-500/25 bg-cyan-950/30 text-cyan-100";
+  }
+  if (normalized === "user") {
+    return "border-rose-500/25 bg-rose-950/30 text-rose-100";
+  }
+  return "border-emerald-500/25 bg-emerald-950/30 text-emerald-100";
+}
+
 function planIsTerminal(status?: string): boolean {
   const normalized = String(status || "").trim().toUpperCase();
   return new Set(["COMPLETED", "DONE", "APPROVED", "REJECTED", "COMMITTED", "FAILED"]).has(normalized);
+}
+
+function planIsClosedLoop(status?: string): boolean {
+  const normalized = String(status || "").trim().toUpperCase();
+  return new Set(["COMPLETED", "DONE", "APPROVED", "REJECTED", "COMMITTED"]).has(normalized);
+}
+
+function planIsFailed(status?: string): boolean {
+  return String(status || "").trim().toUpperCase() === "FAILED";
+}
+
+function planDisplayName(plan: PlanQueueItem): string {
+  const action = String(plan.action || plan.meta?.action || "").trim();
+  const anchor = String(plan.anchor || "").trim();
+  const trace = Array.isArray(plan.meta?.decision_trace) ? (plan.meta?.decision_trace as PlanDecisionTrace[]) : [];
+  const firstTraceLabel = String(trace[0]?.label || "").trim();
+  if (anchor && anchor.toLowerCase() !== "manual") return anchor;
+  if (action && action.toLowerCase() !== "plan_action") return action;
+  if (firstTraceLabel) return firstTraceLabel;
+  if (anchor) return anchor;
+  return "未命名计划";
 }
 
 function planImpactBriefs(impact?: Record<string, number>): string[] {
@@ -336,7 +523,11 @@ export function V17_DecisionInbox({
   locked?: boolean;
   lockMessage?: string;
   onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
-  onAdoptedBatch?: (decisions: Decision[], status: "APPROVED" | "REJECTED") => void | Promise<void>;
+  onAdoptedBatch?: (
+    decisions: Decision[],
+    status: "APPROVED" | "REJECTED",
+    batchIds?: string[],
+  ) => void | Promise<void>;
   onPlanAction?: (
     plan: PlanQueueItem,
     status: "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW",
@@ -350,8 +541,23 @@ export function V17_DecisionInbox({
       ["physics", "physical_void", "system_init_failure"].includes(String((f?.payload as any)?.snapshot_kind || ""))
     ), [frames]);
 
+  const allDecisionsSource =
+    latestSnapshot?.payload?.all_decisions || latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || [];
+  const manualSeed = useMemo(() => {
+    if (!allDecisionsSource.length) {
+      return latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
+    }
+    return allDecisionsSource.filter((decision) => {
+      const mode = String(decision.arbitration_mode || "manual").trim().toLowerCase();
+      return mode === "manual" || !mode;
+    });
+  }, [latestSnapshot?.payload?.all_decisions, latestSnapshot?.payload?.manual_inbox, latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions]);
+
   const { visible: sortedManualDecisions, hiddenCount } = useMemo(() => {
-    const source = latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
+    const source =
+      manualSeed.length
+        ? manualSeed
+        : latestSnapshot?.payload?.manual_inbox || latestSnapshot?.payload?.manual_decisions || latestSnapshot?.payload?.pending_decisions || [];
     const raw = source.filter((d, idx) => {
       const id = normalizeDecisionId(d, idx);
       return !adoptedIds.includes(id);
@@ -360,7 +566,7 @@ export function V17_DecisionInbox({
     const DISPLAY_CAP = 14;
     const cap = Math.min(sorted.length, DISPLAY_CAP);
     return { visible: sorted.slice(0, cap), hiddenCount: Math.max(0, sorted.length - cap) };
-  }, [latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions, adoptedIds]);
+  }, [manualSeed, adoptedIds, latestSnapshot?.payload?.manual_inbox, latestSnapshot?.payload?.manual_decisions, latestSnapshot?.payload?.pending_decisions]);
 
   const decisions = useMemo(
     () =>
@@ -383,6 +589,12 @@ export function V17_DecisionInbox({
   }, [decisions]);
 
   const batchRows = useMemo(() => latestSnapshot?.payload?.decision_batches || [], [latestSnapshot]);
+  const conflictGraph = latestSnapshot?.payload?.claim_conflict_graph || {};
+  const conflictGraphSummary = conflictGraph.summary || {};
+  const conflictGraphConflicts = Array.isArray((latestSnapshot?.payload?.claim_conflict_graph || {}).conflicts)
+    ? (latestSnapshot?.payload?.claim_conflict_graph || {}).conflicts
+    : [];
+  const topConflictRows = (conflictGraphConflicts || []).slice(0, 6);
   const manualDecisionBatches = useMemo(() => {
     if (!batchRows.length) return [];
     const rows: DecisionBatch[] = [];
@@ -392,6 +604,12 @@ export function V17_DecisionInbox({
       const sourceFamilies = Array.isArray(raw?.source_families)
         ? raw.source_families.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
+      const batchId = String(raw?.batch_id || "").trim();
+      const batchIds = batchId
+        ? [batchId]
+        : Array.isArray(raw?.batch_ids)
+          ? raw.batch_ids.map((id) => String(id || "").trim()).filter(Boolean)
+          : [];
       const decisionIds = Array.isArray(raw?.decision_ids)
         ? raw.decision_ids.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
@@ -415,6 +633,7 @@ export function V17_DecisionInbox({
         net_impact_ratio: Number(raw?.net_impact_ratio || 0),
         max_priority: Number(raw?.max_priority || 0),
         prompt_line: String(raw?.prompt_line || "").trim() || "自动批次已生成，可一次提交。",
+        batch_ids: batchIds.length ? batchIds : undefined,
         labels: (Array.isArray(raw?.labels) ? raw.labels : []).map((value) => String(value || "").trim()).filter(Boolean),
       });
     }
@@ -433,39 +652,131 @@ export function V17_DecisionInbox({
   const planQueue = useMemo(
     () =>
       (latestSnapshot?.payload?.decision_brain_state?.plan_queue || [])
-        .map((raw): PlanQueueItem => ({
-          plan_id: String(raw?.plan_id || "").trim() || undefined,
-          anchor: String(raw?.anchor || "").trim() || undefined,
-          status: String(raw?.status || "").trim() || undefined,
-          routing: String(raw?.routing || "").trim() || undefined,
-          action: String(raw?.meta && typeof raw.meta.action === "string" ? raw.meta.action : "").trim() || undefined,
-          decision_ids: Array.isArray(raw?.decision_ids) ? raw.decision_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
-          impact_summary: raw?.impact_summary && typeof raw.impact_summary === "object" ? raw.impact_summary : undefined,
-          meta: raw?.meta && typeof raw.meta === "object" ? raw.meta : undefined,
-          created_at: String(raw?.created_at || "").trim() || undefined,
-          updated_at: String(raw?.updated_at || "").trim() || undefined,
-          batch_ids: Array.isArray(raw?.batch_ids) ? raw.batch_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
-        })),
+        .map((raw): PlanQueueItem => {
+          const meta = raw?.meta && typeof raw.meta === "object" ? (raw.meta as Record<string, unknown>) : undefined;
+          const routingReason = String((meta && typeof meta.routing_reason === "string" ? meta.routing_reason : "") || "").trim();
+          const routingPolicy = String((meta && typeof meta.routing_policy === "string" ? meta.routing_policy : "") || "").trim();
+          const rawRoutingReason = String((typeof raw?.routing_reason === "string" && raw.routing_reason) || "").trim();
+          const rawRoutingPolicy = String((typeof raw?.routing_policy === "string" && raw.routing_policy) || "").trim();
+          const rawRoutingFeatures =
+            raw && typeof raw.routing_features === "object" && raw.routing_features !== null
+              ? (raw.routing_features as PlanDecisionRoutingFeatures)
+              : undefined;
+          const rawRoutingClaim =
+            raw && typeof raw.routing_claim === "object" && raw.routing_claim !== null
+              ? (raw.routing_claim as PlanDecisionClaim)
+              : undefined;
+          const routingFeatures =
+            meta && typeof meta.routing_features === "object" && meta.routing_features !== null
+              ? (meta.routing_features as PlanDecisionRoutingFeatures)
+              : undefined;
+          const action = String(meta && typeof meta.action === "string" ? meta.action : "").trim();
+          const routingClaim =
+            rawRoutingClaim ||
+            (meta && typeof meta.routing_claim === "object" && meta.routing_claim !== null
+              ? (meta.routing_claim as PlanDecisionClaim)
+              : undefined);
+          return {
+            plan_id: String(raw?.plan_id || "").trim() || undefined,
+            anchor: String(raw?.anchor || "").trim() || undefined,
+            status: String(raw?.status || "").trim() || undefined,
+            routing: String(raw?.routing || "").trim() || undefined,
+            routing_reason: rawRoutingReason || routingReason || undefined,
+            routing_policy: rawRoutingPolicy || routingPolicy || undefined,
+            routing_features: rawRoutingFeatures || routingFeatures,
+            routing_claim: routingClaim,
+            action: action || undefined,
+            decision_ids: Array.isArray(raw?.decision_ids) ? raw.decision_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
+            impact_summary: raw?.impact_summary && typeof raw.impact_summary === "object" ? raw.impact_summary : undefined,
+            meta: raw?.meta && typeof raw.meta === "object" ? raw.meta : undefined,
+            created_at: String(raw?.created_at || "").trim() || undefined,
+            updated_at: String(raw?.updated_at || "").trim() || undefined,
+            batch_ids: Array.isArray(raw?.batch_ids) ? raw.batch_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
+          };
+        }),
     [latestSnapshot],
   );
   const activePlanQueue = useMemo(
     () =>
       planQueue
-        .filter((item) => !planIsTerminal(item.status))
+        .filter((item) => !planIsTerminal(item.status) || planIsFailed(item.status))
         .sort((a, b) => String(a.anchor || "").localeCompare(String(b.anchor || ""))),
+    [planQueue],
+  );
+  const failedPlanQueue = useMemo(
+    () =>
+      planQueue
+        .filter((item) => planIsFailed(item.status))
+        .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || ""))),
     [planQueue],
   );
   const terminalPlanQueue = useMemo(
     () =>
       planQueue
-        .filter((item) => planIsTerminal(item.status))
+        .filter((item) => planIsClosedLoop(item.status))
         .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || ""))),
     [planQueue],
   );
-  const llmArbitration = useMemo(
-    () => (latestSnapshot?.payload?.llm_arbitration_context || []).slice(0, 6),
+
+  const decisionTraceIndex = useMemo(() => {
+    const payload = latestSnapshot?.payload?.decision_trace_index;
+    const rawItems = payload?.items;
+    const items = Array.isArray(rawItems) ? (rawItems as PlanDecisionTraceIndexItem[]) : [];
+    return {
+      contract: String((payload?.contract || "").trim()) || "v17.decision.trace_index.v1",
+      plan_count: Number((payload?.plan_count || items.length) || 0),
+      items: items.slice(0, 20),
+    };
+  }, [latestSnapshot]);
+  const llmArbitrationSource = useMemo(
+    () => latestSnapshot?.payload?.llm_arbitration_context || [],
     [latestSnapshot?.payload?.llm_arbitration_context],
   );
+  const llmArbitration = useMemo(
+    () => llmArbitrationSource.filter((row) => !isPassiveLlmContext(row)).slice(0, 6),
+    [llmArbitrationSource],
+  );
+  const passiveLlmContextRows = useMemo(
+    () => llmArbitrationSource.filter((row) => isPassiveLlmContext(row)).slice(0, 3),
+    [llmArbitrationSource],
+  );
+  const passiveLlmContextCount = llmArbitrationSource.filter((row) => isPassiveLlmContext(row)).length;
+  const autoDecisionSource = useMemo(
+    () => latestSnapshot?.payload?.auto_decisions || [],
+    [latestSnapshot?.payload?.auto_decisions],
+  );
+  const autoInboxRows = useMemo(() => {
+    if (Array.isArray(autoDecisionSource) && autoDecisionSource.length) {
+      return autoDecisionSource.slice(0, 12).map((decision, idx) => ({
+        key: `auto_${String(decision.id || decision.label || idx)}`,
+        decision,
+        channel: (String((decision as Decision & { auto_bucket?: string }).auto_bucket || "").trim().toLowerCase() as "system" | "llm" | "context") || "system",
+      }));
+    }
+    const rows: AutoInboxRow[] = [];
+    autoResolutions.forEach((decision, idx) => {
+      rows.push({
+        key: `system_${String(decision.id || decision.label || idx)}`,
+        decision,
+        channel: "system",
+      });
+    });
+    llmArbitration.forEach((decision, idx) => {
+      rows.push({
+        key: `llm_${String(decision.id || decision.label || idx)}`,
+        decision,
+        channel: "llm",
+      });
+    });
+    passiveLlmContextRows.forEach((decision, idx) => {
+      rows.push({
+        key: `context_${String(decision.id || decision.label || idx)}`,
+        decision,
+        channel: "context",
+      });
+    });
+    return rows.slice(0, 12);
+  }, [autoDecisionSource, autoResolutions, llmArbitration, passiveLlmContextRows]);
 
   async function onVote(decision: DecisionWithId, status: "APPROVED" | "REJECTED") {
     if (locked || busyId) return;
@@ -479,12 +790,13 @@ export function V17_DecisionInbox({
   }
 
   async function onBatchVote(
-    group: { decisions: DecisionWithId[] },
+    group: { decisions: DecisionWithId[]; batch_ids?: string[]; batch_id?: string },
     status: "APPROVED" | "REJECTED",
   ) {
     if (locked || !group.decisions.length) return;
     if (onAdoptedBatch) {
-      await onAdoptedBatch(group.decisions, status);
+      const batchIds = Array.from(new Set([...(group.batch_ids || []), ...(group.batch_id ? [group.batch_id] : [])]));
+      await onAdoptedBatch(group.decisions, status, batchIds);
       return;
     }
     for (const decision of group.decisions) {
@@ -510,24 +822,58 @@ export function V17_DecisionInbox({
     setBusyId("");
   }
 
-  if (!decisions.length && !autoResolutions.length && !llmArbitration.length && !planQueue.length) return null;
+  if (!decisions.length && !autoInboxRows.length && !planQueue.length) return null;
 
   return (
     <section className="rounded-2xl border border-violet-700/40 bg-[linear-gradient(180deg,rgba(8,4,20,0.92),rgba(10,10,16,0.82))] p-3 shadow-[0_16px_50px_rgba(76,29,149,0.18)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs tracking-[0.24em] text-violet-200/85">DECISION CONSOLE</p>
-          <p className="mt-1 text-[11px] text-zinc-500">手动裁决 / 系统建议 / LLM 仲裁参考</p>
+          <p className="mt-1 text-[11px] text-zinc-500">手动裁决 / 自动处理回执</p>
         </div>
+
+        {conflictGraphSummary.conflict_count ? (
+          <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/60 p-3">
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">CLAIM CONFLICT GRAPH</p>
+            <div className="mt-2 grid gap-2 text-[10px]">
+              <p className="text-zinc-400">
+                版本 {String(conflictGraph.graph_version || "v17.claim_graph.1")} · 冲突 {Number(conflictGraphSummary.conflict_count || 0)} /
+                开放 {Number(conflictGraphSummary.open_conflict_count || 0)} / 节点 {Number(conflictGraphSummary.node_count || 0)}
+              </p>
+              {topConflictRows.length ? (
+                <div className="space-y-1">
+                  {topConflictRows.map((row) => {
+                    const cid = String(row?.conflict_id || "unknown").trim();
+                    const status = String(row?.status || "open").trim();
+                    return (
+                      <div
+                        key={cid}
+                        className="rounded-lg border border-zinc-700/25 bg-zinc-900/70 px-2 py-1.5 text-[10px] text-zinc-300"
+                      >
+                        <p className="text-zinc-200">
+                          {cid} · {String(row?.conflict_type || "conflict")} · 严重度 {String(row?.severity || "P3")}
+                        </p>
+                        <p className="text-zinc-400">
+                          目标 {String(row?.target_god || "未定目标")} · 主裁 {String(row?.recommended_arbiter || "system")} ·
+                          状态 {status}
+                        </p>
+                        <p className="mt-0.5 text-zinc-500">{String(row?.why_conflict || "待补充冲突原因").trim()}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-zinc-500">已构建冲突图，但当前无冲突明细。</p>
+              )}
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-center gap-2 text-[10px]">
           <span className="rounded-full border border-violet-500/25 bg-violet-900/20 px-2 py-1 text-violet-100">
             手动 {decisions.length}
           </span>
           <span className="rounded-full border border-amber-500/20 bg-amber-950/30 px-2 py-1 text-amber-100">
-            系统 {autoResolutions.length}
-          </span>
-          <span className="rounded-full border border-cyan-500/20 bg-cyan-950/25 px-2 py-1 text-cyan-100">
-            LLM {llmArbitration.length}
+            自动 {autoInboxRows.length}
           </span>
           <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
             Plan {planQueue.length}
@@ -545,41 +891,80 @@ export function V17_DecisionInbox({
             {activePlanQueue.slice(0, 8).map((plan) => {
               const statusTone = planStatusTone(plan.status);
               const impacts = planImpactBriefs(plan.impact_summary);
+              const llmReviewPrompt = String(plan.meta?.llm_review_prompt || "").trim();
+              const routingLabel = compactRoutingLabel(plan.routing);
+              const routingReason = String(plan.routing_reason || (plan.meta?.routing_reason as string) || "").trim();
+              const routingPolicy = String(plan.routing_policy || (plan.meta?.routing_policy as string) || "").trim();
+              const claim = plan.routing_claim || (plan.meta?.routing_claim as PlanDecisionClaim | undefined);
+              const approveLabel = routingLabel === "LLM 预审" ? "提交给系统执行" : "计划通过";
+              const rejectLabel = routingLabel === "LLM 预审" ? "否决预审" : "计划否决";
               return (
                 <div
-                  key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
+                    key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
                   className="rounded-lg border border-zinc-700/25 bg-zinc-900/70 p-2"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[10px] text-zinc-100">
-                      {plan.anchor || "未命名计划"} · {plan.routing ? `策略 ${plan.routing}` : "未设置策略"}
+                      {planDisplayName(plan)} · {plan.routing ? `策略 ${plan.routing}` : "未设置策略"}
                     </p>
                     <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${statusTone}`}>{plan.status || "pending"}</span>
                   </div>
                   <p className="mt-1 text-[10px] text-zinc-400">
                     PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length} 个
                   </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${planRoutingTone(plan.routing)}`}>{routingLabel}</span>
+                    <span className="rounded-full border border-zinc-500/20 px-1.5 py-0.5 text-[9px] text-zinc-200">
+                      路由类型 {String(plan.routing || "system").trim().toUpperCase()}
+                    </span>
+                  </div>
+                  <V17PlanRoutingClaim
+                    routingLabel={routingLabel}
+                    routingReason={routingReason}
+                    routingPolicy={routingPolicy}
+                    routingFeatures={plan.routing_features || (plan.meta?.routing_features as PlanDecisionRoutingFeatures | undefined)}
+                    claim={claim}
+                  />
                   {impacts.length ? (
                     <p className="mt-1 text-[10px] text-zinc-300">
                       影响速览：{impacts.join(" · ")}
                     </p>
                   ) : null}
+                  {llmReviewPrompt ? (
+                    <div className="mt-2 border-t border-zinc-700/20 pt-2">
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">LLM 仲裁提示</p>
+                      <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap rounded-md border border-amber-500/20 bg-zinc-950/70 p-1.5 text-[9px] leading-tight text-amber-100">
+                        {llmReviewPrompt}
+                      </pre>
+                    </div>
+                  ) : null}
+                  {Array.isArray(plan.meta?.decision_trace) &&
+                  (plan.meta?.decision_trace as PlanDecisionTrace[]).length ? (
+                    <div className="mt-2 border-t border-zinc-700/20 pt-2">
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">决策证据</p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[9px] leading-tight text-zinc-300">
+                        {formatPlanDecisionTrace(plan.meta?.decision_trace as PlanDecisionTrace[]).map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
               <div className="mt-2 flex items-center gap-2 border-t border-zinc-700/20 pt-2">
-                <button
-                  type="button"
-                  onClick={() => onPlanVote(plan, "REJECTED")}
-                  disabled={locked || busyId !== ""}
-                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-300 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
-                >
-                  <X className="h-3 w-3" /> 计划否决
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onPlanVote(plan, "REJECTED")}
+                    disabled={locked || busyId !== ""}
+                    className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-300 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                  >
+                  <X className="h-3 w-3" /> {rejectLabel}
+                  </button>
                 <button
                   type="button"
                   onClick={() => onPlanVote(plan, "APPROVED")}
                   disabled={locked || busyId !== ""}
                   className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-300 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30"
                 >
-                  <Check className="h-3 w-3" /> 计划通过
+                  <Check className="h-3 w-3" /> {approveLabel}
                 </button>
               </div>
               <div className="mt-1.5 flex items-center gap-2 border-t border-zinc-700/20 pt-2">
@@ -612,6 +997,70 @@ export function V17_DecisionInbox({
         </div>
       ) : null}
 
+      {decisionTraceIndex.items.length ? (
+        <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">DECISION TRACE INDEX</p>
+            <span className="text-[10px] text-zinc-500">
+              计划溯源索引 · {Number(decisionTraceIndex.plan_count || 0)} 条 · {decisionTraceIndex.contract}
+            </span>
+          </div>
+          <div className="space-y-1">
+            {decisionTraceIndex.items.map((item) => {
+              const route = String(item.routing || "system").trim().toUpperCase() || "SYSTEM";
+              return (
+                <div key={item.plan_id} className="rounded-lg border border-zinc-700/25 bg-zinc-900/60 px-2 py-1.5 text-[10px] text-zinc-300">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-zinc-200">
+                      {item.anchor || "未命名计划"} · {item.plan_id || "unknown"}
+                    </p>
+                    <span className="rounded-full border border-zinc-700/30 px-1.5 py-0.5 text-[9px] text-zinc-200">
+                      {route}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-zinc-500">
+                    状态 {String(item.status || "pending")} · 依据决策 {Number(item.decision_count || item.decision_ids?.length || 0)} 条 · 跟踪条目 {Number(item.decision_trace_count || 0)}
+                  </p>
+                  {Array.isArray(item.decision_trace) && item.decision_trace.length ? (
+                    <p className="mt-1 text-zinc-400">
+                      {formatPlanDecisionTrace(item.decision_trace).slice(0, 3).join(" · ")}
+                    </p>
+                  ) : null}
+                  {(item.routing_reason || item.routing_policy) ? (
+                    <p className="mt-1 text-[9px] text-zinc-500">
+                      原因 {String(item.routing_reason || "") || String(item.routing_policy || "")} · policy {String(item.routing_policy || "").trim() || "-"}
+                    </p>
+                  ) : null}
+                  {item.llm_prompt_preview ? <p className="mt-1 text-cyan-200/80">该 Plan 包含 LLM 提示词预审上下文</p> : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {failedPlanQueue.length ? (
+        <div className="mb-3 rounded-xl border border-rose-500/20 bg-rose-950/10 p-2">
+          <p className="text-[10px] text-rose-200/85">最近异常计划（最近 4 条）</p>
+          <div className="mt-2 space-y-1">
+            {failedPlanQueue.slice(0, 4).map((plan) => {
+              const statusTone = planStatusTone(plan.status);
+              return (
+                <div key={`failed_${plan.plan_id || plan.anchor || plan.updated_at}`} className="rounded-md border border-rose-500/15 px-2 py-1.5">
+                  <div className="flex items-center justify-between text-[9px]">
+                    <span className="text-zinc-200">{planDisplayName(plan)}</span>
+                    <span className={`rounded-full border px-1.5 py-0.5 ${statusTone}`}>{plan.status || "FAILED"}</span>
+                  </div>
+                  <p className="mt-0.5 text-[9px] text-zinc-500">
+                    PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
         {terminalPlanQueue.length ? (
           <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/45 p-2">
             <p className="text-[10px] text-zinc-400">最近已闭环计划（最近 4 条）</p>
@@ -621,7 +1070,7 @@ export function V17_DecisionInbox({
                 return (
                   <div key={`history_${plan.plan_id || plan.anchor || plan.updated_at}`} className="rounded-md border border-zinc-700/20 px-2 py-1.5">
                     <div className="flex items-center justify-between text-[9px]">
-                      <span className="text-zinc-300">{plan.anchor || "未命名计划"}</span>
+                      <span className="text-zinc-300">{planDisplayName(plan)}</span>
                       <span className={`rounded-full border px-1.5 py-0.5 ${statusTone}`}>{plan.status || "DONE"}</span>
                     </div>
                     <p className="mt-0.5 text-[9px] text-zinc-500">
@@ -634,8 +1083,8 @@ export function V17_DecisionInbox({
           </div>
         ) : null}
 
-        <div className="mb-3 grid gap-2 lg:grid-cols-3">
-        {(["manual", "system", "llm"] as BucketKind[]).map((kind) => {
+        <div className="mb-3 grid gap-2 lg:grid-cols-2">
+        {(["manual", "auto"] as BucketKind[]).map((kind) => {
           const rule = arbitrationRule(kind);
           return (
             <div key={kind} className={`rounded-xl border px-3 py-2 text-[10px] leading-relaxed ${rule.accent}`}>
@@ -647,7 +1096,7 @@ export function V17_DecisionInbox({
         })}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.3fr_0.9fr_0.9fr]">
+      <div className="grid gap-3 lg:grid-cols-[1.25fr_0.95fr]">
         <div className="rounded-xl border border-violet-500/20 bg-zinc-950/55 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] tracking-[0.22em] text-violet-200">MANUAL</p>
@@ -816,91 +1265,71 @@ export function V17_DecisionInbox({
 
         <div className="rounded-xl border border-amber-500/15 bg-zinc-950/55 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-amber-200">SYSTEM</p>
-            <span className="text-[10px] text-zinc-500">自动裁决候选</span>
+            <p className="text-[11px] tracking-[0.22em] text-amber-200">AUTO</p>
+            <span className="text-[10px] text-zinc-500">后台静默处理后的结果与素材</span>
           </div>
-          <div className="space-y-2">
-            {autoResolutions.length ? autoResolutions.map((row, idx) => {
-              const badge = statusBadge("system", row);
-              return (
-              <div key={`auto_${idx}`} className="rounded-xl border border-amber-500/10 bg-amber-950/20 px-2.5 py-2">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-amber-100">{String(row.label || row.title || "系统动作").trim()}</p>
-                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
-                </div>
-                <p className="mt-1 text-[10px] text-zinc-500">
-                  {String(row.source || "system")} · {String(row.target_god || row.physical_impact?.target_god || "自动求解")}
-                </p>
-                <p className="mt-1 text-[10px] text-zinc-400">{impactText(row)}</p>
-                <p className="mt-1 font-mono text-[10px] text-amber-200/80">{arbitrationTrace("system", row)}</p>
-                <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{bucketReason("system", row)}</p>
-                {row.resolved_from_llm ? (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    <span className="rounded-full border border-cyan-500/20 bg-cyan-950/25 px-1.5 py-0.5 text-[9px] text-cyan-100">
-                      来自 LLM 仲裁
-                    </span>
-                    <span className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                      {String(row.llm_resolution_state || "collapsed_to_system")}
-                    </span>
-                  </div>
-                ) : null}
+          {passiveLlmContextCount > 0 ? (
+            <div className="mb-2 rounded-xl border border-amber-500/10 bg-amber-950/10 px-2.5 py-2">
+              <p className="text-[10px] text-amber-100">
+                已自动收纳 {passiveLlmContextCount} 条“仅作上下文”的素材，它们不会阻塞 Inbox，也不需要手动处理。
+              </p>
+              {passiveLlmContextRows.length ? (
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {decisionReasonTags("system", row).map((tag) => (
-                    <span key={tag} className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                      {tag}
+                  {passiveLlmContextRows.map((row, idx) => (
+                    <span
+                      key={`passive_llm_${String(row.id || row.label || idx)}`}
+                      className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300"
+                    >
+                      {String(row.label || row.title || row.source || "上下文素材").trim()}
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[10px] leading-relaxed text-amber-100/80">{promptPreview(row)}</p>
-              </div>
-            );}) : <p className="text-[11px] text-zinc-500">暂无系统自动裁决项。</p>}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-cyan-200">LLM</p>
-            <span className="text-[10px] text-zinc-500">叙事仲裁参考</span>
-          </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="space-y-2">
-            {llmArbitration.length ? llmArbitration.map((row, idx) => {
-              const badge = statusBadge("llm", row);
+            {autoInboxRows.length ? autoInboxRows.map((entry) => {
+              const row = entry.decision;
+              const badge = statusBadge("auto", row);
+              const channelLabel =
+                entry.channel === "system" ? "SYSTEM" : entry.channel === "llm" ? "LLM" : "CONTEXT";
               return (
-              <div key={`llm_${idx}`} className="rounded-xl border border-cyan-500/10 bg-cyan-950/15 px-2.5 py-2">
+              <div key={entry.key} className="rounded-xl border border-amber-500/10 bg-amber-950/15 px-2.5 py-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-cyan-100">{String(row.label || row.title || "LLM 参考").trim()}</p>
+                  <p className="text-[11px] text-amber-100">{String(row.label || row.title || "自动处理项").trim()}</p>
                   <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
                 </div>
-                <p className="mt-1 text-[10px] text-zinc-500">{String(row.source || "llm_context")}</p>
+                <p className="mt-1 text-[10px] text-zinc-500">
+                  {channelLabel} · {String(row.source || row.source_label || "auto_context")} · {String(row.target_god || row.physical_impact?.target_god || "未定目标")}
+                </p>
                 <p className="mt-1 text-[10px] text-zinc-400">{impactText(row)}</p>
-                <p className="mt-1 font-mono text-[10px] text-cyan-200/80">{arbitrationTrace("llm", row)}</p>
-                <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{bucketReason("llm", row)}</p>
+                <p className="mt-1 font-mono text-[10px] text-amber-200/80">{arbitrationTrace("auto", row)}</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{bucketReason("auto", row)}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-cyan-100">
-                    {llmPolicyLabel(row.llm_resolution_policy)}
-                  </span>
-                  <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                    {llmStateLabel(row.llm_resolution_state)}
-                  </span>
-                  <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                    {llmResultLabel(row.llm_resolution_result)}
-                  </span>
+                  {decisionReasonTags("auto", row).map((tag) => (
+                    <span key={`${entry.key}:${tag}`} className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                      {tag}
+                    </span>
+                  ))}
+                  {row.llm_resolution_policy ? (
+                    <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-cyan-100">
+                      {llmPolicyLabel(row.llm_resolution_policy)}
+                    </span>
+                  ) : null}
+                  {row.llm_resolution_state ? (
+                    <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                      {llmStateLabel(row.llm_resolution_state)}
+                    </span>
+                  ) : null}
                 </div>
                 {row.llm_terminal_state ? (
                   <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">
                     终态：{String(row.llm_terminal_state)}
                   </p>
                 ) : null}
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {decisionReasonTags("llm", row).map((tag) => (
-                    <span key={tag} className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-1 text-[10px] leading-relaxed text-cyan-100/80">{promptPreview(row)}</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-amber-100/80">{promptPreview(row)}</p>
               </div>
-            );}) : <p className="text-[11px] text-zinc-500">暂无需要交给 LLM 仲裁的参考项。</p>}
+            );}) : <p className="text-[11px] text-zinc-500">暂无自动处理回执。</p>}
           </div>
         </div>
       </div>

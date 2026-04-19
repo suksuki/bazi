@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
 
 const NDJSON_TAIL_CAP = 120;
 
@@ -95,6 +96,14 @@ export type V17Frame = {
       source?: string;
       priority?: number;
     }>;
+    all_decisions?: Array<{
+      id?: string;
+      title?: string;
+      label?: string;
+      source?: string;
+      priority?: number;
+      arbitration_mode?: string;
+    }>;
     god_rings?: {
       god_of_use?: string[];
       god_of_taboo?: string[];
@@ -115,6 +124,10 @@ export type V17Frame = {
         anchor?: string;
         status?: string;
         routing?: string;
+        routing_reason?: string;
+        routing_policy?: string;
+        routing_features?: PlanDecisionRoutingFeatures;
+        routing_claim?: PlanDecisionClaim;
         decision_ids?: string[];
         impact_summary?: Record<string, number>;
         meta?: Record<string, unknown>;
@@ -325,6 +338,13 @@ export function useV17WebStream({
     closeReason: "idle",
     heartbeatHistory: [],
   });
+  const framesRef = useRef<V17Frame[]>([]);
+  const syncOnlyMode = body?.suppress_narrator === true;
+
+  useEffect(() => {
+    framesRef.current = frames;
+  }, [frames]);
+
   // 将 body 序列化为稳定字符串，避免每次 render 产生新对象引用导致 effect 重新触发（SSE 重连）
   const bodyKey = JSON.stringify(body ?? null);
 
@@ -361,15 +381,20 @@ export function useV17WebStream({
           return;
         }
         if (mounted) {
-          setFrames([]);
-          setStreamState({ closed: false, closeReason: "idle", heartbeatHistory: [] });
+          // Keep visual cache until the first new frame arrives.
+          setStreamState((prev) => ({
+            ...prev,
+            closed: false,
+            closeReason: "idle",
+            heartbeatHistory: syncOnlyMode ? prev.heartbeatHistory : [],
+          }));
         }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let buf = "";
 
-        let localFrames: V17Frame[] = [];
-        let pinnedPhysics: V17Frame | null = null;
+        let localFrames: V17Frame[] = syncOnlyMode ? [...framesRef.current] : [];
+        let pinnedPhysics: V17Frame | null = localFrames.find(isCanonPhysicsSnapshot) || null;
 
         while (mounted) {
           const { value, done } = await reader.read();
@@ -419,11 +444,19 @@ export function useV17WebStream({
           }
         }
         if (mounted) {
-          setStreamState((prev) => ({
-            ...prev,
-            closed: true,
-            closeReason: aborter.signal.aborted ? "aborted" : "stream_eof",
-          }));
+          setStreamState((prev) =>
+            syncOnlyMode
+              ? {
+                  ...prev,
+                  closed: false,
+                  closeReason: "idle",
+                }
+              : {
+                  ...prev,
+                  closed: true,
+                  closeReason: aborter.signal.aborted ? "aborted" : "stream_eof",
+                },
+          );
         }
       } catch (err) {
         // 仅静默正常中止；其他错误推入错误帧以供调试
@@ -456,7 +489,7 @@ export function useV17WebStream({
       mounted = false;
       aborter.abort();
     };
-  }, [enabled, endpoint, method, bodyKey]);
+  }, [enabled, endpoint, method, bodyKey, syncOnlyMode]);
 
   return { frames, streamState };
 }

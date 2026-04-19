@@ -3,6 +3,7 @@ from __future__ import annotations
 from v17_rebirth.backend.plugins.spec import ArbiterType
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _manifest_hits_to_decision_rows
 from v17_rebirth.backend.plugins.spec import V17Fact
+from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration, compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.target_god_resolver import infer_target_god_from_text, resolve_target_god
 
@@ -151,14 +152,27 @@ def test_compile_decision_arbitration_splits_manual_and_llm() -> None:
     )
     assert len(arbitration["manual_decisions"]) == 1
     assert arbitration["manual_decisions"][0]["label"] == "六合"
-    assert arbitration["manual_decisions"][0]["arbitration_trace"] == "六合 -> L? -> 手动"
+    assert arbitration["manual_decisions"][0]["arbitration_trace"] == "六合协同 -> L? -> 手动"
     assert len(arbitration["llm_arbitration_context"]) == 1
     assert arbitration["llm_arbitration_context"][0]["label"] == "状态机节律"
-    assert arbitration["llm_arbitration_context"][0]["arbitration_trace"] == "classical.wangshuai.v1 -> L? -> LLM"
+    assert arbitration["llm_arbitration_context"][0]["arbitration_trace"] == "旺衰框架 -> L? -> LLM"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_policy"] == "context_only"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_state"] == "pending_context"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_result"] == "consume_context"
     assert arbitration["llm_arbitration_context"][0]["llm_terminal_state"] == "consume_context"
+
+
+def test_plugin_display_profile_prefers_human_readable_name() -> None:
+    profile = plugin_display_profile(
+        plugin_id="l1.physics.op_branch_sanhe",
+        manifest={
+            "Description": "地支三合/半合全十神通用协同性算法。",
+            "Rationale": "量化合局中的能量聚变与资源绑定过程。",
+        },
+    )
+    assert profile["display_name"] == "三合成局"
+    assert "地支三合" in profile["display_definition"]
+    assert "能量聚变" in profile["display_description"]
 
 
 def test_compile_decision_arbitration_assigns_llm_auto_apply_policy_for_low_risk_targeted_item() -> None:

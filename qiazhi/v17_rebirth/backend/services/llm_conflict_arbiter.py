@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Iterable, List
 
+from v17_rebirth.backend.services.llm_prompt_contracts import build_conflict_prompt_text
+
 
 def _normalize_conflict_ids(value: Iterable[str] | None) -> List[str]:
     out: List[str] = []
@@ -75,30 +77,9 @@ def build_conflict_bundles(*, meta: Dict[str, Any], conflict_ids: Iterable[str])
 
 
 def build_llm_conflict_prompt(*, bundle: Dict[str, Any]) -> str:
-    conflicts = bundle.get("conflicts") if isinstance(bundle.get("conflicts"), list) else []
-    claims = bundle.get("claims") if isinstance(bundle.get("claims"), list) else []
-    knowledge = bundle.get("knowledge_snapshot") if isinstance(bundle.get("knowledge_snapshot"), dict) else {}
-    lines: List[str] = []
-    lines.append("你是 V17 Brain 的冲突仲裁器。请阅读冲突包，并只输出 JSON。")
-    lines.append("目标：给出 resolution_type、preferred_arbiter、winner_claim_ids、dropped_claim_ids、reason、confidence。")
-    lines.append("resolution_type 仅可为 merge / reject / escalate_user / context_only。")
-    lines.append("preferred_arbiter 仅可为 system / llm / user。")
-    if len(conflicts) > 1:
-        lines.append("")
-        lines.append("说明：这是批量冲突包，请返回 results_by_conflict 字典，key 为 conflict_id。")
-        lines.append("每个条目需包含 resolution_type、preferred_arbiter、winner_claim_ids、dropped_claim_ids、reason、confidence。")
-    lines.append("")
-    lines.append("## Conflict" if len(conflicts) <= 1 else "## Conflicts")
-    lines.append(json.dumps(conflicts[0] if conflicts and len(conflicts) <= 1 else conflicts, ensure_ascii=False, indent=2))
-    lines.append("")
-    lines.append("## Claims")
-    lines.append(json.dumps(claims, ensure_ascii=False, indent=2))
-    lines.append("")
-    lines.append("## Knowledge Snapshot")
-    lines.append(json.dumps(knowledge, ensure_ascii=False, indent=2))
-    lines.append("")
-    lines.append("仅输出 JSON，不要附加解释。")
-    return "\n".join(lines)
+    if not isinstance(bundle, dict):
+        return "仅支持标准冲突包输入，无法生成仲裁提示。"
+    return build_conflict_prompt_text(bundle=bundle)
 
 
 def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str, Any]:

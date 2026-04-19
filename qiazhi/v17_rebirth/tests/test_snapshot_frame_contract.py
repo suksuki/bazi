@@ -41,8 +41,12 @@ def test_snapshot_frame_v17_21_contract(bazi_repo_root: Path) -> None:
     assert isinstance(dbg.get("facts"), list)
     assert isinstance(inner.get("fact_rows"), list)
     assert isinstance(inner.get("manual_decisions"), list)
+    assert isinstance(inner.get("manual_inbox"), list)
+    assert isinstance(inner.get("auto_decisions"), list)
+    assert isinstance(inner.get("all_decisions"), list)
     assert isinstance(inner.get("auto_resolutions"), list)
     assert isinstance(inner.get("llm_arbitration_context"), list)
+    assert inner.get("decision_inbox_contract") == "v17.decision.inbox.v2"
     assert isinstance(inner.get("decision_batches"), list)
     assert isinstance(inner.get("decision_prompt_batches"), list)
     if inner.get("manual_decisions"):
@@ -61,3 +65,51 @@ def test_decision_arbitration_tolerates_non_v17fact_inputs(bazi_repo_root: Path)
     }
     arbitration = orch._decision_arbitration(raw, {"食神": 45.0, "正官": 25.0}, spec_facts=[{"fact": "not_v17fact"}])  # type: ignore[list-item]
     assert isinstance(arbitration.get("manual_decisions"), list)
+
+
+def test_snapshot_frame_contains_decision_trace_index(bazi_repo_root: Path) -> None:
+    pd.clear_logic_module_cache()
+    raw = {
+        "four_pillars": {"year": "丙寅", "month": "癸巳", "day": "戊申", "hour": "甲寅"},
+        "luck_pillar": "庚午",
+        "flow_pillar": "甲辰",
+        "ten_gods_absolute_intensity": {"食神": 45.0, "正官": 25.0},
+        "total_energy_index": 70.0,
+        "decision_brain_state": {
+            "plan_queue": [
+                {
+                    "plan_id": "plan_001",
+                    "anchor": "测试锚",
+                    "status": "AWAIT_REVIEW",
+                    "routing": "system",
+                    "updated_at": "2026-01-01T00:00:00",
+                    "decision_ids": ["d1", "d2"],
+                    "impact_summary": {"食神": 0.1},
+                    "meta": {
+                        "decision_count": 2,
+                        "decision_trace": [
+                            {
+                                "decision_id": "d1",
+                                "label": "测试断语",
+                                "source": "plugin",
+                                "target_god": "食神",
+                                "impact_ratio": 0.2,
+                            },
+                        ],
+                    },
+                },
+            ],
+        },
+    }
+    orch = VerdictOrchestrator(repo_root=str(bazi_repo_root))
+    snap = orch.snapshot_frame(raw_physics=raw)
+    inner = snap.get("payload") or {}
+    trace_index = inner.get("decision_trace_index")
+    assert isinstance(trace_index, dict)
+    assert trace_index.get("contract") == "v17.decision.trace_index.v1"
+    assert trace_index.get("plan_count") == 1
+    items = trace_index.get("items")
+    assert isinstance(items, list)
+    assert items and isinstance(items[0], dict)
+    assert items[0].get("plan_id") == "plan_001"
+    assert isinstance(items[0].get("decision_trace"), list)

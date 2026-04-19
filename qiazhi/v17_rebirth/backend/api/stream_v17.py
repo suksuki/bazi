@@ -23,7 +23,8 @@ from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrato
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.backend.services.physics_layers import sync_runtime_aliases
 from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
-from v17_rebirth.backend.services.decision_brain_protocol import DecisionBrainPlan
+from v17_rebirth.backend.services.decision_brain_protocol import DecisionBrainPlan, build_plan_claim
+from v17_rebirth.backend.services.llm_prompt_contracts import build_plan_prompt_text
 from v17_rebirth.backend.services.decision_batches import build_decision_batches
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
 
@@ -310,14 +311,37 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return float(default)
 
 
+def _build_plan_claim(*, routing: str, routing_reason: str, routing_features: Dict[str, Any]) -> Dict[str, Any]:
+    claim = build_plan_claim(
+        routing=routing,
+        routing_reason=routing_reason,
+        routing_features={
+            "decision_count": int(routing_features.get("decision_count") or 0),
+            "conflict_pairs": int(routing_features.get("conflict_pairs") or 0),
+            "duplicate_events": int(routing_features.get("duplicate_events") or 0),
+            "max_abs_ratio": _safe_float(routing_features.get("max_abs_ratio"), 0.0),
+            "total_abs_ratio": _safe_float(routing_features.get("total_abs_ratio"), 0.0),
+        },
+    )
+    claim["routing_reason"] = routing_reason
+    return claim
+
+
 def _decision_route_reason(payload: Dict[str, Any], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     explicit = str(payload.get("routing") or payload.get("route") or payload.get("routing_hint") or "").strip().lower()
     if explicit in {"system", "llm", "user"}:
+        routing_reason = "payload routing_hint has explicit route"
+        routing_features = {}
         return {
             "routing": explicit,
-            "routing_reason": "payload routing_hint has explicit route",
+            "routing_reason": routing_reason,
             "routing_policy": "explicit_payload_routing",
-            "routing_features": {},
+            "routing_features": routing_features,
+            "routing_claim": _build_plan_claim(
+                routing=explicit,
+                routing_reason=routing_reason,
+                routing_features=routing_features,
+            ),
         }
 
     total_abs = 0.0
@@ -365,19 +389,120 @@ def _decision_route_reason(payload: Dict[str, Any], rows: List[Dict[str, Any]]) 
         routing = "user"
         reason = "高风险/冲突批次，建议人工裁定"
 
+    routing_features = {
+        "decision_count": decision_count,
+        "conflict_pairs": conflict_pairs,
+        "duplicate_events": duplicate_events,
+        "max_abs_ratio": round(max_abs, 4),
+        "total_abs_ratio": round(total_abs, 4),
+        "net_ratio": round(ratio_sum, 4),
+    }
+
     return {
         "routing": routing,
         "routing_reason": reason,
         "routing_policy": "local_batch_heuristic",
-        "routing_features": {
-            "decision_count": decision_count,
-            "conflict_pairs": conflict_pairs,
-            "duplicate_events": duplicate_events,
-            "max_abs_ratio": round(max_abs, 4),
-            "total_abs_ratio": round(total_abs, 4),
-            "net_ratio": round(ratio_sum, 4),
-        },
+        "routing_features": routing_features,
+        "routing_claim": _build_plan_claim(
+            routing=routing,
+            routing_reason=reason,
+            routing_features=routing_features,
+        ),
     }
+
+
+def _build_llm_plan_prompt(*, rows: List[Dict[str, Any]], action: str, anchor: str) -> str:
+    if not rows:
+        return "未检测到可执行候选，无法生成批量提示词。"
+    return build_plan_prompt_text(rows=rows, action=action, anchor=anchor, max_rows=16)
+
+
+def _safe_decision_label(row: Dict[str, Any]) -> str:
+    return str(row.get("label") or row.get("title") or row.get("hint") or row.get("id") or "").strip()
+
+
+def _safe_decision_trace(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Build compact evidence bundles so plan 结算过程可追溯，不依赖 LLM 回答文本。"""
+    out: List[Dict[str, Any]] = []
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        label = _safe_decision_label(row)
+        if not label and not str(row.get("id") or "").strip():
+            continue
+        target = str(
+            row.get("target_god")
+            or (row.get("physical_impact") or {}).get("target_god")
+            or ""
+        ).strip()
+        impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
+        try:
+            impact_ratio = float(impact.get("impact_ratio", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            impact_ratio = 0.0
+        try:
+            priority = float(row.get("priority", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            priority = 0.0
+        out.append(
+            {
+                "trace_index": idx,
+                "decision_id": str(row.get("id") or f"row_{idx}").strip(),
+                "label": label,
+                "source": str(row.get("source") or row.get("plugin_id") or "unknown").strip(),
+                "target_god": target,
+                "impact_ratio": round(impact_ratio, 6),
+                "priority": round(priority, 6),
+                "exclusivity_key": str(row.get("exclusivity_key") or "").strip(),
+                "routing_hint": str(row.get("arbiter_type") or "user").strip(),
+                "source_event": str(row.get("source_event") or "").strip(),
+            }
+        )
+    return out
+
+
+def _boolish(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    raw = str(value).strip().lower()
+    if raw in {"1", "true", "yes", "y", "on"}:
+        return True
+    if raw in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _build_physics_sync_payload(pt: Dict[str, Any]) -> Dict[str, Any]:
+    auto_resolutions = [dict(x) for x in pt.get("auto_resolutions", []) if isinstance(x, dict)]
+    llm_arbitration_context = [dict(x) for x in pt.get("llm_arbitration_context", []) if isinstance(x, dict)]
+    auto_decisions = [dict(x) for x in pt.get("auto_decisions", []) if isinstance(x, dict)]
+    if not auto_decisions:
+        auto_decisions = [*auto_resolutions, *llm_arbitration_context]
+    payload: Dict[str, Any] = {
+        "type": "PHYSICS_SYNC",
+        "decision_inbox_contract": str(pt.get("decision_inbox_contract") or "v17.decision.inbox.v2"),
+        "pending_decisions": [dict(x) for x in pt.get("pending_decisions", []) if isinstance(x, dict)],
+        "manual_decisions": [dict(x) for x in pt.get("manual_decisions", []) if isinstance(x, dict)],
+        "manual_inbox": [dict(x) for x in pt.get("manual_decisions", []) if isinstance(x, dict)],
+        "auto_decisions": auto_decisions,
+        "auto_resolutions": auto_resolutions,
+        "llm_arbitration_context": llm_arbitration_context,
+        "decision_brain_state": dict(pt.get("decision_brain_state") or {}),
+        "decision_batches": [dict(x) for x in pt.get("decision_batches_cache", []) if isinstance(x, dict)],
+    }
+    return payload
+
+
+def _event_for_publish(event: Dict[str, Any], *, physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(event)
+    request_verdict = _boolish(out.get("request_verdict"), default=True)
+    if request_verdict:
+        return out
+    out["signal"] = "PHYSICS_SYNC"
+    out["payload"] = _build_physics_sync_payload(physics_tensor)
+    return out
 
 
 def _read_plan_state(pt: Dict[str, Any]) -> Dict[str, Any]:
@@ -582,6 +707,10 @@ def _seed_plan_from_payload(
                 "routing_reason": route.get("routing_reason"),
                 "routing_policy": route.get("routing_policy"),
                 "routing_features": route.get("routing_features"),
+                "routing_claim": route.get("routing_claim"),
+                "decision_trace": _safe_decision_trace(rows),
+                "decision_trace_contract": "v17.decision.trace.v1",
+                "decision_count": len(rows),
             },
             "session_id": session_id,
         },
@@ -962,6 +1091,13 @@ async def _stream_frames(*, will_proxy: str, payload: Dict[str, Any]) -> AsyncIt
             yield (json.dumps(_system_init_failure_stop_frame(), ensure_ascii=False) + "\n").encode("utf-8")
             await asyncio.sleep(0)
             return
+
+    if _boolish(pl.get("suppress_narrator"), default=False):
+        # Sync-only mode: emit physics snapshot and stop. Used by Decision Inbox
+        # to refresh tensor/queue state without invoking LLM narration.
+        _log.info("[V17-SYNC-ONLY] session=%s suppress_narrator=true", session_id)
+        return
+
     facts = pl.get("facts") if isinstance(pl.get("facts"), list) else []
     # V17.99：从物理张量中提取全量案卷（跨 L1-L4）
     dec_raw = pl.get("pending_decisions") if isinstance(pl.get("pending_decisions"), list) else []
@@ -1180,6 +1316,8 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         "seq": _ACTION_SEQ,
         "session_id": session_id,
     }
+    request_verdict = _boolish(payload.get("request_verdict"), default=True)
+    event["request_verdict"] = request_verdict
     kernel_dispatch_ok = True
     kernel_dispatch_detail = ""
     # V17.45: 全域因果调度 (SRC_MANUAL)
@@ -1232,7 +1370,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                 )
                 event["note"] = "decision set already settled; skip duplicate dispatch"
                 await get_state_backend().set_physics(session_id, current_physics)
-                await get_state_backend().publish_action(session_id, event)
+                await get_state_backend().publish_action(
+                    session_id,
+                    _event_for_publish(event, physics_tensor=current_physics),
+                )
                 return JSONResponse({"ok": True, "signal": "VOTE_IGNORED", "action": action, "detail": event["note"]})
             if resolved_plan:
                 resolved_status = str((resolved_plan or {}).get("status", "")).strip().upper()
@@ -1246,7 +1387,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                     event["plan_status"] = resolved_status
                     event["note"] = "plan already terminal; duplicate ignored"
                     await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
+                    await get_state_backend().publish_action(
+                        session_id,
+                        _event_for_publish(event, physics_tensor=current_physics),
+                    )
                     return JSONResponse(
                         {
                             "ok": True,
@@ -1260,7 +1404,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                 # 兼容旧流程：无匹配决策时直观触发叙事，不下发到物理层。
                 event["error"] = "decision_not_found"
                 await get_state_backend().set_physics(session_id, current_physics)
-                await get_state_backend().publish_action(session_id, event)
+                await get_state_backend().publish_action(
+                    session_id,
+                    _event_for_publish(event, physics_tensor=current_physics),
+                )
                 return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
 
             for each in matched_decisions:
@@ -1272,6 +1419,13 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                 rows=matched_decisions,
                 signal=plan_signal,
             )
+            if plan_signal == "PLAN_SUBMIT" and str(plan.routing or "").strip().lower() == "llm":
+                plan.meta["llm_review_prompt"] = _build_llm_plan_prompt(
+                    rows=matched_decisions,
+                    action=action,
+                    anchor=anchor,
+                )
+                event["llm_review_prompt"] = plan.meta.get("llm_review_prompt")
             execute_as_plan_approve = plan_signal == "PLAN_SUBMIT" and str(plan.routing or "user").strip() == "system"
             execution_signal = "PLAN_APPROVE" if execute_as_plan_approve else plan_signal
             if execute_as_plan_approve:
@@ -1324,8 +1478,12 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                             row_payload["target_god"] = final_target
 
                     if not final_target:
-                        _log.warning("[V17-ACTION] decision no target_god, skip kernel dispatch: %s", matched_label)
-                        matched_decision["status"] = "FAILED"
+                        _log.warning("[V17-ACTION] decision no target_god, degrade to context_only: %s", matched_label)
+                        matched_decision["status"] = "CONSUMED_CONTEXT"
+                        matched_decision["applied"] = False
+                        matched_decision["llm_resolution_type"] = "context_only"
+                        matched_decision["llm_resolution_state"] = "pending_context"
+                        matched_decision["llm_terminal_state"] = "consume_context"
                         continue
 
                     matched_decision["status"] = "APPROVED"
@@ -1371,7 +1529,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                     _write_plan_state(current_physics, plan=plan)
                     _emit_decision_batch_cache(current_physics)
                     await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
+                    await get_state_backend().publish_action(
+                        session_id,
+                        _event_for_publish(event, physics_tensor=current_physics),
+                    )
                     return JSONResponse(
                         {
                             "ok": True,
@@ -1394,7 +1555,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                     _write_plan_state(current_physics, plan=plan)
                     _emit_decision_batch_cache(current_physics)
                     await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
+                    await get_state_backend().publish_action(
+                        session_id,
+                        _event_for_publish(event, physics_tensor=current_physics),
+                    )
                     return JSONResponse(
                         {
                             "ok": True,
@@ -1406,31 +1570,59 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                     )
                 if plan_signal in {"PLAN_SUBMIT", "PLAN_ESCALATE"}:
                     plan.transition("AWAIT_REVIEW")
+                    if str(plan.routing or "").strip().lower() == "llm":
+                        event["llm_review_prompt"] = plan.meta.get("llm_review_prompt")
                     _write_plan_state(current_physics, plan=plan)
                     _emit_decision_batch_cache(current_physics)
                     await get_state_backend().set_physics(session_id, current_physics)
-                    await get_state_backend().publish_action(session_id, event)
+                    await get_state_backend().publish_action(
+                        session_id,
+                        _event_for_publish(event, physics_tensor=current_physics),
+                    )
                     return JSONResponse(
                         {
                             "ok": True,
+                            "plan_id": plan.plan_id,
                             "signal": signal if signal == "PLAN_SUBMIT" else plan_signal,
                             "action": action,
-                            "plan_id": plan.plan_id,
                             "decision_count": len(matched_decisions),
+                            "llm_review_prompt": event.get("llm_review_prompt"),
                         }
                     )
 
             if execution_signal == "PLAN_APPROVE" and not applied_ids:
-                event["error"] = "no_physics_apply"
+                no_target_only = all(
+                    str(item.get("status") or "").strip().upper() == "CONSUMED_CONTEXT"
+                    for item in matched_decisions
+                )
                 event["decision_count"] = len(matched_decisions)
-                plan.transition("FAILED")
+                if no_target_only:
+                    plan.transition("COMMITTED")
+                    event["signal"] = "CONTEXT_CONSUMED"
+                else:
+                    event["error"] = "no_physics_apply"
+                    plan.transition("FAILED")
                 _write_plan_state(current_physics, plan=plan)
                 _emit_decision_batch_cache(current_physics)
                 await get_state_backend().set_physics(session_id, current_physics)
-                await get_state_backend().publish_action(session_id, event)
+                await get_state_backend().publish_action(
+                    session_id,
+                    _event_for_publish(event, physics_tensor=current_physics),
+                )
+                if no_target_only:
+                    return JSONResponse({"ok": True, "signal": "CONTEXT_CONSUMED", "action": action, "decision_count": len(matched_decisions)})
                 return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action, "decision_count": 0})
 
             if execution_signal == "PLAN_APPROVE":
+                latest_physics = await get_state_backend().get_physics(session_id)
+                if isinstance(latest_physics, dict) and latest_physics:
+                    current_physics = latest_physics
+                _mark_plan_decisions(
+                    current_physics,
+                    matched_decisions,
+                    status="APPROVED" if kernel_dispatch_ok else "FAILED",
+                    plan_id=plan.plan_id,
+                )
                 if kernel_dispatch_ok:
                     plan.transition("COMMITTED")
                     event["decision_count"] = len(applied_ids)
@@ -1443,7 +1635,10 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
                 _write_plan_state(current_physics, plan=plan)
                 _emit_decision_batch_cache(current_physics)
                 await get_state_backend().set_physics(session_id, current_physics)
-                await get_state_backend().publish_action(session_id, event)
+                await get_state_backend().publish_action(
+                    session_id,
+                    _event_for_publish(event, physics_tensor=current_physics),
+                )
                 if not kernel_dispatch_ok:
                     return JSONResponse(
                         {"ok": False, "detail": kernel_dispatch_detail or "physics kernel dispatch failed", "signal": signal},
