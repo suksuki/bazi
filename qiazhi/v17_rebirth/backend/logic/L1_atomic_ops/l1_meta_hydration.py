@@ -36,6 +36,8 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
 from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
 from v17_rebirth.backend.services.claim_protocol import CLAIM_JSON_SCHEMA, compile_claims
 from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts, recommend_conflict_resolutions
+from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapshot
+from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
 from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
 
@@ -433,8 +435,14 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
 
     modifier_proposals = compile_modifier_proposals(facts=collected_facts, physics_tensor=pt)
     claim_rows = compile_claims(facts=collected_facts, physics_tensor=pt)
-    conflict_rows = detect_claim_conflicts(claim_rows)
-    conflict_resolutions = recommend_conflict_resolutions(claim_rows, conflict_rows)
+    raw_conflict_rows = detect_claim_conflicts(claim_rows)
+    conflict_resolutions = recommend_conflict_resolutions(claim_rows, raw_conflict_rows)
+    knowledge_snapshot = build_knowledge_snapshot(
+        claims=claim_rows,
+        conflicts=raw_conflict_rows,
+        conflict_resolutions=conflict_resolutions,
+    )
+    conflict_rows = route_conflicts(conflicts=raw_conflict_rows, knowledge_snapshot=knowledge_snapshot)
     auto_signatures = sorted(
         proposal_signature(p)
         for p in modifier_proposals
@@ -451,6 +459,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
         meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
         meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
+        meta["knowledge_snapshot"] = dict(knowledge_snapshot)
         for row in applied_rows:
             tg = str(row.get("target_god") or "").strip()
             before = float(row.get("before", 0.0) or 0.0)
@@ -474,6 +483,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         meta["plugin_claim_schema"] = dict(CLAIM_JSON_SCHEMA)
         meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
         meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
+        meta["knowledge_snapshot"] = dict(knowledge_snapshot)
 
     _scanned_pids = [s.plugin_id for s in all_specs]
 

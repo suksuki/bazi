@@ -62,6 +62,51 @@ type PluginRuntimeStatus = {
   reason?: string;
 };
 
+type PluginClaim = {
+  claim_id: string;
+  plugin_id: string;
+  target_god?: string;
+  logic_level?: string;
+  claim_type?: string;
+  source_event?: string;
+};
+
+type PluginConflict = {
+  conflict_id: string;
+  conflict_type?: string;
+  severity?: string;
+  claims?: string[];
+  plugins?: string[];
+  target_god?: string;
+  why_conflict?: string;
+  recommended_arbiter?: string;
+};
+
+type PluginConflictResolution = {
+  conflict_id: string;
+  resolved_by?: string;
+  policy?: string;
+  winner_claim_id?: string;
+  applied_to_settlement?: boolean;
+};
+
+type KnowledgeSnapshot = {
+  claim_history?: {
+    total_claims?: number;
+    by_type?: Record<string, number>;
+    top_targets?: Array<{ target_god?: string; count?: number }>;
+  };
+  conflict_history?: {
+    total_conflicts?: number;
+    by_type?: Record<string, number>;
+    recommended_arbiters?: Record<string, number>;
+  };
+  resolution_preview?: {
+    total_suggestions?: number;
+    resolved_by?: Record<string, number>;
+  };
+};
+
 const LAYER_TABS: { key: string; label: string }[] = [
   { key: "L0", label: "L0 基础场" },
   { key: "L1", label: "L1 原子算子" },
@@ -126,6 +171,13 @@ function normalizePluginKey(value: string | undefined): string {
   return String(value || "").trim().toLowerCase();
 }
 
+function conflictTone(severity: string | undefined): string {
+  const value = String(severity || "").trim().toUpperCase();
+  if (value === "P1") return "bg-rose-900/40 text-rose-300";
+  if (value === "P2") return "bg-amber-900/40 text-amber-300";
+  return "bg-cyan-900/40 text-cyan-300";
+}
+
 export default function V17AdminPage() {
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
@@ -136,6 +188,10 @@ export default function V17AdminPage() {
   const [busy, setBusy] = useState<ActionKey>(null);
   const [plugins, setPlugins] = useState<PluginAdminRow[]>([]);
   const [pluginStatuses, setPluginStatuses] = useState<PluginRuntimeStatus[]>([]);
+  const [pluginClaims, setPluginClaims] = useState<PluginClaim[]>([]);
+  const [pluginConflicts, setPluginConflicts] = useState<PluginConflict[]>([]);
+  const [pluginConflictResolutions, setPluginConflictResolutions] = useState<PluginConflictResolution[]>([]);
+  const [knowledgeSnapshot, setKnowledgeSnapshot] = useState<KnowledgeSnapshot>({});
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
   const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
   const [selectedPlugin, setSelectedPlugin] = useState<PluginAdminRow | null>(null);
@@ -179,11 +235,38 @@ export default function V17AdminPage() {
       ]);
       const list = ((data as any).plugins || []) as PluginAdminRow[];
       const statusList = ((statusData as any).statuses || []) as PluginRuntimeStatus[];
+      const claimList = ((statusData as any).claims || []) as PluginClaim[];
+      const conflictList = ((statusData as any).conflicts || []) as PluginConflict[];
+      const resolutionList = ((statusData as any).conflict_resolutions || []) as PluginConflictResolution[];
+      const knowledge = ((statusData as any).knowledge_snapshot || {}) as KnowledgeSnapshot;
       setPlugins(list);
       setPluginStatuses(statusList);
+      setPluginClaims(claimList);
+      setPluginConflicts(conflictList);
+      setPluginConflictResolutions(resolutionList);
+      setKnowledgeSnapshot(knowledge);
       setResolvedPluginRuntimeSessionId(String((statusData as any).session_id || pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
   }, [pluginRuntimeSessionId]);
+
+  async function resolveConflict(conflictId: string, arbiter: "system" | "llm" | "user") {
+    const { resp, data } = await requestJson("/api/v17-admin/conflict-resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: resolvedPluginRuntimeSessionId || pluginRuntimeSessionId || "default",
+        conflict_id: conflictId,
+        arbiter,
+        v17_origin: "v17_rebirth",
+      }),
+    });
+    if (!resp.ok || !(data as { ok?: boolean }).ok) {
+      setMsg(`冲突裁决失败：${String((data as { detail?: string }).detail || "unknown error")}`);
+      return;
+    }
+    setMsg(`冲突 ${conflictId} 已提交给 ${arbiter.toUpperCase()}。`);
+    await loadPlugins();
+  }
 
   const loadEvolution = useCallback(async () => {
     setBusy("loadEvolution");
@@ -333,13 +416,36 @@ export default function V17AdminPage() {
                   <button onClick={() => void loadPlugins()} className={solidBtn}>刷新运行态</button>
                   <span className="text-[10px] text-zinc-500">当前解析会话：{resolvedPluginRuntimeSessionId || "default"}</span>
                </div>
+               <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 text-[11px] text-zinc-400">
+                 <div className="flex flex-wrap items-center gap-4">
+                   <span>claims {Number(knowledgeSnapshot.claim_history?.total_claims || 0)}</span>
+                   <span>conflicts {Number(knowledgeSnapshot.conflict_history?.total_conflicts || 0)}</span>
+                   <span>suggestions {Number(knowledgeSnapshot.resolution_preview?.total_suggestions || 0)}</span>
+                 </div>
+                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-zinc-500">
+                   <span>arbiter bias: system {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.system || 0)}</span>
+                   <span>llm {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.llm || 0)}</span>
+                   <span>user {Number(knowledgeSnapshot.conflict_history?.recommended_arbiters?.user || 0)}</span>
+                 </div>
+               </div>
                <div className="space-y-2">
                   {plugins.map(p => {
+                    const pluginKey = normalizePluginKey(p.plugin_id);
+                    const moduleKey = normalizePluginKey(p.module);
                     const runtime = pluginStatuses.find((s) => {
                       const sid = normalizePluginKey(s.plugin_id);
-                      const pid = normalizePluginKey(p.plugin_id);
-                      const mod = normalizePluginKey(p.module);
-                      return sid === pid || (sid && mod && (sid === mod || sid.endsWith(`.${mod}`) || mod.endsWith(`.${sid}`)));
+                      return sid === pluginKey || (sid && moduleKey && (sid === moduleKey || sid.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${sid}`)));
+                    });
+                    const relatedClaims = pluginClaims.filter((row) => {
+                      const rowKey = normalizePluginKey(row.plugin_id);
+                      return rowKey === pluginKey || (rowKey && moduleKey && (rowKey === moduleKey || rowKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${rowKey}`)));
+                    });
+                    const relatedConflicts = pluginConflicts.filter((row) => {
+                      const rows = Array.isArray(row.plugins) ? row.plugins : [];
+                      return rows.some((item) => {
+                        const itemKey = normalizePluginKey(item);
+                        return itemKey === pluginKey || (itemKey && moduleKey && (itemKey === moduleKey || itemKey.endsWith(`.${moduleKey}`) || moduleKey.endsWith(`.${itemKey}`)));
+                      });
                     });
                     const runtimeStatus = String(runtime?.status || "unknown");
                     const runtimeTone =
@@ -368,8 +474,49 @@ export default function V17AdminPage() {
                         {runtime?.target_god ? <span className="text-zinc-500">target {runtime.target_god}</span> : null}
                         {typeof runtime?.fact_count === "number" ? <span className="text-zinc-600">facts {runtime.fact_count}</span> : null}
                         {typeof runtime?.proposal_count === "number" ? <span className="text-zinc-600">proposals {runtime.proposal_count}</span> : null}
+                        <span className="text-zinc-600">claims {relatedClaims.length}</span>
+                        <span className="text-zinc-600">conflicts {relatedConflicts.length}</span>
                       </div>
                       <div className="mt-1 text-[10px] text-zinc-500">{runtime?.reason || "暂无最近运行状态。打开 Oracle 跑一轮后会在这里同步。"}</div>
+                      {relatedConflicts.length ? (
+                        <div className="mt-2 space-y-2">
+                          {relatedConflicts.slice(0, 3).map((row) => {
+                            const resolution = pluginConflictResolutions.find((item) => item.conflict_id === row.conflict_id);
+                            return (
+                              <div key={row.conflict_id} className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className={`rounded px-2 py-0.5 text-[10px] uppercase ${conflictTone(row.severity)}`}>
+                                    {row.severity || "P3"} · {row.recommended_arbiter || "system"}
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500">{row.conflict_type || "conflict"}</span>
+                                </div>
+                                <div className="mt-1 text-[10px] text-zinc-300">{row.why_conflict || "—"}</div>
+                                <div className="mt-1 text-[10px] text-zinc-500">
+                                  {row.target_god ? `target ${row.target_god} / ` : ""}
+                                  {Array.isArray(row.claims) ? `claims ${row.claims.length}` : "claims 0"}
+                                </div>
+                                {resolution ? (
+                                  <div className="mt-1 text-[10px] text-cyan-300">
+                                    system suggestion: {resolution.policy || "—"} · keep {resolution.winner_claim_id || "—"}
+                                    {resolution.applied_to_settlement ? " · applied" : " · preview only"}
+                                  </div>
+                                ) : null}
+                                <div className="mt-2 flex items-center gap-2">
+                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "system")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
+                                    System 裁
+                                  </button>
+                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "llm")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
+                                    LLM 裁
+                                  </button>
+                                  <button type="button" onClick={() => void resolveConflict(row.conflict_id, "user")} className="rounded border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300">
+                                    用户裁
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   )})}
                </div>

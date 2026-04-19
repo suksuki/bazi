@@ -27,6 +27,7 @@ def test_snapshot_frame_v17_21_contract(bazi_repo_root: Path) -> None:
     assert isinstance((inner.get("plugins") or {}).get("claims"), list)
     assert isinstance((inner.get("plugins") or {}).get("conflicts"), list)
     assert isinstance((inner.get("plugins") or {}).get("conflict_resolutions"), list)
+    assert isinstance((inner.get("plugins") or {}).get("knowledge_snapshot"), dict)
     assert "食神" in inner.get("ten_gods_base_l0", {})
     assert "食神" in inner.get("ten_gods_runtime", {})
     assert "食神" in inner.get("ten_gods_narrative", {})
@@ -41,5 +42,7 @@ def test_snapshot_frame_v17_21_contract(bazi_repo_root: Path) -> None:
     assert isinstance(inner.get("manual_decisions"), list)
     assert isinstance(inner.get("auto_resolutions"), list)
     assert isinstance(inner.get("llm_arbitration_context"), list)
+    assert isinstance(inner.get("decision_batches"), list)
+    assert isinstance(inner.get("decision_prompt_batches"), list)
     if inner.get("manual_decisions"):
         assert "arbitration_trace" in inner["manual_decisions"][0]

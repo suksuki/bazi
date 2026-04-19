@@ -13,6 +13,7 @@ from fastapi import APIRouter, Header, HTTPException, Query
 from v17_rebirth.backend.logic.plugin_discovery import annotate_causal_trace, registry_rows_for_admin
 from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_with_runtime
 from v17_rebirth.backend.services.verdict_orchestrator import restart_realtime_pipeline
+from v17_rebirth.backend.services.conflict_resolution_service import apply_conflict_resolution
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.infrastructure.state_backend import get_state_backend
@@ -438,13 +439,52 @@ async def get_plugin_runtime_status(
     meta = physics.get("meta") if isinstance(physics, dict) and isinstance(physics.get("meta"), dict) else {}
     statuses = meta.get("plugin_execution_status") if isinstance(meta.get("plugin_execution_status"), list) else []
     proposals = meta.get("plugin_modifier_proposals") if isinstance(meta.get("plugin_modifier_proposals"), list) else []
+    claims = meta.get("plugin_claims") if isinstance(meta.get("plugin_claims"), list) else []
+    conflicts = meta.get("plugin_conflicts") if isinstance(meta.get("plugin_conflicts"), list) else []
+    conflict_resolutions = (
+        meta.get("plugin_conflict_resolutions")
+        if isinstance(meta.get("plugin_conflict_resolutions"), list)
+        else []
+    )
+    knowledge_snapshot = meta.get("knowledge_snapshot") if isinstance(meta.get("knowledge_snapshot"), dict) else {}
     auto_ratios = meta.get("plugin_auto_ratio_totals") if isinstance(meta.get("plugin_auto_ratio_totals"), dict) else {}
     return {
         "ok": True,
         "session_id": resolved_session_id,
         "statuses": statuses,
         "proposal_count": len(proposals),
+        "claims": claims,
+        "conflicts": conflicts,
+        "conflict_resolutions": conflict_resolutions,
+        "knowledge_snapshot": knowledge_snapshot,
         "auto_ratio_totals": auto_ratios,
+    }
+
+
+@router.post("/v17/admin/conflict-resolve")
+async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload if isinstance(payload, dict) else {})
+    session_id = str(payload.get("session_id", "")).strip() or "default"
+    conflict_id = str(payload.get("conflict_id", "")).strip()
+    arbiter = str(payload.get("arbiter", "system")).strip().lower() or "system"
+    if not conflict_id:
+        raise HTTPException(status_code=400, detail="conflict_id is required")
+
+    backend = get_state_backend()
+    physics = await backend.get_physics(session_id)
+    if not isinstance(physics, dict):
+        raise HTTPException(status_code=404, detail="physics not found")
+    meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+    updated_meta = apply_conflict_resolution(meta=meta, conflict_id=conflict_id, arbiter=arbiter)
+    physics["meta"] = updated_meta
+    await backend.set_physics(session_id, physics)
+    return {
+        "ok": True,
+        "session_id": session_id,
+        "conflict_id": conflict_id,
+        "arbiter": arbiter,
+        "conflicts": updated_meta.get("plugin_conflicts", []),
+        "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
     }
 
 

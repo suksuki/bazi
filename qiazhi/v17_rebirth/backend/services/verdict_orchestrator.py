@@ -17,6 +17,7 @@ from v17_rebirth.backend.plugins.v17_wrappers import (
     v17_fact_to_row,
 )
 from v17_rebirth.backend.services.decision_compiler import compile_decision_arbitration
+from v17_rebirth.backend.services.decision_batches import build_decision_batches
 from v17_rebirth.backend.narrative.pipeline import DialogueLayer, RealtimeNarrativePipeline
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
 from v17_rebirth.backend.narrative.sanitizer import NarrativeSanitizer
@@ -238,6 +239,7 @@ class VerdictOrchestrator:
         plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
         plugin_hits = sorted({str(x.get("plugin", "")).strip() for x in plugin_rows if str(x.get("plugin", "")).strip()})
         arbitration = self._decision_arbitration(raw_physics, scores, spec_facts=spec_facts)
+        decision_batches = build_decision_batches(arbitration=arbitration)
         decisions = arbitration.get("manual_decisions", [])
         fact_list = raw_physics.get("facts") if isinstance(raw_physics.get("facts"), list) else []
         sorted_fact_rows = self._sorted_fact_rows(fact_list)
@@ -269,6 +271,8 @@ class VerdictOrchestrator:
             "manual_decisions": decisions,
             "auto_resolutions": arbitration.get("auto_resolutions", []),
             "llm_arbitration_context": arbitration.get("llm_arbitration_context", []),
+            "decision_batches": decision_batches.get("all", []),
+            "decision_prompt_batches": decision_batches.get("prompt_lines", []),
             "pending_decisions": decisions,
             "facts": facts_out,
             "fact_rows": sorted_fact_rows[:160],
@@ -279,6 +283,7 @@ class VerdictOrchestrator:
                 "claims": list(((pt.get("meta") or {}).get("plugin_claims") or []))[:128],
                 "conflicts": list(((pt.get("meta") or {}).get("plugin_conflicts") or []))[:128],
                 "conflict_resolutions": list(((pt.get("meta") or {}).get("plugin_conflict_resolutions") or []))[:128],
+                "knowledge_snapshot": dict(((pt.get("meta") or {}).get("knowledge_snapshot") or {})),
             },
             "debug_trace": {
                 "hits": plugin_hits,
@@ -354,6 +359,9 @@ class VerdictOrchestrator:
             pattern,
             total_energy_index=total_energy_index,
         )
+        arbitration = self._decision_arbitration(raw_physics, scores, spec_facts=facts)
+        decision_batches = build_decision_batches(arbitration=arbitration)
+        fragments.extend([str(x).strip() for x in decision_batches.get("prompt_lines", []) if str(x).strip()])
         rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
         if rid == V17_ROLE_JUDGE:
             for d in (decisions or [])[:32]:
@@ -474,6 +482,8 @@ class VerdictOrchestrator:
                 "render_text": "引擎正在思考以下事实…",
                 **audit_blob,
                 "physics_report": NarrativeMappingEngine.build_physics_report_lines(raw_physics),
+                "decision_batches": decision_batches.get("all", []),
+                "decision_prompt_batches": decision_batches.get("prompt_lines", []),
                 "ten_gods_narrative": narrative_scores,
                 "full_prompt_trace": fpt,
                 "will_proxy": str(will_proxy or "stable"),
