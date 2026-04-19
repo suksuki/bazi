@@ -27,6 +27,20 @@ type Frame = {
       prompt_line?: string;
       labels?: string[];
     }>;
+    decision_brain_state?: {
+      plan_queue?: Array<{
+        plan_id?: string;
+        anchor?: string;
+        status?: string;
+        routing?: string;
+        decision_ids?: string[];
+        impact_summary?: Record<string, number>;
+        meta?: Record<string, unknown>;
+        created_at?: string;
+        updated_at?: string;
+        batch_ids?: string[];
+      }>;
+    };
   };
 };
 
@@ -209,6 +223,48 @@ type DecisionBatch = {
   labels: string[];
 };
 
+type PlanQueueItem = {
+  plan_id?: string;
+  anchor?: string;
+  status?: string;
+  routing?: string;
+  action?: string;
+  decision_ids?: string[];
+  impact_summary?: Record<string, number>;
+  meta?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+  batch_ids?: string[];
+};
+
+function planStatusTone(status?: string): string {
+  const normalized = String(status || "unknown").toLowerCase();
+  if (normalized === "completed" || normalized === "done") {
+    return "border-emerald-500/30 bg-emerald-950/35 text-emerald-100";
+  }
+  if (normalized === "failed" || normalized === "rejected") {
+    return "border-rose-500/30 bg-rose-950/35 text-rose-100";
+  }
+  if (normalized === "processing") {
+    return "border-amber-500/30 bg-amber-950/35 text-amber-100";
+  }
+  return "border-violet-500/25 bg-violet-950/30 text-violet-100";
+}
+
+function planIsTerminal(status?: string): boolean {
+  const normalized = String(status || "").trim().toUpperCase();
+  return new Set(["COMPLETED", "DONE", "APPROVED", "REJECTED", "COMMITTED", "FAILED"]).has(normalized);
+}
+
+function planImpactBriefs(impact?: Record<string, number>): string[] {
+  if (!impact) return [];
+  return Object.entries(impact)
+    .filter(([, value]) => Number.isFinite(value))
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, 4)
+    .map(([name, value]) => `${name}: ${(value * 100).toFixed(0)}%`);
+}
+
 function normalizeDecisionId(decision: Decision, idx: number): string {
   return String(decision.id || decision.label || `manual_${idx}`).trim() || `manual_${idx}`;
 }
@@ -272,6 +328,7 @@ export function V17_DecisionInbox({
   lockMessage = "",
   onAdopted,
   onAdoptedBatch,
+  onPlanAction,
 }: {
   frames: Frame[];
   adoptedIds: string[];
@@ -280,6 +337,10 @@ export function V17_DecisionInbox({
   lockMessage?: string;
   onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
   onAdoptedBatch?: (decisions: Decision[], status: "APPROVED" | "REJECTED") => void | Promise<void>;
+  onPlanAction?: (
+    plan: PlanQueueItem,
+    status: "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW",
+  ) => void | Promise<void>;
 }) {
   const [busyId, setBusyId] = useState<string>("");
 
@@ -369,6 +430,38 @@ export function V17_DecisionInbox({
     () => (latestSnapshot?.payload?.auto_resolutions || []).slice(0, 6),
     [latestSnapshot?.payload?.auto_resolutions],
   );
+  const planQueue = useMemo(
+    () =>
+      (latestSnapshot?.payload?.decision_brain_state?.plan_queue || [])
+        .map((raw): PlanQueueItem => ({
+          plan_id: String(raw?.plan_id || "").trim() || undefined,
+          anchor: String(raw?.anchor || "").trim() || undefined,
+          status: String(raw?.status || "").trim() || undefined,
+          routing: String(raw?.routing || "").trim() || undefined,
+          action: String(raw?.meta && typeof raw.meta.action === "string" ? raw.meta.action : "").trim() || undefined,
+          decision_ids: Array.isArray(raw?.decision_ids) ? raw.decision_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
+          impact_summary: raw?.impact_summary && typeof raw.impact_summary === "object" ? raw.impact_summary : undefined,
+          meta: raw?.meta && typeof raw.meta === "object" ? raw.meta : undefined,
+          created_at: String(raw?.created_at || "").trim() || undefined,
+          updated_at: String(raw?.updated_at || "").trim() || undefined,
+          batch_ids: Array.isArray(raw?.batch_ids) ? raw.batch_ids.map((id) => String(id || "").trim()).filter(Boolean) : undefined,
+        })),
+    [latestSnapshot],
+  );
+  const activePlanQueue = useMemo(
+    () =>
+      planQueue
+        .filter((item) => !planIsTerminal(item.status))
+        .sort((a, b) => String(a.anchor || "").localeCompare(String(b.anchor || ""))),
+    [planQueue],
+  );
+  const terminalPlanQueue = useMemo(
+    () =>
+      planQueue
+        .filter((item) => planIsTerminal(item.status))
+        .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || ""))),
+    [planQueue],
+  );
   const llmArbitration = useMemo(
     () => (latestSnapshot?.payload?.llm_arbitration_context || []).slice(0, 6),
     [latestSnapshot?.payload?.llm_arbitration_context],
@@ -399,7 +492,25 @@ export function V17_DecisionInbox({
     }
   }
 
-  if (!decisions.length && !autoResolutions.length && !llmArbitration.length) return null;
+  async function onPlanVote(
+    plan: PlanQueueItem,
+    status: "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW",
+  ) {
+    if (locked || !plan.plan_id) return;
+    const busyKey = `plan_${plan.plan_id}`;
+    setBusyId(busyKey);
+    if (onPlanAction) {
+      try {
+        await onPlanAction(plan, status);
+      } finally {
+        setBusyId("");
+      }
+      return;
+    }
+    setBusyId("");
+  }
+
+  if (!decisions.length && !autoResolutions.length && !llmArbitration.length && !planQueue.length) return null;
 
   return (
     <section className="rounded-2xl border border-violet-700/40 bg-[linear-gradient(180deg,rgba(8,4,20,0.92),rgba(10,10,16,0.82))] p-3 shadow-[0_16px_50px_rgba(76,29,149,0.18)]">
@@ -418,10 +529,112 @@ export function V17_DecisionInbox({
           <span className="rounded-full border border-cyan-500/20 bg-cyan-950/25 px-2 py-1 text-cyan-100">
             LLM {llmArbitration.length}
           </span>
+          <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
+            Plan {planQueue.length}
+          </span>
         </div>
       </div>
 
-      <div className="mb-3 grid gap-2 lg:grid-cols-3">
+      {activePlanQueue.length ? (
+        <div className="mb-3 rounded-xl border border-zinc-700/25 bg-zinc-950/60 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">PLAN QUEUE</p>
+            <span className="text-[10px] text-zinc-500">决策计划待结算</span>
+          </div>
+          <div className="space-y-2">
+            {activePlanQueue.slice(0, 8).map((plan) => {
+              const statusTone = planStatusTone(plan.status);
+              const impacts = planImpactBriefs(plan.impact_summary);
+              return (
+                <div
+                  key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
+                  className="rounded-lg border border-zinc-700/25 bg-zinc-900/70 p-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] text-zinc-100">
+                      {plan.anchor || "未命名计划"} · {plan.routing ? `策略 ${plan.routing}` : "未设置策略"}
+                    </p>
+                    <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${statusTone}`}>{plan.status || "pending"}</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-zinc-400">
+                    PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length} 个
+                  </p>
+                  {impacts.length ? (
+                    <p className="mt-1 text-[10px] text-zinc-300">
+                      影响速览：{impacts.join(" · ")}
+                    </p>
+                  ) : null}
+              <div className="mt-2 flex items-center gap-2 border-t border-zinc-700/20 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onPlanVote(plan, "REJECTED")}
+                  disabled={locked || busyId !== ""}
+                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-300 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                >
+                  <X className="h-3 w-3" /> 计划否决
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPlanVote(plan, "APPROVED")}
+                  disabled={locked || busyId !== ""}
+                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-300 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30"
+                >
+                  <Check className="h-3 w-3" /> 计划通过
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2 border-t border-zinc-700/20 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onPlanVote(plan, "ESCALATE")}
+                  disabled={locked || busyId !== ""}
+                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-amber-500/20 bg-amber-950/20 text-[10px] text-amber-300 transition hover:bg-amber-500/40 hover:text-amber-100 disabled:opacity-30"
+                >
+                  <span className="h-3 w-3 rounded-full border border-current" />
+                  计划升档
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPlanVote(plan, "WITHDRAW")}
+                  disabled={locked || busyId !== ""}
+                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-sky-500/20 bg-sky-950/20 text-[10px] text-sky-300 transition hover:bg-sky-500/40 hover:text-sky-100 disabled:opacity-30"
+                >
+                  <span className="h-3 w-3 rounded-full border border-current" />
+                  计划撤回
+                </button>
+              </div>
+            </div>
+          );
+        })}
+            {planQueue.length > activePlanQueue.length ? (
+              <p className="text-[10px] text-zinc-500">另有已完成计划隐藏，按需可展开详情。</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+        {terminalPlanQueue.length ? (
+          <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/45 p-2">
+            <p className="text-[10px] text-zinc-400">最近已闭环计划（最近 4 条）</p>
+            <div className="mt-2 space-y-1">
+              {terminalPlanQueue.slice(0, 4).map((plan) => {
+                const statusTone = planStatusTone(plan.status);
+                return (
+                  <div key={`history_${plan.plan_id || plan.anchor || plan.updated_at}`} className="rounded-md border border-zinc-700/20 px-2 py-1.5">
+                    <div className="flex items-center justify-between text-[9px]">
+                      <span className="text-zinc-300">{plan.anchor || "未命名计划"}</span>
+                      <span className={`rounded-full border px-1.5 py-0.5 ${statusTone}`}>{plan.status || "DONE"}</span>
+                    </div>
+                    <p className="mt-0.5 text-[9px] text-zinc-500">
+                      PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mb-3 grid gap-2 lg:grid-cols-3">
         {(["manual", "system", "llm"] as BucketKind[]).map((kind) => {
           const rule = arbitrationRule(kind);
           return (

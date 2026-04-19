@@ -23,7 +23,8 @@ from v17_rebirth.backend.services.verdict_orchestrator import VerdictOrchestrato
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.backend.services.physics_layers import sync_runtime_aliases
 from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
-from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
+from v17_rebirth.backend.services.decision_brain_protocol import DecisionBrainPlan
+from v17_rebirth.backend.services.decision_batches import build_decision_batches
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
 
 router = APIRouter(tags=["v17"])
@@ -33,6 +34,12 @@ _FREEZE_FILE = RUNTIME_DIR / "v17_causal_reports.json"
 # V17.23-Red：_SESSION_QUEUES 已迁移到 StateBackend.subscribe_actions/publish_action
 # V17.20：六柱与流年锚点仅允许由服务端 physics core 写入，禁止 POST Body 覆盖。
 _PHYS_SSOT_KEYS = frozenset({"four_pillars", "luck_pillar", "flow_pillar", "flow_year"})
+_DECISION_BRAIN_KEY = "decision_brain_state"
+_PLAN_QUEUE_KEY = "plan_queue"
+_PLAN_MAX_QUEUE = 96
+_PLAN_AUTO_APPROVE_MAX_COUNT = 8
+_PLAN_AUTO_APPROVE_MAX_RATIO = 0.18
+_PLAN_AUTO_APPROVE_MAX_SUM = 1.0
 
 
 _log = logging.getLogger(__name__)
@@ -267,6 +274,360 @@ def _run_v17_physics_core(
     sync_runtime_aliases(payload, scores)
     return payload
 
+
+def _safe_plan_ids(raw_ids: Any) -> List[str]:
+    if isinstance(raw_ids, str):
+        raw_ids = [raw_ids]
+    if not isinstance(raw_ids, list):
+        return []
+    out: List[str] = []
+    for item in raw_ids:
+        sid = str(item or "").strip()
+        if sid and sid not in out:
+            out.append(sid)
+    return out
+
+
+def _is_plan_terminal(status: str) -> bool:
+    normalized = str(status or "").strip().upper()
+    return normalized in {"COMMITTED", "REJECTED", "FAILED", "DONE"}
+
+
+def _are_decisions_settled(rows: List[Dict[str, Any]]) -> bool:
+    if not rows:
+        return False
+    terminal_states = {"APPROVED", "REJECTED", "COMMITTED", "FAILED", "DONE"}
+    for row in rows:
+        if str(row.get("status") or "").strip().upper() not in terminal_states:
+            return False
+    return True
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _decision_route_reason(payload: Dict[str, Any], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    explicit = str(payload.get("routing") or payload.get("route") or payload.get("routing_hint") or "").strip().lower()
+    if explicit in {"system", "llm", "user"}:
+        return {
+            "routing": explicit,
+            "routing_reason": "payload routing_hint has explicit route",
+            "routing_policy": "explicit_payload_routing",
+            "routing_features": {},
+        }
+
+    total_abs = 0.0
+    max_abs = 0.0
+    conflict_pairs = 0
+    duplicate_events = 0
+    target_by_sign: Dict[str, set[float]] = {}
+    exclusivity_count: Dict[str, int] = {}
+    decision_count = len(rows)
+
+    for row in rows:
+        impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
+        ratio = _safe_float(impact.get("impact_ratio", 0.0), 0.0)
+        abs_ratio = abs(ratio)
+        total_abs += abs_ratio
+        max_abs = max(max_abs, abs_ratio)
+
+        target = str(row.get("target_god") or impact.get("target_god") or "").strip() or "untargeted"
+        target_by_sign.setdefault(target, set()).add(-1.0 if ratio < 0 else 1.0 if ratio > 0 else 0.0)
+
+        event_key = str(row.get("exclusivity_key") or row.get("source_event") or "").strip()
+        if event_key:
+            exclusivity_count[event_key] = exclusivity_count.get(event_key, 0) + 1
+
+        text = str(row.get("label") or row.get("title") or row.get("hint") or "").strip()
+        if any(keyword in text for keyword in ("格局", "坍塌", "翻盘", "断裂", "冲", "刑", "害", "破", "夺", "离", "转化")):
+            total_abs += 0.03
+
+    for value in target_by_sign.values():
+        signs = {item for item in value if item != 0.0}
+        if len(signs) >= 2:
+            conflict_pairs += 1
+
+    duplicate_events = sum(1 for count in exclusivity_count.values() if count > 1)
+    conflict_signal = conflict_pairs > 0 or duplicate_events > 0
+    ratio_sum = _safe_float(sum(_safe_float((row.get("physical_impact") or {}).get("impact_ratio", 0.0), 0.0) for row in rows), 0.0)
+
+    if not conflict_signal and decision_count <= _PLAN_AUTO_APPROVE_MAX_COUNT and max_abs <= _PLAN_AUTO_APPROVE_MAX_RATIO and abs(ratio_sum) <= _PLAN_AUTO_APPROVE_MAX_SUM:
+        routing = "system"
+        reason = "low risk and低冲突批次，系统可自动执行"
+    elif not conflict_signal and max_abs <= max(_PLAN_AUTO_APPROVE_MAX_RATIO * 1.8, 0.25):
+        routing = "llm"
+        reason = "中等风险批次，先交由模型进行价值校验"
+    else:
+        routing = "user"
+        reason = "高风险/冲突批次，建议人工裁定"
+
+    return {
+        "routing": routing,
+        "routing_reason": reason,
+        "routing_policy": "local_batch_heuristic",
+        "routing_features": {
+            "decision_count": decision_count,
+            "conflict_pairs": conflict_pairs,
+            "duplicate_events": duplicate_events,
+            "max_abs_ratio": round(max_abs, 4),
+            "total_abs_ratio": round(total_abs, 4),
+            "net_ratio": round(ratio_sum, 4),
+        },
+    }
+
+
+def _read_plan_state(pt: Dict[str, Any]) -> Dict[str, Any]:
+    raw = pt.get(_DECISION_BRAIN_KEY)
+    if isinstance(raw, dict):
+        plans = raw.get(_PLAN_QUEUE_KEY)
+        if isinstance(plans, list):
+            return {_PLAN_QUEUE_KEY: [dict(x) for x in plans if isinstance(x, dict)]}
+    return {_PLAN_QUEUE_KEY: []}
+
+
+def _find_plan_by_id(pt: Dict[str, Any], plan_id: str) -> Optional[Dict[str, Any]]:
+    normalized = str(plan_id or "").strip()
+    if not normalized:
+        return None
+    state = _read_plan_state(pt)
+    rows = state.get(_PLAN_QUEUE_KEY)
+    if not isinstance(rows, list):
+        return None
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("plan_id") or "").strip() == normalized:
+            return row
+    return None
+
+
+def _write_plan_state(pt: Dict[str, Any], *, plan: DecisionBrainPlan) -> None:
+    state = _read_plan_state(pt)
+    plans = state.get(_PLAN_QUEUE_KEY)
+    if not isinstance(plans, list):
+        plans = []
+    replaced = False
+    for idx, row in enumerate(plans):
+        if str(row.get("plan_id") or "").strip() == str(plan.plan_id):
+            plans[idx] = plan.to_dict()
+            replaced = True
+            break
+    if not replaced:
+        plans.insert(0, plan.to_dict())
+    if len(plans) > _PLAN_MAX_QUEUE:
+        plans = plans[:_PLAN_MAX_QUEUE]
+    pt[_DECISION_BRAIN_KEY] = {_PLAN_QUEUE_KEY: plans}
+
+
+def _pick_pending_decisions(pt: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows = pt.get("pending_decisions")
+    if isinstance(rows, list):
+        return [row for row in rows if isinstance(row, dict)]
+    manual = pt.get("manual_decisions")
+    if isinstance(manual, list):
+        return [row for row in manual if isinstance(row, dict)]
+    return []
+
+
+def _index_pending_decisions(pt: Dict[str, Any]) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    rows = _pick_pending_decisions(pt)
+    by_id: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    by_label: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    by_title: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for row in rows:
+        rid = str(row.get("id") or "").strip()
+        label = str(row.get("label") or row.get("title") or "").strip()
+        title = str(row.get("title") or "").strip()
+        if rid:
+            by_id[rid] = row
+        if label:
+            by_label[label] = row
+        if title:
+            by_title[title] = row
+    return {"id": by_id, "label": by_label, "title": by_title}
+
+
+def _collect_matched_decisions(
+    pt: Dict[str, Any],
+    *,
+    decision_ids: List[str] | None = None,
+    decision_labels: List[str] | None = None,
+) -> List[Dict[str, Any]]:
+    ids = _safe_plan_ids(decision_ids or [])
+    labels = _safe_plan_ids(decision_labels or [])
+    if not ids and not labels:
+        return []
+    index = _index_pending_decisions(pt)
+    out: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def _append(row: Dict[str, Any]) -> None:
+        rid = str(row.get("id") or row.get("label") or row.get("title") or "").strip()
+        if not rid or rid in seen:
+            return
+        seen.add(rid)
+        out.append(row)
+
+    for sid in ids:
+        candidate = index["id"].get(sid)
+        if candidate:
+            _append(candidate)
+        candidate = index["label"].get(sid)
+        if candidate:
+            _append(candidate)
+        candidate = index["title"].get(sid)
+        if candidate:
+            _append(candidate)
+
+    for lab in labels:
+        candidate = index["label"].get(lab)
+        if candidate:
+            _append(candidate)
+            continue
+        candidate = index["title"].get(lab)
+        if candidate:
+            _append(candidate)
+    return out
+
+
+def _resolve_batch_decisions(pt: Dict[str, Any], batch_ids: List[str]) -> List[Dict[str, Any]]:
+    if not batch_ids:
+        return []
+    cache = pt.get("decision_batches_cache")
+    if not isinstance(cache, list):
+        return []
+    rows = []
+    for item in cache:
+        if not isinstance(item, dict):
+            continue
+        batch_id = str(item.get("batch_id") or "").strip()
+        if batch_id not in batch_ids:
+            continue
+        rows.extend(_safe_plan_ids(item.get("decision_ids")))
+    return _collect_matched_decisions(pt, decision_ids=rows)
+
+
+def _impact_summary(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    out: Dict[str, float] = {}
+    for row in rows:
+        impact = row.get("physical_impact")
+        if not isinstance(impact, dict):
+            impact = {}
+        ratio = float(impact.get("impact_ratio", 0.0) or 0.0)
+        target = str(row.get("target_god") or impact.get("target_god") or "untargeted").strip()
+        out[target] = out.get(target, 0.0) + ratio
+    return {key: round(value, 6) for key, value in out.items()}
+
+
+def _seed_plan_from_payload(
+    payload: Dict[str, Any],
+    *,
+    session_id: str,
+    rows: List[Dict[str, Any]],
+    signal: str,
+) -> DecisionBrainPlan:
+    route = _decision_route_reason(payload, rows) if signal == "PLAN_SUBMIT" else {}
+    effective_routing = str(
+        route.get("routing") or payload.get("routing") or payload.get("route") or "system"
+    ).strip().lower()
+    if effective_routing not in {"system", "llm", "user"}:
+        effective_routing = "system"
+    if signal in {"PLAN_APPROVE", "PLAN_REJECT", "PLAN_ESCALATE", "PLAN_WITHDRAW"} and effective_routing == "system":
+        # 人工确认的 plan 按执行路径处理时，明确标记为 system，避免被后续策略误判成非执行。
+        effective_routing = "system"
+    action = str(payload.get("action") or "").strip()
+    if not action and rows:
+        action = str(rows[0].get("label") or rows[0].get("title") or "").strip()
+    anchor = str(payload.get("anchor") or "").strip()
+    if not anchor and rows:
+        anchor = str(rows[0].get("exclusivity_key") or rows[0].get("source_event") or rows[0].get("source") or "").strip()
+    if not anchor:
+        anchor = str(payload.get("source") or "manual").strip() or "manual"
+    decision_ids = _safe_plan_ids(payload.get("decision_ids"))
+    if not decision_ids:
+        decision_id = str(payload.get("decision_id") or "").strip()
+        if decision_id:
+            decision_ids.append(decision_id)
+    if not decision_ids:
+        decision_ids = [str(r.get("id") or r.get("label") or r.get("title") or "").strip() for r in rows if str(r.get("id") or r.get("label") or r.get("title") or "").strip()]
+    status = "DRAFT"
+    if signal == "PLAN_APPROVE":
+        status = "APPROVED"
+    elif signal == "PLAN_REJECT":
+        status = "REJECTED"
+    elif signal in {"PLAN_ESCALATE", "PLAN_WITHDRAW"}:
+        status = "AWAIT_REVIEW"
+    elif signal == "PLAN_SUBMIT":
+        status = "AWAIT_REVIEW"
+    return DecisionBrainPlan.from_dict(
+        {
+            "plan_id": str(payload.get("plan_id") or f"plan_{int(datetime.now(timezone.utc).timestamp() * 1000)}"),
+            "anchor": anchor,
+            "batch_ids": _safe_plan_ids(payload.get("batch_ids") or payload.get("batch_id")),
+            "routing": effective_routing,
+            "creator": str(payload.get("creator") or "user").strip() or "user",
+            "status": status,
+            "impact_summary": _impact_summary(rows),
+            "residual_estimate": float(payload.get("residual_estimate") or 0.0),
+            "meta": {
+                "signal": signal,
+                "action": action,
+                "source": str(payload.get("source") or "oracle"),
+                "rows": len(rows),
+                "decision_ids": decision_ids,
+                "routing_reason": route.get("routing_reason"),
+                "routing_policy": route.get("routing_policy"),
+                "routing_features": route.get("routing_features"),
+            },
+            "session_id": session_id,
+        },
+        session_id=session_id,
+    )
+
+
+def _mark_plan_decisions(
+    pt: Dict[str, Any],
+    rows: List[Dict[str, Any]],
+    *,
+    status: str,
+    plan_id: str,
+) -> None:
+    row_ids = {str(r.get("id") or "").strip() for r in rows if str(r.get("id") or "").strip()}
+    if not row_ids:
+        return
+    for name in ("pending_decisions", "manual_decisions"):
+        section = pt.get(name)
+        if not isinstance(section, list):
+            continue
+        for row in section:
+            rid = str(row.get("id") or "").strip()
+            if rid and rid in row_ids:
+                row["status"] = status
+                row["plan_id"] = plan_id
+
+
+def _emit_decision_batch_cache(pt: Dict[str, Any]) -> None:
+    arbitration = {
+        "manual_decisions": [dict(x) for x in _pick_pending_decisions(pt)],
+        "auto_resolutions": [dict(x) for x in pt.get("auto_resolutions", []) if isinstance(x, dict)],
+        "llm_arbitration_context": [dict(x) for x in pt.get("llm_arbitration_context", []) if isinstance(x, dict)],
+    }
+    pt["decision_batches_cache"] = build_decision_batches(arbitration=arbitration).get("all", [])
+
+
+def _normalize_plan_signal(payload_signal: str, status: str) -> str:
+    direct = str(payload_signal or "").strip().upper()
+    if direct in {"PLAN_SUBMIT", "PLAN_APPROVE", "PLAN_REJECT", "PLAN_ESCALATE", "PLAN_WITHDRAW"}:
+        return direct
+    if direct == "ACTION_TAKEN":
+        if str(status or "").strip().upper() == "REJECTED":
+            return "PLAN_REJECT"
+        return "PLAN_APPROVE"
+    return "PLAN_SUBMIT"
 
 def _physical_void_stop_frame() -> Dict[str, Any]:
     """物理门控失败时唯一出帧：禁止 physics 快照与 LLM 抢跑。"""
@@ -800,162 +1161,304 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
     signal = str(payload.get("signal", "")).strip().upper()
     action = str(payload.get("action", "")).strip()
-    if signal not in {"ACTION_TAKEN", "INJECT_PATCH"} or not action:
+    raw_status = str(payload.get("status", "APPROVED")).strip().upper()
+    if signal in {"", "INJECT_PATCH"}:
+        signal = "PLAN_SUBMIT"
+    plan_signal = _normalize_plan_signal(signal, raw_status)
+    if plan_signal not in {"PLAN_SUBMIT", "PLAN_APPROVE", "PLAN_REJECT", "PLAN_ESCALATE", "PLAN_WITHDRAW"}:
         return JSONResponse({"ok": False, "detail": "invalid action signal"}, status_code=400)
     _ACTION_SEQ += 1
     session_id = str(payload.get("session_id", "")).strip() or "default"
     decision_id = str(payload.get("decision_id", "")).strip()
-    event = {"signal": signal, "action": action, "ts": datetime.now(timezone.utc).isoformat(), "seq": _ACTION_SEQ, "session_id": session_id}
+    plan_id = str(payload.get("plan_id", "")).strip()
+    event = {
+        "signal": signal,
+        "plan_signal": plan_signal,
+        "action": action,
+        "plan_id": plan_id,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "seq": _ACTION_SEQ,
+        "session_id": session_id,
+    }
     kernel_dispatch_ok = True
     kernel_dispatch_detail = ""
     # V17.45: 全域因果调度 (SRC_MANUAL)
-    if signal == "ACTION_TAKEN":
+    if plan_signal:
         from v17_rebirth.backend.logic.L1_atomic_ops.physics_kernel import PhysicsKernel
         try:
             current_physics = await get_state_backend().get_physics(session_id)
-            vote_status = str(payload.get("status", "APPROVED")).upper()  # 默认为 APPROVED (兼容旧版)
-            batch_decision_ids: list[str] = []
-            raw_batch_ids = payload.get("decision_ids")
-            if isinstance(raw_batch_ids, list):
-                for raw_id in raw_batch_ids:
-                    sid = str(raw_id or "").strip()
-                    if sid and sid not in batch_decision_ids:
-                        batch_decision_ids.append(sid)
+            if not isinstance(current_physics, dict):
+                current_physics = {}
+            resolved_plan = _find_plan_by_id(current_physics, plan_id) if plan_id else None
+            anchor = str(payload.get("anchor", "")).strip()
+            if not anchor:
+                anchor = str(resolved_plan.get("anchor") or "") if isinstance(resolved_plan, dict) else ""
+            batch_ids = _safe_plan_ids(payload.get("batch_ids") or payload.get("batch_id"))
+            decision_ids = _safe_plan_ids(payload.get("decision_ids"))
+            if (not batch_ids and not decision_ids) and resolved_plan:
+                resolved_plan_rows = _safe_plan_ids(resolved_plan.get("batch_ids"))
+                if resolved_plan_rows:
+                    batch_ids = resolved_plan_rows
+                else:
+                    decision_ids = _safe_plan_ids((resolved_plan.get("meta") or {}).get("decision_ids"))
+            if not decision_ids and decision_id:
+                decision_ids.append(decision_id)
 
-            matched_decisions: list[dict[str, Any]] = []
-            if isinstance(current_physics, dict):
-                pending = current_physics.get("pending_decisions")
-                if isinstance(pending, list):
-                    if batch_decision_ids:
-                        index: dict[str, dict[str, Any]] = {}
-                        label_index: dict[str, dict[str, Any]] = {}
-                        for item in pending:
-                            if not isinstance(item, dict):
-                                continue
-                            item_id = str(item.get("id", "")).strip()
-                            if item_id:
-                                index[item_id] = item
-                            item_label = str(item.get("label", "")).strip()
-                            if item_label:
-                                label_index[item_label] = item
-                        for item_id in batch_decision_ids:
-                            target = index.get(item_id)
-                            if target is None:
-                                target = label_index.get(item_id)
-                            if target is None:
-                                _log.warning("[V17-ACTION] batch id not found: %s", item_id)
-                                continue
-                            matched_decisions.append(target)
-                    else:
-                        for item in pending:
-                            if not isinstance(item, dict):
-                                continue
-                            item_id = str(item.get("id", "")).strip()
-                            item_label = str(item.get("label", "")).strip()
-                            if (decision_id and item_id == decision_id) or action == item_label:
-                                matched_decisions.append(item)
-                                break
-
+            matched_decisions = _resolve_batch_decisions(current_physics, batch_ids)
             if not matched_decisions:
-                # 兼容旧流程：无匹配决策时直接拒绝，避免空动作继续下沉。
+                if not decision_ids:
+                    # 兼容旧行为：ACTION_TAKEN 时如果只用 action 文案命中
+                    matched_decisions = _collect_matched_decisions(
+                        current_physics,
+                        decision_labels=[action] if action else [],
+                    )
+                else:
+                    matched_decisions = _collect_matched_decisions(current_physics, decision_ids=decision_ids)
+
+            if not action and matched_decisions:
+                sample = matched_decisions[0]
+                action = str(sample.get("label") or sample.get("title") or "").strip()
+
+            if not action:
+                if isinstance(resolved_plan, dict):
+                    action = str(
+                        ((resolved_plan.get("meta") or {}).get("action") or resolved_plan.get("anchor") or "").strip()
+                    ) or action
+                action = action or f"PLAN-{plan_signal}"
+            if _are_decisions_settled(matched_decisions) and plan_signal in {"PLAN_APPROVE", "PLAN_SUBMIT"}:
+                event["decision_count"] = 0
+                event["plan_status"] = (
+                    str((resolved_plan or {}).get("status") or "APPROVED") if resolved_plan else "APPROVED"
+                )
+                event["note"] = "decision set already settled; skip duplicate dispatch"
+                await get_state_backend().set_physics(session_id, current_physics)
+                await get_state_backend().publish_action(session_id, event)
+                return JSONResponse({"ok": True, "signal": "VOTE_IGNORED", "action": action, "detail": event["note"]})
+            if resolved_plan:
+                resolved_status = str((resolved_plan or {}).get("status", "")).strip().upper()
+                if _is_plan_terminal(resolved_status) and plan_signal in {
+                    "PLAN_APPROVE",
+                    "PLAN_REJECT",
+                    "PLAN_ESCALATE",
+                    "PLAN_WITHDRAW",
+                    "PLAN_SUBMIT",
+                }:
+                    event["plan_status"] = resolved_status
+                    event["note"] = "plan already terminal; duplicate ignored"
+                    await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse(
+                        {
+                            "ok": True,
+                            "signal": "VOTE_IGNORED",
+                            "action": action,
+                            "plan_id": str(plan_id),
+                            "detail": event["note"],
+                        }
+                    )
+            if not matched_decisions:
+                # 兼容旧流程：无匹配决策时直观触发叙事，不下发到物理层。
                 event["error"] = "decision_not_found"
                 await get_state_backend().set_physics(session_id, current_physics)
                 await get_state_backend().publish_action(session_id, event)
                 return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action})
 
-            # 批量裁决统一上链：每个决策独立落库与物理扰动
-            if vote_status == "REJECTED":
-                _log.info("[V17-TRIBUNAL] User REJECTED %d decision(s): %s", len(matched_decisions), action)
-                for matched_decision in matched_decisions:
-                    matched_decision["status"] = "REJECTED"
-                    evolution_storage.log_feedback(
-                        session_id=session_id,
-                        decision_id=str(matched_decision.get("id", "") or decision_id or action),
-                        action=action,
-                        status="REJECTED",
-                        meta={"trigger": "user_manual_reject", "batch": bool(batch_decision_ids)},
-                    )
-                await get_state_backend().set_physics(session_id, current_physics)
-                await get_state_backend().publish_action(session_id, event)
-                return JSONResponse(
-                    {"ok": True, "signal": "VOTE_REJECTED", "action": action, "decision_count": len(matched_decisions)}
-                )
+            for each in matched_decisions:
+                each.setdefault("id", str(each.get("label") or each.get("title") or action).strip())
 
-            # 逐条执行，避免单次事件失败污染全体
+            plan = _seed_plan_from_payload(
+                payload={**payload, "action": action, "anchor": anchor},
+                session_id=session_id,
+                rows=matched_decisions,
+                signal=plan_signal,
+            )
+            execute_as_plan_approve = plan_signal == "PLAN_SUBMIT" and str(plan.routing or "user").strip() == "system"
+            execution_signal = "PLAN_APPROVE" if execute_as_plan_approve else plan_signal
+            if execute_as_plan_approve:
+                event["auto_approved"] = True
+                event["routing"] = plan.routing
+                event["routing_reason"] = str(plan.meta.get("routing_reason") or "").strip() or None
+            decision_status = {
+                "PLAN_APPROVE": "APPROVED",
+                "PLAN_REJECT": "REJECTED",
+                "PLAN_ESCALATE": "AWAIT_REVIEW",
+                "PLAN_WITHDRAW": "REJECTED",
+                "PLAN_SUBMIT": "AWAIT_REVIEW" if not execute_as_plan_approve else "APPROVED",
+            }.get(plan_signal, "DRAFT")
+
             applied_ids: list[str] = []
-            for idx, matched_decision in enumerate(matched_decisions):
-                row_payload = dict(payload)
-                matched_label = str(matched_decision.get("label", "")).strip()
-                matched_title = str(matched_decision.get("title", "")).strip()
-                row_payload["action"] = matched_label or matched_title or action
-                row_payload.pop("decision_ids", None)
-                row_payload["decision_ids"] = [str(matched_decision.get("id", "")).strip()] if str(matched_decision.get("id", "")).strip() else []
+            if execution_signal == "PLAN_APPROVE":
+                # 逐条执行，避免单次事件失败污染全体。
+                for idx, matched_decision in enumerate(matched_decisions):
+                    row_payload = dict(payload)
+                    matched_label = str(matched_decision.get("label", "")).strip()
+                    matched_title = str(matched_decision.get("title", "")).strip()
+                    row_payload["action"] = matched_label or matched_title or action
+                    row_payload.pop("decision_ids", None)
+                    row_payload["decision_ids"] = [str(matched_decision.get("id", "")).strip()] if str(
+                        matched_decision.get("id", "")
+                    ).strip() else []
 
-                if isinstance(matched_decision.get("physical_impact"), dict):
-                    row_payload["physical_impact"] = dict(matched_decision.get("physical_impact"))
-                elif isinstance(payload.get("physical_impact"), dict):
-                    row_payload["physical_impact"] = dict(payload.get("physical_impact"))
-                else:
-                    row_payload["physical_impact"] = {}
+                    if isinstance(matched_decision.get("physical_impact"), dict):
+                        row_payload["physical_impact"] = dict(matched_decision.get("physical_impact"))
+                    elif isinstance(payload.get("physical_impact"), dict):
+                        row_payload["physical_impact"] = dict(payload.get("physical_impact"))
+                    else:
+                        row_payload["physical_impact"] = {}
 
-                final_target = str(row_payload.get("target_god", "")).strip()
-                if not final_target and isinstance(row_payload.get("physical_impact"), dict):
-                    final_target = str(row_payload["physical_impact"].get("target_god", "")).strip()
-                    if final_target:
-                        row_payload["target_god"] = final_target
-                if not final_target:
-                    final_target = resolve_target_god(
-                        row_target=row_payload.get("target_god"),
-                        impact=row_payload.get("physical_impact") if isinstance(row_payload.get("physical_impact"), dict) else {},
-                        title=row_payload.get("title") or row_payload.get("action"),
-                        label=matched_label,
-                        plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
-                        physics_tensor=current_physics if isinstance(current_physics, dict) else {},
+                    final_target = str(row_payload.get("target_god", "")).strip()
+                    if not final_target and isinstance(row_payload.get("physical_impact"), dict):
+                        final_target = str(row_payload["physical_impact"].get("target_god", "")).strip()
+                        if final_target:
+                            row_payload["target_god"] = final_target
+                    if not final_target:
+                        final_target = resolve_target_god(
+                            row_target=row_payload.get("target_god"),
+                            impact=row_payload.get("physical_impact") if isinstance(row_payload.get("physical_impact"), dict) else {},
+                            title=row_payload.get("title") or row_payload.get("action"),
+                            label=matched_label,
+                            plugin_id=matched_decision.get("plugin_id") if isinstance(matched_decision, dict) else "",
+                            physics_tensor=current_physics if isinstance(current_physics, dict) else {},
+                        )
+                        if final_target:
+                            row_payload["target_god"] = final_target
+
+                    if not final_target:
+                        _log.warning("[V17-ACTION] decision no target_god, skip kernel dispatch: %s", matched_label)
+                        matched_decision["status"] = "FAILED"
+                        continue
+
+                    matched_decision["status"] = "APPROVED"
+                    matched_decision["applied"] = True
+                    decision_id_val = str(matched_decision.get("id", "")).strip() or f"{action}_{idx}"
+                    applied_ids.append(decision_id_val)
+                    row_payload["decision_id"] = decision_id_val
+                    ok = await PhysicsKernel.dispatch_perturbation(
+                        session_id=session_id,
+                        source="SRC_MANUAL",
+                        payload={**row_payload, "reason": f"手动激活动作: {action}"},
+                        causality_id=f"plan_{plan.plan_id}_{_ACTION_SEQ}_{idx}_{decision_id_val}",
                     )
-                    if final_target:
-                        row_payload["target_god"] = final_target
+                    if not ok:
+                        kernel_dispatch_ok = False
+                        kernel_dispatch_detail = f"physics kernel rejected perturbation at index {idx}"
+                        matched_decision["status"] = "FAILED"
+                        _log.error(
+                            "[V17-ACTION-REJECTED] session=%s action=%s detail=%s",
+                            session_id,
+                            action,
+                            kernel_dispatch_detail,
+                        )
+                        break
+            else:
+                # 仅状态裁决，不触发物理扰动
+                for matched_decision in matched_decisions:
+                    matched_decision["status"] = decision_status
 
-                if not final_target:
-                    _log.warning("[V17-ACTION] decision no target_god, skip kernel dispatch: %s", matched_label)
-                    continue
-
-                matched_decision["status"] = vote_status
-                matched_decision["applied"] = True
-                applied_ids.append(str(matched_decision.get("id", "").strip() or str(action)))
-                row_payload["decision_id"] = str(matched_decision.get("id", "").strip())
-                ok = await PhysicsKernel.dispatch_perturbation(
-                    session_id=session_id,
-                    source="SRC_MANUAL",
-                    payload={**row_payload, "reason": f"手动激活动作: {action}"},
-                    causality_id=f"manual_batch_{_ACTION_SEQ}_{idx}_{final_target}",
-                )
-                if not ok:
-                    kernel_dispatch_ok = False
-                    kernel_dispatch_detail = f"physics kernel rejected perturbation at index {idx}"
-                    _log.error(
-                        "[V17-ACTION-REJECTED] session=%s action=%s detail=%s",
-                        session_id,
-                        action,
-                        kernel_dispatch_detail,
+            if execution_signal != "PLAN_APPROVE":
+                event["decision_count"] = len(matched_decisions)
+                _mark_plan_decisions(current_physics, matched_decisions, status=decision_status, plan_id=plan.plan_id)
+                if plan_signal == "PLAN_REJECT":
+                    for matched in matched_decisions:
+                        evolution_storage.log_feedback(
+                            session_id=session_id,
+                            decision_id=str(matched.get("id") or "").strip(),
+                            action=action,
+                            status="REJECTED",
+                            meta={"trigger": "user_manual_reject", "plan_id": plan.plan_id},
+                        )
+                    plan.transition("REJECTED")
+                    _write_plan_state(current_physics, plan=plan)
+                    _emit_decision_batch_cache(current_physics)
+                    await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse(
+                        {
+                            "ok": True,
+                            "signal": "VOTE_REJECTED",
+                            "action": action,
+                            "plan_id": plan.plan_id,
+                            "decision_count": len(matched_decisions),
+                        }
                     )
-                    break
+                if plan_signal == "PLAN_WITHDRAW":
+                    for matched in matched_decisions:
+                        evolution_storage.log_feedback(
+                            session_id=session_id,
+                            decision_id=str(matched.get("id") or "").strip(),
+                            action=action,
+                            status="REJECTED",
+                            meta={"trigger": "user_plan_withdraw", "plan_id": plan.plan_id},
+                        )
+                    plan.transition("REJECTED")
+                    _write_plan_state(current_physics, plan=plan)
+                    _emit_decision_batch_cache(current_physics)
+                    await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse(
+                        {
+                            "ok": True,
+                            "signal": "VOTE_WITHDRAWN",
+                            "action": action,
+                            "plan_id": plan.plan_id,
+                            "decision_count": len(matched_decisions),
+                        }
+                    )
+                if plan_signal in {"PLAN_SUBMIT", "PLAN_ESCALATE"}:
+                    plan.transition("AWAIT_REVIEW")
+                    _write_plan_state(current_physics, plan=plan)
+                    _emit_decision_batch_cache(current_physics)
+                    await get_state_backend().set_physics(session_id, current_physics)
+                    await get_state_backend().publish_action(session_id, event)
+                    return JSONResponse(
+                        {
+                            "ok": True,
+                            "signal": signal if signal == "PLAN_SUBMIT" else plan_signal,
+                            "action": action,
+                            "plan_id": plan.plan_id,
+                            "decision_count": len(matched_decisions),
+                        }
+                    )
 
-            if not applied_ids:
+            if execution_signal == "PLAN_APPROVE" and not applied_ids:
+                event["error"] = "no_physics_apply"
+                event["decision_count"] = len(matched_decisions)
+                plan.transition("FAILED")
+                _write_plan_state(current_physics, plan=plan)
+                _emit_decision_batch_cache(current_physics)
                 await get_state_backend().set_physics(session_id, current_physics)
                 await get_state_backend().publish_action(session_id, event)
-                return JSONResponse(
-                    {"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action, "decision_count": 0}
-                )
+                return JSONResponse({"ok": True, "signal": "NARRATIVE_TRIGGER", "action": action, "decision_count": 0})
 
-            await get_state_backend().set_physics(session_id, current_physics)
-            event["decision_count"] = len(applied_ids)
-        
+            if execution_signal == "PLAN_APPROVE":
+                if kernel_dispatch_ok:
+                    plan.transition("COMMITTED")
+                    event["decision_count"] = len(applied_ids)
+                else:
+                    plan.transition("FAILED")
+                    event["error"] = "physics kernel dispatch failed"
+                    event["detail"] = kernel_dispatch_detail or "physics kernel dispatch failed"
+                    event["decision_count"] = len(matched_decisions)
+
+                _write_plan_state(current_physics, plan=plan)
+                _emit_decision_batch_cache(current_physics)
+                await get_state_backend().set_physics(session_id, current_physics)
+                await get_state_backend().publish_action(session_id, event)
+                if not kernel_dispatch_ok:
+                    return JSONResponse(
+                        {"ok": False, "detail": kernel_dispatch_detail or "physics kernel dispatch failed", "signal": signal},
+                        status_code=500,
+                    )
         except Exception as e:
             kernel_dispatch_ok = False
             kernel_dispatch_detail = str(e)
             _log.error(f"[V17-KERNEL-DISPATCH-FAIL] {e}")
+            return JSONResponse(
+                {"ok": False, "detail": kernel_dispatch_detail or "physics action failed", "signal": signal},
+                status_code=500,
+            )
 
-    if signal == "ACTION_TAKEN" and not kernel_dispatch_ok:
+    if not kernel_dispatch_ok:
         return JSONResponse(
             {
                 "ok": False,
@@ -964,16 +1467,13 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
             },
             status_code=500,
         )
-
-    # 发布原始事件（用于 Narrator 重启等逻辑）
-    await get_state_backend().publish_action(session_id, event)
     
     # V17.99: 记录正反馈并捕获残差 (The Cerebrum)
-    if signal == "ACTION_TAKEN" and kernel_dispatch_ok:
+    if locals().get("execution_signal") == "PLAN_APPROVE" and kernel_dispatch_ok:
         try:
             residual = float(payload.get("residual", 0.0))
             decision_ids = payload.get("decision_ids")
-            id_lookup = {str(dec.get("id", "")).strip(): dec for dec in matched_decisions} if "matched_decisions" in locals() else {}
+            id_lookup = {str(dec.get("id", "")).strip(): dec for dec in locals().get("matched_decisions", []) if isinstance(dec, dict)}
             if isinstance(decision_ids, list) and decision_ids:
                 for each_id in decision_ids:
                     each_sid = str(each_id or "").strip()
@@ -1021,7 +1521,15 @@ async def v17_action(payload: Dict[str, Any], v17_origin: Optional[str] = Header
         except Exception as e:
             _log.error(f"[V17-EVOLUTION-LOG-FAIL] {e}")
 
-    return JSONResponse({"ok": True, "signal": signal, "will_proxy_delta": "aggressive" if any(k in action for k in ["进", "冲", "加码"]) else "stable"})
+    return JSONResponse(
+        {
+            "ok": True,
+            "signal": signal if signal != "PLAN_WITHDRAW" else plan_signal,
+            "plan_id": plan.plan_id if "plan" in locals() else None,
+            "plan_signal": plan_signal,
+            "will_proxy_delta": "aggressive" if any(k in action for k in ["进", "冲", "加码"]) else "stable",
+        }
+    )
 
 
 @router.post("/v17/freeze-report")

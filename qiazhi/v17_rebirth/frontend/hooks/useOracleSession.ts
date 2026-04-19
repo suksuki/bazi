@@ -20,6 +20,7 @@ export type Decision = {
   id?: string;
   label?: string;
   title?: string;
+  batch_id?: string;
   target_god?: string;
   exclusivity_key?: string;
   source_event?: string;
@@ -44,6 +45,18 @@ export type Decision = {
   };
 };
 
+type PlanActionInput = {
+  plan_id?: string;
+  anchor?: string;
+  routing?: string;
+  action?: string;
+  decision_ids?: string[];
+  batch_ids?: string[];
+  meta?: Record<string, unknown>;
+};
+
+type PlanActionStatus = "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW";
+
 export interface OracleSession {
   // --- stream frames ---
   frames: ReturnType<typeof useV17WebStream>["frames"];
@@ -63,6 +76,7 @@ export interface OracleSession {
   adoptedDecisions: Decision[];
   handleAdopted: (d: Decision & { status: "APPROVED" | "REJECTED" }) => Promise<void>;
   handleAdoptedBatch: (decisions: Decision[], status: "APPROVED" | "REJECTED") => Promise<void>;
+  handlePlanAction: (plan: PlanActionInput, status: PlanActionStatus) => Promise<void>;
   decisionInboxLocked: boolean;
   decisionInboxLockMessage: string;
 
@@ -418,7 +432,7 @@ export function useOracleSession(): OracleSession {
       const response = await fetch("/api/v17/action", {
         method: "POST",
         headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
-        body: JSON.stringify({
+      body: JSON.stringify({
           session_id: sessionId || "default",
           decision_ids: ids,
           status,
@@ -426,7 +440,8 @@ export function useOracleSession(): OracleSession {
           title,
           target_god: String(normalized[0]?.target_god || "").trim() || undefined,
           physical_impact: normalized[0]?.physical_impact || undefined,
-          signal: "ACTION_TAKEN",
+          signal: status === "APPROVED" ? "PLAN_APPROVE" : "PLAN_REJECT",
+          batch_ids: normalized[0]?.batch_id ? [normalized[0]?.batch_id] : undefined,
           v17_origin: "v17_rebirth",
         }),
       });
@@ -478,6 +493,85 @@ export function useOracleSession(): OracleSession {
     await handleAdoptedBatch([decision], decision.status || "APPROVED");
   }
 
+  async function handlePlanAction(plan: PlanActionInput, status: PlanActionStatus) {
+    const planId = String(plan.plan_id || "").trim();
+    const anchor = String(plan.anchor || "").trim();
+    const action = String(plan.action || anchor || String(plan.meta?.action || "").trim() || planId || "PLAN_ACTION").trim();
+    const batchIds = Array.isArray(plan.batch_ids)
+      ? plan.batch_ids.map((id) => String(id || "").trim()).filter(Boolean)
+      : [];
+    const decisionIds = Array.isArray(plan.decision_ids)
+      ? plan.decision_ids.map((id) => String(id || "").trim()).filter(Boolean)
+      : [];
+    if (!planId && !batchIds.length && !decisionIds.length) return;
+    if (decisionLockStartedAtMs != null) return;
+
+    setDecisionActionError("");
+    setDecisionLockStartedAtMs(Date.now());
+
+    try {
+      const signal =
+        status === "APPROVED"
+          ? "PLAN_APPROVE"
+          : status === "ESCALATE"
+            ? "PLAN_ESCALATE"
+            : status === "WITHDRAW"
+              ? "PLAN_WITHDRAW"
+              : "PLAN_REJECT";
+
+      const response = await fetch("/api/v17/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
+        body: JSON.stringify({
+          session_id: sessionId || "default",
+          plan_id: planId || undefined,
+          anchor: anchor || undefined,
+          status,
+          action,
+          signal,
+          batch_ids: batchIds.length ? batchIds : undefined,
+          decision_ids: decisionIds.length ? decisionIds : undefined,
+          v17_origin: "v17_rebirth",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.ok === false) {
+        const detail =
+          typeof payload?.detail === "string" && payload.detail.trim().length > 0
+            ? payload.detail.trim()
+            : "决策计划提交失败";
+        throw new Error(detail);
+      }
+    } catch (error) {
+      console.error("[V17-PLAN-ACTION-ERROR]", error);
+      setDecisionLockStartedAtMs(null);
+      setDecisionActionError("决策计划提交失败，已解除锁定，请稍后重试。");
+      return;
+    }
+
+    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
+    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+    setStreamBody((prevBody) => ({
+      ...(prevBody || {}),
+      v17_origin: "v17_rebirth",
+      session_id: sessionId || "default",
+      user_message: action,
+    }));
+    if (decisionIds.length) {
+      setAdoptedDecisions((prev) => {
+        const next = [...prev];
+        const idx = new Set(prev.map((item) => item.id).filter((value): value is string => Boolean(value)));
+        for (const id of decisionIds) {
+          if (idx.has(id)) continue;
+          next.push({ id, label: action, title: action });
+          idx.add(id);
+        }
+        return next;
+      });
+    }
+    setRunning(true);
+  }
+
   return {
     frames,
     sessionId,
@@ -490,6 +584,7 @@ export function useOracleSession(): OracleSession {
     adoptedDecisions,
     handleAdopted,
     handleAdoptedBatch,
+    handlePlanAction,
     decisionInboxLocked,
     decisionInboxLockMessage,
     traceOpen,

@@ -109,6 +109,20 @@ export type V17Frame = {
       knowledge_snapshot?: Record<string, unknown>;
       brain_action_queue?: Array<Record<string, unknown>>;
     };
+    decision_brain_state?: {
+      plan_queue?: Array<{
+        plan_id?: string;
+        anchor?: string;
+        status?: string;
+        routing?: string;
+        decision_ids?: string[];
+        impact_summary?: Record<string, number>;
+        meta?: Record<string, unknown>;
+        created_at?: string;
+        updated_at?: string;
+        batch_ids?: string[];
+      }>;
+    };
   };
 };
 

@@ -289,6 +289,7 @@ class VerdictOrchestrator:
                 "knowledge_snapshot": dict(((pt.get("meta") or {}).get("knowledge_snapshot") or {})),
                 "brain_action_queue": list(((pt.get("meta") or {}).get("brain_action_queue") or []))[:128],
             },
+            "decision_brain_state": dict((pt.get("decision_brain_state") or {})),
             "debug_trace": {
                 "hits": plugin_hits,
                 "facts": plugin_facts[:64],
