@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.plugins.spec import V17Fact
+from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence, is_pattern_family_plugin
 from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
 
 CLAIM_JSON_SCHEMA: Dict[str, Any] = {
@@ -125,6 +126,12 @@ def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | Non
     for idx, fact in enumerate(facts):
         meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
         plugin_id = str(fact.plugin_id or "").strip()
+        meta = derive_pattern_confidence(
+            plugin_id=plugin_id,
+            meta=meta,
+            priority=float(fact.priority or 0.5),
+            salience_weight=float(fact.salience_weight or 0.5),
+        )
         target_god = resolve_target_god(
             row_target=fact.target_god,
             impact=meta,
@@ -165,7 +172,11 @@ def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | Non
                 "arbiter_type": str(getattr(fact.suggested_arbiter, "value", fact.suggested_arbiter) or "system"),
                 "intent_vector": intent_vector,
                 "priority": float(fact.priority or 0.0),
-                "confidence": float(meta.get("confidence", fact.salience_weight or 0.5) or 0.5) * max(0.35, match_ratio),
+                "confidence": (
+                    float(meta.get("pattern_confidence", 0.0) or 0.0)
+                    if is_pattern_family_plugin(plugin_id, meta)
+                    else float(meta.get("confidence", fact.salience_weight or 0.5) or 0.5) * max(0.35, match_ratio)
+                ),
                 "match_ratio": match_ratio,
                 "origin_type": str(meta.get("origin_type") or "").strip(),
                 "origin_multiplier": float(meta.get("origin_multiplier", 1.0) or 1.0),

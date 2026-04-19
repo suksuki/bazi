@@ -27,8 +27,8 @@ def _run_case(label: str, raw: dict, orch: VerdictOrchestrator) -> None:
     sample_ids = [
         "l1.physics.op_branch_sanxing",
         "l1.physics.op_branch_liuchong",
-        "classical.pattern_detector.v2",
-        "classical.blind_school.v1",
+        "classical.pattern.axis.v1",
+        "classical.blind.work_axis.v1",
     ]
     order_snippet = {pid: order.get(pid) for pid in sample_ids if pid in order}
     print(f"--- {label} ---")

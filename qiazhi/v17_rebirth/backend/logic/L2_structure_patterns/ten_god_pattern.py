@@ -18,8 +18,8 @@ V17_SKILL_MANIFEST = {
     "Layer": "L2",
     "Skill_Type": "Pattern",
     "Domain": "Logic",
-    "Description": "在十神分布上给出主轴格局标签，作为叙事与决策的标题锚点。",
-    "Rationale": "格局为 L2 结构层总控，它决定了整个测算模型的叙事调性与优先级锚点。"
+    "Description": "在十神分布上给出主轴观察与家族混合摘要，不再输出旧式格局 headline。",
+    "Rationale": "十神主轴只负责结构观察，古典格局解释权统一交给 classical.pattern.* 链路。"
 }
 
 DECLARED_PARAMS = {
@@ -31,16 +31,16 @@ DECLARED_PARAMS = {
 
 
 PATTERN_FAMILY_MAP = {
-    "正官": "正官格",
-    "七杀": "正官格",
-    "食神": "食伤格",
-    "伤官": "食伤格",
-    "偏财": "财官兼重",
-    "正财": "财官兼重",
-    "正印": "印绶格",
-    "偏印": "印绶格",
-    "比肩": "比劫格",
-    "劫财": "比劫格",
+    "正官": "官杀主轴",
+    "七杀": "官杀主轴",
+    "食神": "食伤主轴",
+    "伤官": "食伤主轴",
+    "偏财": "财星主轴",
+    "正财": "财星主轴",
+    "正印": "印星主轴",
+    "偏印": "印星主轴",
+    "比肩": "比劫主轴",
+    "劫财": "比劫主轴",
 }
 
 
@@ -50,7 +50,7 @@ def _clamp01(value: float) -> float:
 
 def judge_ten_god_pattern(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> str:
     if not deity_scores:
-        return "未定格"
+        return "未定主轴"
     
     gt = float(cfg.get("GUAN_THRESHOLD", DECLARED_PARAMS["GUAN_THRESHOLD"]))
     st = float(cfg.get("SHI_SHANG_THRESHOLD", DECLARED_PARAMS["SHI_SHANG_THRESHOLD"]))
@@ -59,12 +59,12 @@ def judge_ten_god_pattern(deity_scores: Dict[str, float], cfg: Dict[str, Any] = 
     top = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
     name, score = top[0]
     if name == "正官" and score >= gt:
-        return "正官格势强"
+        return "官杀主轴"
     if name in {"食神", "伤官"} and score >= st:
-        return "食伤外放格"
+        return "食伤主轴"
     if name in {"偏财", "正财"} and score >= ct:
-        return "财星主导格"
-    return f"{name}主轴格"
+        return "财星主轴"
+    return PATTERN_FAMILY_MAP.get(name, f"{name}主轴")
 
 
 def _build_pattern_profile(
@@ -104,17 +104,17 @@ def _build_pattern_profile(
 
 def _format_pattern_profile_text(profile: List[Dict[str, Any]], primary: str) -> str:
     if not profile:
-        return f"十神格局暂定：{primary}，更像未定格。"
+        return f"十神主轴暂定：{primary}，当前更适合作为结构观察。"
     compact = " / ".join(f"{item['family']} {int(item['percent']) if item['percent'].is_integer() else item['percent']}%" for item in profile)
     if len(profile) == 1:
-        return f"十神格局表述：{compact}，兼具{primary}结构。"
-    return f"十神格局表述：{compact}；兼取{primary}为主向。"
+        return f"十神主轴表述：{compact}，当前以{primary}为中心。"
+    return f"十神主轴表述：{compact}；当前以{primary}为主向。"
 
 
 def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> List[dict]:
     prio = float(cfg.get("PATTERN_PRIORITY", DECLARED_PARAMS["PATTERN_PRIORITY"]))
     pattern = judge_ten_god_pattern(deity_scores, cfg)
-    if pattern == "未定格":
+    if pattern == "未定主轴":
         return []
     top = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
     target_god = str(top[0][0]) if top else ""

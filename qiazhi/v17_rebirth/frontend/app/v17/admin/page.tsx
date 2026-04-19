@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { V17_ClassicalPatternAtlas } from "@/components/V17_ClassicalPatternAtlas";
 
 type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution";
 
@@ -744,6 +745,10 @@ export default function V17AdminPage() {
   const visiblePluginRows = pluginPanelRows.filter((row) =>
     pluginPolicyFilter === "warn" ? row.plugin.policy_valid === false : true,
   );
+  const l2PatternRows = visiblePluginRows.filter((row) => {
+    const pluginId = String(row.plugin.plugin_id || "").trim();
+    return row.plugin.causal_tier === 3 && (pluginId.startsWith("classical.pattern.") || pluginId === "ten_god_pattern");
+  });
   const scannedPluginCount = visiblePluginRows.length;
   const hitPluginRows = visiblePluginRows.filter((row) => {
     const factCount = Number(row.runtime?.fact_count || 0);
@@ -1171,6 +1176,22 @@ export default function V17AdminPage() {
                      ))}
                    </div>
                  </div>
+               </div>
+               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-3">
+                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                   <div>
+                     <h3 className="text-sm font-semibold text-zinc-100">L2 Classical Pattern System</h3>
+                     <p className="mt-1 text-[11px] text-zinc-500">古典格局全集目录应归属于 admin 插件页中的 L2 结构层，而不是 Oracle 主页面。</p>
+                   </div>
+                   <div className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] text-cyan-200">
+                     L2 插件 {l2PatternRows.length}
+                   </div>
+                 </div>
+                 <V17_ClassicalPatternAtlas
+                   title="L2 Classical Pattern Atlas"
+                   subtitle="L2 古典格局全集目录、定义条件与系统挂接状态"
+                   compact
+                 />
                </div>
                <div className="space-y-2">
                   {visiblePluginRows.map(({ plugin: p, runtime, relatedClaims, relatedConflicts }) => {

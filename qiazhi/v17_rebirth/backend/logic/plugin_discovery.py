@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
 from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
+from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence
 from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
@@ -51,7 +52,7 @@ def infer_salience_weight(
     tier1_hits = ("十神", "偏强", "偏枯", "五行", "强度", "天医", "将星", "神煞")
     tier3_hits = ("纳音", "空亡")
 
-    if any(k in text for k in tier0_hits) or pid in {"ten_god_pattern", "three_harmony", "l1.physics.op_branch_liuchong", "classical.pattern_detector.v2"}:
+    if any(k in text for k in tier0_hits) or pid in {"ten_god_pattern", "three_harmony", "l1.physics.op_branch_liuchong"}:
         return round(max(0.95, 0.95 + pr * 0.04), 4)
     if any(k in text for k in tier3_hits) or pid in {"kong_wang"}:
         return round(min(0.39, 0.18 + pr * 0.18), 4)
@@ -96,9 +97,26 @@ def rows_dict_to_v17_facts(
         # V17.99: 必须保留插件原生的 meta (如 target_god, impact_ratio 等)
         original_meta = row.get("meta") if isinstance(row.get("meta"), dict) else {}
         meta: Dict[str, Any] = {**original_meta}
+        meta = derive_pattern_confidence(
+            plugin_id=str(row.get("plugin", default_plugin_id)),
+            meta=meta,
+            priority=float(row.get("priority", 0.5) or 0.5),
+            salience_weight=infer_salience_weight(
+                plugin_id=str(row.get("plugin", default_plugin_id)),
+                fact_text=text,
+                causal_tier=int(causal_tier),
+                priority=float(row.get("priority", 0.5) or 0.5),
+            ),
+        )
         
         if tension > 0.0:
             meta["physics_tension"] = tension
+        salience_weight = infer_salience_weight(
+            plugin_id=str(row.get("plugin", default_plugin_id)),
+            fact_text=text,
+            causal_tier=int(causal_tier),
+            priority=float(row.get("priority", 0.5) or 0.5),
+        )
         decision_hint = str(
             row.get("decision_hint")
             or row.get("label")
@@ -114,12 +132,7 @@ def rows_dict_to_v17_facts(
                 plugin_id=str(row.get("plugin", default_plugin_id)),
                 text=text,
                 causal_tier=int(causal_tier),
-                salience_weight=infer_salience_weight(
-                    plugin_id=str(row.get("plugin", default_plugin_id)),
-                    fact_text=text,
-                    causal_tier=int(causal_tier),
-                    priority=float(row.get("priority", 0.5) or 0.5),
-                ),
+                salience_weight=salience_weight,
                 priority=float(row.get("priority", 0.5) or 0.5),
                 decision_hint=decision_hint,
                 meta=meta,

@@ -21,6 +21,7 @@ export type Decision = {
   label?: string;
   title?: string;
   batch_id?: string;
+  match_ratio?: number;
   target_god?: string;
   exclusivity_key?: string;
   source_event?: string;
@@ -36,6 +37,21 @@ export type Decision = {
   llm_resolution_state?: string;
   llm_terminal_state?: string;
   arbitration_mode?: "manual" | "system" | "llm" | string;
+  pattern_name?: string;
+  pattern_candidate?: string;
+  pattern_scope?: string;
+  pattern_scope_label?: string;
+  pattern_mix_mode?: string;
+  pattern_confidence?: number;
+  pattern_confidence_percent?: number;
+  pattern_confidence_label?: string;
+  pattern_profile?: Array<{
+    family?: string;
+    gods?: string[];
+    score?: number;
+    share?: number;
+    percent?: number;
+  }>;
   physical_impact?: {
     target_god?: string;
     impact_ratio?: number;

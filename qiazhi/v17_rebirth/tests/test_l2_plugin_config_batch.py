@@ -50,7 +50,7 @@ def test_ten_god_pattern_respects_thresholds_and_priority(monkeypatch: pytest.Mo
     )
 
     assert len(facts) == 1
-    assert "食伤外放格" in facts[0].text
+    assert "食伤主轴" in facts[0].text
     assert facts[0].priority == 0.88
 
 
@@ -78,8 +78,8 @@ def test_ten_god_pattern_reports_mixed_profile(monkeypatch: pytest.MonkeyPatch) 
     profile = facts[0].meta.get("pattern_profile")
     assert isinstance(profile, list) and len(profile) >= 2
     families = [str(item.get("family") or "") for item in profile]
-    assert "食伤格" in families
-    assert "正官格" in families
+    assert "食伤主轴" in families
+    assert "官杀主轴" in families
     assert facts[0].meta.get("pattern_mix_mode") == "soft_mix"
     assert float(facts[0].meta.get("dominant_ratio", 0.0) or 0.0) > 1.0
 

@@ -24,6 +24,33 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "classical.pattern.jianlu_yuejie.v1" in plugin_ids
     assert "classical.pattern.congshi.v1" in plugin_ids
     assert "classical.pattern.finance_officer.v1" in plugin_ids
+    assert "classical.pattern.wealth_star.v1" in plugin_ids
+    assert "classical.pattern.seal_star.v1" in plugin_ids
+    assert "classical.pattern.yangren.v1" in plugin_ids
+    assert "classical.pattern.guanyin.v1" in plugin_ids
+    assert "classical.pattern.shayin.v1" in plugin_ids
+    assert "classical.pattern.shishen_zhisha.v1" in plugin_ids
+    assert "classical.pattern.shangguan_peiyin.v1" in plugin_ids
+    assert "classical.pattern.shishen_shengcai.v1" in plugin_ids
+    assert "classical.pattern.shangguan_shengcai.v1" in plugin_ids
+    assert "classical.pattern.yangren_jiasha.v1" in plugin_ids
+    assert "classical.pattern.zaqi_caiguan.v1" in plugin_ids
+    assert "classical.pattern.zaqi_yin.v1" in plugin_ids
+    assert "classical.pattern.zaqi_qisha.v1" in plugin_ids
+    assert "classical.pattern.congcai.v1" in plugin_ids
+    assert "classical.pattern.congsha.v1" in plugin_ids
+    assert "classical.pattern.conger.v1" in plugin_ids
+    assert "classical.pattern.congwang.v1" in plugin_ids
+    assert "classical.pattern.congqiang.v1" in plugin_ids
+    assert "classical.pattern.congruo.v1" in plugin_ids
+    assert "classical.pattern.huaqi.v1" in plugin_ids
+    assert "classical.pattern.quzhi.v1" in plugin_ids
+    assert "classical.pattern.yanshang.v1" in plugin_ids
+    assert "classical.pattern.jiase.v1" in plugin_ids
+    assert "classical.pattern.congge.v1" in plugin_ids
+    assert "classical.pattern.runxia.v1" in plugin_ids
+    assert "classical.pattern.liangshen.v1" in plugin_ids
+    assert "classical.pattern.tianyuan.v1" in plugin_ids
     assert "classical.pattern.resolver.v1" in plugin_ids
     assert "classical.pattern.formation_gate.v1" in plugin_ids
     assert "classical.pattern.break_guard.v1" in plugin_ids
@@ -75,7 +102,6 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
                 "sanxing": [],
             },
             "blind_work_hint": "冲中起事",
-            "hit_pattern_name": "食伤外放格",
         },
     }
 
@@ -119,6 +145,92 @@ def test_pattern_resolver_emits_on_multiple_pattern_candidates() -> None:
     resolver_facts = [f for f in facts if str(f.plugin_id or "") == "classical.pattern.resolver.v1"]
     assert resolver_facts
     assert resolver_facts[0].meta.get("pattern_candidate_count", 0) >= 2
+
+
+def test_advanced_classical_patterns_emit_on_specialized_tensor() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "甲寅",
+            "month": "甲卯",
+            "day": "甲寅",
+            "hour": "乙卯",
+        },
+        "ten_gods_runtime": {
+            "比肩": 72.0,
+            "劫财": 40.0,
+            "食神": 8.0,
+            "伤官": 6.0,
+            "正财": 5.0,
+            "偏财": 4.0,
+            "正官": 3.0,
+            "七杀": 2.0,
+            "正印": 12.0,
+            "偏印": 10.0,
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    fact_plugins = {str(f.plugin_id or "") for f in facts}
+
+    assert "classical.pattern.congwang.v1" in fact_plugins
+    assert "classical.pattern.congqiang.v1" in fact_plugins
+    assert "classical.pattern.liangshen.v1" in fact_plugins
+
+
+def test_huaqi_and_tianyuan_emit_on_pure_alignment_tensor() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "甲寅",
+            "month": "己未",
+            "day": "甲寅",
+            "hour": "己未",
+        },
+        "ten_gods_runtime": {
+            "比肩": 36.0,
+            "劫财": 18.0,
+            "正财": 24.0,
+            "偏财": 20.0,
+            "正官": 4.0,
+            "七杀": 3.0,
+            "食神": 8.0,
+            "伤官": 7.0,
+            "正印": 6.0,
+            "偏印": 5.0,
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    fact_plugins = {str(f.plugin_id or "") for f in facts}
+
+    assert "classical.pattern.huaqi.v1" in fact_plugins
+
+
+def test_tianyuan_emits_on_repeated_stem_tensor() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "甲寅",
+            "month": "甲寅",
+            "day": "甲寅",
+            "hour": "甲寅",
+        },
+        "ten_gods_runtime": {
+            "比肩": 50.0,
+            "劫财": 22.0,
+            "正印": 14.0,
+            "偏印": 10.0,
+            "食神": 6.0,
+            "伤官": 5.0,
+            "正财": 8.0,
+            "偏财": 6.0,
+            "正官": 2.0,
+            "七杀": 1.0,
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    fact_plugins = {str(f.plugin_id or "") for f in facts}
+
+    assert "classical.pattern.tianyuan.v1" in fact_plugins
 
 
 def test_pattern_gate_and_break_emit_when_conditions_match() -> None:

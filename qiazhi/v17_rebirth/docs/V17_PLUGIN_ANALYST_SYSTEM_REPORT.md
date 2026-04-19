@@ -196,8 +196,6 @@ L1 Runtime = Old Runtime × (1 + next proposal ...)
 
 | plugin_id | 类 | 文件 | priority | 说明 |
 | --- | --- | --- | ---: | --- |
-| `sys.core.physics` | `SysCorePhysicsStub` | `registry_parity_l0.py` | 0.996 | 核心物理基线显影 |
-| `base.chronos` | `BaseChronosStub` | `registry_parity_l0.py` | 0.94 | 时间基线显影 |
 | `l0.foundation.month_command.v1` | `MonthCommandFoundationPlugin` | `foundation_projection.py` | 0.72 | 月令主气可见化 |
 | `l1.physics.op_status` | `ChangSheng12Plugin` | `chang_sheng_12.py` | 0.72 | 十二长生状态 / 抗性 |
 | `l0.foundation.rooted_stems.v1` | `RootedStemsFoundationPlugin` | `foundation_projection.py` | 0.67 | 通根可见化 |
@@ -234,13 +232,9 @@ L1 Runtime = Old Runtime × (1 + next proposal ...)
 
 | plugin_id | 类 | 文件 | priority | 类型 |
 | --- | --- | --- | ---: | --- |
-| `classical.climate_adjuster.v1` | `ClimateAdjusterStub` | `registry_parity_l2.py` | 0.88 | 调候 |
-| `classical.conflict_auditor.v1` | `ConflictAuditorStub` | `registry_parity_l2.py` | 0.87 | 冲突审计 |
 | `l1.physics.op_branch_sanxing` | `TripleBranchPenaltyPlugin` | `triple_branch_penalty.py` | 0.85 | 三刑 |
-| `classical.pattern_detector.v2` | `PatternDetectorV2` | `registry_parity_l2.py` | 0.84 | 旧格局显影 |
 | `classical.ziping.month_command.v1` | `ZiPingMonthCommandPlugin` | `ziping_family.py` | 0.83 | 子平月令法 |
 | `classical.ziping.balance.v1` | `ZiPingBalancePlugin` | `ziping_family.py` | 0.82 | 子平旺衰平衡 |
-| `classical.blind_school.v1` | `BlindSchoolV1` | `registry_parity_l2.py` | 0.81 | 旧盲派显影 |
 | `classical.pattern.resolver.v1` | `PatternResolverPlugin` | `pattern_specializations.py` | 0.81 | 格局冲突裁决 |
 | `classical.pattern.formation_gate.v1` | `PatternFormationGatePlugin` | `pattern_specializations.py` | 0.80 | 成格条件 |
 | `classical.ziping.yongshen.v1` | `ZiPingYongShenPlugin` | `ziping_family.py` | 0.80 | 子平用神建议 |
@@ -262,9 +256,21 @@ L1 Runtime = Old Runtime × (1 + next proposal ...)
 
 | plugin_id | 类 | 文件 | priority | 类型 |
 | --- | --- | --- | ---: | --- |
-| `modern.will_proxy.v1` | `WillProxyV1Stub` | `registry_parity_l3.py` | 0.94 | 现代意图代理 |
-| `modern.wealth_risk.v1` | `WealthRiskV1Stub` | `registry_parity_l3.py` | 0.56 | 现代财富风险 |
 | `l2.risk.risk_matrix` | `RiskMatrixPlugin` | `risk_matrix.py` | - | 羊刃/枭神/官伤风险矩阵 |
+
+### 4.5 已废弃并移除的兼容壳插件
+
+以下插件曾用于旧 registry 兼容或过渡展示，现已从自动发现链与 admin 页面彻底移除：
+
+- `sys.core.physics`
+- `base.chronos`
+- `classical.climate_adjuster.v1`
+- `classical.conflict_auditor.v1`
+- `classical.pattern_detector.v2`
+- `classical.blind_school.v1`
+- `classical.wangshuai.v1`
+- `modern.will_proxy.v1`
+- `modern.wealth_risk.v1`
 
 ---
 
@@ -632,7 +638,7 @@ L1 Runtime = Old Runtime × (1 + next proposal)
 
 - `pattern_specializations.py`
 - `ten_god_pattern.py`
-- `registry_parity_l2.py` 中的 `pattern_detector.v2`
+- 旧 `registry_parity_l2.py / pattern_detector.v2` 已废弃并删除
 
 当前已形成四层：
 

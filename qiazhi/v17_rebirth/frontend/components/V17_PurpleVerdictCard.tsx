@@ -11,7 +11,6 @@ type EvolutionFrame = {
   payload?: {
     snapshot_kind?: string;
     render_text?: string;
-    pattern?: string;
     ten_gods_base_l0?: Record<string, number>;
     ten_gods_runtime?: Record<string, number>;
     ten_gods_narrative?: Record<string, number>;
@@ -158,7 +157,6 @@ export function V17_PurpleVerdictCard({
   const reasonFacts = (physicsSnapshot?.payload?.debug_trace?.facts || []).filter(
     (x) => String(x || "").trim().length > 0,
   );
-  const snapPattern = String(physicsSnapshot?.payload?.pattern || "").trim();
 
   return (
     <motion.div 
@@ -267,14 +265,9 @@ export function V17_PurpleVerdictCard({
       </div>
       {reasonOpen ? (
         <div className="relative z-20 mt-3 max-h-48 overflow-auto rounded-lg border border-violet-500/30 bg-zinc-950/90 p-2 text-left">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">理 · 格局与因果碎屑</p>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">理 · 因果碎屑</p>
           {llmAuditSnap ? (
             <p className="mb-2 text-[11px] text-emerald-200/90">引擎正在思考以下事实…（Prompt 已由 SNAPSHOT 审计帧解锁）</p>
-          ) : null}
-          {snapPattern ? (
-            <p className="mb-2 text-[11px] text-zinc-300">
-              格局：<span className="text-amber-200/90">{snapPattern}</span>
-            </p>
           ) : null}
           {reasonFacts.length ? (
             <ul className="space-y-1 text-[11px] leading-snug text-zinc-200">

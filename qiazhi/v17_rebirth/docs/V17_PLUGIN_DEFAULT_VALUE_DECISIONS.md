@@ -168,12 +168,6 @@
 | `TRANSFORM_EFFICIENCY` | 0.85 | `modern_convention + engineering_proxy` | `keep` | 天干五合化气成立需环境支持，0.85 表示“高转化但非满额”很合适。 |
 | `STUCK_DAMPING` | 0.35 | `modern_convention + engineering_proxy` | `keep` | 合而不化应表现为牵绊与阻尼，35% 的削减较稳。 |
 
-### `classical.wangshuai.v1`
-
-| 参数 | 默认值 | 来源层级 | 裁定 | 理由 |
-| --- | ---: | --- | --- | --- |
-| `WANGSHUAI_PRIORITY` | 0.88 | `classical_rule + engineering_proxy` | `keep` | 旺衰判断在传统体系中地位很高，0.88 作为高背景优先级合理。 |
-
 ### `l1.physics.op_branch_sanxing`
 
 | 参数 | 默认值 | 来源层级 | 裁定 | 理由 |
@@ -209,7 +203,6 @@
 - `l1.physics.op_branch_liupo`
 - `l1.physics.op_branch_liuhai`
 - `l1.physics.op_stem_fusion`
-- `classical.wangshuai.v1`
 - `l1.physics.full_bandwidth`
 - `narrative_clip`
 

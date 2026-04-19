@@ -24,12 +24,11 @@
 - [x] `l1.physics.op_branch_muku`
 - [x] `l1.physics.op_stem_fusion`
 
-### 子平/旺衰插件家族
+### 子平插件家族
 
 - [x] `classical.ziping.month_command.v1`
 - [x] `classical.ziping.balance.v1`
 - [x] `classical.ziping.yongshen.v1`
-- [x] `classical.wangshuai.v1`
 
 ### 格局插件家族
 
@@ -49,7 +48,6 @@
 - [x] `classical.blind.symbol_trigger.v1`
 - [x] `classical.blind.timing_window.v1`
 - [x] `classical.blind.summary.v1`
-- [x] `classical.blind_school.v1`
 
 ### 风险 / 冲突插件家族
 
@@ -57,8 +55,6 @@
 - [x] `officer_see_hurt`
 - [x] `kong_wang`
 - [x] `shensha`
-- [x] `classical.conflict_auditor.v1`
-- [x] `classical.climate_adjuster.v1`
 
 ## 能力级验收
 
@@ -88,3 +84,4 @@
 ## 后续深化，但不阻塞本轮验收
 
 - [ ] 盲派可继续增加更细的专项断口，但当前“做功 / 应期 / 象法 / 收束”链已齐备
+- [ ] 已废弃兼容壳插件的文档与历史报告继续逐步清理

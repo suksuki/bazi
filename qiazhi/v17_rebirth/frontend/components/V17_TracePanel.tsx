@@ -65,7 +65,6 @@ interface TracePanelProps {
         }>
       >;
       flow_topology?: Array<{ from_el: string; to_el: string; current: number; rel: string; resistance?: number; stress?: number }>;
-      pattern?: string;
       physics_tension?: number;
       four_pillars?: Record<string, unknown>;
       luck_pillar?: unknown;
@@ -423,7 +422,6 @@ export function V17_TracePanel({
       <div className="space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <p className="text-[11px] text-cyan-300">八字元数据</p>
         <div className="space-y-1 text-[11px] text-zinc-200">
-          <p>格局：{String(physicsSnapshot?.payload?.pattern || "—")}</p>
           <p>张力：{Number(physicsSnapshot?.payload?.physics_tension || 0).toFixed(2)}</p>
           <p>六柱：{pillarText || "—"}</p>
           <p>

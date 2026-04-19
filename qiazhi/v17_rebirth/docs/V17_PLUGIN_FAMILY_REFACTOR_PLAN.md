@@ -15,23 +15,30 @@
 
 ## 当前缺口
 
-### 1. 盲派只有单一占位插件
+### 1. 盲派曾经只有单一占位插件
 
-当前只有：
+已废弃：
 
 - `classical.blind_school.v1`
 
-问题：
+现状：
 
-- 只是 `meta.blind_work_hint` 的显影器
-- 不是盲派插件族
+- 已由 `classical.blind.work_axis.v1`
+- `classical.blind.response_chain.v1`
+- `classical.blind.symbol_trigger.v1`
+- `classical.blind.timing_window.v1`
+- `classical.blind.summary.v1`
+
+完整接管。
 
 ### 2. 子平/旺衰派只有底层计算，没有完整专题
 
 当前已有：
 
 - L0 `ten_gods_engine` 里的月令、通根、透干、藏干、盖头、截脚
-- `classical.wangshuai.v1` 占位插件
+- `classical.ziping.month_command.v1`
+- `classical.ziping.balance.v1`
+- `classical.ziping.yongshen.v1`
 
 问题：
 
@@ -42,12 +49,18 @@
 当前已有：
 
 - `ten_god_pattern`
-- `classical.pattern_detector.v2`
+- `classical.pattern.axis.v1`
+- `classical.pattern.jianlu_yuejie.v1`
+- `classical.pattern.congshi.v1`
+- `classical.pattern.finance_officer.v1`
+- `classical.pattern.resolver.v1`
+- `classical.pattern.formation_gate.v1`
+- `classical.pattern.break_guard.v1`
 
 问题：
 
-- 只够做标题锚点
-- 还没有格局专题
+- 早期旧 headline 插件 `classical.pattern_detector.v2` 已废弃
+- 现在已进入候选、裁决、成格、破格四层
 
 ### 4. 合化类缺少“成立条件专题”
 
@@ -124,12 +137,11 @@
 - 只负责结构关系与相对位移
 - 不直接决定最终叙事
 
-### C. 子平/旺衰插件家族
+### C. 子平插件家族
 
 - `classical.ziping.month_command.v1`
 - `classical.ziping.balance.v1`
 - `classical.ziping.yongshen.v1`
-- `classical.wangshuai.v1`
 
 职责：
 
@@ -142,7 +154,10 @@
 - `classical.pattern.jianlu_yuejie.v1`
 - `classical.pattern.congshi.v1`
 - `classical.pattern.finance_officer.v1`
-- `classical.pattern_detector.v2`
+- `classical.pattern.dynamic_scope.v1`
+- `classical.pattern.resolver.v1`
+- `classical.pattern.formation_gate.v1`
+- `classical.pattern.break_guard.v1`
 
 职责：
 
@@ -153,7 +168,8 @@
 - `classical.blind.work_axis.v1`
 - `classical.blind.response_chain.v1`
 - `classical.blind.symbol_trigger.v1`
-- `classical.blind_school.v1`
+- `classical.blind.timing_window.v1`
+- `classical.blind.summary.v1`
 
 职责：
 
@@ -165,7 +181,8 @@
 - `officer_see_hurt`
 - `kong_wang`
 - `shensha`
-- `classical.conflict_auditor.v1`
+- `classical.pattern.resolver.v1`
+- `classical.pattern.break_guard.v1`
 
 职责：
 

@@ -211,6 +211,42 @@ function decisionFocusPreview(decision: Decision): string {
   return `主落点 ${target}${share > 0 ? ` · 占比 ${Math.round(share * 100)}%` : ""}${projectionText ? ` · ${projectionText}` : ""}`;
 }
 
+function patternProfileSummary(decision: Decision): string {
+  const profile = Array.isArray(decision.pattern_profile) ? decision.pattern_profile : [];
+  if (!profile.length) {
+    const candidate = String(decision.pattern_candidate || decision.pattern_name || "").trim();
+    const scope = String(decision.pattern_scope_label || "").trim();
+    return [candidate, scope].filter(Boolean).join(" · ");
+  }
+  return profile
+    .slice(0, 3)
+    .map((item) => {
+      const family = String(item?.family || "").trim();
+      const percent = Number(item?.percent || 0);
+      if (!family) return "";
+      return `${family} ${Number.isFinite(percent) && percent > 0 ? `${Math.round(percent)}%` : ""}`.trim();
+    })
+    .filter(Boolean)
+    .join(" / ");
+}
+
+function patternConfidenceTone(score: number): string {
+  if (score >= 0.82) return "border-emerald-500/25 bg-emerald-950/35 text-emerald-100";
+  if (score >= 0.64) return "border-cyan-500/25 bg-cyan-950/35 text-cyan-100";
+  if (score >= 0.48) return "border-amber-500/25 bg-amber-950/35 text-amber-100";
+  return "border-zinc-500/20 bg-zinc-900/70 text-zinc-300";
+}
+
+function patternConfidenceChip(decision: Decision): { label: string; className: string } | null {
+  const score = Number(decision.pattern_confidence ?? NaN);
+  if (!Number.isFinite(score) || score <= 0) return null;
+  const label = String(decision.pattern_confidence_label || "格局置信").trim();
+  return {
+    label: `${label} ${Math.round(score * 100)}%`,
+    className: patternConfidenceTone(score),
+  };
+}
+
 function llmPolicyLabel(policy: string | undefined): string {
   if (policy === "auto_apply") return "可自动裁决";
   if (policy === "suggest_only") return "仅给建议";
@@ -1495,6 +1531,9 @@ export function V17_DecisionInbox({
                       <p className="text-[10px] leading-relaxed break-words text-zinc-500">
                         {bucketReason("manual", sampleDecision)}
                       </p>
+                      {patternProfileSummary(sampleDecision) ? (
+                        <p className="mt-1 break-words text-[10px] text-cyan-100/90">{patternProfileSummary(sampleDecision)}</p>
+                      ) : null}
                       {routingRationale("manual", sampleDecision).length ? (
                         <p className="mt-1 break-words text-[9px] text-zinc-500">
                           {compactRoutingLines(routingRationale("manual", sampleDecision))}
@@ -1502,6 +1541,11 @@ export function V17_DecisionInbox({
                       ) : null}
 
                       <div className="mt-2 flex flex-wrap gap-1 opacity-80">
+                        {patternConfidenceChip(sampleDecision) ? (
+                          <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${patternConfidenceChip(sampleDecision)?.className}`}>
+                            {patternConfidenceChip(sampleDecision)?.label}
+                          </span>
+                        ) : null}
                         {decisionReasonTags("manual", sampleDecision).map((tag) => (
                           <span key={tag} className="rounded-full border border-violet-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[8px] text-zinc-400">
                             {tag}
@@ -1559,6 +1603,16 @@ export function V17_DecisionInbox({
                                 </button>
                               </div>
                             </div>
+                            {patternProfileSummary(d) ? (
+                              <p className="mt-1 break-words text-[9px] text-cyan-100/85">{patternProfileSummary(d)}</p>
+                            ) : null}
+                            {patternConfidenceChip(d) ? (
+                              <div className="mt-1">
+                                <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${patternConfidenceChip(d)?.className}`}>
+                                  {patternConfidenceChip(d)?.label}
+                                </span>
+                              </div>
+                            ) : null}
                             {decisionFocusPreview(d) ? (
                               <p className="mt-1 break-words text-[9px] text-fuchsia-200/80">{decisionFocusPreview(d)}</p>
                             ) : null}
@@ -1626,9 +1680,12 @@ export function V17_DecisionInbox({
                         目标 {group.target} · 来源 {sourceText} · 批次 {group.decision_count}
                         {group.net_impact_ratio ? ` · 位移 ${Math.abs(ratio) * 100 > 1000 ? ">=1000" : `${(Math.abs(ratio) * 100).toFixed(1)}%`}` : ""}
                       </p>
-                      <p className="mt-1 break-words text-[10px] leading-relaxed text-zinc-500">
+                        <p className="mt-1 break-words text-[10px] leading-relaxed text-zinc-500">
                         {bucketReason(group.bucket, group.decisions[0])}
                       </p>
+                      {patternProfileSummary(group.decisions[0]) ? (
+                        <p className="mt-1 break-words text-[10px] text-cyan-100/85">{patternProfileSummary(group.decisions[0])}</p>
+                      ) : null}
                       {routingRationale(group.bucket, group.decisions[0]).length ? (
                         <p className="mt-1 break-words text-[9px] text-zinc-500">
                           {compactRoutingLines(routingRationale(group.bucket, group.decisions[0]))}
@@ -1654,6 +1711,16 @@ export function V17_DecisionInbox({
                           >
                             <p className="break-words text-[10px] text-zinc-100">{String(decision.label || decision.title || "自动处理项").trim()}</p>
                             <p className="mt-0.5 break-words text-[9px] text-zinc-400">{impactText(decision)}</p>
+                            {patternProfileSummary(decision) ? (
+                              <p className="mt-0.5 break-words text-[9px] text-cyan-100/85">{patternProfileSummary(decision)}</p>
+                            ) : null}
+                            {patternConfidenceChip(decision) ? (
+                              <div className="mt-1">
+                                <span className={`rounded-full border px-1.5 py-0.5 text-[8px] ${patternConfidenceChip(decision)?.className}`}>
+                                  {patternConfidenceChip(decision)?.label}
+                                </span>
+                              </div>
+                            ) : null}
                             <p className="mt-0.5 text-[9px] text-amber-200/80">
                               {arbitrationTrace(group.bucket, decision)}
                             </p>
@@ -1684,6 +1751,9 @@ export function V17_DecisionInbox({
                     <p className="mt-1 break-words text-[10px] text-zinc-400">{impactText(row)}</p>
                     <p className="mt-1 font-mono text-[10px] text-amber-200/80">{arbitrationTrace("auto", row)}</p>
                     <p className="mt-1 break-words text-[10px] leading-relaxed text-zinc-500">{bucketReason("auto", row)}</p>
+                    {patternProfileSummary(row) ? (
+                      <p className="mt-1 break-words text-[10px] text-cyan-100/85">{patternProfileSummary(row)}</p>
+                    ) : null}
                     {routingRationale(entry.channel === "llm" || entry.channel === "system" ? (entry.channel as BucketKind) : "auto", row).length ? (
                       <p className="mt-1 break-words text-[9px] text-zinc-500">
                         {compactRoutingLines(routingRationale(entry.channel === "llm" || entry.channel === "system" ? (entry.channel as BucketKind) : "auto", row))}
@@ -1693,6 +1763,11 @@ export function V17_DecisionInbox({
                       <p className="mt-1 break-words text-[10px] text-fuchsia-200/90">{decisionFocusPreview(row)}</p>
                     ) : null}
                     <div className="mt-1 flex flex-wrap gap-1">
+                      {patternConfidenceChip(row) ? (
+                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${patternConfidenceChip(row)?.className}`}>
+                          {patternConfidenceChip(row)?.label}
+                        </span>
+                      ) : null}
                       {decisionReasonTags("auto", row).map((tag) => (
                         <span key={`${entry.key}:${tag}`} className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
                           {tag}

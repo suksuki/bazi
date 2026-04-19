@@ -4,6 +4,7 @@ import math
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact
+from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence
 from v17_rebirth.backend.services.plugin_display import plugin_source_label
 from v17_rebirth.backend.services.target_god_resolver import infer_target_god_from_text, resolve_target_god
 
@@ -194,6 +195,31 @@ def _clear_observational_physics(row: Dict[str, Any]) -> None:
     row["physical_impact_inferred"] = False
 
 
+def _promote_display_meta(row: Dict[str, Any], meta: Dict[str, Any] | None = None) -> None:
+    info = meta if isinstance(meta, dict) else {}
+    for field in (
+        "pattern_name",
+        "pattern_candidate",
+        "pattern_profile",
+        "pattern_mix_mode",
+        "pattern_scope",
+        "pattern_scope_label",
+        "pattern_dynamic_candidates",
+        "pattern_confidence",
+        "pattern_confidence_percent",
+        "pattern_confidence_label",
+        "pattern_confidence_breakdown",
+        "match_ratio",
+        "manifestation_state",
+        "origin_type",
+        "origin_multiplier",
+        "projection_share",
+        "cluster_projection",
+    ):
+        if field in info and row.get(field) is None:
+            row[field] = info.get(field)
+
+
 def _arbitration_mode_label(mode: str) -> str:
     if mode == "manual":
         return "手动"
@@ -291,6 +317,15 @@ def compile_pending_decisions(
         row["title"] = title or label
         row["label"] = label or title
         row_meta = row.get("meta") if isinstance(row.get("meta"), dict) else None
+        row_meta = derive_pattern_confidence(
+            plugin_id=str(row.get("plugin_id") or row.get("source") or "legacy"),
+            meta=row_meta,
+            priority=float(row.get("priority", 0.5) or 0.5),
+            salience_weight=float(row.get("salience_weight", 0.5) or 0.5),
+        )
+        if row_meta:
+            row["meta"] = row_meta
+        _promote_display_meta(row, row_meta)
         physical_impact = dict(row.get("physical_impact") or {}) if isinstance(row.get("physical_impact"), dict) else {}
         if _is_observational_row(
             source=str(row.get("source") or row.get("plugin_id") or "legacy"),
@@ -394,6 +429,12 @@ def compile_pending_decisions(
 
     for idx, fact in enumerate(facts):
         meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
+        meta = derive_pattern_confidence(
+            plugin_id=str(fact.plugin_id or ""),
+            meta=meta,
+            priority=float(fact.priority or 0.5),
+            salience_weight=float(fact.salience_weight or 0.5),
+        )
         hint = str(fact.decision_hint or infer_decision_hint(plugin_id=fact.plugin_id, fact_text=fact.text, meta=meta)).strip()
         if not hint:
             continue
@@ -410,6 +451,7 @@ def compile_pending_decisions(
                 "priority": max(float(row.get("priority", 0.0)), float(fact.priority or 0.0)),
             }
         )
+        _promote_display_meta(row, meta)
         existing_impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
         is_observational = _is_observational_row(source=fact.plugin_id, plugin_id=fact.plugin_id, meta=meta, physical_impact=existing_impact)
         if is_observational:

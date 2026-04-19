@@ -109,19 +109,6 @@ class VerdictOrchestrator:
         if not self._six_pillars_physics_ok(raw_physics):
             raise DataSovereigntyError("物理因果未对齐")
 
-    def _resolve_pattern(self, deity_scores: Dict[str, float]) -> str:
-        if not deity_scores:
-            return "未定格"
-        top = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
-        name, score = top[0]
-        if name == "正官" and score >= 40:
-            return "正官格势强"
-        if name in {"食神", "伤官"} and score >= 35:
-            return "食伤外放格"
-        if name in {"偏财", "正财"} and score >= 35:
-            return "财星主导格"
-        return f"{name}主轴格"
-
     def _snapshot_plan_trace_index(self, raw_physics: Dict[str, Any]) -> Dict[str, Any]:
         """给快照注入可检索的决策-计划溯源索引。"""
         state = raw_physics.get("decision_brain_state") if isinstance(raw_physics, dict) else None
@@ -246,7 +233,6 @@ class VerdictOrchestrator:
         self,
         deity_scores: Dict[str, float],
         facts: List[Any],
-        pattern: str,
         *,
         total_energy_index: float = 0.0,
     ) -> List[str]:
@@ -263,7 +249,6 @@ class VerdictOrchestrator:
         )
         return [
             "以下提供的 160 条事实已按显著性（Salience）降序排列。排序越靠前的事实对命局的影响越具决定性。请务必优先回应前 10 条核心事实，将其作为你裁决的第一物理支点。",
-            f"当前格局：{pattern}",
             energy_hint,
             ("、".join(lead) + "，局势进入再平衡阶段") if lead else "当前能量分布尚在收敛",
             *top10,
@@ -446,12 +431,9 @@ class VerdictOrchestrator:
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
-        pattern = self._resolve_pattern(scores)
         tension = (max(scores.values()) - min(scores.values())) if scores else 0.0
         total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
         pt = raw_physics if isinstance(raw_physics, dict) else {}
-        if isinstance(pt.get("meta"), dict) and pt["meta"].get("hit_pattern_name"):
-            pattern = str(pt["meta"]["hit_pattern_name"])
         spec_facts = logic_pd.collect_all_spec_facts_and_record(pt)
         spec_rows = [v17_fact_to_row(f) for f in spec_facts]
         spec_rows.sort(key=lambda row: float(row.get("weight", 0.0)), reverse=True)
@@ -510,8 +492,7 @@ class VerdictOrchestrator:
             "snapshot_contract": "v17.21_full_physics",
             **self._physics_trace(raw_physics, causal_anchor=causal_anchor),
             "physics_validation": {"state": "aligned", "gate": "six_pillars"},
-            "render_text": f"格局快照已同步：{pattern}",
-            "pattern": pattern,
+            "render_text": "物理快照已同步。",
             "four_pillars": raw_physics.get("four_pillars", {}),
             "luck_pillar": raw_physics.get("luck_pillar"),
             "flow_pillar": raw_physics.get("flow_pillar"),
@@ -608,12 +589,7 @@ class VerdictOrchestrator:
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         god_of_use = [x[0] for x in ranked[:2]]
         god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
-        pattern = self._resolve_pattern(scores)
         total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
-        if isinstance(raw_physics, dict):
-            meta = raw_physics.get("meta") if isinstance(raw_physics.get("meta"), dict) else {}
-            if meta.get("hit_pattern_name"):
-                pattern = str(meta["hit_pattern_name"])
 
         def _merge_rows() -> List[Dict[str, Any]]:
             pt = raw_physics if isinstance(raw_physics, dict) else {}
@@ -625,7 +601,6 @@ class VerdictOrchestrator:
         fragments = self._build_fragments(
             scores,
             [*facts, *plugin_rows],
-            pattern,
             total_energy_index=total_energy_index,
         )
         arbitration = self._decision_arbitration(

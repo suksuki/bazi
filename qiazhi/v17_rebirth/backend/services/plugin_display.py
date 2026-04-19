@@ -57,17 +57,61 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "叙事剪辑",
         "definition": "将物理事实翻译为现代执行建议的叙事插件。",
     },
-    "modern.will_proxy.v1": {
-        "display_name": "意图代理",
-        "definition": "将用户意图映射到叙事偏置层的现代代理插件。",
+    "l1.physics.op_geography": {
+        "display_name": "地理势场",
+        "definition": "识别地支空间位势与分布结构对当前命局的势场影响。",
     },
-    "modern.wealth_risk.v1": {
-        "display_name": "财富风险代理",
-        "definition": "对现代财富风险叙事做兼容映射的代理插件。",
+    "l1.physics.op_vertical_crush": {
+        "display_name": "上下压制",
+        "definition": "审计干支上下呼应中的压制、穿透与结构挤压。",
     },
-    "classical.wangshuai.v1": {
-        "display_name": "旺衰框架",
-        "definition": "经典旺衰评估框架的兼容占位插件。",
+    "l1.physics.op_branch_banhe": {
+        "display_name": "半合聚势",
+        "definition": "识别地支半合带来的局部聚势与偏向性放大。",
+    },
+    "l1.physics.op_branch_anhe": {
+        "display_name": "暗合牵引",
+        "definition": "识别地支暗合造成的隐性牵引、绑定与转向。",
+    },
+    "l1.physics.op_stem_fusion_stuck": {
+        "display_name": "合而不化",
+        "definition": "审计天干相合但未成化时的牵制、黏滞与悬置状态。",
+    },
+    "l1.physics.op_stem_fusion_transform": {
+        "display_name": "天干化象",
+        "definition": "审计天干合化成象后的方向偏移与元素转化倾向。",
+    },
+    "l1.physics.op_blade_clash": {
+        "display_name": "刃杀冲突",
+        "definition": "审计羊刃、七杀等刚性结构之间的冲撞与爆发压力。",
+    },
+    "l1.physics.op_owl_food": {
+        "display_name": "枭神夺食",
+        "definition": "识别偏印与食神之间的夺食关系，但只作为结构观察。",
+    },
+    "l1.physics.op_robber_wealth": {
+        "display_name": "比劫夺财",
+        "definition": "识别比劫争财、分流资源与争夺控制权的结构张力。",
+    },
+    "l1.physics.op_gov_kill_mix": {
+        "display_name": "官杀混杂",
+        "definition": "识别正官与七杀并立时的混杂、竞权与结构失清。",
+    },
+    "l1.physics.op_wealth_seal": {
+        "display_name": "财印相战",
+        "definition": "识别财星与印星之间的相战、破印与资源背离。",
+    },
+    "l1.physics.op_connection": {
+        "display_name": "生扶连线",
+        "definition": "审计五行生扶链路是否形成稳定的支持通道。",
+    },
+    "l1.physics.op_production": {
+        "display_name": "泄秀通道",
+        "definition": "审计生出关系形成的输出通道与能量泄放方向。",
+    },
+    "l1.physics.op_destruction": {
+        "display_name": "克制回路",
+        "definition": "审计克制关系形成的约束回路与阻尼压力。",
     },
     "l0.foundation.hidden_stems.v1": {
         "display_name": "藏干基线",
@@ -149,13 +193,125 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "动态格局来源",
         "definition": "按原局、运、流来源权重标注当前格局候选的动态生效来源。",
     },
-    "classical.climate_adjuster.v1": {
-        "display_name": "调候专题",
-        "definition": "把月令气候背景提升为专题解释层，而不是只做底层常数。",
+    "classical.pattern.wealth_star.v1": {
+        "display_name": "财格候选",
+        "definition": "围绕正财格与偏财格的月令、透干与结构条件做候选审计。",
     },
-    "classical.conflict_auditor.v1": {
-        "display_name": "冲突审计器",
-        "definition": "汇总插件主张、冲突与裁决建议，作为专题冲突总览。",
+    "classical.pattern.seal_star.v1": {
+        "display_name": "印格候选",
+        "definition": "围绕正印格与偏印格的月令与护格条件做候选审计。",
+    },
+    "classical.pattern.yangren.v1": {
+        "display_name": "羊刃候选",
+        "definition": "审计月令羊刃是否成势，以及是否具备制刃、驾杀等后续路径。",
+    },
+    "classical.pattern.guanyin.v1": {
+        "display_name": "官印相生",
+        "definition": "审计官印相生路线是否成立，以及能否形成清贵结构。",
+    },
+    "classical.pattern.shayin.v1": {
+        "display_name": "杀印相生",
+        "definition": "审计七杀与印星的化杀成权路线是否成立。",
+    },
+    "classical.pattern.shishen_zhisha.v1": {
+        "display_name": "食神制杀",
+        "definition": "审计食神是否足以制服七杀并维持格局清纯。",
+    },
+    "classical.pattern.shangguan_peiyin.v1": {
+        "display_name": "伤官配印",
+        "definition": "审计伤官旺而得印护的高阶成格路线。",
+    },
+    "classical.pattern.shishen_shengcai.v1": {
+        "display_name": "食神生财",
+        "definition": "审计食神吐秀顺泄到财星的流通路线。",
+    },
+    "classical.pattern.shangguan_shengcai.v1": {
+        "display_name": "伤官生财",
+        "definition": "审计伤官输出转财的结构路径与成格条件。",
+    },
+    "classical.pattern.yangren_jiasha.v1": {
+        "display_name": "阳刃驾杀",
+        "definition": "审计羊刃与七杀并行时是否形成可用权格路线。",
+    },
+    "classical.pattern.zaqi_caiguan.v1": {
+        "display_name": "杂气财官格",
+        "definition": "针对辰戌丑未杂气月的财官透势做专题候选审计。",
+    },
+    "classical.pattern.zaqi_yin.v1": {
+        "display_name": "杂气印绶格",
+        "definition": "针对杂气月中印绶透势与护格条件做专题候选审计。",
+    },
+    "classical.pattern.zaqi_qisha.v1": {
+        "display_name": "杂气七杀格",
+        "definition": "针对杂气月中七杀透势与制化条件做专题候选审计。",
+    },
+    "classical.pattern.congcai.v1": {
+        "display_name": "从财格",
+        "definition": "审计财势独旺、身党不敌时的从财路线。",
+    },
+    "classical.pattern.congsha.v1": {
+        "display_name": "从杀格",
+        "definition": "审计七杀成势、日主难起时的从杀路线。",
+    },
+    "classical.pattern.conger.v1": {
+        "display_name": "从儿格",
+        "definition": "审计食伤成党、印比不足回身时的从儿路线。",
+    },
+    "classical.pattern.congwang.v1": {
+        "display_name": "从旺格",
+        "definition": "审计印比成势、一边独旺时的从旺路线。",
+    },
+    "classical.pattern.congqiang.v1": {
+        "display_name": "从强格",
+        "definition": "审计身党绝对主导、异党难敌时的从强路线。",
+    },
+    "classical.pattern.congruo.v1": {
+        "display_name": "从弱格",
+        "definition": "审计身党极弱、异党集中成势时的从弱路线。",
+    },
+    "classical.pattern.huaqi.v1": {
+        "display_name": "化气格",
+        "definition": "审计天干五合与化神得令条件，确认是否具备化气胚象。",
+    },
+    "classical.pattern.quzhi.v1": {
+        "display_name": "曲直格",
+        "definition": "审计木气专旺是否达到曲直外格的候选条件。",
+    },
+    "classical.pattern.yanshang.v1": {
+        "display_name": "炎上格",
+        "definition": "审计火气专旺是否达到炎上外格的候选条件。",
+    },
+    "classical.pattern.jiase.v1": {
+        "display_name": "稼穑格",
+        "definition": "审计土气专旺是否达到稼穑外格的候选条件。",
+    },
+    "classical.pattern.congge.v1": {
+        "display_name": "从革格",
+        "definition": "审计金气专旺是否达到从革外格的候选条件。",
+    },
+    "classical.pattern.runxia.v1": {
+        "display_name": "润下格",
+        "definition": "审计水气专旺是否达到润下外格的候选条件。",
+    },
+    "classical.pattern.liangshen.v1": {
+        "display_name": "两神成象",
+        "definition": "审计双主轴并峙是否形成稳定的两神成象结构。",
+    },
+    "classical.pattern.tianyuan.v1": {
+        "display_name": "天元一气",
+        "definition": "审计天干同气重复与一元化结构是否达到天元一气候选条件。",
+    },
+    "ten_god_pattern": {
+        "display_name": "十神主轴观察",
+        "definition": "只负责十神主轴与家族混合摘要，不再定义古典格局 headline。",
+    },
+    "kong_wang": {
+        "display_name": "空亡观察",
+        "definition": "识别四柱与运流中的空亡位置，并作为结构观察层提示。",
+    },
+    "shensha": {
+        "display_name": "神煞观察",
+        "definition": "识别神煞命中，但不直接定义主格局或物理强弱。",
     },
 }
 

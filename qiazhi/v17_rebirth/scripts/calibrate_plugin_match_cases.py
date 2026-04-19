@@ -27,7 +27,7 @@ class CalibrationCase:
 
 CASES: List[CalibrationCase] = [
     CalibrationCase(
-        label="食伤外放格样盘",
+        label="食伤主轴样盘",
         birth_time=datetime(1977, 5, 8, 18, 0, 0),
         gender="male",
         flow_year=2026,
@@ -229,7 +229,7 @@ def build_case_report(case: CalibrationCase) -> Dict[str, Any]:
         "four_pillars": payload.get("four_pillars", {}),
         "luck_pillar": payload.get("luck_pillar"),
         "flow_pillar": payload.get("flow_pillar"),
-        "pattern": payload.get("hit_pattern_name") or payload.get("pattern"),
+        "pattern_candidates": _top_match_claims(payload, limit=6),
         "match_top": _top_match_claims(payload),
         "relation_focus_summary": _relation_focus_summary(payload),
         "plugin_match_summary": _plugin_match_summary(payload),

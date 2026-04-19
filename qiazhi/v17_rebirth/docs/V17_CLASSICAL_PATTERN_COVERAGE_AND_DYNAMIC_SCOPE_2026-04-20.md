@@ -4,16 +4,57 @@
 
 ## 先说结论
 - 当前是**“核心骨架已上线 + 古典全集仍未全部实现”**。
+- 当前已补上 **Pattern Confidence Model v1**：
+  - 古典格局本身仍是观察协议，不直接改写十神。
+  - 系统会基于 `match_ratio / origin / manifestation / projection / dominant_ratio` 计算统一 `pattern_confidence`。
+  - 这个百分比是**系统工程置信度**，不是古籍原文百分比。
 - 我们已经有：
   - 轴线主导（`classical.pattern.axis.v1`）
   - 建禄/月令（月劫）方向（`classical.pattern.jianlu_yuejie.v1`）
   - 从势候选（`classical.pattern.congshi.v1`）
   - 财官协同（`classical.pattern.finance_officer.v1`）
+  - 财格候选（`classical.pattern.wealth_star.v1`，覆盖正财/偏财）
+  - 印格候选（`classical.pattern.seal_star.v1`，覆盖正印/偏印）
+  - 羊刃候选（`classical.pattern.yangren.v1`）
+  - 组合成格候选（`classical.pattern.guanyin.v1` / `shayin.v1` / `shishen_zhisha.v1` / `shangguan_peiyin.v1`）
+  - 生财/驾杀候选（`classical.pattern.shishen_shengcai.v1` / `shangguan_shengcai.v1` / `yangren_jiasha.v1`）
+  - 杂气格候选（`classical.pattern.zaqi_caiguan.v1` / `zaqi_yin.v1` / `zaqi_qisha.v1`）
+  - 从格候选（`classical.pattern.congcai.v1` / `congsha.v1` / `conger.v1` / `congwang.v1` / `congqiang.v1` / `congruo.v1`）
+  - 化气格候选（`classical.pattern.huaqi.v1`）
+  - 专旺外格候选（`classical.pattern.quzhi.v1` / `yanshang.v1` / `jiase.v1` / `congge.v1` / `runxia.v1`）
+  - 外格候选（`classical.pattern.liangshen.v1` / `tianyuan.v1`）
   - 冲突裁决链（`resolver / formation_gate / break_guard`）
   - 十神分层表述（`ten_god_pattern`）
   - 动态来源标签（本次新增 `classical.pattern.dynamic_scope.v1`）
-- 现阶段仍是“分层骨架”，并未覆盖全部古典格局命名体系。
+- 现阶段已经实现了**古典 35 格局目录的候选入口全挂接**，但仍属于“观察型候选引擎”，并非古籍意义上的最终定格机。
 - 本版明确：**古典/格局类插件不直接修改十神数值**。其任务是输出结构观察、候选与置信度，再由决策层与统一融合层做智能加权。
+
+## Pattern Confidence Model v1
+
+### 定位
+- `pattern_confidence` 用来回答：“在当前系统口径下，这条格局主张有多可信？”
+- 它是智能层的统一评分，不是古法条文，也不是物理层能量。
+
+### 输入因子
+- `match_ratio`：规则命中强度
+- `origin_multiplier`：原局 / 大运 / 流年的来源支持度
+- `manifestation_state`：`manifested / supported / contested / latent`
+- `projection_share` 或 `pattern_profile.share`：主轴或家族投影占比
+- `dominant_ratio`：第一主轴对第二主轴的领先程度
+- `priority / salience_weight`：插件优先级与显著性权重
+
+### 输出字段
+- `pattern_confidence`
+- `pattern_confidence_percent`
+- `pattern_confidence_label`
+- `pattern_confidence_breakdown`
+
+### 解释边界
+- 这个值用于：
+  - UI 展示“格局把握度”
+  - 冲突仲裁时排序
+  - LLM 提示词压缩时优先保留高置信格局
+- 这个值**不用来改十神，不直接落入 PhysicsKernel**。
 
 ## 已有格局插件清单与覆盖类型
 
@@ -23,6 +64,33 @@
 | `classical.pattern.jianlu_yuejie.v1` | 月令候选 | 月令主气落在比劫支撑下，输出建禄/月劫方向 |
 | `classical.pattern.congshi.v1` | 从势/从强候选 | 一枝独强条件门槛后输出 |
 | `classical.pattern.finance_officer.v1` | 财官协同候选 | 正官/七杀与财星并举门槛 |
+| `classical.pattern.wealth_star.v1` | 财格候选 | 正财格 / 偏财格的月令候选入口 |
+| `classical.pattern.seal_star.v1` | 印格候选 | 正印格 / 偏印格的月令候选入口 |
+| `classical.pattern.yangren.v1` | 羊刃候选 | 阳干月令见羊刃位时输出候选 |
+| `classical.pattern.guanyin.v1` | 官印相生 | 官星与印星形成清贵路线时输出候选 |
+| `classical.pattern.shayin.v1` | 杀印相生 | 七杀与印星形成化杀路线时输出候选 |
+| `classical.pattern.shishen_zhisha.v1` | 食神制杀 | 七杀与食神同时成势时输出候选 |
+| `classical.pattern.shangguan_peiyin.v1` | 伤官配印 | 伤官旺而见印时输出候选 |
+| `classical.pattern.shishen_shengcai.v1` | 食神生财 | 食神与财星形成顺泄路线时输出候选 |
+| `classical.pattern.shangguan_shengcai.v1` | 伤官生财 | 伤官与财星形成输出变现路线时输出候选 |
+| `classical.pattern.yangren_jiasha.v1` | 阳刃驾杀 | 刃势与七杀并行时输出候选 |
+| `classical.pattern.zaqi_caiguan.v1` | 杂气财官 | 辰戌丑未杂气月的财官专题入口 |
+| `classical.pattern.zaqi_yin.v1` | 杂气印绶 | 辰戌丑未杂气月的印绶专题入口 |
+| `classical.pattern.zaqi_qisha.v1` | 杂气七杀 | 辰戌丑未杂气月的七杀专题入口 |
+| `classical.pattern.congcai.v1` | 从财格 | 财党成势、日主难起时输出候选 |
+| `classical.pattern.congsha.v1` | 从杀格 | 七杀成势、日主极弱时输出候选 |
+| `classical.pattern.conger.v1` | 从儿格 | 食伤成党、身弱难回时输出候选 |
+| `classical.pattern.congwang.v1` | 从旺格 | 印比成势、一方专旺时输出候选 |
+| `classical.pattern.congqiang.v1` | 从强格 | 身党绝对主导时输出候选 |
+| `classical.pattern.congruo.v1` | 从弱格 | 身弱极而异党集中时输出候选 |
+| `classical.pattern.huaqi.v1` | 化气格 | 天干五合且化神得令时输出候选 |
+| `classical.pattern.quzhi.v1` | 曲直格 | 木势专旺外格候选 |
+| `classical.pattern.yanshang.v1` | 炎上格 | 火势专旺外格候选 |
+| `classical.pattern.jiase.v1` | 稼穑格 | 土势专旺外格候选 |
+| `classical.pattern.congge.v1` | 从革格 | 金势专旺外格候选 |
+| `classical.pattern.runxia.v1` | 润下格 | 水势专旺外格候选 |
+| `classical.pattern.liangshen.v1` | 两神成象 | 双主轴成象时输出候选 |
+| `classical.pattern.tianyuan.v1` | 天元一气 | 干支同气高度统一时输出候选 |
 | `classical.pattern.resolver.v1` | 候选冲突显性化 | 处理候选并存冲突 |
 | `classical.pattern.formation_gate.v1` | 成格成候检验 | 将候选收敛为成格信号 |
 | `classical.pattern.break_guard.v1` | 破格风险预警 | 结合冲刑害/六害等干扰输出 |
@@ -30,9 +98,9 @@
 | `ten_god_pattern.py` | 统一主轴叙事 | 输出“格局表述”与 family mix |
 
 ## 尚未完整实现（优先级从高到低）
-1. 子平系统中的古典格局命名体系（如部分从重/从弱、化气/扶抑路径）
-2. 盲派核心细分类别到格局级输出的系统化映射
-3. “同一个命局可多格并存”的连续权重化评分体系（目前有混合评分雏形）
+1. 每条古典格局的“强/中/弱/近似成格”细粒度评分与破格因子拆账
+2. 大运/流年下的格局跃迁轨迹与阶段性格转移建模
+3. 盲派核心细分类别到格局级输出的系统化映射
 4. 格局与十神分布之间的可学习映射（当前先以规则可解释为主）
 
 ## 古典格局定义建议（分层表达）

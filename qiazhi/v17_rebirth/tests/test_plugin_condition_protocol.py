@@ -111,7 +111,9 @@ def test_condition_plugins_emit_condition_metadata() -> None:
     assert by_plugin["l1.physics.op_stem_fusion"].meta.get("condition_trigger") == "month_support"
     assert isinstance(by_plugin["l1.physics.op_stem_fusion"].meta.get("static_basis"), dict)
     assert 0.0 <= float(by_plugin["l1.physics.op_stem_fusion"].meta.get("match_ratio", 0.0) or 0.0) <= 1.0
-    assert by_plugin["classical.conflict_auditor.v1"].meta.get("conflict_count") == 1
+    conflict_claims = compile_claims(facts=facts, physics_tensor=pt)
+    conflict_rows = detect_claim_conflicts(conflict_claims)
+    assert any(str(row.get("conflict_id") or "").strip() for row in conflict_rows)
 
 
 def test_contested_relation_fact_does_not_produce_modifier_proposal() -> None:
@@ -214,8 +216,8 @@ def test_settlement_recomputes_from_base_scores() -> None:
 def test_diagnostic_claim_without_explicit_match_ratio_is_not_forced_to_full_score() -> None:
     facts = [
         V17Fact(
-            plugin_id="classical.climate_adjuster.v1",
-            text="调候提示：当前月令主气落在 伤官。",
+            plugin_id="classical.pattern.dynamic_scope.v1",
+            text="动态格局来源：流年引动；当前候选更偏向当期触发。",
             causal_tier=3,
             priority=0.82,
             salience_weight=0.82,

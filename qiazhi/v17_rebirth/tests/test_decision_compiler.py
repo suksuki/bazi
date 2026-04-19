@@ -205,9 +205,9 @@ def test_compile_decision_arbitration_splits_manual_and_llm() -> None:
             },
             {
                 "id": "llm_1",
-                "source": "classical.wangshuai.v1",
-                "label": "状态机节律",
-                "title": "日主 壬 位处「墓」位，抗性系数 1.0。",
+                "source": "chang_sheng_12",
+                "label": "长生状态",
+                "title": "日主 壬 位处「墓」位，当前更适合作为结构观察。",
                 "priority": 0.85,
                 "physical_impact": {},
             },
@@ -217,8 +217,8 @@ def test_compile_decision_arbitration_splits_manual_and_llm() -> None:
     assert arbitration["manual_decisions"][0]["label"] == "六合"
     assert arbitration["manual_decisions"][0]["arbitration_trace"] == "六合协同 -> L? -> 手动"
     assert len(arbitration["llm_arbitration_context"]) == 1
-    assert arbitration["llm_arbitration_context"][0]["label"] == "状态机节律"
-    assert arbitration["llm_arbitration_context"][0]["arbitration_trace"] == "旺衰框架 -> L? -> LLM"
+    assert arbitration["llm_arbitration_context"][0]["label"] == "长生状态"
+    assert arbitration["llm_arbitration_context"][0]["arbitration_trace"] == "长生状态 -> L? -> LLM"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_policy"] == "context_only"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_state"] == "pending_context"
     assert arbitration["llm_arbitration_context"][0]["llm_resolution_result"] == "consume_context"

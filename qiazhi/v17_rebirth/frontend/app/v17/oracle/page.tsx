@@ -16,6 +16,7 @@ import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
 import { useOracleSession } from "@/hooks/useOracleSession";
+import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
 function decisionPluginLabel(row: Record<string, unknown>): string {
   return String(
@@ -35,6 +36,190 @@ function compactProjection(projection: unknown): string {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
   return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
+}
+
+function patternConfidenceTone(score: number): string {
+  if (score >= 0.82) return "border-emerald-500/25 bg-emerald-950/35 text-emerald-100";
+  if (score >= 0.64) return "border-cyan-500/25 bg-cyan-950/35 text-cyan-100";
+  if (score >= 0.48) return "border-amber-500/25 bg-amber-950/35 text-amber-100";
+  return "border-zinc-500/20 bg-zinc-900/70 text-zinc-300";
+}
+
+function normalizePatternScope(scope: unknown): string {
+  const key = String(scope || "").trim();
+  if (key === "natal") return "原局";
+  if (key === "luck_background") return "大运背景";
+  if (key === "luck_only") return "大运触发";
+  if (key === "flow_trigger") return "流年引动";
+  if (key === "flow_only") return "流年主导";
+  if (key === "runtime_pair") return "运流联动";
+  if (key === "mixed") return "混合来源";
+  return key || "来源待定";
+}
+
+function patternFamilyByName(name: string): string {
+  return classicalPatternCatalog.find((item) => item.name === name)?.family || "格局候选";
+}
+
+type LivePatternCandidate = {
+  key: string;
+  name: string;
+  family: string;
+  confidence: number;
+  scope: string;
+  source: string;
+  target: string;
+  projectionText: string;
+  profileText: string;
+  manifestation: string;
+  scopeWeights: Array<{ label: string; ratio: number }>;
+  gate: string;
+  gateReason: string;
+  breakRisks: string[];
+  statusLabel: string;
+};
+
+function normalizeManifestation(value: unknown): string {
+  const key = String(value || "").trim();
+  if (key === "manifested") return "成格";
+  if (key === "supported") return "候选成立";
+  if (key === "latent") return "潜势待成";
+  if (key === "contested") return "受扰待核";
+  return "观察中";
+}
+
+function patternStatusToneForRuntime(status: string): string {
+  if (status === "成格") return "border-emerald-500/25 bg-emerald-950/35 text-emerald-100";
+  if (status === "候选成立") return "border-cyan-500/25 bg-cyan-950/35 text-cyan-100";
+  if (status === "受扰待核") return "border-rose-500/25 bg-rose-950/35 text-rose-100";
+  if (status === "潜势待成") return "border-amber-500/25 bg-amber-950/35 text-amber-100";
+  return "border-zinc-500/20 bg-zinc-900/70 text-zinc-300";
+}
+
+function normalizeScopeWeights(value: unknown): Array<{ label: string; ratio: number }> {
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value as Record<string, unknown>)
+    .map(([key, raw]) => ({ label: normalizePatternScope(key), ratio: Number(raw || 0) }))
+    .filter((item) => Number.isFinite(item.ratio) && item.ratio > 0)
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, 4);
+}
+
+function buildPatternJudgement(
+  leader: LivePatternCandidate | undefined,
+  runners: LivePatternCandidate[],
+): string {
+  if (!leader) return "当前盘面尚未形成稳定格局候选，系统仍在等待更多结构证据完成聚合。";
+  const parts: string[] = [];
+  const leadScope = leader.scope || "来源待定";
+  const leadStatus = leader.statusLabel || "观察中";
+  parts.push(`当前以「${leader.name}」为主格局，处于${leadStatus}态势`);
+  parts.push(`主要证据来自${leadScope}`);
+  if (leader.target && leader.target !== "未定目标") {
+    parts.push(`主落点聚焦在${leader.target}`);
+  }
+  if (runners.length) {
+    const topRunners = runners
+      .slice(0, 2)
+      .map((item) => `${item.name}${Math.round(item.confidence * 100)}%`)
+      .join("、");
+    if (topRunners) parts.push(`次格局候选包括${topRunners}`);
+  }
+  if (leader.breakRisks.length) {
+    parts.push(`但当前受${leader.breakRisks.slice(0, 2).join("、")}牵制，仍需继续核验是否破格`);
+  } else if (leader.gateReason) {
+    parts.push(leader.gateReason);
+  }
+  return `${parts.join("，")}。`;
+}
+
+function deriveLivePatternCandidates(
+  allRows: Array<Record<string, unknown>>,
+  pluginClaims: Array<Record<string, unknown>>,
+): LivePatternCandidate[] {
+  const candidates = new Map<string, LivePatternCandidate>();
+  let globalGate = "";
+  let globalGateReason = "";
+  let globalBreakRisks: string[] = [];
+  const ingest = (row: Record<string, unknown>, source: string) => {
+    const name = String(row.pattern_candidate || row.pattern_name || "").trim();
+    if (!name) return;
+    const confidenceRaw = row.pattern_confidence_percent ?? row.pattern_confidence ?? row.match_ratio ?? 0;
+    let confidence = Number(confidenceRaw || 0);
+    if (confidence > 1) confidence = confidence / 100;
+    confidence = Number.isFinite(confidence) ? confidence : 0;
+    const target = String(row.target_god || "").trim();
+    const scope = String(row.pattern_scope_label || normalizePatternScope(row.pattern_scope)).trim();
+    const projectionText = compactProjection(row.cluster_projection);
+    const manifestation = normalizeManifestation(row.manifestation_state);
+    const scopeWeights = normalizeScopeWeights(row.scope_weights);
+    const profile = Array.isArray(row.pattern_profile) ? row.pattern_profile : [];
+    const profileText = profile
+      .slice(0, 3)
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const family = String((item as { family?: string }).family || "").trim();
+        const percent = Number((item as { percent?: number }).percent || 0);
+        if (!family) return "";
+        return `${family}${percent > 0 ? ` ${Math.round(percent)}%` : ""}`;
+      })
+      .filter(Boolean)
+      .join(" / ");
+    const key = `${name}::${target || "na"}`;
+    const current = candidates.get(key);
+    const next: LivePatternCandidate = {
+      key,
+      name,
+      family: patternFamilyByName(name),
+      confidence,
+      scope: scope || "来源待定",
+      source,
+      target: target || "未定目标",
+      projectionText,
+      profileText,
+      manifestation,
+      scopeWeights,
+      gate: globalGate,
+      gateReason: globalGateReason,
+      breakRisks: globalBreakRisks,
+      statusLabel: manifestation,
+    };
+    if (!current || next.confidence > current.confidence) {
+      candidates.set(key, next);
+      return;
+    }
+    if (current && !current.scopeWeights.length && scopeWeights.length) current.scopeWeights = scopeWeights;
+    if (current && !current.profileText && profileText) current.profileText = profileText;
+    if (current && !current.projectionText && projectionText) current.projectionText = projectionText;
+    if (current && current.statusLabel === "观察中" && manifestation !== "观察中") current.statusLabel = manifestation;
+  };
+
+  for (const row of [...pluginClaims, ...allRows]) {
+    const pluginId = String(row.plugin_id || row.source || "").trim();
+    if (pluginId === "classical.pattern.formation_gate.v1") {
+      globalGate = String(row.pattern_gate || "").trim();
+      globalGateReason = String(row.pattern_gate_reason || "").trim();
+    }
+    if (pluginId === "classical.pattern.break_guard.v1") {
+      globalBreakRisks = Array.isArray(row.pattern_break_risks)
+        ? (row.pattern_break_risks as unknown[]).map((item) => String(item || "").trim()).filter(Boolean)
+        : [];
+    }
+  }
+
+  for (const row of pluginClaims) ingest(row, "claim");
+  for (const row of allRows) ingest(row, "decision");
+
+  return Array.from(candidates.values())
+    .map((item) => {
+      const statusLabel = item.breakRisks.length
+        ? "受扰待核"
+        : item.gate === "月令成格" || item.gate === "强轴成格" || item.gate === "双线成格"
+          ? "成格"
+          : item.manifestation;
+      return { ...item, gate: globalGate, gateReason: globalGateReason, breakRisks: globalBreakRisks, statusLabel };
+    })
+    .sort((a, b) => b.confidence - a.confidence);
 }
 
 export default function OraclePage() {
@@ -121,6 +306,12 @@ export default function OraclePage() {
   )
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, 6);
+  const livePatternCandidates = deriveLivePatternCandidates(allRows, pluginClaims);
+  const patternLeader = livePatternCandidates[0];
+  const patternRunners = livePatternCandidates.slice(1, 4);
+  const activePatternScopes = Array.from(new Set(livePatternCandidates.map((item) => item.scope).filter(Boolean))).slice(0, 5);
+  const leaderBreakRisks = patternLeader?.breakRisks || [];
+  const patternJudgement = buildPatternJudgement(patternLeader, patternRunners);
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -274,6 +465,149 @@ export default function OraclePage() {
                   ) : null}
                 </div>
               ) : null}
+              <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(12,74,110,0.32),rgba(9,9,11,0.76))] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">Pattern Overview</p>
+                    <p className="mt-1 text-sm text-cyan-50">当前盘面的主格局、次格局、动态来源、置信度与系统判读</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-[10px]">
+                    <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-2 py-1 text-cyan-100">
+                      候选 {livePatternCandidates.length}
+                    </span>
+                    {activePatternScopes.map((scope) => (
+                      <span key={`pattern_scope_${scope}`} className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-2 py-1 text-cyan-100">
+                        {scope}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-3 rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">System Reading</p>
+                  <p className="mt-2 text-[12px] leading-6 text-cyan-50">{patternJudgement}</p>
+                </div>
+
+                {patternLeader ? (
+                  <div className="mt-3 grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+                    <div className="rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">Primary Pattern</p>
+                          <p className="mt-1 text-lg text-cyan-50">{patternLeader.name}</p>
+                          <p className="mt-1 text-[11px] text-zinc-400">{patternLeader.family}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className={`rounded-full border px-2 py-1 text-[10px] ${patternStatusToneForRuntime(patternLeader.statusLabel)}`}>
+                            {patternLeader.statusLabel}
+                          </span>
+                          <span className={`rounded-full border px-2 py-1 text-[10px] ${patternConfidenceTone(patternLeader.confidence)}`}>
+                            置信 {Math.round(patternLeader.confidence * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+                        <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-1 text-cyan-100">{patternLeader.scope}</span>
+                        <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-200">主落点 {patternLeader.target}</span>
+                        <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">{patternLeader.source === "claim" ? "来自 Claim 层" : "来自 Decision 层"}</span>
+                      </div>
+                      {(patternLeader.gate || patternLeader.gateReason) ? (
+                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/45 p-2">
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">Formation Gate</p>
+                          <p className="mt-1 text-[11px] text-emerald-100">{patternLeader.gate || "候选审计"}</p>
+                          {patternLeader.gateReason ? <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">{patternLeader.gateReason}</p> : null}
+                        </div>
+                      ) : null}
+                      {patternLeader.scopeWeights.length ? (
+                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/45 p-2">
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">Scope Evidence</p>
+                          <div className="mt-2 grid gap-1.5">
+                            {patternLeader.scopeWeights.map((item) => (
+                              <div key={`${patternLeader.key}_${item.label}`} className="grid gap-1">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-zinc-300">{item.label}</span>
+                                  <span className="text-cyan-200">{Math.round(item.ratio * 100)}%</span>
+                                </div>
+                                <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                                  <div className="h-full rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,0.95),rgba(45,212,191,0.95))]" style={{ width: `${Math.max(6, Math.round(item.ratio * 100))}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {patternLeader.profileText ? (
+                        <p className="mt-3 text-[11px] leading-relaxed text-zinc-300">
+                          家族混合：<span className="text-cyan-100">{patternLeader.profileText}</span>
+                        </p>
+                      ) : null}
+                      {patternLeader.projectionText ? (
+                        <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+                          投影焦点：{patternLeader.projectionText}
+                        </p>
+                      ) : null}
+                      {leaderBreakRisks.length ? (
+                        <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-950/20 p-2">
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-rose-300">Break Risks</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {leaderBreakRisks.map((risk) => (
+                              <span key={`${patternLeader.key}_${risk}`} className="rounded-full border border-rose-500/20 bg-zinc-950/50 px-2 py-1 text-[10px] text-rose-100">
+                                {risk}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">Secondary Patterns</p>
+                      <div className="mt-2 grid gap-2">
+                        {patternRunners.length ? (
+                          patternRunners.map((item) => (
+                            <div key={item.key} className="rounded-lg border border-zinc-800 bg-zinc-900/55 p-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-[11px] text-cyan-50">{item.name}</p>
+                                  <p className="text-[9px] text-zinc-500">{item.family} · {item.scope}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${patternStatusToneForRuntime(item.statusLabel)}`}>
+                                    {item.statusLabel}
+                                  </span>
+                                  <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${patternConfidenceTone(item.confidence)}`}>
+                                    {Math.round(item.confidence * 100)}%
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="mt-1 text-[10px] text-zinc-300">
+                                主落点 {item.target}{item.profileText ? ` · ${item.profileText}` : ""}
+                              </p>
+                              {item.scopeWeights.length ? (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {item.scopeWeights.map((scope) => (
+                                    <span key={`${item.key}_${scope.label}`} className="rounded-full border border-zinc-700 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                      {scope.label} {Math.round(scope.ratio * 100)}%
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                              {item.projectionText ? <p className="mt-1 text-[9px] text-zinc-500">{item.projectionText}</p> : null}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-lg border border-zinc-800 bg-zinc-900/55 p-2 text-[10px] text-zinc-500">
+                            当前尚未形成明确的次格局分层，系统只识别到一个主候选。
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3 text-[11px] text-zinc-400">
+                    当前盘面还没有显式格局候选，系统会随着插件命中和 Claim 聚合继续补全。
+                  </div>
+                )}
+              </div>
               <V17_DecisionInbox
                 frames={s.frames}
                 adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}

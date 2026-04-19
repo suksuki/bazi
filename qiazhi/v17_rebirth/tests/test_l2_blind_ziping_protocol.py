@@ -19,7 +19,20 @@ from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import (
 from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
     PatternAxisPlugin,
     FinanceOfficerPatternPlugin,
+    GuanYinPatternPlugin,
+    SealStarPatternPlugin,
+    ShaYinPatternPlugin,
+    ShangGuanShengCaiPatternPlugin,
+    ShangGuanPeiYinPatternPlugin,
     PatternResolverPlugin,
+    ShiShenShengCaiPatternPlugin,
+    ShiShenZhiShaPatternPlugin,
+    WealthStarPatternPlugin,
+    YangRenPatternPlugin,
+    YangRenJiaShaPatternPlugin,
+    ZaQiCaiGuanPatternPlugin,
+    ZaQiQiShaPatternPlugin,
+    ZaQiYinPatternPlugin,
 )
 from v17_rebirth.backend.plugins.spec import V17PluginSpec
 
@@ -172,3 +185,122 @@ def test_pattern_resolver_and_finance_configs_adjust_thresholds(monkeypatch: Any
     )
     assert facts
     assert facts[0].meta["pattern_candidate"] == "财官协同"
+
+
+def test_new_classical_pattern_plugins_emit_candidates() -> None:
+    wealth_facts = WealthStarPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "丁卯", "day": "庚午", "hour": "乙酉"},
+            "ten_gods_runtime": {"正财": 32.0, "偏财": 10.0, "正官": 18.0},
+        }
+    )
+    assert wealth_facts
+    assert wealth_facts[0].meta["pattern_candidate"] == "正财格"
+
+    seal_facts = SealStarPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "戊子", "day": "甲午", "hour": "乙亥"},
+            "ten_gods_runtime": {"正印": 34.0, "偏印": 11.0, "比肩": 12.0},
+        }
+    )
+    assert seal_facts
+    assert seal_facts[0].meta["pattern_candidate"] == "正印格"
+
+    yangren_facts = YangRenPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "丙寅", "month": "辛卯", "day": "甲午", "hour": "丁未"},
+            "ten_gods_runtime": {"劫财": 22.0, "比肩": 14.0, "伤官": 12.0},
+        }
+    )
+    assert yangren_facts
+    assert yangren_facts[0].meta["pattern_candidate"] == "羊刃格"
+
+    guanyin_facts = GuanYinPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "辛酉", "day": "甲午", "hour": "癸酉"},
+            "ten_gods_runtime": {"正官": 28.0, "正印": 24.0, "偏印": 5.0},
+        }
+    )
+    assert guanyin_facts
+    assert guanyin_facts[0].meta["pattern_candidate"] == "官印相生"
+
+    shayin_facts = ShaYinPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲申", "month": "庚申", "day": "甲子", "hour": "癸酉"},
+            "ten_gods_runtime": {"七杀": 30.0, "正印": 20.0, "偏印": 4.0},
+        }
+    )
+    assert shayin_facts
+    assert shayin_facts[0].meta["pattern_candidate"] == "杀印相生"
+
+    zhisha_facts = ShiShenZhiShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲申", "month": "庚申", "day": "壬午", "hour": "甲辰"},
+            "ten_gods_runtime": {"七杀": 26.0, "食神": 22.0, "偏印": 3.0},
+        }
+    )
+    assert zhisha_facts
+    assert zhisha_facts[0].meta["pattern_candidate"] == "食神制杀"
+
+    peiyin_facts = ShangGuanPeiYinPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "丙午", "day": "乙酉", "hour": "壬辰"},
+            "ten_gods_runtime": {"伤官": 28.0, "正印": 18.0, "偏印": 3.0},
+        }
+    )
+    assert peiyin_facts
+    assert peiyin_facts[0].meta["pattern_candidate"] == "伤官配印"
+
+    shishen_shengcai_facts = ShiShenShengCaiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "壬寅", "day": "庚午", "hour": "乙酉"},
+            "ten_gods_runtime": {"食神": 24.0, "正财": 18.0, "偏财": 5.0},
+        }
+    )
+    assert shishen_shengcai_facts
+    assert shishen_shengcai_facts[0].meta["pattern_candidate"] == "食神生财"
+
+    shangguan_shengcai_facts = ShangGuanShengCaiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "丙午", "day": "辛酉", "hour": "甲辰"},
+            "ten_gods_runtime": {"伤官": 26.0, "正财": 16.0, "偏财": 4.0},
+        }
+    )
+    assert shangguan_shengcai_facts
+    assert shangguan_shengcai_facts[0].meta["pattern_candidate"] == "伤官生财"
+
+    yangren_jiasha_facts = YangRenJiaShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "丙寅", "month": "辛卯", "day": "甲午", "hour": "庚申"},
+            "ten_gods_runtime": {"劫财": 22.0, "比肩": 10.0, "七杀": 24.0},
+        }
+    )
+    assert yangren_jiasha_facts
+    assert yangren_jiasha_facts[0].meta["pattern_candidate"] == "阳刃驾杀"
+
+    zaqi_caiguan_facts = ZaQiCaiGuanPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "丙辰", "day": "庚午", "hour": "乙酉"},
+            "ten_gods_runtime": {"正财": 18.0, "偏财": 7.0, "正官": 12.0},
+        }
+    )
+    assert zaqi_caiguan_facts
+    assert zaqi_caiguan_facts[0].meta["pattern_candidate"] == "杂气财官格"
+
+    zaqi_yin_facts = ZaQiYinPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "戊辰", "day": "甲午", "hour": "乙亥"},
+            "ten_gods_runtime": {"正印": 17.0, "偏印": 6.0},
+        }
+    )
+    assert zaqi_yin_facts
+    assert zaqi_yin_facts[0].meta["pattern_candidate"] == "杂气印绶格"
+
+    zaqi_qisha_facts = ZaQiQiShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "庚戌", "day": "甲午", "hour": "乙酉"},
+            "ten_gods_runtime": {"七杀": 19.0, "正印": 4.0},
+        }
+    )
+    assert zaqi_qisha_facts
+    assert zaqi_qisha_facts[0].meta["pattern_candidate"] == "杂气七杀格"
