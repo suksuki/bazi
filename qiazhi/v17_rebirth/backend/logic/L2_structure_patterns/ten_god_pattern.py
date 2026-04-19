@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    choose_dominant_origin_type,
+    collect_origin_types_from_rows,
+    relation_origin_multiplier,
+)
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -68,6 +73,21 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
     ]
 
 
+def _pattern_origin_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    meta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+    iv2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
+    origins: List[str] = []
+    origins.extend(collect_origin_types_from_rows(iv2.get("liu_chong") or [], member_key="pair"))
+    origins.extend(collect_origin_types_from_rows(iv2.get("liu_hai") or [], member_key="pair"))
+    origins.extend(collect_origin_types_from_rows(iv2.get("liu_po") or [], member_key="pair"))
+    origins.extend(collect_origin_types_from_rows(iv2.get("sanxing") or [], member_key="branches"))
+    origin_type = choose_dominant_origin_type(origins) if origins else "natal"
+    return {
+        "origin_type": origin_type,
+        "origin_multiplier": relation_origin_multiplier(origin_type),
+    }
+
+
 @dataclass
 class TenGodPatternPlugin(V17PluginSpec):
     plugin_id: str = "ten_god_pattern"
@@ -78,7 +98,16 @@ class TenGodPatternPlugin(V17PluginSpec):
         from v17_rebirth.backend.logic.configs.manager import get_plugin_config
         cfg = get_plugin_config(self.plugin_id)
         scores = deity_scores_from_tensor(physics_tensor)
-        return rows_dict_to_v17_facts(_collect_rows(scores, cfg), causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        origin_meta = _pattern_origin_meta(physics_tensor)
+        rows = _collect_rows(scores, cfg)
+        for row in rows:
+            if not isinstance(row.get("meta"), dict):
+                row["meta"] = {}
+            base_match = float(row["meta"].get("match_ratio", 0.6) or 0.6)
+            row["meta"]["match_ratio"] = round(min(0.92, base_match * max(0.92, float(origin_meta["origin_multiplier"]))), 3)
+            row["meta"]["origin_type"] = origin_meta["origin_type"]
+            row["meta"]["origin_multiplier"] = round(float(origin_meta["origin_multiplier"]), 3)
+        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 PLUGIN = TenGodPatternPlugin()

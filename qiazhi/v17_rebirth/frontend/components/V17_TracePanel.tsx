@@ -81,6 +81,8 @@ interface TracePanelProps {
         knowledge_snapshot?: Record<string, unknown>;
         brain_action_queue?: Array<Record<string, unknown>>;
       };
+      manual_inbox?: Array<Record<string, unknown>>;
+      auto_decisions?: Array<Record<string, unknown>>;
       manual_decisions?: Array<Record<string, unknown>>;
       auto_resolutions?: Array<Record<string, unknown>>;
       llm_arbitration_context?: Array<Record<string, unknown>>;
@@ -281,15 +283,28 @@ export function V17_TracePanel({
     const action = brainActionQueue.find((item) => String(item.conflict_id || "").trim() === conflictId);
     return { conflict, resolution, action };
   }).filter((row) => String(row.conflict.conflict_id || "").trim());
-  const manualDecisions = Array.isArray(physicsPayload.manual_decisions)
-    ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
+  const manualDecisions = Array.isArray(physicsPayload.manual_inbox)
+    ? (physicsPayload.manual_inbox as Array<Record<string, unknown>>)
+    : Array.isArray(physicsPayload.manual_decisions)
+      ? (physicsPayload.manual_decisions as Array<Record<string, unknown>>)
+      : [];
+  const autoDecisions = Array.isArray(physicsPayload.auto_decisions)
+    ? (physicsPayload.auto_decisions as Array<Record<string, unknown>>)
     : [];
-  const autoResolutions = Array.isArray(physicsPayload.auto_resolutions)
-    ? (physicsPayload.auto_resolutions as Array<Record<string, unknown>>)
+  const autoResolutions = autoDecisions.length
+    ? autoDecisions.filter((row) => {
+        const bucket = String(row.auto_bucket || "").trim().toLowerCase();
+        return bucket === "system" || bucket === "llm";
+      })
+    : Array.isArray(physicsPayload.auto_resolutions)
+      ? (physicsPayload.auto_resolutions as Array<Record<string, unknown>>)
+      : [];
+  const llmArbitrationContext = autoDecisions.length
+    ? autoDecisions.filter((row) => String(row.auto_bucket || "").trim().toLowerCase() === "context")
     : [];
-  const llmArbitrationContext = Array.isArray(physicsPayload.llm_arbitration_context)
-    ? (physicsPayload.llm_arbitration_context as Array<Record<string, unknown>>)
-    : [];
+  if (!autoDecisions.length && Array.isArray(physicsPayload.llm_arbitration_context)) {
+    llmArbitrationContext.push(...(physicsPayload.llm_arbitration_context as Array<Record<string, unknown>>));
+  }
   const groupedPlugins = pluginRows.reduce<Record<string, string[]>>((acc, row) => {
     const plugin = String(row.plugin || row.source || "unknown").trim() || "unknown";
     const fact = String(row.fact || row.label || row.title || "").trim();
@@ -359,13 +374,13 @@ export function V17_TracePanel({
           type="button"
           onClick={onToggle}
           className="rounded-full border border-cyan-400/35 bg-cyan-950/55 px-3 py-2 text-[10px] tracking-[0.35em] text-cyan-200 transition hover:bg-cyan-900/70"
-          title="展开调试边栏"
+          title="展开系统观测"
         >
-          DEBUG
+          观测
         </button>
         <div className="mt-4 flex flex-1 items-center">
           <span className="[writing-mode:vertical-rl] text-[10px] tracking-[0.4em] text-zinc-500">
-            元数据 / 链路
+            系统观测
           </span>
         </div>
       </aside>
@@ -376,8 +391,8 @@ export function V17_TracePanel({
     <aside className="sticky top-6 h-fit rounded-2xl border border-cyan-500/40 bg-[linear-gradient(180deg,rgba(10,18,24,0.96),rgba(9,14,19,0.88))] p-3 shadow-[0_22px_70px_rgba(8,145,178,0.16)]">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs tracking-[0.28em] text-cyan-200">DEBUG SIDEBAR</p>
-          <p className="mt-1 text-[11px] text-zinc-500">元数据 / 因果链路 / LLM 调试</p>
+          <p className="text-xs tracking-[0.28em] text-cyan-200">SYSTEM OBSERVATORY</p>
+          <p className="mt-1 text-[11px] text-zinc-500">元数据 / 重算链路 / 决策与 LLM 观测</p>
         </div>
         <button
           type="button"
@@ -404,7 +419,7 @@ export function V17_TracePanel({
         </div>
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Three-Layer Energy</p>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Three-Layer Energy / 三层能量</p>
             <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-0.5 text-[9px] tracking-[0.2em] text-cyan-200">
               主图: Runtime
             </span>
@@ -425,7 +440,7 @@ export function V17_TracePanel({
               );
             })}
           </div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Runtime Detail</p>
+          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Runtime Detail / 十神运行明细</p>
           {deityScores.length ? (
             <div className="space-y-1">
               {deityScores.map((row) => (
@@ -713,14 +728,14 @@ export function V17_TracePanel({
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">仲裁分流</p>
+          <p className="text-[11px] text-cyan-300">决策观测</p>
           <span className="text-[10px] text-zinc-500">
-            手动 {manualDecisions.length} / 系统 {autoResolutions.length} / LLM {llmArbitrationContext.length}
+            手动 {manualDecisions.length} / 自动 {autoResolutions.length} / 上下文 {llmArbitrationContext.length}
           </span>
         </div>
         <div className="space-y-2">
           <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL_DECISIONS</p>
+            <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL INBOX</p>
             <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
               {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => (
                 <div key={`manual_${idx}`} className="rounded border border-violet-500/10 bg-zinc-950/60 px-2 py-1">
@@ -737,7 +752,7 @@ export function V17_TracePanel({
           </div>
 
           <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-amber-200">AUTO_RESOLUTIONS</p>
+            <p className="text-[10px] tracking-[0.2em] text-amber-200">AUTO DECISIONS</p>
             <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
               {autoResolutions.length ? autoResolutions.slice(0, 8).map((row, idx) => (
                 <div key={`auto_${idx}`} className="rounded border border-amber-500/10 bg-zinc-950/60 px-2 py-1">
@@ -752,7 +767,7 @@ export function V17_TracePanel({
           </div>
 
           <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-cyan-200">LLM_ARBITRATION_CONTEXT</p>
+            <p className="text-[10px] tracking-[0.2em] text-cyan-200">CONTEXT CACHE</p>
             <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
               {llmArbitrationContext.length ? llmArbitrationContext.slice(0, 8).map((row, idx) => (
                 <div key={`llm_${idx}`} className="rounded border border-cyan-500/10 bg-zinc-950/60 px-2 py-1">

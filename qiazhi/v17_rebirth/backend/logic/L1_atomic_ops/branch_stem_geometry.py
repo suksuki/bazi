@@ -88,7 +88,13 @@ _FUSION_ROWS: Tuple[Tuple[str, str, str], ...] = (
     ("戊", "癸", "fire"),
 )
 
-_ADJ_PILLARS: Tuple[Tuple[str, str], ...] = (("year", "month"), ("month", "day"), ("day", "hour"))
+_ADJ_PILLARS: Tuple[Tuple[str, str], ...] = (
+    ("year", "month"),
+    ("month", "day"),
+    ("day", "hour"),
+    ("month", "luck"),
+    ("luck", "flow"),
+)
 
 _BRANCH_DOMINANT_ELEMENT: Dict[str, str] = {
     "子": "water",
@@ -125,6 +131,10 @@ def pillars_branches_set(branches: Mapping[str, str]) -> Set[str]:
 
 def _pillar_keys() -> Tuple[str, ...]:
     return ("year", "month", "day", "hour")
+
+
+def _extended_pillar_keys() -> Tuple[str, ...]:
+    return ("year", "month", "day", "hour", "luck", "flow")
 
 
 def eval_branch_pair_hits(
@@ -306,6 +316,34 @@ def branches_and_stems_from_four_pillars(four: Any) -> Tuple[Dict[str, str], Dic
         return out_b, out_s
     for key in _pillar_keys():
         raw = four.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, str):
+            st, br = parse_ganzhi_pillar(raw)
+        elif isinstance(raw, dict):
+            st, br = str(raw.get("stem") or ""), str(raw.get("branch") or "")
+        else:
+            st, br = "", ""
+        if br:
+            out_b[key] = br
+        if st:
+            out_s[key] = st
+    return out_b, out_s
+
+
+def branches_and_stems_from_runtime_pillars(
+    four: Any,
+    *,
+    luck_pillar: Any = None,
+    flow_pillar: Any = None,
+) -> Tuple[Dict[str, str], Dict[str, str]]:
+    out_b, out_s = branches_and_stems_from_four_pillars(four)
+    runtime_rows = {
+        "luck": luck_pillar,
+        "flow": flow_pillar,
+    }
+    for key in ("luck", "flow"):
+        raw = runtime_rows.get(key)
         if raw is None:
             continue
         if isinstance(raw, str):

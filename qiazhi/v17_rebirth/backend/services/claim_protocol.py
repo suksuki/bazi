@@ -34,6 +34,8 @@ CLAIM_JSON_SCHEMA: Dict[str, Any] = {
         "priority": {"type": "number"},
         "confidence": {"type": "number"},
         "match_ratio": {"type": "number"},
+        "origin_type": {"type": "string"},
+        "origin_multiplier": {"type": "number"},
     },
 }
 
@@ -165,6 +167,8 @@ def compile_claims(*, facts: List[V17Fact], physics_tensor: Dict[str, Any] | Non
                 "priority": float(fact.priority or 0.0),
                 "confidence": float(meta.get("confidence", fact.salience_weight or 0.5) or 0.5) * max(0.35, match_ratio),
                 "match_ratio": match_ratio,
+                "origin_type": str(meta.get("origin_type") or "").strip(),
+                "origin_multiplier": float(meta.get("origin_multiplier", 1.0) or 1.0),
                 "causal_tier": int(fact.causal_tier or 0),
             }
         )

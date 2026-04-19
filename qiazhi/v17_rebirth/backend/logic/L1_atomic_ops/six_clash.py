@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import _branch_dominant_ten_god
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import relation_origin_multiplier
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -41,6 +42,8 @@ class SixClashPlugin(V17PluginSpec):
                     stress = max(0.35, min(1.0, float(hit.get("stress"))))
                 except (TypeError, ValueError):
                     stress = 0.65
+            origin_type = str(hit.get("origin_type") or "natal").strip()
+            origin_mul = relation_origin_multiplier(origin_type)
             rows.append(
                 {
                     "plugin": self.plugin_id,
@@ -49,10 +52,12 @@ class SixClashPlugin(V17PluginSpec):
                     "priority": 0.83,
                     "meta": {
                         "impact_ratio": -0.15,
-                        "match_ratio": round(stress, 3),
+                        "match_ratio": round(max(0.0, min(0.96, stress * origin_mul)), 3),
                         "target_god": target_god,
                         "clash_pair": pair[:2],
                         "relation_family": "liu_chong",
+                        "origin_type": origin_type,
+                        "origin_multiplier": round(origin_mul, 3),
                     },
                 }
             )

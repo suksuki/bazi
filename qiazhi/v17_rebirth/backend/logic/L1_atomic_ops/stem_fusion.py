@@ -52,7 +52,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         if mode == "stuck":
             target_god = ten_god_from_stems(dm, stems[0]) if stems else "被合神"
             cond_mul = relation_effect_multiplier(condition["condition_state"])
-            match_ratio = max(0.0, min(1.0, max(0.25, float(condition["branch_hua_ratio"] or 0.0) + 0.2) * cond_mul))
+            origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
+            branch_ratio = max(0.0, min(1.0, float(condition["branch_hua_ratio"] or 0.0)))
+            support_penalty = 0.92 if condition["month_supports"] else 0.82
+            match_ratio = max(
+                0.0,
+                min(
+                    0.7,
+                    (0.18 + branch_ratio * 0.28 + (0.05 if branch_ratio >= 0.45 else 0.0))
+                    * max(0.5, cond_mul)
+                    * origin_mul
+                    * support_penalty,
+                ),
+            )
             rows.append({
                 "plugin": "l1.physics.op_stem_fusion",
                 "fact": f"天干羁绊 [{lab}]：能量处于僵持态，{target_god} 能级削减 {int(stuck_damp*100)}%（{condition['condition_trigger']}）。",
@@ -64,6 +76,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_trigger": condition["condition_trigger"],
                     "branch_hua_ratio": condition["branch_hua_ratio"],
                     "condition_multiplier": cond_mul,
+                    "origin_type": condition.get("origin_type"),
+                    "origin_multiplier": round(origin_mul, 3),
                 }
             })
         elif mode == "transformed":
@@ -74,7 +88,17 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             target_god = next((g for g, e in g2e.items() if e == hua_el), "化气神")
             
             cond_mul = relation_effect_multiplier(condition["condition_state"])
-            match_ratio = max(0.0, min(1.0, max(0.35, float(condition["branch_hua_ratio"] or 0.0) + (0.35 if condition["condition_state"] == "formed" else 0.0)) * max(cond_mul, 0.35)))
+            origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
+            branch_ratio = max(0.0, min(1.0, float(condition["branch_hua_ratio"] or 0.0)))
+            formed_bonus = 0.2 if condition["condition_state"] == "formed" else 0.04
+            month_bonus = 0.12 if condition["month_supports"] else 0.02
+            match_ratio = max(
+                0.0,
+                min(
+                    0.9,
+                    (0.22 + branch_ratio * 0.38 + formed_bonus + month_bonus) * max(cond_mul, 0.5) * origin_mul,
+                ),
+            )
             meta = {
                 "target_god": target_god,
                 "match_ratio": round(match_ratio, 3),
@@ -82,6 +106,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "condition_trigger": condition["condition_trigger"],
                 "branch_hua_ratio": condition["branch_hua_ratio"],
                 "condition_multiplier": cond_mul,
+                "origin_type": condition.get("origin_type"),
+                "origin_multiplier": round(origin_mul, 3),
             }
             if condition["condition_state"] == "formed":
                 meta["impact_ratio"] = trans_eff * cond_mul

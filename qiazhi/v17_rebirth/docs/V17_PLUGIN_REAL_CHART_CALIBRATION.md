@@ -31,6 +31,7 @@ python3 /Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_p
 - 每个样盘的四柱 / 大运 / 流年
 - 插件 `match_ratio` 最高的主张
 - 按插件聚合的平均命中度
+- 按 `origin_type` 聚合的命中度
 - `plugin_recompute_contributions`
 
 ## 当前样盘
@@ -48,6 +49,18 @@ python3 /Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_p
 
 3. `2024-01-01 12:00`
    - 作为较中性的基线测试盘
+
+4. `1989-08-17 09:20`
+   - 运到成势专项样盘
+   - 观察大运是否更像背景推进，而不是短时噪声
+
+5. `1993-12-11 23:40`
+   - 流年引冲专项样盘
+   - 观察流年是否主要表现为触发与引动
+
+6. `1971-03-28 07:15`
+   - 运流联动合化专项样盘
+   - 观察运流共同参与时，五合/六合/墓库是否进入 `mixed` 或 `luck_background`
 
 ## 校准口径
 
@@ -74,6 +87,19 @@ python3 /Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_p
   - 是否因为多个插件同向叠加而偏大
 - `before → after`
   - 是否符合“从 L0 基线重算”的预期
+
+### 二点五. 来源类型口感
+
+重点看：
+
+- `natal`
+  - 是否仍然是最稳定、最常见的主轴来源
+- `luck_background`
+  - 是否能抬高背景类成立度，但不应像纯原局那样无条件满格
+- `flow_trigger`
+  - 是否更多表现为“引动成立”，而不是长期压倒原局
+- `mixed`
+  - 是否只在运流与原局同时参与时出现，且通常比单纯 `flow_trigger` 更稳
 
 ### 三. 插件优先级
 
@@ -108,4 +134,5 @@ python3 /Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/scripts/calibrate_p
 
 1. 增加更多真实盘样本
 2. 给校准脚本增加“按插件聚合平均命中度”
-3. 对明显偏硬的插件继续细化公式
+3. 给校准脚本增加“按 origin_type 聚合命中度”
+4. 对明显偏硬的插件继续细化公式

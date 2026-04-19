@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    choose_dominant_origin_type,
+    collect_origin_types_from_rows,
+    relation_origin_multiplier,
+)
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -19,6 +24,43 @@ def _top_god(scores: Dict[str, float]) -> str:
     return sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[0][0]
 
 
+def _top_ratio(scores: Dict[str, float]) -> float:
+    ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    if len(ordered) < 2:
+        return 1.0
+    return float(ordered[0][1]) / max(float(ordered[1][1]), 1.0)
+
+
+def _blind_match_ratio(iv2: Dict[str, Any], scores: Dict[str, float], *, base: float, cap: float) -> float:
+    ratio = _top_ratio(scores)
+    structure_boost = 0.0
+    if iv2.get("liu_chong"):
+        structure_boost = 0.07
+    elif iv2.get("sanxing"):
+        structure_boost = 0.05
+    elif iv2.get("san_he") or iv2.get("ban_he"):
+        structure_boost = 0.06
+    dominance_boost = min(0.08, max(0.0, (ratio - 1.0) * 0.08))
+    return round(min(cap, max(0.42, base + structure_boost + dominance_boost)), 3)
+
+
+def _blind_origin_meta(iv2: Dict[str, Any]) -> Dict[str, float | str]:
+    origin_types: List[str] = []
+    if iv2.get("liu_chong"):
+        origin_types.extend(collect_origin_types_from_rows(iv2.get("liu_chong") or [], member_key="pair"))
+    elif iv2.get("sanxing"):
+        origin_types.extend(collect_origin_types_from_rows(iv2.get("sanxing") or [], member_key="branches"))
+    elif iv2.get("san_he"):
+        origin_types.extend(collect_origin_types_from_rows(iv2.get("san_he") or [], member_key="group"))
+    elif iv2.get("ban_he"):
+        origin_types.extend(collect_origin_types_from_rows(iv2.get("ban_he") or [], member_key="pair"))
+    origin_type = choose_dominant_origin_type(origin_types)
+    return {
+        "origin_type": origin_type,
+        "origin_multiplier": relation_origin_multiplier(origin_type),
+    }
+
+
 @dataclass
 class BlindWorkAxisPlugin(V17PluginSpec):
     plugin_id: str = "classical.blind.work_axis.v1"
@@ -27,6 +69,8 @@ class BlindWorkAxisPlugin(V17PluginSpec):
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
         iv2 = _interaction_v2(physics_tensor)
+        scores = deity_scores_from_tensor(physics_tensor)
+        origin_meta = _blind_origin_meta(iv2)
         axis = ""
         detail = ""
         if iv2.get("liu_chong"):
@@ -46,7 +90,11 @@ class BlindWorkAxisPlugin(V17PluginSpec):
                 "fact": f"盲派做功主轴：本局宜以「{axis}」为先。{detail}",
                 "priority": 0.79,
                 "label": "做功主轴",
-                "meta": {"blind_axis": axis, "match_ratio": 0.84},
+                "meta": {
+                    "blind_axis": axis,
+                    "match_ratio": round(min(0.88, _blind_match_ratio(iv2, scores, base=0.68, cap=0.88) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    **origin_meta,
+                },
             }
         ]
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
@@ -64,6 +112,7 @@ class BlindResponseChainPlugin(V17PluginSpec):
         if not top:
             return []
         iv2 = _interaction_v2(physics_tensor)
+        origin_meta = _blind_origin_meta(iv2)
         if iv2.get("liu_chong"):
             line = f"{top} 被外力引发，宜先论近应、突发与触发点。"
         elif iv2.get("san_he") or iv2.get("ban_he"):
@@ -78,7 +127,11 @@ class BlindResponseChainPlugin(V17PluginSpec):
                 "fact": f"盲派应链提示：{line}",
                 "priority": 0.78,
                 "label": "应链判断",
-                "meta": {"response_top_god": top, "match_ratio": 0.78},
+                "meta": {
+                    "response_top_god": top,
+                    "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.57, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    **origin_meta,
+                },
             }
         ]
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
@@ -96,6 +149,7 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
         if not top:
             return []
         iv2 = _interaction_v2(physics_tensor)
+        origin_meta = _blind_origin_meta(iv2)
         if iv2.get("liu_chong"):
             symbol = "动象先起"
         elif iv2.get("san_he") or iv2.get("ban_he"):
@@ -110,7 +164,12 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
                 "fact": f"盲派触发象：{top} 当前呈现「{symbol}」语义，可作为快速断事入口。",
                 "priority": 0.76,
                 "label": "触发象",
-                "meta": {"symbol_top_god": top, "blind_symbol": symbol, "match_ratio": 0.74},
+                "meta": {
+                    "symbol_top_god": top,
+                    "blind_symbol": symbol,
+                    "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.58, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    **origin_meta,
+                },
             }
         ]
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
@@ -125,6 +184,7 @@ class BlindTimingWindowPlugin(V17PluginSpec):
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
         iv2 = _interaction_v2(physics_tensor)
         scores = deity_scores_from_tensor(physics_tensor)
+        origin_meta = _blind_origin_meta(iv2)
         top = _top_god(scores)
         if iv2.get("liu_chong"):
             phase = "近应"
@@ -143,7 +203,12 @@ class BlindTimingWindowPlugin(V17PluginSpec):
                 "fact": f"盲派应期窗：当前以「{phase}」为主。{detail}",
                 "priority": 0.75,
                 "label": "应期窗口",
-                "meta": {"blind_phase": phase, "timing_top_god": top, "match_ratio": 0.73},
+                "meta": {
+                    "blind_phase": phase,
+                    "timing_top_god": top,
+                    "match_ratio": round(min(0.75, _blind_match_ratio(iv2, scores, base=0.53, cap=0.75) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    **origin_meta,
+                },
             }
         ]
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
@@ -161,6 +226,7 @@ class BlindSummaryPlugin(V17PluginSpec):
         if not top:
             return []
         iv2 = _interaction_v2(physics_tensor)
+        origin_meta = _blind_origin_meta(iv2)
         if iv2.get("liu_chong"):
             route = "冲起事，由主神承压见应。"
         elif iv2.get("sanxing"):
@@ -175,7 +241,12 @@ class BlindSummaryPlugin(V17PluginSpec):
                 "fact": f"盲派断口收束：以 {top} 为断口，{route}",
                 "priority": 0.74,
                 "label": "断口收束",
-                "meta": {"blind_summary_top_god": top, "blind_route": route, "match_ratio": 0.72},
+                "meta": {
+                    "blind_summary_top_god": top,
+                    "blind_route": route,
+                    "match_ratio": round(min(0.71, _blind_match_ratio(iv2, scores, base=0.49, cap=0.71) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
+                    **origin_meta,
+                },
             }
         ]
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)

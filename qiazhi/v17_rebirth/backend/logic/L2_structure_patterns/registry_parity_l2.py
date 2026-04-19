@@ -4,6 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    choose_dominant_origin_type,
+    collect_origin_types_from_rows,
+    relation_origin_multiplier,
+)
 from v17_rebirth.backend.logic.L1_atomic_ops.v17_op_fact import generate_v17_fact_from_op, strip_score_noise
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -32,7 +37,12 @@ class ClimateAdjusterStub(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=0.82,
                 decision_hint="先调候，再取用",
-                meta={"month_command_god": month_command_god, "match_ratio": 0.86},
+                meta={
+                    "month_command_god": month_command_god,
+                    "match_ratio": 0.86,
+                    "origin_type": "natal",
+                    "origin_multiplier": 1.0,
+                },
             )
         ]
 
@@ -93,6 +103,12 @@ class PatternDetectorV2(V17PluginSpec):
         name = strip_score_noise(str(meta.get("hit_pattern_name") or "").strip())
         if not name or name == "未定格局":
             return []
+        iv2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
+        pattern_origins = []
+        pattern_origins.extend(collect_origin_types_from_rows(iv2.get("liu_chong") or [], member_key="pair"))
+        pattern_origins.extend(collect_origin_types_from_rows(iv2.get("liu_hai") or [], member_key="pair"))
+        pattern_origins.extend(collect_origin_types_from_rows(iv2.get("sanxing") or [], member_key="branches"))
+        origin_type = choose_dominant_origin_type(pattern_origins) if pattern_origins else "natal"
         text = generate_v17_fact_from_op(kind="pattern", detail=name)
         return [
             V17Fact(
@@ -101,7 +117,11 @@ class PatternDetectorV2(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=0.84,
                 decision_hint="格局对焦",
-                meta={"match_ratio": 0.78},
+                meta={
+                    "match_ratio": round(min(0.82, 0.78 * max(0.92, relation_origin_multiplier(origin_type))), 3),
+                    "origin_type": origin_type,
+                    "origin_multiplier": round(relation_origin_multiplier(origin_type), 3),
+                },
             )
         ]
 
@@ -122,6 +142,13 @@ class BlindSchoolV1(V17PluginSpec):
         hint = strip_score_noise(str(meta.get("blind_work_hint") or "").strip())
         if not hint:
             return []
+        iv2 = meta.get("interaction_v2") if isinstance(meta.get("interaction_v2"), dict) else {}
+        blind_origins = []
+        blind_origins.extend(collect_origin_types_from_rows(iv2.get("liu_chong") or [], member_key="pair"))
+        blind_origins.extend(collect_origin_types_from_rows(iv2.get("san_he") or [], member_key="group"))
+        blind_origins.extend(collect_origin_types_from_rows(iv2.get("ban_he") or [], member_key="pair"))
+        blind_origins.extend(collect_origin_types_from_rows(iv2.get("sanxing") or [], member_key="branches"))
+        origin_type = choose_dominant_origin_type(blind_origins) if blind_origins else "natal"
         text = generate_v17_fact_from_op(kind="blind_work", detail=hint)
         return [
             V17Fact(
@@ -130,7 +157,11 @@ class BlindSchoolV1(V17PluginSpec):
                 causal_tier=int(self.causal_tier),
                 priority=0.81,
                 decision_hint="做功检视",
-                meta={"match_ratio": 0.74},
+                meta={
+                    "match_ratio": round(min(0.8, 0.74 * max(0.9, relation_origin_multiplier(origin_type))), 3),
+                    "origin_type": origin_type,
+                    "origin_multiplier": round(relation_origin_multiplier(origin_type), 3),
+                },
             )
         ]
 

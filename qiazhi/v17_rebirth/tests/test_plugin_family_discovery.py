@@ -88,6 +88,9 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
     assert "classical.blind.summary.v1" in fact_plugins
     assert "classical.ziping.month_command.v1" in fact_plugins
     assert "classical.pattern.axis.v1" in fact_plugins
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+    assert float(by_plugin["l1.physics.op_branch_sanhe"].meta.get("match_ratio", 0.0) or 0.0) < 1.0
+    assert float(by_plugin["classical.pattern.axis.v1"].meta.get("match_ratio", 0.0) or 0.0) < 1.0
 
 
 def test_pattern_resolver_emits_on_multiple_pattern_candidates() -> None:

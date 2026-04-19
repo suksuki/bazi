@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    choose_dominant_origin_type,
+    collect_origin_types_from_rows,
+    relation_origin_multiplier,
+)
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, _parse_gz, ten_god_from_stems
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
@@ -67,6 +72,10 @@ def _pattern_context(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         blockers.append("sanxing")
     if iv2.get("liu_hai"):
         blockers.append("liu_hai")
+    blocker_origin_types: List[str] = []
+    blocker_origin_types.extend(collect_origin_types_from_rows(iv2.get("liu_chong") or [], member_key="pair"))
+    blocker_origin_types.extend(collect_origin_types_from_rows(iv2.get("sanxing") or [], member_key="branches"))
+    blocker_origin_types.extend(collect_origin_types_from_rows(iv2.get("liu_hai") or [], member_key="pair"))
     return {
         "scores": scores,
         "month_god": month_god,
@@ -74,11 +83,21 @@ def _pattern_context(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         "top_score": top_score,
         "dominant_ratio": round(ratio, 3),
         "blockers": blockers,
+        "origin_type": choose_dominant_origin_type(blocker_origin_types) if blocker_origin_types else "natal",
     }
 
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
+
+
+def _pattern_origin_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    context = _pattern_context(physics_tensor)
+    origin_type = str(context.get("origin_type") or "natal")
+    return {
+        "origin_type": origin_type,
+        "origin_multiplier": relation_origin_multiplier(origin_type),
+    }
 
 
 @dataclass
@@ -91,7 +110,19 @@ class PatternAxisPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         if not scores:
             return []
-        top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[0]
+        origin_meta = _pattern_origin_meta(physics_tensor)
+        ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+        top = ordered[0]
+        top_score = float(top[1])
+        second_score = float(ordered[1][1]) if len(ordered) >= 2 else 0.0
+        total_score = max(sum(float(v) for _k, v in ordered), 1.0)
+        top_share = top_score / total_score
+        dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
+        axis_match_ratio = _clamp01(
+            0.42
+            + 0.5 * top_share
+            + 0.25 * min(1.0, max(0.0, (dominant_ratio - 1.0) / 1.5))
+        ) * max(0.92, float(origin_meta["origin_multiplier"]))
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -100,13 +131,16 @@ class PatternAxisPlugin(V17PluginSpec):
                 "label": "格局轴线",
                 "meta": {
                     "pattern_axis": top[0],
-                    "axis_score": float(top[1]),
-                    "match_ratio": round(_clamp01(float(top[1]) / max(sum(float(v) for v in scores.values()), 1.0) * 3.0), 3),
+                    "axis_score": top_score,
+                    "top_share": round(top_share, 3),
+                    "dominant_ratio": round(dominant_ratio, 3),
+                    "match_ratio": round(axis_match_ratio, 3),
                     "claim_type": "pattern_candidate",
                     "entity_scope": "pattern",
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.77,
+                    **origin_meta,
                 },
             }
         ]
@@ -123,6 +157,7 @@ class JianLuYueJiePlugin(V17PluginSpec):
         month_god = _month_main_god(physics_tensor)
         if month_god not in {"比肩", "劫财"}:
             return []
+        origin_meta = _pattern_origin_meta(physics_tensor)
         name = "建禄" if month_god == "比肩" else "月劫"
         rows = [
             {
@@ -133,12 +168,13 @@ class JianLuYueJiePlugin(V17PluginSpec):
                 "meta": {
                     "pattern_candidate": name,
                     "month_main_god": month_god,
-                    "match_ratio": 0.82,
+                    "match_ratio": round(_clamp01(0.82 * max(0.92, float(origin_meta["origin_multiplier"]))), 3),
                     "claim_type": "pattern_candidate",
                     "entity_scope": "pattern",
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.75,
+                    **origin_meta,
                 },
             }
         ]
@@ -153,6 +189,7 @@ class CongShiPlugin(V17PluginSpec):
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
         scores = deity_scores_from_tensor(physics_tensor)
+        origin_meta = _pattern_origin_meta(physics_tensor)
         top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:2]
         if len(top) < 2:
             return []
@@ -170,12 +207,13 @@ class CongShiPlugin(V17PluginSpec):
                     "pattern_candidate": "从势候选",
                     "dominant_god": g1,
                     "dominant_ratio": round(ratio, 3),
-                    "match_ratio": round(_clamp01((ratio - 1.0) / 2.0), 3),
+                    "match_ratio": round(_clamp01(_clamp01((ratio - 1.0) / 2.0) * max(0.92, float(origin_meta["origin_multiplier"]))), 3),
                     "claim_type": "pattern_candidate",
                     "entity_scope": "pattern",
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.74,
+                    **origin_meta,
                 },
             }
         ]
@@ -190,11 +228,12 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
         scores = deity_scores_from_tensor(physics_tensor)
+        origin_meta = _pattern_origin_meta(physics_tensor)
         officer = float(scores.get("正官", 0.0) + scores.get("七杀", 0.0))
         wealth = float(scores.get("正财", 0.0) + scores.get("偏财", 0.0))
         if officer < 25.0 or wealth < 25.0:
             return []
-        match_ratio = _clamp01(min(officer, wealth) / max(officer, wealth, 1.0))
+        match_ratio = _clamp01((min(officer, wealth) / max(officer, wealth, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -211,6 +250,7 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
                     "exclusivity_key": "pattern_family",
                     "source_event": "pattern_family",
                     "confidence": 0.73,
+                    **origin_meta,
                 },
             }
         ]
@@ -227,6 +267,7 @@ class PatternResolverPlugin(V17PluginSpec):
         candidates = _pattern_candidates(physics_tensor)
         if len(candidates) < 2:
             return []
+        origin_meta = _pattern_origin_meta(physics_tensor)
         candidate_names = [name for name, _axis, _score in candidates]
         axis_names = [axis for _name, axis, _score in candidates]
         unique_names = sorted(set(candidate_names))
@@ -242,6 +283,7 @@ class PatternResolverPlugin(V17PluginSpec):
                     "pattern_candidate_count": len(unique_names),
                     "pattern_candidates": unique_names,
                     "pattern_axes": sorted(set(axis_names)),
+                    **origin_meta,
                 },
             }
         ]
@@ -259,6 +301,7 @@ class PatternFormationGatePlugin(V17PluginSpec):
         candidates = _pattern_candidates(physics_tensor)
         if not candidates:
             return []
+        origin_meta = _pattern_origin_meta(physics_tensor)
         month_god = str(context["month_god"] or "")
         top_name = str(context["top_name"] or "")
         top_ratio = float(context["dominant_ratio"] or 0.0)
@@ -284,6 +327,7 @@ class PatternFormationGatePlugin(V17PluginSpec):
                     "pattern_gate_reason": best_reason,
                     "dominant_ratio": top_ratio,
                     "month_main_god": month_god,
+                    **origin_meta,
                 },
             }
         ]
@@ -302,6 +346,7 @@ class PatternBreakGuardPlugin(V17PluginSpec):
         blockers = list(context.get("blockers") or [])
         if not candidates or not blockers:
             return []
+        origin_meta = _pattern_origin_meta(physics_tensor)
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -311,6 +356,7 @@ class PatternBreakGuardPlugin(V17PluginSpec):
                 "meta": {
                     "pattern_break_risks": blockers,
                     "pattern_candidate_count": len(candidates),
+                    **origin_meta,
                 },
             }
         ]

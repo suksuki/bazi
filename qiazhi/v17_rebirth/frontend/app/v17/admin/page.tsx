@@ -677,7 +677,10 @@ export default function V17AdminPage() {
 
           {tab === "plugins" && (
             <div className="space-y-4">
-               <h2 className="text-lg font-bold border-b border-zinc-800 pb-2">Plugin Causal Tiers (L0-L3)</h2>
+               <div className="border-b border-zinc-800 pb-2">
+                 <h2 className="text-lg font-bold">Plugin Runtime Atlas</h2>
+                 <p className="mt-1 text-[11px] text-zinc-500">统一查看插件家族、命中层、决策入口、冲突层与重算贡献。</p>
+               </div>
                <div className="flex items-center gap-2">
                   <input
                     className="bg-zinc-950 border border-zinc-800 p-2 rounded text-xs w-72"

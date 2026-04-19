@@ -64,17 +64,31 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         target_abs = float(scores.get(god, 0.0) or 0.0)
         locked_energy = round(min(source_abs, target_abs) * _clamp(stability_weight, 0.0, 1.0), 4)
         cond_mul = relation_effect_multiplier(condition["condition_state"])
+        origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
         impact = (gain - 1.0) * _clamp(stability_weight, 0.3, 1.0) * cond_mul
         priority = min(0.94, 0.72 + 0.1 * _clamp(stability_weight, 0.0, 1.0))
+        balance_ratio = min(source_abs, target_abs) / max(max(source_abs, target_abs), 1.0)
+        stability_factor = _clamp(stability_weight, 0.0, 1.0)
+        support_bonus = 0.06 if condition["condition_state"] == "supported" else 0.0
+        match_ratio = _clamp(
+            (0.24 + 0.3 * stability_factor + 0.24 * balance_ratio + (0.08 if len(pair) >= 2 else 0.0) + support_bonus)
+            * max(0.55, cond_mul)
+            * origin_mul,
+            0.0,
+            0.86,
+        )
 
         meta = {
             "target_god": god,
             "stability_weight": round(stability_weight, 3),
-            "match_ratio": round(_clamp(_clamp(stability_weight, 0.3, 1.0) * cond_mul, 0.0, 1.0), 3),
+            "match_ratio": round(match_ratio, 3),
             "locked_energy": locked_energy,
+            "balance_ratio": round(balance_ratio, 3),
             "condition_state": condition["condition_state"],
             "condition_blockers": list(condition["blockers"]),
             "condition_multiplier": cond_mul,
+            "origin_type": condition.get("origin_type"),
+            "origin_multiplier": round(origin_mul, 3),
         }
         if condition["condition_state"] == "supported":
             meta["impact_ratio"] = round(impact, 2)

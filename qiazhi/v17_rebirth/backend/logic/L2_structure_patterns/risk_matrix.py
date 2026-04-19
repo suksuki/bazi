@@ -1,6 +1,11 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
+    choose_dominant_origin_type,
+    collect_origin_types_from_rows,
+    relation_origin_multiplier,
+)
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 V17_SKILL_MANIFEST = {
@@ -25,6 +30,15 @@ def _clamp_ratio(value: float, *, low: float = -0.5, high: float = 0.5) -> float
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
+
+
+def _origin_meta(rows: List[Dict[str, Any]], *, member_key: str, members: List[str] | None = None) -> Dict[str, Any]:
+    origin_types = collect_origin_types_from_rows(rows, member_key=member_key, members=members)
+    origin_type = choose_dominant_origin_type(origin_types)
+    return {
+        "origin_type": origin_type,
+        "origin_multiplier": relation_origin_multiplier(origin_type),
+    }
 
 @dataclass
 class RiskMatrixPlugin(V17PluginSpec):
@@ -55,7 +69,8 @@ class RiskMatrixPlugin(V17PluginSpec):
                     break
             if found_blade:
                 blade_ratio = _clamp_ratio(blade_clash_impulse / 10.0, low=0.05, high=0.4)
-                match_ratio = _clamp01(0.55 + 0.12 * len(clashes))
+                origin_meta = _origin_meta(clashes, member_key="pair", members=["子", "午", "卯", "酉"])
+                match_ratio = _clamp01((0.52 + 0.08 * max(0, len(clashes) - 1)) * origin_meta["origin_multiplier"])
                 results.append(V17Fact(
                     plugin_id=self.plugin_id,
                     text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
@@ -67,6 +82,7 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "match_ratio": round(match_ratio, 3),
                         "target_god": "比肩",
                         "risk_driver": "blade_clash",
+                        **origin_meta,
                     }
                 ))
 
@@ -75,7 +91,7 @@ class RiskMatrixPlugin(V17PluginSpec):
         food = float(scores.get("食神", 0))
         owl_threshold = max(5.0, food * (1.0 + max(0.0, owl_food_cap)))
         if food > 0.0 and owl > owl_threshold:
-            match_ratio = _clamp01((owl - owl_threshold) / max(food, 1.0))
+            match_ratio = _clamp01(0.45 + 0.4 * ((owl - owl_threshold) / max(owl, 1.0)))
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
                 text="结构呈现「枭神夺食」态势：输出通道受阻，存在内耗熵增。",
@@ -87,6 +103,8 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "match_ratio": round(match_ratio, 3),
                         "target_god": "食神",
                         "risk_driver": "owl_food",
+                        "origin_type": "natal",
+                        "origin_multiplier": 1.0,
                     }
                 ))
 
@@ -96,7 +114,8 @@ class RiskMatrixPlugin(V17PluginSpec):
         if hurt > 10.0 and offist > 10.0:
             overlap = min(hurt, offist)
             spread = max(hurt, offist)
-            match_ratio = _clamp01(overlap / max(spread, 1.0))
+            origin_meta = _origin_meta(clashes, member_key="pair")
+            match_ratio = _clamp01((0.5 + 0.35 * (overlap / max(spread, 1.0))) * max(0.94, origin_meta["origin_multiplier"]))
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
                 text="检测到「伤官见官」：秩序约束与意志扩张发生剧烈摩擦。",
@@ -108,6 +127,7 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "match_ratio": round(match_ratio, 3),
                         "target_god": "正官",
                         "risk_driver": "officer_crush",
+                        **origin_meta,
                     }
                 ))
 

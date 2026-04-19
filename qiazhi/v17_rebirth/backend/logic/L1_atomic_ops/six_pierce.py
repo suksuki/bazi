@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config, resolve_config_number
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import relation_effect_multiplier, summarize_relation_conditions
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_branch_liuhai",
@@ -60,7 +61,24 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         target_abs = float(scores.get(god_j, 0.0) or 0.0)
         pierce = run_six_pierce(source_abs=source_abs, target_abs=target_abs, penetration_ratio=penetration_ratio)
         effective_ratio = min(0.5, max(0.02, clash_loss_ratio * penetration_ratio))
-        match_ratio = min(1.0, max(0.0, 0.45 + penetration_ratio * 0.4))
+        condition = summarize_relation_conditions(
+            relation_family="liuhai",
+            pair_or_group=[str(x) for x in pair],
+            interaction_v2=iv2,
+        )
+        cond_mul = relation_effect_multiplier(condition["condition_state"])
+        origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
+        balance_ratio = min(source_abs, target_abs) / max(max(source_abs, target_abs), 1.0)
+        pair_strength = 1.0 if len(pair) >= 2 else 0.65
+        match_ratio = min(
+            0.84,
+            max(
+                0.0,
+                (0.26 + penetration_ratio * 0.3 + balance_ratio * 0.16 + effective_ratio * 0.78 + (0.08 if pair_strength >= 1.0 else 0.0))
+                * max(0.55, cond_mul)
+                * origin_mul,
+            ),
+        )
 
         rows.append({
             "plugin": "l1.physics.op_branch_liuhai",
@@ -75,6 +93,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "penetration_ratio": round(penetration_ratio, 3),
                 "clash_loss_ratio": round(clash_loss_ratio, 3),
                 "abs_loss": float(pierce.get("abs_loss", 0.0) or 0.0),
+                "balance_ratio": round(balance_ratio, 3),
+                "condition_state": condition["condition_state"],
+                "condition_blockers": list(condition["blockers"]),
+                "condition_multiplier": round(cond_mul, 3),
+                "origin_type": condition.get("origin_type"),
+                "origin_multiplier": round(origin_mul, 3),
             }
         })
     return rows

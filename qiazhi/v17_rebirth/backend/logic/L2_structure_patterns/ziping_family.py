@@ -16,6 +16,13 @@ def _top_two(scores: Dict[str, float]) -> List[tuple[str, float]]:
     return sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:2]
 
 
+def _dominant_ratio(scores: Dict[str, float]) -> float:
+    top2 = _top_two(scores)
+    if len(top2) < 2:
+        return 1.0
+    return float(top2[0][1]) / max(float(top2[1][1]), 1.0)
+
+
 @dataclass
 class ZiPingMonthCommandPlugin(V17PluginSpec):
     plugin_id: str = "classical.ziping.month_command.v1"
@@ -29,6 +36,10 @@ class ZiPingMonthCommandPlugin(V17PluginSpec):
         branch = str(season.get("month_branch") or "").strip()
         if not god:
             return []
+        scores = deity_scores_from_tensor(physics_tensor)
+        top2 = _top_two(scores)
+        top_god = top2[0][0] if top2 else ""
+        match_ratio = 0.88 if top_god == god else 0.72
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -38,7 +49,9 @@ class ZiPingMonthCommandPlugin(V17PluginSpec):
                 "meta": {
                     "month_command_god": god,
                     "month_branch": branch,
-                    "match_ratio": 0.88,
+                    "match_ratio": match_ratio,
+                    "origin_type": "natal",
+                    "origin_multiplier": 1.0,
                 },
             }
         ]
@@ -64,7 +77,7 @@ class ZiPingBalancePlugin(V17PluginSpec):
             state = "偏旺有主轴"
         else:
             state = "相对均衡"
-        match_ratio = min(1.0, max(0.0, (ratio - 1.0) / 1.2))
+        match_ratio = min(0.9, max(0.45, 0.48 + 0.22 * min(1.0, max(0.0, ratio - 1.0))))
         rows = [
             {
                 "plugin": self.plugin_id,
@@ -76,6 +89,8 @@ class ZiPingBalancePlugin(V17PluginSpec):
                     "dominant_god": g1,
                     "dominant_ratio": round(ratio, 3),
                     "match_ratio": round(match_ratio, 3),
+                    "origin_type": "natal",
+                    "origin_multiplier": 1.0,
                 },
             }
         ]
@@ -94,6 +109,7 @@ class ZiPingYongShenPlugin(V17PluginSpec):
         if not top:
             return []
         god = top[0][0]
+        ratio = _dominant_ratio(scores)
         if god in {"比肩", "劫财", "正印", "偏印"}:
             yong = "财官"
             reason = "比印偏重，宜以财官疏导与收束。"
@@ -112,7 +128,12 @@ class ZiPingYongShenPlugin(V17PluginSpec):
                 "meta": {
                     "yongshen_axis": yong,
                     "dominant_god": god,
-                    "match_ratio": 0.76,
+                    "match_ratio": round(
+                        min(0.84, max(0.58, 0.58 + 0.14 * min(1.0, max(0.0, ratio - 1.0)))),
+                        3,
+                    ),
+                    "origin_type": "natal",
+                    "origin_multiplier": 1.0,
                 },
             }
         ]

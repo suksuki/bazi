@@ -274,7 +274,7 @@ function arbitrationModeLabel(kind: BucketKind): string {
   if (kind === "manual") return "手动";
   if (kind === "auto") return "自动";
   if (kind === "system") return "自动";
-  return "LLM";
+  return "叙事";
 }
 
 function arbitrationTrace(kind: BucketKind, decision: Decision): string {
@@ -750,7 +750,8 @@ export function V17_DecisionInbox({
       return autoDecisionSource.slice(0, 12).map((decision, idx) => ({
         key: `auto_${String(decision.id || decision.label || idx)}`,
         decision,
-        channel: (String((decision as Decision & { auto_bucket?: string }).auto_bucket || "").trim().toLowerCase() as "system" | "llm" | "context") || "system",
+        channel: ((String((decision as Decision & { auto_bucket?: string }).auto_bucket || "").trim().toLowerCase() as "system" | "llm" | "context") ||
+          (isPassiveLlmContext(decision) ? "context" : "system")) as "system" | "llm" | "context",
       }));
     }
     const rows: AutoInboxRow[] = [];
@@ -828,8 +829,11 @@ export function V17_DecisionInbox({
     <section className="rounded-2xl border border-violet-700/40 bg-[linear-gradient(180deg,rgba(8,4,20,0.92),rgba(10,10,16,0.82))] p-3 shadow-[0_16px_50px_rgba(76,29,149,0.18)]">
         <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs tracking-[0.24em] text-violet-200/85">DECISION CONSOLE</p>
-          <p className="mt-1 text-[11px] text-zinc-500">手动裁决 / 自动处理回执</p>
+          <p className="text-xs tracking-[0.24em] text-violet-200/85">DECISION INBOX</p>
+          <p className="mt-1 text-[11px] text-zinc-500">
+            手动入口 / 自动回执
+            {latestSnapshot?.payload?.decision_inbox_contract ? ` · ${latestSnapshot.payload.decision_inbox_contract}` : ""}
+          </p>
         </div>
 
         {conflictGraphSummary.conflict_count ? (
@@ -884,8 +888,8 @@ export function V17_DecisionInbox({
       {activePlanQueue.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/25 bg-zinc-950/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-zinc-300">PLAN QUEUE</p>
-            <span className="text-[10px] text-zinc-500">决策计划待结算</span>
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划队列</p>
+            <span className="text-[10px] text-zinc-500">系统按计划批次推进，不再逐条串行处理</span>
           </div>
           <div className="space-y-2">
             {activePlanQueue.slice(0, 8).map((plan) => {
@@ -1000,7 +1004,7 @@ export function V17_DecisionInbox({
       {decisionTraceIndex.items.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-zinc-300">DECISION TRACE INDEX</p>
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划溯源</p>
             <span className="text-[10px] text-zinc-500">
               计划溯源索引 · {Number(decisionTraceIndex.plan_count || 0)} 条 · {decisionTraceIndex.contract}
             </span>
@@ -1063,7 +1067,7 @@ export function V17_DecisionInbox({
 
         {terminalPlanQueue.length ? (
           <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/45 p-2">
-            <p className="text-[10px] text-zinc-400">最近已闭环计划（最近 4 条）</p>
+            <p className="text-[10px] text-zinc-400">最近已完成计划（最近 4 条）</p>
             <div className="mt-2 space-y-1">
               {terminalPlanQueue.slice(0, 4).map((plan) => {
                 const statusTone = planStatusTone(plan.status);
@@ -1266,7 +1270,7 @@ export function V17_DecisionInbox({
         <div className="rounded-xl border border-amber-500/15 bg-zinc-950/55 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] tracking-[0.22em] text-amber-200">AUTO</p>
-            <span className="text-[10px] text-zinc-500">后台静默处理后的结果与素材</span>
+            <span className="text-[10px] text-zinc-500">系统已处理结果、叙事建议与上下文素材</span>
           </div>
           {passiveLlmContextCount > 0 ? (
             <div className="mb-2 rounded-xl border border-amber-500/10 bg-amber-950/10 px-2.5 py-2">
@@ -1292,7 +1296,7 @@ export function V17_DecisionInbox({
               const row = entry.decision;
               const badge = statusBadge("auto", row);
               const channelLabel =
-                entry.channel === "system" ? "SYSTEM" : entry.channel === "llm" ? "LLM" : "CONTEXT";
+                entry.channel === "system" ? "自动结算" : entry.channel === "llm" ? "叙事建议" : "上下文素材";
               return (
               <div key={entry.key} className="rounded-xl border border-amber-500/10 bg-amber-950/15 px-2.5 py-2">
                 <div className="flex items-start justify-between gap-2">
@@ -1335,7 +1339,7 @@ export function V17_DecisionInbox({
       </div>
       {locked && lockMessage ? <p className="mt-2 text-[11px] text-amber-200/85">{lockMessage}</p> : null}
       {hiddenCount > 0 ? (
-        <p className="mt-2 text-[11px] text-zinc-500">另有 {hiddenCount} 条手动决策已接收但未展开，可拉高 SNAPSHOT 中 manual_decisions 上限或调低已采纳项。</p>
+        <p className="mt-2 text-[11px] text-zinc-500">另有 {hiddenCount} 条手动决策已接收但未展开，可提高当前快照的 `manual_inbox` 展示上限或继续收敛已采纳项。</p>
       ) : null}
     </section>
   );

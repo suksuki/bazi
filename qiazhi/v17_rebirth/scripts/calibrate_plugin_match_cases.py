@@ -44,7 +44,32 @@ CASES: List[CalibrationCase] = [
         gender="female",
         flow_year=2026,
     ),
+    CalibrationCase(
+        label="运到成势专项样盘",
+        birth_time=datetime(1989, 8, 17, 9, 20, 0),
+        gender="male",
+        flow_year=2026,
+    ),
+    CalibrationCase(
+        label="流年引冲专项样盘",
+        birth_time=datetime(1993, 12, 11, 23, 40, 0),
+        gender="female",
+        flow_year=2026,
+    ),
+    CalibrationCase(
+        label="运流联动合化专项样盘",
+        birth_time=datetime(1971, 3, 28, 7, 15, 0),
+        gender="male",
+        flow_year=2026,
+    ),
 ]
+
+RELATION_FOCUS_IDS = {
+    "l1.physics.op_stem_fusion",
+    "l1.physics.op_branch_liuhe",
+    "l1.physics.op_branch_liuhai",
+    "l1.physics.op_branch_liupo",
+}
 
 
 def _top_match_claims(payload: Dict[str, Any], *, limit: int = 10) -> List[Dict[str, Any]]:
@@ -65,6 +90,7 @@ def _top_match_claims(payload: Dict[str, Any], *, limit: int = 10) -> List[Dict[
                 "plugin_id": str(row.get("plugin_id") or "").strip(),
                 "target_god": str(row.get("target_god") or "").strip(),
                 "claim_type": str(row.get("claim_type") or "").strip(),
+                "origin_type": str(row.get("origin_type") or "").strip(),
                 "match_ratio": round(match_ratio, 4),
                 "confidence": round(float(row.get("confidence", 0.0) or 0.0), 4),
             }
@@ -125,6 +151,68 @@ def _plugin_match_summary(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return rows[:16]
 
 
+def _origin_summary(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    claims = meta.get("plugin_claims") if isinstance(meta.get("plugin_claims"), list) else []
+    bucket: Dict[str, Dict[str, float]] = {}
+    for row in claims:
+        if not isinstance(row, dict):
+            continue
+        origin_type = str(row.get("origin_type") or "unknown").strip() or "unknown"
+        try:
+            match_ratio = float(row.get("match_ratio", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            match_ratio = 0.0
+        if origin_type not in bucket:
+            bucket[origin_type] = {"count": 0.0, "sum_match": 0.0}
+        bucket[origin_type]["count"] += 1.0
+        bucket[origin_type]["sum_match"] += match_ratio
+    rows: List[Dict[str, Any]] = []
+    for origin_type, values in bucket.items():
+        count = max(1.0, float(values["count"]))
+        rows.append(
+            {
+                "origin_type": origin_type,
+                "claim_count": int(count),
+                "avg_match_ratio": round(float(values["sum_match"]) / count, 4),
+            }
+        )
+    rows.sort(key=lambda item: (item["avg_match_ratio"], item["claim_count"]), reverse=True)
+    return rows
+
+
+def _relation_focus_summary(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    claims = meta.get("plugin_claims") if isinstance(meta.get("plugin_claims"), list) else []
+    bucket: Dict[str, Dict[str, float | str]] = {}
+    for row in claims:
+        if not isinstance(row, dict):
+            continue
+        plugin_id = str(row.get("plugin_id") or "").strip()
+        if plugin_id not in RELATION_FOCUS_IDS:
+            continue
+        try:
+            match_ratio = float(row.get("match_ratio", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            match_ratio = 0.0
+        if plugin_id not in bucket:
+            bucket[plugin_id] = {"plugin_id": plugin_id, "count": 0.0, "sum_match": 0.0}
+        bucket[plugin_id]["count"] = float(bucket[plugin_id]["count"]) + 1.0
+        bucket[plugin_id]["sum_match"] = float(bucket[plugin_id]["sum_match"]) + match_ratio
+    rows: List[Dict[str, Any]] = []
+    for plugin_id, item in bucket.items():
+        count = max(1.0, float(item["count"]))
+        rows.append(
+            {
+                "plugin_id": plugin_id,
+                "claim_count": int(count),
+                "avg_match_ratio": round(float(item["sum_match"]) / count, 4),
+            }
+        )
+    rows.sort(key=lambda item: (item["avg_match_ratio"], item["claim_count"]), reverse=True)
+    return rows
+
+
 def build_case_report(case: CalibrationCase) -> Dict[str, Any]:
     with redirect_stdout(io.StringIO()):
         payload = _run_v17_physics_core(
@@ -143,7 +231,9 @@ def build_case_report(case: CalibrationCase) -> Dict[str, Any]:
         "flow_pillar": payload.get("flow_pillar"),
         "pattern": payload.get("hit_pattern_name") or payload.get("pattern"),
         "match_top": _top_match_claims(payload),
+        "relation_focus_summary": _relation_focus_summary(payload),
         "plugin_match_summary": _plugin_match_summary(payload),
+        "origin_summary": _origin_summary(payload),
         "recompute_contributions": _recompute_rows(payload),
     }
 

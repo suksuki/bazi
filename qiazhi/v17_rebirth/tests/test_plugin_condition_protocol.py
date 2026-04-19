@@ -32,6 +32,32 @@ def test_hydration_populates_liu_po_and_stem_fusion_meta() -> None:
     assert "stem_fusion_v1" in meta
 
 
+def test_hydration_extends_interaction_scope_with_luck_and_flow() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "甲子",
+            "month": "乙丑",
+            "day": "丙寅",
+            "hour": "丁卯",
+        },
+        "luck_pillar": "戊午",
+        "flow_pillar": "己未",
+        "ten_gods_absolute_intensity": {"比肩": 20.0, "食神": 18.0, "正官": 12.0},
+        "total_energy_index": 70.0,
+    }
+
+    hydrate_v17_physics_tensor(pt)
+    meta = pt.get("meta") or {}
+    iv2 = meta.get("interaction_v2") or {}
+
+    assert iv2.get("version") == "interaction_v2.v2"
+    assert "luck" in (iv2.get("pillar_scope") or [])
+    assert "flow" in (iv2.get("pillar_scope") or [])
+    hit = next((row for row in iv2.get("liu_chong") or [] if sorted(row.get("pillars") or []) == ["luck", "year"]), None)
+    assert hit is not None
+    assert hit.get("origin_type") == "luck_background"
+
+
 def test_condition_plugins_emit_condition_metadata() -> None:
     pt = {
         "four_pillars": {
@@ -75,6 +101,10 @@ def test_condition_plugins_emit_condition_metadata() -> None:
     by_plugin = {str(f.plugin_id or ""): f for f in facts}
 
     assert by_plugin["l1.physics.op_branch_liuhe"].meta.get("condition_state") in {"supported", "contested"}
+    assert by_plugin["l1.physics.op_branch_liuhe"].meta.get("origin_type") == "natal"
+    claims = compile_claims(facts=facts, physics_tensor=pt)
+    liuhe_claim = next(row for row in claims if row.get("plugin_id") == "l1.physics.op_branch_liuhe")
+    assert liuhe_claim.get("origin_type") == "natal"
     assert 0.0 <= float(by_plugin["l1.physics.op_branch_liuhe"].meta.get("match_ratio", 0.0) or 0.0) <= 1.0
     assert by_plugin["l1.physics.op_stem_fusion"].meta.get("condition_trigger") == "month_support"
     assert 0.0 <= float(by_plugin["l1.physics.op_stem_fusion"].meta.get("match_ratio", 0.0) or 0.0) <= 1.0
@@ -192,3 +222,87 @@ def test_diagnostic_claim_without_explicit_match_ratio_is_not_forced_to_full_sco
     claims = compile_claims(facts=facts, physics_tensor={})
     assert len(claims) == 1
     assert 0.35 <= float(claims[0]["match_ratio"]) < 1.0
+
+
+def test_risk_blind_and_pattern_plugins_emit_origin_type() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "癸酉",
+            "month": "甲子",
+            "day": "丙寅",
+            "hour": "庚子",
+        },
+        "luck_pillar": "丁卯",
+        "flow_pillar": "丙午",
+        "ten_gods_base_l0": {"伤官": 18.0, "食神": 12.0, "正官": 16.0, "偏印": 17.0, "比肩": 14.0},
+        "ten_gods_runtime": {"伤官": 18.0, "食神": 12.0, "正官": 16.0, "偏印": 17.0, "比肩": 14.0},
+        "meta": {
+            "interaction_v2": {
+                "liu_chong": [{"pair": ["子", "午"], "pillars": ["month", "flow"], "origin_type": "flow_trigger"}],
+                "liu_hai": [{"pair": ["子", "未"], "pillars": ["hour", "luck"], "origin_type": "luck_background"}],
+                "liu_po": [],
+                "liu_he": [],
+                "san_he": [],
+                "ban_he": [{"pair": ["寅", "卯"], "pillars": ["day", "luck"], "origin_type": "luck_background"}],
+                "sanxing": [],
+            }
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+
+    assert by_plugin["l2.risk.risk_matrix"].meta.get("origin_type") in {"natal", "flow_trigger", "luck_background", "unknown"}
+    assert by_plugin["classical.blind.work_axis.v1"].meta.get("origin_type") == "flow_trigger"
+    assert by_plugin["classical.pattern.break_guard.v1"].meta.get("origin_type") in {"flow_trigger", "luck_background"}
+
+
+def test_natal_sanhe_projects_into_officer_kill_cluster_under_runtime_drag() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "丁巳",
+            "month": "乙巳",
+            "day": "乙丑",
+            "hour": "乙酉",
+        },
+        "luck_pillar": "庚子",
+        "flow_pillar": "丙午",
+        "ten_gods_base_l0": {"伤官": 64.65, "食神": 47.08, "比肩": 27.5, "正官": 14.07, "偏财": 13.48, "七杀": 8.5, "正印": 7.98, "偏印": 5.46, "正财": 4.32},
+        "ten_gods_runtime": {"伤官": 64.03, "食神": 46.63, "比肩": 27.75, "正官": 14.06, "偏财": 13.75, "七杀": 8.49, "正印": 8.26, "偏印": 5.65, "正财": 4.41},
+        "meta": {
+            "interaction_v2": {
+                "liu_chong": [{"pair": ["午", "子"], "pillars": ["flow", "luck"], "origin_type": "runtime_pair"}],
+                "liu_hai": [{"pair": ["丑", "午"], "pillars": ["day", "flow"], "origin_type": "flow_trigger"}],
+                "liu_po": [{"pair": ["子", "酉"], "pillars": ["hour", "luck"], "origin_type": "luck_background"}],
+                "liu_he": [{"pair": ["子", "丑"], "pillars": ["day", "luck"], "origin_type": "luck_background"}],
+                "san_he": [{"group": ["丑", "巳", "酉"], "pillars": ["day", "hour", "month", "year"], "origin_type": "natal"}],
+                "ban_he": [],
+                "sanxing": [],
+            },
+            "stem_fusion_v1": {
+                "cases": [
+                    {
+                        "pillars": ["month", "luck"],
+                        "stems": ["乙", "庚"],
+                        "mode": "stuck",
+                        "hua_element": "metal",
+                        "month_stem_supports": False,
+                        "branch_hua_ratio": 0.1667,
+                    }
+                ]
+            },
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    sanhe_facts = [f for f in facts if str(f.plugin_id or "") == "l1.physics.op_branch_sanhe"]
+    assert len(sanhe_facts) >= 2
+    by_target = {str(f.meta.get("target_god") or ""): f for f in sanhe_facts if isinstance(f.meta, dict)}
+    assert "七杀" in by_target
+    assert "正官" in by_target
+    assert by_target["七杀"].meta.get("condition_mode") == "natal_core_with_runtime_drag"
+    assert float(by_target["七杀"].meta.get("projection_share", 0.0) or 0.0) > float(by_target["正官"].meta.get("projection_share", 0.0) or 0.0)
+    assert "impact_ratio" in by_target["七杀"].meta
+
+    stem_fusion = next(f for f in facts if str(f.plugin_id or "") == "l1.physics.op_stem_fusion")
+    assert stem_fusion.meta.get("condition_state") == "stuck"

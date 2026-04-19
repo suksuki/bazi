@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Tuple
 
 from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
     branches_and_stems_from_four_pillars,
+    branches_and_stems_from_runtime_pillars,
     detect_stem_fusion_cases,
     eval_anhe_hits,
     eval_banhe_hits,
@@ -33,6 +34,7 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     ELEMENT_CYCLE,
     ten_god_from_stems,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import detect_relation_origin_type
 from v17_rebirth.backend.plugins.v17_wrappers import collect_pending_decisions_from_specs
 from v17_rebirth.backend.services.claim_protocol import CLAIM_JSON_SCHEMA, compile_claims
 from v17_rebirth.backend.services.conflict_detector import detect_claim_conflicts, recommend_conflict_resolutions
@@ -428,7 +430,11 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     if meta.get("_v17_hydrated"): return
 
     # 1. 地支/天干几何关系检测 (Pure Geometry)
-    branches, stems = branches_and_stems_from_four_pillars(pt.get("four_pillars"))
+    branches, stems = branches_and_stems_from_runtime_pillars(
+        pt.get("four_pillars"),
+        luck_pillar=pt.get("luck_pillar"),
+        flow_pillar=pt.get("flow_pillar"),
+    )
     _fp = pt.get("four_pillars") if isinstance(pt.get("four_pillars"), dict) else {}
     _day_gz = str(_fp.get("day", "")).strip()
     _daymaster = _day_gz[0] if len(_day_gz) >= 2 else "壬"
@@ -446,20 +452,28 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
 
     # 2. 填充 interaction_v2 (用于插件探测源)
     geom_data = {
-        "version": "interaction_v2.v1",
-        "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_chong],
-        "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_hai],
-        "liu_po": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_po],
-        "liu_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in liu_he],
-        "san_he": [{"group": h.get("group"), "pillars": h.get("pillars")} for h in san_he],
-        "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in ban_he],
-        "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars")} for h in an_he],
-        "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge")} for h in sanxing_geo],
+        "version": "interaction_v2.v2",
+        "pillar_scope": sorted(branches.keys()),
+        "runtime_extensions": {
+            "luck": str(pt.get("luck_pillar") or "").strip(),
+            "flow": str(pt.get("flow_pillar") or "").strip(),
+        },
+        "liu_chong": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_chong],
+        "liu_hai": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_hai],
+        "liu_po": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_po],
+        "liu_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in liu_he],
+        "san_he": [{"group": h.get("group"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in san_he],
+        "ban_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in ban_he],
+        "an_he": [{"pair": h.get("pair"), "pillars": h.get("pillars"), "origin_type": detect_relation_origin_type(h.get("pillars") or [])} for h in an_he],
+        "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge"), "origin_type": detect_relation_origin_type(h.get("edge") or [])} for h in sanxing_geo],
     }
     meta["interaction_v2"] = geom_data
     pt["interaction_v2"] = geom_data # 增强型注入
     
-    print(f"[V17-HYDRATION-GEOM] Sanhe: {len(san_he)} | Sanxing: {len(sanxing_geo)}")
+    print(
+        f"[V17-HYDRATION-GEOM] Scope: {','.join(sorted(branches.keys()))} | "
+        f"Sanhe: {len(san_he)} | Sanxing: {len(sanxing_geo)}"
+    )
 
     # 3. 填充基础 Hits (Legacy Admin UI 兼容)
     hits = {}
