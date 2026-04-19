@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_relation_conditions,
@@ -54,6 +55,14 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         god = _branch_dominant_ten_god(target_br, dm) if target_br else "受损神"
         source_br = pair[0] if len(pair) >= 1 else target_br
         source_god = _branch_dominant_ten_god(source_br, dm) if source_br else god
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=god,
+            day_master=dm,
+            focus_branches=pair,
+        )
+        if projection:
+            god = max(projection.items(), key=lambda item: item[1])[0]
         source_abs = float(scores.get(source_god, 0.0) or 0.0)
         target_abs = float(scores.get(god, 0.0) or 0.0)
         effective_loss = loss * (1.0 + _clamp(friction_coeff, 0.0, 1.0))
@@ -83,6 +92,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "impact_ratio": round(impact, 2),
                 "match_ratio": round(match_ratio, 3),
                 "target_god": god,
+                "projection_share": round(float((projection or {}).get(god, 1.0)), 4),
+                "cluster_projection": projection,
                 "friction_coeff": round(friction_coeff, 3),
                 "break_loss": round(loss, 3),
                 "balance_ratio": round(balance_ratio, 3),

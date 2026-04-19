@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_relation_conditions,
@@ -60,6 +61,14 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         god = _branch_dominant_ten_god(target_br, dm) if target_br else "协作神"
         partner_br = pair[1] if len(pair) >= 2 else target_br
         partner_god = _branch_dominant_ten_god(partner_br, dm) if partner_br else god
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=god,
+            day_master=dm,
+            focus_branches=pair,
+        )
+        if projection:
+            god = max(projection.items(), key=lambda item: item[1])[0]
         source_abs = float(scores.get(partner_god, 0.0) or 0.0)
         target_abs = float(scores.get(god, 0.0) or 0.0)
         locked_energy = round(min(source_abs, target_abs) * _clamp(stability_weight, 0.0, 1.0), 4)
@@ -80,6 +89,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
 
         meta = {
             "target_god": god,
+            "projection_share": round(float((projection or {}).get(god, 1.0)), 4),
+            "cluster_projection": projection,
             "stability_weight": round(stability_weight, 3),
             "match_ratio": round(match_ratio, 3),
             "locked_energy": locked_energy,

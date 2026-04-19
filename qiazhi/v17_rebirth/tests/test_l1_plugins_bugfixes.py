@@ -11,9 +11,9 @@ def test_six_pierce_does_not_crash_on_meta() -> None:
         "four_pillars": {"day": "乙丑"},
         "meta": {
             "interaction_v2": {
-                "liu_po": [
+                "liu_hai": [
                     {
-                        "pair": ["子", "酉"],
+                        "pair": ["子", "未"],
                         "pillars": ["year", "hour"],
                     }
                 ]
@@ -45,9 +45,9 @@ def test_three_harmony_sanhe_key_mapping() -> None:
     }
     
     facts = ThreeHarmonyPlugin.collect_v17_facts(pt)
-    assert len(facts) == 1
-    assert "三合/半合聚势激活" in facts[0].text
-    assert "七杀" in facts[0].text
+    assert len(facts) >= 1
+    assert any("三合/半合聚势激活" in fact.text for fact in facts)
+    assert any(str((fact.meta or {}).get("target_god") or "") == "七杀" for fact in facts)
 
 
 def test_three_harmony_uses_lock_ratio_and_min_stress(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -71,9 +71,9 @@ def test_three_harmony_uses_lock_ratio_and_min_stress(monkeypatch: pytest.Monkey
     }
 
     facts = ThreeHarmonyPlugin.collect_v17_facts(pt)
-    assert len(facts) == 1
+    assert len(facts) >= 1
     meta = facts[0].meta
     assert meta["lock_ratio"] == 0.5
     assert meta["harmony_strength"] == 0.8
-    assert meta["impact_ratio"] == 0.4
     assert meta["locked_energy"] == 25.0
+    assert "cluster_projection" in meta

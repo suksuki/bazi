@@ -8,6 +8,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, _parse_gz, ten_god_from_stems
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
@@ -118,6 +119,15 @@ class PatternAxisPlugin(V17PluginSpec):
         total_score = max(sum(float(v) for _k, v in ordered), 1.0)
         top_share = top_score / total_score
         dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
+        fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+        day_gz = str(fp.get("day", "")).strip()
+        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=top[0],
+            day_master=daymaster,
+            focus_branches=[str(str(fp.get("month", ""))[1:2] or "")],
+        )
         axis_match_ratio = _clamp01(
             0.42
             + 0.5 * top_share
@@ -131,7 +141,10 @@ class PatternAxisPlugin(V17PluginSpec):
                 "label": "格局轴线",
                 "meta": {
                     "pattern_axis": top[0],
+                    "target_god": top[0],
                     "axis_score": top_score,
+                    "projection_share": round(float((projection or {}).get(top[0], 1.0)), 4),
+                    "cluster_projection": projection,
                     "top_share": round(top_share, 3),
                     "dominant_ratio": round(dominant_ratio, 3),
                     "match_ratio": round(axis_match_ratio, 3),
@@ -158,6 +171,15 @@ class JianLuYueJiePlugin(V17PluginSpec):
         if month_god not in {"比肩", "劫财"}:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
+        fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+        day_gz = str(fp.get("day", "")).strip()
+        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=month_god,
+            day_master=daymaster,
+            focus_branches=[str(str(fp.get("month", ""))[1:2] or "")],
+        )
         name = "建禄" if month_god == "比肩" else "月劫"
         rows = [
             {
@@ -167,7 +189,10 @@ class JianLuYueJiePlugin(V17PluginSpec):
                 "label": "格局候选",
                 "meta": {
                     "pattern_candidate": name,
+                    "target_god": month_god,
                     "month_main_god": month_god,
+                    "projection_share": round(float((projection or {}).get(month_god, 1.0)), 4),
+                    "cluster_projection": projection,
                     "match_ratio": round(_clamp01(0.82 * max(0.92, float(origin_meta["origin_multiplier"]))), 3),
                     "claim_type": "pattern_candidate",
                     "entity_scope": "pattern",
@@ -194,6 +219,15 @@ class CongShiPlugin(V17PluginSpec):
         if len(top) < 2:
             return []
         (g1, v1), (_g2, v2) = top
+        fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+        day_gz = str(fp.get("day", "")).strip()
+        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=g1,
+            day_master=daymaster,
+            focus_branches=[str(str(fp.get("month", ""))[1:2] or "")],
+        )
         ratio = v1 / max(v2, 1.0)
         if ratio < 2.0 or v1 < 35.0:
             return []
@@ -206,6 +240,9 @@ class CongShiPlugin(V17PluginSpec):
                 "meta": {
                     "pattern_candidate": "从势候选",
                     "dominant_god": g1,
+                    "target_god": g1,
+                    "projection_share": round(float((projection or {}).get(g1, 1.0)), 4),
+                    "cluster_projection": projection,
                     "dominant_ratio": round(ratio, 3),
                     "match_ratio": round(_clamp01(_clamp01((ratio - 1.0) / 2.0) * max(0.92, float(origin_meta["origin_multiplier"]))), 3),
                     "claim_type": "pattern_candidate",
@@ -233,6 +270,16 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
         wealth = float(scores.get("正财", 0.0) + scores.get("偏财", 0.0))
         if officer < 25.0 or wealth < 25.0:
             return []
+        dominant_god = "正官" if float(scores.get("正官", 0.0)) >= float(scores.get("七杀", 0.0)) else "七杀"
+        fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+        day_gz = str(fp.get("day", "")).strip()
+        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=dominant_god,
+            day_master=daymaster,
+            focus_branches=[str(str(fp.get("month", ""))[1:2] or "")],
+        )
         match_ratio = _clamp01((min(officer, wealth) / max(officer, wealth, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
         rows = [
             {
@@ -242,8 +289,11 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
                 "label": "财官协同",
                 "meta": {
                     "pattern_candidate": "财官协同",
+                    "target_god": dominant_god,
                     "officer_total": officer,
                     "wealth_total": wealth,
+                    "projection_share": round(float((projection or {}).get(dominant_god, 1.0)), 4),
+                    "cluster_projection": projection,
                     "match_ratio": round(match_ratio, 3),
                     "claim_type": "pattern_candidate",
                     "entity_scope": "pattern",

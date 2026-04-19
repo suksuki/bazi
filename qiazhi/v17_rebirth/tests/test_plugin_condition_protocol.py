@@ -257,6 +257,50 @@ def test_risk_blind_and_pattern_plugins_emit_origin_type() -> None:
     assert by_plugin["classical.pattern.break_guard.v1"].meta.get("origin_type") in {"flow_trigger", "luck_background"}
 
 
+def test_pattern_and_ziping_plugins_emit_cluster_projection_meta() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "丁巳",
+            "month": "乙巳",
+            "day": "乙丑",
+            "hour": "乙酉",
+        },
+        "luck_pillar": "庚子",
+        "flow_pillar": "丙午",
+        "ten_gods_base_l0": {"伤官": 64.65, "食神": 47.08, "比肩": 27.5, "正官": 14.07, "偏财": 13.48, "七杀": 8.5, "正印": 7.98, "偏印": 5.46, "正财": 4.32},
+        "ten_gods_runtime": {"伤官": 64.03, "食神": 46.63, "比肩": 27.75, "正官": 14.06, "偏财": 13.75, "七杀": 8.49, "正印": 8.26, "偏印": 5.65, "正财": 4.41},
+        "energy_meta": {
+            "month_command_god": "伤官",
+            "season_power": {"month_branch": "巳"},
+        },
+        "meta": {
+            "interaction_v2": {
+                "liu_chong": [],
+                "liu_hai": [{"pair": ["丑", "午"], "pillars": ["day", "flow"], "origin_type": "flow_trigger"}],
+                "liu_po": [{"pair": ["子", "酉"], "pillars": ["hour", "luck"], "origin_type": "luck_background"}],
+                "liu_he": [{"pair": ["子", "丑"], "pillars": ["day", "luck"], "origin_type": "luck_background"}],
+                "san_he": [{"group": ["丑", "巳", "酉"], "pillars": ["day", "hour", "month", "year"], "origin_type": "natal"}],
+                "ban_he": [],
+                "sanxing": [],
+            }
+        },
+    }
+
+    facts = collect_all_spec_facts(pt)
+    by_plugin = {str(f.plugin_id or ""): f for f in facts}
+    pattern_axis = by_plugin["classical.pattern.axis.v1"]
+    ziping_month = by_plugin["classical.ziping.month_command.v1"]
+
+    assert "cluster_projection" in pattern_axis.meta
+    assert "projection_share" in pattern_axis.meta
+    assert pattern_axis.meta.get("target_god")
+    assert isinstance(pattern_axis.meta.get("cluster_projection"), dict)
+
+    assert "cluster_projection" in ziping_month.meta
+    assert "projection_share" in ziping_month.meta
+    assert ziping_month.meta.get("target_god") == ziping_month.meta.get("month_command_god")
+
+
 def test_natal_sanhe_projects_into_officer_kill_cluster_under_runtime_drag() -> None:
     pt = {
         "four_pillars": {

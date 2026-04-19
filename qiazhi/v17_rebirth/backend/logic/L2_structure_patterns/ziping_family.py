@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -21,6 +22,25 @@ def _dominant_ratio(scores: Dict[str, float]) -> float:
     if len(top2) < 2:
         return 1.0
     return float(top2[0][1]) / max(float(top2[1][1]), 1.0)
+
+
+def _projection_meta(physics_tensor: Dict[str, Any], base_god: str) -> Dict[str, Any]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    day_gz = str(four.get("day", "")).strip()
+    month_gz = str(four.get("month", "")).strip()
+    daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+    month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+    projection = god_cluster_projection(
+        physics_tensor=physics_tensor,
+        base_god=base_god,
+        day_master=daymaster,
+        focus_branches=[month_branch] if month_branch else [],
+    )
+    return {
+        "target_god": base_god,
+        "projection_share": round(float((projection or {}).get(base_god, 1.0)), 4),
+        "cluster_projection": projection,
+    }
 
 
 @dataclass
@@ -50,6 +70,7 @@ class ZiPingMonthCommandPlugin(V17PluginSpec):
                     "month_command_god": god,
                     "month_branch": branch,
                     "match_ratio": match_ratio,
+                    **_projection_meta(physics_tensor, god),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },
@@ -89,6 +110,7 @@ class ZiPingBalancePlugin(V17PluginSpec):
                     "dominant_god": g1,
                     "dominant_ratio": round(ratio, 3),
                     "match_ratio": round(match_ratio, 3),
+                    **_projection_meta(physics_tensor, g1),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },
@@ -132,6 +154,7 @@ class ZiPingYongShenPlugin(V17PluginSpec):
                         min(0.84, max(0.58, 0.58 + 0.14 * min(1.0, max(0.0, ratio - 1.0)))),
                         3,
                     ),
+                    **_projection_meta(physics_tensor, god),
                     "origin_type": "natal",
                     "origin_multiplier": 1.0,
                 },

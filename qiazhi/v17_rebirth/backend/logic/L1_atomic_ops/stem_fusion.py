@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, STEM_ELEMENT, ten_god_from_stems
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_stem_fusion_conditions,
@@ -21,6 +22,82 @@ DECLARED_PARAMS = {
     "TRANSFORM_EFFICIENCY": 0.85,    # 成功化气时的能量转化率
     "STUCK_DAMPING": 0.35           # 羁绊（合而不化）时的能量削减比例
 }
+
+ELEMENT_ALIASES = {
+    "wood": "木",
+    "fire": "火",
+    "earth": "土",
+    "metal": "金",
+    "water": "水",
+}
+
+
+def _parse_gz(gz: str) -> tuple[str, str]:
+    raw = str(gz or "").strip()
+    if len(raw) < 2:
+        return "", ""
+    return raw[0], raw[1]
+
+
+def _normalize_element_name(element: str) -> str:
+    raw = str(element or "").strip()
+    return ELEMENT_ALIASES.get(raw.lower(), raw)
+
+
+def _visible_cluster_weights(physics_tensor: Dict[str, Any], *, target_element: str, day_master: str) -> Dict[str, float]:
+    weights: Dict[str, float] = {}
+    fp = physics_tensor.get("four_pillars", {}) if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    visible_gz = [fp.get(key, "") for key in ("year", "month", "day", "hour")]
+    visible_gz.extend([physics_tensor.get("luck_pillar", ""), physics_tensor.get("flow_pillar", "")])
+    for gz in visible_gz:
+        stem, _branch = _parse_gz(str(gz or ""))
+        if not stem or STEM_ELEMENT.get(stem) != target_element:
+            continue
+        god = ten_god_from_stems(day_master, stem)
+        weights[god] = weights.get(god, 0.0) + 0.55
+    return weights
+
+
+def _element_cluster_projection(*, physics_tensor: Dict[str, Any], target_element: str, day_master: str) -> Dict[str, float]:
+    from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _get_god_to_element_map
+
+    g2e = _get_god_to_element_map(day_master)
+    candidate_gods = [god for god, element in g2e.items() if element == target_element]
+    if not candidate_gods:
+        return {}
+
+    weights: Dict[str, float] = {god: 0.0 for god in candidate_gods}
+    fp = physics_tensor.get("four_pillars", {}) if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    branch_gz = [fp.get(key, "") for key in ("year", "month", "day", "hour")]
+    branch_gz.extend([physics_tensor.get("luck_pillar", ""), physics_tensor.get("flow_pillar", "")])
+    for gz in branch_gz:
+        _stem, branch = _parse_gz(str(gz or ""))
+        if not branch:
+            continue
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
+            if STEM_ELEMENT.get(hidden_stem) != target_element:
+                continue
+            god = ten_god_from_stems(day_master, hidden_stem)
+            if god in weights:
+                weights[god] = weights.get(god, 0.0) + float(hidden_weight)
+
+    for god, weight in _visible_cluster_weights(
+        physics_tensor,
+        target_element=target_element,
+        day_master=day_master,
+    ).items():
+        if god in weights:
+            weights[god] = weights.get(god, 0.0) + weight
+
+    total = sum(weights.values())
+    if total <= 0:
+        uniform = round(1.0 / len(candidate_gods), 4)
+        return {god: uniform for god in candidate_gods}
+    return {
+        god: round(weight / total, 4)
+        for god, weight in sorted(weights.items(), key=lambda item: item[1], reverse=True)
+        if weight > 0
+    }
 
 def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     meta = physics_tensor.get("meta", {})
@@ -42,9 +119,6 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         lab = "".join(stems)
         condition = summarize_stem_fusion_conditions(c)
         
-        # 简单处理：如果是羁绊，对参与的第一个天干对应的十神产生减速
-        # 如果是化气，对化出五行对应的十神产生增益
-        from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import ten_god_from_stems
         fp = physics_tensor.get("four_pillars", {})
         day_gz = str(fp.get("day", "")).strip()
         dm = day_gz[0] if len(day_gz) >= 2 else "壬"
@@ -81,12 +155,7 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 }
             })
         elif mode == "transformed":
-            hua_el = c.get("hua_element")
-            # 找到日主对应化出五行的十神名
-            from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import _get_god_to_element_map
-            g2e = _get_god_to_element_map(dm)
-            target_god = next((g for g, e in g2e.items() if e == hua_el), "化气神")
-            
+            hua_el = _normalize_element_name(str(c.get("hua_element") or ""))
             cond_mul = relation_effect_multiplier(condition["condition_state"])
             origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
             branch_ratio = max(0.0, min(1.0, float(condition["branch_hua_ratio"] or 0.0)))
@@ -99,24 +168,40 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     (0.22 + branch_ratio * 0.38 + formed_bonus + month_bonus) * max(cond_mul, 0.5) * origin_mul,
                 ),
             )
-            meta = {
-                "target_god": target_god,
-                "match_ratio": round(match_ratio, 3),
-                "condition_state": condition["condition_state"],
-                "condition_trigger": condition["condition_trigger"],
-                "branch_hua_ratio": condition["branch_hua_ratio"],
-                "condition_multiplier": cond_mul,
-                "origin_type": condition.get("origin_type"),
-                "origin_multiplier": round(origin_mul, 3),
-            }
-            if condition["condition_state"] == "formed":
-                meta["impact_ratio"] = trans_eff * cond_mul
-            rows.append({
-                "plugin": "l1.physics.op_stem_fusion",
-                "fact": f"天干化气 [{lab}→{hua_el}]：能量聚变成功，{target_god} 能级大幅提升（{condition['condition_trigger']}）。",
-                "priority": 0.85,
-                "meta": meta,
-            })
+            projection = _element_cluster_projection(
+                physics_tensor=physics_tensor,
+                target_element=hua_el,
+                day_master=dm,
+            )
+            target_shares = projection or {"化气神": 1.0}
+            for god, share in sorted(target_shares.items(), key=lambda item: item[1], reverse=True):
+                projected_match = round(
+                    max(
+                        0.0,
+                        min(0.95, match_ratio * max(0.62, float(share))),
+                    ),
+                    3,
+                )
+                meta = {
+                    "target_god": god,
+                    "match_ratio": projected_match,
+                    "projection_share": round(float(share), 4),
+                    "cluster_projection": projection,
+                    "condition_state": condition["condition_state"],
+                    "condition_trigger": condition["condition_trigger"],
+                    "branch_hua_ratio": condition["branch_hua_ratio"],
+                    "condition_multiplier": cond_mul,
+                    "origin_type": condition.get("origin_type"),
+                    "origin_multiplier": round(origin_mul, 3),
+                }
+                if condition["condition_state"] == "formed":
+                    meta["impact_ratio"] = round(trans_eff * cond_mul * max(0.28, float(share)), 3)
+                rows.append({
+                    "plugin": "l1.physics.op_stem_fusion",
+                    "fact": f"天干化气 [{lab}→{hua_el}]：能量聚变成功，{god} 能级被显著抬升（{condition['condition_trigger']}）。",
+                    "priority": round(0.85 * max(0.82, float(share)), 3),
+                    "meta": meta,
+                })
             
     return rows
 

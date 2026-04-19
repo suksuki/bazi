@@ -8,6 +8,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -74,6 +75,25 @@ def _shensha_origin_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _projection_meta(physics_tensor: Dict[str, Any], target_god: str) -> Dict[str, Any]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    day_gz = str(four.get("day", "")).strip()
+    daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+    month_gz = str(four.get("month", "")).strip()
+    month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+    projection = god_cluster_projection(
+        physics_tensor=physics_tensor,
+        base_god=target_god,
+        day_master=daymaster,
+        focus_branches=[month_branch] if month_branch else [],
+    )
+    return {
+        "target_god": target_god,
+        "projection_share": round(float((projection or {}).get(target_god, 1.0)), 4),
+        "cluster_projection": projection,
+    }
+
+
 @dataclass
 class ShenshaPlugin(V17PluginSpec):
     plugin_id: str = "shensha"
@@ -89,6 +109,10 @@ class ShenshaPlugin(V17PluginSpec):
         for row in rows:
             if not isinstance(row.get("meta"), dict):
                 row["meta"] = {}
+            if row["meta"].get("gate") == "TIAN_YI_BUFF":
+                row["meta"].update(_projection_meta(physics_tensor, "正印"))
+            elif row["meta"].get("gate") == "YANG_REN_STRESS":
+                row["meta"].update(_projection_meta(physics_tensor, "劫财"))
             row["meta"]["origin_type"] = origin_meta["origin_type"]
             row["meta"]["origin_multiplier"] = round(float(origin_meta["origin_multiplier"]), 3)
             base_match = float(row["meta"].get("match_ratio", 0.72) or 0.72)

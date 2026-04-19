@@ -8,6 +8,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -54,6 +55,7 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
     if pattern == "未定格":
         return []
     top = sorted(deity_scores.items(), key=lambda kv: kv[1], reverse=True)
+    target_god = str(top[0][0]) if top else ""
     top_score = float(top[0][1]) if top else 0.0
     second_score = float(top[1][1]) if len(top) >= 2 else 0.0
     dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
@@ -66,6 +68,7 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
             "priority": prio,
             "meta": {
                 "pattern_name": pattern,
+                "target_god": target_god,
                 "dominant_ratio": round(dominant_ratio, 3),
                 "match_ratio": round(match_ratio, 3),
             },
@@ -88,6 +91,25 @@ def _pattern_origin_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _projection_meta(physics_tensor: Dict[str, Any], target_god: str) -> Dict[str, Any]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    day_gz = str(four.get("day", "")).strip()
+    daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+    month_gz = str(four.get("month", "")).strip()
+    month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+    projection = god_cluster_projection(
+        physics_tensor=physics_tensor,
+        base_god=target_god,
+        day_master=daymaster,
+        focus_branches=[month_branch] if month_branch else [],
+    )
+    return {
+        "target_god": target_god,
+        "projection_share": round(float((projection or {}).get(target_god, 1.0)), 4),
+        "cluster_projection": projection,
+    }
+
+
 @dataclass
 class TenGodPatternPlugin(V17PluginSpec):
     plugin_id: str = "ten_god_pattern"
@@ -103,6 +125,9 @@ class TenGodPatternPlugin(V17PluginSpec):
         for row in rows:
             if not isinstance(row.get("meta"), dict):
                 row["meta"] = {}
+            target_god = str(row["meta"].get("target_god") or "")
+            if target_god:
+                row["meta"].update(_projection_meta(physics_tensor, target_god))
             base_match = float(row["meta"].get("match_ratio", 0.6) or 0.6)
             row["meta"]["match_ratio"] = round(min(0.92, base_match * max(0.92, float(origin_meta["origin_multiplier"]))), 3)
             row["meta"]["origin_type"] = origin_meta["origin_type"]

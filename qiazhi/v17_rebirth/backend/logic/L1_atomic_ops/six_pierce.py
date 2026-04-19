@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config, resolve_config_number
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import relation_effect_multiplier, summarize_relation_conditions
 
 V17_SKILL_MANIFEST = {
@@ -34,8 +35,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
     meta = physics_tensor.get("meta", {})
     iv2 = meta.get("interaction_v2", {})
     
-    # 合并六害(贯)与六破事件
-    pierce_hits = iv2.get("liu_hai", []) + iv2.get("liu_po", [])
+    # 六害/六穿只读取 liu_hai；六破由独立插件 six_break 处理
+    pierce_hits = iv2.get("liu_hai", [])
     
     if not pierce_hits:
         return []
@@ -57,6 +58,14 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         dm = day_gz[0] if len(day_gz) >= 2 else "壬"
         god_i = _branch_dominant_ten_god(br_i, dm) if br_i else "源神"
         god_j = _branch_dominant_ten_god(br_j, dm) if br_j else "目标"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=god_j,
+            day_master=dm,
+            focus_branches=pair,
+        )
+        if projection:
+            god_j = max(projection.items(), key=lambda item: item[1])[0]
         source_abs = float(scores.get(god_i, 0.0) or 0.0)
         target_abs = float(scores.get(god_j, 0.0) or 0.0)
         pierce = run_six_pierce(source_abs=source_abs, target_abs=target_abs, penetration_ratio=penetration_ratio)
@@ -89,6 +98,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "impact_ratio": round(-effective_ratio, 2),
                 "match_ratio": round(match_ratio, 3),
                 "target_god": god_j,
+                "projection_share": round(float((projection or {}).get(god_j, 1.0)), 4),
+                "cluster_projection": projection,
                 "shielding_status": "FAILED",
                 "penetration_ratio": round(penetration_ratio, 3),
                 "clash_loss_ratio": round(clash_loss_ratio, 3),

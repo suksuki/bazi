@@ -8,6 +8,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -61,6 +62,25 @@ def _blind_origin_meta(iv2: Dict[str, Any]) -> Dict[str, float | str]:
     }
 
 
+def _blind_projection_meta(physics_tensor: Dict[str, Any], base_god: str) -> Dict[str, Any]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    day_gz = str(four.get("day", "")).strip()
+    daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+    month_gz = str(four.get("month", "")).strip()
+    month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+    projection = god_cluster_projection(
+        physics_tensor=physics_tensor,
+        base_god=base_god,
+        day_master=daymaster,
+        focus_branches=[month_branch] if month_branch else [],
+    )
+    return {
+        "target_god": base_god,
+        "projection_share": round(float((projection or {}).get(base_god, 1.0)), 4),
+        "cluster_projection": projection,
+    }
+
+
 @dataclass
 class BlindWorkAxisPlugin(V17PluginSpec):
     plugin_id: str = "classical.blind.work_axis.v1"
@@ -92,6 +112,7 @@ class BlindWorkAxisPlugin(V17PluginSpec):
                 "label": "做功主轴",
                 "meta": {
                     "blind_axis": axis,
+                    **_blind_projection_meta(physics_tensor, _top_god(scores)),
                     "match_ratio": round(min(0.88, _blind_match_ratio(iv2, scores, base=0.68, cap=0.88) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
                     **origin_meta,
                 },
@@ -129,6 +150,7 @@ class BlindResponseChainPlugin(V17PluginSpec):
                 "label": "应链判断",
                 "meta": {
                     "response_top_god": top,
+                    **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.57, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
                     **origin_meta,
                 },
@@ -167,6 +189,7 @@ class BlindSymbolTriggerPlugin(V17PluginSpec):
                 "meta": {
                     "symbol_top_god": top,
                     "blind_symbol": symbol,
+                    **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.8, _blind_match_ratio(iv2, scores, base=0.58, cap=0.8) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
                     **origin_meta,
                 },
@@ -206,6 +229,7 @@ class BlindTimingWindowPlugin(V17PluginSpec):
                 "meta": {
                     "blind_phase": phase,
                     "timing_top_god": top,
+                    **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.75, _blind_match_ratio(iv2, scores, base=0.53, cap=0.75) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
                     **origin_meta,
                 },
@@ -244,6 +268,7 @@ class BlindSummaryPlugin(V17PluginSpec):
                 "meta": {
                     "blind_summary_top_god": top,
                     "blind_route": route,
+                    **_blind_projection_meta(physics_tensor, top),
                     "match_ratio": round(min(0.71, _blind_match_ratio(iv2, scores, base=0.49, cap=0.71) * max(0.9, float(origin_meta["origin_multiplier"]))), 3),
                     **origin_meta,
                 },

@@ -6,6 +6,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     collect_origin_types_from_rows,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 V17_SKILL_MANIFEST = {
@@ -57,6 +58,24 @@ class RiskMatrixPlugin(V17PluginSpec):
         meta = physics_tensor.get("meta", {})
         iv2 = meta.get("interaction_v2", {})
         results: List[V17Fact] = []
+        four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+        day_gz = str(four.get("day", "")).strip()
+        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        month_gz = str(four.get("month", "")).strip()
+        month_branch = month_gz[1] if len(month_gz) >= 2 else ""
+
+        def _projection_meta(target_god: str) -> Dict[str, Any]:
+            projection = god_cluster_projection(
+                physics_tensor=physics_tensor,
+                base_god=target_god,
+                day_master=daymaster,
+                focus_branches=[month_branch] if month_branch else [],
+            )
+            return {
+                "target_god": target_god,
+                "projection_share": round(float((projection or {}).get(target_god, 1.0)), 4),
+                "cluster_projection": projection,
+            }
 
         # 1. 羊刃逢冲 (Blade Clash)
         clashes = iv2.get("liu_chong", [])
@@ -80,8 +99,8 @@ class RiskMatrixPlugin(V17PluginSpec):
                     meta={
                         "impact_ratio": round(blade_ratio, 2),
                         "match_ratio": round(match_ratio, 3),
-                        "target_god": "比肩",
                         "risk_driver": "blade_clash",
+                        **_projection_meta("比肩"),
                         **origin_meta,
                     }
                 ))
@@ -101,8 +120,8 @@ class RiskMatrixPlugin(V17PluginSpec):
                     meta={
                         "impact_ratio": round(-_clamp_ratio(owl_food_cap, low=0.05, high=0.4), 2),
                         "match_ratio": round(match_ratio, 3),
-                        "target_god": "食神",
                         "risk_driver": "owl_food",
+                        **_projection_meta("食神"),
                         "origin_type": "natal",
                         "origin_multiplier": 1.0,
                     }
@@ -125,8 +144,8 @@ class RiskMatrixPlugin(V17PluginSpec):
                     meta={
                         "impact_ratio": round(-_clamp_ratio(officer_crush_limit, low=0.1, high=0.5), 2),
                         "match_ratio": round(match_ratio, 3),
-                        "target_god": "正官",
                         "risk_driver": "officer_crush",
+                        **_projection_meta("正官"),
                         **origin_meta,
                     }
                 ))
