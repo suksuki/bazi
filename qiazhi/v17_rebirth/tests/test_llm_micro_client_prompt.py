@@ -38,7 +38,7 @@ def test_get_metadata_returns_local_mirror_inside_running_loop() -> None:
     PhysicsService.prime_local_tensor(sid, _tensor())
 
     async def _read() -> dict:
-        return PhysicsService.get_metadata(sid)
+        return await PhysicsService.aget_metadata(sid)
 
     try:
         md = asyncio.run(_read())

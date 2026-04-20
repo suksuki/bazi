@@ -7,7 +7,7 @@ import logging
 import os
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 from v17_rebirth.paths import RUNTIME_DIR
 
@@ -27,6 +27,11 @@ from v17_rebirth.backend.services.decision_brain_protocol import DecisionBrainPl
 from v17_rebirth.backend.services.llm_prompt_contracts import build_plan_prompt_text
 from v17_rebirth.backend.services.decision_batches import build_decision_batches
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
+from v17_rebirth.backend.api.stream_v17_physics import (
+    _run_v17_physics_core,
+    _safe_parse_birth_time,
+    _should_rebuild_physics_core,
+)
 
 router = APIRouter(tags=["v17"])
 _WILL_IMPACT_BUFFER: List[Dict[str, Any]] = []

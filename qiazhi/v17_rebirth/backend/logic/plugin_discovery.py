@@ -5,6 +5,7 @@ V17.11–V17.12：递归扫描 L0–L3；支持 `PLUGIN` / `PLUGINS`；合并 L1
 """
 from __future__ import annotations
 
+import logging
 import importlib
 import inspect
 import pkgutil
@@ -19,6 +20,7 @@ from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
 _LOGIC_ROOT = Path(__file__).resolve().parent
+_log = logging.getLogger(__name__)
 
 LAYER_DIRS: Sequence[Tuple[str, str, int]] = (
     ("L0_physics_fields", "L0", 5),
@@ -231,7 +233,8 @@ def iter_logic_modules() -> List[Tuple[str, str, int, Any]]:
             fq = f"v17_rebirth.backend.logic.{subdir}.{mod.name}"
             try:
                 m = importlib.import_module(fq)
-            except Exception:
+            except Exception as exc:
+                _log.warning("[plugin_discovery] import module %s failed: %s", fq, exc)
                 continue
             found.append((subdir, tag, tier, m))
     _MODULE_CACHE = found
