@@ -29,6 +29,12 @@ def test_build_snapshot_payload_does_not_dupe_auto_decisions_and_has_gate() -> N
         "meta": {
             "plugin_execution_status": [{"id": "x"}],
             "plugin_claims": [{"claim_id": "c1", "label": "A"}],
+            "god_ring_authority": {
+                "use_gods": ["正官", "正印"],
+                "taboo_gods": ["伤官", "劫财"],
+                "source": "classical.ziping.god_ring_resolver.v1",
+                "confidence": 0.82,
+            },
         },
     }
     raw_decision = {"id": "d1", "source": "p", "label": "重复", "target_god": "伤官"}
@@ -61,6 +67,8 @@ def test_build_snapshot_payload_does_not_dupe_auto_decisions_and_has_gate() -> N
     assert len(payload["all_decisions"]) == 1
     assert payload["plugins"]["claims"][0]["claim_id"] == "c1"
     assert payload["pillars"]["four_pillars"]["year"] == "甲子"
+    assert payload["god_rings"]["god_of_use"] == ["正官", "正印"]
+    assert payload["god_rings"]["god_of_taboo"] == ["伤官", "劫财"]
 
 
 class _FakePipeline:

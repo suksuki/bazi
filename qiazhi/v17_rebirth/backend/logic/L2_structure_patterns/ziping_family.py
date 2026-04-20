@@ -9,6 +9,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     infer_manifestation_state,
     relation_origin_multiplier,
 )
+from v17_rebirth.backend.logic.core_engine.god_ring_resolver_core import resolve_god_ring_core
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
@@ -48,6 +49,41 @@ def _projection_meta(physics_tensor: Dict[str, Any], base_god: str) -> Dict[str,
         "projection_share": round(float((projection or {}).get(base_god, 1.0)), 4),
         "cluster_projection": projection,
     }
+
+
+def _axis_members(axis: str) -> List[str]:
+    axis_map = {
+        "财官": ["正财", "偏财", "正官", "七杀"],
+        "印官": ["正印", "偏印", "正官", "七杀"],
+        "印比": ["正印", "偏印", "比肩", "劫财"],
+    }
+    return list(axis_map.get(str(axis or "").strip(), []))
+
+
+def _dominant_axis(scores: Dict[str, float]) -> tuple[str, str, str]:
+    top = _top_two(scores)
+    dominant = top[0][0] if top else ""
+    if dominant in {"比肩", "劫财", "正印", "偏印"}:
+        return dominant, "财官", "印比"
+    if dominant in {"食神", "伤官", "正财", "偏财"}:
+        return dominant, "印官", "食伤财"
+    return dominant, "印比", "官杀"
+
+
+def _decision_rows(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for key in ("auto_resolutions", "manual_decisions", "pending_decisions"):
+        for row in physics_tensor.get(key, []) if isinstance(physics_tensor.get(key), list) else []:
+            if not isinstance(row, dict):
+                continue
+            rid = str(row.get("id") or "").strip()
+            fingerprint = rid or f"{row.get('plugin_id')}::{row.get('target_god')}::{row.get('label')}"
+            if fingerprint in seen:
+                continue
+            seen.add(fingerprint)
+            rows.append(row)
+    return rows
 
 
 def _ziping_family_profile(scores: Dict[str, float], *, family: str) -> Dict[str, Any]:
@@ -111,6 +147,14 @@ ZIPING_DEFAULTS = {
         "MATCH_RATIO_BASE": 0.58,
         "MATCH_RATIO_GAIN": 0.14,
         "MATCH_RATIO_MAX": 0.84,
+    },
+    "classical.ziping.god_ring_resolver.v1": {
+        "WORK_RATIO_WEIGHT": 1.25,
+        "MONTH_COMMAND_BONUS": 0.22,
+        "AXIS_BONUS": 0.18,
+        "DOMINANT_TABOO_BONUS": 0.16,
+        "MATCH_RATIO_BASE": 0.62,
+        "MATCH_RATIO_CAP": 0.9,
     },
 }
 
@@ -305,8 +349,138 @@ class ZiPingYongShenPlugin(V17PluginSpec):
         return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
+@dataclass
+class ZiPingGodRingResolverPlugin(V17PluginSpec):
+    plugin_id: str = "classical.ziping.god_ring_resolver.v1"
+    causal_tier: int = 3
+    registry_priority: float = 0.72
+
+    def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        scores = deity_scores_from_tensor(physics_tensor)
+        if not scores:
+            return []
+
+        dominant_god, use_axis, taboo_axis = _dominant_axis(scores)
+        month_command_god = str(_energy_meta(physics_tensor).get("month_command_god") or "").strip()
+        match_ratio_base = _ziping_cfg(self.plugin_id, "MATCH_RATIO_BASE", 0.62)
+        match_ratio_cap = _ziping_cfg(self.plugin_id, "MATCH_RATIO_CAP", 0.9)
+        axis_bonus = _ziping_cfg(self.plugin_id, "AXIS_BONUS", 0.18)
+        decision_rows = _decision_rows(physics_tensor)
+        core_result = resolve_god_ring_core(
+            four_pillars=physics_tensor.get("four_pillars", {}) if isinstance(physics_tensor.get("four_pillars"), dict) else {},
+            luck_pillar=str(physics_tensor.get("luck_pillar") or "").strip(),
+            flow_pillar=str(physics_tensor.get("flow_pillar") or "").strip(),
+            deity_scores=scores,
+            decision_rows=decision_rows,
+        )
+        effect_scores = core_result.get("effect_scores") if isinstance(core_result.get("effect_scores"), dict) else {}
+        positive_work: Dict[str, float] = {
+            god: float((row if isinstance(row, dict) else {}).get("benefit_score") or 0.0)
+            for god, row in effect_scores.items()
+        }
+        negative_work: Dict[str, float] = {
+            god: float((row if isinstance(row, dict) else {}).get("harm_score") or 0.0)
+            for god, row in effect_scores.items()
+        }
+
+        use_members = set(_axis_members(use_axis))
+        taboo_members = set(_axis_members(taboo_axis))
+        use_gods = [
+            str(item.get("god") or "").strip()
+            for item in (core_result.get("use_candidates") or [])
+            if isinstance(item, dict) and str(item.get("god") or "").strip()
+        ][:2]
+        taboo_gods = [
+            str(item.get("god") or "").strip()
+            for item in (core_result.get("taboo_candidates") or [])
+            if isinstance(item, dict) and str(item.get("god") or "").strip()
+        ]
+        taboo_gods = [god for god in taboo_gods if god not in use_gods][:2] or taboo_gods[:2]
+
+        if not use_gods:
+            ranked_use = sorted(
+                scores.items(),
+                key=lambda item: (
+                    positive_work.get(item[0], 0.0)
+                    + (axis_bonus if item[0] in use_members else 0.0)
+                    + (0.12 if month_command_god and item[0] == month_command_god else 0.0)
+                    - negative_work.get(item[0], 0.0) * 0.8
+                ),
+                reverse=True,
+            )
+            use_gods = [god for god, _value in ranked_use[:2]]
+        if not taboo_gods:
+            ranked_taboo = sorted(
+                scores.items(),
+                key=lambda item: (
+                    negative_work.get(item[0], 0.0)
+                    + (axis_bonus if item[0] in taboo_members else 0.0)
+                ),
+                reverse=True,
+            )
+            taboo_gods = [god for god, _value in ranked_taboo if god not in use_gods][:2] or [god for god, _value in ranked_taboo[:2]]
+
+        core_confidence = float(core_result.get("confidence") or 0.0)
+        confidence = min(match_ratio_cap, max(match_ratio_base, core_confidence))
+        authority = {
+            "use_gods": use_gods,
+            "taboo_gods": taboo_gods,
+            "source": self.plugin_id,
+            "mode": str(core_result.get("mode") or "six_pillar_spacetime_core"),
+            "confidence": round(confidence, 3),
+            "dominant_god": dominant_god,
+            "use_axis": use_axis,
+            "taboo_axis": taboo_axis,
+            "month_command_god": month_command_god,
+            "core_graph_meta": dict(core_result.get("graph_meta") or {}),
+            "core_path_count": int(core_result.get("path_count") or 0),
+            "core_use_candidates": list(core_result.get("use_candidates") or []),
+            "core_taboo_candidates": list(core_result.get("taboo_candidates") or []),
+            "dual_role_candidates": list(core_result.get("dual_role_candidates") or []),
+            "effect_scores": effect_scores,
+        }
+        primary_god = use_gods[0] if use_gods else dominant_god
+        interaction_meta = _ziping_interaction_meta(
+            family="ziping_yongshen",
+            scores=scores,
+            top_god=primary_god,
+            interaction_layer="cross_layer",
+        )
+        rows = [
+            {
+                "plugin": self.plugin_id,
+                "fact": f"体用裁决：当前更宜以「{' / '.join(use_gods) or '未定'}」为用，以「{' / '.join(taboo_gods) or '未定'}」为忌；判断基于原局强弱、月令落点与运流做功方向。",
+                "priority": 0.84,
+                "label": "体用裁决",
+                "meta": {
+                    "target_god": primary_god,
+                    "match_ratio": round(confidence, 3),
+                    "observe_only": True,
+                    "claim_type": "pattern_observation",
+                    "entity_scope": "pattern",
+                    "exclusivity_key": "god_ring_authority",
+                    "source_event": "god_ring_authority",
+                    "god_ring_authority": authority,
+                    "positive_work": {k: round(v, 3) for k, v in positive_work.items() if v > 0},
+                    "negative_work": {k: round(v, 3) for k, v in negative_work.items() if v > 0},
+                    "core_paths_preview": list(core_result.get("paths") or [])[:6],
+                    **_projection_meta(physics_tensor, primary_god),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=primary_god,
+                        relation_family="ziping_god_ring_resolver",
+                        relation_members=list(use_members),
+                    ),
+                    **{k: v for k, v in interaction_meta.items() if k not in {"top_ratio"}},
+                },
+            }
+        ]
+        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+
+
 PLUGINS = [
     ZiPingMonthCommandPlugin(),
     ZiPingBalancePlugin(),
     ZiPingYongShenPlugin(),
+    ZiPingGodRingResolverPlugin(),
 ]

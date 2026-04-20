@@ -13,6 +13,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 
 # V17.99 Skill Specification
 V17_SKILL_MANIFEST = {
@@ -266,6 +267,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "pivot_boost": round(pivot_boost, 3),
                 "origin_type": condition.get("origin_type"),
                 "origin_multiplier": round(origin_mul, 3),
+                "work_evidence": build_work_evidence(
+                    relation_family="sanhe",
+                    target_god=god,
+                    members=branches,
+                    effect_type="benefit",
+                    layer=interaction_layer,
+                    origin_scope=str(condition.get("origin_type") or "natal"),
+                    condition_state=effective_state,
+                    impact_ratio=round(projected_impact, 2) if effective_state == "supported" else 0.0,
+                    match_ratio=projected_match,
+                    path_strength=abs(projected_impact) * max(0.45, float(share)) * max(0.7, strength),
+                    targets=list(target_shares.keys()),
+                ),
                 "static_basis": build_static_basis(
                     physics_tensor=physics_tensor,
                     target_god=god,

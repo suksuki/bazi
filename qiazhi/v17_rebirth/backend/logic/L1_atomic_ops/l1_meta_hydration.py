@@ -587,6 +587,11 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         
         # ── V17.99: 裁决分流逻辑 (Tribunal Routing) ──
         for f in facts:
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("god_ring_authority"), dict):
+                incoming = dict(f.meta.get("god_ring_authority") or {})
+                current = meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else {}
+                if float(incoming.get("confidence") or 0.0) >= float(current.get("confidence") or -1.0):
+                    meta["god_ring_authority"] = incoming
             # 记录基础事实，以便后续 L2+ 插件可见
             pt["facts"].append({
                 "fact": str(f.text or "").strip(),

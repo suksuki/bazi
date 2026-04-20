@@ -17,6 +17,7 @@ from v17_rebirth.backend.services.decision_intel import (
     build_decision_arbitration,
 )
 from v17_rebirth.backend.services.decision_batches import build_decision_batches
+from v17_rebirth.backend.services.god_ring_authority import resolve_god_ring_authority
 from v17_rebirth.backend.services.narrative_intel import (
     build_fact_fragments,
     sorted_fact_rows,
@@ -196,8 +197,9 @@ class VerdictOrchestrator:
         scores = adapter.read_deity_scores(raw_physics)
         narrative_scores = build_narrative_scores(scores, will_proxy)
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
-        god_of_use = [x[0] for x in ranked[:2]]
-        god_of_taboo = [x[0] for x in ranked[-2:]] if len(ranked) >= 2 else []
+        god_ring_authority = resolve_god_ring_authority(raw_physics=raw_physics, ranked_pairs=ranked)
+        god_of_use = list(god_ring_authority.get("god_of_use") or [])
+        god_of_taboo = list(god_ring_authority.get("god_of_taboo") or [])
         total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
 
         def _merge_rows() -> List[Dict[str, Any]]:

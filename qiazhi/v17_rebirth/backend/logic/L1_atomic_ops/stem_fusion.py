@@ -9,6 +9,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_stem_fusion_conditions,
 )
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_stem_fusion",
@@ -150,16 +151,29 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_state": condition["condition_state"],
                     "condition_trigger": condition["condition_trigger"],
                     "branch_hua_ratio": condition["branch_hua_ratio"],
-                "condition_multiplier": cond_mul,
-                "origin_type": condition.get("origin_type"),
-                "origin_multiplier": round(origin_mul, 3),
-                "static_basis": build_static_basis(
-                    physics_tensor=physics_tensor,
-                    target_god=target_god,
-                    relation_family="stem_fusion",
-                    relation_members=stems,
-                ),
-            }
+                    "condition_multiplier": cond_mul,
+                    "origin_type": condition.get("origin_type"),
+                    "origin_multiplier": round(origin_mul, 3),
+                    "work_evidence": build_work_evidence(
+                        relation_family="stem_fusion",
+                        target_god=target_god,
+                        members=stems,
+                        effect_type="stuck",
+                        layer="stem",
+                        origin_scope=str(condition.get("origin_type") or "natal"),
+                        condition_state=condition["condition_state"],
+                        impact_ratio=-round(stuck_damp, 3),
+                        match_ratio=round(match_ratio, 3),
+                        path_strength=stuck_damp * max(0.55, branch_ratio + 0.25),
+                        targets=[target_god],
+                    ),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god=target_god,
+                        relation_family="stem_fusion",
+                        relation_members=stems,
+                    ),
+                },
             })
         elif mode == "transformed":
             hua_el = _normalize_element_name(str(c.get("hua_element") or ""))
@@ -200,6 +214,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_multiplier": cond_mul,
                     "origin_type": condition.get("origin_type"),
                     "origin_multiplier": round(origin_mul, 3),
+                    "work_evidence": build_work_evidence(
+                        relation_family="stem_fusion",
+                        target_god=god,
+                        members=stems,
+                        effect_type="transform",
+                        layer="stem",
+                        origin_scope=str(condition.get("origin_type") or "natal"),
+                        condition_state=condition["condition_state"],
+                        impact_ratio=round(trans_eff * cond_mul * max(0.28, float(share)), 3) if condition["condition_state"] == "formed" else 0.0,
+                        match_ratio=projected_match,
+                        path_strength=trans_eff * max(0.55, branch_ratio + 0.2) * max(0.62, float(share)),
+                        targets=list((projection or {}).keys()) or [god],
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god=god,

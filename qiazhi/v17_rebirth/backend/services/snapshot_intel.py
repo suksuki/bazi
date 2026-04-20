@@ -4,6 +4,7 @@ import json
 from typing import Any, Callable, Dict, List
 
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
+from v17_rebirth.backend.services.god_ring_authority import resolve_god_ring_authority
 from v17_rebirth.backend.services.physics_canonical import six_pillars_tensor_complete
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError
 
@@ -147,8 +148,7 @@ def build_snapshot_payload(
     fact_rows = [str(x.get("fact") or "").strip() for x in sorted_fact_rows if str(x.get("fact") or "").strip()][:160]
 
     ranked_pairs = ranked[:]
-    god_of_use = [x[0] for x in ranked_pairs[:2]]
-    god_of_taboo = [x[0] for x in ranked_pairs[-2:]] if len(ranked_pairs) >= 2 else []
+    god_ring_authority = resolve_god_ring_authority(raw_physics=raw_physics, ranked_pairs=ranked_pairs)
 
     pt = raw_physics if isinstance(raw_physics, dict) else {}
     meta = pt.get("meta") or {}
@@ -209,10 +209,7 @@ def build_snapshot_payload(
             "hits": plugin_hits,
             "facts": plugin_facts[:64],
         },
-        "god_rings": {
-            "god_of_use": god_of_use,
-            "god_of_taboo": god_of_taboo,
-        },
+        "god_rings": dict(god_ring_authority),
     }
     inner["pillars"] = {
         "four_pillars": dict(inner.get("four_pillars") or {}),

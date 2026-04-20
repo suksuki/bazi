@@ -13,6 +13,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_family import 
 )
 from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import (
     ZiPingBalancePlugin,
+    ZiPingGodRingResolverPlugin,
     ZiPingMonthCommandPlugin,
     ZiPingYongShenPlugin,
 )
@@ -59,6 +60,18 @@ def _tensor_for_ziping() -> Dict[str, Any]:
         "ten_gods_base_l0": {"伤官": 62.0, "食神": 40.0, "正官": 20.0, "比肩": 10.0},
         "ten_gods_runtime": {"伤官": 62.0, "食神": 40.0, "正官": 20.0, "比肩": 10.0},
         "energy_meta": {"month_command_god": "伤官", "season_power": {"month_branch": "亥"}},
+        "auto_resolutions": [
+            {
+                "id": "auto_1",
+                "target_god": "正官",
+                "physical_impact": {"target_god": "正官", "impact_ratio": 0.22},
+            },
+            {
+                "id": "auto_2",
+                "target_god": "伤官",
+                "physical_impact": {"target_god": "伤官", "impact_ratio": -0.18},
+            },
+        ],
     }
 
 
@@ -94,6 +107,7 @@ def test_ziping_family_reports_interaction_protocol() -> None:
         ZiPingMonthCommandPlugin,
         ZiPingBalancePlugin,
         ZiPingYongShenPlugin,
+        ZiPingGodRingResolverPlugin,
     ]
     for plugin_cls in plugins:
         plugin = plugin_cls()
@@ -101,6 +115,18 @@ def test_ziping_family_reports_interaction_protocol() -> None:
         assert len(facts) >= 1, f"{plugin.plugin_id} should emit diagnostic fact"
         for fact in facts:
             _assert_interaction_protocol(fact)
+
+
+def test_ziping_god_ring_resolver_emits_authority_meta() -> None:
+    facts = ZiPingGodRingResolverPlugin().collect_v17_facts(_tensor_for_ziping())
+    assert facts
+    authority = facts[0].meta.get("god_ring_authority")
+    assert isinstance(authority, dict)
+    assert authority["source"] == "classical.ziping.god_ring_resolver.v1"
+    assert authority["mode"] == "six_pillar_spacetime_core"
+    assert authority["core_path_count"] >= 1
+    assert "正官" in authority["use_gods"]
+    assert "伤官" in authority["taboo_gods"]
 
 
 def test_blind_and_ziping_configs_override_match_ratio(monkeypatch: Any) -> None:

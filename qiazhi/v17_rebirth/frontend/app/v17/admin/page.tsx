@@ -8,6 +8,7 @@ import { V17_AdminPhysicsPanel } from "@/components/V17_AdminPhysicsPanel";
 import { V17_AdminEvolutionPanel } from "@/components/V17_AdminEvolutionPanel";
 import { V17_AdminLlmPanel } from "@/components/V17_AdminLlmPanel";
 import { V17_AdminDbPanel } from "@/components/V17_AdminDbPanel";
+import { V17_AdminCoreEnginePanel } from "@/components/V17_AdminCoreEnginePanel";
 import {
   ADMIN_GHOST_BTN,
   ADMIN_SOLID_BTN,
@@ -99,18 +100,6 @@ type PluginAdminRow = {
   config_exists?: boolean;
   config_file?: string;
 };
-
-function pluginCardTitle(row: PluginAdminRow): string {
-  return String(row.display_name || row.definition_text || row.plugin_id || "未命名插件").trim();
-}
-
-function pluginCardDefinition(row: PluginAdminRow): string {
-  return String(row.display_definition || row.definition_text || row.function_summary || row.plugin_id || "").trim();
-}
-
-function pluginCardDescription(row: PluginAdminRow): string {
-  return String(row.display_description || row.detail_description || row.design_rationale || "暂无补充说明。").trim();
-}
 
 type PluginRuntimeStatus = {
   plugin_id: string;
@@ -750,6 +739,10 @@ export default function V17AdminPage() {
                  brainStepTone={brainStepTone}
                  resolveRoutingPolicy={resolveRoutingPolicy}
                  compactRoutingScores={compactRoutingScores}
+               />
+               <V17_AdminCoreEnginePanel
+                 pluginCount={plugins.length}
+                 hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
                />
                <V17_AdminPluginOverview
                  scannedPluginCount={scannedPluginCount}

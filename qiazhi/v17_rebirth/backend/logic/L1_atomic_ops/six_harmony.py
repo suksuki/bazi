@@ -9,6 +9,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_branch_liuhe",
@@ -101,6 +102,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "condition_multiplier": cond_mul,
             "origin_type": condition.get("origin_type"),
             "origin_multiplier": round(origin_mul, 3),
+            "work_evidence": build_work_evidence(
+                relation_family="liuhe",
+                target_god=god,
+                members=pair,
+                effect_type="benefit",
+                layer="branch",
+                origin_scope=str(condition.get("origin_type") or "natal"),
+                condition_state=condition["condition_state"],
+                impact_ratio=round(impact, 2) if condition["condition_state"] == "supported" else 0.0,
+                match_ratio=round(match_ratio, 3),
+                path_strength=abs(impact) * max(0.4, stability_factor) * max(0.7, cond_mul),
+                targets=list((projection or {}).keys()) or [god],
+            ),
             "static_basis": build_static_basis(
                 physics_tensor=physics_tensor,
                 target_god=god,

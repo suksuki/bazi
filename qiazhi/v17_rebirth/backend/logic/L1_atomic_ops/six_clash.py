@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import _branch_dominant_ten_god
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import build_static_basis, relation_origin_multiplier
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
@@ -87,6 +88,18 @@ class SixClashPlugin(V17PluginSpec):
                         "clash_stress": round(stress, 3),
                         "origin_type": origin_type,
                         "origin_multiplier": round(origin_mul, 3),
+                        "work_evidence": build_work_evidence(
+                            relation_family="liu_chong",
+                            target_god=target_god,
+                            members=pair[:2],
+                            effect_type="harm",
+                            layer="branch",
+                            origin_scope=origin_type,
+                            impact_ratio=round(base_impact_ratio, 3),
+                            match_ratio=round(max(0.0, min(0.96, stress * origin_mul)), 3),
+                            path_strength=abs(base_impact_ratio) * max(0.35, stress) * max(0.72, origin_mul),
+                            targets=[target_god],
+                        ),
                         "static_basis": build_static_basis(
                             physics_tensor=physics_tensor,
                             target_god=target_god,

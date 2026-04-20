@@ -68,6 +68,42 @@ def test_compile_pending_decisions_infers_hint_from_fact_meta() -> None:
     assert rows[0]["target_god"] == "正财"
 
 
+def test_compile_pending_decisions_preserves_work_evidence_from_fact_meta() -> None:
+    rows = compile_pending_decisions(
+        facts=[
+            V17Fact(
+                plugin_id="l1.physics.op_branch_liuhe",
+                text="检测到地支六合 [午未]：资源稳定绑定，正财 能级提升 15%。",
+                causal_tier=4,
+                priority=0.78,
+                meta={
+                    "impact_ratio": 0.15,
+                    "target_god": "正财",
+                    "match_ratio": 0.73,
+                    "work_evidence": {
+                        "relation_family": "liuhe",
+                        "target_god": "正财",
+                        "targets": ["正财"],
+                        "members": ["午", "未"],
+                        "effect_type": "benefit",
+                        "layer": "branch",
+                        "origin_scope": "natal",
+                        "condition_state": "supported",
+                        "impact_ratio": 0.15,
+                        "match_ratio": 0.73,
+                        "path_strength": 0.2,
+                    },
+                },
+            )
+        ],
+        spec_decisions=[],
+        existing_rows=[],
+    )
+    assert len(rows) == 1
+    assert rows[0]["physical_impact"]["work_evidence"]["relation_family"] == "liuhe"
+    assert rows[0]["physical_impact"]["work_evidence"]["members"] == ["午", "未"]
+
+
 def test_infer_target_god_from_text_detects_embedded_ten_god() -> None:
     assert infer_target_god_from_text("资源稳定绑定，正财 能级提升 15%。") == "正财"
 

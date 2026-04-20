@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List
 
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import WORK_EVIDENCE_KEY
 from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence
 from v17_rebirth.backend.services.plugin_display import plugin_source_label
 from v17_rebirth.backend.services.target_god_resolver import resolve_target_god
@@ -237,6 +238,14 @@ _PHYSICAL_IMPACT_KEYS = {
     "detailed_projection",
     "raw_impact_ratio",
     "match_ratio",
+    WORK_EVIDENCE_KEY,
+    "relation_family",
+    "origin_type",
+    "interaction_layer",
+    "condition_state",
+    "condition_multiplier",
+    "origin_multiplier",
+    "clash_pair",
 }
 
 

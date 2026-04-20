@@ -10,6 +10,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_effect_multiplier,
     summarize_relation_conditions,
 )
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.op_branch_muku",
@@ -109,6 +110,19 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             "condition_multiplier": cond_mul,
             "origin_type": condition.get("origin_type"),
             "origin_multiplier": round(origin_mul, 3),
+            "work_evidence": build_work_evidence(
+                relation_family="muku",
+                target_god=god,
+                members=[br],
+                effect_type="release" if is_open else "storage",
+                layer=interaction_layer,
+                origin_scope=str(condition.get("origin_type") or "natal"),
+                condition_state=condition["condition_state"],
+                impact_ratio=impact_ratio,
+                match_ratio=round(_clamp((0.85 if is_open else 0.65) * cond_mul * origin_mul, 0.0, 1.0), 3),
+                path_strength=abs(impact_ratio) * (1.0 if is_open else 0.86),
+                targets=[god],
+            ),
             "static_basis": build_static_basis(
                 physics_tensor=physics_tensor,
                 target_god=god,
