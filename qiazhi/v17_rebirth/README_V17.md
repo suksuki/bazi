@@ -62,15 +62,10 @@
 - [x] Implement frontend `V17_PurpleVerdictCard` protocol-locked renderer.
 - [x] Implement infrastructure bridges for DB/Admin/LLM configuration.
 
-## V17.1 First Pure Verdict Drill
+## 参考演练样例
 
 - Read-only physics adapter: `backend/adapters/physics_adapter.py`
-- First pure verdict experiment: `backend/experiments/first_pure_verdict.py`
 - WebStream render demo: `frontend/components/V17_WebStreamDemo.tsx`
-
-Run (module mode):
-
-`PYTHONPATH=/home/hlsystem/bazi/qiazhi python3 -m v17_rebirth.backend.experiments.first_pure_verdict`
 
 ## Systemd Deployment (V17.2)
 

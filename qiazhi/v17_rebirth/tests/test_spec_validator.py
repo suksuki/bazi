@@ -73,6 +73,7 @@ def test_core_plugins_remain_policy_valid() -> None:
         "l2.risk.risk_matrix",
         "l1.physics.op_branch_sanhe",
         "l1.physics.op_branch_muku",
+        "l1.physics.op_branch_liuchong",
         "l1.physics.op_branch_liuhe",
         "l1.physics.op_branch_liupo",
         "l1.physics.op_branch_liuhai",

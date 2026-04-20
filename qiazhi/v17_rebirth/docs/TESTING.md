@@ -19,6 +19,8 @@ bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh
 
 脚本顺序：V17 pytest（默认排除 `integration`）→ 集成标记用例 → 前端 `pnpm test:ci`（ESLint + `next build` + Vitest）。Next.js 16 起 CLI 不再提供 `next lint`，与本仓库 `package.json` 中 `eslint .` 一致。
 
+脚本会在 Relation Origin Gate 之前执行插件参数审计门禁：`scripts/audit_plugin_params.py` 的 `declared_but_unused` 不能包含任何项；一旦发现未接线参数，会直接中止自动化流程并输出失败原因。
+
 ## 常用命令
 
 ```bash

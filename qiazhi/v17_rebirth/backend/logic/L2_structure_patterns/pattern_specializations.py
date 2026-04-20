@@ -22,7 +22,6 @@ PATTERN_DEFAULTS = {
     "classical.pattern.dynamic_scope.v1": {
         "SCOPE_MIX_LABEL_BOOST": 1.1,
         "SCOPE_MIN_WEIGHT": 0.06,
-        "SCOPE_PRIORITY": 0.72,
         "SCOPE_MATCH_BASE": 0.62,
     },
     "classical.pattern.axis.v1": {
@@ -42,7 +41,7 @@ PATTERN_DEFAULTS = {
         "CONGSHI_SCORE_THRESHOLD": 35.0,
         "CONGSHI_RATIO_DIVISOR": 2.0,
         "CONGSHI_ORIGIN_SCALE_MIN": 0.92,
-        "CONGSHI_STRONG_RATIO": 2.2,
+        "CONGSHI_STRONG_RATIO": 2.0,
     },
     "classical.pattern.jianlu_yuejie.v1": {
         "JIANLU_MATCH_BASE": 0.82,

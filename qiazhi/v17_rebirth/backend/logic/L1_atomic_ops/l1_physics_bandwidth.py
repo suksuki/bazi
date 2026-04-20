@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from v17_rebirth.backend.adapters.physics_adapter import PhysicsAdapter
+from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
+
 # V17.99 Skill Specification
 V17_SKILL_MANIFEST = {
     "id": "l1.physics.full_bandwidth",

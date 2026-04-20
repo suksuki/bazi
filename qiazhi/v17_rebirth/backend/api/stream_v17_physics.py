@@ -141,7 +141,6 @@ def _run_v17_physics_core(
         flow_pillar=flow_pillar,
         gender=gender_norm,
         birth_time=dt,
-        flow_year=fy,
     )
     facts = [
         {

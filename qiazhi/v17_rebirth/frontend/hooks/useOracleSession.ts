@@ -487,6 +487,19 @@ export function useOracleSession(): OracleSession {
     setDecisionDirtySinceLastVerdict(false);
   }, [sessionId, streamEndpoint]);
 
+  function fallbackDecisionAction(item: Decision, index: number): { title: string; label: string } {
+    const target = String(item.target_god || item.physical_impact?.target_god || "").trim();
+    const source = String(item.source_label || item.source || item.plugin_id || "").trim();
+    const rawTitle = String(item.title || "").trim();
+    const rawLabel = String(item.label || "").trim();
+    const title = rawTitle || rawLabel || source || `decision_${index + 1}`;
+    const label = rawLabel || rawTitle || (target ? `处理 ${target}` : title);
+    return {
+      title,
+      label,
+    };
+  }
+
   async function handleAdoptedBatch(
     decisions: Decision[],
     status: "APPROVED" | "REJECTED",
@@ -495,8 +508,9 @@ export function useOracleSession(): OracleSession {
     const normalized = decisions
       .map((item, index) => {
         const id = String(item.id || item.label || item.title || `d_${Date.now()}_${index}`).trim();
-        const title = String(item.title || "").trim();
-        const label = String(item.label || title || "").trim();
+        const fallback = fallbackDecisionAction(item, index);
+        const title = fallback.title;
+        const label = fallback.label;
         return {
           ...item,
           id,
@@ -504,9 +518,13 @@ export function useOracleSession(): OracleSession {
           label,
         };
       })
-      .filter((item) => item.id && (item.label || item.title));
+      .filter((item) => item.id);
 
-    if (!normalized.length || decisionLockStartedAtMs != null) return;
+    if (!normalized.length) {
+      setDecisionActionError("当前 decision item 缺少可提交的标识，已跳过。");
+      return;
+    }
+    if (decisionLockStartedAtMs != null) return;
 
     const ids: string[] = [];
     const seenIds = new Set<string>();
@@ -519,10 +537,16 @@ export function useOracleSession(): OracleSession {
 
     const title = String(normalized[0]?.title || "").trim();
     const action = String(normalized[0]?.label || title || "").trim();
-    if (!action || !ids.length) return;
+    if (!action || !ids.length) {
+      setDecisionActionError("当前 decision item 缺少动作标题，无法提交。");
+      return;
+    }
 
+    const carryImplicitBatchIds = normalized.length > 1;
     const mergedBatchIds = [
-      ...normalized.map((item) => String(item.batch_id || "").trim()).filter(Boolean),
+      ...(carryImplicitBatchIds
+        ? normalized.map((item) => String(item.batch_id || "").trim()).filter(Boolean)
+        : []),
       ...batchIds.map((item) => String(item || "").trim()).filter(Boolean),
     ];
     const uniqBatchIds = Array.from(new Set(mergedBatchIds));

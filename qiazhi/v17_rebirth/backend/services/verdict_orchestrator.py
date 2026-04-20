@@ -30,7 +30,7 @@ from v17_rebirth.backend.services.narrative_pipeline_cache import (
     get_realtime_pipeline,
     restart_pipeline_cache,
 )
-from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
+from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER, V17LlmBridge
 from v17_rebirth.infrastructure.llm_micro_client import _normalize_fuse_role
 from v17_rebirth.backend.services.physics_canonical import six_pillars_tensor_complete
 from v17_rebirth.backend.services.physics_layers import build_narrative_scores, read_base_scores, read_runtime_scores
@@ -213,7 +213,7 @@ class VerdictOrchestrator:
             total_energy_index=total_energy_index,
         )
         arbitration = build_decision_arbitration(
-            raw_physics,
+            raw_physics=raw_physics,
             spec_facts=facts if all(isinstance(f, V17Fact) for f in facts) else None,
         )
         decision_batches = build_decision_batches(arbitration=arbitration)

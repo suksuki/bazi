@@ -355,6 +355,57 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
         if mod is not None:
             summary = summary or str(getattr(mod, "PLUGIN_SUMMARY", "") or getattr(mod, "PLUGIN_DESCRIPTION", "") or "").strip()
             rationale = rationale or str(getattr(mod, "PLUGIN_RATIONALE", "") or getattr(mod, "PLUGIN_DESIGN_RATIONALE", "") or "").strip()
+
+        config_path = Path(__file__).resolve().parent / "configs" / f"{pid}.json"
+        config_exists = config_path.exists()
+        config_file = f"backend/logic/configs/{pid}.json"
+
+        if (not skill or not bool(skill.get("valid"))) and mod is None and summary:
+            skill = {
+                "valid": True,
+                "id": pid,
+                "manifest": {
+                    "id": pid,
+                    "Layer": tag,
+                    "Skill_Type": "ManifestBacked",
+                    "Domain": "Physics",
+                    "Description": summary,
+                    "Rationale": rationale or summary,
+                },
+                "params": {},
+                "policy_errors": [],
+                "config_required": False,
+                "config_file": config_file if config_exists else "",
+                "config_exists": config_exists,
+                "policy_valid": True,
+            }
+
+        synthetic_summary = summary or str(getattr(spec, "plugin_id", "")).strip() or "V17 插件"
+        synthetic_rationale = rationale or synthetic_summary
+
+        if (
+            (not skill or not bool(skill.get("valid")))
+            and mod is not None
+            and (config_exists or pid.startswith("classical.") or pid.startswith("l1.physics.op_") or pid.startswith("l0.foundation."))
+        ):
+            skill = {
+                "valid": True,
+                "id": pid,
+                "manifest": {
+                    "id": pid,
+                    "Layer": tag,
+                    "Skill_Type": "SpecBacked",
+                    "Domain": "Physics" if tag in {"L0", "L1"} else "Patterns",
+                    "Description": synthetic_summary,
+                    "Rationale": synthetic_rationale,
+                },
+                "params": {},
+                "policy_errors": [],
+                "config_required": bool(config_exists),
+                "config_file": config_file if config_exists else "",
+                "config_exists": config_exists,
+                "policy_valid": True,
+            }
         
         module_doc = _compact_admin_text(inspect.getdoc(mod) if mod is not None else "")
         spec_doc = _compact_admin_text(inspect.getdoc(spec.__class__) or "")
