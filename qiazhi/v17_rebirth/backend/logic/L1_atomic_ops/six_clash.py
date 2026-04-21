@@ -64,6 +64,7 @@ class SixClashPlugin(V17PluginSpec):
                 continue
             gods = [_branch_dominant_ten_god(branch, dm) for branch in pair]
             target_god = gods[0] if gods and gods[0] else (gods[1] if len(gods) > 1 else "")
+            source_god = gods[1] if len(gods) > 1 else target_god
             label = "".join(pair[:2])
             stress = default_stress
             if isinstance(hit.get("stress"), (int, float)):
@@ -92,6 +93,8 @@ class SixClashPlugin(V17PluginSpec):
                             relation_family="liu_chong",
                             target_god=target_god,
                             members=pair[:2],
+                            actor_members=pair[1:2],
+                            receiver_members=pair[:1],
                             effect_type="harm",
                             layer="branch",
                             origin_scope=origin_type,
@@ -99,6 +102,8 @@ class SixClashPlugin(V17PluginSpec):
                             match_ratio=round(max(0.0, min(0.96, stress * origin_mul)), 3),
                             path_strength=abs(base_impact_ratio) * max(0.35, stress) * max(0.72, origin_mul),
                             targets=[target_god],
+                            actor_gods=[source_god] if source_god else [],
+                            receiver_gods=[target_god] if target_god else [],
                         ),
                         "static_basis": build_static_basis(
                             physics_tensor=physics_tensor,

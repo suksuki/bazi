@@ -34,11 +34,81 @@ def test_calc_deity_scores_returns_absolute_energy_and_total_index() -> None:
     assert energy_meta.get("constants", {}).get("stem_base") == 10.0
     assert energy_meta.get("constants", {}).get("branch_base") == 12.0
     assert "month_command_god" in energy_meta
+    assert "ten_gods_decomposition_l0" in energy_meta
     # V17.30：energy_meta 应包含 season_power 信息
     assert "season_power" in energy_meta
     sp = energy_meta["season_power"]
     assert sp["month_branch"] == "寅"
     assert sp["month_element"] == "木"
+
+    decomposition = energy_meta["ten_gods_decomposition_l0"]
+    assert isinstance(decomposition, dict) and decomposition
+    top_god = ten_gods[0]
+    top_row = decomposition.get(top_god)
+    assert isinstance(top_row, dict)
+    total_parts = float(top_row.get("manifest") or 0.0) + float(top_row.get("root") or 0.0) + float(top_row.get("momentum") or 0.0) + float(top_row.get("hidden") or 0.0)
+    assert round(total_parts, 2) == round(float(top_row.get("total") or 0.0), 2)
+    detailed_momentum = (
+        float(top_row.get("momentum_month_order") or 0.0)
+        + float(top_row.get("momentum_stage") or 0.0)
+        + float(top_row.get("momentum_structure") or 0.0)
+        + float(top_row.get("momentum_auxiliary") or 0.0)
+        + float(top_row.get("momentum_other") or 0.0)
+    )
+    assert round(detailed_momentum, 2) == round(float(top_row.get("momentum") or 0.0), 2)
+    detailed_stage = (
+        float(top_row.get("momentum_stage_lu") or 0.0)
+        + float(top_row.get("momentum_stage_blade") or 0.0)
+        + float(top_row.get("momentum_stage_general") or 0.0)
+    )
+    assert round(detailed_stage, 2) == round(float(top_row.get("momentum_stage") or 0.0), 2)
+
+
+def test_stage_momentum_surfaces_for_daymaster_same_element_branch() -> None:
+    """
+    同五行分支若处于长生/临官/帝旺等阶段，应单独出现在阶段势账本里，
+    但不应广播给非同五行十神。
+    """
+    scores, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "丙寅", "day": "甲子", "hour": "乙卯"},
+        luck_pillar="甲寅",
+        flow_pillar="乙卯",
+        gender="male",
+    )
+    decomposition = meta.get("ten_gods_decomposition_l0") or {}
+    peer_row = decomposition.get("比肩") or {}
+    seal_row = decomposition.get("正印") or {}
+    assert float(peer_row.get("momentum_stage") or 0.0) > 0.0
+    assert float(peer_row.get("momentum") or 0.0) >= float(peer_row.get("momentum_stage") or 0.0)
+    assert float(seal_row.get("momentum_stage") or 0.0) == 0.0
+    assert float(scores.get("比肩", 0.0)) > 0.0
+
+
+def test_stage_sub_buckets_distinguish_lu_and_blade() -> None:
+    """
+    临官应进入禄势桶，帝旺应进入刃势桶，避免都混成一个阶段势黑箱。
+    """
+    lu_scores, _, _, lu_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "甲寅", "day": "甲子", "hour": "乙卯"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    blade_scores, _, _, blade_meta = calc_deity_scores(
+        four_pillars={"year": "甲卯", "month": "甲卯", "day": "甲子", "hour": "乙卯"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    lu_row = (lu_meta.get("ten_gods_decomposition_l0") or {}).get("比肩") or {}
+    blade_row = (blade_meta.get("ten_gods_decomposition_l0") or {}).get("劫财") or {}
+    assert float(lu_scores.get("比肩", 0.0)) > 0.0
+    assert float(blade_scores.get("劫财", 0.0)) > 0.0
+    assert float(lu_row.get("momentum_stage_lu") or 0.0) > 0.0
+    assert float(lu_row.get("momentum_stage_blade") or 0.0) == 0.0
+    assert float(blade_row.get("momentum_stage_blade") or 0.0) > 0.0
+    assert float(blade_row.get("momentum_stage_lu") or 0.0) == 0.0
 
 
 def test_physics_canonical_materializes_absolute_energy_lines() -> None:
@@ -59,13 +129,63 @@ def test_physics_canonical_materializes_absolute_energy_lines() -> None:
     assert any("全盘总能量指标：130.00" in row for row in rows)
 
 
+def test_day_branch_participates_but_is_weaker_than_month_branch() -> None:
+    """
+    日支必须参与计算，但同类藏干在月支的贡献应高于日支。
+    这里用丑中癸水作对照：月支丑与日支丑都含癸，且月令不直接放大癸水。
+    """
+    scores, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "甲子", "month": "乙丑", "day": "甲丑", "hour": "丁卯"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    assert float(scores.get("正印", 0.0)) > 0.0
+    ledger = meta.get("ledger").to_dict().get("正印") or []
+    month_row = next(row for row in ledger if row.get("step") == "L0_BRANCH_月" and "丑藏癸" in str(row.get("reason") or ""))
+    day_row = next(row for row in ledger if row.get("step") == "L0_BRANCH_日" and "丑藏癸" in str(row.get("reason") or ""))
+    assert float(month_row.get("delta") or 0.0) > float(day_row.get("delta") or 0.0)
+
+
+def test_natal_stem_proximity_prefers_month_then_hour_then_year() -> None:
+    """
+    无根明透的同类天干，应体现“贴身显化”强弱：
+    月干 > 时干 > 年干。
+    该贴身加成属于天干近身作用，不应被记成根气。
+    """
+    scores, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "乙酉", "month": "乙酉", "day": "甲子", "hour": "乙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    assert float(scores.get("劫财", 0.0)) > 0.0
+    ledger = meta.get("ledger").to_dict().get("劫财") or []
+    year_row = next(row for row in ledger if row.get("step") == "L0_STEM_年")
+    month_row = next(row for row in ledger if row.get("step") == "L0_STEM_月")
+    hour_row = next(row for row in ledger if row.get("step") == "L0_STEM_时")
+    assert "贴身×0.72" in str(year_row.get("reason") or "")
+    assert "贴身×1.00" in str(month_row.get("reason") or "")
+    assert "贴身×0.85" in str(hour_row.get("reason") or "")
+    assert "浮木×0.72" in str(month_row.get("reason") or "")
+    assert float(month_row.get("delta") or 0.0) > float(hour_row.get("delta") or 0.0) > float(year_row.get("delta") or 0.0)
+
+    decomposition = meta.get("ten_gods_decomposition_l0") or {}
+    peer_row = decomposition.get("劫财") or {}
+    assert float(peer_row.get("manifest") or 0.0) > 0.0
+    assert float(peer_row.get("root") or 0.0) == 0.0
+
+
 # ── V17.30 Mass Phase 核心断言 ────────────────────────────────────────────────
 
 
 def test_extreme_strong_chart_has_significantly_higher_total_energy() -> None:
     """
-    Assert：在一个极旺格（木旺命局，寅月，天干全木/水生木）中，
-    total_energy_index 应显著高于普通均衡命局。
+    Assert：在月令只作用月支自身的新口径下，
+    极旺格不一定靠 total_energy_index 全盘碾压，
+    但主轴峰值必须显著高于普通均衡命局。
     """
     # 极旺格：日主甲木，月令寅木（当令），年时全木/水支撑
     strong_scores, _, strong_total, strong_meta = calc_deity_scores(
@@ -83,18 +203,14 @@ def test_extreme_strong_chart_has_significantly_higher_total_energy() -> None:
         gender="male",
     )
 
-    # 极旺格总能量必须显著高于普通命局（至少 1.5 倍）
-    ratio = strong_total / normal_total if normal_total > 0 else 0
-    assert ratio >= 1.5, (
-        f"极旺格 ({strong_total:.2f}) 相对普通命局 ({normal_total:.2f}) "
-        f"量级比仅 {ratio:.2f}x，应 >= 1.5x"
+    strong_peak = max(strong_scores.values())
+    normal_peak = max(normal_scores.values())
+    ratio = strong_peak / normal_peak if normal_peak > 0 else 0
+    assert ratio >= 3.0, (
+        f"极旺格主峰 ({strong_peak:.2f}) 相对普通命局主峰 ({normal_peak:.2f}) "
+        f"仅 {ratio:.2f}x，应 >= 3.0x"
     )
-
-    # 极旺格总能量应在高位范围（>= 200）
-    assert strong_total >= 200.0, (
-        f"极旺格 total_energy_index = {strong_total:.2f}, "
-        f"预期 >= 200.0（全木/水得令得势）"
-    )
+    assert max(strong_scores, key=strong_scores.get) == "比肩"
 
 
 def test_same_proportion_different_magnitude_must_differ_in_absolute_values() -> None:
@@ -138,31 +254,101 @@ def test_same_proportion_different_magnitude_must_differ_in_absolute_values() ->
     )
 
 
-def test_season_power_amplifies_in_season_element() -> None:
+def test_month_order_is_localized_to_month_branch_only() -> None:
     """
-    验证月令当令五行确实获得 Season Power 放大。
+    月令只能强化月支自身，不能把同元素藏干在全盘广播放大。
     """
-    # 火命月令午火（当令）
-    fire_scores, _, fire_total, fire_meta = calc_deity_scores(
-        four_pillars={"year": "丙午", "month": "丙午", "day": "丙午", "hour": "丙午"},
-        luck_pillar="—",
-        flow_pillar="—",
+    scores, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    ledger = meta.get("ledger").to_dict()
+    food_entries = ledger.get("食神") or []
+    seasonal_entries = [row for row in food_entries if "季×" in str(row.get("reason") or "")]
+    assert seasonal_entries, "月支主气应保留月令加持"
+    assert len(seasonal_entries) == 1, f"不应出现月令广播：{seasonal_entries}"
+    assert "月支" in str(seasonal_entries[0].get("reason") or "")
+    assert float(scores.get("食神", 0.0)) < float(scores.get("偏印", 0.0))
+
+
+def test_hidden_month_order_without_visible_stem_stays_floating() -> None:
+    """
+    只有月支藏干、没有同气天干透出的十神，应显著弱于有明透的版本。
+    """
+    hidden_only_scores, _, _, hidden_meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    visible_scores, _, _, _ = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "戊辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
         gender="male",
     )
 
-    # 火命月令子水（受制）
-    water_scores, _, water_total, water_meta = calc_deity_scores(
-        four_pillars={"year": "丙子", "month": "丙子", "day": "丙子", "hour": "丙子"},
-        luck_pillar="—",
-        flow_pillar="—",
+    assert float(hidden_only_scores.get("食神", 0.0)) < 15.0
+    assert float(visible_scores.get("食神", 0.0)) > float(hidden_only_scores.get("食神", 0.0)) * 1.6
+    food_entries = (hidden_meta.get("ledger").to_dict().get("食神") or [])
+    assert any("潜藏×" in str(row.get("reason") or "") for row in food_entries)
+
+
+def test_visible_water_stem_can_root_through_same_element_hidden_water() -> None:
+    """
+    壬水明透时，可通过子/辰中的癸水取得同五行之根，
+    但因阴阳不匹配，应按折损根气计算。
+    """
+    rooted_scores, _, _, rooted_meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    floating_scores, _, _, _ = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲戌", "day": "丙午", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
         gender="male",
     )
 
-    # 火当令的总能量应远高于火受制的（注意：子水月下水系藏干也获得 Season Power，
-    # 因此对比不如纯五行阵那么悬殊，1.3x 为合理下限）
-    assert fire_total > water_total * 1.3, (
-        f"Fire in-season ({fire_total:.2f}) should be > 1.3x fire out-of-season ({water_total:.2f})"
+    assert float(rooted_scores.get("七杀", 0.0)) > float(floating_scores.get("七杀", 0.0))
+    qisha_entries = (rooted_meta.get("ledger").to_dict().get("七杀") or [])
+    assert any("异阴阳根×" in str(row.get("reason") or "") for row in qisha_entries)
+
+
+def test_exact_hidden_root_is_stronger_than_cross_polarity_root() -> None:
+    """
+    癸水透出时，对子/辰中的癸水属于本根；
+    壬水透出时，只能按异阴阳同五行根折损计算。
+    """
+    yang_scores, _, _, yang_meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
     )
+    yin_scores, _, _, yin_meta = calc_deity_scores(
+        four_pillars={"year": "癸寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+
+    yang_stem_row = next(
+        row for row in (yang_meta.get("ledger").to_dict().get("七杀") or [])
+        if row.get("step") == "L0_STEM_年"
+    )
+    yin_stem_row = next(
+        row for row in (yin_meta.get("ledger").to_dict().get("正官") or [])
+        if row.get("step") == "L0_STEM_年"
+    )
+
+    assert "异阴阳根×" in str(yang_stem_row.get("reason") or "")
+    assert "本根×" in str(yin_stem_row.get("reason") or "")
+    assert float(yin_stem_row.get("val") or 0.0) > float(yang_stem_row.get("val") or 0.0)
 
 
 def test_l0_controlled_element_is_not_directly_suppressed_by_month_order() -> None:
@@ -203,3 +389,61 @@ def test_total_energy_range_is_in_expected_band() -> None:
 
     assert total >= 50.0, f"total_energy_index = {total:.2f}, expected >= 50.0"
     assert total <= 800.0, f"total_energy_index = {total:.2f}, expected <= 800.0 (sanity cap)"
+
+
+def test_dynamic_root_relation_engine_covers_xing_chong_ke_hai_he() -> None:
+    """
+    动态根气应纳入刑/冲/克/害/合，并在 meta 里可审计。
+    """
+    _, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "甲子", "month": "乙丑", "day": "丙午", "hour": "丁未"},
+        luck_pillar="戊卯",
+        flow_pillar="己酉",
+        gender="male",
+    )
+    rel = meta.get("root_dynamic_relations") or {}
+    hits = rel.get("hits") or {}
+    assert int(hits.get("liuhe", 0)) >= 1
+    assert int(hits.get("chong", 0)) >= 1
+    assert int(hits.get("hai", 0)) >= 1
+    assert int(hits.get("po", 0)) >= 1
+    assert int(hits.get("xing", 0)) >= 1
+    assert int(hits.get("ke", 0)) >= 1
+    assert isinstance(rel.get("dynamic_applied"), dict)
+
+
+def test_zi_chen_banhe_dynamic_root_boosts_qisha() -> None:
+    """
+    子辰半合应对水根（进而对丙日主官杀）提供可观增益。
+    """
+    with_banhe_scores, _, _, with_meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    no_banhe_scores, _, _, _ = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙午", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    rel_hits = ((with_meta.get("root_dynamic_relations") or {}).get("hits") or {})
+    assert int(rel_hits.get("banhe", 0)) >= 1
+    assert float(with_banhe_scores.get("七杀", 0.0)) > float(no_banhe_scores.get("七杀", 0.0))
+
+
+def test_qisha_chart_with_sanhe_and_luck_stem_keeps_qisha_as_top_axis() -> None:
+    """
+    典型“巳酉丑 + 辛丑运”盘应维持七杀主轴，避免被比劫/食伤误抬。
+    """
+    scores, top4, _, meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+        luck_pillar="辛丑",
+        flow_pillar="乙未",
+        gender="male",
+    )
+    assert top4 and top4[0] == "七杀"
+    assert float(scores.get("七杀", 0.0)) > float(scores.get("正官", 0.0)) * 4.0
+    rel_hits = ((meta.get("root_dynamic_relations") or {}).get("hits") or {})
+    assert int(rel_hits.get("sanhe", 0)) >= 1

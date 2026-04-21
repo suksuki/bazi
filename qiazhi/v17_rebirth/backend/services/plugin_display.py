@@ -221,6 +221,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "伤官配印",
         "definition": "审计伤官旺而得印护的高阶成格路线。",
     },
+    "classical.pattern.caipoyin.v1": {
+        "display_name": "财破印",
+        "definition": "审计财星过强反伤印绶的结构压力与体用逆转风险。",
+    },
     "classical.pattern.shishen_shengcai.v1": {
         "display_name": "食神生财",
         "definition": "审计食神吐秀顺泄到财星的流通路线。",

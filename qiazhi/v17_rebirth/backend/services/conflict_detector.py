@@ -55,6 +55,80 @@ def _claim_rank_tuple(claim: Dict[str, Any]) -> Tuple[float, float, int, str]:
     return (priority, confidence, logic, claim_id)
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _pattern_family_policy(ex_key: str, rows: List[Dict[str, Any]]) -> Tuple[str, str, str]:
+    normalized = str(ex_key or "").strip().lower()
+    ranked = sorted(rows, key=_claim_rank_tuple, reverse=True)
+    if len(ranked) < 2:
+        return ("P1", "user", "格局候选属于同一互斥家族，不能在同轮内同时成立。")
+
+    top_confidence = _safe_float(ranked[0].get("confidence"), 0.0)
+    second_confidence = _safe_float(ranked[1].get("confidence"), 0.0)
+    top_priority = _safe_float(ranked[0].get("priority"), 0.0)
+    second_priority = _safe_float(ranked[1].get("priority"), 0.0)
+    lead = (top_confidence - second_confidence) + 0.5 * (top_priority - second_priority)
+
+    if normalized == "pattern:officer_hurt_profile":
+        if lead >= 0.14:
+            return (
+                "P3",
+                "system",
+                "同属伤官-官星互斥家族，但领先候选优势明显，可由系统先行保留胜出解释。",
+            )
+        return (
+            "P2",
+            "llm",
+            "同属伤官-官星互斥家族，存在明显辩证空间，应交由 LLM 综合上下文判定。",
+        )
+
+    if normalized == "pattern:food_output_profile":
+        if lead >= 0.16:
+            return (
+                "P3",
+                "system",
+                "同属食神输出通道的互斥解释，但领先候选优势明确，可由系统先保留主导解释。",
+            )
+        return (
+            "P2",
+            "llm",
+            "食神通道同时出现“受夺”与“制杀成用”两种解释，应交由 LLM 结合全盘判断。",
+        )
+
+    if normalized == "pattern:wealth_output_profile":
+        if lead >= 0.14:
+            return (
+                "P3",
+                "system",
+                "同属输出化财通道，但主导路线优势较明确，可由系统先保留主要财富转化路径。",
+            )
+        return (
+            "P2",
+            "llm",
+            "食神生财与伤官生财同时成立，需结合命盘气质与阻滞项判断哪条通道更主导。",
+        )
+
+    if normalized == "pattern:seal_support_profile":
+        if lead >= 0.14:
+            return (
+                "P3",
+                "system",
+                "同属印星支撑家族，但领先候选优势较明显，可由系统先保留当前主导解释。",
+            )
+        return (
+            "P2",
+            "llm",
+            "印星同时出现“得护成格”与“遭财破损”等辩证解释，需交由 LLM 结合全盘定性。",
+        )
+
+    return ("P1", "user", "格局候选属于同一互斥家族，不能在同轮内同时成立。")
+
+
 def detect_claim_conflicts(claims: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     seen: set[Tuple[str, str]] = set()
@@ -95,20 +169,20 @@ def detect_claim_conflicts(claims: List[Dict[str, Any]]) -> List[Dict[str, Any]]
             continue
         by_exclusive.setdefault(ex_key, []).append(claim)
     for ex_key, rows in by_exclusive.items():
-        unique_plugins = {str(c.get("plugin_id") or "").strip() for c in rows}
-        if len(rows) < 2 or len(unique_plugins) < 2:
+        if len(rows) < 2:
             continue
         key = ("pattern_family_exclusive", ex_key)
         if key in seen:
             continue
         seen.add(key)
+        severity, recommended_arbiter, why_conflict = _pattern_family_policy(ex_key, rows)
         out.append(
             _conflict_row(
                 conflict_type="pattern_family_exclusive",
-                severity="P1",
+                severity=severity,
                 claims=rows[:6],
-                why_conflict="格局候选属于同一互斥家族，不能在同轮内同时成立。",
-                recommended_arbiter="user",
+                why_conflict=why_conflict,
+                recommended_arbiter=recommended_arbiter,
                 anchor=ex_key,
             )
         )

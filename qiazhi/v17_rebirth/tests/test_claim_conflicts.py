@@ -76,3 +76,143 @@ def test_detect_claim_conflicts_flags_same_target_opposite_sign_and_cross_layer(
     conflicts = detect_claim_conflicts(claims)
     assert any(c["conflict_type"] == "same_target_opposite_sign" for c in conflicts)
     assert any(c["conflict_type"] == "cross_layer_override" for c in conflicts)
+
+
+def test_detect_claim_conflicts_routes_same_plugin_officer_hurt_family_to_llm() -> None:
+    claims = [
+        {
+            "claim_id": "hurt_manifest",
+            "plugin_id": "l2.risk.risk_matrix",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:officer_hurt_manifest",
+            "exclusivity_key": "pattern:officer_hurt_profile",
+            "target_god": "伤官",
+            "intent_vector": {"伤官": -0.22},
+            "logic_level": "L2",
+            "priority": 0.86,
+            "confidence": 0.64,
+        },
+        {
+            "claim_id": "hurt_exhaust",
+            "plugin_id": "l2.risk.risk_matrix",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:officer_hurt_exhaust",
+            "exclusivity_key": "pattern:officer_hurt_profile",
+            "target_god": "伤官",
+            "intent_vector": {"伤官": 0.26},
+            "logic_level": "L2",
+            "priority": 0.87,
+            "confidence": 0.7,
+        },
+    ]
+    conflicts = detect_claim_conflicts(claims)
+    family_conflict = next(c for c in conflicts if c["conflict_type"] == "pattern_family_exclusive")
+    assert family_conflict["recommended_arbiter"] == "llm"
+    assert family_conflict["severity"] == "P2"
+
+
+def test_detect_claim_conflicts_routes_food_output_profile_to_llm() -> None:
+    claims = [
+        {
+            "claim_id": "owl_food",
+            "plugin_id": "l2.risk.risk_matrix",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:owl_food",
+            "exclusivity_key": "pattern:food_output_profile",
+            "target_god": "食神",
+            "intent_vector": {"食神": 0.18},
+            "logic_level": "L2",
+            "priority": 0.84,
+            "confidence": 0.62,
+        },
+        {
+            "claim_id": "zhisha",
+            "plugin_id": "classical.pattern.shishen_zhisha.v1",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:shishen_zhisha",
+            "exclusivity_key": "pattern:food_output_profile",
+            "target_god": "七杀",
+            "intent_vector": {"食神": 0.24},
+            "logic_level": "L3",
+            "priority": 0.75,
+            "confidence": 0.67,
+        },
+    ]
+    conflicts = detect_claim_conflicts(claims)
+    family_conflict = next(c for c in conflicts if c["conflict_type"] == "pattern_family_exclusive")
+    assert family_conflict["recommended_arbiter"] == "llm"
+    assert family_conflict["severity"] == "P2"
+
+
+def test_detect_claim_conflicts_routes_wealth_output_profile_to_llm() -> None:
+    claims = [
+        {
+            "claim_id": "food_wealth",
+            "plugin_id": "classical.pattern.shishen_shengcai.v1",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:shishen_shengcai",
+            "exclusivity_key": "pattern:wealth_output_profile",
+            "target_god": "食神",
+            "intent_vector": {"食神": 0.22},
+            "logic_level": "L3",
+            "priority": 0.75,
+            "confidence": 0.66,
+        },
+        {
+            "claim_id": "hurt_wealth",
+            "plugin_id": "classical.pattern.shangguan_shengcai.v1",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:shangguan_shengcai",
+            "exclusivity_key": "pattern:wealth_output_profile",
+            "target_god": "伤官",
+            "intent_vector": {"伤官": 0.23},
+            "logic_level": "L3",
+            "priority": 0.74,
+            "confidence": 0.65,
+        },
+    ]
+    conflicts = detect_claim_conflicts(claims)
+    family_conflict = next(c for c in conflicts if c["conflict_type"] == "pattern_family_exclusive")
+    assert family_conflict["recommended_arbiter"] == "llm"
+    assert family_conflict["severity"] == "P2"
+
+
+def test_detect_claim_conflicts_routes_seal_support_profile_to_llm() -> None:
+    claims = [
+        {
+            "claim_id": "guanyin",
+            "plugin_id": "classical.pattern.guanyin.v1",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:guanyin",
+            "exclusivity_key": "pattern:seal_support_profile",
+            "target_god": "正官",
+            "intent_vector": {"正官": 0.2, "正印": 0.16},
+            "logic_level": "L3",
+            "priority": 0.748,
+            "confidence": 0.748,
+        },
+        {
+            "claim_id": "caipoyin",
+            "plugin_id": "classical.pattern.caipoyin.v1",
+            "claim_type": "pattern_candidate",
+            "entity_scope": "pattern",
+            "source_event": "pattern:caipoyin",
+            "exclusivity_key": "pattern:seal_support_profile",
+            "target_god": "正印",
+            "intent_vector": {"正印": 0.18, "正财": -0.22},
+            "logic_level": "L3",
+            "priority": 0.744,
+            "confidence": 0.744,
+        },
+    ]
+    conflicts = detect_claim_conflicts(claims)
+    family_conflict = next(c for c in conflicts if c["conflict_type"] == "pattern_family_exclusive")
+    assert family_conflict["recommended_arbiter"] == "llm"
+    assert family_conflict["severity"] == "P2"

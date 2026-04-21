@@ -229,6 +229,10 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
         projection = _cluster_projection_weights(hit=hit, day_master=dm, physics_tensor=physics_tensor)
 
         target_shares = projection or {mid_god: 1.0}
+        branch_members = [str(item) for item in branches if str(item).strip()]
+        actor_members = [branch for branch in branch_members if branch and branch != mid_branch] or list(branch_members)
+        receiver_members = [mid_branch] if mid_branch else (branch_members[:1] if branch_members else [])
+        actor_gods = [_branch_dominant_ten_god(branch, dm) for branch in actor_members if branch]
         for god, share in sorted(target_shares.items(), key=lambda item: item[1], reverse=True):
             projected_impact = impact_ratio * max(0.28, float(share))
             projected_match = round(
@@ -271,6 +275,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     relation_family="sanhe",
                     target_god=god,
                     members=branches,
+                    actor_members=actor_members,
+                    receiver_members=receiver_members,
                     effect_type="benefit",
                     layer=interaction_layer,
                     origin_scope=str(condition.get("origin_type") or "natal"),
@@ -279,6 +285,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     match_ratio=projected_match,
                     path_strength=abs(projected_impact) * max(0.45, float(share)) * max(0.7, strength),
                     targets=list(target_shares.keys()),
+                    actor_gods=actor_gods,
+                    receiver_gods=[god] if god else [],
                 ),
                 "static_basis": build_static_basis(
                     physics_tensor=physics_tensor,

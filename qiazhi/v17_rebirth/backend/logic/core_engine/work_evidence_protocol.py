@@ -20,6 +20,8 @@ def build_work_evidence(
     relation_family: str,
     target_god: str,
     members: Iterable[Any] | None = None,
+    actor_members: Iterable[Any] | None = None,
+    receiver_members: Iterable[Any] | None = None,
     effect_type: str,
     layer: str = "unknown",
     origin_scope: str = "natal",
@@ -28,14 +30,27 @@ def build_work_evidence(
     match_ratio: float = 0.0,
     path_strength: float = 0.0,
     targets: Iterable[Any] | None = None,
+    counterpart_gods: Iterable[Any] | None = None,
+    actor_gods: Iterable[Any] | None = None,
+    receiver_gods: Iterable[Any] | None = None,
 ) -> Dict[str, Any]:
     clean_members = _clean_list(members)
+    clean_actor_members = _clean_list(actor_members)
+    clean_receiver_members = _clean_list(receiver_members)
     clean_targets = _clean_list(targets) or ([str(target_god).strip()] if str(target_god).strip() else [])
+    clean_counterparts = _clean_list(counterpart_gods)
+    clean_actor_gods = _clean_list(actor_gods)
+    clean_receiver_gods = _clean_list(receiver_gods)
     return {
         "relation_family": str(relation_family or "").strip(),
         "target_god": str(target_god or "").strip(),
         "targets": clean_targets,
         "members": clean_members,
+        "actor_members": clean_actor_members,
+        "receiver_members": clean_receiver_members,
+        "counterpart_gods": clean_counterparts,
+        "actor_gods": clean_actor_gods,
+        "receiver_gods": clean_receiver_gods,
         "effect_type": str(effect_type or "").strip() or "observe",
         "layer": str(layer or "").strip() or "unknown",
         "origin_scope": str(origin_scope or "").strip() or "natal",

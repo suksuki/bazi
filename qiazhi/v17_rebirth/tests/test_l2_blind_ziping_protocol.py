@@ -18,6 +18,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import (
     ZiPingYongShenPlugin,
 )
 from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
+    CaiPoYinPatternPlugin,
     PatternAxisPlugin,
     FinanceOfficerPatternPlugin,
     GuanYinPatternPlugin,
@@ -59,7 +60,57 @@ def _tensor_for_ziping() -> Dict[str, Any]:
         "four_pillars": {"month": "丁亥", "day": "乙丑"},
         "ten_gods_base_l0": {"伤官": 62.0, "食神": 40.0, "正官": 20.0, "比肩": 10.0},
         "ten_gods_runtime": {"伤官": 62.0, "食神": 40.0, "正官": 20.0, "比肩": 10.0},
-        "energy_meta": {"month_command_god": "伤官", "season_power": {"month_branch": "亥"}},
+        "energy_meta": {
+            "month_command_god": "伤官",
+            "season_power": {"month_branch": "亥"},
+            "ten_gods_decomposition_l0": {
+                "伤官": {
+                    "manifest": 22.0,
+                    "root": 8.0,
+                    "momentum": 0.0,
+                    "momentum_month_order": 0.0,
+                    "momentum_stage": 0.0,
+                    "momentum_stage_lu": 0.0,
+                    "momentum_stage_blade": 0.0,
+                    "momentum_stage_general": 0.0,
+                    "momentum_structure": 0.0,
+                    "momentum_auxiliary": 0.0,
+                    "momentum_other": 0.0,
+                    "hidden": 0.0,
+                    "total": 30.0,
+                },
+                "正官": {
+                    "manifest": 8.0,
+                    "root": 5.0,
+                    "momentum": 4.6,
+                    "momentum_month_order": 0.0,
+                    "momentum_stage": 4.6,
+                    "momentum_stage_lu": 4.6,
+                    "momentum_stage_blade": 0.0,
+                    "momentum_stage_general": 0.0,
+                    "momentum_structure": 0.0,
+                    "momentum_auxiliary": 0.0,
+                    "momentum_other": 0.0,
+                    "hidden": 0.0,
+                    "total": 17.6,
+                },
+                "比肩": {
+                    "manifest": 6.0,
+                    "root": 2.0,
+                    "momentum": 3.8,
+                    "momentum_month_order": 0.0,
+                    "momentum_stage": 3.8,
+                    "momentum_stage_lu": 0.0,
+                    "momentum_stage_blade": 3.8,
+                    "momentum_stage_general": 0.0,
+                    "momentum_structure": 0.0,
+                    "momentum_auxiliary": 0.0,
+                    "momentum_other": 0.0,
+                    "hidden": 0.0,
+                    "total": 11.8,
+                },
+            },
+        },
         "auto_resolutions": [
             {
                 "id": "auto_1",
@@ -127,6 +178,58 @@ def test_ziping_god_ring_resolver_emits_authority_meta() -> None:
     assert authority["core_path_count"] >= 1
     assert "正官" in authority["use_gods"]
     assert "伤官" in authority["taboo_gods"]
+    assert isinstance(authority["tongguan_gods"], list)
+
+
+def test_ziping_god_ring_resolver_consumes_judgement_bias_from_decision_rows() -> None:
+    tensor = _tensor_for_ziping()
+    decomposition = tensor["energy_meta"]["ten_gods_decomposition_l0"]
+    for god in list(decomposition.keys()):
+        row = decomposition[god]
+        row["momentum_stage"] = 0.0
+        row["momentum_stage_lu"] = 0.0
+        row["momentum_stage_blade"] = 0.0
+        row["momentum_stage_general"] = 0.0
+    tensor["pending_decisions"] = [
+        {
+            "id": "risk_1",
+            "plugin_id": "l2.risk.risk_matrix",
+            "label": "伤官见官",
+            "target_god": "伤官",
+            "physical_impact": {
+                "god_ring_bias": {
+                    "use_bias": {"伤官": 0.32},
+                    "taboo_bias": {"正官": 0.26},
+                    "reason": "伤官见官",
+                }
+            },
+        }
+    ]
+    facts = ZiPingGodRingResolverPlugin().collect_v17_facts(tensor)
+    assert facts
+    authority = facts[0].meta.get("god_ring_authority")
+    assert isinstance(authority, dict)
+    assert authority["judgement_bias"]["use_bias"]["伤官"] == 0.32
+    assert authority["judgement_bias"]["taboo_bias"]["正官"] == 0.26
+    assert authority["judgement_bias_entries"][0]["source_label"] == "官伤风险矩阵"
+    assert authority["judgement_bias_entries"][0]["reason"] == "伤官见官"
+    assert "伤官" in authority["use_gods"]
+    assert "正官" in authority["taboo_gods"]
+
+
+def test_ziping_god_ring_resolver_exposes_stage_bias_and_applies_to_effect_scores() -> None:
+    facts = ZiPingGodRingResolverPlugin().collect_v17_facts(_tensor_for_ziping())
+    assert facts
+    authority = facts[0].meta.get("god_ring_authority")
+    assert isinstance(authority, dict)
+    stage_bias = authority.get("stage_bias")
+    assert isinstance(stage_bias, dict)
+    assert stage_bias["正官"]["lu"] == pytest.approx(4.6, abs=1e-6)
+    assert stage_bias["比肩"]["blade"] == pytest.approx(3.8, abs=1e-6)
+    effect_scores = authority.get("effect_scores")
+    assert isinstance(effect_scores, dict)
+    assert effect_scores["正官"]["stage_use_boost"] > 0.0
+    assert effect_scores["比肩"]["stage_taboo_boost"] > 0.0
 
 
 def test_blind_and_ziping_configs_override_match_ratio(monkeypatch: Any) -> None:
@@ -249,6 +352,8 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert guanyin_facts
     assert guanyin_facts[0].meta["pattern_candidate"] == "官印相生"
+    assert guanyin_facts[0].meta["exclusivity_key"] == "pattern:seal_support_profile"
+    assert guanyin_facts[0].meta["god_ring_bias"]["use_bias"]["正官"] > 0.0
 
     shayin_facts = ShaYinPatternPlugin().collect_v17_facts(
         {
@@ -258,6 +363,8 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert shayin_facts
     assert shayin_facts[0].meta["pattern_candidate"] == "杀印相生"
+    assert shayin_facts[0].meta["exclusivity_key"] == "pattern:seal_support_profile"
+    assert shayin_facts[0].meta["god_ring_bias"]["use_bias"]["七杀"] > 0.0
 
     zhisha_facts = ShiShenZhiShaPatternPlugin().collect_v17_facts(
         {
@@ -267,6 +374,9 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert zhisha_facts
     assert zhisha_facts[0].meta["pattern_candidate"] == "食神制杀"
+    assert zhisha_facts[0].meta["exclusivity_key"] == "pattern:food_output_profile"
+    assert zhisha_facts[0].meta["god_ring_bias"]["use_bias"]["食神"] > 0.0
+    assert zhisha_facts[0].meta["god_ring_bias"]["taboo_bias"]["七杀"] > 0.0
 
     peiyin_facts = ShangGuanPeiYinPatternPlugin().collect_v17_facts(
         {
@@ -276,6 +386,20 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert peiyin_facts
     assert peiyin_facts[0].meta["pattern_candidate"] == "伤官配印"
+    assert peiyin_facts[0].meta["exclusivity_key"] == "pattern:seal_support_profile"
+    assert peiyin_facts[0].meta["god_ring_bias"]["use_bias"]["伤官"] > 0.0
+
+    caipoyin_facts = CaiPoYinPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "辛酉", "day": "甲午", "hour": "己丑"},
+            "ten_gods_runtime": {"正印": 18.0, "偏印": 6.0, "正财": 23.0, "偏财": 9.0},
+        }
+    )
+    assert caipoyin_facts
+    assert caipoyin_facts[0].meta["pattern_candidate"] == "财破印"
+    assert caipoyin_facts[0].meta["exclusivity_key"] == "pattern:seal_support_profile"
+    assert sum(caipoyin_facts[0].meta["god_ring_bias"]["use_bias"].get(god, 0.0) for god in ("正印", "偏印")) > 0.0
+    assert sum(caipoyin_facts[0].meta["god_ring_bias"]["taboo_bias"].get(god, 0.0) for god in ("正财", "偏财")) > 0.0
 
     shishen_shengcai_facts = ShiShenShengCaiPatternPlugin().collect_v17_facts(
         {
@@ -285,6 +409,9 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert shishen_shengcai_facts
     assert shishen_shengcai_facts[0].meta["pattern_candidate"] == "食神生财"
+    assert shishen_shengcai_facts[0].meta["exclusivity_key"] == "pattern:wealth_output_profile"
+    assert shishen_shengcai_facts[0].meta["god_ring_bias"]["use_bias"]["食神"] > 0.0
+    assert sum(shishen_shengcai_facts[0].meta["god_ring_bias"]["use_bias"].get(god, 0.0) for god in ("正财", "偏财")) > 0.0
 
     shangguan_shengcai_facts = ShangGuanShengCaiPatternPlugin().collect_v17_facts(
         {
@@ -294,6 +421,9 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert shangguan_shengcai_facts
     assert shangguan_shengcai_facts[0].meta["pattern_candidate"] == "伤官生财"
+    assert shangguan_shengcai_facts[0].meta["exclusivity_key"] == "pattern:wealth_output_profile"
+    assert shangguan_shengcai_facts[0].meta["god_ring_bias"]["use_bias"]["伤官"] > 0.0
+    assert sum(shangguan_shengcai_facts[0].meta["god_ring_bias"]["use_bias"].get(god, 0.0) for god in ("正财", "偏财")) > 0.0
 
     yangren_jiasha_facts = YangRenJiaShaPatternPlugin().collect_v17_facts(
         {

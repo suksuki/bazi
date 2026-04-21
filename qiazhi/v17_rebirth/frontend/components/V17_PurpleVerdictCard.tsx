@@ -48,6 +48,14 @@ type EvolutionFrame = {
     god_rings?: {
       god_of_use?: string[];
       god_of_taboo?: string[];
+      source?: string;
+      mode?: string;
+      display_mode?: string;
+      label_of_use?: string;
+      label_of_taboo?: string;
+      confidence?: number;
+      core_path_count?: number;
+      dual_role_candidates?: Array<Record<string, unknown>>;
     };
   };
 };
@@ -123,22 +131,6 @@ export function V17_PurpleVerdictCard({
   const renderText = String(
     latestNarrator?.payload?.render_text || physicsSnapshot?.payload?.render_text || "",
   ).trim();
-  const snapshotUse = physicsSnapshot?.payload?.god_rings?.god_of_use || [];
-  const snapshotTaboo = physicsSnapshot?.payload?.god_rings?.god_of_taboo || [];
-  const scoreMap =
-    latestNarrator?.payload?.ten_gods_narrative ||
-    physicsSnapshot?.payload?.ten_gods_narrative ||
-    physicsSnapshot?.payload?.ten_gods_runtime ||
-    physicsSnapshot?.payload?.ten_gods_absolute_intensity ||
-    physicsSnapshot?.payload?.deity_scores ||
-    {};
-  const scoreRank = Object.entries(scoreMap || {})
-    .map(([k, v]) => ({ k: String(k).trim(), v: Number(v || 0) }))
-    .filter((x) => x.k && Number.isFinite(x.v))
-    .sort((a, b) => b.v - a.v);
-  const godUse = snapshotUse.length ? snapshotUse : scoreRank.slice(0, 2).map((x) => x.k);
-  const godTaboo = snapshotTaboo.length ? snapshotTaboo : scoreRank.slice(-2).map((x) => x.k);
-  const ringsLit = godUse.length > 0 || godTaboo.length > 0;
 
   const tension = Number(physicsSnapshot?.payload?.physics_tension || 0);
   const willFlash = Boolean(latestNarrator?.payload?.will_flash);
@@ -174,23 +166,13 @@ export function V17_PurpleVerdictCard({
         }}
         transition={{ duration: willFlash ? 0.45 : Math.max(0.2, 2.0 - tension / 30), repeat: willFlash ? 0 : Infinity }}
       />
-      <div className="relative z-10 mb-3 flex items-center justify-between text-xs">
-        <motion.div
-          initial={{ opacity: 0.45 }}
-          animate={{ opacity: ringsLit ? 1 : [0.45, 0.8, 0.45] }}
-          transition={{ duration: ringsLit ? 0.12 : 1.1, repeat: ringsLit ? 0 : Infinity }}
-          className="text-emerald-300 font-mono tracking-wider"
-        >
-          [USE] {godUse.join("/") || "—"}
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0.45 }}
-          animate={{ opacity: ringsLit ? 1 : [0.45, 0.8, 0.45] }}
-          transition={{ duration: ringsLit ? 0.12 : 1.1, repeat: ringsLit ? 0 : Infinity }}
-          className="text-rose-300 font-mono tracking-wider"
-        >
-          [TABOO] {godTaboo.join("/") || "—"}
-        </motion.div>
+      <div className="relative z-10 mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400">
+        <span className="rounded-full border border-violet-500/25 bg-violet-950/20 px-2 py-1 text-violet-200">
+          八字断言 / Narrative Verdict
+        </span>
+        <span className="rounded-full border border-zinc-700/80 bg-zinc-900/80 px-2 py-1 text-zinc-300">
+          {modelLabel}
+        </span>
       </div>
 
       <motion.div

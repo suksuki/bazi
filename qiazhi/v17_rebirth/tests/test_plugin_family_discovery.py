@@ -31,6 +31,7 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "classical.pattern.shayin.v1" in plugin_ids
     assert "classical.pattern.shishen_zhisha.v1" in plugin_ids
     assert "classical.pattern.shangguan_peiyin.v1" in plugin_ids
+    assert "classical.pattern.caipoyin.v1" in plugin_ids
     assert "classical.pattern.shishen_shengcai.v1" in plugin_ids
     assert "classical.pattern.shangguan_shengcai.v1" in plugin_ids
     assert "classical.pattern.yangren_jiasha.v1" in plugin_ids

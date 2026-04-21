@@ -170,6 +170,7 @@ def build_snapshot_payload(
         "flow_year": pt.get("flow_year"),
         "ten_gods": pt.get("ten_gods", []),
         "ten_gods_base_l0": base_scores,
+        "ten_gods_decomposition_l0": dict(pt.get("ten_gods_decomposition_l0") or {}),
         "ten_gods_runtime": scores,
         "ten_gods_narrative": narrative_scores,
         "deity_scores": scores,

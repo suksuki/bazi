@@ -157,12 +157,41 @@
 3. 三合 / 三会 / 六合成势
 4. 强冲 / 强刑 / 强合化改变结构
 
+从 2026-04-21 起，L0 根气层已接入“动态关系量化”：
+
+- 合向增益：`三合 / 三会 / 半合 / 六合 / 暗合`
+- 冲耗折损：`六冲 / 六害 / 六破 / 三刑`
+- 相克传导：按相邻关键柱位（年-月、月-日、日-时、月-运、运-流）计算“谁克谁”的正负位移
+- 天干五合效率：不再二值化，按 `branch_hua_ratio + 月干支持` 计算 `0~1` 的合化效率，再折算到根气增减
+
+补充约束：
+
+- 旁支重复（同组三会/三合出现重复支）会提高强度
+- 被冲刑的成员会触发合势衰减（冲后降效）
+- 所有动态增减都会做“单神上限裁剪”，避免动态层吞掉静态根气主干
+
+从 2026-04-21 起，做功证据还应尽量显式标注 `actor / receiver`：
+
+- `actor_members`
+- `receiver_members`
+- `actor_gods`
+- `receiver_gods`
+
+含义：
+
+- `actor` 表示主动发力的一侧
+- `receiver` 表示受作用的一侧
+- 核心层会把二者映射到六柱图上，按柱位远近与有向边权计算传导强弱
+- 同一关系下，`月 -> 日 / 时` 通常强于 `年 -> 时`
+- 这套“方向距离”属于做功与传导层，不等同于根气
+
 ## 7. 对插件体系的要求
 
 插件未来应从“直接判定结论”升级为“提供证据和路径片段”：
 
 - 输出静态依据
 - 输出关系成员
+- 输出 actor / receiver
 - 输出来源层（原局 / 运 / 流）
 - 输出正负向影响
 - 输出可传播目标
@@ -214,3 +243,67 @@ Admin 应单独有一块：
 - 用真实样盘做参数校准
 - 允许多用神 / 多忌神 / 双刃神并存
 - 形成体用、做功、应期的一体化求解
+
+## 11. 动态做功通量（M1）
+
+从 2026-04-21 起，Core Engine 增加 `Dynamic Work Flux v2 (M1)`：
+
+- 目标：
+  - 把离散 `WorkPath` 升级为有方向、有符号、可回溯的做功链条
+  - 在不破坏现有裁决链路的前提下，提供“正向传导 + 逆向归因”证据
+
+- 实现位置：
+  - `backend/logic/core_engine/flux_solver.py`
+  - `resolve_god_ring_core` 中统一执行
+
+- 输出：
+  - `flux_meta.edge_count / chain_count / top_chains / sink_summary`
+  - `effect_scores[*].flux_benefit / flux_harm / flux_net / flux_top_causes`
+  - `effect_scores[*].resolved_utility_base / resolved_utility_flux`
+
+- 当前策略（稳态优先）：
+  - 不直接覆盖旧的 `resolved_utility`，先以扩展字段并行观察
+  - 链路深度默认 `max_depth=3`
+  - 每条链路使用有界效率，避免数值爆炸
+
+## 12. 动态做功通量（M2）
+
+从 2026-04-21 起继续扩展为“柱位节点级链路”：
+
+- 在 God 链路之外，新增 Node 链路（`year/month/day/hour/luck/flow` 的 `stem/branch` 节点）。
+- Node 边来源于 `actor_nodes -> receiver_nodes`（插件证据），并结合图内距离权重与方向因子。
+- Node 链路先独立求解，再投影回十神，形成可解释的逆向归因。
+
+新增输出：
+
+- `flux_meta.node_edges / node_top_chains / node_sink_summary`
+- `flux_meta.projected_top_chains / projected_sink_summary`
+- `graph_meta.flux_node_edge_count / flux_node_chain_count`
+
+意义：
+
+- 能直接看到“年干 -> 月干 -> 日支 -> 目标十神”这类链条，不再只有抽象十神节点。
+
+## 13. 动态做功通量（M3）
+
+从 2026-04-21 起继续扩展“方向合力/抗力”分析：
+
+- 在已有链路基础上，新增方向矩阵（source -> target）聚合：
+  - 正向合力（benefit）
+  - 负向抗力（harm）
+  - 净方向效应（net）
+  - 支配度与深度（dominance / avg_depth）
+- 新增双向回路检测：
+  - 同向放大（reinforce）
+  - 对冲拉扯（tension）
+
+新增输出：
+
+- `flux_meta.interaction_count / interaction_matrix`
+- `flux_meta.tension_pair_count / tension_pairs`
+- `graph_meta.flux_interaction_count / flux_tension_pair_count`
+
+意义：
+
+- 从“看单条链”升级为“看系统力场”。
+- 能快速定位谁在推动、谁在对冲，以及哪些双向关系会导致放大或拉扯。

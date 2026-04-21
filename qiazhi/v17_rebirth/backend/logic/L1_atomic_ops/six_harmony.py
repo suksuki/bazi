@@ -106,6 +106,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 relation_family="liuhe",
                 target_god=god,
                 members=pair,
+                actor_members=[partner_br] if partner_br else [],
+                receiver_members=[target_br] if target_br else [],
                 effect_type="benefit",
                 layer="branch",
                 origin_scope=str(condition.get("origin_type") or "natal"),
@@ -114,6 +116,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 match_ratio=round(match_ratio, 3),
                 path_strength=abs(impact) * max(0.4, stability_factor) * max(0.7, cond_mul),
                 targets=list((projection or {}).keys()) or [god],
+                actor_gods=[partner_god] if partner_god else [],
+                receiver_gods=[god] if god else [],
             ),
             "static_basis": build_static_basis(
                 physics_tensor=physics_tensor,

@@ -181,6 +181,12 @@ def test_stem_fusion_transformed_is_stronger_than_stuck() -> None:
     assert formed_fact.meta.get("condition_trigger") == "month_support"
     assert stuck_fact.meta.get("condition_state") == "stuck"
     assert "static_basis" in formed_fact.meta
+    stuck_evidence = (stuck_fact.meta or {}).get("work_evidence") or {}
+    formed_evidence = (formed_fact.meta or {}).get("work_evidence") or {}
+    assert stuck_evidence.get("actor_members") == ["庚"]
+    assert stuck_evidence.get("receiver_members") == ["乙"]
+    assert formed_evidence.get("actor_gods")
+    assert formed_evidence.get("receiver_gods")
 
 
 def test_sanhe_support_and_blocked_modes_have_expected_protocol_fields() -> None:

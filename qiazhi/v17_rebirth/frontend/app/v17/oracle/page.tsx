@@ -8,9 +8,11 @@
  * 调试面板已迁移至 components/V17_TracePanel.tsx。
  */
 
+import { useState } from "react";
 import { RotateCcw, Sparkles } from "lucide-react";
 
 import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
+import { V17_GodRingExplainCard } from "@/components/V17_GodRingExplainCard";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
@@ -224,6 +226,7 @@ function deriveLivePatternCandidates(
 
 export default function OraclePage() {
   const s = useOracleSession();
+  const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
   const fourPillars =
@@ -232,6 +235,35 @@ export default function OraclePage() {
       : undefined;
   const luckPillarSnap = payload.luck_pillar;
   const flowPillarSnap = payload.flow_pillar;
+  const godRingInfo =
+    payload.god_rings && typeof payload.god_rings === "object"
+        ? (payload.god_rings as {
+            god_of_use?: string[];
+            god_of_taboo?: string[];
+            tongguan_gods?: string[];
+            source?: string;
+            mode?: string;
+            display_mode?: string;
+          label_of_use?: string;
+          label_of_taboo?: string;
+          confidence?: number;
+          core_path_count?: number;
+          core_use_candidates?: Array<Record<string, unknown>>;
+          core_taboo_candidates?: Array<Record<string, unknown>>;
+          dual_role_candidates?: Array<Record<string, unknown>>;
+          judgement_bias?: {
+            use_bias?: Record<string, number>;
+            taboo_bias?: Record<string, number>;
+          };
+          judgement_bias_entries?: Array<Record<string, unknown>>;
+          stage_bias?: Record<string, Record<string, number>>;
+          effect_scores?: Record<string, unknown>;
+          core_graph_meta?: Record<string, unknown>;
+          core_paths_preview?: Array<Record<string, unknown>>;
+          positive_work?: Record<string, unknown>;
+          negative_work?: Record<string, unknown>;
+        })
+      : undefined;
   const manualRows = Array.isArray(payload.manual_inbox) ? payload.manual_inbox as Array<Record<string, unknown>> : [];
   const autoRows = Array.isArray(payload.auto_decisions) ? payload.auto_decisions as Array<Record<string, unknown>> : [];
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
@@ -357,11 +389,42 @@ export default function OraclePage() {
                 fourPillars={fourPillars}
                 luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
                 flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
+                godRingInfo={godRingInfo}
+                tenGodDecomposition={
+                  payload.ten_gods_decomposition_l0 && typeof payload.ten_gods_decomposition_l0 === "object"
+                    ? (payload.ten_gods_decomposition_l0 as Record<
+                        string,
+                        {
+                          manifest?: number;
+                          root?: number;
+                          momentum?: number;
+                          momentum_month_order?: number;
+                          momentum_stage?: number;
+                          momentum_stage_lu?: number;
+                          momentum_stage_blade?: number;
+                          momentum_stage_general?: number;
+                          momentum_structure?: number;
+                          momentum_auxiliary?: number;
+                          momentum_other?: number;
+                          hidden?: number;
+                          total?: number;
+                        }
+                      >)
+                    : undefined
+                }
                 birthTimeISO={s.birthTimeISO}
                 gender={s.natalGender}
                 calendarType={s.natalCalendar}
                 selectedYear={s.selectedLuckYear}
                 onYearChange={s.setSelectedLuckYear}
+              />
+              <V17_GodRingExplainCard
+                godRings={godRingInfo}
+                focusedDecisionId={focusedDecisionId}
+                onFocusDecision={(decisionId) => {
+                  setFocusedDecisionId(decisionId);
+                  s.setTraceOpen(true);
+                }}
               />
               <V17_PurpleVerdictCard
                 frames={s.frames}
@@ -611,6 +674,7 @@ export default function OraclePage() {
               <V17_DecisionInbox
                 frames={s.frames}
                 adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
+                focusedDecisionId={focusedDecisionId}
                 locked={s.decisionInboxLocked}
                 lockMessage={s.decisionInboxLockMessage}
                 onAdopted={s.handleAdopted}
@@ -625,6 +689,7 @@ export default function OraclePage() {
             <V17_TracePanel
               collapsed={!s.traceOpen}
               onToggle={() => s.setTraceOpen((v) => !v)}
+              focusedDecisionId={focusedDecisionId}
               llmMeta={s.llmMeta}
               llmLifecyclePhase={s.llmLifecyclePhase}
               llmStatusText={s.llmStatusText}

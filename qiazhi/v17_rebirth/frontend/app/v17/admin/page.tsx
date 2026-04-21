@@ -190,24 +190,28 @@ type BrainAction = {
   source_plugins?: string[];
 };
 
+type CoreEngineAuthority = LooseObject;
+type TenGodDecompositionRow = {
+  manifest?: number;
+  root?: number;
+  momentum?: number;
+  momentum_month_order?: number;
+  momentum_stage?: number;
+  momentum_stage_lu?: number;
+  momentum_stage_blade?: number;
+  momentum_stage_general?: number;
+  momentum_structure?: number;
+  momentum_auxiliary?: number;
+  momentum_other?: number;
+  hidden?: number;
+  total?: number;
+};
+
 type PluginPanelRow = {
   plugin: PluginAdminRow;
   runtime?: PluginRuntimeStatus;
   relatedClaims: PluginClaim[];
   relatedConflicts: PluginConflict[];
-};
-
-type PluginCategoryBucket = {
-  key: string;
-  label: string;
-  rows: PluginPanelRow[];
-};
-
-type PluginTierBucket = {
-  tier: string;
-  title: string;
-  rows: PluginPanelRow[];
-  categories: PluginCategoryBucket[];
 };
 
 type EvolutionLogEntry = {
@@ -276,6 +280,8 @@ export default function V17AdminPage() {
   const [pluginConflictResolutions, setPluginConflictResolutions] = useState<PluginConflictResolution[]>([]);
   const [knowledgeSnapshot, setKnowledgeSnapshot] = useState<KnowledgeSnapshot>({});
   const [brainActionQueue, setBrainActionQueue] = useState<BrainAction[]>([]);
+  const [coreEngineAuthority, setCoreEngineAuthority] = useState<CoreEngineAuthority>({});
+  const [tenGodDecomposition, setTenGodDecomposition] = useState<Record<string, TenGodDecompositionRow>>({});
   const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
   const [resolvedPluginRuntimeSessionId, setResolvedPluginRuntimeSessionId] = useState("default");
@@ -325,6 +331,8 @@ export default function V17AdminPage() {
       const resolutionList = asLooseRecord<PluginConflictResolution>(statusPayload.conflict_resolutions, []);
       const knowledge = (statusPayload.knowledge_snapshot as KnowledgeSnapshot) || {};
       const actions = asLooseRecord<BrainAction>(statusPayload.brain_action_queue, []);
+      const authority = asLooseObject(statusPayload.core_engine_authority);
+      const decomposition = asLooseObject(statusPayload.ten_gods_decomposition_l0) as Record<string, TenGodDecompositionRow>;
       const contributions = asLooseRecord<RecomputeContribution>(statusPayload.recompute_contributions, []);
       setPlugins(list);
       setPluginStatuses(statusList);
@@ -333,6 +341,8 @@ export default function V17AdminPage() {
       setPluginConflictResolutions(resolutionList);
       setKnowledgeSnapshot(knowledge);
       setBrainActionQueue(actions);
+      setCoreEngineAuthority(authority);
+      setTenGodDecomposition(decomposition);
       setRecomputeContributions(contributions);
       setResolvedPluginRuntimeSessionId(asString(statusPayload.session_id, pluginRuntimeSessionId || "default"));
     } finally { setBusy(null); }
@@ -743,6 +753,8 @@ export default function V17AdminPage() {
                <V17_AdminCoreEnginePanel
                  pluginCount={plugins.length}
                  hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
+                 authority={coreEngineAuthority}
+                 tenGodDecomposition={tenGodDecomposition}
                />
                <V17_AdminPluginOverview
                  scannedPluginCount={scannedPluginCount}

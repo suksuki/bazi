@@ -34,6 +34,8 @@ def test_build_snapshot_payload_does_not_dupe_auto_decisions_and_has_gate() -> N
                 "taboo_gods": ["伤官", "劫财"],
                 "source": "classical.ziping.god_ring_resolver.v1",
                 "confidence": 0.82,
+                "core_paths_preview": [{"target_god": "正官", "path_type": "sanhe", "net_effect": 0.66}],
+                "core_graph_meta": {"positive_targets": {"正官": 0.88}},
             },
         },
     }
@@ -69,6 +71,11 @@ def test_build_snapshot_payload_does_not_dupe_auto_decisions_and_has_gate() -> N
     assert payload["pillars"]["four_pillars"]["year"] == "甲子"
     assert payload["god_rings"]["god_of_use"] == ["正官", "正印"]
     assert payload["god_rings"]["god_of_taboo"] == ["伤官", "劫财"]
+    assert payload["god_rings"]["display_mode"] == "authority"
+    assert payload["god_rings"]["label_of_use"] == "USE"
+    assert payload["god_rings"]["confidence"] == 0.82
+    assert payload["god_rings"]["core_paths_preview"][0]["target_god"] == "正官"
+    assert payload["god_rings"]["core_graph_meta"]["positive_targets"]["正官"] == 0.88
 
 
 class _FakePipeline:

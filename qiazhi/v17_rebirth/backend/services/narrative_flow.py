@@ -26,6 +26,7 @@ async def run_narrator_frames(
     will_proxy: str,
     god_of_use: List[str],
     god_of_taboo: List[str],
+    tongguan_gods: List[str] | None = None,
     decision_anchor: str,
     user_message: str,
     action_signal: bool,
@@ -105,7 +106,11 @@ async def run_narrator_frames(
                 "render_text": "叙事引擎已离埠，请求正渡上游。",
                 "will_proxy": str(will_proxy or "stable"),
                 "ten_gods_narrative": narrative_scores,
-                "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
+                "god_rings": {
+                    "god_of_use": god_of_use,
+                    "god_of_taboo": god_of_taboo,
+                    "tongguan_gods": list(tongguan_gods or []),
+                },
                 "llm_meta": {
                     "audit_preview": True,
                     "engine_state": "dispatching",
@@ -132,7 +137,11 @@ async def run_narrator_frames(
                     "model": _model_hint,
                 },
                 "source_facts": [],
-                "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
+                "god_rings": {
+                    "god_of_use": god_of_use,
+                    "god_of_taboo": god_of_taboo,
+                    "tongguan_gods": list(tongguan_gods or []),
+                },
             },
         }
 
@@ -171,7 +180,11 @@ async def run_narrator_frames(
             "ten_gods_narrative": narrative_scores,
             "full_prompt_trace": fpt,
             "will_proxy": str(will_proxy or "stable"),
-            "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
+            "god_rings": {
+                "god_of_use": god_of_use,
+                "god_of_taboo": god_of_taboo,
+                "tongguan_gods": list(tongguan_gods or []),
+            },
             "llm_meta": {
                 "llm_audit_preview": True,
                 "engine_state": "llm_audit_preview",
@@ -236,7 +249,11 @@ async def run_narrator_frames(
                                 "ten_gods_narrative": narrative_scores,
                                 "llm_meta": {"stream_partial": True, "model": _model_hint},
                                 "source_facts": [],
-                                "god_rings": {"god_of_use": god_of_use, "god_of_taboo": god_of_taboo},
+                                "god_rings": {
+                                    "god_of_use": god_of_use,
+                                    "god_of_taboo": god_of_taboo,
+                                    "tongguan_gods": list(tongguan_gods or []),
+                                },
                             },
                         }
                 elif t == a_task:

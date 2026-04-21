@@ -15,10 +15,8 @@ import {
   directionGroupLabel,
   normalizeBatchBucket,
   normalizeDecisionId,
-  resolveDecisionLookupKeys,
   sourceLabel,
   type DecisionBatch,
-  type DecisionBatchGroup,
   type DecisionWithId,
 } from "@/components/decisionInboxUtils";
 
@@ -226,6 +224,45 @@ function decisionFocusPreview(decision: Decision): string {
   const target = String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim();
   if (!projectionText && share <= 0) return "";
   return `主落点 ${target}${share > 0 ? ` · 占比 ${Math.round(share * 100)}%` : ""}${projectionText ? ` · ${projectionText}` : ""}`;
+}
+
+function biasPairs(value: unknown): Array<{ name: string; score: number }> {
+  return Object.entries((value && typeof value === "object" ? (value as Record<string, unknown>) : {}))
+    .map(([name, raw]) => ({ name: String(name || "").trim(), score: Number(raw || 0) }))
+    .filter((row) => row.name && Number.isFinite(row.score) && row.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+function godRingBiasSummary(decision: Decision): { useText: string; tabooText: string } | null {
+  const bias = decision.physical_impact?.god_ring_bias;
+  const usePairs = biasPairs(bias?.use_bias).slice(0, 3);
+  const tabooPairs = biasPairs(bias?.taboo_bias).slice(0, 3);
+  if (!usePairs.length && !tabooPairs.length) return null;
+  return {
+    useText: usePairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · "),
+    tabooText: tabooPairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · "),
+  };
+}
+
+function groupGodRingBiasSummary(decisions: Decision[]): { useText: string; tabooText: string } | null {
+  const useBias: Record<string, number> = {};
+  const tabooBias: Record<string, number> = {};
+  for (const decision of decisions || []) {
+    const bias = decision.physical_impact?.god_ring_bias;
+    for (const item of biasPairs(bias?.use_bias)) {
+      useBias[item.name] = (useBias[item.name] || 0) + item.score;
+    }
+    for (const item of biasPairs(bias?.taboo_bias)) {
+      tabooBias[item.name] = (tabooBias[item.name] || 0) + item.score;
+    }
+  }
+  const usePairs = biasPairs(useBias).slice(0, 4);
+  const tabooPairs = biasPairs(tabooBias).slice(0, 4);
+  if (!usePairs.length && !tabooPairs.length) return null;
+  return {
+    useText: usePairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · "),
+    tabooText: tabooPairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · "),
+  };
 }
 
 function patternProfileSummary(decision: Decision): string {
@@ -577,6 +614,7 @@ function singleDecisionButtonLabel(decision: Decision): string {
 export function V17_DecisionInbox({
   frames,
   adoptedIds,
+  focusedDecisionId,
   locked = false,
   lockMessage = "",
   onAdopted,
@@ -585,6 +623,7 @@ export function V17_DecisionInbox({
 }: {
   frames: Frame[];
   adoptedIds: string[];
+  focusedDecisionId?: string;
   locked?: boolean;
   lockMessage?: string;
   onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
@@ -1086,6 +1125,11 @@ export function V17_DecisionInbox({
           <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
             Plan {planQueue.length}
           </span>
+          {focusedDecisionId ? (
+            <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-2 py-1 text-emerald-200">
+              聚焦 {focusedDecisionId}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -1109,8 +1153,12 @@ export function V17_DecisionInbox({
               const rejectLabel = routingLabel === "LLM 预审" ? "否决预审" : "计划否决";
               return (
                 <div
-                    key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
-                  className="rounded-lg border border-zinc-700/25 bg-zinc-900/70 p-2"
+                  key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
+                  className={`rounded-lg border bg-zinc-900/70 p-2 ${
+                    focusedDecisionId && Array.isArray(plan.decision_ids) && plan.decision_ids.includes(focusedDecisionId)
+                      ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                      : "border-zinc-700/25"
+                  }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[10px] text-zinc-100">
@@ -1226,7 +1274,14 @@ export function V17_DecisionInbox({
               const route = String(item.routing || "system").trim().toUpperCase() || "SYSTEM";
               const routeLabel = route === "LLM" ? "模型预审" : route === "SYSTEM" ? "自动处理" : route === "USER" ? "手动入口" : route;
               return (
-                <div key={item.plan_id} className="rounded-lg border border-zinc-700/25 bg-zinc-900/60 px-2 py-1.5 text-[10px] text-zinc-300">
+                <div
+                  key={item.plan_id}
+                  className={`rounded-lg border bg-zinc-900/60 px-2 py-1.5 text-[10px] text-zinc-300 ${
+                    focusedDecisionId && Array.isArray(item.decision_ids) && item.decision_ids.includes(focusedDecisionId)
+                      ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                      : "border-zinc-700/25"
+                  }`}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-zinc-200">
                       {item.anchor || "未命名计划"} · {item.plan_id || "unknown"}
@@ -1329,6 +1384,7 @@ export function V17_DecisionInbox({
           groupedManualDecisionBatches={groupedManualDecisionBatches}
           singleManualDecisionBatches={singleManualDecisionBatches}
           manualGroups={manualGroups}
+          focusedDecisionId={focusedDecisionId}
           locked={locked}
           busyId={busyId}
           onVote={onVote}
@@ -1344,6 +1400,8 @@ export function V17_DecisionInbox({
           patternConfidenceChip={patternConfidenceChip}
           decisionReasonTags={decisionReasonTags}
           directionGroupLabel={directionGroupLabel}
+          godRingBiasSummary={godRingBiasSummary}
+          groupGodRingBiasSummary={groupGodRingBiasSummary}
         />
 
         <V17_AutoDecisionSection
@@ -1351,6 +1409,7 @@ export function V17_DecisionInbox({
           passiveLlmContextRows={passiveLlmContextRows}
           autoDecisionBatches={autoDecisionBatches}
           autoInboxRows={autoInboxRows}
+          focusedDecisionId={focusedDecisionId}
           statusBadge={statusBadge}
           bucketAccessLabel={bucketAccessLabel}
           bucketReason={bucketReason}
@@ -1365,6 +1424,8 @@ export function V17_DecisionInbox({
           llmPolicyLabel={llmPolicyLabel}
           llmStateLabel={llmStateLabel}
           promptPreview={promptPreview}
+          godRingBiasSummary={godRingBiasSummary}
+          groupGodRingBiasSummary={groupGodRingBiasSummary}
         />
       </div>
       {lockMessage ? (

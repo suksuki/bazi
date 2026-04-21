@@ -1,10 +1,10 @@
 # V17 插件参数来源与默认值审计（自动版）
 
-生成时间：2026-04-20 11:45:45
+生成时间：2026-04-20 16:59:42
 
 ## 总览
-- 插件数：55
-- 参数项数：162
+- 插件数：57
+- 参数项数：173
 - 配置文件缺失：0
 
 ## 风险清单
@@ -127,6 +127,12 @@
 | classical.ziping.balance.v1 | MATCH_RATIO_GAIN | 0.22 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.balance.v1 | MATCH_RATIO_MAX | 0.9 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.balance.v1 | MATCH_RATIO_MIN | 0.45 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | AXIS_BONUS | 0.18 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | DOMINANT_TABOO_BONUS | 0.16 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | MATCH_RATIO_BASE | 0.62 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | MATCH_RATIO_CAP | 0.9 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | MONTH_COMMAND_BONUS | 0.22 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.god_ring_resolver.v1 | WORK_RATIO_WEIGHT | 1.25 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.month_command.v1 | MATCH_RATIO_OTHER | 0.72 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.month_command.v1 | MATCH_RATIO_TOP | 0.88 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.yongshen.v1 | MATCH_RATIO_BASE | 0.58 | pattern_defaults | used_and_configurable | - |
@@ -137,6 +143,11 @@
 | kong_wang | VOID_THRESHOLD | 0.75 | DECLARED_PARAMS | used_and_configurable | - |
 | l1.physics.full_bandwidth | PRIORITY_FIERCE | 0.65 | DECLARED_PARAMS | used_and_configurable | - |
 | l1.physics.full_bandwidth | PRIORITY_NORMAL | 0.62 | DECLARED_PARAMS | used_and_configurable | - |
+| l1.physics.op_branch_liuchong | BASE_IMPACT_RATIO | -0.15 | DECLARED_PARAMS | used_and_configurable | - |
+| l1.physics.op_branch_liuchong | DEFAULT_STRESS | 0.65 | DECLARED_PARAMS | used_and_configurable | - |
+| l1.physics.op_branch_liuchong | MAX_STRESS | 1.0 | DECLARED_PARAMS | used_and_configurable | - |
+| l1.physics.op_branch_liuchong | MIN_STRESS | 0.35 | DECLARED_PARAMS | used_and_configurable | - |
+| l1.physics.op_branch_liuchong | PRIORITY_BASE | 0.83 | DECLARED_PARAMS | used_and_configurable | - |
 | l1.physics.op_branch_liuhai | CLASH_LOSS_RATIO | "ref(global.CLASH_LOSS_RATIO)" | DECLARED_PARAMS | used_and_configurable | - |
 | l1.physics.op_branch_liuhai | PENETRATION_RATIO | 0.45 | DECLARED_PARAMS | used_and_configurable | - |
 | l1.physics.op_branch_liuhe | HARMONY_GAIN | 1.15 | DECLARED_PARAMS | used_and_configurable | - |

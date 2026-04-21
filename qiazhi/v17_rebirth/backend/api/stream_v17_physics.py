@@ -172,6 +172,7 @@ def _run_v17_physics_core(
     payload = {
         "ten_gods_base_l0": dict(scores),
         "ten_gods_runtime": dict(scores),
+        "ten_gods_decomposition_l0": dict(energy_meta.get("ten_gods_decomposition_l0") or {}),
         "total_energy_index": total_energy_index,
         "energy_meta": energy_meta,
         "ten_gods_ledger": ten_gods_ledger,

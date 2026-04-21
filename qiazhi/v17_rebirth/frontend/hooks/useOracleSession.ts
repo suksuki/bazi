@@ -59,6 +59,11 @@ export type Decision = {
     significance_weight?: number;
     intensity_level?: number;
     resistance_mod?: Record<string, unknown>;
+    god_ring_bias?: {
+      use_bias?: Record<string, number>;
+      taboo_bias?: Record<string, number>;
+      reason?: string;
+    };
   };
 };
 

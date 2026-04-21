@@ -6,6 +6,7 @@ import type { DecisionBatch } from "@/components/decisionInboxUtils";
 type BucketKind = "manual" | "auto" | "system" | "llm";
 type StatusBadge = { label: string; className: string };
 type ConfidenceChip = { label: string; className: string } | null;
+type BiasSummary = { useText: string; tabooText: string } | null;
 
 type AutoInboxEntry = {
   key: string;
@@ -18,6 +19,7 @@ type Props = {
   passiveLlmContextRows: Decision[];
   autoDecisionBatches: DecisionBatch[];
   autoInboxRows: AutoInboxEntry[];
+  focusedDecisionId?: string;
   statusBadge: (kind: BucketKind, decision: Decision) => StatusBadge;
   bucketAccessLabel: (kind: BucketKind) => string;
   bucketReason: (kind: BucketKind, decision: Decision) => string;
@@ -32,6 +34,8 @@ type Props = {
   llmPolicyLabel: (policy: string | undefined) => string;
   llmStateLabel: (state: string | undefined) => string;
   promptPreview: (decision: Decision) => string;
+  godRingBiasSummary: (decision: Decision) => BiasSummary;
+  groupGodRingBiasSummary: (decisions: Decision[]) => BiasSummary;
 };
 
 export function V17_AutoDecisionSection({
@@ -39,6 +43,7 @@ export function V17_AutoDecisionSection({
   passiveLlmContextRows,
   autoDecisionBatches,
   autoInboxRows,
+  focusedDecisionId,
   statusBadge,
   bucketAccessLabel,
   bucketReason,
@@ -53,6 +58,8 @@ export function V17_AutoDecisionSection({
   llmPolicyLabel,
   llmStateLabel,
   promptPreview,
+  godRingBiasSummary,
+  groupGodRingBiasSummary,
 }: Props) {
   return (
     <div className="rounded-xl border border-amber-500/15 bg-zinc-950/55 p-3">
@@ -92,10 +99,15 @@ export function V17_AutoDecisionSection({
               const ratio = Number(group.net_impact_ratio || 0);
               const channelLabel = group.bucket === "llm" ? "叙事建议" : "系统自动处理";
               const groupRationale = routingRationale(group.bucket, group.decisions[0]);
+              const groupBias = groupGodRingBiasSummary(group.decisions);
               return (
                 <div
                   key={`auto_batch_${group.batch_id}`}
-                  className="rounded-xl border border-amber-500/10 bg-amber-950/15 px-2.5 py-2"
+                  className={`rounded-xl border bg-amber-950/15 px-2.5 py-2 ${
+                    group.decisions.some((item) => String(item.id || item._ui_id || "").trim() === focusedDecisionId)
+                      ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                      : "border-amber-500/10"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-[11px] text-amber-100">自动批次 · {channelLabel}</p>
@@ -111,6 +123,12 @@ export function V17_AutoDecisionSection({
                   </p>
                   {patternProfileSummary(group.decisions[0]) ? (
                     <p className="mt-1 break-words text-[10px] text-cyan-100/85">{patternProfileSummary(group.decisions[0])}</p>
+                  ) : null}
+                  {groupBias ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {groupBias.useText ? <p className="text-emerald-200/90">用侧推动：{groupBias.useText}</p> : null}
+                      {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
+                    </div>
                   ) : null}
                   {groupRationale.length ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">{compactRoutingLines(groupRationale)}</p>
@@ -130,15 +148,26 @@ export function V17_AutoDecisionSection({
                   <div className="mt-2 space-y-1">
                     {group.decisions.map((decision) => {
                       const confidence = patternConfidenceChip(decision);
+                      const bias = godRingBiasSummary(decision);
                       return (
                         <div
                           key={`batch_${group.batch_id}_${decision._ui_id}`}
-                          className="rounded-lg border border-amber-500/20 bg-zinc-950/45 px-2 py-1.5"
+                          className={`rounded-lg border bg-zinc-950/45 px-2 py-1.5 ${
+                            String(decision.id || decision._ui_id || "").trim() === focusedDecisionId
+                              ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                              : "border-amber-500/20"
+                          }`}
                         >
                           <p className="break-words text-[10px] text-zinc-100">{String(decision.label || decision.title || "自动处理项").trim()}</p>
                           <p className="mt-0.5 break-words text-[9px] text-zinc-400">{impactText(decision)}</p>
                           {patternProfileSummary(decision) ? (
                             <p className="mt-0.5 break-words text-[9px] text-cyan-100/85">{patternProfileSummary(decision)}</p>
+                          ) : null}
+                          {bias ? (
+                            <div className="mt-1 space-y-0.5 text-[9px]">
+                              {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
+                              {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                            </div>
                           ) : null}
                           {confidence ? (
                             <div className="mt-1">
@@ -167,8 +196,16 @@ export function V17_AutoDecisionSection({
             const entryKind = entry.channel === "llm" || entry.channel === "system" ? (entry.channel as BucketKind) : "auto";
             const rationale = routingRationale(entryKind, row);
             const confidence = patternConfidenceChip(row);
+            const bias = godRingBiasSummary(row);
             return (
-              <div key={entry.key} className="rounded-xl border border-amber-500/10 bg-amber-950/15 px-2.5 py-2">
+              <div
+                key={entry.key}
+                className={`rounded-xl border bg-amber-950/15 px-2.5 py-2 ${
+                  String(row.id || "").trim() === focusedDecisionId
+                    ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                    : "border-amber-500/10"
+                }`}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-[11px] text-amber-100">{String(row.label || row.title || "自动处理项").trim()}</p>
                   <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
@@ -182,6 +219,12 @@ export function V17_AutoDecisionSection({
                 <p className="mt-1 break-words text-[10px] leading-relaxed text-zinc-500">{bucketReason("auto", row)}</p>
                 {patternProfileSummary(row) ? (
                   <p className="mt-1 break-words text-[10px] text-cyan-100/85">{patternProfileSummary(row)}</p>
+                ) : null}
+                {bias ? (
+                  <div className="mt-1 space-y-0.5 text-[10px]">
+                    {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
+                    {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                  </div>
                 ) : null}
                 {rationale.length ? (
                   <p className="mt-1 break-words text-[9px] text-zinc-500">{compactRoutingLines(rationale)}</p>

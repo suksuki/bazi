@@ -18,6 +18,62 @@ def _cell_ok(value: Any) -> bool:
     return bool(s) and s not in (_PHYS_DASH, "-")
 
 
+def _ten_gods_prompt_contract_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    return [
+        "十神解释合同：`ten_gods_base_l0/ten_gods_runtime` 为绝对物理强度，不是百分比。",
+        "十神解释合同：单个十神总分应理解为显化、根气、势能、潜藏残值的合成结果，不能当作单一来源。",
+        "十神解释合同：显化内部还包含柱位贴身权重；原局天干通常按月干 > 时干 > 年干，且这不属于根气。",
+        "十神解释合同：根气与势能不是同一概念；根气回答“是否扎根”，势能回答“是否得势”。",
+        "十神解释合同：同五行可通根，但阴阳不纯配时应折损；本根强于异阴阳根。",
+        "十神解释合同：日干是十神参照轴，不直接计入比肩/劫财等显化分。",
+        "十神解释合同：只有藏干未透时通常仅作弱支撑或潜藏残值，不宜直接判为强轴。",
+        "十神解释合同：例如丙见巳偏根强，丙见午偏势强；解释时必须区分“根深”与“势猛”。",
+    ]
+
+
+def _ten_gods_decomposition_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    raw = pt.get("ten_gods_decomposition_l0")
+    if not isinstance(raw, dict) or not raw:
+        return []
+    ranked = sorted(
+        (
+            (str(god).strip(), row)
+            for god, row in raw.items()
+            if str(god).strip() and isinstance(row, dict)
+        ),
+        key=lambda item: float(item[1].get("total") or 0.0),
+        reverse=True,
+    )
+    lines: List[str] = []
+    for god, row in ranked[:3]:
+        lines.append(
+            "十神分解："
+            f"{god} 总{float(row.get('total') or 0.0):.2f}"
+            f"＝显化{float(row.get('manifest') or 0.0):.2f}"
+            f"+根气{float(row.get('root') or 0.0):.2f}"
+            f"+势能{float(row.get('momentum') or 0.0):.2f}"
+            f"+潜藏{float(row.get('hidden') or 0.0):.2f}"
+        )
+        momentum_parts = [
+            ("月令势", float(row.get("momentum_month_order") or 0.0)),
+            ("阶段势", float(row.get("momentum_stage") or 0.0)),
+            ("禄势", float(row.get("momentum_stage_lu") or 0.0)),
+            ("刃势", float(row.get("momentum_stage_blade") or 0.0)),
+            ("长生势", float(row.get("momentum_stage_general") or 0.0)),
+            ("结构势", float(row.get("momentum_structure") or 0.0)),
+            ("辅助势", float(row.get("momentum_auxiliary") or 0.0)),
+            ("其他势", float(row.get("momentum_other") or 0.0)),
+        ]
+        visible_parts = [f"{label}{value:.2f}" for label, value in momentum_parts if value > 0.0]
+        if visible_parts:
+            lines.append(f"十神势能细项：{god}＝{' + '.join(visible_parts)}")
+    return lines
+
+
 def six_pillars_tensor_complete(pt: Dict[str, Any]) -> bool:
     """与 VerdictOrchestrator 物理门控一致：四柱 + 大运 + 流年。"""
     fp = pt.get("four_pillars")
@@ -84,6 +140,8 @@ class PhysicsCanonicalService:
         rows = SixPillarsModel.from_physics_tensor(physics_tensor).materialize_prompt_lines()
         if not isinstance(physics_tensor, dict):
             return rows
+        rows.extend(_ten_gods_prompt_contract_lines(physics_tensor))
+        rows.extend(_ten_gods_decomposition_lines(physics_tensor))
         total_energy = physics_tensor.get("total_energy_index")
         scores = read_runtime_scores(physics_tensor)
         if isinstance(scores, dict) and scores:

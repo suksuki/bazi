@@ -28,12 +28,33 @@ def resolve_god_ring_authority(
     use_gods = _clean_gods(authority.get("use_gods"))
     taboo_gods = _clean_gods(authority.get("taboo_gods"))
     if use_gods or taboo_gods:
+        effect_scores = authority.get("effect_scores") if isinstance(authority.get("effect_scores"), dict) else {}
+        graph_meta = authority.get("core_graph_meta") if isinstance(authority.get("core_graph_meta"), dict) else {}
+        flux_meta = authority.get("core_flux_meta") if isinstance(authority.get("core_flux_meta"), dict) else {}
+        tongguan_gods = _clean_gods(authority.get("tongguan_gods"))
         return {
             "god_of_use": use_gods,
             "god_of_taboo": taboo_gods,
+            "tongguan_gods": tongguan_gods,
             "source": str(authority.get("source") or "").strip() or "god_ring_authority",
             "mode": str(authority.get("mode") or "").strip() or "authority",
             "confidence": float(authority.get("confidence") or 0.0),
+            "display_mode": "authority",
+            "label_of_use": "USE",
+            "label_of_taboo": "TABOO",
+            "dual_role_candidates": list(authority.get("dual_role_candidates") or []),
+            "core_use_candidates": list(authority.get("core_use_candidates") or []),
+            "core_taboo_candidates": list(authority.get("core_taboo_candidates") or []),
+            "effect_scores": effect_scores,
+            "core_graph_meta": graph_meta,
+            "core_flux_meta": flux_meta,
+            "core_path_count": int(authority.get("core_path_count") or 0),
+            "core_paths_preview": list(authority.get("core_paths_preview") or []),
+            "positive_work": dict(authority.get("positive_work") or {}),
+            "negative_work": dict(authority.get("negative_work") or {}),
+            "stage_bias": dict(authority.get("stage_bias") or {}),
+            "judgement_bias": dict(authority.get("judgement_bias") or {}),
+            "judgement_bias_entries": list(authority.get("judgement_bias_entries") or []),
         }
 
     ranked = [(str(name or "").strip(), float(score or 0.0)) for name, score in ranked_pairs if str(name or "").strip()]
@@ -42,7 +63,24 @@ def resolve_god_ring_authority(
     return {
         "god_of_use": fallback_use,
         "god_of_taboo": fallback_taboo,
+        "tongguan_gods": [],
         "source": "score_proxy",
         "mode": "fallback_rank",
         "confidence": 0.0,
+        "display_mode": "rank_proxy",
+        "label_of_use": "主导",
+        "label_of_taboo": "弱势",
+        "dual_role_candidates": [],
+        "core_use_candidates": [],
+        "core_taboo_candidates": [],
+        "effect_scores": {},
+        "core_graph_meta": {},
+        "core_flux_meta": {},
+        "core_path_count": 0,
+        "core_paths_preview": [],
+        "positive_work": {},
+        "negative_work": {},
+        "stage_bias": {},
+        "judgement_bias": {},
+        "judgement_bias_entries": [],
     }

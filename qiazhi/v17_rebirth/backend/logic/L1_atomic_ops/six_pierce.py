@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.plugin_discovery import rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config, resolve_config_number
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import build_static_basis, relation_effect_multiplier, summarize_relation_conditions
 
@@ -110,6 +111,23 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 "condition_multiplier": round(cond_mul, 3),
                 "origin_type": condition.get("origin_type"),
                 "origin_multiplier": round(origin_mul, 3),
+                "work_evidence": build_work_evidence(
+                    relation_family="liuhai",
+                    target_god=god_j,
+                    members=pair,
+                    actor_members=[br_i] if br_i else [],
+                    receiver_members=[br_j] if br_j else [],
+                    effect_type="harm",
+                    layer="branch",
+                    origin_scope=str(condition.get("origin_type") or "natal"),
+                    condition_state=condition["condition_state"],
+                    impact_ratio=round(-effective_ratio, 2),
+                    match_ratio=round(match_ratio, 3),
+                    path_strength=effective_ratio * max(0.45, balance_ratio + 0.2) * max(0.72, pair_strength),
+                    targets=list((projection or {}).keys()) or [god_j],
+                    actor_gods=[god_i] if god_i else [],
+                    receiver_gods=[god_j] if god_j else [],
+                ),
                 "static_basis": build_static_basis(
                     physics_tensor=physics_tensor,
                     target_god=god_j,

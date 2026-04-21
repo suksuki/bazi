@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 # V17.99 Skill Specification
@@ -55,10 +54,10 @@ class OfficerSeeHurtPlugin(V17PluginSpec):
     registry_priority: float = 0.88
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
-        from v17_rebirth.backend.logic.configs.manager import get_plugin_config
-        cfg = get_plugin_config(self.plugin_id)
-        scores = deity_scores_from_tensor(physics_tensor)
-        return rows_dict_to_v17_facts(_collect_rows(scores, cfg), causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        # Legacy compatibility plugin.
+        # Runtime ownership of "伤官见官/伤官伤尽" now lives in `l2.risk.risk_matrix`
+        # so we do not emit duplicated facts from this historical path.
+        return []
 
 
 PLUGIN = OfficerSeeHurtPlugin()

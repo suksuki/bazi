@@ -9,12 +9,14 @@ type BucketKind = "manual" | "auto" | "system" | "llm";
 
 type StatusBadge = { label: string; className: string };
 type ConfidenceChip = { label: string; className: string } | null;
+type BiasSummary = { useText: string; tabooText: string } | null;
 
 type Props = {
   decisionsLength: number;
   groupedManualDecisionBatches: DecisionBatch[];
   singleManualDecisionBatches: DecisionBatch[];
   manualGroups: DecisionBatchGroup[];
+  focusedDecisionId?: string;
   locked: boolean;
   busyId: string;
   onVote: (decision: DecisionWithId, status: "APPROVED" | "REJECTED") => Promise<void>;
@@ -33,6 +35,8 @@ type Props = {
   patternConfidenceChip: (decision: Decision) => ConfidenceChip;
   decisionReasonTags: (kind: BucketKind, decision: Decision) => string[];
   directionGroupLabel: (ratio: number, rawLabel?: string) => string;
+  godRingBiasSummary: (decision: Decision) => BiasSummary;
+  groupGodRingBiasSummary: (decisions: Decision[]) => BiasSummary;
 };
 
 export function V17_ManualDecisionSection({
@@ -40,6 +44,7 @@ export function V17_ManualDecisionSection({
   groupedManualDecisionBatches,
   singleManualDecisionBatches,
   manualGroups,
+  focusedDecisionId,
   locked,
   busyId,
   onVote,
@@ -55,6 +60,8 @@ export function V17_ManualDecisionSection({
   patternConfidenceChip,
   decisionReasonTags,
   directionGroupLabel,
+  godRingBiasSummary,
+  groupGodRingBiasSummary,
 }: Props) {
   return (
     <div className="rounded-xl border border-violet-500/20 bg-zinc-950/55 p-3">
@@ -75,10 +82,15 @@ export function V17_ManualDecisionSection({
                     : group.source_anchor || "自动归并";
                 const ratio = Number(group.net_impact_ratio || 0);
                 const groupLabel = directionGroupLabel(ratio, group.direction_label);
+                const groupBias = groupGodRingBiasSummary(group.decisions);
                 return (
                   <div
                     key={group.batch_id}
-                    className="rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3"
+                    className={`rounded-2xl border bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3 ${
+                      group.decisions.some((item) => String(item.id || item._ui_id || "").trim() === focusedDecisionId)
+                        ? "border-emerald-500/45 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                        : "border-violet-500/35"
+                    }`}
                   >
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -91,6 +103,12 @@ export function V17_ManualDecisionSection({
                     </div>
 
                     <p className="text-[10px] leading-relaxed text-zinc-400">{group.prompt_line}</p>
+                    {groupBias ? (
+                      <div className="mt-2 space-y-1 text-[10px]">
+                        {groupBias.useText ? <p className="text-emerald-200/90">用侧推动：{groupBias.useText}</p> : null}
+                        {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
+                      </div>
+                    ) : null}
 
                     {group.labels.length ? (
                       <div className="mt-2 flex flex-wrap gap-1 opacity-80">
@@ -126,10 +144,15 @@ export function V17_ManualDecisionSection({
               const d = group.decisions[0];
               if (!d) return null;
               const badge = statusBadge("manual", d);
+              const bias = godRingBiasSummary(d);
               return (
                 <div
                   key={`single_batch_${group.batch_id}`}
-                  className="rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3"
+                  className={`rounded-2xl border bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3 ${
+                    String(d.id || d._ui_id || "").trim() === focusedDecisionId
+                      ? "border-emerald-500/45 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                      : "border-violet-500/35"
+                  }`}
                 >
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -145,6 +168,12 @@ export function V17_ManualDecisionSection({
                   <p className="text-[10px] leading-relaxed text-zinc-400">{group.prompt_line}</p>
                   {patternProfileSummary(d) ? (
                     <p className="mt-1 break-words text-[10px] text-cyan-100/90">{patternProfileSummary(d)}</p>
+                  ) : null}
+                  {bias ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
+                      {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                    </div>
                   ) : null}
                   {decisionFocusPreview(d) ? (
                     <p className="mt-1 text-[10px] text-fuchsia-200/90">{decisionFocusPreview(d)}</p>
@@ -170,10 +199,15 @@ export function V17_ManualDecisionSection({
               const badge = statusBadge("manual", sampleDecision);
               const sampleConfidence = patternConfidenceChip(sampleDecision);
               const sampleRationale = routingRationale("manual", sampleDecision);
+              const groupBias = groupGodRingBiasSummary(group.decisions);
               return (
                 <div
                   key={group.key}
-                  className="rounded-2xl border border-violet-500/35 bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3"
+                  className={`rounded-2xl border bg-[linear-gradient(180deg,rgba(76,29,149,0.24),rgba(46,16,101,0.16))] p-3 ${
+                    group.decisions.some((item) => String(item.id || item._ui_id || "").trim() === focusedDecisionId)
+                      ? "border-emerald-500/45 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                      : "border-violet-500/35"
+                  }`}
                 >
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -197,6 +231,12 @@ export function V17_ManualDecisionSection({
                   ) : null}
                   {sampleRationale.length ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">{compactRoutingLines(sampleRationale)}</p>
+                  ) : null}
+                  {groupBias ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {groupBias.useText ? <p className="text-emerald-200/90">用侧推动：{groupBias.useText}</p> : null}
+                      {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
+                    </div>
                   ) : null}
 
                   <div className="mt-2 flex flex-wrap gap-1 opacity-80">
@@ -231,8 +271,16 @@ export function V17_ManualDecisionSection({
                   <div className="mt-2 space-y-1">
                     {group.decisions.map((d) => {
                       const decisionConfidence = patternConfidenceChip(d);
+                      const bias = godRingBiasSummary(d);
                       return (
-                        <div key={d._ui_id} className="rounded-lg border border-violet-500/25 bg-zinc-950/45 px-2 py-1.5">
+                        <div
+                          key={d._ui_id}
+                          className={`rounded-lg border bg-zinc-950/45 px-2 py-1.5 ${
+                            String(d.id || d._ui_id || "").trim() === focusedDecisionId
+                              ? "border-emerald-500/45 shadow-[0_0_0_1px_rgba(16,185,129,0.25)]"
+                              : "border-violet-500/25"
+                          }`}
+                        >
                           <div className="flex items-center justify-between gap-2">
                             <p className="break-words text-[10px] text-violet-100">{(d.label || d.title || "行动建议").trim()}</p>
                             <span className="text-[9px] text-zinc-500">{impactText(d)}</span>
@@ -252,6 +300,12 @@ export function V17_ManualDecisionSection({
                           </div>
                           {patternProfileSummary(d) ? (
                             <p className="mt-1 break-words text-[9px] text-cyan-100/85">{patternProfileSummary(d)}</p>
+                          ) : null}
+                          {bias ? (
+                            <div className="mt-1 space-y-0.5 text-[9px]">
+                              {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
+                              {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                            </div>
                           ) : null}
                           {decisionConfidence ? (
                             <div className="mt-1">

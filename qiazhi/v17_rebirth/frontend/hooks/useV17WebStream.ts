@@ -107,6 +107,17 @@ export type V17Frame = {
     god_rings?: {
       god_of_use?: string[];
       god_of_taboo?: string[];
+      tongguan_gods?: string[];
+      source?: string;
+      mode?: string;
+      display_mode?: string;
+      confidence?: number;
+      core_path_count?: number;
+      judgement_bias?: {
+        use_bias?: Record<string, number>;
+        taboo_bias?: Record<string, number>;
+      };
+      judgement_bias_entries?: Array<Record<string, unknown>>;
     };
     plugins?: {
       hits?: unknown[];

@@ -86,6 +86,12 @@ PATTERN_DEFAULTS = {
         "SHANGGUAN_PEIYIN_MIN_SEAL": 15.0,
         "SHANGGUAN_PEIYIN_MATCH_BASE": 0.76,
     },
+    "classical.pattern.caipoyin.v1": {
+        "CAIPOYIN_MIN_WEALTH": 16.0,
+        "CAIPOYIN_MIN_SEAL": 16.0,
+        "CAIPOYIN_BREAK_RATIO": 1.08,
+        "CAIPOYIN_MATCH_BASE": 0.72,
+    },
     "classical.pattern.shishen_shengcai.v1": {
         "SHISHEN_SHENGCAI_MIN_SHISHEN": 16.0,
         "SHISHEN_SHENGCAI_MIN_WEALTH": 15.0,
@@ -304,6 +310,73 @@ def _daymaster_stem(physics_tensor: Dict[str, Any]) -> str:
 
 def _score_sum(scores: Dict[str, float], *names: str) -> float:
     return sum(float(scores.get(name, 0.0)) for name in names)
+
+
+def _bias_strength(match_ratio: float, *, base: float, gain: float) -> float:
+    return round(base + _clamp01(match_ratio) * gain, 3)
+
+
+def _seal_bias_map(scores: Dict[str, float], *, total_bias: float) -> Dict[str, float]:
+    seal_scores = {
+        "正印": max(0.0, float(scores.get("正印", 0.0) or 0.0)),
+        "偏印": max(0.0, float(scores.get("偏印", 0.0) or 0.0)),
+    }
+    total = sum(seal_scores.values())
+    if total <= 0.0 or total_bias <= 0.0:
+        return {}
+    out: Dict[str, float] = {}
+    remaining = float(total_bias)
+    ordered = [(god, score) for god, score in seal_scores.items() if score > 0.0]
+    for idx, (god, score) in enumerate(ordered):
+        if idx == len(ordered) - 1:
+            value = remaining
+        else:
+            value = round(float(total_bias) * (score / total), 3)
+            remaining = round(max(0.0, remaining - value), 3)
+        if value > 0.0:
+            out[god] = value
+    return out
+
+
+def _merge_bias_maps(*maps: Dict[str, float]) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for mapping in maps:
+        if not isinstance(mapping, dict):
+            continue
+        for god, raw in mapping.items():
+            name = str(god or "").strip()
+            if not name:
+                continue
+            try:
+                value = float(raw or 0.0)
+            except (TypeError, ValueError):
+                value = 0.0
+            if value <= 0.0:
+                continue
+            out[name] = round(out.get(name, 0.0) + value, 3)
+    return out
+
+
+def _wealth_bias_map(scores: Dict[str, float], *, total_bias: float) -> Dict[str, float]:
+    wealth_scores = {
+        "正财": max(0.0, float(scores.get("正财", 0.0) or 0.0)),
+        "偏财": max(0.0, float(scores.get("偏财", 0.0) or 0.0)),
+    }
+    total = sum(wealth_scores.values())
+    if total <= 0.0 or total_bias <= 0.0:
+        return {}
+    out: Dict[str, float] = {}
+    remaining = float(total_bias)
+    ordered = [(god, score) for god, score in wealth_scores.items() if score > 0.0]
+    for idx, (god, score) in enumerate(ordered):
+        if idx == len(ordered) - 1:
+            value = remaining
+        else:
+            value = round(float(total_bias) * (score / total), 3)
+            remaining = round(max(0.0, remaining - value), 3)
+        if value > 0.0:
+            out[god] = value
+    return out
 
 
 def _is_zaji_month(branch: str) -> bool:
@@ -1094,6 +1167,9 @@ class GuanYinPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "GUANYIN_MATCH_BASE", 0.76)
         synergy = min(guan, seal) / max(guan, seal, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        officer_bias = _bias_strength(match_ratio, base=0.11, gain=0.15)
+        seal_bias = _seal_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.08, gain=0.1))
+        taboo_bias = _bias_strength(match_ratio, base=0.03, gain=0.06)
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：官星得印星相生，本局存在「官印相生」路线。",
@@ -1109,9 +1185,14 @@ class GuanYinPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:seal_support_profile",
+                "source_event": "pattern:guanyin",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": _merge_bias_maps({"正官": officer_bias}, seal_bias),
+                    "taboo_bias": {"伤官": taboo_bias},
+                    "reason": "官印相生",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="正官", relation_family="pattern_guanyin", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_guanyin"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.74),
@@ -1149,6 +1230,8 @@ class ShaYinPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "SHAYIN_MATCH_BASE", 0.76)
         synergy = min(sha, seal) / max(sha, seal, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        sha_bias = _bias_strength(match_ratio, base=0.08, gain=0.14)
+        seal_bias = _seal_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.08, gain=0.1))
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：七杀得印化生，本局存在「杀印相生」路线。",
@@ -1164,9 +1247,14 @@ class ShaYinPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:seal_support_profile",
+                "source_event": "pattern:shayin",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": _merge_bias_maps({"七杀": sha_bias}, seal_bias),
+                    "taboo_bias": {},
+                    "reason": "杀印相生",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="七杀", relation_family="pattern_shayin", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_shayin"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.74),
@@ -1204,6 +1292,8 @@ class ShiShenZhiShaPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "SHISHEN_ZHISHA_MATCH_BASE", 0.78)
         synergy = min(sha, shishen) / max(sha, shishen, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        use_bias = _bias_strength(match_ratio, base=0.12, gain=0.18)
+        taboo_bias = _bias_strength(match_ratio, base=0.07, gain=0.11)
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：食神透而制杀，本局存在「食神制杀」路线。",
@@ -1219,9 +1309,14 @@ class ShiShenZhiShaPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:food_output_profile",
+                "source_event": "pattern:shishen_zhisha",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": {"食神": use_bias},
+                    "taboo_bias": {"七杀": taboo_bias},
+                    "reason": "食神制杀",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="七杀", relation_family="pattern_shishen_zhisha", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_shishen_zhisha"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.76),
@@ -1259,6 +1354,8 @@ class ShangGuanPeiYinPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "SHANGGUAN_PEIYIN_MATCH_BASE", 0.76)
         synergy = min(hurt, seal) / max(hurt, seal, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        hurt_bias = _bias_strength(match_ratio, base=0.11, gain=0.16)
+        seal_bias = _seal_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.07, gain=0.1))
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：伤官旺而得印护，本局存在「伤官配印」路线。",
@@ -1274,12 +1371,83 @@ class ShangGuanPeiYinPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:seal_support_profile",
+                "source_event": "pattern:shangguan_peiyin",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": _merge_bias_maps({"伤官": hurt_bias}, seal_bias),
+                    "taboo_bias": {},
+                    "reason": "伤官配印",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="伤官", relation_family="pattern_shangguan_peiyin", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_shangguan_peiyin"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.74),
+                **origin_meta,
+            },
+        }]
+        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+
+
+@dataclass
+class CaiPoYinPatternPlugin(V17PluginSpec):
+    plugin_id: str = "classical.pattern.caipoyin.v1"
+    causal_tier: int = 3
+    registry_priority: float = 0.744
+
+    def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        scores = deity_scores_from_tensor(physics_tensor)
+        wealth = _score_sum(scores, "正财", "偏财")
+        seal = _score_sum(scores, "正印", "偏印")
+        min_wealth = _pattern_cfg(self.plugin_id, "CAIPOYIN_MIN_WEALTH", 16.0)
+        min_seal = _pattern_cfg(self.plugin_id, "CAIPOYIN_MIN_SEAL", 16.0)
+        if wealth < min_wealth or seal < min_seal:
+            return []
+        break_ratio = _pattern_cfg(self.plugin_id, "CAIPOYIN_BREAK_RATIO", 1.08)
+        pressure_ratio = wealth / max(seal, 1.0)
+        if pressure_ratio < break_ratio:
+            return []
+
+        origin_meta = _pattern_origin_meta(physics_tensor)
+        context = _pattern_context(physics_tensor)
+        seal_focus = "正印" if float(scores.get("正印", 0.0) or 0.0) >= float(scores.get("偏印", 0.0) or 0.0) else "偏印"
+        projection = god_cluster_projection(
+            physics_tensor=physics_tensor,
+            base_god=seal_focus,
+            day_master=_daymaster_stem(physics_tensor) or "壬",
+            focus_branches=[_month_branch(physics_tensor)],
+        )
+        base = _pattern_cfg(self.plugin_id, "CAIPOYIN_MATCH_BASE", 0.72)
+        pressure = _clamp01(pressure_ratio / max(break_ratio, 1.0))
+        match_ratio = _clamp01(base * pressure * max(0.92, float(origin_meta["origin_multiplier"])))
+        seal_bias = _seal_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.08, gain=0.1))
+        wealth_taboo = _wealth_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.1, gain=0.14))
+        rows = [{
+            "plugin": self.plugin_id,
+            "fact": "格局候选：财星过强而反伤印绶，本局存在「财破印」路线。",
+            "priority": self.registry_priority,
+            "label": "财破印",
+            "meta": {
+                "pattern_candidate": "财破印",
+                "target_god": seal_focus,
+                "wealth_score": wealth,
+                "seal_score": seal,
+                "pressure_ratio": round(pressure_ratio, 3),
+                "projection_share": round(float((projection or {}).get(seal_focus, 1.0)), 4),
+                "cluster_projection": projection,
+                "match_ratio": round(match_ratio, 3),
+                "claim_type": "pattern_candidate",
+                "entity_scope": "pattern",
+                "exclusivity_key": "pattern:seal_support_profile",
+                "source_event": "pattern:caipoyin",
+                "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": seal_bias,
+                    "taboo_bias": wealth_taboo,
+                    "reason": "财破印",
+                },
+                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god=seal_focus, relation_family="pattern_caipoyin", relation_members=[]),
+                "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_caipoyin"),
+                "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.72),
                 **origin_meta,
             },
         }]
@@ -1314,6 +1482,8 @@ class ShiShenShengCaiPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "SHISHEN_SHENGCAI_MATCH_BASE", 0.76)
         synergy = min(shishen, wealth) / max(shishen, wealth, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        shishen_bias = _bias_strength(match_ratio, base=0.1, gain=0.15)
+        wealth_bias = _wealth_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.09, gain=0.14))
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：食神有力而顺泄到财，本局存在「食神生财」路线。",
@@ -1329,9 +1499,14 @@ class ShiShenShengCaiPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:wealth_output_profile",
+                "source_event": "pattern:shishen_shengcai",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": _merge_bias_maps({"食神": shishen_bias}, wealth_bias),
+                    "taboo_bias": {},
+                    "reason": "食神生财",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="食神", relation_family="pattern_shishen_shengcai", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_shishen_shengcai"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.74),
@@ -1369,6 +1544,8 @@ class ShangGuanShengCaiPatternPlugin(V17PluginSpec):
         base = _pattern_cfg(self.plugin_id, "SHANGGUAN_SHENGCAI_MATCH_BASE", 0.76)
         synergy = min(hurt, wealth) / max(hurt, wealth, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
+        hurt_bias = _bias_strength(match_ratio, base=0.1, gain=0.15)
+        wealth_bias = _wealth_bias_map(scores, total_bias=_bias_strength(match_ratio, base=0.09, gain=0.14))
         rows = [{
             "plugin": self.plugin_id,
             "fact": "格局候选：伤官旺而化财，本局存在「伤官生财」路线。",
@@ -1384,9 +1561,14 @@ class ShangGuanShengCaiPatternPlugin(V17PluginSpec):
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
-                "exclusivity_key": "pattern_family",
-                "source_event": "pattern_family",
+                "exclusivity_key": "pattern:wealth_output_profile",
+                "source_event": "pattern:shangguan_shengcai",
                 "confidence": self.registry_priority,
+                "god_ring_bias": {
+                    "use_bias": _merge_bias_maps({"伤官": hurt_bias}, wealth_bias),
+                    "taboo_bias": {},
+                    "reason": "伤官生财",
+                },
                 "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="伤官", relation_family="pattern_shangguan_shengcai", relation_members=[]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_shangguan_shengcai"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.74),
@@ -2187,6 +2369,7 @@ PLUGINS = [
     ShaYinPatternPlugin(),
     ShiShenZhiShaPatternPlugin(),
     ShangGuanPeiYinPatternPlugin(),
+    CaiPoYinPatternPlugin(),
     ShiShenShengCaiPatternPlugin(),
     ShangGuanShengCaiPatternPlugin(),
     YangRenJiaShaPatternPlugin(),

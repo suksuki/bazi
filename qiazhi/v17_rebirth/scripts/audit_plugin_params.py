@@ -56,6 +56,12 @@ def _classify_default_risk(default_value: Any, key: str) -> str:
         if not (0.0 <= v <= 1.0):
             return "优先级通常应在[0,1]，当前越界"
         return ""
+    if "IMPACT_RATIO" in upper:
+        if not (-2.0 <= v <= 2.0):
+            return "冲击比例建议优先在[-2,2]范围，当前可疑"
+        if v == 0.0:
+            return "比例/权重为0会导致插件失活"
+        return ""
     if "RATIO" in upper or "WEIGHT" in upper:
         if not (0.0 <= v <= 2.0):
             return "比例/权重建议优先在[0,2]，当前越界"

@@ -10,6 +10,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_origin_multiplier,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
+from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import ten_god_from_stems
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
@@ -26,6 +27,8 @@ DECLARED_PARAMS = {
     "BLADE_CLASH_IMPULSE": 2.2,     # 羊刃逢冲的波动倍率
     "OWL_FOOD_CAP": 0.4,           # 枭神夺食的能量封锁阈值
     "OFFICER_CRUSH_LIMIT": 0.5,     # 伤官见官的防御折损
+    "OFFICER_EXHAUST_RATIO": 2.2,   # 伤官伤尽的强弱比阈值
+    "OFFICER_EXHAUST_SUPPORT_MAX": 0.42,  # 官星仍有明显根气/成局时，不判伤尽
 }
 
 
@@ -166,6 +169,10 @@ class RiskMatrixPlugin(V17PluginSpec):
         blade_clash_impulse = float(cfg.get("BLADE_CLASH_IMPULSE", DECLARED_PARAMS["BLADE_CLASH_IMPULSE"]))
         owl_food_cap = float(cfg.get("OWL_FOOD_CAP", DECLARED_PARAMS["OWL_FOOD_CAP"]))
         officer_crush_limit = float(cfg.get("OFFICER_CRUSH_LIMIT", DECLARED_PARAMS["OFFICER_CRUSH_LIMIT"]))
+        officer_exhaust_ratio = float(cfg.get("OFFICER_EXHAUST_RATIO", DECLARED_PARAMS["OFFICER_EXHAUST_RATIO"]))
+        officer_exhaust_support_max = float(
+            cfg.get("OFFICER_EXHAUST_SUPPORT_MAX", DECLARED_PARAMS["OFFICER_EXHAUST_SUPPORT_MAX"])
+        )
 
         scores = physics_tensor.get("ten_gods_absolute", {})
         meta = physics_tensor.get("meta", {})
@@ -227,6 +234,19 @@ class RiskMatrixPlugin(V17PluginSpec):
                     "risk_driver": "blade_clash",
                     **manifestation,
                     **_projection_meta("比肩"),
+                    "work_evidence": build_work_evidence(
+                        relation_family="risk_blade_clash",
+                        target_god="比肩",
+                        members=["子", "午", "卯", "酉"],
+                        effect_type="harm",
+                        layer="branch",
+                        origin_scope=str(origin_meta["origin_type"] or "natal"),
+                        condition_state=str(manifestation.get("manifestation_state") or ""),
+                        impact_ratio=0.0,
+                        match_ratio=round(match_ratio, 3),
+                        path_strength=0.16 + match_ratio * 0.28 + 0.04 * max(0, len(clashes) - 1),
+                        targets=["比肩"],
+                    ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
                         target_god="比肩",
@@ -262,6 +282,21 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "interaction_layer": "cross_layer",
                         "manifestation_state": manifestation_state,
                         "observe_only": True,
+                        "work_evidence": build_work_evidence(
+                            relation_family="risk_owl_food",
+                            target_god="食神",
+                            members=[],
+                            effect_type="harm",
+                            layer="cross_layer",
+                            origin_scope="natal",
+                            condition_state=manifestation_state,
+                            impact_ratio=0.0,
+                            match_ratio=round(match_ratio, 3),
+                            path_strength=max(0.14, min(0.42, (owl - owl_threshold) / max(owl_threshold, 1.0))),
+                            targets=["食神"],
+                            actor_gods=["偏印"],
+                            receiver_gods=["食神"],
+                        ),
                         **_projection_meta("食神"),
                         "static_basis": build_static_basis(
                             physics_tensor=physics_tensor,
@@ -273,10 +308,66 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "origin_multiplier": 1.0,
                     }
                 ))
+            food_use_bias = round(0.08 + match_ratio * 0.16, 3)
+            owl_taboo_bias = round(0.07 + match_ratio * 0.14, 3)
+            results.append(V17Fact(
+                plugin_id=self.plugin_id,
+                text="结构候选「枭印夺食」：偏印压住食神，输出路径受阻，食神更应被保护。",
+                causal_tier=self.causal_tier,
+                priority=0.84,
+                decision_hint="此类结构不改十神底数，但会把食神推向用侧、把偏印推向忌侧。",
+                meta={
+                    "impact_ratio": 0.0,
+                    "observe_only": True,
+                    "claim_type": "pattern_candidate",
+                    "entity_scope": "pattern",
+                    "pattern_candidate": "枭印夺食",
+                    "exclusivity_key": "pattern:food_output_profile",
+                    "source_event": "pattern:owl_food",
+                    "target_god": "食神",
+                    "match_ratio": round(match_ratio, 3),
+                    "risk_driver": "owl_food_pattern",
+                    "interaction_layer": "cross_layer",
+                    "manifestation_state": manifestation_state,
+                    "intent_vector": {"食神": food_use_bias},
+                    "god_ring_bias": {
+                        "use_bias": {"食神": food_use_bias},
+                        "taboo_bias": {"偏印": owl_taboo_bias},
+                        "reason": "枭印夺食",
+                    },
+                    "work_evidence": build_work_evidence(
+                        relation_family="owl_food_pattern",
+                        target_god="食神",
+                        members=[],
+                        effect_type="benefit",
+                        layer="cross_layer",
+                        origin_scope="natal",
+                        condition_state=manifestation_state,
+                        impact_ratio=0.0,
+                        match_ratio=round(match_ratio, 3),
+                        path_strength=max(0.1, min(0.36, (owl - owl_threshold) / max(owl_threshold, 1.0))),
+                        targets=["食神"],
+                        counterpart_gods=["偏印"],
+                        actor_gods=["偏印"],
+                        receiver_gods=["食神"],
+                    ),
+                    **_projection_meta("食神"),
+                    "static_basis": build_static_basis(
+                        physics_tensor=physics_tensor,
+                        target_god="食神",
+                        relation_family="owl_food_pattern",
+                        relation_members=[],
+                    ),
+                    "origin_type": "natal",
+                    "origin_multiplier": 1.0,
+                }
+            ))
 
         # 3. 伤官见官 (Officer See Hurt)
         hurt = float(scores.get("伤官", 0))
         offist = float(scores.get("正官", 0))
+        officer_support_total = _clamp01(officer_relief + cluster_factor)
+        exhaust_ratio = hurt / max(offist, 1.0)
         if hurt > 10.0 and offist > 10.0:
             overlap = min(hurt, offist)
             spread = max(hurt, offist)
@@ -314,11 +405,84 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "observe_only": True,
                         "officer_support_relief": round(officer_relief, 3),
                         "formed_officer_cluster_factor": round(cluster_factor, 3),
+                        "work_evidence": build_work_evidence(
+                            relation_family="risk_officer_hurt_contest",
+                            target_god="正官",
+                            members=[],
+                            effect_type="disrupt",
+                            layer="cross_layer",
+                            origin_scope=str(origin_meta["origin_type"] or "natal"),
+                            condition_state=manifestation_state,
+                            impact_ratio=0.0,
+                            match_ratio=round(match_ratio, 3),
+                            path_strength=max(0.12, min(0.4, overlap / max(spread, 1.0))) * max(0.72, 1.0 - cluster_factor * 0.3),
+                            targets=["正官"],
+                            actor_gods=["伤官"],
+                            receiver_gods=["正官"],
+                        ),
                         **_projection_meta("正官"),
                         "static_basis": build_static_basis(
                             physics_tensor=physics_tensor,
                             target_god="正官",
                             relation_family="officer_hurt_contest",
+                            relation_members=[],
+                        ),
+                        **origin_meta,
+                    }
+                ))
+                pattern_match = _clamp01(
+                    0.4
+                    + 0.22 * (overlap / max(spread, 1.0))
+                    + 0.12 * officer_support_total
+                )
+                taboo_bias = round(0.08 + pattern_match * 0.16, 3)
+                use_bias = round(0.05 + pattern_match * 0.12 * max(0.55, officer_support_total), 3)
+                results.append(V17Fact(
+                    plugin_id=self.plugin_id,
+                    text="结构候选「伤官见官」：伤官直撄官星，表达欲与秩序面形成持续对顶。",
+                    causal_tier=self.causal_tier,
+                    priority=0.84,
+                    decision_hint="此类结构不直接改数值，但会把伤官推向忌侧、把正官推向用侧。",
+                    meta={
+                        "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "pattern_candidate",
+                        "entity_scope": "pattern",
+                        "pattern_candidate": "伤官见官",
+                        "exclusivity_key": "pattern:officer_hurt_profile",
+                        "source_event": "pattern:officer_hurt_manifest",
+                        "target_god": "伤官",
+                        "match_ratio": round(pattern_match, 3),
+                        "risk_driver": "officer_hurt_manifest",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": manifestation_state,
+                        "intent_vector": {"伤官": -taboo_bias},
+                        "god_ring_bias": {
+                            "use_bias": {"正官": use_bias},
+                            "taboo_bias": {"伤官": taboo_bias},
+                            "reason": "伤官见官",
+                        },
+                        "work_evidence": build_work_evidence(
+                            relation_family="officer_hurt_manifest",
+                            target_god="伤官",
+                            members=[],
+                            effect_type="harm",
+                            layer="cross_layer",
+                            origin_scope=str(origin_meta["origin_type"] or "natal"),
+                            condition_state=manifestation_state,
+                            impact_ratio=0.0,
+                            match_ratio=round(pattern_match, 3),
+                            path_strength=0.08 + pattern_match * 0.18,
+                            targets=["伤官"],
+                            counterpart_gods=["正官"],
+                            actor_gods=["伤官"],
+                            receiver_gods=["正官"],
+                        ),
+                        **_projection_meta("伤官"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="伤官",
+                            relation_family="officer_hurt_manifest",
                             relation_members=[],
                         ),
                         **origin_meta,
@@ -351,11 +515,153 @@ class RiskMatrixPlugin(V17PluginSpec):
                         "observe_only": True,
                         "officer_support_relief": round(officer_relief, 3),
                         "formed_officer_cluster_factor": round(cluster_factor, 3),
+                        "work_evidence": build_work_evidence(
+                            relation_family="risk_officer_crush",
+                            target_god="正官",
+                            members=[],
+                            effect_type="harm",
+                            layer="cross_layer",
+                            origin_scope=str(origin_meta["origin_type"] or "natal"),
+                            condition_state=manifestation_state,
+                            impact_ratio=0.0,
+                            match_ratio=round(match_ratio, 3),
+                            path_strength=max(0.15, min(0.45, overlap / max(spread, 1.0))) * max(0.68, 1.0 - officer_relief * 0.5),
+                            targets=["正官"],
+                            actor_gods=["伤官"],
+                            receiver_gods=["正官"],
+                        ),
                         **_projection_meta("正官"),
                         "static_basis": build_static_basis(
                             physics_tensor=physics_tensor,
                             target_god="正官",
                             relation_family="officer_crush",
+                            relation_members=[],
+                        ),
+                        **origin_meta,
+                    }
+                ))
+                pattern_match = _clamp01(
+                    0.46
+                    + 0.28 * (overlap / max(spread, 1.0))
+                    + 0.1 * max(0.0, 1.0 - officer_support_total)
+                )
+                taboo_bias = round(0.1 + pattern_match * 0.18, 3)
+                use_bias = round(0.04 + pattern_match * 0.08 * max(0.35, 1.0 - cluster_factor), 3)
+                results.append(V17Fact(
+                    plugin_id=self.plugin_id,
+                    text="结构候选「伤官见官」：伤官冲官未尽，才性与秩序互相牵扯，易成忌点。",
+                    causal_tier=self.causal_tier,
+                    priority=0.86,
+                    decision_hint="此类结构用于体用判断时，通常把伤官向忌侧拉动。",
+                    meta={
+                        "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "pattern_candidate",
+                        "entity_scope": "pattern",
+                        "pattern_candidate": "伤官见官",
+                        "exclusivity_key": "pattern:officer_hurt_profile",
+                        "source_event": "pattern:officer_hurt_crush",
+                        "target_god": "伤官",
+                        "match_ratio": round(pattern_match, 3),
+                        "risk_driver": "officer_hurt_pattern",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": manifestation_state,
+                        "intent_vector": {"伤官": -taboo_bias},
+                        "god_ring_bias": {
+                            "use_bias": {"正官": use_bias},
+                            "taboo_bias": {"伤官": taboo_bias},
+                            "reason": "伤官见官",
+                        },
+                        "work_evidence": build_work_evidence(
+                            relation_family="officer_hurt_pattern",
+                            target_god="伤官",
+                            members=[],
+                            effect_type="harm",
+                            layer="cross_layer",
+                            origin_scope=str(origin_meta["origin_type"] or "natal"),
+                            condition_state=manifestation_state,
+                            impact_ratio=0.0,
+                            match_ratio=round(pattern_match, 3),
+                            path_strength=0.1 + pattern_match * 0.2,
+                            targets=["伤官"],
+                            counterpart_gods=["正官"],
+                            actor_gods=["伤官"],
+                            receiver_gods=["正官"],
+                        ),
+                        **_projection_meta("伤官"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="伤官",
+                            relation_family="officer_hurt_pattern",
+                            relation_members=[],
+                        ),
+                        **origin_meta,
+                    }
+                ))
+
+        if hurt >= 18.0:
+            origin_meta = _origin_meta(clashes, member_key="pair")
+            exhaust_match = _clamp01(
+                0.38
+                + 0.22 * min(1.0, max(0.0, exhaust_ratio - 1.0) / max(officer_exhaust_ratio - 1.0, 0.2))
+                + 0.18 * max(0.0, 1.0 - officer_support_total)
+                + (0.08 if offist <= 10.0 else 0.0)
+            )
+            if (
+                exhaust_ratio >= officer_exhaust_ratio
+                or (offist <= 10.0 and officer_support_total <= officer_exhaust_support_max)
+            ) and officer_support_total <= officer_exhaust_support_max:
+                use_bias = round(0.1 + exhaust_match * 0.2, 3)
+                taboo_bias = round(0.08 + exhaust_match * 0.16, 3)
+                results.append(V17Fact(
+                    plugin_id=self.plugin_id,
+                    text="结构候选「伤官伤尽」：伤官势成一边倒，官星失去承载，才华可脱束外放。",
+                    causal_tier=self.causal_tier,
+                    priority=0.87,
+                    decision_hint="此类结构会把伤官推向喜用，把正官推向忌侧，但仍不直接改十神底数。",
+                    meta={
+                        "impact_ratio": 0.0,
+                        "observe_only": True,
+                        "claim_type": "pattern_candidate",
+                        "entity_scope": "pattern",
+                        "pattern_candidate": "伤官伤尽",
+                        "exclusivity_key": "pattern:officer_hurt_profile",
+                        "source_event": "pattern:officer_hurt_exhaust",
+                        "target_god": "伤官",
+                        "match_ratio": round(exhaust_match, 3),
+                        "risk_driver": "officer_hurt_exhaust",
+                        "interaction_layer": "cross_layer",
+                        "manifestation_state": "manifested" if officer_support_total <= 0.25 else "supported",
+                        "intent_vector": {"伤官": use_bias},
+                        "god_ring_bias": {
+                            "use_bias": {"伤官": use_bias},
+                            "taboo_bias": {"正官": taboo_bias},
+                            "reason": "伤官伤尽",
+                        },
+                        "officer_support_relief": round(officer_relief, 3),
+                        "formed_officer_cluster_factor": round(cluster_factor, 3),
+                        "exhaust_ratio": round(exhaust_ratio, 3),
+                        "work_evidence": build_work_evidence(
+                            relation_family="officer_hurt_exhaust",
+                            target_god="伤官",
+                            members=[],
+                            effect_type="benefit",
+                            layer="cross_layer",
+                            origin_scope=str(origin_meta["origin_type"] or "natal"),
+                            condition_state="manifested" if officer_support_total <= 0.25 else "supported",
+                            impact_ratio=0.0,
+                            match_ratio=round(exhaust_match, 3),
+                            path_strength=0.12 + exhaust_match * 0.2,
+                            targets=["伤官"],
+                            counterpart_gods=["正官"],
+                            actor_gods=["伤官"],
+                            receiver_gods=["正官"],
+                        ),
+                        **_projection_meta("伤官"),
+                        "static_basis": build_static_basis(
+                            physics_tensor=physics_tensor,
+                            target_god="伤官",
+                            relation_family="officer_hurt_exhaust",
                             relation_members=[],
                         ),
                         **origin_meta,

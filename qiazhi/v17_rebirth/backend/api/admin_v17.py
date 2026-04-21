@@ -513,6 +513,12 @@ async def get_plugin_runtime_status(
     knowledge_snapshot = meta.get("knowledge_snapshot") if isinstance(meta.get("knowledge_snapshot"), dict) else {}
     brain_action_queue = meta.get("brain_action_queue") if isinstance(meta.get("brain_action_queue"), list) else []
     auto_ratios = meta.get("plugin_auto_ratio_totals") if isinstance(meta.get("plugin_auto_ratio_totals"), dict) else {}
+    core_engine_authority = meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else {}
+    ten_gods_decomposition_l0 = (
+        physics.get("ten_gods_decomposition_l0")
+        if isinstance(physics, dict) and isinstance(physics.get("ten_gods_decomposition_l0"), dict)
+        else {}
+    )
     recompute_contributions = (
         meta.get("plugin_recompute_contributions")
         if isinstance(meta.get("plugin_recompute_contributions"), list)
@@ -529,6 +535,8 @@ async def get_plugin_runtime_status(
         "knowledge_snapshot": knowledge_snapshot,
         "brain_action_queue": brain_action_queue,
         "auto_ratio_totals": auto_ratios,
+        "core_engine_authority": core_engine_authority,
+        "ten_gods_decomposition_l0": ten_gods_decomposition_l0,
         "recompute_contributions": recompute_contributions,
     }
 

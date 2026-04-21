@@ -114,6 +114,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 relation_family="muku",
                 target_god=god,
                 members=[br],
+                actor_members=[br],
+                receiver_members=[br],
                 effect_type="release" if is_open else "storage",
                 layer=interaction_layer,
                 origin_scope=str(condition.get("origin_type") or "natal"),
@@ -122,6 +124,8 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                 match_ratio=round(_clamp((0.85 if is_open else 0.65) * cond_mul * origin_mul, 0.0, 1.0), 3),
                 path_strength=abs(impact_ratio) * (1.0 if is_open else 0.86),
                 targets=[god],
+                actor_gods=[god] if god else [],
+                receiver_gods=[god] if god else [],
             ),
             "static_basis": build_static_basis(
                 physics_tensor=physics_tensor,

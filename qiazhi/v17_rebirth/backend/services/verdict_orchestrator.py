@@ -200,6 +200,7 @@ class VerdictOrchestrator:
         god_ring_authority = resolve_god_ring_authority(raw_physics=raw_physics, ranked_pairs=ranked)
         god_of_use = list(god_ring_authority.get("god_of_use") or [])
         god_of_taboo = list(god_ring_authority.get("god_of_taboo") or [])
+        tongguan_gods = list(god_ring_authority.get("tongguan_gods") or [])
         total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
 
         def _merge_rows() -> List[Dict[str, Any]]:
@@ -246,6 +247,7 @@ class VerdictOrchestrator:
             will_proxy=will_proxy,
             god_of_use=god_of_use,
             god_of_taboo=god_of_taboo,
+            tongguan_gods=tongguan_gods,
             decision_anchor=decision_anchor,
             user_message=user_message,
             action_signal=action_signal,

@@ -29,6 +29,9 @@ def test_muku_open_gate_boost_controls_open_state(monkeypatch: pytest.MonkeyPatc
     meta = open_meta
     assert meta["condition_multiplier"] > 0
     assert meta["open_gate_boost"] == 1.6
+    evidence = meta["work_evidence"]
+    assert evidence["actor_members"] == evidence["receiver_members"]
+    assert evidence["actor_gods"] == evidence["receiver_gods"]
 
 
 def test_liuhe_stability_weight_controls_locked_energy(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -49,6 +52,8 @@ def test_liuhe_stability_weight_controls_locked_energy(monkeypatch: pytest.Monke
     assert meta["stability_weight"] == 0.5
     assert meta["locked_energy"] == 6.0
     assert meta["impact_ratio"] == 0.1
+    assert meta["work_evidence"]["actor_members"] == ["未"]
+    assert meta["work_evidence"]["receiver_members"] == ["午"]
 
 
 def test_liupo_friction_coeff_controls_effective_loss(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -68,3 +73,5 @@ def test_liupo_friction_coeff_controls_effective_loss(monkeypatch: pytest.Monkey
     assert meta["friction_coeff"] == 0.5
     assert meta["break_loss"] == 0.1
     assert meta["impact_ratio"] == -0.15
+    assert meta["work_evidence"]["actor_members"] == ["子"]
+    assert meta["work_evidence"]["receiver_members"] == ["午"]
