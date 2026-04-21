@@ -115,6 +115,8 @@ def route_conflicts(
 ) -> List[Dict[str, Any]]:
     snapshot = knowledge_snapshot if isinstance(knowledge_snapshot, dict) else {}
     conflict_history = snapshot.get("conflict_history") if isinstance(snapshot.get("conflict_history"), dict) else {}
+    claim_history = snapshot.get("claim_history") if isinstance(snapshot.get("claim_history"), dict) else {}
+    current_targets = claim_history.get("current_targets") if isinstance(claim_history.get("current_targets"), dict) else {}
     preferred = conflict_history.get("recommended_arbiters") if isinstance(conflict_history.get("recommended_arbiters"), dict) else {}
     feedback_preference = conflict_history.get("feedback_arbiters") if isinstance(conflict_history.get("feedback_arbiters"), dict) else {}
     feedback_scores = conflict_history.get("feedback_arbiter_scores") if isinstance(conflict_history.get("feedback_arbiter_scores"), dict) else {}
@@ -152,6 +154,11 @@ def route_conflicts(
         score = _clamp(float(score or 0.0), 0.0, 1.0)
 
         conflict_type = str(cloned.get("conflict_type") or "").strip().lower()
+        target_god = _normalized(cloned.get("target_god"))
+        target_state = current_targets.get(target_god) if isinstance(current_targets.get(target_god), dict) else {}
+        live_tension = _safe_float(target_state.get("flux_tension_load"))
+        live_reinforce = _safe_float(target_state.get("flux_reinforce_load"))
+        live_contest = _safe_float(target_state.get("contest_pressure"))
         # 基础策略 -> 会话学习反馈 -> 置信度后处理
         base_scores = _base_policy_score(cloned)
         candidate_scores: Dict[str, float] = {}
@@ -163,6 +170,15 @@ def route_conflicts(
                 conflict_boost = max(conflict_boost, 0.20)
             if conflict_type == "pattern_family_exclusive" and name == "user":
                 conflict_boost = max(conflict_boost, 0.16)
+            if conflict_type == "same_target_opposite_sign":
+                if name == "llm":
+                    conflict_boost += min(0.26, live_tension * 0.58 + live_contest * 0.10)
+                elif name == "user" and live_tension >= 0.42:
+                    conflict_boost += min(0.18, live_tension * 0.22)
+                elif name == "system":
+                    conflict_boost -= min(0.16, live_tension * 0.34)
+            if conflict_type == "pattern_family_exclusive" and name == "llm":
+                conflict_boost += min(0.16, live_tension * 0.32)
             if severity == "P1" and name == "user":
                 conflict_boost += 0.24
             if severity == "P3" and name == "system":
@@ -221,6 +237,12 @@ def route_conflicts(
             "final_llm": round(_safe_float(candidate_scores.get("llm")), 6),
             "final_user": round(_safe_float(candidate_scores.get("user")), 6),
             "conflict_score": round(score, 6),
+            "live_tension": round(live_tension, 6),
+            "live_reinforce": round(live_reinforce, 6),
+            "live_contest": round(live_contest, 6),
         }
+        cloned["live_target_tension"] = round(live_tension, 4)
+        cloned["live_target_reinforce"] = round(live_reinforce, 4)
+        cloned["live_target_contest"] = round(live_contest, 4)
         out.append(cloned)
     return out

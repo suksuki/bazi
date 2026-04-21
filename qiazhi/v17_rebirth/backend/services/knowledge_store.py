@@ -37,6 +37,7 @@ def build_knowledge_snapshot(
     conflicts: List[Dict[str, Any]],
     conflict_resolutions: List[Dict[str, Any]],
     feedback_rows: Iterable[Dict[str, Any]] | None = None,
+    current_authority: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     claim_types = Counter()
     conflict_types = Counter()
@@ -76,11 +77,28 @@ def build_knowledge_snapshot(
         for target, count in target_gods.most_common(8)
     ]
 
+    authority = current_authority if isinstance(current_authority, dict) else {}
+    effect_scores = authority.get("effect_scores") if isinstance(authority.get("effect_scores"), dict) else {}
+    current_targets: Dict[str, Dict[str, float]] = {}
+    for god, raw in effect_scores.items():
+        row = raw if isinstance(raw, dict) else {}
+        name = _normalized(god)
+        if not name:
+            continue
+        current_targets[name] = {
+            "flux_tension_load": round(_to_float(row.get("flux_tension_load")), 4),
+            "flux_reinforce_load": round(_to_float(row.get("flux_reinforce_load")), 4),
+            "contest_pressure": round(_to_float(row.get("contest_pressure")), 4),
+            "harm_score": round(_to_float(row.get("harm_score")), 4),
+            "resolved_utility_flux": round(_to_float(row.get("resolved_utility_flux", row.get("resolved_utility"))), 4),
+        }
+
     return {
         "claim_history": {
             "total_claims": len(claims),
             "by_type": dict(claim_types),
             "top_targets": top_targets,
+            "current_targets": current_targets,
         },
         "conflict_history": {
             "total_conflicts": len(conflicts),

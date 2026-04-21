@@ -9,6 +9,12 @@ V17.30：十神绝对能量强度引擎（L0 层 — Mass Phase）。
 - 地支透出天干 → Energy *= 1.2
 - 所在支空亡   → Energy *= 0.4
 
+术语口径：
+- 通根只定义为「天干 <- 地支藏干」的支撑关系，主体始终是天干。
+- 透干只定义为「地支藏干 -> 天干显影」的显化关系，主体始终是地支内层。
+- 地支之间不谈“根气”，天干之间不谈“透干”。
+- 通根/透干可视为相对概念，但实现必须基于冻结盘面做单次耦合，禁止递归迭代放大。
+
 返回值 `ten_gods_absolute` / `total_energy_index` 均为绝对累加值，
 典型范围 50.0 ～ 500.0+，量级与命局旺衰成正比。
 """
@@ -113,6 +119,11 @@ REL_ROOT_BONUS_SANHUI: float = 0.18
 REL_ROOT_BONUS_BANHE: float = 0.16
 REL_ROOT_BONUS_LIUHE: float = 0.12
 REL_ROOT_BONUS_ANHE: float = 0.08
+REL_VISIBLE_STEM_RESONANCE_BANHE: float = 3.8
+REL_VISIBLE_STEM_RESONANCE_SANHUI: float = 2.0
+REL_VISIBLE_STEM_RESONANCE_LIUHE: float = 1.8
+REL_VISIBLE_STEM_RESONANCE_ANHE: float = 1.1
+REL_VISIBLE_CROSS_POLARITY_FACTOR: float = 0.82
 REL_ROOT_PENALTY_CHONG: float = 0.12
 REL_ROOT_PENALTY_HAI: float = 0.08
 REL_ROOT_PENALTY_PO: float = 0.06
@@ -1041,10 +1052,174 @@ def _apply_sanhe_foundation_bonus(
     return bonuses
 
 
+def _relation_visible_scope_weight(scope: str) -> float:
+    if scope in NATAL_STEM_POSITION_WEIGHTS:
+        return float(NATAL_STEM_POSITION_WEIGHTS.get(scope, 0.72))
+    if scope == "luck":
+        return float(_get_l0_val("LUCK_PILLAR_FACTOR", 0.85))
+    if scope == "flow":
+        return float(_get_l0_val("FLOW_PILLAR_FACTOR", 0.65))
+    return 0.0
+
+
+def _relation_dominant_hidden_stem(
+    *,
+    relation_element: str,
+    members: List[str],
+    four_pillars: Dict[str, str],
+    luck_pillar: str,
+    flow_pillar: str,
+) -> str:
+    if not relation_element or not members:
+        return ""
+    branch_rows = _runtime_branch_rows(four_pillars, luck_pillar, flow_pillar)
+    member_set = {str(member) for member in members if str(member).strip()}
+    hidden_totals: Dict[str, float] = {}
+    for scope, branch in branch_rows:
+        if branch not in member_set:
+            continue
+        scope_weight = float(ROOT_SCOPE_WEIGHTS.get(scope, 0.5))
+        for hidden_stem, hidden_weight in BRANCH_HIDDEN.get(branch, []):
+            if STEM_ELEMENT.get(hidden_stem, "") != relation_element:
+                continue
+            hidden_totals[hidden_stem] = hidden_totals.get(hidden_stem, 0.0) + float(hidden_weight) * scope_weight
+    if not hidden_totals:
+        return ""
+    return max(hidden_totals.items(), key=lambda item: (item[1], item[0]))[0]
+
+
+def _relation_visible_projection_weights(
+    *,
+    relation_element: str,
+    dominant_hidden_stem: str,
+    daymaster: str,
+    four_pillars: Dict[str, str],
+    luck_pillar: str,
+    flow_pillar: str,
+) -> Dict[str, float]:
+    rel_el = str(relation_element or "")
+    if not rel_el:
+        return {}
+    cross_factor = _get_l0_val("REL_VISIBLE_CROSS_POLARITY_FACTOR", REL_VISIBLE_CROSS_POLARITY_FACTOR)
+    weights: Dict[str, float] = {}
+    for scope, stem in _visible_stem_scope_weights(four_pillars, luck_pillar, flow_pillar):
+        if STEM_ELEMENT.get(stem, "") != rel_el:
+            continue
+        scope_weight = _relation_visible_scope_weight(scope)
+        if scope_weight <= 0.0:
+            continue
+        polarity_factor = 1.0
+        if dominant_hidden_stem and stem != dominant_hidden_stem:
+            polarity_factor = cross_factor
+        god = ten_god_from_stems(daymaster, stem)
+        weights[god] = weights.get(god, 0.0) + scope_weight * polarity_factor
+    total = sum(weights.values())
+    if total <= 0.0:
+        return {}
+    return {god: weight / total for god, weight in weights.items() if weight > 0.0}
+
+
+def _apply_relation_visible_resonance_bonuses(
+    *,
+    acc: Dict[str, float],
+    decomposition: Dict[str, Dict[str, float]],
+    daymaster: str,
+    four_pillars: Dict[str, str],
+    luck_pillar: str,
+    flow_pillar: str,
+    relation_traces: List[Dict[str, Any]],
+    ledger: EvolutionLedger,
+) -> List[Dict[str, Any]]:
+    bonuses: List[Dict[str, Any]] = []
+    scale_defaults = {
+        "banhe": REL_VISIBLE_STEM_RESONANCE_BANHE,
+        "sanhui": REL_VISIBLE_STEM_RESONANCE_SANHUI,
+        "liuhe": REL_VISIBLE_STEM_RESONANCE_LIUHE,
+        "anhe": REL_VISIBLE_STEM_RESONANCE_ANHE,
+    }
+    scale_keys = {
+        "banhe": "REL_VISIBLE_STEM_RESONANCE_BANHE",
+        "sanhui": "REL_VISIBLE_STEM_RESONANCE_SANHUI",
+        "liuhe": "REL_VISIBLE_STEM_RESONANCE_LIUHE",
+        "anhe": "REL_VISIBLE_STEM_RESONANCE_ANHE",
+    }
+    for trace in relation_traces:
+        kind = str(trace.get("kind") or "")
+        relation_element = str(trace.get("relation_element") or "")
+        intensity = float(trace.get("intensity") or 0.0)
+        members = [str(x) for x in (trace.get("members") or []) if str(x).strip()]
+        if kind not in scale_defaults or not relation_element or intensity <= 0.0 or not members:
+            continue
+        dominant_hidden_stem = _relation_dominant_hidden_stem(
+            relation_element=relation_element,
+            members=members,
+            four_pillars=four_pillars,
+            luck_pillar=luck_pillar,
+            flow_pillar=flow_pillar,
+        )
+        projection = _relation_visible_projection_weights(
+            relation_element=relation_element,
+            dominant_hidden_stem=dominant_hidden_stem,
+            daymaster=daymaster,
+            four_pillars=four_pillars,
+            luck_pillar=luck_pillar,
+            flow_pillar=flow_pillar,
+        )
+        if not projection:
+            continue
+        scale = _get_l0_val(scale_keys[kind], scale_defaults[kind])
+        bonus_total = max(0.0, _get_l0_val("BRANCH_BASE", 12.0) * intensity * max(0.0, scale))
+        if bonus_total <= 0.0:
+            continue
+        for god, share in projection.items():
+            delta = bonus_total * float(share)
+            if not math.isfinite(delta) or delta <= 0.0:
+                continue
+            acc[god] = acc.get(god, 0.0) + delta
+            _add_decomposition(decomposition, god, momentum_structure=delta)
+            ledger.append_entry(
+                god,
+                acc[god],
+                f"L0_REL_VISIBLE_{kind.upper()}",
+                f"{kind}显神导流·{relation_element}→{god}·share={share:.2f}·dominant={dominant_hidden_stem or '—'}",
+            )
+        bonuses.append(
+            {
+                "kind": kind,
+                "relation_element": relation_element,
+                "members": members,
+                "dominant_hidden_stem": dominant_hidden_stem,
+                "bonus_total": round(bonus_total, 3),
+                "projection": {god: round(float(share), 4) for god, share in projection.items()},
+            }
+        )
+    return bonuses
+
+
 def _void_factor(branch: str, void_branches: str) -> float:
     if branch and void_branches and branch in void_branches:
         return _get_l0_val("VOID_EFFICIENCY", 0.3)
     return 1.0
+
+
+def _projection_bridge_protocol() -> Dict[str, Any]:
+    return {
+        "tonggen_direction": "stem<-branch_hidden",
+        "tougan_direction": "branch_hidden->visible_stem",
+        "same_element_first": True,
+        "polarity_second": True,
+        "exact_root_support_factor": 1.0,
+        "cross_polarity_root_support_factor": _get_l0_val(
+            "CROSS_POLARITY_ROOT_SUPPORT_FACTOR",
+            CROSS_POLARITY_ROOT_SUPPORT_FACTOR,
+        ),
+        "exact_exposed_hidden_gain": _get_l0_val("EXPOSED_HIDDEN_GAIN", EXPOSED_HIDDEN_GAIN),
+        "same_element_visible_relief": 1.0,
+        "rooted_gain_cap": _get_l0_val("ROOTED_GAIN", ROOTED_STEM_GAIN),
+        "single_pass_coupling": True,
+        "recursive_feedback": False,
+        "protocol": "frozen_evidence_single_pass",
+    }
 
 
 def _ensure_decomposition_bucket(
@@ -1162,10 +1337,14 @@ def _finalize_decomposition(
             momentum_other *= scale
             momentum *= scale
             hidden *= scale
+        manifest_r = round(manifest, 2)
+        root_r = round(root, 2)
+        momentum_r = round(momentum, 2)
+        hidden_r = round(hidden, 2)
         out[god] = {
-            "manifest": round(manifest, 2),
-            "root": round(root, 2),
-            "momentum": round(momentum, 2),
+            "manifest": manifest_r,
+            "root": root_r,
+            "momentum": momentum_r,
             "momentum_month_order": round(momentum_month_order, 2),
             "momentum_stage": round(momentum_stage, 2),
             "momentum_stage_lu": round(momentum_stage_lu, 2),
@@ -1174,8 +1353,8 @@ def _finalize_decomposition(
             "momentum_structure": round(momentum_structure, 2),
             "momentum_auxiliary": round(momentum_auxiliary, 2),
             "momentum_other": round(momentum_other, 2),
-            "hidden": round(hidden, 2),
-            "total": round(manifest + root + momentum + hidden, 2),
+            "hidden": hidden_r,
+            "total": round(manifest_r + root_r + momentum_r + hidden_r, 2),
         }
     return out
 
@@ -1495,6 +1674,16 @@ def calc_deity_scores(
         flow_pillar=flow_pillar,
         ledger=ledger,
     )
+    relation_visible_bonuses = _apply_relation_visible_resonance_bonuses(
+        acc=acc,
+        decomposition=decomposition,
+        daymaster=daymaster,
+        four_pillars=four_pillars,
+        luck_pillar=luck_pillar,
+        flow_pillar=flow_pillar,
+        relation_traces=list(root_dynamic_meta.get("traces") or []),
+        ledger=ledger,
+    )
 
     # ── Step 5：月令主气额外标记（实际加持已只作用在月支自身）──
     month_stem, _ = _parse_gz(str(four_pillars.get("month", "")).strip())
@@ -1597,6 +1786,11 @@ def calc_deity_scores(
             "rel_root_bonus_banhe": REL_ROOT_BONUS_BANHE,
             "rel_root_bonus_liuhe": REL_ROOT_BONUS_LIUHE,
             "rel_root_bonus_anhe": REL_ROOT_BONUS_ANHE,
+            "rel_visible_stem_resonance_banhe": REL_VISIBLE_STEM_RESONANCE_BANHE,
+            "rel_visible_stem_resonance_sanhui": REL_VISIBLE_STEM_RESONANCE_SANHUI,
+            "rel_visible_stem_resonance_liuhe": REL_VISIBLE_STEM_RESONANCE_LIUHE,
+            "rel_visible_stem_resonance_anhe": REL_VISIBLE_STEM_RESONANCE_ANHE,
+            "rel_visible_cross_polarity_factor": REL_VISIBLE_CROSS_POLARITY_FACTOR,
             "rel_root_penalty_chong": REL_ROOT_PENALTY_CHONG,
             "rel_root_penalty_hai": REL_ROOT_PENALTY_HAI,
             "rel_root_penalty_po": REL_ROOT_PENALTY_PO,
@@ -1611,5 +1805,7 @@ def calc_deity_scores(
         },
         "root_dynamic_relations": root_dynamic_meta,
         "structural_bonuses": structural_bonuses,
+        "relation_visible_bonuses": relation_visible_bonuses,
+        "projection_bridge_protocol": _projection_bridge_protocol(),
         "ledger": ledger,
     }

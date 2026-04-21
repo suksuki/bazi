@@ -279,18 +279,62 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
         if god and isinstance(row, dict) and not god.startswith("_")
     }
 
-    ranked_use = sorted(valid_rows.items(), key=lambda item: item[1].get("net_utility", 0.0), reverse=True)
-    ranked_taboo = sorted(valid_rows.items(), key=lambda item: item[1].get("harm_score", 0.0), reverse=True)
+    def _use_candidate_score(row: Dict[str, float]) -> float:
+        resolved_flux = _safe_float(row.get("resolved_utility_flux", row.get("resolved_utility", row.get("net_utility", 0.0))), 0.0)
+        stability = _safe_float(row.get("stability_score"), 0.0)
+        outbound_support = _safe_float(row.get("flux_out_support"), 0.0)
+        reinforce_load = _safe_float(row.get("flux_reinforce_load"), 0.0)
+        tension_load = _safe_float(row.get("flux_tension_load"), 0.0)
+        contest_weight = _safe_float(row.get("contest_weight"), 0.0)
+        return (
+            resolved_flux
+            + stability * 0.18
+            + outbound_support * 0.16
+            + reinforce_load * 0.36
+            - tension_load * 0.44
+            - contest_weight * 0.10
+        )
+
+    def _taboo_candidate_score(row: Dict[str, float]) -> float:
+        harm = _safe_float(row.get("harm_score"), 0.0)
+        flux_harm = _safe_float(row.get("flux_harm"), 0.0)
+        outbound_resist = _safe_float(row.get("flux_out_resist"), 0.0)
+        tension_load = _safe_float(row.get("flux_tension_load"), 0.0)
+        contest_weight = _safe_float(row.get("contest_weight"), 0.0)
+        reinforce_load = _safe_float(row.get("flux_reinforce_load"), 0.0)
+        return (
+            harm
+            + flux_harm * 0.42
+            + outbound_resist * 0.18
+            + tension_load * 0.52
+            + contest_weight * 0.14
+            - reinforce_load * 0.12
+        )
+
+    ranked_use = sorted(valid_rows.items(), key=lambda item: _use_candidate_score(item[1]), reverse=True)
+    ranked_taboo = sorted(valid_rows.items(), key=lambda item: _taboo_candidate_score(item[1]), reverse=True)
 
     use_candidates = [
-        {"god": god, "score": row.get("net_utility", 0.0)}
+        {
+            "god": god,
+            "score": round(_use_candidate_score(row), 4),
+            "resolved_flux": round(_safe_float(row.get("resolved_utility_flux", row.get("resolved_utility", 0.0))), 4),
+            "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
+            "reinforce_load": round(_safe_float(row.get("flux_reinforce_load"), 0.0), 4),
+        }
         for god, row in ranked_use[:3]
-        if row.get("net_utility", 0.0) > 0
+        if _use_candidate_score(row) > 0
     ]
     taboo_candidates = [
-        {"god": god, "score": row.get("harm_score", 0.0)}
+        {
+            "god": god,
+            "score": round(_taboo_candidate_score(row), 4),
+            "harm": round(_safe_float(row.get("harm_score"), 0.0), 4),
+            "flux_harm": round(_safe_float(row.get("flux_harm"), 0.0), 4),
+            "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
+        }
         for god, row in ranked_taboo[:3]
-        if row.get("harm_score", 0.0) > 0
+        if _taboo_candidate_score(row) > 0
     ]
     dual_role = [
         {
@@ -301,9 +345,13 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "raw_harm": row.get("raw_harm", 0.0),
             "contest_weight": row.get("contest_weight", 0.0),
             "release_weight": row.get("release_weight", 0.0),
+            "tension_load": row.get("flux_tension_load", 0.0),
+            "reinforce_load": row.get("flux_reinforce_load", 0.0),
         }
         for god, row in valid_rows.items()
-        if row.get("benefit_score", 0.0) > 0 and row.get("harm_score", 0.0) > 0
+        if (
+            row.get("benefit_score", 0.0) > 0 and row.get("harm_score", 0.0) > 0
+        ) or _safe_float(row.get("flux_tension_load"), 0.0) > 0.12
     ]
 
     return {

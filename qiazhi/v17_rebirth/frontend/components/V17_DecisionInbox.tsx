@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 
 import type { Decision } from "@/hooks/useOracleSession";
@@ -119,8 +119,59 @@ type Frame = {
         llm_prompt_preview?: boolean;
       }>;
     };
+    plugins?: {
+      knowledge_snapshot?: {
+        claim_history?: {
+          current_targets?: Record<string, Record<string, unknown>>;
+        };
+      };
+    };
+    god_rings?: {
+      effect_scores?: Record<string, unknown>;
+    };
   };
 };
+
+type FluxStateRow = {
+  target: string;
+  resolvedFlux: number;
+  tension: number;
+  reinforce: number;
+  contest: number;
+  outSupport: number;
+  outResist: number;
+  outNet: number;
+  harm: number;
+};
+
+type DecisionActionMeta = {
+  label: string;
+  hint?: string;
+};
+
+type PlanActionMeta = {
+  approveLabel: string;
+  rejectLabel: string;
+  escalateLabel: string;
+  withdrawLabel: string;
+  recommended: "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW";
+  hint: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function formatSigned(value: number): string {
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
 
 function impactText(decision: Decision): string {
   const impact = decision.physical_impact || {};
@@ -343,7 +394,7 @@ function arbitrationRule(kind: BucketKind): { title: string; detail: string; acc
   };
 }
 
-function routingRationale(kind: BucketKind, decision: Decision): string[] {
+function baseRoutingRationale(kind: BucketKind, decision: Decision): string[] {
   const impact = decision.physical_impact || {};
   const ratio = Math.abs(Number(impact.impact_ratio || 0));
   const level = Number(impact.intensity_level || 0);
@@ -372,6 +423,175 @@ function routingRationale(kind: BucketKind, decision: Decision): string[] {
     lines.push("叙事策略 仅作上下文");
   }
   return lines;
+}
+
+function decisionFluxState(
+  decision: Decision,
+  effectScores: Record<string, unknown>,
+  currentTargets: Record<string, unknown>,
+): FluxStateRow | null {
+  const target = String(decision.target_god || decision.physical_impact?.target_god || "").trim();
+  if (!target) return null;
+  const effectRow = asRecord(effectScores[target]);
+  const currentRow = asRecord(currentTargets[target]);
+  const resolvedFlux = asNumber(
+    effectRow.resolved_utility_flux,
+    asNumber(effectRow.resolved_utility, asNumber(currentRow.resolved_utility_flux)),
+  );
+  const tension = asNumber(effectRow.flux_tension_load, asNumber(currentRow.flux_tension_load));
+  const reinforce = asNumber(effectRow.flux_reinforce_load, asNumber(currentRow.flux_reinforce_load));
+  const contest = asNumber(effectRow.contest_pressure, asNumber(currentRow.contest_pressure));
+  const outSupport = asNumber(effectRow.flux_out_support);
+  const outResist = asNumber(effectRow.flux_out_resist);
+  const outNet = asNumber(effectRow.flux_out_net);
+  const harm = asNumber(effectRow.harm_score, asNumber(currentRow.harm_score));
+  if (![resolvedFlux, tension, reinforce, contest, outSupport, outResist, outNet, harm].some((value) => Math.abs(value) > 0.0001)) {
+    return null;
+  }
+  return {
+    target,
+    resolvedFlux,
+    tension,
+    reinforce,
+    contest,
+    outSupport,
+    outResist,
+    outNet,
+    harm,
+  };
+}
+
+function decisionFluxSummaryLines(
+  decision: Decision,
+  effectScores: Record<string, unknown>,
+  currentTargets: Record<string, unknown>,
+): string[] {
+  const state = decisionFluxState(decision, effectScores, currentTargets);
+  if (!state) return [];
+  const lines = [
+    `M3 ${state.target} · 流后 ${formatSigned(state.resolvedFlux)} · 张力 ${state.tension.toFixed(2)} · 放大 ${state.reinforce.toFixed(2)} · 对抗 ${state.contest.toFixed(2)}`,
+  ];
+  if (Math.abs(state.outNet) > 0.001 || state.outSupport > 0 || state.outResist > 0) {
+    lines.push(
+      `M3 外推 · 支撑 ${state.outSupport.toFixed(2)} / 压制 ${state.outResist.toFixed(2)} / 净值 ${formatSigned(state.outNet)}`,
+    );
+  }
+  return lines;
+}
+
+function decisionFluxHint(
+  kind: BucketKind,
+  decision: Decision,
+  effectScores: Record<string, unknown>,
+  currentTargets: Record<string, unknown>,
+): string[] {
+  const state = decisionFluxState(decision, effectScores, currentTargets);
+  if (!state) return [];
+  if (kind === "manual") {
+    if (state.tension >= 0.28 || state.contest >= 0.12) {
+      return [`M3 判读：${state.target} 当前拉扯偏高，保留人工裁决更稳。`];
+    }
+    if (Math.abs(state.resolvedFlux) >= 0.22 && state.reinforce >= 0.12) {
+      return [`M3 判读：${state.target} 走势已较清晰，但仍建议人工收口确认。`];
+    }
+    return [];
+  }
+  if (kind === "system" || kind === "auto") {
+    if (state.reinforce >= 0.15 && state.tension < 0.28) {
+      return [`M3 判读：${state.target} 同向放大明显、张力可控，适合自动收敛。`];
+    }
+    if (state.tension >= 0.28) {
+      return [`M3 判读：${state.target} 仍有明显拉扯，自动侧以归档/观察更稳。`];
+    }
+    return [];
+  }
+  if (state.tension >= 0.24 || state.contest >= 0.1) {
+    return [`M3 判读：${state.target} 存在争执与解释空间，适合交给 LLM。`];
+  }
+  return [`M3 判读：${state.target} 张力较低，更适合作为提示词素材。`];
+}
+
+function groupFluxSummaryLines(
+  decisions: Decision[],
+  effectScores: Record<string, unknown>,
+  currentTargets: Record<string, unknown>,
+): string[] {
+  const states = Array.from(
+    new Map(
+      (decisions || [])
+        .map((decision) => decisionFluxState(decision, effectScores, currentTargets))
+        .filter((item): item is FluxStateRow => Boolean(item))
+        .sort(
+          (left, right) =>
+            Math.abs(right.tension) + Math.abs(right.resolvedFlux) + right.reinforce -
+            (Math.abs(left.tension) + Math.abs(left.resolvedFlux) + left.reinforce),
+        )
+        .map((item) => [item.target, item]),
+    ).values(),
+  ).slice(0, 2);
+  if (!states.length) return [];
+  const summary = states
+    .map(
+      (item) =>
+        `${item.target} 张力 ${item.tension.toFixed(2)} / 放大 ${item.reinforce.toFixed(2)} / 流后 ${formatSigned(item.resolvedFlux)}`,
+    )
+    .join(" · ");
+  const lines = [`M3 实时场：${summary}`];
+  const dominant = states[0];
+  if (dominant && dominant.tension >= 0.28) {
+    lines.push(`M3 判读：${dominant.target} 是本组的主要拉扯点，建议联动观察。`);
+  }
+  return lines;
+}
+
+function dominantFluxState(
+  decisions: Decision[],
+  effectScores: Record<string, unknown>,
+  currentTargets: Record<string, unknown>,
+): FluxStateRow | null {
+  return (decisions || [])
+    .map((decision) => decisionFluxState(decision, effectScores, currentTargets))
+    .filter((item): item is FluxStateRow => Boolean(item))
+    .sort(
+      (left, right) =>
+        Math.abs(right.tension) +
+          Math.abs(right.resolvedFlux) +
+          right.reinforce +
+          right.contest -
+        (Math.abs(left.tension) + Math.abs(left.resolvedFlux) + left.reinforce + left.contest),
+    )[0] || null;
+}
+
+function actionMetaFromFluxState(state: FluxStateRow | null, count = 1): DecisionActionMeta {
+  const suffix = count > 1 ? ` (${count})` : "";
+  if (!state?.target) {
+    return {
+      label: count > 1 ? `批量处理本组${suffix}` : "处理",
+      hint: "",
+    };
+  }
+  if (state.tension >= 0.28 || state.contest >= 0.12) {
+    return {
+      label: count > 1 ? `整组裁定 ${state.target}${suffix}` : `人工裁定 ${state.target}`,
+      hint: `${state.target} 当前拉扯偏高，建议先人工收口再放行。`,
+    };
+  }
+  if (state.reinforce >= 0.15 && state.resolvedFlux >= 0.18) {
+    return {
+      label: count > 1 ? `确认整组执行${suffix}` : `确认执行 ${state.target}`,
+      hint: `${state.target} 同向放大清晰，可直接确认执行。`,
+    };
+  }
+  if (state.resolvedFlux <= -0.18 || state.harm >= 0.22) {
+    return {
+      label: count > 1 ? `整组审定 ${state.target}${suffix}` : `审定 ${state.target}`,
+      hint: `${state.target} 当前净效偏负，建议谨慎确认。`,
+    };
+  }
+  return {
+    label: count > 1 ? `批量处理本组${suffix}` : `处理 ${state.target}`,
+    hint: `${state.target} 当前可进入常规处理路径。`,
+  };
 }
 
 function decisionReasonTags(kind: BucketKind, decision: Decision): string[] {
@@ -562,6 +782,19 @@ function planRoutingRationale(plan: {
   if (policy) lines.push(`策略 ${policy}`);
   if (reason) lines.push(`原因 ${reason}`);
   if (scores) lines.push(`候选分数 ${scores}`);
+  const tension = asNumber(plan.routing_scores?.live_tension);
+  const reinforce = asNumber(plan.routing_scores?.live_reinforce);
+  const contest = asNumber(plan.routing_scores?.live_contest);
+  if (tension > 0 || reinforce > 0 || contest > 0) {
+    lines.push(`M3 张力 ${tension.toFixed(2)} · 放大 ${reinforce.toFixed(2)} · 对抗 ${contest.toFixed(2)}`);
+    if (route === "LLM" && (tension >= 0.24 || contest >= 0.1)) {
+      lines.push("M3 判读：当前目标争执偏高，模型预审更合适。");
+    } else if (route === "SYSTEM" && reinforce >= 0.15 && tension < 0.28) {
+      lines.push("M3 判读：同向放大清晰，可先走系统收敛。");
+    } else if (route === "USER" && tension >= 0.28) {
+      lines.push("M3 判读：张力偏高，保留人工确认更稳。");
+    }
+  }
   if (plan.updated_at) lines.push(`更新时间 ${String(plan.updated_at)}`);
   return lines;
 }
@@ -569,6 +802,73 @@ function planRoutingRationale(plan: {
 function compactRoutingLines(lines: string[]): string {
   const safe = (lines || []).map((line) => String(line || "").trim()).filter(Boolean);
   return safe.join(" · ");
+}
+
+function derivePlanActionMeta(plan: {
+  routing?: string;
+  routing_scores?: Record<string, unknown>;
+}): PlanActionMeta {
+  const route = String(plan.routing || "system").trim().toLowerCase();
+  const tension = asNumber(plan.routing_scores?.live_tension);
+  const reinforce = asNumber(plan.routing_scores?.live_reinforce);
+  const contest = asNumber(plan.routing_scores?.live_contest);
+  if (route === "llm") {
+    return {
+      approveLabel: "提交模型预审",
+      rejectLabel: "放弃预审",
+      escalateLabel: "改走人工",
+      withdrawLabel: "撤回计划",
+      recommended: "APPROVED",
+      hint:
+        tension >= 0.24 || contest >= 0.1
+          ? "推荐动作：提交模型预审，当前争执较高，适合先让模型判读。"
+          : "推荐动作：提交模型预审，当前更像解释型分歧。",
+    };
+  }
+  if (route === "user") {
+    return {
+      approveLabel: tension >= 0.28 ? "确认人工裁定" : "确认执行",
+      rejectLabel: "驳回本计划",
+      escalateLabel: "升级给模型",
+      withdrawLabel: "撤回计划",
+      recommended: "APPROVED",
+      hint:
+        tension >= 0.28
+          ? "推荐动作：确认人工裁定，当前张力偏高，保留人为收口更稳。"
+          : "推荐动作：确认执行，这组计划已适合你直接拍板。",
+    };
+  }
+  if (tension >= 0.28) {
+    return {
+      approveLabel: "仍按系统执行",
+      rejectLabel: "阻止执行",
+      escalateLabel: "改由人工裁决",
+      withdrawLabel: "撤回计划",
+      recommended: "ESCALATE",
+      hint: "推荐动作：改由人工裁决，当前张力偏高，不宜直接自动执行。",
+    };
+  }
+  if (reinforce >= 0.15 && tension < 0.28) {
+    return {
+      approveLabel: "确认自动执行",
+      rejectLabel: "阻止执行",
+      escalateLabel: "改走人工",
+      withdrawLabel: "撤回计划",
+      recommended: "APPROVED",
+      hint: "推荐动作：确认自动执行，同向放大清晰且张力可控。",
+    };
+  }
+  return {
+    approveLabel: "确认系统处理",
+    rejectLabel: "否决本计划",
+    escalateLabel: "升档人工",
+    withdrawLabel: "撤回计划",
+    recommended: contest >= 0.1 ? "ESCALATE" : "APPROVED",
+    hint:
+      contest >= 0.1
+        ? "推荐动作：升档人工，当前仍有对抗残留。"
+        : "推荐动作：确认系统处理，当前可按常规路径推进。",
+  };
 }
 
 function planIsTerminal(status?: string): boolean {
@@ -604,11 +904,6 @@ function planImpactBriefs(impact?: Record<string, number>): string[] {
     .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
     .slice(0, 4)
     .map(([name, value]) => `${name}: ${(value * 100).toFixed(0)}%`);
-}
-
-function singleDecisionButtonLabel(decision: Decision): string {
-  const target = String(decision.target_god || decision.physical_impact?.target_god || "").trim();
-  return target ? `处理 ${target}` : "处理";
 }
 
 export function V17_DecisionInbox({
@@ -976,6 +1271,48 @@ export function V17_DecisionInbox({
     () => latestSnapshot?.payload?.auto_decisions || [],
     [latestSnapshot?.payload?.auto_decisions],
   );
+  const godRingEffectScores = useMemo(() => {
+    const raw = latestSnapshot?.payload?.god_rings?.effect_scores;
+    return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  }, [latestSnapshot?.payload?.god_rings?.effect_scores]);
+  const knowledgeCurrentTargets = useMemo(() => {
+    const raw = latestSnapshot?.payload?.plugins?.knowledge_snapshot?.claim_history?.current_targets;
+    return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  }, [latestSnapshot?.payload?.plugins?.knowledge_snapshot?.claim_history?.current_targets]);
+  const fluxRationale = useCallback(
+    (decision: Decision) => decisionFluxSummaryLines(decision, godRingEffectScores, knowledgeCurrentTargets),
+    [godRingEffectScores, knowledgeCurrentTargets],
+  );
+  const singleDecisionActionMeta = useCallback(
+    (decision: Decision) =>
+      actionMetaFromFluxState(
+        decisionFluxState(decision, godRingEffectScores, knowledgeCurrentTargets),
+      ),
+    [godRingEffectScores, knowledgeCurrentTargets],
+  );
+  const groupDecisionActionMeta = useCallback(
+    (items: Decision[]) =>
+      actionMetaFromFluxState(
+        dominantFluxState(items, godRingEffectScores, knowledgeCurrentTargets),
+        items.length,
+      ),
+    [godRingEffectScores, knowledgeCurrentTargets],
+  );
+  const groupFluxRationale = useCallback(
+    (items: Decision[]) => groupFluxSummaryLines(items, godRingEffectScores, knowledgeCurrentTargets),
+    [godRingEffectScores, knowledgeCurrentTargets],
+  );
+  const singleDecisionButtonLabel = useCallback(
+    (decision: Decision) => singleDecisionActionMeta(decision).label,
+    [singleDecisionActionMeta],
+  );
+  const routingRationale = useCallback(
+    (kind: BucketKind, decision: Decision) => [
+      ...baseRoutingRationale(kind, decision),
+      ...decisionFluxHint(kind, decision, godRingEffectScores, knowledgeCurrentTargets),
+    ],
+    [godRingEffectScores, knowledgeCurrentTargets],
+  );
   const autoInboxRows = useMemo(() => {
     if (Array.isArray(autoDecisionSource) && autoDecisionSource.length) {
       return autoDecisionSource
@@ -1149,8 +1486,9 @@ export function V17_DecisionInbox({
               const routingPolicy = String(plan.routing_policy || (plan.meta?.routing_policy as string) || "").trim();
               const claim = plan.routing_claim || (plan.meta?.routing_claim as PlanDecisionClaim | undefined);
               const routingRationaleLines = planRoutingRationale(plan);
-              const approveLabel = routingLabel === "LLM 预审" ? "提交自动执行" : "计划通过";
-              const rejectLabel = routingLabel === "LLM 预审" ? "否决预审" : "计划否决";
+              const actionMeta = derivePlanActionMeta(plan);
+              const approveLabel = actionMeta.approveLabel;
+              const rejectLabel = actionMeta.rejectLabel;
               return (
                 <div
                   key={plan.plan_id || `${plan.anchor || "plan"}:${plan.updated_at || ""}:${plan.routing || ""}`}
@@ -1187,6 +1525,7 @@ export function V17_DecisionInbox({
                       {compactRoutingLines(routingRationaleLines)}
                     </p>
                   ) : null}
+                  <p className="mt-1 text-[9px] text-sky-200/85">{actionMeta.hint}</p>
                   {impacts.length ? (
                     <p className="mt-1 text-[10px] text-zinc-300">
                       影响速览：{impacts.join(" · ")}
@@ -1218,7 +1557,11 @@ export function V17_DecisionInbox({
                     type="button"
                     onClick={() => onPlanVote(plan, "REJECTED")}
                     disabled={locked || busyId !== ""}
-                    className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-red-500/20 bg-red-950/20 text-[10px] text-red-300 transition hover:bg-red-500/40 hover:text-red-100 disabled:opacity-30"
+                    className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] transition disabled:opacity-30 ${
+                      actionMeta.recommended === "REJECTED"
+                        ? "border-red-400/40 bg-red-900/35 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.22)]"
+                        : "border-red-500/20 bg-red-950/20 text-red-300 hover:bg-red-500/40 hover:text-red-100"
+                    }`}
                   >
                   <X className="h-3 w-3" /> {rejectLabel}
                   </button>
@@ -1226,7 +1569,11 @@ export function V17_DecisionInbox({
                   type="button"
                   onClick={() => onPlanVote(plan, "APPROVED")}
                   disabled={locked || busyId !== ""}
-                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-300 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30"
+                  className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] transition disabled:opacity-30 ${
+                    actionMeta.recommended === "APPROVED"
+                      ? "border-emerald-400/40 bg-emerald-900/35 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.24)]"
+                      : "border-emerald-500/20 bg-emerald-950/20 text-emerald-300 hover:bg-emerald-500/40 hover:text-emerald-100"
+                  }`}
                 >
                   <Check className="h-3 w-3" /> {approveLabel}
                 </button>
@@ -1236,19 +1583,27 @@ export function V17_DecisionInbox({
                   type="button"
                   onClick={() => onPlanVote(plan, "ESCALATE")}
                   disabled={locked || busyId !== ""}
-                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-amber-500/20 bg-amber-950/20 text-[10px] text-amber-300 transition hover:bg-amber-500/40 hover:text-amber-100 disabled:opacity-30"
+                  className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] transition disabled:opacity-30 ${
+                    actionMeta.recommended === "ESCALATE"
+                      ? "border-amber-400/40 bg-amber-900/35 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.24)]"
+                      : "border-amber-500/20 bg-amber-950/20 text-amber-300 hover:bg-amber-500/40 hover:text-amber-100"
+                  }`}
                 >
                   <span className="h-3 w-3 rounded-full border border-current" />
-                  计划升档
+                  {actionMeta.escalateLabel}
                 </button>
                 <button
                   type="button"
                   onClick={() => onPlanVote(plan, "WITHDRAW")}
                   disabled={locked || busyId !== ""}
-                  className="flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border border-sky-500/20 bg-sky-950/20 text-[10px] text-sky-300 transition hover:bg-sky-500/40 hover:text-sky-100 disabled:opacity-30"
+                  className={`flex h-7 flex-1 items-center justify-center gap-1 rounded-lg border text-[10px] transition disabled:opacity-30 ${
+                    actionMeta.recommended === "WITHDRAW"
+                      ? "border-sky-400/40 bg-sky-900/35 text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.24)]"
+                      : "border-sky-500/20 bg-sky-950/20 text-sky-300 hover:bg-sky-500/40 hover:text-sky-100"
+                  }`}
                 >
                   <span className="h-3 w-3 rounded-full border border-current" />
-                  计划撤回
+                  {actionMeta.withdrawLabel}
                 </button>
               </div>
             </div>
@@ -1391,11 +1746,15 @@ export function V17_DecisionInbox({
           onBatchVote={onBatchVote}
           statusBadge={statusBadge}
           singleDecisionButtonLabel={singleDecisionButtonLabel}
+          singleDecisionActionMeta={singleDecisionActionMeta}
+          groupDecisionActionMeta={groupDecisionActionMeta}
           impactText={impactText}
           patternProfileSummary={patternProfileSummary}
           decisionFocusPreview={decisionFocusPreview}
           bucketReason={bucketReason}
           routingRationale={routingRationale}
+          fluxRationale={fluxRationale}
+          groupFluxRationale={groupFluxRationale}
           compactRoutingLines={compactRoutingLines}
           patternConfidenceChip={patternConfidenceChip}
           decisionReasonTags={decisionReasonTags}
@@ -1417,6 +1776,8 @@ export function V17_DecisionInbox({
           patternProfileSummary={patternProfileSummary}
           patternConfidenceChip={patternConfidenceChip}
           routingRationale={routingRationale}
+          fluxRationale={fluxRationale}
+          groupFluxRationale={groupFluxRationale}
           compactRoutingLines={compactRoutingLines}
           arbitrationTrace={arbitrationTrace}
           decisionFocusPreview={decisionFocusPreview}

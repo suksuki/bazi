@@ -84,6 +84,42 @@ function stageBiasRows(value: unknown) {
     .slice(0, 6);
 }
 
+function formatSigned(value: number): string {
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+function fluxTone(value: number): string {
+  if (value >= 0.35) return "text-emerald-300";
+  if (value <= -0.2) return "text-rose-300";
+  return "text-zinc-300";
+}
+
+function effectScoreSummary(god: string, raw: unknown) {
+  const row = asRecord(raw);
+  return {
+    god,
+    net: asNumber(row.net_utility),
+    resolved: asNumber(row.resolved_utility),
+    resolvedFlux: asNumber(row.resolved_utility_flux, asNumber(row.resolved_utility)),
+    rawBenefit: asNumber(row.raw_benefit),
+    rawHarm: asNumber(row.raw_harm),
+    contest: asNumber(row.contest_pressure),
+    release: asNumber(row.release_pressure),
+    contestPairs: asStringMatrix(row.contest_pairs),
+    contestWeight: asNumber(row.contest_weight),
+    releaseWeight: asNumber(row.release_weight),
+    benefit: asNumber(row.benefit_score),
+    harm: asNumber(row.harm_score),
+    stability: asNumber(row.stability_score),
+    activation: asNumber(row.activation_score),
+    tension: asNumber(row.flux_tension_load),
+    reinforce: asNumber(row.flux_reinforce_load),
+    outSupport: asNumber(row.flux_out_support),
+    outResist: asNumber(row.flux_out_resist),
+    outNet: asNumber(row.flux_out_net),
+  };
+}
+
 export function V17_GodRingExplainCard({
   godRings,
   focusedDecisionId,
@@ -103,6 +139,7 @@ export function V17_GodRingExplainCard({
 
   const useGods = asStringArray(row.god_of_use);
   const tabooGods = asStringArray(row.god_of_taboo);
+  const tongguanGods = asStringArray(row.tongguan_gods);
   const useCandidates = Array.isArray(row.core_use_candidates)
     ? (row.core_use_candidates as LooseRecord[])
     : [];
@@ -145,12 +182,26 @@ export function V17_GodRingExplainCard({
     : [];
 
   const effectRows = Object.entries(effectScores)
-    .map(([god, raw]) => [god, asRecord(raw)] as const)
+    .map(([god, raw]) => effectScoreSummary(god, raw))
     .sort(
       (left, right) =>
-        asNumber(right[1].net_utility) - asNumber(left[1].net_utility) ||
-        asNumber(right[1].harm_score) - asNumber(left[1].harm_score),
+        Math.abs(right.resolvedFlux) - Math.abs(left.resolvedFlux) ||
+        Math.abs(right.net) - Math.abs(left.net),
     )
+    .slice(0, 6);
+  const fluxFocusRows = Array.from(
+    new Set([
+      ...useGods,
+      ...tabooGods,
+      ...tongguanGods,
+      ...effectRows.slice(0, 4).map((item) => item.god),
+    ]),
+  )
+    .map((god) => {
+      const match = effectRows.find((item) => item.god === god);
+      return match ?? effectScoreSummary(god, effectScores[god]);
+    })
+    .filter((item) => item.god)
     .slice(0, 6);
 
   return (
@@ -454,46 +505,108 @@ export function V17_GodRingExplainCard({
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="text-[11px] font-semibold text-zinc-300">M3 实时力场</div>
+                  <div className="text-[10px] text-zinc-500">张力 / 放大 / 对外推拉</div>
+                </div>
+                <div className="space-y-2 text-[10px] text-zinc-400">
+                  {fluxFocusRows.length ? (
+                    fluxFocusRows.map((item) => {
+                      const roles = [
+                        useGods.includes(item.god) ? "用" : "",
+                        tabooGods.includes(item.god) ? "忌" : "",
+                        tongguanGods.includes(item.god) ? "通关" : "",
+                      ].filter(Boolean);
+                      return (
+                        <div key={`flux_${item.god}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-zinc-100">{item.god}</span>
+                              {roles.length ? (
+                                roles.map((label) => (
+                                  <span
+                                    key={`${item.god}_${label}`}
+                                    className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-2 py-0.5 text-[10px] text-cyan-200"
+                                  >
+                                    {label}
+                                  </span>
+                                ))
+                              ) : null}
+                            </div>
+                            <span className={`font-mono ${fluxTone(item.resolvedFlux)}`}>
+                              流后净效 {formatSigned(item.resolvedFlux)}
+                            </span>
+                          </div>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <span>张力 {item.tension.toFixed(2)}</span>
+                            <span>放大 {item.reinforce.toFixed(2)}</span>
+                            <span>外推支撑 {item.outSupport.toFixed(2)}</span>
+                            <span>外推压制 {item.outResist.toFixed(2)}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">
+                              外推净值 {formatSigned(item.outNet)}
+                            </span>
+                            {item.tension > 0 ? (
+                              <span className="rounded-full border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-amber-200">
+                                回路张力 {item.tension.toFixed(2)}
+                              </span>
+                            ) : null}
+                            {item.reinforce > 0 ? (
+                              <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-emerald-200">
+                                同向放大 {item.reinforce.toFixed(2)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">
+                      当前还没有形成可展示的 M3 实时力场。
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="text-[11px] font-semibold text-zinc-300">效应分数</div>
                   <div className="text-[10px] text-zinc-500">
-                    raw / contest / release / resolved
+                    raw / contest / release / resolved / flux
                   </div>
                 </div>
                 <div className="space-y-2 text-[10px] text-zinc-400">
                   {effectRows.length ? (
-                    effectRows.map(([god, item]) => {
-                      const net = asNumber(item.net_utility);
-                      const resolved = asNumber(item.resolved_utility);
-                      const rawBenefit = asNumber(item.raw_benefit);
-                      const rawHarm = asNumber(item.raw_harm);
-                      const contest = asNumber(item.contest_pressure);
-                      const release = asNumber(item.release_pressure);
-                      const contestPairs = asStringMatrix(item.contest_pairs);
-                      const contestDamp = asNumber(item.contest_weight);
-                      const releaseBoost = asNumber(item.release_weight);
+                    effectRows.map((item) => {
+                      const god = item.god;
                       return (
                         <div key={god} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                           <div className="flex items-center justify-between gap-3">
                             <span className="font-medium text-zinc-100">{god}</span>
-                            <span className={`font-mono ${netTone(net)}`}>
-                              net {net.toFixed(2)} / resolved {resolved.toFixed(2)}
+                            <span className={`font-mono ${netTone(item.net)}`}>
+                              net {item.net.toFixed(2)} / resolved {item.resolved.toFixed(2)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            <span>原始利 {rawBenefit.toFixed(2)} / 原始害 {rawHarm.toFixed(2)}</span>
+                            <span>原始利 {item.rawBenefit.toFixed(2)} / 原始害 {item.rawHarm.toFixed(2)}</span>
                             <span>
-                              对抗 {contest.toFixed(2)}（抑制权重 {contestDamp.toFixed(2)}） /
-                              通道 {release.toFixed(2)}（提升权重 {releaseBoost.toFixed(2)}）
+                              对抗 {item.contest.toFixed(2)}（抑制权重 {item.contestWeight.toFixed(2)}） /
+                              通道 {item.release.toFixed(2)}（提升权重 {item.releaseWeight.toFixed(2)}）
                             </span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                            <span>利 {asNumber(item.benefit_score).toFixed(2)}</span>
-                            <span>害 {asNumber(item.harm_score).toFixed(2)}</span>
-                            <span>稳定 {asNumber(item.stability_score).toFixed(2)} / 激活 {asNumber(item.activation_score).toFixed(2)}</span>
+                            <span>利 {item.benefit.toFixed(2)}</span>
+                            <span>害 {item.harm.toFixed(2)}</span>
+                            <span>稳定 {item.stability.toFixed(2)} / 激活 {item.activation.toFixed(2)}</span>
+                          </div>
+                          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                            <span>流后净效 {formatSigned(item.resolvedFlux)}</span>
+                            <span>张力 {item.tension.toFixed(2)}</span>
+                            <span>放大 {item.reinforce.toFixed(2)}</span>
                           </div>
                           <div className="mt-2 flex flex-wrap gap-1.5">
-                            {contestPairs.length ? (
-                              contestPairs.map((pair) => (
+                            {item.contestPairs.length ? (
+                              item.contestPairs.map((pair) => (
                                 <span
                                   key={`${god}_pair_${pair}`}
                                   className="rounded-full border border-zinc-700/90 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300"

@@ -27,6 +27,8 @@ type Props = {
   patternProfileSummary: (decision: Decision) => string;
   patternConfidenceChip: (decision: Decision) => ConfidenceChip;
   routingRationale: (kind: BucketKind, decision: Decision) => string[];
+  fluxRationale: (decision: Decision) => string[];
+  groupFluxRationale: (decisions: Decision[]) => string[];
   compactRoutingLines: (lines: string[]) => string;
   arbitrationTrace: (kind: BucketKind, decision: Decision) => string;
   decisionFocusPreview: (decision: Decision) => string;
@@ -51,6 +53,8 @@ export function V17_AutoDecisionSection({
   patternProfileSummary,
   patternConfidenceChip,
   routingRationale,
+  fluxRationale,
+  groupFluxRationale,
   compactRoutingLines,
   arbitrationTrace,
   decisionFocusPreview,
@@ -100,6 +104,7 @@ export function V17_AutoDecisionSection({
               const channelLabel = group.bucket === "llm" ? "叙事建议" : "系统自动处理";
               const groupRationale = routingRationale(group.bucket, group.decisions[0]);
               const groupBias = groupGodRingBiasSummary(group.decisions);
+              const groupFlux = groupFluxRationale(group.decisions);
               return (
                 <div
                   key={`auto_batch_${group.batch_id}`}
@@ -130,6 +135,15 @@ export function V17_AutoDecisionSection({
                       {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
                     </div>
                   ) : null}
+                  {groupFlux.length ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {groupFlux.map((line) => (
+                        <p key={`${group.batch_id}_${line}`} className="break-words text-sky-200/85">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                   {groupRationale.length ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">{compactRoutingLines(groupRationale)}</p>
                   ) : null}
@@ -149,6 +163,7 @@ export function V17_AutoDecisionSection({
                     {group.decisions.map((decision) => {
                       const confidence = patternConfidenceChip(decision);
                       const bias = godRingBiasSummary(decision);
+                      const fluxLines = fluxRationale(decision);
                       return (
                         <div
                           key={`batch_${group.batch_id}_${decision._ui_id}`}
@@ -167,6 +182,15 @@ export function V17_AutoDecisionSection({
                             <div className="mt-1 space-y-0.5 text-[9px]">
                               {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
                               {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                            </div>
+                          ) : null}
+                          {fluxLines.length ? (
+                            <div className="mt-1 space-y-0.5 text-[9px]">
+                              {fluxLines.map((line) => (
+                                <p key={`${decision._ui_id}_${line}`} className="break-words text-sky-200/85">
+                                  {line}
+                                </p>
+                              ))}
                             </div>
                           ) : null}
                           {confidence ? (
@@ -197,6 +221,7 @@ export function V17_AutoDecisionSection({
             const rationale = routingRationale(entryKind, row);
             const confidence = patternConfidenceChip(row);
             const bias = godRingBiasSummary(row);
+            const fluxLines = fluxRationale(row);
             return (
               <div
                 key={entry.key}
@@ -224,6 +249,15 @@ export function V17_AutoDecisionSection({
                   <div className="mt-1 space-y-0.5 text-[10px]">
                     {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
                     {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                  </div>
+                ) : null}
+                {fluxLines.length ? (
+                  <div className="mt-1 space-y-0.5 text-[10px]">
+                    {fluxLines.map((line) => (
+                      <p key={`${entry.key}_${line}`} className="break-words text-sky-200/85">
+                        {line}
+                      </p>
+                    ))}
                   </div>
                 ) : null}
                 {rationale.length ? (

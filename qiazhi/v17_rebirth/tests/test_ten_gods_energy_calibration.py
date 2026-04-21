@@ -35,11 +35,17 @@ def test_calc_deity_scores_returns_absolute_energy_and_total_index() -> None:
     assert energy_meta.get("constants", {}).get("branch_base") == 12.0
     assert "month_command_god" in energy_meta
     assert "ten_gods_decomposition_l0" in energy_meta
+    assert "projection_bridge_protocol" in energy_meta
     # V17.30：energy_meta 应包含 season_power 信息
     assert "season_power" in energy_meta
     sp = energy_meta["season_power"]
     assert sp["month_branch"] == "寅"
     assert sp["month_element"] == "木"
+    bridge = energy_meta["projection_bridge_protocol"]
+    assert bridge["tonggen_direction"] == "stem<-branch_hidden"
+    assert bridge["tougan_direction"] == "branch_hidden->visible_stem"
+    assert bridge["single_pass_coupling"] is True
+    assert bridge["recursive_feedback"] is False
 
     decomposition = energy_meta["ten_gods_decomposition_l0"]
     assert isinstance(decomposition, dict) and decomposition
@@ -319,6 +325,28 @@ def test_visible_water_stem_can_root_through_same_element_hidden_water() -> None
     assert any("异阴阳根×" in str(row.get("reason") or "") for row in qisha_entries)
 
 
+def test_projection_bridge_protocol_keeps_root_and_exposure_single_pass() -> None:
+    """
+    通根与透干允许双向互证，但实现必须只读取冻结证据单次结算，
+    不能把“增强后的结果”再次回灌成新的根/透干证据。
+    """
+    _, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "甲子", "month": "丙巳", "day": "甲子", "hour": "乙卯"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    bridge = meta.get("projection_bridge_protocol") or {}
+    assert bridge.get("same_element_first") is True
+    assert bridge.get("polarity_second") is True
+    assert float(bridge.get("exact_root_support_factor") or 0.0) == 1.0
+    assert float(bridge.get("cross_polarity_root_support_factor") or 0.0) == 0.55
+    assert float(bridge.get("exact_exposed_hidden_gain") or 0.0) == 1.2
+    assert float(bridge.get("same_element_visible_relief") or 0.0) == 1.0
+    assert bridge.get("single_pass_coupling") is True
+    assert bridge.get("recursive_feedback") is False
+
+
 def test_exact_hidden_root_is_stronger_than_cross_polarity_root() -> None:
     """
     癸水透出时，对子/辰中的癸水属于本根；
@@ -431,6 +459,27 @@ def test_zi_chen_banhe_dynamic_root_boosts_qisha() -> None:
     rel_hits = ((with_meta.get("root_dynamic_relations") or {}).get("hits") or {})
     assert int(rel_hits.get("banhe", 0)) >= 1
     assert float(with_banhe_scores.get("七杀", 0.0)) > float(no_banhe_scores.get("七杀", 0.0))
+
+
+def test_banhe_visible_resonance_prefers_visible_same_element_stem() -> None:
+    """
+    子辰半合成水后，若只有壬水明透，应优先把动态增益导向壬水这一路，
+    而不是继续全部堆到未明透的癸水十神标签。
+    """
+    scores, top4, _, meta = calc_deity_scores(
+        four_pillars={"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+        luck_pillar="庚戌",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    visible_bonuses = meta.get("relation_visible_bonuses") or []
+    banhe_bonus = next(item for item in visible_bonuses if item.get("kind") == "banhe")
+
+    assert banhe_bonus.get("relation_element") == "水"
+    assert banhe_bonus.get("dominant_hidden_stem") == "癸"
+    assert float((banhe_bonus.get("projection") or {}).get("七杀", 0.0)) > 0.99
+    assert float(scores.get("七杀", 0.0)) > 13.0
+    assert "七杀" in top4
 
 
 def test_qisha_chart_with_sanhe_and_luck_stem_keeps_qisha_as_top_axis() -> None:

@@ -101,3 +101,50 @@ def test_physics_canonical_materializes_ten_god_prompt_contract_lines() -> None:
     assert "绝对物理强度" in joined
     assert "十神分解：" in joined
     assert "十神势能细项：" in joined
+
+
+def test_physics_canonical_materializes_core_flux_summary_lines() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+            "luck_pillar": "庚戌",
+            "flow_pillar": "丙午",
+            "meta": {
+                "god_ring_authority": {
+                    "core_flux_meta": {
+                        "interaction_matrix": [
+                            {
+                                "source": "食神",
+                                "target": "偏财",
+                                "net": 0.386,
+                                "support_ratio": 0.82,
+                                "resist_ratio": 0.18,
+                            },
+                            {
+                                "source": "伤官",
+                                "target": "正官",
+                                "net": -0.417,
+                                "support_ratio": 0.14,
+                                "resist_ratio": 0.86,
+                            },
+                        ],
+                        "tension_pairs": [
+                            {
+                                "left": "伤官",
+                                "right": "正官",
+                                "mode": "tension",
+                                "score": 0.317,
+                            }
+                        ],
+                    }
+                }
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "做功解释合同" in joined
+    assert "做功方向矩阵" in joined
+    assert "食神->偏财" in joined
+    assert "伤官->正官" in joined
+    assert "做功回路" in joined

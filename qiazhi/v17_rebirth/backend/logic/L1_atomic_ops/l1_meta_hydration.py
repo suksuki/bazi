@@ -656,6 +656,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         conflicts=scored_conflict_rows,
         conflict_resolutions=conflict_resolutions,
         feedback_rows=conflict_feedback,
+        current_authority=meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else None,
     )
     conflict_rows = route_conflicts(conflicts=scored_conflict_rows, knowledge_snapshot=knowledge_snapshot)
     adjusted_modifier_proposals, settlement_meta = _extract_claims_resolution_plan(

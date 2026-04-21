@@ -10,6 +10,7 @@ type BucketKind = "manual" | "auto" | "system" | "llm";
 type StatusBadge = { label: string; className: string };
 type ConfidenceChip = { label: string; className: string } | null;
 type BiasSummary = { useText: string; tabooText: string } | null;
+type ActionMeta = { label: string; hint?: string };
 
 type Props = {
   decisionsLength: number;
@@ -26,11 +27,15 @@ type Props = {
   ) => Promise<void>;
   statusBadge: (kind: BucketKind, decision: Decision) => StatusBadge;
   singleDecisionButtonLabel: (decision: Decision) => string;
+  singleDecisionActionMeta: (decision: Decision) => ActionMeta;
+  groupDecisionActionMeta: (decisions: Decision[]) => ActionMeta;
   impactText: (decision: Decision) => string;
   patternProfileSummary: (decision: Decision) => string;
   decisionFocusPreview: (decision: Decision) => string;
   bucketReason: (kind: BucketKind, decision: Decision) => string;
   routingRationale: (kind: BucketKind, decision: Decision) => string[];
+  fluxRationale: (decision: Decision) => string[];
+  groupFluxRationale: (decisions: Decision[]) => string[];
   compactRoutingLines: (lines: string[]) => string;
   patternConfidenceChip: (decision: Decision) => ConfidenceChip;
   decisionReasonTags: (kind: BucketKind, decision: Decision) => string[];
@@ -51,11 +56,15 @@ export function V17_ManualDecisionSection({
   onBatchVote,
   statusBadge,
   singleDecisionButtonLabel,
+  singleDecisionActionMeta,
+  groupDecisionActionMeta,
   impactText,
   patternProfileSummary,
   decisionFocusPreview,
   bucketReason,
   routingRationale,
+  fluxRationale,
+  groupFluxRationale,
   compactRoutingLines,
   patternConfidenceChip,
   decisionReasonTags,
@@ -83,6 +92,8 @@ export function V17_ManualDecisionSection({
                 const ratio = Number(group.net_impact_ratio || 0);
                 const groupLabel = directionGroupLabel(ratio, group.direction_label);
                 const groupBias = groupGodRingBiasSummary(group.decisions);
+                const groupFlux = groupFluxRationale(group.decisions);
+                const actionMeta = groupDecisionActionMeta(group.decisions);
                 return (
                   <div
                     key={group.batch_id}
@@ -109,6 +120,20 @@ export function V17_ManualDecisionSection({
                         {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
                       </div>
                     ) : null}
+                    {groupFlux.length ? (
+                      <div className="mt-2 space-y-0.5 text-[10px]">
+                        {groupFlux.map((line) => (
+                          <p key={`${group.batch_id}_${line}`} className="break-words text-sky-200/85">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                    {actionMeta.hint ? (
+                      <p className="mt-2 break-words text-[10px] text-violet-200/85">
+                        动作建议：{actionMeta.hint}
+                      </p>
+                    ) : null}
 
                     {group.labels.length ? (
                       <div className="mt-2 flex flex-wrap gap-1 opacity-80">
@@ -130,7 +155,7 @@ export function V17_ManualDecisionSection({
                         disabled={locked || busyId !== ""}
                         className="flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                       >
-                        <Check className="h-3 w-3" /> 批量处理本组 ({group.decisions.length})
+                        <Check className="h-3 w-3" /> {actionMeta.label}
                       </button>
                     </div>
                   </div>
@@ -145,6 +170,8 @@ export function V17_ManualDecisionSection({
               if (!d) return null;
               const badge = statusBadge("manual", d);
               const bias = godRingBiasSummary(d);
+              const fluxLines = fluxRationale(d);
+              const actionMeta = singleDecisionActionMeta(d);
               return (
                 <div
                   key={`single_batch_${group.batch_id}`}
@@ -175,20 +202,34 @@ export function V17_ManualDecisionSection({
                       {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
                     </div>
                   ) : null}
+                  {fluxLines.length ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {fluxLines.map((line) => (
+                        <p key={`${group.batch_id}_${line}`} className="break-words text-sky-200/85">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {actionMeta.hint ? (
+                    <p className="mt-1 break-words text-[10px] text-violet-200/85">
+                      动作建议：{actionMeta.hint}
+                    </p>
+                  ) : null}
                   {decisionFocusPreview(d) ? (
                     <p className="mt-1 text-[10px] text-fuchsia-200/90">{decisionFocusPreview(d)}</p>
                   ) : null}
                   <div className="mt-3 flex items-center gap-2 border-t border-violet-500/20 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => onVote(d, "APPROVED")}
-                      disabled={locked || busyId !== ""}
-                      className="flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
-                    >
-                      <Check className="h-3 w-3" /> 处理这条决策
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => onVote(d, "APPROVED")}
+                        disabled={locked || busyId !== ""}
+                        className="flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
+                      >
+                        <Check className="h-3 w-3" /> {actionMeta.label}
+                      </button>
+                    </div>
                   </div>
-                </div>
               );
             })
           ) : null}
@@ -200,6 +241,8 @@ export function V17_ManualDecisionSection({
               const sampleConfidence = patternConfidenceChip(sampleDecision);
               const sampleRationale = routingRationale("manual", sampleDecision);
               const groupBias = groupGodRingBiasSummary(group.decisions);
+              const groupFlux = groupFluxRationale(group.decisions);
+              const actionMeta = groupDecisionActionMeta(group.decisions);
               return (
                 <div
                   key={group.key}
@@ -238,6 +281,20 @@ export function V17_ManualDecisionSection({
                       {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
                     </div>
                   ) : null}
+                  {groupFlux.length ? (
+                    <div className="mt-1 space-y-0.5 text-[10px]">
+                      {groupFlux.map((line) => (
+                        <p key={`${group.key}_${line}`} className="break-words text-sky-200/85">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {actionMeta.hint ? (
+                    <p className="mt-1 break-words text-[10px] text-violet-200/85">
+                      动作建议：{actionMeta.hint}
+                    </p>
+                  ) : null}
 
                   <div className="mt-2 flex flex-wrap gap-1 opacity-80">
                     {sampleConfidence ? (
@@ -263,7 +320,7 @@ export function V17_ManualDecisionSection({
                         disabled={locked || busyId !== ""}
                         className="flex h-8 w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-950/20 text-[10px] text-emerald-400 transition hover:bg-emerald-500/40 hover:text-emerald-100 disabled:opacity-30 shadow-[0_4px_12px_rgba(16,185,129,0.15)]"
                       >
-                        <Check className="h-3 w-3" /> 批量处理本组 ({group.decisions.length})
+                        <Check className="h-3 w-3" /> {actionMeta.label}
                       </button>
                     </div>
                   ) : null}
@@ -272,6 +329,8 @@ export function V17_ManualDecisionSection({
                     {group.decisions.map((d) => {
                       const decisionConfidence = patternConfidenceChip(d);
                       const bias = godRingBiasSummary(d);
+                      const fluxLines = fluxRationale(d);
+                      const actionMeta = singleDecisionActionMeta(d);
                       return (
                         <div
                           key={d._ui_id}
@@ -306,6 +365,20 @@ export function V17_ManualDecisionSection({
                               {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
                               {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
                             </div>
+                          ) : null}
+                          {fluxLines.length ? (
+                            <div className="mt-1 space-y-0.5 text-[9px]">
+                              {fluxLines.map((line) => (
+                                <p key={`${d._ui_id}_${line}`} className="break-words text-sky-200/85">
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          ) : null}
+                          {actionMeta.hint ? (
+                            <p className="mt-1 break-words text-[9px] text-violet-200/85">
+                              动作建议：{actionMeta.hint}
+                            </p>
                           ) : null}
                           {decisionConfidence ? (
                             <div className="mt-1">

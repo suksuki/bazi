@@ -837,6 +837,57 @@ def _attach_flux_to_effect_scores(
         row["resolved_utility_flux"] = round(base_resolved + net * 0.42, 4)
 
 
+def _attach_interaction_loads_to_effect_scores(
+    *,
+    effect_scores: Dict[str, Dict[str, float]],
+    interaction_rows: Sequence[Dict[str, Any]],
+    tension_pairs: Sequence[Dict[str, Any]],
+) -> None:
+    outbound_support: Dict[str, float] = {}
+    outbound_resist: Dict[str, float] = {}
+    outbound_net: Dict[str, float] = {}
+    tension_load: Dict[str, float] = {}
+    reinforce_load: Dict[str, float] = {}
+    loop_dominant: Dict[str, float] = {}
+    loop_count: Dict[str, int] = {}
+
+    for row in interaction_rows:
+        source = str(row.get("source") or "").strip()
+        if not source:
+            continue
+        benefit = _safe_float(row.get("benefit"), 0.0)
+        harm = _safe_float(row.get("harm"), 0.0)
+        net = _safe_float(row.get("net"), 0.0)
+        outbound_support[source] = outbound_support.get(source, 0.0) + benefit
+        outbound_resist[source] = outbound_resist.get(source, 0.0) + harm
+        outbound_net[source] = outbound_net.get(source, 0.0) + net
+
+    for row in tension_pairs:
+        left = str(row.get("left") or "").strip()
+        right = str(row.get("right") or "").strip()
+        tension = _safe_float(row.get("tension"), 0.0)
+        reinforce = _safe_float(row.get("reinforce"), 0.0)
+        dominant = _safe_float(row.get("dominant"), 0.0)
+        for god in (left, right):
+            if not god:
+                continue
+            tension_load[god] = tension_load.get(god, 0.0) + tension
+            reinforce_load[god] = reinforce_load.get(god, 0.0) + reinforce
+            loop_dominant[god] = max(loop_dominant.get(god, 0.0), dominant)
+            loop_count[god] = int(loop_count.get(god, 0)) + 1
+
+    for god, row in effect_scores.items():
+        if not isinstance(row, dict):
+            continue
+        row["flux_out_support"] = round(outbound_support.get(god, 0.0), 4)
+        row["flux_out_resist"] = round(outbound_resist.get(god, 0.0), 4)
+        row["flux_out_net"] = round(outbound_net.get(god, 0.0), 4)
+        row["flux_tension_load"] = round(tension_load.get(god, 0.0), 4)
+        row["flux_reinforce_load"] = round(reinforce_load.get(god, 0.0), 4)
+        row["flux_loop_dominant"] = round(loop_dominant.get(god, 0.0), 4)
+        row["flux_loop_count"] = int(loop_count.get(god, 0))
+
+
 def solve_dynamic_flux(
     *,
     paths: Sequence[WorkPath],
@@ -873,6 +924,11 @@ def solve_dynamic_flux(
         node_summary=node_projected_sink_summary,
     )
     _attach_flux_to_effect_scores(effect_scores=effect_scores, sink_summary=sink_summary)
+    _attach_interaction_loads_to_effect_scores(
+        effect_scores=effect_scores,
+        interaction_rows=interaction_rows,
+        tension_pairs=tension_pairs,
+    )
     return {
         "enabled": True,
         "max_depth": int(max_depth),

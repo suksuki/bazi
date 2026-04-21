@@ -111,13 +111,24 @@ export type V17Frame = {
       source?: string;
       mode?: string;
       display_mode?: string;
+      label_of_use?: string;
+      label_of_taboo?: string;
       confidence?: number;
       core_path_count?: number;
+      core_use_candidates?: Array<Record<string, unknown>>;
+      core_taboo_candidates?: Array<Record<string, unknown>>;
+      dual_role_candidates?: Array<Record<string, unknown>>;
       judgement_bias?: {
         use_bias?: Record<string, number>;
         taboo_bias?: Record<string, number>;
       };
       judgement_bias_entries?: Array<Record<string, unknown>>;
+      stage_bias?: Record<string, Record<string, number>>;
+      effect_scores?: Record<string, Record<string, unknown>>;
+      core_graph_meta?: Record<string, unknown>;
+      core_paths_preview?: Array<Record<string, unknown>>;
+      positive_work?: Record<string, unknown>;
+      negative_work?: Record<string, unknown>;
     };
     plugins?: {
       hits?: unknown[];

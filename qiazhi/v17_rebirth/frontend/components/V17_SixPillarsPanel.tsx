@@ -27,6 +27,7 @@ type GodRingInfo = {
   };
   judgement_bias_entries?: Array<Record<string, unknown>>;
   stage_bias?: Record<string, Record<string, number>>;
+  effect_scores?: Record<string, unknown>;
 };
 
 type TenGodDecompositionRow = {
@@ -241,6 +242,73 @@ function topStageBiasRows(raw?: Record<string, Record<string, number>>) {
     .slice(0, 4);
 }
 
+function num(value: unknown): number {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : 0;
+}
+
+function signed(value: number): string {
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+function fluxReasonTone(role: "use" | "taboo" | "tongguan", flux: number) {
+  if (role === "taboo") {
+    return flux <= -0.2 ? "text-rose-200/90" : "text-amber-200/90";
+  }
+  if (role === "tongguan") {
+    return flux >= 0.18 ? "text-cyan-200/90" : "text-zinc-300";
+  }
+  return flux >= 0.2 ? "text-emerald-200/90" : "text-zinc-300";
+}
+
+function buildFluxReason(
+  role: "use" | "taboo" | "tongguan",
+  god: string,
+  raw?: Record<string, unknown>,
+): { god: string; text: string; tone: string } | null {
+  if (!god) return null;
+  const row = raw || {};
+  const resolvedFlux = num(row.resolved_utility_flux ?? row.resolved_utility);
+  const tension = num(row.flux_tension_load);
+  const reinforce = num(row.flux_reinforce_load);
+  const outSupport = num(row.flux_out_support);
+  const outResist = num(row.flux_out_resist);
+  const outNet = num(row.flux_out_net);
+  const contest = num(row.contest_pressure);
+  const metrics = [resolvedFlux, tension, reinforce, outSupport, outResist, outNet, contest];
+  if (!metrics.some((value) => Math.abs(value) > 0.001)) return null;
+
+  let tail = `流后净效 ${signed(resolvedFlux)}，张力 ${tension.toFixed(2)}，放大 ${reinforce.toFixed(2)}。`;
+  if (role === "use") {
+    tail +=
+      outNet >= 0
+        ? ` 对外净支撑 ${signed(outNet)}，当前仍是可借力的受益点。`
+        : ` 虽有净支撑回落 ${signed(outNet)}，但仍在用侧观察区。`;
+  } else if (role === "taboo") {
+    tail +=
+      outResist >= outSupport
+        ? ` 对外压制 ${outResist.toFixed(2)} 强于支撑 ${outSupport.toFixed(2)}，更像耗损源。`
+        : ` 当前压制未完全占优，暂列为风险位。`;
+  } else {
+    tail +=
+      outSupport >= outResist
+        ? ` 对外传导 ${outSupport.toFixed(2)} 高于阻滞 ${outResist.toFixed(2)}，更适合作缓冲通道。`
+        : ` 传导仍受阻 ${outResist.toFixed(2)}，通关效率偏保守。`;
+  }
+
+  return {
+    god,
+    text: tail,
+    tone: fluxReasonTone(role, resolvedFlux),
+  };
+}
+
+function asEffectRow(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
 export function V17_SixPillarsPanel({
   fourPillars,
   luckPillarFromServer,
@@ -318,6 +386,22 @@ export function V17_SixPillarsPanel({
         }>
     : [];
   const stageBiasRows = topStageBiasRows(godRingInfo?.stage_bias);
+  const effectScores = godRingInfo?.effect_scores || {};
+  const useFluxReasons = authorityMode
+    ? useGods
+        .map((god) => buildFluxReason("use", god, asEffectRow(effectScores[god])))
+        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
+    : [];
+  const tabooFluxReasons = authorityMode
+    ? tabooGods
+        .map((god) => buildFluxReason("taboo", god, asEffectRow(effectScores[god])))
+        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
+    : [];
+  const tongguanFluxReasons = authorityMode
+    ? tongguanGods
+        .map((god) => buildFluxReason("tongguan", god, asEffectRow(effectScores[god])))
+        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
+    : [];
   const decompositionRows = topDecompositionRows(tenGodDecomposition);
   const dayMasterStem = dayP.stem && dayP.stem !== "—" ? dayP.stem : "";
 
@@ -411,6 +495,15 @@ export function V17_SixPillarsPanel({
                 </span>
               )}
             </div>
+            {authorityMode && useFluxReasons.length ? (
+              <div className="mt-3 space-y-1.5">
+                {useFluxReasons.slice(0, 2).map((reason) => (
+                  <p key={`use_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
+                    {reason.god}：{reason.text}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-200/80">忌神</p>
@@ -427,6 +520,15 @@ export function V17_SixPillarsPanel({
                 </span>
               )}
             </div>
+            {authorityMode && tabooFluxReasons.length ? (
+              <div className="mt-3 space-y-1.5">
+                {tabooFluxReasons.slice(0, 2).map((reason) => (
+                  <p key={`taboo_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
+                    {reason.god}：{reason.text}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">通关神</p>
@@ -443,6 +545,15 @@ export function V17_SixPillarsPanel({
                 </span>
               )}
             </div>
+            {authorityMode && tongguanFluxReasons.length ? (
+              <div className="mt-3 space-y-1.5">
+                {tongguanFluxReasons.slice(0, 2).map((reason) => (
+                  <p key={`tongguan_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
+                    {reason.god}：{reason.text}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
         {authorityMode && (judgementUsePairs.length || judgementTabooPairs.length || judgementEntries.length || stageBiasRows.length) ? (

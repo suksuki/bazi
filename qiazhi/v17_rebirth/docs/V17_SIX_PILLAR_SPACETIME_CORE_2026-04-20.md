@@ -169,6 +169,10 @@
 - 旁支重复（同组三会/三合出现重复支）会提高强度
 - 被冲刑的成员会触发合势衰减（冲后降效）
 - 所有动态增减都会做“单神上限裁剪”，避免动态层吞掉静态根气主干
+- `通根` 与 `透干` 虽然互为镜像，但协议上必须单向定义：
+  - `通根` = `天干 <- 地支藏干`
+  - `透干` = `地支藏干 -> 天干`
+- 二者都只允许读取冻结盘面证据做单次耦合，禁止把结算后的结果重新回灌为下一轮根气/透干证据
 
 从 2026-04-21 起，做功证据还应尽量显式标注 `actor / receiver`：
 
@@ -307,3 +311,22 @@ Admin 应单独有一块：
 
 - 从“看单条链”升级为“看系统力场”。
 - 能快速定位谁在推动、谁在对冲，以及哪些双向关系会导致放大或拉扯。
+
+Prompt 对齐：
+
+- `PhysicsCanonicalService.materialize_prompt_lines()` 需将 M3 摘要前置到 LLM user prompt 前段。
+- 至少应包含：
+  - 一条“做功解释合同”
+  - 一条“做功方向矩阵”摘要
+  - 一条“做功回路”摘要
+- 原因：
+  - 当前 `llm_user_prompt` 只截取前 16 条事实，M3 若挂在末尾将无法被模型看到。
+
+决策对齐：
+
+- `effect_scores` 现已附带：
+  - `flux_tension_load`
+  - `flux_reinforce_load`
+  - `flux_out_support / flux_out_resist / flux_out_net`
+- `pick_god_candidates()` 应优先使用 `resolved_utility_flux` 并参考张力/放大载荷，而不再只看旧的 `net_utility / harm_score`。
+- `build_knowledge_snapshot() / route_conflicts()` 应读取当前盘面的实时张力，作为冲突分流的现场证据。
