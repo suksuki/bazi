@@ -41,8 +41,17 @@ def resolve_god_ring_core(
     path_role_profile = _build_path_role_profile(paths)
     path_type_profile = _build_path_type_profile(paths)
     top_use = candidates["use_candidates"][0]["score"] if candidates["use_candidates"] else 0.0
+    top_stability = candidates["use_candidates"][0].get("authority_stability", 0.0) if candidates["use_candidates"] else 0.0
+    top_volatility = candidates["use_candidates"][0].get("authority_volatility", 0.0) if candidates["use_candidates"] else 0.0
     evidence_count = len([path for path in paths if path.path_type != "static_basis"])
-    confidence = min(0.94, 0.54 + float(top_use) * 0.33 + min(0.12, evidence_count * 0.02))
+    confidence = min(
+        0.94,
+        0.52
+        + float(top_use) * 0.28
+        + min(0.12, evidence_count * 0.02)
+        + min(0.10, float(top_stability) * 0.12)
+        - min(0.06, float(top_volatility) * 0.08),
+    )
     return {
         "graph_meta": {
             "node_count": len(graph.nodes),

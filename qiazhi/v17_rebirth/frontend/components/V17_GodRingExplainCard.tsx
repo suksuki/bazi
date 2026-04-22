@@ -117,6 +117,11 @@ function effectScoreSummary(god: string, raw: unknown) {
     outSupport: asNumber(row.flux_out_support),
     outResist: asNumber(row.flux_out_resist),
     outNet: asNumber(row.flux_out_net),
+    authorityEnergy: asNumber(row.authority_energy),
+    authorityStability: asNumber(row.authority_stability),
+    authorityVolatility: asNumber(row.authority_volatility),
+    authorityProfile: asString(row.authority_profile).trim(),
+    authorityReason: asString(row.authority_reason).trim(),
   };
 }
 
@@ -157,7 +162,11 @@ export function V17_GodRingExplainCard({
     ? (row.core_paths_preview as LooseRecord[])
     : [];
   const judgementBias = asRecord(row.judgement_bias);
+  const judgementProtocol = asRecord(row.judgement_bias_protocol);
+  const judgementSummary = asRecord(judgementProtocol.summary);
   const stageBias = stageBiasRows(row.stage_bias);
+  const stageProtocol = asRecord(row.stage_bias_protocol);
+  const stageSummary = asRecord(stageProtocol.summary);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
   const judgementBiasEntries = Array.isArray(row.judgement_bias_entries)
@@ -261,13 +270,12 @@ export function V17_GodRingExplainCard({
                       ).map((item, idx) => {
                         const god = asString(item.god || useGods[idx] || "").trim();
                         const score = asNumber(item.score, confidence);
+                        const profile = asString(item.authority_profile).trim();
                         return (
-                          <span
-                            key={`use_${god}_${idx}`}
-                            className={`rounded-full border px-3 py-1 text-[10px] ${candidateTone(score)}`}
-                          >
-                            用 {god || "未定"} · {Math.round(score * 100)}%
-                          </span>
+                          <div key={`use_${god}_${idx}`} className={`rounded-full border px-3 py-1 text-[10px] ${candidateTone(score)}`}>
+                            <div>用 {god || "未定"} · {Math.round(score * 100)}%</div>
+                            {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
+                          </div>
                         );
                       })}
                     </div>
@@ -281,8 +289,9 @@ export function V17_GodRingExplainCard({
                       ).map((item, idx) => {
                         const god = asString(item.god || tabooGods[idx] || "").trim();
                         const score = asNumber(item.score, confidence);
+                        const profile = asString(item.authority_profile).trim();
                         return (
-                          <span
+                          <div
                             key={`taboo_${god}_${idx}`}
                             className={`rounded-full border px-3 py-1 text-[10px] ${
                               score >= 0.5
@@ -290,8 +299,9 @@ export function V17_GodRingExplainCard({
                                 : "border-amber-500/30 bg-amber-950/20 text-amber-200"
                             }`}
                           >
-                            忌 {god || "未定"} · {Math.round(score * 100)}%
-                          </span>
+                            <div>忌 {god || "未定"} · {Math.round(score * 100)}%</div>
+                            {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
+                          </div>
                         );
                       })}
                     </div>
@@ -303,7 +313,14 @@ export function V17_GodRingExplainCard({
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="text-[11px] font-semibold text-zinc-300">禄刃阶段偏置</div>
-                    <div className="text-[10px] text-zinc-500">为何会推用 / 推忌</div>
+                    <div className="text-[10px] text-zinc-500">
+                      {asString(stageProtocol.contract).trim()
+                        ? `${asString(stageProtocol.contract).trim()} · 条目 ${asNumber(stageSummary.entry_count)}`
+                        : "为何会推用 / 推忌"}
+                    </div>
+                  </div>
+                  <div className="mb-2 text-[10px] leading-5 text-zinc-500">
+                    阶段偏置只作为 authority 的承接/波动修正，不回写 L0/L1 物理根分。
                   </div>
                   <div className="space-y-2 text-[10px] text-zinc-300">
                     {stageBias.map((entry) => (
@@ -414,7 +431,14 @@ export function V17_GodRingExplainCard({
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="text-[11px] font-semibold text-zinc-300">判定 Bias 账本</div>
-                  <div className="text-[10px] text-zinc-500">谁在推动体用</div>
+                  <div className="text-[10px] text-zinc-500">
+                    {asString(judgementProtocol.contract).trim()
+                      ? `${asString(judgementProtocol.contract).trim()} · 条目 ${asNumber(judgementSummary.entry_count)} · 目标 ${asNumber(judgementSummary.target_count)}`
+                      : "谁在推动体用"}
+                  </div>
+                </div>
+                <div className="mb-3 text-[10px] leading-5 text-zinc-500">
+                  L2 judgement 只输出 bias / evidence / narrative hint，用来影响体用裁决，不直接改写 L0/L1 物理结算。
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
@@ -604,6 +628,17 @@ export function V17_GodRingExplainCard({
                             <span>张力 {item.tension.toFixed(2)}</span>
                             <span>放大 {item.reinforce.toFixed(2)}</span>
                           </div>
+                          {item.authorityProfile ? (
+                            <div className="mt-2 rounded-lg border border-cyan-500/15 bg-cyan-950/10 px-3 py-2 text-[10px] text-cyan-100/90">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-medium">{item.authorityProfile}</span>
+                                <span>
+                                  能量 {item.authorityEnergy.toFixed(2)} · 稳定 {item.authorityStability.toFixed(2)} · 波动 {item.authorityVolatility.toFixed(2)}
+                                </span>
+                              </div>
+                              {item.authorityReason ? <div className="mt-1 text-zinc-400">{item.authorityReason}</div> : null}
+                            </div>
+                          ) : null}
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {item.contestPairs.length ? (
                               item.contestPairs.map((pair) => (

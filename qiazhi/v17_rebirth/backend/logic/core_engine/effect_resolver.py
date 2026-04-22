@@ -37,6 +37,10 @@ def _safe_float(value: Any, fallback: float = 0.0) -> float:
         return float(fallback)
 
 
+def _clamp(value: float, low: float = 0.0, high: float = 1.5) -> float:
+    return max(low, min(high, float(value)))
+
+
 def _to_god(value: Any) -> str:
     return str(value or "").strip()
 
@@ -279,37 +283,14 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
         if god and isinstance(row, dict) and not god.startswith("_")
     }
 
+    for row in valid_rows.values():
+        _apply_authority_axis_metrics(row)
+
     def _use_candidate_score(row: Dict[str, float]) -> float:
-        resolved_flux = _safe_float(row.get("resolved_utility_flux", row.get("resolved_utility", row.get("net_utility", 0.0))), 0.0)
-        stability = _safe_float(row.get("stability_score"), 0.0)
-        outbound_support = _safe_float(row.get("flux_out_support"), 0.0)
-        reinforce_load = _safe_float(row.get("flux_reinforce_load"), 0.0)
-        tension_load = _safe_float(row.get("flux_tension_load"), 0.0)
-        contest_weight = _safe_float(row.get("contest_weight"), 0.0)
-        return (
-            resolved_flux
-            + stability * 0.18
-            + outbound_support * 0.16
-            + reinforce_load * 0.36
-            - tension_load * 0.44
-            - contest_weight * 0.10
-        )
+        return _safe_float(row.get("authority_use_score"), 0.0)
 
     def _taboo_candidate_score(row: Dict[str, float]) -> float:
-        harm = _safe_float(row.get("harm_score"), 0.0)
-        flux_harm = _safe_float(row.get("flux_harm"), 0.0)
-        outbound_resist = _safe_float(row.get("flux_out_resist"), 0.0)
-        tension_load = _safe_float(row.get("flux_tension_load"), 0.0)
-        contest_weight = _safe_float(row.get("contest_weight"), 0.0)
-        reinforce_load = _safe_float(row.get("flux_reinforce_load"), 0.0)
-        return (
-            harm
-            + flux_harm * 0.42
-            + outbound_resist * 0.18
-            + tension_load * 0.52
-            + contest_weight * 0.14
-            - reinforce_load * 0.12
-        )
+        return _safe_float(row.get("authority_taboo_score"), 0.0)
 
     ranked_use = sorted(valid_rows.items(), key=lambda item: _use_candidate_score(item[1]), reverse=True)
     ranked_taboo = sorted(valid_rows.items(), key=lambda item: _taboo_candidate_score(item[1]), reverse=True)
@@ -319,6 +300,11 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "god": god,
             "score": round(_use_candidate_score(row), 4),
             "resolved_flux": round(_safe_float(row.get("resolved_utility_flux", row.get("resolved_utility", 0.0))), 4),
+            "authority_energy": round(_safe_float(row.get("authority_energy"), 0.0), 4),
+            "authority_stability": round(_safe_float(row.get("authority_stability"), 0.0), 4),
+            "authority_volatility": round(_safe_float(row.get("authority_volatility"), 0.0), 4),
+            "authority_profile": str(row.get("authority_profile") or "").strip(),
+            "authority_reason": str(row.get("authority_reason") or "").strip(),
             "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
             "reinforce_load": round(_safe_float(row.get("flux_reinforce_load"), 0.0), 4),
         }
@@ -331,6 +317,11 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "score": round(_taboo_candidate_score(row), 4),
             "harm": round(_safe_float(row.get("harm_score"), 0.0), 4),
             "flux_harm": round(_safe_float(row.get("flux_harm"), 0.0), 4),
+            "authority_energy": round(_safe_float(row.get("authority_energy"), 0.0), 4),
+            "authority_stability": round(_safe_float(row.get("authority_stability"), 0.0), 4),
+            "authority_volatility": round(_safe_float(row.get("authority_volatility"), 0.0), 4),
+            "authority_profile": str(row.get("authority_profile") or "").strip(),
+            "authority_reason": str(row.get("authority_reason") or "").strip(),
             "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
         }
         for god, row in ranked_taboo[:3]
@@ -347,6 +338,8 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "release_weight": row.get("release_weight", 0.0),
             "tension_load": row.get("flux_tension_load", 0.0),
             "reinforce_load": row.get("flux_reinforce_load", 0.0),
+            "authority_profile": row.get("authority_profile", ""),
+            "authority_reason": row.get("authority_reason", ""),
         }
         for god, row in valid_rows.items()
         if (
@@ -359,3 +352,127 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
         "taboo_candidates": taboo_candidates,
         "dual_role_candidates": sorted(dual_role, key=lambda item: max(item["benefit"], item["risk"]), reverse=True)[:3],
     }
+
+
+def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
+    resolved_flux = _safe_float(row.get("resolved_utility_flux", row.get("resolved_utility", row.get("net_utility", 0.0))), 0.0)
+    flux_net = _safe_float(row.get("flux_net"), 0.0)
+    benefit = _safe_float(row.get("benefit_score"), 0.0)
+    harm = _safe_float(row.get("harm_score"), 0.0)
+    activation = _safe_float(row.get("activation_score"), 0.0)
+    stability = _safe_float(row.get("stability_score"), 0.0)
+    contest = _safe_float(row.get("contest_weight", row.get("contest_pressure", 0.0)), 0.0)
+    release = _safe_float(row.get("release_weight", row.get("release_pressure", 0.0)), 0.0)
+    flux_harm = _safe_float(row.get("flux_harm"), 0.0)
+    outbound_support = _safe_float(row.get("flux_out_support"), 0.0)
+    outbound_resist = _safe_float(row.get("flux_out_resist"), 0.0)
+    tension = _safe_float(row.get("flux_tension_load"), 0.0)
+    reinforce = _safe_float(row.get("flux_reinforce_load"), 0.0)
+
+    energy = max(
+        0.0,
+        abs(resolved_flux) * 0.82
+        + abs(flux_net) * 0.18
+        + benefit * 0.44
+        + harm * 0.08
+        + activation * 0.22,
+    )
+    stability_axis = _clamp(
+        stability * 0.78
+        + reinforce * 0.56
+        + release * 0.16
+        + outbound_support * 0.10
+        - tension * 0.52
+        - contest * 0.22
+        - flux_harm * 0.08,
+        0.0,
+        1.35,
+    )
+    volatility_axis = _clamp(
+        activation * 0.32
+        + tension * 0.82
+        + contest * 0.34
+        + outbound_resist * 0.16
+        + harm * 0.14
+        + flux_harm * 0.18
+        - stability * 0.20
+        - reinforce * 0.12
+        - release * 0.06,
+        0.0,
+        1.6,
+    )
+    axis_balance = round(stability_axis - volatility_axis, 4)
+    profile = _authority_profile_label(energy, stability_axis, volatility_axis)
+    reason = _authority_reason(profile, energy, stability_axis, volatility_axis, tension, reinforce)
+
+    use_score = (
+        resolved_flux
+        + energy * 0.18
+        + stability_axis * 0.34
+        + outbound_support * 0.12
+        + reinforce * 0.22
+        - volatility_axis * 0.40
+        - contest * 0.08
+    )
+    taboo_score = (
+        harm
+        + flux_harm * 0.42
+        + volatility_axis * 0.54
+        + tension * 0.24
+        + outbound_resist * 0.18
+        + contest * 0.12
+        - stability_axis * 0.18
+        - reinforce * 0.10
+        - release * 0.06
+    )
+
+    row["authority_energy"] = round(energy, 4)
+    row["authority_stability"] = round(stability_axis, 4)
+    row["authority_volatility"] = round(volatility_axis, 4)
+    row["authority_axis_balance"] = axis_balance
+    row["authority_profile"] = profile
+    row["authority_reason"] = reason
+    row["authority_use_score"] = round(use_score, 4)
+    row["authority_taboo_score"] = round(taboo_score, 4)
+
+
+def _authority_profile_label(
+    energy: float,
+    stability_axis: float,
+    volatility_axis: float,
+) -> str:
+    if energy >= 0.9:
+        if stability_axis >= volatility_axis:
+            return "高能稳态"
+        return "高能躁动"
+    if stability_axis >= max(0.18, volatility_axis):
+        return "低能稳态"
+    return "低能低稳"
+
+
+def _authority_reason(
+    profile: str,
+    energy: float,
+    stability_axis: float,
+    volatility_axis: float,
+    tension: float,
+    reinforce: float,
+) -> str:
+    if profile == "高能稳态":
+        return (
+            f"能量{energy:.2f}且稳定承接{stability_axis:.2f}高于波动{volatility_axis:.2f}"
+            f"，放大{reinforce:.2f}可转成有效做功。"
+        )
+    if profile == "高能躁动":
+        return (
+            f"能量{energy:.2f}很高，但波动{volatility_axis:.2f}与张力{tension:.2f}偏大"
+            f"，需防高能失稳。"
+        )
+    if profile == "低能稳态":
+        return (
+            f"绝对能量{energy:.2f}不爆，但稳定承接{stability_axis:.2f}优于波动{volatility_axis:.2f}"
+            f"，可作稳态用神。"
+        )
+    return (
+        f"能量{energy:.2f}与稳定承接{stability_axis:.2f}都偏低，波动{volatility_axis:.2f}难转成有效做功。"
+    )

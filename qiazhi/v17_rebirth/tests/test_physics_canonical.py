@@ -111,6 +111,40 @@ def test_physics_canonical_materializes_core_flux_summary_lines() -> None:
             "flow_pillar": "丙午",
             "meta": {
                 "god_ring_authority": {
+                    "effect_scores": {
+                        "正官": {
+                            "authority_profile": "高能躁动",
+                            "authority_energy": 1.12,
+                            "authority_stability": 0.18,
+                            "authority_volatility": 0.64,
+                            "authority_use_score": 0.42,
+                            "authority_taboo_score": 0.88,
+                        },
+                        "正印": {
+                            "authority_profile": "低能稳态",
+                            "authority_energy": 0.72,
+                            "authority_stability": 0.46,
+                            "authority_volatility": 0.12,
+                            "authority_use_score": 0.84,
+                            "authority_taboo_score": 0.14,
+                        },
+                    },
+                    "judgement_bias_protocol": {
+                        "summary": {
+                            "entry_count": 3,
+                            "total_use_bias": 0.42,
+                            "total_taboo_bias": 0.28,
+                        }
+                    },
+                    "stage_bias_protocol": {
+                        "summary": {
+                            "entry_count": 2,
+                            "total_use_boost": 0.18,
+                            "total_taboo_boost": 0.06,
+                            "total_stability_boost": 0.09,
+                            "total_volatility_boost": 0.12,
+                        }
+                    },
                     "core_flux_meta": {
                         "interaction_matrix": [
                             {
@@ -148,6 +182,10 @@ def test_physics_canonical_materializes_core_flux_summary_lines() -> None:
     assert "食神->偏财" in joined
     assert "伤官->正官" in joined
     assert "做功回路" in joined
+    assert "体用双轴合同" in joined
+    assert "正官 高能躁动" in joined
+    assert "判定偏置合同" in joined
+    assert "阶段偏置摘要" in joined
 
 
 def test_physics_canonical_frontloads_relation_and_pattern_percentages() -> None:

@@ -159,6 +159,14 @@ def route_conflicts(
         live_tension = _safe_float(target_state.get("flux_tension_load"))
         live_reinforce = _safe_float(target_state.get("flux_reinforce_load"))
         live_contest = _safe_float(target_state.get("contest_pressure"))
+        live_judgement_use = _safe_float(target_state.get("judgement_use_bias"))
+        live_judgement_taboo = _safe_float(target_state.get("judgement_taboo_bias"))
+        live_judgement_entries = _safe_float(target_state.get("judgement_entry_count"))
+        live_stage_use = _safe_float(target_state.get("stage_use_boost"))
+        live_stage_taboo = _safe_float(target_state.get("stage_taboo_boost"))
+        live_stage_stability = _safe_float(target_state.get("stage_stability_boost"))
+        live_stage_volatility = _safe_float(target_state.get("stage_volatility_boost"))
+        authority_profile = _normalized(target_state.get("authority_profile"))
         # 基础策略 -> 会话学习反馈 -> 置信度后处理
         base_scores = _base_policy_score(cloned)
         candidate_scores: Dict[str, float] = {}
@@ -173,12 +181,21 @@ def route_conflicts(
             if conflict_type == "same_target_opposite_sign":
                 if name == "llm":
                     conflict_boost += min(0.26, live_tension * 0.58 + live_contest * 0.10)
+                    conflict_boost += min(0.16, min(live_judgement_use, live_judgement_taboo) * 0.42 + live_judgement_entries * 0.03)
                 elif name == "user" and live_tension >= 0.42:
                     conflict_boost += min(0.18, live_tension * 0.22)
+                    if authority_profile == "高能躁动":
+                        conflict_boost += min(0.12, live_stage_volatility * 0.24 + live_judgement_entries * 0.02)
                 elif name == "system":
                     conflict_boost -= min(0.16, live_tension * 0.34)
+                    conflict_boost -= min(0.08, min(live_judgement_use, live_judgement_taboo) * 0.18)
             if conflict_type == "pattern_family_exclusive" and name == "llm":
                 conflict_boost += min(0.16, live_tension * 0.32)
+                conflict_boost += min(0.14, live_judgement_entries * 0.04 + (live_judgement_use + live_judgement_taboo) * 0.14)
+            if conflict_type == "pattern_family_exclusive" and name == "user" and authority_profile == "高能躁动":
+                conflict_boost += min(0.12, live_stage_volatility * 0.22 + live_tension * 0.08)
+            if conflict_type == "same_event_duplicate" and name == "system":
+                conflict_boost += min(0.08, live_stage_stability * 0.12 + max(live_stage_use, live_stage_taboo) * 0.08)
             if severity == "P1" and name == "user":
                 conflict_boost += 0.24
             if severity == "P3" and name == "system":
@@ -240,9 +257,23 @@ def route_conflicts(
             "live_tension": round(live_tension, 6),
             "live_reinforce": round(live_reinforce, 6),
             "live_contest": round(live_contest, 6),
+            "live_judgement_use": round(live_judgement_use, 6),
+            "live_judgement_taboo": round(live_judgement_taboo, 6),
+            "live_judgement_entries": round(live_judgement_entries, 6),
+            "live_stage_use": round(live_stage_use, 6),
+            "live_stage_taboo": round(live_stage_taboo, 6),
+            "live_stage_stability": round(live_stage_stability, 6),
+            "live_stage_volatility": round(live_stage_volatility, 6),
         }
         cloned["live_target_tension"] = round(live_tension, 4)
         cloned["live_target_reinforce"] = round(live_reinforce, 4)
         cloned["live_target_contest"] = round(live_contest, 4)
+        cloned["live_target_judgement_use"] = round(live_judgement_use, 4)
+        cloned["live_target_judgement_taboo"] = round(live_judgement_taboo, 4)
+        cloned["live_target_judgement_entries"] = round(live_judgement_entries, 4)
+        cloned["live_target_stage_use"] = round(live_stage_use, 4)
+        cloned["live_target_stage_taboo"] = round(live_stage_taboo, 4)
+        cloned["live_target_stage_stability"] = round(live_stage_stability, 4)
+        cloned["live_target_stage_volatility"] = round(live_stage_volatility, 4)
         out.append(cloned)
     return out

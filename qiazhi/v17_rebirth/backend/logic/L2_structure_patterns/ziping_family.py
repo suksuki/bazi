@@ -14,7 +14,10 @@ from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import 
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config
-from v17_rebirth.backend.services.plugin_display import plugin_source_label
+from v17_rebirth.backend.services.authority_judgement_protocol import (
+    build_judgement_bias_protocol,
+    build_stage_bias_protocol,
+)
 
 
 def _energy_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
@@ -151,63 +154,6 @@ def _decision_rows(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
             seen.add(fingerprint)
             rows.append(row)
     return rows
-
-
-def _collect_god_ring_bias(decision_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
-    use_bias: Dict[str, float] = {}
-    taboo_bias: Dict[str, float] = {}
-    entries: List[Dict[str, Any]] = []
-    for row in decision_rows:
-        if not isinstance(row, dict):
-            continue
-        impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
-        bias = impact.get("god_ring_bias") if isinstance(impact.get("god_ring_bias"), dict) else {}
-        use_entry: Dict[str, float] = {}
-        taboo_entry: Dict[str, float] = {}
-        for god, raw in (bias.get("use_bias") or {}).items() if isinstance(bias.get("use_bias"), dict) else []:
-            name = str(god or "").strip()
-            if not name:
-                continue
-            try:
-                value = float(raw or 0.0)
-            except (TypeError, ValueError):
-                value = 0.0
-            if value > 0.0:
-                use_bias[name] = use_bias.get(name, 0.0) + value
-                use_entry[name] = round(use_entry.get(name, 0.0) + value, 3)
-        for god, raw in (bias.get("taboo_bias") or {}).items() if isinstance(bias.get("taboo_bias"), dict) else []:
-            name = str(god or "").strip()
-            if not name:
-                continue
-            try:
-                value = float(raw or 0.0)
-            except (TypeError, ValueError):
-                value = 0.0
-            if value > 0.0:
-                taboo_bias[name] = taboo_bias.get(name, 0.0) + value
-                taboo_entry[name] = round(taboo_entry.get(name, 0.0) + value, 3)
-        if use_entry or taboo_entry:
-            source = str(row.get("plugin_id") or row.get("source") or "").strip()
-            entries.append(
-                {
-                    "decision_id": str(row.get("id") or "").strip(),
-                    "plugin_id": source,
-                    "source_label": plugin_source_label(source, fallback=row.get("label") or row.get("title") or ""),
-                    "decision_label": str(row.get("label") or row.get("title") or "").strip(),
-                    "reason": str(bias.get("reason") or row.get("title") or row.get("label") or "").strip(),
-                    "target_god": str(row.get("target_god") or impact.get("target_god") or "").strip(),
-                    "use_bias": use_entry,
-                    "taboo_bias": taboo_entry,
-                }
-            )
-    entries.sort(
-        key=lambda item: (
-            sum(float(v or 0.0) for v in (item.get("use_bias") or {}).values())
-            + sum(float(v or 0.0) for v in (item.get("taboo_bias") or {}).values())
-        ),
-        reverse=True,
-    )
-    return {"use_bias": use_bias, "taboo_bias": taboo_bias, "entries": entries}
 
 
 def _ziping_family_profile(scores: Dict[str, float], *, family: str) -> Dict[str, Any]:
@@ -533,7 +479,13 @@ class ZiPingGodRingResolverPlugin(V17PluginSpec):
             god: float((row if isinstance(row, dict) else {}).get("harm_score") or 0.0)
             for god, row in effect_scores.items()
         }
-        judgement_bias = _collect_god_ring_bias(decision_rows)
+        stage_protocol = build_stage_bias_protocol(stage_bias)
+        judgement_protocol = build_judgement_bias_protocol(decision_rows)
+        judgement_bias = {
+            "use_bias": dict(judgement_protocol.get("use_bias") or {}),
+            "taboo_bias": dict(judgement_protocol.get("taboo_bias") or {}),
+            "entries": list(judgement_protocol.get("entries") or []),
+        }
         rank_positive_work = dict(positive_work)
         rank_negative_work = dict(negative_work)
         for god, value in judgement_bias["use_bias"].items():
@@ -656,7 +608,9 @@ class ZiPingGodRingResolverPlugin(V17PluginSpec):
                 "taboo_bias": {k: round(v, 3) for k, v in judgement_bias["taboo_bias"].items() if v > 0},
             },
             "judgement_bias_entries": list(judgement_bias.get("entries") or [])[:12],
+            "judgement_bias_protocol": judgement_protocol,
             "stage_bias": stage_bias,
+            "stage_bias_protocol": stage_protocol,
         }
         primary_god = use_gods[0] if use_gods else dominant_god
         interaction_meta = _ziping_interaction_meta(

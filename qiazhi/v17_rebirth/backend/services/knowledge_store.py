@@ -4,6 +4,8 @@ from collections import Counter
 from typing import Any, Dict, List
 from typing import Iterable
 
+from v17_rebirth.backend.services.authority_judgement_protocol import authority_target_signal_map
+
 
 def _clamp(value: float, min_value: float, max_value: float) -> float:
     return max(min_value, min(max_value, value))
@@ -79,6 +81,10 @@ def build_knowledge_snapshot(
 
     authority = current_authority if isinstance(current_authority, dict) else {}
     effect_scores = authority.get("effect_scores") if isinstance(authority.get("effect_scores"), dict) else {}
+    target_signal_map = authority_target_signal_map(
+        judgement_protocol=authority.get("judgement_bias_protocol") if isinstance(authority.get("judgement_bias_protocol"), dict) else {},
+        stage_protocol=authority.get("stage_bias_protocol") if isinstance(authority.get("stage_bias_protocol"), dict) else {},
+    )
     current_targets: Dict[str, Dict[str, float]] = {}
     for god, raw in effect_scores.items():
         row = raw if isinstance(raw, dict) else {}
@@ -91,7 +97,25 @@ def build_knowledge_snapshot(
             "contest_pressure": round(_to_float(row.get("contest_pressure")), 4),
             "harm_score": round(_to_float(row.get("harm_score")), 4),
             "resolved_utility_flux": round(_to_float(row.get("resolved_utility_flux", row.get("resolved_utility"))), 4),
+            "authority_profile": _normalized(row.get("authority_profile")),
         }
+    for god, raw in target_signal_map.items():
+        name = _normalized(god)
+        if not name:
+            continue
+        slot = current_targets.setdefault(
+            name,
+            {
+                "flux_tension_load": 0.0,
+                "flux_reinforce_load": 0.0,
+                "contest_pressure": 0.0,
+                "harm_score": 0.0,
+                "resolved_utility_flux": 0.0,
+                "authority_profile": "",
+            },
+        )
+        for key, value in raw.items():
+            slot[key] = round(_to_float(value), 4)
 
     return {
         "claim_history": {

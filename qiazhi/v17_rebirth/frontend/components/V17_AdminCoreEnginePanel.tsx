@@ -443,7 +443,11 @@ export function V17_AdminCoreEnginePanel({
     ? (authorityRow.core_paths_preview as LooseRecord[])
     : [];
   const judgementBias = asRecord(authorityRow.judgement_bias);
+  const judgementProtocol = asRecord(authorityRow.judgement_bias_protocol);
+  const judgementSummary = asRecord(judgementProtocol.summary);
   const stageBias = stageBiasRows(authorityRow.stage_bias);
+  const stageProtocol = asRecord(authorityRow.stage_bias_protocol);
+  const stageSummary = asRecord(stageProtocol.summary);
   const relationRows = relationFormationRows(relationFormationSummary);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
@@ -842,42 +846,53 @@ export function V17_AdminCoreEnginePanel({
           ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-              <div className="mb-2 text-[11px] font-semibold text-zinc-300">体用候选</div>
-              <div className="flex flex-wrap gap-2">
-                {(useCandidates.length ? useCandidates : useGods.map((god) => ({ god, score: confidence }))).map((row, idx) => {
-                  const god = String((row as LooseRecord).god || "").trim();
-                  const score = asNumber((row as LooseRecord).score, confidence);
-                  return (
-                    <span key={`${god}_${idx}`} className={`rounded-full border px-3 py-1 text-[10px] ${candidateTone(score)}`}>
-                      用 {god || "未定"} · {Math.round(score * 100)}%
-                    </span>
-                  );
-                })}
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className="mb-2 text-[11px] font-semibold text-zinc-300">体用候选</div>
+                <div className="flex flex-wrap gap-2">
+                  {(useCandidates.length ? useCandidates : useGods.map((god) => ({ god, score: confidence }))).map((row, idx) => {
+                    const god = String((row as LooseRecord).god || "").trim();
+                    const score = asNumber((row as LooseRecord).score, confidence);
+                    const profile = String((row as LooseRecord).authority_profile || "").trim();
+                    return (
+                      <div key={`${god}_${idx}`} className={`rounded-full border px-3 py-1 text-[10px] ${candidateTone(score)}`}>
+                        <div>用 {god || "未定"} · {Math.round(score * 100)}%</div>
+                        {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-              <div className="mb-2 text-[11px] font-semibold text-zinc-300">忌神候选</div>
-              <div className="flex flex-wrap gap-2">
-                {(tabooCandidates.length ? tabooCandidates : tabooGods.map((god) => ({ god, score: confidence }))).map((row, idx) => {
-                  const god = String((row as LooseRecord).god || "").trim();
-                  const score = asNumber((row as LooseRecord).score, confidence);
-                  return (
-                    <span key={`${god}_${idx}`} className="rounded-full border border-rose-500/30 bg-rose-950/20 px-3 py-1 text-[10px] text-rose-200">
-                      忌 {god || "未定"} · {Math.round(score * 100)}%
-                    </span>
-                  );
-                })}
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className="mb-2 text-[11px] font-semibold text-zinc-300">忌神候选</div>
+                <div className="flex flex-wrap gap-2">
+                  {(tabooCandidates.length ? tabooCandidates : tabooGods.map((god) => ({ god, score: confidence }))).map((row, idx) => {
+                    const god = String((row as LooseRecord).god || "").trim();
+                    const score = asNumber((row as LooseRecord).score, confidence);
+                    const profile = String((row as LooseRecord).authority_profile || "").trim();
+                    return (
+                      <div key={`${god}_${idx}`} className="rounded-full border border-rose-500/30 bg-rose-950/20 px-3 py-1 text-[10px] text-rose-200">
+                        <div>忌 {god || "未定"} · {Math.round(score * 100)}%</div>
+                        {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
           </div>
 
           {stageBias.length ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="text-[11px] font-semibold text-zinc-300">禄刃阶段偏置</div>
-                <div className="text-[10px] text-zinc-500">stage bias to authority</div>
+                <div className="text-[10px] text-zinc-500">
+                  {String(stageProtocol.contract || "").trim()
+                    ? `${String(stageProtocol.contract || "").trim()} · 条目 ${asNumber(stageSummary.entry_count)}`
+                    : "stage bias to authority"}
+                </div>
+              </div>
+              <div className="mb-2 text-[10px] leading-5 text-zinc-500">
+                阶段偏置只参与 authority 的承接与波动修正，不直接改写 L0/L1 物理总分。
               </div>
               <div className="grid gap-2 text-[10px] text-zinc-300">
                 {stageBias.map((row) => (
@@ -918,7 +933,17 @@ export function V17_AdminCoreEnginePanel({
 
           <div className="grid gap-4 xl:grid-cols-[0.92fr,1.08fr]">
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
-              <div className="mb-2 text-[11px] font-semibold text-zinc-300">判定 Bias 汇总</div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">判定 Bias 汇总</div>
+                <div className="text-[10px] text-zinc-500">
+                  {String(judgementProtocol.contract || "").trim()
+                    ? `${String(judgementProtocol.contract || "").trim()} · 条目 ${asNumber(judgementSummary.entry_count)} · 目标 ${asNumber(judgementSummary.target_count)}`
+                    : "谁在推动体用"}
+                </div>
+              </div>
+              <div className="mb-3 text-[10px] leading-5 text-zinc-500">
+                L2 judgement 只输出 bias / evidence / narrative hint，供 authority 参考，不越权改写物理结算。
+              </div>
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
                   <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">推向用神</div>
@@ -954,7 +979,7 @@ export function V17_AdminCoreEnginePanel({
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="text-[11px] font-semibold text-zinc-300">判定来源账本</div>
-                <div className="text-[10px] text-zinc-500">谁在推动体用</div>
+                <div className="text-[10px] text-zinc-500">bias / evidence / narrative hint</div>
               </div>
               <div className="space-y-2 text-[10px] text-zinc-400">
                 {judgementBiasEntries.length ? (
@@ -1055,6 +1080,19 @@ export function V17_AdminCoreEnginePanel({
                     <span>激活 {asNumber(row.activation_score).toFixed(2)}</span>
                     <span>稳定 {asNumber(row.stability_score).toFixed(2)}</span>
                   </div>
+                  {String(row.authority_profile || "").trim() ? (
+                    <div className="mt-2 rounded-lg border border-cyan-500/15 bg-cyan-950/10 px-3 py-2 text-[10px] text-cyan-100/90">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">{String(row.authority_profile || "").trim()}</span>
+                        <span>
+                          能量 {asNumber(row.authority_energy).toFixed(2)} · 稳定 {asNumber(row.authority_stability).toFixed(2)} · 波动 {asNumber(row.authority_volatility).toFixed(2)}
+                        </span>
+                      </div>
+                      {String(row.authority_reason || "").trim() ? (
+                        <div className="mt-1 text-zinc-400">{String(row.authority_reason || "").trim()}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               )) : <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">当前尚无可视化效应分数。</div>}
             </div>

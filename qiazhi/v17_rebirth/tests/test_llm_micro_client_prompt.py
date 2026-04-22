@@ -48,6 +48,40 @@ def _tensor() -> dict:
                 }
             ],
             "god_ring_authority": {
+                "effect_scores": {
+                    "正官": {
+                        "authority_profile": "高能躁动",
+                        "authority_energy": 1.10,
+                        "authority_stability": 0.20,
+                        "authority_volatility": 0.62,
+                        "authority_use_score": 0.44,
+                        "authority_taboo_score": 0.86,
+                    },
+                    "偏印": {
+                        "authority_profile": "低能稳态",
+                        "authority_energy": 0.68,
+                        "authority_stability": 0.41,
+                        "authority_volatility": 0.11,
+                        "authority_use_score": 0.78,
+                        "authority_taboo_score": 0.08,
+                    },
+                },
+                "judgement_bias_protocol": {
+                    "summary": {
+                        "entry_count": 3,
+                        "total_use_bias": 0.42,
+                        "total_taboo_bias": 0.28,
+                    }
+                },
+                "stage_bias_protocol": {
+                    "summary": {
+                        "entry_count": 2,
+                        "total_use_boost": 0.18,
+                        "total_taboo_boost": 0.06,
+                        "total_stability_boost": 0.09,
+                        "total_volatility_boost": 0.12,
+                    }
+                },
                 "core_flux_meta": {
                     "interaction_matrix": [
                         {
@@ -125,5 +159,8 @@ def test_build_llm_audit_payload_frontloads_flux_summary_into_user_prompt() -> N
     assert "食神->偏财" in user_prompt
     assert "合化摘要：寅午戌三合火局 78.6%" in user_prompt
     assert "关系动力学：子午六冲 激发58%" in user_prompt
+    assert "体用双轴摘要：正官 高能躁动" in user_prompt
+    assert "判定偏置摘要：条目3；用侧0.42；忌侧0.28" in user_prompt
+    assert "阶段偏置摘要：条目2；推用0.18；推忌0.06；稳0.09；波动0.12" in user_prompt
     assert "格局摘要：正官格 65.0%" in user_prompt
     assert "运流解释合同" in user_prompt

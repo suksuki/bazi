@@ -94,6 +94,13 @@ SyntheticCase(
 - `l2.authority.bias_reroute`
 - `l2.authority.tongguan_present`
 
+2026-04-22 起，L2 合成样盘还要额外固定两条协议：
+
+- `judgement_bias_protocol`
+  - judgement 插件是否按 `bias / evidence / narrative hint` 输出
+- `stage_bias_protocol`
+  - 阶段势是否只进入 authority，而不回写底层物理
+
 ### MASTER Reasoning
 
 验证：
@@ -113,6 +120,9 @@ Synthetic Lab 不是只看最后分数，而是同时检查：
 - `scores`
 - `top`
 - `relation_formation_summary`
+- `runtime_field_protocol`
+- `judgement_bias_protocol`
+- `stage_bias_protocol`
 - `master_reasoning`
 - `ledger`
 
@@ -141,6 +151,7 @@ pytest qiazhi/v17_rebirth/tests -m synthetic -q
 - 合成判定层矩阵：`test_synthetic_judgement_lab.py`
 - 主审盘推理链：`test_master_reasoning.py`
 - 演化账本：`test_evolution_ledger.py`
+- authority judgement 协议：`test_authority_judgement_protocol.py`
 
 ## Contribution Rule
 
@@ -151,6 +162,7 @@ pytest qiazhi/v17_rebirth/tests -m synthetic -q
 - 做功/传导/通关逻辑
 - 判定型插件
 - 用神 / 忌神 / 通关神路由
+- judgement bias / stage bias 协议
 
 原则很简单：
 

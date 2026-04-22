@@ -100,6 +100,8 @@ def test_resolve_god_ring_core_prefers_positive_work_path() -> None:
     )
     assert result["use_candidates"]
     assert result["use_candidates"][0]["god"] == "正官"
+    assert str(result["use_candidates"][0]["authority_profile"]).strip()
+    assert str(result["use_candidates"][0]["authority_reason"]).strip()
     assert result["taboo_candidates"]
     assert result["taboo_candidates"][0]["god"] == "伤官"
     assert result["path_count"] >= 6
@@ -182,6 +184,8 @@ def test_resolve_effect_scores_preserves_contest_tension_between_officer_and_wea
     assert effect_scores["正官"]["contest_pressure"] > 0.0
     assert effect_scores["伤官"]["resolved_utility"] >= effect_scores["伤官"]["net_utility"]
     assert effect_scores["正官"]["resolved_utility"] <= 0.0
+    assert "authority_profile" in effect_scores["正官"]
+    assert "authority_volatility" in effect_scores["正官"]
 
 
 def test_resolve_god_ring_core_detects_present_tongguan_path() -> None:

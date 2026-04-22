@@ -55,6 +55,8 @@ def resolve_god_ring_authority(
             "stage_bias": dict(authority.get("stage_bias") or {}),
             "judgement_bias": dict(authority.get("judgement_bias") or {}),
             "judgement_bias_entries": list(authority.get("judgement_bias_entries") or []),
+            "judgement_bias_protocol": dict(authority.get("judgement_bias_protocol") or {}),
+            "stage_bias_protocol": dict(authority.get("stage_bias_protocol") or {}),
         }
 
     ranked = [(str(name or "").strip(), float(score or 0.0)) for name, score in ranked_pairs if str(name or "").strip()]
@@ -83,4 +85,6 @@ def resolve_god_ring_authority(
         "stage_bias": {},
         "judgement_bias": {},
         "judgement_bias_entries": [],
+        "judgement_bias_protocol": {},
+        "stage_bias_protocol": {},
     }

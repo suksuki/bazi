@@ -329,6 +329,78 @@ def _core_flux_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     return rows
 
 
+def _authority_axis_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = pt.get("meta") if isinstance(pt.get("meta"), dict) else {}
+    authority = meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else {}
+    effect_scores = authority.get("effect_scores") if isinstance(authority.get("effect_scores"), dict) else {}
+    if not effect_scores:
+        return []
+
+    ranked = sorted(
+        (
+            (str(god).strip(), row)
+            for god, row in effect_scores.items()
+            if str(god).strip() and isinstance(row, dict)
+        ),
+        key=lambda item: abs(_safe_float(item[1].get("authority_use_score"), 0.0)) + abs(_safe_float(item[1].get("authority_taboo_score"), 0.0)),
+        reverse=True,
+    )
+    rows: List[str] = [
+        "体用双轴合同：authority 不只看净效，还同时看能量、稳定承接与波动；高能低稳与低能高稳必须分开解释。"
+    ]
+    fragments: List[str] = []
+    for god, row in ranked[:3]:
+        profile = str(row.get("authority_profile") or "").strip()
+        if not profile:
+            continue
+        energy = _safe_float(row.get("authority_energy"), 0.0)
+        stability = _safe_float(row.get("authority_stability"), 0.0)
+        volatility = _safe_float(row.get("authority_volatility"), 0.0)
+        use_score = _safe_float(row.get("authority_use_score"), 0.0)
+        taboo_score = _safe_float(row.get("authority_taboo_score"), 0.0)
+        fragments.append(
+            f"{god} {profile}"
+            f"（能量{energy:.2f}/稳{stability:.2f}/波动{volatility:.2f}"
+            f"/用{use_score:+.2f}/忌{taboo_score:+.2f}）"
+        )
+    if fragments:
+        rows.append("体用双轴摘要：" + "；".join(fragments))
+    judgement_protocol = authority.get("judgement_bias_protocol") if isinstance(authority.get("judgement_bias_protocol"), dict) else {}
+    stage_protocol = authority.get("stage_bias_protocol") if isinstance(authority.get("stage_bias_protocol"), dict) else {}
+    judgement_summary = judgement_protocol.get("summary") if isinstance(judgement_protocol.get("summary"), dict) else {}
+    stage_summary = stage_protocol.get("summary") if isinstance(stage_protocol.get("summary"), dict) else {}
+    if judgement_summary:
+        line = (
+            "判定偏置合同：L2 judgement 只提供 bias / evidence / narrative hint，不直接改写 L0/L1 物理结算。 "
+            "判定偏置摘要："
+            f"条目{int(judgement_summary.get('entry_count') or 0)}"
+            f"；用侧{_safe_float(judgement_summary.get('total_use_bias'), 0.0):.2f}"
+            f"；忌侧{_safe_float(judgement_summary.get('total_taboo_bias'), 0.0):.2f}"
+        )
+        if stage_summary:
+            line += (
+                "；阶段偏置摘要："
+                f"条目{int(stage_summary.get('entry_count') or 0)}"
+                f"；推用{_safe_float(stage_summary.get('total_use_boost'), 0.0):.2f}"
+                f"；推忌{_safe_float(stage_summary.get('total_taboo_boost'), 0.0):.2f}"
+                f"；稳{_safe_float(stage_summary.get('total_stability_boost'), 0.0):.2f}"
+                f"；波动{_safe_float(stage_summary.get('total_volatility_boost'), 0.0):.2f}"
+            )
+        rows.append(line)
+    elif stage_summary:
+        rows.append(
+            "阶段偏置摘要："
+            f"条目{int(stage_summary.get('entry_count') or 0)}"
+            f"；推用{_safe_float(stage_summary.get('total_use_boost'), 0.0):.2f}"
+            f"；推忌{_safe_float(stage_summary.get('total_taboo_boost'), 0.0):.2f}"
+            f"；稳{_safe_float(stage_summary.get('total_stability_boost'), 0.0):.2f}"
+            f"；波动{_safe_float(stage_summary.get('total_volatility_boost'), 0.0):.2f}"
+        )
+    return rows
+
+
 def six_pillars_tensor_complete(pt: Dict[str, Any]) -> bool:
     """与 VerdictOrchestrator 物理门控一致：四柱 + 大运 + 流年。"""
     fp = pt.get("four_pillars")
@@ -396,10 +468,11 @@ class PhysicsCanonicalService:
         if not isinstance(physics_tensor, dict):
             return rows
         rows.extend(_core_flux_prompt_lines(physics_tensor))
+        rows.extend(_runtime_field_prompt_lines(physics_tensor))
+        rows.extend(_authority_axis_prompt_lines(physics_tensor))
         rows.extend(_relation_summary_prompt_lines(physics_tensor))
         rows.extend(_relation_dynamics_prompt_lines(physics_tensor))
         rows.extend(_pattern_summary_prompt_lines(physics_tensor))
-        rows.extend(_runtime_field_prompt_lines(physics_tensor))
         rows.extend(_ten_gods_prompt_contract_lines(physics_tensor))
         rows.extend(_ten_gods_decomposition_lines(physics_tensor))
         total_energy = physics_tensor.get("total_energy_index")

@@ -125,7 +125,9 @@ export type V17Frame = {
         taboo_bias?: Record<string, number>;
       };
       judgement_bias_entries?: Array<Record<string, unknown>>;
+      judgement_bias_protocol?: Record<string, unknown>;
       stage_bias?: Record<string, Record<string, number>>;
+      stage_bias_protocol?: Record<string, unknown>;
       effect_scores?: Record<string, Record<string, unknown>>;
       core_graph_meta?: Record<string, unknown>;
       core_paths_preview?: Array<Record<string, unknown>>;

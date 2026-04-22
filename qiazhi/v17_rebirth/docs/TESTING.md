@@ -39,6 +39,7 @@ Synthetic Lab 当前覆盖：
 - L1 关系家族：三合 / 三会 / 半合等成局摘要
 - Core 运流协议：背景场 / 年度扰动 / runtime_cascade
 - L2 判定层：`risk_matrix` 偏置、authority 用神/忌神/通关神
+- Authority Judgement 协议：`judgement_bias_protocol / stage_bias_protocol`
 - Master Reasoning：主审盘推理链与 learning hook
 - Evolution Ledger：演化账本契约
 
@@ -60,6 +61,12 @@ pytest qiazhi/v17_rebirth/tests -q
 
 # 仅运行 runtime-field / 六柱时空核心契约
 pytest qiazhi/v17_rebirth/tests/test_runtime_field_protocol.py qiazhi/v17_rebirth/tests/test_six_pillar_spacetime_core.py -q
+
+# 仅运行 authority judgement 协议 / routing / canonical prompt
+pytest qiazhi/v17_rebirth/tests/test_authority_judgement_protocol.py \
+  qiazhi/v17_rebirth/tests/test_brain_routing.py \
+  qiazhi/v17_rebirth/tests/test_physics_canonical.py \
+  qiazhi/v17_rebirth/tests/test_llm_micro_client_prompt.py -q
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test

@@ -211,9 +211,9 @@ def dynamic_edge_metadata(source: str, target: str) -> Dict[str, object]:
 
 def runtime_field_prompt_lines() -> List[str]:
     return [
-        "运流解释合同：大运更像背景场，流年更像年度扰动；不是线性先后，而是流年在大运场中触发原局关键节点。",
-        f"运流解释合同：当前 Core 图优先耦合顺序为{RUNTIME_FIELD_ANCHOR_PRIORITY_LABEL}；大运权重大于流年。",
-        "运流解释合同：dynamic_trigger 细分为 background_core/background_field/background_periphery、yearly_trigger/seasonal_trigger/peripheral_trigger，以及 runtime_cascade。",
+        "运流解释合同：大运更像背景场，流年更像年度扰动；流年不是先打大运，而是在大运场中触发原局关键节点。"
+        f" 当前 Core 图优先顺序为{RUNTIME_FIELD_ANCHOR_PRIORITY_LABEL}；dynamic_trigger 细分为 "
+        "background_core/background_field/background_periphery、yearly_trigger/seasonal_trigger/peripheral_trigger，以及 runtime_cascade。"
     ]
 
 

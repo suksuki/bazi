@@ -278,4 +278,33 @@ V17 的十神不再只是“一个分数”。
 - 有没有势
 - 只是潜藏，还是已经成轴
 
+---
+
+## 10. Authority / Judgement 边界（2026-04-22）
+
+从 2026-04-22 起，L2 判定插件的权力被正式收口：
+
+- L0 / L1 负责物理来源：`manifest / root / momentum / hidden`
+- L2 judgement 只允许输出 `bias / evidence / narrative hint`
+- L2 judgement 不得直接越权改写 L0/L1 能量来源
+
+正式协议：
+
+- `v17.authority.judgement_bias.v1`
+- `v17.authority.stage_bias.v1`
+
+其中：
+
+- `judgement_bias_protocol`
+  - 记录谁在把某个十神推向“更像用神/忌神”
+  - 必须附带 evidence 或最少可回溯的来源摘要
+- `stage_bias_protocol`
+  - 记录禄、刃、长生等阶段势如何改变 authority 的稳定/波动
+  - 只进入 authority 层，不得回写 L0 根分
+
+这条边界用于保证：
+
+- 物理真相与解释偏置分离
+- UI / Admin / LLM 可以看到偏置，但不会把偏置误读成底层能量
+
 只有这样，系统才会真正接近命理师的判断路径。

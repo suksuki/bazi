@@ -21,7 +21,21 @@ def test_build_knowledge_snapshot_summarizes_claims_conflicts_and_resolutions() 
         current_authority={
             "effect_scores": {
                 "食神": {"flux_tension_load": 0.18, "resolved_utility_flux": 0.66},
-            }
+            },
+            "judgement_bias_protocol": {
+                "summary": {
+                    "by_target": {
+                        "食神": {"use_bias": 0.12, "taboo_bias": 0.03, "entry_count": 2},
+                    }
+                }
+            },
+            "stage_bias_protocol": {
+                "summary": {
+                    "by_target": {
+                        "食神": {"use_boost": 0.2, "taboo_boost": 0.0, "stability_boost": 0.08, "volatility_boost": 0.02},
+                    }
+                }
+            },
         },
     )
 
@@ -30,6 +44,8 @@ def test_build_knowledge_snapshot_summarizes_claims_conflicts_and_resolutions() 
     assert snapshot["conflict_history"]["by_type"]["same_event_duplicate"] == 1
     assert snapshot["resolution_preview"]["resolved_by"]["system"] == 1
     assert snapshot["claim_history"]["current_targets"]["食神"]["flux_tension_load"] == 0.18
+    assert snapshot["claim_history"]["current_targets"]["食神"]["judgement_use_bias"] == 0.12
+    assert snapshot["claim_history"]["current_targets"]["食神"]["stage_stability_boost"] == 0.08
 
 
 def test_route_conflicts_prefers_severity_policy_with_session_knowledge() -> None:
@@ -185,3 +201,43 @@ def test_route_conflicts_uses_live_target_tension_for_same_target_opposite_sign(
     routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
     assert routed[0]["recommended_arbiter"] == "llm"
     assert routed[0]["live_target_tension"] == 0.56
+
+
+def test_route_conflicts_reads_judgement_and_stage_signals_from_authority_snapshot() -> None:
+    conflicts = [
+        {
+            "conflict_id": "c2",
+            "severity": "P2",
+            "conflict_type": "same_target_opposite_sign",
+            "target_god": "正官",
+            "recommended_arbiter": "system",
+            "conflict_score": 0.48,
+        },
+    ]
+    knowledge_snapshot = {
+        "claim_history": {
+            "current_targets": {
+                "正官": {
+                    "flux_tension_load": 0.24,
+                    "flux_reinforce_load": 0.02,
+                    "contest_pressure": 0.18,
+                    "judgement_use_bias": 0.26,
+                    "judgement_taboo_bias": 0.22,
+                    "judgement_entry_count": 3,
+                    "stage_use_boost": 0.14,
+                    "stage_taboo_boost": 0.03,
+                    "stage_stability_boost": 0.02,
+                    "stage_volatility_boost": 0.11,
+                    "authority_profile": "高能躁动",
+                }
+            }
+        },
+        "conflict_history": {
+            "recommended_arbiters": {"system": 1, "llm": 0, "user": 0},
+        },
+    }
+
+    routed = route_conflicts(conflicts=conflicts, knowledge_snapshot=knowledge_snapshot)
+    assert routed[0]["recommended_arbiter"] == "llm"
+    assert routed[0]["live_target_judgement_entries"] == 3.0
+    assert routed[0]["live_target_stage_volatility"] == 0.11

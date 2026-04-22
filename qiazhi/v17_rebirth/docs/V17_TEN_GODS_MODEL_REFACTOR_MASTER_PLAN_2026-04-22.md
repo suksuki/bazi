@@ -523,8 +523,8 @@ L0 当前已经形成下面这组边界：
 - `test_l1_relation_runtime_collectors.py`：新增 4 条
 - `test_l1_branch_geometry_modules.py`：新增 3 条
 - `test_runtime_field_protocol.py`：新增 4 条
-- 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）
-- 全量 `v17_rebirth/tests`：`310 passed`
+- 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）→ `14 passed`（双轴 authority + UI 对齐）
+- 全量 `v17_rebirth/tests`：`311 passed`
 
 目标：
 
@@ -543,7 +543,7 @@ L0 当前已经形成下面这组边界：
 
 ## Phase 4：统一运流与做功场
 
-状态：已启动（runtime field 协议已抽成共享模块，Core/Prompt/L0 已开始共用）
+状态：执行中（runtime field 协议已抽成共享模块，双轴 authority 评分已开始落入候选排序与 UI）
 
 目标：
 
