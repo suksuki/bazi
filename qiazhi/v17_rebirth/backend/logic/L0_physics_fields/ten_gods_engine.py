@@ -24,25 +24,60 @@ import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
+from v17_rebirth.backend.logic.runtime_field_protocol import ROOT_SCOPE_WEIGHTS as _RUNTIME_ROOT_SCOPE_WEIGHTS
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
-from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_protocol_builders import (
-    build_projection_bridge_protocol,
-    build_relation_dynamics_summary,
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_decomposition import (
+    add_decomposition as _add_decomposition,
+    finalize_decomposition as _finalize_decomposition,
 )
-from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
-    branches_and_stems_from_runtime_pillars,
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_projection import (
+    collect_visible_stems as _collect_visible_stems,
+    cross_polarity_root_support as _cross_polarity_root_support,
+    same_element_visible as _same_element_visible,
+    visible_stem_scope_weights as _visible_stem_scope_weights,
+)
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_relation_runtime import (
+    append_relation_trace as _append_relation_trace,
+    detect_relation_runtime_hits as _detect_relation_runtime_hits,
+)
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_runtime_collectors import (
+    collect_structured_relation_family_deltas as _collect_structured_relation_family_deltas,
+    collect_penalty_relation_deltas as _collect_penalty_relation_deltas,
+    collect_control_relation_deltas as _collect_control_relation_deltas,
+    collect_stem_fusion_relation_deltas as _collect_stem_fusion_relation_deltas,
+)
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_pairs import (
     eval_anhe_hits,
-    eval_banhe_hits,
-    eval_gonghe_hits,
     eval_liu_chong_hits,
     eval_liu_hai_hits,
     eval_liu_po_hits,
     eval_liuhe_hits,
-    eval_sanhe_hits,
-    detect_stem_fusion_cases,
     sanxing_detect_geometry,
 )
-
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_structured import (
+    eval_banhe_hits,
+    eval_gonghe_hits,
+    eval_sanhe_hits,
+)
+from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
+    branches_and_stems_from_runtime_pillars,
+    detect_stem_fusion_cases,
+)
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_root_dynamics import (
+    build_runtime_stems as _build_runtime_stems,
+    finalize_root_dynamic_state as _finalize_root_dynamic_state,
+)
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_protocol_builders import (
+    build_projection_bridge_protocol,
+    build_relation_formation_summary,
+    build_relation_dynamics_summary,
+)
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_static_basis import (
+    accumulate_branch_energy as _accumulate_branch_energy,
+    accumulate_stem_energy as _accumulate_stem_energy,
+    branch_stage_for_daymaster as _branch_stage_for_daymaster,
+    split_stage_component as _split_stage_component,
+)
 _log = logging.getLogger(__name__)
 
 
@@ -210,14 +245,7 @@ REL_VISIBLE_SCOPE_WEIGHTS: Dict[str, float] = {
     "flow": 0.38,
 }
 
-ROOT_SCOPE_WEIGHTS: Dict[str, float] = {
-    "year": 0.48,
-    "month": 1.0,
-    "day": 0.68,
-    "hour": 0.82,
-    "luck": 0.92,
-    "flow": 0.42,
-}
+ROOT_SCOPE_WEIGHTS: Dict[str, float] = dict(_RUNTIME_ROOT_SCOPE_WEIGHTS)
 
 # 旧名兼容（供外部 import 使用）
 STEM_BASE_ENERGY: float = STEM_BASE
@@ -372,19 +400,6 @@ def _get_xun_kong_map(
     except Exception:
         _ = four_pillars
         return {}
-
-
-def _collect_visible_stems(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> List[str]:
-    stems: List[str] = []
-    for key in ("year", "month", "day", "hour"):
-        stem, _ = _parse_gz(str(four_pillars.get(key, "")).strip())
-        if stem:
-            stems.append(stem)
-    for gz in (luck_pillar, flow_pillar):
-        stem, _ = _parse_gz(gz)
-        if stem:
-            stems.append(stem)
-    return stems
 
 
 _BANHE_PAIR_TO_ELEMENT: Dict[frozenset[str], str] = {
@@ -659,66 +674,6 @@ def _relation_family_label(family_key: str, relation_element: str = "") -> str:
     return mapping.get(str(family_key or "").strip(), family_key or "关系局")
 
 
-def _relation_role_label(role: str) -> str:
-    normalized = str(role or "").strip().lower()
-    if normalized == "pivot":
-        return "中神"
-    if normalized == "tomb":
-        return "墓库"
-    return "长生"
-
-
-def _relation_unique_members(members: List[str]) -> List[str]:
-    out: List[str] = []
-    seen: set[str] = set()
-    for item in members:
-        branch = str(item or "").strip()
-        if not branch or branch in seen:
-            continue
-        seen.add(branch)
-        out.append(branch)
-    return out
-
-
-def _relation_projection_preview(weights: Dict[str, float]) -> List[str]:
-    total = sum(max(0.0, float(v or 0.0)) for v in weights.values())
-    if total <= 0.0:
-        return []
-    ranked = sorted(
-        (
-            (str(god).strip(), max(0.0, float(weight or 0.0)) / total)
-            for god, weight in weights.items()
-            if str(god).strip() and max(0.0, float(weight or 0.0)) > 0.0
-        ),
-        key=lambda item: item[1],
-        reverse=True,
-    )
-    return [f"{god}{round(share * 100):.0f}%" for god, share in ranked[:2]]
-
-
-def _relation_duplicate_notes(
-    *,
-    branch_counts: Dict[str, Any],
-    role_map: Dict[str, Any],
-) -> List[str]:
-    notes: List[str] = []
-    for branch, raw_count in (branch_counts or {}).items():
-        extra_count = max(0, int(raw_count or 0) - 1)
-        if extra_count <= 0:
-            continue
-        role = _relation_role_label(str((role_map or {}).get(branch) or "starter"))
-        bonus = _relation_duplicate_role_bonus(str((role_map or {}).get(branch) or "starter")) * extra_count
-        notes.append(f"{branch}{role}+{round(bonus * 100):.0f}%")
-    return notes
-
-
-def _relation_manifestation_mode(family_key: str, visible_support_strength: float) -> str:
-    normalized = str(family_key or "").strip()
-    if normalized == "anhe":
-        return "暗化"
-    return "明化" if float(visible_support_strength or 0.0) >= 0.18 else "暗化"
-
-
 def _relation_trace_formation_ratio(trace: Dict[str, Any]) -> float:
     family_key = str(trace.get("family_key") or trace.get("kind") or "").strip()
     if not family_key:
@@ -734,6 +689,13 @@ def _relation_trace_formation_ratio(trace: Dict[str, Any]) -> float:
     if clean_intensity <= 0.0:
         return 0.0
     return max(0.0, min(1.0, float(trace.get("intensity") or 0.0) / clean_intensity))
+
+
+def _relation_manifestation_mode(family_key: str, visible_support_strength: float) -> str:
+    normalized = str(family_key or "").strip()
+    if normalized == "anhe":
+        return "暗化"
+    return "明化" if float(visible_support_strength or 0.0) >= 0.18 else "暗化"
 
 
 def _relation_source_loss_base(family_key: str) -> float:
@@ -939,23 +901,6 @@ def _build_stem_fusion_source_retention_plan(
     return sorted(records.values(), key=lambda row: (str(row.get("scope") or ""), str(row.get("stem") or "")))
 
 
-def _relation_summary_status(
-    *,
-    formation_ratio: float,
-    completion: float,
-    conflict_damping: float,
-) -> str:
-    if completion < 0.999:
-        return "候选未全"
-    if formation_ratio >= 0.84 and conflict_damping >= 0.9:
-        return "强成局"
-    if conflict_damping < 0.75:
-        return "受扰成局"
-    if formation_ratio >= 0.56:
-        return "成局"
-    return "弱成局"
-
-
 def _build_relation_formation_summary(
     *,
     relation_traces: List[Dict[str, Any]],
@@ -963,179 +908,17 @@ def _build_relation_formation_summary(
     relation_visible_bonuses: List[Dict[str, Any]],
     relation_source_attenuations: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    structural_index: Dict[Tuple[str, Tuple[str, ...]], Dict[str, Any]] = {}
-    for row in structural_bonuses:
-        if not isinstance(row, dict):
-            continue
-        family_key = str(row.get("kind") or "").strip()
-        members = tuple(str(x) for x in (row.get("matched_branches") or row.get("group") or []) if str(x).strip())
-        if not family_key or not members:
-            continue
-        structural_index[(family_key, members)] = row
-
-    visible_index: Dict[Tuple[str, Tuple[str, ...]], Dict[str, Any]] = {}
-    for row in relation_visible_bonuses:
-        if not isinstance(row, dict):
-            continue
-        family_key = str(row.get("family_key") or row.get("kind") or "").strip()
-        members = tuple(str(x) for x in (row.get("members") or []) if str(x).strip())
-        if not family_key or not members:
-            continue
-        entry = visible_index.setdefault(
-            (family_key, members),
-            {"bonus_total": 0.0, "projection_weights": {}, "dominant_hidden_stem": ""},
-        )
-        entry["bonus_total"] = float(entry.get("bonus_total") or 0.0) + float(row.get("bonus_total") or 0.0)
-        if not entry.get("dominant_hidden_stem"):
-            entry["dominant_hidden_stem"] = str(row.get("dominant_hidden_stem") or "")
-        projection = row.get("projection") if isinstance(row.get("projection"), dict) else {}
-        for god, share in projection.items():
-            weight = max(0.0, float(share or 0.0)) * float(row.get("bonus_total") or 0.0)
-            entry["projection_weights"][str(god)] = float(entry["projection_weights"].get(str(god), 0.0)) + weight
-
-    attenuation_index: Dict[Tuple[str, Tuple[str, ...]], Dict[str, Any]] = {}
-    for row in relation_source_attenuations:
-        if not isinstance(row, dict):
-            continue
-        family_key = str(row.get("family_key") or "").strip()
-        members = tuple(str(x) for x in (row.get("members") or []) if str(x).strip())
-        if not family_key or not members:
-            continue
-        attenuation_index[(family_key, members)] = row
-
-    summary_rows: List[Dict[str, Any]] = []
-    for trace in relation_traces:
-        if not isinstance(trace, dict):
-            continue
-        family_key = str(trace.get("family_key") or trace.get("kind") or "").strip()
-        if family_key not in {"sanhui", "sanhe", "banhe_shengwang", "banhe_muwang", "gonghe", "liuhe", "anhe"}:
-            continue
-        intensity = max(0.0, float(trace.get("intensity") or 0.0))
-        if intensity <= 0.0:
-            continue
-        members = [str(x) for x in (trace.get("members") or []) if str(x).strip()]
-        if not members:
-            continue
-        relation_element = _ELEMENT_EN_TO_CN.get(
-            str(trace.get("relation_element") or "").lower(),
-            str(trace.get("relation_element") or ""),
-        )
-        details = trace.get("details") if isinstance(trace.get("details"), dict) else {}
-        display_members = _relation_unique_members(
-            [str(x) for x in (details.get("ordered_group") or members) if str(x).strip()]
-        )
-        if not display_members:
-            display_members = _relation_unique_members(members)
-        members_key = tuple(members)
-        structural = structural_index.get((family_key, members_key), {})
-        visible = visible_index.get((family_key, members_key), {})
-        family_factor = max(
-            _relation_base_factor(family_key),
-            float(details.get("effective_family_factor") or structural.get("family_factor") or _relation_full_clean_factor(family_key)),
-        )
-        clean_intensity = _relation_root_intensity(
-            family_key=family_key,
-            closeness=1.0,
-            strength=1.0,
-            completion=1.0,
-            duplicate_bonus=0.0,
-            conflict_damping=1.0,
-        )
-        formation_ratio = intensity / clean_intensity if clean_intensity > 0.0 else 0.0
-        formation_ratio = max(0.0, min(1.0, formation_ratio))
-        formation_percent = round(formation_ratio * 100.0, 1)
-        completion = max(0.0, min(1.0, float(trace.get("completion") or 1.0)))
-        conflict_damping = max(0.0, min(1.0, float(trace.get("conflict_damping") or 1.0)))
-        duplicate_bonus = max(0.0, float(trace.get("duplicate_bonus") or 0.0))
-        closeness = max(0.0, float(details.get("closeness") or 0.0))
-        strength = max(0.0, float(details.get("strength") or 0.0))
-        visible_support_strength = max(
-            0.0,
-            min(
-                1.0,
-                float(details.get("visible_support_strength") or structural.get("visible_support_strength") or 0.0),
-            ),
-        )
-        structure_bonus_total = max(0.0, float(structural.get("bonus_total") or 0.0))
-        visible_bonus_total = max(0.0, float(visible.get("bonus_total") or 0.0))
-        attenuation = attenuation_index.get((family_key, members_key), {})
-        source_retention_ratio = max(0.0, min(1.0, float(attenuation.get("source_retention_ratio") or 1.0)))
-        source_release_ratio = max(0.0, min(1.0, float(attenuation.get("source_release_ratio") or 0.0)))
-        manifestation_mode = str(attenuation.get("manifestation_mode") or _relation_manifestation_mode(family_key, visible_support_strength))
-        projection_weights: Dict[str, float] = {}
-        structural_projection = structural.get("projection") if isinstance(structural.get("projection"), dict) else {}
-        for god, share in structural_projection.items():
-            projection_weights[str(god)] = float(projection_weights.get(str(god), 0.0)) + max(0.0, float(share or 0.0)) * structure_bonus_total
-        for god, weight in (visible.get("projection_weights") or {}).items():
-            projection_weights[str(god)] = float(projection_weights.get(str(god), 0.0)) + max(0.0, float(weight or 0.0))
-        projection_preview = _relation_projection_preview(projection_weights)
-        branch_counts = details.get("branch_counts") if isinstance(details.get("branch_counts"), dict) else {}
-        role_map = details.get("role_map") if isinstance(details.get("role_map"), dict) else {}
-        duplicate_notes = _relation_duplicate_notes(branch_counts=branch_counts, role_map=role_map)
-        title = f"{''.join(display_members)}{_relation_family_label(family_key, relation_element)}"
-        details_fragments = [f"基准x{family_factor:.2f}"]
-        if manifestation_mode == "暗化":
-            details_fragments.append("暗化蛰伏")
-        if visible_support_strength > 0.0:
-            details_fragments.append(f"透干支撑{round(visible_support_strength * 100):.0f}%")
-        if source_release_ratio > 0.0:
-            details_fragments.append(f"源气保留{round(source_retention_ratio * 100):.0f}%")
-        if structure_bonus_total > 0.0:
-            details_fragments.append(f"结构+{structure_bonus_total:.1f}")
-        if visible_bonus_total > 0.0:
-            details_fragments.append(f"显神+{visible_bonus_total:.1f}")
-        if duplicate_notes:
-            details_fragments.append(f"重支{'/'.join(duplicate_notes[:2])}")
-        if closeness > 0.0 and closeness < 0.995:
-            details_fragments.append(f"远近{round(closeness * 100):.0f}%")
-        if strength > 0.0 and abs(strength - 1.0) > 0.02:
-            details_fragments.append(f"局势{round(strength * 100):.0f}%")
-        if conflict_damping < 0.995:
-            details_fragments.append(f"受扰保留{round(conflict_damping * 100):.0f}%")
-        if projection_preview:
-            details_fragments.append(f"主投影{' / '.join(projection_preview)}")
-        summary_rows.append(
-            {
-                "family_key": family_key,
-                "family_label": _relation_family_label(family_key, relation_element),
-                "formation_label": title,
-                "formation_ratio": round(formation_ratio, 4),
-                "formation_percent": formation_percent,
-                "status": _relation_summary_status(
-                    formation_ratio=formation_ratio,
-                    completion=completion,
-                    conflict_damping=conflict_damping,
-                ),
-                "relation_element": relation_element,
-                "members": members,
-                "display_members": display_members,
-                "family_factor": round(family_factor, 3),
-                "intensity": round(intensity, 4),
-                "completion": round(completion, 4),
-                "duplicate_bonus": round(duplicate_bonus, 4),
-                "duplicate_notes": duplicate_notes,
-                "conflict_damping": round(conflict_damping, 4),
-                "visible_support_strength": round(visible_support_strength, 4),
-                "manifestation_mode": manifestation_mode,
-                "source_retention_ratio": round(source_retention_ratio, 4),
-                "source_release_ratio": round(source_release_ratio, 4),
-                "closeness": round(closeness, 4) if closeness > 0.0 else 0.0,
-                "strength": round(strength, 4) if strength > 0.0 else 0.0,
-                "structure_bonus_total": round(structure_bonus_total, 3),
-                "visible_bonus_total": round(visible_bonus_total, 3),
-                "projection_preview": projection_preview,
-                "summary": f"{title} {formation_percent:.1f}%（" + "，".join(details_fragments[:5]) + "）",
-            }
-        )
-    summary_rows.sort(
-        key=lambda row: (
-            float(row.get("formation_percent") or 0.0),
-            float(row.get("family_factor") or 0.0),
-            float(row.get("structure_bonus_total") or 0.0) + float(row.get("visible_bonus_total") or 0.0),
-        ),
-        reverse=True,
+    return build_relation_formation_summary(
+        relation_traces=relation_traces,
+        structural_bonuses=structural_bonuses,
+        relation_visible_bonuses=relation_visible_bonuses,
+        relation_source_attenuations=relation_source_attenuations,
+        relation_family_label=_relation_family_label,
+        relation_base_factor=_relation_base_factor,
+        relation_full_clean_factor=_relation_full_clean_factor,
+        relation_root_intensity=_relation_root_intensity,
+        relation_duplicate_role_bonus=_relation_duplicate_role_bonus,
     )
-    return summary_rows[:8]
 
 
 def _build_relation_dynamics_summary(
@@ -1260,15 +1043,12 @@ def _collect_root_strengths_with_meta(
     branch_rows = _runtime_branch_rows(four_pillars, luck_pillar, flow_pillar)
     branches: Dict[str, str] = {scope: branch for scope, branch in branch_rows}
     branch_hidden_base_strengths: Dict[Tuple[str, str, str], float] = {}
-    stems: Dict[str, str] = {}
-    for key in ("year", "month", "day", "hour"):
-        stem, _ = _parse_gz(str(four_pillars.get(key, "")).strip())
-        if stem:
-            stems[key] = stem
-    for key, gz in (("luck", luck_pillar), ("flow", flow_pillar)):
-        stem, _ = _parse_gz(str(gz or "").strip())
-        if stem:
-            stems[key] = stem
+    stems: Dict[str, str] = _build_runtime_stems(
+        four_pillars,
+        luck_pillar,
+        flow_pillar,
+        parse_gz=_parse_gz,
+    )
 
     branch_scope_totals: Dict[str, float] = {}
     for scope_key, branch in branch_rows:
@@ -1284,771 +1064,131 @@ def _collect_root_strengths_with_meta(
     relation_traces: List[Dict[str, Any]] = []
     stem_cases: List[Dict[str, Any]] = []
 
-    def _trace(
-        kind: str,
-        members: List[str],
-        pillars: List[str],
-        intensity: float,
-        relation_element: str = "",
-        *,
-        family_key: str = "",
-        duplicate_bonus: float = 0.0,
-        conflict_damping: float = 1.0,
-        completion: float = 1.0,
-        details: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        payload: Dict[str, Any] = {
-            "kind": kind,
-            "family_key": str(family_key or kind),
-            "members": [str(x) for x in members if str(x).strip()],
-            "pillars": [str(x) for x in pillars if str(x).strip()],
-            "intensity": round(float(intensity), 4),
-            "relation_element": str(relation_element or ""),
-            "duplicate_bonus": round(float(duplicate_bonus or 0.0), 4),
-            "conflict_damping": round(float(conflict_damping or 0.0), 4),
-            "completion": round(float(completion or 0.0), 4),
-        }
-        if isinstance(details, dict):
-            payload["details"] = dict(details)
-            payload.update(details)
-        relation_traces.append(payload)
-
     if branches:
-        sanhe_hits = eval_sanhe_hits(branches)
-        sanhui_hits = _eval_sanhui_hits(branches)
-        banhe_hits = eval_banhe_hits(branches)
-        gonghe_hits = eval_gonghe_hits(branches)
-        liuhe_hits = eval_liuhe_hits(branches)
-        anhe_hits = eval_anhe_hits(branches)
-        chong_hits = eval_liu_chong_hits(branches)
-        hai_hits = eval_liu_hai_hits(branches)
-        po_hits = eval_liu_po_hits(branches)
-        xing_hits = sanxing_detect_geometry(branches)
-        conflicted_branches: set[str] = set()
-        conflict_events: List[set[str]] = []
-        for hit in chong_hits:
-            pair = {str(x) for x in (hit.get("pair") or []) if str(x).strip()}
-            conflicted_branches.update(pair)
-            if pair:
-                conflict_events.append(pair)
-        for hit in hai_hits:
-            pair = {str(x) for x in (hit.get("pair") or []) if str(x).strip()}
-            conflicted_branches.update(pair)
-            if pair:
-                conflict_events.append(pair)
-        for hit in po_hits:
-            pair = {str(x) for x in (hit.get("pair") or []) if str(x).strip()}
-            conflicted_branches.update(pair)
-            if pair:
-                conflict_events.append(pair)
-        for hit in xing_hits:
-            members = {str(x) for x in (hit.get("branches") or []) if str(x).strip()}
-            conflicted_branches.update(members)
-            if members:
-                conflict_events.append(members)
+        relation_hit_bundle = _detect_relation_runtime_hits(
+            branches,
+            eval_sanhe_hits=eval_sanhe_hits,
+            eval_sanhui_hits=_eval_sanhui_hits,
+            eval_banhe_hits=eval_banhe_hits,
+            eval_gonghe_hits=eval_gonghe_hits,
+            eval_liuhe_hits=eval_liuhe_hits,
+            eval_anhe_hits=eval_anhe_hits,
+            eval_liu_chong_hits=eval_liu_chong_hits,
+            eval_liu_hai_hits=eval_liu_hai_hits,
+            eval_liu_po_hits=eval_liu_po_hits,
+            sanxing_detect_geometry=sanxing_detect_geometry,
+        )
+        sanhe_hits = relation_hit_bundle["sanhe_hits"]
+        sanhui_hits = relation_hit_bundle["sanhui_hits"]
+        banhe_hits = relation_hit_bundle["banhe_hits"]
+        gonghe_hits = relation_hit_bundle["gonghe_hits"]
+        liuhe_hits = relation_hit_bundle["liuhe_hits"]
+        anhe_hits = relation_hit_bundle["anhe_hits"]
+        chong_hits = relation_hit_bundle["chong_hits"]
+        hai_hits = relation_hit_bundle["hai_hits"]
+        po_hits = relation_hit_bundle["po_hits"]
+        xing_hits = relation_hit_bundle["xing_hits"]
+        conflicted_branches = relation_hit_bundle["conflicted_branches"]
+        conflict_events = relation_hit_bundle["conflict_events"]
 
-        for hit in sanhe_hits:
-            members = [str(b) for b in (hit.get("matched_branches") or hit.get("group") or []) if str(b).strip()]
-            if not members:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            strength = float(hit.get("strength") or 1.0)
-            role_map = hit.get("role_map") if isinstance(hit.get("role_map"), dict) else {}
-            duplicate_bonus = max(0.0, float(hit.get("duplicate_bonus") or 0.0))
-            mid_branch = str(hit.get("pivot_branch") or hit.get("mid_branch") or "")
-            rel_element = ""
-            dominant_hidden_stem = ""
-            if mid_branch and BRANCH_HIDDEN.get(mid_branch):
-                dominant_hidden_stem = BRANCH_HIDDEN[mid_branch][0][0]
-                rel_element = STEM_ELEMENT.get(dominant_hidden_stem, "")
-            factor_bundle = _relation_factor_bundle(
-                family_key="sanhe",
-                relation_element=rel_element,
-                members=members,
-                dominant_hidden_stem=dominant_hidden_stem,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            conflict_damping = _relation_conflict_damping(
-                members=members,
-                family_key="sanhe",
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key="sanhe",
-                closeness=closeness,
-                strength=strength,
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                family_factor=float(factor_bundle.get("effective_family_factor") or 0.0),
-            )
-            counts = hit.get("branch_counts") or {}
-            for branch in set(members):
-                extra_count = max(0, int((counts.get(branch) or 1) - 1))
-                dup_factor = 1.0 + _relation_duplicate_role_bonus(str(role_map.get(branch) or "starter")) * extra_count
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=rel_element,
-                    magnitude=intensity * dup_factor,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "sanhe",
-                members,
-                pillars,
-                intensity,
-                rel_element,
-                family_key="sanhe",
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                details={
-                    "ordered_group": list(hit.get("ordered_group") or hit.get("group") or []),
-                    "pivot_branch": str(hit.get("pivot_branch") or hit.get("mid_branch") or ""),
-                    "tomb_branch": str(hit.get("tomb_branch") or ""),
-                    "closeness": round(closeness, 4),
-                    "strength": round(strength, 4),
-                    **factor_bundle,
-                    "role_map": role_map,
-                    "branch_counts": counts,
-                },
-            )
+        _collect_structured_relation_family_deltas(
+            sanhe_hits=sanhe_hits,
+            sanhui_hits=sanhui_hits,
+            banhe_hits=banhe_hits,
+            gonghe_hits=gonghe_hits,
+            liuhe_hits=liuhe_hits,
+            anhe_hits=anhe_hits,
+            conflicted_branches=conflicted_branches,
+            conflict_events=conflict_events,
+            four_pillars=four_pillars,
+            luck_pillar=luck_pillar,
+            flow_pillar=flow_pillar,
+            branch_scope_totals=branch_scope_totals,
+            relation_delta_raw=relation_delta_raw,
+            relation_traces=relation_traces,
+            branch_hidden=BRANCH_HIDDEN,
+            stem_element_map=STEM_ELEMENT,
+            banhe_pair_to_element=_BANHE_PAIR_TO_ELEMENT,
+            gonghe_pair_to_element=_GONGHE_PAIR_TO_ELEMENT,
+            liuhe_pair_to_element=_LIUHE_PAIR_TO_ELEMENT,
+            pillars_group_closeness=_pillars_group_closeness,
+            relation_factor_bundle=_relation_factor_bundle,
+            relation_conflict_damping=_relation_conflict_damping,
+            relation_root_intensity=_relation_root_intensity,
+            relation_duplicate_bonus=_relation_duplicate_bonus,
+            relation_duplicate_role_bonus=_relation_duplicate_role_bonus,
+            relation_apply_branch_delta=_relation_apply_branch_delta,
+            relation_dominant_hidden_stem=_relation_dominant_hidden_stem,
+            append_relation_trace=_append_relation_trace,
+        )
 
-        for hit in sanhui_hits:
-            members = [str(b) for b in (hit.get("matched_branches") or hit.get("group") or []) if str(b).strip()]
-            if not members:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            completion = max(0.0, min(1.0, float(hit.get("completion") or 0.0)))
-            strength = max(0.0, float(hit.get("strength") or 0.0))
-            role_map = hit.get("role_map") if isinstance(hit.get("role_map"), dict) else {}
-            duplicate_bonus = max(0.0, float(hit.get("duplicate_bonus") or 0.0))
-            rel_element = str(hit.get("element") or "")
-            dominant_hidden_stem = _relation_dominant_hidden_stem(
-                relation_element=rel_element,
-                members=members,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            factor_bundle = _relation_factor_bundle(
-                family_key="sanhui",
-                relation_element=rel_element,
-                members=members,
-                dominant_hidden_stem=dominant_hidden_stem,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            conflict_damping = _relation_conflict_damping(
-                members=members,
-                family_key="sanhui",
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key="sanhui",
-                closeness=closeness,
-                strength=strength,
-                completion=completion,
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                family_factor=float(factor_bundle.get("effective_family_factor") or 0.0),
-            )
-            counts = hit.get("branch_counts") or {}
-            for branch in set(members):
-                extra_count = max(0, int((counts.get(branch) or 1) - 1))
-                dup_factor = 1.0 + _relation_duplicate_role_bonus(str(role_map.get(branch) or "starter")) * extra_count
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=rel_element,
-                    magnitude=intensity * dup_factor,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "sanhui",
-                members,
-                pillars,
-                intensity,
-                rel_element,
-                family_key="sanhui",
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                completion=completion,
-                details={
-                    "ordered_group": list(hit.get("ordered_group") or hit.get("group") or []),
-                    "pivot_branch": str(hit.get("pivot_branch") or ""),
-                    "tomb_branch": str(hit.get("tomb_branch") or ""),
-                    "closeness": round(closeness, 4),
-                    "strength": round(strength, 4),
-                    **factor_bundle,
-                    "role_map": role_map,
-                    "branch_counts": counts,
-                },
-            )
+        _collect_penalty_relation_deltas(
+            chong_hits=chong_hits,
+            hai_hits=hai_hits,
+            po_hits=po_hits,
+            xing_hits=xing_hits,
+            branch_scope_totals=branch_scope_totals,
+            relation_delta_raw=relation_delta_raw,
+            relation_traces=relation_traces,
+            pillars_group_closeness=_pillars_group_closeness,
+            get_penalty_value=_get_l0_val,
+            relation_apply_branch_delta=_relation_apply_branch_delta,
+            append_relation_trace=_append_relation_trace,
+            penalty_chong_default=REL_ROOT_PENALTY_CHONG,
+            penalty_hai_default=REL_ROOT_PENALTY_HAI,
+            penalty_po_default=REL_ROOT_PENALTY_PO,
+            penalty_xing_default=REL_ROOT_PENALTY_XING,
+        )
 
-        for hit in banhe_hits:
-            pair = [str(x) for x in (hit.get("pair") or []) if str(x).strip()]
-            if len(pair) != 2:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            pair_kind = str(hit.get("pair_kind") or "banhe")
-            family_key = "banhe_shengwang" if pair_kind == "shengwang" else "banhe_muwang"
-            role_map = hit.get("role_map") if isinstance(hit.get("role_map"), dict) else {}
-            counts = hit.get("branch_counts") or {}
-            duplicate_bonus, _duplicate_roles = _relation_duplicate_bonus(counts, role_map)
-            rel_element = str(hit.get("element") or _BANHE_PAIR_TO_ELEMENT.get(frozenset(pair), ""))
-            effective_members = [str(x) for x in (hit.get("matched_branches") or pair) if str(x).strip()]
-            dominant_hidden_stem = _relation_dominant_hidden_stem(
-                relation_element=rel_element,
-                members=effective_members,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            factor_bundle = _relation_factor_bundle(
-                family_key=family_key,
-                relation_element=rel_element,
-                members=effective_members,
-                dominant_hidden_stem=dominant_hidden_stem,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            conflict_damping = _relation_conflict_damping(
-                members=effective_members,
-                family_key=family_key,
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key=family_key,
-                closeness=closeness,
-                strength=1.0,
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                family_factor=float(factor_bundle.get("effective_family_factor") or 0.0),
-            )
-            for branch in set(effective_members):
-                extra_count = max(0, int((counts.get(branch) or 1) - 1))
-                dup_factor = 1.0 + _relation_duplicate_role_bonus(str(role_map.get(branch) or "starter")) * extra_count
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=rel_element,
-                    magnitude=intensity * dup_factor,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "banhe",
-                pair,
-                pillars,
-                intensity,
-                rel_element,
-                family_key=family_key,
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                details={
-                    "pair_kind": pair_kind,
-                    "ordered_group": list(pair),
-                    "closeness": round(closeness, 4),
-                    "strength": 1.0,
-                    **factor_bundle,
-                    "role_map": role_map,
-                    "branch_counts": counts,
-                },
-            )
-
-        for hit in gonghe_hits:
-            pair = [str(x) for x in (hit.get("pair") or []) if str(x).strip()]
-            if len(pair) != 2:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            role_map = hit.get("role_map") if isinstance(hit.get("role_map"), dict) else {}
-            counts = hit.get("branch_counts") or {}
-            duplicate_bonus, _duplicate_roles = _relation_duplicate_bonus(counts, role_map)
-            rel_element = str(hit.get("element") or _GONGHE_PAIR_TO_ELEMENT.get(frozenset(pair), ""))
-            effective_members = [str(x) for x in (hit.get("matched_branches") or pair) if str(x).strip()]
-            dominant_hidden_stem = _relation_dominant_hidden_stem(
-                relation_element=rel_element,
-                members=effective_members,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            factor_bundle = _relation_factor_bundle(
-                family_key="gonghe",
-                relation_element=rel_element,
-                members=effective_members,
-                dominant_hidden_stem=dominant_hidden_stem,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            conflict_damping = _relation_conflict_damping(
-                members=effective_members,
-                family_key="gonghe",
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key="gonghe",
-                closeness=closeness,
-                strength=0.92,
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                family_factor=float(factor_bundle.get("effective_family_factor") or 0.0),
-            )
-            for branch in set(effective_members):
-                extra_count = max(0, int((counts.get(branch) or 1) - 1))
-                dup_factor = 1.0 + _relation_duplicate_role_bonus(str(role_map.get(branch) or "starter")) * extra_count
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=rel_element,
-                    magnitude=intensity * dup_factor,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "gonghe",
-                pair,
-                pillars,
-                intensity,
-                rel_element,
-                family_key="gonghe",
-                duplicate_bonus=duplicate_bonus,
-                conflict_damping=conflict_damping,
-                details={
-                    "pair_kind": "gonghe",
-                    "ordered_group": list(pair),
-                    "closeness": round(closeness, 4),
-                    "strength": 0.92,
-                    **factor_bundle,
-                    "role_map": role_map,
-                    "branch_counts": counts,
-                },
-            )
-
-        for hit in liuhe_hits:
-            pair = [str(x) for x in (hit.get("pair") or []) if str(x).strip()]
-            if len(pair) != 2:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            rel_element = _LIUHE_PAIR_TO_ELEMENT.get(frozenset(pair), "")
-            dominant_hidden_stem = _relation_dominant_hidden_stem(
-                relation_element=rel_element,
-                members=pair,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            factor_bundle = _relation_factor_bundle(
-                family_key="liuhe",
-                relation_element=rel_element,
-                members=pair,
-                dominant_hidden_stem=dominant_hidden_stem,
-                four_pillars=four_pillars,
-                luck_pillar=luck_pillar,
-                flow_pillar=flow_pillar,
-            )
-            conflict_damping = _relation_conflict_damping(
-                members=pair,
-                family_key="liuhe",
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key="liuhe",
-                closeness=closeness,
-                strength=0.96,
-                conflict_damping=conflict_damping,
-                family_factor=float(factor_bundle.get("effective_family_factor") or 0.0),
-            )
-            for branch in pair:
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=rel_element,
-                    magnitude=intensity,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "liuhe",
-                pair,
-                pillars,
-                intensity,
-                rel_element,
-                family_key="liuhe",
-                conflict_damping=conflict_damping,
-                details={
-                    "ordered_group": list(pair),
-                    "closeness": round(closeness, 4),
-                    "strength": 0.96,
-                    **factor_bundle,
-                },
-            )
-
-        for hit in anhe_hits:
-            pair = [str(x) for x in (hit.get("pair") or []) if str(x).strip()]
-            if len(pair) != 2:
-                continue
-            pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            conflict_damping = _relation_conflict_damping(
-                members=pair,
-                family_key="anhe",
-                conflicted_branches=conflicted_branches,
-                conflict_events=conflict_events,
-            )
-            intensity = _relation_root_intensity(
-                family_key="anhe",
-                closeness=closeness,
-                strength=0.92,
-                conflict_damping=conflict_damping,
-            )
-            for branch in pair:
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element="",
-                    magnitude=intensity,
-                    out=relation_delta_raw,
-                )
-            _trace(
-                "anhe",
-                pair,
-                pillars,
-                intensity,
-                "",
-                family_key="anhe",
-                conflict_damping=conflict_damping,
-                details={
-                    "ordered_group": list(pair),
-                    "closeness": round(closeness, 4),
-                    "strength": 0.92,
-                },
-            )
-
-        for kind, hits, cfg_key, dft in (
-            ("chong", chong_hits, "REL_ROOT_PENALTY_CHONG", REL_ROOT_PENALTY_CHONG),
-            ("hai", hai_hits, "REL_ROOT_PENALTY_HAI", REL_ROOT_PENALTY_HAI),
-            ("po", po_hits, "REL_ROOT_PENALTY_PO", REL_ROOT_PENALTY_PO),
-        ):
-            for hit in hits:
-                pair = [str(x) for x in (hit.get("pair") or []) if str(x).strip()]
-                if len(pair) != 2:
-                    continue
-                pillars = [str(p) for p in (hit.get("pillars") or []) if str(p).strip()]
-                closeness = _pillars_group_closeness(pillars)
-                intensity = -_get_l0_val(cfg_key, dft) * closeness
-                for branch in pair:
-                    _relation_apply_branch_delta(
-                        branch=branch,
-                        branch_scope_totals=branch_scope_totals,
-                        relation_element="",
-                        magnitude=intensity,
-                        out=relation_delta_raw,
-                    )
-                _trace(kind, pair, pillars, intensity, "", details={"closeness": round(closeness, 4)})
-
-        for hit in xing_hits:
-            members = [str(b) for b in (hit.get("branches") or []) if str(b).strip()]
-            if len(members) < 2:
-                continue
-            pillars = [str(p) for p in (hit.get("edge") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            intensity = -_get_l0_val("REL_ROOT_PENALTY_XING", REL_ROOT_PENALTY_XING) * closeness
-            for branch in members:
-                _relation_apply_branch_delta(
-                    branch=branch,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element="",
-                    magnitude=intensity,
-                    out=relation_delta_raw,
-                )
-            _trace("xing", members, pillars, intensity, "", details={"closeness": round(closeness, 4)})
-
-        for p1, p2 in _CONTROL_ADJ_SCOPE_PAIRS:
-            b1 = str(branches.get(p1) or "")
-            b2 = str(branches.get(p2) or "")
-            if not b1 or not b2:
-                continue
-            e1 = BRANCH_ELEMENT.get(b1, "")
-            e2 = BRANCH_ELEMENT.get(b2, "")
-            if not e1 or not e2 or e1 == e2:
-                continue
-            closeness = _pillar_pair_closeness(p1, p2)
-            bonus = _get_l0_val("REL_ROOT_CONTROL_BONUS", REL_ROOT_CONTROL_BONUS) * closeness
-            penalty = _get_l0_val("REL_ROOT_CONTROL_PENALTY", REL_ROOT_CONTROL_PENALTY) * closeness
-            if _controls_element(e1, e2):
-                _relation_apply_branch_delta(
-                    branch=b1,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=e1,
-                    magnitude=bonus,
-                    out=relation_delta_raw,
-                )
-                _relation_apply_branch_delta(
-                    branch=b2,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=e2,
-                    magnitude=-penalty,
-                    out=relation_delta_raw,
-                )
-                _trace("ke", [b1, b2], [p1, p2], bonus - penalty, f"{e1}克{e2}", details={"closeness": round(closeness, 4)})
-            elif _controls_element(e2, e1):
-                _relation_apply_branch_delta(
-                    branch=b2,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=e2,
-                    magnitude=bonus,
-                    out=relation_delta_raw,
-                )
-                _relation_apply_branch_delta(
-                    branch=b1,
-                    branch_scope_totals=branch_scope_totals,
-                    relation_element=e1,
-                    magnitude=-penalty,
-                    out=relation_delta_raw,
-                )
-                _trace("ke", [b2, b1], [p2, p1], bonus - penalty, f"{e2}克{e1}", details={"closeness": round(closeness, 4)})
+        _collect_control_relation_deltas(
+            branches=branches,
+            branch_element_map=BRANCH_ELEMENT,
+            control_adj_scope_pairs=_CONTROL_ADJ_SCOPE_PAIRS,
+            branch_scope_totals=branch_scope_totals,
+            relation_delta_raw=relation_delta_raw,
+            relation_traces=relation_traces,
+            pillar_pair_closeness=_pillar_pair_closeness,
+            controls_element=_controls_element,
+            get_l0_val=_get_l0_val,
+            relation_apply_branch_delta=_relation_apply_branch_delta,
+            append_relation_trace=_append_relation_trace,
+            control_bonus_default=REL_ROOT_CONTROL_BONUS,
+            control_penalty_default=REL_ROOT_CONTROL_PENALTY,
+        )
 
         # 天干五合“化学效率”量化：以 branch_hua_ratio 与月干支持作为效率源。
-        stem_cases = detect_stem_fusion_cases(stems, branches) if stems else []
-        for case in stem_cases:
-            mode = str(case.get("mode") or "")
-            hua_el_en = str(case.get("hua_element") or "")
-            rel_element = _ELEMENT_EN_TO_CN.get(hua_el_en.lower(), "")
-            branch_ratio = max(
-                0.0,
-                min(1.0, float(case.get("branch_root_ratio") if case.get("branch_root_ratio") is not None else case.get("branch_hua_ratio") or 0.0)),
-            )
-            visible_support = max(0.0, min(1.0, float(case.get("visible_support_strength") or (1.0 if case.get("month_stem_supports") else 0.0))))
-            support_score = max(
-                0.0,
-                min(
-                    1.0,
-                    float(
-                        case.get("effective_support_score")
-                        if case.get("effective_support_score") is not None
-                        else case.get("support_score")
-                        if case.get("support_score") is not None
-                        else visible_support * 0.62 + branch_ratio * 0.38
-                    ),
-                ),
-            )
-            interference_score = max(0.0, min(1.0, float(case.get("interference_score") or 0.0)))
-            manifestation_mode = str(case.get("manifestation_mode") or ("明化" if case.get("month_stem_supports") else "暗化")).strip()
-            support_origin = str(case.get("support_origin") or "").strip()
-            pillars = [str(p) for p in (case.get("pillars") or []) if str(p).strip()]
-            closeness = _pillars_group_closeness(pillars)
-            stems_pair = [str(s) for s in (case.get("stems") or []) if str(s).strip()]
-            efficiency = max(
-                0.0,
-                min(
-                    1.0,
-                    0.14
-                    + support_score * 0.68
-                    + visible_support * 0.10
-                    - interference_score * 0.24
-                    + (0.06 if manifestation_mode == "明化" else 0.0),
-                ),
-            )
-            if mode == "transformed" and rel_element:
-                intensity = _get_l0_val("REL_ROOT_BONUS_ANHE", REL_ROOT_BONUS_ANHE) * efficiency * closeness
-                _relation_apply_stem_element_delta(
-                    target_element=rel_element,
-                    magnitude=intensity,
-                    rooted_static=static_rooted,
-                    out=relation_delta_raw,
-                )
-                _trace(
-                    "stem_fusion_transform",
-                    stems_pair,
-                    pillars,
-                    intensity,
-                    rel_element,
-                    details={
-                        "branch_root_ratio": round(branch_ratio, 4),
-                        "visible_support_strength": round(visible_support, 4),
-                        "support_score": round(support_score, 4),
-                        "interference_score": round(interference_score, 4),
-                        "manifestation_mode": manifestation_mode,
-                        "support_origin": support_origin,
-                        "branch_disturbance_score": round(float(case.get("branch_disturbance_score") or 0.0), 4),
-                        "stem_competition_score": round(float(case.get("stem_competition_score") or 0.0), 4),
-                    },
-                )
-            elif mode == "stuck":
-                intensity = -_get_l0_val("REL_ROOT_PENALTY_PO", REL_ROOT_PENALTY_PO) * max(0.22, support_score) * (0.84 + interference_score * 0.36) * closeness
-                for stem in stems_pair:
-                    stem_el = STEM_ELEMENT.get(stem, "")
-                    if not stem_el:
-                        continue
-                    _relation_apply_stem_element_delta(
-                        target_element=stem_el,
-                        magnitude=intensity * 0.6,
-                        rooted_static=static_rooted,
-                        out=relation_delta_raw,
-                    )
-                _trace(
-                    "stem_fusion_stuck",
-                    stems_pair,
-                    pillars,
-                    intensity,
-                    "",
-                    details={
-                        "branch_root_ratio": round(branch_ratio, 4),
-                        "visible_support_strength": round(visible_support, 4),
-                        "support_score": round(support_score, 4),
-                        "interference_score": round(interference_score, 4),
-                        "manifestation_mode": manifestation_mode,
-                        "support_origin": support_origin,
-                        "branch_disturbance_score": round(float(case.get("branch_disturbance_score") or 0.0), 4),
-                        "stem_competition_score": round(float(case.get("stem_competition_score") or 0.0), 4),
-                    },
-                )
-
-    branch_source_retention = []
-    stem_source_retention = []
-    if branch_rows and relation_traces:
-        branch_source_retention, source_attenuation_summary = _build_relation_source_retention_plan(
-            branch_rows=branch_rows,
+        stem_cases = _collect_stem_fusion_relation_deltas(
+            stems=stems,
+            branches=branches,
+            static_rooted=static_rooted,
+            relation_delta_raw=relation_delta_raw,
             relation_traces=relation_traces,
+            detect_stem_fusion_cases=detect_stem_fusion_cases,
+            pillars_group_closeness=_pillars_group_closeness,
+            get_l0_val=_get_l0_val,
+            relation_apply_stem_element_delta=_relation_apply_stem_element_delta,
+            append_relation_trace=_append_relation_trace,
+            element_en_to_cn=_ELEMENT_EN_TO_CN,
+            stem_element_map=STEM_ELEMENT,
+            bonus_anhe_default=REL_ROOT_BONUS_ANHE,
+            penalty_po_default=REL_ROOT_PENALTY_PO,
         )
-        for row in branch_source_retention:
-            scope = str(row.get("scope") or "")
-            branch = str(row.get("branch") or "")
-            hidden_stem = str(row.get("hidden_stem") or "")
-            retention = max(0.0, min(1.0, float(row.get("retention") or 1.0)))
-            base_strength = float(branch_hidden_base_strengths.get((scope, branch, hidden_stem), 0.0))
-            if base_strength <= 0.0 or retention >= 0.999:
-                continue
-            static_rooted[hidden_stem] = max(0.0, float(static_rooted.get(hidden_stem, 0.0)) - base_strength * (1.0 - retention))
-    else:
-        source_attenuation_summary = []
-    if stem_cases:
-        stem_source_retention = _build_stem_fusion_source_retention_plan(stem_cases=stem_cases)
 
-    rooted = dict(static_rooted)
-    relation_delta_applied: Dict[str, float] = {}
-    for stem, raw_delta in relation_delta_raw.items():
-        base = max(0.0, float(static_rooted.get(stem, 0.0)))
-        cap_plus = max(0.2, base * 0.55)
-        cap_minus = max(0.16, base * 0.45)
-        applied = max(-cap_minus, min(cap_plus, float(raw_delta)))
-        if abs(applied) <= 1e-9:
-            continue
-        relation_delta_applied[stem] = applied
-        rooted[stem] = max(0.0, rooted.get(stem, 0.0) + applied)
-
-    relation_counts: Dict[str, int] = {}
-    for trace in relation_traces:
-        kind = str(trace.get("kind") or "")
-        relation_counts[kind] = relation_counts.get(kind, 0) + 1
-
-    return rooted, {
-        "hits": relation_counts,
-        "dynamic_raw": {stem: round(v, 4) for stem, v in sorted(relation_delta_raw.items()) if abs(v) > 1e-9},
-        "dynamic_applied": {stem: round(v, 4) for stem, v in sorted(relation_delta_applied.items()) if abs(v) > 1e-9},
-        "branch_source_retention": branch_source_retention,
-        "stem_source_retention": stem_source_retention,
-        "source_attenuation_summary": source_attenuation_summary,
-        "traces": relation_traces[:48],
-    }
+    return _finalize_root_dynamic_state(
+        branch_rows=branch_rows,
+        relation_traces=relation_traces,
+        branch_hidden_base_strengths=branch_hidden_base_strengths,
+        static_rooted=static_rooted,
+        relation_delta_raw=relation_delta_raw,
+        stem_cases=stem_cases,
+        build_relation_source_retention_plan=_build_relation_source_retention_plan,
+        build_stem_fusion_source_retention_plan=_build_stem_fusion_source_retention_plan,
+    )
 
 
 def _collect_root_strengths(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> Dict[str, float]:
     rooted, _meta = _collect_root_strengths_with_meta(four_pillars, luck_pillar, flow_pillar)
     return rooted
-
-
-def _cross_polarity_root_support(stem: str, root_strengths: Dict[str, float]) -> float:
-    """
-    同五行可通根，但若阴阳不匹配，只按折损后的根气计算。
-    例如壬水可以从子中癸水通根，但力度弱于癸水对癸水的本根。
-    """
-    stem_element = STEM_ELEMENT.get(stem, "")
-    stem_yin = STEM_YIN.get(stem)
-    if not stem_element or stem_yin is None:
-        return 0.0
-    support = 0.0
-    factor = _get_l0_val("CROSS_POLARITY_ROOT_SUPPORT_FACTOR", 0.55)
-    for root_stem, strength in root_strengths.items():
-        if root_stem == stem:
-            continue
-        if STEM_ELEMENT.get(root_stem, "") != stem_element:
-            continue
-        if STEM_YIN.get(root_stem) == stem_yin:
-            support += max(0.0, float(strength or 0.0))
-        else:
-            support += max(0.0, float(strength or 0.0)) * factor
-    return support
-
-
-def _visible_stem_scope_weights(four_pillars: Dict[str, str], luck_pillar: str, flow_pillar: str) -> List[Tuple[str, str]]:
-    rows: List[Tuple[str, str]] = []
-    for key in ("year", "month", "day", "hour"):
-        stem, _ = _parse_gz(str(four_pillars.get(key, "")).strip())
-        if stem:
-            rows.append((key, stem))
-    for scope, gz in (("luck", luck_pillar), ("flow", flow_pillar)):
-        stem, _ = _parse_gz(gz)
-        if stem:
-            rows.append((scope, stem))
-    return rows
-
-
-def _same_element_visible(hidden_stem: str, visible_stems: List[str]) -> bool:
-    hidden_element = STEM_ELEMENT.get(hidden_stem, "")
-    if not hidden_element:
-        return False
-    return any(STEM_ELEMENT.get(stem, "") == hidden_element for stem in visible_stems)
-
-
-def _branch_stage_for_daymaster(daymaster: str, branch: str) -> Tuple[str, float]:
-    dm_element = STEM_ELEMENT.get(daymaster, "")
-    if not dm_element or not branch:
-        return "", 0.0
-    table = CHANG_SHENG_TABLE.get(dm_element, [])
-    if branch not in table:
-        return "", 0.0
-    stage = CHANG_SHENG_STAGES[table.index(branch)]
-    return stage, float(CHANG_SHENG_BONUS_MAP.get(stage, 0.0))
-
-
-def _split_stage_component(stage_name: str, stage_component: float) -> Dict[str, float]:
-    if stage_component <= 0.0:
-        return {
-            "momentum_stage_lu": 0.0,
-            "momentum_stage_blade": 0.0,
-            "momentum_stage_general": 0.0,
-        }
-    if stage_name == "临官":
-        return {
-            "momentum_stage_lu": stage_component,
-            "momentum_stage_blade": 0.0,
-            "momentum_stage_general": 0.0,
-        }
-    if stage_name == "帝旺":
-        return {
-            "momentum_stage_lu": 0.0,
-            "momentum_stage_blade": stage_component,
-            "momentum_stage_general": 0.0,
-        }
-    return {
-        "momentum_stage_lu": 0.0,
-        "momentum_stage_blade": 0.0,
-        "momentum_stage_general": stage_component,
-    }
 
 
 def _relation_branch_role(branch: str, pivot_branch: str, tomb_branch: str) -> str:
@@ -2109,7 +1249,12 @@ def _relation_projection_weights(
             god = ten_god_from_stems(daymaster, hidden_stem)
             weights[god] = weights.get(god, 0.0) + float(hidden_weight) * role_weight * pillar_weight
 
-    for scope, stem in _visible_stem_scope_weights(four_pillars, luck_pillar, flow_pillar):
+    for scope, stem in _visible_stem_scope_weights(
+        four_pillars,
+        luck_pillar,
+        flow_pillar,
+        parse_gz=_parse_gz,
+    ):
         if STEM_ELEMENT.get(stem) != target_element:
             continue
         # 动态透干口径：月干最强，日干有效并参与计算，但仍不回流为静态显化。
@@ -2290,7 +1435,12 @@ def _relation_visible_support_strength(
         return 0.0
     cross_factor = _get_l0_val("REL_VISIBLE_CROSS_POLARITY_FACTOR", REL_VISIBLE_CROSS_POLARITY_FACTOR)
     support = 0.0
-    for scope, stem in _visible_stem_scope_weights(four_pillars, luck_pillar, flow_pillar):
+    for scope, stem in _visible_stem_scope_weights(
+        four_pillars,
+        luck_pillar,
+        flow_pillar,
+        parse_gz=_parse_gz,
+    ):
         if STEM_ELEMENT.get(stem, "") != rel_el:
             continue
         scope_weight = _relation_visible_scope_weight(scope)
@@ -2369,7 +1519,12 @@ def _relation_visible_projection_weights(
         return {}
     cross_factor = _get_l0_val("REL_VISIBLE_CROSS_POLARITY_FACTOR", REL_VISIBLE_CROSS_POLARITY_FACTOR)
     weights: Dict[str, float] = {}
-    for scope, stem in _visible_stem_scope_weights(four_pillars, luck_pillar, flow_pillar):
+    for scope, stem in _visible_stem_scope_weights(
+        four_pillars,
+        luck_pillar,
+        flow_pillar,
+        parse_gz=_parse_gz,
+    ):
         if STEM_ELEMENT.get(stem, "") != rel_el:
             continue
         scope_weight = _relation_visible_scope_weight(scope)
@@ -2475,143 +1630,6 @@ def _projection_bridge_protocol() -> Dict[str, Any]:
     )
 
 
-def _ensure_decomposition_bucket(
-    decomposition: Dict[str, Dict[str, float]],
-    god: str,
-) -> Dict[str, float]:
-    row = decomposition.get(god)
-    if isinstance(row, dict):
-        return row
-    row = {
-        "manifest": 0.0,
-        "root": 0.0,
-        "momentum": 0.0,
-        "momentum_month_order": 0.0,
-        "momentum_stage": 0.0,
-        "momentum_stage_lu": 0.0,
-        "momentum_stage_blade": 0.0,
-        "momentum_stage_general": 0.0,
-        "momentum_structure": 0.0,
-        "momentum_auxiliary": 0.0,
-        "hidden": 0.0,
-        "total": 0.0,
-    }
-    decomposition[god] = row
-    return row
-
-
-def _add_decomposition(
-    decomposition: Dict[str, Dict[str, float]],
-    god: str,
-    *,
-    manifest: float = 0.0,
-    root: float = 0.0,
-    momentum: float = 0.0,
-    momentum_month_order: float = 0.0,
-    momentum_stage: float = 0.0,
-    momentum_stage_lu: float = 0.0,
-    momentum_stage_blade: float = 0.0,
-    momentum_stage_general: float = 0.0,
-    momentum_structure: float = 0.0,
-    momentum_auxiliary: float = 0.0,
-    hidden: float = 0.0,
-) -> None:
-    row = _ensure_decomposition_bucket(decomposition, god)
-    month_order = max(0.0, float(momentum_month_order or 0.0))
-    stage_lu = max(0.0, float(momentum_stage_lu or 0.0))
-    stage_blade = max(0.0, float(momentum_stage_blade or 0.0))
-    stage_general = max(0.0, float(momentum_stage_general or 0.0))
-    stage = max(0.0, float(momentum_stage or 0.0)) + stage_lu + stage_blade + stage_general
-    structure = max(0.0, float(momentum_structure or 0.0))
-    auxiliary = max(0.0, float(momentum_auxiliary or 0.0))
-    total_momentum = max(0.0, float(momentum or 0.0)) + month_order + stage + structure + auxiliary
-    row["manifest"] += max(0.0, float(manifest or 0.0))
-    row["root"] += max(0.0, float(root or 0.0))
-    row["momentum"] += total_momentum
-    row["momentum_month_order"] += month_order
-    row["momentum_stage"] += stage
-    row["momentum_stage_lu"] += stage_lu
-    row["momentum_stage_blade"] += stage_blade
-    row["momentum_stage_general"] += stage_general
-    row["momentum_structure"] += structure
-    row["momentum_auxiliary"] += auxiliary
-    row["hidden"] += max(0.0, float(hidden or 0.0))
-    row["total"] = row["manifest"] + row["root"] + row["momentum"] + row["hidden"]
-
-
-def _finalize_decomposition(
-    decomposition: Dict[str, Dict[str, float]],
-    *,
-    damping: float,
-    energy_min: float,
-    energy_max: float,
-) -> Dict[str, Dict[str, float]]:
-    out: Dict[str, Dict[str, float]] = {}
-    for god, raw in decomposition.items():
-        if not isinstance(raw, dict):
-            continue
-        manifest = max(0.0, float(raw.get("manifest") or 0.0)) * damping
-        root = max(0.0, float(raw.get("root") or 0.0)) * damping
-        momentum_month_order = max(0.0, float(raw.get("momentum_month_order") or 0.0)) * damping
-        momentum_stage_lu = max(0.0, float(raw.get("momentum_stage_lu") or 0.0)) * damping
-        momentum_stage_blade = max(0.0, float(raw.get("momentum_stage_blade") or 0.0)) * damping
-        momentum_stage_general = max(0.0, float(raw.get("momentum_stage_general") or 0.0)) * damping
-        momentum_stage = (
-            max(0.0, float(raw.get("momentum_stage") or 0.0))
-            - max(0.0, float(raw.get("momentum_stage_lu") or 0.0))
-            - max(0.0, float(raw.get("momentum_stage_blade") or 0.0))
-            - max(0.0, float(raw.get("momentum_stage_general") or 0.0))
-        )
-        momentum_stage = max(0.0, momentum_stage) * damping + momentum_stage_lu + momentum_stage_blade + momentum_stage_general
-        momentum_structure = max(0.0, float(raw.get("momentum_structure") or 0.0)) * damping
-        momentum_auxiliary = max(0.0, float(raw.get("momentum_auxiliary") or 0.0)) * damping
-        momentum_base = max(0.0, float(raw.get("momentum") or 0.0)) - (
-            max(0.0, float(raw.get("momentum_month_order") or 0.0))
-            + max(0.0, float(raw.get("momentum_stage") or 0.0))
-            + max(0.0, float(raw.get("momentum_structure") or 0.0))
-            + max(0.0, float(raw.get("momentum_auxiliary") or 0.0))
-        )
-        momentum_other = max(0.0, momentum_base) * damping
-        momentum = momentum_month_order + momentum_stage + momentum_structure + momentum_auxiliary + momentum_other
-        hidden = max(0.0, float(raw.get("hidden") or 0.0)) * damping
-        total_raw = manifest + root + momentum + hidden
-        total = max(energy_min, min(energy_max, total_raw))
-        if total_raw > 0.0 and total != total_raw:
-            scale = total / total_raw
-            manifest *= scale
-            root *= scale
-            momentum_month_order *= scale
-            momentum_stage *= scale
-            momentum_stage_lu *= scale
-            momentum_stage_blade *= scale
-            momentum_stage_general *= scale
-            momentum_structure *= scale
-            momentum_auxiliary *= scale
-            momentum_other *= scale
-            momentum *= scale
-            hidden *= scale
-        manifest_r = round(manifest, 2)
-        root_r = round(root, 2)
-        momentum_r = round(momentum, 2)
-        hidden_r = round(hidden, 2)
-        out[god] = {
-            "manifest": manifest_r,
-            "root": root_r,
-            "momentum": momentum_r,
-            "momentum_month_order": round(momentum_month_order, 2),
-            "momentum_stage": round(momentum_stage, 2),
-            "momentum_stage_lu": round(momentum_stage_lu, 2),
-            "momentum_stage_blade": round(momentum_stage_blade, 2),
-            "momentum_stage_general": round(momentum_stage_general, 2),
-            "momentum_structure": round(momentum_structure, 2),
-            "momentum_auxiliary": round(momentum_auxiliary, 2),
-            "momentum_other": round(momentum_other, 2),
-            "hidden": hidden_r,
-            "total": round(manifest_r + root_r + momentum_r + hidden_r, 2),
-        }
-    return out
-
-
 def _vertical_compression(stem: str, branch: str) -> Tuple[float, float]:
     """计算同柱盖头截脚因子：返回 (stem_factor, branch_factor)"""
     s_el = STEM_ELEMENT.get(stem, "")
@@ -2632,191 +1650,6 @@ def _vertical_compression(stem: str, branch: str) -> Tuple[float, float]:
         return _get_l0_val("JIE_JIAO_FACTOR", 0.75), 1.0
         
     return 1.0, 1.0
-
-
-def _accumulate_stem_energy(
-    *,
-    stem: str,
-    stem_scope: str = "",
-    daymaster: str,
-    source_factor: float,
-    season_multiplier: float,
-    root_strengths: Dict[str, float],
-    stem_source_retention_map: Optional[Dict[Tuple[str, str], Dict[str, Any]]] = None,
-    acc: Dict[str, float],
-    decomposition: Dict[str, Dict[str, float]],
-    pillar_label: str = "",
-    proximity_factor: Optional[float] = None,
-    ledger: Optional[EvolutionLedger] = None,
-) -> None:
-    """
-    V17.30 能量累加器（天干）：
-      Energy = STEM_BASE * source_factor * season_multiplier
-      如果天干通根地支 → Energy *= 1.5
-    """
-    if not stem:
-        return
-    energy = _get_l0_val("STEM_BASE", 10.0) * source_factor * season_multiplier
-    source_retention = 1.0
-    source_retention_kind = ""
-    if stem_scope and isinstance(stem_source_retention_map, dict):
-        source_row = stem_source_retention_map.get((stem_scope, stem))
-        if isinstance(source_row, dict):
-            source_retention = max(0.0, min(1.0, float(source_row.get("retention") or 1.0)))
-            source_retention_kind = str(source_row.get("kind") or "")
-    energy *= source_retention
-    manifest_energy = energy
-    exact_root_strength = max(0.0, float(root_strengths.get(stem, 0.0) or 0.0))
-    cross_polarity_support = _cross_polarity_root_support(stem, root_strengths)
-    root_strength = exact_root_strength + cross_polarity_support
-    root_bonus = 0.0
-    if root_strength > 0.0:
-        rooted_gain = 1.0 + (_get_l0_val("ROOTED_GAIN", 1.5) - 1.0) * min(1.0, root_strength)
-        root_bonus = manifest_energy * (rooted_gain - 1.0)
-        energy = manifest_energy + root_bonus
-    god = ten_god_from_stems(daymaster, stem)
-    # 无根明透的比劫容易虚浮。除日主本干外，对无根比肩/劫财做一次温和衰减。
-    if pillar_label != "日" and god in {"比肩", "劫财"} and root_strength < 0.35:
-        floating_floor = _get_l0_val("FLOATING_PEER_FACTOR", 0.72)
-        floating_ratio = max(0.0, min(1.0, root_strength / 0.35))
-        peer_factor = floating_floor + (1.0 - floating_floor) * floating_ratio
-        energy *= peer_factor
-        manifest_energy *= peer_factor
-        root_bonus *= peer_factor
-    # V17.99: 数值护栏 — 安全累加
-    if math.isfinite(energy):
-        acc[god] = acc.get(god, 0.0) + energy
-        _add_decomposition(decomposition, god, manifest=manifest_energy, root=root_bonus)
-    else:
-        _log.warning(f"[V17-PHYSICS-NAN] Attempted to add NaN energy for {god} at {pillar_label}干")
-    if ledger is not None:
-        parts = [f"{stem}→{god}"]
-        if proximity_factor is not None:
-            parts.append(f"贴身×{proximity_factor:.2f}")
-        if exact_root_strength > 0.0:
-            parts.append(f"本根×{min(1.0, exact_root_strength):.2f}")
-        if cross_polarity_support > 0.0:
-            parts.append(f"异阴阳根×{min(1.0, cross_polarity_support):.2f}")
-        if pillar_label != "日" and god in {"比肩", "劫财"} and root_strength < 0.35:
-            floating_floor = _get_l0_val("FLOATING_PEER_FACTOR", 0.72)
-            floating_ratio = max(0.0, min(1.0, root_strength / 0.35))
-            peer_factor = floating_floor + (1.0 - floating_floor) * floating_ratio
-            parts.append(f"浮木×{peer_factor:.2f}")
-        if abs(season_multiplier - 1.0) > 0.01:
-            parts.append(f"季×{season_multiplier:.1f}")
-        if source_retention < 0.999:
-            parts.append(f"源气留存×{source_retention:.2f}")
-            if source_retention_kind:
-                parts.append(source_retention_kind)
-        reason = f"{pillar_label}干 {'·'.join(parts)}"
-        ledger.append_entry(god, acc[god], f"L0_STEM_{pillar_label}", reason)
-
-
-def _accumulate_branch_energy(
-    *,
-    branch: str,
-    branch_scope: str = "",
-    daymaster: str,
-    source_factor: float,
-    void_factor: float,
-    month_branch: str,
-    apply_month_order: bool,
-    visible_stems: List[str],
-    branch_source_retention_map: Optional[Dict[Tuple[str, str, str], Dict[str, Any]]] = None,
-    acc: Dict[str, float],
-    decomposition: Dict[str, Dict[str, float]],
-    pillar_label: str = "",
-    ledger: Optional[EvolutionLedger] = None,
-) -> None:
-    """
-    V17.30 能量累加器（地支）：
-      Energy = BRANCH_BASE * hidden_weight * source_factor * season_multiplier * void_factor
-      如果地支透出天干 → Energy *= 1.2
-    """
-    if not branch:
-        return
-    stage_name, stage_bonus_ratio = _branch_stage_for_daymaster(daymaster, branch)
-    for hidden_stem, h_w in BRANCH_HIDDEN.get(branch, []):
-        hidden_element = STEM_ELEMENT.get(hidden_stem, "")
-        sm = 1.0
-        if apply_month_order and branch == month_branch and hidden_element:
-            sm = _season_multiplier(hidden_element, month_branch)
-        source_retention = 1.0
-        manifestation_mode = ""
-        if branch_scope and isinstance(branch_source_retention_map, dict):
-            source_row = branch_source_retention_map.get((branch_scope, branch, hidden_stem))
-            if isinstance(source_row, dict):
-                source_retention = max(0.0, min(1.0, float(source_row.get("retention") or 1.0)))
-                manifestation_mode = str(source_row.get("manifestation_mode") or "")
-        raw_base_energy = _get_l0_val("BRANCH_BASE", 12.0) * h_w * source_factor * void_factor * source_retention
-        exposed = hidden_stem in visible_stems
-        same_element_visible = _same_element_visible(hidden_stem, visible_stems)
-        support_factor = 1.0
-        if exposed:
-            support_factor = _get_l0_val("EXPOSED_HIDDEN_GAIN", 1.2)
-        elif not same_element_visible:
-            support_factor = _get_l0_val(
-                "UNEXPOSED_MAIN_HIDDEN_FACTOR" if float(h_w) >= 0.6 else "UNEXPOSED_AUX_HIDDEN_FACTOR",
-                0.58 if float(h_w) >= 0.6 else 0.42,
-            )
-        energy = raw_base_energy * sm * support_factor
-        god = ten_god_from_stems(daymaster, hidden_stem)
-        base_component = raw_base_energy * support_factor
-        momentum_component = raw_base_energy * max(0.0, sm - 1.0) * support_factor
-        stage_component = 0.0
-        if hidden_element and hidden_element == STEM_ELEMENT.get(daymaster, "") and stage_bonus_ratio > 0.0:
-            stage_component = raw_base_energy * stage_bonus_ratio * support_factor
-            energy += stage_component
-        stage_breakdown = _split_stage_component(stage_name, stage_component)
-        # V17.99: 数值护栏 — 安全累加
-        if math.isfinite(energy):
-            acc[god] = acc.get(god, 0.0) + energy
-            if exposed or same_element_visible:
-                _add_decomposition(
-                    decomposition,
-                    god,
-                    root=base_component,
-                    momentum_month_order=momentum_component,
-                    momentum_stage=stage_component,
-                    momentum_stage_lu=stage_breakdown["momentum_stage_lu"],
-                    momentum_stage_blade=stage_breakdown["momentum_stage_blade"],
-                    momentum_stage_general=stage_breakdown["momentum_stage_general"],
-                )
-            else:
-                _add_decomposition(
-                    decomposition,
-                    god,
-                    hidden=base_component,
-                    momentum_month_order=momentum_component,
-                    momentum_stage=stage_component,
-                    momentum_stage_lu=stage_breakdown["momentum_stage_lu"],
-                    momentum_stage_blade=stage_breakdown["momentum_stage_blade"],
-                    momentum_stage_general=stage_breakdown["momentum_stage_general"],
-                )
-        else:
-            _log.warning(f"[V17-PHYSICS-NAN] Attempted to add NaN energy for {god} at {pillar_label}支")
-        if ledger is not None:
-            parts = [f"{branch}藏{hidden_stem}→{god}"]
-            if exposed:
-                parts.append("透干×1.2")
-            elif not same_element_visible:
-                latent_factor = _get_l0_val(
-                    "UNEXPOSED_MAIN_HIDDEN_FACTOR" if float(h_w) >= 0.6 else "UNEXPOSED_AUX_HIDDEN_FACTOR",
-                    0.58 if float(h_w) >= 0.6 else 0.42,
-                )
-                parts.append(f"潜藏×{latent_factor:.2f}")
-            if void_factor < 1.0:
-                parts.append(f"空亡×{void_factor:.1f}")
-            if abs(sm - 1.0) > 0.01:
-                parts.append(f"季×{sm:.1f}")
-            if stage_component > 0.0 and stage_name:
-                parts.append(f"{stage_name}势×{stage_bonus_ratio:.2f}")
-            if source_retention < 0.999:
-                parts.append(f"源气留存×{source_retention:.2f}")
-                if manifestation_mode:
-                    parts.append(manifestation_mode)
-            reason = f"{pillar_label}支 {'·'.join(parts)}"
-            ledger.append_entry(god, acc[god], f"L0_BRANCH_{pillar_label}", reason)
 
 
 def calc_deity_scores(
@@ -2854,7 +1687,12 @@ def calc_deity_scores(
     # ── Step 1：准备全局辅助数据 ──
     acc: Dict[str, float] = {}
     decomposition: Dict[str, Dict[str, float]] = {}
-    visible_stems = _collect_visible_stems(four_pillars, luck_pillar, flow_pillar)
+    visible_stems = _collect_visible_stems(
+        four_pillars,
+        luck_pillar,
+        flow_pillar,
+        parse_gz=_parse_gz,
+    )
     root_strengths, root_dynamic_meta = _collect_root_strengths_with_meta(four_pillars, luck_pillar, flow_pillar)
     branch_source_retention_map = {
         (str(row.get("scope") or ""), str(row.get("branch") or ""), str(row.get("hidden_stem") or "")): row
@@ -2906,6 +1744,18 @@ def calc_deity_scores(
                 pillar_label=p_label,
                 proximity_factor=stem_position_factor,
                 ledger=ledger,
+                get_l0_val=_get_l0_val,
+                stem_base=STEM_BASE,
+                ten_god_from_stems=ten_god_from_stems,
+                add_decomposition=_add_decomposition,
+                cross_polarity_root_support=lambda s, rooted: _cross_polarity_root_support(
+                    s,
+                    rooted,
+                    stem_element_map=STEM_ELEMENT,
+                    stem_yin_map=STEM_YIN,
+                    cross_polarity_root_support_factor=_get_l0_val("CROSS_POLARITY_ROOT_SUPPORT_FACTOR", 0.55),
+                ),
+                logger=_log,
             )
         # 地支能量（藏干逐一累加，各自带 Season Power）
         branch_source_factor = float(NATAL_BRANCH_POSITION_WEIGHTS.get(pillar_key, 0.8)) * b_comp
@@ -2923,6 +1773,28 @@ def calc_deity_scores(
             decomposition=decomposition,
             pillar_label=p_label,
             ledger=ledger,
+            get_l0_val=_get_l0_val,
+            branch_hidden=BRANCH_HIDDEN,
+            branch_base=BRANCH_BASE,
+            stem_element_map=STEM_ELEMENT,
+            ten_god_from_stems=ten_god_from_stems,
+            add_decomposition=_add_decomposition,
+            same_element_visible=lambda hidden_stem, stems: _same_element_visible(
+                hidden_stem,
+                stems,
+                stem_element_map=STEM_ELEMENT,
+            ),
+            season_multiplier_fn=_season_multiplier,
+            branch_stage_for_daymaster_fn=lambda dm, br: _branch_stage_for_daymaster(
+                dm,
+                br,
+                stem_element_map=STEM_ELEMENT,
+                chang_sheng_table=CHANG_SHENG_TABLE,
+                chang_sheng_stages=CHANG_SHENG_STAGES,
+                chang_sheng_bonus_map=CHANG_SHENG_BONUS_MAP,
+            ),
+            split_stage_component_fn=_split_stage_component,
+            logger=_log,
         )
 
     # ── Step 4：大运 / 流年（带衰减系数；月令不再直接广播到外柱）──
@@ -2946,6 +1818,18 @@ def calc_deity_scores(
                 decomposition=decomposition,
                 pillar_label=sf_label,
                 ledger=ledger,
+                get_l0_val=_get_l0_val,
+                stem_base=STEM_BASE,
+                ten_god_from_stems=ten_god_from_stems,
+                add_decomposition=_add_decomposition,
+                cross_polarity_root_support=lambda s, rooted: _cross_polarity_root_support(
+                    s,
+                    rooted,
+                    stem_element_map=STEM_ELEMENT,
+                    stem_yin_map=STEM_YIN,
+                    cross_polarity_root_support_factor=_get_l0_val("CROSS_POLARITY_ROOT_SUPPORT_FACTOR", 0.55),
+                ),
+                logger=_log,
             )
             _accumulate_branch_energy(
                 branch=branch,
@@ -2961,6 +1845,28 @@ def calc_deity_scores(
                 decomposition=decomposition,
                 pillar_label=sf_label,
                 ledger=ledger,
+                get_l0_val=_get_l0_val,
+                branch_hidden=BRANCH_HIDDEN,
+                branch_base=BRANCH_BASE,
+                stem_element_map=STEM_ELEMENT,
+                ten_god_from_stems=ten_god_from_stems,
+                add_decomposition=_add_decomposition,
+                same_element_visible=lambda hidden_stem, stems: _same_element_visible(
+                    hidden_stem,
+                    stems,
+                    stem_element_map=STEM_ELEMENT,
+                ),
+                season_multiplier_fn=_season_multiplier,
+                branch_stage_for_daymaster_fn=lambda dm, br: _branch_stage_for_daymaster(
+                    dm,
+                    br,
+                    stem_element_map=STEM_ELEMENT,
+                    chang_sheng_table=CHANG_SHENG_TABLE,
+                    chang_sheng_stages=CHANG_SHENG_STAGES,
+                    chang_sheng_bonus_map=CHANG_SHENG_BONUS_MAP,
+                ),
+                split_stage_component_fn=_split_stage_component,
+                logger=_log,
             )
 
     structural_bonuses = _apply_relation_foundation_bonuses(

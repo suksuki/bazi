@@ -86,10 +86,25 @@
 
 ### 4.3 运流引动权重
 
-- 大运 -> 月柱：`0.90`
-- 大运 -> 日柱：`0.82`
-- 流年 -> 近端触发：`0.72`
-- 流年 -> 远端触发：`0.35`
+当前 runtime field 宪法（2026-04-22 对齐版）：
+
+- 大运 -> 日柱：`1.00`，`background_core`
+- 大运 -> 月柱：`0.96`，`background_field`
+- 大运 -> 时柱：`0.80`，`background_periphery`
+- 大运 -> 年柱：`0.74`，`background_periphery`
+- 流年 -> 日柱：`0.90`，`yearly_trigger`
+- 流年 -> 月柱：`0.84`，`seasonal_trigger`
+- 流年 -> 时柱：`0.72`，`peripheral_trigger`
+- 流年 -> 年柱：`0.64`，`peripheral_trigger`
+- 大运 <-> 流年：`0.88`，`runtime_cascade`
+
+补充说明：
+
+- `大运 = 背景场`
+- `流年 = 年度扰动`
+- 核心锚点优先顺序：`日柱/日支 > 月柱/月令 > 时柱 > 年柱`
+- 这里的 Core 图边权不等于 L0 根气层的 `ROOT_SCOPE_WEIGHTS`
+- L0 根气层当前口径是：`month 1.00 > luck 0.92 > hour 0.82 > day 0.68 > year 0.48 > flow 0.42`
 
 ## 5. 三层求解
 

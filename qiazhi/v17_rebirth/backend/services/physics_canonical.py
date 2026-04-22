@@ -8,6 +8,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
 _PHYS_DASH = "\u2014"
@@ -127,10 +128,7 @@ def _relation_dynamics_prompt_lines(pt: Dict[str, Any]) -> List[str]:
 def _runtime_field_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     if not isinstance(pt, dict):
         return []
-    return [
-        "运流解释合同：大运更像背景场，流年更像年度扰动；不是线性先后，而是流年在大运场中触发原局关键节点。",
-        "运流解释合同：当前 Core 图优先耦合顺序为日柱/日支 > 月柱/月令 > 时柱 > 年柱；大运权重大于流年。",
-    ]
+    return runtime_field_prompt_lines()
 
 
 def _pattern_summary_prompt_lines(pt: Dict[str, Any]) -> List[str]:

@@ -1,7 +1,7 @@
 # V17 十神模型总重构主计划
 
 日期：2026-04-22  
-状态：立项 / 进入 Phase 0 基线冻结  
+状态：执行中 / Phase 1-3 已推进，Phase 4 已启动  
 定位：十神物理层、关系层、运流层、核心求解层的统一重构总图
 
 ---
@@ -34,13 +34,37 @@
 
 ### 2.1 大文件集中度过高
 
-截至 2026-04-22：
+立项时（2026-04-22 初）：
 
 - `ten_gods_engine.py`：3315 行
 - `branch_stem_geometry.py`：792 行
 - `work_path_engine.py`：962 行
 - `flux_solver.py`：958 行
 - `test_ten_gods_energy_calibration.py`：827 行
+
+当前执行面（2026-04-22 晚）：
+
+- `ten_gods_engine.py`：2082 行
+- `branch_stem_geometry.py`：78 行（已退为 facade）
+- 已切出 6 个 L0 子模块 + 4 个 L1 relation runtime 模块：
+  - `ten_gods_protocol_builders.py`
+  - `ten_gods_decomposition.py`
+  - `ten_gods_projection.py`
+  - `ten_gods_static_basis.py`
+  - `ten_gods_root_dynamics.py`
+  - `ten_gods_relation_runtime.py`
+  - `L1_atomic_ops/relation_structured_families.py`
+  - `L1_atomic_ops/relation_penalty_families.py`
+  - `L1_atomic_ops/relation_special_families.py`
+  - `L1_atomic_ops/relation_runtime_collectors.py`（facade）
+- 已切出 3 个 L1 geometry family 模块：
+  - `L1_atomic_ops/relation_geometry_pairs.py`
+  - `L1_atomic_ops/relation_geometry_structured.py`
+  - `L1_atomic_ops/stem_fusion_geometry.py`
+- 已建立统一 runtime field 协议模块：
+  - `backend/logic/runtime_field_protocol.py`
+
+这意味着 L0 已从“单体大文件”转为“主引擎 + 子模块编排”结构，并开始正式消费 L1 relation runtime，后续继续推进 Phase 3 时，风险会显著下降。
 
 这说明我们已经不是“小修小补”阶段，而是需要正式切模块。
 
@@ -141,6 +165,50 @@
 ---
 
 ## 4. 目标架构
+
+## 4.0 当前落地快照（2026-04-22）
+
+L0 当前已经形成下面这组边界：
+
+- `ten_gods_engine.py`
+  - orchestration / 常量 / 少量共享 helper / final assembly
+- `ten_gods_protocol_builders.py`
+  - `projection_bridge_protocol`
+  - `relation_dynamics_summary`
+  - `relation_formation_summary`
+- `ten_gods_decomposition.py`
+  - `manifest / root / momentum / hidden` bucket 与 finalize
+- `ten_gods_projection.py`
+  - visible stems / cross polarity root / same-element projection
+- `ten_gods_static_basis.py`
+  - stem / branch static basis accumulation
+- `ten_gods_root_dynamics.py`
+  - runtime stems / dynamic root finalize
+- `ten_gods_relation_runtime.py`
+  - relation hit shell / trace append / conflict set
+- `L1_atomic_ops/relation_structured_families.py`
+  - `sanhe / sanhui / banhe / gonghe / liuhe / anhe`
+- `L1_atomic_ops/relation_penalty_families.py`
+  - `chong / hai / po / xing`
+- `L1_atomic_ops/relation_special_families.py`
+  - `ke / stem_fusion`
+- `L1_atomic_ops/relation_runtime_collectors.py`
+  - 兼容导出层，供旧调用桥接
+- `L1_atomic_ops/relation_geometry_pairs.py`
+  - `liuhe / anhe / chong / hai / po / xing`
+- `L1_atomic_ops/relation_geometry_structured.py`
+  - `sanhe / banhe / gonghe`
+- `L1_atomic_ops/stem_fusion_geometry.py`
+  - `stem fusion geometry / runtime pillar parsing`
+- `L1_atomic_ops/branch_stem_geometry.py`
+  - facade，仅供兼容导出与测试使用
+
+这说明：
+
+- Phase 1 已完成
+- Phase 2 的代码切分目标已基本完成
+- Phase 3 已进入“逻辑家族真正迁出 L0，并拆成 family 级 L1 模块”阶段
+- Phase 4 已开始把 `L0 root scope / Core dynamic edge / Prompt 合同` 收到同一份 runtime-field 宪法里
 
 ## 4.1 L0：静态十神物理层
 
@@ -408,6 +476,8 @@
 
 ## Phase 1：切出协议与汇总构建器
 
+状态：已完成
+
 目标：
 
 - 先把“协议构建”从大文件里摘出去
@@ -425,6 +495,8 @@
 - Prompt、Admin、前端字段不变
 
 ## Phase 2：切出 L0 静态基础
+
+状态：代码切分已基本完成，待补文档与更细粒度测试
 
 目标：
 
@@ -444,6 +516,16 @@
 
 ## Phase 3：切出 L1 关系家族
 
+状态：已进入 family 级模块阶段（runtime / geometry 双层 family 模块已拆分，并补了轻量单测）
+
+阶段验收快照：
+
+- `test_l1_relation_runtime_collectors.py`：新增 4 条
+- `test_l1_branch_geometry_modules.py`：新增 3 条
+- `test_runtime_field_protocol.py`：新增 4 条
+- 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）
+- 全量 `v17_rebirth/tests`：`310 passed`
+
 目标：
 
 - 让三会、三合、半合、拱合、六合、暗合、冲刑害破等都在独立 family 模块里
@@ -460,6 +542,8 @@
 - 合成样盘覆盖 family 差异
 
 ## Phase 4：统一运流与做功场
+
+状态：已启动（runtime field 协议已抽成共享模块，Core/Prompt/L0 已开始共用）
 
 目标：
 

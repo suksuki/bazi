@@ -3,69 +3,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal
 
+from v17_rebirth.backend.logic.runtime_field_protocol import (
+    CORE_GRAPH_DISTANCE_WEIGHTS,
+    CORE_GRAPH_POSITION_WEIGHTS,
+    DEFAULT_DYNAMIC_EDGE_MODES,
+    DEFAULT_DYNAMIC_EDGE_WEIGHTS,
+    dynamic_edge_metadata,
+)
+
 
 PillarName = Literal["year", "month", "day", "hour", "luck", "flow"]
 NodeKind = Literal["stem", "branch", "hidden_stem"]
 EdgeKind = Literal["intra_pillar", "adjacent_pillar", "skip_pillar", "dynamic_trigger", "projection_bridge"]
 
 
-DEFAULT_POSITION_WEIGHTS: Dict[PillarName, float] = {
-    "year": 0.72,
-    "month": 1.00,
-    "day": 0.92,
-    "hour": 0.85,
-    "luck": 0.88,
-    "flow": 0.56,
-}
+DEFAULT_POSITION_WEIGHTS: Dict[PillarName, float] = dict(CORE_GRAPH_POSITION_WEIGHTS)
 
-DEFAULT_DISTANCE_WEIGHTS: Dict[int, float] = {
-    0: 1.00,
-    1: 0.78,
-    2: 0.52,
-    3: 0.31,
-}
-
-DEFAULT_DYNAMIC_EDGE_WEIGHTS: Dict[tuple[PillarName, PillarName], float] = {
-    ("luck", "day"): 1.00,
-    ("day", "luck"): 1.00,
-    ("luck", "month"): 0.96,
-    ("month", "luck"): 0.96,
-    ("luck", "hour"): 0.80,
-    ("hour", "luck"): 0.80,
-    ("luck", "year"): 0.74,
-    ("year", "luck"): 0.74,
-    ("flow", "day"): 0.90,
-    ("day", "flow"): 0.90,
-    ("flow", "month"): 0.84,
-    ("month", "flow"): 0.84,
-    ("flow", "hour"): 0.72,
-    ("hour", "flow"): 0.72,
-    ("flow", "year"): 0.64,
-    ("year", "flow"): 0.64,
-    ("luck", "flow"): 0.88,
-    ("flow", "luck"): 0.88,
-}
-
-DEFAULT_DYNAMIC_EDGE_MODES: Dict[tuple[PillarName, PillarName], str] = {
-    ("luck", "day"): "background_core",
-    ("day", "luck"): "background_core",
-    ("luck", "month"): "background_field",
-    ("month", "luck"): "background_field",
-    ("luck", "hour"): "background_periphery",
-    ("hour", "luck"): "background_periphery",
-    ("luck", "year"): "background_periphery",
-    ("year", "luck"): "background_periphery",
-    ("flow", "day"): "yearly_trigger",
-    ("day", "flow"): "yearly_trigger",
-    ("flow", "month"): "seasonal_trigger",
-    ("month", "flow"): "seasonal_trigger",
-    ("flow", "hour"): "peripheral_trigger",
-    ("hour", "flow"): "peripheral_trigger",
-    ("flow", "year"): "peripheral_trigger",
-    ("year", "flow"): "peripheral_trigger",
-    ("luck", "flow"): "runtime_cascade",
-    ("flow", "luck"): "runtime_cascade",
-}
+DEFAULT_DISTANCE_WEIGHTS: Dict[int, float] = dict(CORE_GRAPH_DISTANCE_WEIGHTS)
 
 
 @dataclass(frozen=True)
@@ -129,8 +83,10 @@ def _edge_weight_and_metadata(
     if source in {"luck", "flow"} or target in {"luck", "flow"}:
         dist = _dynamic_distance(source, target)
         weight = float(DEFAULT_DYNAMIC_EDGE_WEIGHTS.get((source, target), distance_weights.get(min(dist, 3), distance_weights[3])))
-        mode = str(DEFAULT_DYNAMIC_EDGE_MODES.get((source, target), "dynamic_trigger"))
-        return weight, dist, {"coupling_mode": mode}
+        metadata = dynamic_edge_metadata(source, target)
+        if "coupling_mode" not in metadata:
+            metadata["coupling_mode"] = str(DEFAULT_DYNAMIC_EDGE_MODES.get((source, target), "dynamic_trigger"))
+        return weight, dist, metadata
     dist = pillar_distance(source, target)
     weight = float(distance_weights.get(min(dist, 3), distance_weights[3]))
     return weight, dist, {}

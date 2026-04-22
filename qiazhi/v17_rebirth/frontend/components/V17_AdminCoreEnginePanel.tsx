@@ -522,6 +522,36 @@ export function V17_AdminCoreEnginePanel({
     fallback: fallbackDistanceWeights,
     labelMap: { "0": "同柱", "1": "相邻", "2": "隔柱", "3": "远隔" },
   });
+  const runtimeFieldProtocol = asRecord(graphMeta.runtime_field_protocol);
+  const runtimeAnchorLabel = String(runtimeFieldProtocol.anchor_priority_label || "日柱/日支 > 月柱/月令 > 时柱 > 年柱").trim();
+  const runtimeRootScopeWeights = formatWeightEntries(runtimeFieldProtocol.root_scope_weights, {
+    fallback: [["大运", "0.92"], ["流年", "0.42"]],
+    labelMap: { year: "年柱根域", month: "月柱根域", day: "日柱根域", hour: "时柱根域", luck: "大运根域", flow: "流年根域" },
+  });
+  const runtimeOriginFactors = formatWeightEntries(runtimeFieldProtocol.work_origin_scope_factors, {
+    fallback: [["大运来源", "1.16"], ["流年来源", "0.84"]],
+    labelMap: {
+      natal: "原局来源",
+      natal_basis: "原局基线",
+      natal_projection: "原局投影",
+      runtime: "运流混合",
+      mixed: "运流混合",
+      luck: "大运来源",
+      flow: "流年来源",
+    },
+  });
+  const dynamicModeProfile = Object.entries(asRecord(graphMeta.dynamic_mode_profile))
+    .map(([mode, raw]) => {
+      const row = asRecord(raw);
+      return {
+        mode: String(mode || "").trim(),
+        count: asNumber(row.count),
+        avgWeight: asNumber(row.avg_weight),
+        minPriority: asNumber(row.min_priority, 99),
+      };
+    })
+    .filter((row) => row.mode)
+    .sort((left, right) => left.minPriority - right.minPriority || right.avgWeight - left.avgWeight);
   const effectRows = Object.entries(effectScores)
     .map(([god, raw]) => [god, asRecord(raw)] as [string, LooseRecord])
     .sort(
@@ -628,6 +658,77 @@ export function V17_AdminCoreEnginePanel({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 lg:col-span-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">Runtime Field Protocol</div>
+                <div className="text-[10px] text-zinc-500">背景场 / 扰动触发 / 运流级联</div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-950/20 px-3 py-1 text-cyan-200">
+                  锚点顺序 {runtimeAnchorLabel}
+                </span>
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-3 py-1 text-emerald-200">
+                  大运 = 背景场
+                </span>
+                <span className="rounded-full border border-amber-500/25 bg-amber-950/20 px-3 py-1 text-amber-200">
+                  流年 = 年度扰动
+                </span>
+                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-950/20 px-3 py-1 text-fuchsia-200">
+                  运流 = runtime_cascade
+                </span>
+              </div>
+              <div className="mt-3 grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">L0 Root Scope</div>
+                    <div className="grid gap-2 text-[10px] text-zinc-400">
+                      {runtimeRootScopeWeights.map(([label, value]) => (
+                        <div key={label} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                          <span>{label}</span>
+                          <span className="font-mono text-zinc-200">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Work Origin</div>
+                    <div className="grid gap-2 text-[10px] text-zinc-400">
+                      {runtimeOriginFactors.map(([label, value]) => (
+                        <div key={label} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                          <span>{label}</span>
+                          <span className="font-mono text-zinc-200">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Dynamic Mode Profile</div>
+                  <div className="grid gap-2 text-[10px] text-zinc-400">
+                    {dynamicModeProfile.length ? dynamicModeProfile.map((row) => (
+                      <div key={row.mode} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-zinc-100">{row.mode}</span>
+                          <span className="font-mono text-cyan-200">avg {row.avgWeight.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-2 text-zinc-500">
+                          <span>边数 {row.count}</span>
+                          <span>优先级 {row.minPriority}</span>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/40 px-3 py-4 text-center text-zinc-500">
+                        当前尚未产出 dynamic mode profile。
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-zinc-500">
+                同一个“运流”概念现在拆成三层职责：L0 的根域权重、Core 图的 dynamic edge、Work Path 的来源域系数。三者不必数值相同，但必须遵守同一套背景场/扰动触发法理。
+              </p>
             </div>
 
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">

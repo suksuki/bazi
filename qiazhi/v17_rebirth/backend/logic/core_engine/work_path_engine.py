@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
-from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import branches_and_stems_from_runtime_pillars
+from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import branches_and_stems_from_runtime_pillars
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     BRANCH_HIDDEN,
     BRANCH_ELEMENT,
@@ -11,6 +11,7 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
     STEM_ELEMENT,
     ten_god_from_stems,
 )
+from v17_rebirth.backend.logic.runtime_field_protocol import WORK_ORIGIN_SCOPE_FACTORS
 from v17_rebirth.backend.logic.core_engine.pillar_graph_kernel import PillarEdge, PillarNode, SixPillarGraph
 from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import WORK_EVIDENCE_KEY
 
@@ -192,13 +193,7 @@ def _relation_factor(relation_family: str, effect_type: str) -> float:
 
 def _origin_factor(origin_scope: str) -> float:
     normalized = str(origin_scope or "").strip().lower()
-    if normalized == "luck":
-        return 1.16
-    if normalized == "flow":
-        return 0.84
-    if normalized in {"runtime", "mixed"}:
-        return 1.08
-    return 1.0
+    return float(WORK_ORIGIN_SCOPE_FACTORS.get(normalized, 1.0))
 
 
 def _layer_factor(layer: str) -> float:

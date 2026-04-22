@@ -93,7 +93,14 @@ class ExposedHiddenFoundationPlugin(V17PluginSpec):
         four = _four_pillars(physics_tensor)
         luck = str(physics_tensor.get("luck_pillar", "") or "")
         flow = str(physics_tensor.get("flow_pillar", "") or "")
-        visible = set(_collect_visible_stems(four, luck, flow))
+        visible = set(
+            _collect_visible_stems(
+                four,
+                luck,
+                flow,
+                parse_gz=_parse_gz,
+            )
+        )
         exposed: List[str] = []
         for key in ("year", "month", "day", "hour"):
             _, branch = _parse_gz(str(four.get(key, "")).strip())

@@ -37,6 +37,7 @@ Synthetic Lab 当前覆盖：
 
 - L0 静态基础：通根 / 虚浮 / 透干
 - L1 关系家族：三合 / 三会 / 半合等成局摘要
+- Core 运流协议：背景场 / 年度扰动 / runtime_cascade
 - L2 判定层：`risk_matrix` 偏置、authority 用神/忌神/通关神
 - Master Reasoning：主审盘推理链与 learning hook
 - Evolution Ledger：演化账本契约
@@ -56,6 +57,9 @@ pytest qiazhi/v17_rebirth/tests -m integration -q
 
 # 全量 V17 测试目录
 pytest qiazhi/v17_rebirth/tests -q
+
+# 仅运行 runtime-field / 六柱时空核心契约
+pytest qiazhi/v17_rebirth/tests/test_runtime_field_protocol.py qiazhi/v17_rebirth/tests/test_six_pillar_spacetime_core.py -q
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test

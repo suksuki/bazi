@@ -8,19 +8,23 @@ import math
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from typing import Any, Dict, List, Tuple
 
-from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
-    branches_and_stems_from_four_pillars,
-    branches_and_stems_from_runtime_pillars,
-    detect_stem_fusion_cases,
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_pairs import (
     eval_anhe_hits,
-    eval_banhe_hits,
     eval_liu_chong_hits,
     eval_liu_hai_hits,
     eval_liu_po_hits,
     eval_liuhe_hits,
-    eval_sanhe_hits,
     sanxing_detect_geometry,
     summarize_sanxing_branches,
+)
+from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_structured import (
+    eval_banhe_hits,
+    eval_sanhe_hits,
+)
+from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
+    branches_and_stems_from_four_pillars,
+    branches_and_stems_from_runtime_pillars,
+    detect_stem_fusion_cases,
 )
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import (
     _branch_dominant_ten_god,

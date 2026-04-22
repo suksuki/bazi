@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List
 
+from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_protocol_payload
 from v17_rebirth.backend.logic.core_engine.effect_resolver import pick_god_candidates, resolve_effect_scores
 from v17_rebirth.backend.logic.core_engine.flux_solver import solve_dynamic_flux
 from v17_rebirth.backend.logic.core_engine.pillar_graph_kernel import build_six_pillar_graph
@@ -48,6 +49,8 @@ def resolve_god_ring_core(
             "edge_count": len(graph.edges),
             "position_weights": dict(graph.position_weights),
             "distance_weights": dict(graph.distance_weights),
+            "runtime_field_protocol": runtime_field_protocol_payload(),
+            "dynamic_mode_profile": _build_dynamic_mode_profile(graph.edges),
             "positive_targets": {key: round(value, 4) for key, value in positive.items()},
             "negative_targets": {key: round(value, 4) for key, value in negative.items()},
             "path_family_profile": path_family_profile,
@@ -141,3 +144,37 @@ def _build_path_type_profile(paths: Iterable[Any]) -> Dict[str, int]:
         path_type = str(getattr(path, "path_type", "dynamic_work") or "dynamic_work").strip() or "dynamic_work"
         type_profile[path_type] = int(type_profile.get(path_type, 0)) + 1
     return type_profile
+
+
+def _build_dynamic_mode_profile(edges: Iterable[Any]) -> Dict[str, Dict[str, float | int]]:
+    mode_profile: Dict[str, Dict[str, float | int]] = {}
+    for edge in edges:
+        metadata = getattr(edge, "metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        mode = str(metadata.get("coupling_mode") or "").strip()
+        if not mode:
+            continue
+        entry = mode_profile.setdefault(
+            mode,
+            {
+                "count": 0,
+                "avg_weight": 0.0,
+                "total_weight": 0.0,
+                "min_priority": 99,
+            },
+        )
+        weight = float(getattr(edge, "weight", 0.0) or 0.0)
+        priority = int(metadata.get("coupling_priority") or 99)
+        entry["count"] = int(entry["count"]) + 1
+        entry["total_weight"] = float(entry["total_weight"]) + weight
+        entry["min_priority"] = min(int(entry["min_priority"]), priority)
+        entry["avg_weight"] = round(float(entry["total_weight"]) / max(1, int(entry["count"])), 4)
+    return {
+        key: {
+            "count": int(value["count"]),
+            "avg_weight": round(float(value["avg_weight"]), 4),
+            "min_priority": int(value["min_priority"]),
+        }
+        for key, value in mode_profile.items()
+    }
