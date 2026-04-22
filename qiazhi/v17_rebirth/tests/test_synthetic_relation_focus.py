@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import pytest
+
 from v17_rebirth.backend.logic.plugin_discovery import collect_all_spec_facts
+
+
+pytestmark = [pytest.mark.regression, pytest.mark.synthetic]
 
 
 def _rows(pt):

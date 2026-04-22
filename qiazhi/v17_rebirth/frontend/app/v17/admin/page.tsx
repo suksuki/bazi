@@ -281,6 +281,8 @@ export default function V17AdminPage() {
   const [knowledgeSnapshot, setKnowledgeSnapshot] = useState<KnowledgeSnapshot>({});
   const [brainActionQueue, setBrainActionQueue] = useState<BrainAction[]>([]);
   const [coreEngineAuthority, setCoreEngineAuthority] = useState<CoreEngineAuthority>({});
+  const [projectionBridgeProtocol, setProjectionBridgeProtocol] = useState<LooseObject>({});
+  const [relationFormationSummary, setRelationFormationSummary] = useState<LooseObject[]>([]);
   const [tenGodDecomposition, setTenGodDecomposition] = useState<Record<string, TenGodDecompositionRow>>({});
   const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
@@ -332,6 +334,10 @@ export default function V17AdminPage() {
       const knowledge = (statusPayload.knowledge_snapshot as KnowledgeSnapshot) || {};
       const actions = asLooseRecord<BrainAction>(statusPayload.brain_action_queue, []);
       const authority = asLooseObject(statusPayload.core_engine_authority);
+      const bridgeProtocol =
+        asLooseObject(statusPayload.projection_bridge_protocol) ||
+        asLooseObject(authority.projection_bridge_protocol);
+      const relationSummary = asLooseRecord<LooseObject>(statusPayload.relation_formation_summary, []);
       const decomposition = asLooseObject(statusPayload.ten_gods_decomposition_l0) as Record<string, TenGodDecompositionRow>;
       const contributions = asLooseRecord<RecomputeContribution>(statusPayload.recompute_contributions, []);
       setPlugins(list);
@@ -342,6 +348,8 @@ export default function V17AdminPage() {
       setKnowledgeSnapshot(knowledge);
       setBrainActionQueue(actions);
       setCoreEngineAuthority(authority);
+      setProjectionBridgeProtocol(bridgeProtocol);
+      setRelationFormationSummary(relationSummary);
       setTenGodDecomposition(decomposition);
       setRecomputeContributions(contributions);
       setResolvedPluginRuntimeSessionId(asString(statusPayload.session_id, pluginRuntimeSessionId || "default"));
@@ -754,6 +762,8 @@ export default function V17AdminPage() {
                  pluginCount={plugins.length}
                  hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
                  authority={coreEngineAuthority}
+                 projectionBridgeProtocol={projectionBridgeProtocol}
+                 relationFormationSummary={relationFormationSummary}
                  tenGodDecomposition={tenGodDecomposition}
                />
                <V17_AdminPluginOverview

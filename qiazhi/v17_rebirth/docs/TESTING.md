@@ -21,6 +21,30 @@ bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh
 
 脚本会在 Relation Origin Gate 之前执行插件参数审计门禁：`scripts/audit_plugin_params.py` 的 `declared_but_unused` 不能包含任何项；一旦发现未接线参数，会直接中止自动化流程并输出失败原因。
 
+## Synthetic Lab
+
+合成样盘实验室用于校验“智能弹性框架”里的可控世界，不让真实八字的噪声污染基础算法判断。
+
+```bash
+# 只跑合成样盘实验室
+bash qiazhi/v17_rebirth/scripts/run_synthetic_lab.sh
+
+# 等价命令
+pytest qiazhi/v17_rebirth/tests -m synthetic -q
+```
+
+Synthetic Lab 当前覆盖：
+
+- L0 静态基础：通根 / 虚浮 / 透干
+- L1 关系家族：三合 / 三会 / 半合等成局摘要
+- L2 判定层：`risk_matrix` 偏置、authority 用神/忌神/通关神
+- Master Reasoning：主审盘推理链与 learning hook
+- Evolution Ledger：演化账本契约
+
+设计协议见：
+
+- `qiazhi/v17_rebirth/docs/V17_SYNTHETIC_LAB_PROTOCOL_2026-04-21.md`
+
 ## 常用命令
 
 ```bash

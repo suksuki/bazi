@@ -39,6 +39,8 @@ export type V17Frame = {
     deity_scores?: Record<string, number>;
     ten_gods_absolute_intensity?: Record<string, number>;
     ten_gods_ledger?: Record<string, unknown[]>;
+    ten_gods_decomposition_l0?: Record<string, unknown>;
+    projection_bridge_protocol?: Record<string, unknown>;
     total_energy_index?: number;
     four_pillars?: {
       year?: string;

@@ -519,6 +519,12 @@ async def get_plugin_runtime_status(
         if isinstance(physics, dict) and isinstance(physics.get("ten_gods_decomposition_l0"), dict)
         else {}
     )
+    energy_meta = physics.get("energy_meta") if isinstance(physics, dict) and isinstance(physics.get("energy_meta"), dict) else {}
+    relation_formation_summary = (
+        energy_meta.get("relation_formation_summary")
+        if isinstance(energy_meta.get("relation_formation_summary"), list)
+        else []
+    )
     recompute_contributions = (
         meta.get("plugin_recompute_contributions")
         if isinstance(meta.get("plugin_recompute_contributions"), list)
@@ -537,6 +543,7 @@ async def get_plugin_runtime_status(
         "auto_ratio_totals": auto_ratios,
         "core_engine_authority": core_engine_authority,
         "ten_gods_decomposition_l0": ten_gods_decomposition_l0,
+        "relation_formation_summary": relation_formation_summary,
         "recompute_contributions": recompute_contributions,
     }
 

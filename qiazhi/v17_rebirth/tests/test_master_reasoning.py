@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
 from v17_rebirth.backend.logic.L1_atomic_ops import l1_meta_hydration
 from v17_rebirth.backend.logic import plugin_discovery
+
+
+pytestmark = [pytest.mark.regression, pytest.mark.synthetic]
 
 
 def _no_flow_class():

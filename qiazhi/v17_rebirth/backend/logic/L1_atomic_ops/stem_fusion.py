@@ -129,21 +129,29 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             target_god = ten_god_from_stems(dm, stems[0]) if stems else "被合神"
             cond_mul = relation_effect_multiplier(condition["condition_state"])
             origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
-            branch_ratio = max(0.0, min(1.0, float(condition["branch_hua_ratio"] or 0.0)))
-            support_penalty = 0.92 if condition["month_supports"] else 0.82
+            branch_ratio = max(0.0, min(1.0, float(condition["branch_root_ratio"] or condition["branch_hua_ratio"] or 0.0)))
+            visible_support = max(0.0, min(1.0, float(condition.get("visible_support_strength") or 0.0)))
+            support_score = max(0.0, min(1.0, float(condition.get("support_score") or 0.0)))
+            interference_score = max(0.0, min(1.0, float(condition.get("interference_score") or 0.0)))
+            manifestation_mode = str(condition.get("manifestation_mode") or "暗化")
+            support_penalty = (0.88 if manifestation_mode == "明化" else 0.96) * (0.84 + interference_score * 0.18)
             match_ratio = max(
                 0.0,
                 min(
                     0.7,
-                    (0.18 + branch_ratio * 0.28 + (0.05 if branch_ratio >= 0.45 else 0.0))
+                    (0.12 + support_score * 0.34 + visible_support * 0.12 + branch_ratio * 0.08 + interference_score * 0.18)
                     * max(0.5, cond_mul)
                     * origin_mul
                     * support_penalty,
                 ),
             )
+            if condition["condition_trigger"] == "interference_blocked":
+                fact_text = f"天干五合受阻 [{lab}]：本可转化，但受争合/支扰压制，{target_god} 能级进入僵持态。"
+            else:
+                fact_text = f"天干羁绊 [{lab}]：支根支撑不足，{target_god} 能级处于僵持态。"
             rows.append({
                 "plugin": "l1.physics.op_stem_fusion",
-                "fact": f"天干羁绊 [{lab}]：能量处于僵持态，{target_god} 能级削减 {int(stuck_damp*100)}%（{condition['condition_trigger']}）。",
+                "fact": fact_text,
                 "priority": 0.67,
                 "meta": {
                     "target_god": target_god,
@@ -151,6 +159,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_state": condition["condition_state"],
                     "condition_trigger": condition["condition_trigger"],
                     "branch_hua_ratio": condition["branch_hua_ratio"],
+                    "branch_root_ratio": condition.get("branch_root_ratio"),
+                    "manifestation_mode": manifestation_mode,
+                    "support_origin": condition.get("support_origin"),
+                    "visible_support_strength": round(visible_support, 4),
+                    "support_score": round(support_score, 4),
+                    "interference_score": round(interference_score, 4),
                     "condition_multiplier": cond_mul,
                     "origin_type": condition.get("origin_type"),
                     "origin_multiplier": round(origin_mul, 3),
@@ -183,14 +197,22 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
             hua_el = _normalize_element_name(str(c.get("hua_element") or ""))
             cond_mul = relation_effect_multiplier(condition["condition_state"])
             origin_mul = float(condition.get("origin_multiplier", 1.0) or 1.0)
-            branch_ratio = max(0.0, min(1.0, float(condition["branch_hua_ratio"] or 0.0)))
-            formed_bonus = 0.2 if condition["condition_state"] == "formed" else 0.04
-            month_bonus = 0.12 if condition["month_supports"] else 0.02
+            branch_ratio = max(0.0, min(1.0, float(condition["branch_root_ratio"] or condition["branch_hua_ratio"] or 0.0)))
+            visible_support = max(0.0, min(1.0, float(condition.get("visible_support_strength") or 0.0)))
+            support_score = max(0.0, min(1.0, float(condition.get("support_score") or 0.0)))
+            interference_score = max(0.0, min(1.0, float(condition.get("interference_score") or 0.0)))
+            manifestation_mode = str(condition.get("manifestation_mode") or "明化")
+            support_origin = str(condition.get("support_origin") or "")
+            formed_bonus = 0.18 if condition["condition_state"] == "formed" else 0.04
+            month_bonus = 0.16 if condition["condition_trigger"] == "month_support" else 0.08 if condition["condition_trigger"] == "day_support" else 0.02
             match_ratio = max(
                 0.0,
                 min(
                     0.9,
-                    (0.22 + branch_ratio * 0.38 + formed_bonus + month_bonus) * max(cond_mul, 0.5) * origin_mul,
+                    (0.16 + support_score * 0.34 + visible_support * 0.18 + branch_ratio * 0.12 + formed_bonus + month_bonus)
+                    * max(cond_mul, 0.5)
+                    * origin_mul
+                    * max(0.72, 1.0 - interference_score * 0.28),
                 ),
             )
             projection = _element_cluster_projection(
@@ -207,6 +229,7 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     ),
                     3,
                 )
+                fact_prefix = "天干暗化" if manifestation_mode == "暗化" else "天干化气"
                 meta = {
                     "target_god": god,
                     "match_ratio": projected_match,
@@ -215,6 +238,12 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     "condition_state": condition["condition_state"],
                     "condition_trigger": condition["condition_trigger"],
                     "branch_hua_ratio": condition["branch_hua_ratio"],
+                    "branch_root_ratio": condition.get("branch_root_ratio"),
+                    "manifestation_mode": manifestation_mode,
+                    "support_origin": support_origin,
+                    "visible_support_strength": round(visible_support, 4),
+                    "support_score": round(support_score, 4),
+                    "interference_score": round(interference_score, 4),
                     "condition_multiplier": cond_mul,
                     "origin_type": condition.get("origin_type"),
                     "origin_multiplier": round(origin_mul, 3),
@@ -246,7 +275,7 @@ def _collect_rows(physics_tensor: Dict[str, Any]) -> List[dict]:
                     meta["impact_ratio"] = round(trans_eff * cond_mul * max(0.28, float(share)), 3)
                 rows.append({
                     "plugin": "l1.physics.op_stem_fusion",
-                    "fact": f"天干化气 [{lab}→{hua_el}]：能量聚变成功，{god} 能级被显著抬升（{condition['condition_trigger']}）。",
+                    "fact": f"{fact_prefix} [{lab}→{hua_el}]：{god} 获得五合转化支撑（{condition['condition_trigger']}）。",
                     "priority": round(0.85 * max(0.82, float(share)), 3),
                     "meta": meta,
                 })

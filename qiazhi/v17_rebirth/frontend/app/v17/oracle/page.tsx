@@ -229,6 +229,9 @@ export default function OraclePage() {
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
+  const energyMeta = payload.energy_meta && typeof payload.energy_meta === "object"
+    ? (payload.energy_meta as Record<string, unknown>)
+    : {};
   const fourPillars =
     payload.four_pillars && typeof payload.four_pillars === "object"
       ? (payload.four_pillars as { year?: string; month?: string; day?: string; hour?: string })
@@ -269,6 +272,9 @@ export default function OraclePage() {
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
   const meta = payload.meta && typeof payload.meta === "object" ? payload.meta as Record<string, unknown> : {};
   const pluginClaims = Array.isArray(meta.plugin_claims) ? meta.plugin_claims as Array<Record<string, unknown>> : [];
+  const relationFormationSummary = Array.isArray(energyMeta.relation_formation_summary)
+    ? energyMeta.relation_formation_summary as Array<Record<string, unknown>>
+    : [];
   const recomputeContributions = Array.isArray(meta.plugin_recompute_contributions)
     ? meta.plugin_recompute_contributions as Array<Record<string, unknown>>
     : [];
@@ -412,6 +418,17 @@ export default function OraclePage() {
                       >)
                     : undefined
                 }
+                tenGodLedger={
+                  payload.ten_gods_ledger && typeof payload.ten_gods_ledger === "object"
+                    ? (payload.ten_gods_ledger as Record<string, Array<{ step?: string; reason?: string; delta?: number; val?: number }>>)
+                    : undefined
+                }
+                projectionBridgeProtocol={
+                  payload.projection_bridge_protocol && typeof payload.projection_bridge_protocol === "object"
+                    ? (payload.projection_bridge_protocol as Record<string, unknown>)
+                    : undefined
+                }
+                relationFormationSummary={relationFormationSummary}
                 birthTimeISO={s.birthTimeISO}
                 gender={s.natalGender}
                 calendarType={s.natalCalendar}

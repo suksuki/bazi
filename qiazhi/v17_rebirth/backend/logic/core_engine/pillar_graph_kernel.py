@@ -25,6 +25,48 @@ DEFAULT_DISTANCE_WEIGHTS: Dict[int, float] = {
     3: 0.31,
 }
 
+DEFAULT_DYNAMIC_EDGE_WEIGHTS: Dict[tuple[PillarName, PillarName], float] = {
+    ("luck", "day"): 1.00,
+    ("day", "luck"): 1.00,
+    ("luck", "month"): 0.96,
+    ("month", "luck"): 0.96,
+    ("luck", "hour"): 0.80,
+    ("hour", "luck"): 0.80,
+    ("luck", "year"): 0.74,
+    ("year", "luck"): 0.74,
+    ("flow", "day"): 0.90,
+    ("day", "flow"): 0.90,
+    ("flow", "month"): 0.84,
+    ("month", "flow"): 0.84,
+    ("flow", "hour"): 0.72,
+    ("hour", "flow"): 0.72,
+    ("flow", "year"): 0.64,
+    ("year", "flow"): 0.64,
+    ("luck", "flow"): 0.88,
+    ("flow", "luck"): 0.88,
+}
+
+DEFAULT_DYNAMIC_EDGE_MODES: Dict[tuple[PillarName, PillarName], str] = {
+    ("luck", "day"): "background_core",
+    ("day", "luck"): "background_core",
+    ("luck", "month"): "background_field",
+    ("month", "luck"): "background_field",
+    ("luck", "hour"): "background_periphery",
+    ("hour", "luck"): "background_periphery",
+    ("luck", "year"): "background_periphery",
+    ("year", "luck"): "background_periphery",
+    ("flow", "day"): "yearly_trigger",
+    ("day", "flow"): "yearly_trigger",
+    ("flow", "month"): "seasonal_trigger",
+    ("month", "flow"): "seasonal_trigger",
+    ("flow", "hour"): "peripheral_trigger",
+    ("hour", "flow"): "peripheral_trigger",
+    ("flow", "year"): "peripheral_trigger",
+    ("year", "flow"): "peripheral_trigger",
+    ("luck", "flow"): "runtime_cascade",
+    ("flow", "luck"): "runtime_cascade",
+}
+
 
 @dataclass(frozen=True)
 class PillarNode:
@@ -58,6 +100,40 @@ def pillar_distance(a: PillarName, b: PillarName) -> int:
     if a in {"luck", "flow"} or b in {"luck", "flow"}:
         return 1 if a == b else 2
     return abs(order.index(a) - order.index(b))
+
+
+def _dynamic_distance(a: PillarName, b: PillarName) -> int:
+    pair = (a, b)
+    if pair in {
+        ("luck", "day"), ("day", "luck"),
+        ("luck", "month"), ("month", "luck"),
+        ("flow", "day"), ("day", "flow"),
+        ("flow", "month"), ("month", "flow"),
+        ("luck", "flow"), ("flow", "luck"),
+    }:
+        return 1
+    if pair in {
+        ("luck", "hour"), ("hour", "luck"),
+        ("flow", "hour"), ("hour", "flow"),
+    }:
+        return 2
+    return 3
+
+
+def _edge_weight_and_metadata(
+    *,
+    source: PillarName,
+    target: PillarName,
+    distance_weights: Dict[int, float],
+) -> tuple[float, int, Dict[str, object]]:
+    if source in {"luck", "flow"} or target in {"luck", "flow"}:
+        dist = _dynamic_distance(source, target)
+        weight = float(DEFAULT_DYNAMIC_EDGE_WEIGHTS.get((source, target), distance_weights.get(min(dist, 3), distance_weights[3])))
+        mode = str(DEFAULT_DYNAMIC_EDGE_MODES.get((source, target), "dynamic_trigger"))
+        return weight, dist, {"coupling_mode": mode}
+    dist = pillar_distance(source, target)
+    weight = float(distance_weights.get(min(dist, 3), distance_weights[3]))
+    return weight, dist, {}
 
 
 def build_six_pillar_graph(
@@ -109,11 +185,10 @@ def build_six_pillar_graph(
         for target in pillars:
             if source == target:
                 continue
-            dist = pillar_distance(source, target)
+            weight, dist, metadata = _edge_weight_and_metadata(source=source, target=target, distance_weights=d_weights)
             edge_kind: EdgeKind = "dynamic_trigger" if source in {"luck", "flow"} or target in {"luck", "flow"} else ("adjacent_pillar" if dist == 1 else "skip_pillar")
-            weight = d_weights.get(min(dist, 3), d_weights[3])
-            edges.append(PillarEdge(source=f"{source}_stem", target=f"{target}_stem", kind=edge_kind, weight=weight, distance=dist))
-            edges.append(PillarEdge(source=f"{source}_branch", target=f"{target}_branch", kind=edge_kind, weight=weight, distance=dist))
+            edges.append(PillarEdge(source=f"{source}_stem", target=f"{target}_stem", kind=edge_kind, weight=weight, distance=dist, metadata=dict(metadata)))
+            edges.append(PillarEdge(source=f"{source}_branch", target=f"{target}_branch", kind=edge_kind, weight=weight, distance=dist, metadata=dict(metadata)))
 
     return SixPillarGraph(
         nodes=nodes,

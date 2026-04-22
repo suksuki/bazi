@@ -14,8 +14,39 @@ def _tensor() -> dict:
         "flow_year": 2026,
         "ten_gods_absolute_intensity": {"七杀": 72.4, "偏印": 31.2},
         "total_energy_index": 143.6,
+        "energy_meta": {
+            "relation_formation_summary": [
+                {
+                    "formation_label": "寅午戌三合火局",
+                    "formation_percent": 78.6,
+                    "family_factor": 3.5,
+                    "status": "受扰成局",
+                    "projection_preview": ["劫财65%", "比肩35%"],
+                    "conflict_damping": 0.77,
+                }
+            ],
+            "relation_dynamics_summary": [
+                {
+                    "label": "子午六冲",
+                    "energy_axis": "激发",
+                    "energy_effect_ratio": 0.58,
+                    "stability_delta_ratio": -0.74,
+                    "free_energy_lock_ratio": 0.0,
+                    "note": "冲不等于没能量，而是把静态资源推成动态事件。",
+                }
+            ],
+        },
         "meta": {
             "v17_physics_stable": True,
+            "plugin_claims": [
+                {
+                    "plugin_id": "classical.pattern.officer.v1",
+                    "pattern_candidate": "正官格",
+                    "pattern_confidence_percent": 65.0,
+                    "target_god": "正官",
+                    "pattern_scope_label": "原局",
+                }
+            ],
             "god_ring_authority": {
                 "core_flux_meta": {
                     "interaction_matrix": [
@@ -92,3 +123,7 @@ def test_build_llm_audit_payload_frontloads_flux_summary_into_user_prompt() -> N
     assert "做功方向矩阵" in user_prompt
     assert "做功回路" in user_prompt
     assert "食神->偏财" in user_prompt
+    assert "合化摘要：寅午戌三合火局 78.6%" in user_prompt
+    assert "关系动力学：子午六冲 激发58%" in user_prompt
+    assert "格局摘要：正官格 65.0%" in user_prompt
+    assert "运流解释合同" in user_prompt

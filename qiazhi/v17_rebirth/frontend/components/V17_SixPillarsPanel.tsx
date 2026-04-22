@@ -46,6 +46,28 @@ type TenGodDecompositionRow = {
   total?: number;
 };
 
+type ProjectionBridgeProtocol = {
+  tonggen_direction?: string;
+  tougan_direction?: string;
+  same_element_first?: boolean;
+  polarity_second?: boolean;
+  exact_root_support_factor?: number;
+  cross_polarity_root_support_factor?: number;
+  exact_exposed_hidden_gain?: number;
+  same_element_visible_relief?: number;
+  rooted_gain_cap?: number;
+  single_pass_coupling?: boolean;
+  recursive_feedback?: boolean;
+  protocol?: string;
+};
+
+type LedgerEntry = {
+  step?: string;
+  reason?: string;
+  delta?: number;
+  val?: number;
+};
+
 /** 解析后端/表单传来的出生时刻：无时区后缀时按本地墙钟理解，与 NatalInput 一致。 */
 export function parseBirthTimeLocal(iso: string | undefined): Date | null {
   const raw = String(iso || "").trim();
@@ -222,6 +244,53 @@ function topDecompositionRows(raw?: Record<string, TenGodDecompositionRow>) {
     .slice(0, 4);
 }
 
+function bridgeDirectionLabel(raw: string | undefined): string {
+  const text = String(raw || "").trim();
+  if (text === "stem<-branch_hidden") return "天干 <- 地支藏干";
+  if (text === "branch_hidden->visible_stem") return "地支藏干 -> 天干";
+  return text || "未定义";
+}
+
+function decompositionEvidenceTags(
+  god: string,
+  row: {
+    manifest: number;
+    root: number;
+    hidden: number;
+  },
+  ledger?: Record<string, LedgerEntry[]>,
+): string[] {
+  const entries = Array.isArray(ledger?.[god]) ? ledger?.[god] || [] : [];
+  const reasons = entries.map((entry) => String(entry?.reason || ""));
+  const tags: string[] = [];
+
+  if (reasons.some((reason) => reason.includes("本根×"))) {
+    tags.push("本根通根");
+  } else if (reasons.some((reason) => reason.includes("异阴阳根×"))) {
+    tags.push("异阴阳通根");
+  } else if (row.root > 0.01) {
+    tags.push("有根支撑");
+  }
+
+  if (reasons.some((reason) => reason.includes("透干×1.2"))) {
+    tags.push("精确透干");
+  } else if (row.manifest > 0.01) {
+    tags.push("天干明透");
+  }
+
+  if (row.hidden > 0.01 && row.manifest <= 0.01) {
+    tags.push("潜藏未透");
+  } else if (row.hidden > 0.01) {
+    tags.push("兼带潜藏");
+  }
+
+  if (row.manifest > 0.01 && row.root <= 0.01) {
+    tags.push("明透无根");
+  }
+
+  return [...new Set(tags)].slice(0, 3);
+}
+
 function topStageBiasRows(raw?: Record<string, Record<string, number>>) {
   return Object.entries(raw || {})
     .map(([god, row]) => ({
@@ -249,6 +318,46 @@ function num(value: unknown): number {
 
 function signed(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+type RelationFormationRow = {
+  formationLabel: string;
+  formationPercent: number;
+  familyFactor: number;
+  status: string;
+  projectionPreview: string[];
+  summary: string;
+};
+
+function relationFormationTone(status: string): string {
+  const text = String(status || "").trim();
+  if (text === "强成局") return "border-emerald-500/25 bg-emerald-950/20 text-emerald-200";
+  if (text === "受扰成局") return "border-amber-500/25 bg-amber-950/20 text-amber-200";
+  if (text === "候选未全") return "border-fuchsia-500/25 bg-fuchsia-950/20 text-fuchsia-200";
+  return "border-cyan-500/25 bg-cyan-950/20 text-cyan-200";
+}
+
+function relationFormationRows(value: unknown): RelationFormationRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const row = item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+      return {
+        formationLabel: String(row.formation_label || "").trim(),
+        formationPercent: num(row.formation_percent),
+        familyFactor: num(row.family_factor),
+        status: String(row.status || "").trim(),
+        projectionPreview: Array.isArray(row.projection_preview)
+          ? row.projection_preview.map((entry) => String(entry || "").trim()).filter(Boolean)
+          : [],
+        summary: String(row.summary || "").trim(),
+      };
+    })
+    .filter((row) => row.formationLabel && row.formationPercent > 0)
+    .sort((left, right) => right.formationPercent - left.formationPercent)
+    .slice(0, 4);
 }
 
 function fluxReasonTone(role: "use" | "taboo" | "tongguan", flux: number) {
@@ -315,6 +424,9 @@ export function V17_SixPillarsPanel({
   flowPillarFromServer,
   godRingInfo,
   tenGodDecomposition,
+  tenGodLedger,
+  projectionBridgeProtocol,
+  relationFormationSummary,
   birthTimeISO,
   gender,
   calendarType,
@@ -327,6 +439,9 @@ export function V17_SixPillarsPanel({
   flowPillarFromServer?: string;
   godRingInfo?: GodRingInfo;
   tenGodDecomposition?: Record<string, TenGodDecompositionRow>;
+  tenGodLedger?: Record<string, LedgerEntry[]>;
+  projectionBridgeProtocol?: ProjectionBridgeProtocol;
+  relationFormationSummary?: Array<Record<string, unknown>>;
   birthTimeISO?: string;
   gender?: "male" | "female";
   calendarType?: "solar" | "lunar";
@@ -342,6 +457,7 @@ export function V17_SixPillarsPanel({
   const luckP = parsePillar(luckPillarFromServer);
   const flowP = parsePillar(flowPillarFromServer);
   const authorityMode = String(godRingInfo?.display_mode || "").trim() === "authority";
+  const relationRows = relationFormationRows(relationFormationSummary);
   const useGods = Array.isArray(godRingInfo?.god_of_use)
     ? godRingInfo?.god_of_use.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
@@ -403,6 +519,8 @@ export function V17_SixPillarsPanel({
         .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
     : [];
   const decompositionRows = topDecompositionRows(tenGodDecomposition);
+  const bridgeProtocol = projectionBridgeProtocol || {};
+  const bridgeReady = Object.keys(bridgeProtocol).length > 0;
   const dayMasterStem = dayP.stem && dayP.stem !== "—" ? dayP.stem : "";
 
   const rows: Array<{ label: string; pillar: Pillar }> = [
@@ -678,6 +796,93 @@ export function V17_SixPillarsPanel({
           ) : null}
         </div>
       </div>
+      <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/80">Projection Bridge</p>
+            <p className="mt-1 text-sm text-cyan-50">根透协议</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[10px]">
+            <span className="rounded-full border border-cyan-400/20 bg-cyan-950/35 px-3 py-1 text-cyan-100">
+              通根 {bridgeDirectionLabel(bridgeProtocol.tonggen_direction)}
+            </span>
+            <span className="rounded-full border border-violet-400/20 bg-violet-950/35 px-3 py-1 text-violet-100">
+              透干 {bridgeDirectionLabel(bridgeProtocol.tougan_direction)}
+            </span>
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-950/35 px-3 py-1 text-emerald-100">
+              同五行先 {bridgeProtocol.same_element_first ? "ON" : "OFF"}
+            </span>
+            <span className="rounded-full border border-amber-400/20 bg-amber-950/35 px-3 py-1 text-amber-100">
+              阴阳后判 {bridgeProtocol.polarity_second ? "ON" : "OFF"}
+            </span>
+            <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+              {bridgeProtocol.single_pass_coupling ? "单次耦合" : "未声明"}
+            </span>
+            <span className="rounded-full border border-rose-400/20 bg-rose-950/35 px-3 py-1 text-rose-100">
+              {bridgeProtocol.recursive_feedback ? "允许递归" : "禁止递归"}
+            </span>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 text-[11px] text-zinc-300 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
+            本根 <span className="ml-1 font-mono text-cyan-100">{Number(bridgeProtocol.exact_root_support_factor || 1).toFixed(2)}</span>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
+            异阴阳根 <span className="ml-1 font-mono text-emerald-100">{Number(bridgeProtocol.cross_polarity_root_support_factor || 0).toFixed(2)}</span>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
+            精确透干 <span className="ml-1 font-mono text-violet-100">{Number(bridgeProtocol.exact_exposed_hidden_gain || 0).toFixed(2)}</span>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
+            同五行可见 <span className="ml-1 font-mono text-amber-100">{Number(bridgeProtocol.same_element_visible_relief || 0).toFixed(2)}</span>
+          </div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
+            通根上限 <span className="ml-1 font-mono text-fuchsia-100">{Number(bridgeProtocol.rooted_gain_cap || 0).toFixed(2)}</span>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] leading-5 text-zinc-400">
+          {bridgeReady
+            ? "规则口径：通根只服务天干，透干只服务地支显影。二者允许互证，但都只读取冻结盘面证据一次，不会递归放大。"
+            : "等待后端下发根透协议。"}
+        </p>
+      </div>
+      {relationRows.length ? (
+        <div className="mb-3 rounded-xl border border-amber-500/20 bg-amber-950/10 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-amber-300/80">Relation Formation</p>
+              <p className="mt-1 text-sm text-amber-50">合化成局摘要</p>
+            </div>
+            <p className="max-w-xl text-[11px] leading-5 text-zinc-400">
+              百分比表示成局度，不直接等于十神能量；请结合基准倍数、十神绝对强度和做功链条一起看。
+            </p>
+          </div>
+          <div className="mt-3 grid gap-2 xl:grid-cols-2">
+            {relationRows.map((row) => (
+              <div key={row.formationLabel} className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-amber-50">{row.formationLabel}</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">家族基准 x{row.familyFactor.toFixed(2)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-lg text-amber-100">{row.formationPercent.toFixed(1)}%</p>
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] ${relationFormationTone(row.status)}`}>
+                      {row.status || "成局观察"}
+                    </span>
+                  </div>
+                </div>
+                {row.projectionPreview.length ? (
+                  <p className="mt-2 text-[11px] text-cyan-200/90">主投影：{row.projectionPreview.join(" / ")}</p>
+                ) : null}
+                {row.summary ? (
+                  <p className="mt-2 text-[11px] leading-5 text-zinc-400">{row.summary}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {rows.map((row) => {
           const stemMeta = STEM_META[row.pillar.stem] || { element: "土", yinYang: "阳" as const };
@@ -751,6 +956,16 @@ export function V17_SixPillarsPanel({
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 break-words text-sm font-semibold text-violet-100">{row.god}</span>
                   <span className="font-mono text-[11px] text-cyan-200">{row.total.toFixed(2)}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {decompositionEvidenceTags(row.god, row, tenGodLedger).map((tag) => (
+                    <span
+                      key={`${row.god}_${tag}`}
+                      className="rounded-full border border-violet-400/15 bg-violet-950/20 px-2 py-0.5 text-[10px] text-violet-100/90"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-zinc-300">
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">

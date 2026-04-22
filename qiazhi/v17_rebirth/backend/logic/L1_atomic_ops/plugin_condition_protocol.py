@@ -88,8 +88,9 @@ def infer_manifestation_state(
     if family in {"stem_fusion", "stem_interlock"}:
         for row in candidates:
             mode = str(row.get("mode") or "").strip().lower()
+            manifestation_mode = str(row.get("manifestation_mode") or "").strip()
             if mode == "transformed":
-                return "manifested"
+                return "manifested" if manifestation_mode != "暗化" else "supported"
             if mode == "activated":
                 return "supported"
 
@@ -264,20 +265,47 @@ def summarize_relation_conditions(
 
 def summarize_stem_fusion_conditions(case: Mapping[str, Any]) -> Dict[str, Any]:
     month_supports = bool(case.get("month_stem_supports"))
-    branch_hua_ratio = float(case.get("branch_hua_ratio") or 0.0)
+    branch_hua_ratio = float(case.get("branch_root_ratio") or case.get("branch_hua_ratio") or 0.0)
     mode = str(case.get("mode") or "").strip()
+    manifestation_mode = str(case.get("manifestation_mode") or ("明化" if month_supports else "暗化")).strip()
+    support_origin = str(case.get("support_origin") or "").strip()
+    visible_support_strength = float(case.get("visible_support_strength") or (1.0 if month_supports else 0.0))
+    support_score = float(
+        case.get("effective_support_score")
+        if case.get("effective_support_score") is not None
+        else case.get("support_score")
+        if case.get("support_score") is not None
+        else visible_support_strength * 0.62 + branch_hua_ratio * 0.38
+    )
+    branch_disturbance_score = float(case.get("branch_disturbance_score") or 0.0)
+    stem_competition_score = float(case.get("stem_competition_score") or 0.0)
+    interference_score = float(case.get("interference_score") or 0.0)
     if mode == "transformed":
-        if month_supports:
+        if support_origin == "month_visible" or month_supports:
             trigger = "month_support"
+        elif support_origin == "day_visible":
+            trigger = "day_support"
+        elif support_origin.endswith("_visible"):
+            trigger = "visible_support"
+        elif manifestation_mode == "暗化":
+            trigger = "latent_root_support"
         else:
             trigger = "branch_support"
     else:
-        trigger = "insufficient_support"
+        trigger = "interference_blocked" if interference_score >= 0.24 and support_score >= 0.18 else "insufficient_support"
     return {
         "condition_state": "formed" if mode == "transformed" else "stuck",
         "condition_trigger": trigger,
         "month_supports": month_supports,
         "branch_hua_ratio": round(branch_hua_ratio, 4),
+        "branch_root_ratio": round(branch_hua_ratio, 4),
+        "manifestation_mode": manifestation_mode,
+        "support_origin": support_origin,
+        "visible_support_strength": round(visible_support_strength, 4),
+        "support_score": round(max(0.0, min(1.0, support_score)), 4),
+        "branch_disturbance_score": round(max(0.0, min(1.0, branch_disturbance_score)), 4),
+        "stem_competition_score": round(max(0.0, min(1.0, stem_competition_score)), 4),
+        "interference_score": round(max(0.0, min(1.0, interference_score)), 4),
         "origin_type": detect_relation_origin_type(case.get("pillars") if isinstance(case.get("pillars"), list) else []),
         "origin_multiplier": relation_origin_multiplier(
             detect_relation_origin_type(case.get("pillars") if isinstance(case.get("pillars"), list) else [])

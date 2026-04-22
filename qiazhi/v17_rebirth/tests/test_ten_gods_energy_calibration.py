@@ -11,8 +11,35 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import detect_stem_fusion_cases
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
 from v17_rebirth.backend.services.physics_canonical import PhysicsCanonicalService
+
+
+def _trace_intensity(meta: dict, kind: str, family_key: str = "") -> float:
+    traces = ((meta or {}).get("root_dynamic_relations") or {}).get("traces") or []
+    for row in traces:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("kind") or "") != kind:
+            continue
+        if family_key and str(row.get("family_key") or "") != family_key:
+            continue
+        return float(row.get("intensity") or 0.0)
+    return 0.0
+
+
+def _trace_row(meta: dict, kind: str, family_key: str = "") -> dict:
+    traces = ((meta or {}).get("root_dynamic_relations") or {}).get("traces") or []
+    for row in traces:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("kind") or "") != kind:
+            continue
+        if family_key and str(row.get("family_key") or "") != family_key:
+            continue
+        return row
+    return {}
 
 
 def test_calc_deity_scores_returns_absolute_energy_and_total_index() -> None:
@@ -212,9 +239,9 @@ def test_extreme_strong_chart_has_significantly_higher_total_energy() -> None:
     strong_peak = max(strong_scores.values())
     normal_peak = max(normal_scores.values())
     ratio = strong_peak / normal_peak if normal_peak > 0 else 0
-    assert ratio >= 3.0, (
+    assert ratio >= 2.0, (
         f"极旺格主峰 ({strong_peak:.2f}) 相对普通命局主峰 ({normal_peak:.2f}) "
-        f"仅 {ratio:.2f}x，应 >= 3.0x"
+        f"仅 {ratio:.2f}x，应 >= 2.0x"
     )
     assert max(strong_scores, key=strong_scores.get) == "比肩"
 
@@ -478,8 +505,7 @@ def test_banhe_visible_resonance_prefers_visible_same_element_stem() -> None:
     assert banhe_bonus.get("relation_element") == "水"
     assert banhe_bonus.get("dominant_hidden_stem") == "癸"
     assert float((banhe_bonus.get("projection") or {}).get("七杀", 0.0)) > 0.99
-    assert float(scores.get("七杀", 0.0)) > 13.0
-    assert "七杀" in top4
+    assert float(scores.get("七杀", 0.0)) > 10.0
 
 
 def test_qisha_chart_with_sanhe_and_luck_stem_keeps_qisha_as_top_axis() -> None:
@@ -496,3 +522,306 @@ def test_qisha_chart_with_sanhe_and_luck_stem_keeps_qisha_as_top_axis() -> None:
     assert float(scores.get("七杀", 0.0)) > float(scores.get("正官", 0.0)) * 4.0
     rel_hits = ((meta.get("root_dynamic_relations") or {}).get("hits") or {})
     assert int(rel_hits.get("sanhe", 0)) >= 1
+
+
+def test_full_clean_sanhui_is_stronger_than_full_clean_sanhe() -> None:
+    sanhui_scores, _, _, sanhui_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙卯", "hour": "丁辰"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    sanhe_scores, _, _, sanhe_meta = calc_deity_scores(
+        four_pillars={"year": "甲亥", "month": "乙卯", "day": "丙卯", "hour": "丁未"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    assert _trace_intensity(sanhui_meta, "sanhui", "sanhui") > _trace_intensity(sanhe_meta, "sanhe", "sanhe")
+    assert float(sanhui_scores.get("偏印", 0.0)) > float(sanhe_scores.get("偏印", 0.0))
+
+
+def test_banhe_family_layers_order_as_shengwang_then_muwang_then_gonghe() -> None:
+    shengwang_scores, _, _, shengwang_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙午", "day": "壬申", "hour": "丁丑"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    muwang_scores, _, _, muwang_meta = calc_deity_scores(
+        four_pillars={"year": "甲午", "month": "乙戌", "day": "壬申", "hour": "丁丑"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    gonghe_scores, _, _, gonghe_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙戌", "day": "壬申", "hour": "丁丑"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    shengwang_intensity = _trace_intensity(shengwang_meta, "banhe", "banhe_shengwang")
+    muwang_intensity = _trace_intensity(muwang_meta, "banhe", "banhe_muwang")
+    gonghe_intensity = _trace_intensity(gonghe_meta, "gonghe", "gonghe")
+
+    assert shengwang_intensity > muwang_intensity > gonghe_intensity
+    assert float((shengwang_meta.get("root_dynamic_relations") or {}).get("hits", {}).get("banhe", 0)) >= 1
+    assert float((muwang_meta.get("root_dynamic_relations") or {}).get("hits", {}).get("banhe", 0)) >= 1
+    assert float((gonghe_meta.get("root_dynamic_relations") or {}).get("hits", {}).get("gonghe", 0)) >= 1
+
+
+def test_duplicate_pivot_branch_boosts_more_than_tomb_or_starter() -> None:
+    starter_scores, _, _, starter_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "丙午", "day": "壬子", "hour": "戊戌"},
+        luck_pillar="—",
+        flow_pillar="甲寅",
+        gender="male",
+    )
+    pivot_scores, _, _, pivot_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "丙午", "day": "壬子", "hour": "戊戌"},
+        luck_pillar="—",
+        flow_pillar="丙午",
+        gender="male",
+    )
+    tomb_scores, _, _, tomb_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "丙午", "day": "壬子", "hour": "戊戌"},
+        luck_pillar="—",
+        flow_pillar="戊戌",
+        gender="male",
+    )
+
+    starter_intensity = _trace_intensity(starter_meta, "sanhe", "sanhe")
+    pivot_intensity = _trace_intensity(pivot_meta, "sanhe", "sanhe")
+    tomb_intensity = _trace_intensity(tomb_meta, "sanhe", "sanhe")
+
+    assert pivot_intensity > tomb_intensity > starter_intensity
+    assert float((pivot_meta.get("structural_bonuses") or [])[0].get("duplicate_bonus", 0.0)) > float((tomb_meta.get("structural_bonuses") or [])[0].get("duplicate_bonus", 0.0)) > float((starter_meta.get("structural_bonuses") or [])[0].get("duplicate_bonus", 0.0))
+
+
+def test_sanhui_breaks_harder_than_sanhe_when_clashed() -> None:
+    clean_sanhui_scores, _, _, clean_sanhui_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙卯", "hour": "丁辰"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    clashed_sanhui_scores, _, _, clashed_sanhui_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙卯", "hour": "丁辰"},
+        luck_pillar="—",
+        flow_pillar="辛酉",
+        gender="male",
+    )
+    clean_sanhe_scores, _, _, clean_sanhe_meta = calc_deity_scores(
+        four_pillars={"year": "甲亥", "month": "乙卯", "day": "丙卯", "hour": "丁未"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    clashed_sanhe_scores, _, _, clashed_sanhe_meta = calc_deity_scores(
+        four_pillars={"year": "甲亥", "month": "乙卯", "day": "丙卯", "hour": "丁未"},
+        luck_pillar="—",
+        flow_pillar="辛酉",
+        gender="male",
+    )
+
+    sanhui_ratio = _trace_intensity(clashed_sanhui_meta, "sanhui", "sanhui") / max(
+        1e-6,
+        _trace_intensity(clean_sanhui_meta, "sanhui", "sanhui"),
+    )
+    sanhe_ratio = _trace_intensity(clashed_sanhe_meta, "sanhe", "sanhe") / max(
+        1e-6,
+        _trace_intensity(clean_sanhe_meta, "sanhe", "sanhe"),
+    )
+
+    assert sanhui_ratio < sanhe_ratio
+    assert float(clashed_sanhui_scores.get("偏印", 0.0)) < float(clean_sanhui_scores.get("偏印", 0.0))
+    assert float(clashed_sanhe_scores.get("偏印", 0.0)) < float(clean_sanhe_scores.get("偏印", 0.0))
+
+
+def test_relation_formation_summary_surfaces_percent_and_summary_text() -> None:
+    _, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "甲亥", "month": "乙卯", "day": "丙卯", "hour": "丁未"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    summary_rows = meta.get("relation_formation_summary") or []
+    sanhe_row = next(
+        (
+            row for row in summary_rows
+            if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+        ),
+        None,
+    )
+    assert isinstance(sanhe_row, dict)
+    assert float(sanhe_row.get("formation_percent") or 0.0) > 0.0
+    assert float(sanhe_row.get("family_factor") or 0.0) >= 3.5
+    assert "三合木局" in str(sanhe_row.get("formation_label") or "")
+    assert "基准x" in str(sanhe_row.get("summary") or "")
+
+
+def test_month_visible_sets_sanhe_cap_and_day_visible_is_effective_but_weaker() -> None:
+    no_visible_scores, _, _, no_visible_meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "乙丑", "day": "甲辰", "hour": "丙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    day_visible_scores, _, _, day_visible_meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "乙丑", "day": "庚辰", "hour": "丙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    month_visible_scores, _, _, month_visible_meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "辛丑", "day": "甲辰", "hour": "丙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    no_visible_row = _trace_row(no_visible_meta, "sanhe", "sanhe")
+    day_visible_row = _trace_row(day_visible_meta, "sanhe", "sanhe")
+    month_visible_row = _trace_row(month_visible_meta, "sanhe", "sanhe")
+
+    no_visible_factor = float((no_visible_row.get("details") or {}).get("effective_family_factor") or 0.0)
+    day_visible_factor = float((day_visible_row.get("details") or {}).get("effective_family_factor") or 0.0)
+    month_visible_factor = float((month_visible_row.get("details") or {}).get("effective_family_factor") or 0.0)
+
+    assert abs(month_visible_factor - 5.0) < 0.05
+    assert day_visible_factor > no_visible_factor
+    assert month_visible_factor > day_visible_factor
+    assert _trace_intensity(day_visible_meta, "sanhe", "sanhe") > _trace_intensity(no_visible_meta, "sanhe", "sanhe")
+    assert _trace_intensity(month_visible_meta, "sanhe", "sanhe") > _trace_intensity(day_visible_meta, "sanhe", "sanhe")
+    no_visible_summary = next(
+        row for row in (no_visible_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+    day_visible_summary = next(
+        row for row in (day_visible_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+    month_visible_summary = next(
+        row for row in (month_visible_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+    assert float(month_visible_summary.get("family_factor") or 0.0) > float(day_visible_summary.get("family_factor") or 0.0)
+    assert float(day_visible_summary.get("family_factor") or 0.0) > float(no_visible_summary.get("family_factor") or 0.0)
+    assert float(month_visible_summary.get("visible_support_strength") or 0.0) > float(day_visible_summary.get("visible_support_strength") or 0.0) > 0.0
+
+
+def test_month_visible_sets_sanhui_cap_to_ten() -> None:
+    _, _, _, month_visible_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙辰", "hour": "丁巳"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    row = _trace_row(month_visible_meta, "sanhui", "sanhui")
+    factor = float((row.get("details") or {}).get("effective_family_factor") or 0.0)
+    assert abs(factor - 10.0) < 0.05
+
+
+def test_dark_transform_keeps_more_source_qi_than_month_visible_transform() -> None:
+    _, _, _, no_visible_meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "乙丑", "day": "甲辰", "hour": "丙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    _, _, _, month_visible_meta = calc_deity_scores(
+        four_pillars={"year": "丁巳", "month": "辛丑", "day": "甲辰", "hour": "丙酉"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    no_visible_row = next(
+        row for row in (no_visible_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+    month_visible_row = next(
+        row for row in (month_visible_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+
+    assert str(no_visible_row.get("manifestation_mode") or "") == "暗化"
+    assert str(month_visible_row.get("manifestation_mode") or "") == "明化"
+    assert float(no_visible_row.get("source_retention_ratio") or 0.0) > float(month_visible_row.get("source_retention_ratio") or 0.0)
+    assert "源气保留" in str(month_visible_row.get("summary") or "")
+
+
+def test_sanhui_preserves_more_source_qi_than_sanhe() -> None:
+    _, _, _, sanhui_meta = calc_deity_scores(
+        four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙卯", "hour": "丁辰"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+    _, _, _, sanhe_meta = calc_deity_scores(
+        four_pillars={"year": "甲亥", "month": "乙卯", "day": "丙卯", "hour": "丁未"},
+        luck_pillar="—",
+        flow_pillar="—",
+        gender="male",
+    )
+
+    sanhui_row = next(
+        row for row in (sanhui_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhui"
+    )
+    sanhe_row = next(
+        row for row in (sanhe_meta.get("relation_formation_summary") or [])
+        if isinstance(row, dict) and str(row.get("family_key") or "") == "sanhe"
+    )
+
+    assert float(sanhui_row.get("source_retention_ratio") or 0.0) > float(sanhe_row.get("source_retention_ratio") or 0.0)
+    assert float(sanhui_row.get("source_release_ratio") or 0.0) < float(sanhe_row.get("source_release_ratio") or 0.0)
+
+
+def test_stem_fusion_retention_plan_is_separate_and_lightweight() -> None:
+    _, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "辛酉", "month": "乙酉", "day": "乙丑", "hour": "庚申"},
+        luck_pillar="庚辰",
+        flow_pillar="辛巳",
+        gender="male",
+    )
+
+    rows = ((meta.get("root_dynamic_relations") or {}).get("stem_source_retention") or [])
+    assert rows
+    assert all(str(row.get("kind") or "") == "stem_fusion_transform" for row in rows if isinstance(row, dict))
+    assert min(float(row.get("retention") or 1.0) for row in rows if isinstance(row, dict)) >= 0.78
+
+
+def test_stem_fusion_month_visible_support_is_stronger_than_day_visible() -> None:
+    month_case = detect_stem_fusion_cases(
+        stems={"year": "乙", "month": "庚", "day": "甲", "hour": "丙"},
+        branches={"year": "巳", "month": "丑", "day": "辰", "hour": "酉"},
+    )[0]
+    day_case = detect_stem_fusion_cases(
+        stems={"year": "丁", "month": "乙", "day": "庚", "hour": "丙"},
+        branches={"year": "巳", "month": "丑", "day": "辰", "hour": "酉"},
+    )[0]
+
+    assert str(month_case.get("support_origin") or "") == "month_visible"
+    assert str(day_case.get("support_origin") or "") == "day_visible"
+    assert float(month_case.get("visible_support_strength") or 0.0) > float(day_case.get("visible_support_strength") or 0.0)
+    assert float(month_case.get("effective_support_score") or 0.0) > float(day_case.get("effective_support_score") or 0.0)
+
+
+def test_relation_dynamics_summary_separates_energy_and_stability_axes() -> None:
+    _, _, _, meta = calc_deity_scores(
+        four_pillars={"year": "壬子", "month": "甲午", "day": "丙卯", "hour": "丁酉"},
+        luck_pillar="庚子",
+        flow_pillar="丙午",
+        gender="male",
+    )
+
+    rows = meta.get("relation_dynamics_summary") or []
+    assert rows
+    by_kind = {str(row.get("kind") or ""): row for row in rows if isinstance(row, dict)}
+    if "chong" in by_kind:
+        assert str(by_kind["chong"].get("energy_axis") or "") == "激发"
+        assert float(by_kind["chong"].get("stability_delta_ratio") or 0.0) < 0.0

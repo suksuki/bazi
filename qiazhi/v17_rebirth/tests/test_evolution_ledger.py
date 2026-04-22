@@ -4,8 +4,13 @@ V17.32 演化账本 (Evolution Ledger) 功能测试。
 from __future__ import annotations
 
 from typing import Any, Dict
+
+import pytest
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
+
+
+pytestmark = [pytest.mark.regression, pytest.mark.synthetic]
 
 
 def test_evolution_ledger_initialization() -> None:

@@ -148,3 +148,80 @@ def test_physics_canonical_materializes_core_flux_summary_lines() -> None:
     assert "食神->偏财" in joined
     assert "伤官->正官" in joined
     assert "做功回路" in joined
+
+
+def test_physics_canonical_frontloads_relation_and_pattern_percentages() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+            "luck_pillar": "庚戌",
+            "flow_pillar": "丙午",
+            "energy_meta": {
+                "relation_formation_summary": [
+                    {
+                        "formation_label": "寅午戌三合火局",
+                        "formation_percent": 78.6,
+                        "family_factor": 3.5,
+                        "status": "受扰成局",
+                        "conflict_damping": 0.77,
+                        "projection_preview": ["劫财65%", "比肩35%"],
+                    }
+                ]
+            },
+            "meta": {
+                "plugin_claims": [
+                    {
+                        "plugin_id": "classical.pattern.officer.v1",
+                        "pattern_candidate": "正官格",
+                        "pattern_confidence_percent": 65.0,
+                        "target_god": "正官",
+                        "pattern_scope_label": "原局",
+                    }
+                ]
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "合化解释合同" in joined
+    assert "寅午戌三合火局 78.6%" in joined
+    assert "格局解释合同" in joined
+    assert "正官格 65.0%" in joined
+
+
+def test_physics_canonical_materializes_relation_dynamics_and_runtime_field_lines() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "壬寅", "month": "甲辰", "day": "丙子", "hour": "甲午"},
+            "luck_pillar": "庚戌",
+            "flow_pillar": "丙午",
+            "energy_meta": {
+                "relation_dynamics_summary": [
+                    {
+                        "label": "子午六冲",
+                        "energy_axis": "激发",
+                        "energy_effect_ratio": 0.58,
+                        "stability_delta_ratio": -0.74,
+                        "free_energy_lock_ratio": 0.0,
+                        "note": "冲不等于没能量，而是把静态资源推成动态事件。",
+                    },
+                    {
+                        "label": "寅午戌三合火局",
+                        "energy_axis": "组织化",
+                        "energy_effect_ratio": 0.52,
+                        "stability_delta_ratio": 0.31,
+                        "free_energy_lock_ratio": 0.18,
+                        "note": "合局更像组织化与重分配，不等于总能量线性增加。",
+                    },
+                ]
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "关系动力学合同" in joined
+    assert "子午六冲 激发58%" in joined
+    assert "稳定-74%" in joined
+    assert "寅午戌三合火局 组织化52%" in joined
+    assert "运流解释合同" in joined
+    assert "大运更像背景场" in joined

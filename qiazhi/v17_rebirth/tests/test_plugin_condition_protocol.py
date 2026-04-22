@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from v17_rebirth.backend.plugins.spec import V17Fact
+from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import detect_stem_fusion_cases
 from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import hydrate_v17_physics_tensor
 from v17_rebirth.backend.logic.plugin_discovery import collect_all_spec_facts
 from v17_rebirth.backend.services.claim_protocol import compile_claims
@@ -318,6 +319,40 @@ def test_infer_manifestation_state_for_cross_layer_and_branch_rows() -> None:
 
     stem_rows = [{"mode": "activated", "mode_confidence": 0.84}]
     assert protocol.infer_manifestation_state(stem_rows, relation_family="stem_fusion", member_set=None) == "supported"
+
+
+def test_stem_fusion_summary_distinguishes_day_support_and_interference_block() -> None:
+    day_case = detect_stem_fusion_cases(
+        stems={"year": "丁", "month": "乙", "day": "庚", "hour": "丙"},
+        branches={"year": "巳", "month": "丑", "day": "辰", "hour": "酉"},
+    )[0]
+    day_summary = protocol.summarize_stem_fusion_conditions(day_case)
+
+    assert day_summary["condition_state"] == "formed"
+    assert day_summary["condition_trigger"] == "day_support"
+    assert day_summary["manifestation_mode"] == "明化"
+    assert float(day_summary["support_score"] or 0.0) > 0.0
+
+    blocked_summary = protocol.summarize_stem_fusion_conditions(
+        {
+            "pillars": ["month", "day"],
+            "stems": ["乙", "庚"],
+            "mode": "stuck",
+            "hua_element": "metal",
+            "month_stem_supports": False,
+            "branch_root_ratio": 0.24,
+            "visible_support_strength": 0.82,
+            "support_score": 0.56,
+            "effective_support_score": 0.31,
+            "interference_score": 0.42,
+            "branch_disturbance_score": 0.30,
+            "stem_competition_score": 0.26,
+            "manifestation_mode": "明化",
+            "support_origin": "day_visible",
+        }
+    )
+    assert blocked_summary["condition_state"] == "stuck"
+    assert blocked_summary["condition_trigger"] == "interference_blocked"
 
 
 def test_pattern_and_ziping_plugins_emit_cluster_projection_meta() -> None:

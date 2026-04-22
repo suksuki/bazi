@@ -17,6 +17,29 @@ def test_build_six_pillar_graph_has_nodes_and_edges() -> None:
     assert graph.distance_weights[1] == 0.78
 
 
+def test_build_six_pillar_graph_prefers_luck_day_and_flow_day_coupling() -> None:
+    graph = build_six_pillar_graph(
+        four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+        luck_pillar="庚子",
+        flow_pillar="丙午",
+    )
+    by_pair = {(edge.source, edge.target): edge for edge in graph.edges}
+
+    luck_day = by_pair[("luck_stem", "day_stem")]
+    luck_year = by_pair[("luck_stem", "year_stem")]
+    flow_day = by_pair[("flow_branch", "day_branch")]
+    flow_year = by_pair[("flow_branch", "year_branch")]
+    luck_flow = by_pair[("luck_branch", "flow_branch")]
+
+    assert luck_day.kind == "dynamic_trigger"
+    assert float(luck_day.weight) > float(luck_year.weight)
+    assert float(flow_day.weight) > float(flow_year.weight)
+    assert float(luck_day.weight) > float(flow_day.weight)
+    assert luck_day.metadata.get("coupling_mode") == "background_core"
+    assert flow_day.metadata.get("coupling_mode") == "yearly_trigger"
+    assert luck_flow.metadata.get("coupling_mode") == "runtime_cascade"
+
+
 def test_resolve_god_ring_core_prefers_positive_work_path() -> None:
     result = resolve_god_ring_core(
         four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},

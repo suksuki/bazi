@@ -33,8 +33,10 @@ class WorkPath:
 
 
 _PATH_FAMILY_BY_RELATION: Dict[str, str] = {
+    "sanhui": "convergence",
     "sanhe": "convergence",
     "banhe": "convergence",
+    "gonghe": "convergence",
     "liuhe": "convergence",
     "stem_fusion": "transmuter",
     "liu_chong": "conflict",
@@ -50,6 +52,8 @@ _PATH_FAMILY_BY_RELATION: Dict[str, str] = {
 }
 
 _RELATION_FAMILY_ALIASES: Dict[str, str] = {
+    "san_hui": "sanhui",
+    "sanhui": "sanhui",
     "san_he": "sanhe",
     "sanxing": "sanxing",
     "liu_he": "liuhe",
@@ -60,6 +64,10 @@ _RELATION_FAMILY_ALIASES: Dict[str, str] = {
     "liu_chong": "liu_chong",
     "ban_he": "banhe",
     "banhe": "banhe",
+    "banhe_shengwang": "banhe",
+    "banhe_muwang": "banhe",
+    "gong_he": "gonghe",
+    "gonghe": "gonghe",
     "risk_blade_clash": "blade_clash",
     "risk_owl_food": "owl_food",
     "risk_officer_hurt_contest": "officer_hurt",
@@ -163,8 +171,10 @@ def _relation_factor(relation_family: str, effect_type: str) -> float:
     family = _normalize_relation_family(str(relation_family or ""))
     effect = str(effect_type or "").strip().lower()
     family_weights = {
+        "sanhui": 1.44,
         "sanhe": 1.32,
         "banhe": 1.18,
+        "gonghe": 1.08,
         "liuhe": 1.12,
         "liu_chong": 1.18,
         "liu_po": 1.08,

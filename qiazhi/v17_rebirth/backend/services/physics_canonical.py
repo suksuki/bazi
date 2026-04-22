@@ -25,6 +25,172 @@ def _cell_ok(value: Any) -> bool:
     return bool(s) and s not in (_PHYS_DASH, "-")
 
 
+def _meta_rows(pt: Dict[str, Any]) -> Dict[str, Any]:
+    meta = pt.get("meta")
+    return meta if isinstance(meta, dict) else {}
+
+
+def _energy_meta_rows(pt: Dict[str, Any]) -> Dict[str, Any]:
+    raw = pt.get("energy_meta")
+    return raw if isinstance(raw, dict) else {}
+
+
+def _relation_summary_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    energy_meta = _energy_meta_rows(pt)
+    meta = _meta_rows(pt)
+    raw = (
+        energy_meta.get("relation_formation_summary")
+        if isinstance(energy_meta.get("relation_formation_summary"), list)
+        else meta.get("relation_formation_summary")
+    )
+    if not isinstance(raw, list) or not raw:
+        return []
+    rows = [
+        "合化解释合同：以下百分比表示成局度/效率，不是十神能量百分比；需与家族基准倍数、源气保留比例和十神绝对强度合读。"
+    ]
+    ranked = sorted(
+        (
+            row for row in raw
+            if isinstance(row, dict) and str(row.get("formation_label") or "").strip()
+        ),
+        key=lambda row: float(row.get("formation_percent") or 0.0),
+        reverse=True,
+    )
+    for row in ranked[:3]:
+        label = str(row.get("formation_label") or "").strip()
+        percent = _safe_float(row.get("formation_percent"), 0.0)
+        factor = _safe_float(row.get("family_factor"), 0.0)
+        status = str(row.get("status") or "").strip()
+        conflict_damping = _safe_float(row.get("conflict_damping"), 1.0)
+        projection_preview = row.get("projection_preview") if isinstance(row.get("projection_preview"), list) else []
+        fragments = [f"{label} {percent:.1f}%"]
+        if factor > 0.0:
+            fragments.append(f"基准x{factor:.2f}")
+        source_retention_ratio = _safe_float(row.get("source_retention_ratio"), 1.0)
+        if source_retention_ratio < 0.995:
+            fragments.append(f"源气保留{round(source_retention_ratio * 100):.0f}%")
+        if status:
+            fragments.append(status)
+        if conflict_damping < 0.995:
+            fragments.append(f"受扰保留{round(conflict_damping * 100):.0f}%")
+        if projection_preview:
+            projection_text = " / ".join(
+                str(item).strip() for item in projection_preview[:2] if str(item).strip()
+            )
+            if projection_text:
+                fragments.append(f"主投影 {projection_text}")
+        rows.append("合化摘要：" + "，".join(fragments[:5]))
+    return rows
+
+
+def _relation_dynamics_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    energy_meta = _energy_meta_rows(pt)
+    meta = _meta_rows(pt)
+    raw = (
+        energy_meta.get("relation_dynamics_summary")
+        if isinstance(energy_meta.get("relation_dynamics_summary"), list)
+        else meta.get("relation_dynamics_summary")
+    )
+    if not isinstance(raw, list) or not raw:
+        return []
+    rows = [
+        "关系动力学合同：刑冲克害破与合必须分开读能量与稳定性；冲偏激发，刑偏内耗，克偏压制转移，害偏暗损，破偏解构，合偏绑定/组织化。"
+    ]
+    ranked = sorted(
+        (row for row in raw if isinstance(row, dict) and str(row.get("label") or "").strip()),
+        key=lambda row: abs(_safe_float(row.get("stability_delta_ratio"), 0.0)) + _safe_float(row.get("energy_effect_ratio"), 0.0),
+        reverse=True,
+    )
+    for row in ranked[:4]:
+        label = str(row.get("label") or "").strip()
+        energy_axis = str(row.get("energy_axis") or "").strip()
+        energy_ratio = _safe_float(row.get("energy_effect_ratio"), 0.0)
+        stability_delta = _safe_float(row.get("stability_delta_ratio"), 0.0)
+        lock_ratio = _safe_float(row.get("free_energy_lock_ratio"), 0.0)
+        note = str(row.get("note") or "").strip()
+        fragments = [f"{label} {energy_axis}{round(energy_ratio * 100):.0f}%"]
+        if abs(stability_delta) > 1e-6:
+            sign = "+" if stability_delta > 0 else ""
+            fragments.append(f"稳定{sign}{round(stability_delta * 100):.0f}%")
+        if lock_ratio > 0.0:
+            fragments.append(f"自由能锁定{round(lock_ratio * 100):.0f}%")
+        if note:
+            fragments.append(note)
+        rows.append("关系动力学：" + "，".join(fragments[:4]))
+    return rows
+
+
+def _runtime_field_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    return [
+        "运流解释合同：大运更像背景场，流年更像年度扰动；不是线性先后，而是流年在大运场中触发原局关键节点。",
+        "运流解释合同：当前 Core 图优先耦合顺序为日柱/日支 > 月柱/月令 > 时柱 > 年柱；大运权重大于流年。",
+    ]
+
+
+def _pattern_summary_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    claims = meta.get("plugin_claims") if isinstance(meta.get("plugin_claims"), list) else []
+    if not claims:
+        return []
+    candidates: Dict[str, Dict[str, Any]] = {}
+    for row in claims:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("pattern_candidate") or row.get("pattern_name") or "").strip()
+        if not name:
+            continue
+        confidence_raw = row.get("pattern_confidence_percent")
+        if confidence_raw is None:
+            confidence_raw = row.get("pattern_confidence")
+        if confidence_raw is None:
+            confidence_raw = row.get("match_ratio")
+        confidence = _safe_float(confidence_raw, 0.0)
+        if confidence <= 1.0:
+            confidence *= 100.0
+        confidence = max(0.0, min(100.0, confidence))
+        target = str(row.get("target_god") or "").strip()
+        scope = str(row.get("pattern_scope_label") or row.get("pattern_scope") or "").strip()
+        key = f"{name}::{target or 'na'}"
+        current = candidates.get(key)
+        candidate = {
+            "name": name,
+            "confidence": round(confidence, 1),
+            "target": target,
+            "scope": scope,
+        }
+        if current is None or float(candidate["confidence"]) > float(current.get("confidence") or 0.0):
+            candidates[key] = candidate
+    ranked = sorted(candidates.values(), key=lambda row: float(row.get("confidence") or 0.0), reverse=True)
+    if not ranked:
+        return []
+    rows = ["格局解释合同：以下百分比表示格局拟合度/置信度，不直接改写十神能量；应与原局、运流和做功链条合读。"]
+    fragments: List[str] = []
+    for row in ranked[:3]:
+        name = str(row.get("name") or "").strip()
+        if not name:
+            continue
+        confidence = _safe_float(row.get("confidence"), 0.0)
+        target = str(row.get("target") or "").strip()
+        scope = str(row.get("scope") or "").strip()
+        bits = [f"{name} {confidence:.1f}%"]
+        if target:
+            bits.append(f"主落点 {target}")
+        if scope:
+            bits.append(scope)
+        fragments.append("，".join(bits[:3]))
+    if fragments:
+        rows.append("格局摘要：" + "；".join(fragments))
+    return rows
+
+
 def _ten_gods_prompt_contract_lines(pt: Dict[str, Any]) -> List[str]:
     if not isinstance(pt, dict):
         return []
@@ -35,6 +201,8 @@ def _ten_gods_prompt_contract_lines(pt: Dict[str, Any]) -> List[str]:
         "十神解释合同：根气与势能不是同一概念；根气回答“是否扎根”，势能回答“是否得势”。",
         "十神解释合同：通根只定义为“天干 <- 地支藏干”；透干只定义为“地支藏干 -> 天干显影”。",
         "十神解释合同：地支之间不谈根气，天干之间不谈透干；二者可互相增强，但必须基于冻结盘面单次结算，禁止递归放大。",
+        "十神解释合同：天干五合与地支成局分开解读；五合只回看地支根气与争合/支扰，倍率明显轻于地支三合三会。",
+        "十神解释合同：关系成局的大倍率主要由动态透干/显神触发；月干透出最强，日干在动态做功中有效，但不回流为静态比劫显化。",
         "十神解释合同：同五行可通根，但阴阳不纯配时应折损；本根强于异阴阳根。",
         "十神解释合同：日干是十神参照轴，不直接计入比肩/劫财等显化分。",
         "十神解释合同：只有藏干未透时通常仅作弱支撑或潜藏残值，不宜直接判为强轴。",
@@ -230,6 +398,10 @@ class PhysicsCanonicalService:
         if not isinstance(physics_tensor, dict):
             return rows
         rows.extend(_core_flux_prompt_lines(physics_tensor))
+        rows.extend(_relation_summary_prompt_lines(physics_tensor))
+        rows.extend(_relation_dynamics_prompt_lines(physics_tensor))
+        rows.extend(_pattern_summary_prompt_lines(physics_tensor))
+        rows.extend(_runtime_field_prompt_lines(physics_tensor))
         rows.extend(_ten_gods_prompt_contract_lines(physics_tensor))
         rows.extend(_ten_gods_decomposition_lines(physics_tensor))
         total_energy = physics_tensor.get("total_energy_index")

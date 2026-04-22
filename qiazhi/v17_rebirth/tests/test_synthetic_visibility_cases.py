@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
 from v17_rebirth.backend.logic.plugin_discovery import collect_all_spec_facts
+
+
+pytestmark = [pytest.mark.regression, pytest.mark.synthetic]
 
 
 def _sanhe_projection(four_pillars, luck_pillar, flow_pillar):

@@ -8,6 +8,8 @@ type Props = {
   pluginCount: number;
   hasAuthoritySource: boolean;
   authority?: LooseRecord;
+  projectionBridgeProtocol?: LooseRecord;
+  relationFormationSummary?: LooseRecord[];
   tenGodDecomposition?: Record<
     string,
     {
@@ -85,6 +87,13 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
 }
 
+function bridgeDirectionLabel(raw: unknown): string {
+  const text = String(raw || "").trim();
+  if (text === "stem<-branch_hidden") return "天干 <- 地支藏干";
+  if (text === "branch_hidden->visible_stem") return "地支藏干 -> 天干";
+  return text || "未定义";
+}
+
 function formatWeightEntries(
   value: unknown,
   options: {
@@ -111,6 +120,24 @@ function biasPairs(value: unknown): Array<[string, number]> {
     .map(([god, raw]) => [god, asNumber(raw)] as [string, number])
     .filter(([god, score]) => Boolean(god) && score > 0)
     .sort((left, right) => right[1] - left[1]);
+}
+
+function relationFormationRows(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const row = asRecord(item);
+      return {
+        formationLabel: String(row.formation_label || "").trim(),
+        formationPercent: asNumber(row.formation_percent),
+        familyFactor: asNumber(row.family_factor),
+        status: String(row.status || "").trim(),
+        summary: String(row.summary || "").trim(),
+      };
+    })
+    .filter((row) => row.formationLabel && row.formationPercent > 0)
+    .sort((left, right) => right.formationPercent - left.formationPercent)
+    .slice(0, 6);
 }
 
 function stageBiasRows(value: unknown) {
@@ -380,9 +407,12 @@ export function V17_AdminCoreEnginePanel({
   pluginCount,
   hasAuthoritySource,
   authority,
+  projectionBridgeProtocol,
+  relationFormationSummary,
   tenGodDecomposition,
 }: Props) {
   const authorityRow = asRecord(authority);
+  const bridgeProtocol = asRecord(projectionBridgeProtocol);
   const [selectedNodeChainIndex, setSelectedNodeChainIndex] = useState(0);
   const graphMeta = asRecord(authorityRow.core_graph_meta);
   const fluxMeta = asRecord(authorityRow.core_flux_meta);
@@ -414,6 +444,7 @@ export function V17_AdminCoreEnginePanel({
     : [];
   const judgementBias = asRecord(authorityRow.judgement_bias);
   const stageBias = stageBiasRows(authorityRow.stage_bias);
+  const relationRows = relationFormationRows(relationFormationSummary);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
   const judgementBiasEntries = Array.isArray(authorityRow.judgement_bias_entries)
@@ -598,6 +629,80 @@ export function V17_AdminCoreEnginePanel({
                 ))}
               </div>
             </div>
+
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">Projection Bridge Protocol</div>
+                <div className="text-[10px] text-zinc-500">通根 / 透干单次耦合</div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-950/20 px-3 py-1 text-cyan-200">
+                  通根 {bridgeDirectionLabel(bridgeProtocol.tonggen_direction)}
+                </span>
+                <span className="rounded-full border border-violet-500/25 bg-violet-950/20 px-3 py-1 text-violet-200">
+                  透干 {bridgeDirectionLabel(bridgeProtocol.tougan_direction)}
+                </span>
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-3 py-1 text-emerald-200">
+                  同五行先 {bridgeProtocol.same_element_first ? "ON" : "OFF"}
+                </span>
+                <span className="rounded-full border border-amber-500/25 bg-amber-950/20 px-3 py-1 text-amber-200">
+                  阴阳后判 {bridgeProtocol.polarity_second ? "ON" : "OFF"}
+                </span>
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                  {bridgeProtocol.single_pass_coupling ? "单次耦合" : "未声明"}
+                </span>
+                <span className="rounded-full border border-rose-500/25 bg-rose-950/20 px-3 py-1 text-rose-200">
+                  {bridgeProtocol.recursive_feedback ? "允许递归" : "禁止递归"}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 text-[10px] text-zinc-400 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  本根 <span className="ml-1 font-mono text-zinc-100">{asNumber(bridgeProtocol.exact_root_support_factor, 1).toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  异阴阳根 <span className="ml-1 font-mono text-zinc-100">{asNumber(bridgeProtocol.cross_polarity_root_support_factor).toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  精确透干 <span className="ml-1 font-mono text-zinc-100">{asNumber(bridgeProtocol.exact_exposed_hidden_gain).toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  同五行可见 <span className="ml-1 font-mono text-zinc-100">{asNumber(bridgeProtocol.same_element_visible_relief).toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  通根上限 <span className="ml-1 font-mono text-zinc-100">{asNumber(bridgeProtocol.rooted_gain_cap).toFixed(2)}</span>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                  协议 <span className="ml-1 font-mono text-zinc-100">{String(bridgeProtocol.protocol || "—")}</span>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] leading-5 text-zinc-500">
+                Root 与 Exposed 允许互证，但都只读冻结盘面证据一次；结算后的增强值不会再次回写为新的根/透干依据。
+              </p>
+            </div>
+
+            {relationRows.length ? (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="text-[11px] font-semibold text-zinc-300">Relation Formation Summary</div>
+                  <div className="text-[10px] text-zinc-500">成局度 / 家族基准倍数</div>
+                </div>
+                <div className="grid gap-2">
+                  {relationRows.map((row) => (
+                    <div key={row.formationLabel} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-300">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-zinc-100">{row.formationLabel}</span>
+                        <span className="font-mono text-amber-200">{row.formationPercent.toFixed(1)}%</span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-zinc-500">
+                        <span>状态 {row.status || "成局观察"}</span>
+                        <span>基准 x{row.familyFactor.toFixed(2)}</span>
+                      </div>
+                      {row.summary ? <p className="mt-1 leading-5 text-zinc-500">{row.summary}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {decompositionRows.length ? (
