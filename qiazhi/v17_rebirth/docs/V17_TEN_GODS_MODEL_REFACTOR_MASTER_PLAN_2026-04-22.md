@@ -1,7 +1,7 @@
 # V17 十神模型总重构主计划
 
 日期：2026-04-22  
-状态：执行中 / Phase 1-5 已推进，Phase 6 持续收口  
+状态：执行中 / Phase 1-6 主体已落地并持续收口；Synthetic Lab Phase 2 已扩到关系矩阵、运流矩阵与 authority 矩阵  
 定位：十神物理层、关系层、运流层、核心求解层的统一重构总图
 
 ---
@@ -533,6 +533,7 @@ L0 当前已经形成下面这组边界：
 - `test_authority_judgement_protocol.py`：新增 2 条
 - 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）→ `24 passed`（authority judgement / routing / prompt 对齐）
 - 全量 `v17_rebirth/tests`：`314 passed`
+- Synthetic Lab：`32 passed`
 
 目标：
 
@@ -604,6 +605,59 @@ L0 当前已经形成下面这组边界：
 验收：
 
 - 相同概念不再多名并存
+
+## 7.1 Synthetic Lab Phase 2：关系矩阵扩容
+
+状态：执行中（relation family full matrix 第一批已落地）
+
+目标：
+
+- 把 Synthetic Lab 从“三合/三会示例集”升级成“关系家族验证矩阵”
+- 让 `liuhe / banhe_shengwang / banhe_muwang / gonghe / stem_fusion_transform` 都进入稳定回归
+- 为后续运流矩阵、做功矩阵、authority 矩阵铺底
+
+已落地：
+
+- case catalog 新增：
+  - `l1.relation.liuhe.baseline`
+  - `l1.relation.banhe.shengwang`
+  - `l1.relation.banhe.muwang`
+  - `l1.relation.gonghe.baseline`
+  - `l1.relation.stem_fusion.runtime`
+  - `l1.relation.chong.baseline`
+  - `l1.relation.hai.baseline`
+  - `l1.relation.po.baseline`
+  - `l1.relation.ke.baseline`
+- 新增矩阵测试：
+  - `test_synthetic_relation_family_matrix.py`
+  - `test_synthetic_relation_dynamics_matrix.py`
+
+下一步：
+
+1. 补 `anhe / xing`，让关系动力学双轴覆盖暗合与内耗
+2. 建立 runtime-field matrix：`natal / luck / flow / resonance / interruption`
+3. 建立 work-authority matrix：`食伤制杀 / 伤官见官 / 伤官伤尽 / 通关链`
+
+当前进展：
+
+- runtime-field matrix 第一批已落地：
+  - `runtime.relation.liuhe.luck_background`
+  - `runtime.relation.liuhe.flow_trigger`
+  - `runtime.relation.hai.luck_background`
+  - `runtime.relation.hai.flow_trigger`
+- runtime-field matrix 第二批已落地：
+  - `runtime.relation.sanhui.resonance`
+  - `runtime.relation.banhe.interruption`
+- work-authority matrix 已落地：
+  - `core.authority.officer_contest`
+  - `core.authority.positive_path`
+  - `core.authority.bridge_present`
+- UI 已接上 `relation_dynamics_summary`：
+  - Oracle 主页面 `V17_SixPillarsPanel`
+  - Admin 核心面板 `V17_AdminCoreEnginePanel`
+  - `/api/v17-admin/plugin-runtime-status` 已下发 dual-axis 关系动力学摘要
+- 新增：
+  - `test_synthetic_runtime_field_matrix.py`
 
 ---
 

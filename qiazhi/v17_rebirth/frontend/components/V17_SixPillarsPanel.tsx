@@ -331,6 +331,16 @@ type RelationFormationRow = {
   summary: string;
 };
 
+type RelationDynamicsRow = {
+  label: string;
+  energyAxis: string;
+  energyEffectRatio: number;
+  stabilityDeltaRatio: number;
+  freeEnergyLockRatio: number;
+  pillars: string[];
+  note: string;
+};
+
 function relationFormationTone(status: string): string {
   const text = String(status || "").trim();
   if (text === "强成局") return "border-emerald-500/25 bg-emerald-950/20 text-emerald-200";
@@ -360,6 +370,53 @@ function relationFormationRows(value: unknown): RelationFormationRow[] {
     .filter((row) => row.formationLabel && row.formationPercent > 0)
     .sort((left, right) => right.formationPercent - left.formationPercent)
     .slice(0, 4);
+}
+
+function relationDynamicsTone(axis: string, stabilityDeltaRatio: number): string {
+  const text = String(axis || "").trim();
+  if (text === "激发" || text === "解构") return "border-rose-500/25 bg-rose-950/20 text-rose-200";
+  if (text === "内耗" || text === "暗损" || stabilityDeltaRatio < 0) return "border-amber-500/25 bg-amber-950/20 text-amber-200";
+  if (text === "绑定" || text === "组织化" || text === "转化") return "border-cyan-500/25 bg-cyan-950/20 text-cyan-200";
+  return "border-zinc-700 bg-zinc-950/60 text-zinc-300";
+}
+
+function pillarLabel(value: string): string {
+  const map: Record<string, string> = {
+    year: "年柱",
+    month: "月柱",
+    day: "日柱",
+    hour: "时柱",
+    luck: "大运",
+    flow: "流年",
+  };
+  return map[value] || value || "未定";
+}
+
+function relationDynamicsRows(value: unknown): RelationDynamicsRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const row = item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+      return {
+        label: String(row.label || "").trim(),
+        energyAxis: String(row.energy_axis || "").trim(),
+        energyEffectRatio: num(row.energy_effect_ratio),
+        stabilityDeltaRatio: num(row.stability_delta_ratio),
+        freeEnergyLockRatio: num(row.free_energy_lock_ratio),
+        pillars: Array.isArray(row.pillars)
+          ? row.pillars.map((entry) => String(entry || "").trim()).filter(Boolean)
+          : [],
+        note: String(row.note || "").trim(),
+      };
+    })
+    .filter((row) => row.label)
+    .sort(
+      (left, right) =>
+        Math.abs(right.stabilityDeltaRatio) + right.energyEffectRatio - (Math.abs(left.stabilityDeltaRatio) + left.energyEffectRatio),
+    )
+    .slice(0, 6);
 }
 
 function fluxReasonTone(role: "use" | "taboo" | "tongguan", flux: number) {
@@ -429,6 +486,7 @@ export function V17_SixPillarsPanel({
   tenGodLedger,
   projectionBridgeProtocol,
   relationFormationSummary,
+  relationDynamicsSummary,
   birthTimeISO,
   gender,
   calendarType,
@@ -444,6 +502,7 @@ export function V17_SixPillarsPanel({
   tenGodLedger?: Record<string, LedgerEntry[]>;
   projectionBridgeProtocol?: ProjectionBridgeProtocol;
   relationFormationSummary?: Array<Record<string, unknown>>;
+  relationDynamicsSummary?: Array<Record<string, unknown>>;
   birthTimeISO?: string;
   gender?: "male" | "female";
   calendarType?: "solar" | "lunar";
@@ -460,6 +519,7 @@ export function V17_SixPillarsPanel({
   const flowP = parsePillar(flowPillarFromServer);
   const authorityMode = String(godRingInfo?.display_mode || "").trim() === "authority";
   const relationRows = relationFormationRows(relationFormationSummary);
+  const relationDynamics = relationDynamicsRows(relationDynamicsSummary);
   const useGods = Array.isArray(godRingInfo?.god_of_use)
     ? godRingInfo?.god_of_use.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
@@ -908,6 +968,52 @@ export function V17_SixPillarsPanel({
                 ) : null}
                 {row.summary ? (
                   <p className="mt-2 text-[11px] leading-5 text-zinc-400">{row.summary}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {relationDynamics.length ? (
+        <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/80">Relation Dynamics</p>
+              <p className="mt-1 text-sm text-cyan-50">关系动力学 / 能量-稳定性双轴</p>
+            </div>
+            <p className="max-w-xl text-[11px] leading-5 text-zinc-400">
+              这里看的是关系如何改变能量运行方式与结构稳定性，不直接等于十神总分；合偏组织化/绑定，冲刑害破偏激发/内耗/暗损/解构。
+            </p>
+          </div>
+          <div className="mt-3 grid gap-2 xl:grid-cols-2">
+            {relationDynamics.map((row) => (
+              <div key={row.label} className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-cyan-50">{row.label}</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">
+                      作用柱：{row.pillars.length ? row.pillars.map(pillarLabel).join(" / ") : "未定"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] ${relationDynamicsTone(row.energyAxis, row.stabilityDeltaRatio)}`}>
+                      {row.energyAxis || "动力学观察"}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-2 grid gap-2 text-[11px] text-zinc-300 sm:grid-cols-3">
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                    能量效应 <span className="ml-1 font-mono text-cyan-100">{(row.energyEffectRatio * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                    稳定变化 <span className="ml-1 font-mono text-amber-100">{signed(row.stabilityDeltaRatio * 100)}%</span>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                    自由能锁定 <span className="ml-1 font-mono text-violet-100">{(row.freeEnergyLockRatio * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+                {row.note ? (
+                  <p className="mt-2 text-[11px] leading-5 text-zinc-400">{row.note}</p>
                 ) : null}
               </div>
             ))}

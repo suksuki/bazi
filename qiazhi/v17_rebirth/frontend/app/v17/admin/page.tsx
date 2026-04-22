@@ -283,6 +283,7 @@ export default function V17AdminPage() {
   const [coreEngineAuthority, setCoreEngineAuthority] = useState<CoreEngineAuthority>({});
   const [projectionBridgeProtocol, setProjectionBridgeProtocol] = useState<LooseObject>({});
   const [relationFormationSummary, setRelationFormationSummary] = useState<LooseObject[]>([]);
+  const [relationDynamicsSummary, setRelationDynamicsSummary] = useState<LooseObject[]>([]);
   const [tenGodDecomposition, setTenGodDecomposition] = useState<Record<string, TenGodDecompositionRow>>({});
   const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
@@ -338,6 +339,7 @@ export default function V17AdminPage() {
         asLooseObject(statusPayload.projection_bridge_protocol) ||
         asLooseObject(authority.projection_bridge_protocol);
       const relationSummary = asLooseRecord<LooseObject>(statusPayload.relation_formation_summary, []);
+      const relationDynamics = asLooseRecord<LooseObject>(statusPayload.relation_dynamics_summary, []);
       const decomposition = asLooseObject(statusPayload.ten_gods_decomposition_l0) as Record<string, TenGodDecompositionRow>;
       const contributions = asLooseRecord<RecomputeContribution>(statusPayload.recompute_contributions, []);
       setPlugins(list);
@@ -350,6 +352,7 @@ export default function V17AdminPage() {
       setCoreEngineAuthority(authority);
       setProjectionBridgeProtocol(bridgeProtocol);
       setRelationFormationSummary(relationSummary);
+      setRelationDynamicsSummary(relationDynamics);
       setTenGodDecomposition(decomposition);
       setRecomputeContributions(contributions);
       setResolvedPluginRuntimeSessionId(asString(statusPayload.session_id, pluginRuntimeSessionId || "default"));
@@ -764,6 +767,7 @@ export default function V17AdminPage() {
                  authority={coreEngineAuthority}
                  projectionBridgeProtocol={projectionBridgeProtocol}
                  relationFormationSummary={relationFormationSummary}
+                 relationDynamicsSummary={relationDynamicsSummary}
                  tenGodDecomposition={tenGodDecomposition}
                />
                <V17_AdminPluginOverview

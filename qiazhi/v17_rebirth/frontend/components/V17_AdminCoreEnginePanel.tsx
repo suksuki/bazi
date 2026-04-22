@@ -10,6 +10,7 @@ type Props = {
   authority?: LooseRecord;
   projectionBridgeProtocol?: LooseRecord;
   relationFormationSummary?: LooseRecord[];
+  relationDynamicsSummary?: LooseRecord[];
   tenGodDecomposition?: Record<
     string,
     {
@@ -138,6 +139,49 @@ function relationFormationRows(value: unknown) {
     .filter((row) => row.formationLabel && row.formationPercent > 0)
     .sort((left, right) => right.formationPercent - left.formationPercent)
     .slice(0, 6);
+}
+
+function relationDynamicsRows(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const row = asRecord(item);
+      return {
+        label: String(row.label || "").trim(),
+        energyAxis: String(row.energy_axis || "").trim(),
+        energyEffectRatio: asNumber(row.energy_effect_ratio),
+        stabilityDeltaRatio: asNumber(row.stability_delta_ratio),
+        freeEnergyLockRatio: asNumber(row.free_energy_lock_ratio),
+        note: String(row.note || "").trim(),
+        pillars: asStringArray(row.pillars),
+      };
+    })
+    .filter((row) => row.label)
+    .sort(
+      (left, right) =>
+        Math.abs(right.stabilityDeltaRatio) + right.energyEffectRatio - (Math.abs(left.stabilityDeltaRatio) + left.energyEffectRatio),
+    )
+    .slice(0, 8);
+}
+
+function relationDynamicsTone(axis: string, stabilityDeltaRatio: number): string {
+  const text = String(axis || "").trim();
+  if (text === "激发" || text === "解构") return "border-rose-500/25 bg-rose-950/20 text-rose-200";
+  if (text === "内耗" || text === "暗损" || stabilityDeltaRatio < 0) return "border-amber-500/25 bg-amber-950/20 text-amber-200";
+  if (text === "绑定" || text === "组织化" || text === "转化") return "border-cyan-500/25 bg-cyan-950/20 text-cyan-200";
+  return "border-zinc-700 bg-zinc-950/60 text-zinc-300";
+}
+
+function pillarLabel(value: string): string {
+  const map: Record<string, string> = {
+    year: "年柱",
+    month: "月柱",
+    day: "日柱",
+    hour: "时柱",
+    luck: "大运",
+    flow: "流年",
+  };
+  return map[value] || value || "未定";
 }
 
 function stageBiasRows(value: unknown) {
@@ -409,6 +453,7 @@ export function V17_AdminCoreEnginePanel({
   authority,
   projectionBridgeProtocol,
   relationFormationSummary,
+  relationDynamicsSummary,
   tenGodDecomposition,
 }: Props) {
   const authorityRow = asRecord(authority);
@@ -449,6 +494,7 @@ export function V17_AdminCoreEnginePanel({
   const stageProtocol = asRecord(authorityRow.stage_bias_protocol);
   const stageSummary = asRecord(stageProtocol.summary);
   const relationRows = relationFormationRows(relationFormationSummary);
+  const relationDynamicRows = relationDynamicsRows(relationDynamicsSummary);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
   const judgementBiasEntries = Array.isArray(authorityRow.judgement_bias_entries)
@@ -803,6 +849,36 @@ export function V17_AdminCoreEnginePanel({
                         <span>基准 x{row.familyFactor.toFixed(2)}</span>
                       </div>
                       {row.summary ? <p className="mt-1 leading-5 text-zinc-500">{row.summary}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {relationDynamicRows.length ? (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="text-[11px] font-semibold text-zinc-300">Relation Dynamics Summary</div>
+                  <div className="text-[10px] text-zinc-500">能量轴 / 稳定性轴 / 自由能锁定</div>
+                </div>
+                <div className="grid gap-2">
+                  {relationDynamicRows.map((row) => (
+                    <div key={row.label} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-300">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-zinc-100">{row.label}</span>
+                        <span className={`rounded-full border px-2 py-1 ${relationDynamicsTone(row.energyAxis, row.stabilityDeltaRatio)}`}>
+                          {row.energyAxis || "动力学观察"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-zinc-500">
+                        <span>能量 {(row.energyEffectRatio * 100).toFixed(1)}%</span>
+                        <span>稳定 {row.stabilityDeltaRatio > 0 ? "+" : ""}{(row.stabilityDeltaRatio * 100).toFixed(1)}%</span>
+                        <span>锁定 {(row.freeEnergyLockRatio * 100).toFixed(1)}%</span>
+                      </div>
+                      {row.pillars.length ? (
+                        <div className="mt-1 text-zinc-500">作用柱 {row.pillars.map(pillarLabel).join(" / ")}</div>
+                      ) : null}
+                      {row.note ? <p className="mt-1 leading-5 text-zinc-500">{row.note}</p> : null}
                     </div>
                   ))}
                 </div>

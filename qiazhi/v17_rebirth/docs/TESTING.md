@@ -31,14 +31,23 @@ bash qiazhi/v17_rebirth/scripts/run_synthetic_lab.sh
 
 # 等价命令
 pytest qiazhi/v17_rebirth/tests -m synthetic -q
+
+# 只跑关系家族矩阵
+pytest qiazhi/v17_rebirth/tests/test_synthetic_lab_matrix.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_relation_family_matrix.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_relation_dynamics_matrix.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_runtime_field_matrix.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_work_authority_matrix.py -q
 ```
 
 Synthetic Lab 当前覆盖：
 
 - L0 静态基础：通根 / 虚浮 / 透干
-- L1 关系家族：三合 / 三会 / 半合等成局摘要
-- Core 运流协议：背景场 / 年度扰动 / runtime_cascade
+- L1 关系家族：三合 / 三会 / 六合 / 半合 / 拱合 / stem_fusion runtime
+- L1 关系动力学：暗合 / 冲 / 刑 / 害 / 破 / 克 双轴摘要
+- Core 运流协议：背景场 / 年度扰动 / runtime_cascade / background vs trigger / resonance / interruption
 - L2 判定层：`risk_matrix` 偏置、authority 用神/忌神/通关神
+- Core 做功与 authority：`contest / positive_path / tongguan_present`
 - Authority Judgement 协议：`judgement_bias_protocol / stage_bias_protocol`
 - Master Reasoning：主审盘推理链与 learning hook
 - Evolution Ledger：演化账本契约

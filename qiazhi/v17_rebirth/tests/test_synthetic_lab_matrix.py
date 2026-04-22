@@ -36,6 +36,14 @@ def test_synthetic_case_catalog_executes_and_emits_expected_families(case) -> No
         }
         for family_key in case.expected_relation_families:
             assert family_key in families
+    if case.expected_dynamic_families:
+        families = {
+            str(row.get("family_key") or "")
+            for row in (run.meta.get("relation_dynamics_summary") or [])
+            if isinstance(row, dict)
+        }
+        for family_key in case.expected_dynamic_families:
+            assert family_key in families
 
 
 def test_static_basis_matrix_keeps_rooted_peer_above_floating_peer() -> None:
@@ -85,4 +93,3 @@ def test_master_branch_cluster_reports_parallel_relation_summaries() -> None:
     assert "七杀100%" in " ".join(str(item) for item in (banhe_row.get("projection_preview") or []))
     assert str(sanhui_row.get("status") or "") in {"候选未全", "受扰成局", "成局"}
     assert "基准x" in str(sanhe_row.get("summary") or "")
-

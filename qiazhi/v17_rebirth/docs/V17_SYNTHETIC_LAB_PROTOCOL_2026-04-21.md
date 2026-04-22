@@ -35,6 +35,7 @@ SyntheticCase(
     gender="male",
     tags=("relation", "sanhe", "month_visible"),
     expected_relation_families=("sanhe",),
+    expected_dynamic_families=(),
 )
 ```
 
@@ -46,6 +47,7 @@ SyntheticCase(
 - `four_pillars / luck_pillar / flow_pillar`: 可控输入。
 - `tags`: 检索维度。
 - `expected_relation_families`: 该样盘必须出现的关系家族。
+- `expected_dynamic_families`: 该样盘必须出现的关系动力学家族，用于 `chong / hai / po / ke / stem_fusion_transform` 这类不以 formation bucket 为主目录的关系。
 
 ## Layer Design
 
@@ -79,6 +81,41 @@ SyntheticCase(
 - `l1.relation.sanhe.day_visible`
 - `l1.relation.sanhe.month_visible`
 - `l1.relation.sanhui.month_visible`
+- `l1.relation.liuhe.baseline`
+- `l1.relation.banhe.shengwang`
+- `l1.relation.banhe.muwang`
+- `l1.relation.gonghe.baseline`
+- `l1.relation.anhe.baseline`
+- `l1.relation.stem_fusion.runtime`
+- `l1.relation.chong.baseline`
+- `l1.relation.xing.baseline`
+- `l1.relation.hai.baseline`
+- `l1.relation.po.baseline`
+- `l1.relation.ke.baseline`
+
+2026-04-22 起，L1 Relation Families 进入第二阶段：`relation family full matrix`。
+
+这批矩阵的目标不是只看“三合/三会”，而是把关系家族按工程协议拆开：
+
+- `liuhe`
+- `banhe_shengwang`
+- `banhe_muwang`
+- `gonghe`
+- `anhe`
+- `stem_fusion_transform`
+- `chong`
+- `xing`
+- `hai`
+- `po`
+- `ke`
+
+其中：
+
+- `liuhe / banhe / gonghe` 继续以 `relation_formation_summary` 为主目录
+- `stem_fusion_transform / chong / hai / po / ke` 以 `relation_dynamics_summary` 为主目录
+- `stem_fusion_transform` 同时要求进入 `relation_visible_bonuses`
+
+这样可以避免把“地支成局”和“天干五合转化”硬塞进同一个 formation bucket。
 
 ### L2 Judgment Plugins
 
@@ -111,7 +148,34 @@ SyntheticCase(
 
 当前基线样盘：
 
+- `runtime.relation.liuhe.luck_background`
+- `runtime.relation.liuhe.flow_trigger`
+- `runtime.relation.hai.luck_background`
+- `runtime.relation.hai.flow_trigger`
+- `runtime.relation.sanhui.resonance`
+- `runtime.relation.banhe.interruption`
 - `master.branch_cluster.fire_vs_water`
+
+2026-04-22 起，MASTER 层开始承接 `runtime-field matrix`：
+
+- 同一组关系分别落在 `luck_background / flow_trigger`
+- 校验 `大运 = 背景场`、`流年 = 扰动触发`
+- 校验图边 metadata 与 relation summary 同口径
+- 校验 `resonance / interruption` 在 formation 与 dynamics 两个摘要里同时可见
+
+### MASTER Work-Authority Matrix
+
+验证：
+
+- 做功路径是否会把高能低稳与低能高稳区分开
+- authority 是否会沿着 `contest / positive_path / tongguan_present` 给出不同裁决
+- `effect_scores / use_candidates / taboo_candidates / core paths preview` 是否同口径
+
+当前基线样盘：
+
+- `core.authority.officer_contest`
+- `core.authority.positive_path`
+- `core.authority.bridge_present`
 
 ## Runtime Outputs
 
@@ -148,7 +212,11 @@ pytest qiazhi/v17_rebirth/tests -m synthetic -q
 - 合成关系聚焦测试：`test_synthetic_relation_focus.py`
 - 合成三合投影测试：`test_synthetic_sanhe_projection.py`
 - 合成样盘矩阵：`test_synthetic_lab_matrix.py`
+- 合成关系家族矩阵：`test_synthetic_relation_family_matrix.py`
+- 合成关系动力学矩阵：`test_synthetic_relation_dynamics_matrix.py`
+- 合成运流场矩阵：`test_synthetic_runtime_field_matrix.py`
 - 合成判定层矩阵：`test_synthetic_judgement_lab.py`
+- 合成做功与 authority 矩阵：`test_synthetic_work_authority_matrix.py`
 - 主审盘推理链：`test_master_reasoning.py`
 - 演化账本：`test_evolution_ledger.py`
 - authority judgement 协议：`test_authority_judgement_protocol.py`

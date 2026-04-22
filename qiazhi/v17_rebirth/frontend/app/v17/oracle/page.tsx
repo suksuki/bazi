@@ -277,6 +277,9 @@ export default function OraclePage() {
   const relationFormationSummary = Array.isArray(energyMeta.relation_formation_summary)
     ? energyMeta.relation_formation_summary as Array<Record<string, unknown>>
     : [];
+  const relationDynamicsSummary = Array.isArray(energyMeta.relation_dynamics_summary)
+    ? energyMeta.relation_dynamics_summary as Array<Record<string, unknown>>
+    : [];
   const recomputeContributions = Array.isArray(meta.plugin_recompute_contributions)
     ? meta.plugin_recompute_contributions as Array<Record<string, unknown>>
     : [];
@@ -431,6 +434,7 @@ export default function OraclePage() {
                     : undefined
                 }
                 relationFormationSummary={relationFormationSummary}
+                relationDynamicsSummary={relationDynamicsSummary}
                 birthTimeISO={s.birthTimeISO}
                 gender={s.natalGender}
                 calendarType={s.natalCalendar}

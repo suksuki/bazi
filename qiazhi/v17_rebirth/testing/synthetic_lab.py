@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
+from v17_rebirth.backend.logic.core_engine.god_ring_resolver_core import resolve_god_ring_core
 from v17_rebirth.backend.logic.L2_structure_patterns import risk_matrix
 from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import ZiPingGodRingResolverPlugin
 from v17_rebirth.backend.plugins.spec import V17Fact
@@ -21,6 +22,7 @@ class SyntheticCase:
     gender: str = "male"
     tags: tuple[str, ...] = ()
     expected_relation_families: tuple[str, ...] = ()
+    expected_dynamic_families: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,25 @@ class SyntheticAuthorityRun:
     resolved: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class SyntheticCoreCase:
+    case_id: str
+    layer: str
+    description: str
+    four_pillars: dict[str, str]
+    deity_scores: dict[str, float]
+    luck_pillar: str = ""
+    flow_pillar: str = ""
+    decision_rows: tuple[dict[str, Any], ...] = ()
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class SyntheticCoreRun:
+    case: SyntheticCoreCase
+    result: dict[str, Any]
+
+
 def run_case(case: SyntheticCase) -> SyntheticRun:
     scores, top, total, meta = calc_deity_scores(
         four_pillars=case.four_pillars,
@@ -101,6 +122,22 @@ def relation_row(run: SyntheticRun, family_key: str) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
+def relation_dynamics_rows(run: SyntheticRun, family_key: str | None = None) -> list[dict[str, Any]]:
+    rows = [
+        row
+        for row in (run.meta.get("relation_dynamics_summary") or [])
+        if isinstance(row, dict)
+    ]
+    if family_key is None:
+        return rows
+    return [row for row in rows if str(row.get("family_key") or "") == family_key]
+
+
+def relation_dynamics_row(run: SyntheticRun, family_key: str) -> dict[str, Any] | None:
+    rows = relation_dynamics_rows(run, family_key)
+    return rows[0] if rows else None
+
+
 def run_risk_case(case: SyntheticRiskCase) -> SyntheticRiskRun:
     facts = list(risk_matrix.PLUGIN.collect_v17_facts(dict(case.tensor)))
     return SyntheticRiskRun(case=case, facts=facts)
@@ -133,6 +170,17 @@ def run_authority_case(case: SyntheticAuthorityCase) -> SyntheticAuthorityRun:
         authority=dict(authority or {}),
         resolved=dict(resolved or {}),
     )
+
+
+def run_core_case(case: SyntheticCoreCase) -> SyntheticCoreRun:
+    result = resolve_god_ring_core(
+        four_pillars=dict(case.four_pillars),
+        deity_scores={str(key): float(val or 0.0) for key, val in dict(case.deity_scores).items()},
+        luck_pillar=case.luck_pillar,
+        flow_pillar=case.flow_pillar,
+        decision_rows=[dict(row) for row in case.decision_rows],
+    )
+    return SyntheticCoreRun(case=case, result=dict(result or {}))
 
 
 L0_FLOATING_PEER = SyntheticCase(
@@ -191,6 +239,175 @@ L1_SANHUI_MONTH_VISIBLE = SyntheticCase(
     four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙辰", "hour": "丁巳"},
     tags=("relation", "sanhui", "month_visible"),
     expected_relation_families=("sanhui",),
+)
+
+L1_LIUHE_BASELINE = SyntheticCase(
+    case_id="l1.relation.liuhe.baseline",
+    layer="L1",
+    description="子丑六合土势，验证六合基础倍率与弱成局口径。",
+    four_pillars={"year": "甲子", "month": "乙丑", "day": "丙寅", "hour": "丁卯"},
+    tags=("relation", "liuhe", "baseline"),
+    expected_relation_families=("liuhe",),
+)
+
+L1_BANHE_SHENGWANG = SyntheticCase(
+    case_id="l1.relation.banhe.shengwang",
+    layer="L1",
+    description="巳酉生旺半合金势，验证生旺半合高于墓旺半合的基础倍率。",
+    four_pillars={"year": "丁巳", "month": "乙未", "day": "甲辰", "hour": "丙酉"},
+    tags=("relation", "banhe", "shengwang"),
+    expected_relation_families=("banhe_shengwang",),
+)
+
+L1_BANHE_MUWANG = SyntheticCase(
+    case_id="l1.relation.banhe.muwang",
+    layer="L1",
+    description="丑酉墓旺半合金势，验证墓旺半合倍率与受扰成局状态。",
+    four_pillars={"year": "丁酉", "month": "乙丑", "day": "甲辰", "hour": "丙午"},
+    tags=("relation", "banhe", "muwang"),
+    expected_relation_families=("banhe_muwang",),
+)
+
+L1_GONGHE_BASELINE = SyntheticCase(
+    case_id="l1.relation.gonghe.baseline",
+    layer="L1",
+    description="丑巳拱合金势，验证拱合低于半合/六合的基础倍率。",
+    four_pillars={"year": "丁巳", "month": "乙丑", "day": "甲辰", "hour": "丙未"},
+    tags=("relation", "gonghe", "baseline"),
+    expected_relation_families=("gonghe",),
+)
+
+L1_ANHE_BASELINE = SyntheticCase(
+    case_id="l1.relation.anhe.baseline",
+    layer="L1",
+    description="子未暗合基线盘，验证暗合更偏绑定/蛰伏，稳定性上升但自由能锁定更明显。",
+    four_pillars={"year": "甲寅", "month": "乙未", "day": "丙子", "hour": "丁午"},
+    tags=("relation", "anhe", "baseline"),
+    expected_relation_families=("anhe",),
+    expected_dynamic_families=("anhe",),
+)
+
+L1_STEM_FUSION_RUNTIME = SyntheticCase(
+    case_id="l1.relation.stem_fusion.runtime",
+    layer="L1",
+    description="乙庚五合在月干-大运命中，验证 stem_fusion 进入 relation_dynamics 与 visible bonuses，而非 relation_formation_summary 主目录。",
+    four_pillars={"year": "辛酉", "month": "乙酉", "day": "乙丑", "hour": "丁卯"},
+    luck_pillar="庚辰",
+    tags=("relation", "stem_fusion", "runtime"),
+    expected_relation_families=("banhe_muwang", "liuhe"),
+    expected_dynamic_families=("stem_fusion_transform",),
+)
+
+L1_CHONG_BASELINE = SyntheticCase(
+    case_id="l1.relation.chong.baseline",
+    layer="L1",
+    description="子午冲基线盘，验证冲走激发轴、稳定性显著下降。",
+    four_pillars={"year": "甲子", "month": "乙午", "day": "丙寅", "hour": "丁卯"},
+    tags=("relation", "chong", "baseline"),
+    expected_dynamic_families=("chong",),
+)
+
+L1_HAI_BASELINE = SyntheticCase(
+    case_id="l1.relation.hai.baseline",
+    layer="L1",
+    description="子未害基线盘，验证害走暗损轴、稳定性缓降。",
+    four_pillars={"year": "甲子", "month": "乙未", "day": "丙寅", "hour": "丁卯"},
+    tags=("relation", "hai", "baseline"),
+    expected_dynamic_families=("hai",),
+)
+
+L1_PO_BASELINE = SyntheticCase(
+    case_id="l1.relation.po.baseline",
+    layer="L1",
+    description="子酉破基线盘，验证破走解构轴、稳定性断裂快于害。",
+    four_pillars={"year": "甲子", "month": "乙酉", "day": "丙寅", "hour": "丁卯"},
+    tags=("relation", "po", "baseline"),
+    expected_dynamic_families=("po",),
+)
+
+L1_KE_BASELINE = SyntheticCase(
+    case_id="l1.relation.ke.baseline",
+    layer="L1",
+    description="卯丑/寅丑相克基线盘，验证克走压制转移轴并伴随稳定性下降。",
+    four_pillars={"year": "甲卯", "month": "乙丑", "day": "丙寅", "hour": "丁巳"},
+    tags=("relation", "ke", "baseline"),
+    expected_dynamic_families=("ke",),
+)
+
+L1_XING_BASELINE = SyntheticCase(
+    case_id="l1.relation.xing.baseline",
+    layer="L1",
+    description="子卯刑基线盘，验证刑走内耗轴，总能量未必掉光，但有效输出与稳定性一起打折。",
+    four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁巳"},
+    tags=("relation", "xing", "baseline"),
+    expected_relation_families=("anhe", "sanhui"),
+    expected_dynamic_families=("xing",),
+)
+
+RUNTIME_LIUHE_LUCK_BACKGROUND = SyntheticCase(
+    case_id="runtime.relation.liuhe.luck_background",
+    layer="MASTER",
+    description="同一子丑六合放在大运背景场，验证背景场强于流年扰动。",
+    four_pillars={"year": "甲子", "month": "丙寅", "day": "丁卯", "hour": "戊辰"},
+    luck_pillar="己丑",
+    tags=("runtime_field", "liuhe", "luck_background"),
+    expected_relation_families=("liuhe",),
+    expected_dynamic_families=("liuhe",),
+)
+
+RUNTIME_LIUHE_FLOW_TRIGGER = SyntheticCase(
+    case_id="runtime.relation.liuhe.flow_trigger",
+    layer="MASTER",
+    description="同一子丑六合放在流年扰动，验证弱于大运背景场。",
+    four_pillars={"year": "甲子", "month": "丙寅", "day": "丁卯", "hour": "戊辰"},
+    flow_pillar="己丑",
+    tags=("runtime_field", "liuhe", "flow_trigger"),
+    expected_relation_families=("liuhe",),
+    expected_dynamic_families=("liuhe",),
+)
+
+RUNTIME_HAI_LUCK_BACKGROUND = SyntheticCase(
+    case_id="runtime.relation.hai.luck_background",
+    layer="MASTER",
+    description="同一子未害放在大运背景场，验证背景场的暗损强于流年扰动。",
+    four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁卯"},
+    luck_pillar="戊未",
+    tags=("runtime_field", "hai", "luck_background"),
+    expected_dynamic_families=("hai",),
+)
+
+RUNTIME_HAI_FLOW_TRIGGER = SyntheticCase(
+    case_id="runtime.relation.hai.flow_trigger",
+    layer="MASTER",
+    description="同一子未害放在流年扰动，验证暗损低于大运背景场。",
+    four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁卯"},
+    flow_pillar="戊未",
+    tags=("runtime_field", "hai", "flow_trigger"),
+    expected_dynamic_families=("hai",),
+)
+
+RUNTIME_SANHUI_RESONANCE = SyntheticCase(
+    case_id="runtime.relation.sanhui.resonance",
+    layer="MASTER",
+    description="寅卯辰三会在大运与流年双重入局，验证背景场与扰动共振时的高成局高稳定输出。",
+    four_pillars={"year": "甲寅", "month": "乙卯", "day": "丙辰", "hour": "丁巳"},
+    luck_pillar="戊卯",
+    flow_pillar="己寅",
+    tags=("runtime_field", "sanhui", "resonance"),
+    expected_relation_families=("sanhui",),
+    expected_dynamic_families=("sanhui",),
+)
+
+RUNTIME_BANHE_INTERRUPTION = SyntheticCase(
+    case_id="runtime.relation.banhe.interruption",
+    layer="MASTER",
+    description="卯未墓旺半合遇酉冲与子酉破，验证运流中断时成局仍可见但稳定性被破坏。",
+    four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁辰"},
+    luck_pillar="戊未",
+    flow_pillar="己酉",
+    tags=("runtime_field", "banhe", "interruption"),
+    expected_relation_families=("banhe_muwang", "liuhe"),
+    expected_dynamic_families=("chong", "po"),
 )
 
 MASTER_BRANCH_CLUSTER = SyntheticCase(
@@ -326,6 +543,147 @@ L2_AUTHORITY_TONGGUAN_PRESENT = SyntheticAuthorityCase(
     tags=("authority", "tongguan", "ziping"),
 )
 
+CORE_AUTHORITY_OFFICER_CONTEST = SyntheticCoreCase(
+    case_id="core.authority.officer_contest",
+    layer="MASTER",
+    description="伤官与正官高争衡，验证 authority 能把高能低稳的官杀压到忌侧，并把食伤推到用侧。",
+    four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+    luck_pillar="辛丑",
+    flow_pillar="己未",
+    deity_scores={"伤官": 84.0, "正官": 74.0, "食神": 32.0},
+    decision_rows=(
+        {
+            "id": "row_officer_hurt",
+            "target_god": "正官",
+            "source": "l2.risk.risk_matrix",
+            "plugin_id": "l2.risk.risk_matrix",
+            "source_label": "伤官见官",
+            "label": "伤官见官：高争衡",
+            "physical_impact": {
+                "target_god": "正官",
+                "impact_ratio": 0.0,
+                "match_ratio": 0.86,
+                "work_evidence": {
+                    "relation_family": "risk_officer_hurt_contest",
+                    "target_god": "正官",
+                    "members": ["伤官", "正官"],
+                    "targets": ["正官"],
+                    "counterpart_gods": ["伤官"],
+                    "effect_type": "disrupt",
+                    "layer": "cross_layer",
+                    "origin_scope": "natal",
+                    "condition_state": "contested",
+                    "impact_ratio": 0.0,
+                    "match_ratio": 0.86,
+                    "path_strength": 0.42,
+                },
+            },
+        },
+        {
+            "id": "row_shang_gang",
+            "target_god": "伤官",
+            "source": "l1.physics.op_branch_muku",
+            "plugin_id": "l1.physics.op_branch_muku",
+            "source_label": "三合生伤官",
+            "label": "三合透支",
+            "physical_impact": {
+                "target_god": "伤官",
+                "impact_ratio": 0.36,
+                "match_ratio": 0.77,
+                "work_evidence": {
+                    "relation_family": "sanhe",
+                    "target_god": "伤官",
+                    "members": ["乙", "丙", "丁"],
+                    "targets": ["伤官"],
+                    "counterpart_gods": ["正官"],
+                    "effect_type": "benefit",
+                    "layer": "branch",
+                    "origin_scope": "luck",
+                    "condition_state": "manifested",
+                    "impact_ratio": 0.36,
+                    "match_ratio": 0.77,
+                    "path_strength": 0.48,
+                },
+            },
+        },
+    ),
+    tags=("core", "authority", "contest"),
+)
+
+CORE_AUTHORITY_POSITIVE_PATH = SyntheticCoreCase(
+    case_id="core.authority.positive_path",
+    layer="MASTER",
+    description="正向五合路径胜出，验证稳定正向路径能压过高波动伤官线。",
+    four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+    luck_pillar="庚子",
+    flow_pillar="丙午",
+    deity_scores={"伤官": 74.0, "食神": 53.0, "正官": 15.0, "七杀": 9.0},
+    decision_rows=(
+        {
+            "id": "row_guan",
+            "target_god": "正官",
+            "source": "l1.physics.op_stem_fusion",
+            "plugin_id": "l1.physics.op_stem_fusion",
+            "source_label": "天干五合",
+            "label": "乙庚合",
+            "physical_impact": {
+                "target_god": "正官",
+                "impact_ratio": 0.32,
+                "match_ratio": 0.84,
+                "work_evidence": {
+                    "relation_family": "stem_fusion",
+                    "target_god": "正官",
+                    "targets": ["正官"],
+                    "members": ["庚", "乙"],
+                    "effect_type": "transform",
+                    "layer": "stem",
+                    "origin_scope": "luck",
+                    "condition_state": "formed",
+                    "impact_ratio": 0.32,
+                    "match_ratio": 0.84,
+                    "path_strength": 0.41,
+                },
+            },
+        },
+        {
+            "id": "row_shang",
+            "target_god": "伤官",
+            "source": "l1.physics.op_branch_liuchong",
+            "plugin_id": "l1.physics.op_branch_liuchong",
+            "source_label": "六冲耗伤官",
+            "label": "巳午冲伤官",
+            "physical_impact": {
+                "target_god": "伤官",
+                "impact_ratio": -0.28,
+                "match_ratio": 0.77,
+                "work_evidence": {
+                    "relation_family": "liu_chong",
+                    "target_god": "伤官",
+                    "targets": ["伤官"],
+                    "members": ["巳", "午"],
+                    "effect_type": "harm",
+                    "layer": "branch",
+                    "origin_scope": "flow",
+                    "condition_state": "supported",
+                    "impact_ratio": -0.28,
+                    "match_ratio": 0.77,
+                    "path_strength": 0.33,
+                },
+            },
+        },
+    ),
+    tags=("core", "authority", "positive_path"),
+)
+
+CORE_AUTHORITY_BRIDGE_PRESENT = SyntheticCoreCase(
+    case_id="core.authority.bridge_present",
+    layer="MASTER",
+    description="官杀强压且盘内已有印桥，验证通关链会自然进入 use 候选并保留路径预览。",
+    four_pillars={"year": "甲寅", "month": "丁巳", "day": "戊辰", "hour": "乙卯"},
+    deity_scores={"七杀": 42.0, "正官": 34.0, "正印": 20.0, "偏印": 16.0, "比肩": 28.0, "劫财": 14.0},
+    tags=("core", "authority", "tongguan"),
+)
+
 
 SYNTHETIC_CASES: tuple[SyntheticCase, ...] = (
     L0_FLOATING_PEER,
@@ -334,6 +692,23 @@ SYNTHETIC_CASES: tuple[SyntheticCase, ...] = (
     L1_SANHE_DAY_VISIBLE,
     L1_SANHE_MONTH_VISIBLE,
     L1_SANHUI_MONTH_VISIBLE,
+    L1_LIUHE_BASELINE,
+    L1_BANHE_SHENGWANG,
+    L1_BANHE_MUWANG,
+    L1_GONGHE_BASELINE,
+    L1_ANHE_BASELINE,
+    L1_STEM_FUSION_RUNTIME,
+    L1_CHONG_BASELINE,
+    L1_HAI_BASELINE,
+    L1_PO_BASELINE,
+    L1_KE_BASELINE,
+    L1_XING_BASELINE,
+    RUNTIME_LIUHE_LUCK_BACKGROUND,
+    RUNTIME_LIUHE_FLOW_TRIGGER,
+    RUNTIME_HAI_LUCK_BACKGROUND,
+    RUNTIME_HAI_FLOW_TRIGGER,
+    RUNTIME_SANHUI_RESONANCE,
+    RUNTIME_BANHE_INTERRUPTION,
     MASTER_BRANCH_CLUSTER,
 )
 
@@ -344,6 +719,12 @@ SYNTHETIC_RISK_CASES: tuple[SyntheticRiskCase, ...] = (
 SYNTHETIC_AUTHORITY_CASES: tuple[SyntheticAuthorityCase, ...] = (
     L2_AUTHORITY_BIAS_REROUTE,
     L2_AUTHORITY_TONGGUAN_PRESENT,
+)
+
+SYNTHETIC_CORE_CASES: tuple[SyntheticCoreCase, ...] = (
+    CORE_AUTHORITY_OFFICER_CONTEST,
+    CORE_AUTHORITY_POSITIVE_PATH,
+    CORE_AUTHORITY_BRIDGE_PRESENT,
 )
 
 
@@ -357,3 +738,7 @@ def risk_case_ids() -> tuple[str, ...]:
 
 def authority_case_ids() -> tuple[str, ...]:
     return tuple(case.case_id for case in SYNTHETIC_AUTHORITY_CASES)
+
+
+def core_case_ids() -> tuple[str, ...]:
+    return tuple(case.case_id for case in SYNTHETIC_CORE_CASES)

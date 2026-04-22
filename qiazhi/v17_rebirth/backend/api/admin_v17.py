@@ -525,6 +525,11 @@ async def get_plugin_runtime_status(
         if isinstance(energy_meta.get("relation_formation_summary"), list)
         else []
     )
+    relation_dynamics_summary = (
+        energy_meta.get("relation_dynamics_summary")
+        if isinstance(energy_meta.get("relation_dynamics_summary"), list)
+        else []
+    )
     recompute_contributions = (
         meta.get("plugin_recompute_contributions")
         if isinstance(meta.get("plugin_recompute_contributions"), list)
@@ -544,6 +549,7 @@ async def get_plugin_runtime_status(
         "core_engine_authority": core_engine_authority,
         "ten_gods_decomposition_l0": ten_gods_decomposition_l0,
         "relation_formation_summary": relation_formation_summary,
+        "relation_dynamics_summary": relation_dynamics_summary,
         "recompute_contributions": recompute_contributions,
     }
 
