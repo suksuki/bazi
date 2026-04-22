@@ -1,7 +1,7 @@
 # V17 十神模型总重构主计划
 
 日期：2026-04-22  
-状态：执行中 / Phase 1-3 已推进，Phase 4 已启动  
+状态：执行中 / Phase 1-5 已推进，Phase 6 持续收口  
 定位：十神物理层、关系层、运流层、核心求解层的统一重构总图
 
 ---
@@ -17,6 +17,7 @@
 - `relation dynamics` 能量轴 / 稳定性轴双轴口径
 - `projection bridge` 通根 / 透干单次耦合协议
 - `six-pillar spacetime core` 六柱时空核心层
+- `authority judgement protocol`（bias / evidence / narrative hint）
 - `synthetic lab` 合成样盘回归体系
 
 这些能力都已经出现了，但它们还没有完成模块边界切分，导致：
@@ -46,6 +47,7 @@
 
 - `ten_gods_engine.py`：2082 行
 - `branch_stem_geometry.py`：78 行（已退为 facade）
+- `work_path_engine.py`：579 行
 - 已切出 6 个 L0 子模块 + 4 个 L1 relation runtime 模块：
   - `ten_gods_protocol_builders.py`
   - `ten_gods_decomposition.py`
@@ -63,8 +65,13 @@
   - `L1_atomic_ops/stem_fusion_geometry.py`
 - 已建立统一 runtime field 协议模块：
   - `backend/logic/runtime_field_protocol.py`
+- 已建立 authority judgement 协议模块：
+  - `backend/services/authority_judgement_protocol.py`
+- 已切出 work-path 子协议模块：
+  - `backend/logic/core_engine/work_path_row_protocol.py`
+  - `backend/logic/core_engine/work_path_graph_utils.py`
 
-这意味着 L0 已从“单体大文件”转为“主引擎 + 子模块编排”结构，并开始正式消费 L1 relation runtime，后续继续推进 Phase 3 时，风险会显著下降。
+这意味着 L0 已从“单体大文件”转为“主引擎 + 子模块编排”结构，并开始正式消费 L1 relation runtime；Core 做功层也开始从 `work_path_engine.py` 单体转为“主引擎 + row protocol + graph utils”结构，后续继续推进 Phase 4/5 时，风险会显著下降。
 
 这说明我们已经不是“小修小补”阶段，而是需要正式切模块。
 
@@ -523,8 +530,9 @@ L0 当前已经形成下面这组边界：
 - `test_l1_relation_runtime_collectors.py`：新增 4 条
 - `test_l1_branch_geometry_modules.py`：新增 3 条
 - `test_runtime_field_protocol.py`：新增 4 条
-- 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）→ `14 passed`（双轴 authority + UI 对齐）
-- 全量 `v17_rebirth/tests`：`311 passed`
+- `test_authority_judgement_protocol.py`：新增 2 条
+- 关键回归：`74 passed`（Phase 3）→ `23 passed`（Phase 4 runtime-field 对齐）→ `24 passed`（authority judgement / routing / prompt 对齐）
+- 全量 `v17_rebirth/tests`：`314 passed`
 
 目标：
 
@@ -561,6 +569,8 @@ L0 当前已经形成下面这组边界：
 
 ## Phase 5：专题层与权威裁决对齐
 
+状态：执行中（authority judgement protocol 已落地，routing / prompt / Admin 已开始消费）
+
 目标：
 
 - 让 L2 插件只提供证据与偏置，不越权改物理
@@ -577,6 +587,8 @@ L0 当前已经形成下面这组边界：
 - 冲突层可读 L2 偏置但不混算
 
 ## Phase 6：文档与 UI 完整对齐
+
+状态：执行中（Prompt 合同、Admin / Explain 卡、测试文档已开始同步）
 
 目标：
 

@@ -503,7 +503,19 @@ export function V17_SixPillarsPanel({
           tabooPairs: Array<[string, number]>;
         }>
     : [];
+  const judgementProtocol = godRingInfo?.judgement_bias_protocol && typeof godRingInfo.judgement_bias_protocol === "object"
+    ? (godRingInfo.judgement_bias_protocol as Record<string, unknown>)
+    : {};
+  const judgementSummary = judgementProtocol.summary && typeof judgementProtocol.summary === "object"
+    ? (judgementProtocol.summary as Record<string, unknown>)
+    : {};
   const stageBiasRows = topStageBiasRows(godRingInfo?.stage_bias);
+  const stageProtocol = godRingInfo?.stage_bias_protocol && typeof godRingInfo.stage_bias_protocol === "object"
+    ? (godRingInfo.stage_bias_protocol as Record<string, unknown>)
+    : {};
+  const stageSummary = stageProtocol.summary && typeof stageProtocol.summary === "object"
+    ? (stageProtocol.summary as Record<string, unknown>)
+    : {};
   const effectScores = godRingInfo?.effect_scores || {};
   const useFluxReasons = authorityMode
     ? useGods
@@ -680,7 +692,17 @@ export function V17_SixPillarsPanel({
           <div className="border-t border-violet-400/15 px-3 py-3">
             <div className="grid gap-3 xl:grid-cols-[0.92fr,1.08fr]">
               <div className="min-w-0 rounded-xl border border-violet-400/20 bg-violet-950/20 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200/80">判定推动</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200/80">判定推动</p>
+                  {String(judgementProtocol.contract || "").trim() ? (
+                    <span className="text-[10px] text-zinc-400">
+                      {String(judgementProtocol.contract || "").trim()} · 条目 {Number(judgementSummary.entry_count || 0)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-[10px] leading-5 text-zinc-400">
+                  L2 judgement 只输出 bias / evidence / narrative hint，用来影响 authority，不直接改写底层物理。
+                </p>
                 <div className="mt-3">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-200/75">推向用神</p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -711,7 +733,14 @@ export function V17_SixPillarsPanel({
                 </div>
                 {stageBiasRows.length ? (
                   <div className="mt-3 border-t border-violet-400/10 pt-3">
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/75">禄刃阶段推动</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/75">禄刃阶段推动</p>
+                      {String(stageProtocol.contract || "").trim() ? (
+                        <span className="text-[10px] text-zinc-400">
+                          {String(stageProtocol.contract || "").trim()} · 条目 {Number(stageSummary.entry_count || 0)}
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="mt-2 space-y-2 text-[11px] leading-5">
                       {stageBiasRows.map((row) => (
                         <div key={`stage_bias_${row.god}`} className="min-w-0 rounded-lg border border-violet-300/10 bg-zinc-950/45 px-2.5 py-2">

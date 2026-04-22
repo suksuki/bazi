@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import branches_and_stems_from_runtime_pillars
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
@@ -13,7 +13,25 @@ from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
 )
 from v17_rebirth.backend.logic.runtime_field_protocol import WORK_ORIGIN_SCOPE_FACTORS
 from v17_rebirth.backend.logic.core_engine.pillar_graph_kernel import PillarEdge, PillarNode, SixPillarGraph
-from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import WORK_EVIDENCE_KEY
+from v17_rebirth.backend.logic.core_engine.work_path_graph_utils import (
+    avg_edge_weight as _avg_edge_weight,
+    avg_position_weight as _avg_position_weight,
+    directional_factor as _directional_factor,
+    dynamic_factor as _dynamic_factor,
+    edge_lookup as _edge_lookup,
+    nodes_for_gods as _nodes_for_gods,
+    nodes_for_members as _nodes_for_members,
+)
+from v17_rebirth.backend.logic.core_engine.work_path_row_protocol import (
+    RELATION_DEFAULT_FAMILY,
+    clamp_value as _clamp,
+    collect_effect_maps,
+    extract_counterpart_gods,
+    normalize_relation_family,
+    normalize_work_path_row,
+    safe_float as _safe_float,
+    sign_from_effect as _sign_from_effect,
+)
 
 
 @dataclass(frozen=True)
@@ -52,33 +70,6 @@ _PATH_FAMILY_BY_RELATION: Dict[str, str] = {
     "sanxing": "dynamic_work",
 }
 
-_RELATION_FAMILY_ALIASES: Dict[str, str] = {
-    "san_hui": "sanhui",
-    "sanhui": "sanhui",
-    "san_he": "sanhe",
-    "sanxing": "sanxing",
-    "liu_he": "liuhe",
-    "liu_po": "liu_po",
-    "liupo": "liu_po",
-    "liu_hai": "liu_hai",
-    "liuhai": "liu_hai",
-    "liu_chong": "liu_chong",
-    "ban_he": "banhe",
-    "banhe": "banhe",
-    "banhe_shengwang": "banhe",
-    "banhe_muwang": "banhe",
-    "gong_he": "gonghe",
-    "gonghe": "gonghe",
-    "risk_blade_clash": "blade_clash",
-    "risk_owl_food": "owl_food",
-    "risk_officer_hurt_contest": "officer_hurt",
-    "risk_officer_crush": "officer_hurt",
-    "status_machine": "status_machine",
-    "officer_hurt": "officer_hurt",
-}
-
-_RELATION_DEFAULT_FAMILY = "dynamic_work"
-
 _FAMILY_FACTOR: Dict[str, float] = {
     "convergence": 1.08,
     "conflict": 0.96,
@@ -102,9 +93,9 @@ _ROLE_FACTOR: Dict[str, Tuple[float, float]] = {
 
 
 def _classify_path_family_and_role(*, relation_family: str, effect_type: str) -> Tuple[str, str]:
-    normalized_relation = _normalize_relation_family(relation_family)
+    normalized_relation = normalize_relation_family(relation_family)
     normalized_effect = str(effect_type or "").strip().lower()
-    family = _PATH_FAMILY_BY_RELATION.get(normalized_relation, _RELATION_DEFAULT_FAMILY)
+    family = _PATH_FAMILY_BY_RELATION.get(normalized_relation, RELATION_DEFAULT_FAMILY)
     if normalized_relation.startswith("tongguan"):
         return "bridge", "bridge"
     if normalized_effect in {"transform", "release", "support", "bind"}:
@@ -122,54 +113,14 @@ def _classify_path_family_and_role(*, relation_family: str, effect_type: str) ->
     return family, "unknown"
 
 
-def _normalize_relation_family(raw_relation: str) -> str:
-    normalized = str(raw_relation or "").strip().lower().replace("-", "_")
-    normalized = normalized.replace("  ", " ").replace(" ", "_")
-    if not normalized:
-        return _RELATION_DEFAULT_FAMILY
-    if normalized in _RELATION_FAMILY_ALIASES:
-        return _RELATION_FAMILY_ALIASES[normalized]
-    if normalized.startswith("risk_"):
-        stripped = normalized[5:]
-        if stripped in _RELATION_FAMILY_ALIASES:
-            return _RELATION_FAMILY_ALIASES[stripped]
-        if stripped in _PATH_FAMILY_BY_RELATION:
-            return stripped
-    return normalized
-
-
 def _family_and_role_factor(path_family: str, path_role: str) -> Tuple[float, float]:
     family = _FAMILY_FACTOR.get(str(path_family or "").strip().lower(), 1.0)
     promote_factor, restrain_factor = _ROLE_FACTOR.get(str(path_role or "").strip().lower(), _ROLE_FACTOR["unknown"])
     return family, (promote_factor, restrain_factor)
 
 
-def _clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, float(value)))
-
-
-def _safe_float(value: Any, fallback: float = 0.0) -> float:
-    try:
-        return float(value or 0.0)
-    except (TypeError, ValueError):
-        return float(fallback)
-
-
-def _sign_from_effect(effect_type: str, impact_ratio: float) -> int:
-    normalized = str(effect_type or "").strip().lower()
-    if impact_ratio > 0:
-        return 1
-    if impact_ratio < 0:
-        return -1
-    if normalized in {"benefit", "release", "transform", "support", "bind"}:
-        return 1
-    if normalized in {"harm", "storage", "stuck", "disrupt", "clash"}:
-        return -1
-    return 0
-
-
 def _relation_factor(relation_family: str, effect_type: str) -> float:
-    family = _normalize_relation_family(str(relation_family or ""))
+    family = normalize_relation_family(str(relation_family or ""))
     effect = str(effect_type or "").strip().lower()
     family_weights = {
         "sanhui": 1.44,
@@ -220,315 +171,6 @@ def _condition_factor(condition_state: str) -> float:
     if normalized in {"stuck", "closed"}:
         return 0.76
     return 0.92
-
-
-def _node_lookup(graph: SixPillarGraph) -> Dict[str, List[PillarNode]]:
-    out: Dict[str, List[PillarNode]] = {}
-    for node in graph.nodes:
-        out.setdefault(node.symbol, []).append(node)
-    return out
-
-
-def _edge_lookup(graph: SixPillarGraph) -> Dict[tuple[str, str], PillarEdge]:
-    return {(edge.source, edge.target): edge for edge in graph.edges}
-
-
-def _nodes_for_members(graph: SixPillarGraph, *, members: Sequence[str], layer: str) -> List[PillarNode]:
-    if not members:
-        return []
-    lookup = _node_lookup(graph)
-    wanted_kinds = {"branch"} if layer == "branch" else {"stem"} if layer == "stem" else {"stem", "branch"}
-    out: List[PillarNode] = []
-    for member in members:
-        for node in lookup.get(str(member).strip(), []):
-            if node.kind in wanted_kinds:
-                out.append(node)
-    return out
-
-
-def _nodes_for_gods(graph: SixPillarGraph, *, gods: Sequence[str], day_master: str) -> List[PillarNode]:
-    wanted = {str(god).strip() for god in gods if str(god).strip()}
-    if not wanted or not day_master:
-        return []
-    out: List[PillarNode] = []
-    for node in graph.nodes:
-        if node.kind == "stem":
-            try:
-                if ten_god_from_stems(day_master, node.symbol) in wanted:
-                    out.append(node)
-            except Exception:
-                continue
-            continue
-        if node.kind != "branch":
-            continue
-        for hidden_stem, _hidden_weight in BRANCH_HIDDEN.get(node.symbol, []):
-            try:
-                if ten_god_from_stems(day_master, hidden_stem) in wanted:
-                    out.append(node)
-                    break
-            except Exception:
-                continue
-    return out
-
-
-def _avg_position_weight(nodes: Sequence[PillarNode]) -> float:
-    if not nodes:
-        return 0.48
-    return sum(float(node.position_weight) for node in nodes) / max(len(nodes), 1)
-
-
-def _avg_edge_weight(nodes: Sequence[PillarNode], edges: Dict[tuple[str, str], PillarEdge]) -> float:
-    if len(nodes) <= 1:
-        return 0.72
-    weights: List[float] = []
-    for left in nodes:
-        for right in nodes:
-            if left.node_id == right.node_id:
-                continue
-            edge = edges.get((left.node_id, right.node_id))
-            if edge:
-                weights.append(float(edge.weight))
-    if not weights:
-        return 0.58
-    return sum(weights) / max(len(weights), 1)
-
-
-def _avg_directed_edge_weight(
-    source_nodes: Sequence[PillarNode],
-    target_nodes: Sequence[PillarNode],
-    edges: Dict[tuple[str, str], PillarEdge],
-) -> float:
-    if not source_nodes or not target_nodes:
-        return 0.72
-    weights: List[float] = []
-    for source in source_nodes:
-        for target in target_nodes:
-            if source.node_id == target.node_id:
-                weights.append(1.0)
-                continue
-            edge = edges.get((source.node_id, target.node_id))
-            if edge:
-                weights.append(float(edge.weight))
-    if not weights:
-        return 0.58
-    return sum(weights) / max(len(weights), 1)
-
-
-def _directional_factor(
-    *,
-    actor_nodes: Sequence[PillarNode],
-    receiver_nodes: Sequence[PillarNode],
-    edges: Dict[tuple[str, str], PillarEdge],
-) -> tuple[float, float, float, float, float]:
-    if not actor_nodes or not receiver_nodes:
-        return 1.0, 0.0, 0.0, 0.0, 0.0
-    actor_position = _avg_position_weight(actor_nodes)
-    receiver_position = _avg_position_weight(receiver_nodes)
-    directed_edge = _avg_directed_edge_weight(actor_nodes, receiver_nodes, edges)
-    factor = _clamp(
-        0.72 + actor_position * 0.16 + receiver_position * 0.12 + directed_edge * 0.18,
-        0.84,
-        1.28,
-    )
-    return factor, actor_position, receiver_position, directed_edge, (actor_position + receiver_position) / 2.0
-
-
-def _dynamic_factor(nodes: Sequence[PillarNode]) -> float:
-    if not nodes:
-        return 1.0
-    boost = 1.0
-    if any(node.pillar == "luck" for node in nodes):
-        boost += 0.16
-    if any(node.pillar == "flow" for node in nodes):
-        boost += 0.08
-    return boost
-
-
-def _legacy_members(impact: Dict[str, Any]) -> List[str]:
-    work = impact.get(WORK_EVIDENCE_KEY) if isinstance(impact.get(WORK_EVIDENCE_KEY), dict) else {}
-    members = work.get("members") if isinstance(work, dict) else None
-    if isinstance(members, list):
-        cleaned = [str(item).strip() for item in members if str(item).strip()]
-        if cleaned:
-            return cleaned
-    pair = impact.get("clash_pair")
-    if isinstance(pair, list):
-        cleaned = [str(item).strip() for item in pair if str(item).strip()]
-        if cleaned:
-            return cleaned
-    return []
-
-
-def _normalize_row_evidence(row: Dict[str, Any]) -> Dict[str, Any]:
-    impact = row.get("physical_impact") if isinstance(row.get("physical_impact"), dict) else {}
-    work = impact.get(WORK_EVIDENCE_KEY) if isinstance(impact.get(WORK_EVIDENCE_KEY), dict) else {}
-    target = str(row.get("target_god") or impact.get("target_god") or work.get("target_god") or "").strip()
-    relation_family_raw = str(
-        work.get("relation_family")
-        or impact.get("relation_family")
-        or row.get("source")
-        or row.get("plugin_id")
-        or "unknown"
-    ).strip()
-    relation_family = _normalize_relation_family(relation_family_raw)
-    impact_ratio = _safe_float(work.get("impact_ratio", impact.get("impact_ratio", 0.0)))
-    match_ratio = _clamp(_safe_float(work.get("match_ratio", impact.get("match_ratio", 0.0))), 0.0, 1.0)
-    condition_state = str(work.get("condition_state") or impact.get("condition_state") or "").strip()
-    layer = str(work.get("layer") or impact.get("interaction_layer") or "unknown").strip()
-    origin_scope = str(work.get("origin_scope") or impact.get("origin_type") or "natal").strip()
-    effect_type = str(work.get("effect_type") or "").strip()
-    significance = _safe_float(impact.get("significance_weight", 1.0), 1.0)
-    decision_id = str(row.get("id") or "").strip()
-    plugin_id = str(row.get("plugin_id") or row.get("source") or relation_family).strip()
-    source_label = str(
-        row.get("source_label")
-        or row.get("display_name")
-        or row.get("definition_text")
-        or row.get("title")
-        or row.get("label")
-        or plugin_id
-        or relation_family
-    ).strip()
-    decision_label = str(
-        row.get("label")
-        or row.get("title")
-        or row.get("summary")
-        or row.get("reason")
-        or source_label
-    ).strip()
-    path_strength = _safe_float(
-        work.get("path_strength"),
-        abs(impact_ratio) * max(0.45, match_ratio) * max(0.75, significance),
-    )
-    return {
-        "row_id": decision_id,
-        "decision_id": decision_id,
-        "plugin_id": plugin_id,
-        "source_label": source_label,
-        "decision_label": decision_label,
-        "target_god": target,
-        "relation_family_raw": relation_family_raw,
-        "relation_family": relation_family,
-        "effect_type": effect_type,
-        "members": _legacy_members(impact),
-        "actor_members": [
-            str(item).strip()
-            for item in (
-                work.get("actor_members")
-                if isinstance(work.get("actor_members"), list)
-                else impact.get("actor_members")
-                if isinstance(impact.get("actor_members"), list)
-                else row.get("actor_members")
-                if isinstance(row.get("actor_members"), list)
-                else []
-            )
-            if str(item).strip()
-        ],
-        "receiver_members": [
-            str(item).strip()
-            for item in (
-                work.get("receiver_members")
-                if isinstance(work.get("receiver_members"), list)
-                else impact.get("receiver_members")
-                if isinstance(impact.get("receiver_members"), list)
-                else row.get("receiver_members")
-                if isinstance(row.get("receiver_members"), list)
-                else []
-            )
-            if str(item).strip()
-        ],
-        "origin_scope": origin_scope,
-        "layer": layer,
-        "condition_state": condition_state,
-        "impact_ratio": impact_ratio,
-        "match_ratio": match_ratio,
-        "path_strength": max(0.0, path_strength),
-        "significance_weight": significance,
-        "actor_gods": [
-            str(item).strip()
-            for item in (
-                work.get("actor_gods")
-                if isinstance(work.get("actor_gods"), list)
-                else impact.get("actor_gods")
-                if isinstance(impact.get("actor_gods"), list)
-                else row.get("actor_gods")
-                if isinstance(row.get("actor_gods"), list)
-                else []
-            )
-            if str(item).strip()
-        ],
-        "receiver_gods": [
-            str(item).strip()
-            for item in (
-                work.get("receiver_gods")
-                if isinstance(work.get("receiver_gods"), list)
-                else impact.get("receiver_gods")
-                if isinstance(impact.get("receiver_gods"), list)
-                else row.get("receiver_gods")
-                if isinstance(row.get("receiver_gods"), list)
-                else []
-            )
-            if str(item).strip()
-        ],
-        "source": str(row.get("source") or row.get("plugin_id") or relation_family).strip(),
-        "work": dict(work) if isinstance(work, dict) else {},
-        "impact": dict(impact) if isinstance(impact, dict) else {},
-    }
-
-
-def _extract_counterpart_gods(
-    *,
-    row: Dict[str, Any],
-    work: Dict[str, Any],
-    impact: Dict[str, Any],
-    relation_family: str,
-    target_god: str,
-    day_master: str,
-) -> List[str]:
-    candidates: list[str] = []
-    raw_sources = [
-        row.get("counterpart_gods"),
-        row.get("interaction_gods"),
-        row.get("interaction_pair"),
-        work.get("counterpart_gods"),
-        work.get("interaction_gods"),
-        work.get("interaction_pair"),
-        work.get("interplay"),
-        impact.get("counterpart_gods"),
-        impact.get("interaction_gods"),
-    ]
-    for raw in raw_sources:
-        if isinstance(raw, list):
-            candidates.extend([str(item).strip() for item in raw if str(item).strip()])
-        elif isinstance(raw, str):
-            candidates.append(raw.strip())
-
-    members = row.get("members") if isinstance(row.get("members"), list) else work.get("members")
-    if isinstance(members, list):
-        for member in members:
-            name = str(member).strip()
-            if len(name) == 1 and STEM_ELEMENT.get(name):
-                try:
-                    candidates.append(ten_god_from_stems(day_master, name))
-                except Exception:
-                    continue
-
-    normalized_family = str(relation_family or "").lower().strip()
-    if normalized_family.startswith("risk_officer") and target_god in {"正官", "七杀"}:
-        candidates.append("伤官")
-    if normalized_family.startswith("risk_officer") and target_god == "伤官":
-        candidates.append("正官")
-
-    out: list[str] = []
-    for candidate in candidates:
-        name = str(candidate or "").strip()
-        if not name or name == target_god:
-            continue
-        if name not in out:
-            out.append(name)
-    return out
-
-
 def _basis_path(
     *,
     graph: SixPillarGraph,
@@ -769,11 +411,11 @@ def build_work_paths(
 
     out: List[WorkPath] = []
     for row in rows:
-        normalized = _normalize_row_evidence(row)
+        normalized = normalize_work_path_row(row)
         target_god = str(normalized.get("target_god") or "").strip()
         if not target_god:
             continue
-        normalized["counterpart_gods"] = _extract_counterpart_gods(
+        normalized["counterpart_gods"] = extract_counterpart_gods(
             row=normalized,
             work=normalized.get("work", {}) if isinstance(normalized.get("work"), dict) else {},
             impact=normalized.get("impact", {}) if isinstance(normalized.get("impact"), dict) else {},
@@ -923,26 +565,6 @@ def build_work_paths(
     out.extend(_infer_tongguan_paths(graph=graph, deity_scores=deity_scores))
 
     return sorted(out, key=lambda item: (item.net_effect, item.activation, item.transmission), reverse=True)
-
-
-def collect_effect_maps(decision_rows: Iterable[Dict[str, object]]) -> tuple[Dict[str, float], Dict[str, float]]:
-    positive: Dict[str, float] = {}
-    negative: Dict[str, float] = {}
-    for row in decision_rows:
-        normalized = _normalize_row_evidence(dict(row))
-        god = str(normalized.get("target_god") or "").strip()
-        if not god:
-            continue
-        ratio = _safe_float(normalized.get("impact_ratio"), 0.0)
-        path_strength = _safe_float(normalized.get("path_strength"), abs(ratio))
-        sign = _sign_from_effect(str(normalized.get("effect_type") or ""), ratio)
-        if sign > 0:
-            positive[god] = positive.get(god, 0.0) + max(path_strength, ratio, 0.0)
-        elif sign < 0:
-            negative[god] = negative.get(god, 0.0) + max(path_strength, abs(ratio))
-    return positive, negative
-
-
 def pillar_symbol_maps(
     four_pillars: Dict[str, str],
     *,

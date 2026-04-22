@@ -156,6 +156,19 @@
 - `authority_reason`
 - `confidence`
 
+从 2026-04-22 起，authority 层再正式接入两份 judgement 协议：
+
+- `judgement_bias_protocol`
+  - 记录 L2 judgement 对某个十神“推用 / 推忌”的偏置与证据
+- `stage_bias_protocol`
+  - 记录禄、刃、长生等阶段势如何改变 authority 的稳定/波动
+
+边界：
+
+- judgement 只影响 authority 排序
+- judgement 不直接回写 L0/L1 物理分值
+- Prompt / Admin / 主页面都应直接显示这两份协议，而不是把它们伪装成底层能量
+
 ## 6. 干支分层宪法
 
 默认原则：

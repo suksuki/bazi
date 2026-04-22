@@ -85,7 +85,7 @@ def build_knowledge_snapshot(
         judgement_protocol=authority.get("judgement_bias_protocol") if isinstance(authority.get("judgement_bias_protocol"), dict) else {},
         stage_protocol=authority.get("stage_bias_protocol") if isinstance(authority.get("stage_bias_protocol"), dict) else {},
     )
-    current_targets: Dict[str, Dict[str, float]] = {}
+    current_targets: Dict[str, Dict[str, Any]] = {}
     for god, raw in effect_scores.items():
         row = raw if isinstance(raw, dict) else {}
         name = _normalized(god)
