@@ -120,6 +120,9 @@ pytest qiazhi/v17_rebirth/tests/test_authority_judgement_protocol.py \
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
+
+# 前端构建与类型检查
+pnpm --dir qiazhi/v17_rebirth/frontend build
 ```
 
 ## 与遗留测试
@@ -141,3 +144,10 @@ cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
 - `classical.ziping.climate_bridge.v1`
 - `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.summary.v1`
+
+## UI 验证口径
+
+- `/v17/oracle` 主页面使用 `核心页面 / 辅助页面 / 观测页面` 三 Tab。
+- `辅助页面` 必须显示 `Topic Hub / 专题中枢`，覆盖子平、格局、调候、盲派、象法、风险六条专题线。
+- `/v17/admin` 的 Core Engine 面板必须显示 `Topic Hub / 专题状态表`，用于核对 authority 层级与专题边界。
+- 前端验收以 `pnpm --dir qiazhi/v17_rebirth/frontend build` 为硬线。

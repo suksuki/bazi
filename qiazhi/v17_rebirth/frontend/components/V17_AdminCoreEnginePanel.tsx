@@ -79,6 +79,16 @@ const designBus = [
   },
 ];
 
+type TopicHubItem = {
+  key: string;
+  title: string;
+  layer: string;
+  status: string;
+  tone: "hard" | "structure" | "soft" | "risk" | "muted";
+  metrics: string[];
+  notes: string[];
+};
+
 function asRecord(value: unknown): LooseRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as LooseRecord) : {};
 }
@@ -118,6 +128,22 @@ function candidateTone(score: number): string {
   if (score >= 0.75) return "border-emerald-500/30 bg-emerald-950/20 text-emerald-200";
   if (score >= 0.4) return "border-cyan-500/30 bg-cyan-950/20 text-cyan-200";
   return "border-zinc-700 bg-zinc-950/70 text-zinc-300";
+}
+
+function topicHubTone(tone: TopicHubItem["tone"]): string {
+  if (tone === "hard") return "border-cyan-500/25 bg-cyan-950/20 text-cyan-50";
+  if (tone === "structure") return "border-emerald-500/25 bg-emerald-950/20 text-emerald-50";
+  if (tone === "soft") return "border-fuchsia-500/25 bg-fuchsia-950/20 text-fuchsia-50";
+  if (tone === "risk") return "border-rose-500/25 bg-rose-950/20 text-rose-50";
+  return "border-zinc-800 bg-zinc-950/60 text-zinc-300";
+}
+
+function topicHubBadgeTone(tone: TopicHubItem["tone"]): string {
+  if (tone === "hard") return "border-cyan-500/25 bg-cyan-950/30 text-cyan-100";
+  if (tone === "structure") return "border-emerald-500/25 bg-emerald-950/30 text-emerald-100";
+  if (tone === "soft") return "border-fuchsia-500/25 bg-fuchsia-950/30 text-fuchsia-100";
+  if (tone === "risk") return "border-rose-500/25 bg-rose-950/30 text-rose-100";
+  return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
 function biasPairs(value: unknown): Array<[string, number]> {
@@ -740,6 +766,93 @@ export function V17_AdminCoreEnginePanel({
     .filter((row) => row.god && row.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 6);
+  const riskStressCount = relationDynamicRows.filter((row) => row.stabilityDeltaRatio < -0.05).length;
+  const adminTopicHubItems: TopicHubItem[] = [
+    {
+      key: "ziping",
+      title: "子平主裁决",
+      layer: "Level 1 · hard constraint",
+      status: hasAuthoritySource ? "已接通" : "fallback",
+      tone: hasAuthoritySource ? "hard" : "muted",
+      metrics: [
+        `用 ${useGods.slice(0, 3).join(" / ") || "未定"}`,
+        `忌 ${tabooGods.slice(0, 3).join(" / ") || "未定"}`,
+        `候选 ${useCandidates.length + tabooCandidates.length}`,
+      ],
+      notes: [`模式 ${mode}`, `置信 ${Math.round(confidence * 100)}%`],
+    },
+    {
+      key: "pattern",
+      title: "格局/结构增强",
+      layer: "Level 2 · structure enhancement",
+      status: relationRows.length || climatePattern.length ? "有结构证据" : "等待结构",
+      tone: relationRows.length || climatePattern.length ? "structure" : "muted",
+      metrics: [
+        `成局 ${relationRows.length}`,
+        `存续修正 ${climatePattern.length}`,
+        `做功路径 ${pathCount}`,
+      ],
+      notes: relationRows.slice(0, 2).map((row) => `${row.formationLabel} ${row.formationPercent.toFixed(0)}%`),
+    },
+    {
+      key: "climate",
+      title: "调候物理轴",
+      layer: "L0/L1 field + Level 2 bridge",
+      status: String(climateThemeRow.state || climateFieldRow.state || "调候观察"),
+      tone: Object.keys(climateFieldRow).length || Object.keys(climateThemeRow).length ? "structure" : "muted",
+      metrics: [
+        `寒热 ${signed(asNumber(climateThemeRow.thermal_index ?? climateFieldRow.thermal_index))}`,
+        `燥湿 ${signed(asNumber(climateThemeRow.moisture_index ?? climateFieldRow.moisture_index))}`,
+        `张力 ${asNumber(climateThemeRow.climate_tension ?? climateFieldRow.climate_tension).toFixed(2)}`,
+      ],
+      notes: [
+        ...climateFavored.slice(0, 2).map((god) => `顺势 ${god}`),
+        ...climateStrained.slice(0, 2).map((god) => `承压 ${god}`),
+      ],
+    },
+    {
+      key: "blind",
+      title: "盲派专题",
+      layer: "Level 3 · soft bias",
+      status: String(blindTheme.primary_route || "盲派未显性"),
+      tone: Object.keys(blindTheme).length || blindUseBias.length || blindTabooBias.length ? "soft" : "muted",
+      metrics: [
+        `体态 ${String(blindTheme.body_mode || "未定")}`,
+        `推用 ${blindUseBias.length}`,
+        `推忌 ${blindTabooBias.length}`,
+      ],
+      notes: [`桥接 ${String(blindProtocol.authority_bridge_mode || "bias_only")}`, ...blindSwitches.slice(0, 2)],
+    },
+    {
+      key: "xiangfa",
+      title: "象法专题",
+      layer: "semantic-only · no bias",
+      status: xiangfaSemantic.length || xiangfaEvidence.length ? "已接通" : "语义等待",
+      tone: xiangfaSemantic.length || xiangfaEvidence.length ? "soft" : "muted",
+      metrics: [
+        `语义 ${xiangfaSemantic.length}`,
+        `证据 ${xiangfaEvidence.length}`,
+        `框架 ${xiangfaFraming.length}`,
+      ],
+      notes: xiangfaTopics.slice(0, 3).length ? xiangfaTopics.slice(0, 3) : ["不改能量", "不入主分"],
+    },
+    {
+      key: "risk",
+      title: "风险/判定矩阵",
+      layer: "guard rail · no override",
+      status: judgementBiasEntries.length || riskStressCount ? "风险链活跃" : "稳定观察",
+      tone: judgementBiasEntries.length || riskStressCount ? "risk" : "muted",
+      metrics: [
+        `判定偏置 ${judgementBiasEntries.length}`,
+        `稳定承压 ${riskStressCount}`,
+        `阶段偏置 ${stageBias.length}`,
+      ],
+      notes: [
+        String(judgementSummary.contract || judgementProtocol.contract || "judgement guard").trim(),
+        String(stageSummary.contract || stageProtocol.contract || "stage guard").trim(),
+      ].filter(Boolean),
+    },
+  ];
 
   return (
     <section className="rounded-2xl border border-zinc-800 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.10),transparent_32%),linear-gradient(180deg,rgba(24,24,27,0.88),rgba(9,9,11,0.96))] p-4">
@@ -770,6 +883,60 @@ export function V17_AdminCoreEnginePanel({
           <span className={`rounded-full border px-3 py-1 ${fluxEnabled ? "border-cyan-500/30 bg-cyan-950/20 text-cyan-200" : "border-zinc-700 bg-zinc-950/70 text-zinc-400"}`}>
             Flux {fluxEnabled ? "M2 已启用" : "未启用"}
           </span>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_34%),linear-gradient(180deg,rgba(9,9,11,0.78),rgba(24,24,27,0.62))] p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">Topic Hub</div>
+            <div className="mt-1 text-[12px] font-semibold text-zinc-100">专题状态表</div>
+            <p className="mt-1 max-w-3xl text-[10px] leading-5 text-zinc-500">
+              这里按 authority 层级展示专题主权：子平是硬约束，格局/调候是结构增强，盲派/象法是软专题，风险只做护栏。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5 text-[10px]">
+            <span className="rounded-full border border-cyan-500/25 bg-cyan-950/20 px-2 py-1 text-cyan-200">
+              活跃 {adminTopicHubItems.filter((item) => item.tone !== "muted").length}
+            </span>
+            <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-2 py-1 text-emerald-200">
+              structure {adminTopicHubItems.filter((item) => item.tone === "structure").length}
+            </span>
+            <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-950/20 px-2 py-1 text-fuchsia-200">
+              soft {adminTopicHubItems.filter((item) => item.tone === "soft").length}
+            </span>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {adminTopicHubItems.map((item) => (
+            <div key={`admin_topic_${item.key}`} className={`rounded-xl border p-3 ${topicHubTone(item.tone)}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-[12px] font-semibold">{item.title}</div>
+                  <div className="mt-1 text-[9px] uppercase tracking-[0.14em] text-zinc-500">{item.layer}</div>
+                </div>
+                <span className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(item.tone)}`}>
+                  {item.status}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-1.5 text-[10px]">
+                {item.metrics.map((metric) => (
+                  <div key={`admin_topic_metric_${item.key}_${metric}`} className="rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-zinc-300">
+                    {metric}
+                  </div>
+                ))}
+              </div>
+              {item.notes.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {item.notes.slice(0, 4).map((note) => (
+                    <span key={`admin_topic_note_${item.key}_${note}`} className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(item.tone)}`}>
+                      {note}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
       </div>
 

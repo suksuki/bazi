@@ -231,6 +231,25 @@
   - 不改五行能量
   - 不覆盖 authority 主裁决
 
+## UI 对齐状态
+
+主页面 `/v17/oracle` 已拆成三层页面：
+
+- `核心页面`：只保留六柱、体用中枢、判词与 Decision Inbox。
+- `辅助页面`：承接解释合同、专题总览、格局、关系、来源账本和 God Ring 解释。
+- `观测页面`：承接原调试侧栏的元数据、因果链路、Decision trace 与 LLM 审计。
+
+辅助页面新增 `Topic Hub / 专题中枢`，集中显示六条专题线：
+
+- `子平主裁决`：Level 1 hard constraint，显示用神、忌神、候选与置信度。
+- `格局专题`：Level 2 structure enhancement，显示主格局、成局度、破格风险。
+- `调候专题`：L0/L1 field + L2 bridge，显示寒热轴、燥湿轴、张力与顺/压十神。
+- `盲派专题`：Level 3 soft bias，显示体态、运行换挡、推用/推忌。
+- `象法专题`：semantic-only，显示语义、证据、事件主题，不入 bias。
+- `风险专题`：guard rail，显示风险来源、判定偏置与稳定承压。
+
+Admin Core 面板同步新增 `Topic Hub / 专题状态表`，用于审计各专题是否命中、所在 authority 层级、是否进入硬约束、结构增强或软偏置。
+
 ## 后续仍需深化的专题
 
 ### 1. 合化成立条件专题

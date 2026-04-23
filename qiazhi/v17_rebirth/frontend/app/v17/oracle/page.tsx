@@ -33,10 +33,41 @@ function normalizePluginKey(value: unknown): string {
   return String(value || "").trim().toLowerCase();
 }
 
+function asLooseRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function asNumberValue(value: unknown, fallback = 0): number {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function asStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
+}
+
 function oracleTabTone(active: boolean): string {
   return active
     ? "border-cyan-400/40 bg-cyan-950/35 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
     : "border-zinc-800 bg-zinc-950/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200";
+}
+
+function topicHubTone(tone: "primary" | "stable" | "watch" | "soft" | "risk" | "muted"): string {
+  if (tone === "primary") return "border-cyan-500/25 bg-cyan-950/25 text-cyan-50";
+  if (tone === "stable") return "border-emerald-500/25 bg-emerald-950/20 text-emerald-50";
+  if (tone === "watch") return "border-amber-500/25 bg-amber-950/20 text-amber-50";
+  if (tone === "soft") return "border-fuchsia-500/25 bg-fuchsia-950/20 text-fuchsia-50";
+  if (tone === "risk") return "border-rose-500/25 bg-rose-950/20 text-rose-50";
+  return "border-zinc-800 bg-zinc-950/60 text-zinc-300";
+}
+
+function topicHubBadgeTone(tone: "primary" | "stable" | "watch" | "soft" | "risk" | "muted"): string {
+  if (tone === "primary") return "border-cyan-500/25 bg-cyan-950/30 text-cyan-100";
+  if (tone === "stable") return "border-emerald-500/25 bg-emerald-950/30 text-emerald-100";
+  if (tone === "watch") return "border-amber-500/25 bg-amber-950/30 text-amber-100";
+  if (tone === "soft") return "border-fuchsia-500/25 bg-fuchsia-950/30 text-fuchsia-100";
+  if (tone === "risk") return "border-rose-500/25 bg-rose-950/30 text-rose-100";
+  return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
 function compactProjection(projection: unknown): string {
@@ -88,6 +119,16 @@ type LivePatternCandidate = {
   gateReason: string;
   breakRisks: string[];
   statusLabel: string;
+};
+
+type TopicHubItem = {
+  key: string;
+  title: string;
+  subtitle: string;
+  status: string;
+  tone: "primary" | "stable" | "watch" | "soft" | "risk" | "muted";
+  details: string[];
+  badges: string[];
 };
 
 function normalizeManifestation(value: unknown): string {
@@ -381,11 +422,121 @@ export default function OraclePage() {
   const activePatternScopes = Array.from(new Set(livePatternCandidates.map((item) => item.scope).filter(Boolean))).slice(0, 5);
   const leaderBreakRisks = patternLeader?.breakRisks || [];
   const patternJudgement = buildPatternJudgement(patternLeader, patternRunners);
+  const useGods = asStringList(godRingInfo?.god_of_use);
+  const tabooGods = asStringList(godRingInfo?.god_of_taboo);
+  const coreUseCandidates = Array.isArray(godRingInfo?.core_use_candidates) ? godRingInfo.core_use_candidates : [];
+  const coreTabooCandidates = Array.isArray(godRingInfo?.core_taboo_candidates) ? godRingInfo.core_taboo_candidates : [];
+  const blindTheme = asLooseRecord(godRingInfo?.blind_theme);
+  const blindBiasProtocol = asLooseRecord(godRingInfo?.blind_bias_protocol);
+  const blindBias = asLooseRecord(godRingInfo?.blind_bias);
+  const blindUseBias = Object.keys(asLooseRecord(blindBias.use_bias));
+  const blindTabooBias = Object.keys(asLooseRecord(blindBias.taboo_bias));
+  const climateFavored = asStringList(climateTheme.favored_gods);
+  const climateStrained = asStringList(climateTheme.strained_gods);
+  const xiangfaSemantic = asStringList(xiangfaTheme.semantic_mapping);
+  const xiangfaEvidence = asStringList(xiangfaTheme.evidence);
+  const xiangfaTopics = asStringList(xiangfaTheme.source_topics);
+  const riskRows = [...pluginClaims, ...allRows].filter((row) => {
+    const key = normalizePluginKey(row.plugin_id || row.source);
+    const label = decisionPluginLabel(row);
+    return key.includes("risk") || key.includes("break_guard") || label.includes("风险") || label.includes("破格");
+  });
+  const judgementBiasEntries = Array.isArray(godRingInfo?.judgement_bias_entries)
+    ? godRingInfo.judgement_bias_entries as Array<Record<string, unknown>>
+    : [];
+  const relationStressCount = relationDynamicsSummary.filter((row) => asNumberValue(row.stability_delta_ratio) < -0.05).length;
+  const topicHubItems: TopicHubItem[] = [
+    {
+      key: "ziping",
+      title: "子平主裁决",
+      subtitle: "月令 / 旺衰 / 调候桥 / 格局桥 / 体用",
+      status: godRingInfo ? "硬约束已接通" : "等待权威源",
+      tone: godRingInfo ? "primary" : "muted",
+      details: [
+        useGods.length ? `用神 ${useGods.slice(0, 3).join(" / ")}` : "用神待定",
+        tabooGods.length ? `忌神 ${tabooGods.slice(0, 3).join(" / ")}` : "忌神待定",
+        `候选 ${coreUseCandidates.length + coreTabooCandidates.length}`,
+      ],
+      badges: [
+        `置信 ${Math.round(asNumberValue(godRingInfo?.confidence) * 100)}%`,
+        String(godRingInfo?.mode || godRingInfo?.display_mode || "authority"),
+      ].filter(Boolean),
+    },
+    {
+      key: "pattern",
+      title: "格局专题",
+      subtitle: "古典格局 / 成局度 / 破格风险",
+      status: patternLeader ? `${patternLeader.name} ${Math.round(patternLeader.confidence * 100)}%` : "暂无主格局",
+      tone: patternLeader ? (leaderBreakRisks.length ? "watch" : "stable") : "muted",
+      details: [
+        patternLeader ? `状态 ${patternLeader.statusLabel}` : "等待候选聚合",
+        patternLeader ? `来源 ${patternLeader.scope}` : `候选 ${livePatternCandidates.length}`,
+        leaderBreakRisks.length ? `风险 ${leaderBreakRisks.slice(0, 2).join(" / ")}` : "破格风险未显著",
+      ],
+      badges: activePatternScopes.length ? activePatternScopes : ["pattern"],
+    },
+    {
+      key: "climate",
+      title: "调候专题",
+      subtitle: "寒热轴 / 燥湿轴 / 效率稳定修正",
+      status: String(climateTheme.state || climateField.state || "调候观察"),
+      tone: Object.keys(climateField).length || Object.keys(climateTheme).length ? "stable" : "muted",
+      details: [
+        `寒热 ${asNumberValue(climateTheme.thermal_index ?? climateField.thermal_index).toFixed(2)}`,
+        `燥湿 ${asNumberValue(climateTheme.moisture_index ?? climateField.moisture_index).toFixed(2)}`,
+        `张力 ${asNumberValue(climateTheme.climate_tension ?? climateField.climate_tension).toFixed(2)}`,
+      ],
+      badges: [
+        ...climateFavored.slice(0, 2).map((god) => `顺 ${god}`),
+        ...climateStrained.slice(0, 2).map((god) => `压 ${god}`),
+      ].slice(0, 4),
+    },
+    {
+      key: "blind",
+      title: "盲派专题",
+      subtitle: "体用主线 / 家里家外 / 运行换挡",
+      status: String(blindTheme.primary_route || "盲派未显性"),
+      tone: Object.keys(blindTheme).length ? "soft" : "muted",
+      details: [
+        `体态 ${String(blindTheme.body_mode || "未定")}`,
+        `桥接 ${String(blindBiasProtocol.authority_bridge_mode || "bias_only")}`,
+        `推用/推忌 ${blindUseBias.length}/${blindTabooBias.length}`,
+      ],
+      badges: ["bias-only", ...asStringList(blindTheme.runtime_switches).slice(0, 2)],
+    },
+    {
+      key: "xiangfa",
+      title: "象法专题",
+      subtitle: "语义映射 / 证据串 / 事件框架",
+      status: xiangfaSemantic.length || xiangfaEvidence.length ? "semantic-only 已接通" : "语义等待",
+      tone: xiangfaSemantic.length || xiangfaEvidence.length ? "soft" : "muted",
+      details: [
+        `语义 ${xiangfaSemantic.length}`,
+        `证据 ${xiangfaEvidence.length}`,
+        `主题 ${xiangfaTopics.length}`,
+      ],
+      badges: xiangfaTopics.length ? xiangfaTopics.slice(0, 4) : ["不入 bias"],
+    },
+    {
+      key: "risk",
+      title: "风险专题",
+      subtitle: "风险放大 / 破格提示 / 判定偏置",
+      status: riskRows.length || relationStressCount ? "风险链已观测" : "无显著风险",
+      tone: riskRows.length || relationStressCount ? "risk" : "muted",
+      details: [
+        `风险来源 ${riskRows.length}`,
+        `判定偏置 ${judgementBiasEntries.length}`,
+        `稳定承压 ${relationStressCount}`,
+      ],
+      badges: riskRows.length ? Array.from(new Set(riskRows.map(decisionPluginLabel).filter(Boolean))).slice(0, 3) : ["risk guard"],
+    },
+  ];
   const auxiliarySignalCount =
     livePatternCandidates.length +
     relationFormationSummary.length +
     relationDynamicsSummary.length +
-    pluginFocusRows.length;
+    pluginFocusRows.length +
+    topicHubItems.filter((item) => item.tone !== "muted").length;
   const traceSignalCount =
     s.traceHits.length +
     s.traceFacts.length +
@@ -622,6 +773,59 @@ export default function OraclePage() {
                 <>
                   <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
                     辅助页面只保留“解释与审计”信息，不再重复显示断言卡和 Decision Inbox，方便你专注看结构、格局与法理来源。
+                  </div>
+                  <div className="rounded-2xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(9,9,11,0.92),rgba(24,24,27,0.74))] p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-cyan-300">Topic Hub / 专题中枢</p>
+                        <h2 className="mt-1 text-sm font-semibold text-zinc-100">六条专题线的当前工作台</h2>
+                        <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-400">
+                          这里只看“谁接通、谁主裁决、谁只是软偏置”。细账本继续往下看，核心页面不再被这些辅助信息打断。
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 text-[10px]">
+                        <span className="rounded-full border border-cyan-500/25 bg-cyan-950/25 px-2 py-1 text-cyan-100">
+                          活跃 {topicHubItems.filter((item) => item.tone !== "muted").length}
+                        </span>
+                        <span className="rounded-full border border-emerald-500/25 bg-emerald-950/25 px-2 py-1 text-emerald-100">
+                          hard 子平
+                        </span>
+                        <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-950/25 px-2 py-1 text-fuchsia-100">
+                          soft 盲派/象法
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {topicHubItems.map((item) => (
+                        <div key={item.key} className={`rounded-xl border p-3 ${topicHubTone(item.tone)}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-[12px] font-semibold">{item.title}</div>
+                              <p className="mt-1 text-[10px] leading-4 text-zinc-400">{item.subtitle}</p>
+                            </div>
+                            <span className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(item.tone)}`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid gap-1.5 text-[10px]">
+                            {item.details.map((detail) => (
+                              <div key={`${item.key}_${detail}`} className="rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-zinc-300">
+                                {detail}
+                              </div>
+                            ))}
+                          </div>
+                          {item.badges.length ? (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {item.badges.slice(0, 4).map((badge) => (
+                                <span key={`${item.key}_${badge}`} className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(item.tone)}`}>
+                                  {badge}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <V17_SixPillarsPanel
                     fourPillars={fourPillars}
