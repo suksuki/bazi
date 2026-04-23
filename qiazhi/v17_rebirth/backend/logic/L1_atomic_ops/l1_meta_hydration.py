@@ -50,6 +50,8 @@ from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapsho
 from v17_rebirth.backend.services.master_reasoning import build_master_reasoning_trace
 from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
+from v17_rebirth.backend.services.hydration_pipeline import bucket_decision_records, build_plugin_governance_manifest
+from v17_rebirth.backend.services.meta_contract import build_meta_contract
 from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
 
 _log = logging.getLogger(__name__)
@@ -561,6 +563,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     from v17_rebirth.backend.plugins.spec import ArbiterType, AuditStatus
     all_specs = iter_all_plugin_specs()
     _scanned_pids = [s.plugin_id for s in all_specs]
+    meta["plugin_governance_manifest"] = build_plugin_governance_manifest(all_specs)
     print(f"[V17-TRIBUNAL-MANIFEST] Scanned {len(_scanned_pids)}: {', '.join(_scanned_pids)}")
     
     _active_plugins = []
@@ -757,12 +760,14 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         *_geometry_hits_to_decision_rows(pt, hits),
     ])
     _all_decisions = pt.get("pending_decisions", [])
-    pt["manual_decisions"] = [d for d in _all_decisions if d.get("arbiter_type", ArbiterType.USER.value) == ArbiterType.USER.value]
-    pt["auto_resolutions"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.SYSTEM.value]
-    pt["llm_arbitration_context"] = [d for d in _all_decisions if d.get("arbiter_type") == ArbiterType.LLM.value]
-    pt["manual_inbox"] = list(pt["manual_decisions"])
-    pt["auto_decisions"] = [*pt["auto_resolutions"], *pt["llm_arbitration_context"]]
-    pt["decision_inbox_contract"] = "v17.decision.inbox.v2"
+    decision_buckets = bucket_decision_records(_all_decisions)
+    pt["manual_decisions"] = decision_buckets["manual_decisions"]
+    pt["auto_resolutions"] = decision_buckets["auto_resolutions"]
+    pt["llm_arbitration_context"] = decision_buckets["llm_arbitration_context"]
+    pt["manual_inbox"] = decision_buckets["manual_inbox"]
+    pt["auto_decisions"] = decision_buckets["auto_decisions"]
+    pt["decision_inbox_contract"] = decision_buckets["decision_inbox_contract"]
+    meta["decision_bucket_contract"] = decision_buckets
     
     print(f"[V17-TRIBUNAL-DEBUG] Scanned: {len(_scanned_pids)} | Active: {len(_active_plugins)} ({', '.join(_active_plugins)}) | Total: {len(_all_decisions)} | Manual: {len(pt['manual_decisions'])}")
 
@@ -841,6 +846,8 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     if _ledger:
         pt["ten_gods_ledger"] = _ledger.to_dict()
         if "ledger" in _energy_meta: del _energy_meta["ledger"]
+
+    meta["meta_contract"] = build_meta_contract(meta)
 
     # 最终类型擦除，防止 JSON 报错
     import json

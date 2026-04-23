@@ -55,6 +55,7 @@ Synthetic Lab 当前覆盖：
 - Core 做功与 authority：`contest / positive_path / tongguan_present / tongguan_external`
 - Authority Judgement 协议：`judgement_bias_protocol / stage_bias_protocol`
 - Authority Layer 协议：`authority_layer_protocol / max_bias_ratio / override_forbidden`
+- Learning Governance：`plugin_governance / meta_contract / synthetic_tuning_bridge`
 - 调候驱动 authority 回归：`test_effect_resolver_candidates.py`、`test_l2_blind_ziping_protocol.py`
 - 子平 umbrella 专题：`month_command / balance / climate_bridge / pattern_bridge / yongshen / god_ring_resolver / summary`
 - Master Reasoning：主审盘推理链与 learning hook
@@ -118,6 +119,12 @@ pytest qiazhi/v17_rebirth/tests/test_authority_judgement_protocol.py \
   qiazhi/v17_rebirth/tests/test_physics_canonical.py \
   qiazhi/v17_rebirth/tests/test_llm_micro_client_prompt.py -q
 
+# 仅运行学习治理层契约
+pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
+  qiazhi/v17_rebirth/tests/test_meta_contract.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_tuning_bridge.py \
+  qiazhi/v17_rebirth/tests/test_hydration_pipeline.py -q
+
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
 
@@ -141,6 +148,10 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `v17.authority.layer_protocol.v1`
 - `v17.climate.theme.v1`
 - `v17.xiangfa.theme.v1`
+- `v17.plugin_governance.v1`
+- `v17.meta_contract.v1`
+- `v17.synthetic_tuning_bridge.v1`
+- `v17.hydration_pipeline.v1`
 - `classical.ziping.climate_bridge.v1`
 - `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.summary.v1`

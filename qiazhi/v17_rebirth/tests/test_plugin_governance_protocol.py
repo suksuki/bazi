@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+from v17_rebirth.backend.logic.plugin_discovery import registry_rows_for_admin
+from v17_rebirth.backend.services.plugin_governance import classify_plugin_governance
+
+
+def test_plugin_governance_classifies_core_authority_boundaries() -> None:
+    ziping = classify_plugin_governance(
+        plugin_id="classical.ziping.god_ring_resolver.v1",
+        layer="L2",
+        causal_tier=3,
+    )
+    blind = classify_plugin_governance(
+        plugin_id="classical.blind.work_axis.v1",
+        layer="L2",
+        causal_tier=3,
+    )
+    xiangfa = classify_plugin_governance(
+        plugin_id="classical.xiangfa.semantic_mapping.v1",
+        layer="L2",
+        causal_tier=3,
+    )
+    sanhe = classify_plugin_governance(
+        plugin_id="l1.physics.op_branch_sanhe",
+        layer="L1",
+        causal_tier=4,
+    )
+
+    assert ziping["authority_level"] == "level_1_hard"
+    assert ziping["can_enter_authority"] is True
+    assert ziping["override_forbidden"] is True
+
+    assert blind["governance_class"] == "soft_bias_topic"
+    assert blind["can_enter_authority"] is True
+    assert 0 < float(blind["max_bias_ratio"]) < float(ziping["max_bias_ratio"])
+
+    assert xiangfa["governance_class"] == "semantic_only_topic"
+    assert xiangfa["can_enter_authority"] is False
+    assert xiangfa["max_bias_ratio"] == 0.0
+
+    assert sanhe["governance_class"] == "physical_relation_operator"
+    assert sanhe["can_emit_physical_proposal"] is True
+    assert sanhe["can_enter_authority"] is False
+
+
+def test_admin_registry_exposes_governance_profile() -> None:
+    rows = registry_rows_for_admin()
+    by_id = {
+        str(row.get("plugin_id") or "").strip(): row
+        for row in rows
+        if str(row.get("plugin_id") or "").strip()
+    }
+
+    ziping = by_id["classical.ziping.god_ring_resolver.v1"]
+    blind = by_id["classical.blind.work_axis.v1"]
+    xiangfa = by_id["classical.xiangfa.semantic_mapping.v1"]
+
+    assert ziping["governance_profile"]["protocol"] == "v17.plugin_governance.v1"
+    assert ziping["governance_class"] == "ziping_umbrella"
+    assert ziping["authority_level"] == "level_1_hard"
+
+    assert blind["governance_profile"]["governance_class"] == "soft_bias_topic"
+    assert blind["learning_family"] == "blind_theme"
+
+    assert xiangfa["governance_profile"]["can_enter_authority"] is False
+    assert xiangfa["output_contract"] == "semantic_mapping"
+

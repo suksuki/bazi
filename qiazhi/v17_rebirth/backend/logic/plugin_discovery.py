@@ -17,6 +17,7 @@ from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
 from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
 from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence
 from v17_rebirth.backend.services.plugin_display import plugin_display_profile
+from v17_rebirth.backend.services.plugin_governance import classify_plugin_governance
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
 _LOGIC_ROOT = Path(__file__).resolve().parent
@@ -421,6 +422,12 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
         trigger_condition_text = _plugin_trigger_condition_text(mod, fallback=module_doc or summary or spec_doc)
         detail_description = display_profile["display_description"]
         kind = "manifest_row" if mod is None else "spec"
+        governance_profile = classify_plugin_governance(
+            plugin_id=pid,
+            layer=tag,
+            causal_tier=int(spec.causal_tier),
+            manifest=skill.get("manifest", {}) if skill else {},
+        )
         
         rows.append(
             {
@@ -452,6 +459,11 @@ def registry_rows_for_admin() -> List[Dict[str, Any]]:
                 "config_required": bool(skill.get("config_required", False)) if skill else False,
                 "config_exists": bool(skill.get("config_exists", False)) if skill else False,
                 "config_file": str(skill.get("config_file", "") or "") if skill else "",
+                "governance_profile": governance_profile,
+                "governance_class": str(governance_profile.get("governance_class") or ""),
+                "authority_level": str(governance_profile.get("authority_level") or ""),
+                "output_contract": str(governance_profile.get("output_contract") or ""),
+                "learning_family": str(governance_profile.get("learning_family") or ""),
             }
         )
     return sorted(rows, key=lambda r: (int(r.get("execution_order", 999)), str(r.get("plugin_id", ""))))

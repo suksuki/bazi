@@ -20,6 +20,13 @@ Synthetic Lab 负责四件事：
 3. 让引擎、插件、推理链都能在同一批样盘上被复核。
 4. 为后续学习/演化提供干净基线，再去碰真实世界的复杂命盘。
 
+2026-04-23 起，Synthetic Lab 增加 `Synthetic Tuning Bridge`：
+
+- 读取真实命盘 benchmark 的偏差。
+- 将偏差映射到 `relation_formation.* / relation_dynamics.* / ten_gods.calibration / authority.*` 等参数族。
+- 根据参数族推荐应回归的 synthetic cases。
+- 第一阶段只提出调优方向，不自动改参数。
+
 ## Case Contract
 
 每一个合成样盘都遵循同一份协议：
@@ -217,6 +224,9 @@ Synthetic Lab 不是只看最后分数，而是同时检查：
 - `pattern_candidate / god_ring_bias / authority reroute`
 - `master_reasoning`
 - `ledger`
+- `meta_contract`
+- `plugin_governance`
+- `synthetic_tuning_bridge`
 
 这意味着它既能校验“算得对不对”，也能校验“系统是不是沿着正确轨迹在思考”。
 

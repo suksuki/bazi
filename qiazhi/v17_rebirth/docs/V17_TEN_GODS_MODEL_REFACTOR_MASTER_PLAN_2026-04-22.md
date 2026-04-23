@@ -105,6 +105,11 @@
   - `classical.ziping.climate_bridge.v1` 将调候专题归口到子平主裁决 umbrella
   - `classical.ziping.pattern_bridge.v1` 将格局候选归口到子平主裁决 umbrella
   - `classical.ziping.summary.v1` 收束月令、旺衰、调候、格局、体用裁决
+- Learning Governance Layer 已完成第一阶段：
+  - `backend/services/plugin_governance.py` 为每个插件声明治理等级、输出契约、authority 权限与学习族
+  - `backend/services/meta_contract.py` 将 metadata 拆成 public contract 与 solver trace
+  - `testing/synthetic_tuning_bridge.py` 将真实命盘 benchmark 偏差映射到参数族与 synthetic case 建议
+  - 当前定位是 `feedback-ready / benchmark-ready / tuning-bridge-ready`，尚未自动修改参数
 
 这说明我们已经不是“小修小补”阶段，而是需要正式切模块。
 
