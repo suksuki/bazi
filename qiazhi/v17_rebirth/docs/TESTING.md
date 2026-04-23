@@ -123,7 +123,8 @@ pytest qiazhi/v17_rebirth/tests/test_authority_judgement_protocol.py \
 pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
   qiazhi/v17_rebirth/tests/test_meta_contract.py \
   qiazhi/v17_rebirth/tests/test_synthetic_tuning_bridge.py \
-  qiazhi/v17_rebirth/tests/test_hydration_pipeline.py -q
+  qiazhi/v17_rebirth/tests/test_hydration_pipeline.py \
+  qiazhi/v17_rebirth/tests/test_parameter_candidate_runner.py -q
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
@@ -152,6 +153,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `v17.meta_contract.v1`
 - `v17.synthetic_tuning_bridge.v1`
 - `v17.hydration_pipeline.v1`
+- `v17.parameter_candidate_runner.v1`
 - `classical.ziping.climate_bridge.v1`
 - `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.summary.v1`

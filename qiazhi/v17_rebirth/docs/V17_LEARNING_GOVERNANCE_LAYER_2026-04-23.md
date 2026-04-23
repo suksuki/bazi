@@ -243,7 +243,43 @@ pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
 
 建议下一阶段继续推进：
 
-1. `Hydration Pipeline` 拆分：把 `l1_meta_hydration.py` 中的插件执行、claim/conflict、settlement、meta contract 分段拆出。
-2. `Parameter Candidate Generator`：根据 tuning bridge report 生成候选参数变更，不自动应用。
-3. `Experiment Runner`：对候选参数跑 synthetic + practitioner benchmark。
-4. `Learning Scorecard`：记录每轮参数变更对 benchmark 和 synthetic 的改善/退化。
+1. `Hydration Pipeline` 拆分：继续把 `l1_meta_hydration.py` 中的插件执行、claim/conflict、settlement 分段拆出。
+2. `Experiment Runner`：对候选参数跑 synthetic + practitioner benchmark。
+3. `Learning Scorecard`：记录每轮参数变更对 benchmark 和 synthetic 的改善/退化。
+
+---
+
+## 9. Parameter Candidate Runner
+
+实现：
+
+- `testing/parameter_candidate_runner.py`
+
+协议版本：
+
+- `v17.parameter_candidate_runner.v1`
+
+职责：
+
+- 消费 `Synthetic Tuning Bridge` 的参数族热点。
+- 生成只读实验计划。
+- 明确候选参数范围、回归命令、安全门。
+
+当前输出：
+
+- `experiment_id`
+- `parameter_family`
+- `hypothesis`
+- `candidate_patch`
+- `synthetic_cases`
+- `benchmark_cases`
+- `required_commands`
+- `safety_gates`
+- `application_mode = dry_run_plan_only`
+
+安全边界：
+
+- 不写配置。
+- 不自动应用参数。
+- 不绕过人工 review。
+- 所有 candidate patch 均为 `review_only`。
