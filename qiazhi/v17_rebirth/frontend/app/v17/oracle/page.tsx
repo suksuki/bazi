@@ -20,6 +20,9 @@ import { V17_TracePanel } from "@/components/V17_TracePanel";
 import { useOracleSession } from "@/hooks/useOracleSession";
 import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
+type OracleSurfaceTab = "core" | "auxiliary" | "trace";
+type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
+
 function decisionPluginLabel(row: Record<string, unknown>): string {
   return String(
     row.source_label || row.display_name || row.definition_text || row.plugin_id || row.source || "",
@@ -28,6 +31,12 @@ function decisionPluginLabel(row: Record<string, unknown>): string {
 
 function normalizePluginKey(value: unknown): string {
   return String(value || "").trim().toLowerCase();
+}
+
+function oracleTabTone(active: boolean): string {
+  return active
+    ? "border-cyan-400/40 bg-cyan-950/35 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+    : "border-zinc-800 bg-zinc-950/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200";
 }
 
 function compactProjection(projection: unknown): string {
@@ -227,6 +236,8 @@ function deriveLivePatternCandidates(
 export default function OraclePage() {
   const s = useOracleSession();
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
+  const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
+  const [lastContentSurfaceTab, setLastContentSurfaceTab] = useState<ContentSurfaceTab>("core");
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
   const energyMeta = payload.energy_meta && typeof payload.energy_meta === "object"
@@ -260,6 +271,9 @@ export default function OraclePage() {
           };
           judgement_bias_entries?: Array<Record<string, unknown>>;
           judgement_bias_protocol?: Record<string, unknown>;
+          blind_theme?: Record<string, unknown>;
+          blind_bias?: Record<string, unknown>;
+          blind_bias_protocol?: Record<string, unknown>;
           stage_bias?: Record<string, Record<string, number>>;
           stage_bias_protocol?: Record<string, unknown>;
           effect_scores?: Record<string, unknown>;
@@ -280,6 +294,18 @@ export default function OraclePage() {
   const relationDynamicsSummary = Array.isArray(energyMeta.relation_dynamics_summary)
     ? energyMeta.relation_dynamics_summary as Array<Record<string, unknown>>
     : [];
+  const climateField = energyMeta.climate_field && typeof energyMeta.climate_field === "object"
+    ? energyMeta.climate_field as Record<string, unknown>
+    : {};
+  const climateModifierLayer = energyMeta.climate_modifier_layer && typeof energyMeta.climate_modifier_layer === "object"
+    ? energyMeta.climate_modifier_layer as Record<string, unknown>
+    : {};
+  const climateTheme = meta.climate_theme && typeof meta.climate_theme === "object"
+    ? meta.climate_theme as Record<string, unknown>
+    : {};
+  const xiangfaTheme = meta.xiangfa_theme && typeof meta.xiangfa_theme === "object"
+    ? meta.xiangfa_theme as Record<string, unknown>
+    : {};
   const recomputeContributions = Array.isArray(meta.plugin_recompute_contributions)
     ? meta.plugin_recompute_contributions as Array<Record<string, unknown>>
     : [];
@@ -355,6 +381,32 @@ export default function OraclePage() {
   const activePatternScopes = Array.from(new Set(livePatternCandidates.map((item) => item.scope).filter(Boolean))).slice(0, 5);
   const leaderBreakRisks = patternLeader?.breakRisks || [];
   const patternJudgement = buildPatternJudgement(patternLeader, patternRunners);
+  const auxiliarySignalCount =
+    livePatternCandidates.length +
+    relationFormationSummary.length +
+    relationDynamicsSummary.length +
+    pluginFocusRows.length;
+  const traceSignalCount =
+    s.traceHits.length +
+    s.traceFacts.length +
+    s.heartbeatHistory.length +
+    (s.fullTrace ? 1 : 0);
+
+  const switchContentSurface = (tab: ContentSurfaceTab) => {
+    setActiveSurfaceTab(tab);
+    setLastContentSurfaceTab(tab);
+    s.setTraceOpen(false);
+  };
+
+  const openTraceSurface = () => {
+    setActiveSurfaceTab("trace");
+    s.setTraceOpen(true);
+  };
+
+  const closeTraceSurface = () => {
+    setActiveSurfaceTab(lastContentSurfaceTab);
+    s.setTraceOpen(false);
+  };
 
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -388,170 +440,327 @@ export default function OraclePage() {
 
         {/* ── 运行态主体 ── */}
         {s.running ? (
-          <div
-            className={`grid min-h-[60vh] gap-3 ${
-              s.traceOpen ? "md:grid-cols-[1fr_320px]" : "md:grid-cols-[1fr_64px]"
-            }`}
-          >
-
-            {/* ── 左列：命盘 + 判词 + 决策收件箱 ── */}
+          <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
-              <V17_SixPillarsPanel
-                fourPillars={fourPillars}
-                luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
-                flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
-                godRingInfo={godRingInfo}
-                tenGodDecomposition={
-                  payload.ten_gods_decomposition_l0 && typeof payload.ten_gods_decomposition_l0 === "object"
-                    ? (payload.ten_gods_decomposition_l0 as Record<
-                        string,
-                        {
-                          manifest?: number;
-                          root?: number;
-                          momentum?: number;
-                          momentum_month_order?: number;
-                          momentum_stage?: number;
-                          momentum_stage_lu?: number;
-                          momentum_stage_blade?: number;
-                          momentum_stage_general?: number;
-                          momentum_structure?: number;
-                          momentum_auxiliary?: number;
-                          momentum_other?: number;
-                          hidden?: number;
-                          total?: number;
-                        }
-                      >)
-                    : undefined
-                }
-                tenGodLedger={
-                  payload.ten_gods_ledger && typeof payload.ten_gods_ledger === "object"
-                    ? (payload.ten_gods_ledger as Record<string, Array<{ step?: string; reason?: string; delta?: number; val?: number }>>)
-                    : undefined
-                }
-                projectionBridgeProtocol={
-                  payload.projection_bridge_protocol && typeof payload.projection_bridge_protocol === "object"
-                    ? (payload.projection_bridge_protocol as Record<string, unknown>)
-                    : undefined
-                }
-                relationFormationSummary={relationFormationSummary}
-                relationDynamicsSummary={relationDynamicsSummary}
-                birthTimeISO={s.birthTimeISO}
-                gender={s.natalGender}
-                calendarType={s.natalCalendar}
-                selectedYear={s.selectedLuckYear}
-                onYearChange={s.setSelectedLuckYear}
-              />
-              <V17_GodRingExplainCard
-                godRings={godRingInfo}
-                focusedDecisionId={focusedDecisionId}
-                onFocusDecision={(decisionId) => {
-                  setFocusedDecisionId(decisionId);
-                  s.setTraceOpen(true);
-                }}
-              />
-              <V17_PurpleVerdictCard
-                frames={s.frames}
-                onToggleTrace={() => s.setTraceOpen((v) => !v)}
-                connectTickMs={s.connectTickMs}
-                running={s.running}
-                llmStatusText={s.llmStatusText}
-                llmStatusDetail={s.llmStatusDetail}
-                llmLifecyclePhase={s.llmLifecyclePhase}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
-                <p className="text-xs text-zinc-400">
-                  待处理决策 {s.pendingDecisionWorkCount} 条
-                  {s.canAutoGenerateVerdict ? " · 已满足自动生成断言条件" : " · 处理完成后将自动生成新断言"}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => s.triggerVerdict("请基于当前已通过的决策，生成新的八字断言。")}
-                  className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-950/25 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-900/35"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  显示八字断言
-                </button>
-              </div>
-              {uniquePlugins.length ? (
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-300">
-                    <span>命中插件 {uniquePlugins.length}</span>
-                    <span>手动来源 {manualPlugins.length}</span>
-                    <span>自动/上下文 {autoPlugins.length}</span>
-                  </div>
-                  <div className="mt-2 grid gap-2 md:grid-cols-2">
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                      <div className="text-[10px] uppercase tracking-wide text-amber-300">Manual Sources</div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {manualPlugins.length ? manualPlugins.map((name) => (
-                          <span key={`manual_${name}`} className="rounded-full border border-amber-900/50 bg-amber-950/30 px-2 py-0.5 text-[10px] text-amber-100">
-                            {name}
-                          </span>
-                        )) : <span className="text-[10px] text-zinc-500">当前没有手动来源插件。</span>}
-                      </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/45 p-2.5">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    aria-pressed={activeSurfaceTab === "core"}
+                    onClick={() => switchContentSurface("core")}
+                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "core")}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">核心页面</span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                        决策 {s.pendingDecisionWorkCount}
+                      </span>
                     </div>
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                      <div className="text-[10px] uppercase tracking-wide text-sky-300">Auto / Context Sources</div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {autoPlugins.length ? autoPlugins.map((name) => (
-                          <span key={`auto_${name}`} className="rounded-full border border-sky-900/50 bg-sky-950/30 px-2 py-0.5 text-[10px] text-sky-100">
-                            {name}
-                          </span>
-                        )) : <span className="text-[10px] text-zinc-500">当前没有自动或上下文来源插件。</span>}
-                      </div>
+                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                      六柱、体用、判词、裁决主线。
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeSurfaceTab === "auxiliary"}
+                    onClick={() => switchContentSurface("auxiliary")}
+                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">辅助页面</span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                        洞察 {auxiliarySignalCount}
+                      </span>
                     </div>
-                  </div>
-                  {pluginMatchRows.length ? (
-                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                      <div className="text-[10px] uppercase tracking-wide text-emerald-300">Plugin Match Ratio</div>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {pluginMatchRows.map((row) => (
-                          <span key={`match_${row.pluginId}`} className="rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-100">
-                            {row.label} {Math.round(row.avg * 100)}%
-                          </span>
-                        ))}
-                      </div>
+                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                      格局、关系、来源账本、解释合同。
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeSurfaceTab === "trace"}
+                    onClick={openTraceSurface}
+                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "trace")}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">观测页面</span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                        观测 {traceSignalCount}
+                      </span>
                     </div>
-                  ) : null}
-                  {pluginFocusRows.length ? (
-                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                      <div className="text-[10px] uppercase tracking-wide text-fuchsia-300">Plugin Focus Map</div>
-                      <div className="mt-2 grid gap-1.5">
-                        {pluginFocusRows.map((row) => (
-                          <div key={`focus_${row.pluginId}`} className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-[10px] text-zinc-300">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="text-fuchsia-100">{row.label}</span>
-                              <span className="text-fuchsia-300">{Math.round(row.ratio * 100)}%</span>
-                            </div>
-                            <div className="mt-0.5 text-zinc-400">
-                              主落点 {row.target || "未定"}{row.share > 0 ? ` · 占比 ${Math.round(row.share * 100)}%` : ""}
-                            </div>
-                            {row.projectionText ? <div className="mt-0.5 text-zinc-500">{row.projectionText}</div> : null}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-                  {recomputeContributions.length ? (
-                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                      <div className="text-[10px] uppercase tracking-wide text-sky-300">Base Recompute Contributions</div>
-                      <div className="mt-2 grid gap-1">
-                        {recomputeContributions.slice(0, 8).map((row, idx) => (
-                          <div key={`recompute_${idx}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-300">
-                            <span>{String(row.target_god || "—")}</span>
-                            <span className="text-zinc-500">
-                              {Number(row.before || 0).toFixed(2)} → {Number(row.after || 0).toFixed(2)}
-                            </span>
-                            <span className="text-sky-300">delta {Number(row.delta_abs || 0).toFixed(2)}</span>
-                            <span className="text-zinc-500">ratio {Number(row.ratio_total || 0).toFixed(3)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                      元数据、链路、决策与 LLM 调试观测。
+                    </p>
+                  </button>
                 </div>
-              ) : null}
-              <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(12,74,110,0.32),rgba(9,9,11,0.76))] p-3">
+              </div>
+
+              {activeSurfaceTab === "core" ? (
+                <>
+                  <V17_SixPillarsPanel
+                    fourPillars={fourPillars}
+                    luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
+                    flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
+                    godRingInfo={godRingInfo}
+                    tenGodDecomposition={
+                      payload.ten_gods_decomposition_l0 && typeof payload.ten_gods_decomposition_l0 === "object"
+                        ? (payload.ten_gods_decomposition_l0 as Record<
+                            string,
+                            {
+                              manifest?: number;
+                              root?: number;
+                              momentum?: number;
+                              momentum_month_order?: number;
+                              momentum_stage?: number;
+                              momentum_stage_lu?: number;
+                              momentum_stage_blade?: number;
+                              momentum_stage_general?: number;
+                              momentum_structure?: number;
+                              momentum_auxiliary?: number;
+                              momentum_other?: number;
+                              hidden?: number;
+                              total?: number;
+                            }
+                          >)
+                        : undefined
+                    }
+                    tenGodLedger={
+                      payload.ten_gods_ledger && typeof payload.ten_gods_ledger === "object"
+                        ? (payload.ten_gods_ledger as Record<string, Array<{ step?: string; reason?: string; delta?: number; val?: number }>>)
+                        : undefined
+                    }
+                    climateField={climateField}
+                    climateModifierLayer={climateModifierLayer}
+                    climateTheme={climateTheme}
+                    xiangfaTheme={xiangfaTheme}
+                    projectionBridgeProtocol={
+                      payload.projection_bridge_protocol && typeof payload.projection_bridge_protocol === "object"
+                        ? (payload.projection_bridge_protocol as Record<string, unknown>)
+                        : undefined
+                    }
+                    relationFormationSummary={relationFormationSummary}
+                    relationDynamicsSummary={relationDynamicsSummary}
+                    birthTimeISO={s.birthTimeISO}
+                    gender={s.natalGender}
+                    calendarType={s.natalCalendar}
+                    selectedYear={s.selectedLuckYear}
+                    onYearChange={s.setSelectedLuckYear}
+                    detailMode="core"
+                  />
+                  <V17_PurpleVerdictCard
+                    frames={s.frames}
+                    onToggleTrace={openTraceSurface}
+                    connectTickMs={s.connectTickMs}
+                    running={s.running}
+                    llmStatusText={s.llmStatusText}
+                    llmStatusDetail={s.llmStatusDetail}
+                    llmLifecyclePhase={s.llmLifecyclePhase}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
+                    <p className="text-xs text-zinc-400">
+                      待处理决策 {s.pendingDecisionWorkCount} 条
+                      {s.canAutoGenerateVerdict ? " · 已满足自动生成断言条件" : " · 处理完成后将自动生成新断言"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => s.triggerVerdict("请基于当前已通过的决策，生成新的八字断言。")}
+                      className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-950/25 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-900/35"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      显示八字断言
+                    </button>
+                  </div>
+                  <V17_DecisionInbox
+                    frames={s.frames}
+                    adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
+                    focusedDecisionId={focusedDecisionId}
+                    locked={s.decisionInboxLocked}
+                    lockMessage={s.decisionInboxLockMessage}
+                    onAdopted={s.handleAdopted}
+                    onAdoptedBatch={s.handleAdoptedBatch}
+                    onPlanAction={s.handlePlanAction}
+                  />
+                  {!s.hasNarrative ? (
+                    <p className="mt-3 text-xs text-violet-200/80">V17 织造启动中，正在同步快照与叙事流...</p>
+                  ) : null}
+                </>
+              ) : activeSurfaceTab === "trace" ? (
+                <>
+                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
+                    观测页面汇总运行时元数据、重算链路、Decision 证据和 LLM 调试信息，便于你单独审计，不再挤占主判盘视线。
+                  </div>
+                  <V17_TracePanel
+                    surfaceMode="tab"
+                    collapsed={false}
+                    onToggle={closeTraceSurface}
+                    focusedDecisionId={focusedDecisionId}
+                    llmMeta={s.llmMeta}
+                    llmLifecyclePhase={s.llmLifecyclePhase}
+                    llmStatusText={s.llmStatusText}
+                    llmStatusDetail={s.llmStatusDetail}
+                    modelLabel={s.modelLabel}
+                    connectTickMs={s.connectTickMs}
+                    lastHeartbeatStep={s.lastHeartbeatStep}
+                    heartbeatHistory={s.heartbeatHistory}
+                    streamClosed={s.streamClosed}
+                    fullTrace={s.fullTrace}
+                    llmAuditSnapshot={s.llmAuditSnapshot}
+                    latestNarrator={s.latestNarrator as { payload?: Record<string, unknown> } | undefined}
+                    traceHits={s.traceHits}
+                    traceFacts={s.traceFacts}
+                    birthTimeISO={s.birthTimeISO}
+                    natalGender={s.natalGender}
+                    natalCalendar={s.natalCalendar}
+                    selectedLuckYear={s.selectedLuckYear}
+                    streamEndpoint={s.streamEndpoint}
+                    streamBody={s.streamBody}
+                    streamQuery={s.streamQuery}
+                    physicsSnapshot={s.physicsSnapshot as { payload?: Record<string, unknown> } | undefined}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
+                    辅助页面只保留“解释与审计”信息，不再重复显示断言卡和 Decision Inbox，方便你专注看结构、格局与法理来源。
+                  </div>
+                  <V17_SixPillarsPanel
+                    fourPillars={fourPillars}
+                    luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
+                    flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
+                    godRingInfo={godRingInfo}
+                    tenGodDecomposition={
+                      payload.ten_gods_decomposition_l0 && typeof payload.ten_gods_decomposition_l0 === "object"
+                        ? (payload.ten_gods_decomposition_l0 as Record<
+                            string,
+                            {
+                              manifest?: number;
+                              root?: number;
+                              momentum?: number;
+                              momentum_month_order?: number;
+                              momentum_stage?: number;
+                              momentum_stage_lu?: number;
+                              momentum_stage_blade?: number;
+                              momentum_stage_general?: number;
+                              momentum_structure?: number;
+                              momentum_auxiliary?: number;
+                              momentum_other?: number;
+                              hidden?: number;
+                              total?: number;
+                            }
+                          >)
+                        : undefined
+                    }
+                    tenGodLedger={
+                      payload.ten_gods_ledger && typeof payload.ten_gods_ledger === "object"
+                        ? (payload.ten_gods_ledger as Record<string, Array<{ step?: string; reason?: string; delta?: number; val?: number }>>)
+                        : undefined
+                    }
+                    climateField={climateField}
+                    climateModifierLayer={climateModifierLayer}
+                    climateTheme={climateTheme}
+                    xiangfaTheme={xiangfaTheme}
+                    projectionBridgeProtocol={
+                      payload.projection_bridge_protocol && typeof payload.projection_bridge_protocol === "object"
+                        ? (payload.projection_bridge_protocol as Record<string, unknown>)
+                        : undefined
+                    }
+                    relationFormationSummary={relationFormationSummary}
+                    relationDynamicsSummary={relationDynamicsSummary}
+                    birthTimeISO={s.birthTimeISO}
+                    gender={s.natalGender}
+                    calendarType={s.natalCalendar}
+                    selectedYear={s.selectedLuckYear}
+                    onYearChange={s.setSelectedLuckYear}
+                    detailMode="auxiliary"
+                  />
+                  <V17_GodRingExplainCard
+                    godRings={godRingInfo}
+                    focusedDecisionId={focusedDecisionId}
+                    onFocusDecision={(decisionId) => {
+                      setFocusedDecisionId(decisionId);
+                      openTraceSurface();
+                    }}
+                  />
+                  {uniquePlugins.length ? (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-300">
+                        <span>命中插件 {uniquePlugins.length}</span>
+                        <span>手动来源 {manualPlugins.length}</span>
+                        <span>自动/上下文 {autoPlugins.length}</span>
+                      </div>
+                      <div className="mt-2 grid gap-2 md:grid-cols-2">
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                          <div className="text-[10px] uppercase tracking-wide text-amber-300">Manual Sources</div>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {manualPlugins.length ? manualPlugins.map((name) => (
+                              <span key={`manual_${name}`} className="rounded-full border border-amber-900/50 bg-amber-950/30 px-2 py-0.5 text-[10px] text-amber-100">
+                                {name}
+                              </span>
+                            )) : <span className="text-[10px] text-zinc-500">当前没有手动来源插件。</span>}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                          <div className="text-[10px] uppercase tracking-wide text-sky-300">Auto / Context Sources</div>
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {autoPlugins.length ? autoPlugins.map((name) => (
+                              <span key={`auto_${name}`} className="rounded-full border border-sky-900/50 bg-sky-950/30 px-2 py-0.5 text-[10px] text-sky-100">
+                                {name}
+                              </span>
+                            )) : <span className="text-[10px] text-zinc-500">当前没有自动或上下文来源插件。</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {pluginMatchRows.length ? (
+                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                          <div className="text-[10px] uppercase tracking-wide text-emerald-300">Plugin Match Ratio</div>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {pluginMatchRows.map((row) => (
+                              <span key={`match_${row.pluginId}`} className="rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-100">
+                                {row.label} {Math.round(row.avg * 100)}%
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {pluginFocusRows.length ? (
+                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                          <div className="text-[10px] uppercase tracking-wide text-fuchsia-300">Plugin Focus Map</div>
+                          <div className="mt-2 grid gap-1.5">
+                            {pluginFocusRows.map((row) => (
+                              <div key={`focus_${row.pluginId}`} className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-[10px] text-zinc-300">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="text-fuchsia-100">{row.label}</span>
+                                  <span className="text-fuchsia-300">{Math.round(row.ratio * 100)}%</span>
+                                </div>
+                                <div className="mt-0.5 text-zinc-400">
+                                  主落点 {row.target || "未定"}{row.share > 0 ? ` · 占比 ${Math.round(row.share * 100)}%` : ""}
+                                </div>
+                                {row.projectionText ? <div className="mt-0.5 text-zinc-500">{row.projectionText}</div> : null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {recomputeContributions.length ? (
+                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
+                          <div className="text-[10px] uppercase tracking-wide text-sky-300">Base Recompute Contributions</div>
+                          <div className="mt-2 grid gap-1">
+                            {recomputeContributions.slice(0, 8).map((row, idx) => (
+                              <div key={`recompute_${idx}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-300">
+                                <span>{String(row.target_god || "—")}</span>
+                                <span className="text-zinc-500">
+                                  {Number(row.before || 0).toFixed(2)} → {Number(row.after || 0).toFixed(2)}
+                                </span>
+                                <span className="text-sky-300">delta {Number(row.delta_abs || 0).toFixed(2)}</span>
+                                <span className="text-zinc-500">ratio {Number(row.ratio_total || 0).toFixed(3)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(12,74,110,0.32),rgba(9,9,11,0.76))] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">Pattern Overview</p>
@@ -693,50 +902,10 @@ export default function OraclePage() {
                     当前盘面还没有显式格局候选，系统会随着插件命中和 Claim 聚合继续补全。
                   </div>
                 )}
-              </div>
-              <V17_DecisionInbox
-                frames={s.frames}
-                adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
-                focusedDecisionId={focusedDecisionId}
-                locked={s.decisionInboxLocked}
-                lockMessage={s.decisionInboxLockMessage}
-                onAdopted={s.handleAdopted}
-                onAdoptedBatch={s.handleAdoptedBatch}
-                onPlanAction={s.handlePlanAction}
-              />
-              {!s.hasNarrative ? (
-                <p className="mt-3 text-xs text-violet-200/80">V17 织造启动中，正在同步快照与叙事流...</p>
-              ) : null}
+                  </div>
+                </>
+              )}
             </div>
-            {/* ── 因果链路调试边栏（可收缩）── */}
-            <V17_TracePanel
-              collapsed={!s.traceOpen}
-              onToggle={() => s.setTraceOpen((v) => !v)}
-              focusedDecisionId={focusedDecisionId}
-              llmMeta={s.llmMeta}
-              llmLifecyclePhase={s.llmLifecyclePhase}
-              llmStatusText={s.llmStatusText}
-              llmStatusDetail={s.llmStatusDetail}
-              modelLabel={s.modelLabel}
-              connectTickMs={s.connectTickMs}
-              lastHeartbeatStep={s.lastHeartbeatStep}
-              heartbeatHistory={s.heartbeatHistory}
-              streamClosed={s.streamClosed}
-              fullTrace={s.fullTrace}
-              llmAuditSnapshot={s.llmAuditSnapshot}
-              latestNarrator={s.latestNarrator as { payload?: Record<string, unknown> } | undefined}
-              traceHits={s.traceHits}
-              traceFacts={s.traceFacts}
-              birthTimeISO={s.birthTimeISO}
-              natalGender={s.natalGender}
-              natalCalendar={s.natalCalendar}
-              selectedLuckYear={s.selectedLuckYear}
-              streamEndpoint={s.streamEndpoint}
-              streamBody={s.streamBody}
-              streamQuery={s.streamQuery}
-              physicsSnapshot={s.physicsSnapshot as { payload?: Record<string, unknown> } | undefined}
-            />
-
           </div>
         ) : null}
       </section>

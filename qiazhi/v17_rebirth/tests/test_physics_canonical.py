@@ -234,6 +234,19 @@ def test_physics_canonical_materializes_relation_dynamics_and_runtime_field_line
             "luck_pillar": "庚戌",
             "flow_pillar": "丙午",
             "energy_meta": {
+                "climate_field": {
+                    "state": "偏暖",
+                    "thermal_index": 0.42,
+                    "moisture_index": 0.18,
+                    "climate_tension": 0.26,
+                    "source_by_element": {
+                        "火": {"thermal": 1.2, "moisture": -0.8},
+                        "木": {"thermal": 0.4, "moisture": 0.5},
+                    },
+                },
+                "climate_modifier_layer": {
+                    "yongshen_priority_delta": {"食神": 0.12, "正印": -0.08},
+                },
                 "relation_dynamics_summary": [
                     {
                         "label": "子午六冲",
@@ -253,13 +266,128 @@ def test_physics_canonical_materializes_relation_dynamics_and_runtime_field_line
                     },
                 ]
             },
+            "meta": {
+                "climate_theme": {
+                    "contract": "v17.climate.theme.v1",
+                    "state": "偏暖",
+                    "favored_gods": ["食神", "正财"],
+                    "strained_gods": ["正印"],
+                    "pattern_survival": [{"label": "食伤财链", "bucket": "存续增强", "delta": 0.22}],
+                    "prompt_digest": "偏暖，食神/正财顺势，正印承压，食伤财链存续增强",
+                }
+            },
         }
     )
 
     joined = "\n".join(rows)
+    assert "调候合同" in joined
+    assert "调候摘要：偏暖" in joined
+    assert "调候修正层：食神+0.12" in joined
+    assert "调候专题合同" in joined
+    assert "调候专题摘要：偏暖" in joined
+    assert "食伤财链存续增强" in joined
     assert "关系动力学合同" in joined
     assert "子午六冲 激发58%" in joined
     assert "稳定-74%" in joined
     assert "寅午戌三合火局 组织化52%" in joined
     assert "运流解释合同" in joined
     assert "大运更像背景场" in joined
+
+
+def test_physics_canonical_materializes_blind_theme_lines() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+            "luck_pillar": "己亥",
+            "flow_pillar": "丙午",
+            "meta": {
+                "blind_theme": {
+                    "contract": "v17.blind.theme.v1",
+                    "primary_route": "食伤制杀",
+                    "body_mode": "disturbed_body",
+                    "use_candidates": ["食伤", "七杀"],
+                    "taboo_candidates": ["强印"],
+                    "house_roles": {"食伤": "outside", "七杀": "inside", "偏财": "inside"},
+                    "runtime_switches": ["己亥运中食伤生财抢权"],
+                    "prompt_digest": "主线食伤制杀；体态扰体未换体；家里七杀/偏财；家外食伤",
+                }
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "盲派专题合同" in joined
+    assert "不直接覆盖最终 authority" in joined
+    assert "盲派专题摘要" in joined
+    assert "主线食伤制杀" in joined
+    assert "家里七杀/偏财" in joined
+
+
+def test_physics_canonical_materializes_xiangfa_theme_lines() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+            "luck_pillar": "庚子",
+            "flow_pillar": "丙午",
+            "meta": {
+                "xiangfa_theme": {
+                    "contract": "v17.xiangfa.theme.v1",
+                    "authority_bridge_mode": "disabled",
+                    "semantic_mapping": ["体用主轴偏向「食神 / 正财」", "家外「食伤」牵动家内「七杀 / 偏财」"],
+                    "evidence": ["体用裁决来源：食神 / 正财 / 正印"],
+                    "narrative_hint": ["当前叙事不宜只讲吉凶，应同时描述收益和代价。"],
+                    "event_framing": ["主用与代价并存，适合叙述为“机会伴随成本”"],
+                    "prompt_digest": "体用主轴偏向「食神 / 正财」；主用与代价并存，适合叙述为“机会伴随成本”",
+                    "source_topics": ["authority", "blind", "climate"],
+                }
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "象法专题合同" in joined
+    assert "不修改能量、不写入 bias" in joined
+    assert "象法证据：体用裁决来源：食神 / 正财 / 正印" in joined
+    assert "象法专题摘要：" in joined
+    assert "来源 authority/blind/climate" in joined
+
+
+def test_physics_canonical_materializes_blind_bias_bridge_lines() -> None:
+    rows = PhysicsCanonicalService.materialize_prompt_lines(
+        {
+            "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+            "luck_pillar": "庚子",
+            "flow_pillar": "丙午",
+            "meta": {
+                "god_ring_authority": {
+                    "effect_scores": {
+                        "伤官": {
+                            "authority_profile": "高能躁动",
+                            "authority_energy": 1.06,
+                            "authority_stability": 0.24,
+                            "authority_volatility": 0.58,
+                            "authority_use_score": 0.76,
+                            "authority_taboo_score": 0.18,
+                        }
+                    },
+                    "blind_bias_protocol": {
+                        "contract": "v17.blind.bias.v1",
+                        "authority_bridge_mode": "bias_only",
+                        "primary_route": "食伤生财",
+                        "body_mode": "disturbed_body",
+                        "summary": {
+                            "use_total": 0.31,
+                            "taboo_total": 0.18,
+                            "switch_count": 1,
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    joined = "\n".join(rows)
+    assert "盲派桥接合同" in joined
+    assert "bias_only" in joined
+    assert "食伤生财" in joined
+    assert "推用0.31" in joined

@@ -13,8 +13,11 @@ from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_family import 
 )
 from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import (
     ZiPingBalancePlugin,
+    ZiPingClimateBridgePlugin,
     ZiPingGodRingResolverPlugin,
     ZiPingMonthCommandPlugin,
+    ZiPingPatternBridgePlugin,
+    ZiPingSummaryPlugin,
     ZiPingYongShenPlugin,
 )
 from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
@@ -126,6 +129,26 @@ def _tensor_for_ziping() -> Dict[str, Any]:
     }
 
 
+def _add_climate_to_ziping_tensor(tensor: Dict[str, Any]) -> Dict[str, Any]:
+    tensor["energy_meta"]["climate_field"] = {
+        "thermal_index": -0.82,
+        "moisture_index": 0.68,
+        "climate_tension": 0.44,
+        "state": "寒湿偏盛",
+        "source_by_scope": {
+            "month": {"thermal": -0.38, "moisture": 0.32},
+            "luck": {"thermal": -0.18, "moisture": 0.14},
+        },
+    }
+    tensor["energy_meta"]["climate_modifier_layer"] = {
+        "ten_god_efficiency": {"正官": -0.18, "伤官": 0.22},
+        "ten_god_stability": {"正官": -0.12, "伤官": 0.16},
+        "yongshen_priority_delta": {"正官": -0.2, "伤官": 0.24},
+        "pattern_survival_delta": {"食伤财": 0.18, "印官": -0.12},
+    }
+    return tensor
+
+
 def _assert_interaction_protocol(fact: Any) -> None:
     meta = fact.meta
     assert isinstance(meta, dict)
@@ -150,15 +173,24 @@ def test_blind_school_family_reports_interaction_protocol() -> None:
         assert len(facts) >= 1, f"{plugin.plugin_id} should emit facts when interaction exists"
         for fact in facts:
             _assert_interaction_protocol(fact)
+            blind_theme = fact.meta.get("blind_theme")
+            assert isinstance(blind_theme, dict)
+            assert blind_theme["contract"] == "v17.blind.theme.v1"
+            assert blind_theme["primary_route"]
+            assert blind_theme["body_mode"]
+            assert isinstance(blind_theme.get("house_roles"), dict)
 
 
 def test_ziping_family_reports_interaction_protocol() -> None:
-    tensor = _tensor_for_ziping()
+    tensor = _add_climate_to_ziping_tensor(_tensor_for_ziping())
     plugins: List[Type[V17PluginSpec]] = [
         ZiPingMonthCommandPlugin,
         ZiPingBalancePlugin,
         ZiPingYongShenPlugin,
+        ZiPingClimateBridgePlugin,
+        ZiPingPatternBridgePlugin,
         ZiPingGodRingResolverPlugin,
+        ZiPingSummaryPlugin,
     ]
     for plugin_cls in plugins:
         plugin = plugin_cls()
@@ -179,6 +211,28 @@ def test_ziping_god_ring_resolver_emits_authority_meta() -> None:
     assert "正官" in authority["use_gods"]
     assert "伤官" in authority["taboo_gods"]
     assert isinstance(authority["tongguan_gods"], list)
+
+
+def test_ziping_god_ring_resolver_applies_climate_modifier_to_authority_scores() -> None:
+    tensor = _tensor_for_ziping()
+    tensor["energy_meta"]["climate_modifier_layer"] = {
+        "contract": "v17.climate_modifier_layer.v1",
+        "ten_god_efficiency": {"正官": -0.18, "伤官": 0.22},
+        "ten_god_stability": {"正官": -0.12, "伤官": 0.16},
+        "yongshen_priority_delta": {"正官": -0.20, "伤官": 0.24},
+        "pattern_survival_delta": {"食伤财": 0.18, "印官": -0.12},
+    }
+
+    facts = ZiPingGodRingResolverPlugin().collect_v17_facts(tensor)
+    assert facts
+    authority = facts[0].meta.get("god_ring_authority")
+    assert isinstance(authority, dict)
+    effect_scores = authority.get("effect_scores")
+    assert isinstance(effect_scores, dict)
+    assert effect_scores["伤官"]["authority_climate_fit"] > effect_scores["正官"]["authority_climate_fit"]
+    assert effect_scores["伤官"]["climate_priority_delta"] > 0.0
+    assert effect_scores["正官"]["climate_priority_delta"] < 0.0
+    assert authority["core_use_candidates"][0]["god"] == "伤官"
 
 
 def test_ziping_god_ring_resolver_consumes_judgement_bias_from_decision_rows() -> None:
@@ -215,6 +269,69 @@ def test_ziping_god_ring_resolver_consumes_judgement_bias_from_decision_rows() -
     assert authority["judgement_bias_entries"][0]["reason"] == "伤官见官"
     assert "伤官" in authority["use_gods"]
     assert "正官" in authority["taboo_gods"]
+
+
+def test_ziping_god_ring_resolver_consumes_blind_theme_as_parallel_soft_bias() -> None:
+    tensor = _tensor_for_ziping()
+    tensor["meta"] = {
+        "blind_theme": {
+            "contract": "v17.blind.theme.v1",
+            "primary_route": "食伤生财",
+            "body_mode": "disturbed_body",
+            "confidence": 0.84,
+            "use_candidates": ["食伤", "正财"],
+            "taboo_candidates": ["强印", "正官"],
+            "house_roles": {"食伤": "outside", "正财": "inside", "偏财": "inside", "偏印": "bridge"},
+            "runtime_switches": ["己亥运中食伤生财抢权"],
+            "authority_bridge_mode": "bias_only",
+        }
+    }
+    facts = ZiPingGodRingResolverPlugin().collect_v17_facts(tensor)
+    assert facts
+    authority = facts[0].meta.get("god_ring_authority")
+    assert isinstance(authority, dict)
+    assert authority["blind_theme"]["primary_route"] == "食伤生财"
+    assert authority["blind_bias_protocol"]["contract"] == "v17.blind.bias.v1"
+    assert authority["blind_bias"]["use_bias"]["食神"] > 0.0
+    assert authority["blind_bias"]["use_bias"]["伤官"] > 0.0
+    assert authority["blind_bias"]["taboo_bias"]["正官"] > 0.0
+    assert authority["blind_bias_protocol"]["authority_bridge_mode"] == "bias_only"
+    assert authority["authority_layer_protocol"]["contract"] == "v17.authority.layer_protocol.v1"
+    assert authority["authority_layer_protocol"]["override_forbidden"] is True
+    assert "blind_theme" in authority["authority_layer_protocol"]["soft_bias_source"]
+    assert authority["use_gods"]
+
+
+def test_ziping_climate_and_pattern_bridges_emit_ziping_umbrella_views() -> None:
+    tensor = _add_climate_to_ziping_tensor(_tensor_for_ziping())
+
+    climate_facts = ZiPingClimateBridgePlugin().collect_v17_facts(tensor)
+    assert climate_facts
+    climate_meta = climate_facts[0].meta
+    assert climate_meta["ziping_axis"] == "climate"
+    assert climate_meta["climate_state"] == "寒湿偏盛"
+    assert climate_meta["claim_type"] == "pattern_observation"
+
+    pattern_facts = ZiPingPatternBridgePlugin().collect_v17_facts(tensor)
+    assert pattern_facts
+    pattern_meta = pattern_facts[0].meta
+    assert pattern_meta["ziping_axis"] == "pattern"
+    assert pattern_meta["pattern_candidate_count"] >= 1
+    assert pattern_meta["leading_pattern_candidate"]
+
+
+def test_ziping_summary_collects_umbrella_state() -> None:
+    tensor = _add_climate_to_ziping_tensor(_tensor_for_ziping())
+    facts = ZiPingSummaryPlugin().collect_v17_facts(tensor)
+    assert facts
+    meta = facts[0].meta
+    summary = meta.get("ziping_summary")
+    assert isinstance(summary, dict)
+    assert summary["month_command_god"] == "伤官"
+    assert summary["balance_state"] in {"偏枯偏势", "偏旺有主轴", "相对均衡"}
+    assert summary["climate_state"] == "寒湿偏盛"
+    assert meta["ziping_axis"] == "summary"
+    assert isinstance(meta.get("god_ring_authority"), dict)
 
 
 def test_ziping_god_ring_resolver_exposes_stage_bias_and_applies_to_effect_scores() -> None:
@@ -285,6 +402,24 @@ def test_pattern_axis_plugin_match_ratio_uses_plugin_config(monkeypatch: Any) ->
     facts = PatternAxisPlugin().collect_v17_facts(_tensor_for_pattern())
     assert facts
     assert facts[0].meta["match_ratio"] == pytest.approx(0.106, abs=1e-3)
+
+
+def test_pattern_plugin_applies_climate_pattern_survival_delta() -> None:
+    tensor = _tensor_for_pattern()
+    tensor["energy_meta"] = {
+        "climate_modifier_layer": {
+            "contract": "v17.climate_modifier_layer.v1",
+            "pattern_survival_delta": {"食伤财": 0.20, "印官": -0.10},
+        }
+    }
+
+    facts = ShiShenShengCaiPatternPlugin().collect_v17_facts(tensor)
+    assert facts
+    meta = facts[0].meta
+    assert meta["pattern_candidate"] == "食神生财"
+    assert meta["climate_pattern_survival_bucket"] == "食伤财"
+    assert meta["climate_pattern_survival_delta"] == pytest.approx(0.2, abs=1e-6)
+    assert meta["match_ratio"] > meta["match_ratio_raw"]
 
 
 def test_pattern_resolver_and_finance_configs_adjust_thresholds(monkeypatch: Any) -> None:

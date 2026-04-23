@@ -82,14 +82,35 @@ def test_master_branch_cluster_reports_parallel_relation_summaries() -> None:
 
     sanhe_row = relation_row(run, "sanhe")
     banhe_row = relation_row(run, "banhe_muwang")
-    sanhui_row = relation_row(run, "sanhui")
 
     assert isinstance(sanhe_row, dict)
     assert isinstance(banhe_row, dict)
-    assert isinstance(sanhui_row, dict)
 
     assert "午中神+30%" in list(sanhe_row.get("duplicate_notes") or [])
     assert float(sanhe_row.get("formation_percent") or 0.0) > float(banhe_row.get("formation_percent") or 0.0)
     assert "七杀100%" in " ".join(str(item) for item in (banhe_row.get("projection_preview") or []))
-    assert str(sanhui_row.get("status") or "") in {"候选未全", "受扰成局", "成局"}
+    assert relation_row(run, "sanhui") is None
     assert "基准x" in str(sanhe_row.get("summary") or "")
+
+
+def test_incomplete_sanhui_does_not_emit_false_positive_summary() -> None:
+    run = run_case(
+        type(MASTER_BRANCH_CLUSTER)(
+            case_id="review.no_false_sanhui",
+            layer="MASTER",
+            description="巳巳丑酉 + 子 + 午 不得误判为巳午未三会火局。",
+            four_pillars={"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+            luck_pillar="庚子",
+            flow_pillar="丙午",
+            tags=("review", "sanhui", "false_positive"),
+            expected_relation_families=("sanhe",),
+        ),
+    )
+
+    assert relation_row(run, "sanhe") is not None
+    assert relation_row(run, "sanhui") is None
+    assert not any(
+        str(row.get("family_key") or "") == "sanhui"
+        for row in (run.meta.get("relation_dynamics_summary") or [])
+        if isinstance(row, dict)
+    )

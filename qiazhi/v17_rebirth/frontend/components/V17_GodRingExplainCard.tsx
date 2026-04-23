@@ -164,11 +164,28 @@ export function V17_GodRingExplainCard({
   const judgementBias = asRecord(row.judgement_bias);
   const judgementProtocol = asRecord(row.judgement_bias_protocol);
   const judgementSummary = asRecord(judgementProtocol.summary);
+  const blindTheme = asRecord(row.blind_theme);
+  const blindBias = asRecord(row.blind_bias);
+  const blindProtocol = asRecord(row.blind_bias_protocol);
+  const blindSummary = asRecord(blindProtocol.summary);
   const stageBias = stageBiasRows(row.stage_bias);
   const stageProtocol = asRecord(row.stage_bias_protocol);
   const stageSummary = asRecord(stageProtocol.summary);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
+  const blindUseBias = biasPairs(blindBias.use_bias).slice(0, 6);
+  const blindTabooBias = biasPairs(blindBias.taboo_bias).slice(0, 6);
+  const blindHouseRoles = asRecord(blindTheme.house_roles);
+  const blindInside = Object.entries(blindHouseRoles)
+    .filter(([, role]) => asString(role).trim() === "inside")
+    .map(([god]) => god);
+  const blindOutside = Object.entries(blindHouseRoles)
+    .filter(([, role]) => asString(role).trim() === "outside")
+    .map(([god]) => god);
+  const blindBridge = Object.entries(blindHouseRoles)
+    .filter(([, role]) => asString(role).trim() === "bridge")
+    .map(([god]) => god);
+  const blindSwitches = asStringArray(blindProtocol.runtime_switches || blindTheme.runtime_switches).slice(0, 3);
   const judgementBiasEntries = Array.isArray(row.judgement_bias_entries)
     ? (row.judgement_bias_entries as LooseRecord[])
         .map((item) => {
@@ -355,6 +372,96 @@ export function V17_GodRingExplainCard({
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {Object.keys(blindTheme).length || blindUseBias.length || blindTabooBias.length ? (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-semibold text-zinc-300">盲派专题并行桥接</div>
+                    <div className="text-[10px] text-zinc-500">
+                      {asString(blindProtocol.contract).trim() || "v17.blind.bias.v1"} · {asString(blindProtocol.authority_bridge_mode).trim() || "bias_only"}
+                    </div>
+                  </div>
+                  <div className="mb-2 text-[10px] leading-5 text-zinc-500">
+                    盲派作为独立专题并行输出体态、家里家外与换挡信息，只做 soft bias，不覆盖子平 authority。
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[10px]">
+                    {asString(blindTheme.primary_route).trim() ? (
+                      <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-950/20 px-3 py-1 text-fuchsia-200">
+                        主线 {asString(blindTheme.primary_route).trim()}
+                      </span>
+                    ) : null}
+                    {asString(blindTheme.body_mode).trim() ? (
+                      <span className="rounded-full border border-cyan-500/30 bg-cyan-950/20 px-3 py-1 text-cyan-200">
+                        体态 {asString(blindTheme.body_mode).trim()}
+                      </span>
+                    ) : null}
+                    {asNumber(blindSummary.use_total) > 0 ? (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-950/20 px-3 py-1 text-emerald-200">
+                        推用 +{asNumber(blindSummary.use_total).toFixed(2)}
+                      </span>
+                    ) : null}
+                    {asNumber(blindSummary.taboo_total) > 0 ? (
+                      <span className="rounded-full border border-rose-500/30 bg-rose-950/20 px-3 py-1 text-rose-200">
+                        推忌 +{asNumber(blindSummary.taboo_total).toFixed(2)}
+                      </span>
+                    ) : null}
+                  </div>
+                  {(blindInside.length || blindOutside.length || blindBridge.length) ? (
+                    <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+                      {blindInside.length ? (
+                        <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                          家里 {blindInside.join("/")}
+                        </span>
+                      ) : null}
+                      {blindOutside.length ? (
+                        <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                          家外 {blindOutside.join("/")}
+                        </span>
+                      ) : null}
+                      {blindBridge.length ? (
+                        <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                          桥位 {blindBridge.join("/")}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {blindSwitches.length ? (
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-300">
+                      换挡：{blindSwitches.join("；")}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">盲派推用</div>
+                      <div className="flex flex-wrap gap-2">
+                        {blindUseBias.length ? (
+                          blindUseBias.map(([god, score]) => (
+                            <span key={`blind_use_${god}`} className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
+                              {god} +{score.toFixed(2)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-zinc-500">当前未形成显著推用。</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">盲派推忌</div>
+                      <div className="flex flex-wrap gap-2">
+                        {blindTabooBias.length ? (
+                          blindTabooBias.map(([god, score]) => (
+                            <span key={`blind_taboo_${god}`} className="rounded-full border border-rose-500/20 bg-rose-950/20 px-3 py-1 text-[10px] text-rose-200">
+                              {god} +{score.toFixed(2)}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-zinc-500">当前未形成显著推忌。</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : null}

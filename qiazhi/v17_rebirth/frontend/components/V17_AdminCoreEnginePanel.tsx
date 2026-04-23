@@ -8,6 +8,10 @@ type Props = {
   pluginCount: number;
   hasAuthoritySource: boolean;
   authority?: LooseRecord;
+  climateField?: LooseRecord;
+  climateModifierLayer?: LooseRecord;
+  climateTheme?: LooseRecord;
+  xiangfaTheme?: LooseRecord;
   projectionBridgeProtocol?: LooseRecord;
   relationFormationSummary?: LooseRecord[];
   relationDynamicsSummary?: LooseRecord[];
@@ -162,6 +166,75 @@ function relationDynamicsRows(value: unknown) {
         Math.abs(right.stabilityDeltaRatio) + right.energyEffectRatio - (Math.abs(left.stabilityDeltaRatio) + left.energyEffectRatio),
     )
     .slice(0, 8);
+}
+
+function signed(value: number): string {
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+function climateGodRows(value: unknown) {
+  return Object.entries(asRecord(value))
+    .map(([god, raw]) => ({ god: String(god || "").trim(), delta: asNumber(raw) }))
+    .filter((row) => row.god && Math.abs(row.delta) > 0.001)
+    .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta))
+    .slice(0, 6);
+}
+
+function climatePatternRows(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        const row = asRecord(item);
+        return {
+          label: String(row.label || row.key || "").trim(),
+          delta: asNumber(row.delta),
+          bucket: String(row.bucket || "").trim(),
+        };
+      })
+      .filter((row) => row.label)
+      .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta))
+      .slice(0, 4);
+  }
+  return Object.entries(asRecord(value))
+    .map(([label, raw]) => ({ label: String(label || "").trim(), delta: asNumber(raw), bucket: "" }))
+    .filter((row) => row.label && Math.abs(row.delta) > 0.001)
+    .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta))
+    .slice(0, 4);
+}
+
+function climateSourceRows(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        const row = asRecord(item);
+        const thermal = asNumber(row.thermal);
+        const moisture = asNumber(row.moisture);
+        return {
+          scopeLabel: String(row.scope_label || row.scope || "").trim(),
+          thermal,
+          moisture,
+          dominance: asNumber(row.dominance, Math.abs(thermal) + Math.abs(moisture)),
+        };
+      })
+      .filter((row) => row.scopeLabel)
+      .sort((left, right) => right.dominance - left.dominance)
+      .slice(0, 4);
+  }
+  return Object.entries(asRecord(value))
+    .map(([scope, raw]) => {
+      const row = asRecord(raw);
+      const thermal = asNumber(row.thermal);
+      const moisture = asNumber(row.moisture);
+      return {
+        scopeLabel: pillarLabel(String(scope || "").trim()),
+        thermal,
+        moisture,
+        dominance: Math.abs(thermal) + Math.abs(moisture),
+      };
+    })
+    .filter((row) => row.scopeLabel)
+    .sort((left, right) => right.dominance - left.dominance)
+    .slice(0, 4);
 }
 
 function relationDynamicsTone(axis: string, stabilityDeltaRatio: number): string {
@@ -451,12 +524,20 @@ export function V17_AdminCoreEnginePanel({
   pluginCount,
   hasAuthoritySource,
   authority,
+  climateField,
+  climateModifierLayer,
+  climateTheme,
+  xiangfaTheme,
   projectionBridgeProtocol,
   relationFormationSummary,
   relationDynamicsSummary,
   tenGodDecomposition,
 }: Props) {
   const authorityRow = asRecord(authority);
+  const climateFieldRow = asRecord(climateField);
+  const climateModifierRow = asRecord(climateModifierLayer);
+  const climateThemeRow = asRecord(climateTheme);
+  const xiangfaThemeRow = asRecord(xiangfaTheme);
   const bridgeProtocol = asRecord(projectionBridgeProtocol);
   const [selectedNodeChainIndex, setSelectedNodeChainIndex] = useState(0);
   const graphMeta = asRecord(authorityRow.core_graph_meta);
@@ -490,13 +571,42 @@ export function V17_AdminCoreEnginePanel({
   const judgementBias = asRecord(authorityRow.judgement_bias);
   const judgementProtocol = asRecord(authorityRow.judgement_bias_protocol);
   const judgementSummary = asRecord(judgementProtocol.summary);
+  const blindTheme = asRecord(authorityRow.blind_theme);
+  const blindBias = asRecord(authorityRow.blind_bias);
+  const blindProtocol = asRecord(authorityRow.blind_bias_protocol);
+  const blindSummary = asRecord(blindProtocol.summary);
   const stageBias = stageBiasRows(authorityRow.stage_bias);
   const stageProtocol = asRecord(authorityRow.stage_bias_protocol);
   const stageSummary = asRecord(stageProtocol.summary);
   const relationRows = relationFormationRows(relationFormationSummary);
   const relationDynamicRows = relationDynamicsRows(relationDynamicsSummary);
+  const climateFavored = asStringArray(climateThemeRow.favored_gods);
+  const climateStrained = asStringArray(climateThemeRow.strained_gods);
+  const climateFocus = climateSourceRows(climateThemeRow.source_focus || climateFieldRow.source_by_scope);
+  const climatePattern = climatePatternRows(climateThemeRow.pattern_survival || climateModifierRow.pattern_survival_delta);
+  const climateEfficiency = climateGodRows(climateModifierRow.ten_god_efficiency);
+  const climateStability = climateGodRows(climateModifierRow.ten_god_stability);
+  const climatePriority = climateGodRows(climateModifierRow.yongshen_priority_delta);
+  const xiangfaSemantic = asStringArray(xiangfaThemeRow.semantic_mapping);
+  const xiangfaEvidence = asStringArray(xiangfaThemeRow.evidence);
+  const xiangfaHints = asStringArray(xiangfaThemeRow.narrative_hint);
+  const xiangfaFraming = asStringArray(xiangfaThemeRow.event_framing);
+  const xiangfaTopics = asStringArray(xiangfaThemeRow.source_topics);
   const judgementUseBias = biasPairs(judgementBias.use_bias).slice(0, 6);
   const judgementTabooBias = biasPairs(judgementBias.taboo_bias).slice(0, 6);
+  const blindUseBias = biasPairs(blindBias.use_bias).slice(0, 6);
+  const blindTabooBias = biasPairs(blindBias.taboo_bias).slice(0, 6);
+  const blindHouseRoles = asRecord(blindTheme.house_roles);
+  const blindInside = Object.entries(blindHouseRoles)
+    .filter(([, role]) => String(role || "").trim() === "inside")
+    .map(([god]) => god);
+  const blindOutside = Object.entries(blindHouseRoles)
+    .filter(([, role]) => String(role || "").trim() === "outside")
+    .map(([god]) => god);
+  const blindBridge = Object.entries(blindHouseRoles)
+    .filter(([, role]) => String(role || "").trim() === "bridge")
+    .map(([god]) => god);
+  const blindSwitches = asStringArray(blindProtocol.runtime_switches || blindTheme.runtime_switches).slice(0, 3);
   const judgementBiasEntries = Array.isArray(authorityRow.judgement_bias_entries)
     ? (authorityRow.judgement_bias_entries as LooseRecord[])
         .map((item) => {
@@ -781,6 +891,219 @@ export function V17_AdminCoreEnginePanel({
               </p>
             </div>
 
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 lg:col-span-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">Climate Theme</div>
+                <div className="text-[10px] text-zinc-500">调候场 / 主题解释 / 存续修正</div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-3 py-1 text-emerald-200">
+                  状态 {String(climateThemeRow.state || climateFieldRow.state || "未定")}
+                </span>
+                <span className="rounded-full border border-amber-500/25 bg-amber-950/20 px-3 py-1 text-amber-200">
+                  寒热 {signed(asNumber(climateThemeRow.thermal_index ?? climateFieldRow.thermal_index))}
+                </span>
+                <span className="rounded-full border border-cyan-500/25 bg-cyan-950/20 px-3 py-1 text-cyan-200">
+                  燥湿 {signed(asNumber(climateThemeRow.moisture_index ?? climateFieldRow.moisture_index))}
+                </span>
+                <span className="rounded-full border border-rose-500/25 bg-rose-950/20 px-3 py-1 text-rose-200">
+                  张力 {asNumber(climateThemeRow.climate_tension ?? climateFieldRow.climate_tension).toFixed(2)}
+                </span>
+              </div>
+              {String(climateThemeRow.prompt_digest || "").trim() ? (
+                <p className="mt-2 text-[10px] leading-5 text-zinc-400">{String(climateThemeRow.prompt_digest || "").trim()}</p>
+              ) : null}
+              <div className="mt-3 grid gap-4 xl:grid-cols-[0.92fr,1.08fr]">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Favored / Strained</div>
+                    <div className="flex flex-wrap gap-2">
+                      {climateFavored.slice(0, 3).map((god) => (
+                        <span key={`adm_climate_favored_${god}`} className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-2 py-1 text-[10px] text-emerald-200">
+                          顺势 {god}
+                        </span>
+                      ))}
+                      {climateStrained.slice(0, 3).map((god) => (
+                        <span key={`adm_climate_strained_${god}`} className="rounded-full border border-rose-500/25 bg-rose-950/20 px-2 py-1 text-[10px] text-rose-200">
+                          承压 {god}
+                        </span>
+                      ))}
+                      {!climateFavored.length && !climateStrained.length ? (
+                        <span className="text-[10px] text-zinc-500">当前未形成显著十神调候偏向。</span>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 grid gap-2 text-[10px] text-zinc-400">
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                        <div className="mb-1 text-zinc-500">Efficiency</div>
+                        {climateEfficiency.length ? climateEfficiency.slice(0, 3).map((row) => (
+                          <div key={`adm_eff_${row.god}`} className="flex items-center justify-between">
+                            <span>{row.god}</span>
+                            <span className="font-mono text-cyan-200">{signed(row.delta)}</span>
+                          </div>
+                        )) : <div className="text-zinc-500">暂无修正</div>}
+                      </div>
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                        <div className="mb-1 text-zinc-500">Stability / Priority</div>
+                        {climateStability.length || climatePriority.length ? (
+                          <div className="space-y-1">
+                            {climateStability.slice(0, 2).map((row) => (
+                              <div key={`adm_stab_${row.god}`} className="flex items-center justify-between">
+                                <span>{row.god} 稳定</span>
+                                <span className="font-mono text-amber-200">{signed(row.delta)}</span>
+                              </div>
+                            ))}
+                            {climatePriority.slice(0, 2).map((row) => (
+                              <div key={`adm_pri_${row.god}`} className="flex items-center justify-between">
+                                <span>{row.god} 优先级</span>
+                                <span className="font-mono text-emerald-200">{signed(row.delta)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-zinc-500">暂无修正</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Source Focus</div>
+                    <div className="grid gap-2 text-[10px] text-zinc-400">
+                      {climateFocus.length ? climateFocus.map((row) => (
+                        <div key={`adm_climate_scope_${row.scopeLabel}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-zinc-100">{row.scopeLabel}</span>
+                            <span className="font-mono text-zinc-500">{row.dominance.toFixed(2)}</span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            <span className="font-mono text-cyan-200">热 {signed(row.thermal)}</span>
+                            <span className="font-mono text-emerald-200">湿 {signed(row.moisture)}</span>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/40 px-3 py-4 text-center text-zinc-500">
+                          当前尚未产出调候来源焦点。
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                  <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Pattern Survival</div>
+                  <div className="grid gap-2 text-[10px] text-zinc-400">
+                    {climatePattern.length ? climatePattern.map((row) => (
+                      <div key={`adm_climate_pattern_${row.label}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-zinc-100">{row.label}</span>
+                          <span className="font-mono text-amber-200">{signed(row.delta)}</span>
+                        </div>
+                        <div className="mt-1 text-zinc-500">{row.bucket || "存续观察"}</div>
+                      </div>
+                    )) : (
+                      <div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/40 px-3 py-4 text-center text-zinc-500">
+                        当前尚未产出显著的格局存续修正。
+                      </div>
+                    )}
+                  </div>
+                  {asStringArray(climateThemeRow.narrative_focus).length ? (
+                    <div className="mt-3 rounded-lg border border-emerald-500/15 bg-emerald-950/10 px-3 py-2 text-[10px] leading-5 text-zinc-300">
+                      {asStringArray(climateThemeRow.narrative_focus).slice(0, 4).join(" · ")}
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-[10px] leading-5 text-zinc-500">
+                    调候专题现在只解释 climate field 的下游影响，不直接回写 L0 base totals；真正进入裁决的是 modifier layer。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 lg:col-span-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">Xiangfa Theme</div>
+                <div className="text-[10px] text-zinc-500">语义映射 / 证据串 / 事件框架</div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                <span className="rounded-full border border-fuchsia-500/25 bg-fuchsia-950/20 px-3 py-1 text-fuchsia-200">
+                  semantic-only
+                </span>
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                  不入 bias
+                </span>
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
+                  不改能量
+                </span>
+              </div>
+              {String(xiangfaThemeRow.prompt_digest || "").trim() ? (
+                <p className="mt-2 text-[10px] leading-5 text-zinc-400">{String(xiangfaThemeRow.prompt_digest || "").trim()}</p>
+              ) : null}
+              <div className="mt-3 grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Semantic / Framing</div>
+                    <div className="space-y-2 text-[10px] leading-5 text-zinc-400">
+                      {xiangfaSemantic.length ? (
+                        <div>
+                          <div className="mb-1 text-zinc-500">Semantic</div>
+                          {xiangfaSemantic.slice(0, 3).map((row) => (
+                            <div key={`adm_xiangfa_sem_${row}`} className="text-zinc-200">{row}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {xiangfaFraming.length ? (
+                        <div>
+                          <div className="mb-1 text-zinc-500">Framing</div>
+                          {xiangfaFraming.slice(0, 3).map((row) => (
+                            <div key={`adm_xiangfa_frame_${row}`} className="text-zinc-200">{row}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {!xiangfaSemantic.length && !xiangfaFraming.length ? (
+                        <div className="text-zinc-500">当前尚未产出稳定的象法映射。</div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Evidence / Hint</div>
+                    <div className="space-y-2 text-[10px] leading-5 text-zinc-400">
+                      {xiangfaEvidence.length ? (
+                        <div>
+                          <div className="mb-1 text-zinc-500">Evidence</div>
+                          {xiangfaEvidence.slice(0, 3).map((row) => (
+                            <div key={`adm_xiangfa_evi_${row}`} className="text-zinc-200">{row}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {xiangfaHints.length ? (
+                        <div>
+                          <div className="mb-1 text-zinc-500">Hint</div>
+                          {xiangfaHints.slice(0, 2).map((row) => (
+                            <div key={`adm_xiangfa_hint_${row}`} className="text-zinc-200">{row}</div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {!xiangfaEvidence.length && !xiangfaHints.length ? (
+                        <div className="text-zinc-500">当前尚未产出稳定的象法证据串。</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-3">
+                  <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500">Source Topics</div>
+                  <div className="flex flex-wrap gap-2">
+                    {xiangfaTopics.length ? xiangfaTopics.slice(0, 6).map((topic) => (
+                      <span key={`adm_xiangfa_topic_${topic}`} className="rounded-full border border-fuchsia-500/20 bg-fuchsia-950/20 px-2 py-1 text-[10px] text-fuchsia-200">
+                        {topic}
+                      </span>
+                    )) : (
+                      <span className="text-[10px] text-zinc-500">当前尚未形成象法来源链。</span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-[10px] leading-5 text-zinc-500">
+                    象法专题目前只消费 authority、blind、climate、relation 的现成结果，输出语义映射与事件框架，不进入 bias，不覆盖主裁决。
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="text-[11px] font-semibold text-zinc-300">Projection Bridge Protocol</div>
@@ -1003,6 +1326,96 @@ export function V17_AdminCoreEnginePanel({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          ) : null}
+
+          {Object.keys(blindTheme).length || blindUseBias.length || blindTabooBias.length ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-zinc-300">盲派专题桥接</div>
+                <div className="text-[10px] text-zinc-500">
+                  {String(blindProtocol.contract || "v17.blind.bias.v1").trim()} · {String(blindProtocol.authority_bridge_mode || "bias_only").trim()}
+                </div>
+              </div>
+              <div className="mb-2 text-[10px] leading-5 text-zinc-500">
+                盲派作为并行专题，把主线、家里家外与运行换挡折算成 soft bias，供 authority 参考，不直接改写物理结算。
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px]">
+                {String(blindTheme.primary_route || "").trim() ? (
+                  <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-950/20 px-3 py-1 text-fuchsia-200">
+                    主线 {String(blindTheme.primary_route || "").trim()}
+                  </span>
+                ) : null}
+                {String(blindTheme.body_mode || "").trim() ? (
+                  <span className="rounded-full border border-cyan-500/30 bg-cyan-950/20 px-3 py-1 text-cyan-200">
+                    体态 {String(blindTheme.body_mode || "").trim()}
+                  </span>
+                ) : null}
+                {asNumber(blindSummary.use_total) > 0 ? (
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-950/20 px-3 py-1 text-emerald-200">
+                    推用 +{asNumber(blindSummary.use_total).toFixed(2)}
+                  </span>
+                ) : null}
+                {asNumber(blindSummary.taboo_total) > 0 ? (
+                  <span className="rounded-full border border-rose-500/30 bg-rose-950/20 px-3 py-1 text-rose-200">
+                    推忌 +{asNumber(blindSummary.taboo_total).toFixed(2)}
+                  </span>
+                ) : null}
+              </div>
+              {(blindInside.length || blindOutside.length || blindBridge.length) ? (
+                <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+                  {blindInside.length ? (
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                      家里 {blindInside.join("/")}
+                    </span>
+                  ) : null}
+                  {blindOutside.length ? (
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                      家外 {blindOutside.join("/")}
+                    </span>
+                  ) : null}
+                  {blindBridge.length ? (
+                    <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
+                      桥位 {blindBridge.join("/")}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              {blindSwitches.length ? (
+                <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-300">
+                  换挡：{blindSwitches.join("；")}
+                </div>
+              ) : null}
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+                  <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">盲派推用</div>
+                  <div className="flex flex-wrap gap-2">
+                    {blindUseBias.length ? (
+                      blindUseBias.map(([god, score]) => (
+                        <span key={`blind_use_${god}`} className="rounded-full border border-emerald-500/30 bg-emerald-950/25 px-3 py-1 text-[10px] text-emerald-200">
+                          {god} +{score.toFixed(2)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-zinc-500">暂无显著推用。</span>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
+                  <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">盲派推忌</div>
+                  <div className="flex flex-wrap gap-2">
+                    {blindTabooBias.length ? (
+                      blindTabooBias.map(([god, score]) => (
+                        <span key={`blind_taboo_${god}`} className="rounded-full border border-rose-500/30 bg-rose-950/25 px-3 py-1 text-[10px] text-rose-200">
+                          {god} +{score.toFixed(2)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-zinc-500">暂无显著推忌。</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}

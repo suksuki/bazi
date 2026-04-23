@@ -431,34 +431,133 @@ def _pattern_candidates(physics_tensor: Dict[str, Any]) -> List[Tuple[str, str, 
 
     month_god = _month_main_god(physics_tensor)
     if month_god in {"比肩", "劫财"}:
-        candidates.append(("建禄/月劫", month_god, float(scores.get(month_god, 0.0))))
+        candidates.append(
+            (
+                "建禄/月劫",
+                month_god,
+                _apply_pattern_candidate_score(
+                    float(scores.get(month_god, 0.0)),
+                    physics_tensor=physics_tensor,
+                    pattern_name="建禄" if month_god == "比肩" else "月劫",
+                    target_god=month_god,
+                ),
+            )
+        )
 
     if len(top) >= 2:
         top2_score = float(top[1][1])
         ratio = float(top_score) / max(top2_score, 1.0)
         if ratio >= follower_ratio_threshold and float(top_score) >= follower_score_threshold:
-            candidates.append(("从势候选", top_name, round(ratio, 3)))
+            candidates.append(
+                (
+                    "从势候选",
+                    top_name,
+                    _apply_pattern_candidate_score(
+                        round(ratio, 3),
+                        physics_tensor=physics_tensor,
+                        pattern_name="从势候选",
+                        target_god=top_name,
+                    ),
+                )
+            )
 
     officer = float(scores.get("正官", 0.0) + scores.get("七杀", 0.0))
     wealth = float(scores.get("正财", 0.0) + scores.get("偏财", 0.0))
     if officer >= officer_wealth_threshold and wealth >= officer_wealth_threshold:
-        candidates.append(("财官协同", "财官", min(officer, wealth)))
+        candidates.append(
+            (
+                "财官协同",
+                "财官",
+                _apply_pattern_candidate_score(
+                    min(officer, wealth),
+                    physics_tensor=physics_tensor,
+                    pattern_name="财官协同",
+                    target_god="正官",
+                ),
+            )
+        )
 
     guan = float(scores.get("正官", 0.0))
     sha = float(scores.get("七杀", 0.0))
     seal = _score_sum(scores, "正印", "偏印")
     if guan >= _pattern_cfg("classical.pattern.guanyin.v1", "GUANYIN_MIN_GUAN", 16.0) and seal >= _pattern_cfg("classical.pattern.guanyin.v1", "GUANYIN_MIN_SEAL", 16.0):
-        candidates.append(("官印相生", "正官", min(guan, seal)))
+        candidates.append(
+            (
+                "官印相生",
+                "正官",
+                _apply_pattern_candidate_score(
+                    min(guan, seal),
+                    physics_tensor=physics_tensor,
+                    pattern_name="官印相生",
+                    target_god="正官",
+                ),
+            )
+        )
     if sha >= _pattern_cfg("classical.pattern.shayin.v1", "SHAYIN_MIN_SHA", 16.0) and seal >= _pattern_cfg("classical.pattern.shayin.v1", "SHAYIN_MIN_SEAL", 15.0):
-        candidates.append(("杀印相生", "七杀", min(sha, seal)))
+        candidates.append(
+            (
+                "杀印相生",
+                "七杀",
+                _apply_pattern_candidate_score(
+                    min(sha, seal),
+                    physics_tensor=physics_tensor,
+                    pattern_name="杀印相生",
+                    target_god="七杀",
+                ),
+            )
+        )
     if sha >= _pattern_cfg("classical.pattern.shishen_zhisha.v1", "SHISHEN_ZHISHA_MIN_SHA", 16.0) and float(scores.get("食神", 0.0)) >= _pattern_cfg("classical.pattern.shishen_zhisha.v1", "SHISHEN_ZHISHA_MIN_SHISHEN", 16.0):
-        candidates.append(("食神制杀", "七杀", min(sha, float(scores.get("食神", 0.0)))))
+        candidates.append(
+            (
+                "食神制杀",
+                "七杀",
+                _apply_pattern_candidate_score(
+                    min(sha, float(scores.get("食神", 0.0))),
+                    physics_tensor=physics_tensor,
+                    pattern_name="食神制杀",
+                    target_god="七杀",
+                ),
+            )
+        )
     if float(scores.get("伤官", 0.0)) >= _pattern_cfg("classical.pattern.shangguan_peiyin.v1", "SHANGGUAN_PEIYIN_MIN_HURT", 16.0) and seal >= _pattern_cfg("classical.pattern.shangguan_peiyin.v1", "SHANGGUAN_PEIYIN_MIN_SEAL", 15.0):
-        candidates.append(("伤官配印", "伤官", min(float(scores.get("伤官", 0.0)), seal)))
+        candidates.append(
+            (
+                "伤官配印",
+                "伤官",
+                _apply_pattern_candidate_score(
+                    min(float(scores.get("伤官", 0.0)), seal),
+                    physics_tensor=physics_tensor,
+                    pattern_name="伤官配印",
+                    target_god="伤官",
+                ),
+            )
+        )
     if float(scores.get("食神", 0.0)) >= _pattern_cfg("classical.pattern.shishen_shengcai.v1", "SHISHEN_SHENGCAI_MIN_SHISHEN", 16.0) and wealth >= _pattern_cfg("classical.pattern.shishen_shengcai.v1", "SHISHEN_SHENGCAI_MIN_WEALTH", 15.0):
-        candidates.append(("食神生财", "食神", min(float(scores.get("食神", 0.0)), wealth)))
+        candidates.append(
+            (
+                "食神生财",
+                "食神",
+                _apply_pattern_candidate_score(
+                    min(float(scores.get("食神", 0.0)), wealth),
+                    physics_tensor=physics_tensor,
+                    pattern_name="食神生财",
+                    target_god="食神",
+                ),
+            )
+        )
     if float(scores.get("伤官", 0.0)) >= _pattern_cfg("classical.pattern.shangguan_shengcai.v1", "SHANGGUAN_SHENGCAI_MIN_HURT", 16.0) and wealth >= _pattern_cfg("classical.pattern.shangguan_shengcai.v1", "SHANGGUAN_SHENGCAI_MIN_WEALTH", 15.0):
-        candidates.append(("伤官生财", "伤官", min(float(scores.get("伤官", 0.0)), wealth)))
+        candidates.append(
+            (
+                "伤官生财",
+                "伤官",
+                _apply_pattern_candidate_score(
+                    min(float(scores.get("伤官", 0.0)), wealth),
+                    physics_tensor=physics_tensor,
+                    pattern_name="伤官生财",
+                    target_god="伤官",
+                ),
+            )
+        )
     ren_score = _score_sum(scores, "劫财", "比肩")
     if ren_score >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_REN", 16.0) and sha >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_SHA", 16.0):
         candidates.append(("阳刃驾杀", "七杀", min(ren_score, sha)))
@@ -559,6 +658,123 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
+def _climate_modifier_layer(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    meta = physics_tensor.get("energy_meta") if isinstance(physics_tensor.get("energy_meta"), dict) else {}
+    raw = meta.get("climate_modifier_layer")
+    return raw if isinstance(raw, dict) else {}
+
+
+def _pattern_survival_bucket(pattern_name: str, target_god: str) -> str:
+    pattern = str(pattern_name or "").strip()
+    target = str(target_god or "").strip()
+    explicit = {
+        "财官协同": "财官",
+        "正财格": "财官",
+        "偏财格": "财官",
+        "杂气财官格": "财官",
+        "官印相生": "印官",
+        "杀印相生": "印官",
+        "伤官配印": "印官",
+        "财破印": "印官",
+        "杂气印绶格": "印官",
+        "杂气七杀格": "财官",
+        "食神制杀": "食伤财",
+        "食神生财": "食伤财",
+        "伤官生财": "食伤财",
+        "从财格": "财官",
+        "从杀格": "财官",
+        "从儿格": "食伤财",
+        "建禄": "印比",
+        "月劫": "印比",
+        "羊刃格": "印比",
+        "阳刃驾杀": "财官",
+        "从旺格": "印比",
+        "从强格": "印比",
+        "从弱格": "财官",
+    }
+    if pattern in explicit:
+        return explicit[pattern]
+    if target in {"比肩", "劫财", "正印", "偏印"}:
+        return "印比"
+    if target in {"正官", "七杀"}:
+        return "财官"
+    if target in {"食神", "伤官", "正财", "偏财"}:
+        return "食伤财"
+    return "财官"
+
+
+def _pattern_survival_delta(physics_tensor: Dict[str, Any], *, pattern_name: str, target_god: str) -> tuple[str, float]:
+    modifier = _climate_modifier_layer(physics_tensor)
+    delta_map = modifier.get("pattern_survival_delta") if isinstance(modifier.get("pattern_survival_delta"), dict) else {}
+    bucket = _pattern_survival_bucket(pattern_name, target_god)
+    try:
+        delta = float(delta_map.get(bucket, 0.0) or 0.0)
+    except (TypeError, ValueError):
+        delta = 0.0
+    return bucket, round(delta, 4)
+
+
+def _apply_pattern_survival(
+    match_ratio: float,
+    *,
+    physics_tensor: Dict[str, Any],
+    pattern_name: str,
+    target_god: str,
+) -> tuple[float, str, float]:
+    bucket, delta = _pattern_survival_delta(
+        physics_tensor,
+        pattern_name=pattern_name,
+        target_god=target_god,
+    )
+    adjusted = _clamp01(float(match_ratio) + delta * 0.48)
+    return round(adjusted, 4), bucket, delta
+
+
+def _apply_pattern_candidate_score(
+    raw_score: float,
+    *,
+    physics_tensor: Dict[str, Any],
+    pattern_name: str,
+    target_god: str,
+) -> float:
+    _bucket, delta = _pattern_survival_delta(
+        physics_tensor,
+        pattern_name=pattern_name,
+        target_god=target_god,
+    )
+    return round(max(0.0, float(raw_score) * (1.0 + delta * 0.62)), 4)
+
+
+def _finalize_pattern_rows(
+    rows: List[Dict[str, Any]],
+    *,
+    physics_tensor: Dict[str, Any],
+    causal_tier: int,
+    default_plugin_id: str,
+) -> List[V17Fact]:
+    for row in rows:
+        meta = row.get("meta")
+        if not isinstance(meta, dict):
+            continue
+        pattern_name = str(meta.get("pattern_candidate") or "").strip()
+        if not pattern_name:
+            continue
+        target_god = str(meta.get("target_god") or "").strip()
+        raw_ratio = float(meta.get("match_ratio") or 0.0)
+        adjusted_ratio, bucket, delta = _apply_pattern_survival(
+            raw_ratio,
+            physics_tensor=physics_tensor,
+            pattern_name=pattern_name,
+            target_god=target_god,
+        )
+        meta["match_ratio_raw"] = round(raw_ratio, 4)
+        meta["match_ratio"] = round(adjusted_ratio, 3)
+        meta["climate_pattern_survival_bucket"] = bucket
+        meta["climate_pattern_survival_delta"] = round(delta, 4)
+        meta["climate_pattern_survival_adjusted"] = round(adjusted_ratio - raw_ratio, 4)
+    return rows_dict_to_v17_facts(rows, causal_tier=causal_tier, default_plugin_id=default_plugin_id)
+
+
 def _pattern_origin_meta(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     context = _pattern_context(physics_tensor)
     origin_type = str(context.get("origin_type") or "natal")
@@ -655,7 +871,7 @@ class PatternAxisPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -715,7 +931,7 @@ class PatternDynamicScopePlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -779,7 +995,7 @@ class JianLuYueJiePlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -855,7 +1071,7 @@ class CongShiPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -926,7 +1142,7 @@ class FinanceOfficerPatternPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -996,7 +1212,7 @@ class WealthStarPatternPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1066,7 +1282,7 @@ class SealStarPatternPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1136,7 +1352,7 @@ class YangRenPatternPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1199,7 +1415,7 @@ class GuanYinPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1261,7 +1477,7 @@ class ShaYinPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1323,7 +1539,7 @@ class ShiShenZhiShaPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1385,7 +1601,7 @@ class ShangGuanPeiYinPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1451,7 +1667,7 @@ class CaiPoYinPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1513,7 +1729,7 @@ class ShiShenShengCaiPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1575,7 +1791,7 @@ class ShangGuanShengCaiPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1630,7 +1846,7 @@ class YangRenJiaShaPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1671,7 +1887,7 @@ class ZaQiCaiGuanPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1712,7 +1928,7 @@ class ZaQiYinPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1753,7 +1969,7 @@ class ZaQiQiShaPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1792,7 +2008,7 @@ class CongCaiPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1831,7 +2047,7 @@ class CongShaPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1870,7 +2086,7 @@ class CongErPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1909,7 +2125,7 @@ class CongWangPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1948,7 +2164,7 @@ class CongQiangPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -1987,7 +2203,7 @@ class CongRuoPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -2030,7 +2246,7 @@ class HuaQiPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 def _specialized_pattern_row(*, plugin_id: str, pattern_name: str, element: str, target_god: str, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
@@ -2065,7 +2281,7 @@ def _specialized_pattern_row(*, plugin_id: str, pattern_name: str, element: str,
             **origin_meta,
         },
     }]
-    return rows_dict_to_v17_facts(rows, causal_tier=3, default_plugin_id=plugin_id)
+    return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=3, default_plugin_id=plugin_id)
 
 
 @dataclass
@@ -2156,7 +2372,7 @@ class LiangShenPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -2198,7 +2414,7 @@ class TianYuanPatternPlugin(V17PluginSpec):
                 **origin_meta,
             },
         }]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -2247,7 +2463,7 @@ class PatternResolverPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -2308,7 +2524,7 @@ class PatternFormationGatePlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 @dataclass
@@ -2353,7 +2569,7 @@ class PatternBreakGuardPlugin(V17PluginSpec):
                 },
             }
         ]
-        return rows_dict_to_v17_facts(rows, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
+        return _finalize_pattern_rows(rows, physics_tensor=physics_tensor, causal_tier=self.causal_tier, default_plugin_id=self.plugin_id)
 
 
 PLUGINS = [

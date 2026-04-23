@@ -87,3 +87,52 @@ def test_pick_god_candidates_prefers_stable_gain_over_unstable_high_energy() -> 
     assert effect_scores["七杀"]["authority_profile"] == "高能躁动"
     assert effect_scores["正印"]["authority_profile"] in {"高能稳态", "低能稳态"}
     assert effect_scores["正印"]["authority_use_score"] > effect_scores["七杀"]["authority_use_score"]
+
+
+def test_pick_god_candidates_consumes_climate_axis_deltas() -> None:
+    effect_scores = {
+        "食神": {
+            "benefit_score": 0.66,
+            "harm_score": 0.10,
+            "net_utility": 0.62,
+            "resolved_utility": 0.66,
+            "resolved_utility_flux": 0.74,
+            "stability_score": 0.22,
+            "activation_score": 0.28,
+            "contest_weight": 0.06,
+            "release_weight": 0.14,
+            "flux_harm": 0.02,
+            "flux_out_support": 0.22,
+            "flux_out_resist": 0.01,
+            "flux_tension_load": 0.06,
+            "flux_reinforce_load": 0.16,
+            "climate_efficiency_delta": 0.22,
+            "climate_stability_delta": 0.18,
+            "climate_priority_delta": 0.24,
+        },
+        "正官": {
+            "benefit_score": 0.72,
+            "harm_score": 0.18,
+            "net_utility": 0.68,
+            "resolved_utility": 0.72,
+            "resolved_utility_flux": 0.80,
+            "stability_score": 0.18,
+            "activation_score": 0.32,
+            "contest_weight": 0.08,
+            "release_weight": 0.08,
+            "flux_harm": 0.03,
+            "flux_out_support": 0.18,
+            "flux_out_resist": 0.04,
+            "flux_tension_load": 0.14,
+            "flux_reinforce_load": 0.12,
+            "climate_efficiency_delta": -0.18,
+            "climate_stability_delta": -0.12,
+            "climate_priority_delta": -0.22,
+        },
+    }
+
+    result = pick_god_candidates(effect_scores)
+    assert result["use_candidates"][0]["god"] == "食神"
+    assert effect_scores["食神"]["authority_climate_fit"] > effect_scores["正官"]["authority_climate_fit"]
+    assert effect_scores["食神"]["authority_use_score"] > effect_scores["正官"]["authority_use_score"]
+    assert effect_scores["正官"]["authority_taboo_score"] > effect_scores["食神"]["authority_taboo_score"]

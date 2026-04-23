@@ -131,23 +131,55 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.blind.work_axis.v1": {
         "display_name": "盲派做功主轴",
-        "definition": "以冲、刑、合等结构先定盲派做功的主观察轴。",
+        "definition": "读取 blind theme core 的主结构、体态与家里家外角色，给出盲派做功主轴。",
     },
     "classical.blind.response_chain.v1": {
         "display_name": "盲派应链",
-        "definition": "围绕主轴与触发结构，输出盲派的一事一应链提示。",
+        "definition": "围绕 blind theme core 的内外角色与体用候选，输出盲派应链与做功去向。",
     },
     "classical.blind.symbol_trigger.v1": {
         "display_name": "盲派触发象",
-        "definition": "把当前最强结构和主神转换为盲派断事入口之象。",
+        "definition": "把 blind theme core 的体态、关系家族与主结构转成盲派断事入口之象。",
     },
     "classical.blind.timing_window.v1": {
         "display_name": "盲派应期窗",
-        "definition": "把冲、刑、合等结构映射为盲派的近应、迟应与联应窗口。",
+        "definition": "结合体态与关系家族，把 blind theme core 映射为近应、迟应与联应窗口。",
     },
     "classical.blind.summary.v1": {
         "display_name": "盲派断口收束",
-        "definition": "把做功、应期与象法汇总为一个可直接断事的盲派断口。",
+        "definition": "把 blind theme core 的主线、体态、家里家外与换挡摘要收束为盲派断口。",
+    },
+    "classical.climate.axis.v1": {
+        "display_name": "调候主轴",
+        "definition": "把 climate field 的寒热轴、燥湿轴与张力状态收束为调候专题入口。",
+    },
+    "classical.climate.ten_god_fit.v1": {
+        "display_name": "调候十神适配",
+        "definition": "读取 climate modifier layer，标记哪些十神更顺势、哪些十神更承压。",
+    },
+    "classical.climate.pattern_survival.v1": {
+        "display_name": "调候格局存续",
+        "definition": "把 pattern_survival_delta 翻译为成格存续、承压与缓和的专题说明。",
+    },
+    "classical.climate.summary.v1": {
+        "display_name": "调候专题收束",
+        "definition": "围绕 climate theme core 的主状态、十神适配与格局存续做最终摘要。",
+    },
+    "classical.xiangfa.semantic_mapping.v1": {
+        "display_name": "象法语义映射",
+        "definition": "把 authority / blind / climate / relation 的结构信息映射为象法语义，不触碰底层能量。",
+    },
+    "classical.xiangfa.evidence.v1": {
+        "display_name": "象法证据串",
+        "definition": "汇总可用于类象解释的证据来源与结构线索，作为语义专题的证据层。",
+    },
+    "classical.xiangfa.narrative_hint.v1": {
+        "display_name": "象法叙事提示",
+        "definition": "把当前结构转为叙事口径提示，但不进入 bias 或 authority 主分。",
+    },
+    "classical.xiangfa.event_framing.v1": {
+        "display_name": "象法事件框架",
+        "definition": "以事件框架方式组织象法输出，帮助 LLM 生成更贴合结构的解释。",
     },
     "classical.ziping.month_command.v1": {
         "display_name": "子平月令法",
@@ -160,6 +192,22 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     "classical.ziping.yongshen.v1": {
         "display_name": "子平用神建议",
         "definition": "按当前强弱结构给出用神观察方向的专题插件。",
+    },
+    "classical.ziping.climate_bridge.v1": {
+        "display_name": "子平调候桥",
+        "definition": "把调候主轴从 climate field 归口到子平 umbrella，说明寒热燥湿如何改写体用效率。",
+    },
+    "classical.ziping.pattern_bridge.v1": {
+        "display_name": "子平格局桥",
+        "definition": "把格局候选从 pattern 专题归口到子平 umbrella，标记当前最强的格局轴与并存候选。",
+    },
+    "classical.ziping.god_ring_resolver.v1": {
+        "display_name": "子平体用裁决",
+        "definition": "综合月令、旺衰、调候与做功结果，给出当前用神、忌神与通关神裁决。",
+    },
+    "classical.ziping.summary.v1": {
+        "display_name": "子平总括",
+        "definition": "把月令、旺衰、调候、格局和体用裁决收束为 ziping umbrella 的专题总括。",
     },
     "classical.pattern.axis.v1": {
         "display_name": "格局轴线",

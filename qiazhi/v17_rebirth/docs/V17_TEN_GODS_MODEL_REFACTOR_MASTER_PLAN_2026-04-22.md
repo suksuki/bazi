@@ -1,7 +1,7 @@
 # V17 十神模型总重构主计划
 
 日期：2026-04-22  
-状态：执行中 / Phase 1-6 主体已落地并持续收口；Synthetic Lab Phase 2 已扩到关系矩阵、运流矩阵与 authority 矩阵  
+状态：执行中 / Phase 1-6 主体已落地并持续收口；Synthetic Lab Phase 2 已扩到关系矩阵、运流矩阵、authority 矩阵与 pattern-specialization 专题矩阵  
 定位：十神物理层、关系层、运流层、核心求解层的统一重构总图
 
 ---
@@ -67,11 +67,44 @@
   - `backend/logic/runtime_field_protocol.py`
 - 已建立 authority judgement 协议模块：
   - `backend/services/authority_judgement_protocol.py`
+- 已启动调候物理轴与 authority 分层协议：
+  - `backend/logic/climate_field_protocol.py`
+  - `backend/services/authority_layer_protocol.py`
 - 已切出 work-path 子协议模块：
   - `backend/logic/core_engine/work_path_row_protocol.py`
   - `backend/logic/core_engine/work_path_graph_utils.py`
+- Synthetic Lab 已新增专题插件 authority 闭环样盘：
+  - `l2.pattern.shishen_zhisha`
+  - `l2.pattern.shangguan_peiyin`
+  - `l2.pattern.caipoyin`
 
 这意味着 L0 已从“单体大文件”转为“主引擎 + 子模块编排”结构，并开始正式消费 L1 relation runtime；Core 做功层也开始从 `work_path_engine.py` 单体转为“主引擎 + row protocol + graph utils”结构，后续继续推进 Phase 4/5 时，风险会显著下降。
+
+新增说明（2026-04-23）：
+
+- 调候轴已不再停留在设计建议，第一版 `climate field + climate modifier layer` 已进入 `calc_deity_scores()` 的 `energy_meta`
+- authority 分层已从文档层进入协议层，当前已具备：
+  - `authority_level`
+  - `override_forbidden`
+  - `max_bias_ratio`
+  - `hard_constraint_source`
+  - `structure_enhancement_source`
+  - `soft_bias_source`
+- blind soft bias 进入前已增加限幅与“硬约束保顶”机制，避免 Level 3 overturn Level 1
+- Phase 3 已进入完成态：
+  - `climate_modifier_layer` 已正式进入 `effect_scores -> authority_use_score / authority_taboo_score`
+  - `ZiPingGodRingResolverPlugin` 已改用 climate-adjusted `core_use_candidates / core_taboo_candidates`
+  - `pattern_specializations` 已通过统一 finalize 层消费 `pattern_survival_delta`
+- Phase 4 已完成：
+  - `climate_theme_core + classical.climate.*` 已接入 Prompt / Oracle 辅助页 / Admin Core 面板
+- Phase 5 已完成第一版：
+  - `xiangfa_theme_core + classical.xiangfa.*` 已落地为 semantic-only 专题
+  - 当前只输出 `semantic mapping / evidence / narrative hint / event framing`
+  - 明确不进入 bias、不改能量、不覆盖 authority
+- Ziping umbrella 已补齐专题归口：
+  - `classical.ziping.climate_bridge.v1` 将调候专题归口到子平主裁决 umbrella
+  - `classical.ziping.pattern_bridge.v1` 将格局候选归口到子平主裁决 umbrella
+  - `classical.ziping.summary.v1` 收束月令、旺衰、调候、格局、体用裁决
 
 这说明我们已经不是“小修小补”阶段，而是需要正式切模块。
 
@@ -570,7 +603,7 @@ L0 当前已经形成下面这组边界：
 
 ## Phase 5：专题层与权威裁决对齐
 
-状态：执行中（authority judgement protocol 已落地，routing / prompt / Admin 已开始消费）
+状态：主体完成（authority judgement protocol、调候桥、格局桥、盲派 bias-only、象法 semantic-only 已落地）
 
 目标：
 
@@ -581,6 +614,7 @@ L0 当前已经形成下面这组边界：
 1. 审计判定型插件
 2. 明确 bias / evidence / narrative 边界
 3. 把 `use/taboo/tongguan` 统一接 authority
+4. 用 `ziping climate_bridge / pattern_bridge / summary` 完成子平 umbrella 收束
 
 验收：
 
@@ -589,7 +623,7 @@ L0 当前已经形成下面这组边界：
 
 ## Phase 6：文档与 UI 完整对齐
 
-状态：执行中（Prompt 合同、Admin / Explain 卡、测试文档已开始同步）
+状态：主体完成（Prompt 合同、Admin / Explain 卡、测试文档、插件家族文档已同步）
 
 目标：
 
@@ -648,10 +682,18 @@ L0 当前已经形成下面这组边界：
 - runtime-field matrix 第二批已落地：
   - `runtime.relation.sanhui.resonance`
   - `runtime.relation.banhe.interruption`
+- runtime-field matrix 第三批已落地：
+  - `runtime.relation.liuhe.natal_baseline`
+  - `runtime.relation.hai.natal_baseline`
+- 三会 gate 已收紧：
+  - `sanhui` 只接受三支齐全
+  - 两支会气与重支不再误升为 `三会局` 主摘要
+  - 已补回归，防止 `巳巳丑酉 + 子 + 午` 被误判成 `巳午未三会火局`
 - work-authority matrix 已落地：
   - `core.authority.officer_contest`
   - `core.authority.positive_path`
   - `core.authority.bridge_present`
+  - `core.authority.bridge_external`
 - UI 已接上 `relation_dynamics_summary`：
   - Oracle 主页面 `V17_SixPillarsPanel`
   - Admin 核心面板 `V17_AdminCoreEnginePanel`
@@ -691,6 +733,21 @@ L0 当前已经形成下面这组边界：
 - 命理师争议盘
 - 强格 / 弱格 / 从格 / 混格
 - 高动态冲突盘
+
+当前已正式落地首批协议与回归：
+
+- 协议文档：
+  - `docs/V17_PRACTITIONER_BENCHMARK_PROTOCOL_2026-04-23.md`
+- 代码入口：
+  - `testing/practitioner_benchmarks.py`
+- 测试入口：
+  - `tests/test_practitioner_benchmark_cases.py`
+
+首批基准盘：
+
+- `丁巳 / 乙巳 / 乙丑 / 乙酉 · 庚子 / 丙午`
+- `丁巳 / 乙巳 / 乙丑 / 乙酉 · 辛丑 / 乙未`
+- `壬寅 / 甲辰 / 丙子 / 甲午 · 庚戌 / 丙午`
 
 ### 8.4 Prompt / UI 合同测试
 

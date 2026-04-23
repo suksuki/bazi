@@ -303,6 +303,7 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "authority_energy": round(_safe_float(row.get("authority_energy"), 0.0), 4),
             "authority_stability": round(_safe_float(row.get("authority_stability"), 0.0), 4),
             "authority_volatility": round(_safe_float(row.get("authority_volatility"), 0.0), 4),
+            "authority_climate_fit": round(_safe_float(row.get("authority_climate_fit"), 0.0), 4),
             "authority_profile": str(row.get("authority_profile") or "").strip(),
             "authority_reason": str(row.get("authority_reason") or "").strip(),
             "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
@@ -320,6 +321,7 @@ def pick_god_candidates(effect_scores: Dict[str, Dict[str, float]]) -> Dict[str,
             "authority_energy": round(_safe_float(row.get("authority_energy"), 0.0), 4),
             "authority_stability": round(_safe_float(row.get("authority_stability"), 0.0), 4),
             "authority_volatility": round(_safe_float(row.get("authority_volatility"), 0.0), 4),
+            "authority_climate_fit": round(_safe_float(row.get("authority_climate_fit"), 0.0), 4),
             "authority_profile": str(row.get("authority_profile") or "").strip(),
             "authority_reason": str(row.get("authority_reason") or "").strip(),
             "tension_load": round(_safe_float(row.get("flux_tension_load"), 0.0), 4),
@@ -368,6 +370,18 @@ def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
     outbound_resist = _safe_float(row.get("flux_out_resist"), 0.0)
     tension = _safe_float(row.get("flux_tension_load"), 0.0)
     reinforce = _safe_float(row.get("flux_reinforce_load"), 0.0)
+    climate_efficiency = _safe_float(row.get("climate_efficiency_delta"), 0.0)
+    climate_stability = _safe_float(row.get("climate_stability_delta"), 0.0)
+    climate_priority = _safe_float(row.get("climate_priority_delta"), 0.0)
+    climate_fit = _clamp(
+        0.5
+        + climate_efficiency * 1.12
+        + climate_stability * 0.96
+        + climate_priority * 0.72
+        - abs(min(climate_priority, 0.0)) * 0.18,
+        0.0,
+        1.35,
+    )
 
     energy = max(
         0.0,
@@ -377,11 +391,14 @@ def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
         + harm * 0.08
         + activation * 0.22,
     )
+    energy *= 1.0 + climate_efficiency * 0.18 + max(0.0, climate_priority) * 0.06
     stability_axis = _clamp(
         stability * 0.78
         + reinforce * 0.56
         + release * 0.16
         + outbound_support * 0.10
+        + climate_stability * 0.88
+        + climate_efficiency * 0.24
         - tension * 0.52
         - contest * 0.22
         - flux_harm * 0.08,
@@ -395,6 +412,8 @@ def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
         + outbound_resist * 0.16
         + harm * 0.14
         + flux_harm * 0.18
+        + max(0.0, -climate_stability) * 0.42
+        + max(0.0, -climate_priority) * 0.28
         - stability * 0.20
         - reinforce * 0.12
         - release * 0.06,
@@ -411,6 +430,9 @@ def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
         + stability_axis * 0.34
         + outbound_support * 0.12
         + reinforce * 0.22
+        + climate_efficiency * 0.52
+        + climate_stability * 0.42
+        + climate_priority * 0.68
         - volatility_axis * 0.40
         - contest * 0.08
     )
@@ -421,14 +443,19 @@ def _apply_authority_axis_metrics(row: Dict[str, float]) -> None:
         + tension * 0.24
         + outbound_resist * 0.18
         + contest * 0.12
+        + max(0.0, -climate_efficiency) * 0.44
+        + max(0.0, -climate_stability) * 0.54
+        + max(0.0, -climate_priority) * 0.72
         - stability_axis * 0.18
         - reinforce * 0.10
         - release * 0.06
+        - max(0.0, climate_priority) * 0.12
     )
 
     row["authority_energy"] = round(energy, 4)
     row["authority_stability"] = round(stability_axis, 4)
     row["authority_volatility"] = round(volatility_axis, 4)
+    row["authority_climate_fit"] = round(climate_fit, 4)
     row["authority_axis_balance"] = axis_balance
     row["authority_profile"] = profile
     row["authority_reason"] = reason

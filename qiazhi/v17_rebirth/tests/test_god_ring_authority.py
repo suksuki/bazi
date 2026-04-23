@@ -39,6 +39,16 @@ def test_resolve_god_ring_authority_passes_judgement_bias_payload() -> None:
                         "taboo_bias": {"七杀": 0.18},
                     }
                 ],
+                "authority_layer_protocol": {
+                    "contract": "v17.authority.layer_protocol.v1",
+                    "authority_level": 1,
+                    "override_forbidden": True,
+                    "max_bias_ratio": 0.35,
+                },
+                "climate_modifier_layer": {
+                    "contract": "v17.climate_modifier_layer.v1",
+                    "ten_god_efficiency": {"食神": 0.12},
+                },
             }
         }
     }
@@ -50,3 +60,5 @@ def test_resolve_god_ring_authority_passes_judgement_bias_payload() -> None:
     assert info["stage_bias"]["食神"]["lu"] == 1.2
     assert info["judgement_bias_entries"][0]["source_label"] == "食神制杀"
     assert info["core_flux_meta"]["enabled"] is True
+    assert info["authority_layer_protocol"]["contract"] == "v17.authority.layer_protocol.v1"
+    assert info["climate_modifier_layer"]["contract"] == "v17.climate_modifier_layer.v1"

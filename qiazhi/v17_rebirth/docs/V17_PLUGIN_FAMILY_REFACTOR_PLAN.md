@@ -39,10 +39,15 @@
 - `classical.ziping.month_command.v1`
 - `classical.ziping.balance.v1`
 - `classical.ziping.yongshen.v1`
+- `classical.ziping.climate_bridge.v1`
+- `classical.ziping.pattern_bridge.v1`
+- `classical.ziping.god_ring_resolver.v1`
+- `classical.ziping.summary.v1`
 
-问题：
+现状：
 
-- 物理做了，理论插件没长起来
+- 子平已从“月令 / 旺衰 / 用神”三件套升级为完整 umbrella。
+- `pattern_specializations` 和 `climate_theme` 仍是独立专题家族，但子平通过 bridge 插件完成归口。
 
 ### 3. 格局插件过于粗糙
 
@@ -141,11 +146,22 @@
 
 - `classical.ziping.month_command.v1`
 - `classical.ziping.balance.v1`
+- `classical.ziping.climate_bridge.v1`
+- `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.yongshen.v1`
+- `classical.ziping.god_ring_resolver.v1`
+- `classical.ziping.summary.v1`
 
 职责：
 
-- 子平体系的“月令、旺衰、用神”解释层
+- 子平体系的主裁决 umbrella。
+- `month_command` 负责月令定盘。
+- `balance` 负责扶抑 / 旺衰平衡轴。
+- `climate_bridge` 把调候物理轴归口到子平，不直接改写 L0 base totals。
+- `pattern_bridge` 把格局专题候选归口到子平，不取代独立格局插件。
+- `yongshen` 给出传统用神观察轴。
+- `god_ring_resolver` 是体用 / 用忌 / 通关主裁决。
+- `summary` 收束月令、旺衰、调候、格局、体用裁决为子平总括。
 
 ### D. 格局插件家族
 
@@ -174,6 +190,13 @@
 职责：
 
 - 把“做功、应期、触发象”从单句提示拆成结构化插件
+- 当前已升级为“盲派主题 core + 多个视图插件”
+- blind theme core 统一输出：
+  - 体/用候选
+  - 家里家外
+  - 运行换挡
+  - blind soft bias
+- 子插件负责展示不同切面；authority 只并行吸收 `blind_bias_protocol`，不允许盲派覆盖子平主裁决
 
 ### F. 风险与结构冲突插件家族
 
@@ -187,6 +210,26 @@
 职责：
 
 - 负责高风险结构、解释性冲突和需要升级到裁决层的问题
+
+### G. 调候与象法专题家族
+
+- `classical.climate.axis.v1`
+- `classical.climate.ten_god_fit.v1`
+- `classical.climate.pattern_survival.v1`
+- `classical.climate.summary.v1`
+- `classical.xiangfa.semantic_mapping.v1`
+- `classical.xiangfa.evidence.v1`
+- `classical.xiangfa.narrative_hint.v1`
+- `classical.xiangfa.event_framing.v1`
+
+职责：
+
+- 调候专题建立在 `climate_field + climate_modifier_layer` 之上，只做 L2 解释，不回写 L0 base totals
+- 象法专题只消费 authority / blind / climate / relation 的现成结果，输出 semantic mapping、evidence、narrative hint、event framing
+- 象法当前明确保持 `semantic-only`：
+  - 不进入 bias
+  - 不改五行能量
+  - 不覆盖 authority 主裁决
 
 ## 后续仍需深化的专题
 

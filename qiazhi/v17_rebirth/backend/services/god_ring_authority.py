@@ -56,6 +56,11 @@ def resolve_god_ring_authority(
             "judgement_bias": dict(authority.get("judgement_bias") or {}),
             "judgement_bias_entries": list(authority.get("judgement_bias_entries") or []),
             "judgement_bias_protocol": dict(authority.get("judgement_bias_protocol") or {}),
+            "blind_theme": dict(authority.get("blind_theme") or {}),
+            "blind_bias": dict(authority.get("blind_bias") or {}),
+            "blind_bias_protocol": dict(authority.get("blind_bias_protocol") or {}),
+            "authority_layer_protocol": dict(authority.get("authority_layer_protocol") or {}),
+            "climate_modifier_layer": dict(authority.get("climate_modifier_layer") or {}),
             "stage_bias_protocol": dict(authority.get("stage_bias_protocol") or {}),
         }
 
@@ -86,5 +91,10 @@ def resolve_god_ring_authority(
         "judgement_bias": {},
         "judgement_bias_entries": [],
         "judgement_bias_protocol": {},
+        "blind_theme": {},
+        "blind_bias": {},
+        "blind_bias_protocol": {},
+        "authority_layer_protocol": {},
+        "climate_modifier_layer": {},
         "stage_bias_protocol": {},
     }

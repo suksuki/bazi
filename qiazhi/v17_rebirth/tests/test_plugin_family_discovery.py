@@ -19,6 +19,18 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "classical.ziping.month_command.v1" in plugin_ids
     assert "classical.ziping.balance.v1" in plugin_ids
     assert "classical.ziping.yongshen.v1" in plugin_ids
+    assert "classical.ziping.climate_bridge.v1" in plugin_ids
+    assert "classical.ziping.pattern_bridge.v1" in plugin_ids
+    assert "classical.ziping.god_ring_resolver.v1" in plugin_ids
+    assert "classical.ziping.summary.v1" in plugin_ids
+    assert "classical.climate.axis.v1" in plugin_ids
+    assert "classical.climate.ten_god_fit.v1" in plugin_ids
+    assert "classical.climate.pattern_survival.v1" in plugin_ids
+    assert "classical.climate.summary.v1" in plugin_ids
+    assert "classical.xiangfa.semantic_mapping.v1" in plugin_ids
+    assert "classical.xiangfa.evidence.v1" in plugin_ids
+    assert "classical.xiangfa.narrative_hint.v1" in plugin_ids
+    assert "classical.xiangfa.event_framing.v1" in plugin_ids
     assert "classical.pattern.axis.v1" in plugin_ids
     assert "classical.pattern.dynamic_scope.v1" in plugin_ids
     assert "classical.pattern.jianlu_yuejie.v1" in plugin_ids
@@ -94,6 +106,22 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
         "energy_meta": {
             "month_command_god": "伤官",
             "season_power": {"month_branch": "巳"},
+            "climate_field": {
+                "thermal_index": 1.26,
+                "moisture_index": -0.94,
+                "climate_tension": 0.88,
+                "state": "燥热偏盛",
+                "source_by_scope": {
+                    "month": {"thermal": 0.72, "moisture": -0.36},
+                    "flow": {"thermal": 0.38, "moisture": -0.22},
+                },
+            },
+            "climate_modifier_layer": {
+                "ten_god_efficiency": {"伤官": 0.24, "正官": -0.18},
+                "ten_god_stability": {"伤官": 0.12, "正官": -0.1},
+                "yongshen_priority_delta": {"伤官": 0.22, "正官": -0.16},
+                "pattern_survival_delta": {"食伤财": 0.18, "印官": -0.12},
+            },
         },
         "meta": {
             "interaction_v2": {
@@ -103,6 +131,18 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
                 "sanxing": [],
             },
             "blind_work_hint": "冲中起事",
+            "god_ring_authority": {
+                "use_gods": ["伤官", "食神"],
+                "taboo_gods": ["正官"],
+            },
+            "climate_theme": {
+                "contract": "v17.climate.theme.v1",
+                "confidence": 0.72,
+                "state": "燥热偏盛",
+                "favored_gods": ["伤官", "食神"],
+                "strained_gods": ["正官"],
+                "prompt_digest": "燥热偏盛；顺势 伤官/食神；承压 正官",
+            },
         },
     }
 
@@ -115,6 +155,14 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
     assert "classical.blind.timing_window.v1" in fact_plugins
     assert "classical.blind.summary.v1" in fact_plugins
     assert "classical.ziping.month_command.v1" in fact_plugins
+    assert "classical.ziping.climate_bridge.v1" in fact_plugins
+    assert "classical.ziping.pattern_bridge.v1" in fact_plugins
+    assert "classical.ziping.god_ring_resolver.v1" in fact_plugins
+    assert "classical.ziping.summary.v1" in fact_plugins
+    assert "classical.climate.axis.v1" in fact_plugins
+    assert "classical.climate.summary.v1" in fact_plugins
+    assert "classical.xiangfa.semantic_mapping.v1" in fact_plugins
+    assert "classical.xiangfa.event_framing.v1" in fact_plugins
     assert "classical.pattern.axis.v1" in fact_plugins
     assert "classical.pattern.dynamic_scope.v1" in fact_plugins
     by_plugin = {str(f.plugin_id or ""): f for f in facts}

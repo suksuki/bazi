@@ -8,6 +8,10 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from v17_rebirth.backend.logic.climate_field_protocol import climate_field_prompt_lines
+from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import normalize_blind_theme_meta
+from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
+from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
@@ -129,6 +133,149 @@ def _runtime_field_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     if not isinstance(pt, dict):
         return []
     return runtime_field_prompt_lines()
+
+
+def _climate_field_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    energy_meta = _energy_meta_rows(pt)
+    climate = energy_meta.get("climate_field") if isinstance(energy_meta.get("climate_field"), dict) else {}
+    modifier = energy_meta.get("climate_modifier_layer") if isinstance(energy_meta.get("climate_modifier_layer"), dict) else {}
+    if not climate:
+        return []
+    rows = list(climate_field_prompt_lines())
+    state = str(climate.get("state") or "").strip()
+    thermal = _safe_float(climate.get("thermal_index"), 0.0)
+    moisture = _safe_float(climate.get("moisture_index"), 0.0)
+    tension = _safe_float(climate.get("climate_tension"), 0.0)
+    by_element = climate.get("source_by_element") if isinstance(climate.get("source_by_element"), dict) else {}
+    dominant_elements = sorted(
+        (
+            (str(element).strip(), abs(_safe_float(raw.get("thermal"), 0.0)) + abs(_safe_float(raw.get("moisture"), 0.0)))
+            for element, raw in by_element.items()
+            if str(element).strip() and isinstance(raw, dict)
+        ),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    element_fragments: List[str] = []
+    for element, _score in dominant_elements[:2]:
+        raw = by_element.get(element) if isinstance(by_element.get(element), dict) else {}
+        element_fragments.append(
+            f"{element} 热{_safe_float(raw.get('thermal'), 0.0):+.2f}/湿{_safe_float(raw.get('moisture'), 0.0):+.2f}"
+        )
+    rows.append(
+        "调候摘要："
+        f"{state or '未定'}"
+        f"；寒热轴{thermal:+.2f}"
+        f"；燥湿轴{moisture:+.2f}"
+        f"；张力{tension:.2f}"
+        + (f"；主来源 {' / '.join(element_fragments)}" if element_fragments else "")
+    )
+    if modifier:
+        priority_map = modifier.get("yongshen_priority_delta") if isinstance(modifier.get("yongshen_priority_delta"), dict) else {}
+        ranked = sorted(
+            (
+                (str(god).strip(), _safe_float(delta, 0.0))
+                for god, delta in priority_map.items()
+                if str(god).strip() and abs(_safe_float(delta, 0.0)) > 1e-6
+            ),
+            key=lambda item: abs(item[1]),
+            reverse=True,
+        )
+        if ranked:
+            preview = "；".join(f"{god}{delta:+.2f}" for god, delta in ranked[:3])
+            rows.append("调候修正层：" + preview)
+    return rows
+
+
+def _climate_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    climate_theme = normalize_climate_theme_meta(meta.get("climate_theme"))
+    if not climate_theme:
+        return []
+    rows = [
+        "调候专题合同：调候专题是 climate field 的 L2 解释层，只输出 evidence / narrative / report，不额外回写 L0 原始十神总量，也不再叠加 bias。",
+    ]
+    state = str(climate_theme.get("state") or "").strip()
+    digest = str(climate_theme.get("prompt_digest") or "").strip()
+    favored = climate_theme.get("favored_gods") if isinstance(climate_theme.get("favored_gods"), list) else []
+    strained = climate_theme.get("strained_gods") if isinstance(climate_theme.get("strained_gods"), list) else []
+    pattern_rows = climate_theme.get("pattern_survival") if isinstance(climate_theme.get("pattern_survival"), list) else []
+    fragments: List[str] = []
+    if state:
+        fragments.append(state)
+    if favored:
+        fragments.append("顺势 " + "/".join(str(item).strip() for item in favored[:2] if str(item).strip()))
+    if strained:
+        fragments.append("承压 " + "/".join(str(item).strip() for item in strained[:2] if str(item).strip()))
+    if pattern_rows:
+        top = pattern_rows[0] if isinstance(pattern_rows[0], dict) else {}
+        label = str(top.get("label") or top.get("key") or "").strip()
+        bucket = str(top.get("bucket") or "").strip()
+        if label:
+            fragments.append(f"{label}{bucket}")
+    if digest:
+        fragments.append(digest)
+    if fragments:
+        rows.append("调候专题摘要：" + "；".join(fragment for fragment in fragments if fragment))
+    return rows
+
+
+def _xiangfa_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    xiangfa_theme = normalize_xiangfa_theme_meta(meta.get("xiangfa_theme"))
+    if not xiangfa_theme:
+        return []
+    rows = [
+        "象法专题合同：象法专题当前只做 semantic mapping / evidence / narrative hint / event framing，不修改能量、不写入 bias，也不覆盖 authority。",
+    ]
+    semantic = (
+        xiangfa_theme.get("semantic_mapping")
+        if isinstance(xiangfa_theme.get("semantic_mapping"), list)
+        else []
+    )
+    evidence = (
+        xiangfa_theme.get("evidence")
+        if isinstance(xiangfa_theme.get("evidence"), list)
+        else []
+    )
+    hints = (
+        xiangfa_theme.get("narrative_hint")
+        if isinstance(xiangfa_theme.get("narrative_hint"), list)
+        else []
+    )
+    framing = (
+        xiangfa_theme.get("event_framing")
+        if isinstance(xiangfa_theme.get("event_framing"), list)
+        else []
+    )
+    digest = str(xiangfa_theme.get("prompt_digest") or "").strip()
+    topics = (
+        xiangfa_theme.get("source_topics")
+        if isinstance(xiangfa_theme.get("source_topics"), list)
+        else []
+    )
+    fragments: List[str] = []
+    if semantic:
+        fragments.append("语义 " + " / ".join(str(item).strip() for item in semantic[:2] if str(item).strip()))
+    if framing:
+        fragments.append("事件 " + " / ".join(str(item).strip() for item in framing[:2] if str(item).strip()))
+    if hints:
+        fragments.append("叙事 " + " / ".join(str(item).strip() for item in hints[:1] if str(item).strip()))
+    if topics:
+        fragments.append("来源 " + "/".join(str(item).strip() for item in topics[:3] if str(item).strip()))
+    if digest:
+        fragments.append(digest)
+    if evidence:
+        rows.append("象法证据：" + "；".join(str(item).strip() for item in evidence[:3] if str(item).strip()))
+    if fragments:
+        rows.append("象法专题摘要：" + "；".join(fragment for fragment in fragments if fragment))
+    return rows
 
 
 def _pattern_summary_prompt_lines(pt: Dict[str, Any]) -> List[str]:
@@ -368,9 +515,22 @@ def _authority_axis_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     if fragments:
         rows.append("体用双轴摘要：" + "；".join(fragments))
     judgement_protocol = authority.get("judgement_bias_protocol") if isinstance(authority.get("judgement_bias_protocol"), dict) else {}
+    blind_protocol = authority.get("blind_bias_protocol") if isinstance(authority.get("blind_bias_protocol"), dict) else {}
     stage_protocol = authority.get("stage_bias_protocol") if isinstance(authority.get("stage_bias_protocol"), dict) else {}
+    layer_protocol = authority.get("authority_layer_protocol") if isinstance(authority.get("authority_layer_protocol"), dict) else {}
     judgement_summary = judgement_protocol.get("summary") if isinstance(judgement_protocol.get("summary"), dict) else {}
+    blind_summary = blind_protocol.get("summary") if isinstance(blind_protocol.get("summary"), dict) else {}
     stage_summary = stage_protocol.get("summary") if isinstance(stage_protocol.get("summary"), dict) else {}
+    layer_summary = layer_protocol.get("summary") if isinstance(layer_protocol.get("summary"), dict) else {}
+    if layer_protocol:
+        rows.append(
+            "裁决分层合同：Level 1 为 ziping 主裁决硬约束，Level 2 为结构增强，Level 3 为 soft bias；"
+            f"override_forbidden={'是' if bool(layer_protocol.get('override_forbidden')) else '否'}"
+            f"；bias 上限{_safe_float(layer_protocol.get('max_bias_ratio'), 0.0):.2f}"
+            f"；硬约束{int(layer_summary.get('hard_constraint_count') or 0)}"
+            f"；结构增强{int(layer_summary.get('structure_enhancement_count') or 0)}"
+            f"；软偏置{int(layer_summary.get('soft_bias_count') or 0)}"
+        )
     if judgement_summary:
         line = (
             "判定偏置合同：L2 judgement 只提供 bias / evidence / narrative hint，不直接改写 L0/L1 物理结算。 "
@@ -398,6 +558,61 @@ def _authority_axis_prompt_lines(pt: Dict[str, Any]) -> List[str]:
             f"；稳{_safe_float(stage_summary.get('total_stability_boost'), 0.0):.2f}"
             f"；波动{_safe_float(stage_summary.get('total_volatility_boost'), 0.0):.2f}"
         )
+    if blind_protocol:
+        route = str(blind_protocol.get("primary_route") or "").strip()
+        body_mode = str(blind_protocol.get("body_mode") or "").strip()
+        line = (
+            "盲派桥接合同：盲派只以 bias_only 方式并行推用/推忌，不覆盖子平 authority 主裁决。 "
+            "盲派桥接摘要："
+            f"{route or '主线待定'}"
+            f"；体态{body_mode or '未定'}"
+            f"；推用{_safe_float(blind_summary.get('use_total'), 0.0):.2f}"
+            f"；推忌{_safe_float(blind_summary.get('taboo_total'), 0.0):.2f}"
+            f"；换挡{int(blind_summary.get('switch_count') or 0)}"
+        )
+        rows.append(line)
+    return rows
+
+
+def _blind_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    blind_theme = normalize_blind_theme_meta(meta.get("blind_theme"))
+    if not blind_theme:
+        return []
+    rows = [
+        "盲派专题合同：盲派作为可选独立专题，与子平/格局并行；只输出体用候选、家里家外、运行换挡与断事摘要，不直接覆盖最终 authority。"
+    ]
+    summary_parts: List[str] = []
+    primary_route = str(blind_theme.get("primary_route") or "").strip()
+    body_mode = str(blind_theme.get("body_mode") or "").strip()
+    use_candidates = blind_theme.get("use_candidates") if isinstance(blind_theme.get("use_candidates"), list) else []
+    taboo_candidates = blind_theme.get("taboo_candidates") if isinstance(blind_theme.get("taboo_candidates"), list) else []
+    house_roles = blind_theme.get("house_roles") if isinstance(blind_theme.get("house_roles"), dict) else {}
+    runtime_switches = blind_theme.get("runtime_switches") if isinstance(blind_theme.get("runtime_switches"), list) else []
+    digest = str(blind_theme.get("prompt_digest") or "").strip()
+    if primary_route:
+        summary_parts.append(f"主线{primary_route}")
+    if body_mode:
+        summary_parts.append(f"体态{body_mode}")
+    if use_candidates:
+        summary_parts.append("用侧" + "/".join(str(item).strip() for item in use_candidates[:2] if str(item).strip()))
+    if taboo_candidates:
+        summary_parts.append("忌侧" + "/".join(str(item).strip() for item in taboo_candidates[:2] if str(item).strip()))
+    inside = [god for god, role in house_roles.items() if str(role).strip() == "inside"]
+    outside = [god for god, role in house_roles.items() if str(role).strip() == "outside"]
+    if inside:
+        summary_parts.append("家里" + "/".join(inside[:2]))
+    if outside:
+        summary_parts.append("家外" + "/".join(outside[:2]))
+    switch_labels = [str(item).strip() for item in runtime_switches[:2] if str(item).strip()]
+    if switch_labels:
+        summary_parts.append("换挡" + "；".join(switch_labels))
+    if digest:
+        summary_parts.append("断口" + digest)
+    if summary_parts:
+        rows.append("盲派专题摘要：" + "；".join(summary_parts))
     return rows
 
 
@@ -469,7 +684,11 @@ class PhysicsCanonicalService:
             return rows
         rows.extend(_core_flux_prompt_lines(physics_tensor))
         rows.extend(_runtime_field_prompt_lines(physics_tensor))
+        rows.extend(_climate_field_prompt_lines(physics_tensor))
+        rows.extend(_climate_theme_prompt_lines(physics_tensor))
+        rows.extend(_xiangfa_theme_prompt_lines(physics_tensor))
         rows.extend(_authority_axis_prompt_lines(physics_tensor))
+        rows.extend(_blind_theme_prompt_lines(physics_tensor))
         rows.extend(_relation_summary_prompt_lines(physics_tensor))
         rows.extend(_relation_dynamics_prompt_lines(physics_tensor))
         rows.extend(_pattern_summary_prompt_lines(physics_tensor))

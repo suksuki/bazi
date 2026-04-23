@@ -10,6 +10,7 @@
 interface TracePanelProps {
   collapsed: boolean;
   onToggle: () => void;
+  surfaceMode?: "sidebar" | "tab";
   focusedDecisionId?: string;
   llmMeta: Record<string, unknown>;
   llmLifecyclePhase:
@@ -207,6 +208,7 @@ function compactProjection(projection: unknown): string {
 export function V17_TracePanel({
   collapsed,
   onToggle,
+  surfaceMode = "sidebar",
   focusedDecisionId,
   llmMeta,
   llmLifecyclePhase,
@@ -504,6 +506,10 @@ export function V17_TracePanel({
     },
   ];
 
+  if (surfaceMode === "tab" && collapsed) {
+    return null;
+  }
+
   if (collapsed) {
     return (
       <aside className="sticky top-6 flex h-fit min-h-[28rem] w-14 flex-col items-center rounded-2xl border border-cyan-500/25 bg-zinc-900/70 py-3 shadow-[0_18px_60px_rgba(8,145,178,0.12)]">
@@ -525,7 +531,13 @@ export function V17_TracePanel({
   }
 
   return (
-    <aside className="sticky top-6 h-fit rounded-2xl border border-cyan-500/40 bg-[linear-gradient(180deg,rgba(10,18,24,0.96),rgba(9,14,19,0.88))] p-3 shadow-[0_22px_70px_rgba(8,145,178,0.16)]">
+    <aside
+      className={
+        surfaceMode === "tab"
+          ? "rounded-2xl border border-cyan-500/40 bg-[linear-gradient(180deg,rgba(10,18,24,0.96),rgba(9,14,19,0.88))] p-3 shadow-[0_22px_70px_rgba(8,145,178,0.16)]"
+          : "sticky top-6 h-fit rounded-2xl border border-cyan-500/40 bg-[linear-gradient(180deg,rgba(10,18,24,0.96),rgba(9,14,19,0.88))] p-3 shadow-[0_22px_70px_rgba(8,145,178,0.16)]"
+      }
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <p className="text-xs tracking-[0.28em] text-cyan-200">SYSTEM OBSERVATORY</p>
@@ -536,7 +548,7 @@ export function V17_TracePanel({
           onClick={onToggle}
           className="rounded-full border border-cyan-400/35 bg-cyan-950/50 px-3 py-1 text-[10px] text-cyan-200 transition hover:bg-cyan-900/70"
         >
-          收起
+          {surfaceMode === "tab" ? "返回" : "收起"}
         </button>
       </div>
       {focusedDecisionId ? (

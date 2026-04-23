@@ -343,6 +343,8 @@ export function inferPluginSubCategory(plugin: PluginCardRow): string {
     if (pluginId.includes("classical.pattern")) return "格局专题";
     if (pluginId.includes("classical.ziping")) return "子平专题";
     if (pluginId.includes("classical.blind")) return "盲派专题";
+    if (pluginId.includes("classical.climate")) return "调候专题";
+    if (pluginId.includes("classical.xiangfa")) return "象法专题";
     if (pluginId.includes("kong_wang") || pluginId.includes("shensha") || pluginId.includes("risk")) return "风险/象法观察";
     if (pluginId === "ten_god_pattern") return "十神主轴";
     if (pluginId === "narrative_clip") return "叙事剪辑";

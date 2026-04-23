@@ -56,3 +56,14 @@ def test_synthetic_core_bridge_present_keeps_tongguan_lane_visible() -> None:
     assert tongguan_paths
     assert any(candidate["god"] in {"正印", "偏印"} for candidate in result["use_candidates"])
     assert tongguan_paths[0]["evidence"]["mediator_element"] == "火"
+
+
+def test_synthetic_core_external_bridge_projects_outside_mediator() -> None:
+    run = run_core_case(SYNTHETIC_CORE_CASES[3])
+    result = run.result
+
+    tongguan_paths = [path for path in result["paths"] if path["path_type"] == "tongguan_external"]
+    assert tongguan_paths
+    assert tongguan_paths[0]["target_god"] in {"正印", "偏印"}
+    assert tongguan_paths[0]["evidence"]["external_candidate"] is True
+    assert any(candidate["god"] in {"正印", "偏印"} for candidate in result["use_candidates"])

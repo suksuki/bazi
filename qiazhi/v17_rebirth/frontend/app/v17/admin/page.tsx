@@ -284,6 +284,10 @@ export default function V17AdminPage() {
   const [projectionBridgeProtocol, setProjectionBridgeProtocol] = useState<LooseObject>({});
   const [relationFormationSummary, setRelationFormationSummary] = useState<LooseObject[]>([]);
   const [relationDynamicsSummary, setRelationDynamicsSummary] = useState<LooseObject[]>([]);
+  const [climateField, setClimateField] = useState<LooseObject>({});
+  const [climateModifierLayer, setClimateModifierLayer] = useState<LooseObject>({});
+  const [climateTheme, setClimateTheme] = useState<LooseObject>({});
+  const [xiangfaTheme, setXiangfaTheme] = useState<LooseObject>({});
   const [tenGodDecomposition, setTenGodDecomposition] = useState<Record<string, TenGodDecompositionRow>>({});
   const [recomputeContributions, setRecomputeContributions] = useState<RecomputeContribution[]>([]);
   const [pluginRuntimeSessionId, setPluginRuntimeSessionId] = useState("default");
@@ -340,6 +344,10 @@ export default function V17AdminPage() {
         asLooseObject(authority.projection_bridge_protocol);
       const relationSummary = asLooseRecord<LooseObject>(statusPayload.relation_formation_summary, []);
       const relationDynamics = asLooseRecord<LooseObject>(statusPayload.relation_dynamics_summary, []);
+      const climate = asLooseObject(statusPayload.climate_field);
+      const climateModifier = asLooseObject(statusPayload.climate_modifier_layer);
+      const climateTopic = asLooseObject(statusPayload.climate_theme);
+      const xiangfaTopic = asLooseObject(statusPayload.xiangfa_theme);
       const decomposition = asLooseObject(statusPayload.ten_gods_decomposition_l0) as Record<string, TenGodDecompositionRow>;
       const contributions = asLooseRecord<RecomputeContribution>(statusPayload.recompute_contributions, []);
       setPlugins(list);
@@ -353,6 +361,10 @@ export default function V17AdminPage() {
       setProjectionBridgeProtocol(bridgeProtocol);
       setRelationFormationSummary(relationSummary);
       setRelationDynamicsSummary(relationDynamics);
+      setClimateField(climate);
+      setClimateModifierLayer(climateModifier);
+      setClimateTheme(climateTopic);
+      setXiangfaTheme(xiangfaTopic);
       setTenGodDecomposition(decomposition);
       setRecomputeContributions(contributions);
       setResolvedPluginRuntimeSessionId(asString(statusPayload.session_id, pluginRuntimeSessionId || "default"));
@@ -765,6 +777,10 @@ export default function V17AdminPage() {
                  pluginCount={plugins.length}
                  hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
                  authority={coreEngineAuthority}
+                 climateField={climateField}
+                 climateModifierLayer={climateModifierLayer}
+                 climateTheme={climateTheme}
+                 xiangfaTheme={xiangfaTheme}
                  projectionBridgeProtocol={projectionBridgeProtocol}
                  relationFormationSummary={relationFormationSummary}
                  relationDynamicsSummary={relationDynamicsSummary}

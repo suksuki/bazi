@@ -530,6 +530,18 @@ async def get_plugin_runtime_status(
         if isinstance(energy_meta.get("relation_dynamics_summary"), list)
         else []
     )
+    climate_field = (
+        energy_meta.get("climate_field")
+        if isinstance(energy_meta.get("climate_field"), dict)
+        else {}
+    )
+    climate_modifier_layer = (
+        energy_meta.get("climate_modifier_layer")
+        if isinstance(energy_meta.get("climate_modifier_layer"), dict)
+        else {}
+    )
+    climate_theme = meta.get("climate_theme") if isinstance(meta.get("climate_theme"), dict) else {}
+    xiangfa_theme = meta.get("xiangfa_theme") if isinstance(meta.get("xiangfa_theme"), dict) else {}
     recompute_contributions = (
         meta.get("plugin_recompute_contributions")
         if isinstance(meta.get("plugin_recompute_contributions"), list)
@@ -550,6 +562,10 @@ async def get_plugin_runtime_status(
         "ten_gods_decomposition_l0": ten_gods_decomposition_l0,
         "relation_formation_summary": relation_formation_summary,
         "relation_dynamics_summary": relation_dynamics_summary,
+        "climate_field": climate_field,
+        "climate_modifier_layer": climate_modifier_layer,
+        "climate_theme": climate_theme,
+        "xiangfa_theme": xiangfa_theme,
         "recompute_contributions": recompute_contributions,
     }
 

@@ -26,6 +26,9 @@ from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
     branches_and_stems_from_runtime_pillars,
     detect_stem_fusion_cases,
 )
+from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import normalize_blind_theme_meta
+from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
+from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import (
     _branch_dominant_ten_god,
     build_clash_stress_map,
@@ -596,6 +599,27 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 current = meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else {}
                 if float(incoming.get("confidence") or 0.0) >= float(current.get("confidence") or -1.0):
                     meta["god_ring_authority"] = incoming
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("blind_theme"), dict):
+                incoming_blind = normalize_blind_theme_meta(f.meta.get("blind_theme"))
+                current_blind = normalize_blind_theme_meta(meta.get("blind_theme"))
+                incoming_conf = float(incoming_blind.get("confidence") or 0.0)
+                current_conf = float(current_blind.get("confidence") or -1.0)
+                if incoming_conf >= current_conf:
+                    meta["blind_theme"] = incoming_blind
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("climate_theme"), dict):
+                incoming_climate = normalize_climate_theme_meta(f.meta.get("climate_theme"))
+                current_climate = normalize_climate_theme_meta(meta.get("climate_theme"))
+                incoming_conf = float(incoming_climate.get("confidence") or 0.0)
+                current_conf = float(current_climate.get("confidence") or -1.0)
+                if incoming_conf >= current_conf:
+                    meta["climate_theme"] = incoming_climate
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("xiangfa_theme"), dict):
+                incoming_xiangfa = normalize_xiangfa_theme_meta(f.meta.get("xiangfa_theme"))
+                current_xiangfa = normalize_xiangfa_theme_meta(meta.get("xiangfa_theme"))
+                incoming_conf = float(incoming_xiangfa.get("confidence") or 0.0)
+                current_conf = float(current_xiangfa.get("confidence") or -1.0)
+                if incoming_conf >= current_conf:
+                    meta["xiangfa_theme"] = incoming_xiangfa
             # 记录基础事实，以便后续 L2+ 插件可见
             pt["facts"].append({
                 "fact": str(f.text or "").strip(),

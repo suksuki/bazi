@@ -37,24 +37,60 @@ pytest qiazhi/v17_rebirth/tests/test_synthetic_lab_matrix.py \
   qiazhi/v17_rebirth/tests/test_synthetic_relation_family_matrix.py \
   qiazhi/v17_rebirth/tests/test_synthetic_relation_dynamics_matrix.py \
   qiazhi/v17_rebirth/tests/test_synthetic_runtime_field_matrix.py \
-  qiazhi/v17_rebirth/tests/test_synthetic_work_authority_matrix.py -q
+  qiazhi/v17_rebirth/tests/test_synthetic_work_authority_matrix.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_pattern_specialization_lab.py -q
 ```
 
 Synthetic Lab 当前覆盖：
 
 - L0 静态基础：通根 / 虚浮 / 透干
+- L0 调候场：`thermal_index / moisture_index / climate_tension / climate_modifier_layer`
+- L0/L2 调候作用链：`climate_modifier_layer -> authority_use_score / authority_taboo_score -> pattern_survival_delta`
+- L2 调候专题：`climate_theme_core + classical.climate.*` 的 Prompt / UI / Admin 对齐
 - L1 关系家族：三合 / 三会 / 六合 / 半合 / 拱合 / stem_fusion runtime
 - L1 关系动力学：暗合 / 冲 / 刑 / 害 / 破 / 克 双轴摘要
-- Core 运流协议：背景场 / 年度扰动 / runtime_cascade / background vs trigger / resonance / interruption
+- Core 运流协议：原局 / 背景场 / 年度扰动 / runtime_cascade / resonance / interruption
 - L2 判定层：`risk_matrix` 偏置、authority 用神/忌神/通关神
-- Core 做功与 authority：`contest / positive_path / tongguan_present`
+- L2 专题插件：`食神制杀 / 伤官配印 / 财破印` 的 fact -> bias -> authority 闭环
+- Core 做功与 authority：`contest / positive_path / tongguan_present / tongguan_external`
 - Authority Judgement 协议：`judgement_bias_protocol / stage_bias_protocol`
+- Authority Layer 协议：`authority_layer_protocol / max_bias_ratio / override_forbidden`
+- 调候驱动 authority 回归：`test_effect_resolver_candidates.py`、`test_l2_blind_ziping_protocol.py`
+- 子平 umbrella 专题：`month_command / balance / climate_bridge / pattern_bridge / yongshen / god_ring_resolver / summary`
 - Master Reasoning：主审盘推理链与 learning hook
 - Evolution Ledger：演化账本契约
+- 盲派专题：`blind_theme` 独立专题、最终/临时元数据分层、Prompt 合同出口、`blind_bias_protocol -> authority` 并行桥接
+- 象法专题：`xiangfa_theme` semantic-only 专题、最终/临时元数据分层、Prompt 合同出口、禁止进入 bias/authority
 
 设计协议见：
 
 - `qiazhi/v17_rebirth/docs/V17_SYNTHETIC_LAB_PROTOCOL_2026-04-21.md`
+
+## Practitioner Benchmark
+
+真实命盘校盘基准集用于在 Synthetic Lab 之后，继续校验“复杂盘是否沿着命理师的审盘轨迹运行”。
+
+```bash
+# 只跑真实命盘校盘基准
+bash qiazhi/v17_rebirth/scripts/run_practitioner_benchmarks.sh
+
+# 等价命令
+pytest qiazhi/v17_rebirth/tests/test_practitioner_benchmark_cases.py -q
+
+# 输出当前校盘基准报告
+python3 qiazhi/v17_rebirth/scripts/render_practitioner_benchmark_report.py
+```
+
+当前首批基准盘覆盖：
+
+- `丁巳 / 乙巳 / 乙丑 / 乙酉 · 庚子 / 丙午`
+- `丁巳 / 乙巳 / 乙丑 / 乙酉 · 辛丑 / 乙未`
+- `壬寅 / 甲辰 / 丙子 / 甲午 · 庚戌 / 丙午`
+
+协议见：
+
+- `qiazhi/v17_rebirth/docs/V17_PRACTITIONER_BENCHMARK_PROTOCOL_2026-04-23.md`
+- `qiazhi/v17_rebirth/docs/V17_PRACTITIONER_BENCHMARK_AUDIT_2026-04-23.md`
 
 ## 常用命令
 
@@ -73,6 +109,11 @@ pytest qiazhi/v17_rebirth/tests/test_runtime_field_protocol.py qiazhi/v17_rebirt
 
 # 仅运行 authority judgement 协议 / routing / canonical prompt
 pytest qiazhi/v17_rebirth/tests/test_authority_judgement_protocol.py \
+  qiazhi/v17_rebirth/tests/test_authority_layer_protocol.py \
+  qiazhi/v17_rebirth/tests/test_climate_field_protocol.py \
+  qiazhi/v17_rebirth/tests/test_climate_theme_core.py \
+  qiazhi/v17_rebirth/tests/test_blind_school_core.py \
+  qiazhi/v17_rebirth/tests/test_xiangfa_theme_core.py \
   qiazhi/v17_rebirth/tests/test_brain_routing.py \
   qiazhi/v17_rebirth/tests/test_physics_canonical.py \
   qiazhi/v17_rebirth/tests/test_llm_micro_client_prompt.py -q
@@ -89,3 +130,14 @@ cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
 
 - **ImportError: v17_rebirth**：在仓库根执行 pytest，或设置 `PYTHONPATH=qiazhi`。
 - **集成测试失败**：确认未改 `app` 的 `/health` 契约；流式端点需要真实 LLM，默认不在 CI 中覆盖。
+
+## 本轮新增协议
+
+- `v17.climate_field.v1`
+- `v17.climate_modifier_layer.v1`
+- `v17.authority.layer_protocol.v1`
+- `v17.climate.theme.v1`
+- `v17.xiangfa.theme.v1`
+- `classical.ziping.climate_bridge.v1`
+- `classical.ziping.pattern_bridge.v1`
+- `classical.ziping.summary.v1`

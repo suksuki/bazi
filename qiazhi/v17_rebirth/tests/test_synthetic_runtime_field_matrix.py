@@ -7,8 +7,10 @@ from v17_rebirth.testing.synthetic_lab import (
     RUNTIME_BANHE_INTERRUPTION,
     RUNTIME_HAI_FLOW_TRIGGER,
     RUNTIME_HAI_LUCK_BACKGROUND,
+    RUNTIME_HAI_NATAL_BASELINE,
     RUNTIME_LIUHE_FLOW_TRIGGER,
     RUNTIME_LIUHE_LUCK_BACKGROUND,
+    RUNTIME_LIUHE_NATAL_BASELINE,
     RUNTIME_SANHUI_RESONANCE,
     relation_dynamics_row,
     relation_row,
@@ -39,6 +41,31 @@ def test_runtime_field_matrix_luck_background_outweighs_flow_trigger_for_liuhe()
     assert list(flow_dynamic.get("pillars") or []) == ["flow", "year"]
 
 
+def test_runtime_field_matrix_natal_outweighs_external_trigger_for_liuhe() -> None:
+    natal_run = run_case(RUNTIME_LIUHE_NATAL_BASELINE)
+    luck_run = run_case(RUNTIME_LIUHE_LUCK_BACKGROUND)
+    flow_run = run_case(RUNTIME_LIUHE_FLOW_TRIGGER)
+
+    natal_row = relation_row(natal_run, "liuhe")
+    luck_row = relation_row(luck_run, "liuhe")
+    flow_row = relation_row(flow_run, "liuhe")
+    natal_dynamic = relation_dynamics_row(natal_run, "liuhe")
+    luck_dynamic = relation_dynamics_row(luck_run, "liuhe")
+    flow_dynamic = relation_dynamics_row(flow_run, "liuhe")
+
+    assert isinstance(natal_row, dict)
+    assert isinstance(luck_row, dict)
+    assert isinstance(flow_row, dict)
+    assert isinstance(natal_dynamic, dict)
+    assert isinstance(luck_dynamic, dict)
+    assert isinstance(flow_dynamic, dict)
+
+    assert float(natal_row.get("formation_percent") or 0.0) > float(luck_row.get("formation_percent") or 0.0)
+    assert float(luck_row.get("formation_percent") or 0.0) > float(flow_row.get("formation_percent") or 0.0)
+    assert float(natal_dynamic.get("stability_delta_ratio") or 0.0) > float(luck_dynamic.get("stability_delta_ratio") or 0.0)
+    assert float(luck_dynamic.get("stability_delta_ratio") or 0.0) > float(flow_dynamic.get("stability_delta_ratio") or 0.0)
+
+
 def test_runtime_field_matrix_luck_background_outweighs_flow_trigger_for_hai() -> None:
     luck_run = run_case(RUNTIME_HAI_LUCK_BACKGROUND)
     flow_run = run_case(RUNTIME_HAI_FLOW_TRIGGER)
@@ -52,6 +79,25 @@ def test_runtime_field_matrix_luck_background_outweighs_flow_trigger_for_hai() -
     assert float(luck_dynamic.get("energy_effect_ratio") or 0.0) > float(flow_dynamic.get("energy_effect_ratio") or 0.0)
     assert float(luck_dynamic.get("stability_delta_ratio") or 0.0) < 0.0
     assert float(flow_dynamic.get("stability_delta_ratio") or 0.0) < 0.0
+
+
+def test_runtime_field_matrix_natal_harm_outweighs_external_harm() -> None:
+    natal_run = run_case(RUNTIME_HAI_NATAL_BASELINE)
+    luck_run = run_case(RUNTIME_HAI_LUCK_BACKGROUND)
+    flow_run = run_case(RUNTIME_HAI_FLOW_TRIGGER)
+
+    natal_dynamic = relation_dynamics_row(natal_run, "hai")
+    luck_dynamic = relation_dynamics_row(luck_run, "hai")
+    flow_dynamic = relation_dynamics_row(flow_run, "hai")
+
+    assert isinstance(natal_dynamic, dict)
+    assert isinstance(luck_dynamic, dict)
+    assert isinstance(flow_dynamic, dict)
+
+    assert float(natal_dynamic.get("energy_effect_ratio") or 0.0) > float(luck_dynamic.get("energy_effect_ratio") or 0.0)
+    assert float(luck_dynamic.get("energy_effect_ratio") or 0.0) > float(flow_dynamic.get("energy_effect_ratio") or 0.0)
+    assert abs(float(natal_dynamic.get("stability_delta_ratio") or 0.0)) > abs(float(luck_dynamic.get("stability_delta_ratio") or 0.0))
+    assert abs(float(luck_dynamic.get("stability_delta_ratio") or 0.0)) > abs(float(flow_dynamic.get("stability_delta_ratio") or 0.0))
 
 
 def test_runtime_field_matrix_graph_metadata_keeps_background_and_trigger_roles_distinct() -> None:

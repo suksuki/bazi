@@ -117,6 +117,12 @@ SyntheticCase(
 
 这样可以避免把“地支成局”和“天干五合转化”硬塞进同一个 formation bucket。
 
+补充口径（2026-04-22）：
+
+- `三会` 当前只在三支齐全时进入 `sanhui` 主家族。
+- 两支会气、重支叠加，不再冒充 `sanhui` 摘要。
+- 如果后续要做“会气候选”，必须另立 family，不得继续污染 `三会局` 主摘要。
+
 ### L2 Judgment Plugins
 
 验证：
@@ -128,8 +134,13 @@ SyntheticCase(
 当前基线样盘：
 
 - `l2.judgement.officer_exhaust_pair`
+- `l2.judgement.owl_food`
 - `l2.authority.bias_reroute`
 - `l2.authority.tongguan_present`
+- `l2.authority.blind_theme_parallel`
+- `l2.pattern.shishen_zhisha`
+- `l2.pattern.shangguan_peiyin`
+- `l2.pattern.caipoyin`
 
 2026-04-22 起，L2 合成样盘还要额外固定两条协议：
 
@@ -137,6 +148,18 @@ SyntheticCase(
   - judgement 插件是否按 `bias / evidence / narrative hint` 输出
 - `stage_bias_protocol`
   - 阶段势是否只进入 authority，而不回写底层物理
+- `blind_bias_protocol`
+  - 盲派主题是否以 `bias_only` 方式并行推用/推忌，而不覆盖子平 authority
+
+2026-04-22 晚间补充：
+
+- `pattern_specializations` 进入 Synthetic Lab 主矩阵，不再只靠零散单元测试
+- `专题插件事实 -> judgement bias -> authority` 成为正式回归链
+- 当前已固定三类专题样盘：
+  - `食神制杀`
+  - `伤官配印`
+  - `财破印`
+- 这意味着实验室现在不只验证“插件能不能命中”，还验证“插件命中后会不会正确改写 authority 候选方向”
 
 ### MASTER Reasoning
 
@@ -148,8 +171,10 @@ SyntheticCase(
 
 当前基线样盘：
 
+- `runtime.relation.liuhe.natal_baseline`
 - `runtime.relation.liuhe.luck_background`
 - `runtime.relation.liuhe.flow_trigger`
+- `runtime.relation.hai.natal_baseline`
 - `runtime.relation.hai.luck_background`
 - `runtime.relation.hai.flow_trigger`
 - `runtime.relation.sanhui.resonance`
@@ -159,6 +184,7 @@ SyntheticCase(
 2026-04-22 起，MASTER 层开始承接 `runtime-field matrix`：
 
 - 同一组关系分别落在 `luck_background / flow_trigger`
+- 补齐 `natal / luck / flow` 的同关系梯度
 - 校验 `大运 = 背景场`、`流年 = 扰动触发`
 - 校验图边 metadata 与 relation summary 同口径
 - 校验 `resonance / interruption` 在 formation 与 dynamics 两个摘要里同时可见
@@ -176,6 +202,7 @@ SyntheticCase(
 - `core.authority.officer_contest`
 - `core.authority.positive_path`
 - `core.authority.bridge_present`
+- `core.authority.bridge_external`
 
 ## Runtime Outputs
 
@@ -187,6 +214,7 @@ Synthetic Lab 不是只看最后分数，而是同时检查：
 - `runtime_field_protocol`
 - `judgement_bias_protocol`
 - `stage_bias_protocol`
+- `pattern_candidate / god_ring_bias / authority reroute`
 - `master_reasoning`
 - `ledger`
 
@@ -233,6 +261,26 @@ pytest qiazhi/v17_rebirth/tests -m synthetic -q
 - judgement bias / stage bias 协议
 
 原则很简单：
+
+## Practitioner Benchmark Bridge
+
+从 2026-04-23 起，Synthetic Lab 不再是“最终一站”。
+
+V17 现在明确采用两段式验证：
+
+1. `Synthetic Lab`
+   - 负责干净世界、单变量、关系矩阵、authority 协议的稳定性
+2. `Practitioner Benchmark`
+   - 负责真实命盘、多路结构并存、命理师审盘轨迹的复杂盘回归
+
+也就是说：
+
+- Synthetic Lab 负责“规则别坏”
+- Practitioner Benchmark 负责“复杂盘别跑偏”
+
+真实命盘基准协议见：
+
+- `qiazhi/v17_rebirth/docs/V17_PRACTITIONER_BENCHMARK_PROTOCOL_2026-04-23.md`
 
 1. 先造一个最小可控样盘。
 2. 再写断言，固定预期。

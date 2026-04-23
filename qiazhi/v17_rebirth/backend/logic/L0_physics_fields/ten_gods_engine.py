@@ -24,6 +24,7 @@ import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
+from v17_rebirth.backend.logic.climate_field_protocol import build_climate_field
 from v17_rebirth.backend.logic.runtime_field_protocol import ROOT_SCOPE_WEIGHTS as _RUNTIME_ROOT_SCOPE_WEIGHTS
 from v17_rebirth.backend.logic.L0_physics_fields.evolution_ledger import EvolutionLedger
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_decomposition import (
@@ -946,8 +947,7 @@ def _eval_sanhui_hits(branches: Dict[str, str]) -> List[Dict[str, Any]]:
         return hits
     for starter, pivot, tomb, element in _SANHUI_GROUPS:
         group = {starter, pivot, tomb}
-        shared = sorted(group.intersection(present))
-        if len(shared) < 2:
+        if not group.issubset(present):
             continue
         matched = [(p, br) for p, br in branches.items() if br in group]
         pillars = [p for p, _ in matched]
@@ -955,9 +955,9 @@ def _eval_sanhui_hits(branches: Dict[str, str]) -> List[Dict[str, Any]]:
         branch_counts: Dict[str, int] = {}
         for br in matched_branches:
             branch_counts[br] = branch_counts.get(br, 0) + 1
-        unique_count = len(set(shared))
+        unique_count = len(group)
         duplicate_count = max(0, len(matched_branches) - unique_count)
-        completion = unique_count / 3.0
+        completion = 1.0
         role_map = {starter: "starter", pivot: "pivot", tomb: "tomb"}
         duplicate_bonus, duplicate_roles = _relation_duplicate_bonus(branch_counts, role_map)
         strength = (
@@ -1897,6 +1897,12 @@ def calc_deity_scores(
     relation_dynamics_summary = _build_relation_dynamics_summary(
         relation_traces=list(root_dynamic_meta.get("traces") or []),
     )
+    climate_field = build_climate_field(
+        four_pillars=four_pillars,
+        luck_pillar=luck_pillar,
+        flow_pillar=flow_pillar,
+        daymaster=daymaster,
+    )
 
     # ── Step 5：月令主气额外标记（实际加持已只作用在月支自身）──
     month_stem, _ = _parse_gz(str(four_pillars.get("month", "")).strip())
@@ -2070,6 +2076,8 @@ def calc_deity_scores(
         "relation_visible_bonuses": relation_visible_bonuses,
         "relation_formation_summary": relation_formation_summary,
         "relation_dynamics_summary": relation_dynamics_summary,
+        "climate_field": climate_field,
+        "climate_modifier_layer": dict(climate_field.get("climate_modifier_layer") or {}),
         "projection_bridge_protocol": _projection_bridge_protocol(),
         "ledger": ledger,
     }

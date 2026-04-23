@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
 from v17_rebirth.backend.logic.core_engine.god_ring_resolver_core import resolve_god_ring_core
 from v17_rebirth.backend.logic.L2_structure_patterns import risk_matrix
+from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
+    CaiPoYinPatternPlugin,
+    ShiShenZhiShaPatternPlugin,
+    ShangGuanPeiYinPatternPlugin,
+)
 from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import ZiPingGodRingResolverPlugin
 from v17_rebirth.backend.plugins.spec import V17Fact
 from v17_rebirth.backend.services.god_ring_authority import resolve_god_ring_authority
@@ -62,6 +68,28 @@ class SyntheticAuthorityCase:
 @dataclass(frozen=True)
 class SyntheticAuthorityRun:
     case: SyntheticAuthorityCase
+    facts: list[V17Fact]
+    authority: dict[str, Any]
+    resolved: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SyntheticPatternCase:
+    case_id: str
+    layer: str
+    description: str
+    plugin_cls: type
+    tensor: dict[str, Any]
+    expected_pattern: str
+    expected_target_god: str
+    expected_use_bias: tuple[str, ...] = ()
+    expected_taboo_bias: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class SyntheticPatternRun:
+    case: SyntheticPatternCase
     facts: list[V17Fact]
     authority: dict[str, Any]
     resolved: dict[str, Any]
@@ -170,6 +198,68 @@ def run_authority_case(case: SyntheticAuthorityCase) -> SyntheticAuthorityRun:
         authority=dict(authority or {}),
         resolved=dict(resolved or {}),
     )
+
+
+def _decision_rows_from_facts(*, plugin_id: str, case_id: str, facts: list[V17Fact]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for idx, fact in enumerate(facts):
+        meta = dict(fact.meta or {}) if isinstance(fact.meta, dict) else {}
+        bias = dict(meta.get("god_ring_bias") or {}) if isinstance(meta.get("god_ring_bias"), dict) else {}
+        if not bias:
+            continue
+        impact: dict[str, Any] = {
+            "target_god": str(meta.get("target_god") or fact.target_god or "").strip(),
+            "god_ring_bias": bias,
+        }
+        work_evidence = meta.get("work_evidence")
+        if isinstance(work_evidence, dict) and work_evidence:
+            impact["work_evidence"] = deepcopy(work_evidence)
+        narrative_hint = str(meta.get("pattern_candidate") or fact.text or "").strip()
+        if narrative_hint:
+            impact["narrative_hint"] = narrative_hint
+        rows.append(
+            {
+                "id": f"{case_id}:{idx}",
+                "plugin_id": plugin_id,
+                "label": str(meta.get("pattern_candidate") or fact.text or "").strip(),
+                "title": str(fact.text or "").strip(),
+                "target_god": str(meta.get("target_god") or fact.target_god or "").strip(),
+                "physical_impact": impact,
+            }
+        )
+    return rows
+
+
+def run_pattern_case(case: SyntheticPatternCase) -> SyntheticPatternRun:
+    plugin = case.plugin_cls()
+    tensor = deepcopy(case.tensor)
+    facts = list(plugin.collect_v17_facts(tensor))
+    routed_tensor = deepcopy(case.tensor)
+    routed_tensor["pending_decisions"] = _decision_rows_from_facts(
+        plugin_id=str(plugin.plugin_id),
+        case_id=case.case_id,
+        facts=facts,
+    )
+    routed_tensor.setdefault("auto_resolutions", [])
+    authority_facts = list(ZiPingGodRingResolverPlugin().collect_v17_facts(routed_tensor))
+    authority = authority_facts[0].meta.get("god_ring_authority") if authority_facts and isinstance(authority_facts[0].meta, dict) else {}
+    resolved = resolve_god_ring_authority(
+        raw_physics={"meta": {"god_ring_authority": dict(authority or {})}},
+        ranked_pairs=_ranked_pairs_from_tensor(routed_tensor),
+    )
+    return SyntheticPatternRun(
+        case=case,
+        facts=facts,
+        authority=dict(authority or {}),
+        resolved=dict(resolved or {}),
+    )
+
+
+def pattern_case_fact(run: SyntheticPatternRun) -> V17Fact | None:
+    for fact in run.facts:
+        if str((fact.meta or {}).get("pattern_candidate") or "") == run.case.expected_pattern:
+            return fact
+    return run.facts[0] if run.facts else None
 
 
 def run_core_case(case: SyntheticCoreCase) -> SyntheticCoreRun:
@@ -340,7 +430,7 @@ L1_XING_BASELINE = SyntheticCase(
     description="子卯刑基线盘，验证刑走内耗轴，总能量未必掉光，但有效输出与稳定性一起打折。",
     four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁巳"},
     tags=("relation", "xing", "baseline"),
-    expected_relation_families=("anhe", "sanhui"),
+    expected_relation_families=("anhe",),
     expected_dynamic_families=("xing",),
 )
 
@@ -351,6 +441,16 @@ RUNTIME_LIUHE_LUCK_BACKGROUND = SyntheticCase(
     four_pillars={"year": "甲子", "month": "丙寅", "day": "丁卯", "hour": "戊辰"},
     luck_pillar="己丑",
     tags=("runtime_field", "liuhe", "luck_background"),
+    expected_relation_families=("liuhe",),
+    expected_dynamic_families=("liuhe",),
+)
+
+RUNTIME_LIUHE_NATAL_BASELINE = SyntheticCase(
+    case_id="runtime.relation.liuhe.natal_baseline",
+    layer="MASTER",
+    description="同一子丑六合直接落在原局，验证原局结构型绑定高于大运背景场与流年扰动。",
+    four_pillars={"year": "甲子", "month": "乙丑", "day": "丙寅", "hour": "丁辰"},
+    tags=("runtime_field", "liuhe", "natal_baseline"),
     expected_relation_families=("liuhe",),
     expected_dynamic_families=("liuhe",),
 )
@@ -373,6 +473,15 @@ RUNTIME_HAI_LUCK_BACKGROUND = SyntheticCase(
     four_pillars={"year": "甲子", "month": "乙卯", "day": "丙寅", "hour": "丁卯"},
     luck_pillar="戊未",
     tags=("runtime_field", "hai", "luck_background"),
+    expected_dynamic_families=("hai",),
+)
+
+RUNTIME_HAI_NATAL_BASELINE = SyntheticCase(
+    case_id="runtime.relation.hai.natal_baseline",
+    layer="MASTER",
+    description="同一子未害直接落在原局，验证原局慢性暗损高于大运背景场与流年扰动。",
+    four_pillars={"year": "甲子", "month": "乙未", "day": "丙寅", "hour": "丁卯"},
+    tags=("runtime_field", "hai", "natal_baseline"),
     expected_dynamic_families=("hai",),
 )
 
@@ -418,7 +527,7 @@ MASTER_BRANCH_CLUSTER = SyntheticCase(
     luck_pillar="庚戌",
     flow_pillar="丙午",
     tags=("master", "relation", "user_review"),
-    expected_relation_families=("sanhe", "banhe_muwang", "sanhui"),
+    expected_relation_families=("sanhe", "banhe_muwang"),
 )
 
 L2_RISK_OFFICER_JUDGEMENT = SyntheticRiskCase(
@@ -432,6 +541,19 @@ L2_RISK_OFFICER_JUDGEMENT = SyntheticRiskCase(
     },
     expected_patterns=("伤官见官", "伤官伤尽"),
     tags=("judgement", "risk_matrix", "officer"),
+)
+
+L2_RISK_OWL_FOOD = SyntheticRiskCase(
+    case_id="l2.judgement.owl_food",
+    layer="L2",
+    description="偏印压食神的风险样盘，要求吐出枭印夺食候选，并把食神保护、偏印压到忌侧。",
+    tensor={
+        "four_pillars": {"year": "辛酉", "month": "壬辰", "day": "丙午", "hour": "甲寅"},
+        "ten_gods_absolute": {"偏印": 16.0, "食神": 10.0},
+        "meta": {"interaction_v2": {}},
+    },
+    expected_patterns=("枭印夺食",),
+    tags=("judgement", "risk_matrix", "owl_food"),
 )
 
 L2_AUTHORITY_BIAS_REROUTE = SyntheticAuthorityCase(
@@ -541,6 +663,45 @@ L2_AUTHORITY_TONGGUAN_PRESENT = SyntheticAuthorityCase(
         "auto_resolutions": [],
     },
     tags=("authority", "tongguan", "ziping"),
+)
+
+L2_AUTHORITY_BLIND_THEME_PARALLEL = SyntheticAuthorityCase(
+    case_id="l2.authority.blind_theme_parallel",
+    layer="L2",
+    description="盲派主题作为并行专题推用推忌，但不覆盖子平 authority，用于校验 blind bias_only 桥接。",
+    tensor={
+        "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+        "ten_gods_base_l0": {"伤官": 58.0, "食神": 44.0, "正财": 22.0, "偏财": 16.0, "正官": 18.0, "偏印": 11.0},
+        "ten_gods_runtime": {"伤官": 58.0, "食神": 44.0, "正财": 22.0, "偏财": 16.0, "正官": 18.0, "偏印": 11.0},
+        "energy_meta": {
+            "month_command_god": "伤官",
+            "season_power": {"month_branch": "巳"},
+            "ten_gods_decomposition_l0": {
+                "伤官": {"manifest": 18.0, "root": 8.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 26.0},
+                "食神": {"manifest": 12.0, "root": 7.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 19.0},
+                "正财": {"manifest": 8.0, "root": 4.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 12.0},
+                "偏财": {"manifest": 6.0, "root": 3.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 9.0},
+                "正官": {"manifest": 7.0, "root": 4.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 11.0},
+                "偏印": {"manifest": 5.0, "root": 3.0, "momentum": 0.0, "momentum_month_order": 0.0, "momentum_stage": 0.0, "momentum_stage_lu": 0.0, "momentum_stage_blade": 0.0, "momentum_stage_general": 0.0, "momentum_structure": 0.0, "momentum_auxiliary": 0.0, "momentum_other": 0.0, "hidden": 0.0, "total": 8.0},
+            },
+        },
+        "meta": {
+            "blind_theme": {
+                "contract": "v17.blind.theme.v1",
+                "primary_route": "食伤生财",
+                "body_mode": "disturbed_body",
+                "confidence": 0.84,
+                "use_candidates": ["食伤", "正财"],
+                "taboo_candidates": ["强印", "正官"],
+                "house_roles": {"食伤": "outside", "正财": "inside", "偏财": "inside", "偏印": "bridge"},
+                "runtime_switches": ["己亥运中食伤生财抢权"],
+                "authority_bridge_mode": "bias_only",
+            }
+        },
+        "pending_decisions": [],
+        "auto_resolutions": [],
+    },
+    tags=("authority", "blind_theme", "ziping"),
 )
 
 CORE_AUTHORITY_OFFICER_CONTEST = SyntheticCoreCase(
@@ -684,6 +845,63 @@ CORE_AUTHORITY_BRIDGE_PRESENT = SyntheticCoreCase(
     tags=("core", "authority", "tongguan"),
 )
 
+CORE_AUTHORITY_BRIDGE_EXTERNAL = SyntheticCoreCase(
+    case_id="core.authority.bridge_external",
+    layer="MASTER",
+    description="盘内无印而官杀压身，验证外来通关神会被投影为 authority 候选与外部桥接路径。",
+    four_pillars={"year": "甲寅", "month": "乙卯", "day": "戊辰", "hour": "甲寅"},
+    deity_scores={"七杀": 44.0, "正官": 36.0, "比肩": 24.0, "劫财": 8.0, "正印": 0.0, "偏印": 0.0},
+    tags=("core", "authority", "tongguan_external"),
+)
+
+L2_PATTERN_SHISHEN_ZHISHA = SyntheticPatternCase(
+    case_id="l2.pattern.shishen_zhisha",
+    layer="L2",
+    description="专题插件样盘：食神制杀应把食神推入用神线，并把七杀压入忌线。",
+    plugin_cls=ShiShenZhiShaPatternPlugin,
+    tensor={
+        "four_pillars": {"year": "甲申", "month": "庚申", "day": "壬午", "hour": "甲辰"},
+        "ten_gods_runtime": {"七杀": 26.0, "食神": 22.0, "偏印": 3.0},
+    },
+    expected_pattern="食神制杀",
+    expected_target_god="七杀",
+    expected_use_bias=("食神",),
+    expected_taboo_bias=("七杀",),
+    tags=("pattern", "specialization", "shishen_zhisha"),
+)
+
+L2_PATTERN_SHANGGUAN_PEIYIN = SyntheticPatternCase(
+    case_id="l2.pattern.shangguan_peiyin",
+    layer="L2",
+    description="专题插件样盘：伤官配印应把伤官与印线一起推入用神候选。",
+    plugin_cls=ShangGuanPeiYinPatternPlugin,
+    tensor={
+        "four_pillars": {"year": "甲子", "month": "丙午", "day": "乙酉", "hour": "壬辰"},
+        "ten_gods_runtime": {"伤官": 28.0, "正印": 18.0, "偏印": 3.0},
+    },
+    expected_pattern="伤官配印",
+    expected_target_god="伤官",
+    expected_use_bias=("伤官", "正印"),
+    expected_taboo_bias=(),
+    tags=("pattern", "specialization", "shangguan_peiyin"),
+)
+
+L2_PATTERN_CAIPOYIN = SyntheticPatternCase(
+    case_id="l2.pattern.caipoyin",
+    layer="L2",
+    description="专题插件样盘：财破印应保护印线并把财线压到忌神侧。",
+    plugin_cls=CaiPoYinPatternPlugin,
+    tensor={
+        "four_pillars": {"year": "甲子", "month": "辛酉", "day": "甲午", "hour": "己丑"},
+        "ten_gods_runtime": {"正印": 18.0, "偏印": 6.0, "正财": 23.0, "偏财": 9.0},
+    },
+    expected_pattern="财破印",
+    expected_target_god="正印",
+    expected_use_bias=("正印",),
+    expected_taboo_bias=("正财", "偏财"),
+    tags=("pattern", "specialization", "caipoyin"),
+)
+
 
 SYNTHETIC_CASES: tuple[SyntheticCase, ...] = (
     L0_FLOATING_PEER,
@@ -703,8 +921,10 @@ SYNTHETIC_CASES: tuple[SyntheticCase, ...] = (
     L1_PO_BASELINE,
     L1_KE_BASELINE,
     L1_XING_BASELINE,
+    RUNTIME_LIUHE_NATAL_BASELINE,
     RUNTIME_LIUHE_LUCK_BACKGROUND,
     RUNTIME_LIUHE_FLOW_TRIGGER,
+    RUNTIME_HAI_NATAL_BASELINE,
     RUNTIME_HAI_LUCK_BACKGROUND,
     RUNTIME_HAI_FLOW_TRIGGER,
     RUNTIME_SANHUI_RESONANCE,
@@ -714,17 +934,26 @@ SYNTHETIC_CASES: tuple[SyntheticCase, ...] = (
 
 SYNTHETIC_RISK_CASES: tuple[SyntheticRiskCase, ...] = (
     L2_RISK_OFFICER_JUDGEMENT,
+    L2_RISK_OWL_FOOD,
 )
 
 SYNTHETIC_AUTHORITY_CASES: tuple[SyntheticAuthorityCase, ...] = (
     L2_AUTHORITY_BIAS_REROUTE,
     L2_AUTHORITY_TONGGUAN_PRESENT,
+    L2_AUTHORITY_BLIND_THEME_PARALLEL,
+)
+
+SYNTHETIC_PATTERN_CASES: tuple[SyntheticPatternCase, ...] = (
+    L2_PATTERN_SHISHEN_ZHISHA,
+    L2_PATTERN_SHANGGUAN_PEIYIN,
+    L2_PATTERN_CAIPOYIN,
 )
 
 SYNTHETIC_CORE_CASES: tuple[SyntheticCoreCase, ...] = (
     CORE_AUTHORITY_OFFICER_CONTEST,
     CORE_AUTHORITY_POSITIVE_PATH,
     CORE_AUTHORITY_BRIDGE_PRESENT,
+    CORE_AUTHORITY_BRIDGE_EXTERNAL,
 )
 
 
@@ -738,6 +967,10 @@ def risk_case_ids() -> tuple[str, ...]:
 
 def authority_case_ids() -> tuple[str, ...]:
     return tuple(case.case_id for case in SYNTHETIC_AUTHORITY_CASES)
+
+
+def pattern_case_ids() -> tuple[str, ...]:
+    return tuple(case.case_id for case in SYNTHETIC_PATTERN_CASES)
 
 
 def core_case_ids() -> tuple[str, ...]:
