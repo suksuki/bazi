@@ -32,6 +32,9 @@ bash qiazhi/v17_rebirth/scripts/run_synthetic_lab.sh
 # 等价命令
 pytest qiazhi/v17_rebirth/tests -m synthetic -q
 
+# 运行批量 synthetic lab 报告
+python3 qiazhi/v17_rebirth/scripts/render_synthetic_batch_report.py
+
 # 只跑关系家族矩阵
 pytest qiazhi/v17_rebirth/tests/test_synthetic_lab_matrix.py \
   qiazhi/v17_rebirth/tests/test_synthetic_relation_family_matrix.py \
@@ -62,6 +65,7 @@ Synthetic Lab 当前覆盖：
 - Evolution Ledger：演化账本契约
 - 盲派专题：`blind_theme` 独立专题、最终/临时元数据分层、Prompt 合同出口、`blind_bias_protocol -> authority` 并行桥接
 - 象法专题：`xiangfa_theme` semantic-only 专题、最终/临时元数据分层、Prompt 合同出口、禁止进入 bias/authority
+- Synthetic Batch Lab：批量样盘不变量、异常到参数族映射、review-only 调参实验单
 
 设计协议见：
 
@@ -124,7 +128,8 @@ pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
   qiazhi/v17_rebirth/tests/test_meta_contract.py \
   qiazhi/v17_rebirth/tests/test_synthetic_tuning_bridge.py \
   qiazhi/v17_rebirth/tests/test_hydration_pipeline.py \
-  qiazhi/v17_rebirth/tests/test_parameter_candidate_runner.py -q
+  qiazhi/v17_rebirth/tests/test_parameter_candidate_runner.py \
+  qiazhi/v17_rebirth/tests/test_synthetic_batch_lab.py -q
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
@@ -154,6 +159,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `v17.synthetic_tuning_bridge.v1`
 - `v17.hydration_pipeline.v1`
 - `v17.parameter_candidate_runner.v1`
+- `v17.synthetic_batch_lab.v1`
 - `classical.ziping.climate_bridge.v1`
 - `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.summary.v1`

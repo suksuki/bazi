@@ -283,3 +283,44 @@ pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
 - 不自动应用参数。
 - 不绕过人工 review。
 - 所有 candidate patch 均为 `review_only`。
+
+---
+
+## 10. Synthetic Batch Lab
+
+实现：
+
+- `testing/synthetic_batch_lab.py`
+- `scripts/render_synthetic_batch_report.py`
+
+协议版本：
+
+- `v17.synthetic_batch_lab.v1`
+
+职责：
+
+- 批量运行一组代表性 synthetic cases。
+- 检查基础不变量：
+  - 总量有限且为正
+  - 十神分数有限且非负
+  - `climate_field` 存在且数值有限
+  - 预期 relation / dynamics family 必须出现
+  - 禁止 family 不得出现
+  - relation summary 数值不越界
+- 将异常映射到参数族。
+- 调用 `Synthetic Tuning Bridge` 和 `Parameter Candidate Runner` 生成 review-only 调参实验。
+
+当前默认批量覆盖：
+
+- 三合可见 / 不可见
+- 三会完整 gate
+- 三会误判防线
+- 六合原局 / 大运 / 流年
+- 冲 / 害
+- 寒湿 / 燥热调候场
+
+第一阶段安全边界：
+
+- 不写配置。
+- 不自动调整参数。
+- 只生成 `parameter_candidate_plan` 与 `parameter_experiments`。
