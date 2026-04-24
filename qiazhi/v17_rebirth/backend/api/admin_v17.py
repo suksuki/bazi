@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import socket
 import json
 import sqlite3
+import time
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib import request
@@ -26,10 +28,17 @@ from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.infrastructure.state_backend import get_state_backend
 from v17_rebirth.paths import RUNTIME_DIR
+from v17_rebirth.testing.learning_campaign import (
+    LearningCampaignConfig,
+    render_learning_campaign_markdown,
+    run_learning_campaign,
+)
 
 router = APIRouter(tags=["v17-admin"])
 
 _DB_STATE_FILE = RUNTIME_DIR / "db_bridge.json"
+_LEARNING_REPORT_JSON_FILE = RUNTIME_DIR / "learning_campaign_latest.json"
+_LEARNING_REPORT_MD_FILE = RUNTIME_DIR / "learning_campaign_latest.md"
 
 
 _DB_BRIDGE_STATE: Dict[str, Any] = {
@@ -68,6 +77,28 @@ def _save_db_state() -> None:
 _load_db_state()
 
 
+_LEARNING_CAMPAIGN_TASK: Optional[asyncio.Task] = None
+_LEARNING_CAMPAIGN_PAUSE_REQUESTED = False
+_LEARNING_CAMPAIGN_STATE: Dict[str, Any] = {
+    "protocol": "v17.admin.learning_campaign_runtime.v1",
+    "status": "idle",
+    "progress_percent": 0,
+    "current_step": "idle",
+    "current_step_label": "等待启动",
+    "estimated_remaining_seconds": 0,
+    "started_at": "",
+    "completed_at": "",
+    "message": "等待启动自动学习 Campaign。",
+    "config": {
+        "max_minutes": 180,
+        "max_extended_cases": None,
+        "request_llm_review": False,
+    },
+    "latest_report": {},
+    "latest_report_markdown": "",
+}
+
+
 def _ensure_v17_origin(payload: Dict[str, Any]) -> None:
     origin = str(payload.get("v17_origin", "")).strip()
     if origin != "v17_rebirth":
@@ -82,6 +113,107 @@ def _ensure_get_v17_origin(
     o = str(v17_origin or v17_origin_header or "").strip()
     if o != "v17_rebirth":
         raise HTTPException(status_code=403, detail="v17_origin validation failed")
+
+
+def _now_label() -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _learning_campaign_status_payload() -> Dict[str, Any]:
+    return {
+        **_LEARNING_CAMPAIGN_STATE,
+        "running": _LEARNING_CAMPAIGN_STATE.get("status") == "running",
+        "pause_requested": bool(_LEARNING_CAMPAIGN_PAUSE_REQUESTED),
+    }
+
+
+def _learning_campaign_config_from_payload(payload: Dict[str, Any]) -> LearningCampaignConfig:
+    raw_minutes = payload.get("max_minutes", payload.get("max_duration_minutes", 180))
+    try:
+        max_minutes = int(raw_minutes)
+    except (TypeError, ValueError):
+        max_minutes = 180
+    max_minutes = max(1, min(180, max_minutes))
+
+    raw_max_cases = payload.get("max_extended_cases")
+    max_cases: int | None
+    try:
+        max_cases = int(raw_max_cases) if raw_max_cases not in {None, ""} else None
+    except (TypeError, ValueError):
+        max_cases = None
+    if max_cases is not None:
+        max_cases = max(1, min(128, max_cases))
+
+    return LearningCampaignConfig(
+        max_duration_seconds=max_minutes * 60,
+        include_extended_synthetic=bool(payload.get("include_extended_synthetic", True)),
+        include_practitioner_benchmarks=bool(payload.get("include_practitioner_benchmarks", True)),
+        include_auto_learning_loop=bool(payload.get("include_auto_learning_loop", True)),
+        request_llm_review=bool(payload.get("request_llm_review", False)),
+        max_extended_cases=max_cases,
+    )
+
+
+def _set_learning_progress(row: Dict[str, Any]) -> None:
+    _LEARNING_CAMPAIGN_STATE.update(
+        {
+            "status": "running",
+            "current_step": str(row.get("step_key") or "running"),
+            "current_step_label": str(row.get("step_label") or "运行中"),
+            "progress_percent": int(row.get("progress_percent") or 0),
+            "estimated_remaining_seconds": float(row.get("estimated_remaining_seconds") or 0.0),
+            "message": f"{row.get('step_label') or '运行中'} · {int(row.get('progress_percent') or 0)}%",
+        }
+    )
+
+
+def _save_learning_report(report: Dict[str, Any], markdown: str) -> None:
+    try:
+        _LEARNING_REPORT_JSON_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _LEARNING_REPORT_JSON_FILE.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        _LEARNING_REPORT_MD_FILE.write_text(markdown, encoding="utf-8")
+    except Exception:
+        pass
+
+
+async def _run_learning_campaign_background(config: LearningCampaignConfig) -> None:
+    global _LEARNING_CAMPAIGN_PAUSE_REQUESTED
+    try:
+        report = await asyncio.to_thread(
+            run_learning_campaign,
+            config,
+            progress_callback=_set_learning_progress,
+            should_stop=lambda: bool(_LEARNING_CAMPAIGN_PAUSE_REQUESTED),
+        )
+        markdown = render_learning_campaign_markdown(report)
+        _save_learning_report(report, markdown)
+        status = "paused" if report.get("interrupted") else "completed"
+        _LEARNING_CAMPAIGN_STATE.update(
+            {
+                "status": status,
+                "progress_percent": 100 if status == "completed" else int(_LEARNING_CAMPAIGN_STATE.get("progress_percent") or 0),
+                "current_step": "paused" if status == "paused" else "completed",
+                "current_step_label": "已暂停" if status == "paused" else "完成",
+                "estimated_remaining_seconds": 0,
+                "completed_at": _now_label(),
+                "message": "学习 Campaign 已暂停，报告保留当前阶段结果。" if status == "paused" else "学习 Campaign 已完成。",
+                "latest_report": report,
+                "latest_report_markdown": markdown,
+            }
+        )
+    except Exception as exc:
+        _LEARNING_CAMPAIGN_STATE.update(
+            {
+                "status": "failed",
+                "current_step": "failed",
+                "current_step_label": "失败",
+                "estimated_remaining_seconds": 0,
+                "completed_at": _now_label(),
+                "message": f"学习 Campaign 失败：{type(exc).__name__}: {exc}",
+            }
+        )
+    finally:
+        _LEARNING_CAMPAIGN_PAUSE_REQUESTED = False
 
 
 def _probe_llm(base_url: str) -> Dict[str, Any]:
@@ -776,6 +908,75 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         "conflicts": updated_meta.get("plugin_conflicts", []),
         "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
     }
+
+
+@router.get("/v17/admin/learning-campaign")
+async def get_learning_campaign_status(
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    return {"ok": True, "campaign": _learning_campaign_status_payload()}
+
+
+@router.post("/v17/admin/learning-campaign/start")
+async def start_learning_campaign(payload: Dict[str, Any]) -> Dict[str, Any]:
+    global _LEARNING_CAMPAIGN_TASK, _LEARNING_CAMPAIGN_PAUSE_REQUESTED
+    _ensure_v17_origin(payload)
+    if _LEARNING_CAMPAIGN_TASK is not None and not _LEARNING_CAMPAIGN_TASK.done():
+        return {"ok": False, "detail": "learning campaign already running", "campaign": _learning_campaign_status_payload()}
+
+    config = _learning_campaign_config_from_payload(payload)
+    max_minutes = int(config.max_duration_seconds / 60)
+    _LEARNING_CAMPAIGN_PAUSE_REQUESTED = False
+    _LEARNING_CAMPAIGN_STATE.update(
+        {
+            "status": "running",
+            "progress_percent": 1,
+            "current_step": "queued",
+            "current_step_label": "已排队",
+            "estimated_remaining_seconds": config.max_duration_seconds,
+            "started_at": _now_label(),
+            "completed_at": "",
+            "message": "学习 Campaign 已启动。",
+            "config": {
+                "max_minutes": max_minutes,
+                "max_extended_cases": config.max_extended_cases,
+                "request_llm_review": bool(config.request_llm_review),
+                "include_extended_synthetic": bool(config.include_extended_synthetic),
+                "include_practitioner_benchmarks": bool(config.include_practitioner_benchmarks),
+                "include_auto_learning_loop": bool(config.include_auto_learning_loop),
+            },
+            "latest_report": {},
+            "latest_report_markdown": "",
+        }
+    )
+    _LEARNING_CAMPAIGN_TASK = asyncio.create_task(_run_learning_campaign_background(config))
+    return {"ok": True, "campaign": _learning_campaign_status_payload()}
+
+
+@router.post("/v17/admin/learning-campaign/pause")
+async def pause_learning_campaign(payload: Dict[str, Any]) -> Dict[str, Any]:
+    global _LEARNING_CAMPAIGN_PAUSE_REQUESTED
+    _ensure_v17_origin(payload)
+    if _LEARNING_CAMPAIGN_TASK is not None and not _LEARNING_CAMPAIGN_TASK.done():
+        _LEARNING_CAMPAIGN_PAUSE_REQUESTED = True
+        _LEARNING_CAMPAIGN_STATE.update(
+            {
+                "status": "pause_requested",
+                "message": "已请求暂停；当前阶段结束后停止。",
+            }
+        )
+    else:
+        _LEARNING_CAMPAIGN_STATE.update(
+            {
+                "status": "paused",
+                "current_step": "paused",
+                "current_step_label": "已暂停",
+                "message": "当前没有运行中的 Campaign。",
+            }
+        )
+    return {"ok": True, "campaign": _learning_campaign_status_payload()}
 
 
 @router.get("/v17/admin/rlhf-feedback")

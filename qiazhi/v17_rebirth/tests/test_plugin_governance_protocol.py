@@ -25,6 +25,10 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
         layer="L1",
         causal_tier=4,
     )
+    narrative = classify_plugin_governance(
+        plugin_id="narrative_clip",
+        causal_tier=2,
+    )
 
     assert ziping["authority_level"] == "level_1_hard"
     assert ziping["can_enter_authority"] is True
@@ -41,6 +45,10 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
     assert sanhe["governance_class"] == "physical_relation_operator"
     assert sanhe["can_emit_physical_proposal"] is True
     assert sanhe["can_enter_authority"] is False
+
+    assert narrative["governance_class"] == "narrative_or_strategy"
+    assert narrative["can_enter_authority"] is False
+    assert narrative["learning_family"] == "narrative"
 
 
 def test_admin_registry_exposes_governance_profile() -> None:
@@ -64,4 +72,3 @@ def test_admin_registry_exposes_governance_profile() -> None:
 
     assert xiangfa["governance_profile"]["can_enter_authority"] is False
     assert xiangfa["output_contract"] == "semantic_mapping"
-

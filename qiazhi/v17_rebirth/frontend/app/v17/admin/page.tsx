@@ -10,6 +10,11 @@ import { V17_AdminLlmPanel } from "@/components/V17_AdminLlmPanel";
 import { V17_AdminDbPanel } from "@/components/V17_AdminDbPanel";
 import { V17_AdminCoreEnginePanel } from "@/components/V17_AdminCoreEnginePanel";
 import {
+  V17_AdminLearningPanel,
+  type LearningCampaignRuntime,
+  type LearningCampaignUiConfig,
+} from "@/components/V17_AdminLearningPanel";
+import {
   ADMIN_GHOST_BTN,
   ADMIN_SOLID_BTN,
   asLooseObject,
@@ -40,7 +45,7 @@ import {
   type PluginTierBucketLike,
 } from "@/components/adminShared";
 
-type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution";
+type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution" | "learning";
 
 type LlmNode = {
   provider: string;
@@ -297,6 +302,13 @@ export default function V17AdminPage() {
   const [l0Locked, setL0Locked] = useState(true);
   const [resolveBusyKeys, setResolveBusyKeys] = useState<string[]>([]);
   const [pluginPolicyFilter, setPluginPolicyFilter] = useState<"all" | "warn">("all");
+  const [learningCampaign, setLearningCampaign] = useState<LearningCampaignRuntime>({});
+  const [learningConfig, setLearningConfig] = useState<LearningCampaignUiConfig>({
+    maxMinutes: 180,
+    maxExtendedCases: "",
+    requestLlmReview: false,
+  });
+  const [learningBusy, setLearningBusy] = useState(false);
 
   useEffect(() => {
     try {
@@ -443,6 +455,64 @@ export default function V17AdminPage() {
     } finally { setBusy(null); }
   }, []);
 
+  const loadLearningCampaign = useCallback(async () => {
+    setLearningBusy(true);
+    try {
+      const { data } = await requestJson("/api/v17-admin/learning-campaign?v17_origin=v17_rebirth");
+      const payload = asLooseObject(data);
+      const campaign = asLooseObject(payload.campaign);
+      if (Object.keys(campaign).length) {
+        setLearningCampaign(campaign as LearningCampaignRuntime);
+      }
+    } finally {
+      setLearningBusy(false);
+    }
+  }, []);
+
+  async function startLearningCampaign() {
+    setLearningBusy(true);
+    try {
+      const maxCases = learningConfig.maxExtendedCases.trim();
+      const { data } = await requestJson("/api/v17-admin/learning-campaign/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          v17_origin: "v17_rebirth",
+          max_minutes: learningConfig.maxMinutes,
+          max_extended_cases: maxCases ? Number(maxCases) : null,
+          request_llm_review: learningConfig.requestLlmReview,
+        }),
+      });
+      const payload = asLooseObject(data);
+      const campaign = asLooseObject(payload.campaign);
+      if (Object.keys(campaign).length) {
+        setLearningCampaign(campaign as LearningCampaignRuntime);
+      }
+      setMsg(payload.ok === false ? asString(payload.detail, "学习 Campaign 启动失败") : "学习 Campaign 已启动");
+    } finally {
+      setLearningBusy(false);
+    }
+  }
+
+  async function pauseLearningCampaign() {
+    setLearningBusy(true);
+    try {
+      const { data } = await requestJson("/api/v17-admin/learning-campaign/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ v17_origin: "v17_rebirth" }),
+      });
+      const payload = asLooseObject(data);
+      const campaign = asLooseObject(payload.campaign);
+      if (Object.keys(campaign).length) {
+        setLearningCampaign(campaign as LearningCampaignRuntime);
+      }
+      setMsg("学习 Campaign 已请求暂停");
+    } finally {
+      setLearningBusy(false);
+    }
+  }
+
   useEffect(() => {
     void (async () => {
       const [{ data: llmData }, { data: dbData }, { data: physicsData }] = await Promise.all([
@@ -466,7 +536,18 @@ export default function V17AdminPage() {
   useEffect(() => {
     if (tab === "plugins") loadPlugins();
     if (tab === "evolution") loadEvolution();
-  }, [tab, loadPlugins, loadEvolution]);
+    if (tab === "learning") loadLearningCampaign();
+  }, [tab, loadPlugins, loadEvolution, loadLearningCampaign]);
+
+  useEffect(() => {
+    if (tab !== "learning") return;
+    const status = String(learningCampaign.status || "");
+    if (status !== "running" && status !== "pause_requested") return;
+    const timer = window.setInterval(() => {
+      void loadLearningCampaign();
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [tab, learningCampaign.status, loadLearningCampaign]);
 
   async function saveLlm() {
     setBusy("saveLlm");
@@ -683,6 +764,7 @@ export default function V17AdminPage() {
             { id: "plugins", label: "插件链", icon: "🧬" },
             { id: "physics", label: "宇宙常数", icon: "⚛️" },
             { id: "evolution", label: "演化审计", icon: "📜" },
+            { id: "learning", label: "自动学习", icon: "🛰️" },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id as TabKey)} className={`w-full rounded-2xl px-4 py-3 text-left transition ${tab === t.id ? "border border-zinc-200/80 bg-zinc-100 text-black shadow-[0_10px_30px_rgba(255,255,255,0.08)]" : "border border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"}`}>
               {t.icon} <span className="ml-2">{t.label}</span>
@@ -815,6 +897,18 @@ export default function V17AdminPage() {
                  resolveConflictBatch={resolveConflictBatch}
                />
             </div>
+          )}
+
+          {tab === "learning" && (
+            <V17_AdminLearningPanel
+              campaign={learningCampaign}
+              config={learningConfig}
+              setConfig={setLearningConfig}
+              loading={learningBusy}
+              onStart={startLearningCampaign}
+              onPause={pauseLearningCampaign}
+              onRefresh={loadLearningCampaign}
+            />
           )}
 
                         <p className="mt-8 text-xs text-zinc-600 italic">{msg || "等待指令..."}</p>

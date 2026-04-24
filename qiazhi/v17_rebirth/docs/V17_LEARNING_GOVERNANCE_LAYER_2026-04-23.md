@@ -324,3 +324,143 @@ pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
 - 不写配置。
 - 不自动调整参数。
 - 只生成 `parameter_candidate_plan` 与 `parameter_experiments`。
+
+---
+
+## 11. Auto Learning Cycle
+
+实现：
+
+- `testing/parameter_sandbox.py`
+- `testing/auto_learning_loop.py`
+- `scripts/run_auto_learning_cycle.py`
+
+协议版本：
+
+- `v17.parameter_sandbox.v1`
+- `v17.auto_learning_loop.v1`
+
+职责：
+
+- 自动运行 Synthetic Batch Lab。
+- 如果基线全绿，则输出 `baseline_green_no_parameter_tuning`。
+- 如果出现异常，则读取 `parameter_experiments`。
+- 对可数值调参的候选，在内存里临时覆盖常数，重新跑批量样盘。
+- 对 gate / 语义 / 法理类问题，生成 `analyst_feedback_items`。
+
+安全边界：
+
+- 沙盒只 monkeypatch 当前进程的配置读取。
+- 不写 `v17_core_constants.json`。
+- 不自动应用任何候选。
+- `can_auto_apply` 永远是 `false`，直到裁决者明确授权下一阶段。
+
+运行：
+
+```bash
+python3 qiazhi/v17_rebirth/scripts/run_auto_learning_cycle.py
+```
+
+---
+
+## 12. Learning Campaign
+
+实现：
+
+- `testing/learning_campaign.py`
+- `scripts/run_learning_campaign.py`
+
+协议版本：
+
+- `v17.learning_campaign.v1`
+
+定位：
+
+> 把插件治理、Synthetic Batch、完整 Synthetic Lab、真实命盘 Benchmark、Auto Learning Cycle 组织成一次可审计学习活动。
+
+设计目标：
+
+1. 自动跑起来，但不自动上线参数。
+2. 3 小时以内完成一轮默认学习活动。
+3. 先生成给 Codex 主审的报告，再交给分析师复核。
+4. 冲突、gate、语义和非数值问题进入 `analyst_feedback_items`。
+5. LLM 只作为可选审阅者，不允许输出直接配置补丁。
+
+默认覆盖：
+
+- `plugin_governance_coverage`
+- `synthetic_batch`
+- `extended_synthetic`
+- `practitioner_benchmarks`
+- `auto_learning_loop`
+- `learning_insights`
+- `parameter_experiments`
+- `llm_review_package`
+
+核心输出：
+
+- `scorecard`
+- `learning_value`
+- `learning_density`
+- `validated_parameter_families`
+- `top_learning_signals`
+- `blind_spots`
+- `recommended_next_cases`
+- `parameter_family_counts`
+- `analyst_feedback_items`
+- `llm_review_package`
+- `safety_gates`
+
+报告口径：
+
+- `green` 不再只表示“全绿”，还必须说明本轮验证了哪些参数族。
+- `Learning Signals` 优先展示高信息密度样盘，不按 catalog 原始顺序机械罗列。
+- `Next Hard Cases` 必须给出下一轮主动挑战方向，即使本轮没有异常。
+- `Parameter Health` 只在发现异常时生成影子参数实验；全绿时保持参数冻结。
+
+安全边界：
+
+- `can_auto_apply = false`
+- `sandbox_only`
+- `do_not_write_real_config`
+- `codex_primary_review_required`
+- `analyst_review_for_uncertain_or_conflicting_cases`
+- `manual_approval_required_before_apply`
+
+运行：
+
+```bash
+# Markdown 报告，默认 180 分钟预算
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py
+
+# JSON 报告
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py --json
+
+# 生成可给 LLM/分析师审阅的 review package
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py --llm-review
+
+# 写入报告文件
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py --write /tmp/v17_learning_campaign.md
+```
+
+Admin UI：
+
+- `/v17/admin` 新增 `自动学习` Tab。
+- 可配置：
+  - 运行预算，默认 180 分钟。
+  - 扩展样盘上限。
+  - 是否生成 LLM review package。
+- 可操作：
+  - `开始学习`
+  - `暂停`
+  - `刷新状态`
+  - `复制报告`
+- 展示：
+  - 当前状态
+  - 进度条
+  - 预计剩余时长
+  - scorecard
+  - 插件治理覆盖
+  - 参数实验数
+  - 分析师反馈项
+  - Markdown 报告

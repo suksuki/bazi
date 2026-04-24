@@ -35,6 +35,9 @@ pytest qiazhi/v17_rebirth/tests -m synthetic -q
 # 运行批量 synthetic lab 报告
 python3 qiazhi/v17_rebirth/scripts/render_synthetic_batch_report.py
 
+# 运行自动学习闭环（只读 / 沙盒 / 不写配置）
+python3 qiazhi/v17_rebirth/scripts/run_auto_learning_cycle.py
+
 # 只跑关系家族矩阵
 pytest qiazhi/v17_rebirth/tests/test_synthetic_lab_matrix.py \
   qiazhi/v17_rebirth/tests/test_synthetic_relation_family_matrix.py \
@@ -66,6 +69,7 @@ Synthetic Lab 当前覆盖：
 - 盲派专题：`blind_theme` 独立专题、最终/临时元数据分层、Prompt 合同出口、`blind_bias_protocol -> authority` 并行桥接
 - 象法专题：`xiangfa_theme` semantic-only 专题、最终/临时元数据分层、Prompt 合同出口、禁止进入 bias/authority
 - Synthetic Batch Lab：批量样盘不变量、异常到参数族映射、review-only 调参实验单
+- Auto Learning Loop：自动运行批量样盘，沙盒评估候选参数，并输出 analyst feedback items
 
 设计协议见：
 
@@ -129,7 +133,15 @@ pytest qiazhi/v17_rebirth/tests/test_plugin_governance_protocol.py \
   qiazhi/v17_rebirth/tests/test_synthetic_tuning_bridge.py \
   qiazhi/v17_rebirth/tests/test_hydration_pipeline.py \
   qiazhi/v17_rebirth/tests/test_parameter_candidate_runner.py \
-  qiazhi/v17_rebirth/tests/test_synthetic_batch_lab.py -q
+  qiazhi/v17_rebirth/tests/test_synthetic_batch_lab.py \
+  qiazhi/v17_rebirth/tests/test_auto_learning_loop.py \
+  qiazhi/v17_rebirth/tests/test_learning_campaign.py -q
+
+# 运行自动学习 Campaign，输出 Codex 主审报告
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py
+
+# 输出 JSON 便于系统/分析师二次消费
+python3 qiazhi/v17_rebirth/scripts/run_learning_campaign.py --json
 
 # 前端
 cd qiazhi/v17_rebirth/frontend && pnpm install && pnpm test
@@ -160,6 +172,10 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `v17.hydration_pipeline.v1`
 - `v17.parameter_candidate_runner.v1`
 - `v17.synthetic_batch_lab.v1`
+- `v17.parameter_sandbox.v1`
+- `v17.auto_learning_loop.v1`
+- `v17.learning_campaign.v1`
+- `v17.learning_insights.v1`
 - `classical.ziping.climate_bridge.v1`
 - `classical.ziping.pattern_bridge.v1`
 - `classical.ziping.summary.v1`
@@ -169,4 +185,6 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `/v17/oracle` 主页面使用 `核心页面 / 辅助页面 / 观测页面` 三 Tab。
 - `辅助页面` 必须显示 `Topic Hub / 专题中枢`，覆盖子平、格局、调候、盲派、象法、风险六条专题线。
 - `/v17/admin` 的 Core Engine 面板必须显示 `Topic Hub / 专题状态表`，用于核对 authority 层级与专题边界。
+- `/v17/admin` 必须显示 `自动学习` Tab，可配置预算、启动/暂停 Campaign、查看进度、复制 Markdown 报告。
+- 自动学习报告必须包含 `Learning Value / Learning Signals / Next Hard Cases`，避免只输出无学习价值的绿灯清单。
 - 前端验收以 `pnpm --dir qiazhi/v17_rebirth/frontend build` 为硬线。

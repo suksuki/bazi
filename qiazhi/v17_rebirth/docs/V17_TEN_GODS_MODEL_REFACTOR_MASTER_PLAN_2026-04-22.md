@@ -761,6 +761,29 @@ L0 当前已经形成下面这组边界：
 - Prompt 是否正确解释“成局度 / 拟合度 / 双轴”
 - 前端是否能稳定读取新字段
 
+### 8.5 自动学习 Campaign
+
+当前已落地：
+
+- `testing/learning_campaign.py`
+- `scripts/run_learning_campaign.py`
+- `tests/test_learning_campaign.py`
+
+定位：
+
+- 自动组织插件治理、Synthetic Batch、完整 Synthetic Lab、真实命盘 Benchmark 与 Auto Learning Cycle。
+- 默认预算控制在 3 小时以内。
+- 报告首先给 Codex 主审，再给分析师复核。
+- 冲突、gate、语义不确定项进入 `analyst_feedback_items`。
+- LLM 只作为可选审阅者，不允许直接输出配置补丁。
+
+硬边界：
+
+- `can_auto_apply = false`
+- 不写真实配置
+- 参数候选只能进入 sandbox / review-only 实验
+- 裁决者批准前不得应用到生产常数
+
 ---
 
 ## 9. 风险控制

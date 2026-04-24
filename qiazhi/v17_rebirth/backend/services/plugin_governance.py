@@ -168,7 +168,7 @@ def classify_plugin_governance(
             notes=("Risk matrix amplifies or flags risk; it is not a primary structure replacement.",),
         ).to_dict()
 
-    if layer_tag in {"L3", "L4"} or domain in {"narrative", "strategy"}:
+    if pid in {"narrative_clip"} or layer_tag in {"L3", "L4"} or domain in {"narrative", "strategy"}:
         return PluginGovernanceProfile(
             plugin_id=pid,
             governance_class="narrative_or_strategy",
@@ -211,4 +211,3 @@ def _relation_learning_family(plugin_id: str) -> str:
         if key in pid:
             return f"relation.{key}"
     return "relation.general"
-
