@@ -13,6 +13,7 @@ import {
   shouldReleaseDecisionInboxLock,
   useV17WebStream,
 } from "@/hooks/useV17WebStream";
+import { jsonPostInit, requestJson } from "@/lib/apiClient";
 import { t, type AppLanguage } from "@/lib/i18n";
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
@@ -597,10 +598,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     let actionPayload: Record<string, unknown> | null = null;
 
     try {
-      const response = await fetch("/api/v17/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
-      body: JSON.stringify({
+      const { data, ok } = await requestJson<Record<string, unknown>>("/api/v17/action", jsonPostInit({
           session_id: sessionId || "default",
           decision_ids: ids,
           status,
@@ -612,10 +610,9 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
           batch_ids: uniqBatchIds.length ? uniqBatchIds : undefined,
           request_verdict: false,
           v17_origin: "v17_rebirth",
-        }),
-      });
-      actionPayload = await response.json().catch(() => null);
-      if (!response.ok || actionPayload?.ok === false) {
+        }, { headers: { v17_origin: "v17_rebirth" } }));
+      actionPayload = data;
+      if (!ok || actionPayload?.ok === false) {
         const detail =
           typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
             ? actionPayload.detail.trim()
@@ -703,10 +700,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
               ? "PLAN_WITHDRAW"
               : "PLAN_REJECT";
 
-      const response = await fetch("/api/v17/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "v17_origin": "v17_rebirth" },
-        body: JSON.stringify({
+      const { data, ok } = await requestJson<Record<string, unknown>>("/api/v17/action", jsonPostInit({
           session_id: sessionId || "default",
           plan_id: planId || undefined,
           anchor: anchor || undefined,
@@ -717,10 +711,9 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
           decision_ids: decisionIds.length ? decisionIds : undefined,
           request_verdict: false,
           v17_origin: "v17_rebirth",
-        }),
-      });
-      actionPayload = await response.json().catch(() => null);
-      if (!response.ok || actionPayload?.ok === false) {
+        }, { headers: { v17_origin: "v17_rebirth" } }));
+      actionPayload = data;
+      if (!ok || actionPayload?.ok === false) {
         const detail =
           typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
             ? actionPayload.detail.trim()

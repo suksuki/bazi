@@ -27,10 +27,21 @@ export async function requestJson<T = unknown>(url: string, init?: RequestInit):
   };
 }
 
-export function jsonPostInit(body: unknown): RequestInit {
+export function jsonPostInit(body: unknown, init: RequestInit = {}): RequestInit {
+  const headers = new Headers(init.headers);
+  headers.set("Content-Type", "application/json");
+
   return {
+    ...init,
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
+  };
+}
+
+export function noStoreInit(init: RequestInit = {}): RequestInit {
+  return {
+    ...init,
+    cache: "no-store",
   };
 }

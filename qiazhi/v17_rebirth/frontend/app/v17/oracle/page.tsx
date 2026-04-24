@@ -14,6 +14,7 @@ import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_SurfaceTabs, type V17SurfaceTabItem } from "@/components/V17_SurfaceTabs";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
 import type { OracleSurface } from "@/lib/accessControl";
+import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 import { t } from "@/lib/i18n";
 import { useOracleSession } from "@/hooks/useOracleSession";
 import { useV17Runtime } from "@/hooks/useV17Runtime";
@@ -621,9 +622,8 @@ export default function OraclePage() {
     setAuthUsersLoading(true);
     setAuthUsersMessage("");
     try {
-      const resp = await fetch("/api/auth/users", { cache: "no-store" });
-      const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
-      if (!resp.ok) {
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>("/api/auth/users", noStoreInit());
+      if (!ok) {
         throw new Error(String(payload.detail || ui("用户列表加载失败。", "Failed to load users.", "사용자 목록을 불러오지 못했습니다.")));
       }
       const rows = Array.isArray(payload.users) ? payload.users : [];
@@ -654,13 +654,8 @@ export default function OraclePage() {
 
   const updateAuthUserRole = useCallback(
     async (userId: number, role: AdminAuthUser["role"]) => {
-      const resp = await fetch(`/api/auth/users/${userId}/role`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
-      if (!resp.ok || payload.ok === false) {
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>(`/api/auth/users/${userId}/role`, jsonPostInit({ role }));
+      if (!ok || payload.ok === false) {
         throw new Error(String(payload.detail || ui("角色更新失败。", "Failed to update role.", "역할을 업데이트하지 못했습니다.")));
       }
       setAuthUsersMessage(ui(`角色已更新为 ${role}。`, `Role updated to ${role}.`, `역할이 ${role}(으)로 변경되었습니다.`));

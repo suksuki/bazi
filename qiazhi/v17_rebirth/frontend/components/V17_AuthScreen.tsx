@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { APP_LANGUAGE_OPTIONS, t } from "@/lib/i18n";
+import { jsonPostInit, requestJson } from "@/lib/apiClient";
 import { useAppLanguage } from "@/hooks/useAppLanguage";
 
 type Props = {
@@ -59,13 +60,8 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
               identifier: username,
               password,
             };
-      const resp = await fetch(`/api/auth/${mode}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
-      if (!resp.ok) {
+      const { data, ok } = await requestJson<Record<string, unknown>>(`/api/auth/${mode}`, jsonPostInit(payload));
+      if (!ok) {
         setError(String(data.detail || t(language, "auth.error.failed")));
         return;
       }

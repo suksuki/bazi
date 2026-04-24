@@ -52,6 +52,8 @@ Use `lib/apiClient.ts` for client-side JSON calls.
 
 Feature pages should avoid adding local `requestJson` helpers.
 
+Direct `fetch` should be limited to streaming readers and Next.js API proxy routes where the response is not ordinary JSON or must be forwarded as-is.
+
 ## Migration Rule
 
 When adding a feature:

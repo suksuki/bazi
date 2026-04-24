@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+
 export type AuthRole = "admin" | "manager" | "user";
 
 export type AuthUser = {
@@ -56,9 +58,8 @@ export function useAuthSession(): AuthState {
     setLoading(true);
     setError("");
     try {
-      const resp = await fetch("/api/auth/me", { cache: "no-store" });
-      const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
-      if (!resp.ok) {
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>("/api/auth/me", noStoreInit());
+      if (!ok) {
         setUser(null);
         setError(String(payload.detail || "登录已失效。"));
         return;
@@ -74,7 +75,7 @@ export function useAuthSession(): AuthState {
 
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST", cache: "no-store" });
+      await requestJson("/api/auth/logout", jsonPostInit({}, noStoreInit()));
     } finally {
       setUser(null);
     }

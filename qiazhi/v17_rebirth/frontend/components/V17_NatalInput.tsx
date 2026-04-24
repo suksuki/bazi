@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderOpen, Play, Save, Trash2 } from "lucide-react";
 import { findCityGroup, findCityOption, getCityCatalogGroups } from "@/types/cityCatalog";
+import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 import { t, type AppLanguage } from "@/lib/i18n";
 
 export type V17NatalInputValue = {
@@ -127,9 +128,8 @@ export function V17_NatalInput({
   const loadProfiles = useCallback(async () => {
     setProfilesLoading(true);
     try {
-      const resp = await fetch("/api/auth/profiles", { cache: "no-store" });
-      const data = (await resp.json().catch(() => ({}))) as { profiles?: BaziProfile[]; detail?: string };
-      if (!resp.ok) {
+      const { data, ok } = await requestJson<{ profiles?: BaziProfile[]; detail?: string }>("/api/auth/profiles", noStoreInit());
+      if (!ok) {
         throw new Error(String(data.detail || t(lang, "natal.profile.error.load")));
       }
       const nextProfiles = Array.isArray(data.profiles) ? data.profiles : [];
@@ -196,10 +196,11 @@ export function V17_NatalInput({
     setProfileMessage("");
     try {
       const target = selectedProfileId == null ? "/api/auth/profiles" : `/api/auth/profiles/${selectedProfileId}`;
-      const resp = await fetch(target, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, ok } = await requestJson<{
+        ok?: boolean;
+        detail?: string;
+        profile?: BaziProfile;
+      }>(target, jsonPostInit({
           profile_name: nextName,
           birth_time_iso: birthTimeLocal,
           gender,
@@ -209,14 +210,8 @@ export function V17_NatalInput({
           city_code: selectedCity?.item.code || "",
           city_group: selectedCity?.group.id || cityGroup,
           city_longitude: selectedCity?.item.longitude ?? null,
-        }),
-      });
-      const data = (await resp.json().catch(() => ({}))) as {
-        ok?: boolean;
-        detail?: string;
-        profile?: BaziProfile;
-      };
-      if (!resp.ok || data.ok === false || !data.profile) {
+        }));
+      if (!ok || data.ok === false || !data.profile) {
         throw new Error(String(data.detail || t(lang, "natal.profile.error.save")));
       }
       const saved = data.profile;
@@ -258,11 +253,8 @@ export function V17_NatalInput({
     setProfileError("");
     setProfileMessage("");
     try {
-      const resp = await fetch(`/api/auth/profiles/${selectedProfileId}/delete`, {
-        method: "POST",
-      });
-      const data = (await resp.json().catch(() => ({}))) as { ok?: boolean; detail?: string };
-      if (!resp.ok || data.ok === false) {
+      const { data, ok } = await requestJson<{ ok?: boolean; detail?: string }>(`/api/auth/profiles/${selectedProfileId}/delete`, jsonPostInit({}));
+      if (!ok || data.ok === false) {
         throw new Error(String(data.detail || t(lang, "natal.profile.error.delete")));
       }
       const deletedId = selectedProfileId;
@@ -283,11 +275,8 @@ export function V17_NatalInput({
   async function touchProfile(profileId: number | null) {
     if (profileId == null) return;
     try {
-      const resp = await fetch(`/api/auth/profiles/${profileId}/touch`, {
-        method: "POST",
-      });
-      const data = (await resp.json().catch(() => ({}))) as { profile?: BaziProfile };
-      if (!resp.ok || !data.profile) return;
+      const { data, ok } = await requestJson<{ profile?: BaziProfile }>(`/api/auth/profiles/${profileId}/touch`, jsonPostInit({}));
+      if (!ok || !data.profile) return;
       const touched = data.profile;
       setProfiles((prev) => {
         const next = prev.filter((item) => item.id !== touched.id);
