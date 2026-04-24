@@ -839,7 +839,7 @@ export default function V17AdminPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
         <aside className="min-w-0 rounded-2xl border border-zinc-800/70 bg-zinc-950/40 p-3 backdrop-blur sm:rounded-3xl">
           <h1 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.28em] text-zinc-500 md:px-3">V17 管理中枢</h1>
-          <div className="flex gap-2 overflow-x-auto pb-1 md:block md:space-y-2 md:overflow-visible md:pb-0">
+          <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:block md:space-y-2 md:overflow-visible md:px-0 md:pb-0">
           {[
             { id: "llm", label: "LLM 节点", icon: "🧠" },
             { id: "db", label: "数据库桥接", icon: "💎" },
@@ -849,7 +849,17 @@ export default function V17AdminPage() {
             { id: "learning", label: "自动学习", icon: "🛰️" },
             { id: "users", label: "用户权限", icon: "🪪" },
           ].map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id as TabKey)} className={`shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-left transition md:w-full ${tab === t.id ? "border border-zinc-200/80 bg-zinc-100 text-black shadow-[0_10px_30px_rgba(255,255,255,0.08)]" : "border border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"}`}>
+            <button
+              key={t.id}
+              type="button"
+              aria-pressed={tab === t.id}
+              onClick={() => setTab(t.id as TabKey)}
+              className={`min-w-[58%] shrink-0 snap-start whitespace-nowrap rounded-full px-4 py-2.5 text-left transition md:w-full md:min-w-0 md:rounded-2xl md:py-3 ${
+                tab === t.id
+                  ? "border border-cyan-400/40 bg-cyan-950/35 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)] md:border-zinc-200/80 md:bg-zinc-100 md:text-black md:shadow-[0_10px_30px_rgba(255,255,255,0.08)]"
+                  : "border border-zinc-800 bg-zinc-950/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 md:border-transparent md:bg-transparent md:hover:bg-zinc-900/70"
+              }`}
+            >
               {t.icon} <span className="ml-2">{t.label}</span>
             </button>
           ))}
