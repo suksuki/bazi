@@ -1,24 +1,25 @@
 "use client";
 
-import Image from "next/image";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, LogOut, RotateCcw, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { V17_AppShell } from "@/components/V17_AppShell";
 import { V17_AdminUsersPanel, type AdminAuthUser } from "@/components/V17_AdminUsersPanel";
 import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
 import { V17_GodRingExplainCard } from "@/components/V17_GodRingExplainCard";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
+import { V17_SurfaceTabs, type V17SurfaceTabItem } from "@/components/V17_SurfaceTabs";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
-import { t, translateTerm } from "@/lib/i18n";
-import { useAppLanguage } from "@/hooks/useAppLanguage";
-import { useAuthSession } from "@/hooks/useAuthSession";
+import type { OracleSurface } from "@/lib/accessControl";
+import { t } from "@/lib/i18n";
 import { useOracleSession } from "@/hooks/useOracleSession";
+import { useV17Runtime } from "@/hooks/useV17Runtime";
 import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
-type OracleSurfaceTab = "core" | "auxiliary" | "trace";
+type OracleSurfaceTab = OracleSurface;
 type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
 type AuxiliarySectionKey = "structure" | "runtime" | "authority" | "patterns" | "collaboration";
 
@@ -33,12 +34,6 @@ function asNumberValue(value: unknown, fallback = 0): number {
 
 function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
-}
-
-function oracleTabTone(active: boolean): string {
-  return active
-    ? "border-cyan-400/40 bg-cyan-950/35 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-    : "border-zinc-800 bg-zinc-950/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200";
 }
 
 function topicHubTone(tone: "primary" | "stable" | "watch" | "soft" | "risk" | "muted"): string {
@@ -298,14 +293,7 @@ function deriveLivePatternCandidates(
 
 export default function OraclePage() {
   const router = useRouter();
-  const { language } = useAppLanguage();
-  const ui = useCallback(
-    (zh: string, en: string, ko: string) => (language === "en" ? en : language === "ko" ? ko : zh),
-    [language],
-  );
-  const term = (value: string) => translateTerm(language, value);
-  const termList = (values: string[]) => values.map((value) => translateTerm(language, value));
-  const { user, loading: authLoading, logout } = useAuthSession();
+  const { language, user, authLoading, logout, access, ui, term, termList } = useV17Runtime();
   const s = useOracleSession({ uiLanguage: language });
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
@@ -590,12 +578,37 @@ export default function OraclePage() {
     s.traceFacts.length +
     s.heartbeatHistory.length +
     (s.fullTrace ? 1 : 0);
-  const allowedOracleSurfaces = Array.isArray(user?.surface_access?.oracle)
-    ? user.surface_access.oracle
-    : ["core"];
-  const canAccessAuxiliarySurface = allowedOracleSurfaces.includes("auxiliary");
-  const canAccessTraceSurface = allowedOracleSurfaces.includes("trace");
-  const canManageUsers = Boolean(user?.surface_access?.user_management);
+  const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
+  const canAccessTraceSurface = access.canAccessOracleSurface("trace");
+  const canManageUsers = access.canManageUsers;
+  const surfaceTabs: Array<V17SurfaceTabItem<OracleSurfaceTab>> = [
+    {
+      id: "core",
+      label: t(language, "oracle.tab.core"),
+      badge: `${t(language, "oracle.count.decisions")} ${s.pendingDecisionWorkCount}`,
+      description: t(language, "oracle.tab.core.desc"),
+    },
+    ...(canAccessAuxiliarySurface
+      ? [
+          {
+            id: "auxiliary" as const,
+            label: t(language, "oracle.tab.aux"),
+            badge: `${t(language, "oracle.count.signals")} ${auxiliarySignalCount}`,
+            description: t(language, "oracle.tab.aux.desc"),
+          },
+        ]
+      : []),
+    ...(canAccessTraceSurface
+      ? [
+          {
+            id: "trace" as const,
+            label: t(language, "oracle.tab.trace"),
+            badge: `${t(language, "oracle.count.trace")} ${traceSignalCount}`,
+            description: t(language, "oracle.tab.trace.desc"),
+          },
+        ]
+      : []),
+  ];
   const toggleAuxiliarySection = (section: AuxiliarySectionKey) => {
     setAuxiliarySections((current) => ({
       ...current,
@@ -714,70 +727,27 @@ export default function OraclePage() {
 
   if (authLoading || !user) {
     return (
-      <main className="min-h-screen bg-zinc-950 p-3 text-zinc-100 sm:p-6">
-        <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-center sm:rounded-3xl sm:p-8">
-            <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Auth Gate</div>
-            <h1 className="mt-3 text-2xl font-semibold text-zinc-50">{t(language, "oracle.auth_gate.title")}</h1>
-            <p className="mt-3 text-sm text-zinc-400">
-              {authLoading ? t(language, "oracle.auth_gate.loading") : t(language, "oracle.auth_gate.redirect")}
-            </p>
-          </div>
-        </section>
-      </main>
+      <V17_AppShell
+        language={language}
+        user={user}
+        loading={authLoading}
+        onLogout={() => void handleLogout()}
+        maxWidthClassName="max-w-3xl"
+      >
+        {null}
+      </V17_AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 pb-28 text-zinc-100 sm:p-6">
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:gap-4">
-
-        {/* ── 顶栏 ── */}
-        <header className="sticky top-0 z-30 flex flex-col items-start justify-between gap-3 border-b border-zinc-900 bg-zinc-950/95 px-4 py-3 text-violet-300 backdrop-blur sm:static sm:flex-row sm:items-center sm:border-b-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="overflow-hidden rounded-xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)] sm:rounded-2xl">
-              <Image
-                src="/branding/qiazhi-logo.png"
-                alt={t(language, "brand.title")}
-                width={512}
-                height={512}
-                priority
-                className="h-11 w-11 object-cover sm:h-16 sm:w-16"
-              />
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-wide text-violet-100 sm:text-xl">{t(language, "brand.title")}</h1>
-              <p className="truncate text-[10px] tracking-[0.2em] text-violet-200/65 sm:text-[11px] sm:tracking-[0.24em]">{t(language, "brand.subtitle")}</p>
-            </div>
-          </div>
-          <div className="flex w-full items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible">
-            <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-100">
-              {user.role}
-            </span>
-            <span className="max-w-[42vw] truncate rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-1 text-[10px] text-zinc-200 sm:max-w-none">
-              {user.display_name || user.username}
-            </span>
-            {s.running ? (
-              <button
-                type="button"
-                onClick={s.resetRun}
-                className="inline-flex items-center gap-1 rounded-md border border-violet-300/40 bg-violet-900/20 px-2 py-1 text-xs text-violet-100 hover:bg-violet-800/30"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                {t(language, "oracle.action.retry")}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void handleLogout()}
-              className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-xs text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              {t(language, "oracle.action.logout")}
-            </button>
-          </div>
-        </header>
-
+    <V17_AppShell
+      language={language}
+      user={user}
+      loading={authLoading}
+      running={s.running}
+      onRetry={s.resetRun}
+      onLogout={() => void handleLogout()}
+    >
         {/* ── 排盘输入 ── */}
         <div className="relative">
           {s.running ? (
@@ -790,68 +760,17 @@ export default function OraclePage() {
         {s.running ? (
           <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
-              <div className="sticky top-[90px] z-20 border-y border-zinc-800 bg-zinc-950/95 px-3 py-2 backdrop-blur sm:static sm:rounded-2xl sm:border sm:bg-zinc-900/45 sm:p-2.5 sm:backdrop-blur-none">
-                <div
-                  className={`-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 ${
-                    canAccessTraceSurface ? "sm:grid-cols-3" : canAccessAuxiliarySurface ? "sm:grid-cols-2" : "sm:grid-cols-1"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    aria-pressed={activeSurfaceTab === "core"}
-                    onClick={() => switchContentSurface("core")}
-                    className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "core")}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.core")}</span>
-                      <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
-                        {t(language, "oracle.count.decisions")} {s.pendingDecisionWorkCount}
-                      </span>
-                    </div>
-                    <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
-                      {t(language, "oracle.tab.core.desc")}
-                    </p>
-                  </button>
-                  {canAccessAuxiliarySurface ? (
-                    <>
-                      <button
-                        type="button"
-                        aria-pressed={activeSurfaceTab === "auxiliary"}
-                        onClick={() => switchContentSurface("auxiliary")}
-                        className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.aux")}</span>
-                          <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
-                            {t(language, "oracle.count.signals")} {auxiliarySignalCount}
-                          </span>
-                        </div>
-                        <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
-                          {t(language, "oracle.tab.aux.desc")}
-                        </p>
-                      </button>
-                      {canAccessTraceSurface ? (
-                        <button
-                          type="button"
-                          aria-pressed={activeSurfaceTab === "trace"}
-                          onClick={openTraceSurface}
-                          className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "trace")}`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.trace")}</span>
-                            <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
-                              {t(language, "oracle.count.trace")} {traceSignalCount}
-                            </span>
-                          </div>
-                          <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
-                            {t(language, "oracle.tab.trace.desc")}
-                          </p>
-                        </button>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              </div>
+              <V17_SurfaceTabs
+                items={surfaceTabs}
+                activeId={activeSurfaceTab}
+                onChange={(tab) => {
+                  if (tab === "trace") {
+                    openTraceSurface();
+                  } else {
+                    switchContentSurface(tab);
+                  }
+                }}
+              />
 
               {activeSurfaceTab === "core" ? (
                 <>
@@ -1415,7 +1334,6 @@ export default function OraclePage() {
             </div>
           </div>
         ) : null}
-      </section>
-    </main>
+    </V17_AppShell>
   );
 }
