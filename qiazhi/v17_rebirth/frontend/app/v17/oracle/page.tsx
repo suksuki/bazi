@@ -12,6 +12,7 @@ import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
+import { V17_FeatureOutlet } from "@/components/V17_FeatureOutlet";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
 import type { OracleSurface } from "@/lib/accessControl";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
@@ -749,8 +750,11 @@ export default function OraclePage() {
                 }}
               />
 
-              {activeSurfaceTab === "core" ? (
-                <>
+              <V17_FeatureOutlet
+                activeId={activeSurfaceTab}
+                renderers={{
+                  core: () => (
+                    <>
                   <V17_SixPillarsPanel
                     fourPillars={fourPillars}
                     luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
@@ -851,9 +855,10 @@ export default function OraclePage() {
                   {!s.hasNarrative ? (
                     <p className="mt-3 text-xs text-violet-200/80">{t(language, "oracle.core.weaving")}</p>
                   ) : null}
-                </>
-              ) : activeSurfaceTab === "trace" ? (
-                <>
+                    </>
+                  ),
+                  trace: () => (
+                    <>
                   <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
                     {t(language, "oracle.trace.notice")}
                   </div>
@@ -915,9 +920,10 @@ export default function OraclePage() {
                     onPlanAction={s.handlePlanAction}
                     lang={language}
                   />
-                </>
-              ) : (
-                <>
+                    </>
+                  ),
+                  auxiliary: () => (
+                    <>
                   <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
                     {t(language, "oracle.aux.notice")}
                   </div>
@@ -1306,8 +1312,10 @@ export default function OraclePage() {
                       </div>
                     </AuxiliarySection>
                   ) : null}
-                </>
-              )}
+                    </>
+                  ),
+                }}
+              />
             </div>
           </div>
         ) : null}

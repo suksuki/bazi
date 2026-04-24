@@ -53,6 +53,16 @@ Use `lib/featureRegistry.ts` to declare top-level feature modules.
 
 New modules should be registered here first, then rendered by the target page. This keeps feature names, badges, ordering, access gates, and responsive navigation out of page-local arrays.
 
+## Feature Outlet
+
+Use `components/V17_FeatureOutlet.tsx` to render the currently active feature module.
+
+- Pages provide a typed renderer map keyed by feature id.
+- `V17_SurfaceTabs` controls the active id.
+- `V17_FeatureOutlet` owns active-module dispatch.
+
+This separates page chrome, module metadata, and module content. A new feature should add metadata in `featureRegistry.ts`, add one renderer entry in the page or feature bundle, and avoid extending long page-level conditional render chains.
+
 ## API Requests
 
 Use `lib/apiClient.ts` for client-side JSON calls.
@@ -73,5 +83,6 @@ When adding a feature:
 3. Render inside `V17_AppShell`.
 4. Register top-level feature sections in `lib/featureRegistry.ts`.
 5. Use `V17_SurfaceTabs` for role-dependent top-level sections.
-6. Use `requestJson` / `jsonPostInit` for client JSON calls.
-7. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.
+6. Render the active section through `V17_FeatureOutlet`.
+7. Use `requestJson` / `jsonPostInit` for client JSON calls.
+8. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.

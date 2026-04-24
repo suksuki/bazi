@@ -48,6 +48,7 @@ import {
   type PluginTierBucketLike,
 } from "@/components/adminShared";
 import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
+import { V17_FeatureOutlet, type V17FeatureRenderers } from "@/components/V17_FeatureOutlet";
 import { requestJson, jsonPostInit } from "@/lib/apiClient";
 import { ADMIN_FEATURE_MODULES, resolveFeatureTabs, type AdminFeatureTabKey } from "@/lib/featureRegistry";
 import { useV17Runtime } from "@/hooks/useV17Runtime";
@@ -759,6 +760,148 @@ export default function V17AdminPage() {
       authUserCount: authUsers.length,
     },
   });
+  const adminRenderers: V17FeatureRenderers<TabKey> = {
+    llm: () => (
+      <V17_AdminLlmPanel
+        llm={llm}
+        setLlm={setLlm}
+        llmBaseUrl={llmBaseUrl}
+        llmProbeMeta={llmProbeMeta}
+        llmPrompt={llmPrompt}
+        setLlmPrompt={setLlmPrompt}
+        llmModels={llmModels}
+        llmTestReply={llmTestReply}
+        busy={busy}
+        saveLlm={saveLlm}
+        testLlm={testLlm}
+        loadModels={loadModels}
+        testLlmChat={testLlmChat}
+        solidBtn={solidBtn}
+        ghostBtn={ghostBtn}
+      />
+    ),
+    db: () => (
+      <V17_AdminDbPanel
+        db={db}
+        setDb={setDb}
+        dbProbeMeta={dbProbeMeta}
+        busy={busy}
+        saveDb={saveDb}
+        testDb={testDb}
+        solidBtn={solidBtn}
+        ghostBtn={ghostBtn}
+      />
+    ),
+    physics: () => (
+      <V17_AdminPhysicsPanel
+        l0Locked={l0Locked}
+        setL0Locked={setL0Locked}
+        physicsConstants={physicsConstants}
+        setPhysicsConstants={setPhysicsConstants}
+        asLooseObject={asLooseObject}
+        asNumber={asNumber}
+        savePhysics={savePhysics}
+        solidBtn={solidBtn}
+      />
+    ),
+    evolution: () => (
+      <V17_AdminEvolutionPanel
+        evolutionLogs={evolutionLogs}
+        asNumber={asNumber}
+        loadEvolution={loadEvolution}
+      />
+    ),
+    plugins: () => (
+      <div className="space-y-4">
+        <V17_AdminPluginRuntimePanel
+          pluginRuntimeSessionId={pluginRuntimeSessionId}
+          setPluginRuntimeSessionId={setPluginRuntimeSessionId}
+          resolvedPluginRuntimeSessionId={resolvedPluginRuntimeSessionId}
+          loadPlugins={loadPlugins}
+          scannedPluginCount={scannedPluginCount}
+          hitPluginCount={hitPluginRows.length}
+          inboxPluginCount={inboxPluginRows.length}
+          policyWarnCount={policyWarnCount}
+          knowledgeSnapshot={knowledgeSnapshot}
+          brainActionQueue={brainActionQueue}
+          recomputeContributionCount={recomputeContributions.length}
+          pluginPolicyFilter={pluginPolicyFilter}
+          setPluginPolicyFilter={setPluginPolicyFilter}
+          resolveBusyKeys={resolveBusyKeys}
+          pendingConflictGroups={pendingConflictGroups}
+          resolveAllConflictByRule={resolveAllConflictByRule}
+          brainTimeline={brainTimeline}
+          formatQueueLabel={formatQueueLabel}
+          formatArbiterLabel={formatArbiterLabel}
+          conflictTone={conflictTone}
+          brainStepTone={brainStepTone}
+          resolveRoutingPolicy={resolveRoutingPolicy}
+          compactRoutingScores={compactRoutingScores}
+        />
+        <V17_AdminCoreEnginePanel
+          pluginCount={plugins.length}
+          hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
+          authority={coreEngineAuthority}
+          climateField={climateField}
+          climateModifierLayer={climateModifierLayer}
+          climateTheme={climateTheme}
+          xiangfaTheme={xiangfaTheme}
+          projectionBridgeProtocol={projectionBridgeProtocol}
+          relationFormationSummary={relationFormationSummary}
+          relationDynamicsSummary={relationDynamicsSummary}
+          tenGodDecomposition={tenGodDecomposition}
+        />
+        <V17_AdminPluginOverview
+          scannedPluginCount={scannedPluginCount}
+          hitPluginRows={hitPluginRows}
+          inboxPluginRows={inboxPluginRows}
+          visiblePluginRows={visiblePluginRows}
+          l2PatternCount={l2PatternRows.length}
+          pluginCardTitle={(plugin) => pluginCardTitle(plugin as PluginAdminRow)}
+          runtimeStatusLabel={runtimeStatusLabel}
+        />
+        <V17_AdminPluginTierPanel
+          pluginTierBuckets={pluginTierBuckets}
+          recomputeContributions={recomputeContributions}
+          resolveBusyKeys={resolveBusyKeys}
+          pluginConflictResolutions={pluginConflictResolutions}
+          pluginCardTitle={pluginCardTitle}
+          pluginCardDefinition={pluginCardDefinition}
+          pluginCardDescription={pluginCardDescription}
+          runtimeStatusTone={runtimeStatusTone}
+          runtimeStatusLabel={runtimeStatusLabel}
+          compactProjection={compactProjection}
+          buildConflictGroups={buildConflictGroups}
+          conflictTone={conflictTone}
+          formatArbiterLabel={formatArbiterLabel}
+          resolveRoutingPolicy={resolveRoutingPolicy}
+          compactRoutingScores={compactRoutingScores}
+          resolveConflictByRule={resolveConflictByRule}
+          resolveConflictBatch={resolveConflictBatch}
+        />
+      </div>
+    ),
+    learning: () => (
+      <V17_AdminLearningPanel
+        campaign={learningCampaign}
+        config={learningConfig}
+        setConfig={setLearningConfig}
+        loading={learningBusy}
+        onStart={startLearningCampaign}
+        onPause={pauseLearningCampaign}
+        onRefresh={loadLearningCampaign}
+      />
+    ),
+    users: () => (
+      <V17_AdminUsersPanel
+        users={authUsers}
+        loading={authUsersLoading}
+        onRefresh={loadAuthUsers}
+        onUpdateRole={updateAuthUserRole}
+        operatorRole="admin"
+      />
+    ),
+  };
 
   if (authLoading || !user || !canManageSystem) {
     return (
@@ -821,152 +964,7 @@ export default function V17AdminPage() {
         <V17_SurfaceTabs items={adminTabs} activeId={tab} onChange={setTab} />
 
         <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
-          {tab === "llm" && (
-            <V17_AdminLlmPanel
-              llm={llm}
-              setLlm={setLlm}
-              llmBaseUrl={llmBaseUrl}
-              llmProbeMeta={llmProbeMeta}
-              llmPrompt={llmPrompt}
-              setLlmPrompt={setLlmPrompt}
-              llmModels={llmModels}
-              llmTestReply={llmTestReply}
-              busy={busy}
-              saveLlm={saveLlm}
-              testLlm={testLlm}
-              loadModels={loadModels}
-              testLlmChat={testLlmChat}
-              solidBtn={solidBtn}
-              ghostBtn={ghostBtn}
-            />
-          )}
-
-          {tab === "db" && (
-            <V17_AdminDbPanel
-              db={db}
-              setDb={setDb}
-              dbProbeMeta={dbProbeMeta}
-              busy={busy}
-              saveDb={saveDb}
-              testDb={testDb}
-              solidBtn={solidBtn}
-              ghostBtn={ghostBtn}
-            />
-          )}
-
-          {tab === "physics" && (
-            <V17_AdminPhysicsPanel
-              l0Locked={l0Locked}
-              setL0Locked={setL0Locked}
-              physicsConstants={physicsConstants}
-              setPhysicsConstants={setPhysicsConstants}
-              asLooseObject={asLooseObject}
-              asNumber={asNumber}
-              savePhysics={savePhysics}
-              solidBtn={solidBtn}
-            />
-          )}
-
-          {tab === "evolution" && (
-            <V17_AdminEvolutionPanel
-              evolutionLogs={evolutionLogs}
-              asNumber={asNumber}
-              loadEvolution={loadEvolution}
-            />
-          )}
-
-          {tab === "plugins" && (
-            <div className="space-y-4">
-               <V17_AdminPluginRuntimePanel
-                 pluginRuntimeSessionId={pluginRuntimeSessionId}
-                 setPluginRuntimeSessionId={setPluginRuntimeSessionId}
-                 resolvedPluginRuntimeSessionId={resolvedPluginRuntimeSessionId}
-                 loadPlugins={loadPlugins}
-                 scannedPluginCount={scannedPluginCount}
-                 hitPluginCount={hitPluginRows.length}
-                 inboxPluginCount={inboxPluginRows.length}
-                 policyWarnCount={policyWarnCount}
-                 knowledgeSnapshot={knowledgeSnapshot}
-                 brainActionQueue={brainActionQueue}
-                 recomputeContributionCount={recomputeContributions.length}
-                 pluginPolicyFilter={pluginPolicyFilter}
-                 setPluginPolicyFilter={setPluginPolicyFilter}
-                 resolveBusyKeys={resolveBusyKeys}
-                 pendingConflictGroups={pendingConflictGroups}
-                 resolveAllConflictByRule={resolveAllConflictByRule}
-                 brainTimeline={brainTimeline}
-                 formatQueueLabel={formatQueueLabel}
-                 formatArbiterLabel={formatArbiterLabel}
-                 conflictTone={conflictTone}
-                 brainStepTone={brainStepTone}
-                 resolveRoutingPolicy={resolveRoutingPolicy}
-                 compactRoutingScores={compactRoutingScores}
-               />
-               <V17_AdminCoreEnginePanel
-                 pluginCount={plugins.length}
-                 hasAuthoritySource={pluginClaims.some((row) => String((row as Record<string, unknown>)?.plugin_id || "").includes("god_ring_resolver"))}
-                 authority={coreEngineAuthority}
-                 climateField={climateField}
-                 climateModifierLayer={climateModifierLayer}
-                 climateTheme={climateTheme}
-                 xiangfaTheme={xiangfaTheme}
-                 projectionBridgeProtocol={projectionBridgeProtocol}
-                 relationFormationSummary={relationFormationSummary}
-                 relationDynamicsSummary={relationDynamicsSummary}
-                 tenGodDecomposition={tenGodDecomposition}
-               />
-               <V17_AdminPluginOverview
-                 scannedPluginCount={scannedPluginCount}
-                 hitPluginRows={hitPluginRows}
-                 inboxPluginRows={inboxPluginRows}
-                 visiblePluginRows={visiblePluginRows}
-                 l2PatternCount={l2PatternRows.length}
-                 pluginCardTitle={(plugin) => pluginCardTitle(plugin as PluginAdminRow)}
-                 runtimeStatusLabel={runtimeStatusLabel}
-               />
-               <V17_AdminPluginTierPanel
-                 pluginTierBuckets={pluginTierBuckets}
-                 recomputeContributions={recomputeContributions}
-                 resolveBusyKeys={resolveBusyKeys}
-                 pluginConflictResolutions={pluginConflictResolutions}
-                 pluginCardTitle={pluginCardTitle}
-                 pluginCardDefinition={pluginCardDefinition}
-                 pluginCardDescription={pluginCardDescription}
-                 runtimeStatusTone={runtimeStatusTone}
-                 runtimeStatusLabel={runtimeStatusLabel}
-                 compactProjection={compactProjection}
-                 buildConflictGroups={buildConflictGroups}
-                 conflictTone={conflictTone}
-                 formatArbiterLabel={formatArbiterLabel}
-                 resolveRoutingPolicy={resolveRoutingPolicy}
-                 compactRoutingScores={compactRoutingScores}
-                 resolveConflictByRule={resolveConflictByRule}
-                 resolveConflictBatch={resolveConflictBatch}
-               />
-            </div>
-          )}
-
-          {tab === "learning" && (
-            <V17_AdminLearningPanel
-              campaign={learningCampaign}
-              config={learningConfig}
-              setConfig={setLearningConfig}
-              loading={learningBusy}
-              onStart={startLearningCampaign}
-              onPause={pauseLearningCampaign}
-              onRefresh={loadLearningCampaign}
-            />
-          )}
-
-          {tab === "users" && (
-            <V17_AdminUsersPanel
-              users={authUsers}
-              loading={authUsersLoading}
-              onRefresh={loadAuthUsers}
-              onUpdateRole={updateAuthUserRole}
-              operatorRole="admin"
-            />
-          )}
+          <V17_FeatureOutlet activeId={tab} renderers={adminRenderers} />
 
           <p className="mt-8 text-xs italic text-zinc-600">{msg || "等待指令..."}</p>
         </div>
