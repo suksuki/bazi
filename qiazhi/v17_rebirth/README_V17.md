@@ -47,13 +47,28 @@
 ### 自动化测试
 
 - 说明与命令矩阵：[docs/TESTING.md](docs/TESTING.md)。  
-- 仓库根一键：`bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh`（`python3 -m pytest` + 前端 `pnpm run test:ci`）。
+- 当前用户验收用例：[docs/V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md](docs/V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md)。
+- 仓库根一键：`bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh`（优先使用 `qiazhi/.venv`，覆盖后端 pytest、集成、审计门禁与前端 `pnpm run test:ci`）。
 
-### V17.16 可调环境变量（可选）
+### 当前产品/运行重点（2026-04-24）
 
-- `QIAZHI_V17_FUSE_HARD_SEC`：LLM `fuse()` 整段请求硬熔断秒数，默认 `3.0`。
-- `QIAZHI_V17_LLM_TTFT_SEC`：首字（首 token）超时，默认 `5.0`（与总熔断取 `max(hard, ttft+2)` 对齐）。
-- `QIAZHI_V17_SSE_HEARTBEAT_SEC`：叙事流无 NARRATOR 产出时下发 `HEARTBEAT` 的间隔，默认 `5.0`。
+- 多语言主链：中文、英文、韩文共用 `frontend/lib/i18n.ts`，前端文案与 LLM verdict prompt 都必须走统一字典或 `ui()` helper。
+- 多终端 UI：登录/注册入口、Oracle 主页面、Admin 页面均按桌面/手机 Chrome 响应式验收。
+- 授权控制：`admin / manager / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API。
+- 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
+- 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
+- 0.13 部署：使用 `scripts/update_v17_from_git.sh` 拉取、构建、重启并做健康检查。
+
+### 可调环境变量（可选）
+
+- `QIAZHI_V17_FUSE_MAX_PARALLEL`：全局 LLM 并发上限，默认 `3`。
+- `QIAZHI_V17_FUSE_HARD_SEC`：LLM `fuse()` 整段请求硬熔断秒数，默认 `10.0`。
+- `QIAZHI_V17_LLM_TTFT_SEC`：首字（首 token）预算，默认 `20.0`。
+- `QIAZHI_V17_SSE_STALL_SEC`：SSE 行间最大等待，默认 `30`。
+- `QIAZHI_V17_SSE_HEARTBEAT_SEC`：叙事流无 NARRATOR 产出时下发 `HEARTBEAT` 的间隔，默认 `2.0`。
+- `QIAZHI_V17_FUSE_MAX_TOKENS`：LLM fuse 默认输出上限，默认 `520`。
+- `QIAZHI_V17_JUDGE_MAX_TOKENS`：判词角色输出上限，默认 `420`。
+- `QIAZHI_V17_WEAVER_MAX_TOKENS`：织造角色输出上限，默认 `520`。
 
 ## Boot Sequence (Current Milestone)
 

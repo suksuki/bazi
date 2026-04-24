@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
 type LooseRecord = Record<string, unknown>;
 
@@ -131,37 +131,23 @@ export function V17_AdminLearningPanel({
   const watchFamilies = stringList(optimizationGuidance.watch_families);
   const adjustmentFamilies = stringList(optimizationGuidance.adjustment_candidates);
   const guidanceNotes = stringList(optimizationGuidance.guidance_notes);
-  const optimizationRows = useMemo(
-    () =>
-      optimizationMap
-        .map((row) => asRecord(row))
-        .filter((row) => String(row.parameter_family || "").trim()),
-    [optimizationMap]
-  );
-  const selectableFamilies = useMemo(
-    () =>
-      stringList([
-        ...watchFamilies,
-        ...adjustmentFamilies,
-        ...freezeFamilies,
-        ...optimizationRows.map((row) => row.parameter_family),
-      ]),
-    [watchFamilies, adjustmentFamilies, freezeFamilies, optimizationRows]
-  );
+  const optimizationRows = optimizationMap
+    .map((row) => asRecord(row))
+    .filter((row) => String(row.parameter_family || "").trim());
+  const selectableFamilies = stringList([
+    ...watchFamilies,
+    ...adjustmentFamilies,
+    ...freezeFamilies,
+    ...optimizationRows.map((row) => row.parameter_family),
+  ]);
+  const activeSelectedFamily =
+    selectedFamily && selectableFamilies.includes(selectedFamily)
+      ? selectedFamily
+      : selectableFamilies[0] || "";
   const selectedOptimizationRow =
-    optimizationRows.find((row) => String(row.parameter_family || "") === selectedFamily) ||
+    optimizationRows.find((row) => String(row.parameter_family || "") === activeSelectedFamily) ||
     optimizationRows[0] ||
     null;
-
-  useEffect(() => {
-    if (!selectableFamilies.length) {
-      setSelectedFamily("");
-      return;
-    }
-    if (!selectedFamily || !selectableFamilies.includes(selectedFamily)) {
-      setSelectedFamily(selectableFamilies[0]);
-    }
-  }, [selectableFamilies, selectedFamily]);
 
   async function copyReport() {
     const payload = reportMarkdown || JSON.stringify(report, null, 2);
@@ -490,7 +476,7 @@ export function V17_AdminLearningPanel({
                       type="button"
                       onClick={() => setSelectedFamily(item)}
                       className={`rounded-full border px-3 py-1 text-[11px] ${
-                        selectedFamily === item
+                        activeSelectedFamily === item
                           ? "border-emerald-200/60 bg-emerald-200 text-emerald-950"
                           : "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
                       }`}
@@ -514,7 +500,7 @@ export function V17_AdminLearningPanel({
                       type="button"
                       onClick={() => setSelectedFamily(item)}
                       className={`rounded-full border px-3 py-1 text-[11px] ${
-                        selectedFamily === item
+                        activeSelectedFamily === item
                           ? "border-amber-200/60 bg-amber-200 text-amber-950"
                           : "border-amber-400/20 bg-amber-950/30 text-amber-100"
                       }`}
@@ -538,7 +524,7 @@ export function V17_AdminLearningPanel({
                       type="button"
                       onClick={() => setSelectedFamily(item)}
                       className={`rounded-full border px-3 py-1 text-[11px] ${
-                        selectedFamily === item
+                        activeSelectedFamily === item
                           ? "border-rose-200/60 bg-rose-200 text-rose-950"
                           : "border-rose-400/20 bg-rose-950/30 text-rose-100"
                       }`}

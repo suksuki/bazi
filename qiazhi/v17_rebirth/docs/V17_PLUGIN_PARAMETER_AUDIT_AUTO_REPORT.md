@@ -1,17 +1,25 @@
 # V17 插件参数来源与默认值审计（自动版）
 
-生成时间：2026-04-20 16:59:42
+生成时间：2026-04-24 23:04:40
 
 ## 总览
-- 插件数：57
-- 参数项数：173
-- 配置文件缺失：0
+- 插件数：60
+- 参数项数：181
+- 配置文件缺失：4
 
 ## 风险清单
 - 未落地参数（声明未接线）：
   - 无
 - 高风险默认值：
-  - 无
+  - l2.risk.risk_matrix:OFFICER_EXHAUST_RATIO:比例/权重建议优先在[0,2]，当前越界
+
+## 配置缺失
+| 插件 ID | 说明 |
+| --- | --- |
+| classical.pattern.caipoyin.v1 | 缺失 backend/logic/configs/classical.pattern.caipoyin.v1.json |
+| classical.ziping.climate_bridge.v1 | 缺失 backend/logic/configs/classical.ziping.climate_bridge.v1.json |
+| classical.ziping.pattern_bridge.v1 | 缺失 backend/logic/configs/classical.ziping.pattern_bridge.v1.json |
+| classical.ziping.summary.v1 | 缺失 backend/logic/configs/classical.ziping.summary.v1.json |
 
 ## 明细（Top 400）
 | 插件 | 参数 | 默认值 | 来源 | 分类 | 风险 |
@@ -36,6 +44,10 @@
 | classical.pattern.axis.v1 | CANDIDATE_OFFICER_WEALTH | 25.0 | pattern_defaults | used_and_configurable | - |
 | classical.pattern.axis.v1 | FINANCE_STRONG_MATCH_RATIO | 0.6 | pattern_defaults | used_and_configurable | - |
 | classical.pattern.axis.v1 | FORMATION_STRENGTH_RATIO | 2.0 | pattern_defaults | used_and_configurable | - |
+| classical.pattern.caipoyin.v1 | CAIPOYIN_BREAK_RATIO | 1.08 | pattern_defaults | used_but_no_config_file | - |
+| classical.pattern.caipoyin.v1 | CAIPOYIN_MATCH_BASE | 0.72 | pattern_defaults | used_but_no_config_file | - |
+| classical.pattern.caipoyin.v1 | CAIPOYIN_MIN_SEAL | 16.0 | pattern_defaults | used_but_no_config_file | - |
+| classical.pattern.caipoyin.v1 | CAIPOYIN_MIN_WEALTH | 16.0 | pattern_defaults | used_but_no_config_file | - |
 | classical.pattern.congcai.v1 | CONGCAI_MATCH_BASE | 0.74 | pattern_defaults | used_and_configurable | - |
 | classical.pattern.congcai.v1 | CONGCAI_MAX_PEER | 12.0 | pattern_defaults | used_and_configurable | - |
 | classical.pattern.congcai.v1 | CONGCAI_MIN_WEALTH | 22.0 | pattern_defaults | used_and_configurable | - |
@@ -127,6 +139,8 @@
 | classical.ziping.balance.v1 | MATCH_RATIO_GAIN | 0.22 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.balance.v1 | MATCH_RATIO_MAX | 0.9 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.balance.v1 | MATCH_RATIO_MIN | 0.45 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.climate_bridge.v1 | MATCH_RATIO_MAX | 0.88 | pattern_defaults | used_but_no_config_file | - |
+| classical.ziping.climate_bridge.v1 | MATCH_RATIO_MIN | 0.56 | pattern_defaults | used_but_no_config_file | - |
 | classical.ziping.god_ring_resolver.v1 | AXIS_BONUS | 0.18 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.god_ring_resolver.v1 | DOMINANT_TABOO_BONUS | 0.16 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.god_ring_resolver.v1 | MATCH_RATIO_BASE | 0.62 | pattern_defaults | used_and_configurable | - |
@@ -135,6 +149,10 @@
 | classical.ziping.god_ring_resolver.v1 | WORK_RATIO_WEIGHT | 1.25 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.month_command.v1 | MATCH_RATIO_OTHER | 0.72 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.month_command.v1 | MATCH_RATIO_TOP | 0.88 | pattern_defaults | used_and_configurable | - |
+| classical.ziping.pattern_bridge.v1 | MATCH_RATIO_BASE | 0.58 | pattern_defaults | used_but_no_config_file | - |
+| classical.ziping.pattern_bridge.v1 | MATCH_RATIO_MAX | 0.86 | pattern_defaults | used_but_no_config_file | - |
+| classical.ziping.summary.v1 | MATCH_RATIO_BASE | 0.62 | pattern_defaults | used_but_no_config_file | - |
+| classical.ziping.summary.v1 | MATCH_RATIO_MAX | 0.9 | pattern_defaults | used_but_no_config_file | - |
 | classical.ziping.yongshen.v1 | MATCH_RATIO_BASE | 0.58 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.yongshen.v1 | MATCH_RATIO_GAIN | 0.14 | pattern_defaults | used_and_configurable | - |
 | classical.ziping.yongshen.v1 | MATCH_RATIO_MAX | 0.84 | pattern_defaults | used_and_configurable | - |
@@ -168,15 +186,13 @@
 | l1.physics.op_stem_fusion | TRANSFORM_EFFICIENCY | 0.85 | DECLARED_PARAMS | used_and_configurable | - |
 | l2.risk.risk_matrix | BLADE_CLASH_IMPULSE | 2.2 | DECLARED_PARAMS | used_and_configurable | - |
 | l2.risk.risk_matrix | OFFICER_CRUSH_LIMIT | 0.5 | DECLARED_PARAMS | used_and_configurable | - |
+| l2.risk.risk_matrix | OFFICER_EXHAUST_RATIO | 2.2 | DECLARED_PARAMS | used_and_configurable | 比例/权重建议优先在[0,2]，当前越界 |
+| l2.risk.risk_matrix | OFFICER_EXHAUST_SUPPORT_MAX | 0.42 | DECLARED_PARAMS | used_and_configurable | - |
 | l2.risk.risk_matrix | OWL_FOOD_CAP | 0.4 | DECLARED_PARAMS | used_and_configurable | - |
 | narrative_clip | PRIORITY_AGGRESSIVE | 0.86 | DECLARED_PARAMS | used_and_configurable | - |
 | narrative_clip | PRIORITY_STABLE | 0.85 | DECLARED_PARAMS | used_and_configurable | - |
 | narrative_clip | SEAL_THRESHOLD | 30.0 | DECLARED_PARAMS | used_and_configurable | - |
 | narrative_clip | WEALTH_THRESHOLD | 20.0 | DECLARED_PARAMS | used_and_configurable | - |
-| officer_see_hurt | DEFENSE_CAP | 0.5 | DECLARED_PARAMS | used_and_configurable | - |
-| officer_see_hurt | HURTING_THRESHOLD | 16.0 | DECLARED_PARAMS | used_and_configurable | - |
-| officer_see_hurt | OFFICER_THRESHOLD | 20.0 | DECLARED_PARAMS | used_and_configurable | - |
-| officer_see_hurt | PRIORITY | 0.94 | DECLARED_PARAMS | used_and_configurable | - |
 | shensha | PRIORITY_BASE | 0.94 | DECLARED_PARAMS | used_and_configurable | - |
 | shensha | RESISTANCE_BUFF | 0.1 | DECLARED_PARAMS | used_and_configurable | - |
 | shensha | TENSION_MULTIPLIER | 1.4 | DECLARED_PARAMS | used_and_configurable | - |

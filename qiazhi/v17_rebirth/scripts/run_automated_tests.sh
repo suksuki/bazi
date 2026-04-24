@@ -5,7 +5,13 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
 PY=python3
-command -v python3 >/dev/null 2>&1 || PY=python
+if [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif ! command -v python3 >/dev/null 2>&1; then
+  PY=python
+fi
+
+echo "python: $("$PY" -V 2>&1)"
 
 TREND_REPORT=""
 PLUGIN_AUDIT_JSON=""

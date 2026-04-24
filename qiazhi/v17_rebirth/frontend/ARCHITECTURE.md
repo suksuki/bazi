@@ -30,8 +30,17 @@ Use `components/V17_AppShell.tsx` for authenticated app pages. It owns:
 - desktop header layout
 - role/user/logout/retry chrome
 - auth gate display
+- explicit reset affordance: `返回填写八字` returns a running oracle session to the natal-input screen
 
 Feature pages should pass page content as children and keep business UI inside the shell.
+
+## Auth Entry
+
+Use `components/V17_AuthScreen.tsx` for `/login` and `/register`.
+
+- It owns the branded entry layout, language selector, login/register switching, and compact validation.
+- It should stay responsive without page-local wrappers: desktop uses a brand panel plus form, while mobile uses a single compact form surface.
+- It should not expose browser-native required-field bubbles; validation messages must be localized through `lib/i18n.ts`.
 
 ## Page Guard
 
@@ -47,7 +56,7 @@ Pages should declare access intent with `allowed`, `forbiddenRedirectTo`, and op
 
 Use `components/V17_SurfaceTabs.tsx` for multi-surface feature areas.
 
-- Mobile: horizontal swipe tabs.
+- Mobile: horizontal, tab-like segmented navigation.
 - Desktop: stable grid tabs.
 - The page supplies only available tabs after access filtering.
 
@@ -72,6 +81,17 @@ Use `components/V17_FeatureOutlet.tsx` to render the currently active feature mo
 - `V17_FeatureOutlet` owns active-module dispatch.
 
 This separates page chrome, module metadata, and module content. A new feature should add metadata in `featureRegistry.ts`, add one renderer entry in the page or feature bundle, and avoid extending long page-level conditional render chains.
+
+## Verdict UX
+
+The oracle verdict action is intentionally product-facing:
+
+- Button label: `掐指一算`.
+- Busy label: `正在掐指一算`.
+- The UI prompt asks for concise BaZi judgement lines.
+- Backend prompt contracts and role token budgets are enforced in `backend/narrative/semantic_fusion.py` and `infrastructure/llm_micro_client.py`.
+
+Do not reintroduce long-form verdict prompts from the frontend. Deep reasoning belongs in `深度解读` and `幕后观察`; the primary verdict card should stay short and decisive.
 
 ## API Requests
 

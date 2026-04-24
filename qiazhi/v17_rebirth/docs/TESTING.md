@@ -2,6 +2,8 @@
 
 ## 概览
 
+当前用户验收用例见：[V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md](V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md)。
+
 | 层级 | 技术 | 路径 / 命令 |
 |------|------|----------------|
 | 后端单元 / 契约 | pytest | `qiazhi/v17_rebirth/tests/` |
@@ -17,7 +19,9 @@
 bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh
 ```
 
-脚本顺序：V17 pytest（默认排除 `integration`）→ 集成标记用例 → 前端 `pnpm test:ci`（ESLint + `next build` + Vitest）。Next.js 16 起 CLI 不再提供 `next lint`，与本仓库 `package.json` 中 `eslint .` 一致。
+脚本顺序：V17 pytest（默认排除 `integration`）→ 集成标记用例 → 插件参数审计门禁 → relation origin trend 门禁 → 前端 `pnpm test:ci`（ESLint + `next build` + Vitest）。Next.js 16 起 CLI 不再提供 `next lint`，与本仓库 `package.json` 中 `eslint .` 一致。
+
+脚本优先使用 `qiazhi/.venv/bin/python`；如果 venv 不存在，才回退到系统 `python3/python`。这样 macOS 与 0.13 Linux 服务器可以共用同一条测试命令。
 
 脚本会在 Relation Origin Gate 之前执行插件参数审计门禁：`scripts/audit_plugin_params.py` 的 `declared_but_unused` 不能包含任何项；一旦发现未接线参数，会直接中止自动化流程并输出失败原因。
 
@@ -182,8 +186,11 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 
 ## UI 验证口径
 
-- `/v17/oracle` 主页面使用 `核心页面 / 辅助页面 / 观测页面` 三 Tab。
-- `辅助页面` 必须显示 `Topic Hub / 专题中枢`，覆盖子平、格局、调候、盲派、象法、风险六条专题线。
+- `/login` 与 `/register` 使用 `V17_AuthScreen`，桌面为品牌区 + 表单，手机为紧凑单列表单；语言切换、登录/注册切换和页面内必填错误必须多语言化。
+- `/v17/oracle` 主页面使用 `命盘总览 / 深度解读 / 幕后观察` 三个角色过滤后的 Tab；手机端必须呈现为明确的横向 Tab，而不是三张大按钮。
+- `命盘总览` 的主断言按钮必须显示 `掐指一算`；LLM 生成中必须显示 `正在掐指一算` 并带轻量 loading 动效。
+- App 顶部重置入口必须显示 `返回填写八字`，语义上指向出生信息输入页，而不是模糊的刷新/重测。
+- `深度解读` 必须显示 `Topic Hub / 专题中枢`，覆盖子平、格局、调候、盲派、象法、风险六条专题线。
 - `/v17/admin` 的 Core Engine 面板必须显示 `Topic Hub / 专题状态表`，用于核对 authority 层级与专题边界。
 - `/v17/admin` 必须显示 `自动学习` Tab，可配置预算、启动/暂停 Campaign、查看进度、复制 Markdown 报告。
 - 自动学习报告必须包含 `Learning Value / Algorithm Intelligence / Learning Signals / Next Hard Cases`，避免只输出无学习价值的绿灯清单。
@@ -191,4 +198,6 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `Algorithm Intelligence` 还应包含 `Core 关键路径覆盖率 / Core 已验证步骤 / Core 观察步骤`，用于区分 `hydration 主链` 与 `graph -> work_path -> flux -> authority` 做功链问题。
 - 自动学习报告应继续包含 `Parameter Optimization Guidance / Parameter Optimization Map`，让报告能直接指导后续参数审计与影子调参。
 - `/v17/admin` 的自动学习页应支持点击重点参数族并展开 `Shadow Experiment Plan`，展示目标模块、参数范围、验证样盘、命令建议与安全门禁。
+- 八字断言应为精炼短断语；中文 UI prompt 必须包含 `精炼`，英文包含 `concise`，韩文包含 `간결`。
+- 阴历排盘必须支持闰月，回归入口为 `tests/test_lunar_calendar_conversion.py`。
 - 前端验收以 `pnpm --dir qiazhi/v17_rebirth/frontend build` 为硬线。

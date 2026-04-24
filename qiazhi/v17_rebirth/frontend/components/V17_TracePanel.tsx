@@ -1,6 +1,6 @@
 "use client";
 
-import { t, translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
+import { translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
 
 /**
  * V17.23 — V17_TracePanel
@@ -127,18 +127,6 @@ function traceImpactText(row: Record<string, unknown>): string {
   if (ratio > 0) return `位移 ${(ratio * 100).toFixed(1)}% · L${level || "?"}`;
   if (level > 0) return `烈度 L${level}`;
   return "诊断参考";
-}
-
-function tracePromptPreview(row: Record<string, unknown>): string {
-  const impact =
-    row.physical_impact && typeof row.physical_impact === "object"
-      ? (row.physical_impact as Record<string, unknown>)
-      : {};
-  const target = String(row.target_god || impact.target_god || "未定目标").trim();
-  const source = String(row.source || row.plugin_id || "unknown").trim();
-  const ratio = Math.abs(Number(impact.impact_ratio || 0));
-  const movement = ratio > 0 ? `${(ratio * 100).toFixed(1)}% 位移` : "诊断引用";
-  return `${target} · ${movement} · ${source}`;
 }
 
 function traceBiasPairs(value: unknown): Array<{ name: string; score: number }> {
