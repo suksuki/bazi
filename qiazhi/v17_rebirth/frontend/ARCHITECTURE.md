@@ -43,6 +43,15 @@ Use `components/V17_SurfaceTabs.tsx` for multi-surface feature areas.
 
 This pattern is intended for oracle, admin, and future feature modules with role-dependent sections.
 
+## API Requests
+
+Use `lib/apiClient.ts` for client-side JSON calls.
+
+- `requestJson(url, init)` normalizes JSON and non-JSON responses.
+- `jsonPostInit(body)` keeps POST headers and serialization consistent.
+
+Feature pages should avoid adding local `requestJson` helpers.
+
 ## Migration Rule
 
 When adding a feature:
@@ -51,4 +60,5 @@ When adding a feature:
 2. Filter visible sections through `access`.
 3. Render inside `V17_AppShell`.
 4. Use `V17_SurfaceTabs` for role-dependent top-level sections.
-5. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.
+5. Use `requestJson` / `jsonPostInit` for client JSON calls.
+6. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.

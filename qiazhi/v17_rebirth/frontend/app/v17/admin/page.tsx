@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
+import { V17_AppShell } from "@/components/V17_AppShell";
 import { V17_AdminPluginOverview } from "@/components/V17_AdminPluginOverview";
 import { V17_AdminPluginTierPanel } from "@/components/V17_AdminPluginTierPanel";
 import { V17_AdminPluginRuntimePanel } from "@/components/V17_AdminPluginRuntimePanel";
@@ -46,7 +47,9 @@ import {
   type LooseObject,
   type PluginTierBucketLike,
 } from "@/components/adminShared";
-import { useAuthSession } from "@/hooks/useAuthSession";
+import { V17_SurfaceTabs, type V17SurfaceTabItem } from "@/components/V17_SurfaceTabs";
+import { requestJson, jsonPostInit } from "@/lib/apiClient";
+import { useV17Runtime } from "@/hooks/useV17Runtime";
 
 type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution" | "learning" | "users";
 
@@ -235,18 +238,6 @@ type EvolutionLogEntry = {
 type ActionKey = "loadModels" | "testLlm" | "testLlmChat" | "saveLlm" | "testDb" | "saveDb" | "loadPlugins" | "savePhysics" | "loadEvolution" | null;
 const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
-async function requestJson(url: string, init?: RequestInit) {
-  const resp = await fetch(url, init);
-  const text = await resp.text();
-  let data: unknown = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { ok: false, error: text.slice(0, 200) || "non-json response" };
-  }
-  return { resp, data };
-}
-
 function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetStateAction<LlmNode>>) {
   if (!llmNode) return;
   const baseUrl = String(llmNode.base_url || "");
@@ -272,7 +263,7 @@ function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetSt
 
 export default function V17AdminPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuthSession();
+  const { language, user, authLoading, logout, access, ui } = useV17Runtime();
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
   const [db, setDb] = useState<DbBridge>({ driver: "postgres", host: "127.0.0.1", port: 5432, database: "v17_rebirth", username: "postgres", password: "", sslmode: "prefer", url: "", enabled: false });
@@ -342,7 +333,7 @@ export default function V17AdminPage() {
   const ghostBtn = ADMIN_GHOST_BTN;
   const solidBtn = ADMIN_SOLID_BTN;
 
-  const canManageSystem = user?.role === "admin";
+  const canManageSystem = access.canAccessAdmin && access.role === "admin";
 
   const loadPlugins = useCallback(async () => {
     setBusy("loadPlugins");
@@ -412,11 +403,7 @@ export default function V17AdminPage() {
         body.conflict_ids = ids;
       }
 
-      const { resp, data } = await requestJson("/api/v17-admin/conflict-resolve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const { resp, data } = await requestJson("/api/v17-admin/conflict-resolve", jsonPostInit(body));
       if (!resp.ok || !(data as { ok?: boolean }).ok) {
         setMsg(`冲突裁决失败：${String((data as { detail?: string }).detail || "未知错误")}`);
         return;
@@ -508,11 +495,7 @@ export default function V17AdminPage() {
   }, []);
 
   async function updateAuthUserRole(userId: number, role: AdminAuthUser["role"]) {
-    const { resp, data } = await requestJson(`/api/auth/users/${userId}/role`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    });
+    const { resp, data } = await requestJson(`/api/auth/users/${userId}/role`, jsonPostInit({ role }));
     const payload = asLooseObject(data);
     if (!resp.ok || payload.ok === false) {
       setMsg(`角色更新失败：${asString(payload.detail || payload.error, "未知错误")}`);
@@ -526,16 +509,12 @@ export default function V17AdminPage() {
     setLearningBusy(true);
     try {
       const maxCases = learningConfig.maxExtendedCases.trim();
-      const { data } = await requestJson("/api/v17-admin/learning-campaign/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data } = await requestJson("/api/v17-admin/learning-campaign/start", jsonPostInit({
           v17_origin: "v17_rebirth",
           max_minutes: learningConfig.maxMinutes,
           max_extended_cases: maxCases ? Number(maxCases) : null,
           request_llm_review: learningConfig.requestLlmReview,
-        }),
-      });
+        }));
       const payload = asLooseObject(data);
       const campaign = asLooseObject(payload.campaign);
       if (Object.keys(campaign).length) {
@@ -550,11 +529,7 @@ export default function V17AdminPage() {
   async function pauseLearningCampaign() {
     setLearningBusy(true);
     try {
-      const { data } = await requestJson("/api/v17-admin/learning-campaign/pause", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ v17_origin: "v17_rebirth" }),
-      });
+      const { data } = await requestJson("/api/v17-admin/learning-campaign/pause", jsonPostInit({ v17_origin: "v17_rebirth" }));
       const payload = asLooseObject(data);
       const campaign = asLooseObject(payload.campaign);
       if (Object.keys(campaign).length) {
@@ -567,6 +542,7 @@ export default function V17AdminPage() {
   }
 
   useEffect(() => {
+    if (!canManageSystem) return;
     void (async () => {
       const [{ data: llmData }, { data: dbData }, { data: physicsData }] = await Promise.all([
         requestJson("/api/v17-admin/llm-node?v17_origin=v17_rebirth"),
@@ -584,7 +560,7 @@ export default function V17AdminPage() {
         setPhysicsConstants(asLooseObject(constants));
       }
     })();
-  }, []);
+  }, [canManageSystem]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -592,19 +568,21 @@ export default function V17AdminPage() {
       router.replace("/login");
       return;
     }
-    if (user.role !== "admin") {
+    if (!canManageSystem) {
       router.replace("/v17/oracle");
     }
-  }, [authLoading, router, user]);
+  }, [authLoading, canManageSystem, router, user]);
 
   useEffect(() => {
+    if (!canManageSystem) return;
     if (tab === "plugins") loadPlugins();
     if (tab === "evolution") loadEvolution();
     if (tab === "learning") loadLearningCampaign();
     if (tab === "users") loadAuthUsers();
-  }, [tab, loadPlugins, loadEvolution, loadLearningCampaign, loadAuthUsers]);
+  }, [tab, canManageSystem, loadPlugins, loadEvolution, loadLearningCampaign, loadAuthUsers]);
 
   useEffect(() => {
+    if (!canManageSystem) return;
     if (tab !== "learning") return;
     const status = String(learningCampaign.status || "");
     if (status !== "running" && status !== "pause_requested") return;
@@ -612,16 +590,12 @@ export default function V17AdminPage() {
       void loadLearningCampaign();
     }, 1200);
     return () => window.clearInterval(timer);
-  }, [tab, learningCampaign.status, loadLearningCampaign]);
+  }, [tab, canManageSystem, learningCampaign.status, loadLearningCampaign]);
 
   async function saveLlm() {
     setBusy("saveLlm");
     try {
-      const { resp } = await requestJson("/api/v17-admin/llm-node", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...llm, base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
-      });
+      const { resp } = await requestJson("/api/v17-admin/llm-node", jsonPostInit({ ...llm, base_url: llmBaseUrl, v17_origin: "v17_rebirth" }));
       setMsg(resp.ok ? "LLM 配置已保存" : "保存失败");
     } finally { setBusy(null); }
   }
@@ -629,11 +603,7 @@ export default function V17AdminPage() {
   async function loadModels() {
     setBusy("loadModels");
     try {
-      const { data } = await requestJson("/api/v17-admin/llm-node/models", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
-      });
+      const { data } = await requestJson("/api/v17-admin/llm-node/models", jsonPostInit({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }));
       const payload = asLooseObject(data);
       const result = asLooseObject(payload.result);
       const models = asLooseRecord<string>(result.models, []);
@@ -653,11 +623,7 @@ export default function V17AdminPage() {
   async function testLlm() {
     setBusy("testLlm");
     try {
-      const { data } = await requestJson("/api/v17-admin/llm-node/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }),
-      });
+      const { data } = await requestJson("/api/v17-admin/llm-node/test", jsonPostInit({ base_url: llmBaseUrl, v17_origin: "v17_rebirth" }));
       const payload = asLooseObject(data);
       const result = asLooseObject(payload.result);
       if (payload.ok) {
@@ -673,16 +639,12 @@ export default function V17AdminPage() {
   async function testLlmChat() {
     setBusy("testLlmChat");
     try {
-      const { data } = await requestJson("/api/v17-admin/llm-node/chat-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data } = await requestJson("/api/v17-admin/llm-node/chat-test", jsonPostInit({
           base_url: llmBaseUrl,
-        model: llm.model,
-        prompt: llmPrompt,
-        v17_origin: "v17_rebirth",
-      }),
-      });
+          model: llm.model,
+          prompt: llmPrompt,
+          v17_origin: "v17_rebirth",
+        }));
       const payload = asLooseObject(data);
       const result = asLooseObject(payload.result);
       if (payload.ok) {
@@ -699,11 +661,7 @@ export default function V17AdminPage() {
   async function saveDb() {
     setBusy("saveDb");
     try {
-      const { resp, data } = await requestJson("/api/v17-admin/db-bridge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...db, v17_origin: "v17_rebirth" }),
-      });
+      const { resp, data } = await requestJson("/api/v17-admin/db-bridge", jsonPostInit({ ...db, v17_origin: "v17_rebirth" }));
       const payload = asLooseObject(data);
       const bridge = asLooseObject(payload.bridge);
       if (resp.ok && payload.ok) {
@@ -720,11 +678,7 @@ export default function V17AdminPage() {
   async function testDb() {
     setBusy("testDb");
     try {
-      const { data } = await requestJson("/api/v17-admin/db-bridge/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host: db.host, port: db.port, v17_origin: "v17_rebirth" }),
-      });
+      const { data } = await requestJson("/api/v17-admin/db-bridge/test", jsonPostInit({ host: db.host, port: db.port, v17_origin: "v17_rebirth" }));
       const payload = asLooseObject(data);
       if (payload.ok) {
         setDbProbeMeta(`连通成功 · ${db.host}:${db.port}`);
@@ -739,11 +693,7 @@ export default function V17AdminPage() {
   async function savePhysics() {
     setBusy("savePhysics");
     try {
-      await requestJson("/api/v17-admin/physics-constants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ constants: physicsConstants, v17_origin: "v17_rebirth" }),
-      });
+      await requestJson("/api/v17-admin/physics-constants", jsonPostInit({ constants: physicsConstants, v17_origin: "v17_rebirth" }));
       setMsg("物理定律已同步");
     } finally { setBusy(null); }
   }
@@ -795,76 +745,75 @@ export default function V17AdminPage() {
     return decisionCount > 0 || isInboxRuntimeStatus(row.runtime?.status);
   });
   const policyWarnCount = pluginPanelRows.filter((row) => row.plugin.policy_valid === false).length;
+  const adminTabs: Array<V17SurfaceTabItem<TabKey>> = [
+    { id: "llm", label: "LLM 节点", badge: llm.model || "model", description: "模型、节点与连通测试" },
+    { id: "db", label: "数据库桥接", badge: db.enabled ? "on" : "off", description: "Postgres 桥接与连通测试" },
+    { id: "plugins", label: "插件链", badge: plugins.length, description: "L0-L4 插件、运行态与冲突裁决" },
+    { id: "physics", label: "宇宙常数", badge: l0Locked ? "locked" : "edit", description: "L0 物理常数与核心参数" },
+    { id: "evolution", label: "演化审计", badge: evolutionLogs.length, description: "演化日志与反馈账本" },
+    { id: "learning", label: "自动学习", badge: asString(learningCampaign.status, "idle"), description: "学习 Campaign 与 LLM 复核" },
+    { id: "users", label: "用户权限", badge: authUsers.length, description: "账号、角色与协作权限" },
+  ];
 
   if (authLoading || !user || !canManageSystem) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#09090b_0%,#111827_100%)] px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-center sm:rounded-3xl sm:p-8">
+      <V17_AppShell
+        language={language}
+        user={user}
+        loading={authLoading}
+        onLogout={() => void logout()}
+        maxWidthClassName="max-w-3xl"
+      >
+        {user && !canManageSystem ? (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-center sm:rounded-3xl sm:p-8">
           <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Admin Guard</div>
-          <h1 className="mt-3 text-2xl font-semibold text-zinc-50">正在校验权限</h1>
+          <h1 className="mt-3 text-2xl font-semibold text-zinc-50">{ui("正在校验权限", "Checking access", "권한 확인 중")}</h1>
           <p className="mt-3 text-sm text-zinc-400">
-            {authLoading ? "正在加载账号信息..." : "当前账号无管理员权限，正在返回主页面。"}
+            {ui("当前账号无管理员权限，正在返回主页面。", "This account does not have admin access. Returning to the main page.", "현재 계정에는 관리자 권한이 없어 메인 화면으로 돌아갑니다.")}
           </p>
         </div>
-      </main>
+        ) : null}
+      </V17_AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_26%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-3 py-4 text-sm text-zinc-100 sm:px-4 sm:py-6 md:px-6">
-      <div className="mx-auto max-w-[1500px] space-y-4 sm:space-y-6">
+    <V17_AppShell
+      language={language}
+      user={user}
+      loading={authLoading}
+      onLogout={() => void logout()}
+      maxWidthClassName="max-w-[1500px]"
+    >
+      <div className="space-y-4 text-sm sm:space-y-6">
         <header className="rounded-2xl border border-zinc-800/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.88),rgba(9,9,11,0.96))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-5">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
             <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">V17 Admin</div>
-              <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">管理中枢</h1>
+              <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">{ui("管理中枢", "Admin Console", "관리 콘솔")}</h1>
               <p className="mt-2 max-w-3xl text-[12px] leading-6 text-zinc-400">
-                对齐 L0-L4 插件体系、运行态、冲突裁决与演化账本。这里应该像控制台，而不是杂糅的配置页。
+                {ui(
+                  "对齐 L0-L4 插件体系、运行态、冲突裁决与演化账本。这里应该像控制台，而不是杂糅的配置页。",
+                  "Operate L0-L4 plugins, runtime status, conflict arbitration, and evolution ledgers from one console.",
+                  "L0-L4 플러그인, 런타임 상태, 충돌 중재, 진화 장부를 하나의 콘솔에서 다룹니다.",
+                )}
               </p>
             </div>
             <div className="flex max-w-full flex-wrap gap-2">
               <span className="rounded-full border border-zinc-700 bg-zinc-950/60 px-3 py-1 text-[10px] text-zinc-400">
-                当前标签 · {tab.toUpperCase()}
+                {ui("当前标签", "Current tab", "현재 탭")} · {tab.toUpperCase()}
               </span>
               <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] text-cyan-200">
-                插件 {plugins.length}
+                {ui("插件", "Plugins", "플러그인")} {plugins.length}
               </span>
               <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
-                管理员 {user.display_name || user.username}
+                {ui("管理员", "Admin", "관리자")} {user.display_name || user.username}
               </span>
             </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
-        <aside className="min-w-0 rounded-2xl border border-zinc-800/70 bg-zinc-950/40 p-3 backdrop-blur sm:rounded-3xl">
-          <h1 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.28em] text-zinc-500 md:px-3">V17 管理中枢</h1>
-          <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:block md:space-y-2 md:overflow-visible md:px-0 md:pb-0">
-          {[
-            { id: "llm", label: "LLM 节点", icon: "🧠" },
-            { id: "db", label: "数据库桥接", icon: "💎" },
-            { id: "plugins", label: "插件链", icon: "🧬" },
-            { id: "physics", label: "宇宙常数", icon: "⚛️" },
-            { id: "evolution", label: "演化审计", icon: "📜" },
-            { id: "learning", label: "自动学习", icon: "🛰️" },
-            { id: "users", label: "用户权限", icon: "🪪" },
-          ].map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={tab === t.id}
-              onClick={() => setTab(t.id as TabKey)}
-              className={`min-w-[58%] shrink-0 snap-start whitespace-nowrap rounded-full px-4 py-2.5 text-left transition md:w-full md:min-w-0 md:rounded-2xl md:py-3 ${
-                tab === t.id
-                  ? "border border-cyan-400/40 bg-cyan-950/35 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.12)] md:border-zinc-200/80 md:bg-zinc-100 md:text-black md:shadow-[0_10px_30px_rgba(255,255,255,0.08)]"
-                  : "border border-zinc-800 bg-zinc-950/55 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200 md:border-transparent md:bg-transparent md:hover:bg-zinc-900/70"
-              }`}
-            >
-              {t.icon} <span className="ml-2">{t.label}</span>
-            </button>
-          ))}
-          </div>
-        </aside>
+        <V17_SurfaceTabs items={adminTabs} activeId={tab} onChange={setTab} />
 
         <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
           {tab === "llm" && (
@@ -1014,10 +963,9 @@ export default function V17AdminPage() {
             />
           )}
 
-                        <p className="mt-8 text-xs text-zinc-600 italic">{msg || "等待指令..."}</p>
+          <p className="mt-8 text-xs italic text-zinc-600">{msg || "等待指令..."}</p>
         </div>
       </div>
-      </div>
-    </main>
+    </V17_AppShell>
   );
 }
