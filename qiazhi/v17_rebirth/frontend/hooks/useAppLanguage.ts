@@ -31,29 +31,29 @@ function persistLanguage(lang: AppLanguage) {
   }
 }
 
+function resolveInitialLanguage(): AppLanguage {
+  try {
+    const stored =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)
+        : "";
+    const cookie = readCookie(APP_LANGUAGE_COOKIE);
+    return normalizeAppLanguage(stored || cookie || DEFAULT_APP_LANGUAGE);
+  } catch {
+    return DEFAULT_APP_LANGUAGE;
+  }
+}
+
 export function useAppLanguage() {
-  const [language, setLanguageState] = useState<AppLanguage>(DEFAULT_APP_LANGUAGE);
+  const [language, setLanguageState] = useState<AppLanguage>(resolveInitialLanguage);
 
   useEffect(() => {
-    let next = DEFAULT_APP_LANGUAGE;
-    try {
-      const stored =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)
-          : "";
-      const cookie = readCookie(APP_LANGUAGE_COOKIE);
-      next = normalizeAppLanguage(stored || cookie || DEFAULT_APP_LANGUAGE);
-    } catch {
-      next = DEFAULT_APP_LANGUAGE;
-    }
-    setLanguageState(next);
-    persistLanguage(next);
-  }, []);
+    persistLanguage(language);
+  }, [language]);
 
   const setLanguage = useCallback((value: AppLanguage) => {
     const next = normalizeAppLanguage(value);
     setLanguageState(next);
-    persistLanguage(next);
   }, []);
 
   return {

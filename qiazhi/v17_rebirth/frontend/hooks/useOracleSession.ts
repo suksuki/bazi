@@ -13,7 +13,7 @@ import {
   shouldReleaseDecisionInboxLock,
   useV17WebStream,
 } from "@/hooks/useV17WebStream";
-import type { AppLanguage } from "@/lib/i18n";
+import { t, type AppLanguage } from "@/lib/i18n";
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
 
@@ -152,6 +152,14 @@ export interface OracleSession {
 const DEFAULT_ENDPOINT = "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth";
 const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
+function refreshEndpointLanguage(endpoint: string | null | undefined, lang: AppLanguage): string {
+  const raw = String(endpoint || DEFAULT_ENDPOINT);
+  const [path, queryText = ""] = raw.split("?");
+  const query = new URLSearchParams(queryText.split("&_pulse=")[0] || "");
+  query.set("ui_lang", lang);
+  return `${path}?${query.toString()}&_pulse=${Date.now()}`;
+}
+
 export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLanguage } = {}): OracleSession {
   // Session state
   const [sessionId, setSessionId] = useState("");
@@ -178,8 +186,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
   const [connectTickMs, setConnectTickMs] = useState(0);
 
   const refreshPhysicsOnly = useCallback(() => {
-    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
-    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+    setStreamEndpoint(refreshEndpointLanguage(streamEndpoint, uiLanguage));
     setStreamBody((prevBody) => ({
       ...(prevBody || {}),
       v17_origin: "v17_rebirth",
@@ -328,7 +335,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     typeof llmMeta.elapsed_ms === "number" &&
     !Number.isNaN(Number(llmMeta.elapsed_ms));
   const llmTerminal = ["completed", "failed", "closed_without_output"].includes(lifecycle.phase);
-  const modelLabel = String(llmMeta.model || "").trim() || "叙事引擎";
+  const modelLabel = String(llmMeta.model || "").trim() || t(uiLanguage, "verdict.model");
   const lastHeartbeatStep = String(streamState.lastHeartbeat?.stepPosition || "").trim();
   const heartbeatHistory = streamState.heartbeatHistory;
   const streamClosed = streamState.closed;
@@ -364,19 +371,19 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     if (decisionLockStartedAtMs == null) return;
     const timerId = window.setTimeout(() => {
       setDecisionLockStartedAtMs(null);
-      setDecisionActionError("动作回执超时，已解除锁定，请重试该 decision item。");
+      setDecisionActionError(t(uiLanguage, "decision.action.timeout"));
     }, 8000);
     return () => window.clearTimeout(timerId);
-  }, [decisionLockStartedAtMs]);
+  }, [decisionLockStartedAtMs, uiLanguage]);
 
   const initialVerdictLocked =
     running && frames.length > 0 && decisionLockStartedAtMs == null && !llmTerminal;
   const decisionInboxLocked = initialVerdictLocked || decisionLockStartedAtMs != null;
   const decisionInboxLockMessage =
     decisionLockStartedAtMs != null
-      ? "上一条决策仍在织造中，待 LLM 完成后才可选择新的 item。"
+      ? t(uiLanguage, "decision.manual.lock.action")
       : initialVerdictLocked
-        ? "首轮判词仍在织造中，待 LLM 完成后才可选择 decision item。"
+        ? t(uiLanguage, "decision.manual.lock.initial")
         : decisionActionError;
 
   // ── Connection tick ──────────────────────────────────────────────────────────
@@ -485,15 +492,14 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     setDecisionDirtySinceLastVerdict(false);
   }
 
-  const triggerVerdict = useCallback((reason: string = "请基于当前已结算决策，生成新的八字断言。") => {
-    const base = streamEndpoint?.split("&_pulse=")[0] || DEFAULT_ENDPOINT;
-    setStreamEndpoint(`${base}&_pulse=${Date.now()}`);
+  const triggerVerdict = useCallback((reason: string = t(uiLanguage, "verdict.prompt.default")) => {
+    setStreamEndpoint(refreshEndpointLanguage(streamEndpoint, uiLanguage));
     setStreamBody((prevBody) => ({
       ...(prevBody || {}),
       v17_origin: "v17_rebirth",
       session_id: sessionId || "default",
       suppress_narrator: false,
-      user_message: String(reason || "").trim() || "请生成新的八字断言。",
+      user_message: String(reason || "").trim() || t(uiLanguage, "verdict.prompt.generate"),
       ui_lang: uiLanguage,
     }));
     setRunning(true);
@@ -506,7 +512,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     const rawTitle = String(item.title || "").trim();
     const rawLabel = String(item.label || "").trim();
     const title = rawTitle || rawLabel || source || `decision_${index + 1}`;
-    const label = rawLabel || rawTitle || (target ? `处理 ${target}` : title);
+    const label = rawLabel || rawTitle || (target ? `${t(uiLanguage, "decision.manual.button")} ${target}` : title);
     return {
       title,
       label,
@@ -534,7 +540,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
       .filter((item) => item.id);
 
     if (!normalized.length) {
-      setDecisionActionError("当前 decision item 缺少可提交的标识，已跳过。");
+      setDecisionActionError(t(uiLanguage, "decision.action.missing"));
       return;
     }
     if (decisionLockStartedAtMs != null) return;
@@ -551,7 +557,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     const title = String(normalized[0]?.title || "").trim();
     const action = String(normalized[0]?.label || title || "").trim();
     if (!action || !ids.length) {
-      setDecisionActionError("当前 decision item 缺少动作标题，无法提交。");
+      setDecisionActionError(t(uiLanguage, "decision.action.missing_title"));
       return;
     }
 
@@ -591,13 +597,13 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
         const detail =
           typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
             ? actionPayload.detail.trim()
-            : "动作提交失败";
+            : t(uiLanguage, "decision.action.failed_short");
         throw new Error(detail);
       }
     } catch (error) {
       console.error("[V17-ACTION-ERROR]", error);
       setDecisionLockStartedAtMs(null);
-      setDecisionActionError("动作提交失败，已解除锁定，请稍后重试。");
+      setDecisionActionError(t(uiLanguage, "decision.action.failed"));
       return;
     }
 
@@ -636,7 +642,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     }
     if (signal === "DECISION_NOT_FOUND") {
       setDecisionActionError(
-        `未命中该决策：${action}. 请确认卡片是否已被结算，或尝试手动刷新后重试。`,
+        t(uiLanguage, "decision.action.not_found", { action }),
       );
       setDecisionDirtySinceLastVerdict(false);
       return;
@@ -696,13 +702,13 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
         const detail =
           typeof actionPayload?.detail === "string" && actionPayload.detail.trim().length > 0
             ? actionPayload.detail.trim()
-            : "决策计划提交失败";
+            : t(uiLanguage, "decision.plan.failed_short");
         throw new Error(detail);
       }
     } catch (error) {
       console.error("[V17-PLAN-ACTION-ERROR]", error);
       setDecisionLockStartedAtMs(null);
-      setDecisionActionError("决策计划提交失败，已解除锁定，请稍后重试。");
+      setDecisionActionError(t(uiLanguage, "decision.plan.failed"));
       return;
     }
 
@@ -733,8 +739,9 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
       });
     }
     if (signal === "DECISION_NOT_FOUND") {
+      const planLabel = planId ? t(uiLanguage, "decision.plan.not_found_plan", { planId }) : "";
       setDecisionActionError(
-        `未命中该决策分组${planId ? `（plan ${planId}）` : ""}，请检查页面是否有最新手动决策。`,
+        t(uiLanguage, "decision.plan.not_found", { plan: planLabel }),
       );
       setDecisionDirtySinceLastVerdict(false);
       return;
@@ -746,8 +753,8 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     if (!decisionDirtySinceLastVerdict) return;
     if (decisionLockStartedAtMs != null) return;
     if (!canAutoGenerateVerdict) return;
-    triggerVerdict("Decision Inbox 已结算完成，请生成新的八字断言。");
-  }, [decisionDirtySinceLastVerdict, decisionLockStartedAtMs, canAutoGenerateVerdict, triggerVerdict]);
+    triggerVerdict(t(uiLanguage, "verdict.prompt.after_decision"));
+  }, [decisionDirtySinceLastVerdict, decisionLockStartedAtMs, canAutoGenerateVerdict, triggerVerdict, uiLanguage]);
 
   return {
     frames,

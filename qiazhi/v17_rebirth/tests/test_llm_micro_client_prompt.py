@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from v17_rebirth.backend.services.physics_service import PhysicsService
+from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE
 from v17_rebirth.infrastructure.llm_micro_client import build_llm_audit_payload, build_v17_system_prompt
 
 
@@ -178,7 +179,11 @@ def test_build_llm_audit_payload_respects_output_language_lock() -> None:
     en_system_prompt = str(en_payload.get("llm_system_prompt") or "")
     en_user_prompt = str(en_payload.get("llm_user_prompt") or "")
     assert "STRICT ENGLISH ONLY" in en_system_prompt
+    assert "The final answer must be English." in en_system_prompt
     assert "The final response must be written in English only." in en_user_prompt
+    for forbidden in ("中文篇章", "不得输出英文", "短指令式中文", "最终正文必须使用简体中文"):
+        assert forbidden not in en_system_prompt
+        assert forbidden not in en_user_prompt
 
     ko_tensor = {**_tensor(), "ui_lang": "ko"}
     ko_payload = build_llm_audit_payload(
@@ -191,4 +196,24 @@ def test_build_llm_audit_payload_respects_output_language_lock() -> None:
     ko_system_prompt = str(ko_payload.get("llm_system_prompt") or "")
     ko_user_prompt = str(ko_payload.get("llm_user_prompt") or "")
     assert "STRICT KOREAN ONLY" in ko_system_prompt
+    assert "최종 답변은 반드시 한국어입니다" in ko_system_prompt
     assert "최종 응답은 반드시 한국어로만 작성하십시오." in ko_user_prompt
+    for forbidden in ("中文篇章", "不得输出英文", "短指令式中文", "最终正文必须使用简体中文"):
+        assert forbidden not in ko_system_prompt
+        assert forbidden not in ko_user_prompt
+
+    ko_judge_payload = build_llm_audit_payload(
+        [],
+        will_proxy="stable",
+        decision_anchor="",
+        action_signal=False,
+        role_style=V17_ROLE_JUDGE,
+        physics_tensor=ko_tensor,
+    )
+    ko_judge_system_prompt = str(ko_judge_payload.get("llm_system_prompt") or "")
+    ko_judge_user_prompt = str(ko_judge_payload.get("llm_user_prompt") or "")
+    assert "STRICT KOREAN ONLY" in ko_judge_system_prompt
+    assert "최종 답변은 반드시 한국어입니다" in ko_judge_system_prompt
+    for forbidden in ("中文篇章", "不得输出英文", "短指令式中文", "最终正文必须使用简体中文"):
+        assert forbidden not in ko_judge_system_prompt
+        assert forbidden not in ko_judge_user_prompt

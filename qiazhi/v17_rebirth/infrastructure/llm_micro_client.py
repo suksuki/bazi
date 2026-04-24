@@ -315,20 +315,47 @@ def build_v17_system_prompt(
     fp = p.get("four_pillars") if isinstance(p.get("four_pillars"), dict) else {}
     y, mo, d, h = fp.get("year"), fp.get("month"), fp.get("day"), fp.get("hour")
     luck, flow, fy = p.get("luck_pillar"), p.get("flow_pillar"), p.get("flow_year")
-    anchor = (
-        f"\n\n【元数据主权·仅服务端】"
-        f"四柱：{y} / {mo} / {d} / {h}；大运：{luck}；流年：{flow}；流年锚年：{fy}。"
-    )
+    if output_language == "en":
+        anchor = (
+            f"\n\n[Server Metadata Sovereignty]"
+            f"Four pillars: {y} / {mo} / {d} / {h}; luck pillar: {luck}; flow pillar: {flow}; flow year anchor: {fy}."
+        )
+    elif output_language == "ko":
+        anchor = (
+            f"\n\n[서버 메타데이터 주권]"
+            f"사주: {y} / {mo} / {d} / {h}; 대운: {luck}; 세운: {flow}; 세운 기준 연도: {fy}."
+        )
+    else:
+        anchor = (
+            f"\n\n【元数据主权·仅服务端】"
+            f"四柱：{y} / {mo} / {d} / {h}；大运：{luck}；流年：{flow}；流年锚年：{fy}。"
+        )
     scores = p.get("ten_gods_absolute") or p.get("ten_gods_absolute_intensity") or p.get("deity_scores")
     try:
         total_energy = float(p.get("total_energy_index"))
     except (TypeError, ValueError):
         total_energy = None
-    energy_lines: List[str] = [
-        "注意：当前提供的十神能量为绝对物理强度，非比例值。",
-        "若总能量指标过低，即便十神分布均衡，也应偏向“漂泊、谨慎、根基虚浮”的叙事。",
-        "若总能量指标偏高，则应偏向“刚毅、掌控、可定盘”的叙事。",
-    ]
+    if output_language == "en":
+        energy_lines: List[str] = [
+            "The provided ten-god energies are absolute physical strengths, not proportions.",
+            "If the total energy index is low, even a balanced distribution should read as drifting, cautious, or weakly rooted.",
+            "If the total energy index is high, the reading may lean toward firmness, control, and decisive structure.",
+        ]
+        energy_label = "[Energy Scale]"
+    elif output_language == "ko":
+        energy_lines = [
+            "제공된 십신 에너지는 비율이 아니라 절대 물리 강도입니다.",
+            "총 에너지 지표가 낮으면 십신 분포가 균형적이어도 표류, 신중함, 약한 기반 쪽으로 읽으십시오.",
+            "총 에너지 지표가 높으면 단단함, 통제력, 판을 정할 수 있는 구조 쪽으로 읽을 수 있습니다.",
+        ]
+        energy_label = "[에너지 척도]"
+    else:
+        energy_lines = [
+            "注意：当前提供的十神能量为绝对物理强度，非比例值。",
+            "若总能量指标过低，即便十神分布均衡，也应偏向“漂泊、谨慎、根基虚浮”的叙事。",
+            "若总能量指标偏高，则应偏向“刚毅、掌控、可定盘”的叙事。",
+        ]
+        energy_label = "【能量量纲】"
     if isinstance(scores, dict) and scores:
         ranked = sorted(
             ((str(k).strip(), float(v)) for k, v in scores.items() if str(k).strip()),
@@ -345,7 +372,7 @@ def build_v17_system_prompt(
         if physics_report_lines
         else ""
     )
-    return base + physics_report_block + anchor + "\n" + "\n".join(f"【能量量纲】{line}" for line in energy_lines)
+    return base + physics_report_block + anchor + "\n" + "\n".join(f"{energy_label}{line}" for line in energy_lines)
 
 
 _SENSITIVE_PATTERNS = (

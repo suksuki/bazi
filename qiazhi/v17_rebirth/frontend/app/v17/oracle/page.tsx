@@ -990,17 +990,17 @@ export default function OraclePage() {
                   <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(8,47,73,0.28),rgba(9,9,11,0.84))] p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">Decision Console / 后台裁决台</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">{t(language, "oracle.trace.console.title")}</p>
                         <p className="mt-1 text-[12px] leading-6 text-cyan-50">
-                          这里集中显示自动/系统/计划/索引等后台裁决链路，供你完整审计，不再占用核心判盘页。
+                          {t(language, "oracle.trace.console.desc")}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-1.5 text-[10px]">
                         <span className="rounded-full border border-cyan-500/25 bg-cyan-950/30 px-2 py-1 text-cyan-100">
-                          后台链路
+                          {t(language, "oracle.trace.console.badge.backend")}
                         </span>
                         <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-1 text-zinc-200">
-                          全量视图
+                          {t(language, "oracle.trace.console.badge.full")}
                         </span>
                       </div>
                     </div>
@@ -1014,6 +1014,7 @@ export default function OraclePage() {
                     onAdopted={s.handleAdopted}
                     onAdoptedBatch={s.handleAdoptedBatch}
                     onPlanAction={s.handlePlanAction}
+                    lang={language}
                   />
                 </>
               ) : (
