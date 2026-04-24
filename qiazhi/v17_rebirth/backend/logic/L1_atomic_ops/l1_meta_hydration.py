@@ -20,6 +20,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_pairs import (
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_structured import (
     eval_banhe_hits,
     eval_sanhe_hits,
+    eval_sanhui_hits,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
     branches_and_stems_from_four_pillars,
@@ -475,6 +476,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     liu_po = eval_liu_po_hits(branches) if branches else []
     liu_he = eval_liuhe_hits(branches) if branches else []
     san_he = eval_sanhe_hits(branches) if branches else []
+    san_hui = eval_sanhui_hits(branches) if branches else []
     ban_he = eval_banhe_hits(branches) if branches else []
     an_he = eval_anhe_hits(branches) if branches else []
     muku_hits = [b for b in branches.values() if b in {"辰", "戌", "丑", "未"}] if branches else []
@@ -494,6 +496,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         "liu_po": _geometry_rows_with_origin(liu_po, member_key="pair"),
         "liu_he": _geometry_rows_with_origin(liu_he, member_key="pair"),
         "san_he": _geometry_rows_with_origin(san_he, member_key="group"),
+        "san_hui": _geometry_rows_with_origin(san_hui, member_key="group"),
         "ban_he": _geometry_rows_with_origin(ban_he, member_key="pair"),
         "an_he": _geometry_rows_with_origin(an_he, member_key="pair"),
         "sanxing": [{"branches": h.get("branches"), "edge": h.get("edge"), "origin_type": detect_relation_origin_type(h.get("edge") or [])} for h in sanxing_geo],
@@ -507,6 +510,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         counts={
             "branch_scope_count": len(branches),
             "sanhe_hits": len(san_he),
+            "sanhui_hits": len(san_hui),
             "banhe_hits": len(ban_he),
             "anhe_hits": len(an_he),
             "liuhe_hits": len(liu_he),
@@ -516,13 +520,14 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     
     print(
         f"[V17-HYDRATION-GEOM] Scope: {','.join(sorted(branches.keys()))} | "
-        f"Sanhe: {len(san_he)} | Sanxing: {len(sanxing_geo)}"
+        f"Sanhe: {len(san_he)} | Sanhui: {len(san_hui)} | Sanxing: {len(sanxing_geo)}"
     )
 
     # 3. 填充基础 Hits (Legacy Admin UI 兼容)
     hits = {}
     if liu_chong: _register_manifest_hit(hits, "l1.physics.op_branch_liuchong", "", "六冲", 0.72)
     if san_he: _register_manifest_hit(hits, "l1.physics.op_branch_sanhe", "", "三合成局", 0.76)
+    if san_hui: _register_manifest_hit(hits, "l1.physics.op_branch_sanhui", "", "三会成势", 0.755)
     if ban_he: _register_manifest_hit(hits, "l1.physics.op_branch_banhe", "", "半合聚势", 0.69)
     if an_he: _register_manifest_hit(hits, "l1.physics.op_branch_anhe", "", "暗合", 0.68)
     if muku_hits: _register_manifest_hit(hits, "l1.physics.op_branch_muku", "", "墓库门态", 0.73, {"branches": muku_hits})

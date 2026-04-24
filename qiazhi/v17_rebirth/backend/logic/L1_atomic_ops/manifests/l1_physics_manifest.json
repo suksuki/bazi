@@ -1,0 +1,157 @@
+{
+  "version": "V17.13",
+  "operators": [
+    {
+      "id": "l1.physics.op_geography",
+      "legacy_op_id": "L1_OP_GEOGRAPHY",
+      "causal_tier": 4,
+      "registry_priority": 0.78,
+      "summary": "地理方位场补丁",
+      "rationale": "备份 op_geography：用户朝向对五行场与十神绝对能量做演示性修正"
+    },
+    {
+      "id": "l1.physics.op_vertical_crush",
+      "legacy_op_id": "L1_OP_VERTICAL_CRUSH",
+      "causal_tier": 4,
+      "registry_priority": 0.77,
+      "summary": "干支维轴·盖头截脚",
+      "rationale": "备份 op_interdimensional：处理同柱盖头截脚、跨柱传导、通根透干谐振"
+    },
+    {
+      "id": "l1.physics.op_branch_sanhui",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.755,
+      "summary": "地支三会",
+      "rationale": "备份 op_sub_branch_interaction：三会方局成势与方气汇聚"
+    },
+    {
+      "id": "l1.physics.op_branch_banhe",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.75,
+      "summary": "地支半合",
+      "rationale": "备份 op_sub_branch_interaction：半合成势与局部锁能"
+    },
+    {
+      "id": "l1.physics.op_branch_anhe",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.74,
+      "summary": "地支暗合",
+      "rationale": "备份 op_sub_branch_interaction：隐性支系绑定与暗线牵动"
+    },
+    {
+      "id": "l1.physics.op_branch_muku",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.73,
+      "summary": "墓库门态",
+      "rationale": "备份 op_sub_branch_interaction：墓库锁定、聚气与开库门态"
+    },
+    {
+      "id": "l1.physics.op_branch_liuchong",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.72,
+      "summary": "地支六冲",
+      "rationale": "备份 op_sub_branch_interaction：eval_liu_chong_hits"
+    },
+    {
+      "id": "l1.physics.op_branch_liupo",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.69,
+      "summary": "地支六破",
+      "rationale": "eval_liu_po_hits"
+    },
+    {
+      "id": "l1.physics.op_branch_liuhe",
+      "legacy_op_id": "L1_OP_SUB_BRANCH_INTERACTION",
+      "causal_tier": 4,
+      "registry_priority": 0.68,
+      "summary": "地支六合",
+      "rationale": "eval_liuhe_hits"
+    },
+    {
+      "id": "l1.physics.op_stem_fusion_stuck",
+      "legacy_op_id": "L1_OP_STEM_FUSION",
+      "causal_tier": 4,
+      "registry_priority": 0.67,
+      "summary": "天干五合·羁绊",
+      "rationale": "备份 op_stem_fusion 未化真分支"
+    },
+    {
+      "id": "l1.physics.op_stem_fusion_transform",
+      "legacy_op_id": "L1_OP_STEM_FUSION",
+      "causal_tier": 4,
+      "registry_priority": 0.66,
+      "summary": "天干五合·化气",
+      "rationale": "备份 op_stem_fusion 化真分支"
+    },
+    {
+      "id": "l1.physics.op_blade_clash",
+      "legacy_op_id": "L1_OP_BLADE_CLASH",
+      "causal_tier": 4,
+      "registry_priority": 0.65,
+      "summary": "羊刃逢冲",
+      "rationale": "备份 op_blade_clash：刃支被冲时注入不稳定度与极性种子"
+    },
+    {
+      "id": "l1.physics.op_owl_food",
+      "legacy_op_id": "L1_OP_OWL_FOOD",
+      "causal_tier": 4,
+      "registry_priority": 0.64,
+      "summary": "枭神夺食",
+      "rationale": "备份 op_owl_food：偏印压制食神，削弱食神生存与输出"
+    },
+    {
+      "id": "l1.physics.op_robber_wealth",
+      "legacy_op_id": "L1_OP_ROBBER_WEALTH",
+      "causal_tier": 4,
+      "registry_priority": 0.63,
+      "summary": "劫财见财",
+      "rationale": "备份 op_robber_wealth：劫财与正财同柱或同透时触发财星分配损耗"
+    },
+    {
+      "id": "l1.physics.op_gov_kill_mix",
+      "legacy_op_id": "L1_OP_GOV_KILL_MIX",
+      "causal_tier": 4,
+      "registry_priority": 0.62,
+      "summary": "官杀混杂",
+      "rationale": "备份 op_gov_kill_mix：正官与七杀同透时降低决策效率"
+    },
+    {
+      "id": "l1.physics.op_wealth_seal",
+      "legacy_op_id": "L1_OP_WEALTH_SEAL",
+      "causal_tier": 4,
+      "registry_priority": 0.61,
+      "summary": "财星破印",
+      "rationale": "备份 op_wealth_seal：财印同存且无官杀通关时触发印星防御坍缩"
+    },
+    {
+      "id": "l1.physics.op_connection",
+      "legacy_op_id": "L1_OP_CONN",
+      "causal_tier": 4,
+      "registry_priority": 0.6,
+      "summary": "连接η子算子",
+      "rationale": "备份 op_connection：对合局、合绊的锁定能量施加连接系数"
+    },
+    {
+      "id": "l1.physics.op_production",
+      "legacy_op_id": "L1_OP_PROD",
+      "causal_tier": 4,
+      "registry_priority": 0.59,
+      "summary": "相生η子算子",
+      "rationale": "备份 op_production：对相生通道的绝对增益施加生产系数"
+    },
+    {
+      "id": "l1.physics.op_destruction",
+      "legacy_op_id": "L1_OP_DEST",
+      "causal_tier": 4,
+      "registry_priority": 0.58,
+      "summary": "相克η子算子",
+      "rationale": "备份 op_destruction：对相克、穿破、刑耗的损耗项施加破坏系数"
+    }
+  ]
+}

@@ -22,6 +22,8 @@ BRANCH_RELATION_FAMILIES = {
     "ban_he",
     "an_he",
     "san_he",
+    "sanhui",
+    "san_hui",
     "muku",
     "sanxing",
 }
@@ -222,13 +224,13 @@ def summarize_relation_conditions(
         return False
 
     blockers: List[str] = []
-    if relation_family in {"sanhe", "liuhe", "stem_fusion", "muku"} and _touches(liu_chong, "pair"):
+    if relation_family in {"sanhe", "sanhui", "liuhe", "stem_fusion", "muku"} and _touches(liu_chong, "pair"):
         blockers.append("liu_chong")
-    if relation_family in {"sanhe", "liuhe"} and _touches(liu_hai, "pair"):
+    if relation_family in {"sanhe", "sanhui", "liuhe"} and _touches(liu_hai, "pair"):
         blockers.append("liu_hai")
-    if relation_family in {"sanhe", "liuhe"} and _touches(liu_po, "pair"):
+    if relation_family in {"sanhe", "sanhui", "liuhe"} and _touches(liu_po, "pair"):
         blockers.append("liu_po")
-    if relation_family in {"sanhe", "muku"} and _touches(sanxing, "branches"):
+    if relation_family in {"sanhe", "sanhui", "muku"} and _touches(sanxing, "branches"):
         blockers.append("sanxing")
 
     origin_candidates: List[str] = []
@@ -238,6 +240,8 @@ def summarize_relation_conditions(
         "liu_po": ("liu_po", "pair"),
         "liuhe": ("liu_he", "pair"),
         "sanhe": ("san_he", "group"),
+        "sanhui": ("san_hui", "group"),
+        "san_hui": ("san_hui", "group"),
         "banhe": ("ban_he", "pair"),
         "muku": ("liu_chong", "pair"),
     }

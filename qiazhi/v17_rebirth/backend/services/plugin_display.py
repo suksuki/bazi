@@ -9,6 +9,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "三合成局",
         "definition": "地支三合/半合带来的聚势与协同做功。",
     },
+    "l1.physics.op_branch_sanhui": {
+        "display_name": "三会成势",
+        "definition": "地支三会方局汇气，放大同一五行方向的背景势能。",
+    },
     "l1.physics.op_branch_liuhe": {
         "display_name": "六合协同",
         "definition": "地支六合形成的稳定绑定与局部增益。",

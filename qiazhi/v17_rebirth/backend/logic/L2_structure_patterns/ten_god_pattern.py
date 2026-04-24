@@ -26,7 +26,10 @@ DECLARED_PARAMS = {
     "GUAN_THRESHOLD": 40.0,        # 正官格激活能量阈值
     "SHI_SHANG_THRESHOLD": 35.0,   # 食伤格激活能量阈值
     "CAI_THRESHOLD": 35.0,         # 财星格激活能量阈值
-    "PATTERN_PRIORITY": 0.78       # 事实输出优先级
+    "PATTERN_PRIORITY": 0.78,      # 事实输出优先级
+    "PROFILE_MIN_SCORE": 10.0,     # 混合主轴纳入剖面的最低十神分数
+    "PROFILE_TOP_GODS": 3,         # 混合主轴最多采样几个十神
+    "AXIS_ORIGIN_SCALE_MIN": 0.92  # 来源倍率对主轴匹配度的最低保护
 }
 
 
@@ -72,8 +75,8 @@ def _build_pattern_profile(
     cfg: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     raw_top = sorted(deity_scores.items(), key=lambda kv: float(kv[1]), reverse=True)
-    min_score = float(cfg.get("PROFILE_MIN_SCORE", 10.0))
-    top_count = int(cfg.get("PROFILE_TOP_GODS", 3))
+    min_score = float(cfg.get("PROFILE_MIN_SCORE", DECLARED_PARAMS["PROFILE_MIN_SCORE"]))
+    top_count = int(cfg.get("PROFILE_TOP_GODS", DECLARED_PARAMS["PROFILE_TOP_GODS"]))
     ranked: Sequence[tuple[str, float]] = tuple((str(name), float(score)) for name, score in raw_top if float(score) >= min_score)
     if not ranked:
         return []
@@ -122,7 +125,10 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
     second_score = float(top[1][1]) if len(top) >= 2 else 0.0
     dominant_ratio = top_score / max(second_score, 1.0) if top_score else 0.0
     profile = _build_pattern_profile(deity_scores, cfg)
-    origin_scale = max(0.92, float(cfg.get("AXIS_ORIGIN_SCALE_MIN", 0.92)))
+    origin_scale = max(
+        float(DECLARED_PARAMS["AXIS_ORIGIN_SCALE_MIN"]),
+        float(cfg.get("AXIS_ORIGIN_SCALE_MIN", DECLARED_PARAMS["AXIS_ORIGIN_SCALE_MIN"])),
+    )
     dominant_share = profile[0]["share"] if profile else 0.5
     match_ratio = min(0.92, max(0.45, dominant_share * _clamp01(origin_scale)))
     if not profile:

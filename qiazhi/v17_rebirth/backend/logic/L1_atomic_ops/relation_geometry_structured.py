@@ -17,6 +17,13 @@ SANHE_GROUPS: Tuple[frozenset[str], ...] = tuple(
     for starter, pivot, tomb, _element in SANHE_GROUP_ROWS
 )
 
+SANHUI_GROUP_ROWS: Tuple[Tuple[str, str, str, str], ...] = (
+    ("寅", "卯", "辰", "wood"),
+    ("巳", "午", "未", "fire"),
+    ("申", "酉", "戌", "metal"),
+    ("亥", "子", "丑", "water"),
+)
+
 BANHE_SHENGWANG_ROWS: Tuple[Tuple[str, str, str, str], ...] = (
     ("申", "子", "water", "sanhe_water"),
     ("亥", "卯", "wood", "sanhe_wood"),
@@ -135,6 +142,72 @@ def eval_sanhe_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
                 "duplicate_roles": duplicate_roles,
                 "role_map": role_map,
                 "pivot_factor": round(pivot_factor, 3),
+                "strength": strength,
+                "element": element,
+            }
+        )
+    return hits
+
+
+def eval_sanhui_hits(branches: Mapping[str, str]) -> List[Dict[str, Any]]:
+    present = pillars_branches_set(branches)
+    hits: List[Dict[str, Any]] = []
+    scope_weights = {
+        "year": 0.86,
+        "month": 1.18,
+        "day": 0.96,
+        "hour": 1.0,
+        "luck": 1.02,
+        "flow": 0.76,
+    }
+    role_duplicate_bonus = {"pivot": 0.28, "tomb": 0.16, "starter": 0.10}
+    for starter, pivot, tomb, element in SANHUI_GROUP_ROWS:
+        group = frozenset({starter, pivot, tomb})
+        if not set(group).issubset(present):
+            continue
+        matched = [(pillar, branch) for pillar, branch in branches.items() if branch in group]
+        pillars = [pillar for pillar, _branch in matched]
+        matched_branches = [branch for _pillar, branch in matched]
+        branch_counts: Dict[str, int] = {}
+        for branch in matched_branches:
+            branch_counts[branch] = branch_counts.get(branch, 0) + 1
+        role_map = {starter: "starter", pivot: "pivot", tomb: "tomb"}
+        duplicate_roles: Dict[str, Dict[str, Any]] = {}
+        duplicate_bonus = 0.0
+        for branch, count in branch_counts.items():
+            extra_count = max(0, int(count) - 1)
+            if extra_count <= 0:
+                continue
+            role = role_map.get(branch, "starter")
+            bonus = float(role_duplicate_bonus.get(role, 0.10)) * extra_count
+            duplicate_bonus += bonus
+            duplicate_roles[branch] = {
+                "role": role,
+                "extra_count": extra_count,
+                "bonus": round(bonus, 3),
+            }
+        pivot_factor = max(
+            [float(scope_weights.get(pillar, 0.9)) for pillar, branch in matched if branch == pivot] or [0.9]
+        )
+        scope_factor = max([float(scope_weights.get(pillar, 0.9)) for pillar, _branch in matched] or [0.9])
+        duplicate_count = max(0, len(matched_branches) - len(set(group)))
+        strength = round(1.04 + duplicate_bonus + 0.12 * max(0.0, pivot_factor - 0.9) + 0.08 * max(0.0, scope_factor - 0.9), 3)
+        hits.append(
+            {
+                "group": sorted(group),
+                "ordered_group": [starter, pivot, tomb],
+                "pillars": pillars,
+                "matched_branches": matched_branches,
+                "branch_counts": branch_counts,
+                "mid_branch": pivot,
+                "pivot_branch": pivot,
+                "tomb_branch": tomb,
+                "duplicate_count": duplicate_count,
+                "duplicate_bonus": round(duplicate_bonus, 3),
+                "duplicate_roles": duplicate_roles,
+                "role_map": role_map,
+                "pivot_factor": round(pivot_factor, 3),
+                "scope_factor": round(scope_factor, 3),
                 "strength": strength,
                 "element": element,
             }

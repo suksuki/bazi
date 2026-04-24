@@ -10,6 +10,7 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "l0.foundation.rooted_stems.v1" in plugin_ids
     assert "l0.foundation.exposed_hidden_stems.v1" in plugin_ids
     assert "l0.foundation.month_command.v1" in plugin_ids
+    assert "l1.physics.op_branch_sanhui" in plugin_ids
     assert "l1.physics.op_branch_liuchong" in plugin_ids
     assert "classical.blind.work_axis.v1" in plugin_ids
     assert "classical.blind.response_chain.v1" in plugin_ids

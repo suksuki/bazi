@@ -27,7 +27,7 @@ DECLARED_PARAMS = {
     "BLADE_CLASH_IMPULSE": 2.2,     # 羊刃逢冲的波动倍率
     "OWL_FOOD_CAP": 0.4,           # 枭神夺食的能量封锁阈值
     "OFFICER_CRUSH_LIMIT": 0.5,     # 伤官见官的防御折损
-    "OFFICER_EXHAUST_RATIO": 2.2,   # 伤官伤尽的强弱比阈值
+    "OFFICER_EXHAUST_RATIO": 2.0,   # 伤官伤尽的强弱比阈值
     "OFFICER_EXHAUST_SUPPORT_MAX": 0.42,  # 官星仍有明显根气/成局时，不判伤尽
 }
 

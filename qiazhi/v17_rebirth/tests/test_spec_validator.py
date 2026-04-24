@@ -72,6 +72,7 @@ def test_core_plugins_remain_policy_valid() -> None:
     core_plugin_ids = {
         "l2.risk.risk_matrix",
         "l1.physics.op_branch_sanhe",
+        "l1.physics.op_branch_sanhui",
         "l1.physics.op_branch_muku",
         "l1.physics.op_branch_liuchong",
         "l1.physics.op_branch_liuhe",

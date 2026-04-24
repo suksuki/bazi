@@ -46,3 +46,26 @@ def test_hydrate_v17_physics_tensor_populates_anhe_and_banhe_hits() -> None:
     hits = (pt.get("meta") or {}).get("l1_manifest_hits") or {}
     assert "l1.physics.op_branch_anhe" in hits
     assert "l1.physics.op_branch_banhe" in hits
+
+
+def test_hydrate_v17_physics_tensor_populates_sanhui_hits() -> None:
+    pt = {
+        "four_pillars": {
+            "year": "甲寅",
+            "month": "乙卯",
+            "day": "丙辰",
+            "hour": "丁巳",
+        },
+        "ten_gods_absolute_intensity": {"正印": 20.0, "食神": 32.0},
+        "total_energy_index": 88.0,
+    }
+
+    hydrate_v17_physics_tensor(pt)
+
+    meta = pt.get("meta") or {}
+    hits = meta.get("l1_manifest_hits") or {}
+    interaction_v2 = meta.get("interaction_v2") or {}
+
+    assert "l1.physics.op_branch_sanhui" in hits
+    assert interaction_v2.get("san_hui")
+    assert hits["l1.physics.op_branch_sanhui"].get("label") == "三会成势"

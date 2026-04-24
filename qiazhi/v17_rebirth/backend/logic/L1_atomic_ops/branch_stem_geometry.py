@@ -30,9 +30,11 @@ from v17_rebirth.backend.logic.L1_atomic_ops.relation_geometry_structured import
     GONGHE_ROWS,
     SANHE_GROUPS,
     SANHE_GROUP_ROWS,
+    SANHUI_GROUP_ROWS,
     eval_banhe_hits,
     eval_gonghe_hits,
     eval_sanhe_hits,
+    eval_sanhui_hits,
     sanhe_group_complete_for_pair,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
@@ -47,6 +49,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
 __all__ = [
     "SANHE_GROUP_ROWS",
     "SANHE_GROUPS",
+    "SANHUI_GROUP_ROWS",
     "SANXING_EDGES",
     "LIUHE_PAIRS",
     "ANHE_PAIR_SETS",
@@ -63,6 +66,7 @@ __all__ = [
     "eval_liuhe_hits",
     "eval_anhe_hits",
     "eval_sanhe_hits",
+    "eval_sanhui_hits",
     "sanhe_group_complete_for_pair",
     "eval_banhe_hits",
     "eval_gonghe_hits",

@@ -108,6 +108,42 @@ def test_shensha_respects_thresholds_and_payload(monkeypatch: pytest.MonkeyPatch
     assert yang_ren.meta["tension_multiplier"] == 1.6
 
 
+def test_shensha_emits_first_batch_branch_deities(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.logic.configs.manager.get_plugin_config",
+        lambda _plugin_id: {
+            "TIAN_YI_THRESHOLD": 99.0,
+            "YANG_REN_THRESHOLD": 99.0,
+            "RESISTANCE_BUFF": 0.2,
+            "TENSION_MULTIPLIER": 1.6,
+            "PRIORITY_BASE": 0.9,
+            "BRANCH_SHENSHA_PRIORITY": 0.8,
+            "BRANCH_SHENSHA_MATCH_RATIO": 0.66,
+            "BRANCH_SHENSHA_MAX_ROWS": 8,
+        },
+    )
+    facts = ShenshaPlugin.collect_v17_facts(
+        {
+            "four_pillars": {
+                "year": "甲寅",
+                "month": "乙卯",
+                "day": "甲子",
+                "hour": "丁巳",
+            },
+            "ten_gods_absolute": {"比肩": 20.0, "劫财": 18.0, "食神": 12.0, "正印": 8.0},
+            "ten_gods_runtime": {"比肩": 20.0, "劫财": 18.0, "食神": 12.0, "正印": 8.0},
+        }
+    )
+
+    gates = {str(f.meta.get("gate") or "") for f in facts}
+    assert "SHENSHA_WENCHANG" in gates
+    assert "SHENSHA_LU" in gates
+    assert "SHENSHA_YANG_REN_BRANCH" in gates
+    assert "SHENSHA_驿马" in gates
+    assert "SHENSHA_将星" in gates
+    assert all(f.meta.get("observe_only") is True for f in facts)
+
+
 def test_kong_wang_respects_threshold_and_efficiency(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "v17_rebirth.backend.logic.configs.manager.get_plugin_config",

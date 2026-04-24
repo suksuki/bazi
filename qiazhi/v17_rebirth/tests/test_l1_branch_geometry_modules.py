@@ -7,14 +7,20 @@ from v17_rebirth.backend.logic.L1_atomic_ops.branch_stem_geometry import (
     eval_gonghe_hits,
     eval_liu_chong_hits,
     eval_sanhe_hits,
+    eval_sanhui_hits,
 )
 
 
-def test_structured_geometry_modules_report_sanhe_banhe_and_gonghe() -> None:
+def test_structured_geometry_modules_report_sanhe_sanhui_banhe_and_gonghe() -> None:
     sanhe_branches = {
         "year": "寅",
         "month": "午",
         "hour": "戌",
+    }
+    sanhui_branches = {
+        "year": "寅",
+        "month": "卯",
+        "day": "辰",
     }
     banhe_branches = {
         "year": "酉",
@@ -30,10 +36,12 @@ def test_structured_geometry_modules_report_sanhe_banhe_and_gonghe() -> None:
     }
 
     sanhe = eval_sanhe_hits(sanhe_branches)
+    sanhui = eval_sanhui_hits(sanhui_branches)
     banhe = eval_banhe_hits(banhe_branches)
     gonghe = eval_gonghe_hits(gonghe_branches)
 
     assert any(hit["element"] == "fire" for hit in sanhe)
+    assert any(hit["element"] == "wood" and hit["pivot_branch"] == "卯" for hit in sanhui)
     assert any(hit["pair_kind"] == "muwang" and hit["element"] == "metal" for hit in banhe)
     assert any(hit["pair_kind"] == "gonghe" and hit["element"] == "water" for hit in gonghe)
 

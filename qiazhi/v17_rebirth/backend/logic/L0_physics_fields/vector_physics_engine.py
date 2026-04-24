@@ -160,6 +160,7 @@ def compute_stress_events(
         ("liu_he", "combination", RELATION_COEFFICIENT["combination"]),
         ("sanhe", "combination", RELATION_COEFFICIENT["combination"]),
         ("san_he", "combination", RELATION_COEFFICIENT["combination"]),
+        ("san_hui", "combination", RELATION_COEFFICIENT["combination"]),
         ("liu_hai", "harm", RELATION_COEFFICIENT["harm"]),
         ("liu_po", "pierce", RELATION_COEFFICIENT["pierce"]),
     ]
