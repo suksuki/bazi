@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
-import { LogOut, RotateCcw } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 
 import type { AuthUser } from "@/hooks/useAuthSession";
 import { t, type AppLanguage } from "@/lib/i18n";
@@ -75,9 +75,11 @@ export function V17_AppShell({
               <button
                 type="button"
                 onClick={onRetry}
-                className="inline-flex items-center gap-1 rounded-md border border-violet-300/40 bg-violet-900/20 px-2 py-1 text-xs text-violet-100 hover:bg-violet-800/30"
+                title={t(language, "oracle.action.retry.title")}
+                aria-label={t(language, "oracle.action.retry.title")}
+                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-300/70 bg-violet-500/20 px-3 py-2 text-sm font-semibold text-violet-50 shadow-[0_0_22px_rgba(168,85,247,0.18)] transition hover:border-violet-200 hover:bg-violet-500/30 hover:text-white"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <ArrowLeft className="h-4 w-4" />
                 {t(language, "oracle.action.retry")}
               </button>
             ) : null}
