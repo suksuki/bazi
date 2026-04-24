@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { V17_AppShell } from "@/components/V17_AppShell";
+import { V17_PageGuard } from "@/components/V17_PageGuard";
 import { V17_AdminUsersPanel, type AdminAuthUser } from "@/components/V17_AdminUsersPanel";
 import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
 import { V17_GodRingExplainCard } from "@/components/V17_GodRingExplainCard";
@@ -672,11 +673,7 @@ export default function OraclePage() {
   };
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
+    if (authLoading || !user) return;
     if (activeSurfaceTab === "trace" && !canAccessTraceSurface) {
       const fallbackTab: ContentSurfaceTab = canAccessAuxiliarySurface ? "auxiliary" : "core";
       setActiveSurfaceTab(fallbackTab);
@@ -689,7 +686,7 @@ export default function OraclePage() {
       setLastContentSurfaceTab("core");
       s.setTraceOpen(false);
     }
-  }, [activeSurfaceTab, authLoading, canAccessAuxiliarySurface, canAccessTraceSurface, router, s, user]);
+  }, [activeSurfaceTab, authLoading, canAccessAuxiliarySurface, canAccessTraceSurface, s, user]);
 
   useEffect(() => {
     if (!authLoading && user && canManageUsers) {
@@ -703,29 +700,21 @@ export default function OraclePage() {
     router.refresh();
   }
 
-  if (authLoading || !user) {
-    return (
+  return (
+    <V17_PageGuard
+      language={language}
+      user={user}
+      loading={authLoading}
+      onLogout={() => void handleLogout()}
+    >
       <V17_AppShell
         language={language}
         user={user}
         loading={authLoading}
+        running={s.running}
+        onRetry={s.resetRun}
         onLogout={() => void handleLogout()}
-        maxWidthClassName="max-w-3xl"
       >
-        {null}
-      </V17_AppShell>
-    );
-  }
-
-  return (
-    <V17_AppShell
-      language={language}
-      user={user}
-      loading={authLoading}
-      running={s.running}
-      onRetry={s.resetRun}
-      onLogout={() => void handleLogout()}
-    >
         {/* ── 排盘输入 ── */}
         <div className="relative">
           {s.running ? (
@@ -1285,7 +1274,7 @@ export default function OraclePage() {
                     </div>
                   </AuxiliarySection>
 
-                  {canManageUsers && user.role === "manager" ? (
+                  {canManageUsers && user?.role === "manager" ? (
                     <AuxiliarySection
                       title={t(language, "oracle.section.collab.title")}
                       subtitle={t(language, "oracle.section.collab.subtitle")}
@@ -1304,7 +1293,7 @@ export default function OraclePage() {
                           loading={authUsersLoading}
                           onRefresh={() => void loadAuthUsers()}
                           onUpdateRole={updateAuthUserRole}
-                          operatorRole={user.role}
+                          operatorRole="manager"
                           compact
                           title={t(language, "oracle.section.collab.title")}
                           description={t(language, "oracle.collab.desc")}
@@ -1319,6 +1308,7 @@ export default function OraclePage() {
             </div>
           </div>
         ) : null}
-    </V17_AppShell>
+      </V17_AppShell>
+    </V17_PageGuard>
   );
 }

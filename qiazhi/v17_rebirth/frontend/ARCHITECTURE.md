@@ -33,6 +33,16 @@ Use `components/V17_AppShell.tsx` for authenticated app pages. It owns:
 
 Feature pages should pass page content as children and keep business UI inside the shell.
 
+## Page Guard
+
+Use `components/V17_PageGuard.tsx` around authenticated feature pages.
+
+- It redirects anonymous users to login.
+- It can redirect authenticated-but-forbidden users to a fallback route.
+- It renders the shared auth/permission holding state through `V17_AppShell`.
+
+Pages should declare access intent with `allowed`, `forbiddenRedirectTo`, and optional `forbiddenContent` instead of writing page-local auth redirect effects.
+
 ## Surface Navigation
 
 Use `components/V17_SurfaceTabs.tsx` for multi-surface feature areas.
@@ -80,9 +90,10 @@ When adding a feature:
 
 1. Read runtime from `useV17Runtime()`.
 2. Filter visible sections through `access`.
-3. Render inside `V17_AppShell`.
-4. Register top-level feature sections in `lib/featureRegistry.ts`.
-5. Use `V17_SurfaceTabs` for role-dependent top-level sections.
-6. Render the active section through `V17_FeatureOutlet`.
-7. Use `requestJson` / `jsonPostInit` for client JSON calls.
-8. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.
+3. Wrap authenticated pages with `V17_PageGuard`.
+4. Render app content inside `V17_AppShell`.
+5. Register top-level feature sections in `lib/featureRegistry.ts`.
+6. Use `V17_SurfaceTabs` for role-dependent top-level sections.
+7. Render the active section through `V17_FeatureOutlet`.
+8. Use `requestJson` / `jsonPostInit` for client JSON calls.
+9. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.

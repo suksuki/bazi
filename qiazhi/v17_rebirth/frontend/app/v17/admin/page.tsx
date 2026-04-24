@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { useRouter } from "next/navigation";
 import { V17_AppShell } from "@/components/V17_AppShell";
+import { V17_PageGuard } from "@/components/V17_PageGuard";
 import { V17_AdminPluginOverview } from "@/components/V17_AdminPluginOverview";
 import { V17_AdminPluginTierPanel } from "@/components/V17_AdminPluginTierPanel";
 import { V17_AdminPluginRuntimePanel } from "@/components/V17_AdminPluginRuntimePanel";
@@ -264,7 +264,6 @@ function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetSt
 
 
 export default function V17AdminPage() {
-  const router = useRouter();
   const { language, user, authLoading, logout, access, ui } = useV17Runtime();
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
@@ -563,17 +562,6 @@ export default function V17AdminPage() {
       }
     })();
   }, [canManageSystem]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-    if (!canManageSystem) {
-      router.replace("/v17/oracle");
-    }
-  }, [authLoading, canManageSystem, router, user]);
 
   useEffect(() => {
     if (!canManageSystem) return;
@@ -903,16 +891,15 @@ export default function V17AdminPage() {
     ),
   };
 
-  if (authLoading || !user || !canManageSystem) {
-    return (
-      <V17_AppShell
-        language={language}
-        user={user}
-        loading={authLoading}
-        onLogout={() => void logout()}
-        maxWidthClassName="max-w-3xl"
-      >
-        {user && !canManageSystem ? (
+  return (
+    <V17_PageGuard
+      language={language}
+      user={user}
+      loading={authLoading}
+      onLogout={() => void logout()}
+      allowed={canManageSystem}
+      forbiddenRedirectTo="/v17/oracle"
+      forbiddenContent={(
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-center sm:rounded-3xl sm:p-8">
           <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Admin Guard</div>
           <h1 className="mt-3 text-2xl font-semibold text-zinc-50">{ui("正在校验权限", "Checking access", "권한 확인 중")}</h1>
@@ -920,55 +907,52 @@ export default function V17AdminPage() {
             {ui("当前账号无管理员权限，正在返回主页面。", "This account does not have admin access. Returning to the main page.", "현재 계정에는 관리자 권한이 없어 메인 화면으로 돌아갑니다.")}
           </p>
         </div>
-        ) : null}
-      </V17_AppShell>
-    );
-  }
-
-  return (
-    <V17_AppShell
-      language={language}
-      user={user}
-      loading={authLoading}
-      onLogout={() => void logout()}
-      maxWidthClassName="max-w-[1500px]"
+      )}
     >
-      <div className="space-y-4 text-sm sm:space-y-6">
-        <header className="rounded-2xl border border-zinc-800/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.88),rgba(9,9,11,0.96))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-5">
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-            <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">V17 Admin</div>
-              <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">{ui("管理中枢", "Admin Console", "관리 콘솔")}</h1>
-              <p className="mt-2 max-w-3xl text-[12px] leading-6 text-zinc-400">
-                {ui(
-                  "对齐 L0-L4 插件体系、运行态、冲突裁决与演化账本。这里应该像控制台，而不是杂糅的配置页。",
-                  "Operate L0-L4 plugins, runtime status, conflict arbitration, and evolution ledgers from one console.",
-                  "L0-L4 플러그인, 런타임 상태, 충돌 중재, 진화 장부를 하나의 콘솔에서 다룹니다.",
-                )}
-              </p>
+      <V17_AppShell
+        language={language}
+        user={user}
+        loading={authLoading}
+        onLogout={() => void logout()}
+        maxWidthClassName="max-w-[1500px]"
+      >
+        <div className="space-y-4 text-sm sm:space-y-6">
+          <header className="rounded-2xl border border-zinc-800/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.88),rgba(9,9,11,0.96))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-5">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">V17 Admin</div>
+                <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">{ui("管理中枢", "Admin Console", "관리 콘솔")}</h1>
+                <p className="mt-2 max-w-3xl text-[12px] leading-6 text-zinc-400">
+                  {ui(
+                    "对齐 L0-L4 插件体系、运行态、冲突裁决与演化账本。这里应该像控制台，而不是杂糅的配置页。",
+                    "Operate L0-L4 plugins, runtime status, conflict arbitration, and evolution ledgers from one console.",
+                    "L0-L4 플러그인, 런타임 상태, 충돌 중재, 진화 장부를 하나의 콘솔에서 다룹니다.",
+                  )}
+                </p>
+              </div>
+              <div className="flex max-w-full flex-wrap gap-2">
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/60 px-3 py-1 text-[10px] text-zinc-400">
+                  {ui("当前标签", "Current tab", "현재 탭")} · {tab.toUpperCase()}
+                </span>
+                <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] text-cyan-200">
+                  {ui("插件", "Plugins", "플러그인")} {plugins.length}
+                </span>
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
+                  {ui("管理员", "Admin", "관리자")} {user?.display_name || user?.username || ""}
+                </span>
+              </div>
             </div>
-            <div className="flex max-w-full flex-wrap gap-2">
-              <span className="rounded-full border border-zinc-700 bg-zinc-950/60 px-3 py-1 text-[10px] text-zinc-400">
-                {ui("当前标签", "Current tab", "현재 탭")} · {tab.toUpperCase()}
-              </span>
-              <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] text-cyan-200">
-                {ui("插件", "Plugins", "플러그인")} {plugins.length}
-              </span>
-              <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
-                {ui("管理员", "Admin", "관리자")} {user.display_name || user.username}
-              </span>
-            </div>
+          </header>
+
+          <V17_SurfaceTabs items={adminTabs} activeId={tab} onChange={setTab} />
+
+          <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
+            <V17_FeatureOutlet activeId={tab} renderers={adminRenderers} />
+
+            <p className="mt-8 text-xs italic text-zinc-600">{msg || "等待指令..."}</p>
           </div>
-        </header>
-
-        <V17_SurfaceTabs items={adminTabs} activeId={tab} onChange={setTab} />
-
-        <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
-          <V17_FeatureOutlet activeId={tab} renderers={adminRenderers} />
-
-          <p className="mt-8 text-xs italic text-zinc-600">{msg || "等待指令..."}</p>
         </div>
-      </div>
-    </V17_AppShell>
+      </V17_AppShell>
+    </V17_PageGuard>
   );
 }
