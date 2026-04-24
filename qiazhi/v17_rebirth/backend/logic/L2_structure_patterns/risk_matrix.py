@@ -11,7 +11,11 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
-from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, ten_god_from_stems
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import ten_god_from_stems
+from v17_rebirth.backend.logic.L2_structure_patterns.classical_evidence import (
+    YANGREN_BRANCH_BY_DAYMASTER,
+    branch_main_god as _branch_main_god,
+)
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 V17_SKILL_MANIFEST = {
@@ -30,20 +34,6 @@ DECLARED_PARAMS = {
     "OFFICER_EXHAUST_RATIO": 2.0,   # 伤官伤尽的强弱比阈值
     "OFFICER_EXHAUST_SUPPORT_MAX": 0.42,  # 官星仍有明显根气/成局时，不判伤尽
 }
-
-YANGREN_BRANCH_BY_DAYMASTER: Dict[str, str] = {
-    "甲": "卯",
-    "乙": "寅",
-    "丙": "午",
-    "丁": "巳",
-    "戊": "午",
-    "己": "巳",
-    "庚": "酉",
-    "辛": "申",
-    "壬": "子",
-    "癸": "亥",
-}
-
 
 def _clamp_ratio(value: float, *, low: float = -0.5, high: float = 0.5) -> float:
     return max(low, min(high, float(value)))
@@ -169,14 +159,6 @@ def _owl_manifestation(*, food: float, owl: float, scores: Dict[str, Any]) -> st
     if imbalance >= 1.25:
         return "contested"
     return "latent"
-
-
-def _branch_main_god(daymaster: str, branch: str, fallback: str = "劫财") -> str:
-    hidden = BRANCH_HIDDEN.get(branch) or []
-    if not daymaster or not hidden:
-        return fallback
-    return ten_god_from_stems(daymaster, hidden[0][0]) or fallback
-
 @dataclass
 class RiskMatrixPlugin(V17PluginSpec):
     plugin_id: str = "l2.risk.risk_matrix"
