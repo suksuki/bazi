@@ -594,6 +594,11 @@ export default function OraclePage() {
       traceSignalCount,
     },
   });
+  const verdictButtonBusy =
+    s.running && ["connecting", "awaiting_first_token", "streaming"].includes(s.llmLifecyclePhase);
+  const verdictButtonLabel = verdictButtonBusy
+    ? t(language, "oracle.action.show_verdict.loading")
+    : t(language, "oracle.action.show_verdict");
   const toggleAuxiliarySection = (section: AuxiliarySectionKey) => {
     setAuxiliarySections((current) => ({
       ...current,
@@ -823,10 +828,23 @@ export default function OraclePage() {
                     <button
                       type="button"
                       onClick={() => s.triggerVerdict(verdictTriggerPrompt)}
-                      className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-950/25 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-900/35"
+                      disabled={verdictButtonBusy}
+                      aria-busy={verdictButtonBusy}
+                      className={`group relative inline-flex min-h-9 w-full items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
+                        verdictButtonBusy
+                          ? "cursor-wait border-cyan-300/50 bg-cyan-500/15 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.18)]"
+                          : "border-cyan-500/35 bg-cyan-950/25 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-900/35 hover:text-white"
+                      }`}
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      {t(language, "oracle.action.show_verdict")}
+                      <Sparkles className={`relative z-10 h-4 w-4 ${verdictButtonBusy ? "motion-safe:animate-pulse" : ""}`} />
+                      <span className="relative z-10">{verdictButtonLabel}</span>
+                      {verdictButtonBusy ? (
+                        <span className="relative z-10 inline-flex items-center gap-0.5" aria-hidden="true">
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-200ms]" />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-100ms]" />
+                          <span className="h-1 w-1 animate-bounce rounded-full bg-current" />
+                        </span>
+                      ) : null}
                     </button>
                   </div>
                   <V17_DecisionInbox

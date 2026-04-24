@@ -63,7 +63,8 @@ const ZH: Dictionary = {
   "oracle.count.trace": "观测",
   "oracle.action.retry": "重测",
   "oracle.action.logout": "退出",
-  "oracle.action.show_verdict": "显示八字断言",
+  "oracle.action.show_verdict": "掐指一算",
+  "oracle.action.show_verdict.loading": "正在掐指一算",
   "oracle.core.decision_notice":
     "命盘总览只保留需要命理师手动确认的裁决项；自动、系统与计划链路已移至幕后观察。",
   "oracle.core.ready_for_verdict": "当前已满足自动生成断言条件。",
@@ -298,7 +299,8 @@ const EN: Dictionary = {
   "oracle.count.trace": "Trace",
   "oracle.action.retry": "Run Again",
   "oracle.action.logout": "Sign Out",
-  "oracle.action.show_verdict": "Generate Verdict",
+  "oracle.action.show_verdict": "Cast Reading",
+  "oracle.action.show_verdict.loading": "Casting Reading",
   "oracle.core.decision_notice":
     "Chart Overview keeps only the decisions that need practitioner confirmation. Auto/system/plan chains have moved to Behind the Scenes.",
   "oracle.core.ready_for_verdict": "The current state is ready for automatic verdict generation.",
@@ -534,7 +536,8 @@ const KO: Dictionary = {
   "oracle.count.trace": "관측",
   "oracle.action.retry": "재측정",
   "oracle.action.logout": "로그아웃",
-  "oracle.action.show_verdict": "단언 생성",
+  "oracle.action.show_verdict": "사주 짚어보기",
+  "oracle.action.show_verdict.loading": "사주 짚는 중",
   "oracle.core.decision_notice":
     "명식 개요에는 명리사가 직접 확인해야 하는 항목만 남깁니다. 자동/시스템/계획 체인은 내부 관찰로 이동했습니다.",
   "oracle.core.ready_for_verdict": "현재 상태는 자동 단언 생성 조건을 충족합니다.",
