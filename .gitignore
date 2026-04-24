@@ -21,6 +21,7 @@ wheels/
 *.egg
 
 # Virtual Environment
+.venv/
 venv/
 env/
 ENV/
@@ -40,6 +41,7 @@ ENV/
 *.log
 logs/
 server.log
+.runlogs/
 
 # Database
 *.db
@@ -64,6 +66,18 @@ data.backup/
 tmp/
 temp/
 *.tmp
+.runtime/
+.pnpm-store/
+node_modules/
+.next/
+
+# Qiazhi local runtime/deploy artifacts
+qiazhi/.venv/
+qiazhi/.pnpm-store/
+qiazhi/v17_rebirth/.runlogs/
+qiazhi/v17_rebirth/.runtime/
+qiazhi/v17_rebirth/frontend/node_modules/
+qiazhi/v17_rebirth/frontend/.next/
 scripts/auto_evolve.py
 scripts/auto_tune_val005.py
 scripts/debug_outliers.py
