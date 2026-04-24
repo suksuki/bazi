@@ -717,7 +717,7 @@ export function V17_SixPillarsPanel({
 
   const birthLabel =
     birth != null
-      ? `${birth.getFullYear()}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")} ${String(birth.getHours()).padStart(2, "0")}:00`
+      ? `${birth.getFullYear()}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")} ${String(birth.getHours()).padStart(2, "0")}:${String(birth.getMinutes()).padStart(2, "0")}`
       : "—";
   const genderLabel = gender === "male" ? "男" : gender === "female" ? "女" : "—";
   const calendarLabel = calendarType === "lunar" ? "阴历" : calendarType === "solar" ? "阳历" : "—";

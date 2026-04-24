@@ -50,7 +50,13 @@ from v17_rebirth.backend.services.knowledge_store import build_knowledge_snapsho
 from v17_rebirth.backend.services.master_reasoning import build_master_reasoning_trace
 from v17_rebirth.backend.services.arbiter_router import route_conflicts
 from v17_rebirth.backend.services.decision_compiler import compile_modifier_proposals, compile_pending_decisions
-from v17_rebirth.backend.services.hydration_pipeline import bucket_decision_records, build_plugin_governance_manifest
+from v17_rebirth.backend.services.hydration_pipeline import (
+    append_algorithm_execution_stage,
+    bucket_decision_records,
+    build_algorithm_execution_audit,
+    build_algorithm_execution_policy,
+    build_plugin_governance_manifest,
+)
 from v17_rebirth.backend.services.meta_contract import build_meta_contract
 from v17_rebirth.backend.services.physics_layers import proposal_signature, read_base_scores, read_runtime_scores, settle_modifier_proposals, sync_runtime_aliases
 
@@ -494,6 +500,19 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     }
     meta["interaction_v2"] = geom_data
     pt["interaction_v2"] = geom_data # 增强型注入
+    append_algorithm_execution_stage(
+        meta,
+        stage="geometry_built",
+        label="几何关系建模",
+        counts={
+            "branch_scope_count": len(branches),
+            "sanhe_hits": len(san_he),
+            "banhe_hits": len(ban_he),
+            "anhe_hits": len(an_he),
+            "liuhe_hits": len(liu_he),
+            "clash_hits": len(liu_chong),
+        },
+    )
     
     print(
         f"[V17-HYDRATION-GEOM] Scope: {','.join(sorted(branches.keys()))} | "
@@ -552,6 +571,15 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     pt["ten_gods_absolute"] = dict(_base)
     pt["deity_scores"] = dict(_base)
     pt["ten_gods_absolute_intensity"] = dict(_base)
+    append_algorithm_execution_stage(
+        meta,
+        stage="base_runtime_ready",
+        label="基线与运行态初始化",
+        counts={
+            "base_god_count": len(_base),
+            "runtime_god_count": len(_runtime),
+        },
+    )
     session_id = str(pt.get("session_id", "default_ghost"))
     pt.setdefault("facts", [])
     pt.setdefault("pending_decisions", [])
@@ -564,6 +592,14 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     all_specs = iter_all_plugin_specs()
     _scanned_pids = [s.plugin_id for s in all_specs]
     meta["plugin_governance_manifest"] = build_plugin_governance_manifest(all_specs)
+    append_algorithm_execution_stage(
+        meta,
+        stage="plugin_manifest_ready",
+        label="插件治理清单生成",
+        counts={
+            "plugin_count": len(_scanned_pids),
+        },
+    )
     print(f"[V17-TRIBUNAL-MANIFEST] Scanned {len(_scanned_pids)}: {', '.join(_scanned_pids)}")
     
     _active_plugins = []
@@ -671,9 +707,34 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             # 无论自动与否，均进入案卷库，由后期分桶逻辑分发到 UI 不同栏位
             pt["pending_decisions"].append(decision)
                 # 阻塞事实不进入 pt["facts"]，直到下一轮用户 Approve 后被处理
+    append_algorithm_execution_stage(
+        meta,
+        stage="plugin_scan_completed",
+        label="专题扫描与主题提升",
+        counts={
+            "active_plugin_count": len(_active_plugins),
+            "fact_count": len(collected_facts),
+            "decision_count": len(pt.get("pending_decisions", [])),
+        },
+        sovereignty={
+            "hard_authority_present": isinstance(meta.get("god_ring_authority"), dict) and bool(meta.get("god_ring_authority")),
+            "blind_theme_present": isinstance(meta.get("blind_theme"), dict) and bool(meta.get("blind_theme")),
+            "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
+            "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
+        },
+    )
 
     modifier_proposals = compile_modifier_proposals(facts=collected_facts, physics_tensor=pt)
     claim_rows = compile_claims(facts=collected_facts, physics_tensor=pt)
+    append_algorithm_execution_stage(
+        meta,
+        stage="claims_compiled",
+        label="主张与提案编译",
+        counts={
+            "proposal_count": len(modifier_proposals),
+            "claim_count": len(claim_rows),
+        },
+    )
     raw_conflict_rows = detect_claim_conflicts(claim_rows)
     scored_conflict_rows = build_conflict_scores(conflicts=raw_conflict_rows, claim_rows=claim_rows)
     conflict_resolutions = recommend_conflict_resolutions(claim_rows, raw_conflict_rows)
@@ -690,6 +751,16 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         current_authority=meta.get("god_ring_authority") if isinstance(meta.get("god_ring_authority"), dict) else None,
     )
     conflict_rows = route_conflicts(conflicts=scored_conflict_rows, knowledge_snapshot=knowledge_snapshot)
+    append_algorithm_execution_stage(
+        meta,
+        stage="conflicts_routed",
+        label="冲突检测与仲裁路由",
+        counts={
+            "raw_conflict_count": len(raw_conflict_rows),
+            "scored_conflict_count": len(scored_conflict_rows),
+            "routed_conflict_count": len(conflict_rows),
+        },
+    )
     adjusted_modifier_proposals, settlement_meta = _extract_claims_resolution_plan(
         claim_rows=claim_rows,
         conflict_resolutions=conflict_resolutions,
@@ -748,6 +819,16 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     meta["plugin_conflicts"] = [dict(c) for c in conflict_rows]
     meta["plugin_conflict_resolutions"] = [dict(r) for r in conflict_resolutions]
     meta["knowledge_snapshot"] = dict(knowledge_snapshot)
+    append_algorithm_execution_stage(
+        meta,
+        stage="modifier_settlement_completed",
+        label="统一结算完成",
+        counts={
+            "adjusted_proposal_count": len(adjusted_modifier_proposals),
+            "auto_settlement_signature_count": len(auto_signatures),
+            "conflict_resolution_count": len(conflict_resolutions),
+        },
+    )
     master_reasoning = build_master_reasoning_trace(physics_tensor=pt, meta=meta)
     meta["master_reasoning"] = dict(master_reasoning)
     pt["master_reasoning"] = dict(master_reasoning)
@@ -768,6 +849,16 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
     pt["auto_decisions"] = decision_buckets["auto_decisions"]
     pt["decision_inbox_contract"] = decision_buckets["decision_inbox_contract"]
     meta["decision_bucket_contract"] = decision_buckets
+    append_algorithm_execution_stage(
+        meta,
+        stage="decision_buckets_ready",
+        label="决策分桶完成",
+        counts={
+            "manual_count": len(pt["manual_decisions"]),
+            "system_count": len(pt["auto_resolutions"]),
+            "llm_count": len(pt["llm_arbitration_context"]),
+        },
+    )
     
     print(f"[V17-TRIBUNAL-DEBUG] Scanned: {len(_scanned_pids)} | Active: {len(_active_plugins)} ({', '.join(_active_plugins)}) | Total: {len(_all_decisions)} | Manual: {len(pt['manual_decisions'])}")
 
@@ -796,6 +887,15 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 if _ledger:
                     _ledger.append_entry(god, _runtime[god], "L1.5_FLOW", "内生系统平衡流转")
         meta["flow_topology"] = flow_result["topology"]
+    append_algorithm_execution_stage(
+        meta,
+        stage="flow_applied",
+        label="流转平衡完成",
+        counts={
+            "topology_edge_count": len((meta.get("flow_topology") or {}).get("edges", [])) if isinstance(meta.get("flow_topology"), dict) else 0,
+            "stress_node_count": len(stress_map),
+        },
+    )
 
     # 6. Action Impact & Will Proxy
     _decisions = pt.get("pending_decisions", [])
@@ -835,6 +935,22 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         decisions=_all_decisions,
     )
     meta["l1_manifest_hits"] = hits
+    append_algorithm_execution_stage(
+        meta,
+        stage="runtime_synced",
+        label="运行态同步与专题收束",
+        counts={
+            "runtime_god_count": len(_runtime),
+            "plugin_status_count": len(meta.get("plugin_execution_status") or []),
+        },
+        sovereignty={
+            "hard_authority_present": isinstance(meta.get("god_ring_authority"), dict) and bool(meta.get("god_ring_authority")),
+            "blind_theme_present": isinstance(meta.get("blind_theme"), dict) and bool(meta.get("blind_theme")),
+            "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
+            "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
+            "authority_layer_protocol_present": isinstance((meta.get("god_ring_authority") or {}).get("authority_layer_protocol"), dict),
+        },
+    )
     qsc = meta.get("qi_status_coeffs") if isinstance(meta.get("qi_status_coeffs"), dict) else {}
     if qsc:
         meta["l1_status_v1"] = {
@@ -847,6 +963,18 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
         pt["ten_gods_ledger"] = _ledger.to_dict()
         if "ledger" in _energy_meta: del _energy_meta["ledger"]
 
+    meta["algorithm_execution_policy"] = build_algorithm_execution_policy()
+    meta["meta_contract"] = build_meta_contract(meta)
+    append_algorithm_execution_stage(
+        meta,
+        stage="meta_contract_built",
+        label="元数据契约完成",
+        counts={
+            "public_meta_key_count": int((meta.get("meta_contract") or {}).get("public_key_count") or 0),
+            "solver_trace_key_count": int((meta.get("meta_contract") or {}).get("solver_trace_key_count") or 0),
+        },
+    )
+    meta["algorithm_execution_audit"] = build_algorithm_execution_audit(meta.get("algorithm_execution_trace"))
     meta["meta_contract"] = build_meta_contract(meta)
 
     # 最终类型擦除，防止 JSON 报错

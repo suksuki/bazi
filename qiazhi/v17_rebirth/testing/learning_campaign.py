@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
 from v17_rebirth.backend.logic.plugin_discovery import iter_all_plugin_specs
+from v17_rebirth.backend.services.hydration_pipeline import build_algorithm_execution_audit
 from v17_rebirth.backend.services.plugin_governance import classify_plugin_governance
 from v17_rebirth.testing.auto_learning_loop import run_auto_learning_cycle
 from v17_rebirth.testing.parameter_candidate_runner import build_parameter_experiments_from_report
@@ -232,6 +233,7 @@ def build_plugin_governance_coverage() -> dict[str, Any]:
 def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, Any]:
     findings: list[LearningFinding] = []
     signals: list[dict[str, Any]] = []
+    algorithm_audits: list[dict[str, Any]] = []
     relation_counter: Counter[str] = Counter()
     dynamic_counter: Counter[str] = Counter()
     climate_buckets: Counter[str] = Counter()
@@ -255,6 +257,14 @@ def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, 
                 )
             )
             continue
+        algorithm_audit = _collect_algorithm_audit(
+            meta=run.meta,
+            case_id=case.case_id,
+            source="synthetic_catalog",
+            findings=findings,
+        )
+        if algorithm_audit:
+            algorithm_audits.append(algorithm_audit)
         _audit_basic_run(case.case_id, run.total, run.top, findings)
         relation_families = {
             str(row.get("family_key") or "")
@@ -281,6 +291,9 @@ def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, 
                 "total": round(float(run.total or 0.0), 3),
                 "relation_families": sorted(relation_families),
                 "dynamic_families": sorted(dynamic_families),
+                "expected_relation_families": list(case.expected_relation_families),
+                "expected_dynamic_families": list(case.expected_dynamic_families),
+                "focus_parameter_family": _focus_parameter_family_for_case(case),
                 "climate_label": climate_label,
             }
         )
@@ -339,6 +352,7 @@ def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, 
             "core": core_summary["case_count"],
         },
         "signals": signals[:64],
+        "algorithm_execution_summary": _summarize_algorithm_audits(algorithm_audits),
         "relation_family_counts": dict(sorted(relation_counter.items())),
         "dynamic_family_counts": dict(sorted(dynamic_counter.items())),
         "climate_bucket_counts": dict(sorted(climate_buckets.items())),
@@ -347,6 +361,7 @@ def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, 
             "authority_routes": authority_summary.get("signal_count", 0),
             "pattern_routes": pattern_summary.get("signal_count", 0),
             "core_routes": core_summary.get("signal_count", 0),
+            "__core_execution_summary__": core_summary.get("core_execution_summary", {}),
         },
         "findings": [finding.to_dict() for finding in findings],
     }
@@ -355,6 +370,7 @@ def audit_extended_synthetic_catalog(max_cases: int | None = None) -> dict[str, 
 def audit_practitioner_benchmarks() -> dict[str, Any]:
     findings: list[LearningFinding] = []
     signals: list[dict[str, Any]] = []
+    algorithm_audits: list[dict[str, Any]] = []
     passed = 0
     for case in PRACTITIONER_BENCHMARK_CASES:
         before = len(findings)
@@ -372,6 +388,14 @@ def audit_practitioner_benchmarks() -> dict[str, Any]:
                 )
             )
             continue
+        algorithm_audit = _collect_algorithm_audit(
+            meta=run.meta,
+            case_id=case.case_id,
+            source="practitioner_benchmark",
+            findings=findings,
+        )
+        if algorithm_audit:
+            algorithm_audits.append(algorithm_audit)
         _audit_basic_run(case.case_id, run.total, run.top, findings, source="practitioner_benchmark")
         relation_families = practitioner_relation_families(run)
         dynamic_families = practitioner_dynamic_families(run)
@@ -384,6 +408,7 @@ def audit_practitioner_benchmarks() -> dict[str, Any]:
                 "top": list(run.top[:6]),
                 "relation_families": sorted(relation_families),
                 "dynamic_families": sorted(dynamic_families),
+                "focus_parameter_family": _focus_parameter_family_for_practitioner_case(case),
                 "reviewer_note": case.reviewer_note,
             }
         )
@@ -451,6 +476,7 @@ def audit_practitioner_benchmarks() -> dict[str, Any]:
         "passed_count": passed,
         "failed_count": len({finding.case_id for finding in findings}),
         "signals": signals,
+        "algorithm_execution_summary": _summarize_algorithm_audits(algorithm_audits),
         "findings": [finding.to_dict() for finding in findings],
     }
 
@@ -497,6 +523,8 @@ def build_learning_insights(
         validated_families.add("risk_matrix")
     if int(topic_counts.get("core_routes") or 0) > 0:
         validated_families.add("work_authority_core")
+    if _algorithm_trace_case_count(extended_report, practitioner_report) > 0:
+        validated_families.add("algorithm.execution_order")
 
     top_signals: list[dict[str, Any]] = []
     synthetic_signals = sorted(
@@ -524,9 +552,10 @@ def build_learning_insights(
                 "case_id": signal.get("case_id"),
                 "signal_type": "practitioner",
                 "summary": f"top={ '/'.join(str(item) for item in (signal.get('top') or [])[:4]) or '—' }；focus={ ' / '.join(str(item) for item in (signal.get('audit_focus') or [])[:3]) }",
-                "parameter_family": "practitioner_benchmark",
+                "parameter_family": _primary_parameter_family_from_signal(signal),
             }
         )
+    top_signals = _compress_learning_signals(top_signals, limit=10, per_family_limit=2)
 
     blind_spots = _learning_blind_spots(
         relation_counts=relation_counts,
@@ -552,13 +581,42 @@ def build_learning_insights(
         "learning_value": learning_value,
         "learning_density": learning_density,
         "validated_parameter_families": sorted(validated_families),
+        "algorithm_intelligence": _build_algorithm_intelligence(
+            extended_report=extended_report,
+            practitioner_report=practitioner_report,
+            core_summary=core_summary if isinstance((core_summary := topic_counts.get("__core_execution_summary__")), dict) else {},
+            findings=findings,
+        ),
         "top_learning_signals": top_signals[:12],
         "blind_spots": blind_spots,
         "recommended_next_cases": _recommended_next_cases(blind_spots=blind_spots, findings=findings),
+        "freeze_rationale": _freeze_rationale(
+            findings=findings,
+            parameter_experiments=parameter_experiments,
+            validated_families=sorted(validated_families),
+            practitioner_report=practitioner_report,
+        ),
+        "parameter_optimization_guidance": _parameter_optimization_guidance(
+            findings=findings,
+            parameter_experiments=parameter_experiments,
+            validated_families=sorted(validated_families),
+            top_signals=top_signals,
+            blind_spots=blind_spots,
+        ),
+        "parameter_optimization_map": _parameter_optimization_map(
+            top_signals=top_signals,
+            extended_report=extended_report,
+            practitioner_report=practitioner_report,
+            findings=findings,
+            parameter_experiments=parameter_experiments,
+        ),
     }
 
 
 def _primary_parameter_family_from_signal(signal: dict[str, Any]) -> str:
+    focus = str(signal.get("focus_parameter_family") or "").strip()
+    if focus:
+        return focus
     relation_families = [str(item) for item in (signal.get("relation_families") or []) if str(item)]
     dynamic_families = [str(item) for item in (signal.get("dynamic_families") or []) if str(item)]
     if relation_families:
@@ -569,6 +627,35 @@ def _primary_parameter_family_from_signal(signal: dict[str, Any]) -> str:
         return "climate_field"
     layer = str(signal.get("layer") or "").strip()
     return f"synthetic.{layer}" if layer else "synthetic.general"
+
+
+def _focus_parameter_family_for_case(case: Any) -> str:
+    expected_dynamic = [str(item) for item in getattr(case, "expected_dynamic_families", ()) if str(item)]
+    expected_relation = [str(item) for item in getattr(case, "expected_relation_families", ()) if str(item)]
+    tags = {str(item) for item in getattr(case, "tags", ())}
+
+    if "stem_fusion" in tags or "stem_fusion_transform" in expected_dynamic:
+        return "relation_dynamics.stem_fusion_transform"
+    if expected_dynamic:
+        return f"relation_dynamics.{expected_dynamic[0]}"
+    if expected_relation:
+        return f"relation_formation.{expected_relation[0]}"
+    if "runtime_field" in tags:
+        return "runtime_field"
+    return "synthetic.general"
+
+
+def _focus_parameter_family_for_practitioner_case(case: Any) -> str:
+    leader = str(getattr(case, "expected_leader", "") or "").strip()
+    if leader:
+        return "authority.leader_axis"
+    expected_dynamic = [str(item) for item in getattr(case, "expected_dynamic_families", ()) if str(item)]
+    if expected_dynamic:
+        return f"relation_dynamics.{expected_dynamic[0]}"
+    expected_relation = [str(item) for item in getattr(case, "expected_relation_families", ()) if str(item)]
+    if expected_relation:
+        return f"relation_formation.{expected_relation[0]}"
+    return "practitioner_benchmark"
 
 
 def _signal_weight(signal: dict[str, Any]) -> int:
@@ -596,6 +683,25 @@ def _signal_weight(signal: dict[str, Any]) -> int:
     return score
 
 
+def _compress_learning_signals(
+    rows: list[dict[str, Any]],
+    *,
+    limit: int,
+    per_family_limit: int = 2,
+) -> list[dict[str, Any]]:
+    family_counts: Counter[str] = Counter()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        family = str(row.get("parameter_family") or "unknown")
+        if family_counts[family] >= max(1, per_family_limit):
+            continue
+        out.append(row)
+        family_counts[family] += 1
+        if len(out) >= max(1, limit):
+            break
+    return out
+
+
 def _dedupe_preserve_order(values: Iterable[Any]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -606,6 +712,345 @@ def _dedupe_preserve_order(values: Iterable[Any]) -> list[str]:
         seen.add(text)
         out.append(text)
     return out
+
+
+def _freeze_rationale(
+    *,
+    findings: list[LearningFinding],
+    parameter_experiments: list[dict[str, Any]],
+    validated_families: list[str],
+    practitioner_report: dict[str, Any],
+) -> list[str]:
+    if findings or parameter_experiments:
+        return [
+            "本轮存在异常或影子实验候选，参数不满足冻结解释条件。",
+        ]
+    rationale = [
+        "Synthetic Batch、Extended Synthetic、Practitioner Benchmark 全绿，当前没有数值异常或 gate 异常。",
+        "未触发 analyst feedback 与 LLM review package，说明本轮没有法理冲突、语义冲突或 authority 越权项。",
+    ]
+    if validated_families:
+        rationale.append(
+            "已形成参数冻结依据："
+            + "、".join(validated_families[:6])
+            + (" 等参数族已通过当前矩阵验证。" if len(validated_families) > 6 else " 已通过当前矩阵验证。")
+        )
+    practitioner_count = int(practitioner_report.get("case_count") or 0)
+    rationale.append(
+        f"真实校盘虽然只有 {practitioner_count} 例，但当前这批锚盘未发现偏轴，因此冻结结论成立；是否继续扩盘由下一轮挑战样盘决定。"
+    )
+    return rationale[:4]
+
+
+def _parameter_optimization_guidance(
+    *,
+    findings: list[LearningFinding],
+    parameter_experiments: list[dict[str, Any]],
+    validated_families: list[str],
+    top_signals: list[dict[str, Any]],
+    blind_spots: list[str],
+) -> dict[str, Any]:
+    watch_families = _dedupe_preserve_order(
+        row.get("parameter_family")
+        for row in top_signals
+        if isinstance(row, dict)
+    )
+    freeze_families = validated_families[:8]
+    adjustment_candidates = [
+        str(item.get("parameter_family") or "").strip()
+        for item in parameter_experiments
+        if isinstance(item, dict) and str(item.get("parameter_family") or "").strip()
+    ]
+    if not adjustment_candidates and findings:
+        adjustment_candidates = _dedupe_preserve_order(
+            finding.parameter_family for finding in findings if finding.parameter_family
+        )
+    return {
+        "readiness": "freeze_only" if not adjustment_candidates else "review_candidates_ready",
+        "freeze_families": freeze_families,
+        "watch_families": watch_families[:8],
+        "adjustment_candidates": adjustment_candidates[:8],
+        "guidance_notes": [
+            "freeze_families 表示当前已被矩阵验证、短期不建议主动调整的参数族。",
+            "watch_families 表示当前学习信号最密集的观察对象，一旦后续出现偏差，优先回到这些参数族。",
+            "adjustment_candidates 只有在 findings 或 shadow experiments 出现时才进入正式调参候选。",
+            "blind_spots 代表下一轮应补样盘的领域，不能直接当作调参理由。",
+            *(["当前盲区提醒：" + "；".join(blind_spots[:2])] if blind_spots else []),
+        ],
+    }
+
+
+def _collect_algorithm_audit(
+    *,
+    meta: Any,
+    case_id: str,
+    source: str,
+    findings: list[LearningFinding],
+) -> dict[str, Any]:
+    source_meta = meta if isinstance(meta, dict) else {}
+    audit = source_meta.get("algorithm_execution_audit")
+    if not isinstance(audit, dict):
+        audit = build_algorithm_execution_audit(source_meta.get("algorithm_execution_trace"))
+    if not isinstance(audit, dict) or not audit:
+        return {}
+    if not bool(audit.get("order_ok")):
+        findings.append(
+            LearningFinding(
+                source=source,
+                case_id=case_id,
+                severity="P1",
+                message="algorithm execution order is degraded or missing required stages",
+                parameter_family="algorithm.execution_order",
+                needs_analyst_feedback=True,
+            )
+        )
+    elif not bool(audit.get("authority_layer_protocol_present")):
+        findings.append(
+            LearningFinding(
+                source=source,
+                case_id=case_id,
+                severity="P2",
+                message="authority layer protocol not visible in algorithm trace",
+                parameter_family="algorithm.authority_gate",
+            )
+        )
+    return dict(audit)
+
+
+def _summarize_algorithm_audits(audits: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = [row for row in audits if isinstance(row, dict)]
+    stage_counter: Counter[str] = Counter()
+    missing_counter: Counter[str] = Counter()
+    watch_counter: Counter[str] = Counter()
+    dependency_counter: Counter[str] = Counter()
+    critical_stage_counter: Counter[str] = Counter()
+    coverage_total = 0.0
+    healthy = 0
+    partial = 0
+    needs_review = 0
+    critical_path_ok = 0
+    gate_stage_ok = 0
+    hard_authority = 0
+    authority_gate = 0
+    blind_theme = 0
+    climate_theme = 0
+    xiangfa_theme = 0
+    for row in rows:
+        completed = [str(item) for item in (row.get("completed_stages") or []) if str(item)]
+        missing = [str(item) for item in (row.get("missing_stages") or []) if str(item)]
+        stage_counter.update(completed)
+        missing_counter.update(missing)
+        if not bool(row.get("order_ok")):
+            watch_counter.update(missing or ["execution_order"])
+        dependency_counter.update(str(item) for item in (row.get("dependency_violations") or []) if str(item))
+        critical_stage_counter.update(str(item) for item in (row.get("critical_missing_stages") or []) if str(item))
+        watch_counter.update(str(item) for item in (row.get("watch_stages") or []) if str(item))
+        if not bool(row.get("authority_layer_protocol_present")):
+            watch_counter.update(["authority_gate"])
+        coverage_total += _safe_float(row.get("trace_coverage_ratio"))
+        summary = str(row.get("summary") or "").strip()
+        if summary == "healthy":
+            healthy += 1
+        elif summary == "partial":
+            partial += 1
+        else:
+            needs_review += 1
+        critical_path_ok += 1 if bool(row.get("critical_path_ok")) else 0
+        gate_stage_ok += 1 if bool(row.get("gate_stage_ok")) else 0
+        hard_authority += 1 if bool(row.get("hard_authority_present")) else 0
+        authority_gate += 1 if bool(row.get("authority_layer_protocol_present")) else 0
+        blind_theme += 1 if bool(row.get("blind_theme_present")) else 0
+        climate_theme += 1 if bool(row.get("climate_theme_present")) else 0
+        xiangfa_theme += 1 if bool(row.get("xiangfa_theme_present")) else 0
+    case_count = len(rows)
+    validated_stages = sorted(stage for stage, count in stage_counter.items() if case_count and count == case_count)
+    return {
+        "protocol": "v17.learning_campaign.algorithm_execution_summary.v1",
+        "case_count": case_count,
+        "healthy_case_count": healthy,
+        "partial_case_count": partial,
+        "needs_review_case_count": needs_review,
+        "average_trace_coverage": round(coverage_total / max(1, case_count), 3),
+        "validated_stages": validated_stages,
+        "watch_stages": [stage for stage, _ in watch_counter.most_common(8)],
+        "missing_stage_counts": dict(sorted(missing_counter.items())),
+        "dependency_violation_counts": dict(sorted(dependency_counter.items())),
+        "critical_missing_stage_counts": dict(sorted(critical_stage_counter.items())),
+        "critical_path_ok_case_count": critical_path_ok,
+        "gate_stage_ok_case_count": gate_stage_ok,
+        "hard_authority_case_count": hard_authority,
+        "authority_gate_case_count": authority_gate,
+        "topic_visibility": {
+            "blind_theme_case_count": blind_theme,
+            "climate_theme_case_count": climate_theme,
+            "xiangfa_theme_case_count": xiangfa_theme,
+        },
+    }
+
+
+def _algorithm_trace_case_count(extended_report: dict[str, Any], practitioner_report: dict[str, Any]) -> int:
+    extended_summary = (
+        extended_report.get("algorithm_execution_summary")
+        if isinstance(extended_report.get("algorithm_execution_summary"), dict)
+        else {}
+    )
+    practitioner_summary = (
+        practitioner_report.get("algorithm_execution_summary")
+        if isinstance(practitioner_report.get("algorithm_execution_summary"), dict)
+        else {}
+    )
+    return int(extended_summary.get("case_count") or 0) + int(practitioner_summary.get("case_count") or 0)
+
+
+def _build_algorithm_intelligence(
+    *,
+    extended_report: dict[str, Any],
+    practitioner_report: dict[str, Any],
+    core_summary: dict[str, Any],
+    findings: list[LearningFinding],
+) -> dict[str, Any]:
+    summaries = [
+        extended_report.get("algorithm_execution_summary"),
+        practitioner_report.get("algorithm_execution_summary"),
+    ]
+    valid = [row for row in summaries if isinstance(row, dict)]
+    case_count = sum(int(row.get("case_count") or 0) for row in valid)
+    healthy = sum(int(row.get("healthy_case_count") or 0) for row in valid)
+    partial = sum(int(row.get("partial_case_count") or 0) for row in valid)
+    needs_review = sum(int(row.get("needs_review_case_count") or 0) for row in valid)
+    critical_path_ok = sum(int(row.get("critical_path_ok_case_count") or 0) for row in valid)
+    gate_stage_ok = sum(int(row.get("gate_stage_ok_case_count") or 0) for row in valid)
+    hard_authority = sum(int(row.get("hard_authority_case_count") or 0) for row in valid)
+    authority_gate = sum(int(row.get("authority_gate_case_count") or 0) for row in valid)
+    coverage = round(
+        sum(_safe_float(row.get("average_trace_coverage")) * max(1, int(row.get("case_count") or 0)) for row in valid)
+        / max(1, case_count),
+        3,
+    )
+    validated_stages = sorted(
+        set.intersection(*[set(row.get("validated_stages") or []) for row in valid]) if valid else set()
+    )
+    watch_counter: Counter[str] = Counter()
+    dependency_counter: Counter[str] = Counter()
+    for row in valid:
+        watch_counter.update(str(item) for item in (row.get("watch_stages") or []) if str(item))
+        dependency_counter.update(str(item) for item in (row.get("dependency_violation_counts") or {}).keys() if str(item))
+    recommendations: list[str] = []
+    if needs_review:
+        recommendations.append("优先审计 hydration 主链缺失阶段或越权阶段，再决定是否进入参数调优。")
+    if critical_path_ok < case_count:
+        recommendations.append("关键路径未全量通过，优先检查 claims -> conflicts -> settlement -> flow -> runtime_sync 这条主链。")
+    if gate_stage_ok < case_count:
+        recommendations.append("runtime_synced 阶段的 authority gate 仍需加固，确保软偏置在该阶段之后才参与最终解释。")
+    if authority_gate < case_count:
+        recommendations.append("强化 authority gate 的可见性，确保每个基准 case 都能看到硬约束与 soft bias 门禁。")
+    if coverage < 1.0:
+        recommendations.append("补齐 algorithm execution trace 的所有阶段，让自动学习能区分顺序问题与参数问题。")
+    if not recommendations:
+        recommendations.append("当前算法主链健康，可继续把 benchmark 扩展到双体竞争、体转移、结构抢权样盘。")
+    algorithm_finding_count = sum(1 for finding in findings if str(finding.parameter_family).startswith("algorithm."))
+    core_critical_path_coverage = round(_safe_float(core_summary.get("critical_path_coverage_ratio")), 3)
+    if core_summary and core_critical_path_coverage < 1.0:
+        recommendations.insert(0, "Core 做功链存在关键路径缺口，优先复核 graph -> work_path -> flux -> authority 这条链。")
+    return {
+        "protocol": "v17.learning_campaign.algorithm_intelligence.v1",
+        "trace_case_count": case_count,
+        "healthy_case_count": healthy,
+        "partial_case_count": partial,
+        "needs_review_case_count": needs_review,
+        "average_trace_coverage": coverage,
+        "validated_stages": validated_stages,
+        "watch_stages": [stage for stage, _ in watch_counter.most_common(8)],
+        "critical_path_coverage_ratio": round(critical_path_ok / max(1, case_count), 3),
+        "gate_stage_coverage_ratio": round(gate_stage_ok / max(1, case_count), 3),
+        "dependency_watch_edges": [edge for edge, _ in dependency_counter.most_common(6)],
+        "core_critical_path_coverage_ratio": core_critical_path_coverage,
+        "core_validated_steps": list(core_summary.get("validated_steps") or []),
+        "core_watch_steps": list(core_summary.get("watch_steps") or []),
+        "core_dependency_watch_edges": list(core_summary.get("dependency_watch_edges") or []),
+        "hard_authority_coverage_ratio": round(hard_authority / max(1, case_count), 3),
+        "authority_gate_coverage_ratio": round(authority_gate / max(1, case_count), 3),
+        "algorithm_finding_count": algorithm_finding_count,
+        "recommendations": recommendations[:4],
+    }
+
+
+def _parameter_optimization_map(
+    *,
+    top_signals: list[dict[str, Any]],
+    extended_report: dict[str, Any],
+    practitioner_report: dict[str, Any],
+    findings: list[LearningFinding],
+    parameter_experiments: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    prioritized_families = _dedupe_preserve_order(
+        [
+            *(str(item.get("parameter_family") or "").strip() for item in top_signals if isinstance(item, dict)),
+            *(str(item.get("parameter_family") or "").strip() for item in parameter_experiments if isinstance(item, dict)),
+            *(finding.parameter_family for finding in findings if finding.parameter_family),
+        ]
+    )
+    rows: list[dict[str, Any]] = []
+    for family in prioritized_families[:8]:
+        synthetic_cases = _matching_case_ids((extended_report.get("signals") or []), family)
+        benchmark_cases = _matching_case_ids((practitioner_report.get("signals") or []), family)
+        experiment_rows = build_parameter_experiments_from_report(
+            {
+                "parameter_candidate_plan": [
+                    {
+                        "candidate_id": f"reference::{family}",
+                        "parameter_family": family,
+                        "issue_count": 0,
+                        "recommended_action": "reference_only",
+                        "safety_gate": "manual_review_required",
+                        "synthetic_cases": synthetic_cases,
+                    }
+                ],
+                "audits": [{"case_id": case_id} for case_id in benchmark_cases],
+            }
+        )
+        experiment = experiment_rows[0] if experiment_rows else {}
+        candidate_patch = experiment.get("candidate_patch") if isinstance(experiment, dict) else {}
+        rows.append(
+            {
+                "parameter_family": family,
+                "experiment_id": experiment.get("experiment_id") or "",
+                "target": candidate_patch.get("target_config") or candidate_patch.get("target_module") or candidate_patch.get("target") or "—",
+                "scope": candidate_patch.get("candidate_scope") or "—",
+                "parameters_to_review": list(candidate_patch.get("parameters_to_review") or []),
+                "synthetic_cases": synthetic_cases[:5],
+                "benchmark_cases": benchmark_cases[:4],
+                "hypothesis": experiment.get("hypothesis") or "",
+                "required_commands": list(experiment.get("required_commands") or []),
+                "safety_gates": list(experiment.get("safety_gates") or []),
+            }
+        )
+    return rows
+
+
+def _matching_case_ids(rows: Any, family: str) -> list[str]:
+    family_text = str(family or "").strip()
+    if not family_text:
+        return []
+    out: list[str] = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        focus = str(row.get("focus_parameter_family") or row.get("parameter_family") or "").strip()
+        families = _dedupe_preserve_order(
+            [
+                *(row.get("relation_families") or []),
+                *(row.get("dynamic_families") or []),
+                *(row.get("expected_relation_families") or []),
+                *(row.get("expected_dynamic_families") or []),
+            ]
+        )
+        family_suffix = family_text.split(".", 1)[-1]
+        if focus == family_text or family_suffix in families:
+            case_id = str(row.get("case_id") or "").strip()
+            if case_id:
+                out.append(case_id)
+    return _dedupe_preserve_order(out)
 
 
 def _learning_blind_spots(
@@ -725,6 +1170,11 @@ def render_learning_campaign_markdown(report: dict[str, Any]) -> str:
     learning_counts = coverage.get("learning_family_counts") if isinstance(coverage.get("learning_family_counts"), dict) else {}
     extended_groups = extended.get("catalog_groups") if isinstance(extended.get("catalog_groups"), dict) else {}
     insights = report.get("learning_insights") if isinstance(report.get("learning_insights"), dict) else {}
+    algorithm_intelligence = (
+        insights.get("algorithm_intelligence")
+        if isinstance(insights.get("algorithm_intelligence"), dict)
+        else {}
+    )
     findings = report.get("findings") if isinstance(report.get("findings"), list) else []
     experiments = report.get("parameter_experiments") if isinstance(report.get("parameter_experiments"), list) else []
     llm_pkg = report.get("llm_review_package") if isinstance(report.get("llm_review_package"), dict) else {}
@@ -761,6 +1211,71 @@ def render_learning_campaign_markdown(report: dict[str, Any]) -> str:
         f"- 已验证参数族：{', '.join(str(item) for item in (insights.get('validated_parameter_families') or [])) or '—'}",
         f"- 主要盲区：{'; '.join(str(item) for item in (insights.get('blind_spots') or [])) or '—'}",
         "",
+        "## Algorithm Intelligence",
+        f"- 算法轨迹覆盖样盘：{algorithm_intelligence.get('trace_case_count', 0)}",
+        f"- 健康主链样盘：{algorithm_intelligence.get('healthy_case_count', 0)}",
+        f"- 部分覆盖样盘：{algorithm_intelligence.get('partial_case_count', 0)}",
+        f"- 待审计算法样盘：{algorithm_intelligence.get('needs_review_case_count', 0)}",
+        f"- 平均轨迹覆盖率：`{algorithm_intelligence.get('average_trace_coverage', 0)}`",
+        f"- 关键路径覆盖率：`{algorithm_intelligence.get('critical_path_coverage_ratio', 0)}`",
+        f"- 运行态门禁阶段覆盖率：`{algorithm_intelligence.get('gate_stage_coverage_ratio', 0)}`",
+        f"- Core 关键路径覆盖率：`{algorithm_intelligence.get('core_critical_path_coverage_ratio', 0)}`",
+        f"- 已验证阶段：{' / '.join(str(item) for item in (algorithm_intelligence.get('validated_stages') or [])) or '—'}",
+        f"- 重点观察阶段：{' / '.join(str(item) for item in (algorithm_intelligence.get('watch_stages') or [])) or '—'}",
+        f"- 重点依赖边：{' / '.join(str(item) for item in (algorithm_intelligence.get('dependency_watch_edges') or [])) or '—'}",
+        f"- Core 已验证步骤：{' / '.join(str(item) for item in (algorithm_intelligence.get('core_validated_steps') or [])) or '—'}",
+        f"- Core 观察步骤：{' / '.join(str(item) for item in (algorithm_intelligence.get('core_watch_steps') or [])) or '—'}",
+        f"- 硬主权覆盖率：`{algorithm_intelligence.get('hard_authority_coverage_ratio', 0)}`",
+        f"- 门禁覆盖率：`{algorithm_intelligence.get('authority_gate_coverage_ratio', 0)}`",
+        "",
+        "## Freeze Rationale",
+    ]
+    for item in (algorithm_intelligence.get("recommendations") or [])[:3]:
+        lines.insert(-1, f"- 算法建议：{item}")
+    freeze_rationale = insights.get("freeze_rationale") if isinstance(insights.get("freeze_rationale"), list) else []
+    if freeze_rationale:
+        for item in freeze_rationale:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- （无）")
+    lines.extend([
+        "",
+        "## Parameter Optimization Guidance",
+    ])
+    guidance = insights.get("parameter_optimization_guidance") if isinstance(insights.get("parameter_optimization_guidance"), dict) else {}
+    lines.append(f"- 就绪状态：`{guidance.get('readiness', 'unknown')}`")
+    lines.append(f"- 冻结参数族：{', '.join(str(item) for item in (guidance.get('freeze_families') or [])) or '—'}")
+    lines.append(f"- 重点观察参数族：{', '.join(str(item) for item in (guidance.get('watch_families') or [])) or '—'}")
+    lines.append(f"- 调参候选参数族：{', '.join(str(item) for item in (guidance.get('adjustment_candidates') or [])) or '—'}")
+    for item in guidance.get("guidance_notes") or []:
+        lines.append(f"- {item}")
+    lines.extend([
+        "",
+        "## Parameter Optimization Map",
+    ])
+    optimization_map = insights.get("parameter_optimization_map") if isinstance(insights.get("parameter_optimization_map"), list) else []
+    if optimization_map:
+        for row in optimization_map:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                f"- `{row.get('parameter_family')}` → `{row.get('target')}` / `{row.get('scope')}`"
+            )
+            lines.append(
+                f"  参数：{', '.join(str(item) for item in (row.get('parameters_to_review') or [])) or '—'}"
+            )
+            lines.append(
+                f"  Synthetic：{', '.join(str(item) for item in (row.get('synthetic_cases') or [])) or '—'}"
+            )
+            lines.append(
+                f"  Benchmark：{', '.join(str(item) for item in (row.get('benchmark_cases') or [])) or '—'}"
+            )
+            if row.get("hypothesis"):
+                lines.append(f"  假设：{row.get('hypothesis')}")
+    else:
+        lines.append("- （无）")
+    lines.extend([
+        "",
         "## Scorecard",
         f"- Synthetic Batch：{batch.get('passed_count', 0)}/{batch.get('case_count', 0)} passed",
         f"- Extended Synthetic：{extended.get('passed_count', 0)}/{extended.get('case_count', 0)} passed",
@@ -775,7 +1290,7 @@ def render_learning_campaign_markdown(report: dict[str, Any]) -> str:
         f"- Practitioner Benchmark 覆盖：真实复杂盘 {practitioner.get('case_count', 0)} 例。",
         "",
         "## Learning Signals",
-    ]
+    ])
     signals = insights.get("top_learning_signals") if isinstance(insights.get("top_learning_signals"), list) else []
     if signals:
         for item in signals[:12]:
@@ -952,10 +1467,14 @@ def _audit_pattern_cases(findings: list[LearningFinding]) -> dict[str, Any]:
 
 def _audit_core_cases(findings: list[LearningFinding]) -> dict[str, Any]:
     signal_count = 0
+    core_audits: list[dict[str, Any]] = []
     for case in SYNTHETIC_CORE_CASES:
         run = run_core_case(case)
         result = run.result
         signal_count += 1 if result else 0
+        core_audit = result.get("core_execution_audit") if isinstance(result.get("core_execution_audit"), dict) else {}
+        if core_audit:
+            core_audits.append(dict(core_audit))
         if not isinstance(result.get("effect_scores"), dict):
             findings.append(LearningFinding("synthetic_core", case.case_id, "P1", "missing effect scores", "authority.core_path"))
         if not result.get("use_candidates"):
@@ -964,7 +1483,45 @@ def _audit_core_cases(findings: list[LearningFinding]) -> dict[str, Any]:
             findings.append(LearningFinding("synthetic_core", case.case_id, "P1", "missing taboo candidates", "authority.core_path"))
         if str(result.get("mode") or "") != "six_pillar_spacetime_core":
             findings.append(LearningFinding("synthetic_core", case.case_id, "P1", "core mode mismatch", "authority.core_path"))
-    return {"case_count": len(SYNTHETIC_CORE_CASES), "signal_count": signal_count}
+        if core_audit and not bool(core_audit.get("critical_path_ok")):
+            findings.append(
+                LearningFinding(
+                    "synthetic_core",
+                    case.case_id,
+                    "P1",
+                    "core execution critical path degraded",
+                    "algorithm.core_execution_order",
+                )
+            )
+    return {
+        "case_count": len(SYNTHETIC_CORE_CASES),
+        "signal_count": signal_count,
+        "core_execution_summary": _summarize_core_execution_audits(core_audits),
+    }
+
+
+def _summarize_core_execution_audits(audits: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = [row for row in audits if isinstance(row, dict)]
+    step_counter: Counter[str] = Counter()
+    watch_counter: Counter[str] = Counter()
+    edge_counter: Counter[str] = Counter()
+    critical_ok = 0
+    case_count = len(rows)
+    for row in rows:
+        step_counter.update(str(item) for item in (row.get("completed_steps") or []) if str(item))
+        watch_counter.update(str(item) for item in (row.get("watch_steps") or []) if str(item))
+        edge_counter.update(str(item) for item in (row.get("dependency_watch_edges") or []) if str(item))
+        critical_ok += 1 if bool(row.get("critical_path_ok")) else 0
+    validated_steps = sorted(step for step, count in step_counter.items() if case_count and count == case_count)
+    return {
+        "protocol": "v17.core_execution_summary.v1",
+        "case_count": case_count,
+        "critical_path_ok_case_count": critical_ok,
+        "critical_path_coverage_ratio": round(critical_ok / max(1, case_count), 3),
+        "validated_steps": validated_steps,
+        "watch_steps": [step for step, _ in watch_counter.most_common(8)],
+        "dependency_watch_edges": [edge for edge, _ in edge_counter.most_common(6)],
+    }
 
 
 def _findings_from_batch_report(report: dict[str, Any]) -> list[LearningFinding]:

@@ -1,37 +1,23 @@
 "use client";
 
-/**
- * V17.23 — OraclePage（精简版）
- *
- * 组件职责：纯 JSX 组合 + 路由入口。
- * 所有状态与业务逻辑已迁移至 hooks/useOracleSession.ts。
- * 调试面板已迁移至 components/V17_TracePanel.tsx。
- */
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
+import { LogOut, RotateCcw, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-import { useState } from "react";
-import { RotateCcw, Sparkles } from "lucide-react";
-
+import { V17_AdminUsersPanel, type AdminAuthUser } from "@/components/V17_AdminUsersPanel";
 import { V17_DecisionInbox } from "@/components/V17_DecisionInbox";
 import { V17_GodRingExplainCard } from "@/components/V17_GodRingExplainCard";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { useOracleSession } from "@/hooks/useOracleSession";
 import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
 type OracleSurfaceTab = "core" | "auxiliary" | "trace";
 type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
-
-function decisionPluginLabel(row: Record<string, unknown>): string {
-  return String(
-    row.source_label || row.display_name || row.definition_text || row.plugin_id || row.source || "",
-  ).trim();
-}
-
-function normalizePluginKey(value: unknown): string {
-  return String(value || "").trim().toLowerCase();
-}
 
 function asLooseRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -68,16 +54,6 @@ function topicHubBadgeTone(tone: "primary" | "stable" | "watch" | "soft" | "risk
   if (tone === "soft") return "border-fuchsia-500/25 bg-fuchsia-950/30 text-fuchsia-100";
   if (tone === "risk") return "border-rose-500/25 bg-rose-950/30 text-rose-100";
   return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
-}
-
-function compactProjection(projection: unknown): string {
-  if (!projection || typeof projection !== "object") return "";
-  const entries = Object.entries(projection as Record<string, unknown>)
-    .map(([key, value]) => [key, Number(value || 0)] as const)
-    .filter(([, value]) => Number.isFinite(value) && value > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-  return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
 }
 
 function patternConfidenceTone(score: number): string {
@@ -155,6 +131,35 @@ function normalizeScopeWeights(value: unknown): Array<{ label: string; ratio: nu
     .filter((item) => Number.isFinite(item.ratio) && item.ratio > 0)
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, 4);
+}
+
+function normalizePluginKey(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function decisionPluginLabel(row: Record<string, unknown>): string {
+  return String(row.plugin_label || row.plugin_name || row.label || row.source || row.plugin_id || "")
+    .trim()
+    .replace(/^classical\./, "");
+}
+
+function compactProjection(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return "";
+      const entry = item as Record<string, unknown>;
+      const label = String(entry.label || entry.name || entry.family || "").trim();
+      const percent = Number(entry.percent ?? entry.ratio ?? 0);
+      if (!label) return "";
+      return `${label}${percent > 0 ? ` ${Math.round(percent)}%` : ""}`;
+    })
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" / ");
 }
 
 function buildPatternJudgement(
@@ -275,10 +280,15 @@ function deriveLivePatternCandidates(
 }
 
 export default function OraclePage() {
+  const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuthSession();
   const s = useOracleSession();
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
   const [lastContentSurfaceTab, setLastContentSurfaceTab] = useState<ContentSurfaceTab>("core");
+  const [authUsers, setAuthUsers] = useState<AdminAuthUser[]>([]);
+  const [authUsersLoading, setAuthUsersLoading] = useState(false);
+  const [authUsersMessage, setAuthUsersMessage] = useState("");
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
   const energyMeta = payload.energy_meta && typeof payload.energy_meta === "object"
@@ -347,75 +357,6 @@ export default function OraclePage() {
   const xiangfaTheme = meta.xiangfa_theme && typeof meta.xiangfa_theme === "object"
     ? meta.xiangfa_theme as Record<string, unknown>
     : {};
-  const recomputeContributions = Array.isArray(meta.plugin_recompute_contributions)
-    ? meta.plugin_recompute_contributions as Array<Record<string, unknown>>
-    : [];
-  const pluginLabelById = new Map<string, string>();
-  for (const row of allRows) {
-    const label = decisionPluginLabel(row);
-    const key = normalizePluginKey(row.plugin_id || row.source);
-    if (key && label && !pluginLabelById.has(key)) pluginLabelById.set(key, label);
-  }
-  const uniquePlugins = Array.from(
-    new Set(
-      allRows
-        .map(decisionPluginLabel)
-        .filter(Boolean),
-    ),
-  );
-  const manualPlugins = Array.from(
-    new Set(
-      manualRows
-        .map(decisionPluginLabel)
-        .filter(Boolean),
-    ),
-  );
-  const autoPlugins = Array.from(
-    new Set(
-      autoRows
-        .map(decisionPluginLabel)
-        .filter(Boolean),
-      ),
-  );
-  const pluginMatchRows = Array.from(
-    pluginClaims.reduce((acc, row) => {
-      const key = normalizePluginKey(row.plugin_id);
-      if (!key) return acc;
-      const current = acc.get(key) || { count: 0, sum: 0, pluginId: String(row.plugin_id || ""), label: pluginLabelById.get(key) || String(row.plugin_id || "") };
-      const ratio = Number(row.match_ratio || 0);
-      if (Number.isFinite(ratio) && ratio > 0) {
-        current.count += 1;
-        current.sum += ratio;
-      }
-      acc.set(key, current);
-      return acc;
-    }, new Map<string, { count: number; sum: number; pluginId: string; label: string }>() ).values(),
-  )
-    .map((row) => ({ ...row, avg: row.count ? row.sum / row.count : 0 }))
-    .filter((row) => row.count > 0)
-    .sort((a, b) => b.avg - a.avg)
-    .slice(0, 8);
-  const pluginFocusRows = Array.from(
-    pluginClaims.reduce((acc, row) => {
-      const key = normalizePluginKey(row.plugin_id);
-      if (!key) return acc;
-      const projectionText = compactProjection(row.cluster_projection);
-      const existing = acc.get(key);
-      const ratio = Number(row.match_ratio || 0);
-      const candidate = {
-        pluginId: String(row.plugin_id || ""),
-        label: pluginLabelById.get(key) || String(row.plugin_id || ""),
-        target: String(row.target_god || "").trim(),
-        ratio: Number.isFinite(ratio) ? ratio : 0,
-        projectionText,
-        share: Number(row.projection_share || 0),
-      };
-      if (!existing || candidate.ratio > existing.ratio) acc.set(key, candidate);
-      return acc;
-    }, new Map<string, { pluginId: string; label: string; target: string; ratio: number; projectionText: string; share: number }>() ).values(),
-  )
-    .sort((a, b) => b.ratio - a.ratio)
-    .slice(0, 6);
   const livePatternCandidates = deriveLivePatternCandidates(allRows, pluginClaims);
   const patternLeader = livePatternCandidates[0];
   const patternRunners = livePatternCandidates.slice(1, 4);
@@ -535,21 +476,81 @@ export default function OraclePage() {
     livePatternCandidates.length +
     relationFormationSummary.length +
     relationDynamicsSummary.length +
-    pluginFocusRows.length +
     topicHubItems.filter((item) => item.tone !== "muted").length;
   const traceSignalCount =
     s.traceHits.length +
     s.traceFacts.length +
     s.heartbeatHistory.length +
     (s.fullTrace ? 1 : 0);
+  const allowedOracleSurfaces = Array.isArray(user?.surface_access?.oracle)
+    ? user.surface_access.oracle
+    : ["core"];
+  const canAccessAuxiliarySurface = allowedOracleSurfaces.includes("auxiliary");
+  const canAccessTraceSurface = allowedOracleSurfaces.includes("trace");
+  const canManageUsers = Boolean(user?.surface_access?.user_management);
+
+  const loadAuthUsers = useCallback(async () => {
+    if (!canManageUsers) return;
+    setAuthUsersLoading(true);
+    setAuthUsersMessage("");
+    try {
+      const resp = await fetch("/api/auth/users", { cache: "no-store" });
+      const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!resp.ok) {
+        throw new Error(String(payload.detail || "用户列表加载失败。"));
+      }
+      const rows = Array.isArray(payload.users) ? payload.users : [];
+      setAuthUsers(
+        rows.map((row) => {
+          const item = asLooseRecord(row);
+          return {
+            id: Number(item.id || 0),
+            username: String(item.username || "").trim(),
+            display_name: String(item.display_name || "").trim(),
+            email: String(item.email || "").trim(),
+            role: (String(item.role || "user").trim().toLowerCase() as AdminAuthUser["role"]),
+            is_active: Boolean(item.is_active),
+            created_at: String(item.created_at || "").trim(),
+            last_login_at: String(item.last_login_at || "").trim(),
+            latest_ip_address: String(item.latest_ip_address || "").trim(),
+            latest_user_agent: String(item.latest_user_agent || "").trim(),
+            latest_seen_at: String(item.latest_seen_at || "").trim(),
+          };
+        }),
+      );
+    } catch (error) {
+      setAuthUsersMessage(error instanceof Error ? error.message : "用户列表加载失败。");
+    } finally {
+      setAuthUsersLoading(false);
+    }
+  }, [canManageUsers]);
+
+  const updateAuthUserRole = useCallback(
+    async (userId: number, role: AdminAuthUser["role"]) => {
+      const resp = await fetch(`/api/auth/users/${userId}/role`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!resp.ok || payload.ok === false) {
+        throw new Error(String(payload.detail || "角色更新失败。"));
+      }
+      setAuthUsersMessage(`角色已更新为 ${role}。`);
+      await loadAuthUsers();
+    },
+    [loadAuthUsers],
+  );
 
   const switchContentSurface = (tab: ContentSurfaceTab) => {
+    if (tab === "auxiliary" && !canAccessAuxiliarySurface) return;
     setActiveSurfaceTab(tab);
     setLastContentSurfaceTab(tab);
     s.setTraceOpen(false);
   };
 
   const openTraceSurface = () => {
+    if (!canAccessTraceSurface) return;
     setActiveSurfaceTab("trace");
     s.setTraceOpen(true);
   };
@@ -559,26 +560,100 @@ export default function OraclePage() {
     s.setTraceOpen(false);
   };
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (activeSurfaceTab === "trace" && !canAccessTraceSurface) {
+      const fallbackTab: ContentSurfaceTab = canAccessAuxiliarySurface ? "auxiliary" : "core";
+      setActiveSurfaceTab(fallbackTab);
+      setLastContentSurfaceTab(fallbackTab);
+      s.setTraceOpen(false);
+      return;
+    }
+    if (activeSurfaceTab === "auxiliary" && !canAccessAuxiliarySurface) {
+      setActiveSurfaceTab("core");
+      setLastContentSurfaceTab("core");
+      s.setTraceOpen(false);
+    }
+  }, [activeSurfaceTab, authLoading, canAccessAuxiliarySurface, canAccessTraceSurface, router, s, user]);
+
+  useEffect(() => {
+    if (!authLoading && user && canManageUsers) {
+      void loadAuthUsers();
+    }
+  }, [authLoading, canManageUsers, loadAuthUsers, user]);
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+    router.refresh();
+  }
+
+  if (authLoading || !user) {
+    return (
+      <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
+        <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
+            <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Auth Gate</div>
+            <h1 className="mt-3 text-2xl font-semibold text-zinc-50">正在校验登录状态</h1>
+            <p className="mt-3 text-sm text-zinc-400">{authLoading ? "正在加载账号信息..." : "正在返回登录页..."}</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-4">
 
         {/* ── 顶栏 ── */}
         <header className="flex items-center justify-between gap-2 text-violet-300">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            <h1 className="text-lg font-semibold tracking-wide">V17 Oracle Temple</h1>
+          <div className="flex items-center gap-3">
+            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
+              <Image
+                src="/branding/qiazhi-logo.png"
+                alt="掐指一算 Logo"
+                width={512}
+                height={512}
+                priority
+                className="h-14 w-14 object-cover sm:h-16 sm:w-16"
+              />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold tracking-wide text-violet-100 sm:text-xl">掐指一算</h1>
+              <p className="text-[11px] tracking-[0.24em] text-violet-200/65">八字 · 命理 · 运势</p>
+            </div>
           </div>
-          {s.running ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-100">
+              {user.role}
+            </span>
+            <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-1 text-[10px] text-zinc-200">
+              {user.display_name || user.username}
+            </span>
+            {s.running ? (
+              <button
+                type="button"
+                onClick={s.resetRun}
+                className="inline-flex items-center gap-1 rounded-md border border-violet-300/40 bg-violet-900/20 px-2 py-1 text-xs text-violet-100 hover:bg-violet-800/30"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                重测
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={s.resetRun}
-              className="inline-flex items-center gap-1 rounded-md border border-violet-300/40 bg-violet-900/20 px-2 py-1 text-xs text-violet-100 hover:bg-violet-800/30"
+              onClick={() => void handleLogout()}
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-xs text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              重测
+              <LogOut className="h-3.5 w-3.5" />
+              退出
             </button>
-          ) : null}
+          </div>
         </header>
 
         {/* ── 排盘输入 ── */}
@@ -594,7 +669,7 @@ export default function OraclePage() {
           <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/45 p-2.5">
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className={`grid gap-2 ${canAccessTraceSurface ? "sm:grid-cols-3" : canAccessAuxiliarySurface ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
                   <button
                     type="button"
                     aria-pressed={activeSurfaceTab === "core"}
@@ -611,38 +686,44 @@ export default function OraclePage() {
                       六柱、体用、判词、裁决主线。
                     </p>
                   </button>
-                  <button
-                    type="button"
-                    aria-pressed={activeSurfaceTab === "auxiliary"}
-                    onClick={() => switchContentSurface("auxiliary")}
-                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold">辅助页面</span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
-                        洞察 {auxiliarySignalCount}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
-                      格局、关系、来源账本、解释合同。
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={activeSurfaceTab === "trace"}
-                    onClick={openTraceSurface}
-                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "trace")}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold">观测页面</span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
-                        观测 {traceSignalCount}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
-                      元数据、链路、决策与 LLM 调试观测。
-                    </p>
-                  </button>
+                  {canAccessAuxiliarySurface ? (
+                    <>
+                      <button
+                        type="button"
+                        aria-pressed={activeSurfaceTab === "auxiliary"}
+                        onClick={() => switchContentSurface("auxiliary")}
+                        className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">辅助页面</span>
+                          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                            洞察 {auxiliarySignalCount}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                          格局、关系、来源账本、解释合同。
+                        </p>
+                      </button>
+                      {canAccessTraceSurface ? (
+                        <button
+                          type="button"
+                          aria-pressed={activeSurfaceTab === "trace"}
+                          onClick={openTraceSurface}
+                          className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "trace")}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold">观测页面</span>
+                            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                              观测 {traceSignalCount}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                            元数据、链路、决策与 LLM 调试观测。
+                          </p>
+                        </button>
+                      ) : null}
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -885,85 +966,6 @@ export default function OraclePage() {
                       openTraceSurface();
                     }}
                   />
-                  {uniquePlugins.length ? (
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-300">
-                        <span>命中插件 {uniquePlugins.length}</span>
-                        <span>手动来源 {manualPlugins.length}</span>
-                        <span>自动/上下文 {autoPlugins.length}</span>
-                      </div>
-                      <div className="mt-2 grid gap-2 md:grid-cols-2">
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                          <div className="text-[10px] uppercase tracking-wide text-amber-300">Manual Sources</div>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {manualPlugins.length ? manualPlugins.map((name) => (
-                              <span key={`manual_${name}`} className="rounded-full border border-amber-900/50 bg-amber-950/30 px-2 py-0.5 text-[10px] text-amber-100">
-                                {name}
-                              </span>
-                            )) : <span className="text-[10px] text-zinc-500">当前没有手动来源插件。</span>}
-                          </div>
-                        </div>
-                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                          <div className="text-[10px] uppercase tracking-wide text-sky-300">Auto / Context Sources</div>
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {autoPlugins.length ? autoPlugins.map((name) => (
-                              <span key={`auto_${name}`} className="rounded-full border border-sky-900/50 bg-sky-950/30 px-2 py-0.5 text-[10px] text-sky-100">
-                                {name}
-                              </span>
-                            )) : <span className="text-[10px] text-zinc-500">当前没有自动或上下文来源插件。</span>}
-                          </div>
-                        </div>
-                      </div>
-                      {pluginMatchRows.length ? (
-                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                          <div className="text-[10px] uppercase tracking-wide text-emerald-300">Plugin Match Ratio</div>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {pluginMatchRows.map((row) => (
-                              <span key={`match_${row.pluginId}`} className="rounded-full border border-emerald-900/50 bg-emerald-950/30 px-2 py-0.5 text-[10px] text-emerald-100">
-                                {row.label} {Math.round(row.avg * 100)}%
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                      {pluginFocusRows.length ? (
-                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                          <div className="text-[10px] uppercase tracking-wide text-fuchsia-300">Plugin Focus Map</div>
-                          <div className="mt-2 grid gap-1.5">
-                            {pluginFocusRows.map((row) => (
-                              <div key={`focus_${row.pluginId}`} className="rounded border border-zinc-800 bg-zinc-900/50 px-2 py-1 text-[10px] text-zinc-300">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <span className="text-fuchsia-100">{row.label}</span>
-                                  <span className="text-fuchsia-300">{Math.round(row.ratio * 100)}%</span>
-                                </div>
-                                <div className="mt-0.5 text-zinc-400">
-                                  主落点 {row.target || "未定"}{row.share > 0 ? ` · 占比 ${Math.round(row.share * 100)}%` : ""}
-                                </div>
-                                {row.projectionText ? <div className="mt-0.5 text-zinc-500">{row.projectionText}</div> : null}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                      {recomputeContributions.length ? (
-                        <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2">
-                          <div className="text-[10px] uppercase tracking-wide text-sky-300">Base Recompute Contributions</div>
-                          <div className="mt-2 grid gap-1">
-                            {recomputeContributions.slice(0, 8).map((row, idx) => (
-                              <div key={`recompute_${idx}`} className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-zinc-300">
-                                <span>{String(row.target_god || "—")}</span>
-                                <span className="text-zinc-500">
-                                  {Number(row.before || 0).toFixed(2)} → {Number(row.after || 0).toFixed(2)}
-                                </span>
-                                <span className="text-sky-300">delta {Number(row.delta_abs || 0).toFixed(2)}</span>
-                                <span className="text-zinc-500">ratio {Number(row.ratio_total || 0).toFixed(3)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                   <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(12,74,110,0.32),rgba(9,9,11,0.76))] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -1106,6 +1108,25 @@ export default function OraclePage() {
                     当前盘面还没有显式格局候选，系统会随着插件命中和 Claim 聚合继续补全。
                   </div>
                 )}
+                  {canManageUsers && user.role === "manager" ? (
+                    <div className="rounded-2xl border border-amber-500/20 bg-amber-950/10 p-3">
+                      {authUsersMessage ? (
+                        <p className="mb-3 rounded-lg border border-amber-500/20 bg-black/20 px-3 py-2 text-[11px] text-amber-100">
+                          {authUsersMessage}
+                        </p>
+                      ) : null}
+                      <V17_AdminUsersPanel
+                        users={authUsers}
+                        loading={authUsersLoading}
+                        onRefresh={() => void loadAuthUsers()}
+                        onUpdateRole={updateAuthUserRole}
+                        operatorRole={user.role}
+                        compact
+                        title="协作权限"
+                        description="经理可在这里维护普通账号与经理账号，不进入管理后台，也不能改动唯一管理员。"
+                      />
+                    </div>
+                  ) : null}
                   </div>
                 </>
               )}

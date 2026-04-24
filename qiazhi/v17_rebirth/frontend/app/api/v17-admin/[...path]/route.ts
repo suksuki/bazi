@@ -9,7 +9,10 @@ async function forward(req: NextRequest, path: string[]) {
 
   const init: RequestInit = {
     method: req.method,
-    headers: { "Content-Type": req.headers.get("content-type") || "application/json" },
+    headers: {
+      "Content-Type": req.headers.get("content-type") || "application/json",
+      ...(req.headers.get("cookie") ? { cookie: req.headers.get("cookie") as string } : {}),
+    },
     cache: "no-store",
   };
 

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional, Union
 
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from v17_rebirth.backend.api import stream_v17
+from v17_rebirth.backend.services.auth_service import require_authenticated_request
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_authenticated_request)])
 
 
 @router.get("/v17/stream", response_model=None)

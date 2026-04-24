@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
+from v17_rebirth.backend.logic.L1_atomic_ops.l1_meta_hydration import hydrate_v17_physics_tensor
 from v17_rebirth.backend.logic.core_engine.god_ring_resolver_core import resolve_god_ring_core
 from v17_rebirth.backend.logic.L2_structure_patterns import risk_matrix
 from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
@@ -121,12 +122,23 @@ def run_case(case: SyntheticCase) -> SyntheticRun:
         flow_pillar=case.flow_pillar,
         gender=case.gender,
     )
+    pt = {
+        "four_pillars": dict(case.four_pillars),
+        "luck_pillar": case.luck_pillar,
+        "flow_pillar": case.flow_pillar,
+        "gender": case.gender,
+        "ten_gods_base_l0": dict(scores),
+        "ten_gods_runtime": dict(scores),
+        "meta": dict(meta or {}),
+        "_is_current_focus": True,
+    }
+    hydrate_v17_physics_tensor(pt)
     return SyntheticRun(
         case=case,
         scores={str(key): float(val or 0.0) for key, val in dict(scores).items()},
         top=[str(item) for item in list(top)],
         total=float(total or 0.0),
-        meta=dict(meta or {}),
+        meta=dict((pt.get("meta") or {}) if isinstance(pt.get("meta"), dict) else {}),
     )
 
 

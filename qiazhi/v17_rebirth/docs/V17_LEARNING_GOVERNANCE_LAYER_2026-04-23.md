@@ -90,6 +90,8 @@ Admin registry 现在会暴露：
 
 当前 public keys 包括：
 
+- `algorithm_execution_policy`
+- `algorithm_execution_audit`
 - `projection_bridge_protocol`
 - `runtime_field_protocol`
 - `relation_formation_summary`
@@ -105,6 +107,7 @@ Admin registry 现在会暴露：
 
 当前 solver trace keys 包括：
 
+- `algorithm_execution_trace`
 - `plugin_modifier_proposals`
 - `plugin_claims`
 - `plugin_claim_schema`
@@ -186,6 +189,9 @@ Hydration 结束时会写入：
 协议版本：
 
 - `v17.hydration_pipeline.v1`
+- `v17.algorithm_execution_policy.v1`
+- `v17.algorithm_execution_trace.v1`
+- `v17.algorithm_execution_audit.v1`
 
 当前已从 `l1_meta_hydration.py` 中抽出的职责：
 
@@ -197,6 +203,35 @@ Hydration 结束时会写入：
 2. `bucket_decision_records()`
    - 将案卷拆成 `manual_decisions / auto_resolutions / llm_arbitration_context`。
    - 写入 `meta.decision_bucket_contract`。
+
+3. `append_algorithm_execution_stage() / build_algorithm_execution_audit()`
+   - 记录 hydration 主链的阶段顺序。
+   - 同时声明一份执行协议：
+     - `foundation -> plugin_pipeline -> reasoning -> settlement -> runtime -> contract`
+     - 每个阶段包含 `phase / category / critical / requires / sovereignty_sensitive`
+     - `runtime_synced` 被视为 authority gate 关键阶段
+   - 当前阶段至少覆盖：
+     - `geometry_built`
+     - `base_runtime_ready`
+     - `plugin_manifest_ready`
+     - `plugin_scan_completed`
+     - `claims_compiled`
+     - `conflicts_routed`
+     - `modifier_settlement_completed`
+     - `decision_buckets_ready`
+     - `flow_applied`
+     - `runtime_synced`
+     - `meta_contract_built`
+   - 最终生成：
+     - `meta.algorithm_execution_policy`
+     - `meta.algorithm_execution_trace`
+     - `meta.algorithm_execution_audit`
+   - 用于判断：
+     - 算法主链是否缺阶段
+     - 关键路径是否断裂
+     - 阶段依赖是否错位
+     - hard authority 与 authority gate 是否可见
+     - 问题更像“顺序问题”还是“参数问题”
 
 这一步还没有重写 hydration 主流程，但已经把“插件治理清单”和“Decision Inbox 分桶”从主函数中抽离出来。
 
@@ -210,6 +245,8 @@ Hydration 结束时会写入：
 2. 元数据边界可审计。
 3. benchmark 偏差可映射到参数族。
 4. synthetic case 可作为调优建议目标。
+5. 算法执行顺序已进入学习闭环，可区分“顺序退化”和“参数退化”。
+6. Core 做功链已进入学习闭环，可区分 `graph -> work_path -> flux -> authority` 关键路径问题与 hydration 主链问题。
 
 尚未完成：
 
@@ -217,10 +254,11 @@ Hydration 结束时会写入：
 2. 自动对比多组配置。
 3. 自动选择最优配置。
 4. 用户反馈到参数候选的在线学习。
+5. `work_path / flux_solver` 级别的更细算法链审计。
 
 因此当前系统应定义为：
 
-> feedback-ready / benchmark-ready / tuning-bridge-ready，但还不是 fully self-optimizing。
+> feedback-ready / benchmark-ready / tuning-bridge-ready / execution-order-auditable / core-path-auditable，但还不是 fully self-optimizing。
 
 ---
 
@@ -417,6 +455,8 @@ python3 qiazhi/v17_rebirth/scripts/run_auto_learning_cycle.py
 - `Learning Signals` 优先展示高信息密度样盘，不按 catalog 原始顺序机械罗列。
 - `Next Hard Cases` 必须给出下一轮主动挑战方向，即使本轮没有异常。
 - `Parameter Health` 只在发现异常时生成影子参数实验；全绿时保持参数冻结。
+- `Parameter Optimization Guidance` 必须区分：冻结参数族 / 重点观察参数族 / 正式调参候选参数族。
+- `Parameter Optimization Map` 必须把重点参数族映射到目标配置、参数名、Synthetic case 与 Benchmark case。
 
 安全边界：
 
@@ -460,6 +500,9 @@ Admin UI：
   - 进度条
   - 预计剩余时长
   - scorecard
+  - 参数优化参考（freeze / watch / adjust）
+  - 参数优化参考地图（目标文件 / 参数名 / synthetic / benchmark）
+  - 影子实验计划（按主看参数族展开）
   - 插件治理覆盖
   - 参数实验数
   - 分析师反馈项

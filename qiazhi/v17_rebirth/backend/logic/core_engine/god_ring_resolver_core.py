@@ -9,6 +9,11 @@ from v17_rebirth.backend.logic.core_engine.pillar_graph_kernel import build_six_
 from v17_rebirth.backend.logic.core_engine.work_path_engine import build_work_paths, collect_effect_maps
 
 
+CORE_EXECUTION_AUDIT_PROTOCOL = "v17.core_execution_audit.v1"
+WORK_PATH_EXECUTION_SUMMARY_PROTOCOL = "v17.work_path_execution_summary.v1"
+FLUX_EXECUTION_SUMMARY_PROTOCOL = "v17.flux_execution_summary.v1"
+
+
 def resolve_god_ring_core(
     *,
     four_pillars: Dict[str, str],
@@ -37,6 +42,15 @@ def resolve_god_ring_core(
         max_depth=3,
     )
     candidates = pick_god_candidates(effect_scores)
+    work_path_summary = _build_work_path_execution_summary(paths=paths, decision_rows=decision_rows or [])
+    flux_summary = _build_flux_execution_summary(flux_meta)
+    core_execution_audit = _build_core_execution_audit(
+        graph=graph,
+        work_path_summary=work_path_summary,
+        flux_summary=flux_summary,
+        effect_scores=effect_scores,
+        candidates=candidates,
+    )
     path_family_profile = _build_path_family_profile(paths)
     path_role_profile = _build_path_role_profile(paths)
     path_type_profile = _build_path_type_profile(paths)
@@ -75,11 +89,15 @@ def resolve_god_ring_core(
             "flux_projected_chain_count": int(flux_meta.get("projected_chain_count") or 0),
             "flux_interaction_count": int(flux_meta.get("interaction_count") or 0),
             "flux_tension_pair_count": int(flux_meta.get("tension_pair_count") or 0),
+            "work_path_execution_summary": work_path_summary,
+            "flux_execution_summary": flux_summary,
+            "core_execution_audit": core_execution_audit,
         },
         "path_count": len(paths),
         "paths": [path.__dict__ for path in paths[:16]],
         "effect_scores": effect_scores,
         "flux_meta": flux_meta,
+        "core_execution_audit": core_execution_audit,
         **candidates,
         "confidence": round(confidence, 4),
         "mode": "six_pillar_spacetime_core",
@@ -186,4 +204,133 @@ def _build_dynamic_mode_profile(edges: Iterable[Any]) -> Dict[str, Dict[str, flo
             "min_priority": int(value["min_priority"]),
         }
         for key, value in mode_profile.items()
+    }
+
+
+def _build_work_path_execution_summary(
+    *,
+    paths: Iterable[Any],
+    decision_rows: Iterable[Dict[str, Any]] | None = None,
+) -> Dict[str, Any]:
+    rows = [path for path in paths]
+    family_counts: Dict[str, int] = {}
+    type_counts: Dict[str, int] = {}
+    positive_count = 0
+    negative_count = 0
+    dynamic_count = 0
+    basis_count = 0
+    bridge_count = 0
+    for path in rows:
+        path_family = str(getattr(path, "path_family", "dynamic_work") or "dynamic_work").strip().lower()
+        path_type = str(getattr(path, "path_type", "dynamic_work") or "dynamic_work").strip().lower()
+        net_effect = float(getattr(path, "net_effect", 0.0) or 0.0)
+        family_counts[path_family] = int(family_counts.get(path_family, 0)) + 1
+        type_counts[path_type] = int(type_counts.get(path_type, 0)) + 1
+        if path_type == "static_basis":
+            basis_count += 1
+        else:
+            dynamic_count += 1
+        if path_family == "bridge" or path_type.startswith("tongguan"):
+            bridge_count += 1
+        if net_effect >= 0:
+            positive_count += 1
+        else:
+            negative_count += 1
+    return {
+        "protocol": WORK_PATH_EXECUTION_SUMMARY_PROTOCOL,
+        "decision_row_count": len([row for row in (decision_rows or []) if isinstance(row, dict)]),
+        "path_count": len(rows),
+        "dynamic_path_count": dynamic_count,
+        "basis_path_count": basis_count,
+        "bridge_path_count": bridge_count,
+        "positive_path_count": positive_count,
+        "negative_path_count": negative_count,
+        "family_counts": dict(sorted(family_counts.items())),
+        "type_counts": dict(sorted(type_counts.items())),
+    }
+
+
+def _build_flux_execution_summary(flux_meta: Dict[str, Any]) -> Dict[str, Any]:
+    source = flux_meta if isinstance(flux_meta, dict) else {}
+    return {
+        "protocol": FLUX_EXECUTION_SUMMARY_PROTOCOL,
+        "enabled": bool(source.get("enabled")),
+        "edge_count": int(source.get("edge_count") or 0),
+        "chain_count": int(source.get("chain_count") or 0),
+        "node_edge_count": int(source.get("node_edge_count") or 0),
+        "node_chain_count": int(source.get("node_chain_count") or 0),
+        "projected_chain_count": int(source.get("projected_chain_count") or 0),
+        "interaction_count": int(source.get("interaction_count") or 0),
+        "tension_pair_count": int(source.get("tension_pair_count") or 0),
+        "sink_count": len(source.get("sink_summary") or {}),
+    }
+
+
+def _build_core_execution_audit(
+    *,
+    graph: Any,
+    work_path_summary: Dict[str, Any],
+    flux_summary: Dict[str, Any],
+    effect_scores: Dict[str, Dict[str, Any]],
+    candidates: Dict[str, Any],
+) -> Dict[str, Any]:
+    completed_steps: List[str] = []
+    watch_steps: List[str] = []
+    dependency_watch_edges: List[str] = []
+
+    graph_built = bool(getattr(graph, "nodes", None)) and bool(getattr(graph, "edges", None))
+    work_paths_built = int(work_path_summary.get("path_count") or 0) > 0
+    effect_scores_resolved = bool(effect_scores)
+    flux_solved = bool(flux_summary.get("enabled")) and int(flux_summary.get("chain_count") or 0) > 0
+    authority_candidates_picked = bool(candidates.get("use_candidates")) and bool(candidates.get("taboo_candidates"))
+
+    if graph_built:
+        completed_steps.append("graph_built")
+    else:
+        watch_steps.append("graph_built")
+    if work_paths_built:
+        completed_steps.append("work_paths_built")
+    else:
+        watch_steps.append("work_paths_built")
+    if effect_scores_resolved:
+        completed_steps.append("effect_scores_resolved")
+    else:
+        watch_steps.append("effect_scores_resolved")
+    if flux_solved:
+        completed_steps.append("flux_solved")
+    else:
+        watch_steps.append("flux_solved")
+    if authority_candidates_picked:
+        completed_steps.append("authority_candidates_picked")
+    else:
+        watch_steps.append("authority_candidates_picked")
+
+    if not graph_built and work_paths_built:
+        dependency_watch_edges.append("graph_built->work_paths_built")
+    if not work_paths_built and effect_scores_resolved:
+        dependency_watch_edges.append("work_paths_built->effect_scores_resolved")
+    if not effect_scores_resolved and flux_solved:
+        dependency_watch_edges.append("effect_scores_resolved->flux_solved")
+    if not flux_solved and authority_candidates_picked:
+        dependency_watch_edges.append("flux_solved->authority_candidates_picked")
+
+    critical_steps = [
+        "graph_built",
+        "work_paths_built",
+        "effect_scores_resolved",
+        "flux_solved",
+        "authority_candidates_picked",
+    ]
+    critical_path_ok = not watch_steps and not dependency_watch_edges
+    summary = "healthy" if critical_path_ok else ("partial" if completed_steps else "needs_review")
+    return {
+        "protocol": CORE_EXECUTION_AUDIT_PROTOCOL,
+        "critical_steps": critical_steps,
+        "completed_steps": completed_steps,
+        "watch_steps": watch_steps,
+        "dependency_watch_edges": dependency_watch_edges,
+        "critical_path_ok": bool(critical_path_ok),
+        "work_path_execution_summary_protocol": work_path_summary.get("protocol"),
+        "flux_execution_summary_protocol": flux_summary.get("protocol"),
+        "summary": summary,
     }

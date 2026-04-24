@@ -8,6 +8,9 @@ from v17_rebirth.backend.services.meta_contract import build_meta_contract
 def test_meta_contract_splits_public_and_solver_trace_keys() -> None:
     contract = build_meta_contract(
         {
+            "algorithm_execution_policy": {"critical_path": ["geometry_built"]},
+            "algorithm_execution_audit": {"summary": "healthy"},
+            "algorithm_execution_trace": {"stages": [{"stage": "geometry_built"}]},
             "god_ring_authority": {"use_gods": ["食神"]},
             "relation_formation_summary": [{"family_key": "sanhe"}],
             "plugin_claims": [{"claim_id": "c1"}],
@@ -17,9 +20,14 @@ def test_meta_contract_splits_public_and_solver_trace_keys() -> None:
     )
 
     assert contract["protocol"] == "v17.meta_contract.v1"
+    assert "algorithm_execution_policy" in contract["public_meta_keys"]
+    assert "algorithm_execution_audit" in contract["public_meta_keys"]
     assert "god_ring_authority" in contract["public_meta_keys"]
     assert "relation_formation_summary" in contract["public_meta_keys"]
+    assert "algorithm_execution_trace" in contract["solver_trace_keys"]
     assert "plugin_claims" in contract["solver_trace_keys"]
+    assert "algorithm_execution_audit" in contract["learning_signal_keys"]
+    assert "algorithm_execution_policy" in contract["learning_signal_keys"]
     assert "knowledge_snapshot" in contract["learning_signal_keys"]
     assert contract["boundary"]["solver_trace_meta"]
 
@@ -47,7 +55,11 @@ def test_hydration_emits_meta_contract_without_changing_runtime_scores() -> None
     contract = pt["meta"].get("meta_contract")
     assert isinstance(contract, dict)
     assert contract["protocol"] == "v17.meta_contract.v1"
+    assert "algorithm_execution_policy" in contract["public_meta_keys"]
+    assert "algorithm_execution_audit" in contract["public_meta_keys"]
+    assert "algorithm_execution_trace" in contract["solver_trace_keys"]
     assert "plugin_execution_status" in contract["public_meta_keys"]
     assert "plugin_claims" in contract["solver_trace_keys"]
+    assert isinstance(pt["meta"].get("algorithm_execution_audit"), dict)
+    assert isinstance(pt["meta"].get("algorithm_execution_policy"), dict)
     assert isinstance(pt.get("ten_gods_runtime"), dict)
-

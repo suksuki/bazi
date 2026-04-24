@@ -186,5 +186,9 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - `辅助页面` 必须显示 `Topic Hub / 专题中枢`，覆盖子平、格局、调候、盲派、象法、风险六条专题线。
 - `/v17/admin` 的 Core Engine 面板必须显示 `Topic Hub / 专题状态表`，用于核对 authority 层级与专题边界。
 - `/v17/admin` 必须显示 `自动学习` Tab，可配置预算、启动/暂停 Campaign、查看进度、复制 Markdown 报告。
-- 自动学习报告必须包含 `Learning Value / Learning Signals / Next Hard Cases`，避免只输出无学习价值的绿灯清单。
+- 自动学习报告必须包含 `Learning Value / Algorithm Intelligence / Learning Signals / Next Hard Cases`，避免只输出无学习价值的绿灯清单。
+- `Algorithm Intelligence` 至少要包含 `平均轨迹覆盖率 / 关键路径覆盖率 / 运行态门禁阶段覆盖率 / 重点依赖边`，让报告能区分参数问题与主链顺序问题。
+- `Algorithm Intelligence` 还应包含 `Core 关键路径覆盖率 / Core 已验证步骤 / Core 观察步骤`，用于区分 `hydration 主链` 与 `graph -> work_path -> flux -> authority` 做功链问题。
+- 自动学习报告应继续包含 `Parameter Optimization Guidance / Parameter Optimization Map`，让报告能直接指导后续参数审计与影子调参。
+- `/v17/admin` 的自动学习页应支持点击重点参数族并展开 `Shadow Experiment Plan`，展示目标模块、参数范围、验证样盘、命令建议与安全门禁。
 - 前端验收以 `pnpm --dir qiazhi/v17_rebirth/frontend build` 为硬线。

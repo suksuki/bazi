@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     headers: {
       "Content-Type": req.headers.get("content-type") || "application/json",
       ...(originHeader ? { v17_origin: originHeader } : {}),
+      ...(req.headers.get("cookie") ? { cookie: req.headers.get("cookie") as string } : {}),
     },
     body,
     cache: "no-store",

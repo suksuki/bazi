@@ -10,7 +10,7 @@ from urllib.error import HTTPError
 from urllib import request
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from v17_rebirth.backend.logic.plugin_discovery import annotate_causal_trace, registry_rows_for_admin
 from v17_rebirth.backend.services.plugin_runtime_state import merge_registry_with_runtime
@@ -33,8 +33,9 @@ from v17_rebirth.testing.learning_campaign import (
     render_learning_campaign_markdown,
     run_learning_campaign,
 )
+from v17_rebirth.backend.services.auth_service import require_admin_request
 
-router = APIRouter(tags=["v17-admin"])
+router = APIRouter(tags=["v17-admin"], dependencies=[Depends(require_admin_request)])
 
 _DB_STATE_FILE = RUNTIME_DIR / "db_bridge.json"
 _LEARNING_REPORT_JSON_FILE = RUNTIME_DIR / "learning_campaign_latest.json"

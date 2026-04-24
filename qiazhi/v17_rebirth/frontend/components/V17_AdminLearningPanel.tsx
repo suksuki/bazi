@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type LooseRecord = Record<string, unknown>;
 
@@ -43,6 +43,16 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function stringList(value: unknown): string[] {
+  return asArray(value)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
 function statusTone(status: string): string {
   if (status === "running") return "border-cyan-500/30 bg-cyan-950/25 text-cyan-100";
   if (status === "completed") return "border-emerald-500/30 bg-emerald-950/25 text-emerald-100";
@@ -70,6 +80,10 @@ function formatDuration(seconds: unknown): string {
   return `${sec}s`;
 }
 
+function formatPercent(value: unknown, digits = 0): string {
+  return `${(asNumber(value) * 100).toFixed(digits)}%`;
+}
+
 function scoreRows(report: LooseRecord) {
   const scorecard = asRecord(report.scorecard);
   const batch = asRecord(report.synthetic_batch);
@@ -93,6 +107,7 @@ export function V17_AdminLearningPanel({
   onRefresh,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState("");
   const status = String(campaign.status || "idle");
   const progress = Math.max(0, Math.min(100, asNumber(campaign.progress_percent)));
   const report = asRecord(campaign.latest_report);
@@ -102,6 +117,51 @@ export function V17_AdminLearningPanel({
   const feedbackItems = Array.isArray(report.analyst_feedback_items) ? report.analyst_feedback_items : [];
   const parameterExperiments = Array.isArray(report.parameter_experiments) ? report.parameter_experiments : [];
   const coverage = asRecord(report.plugin_governance_coverage);
+  const insights = asRecord(report.learning_insights);
+  const algorithmIntelligence = asRecord(insights.algorithm_intelligence);
+  const optimizationGuidance = asRecord(insights.parameter_optimization_guidance);
+  const optimizationMap = asArray(insights.parameter_optimization_map);
+  const algorithmValidatedStages = stringList(algorithmIntelligence.validated_stages);
+  const algorithmWatchStages = stringList(algorithmIntelligence.watch_stages);
+  const algorithmDependencyEdges = stringList(algorithmIntelligence.dependency_watch_edges);
+  const coreValidatedSteps = stringList(algorithmIntelligence.core_validated_steps);
+  const coreWatchSteps = stringList(algorithmIntelligence.core_watch_steps);
+  const algorithmRecommendations = stringList(algorithmIntelligence.recommendations);
+  const freezeFamilies = stringList(optimizationGuidance.freeze_families);
+  const watchFamilies = stringList(optimizationGuidance.watch_families);
+  const adjustmentFamilies = stringList(optimizationGuidance.adjustment_candidates);
+  const guidanceNotes = stringList(optimizationGuidance.guidance_notes);
+  const optimizationRows = useMemo(
+    () =>
+      optimizationMap
+        .map((row) => asRecord(row))
+        .filter((row) => String(row.parameter_family || "").trim()),
+    [optimizationMap]
+  );
+  const selectableFamilies = useMemo(
+    () =>
+      stringList([
+        ...watchFamilies,
+        ...adjustmentFamilies,
+        ...freezeFamilies,
+        ...optimizationRows.map((row) => row.parameter_family),
+      ]),
+    [watchFamilies, adjustmentFamilies, freezeFamilies, optimizationRows]
+  );
+  const selectedOptimizationRow =
+    optimizationRows.find((row) => String(row.parameter_family || "") === selectedFamily) ||
+    optimizationRows[0] ||
+    null;
+
+  useEffect(() => {
+    if (!selectableFamilies.length) {
+      setSelectedFamily("");
+      return;
+    }
+    if (!selectedFamily || !selectableFamilies.includes(selectedFamily)) {
+      setSelectedFamily(selectableFamilies[0]);
+    }
+  }, [selectableFamilies, selectedFamily]);
 
   async function copyReport() {
     const payload = reportMarkdown || JSON.stringify(report, null, 2);
@@ -223,7 +283,7 @@ export function V17_AdminLearningPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr_1fr]">
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -251,6 +311,144 @@ export function V17_AdminLearningPanel({
         </div>
 
         <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Algorithm Intelligence</div>
+              <h3 className="mt-1 text-lg font-semibold text-zinc-100">算法执行审计</h3>
+            </div>
+            <span className="rounded-full border border-violet-500/20 bg-violet-950/20 px-3 py-1 text-[11px] text-violet-100">
+              {asNumber(algorithmIntelligence.trace_case_count) > 0 ? "execution-auditable" : "awaiting-trace"}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Trace Coverage</div>
+              <div className="mt-2 font-mono text-2xl text-zinc-50">
+                {formatPercent(algorithmIntelligence.average_trace_coverage, 1)}
+              </div>
+              <div className="mt-1 text-[11px] text-zinc-500">
+                样盘数 {asNumber(algorithmIntelligence.trace_case_count)} · 健康 {asNumber(algorithmIntelligence.healthy_case_count)}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Authority Gate</div>
+              <div className="mt-2 font-mono text-2xl text-zinc-50">
+                {formatPercent(algorithmIntelligence.authority_gate_coverage_ratio, 0)}
+              </div>
+              <div className="mt-1 text-[11px] text-zinc-500">
+                硬主权覆盖 {formatPercent(algorithmIntelligence.hard_authority_coverage_ratio, 0)}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Critical Path</div>
+              <div className="mt-2 font-mono text-2xl text-zinc-50">
+                {formatPercent(algorithmIntelligence.critical_path_coverage_ratio, 0)}
+              </div>
+              <div className="mt-1 text-[11px] text-zinc-500">
+                运行态门禁 {formatPercent(algorithmIntelligence.gate_stage_coverage_ratio, 0)}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Core Path</div>
+              <div className="mt-2 font-mono text-2xl text-zinc-50">
+                {formatPercent(algorithmIntelligence.core_critical_path_coverage_ratio, 0)}
+              </div>
+              <div className="mt-1 text-[11px] text-zinc-500">
+                graph → work_path → flux → authority
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Validated Stages</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {algorithmValidatedStages.length ? (
+                  algorithmValidatedStages.map((stage) => (
+                    <span
+                      key={stage}
+                      className="rounded-full border border-emerald-400/20 bg-emerald-950/30 px-3 py-1 text-[11px] text-emerald-100"
+                    >
+                      {stage}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">暂无已验证阶段。</span>
+                )}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Watch Stages</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {algorithmWatchStages.length ? (
+                  algorithmWatchStages.map((stage) => (
+                    <span
+                      key={stage}
+                      className="rounded-full border border-amber-400/20 bg-amber-950/30 px-3 py-1 text-[11px] text-amber-100"
+                    >
+                      {stage}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">当前没有重点观察阶段。</span>
+                )}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Core Steps</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {coreValidatedSteps.length ? (
+                  coreValidatedSteps.map((step) => (
+                    <span
+                      key={step}
+                      className="rounded-full border border-cyan-400/20 bg-cyan-950/30 px-3 py-1 text-[11px] text-cyan-100"
+                    >
+                      {step}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">暂无 Core 已验证步骤。</span>
+                )}
+                {coreWatchSteps.length
+                  ? coreWatchSteps.map((step) => (
+                      <span
+                        key={`watch-${step}`}
+                        className="rounded-full border border-amber-400/20 bg-amber-950/30 px-3 py-1 text-[11px] text-amber-100"
+                      >
+                        {step}
+                      </span>
+                    ))
+                  : null}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-black/30 p-3 sm:col-span-2">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Dependency Watch</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {algorithmDependencyEdges.length ? (
+                  algorithmDependencyEdges.map((edge) => (
+                    <span
+                      key={edge}
+                      className="rounded-full border border-rose-400/20 bg-rose-950/30 px-3 py-1 text-[11px] text-rose-100"
+                    >
+                      {edge}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">当前没有依赖边预警。</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Recommendations</div>
+            <div className="mt-3 space-y-2 text-xs leading-6 text-zinc-400">
+              {algorithmRecommendations.length ? (
+                algorithmRecommendations.map((item) => <p key={item}>- {item}</p>)
+              ) : (
+                <p>当前算法主链健康，没有额外执行顺序建议。</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
           <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Feedback Routing</div>
           <h3 className="mt-1 text-lg font-semibold text-zinc-100">反馈出口</h3>
           <div className="mt-4 space-y-3 text-xs leading-6">
@@ -268,6 +466,244 @@ export function V17_AdminLearningPanel({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Optimization Guidance</div>
+              <h3 className="mt-1 text-lg font-semibold text-zinc-100">参数优化参考</h3>
+            </div>
+            <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[11px] text-cyan-100">
+              {String(optimizationGuidance.readiness || "unknown")}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3">
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-950/10 p-4">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/80">Freeze</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {freezeFamilies.length ? (
+                  freezeFamilies.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSelectedFamily(item)}
+                      className={`rounded-full border px-3 py-1 text-[11px] ${
+                        selectedFamily === item
+                          ? "border-emerald-200/60 bg-emerald-200 text-emerald-950"
+                          : "border-emerald-400/20 bg-emerald-950/30 text-emerald-100"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">暂无冻结参数族。</span>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-950/10 p-4">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80">Watch</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {watchFamilies.length ? (
+                  watchFamilies.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSelectedFamily(item)}
+                      className={`rounded-full border px-3 py-1 text-[11px] ${
+                        selectedFamily === item
+                          ? "border-amber-200/60 bg-amber-200 text-amber-950"
+                          : "border-amber-400/20 bg-amber-950/30 text-amber-100"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">暂无重点观察参数族。</span>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-950/10 p-4">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-rose-300/80">Adjust</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {adjustmentFamilies.length ? (
+                  adjustmentFamilies.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSelectedFamily(item)}
+                      className={`rounded-full border px-3 py-1 text-[11px] ${
+                        selectedFamily === item
+                          ? "border-rose-200/60 bg-rose-200 text-rose-950"
+                          : "border-rose-400/20 bg-rose-950/30 text-rose-100"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-500">当前没有正式调参候选参数族。</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Notes</div>
+            <div className="mt-3 space-y-2 text-xs leading-6 text-zinc-400">
+              {guidanceNotes.length ? (
+                guidanceNotes.map((item) => <p key={item}>- {item}</p>)
+              ) : (
+                <p>暂无额外优化说明。</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Optimization Map</div>
+              <h3 className="mt-1 text-lg font-semibold text-zinc-100">参数优化参考地图</h3>
+            </div>
+            <span className="text-[11px] text-zinc-500">目标文件 / 参数 / 验证样盘</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {optimizationMap.length ? (
+              optimizationMap.map((row, idx) => {
+                const item = asRecord(row);
+                const parameters = stringList(item.parameters_to_review);
+                const syntheticCases = stringList(item.synthetic_cases);
+                const benchmarkCases = stringList(item.benchmark_cases);
+                return (
+                  <div key={`${String(item.parameter_family || "unknown")}-${idx}`} className="rounded-2xl border border-zinc-800 bg-black/30 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-mono text-sm text-cyan-100">{String(item.parameter_family || "—")}</div>
+                      <div className="text-[11px] text-zinc-500">
+                        {String(item.target || "—")} · {String(item.scope || "—")}
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3 text-xs leading-6 text-zinc-400 md:grid-cols-3">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Parameters</div>
+                        <div className="mt-2 space-y-1">
+                          {parameters.length ? parameters.map((param) => <p key={param}>{param}</p>) : <p>—</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Synthetic</div>
+                        <div className="mt-2 space-y-1">
+                          {syntheticCases.length ? syntheticCases.map((caseId) => <p key={caseId}>{caseId}</p>) : <p>—</p>}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Benchmark</div>
+                        <div className="mt-2 space-y-1">
+                          {benchmarkCases.length ? benchmarkCases.map((caseId) => <p key={caseId}>{caseId}</p>) : <p>—</p>}
+                        </div>
+                      </div>
+                    </div>
+                    {item.hypothesis ? (
+                      <div className="mt-3 rounded-xl border border-cyan-500/10 bg-cyan-950/10 px-3 py-2 text-xs text-cyan-100">
+                        假设：{String(item.hypothesis)}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-500">
+                当前还没有生成参数优化参考地图。
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-950/50 p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Shadow Experiment</div>
+            <h3 className="mt-1 text-lg font-semibold text-zinc-100">影子实验计划</h3>
+          </div>
+          <span className="text-[11px] text-zinc-500">点击上方参数族切换主看对象</span>
+        </div>
+        {selectedOptimizationRow ? (
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-mono text-sm text-cyan-100">
+                {String(selectedOptimizationRow.parameter_family || "—")}
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                {String(selectedOptimizationRow.experiment_id || "reference-only")}
+              </div>
+            </div>
+            {selectedOptimizationRow.hypothesis ? (
+              <div className="mt-3 rounded-xl border border-cyan-500/10 bg-cyan-950/10 px-3 py-2 text-xs text-cyan-100">
+                假设：{String(selectedOptimizationRow.hypothesis)}
+              </div>
+            ) : null}
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Step 1 · Review Scope</div>
+                <div className="mt-3 text-xs leading-6 text-zinc-300">
+                  <p>目标：{String(selectedOptimizationRow.target || "—")}</p>
+                  <p>范围：{String(selectedOptimizationRow.scope || "—")}</p>
+                  <p className="mt-2 text-zinc-500">先看这里，再决定要不要启动 shadow experiment。</p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Step 2 · Validate Cases</div>
+                <div className="mt-3 space-y-1 text-xs leading-6 text-zinc-300">
+                  <p className="text-zinc-500">Synthetic</p>
+                  {stringList(selectedOptimizationRow.synthetic_cases).length ? (
+                    stringList(selectedOptimizationRow.synthetic_cases).map((caseId) => <p key={caseId}>{caseId}</p>)
+                  ) : (
+                    <p>—</p>
+                  )}
+                  <p className="mt-3 text-zinc-500">Benchmark</p>
+                  {stringList(selectedOptimizationRow.benchmark_cases).length ? (
+                    stringList(selectedOptimizationRow.benchmark_cases).map((caseId) => <p key={caseId}>{caseId}</p>)
+                  ) : (
+                    <p>—</p>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Step 3 · Safety Gates</div>
+                <div className="mt-3 space-y-1 text-xs leading-6 text-zinc-300">
+                  {stringList(selectedOptimizationRow.safety_gates).length ? (
+                    stringList(selectedOptimizationRow.safety_gates).map((gate) => <p key={gate}>{gate}</p>)
+                  ) : (
+                    <p>manual_review_required</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">Suggested Commands</div>
+              <div className="mt-3 space-y-2 text-xs leading-6 text-zinc-300">
+                {stringList(selectedOptimizationRow.required_commands).length ? (
+                  stringList(selectedOptimizationRow.required_commands).map((command) => (
+                    <code key={command} className="block rounded-xl border border-zinc-800 bg-black/40 px-3 py-2 text-[11px] text-cyan-100">
+                      {command}
+                    </code>
+                  ))
+                ) : (
+                  <p>当前没有额外命令建议。</p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-500">
+            当前没有可展开的影子实验计划。
+          </div>
+        )}
       </div>
 
       <div className="rounded-3xl border border-zinc-800 bg-black/40 p-5">

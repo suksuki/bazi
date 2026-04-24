@@ -7,7 +7,10 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const resp = await fetch(target, {
     method: "POST",
-    headers: { "Content-Type": req.headers.get("content-type") || "application/json" },
+    headers: {
+      "Content-Type": req.headers.get("content-type") || "application/json",
+      ...(req.headers.get("cookie") ? { cookie: req.headers.get("cookie") as string } : {}),
+    },
     body,
     cache: "no-store",
   });

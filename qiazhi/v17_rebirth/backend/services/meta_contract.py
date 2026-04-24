@@ -10,6 +10,8 @@ PUBLIC_META_KEYS: tuple[str, ...] = (
     "runtime_field_protocol",
     "relation_formation_summary",
     "relation_dynamics_summary",
+    "algorithm_execution_policy",
+    "algorithm_execution_audit",
     "climate_field",
     "climate_modifier_layer",
     "god_ring_authority",
@@ -23,6 +25,7 @@ PUBLIC_META_KEYS: tuple[str, ...] = (
 )
 
 SOLVER_TRACE_KEYS: tuple[str, ...] = (
+    "algorithm_execution_trace",
     "plugin_modifier_proposals",
     "plugin_claims",
     "plugin_claim_schema",
@@ -39,6 +42,9 @@ SOLVER_TRACE_KEYS: tuple[str, ...] = (
 )
 
 LEARNING_SIGNAL_KEYS: tuple[str, ...] = (
+    "algorithm_execution_trace",
+    "algorithm_execution_audit",
+    "algorithm_execution_policy",
     "plugin_claims",
     "plugin_conflicts",
     "plugin_conflict_resolutions",

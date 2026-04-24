@@ -30,8 +30,29 @@ def test_learning_campaign_runs_comprehensive_safe_cycle() -> None:
     assert insights["protocol"] == "v17.learning_insights.v1"
     assert insights["learning_value"] in {"actionable", "baseline_validated", "low_signal_green"}
     assert insights["validated_parameter_families"]
+    algorithm = insights["algorithm_intelligence"]
+    assert algorithm["protocol"] == "v17.learning_campaign.algorithm_intelligence.v1"
+    assert algorithm["trace_case_count"] >= 1
+    assert algorithm["average_trace_coverage"] > 0
+    assert algorithm["validated_stages"]
+    assert algorithm["critical_path_coverage_ratio"] > 0
+    assert algorithm["gate_stage_coverage_ratio"] > 0
+    assert algorithm["core_critical_path_coverage_ratio"] > 0
+    assert algorithm["core_validated_steps"]
+    assert "runtime_synced" not in algorithm["validated_stages"] or algorithm["authority_gate_coverage_ratio"] > 0
     assert insights["top_learning_signals"]
     assert insights["recommended_next_cases"]
+    assert insights["freeze_rationale"]
+    guidance = insights["parameter_optimization_guidance"]
+    assert guidance["readiness"] in {"freeze_only", "review_candidates_ready"}
+    assert guidance["freeze_families"]
+    assert guidance["watch_families"]
+    optimization_map = insights["parameter_optimization_map"]
+    assert optimization_map
+    assert all("parameter_family" in row for row in optimization_map)
+    assert all("target" in row for row in optimization_map)
+    assert all("required_commands" in row for row in optimization_map)
+    assert all("safety_gates" in row for row in optimization_map)
     assert "do_not_write_real_config" in report["safety_gates"]
 
 
@@ -63,6 +84,13 @@ def test_learning_campaign_markdown_report_is_codex_first() -> None:
     assert "主审：`codex`" in rendered
     assert "复核：`analyst`" in rendered
     assert "Learning Value" in rendered
+    assert "Algorithm Intelligence" in rendered
+    assert "关键路径覆盖率" in rendered
+    assert "重点依赖边" in rendered
+    assert "Core 关键路径覆盖率" in rendered
+    assert "Freeze Rationale" in rendered
+    assert "Parameter Optimization Guidance" in rendered
+    assert "Parameter Optimization Map" in rendered
     assert "Learning Signals" in rendered
     assert "Next Hard Cases" in rendered
     assert "已验证参数族" in rendered

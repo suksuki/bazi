@@ -111,6 +111,10 @@ def test_resolve_god_ring_core_prefers_positive_work_path() -> None:
     assert fusion_path["evidence"]["source_label"] == "天干五合"
     assert fusion_path["evidence"]["decision_label"] == "乙庚合"
     assert result["confidence"] > 0.58
+    assert result["core_execution_audit"]["protocol"] == "v17.core_execution_audit.v1"
+    assert result["graph_meta"]["work_path_execution_summary"]["protocol"] == "v17.work_path_execution_summary.v1"
+    assert result["graph_meta"]["flux_execution_summary"]["protocol"] == "v17.flux_execution_summary.v1"
+    assert result["core_execution_audit"]["critical_path_ok"] is True
 
 
 def test_resolve_effect_scores_preserves_contest_tension_between_officer_and_weapon() -> None:
@@ -355,6 +359,9 @@ def test_resolve_god_ring_core_exposes_flux_chains_and_reverse_attribution() -> 
     assert result["graph_meta"]["flux_node_chain_count"] == flux["node_chain_count"]
     assert result["graph_meta"]["flux_node_edge_count"] == flux["node_edge_count"]
     assert result["graph_meta"]["flux_interaction_count"] == flux["interaction_count"]
+    assert result["graph_meta"]["flux_execution_summary"]["interaction_count"] == flux["interaction_count"]
+    assert result["graph_meta"]["work_path_execution_summary"]["dynamic_path_count"] > 0
+    assert result["core_execution_audit"]["critical_path_ok"] is True
 
     effect_scores = result["effect_scores"]
     assert "正官" in effect_scores

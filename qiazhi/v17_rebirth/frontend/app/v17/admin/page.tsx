@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useRouter } from "next/navigation";
 import { V17_AdminPluginOverview } from "@/components/V17_AdminPluginOverview";
 import { V17_AdminPluginTierPanel } from "@/components/V17_AdminPluginTierPanel";
 import { V17_AdminPluginRuntimePanel } from "@/components/V17_AdminPluginRuntimePanel";
@@ -14,6 +15,7 @@ import {
   type LearningCampaignRuntime,
   type LearningCampaignUiConfig,
 } from "@/components/V17_AdminLearningPanel";
+import { V17_AdminUsersPanel, type AdminAuthUser } from "@/components/V17_AdminUsersPanel";
 import {
   ADMIN_GHOST_BTN,
   ADMIN_SOLID_BTN,
@@ -44,8 +46,9 @@ import {
   type LooseObject,
   type PluginTierBucketLike,
 } from "@/components/adminShared";
+import { useAuthSession } from "@/hooks/useAuthSession";
 
-type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution" | "learning";
+type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution" | "learning" | "users";
 
 type LlmNode = {
   provider: string;
@@ -268,6 +271,8 @@ function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetSt
 
 
 export default function V17AdminPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuthSession();
   const [tab, setTab] = useState<TabKey>("llm");
   const [llm, setLlm] = useState<LlmNode>({ provider: "ollama", host: "192.168.0.12", port: 11434, model: "", httpTimeoutSec: 15, fuseWaitSec: 30 });
   const [db, setDb] = useState<DbBridge>({ driver: "postgres", host: "127.0.0.1", port: 5432, database: "v17_rebirth", username: "postgres", password: "", sslmode: "prefer", url: "", enabled: false });
@@ -309,6 +314,8 @@ export default function V17AdminPage() {
     requestLlmReview: false,
   });
   const [learningBusy, setLearningBusy] = useState(false);
+  const [authUsers, setAuthUsers] = useState<AdminAuthUser[]>([]);
+  const [authUsersLoading, setAuthUsersLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -334,6 +341,8 @@ export default function V17AdminPage() {
   const llmBaseUrl = `http://${llm.host}:${llm.port}/v1`;
   const ghostBtn = ADMIN_GHOST_BTN;
   const solidBtn = ADMIN_SOLID_BTN;
+
+  const canManageSystem = user?.role === "admin";
 
   const loadPlugins = useCallback(async () => {
     setBusy("loadPlugins");
@@ -469,6 +478,50 @@ export default function V17AdminPage() {
     }
   }, []);
 
+  const loadAuthUsers = useCallback(async () => {
+    setAuthUsersLoading(true);
+    try {
+      const { data } = await requestJson("/api/auth/users");
+      const payload = asLooseObject(data);
+      const rows = Array.isArray(payload.users) ? payload.users : [];
+      setAuthUsers(
+        rows.map((row) => {
+          const item = asLooseObject(row);
+          return {
+            id: Number(item.id || 0),
+            username: asString(item.username),
+            display_name: asString(item.display_name),
+            email: asString(item.email),
+            role: (asString(item.role, "user") as AdminAuthUser["role"]),
+            is_active: Boolean(item.is_active),
+            created_at: asString(item.created_at),
+            last_login_at: asString(item.last_login_at),
+            latest_ip_address: asString(item.latest_ip_address),
+            latest_user_agent: asString(item.latest_user_agent),
+            latest_seen_at: asString(item.latest_seen_at),
+          };
+        }),
+      );
+    } finally {
+      setAuthUsersLoading(false);
+    }
+  }, []);
+
+  async function updateAuthUserRole(userId: number, role: AdminAuthUser["role"]) {
+    const { resp, data } = await requestJson(`/api/auth/users/${userId}/role`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    const payload = asLooseObject(data);
+    if (!resp.ok || payload.ok === false) {
+      setMsg(`角色更新失败：${asString(payload.detail || payload.error, "未知错误")}`);
+      return;
+    }
+    setMsg(`用户角色已更新为 ${role}`);
+    await loadAuthUsers();
+  }
+
   async function startLearningCampaign() {
     setLearningBusy(true);
     try {
@@ -534,10 +587,22 @@ export default function V17AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (user.role !== "admin") {
+      router.replace("/v17/oracle");
+    }
+  }, [authLoading, router, user]);
+
+  useEffect(() => {
     if (tab === "plugins") loadPlugins();
     if (tab === "evolution") loadEvolution();
     if (tab === "learning") loadLearningCampaign();
-  }, [tab, loadPlugins, loadEvolution, loadLearningCampaign]);
+    if (tab === "users") loadAuthUsers();
+  }, [tab, loadPlugins, loadEvolution, loadLearningCampaign, loadAuthUsers]);
 
   useEffect(() => {
     if (tab !== "learning") return;
@@ -731,6 +796,20 @@ export default function V17AdminPage() {
   });
   const policyWarnCount = pluginPanelRows.filter((row) => row.plugin.policy_valid === false).length;
 
+  if (authLoading || !user || !canManageSystem) {
+    return (
+      <main className="min-h-screen bg-[linear-gradient(180deg,#09090b_0%,#111827_100%)] px-4 py-10 text-zinc-100">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8 text-center">
+          <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Admin Guard</div>
+          <h1 className="mt-3 text-2xl font-semibold text-zinc-50">正在校验权限</h1>
+          <p className="mt-3 text-sm text-zinc-400">
+            {authLoading ? "正在加载账号信息..." : "当前账号无管理员权限，正在返回主页面。"}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_26%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-4 py-6 text-sm text-zinc-100 md:px-6">
       <div className="mx-auto max-w-[1500px] space-y-6">
@@ -750,6 +829,9 @@ export default function V17AdminPage() {
               <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] text-cyan-200">
                 插件 {plugins.length}
               </span>
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
+                管理员 {user.display_name || user.username}
+              </span>
             </div>
           </div>
         </header>
@@ -765,6 +847,7 @@ export default function V17AdminPage() {
             { id: "physics", label: "宇宙常数", icon: "⚛️" },
             { id: "evolution", label: "演化审计", icon: "📜" },
             { id: "learning", label: "自动学习", icon: "🛰️" },
+            { id: "users", label: "用户权限", icon: "🪪" },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id as TabKey)} className={`w-full rounded-2xl px-4 py-3 text-left transition ${tab === t.id ? "border border-zinc-200/80 bg-zinc-100 text-black shadow-[0_10px_30px_rgba(255,255,255,0.08)]" : "border border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"}`}>
               {t.icon} <span className="ml-2">{t.label}</span>
@@ -908,6 +991,16 @@ export default function V17AdminPage() {
               onStart={startLearningCampaign}
               onPause={pauseLearningCampaign}
               onRefresh={loadLearningCampaign}
+            />
+          )}
+
+          {tab === "users" && (
+            <V17_AdminUsersPanel
+              users={authUsers}
+              loading={authUsersLoading}
+              onRefresh={loadAuthUsers}
+              onUpdateRole={updateAuthUserRole}
+              operatorRole="admin"
             />
           )}
 
