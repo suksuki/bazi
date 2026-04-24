@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from dataclasses import dataclass
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Literal, Optional, Protocol, Tuple
 
@@ -27,6 +28,11 @@ LANGUAGE_SOUL_LOCKS: Dict[OUTPUT_LANGUAGE, str] = {
 
 _CONFLICT_MARKERS = ("冲", "破", "穿", "刑", "害", "绝", "墓", "刃", "争合", "伏吟")
 
+_ROLE_DEFAULT_MAX_TOKENS: Dict[str, int] = {
+    V17_ROLE_JUDGE: 420,
+    V17_ROLE_WEAVER: 520,
+}
+
 
 def _conflict_lines(rows: List[str]) -> List[str]:
     """从事实行中摘录含结构张力的条目，供裁决角色作「事实＋张力」合观。"""
@@ -51,6 +57,25 @@ def normalize_output_language(value: Any) -> OUTPUT_LANGUAGE:
     if raw == "ko":
         return "ko"
     return "zh"
+
+
+def role_output_max_tokens(role_id: str, requested: Any = None) -> int:
+    rid = str(role_id or "").strip().upper()
+    default = _ROLE_DEFAULT_MAX_TOKENS.get(rid, _ROLE_DEFAULT_MAX_TOKENS[V17_ROLE_WEAVER])
+    env_key = "QIAZHI_V17_JUDGE_MAX_TOKENS" if rid == V17_ROLE_JUDGE else "QIAZHI_V17_WEAVER_MAX_TOKENS"
+    try:
+        env_value = int(str(os.getenv(env_key, "") or "").strip())
+        if env_value > 0:
+            default = env_value
+    except (TypeError, ValueError):
+        pass
+    try:
+        requested_value = int(requested)
+        if 0 < requested_value < default:
+            default = requested_value
+    except (TypeError, ValueError):
+        pass
+    return max(120, min(1200, default))
 
 
 def _preface_system(core: str, output_language: OUTPUT_LANGUAGE) -> str:
@@ -169,6 +194,78 @@ def _physics_explain(output_language: OUTPUT_LANGUAGE) -> str:
     )
 
 
+def _concise_output_contract(*, output_language: OUTPUT_LANGUAGE, role_id: str) -> str:
+    lang = normalize_output_language(output_language)
+    rid = str(role_id or "").strip().upper()
+    is_judge = rid == V17_ROLE_JUDGE
+    if lang == "en":
+        if is_judge:
+            return (
+                "[Concise Verdict Format]\n"
+                "Write a compact verdict, not an essay. Use exactly 4 blocks: "
+                "1) [Verdict] one decisive sentence; 2) [Keys] 2-4 short bullets; "
+                "3) [Proceed] one practical sentence; 4) [Avoid] one practical sentence. "
+                "Total length: 80-120 English words. No background explanation, no process notes."
+            )
+        return (
+            "[Concise Reading Format]\n"
+            "Write 3-5 short judgement sentences, total 80-130 English words. "
+            "Keep only conclusion, key cause, and practical direction. No essay, no process notes."
+        )
+    if lang == "ko":
+        if is_judge:
+            return (
+                "[간결 단언 형식]\n"
+                "긴 해설문이 아니라 짧은 단언으로 쓰십시오. 정확히 4개 블록만 사용합니다: "
+                "1) [판정] 결정적 한 문장; 2) [핵심] 짧은 항목 2-4개; "
+                "3) [진행] 실천 문장 1개; 4) [주의] 실천 문장 1개. "
+                "전체 5-8문장 이내. 배경 설명과 사고 과정은 쓰지 마십시오."
+            )
+        return (
+            "[간결 해석 형식]\n"
+            "3-5개의 짧은 판단 문장만 쓰십시오. 결론, 핵심 원인, 실행 방향만 남기고 "
+            "긴 해설과 사고 과정은 쓰지 마십시오."
+        )
+    if is_judge:
+        return (
+            "【精炼断语格式】\n"
+            "不要写长篇报告，只输出四段："
+            "一、【判曰】一句定论，25字内；"
+            "二、【要点】2-4条短句，每条不超过18字；"
+            "三、【宜】一句可行方向；"
+            "四、【忌】一句当止之处。"
+            "全文控制在180字以内；禁铺陈背景、禁解释过程、禁长段议论。"
+        )
+    return (
+        "【精炼断语格式】\n"
+        "只写3-5句短断语，全文不超过220字；只保留结论、主因、取舍与行动方向。"
+        "禁写长篇分析，禁输出过程说明。"
+    )
+
+
+def _concise_user_contract(*, output_language: OUTPUT_LANGUAGE, role_id: str) -> str:
+    lang = normalize_output_language(output_language)
+    rid = str(role_id or "").strip().upper()
+    is_judge = rid == V17_ROLE_JUDGE
+    if lang == "en":
+        return (
+            "[Brevity]\nReturn the compact verdict format only. No long analysis."
+            if is_judge
+            else "[Brevity]\nReturn short judgement sentences only. No long analysis."
+        )
+    if lang == "ko":
+        return (
+            "[간결성]\n짧은 단언 형식만 출력하십시오. 긴 분석은 쓰지 마십시오."
+            if is_judge
+            else "[간결성]\n짧은 판단 문장만 출력하십시오. 긴 분석은 쓰지 마십시오."
+        )
+    return (
+        "【精简要求】\n只输出短断语格式，不写长篇分析。"
+        if is_judge
+        else "【精简要求】\n只输出短断语，不写长篇分析。"
+    )
+
+
 def _weaver_system_core(*, will_proxy: str, decision_anchor: str, action_signal: bool, output_language: OUTPUT_LANGUAGE) -> str:
     lang = normalize_output_language(output_language)
     guidance = "\n\n".join(_will_guidance_blocks(will_proxy=will_proxy, decision_anchor=decision_anchor, action_signal=action_signal, output_language=lang))
@@ -181,7 +278,7 @@ def _weaver_system_core(*, will_proxy: str, decision_anchor: str, action_signal:
             "[Task]\nShape the facts into readable judgement. You may vary rhythm and phrasing, but must not introduce unsupported claims.",
             "[Hard Rules]\nDo not request or perform extra chain reasoning unsupported by plugin facts. Do not add, remove, soften, or alter the settled meanings. The final answer must be English.",
             guidance,
-            "[Length]\nUse a longer answer for many facts and a shorter one for few facts.",
+            _concise_output_contract(output_language=lang, role_id=V17_ROLE_WEAVER),
         ]
         return "\n\n".join(blocks)
     if lang == "ko":
@@ -193,7 +290,7 @@ def _weaver_system_core(*, will_proxy: str, decision_anchor: str, action_signal:
             "[작업]\n사실을 뼈대로 삼아 문장을 정리하십시오. 호흡과 문체는 조절할 수 있지만, 명식에 없는 판단을 새로 만들면 안 됩니다.",
             "[절대 규칙]\n플러그인 사실로 뒷받침되지 않는 추가 연쇄 추론을 요구하거나 수행하지 마십시오. 확정된 의미를 더하거나 빼거나 약화하거나 바꾸지 마십시오. 최종 답변은 반드시 한국어입니다.",
             guidance,
-            "[분량]\n사실이 많으면 길게, 적으면 짧게 작성하십시오.",
+            _concise_output_contract(output_language=lang, role_id=V17_ROLE_WEAVER),
         ]
         return "\n\n".join(blocks)
     blocks = [
@@ -204,7 +301,7 @@ def _weaver_system_core(*, will_proxy: str, decision_anchor: str, action_signal:
         "【任务】\n以事实为骨、以文采为肉；可换气、蓄势、转笔，不得另起盘上未有之推断。",
         "【铁律】\n织造官禁令：禁止要求或执行任何未被插件事实支撑的链式逻辑推演；禁止再作推演、禁止增删已给事实之义理、禁止轻慢或暗改定论；不得输出英文或拉丁字母串。",
         guidance,
-        "【篇幅】\n条目繁则笔长，条目简则笔短，自裁。",
+        _concise_output_contract(output_language=lang, role_id=V17_ROLE_WEAVER),
     ]
     return "\n\n".join(blocks)
 
@@ -221,6 +318,7 @@ def _judge_system_core(*, will_proxy: str, decision_anchor: str, action_signal: 
             "[Task]\nGive the final judgement: priority, benefit and harm, what can proceed, and what should stop. Avoid vague adjectives.",
             "[Hard Rules]\nDo not invent stems, branches, shensha, or events not present in the facts. If facts conflict, name the tension and rank primary versus secondary. The final answer must be English.",
             guidance,
+            _concise_output_contract(output_language=lang, role_id=V17_ROLE_JUDGE),
             "[Final Verdict]\nInclude at least one decisive verdict paragraph. If a ten-god is intensified or weakened, keep machine tokens such as [INTENSIFY:七杀] or [WEAKEN:正印] at the relevant sentence end.",
         ]
         return "\n\n".join(blocks)
@@ -233,6 +331,7 @@ def _judge_system_core(*, will_proxy: str, decision_anchor: str, action_signal: 
             "[작업]\n최종 판단을 제시하십시오. 무엇이 우선인지, 이익과 손상이 어디에 있는지, 무엇은 진행 가능하고 무엇은 멈춰야 하는지 분명히 말하십시오.",
             "[절대 규칙]\n제공되지 않은 천간·지지·신살·사건을 만들지 마십시오. 사실이 충돌하면 그 장력을 본문에서 짚고 주/부를 나누십시오. 최종 답변은 반드시 한국어입니다.",
             guidance,
+            _concise_output_contract(output_language=lang, role_id=V17_ROLE_JUDGE),
             "[최종 판정]\n최소 한 단락은 분명한 판정문으로 작성하십시오. 특정 십신이 강화되거나 약화되는 경우 관련 문장 끝에 [INTENSIFY:七杀] 또는 [WEAKEN:正印] 같은 기계 토큰은 유지하십시오.",
         ]
         return "\n\n".join(blocks)
@@ -245,6 +344,7 @@ def _judge_system_core(*, will_proxy: str, decision_anchor: str, action_signal: 
         "【铁律】\n不得杜撰盘中未给出之干支、神煞或事件；不得掩耳盗铃式改写事实；不得输出英文或拉丁字母串。"
         "若事实彼此牴牾，须在正文中点名张力并给出主次。",
         guidance,
+        _concise_output_contract(output_language=lang, role_id=V17_ROLE_JUDGE),
         "【终极断言】\n全文须出现至少一处以「【判曰】」起首之定论段（可置于篇末收束）。\n若裁决导致某十神失控或爆发（如七杀、伤官等），须在对应句末紧跟机读标记，如：`[INTENSIFY:七杀]` 或 `[WEAKEN:正印]`，作为前台物理反馈令牌。",
     ]
     return "\n\n".join(blocks)
@@ -346,7 +446,7 @@ def build_role_user_prompt(
             ]
             if anchor:
                 parts.extend(["", "[User Anchor]", anchor])
-            parts.extend(["", "[Final Verdict]", "Include a decisive verdict paragraph.", "", lang_notes[lang]])
+            parts.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", "[Final Verdict]", "Include a decisive verdict paragraph.", "", lang_notes[lang]])
             return "\n".join(parts)
         if lang == "ko":
             parts = [
@@ -363,7 +463,7 @@ def build_role_user_prompt(
             ]
             if anchor:
                 parts.extend(["", "[사용자 앵커]", anchor])
-            parts.extend(["", "[최종 판정]", "분명한 최종 판정 단락을 포함하십시오.", "", lang_notes[lang]])
+            parts.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", "[최종 판정]", "분명한 최종 판정 단락을 포함하십시오.", "", lang_notes[lang]])
             return "\n".join(parts)
         parts = [
             "【因事实录】",
@@ -379,7 +479,7 @@ def build_role_user_prompt(
         ]
         if anchor:
             parts.extend(["", "用户锚点（须贯通终局）：", anchor])
-        parts.extend(["", "【终极断言】", "终文须含以「【判曰】」起首之定论段。", "", lang_notes[lang]])
+        parts.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", "【终极断言】", "终文须含以「【判曰】」起首之定论段。", "", lang_notes[lang]])
         return "\n".join(parts)
     if lang == "en":
         parts_w = [
@@ -389,7 +489,7 @@ def build_role_user_prompt(
         ]
         if anchor:
             parts_w.extend(["", "[Will Anchor]", "Reflect this user anchor throughout the response:", anchor])
-        parts_w.extend(["", lang_notes[lang]])
+        parts_w.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", lang_notes[lang]])
         return "\n".join(parts_w)
     if lang == "ko":
         parts_w = [
@@ -399,7 +499,7 @@ def build_role_user_prompt(
         ]
         if anchor:
             parts_w.extend(["", "[의지 앵커]", "본문 전체의 어조가 이 사용자 앵커와 호응해야 합니다:", anchor])
-        parts_w.extend(["", lang_notes[lang]])
+        parts_w.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", lang_notes[lang]])
         return "\n".join(parts_w)
     parts_w: List[str] = [
         "【因事实录】",
@@ -408,7 +508,7 @@ def build_role_user_prompt(
     ]
     if anchor:
         parts_w.extend(["", "【意志导向】", "用户意志锚点（全文语势须与之呼应）：", anchor])
-    parts_w.extend(["", lang_notes[lang]])
+    parts_w.extend(["", _concise_user_contract(output_language=lang, role_id=rid), "", lang_notes[lang]])
     return "\n".join(parts_w)
 
 
@@ -447,7 +547,7 @@ class SemanticFusion:
         async for step in self.llm_client.fuse(
             fragments=rows,
             will_proxy=will_proxy,
-            max_tokens=2048,
+            max_tokens=role_output_max_tokens(rid),
             decision_anchor=str(decision_anchor or ""),
             action_signal=bool(action_signal),
             action_queue=action_queue,

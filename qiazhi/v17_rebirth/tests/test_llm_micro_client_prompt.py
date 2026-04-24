@@ -217,3 +217,43 @@ def test_build_llm_audit_payload_respects_output_language_lock() -> None:
     for forbidden in ("中文篇章", "不得输出英文", "短指令式中文", "最终正文必须使用简体中文"):
         assert forbidden not in ko_judge_system_prompt
         assert forbidden not in ko_judge_user_prompt
+
+
+def test_build_llm_audit_payload_uses_concise_verdict_contract(monkeypatch) -> None:
+    monkeypatch.delenv("QIAZHI_V17_JUDGE_MAX_TOKENS", raising=False)
+    payload = build_llm_audit_payload(
+        [],
+        will_proxy="stable",
+        decision_anchor="",
+        action_signal=False,
+        role_style=V17_ROLE_JUDGE,
+        physics_tensor=_tensor(),
+    )
+
+    system_prompt = str(payload.get("llm_system_prompt") or "")
+    user_prompt = str(payload.get("llm_user_prompt") or "")
+    assert "【精炼断语格式】" in system_prompt
+    assert "全文控制在180字以内" in system_prompt
+    assert "只输出短断语格式" in user_prompt
+    assert payload.get("max_tokens_preview") == 420
+
+
+def test_build_llm_audit_payload_uses_concise_english_contract(monkeypatch) -> None:
+    monkeypatch.delenv("QIAZHI_V17_JUDGE_MAX_TOKENS", raising=False)
+    en_tensor = {**_tensor(), "ui_lang": "en"}
+    payload = build_llm_audit_payload(
+        [],
+        will_proxy="stable",
+        decision_anchor="",
+        action_signal=False,
+        role_style=V17_ROLE_JUDGE,
+        physics_tensor=en_tensor,
+    )
+
+    system_prompt = str(payload.get("llm_system_prompt") or "")
+    user_prompt = str(payload.get("llm_user_prompt") or "")
+    assert "[Concise Verdict Format]" in system_prompt
+    assert "80-120 English words" in system_prompt
+    assert "Return the compact verdict format only" in user_prompt
+    assert "【精炼断语格式】" not in system_prompt
+    assert payload.get("max_tokens_preview") == 420

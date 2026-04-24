@@ -649,9 +649,9 @@ export default function OraclePage() {
   );
 
   const verdictTriggerPrompt = ui(
-    "请基于当前已通过的决策，生成新的八字断言。",
-    "Generate a new BaZi verdict based on the currently approved decisions.",
-    "현재 승인된 결정을 바탕으로 새로운 사주 단언을 생성하세요.",
+    "请基于当前已通过的决策，生成精炼八字断语，短句为主。",
+    "Generate a concise BaZi verdict from the approved decisions. Use short judgement lines.",
+    "현재 승인된 결정을 바탕으로 간결한 사주 단언을 짧은 판단 문장으로 생성하세요.",
   );
 
   const switchContentSurface = (tab: ContentSurfaceTab) => {

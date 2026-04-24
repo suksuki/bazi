@@ -17,6 +17,7 @@ from .llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER, V17_ROLES, V17LlmBridge
 from v17_rebirth.backend.narrative.semantic_fusion import (
     build_role_user_prompt,
     normalize_output_language,
+    role_output_max_tokens,
 )
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
 
@@ -170,12 +171,12 @@ def _v1721_reasoning_suppressed_body_patch() -> Dict[str, Any]:
 
 
 def _fuse_max_tokens_default() -> int:
-    """叙事织造默认生成长度上限；默认 2048 适配 L1-L4 高复杂度裁决。"""
+    """叙事织造默认生成长度上限；默认 520，角色层可进一步收紧。"""
     try:
-        v = int(str(os.getenv("QIAZHI_V17_FUSE_MAX_TOKENS", "2048") or "2048").strip())
-        return max(64, min(8192, v))
+        v = int(str(os.getenv("QIAZHI_V17_FUSE_MAX_TOKENS", "520") or "520").strip())
+        return max(120, min(1200, v))
     except (TypeError, ValueError):
-        return 512
+        return 520
 
 # 熔断时写入 llm_meta.error 与降级正文的人类可读前缀
 _LOCAL_COMPUTE_EXHAUST_MSG = "[本地算力透支] 引擎思考超时，请尝试精简意志注入。"
@@ -268,7 +269,7 @@ def build_llm_audit_payload(
         "llm_user_prompt": user_prompt,
         "llm_request_messages": messages,
         "physics_report": physics_report,
-        "max_tokens_preview": int(max_tokens or _fuse_max_tokens_default()),
+        "max_tokens_preview": role_output_max_tokens(rid, max_tokens or _fuse_max_tokens_default()),
         **_fuse_role_extras(rid),
     }
 
@@ -657,11 +658,12 @@ class V17MicroLlmClient:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+        output_max_tokens = role_output_max_tokens(rid, max_tokens or _fuse_max_tokens_default())
         body: Dict[str, Any] = {
             "model": cfg["model"],
             "messages": messages,
             "temperature": 0.2,
-            "max_tokens": int(max_tokens or _fuse_max_tokens_default()),
+            "max_tokens": output_max_tokens,
             "stream": True,
             **_v1721_reasoning_suppressed_body_patch(),
         }
