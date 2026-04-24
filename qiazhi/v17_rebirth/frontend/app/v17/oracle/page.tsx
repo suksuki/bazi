@@ -365,8 +365,6 @@ export default function OraclePage() {
           negative_work?: Record<string, unknown>;
         })
       : undefined;
-  const manualRows = Array.isArray(payload.manual_inbox) ? payload.manual_inbox as Array<Record<string, unknown>> : [];
-  const autoRows = Array.isArray(payload.auto_decisions) ? payload.auto_decisions as Array<Record<string, unknown>> : [];
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
   const meta = payload.meta && typeof payload.meta === "object" ? payload.meta as Record<string, unknown> : {};
   const pluginClaims = Array.isArray(meta.plugin_claims) ? meta.plugin_claims as Array<Record<string, unknown>> : [];
@@ -909,6 +907,7 @@ export default function OraclePage() {
                     birthTimeISO={s.birthTimeISO}
                     gender={s.natalGender}
                     calendarType={s.natalCalendar}
+                    lunarIsLeapMonth={s.lunarIsLeapMonth}
                     selectedYear={s.selectedLuckYear}
                     onYearChange={s.setSelectedLuckYear}
                     detailMode="core"
@@ -1128,6 +1127,7 @@ export default function OraclePage() {
                       birthTimeISO={s.birthTimeISO}
                       gender={s.natalGender}
                       calendarType={s.natalCalendar}
+                      lunarIsLeapMonth={s.lunarIsLeapMonth}
                       selectedYear={s.selectedLuckYear}
                       onYearChange={s.setSelectedLuckYear}
                       detailMode="auxiliary"

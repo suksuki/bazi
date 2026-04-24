@@ -548,6 +548,7 @@ export function V17_SixPillarsPanel({
   birthTimeISO,
   gender,
   calendarType,
+  lunarIsLeapMonth,
   selectedYear,
   onYearChange,
   detailMode = "core",
@@ -571,6 +572,7 @@ export function V17_SixPillarsPanel({
   birthTimeISO?: string;
   gender?: "male" | "female";
   calendarType?: "solar" | "lunar";
+  lunarIsLeapMonth?: boolean;
   selectedYear: number;
   onYearChange: (year: number) => void;
   detailMode?: "core" | "auxiliary";
@@ -731,7 +733,7 @@ export function V17_SixPillarsPanel({
     gender === "male" ? t(lang, "natal.gender.male") : gender === "female" ? t(lang, "natal.gender.female") : "—";
   const calendarLabel =
     calendarType === "lunar"
-      ? t(lang, "natal.calendar.lunar")
+      ? `${t(lang, "natal.calendar.lunar")}${lunarIsLeapMonth ? ` · ${t(lang, "natal.leap_month.badge")}` : ""}`
       : calendarType === "solar"
         ? t(lang, "natal.calendar.solar")
         : "—";

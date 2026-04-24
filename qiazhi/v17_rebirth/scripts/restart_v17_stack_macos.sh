@@ -152,6 +152,35 @@ check_http_code() {
   return 1
 }
 
+start_detached() {
+  local pid_file="$1"
+  local log_file="$2"
+  local cwd="$3"
+  shift 3
+
+  "${VENV_PY}" - "$pid_file" "$log_file" "$cwd" "$@" <<'PY'
+import os
+import subprocess
+import sys
+
+pid_file, log_file, cwd, *cmd = sys.argv[1:]
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+with open(log_file, "ab", buffering=0) as log:
+    process = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        env=os.environ.copy(),
+        stdin=subprocess.DEVNULL,
+        stdout=log,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+        close_fds=True,
+    )
+with open(pid_file, "w", encoding="utf-8") as handle:
+    handle.write(f"{process.pid}\n")
+PY
+}
+
 if ! command -v node >/dev/null 2>&1; then
   echo -e "${RED}node not found. Please install Node.js >= 20.9 first.${NC}"
   exit 1
@@ -242,30 +271,22 @@ print_step "[3/5] Start backend + frontend..."
 # V17.16：Uvicorn 无 Gunicorn 式 --no-buffer；有 stdbuf 时行缓冲 stdout/stderr（否则仅 PYTHONUNBUFFERED）。
 # 注意：set -u 下勿展开空数组 "${arr[@]}"（macOS bash 3.2 会报 unbound variable），改用分支调用。
 if [[ "${RESTART_BACKEND}" -eq 1 ]]; then
-  (
-    cd "${PROJECT_DIR}"
-    export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
-    export PYTHONUNBUFFERED=1
-    export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
-    if command -v stdbuf >/dev/null 2>&1; then
+  export PYTHONPATH="${PROJECT_DIR%/v17_rebirth}"
+  export PYTHONUNBUFFERED=1
+  export QIAZHI_REDIS_URL="${QIAZHI_REDIS_URL:-redis://127.0.0.1:6379/0}"
+  if command -v stdbuf >/dev/null 2>&1; then
+    start_detached "${BACKEND_PID_FILE}" "${BACKEND_LOG}" "${PROJECT_DIR}" \
       stdbuf -oL -eL "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
-        --proxy-headers --timeout-keep-alive 75 \
-        >> "${BACKEND_LOG}" 2>&1
-    else
+      --proxy-headers --timeout-keep-alive 75
+  else
+    start_detached "${BACKEND_PID_FILE}" "${BACKEND_LOG}" "${PROJECT_DIR}" \
       "${UVICORN_LAUNCH[@]}" v17_rebirth.backend.api.app:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" \
-        --proxy-headers --timeout-keep-alive 75 \
-        >> "${BACKEND_LOG}" 2>&1
-    fi
-  ) &
-  echo $! > "${BACKEND_PID_FILE}"
+      --proxy-headers --timeout-keep-alive 75
+  fi
 fi
 
 if [[ "${RESTART_FRONTEND}" -eq 1 ]]; then
-  (
-    cd "${FRONTEND_DIR}"
-    "${FRONTEND_START_CMD[@]}" >> "${FRONTEND_LOG}" 2>&1
-  ) &
-  echo $! > "${FRONTEND_PID_FILE}"
+  start_detached "${FRONTEND_PID_FILE}" "${FRONTEND_LOG}" "${FRONTEND_DIR}" "${FRONTEND_START_CMD[@]}"
 fi
 
 # 给 uvicorn / Next 一点时间 bind 端口，减少首轮 curl 失败
