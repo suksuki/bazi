@@ -17,6 +17,13 @@ function tone(active: boolean) {
     : "border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200";
 }
 
+function authTabHref(mode: "login" | "register", next: string) {
+  if (next && next !== "/v17/oracle") {
+    return `/${mode}?next=${encodeURIComponent(next)}`;
+  }
+  return `/${mode}`;
+}
+
 export function V17_AuthScreen({ mode, nextPath }: Props) {
   const router = useRouter();
   const { language, setLanguage } = useAppLanguage();
@@ -76,28 +83,32 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
     }
   }
 
+  const languageSelector = (
+    <div className="inline-flex rounded-xl border border-zinc-800 bg-zinc-950/70 p-1">
+      {APP_LANGUAGE_OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => setLanguage(option.value)}
+          className={`rounded-lg px-3 py-1.5 text-xs transition ${
+            language === option.value
+              ? "bg-cyan-300 text-black"
+              : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+          }`}
+        >
+          {t(language, `lang.${option.value}`)}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_22%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-4 py-10 text-zinc-100">
-      <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-[28px] border border-cyan-500/15 bg-[linear-gradient(145deg,rgba(17,24,39,0.92),rgba(9,9,11,0.98))] p-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+    <main className="min-h-dvh overflow-x-hidden bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_22%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-3 py-4 text-zinc-100 sm:px-4 sm:py-8 lg:min-h-screen lg:py-10">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 lg:grid lg:max-w-5xl lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+        <section className="hidden rounded-[28px] border border-cyan-500/15 bg-[linear-gradient(145deg,rgba(17,24,39,0.92),rgba(9,9,11,0.98))] p-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)] lg:block">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">{t(language, "brand.title")}</div>
-            <div className="inline-flex rounded-xl border border-zinc-800 bg-zinc-950/70 p-1">
-              {APP_LANGUAGE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setLanguage(option.value)}
-                  className={`rounded-lg px-3 py-1.5 text-xs transition ${
-                    language === option.value
-                      ? "bg-cyan-300 text-black"
-                      : "text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
-                  }`}
-                >
-                  {t(language, `lang.${option.value}`)}
-                </button>
-              ))}
-            </div>
+            {languageSelector}
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-zinc-50">
             {t(language, mode === "register" ? "auth.title.register" : "auth.title.login")}
@@ -121,12 +132,22 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.8),rgba(9,9,11,0.96))] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.32)]">
+        <section className="rounded-2xl border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.86),rgba(9,9,11,0.98))] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-5 lg:rounded-[28px] lg:bg-[linear-gradient(180deg,rgba(24,24,27,0.8),rgba(9,9,11,0.96))] lg:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:hidden">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-cyan-300/80">{t(language, "brand.title")}</div>
+              <h1 className="mt-2 text-2xl font-semibold text-zinc-50">
+                {t(language, mode === "register" ? "auth.title.register" : "auth.title.login")}
+              </h1>
+            </div>
+            <div className="shrink-0">{languageSelector}</div>
+          </div>
+
           <div className="flex gap-2">
-            <Link href={next && next !== "/v17/oracle" ? `/login?next=${encodeURIComponent(next)}` : "/login"} className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm transition ${tone(mode === "login")}`}>
+            <Link href={authTabHref("login", next)} className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm transition ${tone(mode === "login")}`}>
               {t(language, "auth.tab.login")}
             </Link>
-            <Link href={next && next !== "/v17/oracle" ? `/register?next=${encodeURIComponent(next)}` : "/register"} className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm transition ${tone(mode === "register")}`}>
+            <Link href={authTabHref("register", next)} className={`flex-1 rounded-xl border px-4 py-3 text-center text-sm transition ${tone(mode === "register")}`}>
               {t(language, "auth.tab.register")}
             </Link>
           </div>
