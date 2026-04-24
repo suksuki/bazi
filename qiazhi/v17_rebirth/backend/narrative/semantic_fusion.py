@@ -2,17 +2,28 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Protocol, Tuple
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Literal, Optional, Protocol, Tuple
 
 from v17_rebirth.backend.services.physics_canonical import PhysicsCanonicalService
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER
 
-# 全角色 System 首行：圣殿宪法 — STRICT CHINESE ONLY + 中文魂锁
-CHINESE_SOUL_LOCK = (
-    "STRICT CHINESE ONLY：全文须为纯正简体中文；禁止输出 Thinking Process、Analysis 或任何英文化推理备注；不得出现无必要拉丁字母串。\n"
-    "【中文魂锁】自此行以下直至全文结束，须为纯正简体中文；不得出现英文段落，"
-    "亦不得以「思考过程」「推理链」「备注」等形式外显内心推演。"
-)
+OUTPUT_LANGUAGE = Literal["zh", "en", "ko"]
+
+LANGUAGE_SOUL_LOCKS: Dict[OUTPUT_LANGUAGE, str] = {
+    "zh": (
+        "STRICT CHINESE ONLY：全文须为纯正简体中文；禁止输出 Thinking Process、Analysis 或任何英文化推理备注；不得出现无必要拉丁字母串。\n"
+        "【中文魂锁】自此行以下直至全文结束，须为纯正简体中文；不得出现英文段落，"
+        "亦不得以「思考过程」「推理链」「备注」等形式外显内心推演。"
+    ),
+    "en": (
+        "STRICT ENGLISH ONLY: Write entirely in natural English. Do not output Chinese or Korean sentences except when quoting source labels that cannot be translated.\n"
+        "[Language Lock] From this line to the end, the final answer must remain English-only. Never expose inner reasoning, thinking traces, or analysis notes."
+    ),
+    "ko": (
+        "STRICT KOREAN ONLY: 최종 응답은 자연스러운 한국어로만 작성하십시오. 번역되지 않은 중국어/영어 문단을 그대로 출력하지 마십시오.\n"
+        "[언어 잠금] 이 줄부터 끝까지 최종 출력은 한국어만 허용됩니다. 사고 과정, 분석 메모, 추론 체인을 노출하지 마십시오."
+    ),
+}
 
 _CONFLICT_MARKERS = ("冲", "破", "穿", "刑", "害", "绝", "墓", "刃", "争合", "伏吟")
 
@@ -33,8 +44,17 @@ def _conflict_lines(rows: List[str]) -> List[str]:
     return out
 
 
-def _preface_system(core: str) -> str:
-    return CHINESE_SOUL_LOCK + "\n\n" + core.lstrip()
+def normalize_output_language(value: Any) -> OUTPUT_LANGUAGE:
+    raw = str(value or "").strip().lower()
+    if raw == "en":
+        return "en"
+    if raw == "ko":
+        return "ko"
+    return "zh"
+
+
+def _preface_system(core: str, output_language: OUTPUT_LANGUAGE) -> str:
+    return LANGUAGE_SOUL_LOCKS[output_language] + "\n\n" + core.lstrip()
 
 
 class MicroLlmClient(Protocol):
@@ -122,12 +142,28 @@ def build_v17_role_system_prompt(
     will_proxy: str,
     decision_anchor: str,
     action_signal: bool,
+    output_language: OUTPUT_LANGUAGE = "zh",
 ) -> str:
     """按 role_id 物理隔离 System 模板；首行统一中文魂锁。"""
     rid = str(role_id or "").strip().upper() or V17_ROLE_WEAVER
+    lang = normalize_output_language(output_language)
     if rid == V17_ROLE_JUDGE:
-        return _preface_system(_judge_system_core(will_proxy=will_proxy, decision_anchor=decision_anchor, action_signal=action_signal))
-    return _preface_system(_weaver_system_core(will_proxy=will_proxy, decision_anchor=decision_anchor, action_signal=action_signal))
+        return _preface_system(
+            _judge_system_core(
+                will_proxy=will_proxy,
+                decision_anchor=decision_anchor,
+                action_signal=action_signal,
+            ),
+            lang,
+        )
+    return _preface_system(
+        _weaver_system_core(
+            will_proxy=will_proxy,
+            decision_anchor=decision_anchor,
+            action_signal=action_signal,
+        ),
+        lang,
+    )
 
 
 def build_v17_master_system_prompt(
@@ -135,6 +171,7 @@ def build_v17_master_system_prompt(
     will_proxy: str,
     decision_anchor: str,
     action_signal: bool,
+    output_language: OUTPUT_LANGUAGE = "zh",
 ) -> str:
     """兼容旧名：织造。"""
     return build_v17_role_system_prompt(
@@ -142,6 +179,7 @@ def build_v17_master_system_prompt(
         will_proxy=will_proxy,
         decision_anchor=decision_anchor,
         action_signal=action_signal,
+        output_language=output_language,
     )
 
 
@@ -152,6 +190,7 @@ def build_role_user_prompt(
     decision_anchor: str,
     list_cap: int = 16,
     will_proxy: str = "stable",
+    output_language: OUTPUT_LANGUAGE = "zh",
 ) -> str:
     """按 role_id 物理隔离 User：织造唯事实；裁决为事实＋张力摘录。"""
     rows = [str(x).strip() for x in fact_rows if str(x).strip()]
@@ -159,6 +198,12 @@ def build_role_user_prompt(
     joined = "\n".join(f"{idx + 1}. {row}" for idx, row in enumerate(capped))
     rid = str(role_id or "").strip().upper() or V17_ROLE_WEAVER
     anchor = str(decision_anchor or "").strip()
+    lang = normalize_output_language(output_language)
+    lang_notes = {
+        "zh": "【输出语言】\n最终正文必须使用简体中文。",
+        "en": "【OUTPUT LANGUAGE】\nThe final response must be written in English only.",
+        "ko": "【출력 언어】\n최종 응답은 반드시 한국어로만 작성하십시오.",
+    }
     if rid == V17_ROLE_JUDGE:
         conflicts = _conflict_lines(rows)
         cj = (
@@ -185,6 +230,8 @@ def build_role_user_prompt(
                 "",
                 "【终极断言】",
                 "终文须含以「【判曰】」起首之定论段。",
+                "",
+                lang_notes[lang],
             ]
         )
         return "\n".join(parts)
@@ -195,6 +242,7 @@ def build_role_user_prompt(
     ]
     if anchor:
         parts_w.extend(["", "【意志导向】", "用户意志锚点（全文语势须与之呼应）：", anchor])
+    parts_w.extend(["", lang_notes[lang]])
     return "\n".join(parts_w)
 
 

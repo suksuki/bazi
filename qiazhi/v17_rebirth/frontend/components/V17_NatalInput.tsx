@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderOpen, Play, Save, Trash2 } from "lucide-react";
 import { findCityGroup, findCityOption, getCityCatalogGroups } from "@/types/cityCatalog";
+import { t, type AppLanguage } from "@/lib/i18n";
 
 export type V17NatalInputValue = {
   birthTimeISO: string;
@@ -75,7 +76,13 @@ function profileLabel(profile: BaziProfile): string {
 
 const cityGroups = getCityCatalogGroups();
 
-export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValue) => void }) {
+export function V17_NatalInput({
+  onStart,
+  lang = "zh",
+}: {
+  onStart: (value: V17NatalInputValue) => void;
+  lang?: AppLanguage;
+}) {
   const current = new Date();
   const currentYear = current.getFullYear();
   const [year, setYear] = useState(DEFAULT_FORM.year);
@@ -119,7 +126,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
       const resp = await fetch("/api/auth/profiles", { cache: "no-store" });
       const data = (await resp.json().catch(() => ({}))) as { profiles?: BaziProfile[]; detail?: string };
       if (!resp.ok) {
-        throw new Error(String(data.detail || "档案列表加载失败。"));
+        throw new Error(String(data.detail || t(lang, "natal.profile.error.load")));
       }
       const nextProfiles = Array.isArray(data.profiles) ? data.profiles : [];
       setProfiles(nextProfiles);
@@ -128,11 +135,11 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
         setSelectedProfileId(null);
       }
     } catch (error) {
-      setProfileError(error instanceof Error ? error.message : "档案列表加载失败。");
+      setProfileError(error instanceof Error ? error.message : t(lang, "natal.profile.error.load"));
     } finally {
       setProfilesLoading(false);
     }
-  }, [selectedProfileId]);
+  }, [lang, selectedProfileId]);
 
   useEffect(() => {
     void loadProfiles();
@@ -153,7 +160,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
     setCityGroup(String(profile.city_group || resolvedCity?.group.id || ""));
     setCityName(String(profile.city_name || resolvedCity?.item.name || "").trim());
     setProfileError("");
-    setProfileMessage(`已载入档案「${profile.profile_name}」。`);
+    setProfileMessage(t(lang, "natal.profile.message.loaded", { name: profile.profile_name }));
   }
 
   function resetDraft() {
@@ -169,13 +176,13 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
     setCityGroup("");
     setCityName("");
     setProfileError("");
-    setProfileMessage("已切换为新建草稿。");
+    setProfileMessage(t(lang, "natal.profile.message.draft"));
   }
 
   async function saveProfile() {
     const nextName = profileName.trim();
     if (!nextName) {
-      setProfileError("请先填写八字姓名/档案名。");
+      setProfileError(t(lang, "natal.profile.error.name"));
       return;
     }
     setProfileBusy(true);
@@ -203,7 +210,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
         profile?: BaziProfile;
       };
       if (!resp.ok || data.ok === false || !data.profile) {
-        throw new Error(String(data.detail || "档案保存失败。"));
+        throw new Error(String(data.detail || t(lang, "natal.profile.error.save")));
       }
       const saved = data.profile;
       setSelectedProfileId(saved.id);
@@ -213,9 +220,13 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
         next.unshift(saved);
         return next;
       });
-      setProfileMessage(selectedProfileId == null ? `已创建档案「${saved.profile_name}」。` : `已更新档案「${saved.profile_name}」。`);
+      setProfileMessage(
+        selectedProfileId == null
+          ? t(lang, "natal.profile.message.created", { name: saved.profile_name })
+          : t(lang, "natal.profile.message.updated", { name: saved.profile_name }),
+      );
     } catch (error) {
-      setProfileError(error instanceof Error ? error.message : "档案保存失败。");
+      setProfileError(error instanceof Error ? error.message : t(lang, "natal.profile.error.save"));
     } finally {
       setProfileBusy(false);
     }
@@ -223,11 +234,17 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
 
   async function removeProfile() {
     if (selectedProfileId == null) {
-      setProfileError("当前没有可删除的档案。");
+      setProfileError(t(lang, "natal.profile.error.none"));
       return;
     }
     const currentProfile = selectedProfile;
-    if (!window.confirm(`确认删除档案「${currentProfile?.profile_name || profileName || "当前档案"}」吗？`)) {
+    if (
+      !window.confirm(
+        t(lang, "natal.profile.confirm_delete", {
+          name: currentProfile?.profile_name || profileName || t(lang, "common.undefined"),
+        }),
+      )
+    ) {
       return;
     }
     setProfileBusy(true);
@@ -239,14 +256,18 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
       });
       const data = (await resp.json().catch(() => ({}))) as { ok?: boolean; detail?: string };
       if (!resp.ok || data.ok === false) {
-        throw new Error(String(data.detail || "档案删除失败。"));
+        throw new Error(String(data.detail || t(lang, "natal.profile.error.delete")));
       }
       const deletedId = selectedProfileId;
       setProfiles((prev) => prev.filter((item) => item.id !== deletedId));
       setSelectedProfileId(null);
-      setProfileMessage(`已删除档案「${currentProfile?.profile_name || profileName || "当前档案"}」，当前保留为未保存草稿。`);
+      setProfileMessage(
+        t(lang, "natal.profile.message.deleted", {
+          name: currentProfile?.profile_name || profileName || t(lang, "common.undefined"),
+        }),
+      );
     } catch (error) {
-      setProfileError(error instanceof Error ? error.message : "档案删除失败。");
+      setProfileError(error instanceof Error ? error.message : t(lang, "natal.profile.error.delete"));
     } finally {
       setProfileBusy(false);
     }
@@ -289,15 +310,15 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
   return (
     <section className="w-full rounded-2xl border border-violet-400/30 bg-violet-900/20 p-5 shadow-[0_10px_40px_rgba(76,29,149,0.35)] backdrop-blur-xl">
       <header className="mb-4">
-        <h2 className="text-base font-semibold text-violet-100">掐指一算 · 排盘输入</h2>
-        <p className="mt-1 text-xs text-violet-200/80">当前账号可管理自己的八字档案，保存后可随时载入继续测算。</p>
+        <h2 className="text-base font-semibold text-violet-100">{t(lang, "natal.title")}</h2>
+        <p className="mt-1 text-xs text-violet-200/80">{t(lang, "natal.desc")}</p>
       </header>
 
       <div className="mb-5 rounded-2xl border border-violet-300/20 bg-black/20 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-violet-100">
             <FolderOpen className="h-4 w-4" />
-            <h3 className="text-sm font-semibold">八字档案管理</h3>
+            <h3 className="text-sm font-semibold">{t(lang, "natal.profile.title")}</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -305,7 +326,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
               onClick={resetDraft}
               className="rounded-md border border-zinc-700 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-900"
             >
-              新建草稿
+              {t(lang, "natal.profile.new")}
             </button>
             <button
               type="button"
@@ -314,7 +335,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
               className="inline-flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-3.5 w-3.5" />
-              {selectedProfileId == null ? "保存档案" : "更新档案"}
+              {selectedProfileId == null ? t(lang, "natal.profile.save") : t(lang, "natal.profile.update")}
             </button>
             <button
               type="button"
@@ -323,14 +344,14 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
               className="inline-flex items-center gap-2 rounded-md border border-rose-400/30 bg-rose-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              删除档案
+              {t(lang, "natal.profile.delete")}
             </button>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1.2fr_1fr]">
           <label className="flex flex-col gap-1 text-xs text-violet-100">
-            已有档案
+            {t(lang, "natal.profile.list")}
             <select
               className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm"
               value={selectedProfileId == null ? "" : String(selectedProfileId)}
@@ -344,7 +365,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
                 if (next) applyProfile(next);
               }}
             >
-              <option value="">未选择档案（当前草稿）</option>
+              <option value="">{t(lang, "natal.profile.draft")}</option>
               {profiles.map((item) => (
                 <option key={item.id} value={item.id}>
                   {profileLabel(item)}
@@ -354,19 +375,19 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-violet-100">
-            八字姓名 / 档案名
+            {t(lang, "natal.profile.name")}
             <input
               value={profileName}
               onChange={(event) => setProfileName(event.target.value)}
               className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm text-violet-50 outline-none transition focus:border-violet-200/50"
-              placeholder="例如：本人命盘 / 父亲 / 案例 A"
+              placeholder={t(lang, "natal.profile.name.placeholder")}
             />
           </label>
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-[0.9fr_1.1fr]">
           <label className="flex flex-col gap-1 text-xs text-violet-100">
-            城市分组
+            {t(lang, "natal.profile.group")}
             <select
               className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm"
               value={cityGroup}
@@ -383,7 +404,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
                 }
               }}
             >
-              <option value="">未选择城市</option>
+              <option value="">{t(lang, "natal.profile.city.none")}</option>
               {cityGroups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.label}
@@ -393,16 +414,16 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </label>
 
           <label className="flex flex-col gap-1 text-xs text-violet-100">
-            所属城市
+            {t(lang, "natal.profile.city")}
             <select
               className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm"
               value={cityName}
               onChange={(event) => setCityName(event.target.value)}
               disabled={!cityGroup}
             >
-              <option value="">{cityGroup ? "请选择城市" : "请先选择城市分组"}</option>
+              <option value="">{cityGroup ? t(lang, "natal.profile.city.pick") : t(lang, "natal.profile.city.pick_group")}</option>
               {cityName && !visibleCities.some((item) => item.name === cityName) ? (
-                <option value={cityName}>{cityName}（当前档案保留值）</option>
+                <option value={cityName}>{`${cityName}${t(lang, "natal.profile.city.keep")}`}</option>
               ) : null}
               {visibleCities.map((item) => (
                 <option key={item.code || item.name} value={item.name}>
@@ -414,9 +435,13 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
         </div>
 
         <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-violet-200/70">
-          <span>{profilesLoading ? "档案加载中..." : `当前档案数：${profiles.length}`}</span>
-          <span>{selectedProfileId == null ? "当前状态：未保存草稿" : `当前档案 ID：${selectedProfileId}`}</span>
-          <span>{cityName ? `当前城市：${cityName}` : "当前城市：未设置"}</span>
+          <span>{profilesLoading ? t(lang, "natal.profile.loading") : t(lang, "natal.profile.count", { count: profiles.length })}</span>
+          <span>
+            {selectedProfileId == null
+              ? t(lang, "natal.profile.state.draft")
+              : t(lang, "natal.profile.state.id", { id: selectedProfileId })}
+          </span>
+          <span>{cityName ? t(lang, "natal.profile.state.city", { city: cityName }) : t(lang, "natal.profile.state.city.none")}</span>
         </div>
 
         {profileError ? (
@@ -429,18 +454,18 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          历法
+          {t(lang, "natal.field.calendar")}
           <select
             className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm"
             value={calendarType}
             onChange={(e) => setCalendarType(e.target.value as "solar" | "lunar")}
           >
-            <option value="solar">阳历</option>
-            <option value="lunar">阴历</option>
+            <option value="solar">{t(lang, "natal.calendar.solar")}</option>
+            <option value="lunar">{t(lang, "natal.calendar.lunar")}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          年
+          {t(lang, "natal.field.year")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={year} onChange={(e) => setYear(e.target.value)}>
             {years.map((item) => (
               <option key={item} value={item}>
@@ -450,7 +475,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          月
+          {t(lang, "natal.field.month")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
             {months.map((item) => (
               <option key={item} value={item}>
@@ -460,7 +485,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          日
+          {t(lang, "natal.field.day")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={day} onChange={(e) => setDay(e.target.value)}>
             {days.map((item) => (
               <option key={item} value={item}>
@@ -470,7 +495,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          时
+          {t(lang, "natal.field.hour")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={hour} onChange={(e) => setHour(e.target.value)}>
             {hours.map((item) => (
               <option key={item} value={item}>
@@ -480,7 +505,7 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          分
+          {t(lang, "natal.field.minute")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={minute} onChange={(e) => setMinute(e.target.value)}>
             {minutes.map((item) => (
               <option key={item} value={item}>
@@ -490,23 +515,25 @@ export function V17_NatalInput({ onStart }: { onStart: (value: V17NatalInputValu
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
-          性别
+          {t(lang, "natal.field.gender")}
           <select className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm" value={gender} onChange={(e) => setGender(e.target.value as "male" | "female")}>
-            <option value="female">女</option>
-            <option value="male">男</option>
+            <option value="female">{t(lang, "natal.gender.female")}</option>
+            <option value="male">{t(lang, "natal.gender.male")}</option>
           </select>
         </label>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-violet-200/75">当前出生时刻：{birthTimeLocal.replace("T", " ").slice(0, 16)}</p>
+        <p className="text-xs text-violet-200/75">
+          {t(lang, "natal.current_birth", { value: birthTimeLocal.replace("T", " ").slice(0, 16) })}
+        </p>
         <button
           type="button"
           onClick={start}
           className="inline-flex items-center gap-2 rounded-md bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400"
         >
           <Play className="h-4 w-4" />
-          启动测算
+          {t(lang, "natal.start")}
         </button>
       </div>
     </section>

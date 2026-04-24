@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
+import { t, type AppLanguage } from "@/lib/i18n";
 
 const NDJSON_TAIL_CAP = 120;
 
@@ -260,18 +261,20 @@ export function deriveV17LlmLifecycle({
   latestNarrator,
   hasAuditPreview,
   streamState,
+  language = "zh",
 }: {
   running: boolean;
   llmMeta: Record<string, unknown>;
   latestNarrator?: { payload?: Record<string, unknown> } | undefined;
   hasAuditPreview: boolean;
   streamState: V17StreamState;
+  language?: AppLanguage;
 }): {
   phase: V17LlmLifecyclePhase;
   statusText: string;
   detailText: string;
 } {
-  const modelLabel = String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎").trim() || "叙事引擎";
+  const modelLabel = String(llmMeta.model || llmMeta.llm_endpoint_host || t(language, "verdict.model")).trim() || t(language, "verdict.model");
   const engineState = String(llmMeta.engine_state || "").trim();
   const rhythmBeat = String(llmMeta["叙事节拍"] || "").trim();
   const streamPartial = llmMeta.stream_partial === true;
@@ -292,7 +295,7 @@ export function deriveV17LlmLifecycle({
     heartbeatStep.startsWith("SNAPSHOT:llm_audit_preview");
 
   if (!running) {
-    return { phase: "idle", statusText: "待命", detailText: "尚未启动测算" };
+    return { phase: "idle", statusText: t(language, "verdict.status.idle"), detailText: t(language, "verdict.detail.idle") };
   }
   if (llmMeta.ok === false) {
     return {
@@ -304,49 +307,49 @@ export function deriveV17LlmLifecycle({
   if (hasFinalLlmMeta) {
     return {
       phase: "completed",
-      statusText: "已完成",
+      statusText: t(language, "verdict.status.completed"),
       detailText: `${modelLabel} · ${Number(llmMeta.elapsed_ms || 0)} ms`,
     };
   }
   if (streamState.closed) {
     return {
       phase: "closed_without_output",
-      statusText: "流已结束，但未产出终局正文",
+      statusText: t(language, "verdict.status.closed_without_output"),
       detailText: heartbeatStep || streamState.closeReason,
     };
   }
   if (engineState === "awaiting_first_token" || rhythmBeat === "已联通") {
     return {
       phase: "awaiting_first_token",
-      statusText: "已联通，等待首字",
+      statusText: t(language, "verdict.status.awaiting_first_token"),
       detailText: heartbeatStep || engineState || rhythmBeat,
     };
   }
   if (engineState === "stream_stalled") {
     return {
       phase: "streaming",
-      statusText: "流式停顿中",
+      statusText: t(language, "verdict.status.stream_stalled"),
       detailText: heartbeatStep || engineState,
     };
   }
   if (streamPartial && hasNarratorText) {
     return {
       phase: "streaming",
-      statusText: "流式生成中",
+      statusText: t(language, "verdict.status.streaming"),
       detailText: heartbeatStep || engineState || "NARRATOR:streaming_partial",
     };
   }
   if (waitingUpstream) {
     return {
       phase: "awaiting_first_token",
-      statusText: "已派发，等待首字",
+      statusText: t(language, "verdict.status.awaiting_dispatched"),
       detailText: heartbeatStep || engineState || "AUDIT_PREVIEW",
     };
   }
   return {
     phase: "connecting",
-    statusText: `正在连接 ${modelLabel}…`,
-    detailText: "尚未收到上游握手信号",
+    statusText: t(language, "verdict.status.connecting", { model: modelLabel }),
+    detailText: t(language, "verdict.detail.connecting"),
   };
 }
 

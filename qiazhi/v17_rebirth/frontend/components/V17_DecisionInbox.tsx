@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 
+import { t, type AppLanguage } from "@/lib/i18n";
 import type { Decision } from "@/hooks/useOracleSession";
 import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
 import { V17PlanRoutingClaim, compactRoutingLabel } from "@/components/V17_PlanRoutingClaim";
@@ -910,15 +911,18 @@ export function V17_DecisionInbox({
   frames,
   adoptedIds,
   focusedDecisionId,
+  viewMode = "full",
   locked = false,
   lockMessage = "",
   onAdopted,
   onAdoptedBatch,
   onPlanAction,
+  lang = "zh",
 }: {
   frames: Frame[];
   adoptedIds: string[];
   focusedDecisionId?: string;
+  viewMode?: "full" | "manual_only";
   locked?: boolean;
   lockMessage?: string;
   onAdopted?: (decision: Decision & { status: "APPROVED" | "REJECTED" }) => void | Promise<void>;
@@ -931,8 +935,10 @@ export function V17_DecisionInbox({
     plan: PlanQueueItem,
     status: "APPROVED" | "REJECTED" | "ESCALATE" | "WITHDRAW",
   ) => void | Promise<void>;
+  lang?: AppLanguage;
 }) {
   const [busyId, setBusyId] = useState<string>("");
+  const manualOnly = viewMode === "manual_only";
 
   const latestSnapshot = useMemo(() => 
     [...(frames || [])].reverse().find(f => 
@@ -1403,7 +1409,11 @@ export function V17_DecisionInbox({
     setBusyId("");
   }
 
-  if (!decisions.length && !autoInboxRows.length && !autoDecisionBatches.length && !planQueue.length) return null;
+  if (manualOnly) {
+    if (!decisions.length) return null;
+  } else if (!decisions.length && !autoInboxRows.length && !autoDecisionBatches.length && !planQueue.length) {
+    return null;
+  }
 
   return (
     <section className="rounded-2xl border border-violet-700/40 bg-[linear-gradient(180deg,rgba(8,4,20,0.92),rgba(10,10,16,0.82))] p-3 shadow-[0_16px_50px_rgba(76,29,149,0.18)]">
@@ -1411,12 +1421,12 @@ export function V17_DecisionInbox({
         <div>
           <p className="text-xs tracking-[0.24em] text-violet-200/85">DECISION INBOX</p>
           <p className="mt-1 text-[11px] text-zinc-500">
-            手动入口 / 自动回执
-            {latestSnapshot?.payload?.decision_inbox_contract ? ` · ${latestSnapshot.payload.decision_inbox_contract}` : ""}
+            {manualOnly ? t(lang, "decision.manual.header") : "手动入口 / 自动回执"}
+            {!manualOnly && latestSnapshot?.payload?.decision_inbox_contract ? ` · ${latestSnapshot.payload.decision_inbox_contract}` : ""}
           </p>
         </div>
 
-        {conflictGraphSummary.conflict_count ? (
+        {!manualOnly && conflictGraphSummary.conflict_count ? (
           <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/60 p-3">
             <p className="text-[11px] tracking-[0.22em] text-zinc-300">CLAIM CONFLICT GRAPH</p>
             <div className="mt-2 grid gap-2 text-[10px]">
@@ -1456,12 +1466,16 @@ export function V17_DecisionInbox({
           <span className="rounded-full border border-violet-500/25 bg-violet-900/20 px-2 py-1 text-violet-100">
             手动 {decisions.length}
           </span>
-          <span className="rounded-full border border-amber-500/20 bg-amber-950/30 px-2 py-1 text-amber-100">
-            自动 {autoInboxRows.length + autoDecisionBatches.length}
-          </span>
-          <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
-            Plan {planQueue.length}
-          </span>
+          {!manualOnly ? (
+            <>
+              <span className="rounded-full border border-amber-500/20 bg-amber-950/30 px-2 py-1 text-amber-100">
+                自动 {autoInboxRows.length + autoDecisionBatches.length}
+              </span>
+              <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
+                Plan {planQueue.length}
+              </span>
+            </>
+          ) : null}
           {focusedDecisionId ? (
             <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-2 py-1 text-emerald-200">
               聚焦 {focusedDecisionId}
@@ -1470,7 +1484,7 @@ export function V17_DecisionInbox({
         </div>
       </div>
 
-      {activePlanQueue.length ? (
+      {!manualOnly && activePlanQueue.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/25 bg-zinc-950/60 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划队列</p>
@@ -1616,7 +1630,7 @@ export function V17_DecisionInbox({
         </div>
       ) : null}
 
-      {decisionTraceIndex.items.length ? (
+      {!manualOnly && decisionTraceIndex.items.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/50 p-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划溯源</p>
@@ -1676,7 +1690,7 @@ export function V17_DecisionInbox({
         </div>
       ) : null}
 
-      {failedPlanQueue.length ? (
+      {!manualOnly && failedPlanQueue.length ? (
         <div className="mb-3 rounded-xl border border-rose-500/20 bg-rose-950/10 p-2">
           <p className="text-[10px] text-rose-200/85">最近异常计划（最近 4 条）</p>
           <div className="mt-2 space-y-1">
@@ -1698,7 +1712,7 @@ export function V17_DecisionInbox({
         </div>
       ) : null}
 
-        {terminalPlanQueue.length ? (
+        {!manualOnly && terminalPlanQueue.length ? (
           <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/45 p-2">
             <p className="text-[10px] text-zinc-400">最近已完成计划（最近 4 条）</p>
             <div className="mt-2 space-y-1">
@@ -1720,8 +1734,9 @@ export function V17_DecisionInbox({
           </div>
         ) : null}
 
-        <div className="mb-3 grid gap-2 lg:grid-cols-2">
-        {(["manual", "system", "llm", "auto"] as BucketKind[]).map((kind) => {
+        {!manualOnly ? (
+          <div className="mb-3 grid gap-2 lg:grid-cols-2">
+            {(["manual", "system", "llm", "auto"] as BucketKind[]).map((kind) => {
           const rule = arbitrationRule(kind);
           return (
             <div key={kind} className={`rounded-xl border px-3 py-2 text-[10px] leading-relaxed ${rule.accent}`}>
@@ -1730,10 +1745,11 @@ export function V17_DecisionInbox({
               <p className="mt-1 text-zinc-400">{rule.detail}</p>
             </div>
           );
-        })}
-      </div>
+            })}
+          </div>
+        ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-[1.25fr_0.95fr]">
+      <div className={`grid gap-3 ${manualOnly ? "" : "lg:grid-cols-[1.25fr_0.95fr]"}`}>
         <V17_ManualDecisionSection
           decisionsLength={decisions.length}
           groupedManualDecisionBatches={groupedManualDecisionBatches}
@@ -1763,31 +1779,33 @@ export function V17_DecisionInbox({
           groupGodRingBiasSummary={groupGodRingBiasSummary}
         />
 
-        <V17_AutoDecisionSection
-          passiveLlmContextCount={passiveLlmContextCount}
-          passiveLlmContextRows={passiveLlmContextRows}
-          autoDecisionBatches={autoDecisionBatches}
-          autoInboxRows={autoInboxRows}
-          focusedDecisionId={focusedDecisionId}
-          statusBadge={statusBadge}
-          bucketAccessLabel={bucketAccessLabel}
-          bucketReason={bucketReason}
-          impactText={impactText}
-          patternProfileSummary={patternProfileSummary}
-          patternConfidenceChip={patternConfidenceChip}
-          routingRationale={routingRationale}
-          fluxRationale={fluxRationale}
-          groupFluxRationale={groupFluxRationale}
-          compactRoutingLines={compactRoutingLines}
-          arbitrationTrace={arbitrationTrace}
-          decisionFocusPreview={decisionFocusPreview}
-          decisionReasonTags={decisionReasonTags}
-          llmPolicyLabel={llmPolicyLabel}
-          llmStateLabel={llmStateLabel}
-          promptPreview={promptPreview}
-          godRingBiasSummary={godRingBiasSummary}
-          groupGodRingBiasSummary={groupGodRingBiasSummary}
-        />
+        {!manualOnly ? (
+          <V17_AutoDecisionSection
+            passiveLlmContextCount={passiveLlmContextCount}
+            passiveLlmContextRows={passiveLlmContextRows}
+            autoDecisionBatches={autoDecisionBatches}
+            autoInboxRows={autoInboxRows}
+            focusedDecisionId={focusedDecisionId}
+            statusBadge={statusBadge}
+            bucketAccessLabel={bucketAccessLabel}
+            bucketReason={bucketReason}
+            impactText={impactText}
+            patternProfileSummary={patternProfileSummary}
+            patternConfidenceChip={patternConfidenceChip}
+            routingRationale={routingRationale}
+            fluxRationale={fluxRationale}
+            groupFluxRationale={groupFluxRationale}
+            compactRoutingLines={compactRoutingLines}
+            arbitrationTrace={arbitrationTrace}
+            decisionFocusPreview={decisionFocusPreview}
+            decisionReasonTags={decisionReasonTags}
+            llmPolicyLabel={llmPolicyLabel}
+            llmStateLabel={llmStateLabel}
+            promptPreview={promptPreview}
+            godRingBiasSummary={godRingBiasSummary}
+            groupGodRingBiasSummary={groupGodRingBiasSummary}
+          />
+        ) : null}
       </div>
       {lockMessage ? (
         <p className={`mt-2 text-[11px] ${locked ? "text-amber-200/85" : "text-rose-200/85"}`}>

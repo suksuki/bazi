@@ -196,6 +196,7 @@ async def stream_v17(
     gender: Optional[str] = "male",
     flow_year: Optional[int] = None,
     v17_origin: Optional[str] = None,
+    ui_lang: Optional[str] = "zh",
 ) -> Union[StreamingResponse, JSONResponse]:
     if not _sovereignty_v17(v17_origin):
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
@@ -204,6 +205,7 @@ async def stream_v17(
         gender=gender,
         flow_year=flow_year,
     )
+    physics_payload["ui_lang"] = str(ui_lang or "zh").strip() or "zh"
     return StreamingResponse(
         _stream_frames(will_proxy=will_proxy, payload=physics_payload),
         media_type="application/x-ndjson",
@@ -221,6 +223,7 @@ async def stream_v17_post(
     birth_time: Optional[str] = None,
     gender: Optional[str] = "male",
     flow_year: Optional[int] = None,
+    ui_lang: Optional[str] = "zh",
 ) -> Union[StreamingResponse, JSONResponse]:
     session_id = str((payload or {}).get("session_id", "")).strip() or "default"
     current_physics = await get_state_backend().get_physics(session_id)
@@ -246,6 +249,9 @@ async def stream_v17_post(
             if _k in _PHYS_SSOT_KEYS:
                 continue
             merged_payload[_k] = _v
+    merged_payload["ui_lang"] = str(
+        (payload or {}).get("ui_lang") or ui_lang or merged_payload.get("ui_lang") or "zh"
+    ).strip() or "zh"
     if not _sovereignty_v17(str(merged_payload.get("v17_origin", "")) if isinstance(merged_payload, dict) else None):
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
     if _WILL_IMPACT_BUFFER:

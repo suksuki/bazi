@@ -1,5 +1,7 @@
 "use client";
 
+import { t, translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
+
 type Pillar = { stem: string; branch: string };
 
 type FourPillars = {
@@ -108,6 +110,13 @@ type ClimateModifierLayer = {
   ten_god_stability?: Record<string, number>;
   yongshen_priority_delta?: Record<string, number>;
   pattern_survival_delta?: Record<string, number>;
+};
+
+type PatternLeaderInfo = {
+  name?: string;
+  confidence?: number;
+  statusLabel?: string;
+  scope?: string;
 };
 
 type LedgerEntry = {
@@ -515,58 +524,6 @@ function climateSourceRows(value: unknown): Array<{ scopeLabel: string; thermal:
     .slice(0, 4);
 }
 
-function fluxReasonTone(role: "use" | "taboo" | "tongguan", flux: number) {
-  if (role === "taboo") {
-    return flux <= -0.2 ? "text-rose-200/90" : "text-amber-200/90";
-  }
-  if (role === "tongguan") {
-    return flux >= 0.18 ? "text-cyan-200/90" : "text-zinc-300";
-  }
-  return flux >= 0.2 ? "text-emerald-200/90" : "text-zinc-300";
-}
-
-function buildFluxReason(
-  role: "use" | "taboo" | "tongguan",
-  god: string,
-  raw?: Record<string, unknown>,
-): { god: string; text: string; tone: string } | null {
-  if (!god) return null;
-  const row = raw || {};
-  const resolvedFlux = num(row.resolved_utility_flux ?? row.resolved_utility);
-  const tension = num(row.flux_tension_load);
-  const reinforce = num(row.flux_reinforce_load);
-  const outSupport = num(row.flux_out_support);
-  const outResist = num(row.flux_out_resist);
-  const outNet = num(row.flux_out_net);
-  const contest = num(row.contest_pressure);
-  const metrics = [resolvedFlux, tension, reinforce, outSupport, outResist, outNet, contest];
-  if (!metrics.some((value) => Math.abs(value) > 0.001)) return null;
-
-  let tail = `流后净效 ${signed(resolvedFlux)}，张力 ${tension.toFixed(2)}，放大 ${reinforce.toFixed(2)}。`;
-  if (role === "use") {
-    tail +=
-      outNet >= 0
-        ? ` 对外净支撑 ${signed(outNet)}，当前仍是可借力的受益点。`
-        : ` 虽有净支撑回落 ${signed(outNet)}，但仍在用侧观察区。`;
-  } else if (role === "taboo") {
-    tail +=
-      outResist >= outSupport
-        ? ` 对外压制 ${outResist.toFixed(2)} 强于支撑 ${outSupport.toFixed(2)}，更像耗损源。`
-        : ` 当前压制未完全占优，暂列为风险位。`;
-  } else {
-    tail +=
-      outSupport >= outResist
-        ? ` 对外传导 ${outSupport.toFixed(2)} 高于阻滞 ${outResist.toFixed(2)}，更适合作缓冲通道。`
-        : ` 传导仍受阻 ${outResist.toFixed(2)}，通关效率偏保守。`;
-  }
-
-  return {
-    god,
-    text: tail,
-    tone: fluxReasonTone(role, resolvedFlux),
-  };
-}
-
 function asEffectRow(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -584,6 +541,7 @@ export function V17_SixPillarsPanel({
   climateModifierLayer,
   climateTheme,
   xiangfaTheme,
+  patternLeader,
   projectionBridgeProtocol,
   relationFormationSummary,
   relationDynamicsSummary,
@@ -593,6 +551,7 @@ export function V17_SixPillarsPanel({
   selectedYear,
   onYearChange,
   detailMode = "core",
+  lang = "zh",
 }: {
   fourPillars?: FourPillars;
   /** 后端 lunar_python 大运（与所选流年对应） */
@@ -605,6 +564,7 @@ export function V17_SixPillarsPanel({
   climateModifierLayer?: ClimateModifierLayer;
   climateTheme?: ClimateThemeInfo;
   xiangfaTheme?: XiangfaThemeInfo;
+  patternLeader?: PatternLeaderInfo;
   projectionBridgeProtocol?: ProjectionBridgeProtocol;
   relationFormationSummary?: Array<Record<string, unknown>>;
   relationDynamicsSummary?: Array<Record<string, unknown>>;
@@ -614,7 +574,10 @@ export function V17_SixPillarsPanel({
   selectedYear: number;
   onYearChange: (year: number) => void;
   detailMode?: "core" | "auxiliary";
+  lang?: AppLanguage;
 }) {
+  const ui = (zh: string, en: string, ko: string) =>
+    lang === "en" ? en : lang === "ko" ? ko : zh;
   const birth = parseBirthTimeLocal(birthTimeISO);
 
   const yearP = parsePillar(fourPillars?.year);
@@ -624,6 +587,7 @@ export function V17_SixPillarsPanel({
   const luckP = parsePillar(luckPillarFromServer);
   const flowP = parsePillar(flowPillarFromServer);
   const authorityMode = String(godRingInfo?.display_mode || "").trim() === "authority";
+  const patternLeaderRow = patternLeader || {};
   const relationRows = relationFormationRows(relationFormationSummary);
   const relationDynamics = relationDynamicsRows(relationDynamicsSummary);
   const useGods = Array.isArray(godRingInfo?.god_of_use)
@@ -650,21 +614,6 @@ export function V17_SixPillarsPanel({
         .filter(Boolean)
     : [];
   const effectScores = godRingInfo?.effect_scores || {};
-  const useFluxReasons = authorityMode
-    ? useGods
-        .map((god) => buildFluxReason("use", god, asEffectRow(effectScores[god])))
-        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
-    : [];
-  const tabooFluxReasons = authorityMode
-    ? tabooGods
-        .map((god) => buildFluxReason("taboo", god, asEffectRow(effectScores[god])))
-        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
-    : [];
-  const tongguanFluxReasons = authorityMode
-    ? tongguanGods
-        .map((god) => buildFluxReason("tongguan", god, asEffectRow(effectScores[god])))
-        .filter(Boolean) as Array<{ god: string; text: string; tone: string }>
-    : [];
   const decompositionRows = topDecompositionRows(tenGodDecomposition);
   const climateThemeRow = climateTheme || {};
   const xiangfaThemeRow = xiangfaTheme || {};
@@ -703,6 +652,60 @@ export function V17_SixPillarsPanel({
   const dayMasterStem = dayP.stem && dayP.stem !== "—" ? dayP.stem : "";
   const showCoreSections = detailMode === "core";
   const showAuxiliarySections = detailMode === "auxiliary";
+  const buildAuthorityMetricChips = (god?: string) => {
+    const row = asEffectRow(god ? effectScores[god] : undefined);
+    if (!row) return [] as Array<{ label: string; tone: string }>;
+    const resolvedFlux = num(row.resolved_utility_flux ?? row.resolved_utility);
+    const tension = num(row.flux_tension_load);
+    const reinforce = num(row.flux_reinforce_load);
+    const chips: Array<{ label: string; tone: string }> = [];
+    if (Math.abs(resolvedFlux) > 0.001) {
+      chips.push({
+        label: `净效 ${signed(resolvedFlux)}`,
+        tone: resolvedFlux >= 0 ? "text-emerald-100 border-emerald-400/20 bg-emerald-950/35" : "text-rose-100 border-rose-400/20 bg-rose-950/35",
+      });
+    }
+    if (Math.abs(tension) > 0.001) {
+      chips.push({
+        label: `张力 ${tension.toFixed(2)}`,
+        tone: "text-amber-100 border-amber-400/20 bg-amber-950/35",
+      });
+    }
+    if (Math.abs(reinforce) > 0.001) {
+      chips.push({
+        label: `放大 ${reinforce.toFixed(2)}`,
+        tone: "text-cyan-100 border-cyan-400/20 bg-cyan-950/35",
+      });
+    }
+    return chips.slice(0, 3);
+  };
+  const useMetricChips = authorityMode ? buildAuthorityMetricChips(useGods[0]) : [];
+  const tabooMetricChips = authorityMode ? buildAuthorityMetricChips(tabooGods[0]) : [];
+  const tongguanMetricChips = authorityMode ? buildAuthorityMetricChips(tongguanGods[0]) : [];
+  const patternMetricChips = patternLeaderRow.name
+    ? [
+        {
+          label: `置信 ${Math.round(Number(patternLeaderRow.confidence || 0) * 100)}%`,
+          tone: "text-amber-100 border-amber-400/20 bg-amber-950/35",
+        },
+        ...(patternLeaderRow.statusLabel
+          ? [
+              {
+                label: String(patternLeaderRow.statusLabel),
+                tone: "text-zinc-100 border-zinc-700 bg-zinc-950/70",
+              },
+            ]
+          : []),
+        ...(patternLeaderRow.scope
+          ? [
+              {
+                label: String(patternLeaderRow.scope),
+                tone: "text-zinc-200 border-zinc-700 bg-black/20",
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   const rows: Array<{ label: string; pillar: Pillar }> = [
     { label: "年柱", pillar: yearP },
@@ -719,27 +722,33 @@ export function V17_SixPillarsPanel({
     birth != null
       ? `${birth.getFullYear()}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")} ${String(birth.getHours()).padStart(2, "0")}:${String(birth.getMinutes()).padStart(2, "0")}`
       : "—";
-  const genderLabel = gender === "male" ? "男" : gender === "female" ? "女" : "—";
-  const calendarLabel = calendarType === "lunar" ? "阴历" : calendarType === "solar" ? "阳历" : "—";
+  const genderLabel =
+    gender === "male" ? t(lang, "natal.gender.male") : gender === "female" ? t(lang, "natal.gender.female") : "—";
+  const calendarLabel =
+    calendarType === "lunar"
+      ? t(lang, "natal.calendar.lunar")
+      : calendarType === "solar"
+        ? t(lang, "natal.calendar.solar")
+        : "—";
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-900/20 via-zinc-950/90 to-zinc-900/80 p-4 shadow-[0_0_24px_rgba(124,58,237,0.25)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/70 to-transparent" />
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-600/30 bg-zinc-900/60 px-2.5 py-2 text-[11px] text-zinc-300">
-        <span className="text-zinc-500">出生 </span>
+        <span className="text-zinc-500">{t(lang, "six_pillars.birth")} </span>
         <span className="text-violet-100">{birthLabel}</span>
         <span className="mx-1.5 text-zinc-600">·</span>
-        <span className="text-zinc-500">性别 </span>
+        <span className="text-zinc-500">{t(lang, "six_pillars.gender")} </span>
         <span className="text-violet-100">{genderLabel}</span>
         <span className="mx-1.5 text-zinc-600">·</span>
-        <span className="text-zinc-500">历法 </span>
+        <span className="text-zinc-500">{t(lang, "six_pillars.calendar")} </span>
         <span className="text-violet-100">{calendarLabel}</span>
       </div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold tracking-wide text-violet-100">命局六柱</p>
-        <p className="text-[11px] text-violet-200/80">仅展示 NDJSON 快照中的服务端结果</p>
+        <p className="text-sm font-semibold tracking-wide text-violet-100">{t(lang, "six_pillars.title")}</p>
+        <p className="text-[11px] text-violet-200/80">{t(lang, "six_pillars.subtitle")}</p>
         <label className="inline-flex items-center gap-2 text-xs text-zinc-300">
-          <span>年份</span>
+          <span>{t(lang, "six_pillars.year")}</span>
           <select
             value={selectedYear}
             onChange={(e) => onYearChange(Number(e.target.value))}
@@ -754,143 +763,210 @@ export function V17_SixPillarsPanel({
         </label>
       </div>
       {showCoreSections ? (
-      <div className="mb-3 overflow-hidden rounded-2xl border border-violet-400/30 bg-[linear-gradient(135deg,rgba(76,29,149,0.28),rgba(17,24,39,0.88))]">
+      <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+        {rows.map((row) => {
+          const stemMeta = STEM_META[row.pillar.stem] || { element: "土", yinYang: "阳" as const };
+          const branchMeta = BRANCH_META[row.pillar.branch] || { element: "土", yinYang: "阳" as const };
+          const stemColor = colorForElement(stemMeta.element, stemMeta.yinYang);
+          const branchColor = colorForElement(branchMeta.element, branchMeta.yinYang);
+          const stemGod =
+            row.label === "日柱" && row.pillar.stem === dayMasterStem
+              ? "日主"
+              : tenGodFromStems(dayMasterStem, row.pillar.stem) || "十神";
+          const branchMainStem = BRANCH_MAIN_HIDDEN_STEM[row.pillar.branch] || "";
+          const branchGod = tenGodFromStems(dayMasterStem, branchMainStem) || "十神";
+          const branchLayers = branchLayerGods(dayMasterStem, row.pillar.branch);
+          const branchLayerText = branchLayers.map((layer) => `${layer.level}${translateTerm(lang, layer.god)}`).join(" · ");
+          return (
+            <div
+              key={row.label}
+              className="group rounded-xl border border-zinc-700/35 bg-zinc-900/45 p-2.5 text-center transition duration-150 hover:border-violet-400/70"
+            >
+              <p className="mb-2 text-[10px] font-semibold tracking-wide text-zinc-300">{translateTerm(lang, row.label)}</p>
+              <div className="flex flex-col items-stretch gap-1.5">
+                <div className={`rounded-md px-2 py-1.5 text-center text-lg font-bold ${stemColor}`}>
+                  <span className="block text-[10px] font-semibold tracking-wide text-zinc-200/85">{translateTerm(lang, stemGod)}</span>
+                  <span className="leading-none">{row.pillar.stem || "—"}</span>
+                </div>
+                <div className={`rounded-md px-2 py-1.5 text-center text-lg font-bold ${branchColor}`}>
+                  <span className="block text-[10px] font-semibold tracking-wide text-zinc-200/85">{translateTerm(lang, branchGod)}</span>
+                  <span className="leading-none">{row.pillar.branch || "—"}</span>
+                  {branchLayers.length > 1 ? (
+                    <span className="mt-1 block break-words text-[9px] font-medium tracking-wide text-zinc-200/80">
+                      {branchLayerText}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-zinc-400">
+                {row.pillar.stem && row.pillar.branch ? (
+                  <>
+                    <span className="font-medium text-zinc-200">{row.pillar.stem + row.pillar.branch}</span>
+                    <span className="ml-1 text-zinc-500">·</span>
+                    <span className="ml-1 text-violet-200">
+                      {translateTerm(lang, stemGod)} / {branchLayers.length > 1 ? branchLayerText : translateTerm(lang, branchGod)}
+                    </span>
+                  </>
+                ) : (
+                  <span>{translateTerm(lang, "待重算")}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 rounded-lg border border-violet-500/30 bg-zinc-950/55 p-2 text-xs text-zinc-400">
+        <p className="text-violet-200/90">{t(lang, "six_pillars.tip")}</p>
+        <p className="mt-1 text-zinc-400">{t(lang, "six_pillars.tip.body")}</p>
+      </div>
+      </>
+      ) : null}
+      {showCoreSections ? (
+      <div className="mb-3 overflow-hidden rounded-2xl border border-violet-400/30 bg-[linear-gradient(135deg,rgba(76,29,149,0.22),rgba(17,24,39,0.88))]">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-violet-400/15 px-3 py-2">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-violet-200/70">God Ring Authority</p>
-            <p className="mt-1 text-sm font-semibold text-violet-50">体用中枢</p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-[10px]">
-            <span className={`rounded-full border px-3 py-1 ${authorityMode ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" : "border-amber-400/25 bg-amber-500/10 text-amber-200"}`}>
-              {authorityMode ? "权威体用已生效" : "体用裁决待确认"}
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-violet-50">{t(lang, "god_ring.title")}</p>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] ${authorityMode ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" : "border-amber-400/25 bg-amber-500/10 text-amber-200"}`}>
+              {authorityMode ? t(lang, "god_ring.active") : t(lang, "god_ring.pending")}
             </span>
-            <span className="rounded-full border border-violet-300/20 bg-black/20 px-3 py-1 text-violet-100/80">
-              模式 {mode || (authorityMode ? "authority" : "pending")}
+          </div>
+          <div className="flex flex-wrap gap-1.5 text-[10px]">
+            <span className="rounded-full border border-violet-300/20 bg-black/20 px-2 py-0.5 text-violet-100/80">
+              {t(lang, "god_ring.mode", { mode: mode || (authorityMode ? "authority" : "pending") })}
+            </span>
+            <span className="rounded-full border border-violet-300/20 bg-black/20 px-2 py-0.5 text-violet-100/80">
+              {t(lang, "god_ring.confidence", { percent: Math.round(confidence * 100) })}
             </span>
             {authorityMode ? (
-              <>
-                <span className="rounded-full border border-violet-300/20 bg-black/20 px-3 py-1 text-violet-100/80">
-                  置信 {Math.round(confidence * 100)}%
-                </span>
-                <span className="rounded-full border border-violet-300/20 bg-black/20 px-3 py-1 text-violet-100/80">
-                  路径 {pathCount}
-                </span>
-              </>
+              <span className="rounded-full border border-violet-300/20 bg-black/20 px-2 py-0.5 text-violet-100/80">
+                {t(lang, "god_ring.path", { count: pathCount })}
+              </span>
             ) : null}
           </div>
         </div>
-        <div className="grid gap-3 px-3 py-3 md:grid-cols-3">
-          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200/80">用神</p>
-            <div className="mt-2 flex min-h-[54px] flex-wrap gap-2">
+        <div className="grid gap-2 px-3 py-2.5 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">{t(lang, "god_ring.use")}</p>
+            <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
               {authorityMode && useGods.length ? (
                 useGods.map((god) => (
-                  <span key={god} className="rounded-full border border-emerald-300/25 bg-emerald-950/35 px-3 py-1.5 text-sm font-semibold text-emerald-100">
-                    {god}
+                  <span key={god} className="rounded-full border border-emerald-300/25 bg-emerald-950/35 px-2 py-0.5 text-[11px] font-semibold text-emerald-100">
+                    {translateTerm(lang, god)}
                   </span>
                 ))
               ) : (
-                <span className="text-xs leading-6 text-zinc-300">
-                  当前尚未完成权威体用裁决，用神暂不显示。
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+                  {translateTerm(lang, "等待裁决")}
                 </span>
               )}
             </div>
-            {authorityMode && useFluxReasons.length ? (
-              <div className="mt-3 space-y-1.5">
-                {useFluxReasons.slice(0, 2).map((reason) => (
-                  <p key={`use_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
-                    {reason.god}：{reason.text}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {useMetricChips.slice(0, 3).map((chip) => (
+                <span key={`use_chip_${chip.label}`} className={`rounded-full border px-1.5 py-0.5 text-[9px] ${chip.tone}`}>
+                  {chip.label}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-rose-200/80">忌神</p>
-            <div className="mt-2 flex min-h-[54px] flex-wrap gap-2">
+          <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-200/80">{t(lang, "god_ring.taboo")}</p>
+            <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
               {authorityMode && tabooGods.length ? (
                 tabooGods.map((god) => (
-                  <span key={god} className="rounded-full border border-rose-300/25 bg-rose-950/35 px-3 py-1.5 text-sm font-semibold text-rose-100">
-                    {god}
+                  <span key={god} className="rounded-full border border-rose-300/25 bg-rose-950/35 px-2 py-0.5 text-[11px] font-semibold text-rose-100">
+                    {translateTerm(lang, god)}
                   </span>
                 ))
               ) : (
-                <span className="text-xs leading-6 text-zinc-300">
-                  当前尚未完成权威体用裁决，忌神暂不显示。
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+                  {translateTerm(lang, "等待裁决")}
                 </span>
               )}
             </div>
-            {authorityMode && tabooFluxReasons.length ? (
-              <div className="mt-3 space-y-1.5">
-                {tabooFluxReasons.slice(0, 2).map((reason) => (
-                  <p key={`taboo_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
-                    {reason.god}：{reason.text}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {tabooMetricChips.slice(0, 3).map((chip) => (
+                <span key={`taboo_chip_${chip.label}`} className={`rounded-full border px-1.5 py-0.5 text-[9px] ${chip.tone}`}>
+                  {chip.label}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">通关神</p>
-            <div className="mt-2 flex min-h-[54px] flex-wrap gap-2">
+          <div className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">{t(lang, "god_ring.tongguan")}</p>
+            <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
               {authorityMode && tongguanGods.length ? (
                 tongguanGods.map((god) => (
-                  <span key={god} className="rounded-full border border-cyan-300/25 bg-cyan-950/35 px-3 py-1.5 text-sm font-semibold text-cyan-100">
-                    {god}
+                  <span key={god} className="rounded-full border border-cyan-300/25 bg-cyan-950/35 px-2 py-0.5 text-[11px] font-semibold text-cyan-100">
+                    {translateTerm(lang, god)}
                   </span>
                 ))
               ) : (
-                <span className="text-xs leading-6 text-zinc-300">
-                  当前尚未完成体用权威裁决，通关神暂不显示。
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+                  {authorityMode ? translateTerm(lang, "未形成通关链") : translateTerm(lang, "等待裁决")}
                 </span>
               )}
             </div>
-            {authorityMode && tongguanFluxReasons.length ? (
-              <div className="mt-3 space-y-1.5">
-                {tongguanFluxReasons.slice(0, 2).map((reason) => (
-                  <p key={`tongguan_flux_${reason.god}`} className={`text-[11px] leading-5 ${reason.tone}`}>
-                    {reason.god}：{reason.text}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {tongguanMetricChips.slice(0, 3).map((chip) => (
+                <span key={`tongguan_chip_${chip.label}`} className={`rounded-full border px-1.5 py-0.5 text-[9px] ${chip.tone}`}>
+                  {chip.label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">{t(lang, "god_ring.pattern")}</p>
+            <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
+              {patternLeaderRow.name ? (
+                <span className="rounded-full border border-amber-300/25 bg-amber-950/35 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
+                  {translateTerm(lang, patternLeaderRow.name)}
+                </span>
+              ) : (
+                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+                  {translateTerm(lang, "等待稳定格局")}
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {patternMetricChips.slice(0, 3).map((chip) => (
+                <span key={`pattern_chip_${chip.label}`} className={`rounded-full border px-1.5 py-0.5 text-[9px] ${chip.tone}`}>
+                  {chip.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="border-t border-violet-400/15 px-3 py-2 text-xs text-zinc-300">
-          {authorityMode ? (
-            <p>
-              体用裁决已由核心求解器接管，以下六柱与运流将围绕这份权威结果继续做功解释。
-            </p>
-          ) : (
-            <p>
-              当前页面不再把“主导/弱势十神”冒充成用神/忌神；只有权威裁决完成后，才会在这里亮起。
-            </p>
-          )}
-          {authorityMode && dualRoleCandidates.length ? (
-            <p className="mt-1 text-fuchsia-200/90">双刃神：{dualRoleCandidates.slice(0, 2).join(" · ")}</p>
-          ) : null}
-        </div>
+        {authorityMode && dualRoleCandidates.length ? (
+          <div className="border-t border-violet-400/15 px-3 py-2">
+            <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-950/25 px-2 py-0.5 text-[10px] text-fuchsia-100">
+              {t(lang, "god_ring.dual_role", {
+                value: translateTermList(lang, dualRoleCandidates.slice(0, 2)),
+              })}
+            </span>
+          </div>
+        ) : null}
       </div>
       ) : null}
       {showAuxiliarySections ? (
       <div className="mb-3 rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-300/80">Climate Theme</p>
-            <p className="mt-1 text-sm text-emerald-50">调候专题</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-300/80">{ui("调候专题", "Climate Theme", "조후 테마")}</p>
+            <p className="mt-1 text-sm text-emerald-50">{ui("调候专题", "Climate Topic", "조후 주제")}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px]">
             <span className="rounded-full border border-emerald-400/20 bg-emerald-950/35 px-3 py-1 text-emerald-100">
-              {String(climateThemeRow.state || climateFieldRow.state || "未定")}
+              {translateTerm(lang, String(climateThemeRow.state || climateFieldRow.state || "未定"))}
             </span>
             <span className="rounded-full border border-amber-400/20 bg-amber-950/35 px-3 py-1 text-amber-100">
-              寒热 {signed(num(climateThemeRow.thermal_index ?? climateFieldRow.thermal_index))}
+              {ui("寒热", "Thermal", "한열")} {signed(num(climateThemeRow.thermal_index ?? climateFieldRow.thermal_index))}
             </span>
             <span className="rounded-full border border-cyan-400/20 bg-cyan-950/35 px-3 py-1 text-cyan-100">
-              燥湿 {signed(num(climateThemeRow.moisture_index ?? climateFieldRow.moisture_index))}
+              {ui("燥湿", "Moisture", "조습")} {signed(num(climateThemeRow.moisture_index ?? climateFieldRow.moisture_index))}
             </span>
             <span className="rounded-full border border-rose-400/20 bg-rose-950/35 px-3 py-1 text-rose-100">
-              张力 {num(climateThemeRow.climate_tension ?? climateFieldRow.climate_tension).toFixed(2)}
+              {ui("张力", "Tension", "장력")} {num(climateThemeRow.climate_tension ?? climateFieldRow.climate_tension).toFixed(2)}
             </span>
           </div>
         </div>
@@ -901,86 +977,86 @@ export function V17_SixPillarsPanel({
         ) : null}
         <div className="mt-3 grid gap-2 xl:grid-cols-2">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
-            <p className="text-[11px] font-semibold text-emerald-100">十神调候适配</p>
+            <p className="text-[11px] font-semibold text-emerald-100">{ui("十神调候适配", "Ten-God Climate Fit", "십신 조후 적합도")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {climateFavored.slice(0, 3).map((god) => (
                 <span key={`climate_favored_${god}`} className="rounded-full border border-emerald-400/20 bg-emerald-950/35 px-3 py-1 text-[10px] text-emerald-100">
-                  顺势 {god}
+                  {ui("顺势", "Favored", "순응")} {translateTerm(lang, god)}
                 </span>
               ))}
               {climateStrained.slice(0, 3).map((god) => (
                 <span key={`climate_strained_${god}`} className="rounded-full border border-rose-400/20 bg-rose-950/35 px-3 py-1 text-[10px] text-rose-100">
-                  承压 {god}
+                  {ui("承压", "Strained", "압박")} {translateTerm(lang, god)}
                 </span>
               ))}
             </div>
             <div className="mt-3 grid gap-2 text-[10px] text-zinc-300 md:grid-cols-3">
               <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-2">
-                <div className="text-zinc-400">效率修正</div>
+                <div className="text-zinc-400">{ui("效率修正", "Efficiency Delta", "효율 보정")}</div>
                 {climateEfficiency.length ? (
                   <div className="mt-1 space-y-1">
                     {climateEfficiency.slice(0, 3).map((row) => (
                       <div key={`climate_eff_${row.god}`} className="font-mono text-cyan-100">
-                        {row.god} {signed(row.delta)}
+                        {translateTerm(lang, row.god)} {signed(row.delta)}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-1 text-zinc-500">暂无</div>
+                  <div className="mt-1 text-zinc-500">{ui("暂无", "None", "없음")}</div>
                 )}
               </div>
               <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-2">
-                <div className="text-zinc-400">稳定修正</div>
+                <div className="text-zinc-400">{ui("稳定修正", "Stability Delta", "안정성 보정")}</div>
                 {climateStability.length ? (
                   <div className="mt-1 space-y-1">
                     {climateStability.slice(0, 3).map((row) => (
                       <div key={`climate_stab_${row.god}`} className="font-mono text-amber-100">
-                        {row.god} {signed(row.delta)}
+                        {translateTerm(lang, row.god)} {signed(row.delta)}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-1 text-zinc-500">暂无</div>
+                  <div className="mt-1 text-zinc-500">{ui("暂无", "None", "없음")}</div>
                 )}
               </div>
               <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-2">
-                <div className="text-zinc-400">用神优先级</div>
+                <div className="text-zinc-400">{ui("用神优先级", "Use Priority", "용신 우선순위")}</div>
                 {climatePriority.length ? (
                   <div className="mt-1 space-y-1">
                     {climatePriority.slice(0, 3).map((row) => (
                       <div key={`climate_pri_${row.god}`} className="font-mono text-emerald-100">
-                        {row.god} {signed(row.delta)}
+                        {translateTerm(lang, row.god)} {signed(row.delta)}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="mt-1 text-zinc-500">暂无</div>
+                  <div className="mt-1 text-zinc-500">{ui("暂无", "None", "없음")}</div>
                 )}
               </div>
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
-            <p className="text-[11px] font-semibold text-emerald-100">来源与格局存续</p>
+            <p className="text-[11px] font-semibold text-emerald-100">{ui("来源与格局存续", "Source & Pattern Survival", "출처와 격국 존속")}</p>
             <div className="mt-2 space-y-2">
               {climateFocus.length ? (
                 <div className="grid gap-2 text-[10px] text-zinc-300 sm:grid-cols-2">
                   {climateFocus.map((row) => (
                     <div key={`climate_scope_${row.scopeLabel}`} className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-2">
-                      <div className="text-zinc-400">{row.scopeLabel}</div>
-                      <div className="mt-1 font-mono text-cyan-100">热 {signed(row.thermal)}</div>
-                      <div className="font-mono text-emerald-100">湿 {signed(row.moisture)}</div>
+                      <div className="text-zinc-400">{translateTerm(lang, row.scopeLabel)}</div>
+                      <div className="mt-1 font-mono text-cyan-100">{ui("热", "Heat", "열")} {signed(row.thermal)}</div>
+                      <div className="font-mono text-emerald-100">{ui("湿", "Moisture", "습")} {signed(row.moisture)}</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-[10px] text-zinc-500">暂无主要来源焦点。</p>
+                <p className="text-[10px] text-zinc-500">{ui("暂无主要来源焦点。", "No dominant source focus yet.", "주요 출처 초점이 아직 없습니다.")}</p>
               )}
               {climatePattern.length ? (
                 <div className="space-y-1.5">
                   {climatePattern.map((row) => (
                     <p key={`climate_pattern_${row.label}`} className="text-[11px] leading-5 text-zinc-300">
-                      {row.label}
-                      <span className="ml-2 text-emerald-200/90">{row.bucket || "存续观察"}</span>
+                      {translateTerm(lang, row.label)}
+                      <span className="ml-2 text-emerald-200/90">{translateTerm(lang, row.bucket || "存续观察")}</span>
                       <span className="ml-2 font-mono text-amber-100">{signed(row.delta)}</span>
                     </p>
                   ))}
@@ -999,7 +1075,11 @@ export function V17_SixPillarsPanel({
           </div>
         </div>
         <p className="mt-2 text-[11px] leading-5 text-zinc-400">
-          调候专题只解释 climate field，不直接改写 L0 原始总量；当前主要影响十神效率、稳定性、用神优先级与格局存续。
+          {ui(
+            "调候专题只解释 climate field，不直接改写 L0 原始总量；当前主要影响十神效率、稳定性、用神优先级与格局存续。",
+            "The climate topic only interprets the climate field. It does not rewrite the raw L0 totals and currently affects ten-god efficiency, stability, use-priority, and pattern survival.",
+            "조후 주제는 climate field 만 해석합니다. L0 원시 총량은 다시 쓰지 않으며, 현재 십신 효율·안정성·용신 우선순위·격국 존속에만 영향을 줍니다.",
+          )}
         </p>
       </div>
       ) : null}
@@ -1007,18 +1087,18 @@ export function V17_SixPillarsPanel({
       <div className="mb-3 rounded-xl border border-fuchsia-500/25 bg-fuchsia-950/10 p-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-fuchsia-300/80">Xiangfa Theme</p>
-            <p className="mt-1 text-sm text-fuchsia-50">象法专题</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-fuchsia-300/80">{ui("象法专题", "Xiangfa Theme", "상법 테마")}</p>
+            <p className="mt-1 text-sm text-fuchsia-50">{ui("象法专题", "Xiangfa Topic", "상법 주제")}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px]">
             <span className="rounded-full border border-fuchsia-400/20 bg-fuchsia-950/35 px-3 py-1 text-fuchsia-100">
-              语义专题
+              {ui("语义专题", "Semantic topic", "의미 주제")}
             </span>
             <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-              不入 bias
+              {ui("不入 bias", "No bias", "bias 미포함")}
             </span>
             <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-              不改能量
+              {ui("不改能量", "No energy rewrite", "에너지 미수정")}
             </span>
           </div>
         </div>
@@ -1029,7 +1109,7 @@ export function V17_SixPillarsPanel({
         ) : null}
         <div className="mt-3 grid gap-2 xl:grid-cols-2">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
-            <p className="text-[11px] font-semibold text-fuchsia-100">语义映射 / 事件框架</p>
+            <p className="text-[11px] font-semibold text-fuchsia-100">{ui("语义映射 / 事件框架", "Semantic Mapping / Event Framing", "의미 매핑 / 사건 프레이밍")}</p>
             <div className="mt-2 space-y-2 text-[11px] leading-5 text-zinc-300">
               {xiangfaSemantic.length ? (
                 <div>
@@ -1048,12 +1128,12 @@ export function V17_SixPillarsPanel({
                 </div>
               ) : null}
               {!xiangfaSemantic.length && !xiangfaFraming.length ? (
-                <p className="text-[10px] text-zinc-500">当前尚未形成稳定的象法语义映射。</p>
+                <p className="text-[10px] text-zinc-500">{ui("当前尚未形成稳定的象法语义映射。", "No stable Xiangfa semantic mapping has formed yet.", "안정적인 상법 의미 매핑이 아직 형성되지 않았습니다.")}</p>
               ) : null}
             </div>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
-            <p className="text-[11px] font-semibold text-fuchsia-100">证据与叙事提示</p>
+            <p className="text-[11px] font-semibold text-fuchsia-100">{ui("证据与叙事提示", "Evidence & Narrative Hints", "증거와 서사 힌트")}</p>
             <div className="mt-2 space-y-2 text-[11px] leading-5 text-zinc-300">
               {xiangfaEvidence.length ? (
                 <div>
@@ -1073,17 +1153,21 @@ export function V17_SixPillarsPanel({
               ) : null}
               {xiangfaSourceTopics.length ? (
                 <div className="rounded border border-fuchsia-400/10 bg-fuchsia-950/15 px-2 py-2 text-[10px] text-zinc-300">
-                  来源：{xiangfaSourceTopics.slice(0, 4).join(" · ")}
+                  {ui("来源", "Sources", "출처")}：{translateTermList(lang, xiangfaSourceTopics.slice(0, 4), " · ")}
                 </div>
               ) : null}
               {!xiangfaEvidence.length && !xiangfaHints.length ? (
-                <p className="text-[10px] text-zinc-500">当前尚未形成稳定的象法证据串。</p>
+                <p className="text-[10px] text-zinc-500">{ui("当前尚未形成稳定的象法证据串。", "No stable Xiangfa evidence chain has formed yet.", "안정적인 상법 증거 연쇄가 아직 형성되지 않았습니다.")}</p>
               ) : null}
             </div>
           </div>
         </div>
         <p className="mt-2 text-[11px] leading-5 text-zinc-400">
-          象法专题当前只做 semantic mapping、evidence、narrative hint、event framing，不进入 bias，不覆盖 authority，也不改写底层物理。
+          {ui(
+            "象法专题当前只做 semantic mapping、evidence、narrative hint、event framing，不进入 bias，不覆盖 authority，也不改写底层物理。",
+            "The Xiangfa topic currently produces only semantic mapping, evidence, narrative hints, and event framing. It does not enter bias, override authority, or rewrite the physical base.",
+            "상법 주제는 현재 semantic mapping, evidence, narrative hint, event framing 만 제공합니다. bias 에 들어가지 않고 authority 를 덮지 않으며 물리 기반도 다시 쓰지 않습니다.",
+          )}
         </p>
       </div>
       ) : null}
@@ -1091,24 +1175,24 @@ export function V17_SixPillarsPanel({
       <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/80">Projection Bridge</p>
-            <p className="mt-1 text-sm text-cyan-50">根透协议</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/80">{ui("根透协议", "Projection Bridge", "근투 프로토콜")}</p>
+            <p className="mt-1 text-sm text-cyan-50">{ui("根透协议", "Projection Bridge", "근투 프로토콜")}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-[10px]">
             <span className="rounded-full border border-cyan-400/20 bg-cyan-950/35 px-3 py-1 text-cyan-100">
-              通根 {bridgeDirectionLabel(bridgeProtocol.tonggen_direction)}
+              {ui("通根", "Rooting", "통근")} {translateTerm(lang, bridgeDirectionLabel(bridgeProtocol.tonggen_direction))}
             </span>
             <span className="rounded-full border border-violet-400/20 bg-violet-950/35 px-3 py-1 text-violet-100">
-              透干 {bridgeDirectionLabel(bridgeProtocol.tougan_direction)}
+              {ui("透干", "Exposure", "투간")} {translateTerm(lang, bridgeDirectionLabel(bridgeProtocol.tougan_direction))}
             </span>
             <span className="rounded-full border border-emerald-400/20 bg-emerald-950/35 px-3 py-1 text-emerald-100">
-              同五行先 {bridgeProtocol.same_element_first ? "ON" : "OFF"}
+              {ui("同五行先", "Same element first", "동오행 우선")} {bridgeProtocol.same_element_first ? "ON" : "OFF"}
             </span>
             <span className="rounded-full border border-amber-400/20 bg-amber-950/35 px-3 py-1 text-amber-100">
-              阴阳后判 {bridgeProtocol.polarity_second ? "ON" : "OFF"}
+              {ui("阴阳后判", "Polarity second", "음양 후판")} {bridgeProtocol.polarity_second ? "ON" : "OFF"}
             </span>
             <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-              {bridgeProtocol.single_pass_coupling ? "单次耦合" : "未声明"}
+              {bridgeProtocol.single_pass_coupling ? ui("单次耦合", "Single-pass coupling", "단회 결합") : ui("未声明", "Undeclared", "미선언")}
             </span>
             <span className="rounded-full border border-rose-400/20 bg-rose-950/35 px-3 py-1 text-rose-100">
               {bridgeProtocol.recursive_feedback ? "允许递归" : "禁止递归"}
@@ -1221,66 +1305,6 @@ export function V17_SixPillarsPanel({
             ))}
           </div>
         </div>
-      ) : null}
-      {showCoreSections ? (
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {rows.map((row) => {
-          const stemMeta = STEM_META[row.pillar.stem] || { element: "土", yinYang: "阳" as const };
-          const branchMeta = BRANCH_META[row.pillar.branch] || { element: "土", yinYang: "阳" as const };
-          const stemColor = colorForElement(stemMeta.element, stemMeta.yinYang);
-          const branchColor = colorForElement(branchMeta.element, branchMeta.yinYang);
-          const stemGod =
-            row.label === "日柱" && row.pillar.stem === dayMasterStem
-              ? "日主"
-              : tenGodFromStems(dayMasterStem, row.pillar.stem) || "十神";
-          const branchMainStem = BRANCH_MAIN_HIDDEN_STEM[row.pillar.branch] || "";
-          const branchGod = tenGodFromStems(dayMasterStem, branchMainStem) || "十神";
-          const branchLayers = branchLayerGods(dayMasterStem, row.pillar.branch);
-          const branchLayerText = branchLayers.map((layer) => `${layer.level}${layer.god}`).join(" · ");
-          return (
-            <div
-              key={row.label}
-              className="group rounded-xl border border-zinc-700/35 bg-zinc-900/45 p-2.5 text-center transition duration-150 hover:border-violet-400/70"
-            >
-              <p className="mb-2 text-[10px] font-semibold tracking-wide text-zinc-300">{row.label}</p>
-              <div className="flex flex-col items-stretch gap-1.5">
-                <div className={`rounded-md px-2 py-1.5 text-center text-lg font-bold ${stemColor}`}>
-                  <span className="block text-[10px] font-semibold tracking-wide text-zinc-200/85">{stemGod}</span>
-                  <span className="leading-none">{row.pillar.stem || "—"}</span>
-                </div>
-                <div className={`rounded-md px-2 py-1.5 text-center text-lg font-bold ${branchColor}`}>
-                  <span className="block text-[10px] font-semibold tracking-wide text-zinc-200/85">{branchGod}</span>
-                  <span className="leading-none">{row.pillar.branch || "—"}</span>
-                  {branchLayers.length > 1 ? (
-                    <span className="mt-1 block break-words text-[9px] font-medium tracking-wide text-zinc-200/80">
-                      {branchLayerText}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <div className="mt-2 text-[10px] text-zinc-400">
-                {row.pillar.stem && row.pillar.branch ? (
-                  <>
-                    <span className="font-medium text-zinc-200">{row.pillar.stem + row.pillar.branch}</span>
-                    <span className="ml-1 text-zinc-500">·</span>
-                    <span className="ml-1 text-violet-200">
-                      {stemGod} / {branchLayers.length > 1 ? branchLayerText : branchGod}
-                    </span>
-                  </>
-                ) : (
-                  <span>待重算</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      ) : null}
-      {showCoreSections ? (
-      <div className="mt-3 rounded-lg border border-violet-500/30 bg-zinc-950/55 p-2 text-xs text-zinc-400">
-        <p className="text-violet-200/90">提示</p>
-        <p className="mt-1 text-zinc-400">六柱在切换流年后会同步重算大运和流年柱，以保证命盘时态一致。</p>
-      </div>
       ) : null}
       {showAuxiliarySections && decompositionRows.length ? (
         <div className="mt-3 rounded-xl border border-violet-500/25 bg-zinc-950/60 p-3">

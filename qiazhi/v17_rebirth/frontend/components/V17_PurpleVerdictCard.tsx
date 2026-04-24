@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 
 import { mergeV17LlmMetaForUi } from "@/hooks/useV17WebStream";
+import { t, type AppLanguage } from "@/lib/i18n";
 
 type EvolutionFrame = {
   timestamp?: string;
@@ -75,6 +76,7 @@ export function V17_PurpleVerdictCard({
   llmStatusText,
   llmStatusDetail,
   llmLifecyclePhase,
+  lang = "zh",
 }: {
   frames: EvolutionFrame[];
   onToggleTrace?: () => void;
@@ -91,6 +93,7 @@ export function V17_PurpleVerdictCard({
     | "completed"
     | "failed"
     | "closed_without_output";
+  lang?: AppLanguage;
 }) {
   const ordered = [...(frames || [])];
   const llmAuditSnap = [...ordered].reverse().find(
@@ -141,7 +144,7 @@ export function V17_PurpleVerdictCard({
     rawFpt && typeof rawFpt === "object" ? (rawFpt as MergedFullPromptTrace) : undefined;
   const reconnecting = String(lm.engine_state || "") === "reconnecting";
   const errId = String(lm.error_id || "").trim();
-  const modelLabel = String(lm.model || "").trim() || "叙事引擎";
+  const modelLabel = String(lm.model || "").trim() || t(lang, "verdict.model");
   const waitingPhase =
     llmLifecyclePhase === "connecting" || llmLifecyclePhase === "awaiting_first_token";
   const streamingPhase = llmLifecyclePhase === "streaming";
@@ -168,7 +171,7 @@ export function V17_PurpleVerdictCard({
       />
       <div className="relative z-10 mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400">
         <span className="rounded-full border border-violet-500/25 bg-violet-950/20 px-2 py-1 text-violet-200">
-          八字断言 / Narrative Verdict
+          {t(lang, "verdict.title")}
         </span>
         <span className="rounded-full border border-zinc-700/80 bg-zinc-900/80 px-2 py-1 text-zinc-300">
           {modelLabel}
@@ -185,7 +188,10 @@ export function V17_PurpleVerdictCard({
       {renderText ? (
         <>
           {reconnecting ? (
-            <p className="mb-2 text-[11px] text-amber-300">[叙事引擎重连中]{errId ? ` ${errId}` : ""}</p>
+            <p className="mb-2 text-[11px] text-amber-300">
+              {t(lang, "verdict.reconnecting")}
+              {errId ? ` ${errId}` : ""}
+            </p>
           ) : null}
           <motion.p
             key={renderText}
@@ -209,20 +215,20 @@ export function V17_PurpleVerdictCard({
         <div className="relative z-10 mt-2 text-[10px] leading-relaxed text-violet-200/85">
           {waitingPhase ? (
             <>
-              <p>状态：{llmStatusText}</p>
+              <p>{t(lang, "verdict.status", { value: llmStatusText })}</p>
               <p className="font-mono text-violet-300/90">
-                耗时：{modelLabel} · {connectTickMs} ms
+                {t(lang, "verdict.elapsed", { model: modelLabel, ms: connectTickMs })}
               </p>
             </>
           ) : streamingPhase ? (
             <>
-              <p>状态：{llmStatusText}</p>
-              <p className="font-mono text-violet-300/90">链路：{llmStatusDetail}</p>
+              <p>{t(lang, "verdict.status", { value: llmStatusText })}</p>
+              <p className="font-mono text-violet-300/90">{t(lang, "verdict.link", { value: llmStatusDetail })}</p>
             </>
           ) : (
             <>
-              <p>状态：{llmStatusText}</p>
-              <p className="font-mono text-violet-300/90">链路：{llmStatusDetail}</p>
+              <p>{t(lang, "verdict.status", { value: llmStatusText })}</p>
+              <p className="font-mono text-violet-300/90">{t(lang, "verdict.link", { value: llmStatusDetail })}</p>
             </>
           )}
         </div>
@@ -232,24 +238,26 @@ export function V17_PurpleVerdictCard({
           type="button"
           onClick={() => setReasonOpen((v) => !v)}
           className="rounded-full border border-violet-400/40 bg-violet-900/40 px-2 py-0.5 text-xs text-violet-200 hover:bg-violet-800/50"
-          title="理：格局与插件事实碎屑（SNAPSHOT）"
+          title={t(lang, "verdict.reason.button.title")}
         >
-          理
+          {t(lang, "verdict.reason.button")}
         </button>
         <button
           type="button"
           onClick={() => onToggleTrace?.()}
           className="rounded-full border border-cyan-500/35 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-cyan-200/90 hover:bg-zinc-800/70"
-          title="因果链路面板"
+          title={t(lang, "verdict.trace.button.title")}
         >
-          溯
+          {t(lang, "verdict.trace.button")}
         </button>
       </div>
       {reasonOpen ? (
         <div className="relative z-20 mt-3 max-h-48 overflow-auto rounded-lg border border-violet-500/30 bg-zinc-950/90 p-2 text-left">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">理 · 因果碎屑</p>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
+            {t(lang, "verdict.reason.title")}
+          </p>
           {llmAuditSnap ? (
-            <p className="mb-2 text-[11px] text-emerald-200/90">引擎正在思考以下事实…（Prompt 已由 SNAPSHOT 审计帧解锁）</p>
+            <p className="mb-2 text-[11px] text-emerald-200/90">{t(lang, "verdict.reason.audit")}</p>
           ) : null}
           {reasonFacts.length ? (
             <ul className="space-y-1 text-[11px] leading-snug text-zinc-200">
@@ -260,7 +268,7 @@ export function V17_PurpleVerdictCard({
               ))}
             </ul>
           ) : (
-            <p className="text-[11px] text-zinc-500">尚无插件事实（等待 SNAPSHOT 一帧）。</p>
+            <p className="text-[11px] text-zinc-500">{t(lang, "verdict.reason.empty")}</p>
           )}
           {typeof lm.elapsed_ms === "number" ||
           lm.prompt_dead_audit_unlock === true ||
@@ -270,38 +278,42 @@ export function V17_PurpleVerdictCard({
           String(lm.llm_system_prompt || lm.llm_user_prompt || "").trim() ? (
             <div className="mt-3 space-y-2 border-t border-violet-500/25 pt-2">
               {lm.llm_audit_preview === true || Boolean(llmAuditSnap) ? (
-                <p className="mb-1 text-[10px] text-emerald-300/90">首帧审计（SNAPSHOT / llm_audit_preview）：LLM 调用前已下发 System/User。</p>
+                <p className="mb-1 text-[10px] text-emerald-300/90">{t(lang, "verdict.audit.snapshot")}</p>
               ) : lm.audit_preview ? (
-                <p className="mb-1 text-[10px] text-emerald-300/90">首帧审计（AUDIT_PREVIEW）：LLM 调用前已下发 System/User。</p>
+                <p className="mb-1 text-[10px] text-emerald-300/90">{t(lang, "verdict.audit.preview")}</p>
               ) : null}
               {fullPromptTrace ? (
                 <p className="text-[10px] text-amber-200/90">
-                  decision_anchor 已进入 System：{fullPromptTrace.decision_anchor_literal_in_system_role ? "是" : "否"}
+                  {t(lang, "verdict.audit.anchor", {
+                    value: fullPromptTrace.decision_anchor_literal_in_system_role
+                      ? t(lang, "common.yes")
+                      : t(lang, "common.no"),
+                  })}
                   {typeof fullPromptTrace.decision_anchor_len === "number"
-                    ? `（锚点长度 ${fullPromptTrace.decision_anchor_len}）`
+                    ? t(lang, "verdict.audit.anchor_len", { value: fullPromptTrace.decision_anchor_len })
                     : ""}
                 </p>
               ) : null}
               <details className="rounded border border-violet-600/30 bg-black/40 px-2 py-1 text-[11px] text-zinc-300">
-                <summary className="cursor-pointer select-none text-violet-200/95">[查看完整提示词 (Prompt)]</summary>
-                <p className="mt-1 text-[10px] uppercase tracking-wide text-violet-400/80">System</p>
+                <summary className="cursor-pointer select-none text-violet-200/95">{t(lang, "verdict.prompt.view")}</summary>
+                <p className="mt-1 text-[10px] uppercase tracking-wide text-violet-400/80">{t(lang, "verdict.prompt.system")}</p>
                 <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(fullPromptTrace?.system_role ?? lm.llm_system_prompt ?? "（未携带）")}
+                  {String(fullPromptTrace?.system_role ?? lm.llm_system_prompt ?? t(lang, "verdict.prompt.empty"))}
                 </pre>
-                <p className="mt-2 text-[10px] uppercase tracking-wide text-violet-400/80">User</p>
+                <p className="mt-2 text-[10px] uppercase tracking-wide text-violet-400/80">{t(lang, "verdict.prompt.user")}</p>
                 <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(fullPromptTrace?.user_role ?? lm.llm_user_prompt ?? "（未携带）")}
+                  {String(fullPromptTrace?.user_role ?? lm.llm_user_prompt ?? t(lang, "verdict.prompt.empty"))}
                 </pre>
               </details>
               <details className="rounded border border-violet-600/30 bg-black/40 px-2 py-1 text-[11px] text-zinc-300">
-                <summary className="cursor-pointer select-none text-violet-200/95">[查看原始回复 (Raw)]</summary>
-                <p className="mt-1 text-[10px] text-zinc-500">模型正文（未经叙事 Sanitizer）</p>
+                <summary className="cursor-pointer select-none text-violet-200/95">{t(lang, "verdict.raw.view")}</summary>
+                <p className="mt-1 text-[10px] text-zinc-500">{t(lang, "verdict.raw.reply")}</p>
                 <pre className="mt-0.5 max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(lm.llm_reply || "").trim() || "（空）"}
+                  {String(lm.llm_reply || "").trim() || t(lang, "verdict.raw.empty")}
                 </pre>
-                <p className="mt-2 text-[10px] text-zinc-500">上游 JSON / SSE 原始帧（截断存储）</p>
+                <p className="mt-2 text-[10px] text-zinc-500">{t(lang, "verdict.raw.payload")}</p>
                 <pre className="mt-0.5 max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[9px] text-zinc-400">
-                  {String(lm.llm_raw_response_json || "").trim() || "（无或未启用流式捕获）"}
+                  {String(lm.llm_raw_response_json || "").trim() || t(lang, "verdict.raw.payload_empty")}
                 </pre>
               </details>
             </div>

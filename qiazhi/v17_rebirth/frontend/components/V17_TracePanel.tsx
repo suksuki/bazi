@@ -1,5 +1,7 @@
 "use client";
 
+import { t, translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
+
 /**
  * V17.23 — V17_TracePanel
  *
@@ -11,6 +13,8 @@ interface TracePanelProps {
   collapsed: boolean;
   onToggle: () => void;
   surfaceMode?: "sidebar" | "tab";
+  contentMode?: "full" | "insight_only" | "debug_only";
+  showChrome?: boolean;
   focusedDecisionId?: string;
   llmMeta: Record<string, unknown>;
   llmLifecyclePhase:
@@ -40,6 +44,7 @@ interface TracePanelProps {
   streamEndpoint: string | null;
   streamBody: Record<string, unknown> | null;
   streamQuery: { will_proxy: string; birth_time: string; gender: string; flow_year: string };
+  lang?: AppLanguage;
   physicsSnapshot?: {
     payload?: {
       causal_anchor?: unknown;
@@ -209,6 +214,8 @@ export function V17_TracePanel({
   collapsed,
   onToggle,
   surfaceMode = "sidebar",
+  contentMode = "full",
+  showChrome = true,
   focusedDecisionId,
   llmMeta,
   llmLifecyclePhase,
@@ -232,7 +239,13 @@ export function V17_TracePanel({
   streamBody,
   streamQuery,
   physicsSnapshot,
+  lang = "zh",
 }: TracePanelProps) {
+  const ui = (zh: string, en: string, ko: string) =>
+    lang === "en" ? en : lang === "ko" ? ko : zh;
+  const compactInsightMode = contentMode === "insight_only";
+  const showInsightSections = contentMode !== "debug_only";
+  const showDebugSections = contentMode !== "insight_only";
   const physicsPayload = (physicsSnapshot?.payload ?? {}) as Record<string, unknown>;
   const auditPayload =
     llmAuditSnapshot && typeof llmAuditSnapshot === "object"
@@ -326,8 +339,8 @@ export function V17_TracePanel({
   const layerCards = [
     {
       key: "base",
-      title: "L0 Base",
-      subtitle: "冻结基线",
+      title: ui("L0 基线", "L0 Base", "L0 기준"),
+      subtitle: ui("冻结基线", "Frozen baseline", "고정 기준선"),
       rows: baseScores,
       accent: "text-zinc-200",
       border: "border-zinc-700/70",
@@ -335,8 +348,8 @@ export function V17_TracePanel({
     },
     {
       key: "runtime",
-      title: "L1 Runtime",
-      subtitle: "客观运行态",
+      title: ui("L1 运行态", "L1 Runtime", "L1 운행"),
+      subtitle: ui("客观运行态", "Objective runtime", "객관 운행 상태"),
       rows: deityScores.map((row) => ({ name: row.name, score: row.score })),
       accent: "text-cyan-200",
       border: "border-cyan-500/30",
@@ -344,8 +357,8 @@ export function V17_TracePanel({
     },
     {
       key: "narrative",
-      title: "L2 Narrative",
-      subtitle: "主观镜头",
+      title: ui("L2 叙事态", "L2 Narrative", "L2 서사"),
+      subtitle: ui("主观镜头", "Narrative lens", "서사 렌즈"),
       rows: narrativeScores,
       accent: "text-fuchsia-200",
       border: "border-fuchsia-500/30",
@@ -538,43 +551,53 @@ export function V17_TracePanel({
           : "sticky top-6 h-fit rounded-2xl border border-cyan-500/40 bg-[linear-gradient(180deg,rgba(10,18,24,0.96),rgba(9,14,19,0.88))] p-3 shadow-[0_22px_70px_rgba(8,145,178,0.16)]"
       }
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div>
-          <p className="text-xs tracking-[0.28em] text-cyan-200">SYSTEM OBSERVATORY</p>
-          <p className="mt-1 text-[11px] text-zinc-500">元数据 / 重算链路 / 决策与 LLM 观测</p>
+      {showChrome ? (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs tracking-[0.28em] text-cyan-200">
+              {contentMode === "debug_only" ? "BACKEND OBSERVATORY" : "SYSTEM OBSERVATORY"}
+            </p>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              {contentMode === "debug_only"
+                ? "后台链路 / Prompt / LLM / payload 调试观测"
+                : "元数据 / 十神账本 / 决策与 LLM 观测"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="rounded-full border border-cyan-400/35 bg-cyan-950/50 px-3 py-1 text-[10px] text-cyan-200 transition hover:bg-cyan-900/70"
+          >
+            {surfaceMode === "tab" ? "返回" : "收起"}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="rounded-full border border-cyan-400/35 bg-cyan-950/50 px-3 py-1 text-[10px] text-cyan-200 transition hover:bg-cyan-900/70"
-        >
-          {surfaceMode === "tab" ? "返回" : "收起"}
-        </button>
-      </div>
-      {focusedDecisionId ? (
+      ) : null}
+      {showChrome && focusedDecisionId ? (
         <div className="mb-3 rounded-xl border border-emerald-500/20 bg-emerald-950/15 px-3 py-2 text-[10px] text-emerald-200">
           当前聚焦决策：{focusedDecisionId}
         </div>
       ) : null}
 
+      {showInsightSections ? (
+        <>
       <div className="space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <p className="text-[11px] text-cyan-300">八字元数据</p>
-        <div className="space-y-1 text-[11px] text-zinc-200">
-          <p>张力：{Number(physicsSnapshot?.payload?.physics_tension || 0).toFixed(2)}</p>
-          <p>六柱：{pillarText || "—"}</p>
+            <p className="text-[11px] text-cyan-300">{ui("八字元数据", "BaZi Metadata", "사주 메타데이터")}</p>
+            <div className="space-y-1 text-[11px] text-zinc-200">
+          <p>{ui("张力", "Tension", "장력")}：{Number(physicsSnapshot?.payload?.physics_tension || 0).toFixed(2)}</p>
+          <p>{ui("六柱", "Six pillars", "육주")}：{pillarText || "—"}</p>
           <p>
-            运势：
+            {ui("运势", "Luck / Flow", "운세")}：
             {String(physicsSnapshot?.payload?.luck_pillar || "—")} / {String(physicsSnapshot?.payload?.flow_pillar || "—")}
           </p>
-          <p>流年锚年：{String(physicsSnapshot?.payload?.flow_year || "—")}</p>
-          <p>十神主轴：{tenGods.length ? tenGods.join(" / ") : "—"}</p>
-          <p>总能量指数：{Number(physicsSnapshot?.payload?.total_energy_index || 0).toFixed(2)}</p>
+          <p>{ui("流年锚年", "Flow year anchor", "세운 기준연")}：{String(physicsSnapshot?.payload?.flow_year || "—")}</p>
+          <p>{ui("十神主轴", "Ten-god axis", "십신 주축")}：{tenGods.length ? translateTermList(lang, tenGods) : "—"}</p>
+          <p>{ui("总能量指数", "Total energy index", "총 에너지 지수")}：{Number(physicsSnapshot?.payload?.total_energy_index || 0).toFixed(2)}</p>
         </div>
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Three-Layer Energy / 三层能量</p>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">{ui("三层能量", "Three-Layer Energy", "삼층 에너지")}</p>
             <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-0.5 text-[9px] tracking-[0.2em] text-cyan-200">
-              主图: Runtime
+              {ui("主图: 运行态", "Primary: Runtime", "주 도표: Runtime")}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -587,40 +610,43 @@ export function V17_TracePanel({
                   <p className="mt-1 text-[10px] text-zinc-500">{layer.subtitle}</p>
                   <p className="mt-2 font-mono text-[11px] text-zinc-100">{total.toFixed(2)}</p>
                   <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">
-                    {leads.length ? leads.join(" / ") : "暂无样本"}
+                    {leads.length ? leads.map((lead) => {
+                      const [name, score] = lead.split(" ");
+                      return `${translateTerm(lang, name)} ${score}`;
+                    }).join(" / ") : ui("暂无样本", "No samples yet", "샘플 없음")}
                   </p>
                 </div>
               );
             })}
           </div>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Runtime Overview / 运行总览</p>
+          <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">{ui("运行总览", "Runtime Overview", "운행 개요")}</p>
           {runtimeTopRows.length ? (
             <div className="space-y-2">
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-lg border border-cyan-500/15 bg-cyan-950/20 p-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">当前运行总分</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">{ui("当前运行总分", "Current runtime total", "현재 운행 총점")}</p>
                   <p className="mt-2 font-mono text-lg text-cyan-100">{runtimeTotal.toFixed(2)}</p>
-                  <p className="mt-1 text-[10px] text-zinc-500">L1 Runtime 总量</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("L1 运行态总量", "L1 runtime total", "L1 운행 총량")}</p>
                 </div>
                 <div className="rounded-lg border border-zinc-700/40 bg-zinc-900/80 p-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-300">基线总分</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-300">{ui("基线总分", "Baseline total", "기준선 총점")}</p>
                   <p className="mt-2 font-mono text-lg text-zinc-100">{baseTotal.toFixed(2)}</p>
-                  <p className="mt-1 text-[10px] text-zinc-500">L0 Base 冻结基线</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("L0 冻结基线", "L0 frozen baseline", "L0 고정 기준선")}</p>
                 </div>
                 <div className="rounded-lg border border-amber-500/15 bg-amber-950/20 p-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-amber-300">势能占比</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-amber-300">{ui("势能占比", "Momentum share", "세력 비중")}</p>
                   <p className="mt-2 font-mono text-lg text-amber-100">{momentumShare.toFixed(1)}%</p>
-                  <p className="mt-1 text-[10px] text-zinc-500">势能 / 运行总分</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("势能 / 运行总分", "Momentum / runtime total", "세력 / 운행 총점")}</p>
                 </div>
               </div>
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="rounded-lg border border-fuchsia-500/15 bg-fuchsia-950/20 p-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">叙事总分</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">{ui("叙事总分", "Narrative total", "서사 총점")}</p>
                   <p className="mt-2 font-mono text-lg text-fuchsia-100">{narrativeTotal.toFixed(2)}</p>
-                  <p className="mt-1 text-[10px] text-zinc-500">L2 Narrative 总量</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("L2 叙事总量", "L2 narrative total", "L2 서사 총량")}</p>
                 </div>
                 <div className="rounded-lg border border-emerald-500/15 bg-emerald-950/20 p-2">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">运行偏移</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">{ui("运行偏移", "Runtime drift", "운행 편차")}</p>
                   <p className="mt-2 font-mono text-lg text-emerald-100">
                     {(runtimeTotal - baseTotal >= 0 ? "+" : "") + (runtimeTotal - baseTotal).toFixed(2)}
                   </p>
@@ -632,7 +658,7 @@ export function V17_TracePanel({
                 <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
                   {runtimeTopRows.map((row) => (
                     <div key={row.name} className="flex items-center justify-between gap-2 rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                      <span className="text-zinc-100">{row.name}</span>
+                      <span className="text-zinc-100">{translateTerm(lang, row.name)}</span>
                       <span className="font-mono text-cyan-200">{row.score.toFixed(2)}</span>
                     </div>
                   ))}
@@ -642,51 +668,55 @@ export function V17_TracePanel({
                 <p className="text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">Source Totals</p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-zinc-300">
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    显化 <span className="ml-1 font-mono text-fuchsia-100">{decompositionSummary.manifest.toFixed(2)}</span>
+                    {ui("显化", "Manifest", "현출")} <span className="ml-1 font-mono text-fuchsia-100">{decompositionSummary.manifest.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    根气 <span className="ml-1 font-mono text-emerald-100">{decompositionSummary.root.toFixed(2)}</span>
+                    {ui("根气", "Root", "근기")} <span className="ml-1 font-mono text-emerald-100">{decompositionSummary.root.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    势能 <span className="ml-1 font-mono text-amber-100">{decompositionSummary.momentum.toFixed(2)}</span>
+                    {ui("势能", "Momentum", "세력")} <span className="ml-1 font-mono text-amber-100">{decompositionSummary.momentum.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    潜藏 <span className="ml-1 font-mono text-zinc-100">{decompositionSummary.hidden.toFixed(2)}</span>
+                    {ui("潜藏", "Hidden", "잠장")} <span className="ml-1 font-mono text-zinc-100">{decompositionSummary.hidden.toFixed(2)}</span>
                   </div>
                 </div>
                 <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
-                  这块只展示当前运行态总览，不再保留旧版单步 `was` 条形图。
+                  {ui(
+                    "这里仅展示当前运行态总览，不再保留旧版单步 `was` 条形图。",
+                    "This block shows only the current runtime overview and no longer keeps the legacy step-by-step `was` bars.",
+                    "이 영역은 현재 운행 개요만 보여 주며, 예전 `was` 막대는 더 이상 유지하지 않습니다.",
+                  )}
                 </p>
               </div>
             </div>
           ) : (
-            <p className="text-[11px] text-zinc-500">暂无运行态总览</p>
+            <p className="text-[11px] text-zinc-500">{ui("暂无运行态总览", "No runtime overview yet", "운행 개요 없음")}</p>
           )}
           {decompositionRows.length ? (
             <div className="mt-3">
-              <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">L0 Decomposition / 十神来源分解</p>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">{ui("L0 十神来源分解", "L0 Decomposition", "L0 십신 분해")}</p>
               <div className="mt-2 space-y-1">
                 {decompositionRows.map((row) => (
                   <div key={row.name} className="rounded-lg border border-fuchsia-500/15 bg-zinc-900/80 px-2 py-1.5 text-[10px] text-zinc-300">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-fuchsia-100">{row.name}</span>
+                      <span className="text-fuchsia-100">{translateTerm(lang, row.name)}</span>
                       <span className="font-mono text-fuchsia-200">{row.total.toFixed(2)}</span>
                     </div>
                     <div className="mt-1 grid grid-cols-2 gap-1 lg:grid-cols-4">
-                      <span>显化 {row.manifest.toFixed(2)}</span>
-                      <span>根气 {row.root.toFixed(2)}</span>
-                      <span>势能 {row.momentum.toFixed(2)}</span>
-                      <span>潜藏 {row.hidden.toFixed(2)}</span>
+                      <span>{ui("显化", "Manifest", "현출")} {row.manifest.toFixed(2)}</span>
+                      <span>{ui("根气", "Root", "근기")} {row.root.toFixed(2)}</span>
+                      <span>{ui("势能", "Momentum", "세력")} {row.momentum.toFixed(2)}</span>
+                      <span>{ui("潜藏", "Hidden", "잠장")} {row.hidden.toFixed(2)}</span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-zinc-500">
-                      <span>月令势 {row.momentumMonthOrder.toFixed(2)}</span>
-                      <span>阶段势 {row.momentumStage.toFixed(2)}</span>
-                      <span>禄势 {row.momentumStageLu.toFixed(2)}</span>
-                      <span>刃势 {row.momentumStageBlade.toFixed(2)}</span>
-                      <span>长生势 {row.momentumStageGeneral.toFixed(2)}</span>
-                      <span>结构势 {row.momentumStructure.toFixed(2)}</span>
-                      <span>辅助势 {row.momentumAuxiliary.toFixed(2)}</span>
-                      <span>其他势 {row.momentumOther.toFixed(2)}</span>
+                      <span>{ui("月令势", "Month order", "월령세")} {row.momentumMonthOrder.toFixed(2)}</span>
+                      <span>{ui("阶段势", "Stage", "단계세")} {row.momentumStage.toFixed(2)}</span>
+                      <span>{ui("禄势", "Lu", "록세")} {row.momentumStageLu.toFixed(2)}</span>
+                      <span>{ui("刃势", "Blade", "인세")} {row.momentumStageBlade.toFixed(2)}</span>
+                      <span>{ui("长生势", "Growth", "장생세")} {row.momentumStageGeneral.toFixed(2)}</span>
+                      <span>{ui("结构势", "Structure", "구조세")} {row.momentumStructure.toFixed(2)}</span>
+                      <span>{ui("辅助势", "Auxiliary", "보조세")} {row.momentumAuxiliary.toFixed(2)}</span>
+                      <span>{ui("其他势", "Other", "기타세")} {row.momentumOther.toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
@@ -698,27 +728,69 @@ export function V17_TracePanel({
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">因果锚点</p>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] ${
-              causalAligned ? "bg-emerald-950/80 text-emerald-200" : "bg-amber-950/80 text-amber-200"
-            }`}
-          >
-            {causalAligned ? "已对齐" : "待核对"}
+          <p className="text-[11px] text-cyan-300">{ui("体用判定账本", "Body/Use Authority Ledger", "체용 판정 장부")}</p>
+          <span className="text-[10px] text-zinc-500">
+            {ui("用侧", "Use", "용측")} {judgementUseBias.length} / {ui("忌侧", "Taboo", "기측")} {judgementTabooBias.length} / {ui("来源", "Sources", "출처")} {judgementBiasEntries.length}
           </span>
         </div>
-        <div className="space-y-1 text-[11px] text-zinc-200">
-          <p>物理快照：{causalPhysicsAnchor}</p>
-          <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalPhysicsFp}</p>
-          <p>审计快照：{causalAuditAnchor}</p>
-          <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalAuditFp}</p>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-lg border border-emerald-500/15 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.2em] text-emerald-200">USE BIAS</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+              {judgementUseBias.length ? judgementUseBias.map((row) => (
+                <span key={`trace_judgement_use_${row.name}`} className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-emerald-200">
+                  {translateTerm(lang, row.name)} +{row.score.toFixed(2)}
+                </span>
+              )) : <span className="text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>}
+            </div>
+          </div>
+          <div className="rounded-lg border border-rose-500/15 bg-zinc-900/60 p-2">
+            <p className="text-[10px] tracking-[0.2em] text-rose-200">TABOO BIAS</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+              {judgementTabooBias.length ? judgementTabooBias.map((row) => (
+                <span key={`trace_judgement_taboo_${row.name}`} className="rounded-full border border-rose-500/20 bg-rose-950/20 px-2 py-1 text-rose-200">
+                  {translateTerm(lang, row.name)} +{row.score.toFixed(2)}
+                </span>
+              )) : <span className="text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          {judgementBiasEntries.length ? judgementBiasEntries.slice(0, 8).map((row, idx) => (
+            <div
+              key={`judgement_entry_${idx}_${row.sourceLabel}`}
+              className={`rounded-lg border bg-zinc-900/60 px-2 py-2 ${
+                row.decisionId && row.decisionId === focusedDecisionId
+                  ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                  : "border-cyan-500/10"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] tracking-[0.18em] text-cyan-200 uppercase">{row.sourceLabel}</p>
+                {row.decisionId ? <span className="font-mono text-[10px] text-zinc-400">{row.decisionId}</span> : null}
+              </div>
+              {row.reason ? <p className="mt-1 text-[10px] text-zinc-400">{row.reason}</p> : null}
+              {row.usePairs.length ? (
+                <p className="mt-1 text-[10px] text-emerald-200/90">
+                  {ui("用侧", "Use", "용측")}：{row.usePairs.map((item) => `${translateTerm(lang, item.name)} +${item.score.toFixed(2)}`).join(" · ")}
+                </p>
+              ) : null}
+              {row.tabooPairs.length ? (
+                <p className="mt-1 text-[10px] text-rose-200/90">
+                  {ui("忌侧", "Taboo", "기측")}：{row.tabooPairs.map((item) => `${translateTerm(lang, item.name)} +${item.score.toFixed(2)}`).join(" · ")}
+                </p>
+              ) : null}
+            </div>
+          )) : (
+            <p className="text-[11px] text-zinc-500">{ui("暂无体用判定账本；当前没有插件向体用裁决提供额外偏置。", "No body/use authority ledger is available yet; no plugin is currently adding extra bias into the authority judgement.", "체용 판정 장부가 아직 없습니다. 현재 체용 판정에 추가 편향을 제공하는 플러그인이 없습니다.")}</p>
+          )}
         </div>
       </div>
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">插件执行状态</p>
-          <span className="text-[10px] text-zinc-500">{pluginStatuses.length} 条</span>
+          <p className="text-[11px] text-cyan-300">{ui("插件执行状态", "Plugin Execution Status", "플러그인 실행 상태")}</p>
+          <span className="text-[10px] text-zinc-500">{pluginStatuses.length} {ui("条", "rows", "건")}</span>
         </div>
         <div className="space-y-1">
           {pluginStatuses.length ? pluginStatuses.slice(0, 10).map((row, idx) => {
@@ -742,7 +814,7 @@ export function V17_TracePanel({
                 <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
                   <p className="mt-1 text-[10px] text-zinc-500">
                     facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
-                    {String(row.target_god || "").trim() ? ` / target ${String(row.target_god)}` : ""}
+                    {String(row.target_god || "").trim() ? ` / ${ui("target", "target", "대상")} ${translateTerm(lang, String(row.target_god))}` : ""}
                   </p>
                   {(() => {
                     const claim = pluginClaimById[String(row.plugin_id || "").trim()];
@@ -750,8 +822,8 @@ export function V17_TracePanel({
                     const projectionText = compactProjection(claim.cluster_projection);
                     return (
                       <p className="mt-1 break-words text-[10px] text-zinc-400">
-                        主落点 {String(claim.target_god || row.target_god || "未定目标")}
-                        {Number(claim.projection_share || 0) > 0 ? ` · 占比 ${Math.round(Number(claim.projection_share || 0) * 100)}%` : ""}
+                        {ui("主落点", "Primary target", "주 낙점")} {translateTerm(lang, String(claim.target_god || row.target_god || "未定目标"))}
+                        {Number(claim.projection_share || 0) > 0 ? ` · ${ui("占比", "share", "비중")} ${Math.round(Number(claim.projection_share || 0) * 100)}%` : ""}
                         {projectionText ? ` · ${projectionText}` : ""}
                       </p>
                     );
@@ -759,11 +831,141 @@ export function V17_TracePanel({
                 </div>
               );
             }) : (
-            <p className="text-[11px] text-zinc-500">暂无插件状态标签</p>
+            <p className="text-[11px] text-zinc-500">{ui("暂无插件状态标签", "No plugin status labels yet", "플러그인 상태 라벨 없음")}</p>
           )}
         </div>
       </div>
 
+      <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3" open>
+        <summary className="cursor-pointer text-[11px] text-cyan-300">{ui("插件 / Fact 分组", "Plugin / Fact Groups", "플러그인 / Fact 그룹")}</summary>
+        <div className="mt-3">
+        <p className="text-[11px] text-cyan-300">{ui("命中插件", "Matched Plugins", "적중 플러그인")}</p>
+        <p className="mt-1 text-[11px] text-zinc-200">
+          {traceHits.length ? (traceHits as string[]).join(" / ") : ui("暂无命中", "No matched plugins yet", "적중 없음")}
+        </p>
+        </div>
+        <div className="mt-3">
+        <p className="text-[11px] text-cyan-300">{ui("织造 Fact", "Weaving Facts", "직조 Fact")}</p>
+        <div className="mt-1 space-y-1">
+          {traceFacts.length ? (
+            (traceFacts as string[]).map((x, idx) => (
+              <p key={`${idx}_${x}`} className="text-[11px] text-zinc-200">
+                {idx + 1}. {String(x)}
+              </p>
+            ))
+          ) : (
+            <p className="text-[11px] text-zinc-500">{ui("暂无 Fact", "No facts yet", "Fact 없음")}</p>
+          )}
+        </div>
+        </div>
+        <div className="mt-3 space-y-2">
+          <p className="text-[11px] text-cyan-300">{ui("插件分组", "Plugin Groups", "플러그인 그룹")}</p>
+          {Object.keys(groupedPlugins).length ? (
+            Object.entries(groupedPlugins).map(([plugin, facts]) => (
+              <details key={plugin} className="rounded-lg border border-cyan-500/15 bg-zinc-900/70 p-2">
+                <summary className="cursor-pointer text-[11px] text-zinc-100">{plugin}</summary>
+                <div className="mt-2 space-y-1">
+                  {facts.map((fact, idx) => (
+                    <p key={`${plugin}_${idx}`} className="text-[10px] text-zinc-300">
+                      {idx + 1}. {fact}
+                    </p>
+                  ))}
+                </div>
+              </details>
+            ))
+          ) : (
+            <p className="text-[11px] text-zinc-500">{ui("暂无插件分组", "No plugin groups yet", "플러그인 그룹 없음")}</p>
+          )}
+        </div>
+      </details>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">{ui("裁决摘要", "Decision Summary", "결정 요약")}</p>
+          <span className="text-[10px] text-zinc-500">
+            {ui("手动", "Manual", "수동")} {manualDecisions.length} / {ui("自动", "Auto", "자동")} {autoResolutions.length} / {ui("上下文", "Context", "컨텍스트")} {llmArbitrationContext.length}
+          </span>
+        </div>
+        {compactInsightMode ? (
+          <div className="grid gap-2 md:grid-cols-3">
+            <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
+              <p className="text-[10px] tracking-[0.18em] text-violet-200">MANUAL</p>
+              <p className="mt-2 font-mono text-base text-violet-50">{manualDecisions.length}</p>
+              <p className="mt-1 text-[10px] text-zinc-500">{ui("命理师待确认裁决", "Pending practitioner decisions", "명리사 확인 대기")}</p>
+            </div>
+            <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
+              <p className="text-[10px] tracking-[0.18em] text-amber-200">AUTO</p>
+              <p className="mt-2 font-mono text-base text-amber-50">{autoResolutions.length}</p>
+              <p className="mt-1 text-[10px] text-zinc-500">{ui("系统静默处理项", "System silent resolutions", "시스템 자동 처리")}</p>
+            </div>
+            <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
+              <p className="text-[10px] tracking-[0.18em] text-cyan-200">CONTEXT</p>
+              <p className="mt-2 font-mono text-base text-cyan-50">{llmArbitrationContext.length}</p>
+              <p className="mt-1 text-[10px] text-zinc-500">{ui("仅作上下文缓存", "Context-only cache", "컨텍스트 전용 캐시")}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
+              <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL INBOX</p>
+              <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
+                {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => {
+                  const biasSummary = traceBiasSummary(row);
+                  return (
+                    <div
+                      key={`manual_${idx}`}
+                      className={`rounded border bg-zinc-950/60 px-2 py-1 ${
+                        String(row.id || "").trim() === focusedDecisionId
+                          ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                          : "border-violet-500/10"
+                      }`}
+                    >
+                      <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
+                      <p className="mt-0.5 text-zinc-500">
+                        {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
+                      </p>
+                      <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
+                      {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
+                      <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
+                      {biasSummary ? (
+                        <div className="mt-1 space-y-0.5 text-[10px]">
+                          {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
+                          {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                }) : <p className="text-zinc-500">{ui("暂无手动裁决项", "No manual decisions", "수동 결정 없음")}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-cyan-300">{ui("因果锚点", "Causal Anchors", "인과 앵커")}</p>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] ${
+              causalAligned ? "bg-emerald-950/80 text-emerald-200" : "bg-amber-950/80 text-amber-200"
+            }`}
+          >
+            {causalAligned ? ui("已对齐", "Aligned", "정렬됨") : ui("待核对", "Pending review", "검토 대기")}
+          </span>
+        </div>
+        <div className="space-y-1 text-[11px] text-zinc-200">
+          <p>{ui("物理快照", "Physics snapshot", "물리 스냅샷")}：{causalPhysicsAnchor}</p>
+          <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalPhysicsFp}</p>
+          <p>{ui("审计快照", "Audit snapshot", "감사 스냅샷")}：{causalAuditAnchor}</p>
+          <p className="font-mono text-[10px] text-cyan-200/90 break-all">fp={causalAuditFp}</p>
+        </div>
+      </div>
+
+        </>
+      ) : null}
+
+      {showDebugSections ? (
+        <>
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-cyan-300">主张与冲突层</p>
@@ -891,174 +1093,6 @@ export function V17_TracePanel({
             ))
           ) : (
             <p className="text-[11px] text-zinc-500">暂无脑流时间线；当前尚未形成从冲突到路由的完整链路。</p>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">决策观测</p>
-          <span className="text-[10px] text-zinc-500">
-            手动 {manualDecisions.length} / 自动 {autoResolutions.length} / 上下文 {llmArbitrationContext.length}
-          </span>
-        </div>
-        <div className="space-y-2">
-          <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL INBOX</p>
-            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
-              {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => {
-                const biasSummary = traceBiasSummary(row);
-                return (
-                  <div
-                    key={`manual_${idx}`}
-                    className={`rounded border bg-zinc-950/60 px-2 py-1 ${
-                      String(row.id || "").trim() === focusedDecisionId
-                        ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                        : "border-violet-500/10"
-                    }`}
-                  >
-                    <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
-                    <p className="mt-0.5 text-zinc-500">
-                      {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
-                    </p>
-                    <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
-                    {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
-                    <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
-                    {biasSummary ? (
-                      <div className="mt-1 space-y-0.5 text-[10px]">
-                        {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
-                        {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }) : <p className="text-zinc-500">暂无手动裁决项</p>}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-amber-200">AUTO DECISIONS</p>
-            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
-              {autoResolutions.length ? autoResolutions.slice(0, 8).map((row, idx) => {
-                const biasSummary = traceBiasSummary(row);
-                return (
-                  <div
-                    key={`auto_${idx}`}
-                    className={`rounded border bg-zinc-950/60 px-2 py-1 ${
-                      String(row.id || "").trim() === focusedDecisionId
-                        ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                        : "border-amber-500/10"
-                    }`}
-                  >
-                    <p className="text-amber-100">{String(row.label || row.title || "—")}</p>
-                    <p className="mt-0.5 text-zinc-500">{String(row.source || row.plugin_id || "unknown")}</p>
-                    <p className="mt-0.5 font-mono text-amber-200/80">{traceArbitrationChain(row, "自动")}</p>
-                    {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "collapsed_to_system")}</p> : null}
-                    <p className="mt-0.5 text-zinc-400">{tracePromptPreview(row)}</p>
-                    {biasSummary ? (
-                      <div className="mt-1 space-y-0.5 text-[10px]">
-                        {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
-                        {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }) : <p className="text-zinc-500">暂无系统自动裁决项</p>}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-cyan-200">CONTEXT CACHE</p>
-            <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
-              {llmArbitrationContext.length ? llmArbitrationContext.slice(0, 8).map((row, idx) => {
-                const biasSummary = traceBiasSummary(row);
-                return (
-                  <div
-                    key={`llm_${idx}`}
-                    className={`rounded border bg-zinc-950/60 px-2 py-1 ${
-                      String(row.id || "").trim() === focusedDecisionId
-                        ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                        : "border-cyan-500/10"
-                    }`}
-                  >
-                    <p className="text-cyan-100">{String(row.label || row.title || "—")}</p>
-                    <p className="mt-0.5 text-zinc-500">{String(row.source || row.plugin_id || "unknown")}</p>
-                    <p className="mt-0.5 font-mono text-cyan-200/80">{traceArbitrationChain(row, "LLM")}</p>
-                    <p className="mt-0.5 text-zinc-400">
-                      {String(row.llm_resolution_policy || "context_only")} · {String(row.llm_resolution_state || "pending_context")} · {String(row.llm_resolution_result || "consume_context")}
-                    </p>
-                    <p className="mt-0.5 text-zinc-400">{tracePromptPreview(row)}</p>
-                    {biasSummary ? (
-                      <div className="mt-1 space-y-0.5 text-[10px]">
-                        {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
-                        {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }) : <p className="text-zinc-500">暂无 LLM 仲裁上下文</p>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">体用判定账本</p>
-          <span className="text-[10px] text-zinc-500">
-            用侧 {judgementUseBias.length} / 忌侧 {judgementTabooBias.length} / 来源 {judgementBiasEntries.length}
-          </span>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="rounded-lg border border-emerald-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-emerald-200">USE BIAS</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-              {judgementUseBias.length ? judgementUseBias.map((row) => (
-                <span key={`trace_judgement_use_${row.name}`} className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-emerald-200">
-                  {row.name} +{row.score.toFixed(2)}
-                </span>
-              )) : <span className="text-zinc-500">暂无。</span>}
-            </div>
-          </div>
-          <div className="rounded-lg border border-rose-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-rose-200">TABOO BIAS</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
-              {judgementTabooBias.length ? judgementTabooBias.map((row) => (
-                <span key={`trace_judgement_taboo_${row.name}`} className="rounded-full border border-rose-500/20 bg-rose-950/20 px-2 py-1 text-rose-200">
-                  {row.name} +{row.score.toFixed(2)}
-                </span>
-              )) : <span className="text-zinc-500">暂无。</span>}
-            </div>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {judgementBiasEntries.length ? judgementBiasEntries.slice(0, 8).map((row, idx) => (
-            <div
-              key={`judgement_entry_${idx}_${row.sourceLabel}`}
-              className={`rounded-lg border bg-zinc-900/60 px-2 py-2 ${
-                row.decisionId && row.decisionId === focusedDecisionId
-                  ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                  : "border-cyan-500/10"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] tracking-[0.18em] text-cyan-200 uppercase">{row.sourceLabel}</p>
-                {row.decisionId ? <span className="font-mono text-[10px] text-zinc-400">{row.decisionId}</span> : null}
-              </div>
-              {row.reason ? <p className="mt-1 text-[10px] text-zinc-400">{row.reason}</p> : null}
-              {row.usePairs.length ? (
-                <p className="mt-1 text-[10px] text-emerald-200/90">
-                  用侧：{row.usePairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · ")}
-                </p>
-              ) : null}
-              {row.tabooPairs.length ? (
-                <p className="mt-1 text-[10px] text-rose-200/90">
-                  忌侧：{row.tabooPairs.map((item) => `${item.name} +${item.score.toFixed(2)}`).join(" · ")}
-                </p>
-              ) : null}
-            </div>
-          )) : (
-            <p className="text-[11px] text-zinc-500">暂无体用判定账本；当前没有插件向体用裁决提供额外偏置。</p>
           )}
         </div>
       </div>
@@ -1209,49 +1243,6 @@ export function V17_TracePanel({
         </div>
       </details>
 
-      <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3" open>
-        <summary className="cursor-pointer text-[11px] text-cyan-300">插件 / Fact 分组</summary>
-        <div className="mt-3">
-        <p className="text-[11px] text-cyan-300">命中插件</p>
-        <p className="mt-1 text-[11px] text-zinc-200">
-          {traceHits.length ? (traceHits as string[]).join(" / ") : "暂无命中"}
-        </p>
-        </div>
-        <div className="mt-3">
-        <p className="text-[11px] text-cyan-300">织造 Fact</p>
-        <div className="mt-1 space-y-1">
-          {traceFacts.length ? (
-            (traceFacts as string[]).map((x, idx) => (
-              <p key={`${idx}_${x}`} className="text-[11px] text-zinc-200">
-                {idx + 1}. {String(x)}
-              </p>
-            ))
-          ) : (
-            <p className="text-[11px] text-zinc-500">暂无 Fact</p>
-          )}
-        </div>
-        </div>
-        <div className="mt-3 space-y-2">
-          <p className="text-[11px] text-cyan-300">插件分组</p>
-          {Object.keys(groupedPlugins).length ? (
-            Object.entries(groupedPlugins).map(([plugin, facts]) => (
-              <details key={plugin} className="rounded-lg border border-cyan-500/15 bg-zinc-900/70 p-2">
-                <summary className="cursor-pointer text-[11px] text-zinc-100">{plugin}</summary>
-                <div className="mt-2 space-y-1">
-                  {facts.map((fact, idx) => (
-                    <p key={`${plugin}_${idx}`} className="text-[10px] text-zinc-300">
-                      {idx + 1}. {fact}
-                    </p>
-                  ))}
-                </div>
-              </details>
-            ))
-          ) : (
-            <p className="text-[11px] text-zinc-500">暂无插件分组</p>
-          )}
-        </div>
-      </details>
-
       <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <summary className="cursor-pointer text-[11px] text-cyan-300">四柱原始 payload</summary>
         <div className="mt-3 space-y-2">
@@ -1291,6 +1282,8 @@ export function V17_TracePanel({
           </pre>
         </details>
       </div>
+        </>
+      ) : null}
     </aside>
   );
 }

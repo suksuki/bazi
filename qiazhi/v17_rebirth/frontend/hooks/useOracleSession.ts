@@ -13,6 +13,7 @@ import {
   shouldReleaseDecisionInboxLock,
   useV17WebStream,
 } from "@/hooks/useV17WebStream";
+import type { AppLanguage } from "@/lib/i18n";
 
 // ─── Type helpers ─────────────────────────────────────────────────────────────
 
@@ -139,7 +140,7 @@ export interface OracleSession {
   // --- endpoint helpers ---
   streamEndpoint: string | null;
   streamBody: Record<string, unknown> | null;
-  streamQuery: { will_proxy: string; birth_time: string; gender: string; flow_year: string };
+  streamQuery: { will_proxy: string; birth_time: string; gender: string; flow_year: string; ui_lang: string };
 
   // --- actions ---
   startRun: (input: { birthTimeISO: string; gender: "male" | "female"; calendarType: "solar" | "lunar" }) => void;
@@ -151,7 +152,7 @@ export interface OracleSession {
 const DEFAULT_ENDPOINT = "/api/v17/stream?will_proxy=stable&v17_origin=v17_rebirth";
 const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
-export function useOracleSession(): OracleSession {
+export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLanguage } = {}): OracleSession {
   // Session state
   const [sessionId, setSessionId] = useState("");
   const [running, setRunning] = useState(false);
@@ -185,9 +186,10 @@ export function useOracleSession(): OracleSession {
       session_id: sessionId || "default",
       suppress_narrator: true,
       user_message: "",
+      ui_lang: uiLanguage,
     }));
     setRunning(true);
-  }, [sessionId, streamEndpoint]);
+  }, [sessionId, streamEndpoint, uiLanguage]);
 
   // ── Stream ───────────────────────────────────────────────────────────────────
   const { frames, streamState } = useV17WebStream({
@@ -318,6 +320,7 @@ export function useOracleSession(): OracleSession {
     latestNarrator,
     hasAuditPreview: Boolean(llmAuditSnapshot),
     streamState,
+    language: uiLanguage,
   });
   const streamPartial = llmMeta.stream_partial === true;
   const hasFinalLlmMeta =
@@ -399,9 +402,10 @@ export function useOracleSession(): OracleSession {
         birth_time: q.get("birth_time") || "",
         gender: q.get("gender") || "",
         flow_year: q.get("flow_year") || "",
+        ui_lang: q.get("ui_lang") || "",
       };
     } catch {
-      return { will_proxy: "", birth_time: "", gender: "", flow_year: "" };
+      return { will_proxy: "", birth_time: "", gender: "", flow_year: "", ui_lang: "" };
     }
   }, [streamEndpoint]);
 
@@ -423,6 +427,7 @@ export function useOracleSession(): OracleSession {
       birth_time: birthTimeISO,
       gender: natalGender,
       flow_year: String(selectedLuckYear),
+      ui_lang: uiLanguage,
       v17_origin: "v17_rebirth",
     });
     setStreamEndpoint(`/api/v17/stream?${query.toString()}&_pulse=${Date.now()}`);
@@ -434,13 +439,14 @@ export function useOracleSession(): OracleSession {
       suppress_narrator: false,
       reset_stream_cache: true,
       user_message: "",
+      ui_lang: uiLanguage,
     }));
     setAdoptedDecisions([]);
     setDecisionDirtySinceLastVerdict(false);
     setDecisionLockStartedAtMs(null);
     setDecisionActionError("");
     setRunning(true);
-  }, [selectedLuckYear, running, birthTimeISO, natalGender, natalCalendar, sessionId, streamEndpoint]);
+  }, [selectedLuckYear, running, birthTimeISO, natalGender, natalCalendar, sessionId, streamEndpoint, uiLanguage]);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   function startRun(input: {
@@ -454,6 +460,7 @@ export function useOracleSession(): OracleSession {
       birth_time: input.birthTimeISO,
       gender: input.gender,
       flow_year: String(fy),
+      ui_lang: uiLanguage,
       v17_origin: "v17_rebirth",
     });
     const sid = crypto.randomUUID();
@@ -463,7 +470,7 @@ export function useOracleSession(): OracleSession {
     setNatalGender(input.gender);
     setNatalCalendar(input.calendarType);
     setSelectedLuckYear(fy);
-    setStreamBody({ v17_origin: "v17_rebirth", calendar_type: input.calendarType, session_id: sid, reset_stream_cache: true });
+    setStreamBody({ v17_origin: "v17_rebirth", calendar_type: input.calendarType, session_id: sid, reset_stream_cache: true, ui_lang: uiLanguage });
     setDecisionLockStartedAtMs(null);
     setAdoptedDecisions([]);
     setRunning(true);
@@ -487,10 +494,11 @@ export function useOracleSession(): OracleSession {
       session_id: sessionId || "default",
       suppress_narrator: false,
       user_message: String(reason || "").trim() || "请生成新的八字断言。",
+      ui_lang: uiLanguage,
     }));
     setRunning(true);
     setDecisionDirtySinceLastVerdict(false);
-  }, [sessionId, streamEndpoint]);
+  }, [sessionId, streamEndpoint, uiLanguage]);
 
   function fallbackDecisionAction(item: Decision, index: number): { title: string; label: string } {
     const target = String(item.target_god || item.physical_impact?.target_god || "").trim();

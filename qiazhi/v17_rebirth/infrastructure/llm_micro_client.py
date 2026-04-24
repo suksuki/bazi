@@ -14,7 +14,10 @@ from urllib import request
 from urllib.parse import urlparse
 
 from .llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER, V17_ROLES, V17LlmBridge
-from v17_rebirth.backend.narrative.semantic_fusion import build_role_user_prompt
+from v17_rebirth.backend.narrative.semantic_fusion import (
+    build_role_user_prompt,
+    normalize_output_language,
+)
 from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappingEngine
 
 
@@ -246,6 +249,9 @@ def build_llm_audit_payload(
         decision_anchor=str(decision_anchor or ""),
         list_cap=16,
         will_proxy=str(will_proxy or "stable"),
+        output_language=normalize_output_language(
+            (physics_tensor or {}).get("ui_lang") if isinstance(physics_tensor, dict) else None
+        ),
     )
     messages: List[Dict[str, str]] = [
         {"role": "system", "content": system_prompt},
@@ -289,11 +295,15 @@ def build_v17_system_prompt(
     from v17_rebirth.backend.services.physics_service import PhysicsService
 
     rid = _normalize_fuse_role(str(role_style or V17_ROLE_WEAVER))
+    output_language = normalize_output_language(
+        (physics_tensor or {}).get("ui_lang") if isinstance(physics_tensor, dict) else None
+    )
     base = build_v17_role_system_prompt(
         role_id=rid,
         will_proxy=will_proxy,
         decision_anchor=decision_anchor,
         action_signal=action_signal,
+        output_language=output_language,
     )
     sid = str(session_id or "").strip()
     if isinstance(physics_tensor, dict) and physics_tensor:
@@ -612,6 +622,9 @@ class V17MicroLlmClient:
             decision_anchor=str(decision_anchor or ""),
             list_cap=16,
             will_proxy=str(will_proxy or "stable"),
+            output_language=normalize_output_language(
+                (physics_tensor or {}).get("ui_lang") if isinstance(physics_tensor, dict) else None
+            ),
         )
         messages: List[Dict[str, str]] = [
             {"role": "system", "content": system_prompt},
