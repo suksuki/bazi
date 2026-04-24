@@ -1,7 +1,18 @@
 "use client";
 
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { ArrowRight, BarChart3, BriefcaseBusiness, ChevronDown, ChevronUp, ScrollText, Sparkles } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  BarChart3,
+  BriefcaseBusiness,
+  ChevronDown,
+  ChevronUp,
+  Network,
+  ScrollText,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { V17_AppShell } from "@/components/V17_AppShell";
@@ -26,6 +37,10 @@ import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 type OracleSurfaceTab = OracleSurface;
 type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
 type AuxiliarySectionKey = "structure" | "runtime" | "authority" | "patterns" | "collaboration";
+type LocalizeText = (zh: string, en: string, ko: string) => string;
+type TranslateText = (value: string) => string;
+type TranslateList = (values: string[]) => string[];
+type FourPillarsSummary = { year?: string; month?: string; day?: string; hour?: string };
 
 function asLooseRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -109,6 +124,411 @@ type TopicHubItem = {
   badges: string[];
 };
 
+type MobileResultTab = "chart" | "gods" | "relations" | "risks";
+
+function compactPillarText(value: unknown): { stem: string; branch: string; text: string } {
+  const text = String(value || "").trim();
+  const compact = text.replace(/\s+/g, "");
+  return {
+    stem: compact.slice(0, 1) || "—",
+    branch: compact.slice(1, 2) || "—",
+    text: compact || "—",
+  };
+}
+
+function compactRelationTitle(row: Record<string, unknown>, fallback: string): string {
+  return String(
+    row.relation_type ||
+      row.relation ||
+      row.name ||
+      row.energy_axis ||
+      row.axis ||
+      row.plugin_label ||
+      row.plugin_id ||
+      fallback,
+  ).trim();
+}
+
+function V17MobileResultSummary({
+  ui,
+  term,
+  termList,
+  fourPillars,
+  luckPillar,
+  flowPillar,
+  birthLine,
+  judgement,
+  patternLeader,
+  useGods,
+  tabooGods,
+  tongguanGods,
+  relationRows,
+  riskRows,
+}: {
+  ui: LocalizeText;
+  term: TranslateText;
+  termList: TranslateList;
+  fourPillars?: FourPillarsSummary;
+  luckPillar?: unknown;
+  flowPillar?: unknown;
+  birthLine: string;
+  judgement: string;
+  patternLeader?: LivePatternCandidate;
+  useGods: string[];
+  tabooGods: string[];
+  tongguanGods: string[];
+  relationRows: Array<Record<string, unknown>>;
+  riskRows: Array<Record<string, unknown>>;
+}) {
+  const [activeTab, setActiveTab] = useState<MobileResultTab>("chart");
+  const pillars = [
+    { key: "year", label: ui("年", "Year", "년"), value: compactPillarText(fourPillars?.year) },
+    { key: "month", label: ui("月", "Month", "월"), value: compactPillarText(fourPillars?.month) },
+    { key: "day", label: ui("日", "Day", "일"), value: compactPillarText(fourPillars?.day) },
+    { key: "hour", label: ui("时", "Hour", "시"), value: compactPillarText(fourPillars?.hour) },
+  ];
+  const runtimePillars = [
+    { key: "luck", label: ui("大运", "Luck", "대운"), value: compactPillarText(luckPillar) },
+    { key: "flow", label: ui("流年", "Flow", "세운"), value: compactPillarText(flowPillar) },
+  ];
+  const tabs: Array<{ id: MobileResultTab; label: string }> = [
+    { id: "chart", label: ui("命盘", "Chart", "명반") },
+    { id: "gods", label: ui("用神", "Gods", "용신") },
+    { id: "relations", label: ui("关系", "Relations", "관계") },
+    { id: "risks", label: ui("风险", "Risks", "위험") },
+  ];
+  const activeRiskRows = riskRows.slice(0, 4);
+  const activeRelationRows = relationRows.slice(0, 4);
+
+  return (
+    <section className="space-y-3 sm:hidden">
+      <div className="rounded-2xl border border-violet-400/25 bg-[radial-gradient(circle_at_top_right,rgba(124,58,237,0.22),transparent_42%),linear-gradient(180deg,rgba(24,24,27,0.96),rgba(8,13,21,0.96))] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-violet-200">
+              {ui("命盘结果", "Chart Result", "명반 결과")}
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-zinc-50">
+              {patternLeader ? term(patternLeader.name) : ui("核心结论生成中", "Reading forming", "핵심 판독 생성 중")}
+            </h2>
+          </div>
+          <span className={`rounded-full border px-2 py-1 text-[10px] ${patternLeader ? patternStatusToneForRuntime(patternLeader.statusLabel) : "border-cyan-500/25 bg-cyan-950/30 text-cyan-100"}`}>
+            {patternLeader ? term(patternLeader.statusLabel) : ui("观察中", "Observing", "관찰 중")}
+          </span>
+        </div>
+        <p className="mt-3 text-[13px] leading-6 text-zinc-200">{judgement}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 text-[10px] text-cyan-100">
+            {birthLine}
+          </span>
+          {useGods.slice(0, 2).map((god) => (
+            <span key={`mobile_use_${god}`} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-100">
+              {ui("用", "Use", "용")} {term(god)}
+            </span>
+          ))}
+          {activeRiskRows.length ? (
+            <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
+              {ui("风险", "Risks", "위험")} {activeRiskRows.length}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+        <div className="grid grid-cols-4 gap-2">
+          {pillars.map((pillar) => (
+            <div key={pillar.key} className="rounded-xl border border-white/10 bg-[#0B0F16] p-2 text-center">
+              <p className="text-[10px] text-zinc-500">{pillar.label}</p>
+              <div className="mt-1 grid grid-rows-2 overflow-hidden rounded-lg border border-white/10">
+                <span className="bg-zinc-900 py-2 text-xl font-semibold text-zinc-100">{pillar.value.stem}</span>
+                <span className="bg-zinc-950 py-2 text-lg font-semibold text-cyan-200">{pillar.value.branch}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {runtimePillars.map((pillar) => (
+            <div key={pillar.key} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B0F16] px-3 py-2">
+              <span className="text-[11px] text-zinc-500">{pillar.label}</span>
+              <span className="text-sm font-semibold text-zinc-100">{pillar.value.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3">
+        <div className="grid grid-cols-4 gap-1 rounded-xl bg-white/[0.04] p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-lg px-2 py-2 text-[12px] font-medium transition ${
+                activeTab === tab.id
+                  ? "bg-cyan-400 text-zinc-950"
+                  : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3">
+          {activeTab === "chart" ? (
+            <div className="grid gap-2">
+              <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+                <p className="text-[11px] text-zinc-500">{ui("主格局", "Primary pattern", "주격")}</p>
+                <p className="mt-1 text-base font-semibold text-zinc-100">
+                  {patternLeader ? term(patternLeader.name) : ui("未成显格", "No clear pattern", "명확한 격 없음")}
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-zinc-400">
+                  {patternLeader ? `${term(patternLeader.scope)} · ${Math.round(patternLeader.confidence * 100)}%` : ui("等待更多结构信号聚合。", "Waiting for more structural signals.", "구조 신호 집계를 기다립니다.")}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {activeTab === "gods" ? (
+            <div className="grid gap-2">
+              {[
+                { key: "use", title: ui("用神", "Useful gods", "용신"), values: useGods, tone: "border-emerald-400/20 bg-emerald-500/10 text-emerald-100" },
+                { key: "taboo", title: ui("忌神", "Taboo gods", "기신"), values: tabooGods, tone: "border-rose-400/20 bg-rose-500/10 text-rose-100" },
+                { key: "bridge", title: ui("通关", "Bridge gods", "통관"), values: tongguanGods, tone: "border-cyan-400/20 bg-cyan-500/10 text-cyan-100" },
+              ].map((group) => (
+                <div key={group.key} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+                  <p className="text-[11px] text-zinc-500">{group.title}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {group.values.length ? termList(group.values).slice(0, 6).map((value) => (
+                      <span key={`${group.key}_${value}`} className={`rounded-full border px-2 py-1 text-[11px] ${group.tone}`}>
+                        {value}
+                      </span>
+                    )) : (
+                      <span className="text-[12px] text-zinc-500">{ui("暂无显性信号", "No explicit signal", "명시 신호 없음")}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {activeTab === "relations" ? (
+            <div className="grid gap-2">
+              {activeRelationRows.length ? activeRelationRows.map((row, index) => (
+                <div key={`mobile_relation_${index}`} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[12px] font-semibold text-zinc-100">{term(compactRelationTitle(row, ui("关系链", "Relation", "관계")))}</p>
+                    <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
+                      {ui("动态", "Dynamic", "동적")}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-zinc-400">
+                    {String(row.reason || row.summary || row.effect || row.explain || row.energy_axis || ui("等待关系证据展开。", "Waiting for relation evidence.", "관계 근거 대기 중입니다."))}
+                  </p>
+                </div>
+              )) : (
+                <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-[12px] text-zinc-500">
+                  {ui("暂无显著关系扰动，当前结构以静态盘面为主。", "No major relation disturbance; the static chart remains primary.", "주요 관계 교란은 없고 정적 명식이 중심입니다.")}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {activeTab === "risks" ? (
+            <div className="grid gap-2">
+              {activeRiskRows.length ? activeRiskRows.map((row, index) => (
+                <div key={`mobile_risk_${index}`} className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
+                  <p className="text-[12px] font-semibold text-amber-100">{term(decisionPluginLabel(row) || ui("风险提示", "Risk signal", "위험 신호"))}</p>
+                  <p className="mt-1 text-[11px] leading-5 text-amber-50/80">
+                    {String(row.reason || row.summary || row.risk_reason || row.pattern_gate_reason || ui("系统建议继续观察该风险来源。", "The system suggests watching this source.", "시스템은 이 위험 출처를 계속 관찰하라고 제안합니다."))}
+                  </p>
+                </div>
+              )) : (
+                <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-[12px] text-emerald-100">
+                  {ui("暂无显著破格风险。", "No major break risk.", "뚜렷한 파격 위험이 없습니다.")}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function V17MobileAnalysisDeck({
+  ui,
+  counts,
+  canManageUsers,
+  onOpen,
+}: {
+  ui: LocalizeText;
+  counts: {
+    structure: number;
+    runtime: number;
+    authority: number;
+    patterns: number;
+    collaboration: number;
+  };
+  canManageUsers: boolean;
+  onOpen: (section: AuxiliarySectionKey) => void;
+}) {
+  const cards: Array<{
+    key: AuxiliarySectionKey;
+    title: string;
+    desc: string;
+    badge: string;
+    tone: string;
+  }> = [
+    {
+      key: "structure",
+      title: ui("结构总览", "Structure", "구조"),
+      desc: ui("六柱、调候、关系链的核心证据。", "Core evidence from pillars, climate, and relations.", "육주, 조후, 관계 체인의 핵심 근거입니다."),
+      badge: `${counts.structure}`,
+      tone: "border-cyan-400/25 bg-cyan-500/10 text-cyan-100",
+    },
+    {
+      key: "authority",
+      title: ui("体用裁决", "Body-Use", "체용 판정"),
+      desc: ui("用神、忌神、通关与权威来源。", "Useful, taboo, bridge gods, and authority source.", "용신, 기신, 통관과 권위 출처입니다."),
+      badge: `${counts.authority}`,
+      tone: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
+    },
+    {
+      key: "patterns",
+      title: ui("格局候选", "Patterns", "격국 후보"),
+      desc: ui("主格局、次格局、成局度与破格点。", "Primary, secondary patterns, formation, and break points.", "주격, 보조 격국, 성국도와 파격점입니다."),
+      badge: `${counts.patterns}`,
+      tone: "border-violet-400/25 bg-violet-500/10 text-violet-100",
+    },
+    {
+      key: "runtime",
+      title: ui("运行账本", "Runtime", "운행 장부"),
+      desc: ui("大运、流年、十神变化与引擎状态。", "Luck, annual flow, deity shifts, and engine state.", "대운, 세운, 십신 변화와 엔진 상태입니다."),
+      badge: `${counts.runtime}`,
+      tone: "border-amber-400/25 bg-amber-500/10 text-amber-100",
+    },
+  ];
+  if (canManageUsers) {
+    cards.push({
+      key: "collaboration",
+      title: ui("协作权限", "Collaboration", "협업 권한"),
+      desc: ui("经理账号的用户与权限维护入口。", "User and role management for manager accounts.", "매니저 계정의 사용자와 권한 관리입니다."),
+      badge: `${counts.collaboration}`,
+      tone: "border-zinc-500/25 bg-zinc-500/10 text-zinc-100",
+    });
+  }
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3 sm:hidden">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">
+            {ui("深度分析", "Deep Analysis", "심층 분석")}
+          </p>
+          <h2 className="mt-1 text-base font-semibold text-zinc-50">
+            {ui("选择一个专题展开", "Pick a topic", "주제를 선택하세요")}
+          </h2>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-zinc-400">
+          {cards.length}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {cards.map((card) => (
+          <button
+            key={card.key}
+            type="button"
+            onClick={() => onOpen(card.key)}
+            className={`group rounded-xl border p-3 text-left transition active:scale-[0.99] ${card.tone}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-zinc-50">{card.title}</p>
+                <p className="mt-1 text-[11px] leading-5 text-zinc-400">{card.desc}</p>
+              </div>
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 text-[11px] group-active:translate-x-0.5">
+                {card.badge}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function V17ToolboxDeck({
+  ui,
+  traceSignalCount,
+  pendingDecisionCount,
+  modelLabel,
+  llmLifecyclePhase,
+}: {
+  ui: LocalizeText;
+  traceSignalCount: number;
+  pendingDecisionCount: number;
+  modelLabel: string;
+  llmLifecyclePhase: string;
+}) {
+  const cards = [
+    {
+      key: "runtime",
+      icon: <Activity className="h-4 w-4" />,
+      title: ui("运行监控", "Runtime Monitor", "런타임 모니터"),
+      desc: ui("查看流式状态、心跳与模型链路。", "Inspect streaming state, heartbeat, and model link.", "스트리밍 상태, 하트비트, 모델 연결을 확인합니다."),
+      stat: llmLifecyclePhase,
+      tone: "border-cyan-400/25 bg-cyan-500/10 text-cyan-100",
+    },
+    {
+      key: "audit",
+      icon: <ShieldAlert className="h-4 w-4" />,
+      title: ui("裁决审计", "Decision Audit", "판정 감사"),
+      desc: ui("查看人工确认、自动裁决与争议来源。", "Review manual, automatic, and disputed decisions.", "수동, 자동, 쟁점 판정을 검토합니다."),
+      stat: `${pendingDecisionCount}`,
+      tone: "border-amber-400/25 bg-amber-500/10 text-amber-100",
+    },
+    {
+      key: "network",
+      icon: <Network className="h-4 w-4" />,
+      title: ui("链路诊断", "Link Diagnostics", "링크 진단"),
+      desc: ui("追踪后端、插件、LLM 与物理快照。", "Trace backend, plugins, LLM, and physics snapshots.", "백엔드, 플러그인, LLM, 물리 스냅샷을 추적합니다."),
+      stat: `${traceSignalCount}`,
+      tone: "border-violet-400/25 bg-violet-500/10 text-violet-100",
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-amber-300">
+            {ui("工具箱", "Toolbox", "도구함")}
+          </p>
+          <h2 className="mt-1 text-base font-semibold text-zinc-50">
+            {ui("运行与审计工具", "Runtime and audit tools", "런타임 및 감사 도구")}
+          </h2>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-zinc-400">
+          {modelLabel}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        {cards.map((card) => (
+          <div key={card.key} className={`rounded-xl border p-3 ${card.tone}`}>
+            <div className="flex items-start justify-between gap-3">
+              <span className="rounded-lg border border-white/10 bg-black/20 p-2">{card.icon}</span>
+              <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px]">{card.stat}</span>
+            </div>
+            <p className="mt-3 text-sm font-semibold text-zinc-50">{card.title}</p>
+            <p className="mt-1 text-[11px] leading-5 text-zinc-400">{card.desc}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function OracleStartDashboard({
   language,
   name,
@@ -181,6 +601,7 @@ function OracleStartDashboard({
 }
 
 function AuxiliarySection({
+  id,
   title,
   subtitle,
   badge,
@@ -188,6 +609,7 @@ function AuxiliarySection({
   onToggle,
   children,
 }: {
+  id?: string;
   title: string;
   subtitle: string;
   badge?: string;
@@ -196,7 +618,7 @@ function AuxiliarySection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-cyan-500/18 bg-[linear-gradient(180deg,rgba(9,9,11,0.9),rgba(16,24,39,0.72))]">
+    <section id={id} className="scroll-mt-24 rounded-2xl border border-cyan-500/18 bg-[linear-gradient(180deg,rgba(9,9,11,0.9),rgba(16,24,39,0.72))]">
       <button
         type="button"
         onClick={onToggle}
@@ -374,11 +796,11 @@ export default function OraclePage() {
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
   const [lastContentSurfaceTab, setLastContentSurfaceTab] = useState<ContentSurfaceTab>("core");
   const [auxiliarySections, setAuxiliarySections] = useState<Record<AuxiliarySectionKey, boolean>>({
-    structure: true,
-    runtime: true,
+    structure: false,
+    runtime: false,
     authority: false,
     patterns: false,
-    collaboration: true,
+    collaboration: false,
   });
   const [authUsers, setAuthUsers] = useState<AdminAuthUser[]>([]);
   const [authUsersLoading, setAuthUsersLoading] = useState(false);
@@ -676,6 +1098,15 @@ export default function OraclePage() {
       [section]: !current[section],
     }));
   };
+  const openAuxiliarySection = (section: AuxiliarySectionKey) => {
+    setAuxiliarySections((current) => ({
+      ...current,
+      [section]: true,
+    }));
+    requestAnimationFrame(() => {
+      document.getElementById(`aux-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const loadAuthUsers = useCallback(async () => {
     if (!canManageUsers) return;
@@ -827,7 +1258,24 @@ export default function OraclePage() {
                 renderers={{
                   core: () => (
                     <>
-                  <V17_SixPillarsPanel
+                  <V17MobileResultSummary
+                    ui={ui}
+                    term={term}
+                    termList={termList}
+                    fourPillars={fourPillars}
+                    luckPillar={luckPillarSnap}
+                    flowPillar={flowPillarSnap}
+                    birthLine={`${s.birthTimeISO} · ${term(s.natalGender || "")}`}
+                    judgement={patternJudgement}
+                    patternLeader={patternLeader}
+                    useGods={useGods}
+                    tabooGods={tabooGods}
+                    tongguanGods={tongguanGods}
+                    relationRows={relationDynamicsSummary}
+                    riskRows={riskRows}
+                  />
+                  <div className="hidden sm:block">
+                    <V17_SixPillarsPanel
                     fourPillars={fourPillars}
                     luckPillarFromServer={typeof luckPillarSnap === "string" ? luckPillarSnap : undefined}
                     flowPillarFromServer={typeof flowPillarSnap === "string" ? flowPillarSnap : undefined}
@@ -889,6 +1337,7 @@ export default function OraclePage() {
                     detailMode="core"
                     lang={language}
                   />
+                  </div>
                   <V17_PurpleVerdictCard
                     frames={s.frames}
                     connectTickMs={s.connectTickMs}
@@ -944,67 +1393,93 @@ export default function OraclePage() {
                   ),
                   trace: () => (
                     <>
-                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
-                    {t(language, "oracle.trace.notice")}
-                  </div>
-                  <V17_TracePanel
-                    surfaceMode="tab"
-                    contentMode="debug_only"
-                    collapsed={false}
-                    onToggle={closeTraceSurface}
-                    focusedDecisionId={focusedDecisionId}
-                    llmMeta={s.llmMeta}
-                    llmLifecyclePhase={s.llmLifecyclePhase}
-                    llmStatusText={s.llmStatusText}
-                    llmStatusDetail={s.llmStatusDetail}
+                  <V17ToolboxDeck
+                    ui={ui}
+                    traceSignalCount={traceSignalCount}
+                    pendingDecisionCount={s.pendingDecisionWorkCount}
                     modelLabel={s.modelLabel}
-                    connectTickMs={s.connectTickMs}
-                    lastHeartbeatStep={s.lastHeartbeatStep}
-                    heartbeatHistory={s.heartbeatHistory}
-                    streamClosed={s.streamClosed}
-                    fullTrace={s.fullTrace}
-                    llmAuditSnapshot={s.llmAuditSnapshot}
-                    latestNarrator={s.latestNarrator as { payload?: Record<string, unknown> } | undefined}
-                    traceHits={s.traceHits}
-                    traceFacts={s.traceFacts}
-                    birthTimeISO={s.birthTimeISO}
-                    natalGender={s.natalGender}
-                    natalCalendar={s.natalCalendar}
-                    selectedLuckYear={s.selectedLuckYear}
-                    streamEndpoint={s.streamEndpoint}
-                    streamBody={s.streamBody}
-                    streamQuery={s.streamQuery}
-                    physicsSnapshot={s.physicsSnapshot as { payload?: Record<string, unknown> } | undefined}
+                    llmLifecyclePhase={s.llmLifecyclePhase}
                   />
-                  <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(8,47,73,0.28),rgba(9,9,11,0.84))] p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <details className="group rounded-2xl border border-cyan-500/18 bg-[linear-gradient(180deg,rgba(9,9,11,0.92),rgba(16,24,39,0.72))] p-3">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-left">
                       <div>
                         <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">{t(language, "oracle.trace.console.title")}</p>
-                        <p className="mt-1 text-[12px] leading-6 text-cyan-50">
-                          {t(language, "oracle.trace.console.desc")}
+                        <p className="mt-1 text-[12px] leading-5 text-zinc-400">
+                          {ui(
+                            "展开查看完整调试面板、裁决箱与后端链路。",
+                            "Expand to inspect the full debug panel, decision inbox, and backend link.",
+                            "전체 디버그 패널, 판정함, 백엔드 링크를 보려면 펼치세요.",
+                          )}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 text-[10px]">
-                        <span className="rounded-full border border-cyan-500/25 bg-cyan-950/30 px-2 py-1 text-cyan-100">
-                          {t(language, "oracle.trace.console.badge.backend")}
-                        </span>
-                        <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-1 text-zinc-200">
-                          {t(language, "oracle.trace.console.badge.full")}
-                        </span>
+                      <span className="rounded-full border border-zinc-700 bg-zinc-950/70 p-1.5 text-zinc-300 group-open:rotate-180">
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </span>
+                    </summary>
+                    <div className="mt-3 space-y-3 border-t border-zinc-800/80 pt-3">
+                      <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
+                        {t(language, "oracle.trace.notice")}
                       </div>
+                      <V17_TracePanel
+                        surfaceMode="tab"
+                        contentMode="debug_only"
+                        collapsed={false}
+                        onToggle={closeTraceSurface}
+                        focusedDecisionId={focusedDecisionId}
+                        llmMeta={s.llmMeta}
+                        llmLifecyclePhase={s.llmLifecyclePhase}
+                        llmStatusText={s.llmStatusText}
+                        llmStatusDetail={s.llmStatusDetail}
+                        modelLabel={s.modelLabel}
+                        connectTickMs={s.connectTickMs}
+                        lastHeartbeatStep={s.lastHeartbeatStep}
+                        heartbeatHistory={s.heartbeatHistory}
+                        streamClosed={s.streamClosed}
+                        fullTrace={s.fullTrace}
+                        llmAuditSnapshot={s.llmAuditSnapshot}
+                        latestNarrator={s.latestNarrator as { payload?: Record<string, unknown> } | undefined}
+                        traceHits={s.traceHits}
+                        traceFacts={s.traceFacts}
+                        birthTimeISO={s.birthTimeISO}
+                        natalGender={s.natalGender}
+                        natalCalendar={s.natalCalendar}
+                        selectedLuckYear={s.selectedLuckYear}
+                        streamEndpoint={s.streamEndpoint}
+                        streamBody={s.streamBody}
+                        streamQuery={s.streamQuery}
+                        physicsSnapshot={s.physicsSnapshot as { payload?: Record<string, unknown> } | undefined}
+                      />
+                      <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(8,47,73,0.28),rgba(9,9,11,0.84))] p-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">{t(language, "oracle.trace.console.title")}</p>
+                            <p className="mt-1 text-[12px] leading-6 text-cyan-50">
+                              {t(language, "oracle.trace.console.desc")}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 text-[10px]">
+                            <span className="rounded-full border border-cyan-500/25 bg-cyan-950/30 px-2 py-1 text-cyan-100">
+                              {t(language, "oracle.trace.console.badge.backend")}
+                            </span>
+                            <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-1 text-zinc-200">
+                              {t(language, "oracle.trace.console.badge.full")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <V17_DecisionInbox
+                        frames={s.frames}
+                        adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
+                        focusedDecisionId={focusedDecisionId}
+                        locked={s.decisionInboxLocked}
+                        lockMessage={s.decisionInboxLockMessage}
+                        onAdopted={s.handleAdopted}
+                        onAdoptedBatch={s.handleAdoptedBatch}
+                        onPlanAction={s.handlePlanAction}
+                        lang={language}
+                      />
                     </div>
-                  </div>
-                  <V17_DecisionInbox
-                    frames={s.frames}
-                    adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
-                    focusedDecisionId={focusedDecisionId}
-                    locked={s.decisionInboxLocked}
-                    lockMessage={s.decisionInboxLockMessage}
-                    onAdopted={s.handleAdopted}
-                    onAdoptedBatch={s.handleAdoptedBatch}
-                    onPlanAction={s.handlePlanAction}
-                    lang={language}
-                  />
+                  </details>
                     </>
                   ),
                   auxiliary: () => (
@@ -1012,6 +1487,18 @@ export default function OraclePage() {
                   <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3 text-[12px] leading-6 text-cyan-50">
                     {t(language, "oracle.aux.notice")}
                   </div>
+                  <V17MobileAnalysisDeck
+                    ui={ui}
+                    counts={{
+                      structure: structureSignalCount,
+                      runtime: runtimeLedgerSignalCount,
+                      authority: authoritySignalCount,
+                      patterns: livePatternCandidates.length,
+                      collaboration: collaborationUserCount,
+                    }}
+                    canManageUsers={canManageUsers && user?.role === "manager"}
+                    onOpen={openAuxiliarySection}
+                  />
                   <div className="rounded-2xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(9,9,11,0.92),rgba(24,24,27,0.74))] p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -1066,6 +1553,7 @@ export default function OraclePage() {
                     </div>
                   </div>
                   <AuxiliarySection
+                    id="aux-structure"
                     title={t(language, "oracle.section.structure.title")}
                     subtitle={t(language, "oracle.section.structure.subtitle")}
                     badge={`${structureSignalCount} ${ui("信号", "signals", "신호")}`}
@@ -1127,6 +1615,7 @@ export default function OraclePage() {
                   </AuxiliarySection>
 
                   <AuxiliarySection
+                    id="aux-runtime"
                     title={t(language, "oracle.section.runtime.title")}
                     subtitle={t(language, "oracle.section.runtime.subtitle")}
                     badge={`${runtimeLedgerSignalCount} ${ui("账本", "ledger", "장부")}`}
@@ -1167,6 +1656,7 @@ export default function OraclePage() {
                   </AuxiliarySection>
 
                   <AuxiliarySection
+                    id="aux-authority"
                     title={t(language, "oracle.section.authority.title")}
                     subtitle={t(language, "oracle.section.authority.subtitle")}
                     badge={`${authoritySignalCount} ${ui("神", "gods", "신")}`}
@@ -1185,6 +1675,7 @@ export default function OraclePage() {
                   </AuxiliarySection>
 
                   <AuxiliarySection
+                    id="aux-patterns"
                     title={t(language, "oracle.section.pattern.title")}
                     subtitle={t(language, "oracle.section.pattern.subtitle")}
                     badge={`${livePatternCandidates.length} ${ui("格局", "patterns", "격국")}`}
@@ -1371,8 +1862,9 @@ export default function OraclePage() {
                   </AuxiliarySection>
 
                   {canManageUsers && user?.role === "manager" ? (
-                    <AuxiliarySection
-                      title={t(language, "oracle.section.collab.title")}
+	                    <AuxiliarySection
+	                      id="aux-collaboration"
+	                      title={t(language, "oracle.section.collab.title")}
                       subtitle={t(language, "oracle.section.collab.subtitle")}
                       badge={collaborationUserCount ? `${collaborationUserCount} ${ui("用户", "users", "사용자")}` : "sync"}
                       open={auxiliarySections.collaboration}
