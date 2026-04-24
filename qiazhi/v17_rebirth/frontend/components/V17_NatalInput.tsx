@@ -110,7 +110,7 @@ export function V17_NatalInput({
   const [profileOpen, setProfileOpen] = useState(false);
 
   const years = useMemo(
-    () => Array.from({ length: currentYear - 1949 }, (_, i) => String(currentYear - i)),
+    () => Array.from({ length: currentYear - 1899 }, (_, i) => String(currentYear - i)),
     [currentYear],
   );
   const months = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")), []);

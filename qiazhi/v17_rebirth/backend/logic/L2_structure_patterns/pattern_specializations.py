@@ -196,6 +196,28 @@ YANGREN_BRANCH_BY_DAYMASTER: Dict[str, str] = {
 }
 
 
+def _natal_branch_scopes(physics_tensor: Dict[str, Any]) -> Dict[str, List[str]]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    out: Dict[str, List[str]] = {}
+    for scope in ("year", "month", "day", "hour"):
+        _stem, branch = _parse_gz(str(four.get(scope, "")).strip())
+        if branch:
+            out.setdefault(branch, []).append(scope)
+    return out
+
+
+def _yangren_blade_context(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    daymaster = _daymaster_stem(physics_tensor)
+    blade_branch = YANGREN_BRANCH_BY_DAYMASTER.get(daymaster, "")
+    scopes = _natal_branch_scopes(physics_tensor).get(blade_branch, []) if blade_branch else []
+    return {
+        "daymaster": daymaster,
+        "blade_branch": blade_branch,
+        "blade_scopes": scopes,
+        "month_is_blade": "month" in scopes,
+    }
+
+
 def _scope_weights_from_rows(rows: List[Dict[str, Any]], *, member_filter: List[str] | None = None) -> Dict[str, float]:
     filtered: List[Dict[str, Any]] = []
     need_members = {str(item).strip() for item in (member_filter or []) if str(item).strip()}
@@ -559,7 +581,12 @@ def _pattern_candidates(physics_tensor: Dict[str, Any]) -> List[Tuple[str, str, 
             )
         )
     ren_score = _score_sum(scores, "劫财", "比肩")
-    if ren_score >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_REN", 16.0) and sha >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_SHA", 16.0):
+    blade_context = _yangren_blade_context(physics_tensor)
+    if (
+        blade_context.get("month_is_blade")
+        and ren_score >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_REN", 16.0)
+        and sha >= _pattern_cfg("classical.pattern.yangren_jiasha.v1", "YANGREN_JIASHA_MIN_SHA", 16.0)
+    ):
         candidates.append(("阳刃驾杀", "七杀", min(ren_score, sha)))
     if wealth >= _pattern_cfg("classical.pattern.congcai.v1", "CONGCAI_MIN_WEALTH", 22.0) and ren_score <= _pattern_cfg("classical.pattern.congcai.v1", "CONGCAI_MAX_PEER", 12.0):
         candidates.append(("从财格", "财星", wealth))
@@ -1292,10 +1319,11 @@ class YangRenPatternPlugin(V17PluginSpec):
     registry_priority: float = 0.742
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
-        daymaster = _daymaster_stem(physics_tensor)
+        blade_context = _yangren_blade_context(physics_tensor)
+        daymaster = str(blade_context.get("daymaster") or "")
         month_branch = _month_branch(physics_tensor)
-        blade_branch = YANGREN_BRANCH_BY_DAYMASTER.get(daymaster, "")
-        if not daymaster or not blade_branch or month_branch != blade_branch:
+        blade_branch = str(blade_context.get("blade_branch") or "")
+        if not daymaster or not blade_branch or not blade_context.get("month_is_blade"):
             return []
         scores = deity_scores_from_tensor(physics_tensor)
         target_god = "劫财"
@@ -1325,6 +1353,7 @@ class YangRenPatternPlugin(V17PluginSpec):
                     "target_god": target_god,
                     "month_main_god": target_god,
                     "blade_branch": blade_branch,
+                    "blade_scopes": list(blade_context.get("blade_scopes") or []),
                     "projection_share": round(float((projection or {}).get(target_god, 1.0)), 4),
                     "cluster_projection": projection,
                     "match_ratio": round(match_ratio, 3),
@@ -1801,6 +1830,9 @@ class YangRenJiaShaPatternPlugin(V17PluginSpec):
     registry_priority: float = 0.752
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
+        blade_context = _yangren_blade_context(physics_tensor)
+        if not blade_context.get("month_is_blade"):
+            return []
         scores = deity_scores_from_tensor(physics_tensor)
         ren_score = _score_sum(scores, "劫财", "比肩")
         sha = float(scores.get("七杀", 0.0))
@@ -1810,26 +1842,27 @@ class YangRenJiaShaPatternPlugin(V17PluginSpec):
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         context = _pattern_context(physics_tensor)
-        fp = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
-        day_gz = str(fp.get("day", "")).strip()
-        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        daymaster = str(blade_context.get("daymaster") or "壬")
+        blade_branch = str(blade_context.get("blade_branch") or "")
         projection = god_cluster_projection(
             physics_tensor=physics_tensor,
             base_god="七杀",
             day_master=daymaster,
-            focus_branches=[_month_branch(physics_tensor)],
+            focus_branches=[blade_branch] if blade_branch else [_month_branch(physics_tensor)],
         )
         base = _pattern_cfg(self.plugin_id, "YANGREN_JIASHA_MATCH_BASE", 0.78)
         synergy = min(ren_score, sha) / max(ren_score, sha, 1.0)
         match_ratio = _clamp01(base * synergy * max(0.92, float(origin_meta["origin_multiplier"])))
         rows = [{
             "plugin": self.plugin_id,
-            "fact": "格局候选：刃势与七杀并行，本局存在「阳刃驾杀」路线。",
+            "fact": f"格局候选：日主 {daymaster} 月令见阳刃位 {blade_branch}，刃势与七杀并行，本局存在「阳刃驾杀」路线。",
             "priority": self.registry_priority,
             "label": "阳刃驾杀",
             "meta": {
                 "pattern_candidate": "阳刃驾杀",
                 "target_god": "七杀",
+                "blade_branch": blade_branch,
+                "blade_scopes": list(blade_context.get("blade_scopes") or []),
                 "ren_score": ren_score,
                 "sha_score": sha,
                 "projection_share": round(float((projection or {}).get("七杀", 1.0)), 4),
@@ -1840,7 +1873,7 @@ class YangRenJiaShaPatternPlugin(V17PluginSpec):
                 "exclusivity_key": "pattern_family",
                 "source_event": "pattern_family",
                 "confidence": self.registry_priority,
-                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="七杀", relation_family="pattern_yangren_jiasha", relation_members=[]),
+                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="七杀", relation_family="pattern_yangren_jiasha", relation_members=[blade_branch] if blade_branch else []),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "cross_layer"}, relation_family="pattern_yangren_jiasha"),
                 "manifestation_state": _pattern_manifestation(blockers=context.get("blockers"), origin_type=str(origin_meta.get("origin_type") or ""), target_is_strong=match_ratio >= 0.76),
                 **origin_meta,

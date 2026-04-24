@@ -38,6 +38,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations imp
     ZaQiCaiGuanPatternPlugin,
     ZaQiQiShaPatternPlugin,
     ZaQiYinPatternPlugin,
+    _pattern_candidates,
 )
 from v17_rebirth.backend.plugins.spec import V17PluginSpec
 
@@ -568,6 +569,30 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     )
     assert yangren_jiasha_facts
     assert yangren_jiasha_facts[0].meta["pattern_candidate"] == "阳刃驾杀"
+    assert yangren_jiasha_facts[0].meta["blade_branch"] == "卯"
+    assert "month" in yangren_jiasha_facts[0].meta["blade_scopes"]
+
+    no_yangren_jiasha_facts = YangRenJiaShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+            "luck_pillar": "己亥",
+            "flow_pillar": "戊申",
+            "ten_gods_runtime": {"比肩": 42.0, "劫财": 20.0, "七杀": 24.0, "伤官": 30.0},
+        }
+    )
+    assert no_yangren_jiasha_facts == []
+    candidate_names = {
+        name
+        for name, _axis, _score in _pattern_candidates(
+            {
+                "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+                "luck_pillar": "己亥",
+                "flow_pillar": "戊申",
+                "ten_gods_runtime": {"比肩": 42.0, "劫财": 20.0, "七杀": 24.0, "伤官": 30.0},
+            }
+        )
+    }
+    assert "阳刃驾杀" not in candidate_names
 
     zaqi_caiguan_facts = ZaQiCaiGuanPatternPlugin().collect_v17_facts(
         {
