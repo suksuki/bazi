@@ -9,6 +9,7 @@ export type V17NatalInputValue = {
   birthTimeISO: string;
   gender: "male" | "female";
   calendarType: "solar" | "lunar";
+  lunarIsLeapMonth: boolean;
   profileId?: number | null;
   profileName?: string;
   cityName?: string;
@@ -23,6 +24,7 @@ type BaziProfile = {
   birth_time_iso: string;
   gender: "male" | "female";
   calendar_type: "solar" | "lunar";
+  lunar_is_leap_month?: boolean;
   city_name?: string;
   city_code?: string;
   city_group?: string;
@@ -40,6 +42,7 @@ const DEFAULT_FORM = {
   minute: "00",
   gender: "male" as const,
   calendarType: "solar" as const,
+  lunarIsLeapMonth: false,
 };
 
 function parseBirthTimeLocal(raw: string | undefined) {
@@ -92,6 +95,7 @@ export function V17_NatalInput({
   const [minute, setMinute] = useState(DEFAULT_FORM.minute);
   const [gender, setGender] = useState<"male" | "female">(DEFAULT_FORM.gender);
   const [calendarType, setCalendarType] = useState<"solar" | "lunar">(DEFAULT_FORM.calendarType);
+  const [lunarIsLeapMonth, setLunarIsLeapMonth] = useState(DEFAULT_FORM.lunarIsLeapMonth);
 
   const [profiles, setProfiles] = useState<BaziProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
@@ -156,6 +160,7 @@ export function V17_NatalInput({
     setMinute(parsed.minute);
     setGender(profile.gender);
     setCalendarType(profile.calendar_type);
+    setLunarIsLeapMonth(Boolean(profile.lunar_is_leap_month));
     const resolvedCity = findCityOption(profile.city_name);
     setCityGroup(String(profile.city_group || resolvedCity?.group.id || ""));
     setCityName(String(profile.city_name || resolvedCity?.item.name || "").trim());
@@ -173,6 +178,7 @@ export function V17_NatalInput({
     setMinute(DEFAULT_FORM.minute);
     setGender(DEFAULT_FORM.gender);
     setCalendarType(DEFAULT_FORM.calendarType);
+    setLunarIsLeapMonth(DEFAULT_FORM.lunarIsLeapMonth);
     setCityGroup("");
     setCityName("");
     setProfileError("");
@@ -198,6 +204,7 @@ export function V17_NatalInput({
           birth_time_iso: birthTimeLocal,
           gender,
           calendar_type: calendarType,
+          lunar_is_leap_month: calendarType === "lunar" ? lunarIsLeapMonth : false,
           city_name: selectedCity?.item.name || cityName.trim(),
           city_code: selectedCity?.item.code || "",
           city_group: selectedCity?.group.id || cityGroup,
@@ -298,6 +305,7 @@ export function V17_NatalInput({
       birthTimeISO: birthTimeLocal,
       gender,
       calendarType,
+      lunarIsLeapMonth: calendarType === "lunar" ? lunarIsLeapMonth : false,
       profileId: selectedProfileId,
       profileName: profileName.trim() || undefined,
       cityName: selectedCity?.item.name || cityName.trim() || undefined,
@@ -452,17 +460,33 @@ export function V17_NatalInput({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-8">
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.calendar")}
           <select
             className="rounded-md border border-violet-300/30 bg-black/30 px-2 py-2 text-sm"
             value={calendarType}
-            onChange={(e) => setCalendarType(e.target.value as "solar" | "lunar")}
+            onChange={(e) => {
+              const next = e.target.value as "solar" | "lunar";
+              setCalendarType(next);
+              if (next !== "lunar") setLunarIsLeapMonth(false);
+            }}
           >
             <option value="solar">{t(lang, "natal.calendar.solar")}</option>
             <option value="lunar">{t(lang, "natal.calendar.lunar")}</option>
           </select>
+        </label>
+        <label className="flex min-h-[58px] items-end gap-2 rounded-md border border-violet-300/20 bg-black/20 px-2 py-2 text-xs text-violet-100">
+          <input
+            type="checkbox"
+            checked={calendarType === "lunar" && lunarIsLeapMonth}
+            disabled={calendarType !== "lunar"}
+            onChange={(e) => setLunarIsLeapMonth(e.target.checked)}
+            className="mb-1 h-4 w-4 accent-violet-400 disabled:opacity-40"
+          />
+          <span className={calendarType === "lunar" ? "text-violet-100" : "text-violet-300/45"}>
+            {t(lang, "natal.field.leap_month")}
+          </span>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.year")}
@@ -525,7 +549,11 @@ export function V17_NatalInput({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-violet-200/75">
-          {t(lang, "natal.current_birth", { value: birthTimeLocal.replace("T", " ").slice(0, 16) })}
+          {t(lang, "natal.current_birth", {
+            value: `${birthTimeLocal.replace("T", " ").slice(0, 16)}${
+              calendarType === "lunar" && lunarIsLeapMonth ? ` · ${t(lang, "natal.leap_month.badge")}` : ""
+            }`,
+          })}
         </p>
         <button
           type="button"
