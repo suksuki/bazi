@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import {
+  Activity,
+  ArrowRight,
+  BrainCircuit,
+  Database,
+  FlaskConical,
+  Gauge,
+  PlugZap,
+  Users,
+} from "lucide-react";
 import { V17_AppShell } from "@/components/V17_AppShell";
 import { V17_PageGuard } from "@/components/V17_PageGuard";
 import { V17_AdminPluginOverview } from "@/components/V17_AdminPluginOverview";
@@ -47,10 +57,9 @@ import {
   type LooseObject,
   type PluginTierBucketLike,
 } from "@/components/adminShared";
-import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
 import { V17_FeatureOutlet, type V17FeatureRenderers } from "@/components/V17_FeatureOutlet";
 import { requestJson, jsonPostInit } from "@/lib/apiClient";
-import { ADMIN_FEATURE_MODULES, resolveFeatureTabs, type AdminFeatureTabKey } from "@/lib/featureRegistry";
+import type { AdminFeatureTabKey } from "@/lib/featureRegistry";
 import { useV17Runtime } from "@/hooks/useV17Runtime";
 
 type TabKey = AdminFeatureTabKey;
@@ -240,6 +249,59 @@ type EvolutionLogEntry = {
 type ActionKey = "loadModels" | "testLlm" | "testLlmChat" | "saveLlm" | "testDb" | "saveDb" | "loadPlugins" | "savePhysics" | "loadEvolution" | null;
 const ORACLE_SESSION_STORAGE_KEY = "v17.oracle.current_session_id";
 
+type AdminConsoleCard = {
+  id: TabKey;
+  title: string;
+  desc: string;
+  badge: ReactNode;
+  icon: ReactNode;
+  tone: string;
+};
+
+function AdminConsoleDeck({
+  cards,
+  activeId,
+  onSelect,
+}: {
+  cards: AdminConsoleCard[];
+  activeId: TabKey;
+  onSelect: (id: TabKey) => void;
+}) {
+  return (
+    <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map((card) => {
+        const active = card.id === activeId;
+        return (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => onSelect(card.id)}
+            className={`group min-w-0 rounded-2xl border p-3 text-left transition active:scale-[0.99] sm:p-4 ${
+              active
+                ? "border-cyan-400/45 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+                : "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.055]"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className={`rounded-xl border p-2 ${card.tone}`}>{card.icon}</span>
+              <span className="inline-flex min-h-8 max-w-[42%] items-center justify-center rounded-full border border-white/10 bg-black/20 px-2 text-[10px] text-zinc-300">
+                <span className="truncate">{card.badge}</span>
+              </span>
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-zinc-50">{card.title}</h3>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-zinc-400">{card.desc}</p>
+              </div>
+              <ArrowRight className={`h-4 w-4 shrink-0 transition ${active ? "text-cyan-200" : "text-zinc-500 group-hover:text-zinc-200"}`} />
+            </div>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
 function applyLlmNodeToState(llmNode: LooseObject | null, setLlm: Dispatch<SetStateAction<LlmNode>>) {
   if (!llmNode) return;
   const baseUrl = String(llmNode.base_url || "");
@@ -333,6 +395,12 @@ export default function V17AdminPage() {
   const llmBaseUrl = `http://${llm.host}:${llm.port}/v1`;
   const ghostBtn = ADMIN_GHOST_BTN;
   const solidBtn = ADMIN_SOLID_BTN;
+  const selectAdminTab = (nextTab: TabKey) => {
+    setTab(nextTab);
+    requestAnimationFrame(() => {
+      document.getElementById("v17-admin-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const canManageSystem = access.canAccessAdmin && access.role === "admin";
 
@@ -735,19 +803,64 @@ export default function V17AdminPage() {
     return decisionCount > 0 || isInboxRuntimeStatus(row.runtime?.status);
   });
   const policyWarnCount = pluginPanelRows.filter((row) => row.plugin.policy_valid === false).length;
-  const adminTabs = resolveFeatureTabs(ADMIN_FEATURE_MODULES, {
-    language,
-    access,
-    context: {
-      llmModel: llm.model,
-      dbEnabled: db.enabled,
-      pluginsCount: plugins.length,
-      l0Locked,
-      evolutionLogCount: evolutionLogs.length,
-      learningStatus: asString(learningCampaign.status, "idle"),
-      authUserCount: authUsers.length,
+  const adminConsoleCards: AdminConsoleCard[] = [
+    {
+      id: "llm",
+      title: ui("模型引擎", "Model Engine", "모델 엔진"),
+      desc: ui("配置模型、节点、超时与连通测试。", "Configure model, endpoint, timeout, and tests.", "모델, 노드, 제한시간, 연결 테스트를 설정합니다."),
+      badge: llm.model || "model",
+      icon: <BrainCircuit className="h-4 w-4" />,
+      tone: "border-violet-400/25 bg-violet-500/10 text-violet-100",
     },
-  });
+    {
+      id: "db",
+      title: ui("数据库", "Database", "데이터베이스"),
+      desc: ui("Postgres 桥接、保存配置与连通测试。", "Postgres bridge, saved config, and connectivity.", "Postgres 브리지, 저장 설정, 연결 상태입니다."),
+      badge: db.enabled ? "on" : "off",
+      icon: <Database className="h-4 w-4" />,
+      tone: "border-cyan-400/25 bg-cyan-500/10 text-cyan-100",
+    },
+    {
+      id: "plugins",
+      title: ui("规则引擎", "Rule Engine", "규칙 엔진"),
+      desc: ui("插件运行态、冲突裁决与核心推理链。", "Plugin runtime, conflict arbitration, and reasoning chain.", "플러그인 런타임, 충돌 중재, 추론 체인입니다."),
+      badge: plugins.length,
+      icon: <PlugZap className="h-4 w-4" />,
+      tone: "border-amber-400/25 bg-amber-500/10 text-amber-100",
+    },
+    {
+      id: "physics",
+      title: ui("参数中心", "Parameters", "파라미터"),
+      desc: ui("L0 常数、冻结状态与基础权重。", "L0 constants, lock state, and base weights.", "L0 상수, 잠금 상태, 기본 가중치입니다."),
+      badge: l0Locked ? "locked" : "edit",
+      icon: <Gauge className="h-4 w-4" />,
+      tone: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
+    },
+    {
+      id: "evolution",
+      title: ui("审计日志", "Audit Logs", "감사 로그"),
+      desc: ui("演化账本与每次十神位移记录。", "Evolution ledger and deity-shift records.", "진화 장부와 십신 이동 기록입니다."),
+      badge: evolutionLogs.length,
+      icon: <Activity className="h-4 w-4" />,
+      tone: "border-sky-400/25 bg-sky-500/10 text-sky-100",
+    },
+    {
+      id: "learning",
+      title: ui("学习任务", "Learning", "학습 작업"),
+      desc: ui("批量学习、LLM 复核与质量分数。", "Batch learning, LLM review, and quality score.", "일괄 학습, LLM 검토, 품질 점수입니다."),
+      badge: asString(learningCampaign.status, "idle"),
+      icon: <FlaskConical className="h-4 w-4" />,
+      tone: "border-fuchsia-400/25 bg-fuchsia-500/10 text-fuchsia-100",
+    },
+    {
+      id: "users",
+      title: ui("成员权限", "Members", "멤버 권한"),
+      desc: ui("账号、角色与协作权限维护。", "Accounts, roles, and collaboration access.", "계정, 역할, 협업 권한을 관리합니다."),
+      badge: authUsers.length,
+      icon: <Users className="h-4 w-4" />,
+      tone: "border-zinc-400/25 bg-zinc-500/10 text-zinc-100",
+    },
+  ];
   const adminRenderers: V17FeatureRenderers<TabKey> = {
     llm: () => (
       <V17_AdminLlmPanel
@@ -944,9 +1057,9 @@ export default function V17AdminPage() {
             </div>
           </header>
 
-          <V17_SurfaceTabs items={adminTabs} activeId={tab} onChange={setTab} />
+          <AdminConsoleDeck cards={adminConsoleCards} activeId={tab} onSelect={selectAdminTab} />
 
-          <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
+          <div id="v17-admin-panel" className="scroll-mt-20 min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:scroll-mt-6 sm:rounded-3xl sm:p-6 md:min-h-[700px]">
             <V17_FeatureOutlet activeId={tab} renderers={adminRenderers} />
 
             <p className="mt-8 text-xs italic text-zinc-600">{msg || "等待指令..."}</p>
