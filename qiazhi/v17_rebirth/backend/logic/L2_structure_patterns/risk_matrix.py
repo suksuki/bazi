@@ -11,7 +11,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
 from v17_rebirth.backend.logic.core_engine.work_evidence_protocol import build_work_evidence
-from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import ten_god_from_stems
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, ten_god_from_stems
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
 
 V17_SKILL_MANIFEST = {
@@ -29,6 +29,19 @@ DECLARED_PARAMS = {
     "OFFICER_CRUSH_LIMIT": 0.5,     # 伤官见官的防御折损
     "OFFICER_EXHAUST_RATIO": 2.0,   # 伤官伤尽的强弱比阈值
     "OFFICER_EXHAUST_SUPPORT_MAX": 0.42,  # 官星仍有明显根气/成局时，不判伤尽
+}
+
+YANGREN_BRANCH_BY_DAYMASTER: Dict[str, str] = {
+    "甲": "卯",
+    "乙": "寅",
+    "丙": "午",
+    "丁": "巳",
+    "戊": "午",
+    "己": "巳",
+    "庚": "酉",
+    "辛": "申",
+    "壬": "子",
+    "癸": "亥",
 }
 
 
@@ -157,6 +170,13 @@ def _owl_manifestation(*, food: float, owl: float, scores: Dict[str, Any]) -> st
         return "contested"
     return "latent"
 
+
+def _branch_main_god(daymaster: str, branch: str, fallback: str = "劫财") -> str:
+    hidden = BRANCH_HIDDEN.get(branch) or []
+    if not daymaster or not hidden:
+        return fallback
+    return ten_god_from_stems(daymaster, hidden[0][0]) or fallback
+
 @dataclass
 class RiskMatrixPlugin(V17PluginSpec):
     plugin_id: str = "l2.risk.risk_matrix"
@@ -180,7 +200,7 @@ class RiskMatrixPlugin(V17PluginSpec):
         results: List[V17Fact] = []
         four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
         day_gz = str(four.get("day", "")).strip()
-        daymaster = day_gz[0] if len(day_gz) >= 2 else "壬"
+        daymaster = day_gz[0] if len(day_gz) >= 2 else ""
         month_gz = str(four.get("month", "")).strip()
         month_branch = month_gz[1] if len(month_gz) >= 2 else ""
         officer_relief = _officer_support_relief(physics_tensor, daymaster=daymaster)
@@ -201,25 +221,36 @@ class RiskMatrixPlugin(V17PluginSpec):
 
         # 1. 羊刃逢冲 (Blade Clash)
         clashes = iv2.get("liu_chong", [])
-        found_blade = False
-        if clashes:
+        blade_branch = YANGREN_BRANCH_BY_DAYMASTER.get(daymaster, "")
+        blade_clashes = []
+        if blade_branch and clashes:
             for cl in clashes:
-                brs = cl.get("pair") or []
-                if any(b in {"子", "午", "卯", "酉"} for b in brs):
-                    found_blade = True
-                    break
-        if found_blade:
-            origin_meta = _origin_meta(clashes, member_key="pair", members=["子", "午", "卯", "酉"])
+                if not isinstance(cl, dict):
+                    continue
+                brs = [str(b).strip() for b in (cl.get("pair") or []) if str(b).strip()]
+                if blade_branch in brs:
+                    blade_clashes.append(cl)
+        if blade_clashes:
+            blade_members = sorted(
+                {
+                    str(b).strip()
+                    for row in blade_clashes
+                    for b in (row.get("pair") or [])
+                    if str(b).strip()
+                }
+            )
+            blade_target_god = _branch_main_god(daymaster, blade_branch)
+            origin_meta = _origin_meta(blade_clashes, member_key="pair", members=[blade_branch])
             manifestation = _manifestation_profile(
-                rows=clashes,
+                rows=blade_clashes,
                 relation_family="liu_chong",
-                member_set=["子", "午", "卯", "酉"],
+                member_set=[blade_branch],
                 origin_types=[origin_meta["origin_type"]],
             )
-            match_ratio = _clamp01((0.52 + 0.08 * max(0, len(clashes) - 1)) * origin_meta["origin_multiplier"])
+            match_ratio = _clamp01((0.56 + 0.08 * max(0, len(blade_clashes) - 1)) * origin_meta["origin_multiplier"])
             results.append(V17Fact(
                 plugin_id=self.plugin_id,
-                text="检测到「羊刃逢冲」结构：能级存在瞬间爆发式波动风险。",
+                text=f"检测到「羊刃逢冲」结构：日主 {daymaster} 的羊刃位 {blade_branch} 参与冲动，能级存在瞬间爆发式波动风险。",
                 causal_tier=self.causal_tier,
                 priority=0.95,
                 decision_hint="优先作为结构风险描述，不直接改写十神底数。",
@@ -232,26 +263,29 @@ class RiskMatrixPlugin(V17PluginSpec):
                     "source_event": "blade_clash",
                     "match_ratio": round(match_ratio, 3),
                     "risk_driver": "blade_clash",
+                    "blade_daymaster": daymaster,
+                    "blade_branch": blade_branch,
+                    "clash_pairs": [row.get("pair") for row in blade_clashes],
                     **manifestation,
-                    **_projection_meta("比肩"),
+                    **_projection_meta(blade_target_god),
                     "work_evidence": build_work_evidence(
                         relation_family="risk_blade_clash",
-                        target_god="比肩",
-                        members=["子", "午", "卯", "酉"],
+                        target_god=blade_target_god,
+                        members=blade_members,
                         effect_type="harm",
                         layer="branch",
                         origin_scope=str(origin_meta["origin_type"] or "natal"),
                         condition_state=str(manifestation.get("manifestation_state") or ""),
                         impact_ratio=0.0,
                         match_ratio=round(match_ratio, 3),
-                        path_strength=0.16 + match_ratio * 0.28 + 0.04 * max(0, len(clashes) - 1),
-                        targets=["比肩"],
+                        path_strength=0.18 + match_ratio * 0.28 + 0.04 * max(0, len(blade_clashes) - 1),
+                        targets=[blade_target_god],
                     ),
                     "static_basis": build_static_basis(
                         physics_tensor=physics_tensor,
-                        target_god="比肩",
+                        target_god=blade_target_god,
                         relation_family="blade_clash",
-                        relation_members=["子", "午", "卯", "酉"],
+                        relation_members=blade_members,
                     ),
                     **origin_meta,
                 }

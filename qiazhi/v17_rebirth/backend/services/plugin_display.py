@@ -247,7 +247,7 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.pattern.wealth_star.v1": {
         "display_name": "财格候选",
-        "definition": "围绕正财格与偏财格的月令、透干与结构条件做候选审计。",
+        "definition": "围绕正财格与偏财格做候选审计；未满足透干、清杂与护格证据前不直接定格。",
     },
     "classical.pattern.seal_star.v1": {
         "display_name": "印格候选",
@@ -259,19 +259,19 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.pattern.guanyin.v1": {
         "display_name": "官印相生",
-        "definition": "审计官印相生路线是否成立，以及能否形成清贵结构。",
+        "definition": "审计官印相生路线的候选证据，最终仍需透干、清杂与贴身链路确认。",
     },
     "classical.pattern.shayin.v1": {
         "display_name": "杀印相生",
-        "definition": "审计七杀与印星的化杀成权路线是否成立。",
+        "definition": "审计七杀与印星的化杀成权候选路线，未核验制化前只作观察。",
     },
     "classical.pattern.shishen_zhisha.v1": {
         "display_name": "食神制杀",
-        "definition": "审计食神是否足以制服七杀并维持格局清纯。",
+        "definition": "审计食神制杀的候选链路，需继续核验食神透出、枭夺食与杀势清杂。",
     },
     "classical.pattern.shangguan_peiyin.v1": {
         "display_name": "伤官配印",
-        "definition": "审计伤官旺而得印护的高阶成格路线。",
+        "definition": "审计伤官配印的候选路线，未核验印星贴身护伤前不直接定格。",
     },
     "classical.pattern.caipoyin.v1": {
         "display_name": "财破印",
@@ -283,23 +283,23 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.pattern.shangguan_shengcai.v1": {
         "display_name": "伤官生财",
-        "definition": "审计伤官输出转财的结构路径与成格条件。",
+        "definition": "审计伤官输出转财的候选路径，成格条件需另由证据层确认。",
     },
     "classical.pattern.yangren_jiasha.v1": {
         "display_name": "阳刃驾杀",
-        "definition": "审计羊刃与七杀并行时是否形成可用权格路线。",
+        "definition": "审计真实日主羊刃与七杀并行时的权格候选路线。",
     },
     "classical.pattern.zaqi_caiguan.v1": {
         "display_name": "杂气财官格",
-        "definition": "针对辰戌丑未杂气月的财官透势做专题候选审计。",
+        "definition": "针对辰戌丑未杂气月中财官藏干与透干证据做专题候选审计。",
     },
     "classical.pattern.zaqi_yin.v1": {
         "display_name": "杂气印绶格",
-        "definition": "针对杂气月中印绶透势与护格条件做专题候选审计。",
+        "definition": "针对杂气月中印绶藏干与透干证据做专题候选审计。",
     },
     "classical.pattern.zaqi_qisha.v1": {
         "display_name": "杂气七杀格",
-        "definition": "针对杂气月中七杀透势与制化条件做专题候选审计。",
+        "definition": "针对杂气月中七杀藏干、透干与制化证据做专题候选审计。",
     },
     "classical.pattern.congcai.v1": {
         "display_name": "从财格",
@@ -327,7 +327,7 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.pattern.huaqi.v1": {
         "display_name": "化气格",
-        "definition": "审计天干五合与化神得令条件，确认是否具备化气胚象。",
+        "definition": "依据 L1 合化结果审计天干五合是否具备化气胚象。",
     },
     "classical.pattern.quzhi.v1": {
         "display_name": "曲直格",

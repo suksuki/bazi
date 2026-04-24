@@ -23,9 +23,9 @@ V17_SKILL_MANIFEST = {
 }
 
 DECLARED_PARAMS = {
-    "GUAN_THRESHOLD": 40.0,        # 正官格激活能量阈值
-    "SHI_SHANG_THRESHOLD": 35.0,   # 食伤格激活能量阈值
-    "CAI_THRESHOLD": 35.0,         # 财星格激活能量阈值
+    "GUAN_THRESHOLD": 40.0,        # 官杀主轴纳入观察阈值
+    "SHI_SHANG_THRESHOLD": 35.0,   # 食伤主轴纳入观察阈值
+    "CAI_THRESHOLD": 35.0,         # 财星主轴纳入观察阈值
     "PATTERN_PRIORITY": 0.78,      # 事实输出优先级
     "PROFILE_MIN_SCORE": 10.0,     # 混合主轴纳入剖面的最低十神分数
     "PROFILE_TOP_GODS": 3,         # 混合主轴最多采样几个十神

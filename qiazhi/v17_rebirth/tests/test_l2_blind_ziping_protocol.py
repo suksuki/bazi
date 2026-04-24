@@ -22,9 +22,20 @@ from v17_rebirth.backend.logic.L2_structure_patterns.ziping_family import (
 )
 from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations import (
     CaiPoYinPatternPlugin,
+    CongCaiPatternPlugin,
+    CongGePatternPlugin,
+    CongQiangPatternPlugin,
+    CongRuoPatternPlugin,
+    CongShaPatternPlugin,
+    CongWangPatternPlugin,
+    CongErPatternPlugin,
     PatternAxisPlugin,
     FinanceOfficerPatternPlugin,
     GuanYinPatternPlugin,
+    HuaQiPatternPlugin,
+    JiaSePatternPlugin,
+    QuZhiPatternPlugin,
+    RunXiaPatternPlugin,
     SealStarPatternPlugin,
     ShaYinPatternPlugin,
     ShangGuanShengCaiPatternPlugin,
@@ -35,6 +46,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.pattern_specializations imp
     WealthStarPatternPlugin,
     YangRenPatternPlugin,
     YangRenJiaShaPatternPlugin,
+    YanShangPatternPlugin,
     ZaQiCaiGuanPatternPlugin,
     ZaQiQiShaPatternPlugin,
     ZaQiYinPatternPlugin,
@@ -615,7 +627,7 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
 
     zaqi_yin_facts = ZaQiYinPatternPlugin().collect_v17_facts(
         {
-            "four_pillars": {"year": "甲子", "month": "戊辰", "day": "甲午", "hour": "乙亥"},
+            "four_pillars": {"year": "甲子", "month": "戊辰", "day": "甲午", "hour": "癸亥"},
             "ten_gods_runtime": {"正印": 17.0, "偏印": 6.0},
         }
     )
@@ -624,9 +636,76 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
 
     zaqi_qisha_facts = ZaQiQiShaPatternPlugin().collect_v17_facts(
         {
-            "four_pillars": {"year": "甲子", "month": "庚戌", "day": "甲午", "hour": "乙酉"},
+            "four_pillars": {"year": "甲子", "month": "辛丑", "day": "乙午", "hour": "辛酉"},
             "ten_gods_runtime": {"七杀": 19.0, "正印": 4.0},
         }
     )
     assert zaqi_qisha_facts
     assert zaqi_qisha_facts[0].meta["pattern_candidate"] == "杂气七杀格"
+
+
+def test_classical_patterns_reject_score_only_high_risk_false_positives() -> None:
+    score_only_huaqi = HuaQiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "己卯", "day": "庚午", "hour": "丁亥"},
+            "ten_gods_runtime": {"正财": 28.0, "偏印": 18.0},
+            "meta": {"stem_fusion_v1": {"cases": [{"stems": ["甲", "己"], "pillars": ["year", "month"], "mode": "stuck", "hua_element": "earth"}]}},
+        }
+    )
+    assert score_only_huaqi == []
+
+    real_huaqi = HuaQiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "己辰", "day": "甲午", "hour": "戊辰"},
+            "ten_gods_runtime": {"正财": 30.0, "偏财": 12.0},
+            "meta": {
+                "stem_fusion_v1": {
+                    "cases": [
+                        {
+                            "stems": ["甲", "己"],
+                            "pillars": ["day", "month"],
+                            "mode": "transformed",
+                            "hua_element": "earth",
+                            "effective_support_score": 0.58,
+                            "interference_score": 0.05,
+                        }
+                    ]
+                }
+            },
+        }
+    )
+    assert real_huaqi
+    assert real_huaqi[0].meta["huaqi_signature"] == "甲己化土"
+
+    non_wood_daymaster_specialized = QuZhiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "庚申", "month": "辛酉", "day": "庚辰", "hour": "庚申"},
+            "ten_gods_runtime": {"比肩": 38.0, "劫财": 20.0, "偏印": 8.0},
+        }
+    )
+    assert non_wood_daymaster_specialized == []
+
+    wood_structure_specialized = QuZhiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲寅", "month": "乙卯", "day": "甲辰", "hour": "乙亥"},
+            "ten_gods_runtime": {"比肩": 34.0, "劫财": 22.0, "正印": 6.0},
+        }
+    )
+    assert wood_structure_specialized
+    assert wood_structure_specialized[0].meta["dominant_element"] == "木"
+
+    fake_congcai_with_roots = CongCaiPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲寅", "month": "乙卯", "day": "甲辰", "hour": "戊辰"},
+            "ten_gods_runtime": {"正财": 24.0, "偏财": 12.0, "比肩": 9.0, "劫财": 2.0, "正印": 8.0},
+        }
+    )
+    assert fake_congcai_with_roots == []
+
+    zaqi_qisha_without_hidden_sha = ZaQiQiShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "甲子", "month": "庚戌", "day": "甲午", "hour": "乙酉"},
+            "ten_gods_runtime": {"七杀": 24.0, "正印": 4.0},
+        }
+    )
+    assert zaqi_qisha_without_hidden_sha == []

@@ -247,6 +247,20 @@ def test_huaqi_and_tianyuan_emit_on_pure_alignment_tensor() -> None:
             "正印": 6.0,
             "偏印": 5.0,
         },
+        "meta": {
+            "stem_fusion_v1": {
+                "cases": [
+                    {
+                        "pillars": ["day", "month"],
+                        "stems": ["甲", "己"],
+                        "mode": "transformed",
+                        "hua_element": "earth",
+                        "effective_support_score": 0.62,
+                        "interference_score": 0.02,
+                    }
+                ]
+            }
+        },
     }
 
     facts = collect_all_spec_facts(pt)

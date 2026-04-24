@@ -96,7 +96,7 @@ def test_shensha_respects_thresholds_and_payload(monkeypatch: pytest.MonkeyPatch
     )
     facts = ShenshaPlugin.collect_v17_facts(
         {
-            "four_pillars": {"month": "甲午", "day": "丙寅"},
+            "four_pillars": {"month": "甲午", "day": "丙寅", "hour": "丁酉"},
             "ten_gods_absolute": {"正印": 35.0, "劫财": 22.0},
             "ten_gods_runtime": {"正印": 35.0, "劫财": 22.0},
         }

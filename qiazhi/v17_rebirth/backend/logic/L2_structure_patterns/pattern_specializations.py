@@ -12,7 +12,13 @@ from v17_rebirth.backend.logic.L1_atomic_ops.plugin_condition_protocol import (
     relation_origin_multiplier,
 )
 from v17_rebirth.backend.logic.L1_atomic_ops.relation_cluster_projection import god_cluster_projection
-from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, _parse_gz, ten_god_from_stems
+from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import (
+    BRANCH_ELEMENT,
+    BRANCH_HIDDEN,
+    STEM_ELEMENT,
+    _parse_gz,
+    ten_god_from_stems,
+)
 from v17_rebirth.backend.logic.plugin_discovery import deity_scores_from_tensor, rows_dict_to_v17_facts
 from v17_rebirth.backend.logic.configs.manager import get_plugin_config
 from v17_rebirth.backend.plugins.spec import V17Fact, V17PluginSpec
@@ -432,15 +438,79 @@ def _is_zaji_month(branch: str) -> bool:
     return branch in {"辰", "戌", "丑", "未"}
 
 
-def _dominant_element(scores: Dict[str, float]) -> Tuple[str, float, float]:
-    element_scores = {"木": 0.0, "火": 0.0, "土": 0.0, "金": 0.0, "水": 0.0}
-    god_to_element = {
-        "比肩": "木", "劫财": "木",
-        "食神": "火", "伤官": "火",
-        "偏财": "土", "正财": "土",
-        "七杀": "金", "正官": "金",
-        "偏印": "水", "正印": "水",
+def _pillar_scope_rows(physics_tensor: Dict[str, Any], *, include_runtime: bool = False) -> List[Tuple[str, str, str]]:
+    four = physics_tensor.get("four_pillars") if isinstance(physics_tensor.get("four_pillars"), dict) else {}
+    rows: List[Tuple[str, str, str]] = []
+    for scope in ("year", "month", "day", "hour"):
+        stem, branch = _parse_gz(str(four.get(scope, "")).strip())
+        rows.append((scope, stem, branch))
+    if include_runtime:
+        for scope, key in (("luck", "luck_pillar"), ("flow", "flow_pillar")):
+            stem, branch = _parse_gz(str(physics_tensor.get(key, "")).strip())
+            rows.append((scope, stem, branch))
+    return rows
+
+
+def _visible_god_hits(physics_tensor: Dict[str, Any], *, include_runtime: bool = False) -> List[Dict[str, str]]:
+    daymaster = _daymaster_stem(physics_tensor)
+    if not daymaster:
+        return []
+    hits: List[Dict[str, str]] = []
+    for scope, stem, _branch in _pillar_scope_rows(physics_tensor, include_runtime=include_runtime):
+        if not stem or scope == "day":
+            continue
+        hits.append({"scope": scope, "stem": stem, "god": ten_god_from_stems(daymaster, stem)})
+    return hits
+
+
+def _month_hidden_god_hits(physics_tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
+    daymaster = _daymaster_stem(physics_tensor)
+    month_branch = _month_branch(physics_tensor)
+    if not daymaster or not month_branch:
+        return []
+    hits: List[Dict[str, Any]] = []
+    for stem, weight in BRANCH_HIDDEN.get(month_branch, []):
+        hits.append(
+            {
+                "branch": month_branch,
+                "stem": stem,
+                "god": ten_god_from_stems(daymaster, stem),
+                "weight": float(weight),
+            }
+        )
+    return hits
+
+
+def _zaqi_evidence(physics_tensor: Dict[str, Any], candidate_gods: set[str]) -> Dict[str, Any]:
+    hidden_hits = [row for row in _month_hidden_god_hits(physics_tensor) if row.get("god") in candidate_gods]
+    visible_hits = [row for row in _visible_god_hits(physics_tensor) if row.get("god") in candidate_gods]
+    return {
+        "hidden_hits": hidden_hits,
+        "visible_hits": visible_hits,
+        "has_hidden": bool(hidden_hits),
+        "has_visible": bool(visible_hits),
+        "hidden_gods": sorted({str(row.get("god") or "") for row in hidden_hits if row.get("god")}),
+        "visible_gods": sorted({str(row.get("god") or "") for row in visible_hits if row.get("god")}),
     }
+
+
+def _gods_for_element(daymaster: str, element: str) -> set[str]:
+    if not daymaster or not element:
+        return set()
+    return {
+        ten_god_from_stems(daymaster, stem)
+        for stem, stem_element in STEM_ELEMENT.items()
+        if stem_element == element
+    }
+
+
+def _dominant_element(scores: Dict[str, float], *, daymaster: str) -> Tuple[str, float, float]:
+    element_scores = {"木": 0.0, "火": 0.0, "土": 0.0, "金": 0.0, "水": 0.0}
+    if not daymaster:
+        return "", 0.0, 0.0
+    god_to_element: Dict[str, str] = {}
+    for stem, element in STEM_ELEMENT.items():
+        god_to_element[ten_god_from_stems(daymaster, stem)] = element
     for god, score in scores.items():
         element = god_to_element.get(str(god))
         if element:
@@ -449,6 +519,106 @@ def _dominant_element(scores: Dict[str, float]) -> Tuple[str, float, float]:
     top_el, top_score = ranked[0]
     second = float(ranked[1][1]) if len(ranked) > 1 else 0.0
     return top_el, float(top_score), second
+
+
+def _element_structure_evidence(physics_tensor: Dict[str, Any], element: str) -> Dict[str, Any]:
+    month_branch = _month_branch(physics_tensor)
+    month_hidden = BRANCH_HIDDEN.get(month_branch, [])
+    month_main_element = STEM_ELEMENT.get(month_hidden[0][0], "") if month_hidden else BRANCH_ELEMENT.get(month_branch, "")
+    stem_hits: List[Dict[str, str]] = []
+    branch_hits: List[Dict[str, Any]] = []
+    for scope, stem, branch in _pillar_scope_rows(physics_tensor):
+        if stem and STEM_ELEMENT.get(stem) == element:
+            stem_hits.append({"scope": scope, "stem": stem})
+        if not branch:
+            continue
+        hidden_weights = [
+            float(weight)
+            for hidden_stem, weight in BRANCH_HIDDEN.get(branch, [])
+            if STEM_ELEMENT.get(hidden_stem) == element
+        ]
+        if BRANCH_ELEMENT.get(branch) == element or hidden_weights:
+            branch_hits.append(
+                {
+                    "scope": scope,
+                    "branch": branch,
+                    "main_element": BRANCH_ELEMENT.get(branch, ""),
+                    "hidden_weight": round(sum(hidden_weights), 3),
+                }
+            )
+    strong_branch_hits = [
+        row for row in branch_hits if row.get("main_element") == element or float(row.get("hidden_weight") or 0.0) >= 0.6
+    ]
+    return {
+        "month_branch": month_branch,
+        "month_main_element": month_main_element,
+        "month_supports_element": month_main_element == element,
+        "stem_hits": stem_hits,
+        "branch_hits": branch_hits,
+        "strong_branch_hits": strong_branch_hits,
+    }
+
+
+def _daymaster_root_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
+    daymaster = _daymaster_stem(physics_tensor)
+    dm_element = STEM_ELEMENT.get(daymaster, "")
+    roots: List[Dict[str, Any]] = []
+    same_visible: List[Dict[str, str]] = []
+    if not daymaster or not dm_element:
+        return {"daymaster": daymaster, "root_weight": 0.0, "roots": roots, "same_visible": same_visible}
+    scope_weight = {"year": 0.45, "month": 1.1, "day": 0.85, "hour": 0.5, "luck": 0.32, "flow": 0.18}
+    for scope, stem, branch in _pillar_scope_rows(physics_tensor, include_runtime=True):
+        if scope != "day" and stem and STEM_ELEMENT.get(stem) == dm_element:
+            same_visible.append({"scope": scope, "stem": stem})
+        for hidden_stem, weight in BRANCH_HIDDEN.get(branch, []):
+            if STEM_ELEMENT.get(hidden_stem) != dm_element:
+                continue
+            roots.append(
+                {
+                    "scope": scope,
+                    "branch": branch,
+                    "stem": hidden_stem,
+                    "weight": round(float(weight) * scope_weight.get(scope, 0.2), 3),
+                }
+            )
+    root_weight = round(sum(float(row.get("weight") or 0.0) for row in roots), 3)
+    return {
+        "daymaster": daymaster,
+        "daymaster_element": dm_element,
+        "root_weight": root_weight,
+        "roots": roots,
+        "same_visible": same_visible,
+    }
+
+
+def _is_followable_weak_body(physics_tensor: Dict[str, Any], scores: Dict[str, float], *, max_support: float) -> Tuple[bool, Dict[str, Any]]:
+    profile = _daymaster_root_profile(physics_tensor)
+    peer = _score_sum(scores, "比肩", "劫财")
+    seal = _score_sum(scores, "正印", "偏印")
+    support_score = peer + seal + float(profile.get("root_weight") or 0.0) * 8.0 + len(profile.get("same_visible") or []) * 3.0
+    evidence = {
+        **profile,
+        "peer_score": round(peer, 3),
+        "seal_score": round(seal, 3),
+        "self_support_score": round(support_score, 3),
+        "self_support_limit": round(max_support, 3),
+    }
+    return support_score <= max_support, evidence
+
+
+def _is_self_party_strong(physics_tensor: Dict[str, Any], scores: Dict[str, float], *, min_support: float) -> Tuple[bool, Dict[str, Any]]:
+    profile = _daymaster_root_profile(physics_tensor)
+    peer = _score_sum(scores, "比肩", "劫财")
+    seal = _score_sum(scores, "正印", "偏印")
+    support_score = peer + seal + float(profile.get("root_weight") or 0.0) * 6.0 + len(profile.get("same_visible") or []) * 2.0
+    evidence = {
+        **profile,
+        "peer_score": round(peer, 3),
+        "seal_score": round(seal, 3),
+        "self_support_score": round(support_score, 3),
+        "self_support_required": round(min_support, 3),
+    }
+    return support_score >= min_support and float(profile.get("root_weight") or 0.0) >= 0.8, evidence
 
 
 def _visible_stems_and_branches(physics_tensor: Dict[str, Any]) -> Tuple[List[str], List[str]]:
@@ -814,6 +984,8 @@ def _finalize_pattern_rows(
         if not pattern_name:
             continue
         target_god = str(meta.get("target_god") or "").strip()
+        meta.setdefault("observe_only", True)
+        meta.setdefault("candidate_status", "needs_classical_evidence")
         raw_ratio = float(meta.get("match_ratio") or 0.0)
         adjusted_ratio, bucket, delta = _apply_pattern_survival(
             raw_ratio,
@@ -1925,28 +2097,34 @@ class ZaQiCaiGuanPatternPlugin(V17PluginSpec):
         if not _is_zaji_month(month_branch):
             return []
         scores = deity_scores_from_tensor(physics_tensor)
-        guan = _score_sum(scores, "正官", "偏财", "正财")
+        candidate_gods = {"正官", "七杀", "偏财", "正财"}
+        evidence = _zaqi_evidence(physics_tensor, candidate_gods)
+        if not (evidence["has_hidden"] and evidence["has_visible"]):
+            return []
+        guan = _score_sum(scores, "正官", "七杀", "偏财", "正财")
         min_score = _pattern_cfg(self.plugin_id, "ZAQI_CAIGUAN_MIN_SCORE", 14.0)
         if guan < min_score:
             return []
+        target_god = max(candidate_gods, key=lambda god: float(scores.get(god, 0.0) or 0.0))
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "ZAQI_CAIGUAN_MATCH_BASE", 0.72) * min(1.0, guan / max(min_score * 1.8, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
         rows = [{
             "plugin": self.plugin_id,
-            "fact": f"格局候选：{month_branch} 月属杂气月，财官透势可入「杂气财官格」专题。",
+            "fact": f"格局候选：{month_branch} 月属杂气月，且财官类藏干有透出，可入「杂气财官格」专题。",
             "priority": self.registry_priority,
             "label": "杂气财官",
             "meta": {
                 "pattern_candidate": "杂气财官格",
-                "target_god": "正官",
+                "target_god": target_god,
                 "month_branch": month_branch,
+                "zaqi_evidence": evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
                 "exclusivity_key": "pattern_family",
                 "source_event": "pattern_family",
                 "confidence": self.registry_priority,
-                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="正官", relation_family="pattern_zaqi_caiguan", relation_members=[month_branch]),
+                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god=target_god, relation_family="pattern_zaqi_caiguan", relation_members=[month_branch]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "hidden"}, relation_family="pattern_zaqi_caiguan"),
                 "manifestation_state": "supported",
                 **origin_meta,
@@ -1966,28 +2144,34 @@ class ZaQiYinPatternPlugin(V17PluginSpec):
         if not _is_zaji_month(month_branch):
             return []
         scores = deity_scores_from_tensor(physics_tensor)
+        candidate_gods = {"正印", "偏印"}
+        evidence = _zaqi_evidence(physics_tensor, candidate_gods)
+        if not (evidence["has_hidden"] and evidence["has_visible"]):
+            return []
         seal = _score_sum(scores, "正印", "偏印")
         min_score = _pattern_cfg(self.plugin_id, "ZAQI_YIN_MIN_SCORE", 14.0)
         if seal < min_score:
             return []
+        target_god = max(candidate_gods, key=lambda god: float(scores.get(god, 0.0) or 0.0))
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "ZAQI_YIN_MATCH_BASE", 0.72) * min(1.0, seal / max(min_score * 1.8, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
         rows = [{
             "plugin": self.plugin_id,
-            "fact": f"格局候选：{month_branch} 月属杂气月，印绶透势可入「杂气印绶格」专题。",
+            "fact": f"格局候选：{month_branch} 月属杂气月，且印绶藏干有透出，可入「杂气印绶格」专题。",
             "priority": self.registry_priority,
             "label": "杂气印绶",
             "meta": {
                 "pattern_candidate": "杂气印绶格",
-                "target_god": "正印",
+                "target_god": target_god,
                 "month_branch": month_branch,
+                "zaqi_evidence": evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
                 "exclusivity_key": "pattern_family",
                 "source_event": "pattern_family",
                 "confidence": self.registry_priority,
-                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god="正印", relation_family="pattern_zaqi_yin", relation_members=[month_branch]),
+                "static_basis": build_static_basis(physics_tensor=physics_tensor, target_god=target_god, relation_family="pattern_zaqi_yin", relation_members=[month_branch]),
                 "interaction_layer": detect_interaction_layer({"interaction_layer": "hidden"}, relation_family="pattern_zaqi_yin"),
                 "manifestation_state": "supported",
                 **origin_meta,
@@ -2007,6 +2191,9 @@ class ZaQiQiShaPatternPlugin(V17PluginSpec):
         if not _is_zaji_month(month_branch):
             return []
         scores = deity_scores_from_tensor(physics_tensor)
+        evidence = _zaqi_evidence(physics_tensor, {"七杀"})
+        if not (evidence["has_hidden"] and evidence["has_visible"]):
+            return []
         sha = float(scores.get("七杀", 0.0))
         min_score = _pattern_cfg(self.plugin_id, "ZAQI_QISHA_MIN_SCORE", 14.0)
         if sha < min_score:
@@ -2022,6 +2209,7 @@ class ZaQiQiShaPatternPlugin(V17PluginSpec):
                 "pattern_candidate": "杂气七杀格",
                 "target_god": "七杀",
                 "month_branch": month_branch,
+                "zaqi_evidence": evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2047,7 +2235,15 @@ class CongCaiPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         wealth = _score_sum(scores, "正财", "偏财")
         peer = _score_sum(scores, "比肩", "劫财")
-        if wealth < _pattern_cfg(self.plugin_id, "CONGCAI_MIN_WEALTH", 22.0) or peer > _pattern_cfg(self.plugin_id, "CONGCAI_MAX_PEER", 12.0):
+        support_ok, support_evidence = _is_followable_weak_body(
+            physics_tensor,
+            scores,
+            max_support=_pattern_cfg(self.plugin_id, "CONGCAI_MAX_PEER", 12.0) + 6.0,
+        )
+        if wealth < _pattern_cfg(self.plugin_id, "CONGCAI_MIN_WEALTH", 22.0) or peer > _pattern_cfg(self.plugin_id, "CONGCAI_MAX_PEER", 12.0) or not support_ok:
+            return []
+        total = max(sum(float(value or 0.0) for value in scores.values()), 1.0)
+        if wealth / total < 0.42 or wealth / max(float(support_evidence.get("self_support_score") or 0.0), 1.0) < 2.2:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGCAI_MATCH_BASE", 0.74) * min(1.0, wealth / max(peer + wealth, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2061,6 +2257,7 @@ class CongCaiPatternPlugin(V17PluginSpec):
                 "target_god": "财星",
                 "wealth_score": wealth,
                 "peer_score": peer,
+                "follow_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2086,7 +2283,15 @@ class CongShaPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         sha = float(scores.get("七杀", 0.0))
         peer = _score_sum(scores, "比肩", "劫财")
-        if sha < _pattern_cfg(self.plugin_id, "CONGSHA_MIN_SHA", 22.0) or peer > _pattern_cfg(self.plugin_id, "CONGSHA_MAX_PEER", 12.0):
+        support_ok, support_evidence = _is_followable_weak_body(
+            physics_tensor,
+            scores,
+            max_support=_pattern_cfg(self.plugin_id, "CONGSHA_MAX_PEER", 12.0) + 6.0,
+        )
+        if sha < _pattern_cfg(self.plugin_id, "CONGSHA_MIN_SHA", 22.0) or peer > _pattern_cfg(self.plugin_id, "CONGSHA_MAX_PEER", 12.0) or not support_ok:
+            return []
+        total = max(sum(float(value or 0.0) for value in scores.values()), 1.0)
+        if sha / total < 0.36 or sha / max(float(support_evidence.get("self_support_score") or 0.0), 1.0) < 2.0:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGSHA_MATCH_BASE", 0.74) * min(1.0, sha / max(peer + sha, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2100,6 +2305,7 @@ class CongShaPatternPlugin(V17PluginSpec):
                 "target_god": "七杀",
                 "sha_score": sha,
                 "peer_score": peer,
+                "follow_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2125,7 +2331,15 @@ class CongErPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         output_total = _score_sum(scores, "食神", "伤官")
         seal = _score_sum(scores, "正印", "偏印")
-        if output_total < _pattern_cfg(self.plugin_id, "CONGER_MIN_OUTPUT", 24.0) or seal > _pattern_cfg(self.plugin_id, "CONGER_MAX_SEAL", 12.0):
+        support_ok, support_evidence = _is_followable_weak_body(
+            physics_tensor,
+            scores,
+            max_support=_pattern_cfg(self.plugin_id, "CONGER_MAX_SEAL", 12.0) + 8.0,
+        )
+        if output_total < _pattern_cfg(self.plugin_id, "CONGER_MIN_OUTPUT", 24.0) or seal > _pattern_cfg(self.plugin_id, "CONGER_MAX_SEAL", 12.0) or not support_ok:
+            return []
+        total = max(sum(float(value or 0.0) for value in scores.values()), 1.0)
+        if output_total / total < 0.42:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGER_MATCH_BASE", 0.74) * min(1.0, output_total / max(output_total + seal, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2139,6 +2353,7 @@ class CongErPatternPlugin(V17PluginSpec):
                 "target_god": "食伤",
                 "output_score": output_total,
                 "seal_score": seal,
+                "follow_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2164,7 +2379,12 @@ class CongWangPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         peer = _score_sum(scores, "比肩", "劫财")
         other = max(_score_sum(scores, "正财", "偏财"), _score_sum(scores, "正官", "七杀"), _score_sum(scores, "食神", "伤官"))
-        if peer < _pattern_cfg(self.plugin_id, "CONGWANG_MIN_PEER", 30.0) or other > _pattern_cfg(self.plugin_id, "CONGWANG_MAX_OTHER", 14.0):
+        support_ok, support_evidence = _is_self_party_strong(
+            physics_tensor,
+            scores,
+            min_support=_pattern_cfg(self.plugin_id, "CONGWANG_MIN_PEER", 30.0),
+        )
+        if peer < _pattern_cfg(self.plugin_id, "CONGWANG_MIN_PEER", 30.0) or other > _pattern_cfg(self.plugin_id, "CONGWANG_MAX_OTHER", 14.0) or not support_ok:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGWANG_MATCH_BASE", 0.76) * min(1.0, peer / max(peer + other, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2178,6 +2398,7 @@ class CongWangPatternPlugin(V17PluginSpec):
                 "target_god": "比劫",
                 "peer_score": peer,
                 "other_score": other,
+                "self_party_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2203,7 +2424,12 @@ class CongQiangPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         peer = _score_sum(scores, "比肩", "劫财") + _score_sum(scores, "正印", "偏印")
         other = max(_score_sum(scores, "正财", "偏财"), _score_sum(scores, "正官", "七杀"), _score_sum(scores, "食神", "伤官"))
-        if peer < _pattern_cfg(self.plugin_id, "CONGQIANG_MIN_PEER", 28.0) or other > _pattern_cfg(self.plugin_id, "CONGQIANG_MAX_OTHER", 15.0):
+        support_ok, support_evidence = _is_self_party_strong(
+            physics_tensor,
+            scores,
+            min_support=_pattern_cfg(self.plugin_id, "CONGQIANG_MIN_PEER", 28.0),
+        )
+        if peer < _pattern_cfg(self.plugin_id, "CONGQIANG_MIN_PEER", 28.0) or other > _pattern_cfg(self.plugin_id, "CONGQIANG_MAX_OTHER", 15.0) or not support_ok:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGQIANG_MATCH_BASE", 0.75) * min(1.0, peer / max(peer + other, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2217,6 +2443,7 @@ class CongQiangPatternPlugin(V17PluginSpec):
                 "target_god": "比劫",
                 "peer_score": peer,
                 "other_score": other,
+                "self_party_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2242,7 +2469,15 @@ class CongRuoPatternPlugin(V17PluginSpec):
         scores = deity_scores_from_tensor(physics_tensor)
         peer = _score_sum(scores, "比肩", "劫财") + _score_sum(scores, "正印", "偏印")
         other = max(_score_sum(scores, "正财", "偏财"), _score_sum(scores, "正官", "七杀"), _score_sum(scores, "食神", "伤官"))
-        if peer > _pattern_cfg(self.plugin_id, "CONGRUO_MAX_PEER", 10.0) or other < _pattern_cfg(self.plugin_id, "CONGRUO_MIN_OTHER", 24.0):
+        support_ok, support_evidence = _is_followable_weak_body(
+            physics_tensor,
+            scores,
+            max_support=_pattern_cfg(self.plugin_id, "CONGRUO_MAX_PEER", 10.0) + 5.0,
+        )
+        if peer > _pattern_cfg(self.plugin_id, "CONGRUO_MAX_PEER", 10.0) or other < _pattern_cfg(self.plugin_id, "CONGRUO_MIN_OTHER", 24.0) or not support_ok:
+            return []
+        total = max(sum(float(value or 0.0) for value in scores.values()), 1.0)
+        if other / total < 0.45:
             return []
         origin_meta = _pattern_origin_meta(physics_tensor)
         match_ratio = _clamp01(_pattern_cfg(self.plugin_id, "CONGRUO_MATCH_BASE", 0.72) * min(1.0, other / max(peer + other, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
@@ -2256,6 +2491,7 @@ class CongRuoPatternPlugin(V17PluginSpec):
                 "target_god": "异党",
                 "peer_score": peer,
                 "other_score": other,
+                "follow_evidence": support_evidence,
                 "match_ratio": round(match_ratio, 3),
                 "claim_type": "pattern_candidate",
                 "entity_scope": "pattern",
@@ -2278,26 +2514,68 @@ class HuaQiPatternPlugin(V17PluginSpec):
     registry_priority: float = 0.737
 
     def collect_v17_facts(self, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
-        stems, branches = _visible_stems_and_branches(physics_tensor)
-        pairs = {("甲", "己"): "土", ("乙", "庚"): "金", ("丙", "辛"): "水", ("丁", "壬"): "木", ("戊", "癸"): "火"}
-        found = ""
-        for (a, b), element in pairs.items():
-            if a in stems and b in stems:
-                found = f"{a}{b}化{element}"
-                break
-        if not found:
+        _stems, branches = _visible_stems_and_branches(physics_tensor)
+        element_name = {
+            "wood": "木",
+            "fire": "火",
+            "earth": "土",
+            "metal": "金",
+            "water": "水",
+            "木": "木",
+            "火": "火",
+            "土": "土",
+            "金": "金",
+            "水": "水",
+        }
+        meta = physics_tensor.get("meta") if isinstance(physics_tensor.get("meta"), dict) else {}
+        fusion = meta.get("stem_fusion_v1") if isinstance(meta.get("stem_fusion_v1"), dict) else {}
+        daymaster = _daymaster_stem(physics_tensor)
+        found_case: Dict[str, Any] | None = None
+        for case in fusion.get("cases") or []:
+            if not isinstance(case, dict):
+                continue
+            if str(case.get("mode") or "").strip() != "transformed":
+                continue
+            case_stems = [str(item).strip() for item in (case.get("stems") or []) if str(item).strip()]
+            case_pillars = [str(item).strip() for item in (case.get("pillars") or []) if str(item).strip()]
+            if daymaster and daymaster not in case_stems and "day" not in case_pillars:
+                continue
+            support_score = float(
+                case.get("effective_support_score")
+                if case.get("effective_support_score") is not None
+                else case.get("support_score")
+                if case.get("support_score") is not None
+                else 0.0
+            )
+            if support_score < 0.42 and not bool(case.get("month_stem_supports")):
+                continue
+            found_case = case
+            break
+        if not found_case:
             return []
+        case_stems = [str(item).strip() for item in (found_case.get("stems") or []) if str(item).strip()]
+        hua_element = element_name.get(str(found_case.get("hua_element") or "").strip().lower(), str(found_case.get("hua_element") or "").strip())
+        found = f"{''.join(case_stems)}化{hua_element}" if hua_element else "".join(case_stems)
         origin_meta = _pattern_origin_meta(physics_tensor)
-        match_ratio = round(max(_pattern_cfg(self.plugin_id, "HUAQI_MIN_MATCH", 0.72), min(0.9, 0.72 * max(0.92, float(origin_meta["origin_multiplier"])))), 3)
+        support_score = float(found_case.get("effective_support_score") or found_case.get("support_score") or 0.72)
+        interference = float(found_case.get("interference_score") or 0.0)
+        match_ratio = round(
+            max(
+                _pattern_cfg(self.plugin_id, "HUAQI_MIN_MATCH", 0.72),
+                min(0.9, (0.62 + support_score * 0.28 - interference * 0.16) * max(0.92, float(origin_meta["origin_multiplier"]))),
+            ),
+            3,
+        )
         rows = [{
             "plugin": self.plugin_id,
-            "fact": f"格局候选：天干见合化胚象（{found}），本局存在「化气格」方向。",
+            "fact": f"格局候选：L1 已确认天干合化成形（{found}），本局存在「化气格」候选方向。",
             "priority": self.registry_priority,
             "label": "化气候选",
             "meta": {
                 "pattern_candidate": "化气格",
                 "target_god": "化气",
                 "huaqi_signature": found,
+                "huaqi_case": found_case,
                 "branches": branches,
                 "match_ratio": match_ratio,
                 "claim_type": "pattern_candidate",
@@ -2316,13 +2594,21 @@ class HuaQiPatternPlugin(V17PluginSpec):
 
 def _specialized_pattern_row(*, plugin_id: str, pattern_name: str, element: str, target_god: str, physics_tensor: Dict[str, Any]) -> List[V17Fact]:
     scores = deity_scores_from_tensor(physics_tensor)
-    dominant_element, top_score, second_score = _dominant_element(scores)
+    daymaster = _daymaster_stem(physics_tensor)
+    dominant_element, top_score, second_score = _dominant_element(scores, daymaster=daymaster)
     if dominant_element != element:
         return []
     min_score = _pattern_cfg(plugin_id, "SPECIALIZED_MIN_SCORE", 26.0)
     max_other = _pattern_cfg(plugin_id, "SPECIALIZED_MAX_OTHER", 14.0)
     if top_score < min_score or second_score > max_other:
         return []
+    evidence = _element_structure_evidence(physics_tensor, element)
+    strong_branch_count = len(evidence.get("strong_branch_hits") or [])
+    if not (evidence.get("month_supports_element") and strong_branch_count >= 2) and strong_branch_count < 3:
+        return []
+    element_gods = _gods_for_element(daymaster, element)
+    if element_gods:
+        target_god = max(element_gods, key=lambda god: float(scores.get(god, 0.0) or 0.0))
     origin_meta = _pattern_origin_meta(physics_tensor)
     match_ratio = _clamp01(_pattern_cfg(plugin_id, "SPECIALIZED_MATCH_BASE", 0.76) * min(1.0, top_score / max(top_score + second_score, 1.0)) * max(0.92, float(origin_meta["origin_multiplier"])))
     rows = [{
@@ -2334,6 +2620,8 @@ def _specialized_pattern_row(*, plugin_id: str, pattern_name: str, element: str,
             "pattern_candidate": pattern_name,
             "target_god": target_god,
             "dominant_element": element,
+            "daymaster": daymaster,
+            "structure_evidence": evidence,
             "match_ratio": round(match_ratio, 3),
             "claim_type": "pattern_candidate",
             "entity_scope": "pattern",

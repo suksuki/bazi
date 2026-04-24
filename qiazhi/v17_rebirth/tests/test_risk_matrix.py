@@ -14,6 +14,7 @@ def test_risk_matrix_uses_config_for_blade_and_officer(monkeypatch) -> None:
     )
     facts = risk_matrix.PLUGIN.collect_v17_facts(
         {
+            "four_pillars": {"day": "壬申"},
             "ten_gods_absolute": {"伤官": 12.0, "正官": 11.0},
             "meta": {
                 "interaction_v2": {
@@ -113,6 +114,7 @@ def test_risk_matrix_exposes_layer_and_manifestation_profile(monkeypatch) -> Non
     )
     facts = risk_matrix.PLUGIN.collect_v17_facts(
         {
+            "four_pillars": {"day": "壬申"},
             "ten_gods_absolute": {"伤官": 20.0, "正官": 18.0, "偏印": 9.0, "食神": 8.0},
             "meta": {
                 "interaction_v2": {
@@ -132,6 +134,31 @@ def test_risk_matrix_exposes_layer_and_manifestation_profile(monkeypatch) -> Non
     assert blade.meta["interaction_layer"] == "branch"
     assert blade.meta["manifestation_state"] in {"manifested", "supported", "contested", "latent"}
     assert blade.meta["origin_type"] == "natal"
+    assert blade.meta["blade_branch"] == "子"
+
+
+def test_risk_matrix_does_not_call_four_orthodox_clash_yangren_without_daymaster_blade(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.logic.configs.manager.get_plugin_config",
+        lambda _plugin_id: {
+            "BLADE_CLASH_IMPULSE": 2.2,
+            "OWL_FOOD_CAP": 0.4,
+            "OFFICER_CRUSH_LIMIT": 0.5,
+        },
+    )
+    facts = risk_matrix.PLUGIN.collect_v17_facts(
+        {
+            "four_pillars": {"day": "乙丑"},
+            "ten_gods_absolute": {"伤官": 8.0, "正官": 4.0},
+            "meta": {
+                "interaction_v2": {
+                    "liu_chong": [{"pair": ["子", "午"], "origin_type": "natal"}],
+                }
+            },
+        }
+    )
+
+    assert [f for f in facts if f.meta.get("risk_driver") == "blade_clash"] == []
 
 
 def test_risk_matrix_emits_officer_hurt_and_exhaust_pattern_candidates(monkeypatch) -> None:

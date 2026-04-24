@@ -25,8 +25,8 @@ V17_SKILL_MANIFEST = {
 }
 
 DECLARED_PARAMS = {
-    "TIAN_YI_THRESHOLD": 40.0,     # 天乙显化所需正印能量
-    "YANG_REN_THRESHOLD": 45.0,     # 羊刃显化所需劫财能量
+    "TIAN_YI_THRESHOLD": 40.0,     # 地支命中天乙后，正印能量达到该值才叠加护持提示
+    "YANG_REN_THRESHOLD": 45.0,     # 地支命中日主羊刃后，劫财能量达到该值才叠加张力提示
     "RESISTANCE_BUFF": 0.1,         # 天乙抗性加成比例
     "TENSION_MULTIPLIER": 1.4,      # 羊刃张力乘数
     "PRIORITY_BASE": 0.94,          # 事实输出优先级
@@ -251,15 +251,21 @@ def _collect_branch_rows(physics_tensor: Dict[str, Any], cfg: Dict[str, Any]) ->
     return rows[:max(0, max_rows)]
 
 
-def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> List[dict]:
+def _collect_rows(
+    deity_scores: Dict[str, float],
+    cfg: Dict[str, Any] = {},
+    *,
+    has_tian_yi_branch: bool = False,
+    has_yang_ren_branch: bool = False,
+) -> List[dict]:
     tian_yi_t = float(cfg.get("TIAN_YI_THRESHOLD", DECLARED_PARAMS["TIAN_YI_THRESHOLD"]))
     yang_ren_t = float(cfg.get("YANG_REN_THRESHOLD", DECLARED_PARAMS["YANG_REN_THRESHOLD"]))
     res_buff = float(cfg.get("RESISTANCE_BUFF", DECLARED_PARAMS["RESISTANCE_BUFF"]))
     tens_mul = float(cfg.get("TENSION_MULTIPLIER", DECLARED_PARAMS["TENSION_MULTIPLIER"]))
     prio = float(cfg.get("PRIORITY_BASE", DECLARED_PARAMS["PRIORITY_BASE"]))
 
-    has_tian_yi = deity_scores.get("正印", 0) > tian_yi_t
-    has_yang_ren = deity_scores.get("劫财", 0) > yang_ren_t
+    has_tian_yi = has_tian_yi_branch and deity_scores.get("正印", 0) > tian_yi_t
+    has_yang_ren = has_yang_ren_branch and deity_scores.get("劫财", 0) > yang_ren_t
     
     rows = []
     if has_tian_yi:
@@ -268,7 +274,13 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
             "fact": f"天乙贵人显化：所在柱抗性 (Resistance) 额外提升 {int(res_buff*100)}%。",
             "label": "护持/守御为主",
             "priority": prio + 0.01,
-            "meta": {"resistance_buff": res_buff, "gate": "TIAN_YI_BUFF"}
+            "meta": {
+                "resistance_buff": res_buff,
+                "gate": "TIAN_YI_BUFF",
+                "observe_only": True,
+                "claim_type": "classical_aura",
+                "entity_scope": "shensha",
+            }
         })
     if has_yang_ren:
         rows.append({
@@ -276,7 +288,13 @@ def _collect_rows(deity_scores: Dict[str, float], cfg: Dict[str, Any] = {}) -> L
             "fact": f"羊刃显化：所在场压张力系数 x {tens_mul}。",
             "label": "校准节奏，防范剧烈冲突",
             "priority": prio,
-            "meta": {"tension_multiplier": tens_mul, "gate": "YANG_REN_STRESS"}
+            "meta": {
+                "tension_multiplier": tens_mul,
+                "gate": "YANG_REN_STRESS",
+                "observe_only": True,
+                "claim_type": "classical_aura",
+                "entity_scope": "shensha",
+            }
         })
     return rows
 
@@ -330,13 +348,16 @@ class ShenshaPlugin(V17PluginSpec):
             isinstance(row.get("meta"), dict) and row["meta"].get("gate") == "SHENSHA_YANG_REN_BRANCH"
             for row in branch_rows
         )
-        rows = _collect_rows(scores, cfg)
-        if not has_yang_ren_branch:
-            rows = [
-                row
-                for row in rows
-                if not (isinstance(row.get("meta"), dict) and row["meta"].get("gate") == "YANG_REN_STRESS")
-            ]
+        has_tian_yi_branch = any(
+            isinstance(row.get("meta"), dict) and row["meta"].get("gate") == "SHENSHA_TIAN_YI_BRANCH"
+            for row in branch_rows
+        )
+        rows = _collect_rows(
+            scores,
+            cfg,
+            has_tian_yi_branch=has_tian_yi_branch,
+            has_yang_ren_branch=has_yang_ren_branch,
+        )
         rows.extend(branch_rows)
         for row in rows:
             if not isinstance(row.get("meta"), dict):
