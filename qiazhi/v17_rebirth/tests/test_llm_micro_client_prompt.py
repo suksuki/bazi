@@ -164,3 +164,31 @@ def test_build_llm_audit_payload_frontloads_flux_summary_into_user_prompt() -> N
     assert "阶段偏置摘要：条目2；推用0.18；推忌0.06；稳0.09；波动0.12" in user_prompt
     assert "格局摘要：正官格 65.0%" in user_prompt
     assert "运流解释合同" in user_prompt
+
+
+def test_build_llm_audit_payload_respects_output_language_lock() -> None:
+    en_tensor = {**_tensor(), "ui_lang": "en"}
+    en_payload = build_llm_audit_payload(
+        [],
+        will_proxy="stable",
+        decision_anchor="",
+        action_signal=False,
+        physics_tensor=en_tensor,
+    )
+    en_system_prompt = str(en_payload.get("llm_system_prompt") or "")
+    en_user_prompt = str(en_payload.get("llm_user_prompt") or "")
+    assert "STRICT ENGLISH ONLY" in en_system_prompt
+    assert "The final response must be written in English only." in en_user_prompt
+
+    ko_tensor = {**_tensor(), "ui_lang": "ko"}
+    ko_payload = build_llm_audit_payload(
+        [],
+        will_proxy="stable",
+        decision_anchor="",
+        action_signal=False,
+        physics_tensor=ko_tensor,
+    )
+    ko_system_prompt = str(ko_payload.get("llm_system_prompt") or "")
+    ko_user_prompt = str(ko_payload.get("llm_user_prompt") or "")
+    assert "STRICT KOREAN ONLY" in ko_system_prompt
+    assert "최종 응답은 반드시 한국어로만 작성하십시오." in ko_user_prompt

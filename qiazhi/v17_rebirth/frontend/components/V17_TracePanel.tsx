@@ -246,6 +246,7 @@ export function V17_TracePanel({
   const compactInsightMode = contentMode === "insight_only";
   const showInsightSections = contentMode !== "debug_only";
   const showDebugSections = contentMode !== "insight_only";
+  const showPluginSections = contentMode !== "insight_only";
   const physicsPayload = (physicsSnapshot?.payload ?? {}) as Record<string, unknown>;
   const auditPayload =
     llmAuditSnapshot && typeof llmAuditSnapshot === "object"
@@ -654,7 +655,9 @@ export function V17_TracePanel({
                 </div>
               </div>
               <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/80 p-2">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">Top Runtime Scores</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">
+                  {ui("运行态 Top 分数", "Top Runtime Scores", "운행 상위 점수")}
+                </p>
                 <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
                   {runtimeTopRows.map((row) => (
                     <div key={row.name} className="flex items-center justify-between gap-2 rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
@@ -665,7 +668,9 @@ export function V17_TracePanel({
                 </div>
               </div>
               <div className="rounded-lg border border-fuchsia-500/15 bg-zinc-900/80 p-2">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">Source Totals</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">
+                  {ui("来源合计", "Source Totals", "출처 합계")}
+                </p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-zinc-300">
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
                     {ui("显化", "Manifest", "현출")} <span className="ml-1 font-mono text-fuchsia-100">{decompositionSummary.manifest.toFixed(2)}</span>
@@ -735,7 +740,9 @@ export function V17_TracePanel({
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-lg border border-emerald-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-emerald-200">USE BIAS</p>
+            <p className="text-[10px] tracking-[0.2em] text-emerald-200">
+              {ui("用侧偏置", "USE BIAS", "용측 편향")}
+            </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
               {judgementUseBias.length ? judgementUseBias.map((row) => (
                 <span key={`trace_judgement_use_${row.name}`} className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-emerald-200">
@@ -745,7 +752,9 @@ export function V17_TracePanel({
             </div>
           </div>
           <div className="rounded-lg border border-rose-500/15 bg-zinc-900/60 p-2">
-            <p className="text-[10px] tracking-[0.2em] text-rose-200">TABOO BIAS</p>
+            <p className="text-[10px] tracking-[0.2em] text-rose-200">
+              {ui("忌侧偏置", "TABOO BIAS", "기측 편향")}
+            </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
               {judgementTabooBias.length ? judgementTabooBias.map((row) => (
                 <span key={`trace_judgement_taboo_${row.name}`} className="rounded-full border border-rose-500/20 bg-rose-950/20 px-2 py-1 text-rose-200">
@@ -787,160 +796,164 @@ export function V17_TracePanel({
         </div>
       </div>
 
-      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">{ui("插件执行状态", "Plugin Execution Status", "플러그인 실행 상태")}</p>
-          <span className="text-[10px] text-zinc-500">{pluginStatuses.length} {ui("条", "rows", "건")}</span>
-        </div>
-        <div className="space-y-1">
-          {pluginStatuses.length ? pluginStatuses.slice(0, 10).map((row, idx) => {
-            const status = String(row.status || "fact_only").trim();
-            const statusTone =
-              status === "auto_applied"
-                ? "text-emerald-200 border-emerald-500/20 bg-emerald-950/20"
-                : status === "proposal_pending"
-                  ? "text-amber-200 border-amber-500/20 bg-amber-950/20"
-                  : status === "clamped"
-                    ? "text-fuchsia-200 border-fuchsia-500/20 bg-fuchsia-950/20"
-                    : status.startsWith("skipped")
-                      ? "text-rose-200 border-rose-500/20 bg-rose-950/20"
-                      : "text-zinc-200 border-zinc-700/60 bg-zinc-900/70";
-            return (
-              <div key={`plugin_status_${idx}`} className={`min-w-0 rounded-lg border px-2 py-2 ${statusTone}`}>
-                <div className="flex min-w-0 items-center justify-between gap-2">
-                  <p className="min-w-0 break-all text-[10px] tracking-[0.18em]">{String(row.plugin_id || "unknown")}</p>
-                  <span className="font-mono text-[10px] uppercase">{status}</span>
-                </div>
-                <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
-                  <p className="mt-1 text-[10px] text-zinc-500">
-                    facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
-                    {String(row.target_god || "").trim() ? ` / ${ui("target", "target", "대상")} ${translateTerm(lang, String(row.target_god))}` : ""}
-                  </p>
-                  {(() => {
-                    const claim = pluginClaimById[String(row.plugin_id || "").trim()];
-                    if (!claim) return null;
-                    const projectionText = compactProjection(claim.cluster_projection);
-                    return (
-                      <p className="mt-1 break-words text-[10px] text-zinc-400">
-                        {ui("主落点", "Primary target", "주 낙점")} {translateTerm(lang, String(claim.target_god || row.target_god || "未定目标"))}
-                        {Number(claim.projection_share || 0) > 0 ? ` · ${ui("占比", "share", "비중")} ${Math.round(Number(claim.projection_share || 0) * 100)}%` : ""}
-                        {projectionText ? ` · ${projectionText}` : ""}
-                      </p>
-                    );
-                  })()}
-                </div>
-              );
-            }) : (
-            <p className="text-[11px] text-zinc-500">{ui("暂无插件状态标签", "No plugin status labels yet", "플러그인 상태 라벨 없음")}</p>
-          )}
-        </div>
-      </div>
-
-      <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3" open>
-        <summary className="cursor-pointer text-[11px] text-cyan-300">{ui("插件 / Fact 分组", "Plugin / Fact Groups", "플러그인 / Fact 그룹")}</summary>
-        <div className="mt-3">
-        <p className="text-[11px] text-cyan-300">{ui("命中插件", "Matched Plugins", "적중 플러그인")}</p>
-        <p className="mt-1 text-[11px] text-zinc-200">
-          {traceHits.length ? (traceHits as string[]).join(" / ") : ui("暂无命中", "No matched plugins yet", "적중 없음")}
-        </p>
-        </div>
-        <div className="mt-3">
-        <p className="text-[11px] text-cyan-300">{ui("织造 Fact", "Weaving Facts", "직조 Fact")}</p>
-        <div className="mt-1 space-y-1">
-          {traceFacts.length ? (
-            (traceFacts as string[]).map((x, idx) => (
-              <p key={`${idx}_${x}`} className="text-[11px] text-zinc-200">
-                {idx + 1}. {String(x)}
-              </p>
-            ))
-          ) : (
-            <p className="text-[11px] text-zinc-500">{ui("暂无 Fact", "No facts yet", "Fact 없음")}</p>
-          )}
-        </div>
-        </div>
-        <div className="mt-3 space-y-2">
-          <p className="text-[11px] text-cyan-300">{ui("插件分组", "Plugin Groups", "플러그인 그룹")}</p>
-          {Object.keys(groupedPlugins).length ? (
-            Object.entries(groupedPlugins).map(([plugin, facts]) => (
-              <details key={plugin} className="rounded-lg border border-cyan-500/15 bg-zinc-900/70 p-2">
-                <summary className="cursor-pointer text-[11px] text-zinc-100">{plugin}</summary>
-                <div className="mt-2 space-y-1">
-                  {facts.map((fact, idx) => (
-                    <p key={`${plugin}_${idx}`} className="text-[10px] text-zinc-300">
-                      {idx + 1}. {fact}
+      {showPluginSections ? (
+        <>
+          <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-cyan-300">{ui("插件执行状态", "Plugin Execution Status", "플러그인 실행 상태")}</p>
+              <span className="text-[10px] text-zinc-500">{pluginStatuses.length} {ui("条", "rows", "건")}</span>
+            </div>
+            <div className="space-y-1">
+              {pluginStatuses.length ? pluginStatuses.slice(0, 10).map((row, idx) => {
+                const status = String(row.status || "fact_only").trim();
+                const statusTone =
+                  status === "auto_applied"
+                    ? "text-emerald-200 border-emerald-500/20 bg-emerald-950/20"
+                    : status === "proposal_pending"
+                      ? "text-amber-200 border-amber-500/20 bg-amber-950/20"
+                      : status === "clamped"
+                        ? "text-fuchsia-200 border-fuchsia-500/20 bg-fuchsia-950/20"
+                        : status.startsWith("skipped")
+                          ? "text-rose-200 border-rose-500/20 bg-rose-950/20"
+                          : "text-zinc-200 border-zinc-700/60 bg-zinc-900/70";
+                return (
+                  <div key={`plugin_status_${idx}`} className={`min-w-0 rounded-lg border px-2 py-2 ${statusTone}`}>
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <p className="min-w-0 break-all text-[10px] tracking-[0.18em]">{String(row.plugin_id || "unknown")}</p>
+                      <span className="font-mono text-[10px] uppercase">{status}</span>
+                    </div>
+                    <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.reason || "—")}</p>
+                    <p className="mt-1 text-[10px] text-zinc-500">
+                      facts {Number(row.fact_count || 0)} / proposals {Number(row.proposal_count || 0)}
+                      {String(row.target_god || "").trim() ? ` / ${ui("target", "target", "대상")} ${translateTerm(lang, String(row.target_god))}` : ""}
                     </p>
-                  ))}
-                </div>
-              </details>
-            ))
-          ) : (
-            <p className="text-[11px] text-zinc-500">{ui("暂无插件分组", "No plugin groups yet", "플러그인 그룹 없음")}</p>
-          )}
-        </div>
-      </details>
-
-      <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">{ui("裁决摘要", "Decision Summary", "결정 요약")}</p>
-          <span className="text-[10px] text-zinc-500">
-            {ui("手动", "Manual", "수동")} {manualDecisions.length} / {ui("自动", "Auto", "자동")} {autoResolutions.length} / {ui("上下文", "Context", "컨텍스트")} {llmArbitrationContext.length}
-          </span>
-        </div>
-        {compactInsightMode ? (
-          <div className="grid gap-2 md:grid-cols-3">
-            <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
-              <p className="text-[10px] tracking-[0.18em] text-violet-200">MANUAL</p>
-              <p className="mt-2 font-mono text-base text-violet-50">{manualDecisions.length}</p>
-              <p className="mt-1 text-[10px] text-zinc-500">{ui("命理师待确认裁决", "Pending practitioner decisions", "명리사 확인 대기")}</p>
-            </div>
-            <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
-              <p className="text-[10px] tracking-[0.18em] text-amber-200">AUTO</p>
-              <p className="mt-2 font-mono text-base text-amber-50">{autoResolutions.length}</p>
-              <p className="mt-1 text-[10px] text-zinc-500">{ui("系统静默处理项", "System silent resolutions", "시스템 자동 처리")}</p>
-            </div>
-            <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
-              <p className="text-[10px] tracking-[0.18em] text-cyan-200">CONTEXT</p>
-              <p className="mt-2 font-mono text-base text-cyan-50">{llmArbitrationContext.length}</p>
-              <p className="mt-1 text-[10px] text-zinc-500">{ui("仅作上下文缓存", "Context-only cache", "컨텍스트 전용 캐시")}</p>
+                    {(() => {
+                      const claim = pluginClaimById[String(row.plugin_id || "").trim()];
+                      if (!claim) return null;
+                      const projectionText = compactProjection(claim.cluster_projection);
+                      return (
+                        <p className="mt-1 break-words text-[10px] text-zinc-400">
+                          {ui("主落点", "Primary target", "주 낙점")} {translateTerm(lang, String(claim.target_god || row.target_god || "未定目标"))}
+                          {Number(claim.projection_share || 0) > 0 ? ` · ${ui("占比", "share", "비중")} ${Math.round(Number(claim.projection_share || 0) * 100)}%` : ""}
+                          {projectionText ? ` · ${projectionText}` : ""}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                );
+              }) : (
+                <p className="text-[11px] text-zinc-500">{ui("暂无插件状态标签", "No plugin status labels yet", "플러그인 상태 라벨 없음")}</p>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
-              <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL INBOX</p>
-              <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
-                {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => {
-                  const biasSummary = traceBiasSummary(row);
-                  return (
-                    <div
-                      key={`manual_${idx}`}
-                      className={`rounded border bg-zinc-950/60 px-2 py-1 ${
-                        String(row.id || "").trim() === focusedDecisionId
-                          ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
-                          : "border-violet-500/10"
-                      }`}
-                    >
-                      <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
-                      <p className="mt-0.5 text-zinc-500">
-                        {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
-                      </p>
-                      <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
-                      {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
-                      <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
-                      {biasSummary ? (
-                        <div className="mt-1 space-y-0.5 text-[10px]">
-                          {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
-                          {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                }) : <p className="text-zinc-500">{ui("暂无手动裁决项", "No manual decisions", "수동 결정 없음")}</p>}
+
+          <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3" open>
+            <summary className="cursor-pointer text-[11px] text-cyan-300">{ui("插件 / Fact 分组", "Plugin / Fact Groups", "플러그인 / Fact 그룹")}</summary>
+            <div className="mt-3">
+              <p className="text-[11px] text-cyan-300">{ui("命中插件", "Matched Plugins", "적중 플러그인")}</p>
+              <p className="mt-1 text-[11px] text-zinc-200">
+                {traceHits.length ? (traceHits as string[]).join(" / ") : ui("暂无命中", "No matched plugins yet", "적중 없음")}
+              </p>
+            </div>
+            <div className="mt-3">
+              <p className="text-[11px] text-cyan-300">{ui("织造 Fact", "Weaving Facts", "직조 Fact")}</p>
+              <div className="mt-1 space-y-1">
+                {traceFacts.length ? (
+                  (traceFacts as string[]).map((x, idx) => (
+                    <p key={`${idx}_${x}`} className="text-[11px] text-zinc-200">
+                      {idx + 1}. {String(x)}
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-[11px] text-zinc-500">{ui("暂无 Fact", "No facts yet", "Fact 없음")}</p>
+                )}
               </div>
             </div>
+            <div className="mt-3 space-y-2">
+              <p className="text-[11px] text-cyan-300">{ui("插件分组", "Plugin Groups", "플러그인 그룹")}</p>
+              {Object.keys(groupedPlugins).length ? (
+                Object.entries(groupedPlugins).map(([plugin, facts]) => (
+                  <details key={plugin} className="rounded-lg border border-cyan-500/15 bg-zinc-900/70 p-2">
+                    <summary className="cursor-pointer text-[11px] text-zinc-100">{plugin}</summary>
+                    <div className="mt-2 space-y-1">
+                      {facts.map((fact, idx) => (
+                        <p key={`${plugin}_${idx}`} className="text-[10px] text-zinc-300">
+                          {idx + 1}. {fact}
+                        </p>
+                      ))}
+                    </div>
+                  </details>
+                ))
+              ) : (
+                <p className="text-[11px] text-zinc-500">{ui("暂无插件分组", "No plugin groups yet", "플러그인 그룹 없음")}</p>
+              )}
+            </div>
+          </details>
+
+          <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-cyan-300">{ui("裁决摘要", "Decision Summary", "결정 요약")}</p>
+              <span className="text-[10px] text-zinc-500">
+                {ui("手动", "Manual", "수동")} {manualDecisions.length} / {ui("自动", "Auto", "자동")} {autoResolutions.length} / {ui("上下文", "Context", "컨텍스트")} {llmArbitrationContext.length}
+              </span>
+            </div>
+            {compactInsightMode ? (
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
+                  <p className="text-[10px] tracking-[0.18em] text-violet-200">MANUAL</p>
+                  <p className="mt-2 font-mono text-base text-violet-50">{manualDecisions.length}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("命理师待确认裁决", "Pending practitioner decisions", "명리사 확인 대기")}</p>
+                </div>
+                <div className="rounded-lg border border-amber-500/15 bg-zinc-900/60 p-2">
+                  <p className="text-[10px] tracking-[0.18em] text-amber-200">AUTO</p>
+                  <p className="mt-2 font-mono text-base text-amber-50">{autoResolutions.length}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("系统静默处理项", "System silent resolutions", "시스템 자동 처리")}</p>
+                </div>
+                <div className="rounded-lg border border-cyan-500/15 bg-zinc-900/60 p-2">
+                  <p className="text-[10px] tracking-[0.18em] text-cyan-200">CONTEXT</p>
+                  <p className="mt-2 font-mono text-base text-cyan-50">{llmArbitrationContext.length}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500">{ui("仅作上下文缓存", "Context-only cache", "컨텍스트 전용 캐시")}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-violet-500/15 bg-zinc-900/60 p-2">
+                  <p className="text-[10px] tracking-[0.2em] text-violet-200">MANUAL INBOX</p>
+                  <div className="mt-2 space-y-1 text-[10px] text-zinc-300">
+                    {manualDecisions.length ? manualDecisions.slice(0, 8).map((row, idx) => {
+                      const biasSummary = traceBiasSummary(row);
+                      return (
+                        <div
+                          key={`manual_${idx}`}
+                          className={`rounded border bg-zinc-950/60 px-2 py-1 ${
+                            String(row.id || "").trim() === focusedDecisionId
+                              ? "border-emerald-500/35 shadow-[0_0_0_1px_rgba(16,185,129,0.22)]"
+                              : "border-violet-500/10"
+                          }`}
+                        >
+                          <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
+                          <p className="mt-0.5 text-zinc-500">
+                            {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
+                          </p>
+                          <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
+                          {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
+                          <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
+                          {biasSummary ? (
+                            <div className="mt-1 space-y-0.5 text-[10px]">
+                              {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
+                              {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }) : <p className="text-zinc-500">{ui("暂无手动裁决项", "No manual decisions", "수동 결정 없음")}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      ) : null}
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">

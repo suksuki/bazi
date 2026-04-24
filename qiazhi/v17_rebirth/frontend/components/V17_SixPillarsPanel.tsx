@@ -609,7 +609,7 @@ export function V17_SixPillarsPanel({
           const benefit = Number((item as Record<string, unknown>)?.benefit || 0);
           const risk = Number((item as Record<string, unknown>)?.risk || 0);
           if (!god) return "";
-          return `${god} 利${benefit.toFixed(2)} / 害${risk.toFixed(2)}`;
+          return `${translateTerm(lang, god)} ${ui("利", "benefit", "이익")}${benefit.toFixed(2)} / ${ui("害", "risk", "위험")}${risk.toFixed(2)}`;
         })
         .filter(Boolean)
     : [];
@@ -661,19 +661,19 @@ export function V17_SixPillarsPanel({
     const chips: Array<{ label: string; tone: string }> = [];
     if (Math.abs(resolvedFlux) > 0.001) {
       chips.push({
-        label: `净效 ${signed(resolvedFlux)}`,
+        label: `${ui("净效", "Net", "순효")} ${signed(resolvedFlux)}`,
         tone: resolvedFlux >= 0 ? "text-emerald-100 border-emerald-400/20 bg-emerald-950/35" : "text-rose-100 border-rose-400/20 bg-rose-950/35",
       });
     }
     if (Math.abs(tension) > 0.001) {
       chips.push({
-        label: `张力 ${tension.toFixed(2)}`,
+        label: `${ui("张力", "Tension", "장력")} ${tension.toFixed(2)}`,
         tone: "text-amber-100 border-amber-400/20 bg-amber-950/35",
       });
     }
     if (Math.abs(reinforce) > 0.001) {
       chips.push({
-        label: `放大 ${reinforce.toFixed(2)}`,
+        label: `${ui("放大", "Amplify", "증폭")} ${reinforce.toFixed(2)}`,
         tone: "text-cyan-100 border-cyan-400/20 bg-cyan-950/35",
       });
     }
@@ -685,13 +685,13 @@ export function V17_SixPillarsPanel({
   const patternMetricChips = patternLeaderRow.name
     ? [
         {
-          label: `置信 ${Math.round(Number(patternLeaderRow.confidence || 0) * 100)}%`,
+          label: `${ui("置信", "Confidence", "신뢰도")} ${Math.round(Number(patternLeaderRow.confidence || 0) * 100)}%`,
           tone: "text-amber-100 border-amber-400/20 bg-amber-950/35",
         },
         ...(patternLeaderRow.statusLabel
           ? [
               {
-                label: String(patternLeaderRow.statusLabel),
+                label: translateTerm(lang, String(patternLeaderRow.statusLabel)),
                 tone: "text-zinc-100 border-zinc-700 bg-zinc-950/70",
               },
             ]
@@ -699,7 +699,7 @@ export function V17_SixPillarsPanel({
         ...(patternLeaderRow.scope
           ? [
               {
-                label: String(patternLeaderRow.scope),
+                label: translateTerm(lang, String(patternLeaderRow.scope)),
                 tone: "text-zinc-200 border-zinc-700 bg-black/20",
               },
             ]
@@ -715,6 +715,11 @@ export function V17_SixPillarsPanel({
     { label: "大运", pillar: luckP },
     { label: "流年", pillar: flowP },
   ];
+  const layerLevelLabel = (level: string) => {
+    if (level === "主") return ui("主", "main", "주");
+    if (level === "中") return ui("中", "middle", "중");
+    return ui("余", "residual", "여");
+  };
 
   const yearChoices = Array.from({ length: 111 }, (_, i) => selectedYear - 80 + i);
 
@@ -777,7 +782,7 @@ export function V17_SixPillarsPanel({
           const branchMainStem = BRANCH_MAIN_HIDDEN_STEM[row.pillar.branch] || "";
           const branchGod = tenGodFromStems(dayMasterStem, branchMainStem) || "十神";
           const branchLayers = branchLayerGods(dayMasterStem, row.pillar.branch);
-          const branchLayerText = branchLayers.map((layer) => `${layer.level}${translateTerm(lang, layer.god)}`).join(" · ");
+          const branchLayerText = branchLayers.map((layer) => `${layerLevelLabel(layer.level)}${translateTerm(lang, layer.god)}`).join(" · ");
           return (
             <div
               key={row.label}
@@ -1195,31 +1200,35 @@ export function V17_SixPillarsPanel({
               {bridgeProtocol.single_pass_coupling ? ui("单次耦合", "Single-pass coupling", "단회 결합") : ui("未声明", "Undeclared", "미선언")}
             </span>
             <span className="rounded-full border border-rose-400/20 bg-rose-950/35 px-3 py-1 text-rose-100">
-              {bridgeProtocol.recursive_feedback ? "允许递归" : "禁止递归"}
+              {bridgeProtocol.recursive_feedback ? ui("允许递归", "Recursive allowed", "재귀 허용") : ui("禁止递归", "Recursive forbidden", "재귀 금지")}
             </span>
           </div>
         </div>
         <div className="mt-3 grid gap-2 text-[11px] text-zinc-300 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
-            本根 <span className="ml-1 font-mono text-cyan-100">{Number(bridgeProtocol.exact_root_support_factor || 1).toFixed(2)}</span>
+            {ui("本根", "Exact root", "정근")} <span className="ml-1 font-mono text-cyan-100">{Number(bridgeProtocol.exact_root_support_factor || 1).toFixed(2)}</span>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
-            异阴阳根 <span className="ml-1 font-mono text-emerald-100">{Number(bridgeProtocol.cross_polarity_root_support_factor || 0).toFixed(2)}</span>
+            {ui("异阴阳根", "Cross-polarity root", "이극 근")} <span className="ml-1 font-mono text-emerald-100">{Number(bridgeProtocol.cross_polarity_root_support_factor || 0).toFixed(2)}</span>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
-            精确透干 <span className="ml-1 font-mono text-violet-100">{Number(bridgeProtocol.exact_exposed_hidden_gain || 0).toFixed(2)}</span>
+            {ui("精确透干", "Exact exposure", "정확 투간")} <span className="ml-1 font-mono text-violet-100">{Number(bridgeProtocol.exact_exposed_hidden_gain || 0).toFixed(2)}</span>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
-            同五行可见 <span className="ml-1 font-mono text-amber-100">{Number(bridgeProtocol.same_element_visible_relief || 0).toFixed(2)}</span>
+            {ui("同五行可见", "Same-element visible", "동오행 가시")} <span className="ml-1 font-mono text-amber-100">{Number(bridgeProtocol.same_element_visible_relief || 0).toFixed(2)}</span>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950/55 px-3 py-2">
-            通根上限 <span className="ml-1 font-mono text-fuchsia-100">{Number(bridgeProtocol.rooted_gain_cap || 0).toFixed(2)}</span>
+            {ui("通根上限", "Rooting cap", "통근 상한")} <span className="ml-1 font-mono text-fuchsia-100">{Number(bridgeProtocol.rooted_gain_cap || 0).toFixed(2)}</span>
           </div>
         </div>
         <p className="mt-2 text-[11px] leading-5 text-zinc-400">
           {bridgeReady
-            ? "规则口径：通根只服务天干，透干只服务地支显影。二者允许互证，但都只读取冻结盘面证据一次，不会递归放大。"
-            : "等待后端下发根透协议。"}
+            ? ui(
+                "规则口径：通根只服务天干，透干只服务地支显影。二者允许互证，但都只读取冻结盘面证据一次，不会递归放大。",
+                "Rule scope: rooting serves stems, exposure serves branch-hidden manifestation. They may corroborate each other, but each reads frozen-chart evidence only once and never recursively amplifies.",
+                "규칙 범위: 통근은 천간을, 투간은 지지 장간의 현현을 보조합니다. 둘은 상호 증거가 될 수 있지만 동결된 명식 증거를 한 번만 읽고 재귀 증폭하지 않습니다.",
+              )
+            : ui("等待后端下发根透协议。", "Waiting for backend projection-bridge protocol.", "백엔드 근투 프로토콜 대기 중입니다.")}
         </p>
       </div>
       ) : null}
@@ -1228,10 +1237,14 @@ export function V17_SixPillarsPanel({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-amber-300/80">Relation Formation</p>
-              <p className="mt-1 text-sm text-amber-50">合化成局摘要</p>
+              <p className="mt-1 text-sm text-amber-50">{ui("合化成局摘要", "Relation Formation Summary", "합화 성국 요약")}</p>
             </div>
             <p className="max-w-xl text-[11px] leading-5 text-zinc-400">
-              百分比表示成局度，不直接等于十神能量；请结合基准倍数、十神绝对强度和做功链条一起看。
+              {ui(
+                "百分比表示成局度，不直接等于十神能量；请结合基准倍数、十神绝对强度和做功链条一起看。",
+                "The percentage means formation degree, not direct ten-god energy. Read it together with base factor, absolute ten-god strength, and work-flow chains.",
+                "퍼센트는 성국도를 뜻하며 십신 에너지와 직접 동일하지 않습니다. 기준 배수, 십신 절대 강도, 작용 사슬과 함께 보세요.",
+              )}
             </p>
           </div>
           <div className="mt-3 grid gap-2 xl:grid-cols-2">
@@ -1239,18 +1252,20 @@ export function V17_SixPillarsPanel({
               <div key={row.formationLabel} className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm text-amber-50">{row.formationLabel}</p>
-                    <p className="mt-1 text-[11px] text-zinc-400">家族基准 x{row.familyFactor.toFixed(2)}</p>
+                    <p className="text-sm text-amber-50">{translateTerm(lang, row.formationLabel)}</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">{ui("家族基准", "Family factor", "계열 기준")} x{row.familyFactor.toFixed(2)}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-lg text-amber-100">{row.formationPercent.toFixed(1)}%</p>
                     <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] ${relationFormationTone(row.status)}`}>
-                      {row.status || "成局观察"}
+                      {translateTerm(lang, row.status || "成局观察")}
                     </span>
                   </div>
                 </div>
                 {row.projectionPreview.length ? (
-                  <p className="mt-2 text-[11px] text-cyan-200/90">主投影：{row.projectionPreview.join(" / ")}</p>
+                  <p className="mt-2 text-[11px] text-cyan-200/90">
+                    {ui("主投影", "Main projection", "주 투영")}：{translateTermList(lang, row.projectionPreview)}
+                  </p>
                 ) : null}
                 {row.summary ? (
                   <p className="mt-2 text-[11px] leading-5 text-zinc-400">{row.summary}</p>
@@ -1265,10 +1280,14 @@ export function V17_SixPillarsPanel({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/80">Relation Dynamics</p>
-              <p className="mt-1 text-sm text-cyan-50">关系动力学 / 能量-稳定性双轴</p>
+              <p className="mt-1 text-sm text-cyan-50">{ui("关系动力学 / 能量-稳定性双轴", "Relation Dynamics / Energy-Stability Axes", "관계 동역학 / 에너지-안정성 이중축")}</p>
             </div>
             <p className="max-w-xl text-[11px] leading-5 text-zinc-400">
-              这里看的是关系如何改变能量运行方式与结构稳定性，不直接等于十神总分；合偏组织化/绑定，冲刑害破偏激发/内耗/暗损/解构。
+              {ui(
+                "这里看的是关系如何改变能量运行方式与结构稳定性，不直接等于十神总分；合偏组织化/绑定，冲刑害破偏激发/内耗/暗损/解构。",
+                "This shows how relations change energy operation and structural stability. It is not a direct ten-god total; combinations lean toward organization/binding, while clash/penalty/harm/break lean toward activation, drag, hidden drain, or deconstruction.",
+                "여기는 관계가 에너지 운행 방식과 구조 안정성을 어떻게 바꾸는지 보여 줍니다. 십신 총점과 직접 동일하지 않으며, 합은 조직화/결속 쪽이고 충·형·해·파는 격발/내모/암손/해체 쪽입니다.",
+              )}
             </p>
           </div>
           <div className="mt-3 grid gap-2 xl:grid-cols-2">
@@ -1276,26 +1295,26 @@ export function V17_SixPillarsPanel({
               <div key={row.label} className="rounded-lg border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm text-cyan-50">{row.label}</p>
+                    <p className="text-sm text-cyan-50">{translateTerm(lang, row.label)}</p>
                     <p className="mt-1 text-[11px] text-zinc-400">
-                      作用柱：{row.pillars.length ? row.pillars.map(pillarLabel).join(" / ") : "未定"}
+                      {ui("作用柱", "Active pillars", "작용 기둥")}：{row.pillars.length ? row.pillars.map((pillar) => translateTerm(lang, pillarLabel(pillar))).join(" / ") : translateTerm(lang, "未定")}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] ${relationDynamicsTone(row.energyAxis, row.stabilityDeltaRatio)}`}>
-                      {row.energyAxis || "动力学观察"}
+                      {translateTerm(lang, row.energyAxis || "动力学观察")}
                     </span>
                   </div>
                 </div>
                 <div className="mt-2 grid gap-2 text-[11px] text-zinc-300 sm:grid-cols-3">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                    能量效应 <span className="ml-1 font-mono text-cyan-100">{(row.energyEffectRatio * 100).toFixed(1)}%</span>
+                    {ui("能量效应", "Energy effect", "에너지 효과")} <span className="ml-1 font-mono text-cyan-100">{(row.energyEffectRatio * 100).toFixed(1)}%</span>
                   </div>
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                    稳定变化 <span className="ml-1 font-mono text-amber-100">{signed(row.stabilityDeltaRatio * 100)}%</span>
+                    {ui("稳定变化", "Stability delta", "안정 변화")} <span className="ml-1 font-mono text-amber-100">{signed(row.stabilityDeltaRatio * 100)}%</span>
                   </div>
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                    自由能锁定 <span className="ml-1 font-mono text-violet-100">{(row.freeEnergyLockRatio * 100).toFixed(1)}%</span>
+                    {ui("自由能锁定", "Free-energy lock", "자유에너지 잠금")} <span className="ml-1 font-mono text-violet-100">{(row.freeEnergyLockRatio * 100).toFixed(1)}%</span>
                   </div>
                 </div>
                 {row.note ? (
@@ -1311,17 +1330,17 @@ export function V17_SixPillarsPanel({
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-violet-300/80">Ten Gods Decomposition</p>
-              <p className="mt-1 text-sm text-violet-50">十神来源分解</p>
+              <p className="mt-1 text-sm text-violet-50">{ui("十神来源分解", "Ten-God Source Decomposition", "십신 출처 분해")}</p>
             </div>
             <span className="rounded-full border border-violet-400/20 bg-violet-950/30 px-2 py-1 text-[10px] text-violet-100/80">
-              显化 / 根气 / 势能细项 / 潜藏
+              {ui("显化 / 根气 / 势能细项 / 潜藏", "Manifest / Root / Momentum Detail / Hidden", "현출 / 근기 / 세력 세목 / 잠장")}
             </span>
           </div>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {decompositionRows.map((row) => (
               <div key={row.god} className="min-w-0 rounded-lg border border-violet-400/15 bg-black/20 p-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 break-words text-sm font-semibold text-violet-100">{row.god}</span>
+                  <span className="min-w-0 break-words text-sm font-semibold text-violet-100">{translateTerm(lang, row.god)}</span>
                   <span className="font-mono text-[11px] text-cyan-200">{row.total.toFixed(2)}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1330,37 +1349,37 @@ export function V17_SixPillarsPanel({
                       key={`${row.god}_${tag}`}
                       className="rounded-full border border-violet-400/15 bg-violet-950/20 px-2 py-0.5 text-[10px] text-violet-100/90"
                     >
-                      {tag}
+                      {translateTerm(lang, tag)}
                     </span>
                   ))}
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-zinc-300">
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    显化 <span className="ml-1 font-mono text-violet-100">{row.manifest.toFixed(2)}</span>
+                    {ui("显化", "Manifest", "현출")} <span className="ml-1 font-mono text-violet-100">{row.manifest.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    根气 <span className="ml-1 font-mono text-emerald-100">{row.root.toFixed(2)}</span>
+                    {ui("根气", "Root", "근기")} <span className="ml-1 font-mono text-emerald-100">{row.root.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    势能 <span className="ml-1 font-mono text-amber-100">{row.momentum.toFixed(2)}</span>
+                    {ui("势能", "Momentum", "세력")} <span className="ml-1 font-mono text-amber-100">{row.momentum.toFixed(2)}</span>
                   </div>
                   <div className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1">
-                    潜藏 <span className="ml-1 font-mono text-zinc-100">{row.hidden.toFixed(2)}</span>
+                    {ui("潜藏", "Hidden", "잠장")} <span className="ml-1 font-mono text-zinc-100">{row.hidden.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="mt-2 break-words rounded border border-violet-400/10 bg-violet-950/10 px-2 py-1.5 text-[10px] text-zinc-300">
-                  势能细项：
-                  <span className="ml-1 text-amber-100">月令 {row.momentumMonthOrder.toFixed(2)}</span>
-                  <span className="ml-2 text-orange-100">阶段 {row.momentumStage.toFixed(2)}</span>
-                  <span className="ml-2 text-fuchsia-100">结构 {row.momentumStructure.toFixed(2)}</span>
-                  <span className="ml-2 text-cyan-100">辅助 {row.momentumAuxiliary.toFixed(2)}</span>
-                  <span className="ml-2 text-zinc-200">其他 {row.momentumOther.toFixed(2)}</span>
+                  {ui("势能细项", "Momentum details", "세력 세목")}：
+                  <span className="ml-1 text-amber-100">{ui("月令", "Month", "월령")} {row.momentumMonthOrder.toFixed(2)}</span>
+                  <span className="ml-2 text-orange-100">{ui("阶段", "Stage", "단계")} {row.momentumStage.toFixed(2)}</span>
+                  <span className="ml-2 text-fuchsia-100">{ui("结构", "Structure", "구조")} {row.momentumStructure.toFixed(2)}</span>
+                  <span className="ml-2 text-cyan-100">{ui("辅助", "Auxiliary", "보조")} {row.momentumAuxiliary.toFixed(2)}</span>
+                  <span className="ml-2 text-zinc-200">{ui("其他", "Other", "기타")} {row.momentumOther.toFixed(2)}</span>
                 </div>
                 <div className="mt-2 break-words rounded border border-orange-400/10 bg-orange-950/10 px-2 py-1.5 text-[10px] text-zinc-300">
-                  阶段分层：
-                  <span className="ml-1 text-emerald-100">禄 {row.momentumStageLu.toFixed(2)}</span>
-                  <span className="ml-2 text-rose-100">刃 {row.momentumStageBlade.toFixed(2)}</span>
-                  <span className="ml-2 text-amber-100">长生 {row.momentumStageGeneral.toFixed(2)}</span>
+                  {ui("阶段分层", "Stage layers", "단계 분층")}：
+                  <span className="ml-1 text-emerald-100">{ui("禄", "Lu", "록")} {row.momentumStageLu.toFixed(2)}</span>
+                  <span className="ml-2 text-rose-100">{ui("刃", "Blade", "인")} {row.momentumStageBlade.toFixed(2)}</span>
+                  <span className="ml-2 text-amber-100">{ui("长生", "Growth", "장생")} {row.momentumStageGeneral.toFixed(2)}</span>
                 </div>
               </div>
             ))}

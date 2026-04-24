@@ -12,7 +12,7 @@ import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
-import { t } from "@/lib/i18n";
+import { t, translateTerm } from "@/lib/i18n";
 import { useAppLanguage } from "@/hooks/useAppLanguage";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useOracleSession } from "@/hooks/useOracleSession";
@@ -207,34 +207,6 @@ function compactProjection(value: unknown): string {
     .join(" / ");
 }
 
-function buildPatternJudgement(
-  leader: LivePatternCandidate | undefined,
-  runners: LivePatternCandidate[],
-): string {
-  if (!leader) return "当前盘面尚未形成稳定格局候选，系统仍在等待更多结构证据完成聚合。";
-  const parts: string[] = [];
-  const leadScope = leader.scope || "来源待定";
-  const leadStatus = leader.statusLabel || "观察中";
-  parts.push(`当前以「${leader.name}」为主格局，处于${leadStatus}态势`);
-  parts.push(`主要证据来自${leadScope}`);
-  if (leader.target && leader.target !== "未定目标") {
-    parts.push(`主落点聚焦在${leader.target}`);
-  }
-  if (runners.length) {
-    const topRunners = runners
-      .slice(0, 2)
-      .map((item) => `${item.name}${Math.round(item.confidence * 100)}%`)
-      .join("、");
-    if (topRunners) parts.push(`次格局候选包括${topRunners}`);
-  }
-  if (leader.breakRisks.length) {
-    parts.push(`但当前受${leader.breakRisks.slice(0, 2).join("、")}牵制，仍需继续核验是否破格`);
-  } else if (leader.gateReason) {
-    parts.push(leader.gateReason);
-  }
-  return `${parts.join("，")}。`;
-}
-
 function deriveLivePatternCandidates(
   allRows: Array<Record<string, unknown>>,
   pluginClaims: Array<Record<string, unknown>>,
@@ -327,6 +299,12 @@ function deriveLivePatternCandidates(
 export default function OraclePage() {
   const router = useRouter();
   const { language } = useAppLanguage();
+  const ui = useCallback(
+    (zh: string, en: string, ko: string) => (language === "en" ? en : language === "ko" ? ko : zh),
+    [language],
+  );
+  const term = (value: string) => translateTerm(language, value);
+  const termList = (values: string[]) => values.map((value) => translateTerm(language, value));
   const { user, loading: authLoading, logout } = useAuthSession();
   const s = useOracleSession({ uiLanguage: language });
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
@@ -415,7 +393,68 @@ export default function OraclePage() {
   const patternRunners = livePatternCandidates.slice(1, 4);
   const activePatternScopes = Array.from(new Set(livePatternCandidates.map((item) => item.scope).filter(Boolean))).slice(0, 5);
   const leaderBreakRisks = patternLeader?.breakRisks || [];
-  const patternJudgement = buildPatternJudgement(patternLeader, patternRunners);
+  const patternJudgement = (() => {
+    if (!patternLeader) {
+      return ui(
+        "当前盘面尚未形成稳定格局候选，系统仍在等待更多结构证据完成聚合。",
+        "No stable pattern candidate has formed yet. The system is still waiting for more structural evidence.",
+        "현재 명식에는 안정적인 격국 후보가 아직 형성되지 않았고, 시스템은 구조 증거가 더 모이기를 기다리고 있습니다.",
+      );
+    }
+    const parts: string[] = [];
+    const leadScope = term(patternLeader.scope || "来源待定");
+    const leadStatus = term(patternLeader.statusLabel || "观察中");
+    parts.push(
+      ui(
+        `当前以「${patternLeader.name}」为主格局，处于${leadStatus}态势`,
+        `The leading pattern is ${term(patternLeader.name)}, currently in ${leadStatus} state`,
+        `현재 주격은 ${term(patternLeader.name)}이며 ${leadStatus} 상태입니다`,
+      ),
+    );
+    parts.push(
+      ui(
+        `主要证据来自${leadScope}`,
+        `main evidence comes from ${leadScope}`,
+        `주요 근거는 ${leadScope}에서 나옵니다`,
+      ),
+    );
+    if (patternLeader.target && patternLeader.target !== "未定目标") {
+      parts.push(
+        ui(
+          `主落点聚焦在${term(patternLeader.target)}`,
+          `the main focus is ${term(patternLeader.target)}`,
+          `주요 초점은 ${term(patternLeader.target)}입니다`,
+        ),
+      );
+    }
+    if (patternRunners.length) {
+      const topRunners = patternRunners
+        .slice(0, 2)
+        .map((item) => `${term(item.name)} ${Math.round(item.confidence * 100)}%`)
+        .join(language === "zh" ? "、" : " / ");
+      if (topRunners) {
+        parts.push(
+          ui(
+            `次格局候选包括${topRunners}`,
+            `secondary candidates include ${topRunners}`,
+            `보조 격국 후보는 ${topRunners}입니다`,
+          ),
+        );
+      }
+    }
+    if (patternLeader.breakRisks.length) {
+      parts.push(
+        ui(
+          `但当前受${patternLeader.breakRisks.slice(0, 2).map(term).join("、")}牵制，仍需继续核验是否破格`,
+          `but current break risks ${patternLeader.breakRisks.slice(0, 2).map(term).join(" / ")} still need verification`,
+          `다만 현재 ${patternLeader.breakRisks.slice(0, 2).map(term).join(" / ")}의 견제를 받아 파격 여부를 계속 확인해야 합니다`,
+        ),
+      );
+    } else if (patternLeader.gateReason) {
+      parts.push(patternLeader.gateReason);
+    }
+    return `${parts.join(language === "zh" ? "，" : ". ")}${language === "zh" ? "。" : "."}`;
+  })();
   const useGods = asStringList(godRingInfo?.god_of_use);
   const tabooGods = asStringList(godRingInfo?.god_of_taboo);
   const tongguanGods = asStringList(godRingInfo?.tongguan_gods);
@@ -456,85 +495,89 @@ export default function OraclePage() {
   const topicHubItems: TopicHubItem[] = [
     {
       key: "ziping",
-      title: "子平主裁决",
-      subtitle: "月令 / 旺衰 / 调候桥 / 格局桥 / 体用",
-      status: godRingInfo ? "硬约束已接通" : "等待权威源",
+      title: ui("子平主裁决", "ZiPing Authority", "자평 주판정"),
+      subtitle: ui(
+        "月令 / 旺衰 / 调候桥 / 格局桥 / 体用",
+        "Month order / balance / climate bridge / pattern bridge / body-use",
+        "월령 / 왕쇠 / 조후 브리지 / 격국 브리지 / 체용",
+      ),
+      status: godRingInfo ? ui("硬约束已接通", "Hard constraint online", "하드 제약 연결됨") : ui("等待权威源", "Waiting for authority source", "권위 출처 대기"),
       tone: godRingInfo ? "primary" : "muted",
       details: [
-        useGods.length ? `用神 ${useGods.slice(0, 3).join(" / ")}` : "用神待定",
-        tabooGods.length ? `忌神 ${tabooGods.slice(0, 3).join(" / ")}` : "忌神待定",
-        `候选 ${coreUseCandidates.length + coreTabooCandidates.length}`,
+        useGods.length ? `${ui("用神", "Useful gods", "용신")} ${termList(useGods.slice(0, 3)).join(" / ")}` : ui("用神待定", "Useful gods pending", "용신 대기"),
+        tabooGods.length ? `${ui("忌神", "Taboo gods", "기신")} ${termList(tabooGods.slice(0, 3)).join(" / ")}` : ui("忌神待定", "Taboo gods pending", "기신 대기"),
+        `${ui("候选", "Candidates", "후보")} ${coreUseCandidates.length + coreTabooCandidates.length}`,
       ],
       badges: [
-        `置信 ${Math.round(asNumberValue(godRingInfo?.confidence) * 100)}%`,
+        `${ui("置信", "Confidence", "신뢰도")} ${Math.round(asNumberValue(godRingInfo?.confidence) * 100)}%`,
         String(godRingInfo?.mode || godRingInfo?.display_mode || "authority"),
       ].filter(Boolean),
     },
     {
       key: "pattern",
-      title: "格局专题",
-      subtitle: "古典格局 / 成局度 / 破格风险",
-      status: patternLeader ? `${patternLeader.name} ${Math.round(patternLeader.confidence * 100)}%` : "暂无主格局",
+      title: ui("格局专题", "Pattern Topic", "격국 주제"),
+      subtitle: ui("古典格局 / 成局度 / 破格风险", "Classical pattern / formation / break risk", "고전 격국 / 성국도 / 파격 위험"),
+      status: patternLeader ? `${term(patternLeader.name)} ${Math.round(patternLeader.confidence * 100)}%` : ui("暂无主格局", "No primary pattern", "주격 없음"),
       tone: patternLeader ? (leaderBreakRisks.length ? "watch" : "stable") : "muted",
       details: [
-        patternLeader ? `状态 ${patternLeader.statusLabel}` : "等待候选聚合",
-        patternLeader ? `来源 ${patternLeader.scope}` : `候选 ${livePatternCandidates.length}`,
-        leaderBreakRisks.length ? `风险 ${leaderBreakRisks.slice(0, 2).join(" / ")}` : "破格风险未显著",
+        patternLeader ? `${ui("状态", "State", "상태")} ${term(patternLeader.statusLabel)}` : ui("等待候选聚合", "Waiting for candidates", "후보 집계 대기"),
+        patternLeader ? `${ui("来源", "Source", "출처")} ${term(patternLeader.scope)}` : `${ui("候选", "Candidates", "후보")} ${livePatternCandidates.length}`,
+        leaderBreakRisks.length ? `${ui("风险", "Risk", "위험")} ${leaderBreakRisks.slice(0, 2).map(term).join(" / ")}` : ui("破格风险未显著", "No major break risk", "큰 파격 위험 없음"),
       ],
-      badges: activePatternScopes.length ? activePatternScopes : ["pattern"],
+      badges: activePatternScopes.length ? activePatternScopes.map(term) : ["pattern"],
     },
     {
       key: "climate",
-      title: "调候专题",
-      subtitle: "寒热轴 / 燥湿轴 / 效率稳定修正",
-      status: String(climateTheme.state || climateField.state || "调候观察"),
+      title: ui("调候专题", "Climate Topic", "조후 주제"),
+      subtitle: ui("寒热轴 / 燥湿轴 / 效率稳定修正", "Thermal axis / moisture axis / efficiency-stability modifier", "한열축 / 조습축 / 효율·안정 보정"),
+      status: term(String(climateTheme.state || climateField.state || "调候观察")),
       tone: Object.keys(climateField).length || Object.keys(climateTheme).length ? "stable" : "muted",
       details: [
-        `寒热 ${asNumberValue(climateTheme.thermal_index ?? climateField.thermal_index).toFixed(2)}`,
-        `燥湿 ${asNumberValue(climateTheme.moisture_index ?? climateField.moisture_index).toFixed(2)}`,
-        `张力 ${asNumberValue(climateTheme.climate_tension ?? climateField.climate_tension).toFixed(2)}`,
+        `${ui("寒热", "Thermal", "한열")} ${asNumberValue(climateTheme.thermal_index ?? climateField.thermal_index).toFixed(2)}`,
+        `${ui("燥湿", "Moisture", "조습")} ${asNumberValue(climateTheme.moisture_index ?? climateField.moisture_index).toFixed(2)}`,
+        `${ui("张力", "Tension", "장력")} ${asNumberValue(climateTheme.climate_tension ?? climateField.climate_tension).toFixed(2)}`,
       ],
       badges: [
-        ...climateFavored.slice(0, 2).map((god) => `顺 ${god}`),
-        ...climateStrained.slice(0, 2).map((god) => `压 ${god}`),
+        ...climateFavored.slice(0, 2).map((god) => `${ui("顺", "Favors", "순응")} ${term(god)}`),
+        ...climateStrained.slice(0, 2).map((god) => `${ui("压", "Strains", "압박")} ${term(god)}`),
       ].slice(0, 4),
     },
     {
       key: "blind",
-      title: "盲派专题",
-      subtitle: "体用主线 / 家里家外 / 运行换挡",
-      status: String(blindTheme.primary_route || "盲派未显性"),
+      title: ui("盲派专题", "Blind-School Topic", "맹파 주제"),
+      subtitle: ui("体用主线 / 家里家外 / 运行换挡", "Body-use route / inner-outer roles / runtime shift", "체용 주선 / 안팎 역할 / 운행 전환"),
+      status: term(String(blindTheme.primary_route || "盲派未显性")),
       tone: Object.keys(blindTheme).length ? "soft" : "muted",
       details: [
-        `体态 ${String(blindTheme.body_mode || "未定")}`,
-        `桥接 ${String(blindBiasProtocol.authority_bridge_mode || "bias_only")}`,
-        `推用/推忌 ${blindUseBias.length}/${blindTabooBias.length}`,
+        `${ui("体态", "Body mode", "체태")} ${term(String(blindTheme.body_mode || "未定"))}`,
+        `${ui("桥接", "Bridge", "브리지")} ${String(blindBiasProtocol.authority_bridge_mode || "bias_only")}`,
+        `${ui("推用/推忌", "Use/Taboo bias", "용/기신 편향")} ${blindUseBias.length}/${blindTabooBias.length}`,
       ],
-      badges: ["bias-only", ...asStringList(blindTheme.runtime_switches).slice(0, 2)],
+      badges: ["bias-only", ...termList(asStringList(blindTheme.runtime_switches).slice(0, 2))],
     },
     {
       key: "xiangfa",
-      title: "象法专题",
-      subtitle: "语义映射 / 证据串 / 事件框架",
-      status: xiangfaSemantic.length || xiangfaEvidence.length ? "semantic-only 已接通" : "语义等待",
+      title: ui("象法专题", "Image-Semantic Topic", "상법 주제"),
+      subtitle: ui("语义映射 / 证据串 / 事件框架", "Semantic mapping / evidence chain / event framing", "의미 매핑 / 근거 사슬 / 사건 프레임"),
+      status: xiangfaSemantic.length || xiangfaEvidence.length ? ui("semantic-only 已接通", "semantic-only online", "semantic-only 연결됨") : ui("语义等待", "Semantic pending", "의미 대기"),
       tone: xiangfaSemantic.length || xiangfaEvidence.length ? "soft" : "muted",
       details: [
-        `语义 ${xiangfaSemantic.length}`,
-        `证据 ${xiangfaEvidence.length}`,
-        `主题 ${xiangfaTopics.length}`,
+        `${ui("语义", "Semantic", "의미")} ${xiangfaSemantic.length}`,
+        `${ui("证据", "Evidence", "근거")} ${xiangfaEvidence.length}`,
+        `${ui("主题", "Topics", "주제")} ${xiangfaTopics.length}`,
       ],
-      badges: xiangfaTopics.length ? xiangfaTopics.slice(0, 4) : ["不入 bias"],
+      badges: xiangfaTopics.length ? termList(xiangfaTopics.slice(0, 4)) : [ui("不入 bias", "No bias entry", "bias 미진입")],
     },
     {
       key: "risk",
-      title: "风险专题",
-      subtitle: "风险放大 / 破格提示 / 判定偏置",
-      status: riskRows.length || relationStressCount ? "风险链已观测" : "无显著风险",
+      title: ui("风险专题", "Risk Topic", "위험 주제"),
+      subtitle: ui("风险放大 / 破格提示 / 判定偏置", "Risk amplification / break warning / judgement bias", "위험 증폭 / 파격 경고 / 판정 편향"),
+      status: riskRows.length || relationStressCount ? ui("风险链已观测", "Risk chain observed", "위험 체인 관측") : ui("无显著风险", "No major risk", "주요 위험 없음"),
       tone: riskRows.length || relationStressCount ? "risk" : "muted",
       details: [
-        `风险来源 ${riskRows.length}`,
-        `判定偏置 ${judgementBiasEntries.length}`,
-        `稳定承压 ${relationStressCount}`,
+        `${ui("风险来源", "Risk sources", "위험 출처")} ${riskRows.length}`,
+        `${ui("判定偏置", "Judgement bias", "판정 편향")} ${judgementBiasEntries.length}`,
+        `${ui("稳定承压", "Stability strain", "안정 압박")} ${relationStressCount}`,
       ],
       badges: riskRows.length ? Array.from(new Set(riskRows.map(decisionPluginLabel).filter(Boolean))).slice(0, 3) : ["risk guard"],
     },
@@ -570,7 +613,7 @@ export default function OraclePage() {
       const resp = await fetch("/api/auth/users", { cache: "no-store" });
       const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
       if (!resp.ok) {
-        throw new Error(String(payload.detail || "用户列表加载失败。"));
+        throw new Error(String(payload.detail || ui("用户列表加载失败。", "Failed to load users.", "사용자 목록을 불러오지 못했습니다.")));
       }
       const rows = Array.isArray(payload.users) ? payload.users : [];
       setAuthUsers(
@@ -592,11 +635,11 @@ export default function OraclePage() {
         }),
       );
     } catch (error) {
-      setAuthUsersMessage(error instanceof Error ? error.message : "用户列表加载失败。");
+      setAuthUsersMessage(error instanceof Error ? error.message : ui("用户列表加载失败。", "Failed to load users.", "사용자 목록을 불러오지 못했습니다."));
     } finally {
       setAuthUsersLoading(false);
     }
-  }, [canManageUsers]);
+  }, [canManageUsers, ui]);
 
   const updateAuthUserRole = useCallback(
     async (userId: number, role: AdminAuthUser["role"]) => {
@@ -607,12 +650,18 @@ export default function OraclePage() {
       });
       const payload = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
       if (!resp.ok || payload.ok === false) {
-        throw new Error(String(payload.detail || "角色更新失败。"));
+        throw new Error(String(payload.detail || ui("角色更新失败。", "Failed to update role.", "역할을 업데이트하지 못했습니다.")));
       }
-      setAuthUsersMessage(`角色已更新为 ${role}。`);
+      setAuthUsersMessage(ui(`角色已更新为 ${role}。`, `Role updated to ${role}.`, `역할이 ${role}(으)로 변경되었습니다.`));
       await loadAuthUsers();
     },
-    [loadAuthUsers],
+    [loadAuthUsers, ui],
+  );
+
+  const verdictTriggerPrompt = ui(
+    "请基于当前已通过的决策，生成新的八字断言。",
+    "Generate a new BaZi verdict based on the currently approved decisions.",
+    "현재 승인된 결정을 바탕으로 새로운 사주 단언을 생성하세요.",
   );
 
   const switchContentSurface = (tab: ContentSurfaceTab) => {
@@ -867,7 +916,6 @@ export default function OraclePage() {
                   />
                   <V17_PurpleVerdictCard
                     frames={s.frames}
-                    onToggleTrace={openTraceSurface}
                     connectTickMs={s.connectTickMs}
                     running={s.running}
                     llmStatusText={s.llmStatusText}
@@ -882,7 +930,7 @@ export default function OraclePage() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => s.triggerVerdict("请基于当前已通过的决策，生成新的八字断言。")}
+                      onClick={() => s.triggerVerdict(verdictTriggerPrompt)}
                       className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-950/25 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-900/35"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
@@ -1029,7 +1077,7 @@ export default function OraclePage() {
                   <AuxiliarySection
                     title={t(language, "oracle.section.structure.title")}
                     subtitle={t(language, "oracle.section.structure.subtitle")}
-                    badge={`${structureSignalCount} signals`}
+                    badge={`${structureSignalCount} ${ui("信号", "signals", "신호")}`}
                     open={auxiliarySections.structure}
                     onToggle={() => toggleAuxiliarySection("structure")}
                   >
@@ -1089,7 +1137,7 @@ export default function OraclePage() {
                   <AuxiliarySection
                     title={t(language, "oracle.section.runtime.title")}
                     subtitle={t(language, "oracle.section.runtime.subtitle")}
-                    badge={`${runtimeLedgerSignalCount} ledger`}
+                    badge={`${runtimeLedgerSignalCount} ${ui("账本", "ledger", "장부")}`}
                     open={auxiliarySections.runtime}
                     onToggle={() => toggleAuxiliarySection("runtime")}
                   >
@@ -1129,7 +1177,7 @@ export default function OraclePage() {
                   <AuxiliarySection
                     title={t(language, "oracle.section.authority.title")}
                     subtitle={t(language, "oracle.section.authority.subtitle")}
-                    badge={`${authoritySignalCount} gods`}
+                    badge={`${authoritySignalCount} ${ui("神", "gods", "신")}`}
                     open={auxiliarySections.authority}
                     onToggle={() => toggleAuxiliarySection("authority")}
                   >
@@ -1140,35 +1188,46 @@ export default function OraclePage() {
                         setFocusedDecisionId(decisionId);
                         openTraceSurface();
                       }}
+                      lang={language}
                     />
                   </AuxiliarySection>
 
                   <AuxiliarySection
                     title={t(language, "oracle.section.pattern.title")}
                     subtitle={t(language, "oracle.section.pattern.subtitle")}
-                    badge={`${livePatternCandidates.length} patterns`}
+                    badge={`${livePatternCandidates.length} ${ui("格局", "patterns", "격국")}`}
                     open={auxiliarySections.patterns}
                     onToggle={() => toggleAuxiliarySection("patterns")}
                   >
                     <div className="rounded-xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(12,74,110,0.32),rgba(9,9,11,0.76))] p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">Pattern Overview</p>
-                          <p className="mt-1 text-sm text-cyan-50">当前盘面的主格局、次格局、动态来源、置信度与系统判读</p>
+                          <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
+                            {ui("格局总览", "Pattern Overview", "격국 총람")}
+                          </p>
+                          <p className="mt-1 text-sm text-cyan-50">
+                            {ui(
+                              "当前盘面的主格局、次格局、动态来源、置信度与系统判读",
+                              "Primary pattern, secondary candidates, runtime sources, confidence, and system reading.",
+                              "현재 명식의 주격, 보조 격국, 동적 출처, 신뢰도와 시스템 판독입니다.",
+                            )}
+                          </p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 text-[10px]">
                           <span className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-2 py-1 text-cyan-100">
-                            候选 {livePatternCandidates.length}
+                            {ui("候选", "Candidates", "후보")} {livePatternCandidates.length}
                           </span>
                           {activePatternScopes.map((scope) => (
                             <span key={`pattern_scope_${scope}`} className="rounded-full border border-cyan-500/20 bg-zinc-950/60 px-2 py-1 text-cyan-100">
-                              {scope}
+                              {term(scope)}
                             </span>
                           ))}
                         </div>
                       </div>
                       <div className="mt-3 rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
-                        <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">System Reading</p>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
+                          {ui("系统判读", "System Reading", "시스템 판독")}
+                        </p>
                         <p className="mt-2 text-[12px] leading-6 text-cyan-50">{patternJudgement}</p>
                       </div>
 
@@ -1177,39 +1236,51 @@ export default function OraclePage() {
                           <div className="rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
-                                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">Primary Pattern</p>
-                                <p className="mt-1 text-lg text-cyan-50">{patternLeader.name}</p>
-                                <p className="mt-1 text-[11px] text-zinc-400">{patternLeader.family}</p>
+                                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
+                                  {ui("主格局", "Primary Pattern", "주격")}
+                                </p>
+                                <p className="mt-1 text-lg text-cyan-50">{term(patternLeader.name)}</p>
+                                <p className="mt-1 text-[11px] text-zinc-400">{term(patternLeader.family)}</p>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
                                 <span className={`rounded-full border px-2 py-1 text-[10px] ${patternStatusToneForRuntime(patternLeader.statusLabel)}`}>
-                                  {patternLeader.statusLabel}
+                                  {term(patternLeader.statusLabel)}
                                 </span>
                                 <span className={`rounded-full border px-2 py-1 text-[10px] ${patternConfidenceTone(patternLeader.confidence)}`}>
-                                  置信 {Math.round(patternLeader.confidence * 100)}%
+                                  {ui("置信", "Confidence", "신뢰도")} {Math.round(patternLeader.confidence * 100)}%
                                 </span>
                               </div>
                             </div>
                             <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                              <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-1 text-cyan-100">{patternLeader.scope}</span>
-                              <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-200">主落点 {patternLeader.target}</span>
-                              <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">{patternLeader.source === "claim" ? "来自 Claim 层" : "来自 Decision 层"}</span>
+                              <span className="rounded-full border border-cyan-500/20 bg-cyan-950/30 px-2 py-1 text-cyan-100">{term(patternLeader.scope)}</span>
+                              <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-200">
+                                {ui("主落点", "Focus", "초점")} {term(patternLeader.target)}
+                              </span>
+                              <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">
+                                {patternLeader.source === "claim" ? ui("来自 Claim 层", "From Claim layer", "Claim 계층") : ui("来自 Decision 层", "From Decision layer", "Decision 계층")}
+                              </span>
                             </div>
                             {(patternLeader.gate || patternLeader.gateReason) ? (
                               <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/45 p-2">
-                                <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">Formation Gate</p>
-                                <p className="mt-1 text-[11px] text-emerald-100">{patternLeader.gate || "候选审计"}</p>
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+                                  {ui("成格门槛", "Formation Gate", "성격 관문")}
+                                </p>
+                                <p className="mt-1 text-[11px] text-emerald-100">
+                                  {patternLeader.gate ? term(patternLeader.gate) : ui("候选审计", "Candidate audit", "후보 감사")}
+                                </p>
                                 {patternLeader.gateReason ? <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">{patternLeader.gateReason}</p> : null}
                               </div>
                             ) : null}
                             {patternLeader.scopeWeights.length ? (
                               <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/45 p-2">
-                                <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">Scope Evidence</p>
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-300">
+                                  {ui("来源证据", "Scope Evidence", "출처 근거")}
+                                </p>
                                 <div className="mt-2 grid gap-1.5">
                                   {patternLeader.scopeWeights.map((item) => (
                                     <div key={`${patternLeader.key}_${item.label}`} className="grid gap-1">
                                       <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-zinc-300">{item.label}</span>
+                                        <span className="text-zinc-300">{term(item.label)}</span>
                                         <span className="text-cyan-200">{Math.round(item.ratio * 100)}%</span>
                                       </div>
                                       <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
@@ -1222,21 +1293,23 @@ export default function OraclePage() {
                             ) : null}
                             {patternLeader.profileText ? (
                               <p className="mt-3 text-[11px] leading-relaxed text-zinc-300">
-                                家族混合：<span className="text-cyan-100">{patternLeader.profileText}</span>
+                                {ui("家族混合", "Family mixture", "계열 혼합")}：<span className="text-cyan-100">{patternLeader.profileText}</span>
                               </p>
                             ) : null}
                             {patternLeader.projectionText ? (
                               <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
-                                投影焦点：{patternLeader.projectionText}
+                                {ui("投影焦点", "Projection focus", "투영 초점")}：{patternLeader.projectionText}
                               </p>
                             ) : null}
                             {leaderBreakRisks.length ? (
                               <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-950/20 p-2">
-                                <p className="text-[10px] uppercase tracking-[0.16em] text-rose-300">Break Risks</p>
+                                <p className="text-[10px] uppercase tracking-[0.16em] text-rose-300">
+                                  {ui("破格风险", "Break Risks", "파격 위험")}
+                                </p>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   {leaderBreakRisks.map((risk) => (
                                     <span key={`${patternLeader.key}_${risk}`} className="rounded-full border border-rose-500/20 bg-zinc-950/50 px-2 py-1 text-[10px] text-rose-100">
-                                      {risk}
+                                      {term(risk)}
                                     </span>
                                   ))}
                                 </div>
@@ -1245,19 +1318,21 @@ export default function OraclePage() {
                           </div>
 
                           <div className="rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3">
-                            <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">Secondary Patterns</p>
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
+                              {ui("次格局", "Secondary Patterns", "보조 격국")}
+                            </p>
                             <div className="mt-2 grid gap-2">
                               {patternRunners.length ? (
                                 patternRunners.map((item) => (
                                   <div key={item.key} className="rounded-lg border border-zinc-800 bg-zinc-900/55 p-2">
                                     <div className="flex items-start justify-between gap-2">
                                       <div>
-                                        <p className="text-[11px] text-cyan-50">{item.name}</p>
-                                        <p className="text-[9px] text-zinc-500">{item.family} · {item.scope}</p>
+                                        <p className="text-[11px] text-cyan-50">{term(item.name)}</p>
+                                        <p className="text-[9px] text-zinc-500">{term(item.family)} · {term(item.scope)}</p>
                                       </div>
                                       <div className="flex flex-wrap gap-1">
                                         <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${patternStatusToneForRuntime(item.statusLabel)}`}>
-                                          {item.statusLabel}
+                                          {term(item.statusLabel)}
                                         </span>
                                         <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${patternConfidenceTone(item.confidence)}`}>
                                           {Math.round(item.confidence * 100)}%
@@ -1265,13 +1340,13 @@ export default function OraclePage() {
                                       </div>
                                     </div>
                                     <p className="mt-1 text-[10px] text-zinc-300">
-                                      主落点 {item.target}{item.profileText ? ` · ${item.profileText}` : ""}
+                                      {ui("主落点", "Focus", "초점")} {term(item.target)}{item.profileText ? ` · ${item.profileText}` : ""}
                                     </p>
                                     {item.scopeWeights.length ? (
                                       <div className="mt-1 flex flex-wrap gap-1">
                                         {item.scopeWeights.map((scope) => (
                                           <span key={`${item.key}_${scope.label}`} className="rounded-full border border-zinc-700 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                                            {scope.label} {Math.round(scope.ratio * 100)}%
+                                            {term(scope.label)} {Math.round(scope.ratio * 100)}%
                                           </span>
                                         ))}
                                       </div>
@@ -1281,7 +1356,11 @@ export default function OraclePage() {
                                 ))
                               ) : (
                                 <div className="rounded-lg border border-zinc-800 bg-zinc-900/55 p-2 text-[10px] text-zinc-500">
-                                  当前尚未形成明确的次格局分层，系统只识别到一个主候选。
+                                  {ui(
+                                    "当前尚未形成明确的次格局分层，系统只识别到一个主候选。",
+                                    "No clear secondary pattern layer has formed yet; the system currently sees only one primary candidate.",
+                                    "아직 명확한 보조 격국 층이 형성되지 않았고, 시스템은 현재 하나의 주 후보만 인식했습니다.",
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1289,7 +1368,11 @@ export default function OraclePage() {
                         </div>
                       ) : (
                         <div className="mt-3 rounded-xl border border-cyan-500/15 bg-zinc-950/55 p-3 text-[11px] text-zinc-400">
-                          当前盘面还没有显式格局候选，系统会随着插件命中和 Claim 聚合继续补全。
+                          {ui(
+                            "当前盘面还没有显式格局候选，系统会随着插件命中和 Claim 聚合继续补全。",
+                            "No explicit pattern candidate has appeared yet; the system will keep completing this as plugins and claims aggregate.",
+                            "현재 명식에는 명시적 격국 후보가 없으며, 플러그인 명중과 Claim 집계에 따라 계속 보완됩니다.",
+                          )}
                         </div>
                       )}
                     </div>
@@ -1299,7 +1382,7 @@ export default function OraclePage() {
                     <AuxiliarySection
                       title={t(language, "oracle.section.collab.title")}
                       subtitle={t(language, "oracle.section.collab.subtitle")}
-                      badge={collaborationUserCount ? `${collaborationUserCount} users` : "sync"}
+                      badge={collaborationUserCount ? `${collaborationUserCount} ${ui("用户", "users", "사용자")}` : "sync"}
                       open={auxiliarySections.collaboration}
                       onToggle={() => toggleAuxiliarySection("collaboration")}
                     >

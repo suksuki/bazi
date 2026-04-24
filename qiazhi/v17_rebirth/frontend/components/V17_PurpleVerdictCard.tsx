@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 
 import { mergeV17LlmMetaForUi } from "@/hooks/useV17WebStream";
@@ -61,16 +60,8 @@ type EvolutionFrame = {
   };
 };
 
-type MergedFullPromptTrace = {
-  system_role?: string;
-  user_role?: string;
-  decision_anchor_literal_in_system_role?: boolean;
-  decision_anchor_len?: number;
-};
-
 export function V17_PurpleVerdictCard({
   frames,
-  onToggleTrace,
   connectTickMs = 0,
   running = false,
   llmStatusText,
@@ -79,7 +70,6 @@ export function V17_PurpleVerdictCard({
   lang = "zh",
 }: {
   frames: EvolutionFrame[];
-  onToggleTrace?: () => void;
   /** 测算开始后前端计时（ms），用于连接态跳动 */
   connectTickMs?: number;
   running?: boolean;
@@ -139,19 +129,12 @@ export function V17_PurpleVerdictCard({
   const willFlash = Boolean(latestNarrator?.payload?.will_flash);
   const lastFlashAt = [...ordered].reverse().find((f) => String(f?.layer || "").toUpperCase() === "WILL_FLASH")?.timestamp || "";
   const lm = mergeV17LlmMetaForUi(narratorForAudit, latestNarrator, llmAuditSnap);
-  const rawFpt = lm.full_prompt_trace;
-  const fullPromptTrace: MergedFullPromptTrace | undefined =
-    rawFpt && typeof rawFpt === "object" ? (rawFpt as MergedFullPromptTrace) : undefined;
   const reconnecting = String(lm.engine_state || "") === "reconnecting";
   const errId = String(lm.error_id || "").trim();
   const modelLabel = String(lm.model || "").trim() || t(lang, "verdict.model");
   const waitingPhase =
     llmLifecyclePhase === "connecting" || llmLifecyclePhase === "awaiting_first_token";
   const streamingPhase = llmLifecyclePhase === "streaming";
-  const [reasonOpen, setReasonOpen] = useState(false);
-  const reasonFacts = (physicsSnapshot?.payload?.debug_trace?.facts || []).filter(
-    (x) => String(x || "").trim().length > 0,
-  );
 
   return (
     <motion.div 
@@ -231,93 +214,6 @@ export function V17_PurpleVerdictCard({
               <p className="font-mono text-violet-300/90">{t(lang, "verdict.link", { value: llmStatusDetail })}</p>
             </>
           )}
-        </div>
-      ) : null}
-      <div className="absolute bottom-2 right-2 z-20 flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => setReasonOpen((v) => !v)}
-          className="rounded-full border border-violet-400/40 bg-violet-900/40 px-2 py-0.5 text-xs text-violet-200 hover:bg-violet-800/50"
-          title={t(lang, "verdict.reason.button.title")}
-        >
-          {t(lang, "verdict.reason.button")}
-        </button>
-        <button
-          type="button"
-          onClick={() => onToggleTrace?.()}
-          className="rounded-full border border-cyan-500/35 bg-zinc-900/60 px-2 py-0.5 text-[10px] text-cyan-200/90 hover:bg-zinc-800/70"
-          title={t(lang, "verdict.trace.button.title")}
-        >
-          {t(lang, "verdict.trace.button")}
-        </button>
-      </div>
-      {reasonOpen ? (
-        <div className="relative z-20 mt-3 max-h-48 overflow-auto rounded-lg border border-violet-500/30 bg-zinc-950/90 p-2 text-left">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
-            {t(lang, "verdict.reason.title")}
-          </p>
-          {llmAuditSnap ? (
-            <p className="mb-2 text-[11px] text-emerald-200/90">{t(lang, "verdict.reason.audit")}</p>
-          ) : null}
-          {reasonFacts.length ? (
-            <ul className="space-y-1 text-[11px] leading-snug text-zinc-200">
-              {reasonFacts.map((line, i) => (
-                <li key={`${i}_${line.slice(0, 24)}`} className="border-l border-violet-600/40 pl-2">
-                  {line}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[11px] text-zinc-500">{t(lang, "verdict.reason.empty")}</p>
-          )}
-          {typeof lm.elapsed_ms === "number" ||
-          lm.prompt_dead_audit_unlock === true ||
-          lm.audit_preview === true ||
-          lm.llm_audit_preview === true ||
-          Boolean(llmAuditSnap) ||
-          String(lm.llm_system_prompt || lm.llm_user_prompt || "").trim() ? (
-            <div className="mt-3 space-y-2 border-t border-violet-500/25 pt-2">
-              {lm.llm_audit_preview === true || Boolean(llmAuditSnap) ? (
-                <p className="mb-1 text-[10px] text-emerald-300/90">{t(lang, "verdict.audit.snapshot")}</p>
-              ) : lm.audit_preview ? (
-                <p className="mb-1 text-[10px] text-emerald-300/90">{t(lang, "verdict.audit.preview")}</p>
-              ) : null}
-              {fullPromptTrace ? (
-                <p className="text-[10px] text-amber-200/90">
-                  {t(lang, "verdict.audit.anchor", {
-                    value: fullPromptTrace.decision_anchor_literal_in_system_role
-                      ? t(lang, "common.yes")
-                      : t(lang, "common.no"),
-                  })}
-                  {typeof fullPromptTrace.decision_anchor_len === "number"
-                    ? t(lang, "verdict.audit.anchor_len", { value: fullPromptTrace.decision_anchor_len })
-                    : ""}
-                </p>
-              ) : null}
-              <details className="rounded border border-violet-600/30 bg-black/40 px-2 py-1 text-[11px] text-zinc-300">
-                <summary className="cursor-pointer select-none text-violet-200/95">{t(lang, "verdict.prompt.view")}</summary>
-                <p className="mt-1 text-[10px] uppercase tracking-wide text-violet-400/80">{t(lang, "verdict.prompt.system")}</p>
-                <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(fullPromptTrace?.system_role ?? lm.llm_system_prompt ?? t(lang, "verdict.prompt.empty"))}
-                </pre>
-                <p className="mt-2 text-[10px] uppercase tracking-wide text-violet-400/80">{t(lang, "verdict.prompt.user")}</p>
-                <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(fullPromptTrace?.user_role ?? lm.llm_user_prompt ?? t(lang, "verdict.prompt.empty"))}
-                </pre>
-              </details>
-              <details className="rounded border border-violet-600/30 bg-black/40 px-2 py-1 text-[11px] text-zinc-300">
-                <summary className="cursor-pointer select-none text-violet-200/95">{t(lang, "verdict.raw.view")}</summary>
-                <p className="mt-1 text-[10px] text-zinc-500">{t(lang, "verdict.raw.reply")}</p>
-                <pre className="mt-0.5 max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] text-zinc-200">
-                  {String(lm.llm_reply || "").trim() || t(lang, "verdict.raw.empty")}
-                </pre>
-                <p className="mt-2 text-[10px] text-zinc-500">{t(lang, "verdict.raw.payload")}</p>
-                <pre className="mt-0.5 max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-[9px] text-zinc-400">
-                  {String(lm.llm_raw_response_json || "").trim() || t(lang, "verdict.raw.payload_empty")}
-                </pre>
-              </details>
-            </div>
-          ) : null}
         </div>
       ) : null}
     </motion.div>

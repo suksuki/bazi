@@ -1777,6 +1777,7 @@ export function V17_DecisionInbox({
           directionGroupLabel={directionGroupLabel}
           godRingBiasSummary={godRingBiasSummary}
           groupGodRingBiasSummary={groupGodRingBiasSummary}
+          lang={lang}
         />
 
         {!manualOnly ? (

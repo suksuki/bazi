@@ -1,5 +1,7 @@
 "use client";
 
+import { translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
+
 type LooseRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): LooseRecord {
@@ -129,11 +131,16 @@ export function V17_GodRingExplainCard({
   godRings,
   focusedDecisionId,
   onFocusDecision,
+  lang = "zh",
 }: {
   godRings?: Record<string, unknown>;
   focusedDecisionId?: string;
   onFocusDecision?: (decisionId: string) => void;
+  lang?: AppLanguage;
 }) {
+  const ui = (zh: string, en: string, ko: string) => (lang === "en" ? en : lang === "ko" ? ko : zh);
+  const term = (value: string) => translateTerm(lang, value);
+  const termList = (values: string[]) => translateTermList(lang, values);
   const row = asRecord(godRings);
   const displayMode = asString(row.display_mode).trim();
   const authorityMode = displayMode === "authority";
@@ -237,9 +244,13 @@ export function V17_GodRingExplainCard({
           <div className="text-[11px] uppercase tracking-[0.24em] text-cyan-300/80">
             God Ring Explain
           </div>
-          <h3 className="mt-2 text-sm font-semibold text-cyan-50">体用裁决说明</h3>
+          <h3 className="mt-2 text-sm font-semibold text-cyan-50">{ui("体用裁决说明", "Body-Use Authority Explanation", "체용 판정 설명")}</h3>
           <p className="mt-1 text-[11px] leading-6 text-zinc-400">
-            这里展示核心层如何把六柱、大运、流年与关系做功折算成用神、忌神和双刃神。
+            {ui(
+              "这里展示核心层如何把六柱、大运、流年与关系做功折算成用神、忌神和双刃神。",
+              "This explains how the core layer converts six pillars, luck, flow year, and relation work into useful gods, taboo gods, and dual-role gods.",
+              "핵심 계층이 육주·대운·세운·관계 작용을 용신, 기신, 양면 신으로 환산하는 방식을 보여 줍니다.",
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-[10px]">
@@ -250,23 +261,27 @@ export function V17_GodRingExplainCard({
                 : "border-amber-500/30 bg-amber-950/20 text-amber-200"
             }`}
           >
-            {authorityMode ? "权威体用" : "等待权威裁决"}
+            {authorityMode ? ui("权威体用", "Authority active", "권위 체용") : ui("等待权威裁决", "Waiting for authority", "권위 판정 대기")}
           </span>
           <span className="rounded-full border border-cyan-500/20 bg-cyan-950/25 px-3 py-1 text-cyan-200">
-            模式 {mode}
+            {ui("模式", "Mode", "모드")} {mode}
           </span>
           <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
-            置信 {Math.round(confidence * 100)}%
+            {ui("置信", "Confidence", "신뢰도")} {Math.round(confidence * 100)}%
           </span>
           <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-300">
-            路径 {pathCount}
+            {ui("路径", "Paths", "경로")} {pathCount}
           </span>
         </div>
       </div>
 
       {!authorityMode ? (
         <div className="mt-4 rounded-xl border border-dashed border-amber-500/25 bg-amber-950/15 px-4 py-3 text-[12px] leading-6 text-amber-100/90">
-          当前尚未拿到核心层的权威体用结果。主页面已经停止把“主导/弱势十神”冒充成用神/忌神；待核心路径完成后，这里会亮起完整解释。
+          {ui(
+            "当前尚未拿到核心层的权威体用结果。主页面已经停止把“主导/弱势十神”冒充成用神/忌神；待核心路径完成后，这里会亮起完整解释。",
+            "The core authority result is not available yet. The main page no longer treats dominant or weak ten-gods as useful/taboo gods; once the core paths finish, the full explanation appears here.",
+            "핵심 계층의 권위 체용 결과가 아직 없습니다. 메인 화면은 더 이상 주도/약세 십신을 용신/기신으로 가장하지 않으며, 핵심 경로가 완성되면 이곳에 전체 설명이 표시됩니다.",
+          )}
         </div>
       ) : (
         <>
@@ -274,12 +289,12 @@ export function V17_GodRingExplainCard({
             <div className="grid gap-4">
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-zinc-300">体用候选</div>
-                  <div className="text-[10px] text-zinc-500">来源 {source}</div>
+                  <div className="text-[11px] font-semibold text-zinc-300">{ui("体用候选", "Body-use candidates", "체용 후보")}</div>
+                  <div className="text-[10px] text-zinc-500">{ui("来源", "Source", "출처")} {term(source)}</div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">用神候选</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">{ui("用神候选", "Useful candidates", "용신 후보")}</div>
                     <div className="flex flex-wrap gap-2">
                       {(useCandidates.length
                         ? useCandidates
@@ -290,7 +305,7 @@ export function V17_GodRingExplainCard({
                         const profile = asString(item.authority_profile).trim();
                         return (
                           <div key={`use_${god}_${idx}`} className={`rounded-full border px-3 py-1 text-[10px] ${candidateTone(score)}`}>
-                            <div>用 {god || "未定"} · {Math.round(score * 100)}%</div>
+                            <div>{ui("用", "Use", "용")} {term(god || "未定")} · {Math.round(score * 100)}%</div>
                             {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
                           </div>
                         );
@@ -298,7 +313,7 @@ export function V17_GodRingExplainCard({
                     </div>
                   </div>
                   <div>
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">忌神候选</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">{ui("忌神候选", "Taboo candidates", "기신 후보")}</div>
                     <div className="flex flex-wrap gap-2">
                       {(tabooCandidates.length
                         ? tabooCandidates
@@ -316,7 +331,7 @@ export function V17_GodRingExplainCard({
                                 : "border-amber-500/30 bg-amber-950/20 text-amber-200"
                             }`}
                           >
-                            <div>忌 {god || "未定"} · {Math.round(score * 100)}%</div>
+                            <div>{ui("忌", "Taboo", "기")} {term(god || "未定")} · {Math.round(score * 100)}%</div>
                             {profile ? <div className="mt-0.5 text-[9px] text-zinc-400">{profile}</div> : null}
                           </div>
                         );
@@ -329,44 +344,48 @@ export function V17_GodRingExplainCard({
               {stageBias.length ? (
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="text-[11px] font-semibold text-zinc-300">禄刃阶段偏置</div>
+                    <div className="text-[11px] font-semibold text-zinc-300">{ui("禄刃阶段偏置", "Lu/Blade Stage Bias", "록·인 단계 편향")}</div>
                     <div className="text-[10px] text-zinc-500">
                       {asString(stageProtocol.contract).trim()
-                        ? `${asString(stageProtocol.contract).trim()} · 条目 ${asNumber(stageSummary.entry_count)}`
-                        : "为何会推用 / 推忌"}
+                        ? `${asString(stageProtocol.contract).trim()} · ${ui("条目", "entries", "항목")} ${asNumber(stageSummary.entry_count)}`
+                        : ui("为何会推用 / 推忌", "Why it pushes use/taboo", "왜 용/기를 미는가")}
                     </div>
                   </div>
                   <div className="mb-2 text-[10px] leading-5 text-zinc-500">
-                    阶段偏置只作为 authority 的承接/波动修正，不回写 L0/L1 物理根分。
+                    {ui(
+                      "阶段偏置只作为 authority 的承接/波动修正，不回写 L0/L1 物理根分。",
+                      "Stage bias only modifies authority acceptance/volatility and does not write back to L0/L1 physical root scores.",
+                      "단계 편향은 authority 의 수용/변동 보정으로만 쓰이며 L0/L1 물리 근점수에 되쓰지 않습니다.",
+                    )}
                   </div>
                   <div className="space-y-2 text-[10px] text-zinc-300">
                     {stageBias.map((entry) => (
                       <div key={`stage_bias_${entry.god}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-medium text-zinc-100">{entry.god}</span>
+                          <span className="font-medium text-zinc-100">{term(entry.god)}</span>
                           <span className="text-zinc-500">
-                            禄 {entry.lu.toFixed(2)} · 刃 {entry.blade.toFixed(2)} · 长生 {entry.general.toFixed(2)}
+                            {ui("禄", "Lu", "록")} {entry.lu.toFixed(2)} · {ui("刃", "Blade", "인")} {entry.blade.toFixed(2)} · {ui("长生", "Growth", "장생")} {entry.general.toFixed(2)}
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {entry.useBoost > 0 ? (
                             <span className="rounded-full border border-emerald-500/30 bg-emerald-950/25 px-3 py-1 text-emerald-200">
-                              推用 +{entry.useBoost.toFixed(2)}
+                              {ui("推用", "Use bias", "용신 편향")} +{entry.useBoost.toFixed(2)}
                             </span>
                           ) : null}
                           {entry.tabooBoost > 0 ? (
                             <span className="rounded-full border border-rose-500/30 bg-rose-950/25 px-3 py-1 text-rose-200">
-                              推忌 +{entry.tabooBoost.toFixed(2)}
+                              {ui("推忌", "Taboo bias", "기신 편향")} +{entry.tabooBoost.toFixed(2)}
                             </span>
                           ) : null}
                           {entry.stabilityBoost > 0 ? (
                             <span className="rounded-full border border-cyan-500/30 bg-cyan-950/25 px-3 py-1 text-cyan-200">
-                              稳定 +{entry.stabilityBoost.toFixed(2)}
+                              {ui("稳定", "Stability", "안정")} +{entry.stabilityBoost.toFixed(2)}
                             </span>
                           ) : null}
                           {entry.volatilityBoost > 0 ? (
                             <span className="rounded-full border border-amber-500/30 bg-amber-950/25 px-3 py-1 text-amber-200">
-                              波动 +{entry.volatilityBoost.toFixed(2)}
+                              {ui("波动", "Volatility", "변동")} +{entry.volatilityBoost.toFixed(2)}
                             </span>
                           ) : null}
                         </div>
@@ -379,33 +398,37 @@ export function V17_GodRingExplainCard({
               {Object.keys(blindTheme).length || blindUseBias.length || blindTabooBias.length ? (
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="text-[11px] font-semibold text-zinc-300">盲派专题并行桥接</div>
+                    <div className="text-[11px] font-semibold text-zinc-300">{ui("盲派专题并行桥接", "Blind-school parallel bridge", "맹파 병렬 브리지")}</div>
                     <div className="text-[10px] text-zinc-500">
                       {asString(blindProtocol.contract).trim() || "v17.blind.bias.v1"} · {asString(blindProtocol.authority_bridge_mode).trim() || "bias_only"}
                     </div>
                   </div>
                   <div className="mb-2 text-[10px] leading-5 text-zinc-500">
-                    盲派作为独立专题并行输出体态、家里家外与换挡信息，只做 soft bias，不覆盖子平 authority。
+                    {ui(
+                      "盲派作为独立专题并行输出体态、家里家外与换挡信息，只做 soft bias，不覆盖子平 authority。",
+                      "The blind-school topic runs independently and outputs body mode, inner/outer roles, and runtime shifts. It only provides soft bias and never overrides ZiPing authority.",
+                      "맹파 주제는 독립적으로 체태, 안팎 역할, 전환 정보를 출력합니다. soft bias 만 제공하며 자평 authority 를 덮지 않습니다.",
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 text-[10px]">
                     {asString(blindTheme.primary_route).trim() ? (
                       <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-950/20 px-3 py-1 text-fuchsia-200">
-                        主线 {asString(blindTheme.primary_route).trim()}
+                        {ui("主线", "Route", "주선")} {term(asString(blindTheme.primary_route).trim())}
                       </span>
                     ) : null}
                     {asString(blindTheme.body_mode).trim() ? (
                       <span className="rounded-full border border-cyan-500/30 bg-cyan-950/20 px-3 py-1 text-cyan-200">
-                        体态 {asString(blindTheme.body_mode).trim()}
+                        {ui("体态", "Body mode", "체태")} {term(asString(blindTheme.body_mode).trim())}
                       </span>
                     ) : null}
                     {asNumber(blindSummary.use_total) > 0 ? (
                       <span className="rounded-full border border-emerald-500/30 bg-emerald-950/20 px-3 py-1 text-emerald-200">
-                        推用 +{asNumber(blindSummary.use_total).toFixed(2)}
+                        {ui("推用", "Use bias", "용신 편향")} +{asNumber(blindSummary.use_total).toFixed(2)}
                       </span>
                     ) : null}
                     {asNumber(blindSummary.taboo_total) > 0 ? (
                       <span className="rounded-full border border-rose-500/30 bg-rose-950/20 px-3 py-1 text-rose-200">
-                        推忌 +{asNumber(blindSummary.taboo_total).toFixed(2)}
+                        {ui("推忌", "Taboo bias", "기신 편향")} +{asNumber(blindSummary.taboo_total).toFixed(2)}
                       </span>
                     ) : null}
                   </div>
@@ -413,52 +436,52 @@ export function V17_GodRingExplainCard({
                     <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
                       {blindInside.length ? (
                         <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-                          家里 {blindInside.join("/")}
+                          {ui("家里", "Inside", "안")} {termList(blindInside)}
                         </span>
                       ) : null}
                       {blindOutside.length ? (
                         <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-                          家外 {blindOutside.join("/")}
+                          {ui("家外", "Outside", "밖")} {termList(blindOutside)}
                         </span>
                       ) : null}
                       {blindBridge.length ? (
                         <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-3 py-1 text-zinc-200">
-                          桥位 {blindBridge.join("/")}
+                          {ui("桥位", "Bridge", "교량")} {termList(blindBridge)}
                         </span>
                       ) : null}
                     </div>
                   ) : null}
                   {blindSwitches.length ? (
                     <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-[10px] text-zinc-300">
-                      换挡：{blindSwitches.join("；")}
+                      {ui("换挡", "Runtime shifts", "전환")}：{termList(blindSwitches)}
                     </div>
                   ) : null}
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">盲派推用</div>
+                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">{ui("盲派推用", "Blind-school use bias", "맹파 용신 편향")}</div>
                       <div className="flex flex-wrap gap-2">
                         {blindUseBias.length ? (
                           blindUseBias.map(([god, score]) => (
                             <span key={`blind_use_${god}`} className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-3 py-1 text-[10px] text-emerald-200">
-                              {god} +{score.toFixed(2)}
+                              {term(god)} +{score.toFixed(2)}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[11px] text-zinc-500">当前未形成显著推用。</span>
+                          <span className="text-[11px] text-zinc-500">{ui("当前未形成显著推用。", "No significant use bias yet.", "아직 뚜렷한 용신 편향이 없습니다.")}</span>
                         )}
                       </div>
                     </div>
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">盲派推忌</div>
+                      <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">{ui("盲派推忌", "Blind-school taboo bias", "맹파 기신 편향")}</div>
                       <div className="flex flex-wrap gap-2">
                         {blindTabooBias.length ? (
                           blindTabooBias.map(([god, score]) => (
                             <span key={`blind_taboo_${god}`} className="rounded-full border border-rose-500/20 bg-rose-950/20 px-3 py-1 text-[10px] text-rose-200">
-                              {god} +{score.toFixed(2)}
+                              {term(god)} +{score.toFixed(2)}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[11px] text-zinc-500">当前未形成显著推忌。</span>
+                          <span className="text-[11px] text-zinc-500">{ui("当前未形成显著推忌。", "No significant taboo bias yet.", "아직 뚜렷한 기신 편향이 없습니다.")}</span>
                         )}
                       </div>
                     </div>
@@ -467,10 +490,10 @@ export function V17_GodRingExplainCard({
               ) : null}
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
-                <div className="mb-2 text-[11px] font-semibold text-zinc-300">双刃神与引动热区</div>
+                <div className="mb-2 text-[11px] font-semibold text-zinc-300">{ui("双刃神与引动热区", "Dual-role Gods & Activation Hotspots", "양면 신과 인동 열점")}</div>
                 <div className="grid gap-3 lg:grid-cols-2">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">双刃神</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-fuchsia-300">{ui("双刃神", "Dual-role gods", "양면 신")}</div>
                     <div className="flex flex-wrap gap-2">
                       {dualRoleCandidates.length ? (
                         dualRoleCandidates.map((item, idx) => {
@@ -482,20 +505,20 @@ export function V17_GodRingExplainCard({
                               key={`dual_${god}_${idx}`}
                               className="rounded-full border border-fuchsia-500/30 bg-fuchsia-950/20 px-3 py-1 text-[10px] text-fuchsia-200"
                             >
-                              {god || "未定"} · 利 {benefit.toFixed(2)} / 害 {risk.toFixed(2)}
+                              {term(god || "未定")} · {ui("利", "benefit", "이익")} {benefit.toFixed(2)} / {ui("害", "risk", "위험")} {risk.toFixed(2)}
                             </span>
                           );
                         })
                       ) : (
-                        <span className="text-[11px] text-zinc-500">当前无显著双刃神。</span>
+                        <span className="text-[11px] text-zinc-500">{ui("当前无显著双刃神。", "No significant dual-role gods yet.", "아직 뚜렷한 양면 신이 없습니다.")}</span>
                       )}
                     </div>
                   </div>
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-cyan-300">引动热区</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-cyan-300">{ui("引动热区", "Activation hotspots", "인동 열점")}</div>
                     <div className="space-y-2">
                       <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                        <div className="mb-1 text-[10px] text-zinc-500">正向引动</div>
+                        <div className="mb-1 text-[10px] text-zinc-500">{ui("正向引动", "Positive activation", "정방향 인동")}</div>
                         <div className="flex flex-wrap gap-2">
                           {Object.keys(positiveTargets).length ? (
                             Object.entries(positiveTargets).map(([god, raw]) => (
@@ -503,16 +526,16 @@ export function V17_GodRingExplainCard({
                                 key={`pos_${god}`}
                                 className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-[10px] text-emerald-200"
                               >
-                                {god} {asNumber(raw).toFixed(2)}
+                                {term(god)} {asNumber(raw).toFixed(2)}
                               </span>
                             ))
                           ) : (
-                            <span className="text-[11px] text-zinc-500">暂无。</span>
+                            <span className="text-[11px] text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>
                           )}
                         </div>
                       </div>
                       <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-                        <div className="mb-1 text-[10px] text-zinc-500">负向引动</div>
+                        <div className="mb-1 text-[10px] text-zinc-500">{ui("负向引动", "Negative activation", "부정 인동")}</div>
                         <div className="flex flex-wrap gap-2">
                           {Object.keys(negativeTargets).length ? (
                             Object.entries(negativeTargets).map(([god, raw]) => (
@@ -520,11 +543,11 @@ export function V17_GodRingExplainCard({
                                 key={`neg_${god}`}
                                 className="rounded-full border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-[10px] text-amber-200"
                               >
-                                {god} {asNumber(raw).toFixed(2)}
+                                {term(god)} {asNumber(raw).toFixed(2)}
                               </span>
                             ))
                           ) : (
-                            <span className="text-[11px] text-zinc-500">暂无。</span>
+                            <span className="text-[11px] text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>
                           )}
                         </div>
                       </div>
@@ -537,19 +560,23 @@ export function V17_GodRingExplainCard({
             <div className="grid gap-4">
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-zinc-300">判定 Bias 账本</div>
+                  <div className="text-[11px] font-semibold text-zinc-300">{ui("判定 Bias 账本", "Judgement Bias Ledger", "판정 Bias 장부")}</div>
                   <div className="text-[10px] text-zinc-500">
                     {asString(judgementProtocol.contract).trim()
-                      ? `${asString(judgementProtocol.contract).trim()} · 条目 ${asNumber(judgementSummary.entry_count)} · 目标 ${asNumber(judgementSummary.target_count)}`
-                      : "谁在推动体用"}
+                      ? `${asString(judgementProtocol.contract).trim()} · ${ui("条目", "entries", "항목")} ${asNumber(judgementSummary.entry_count)} · ${ui("目标", "targets", "대상")} ${asNumber(judgementSummary.target_count)}`
+                      : ui("谁在推动体用", "What is pushing body-use", "무엇이 체용을 미는가")}
                   </div>
                 </div>
                 <div className="mb-3 text-[10px] leading-5 text-zinc-500">
-                  L2 judgement 只输出 bias / evidence / narrative hint，用来影响体用裁决，不直接改写 L0/L1 物理结算。
+                  {ui(
+                    "L2 judgement 只输出 bias / evidence / narrative hint，用来影响体用裁决，不直接改写 L0/L1 物理结算。",
+                    "L2 judgement only outputs bias, evidence, and narrative hints to influence body-use authority. It does not rewrite L0/L1 physical settlement.",
+                    "L2 judgement 는 bias/evidence/narrative hint 만 출력해 체용 판정에 영향을 주며 L0/L1 물리 결산을 다시 쓰지 않습니다.",
+                  )}
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">用侧推动</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-emerald-300">{ui("用侧推动", "Use-side push", "용측 추진")}</div>
                     <div className="flex flex-wrap gap-2">
                       {judgementUseBias.length ? (
                         judgementUseBias.map(([god, score]) => (
@@ -557,16 +584,16 @@ export function V17_GodRingExplainCard({
                             key={`judgement_use_${god}`}
                             className="rounded-full border border-emerald-500/30 bg-emerald-950/25 px-3 py-1 text-[10px] text-emerald-200"
                           >
-                            {god} +{score.toFixed(2)}
+                            {term(god)} +{score.toFixed(2)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[11px] text-zinc-500">暂无。</span>
+                        <span className="text-[11px] text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>
                       )}
                     </div>
                   </div>
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
-                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">忌侧推动</div>
+                    <div className="mb-2 text-[10px] uppercase tracking-[0.16em] text-rose-300">{ui("忌侧推动", "Taboo-side push", "기측 추진")}</div>
                     <div className="flex flex-wrap gap-2">
                       {judgementTabooBias.length ? (
                         judgementTabooBias.map(([god, score]) => (
@@ -574,11 +601,11 @@ export function V17_GodRingExplainCard({
                             key={`judgement_taboo_${god}`}
                             className="rounded-full border border-rose-500/30 bg-rose-950/25 px-3 py-1 text-[10px] text-rose-200"
                           >
-                            {god} +{score.toFixed(2)}
+                            {term(god)} +{score.toFixed(2)}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[11px] text-zinc-500">暂无。</span>
+                        <span className="text-[11px] text-zinc-500">{ui("暂无。", "None.", "없음.")}</span>
                       )}
                     </div>
                   </div>
@@ -596,12 +623,12 @@ export function V17_GodRingExplainCard({
                           <div className="mt-1 space-y-1">
                             {entry.usePairs.length ? (
                               <div className="break-words text-emerald-200/90">
-                                用侧：{entry.usePairs.map(([god, score]) => `${god} +${score.toFixed(2)}`).join(" · ")}
+                                {ui("用侧", "Use side", "용측")}：{entry.usePairs.map(([god, score]) => `${term(god)} +${score.toFixed(2)}`).join(" · ")}
                               </div>
                             ) : null}
                             {entry.tabooPairs.length ? (
                               <div className="break-words text-rose-200/90">
-                                忌侧：{entry.tabooPairs.map(([god, score]) => `${god} +${score.toFixed(2)}`).join(" · ")}
+                                {ui("忌侧", "Taboo side", "기측")}：{entry.tabooPairs.map(([god, score]) => `${term(god)} +${score.toFixed(2)}`).join(" · ")}
                               </div>
                             ) : null}
                           </div>
@@ -619,7 +646,7 @@ export function V17_GodRingExplainCard({
                                     : "border-cyan-500/20 bg-cyan-950/20 text-cyan-200 hover:bg-cyan-900/35"
                                 }`}
                               >
-                                {isFocused ? "已联动到决策" : "联动决策"}
+                                {isFocused ? ui("已联动到决策", "Linked to decision", "결정에 연결됨") : ui("联动决策", "Link decision", "결정 연결")}
                               </button>
                             </div>
                           ) : null}
@@ -628,7 +655,7 @@ export function V17_GodRingExplainCard({
                     })
                   ) : (
                     <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">
-                      当前没有来自判定性插件的 bias 账本。
+                      {ui("当前没有来自判定性插件的 bias 账本。", "No bias ledger from judgement plugins yet.", "판정성 플러그인에서 온 bias 장부가 아직 없습니다.")}
                     </div>
                   )}
                 </div>
@@ -636,22 +663,22 @@ export function V17_GodRingExplainCard({
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-zinc-300">M3 实时力场</div>
-                  <div className="text-[10px] text-zinc-500">张力 / 放大 / 对外推拉</div>
+                  <div className="text-[11px] font-semibold text-zinc-300">{ui("M3 实时力场", "M3 Runtime Force Field", "M3 실시간 역장")}</div>
+                  <div className="text-[10px] text-zinc-500">{ui("张力 / 放大 / 对外推拉", "Tension / amplification / outward push-pull", "장력 / 증폭 / 외부 추동")}</div>
                 </div>
                 <div className="space-y-2 text-[10px] text-zinc-400">
                   {fluxFocusRows.length ? (
                     fluxFocusRows.map((item) => {
                       const roles = [
-                        useGods.includes(item.god) ? "用" : "",
-                        tabooGods.includes(item.god) ? "忌" : "",
-                        tongguanGods.includes(item.god) ? "通关" : "",
+                        useGods.includes(item.god) ? ui("用", "Use", "용") : "",
+                        tabooGods.includes(item.god) ? ui("忌", "Taboo", "기") : "",
+                        tongguanGods.includes(item.god) ? ui("通关", "Tongguan", "통관") : "",
                       ].filter(Boolean);
                       return (
                         <div key={`flux_${item.god}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-zinc-100">{item.god}</span>
+                              <span className="font-medium text-zinc-100">{term(item.god)}</span>
                               {roles.length ? (
                                 roles.map((label) => (
                                   <span
@@ -664,27 +691,27 @@ export function V17_GodRingExplainCard({
                               ) : null}
                             </div>
                             <span className={`font-mono ${fluxTone(item.resolvedFlux)}`}>
-                              流后净效 {formatSigned(item.resolvedFlux)}
+                              {ui("流后净效", "Resolved net", "흐름 후 순효")} {formatSigned(item.resolvedFlux)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                            <span>张力 {item.tension.toFixed(2)}</span>
-                            <span>放大 {item.reinforce.toFixed(2)}</span>
-                            <span>外推支撑 {item.outSupport.toFixed(2)}</span>
-                            <span>外推压制 {item.outResist.toFixed(2)}</span>
+                            <span>{ui("张力", "Tension", "장력")} {item.tension.toFixed(2)}</span>
+                            <span>{ui("放大", "Amplify", "증폭")} {item.reinforce.toFixed(2)}</span>
+                            <span>{ui("外推支撑", "Out support", "외부 지지")} {item.outSupport.toFixed(2)}</span>
+                            <span>{ui("外推压制", "Out resist", "외부 저항")} {item.outResist.toFixed(2)}</span>
                           </div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">
-                              外推净值 {formatSigned(item.outNet)}
+                              {ui("外推净值", "Out net", "외부 순값")} {formatSigned(item.outNet)}
                             </span>
                             {item.tension > 0 ? (
                               <span className="rounded-full border border-amber-500/20 bg-amber-950/20 px-2 py-1 text-amber-200">
-                                回路张力 {item.tension.toFixed(2)}
+                                {ui("回路张力", "Loop tension", "회로 장력")} {item.tension.toFixed(2)}
                               </span>
                             ) : null}
                             {item.reinforce > 0 ? (
                               <span className="rounded-full border border-emerald-500/20 bg-emerald-950/20 px-2 py-1 text-emerald-200">
-                                同向放大 {item.reinforce.toFixed(2)}
+                                {ui("同向放大", "Same-direction amplification", "동향 증폭")} {item.reinforce.toFixed(2)}
                               </span>
                             ) : null}
                           </div>
@@ -693,7 +720,7 @@ export function V17_GodRingExplainCard({
                     })
                   ) : (
                     <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">
-                      当前还没有形成可展示的 M3 实时力场。
+                      {ui("当前还没有形成可展示的 M3 实时力场。", "No displayable M3 runtime force field has formed yet.", "아직 표시할 수 있는 M3 실시간 역장이 형성되지 않았습니다.")}
                     </div>
                   )}
                 </div>
@@ -701,7 +728,7 @@ export function V17_GodRingExplainCard({
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-zinc-300">效应分数</div>
+                  <div className="text-[11px] font-semibold text-zinc-300">{ui("效应分数", "Effect Scores", "효과 점수")}</div>
                   <div className="text-[10px] text-zinc-500">
                     raw / contest / release / resolved / flux
                   </div>
@@ -713,34 +740,34 @@ export function V17_GodRingExplainCard({
                       return (
                         <div key={god} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                           <div className="flex items-center justify-between gap-3">
-                            <span className="font-medium text-zinc-100">{god}</span>
+                            <span className="font-medium text-zinc-100">{term(god)}</span>
                             <span className={`font-mono ${netTone(item.net)}`}>
                               net {item.net.toFixed(2)} / resolved {item.resolved.toFixed(2)}
                             </span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            <span>原始利 {item.rawBenefit.toFixed(2)} / 原始害 {item.rawHarm.toFixed(2)}</span>
+                            <span>{ui("原始利", "Raw benefit", "원시 이익")} {item.rawBenefit.toFixed(2)} / {ui("原始害", "Raw harm", "원시 해")} {item.rawHarm.toFixed(2)}</span>
                             <span>
-                              对抗 {item.contest.toFixed(2)}（抑制权重 {item.contestWeight.toFixed(2)}） /
-                              通道 {item.release.toFixed(2)}（提升权重 {item.releaseWeight.toFixed(2)}）
+                              {ui("对抗", "Contest", "대항")} {item.contest.toFixed(2)}（{ui("抑制权重", "resist weight", "억제 가중")} {item.contestWeight.toFixed(2)}） /
+                              {ui("通道", "Channel", "통로")} {item.release.toFixed(2)}（{ui("提升权重", "release weight", "상승 가중")} {item.releaseWeight.toFixed(2)}）
                             </span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                            <span>利 {item.benefit.toFixed(2)}</span>
-                            <span>害 {item.harm.toFixed(2)}</span>
-                            <span>稳定 {item.stability.toFixed(2)} / 激活 {item.activation.toFixed(2)}</span>
+                            <span>{ui("利", "Benefit", "이익")} {item.benefit.toFixed(2)}</span>
+                            <span>{ui("害", "Harm", "해")} {item.harm.toFixed(2)}</span>
+                            <span>{ui("稳定", "Stability", "안정")} {item.stability.toFixed(2)} / {ui("激活", "Activation", "활성")} {item.activation.toFixed(2)}</span>
                           </div>
                           <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                            <span>流后净效 {formatSigned(item.resolvedFlux)}</span>
-                            <span>张力 {item.tension.toFixed(2)}</span>
-                            <span>放大 {item.reinforce.toFixed(2)}</span>
+                            <span>{ui("流后净效", "Resolved net", "흐름 후 순효")} {formatSigned(item.resolvedFlux)}</span>
+                            <span>{ui("张力", "Tension", "장력")} {item.tension.toFixed(2)}</span>
+                            <span>{ui("放大", "Amplify", "증폭")} {item.reinforce.toFixed(2)}</span>
                           </div>
                           {item.authorityProfile ? (
                             <div className="mt-2 rounded-lg border border-cyan-500/15 bg-cyan-950/10 px-3 py-2 text-[10px] text-cyan-100/90">
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <span className="font-medium">{item.authorityProfile}</span>
                                 <span>
-                                  能量 {item.authorityEnergy.toFixed(2)} · 稳定 {item.authorityStability.toFixed(2)} · 波动 {item.authorityVolatility.toFixed(2)}
+                                  {ui("能量", "Energy", "에너지")} {item.authorityEnergy.toFixed(2)} · {ui("稳定", "Stability", "안정")} {item.authorityStability.toFixed(2)} · {ui("波动", "Volatility", "변동")} {item.authorityVolatility.toFixed(2)}
                                 </span>
                               </div>
                               {item.authorityReason ? <div className="mt-1 text-zinc-400">{item.authorityReason}</div> : null}
@@ -753,11 +780,11 @@ export function V17_GodRingExplainCard({
                                   key={`${god}_pair_${pair}`}
                                   className="rounded-full border border-zinc-700/90 bg-zinc-900/70 px-2 py-1 text-[10px] text-zinc-300"
                                 >
-                                  对抗对 {pair}
+                                  {ui("对抗对", "Contest pair", "대항 쌍")} {pair}
                                 </span>
                               ))
                             ) : (
-                              <span className="text-[11px] text-zinc-500">无显著对抗对</span>
+                              <span className="text-[11px] text-zinc-500">{ui("无显著对抗对", "No significant contest pairs", "뚜렷한 대항 쌍 없음")}</span>
                             )}
                           </div>
                         </div>
@@ -765,7 +792,7 @@ export function V17_GodRingExplainCard({
                     })
                   ) : (
                     <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">
-                      当前还没有可展示的效应分数。
+                      {ui("当前还没有可展示的效应分数。", "No displayable effect scores yet.", "아직 표시할 수 있는 효과 점수가 없습니다.")}
                     </div>
                   )}
                 </div>
@@ -773,8 +800,8 @@ export function V17_GodRingExplainCard({
 
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-zinc-300">做功路径预览</div>
-                  <div className="text-[10px] text-zinc-500">前 6 条核心链路</div>
+                  <div className="text-[11px] font-semibold text-zinc-300">{ui("做功路径预览", "Work-path Preview", "작용 경로 미리보기")}</div>
+                  <div className="text-[10px] text-zinc-500">{ui("前 6 条核心链路", "Top 6 core paths", "상위 6개 핵심 경로")}</div>
                 </div>
                 <div className="space-y-2 text-[10px] text-zinc-400">
                   {pathPreview.length ? (
@@ -795,23 +822,23 @@ export function V17_GodRingExplainCard({
                         <div key={`path_${idx}_${target}`} className="rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-medium text-zinc-100">
-                              {target} · {pathType}
+                              {term(target)} · {term(pathType)}
                             </span>
                             <span className={`font-mono ${netTone(net)}`}>net {net.toFixed(2)}</span>
                           </div>
                           <div className="mt-1 text-zinc-500">
-                            {participants.length ? participants.join(" -> ") : "单点路径"} · {originScope}
+                            {participants.length ? translateTermList(lang, participants, " -> ") : ui("单点路径", "Single-point path", "단일점 경로")} · {term(originScope)}
                           </div>
                           {sourceLabel || decisionLabel || decisionId ? (
                             <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
                               {sourceLabel ? (
                                 <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-2 py-1 text-cyan-200">
-                                  插件 {sourceLabel}
+                                  {ui("插件", "Plugin", "플러그인")} {sourceLabel}
                                 </span>
                               ) : null}
                               {decisionLabel ? (
                                 <span className="rounded-full border border-violet-500/20 bg-violet-950/20 px-2 py-1 text-violet-200">
-                                  决策 {decisionLabel}
+                                  {ui("决策", "Decision", "결정")} {decisionLabel}
                                 </span>
                               ) : null}
                               {decisionId ? (
@@ -821,12 +848,12 @@ export function V17_GodRingExplainCard({
                               ) : null}
                               {layer ? (
                                 <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">
-                                  层 {layer}
+                                  {ui("层", "Layer", "층")} {layer}
                                 </span>
                               ) : null}
                               {conditionState ? (
                                 <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-zinc-300">
-                                  态 {conditionState}
+                                  {ui("态", "State", "상태")} {term(conditionState)}
                                 </span>
                               ) : null}
                               {decisionId ? (
@@ -839,23 +866,23 @@ export function V17_GodRingExplainCard({
                                       : "border-violet-500/20 bg-violet-950/20 text-violet-200 hover:bg-violet-900/35"
                                   }`}
                                 >
-                                  {isFocused ? "已联动到决策" : "联动决策"}
+                                  {isFocused ? ui("已联动到决策", "Linked to decision", "결정에 연결됨") : ui("联动决策", "Link decision", "결정 연결")}
                                 </button>
                               ) : null}
                             </div>
                           ) : null}
                           <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                            <span>激活 {asNumber(item.activation).toFixed(2)}</span>
-                            <span>传导 {asNumber(item.transmission).toFixed(2)}</span>
-                            <span>损耗 {asNumber(item.loss).toFixed(2)}</span>
-                            <span>稳定 {asNumber(item.stability).toFixed(2)}</span>
+                            <span>{ui("激活", "Activation", "활성")} {asNumber(item.activation).toFixed(2)}</span>
+                            <span>{ui("传导", "Transmission", "전도")} {asNumber(item.transmission).toFixed(2)}</span>
+                            <span>{ui("损耗", "Loss", "손실")} {asNumber(item.loss).toFixed(2)}</span>
+                            <span>{ui("稳定", "Stability", "안정")} {asNumber(item.stability).toFixed(2)}</span>
                           </div>
                         </div>
                       );
                     })
                   ) : (
                     <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-4 text-zinc-500">
-                      当前还没有做功路径预览。
+                      {ui("当前还没有做功路径预览。", "No work-path preview yet.", "아직 작용 경로 미리보기가 없습니다.")}
                     </div>
                   )}
                 </div>
