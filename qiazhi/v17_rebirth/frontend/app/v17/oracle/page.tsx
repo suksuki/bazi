@@ -791,20 +791,24 @@ export default function OraclePage() {
           <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/45 p-2.5">
-                <div className={`grid gap-2 ${canAccessTraceSurface ? "sm:grid-cols-3" : canAccessAuxiliarySurface ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+                <div
+                  className={`-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 ${
+                    canAccessTraceSurface ? "sm:grid-cols-3" : canAccessAuxiliarySurface ? "sm:grid-cols-2" : "sm:grid-cols-1"
+                  }`}
+                >
                   <button
                     type="button"
                     aria-pressed={activeSurfaceTab === "core"}
                     onClick={() => switchContentSurface("core")}
-                    className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "core")}`}
+                    className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "core")}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold">{t(language, "oracle.tab.core")}</span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                      <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.core")}</span>
+                      <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
                         {t(language, "oracle.count.decisions")} {s.pendingDecisionWorkCount}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                    <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
                       {t(language, "oracle.tab.core.desc")}
                     </p>
                   </button>
@@ -814,15 +818,15 @@ export default function OraclePage() {
                         type="button"
                         aria-pressed={activeSurfaceTab === "auxiliary"}
                         onClick={() => switchContentSurface("auxiliary")}
-                        className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
+                        className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold">{t(language, "oracle.tab.aux")}</span>
-                          <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                          <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.aux")}</span>
+                          <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
                             {t(language, "oracle.count.signals")} {auxiliarySignalCount}
                           </span>
                         </div>
-                        <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                        <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
                           {t(language, "oracle.tab.aux.desc")}
                         </p>
                       </button>
@@ -831,15 +835,15 @@ export default function OraclePage() {
                           type="button"
                           aria-pressed={activeSurfaceTab === "trace"}
                           onClick={openTraceSurface}
-                          className={`rounded-xl border px-3 py-3 text-left transition ${oracleTabTone(activeSurfaceTab === "trace")}`}
+                          className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "trace")}`}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold">{t(language, "oracle.tab.trace")}</span>
-                            <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
+                            <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.trace")}</span>
+                            <span className="shrink-0 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[10px]">
                               {t(language, "oracle.count.trace")} {traceSignalCount}
                             </span>
                           </div>
-                          <p className="mt-1 text-[11px] leading-5 text-inherit/80">
+                          <p className="mt-1 hidden text-[11px] leading-5 text-inherit/80 sm:block">
                             {t(language, "oracle.tab.trace.desc")}
                           </p>
                         </button>

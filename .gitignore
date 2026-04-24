@@ -78,6 +78,8 @@ qiazhi/v17_rebirth/.runlogs/
 qiazhi/v17_rebirth/.runtime/
 qiazhi/v17_rebirth/frontend/node_modules/
 qiazhi/v17_rebirth/frontend/.next/
+!qiazhi/v17_rebirth/frontend/lib/
+!qiazhi/v17_rebirth/frontend/lib/i18n.ts
 scripts/auto_evolve.py
 scripts/auto_tune_val005.py
 scripts/debug_outliers.py
