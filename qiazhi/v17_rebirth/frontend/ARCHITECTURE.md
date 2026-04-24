@@ -43,6 +43,16 @@ Use `components/V17_SurfaceTabs.tsx` for multi-surface feature areas.
 
 This pattern is intended for oracle, admin, and future feature modules with role-dependent sections.
 
+## Feature Registry
+
+Use `lib/featureRegistry.ts` to declare top-level feature modules.
+
+- `ORACLE_FEATURE_MODULES` declares oracle surfaces and their access gates.
+- `ADMIN_FEATURE_MODULES` declares admin console sections and their tab metadata.
+- `resolveFeatureTabs(...)` turns module declarations plus runtime context into `V17_SurfaceTabs` items.
+
+New modules should be registered here first, then rendered by the target page. This keeps feature names, badges, ordering, access gates, and responsive navigation out of page-local arrays.
+
 ## API Requests
 
 Use `lib/apiClient.ts` for client-side JSON calls.
@@ -61,6 +71,7 @@ When adding a feature:
 1. Read runtime from `useV17Runtime()`.
 2. Filter visible sections through `access`.
 3. Render inside `V17_AppShell`.
-4. Use `V17_SurfaceTabs` for role-dependent top-level sections.
-5. Use `requestJson` / `jsonPostInit` for client JSON calls.
-6. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.
+4. Register top-level feature sections in `lib/featureRegistry.ts`.
+5. Use `V17_SurfaceTabs` for role-dependent top-level sections.
+6. Use `requestJson` / `jsonPostInit` for client JSON calls.
+7. Keep translations in `lib/i18n.ts`; avoid inline language branching except through `ui()`.

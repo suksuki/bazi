@@ -11,10 +11,11 @@ import { V17_GodRingExplainCard } from "@/components/V17_GodRingExplainCard";
 import { V17_NatalInput } from "@/components/V17_NatalInput";
 import { V17_PurpleVerdictCard } from "@/components/V17_PurpleVerdictCard";
 import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
-import { V17_SurfaceTabs, type V17SurfaceTabItem } from "@/components/V17_SurfaceTabs";
+import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
 import type { OracleSurface } from "@/lib/accessControl";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+import { ORACLE_FEATURE_MODULES, resolveFeatureTabs } from "@/lib/featureRegistry";
 import { t } from "@/lib/i18n";
 import { useOracleSession } from "@/hooks/useOracleSession";
 import { useV17Runtime } from "@/hooks/useV17Runtime";
@@ -582,34 +583,15 @@ export default function OraclePage() {
   const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
   const canAccessTraceSurface = access.canAccessOracleSurface("trace");
   const canManageUsers = access.canManageUsers;
-  const surfaceTabs: Array<V17SurfaceTabItem<OracleSurfaceTab>> = [
-    {
-      id: "core",
-      label: t(language, "oracle.tab.core"),
-      badge: `${t(language, "oracle.count.decisions")} ${s.pendingDecisionWorkCount}`,
-      description: t(language, "oracle.tab.core.desc"),
+  const surfaceTabs = resolveFeatureTabs(ORACLE_FEATURE_MODULES, {
+    language,
+    access,
+    context: {
+      decisionCount: s.pendingDecisionWorkCount,
+      auxiliarySignalCount,
+      traceSignalCount,
     },
-    ...(canAccessAuxiliarySurface
-      ? [
-          {
-            id: "auxiliary" as const,
-            label: t(language, "oracle.tab.aux"),
-            badge: `${t(language, "oracle.count.signals")} ${auxiliarySignalCount}`,
-            description: t(language, "oracle.tab.aux.desc"),
-          },
-        ]
-      : []),
-    ...(canAccessTraceSurface
-      ? [
-          {
-            id: "trace" as const,
-            label: t(language, "oracle.tab.trace"),
-            badge: `${t(language, "oracle.count.trace")} ${traceSignalCount}`,
-            description: t(language, "oracle.tab.trace.desc"),
-          },
-        ]
-      : []),
-  ];
+  });
   const toggleAuxiliarySection = (section: AuxiliarySectionKey) => {
     setAuxiliarySections((current) => ({
       ...current,

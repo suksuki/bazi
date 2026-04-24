@@ -47,11 +47,12 @@ import {
   type LooseObject,
   type PluginTierBucketLike,
 } from "@/components/adminShared";
-import { V17_SurfaceTabs, type V17SurfaceTabItem } from "@/components/V17_SurfaceTabs";
+import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
 import { requestJson, jsonPostInit } from "@/lib/apiClient";
+import { ADMIN_FEATURE_MODULES, resolveFeatureTabs, type AdminFeatureTabKey } from "@/lib/featureRegistry";
 import { useV17Runtime } from "@/hooks/useV17Runtime";
 
-type TabKey = "llm" | "db" | "plugins" | "physics" | "evolution" | "learning" | "users";
+type TabKey = AdminFeatureTabKey;
 
 type LlmNode = {
   provider: string;
@@ -745,15 +746,19 @@ export default function V17AdminPage() {
     return decisionCount > 0 || isInboxRuntimeStatus(row.runtime?.status);
   });
   const policyWarnCount = pluginPanelRows.filter((row) => row.plugin.policy_valid === false).length;
-  const adminTabs: Array<V17SurfaceTabItem<TabKey>> = [
-    { id: "llm", label: "LLM 节点", badge: llm.model || "model", description: "模型、节点与连通测试" },
-    { id: "db", label: "数据库桥接", badge: db.enabled ? "on" : "off", description: "Postgres 桥接与连通测试" },
-    { id: "plugins", label: "插件链", badge: plugins.length, description: "L0-L4 插件、运行态与冲突裁决" },
-    { id: "physics", label: "宇宙常数", badge: l0Locked ? "locked" : "edit", description: "L0 物理常数与核心参数" },
-    { id: "evolution", label: "演化审计", badge: evolutionLogs.length, description: "演化日志与反馈账本" },
-    { id: "learning", label: "自动学习", badge: asString(learningCampaign.status, "idle"), description: "学习 Campaign 与 LLM 复核" },
-    { id: "users", label: "用户权限", badge: authUsers.length, description: "账号、角色与协作权限" },
-  ];
+  const adminTabs = resolveFeatureTabs(ADMIN_FEATURE_MODULES, {
+    language,
+    access,
+    context: {
+      llmModel: llm.model,
+      dbEnabled: db.enabled,
+      pluginsCount: plugins.length,
+      l0Locked,
+      evolutionLogCount: evolutionLogs.length,
+      learningStatus: asString(learningCampaign.status, "idle"),
+      authUserCount: authUsers.length,
+    },
+  });
 
   if (authLoading || !user || !canManageSystem) {
     return (
