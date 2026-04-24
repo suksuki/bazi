@@ -72,7 +72,15 @@
 - Unit files:
   - `deploy/systemd/v17-backend.service`
   - `deploy/systemd/v17-frontend.service`
+- Nginx template:
+  - `deploy/nginx/dblife.com.conf`
 - One-time install:
   - `scripts/install_systemd_services.sh`
 - Restart both services:
   - `scripts/restart_v17_stack.sh`
+- Backup local runtime DBs before risky deploys:
+  - `scripts/backup_v17_runtime_dbs.sh`
+- Post-deploy smoke check:
+  - `scripts/check_v17_deploy.sh`
+  - Optional credentialed login check:
+    `V17_ADMIN_IDENTIFIER=admin V17_ADMIN_PASSWORD=... scripts/check_v17_deploy.sh`
