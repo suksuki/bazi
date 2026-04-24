@@ -1,5 +1,10 @@
 # V17 Rebirth Constitution
 
+## Product North Star
+
+- 产品需求宪法：[docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md](docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md)。
+- 后续产品、架构、UI、Prompt、插件、权限和学习闭环设计，默认都必须围绕这份中心文档展开。
+
 ## Scope
 
 - Active workspace: `v17_rebirth/` only.
