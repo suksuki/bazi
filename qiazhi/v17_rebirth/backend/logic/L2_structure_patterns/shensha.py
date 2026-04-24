@@ -325,8 +325,19 @@ class ShenshaPlugin(V17PluginSpec):
         cfg = get_plugin_config(self.plugin_id)
         scores = deity_scores_from_tensor(physics_tensor)
         origin_meta = _shensha_origin_meta(physics_tensor)
+        branch_rows = _collect_branch_rows(physics_tensor, cfg)
+        has_yang_ren_branch = any(
+            isinstance(row.get("meta"), dict) and row["meta"].get("gate") == "SHENSHA_YANG_REN_BRANCH"
+            for row in branch_rows
+        )
         rows = _collect_rows(scores, cfg)
-        rows.extend(_collect_branch_rows(physics_tensor, cfg))
+        if not has_yang_ren_branch:
+            rows = [
+                row
+                for row in rows
+                if not (isinstance(row.get("meta"), dict) and row["meta"].get("gate") == "YANG_REN_STRESS")
+            ]
+        rows.extend(branch_rows)
         for row in rows:
             if not isinstance(row.get("meta"), dict):
                 row["meta"] = {}

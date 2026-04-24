@@ -572,6 +572,16 @@ def test_new_classical_pattern_plugins_emit_candidates() -> None:
     assert yangren_jiasha_facts[0].meta["blade_branch"] == "卯"
     assert "month" in yangren_jiasha_facts[0].meta["blade_scopes"]
 
+    non_month_yangren_jiasha_facts = YangRenJiaShaPatternPlugin().collect_v17_facts(
+        {
+            "four_pillars": {"year": "丁卯", "month": "辛丑", "day": "乙未", "hour": "庚寅"},
+            "ten_gods_runtime": {"劫财": 20.0, "比肩": 8.0, "七杀": 22.0},
+        }
+    )
+    assert non_month_yangren_jiasha_facts
+    assert non_month_yangren_jiasha_facts[0].meta["blade_branch"] == "寅"
+    assert "hour" in non_month_yangren_jiasha_facts[0].meta["blade_scopes"]
+
     no_yangren_jiasha_facts = YangRenJiaShaPatternPlugin().collect_v17_facts(
         {
             "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},

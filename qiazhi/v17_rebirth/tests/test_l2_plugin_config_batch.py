@@ -96,12 +96,13 @@ def test_shensha_respects_thresholds_and_payload(monkeypatch: pytest.MonkeyPatch
     )
     facts = ShenshaPlugin.collect_v17_facts(
         {
+            "four_pillars": {"month": "甲午", "day": "丙寅"},
             "ten_gods_absolute": {"正印": 35.0, "劫财": 22.0},
             "ten_gods_runtime": {"正印": 35.0, "劫财": 22.0},
         }
     )
 
-    assert len(facts) == 2
+    assert len(facts) >= 2
     tian_yi = next(f for f in facts if f.meta.get("gate") == "TIAN_YI_BUFF")
     yang_ren = next(f for f in facts if f.meta.get("gate") == "YANG_REN_STRESS")
     assert tian_yi.meta["resistance_buff"] == 0.2

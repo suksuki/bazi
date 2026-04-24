@@ -255,7 +255,7 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
     },
     "classical.pattern.yangren.v1": {
         "display_name": "羊刃候选",
-        "definition": "审计月令羊刃是否成势，以及是否具备制刃、驾杀等后续路径。",
+        "definition": "审计原局是否真实见日主羊刃位，以及是否具备制刃、驾杀等后续路径。",
     },
     "classical.pattern.guanyin.v1": {
         "display_name": "官印相生",
