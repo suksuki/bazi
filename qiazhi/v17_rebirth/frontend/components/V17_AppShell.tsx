@@ -45,9 +45,9 @@ export function V17_AppShell({
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 pb-28 text-zinc-100 sm:p-6">
+    <main className="min-h-screen bg-[#0B0F16] pb-28 text-zinc-100 sm:p-6">
       <section className={`mx-auto flex w-full ${maxWidthClassName} flex-col gap-3 sm:gap-4`}>
-        <header className="sticky top-0 z-30 flex flex-col items-start justify-between gap-3 border-b border-zinc-900 bg-zinc-950/95 px-4 py-3 text-violet-300 backdrop-blur sm:static sm:flex-row sm:items-center sm:border-b-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+        <header className="sticky top-0 z-30 flex flex-col items-start justify-between gap-3 border-b border-white/10 bg-[#0B0F16]/95 px-4 py-3 text-violet-300 backdrop-blur-xl sm:static sm:flex-row sm:items-center sm:border-b-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
           <div className="flex min-w-0 items-center gap-3">
             <div className="overflow-hidden rounded-xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)] sm:rounded-2xl">
               <Image
@@ -60,7 +60,7 @@ export function V17_AppShell({
               />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-wide text-violet-100 sm:text-xl">{t(language, "brand.title")}</h1>
+              <h1 className="truncate text-base font-semibold tracking-wide text-amber-300 sm:text-xl">{t(language, "brand.title")}</h1>
               <p className="truncate text-[10px] tracking-[0.2em] text-violet-200/65 sm:text-[11px] sm:tracking-[0.24em]">{t(language, "brand.subtitle")}</p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { ArrowRight, BarChart3, BriefcaseBusiness, ChevronDown, ChevronUp, ScrollText, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { V17_AppShell } from "@/components/V17_AppShell";
@@ -108,6 +108,77 @@ type TopicHubItem = {
   details: string[];
   badges: string[];
 };
+
+function OracleStartDashboard({
+  language,
+  name,
+}: {
+  language: Parameters<typeof t>[0];
+  name: string;
+}) {
+  const cards = [
+    {
+      key: "chart",
+      icon: <ScrollText className="h-5 w-5" />,
+      title: t(language, "oracle.dashboard.card.chart.title"),
+      desc: t(language, "oracle.dashboard.card.chart.desc"),
+      cta: t(language, "oracle.dashboard.card.chart.cta"),
+      tone: "border-violet-400/35 bg-violet-500/10 text-violet-100",
+      orb: "from-violet-400/22 to-transparent",
+    },
+    {
+      key: "analysis",
+      icon: <BarChart3 className="h-5 w-5" />,
+      title: t(language, "oracle.dashboard.card.analysis.title"),
+      desc: t(language, "oracle.dashboard.card.analysis.desc"),
+      cta: t(language, "oracle.dashboard.card.analysis.cta"),
+      tone: "border-cyan-400/35 bg-cyan-500/10 text-cyan-100",
+      orb: "from-cyan-400/24 to-transparent",
+    },
+    {
+      key: "tools",
+      icon: <BriefcaseBusiness className="h-5 w-5" />,
+      title: t(language, "oracle.dashboard.card.tools.title"),
+      desc: t(language, "oracle.dashboard.card.tools.desc"),
+      cta: t(language, "oracle.dashboard.card.tools.cta"),
+      tone: "border-amber-400/35 bg-amber-500/10 text-amber-100",
+      orb: "from-amber-400/24 to-transparent",
+    },
+  ];
+
+  return (
+    <section className="rounded-none border-y border-white/10 bg-[#0B0F16] px-4 py-5 sm:rounded-2xl sm:border sm:bg-white/[0.035] sm:p-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-50 sm:text-2xl">
+            {t(language, "oracle.dashboard.welcome", { name })}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-zinc-400">{t(language, "oracle.dashboard.subtitle")}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {cards.map((card) => (
+          <a
+            key={card.key}
+            href="#v17-natal-input"
+            className={`group relative overflow-hidden rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01] active:scale-[0.98] ${card.tone}`}
+          >
+            <div className={`pointer-events-none absolute right-[-28px] top-[-28px] h-28 w-28 rounded-full bg-gradient-to-br ${card.orb}`} />
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="rounded-xl border border-white/10 bg-black/20 p-2.5">{card.icon}</div>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] transition group-hover:translate-x-0.5">
+                <ArrowRight className="h-4 w-4" />
+              </span>
+            </div>
+            <h3 className="relative mt-4 text-base font-semibold text-zinc-50">{card.title}</h3>
+            <p className="relative mt-1 text-xs leading-5 text-zinc-400">{card.desc}</p>
+            <p className="relative mt-4 text-xs font-semibold text-current">{card.cta}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function AuxiliarySection({
   title,
@@ -720,8 +791,15 @@ export default function OraclePage() {
         onRetry={s.resetRun}
         onLogout={() => void handleLogout()}
       >
+        {!s.running ? (
+          <OracleStartDashboard
+            language={language}
+            name={user?.display_name || user?.username || "Admin"}
+          />
+        ) : null}
+
         {/* ── 排盘输入 ── */}
-        <div className="relative">
+        <div id="v17-natal-input" className="relative scroll-mt-24">
           {s.running ? (
             <div className="absolute inset-0 z-20 animate-[fadeOut_280ms_ease-out_forwards] rounded-2xl bg-black/50 backdrop-blur-[1px]" />
           ) : null}

@@ -17,7 +17,7 @@ type Props = {
 function tone(active: boolean) {
   return active
     ? "border-cyan-300 bg-cyan-300 text-zinc-950 shadow-[0_10px_28px_rgba(34,211,238,0.18)]"
-    : "border-zinc-800 bg-zinc-950/70 text-zinc-400 hover:border-zinc-600 hover:text-zinc-100";
+    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-white/20 hover:bg-white/[0.07] hover:text-zinc-100";
 }
 
 function authTabHref(mode: "login" | "register", next: string) {
@@ -110,14 +110,20 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
   const headingKey = mode === "register" ? "auth.entry.heading.register" : "auth.entry.heading.login";
   const subtitleKey = mode === "register" ? "auth.entry.subtitle.register" : "auth.entry.subtitle.login";
   const submitIcon = mode === "register" ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />;
+  const inputClass =
+    "mt-2 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400 focus:bg-white/[0.07] focus:ring-1 focus:ring-cyan-400/70";
+  const labelClass = "block text-sm font-medium text-zinc-300";
 
   return (
-    <main className="min-h-dvh overflow-x-hidden bg-[linear-gradient(180deg,#07080b_0%,#0b1018_54%,#09090b_100%)] px-4 py-5 text-zinc-100 sm:px-6 lg:min-h-screen lg:px-8">
+    <main className="relative min-h-dvh overflow-hidden bg-[#0B0F16] px-4 py-5 text-zinc-100 sm:px-6 lg:min-h-screen lg:px-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(212,175,55,0.13),transparent_24%),radial-gradient(circle_at_82%_20%,rgba(34,211,238,0.1),transparent_26%),linear-gradient(180deg,#060b10_0%,#0B0F16_58%,#07090d_100%)]" />
+      <div className="pointer-events-none absolute left-[-18%] top-[-10%] h-72 w-72 rounded-full border border-amber-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-18%] right-[-18%] h-80 w-80 rounded-full border border-cyan-400/10 blur-3xl" />
       <div className="mx-auto grid min-h-[calc(100dvh-40px)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
-        <section className="hidden min-w-0 lg:block">
-          <div className="max-w-xl">
+        <section className="relative hidden min-w-0 lg:block">
+          <div className="max-w-xl rounded-2xl border border-white/10 bg-white/[0.035] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-white/95 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+              <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-white/95 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
                 <Image
                   src="/branding/qiazhi-logo.png"
                   alt={t(language, "brand.title")}
@@ -128,7 +134,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
                 />
               </div>
               <div>
-                <div className="text-sm font-medium text-cyan-200">{t(language, "brand.title")}</div>
+                <div className="text-lg font-semibold text-amber-300">{t(language, "brand.title")}</div>
                 <div className="mt-1 text-sm text-zinc-500">{t(language, "brand.subtitle")}</div>
               </div>
             </div>
@@ -138,7 +144,18 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             <p className="mt-5 max-w-lg text-base leading-8 text-zinc-400">
               {t(language, "auth.entry.hero_subtitle")}
             </p>
-            <div className="mt-8 flex flex-wrap gap-2">
+            <div className="mt-8 grid h-40 overflow-hidden rounded-2xl border border-amber-400/15 bg-[radial-gradient(circle_at_50%_45%,rgba(212,175,55,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.06),rgba(124,58,237,0.07))] p-5">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute h-24 w-24 rounded-full border border-amber-400/35" />
+                <div className="absolute h-32 w-32 rounded-full border border-cyan-400/10" />
+                <div className="absolute h-px w-56 rotate-12 bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
+                <div className="absolute h-px w-48 -rotate-12 bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
+                <span className="rounded-full border border-amber-300/30 bg-black/35 px-4 py-2 text-sm font-semibold text-amber-200">
+                  {t(language, "brand.subtitle")}
+                </span>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
               {["admin", "manager", "user"].map((role) => (
                 <span key={role} className="rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-xs font-medium text-zinc-300">
                   {t(language, `auth.role.${role}.title`)}
@@ -148,34 +165,40 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
           </div>
         </section>
 
-        <section className="min-w-0 justify-self-center rounded-lg border border-zinc-800 bg-zinc-950/82 p-4 shadow-[0_28px_80px_rgba(0,0,0,0.42)] sm:w-full sm:max-w-md sm:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-white/95 lg:hidden">
+        <section className="relative min-w-0 justify-self-center rounded-2xl border border-white/10 bg-[#0B0F16]/80 p-5 shadow-[0_28px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:w-full sm:max-w-md sm:p-6">
+          <div className="mb-5 flex justify-end lg:hidden">{languageSelector}</div>
+          <div className="flex flex-col items-center gap-3 text-center lg:hidden">
+              <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-white/95 shadow-[0_16px_42px_rgba(0,0,0,0.28)]">
                 <Image
                   src="/branding/qiazhi-logo.png"
                   alt={t(language, "brand.title")}
                   width={64}
                   height={64}
                   priority
-                  className="h-11 w-11 object-cover"
+                  className="h-16 w-16 object-cover"
                 />
               </div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-cyan-200">{t(language, "brand.title")}</div>
-                <h1 className="mt-1 text-2xl font-semibold text-zinc-50">{t(language, headingKey)}</h1>
-              </div>
+            <div className="text-2xl font-semibold text-amber-300">{t(language, "brand.title")}</div>
+            <p className="text-sm text-zinc-400">{t(language, "auth.entry.hero_subtitle")}</p>
+          </div>
+          <div className="hidden items-start justify-between gap-3 lg:flex">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-amber-300">{t(language, "brand.title")}</div>
+              <h1 className="mt-1 text-2xl font-semibold text-zinc-50">{t(language, headingKey)}</h1>
             </div>
             <div className="shrink-0">{languageSelector}</div>
           </div>
-          <p className="mt-4 text-sm leading-6 text-zinc-400">{t(language, subtitleKey)}</p>
+          <div className="mt-6 lg:mt-4">
+            <h1 className="text-center text-xl font-semibold text-zinc-50 lg:hidden">{t(language, headingKey)}</h1>
+            <p className="mt-2 text-center text-sm leading-6 text-zinc-400 lg:text-left">{t(language, subtitleKey)}</p>
+          </div>
 
           <div className="mt-5 grid min-w-0 grid-cols-2 gap-2">
-            <Link href={authTabHref("login", next)} className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-md border px-3 py-2.5 text-center text-sm font-medium transition ${tone(mode === "login")}`}>
+            <Link href={authTabHref("login", next)} className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-center text-sm font-medium transition ${tone(mode === "login")}`}>
               <LogIn className="h-4 w-4" />
               {t(language, "auth.tab.login")}
             </Link>
-            <Link href={authTabHref("register", next)} className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-md border px-3 py-2.5 text-center text-sm font-medium transition ${tone(mode === "register")}`}>
+            <Link href={authTabHref("register", next)} className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-center text-sm font-medium transition ${tone(mode === "register")}`}>
               <UserPlus className="h-4 w-4" />
               {t(language, "auth.tab.register")}
             </Link>
@@ -183,14 +206,14 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
 
           <form onSubmit={onSubmit} noValidate className="mt-5 space-y-4">
             <label className="block">
-              <span className="text-sm font-medium text-zinc-300">
+              <span className={labelClass}>
                 {mode === "login" ? t(language, "auth.field.identifier") : t(language, "auth.field.username")}
               </span>
               <input
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 autoComplete={mode === "login" ? "username" : "username"}
-                className="mt-2 w-full rounded-md border border-zinc-800 bg-black/45 px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:bg-black/65"
+                className={inputClass}
                 placeholder={mode === "login" ? t(language, "auth.placeholder.identifier") : t(language, "auth.placeholder.username")}
               />
             </label>
@@ -198,23 +221,23 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             {mode === "register" ? (
               <>
                 <label className="block">
-                  <span className="text-sm font-medium text-zinc-300">{t(language, "auth.field.display_name")}</span>
+                  <span className={labelClass}>{t(language, "auth.field.display_name")}</span>
                   <input
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
                     autoComplete="name"
-                    className="mt-2 w-full rounded-md border border-zinc-800 bg-black/45 px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:bg-black/65"
+                    className={inputClass}
                     placeholder={t(language, "auth.placeholder.display_name")}
                   />
                 </label>
                 <label className="block">
-                  <span className="text-sm font-medium text-zinc-300">{t(language, "auth.field.email")}</span>
+                  <span className={labelClass}>{t(language, "auth.field.email")}</span>
                   <input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     autoComplete="email"
                     type="email"
-                    className="mt-2 w-full rounded-md border border-zinc-800 bg-black/45 px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:bg-black/65"
+                    className={inputClass}
                     placeholder={t(language, "auth.placeholder.email")}
                   />
                 </label>
@@ -222,26 +245,26 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             ) : null}
 
             <label className="block">
-              <span className="text-sm font-medium text-zinc-300">{t(language, "auth.field.password")}</span>
+              <span className={labelClass}>{t(language, "auth.field.password")}</span>
               <input
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 type="password"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
-                className="mt-2 w-full rounded-md border border-zinc-800 bg-black/45 px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:bg-black/65"
+                className={inputClass}
                 placeholder={t(language, "auth.placeholder.password")}
               />
             </label>
 
             {mode === "register" ? (
               <label className="block">
-                <span className="text-sm font-medium text-zinc-300">{t(language, "auth.field.confirm_password")}</span>
+                <span className={labelClass}>{t(language, "auth.field.confirm_password")}</span>
                 <input
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   type="password"
                   autoComplete="new-password"
-                  className="mt-2 w-full rounded-md border border-zinc-800 bg-black/45 px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/70 focus:bg-black/65"
+                  className={inputClass}
                   placeholder={t(language, "auth.placeholder.confirm_password")}
                 />
               </label>
@@ -253,7 +276,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-cyan-300 bg-cyan-300 px-4 py-3 text-base font-semibold text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-cyan-300/70 bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-base font-semibold text-zinc-950 shadow-[0_14px_30px_rgba(34,211,238,0.18)] transition-all duration-200 hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? null : submitIcon}
               {loading

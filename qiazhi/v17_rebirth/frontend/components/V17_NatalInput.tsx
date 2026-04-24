@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FolderOpen, Play, Save, Trash2 } from "lucide-react";
+import { CalendarClock, ChevronDown, FolderOpen, Play, Save, Trash2 } from "lucide-react";
 import { findCityGroup, findCityOption, getCityCatalogGroups } from "@/types/cityCatalog";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 import { t, type AppLanguage } from "@/lib/i18n";
@@ -107,6 +107,7 @@ export function V17_NatalInput({
   const [cityName, setCityName] = useState("");
   const [profileError, setProfileError] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const years = useMemo(
     () => Array.from({ length: currentYear - 1949 }, (_, i) => String(currentYear - i)),
@@ -305,18 +306,28 @@ export function V17_NatalInput({
   }
 
   return (
-    <section className="w-full border-y border-violet-400/20 bg-[linear-gradient(180deg,rgba(76,29,149,0.18),rgba(9,9,11,0.88))] px-3 pb-28 pt-4 shadow-none backdrop-blur-xl sm:rounded-2xl sm:border sm:border-violet-400/30 sm:bg-violet-900/20 sm:p-5 sm:shadow-[0_10px_40px_rgba(76,29,149,0.35)]">
-      <header className="mb-3 sm:mb-4">
-        <h2 className="text-base font-semibold text-violet-100">{t(lang, "natal.title")}</h2>
-        <p className="mt-1 hidden text-xs text-violet-200/80 sm:block">{t(lang, "natal.desc")}</p>
+    <section className="w-full border-y border-white/10 bg-[#0B0F16] px-4 pb-28 pt-5 shadow-none backdrop-blur-xl sm:rounded-2xl sm:border sm:border-violet-400/30 sm:bg-[linear-gradient(180deg,rgba(76,29,149,0.18),rgba(9,9,11,0.88))] sm:p-5 sm:shadow-[0_10px_40px_rgba(76,29,149,0.28)]">
+      <header className="mb-4 sm:mb-5">
+        <p className="text-xs font-semibold text-amber-300 sm:hidden">{t(lang, "brand.title")}</p>
+        <h2 className="mt-1 text-xl font-semibold text-zinc-50 sm:mt-0 sm:text-base sm:text-violet-100">{t(lang, "natal.title")}</h2>
+        <p className="mt-1 text-sm leading-6 text-zinc-400 sm:text-xs sm:text-violet-200/80">{t(lang, "natal.desc")}</p>
       </header>
 
-      <div className="mb-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 sm:mb-5 sm:border-violet-300/20 sm:bg-black/20 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-violet-100">
+      <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.05] p-3 sm:mb-5 sm:rounded-2xl sm:border-violet-300/20 sm:bg-black/20 sm:p-4">
+        <button
+          type="button"
+          onClick={() => setProfileOpen((value) => !value)}
+          className="flex w-full items-center justify-between gap-3 text-left sm:pointer-events-none"
+        >
+          <div className="flex items-center gap-2 text-zinc-100 sm:text-violet-100">
             <FolderOpen className="h-4 w-4" />
-            <h3 className="text-sm font-semibold">{t(lang, "natal.profile.title")}</h3>
+            <h3 className="text-sm font-semibold">{t(lang, "natal.section.profile")}</h3>
           </div>
+          <ChevronDown className={`h-4 w-4 text-zinc-500 transition sm:hidden ${profileOpen ? "rotate-180" : ""}`} />
+        </button>
+        <div className={`${profileOpen ? "block" : "hidden"} sm:block`}>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-zinc-500 sm:text-violet-200/70">{t(lang, "natal.profile.title")}</p>
           <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:flex-wrap">
             <button
               type="button"
@@ -447,14 +458,19 @@ export function V17_NatalInput({
         {profileMessage ? (
           <p className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-950/25 px-3 py-2 text-xs text-emerald-200">{profileMessage}</p>
         ) : null}
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/55 p-3 sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="rounded-xl border border-white/10 bg-white/[0.05] p-3 sm:rounded-2xl sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="mb-3 flex items-center gap-2 text-zinc-100 sm:hidden">
+        <CalendarClock className="h-4 w-4 text-cyan-300" />
+        <h3 className="text-sm font-semibold">{t(lang, "natal.section.birth")}</h3>
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-8">
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.calendar")}
           <select
-            className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm"
+            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50"
             value={calendarType}
             onChange={(e) => {
               const next = e.target.value as "solar" | "lunar";
@@ -466,7 +482,7 @@ export function V17_NatalInput({
             <option value="lunar">{t(lang, "natal.calendar.lunar")}</option>
           </select>
         </label>
-        <label className="flex min-h-[68px] items-end gap-2 rounded-xl border border-zinc-700 bg-black/25 px-3 py-3 text-xs text-violet-100 sm:min-h-[58px] sm:rounded-md sm:border-violet-300/20 sm:px-2 sm:py-2">
+        <label className="flex min-h-[68px] items-end gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 text-xs text-zinc-200 sm:min-h-[58px] sm:rounded-md sm:border-violet-300/20 sm:bg-black/25 sm:px-2 sm:py-2 sm:text-violet-100">
           <input
             type="checkbox"
             checked={calendarType === "lunar" && lunarIsLeapMonth}
@@ -474,13 +490,13 @@ export function V17_NatalInput({
             onChange={(e) => setLunarIsLeapMonth(e.target.checked)}
             className="mb-1 h-4 w-4 accent-violet-400 disabled:opacity-40"
           />
-          <span className={calendarType === "lunar" ? "text-violet-100" : "text-violet-300/45"}>
+          <span className={calendarType === "lunar" ? "text-zinc-100 sm:text-violet-100" : "text-zinc-500 sm:text-violet-300/45"}>
             {t(lang, "natal.field.leap_month")}
           </span>
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.year")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={year} onChange={(e) => setYear(e.target.value)}>
+          <select className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50" value={year} onChange={(e) => setYear(e.target.value)}>
             {years.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -490,7 +506,7 @@ export function V17_NatalInput({
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.month")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={month} onChange={(e) => setMonth(e.target.value)}>
+          <select className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50" value={month} onChange={(e) => setMonth(e.target.value)}>
             {months.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -500,7 +516,7 @@ export function V17_NatalInput({
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.day")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={day} onChange={(e) => setDay(e.target.value)}>
+          <select className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50" value={day} onChange={(e) => setDay(e.target.value)}>
             {days.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -510,7 +526,7 @@ export function V17_NatalInput({
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.hour")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={hour} onChange={(e) => setHour(e.target.value)}>
+          <select className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50" value={hour} onChange={(e) => setHour(e.target.value)}>
             {hours.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -520,7 +536,7 @@ export function V17_NatalInput({
         </label>
         <label className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.minute")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={minute} onChange={(e) => setMinute(e.target.value)}>
+          <select className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-3 text-base text-zinc-100 sm:rounded-md sm:border-violet-300/30 sm:bg-black/35 sm:px-2 sm:py-2 sm:text-sm sm:text-violet-50" value={minute} onChange={(e) => setMinute(e.target.value)}>
             {minutes.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -528,13 +544,23 @@ export function V17_NatalInput({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-violet-100">
+        <div className="flex flex-col gap-1 text-xs text-violet-100">
           {t(lang, "natal.field.gender")}
-          <select className="rounded-xl border border-zinc-700 bg-black/35 px-3 py-3 text-base text-violet-50 sm:rounded-md sm:border-violet-300/30 sm:px-2 sm:py-2 sm:text-sm" value={gender} onChange={(e) => setGender(e.target.value as "male" | "female")}>
-            <option value="female">{t(lang, "natal.gender.female")}</option>
-            <option value="male">{t(lang, "natal.gender.male")}</option>
-          </select>
-        </label>
+          <div className="grid grid-cols-2 rounded-lg border border-white/10 bg-white/[0.04] p-1 sm:rounded-md sm:border-violet-300/20 sm:bg-black/25">
+            {(["male", "female"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setGender(item)}
+                className={`rounded-md px-2 py-2 text-sm font-medium transition ${
+                  gender === item ? "bg-cyan-500/75 text-white sm:bg-violet-500" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                }`}
+              >
+                {t(lang, item === "male" ? "natal.gender.male" : "natal.gender.female")}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       </div>
 
@@ -549,17 +575,17 @@ export function V17_NatalInput({
         <button
           type="button"
           onClick={start}
-          className="hidden items-center gap-2 rounded-md bg-violet-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 sm:inline-flex"
+          className="hidden items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-95 active:scale-[0.98] sm:inline-flex"
         >
           <Play className="h-4 w-4" />
           {t(lang, "natal.start")}
         </button>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-[0_-16px_40px_rgba(0,0,0,0.45)] backdrop-blur sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#080d13]/92 px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-[0_-16px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:hidden">
         <button
           type="button"
           onClick={start}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-violet-500 px-4 py-3 text-base font-semibold text-white transition active:bg-violet-400"
+          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-4 py-3 text-base font-semibold text-white shadow-[0_16px_38px_rgba(124,58,237,0.22)] transition active:scale-[0.98]"
         >
           <Play className="h-4 w-4" />
           {t(lang, "natal.start")}
