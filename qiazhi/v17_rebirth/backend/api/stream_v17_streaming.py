@@ -102,9 +102,11 @@ async def self_heal_physics_if_missing(session_id: str, pl: Dict[str, Any], run_
     except (TypeError, ValueError):
         healed_flow_year = None
     healed_payload = run_physics_core(
-        birth_time=parse_birth_time(str(pl.get("birth_time") or "").strip() or None),
+        birth_time=parse_birth_time(str(pl.get("birth_time_input") or pl.get("birth_time") or "").strip() or None),
         gender=str(pl.get("gender") or "").strip() or None,
         flow_year=healed_flow_year,
+        calendar_type=str(pl.get("calendar_type") or "solar").strip() or "solar",
+        lunar_is_leap_month=pl.get("lunar_is_leap_month", False),
     )
     pl.update(healed_payload)
     PhysicsService.prime_local_tensor(session_id, pl)
@@ -507,4 +509,3 @@ def _parse_iso_timestamp(value: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except ValueError:
         return None
-

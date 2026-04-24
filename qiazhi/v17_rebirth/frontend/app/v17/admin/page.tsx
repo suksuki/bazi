@@ -798,8 +798,8 @@ export default function V17AdminPage() {
 
   if (authLoading || !user || !canManageSystem) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#09090b_0%,#111827_100%)] px-4 py-10 text-zinc-100">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-zinc-800 bg-zinc-950/70 p-8 text-center">
+      <main className="min-h-screen bg-[linear-gradient(180deg,#09090b_0%,#111827_100%)] px-3 py-6 text-zinc-100 sm:px-4 sm:py-10">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5 text-center sm:rounded-3xl sm:p-8">
           <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Admin Guard</div>
           <h1 className="mt-3 text-2xl font-semibold text-zinc-50">正在校验权限</h1>
           <p className="mt-3 text-sm text-zinc-400">
@@ -811,18 +811,18 @@ export default function V17AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_26%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-4 py-6 text-sm text-zinc-100 md:px-6">
-      <div className="mx-auto max-w-[1500px] space-y-6">
-        <header className="rounded-3xl border border-zinc-800/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.88),rgba(9,9,11,0.96))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.08),transparent_26%),linear-gradient(180deg,#09090b_0%,#111827_100%)] px-3 py-4 text-sm text-zinc-100 sm:px-4 sm:py-6 md:px-6">
+      <div className="mx-auto max-w-[1500px] space-y-4 sm:space-y-6">
+        <header className="rounded-2xl border border-zinc-800/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.88),rgba(9,9,11,0.96))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] sm:rounded-3xl sm:p-5">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+            <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">V17 Admin</div>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">管理中枢</h1>
+              <h1 className="mt-2 text-xl font-semibold tracking-tight text-zinc-50 sm:text-2xl">管理中枢</h1>
               <p className="mt-2 max-w-3xl text-[12px] leading-6 text-zinc-400">
                 对齐 L0-L4 插件体系、运行态、冲突裁决与演化账本。这里应该像控制台，而不是杂糅的配置页。
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex max-w-full flex-wrap gap-2">
               <span className="rounded-full border border-zinc-700 bg-zinc-950/60 px-3 py-1 text-[10px] text-zinc-400">
                 当前标签 · {tab.toUpperCase()}
               </span>
@@ -836,10 +836,10 @@ export default function V17AdminPage() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[260px_1fr]">
-        <aside className="rounded-3xl border border-zinc-800/70 bg-zinc-950/40 p-3 backdrop-blur">
-          <h1 className="mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.28em] text-zinc-500">V17 管理中枢</h1>
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
+        <aside className="min-w-0 rounded-2xl border border-zinc-800/70 bg-zinc-950/40 p-3 backdrop-blur sm:rounded-3xl">
+          <h1 className="mb-3 px-1 text-[11px] font-bold uppercase tracking-[0.28em] text-zinc-500 md:px-3">V17 管理中枢</h1>
+          <div className="flex gap-2 overflow-x-auto pb-1 md:block md:space-y-2 md:overflow-visible md:pb-0">
           {[
             { id: "llm", label: "LLM 节点", icon: "🧠" },
             { id: "db", label: "数据库桥接", icon: "💎" },
@@ -849,14 +849,14 @@ export default function V17AdminPage() {
             { id: "learning", label: "自动学习", icon: "🛰️" },
             { id: "users", label: "用户权限", icon: "🪪" },
           ].map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id as TabKey)} className={`w-full rounded-2xl px-4 py-3 text-left transition ${tab === t.id ? "border border-zinc-200/80 bg-zinc-100 text-black shadow-[0_10px_30px_rgba(255,255,255,0.08)]" : "border border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"}`}>
+            <button key={t.id} onClick={() => setTab(t.id as TabKey)} className={`shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-left transition md:w-full ${tab === t.id ? "border border-zinc-200/80 bg-zinc-100 text-black shadow-[0_10px_30px_rgba(255,255,255,0.08)]" : "border border-transparent text-zinc-400 hover:border-zinc-800 hover:bg-zinc-900/70 hover:text-zinc-100"}`}>
               {t.icon} <span className="ml-2">{t.label}</span>
             </button>
           ))}
           </div>
         </aside>
 
-        <div className="min-h-[700px] rounded-3xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.28)]">
+        <div className="min-h-[60vh] min-w-0 rounded-2xl border border-zinc-800/80 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.28)] sm:rounded-3xl sm:p-6 md:min-h-[700px]">
           {tab === "llm" && (
             <V17_AdminLlmPanel
               llm={llm}

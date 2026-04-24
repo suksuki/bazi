@@ -45,52 +45,52 @@ export function V17_AdminLlmPanel({
   ghostBtn,
 }: Props) {
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <h2 className="border-b border-zinc-800 pb-2 text-lg font-bold">LLM 节点配置</h2>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-          <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+        <div className="min-w-0 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             <label className="text-xs text-zinc-400">
               提供商
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.provider} onChange={(e) => setLlm((s) => ({ ...s, provider: e.target.value }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.provider} onChange={(e) => setLlm((s) => ({ ...s, provider: e.target.value }))} />
             </label>
             <label className="text-xs text-zinc-400">
               模型
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.model} onChange={(e) => setLlm((s) => ({ ...s, model: e.target.value }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.model} onChange={(e) => setLlm((s) => ({ ...s, model: e.target.value }))} />
             </label>
             <label className="text-xs text-zinc-400">
               主机
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.host} onChange={(e) => setLlm((s) => ({ ...s, host: e.target.value }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.host} onChange={(e) => setLlm((s) => ({ ...s, host: e.target.value }))} />
             </label>
             <label className="text-xs text-zinc-400">
               端口
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.port} onChange={(e) => setLlm((s) => ({ ...s, port: Number(e.target.value) }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.port} onChange={(e) => setLlm((s) => ({ ...s, port: Number(e.target.value) }))} />
             </label>
             <label className="text-xs text-zinc-400">
               接口超时
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.httpTimeoutSec} onChange={(e) => setLlm((s) => ({ ...s, httpTimeoutSec: Number(e.target.value) }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.httpTimeoutSec} onChange={(e) => setLlm((s) => ({ ...s, httpTimeoutSec: Number(e.target.value) }))} />
             </label>
             <label className="text-xs text-zinc-400">
               熔断等待
-              <input className="mt-1 w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.fuseWaitSec} onChange={(e) => setLlm((s) => ({ ...s, fuseWaitSec: Number(e.target.value) }))} />
+              <input className="mt-1 w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm" value={llm.fuseWaitSec} onChange={(e) => setLlm((s) => ({ ...s, fuseWaitSec: Number(e.target.value) }))} />
             </label>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[11px] text-zinc-400">
-            接口地址：<span className="text-zinc-200">{llmBaseUrl}</span>
+            接口地址：<span className="break-all text-zinc-200">{llmBaseUrl}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => void saveLlm()} className={solidBtn} disabled={busy === "saveLlm"}>保存配置</button>
             <button onClick={() => void testLlm()} className={ghostBtn} disabled={busy === "testLlm"}>连通测试</button>
             <button onClick={() => void loadModels()} className={ghostBtn} disabled={busy === "loadModels"}>加载模型</button>
           </div>
-          {llmProbeMeta ? <div className="text-xs text-emerald-300">{llmProbeMeta}</div> : null}
+          {llmProbeMeta ? <div className="break-words text-xs text-emerald-300">{llmProbeMeta}</div> : null}
         </div>
 
-        <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+        <div className="min-w-0 space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
           <div>
             <div className="mb-2 text-xs text-zinc-400">模型测试</div>
             <textarea
-              className="min-h-[120px] w-full rounded border border-zinc-800 bg-zinc-950 p-2 text-sm"
+              className="min-h-[140px] w-full min-w-0 rounded border border-zinc-800 bg-zinc-950 p-2 text-sm"
               value={llmPrompt}
               onChange={(e) => setLlmPrompt(e.target.value)}
             />
@@ -107,7 +107,7 @@ export function V17_AdminLlmPanel({
                     key={model}
                     type="button"
                     onClick={() => setLlm((s) => ({ ...s, model }))}
-                    className={`rounded-full border px-2 py-1 text-[11px] ${llm.model === model ? "border-cyan-400 bg-cyan-950/40 text-cyan-100" : "border-zinc-700 bg-zinc-950 text-zinc-300"}`}
+                    className={`max-w-full break-all rounded-full border px-2 py-1 text-[11px] ${llm.model === model ? "border-cyan-400 bg-cyan-950/40 text-cyan-100" : "border-zinc-700 bg-zinc-950 text-zinc-300"}`}
                   >
                     {model}
                   </button>
@@ -117,7 +117,7 @@ export function V17_AdminLlmPanel({
           ) : null}
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
             <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">测试回复</div>
-            <div className="min-h-[120px] whitespace-pre-wrap text-sm text-zinc-200">
+            <div className="min-h-[120px] whitespace-pre-wrap break-words text-sm text-zinc-200">
               {llmTestReply || "尚未执行测试。"}
             </div>
           </div>

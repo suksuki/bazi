@@ -20,6 +20,8 @@ async def stream_v17_get(
     flow_year: Optional[int] = Query(default=None, ge=1800, le=2200),
     v17_origin: Optional[str] = Query(default=None),
     ui_lang: Optional[str] = Query(default="zh", pattern="^(zh|en|ko)$"),
+    calendar_type: Optional[str] = Query(default="solar", pattern="^(solar|lunar)$"),
+    lunar_is_leap_month: bool = Query(default=False),
 ) -> Union[StreamingResponse, JSONResponse]:
     return await stream_v17.stream_v17(
         will_proxy=will_proxy,
@@ -28,6 +30,8 @@ async def stream_v17_get(
         flow_year=flow_year,
         v17_origin=v17_origin,
         ui_lang=ui_lang,
+        calendar_type=calendar_type,
+        lunar_is_leap_month=lunar_is_leap_month,
     )
 
 
@@ -40,6 +44,8 @@ async def stream_v17_post(
     gender: Optional[str] = Query(default="male", pattern="^(male|female)$"),
     flow_year: Optional[int] = Query(default=None, ge=1800, le=2200),
     ui_lang: Optional[str] = Query(default="zh", pattern="^(zh|en|ko)$"),
+    calendar_type: Optional[str] = Query(default="solar", pattern="^(solar|lunar)$"),
+    lunar_is_leap_month: bool = Query(default=False),
 ) -> Union[StreamingResponse, JSONResponse]:
     return await stream_v17.stream_v17_post(
         payload=payload,
@@ -48,6 +54,8 @@ async def stream_v17_post(
         gender=gender,
         flow_year=flow_year,
         ui_lang=ui_lang,
+        calendar_type=calendar_type,
+        lunar_is_leap_month=lunar_is_leap_month,
     )
 
 

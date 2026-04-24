@@ -132,12 +132,16 @@ def _should_rebuild_physics_core(
     birth_time: Optional[str],
     gender: Optional[str],
     flow_year: Optional[int],
+    calendar_type: Optional[str] = None,
+    lunar_is_leap_month: Any = False,
 ) -> bool:
     return _should_rebuild_physics_core_delegate(
         current_physics=current_physics,
         birth_time=birth_time,
         gender=gender,
         flow_year=flow_year,
+        calendar_type=calendar_type,
+        lunar_is_leap_month=lunar_is_leap_month,
     )
 
 
@@ -146,8 +150,16 @@ def _run_v17_physics_core(
     birth_time: Optional[datetime],
     gender: Optional[str],
     flow_year: Optional[int] = None,
+    calendar_type: Optional[str] = None,
+    lunar_is_leap_month: Any = False,
 ) -> Dict[str, Any]:
-    return _run_v17_physics_core_delegate(birth_time=birth_time, gender=gender, flow_year=flow_year)
+    return _run_v17_physics_core_delegate(
+        birth_time=birth_time,
+        gender=gender,
+        flow_year=flow_year,
+        calendar_type=calendar_type,
+        lunar_is_leap_month=lunar_is_leap_month,
+    )
 
 
 def _decision_route_reason(payload: Dict[str, Any], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -197,6 +209,8 @@ async def stream_v17(
     flow_year: Optional[int] = None,
     v17_origin: Optional[str] = None,
     ui_lang: Optional[str] = "zh",
+    calendar_type: Optional[str] = "solar",
+    lunar_is_leap_month: Any = False,
 ) -> Union[StreamingResponse, JSONResponse]:
     if not _sovereignty_v17(v17_origin):
         return JSONResponse({"ok": False, "detail": "v17_origin validation failed"}, status_code=403)
@@ -204,6 +218,8 @@ async def stream_v17(
         birth_time=_safe_parse_birth_time(birth_time),
         gender=gender,
         flow_year=flow_year,
+        calendar_type=calendar_type,
+        lunar_is_leap_month=lunar_is_leap_month,
     )
     physics_payload["ui_lang"] = str(ui_lang or "zh").strip() or "zh"
     return StreamingResponse(
@@ -224,25 +240,35 @@ async def stream_v17_post(
     gender: Optional[str] = "male",
     flow_year: Optional[int] = None,
     ui_lang: Optional[str] = "zh",
+    calendar_type: Optional[str] = "solar",
+    lunar_is_leap_month: Any = False,
 ) -> Union[StreamingResponse, JSONResponse]:
     session_id = str((payload or {}).get("session_id", "")).strip() or "default"
+    request_calendar_type = str((payload or {}).get("calendar_type") or calendar_type or "solar").strip()
+    request_lunar_is_leap_month = (payload or {}).get("lunar_is_leap_month", lunar_is_leap_month)
     current_physics = await get_state_backend().get_physics(session_id)
     if _should_rebuild_physics_core(
         current_physics=current_physics if isinstance(current_physics, dict) else None,
         birth_time=birth_time,
         gender=gender,
         flow_year=flow_year,
+        calendar_type=request_calendar_type,
+        lunar_is_leap_month=request_lunar_is_leap_month,
     ):
         merged_payload = _run_v17_physics_core(
             birth_time=_safe_parse_birth_time(birth_time),
             gender=gender,
             flow_year=flow_year,
+            calendar_type=request_calendar_type,
+            lunar_is_leap_month=request_lunar_is_leap_month,
         )
     else:
         merged_payload = dict(current_physics) if isinstance(current_physics, dict) and current_physics else _run_v17_physics_core(
             birth_time=_safe_parse_birth_time(birth_time),
             gender=gender,
             flow_year=flow_year,
+            calendar_type=request_calendar_type,
+            lunar_is_leap_month=request_lunar_is_leap_month,
         )
     if isinstance(payload, dict):
         for _k, _v in payload.items():

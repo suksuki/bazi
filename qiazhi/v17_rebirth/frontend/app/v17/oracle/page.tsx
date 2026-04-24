@@ -716,9 +716,9 @@ export default function OraclePage() {
 
   if (authLoading || !user) {
     return (
-      <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
+      <main className="min-h-screen bg-zinc-950 p-3 text-zinc-100 sm:p-6">
         <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <div className="rounded-3xl border border-zinc-800 bg-zinc-900/60 p-8 text-center">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 text-center sm:rounded-3xl sm:p-8">
             <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Auth Gate</div>
             <h1 className="mt-3 text-2xl font-semibold text-zinc-50">{t(language, "oracle.auth_gate.title")}</h1>
             <p className="mt-3 text-sm text-zinc-400">
@@ -731,12 +731,12 @@ export default function OraclePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
+    <main className="min-h-screen bg-zinc-950 p-3 text-zinc-100 sm:p-6">
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-4">
 
         {/* ── 顶栏 ── */}
-        <header className="flex items-center justify-between gap-2 text-violet-300">
-          <div className="flex items-center gap-3">
+        <header className="flex flex-col items-start justify-between gap-3 text-violet-300 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
               <Image
                 src="/branding/qiazhi-logo.png"
@@ -752,7 +752,7 @@ export default function OraclePage() {
               <p className="text-[11px] tracking-[0.24em] text-violet-200/65">{t(language, "brand.subtitle")}</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-100">
               {user.role}
             </span>

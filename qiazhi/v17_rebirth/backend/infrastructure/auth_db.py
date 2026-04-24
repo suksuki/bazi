@@ -134,6 +134,7 @@ class V17AuthDB:
             ("city_code", "TEXT NOT NULL DEFAULT ''"),
             ("city_group", "TEXT NOT NULL DEFAULT ''"),
             ("city_longitude", "REAL"),
+            ("lunar_is_leap_month", "INTEGER NOT NULL DEFAULT 0"),
         ]
         for column_name, column_type in additions:
             if column_name in existing:
@@ -404,6 +405,7 @@ class V17AuthDB:
         item["birth_time_iso"] = str(item.get("birth_time_iso") or "").strip()
         item["gender"] = str(item.get("gender") or "").strip().lower() or "male"
         item["calendar_type"] = str(item.get("calendar_type") or "").strip().lower() or "solar"
+        item["lunar_is_leap_month"] = bool(item.get("lunar_is_leap_month"))
         item["city_name"] = str(item.get("city_name") or "").strip()
         item["city_code"] = str(item.get("city_code") or "").strip()
         item["city_group"] = str(item.get("city_group") or "").strip()
@@ -428,6 +430,7 @@ class V17AuthDB:
                     birth_time_iso,
                     gender,
                     calendar_type,
+                    lunar_is_leap_month,
                     city_name,
                     city_code,
                     city_group,
@@ -451,6 +454,7 @@ class V17AuthDB:
         birth_time_iso: str,
         gender: str,
         calendar_type: str,
+        lunar_is_leap_month: bool = False,
         city_name: str = "",
         city_code: str = "",
         city_group: str = "",
@@ -494,6 +498,7 @@ class V17AuthDB:
                     birth_time_iso,
                     gender,
                     calendar_type,
+                    lunar_is_leap_month,
                     city_name,
                     city_code,
                     city_group,
@@ -501,7 +506,7 @@ class V17AuthDB:
                     created_at,
                     updated_at,
                     last_used_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     int(user_id),
@@ -509,6 +514,7 @@ class V17AuthDB:
                     birth_time_clean,
                     gender_clean,
                     calendar_clean,
+                    1 if lunar_is_leap_month and calendar_clean == "lunar" else 0,
                     city_name_clean,
                     city_code_clean,
                     city_group_clean,
@@ -528,6 +534,7 @@ class V17AuthDB:
                     birth_time_iso,
                     gender,
                     calendar_type,
+                    lunar_is_leap_month,
                     city_name,
                     city_code,
                     city_group,
@@ -555,6 +562,7 @@ class V17AuthDB:
         birth_time_iso: str,
         gender: str,
         calendar_type: str,
+        lunar_is_leap_month: bool = False,
         city_name: str = "",
         city_code: str = "",
         city_group: str = "",
@@ -604,6 +612,7 @@ class V17AuthDB:
                     birth_time_iso = ?,
                     gender = ?,
                     calendar_type = ?,
+                    lunar_is_leap_month = ?,
                     city_name = ?,
                     city_code = ?,
                     city_group = ?,
@@ -617,6 +626,7 @@ class V17AuthDB:
                     birth_time_clean,
                     gender_clean,
                     calendar_clean,
+                    1 if lunar_is_leap_month and calendar_clean == "lunar" else 0,
                     city_name_clean,
                     city_code_clean,
                     city_group_clean,
@@ -636,6 +646,7 @@ class V17AuthDB:
                     birth_time_iso,
                     gender,
                     calendar_type,
+                    lunar_is_leap_month,
                     city_name,
                     city_code,
                     city_group,
@@ -690,6 +701,7 @@ class V17AuthDB:
                     birth_time_iso,
                     gender,
                     calendar_type,
+                    lunar_is_leap_month,
                     city_name,
                     city_code,
                     city_group,

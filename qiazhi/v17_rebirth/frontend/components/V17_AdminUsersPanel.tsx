@@ -77,10 +77,10 @@ export function V17_AdminUsersPanel({
     "账号写入数据库。系统保留唯一管理员账号 `admin`，后续账号默认注册为 `user`；管理员或经理可将普通账号调整为 `manager / user`。";
 
   return (
-    <section className="space-y-5">
-      <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/50 p-5">
+    <section className="min-w-0 space-y-5">
+      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/50 p-4 sm:rounded-3xl sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <div className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">RBAC</div>
               <h2 className="mt-2 text-xl font-semibold text-zinc-50">{panelTitle}</h2>
               <p className="mt-2 max-w-3xl text-xs leading-6 text-zinc-400">{panelDescription}</p>
@@ -94,7 +94,7 @@ export function V17_AdminUsersPanel({
         </div>
 
         {!compact ? (
-          <div className="mt-5 grid gap-3 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               { label: "总用户", value: counts.total, tone: "text-zinc-50" },
               { label: "管理员", value: counts.admin, tone: "text-cyan-100" },
@@ -123,25 +123,25 @@ export function V17_AdminUsersPanel({
           const saving = busyUserId === user.id;
           const roleOptions = roleOptionsForUser(user, operatorRole);
           return (
-            <article key={user.id} className={`rounded-2xl border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] ${compact ? "p-3" : "p-4"}`}>
+            <article key={user.id} className={`min-w-0 rounded-2xl border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] ${compact ? "p-3" : "p-4"}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-1">
+                <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-zinc-50">{user.display_name || user.username}</h3>
+                    <h3 className="break-words text-base font-semibold text-zinc-50">{user.display_name || user.username}</h3>
                     <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-zinc-300">
                       {user.role}
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-400">@{user.username}{user.email ? ` · ${user.email}` : ""}</p>
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="break-all text-xs text-zinc-400">@{user.username}{user.email ? ` · ${user.email}` : ""}</p>
+                  <p className="break-words text-[11px] text-zinc-500">
                     创建 {user.created_at || "—"} · 最近登录 {user.last_login_at || "—"}
                   </p>
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="break-words text-[11px] text-zinc-500">
                     最近活跃 {user.latest_seen_at || "—"} · 最近 IP {user.latest_ip_address || "—"}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   <select
                     value={nextRole}
                     onChange={(event) =>
@@ -150,7 +150,7 @@ export function V17_AdminUsersPanel({
                         [user.id]: event.target.value as AdminAuthUser["role"],
                       }))
                     }
-                    className="rounded-xl border border-zinc-800 bg-black/45 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-cyan-500/50"
+                    className="w-full rounded-xl border border-zinc-800 bg-black/45 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-cyan-500/50 sm:w-auto"
                     disabled={roleOptions.length === 1}
                   >
                     {roleOptions.map((role) => (
@@ -162,7 +162,7 @@ export function V17_AdminUsersPanel({
                   <button
                     onClick={() => void commitRole(user)}
                     disabled={loading || saving || nextRole === user.role}
-                    className="rounded-xl border border-cyan-400/30 bg-cyan-300 px-4 py-2 text-sm font-semibold text-black transition disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl border border-cyan-400/30 bg-cyan-300 px-4 py-2 text-sm font-semibold text-black transition disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                   >
                     {saving ? "保存中..." : "更新角色"}
                   </button>

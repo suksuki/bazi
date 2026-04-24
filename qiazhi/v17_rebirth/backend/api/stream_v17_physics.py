@@ -17,6 +17,49 @@ def _safe_parse_birth_time(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
+def _boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _normalize_calendar_type(value: Optional[str]) -> str:
+    return "lunar" if str(value or "").strip().lower() == "lunar" else "solar"
+
+
+def _effective_solar_birth_time(
+    *,
+    birth_time: datetime,
+    calendar_type: Optional[str],
+    lunar_is_leap_month: Any = False,
+) -> datetime:
+    if _normalize_calendar_type(calendar_type) != "lunar":
+        return birth_time
+
+    from lunar_python import Lunar
+
+    month = int(birth_time.month)
+    if _boolish(lunar_is_leap_month):
+        month = -month
+    lunar = Lunar.fromYmdHms(
+        int(birth_time.year),
+        month,
+        int(birth_time.day),
+        int(birth_time.hour),
+        int(birth_time.minute),
+        int(birth_time.second),
+    )
+    solar = lunar.getSolar()
+    return datetime(
+        int(solar.getYear()),
+        int(solar.getMonth()),
+        int(solar.getDay()),
+        int(solar.getHour()),
+        int(solar.getMinute()),
+        int(solar.getSecond()),
+    )
+
+
 def _pillars_from_lunar(*, birth_time: datetime, gender: Optional[str], flow_year: int) -> Tuple[Dict[str, str], str, str]:
     """
     与 legacy BaziProfile 一致：使用 lunar_python 排四柱；流年用年中点规避立春边界；
@@ -66,6 +109,8 @@ def _should_rebuild_physics_core(
     birth_time: Optional[str],
     gender: Optional[str],
     flow_year: Optional[int],
+    calendar_type: Optional[str] = None,
+    lunar_is_leap_month: Any = False,
 ) -> bool:
     current = current_physics if isinstance(current_physics, dict) else {}
     if not current:
@@ -86,11 +131,21 @@ def _should_rebuild_physics_core(
             return True
 
     if birth_time is not None:
-        current_birth = str(current.get("birth_time") or "").strip() or None
+        current_birth = str(current.get("birth_time_input") or current.get("birth_time") or "").strip() or None
         parsed_request = _safe_parse_birth_time(birth_time)
         request_birth = parsed_request.isoformat() if parsed_request is not None else str(birth_time or "").strip() or None
         if current_birth != request_birth:
             return True
+
+    if calendar_type is not None:
+        current_calendar = _normalize_calendar_type(str(current.get("calendar_type") or "solar"))
+        if current_calendar != _normalize_calendar_type(calendar_type):
+            return True
+
+    current_leap = _boolish(current.get("lunar_is_leap_month"))
+    request_leap = _boolish(lunar_is_leap_month)
+    if current_leap != request_leap:
+        return True
 
     return False
 
@@ -104,13 +159,22 @@ def _run_v17_physics_core(
     birth_time: Optional[datetime],
     gender: Optional[str],
     flow_year: Optional[int] = None,
+    calendar_type: Optional[str] = None,
+    lunar_is_leap_month: Any = False,
 ) -> Dict[str, Any]:
     from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import calc_deity_scores
     from v17_rebirth.backend.services.physics_layers import sync_runtime_aliases
 
     stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
     branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
-    dt = birth_time or datetime(1977, 5, 8, 18, 0, 0)
+    input_dt = birth_time or datetime(1977, 5, 8, 18, 0, 0)
+    calendar_norm = _normalize_calendar_type(calendar_type)
+    leap_month = calendar_norm == "lunar" and _boolish(lunar_is_leap_month)
+    dt = _effective_solar_birth_time(
+        birth_time=input_dt,
+        calendar_type=calendar_norm,
+        lunar_is_leap_month=leap_month,
+    )
     gender_norm = "male" if str(gender or "").lower() == "male" else "female"
     fy = int(flow_year) if flow_year is not None else datetime.now().year
 
@@ -183,7 +247,11 @@ def _run_v17_physics_core(
         "flow_year": fy,
         "ten_gods": ten_gods,
         "gender": gender_norm,
+        "calendar_type": calendar_norm,
+        "lunar_is_leap_month": leap_month,
+        "birth_time_input": input_dt.isoformat(),
         "birth_time": dt.isoformat(),
+        "birth_time_solar": dt.isoformat(),
     }
     sync_runtime_aliases(payload, scores)
     return payload

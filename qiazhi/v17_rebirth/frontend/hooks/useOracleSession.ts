@@ -92,6 +92,7 @@ export interface OracleSession {
   birthTimeISO: string;
   natalGender: "male" | "female" | undefined;
   natalCalendar: "solar" | "lunar" | undefined;
+  lunarIsLeapMonth: boolean;
   selectedLuckYear: number;
   setSelectedLuckYear: (y: number) => void;
 
@@ -143,7 +144,12 @@ export interface OracleSession {
   streamQuery: { will_proxy: string; birth_time: string; gender: string; flow_year: string; ui_lang: string };
 
   // --- actions ---
-  startRun: (input: { birthTimeISO: string; gender: "male" | "female"; calendarType: "solar" | "lunar" }) => void;
+  startRun: (input: {
+    birthTimeISO: string;
+    gender: "male" | "female";
+    calendarType: "solar" | "lunar";
+    lunarIsLeapMonth?: boolean;
+  }) => void;
   resetRun: () => void;
 }
 
@@ -171,6 +177,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
   const [birthTimeISO, setBirthTimeISO] = useState("");
   const [natalGender, setNatalGender] = useState<"male" | "female" | undefined>(undefined);
   const [natalCalendar, setNatalCalendar] = useState<"solar" | "lunar" | undefined>(undefined);
+  const [lunarIsLeapMonth, setLunarIsLeapMonth] = useState(false);
   const [selectedLuckYear, setSelectedLuckYear] = useState<number>(new Date().getFullYear());
 
   // Decisions
@@ -435,6 +442,8 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
       gender: natalGender,
       flow_year: String(selectedLuckYear),
       ui_lang: uiLanguage,
+      calendar_type: natalCalendar || "solar",
+      lunar_is_leap_month: natalCalendar === "lunar" && lunarIsLeapMonth ? "1" : "0",
       v17_origin: "v17_rebirth",
     });
     setStreamEndpoint(`/api/v17/stream?${query.toString()}&_pulse=${Date.now()}`);
@@ -442,6 +451,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
       ...(prevBody || {}),
       v17_origin: "v17_rebirth",
       calendar_type: natalCalendar,
+      lunar_is_leap_month: natalCalendar === "lunar" && lunarIsLeapMonth,
       session_id: sessionId || "default",
       suppress_narrator: false,
       reset_stream_cache: true,
@@ -453,31 +463,43 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     setDecisionLockStartedAtMs(null);
     setDecisionActionError("");
     setRunning(true);
-  }, [selectedLuckYear, running, birthTimeISO, natalGender, natalCalendar, sessionId, streamEndpoint, uiLanguage]);
+  }, [selectedLuckYear, running, birthTimeISO, natalGender, natalCalendar, lunarIsLeapMonth, sessionId, streamEndpoint, uiLanguage]);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   function startRun(input: {
     birthTimeISO: string;
     gender: "male" | "female";
     calendarType: "solar" | "lunar";
+    lunarIsLeapMonth?: boolean;
   }) {
     const fy = new Date().getFullYear();
+    const isLeapMonth = input.calendarType === "lunar" && Boolean(input.lunarIsLeapMonth);
     const query = new URLSearchParams({
       will_proxy: "stable",
       birth_time: input.birthTimeISO,
       gender: input.gender,
       flow_year: String(fy),
       ui_lang: uiLanguage,
+      calendar_type: input.calendarType,
+      lunar_is_leap_month: isLeapMonth ? "1" : "0",
       v17_origin: "v17_rebirth",
     });
-    const sid = crypto.randomUUID();
+    const sid = globalThis.crypto?.randomUUID?.() ?? `v17_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     setStreamEndpoint(`/api/v17/stream?${query.toString()}`);
     setSessionId(sid);
     setBirthTimeISO(input.birthTimeISO);
     setNatalGender(input.gender);
     setNatalCalendar(input.calendarType);
+    setLunarIsLeapMonth(isLeapMonth);
     setSelectedLuckYear(fy);
-    setStreamBody({ v17_origin: "v17_rebirth", calendar_type: input.calendarType, session_id: sid, reset_stream_cache: true, ui_lang: uiLanguage });
+    setStreamBody({
+      v17_origin: "v17_rebirth",
+      calendar_type: input.calendarType,
+      lunar_is_leap_month: isLeapMonth,
+      session_id: sid,
+      reset_stream_cache: true,
+      ui_lang: uiLanguage,
+    });
     setDecisionLockStartedAtMs(null);
     setAdoptedDecisions([]);
     setRunning(true);
@@ -763,6 +785,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     birthTimeISO,
     natalGender,
     natalCalendar,
+    lunarIsLeapMonth,
     selectedLuckYear,
     setSelectedLuckYear,
     adoptedDecisions,

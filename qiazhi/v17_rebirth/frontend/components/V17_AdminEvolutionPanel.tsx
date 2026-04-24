@@ -22,19 +22,19 @@ export function V17_AdminEvolutionPanel({
   loadEvolution,
 }: Props) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-        <div>
+    <div className="min-w-0 space-y-4">
+      <div className="flex flex-col gap-3 border-b border-zinc-800 pb-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-bold">演化账本（因果轨迹）</h2>
           <p className="mt-1 text-[11px] text-zinc-500">追踪插件驱动下每一次十神位移与原因。</p>
         </div>
-        <button onClick={() => void loadEvolution()} className="rounded-full border border-sky-500/30 bg-sky-950/20 px-3 py-1 text-xs text-sky-300">
+        <button onClick={() => void loadEvolution()} className="w-full rounded-full border border-sky-500/30 bg-sky-950/20 px-3 py-1 text-xs text-sky-300 sm:w-auto">
           刷新
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
-        <table className="w-full text-left text-xs">
+      <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950">
+        <table className="min-w-[720px] w-full text-left text-xs">
           <thead className="bg-zinc-900/80 text-[10px] font-bold uppercase text-zinc-500">
             <tr>
               <th className="px-4 py-3">时间</th>
@@ -60,7 +60,7 @@ export function V17_AdminEvolutionPanel({
                     <span className="text-sky-400">{log.plugin_id}</span>
                     <div className="text-[9px] text-zinc-600">{log.step}</div>
                   </td>
-                  <td className="max-w-[320px] overflow-hidden px-4 py-3 text-ellipsis whitespace-nowrap text-zinc-400">
+                  <td className="max-w-[320px] px-4 py-3 text-zinc-400">
                     {log.reason}
                   </td>
                 </tr>
