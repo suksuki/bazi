@@ -729,32 +729,32 @@ export default function OraclePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 p-3 text-zinc-100 sm:p-6">
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+    <main className="min-h-screen bg-zinc-950 pb-28 text-zinc-100 sm:p-6">
+      <section className="mx-auto flex w-full max-w-4xl flex-col gap-3 sm:gap-4">
 
         {/* ── 顶栏 ── */}
-        <header className="flex flex-col items-start justify-between gap-3 text-violet-300 sm:flex-row sm:items-center">
+        <header className="sticky top-0 z-30 flex flex-col items-start justify-between gap-3 border-b border-zinc-900 bg-zinc-950/95 px-4 py-3 text-violet-300 backdrop-blur sm:static sm:flex-row sm:items-center sm:border-b-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
+            <div className="overflow-hidden rounded-xl border border-zinc-800 bg-white/95 shadow-[0_12px_40px_rgba(0,0,0,0.25)] sm:rounded-2xl">
               <Image
                 src="/branding/qiazhi-logo.png"
                 alt={t(language, "brand.title")}
                 width={512}
                 height={512}
                 priority
-                className="h-14 w-14 object-cover sm:h-16 sm:w-16"
+                className="h-11 w-11 object-cover sm:h-16 sm:w-16"
               />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold tracking-wide text-violet-100 sm:text-xl">{t(language, "brand.title")}</h1>
-              <p className="text-[11px] tracking-[0.24em] text-violet-200/65">{t(language, "brand.subtitle")}</p>
+              <h1 className="truncate text-base font-semibold tracking-wide text-violet-100 sm:text-xl">{t(language, "brand.title")}</h1>
+              <p className="truncate text-[10px] tracking-[0.2em] text-violet-200/65 sm:text-[11px] sm:tracking-[0.24em]">{t(language, "brand.subtitle")}</p>
             </div>
           </div>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          <div className="flex w-full items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible">
             <span className="rounded-full border border-cyan-500/20 bg-cyan-950/20 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-cyan-100">
               {user.role}
             </span>
-            <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-1 text-[10px] text-zinc-200">
+            <span className="max-w-[42vw] truncate rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-1 text-[10px] text-zinc-200 sm:max-w-none">
               {user.display_name || user.username}
             </span>
             {s.running ? (
@@ -790,7 +790,7 @@ export default function OraclePage() {
         {s.running ? (
           <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/45 p-2.5">
+              <div className="sticky top-[90px] z-20 border-y border-zinc-800 bg-zinc-950/95 px-3 py-2 backdrop-blur sm:static sm:rounded-2xl sm:border sm:bg-zinc-900/45 sm:p-2.5 sm:backdrop-blur-none">
                 <div
                   className={`-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 ${
                     canAccessTraceSurface ? "sm:grid-cols-3" : canAccessAuxiliarySurface ? "sm:grid-cols-2" : "sm:grid-cols-1"
@@ -800,7 +800,7 @@ export default function OraclePage() {
                     type="button"
                     aria-pressed={activeSurfaceTab === "core"}
                     onClick={() => switchContentSurface("core")}
-                    className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "core")}`}
+                    className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "core")}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.core")}</span>
@@ -818,7 +818,7 @@ export default function OraclePage() {
                         type="button"
                         aria-pressed={activeSurfaceTab === "auxiliary"}
                         onClick={() => switchContentSurface("auxiliary")}
-                        className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
+                        className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "auxiliary")}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.aux")}</span>
@@ -835,7 +835,7 @@ export default function OraclePage() {
                           type="button"
                           aria-pressed={activeSurfaceTab === "trace"}
                           onClick={openTraceSurface}
-                          className={`min-w-[72%] snap-start rounded-full border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "trace")}`}
+                          className={`min-w-[46%] snap-start rounded-xl border px-3 py-2 text-left transition sm:min-w-0 sm:rounded-xl sm:py-3 ${oracleTabTone(activeSurfaceTab === "trace")}`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate text-sm font-semibold">{t(language, "oracle.tab.trace")}</span>
