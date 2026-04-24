@@ -11,6 +11,9 @@ RED="\033[0;31m"
 NC="\033[0m"
 FRONTEND_DIR="/home/hlsystem/bazi/qiazhi/v17_rebirth/frontend"
 FRONTEND_LOG="/home/hlsystem/bazi/qiazhi/v17_rebirth/.runlogs/frontend-3001.log"
+V17_ROOT="/home/hlsystem/bazi/qiazhi/v17_rebirth"
+
+mkdir -p "$V17_ROOT/.runlogs" "$V17_ROOT/.runtime"
 
 node_major="$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)"
 echo -e "${BLUE}Node in use:${NC} $(node -v 2>/dev/null || echo 'missing') ($(command -v node || echo 'not found'))"

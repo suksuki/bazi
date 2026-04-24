@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="/home/hlsystem/bazi/qiazhi/v17_rebirth"
 UNIT_SRC="$ROOT/deploy/systemd"
 
-echo "[1/5] Prepare log directory..."
-mkdir -p "$ROOT/.runlogs"
+echo "[1/5] Prepare runtime directories..."
+mkdir -p "$ROOT/.runlogs" "$ROOT/.runtime"
 
 echo "[2/5] Install unit files to /etc/systemd/system ..."
 sudo cp "$UNIT_SRC/v17-backend.service" /etc/systemd/system/v17-backend.service

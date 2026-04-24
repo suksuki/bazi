@@ -19,6 +19,7 @@ BACKEND_HOST="127.0.0.1"
 BACKEND_PORT="8017"
 FRONTEND_PORT="3001"
 RUNLOG_DIR="${PROJECT_DIR}/.runlogs"
+RUNTIME_DIR="${PROJECT_DIR}/.runtime"
 BACKEND_LOG="${RUNLOG_DIR}/backend-${BACKEND_PORT}.log"
 FRONTEND_LOG="${RUNLOG_DIR}/frontend-${FRONTEND_PORT}.log"
 BACKEND_PID_FILE="${RUNLOG_DIR}/backend-${BACKEND_PORT}.pid"
@@ -80,7 +81,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-mkdir -p "${RUNLOG_DIR}"
+mkdir -p "${RUNLOG_DIR}" "${RUNTIME_DIR}"
 
 if ! mkdir "${LOCK_DIR}" 2>/dev/null; then
   echo -e "${RED}Another restart is already running. Lock: ${LOCK_DIR}${NC}"
