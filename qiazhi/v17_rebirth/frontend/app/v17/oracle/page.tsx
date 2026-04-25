@@ -1084,6 +1084,7 @@ function compactEvidenceValue(value: unknown, term: TranslateText): string {
 }
 
 type PractitionerFeedbackStatus = "confirm" | "reject" | "watch" | "review";
+type EvidenceFilterKey = "all" | "strong" | "candidate" | "counterexample" | "boundary" | "review";
 
 function feedbackStatusLabel(status: PractitionerFeedbackStatus | string, ui: LocalizeText): string {
   if (status === "confirm") return ui("确认", "Confirm", "확인");
@@ -1164,6 +1165,66 @@ function normalizedPillarText(value: unknown): string {
   return compact === "—" ? "" : compact;
 }
 
+function evidenceItemKey(item: Record<string, unknown>): string {
+  return String(item.evidence_id || item.claim_id || item.title || "").trim();
+}
+
+function evidenceIsFinalCandidateStatus(status: string): boolean {
+  return ["confirmed", "accepted", "strong"].includes(status.trim().toLowerCase());
+}
+
+function evidenceIsCandidate(item: Record<string, unknown>): boolean {
+  const status = String(item.candidate_status || "").trim();
+  return Boolean(item.observe_only) || Boolean(status && !evidenceIsFinalCandidateStatus(status));
+}
+
+function evidenceIsStrong(item: Record<string, unknown>): boolean {
+  if (evidenceIsCandidate(item)) return false;
+  const confidence = asNumberValue(item.confidence);
+  const matchRatio = asNumberValue(item.match_ratio);
+  const kind = String(item.evidence_type || "").trim();
+  return kind !== "risk" && kind !== "break_risk" && (confidence >= 0.72 || matchRatio >= 0.72);
+}
+
+function evidenceIsBoundary(item: Record<string, unknown>, feedback: Record<string, unknown> | undefined): boolean {
+  const status = String(item.candidate_status || "").trim().toLowerCase();
+  const feedbackStatus = String(feedback?.status || "").trim();
+  const detailKeys = asStringList(item.detail_keys).join(" ").toLowerCase();
+  return (
+    feedbackStatus === "watch" ||
+    Boolean(item.observe_only) ||
+    status.includes("watch") ||
+    status.includes("boundary") ||
+    detailKeys.includes("boundary") ||
+    detailKeys.includes("break")
+  );
+}
+
+function evidenceNeedsReview(item: Record<string, unknown>, feedback: Record<string, unknown> | undefined): boolean {
+  const status = String(item.candidate_status || "").trim().toLowerCase();
+  const feedbackStatus = String(feedback?.status || "").trim();
+  const confidence = asNumberValue(item.confidence);
+  return (
+    feedbackStatus === "review" ||
+    status.includes("review") ||
+    status.includes("needs") ||
+    (confidence > 0 && confidence < 0.55)
+  );
+}
+
+function evidenceMatchesFilter(
+  item: Record<string, unknown>,
+  feedback: Record<string, unknown> | undefined,
+  filter: EvidenceFilterKey,
+): boolean {
+  if (filter === "all") return true;
+  if (filter === "strong") return evidenceIsStrong(item);
+  if (filter === "candidate") return evidenceIsCandidate(item);
+  if (filter === "counterexample") return String(feedback?.status || "").trim() === "reject";
+  if (filter === "boundary") return evidenceIsBoundary(item, feedback);
+  return evidenceNeedsReview(item, feedback);
+}
+
 function V17EvidencePanel({
   ui,
   term,
@@ -1200,6 +1261,7 @@ function V17EvidencePanel({
   selectedYear: number;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [evidenceFilter, setEvidenceFilter] = useState<EvidenceFilterKey>("all");
   const [reasonByEvidence, setReasonByEvidence] = useState<Record<string, string>>({});
   const [pendingByEvidence, setPendingByEvidence] = useState<Record<string, boolean>>({});
   const [feedbackByEvidence, setFeedbackByEvidence] = useState<Record<string, Record<string, unknown>>>({});
@@ -1211,7 +1273,24 @@ function V17EvidencePanel({
   const [reviewPending, setReviewPending] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewResult, setReviewResult] = useState<Record<string, unknown>>({});
-  const visibleItems = (expanded ? items.slice(0, 12) : items.slice(0, 4));
+  const filteredItems = items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], evidenceFilter));
+  const visibleItems = (expanded ? filteredItems.slice(0, 12) : filteredItems.slice(0, 4));
+  const filterCounts: Record<EvidenceFilterKey, number> = {
+    all: items.length,
+    strong: items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], "strong")).length,
+    candidate: items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], "candidate")).length,
+    counterexample: items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], "counterexample")).length,
+    boundary: items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], "boundary")).length,
+    review: items.filter((item) => evidenceMatchesFilter(item, feedbackByEvidence[evidenceItemKey(item)], "review")).length,
+  };
+  const filterOptions: Array<{ key: EvidenceFilterKey; label: string; count: number }> = [
+    { key: "all", label: ui("全部", "All", "전체"), count: filterCounts.all },
+    { key: "strong", label: ui("强证据", "Strong", "강한 근거"), count: filterCounts.strong },
+    { key: "candidate", label: ui("候选", "Candidate", "후보"), count: filterCounts.candidate },
+    { key: "counterexample", label: ui("反例", "Counterexample", "반례"), count: filterCounts.counterexample },
+    { key: "boundary", label: ui("边界", "Boundary", "경계"), count: filterCounts.boundary },
+    { key: "review", label: ui("需复核", "Review", "검토 필요"), count: filterCounts.review },
+  ];
   const total = asNumberValue(summary.total, items.length);
   const candidateCount = asNumberValue(summary.candidate_count);
   const riskCount = asNumberValue(summary.risk_count);
@@ -1546,6 +1625,51 @@ function V17EvidencePanel({
         </div>
       ) : null}
 
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold text-zinc-200">
+            {ui("证据目录", "Evidence Index", "근거 목록")}
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">
+            {ui("按强证据、候选、反例、边界与复核缺口查看。", "Filter by strong, candidate, counterexample, boundary, and review gaps.", "강한 근거, 후보, 반례, 경계, 검토 공백별로 봅니다.")}
+          </p>
+        </div>
+        <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
+          {filterOptions.map((option) => {
+            const active = evidenceFilter === option.key;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => {
+                  setEvidenceFilter(option.key);
+                  setExpanded(false);
+                }}
+                className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
+                  active
+                    ? "border-cyan-300/45 bg-cyan-400/15 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.08)]"
+                    : option.count
+                      ? "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-50"
+                      : "border-white/10 bg-white/[0.02] text-zinc-600"
+                }`}
+                aria-pressed={active}
+              >
+                <span>{option.label}</span>
+                <span className="rounded-full border border-white/10 bg-black/25 px-1.5 py-0.5 text-[10px]">
+                  {option.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {!visibleItems.length ? (
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-[12px] text-zinc-500">
+          {ui("当前筛选没有匹配证据。", "No evidence matches this filter.", "이 필터에 맞는 근거가 없습니다.")}
+        </div>
+      ) : null}
+
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {visibleItems.map((item, index) => {
           const kind = String(item.evidence_type || "diagnostic").trim();
@@ -1705,7 +1829,7 @@ function V17EvidencePanel({
           {caseError}
         </p>
       ) : null}
-      {items.length > visibleItems.length ? (
+      {filteredItems.length > visibleItems.length ? (
         <button
           type="button"
           onClick={() => setExpanded((current) => !current)}
@@ -1713,7 +1837,7 @@ function V17EvidencePanel({
         >
           {expanded
             ? ui("收起证据链", "Collapse evidence", "근거 접기")
-            : ui(`展开更多证据（${items.length - visibleItems.length}）`, `Show more evidence (${items.length - visibleItems.length})`, `근거 더 보기 (${items.length - visibleItems.length})`)}
+            : ui(`展开更多证据（${filteredItems.length - visibleItems.length}）`, `Show more evidence (${filteredItems.length - visibleItems.length})`, `근거 더 보기 (${filteredItems.length - visibleItems.length})`)}
         </button>
       ) : null}
     </section>

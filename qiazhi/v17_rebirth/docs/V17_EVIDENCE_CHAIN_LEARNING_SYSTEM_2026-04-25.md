@@ -91,6 +91,7 @@ Date: 2026-04-25
 - manager/admin 可导出 `accepted` 案例为 `v17.practitioner.benchmark_export.v1`，包含 benchmark seed、来源案例和 `PractitionerBenchmarkCase` Python 片段；导出只读，不自动写静态测试文件。
 - scorecard 可导入 `shadow_run_report`，从报告中推导 synthetic/practitioner 是否通过、改善/退化数量、verdict 和 accepted benchmark case IDs。
 - manager/admin 可生成 `v17.practitioner.shadow_run_report.v1`：报告运行当前 synthetic baseline，审计静态与 accepted practitioner benchmarks，并可直接转入 scorecard；候选 patch 不自动应用。
+- 证据链 UI 已增加证据目录筛选：全部、强证据、候选、反例、边界、需复核；展开数量按当前筛选结果计算。
 
 ## 5. Guardrails
 
@@ -105,6 +106,5 @@ Date: 2026-04-25
 
 ## 6. Next Steps
 
-1. 在证据链 UI 增加筛选：强证据、候选、反例、边界、需复核。
-2. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。
-3. 将 shadow-run 报告生成器升级为安全 A/B Experiment Runner，比较 baseline 与候选 patch 后再允许 `promote`。
+1. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。
+2. 将 shadow-run 报告生成器升级为安全 A/B Experiment Runner，比较 baseline 与候选 patch 后再允许 `promote`。

@@ -153,6 +153,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 - `v17.evidence.bundle.v1` 已作为后端快照协议接入，统一汇总 pattern / risk / work / climate / semantic 等插件证据。
 - 命盘核心页已接入 `EvidencePanel`，桌面端可展开证据，手机端默认以摘要卡片展示并折叠细节。
 - 快照前端读取已切换到 `payload.plugins.claims` 与 `payload.evidence_bundle`，避免 claim/evidence 因位置不一致而丢失。
+- 专业证据链已增加证据目录筛选：全部、强证据、候选、反例、边界、需复核；手机端可横向滑动筛选，展开按钮只展开当前筛选结果。
 
 ### P2：命理师反馈闭环
 
