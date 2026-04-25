@@ -12,6 +12,7 @@ Date: 2026-04-26
 - 只读 L0/L1/L2、体用裁决、格局候选、调候、盲派、象法和关系动力。
 - 输出每个主题的激活度、置信度、风险、证据、机会、风险提示和 LLM 叙事焦点。
 - 不改物理能量、不改体用候选、不自动写参数。
+- 后续专题断言不直接由 `macro_theme` 生成，而由 `topic_decoder` 先产出 `wealth_profile / career_profile / relationship_profile / personality_profile` 等专题画像，再交给领域专属 prompt。
 
 ## 2. 第一批主题
 
@@ -39,3 +40,9 @@ LLM 可以把 `macro_theme` 写成自然语言，但必须遵守：
 - `macro.personality.calibration`
 
 这些学习素材只能进入审计候选和实验队列，不能直接改参数。
+
+## 5. 下一层专题解码
+
+详见 `V17_TOPIC_DECODER_AND_WEALTH_PROFILE_2026-04-26.md`。
+
+`macro_theme` 负责判断财富、事业、感情、性格哪个主题更活跃；专题解码器负责回答每个主题如何发生、从哪里来、能否承载、有什么代价，以及 LLM 应如何写成专属断言。
