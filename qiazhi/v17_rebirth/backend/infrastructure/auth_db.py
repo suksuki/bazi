@@ -18,6 +18,7 @@ CALENDAR_VALUES = {"solar", "lunar"}
 ROLE_REQUEST_STATUS_VALUES = {"pending", "approved", "rejected", "cancelled"}
 PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
 PRACTITIONER_CASE_STATUS_VALUES = {"draft", "submitted", "accepted", "rejected", "benchmark_candidate"}
+LEARNING_REVIEW_STATUS_VALUES = {"watch", "approved_for_experiment", "rejected"}
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_DISPLAY_NAME = "System Admin"
 DEFAULT_ADMIN_PASSWORD = "abcd1235"
@@ -267,6 +268,24 @@ class V17AuthDB:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practitioner_learning_reviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    candidate_id TEXT NOT NULL,
+                    parameter_family TEXT NOT NULL,
+                    reviewer_user_id INTEGER NOT NULL,
+                    reviewer_role TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    reviewer_note TEXT NOT NULL,
+                    safety_gate TEXT NOT NULL,
+                    candidate_snapshot_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(reviewer_user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
@@ -275,6 +294,8 @@ class V17AuthDB:
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_practitioner_cases_user_key ON practitioner_cases(user_id, case_key)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_status ON practitioner_cases(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_fingerprint ON practitioner_cases(chart_fingerprint)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_reviews_candidate ON practitioner_learning_reviews(candidate_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_reviews_status ON practitioner_learning_reviews(status)")
             self._ensure_profile_columns(conn)
             conn.commit()
 
@@ -1681,6 +1702,143 @@ class V17AuthDB:
             item["owner_display_name"] = str(row_dict.get("owner_display_name") or "").strip()
             out.append(item)
         return out
+
+    def _clean_learning_review_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["reviewer_user_id"] = int(item.get("reviewer_user_id") or 0)
+        item["candidate_id"] = str(item.get("candidate_id") or "").strip()
+        item["parameter_family"] = str(item.get("parameter_family") or "").strip()
+        item["reviewer_role"] = str(item.get("reviewer_role") or "").strip().lower()
+        item["status"] = str(item.get("status") or "").strip().lower()
+        item["reviewer_note"] = str(item.get("reviewer_note") or "").strip()
+        item["safety_gate"] = str(item.get("safety_gate") or "").strip()
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        try:
+            snapshot = json.loads(str(item.get("candidate_snapshot_json") or "{}"))
+        except Exception:
+            snapshot = {}
+        item["candidate_snapshot"] = snapshot if isinstance(snapshot, dict) else {}
+        item.pop("candidate_snapshot_json", None)
+        item["reviewer_username"] = str(item.get("reviewer_username") or "").strip()
+        item["reviewer_display_name"] = str(item.get("reviewer_display_name") or "").strip()
+        return item
+
+    def create_practitioner_learning_review(
+        self,
+        *,
+        reviewer_user_id: int,
+        reviewer_role: str,
+        candidate_id: str,
+        parameter_family: str,
+        status: str,
+        reviewer_note: str = "",
+        safety_gate: str = "manual_review_required",
+        candidate_snapshot: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        role_clean = str(reviewer_role or "user").strip().lower() or "user"
+        if role_clean not in {"manager", "admin"}:
+            raise ValueError("只有 manager/admin 可以审计学习候选。")
+        candidate_clean = str(candidate_id or "").strip()[:240]
+        family_clean = str(parameter_family or "").strip()[:160]
+        if not candidate_clean or not family_clean:
+            raise ValueError("学习候选 ID 与参数族不能为空。")
+        status_clean = str(status or "").strip().lower()
+        if status_clean not in LEARNING_REVIEW_STATUS_VALUES:
+            raise ValueError("无效学习候选审计状态。")
+        note_clean = str(reviewer_note or "").strip()
+        if len(note_clean) > 1200:
+            raise ValueError("审计备注最多 1200 个字符。")
+        snapshot_obj = candidate_snapshot if isinstance(candidate_snapshot, dict) else {}
+        snapshot_json = json.dumps(snapshot_obj, ensure_ascii=False, sort_keys=True, default=str)
+        if len(snapshot_json) > 16000:
+            snapshot_json = json.dumps(
+                {
+                    "truncated": True,
+                    "candidate_id": candidate_clean,
+                    "parameter_family": family_clean,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO practitioner_learning_reviews (
+                    candidate_id,
+                    parameter_family,
+                    reviewer_user_id,
+                    reviewer_role,
+                    status,
+                    reviewer_note,
+                    safety_gate,
+                    candidate_snapshot_json,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    candidate_clean,
+                    family_clean,
+                    int(reviewer_user_id),
+                    role_clean,
+                    status_clean,
+                    note_clean,
+                    str(safety_gate or "manual_review_required").strip()[:80],
+                    snapshot_json,
+                    now,
+                    now,
+                ),
+            )
+            review_id = int(cursor.lastrowid)
+            row = conn.execute(
+                """
+                SELECT lr.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+                FROM practitioner_learning_reviews lr
+                JOIN auth_users u ON u.id = lr.reviewer_user_id
+                WHERE lr.id = ?
+                """,
+                (review_id,),
+            ).fetchone()
+            conn.commit()
+        review = self._clean_learning_review_row(row)
+        if not review:
+            raise ValueError("学习候选审计记录失败。")
+        return review
+
+    def list_practitioner_learning_reviews(
+        self,
+        *,
+        candidate_id: str = "",
+        status: str = "",
+        limit: int = 80,
+    ) -> List[Dict[str, Any]]:
+        where: List[str] = []
+        params: List[Any] = []
+        candidate_clean = str(candidate_id or "").strip()
+        status_clean = str(status or "").strip().lower()
+        if candidate_clean:
+            where.append("lr.candidate_id = ?")
+            params.append(candidate_clean)
+        if status_clean:
+            where.append("lr.status = ?")
+            params.append(status_clean)
+        sql = """
+            SELECT lr.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+            FROM practitioner_learning_reviews lr
+            JOIN auth_users u ON u.id = lr.reviewer_user_id
+        """
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY lr.created_at DESC, lr.id DESC LIMIT ?"
+        params.append(max(1, min(300, int(limit or 80))))
+        with self._connect() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        return [item for row in rows if (item := self._clean_learning_review_row(row))]
 
 
 auth_storage = V17AuthDB()

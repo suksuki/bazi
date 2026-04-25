@@ -177,6 +177,47 @@ def _contribution_map_from_users() -> Dict[int, Dict[str, Any]]:
     return out
 
 
+def _learning_review_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": int(row.get("id") or 0),
+        "candidate_id": str(row.get("candidate_id") or "").strip(),
+        "parameter_family": str(row.get("parameter_family") or "").strip(),
+        "reviewer_user_id": int(row.get("reviewer_user_id") or 0),
+        "reviewer_role": str(row.get("reviewer_role") or "").strip(),
+        "reviewer_username": str(row.get("reviewer_username") or "").strip(),
+        "reviewer_display_name": str(row.get("reviewer_display_name") or "").strip(),
+        "status": str(row.get("status") or "").strip(),
+        "reviewer_note": str(row.get("reviewer_note") or "").strip(),
+        "safety_gate": str(row.get("safety_gate") or "").strip(),
+        "candidate_snapshot": row.get("candidate_snapshot") if isinstance(row.get("candidate_snapshot"), dict) else {},
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+    }
+
+
+def _attach_latest_learning_reviews(report: Dict[str, Any]) -> Dict[str, Any]:
+    reviews = auth_storage.list_practitioner_learning_reviews(limit=240)
+    latest_by_candidate: Dict[str, Dict[str, Any]] = {}
+    counts_by_candidate: Dict[str, int] = {}
+    for row in reviews:
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if not candidate_id:
+            continue
+        counts_by_candidate[candidate_id] = counts_by_candidate.get(candidate_id, 0) + 1
+        latest_by_candidate.setdefault(candidate_id, _learning_review_payload(row))
+    candidates = report.get("candidates")
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            candidate_id = str(candidate.get("candidate_id") or "").strip()
+            latest = latest_by_candidate.get(candidate_id)
+            candidate["review_count"] = counts_by_candidate.get(candidate_id, 0)
+            candidate["latest_review"] = latest
+            candidate["review_status"] = str((latest or {}).get("status") or "unreviewed")
+    return report
+
+
 @router.post("/v17/auth/register")
 @router.post("/api/v17/auth/register")
 async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
@@ -425,8 +466,56 @@ async def list_practitioner_learning_candidates(request: Request) -> Dict[str, A
         contribution_by_user_id=_contribution_map_from_users(),
         scope=effective_scope,
     )
+    report = _attach_latest_learning_reviews(report)
     report["viewer_role"] = viewer_role
     return report
+
+
+@router.get("/v17/auth/practitioner-learning-reviews")
+@router.get("/api/v17/auth/practitioner-learning-reviews")
+async def list_practitioner_learning_reviews(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    rows = auth_storage.list_practitioner_learning_reviews(
+        candidate_id=str(query.get("candidate_id") or "").strip(),
+        status=str(query.get("status") or "").strip(),
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "reviews": [_learning_review_payload(row) for row in rows],
+        "viewer_role": str(user.get("role") or "user"),
+    }
+
+
+@router.post("/v17/auth/practitioner-learning-reviews")
+@router.post("/api/v17/auth/practitioner-learning-reviews")
+async def create_practitioner_learning_review(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    snapshot = payload.get("candidate_snapshot") if isinstance(payload.get("candidate_snapshot"), dict) else {}
+    try:
+        row = auth_storage.create_practitioner_learning_review(
+            reviewer_user_id=int(user.get("id") or 0),
+            reviewer_role=str(user.get("role") or "user"),
+            candidate_id=str(payload.get("candidate_id") or snapshot.get("candidate_id") or "").strip(),
+            parameter_family=str(payload.get("parameter_family") or snapshot.get("parameter_family") or "").strip(),
+            status=str(payload.get("status") or "").strip(),
+            reviewer_note=str(payload.get("reviewer_note") or "").strip(),
+            safety_gate=str(payload.get("safety_gate") or snapshot.get("safety_gate") or "manual_review_required").strip(),
+            candidate_snapshot=snapshot,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "review": _learning_review_payload(row),
+        "applied": False,
+        "guardrail": "review_only_no_runtime_parameter_change",
+    }
 
 
 @router.post("/v17/auth/practitioner-cases")

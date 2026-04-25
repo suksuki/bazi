@@ -697,3 +697,47 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert admin_all.status_code == 200
         assert admin_all.json()["scope"] == "all"
         assert admin_all.json()["summary"]["candidate_count"] == 1
+
+        practitioner_review = client.post(
+            "/v17/auth/practitioner-learning-reviews",
+            cookies={"v17_session": user_token},
+            json={
+                "candidate_id": candidate["candidate_id"],
+                "parameter_family": candidate["parameter_family"],
+                "status": "approved_for_experiment",
+            },
+        )
+        assert practitioner_review.status_code == 403
+
+        review_resp = client.post(
+            "/v17/auth/practitioner-learning-reviews",
+            cookies={"v17_session": admin_token},
+            json={
+                "candidate_id": candidate["candidate_id"],
+                "parameter_family": candidate["parameter_family"],
+                "status": "approved_for_experiment",
+                "reviewer_note": "允许进入 synthetic shadow run，不允许直接改线上参数。",
+                "candidate_snapshot": candidate,
+            },
+        )
+        assert review_resp.status_code == 200
+        review_body = review_resp.json()
+        assert review_body["applied"] is False
+        assert review_body["guardrail"] == "review_only_no_runtime_parameter_change"
+        assert review_body["review"]["status"] == "approved_for_experiment"
+
+        reviews = client.get(
+            f"/v17/auth/practitioner-learning-reviews?candidate_id={candidate['candidate_id']}",
+            cookies={"v17_session": admin_token},
+        )
+        assert reviews.status_code == 200
+        assert len(reviews.json()["reviews"]) == 1
+
+        reviewed_report = client.get(
+            "/v17/auth/practitioner-learning-candidates?scope=all",
+            cookies={"v17_session": admin_token},
+        )
+        reviewed_candidate = reviewed_report.json()["candidates"][0]
+        assert reviewed_candidate["review_status"] == "approved_for_experiment"
+        assert reviewed_candidate["review_count"] == 1
+        assert reviewed_candidate["latest_review"]["reviewer_note"].startswith("允许进入 synthetic")
