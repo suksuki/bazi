@@ -67,6 +67,7 @@
 - 实验队列：已准入候选会生成 dry-run experiment queue，列出候选 patch 范围、必跑回归命令和回滚安全门。
 - 学习评分：shadow run 结果进入 scorecard，记录 synthetic/practitioner benchmark、改善/退化和 promote/rework/reject 结论。
 - 发布控制：admin 发布记录必须包含测试报告和回滚方案，当前只留痕，不自动写配置。
+- 治理归档：Admin 可导出学习治理审计包，包含候选、审计、实验、scorecard 和发布记录。
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
 - 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库 -> 学习候选”的 P1-P4 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选，系统会把反馈和案例归因为只读的 `manual_review_required` 学习候选。

@@ -251,6 +251,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - `/v17/auth/practitioner-learning-experiments` 会把已准入候选转换为 dry-run 实验队列，输出候选 patch 范围、必跑命令和安全门。
 - `/v17/auth/practitioner-learning-scorecards` 记录 shadow run 的 synthetic / practitioner benchmark 结果、改善/退化数量和 promote/rework/reject 结论。
 - `/v17/auth/practitioner-learning-releases` 记录 admin 发布审批、测试报告和回滚方案；批准发布前必须存在无退化的 `promote` scorecard，响应固定 `applied=false`，不自动写配置。
+- `/v17/auth/practitioner-learning-governance-export` 可导出候选、审计、实验、scorecard 与发布记录，作为长期归档和版本对照的审计包。
 
 ### P6：产品化分层
 
@@ -309,7 +310,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 1. 扩充真实命理师案例库，把更多 `benchmark_candidate` 转成长期 `PractitionerBenchmarkCase`。
 2. 对 scorecard 接入真实 shadow run 报告导入，而不是只由管理员手工记录摘要。
 3. 继续做移动端验收与普通用户表达减噪，让 P6 的消费侧体验更顺。
-4. 给发布记录增加导出/归档能力，方便长期审计和版本对照。
+4. 持续把审计包与真实版本号、配置 diff 和部署记录对齐，形成长期发布档案。
 
 ## 7. 产品判断
 

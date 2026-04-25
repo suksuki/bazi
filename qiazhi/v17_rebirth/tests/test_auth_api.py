@@ -859,3 +859,17 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         )
         assert releases.status_code == 200
         assert len(releases.json()["releases"]) == 1
+
+        export_resp = client.get(
+            "/v17/auth/practitioner-learning-governance-export",
+            cookies={"v17_session": admin_token},
+        )
+        assert export_resp.status_code == 200
+        export_body = export_resp.json()
+        assert export_body["protocol"] == "v17.practitioner.learning_governance_export.v1"
+        assert export_body["summary"]["candidate_count"] == 1
+        assert export_body["summary"]["review_count"] >= 1
+        assert export_body["summary"]["experiment_count"] == 1
+        assert export_body["summary"]["scorecard_count"] == 1
+        assert export_body["summary"]["release_count"] == 1
+        assert export_body["releases"][0]["experiment_id"] == experiment["experiment_id"]

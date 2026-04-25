@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, HTTPException, Request
@@ -261,6 +262,56 @@ def _attach_latest_learning_reviews(report: Dict[str, Any]) -> Dict[str, Any]:
             candidate["latest_review"] = latest
             candidate["review_status"] = str((latest or {}).get("status") or "unreviewed")
     return report
+
+
+def _build_learning_governance_export() -> Dict[str, Any]:
+    feedback_rows = auth_storage.list_practitioner_feedback(
+        user_id=0,
+        reviewer_role="admin",
+        scope="all",
+        limit=180,
+    )
+    case_rows = auth_storage.list_practitioner_cases(
+        user_id=0,
+        owner_role="admin",
+        scope="all",
+        limit=180,
+    )
+    candidate_report = build_practitioner_learning_candidates(
+        feedback_rows=feedback_rows,
+        case_rows=case_rows,
+        contribution_by_user_id=_contribution_map_from_users(),
+        scope="all",
+    )
+    candidate_report = _attach_latest_learning_reviews(candidate_report)
+    reviews = auth_storage.list_practitioner_learning_reviews(limit=240)
+    experiment_report = build_practitioner_experiment_queue(
+        auth_storage.list_practitioner_learning_reviews(status="approved_for_experiment", limit=120)
+    )
+    scorecards = auth_storage.list_practitioner_learning_scorecards(limit=240)
+    releases = auth_storage.list_practitioner_learning_releases(limit=240)
+    return {
+        "ok": True,
+        "protocol": "v17.practitioner.learning_governance_export.v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "candidate_count": int((candidate_report.get("summary") or {}).get("candidate_count") or 0),
+            "review_count": len(reviews),
+            "experiment_count": int(experiment_report.get("experiment_count") or 0),
+            "scorecard_count": len(scorecards),
+            "release_count": len(releases),
+        },
+        "candidate_report": candidate_report,
+        "reviews": [_learning_review_payload(row) for row in reviews],
+        "experiment_report": experiment_report,
+        "scorecards": [_learning_scorecard_payload(row) for row in scorecards],
+        "releases": [_learning_release_payload(row) for row in releases],
+        "guardrails": [
+            "export is audit-only",
+            "release records do not apply runtime parameter changes",
+            "approved releases require promote scorecard and rollback plan",
+        ],
+    }
 
 
 @router.post("/v17/auth/register")
@@ -574,6 +625,15 @@ async def list_practitioner_learning_experiments(request: Request) -> Dict[str, 
     report = build_practitioner_experiment_queue(rows)
     report["viewer_role"] = str(user.get("role") or "user")
     return report
+
+
+@router.get("/v17/auth/practitioner-learning-governance-export")
+@router.get("/api/v17/auth/practitioner-learning-governance-export")
+async def export_practitioner_learning_governance(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    payload = _build_learning_governance_export()
+    payload["viewer_role"] = str(user.get("role") or "user")
+    return payload
 
 
 @router.get("/v17/auth/practitioner-learning-releases")

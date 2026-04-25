@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Eye, RefreshCcw, Rocket, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Eye, RefreshCcw, Rocket, XCircle } from "lucide-react";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 
 type Row = Record<string, unknown>;
@@ -188,6 +188,29 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
     }
   }
 
+  async function exportGovernance() {
+    setBusyKey("export");
+    setMessage("");
+    try {
+      const { data, ok } = await requestJson<Row>("/api/auth/practitioner-learning-governance-export", noStoreInit());
+      if (!ok) throw new Error(String(data.detail || "治理审计包导出失败"));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `v17-learning-governance-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setMessage("治理审计包已生成。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "治理审计包导出失败");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
   const topCandidates = candidates.slice(0, 8);
   const candidateCount = Number(summary.candidate_count || candidates.length || 0);
   const reviewCount = candidates.reduce((count, row) => count + (asText(row.review_status, "unreviewed") !== "unreviewed" ? 1 : 0), 0);
@@ -211,6 +234,15 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
           >
             <RefreshCcw className="h-4 w-4" />
             {loading ? "刷新中" : "刷新治理链路"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportGovernance()}
+            disabled={Boolean(busyKey)}
+            className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/40 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {busyKey === "export" ? "生成中" : "导出审计包"}
           </button>
         </div>
 
