@@ -126,21 +126,15 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
       <div className="mx-auto grid min-h-[calc(100dvh-40px)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
         <section className="relative hidden min-w-0 lg:block">
           <div className="max-w-xl rounded-2xl border border-white/10 bg-white/[0.035] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl">
-            <div className="flex items-center gap-4">
-              <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-white/95 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-                <Image
-                  src="/branding/qiazhi-logo.png"
-                  alt={t(language, "brand.title")}
-                  width={96}
-                  height={96}
-                  priority
-                  className="h-16 w-16 object-cover"
-                />
-              </div>
-              <div>
-                <div className={`text-lg font-semibold ${brandGoldClass}`}>{t(language, "brand.title")}</div>
-                <div className="mt-1 text-sm text-zinc-500">{t(language, "brand.subtitle")}</div>
-              </div>
+            <div className="overflow-hidden rounded-2xl border border-amber-300/20 bg-[#03070D] shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+              <Image
+                src="/branding/qiazhi-logo-wide.png"
+                alt={t(language, "brand.title")}
+                width={1056}
+                height={360}
+                priority
+                className="h-auto w-full object-contain"
+              />
             </div>
             <h1 className="mt-8 text-5xl font-semibold leading-tight text-zinc-50">
               {t(language, "auth.entry.hero")}
@@ -172,7 +166,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
         <section className="relative min-w-0 justify-self-center rounded-2xl border border-white/10 bg-[#0B0F16]/80 p-5 shadow-[0_28px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl sm:w-full sm:max-w-md sm:p-6">
           <div className="mb-5 flex justify-end lg:hidden">{languageSelector}</div>
           <div className="flex flex-col items-center gap-3 text-center lg:hidden">
-              <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-white/95 shadow-[0_16px_42px_rgba(0,0,0,0.28)]">
+              <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-[#03070D] shadow-[0_16px_42px_rgba(0,0,0,0.28)]">
                 <Image
                   src="/branding/qiazhi-logo.png"
                   alt={t(language, "brand.title")}
