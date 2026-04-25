@@ -630,6 +630,19 @@ def test_practitioner_case_library_records_real_case_and_benchmark_seed(isolated
         assert accepted_list.status_code == 200
         assert len(accepted_list.json()["cases"]) == 1
 
+        export_resp = client.get(
+            "/v17/auth/practitioner-benchmark-export",
+            cookies=cookies,
+        )
+        assert export_resp.status_code == 200
+        export_body = export_resp.json()
+        assert export_body["protocol"] == "v17.practitioner.benchmark_export.v1"
+        assert export_body["summary"]["accepted_case_count"] == 1
+        assert export_body["benchmark_cases"][0]["case_id"] == "real.audit.yangren_false_positive_19770508"
+        assert "PractitionerBenchmarkCase" in export_body["python_case_snippets"][0]
+        assert "PRACTITIONER_ACCEPTED_REAL_AUDIT_YANGREN_FALSE_POSITIVE_19770508" in export_body["python_registry_snippet"]
+        assert export_body["guardrails"][0] == "export is read-only"
+
         duplicate = client.post(
             "/v17/auth/practitioner-cases",
             cookies=cookies,

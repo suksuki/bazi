@@ -133,6 +133,40 @@ def _case_benchmark_seed(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _python_tuple_literal(values: Any) -> str:
+    rows = [str(item).strip() for item in (values or []) if str(item or "").strip()]
+    if not rows:
+        return "()"
+    if len(rows) == 1:
+        return f"({rows[0]!r},)"
+    return "(" + ", ".join(repr(item) for item in rows) + ")"
+
+
+def _python_case_name(case_id: str) -> str:
+    normalized = "".join(ch.upper() if ch.isascii() and ch.isalnum() else "_" for ch in str(case_id or ""))
+    normalized = "_".join(part for part in normalized.split("_") if part)
+    return f"PRACTITIONER_ACCEPTED_{normalized or 'CASE'}"
+
+
+def _case_benchmark_python_snippet(seed: Dict[str, Any]) -> str:
+    case_id = str(seed.get("case_id") or "").strip()
+    name = _python_case_name(case_id)
+    lines = [
+        f"{name} = PractitionerBenchmarkCase(",
+        f"    case_id={case_id!r},",
+        f"    description={str(seed.get('description') or '').strip()!r},",
+        f"    four_pillars={dict(seed.get('four_pillars') if isinstance(seed.get('four_pillars'), dict) else {})!r},",
+        f"    luck_pillar={str(seed.get('luck_pillar') or '—').strip()!r},",
+        f"    flow_pillar={str(seed.get('flow_pillar') or '—').strip()!r},",
+        f"    gender={str(seed.get('gender') or 'male').strip()!r},",
+        f"    audit_focus={_python_tuple_literal(seed.get('audit_focus'))},",
+        f"    expected_top_contains={_python_tuple_literal(seed.get('expected_top_contains'))},",
+        f"    reviewer_note={str(seed.get('reviewer_note') or '').strip()!r},",
+        ")",
+    ]
+    return "\n".join(lines)
+
+
 def _case_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     payload = {
         "id": int(row.get("id") or 0),
@@ -172,6 +206,42 @@ def _case_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
     payload["benchmark_seed"] = _case_benchmark_seed(payload)
     return payload
+
+
+def _build_practitioner_benchmark_export() -> Dict[str, Any]:
+    rows = auth_storage.list_practitioner_cases(
+        user_id=0,
+        owner_role="admin",
+        scope="all",
+        status="accepted",
+        limit=300,
+    )
+    cases = [_case_payload(row) for row in rows]
+    seeds = [case["benchmark_seed"] for case in cases]
+    snippets = [_case_benchmark_python_snippet(seed) for seed in seeds]
+    case_ids = [str(seed.get("case_id") or "").strip() for seed in seeds if str(seed.get("case_id") or "").strip()]
+    return {
+        "ok": True,
+        "protocol": "v17.practitioner.benchmark_export.v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "accepted_case_count": len(cases),
+            "benchmark_seed_count": len(seeds),
+            "case_ids": case_ids,
+        },
+        "benchmark_cases": seeds,
+        "source_cases": cases,
+        "python_import": "from v17_rebirth.testing.practitioner_benchmarks import PractitionerBenchmarkCase",
+        "python_case_snippets": snippets,
+        "python_registry_snippet": "PRACTITIONER_BENCHMARK_CASES += (\n"
+        + "".join(f"    {_python_case_name(case_id)},\n" for case_id in case_ids)
+        + ")",
+        "guardrails": [
+            "export is read-only",
+            "accepted cases are not written into static benchmark files automatically",
+            "human review is required before adding snippets to practitioner_benchmarks.py",
+        ],
+    }
 
 
 def _contribution_map_from_users() -> Dict[int, Dict[str, Any]]:
@@ -572,6 +642,15 @@ async def update_practitioner_case_status(case_id: int, request: Request, payloa
         "applied_to_static_benchmark": False,
         "guardrail": "case_status_only_no_test_file_change",
     }
+
+
+@router.get("/v17/auth/practitioner-benchmark-export")
+@router.get("/api/v17/auth/practitioner-benchmark-export")
+async def export_practitioner_benchmark_cases(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    payload = _build_practitioner_benchmark_export()
+    payload["viewer_role"] = str(user.get("role") or "user")
+    return payload
 
 
 @router.get("/v17/auth/practitioner-learning-candidates")

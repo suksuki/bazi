@@ -215,6 +215,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 - 命盘核心页的证据卡片已接入案例收录入口：`practitioner` 以上账号可直接沉淀为命理师基准候选，并自动绑定命盘、运流、证据、反馈和 `chart_fingerprint`。
 - “命理师账本”同步展示真实案例与基准候选，作为后续参数候选、回归审计和学习治理的入口。
 - manager/admin 可将案例状态推进为 `accepted / rejected`，作为转入长期 Practitioner Benchmark 前的运营标记；该动作只更新运行时案例状态，不自动改测试文件。
+- `/v17/auth/practitioner-benchmark-export` 可把 `accepted` 案例导出为 `v17.practitioner.benchmark_export.v1`，包含 benchmark seed、来源案例和 `PractitionerBenchmarkCase` 片段，用于人工转入长期回归集。
 
 ### P4：Synthetic Lab 与参数候选
 
@@ -321,7 +322,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 
 当前主线已完成，后续建议转入运营化打磨：
 
-1. 扩充真实命理师案例库，把更多 `benchmark_candidate` 转成长期 `PractitionerBenchmarkCase`。
+1. 扩充真实命理师案例库，把更多 `benchmark_candidate` 接纳并导出为长期 `PractitionerBenchmarkCase`。
 2. 对 scorecard 接入真实 shadow run 报告导入，而不是只由管理员手工记录摘要。
 3. 继续做移动端验收与普通用户表达减噪，让 P6 的消费侧体验更顺。
 4. 持续把审计包与真实版本号、配置 diff 和部署记录对齐，形成长期发布档案。

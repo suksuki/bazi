@@ -88,6 +88,7 @@ Date: 2026-04-25
 - 案例沉淀自动带上 `learning_value` 与 `learning_tags`。
 - 学习候选聚合展示 `learning_values / feedback_intents / learning_tags / boundary_tags`。
 - 命理师账本可按全部、反例、边界、复核缺口筛选学习候选，并在候选、反馈和案例卡片上展示学习素材标签。
+- manager/admin 可导出 `accepted` 案例为 `v17.practitioner.benchmark_export.v1`，包含 benchmark seed、来源案例和 `PractitionerBenchmarkCase` Python 片段；导出只读，不自动写静态测试文件。
 
 ## 5. Guardrails
 
@@ -103,5 +104,5 @@ Date: 2026-04-25
 ## 6. Next Steps
 
 1. 在证据链 UI 增加筛选：强证据、候选、反例、边界、需复核。
-2. 把 accepted benchmark candidate 转入长期 practitioner benchmark 的人工导出流程。
-3. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。
+2. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。
+3. 将 benchmark export 接入真实 shadow-run 报告，让 scorecard 可引用具体 accepted 案例结果。

@@ -191,6 +191,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - 证据链反馈 payload 应带 `v17.evidence.learning_material.v1` 学习素材契约；学习候选应保留 `learning_values / feedback_intents / learning_tags / boundary_tags`，但这些字段只能影响候选归因和审计排序，不能自动改参数。
 - 用户权限面板应展示命理师贡献画像：反馈数、案例数、基准候选数、贡献分和等级；没有贡献时不能伪造高可信标签。
 - manager/admin 可把真实案例从 `benchmark_candidate` 标记为 `accepted / rejected`；该动作只更新运行时状态和备注，不得自动改静态 benchmark 测试文件。
+- manager/admin 可导出 `accepted` 案例为 `v17.practitioner.benchmark_export.v1`；导出包可包含 `PractitionerBenchmarkCase` 片段，但不得自动写入 `testing/practitioner_benchmarks.py`。
 - 命理师学习候选应读取贡献画像调整人工复核优先级，并在候选中保留 `contributor_tiers / contributor_reputation_score`；该分数只能影响审计排序，不能自动改参数。
 - manager/admin 可对学习候选写入审计意见；`approved_for_experiment` 只能表示准入 shadow run，API 响应必须保留 `applied=false`。
 - 已准入实验的学习候选应出现在 dry-run 实验队列中，携带 `candidate_patch.patch_mode=review_only` 和回滚安全门。

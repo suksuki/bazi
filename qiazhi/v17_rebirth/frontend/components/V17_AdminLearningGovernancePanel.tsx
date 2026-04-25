@@ -240,6 +240,30 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
     }
   }
 
+  async function exportAcceptedBenchmarks() {
+    setBusyKey("benchmark-export");
+    setMessage("");
+    try {
+      const { data, ok } = await requestJson<Row>("/api/auth/practitioner-benchmark-export", noStoreInit());
+      if (!ok) throw new Error(String(data.detail || "基准样本导出失败"));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `v17-practitioner-benchmark-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      const acceptedCount = Number(asRecord(data.summary).accepted_case_count || 0);
+      setMessage(`长期基准样本导出已生成：${acceptedCount} 条 accepted 案例。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "基准样本导出失败");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
   const topCandidates = candidates.slice(0, 8);
   const topCases = cases.slice(0, 5);
   const candidateCount = Number(summary.candidate_count || candidates.length || 0);
@@ -273,6 +297,15 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
           >
             <Download className="h-4 w-4" />
             {busyKey === "export" ? "生成中" : "导出审计包"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportAcceptedBenchmarks()}
+            disabled={Boolean(busyKey)}
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:border-amber-200/40 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {busyKey === "benchmark-export" ? "生成中" : "导出基准样本"}
           </button>
         </div>
 
