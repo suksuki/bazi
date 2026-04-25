@@ -39,7 +39,7 @@ import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
 type OracleSurfaceTab = OracleSurface;
 type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
-type AuxiliarySectionKey = "ledger" | "structure" | "runtime" | "authority" | "patterns" | "collaboration";
+type AuxiliarySectionKey = "evidence" | "ledger" | "structure" | "runtime" | "authority" | "patterns" | "collaboration";
 type LocalizeText = (zh: string, en: string, ko: string) => string;
 type TranslateText = (value: string) => string;
 type TranslateList = (values: string[]) => string[];
@@ -572,6 +572,7 @@ function V17MobileAnalysisDeck({
 }: {
   ui: LocalizeText;
   counts: {
+    evidence: number;
     ledger: number;
     structure: number;
     runtime: number;
@@ -589,6 +590,13 @@ function V17MobileAnalysisDeck({
     badge: string;
     tone: string;
   }> = [
+    {
+      key: "evidence",
+      title: ui("证据链", "Evidence Chain", "근거 체인"),
+      desc: ui("查看插件、条件、置信度与反馈入口。", "Inspect plugins, conditions, confidence, and feedback.", "플러그인, 조건, 신뢰도와 피드백 입구를 봅니다."),
+      badge: `${counts.evidence}`,
+      tone: "border-cyan-300/25 bg-cyan-400/10 text-cyan-100",
+    },
     {
       key: "ledger",
       title: ui("命理师账本", "Practitioner Ledger", "명리사 장부"),
@@ -636,8 +644,8 @@ function V17MobileAnalysisDeck({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3 sm:hidden">
-      <div className="flex items-end justify-between gap-3">
+    <section className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">
             {ui("深度分析", "Deep Analysis", "심층 분석")}
@@ -650,7 +658,7 @@ function V17MobileAnalysisDeck({
           {cards.length}
         </span>
       </div>
-      <div className="mt-3 grid gap-2">
+      <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((card) => (
           <button
             key={card.key}
@@ -1552,6 +1560,67 @@ function V17EvidencePanel({
   );
 }
 
+function V17EvidenceEntryCard({
+  ui,
+  items,
+  summary,
+  onOpen,
+}: {
+  ui: LocalizeText;
+  items: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+  onOpen: () => void;
+}) {
+  const total = asNumberValue(summary.total, items.length);
+  const candidateCount = asNumberValue(summary.candidate_count);
+  const riskCount = asNumberValue(summary.risk_count);
+  const observeOnlyCount = asNumberValue(summary.observe_only_count);
+
+  return (
+    <section className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2">
+          <span className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-2 text-cyan-100">
+            <FileSearch className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-cyan-50">{ui("专业证据已移至运势分析", "Professional evidence moved to Analysis", "전문 근거는 분석으로 이동했습니다.")}</p>
+            <p className="mt-1 text-[12px] leading-5 text-zinc-400">
+              {ui(
+                "基础排盘只保留摘要入口，完整插件依据、反馈和案例沉淀在运势分析中查看。",
+                "The chart keeps only a summary entry. Full plugin evidence, feedback, and case capture live in Analysis.",
+                "기본 명반에는 요약 입구만 남기고, 전체 플러그인 근거와 피드백, 사례 저장은 분석에서 봅니다.",
+              )}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-[12px] font-semibold text-cyan-50 transition hover:border-cyan-300/55 hover:bg-cyan-500/15 sm:w-auto"
+        >
+          <FileSearch className="h-3.5 w-3.5" />
+          {ui("查看证据链", "Open evidence", "근거 보기")}
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+        {[
+          [ui("总数", "Total", "합계"), total],
+          [ui("格局", "Pattern", "격국"), candidateCount],
+          [ui("风险", "Risk", "위험"), riskCount],
+          [ui("观察", "Watch", "관찰"), observeOnlyCount],
+        ].map(([label, value]) => (
+          <span key={String(label)} className="rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-[10px] text-zinc-400">
+            <b className="mr-1 text-zinc-100">{String(value)}</b>
+            {String(label)}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function caseStatusLabel(status: string, ui: LocalizeText): string {
   if (status === "benchmark_candidate") return ui("基准候选", "Benchmark", "기준 후보");
   if (status === "accepted") return ui("已采纳", "Accepted", "채택");
@@ -1969,6 +2038,7 @@ export default function OraclePage() {
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
   const [lastContentSurfaceTab, setLastContentSurfaceTab] = useState<ContentSurfaceTab>("core");
   const [auxiliarySections, setAuxiliarySections] = useState<Record<AuxiliarySectionKey, boolean>>({
+    evidence: false,
     ledger: false,
     structure: false,
     runtime: false,
@@ -2284,6 +2354,7 @@ export default function OraclePage() {
     }));
   };
   const openAuxiliarySection = (section: AuxiliarySectionKey) => {
+    switchContentSurface("auxiliary");
     setAuxiliarySections((current) => ({
       ...current,
       [section]: true,
@@ -2588,22 +2659,11 @@ export default function OraclePage() {
                     lang={language}
                   />
                   {canReadEvidence ? (
-                    <V17EvidencePanel
+                    <V17EvidenceEntryCard
                       ui={ui}
-                      term={term}
                       items={evidenceItems}
                       summary={evidenceSummary}
-                      sessionId={s.sessionId}
-                      chartFingerprint={String(payload.physics_fingerprint || "")}
-                      reviewerRole={user?.role || "user"}
-                      birthTimeISO={s.birthTimeISO}
-                      gender={s.natalGender || "male"}
-                      calendarType={s.natalCalendar || "solar"}
-                      lunarIsLeapMonth={s.lunarIsLeapMonth}
-                      fourPillars={fourPillars}
-                      luckPillar={luckPillarSnap}
-                      flowPillar={flowPillarSnap}
-                      selectedYear={s.selectedLuckYear}
+                      onOpen={() => openAuxiliarySection("evidence")}
                     />
                   ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
@@ -2753,6 +2813,7 @@ export default function OraclePage() {
                   <V17MobileAnalysisDeck
                     ui={ui}
                     counts={{
+                      evidence: evidenceItems.length,
                       ledger: evidenceItems.length,
                       structure: structureSignalCount,
                       runtime: runtimeLedgerSignalCount,
@@ -2763,6 +2824,32 @@ export default function OraclePage() {
                     canManageUsers={canManageUsers && user?.role === "manager"}
                     onOpen={openAuxiliarySection}
                   />
+                  <AuxiliarySection
+                    id="aux-evidence"
+                    title={ui("证据链", "Evidence Chain", "근거 체인")}
+                    subtitle={ui("插件依据、条件、置信度与命理师反馈", "Plugin evidence, conditions, confidence, and practitioner feedback", "플러그인 근거, 조건, 신뢰도와 명리사 피드백")}
+                    badge={`${evidenceItems.length} ${ui("条", "items", "개")}`}
+                    open={auxiliarySections.evidence}
+                    onToggle={() => toggleAuxiliarySection("evidence")}
+                  >
+                    <V17EvidencePanel
+                      ui={ui}
+                      term={term}
+                      items={evidenceItems}
+                      summary={evidenceSummary}
+                      sessionId={s.sessionId}
+                      chartFingerprint={String(payload.physics_fingerprint || "")}
+                      reviewerRole={user?.role || "user"}
+                      birthTimeISO={s.birthTimeISO}
+                      gender={s.natalGender || "male"}
+                      calendarType={s.natalCalendar || "solar"}
+                      lunarIsLeapMonth={s.lunarIsLeapMonth}
+                      fourPillars={fourPillars}
+                      luckPillar={luckPillarSnap}
+                      flowPillar={flowPillarSnap}
+                      selectedYear={s.selectedLuckYear}
+                    />
+                  </AuxiliarySection>
                   <AuxiliarySection
                     id="aux-ledger"
                     title={ui("命理师账本", "Practitioner Ledger", "명리사 장부")}
