@@ -63,6 +63,7 @@
 - 授权控制：`admin / manager / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API。
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
+- 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库”的 P1-P3 闭环。
 - 0.13 部署：使用 `scripts/update_v17_from_git.sh` 拉取、构建、重启并做健康检查。
 
 ### 可调环境变量（可选）

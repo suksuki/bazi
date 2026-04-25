@@ -309,3 +309,124 @@ def test_practitioner_feedback_scope_all_requires_manager(isolated_auth_db) -> N
             json={"evidence_id": "e-invalid", "status": "maybe"},
         )
         assert invalid.status_code == 400
+
+
+def test_practitioner_case_library_records_real_case_and_benchmark_seed(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        token = login.json()["session_token"]
+        cookies = {"v17_session": token}
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies=cookies,
+            json={
+                "case_key": "real.audit.yangren_false_positive_19770508",
+                "case_title": "羊刃误判审计样盘",
+                "description": "用于验证无劫财/羊刃时不得输出羊刃格。",
+                "birth_time_iso": "1977-05-08T17:30:00",
+                "gender": "male",
+                "calendar_type": "solar",
+                "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+                "luck_pillar": "庚子",
+                "flow_pillar": "戊申",
+                "flow_year": 2028,
+                "tags": ["羊刃误判", "格局审计"],
+                "expected_patterns": ["不成立:阳刃驾杀"],
+                "expected_use_gods": ["伤官", "七杀"],
+                "expected_risks": ["羊刃误报"],
+                "boundary_flags": ["无羊刃支", "无劫财根"],
+                "failure_modes": ["false_yangren"],
+                "expected_notes": "命理师确认：此盘没有羊刃，若系统输出阳刃驾杀应进入错判库。",
+                "source_feedback_ids": ["classical.pattern.yangren_jiasha.v1_evidence_0"],
+                "chart_fingerprint": "fp-yangren-false-positive",
+                "status": "benchmark_candidate",
+                "payload": {"source": "manual_audit"},
+            },
+        )
+
+        assert create_resp.status_code == 200
+        body = create_resp.json()
+        assert body["trust_tier"] == "practitioner"
+        case = body["case"]
+        assert case["status"] == "benchmark_candidate"
+        assert case["owner_weight"] > 2.0
+        assert case["four_pillars"]["day"] == "乙丑"
+        assert case["boundary_flags"] == ["无羊刃支", "无劫财根"]
+        assert case["source_feedback_ids"] == ["classical.pattern.yangren_jiasha.v1_evidence_0"]
+        seed = body["benchmark_seed"]
+        assert seed["case_id"] == "real.audit.yangren_false_positive_19770508"
+        assert seed["four_pillars"]["month"] == "乙巳"
+        assert "false_yangren" in seed["audit_focus"]
+        assert seed["reviewer_note"].startswith("命理师确认")
+
+        list_resp = client.get(
+            "/v17/auth/practitioner-cases?scope=all&status=benchmark_candidate",
+            cookies=cookies,
+        )
+        assert list_resp.status_code == 200
+        rows = list_resp.json()["cases"]
+        assert len(rows) == 1
+        assert rows[0]["benchmark_seed"]["case_id"] == "real.audit.yangren_false_positive_19770508"
+
+        duplicate = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies=cookies,
+            json={
+                "case_key": "real.audit.yangren_false_positive_19770508",
+                "case_title": "重复案例",
+                "birth_time_iso": "1977-05-08T17:30:00",
+                "gender": "male",
+            },
+        )
+        assert duplicate.status_code == 400
+
+
+def test_practitioner_case_scope_and_user_status_guard(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        admin_login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        admin_token = admin_login.json()["session_token"]
+
+        user_resp = client.post(
+            "/v17/auth/register",
+            json={"username": "case-user", "password": "very-secure-pass"},
+        )
+        user_token = user_resp.json()["session_token"]
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies={"v17_session": user_token},
+            json={
+                "case_key": "user.case.false_follow",
+                "case_title": "假从边界样盘",
+                "birth_time_iso": "1985-02-01T08:00:00",
+                "gender": "female",
+                "calendar_type": "solar",
+                "status": "benchmark_candidate",
+                "failure_modes": ["false_follow"],
+            },
+        )
+        assert create_resp.status_code == 200
+        assert create_resp.json()["trust_tier"] == "user"
+        assert create_resp.json()["case"]["status"] == "submitted"
+
+        user_all = client.get(
+            "/v17/auth/practitioner-cases?scope=all",
+            cookies={"v17_session": user_token},
+        )
+        assert user_all.status_code == 200
+        assert len(user_all.json()["cases"]) == 1
+
+        admin_all = client.get(
+            "/v17/auth/practitioner-cases?scope=all",
+            cookies={"v17_session": admin_token},
+        )
+        assert admin_all.status_code == 200
+        assert len(admin_all.json()["cases"]) == 1
+        assert admin_all.json()["cases"][0]["owner_username"] == "case-user"

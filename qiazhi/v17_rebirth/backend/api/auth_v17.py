@@ -72,6 +72,68 @@ def _feedback_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _case_benchmark_seed(row: Dict[str, Any]) -> Dict[str, Any]:
+    audit_focus = []
+    for key in ("tags", "boundary_flags", "failure_modes"):
+        for item in row.get(key) or []:
+            text = str(item or "").strip()
+            if text and text not in audit_focus:
+                audit_focus.append(text)
+    return {
+        "case_id": str(row.get("case_key") or "").strip(),
+        "description": str(row.get("description") or row.get("case_title") or "").strip(),
+        "four_pillars": row.get("four_pillars") if isinstance(row.get("four_pillars"), dict) else {},
+        "luck_pillar": str(row.get("luck_pillar") or "").strip() or "—",
+        "flow_pillar": str(row.get("flow_pillar") or "").strip() or "—",
+        "gender": str(row.get("gender") or "male").strip() or "male",
+        "audit_focus": audit_focus,
+        "expected_top_contains": [str(item) for item in (row.get("expected_use_gods") or [])],
+        "reviewer_note": str(row.get("expected_notes") or "").strip(),
+        "source": "practitioner_case_library",
+    }
+
+
+def _case_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    payload = {
+        "id": int(row.get("id") or 0),
+        "user_id": int(row.get("user_id") or 0),
+        "owner_role": str(row.get("owner_role") or "user").strip(),
+        "owner_weight": float(row.get("owner_weight") or 1.0),
+        "owner_username": str(row.get("owner_username") or "").strip(),
+        "owner_display_name": str(row.get("owner_display_name") or "").strip(),
+        "case_key": str(row.get("case_key") or "").strip(),
+        "case_title": str(row.get("case_title") or "").strip(),
+        "description": str(row.get("description") or "").strip(),
+        "birth_time_iso": str(row.get("birth_time_iso") or "").strip(),
+        "gender": str(row.get("gender") or "").strip(),
+        "calendar_type": str(row.get("calendar_type") or "").strip(),
+        "lunar_is_leap_month": bool(row.get("lunar_is_leap_month")),
+        "city_name": str(row.get("city_name") or "").strip(),
+        "city_code": str(row.get("city_code") or "").strip(),
+        "city_group": str(row.get("city_group") or "").strip(),
+        "city_longitude": row.get("city_longitude"),
+        "four_pillars": row.get("four_pillars") if isinstance(row.get("four_pillars"), dict) else {},
+        "luck_pillar": str(row.get("luck_pillar") or "").strip(),
+        "flow_pillar": str(row.get("flow_pillar") or "").strip(),
+        "flow_year": row.get("flow_year"),
+        "tags": row.get("tags") if isinstance(row.get("tags"), list) else [],
+        "expected_patterns": row.get("expected_patterns") if isinstance(row.get("expected_patterns"), list) else [],
+        "expected_use_gods": row.get("expected_use_gods") if isinstance(row.get("expected_use_gods"), list) else [],
+        "expected_risks": row.get("expected_risks") if isinstance(row.get("expected_risks"), list) else [],
+        "boundary_flags": row.get("boundary_flags") if isinstance(row.get("boundary_flags"), list) else [],
+        "failure_modes": row.get("failure_modes") if isinstance(row.get("failure_modes"), list) else [],
+        "expected_notes": str(row.get("expected_notes") or "").strip(),
+        "source_feedback_ids": row.get("source_feedback_ids") if isinstance(row.get("source_feedback_ids"), list) else [],
+        "chart_fingerprint": str(row.get("chart_fingerprint") or "").strip(),
+        "status": str(row.get("status") or "").strip(),
+        "payload": row.get("payload") if isinstance(row.get("payload"), dict) else {},
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+    }
+    payload["benchmark_seed"] = _case_benchmark_seed(payload)
+    return payload
+
+
 @router.post("/v17/auth/register")
 @router.post("/api/v17/auth/register")
 async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
@@ -212,6 +274,77 @@ async def create_practitioner_feedback(request: Request, payload: Dict[str, Any]
         "ok": True,
         "feedback": _feedback_payload(row),
         "trust_tier": "practitioner" if str(user.get("role") or "") in {"manager", "admin"} else "user",
+    }
+
+
+@router.get("/v17/auth/practitioner-cases")
+@router.get("/api/v17/auth/practitioner-cases")
+async def list_practitioner_cases(request: Request) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    rows = auth_storage.list_practitioner_cases(
+        user_id=int(user["id"]),
+        owner_role=str(user.get("role") or "user"),
+        scope=str(query.get("scope") or "own").strip(),
+        case_key=str(query.get("case_key") or "").strip(),
+        status=str(query.get("status") or "").strip(),
+        chart_fingerprint=str(query.get("chart_fingerprint") or "").strip(),
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "cases": [_case_payload(row) for row in rows],
+        "viewer_role": str(user.get("role") or "user"),
+    }
+
+
+@router.post("/v17/auth/practitioner-cases")
+@router.post("/api/v17/auth/practitioner-cases")
+async def create_practitioner_case(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    try:
+        row = auth_storage.create_practitioner_case(
+            user_id=int(user["id"]),
+            owner_role=str(user.get("role") or "user"),
+            case_key=str(payload.get("case_key") or "").strip(),
+            case_title=str(payload.get("case_title") or payload.get("title") or "").strip(),
+            description=str(payload.get("description") or "").strip(),
+            birth_time_iso=str(payload.get("birth_time_iso") or "").strip(),
+            gender=str(payload.get("gender") or "").strip(),
+            calendar_type=str(payload.get("calendar_type") or "solar").strip(),
+            lunar_is_leap_month=bool(payload.get("lunar_is_leap_month")),
+            city_name=str(payload.get("city_name") or "").strip(),
+            city_code=str(payload.get("city_code") or "").strip(),
+            city_group=str(payload.get("city_group") or "").strip(),
+            city_longitude=payload.get("city_longitude"),
+            four_pillars=payload.get("four_pillars") if isinstance(payload.get("four_pillars"), dict) else {},
+            luck_pillar=str(payload.get("luck_pillar") or "").strip(),
+            flow_pillar=str(payload.get("flow_pillar") or "").strip(),
+            flow_year=payload.get("flow_year"),
+            tags=payload.get("tags"),
+            expected_patterns=payload.get("expected_patterns"),
+            expected_use_gods=payload.get("expected_use_gods"),
+            expected_risks=payload.get("expected_risks"),
+            boundary_flags=payload.get("boundary_flags"),
+            failure_modes=payload.get("failure_modes"),
+            expected_notes=str(payload.get("expected_notes") or "").strip(),
+            source_feedback_ids=payload.get("source_feedback_ids"),
+            chart_fingerprint=str(payload.get("chart_fingerprint") or "").strip(),
+            status=str(payload.get("status") or "submitted").strip(),
+            payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    case = _case_payload(row)
+    return {
+        "ok": True,
+        "case": case,
+        "trust_tier": "practitioner" if str(user.get("role") or "") in {"manager", "admin"} else "user",
+        "benchmark_seed": case["benchmark_seed"],
     }
 
 

@@ -16,6 +16,7 @@ ROLE_VALUES = {"admin", "manager", "user"}
 GENDER_VALUES = {"male", "female"}
 CALENDAR_VALUES = {"solar", "lunar"}
 PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
+PRACTITIONER_CASE_STATUS_VALUES = {"draft", "submitted", "accepted", "rejected", "benchmark_candidate"}
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_DISPLAY_NAME = "System Admin"
 DEFAULT_ADMIN_PASSWORD = "abcd1235"
@@ -37,6 +38,52 @@ def _parse_iso(value: Any) -> datetime | None:
         return datetime.fromisoformat(raw.replace("Z", "+00:00"))
     except Exception:
         return None
+
+
+def _json_list(value: Any, *, limit: int = 40, item_limit: int = 160) -> List[str]:
+    if isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = []
+    out: List[str] = []
+    for item in raw_items:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        out.append(text[:item_limit])
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _json_dict(value: Any, *, key_limit: int = 80, value_limit: int = 160) -> Dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key, val in value.items():
+        key_text = str(key or "").strip()[:key_limit]
+        if not key_text:
+            continue
+        out[key_text] = str(val or "").strip()[:value_limit]
+    return out
+
+
+def _load_json_list(value: Any) -> List[str]:
+    try:
+        parsed = json.loads(str(value or "[]"))
+    except Exception:
+        parsed = []
+    return _json_list(parsed)
+
+
+def _load_json_dict(value: Any) -> Dict[str, str]:
+    try:
+        parsed = json.loads(str(value or "{}"))
+    except Exception:
+        parsed = {}
+    return _json_dict(parsed)
 
 
 def _password_hash(password: str, *, iterations: int = 240_000, salt_hex: str | None = None) -> str:
@@ -151,9 +198,51 @@ class V17AuthDB:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practitioner_cases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    owner_role TEXT NOT NULL,
+                    owner_weight REAL NOT NULL,
+                    case_key TEXT NOT NULL,
+                    case_title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    birth_time_iso TEXT NOT NULL,
+                    gender TEXT NOT NULL,
+                    calendar_type TEXT NOT NULL,
+                    lunar_is_leap_month INTEGER NOT NULL DEFAULT 0,
+                    city_name TEXT NOT NULL DEFAULT '',
+                    city_code TEXT NOT NULL DEFAULT '',
+                    city_group TEXT NOT NULL DEFAULT '',
+                    city_longitude REAL,
+                    four_pillars_json TEXT NOT NULL,
+                    luck_pillar TEXT NOT NULL,
+                    flow_pillar TEXT NOT NULL,
+                    flow_year INTEGER,
+                    tags_json TEXT NOT NULL,
+                    expected_patterns_json TEXT NOT NULL,
+                    expected_use_gods_json TEXT NOT NULL,
+                    expected_risks_json TEXT NOT NULL,
+                    boundary_flags_json TEXT NOT NULL,
+                    failure_modes_json TEXT NOT NULL,
+                    expected_notes TEXT NOT NULL,
+                    source_feedback_ids_json TEXT NOT NULL,
+                    chart_fingerprint TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
+            conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_practitioner_cases_user_key ON practitioner_cases(user_id, case_key)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_status ON practitioner_cases(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_fingerprint ON practitioner_cases(chart_fingerprint)")
             self._ensure_profile_columns(conn)
             conn.commit()
 
@@ -954,6 +1043,261 @@ class V17AuthDB:
                 continue
             item["reviewer_username"] = str(dict(row).get("reviewer_username") or "").strip()
             item["reviewer_display_name"] = str(dict(row).get("reviewer_display_name") or "").strip()
+            out.append(item)
+        return out
+
+    def _clean_practitioner_case_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["user_id"] = int(item.get("user_id") or 0)
+        item["owner_role"] = str(item.get("owner_role") or "user").strip().lower() or "user"
+        item["owner_weight"] = float(item.get("owner_weight") or 1.0)
+        item["case_key"] = str(item.get("case_key") or "").strip()
+        item["case_title"] = str(item.get("case_title") or "").strip()
+        item["description"] = str(item.get("description") or "").strip()
+        item["birth_time_iso"] = str(item.get("birth_time_iso") or "").strip()
+        item["gender"] = str(item.get("gender") or "").strip()
+        item["calendar_type"] = str(item.get("calendar_type") or "").strip()
+        item["lunar_is_leap_month"] = bool(item.get("lunar_is_leap_month"))
+        item["city_name"] = str(item.get("city_name") or "").strip()
+        item["city_code"] = str(item.get("city_code") or "").strip()
+        item["city_group"] = str(item.get("city_group") or "").strip()
+        item["city_longitude"] = item.get("city_longitude")
+        item["four_pillars"] = _load_json_dict(item.get("four_pillars_json"))
+        item["luck_pillar"] = str(item.get("luck_pillar") or "").strip()
+        item["flow_pillar"] = str(item.get("flow_pillar") or "").strip()
+        item["flow_year"] = item.get("flow_year")
+        item["tags"] = _load_json_list(item.get("tags_json"))
+        item["expected_patterns"] = _load_json_list(item.get("expected_patterns_json"))
+        item["expected_use_gods"] = _load_json_list(item.get("expected_use_gods_json"))
+        item["expected_risks"] = _load_json_list(item.get("expected_risks_json"))
+        item["boundary_flags"] = _load_json_list(item.get("boundary_flags_json"))
+        item["failure_modes"] = _load_json_list(item.get("failure_modes_json"))
+        item["expected_notes"] = str(item.get("expected_notes") or "").strip()
+        item["source_feedback_ids"] = _load_json_list(item.get("source_feedback_ids_json"))
+        item["chart_fingerprint"] = str(item.get("chart_fingerprint") or "").strip()
+        item["status"] = str(item.get("status") or "draft").strip()
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        try:
+            payload = json.loads(str(item.get("payload_json") or "{}"))
+        except Exception:
+            payload = {}
+        item["payload"] = payload if isinstance(payload, dict) else {}
+        for key in (
+            "four_pillars_json",
+            "tags_json",
+            "expected_patterns_json",
+            "expected_use_gods_json",
+            "expected_risks_json",
+            "boundary_flags_json",
+            "failure_modes_json",
+            "source_feedback_ids_json",
+            "payload_json",
+        ):
+            item.pop(key, None)
+        return item
+
+    def create_practitioner_case(
+        self,
+        *,
+        user_id: int,
+        owner_role: str,
+        case_key: str = "",
+        case_title: str,
+        description: str = "",
+        birth_time_iso: str,
+        gender: str,
+        calendar_type: str = "solar",
+        lunar_is_leap_month: bool = False,
+        city_name: str = "",
+        city_code: str = "",
+        city_group: str = "",
+        city_longitude: Any = None,
+        four_pillars: Dict[str, Any] | None = None,
+        luck_pillar: str = "",
+        flow_pillar: str = "",
+        flow_year: Any = None,
+        tags: Any = None,
+        expected_patterns: Any = None,
+        expected_use_gods: Any = None,
+        expected_risks: Any = None,
+        boundary_flags: Any = None,
+        failure_modes: Any = None,
+        expected_notes: str = "",
+        source_feedback_ids: Any = None,
+        chart_fingerprint: str = "",
+        status: str = "submitted",
+        payload: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        role_clean = str(owner_role or "user").strip().lower() or "user"
+        if role_clean not in ROLE_VALUES:
+            role_clean = "user"
+        title_clean = str(case_title or "").strip()
+        if len(title_clean) < 2:
+            raise ValueError("案例标题至少 2 个字符。")
+        birth_clean = str(birth_time_iso or "").strip()
+        if not birth_clean:
+            raise ValueError("出生时间不能为空。")
+        gender_clean = str(gender or "").strip().lower()
+        if gender_clean not in GENDER_VALUES:
+            raise ValueError("无效性别。")
+        calendar_clean = str(calendar_type or "solar").strip().lower() or "solar"
+        if calendar_clean not in CALENDAR_VALUES:
+            raise ValueError("无效历法。")
+        status_clean = str(status or "submitted").strip().lower() or "submitted"
+        if status_clean not in PRACTITIONER_CASE_STATUS_VALUES:
+            raise ValueError("无效案例状态。")
+        if role_clean not in {"manager", "admin"} and status_clean not in {"draft", "submitted"}:
+            status_clean = "submitted"
+        key_clean = str(case_key or "").strip().replace(" ", "_")[:120]
+        if not key_clean:
+            key_clean = f"case_{secrets.token_hex(6)}"
+        try:
+            longitude_value = None if city_longitude in (None, "") else float(city_longitude)
+        except Exception:
+            longitude_value = None
+        try:
+            flow_year_value = None if flow_year in (None, "") else int(flow_year)
+        except Exception:
+            flow_year_value = None
+        pillars_clean = _json_dict(four_pillars or {}, key_limit=12, value_limit=12)
+        payload_obj = payload if isinstance(payload, dict) else {}
+        payload_json = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, default=str)
+        if len(payload_json) > 20000:
+            payload_json = json.dumps({"truncated": True, "case_title": title_clean[:120]}, ensure_ascii=False)
+        owner_weight = {"user": 1.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
+        now = _iso(_now_utc())
+        values = (
+            int(user_id),
+            role_clean,
+            owner_weight,
+            key_clean,
+            title_clean[:160],
+            str(description or "").strip()[:1200],
+            birth_clean[:80],
+            gender_clean,
+            calendar_clean,
+            1 if bool(lunar_is_leap_month) and calendar_clean == "lunar" else 0,
+            str(city_name or "").strip()[:120],
+            str(city_code or "").strip()[:80],
+            str(city_group or "").strip()[:80],
+            longitude_value,
+            json.dumps(pillars_clean, ensure_ascii=False, sort_keys=True),
+            str(luck_pillar or "").strip()[:16],
+            str(flow_pillar or "").strip()[:16],
+            flow_year_value,
+            json.dumps(_json_list(tags, limit=30), ensure_ascii=False),
+            json.dumps(_json_list(expected_patterns, limit=20), ensure_ascii=False),
+            json.dumps(_json_list(expected_use_gods, limit=20), ensure_ascii=False),
+            json.dumps(_json_list(expected_risks, limit=20), ensure_ascii=False),
+            json.dumps(_json_list(boundary_flags, limit=30), ensure_ascii=False),
+            json.dumps(_json_list(failure_modes, limit=30), ensure_ascii=False),
+            str(expected_notes or "").strip()[:1600],
+            json.dumps(_json_list(source_feedback_ids, limit=80), ensure_ascii=False),
+            str(chart_fingerprint or "").strip()[:160],
+            status_clean,
+            payload_json,
+            now,
+            now,
+        )
+        try:
+            with self._connect() as conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO practitioner_cases (
+                        user_id,
+                        owner_role,
+                        owner_weight,
+                        case_key,
+                        case_title,
+                        description,
+                        birth_time_iso,
+                        gender,
+                        calendar_type,
+                        lunar_is_leap_month,
+                        city_name,
+                        city_code,
+                        city_group,
+                        city_longitude,
+                        four_pillars_json,
+                        luck_pillar,
+                        flow_pillar,
+                        flow_year,
+                        tags_json,
+                        expected_patterns_json,
+                        expected_use_gods_json,
+                        expected_risks_json,
+                        boundary_flags_json,
+                        failure_modes_json,
+                        expected_notes,
+                        source_feedback_ids_json,
+                        chart_fingerprint,
+                        status,
+                        payload_json,
+                        created_at,
+                        updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    values,
+                )
+                case_id = int(cursor.lastrowid)
+                row = conn.execute("SELECT * FROM practitioner_cases WHERE id = ?", (case_id,)).fetchone()
+                conn.commit()
+        except sqlite3.IntegrityError as exc:
+            raise ValueError("同一账号下案例 key 已存在。") from exc
+        item = self._clean_practitioner_case_row(row)
+        if not item:
+            raise ValueError("案例记录失败。")
+        return item
+
+    def list_practitioner_cases(
+        self,
+        *,
+        user_id: int,
+        owner_role: str,
+        scope: str = "own",
+        case_key: str = "",
+        status: str = "",
+        chart_fingerprint: str = "",
+        limit: int = 80,
+    ) -> List[Dict[str, Any]]:
+        role_clean = str(owner_role or "user").strip().lower()
+        can_view_all = role_clean in {"manager", "admin"} and str(scope or "").strip().lower() == "all"
+        where: List[str] = []
+        params: List[Any] = []
+        if not can_view_all:
+            where.append("pc.user_id = ?")
+            params.append(int(user_id))
+        key_clean = str(case_key or "").strip()
+        status_clean = str(status or "").strip().lower()
+        fingerprint_clean = str(chart_fingerprint or "").strip()
+        if key_clean:
+            where.append("pc.case_key = ?")
+            params.append(key_clean)
+        if status_clean:
+            where.append("pc.status = ?")
+            params.append(status_clean)
+        if fingerprint_clean:
+            where.append("pc.chart_fingerprint = ?")
+            params.append(fingerprint_clean)
+        sql = "SELECT pc.*, u.username AS owner_username, u.display_name AS owner_display_name FROM practitioner_cases pc JOIN auth_users u ON u.id = pc.user_id"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY pc.updated_at DESC, pc.id DESC LIMIT ?"
+        params.append(max(1, min(300, int(limit or 80))))
+        with self._connect() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            item = self._clean_practitioner_case_row(row)
+            if not item:
+                continue
+            row_dict = dict(row)
+            item["owner_username"] = str(row_dict.get("owner_username") or "").strip()
+            item["owner_display_name"] = str(row_dict.get("owner_display_name") or "").strip()
             out.append(item)
         return out
 

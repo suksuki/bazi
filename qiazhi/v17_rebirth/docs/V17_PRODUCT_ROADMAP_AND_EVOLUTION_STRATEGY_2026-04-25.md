@@ -193,6 +193,12 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 
 - 每次核心插件或参数修改前后，都能看到真实案例是否退化。
 
+当前落地：
+
+- `practitioner_cases` 已进入运行时认证数据库，记录真实样盘、期望判断、边界标签、错判类型、来源反馈和命理师权重。
+- `/v17/auth/practitioner-cases` 已提供提交与查询接口；普通用户可提交自己的案例，manager/admin 可用 `scope=all` 查看全量案例。
+- API 响应会生成 `benchmark_seed`，把真实案例整理成接近 `PractitionerBenchmarkCase` 的结构，为后续转入长期回归集做准备。
+
 ### P4：Synthetic Lab 与参数候选
 
 目标：把偏差转化为可审计的参数优化候选。
