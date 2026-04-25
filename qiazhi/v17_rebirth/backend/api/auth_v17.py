@@ -531,6 +531,27 @@ async def list_practitioner_cases(request: Request) -> Dict[str, Any]:
     }
 
 
+@router.post("/v17/auth/practitioner-cases/{case_id}/status")
+@router.post("/api/v17/auth/practitioner-cases/{case_id}/status")
+async def update_practitioner_case_status(case_id: int, request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    try:
+        row = auth_storage.update_practitioner_case_status(
+            case_id=case_id,
+            status=str(payload.get("status") or "").strip(),
+            reviewer_note=str(payload.get("reviewer_note") or "").strip(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "case": _case_payload(row),
+        "viewer_role": str(user.get("role") or "user"),
+        "applied_to_static_benchmark": False,
+        "guardrail": "case_status_only_no_test_file_change",
+    }
+
+
 @router.get("/v17/auth/practitioner-learning-candidates")
 @router.get("/api/v17/auth/practitioner-learning-candidates")
 async def list_practitioner_learning_candidates(request: Request) -> Dict[str, Any]:

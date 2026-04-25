@@ -201,6 +201,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - API 响应会生成 `benchmark_seed`，把真实案例整理成接近 `PractitionerBenchmarkCase` 的结构，为后续转入长期回归集做准备。
 - 命盘核心页的证据卡片已接入案例收录入口：`practitioner` 以上账号可直接沉淀为命理师基准候选，并自动绑定命盘、运流、证据、反馈和 `chart_fingerprint`。
 - “命理师账本”同步展示真实案例与基准候选，作为后续参数候选、回归审计和学习治理的入口。
+- manager/admin 可将案例状态推进为 `accepted / rejected`，作为转入长期 Practitioner Benchmark 前的运营标记；该动作只更新运行时案例状态，不自动改测试文件。
 
 ### P4：Synthetic Lab 与参数候选
 

@@ -511,6 +511,28 @@ def test_practitioner_case_library_records_real_case_and_benchmark_seed(isolated
         assert len(rows) == 1
         assert rows[0]["benchmark_seed"]["case_id"] == "real.audit.yangren_false_positive_19770508"
 
+        accept_resp = client.post(
+            f"/v17/auth/practitioner-cases/{case['id']}/status",
+            cookies=cookies,
+            json={
+                "status": "accepted",
+                "reviewer_note": "纳入长期 Practitioner Benchmark 候选池。",
+            },
+        )
+        assert accept_resp.status_code == 200
+        accept_body = accept_resp.json()
+        assert accept_body["case"]["status"] == "accepted"
+        assert accept_body["applied_to_static_benchmark"] is False
+        assert accept_body["guardrail"] == "case_status_only_no_test_file_change"
+        assert accept_body["case"]["payload"]["status_reviewer_note"].startswith("纳入长期")
+
+        accepted_list = client.get(
+            "/v17/auth/practitioner-cases?scope=all&status=accepted",
+            cookies=cookies,
+        )
+        assert accepted_list.status_code == 200
+        assert len(accepted_list.json()["cases"]) == 1
+
         duplicate = client.post(
             "/v17/auth/practitioner-cases",
             cookies=cookies,

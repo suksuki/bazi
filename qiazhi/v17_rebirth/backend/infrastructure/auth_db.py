@@ -1752,6 +1752,51 @@ class V17AuthDB:
             out.append(item)
         return out
 
+    def update_practitioner_case_status(
+        self,
+        *,
+        case_id: int,
+        status: str,
+        reviewer_note: str = "",
+    ) -> Dict[str, Any]:
+        status_clean = str(status or "").strip().lower()
+        if status_clean not in PRACTITIONER_CASE_STATUS_VALUES:
+            raise ValueError("无效案例状态。")
+        note_clean = str(reviewer_note or "").strip()[:1200]
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM practitioner_cases WHERE id = ?", (int(case_id),)).fetchone()
+            if not row:
+                raise ValueError("案例不存在。")
+            payload = {}
+            try:
+                loaded = json.loads(str(row["payload_json"] or "{}"))
+                payload = loaded if isinstance(loaded, dict) else {}
+            except Exception:
+                payload = {}
+            if note_clean:
+                payload["status_reviewer_note"] = note_clean
+            payload["status_updated_at"] = now
+            conn.execute(
+                """
+                UPDATE practitioner_cases
+                SET status = ?, payload_json = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    status_clean,
+                    json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str),
+                    now,
+                    int(case_id),
+                ),
+            )
+            updated = conn.execute("SELECT * FROM practitioner_cases WHERE id = ?", (int(case_id),)).fetchone()
+            conn.commit()
+        item = self._clean_practitioner_case_row(updated)
+        if not item:
+            raise ValueError("案例状态更新失败。")
+        return item
+
     def _clean_learning_review_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
         if row is None:
             return None
