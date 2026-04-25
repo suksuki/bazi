@@ -166,6 +166,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 反馈状态支持 `confirm / reject / watch / review`，并记录理由、置信度、角色与 `reviewer_weight`。
 - `/v17/auth/practitioner-feedback` 已提供提交与查询接口；`practitioner / manager / admin` 可提交专业反馈，manager/admin 可用 `scope=all` 查看全量反馈。
 - 命盘核心页证据卡片已接入反馈入口；普通用户看到简明断语，`practitioner` 以上账号进入专业证据链工作台。
+- 专业工作台新增“命理师账本”，可回看最近反馈、确认/否定/复核状态，以及全量或本人范围的反馈记录。
 
 ### P3：真实案例库与基准测试
 
@@ -199,6 +200,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - `/v17/auth/practitioner-cases` 已提供提交与查询接口；`practitioner / manager / admin` 可提交案例，manager/admin 可用 `scope=all` 查看全量案例。
 - API 响应会生成 `benchmark_seed`，把真实案例整理成接近 `PractitionerBenchmarkCase` 的结构，为后续转入长期回归集做准备。
 - 命盘核心页的证据卡片已接入案例收录入口：`practitioner` 以上账号可直接沉淀为命理师基准候选，并自动绑定命盘、运流、证据、反馈和 `chart_fingerprint`。
+- “命理师账本”同步展示真实案例与基准候选，作为后续参数候选、回归审计和学习治理的入口。
 
 ### P4：Synthetic Lab 与参数候选
 

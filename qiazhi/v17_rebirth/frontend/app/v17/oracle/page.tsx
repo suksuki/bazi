@@ -39,7 +39,7 @@ import { classicalPatternCatalog } from "@/types/classicalPatternCatalog";
 
 type OracleSurfaceTab = OracleSurface;
 type ContentSurfaceTab = Exclude<OracleSurfaceTab, "trace">;
-type AuxiliarySectionKey = "structure" | "runtime" | "authority" | "patterns" | "collaboration";
+type AuxiliarySectionKey = "ledger" | "structure" | "runtime" | "authority" | "patterns" | "collaboration";
 type LocalizeText = (zh: string, en: string, ko: string) => string;
 type TranslateText = (value: string) => string;
 type TranslateList = (values: string[]) => string[];
@@ -572,6 +572,7 @@ function V17MobileAnalysisDeck({
 }: {
   ui: LocalizeText;
   counts: {
+    ledger: number;
     structure: number;
     runtime: number;
     authority: number;
@@ -588,6 +589,13 @@ function V17MobileAnalysisDeck({
     badge: string;
     tone: string;
   }> = [
+    {
+      key: "ledger",
+      title: ui("命理师账本", "Practitioner Ledger", "명리사 장부"),
+      desc: ui("回看反馈、案例与基准候选沉淀。", "Review feedback, cases, and benchmark candidates.", "피드백, 사례, 기준 후보를 되돌아봅니다."),
+      badge: `${counts.ledger}`,
+      tone: "border-amber-300/25 bg-amber-400/10 text-amber-100",
+    },
     {
       key: "structure",
       title: ui("结构总览", "Structure", "구조"),
@@ -1544,6 +1552,224 @@ function V17EvidencePanel({
   );
 }
 
+function caseStatusLabel(status: string, ui: LocalizeText): string {
+  if (status === "benchmark_candidate") return ui("基准候选", "Benchmark", "기준 후보");
+  if (status === "accepted") return ui("已采纳", "Accepted", "채택");
+  if (status === "rejected") return ui("已驳回", "Rejected", "반려");
+  if (status === "submitted") return ui("已提交", "Submitted", "제출됨");
+  if (status === "draft") return ui("草稿", "Draft", "초안");
+  return status || ui("未知", "Unknown", "알 수 없음");
+}
+
+function caseStatusTone(status: string): string {
+  if (status === "benchmark_candidate") return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+  if (status === "accepted") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+  if (status === "rejected") return "border-rose-400/25 bg-rose-500/10 text-rose-100";
+  if (status === "submitted") return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
+  return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
+}
+
+function shortLedgerTime(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "—";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 16);
+  return date.toLocaleString(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function countStatus(rows: Array<Record<string, unknown>>, status: string): number {
+  return rows.filter((row) => String(row.status || "").trim() === status).length;
+}
+
+function V17PractitionerLedgerPanel({
+  ui,
+  reviewerRole,
+}: {
+  ui: LocalizeText;
+  reviewerRole: string;
+}) {
+  const [feedbackRows, setFeedbackRows] = useState<Array<Record<string, unknown>>>([]);
+  const [caseRows, setCaseRows] = useState<Array<Record<string, unknown>>>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const canViewAll = reviewerRole === "manager" || reviewerRole === "admin";
+
+  const loadLedger = useCallback(async () => {
+    setLoading(true);
+    setMessage("");
+    const feedbackQuery = new URLSearchParams({ limit: "80" });
+    const caseQuery = new URLSearchParams({ limit: "80" });
+    if (canViewAll) {
+      feedbackQuery.set("scope", "all");
+      caseQuery.set("scope", "all");
+    }
+    try {
+      const [feedbackResp, caseResp] = await Promise.all([
+        requestJson<Record<string, unknown>>(`/api/auth/practitioner-feedback?${feedbackQuery.toString()}`, noStoreInit()),
+        requestJson<Record<string, unknown>>(`/api/auth/practitioner-cases?${caseQuery.toString()}`, noStoreInit()),
+      ]);
+      if (!feedbackResp.ok) {
+        throw new Error(String(feedbackResp.data.detail || ui("反馈账本加载失败。", "Failed to load feedback ledger.", "피드백 장부 로드 실패")));
+      }
+      if (!caseResp.ok) {
+        throw new Error(String(caseResp.data.detail || ui("案例账本加载失败。", "Failed to load case ledger.", "사례 장부 로드 실패")));
+      }
+      setFeedbackRows(Array.isArray(feedbackResp.data.feedback) ? feedbackResp.data.feedback as Array<Record<string, unknown>> : []);
+      setCaseRows(Array.isArray(caseResp.data.cases) ? caseResp.data.cases as Array<Record<string, unknown>> : []);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : ui("命理师账本加载失败。", "Failed to load practitioner ledger.", "명리사 장부 로드 실패"));
+    } finally {
+      setLoading(false);
+    }
+  }, [canViewAll, ui]);
+
+  useEffect(() => {
+    void loadLedger();
+  }, [loadLedger]);
+
+  const latestFeedback = feedbackRows.slice(0, 6);
+  const latestCases = caseRows.slice(0, 6);
+  const benchmarkCount = countStatus(caseRows, "benchmark_candidate");
+  const confirmedCount = countStatus(feedbackRows, "confirm");
+  const rejectedCount = countStatus(feedbackRows, "reject");
+  const reviewCount = countStatus(feedbackRows, "review") + countStatus(feedbackRows, "watch");
+
+  return (
+    <section className="space-y-3">
+      <div className="rounded-2xl border border-amber-400/18 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.12),transparent_32%),linear-gradient(180deg,rgba(12,10,24,0.92),rgba(8,13,21,0.82))] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-amber-300">
+              {ui("命理师账本", "Practitioner Ledger", "명리사 장부")}
+            </p>
+            <h2 className="mt-1 text-sm font-semibold text-zinc-100">
+              {canViewAll
+                ? ui("全量反馈与案例运营", "All feedback and cases", "전체 피드백과 사례 운영")
+                : ui("我的反馈与案例沉淀", "My feedback and cases", "내 피드백과 사례")}
+            </h2>
+            <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-400">
+              {ui(
+                "这里把证据反馈、真实案例和基准候选聚合成可回看的学习账本，后续会接入参数候选和回归审计。",
+                "This turns evidence feedback, real cases, and benchmark candidates into a reviewable learning ledger.",
+                "근거 피드백, 실제 사례, 기준 후보를 되돌아볼 수 있는 학습 장부로 모읍니다.",
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadLedger()}
+            disabled={loading}
+            className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-[11px] font-semibold text-amber-50 transition hover:border-amber-200/45 disabled:cursor-wait disabled:opacity-60"
+          >
+            {loading ? ui("刷新中", "Refreshing", "새로고침 중") : ui("刷新账本", "Refresh", "새로고침")}
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {[
+            { label: ui("反馈", "Feedback", "피드백"), value: feedbackRows.length, tone: "text-cyan-100" },
+            { label: ui("确认", "Confirm", "확인"), value: confirmedCount, tone: "text-emerald-100" },
+            { label: ui("否定", "Reject", "부정"), value: rejectedCount, tone: "text-rose-100" },
+            { label: ui("基准候选", "Benchmark", "기준 후보"), value: benchmarkCount || reviewCount, tone: "text-amber-100" },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+              <p className="text-[10px] text-zinc-500">{item.label}</p>
+              <p className={`mt-1 text-xl font-semibold ${item.tone}`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {message ? (
+          <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+            {message}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="rounded-2xl border border-cyan-500/15 bg-zinc-950/55 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-zinc-100">{ui("最近反馈", "Recent Feedback", "최근 피드백")}</h3>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-zinc-400">{feedbackRows.length}</span>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {latestFeedback.map((row) => {
+              const status = String(row.status || "").trim();
+              const title = String(row.source_title || row.evidence_id || row.claim_id || "").trim();
+              const reviewer = String(row.reviewer_display_name || row.reviewer_username || row.reviewer_role || "").trim();
+              return (
+                <article key={`feedback_${String(row.id || title)}`} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold text-zinc-100">{title || ui("未命名反馈", "Untitled feedback", "이름 없는 피드백")}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">
+                        {shortLedgerTime(row.created_at)}{reviewer ? ` · ${reviewer}` : ""}
+                      </p>
+                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${feedbackStatusTone(status)}`}>
+                      {feedbackStatusLabel(status, ui)}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
+                    {String(row.reason || row.source_summary || row.plugin_id || ui("暂无补充理由。", "No note yet.", "추가 메모 없음"))}
+                  </p>
+                </article>
+              );
+            })}
+            {!latestFeedback.length && !loading ? (
+              <p className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-[12px] text-zinc-500">
+                {ui("暂无反馈记录。", "No feedback yet.", "아직 피드백이 없습니다.")}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-500/15 bg-zinc-950/55 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-zinc-100">{ui("案例与基准候选", "Cases & Benchmarks", "사례와 기준 후보")}</h3>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-zinc-400">{caseRows.length}</span>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {latestCases.map((row) => {
+              const status = String(row.status || "").trim();
+              const title = String(row.case_title || row.case_key || "").trim();
+              const owner = String(row.owner_display_name || row.owner_username || row.owner_role || "").trim();
+              return (
+                <article key={`case_${String(row.id || title)}`} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold text-zinc-100">{title || ui("未命名案例", "Untitled case", "이름 없는 사례")}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">
+                        {shortLedgerTime(row.updated_at || row.created_at)}{owner ? ` · ${owner}` : ""}
+                      </p>
+                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${caseStatusTone(status)}`}>
+                      {caseStatusLabel(status, ui)}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
+                    {String(row.expected_notes || row.description || row.chart_fingerprint || ui("暂无案例说明。", "No case note yet.", "사례 설명 없음"))}
+                  </p>
+                </article>
+              );
+            })}
+            {!latestCases.length && !loading ? (
+              <p className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-[12px] text-zinc-500">
+                {ui("暂无案例记录。", "No cases yet.", "아직 사례가 없습니다.")}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function OraclePage() {
   const router = useRouter();
   const { language, user, authLoading, logout, access, ui, term, termList } = useV17Runtime();
@@ -1552,6 +1778,7 @@ export default function OraclePage() {
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
   const [lastContentSurfaceTab, setLastContentSurfaceTab] = useState<ContentSurfaceTab>("core");
   const [auxiliarySections, setAuxiliarySections] = useState<Record<AuxiliarySectionKey, boolean>>({
+    ledger: false,
     structure: false,
     runtime: false,
     authority: false,
@@ -2303,6 +2530,7 @@ export default function OraclePage() {
                   <V17MobileAnalysisDeck
                     ui={ui}
                     counts={{
+                      ledger: evidenceItems.length,
                       structure: structureSignalCount,
                       runtime: runtimeLedgerSignalCount,
                       authority: authoritySignalCount,
@@ -2312,6 +2540,19 @@ export default function OraclePage() {
                     canManageUsers={canManageUsers && user?.role === "manager"}
                     onOpen={openAuxiliarySection}
                   />
+                  <AuxiliarySection
+                    id="aux-ledger"
+                    title={ui("命理师账本", "Practitioner Ledger", "명리사 장부")}
+                    subtitle={ui("反馈、案例与基准候选回看", "Feedback, cases, and benchmark candidates", "피드백, 사례, 기준 후보 회고")}
+                    badge={canReadEvidence ? ui("已接入", "online", "연결됨") : "locked"}
+                    open={auxiliarySections.ledger}
+                    onToggle={() => toggleAuxiliarySection("ledger")}
+                  >
+                    <V17PractitionerLedgerPanel
+                      ui={ui}
+                      reviewerRole={user?.role || "user"}
+                    />
+                  </AuxiliarySection>
                   <div className="rounded-2xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_34%),linear-gradient(180deg,rgba(9,9,11,0.92),rgba(24,24,27,0.74))] p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
