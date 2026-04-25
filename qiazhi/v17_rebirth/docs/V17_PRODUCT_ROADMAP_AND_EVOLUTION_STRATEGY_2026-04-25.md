@@ -198,6 +198,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - `practitioner_cases` 已进入运行时认证数据库，记录真实样盘、期望判断、边界标签、错判类型、来源反馈和命理师权重。
 - `/v17/auth/practitioner-cases` 已提供提交与查询接口；普通用户可提交自己的案例，manager/admin 可用 `scope=all` 查看全量案例。
 - API 响应会生成 `benchmark_seed`，把真实案例整理成接近 `PractitionerBenchmarkCase` 的结构，为后续转入长期回归集做准备。
+- 命盘核心页的证据卡片已接入案例收录入口：普通用户可沉淀真实案例，manager/admin 可直接沉淀为命理师基准候选，并自动绑定命盘、运流、证据、反馈和 `chart_fingerprint`。
 
 ### P4：Synthetic Lab 与参数候选
 

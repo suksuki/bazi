@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowRight,
   BarChart3,
+  BookMarked,
   BriefcaseBusiness,
   ChevronDown,
   ChevronUp,
@@ -975,6 +976,21 @@ function feedbackStatusTone(status: PractitionerFeedbackStatus | string): string
   return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
+function practitionerCaseKeyPart(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized || `case_${Date.now()}`;
+}
+
+function normalizedPillarText(value: unknown): string {
+  const compact = compactPillarText(value).text;
+  return compact === "—" ? "" : compact;
+}
+
 function V17EvidencePanel({
   ui,
   term,
@@ -983,6 +999,14 @@ function V17EvidencePanel({
   sessionId,
   chartFingerprint,
   reviewerRole,
+  birthTimeISO,
+  gender,
+  calendarType,
+  lunarIsLeapMonth,
+  fourPillars,
+  luckPillar,
+  flowPillar,
+  selectedYear,
 }: {
   ui: LocalizeText;
   term: TranslateText;
@@ -991,12 +1015,24 @@ function V17EvidencePanel({
   sessionId: string;
   chartFingerprint: string;
   reviewerRole: string;
+  birthTimeISO: string;
+  gender: string;
+  calendarType: string;
+  lunarIsLeapMonth: boolean;
+  fourPillars?: FourPillarsSummary;
+  luckPillar?: unknown;
+  flowPillar?: unknown;
+  selectedYear: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [reasonByEvidence, setReasonByEvidence] = useState<Record<string, string>>({});
   const [pendingByEvidence, setPendingByEvidence] = useState<Record<string, boolean>>({});
   const [feedbackByEvidence, setFeedbackByEvidence] = useState<Record<string, Record<string, unknown>>>({});
   const [feedbackError, setFeedbackError] = useState("");
+  const [caseByEvidence, setCaseByEvidence] = useState<Record<string, Record<string, unknown>>>({});
+  const [casePendingByEvidence, setCasePendingByEvidence] = useState<Record<string, boolean>>({});
+  const [caseMessageByEvidence, setCaseMessageByEvidence] = useState<Record<string, string>>({});
+  const [caseError, setCaseError] = useState("");
   const visibleItems = (expanded ? items.slice(0, 12) : items.slice(0, 4));
   const total = asNumberValue(summary.total, items.length);
   const candidateCount = asNumberValue(summary.candidate_count);
@@ -1027,6 +1063,33 @@ function V17EvidencePanel({
       cancelled = true;
     };
   }, [items.length, sessionId]);
+
+  useEffect(() => {
+    if (!items.length) return;
+    let cancelled = false;
+    const loadCases = async () => {
+      const query = new URLSearchParams({ limit: "200" });
+      if (chartFingerprint) query.set("chart_fingerprint", chartFingerprint);
+      if (professionalFeedback) query.set("scope", "all");
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>(
+        `/api/auth/practitioner-cases?${query.toString()}`,
+        noStoreInit(),
+      );
+      if (!ok || cancelled) return;
+      const rows = Array.isArray(payload.cases) ? payload.cases as Array<Record<string, unknown>> : [];
+      const next: Record<string, Record<string, unknown>> = {};
+      for (const row of rows) {
+        for (const sourceId of asStringList(row.source_feedback_ids)) {
+          if (sourceId && !next[sourceId]) next[sourceId] = row;
+        }
+      }
+      setCaseByEvidence(next);
+    };
+    void loadCases();
+    return () => {
+      cancelled = true;
+    };
+  }, [chartFingerprint, items.length, professionalFeedback]);
 
   async function submitFeedback(item: Record<string, unknown>, status: PractitionerFeedbackStatus) {
     const evidenceId = String(item.evidence_id || item.claim_id || item.title || "").trim();
@@ -1064,6 +1127,93 @@ function V17EvidencePanel({
     const row = asLooseRecord(payload.feedback);
     setFeedbackByEvidence((current) => ({ ...current, [evidenceId]: row }));
     setReasonByEvidence((current) => ({ ...current, [evidenceId]: "" }));
+  }
+
+  async function savePractitionerCase(item: Record<string, unknown>) {
+    const evidenceId = String(item.evidence_id || item.claim_id || item.title || "").trim();
+    if (!evidenceId) return;
+    const kind = String(item.evidence_type || "diagnostic").trim();
+    const source = String(item.source_plugin || "").trim().replace(/^classical\./, "");
+    const title = String(item.title || item.summary || evidenceId).trim();
+    const summaryText = String(item.summary || "").trim();
+    const target = String(item.target_god || "").trim();
+    const existingFeedback = feedbackByEvidence[evidenceId];
+    const feedbackStatus = String(existingFeedback?.status || "").trim();
+    const reviewerNote = String(reasonByEvidence[evidenceId] || existingFeedback?.reason || "").trim();
+    const caseStatus = professionalFeedback ? "benchmark_candidate" : "submitted";
+    const detailKeys = asStringList(item.detail_keys);
+    const caseKey = `real.${practitionerCaseKeyPart(chartFingerprint || sessionId || "runtime")}.${practitionerCaseKeyPart(evidenceId)}`.slice(0, 120);
+    const expectedPatterns = kind.includes("pattern") || String(item.candidate_status || "").trim() ? [title] : [];
+    const expectedRisks = kind.includes("risk") ? [title] : [];
+    const expectedUseGods = target ? [target] : [];
+    const failureModes = Array.from(new Set([
+      feedbackStatus === "reject" ? `reject_${kind || "evidence"}` : "",
+      kind ? `evidence_${kind}` : "",
+    ].filter(Boolean)));
+    const sourceFeedbackIds = Array.from(new Set([
+      evidenceId,
+      String(existingFeedback?.id || "").trim(),
+    ].filter(Boolean)));
+
+    setCaseError("");
+    setCaseMessageByEvidence((current) => ({ ...current, [evidenceId]: "" }));
+    setCasePendingByEvidence((current) => ({ ...current, [evidenceId]: true }));
+    const { data: payload, ok, error } = await requestJson<Record<string, unknown>>(
+      "/api/auth/practitioner-cases",
+      jsonPostInit({
+        case_key: caseKey,
+        case_title: title ? `案例：${title}` : ui("证据案例", "Evidence case", "근거 사례"),
+        description: [
+          `session=${sessionId || "default"}`,
+          birthTimeISO ? `birth=${birthTimeISO}` : "",
+          title ? `evidence=${title}` : "",
+          summaryText ? `summary=${summaryText}` : "",
+          reviewerNote ? `review_note=${reviewerNote}` : "",
+        ].filter(Boolean).join("\n"),
+        birth_time_iso: birthTimeISO,
+        gender: gender === "female" ? "female" : "male",
+        calendar_type: calendarType || "solar",
+        lunar_is_leap_month: lunarIsLeapMonth,
+        four_pillars: {
+          year: String(fourPillars?.year || "").trim(),
+          month: String(fourPillars?.month || "").trim(),
+          day: String(fourPillars?.day || "").trim(),
+          hour: String(fourPillars?.hour || "").trim(),
+        },
+        luck_pillar: normalizedPillarText(luckPillar),
+        flow_pillar: normalizedPillarText(flowPillar),
+        flow_year: selectedYear,
+        tags: Array.from(new Set([kind, source, target].filter(Boolean))).slice(0, 8),
+        expected_patterns: expectedPatterns,
+        expected_use_gods: expectedUseGods,
+        expected_risks: expectedRisks,
+        boundary_flags: detailKeys.map((key) => evidenceDetailLabel(key, ui)).slice(0, 8),
+        failure_modes: failureModes,
+        expected_notes: reviewerNote || summaryText || title,
+        source_feedback_ids: sourceFeedbackIds,
+        chart_fingerprint: chartFingerprint,
+        status: caseStatus,
+        payload: {
+          source: "oracle_evidence_panel",
+          evidence: item,
+          feedback: existingFeedback || {},
+          trust_hint: professionalFeedback ? "practitioner" : "user",
+        },
+      }),
+    );
+    setCasePendingByEvidence((current) => ({ ...current, [evidenceId]: false }));
+    if (!ok) {
+      setCaseError(error || ui("案例收录失败。", "Failed to save case.", "사례 저장에 실패했습니다."));
+      return;
+    }
+    const row = asLooseRecord(payload.case);
+    setCaseByEvidence((current) => ({ ...current, [evidenceId]: row }));
+    setCaseMessageByEvidence((current) => ({
+      ...current,
+      [evidenceId]: professionalFeedback
+        ? ui("已收录为基准候选。", "Saved as a benchmark candidate.", "기준 후보로 저장했습니다.")
+        : ui("已收录为真实案例。", "Saved as a real case.", "실제 사례로 저장했습니다."),
+    }));
   }
 
   if (!items.length) {
@@ -1130,6 +1280,9 @@ function V17EvidencePanel({
           const pending = Boolean(pendingByEvidence[evidenceId]);
           const existingFeedback = feedbackByEvidence[evidenceId];
           const feedbackStatus = String(existingFeedback?.status || "").trim();
+          const existingCase = caseByEvidence[evidenceId];
+          const casePending = Boolean(casePendingByEvidence[evidenceId]);
+          const caseMessage = caseMessageByEvidence[evidenceId] || "";
           return (
             <article key={`${String(item.evidence_id || item.claim_id || title)}_${index}`} className="rounded-xl border border-white/10 bg-[#0B0F16]/85 p-3">
               <div className="flex items-start justify-between gap-2">
@@ -1213,6 +1366,45 @@ function V17EvidencePanel({
                     </button>
                   ))}
                 </div>
+                <div className="mt-2 rounded-lg border border-amber-400/15 bg-amber-500/[0.06] p-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-lg border border-amber-300/20 bg-amber-500/10 p-1.5 text-amber-100">
+                        <BookMarked className="h-3.5 w-3.5" />
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-semibold text-amber-50">
+                          {professionalFeedback
+                            ? ui("沉淀为命理师基准候选", "Save as practitioner benchmark candidate", "명리사 기준 후보로 저장")
+                            : ui("收录为真实案例", "Save as real case", "실제 사례로 저장")}
+                        </p>
+                        <p className="mt-0.5 text-[10px] leading-4 text-zinc-500">
+                          {ui("用于后续回归、审计与自动学习。", "Feeds later regression, audit, and learning.", "이후 회귀, 감사, 학습에 사용됩니다.")}
+                        </p>
+                      </div>
+                    </div>
+                    {existingCase ? (
+                      <span className="inline-flex justify-center rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-100">
+                        {ui("已收录", "Saved", "저장됨")}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={casePending || !birthTimeISO}
+                        onClick={() => void savePractitionerCase(item)}
+                        className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-300/25 bg-amber-500/10 px-2 py-1.5 text-[11px] font-semibold text-amber-50 transition hover:border-amber-200/40 hover:bg-amber-500/15 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <BookMarked className="h-3.5 w-3.5" />
+                        {casePending
+                          ? ui("收录中", "Saving", "저장 중")
+                          : professionalFeedback
+                            ? ui("收录候选", "Save candidate", "후보 저장")
+                            : ui("收录案例", "Save case", "사례 저장")}
+                      </button>
+                    )}
+                  </div>
+                  {caseMessage ? <p className="mt-1.5 text-[10px] text-emerald-100">{caseMessage}</p> : null}
+                </div>
               </div>
             </article>
           );
@@ -1221,6 +1413,11 @@ function V17EvidencePanel({
       {feedbackError ? (
         <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
           {feedbackError}
+        </p>
+      ) : null}
+      {caseError ? (
+        <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+          {caseError}
         </p>
       ) : null}
       {items.length > visibleItems.length ? (
@@ -1816,6 +2013,14 @@ export default function OraclePage() {
                     sessionId={s.sessionId}
                     chartFingerprint={String(payload.physics_fingerprint || "")}
                     reviewerRole={user?.role || "user"}
+                    birthTimeISO={s.birthTimeISO}
+                    gender={s.natalGender || "male"}
+                    calendarType={s.natalCalendar || "solar"}
+                    lunarIsLeapMonth={s.lunarIsLeapMonth}
+                    fourPillars={fourPillars}
+                    luckPillar={luckPillarSnap}
+                    flowPillar={flowPillarSnap}
+                    selectedYear={s.selectedLuckYear}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
                     <p className="text-xs text-zinc-400">
