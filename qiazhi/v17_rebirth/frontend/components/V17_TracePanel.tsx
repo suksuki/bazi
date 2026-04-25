@@ -117,16 +117,20 @@ interface TracePanelProps {
   };
 }
 
-function traceImpactText(row: Record<string, unknown>): string {
+function traceUi(lang: AppLanguage, zh: string, en: string, ko: string): string {
+  return lang === "en" ? en : lang === "ko" ? ko : zh;
+}
+
+function traceImpactText(row: Record<string, unknown>, lang: AppLanguage): string {
   const impact =
     row.physical_impact && typeof row.physical_impact === "object"
       ? (row.physical_impact as Record<string, unknown>)
       : {};
   const ratio = Math.abs(Number(impact.impact_ratio || 0));
   const level = Number(impact.intensity_level || 0);
-  if (ratio > 0) return `位移 ${(ratio * 100).toFixed(1)}% · L${level || "?"}`;
-  if (level > 0) return `烈度 L${level}`;
-  return "诊断参考";
+  if (ratio > 0) return `${traceUi(lang, "位移", "Shift", "이동")} ${(ratio * 100).toFixed(1)}% · L${level || "?"}`;
+  if (level > 0) return `${traceUi(lang, "烈度", "Intensity", "강도")} L${level}`;
+  return traceUi(lang, "诊断参考", "Diagnostic reference", "진단 참고");
 }
 
 function traceBiasPairs(value: unknown): Array<{ name: string; score: number }> {
@@ -154,7 +158,7 @@ function traceBiasSummary(row: Record<string, unknown>): { useText: string; tabo
   };
 }
 
-function traceArbitrationChain(row: Record<string, unknown>, fallbackMode: "手动" | "自动" | "LLM"): string {
+function traceArbitrationChain(row: Record<string, unknown>, fallbackMode: "manual" | "auto" | "LLM", lang: AppLanguage): string {
   const explicit = String(row.arbitration_trace || "").trim();
   if (explicit) return explicit;
   const impact =
@@ -163,7 +167,13 @@ function traceArbitrationChain(row: Record<string, unknown>, fallbackMode: "手�
       : {};
   const source = String(row.source_label || row.source || row.plugin_id || "unknown").trim();
   const level = Number(impact.intensity_level || 0);
-  return `${source} -> L${level > 0 ? level : "?"} -> ${fallbackMode}`;
+  const fallbackLabel =
+    fallbackMode === "manual"
+      ? traceUi(lang, "手动", "Manual", "수동")
+      : fallbackMode === "auto"
+        ? traceUi(lang, "自动", "Auto", "자동")
+        : "LLM";
+  return `${source} -> L${level > 0 ? level : "?"} -> ${fallbackLabel}`;
 }
 
 function scoreEntries(map: Record<string, number> | undefined): Array<{ name: string; score: number }> {
@@ -921,15 +931,15 @@ export function V17_TracePanel({
                         >
                           <p className="text-violet-100">{String(row.label || row.title || "—")}</p>
                           <p className="mt-0.5 text-zinc-500">
-                            {String(row.source || row.plugin_id || "unknown")} · {String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || "无目标神")}
+                            {String(row.source || row.plugin_id || "unknown")} · {translateTerm(lang, String(row.target_god || (row.physical_impact as Record<string, unknown> | undefined)?.target_god || ui("无目标神", "No target god", "대상 십신 없음")))}
                           </p>
-                          <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "手动")}</p>
-                          {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">来自 LLM 仲裁 · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
-                          <p className="mt-0.5 text-zinc-400">{traceImpactText(row)}</p>
+                          <p className="mt-0.5 font-mono text-violet-200/80">{traceArbitrationChain(row, "manual", lang)}</p>
+                          {row.resolved_from_llm ? <p className="mt-0.5 text-cyan-200/80">{ui("来自 LLM 仲裁", "From LLM arbitration", "LLM 중재에서 옴")} · {String(row.llm_resolution_state || "promoted_to_manual")}</p> : null}
+                          <p className="mt-0.5 text-zinc-400">{traceImpactText(row, lang)}</p>
                           {biasSummary ? (
                             <div className="mt-1 space-y-0.5 text-[10px]">
-                              {biasSummary.useText ? <p className="text-emerald-200/90">用侧推动：{biasSummary.useText}</p> : null}
-                              {biasSummary.tabooText ? <p className="text-rose-200/90">忌侧推动：{biasSummary.tabooText}</p> : null}
+                              {biasSummary.useText ? <p className="text-emerald-200/90">{ui("用侧推动", "Use-side push", "용측 추진")}：{biasSummary.useText}</p> : null}
+                              {biasSummary.tabooText ? <p className="text-rose-200/90">{ui("忌侧推动", "Taboo-side push", "기측 추진")}：{biasSummary.tabooText}</p> : null}
                             </div>
                           ) : null}
                         </div>
@@ -969,7 +979,7 @@ export function V17_TracePanel({
         <>
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">主张与冲突层</p>
+          <p className="text-[11px] text-cyan-300">{ui("主张与冲突层", "Claims & Conflict Layer", "주장/충돌 레이어")}</p>
           <span className="text-[10px] text-zinc-500">
             claims {pluginClaims.length} / conflicts {pluginConflicts.length} / resolutions {pluginConflictResolutions.length}
           </span>
@@ -1013,7 +1023,7 @@ export function V17_TracePanel({
                   </div>
                   <p className="mt-1 break-words text-[10px] text-zinc-300">{String(row.why_conflict || "—")}</p>
                   <p className="mt-1 text-[10px] text-zinc-500">
-                    {String(row.target_god || "").trim() ? `target ${String(row.target_god)} / ` : ""}
+                    {String(row.target_god || "").trim() ? `${ui("目标", "target", "대상")} ${translateTerm(lang, String(row.target_god))} / ` : ""}
                     plugins {plugins.length} / claims {claims.length}
                   </p>
                   {plugins.length ? (
@@ -1021,22 +1031,22 @@ export function V17_TracePanel({
                   ) : null}
                   {resolution ? (
                     <p className="mt-1 break-all text-[10px] text-cyan-200/90">
-                      system suggestion: {String(resolution.policy || "—")} · keep {String(resolution.winner_claim_id || "—")}
+                      {ui("系统建议", "system suggestion", "시스템 제안")}: {String(resolution.policy || "—")} · keep {String(resolution.winner_claim_id || "—")}
                     </p>
                   ) : null}
                 </div>
               );
             })
           ) : (
-            <p className="text-[11px] text-zinc-500">暂无挂起冲突；当前主张之间未检测到显著冲突。</p>
+            <p className="text-[11px] text-zinc-500">{ui("暂无挂起冲突；当前主张之间未检测到显著冲突。", "No pending conflicts; no significant conflict was detected among current claims.", "보류 중인 충돌이 없습니다. 현재 주장 사이에 뚜렷한 충돌이 감지되지 않았습니다.")}</p>
           )}
         </div>
       </div>
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">大脑动作队列</p>
-          <span className="text-[10px] text-zinc-500">{brainActionQueue.length} 条</span>
+          <p className="text-[11px] text-cyan-300">{ui("大脑动作队列", "Brain Action Queue", "브레인 액션 큐")}</p>
+          <span className="text-[10px] text-zinc-500">{brainActionQueue.length} {ui("条", "rows", "건")}</span>
         </div>
         <div className="space-y-1">
           {brainActionQueue.length ? (
@@ -1056,15 +1066,15 @@ export function V17_TracePanel({
               </div>
             ))
           ) : (
-            <p className="text-[11px] text-zinc-500">暂无脑动作；当前未形成可执行的后续路由建议。</p>
+            <p className="text-[11px] text-zinc-500">{ui("暂无脑动作；当前未形成可执行的后续路由建议。", "No brain actions yet; no executable follow-up route has formed.", "브레인 액션이 아직 없습니다. 실행 가능한 후속 라우트가 아직 형성되지 않았습니다.")}</p>
           )}
         </div>
       </div>
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-cyan-300">脑流时间线</p>
-          <span className="text-[10px] text-zinc-500">{brainTimeline.length} 条</span>
+          <p className="text-[11px] text-cyan-300">{ui("脑流时间线", "Brain Flow Timeline", "브레인 플로우 타임라인")}</p>
+          <span className="text-[10px] text-zinc-500">{brainTimeline.length} {ui("条", "rows", "건")}</span>
         </div>
         <div className="space-y-2">
           {brainTimeline.length ? (
@@ -1093,13 +1103,13 @@ export function V17_TracePanel({
               </div>
             ))
           ) : (
-            <p className="text-[11px] text-zinc-500">暂无脑流时间线；当前尚未形成从冲突到路由的完整链路。</p>
+            <p className="text-[11px] text-zinc-500">{ui("暂无脑流时间线；当前尚未形成从冲突到路由的完整链路。", "No brain-flow timeline yet; the full path from conflict to routing has not formed.", "브레인 플로우 타임라인이 아직 없습니다. 충돌에서 라우팅까지의 전체 경로가 아직 형성되지 않았습니다.")}</p>
           )}
         </div>
       </div>
 
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <p className="text-[11px] text-cyan-300">LLM 链路时间线</p>
+        <p className="text-[11px] text-cyan-300">{ui("LLM 链路时间线", "LLM Link Timeline", "LLM 링크 타임라인")}</p>
         <div className="space-y-2">
           {timelineItems.map((item) => (
             <div key={item.label} className="rounded-lg border border-cyan-500/10 bg-zinc-900/70 px-2 py-2">
@@ -1131,41 +1141,41 @@ export function V17_TracePanel({
 
       {/* ── LLM 状态概览 ── */}
       <div className="mt-3 space-y-1 text-[11px] text-zinc-200 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <p className="text-[11px] text-cyan-300">LLM 状态概览</p>
+        <p className="text-[11px] text-cyan-300">{ui("LLM 状态概览", "LLM Status Overview", "LLM 상태 개요")}</p>
         <p>
-          模型：
+          {ui("模型", "Model", "모델")}：
           {connectPhase
-            ? `${modelLabel}（待首字）`
-            : String(llmMeta.model || llmMeta.llm_endpoint_host || "叙事引擎")}
+            ? `${modelLabel}${ui("（待首字）", " (waiting for first token)", " (첫 토큰 대기)")}`
+            : String(llmMeta.model || llmMeta.llm_endpoint_host || ui("叙事引擎", "Narrative engine", "서사 엔진"))}
         </p>
         <p>
-          耗时：
+          {ui("耗时", "Elapsed", "소요 시간")}：
           {connectPhase
             ? `${modelLabel} · ${connectTickMs} ms`
             : collapsePhase
-              ? "计时中…"
+              ? ui("计时中…", "Timing…", "계산 중…")
               : llmLifecyclePhase === "closed_without_output"
-                ? "流已结束"
+                ? ui("流已结束", "Stream closed", "스트림 종료")
                 : `${Number(llmMeta.elapsed_ms || 0)} ms`}
         </p>
         <p>
-          状态：
+          {ui("状态", "Status", "상태")}：
           {llmStatusText}
         </p>
-        {llmStatusDetail ? <p>步进：{llmStatusDetail}</p> : null}
+        {llmStatusDetail ? <p>{ui("步进", "Step", "단계")}：{llmStatusDetail}</p> : null}
         {lastHeartbeatStep ? <p>Heartbeat：{lastHeartbeatStep}</p> : null}
         {llmMeta.http_timeout_sec != null ? (
-          <p>HTTP 超时：{String(llmMeta.http_timeout_sec)} s</p>
+          <p>{ui("HTTP 超时", "HTTP timeout", "HTTP 타임아웃")}：{String(llmMeta.http_timeout_sec)} s</p>
         ) : null}
         {llmMeta.fuse_wait_timeout_sec != null ? (
-          <p>Fuse 等待：{String(llmMeta.fuse_wait_timeout_sec)} s</p>
+          <p>{ui("Fuse 等待", "Fuse wait", "Fuse 대기")}：{String(llmMeta.fuse_wait_timeout_sec)} s</p>
         ) : null}
-        {llmMeta.error ? <p className="text-rose-300/90">错误：{String(llmMeta.error)}</p> : null}
+        {llmMeta.error ? <p className="text-rose-300/90">{ui("错误", "Error", "오류")}：{String(llmMeta.error)}</p> : null}
       </div>
 
       {/* ── 初始请求参数 ── */}
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <p className="text-[11px] text-cyan-300">初始请求参数</p>
+        <p className="text-[11px] text-cyan-300">{ui("初始请求参数", "Initial Request Params", "초기 요청 파라미터")}</p>
         <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
           {JSON.stringify(
             {
@@ -1187,65 +1197,65 @@ export function V17_TracePanel({
       </div>
 
       <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3" open>
-        <summary className="cursor-pointer text-[11px] text-cyan-300">full_prompt_trace 审计</summary>
+        <summary className="cursor-pointer text-[11px] text-cyan-300">full_prompt_trace {ui("审计", "Audit", "감사")}</summary>
         <div className="mt-3 space-y-2">
         {fullTrace ? (
           <p className="text-[10px] text-amber-200/90">
-            full_prompt_trace：decision_anchor 位于 System Role —{" "}
-            {fullTrace.decision_anchor_literal_in_system_role ? "已验证" : "未命中（锚点为空或未写入 System）"}
+            full_prompt_trace：decision_anchor {ui("位于 System Role", "is in System Role", "System Role에 있음")} —{" "}
+            {fullTrace.decision_anchor_literal_in_system_role ? ui("已验证", "verified", "검증됨") : ui("未命中（锚点为空或未写入 System）", "not found (anchor is empty or not written into System)", "미검출(앵커가 비었거나 System에 쓰이지 않음)")}
             {typeof fullTrace.decision_anchor_len === "number"
-              ? `（锚点长度 ${String(fullTrace.decision_anchor_len)}）`
+              ? ui(`（锚点长度 ${String(fullTrace.decision_anchor_len)}）`, ` (anchor length ${String(fullTrace.decision_anchor_len)})`, ` (앵커 길이 ${String(fullTrace.decision_anchor_len)})`)
               : ""}
           </p>
         ) : collapsePhase || connectPhase || llmLifecyclePhase === "closed_without_output" ? (
           <p className="text-[10px] text-zinc-500">
             {llmAuditSnapshot
-              ? "full_prompt_trace：已由 SNAPSHOT（llm_audit_preview）在 fuse 前下发…"
-              : "full_prompt_trace：终帧到达后解锁审计字段…"}
+              ? ui("full_prompt_trace：已由 SNAPSHOT（llm_audit_preview）在 fuse 前下发…", "full_prompt_trace: already sent by SNAPSHOT (llm_audit_preview) before fuse…", "full_prompt_trace: SNAPSHOT(llm_audit_preview)이 fuse 전에 이미 전달됨…")
+              : ui("full_prompt_trace：终帧到达后解锁审计字段…", "full_prompt_trace: audit fields unlock after the final frame arrives…", "full_prompt_trace: 최종 프레임 도착 후 감사 필드가 열립니다…")}
           </p>
         ) : null}
 
-        <p className="text-[11px] text-cyan-300">LLM 系统提示词</p>
+        <p className="text-[11px] text-cyan-300">{ui("LLM 系统提示词", "LLM System Prompt", "LLM 시스템 프롬프트")}</p>
         <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
           {String(
             fullTrace?.system_role ??
               llmMeta.llm_system_prompt ??
-              "（本期帧未携带，可能为缓存帧或非 LLM 路径）",
+              ui("（本期帧未携带，可能为缓存帧或非 LLM 路径）", "(not included in this frame; it may be cached or a non-LLM path)", "(이번 프레임에 없음; 캐시 프레임이거나 비 LLM 경로일 수 있음)"),
           )}
         </pre>
-        <p className="text-[11px] text-cyan-300">LLM 用户提示词</p>
+        <p className="text-[11px] text-cyan-300">{ui("LLM 用户提示词", "LLM User Prompt", "LLM 사용자 프롬프트")}</p>
         <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
-          {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? "（同上）")}
+          {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? ui("（同上）", "(same as above)", "(위와 동일)"))}
         </pre>
 
         {Array.isArray(llmMeta.llm_request_messages) ? (
           <details className="text-[11px] text-zinc-400">
-            <summary className="cursor-pointer text-cyan-300/90">完整 messages JSON</summary>
+            <summary className="cursor-pointer text-cyan-300/90">{ui("完整 messages JSON", "Full messages JSON", "전체 messages JSON")}</summary>
             <pre className="mt-1 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-400">
               {JSON.stringify(llmMeta.llm_request_messages, null, 2)}
             </pre>
           </details>
         ) : null}
 
-        <p className="text-[11px] text-cyan-300">LLM 返回（模型正文，未经 Sanitizer）</p>
+        <p className="text-[11px] text-cyan-300">{ui("LLM 返回（模型正文，未经 Sanitizer）", "LLM Return (raw model text, before sanitizer)", "LLM 반환(모델 본문, Sanitizer 전)")}</p>
         <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
           {(() => {
             const raw = String(llmMeta.llm_reply ?? "").trim();
             if (raw) return raw;
-            if (llmMeta.ok === false) return "（LLM 调用失败，无模型正文；界面判词可能为降级拼接）";
-            return String(latestNarrator?.payload?.render_text || "").trim() || "（空）";
+            if (llmMeta.ok === false) return ui("（LLM 调用失败，无模型正文；界面判词可能为降级拼接）", "(LLM call failed; no model text. The visible verdict may be fallback-composed.)", "(LLM 호출 실패; 모델 본문 없음. 화면 판정은 폴백 조합일 수 있습니다.)");
+            return String(latestNarrator?.payload?.render_text || "").trim() || ui("（空）", "(empty)", "(비어 있음)");
           })()}
         </pre>
 
-        <p className="text-[11px] text-cyan-300">上游原始 JSON / SSE（截断）</p>
+        <p className="text-[11px] text-cyan-300">{ui("上游原始 JSON / SSE（截断）", "Upstream Raw JSON / SSE (truncated)", "상위 원본 JSON / SSE(잘림)")}</p>
         <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md border border-cyan-500/20 bg-zinc-950/80 p-2 font-mono text-[9px] text-zinc-400">
-          {String(llmMeta.llm_raw_response_json || "").trim() || "（无）"}
+          {String(llmMeta.llm_raw_response_json || "").trim() || ui("（无）", "(none)", "(없음)")}
         </pre>
         </div>
       </details>
 
       <details className="mt-3 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
-        <summary className="cursor-pointer text-[11px] text-cyan-300">四柱原始 payload</summary>
+        <summary className="cursor-pointer text-[11px] text-cyan-300">{ui("四柱原始 payload", "Raw Four-Pillar Payload", "사주 원본 payload")}</summary>
         <div className="mt-3 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.22em] text-zinc-500">Physics SNAPSHOT</p>
           <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
@@ -1261,25 +1271,25 @@ export function V17_TracePanel({
       {/* ── 展开式提示词 / 原始回复 ── */}
       <div className="mt-3 space-y-2 rounded-xl border border-cyan-500/20 bg-zinc-950/70 p-3">
         <details className="text-[11px] text-zinc-300">
-          <summary className="cursor-pointer text-cyan-300/90">[查看完整提示词 (Prompt)]</summary>
+          <summary className="cursor-pointer text-cyan-300/90">[{ui("查看完整提示词", "View Full Prompt", "전체 프롬프트 보기")} (Prompt)]</summary>
           <p className="mt-1 text-[10px] text-cyan-400/80">System</p>
           <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
-            {String(fullTrace?.system_role ?? llmMeta.llm_system_prompt ?? "（等待终帧 llm_meta）")}
+            {String(fullTrace?.system_role ?? llmMeta.llm_system_prompt ?? ui("（等待终帧 llm_meta）", "(waiting for final-frame llm_meta)", "(최종 프레임 llm_meta 대기)"))}
           </pre>
           <p className="mt-2 text-[10px] text-cyan-400/80">User</p>
           <pre className="mt-0.5 max-h-36 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
-            {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? "（等待终帧 llm_meta）")}
+            {String(fullTrace?.user_role ?? llmMeta.llm_user_prompt ?? ui("（等待终帧 llm_meta）", "(waiting for final-frame llm_meta)", "(최종 프레임 llm_meta 대기)"))}
           </pre>
         </details>
         <details className="text-[11px] text-zinc-300">
-          <summary className="cursor-pointer text-cyan-300/90">[查看原始回复 (Raw)]</summary>
-          <p className="mt-1 text-[10px] text-zinc-500">模型正文（未经 Sanitizer）</p>
+          <summary className="cursor-pointer text-cyan-300/90">[{ui("查看原始回复", "View Raw Reply", "원본 응답 보기")} (Raw)]</summary>
+          <p className="mt-1 text-[10px] text-zinc-500">{ui("模型正文（未经 Sanitizer）", "Model text (before sanitizer)", "모델 본문(Sanitizer 전)")}</p>
           <pre className="mt-0.5 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[10px] text-zinc-300">
-            {String(llmMeta.llm_reply || "").trim() || "（空）"}
+            {String(llmMeta.llm_reply || "").trim() || ui("（空）", "(empty)", "(비어 있음)")}
           </pre>
-          <p className="mt-2 text-[10px] text-zinc-500">上游 JSON / SSE</p>
+          <p className="mt-2 text-[10px] text-zinc-500">{ui("上游 JSON / SSE", "Upstream JSON / SSE", "상위 JSON / SSE")}</p>
           <pre className="mt-0.5 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-700 bg-zinc-950/80 p-2 font-mono text-[9px] text-zinc-400">
-            {String(llmMeta.llm_raw_response_json || "").trim() || "（无）"}
+            {String(llmMeta.llm_raw_response_json || "").trim() || ui("（无）", "(none)", "(없음)")}
           </pre>
         </details>
       </div>

@@ -153,10 +153,14 @@ def decision_route_reason(
     }
 
 
-def build_llm_plan_prompt(*, rows: List[Dict[str, Any]], action: str, anchor: str) -> str:
+def build_llm_plan_prompt(*, rows: List[Dict[str, Any]], action: str, anchor: str, output_language: str = "zh") -> str:
     if not rows:
+        if output_language == "en":
+            return "No executable candidates were found, so no batch prompt can be generated."
+        if output_language == "ko":
+            return "실행 가능한 후보가 없어 배치 프롬프트를 생성할 수 없습니다."
         return "未检测到可执行候选，无法生成批量提示词。"
-    return build_plan_prompt_text(rows=rows, action=action, anchor=anchor, max_rows=16)
+    return build_plan_prompt_text(rows=rows, action=action, anchor=anchor, max_rows=16, output_language=output_language)
 
 
 def safe_decision_label(row: Dict[str, Any]) -> str:

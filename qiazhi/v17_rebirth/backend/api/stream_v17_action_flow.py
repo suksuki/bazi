@@ -178,6 +178,7 @@ async def process_plan_signal_action(
                 rows=matched_decisions,
                 action=action,
                 anchor=anchor,
+                output_language=str(payload.get("ui_lang") or current_physics.get("ui_lang") or "zh"),
             )
             event["llm_review_prompt"] = plan.meta.get("llm_review_prompt")
 

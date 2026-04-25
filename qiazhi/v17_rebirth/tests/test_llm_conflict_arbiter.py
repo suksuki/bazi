@@ -56,6 +56,16 @@ def test_build_llm_conflict_prompt_embeds_bundle_sections() -> None:
     assert "只输出 JSON" in prompt
 
 
+def test_build_llm_conflict_prompt_honors_output_language() -> None:
+    prompt = build_llm_conflict_prompt(
+        bundle=build_conflict_bundle(meta=_meta(), conflict_id="cx_1"),
+        output_language="en",
+    )
+    assert "Output structured JSON only" in prompt
+    assert '"reason_language": "en"' in prompt
+    assert "只输出结构化 JSON" not in prompt
+
+
 def test_parse_llm_conflict_reply_prefers_json_contract() -> None:
     parsed = parse_llm_conflict_reply(
         reply='{"resolution_type":"merge","preferred_arbiter":"system","winner_claim_ids":["c1"],"dropped_claim_ids":["c2"],"reason":"L1优先","confidence":0.81}',

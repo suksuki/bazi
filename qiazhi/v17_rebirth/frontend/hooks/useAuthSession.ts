@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+import { useAppLanguage } from "@/hooks/useAppLanguage";
+import type { AppLanguage } from "@/lib/i18n";
 
 export type AuthRole = "admin" | "manager" | "practitioner" | "user";
 
@@ -49,7 +51,14 @@ function asUser(value: unknown): AuthUser | null {
   };
 }
 
+function ui(lang: AppLanguage, zh: string, en: string, ko: string): string {
+  if (lang === "en") return en;
+  if (lang === "ko") return ko;
+  return zh;
+}
+
 export function useAuthSession(): AuthState {
+  const { language } = useAppLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,17 +70,17 @@ export function useAuthSession(): AuthState {
       const { data: payload, ok } = await requestJson<Record<string, unknown>>("/api/auth/me", noStoreInit());
       if (!ok) {
         setUser(null);
-        setError(String(payload.detail || "登录已失效。"));
+        setError(String(payload.detail || ui(language, "登录已失效。", "The login session has expired.", "로그인 세션이 만료되었습니다.")));
         return;
       }
       setUser(asUser(payload.user));
     } catch (err) {
       setUser(null);
-      setError(err instanceof Error ? err.message : "认证信息加载失败。");
+      setError(err instanceof Error ? err.message : ui(language, "认证信息加载失败。", "Failed to load authentication info.", "인증 정보를 불러오지 못했습니다."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const logout = useCallback(async () => {
     try {

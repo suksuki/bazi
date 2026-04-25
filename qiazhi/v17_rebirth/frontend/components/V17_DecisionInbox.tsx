@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 
-import { t, type AppLanguage } from "@/lib/i18n";
+import { t, translateTerm, type AppLanguage } from "@/lib/i18n";
 import type { Decision } from "@/hooks/useOracleSession";
 import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
 import { V17PlanRoutingClaim, compactRoutingLabel } from "@/components/V17_PlanRoutingClaim";
@@ -174,90 +174,94 @@ function formatSigned(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 }
 
-function impactText(decision: Decision): string {
+function localText(lang: AppLanguage, zh: string, en: string, ko: string): string {
+  return lang === "en" ? en : lang === "ko" ? ko : zh;
+}
+
+function impactText(decision: Decision, lang: AppLanguage): string {
   const impact = decision.physical_impact || {};
   const ratio = typeof impact.impact_ratio === "number" ? Math.abs(impact.impact_ratio) : 0;
   const level = Number(impact.intensity_level || 0);
-  if (ratio > 0) return `位移 ${(ratio * 100).toFixed(0)}% · L${level || "?"}`;
-  if (level > 0) return `烈度 L${level}`;
-  return "等待仲裁";
+  if (ratio > 0) return `${localText(lang, "位移", "Shift", "이동")} ${(ratio * 100).toFixed(0)}% · L${level || "?"}`;
+  if (level > 0) return `${localText(lang, "烈度", "Intensity", "강도")} L${level}`;
+  return localText(lang, "等待仲裁", "Awaiting arbitration", "중재 대기");
 }
 
-function bucketReason(kind: BucketKind, decision: Decision): string {
-  const target = String(decision.target_god || decision.physical_impact?.target_god || "").trim();
+function bucketReason(kind: BucketKind, decision: Decision, lang: AppLanguage): string {
+  const target = translateTerm(lang, String(decision.target_god || decision.physical_impact?.target_god || "").trim());
   if (kind === "manual") {
-    return target ? `已有明确目标神 ${target}，适合由你手动裁定。` : "保留给你手动定夺。";
+    return target ? localText(lang, `已有明确目标神 ${target}，适合由你手动裁定。`, `The target god ${target} is clear, so this is suitable for manual judgement.`, `대상 십신 ${target}이 명확하여 수동 판정에 적합합니다.`) : localText(lang, "保留给你手动定夺。", "Kept for your manual decision.", "수동 판단을 위해 남겨둡니다.");
   }
   if (kind === "auto") {
-    return target ? `系统已围绕 ${target} 完成静默处理或归档。` : "系统已将这条信息静默处理，不再占用你的决策位。";
+    return target ? localText(lang, `系统已围绕 ${target} 完成静默处理或归档。`, `The system has silently handled or archived this around ${target}.`, `시스템이 ${target} 기준으로 조용히 처리하거나 보관했습니다.`) : localText(lang, "系统已将这条信息静默处理，不再占用你的决策位。", "The system handled this silently, so it no longer occupies a decision slot.", "시스템이 이 항목을 조용히 처리하여 결정 슬롯을 차지하지 않습니다.");
   }
   if (kind === "system") {
-    return target ? `目标神 ${target} 已明确，满足自动处理条件。` : "系统将继续观察并尝试自动收敛。";
+    return target ? localText(lang, `目标神 ${target} 已明确，满足自动处理条件。`, `The target god ${target} is clear and meets auto-handling conditions.`, `대상 십신 ${target}이 명확하여 자동 처리 조건을 충족합니다.`) : localText(lang, "系统将继续观察并尝试自动收敛。", "The system will keep observing and try to converge automatically.", "시스템이 계속 관찰하며 자동 수렴을 시도합니다.");
   }
-  return target ? `可为模型提供 ${target} 方向的叙事参考，但不建议直接点按。` : "更适合作为叙事上下文，而不是直接动作。";
+  return target ? localText(lang, `可为模型提供 ${target} 方向的叙事参考，但不建议直接点按。`, `Can provide narrative context toward ${target}, but is not recommended as a direct action.`, `${target} 방향의 서사 참고를 제공할 수 있지만 직접 액션으로 권장하지는 않습니다.`) : localText(lang, "更适合作为叙事上下文，而不是直接动作。", "Better used as narrative context than a direct action.", "직접 액션보다 서사 컨텍스트에 더 적합합니다.");
 }
 
-function bucketAccessLabel(kind: BucketKind): string {
-  if (kind === "manual") return "可手动执行";
-  if (kind === "auto") return "系统归档";
-  if (kind === "system") return "系统自动";
-  return "叙事参考";
+function bucketAccessLabel(kind: BucketKind, lang: AppLanguage): string {
+  if (kind === "manual") return localText(lang, "可手动执行", "Manual action", "수동 실행 가능");
+  if (kind === "auto") return localText(lang, "系统归档", "System archived", "시스템 보관");
+  if (kind === "system") return localText(lang, "系统自动", "System auto", "시스템 자동");
+  return localText(lang, "叙事参考", "Narrative reference", "서사 참고");
 }
 
-function statusBadge(kind: BucketKind, decision: Decision): { label: string; className: string } {
+function statusBadge(kind: BucketKind, decision: Decision, lang: AppLanguage): { label: string; className: string } {
   const impact = decision.physical_impact || {};
   const ratio = Math.abs(Number(impact.impact_ratio || 0));
   const level = Number(impact.intensity_level || 0);
   if (kind === "manual") {
     if (level >= 3 || ratio >= 0.1) {
       return {
-        label: "需立即裁定",
+        label: localText(lang, "需立即裁定", "Needs immediate judgement", "즉시 판정 필요"),
         className: "border-rose-500/30 bg-rose-950/40 text-rose-100",
       };
     }
     return {
-      label: "等待你确认",
+      label: localText(lang, "等待你确认", "Awaiting your confirmation", "확인 대기"),
       className: "border-violet-500/25 bg-violet-950/35 text-violet-100",
     };
   }
   if (kind === "auto") {
     if (decision.resolved_from_llm) {
       return {
-        label: "已自动承接",
+        label: localText(lang, "已自动承接", "Auto accepted", "자동 수용됨"),
         className: "border-cyan-500/25 bg-cyan-950/35 text-cyan-100",
       };
     }
     return {
-      label: "后台静默处理",
+      label: localText(lang, "后台静默处理", "Silent backend handling", "백그라운드 조용한 처리"),
       className: "border-amber-500/25 bg-amber-950/35 text-amber-100",
     };
   }
   if (kind === "system") {
     if (level >= 3) {
       return {
-        label: "拟自动收敛",
+        label: localText(lang, "拟自动收敛", "Planned auto convergence", "자동 수렴 예정"),
         className: "border-amber-500/30 bg-amber-950/40 text-amber-100",
       };
     }
     return {
-      label: "系统观察中",
+      label: localText(lang, "系统观察中", "System observing", "시스템 관찰 중"),
       className: "border-zinc-500/20 bg-zinc-900/70 text-zinc-300",
     };
   }
   return {
-    label: "将注入 Prompt",
+    label: localText(lang, "将注入 Prompt", "Will inject into prompt", "프롬프트에 주입 예정"),
     className: "border-cyan-500/30 bg-cyan-950/35 text-cyan-100",
   };
 }
 
-function promptPreview(decision: Decision): string {
-  const target = String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim();
+function promptPreview(decision: Decision, lang: AppLanguage): string {
+  const target = translateTerm(lang, String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim());
   const source = String(decision.source || "unknown").trim();
   const ratio = Math.abs(Number(decision.physical_impact?.impact_ratio || 0));
   const preview = ratio > 0
-    ? `${target} 发生 ${(ratio * 100).toFixed(1)}% 相对位移`
-    : `${target} 被纳入叙事仲裁参考`;
-  return `Prompt 将引用：${preview}，来源 ${source}。`;
+    ? localText(lang, `${target} 发生 ${(ratio * 100).toFixed(1)}% 相对位移`, `${target} has a ${(ratio * 100).toFixed(1)}% relative shift`, `${target}에 ${(ratio * 100).toFixed(1)}% 상대 이동 발생`)
+    : localText(lang, `${target} 被纳入叙事仲裁参考`, `${target} is included as narrative arbitration context`, `${target}이 서사 중재 참고로 포함됨`);
+  return localText(lang, `Prompt 将引用：${preview}，来源 ${source}。`, `Prompt will cite: ${preview}; source ${source}.`, `프롬프트가 인용합니다: ${preview}, 출처 ${source}.`);
 }
 
 function compactProjection(projection: unknown): string {
@@ -270,12 +274,12 @@ function compactProjection(projection: unknown): string {
   return entries.map(([key, value]) => `${key} ${Math.round(value * 100)}%`).join(" · ");
 }
 
-function decisionFocusPreview(decision: Decision): string {
+function decisionFocusPreview(decision: Decision, lang: AppLanguage): string {
   const projectionText = compactProjection((decision as Decision & { cluster_projection?: Record<string, unknown> }).cluster_projection);
   const share = Number((decision as Decision & { projection_share?: number }).projection_share || 0);
-  const target = String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim();
+  const target = translateTerm(lang, String(decision.target_god || decision.physical_impact?.target_god || "未定目标").trim());
   if (!projectionText && share <= 0) return "";
-  return `主落点 ${target}${share > 0 ? ` · 占比 ${Math.round(share * 100)}%` : ""}${projectionText ? ` · ${projectionText}` : ""}`;
+  return `${localText(lang, "主落点", "Primary target", "주 낙점")} ${target}${share > 0 ? ` · ${localText(lang, "占比", "share", "비중")} ${Math.round(share * 100)}%` : ""}${projectionText ? ` · ${projectionText}` : ""}`;
 }
 
 function biasPairs(value: unknown): Array<{ name: string; score: number }> {
@@ -343,85 +347,89 @@ function patternConfidenceTone(score: number): string {
   return "border-zinc-500/20 bg-zinc-900/70 text-zinc-300";
 }
 
-function patternConfidenceChip(decision: Decision): { label: string; className: string } | null {
+function patternConfidenceChip(decision: Decision, lang: AppLanguage): { label: string; className: string } | null {
   const score = Number(decision.pattern_confidence ?? NaN);
   if (!Number.isFinite(score) || score <= 0) return null;
-  const label = String(decision.pattern_confidence_label || "格局置信").trim();
+  const label = String(decision.pattern_confidence_label || localText(lang, "格局置信", "Pattern confidence", "격국 신뢰도")).trim();
   return {
     label: `${label} ${Math.round(score * 100)}%`,
     className: patternConfidenceTone(score),
   };
 }
 
-function llmPolicyLabel(policy: string | undefined): string {
-  if (policy === "auto_apply") return "可自动裁决";
-  if (policy === "suggest_only") return "仅给建议";
-  return "仅作上下文";
+function llmPolicyLabel(policy: string | undefined, lang: AppLanguage): string {
+  if (policy === "auto_apply") return localText(lang, "可自动裁决", "Auto-judgement allowed", "자동 판정 가능");
+  if (policy === "suggest_only") return localText(lang, "仅给建议", "Suggestion only", "제안만");
+  return localText(lang, "仅作上下文", "Context only", "컨텍스트 전용");
 }
 
-function llmStateLabel(state: string | undefined): string {
-  if (state === "collapsed_to_system") return "已转入自动处理";
-  if (state === "promoted_to_manual") return "已转入手动入口";
-  if (state === "pending_context") return "等待模型消化";
-  return "处理中";
+function llmStateLabel(state: string | undefined, lang: AppLanguage): string {
+  if (state === "collapsed_to_system") return localText(lang, "已转入自动处理", "Moved to auto handling", "자동 처리로 이동됨");
+  if (state === "promoted_to_manual") return localText(lang, "已转入手动入口", "Moved to manual inbox", "수동 입구로 이동됨");
+  if (state === "pending_context") return localText(lang, "等待模型消化", "Waiting for model digestion", "모델 소화 대기");
+  return localText(lang, "处理中", "Processing", "처리 중");
 }
 
-function arbitrationRule(kind: BucketKind): { title: string; detail: string; accent: string } {
+function arbitrationRule(kind: BucketKind, lang: AppLanguage): { title: string; detail: string; accent: string } {
   if (kind === "manual") {
     return {
-      title: "进入条件",
-      detail: "存在明确目标神，且属于可执行动作，不是诊断态或纯说明态。",
+      title: localText(lang, "进入条件", "Entry Condition", "진입 조건"),
+      detail: localText(lang, "存在明确目标神，且属于可执行动作，不是诊断态或纯说明态。", "There is a clear target god and the item is executable, not diagnostic or descriptive only.", "명확한 대상 십신이 있고, 진단/설명 전용이 아닌 실행 가능한 항목입니다."),
       accent: "text-violet-100 border-violet-500/20 bg-violet-950/20",
     };
   }
   if (kind === "auto") {
     return {
-      title: "进入条件",
-      detail: "系统可自行结算、自动归档，或仅作为提示词素材保留，不再要求你逐条确认。",
+      title: localText(lang, "进入条件", "Entry Condition", "진입 조건"),
+      detail: localText(lang, "系统可自行结算、自动归档，或仅作为提示词素材保留，不再要求你逐条确认。", "The system can settle, archive, or keep this as prompt material without asking you to confirm each item.", "시스템이 자체 결산/자동 보관하거나 프롬프트 소재로 보존할 수 있어 개별 확인이 필요 없습니다."),
       accent: "text-amber-100 border-amber-500/20 bg-amber-950/20",
     };
   }
   if (kind === "system") {
     return {
-      title: "进入条件",
-      detail: "烈度较高，且满足自动处理阈值，系统可先行收敛。",
+      title: localText(lang, "进入条件", "Entry Condition", "진입 조건"),
+      detail: localText(lang, "烈度较高，且满足自动处理阈值，系统可先行收敛。", "Intensity is high enough and meets the auto-handling threshold, so the system can converge first.", "강도가 높고 자동 처리 임계값을 충족하여 시스템이 먼저 수렴할 수 있습니다."),
       accent: "text-amber-100 border-amber-500/20 bg-amber-950/20",
     };
   }
   return {
-    title: "进入条件",
-    detail: "更适合作为叙事依据、诊断上下文或提示词引用，而非直接动作。",
+    title: localText(lang, "进入条件", "Entry Condition", "진입 조건"),
+    detail: localText(lang, "更适合作为叙事依据、诊断上下文或提示词引用，而非直接动作。", "Better suited as narrative evidence, diagnostic context, or prompt reference than a direct action.", "직접 액션보다 서사 근거, 진단 컨텍스트, 프롬프트 참조에 더 적합합니다."),
     accent: "text-cyan-100 border-cyan-500/20 bg-cyan-950/20",
   };
 }
 
-function baseRoutingRationale(kind: BucketKind, decision: Decision): string[] {
+function baseRoutingRationale(kind: BucketKind, decision: Decision, lang: AppLanguage): string[] {
   const impact = decision.physical_impact || {};
   const ratio = Math.abs(Number(impact.impact_ratio || 0));
   const level = Number(impact.intensity_level || 0);
-  const target = String(decision.target_god || impact.target_god || "").trim() || "未定目标";
+  const target = translateTerm(lang, String(decision.target_god || impact.target_god || "").trim() || "未定目标");
   const source = String(decision.source_label || sourceLabel(decision)).trim() || "未知来源";
-  const ratioText = ratio > 0 ? `${(ratio * 100).toFixed(1)}%` : "观察";
-  const lines: string[] = [`来源 ${source}`, `目标 ${target}`, `位移 ${ratioText} · 烈度 L${level}`];
+  const ratioText = ratio > 0 ? `${(ratio * 100).toFixed(1)}%` : localText(lang, "观察", "observe", "관찰");
+  const lines: string[] = [
+    `${localText(lang, "来源", "Source", "출처")} ${source}`,
+    `${localText(lang, "目标", "Target", "대상")} ${target}`,
+    `${localText(lang, "位移", "Shift", "이동")} ${ratioText} · ${localText(lang, "烈度", "Intensity", "강도")} L${level}`,
+  ];
   if (kind === "manual") {
-    lines.push("规则：可人工确认且可回溯");
-    if (level >= 3) lines.push("触发阈值：烈度 >= 3");
-    if (ratio >= 0.08) lines.push("触发阈值：位移 >= 8%");
+    lines.push(localText(lang, "规则：可人工确认且可回溯", "Rule: manually confirmable and traceable", "규칙: 수동 확인 및 추적 가능"));
+    if (level >= 3) lines.push(localText(lang, "触发阈值：烈度 >= 3", "Trigger threshold: intensity >= 3", "트리거 임계값: 강도 >= 3"));
+    if (ratio >= 0.08) lines.push(localText(lang, "触发阈值：位移 >= 8%", "Trigger threshold: shift >= 8%", "트리거 임계값: 이동 >= 8%"));
     return lines;
   }
   if (kind === "auto" || kind === "system") {
     const rawPolicy = String((decision as Decision & { llm_resolution_policy?: string }).llm_resolution_policy || "").trim().toLowerCase();
     const state = String((decision as Decision & { llm_resolution_state?: string }).llm_resolution_state || "").trim().toLowerCase();
-    if (rawPolicy) lines.push(`策略 ${llmPolicyLabel(rawPolicy)}`);
-    if (state && state !== "none") lines.push(`状态 ${llmStateLabel(state)}`);
-    if (ratio > 0.02 && level >= 2) lines.push("按规则自动收敛或归档");
+    if (rawPolicy) lines.push(`${localText(lang, "策略", "Policy", "전략")} ${llmPolicyLabel(rawPolicy, lang)}`);
+    if (state && state !== "none") lines.push(`${localText(lang, "状态", "Status", "상태")} ${llmStateLabel(state, lang)}`);
+    if (ratio > 0.02 && level >= 2) lines.push(localText(lang, "按规则自动收敛或归档", "Auto-converged or archived by rule", "규칙에 따라 자동 수렴 또는 보관"));
     return lines;
   }
   const rawPolicy = String((decision as Decision & { llm_resolution_policy?: string }).llm_resolution_policy || "").trim();
   if (rawPolicy) {
-    lines.push(`叙事策略 ${llmPolicyLabel(rawPolicy)}`);
+    lines.push(`${localText(lang, "叙事策略", "Narrative policy", "서사 전략")} ${llmPolicyLabel(rawPolicy, lang)}`);
   } else {
-    lines.push("叙事策略 仅作上下文");
+    lines.push(`${localText(lang, "叙事策略", "Narrative policy", "서사 전략")} ${llmPolicyLabel(undefined, lang)}`);
   }
   return lines;
 }
@@ -466,15 +474,17 @@ function decisionFluxSummaryLines(
   decision: Decision,
   effectScores: Record<string, unknown>,
   currentTargets: Record<string, unknown>,
+  lang: AppLanguage,
 ): string[] {
   const state = decisionFluxState(decision, effectScores, currentTargets);
   if (!state) return [];
+  const target = translateTerm(lang, state.target);
   const lines = [
-    `M3 ${state.target} · 流后 ${formatSigned(state.resolvedFlux)} · 张力 ${state.tension.toFixed(2)} · 放大 ${state.reinforce.toFixed(2)} · 对抗 ${state.contest.toFixed(2)}`,
+    `M3 ${target} · ${localText(lang, "流后", "post-flow", "흐름 후")} ${formatSigned(state.resolvedFlux)} · ${localText(lang, "张力", "tension", "장력")} ${state.tension.toFixed(2)} · ${localText(lang, "放大", "reinforce", "증폭")} ${state.reinforce.toFixed(2)} · ${localText(lang, "对抗", "contest", "대항")} ${state.contest.toFixed(2)}`,
   ];
   if (Math.abs(state.outNet) > 0.001 || state.outSupport > 0 || state.outResist > 0) {
     lines.push(
-      `M3 外推 · 支撑 ${state.outSupport.toFixed(2)} / 压制 ${state.outResist.toFixed(2)} / 净值 ${formatSigned(state.outNet)}`,
+      `M3 ${localText(lang, "外推", "outbound", "외부 추정")} · ${localText(lang, "支撑", "support", "지지")} ${state.outSupport.toFixed(2)} / ${localText(lang, "压制", "resist", "압제")} ${state.outResist.toFixed(2)} / ${localText(lang, "净值", "net", "순값")} ${formatSigned(state.outNet)}`,
     );
   }
   return lines;
@@ -485,37 +495,40 @@ function decisionFluxHint(
   decision: Decision,
   effectScores: Record<string, unknown>,
   currentTargets: Record<string, unknown>,
+  lang: AppLanguage,
 ): string[] {
   const state = decisionFluxState(decision, effectScores, currentTargets);
   if (!state) return [];
+  const target = translateTerm(lang, state.target);
   if (kind === "manual") {
     if (state.tension >= 0.28 || state.contest >= 0.12) {
-      return [`M3 判读：${state.target} 当前拉扯偏高，保留人工裁决更稳。`];
+      return [localText(lang, `M3 判读：${target} 当前拉扯偏高，保留人工裁决更稳。`, `M3 reading: ${target} has high tension; manual judgement is steadier.`, `M3 판독: ${target}의 장력이 높아 수동 판정이 더 안정적입니다.`)];
     }
     if (Math.abs(state.resolvedFlux) >= 0.22 && state.reinforce >= 0.12) {
-      return [`M3 判读：${state.target} 走势已较清晰，但仍建议人工收口确认。`];
+      return [localText(lang, `M3 判读：${target} 走势已较清晰，但仍建议人工收口确认。`, `M3 reading: ${target}'s trend is clearer, but manual closure is still recommended.`, `M3 판독: ${target}의 흐름은 비교적 명확하지만 수동 마무리 확인을 권장합니다.`)];
     }
     return [];
   }
   if (kind === "system" || kind === "auto") {
     if (state.reinforce >= 0.15 && state.tension < 0.28) {
-      return [`M3 判读：${state.target} 同向放大明显、张力可控，适合自动收敛。`];
+      return [localText(lang, `M3 判读：${target} 同向放大明显、张力可控，适合自动收敛。`, `M3 reading: ${target} is reinforcing clearly with controlled tension, suitable for auto convergence.`, `M3 판독: ${target}은 동방향 증폭이 뚜렷하고 장력이 제어되어 자동 수렴에 적합합니다.`)];
     }
     if (state.tension >= 0.28) {
-      return [`M3 判读：${state.target} 仍有明显拉扯，自动侧以归档/观察更稳。`];
+      return [localText(lang, `M3 判读：${target} 仍有明显拉扯，自动侧以归档/观察更稳。`, `M3 reading: ${target} still has clear tension; auto side should archive or observe.`, `M3 판독: ${target}에는 여전히 뚜렷한 장력이 있어 자동 측은 보관/관찰이 더 안정적입니다.`)];
     }
     return [];
   }
   if (state.tension >= 0.24 || state.contest >= 0.1) {
-    return [`M3 判读：${state.target} 存在争执与解释空间，适合交给 LLM。`];
+    return [localText(lang, `M3 判读：${target} 存在争执与解释空间，适合交给 LLM。`, `M3 reading: ${target} has contest and interpretive room, suitable for LLM review.`, `M3 판독: ${target}에는 다툼과 해석 여지가 있어 LLM 검토에 적합합니다.`)];
   }
-  return [`M3 判读：${state.target} 张力较低，更适合作为提示词素材。`];
+  return [localText(lang, `M3 判读：${target} 张力较低，更适合作为提示词素材。`, `M3 reading: ${target} has low tension and is better as prompt material.`, `M3 판독: ${target}은 장력이 낮아 프롬프트 소재에 더 적합합니다.`)];
 }
 
 function groupFluxSummaryLines(
   decisions: Decision[],
   effectScores: Record<string, unknown>,
   currentTargets: Record<string, unknown>,
+  lang: AppLanguage,
 ): string[] {
   const states = Array.from(
     new Map(
@@ -534,13 +547,13 @@ function groupFluxSummaryLines(
   const summary = states
     .map(
       (item) =>
-        `${item.target} 张力 ${item.tension.toFixed(2)} / 放大 ${item.reinforce.toFixed(2)} / 流后 ${formatSigned(item.resolvedFlux)}`,
+        `${translateTerm(lang, item.target)} ${localText(lang, "张力", "tension", "장력")} ${item.tension.toFixed(2)} / ${localText(lang, "放大", "reinforce", "증폭")} ${item.reinforce.toFixed(2)} / ${localText(lang, "流后", "post-flow", "흐름 후")} ${formatSigned(item.resolvedFlux)}`,
     )
     .join(" · ");
-  const lines = [`M3 实时场：${summary}`];
+  const lines = [`M3 ${localText(lang, "实时场", "live field", "실시간 장")}：${summary}`];
   const dominant = states[0];
   if (dominant && dominant.tension >= 0.28) {
-    lines.push(`M3 判读：${dominant.target} 是本组的主要拉扯点，建议联动观察。`);
+    lines.push(localText(lang, `M3 判读：${translateTerm(lang, dominant.target)} 是本组的主要拉扯点，建议联动观察。`, `M3 reading: ${translateTerm(lang, dominant.target)} is the main tension point in this group; linked observation is recommended.`, `M3 판독: ${translateTerm(lang, dominant.target)}이 이 그룹의 주요 장력 지점이므로 연동 관찰을 권장합니다.`));
   }
   return lines;
 }
@@ -563,62 +576,63 @@ function dominantFluxState(
     )[0] || null;
 }
 
-function actionMetaFromFluxState(state: FluxStateRow | null, count = 1): DecisionActionMeta {
+function actionMetaFromFluxState(state: FluxStateRow | null, count = 1, lang: AppLanguage = "zh"): DecisionActionMeta {
   const suffix = count > 1 ? ` (${count})` : "";
   if (!state?.target) {
     return {
-      label: count > 1 ? `批量处理本组${suffix}` : "处理",
+      label: count > 1 ? `${localText(lang, "批量处理本组", "Process this group", "이 그룹 일괄 처리")}${suffix}` : localText(lang, "处理", "Process", "처리"),
       hint: "",
     };
   }
+  const target = translateTerm(lang, state.target);
   if (state.tension >= 0.28 || state.contest >= 0.12) {
     return {
-      label: count > 1 ? `整组裁定 ${state.target}${suffix}` : `人工裁定 ${state.target}`,
-      hint: `${state.target} 当前拉扯偏高，建议先人工收口再放行。`,
+      label: count > 1 ? `${localText(lang, "整组裁定", "Judge group", "그룹 판정")} ${target}${suffix}` : `${localText(lang, "人工裁定", "Manual judgement", "수동 판정")} ${target}`,
+      hint: localText(lang, `${target} 当前拉扯偏高，建议先人工收口再放行。`, `${target} has high tension; close it manually before releasing.`, `${target}의 장력이 높아 먼저 수동으로 마무리한 뒤 진행하는 것이 좋습니다.`),
     };
   }
   if (state.reinforce >= 0.15 && state.resolvedFlux >= 0.18) {
     return {
-      label: count > 1 ? `确认整组执行${suffix}` : `确认执行 ${state.target}`,
-      hint: `${state.target} 同向放大清晰，可直接确认执行。`,
+      label: count > 1 ? `${localText(lang, "确认整组执行", "Confirm group execution", "그룹 실행 확인")}${suffix}` : `${localText(lang, "确认执行", "Confirm execution", "실행 확인")} ${target}`,
+      hint: localText(lang, `${target} 同向放大清晰，可直接确认执行。`, `${target} is clearly reinforcing and can be confirmed directly.`, `${target}의 동방향 증폭이 명확하여 바로 실행 확인할 수 있습니다.`),
     };
   }
   if (state.resolvedFlux <= -0.18 || state.harm >= 0.22) {
     return {
-      label: count > 1 ? `整组审定 ${state.target}${suffix}` : `审定 ${state.target}`,
-      hint: `${state.target} 当前净效偏负，建议谨慎确认。`,
+      label: count > 1 ? `${localText(lang, "整组审定", "Review group", "그룹 심사")} ${target}${suffix}` : `${localText(lang, "审定", "Review", "심사")} ${target}`,
+      hint: localText(lang, `${target} 当前净效偏负，建议谨慎确认。`, `${target} currently has negative net effect; confirm carefully.`, `${target}의 현재 순효과가 음수라 신중한 확인을 권장합니다.`),
     };
   }
   return {
-    label: count > 1 ? `批量处理本组${suffix}` : `处理 ${state.target}`,
-    hint: `${state.target} 当前可进入常规处理路径。`,
+    label: count > 1 ? `${localText(lang, "批量处理本组", "Process this group", "이 그룹 일괄 처리")}${suffix}` : `${localText(lang, "处理", "Process", "처리")} ${target}`,
+    hint: localText(lang, `${target} 当前可进入常规处理路径。`, `${target} can enter the normal handling path.`, `${target}은 현재 일반 처리 경로에 들어갈 수 있습니다.`),
   };
 }
 
-function decisionReasonTags(kind: BucketKind, decision: Decision): string[] {
+function decisionReasonTags(kind: BucketKind, decision: Decision, lang: AppLanguage = "zh"): string[] {
   const impact = decision.physical_impact || {};
   const ratio = Math.abs(Number(impact.impact_ratio || 0));
   const level = Number(impact.intensity_level || 0);
   const target = String(decision.target_god || impact.target_god || "").trim();
   const tags: string[] = [];
-  if (target) tags.push(`目标神:${target}`);
-  if (level > 0) tags.push(`烈度:L${level}`);
-  if (ratio > 0) tags.push(`位移:${(ratio * 100).toFixed(0)}%`);
-  if (kind === "manual") tags.push("人工裁决");
-  if (kind === "auto") tags.push("后台处理");
-  if (kind === "system") tags.push("自动收敛");
-  if (kind === "llm") tags.push("叙事引用");
+  if (target) tags.push(`${localText(lang, "目标神", "target", "대상")}:${translateTerm(lang, target)}`);
+  if (level > 0) tags.push(`${localText(lang, "烈度", "intensity", "강도")}:L${level}`);
+  if (ratio > 0) tags.push(`${localText(lang, "位移", "shift", "이동")}:${(ratio * 100).toFixed(0)}%`);
+  if (kind === "manual") tags.push(localText(lang, "人工裁决", "Manual judgement", "수동 판정"));
+  if (kind === "auto") tags.push(localText(lang, "后台处理", "Backend handling", "백그라운드 처리"));
+  if (kind === "system") tags.push(localText(lang, "自动收敛", "Auto convergence", "자동 수렴"));
+  if (kind === "llm") tags.push(localText(lang, "叙事引用", "Narrative citation", "서사 인용"));
   return tags.slice(0, 4);
 }
 
-function arbitrationModeLabel(kind: BucketKind): string {
-  if (kind === "manual") return "手动";
-  if (kind === "auto") return "自动";
-  if (kind === "system") return "自动";
-  return "叙事";
+function arbitrationModeLabel(kind: BucketKind, lang: AppLanguage): string {
+  if (kind === "manual") return localText(lang, "手动", "Manual", "수동");
+  if (kind === "auto") return localText(lang, "自动", "Auto", "자동");
+  if (kind === "system") return localText(lang, "自动", "Auto", "자동");
+  return localText(lang, "叙事", "Narrative", "서사");
 }
 
-function arbitrationTrace(kind: BucketKind, decision: Decision): string {
+function arbitrationTrace(kind: BucketKind, decision: Decision, lang: AppLanguage): string {
   if (String(decision.arbitration_trace || "").trim()) {
     return String(decision.arbitration_trace || "").trim();
   }
@@ -626,7 +640,7 @@ function arbitrationTrace(kind: BucketKind, decision: Decision): string {
   const level = Number(impact.intensity_level || 0);
   const source = String(decision.source_label || "").trim() || sourceLabel(decision);
   const levelText = level > 0 ? `L${level}` : "L?";
-  return `${source} -> ${levelText} -> ${arbitrationModeLabel(kind)}`;
+  return `${source} -> ${levelText} -> ${arbitrationModeLabel(kind, lang)}`;
 }
 
 function isPassiveLlmContext(decision: Decision): boolean {
@@ -656,18 +670,18 @@ function isActionableManualDecision(decision: Decision): boolean {
   return true;
 }
 
-function formatPlanDecisionTrace(trace: PlanDecisionTrace[]): string[] {
+function formatPlanDecisionTrace(trace: PlanDecisionTrace[], lang: AppLanguage): string[] {
   if (!trace.length) return [];
   return trace
     .slice(0, 8)
     .map((item) => {
       const idx = typeof item.trace_index === "number" ? item.trace_index + 1 : null;
-      const label = String(item.label || item.decision_id || "未命名").trim();
+      const label = String(item.label || item.decision_id || localText(lang, "未命名", "Untitled", "이름 없음")).trim();
       const source = String(item.source || "unknown").trim();
-      const target = String(item.target_god || "未定目标").trim();
+      const target = translateTerm(lang, String(item.target_god || "未定目标").trim());
       const ratio = Number(item.impact_ratio || 0);
       const ratioText =
-        ratio > 0 ? `↑${(ratio * 100).toFixed(1)}%` : ratio < 0 ? `↓${Math.abs(ratio * 100).toFixed(1)}%` : "观察";
+        ratio > 0 ? `↑${(ratio * 100).toFixed(1)}%` : ratio < 0 ? `↓${Math.abs(ratio * 100).toFixed(1)}%` : localText(lang, "观察", "observe", "관찰");
       const prefix = idx == null ? "" : `${idx}. `;
       return `${prefix}${label} @${target} ${ratioText} / ${source}`;
     })
@@ -774,29 +788,29 @@ function planRoutingRationale(plan: {
   routing_policy?: string;
   routing_scores?: Record<string, unknown>;
   updated_at?: string;
-}): string[] {
+}, lang: AppLanguage): string[] {
   const route = String(plan.routing || "system").trim().toUpperCase() || "SYSTEM";
   const reason = String(plan.routing_reason || "").trim();
   const policy = String(plan.routing_policy || "").trim();
   const scores = compactRoutingScores(plan.routing_scores);
-  const lines: string[] = [`路由通道 ${route}`];
-  if (policy) lines.push(`策略 ${policy}`);
-  if (reason) lines.push(`原因 ${reason}`);
-  if (scores) lines.push(`候选分数 ${scores}`);
+  const lines: string[] = [`${localText(lang, "路由通道", "Route channel", "라우팅 채널")} ${route}`];
+  if (policy) lines.push(`${localText(lang, "策略", "Policy", "전략")} ${policy}`);
+  if (reason) lines.push(`${localText(lang, "原因", "Reason", "사유")} ${reason}`);
+  if (scores) lines.push(`${localText(lang, "候选分数", "Candidate scores", "후보 점수")} ${scores}`);
   const tension = asNumber(plan.routing_scores?.live_tension);
   const reinforce = asNumber(plan.routing_scores?.live_reinforce);
   const contest = asNumber(plan.routing_scores?.live_contest);
   if (tension > 0 || reinforce > 0 || contest > 0) {
-    lines.push(`M3 张力 ${tension.toFixed(2)} · 放大 ${reinforce.toFixed(2)} · 对抗 ${contest.toFixed(2)}`);
+    lines.push(`M3 ${localText(lang, "张力", "tension", "장력")} ${tension.toFixed(2)} · ${localText(lang, "放大", "reinforce", "증폭")} ${reinforce.toFixed(2)} · ${localText(lang, "对抗", "contest", "대항")} ${contest.toFixed(2)}`);
     if (route === "LLM" && (tension >= 0.24 || contest >= 0.1)) {
-      lines.push("M3 判读：当前目标争执偏高，模型预审更合适。");
+      lines.push(localText(lang, "M3 判读：当前目标争执偏高，模型预审更合适。", "M3 reading: the current target has high contest; model pre-review is more suitable.", "M3 판독: 현재 대상의 다툼이 높아 모델 사전 검토가 더 적합합니다."));
     } else if (route === "SYSTEM" && reinforce >= 0.15 && tension < 0.28) {
-      lines.push("M3 判读：同向放大清晰，可先走系统收敛。");
+      lines.push(localText(lang, "M3 判读：同向放大清晰，可先走系统收敛。", "M3 reading: reinforcement is clear, so system convergence can go first.", "M3 판독: 동방향 증폭이 명확하여 시스템 수렴을 먼저 진행할 수 있습니다."));
     } else if (route === "USER" && tension >= 0.28) {
-      lines.push("M3 判读：张力偏高，保留人工确认更稳。");
+      lines.push(localText(lang, "M3 判读：张力偏高，保留人工确认更稳。", "M3 reading: tension is high, so manual confirmation is steadier.", "M3 판독: 장력이 높아 수동 확인이 더 안정적입니다."));
     }
   }
-  if (plan.updated_at) lines.push(`更新时间 ${String(plan.updated_at)}`);
+  if (plan.updated_at) lines.push(`${localText(lang, "更新时间", "Updated", "업데이트 시간")} ${String(plan.updated_at)}`);
   return lines;
 }
 
@@ -808,67 +822,67 @@ function compactRoutingLines(lines: string[]): string {
 function derivePlanActionMeta(plan: {
   routing?: string;
   routing_scores?: Record<string, unknown>;
-}): PlanActionMeta {
+}, lang: AppLanguage): PlanActionMeta {
   const route = String(plan.routing || "system").trim().toLowerCase();
   const tension = asNumber(plan.routing_scores?.live_tension);
   const reinforce = asNumber(plan.routing_scores?.live_reinforce);
   const contest = asNumber(plan.routing_scores?.live_contest);
   if (route === "llm") {
     return {
-      approveLabel: "提交模型预审",
-      rejectLabel: "放弃预审",
-      escalateLabel: "改走人工",
-      withdrawLabel: "撤回计划",
+      approveLabel: localText(lang, "提交模型预审", "Submit model pre-review", "모델 사전 검토 제출"),
+      rejectLabel: localText(lang, "放弃预审", "Skip pre-review", "사전 검토 포기"),
+      escalateLabel: localText(lang, "改走人工", "Switch to manual", "수동으로 전환"),
+      withdrawLabel: localText(lang, "撤回计划", "Withdraw plan", "계획 철회"),
       recommended: "APPROVED",
       hint:
         tension >= 0.24 || contest >= 0.1
-          ? "推荐动作：提交模型预审，当前争执较高，适合先让模型判读。"
-          : "推荐动作：提交模型预审，当前更像解释型分歧。",
+          ? localText(lang, "推荐动作：提交模型预审，当前争执较高，适合先让模型判读。", "Recommended: submit model pre-review; contest is high enough for the model to read first.", "추천 액션: 모델 사전 검토 제출. 현재 다툼이 높아 모델 판독이 먼저 적합합니다.")
+          : localText(lang, "推荐动作：提交模型预审，当前更像解释型分歧。", "Recommended: submit model pre-review; this looks like an interpretive difference.", "추천 액션: 모델 사전 검토 제출. 현재는 해석형 분기처럼 보입니다."),
     };
   }
   if (route === "user") {
     return {
-      approveLabel: tension >= 0.28 ? "确认人工裁定" : "确认执行",
-      rejectLabel: "驳回本计划",
-      escalateLabel: "升级给模型",
-      withdrawLabel: "撤回计划",
+      approveLabel: tension >= 0.28 ? localText(lang, "确认人工裁定", "Confirm manual judgement", "수동 판정 확인") : localText(lang, "确认执行", "Confirm execution", "실행 확인"),
+      rejectLabel: localText(lang, "驳回本计划", "Reject this plan", "이 계획 반려"),
+      escalateLabel: localText(lang, "升级给模型", "Escalate to model", "모델로 승격"),
+      withdrawLabel: localText(lang, "撤回计划", "Withdraw plan", "계획 철회"),
       recommended: "APPROVED",
       hint:
         tension >= 0.28
-          ? "推荐动作：确认人工裁定，当前张力偏高，保留人为收口更稳。"
-          : "推荐动作：确认执行，这组计划已适合你直接拍板。",
+          ? localText(lang, "推荐动作：确认人工裁定，当前张力偏高，保留人为收口更稳。", "Recommended: confirm manual judgement; tension is high and human closure is steadier.", "추천 액션: 수동 판정 확인. 현재 장력이 높아 사람이 마무리하는 편이 더 안정적입니다.")
+          : localText(lang, "推荐动作：确认执行，这组计划已适合你直接拍板。", "Recommended: confirm execution; this plan group is ready for your call.", "추천 액션: 실행 확인. 이 계획 묶음은 직접 결정하기에 적합합니다."),
     };
   }
   if (tension >= 0.28) {
     return {
-      approveLabel: "仍按系统执行",
-      rejectLabel: "阻止执行",
-      escalateLabel: "改由人工裁决",
-      withdrawLabel: "撤回计划",
+      approveLabel: localText(lang, "仍按系统执行", "Still run by system", "그래도 시스템 실행"),
+      rejectLabel: localText(lang, "阻止执行", "Block execution", "실행 차단"),
+      escalateLabel: localText(lang, "改由人工裁决", "Switch to manual judgement", "수동 판정으로 전환"),
+      withdrawLabel: localText(lang, "撤回计划", "Withdraw plan", "계획 철회"),
       recommended: "ESCALATE",
-      hint: "推荐动作：改由人工裁决，当前张力偏高，不宜直接自动执行。",
+      hint: localText(lang, "推荐动作：改由人工裁决，当前张力偏高，不宜直接自动执行。", "Recommended: switch to manual judgement; tension is too high for direct auto execution.", "추천 액션: 수동 판정으로 전환. 현재 장력이 높아 바로 자동 실행하기 어렵습니다."),
     };
   }
   if (reinforce >= 0.15 && tension < 0.28) {
     return {
-      approveLabel: "确认自动执行",
-      rejectLabel: "阻止执行",
-      escalateLabel: "改走人工",
-      withdrawLabel: "撤回计划",
+      approveLabel: localText(lang, "确认自动执行", "Confirm auto execution", "자동 실행 확인"),
+      rejectLabel: localText(lang, "阻止执行", "Block execution", "실행 차단"),
+      escalateLabel: localText(lang, "改走人工", "Switch to manual", "수동으로 전환"),
+      withdrawLabel: localText(lang, "撤回计划", "Withdraw plan", "계획 철회"),
       recommended: "APPROVED",
-      hint: "推荐动作：确认自动执行，同向放大清晰且张力可控。",
+      hint: localText(lang, "推荐动作：确认自动执行，同向放大清晰且张力可控。", "Recommended: confirm auto execution; reinforcement is clear and tension is controlled.", "추천 액션: 자동 실행 확인. 동방향 증폭이 명확하고 장력이 제어됩니다."),
     };
   }
   return {
-    approveLabel: "确认系统处理",
-    rejectLabel: "否决本计划",
-    escalateLabel: "升档人工",
-    withdrawLabel: "撤回计划",
+    approveLabel: localText(lang, "确认系统处理", "Confirm system handling", "시스템 처리 확인"),
+    rejectLabel: localText(lang, "否决本计划", "Reject this plan", "이 계획 부결"),
+    escalateLabel: localText(lang, "升档人工", "Escalate to manual", "수동 승격"),
+    withdrawLabel: localText(lang, "撤回计划", "Withdraw plan", "계획 철회"),
     recommended: contest >= 0.1 ? "ESCALATE" : "APPROVED",
     hint:
       contest >= 0.1
-        ? "推荐动作：升档人工，当前仍有对抗残留。"
-        : "推荐动作：确认系统处理，当前可按常规路径推进。",
+        ? localText(lang, "推荐动作：升档人工，当前仍有对抗残留。", "Recommended: escalate to manual; contest remains.", "추천 액션: 수동 승격. 현재 대항 잔여가 있습니다.")
+        : localText(lang, "推荐动作：确认系统处理，当前可按常规路径推进。", "Recommended: confirm system handling; this can proceed normally.", "추천 액션: 시스템 처리 확인. 현재 일반 경로로 진행할 수 있습니다."),
   };
 }
 
@@ -886,7 +900,7 @@ function planIsFailed(status?: string): boolean {
   return String(status || "").trim().toUpperCase() === "FAILED";
 }
 
-function planDisplayName(plan: PlanQueueItem): string {
+function planDisplayName(plan: PlanQueueItem, lang: AppLanguage = "zh"): string {
   const action = String(plan.action || plan.meta?.action || "").trim();
   const anchor = String(plan.anchor || "").trim();
   const trace = Array.isArray(plan.meta?.decision_trace) ? (plan.meta?.decision_trace as PlanDecisionTrace[]) : [];
@@ -895,7 +909,7 @@ function planDisplayName(plan: PlanQueueItem): string {
   if (action && action.toLowerCase() !== "plan_action") return action;
   if (firstTraceLabel) return firstTraceLabel;
   if (anchor) return anchor;
-  return "未命名计划";
+  return localText(lang, "未命名计划", "Untitled plan", "이름 없는 계획");
 }
 
 function planImpactBriefs(impact?: Record<string, number>): string[] {
@@ -939,6 +953,8 @@ export function V17_DecisionInbox({
 }) {
   const [busyId, setBusyId] = useState<string>("");
   const manualOnly = viewMode === "manual_only";
+  const ui = (zh: string, en: string, ko: string) =>
+    lang === "en" ? en : lang === "ko" ? ko : zh;
 
   const latestSnapshot = useMemo(() => 
     [...(frames || [])].reverse().find(f => 
@@ -1043,7 +1059,7 @@ export function V17_DecisionInbox({
       rows.push({
         batch_id: String(raw?.batch_id || `${bucket}:${raw?.source_anchor || "unknown"}:${decisionIds.join(",")}`).trim(),
         bucket: "manual",
-        target: String(raw?.target_god || batchDecisions[0]?.target_god || batchDecisions[0]?.physical_impact?.target_god || "未定目标").trim(),
+        target: String(raw?.target_god || batchDecisions[0]?.target_god || batchDecisions[0]?.physical_impact?.target_god || localText(lang, "未定目标", "Unspecified target", "미정 대상")).trim(),
         source_anchor: String(raw?.source_anchor || batchDecisions[0]?.source || batchDecisions[0]?.plugin_id || "").trim(),
         source_families: sourceFamilies,
         decisions: batchDecisions,
@@ -1052,7 +1068,7 @@ export function V17_DecisionInbox({
         max_priority: Number(raw?.max_priority || 0),
         direction_key: String(raw?.direction_key || "").trim() || undefined,
         direction_label: String(raw?.direction_label || "").trim() || undefined,
-        prompt_line: String(raw?.prompt_line || "").trim() || "自动批次已生成，可一次提交。",
+        prompt_line: String(raw?.prompt_line || "").trim() || localText(lang, "自动批次已生成，可一次提交。", "Auto batch is ready and can be submitted together.", "자동 배치가 생성되어 한 번에 제출할 수 있습니다."),
         batch_ids: batchIds.length ? batchIds : undefined,
         labels: (Array.isArray(raw?.labels) ? raw.labels : []).map((value) => String(value || "").trim()).filter(Boolean),
       });
@@ -1063,7 +1079,7 @@ export function V17_DecisionInbox({
         b.max_priority - a.max_priority ||
         b.decision_count - a.decision_count,
     );
-  }, [batchRows, allDecisionIndex, adoptedIdSet]);
+  }, [batchRows, allDecisionIndex, adoptedIdSet, lang]);
   const groupedManualDecisionBatches = useMemo(
     () => manualDecisionBatches.filter((group) => group.decisions.length > 1),
     [manualDecisionBatches],
@@ -1122,7 +1138,7 @@ export function V17_DecisionInbox({
       rows.push({
         batch_id: String(raw?.batch_id || `${bucket}:${raw?.source_anchor || "unknown"}:${decisionIds.join(",")}`).trim(),
         bucket,
-        target: String(raw?.target_god || batchDecisions[0]?.target_god || batchDecisions[0]?.physical_impact?.target_god || "未定目标").trim(),
+        target: String(raw?.target_god || batchDecisions[0]?.target_god || batchDecisions[0]?.physical_impact?.target_god || localText(lang, "未定目标", "Unspecified target", "미정 대상")).trim(),
         source_anchor: String(raw?.source_anchor || batchDecisions[0]?.source || batchDecisions[0]?.plugin_id || "").trim(),
         source_families: sourceFamilies,
         decisions: batchDecisions,
@@ -1134,7 +1150,7 @@ export function V17_DecisionInbox({
         max_priority: Number(raw?.max_priority || 0),
         direction_key: String(raw?.direction_key || "").trim() || undefined,
         direction_label: String(raw?.direction_label || "").trim() || undefined,
-        prompt_line: String(raw?.prompt_line || "").trim() || "自动批次已生成，可用于系统审阅。",
+        prompt_line: String(raw?.prompt_line || "").trim() || localText(lang, "自动批次已生成，可用于系统审阅。", "Auto batch is ready for system review.", "자동 배치가 생성되어 시스템 검토에 사용할 수 있습니다."),
         batch_ids: batchIds.length ? batchIds : undefined,
         labels: (Array.isArray(raw?.labels) ? raw.labels : []).map((value) => String(value || "").trim()).filter(Boolean),
       });
@@ -1145,7 +1161,7 @@ export function V17_DecisionInbox({
         b.max_priority - a.max_priority ||
         b.decision_count - a.decision_count,
     );
-  }, [batchRows, allDecisionIndex, adoptedIdSet]);
+  }, [batchRows, allDecisionIndex, adoptedIdSet, lang]);
 
   const autoResolutions = useMemo(
     () => (latestSnapshot?.payload?.auto_resolutions || []).slice(0, 6),
@@ -1286,27 +1302,30 @@ export function V17_DecisionInbox({
     return raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   }, [latestSnapshot?.payload?.plugins?.knowledge_snapshot?.claim_history?.current_targets]);
   const fluxRationale = useCallback(
-    (decision: Decision) => decisionFluxSummaryLines(decision, godRingEffectScores, knowledgeCurrentTargets),
-    [godRingEffectScores, knowledgeCurrentTargets],
+    (decision: Decision) => decisionFluxSummaryLines(decision, godRingEffectScores, knowledgeCurrentTargets, lang),
+    [godRingEffectScores, knowledgeCurrentTargets, lang],
   );
   const singleDecisionActionMeta = useCallback(
     (decision: Decision) =>
       actionMetaFromFluxState(
         decisionFluxState(decision, godRingEffectScores, knowledgeCurrentTargets),
+        1,
+        lang,
       ),
-    [godRingEffectScores, knowledgeCurrentTargets],
+    [godRingEffectScores, knowledgeCurrentTargets, lang],
   );
   const groupDecisionActionMeta = useCallback(
     (items: Decision[]) =>
       actionMetaFromFluxState(
         dominantFluxState(items, godRingEffectScores, knowledgeCurrentTargets),
         items.length,
+        lang,
       ),
-    [godRingEffectScores, knowledgeCurrentTargets],
+    [godRingEffectScores, knowledgeCurrentTargets, lang],
   );
   const groupFluxRationale = useCallback(
-    (items: Decision[]) => groupFluxSummaryLines(items, godRingEffectScores, knowledgeCurrentTargets),
-    [godRingEffectScores, knowledgeCurrentTargets],
+    (items: Decision[]) => groupFluxSummaryLines(items, godRingEffectScores, knowledgeCurrentTargets, lang),
+    [godRingEffectScores, knowledgeCurrentTargets, lang],
   );
   const singleDecisionButtonLabel = useCallback(
     (decision: Decision) => singleDecisionActionMeta(decision).label,
@@ -1314,11 +1333,22 @@ export function V17_DecisionInbox({
   );
   const routingRationale = useCallback(
     (kind: BucketKind, decision: Decision) => [
-      ...baseRoutingRationale(kind, decision),
-      ...decisionFluxHint(kind, decision, godRingEffectScores, knowledgeCurrentTargets),
+      ...baseRoutingRationale(kind, decision, lang),
+      ...decisionFluxHint(kind, decision, godRingEffectScores, knowledgeCurrentTargets, lang),
     ],
-    [godRingEffectScores, knowledgeCurrentTargets],
+    [godRingEffectScores, knowledgeCurrentTargets, lang],
   );
+  const localizedStatusBadge = useCallback((kind: BucketKind, decision: Decision) => statusBadge(kind, decision, lang), [lang]);
+  const localizedBucketAccessLabel = useCallback((kind: BucketKind) => bucketAccessLabel(kind, lang), [lang]);
+  const localizedBucketReason = useCallback((kind: BucketKind, decision: Decision) => bucketReason(kind, decision, lang), [lang]);
+  const localizedImpactText = useCallback((decision: Decision) => impactText(decision, lang), [lang]);
+  const localizedDecisionFocusPreview = useCallback((decision: Decision) => decisionFocusPreview(decision, lang), [lang]);
+  const localizedPatternConfidenceChip = useCallback((decision: Decision) => patternConfidenceChip(decision, lang), [lang]);
+  const localizedLlmPolicyLabel = useCallback((policy: string | undefined) => llmPolicyLabel(policy, lang), [lang]);
+  const localizedLlmStateLabel = useCallback((state: string | undefined) => llmStateLabel(state, lang), [lang]);
+  const localizedPromptPreview = useCallback((decision: Decision) => promptPreview(decision, lang), [lang]);
+  const localizedDecisionReasonTags = useCallback((kind: BucketKind, decision: Decision) => decisionReasonTags(kind, decision, lang), [lang]);
+  const localizedArbitrationTrace = useCallback((kind: BucketKind, decision: Decision) => arbitrationTrace(kind, decision, lang), [lang]);
   const autoInboxRows = useMemo(() => {
     if (Array.isArray(autoDecisionSource) && autoDecisionSource.length) {
       return autoDecisionSource
@@ -1421,7 +1451,7 @@ export function V17_DecisionInbox({
         <div>
           <p className="text-xs tracking-[0.24em] text-violet-200/85">DECISION INBOX</p>
           <p className="mt-1 text-[11px] text-zinc-500">
-            {manualOnly ? t(lang, "decision.manual.header") : "手动入口 / 自动回执"}
+            {manualOnly ? t(lang, "decision.manual.header") : ui("手动入口 / 自动回执", "Manual Inbox / Auto Receipts", "수동 입구 / 자동 회신")}
             {!manualOnly && latestSnapshot?.payload?.decision_inbox_contract ? ` · ${latestSnapshot.payload.decision_inbox_contract}` : ""}
           </p>
         </div>
@@ -1431,8 +1461,8 @@ export function V17_DecisionInbox({
             <p className="text-[11px] tracking-[0.22em] text-zinc-300">CLAIM CONFLICT GRAPH</p>
             <div className="mt-2 grid gap-2 text-[10px]">
               <p className="text-zinc-400">
-                版本 {String(conflictGraph.graph_version || "v17.claim_graph.1")} · 冲突 {Number(conflictGraphSummary.conflict_count || 0)} /
-                开放 {Number(conflictGraphSummary.open_conflict_count || 0)} / 节点 {Number(conflictGraphSummary.node_count || 0)}
+                {ui("版本", "Version", "버전")} {String(conflictGraph.graph_version || "v17.claim_graph.1")} · {ui("冲突", "Conflicts", "충돌")} {Number(conflictGraphSummary.conflict_count || 0)} /
+                {ui("开放", "Open", "열림")} {Number(conflictGraphSummary.open_conflict_count || 0)} / {ui("节点", "Nodes", "노드")} {Number(conflictGraphSummary.node_count || 0)}
               </p>
               {topConflictRows.length ? (
                 <div className="space-y-1">
@@ -1445,31 +1475,31 @@ export function V17_DecisionInbox({
                         className="rounded-lg border border-zinc-700/25 bg-zinc-900/70 px-2 py-1.5 text-[10px] text-zinc-300"
                       >
                         <p className="text-zinc-200">
-                          {cid} · {String(row?.conflict_type || "conflict")} · 严重度 {String(row?.severity || "P3")}
+                          {cid} · {String(row?.conflict_type || "conflict")} · {ui("严重度", "Severity", "심각도")} {String(row?.severity || "P3")}
                         </p>
                         <p className="text-zinc-400">
-                          目标 {String(row?.target_god || "未定目标")} · 主裁 {String(row?.recommended_arbiter || "system")} ·
-                          状态 {status}
+                          {ui("目标", "Target", "대상")} {translateTerm(lang, String(row?.target_god || "未定目标"))} · {ui("主裁", "Arbiter", "중재자")} {String(row?.recommended_arbiter || "system")} ·
+                          {ui("状态", "Status", "상태")} {status}
                         </p>
-                        <p className="mt-0.5 text-zinc-500">{String(row?.why_conflict || "待补充冲突原因").trim()}</p>
+                        <p className="mt-0.5 text-zinc-500">{String(row?.why_conflict || ui("待补充冲突原因", "Conflict reason pending", "충돌 사유 대기")).trim()}</p>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-zinc-500">已构建冲突图，但当前无冲突明细。</p>
+                <p className="text-zinc-500">{ui("已构建冲突图，但当前无冲突明细。", "The conflict graph is built, but no conflict details are present.", "충돌 그래프는 생성되었지만 현재 충돌 상세가 없습니다.")}</p>
               )}
             </div>
           </div>
         ) : null}
         <div className="flex items-center gap-2 text-[10px]">
           <span className="rounded-full border border-violet-500/25 bg-violet-900/20 px-2 py-1 text-violet-100">
-            手动 {decisions.length}
+            {ui("手动", "Manual", "수동")} {decisions.length}
           </span>
           {!manualOnly ? (
             <>
               <span className="rounded-full border border-amber-500/20 bg-amber-950/30 px-2 py-1 text-amber-100">
-                自动 {autoInboxRows.length + autoDecisionBatches.length}
+                {ui("自动", "Auto", "자동")} {autoInboxRows.length + autoDecisionBatches.length}
               </span>
               <span className="rounded-full border border-zinc-500/20 bg-zinc-900/20 px-2 py-1 text-zinc-100">
                 Plan {planQueue.length}
@@ -1478,7 +1508,7 @@ export function V17_DecisionInbox({
           ) : null}
           {focusedDecisionId ? (
             <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-2 py-1 text-emerald-200">
-              聚焦 {focusedDecisionId}
+              {ui("聚焦", "Focused", "포커스")} {focusedDecisionId}
             </span>
           ) : null}
         </div>
@@ -1487,20 +1517,20 @@ export function V17_DecisionInbox({
       {!manualOnly && activePlanQueue.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/25 bg-zinc-950/60 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划队列</p>
-            <span className="text-[10px] text-zinc-500">系统按计划批次推进，不再逐条串行处理</span>
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">{ui("计划队列", "Plan Queue", "계획 큐")}</p>
+            <span className="text-[10px] text-zinc-500">{ui("系统按计划批次推进，不再逐条串行处理", "The system advances by plan batches instead of serial single-item handling.", "시스템은 단건 직렬 처리 대신 계획 배치 단위로 진행합니다.")}</span>
           </div>
                 <div className="space-y-2">
             {activePlanQueue.slice(0, 8).map((plan) => {
               const statusTone = planStatusTone(plan.status);
               const impacts = planImpactBriefs(plan.impact_summary);
               const llmReviewPrompt = String(plan.meta?.llm_review_prompt || "").trim();
-              const routingLabel = compactRoutingLabel(plan.routing);
+              const routingLabel = compactRoutingLabel(plan.routing, lang);
               const routingReason = String(plan.routing_reason || (plan.meta?.routing_reason as string) || "").trim();
               const routingPolicy = String(plan.routing_policy || (plan.meta?.routing_policy as string) || "").trim();
               const claim = plan.routing_claim || (plan.meta?.routing_claim as PlanDecisionClaim | undefined);
-              const routingRationaleLines = planRoutingRationale(plan);
-              const actionMeta = derivePlanActionMeta(plan);
+              const routingRationaleLines = planRoutingRationale(plan, lang);
+              const actionMeta = derivePlanActionMeta(plan, lang);
               const approveLabel = actionMeta.approveLabel;
               const rejectLabel = actionMeta.rejectLabel;
               return (
@@ -1514,17 +1544,17 @@ export function V17_DecisionInbox({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[10px] text-zinc-100">
-                      {planDisplayName(plan)} · {plan.routing ? `策略 ${plan.routing}` : "未设置策略"}
+                      {planDisplayName(plan, lang)} · {plan.routing ? `${ui("策略", "Policy", "전략")} ${plan.routing}` : ui("未设置策略", "No policy set", "전략 미설정")}
                     </p>
                     <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${statusTone}`}>{plan.status || "pending"}</span>
                   </div>
                   <p className="mt-1 break-words text-[10px] text-zinc-400">
-                    PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length} 个
+                    PlanID {plan.plan_id || "N/A"} · {ui("批次", "Batches", "배치")} {(plan.batch_ids || []).length} {ui("个", "", "개")}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${planRoutingTone(plan.routing)}`}>{routingLabel}</span>
                     <span className="rounded-full border border-zinc-500/20 px-1.5 py-0.5 text-[9px] text-zinc-200">
-                      路由类型 {String(plan.routing || "system").trim().toUpperCase()}
+                      {ui("路由类型", "Route Type", "라우팅 유형")} {String(plan.routing || "system").trim().toUpperCase()}
                     </span>
                   </div>
                   <V17PlanRoutingClaim
@@ -1533,6 +1563,7 @@ export function V17_DecisionInbox({
                     routingPolicy={routingPolicy}
                     routingFeatures={plan.routing_features || (plan.meta?.routing_features as PlanDecisionRoutingFeatures | undefined)}
                     claim={claim}
+                    lang={lang}
                   />
                   {routingRationaleLines.length ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">
@@ -1542,12 +1573,12 @@ export function V17_DecisionInbox({
                   <p className="mt-1 text-[9px] text-sky-200/85">{actionMeta.hint}</p>
                   {impacts.length ? (
                     <p className="mt-1 text-[10px] text-zinc-300">
-                      影响速览：{impacts.join(" · ")}
+                      {ui("影响速览", "Impact Brief", "영향 요약")}：{impacts.join(" · ")}
                     </p>
                   ) : null}
                   {llmReviewPrompt ? (
                     <div className="mt-2 border-t border-zinc-700/20 pt-2">
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">模型预审提示</p>
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">{ui("模型预审提示", "Model Pre-review Prompt", "모델 사전 검토 프롬프트")}</p>
                       <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap rounded-md border border-amber-500/20 bg-zinc-950/70 p-1.5 text-[9px] leading-tight text-amber-100">
                         {llmReviewPrompt}
                       </pre>
@@ -1556,9 +1587,9 @@ export function V17_DecisionInbox({
                   {Array.isArray(plan.meta?.decision_trace) &&
                   (plan.meta?.decision_trace as PlanDecisionTrace[]).length ? (
                     <div className="mt-2 border-t border-zinc-700/20 pt-2">
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">决策证据</p>
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-400">{ui("决策证据", "Decision Evidence", "결정 증거")}</p>
                       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[9px] leading-tight text-zinc-300">
-                        {formatPlanDecisionTrace(plan.meta?.decision_trace as PlanDecisionTrace[]).map((line) => (
+                        {formatPlanDecisionTrace(plan.meta?.decision_trace as PlanDecisionTrace[], lang).map((line) => (
                           <li key={line} className="break-words">
                             {line}
                           </li>
@@ -1624,7 +1655,7 @@ export function V17_DecisionInbox({
           );
         })}
             {planQueue.length > activePlanQueue.length ? (
-              <p className="text-[10px] text-zinc-500">另有已完成计划隐藏，按需可展开详情。</p>
+              <p className="text-[10px] text-zinc-500">{ui("另有已完成计划隐藏，按需可展开详情。", "Additional completed plans are hidden; expand details when needed.", "완료된 계획 일부가 숨겨져 있습니다. 필요하면 상세를 펼치세요.")}</p>
             ) : null}
           </div>
         </div>
@@ -1633,15 +1664,15 @@ export function V17_DecisionInbox({
       {!manualOnly && decisionTraceIndex.items.length ? (
         <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[11px] tracking-[0.22em] text-zinc-300">计划溯源</p>
+            <p className="text-[11px] tracking-[0.22em] text-zinc-300">{ui("计划溯源", "Plan Trace", "계획 추적")}</p>
             <span className="text-[10px] text-zinc-500">
-              计划溯源索引 · {Number(decisionTraceIndex.plan_count || 0)} 条 · {decisionTraceIndex.contract}
+              {ui("计划溯源索引", "Plan trace index", "계획 추적 인덱스")} · {Number(decisionTraceIndex.plan_count || 0)} {ui("条", "rows", "건")} · {decisionTraceIndex.contract}
             </span>
           </div>
           <div className="space-y-1">
             {decisionTraceIndex.items.map((item) => {
               const route = String(item.routing || "system").trim().toUpperCase() || "SYSTEM";
-              const routeLabel = route === "LLM" ? "模型预审" : route === "SYSTEM" ? "自动处理" : route === "USER" ? "手动入口" : route;
+              const routeLabel = route === "LLM" ? ui("模型预审", "Model pre-review", "모델 사전 검토") : route === "SYSTEM" ? ui("自动处理", "Auto handling", "자동 처리") : route === "USER" ? ui("手动入口", "Manual inbox", "수동 입구") : route;
               return (
                 <div
                   key={item.plan_id}
@@ -1653,36 +1684,36 @@ export function V17_DecisionInbox({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-zinc-200">
-                      {item.anchor || "未命名计划"} · {item.plan_id || "unknown"}
+                      {item.anchor || ui("未命名计划", "Untitled plan", "이름 없는 계획")} · {item.plan_id || "unknown"}
                     </p>
                     <span className="rounded-full border border-zinc-700/30 px-1.5 py-0.5 text-[9px] text-zinc-200">
                       {routeLabel}
                     </span>
                   </div>
-                  {planRoutingRationale(item).length ? (
+                  {planRoutingRationale(item, lang).length ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">
-                      {compactRoutingLines(planRoutingRationale(item))}
+                      {compactRoutingLines(planRoutingRationale(item, lang))}
                     </p>
                   ) : null}
                   <p className="mt-1 text-zinc-500">
-                    状态 {String(item.status || "pending")} · 依据决策 {Number(item.decision_count || item.decision_ids?.length || 0)} 条 · 跟踪条目 {Number(item.decision_trace_count || 0)}
+                    {ui("状态", "Status", "상태")} {String(item.status || "pending")} · {ui("依据决策", "Source decisions", "근거 결정")} {Number(item.decision_count || item.decision_ids?.length || 0)} {ui("条", "rows", "건")} · {ui("跟踪条目", "Trace entries", "추적 항목")} {Number(item.decision_trace_count || 0)}
                   </p>
                   {Array.isArray(item.decision_trace) && item.decision_trace.length ? (
                     <p className="mt-1 break-words text-zinc-400">
-                      {formatPlanDecisionTrace(item.decision_trace).slice(0, 3).join(" · ")}
+                      {formatPlanDecisionTrace(item.decision_trace, lang).slice(0, 3).join(" · ")}
                     </p>
                   ) : null}
                   {(item.routing_reason || item.routing_policy) ? (
                     <p className="mt-1 text-[9px] text-zinc-500">
-                      原因 {String(item.routing_reason || "") || String(item.routing_policy || "")} · policy {String(item.routing_policy || "").trim() || "-"}
+                      {ui("原因", "Reason", "사유")} {String(item.routing_reason || "") || String(item.routing_policy || "")} · policy {String(item.routing_policy || "").trim() || "-"}
                     </p>
                   ) : null}
                   {compactRoutingScores(item.routing_scores) ? (
                     <p className="mt-1 break-words text-[9px] text-zinc-500">
-                      路由候选分数：{compactRoutingScores(item.routing_scores)}
+                      {ui("路由候选分数", "Route candidate scores", "라우팅 후보 점수")}：{compactRoutingScores(item.routing_scores)}
                     </p>
                   ) : null}
-                  {item.llm_prompt_preview ? <p className="mt-1 text-cyan-200/80">该计划包含模型预审提示上下文</p> : null}
+                  {item.llm_prompt_preview ? <p className="mt-1 text-cyan-200/80">{ui("该计划包含模型预审提示上下文", "This plan includes model pre-review prompt context", "이 계획에는 모델 사전 검토 프롬프트 컨텍스트가 포함됩니다.")}</p> : null}
                 </div>
               );
             })}
@@ -1692,18 +1723,18 @@ export function V17_DecisionInbox({
 
       {!manualOnly && failedPlanQueue.length ? (
         <div className="mb-3 rounded-xl border border-rose-500/20 bg-rose-950/10 p-2">
-          <p className="text-[10px] text-rose-200/85">最近异常计划（最近 4 条）</p>
+          <p className="text-[10px] text-rose-200/85">{ui("最近异常计划（最近 4 条）", "Recent abnormal plans (last 4)", "최근 이상 계획(최근 4건)")}</p>
           <div className="mt-2 space-y-1">
             {failedPlanQueue.slice(0, 4).map((plan) => {
               const statusTone = planStatusTone(plan.status);
               return (
                 <div key={`failed_${plan.plan_id || plan.anchor || plan.updated_at}`} className="rounded-md border border-rose-500/15 px-2 py-1.5">
                   <div className="flex items-center justify-between text-[9px]">
-                    <span className="text-zinc-200">{planDisplayName(plan)}</span>
+                    <span className="text-zinc-200">{planDisplayName(plan, lang)}</span>
                     <span className={`rounded-full border px-1.5 py-0.5 ${statusTone}`}>{plan.status || "FAILED"}</span>
                   </div>
                   <p className="mt-0.5 text-[9px] text-zinc-500">
-                    PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length}
+                    PlanID {plan.plan_id || "N/A"} · {ui("批次", "Batches", "배치")} {(plan.batch_ids || []).length}
                   </p>
                 </div>
               );
@@ -1714,18 +1745,18 @@ export function V17_DecisionInbox({
 
         {!manualOnly && terminalPlanQueue.length ? (
           <div className="mb-3 rounded-xl border border-zinc-700/20 bg-zinc-950/45 p-2">
-            <p className="text-[10px] text-zinc-400">最近已完成计划（最近 4 条）</p>
+            <p className="text-[10px] text-zinc-400">{ui("最近已完成计划（最近 4 条）", "Recently completed plans (last 4)", "최근 완료 계획(최근 4건)")}</p>
             <div className="mt-2 space-y-1">
               {terminalPlanQueue.slice(0, 4).map((plan) => {
                 const statusTone = planStatusTone(plan.status);
                 return (
                   <div key={`history_${plan.plan_id || plan.anchor || plan.updated_at}`} className="rounded-md border border-zinc-700/20 px-2 py-1.5">
                     <div className="flex items-center justify-between text-[9px]">
-                      <span className="text-zinc-300">{planDisplayName(plan)}</span>
+                      <span className="text-zinc-300">{planDisplayName(plan, lang)}</span>
                       <span className={`rounded-full border px-1.5 py-0.5 ${statusTone}`}>{plan.status || "DONE"}</span>
                     </div>
                     <p className="mt-0.5 text-[9px] text-zinc-500">
-                      PlanID {plan.plan_id || "N/A"} · 批次 {(plan.batch_ids || []).length}
+                      PlanID {plan.plan_id || "N/A"} · {ui("批次", "Batches", "배치")} {(plan.batch_ids || []).length}
                     </p>
                   </div>
                 );
@@ -1737,7 +1768,7 @@ export function V17_DecisionInbox({
         {!manualOnly ? (
           <div className="mb-3 grid gap-2 lg:grid-cols-2">
             {(["manual", "system", "llm", "auto"] as BucketKind[]).map((kind) => {
-          const rule = arbitrationRule(kind);
+          const rule = arbitrationRule(kind, lang);
           return (
             <div key={kind} className={`rounded-xl border px-3 py-2 text-[10px] leading-relaxed ${rule.accent}`}>
               <p className="tracking-[0.2em]">{kind.toUpperCase()}</p>
@@ -1760,20 +1791,20 @@ export function V17_DecisionInbox({
           busyId={busyId}
           onVote={onVote}
           onBatchVote={onBatchVote}
-          statusBadge={statusBadge}
+          statusBadge={localizedStatusBadge}
           singleDecisionButtonLabel={singleDecisionButtonLabel}
           singleDecisionActionMeta={singleDecisionActionMeta}
           groupDecisionActionMeta={groupDecisionActionMeta}
-          impactText={impactText}
+          impactText={localizedImpactText}
           patternProfileSummary={patternProfileSummary}
-          decisionFocusPreview={decisionFocusPreview}
-          bucketReason={bucketReason}
+          decisionFocusPreview={localizedDecisionFocusPreview}
+          bucketReason={localizedBucketReason}
           routingRationale={routingRationale}
           fluxRationale={fluxRationale}
           groupFluxRationale={groupFluxRationale}
           compactRoutingLines={compactRoutingLines}
-          patternConfidenceChip={patternConfidenceChip}
-          decisionReasonTags={decisionReasonTags}
+          patternConfidenceChip={localizedPatternConfidenceChip}
+          decisionReasonTags={localizedDecisionReasonTags}
           directionGroupLabel={directionGroupLabel}
           godRingBiasSummary={godRingBiasSummary}
           groupGodRingBiasSummary={groupGodRingBiasSummary}
@@ -1787,24 +1818,25 @@ export function V17_DecisionInbox({
             autoDecisionBatches={autoDecisionBatches}
             autoInboxRows={autoInboxRows}
             focusedDecisionId={focusedDecisionId}
-            statusBadge={statusBadge}
-            bucketAccessLabel={bucketAccessLabel}
-            bucketReason={bucketReason}
-            impactText={impactText}
+            statusBadge={localizedStatusBadge}
+            bucketAccessLabel={localizedBucketAccessLabel}
+            bucketReason={localizedBucketReason}
+            impactText={localizedImpactText}
             patternProfileSummary={patternProfileSummary}
-            patternConfidenceChip={patternConfidenceChip}
+            patternConfidenceChip={localizedPatternConfidenceChip}
             routingRationale={routingRationale}
             fluxRationale={fluxRationale}
             groupFluxRationale={groupFluxRationale}
             compactRoutingLines={compactRoutingLines}
-            arbitrationTrace={arbitrationTrace}
-            decisionFocusPreview={decisionFocusPreview}
-            decisionReasonTags={decisionReasonTags}
-            llmPolicyLabel={llmPolicyLabel}
-            llmStateLabel={llmStateLabel}
-            promptPreview={promptPreview}
+            arbitrationTrace={localizedArbitrationTrace}
+            decisionFocusPreview={localizedDecisionFocusPreview}
+            decisionReasonTags={localizedDecisionReasonTags}
+            llmPolicyLabel={localizedLlmPolicyLabel}
+            llmStateLabel={localizedLlmStateLabel}
+            promptPreview={localizedPromptPreview}
             godRingBiasSummary={godRingBiasSummary}
             groupGodRingBiasSummary={groupGodRingBiasSummary}
+            lang={lang}
           />
         ) : null}
       </div>
@@ -1814,7 +1846,9 @@ export function V17_DecisionInbox({
         </p>
       ) : null}
       {hiddenCount > 0 ? (
-        <p className="mt-2 text-[11px] text-zinc-500">另有 {hiddenCount} 条手动决策已接收但未展开，可提高当前快照的 `manual_inbox` 展示上限或继续收敛已采纳项。</p>
+        <p className="mt-2 text-[11px] text-zinc-500">
+          {ui(`另有 ${hiddenCount} 条手动决策已接收但未展开，可提高当前快照的 manual_inbox 展示上限或继续收敛已采纳项。`, `${hiddenCount} additional manual decisions were received but not expanded; raise the current snapshot manual_inbox display limit or continue converging adopted items.`, `추가 수동 결정 ${hiddenCount}건이 수신되었지만 펼쳐지지 않았습니다. 현재 스냅샷의 manual_inbox 표시 한도를 높이거나 채택 항목 수렴을 계속하세요.`)}
+        </p>
       ) : null}
     </section>
   );

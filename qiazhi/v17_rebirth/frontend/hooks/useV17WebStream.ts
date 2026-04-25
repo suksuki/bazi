@@ -306,8 +306,8 @@ export function deriveV17LlmLifecycle({
   if (llmMeta.ok === false) {
     return {
       phase: "failed",
-      statusText: String(llmMeta.error || engineState || "叙事引擎异常"),
-      detailText: `${modelLabel} · 已失败/降级`,
+      statusText: String(llmMeta.error || engineState || t(language, "verdict.status.failed")),
+      detailText: t(language, "verdict.detail.failed", { model: modelLabel }),
     };
   }
   if (hasFinalLlmMeta) {
@@ -379,6 +379,9 @@ export function useV17WebStream({
   const framesRef = useRef<V17Frame[]>([]);
   const syncOnlyMode = body?.suppress_narrator === true;
   const resetVisualCache = body?.reset_stream_cache === true;
+  const streamLanguage = (body?.ui_lang === "en" || body?.ui_lang === "ko" || body?.ui_lang === "zh"
+    ? body.ui_lang
+    : "zh") as AppLanguage;
 
   useEffect(() => {
     framesRef.current = frames;
@@ -407,7 +410,12 @@ export function useV17WebStream({
         if (!resp.ok || !resp.body) {
           if (mounted) {
             setStreamState({ closed: true, closeReason: "http_error", heartbeatHistory: [] });
-            const msg = `[流连接失败] HTTP ${resp.status}。请确认后端 8017 已启动，且 Next 代理 V17_BACKEND_INTERNAL_URL 指向正确（默认同机 127.0.0.1:8017）。`;
+            const msg =
+              streamLanguage === "en"
+                ? `[Stream connection failed] HTTP ${resp.status}. Please confirm backend 8017 is running and Next proxy V17_BACKEND_INTERNAL_URL points to the correct target (default same-host 127.0.0.1:8017).`
+                : streamLanguage === "ko"
+                  ? `[스트림 연결 실패] HTTP ${resp.status}. 백엔드 8017이 실행 중이고 Next 프록시 V17_BACKEND_INTERNAL_URL이 올바른 대상(기본 동일 호스트 127.0.0.1:8017)을 가리키는지 확인하세요.`
+                  : `[流连接失败] HTTP ${resp.status}。请确认后端 8017 已启动，且 Next 代理 V17_BACKEND_INTERNAL_URL 指向正确（默认同机 127.0.0.1:8017）。`;
             setFrames((prev) => [
               ...prev,
               {
@@ -516,7 +524,12 @@ export function useV17WebStream({
               timestamp: new Date().toISOString(),
               layer: "NARRATOR",
               payload: {
-                render_text: `[流错误] ${String(err)}`,
+                render_text:
+                  streamLanguage === "en"
+                    ? `[Stream error] ${String(err)}`
+                    : streamLanguage === "ko"
+                      ? `[스트림 오류] ${String(err)}`
+                      : `[流错误] ${String(err)}`,
                 llm_meta: { ok: false, engine_state: "stream_runtime_error" },
               },
             },
@@ -531,7 +544,7 @@ export function useV17WebStream({
       mounted = false;
       aborter.abort();
     };
-  }, [enabled, endpoint, method, bodyKey, syncOnlyMode, resetVisualCache]);
+  }, [enabled, endpoint, method, bodyKey, syncOnlyMode, resetVisualCache, streamLanguage]);
 
   return { frames, streamState };
 }

@@ -1101,6 +1101,23 @@ function feedbackStatusTone(status: PractitionerFeedbackStatus | string): string
   return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
+function evidenceReviewStatusLabel(status: string, ui: LocalizeText): string {
+  if (status === "supported") return ui("证据支持", "Supported", "근거 충분");
+  if (status === "mixed") return ui("混合证据", "Mixed", "혼합 근거");
+  if (status === "insufficient") return ui("证据不足", "Insufficient", "근거 부족");
+  if (status === "needs_practitioner") return ui("需命理师复核", "Practitioner review", "명리사 검토 필요");
+  return status || ui("已生成", "Generated", "생성됨");
+}
+
+function evidenceReviewActionLabel(action: string, ui: LocalizeText): string {
+  if (action === "keep_strong") return ui("强证据", "Strong", "강한 근거");
+  if (action === "keep_candidate") return ui("保留候选", "Candidate", "후보 유지");
+  if (action === "downgrade_to_candidate") return ui("降为候选", "Downgrade", "후보로 하향");
+  if (action === "ask_practitioner") return ui("命理师复核", "Review", "명리사 검토");
+  if (action === "needs_more_evidence") return ui("补充证据", "More evidence", "근거 보강");
+  return action || ui("复核", "Review", "검토");
+}
+
 function practitionerCaseKeyPart(value: string): string {
   const normalized = value
     .trim()
@@ -1119,6 +1136,7 @@ function normalizedPillarText(value: unknown): string {
 function V17EvidencePanel({
   ui,
   term,
+  language,
   items,
   summary,
   sessionId,
@@ -1135,6 +1153,7 @@ function V17EvidencePanel({
 }: {
   ui: LocalizeText;
   term: TranslateText;
+  language: string;
   items: Array<Record<string, unknown>>;
   summary: Record<string, unknown>;
   sessionId: string;
@@ -1353,6 +1372,7 @@ function V17EvidencePanel({
       jsonPostInit({
         session_id: sessionId || "default",
         chart_fingerprint: chartFingerprint,
+        ui_lang: language,
         summary,
         items,
       }),
@@ -1451,7 +1471,7 @@ function V17EvidencePanel({
                   {ui("复核摘要", "Review Summary", "검토 요약")}
                 </p>
                 <p className="mt-2 text-[12px] font-semibold text-cyan-50">
-                  {String(reviewResult.overall_status || ui("已生成", "Generated", "생성됨"))}
+                  {evidenceReviewStatusLabel(String(reviewResult.overall_status || ""), ui)}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-zinc-300">
                   {Object.entries(asLooseRecord(reviewResult.summary)).map(([key, value]) => (
@@ -1467,7 +1487,7 @@ function V17EvidencePanel({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[11px] font-semibold text-zinc-100">{String(row.evidence_id || "")}</p>
                       <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
-                        {String(row.review_action || "")}
+                        {evidenceReviewActionLabel(String(row.review_action || ""), ui)}
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] leading-5 text-zinc-400">{String(row.reason || "")}</p>
@@ -2924,6 +2944,7 @@ export default function OraclePage() {
                     <V17EvidencePanel
                       ui={ui}
                       term={term}
+                      language={language}
                       items={evidenceItems}
                       summary={evidenceSummary}
                       sessionId={s.sessionId}

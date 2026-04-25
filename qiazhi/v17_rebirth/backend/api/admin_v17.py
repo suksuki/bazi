@@ -738,7 +738,7 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         model = str(cfg.get("model") or "").strip()
         if not base_url or not model:
             raise HTTPException(status_code=400, detail="llm config incomplete")
-        prompt = build_llm_conflict_prompt(bundle=bundle)
+        prompt = build_llm_conflict_prompt(bundle=bundle, output_language=str(payload.get("ui_lang") or payload.get("language") or "zh"))
         try:
             llm_result = _chat_llm(base_url, model, prompt)
         except Exception as exc:

@@ -2,6 +2,7 @@
 
 import type { Decision } from "@/hooks/useOracleSession";
 import type { DecisionBatch } from "@/components/decisionInboxUtils";
+import type { AppLanguage } from "@/lib/i18n";
 
 type BucketKind = "manual" | "auto" | "system" | "llm";
 type StatusBadge = { label: string; className: string };
@@ -38,7 +39,14 @@ type Props = {
   promptPreview: (decision: Decision) => string;
   godRingBiasSummary: (decision: Decision) => BiasSummary;
   groupGodRingBiasSummary: (decisions: Decision[]) => BiasSummary;
+  lang?: AppLanguage;
 };
+
+function ui(lang: AppLanguage | undefined, zh: string, en: string, ko: string): string {
+  if (lang === "en") return en;
+  if (lang === "ko") return ko;
+  return zh;
+}
 
 export function V17_AutoDecisionSection({
   passiveLlmContextCount,
@@ -64,17 +72,18 @@ export function V17_AutoDecisionSection({
   promptPreview,
   godRingBiasSummary,
   groupGodRingBiasSummary,
+  lang = "zh",
 }: Props) {
   return (
     <div className="rounded-xl border border-amber-500/15 bg-zinc-950/55 p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-[11px] tracking-[0.22em] text-amber-200">AUTO</p>
-        <span className="text-[10px] text-zinc-500">系统已处理结果、叙事建议与上下文素材</span>
+        <span className="text-[10px] text-zinc-500">{ui(lang, "系统已处理结果、叙事建议与上下文素材", "System-handled results, narrative suggestions, and context material", "시스템 처리 결과, 서술 제안, 컨텍스트 자료")}</span>
       </div>
       {passiveLlmContextCount > 0 ? (
         <div className="mb-2 rounded-xl border border-amber-500/10 bg-amber-950/10 px-2.5 py-2">
           <p className="text-[10px] text-amber-100">
-            已自动收纳 {passiveLlmContextCount} 条“仅作上下文”的素材，它们不会阻塞 Inbox，也不需要手动处理。
+            {ui(lang, "已自动收纳", "Auto-collected", "자동 수집됨")} {passiveLlmContextCount} {ui(lang, "条“仅作上下文”的素材，它们不会阻塞 Inbox，也不需要手动处理。", "context-only items. They do not block the Inbox or require manual action.", "개의 컨텍스트 전용 자료입니다. Inbox를 막지 않으며 수동 처리가 필요 없습니다.")}
           </p>
           {passiveLlmContextRows.length ? (
             <div className="mt-1 flex flex-wrap gap-1">
@@ -83,7 +92,7 @@ export function V17_AutoDecisionSection({
                   key={`passive_llm_${String(row.id || row.label || idx)}`}
                   className="rounded-full border border-amber-500/20 bg-zinc-950/60 px-1.5 py-0.5 text-[9px] text-zinc-300"
                 >
-                  {String(row.label || row.title || row.source || "上下文素材").trim()}
+                  {String(row.label || row.title || row.source || ui(lang, "上下文素材", "Context material", "컨텍스트 자료")).trim()}
                 </span>
               ))}
             </div>
@@ -99,9 +108,9 @@ export function V17_AutoDecisionSection({
               const sourceText =
                 group.source_families && group.source_families.length
                   ? group.source_families.join(" / ")
-                  : group.source_anchor || "自动归并";
+                  : group.source_anchor || ui(lang, "自动归并", "Auto merged", "자동 병합");
               const ratio = Number(group.net_impact_ratio || 0);
-              const channelLabel = group.bucket === "llm" ? "叙事建议" : "系统自动处理";
+              const channelLabel = group.bucket === "llm" ? ui(lang, "叙事建议", "Narrative suggestion", "서술 제안") : ui(lang, "系统自动处理", "System auto-handled", "시스템 자동 처리");
               const groupRationale = routingRationale(group.bucket, group.decisions[0]);
               const groupBias = groupGodRingBiasSummary(group.decisions);
               const groupFlux = groupFluxRationale(group.decisions);
@@ -115,13 +124,13 @@ export function V17_AutoDecisionSection({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] text-amber-100">自动批次 · {channelLabel}</p>
+                    <p className="text-[11px] text-amber-100">{ui(lang, "自动批次", "Auto batch", "자동 배치")} · {channelLabel}</p>
                     <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
                   </div>
-                  <p className="mt-1 break-words text-[10px] text-zinc-500">访问方式：{bucketAccessLabel(group.bucket)}</p>
+                  <p className="mt-1 break-words text-[10px] text-zinc-500">{ui(lang, "访问方式", "Access", "접근 방식")}：{bucketAccessLabel(group.bucket)}</p>
                   <p className="mt-1 break-words text-[10px] text-zinc-500">
-                    目标 {group.target} · 来源 {sourceText} · 批次 {group.decision_count}
-                    {group.net_impact_ratio ? ` · 位移 ${Math.abs(ratio) * 100 > 1000 ? ">=1000" : `${(Math.abs(ratio) * 100).toFixed(1)}%`}` : ""}
+                    {ui(lang, "目标", "Target", "대상")} {group.target} · {ui(lang, "来源", "Source", "출처")} {sourceText} · {ui(lang, "批次", "Batch", "배치")} {group.decision_count}
+                    {group.net_impact_ratio ? ` · ${ui(lang, "位移", "Shift", "변위")} ${Math.abs(ratio) * 100 > 1000 ? ">=1000" : `${(Math.abs(ratio) * 100).toFixed(1)}%`}` : ""}
                   </p>
                   <p className="mt-1 break-words text-[10px] leading-relaxed text-zinc-500">
                     {bucketReason(group.bucket, group.decisions[0])}
@@ -131,8 +140,8 @@ export function V17_AutoDecisionSection({
                   ) : null}
                   {groupBias ? (
                     <div className="mt-1 space-y-0.5 text-[10px]">
-                      {groupBias.useText ? <p className="text-emerald-200/90">用侧推动：{groupBias.useText}</p> : null}
-                      {groupBias.tabooText ? <p className="text-rose-200/90">忌侧推动：{groupBias.tabooText}</p> : null}
+                      {groupBias.useText ? <p className="text-emerald-200/90">{ui(lang, "用侧推动", "Use-side push", "용신 측 추진")}：{groupBias.useText}</p> : null}
+                      {groupBias.tabooText ? <p className="text-rose-200/90">{ui(lang, "忌侧推动", "Taboo-side push", "기신 측 추진")}：{groupBias.tabooText}</p> : null}
                     </div>
                   ) : null}
                   {groupFlux.length ? (
@@ -173,15 +182,15 @@ export function V17_AutoDecisionSection({
                               : "border-amber-500/20"
                           }`}
                         >
-                          <p className="break-words text-[10px] text-zinc-100">{String(decision.label || decision.title || "自动处理项").trim()}</p>
+                          <p className="break-words text-[10px] text-zinc-100">{String(decision.label || decision.title || ui(lang, "自动处理项", "Auto item", "자동 처리 항목")).trim()}</p>
                           <p className="mt-0.5 break-words text-[9px] text-zinc-400">{impactText(decision)}</p>
                           {patternProfileSummary(decision) ? (
                             <p className="mt-0.5 break-words text-[9px] text-cyan-100/85">{patternProfileSummary(decision)}</p>
                           ) : null}
                           {bias ? (
                             <div className="mt-1 space-y-0.5 text-[9px]">
-                              {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
-                              {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                              {bias.useText ? <p className="text-emerald-200/90">{ui(lang, "用侧推动", "Use-side push", "용신 측 추진")}：{bias.useText}</p> : null}
+                              {bias.tabooText ? <p className="text-rose-200/90">{ui(lang, "忌侧推动", "Taboo-side push", "기신 측 추진")}：{bias.tabooText}</p> : null}
                             </div>
                           ) : null}
                           {fluxLines.length ? (
@@ -216,7 +225,7 @@ export function V17_AutoDecisionSection({
             const row = entry.decision;
             const badge = statusBadge("auto", row);
             const channelLabel =
-              entry.channel === "system" ? "自动结算" : entry.channel === "llm" ? "叙事建议" : "上下文素材";
+              entry.channel === "system" ? ui(lang, "自动结算", "Auto settlement", "자동 결산") : entry.channel === "llm" ? ui(lang, "叙事建议", "Narrative suggestion", "서술 제안") : ui(lang, "上下文素材", "Context material", "컨텍스트 자료");
             const entryKind = entry.channel === "llm" || entry.channel === "system" ? (entry.channel as BucketKind) : "auto";
             const rationale = routingRationale(entryKind, row);
             const confidence = patternConfidenceChip(row);
@@ -232,12 +241,12 @@ export function V17_AutoDecisionSection({
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-amber-100">{String(row.label || row.title || "自动处理项").trim()}</p>
+                  <p className="text-[11px] text-amber-100">{String(row.label || row.title || ui(lang, "自动处理项", "Auto item", "자동 처리 항목")).trim()}</p>
                   <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${badge.className}`}>{badge.label}</span>
                 </div>
-                <p className="mt-1 break-words text-[10px] text-zinc-500">访问方式：{bucketAccessLabel(entryKind)}</p>
+                <p className="mt-1 break-words text-[10px] text-zinc-500">{ui(lang, "访问方式", "Access", "접근 방식")}：{bucketAccessLabel(entryKind)}</p>
                 <p className="mt-1 break-words text-[10px] text-zinc-500">
-                  {channelLabel} · {String(row.source || row.source_label || "auto_context")} · {String(row.target_god || row.physical_impact?.target_god || "未定目标")}
+                  {channelLabel} · {String(row.source || row.source_label || "auto_context")} · {String(row.target_god || row.physical_impact?.target_god || ui(lang, "未定目标", "No target yet", "대상 미정"))}
                 </p>
                 <p className="mt-1 break-words text-[10px] text-zinc-400">{impactText(row)}</p>
                 <p className="mt-1 font-mono text-[10px] text-amber-200/80">{arbitrationTrace("auto", row)}</p>
@@ -247,8 +256,8 @@ export function V17_AutoDecisionSection({
                 ) : null}
                 {bias ? (
                   <div className="mt-1 space-y-0.5 text-[10px]">
-                    {bias.useText ? <p className="text-emerald-200/90">用侧推动：{bias.useText}</p> : null}
-                    {bias.tabooText ? <p className="text-rose-200/90">忌侧推动：{bias.tabooText}</p> : null}
+                    {bias.useText ? <p className="text-emerald-200/90">{ui(lang, "用侧推动", "Use-side push", "용신 측 추진")}：{bias.useText}</p> : null}
+                    {bias.tabooText ? <p className="text-rose-200/90">{ui(lang, "忌侧推动", "Taboo-side push", "기신 측 추진")}：{bias.tabooText}</p> : null}
                   </div>
                 ) : null}
                 {fluxLines.length ? (
@@ -289,7 +298,7 @@ export function V17_AutoDecisionSection({
                   ) : null}
                 </div>
                 {row.llm_terminal_state ? (
-                  <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">终态：{String(row.llm_terminal_state)}</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">{ui(lang, "终态", "Terminal state", "종단 상태")}：{String(row.llm_terminal_state)}</p>
                 ) : null}
                 <p className="mt-1 break-words text-[10px] leading-relaxed text-amber-100/80">{promptPreview(row)}</p>
               </div>
@@ -297,7 +306,7 @@ export function V17_AutoDecisionSection({
           })
         ) : null}
 
-        {autoDecisionBatches.length || autoInboxRows.length ? null : <p className="text-[11px] text-zinc-500">暂无自动处理回执。</p>}
+        {autoDecisionBatches.length || autoInboxRows.length ? null : <p className="text-[11px] text-zinc-500">{ui(lang, "暂无自动处理回执。", "No auto-handled receipts yet.", "아직 자동 처리 회신이 없습니다.")}</p>}
       </div>
     </div>
   );

@@ -526,6 +526,7 @@ async def create_practitioner_evidence_review(request: Request, payload: Dict[st
         chart_fingerprint=str(payload.get("chart_fingerprint") or "").strip(),
         verdict_text=str(payload.get("verdict_text") or "").strip(),
         reviewer_role=str(user.get("role") or "user"),
+        output_language=str(payload.get("ui_lang") or payload.get("language") or "zh").strip(),
     )
     return {
         "ok": True,

@@ -233,6 +233,18 @@ def test_practitioner_evidence_review_is_trusted_review_only(isolated_auth_db) -
         assert body["review"]["items"][1]["review_action"] == "keep_candidate"
         assert "observe_only" in body["review"]["items"][1]["risk_flags"]
 
+        english_review = client.post(
+            "/v17/auth/practitioner-evidence-review",
+            cookies={"v17_session": user_token},
+            json={**payload, "ui_lang": "en"},
+        )
+        assert english_review.status_code == 200
+        english_body = english_review.json()
+        assert english_body["prompt_contract"]["output_language"] == "en"
+        assert english_body["prompt_contract"]["output_contract"]["reason_language"] == "en"
+        assert "Output structured JSON only" in english_body["prompt_text"]
+        assert "evidence is strong enough" in english_body["review"]["items"][0]["reason"]
+
 
 def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
     with TestClient(app) as client:

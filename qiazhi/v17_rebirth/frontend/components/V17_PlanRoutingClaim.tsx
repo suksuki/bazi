@@ -1,6 +1,7 @@
 "use client";
 
 import type { PlanDecisionClaim, PlanDecisionRoutingFeatures } from "@/types/decisionBrain";
+import type { AppLanguage } from "@/lib/i18n";
 
 type Props = {
   routingLabel?: string;
@@ -8,7 +9,14 @@ type Props = {
   routingPolicy?: string;
   routingFeatures?: PlanDecisionRoutingFeatures;
   claim?: PlanDecisionClaim;
+  lang?: AppLanguage;
 };
+
+function ui(lang: AppLanguage | undefined, zh: string, en: string, ko: string): string {
+  if (lang === "en") return en;
+  if (lang === "ko") return ko;
+  return zh;
+}
 
 function compactRoutingHints(features?: PlanDecisionRoutingFeatures): string {
   if (!features) return "";
@@ -71,9 +79,10 @@ export function V17PlanRoutingClaim({
   routingPolicy,
   routingFeatures,
   claim,
+  lang = "zh",
 }: Props) {
-  const labelText = routingLabel ? `策略 ${routingLabel}` : undefined;
-  const policyText = routingPolicy ? `策略 ${routingPolicy}` : undefined;
+  const labelText = routingLabel ? `${ui(lang, "策略", "Strategy", "전략")} ${routingLabel}` : undefined;
+  const policyText = routingPolicy ? `${ui(lang, "策略", "Policy", "정책")} ${routingPolicy}` : undefined;
   const routingText = compactRoutingHints(routingFeatures);
   const signalText = compactClaimSignals(claim);
   const severityText = claimSeverity(claim);
@@ -86,7 +95,7 @@ export function V17PlanRoutingClaim({
         {labelText ? <span className="rounded-full border px-1.5 py-0.5 text-[9px] text-zinc-200">{labelText}</span> : null}
         {policyText ? <span className="rounded-full border border-zinc-500/20 px-1.5 py-0.5 text-[9px] text-zinc-200">{policyText}</span> : null}
         <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${planSeverityTone(severityText)}`}>
-          风险 {severityText}
+          {ui(lang, "风险", "Risk", "위험")} {severityText}
         </span>
         {routingText ? (
           <span className="rounded-full border border-zinc-500/20 px-1.5 py-0.5 text-[8px] leading-tight text-zinc-400">{routingText}</span>
@@ -95,17 +104,16 @@ export function V17PlanRoutingClaim({
           <span className="rounded-full border border-zinc-500/20 px-1.5 py-0.5 text-[8px] leading-tight text-zinc-300">{signalText}</span>
         ) : null}
       </div>
-      {routingReason ? <p className="mt-1 text-[9px] text-zinc-500">路由说明：{routingReason}</p> : null}
-      {rationale ? <p className="mt-1 text-[9px] text-zinc-500">裁决依据：{rationale}</p> : null}
-      {confidenceText ? <p className="mt-1 text-[9px] text-zinc-500">裁决置信度：{confidenceText}</p> : null}
+      {routingReason ? <p className="mt-1 text-[9px] text-zinc-500">{ui(lang, "路由说明", "Routing note", "라우팅 설명")}：{routingReason}</p> : null}
+      {rationale ? <p className="mt-1 text-[9px] text-zinc-500">{ui(lang, "裁决依据", "Rationale", "판정 근거")}：{rationale}</p> : null}
+      {confidenceText ? <p className="mt-1 text-[9px] text-zinc-500">{ui(lang, "裁决置信度", "Confidence", "판정 신뢰도")}：{confidenceText}</p> : null}
     </>
   );
 }
 
-export function compactRoutingLabel(planRouting?: string): string {
+export function compactRoutingLabel(planRouting?: string, lang: AppLanguage = "zh"): string {
   const routing = String(planRouting || "system").trim().toLowerCase();
-  if (routing === "llm") return "LLM 预审";
-  if (routing === "user") return "用户确认";
-  return "系统自动";
+  if (routing === "llm") return ui(lang, "LLM 预审", "LLM pre-review", "LLM 사전 검토");
+  if (routing === "user") return ui(lang, "用户确认", "User confirmation", "사용자 확인");
+  return ui(lang, "系统自动", "System auto", "시스템 자동");
 }
-

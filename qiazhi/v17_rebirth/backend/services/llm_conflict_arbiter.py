@@ -76,10 +76,14 @@ def build_conflict_bundles(*, meta: Dict[str, Any], conflict_ids: Iterable[str])
     }
 
 
-def build_llm_conflict_prompt(*, bundle: Dict[str, Any]) -> str:
+def build_llm_conflict_prompt(*, bundle: Dict[str, Any], output_language: str = "zh") -> str:
     if not isinstance(bundle, dict):
+        if output_language == "en":
+            return "Only standard conflict bundle input is supported; arbitration prompt cannot be generated."
+        if output_language == "ko":
+            return "표준 충돌 묶음 입력만 지원하므로 중재 프롬프트를 생성할 수 없습니다."
         return "仅支持标准冲突包输入，无法生成仲裁提示。"
-    return build_conflict_prompt_text(bundle=bundle)
+    return build_conflict_prompt_text(bundle=bundle, output_language=output_language)
 
 
 def parse_llm_conflict_reply(*, reply: str, bundle: Dict[str, Any]) -> Dict[str, Any]:

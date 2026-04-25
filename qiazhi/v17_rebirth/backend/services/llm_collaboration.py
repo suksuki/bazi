@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Literal
 
 
 LLM_COLLABORATION_CONTRACT_VERSION = "v17.llm.collaboration.v1.0"
@@ -14,6 +14,25 @@ REVIEW_ACTIONS = (
     "ask_practitioner",
     "needs_more_evidence",
 )
+
+OUTPUT_LANGUAGE = Literal["zh", "en", "ko"]
+
+
+def normalize_output_language(value: Any) -> OUTPUT_LANGUAGE:
+    raw = str(value or "").strip().lower()
+    if raw == "en":
+        return "en"
+    if raw == "ko":
+        return "ko"
+    return "zh"
+
+
+def _l10n(lang: OUTPUT_LANGUAGE, zh: str, en: str, ko: str) -> str:
+    if lang == "en":
+        return en
+    if lang == "ko":
+        return ko
+    return zh
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -74,8 +93,10 @@ def build_evidence_review_contract(
     chart_fingerprint: str = "",
     verdict_text: str = "",
     reviewer_role: str = "user",
+    output_language: Any = "zh",
     max_items: int = 12,
 ) -> Dict[str, Any]:
+    lang = normalize_output_language(output_language)
     compact_items = _compact_evidence_items(items, max_items=max_items)
     safe_summary = summary if isinstance(summary, dict) else {}
     return {
@@ -85,6 +106,7 @@ def build_evidence_review_contract(
         "session_id": _safe_str(session_id, "default"),
         "chart_fingerprint": _safe_str(chart_fingerprint),
         "reviewer_role": _safe_str(reviewer_role, "user"),
+        "output_language": lang,
         "summary": {
             "total": int(_safe_float(safe_summary.get("total"), len(items))),
             "candidate_count": int(_safe_float(safe_summary.get("candidate_count"), 0)),
@@ -102,16 +124,39 @@ def build_evidence_review_contract(
             "confidence_range": "[0.0,1.0]",
             "output_format": "json",
             "fallback_when_unparseable": "needs_practitioner",
+            "reason_language": lang,
         },
     }
 
 
 def build_evidence_review_prompt_text(contract: Dict[str, Any]) -> str:
+    lang = normalize_output_language(contract.get("output_language"))
+    if lang == "en":
+        header = [
+            "You are the V17 evidence-chain Reviewer. Output structured JSON only.",
+            "Task: review evidence_bundle and decide whether each evidence item can support a strong verdict.",
+            "Boundary: do not add BaZi facts, and do not modify physics, parameters, authority, or release state.",
+            "Output JSON only. Do not add prose, Markdown, or code fences.",
+        ]
+        example_reason = "Keep this as a candidate; it is not strong enough for a final verdict."
+    elif lang == "ko":
+        header = [
+            "당신은 V17 근거 체인 Reviewer입니다. 구조화된 JSON만 출력하십시오.",
+            "작업: evidence_bundle을 검토하여 각 근거가 강한 단언을 지지할 수 있는지 판단합니다.",
+            "경계: 명리 사실을 새로 만들지 말고 physics, parameter, authority, release 상태를 바꾸지 마십시오.",
+            "JSON만 출력하십시오. 설명문, Markdown, 코드 블록은 붙이지 마십시오.",
+        ]
+        example_reason = "후보로 보관할 수 있지만 최종 단언으로 쓰기에는 부족합니다."
+    else:
+        header = [
+            "你是 V17 证据链复核器（Reviewer），只输出结构化 JSON。",
+            "任务：审阅 evidence_bundle，判断每条证据是否足以支撑强断语。",
+            "边界：不得新增命理事实，不得改写物理层、参数、authority 或发布状态。",
+            "输出仅为 JSON，不要附加解释文本、Markdown 或代码块。",
+        ]
+        example_reason = "证据可保留为候选，但不足以写成强断语。"
     lines = [
-        "你是 V17 证据链复核器（Reviewer），只输出结构化 JSON。",
-        "任务：审阅 evidence_bundle，判断每条证据是否足以支撑强断语。",
-        "边界：不得新增命理事实，不得改写物理层、参数、authority 或发布状态。",
-        "输出仅为 JSON，不要附加解释文本、Markdown 或代码块。",
+        *header,
         "",
         "## Review Contract",
         json.dumps(contract, ensure_ascii=False, indent=2),
@@ -125,7 +170,7 @@ def build_evidence_review_prompt_text(contract: Dict[str, Any]) -> str:
                     {
                         "evidence_id": "example",
                         "review_action": "keep_candidate",
-                        "reason": "证据可保留为候选，但不足以写成强断语。",
+                        "reason": example_reason,
                         "confidence": 0.7,
                         "risk_flags": ["candidate_not_final"],
                     }
@@ -144,6 +189,7 @@ def build_evidence_review_prompt_text(contract: Dict[str, Any]) -> str:
 
 
 def build_evidence_review_draft(contract: Dict[str, Any]) -> Dict[str, Any]:
+    lang = normalize_output_language(contract.get("output_language"))
     rows = _safe_list(contract.get("evidence_items"))
     result_items: List[Dict[str, Any]] = []
     strong_count = 0
@@ -170,19 +216,43 @@ def build_evidence_review_draft(contract: Dict[str, Any]) -> Dict[str, Any]:
             risk_count += 1
         if observe_only or "candidate_not_final" in risk_flags:
             action = "keep_candidate"
-            reason = "证据适合保留为候选或观察项，暂不应写成强断语。"
+            reason = _l10n(
+                lang,
+                "证据适合保留为候选或观察项，暂不应写成强断语。",
+                "Keep this as a candidate or watch item; it should not become a strong verdict yet.",
+                "후보 또는 관찰 항목으로 보관하는 것이 적절하며 아직 강한 단언으로 쓰면 안 됩니다.",
+            )
+            reason_key = "candidate_or_watch"
             candidate_count += 1
         elif confidence >= 0.72 or match_ratio >= 0.72:
             action = "keep_strong"
-            reason = "证据强度较高，可支撑较明确表达，但仍需保留来源。"
+            reason = _l10n(
+                lang,
+                "证据强度较高，可支撑较明确表达，但仍需保留来源。",
+                "The evidence is strong enough for clearer wording, while keeping its source visible.",
+                "근거 강도가 높아 비교적 명확한 표현을 지지하지만 출처는 계속 표시해야 합니다.",
+            )
+            reason_key = "strong_with_source"
             strong_count += 1
         elif confidence <= 0.0 and match_ratio <= 0.0:
             action = "needs_more_evidence"
-            reason = "当前证据缺少置信或命中指标，建议补充来源后再判断。"
+            reason = _l10n(
+                lang,
+                "当前证据缺少置信或命中指标，建议补充来源后再判断。",
+                "This evidence lacks confidence or match metrics; add source detail before judging.",
+                "현재 근거에는 신뢰도나 명중 지표가 부족하므로 출처를 보강한 뒤 판단하는 것이 좋습니다.",
+            )
+            reason_key = "missing_metrics"
             practitioner_required = True
         else:
             action = "ask_practitioner"
-            reason = "证据处于中间态，建议由命理师结合盘面复核。"
+            reason = _l10n(
+                lang,
+                "证据处于中间态，建议由命理师结合盘面复核。",
+                "This evidence is in a middle state; ask a practitioner to review it with the full chart.",
+                "이 근거는 중간 상태이므로 명리사가 전체 명식과 함께 검토하는 것이 좋습니다.",
+            )
+            reason_key = "practitioner_review"
             practitioner_required = True
             candidate_count += 1
         if action in {"ask_practitioner", "needs_more_evidence"}:
@@ -191,6 +261,7 @@ def build_evidence_review_draft(contract: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "evidence_id": _safe_str(row.get("evidence_id")),
                 "review_action": action,
+                "reason_key": reason_key,
                 "reason": reason,
                 "confidence": round(max(confidence, match_ratio, 0.45 if action == "ask_practitioner" else 0.0), 3),
                 "risk_flags": risk_flags,
