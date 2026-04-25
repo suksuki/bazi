@@ -166,6 +166,17 @@ def _case_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     return payload
 
 
+def _contribution_map_from_users() -> Dict[int, Dict[str, Any]]:
+    out: Dict[int, Dict[str, Any]] = {}
+    for row in auth_storage.list_users():
+        user = build_user_payload(row)
+        user_id = int(user.get("id") or 0)
+        contribution = user.get("practitioner_contribution")
+        if user_id and isinstance(contribution, dict):
+            out[user_id] = contribution
+    return out
+
+
 @router.post("/v17/auth/register")
 @router.post("/api/v17/auth/register")
 async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
@@ -411,6 +422,7 @@ async def list_practitioner_learning_candidates(request: Request) -> Dict[str, A
     report = build_practitioner_learning_candidates(
         feedback_rows=feedback_rows,
         case_rows=case_rows,
+        contribution_by_user_id=_contribution_map_from_users(),
         scope=effective_scope,
     )
     report["viewer_role"] = viewer_role

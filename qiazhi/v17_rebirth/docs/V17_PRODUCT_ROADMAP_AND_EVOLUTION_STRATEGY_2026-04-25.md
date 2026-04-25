@@ -225,6 +225,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 学习候选会按参数族归因，例如 `pattern_specialization.yangren_gate`、`pattern_specialization.follow_gate`、`relation_gate.*`、`authority.leader_axis`、`narrative.prompt_contract`。
 - 每个候选输出 `signal_score / priority / recommended_action / safety_gate / review_hints`，并保留来源插件、证据 ID、案例 key 和错判标签。
 - 专业工作台“命理师账本”已展示学习候选摘要；候选只进入 `manual_review_required` 队列，不会自动修改运行时参数。
+- 学习候选已读取 `practitioner_contribution` 作为 reputation multiplier：贡献等级会影响候选分数、优先级与人工复核排序，并在账本 UI 中展示贡献等级来源。
 
 ### P5：学习治理与进化发布
 
@@ -294,7 +295,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 4. `BenchmarkCase`：真实案例结构化入库。
 5. `LearningCandidateReview`：参数候选和 synthetic case 审计。
 6. `PractitionerOnboarding`：命理师申请、审核、可信身份权重与后续贡献档案。
-7. `PractitionerReputation`：基于贡献画像调整学习候选优先级和人工复核队列排序，但不直接自动改参数。
+7. `PractitionerReputation`：基于贡献画像调整学习候选优先级和人工复核队列排序，但不直接自动改参数；已接入学习候选聚合与命理师账本展示。
 
 其中 P1 和 P2 应优先完成，因为没有证据与反馈，后面的学习系统就缺少高质量燃料。
 

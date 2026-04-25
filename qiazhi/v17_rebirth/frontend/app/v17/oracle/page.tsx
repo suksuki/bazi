@@ -1598,6 +1598,13 @@ function learningPriorityTone(priority: string): string {
   return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
 }
 
+function contributionTierLabel(tier: string, ui: LocalizeText): string {
+  if (tier === "anchor") return ui("锚点贡献者", "Anchor", "앵커 기여자");
+  if (tier === "active") return ui("活跃贡献者", "Active", "활성 기여자");
+  if (tier === "seed") return ui("种子贡献者", "Seed", "시드 기여자");
+  return ui("待积累", "New", "누적 대기");
+}
+
 function learningActionLabel(action: string, ui: LocalizeText): string {
   if (action === "review_classical_pattern_gate") return ui("复核格局门槛", "Review pattern gate", "격국 조건 검토");
   if (action === "review_relation_gate_and_runtime_origin") return ui("复核运流来源", "Review relation origin", "관계 출처 검토");
@@ -1755,12 +1762,17 @@ function V17PractitionerLedgerPanel({
               const hints = asStringList(row.review_hints).slice(0, 2);
               const plugins = asStringList(row.source_plugins).slice(0, 2);
               const cases = asStringList(row.source_cases).slice(0, 2);
+              const contributorTiers = asStringList(row.contributor_tiers).slice(0, 2);
+              const reputationScore = Number(row.contributor_reputation_score || 0);
               return (
                 <article key={String(row.candidate_id || family)} className="rounded-xl border border-white/10 bg-black/25 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-[12px] font-semibold text-zinc-100">{family || ui("未分类候选", "Unclassified candidate", "미분류 후보")}</p>
-                      <p className="mt-1 text-[10px] text-zinc-500">{learningActionLabel(action, ui)} · {ui("分数", "score", "점수")} {score.toFixed(2)}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">
+                        {learningActionLabel(action, ui)} · {ui("分数", "score", "점수")} {score.toFixed(2)}
+                        {reputationScore > 0 ? ` · ${ui("信誉", "rep", "평판")} ${reputationScore.toFixed(1)}` : ""}
+                      </p>
                     </div>
                     <span className={`rounded-full border px-2 py-0.5 text-[10px] ${learningPriorityTone(priority)}`}>
                       {learningPriorityLabel(priority, ui)}
@@ -1770,7 +1782,7 @@ function V17PractitionerLedgerPanel({
                     {hints.join(" / ") || ui("等待更多命理师反馈形成审计说明。", "Waiting for more practitioner signals.", "더 많은 명리사 신호 대기 중")}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[...plugins, ...cases].slice(0, 4).map((item, index) => (
+                    {[...contributorTiers.map((tier) => contributionTierLabel(tier, ui)), ...plugins, ...cases].slice(0, 4).map((item, index) => (
                       <span key={`${item}_${index}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-400">
                         {item}
                       </span>

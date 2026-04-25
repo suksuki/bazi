@@ -41,20 +41,23 @@ def build_practitioner_learning_candidates(
     *,
     feedback_rows: Iterable[dict[str, Any]],
     case_rows: Iterable[dict[str, Any]],
+    contribution_by_user_id: dict[int, dict[str, Any]] | None = None,
     scope: str = "own",
 ) -> dict[str, Any]:
     feedback = [dict(row) for row in feedback_rows if isinstance(row, dict)]
     cases = [dict(row) for row in case_rows if isinstance(row, dict)]
+    contribution_map = contribution_by_user_id or {}
     buckets: dict[str, dict[str, Any]] = {}
 
     for row in feedback:
         family = infer_parameter_family_from_feedback(row)
         bucket = buckets.setdefault(family, _empty_bucket(family))
         status = _norm(row.get("status"))
-        score = _feedback_score(row)
+        score = _feedback_score(row, contribution_map=contribution_map)
         bucket["signal_score"] += score
         bucket["feedback_count"] += 1
         bucket["weighted_feedback_score"] += score
+        _merge_contributor_reputation(bucket, row, contribution_map)
         if status == "reject":
             bucket["reject_count"] += 1
         elif status == "confirm":
@@ -71,10 +74,11 @@ def build_practitioner_learning_candidates(
         family = infer_parameter_family_from_case(row)
         bucket = buckets.setdefault(family, _empty_bucket(family))
         status = _norm(row.get("status"))
-        score = _case_score(row)
+        score = _case_score(row, contribution_map=contribution_map)
         bucket["signal_score"] += score
         bucket["case_count"] += 1
         bucket["weighted_case_score"] += score
+        _merge_contributor_reputation(bucket, row, contribution_map)
         if status == "benchmark_candidate":
             bucket["benchmark_candidate_count"] += 1
         _append_unique(bucket["source_cases"], _text(row.get("case_key") or row.get("case_title")), limit=8)
@@ -189,6 +193,9 @@ def _empty_bucket(family: str) -> dict[str, Any]:
         "benchmark_candidate_count": 0,
         "weighted_feedback_score": 0.0,
         "weighted_case_score": 0.0,
+        "contributor_reputation_score": 0.0,
+        "contributor_tiers": [],
+        "trusted_contributor_count": 0,
         "source_plugins": [],
         "source_evidence_ids": [],
         "source_feedback_ids": [],
@@ -212,6 +219,7 @@ def _finalize_bucket(bucket: dict[str, Any]) -> dict[str, Any]:
         "signal_score": score,
         "weighted_feedback_score": round(float(bucket.get("weighted_feedback_score") or 0.0), 3),
         "weighted_case_score": round(float(bucket.get("weighted_case_score") or 0.0), 3),
+        "contributor_reputation_score": round(float(bucket.get("contributor_reputation_score") or 0.0), 3),
         "issue_count": issue_count,
         "priority": priority,
         "recommended_action": _recommended_action(str(bucket.get("parameter_family") or ""), issue_count=issue_count),
@@ -263,18 +271,18 @@ def _review_hints(bucket: dict[str, Any], *, issue_count: int) -> list[str]:
     return hints[:4]
 
 
-def _feedback_score(row: dict[str, Any]) -> float:
+def _feedback_score(row: dict[str, Any], *, contribution_map: dict[int, dict[str, Any]]) -> float:
     status = _norm(row.get("status"))
     base = {"reject": 1.4, "review": 1.0, "watch": 0.8, "confirm": 0.32}.get(status, 0.5)
-    return base * _row_weight(row, "reviewer_weight")
+    return base * _row_weight(row, "reviewer_weight") * _reputation_multiplier(row, contribution_map)
 
 
-def _case_score(row: dict[str, Any]) -> float:
+def _case_score(row: dict[str, Any], *, contribution_map: dict[int, dict[str, Any]]) -> float:
     status = _norm(row.get("status"))
     base = 1.45 if status == "benchmark_candidate" else 0.8 if status in {"accepted", "submitted"} else 0.35
     failure_bonus = min(0.9, 0.18 * len(_list_text(row.get("failure_modes"))))
     boundary_bonus = min(0.5, 0.1 * len(_list_text(row.get("boundary_flags"))))
-    return (base + failure_bonus + boundary_bonus) * _row_weight(row, "owner_weight")
+    return (base + failure_bonus + boundary_bonus) * _row_weight(row, "owner_weight") * _reputation_multiplier(row, contribution_map)
 
 
 def _row_weight(row: dict[str, Any], key: str) -> float:
@@ -288,6 +296,46 @@ def _row_weight(row: dict[str, Any], key: str) -> float:
         confidence = 0.0
     confidence_factor = 1.0 if confidence <= 0 else 0.7 + min(1.0, max(0.0, confidence)) * 0.6
     return max(0.4, min(3.0, weight)) * confidence_factor
+
+
+def _reputation_multiplier(row: dict[str, Any], contribution_map: dict[int, dict[str, Any]]) -> float:
+    try:
+        user_id = int(row.get("user_id") or 0)
+    except Exception:
+        user_id = 0
+    contribution = contribution_map.get(user_id) if user_id else None
+    if not isinstance(contribution, dict):
+        return 1.0
+    tier = _norm(contribution.get("tier"))
+    base = {"anchor": 1.3, "active": 1.18, "seed": 1.08}.get(tier, 1.0)
+    try:
+        score = max(0.0, float(contribution.get("score") or 0.0))
+    except Exception:
+        score = 0.0
+    return min(1.36, base + min(0.06, score / 500.0))
+
+
+def _merge_contributor_reputation(
+    bucket: dict[str, Any],
+    row: dict[str, Any],
+    contribution_map: dict[int, dict[str, Any]],
+) -> None:
+    try:
+        user_id = int(row.get("user_id") or 0)
+    except Exception:
+        user_id = 0
+    contribution = contribution_map.get(user_id) if user_id else None
+    if not isinstance(contribution, dict):
+        return
+    tier = _norm(contribution.get("tier")) or "none"
+    try:
+        score = max(0.0, float(contribution.get("score") or 0.0))
+    except Exception:
+        score = 0.0
+    bucket["contributor_reputation_score"] = float(bucket.get("contributor_reputation_score") or 0.0) + score
+    _append_unique(bucket["contributor_tiers"], tier, limit=4, max_chars=40)
+    if tier in {"seed", "active", "anchor"}:
+        bucket["trusted_contributor_count"] = int(bucket.get("trusted_contributor_count") or 0) + 1
 
 
 def _flatten_text_values(value: Any) -> list[str]:

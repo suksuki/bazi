@@ -682,6 +682,10 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert candidate["recommended_action"] == "review_classical_pattern_gate"
         assert candidate["reject_count"] == 1
         assert candidate["benchmark_candidate_count"] == 1
+        assert candidate["trusted_contributor_count"] == 2
+        assert candidate["contributor_reputation_score"] > 0
+        assert "seed" in candidate["contributor_tiers"]
+        assert candidate["priority"] == "high"
         assert "classical.pattern.yangren_jiasha.v1" in candidate["source_plugins"]
         assert "learning.false_yangren.19770508" in candidate["source_cases"]
         assert any("羊刃" in hint for hint in candidate["review_hints"])
