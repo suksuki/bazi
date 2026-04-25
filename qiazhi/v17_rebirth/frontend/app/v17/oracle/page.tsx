@@ -1101,6 +1101,37 @@ function feedbackStatusTone(status: PractitionerFeedbackStatus | string): string
   return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
+function learningIntentForFeedback(status: PractitionerFeedbackStatus): string {
+  if (status === "confirm") return "positive_support";
+  if (status === "reject") return "false_positive_or_wrong_claim";
+  if (status === "watch") return "boundary_observation";
+  return "needs_expert_review";
+}
+
+function learningValueForFeedback(status: PractitionerFeedbackStatus): string {
+  if (status === "confirm") return "benchmark_positive";
+  if (status === "reject") return "counterexample";
+  if (status === "watch") return "boundary_case";
+  return "review_gap";
+}
+
+function evidenceLearningTags(item: Record<string, unknown>, status: PractitionerFeedbackStatus, detailKeys: string[]): string[] {
+  const kind = String(item.evidence_type || "").trim();
+  const candidateStatus = String(item.candidate_status || "").trim();
+  const originType = String(item.origin_type || "").trim();
+  const manifestationState = String(item.manifestation_state || "").trim();
+  return Array.from(new Set([
+    kind ? `evidence_type:${kind}` : "",
+    status === "reject" ? "needs_counterexample" : "",
+    status === "watch" ? "boundary_observation" : "",
+    status === "review" ? "expert_review_required" : "",
+    candidateStatus ? `candidate:${candidateStatus}` : "",
+    originType ? `origin:${originType}` : "",
+    manifestationState ? `state:${manifestationState}` : "",
+    ...detailKeys.slice(0, 8).map((key) => `detail:${key}`),
+  ].filter(Boolean)));
+}
+
 function evidenceReviewStatusLabel(status: string, ui: LocalizeText): string {
   if (status === "supported") return ui("证据支持", "Supported", "근거 충분");
   if (status === "mixed") return ui("混合证据", "Mixed", "혼합 근거");
@@ -1241,6 +1272,8 @@ function V17EvidencePanel({
   async function submitFeedback(item: Record<string, unknown>, status: PractitionerFeedbackStatus) {
     const evidenceId = String(item.evidence_id || item.claim_id || item.title || "").trim();
     if (!evidenceId) return;
+    const detailKeys = asStringList(item.detail_keys);
+    const learningTags = evidenceLearningTags(item, status, detailKeys);
     setFeedbackError("");
     setPendingByEvidence((current) => ({ ...current, [evidenceId]: true }));
     const { data: payload, ok, error } = await requestJson<Record<string, unknown>>(
@@ -1259,6 +1292,12 @@ function V17EvidencePanel({
         source_summary: String(item.summary || "").trim(),
         chart_fingerprint: chartFingerprint,
         payload: {
+          material_protocol: "v17.evidence.learning_material.v1",
+          feedback_intent: learningIntentForFeedback(status),
+          learning_value: learningValueForFeedback(status),
+          learning_tags: learningTags,
+          boundary_tags: learningTags.filter((tag) => tag.includes("boundary") || tag.startsWith("detail:")),
+          parameter_family_hint: String(item.source_plugin || "").trim(),
           detail_keys: asStringList(item.detail_keys),
           candidate_status: String(item.candidate_status || "").trim(),
           origin_type: String(item.origin_type || "").trim(),
@@ -1296,6 +1335,11 @@ function V17EvidencePanel({
     const failureModes = Array.from(new Set([
       feedbackStatus === "reject" ? `reject_${kind || "evidence"}` : "",
       kind ? `evidence_${kind}` : "",
+    ].filter(Boolean)));
+    const learningTags = Array.from(new Set([
+      ...evidenceLearningTags(item, feedbackStatus === "reject" ? "reject" : feedbackStatus === "watch" ? "watch" : "confirm", detailKeys),
+      professionalFeedback ? "source:practitioner_case" : "source:user_case",
+      caseStatus === "benchmark_candidate" ? "benchmark_candidate" : "",
     ].filter(Boolean)));
     const sourceFeedbackIds = Array.from(new Set([
       evidenceId,
@@ -1341,6 +1385,9 @@ function V17EvidencePanel({
         chart_fingerprint: chartFingerprint,
         status: caseStatus,
         payload: {
+          material_protocol: "v17.evidence.learning_material.v1",
+          learning_value: feedbackStatus === "reject" ? "counterexample" : "case_evidence",
+          learning_tags: learningTags,
           source: "oracle_evidence_panel",
           evidence: item,
           feedback: existingFeedback || {},

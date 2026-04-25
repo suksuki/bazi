@@ -187,7 +187,8 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 ## UI 验证口径
 
 - `/login` 与 `/register` 使用 `V17_AuthScreen`，桌面为品牌区 + 表单，手机为紧凑单列表单；语言切换、登录/注册切换和页面内必填错误必须多语言化。
-- `/register` 的命理师入口只是申请，不得直接把新账号变成 `practitioner`；申请应进入用户权限面板，由 manager/admin 批准或驳回。
+- 当前使用期 `/register` 不显示命理师申请入口，新账号直接进入 `practitioner`；历史 `user` 账号的命理师申请入口应放在 `/v17/oracle` 主页面空白位置，并进入用户权限面板由 manager/admin 批准或驳回。
+- 证据链反馈 payload 应带 `v17.evidence.learning_material.v1` 学习素材契约；学习候选应保留 `learning_values / feedback_intents / learning_tags / boundary_tags`，但这些字段只能影响候选归因和审计排序，不能自动改参数。
 - 用户权限面板应展示命理师贡献画像：反馈数、案例数、基准候选数、贡献分和等级；没有贡献时不能伪造高可信标签。
 - manager/admin 可把真实案例从 `benchmark_candidate` 标记为 `accepted / rejected`；该动作只更新运行时状态和备注，不得自动改静态 benchmark 测试文件。
 - 命理师学习候选应读取贡献画像调整人工复核优先级，并在候选中保留 `contributor_tiers / contributor_reputation_score`；该分数只能影响审计排序，不能自动改参数。

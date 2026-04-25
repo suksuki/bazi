@@ -175,6 +175,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 
 - `practitioner_feedback` 已进入运行时认证数据库，绑定 `session_id / evidence_id / claim_id / plugin_id`。
 - 反馈状态支持 `confirm / reject / watch / review`，并记录理由、置信度、角色与 `reviewer_weight`。
+- 反馈 payload 已接入 `v17.evidence.learning_material.v1`，记录 `feedback_intent / learning_value / learning_tags / boundary_tags / parameter_family_hint`，让证据链反馈能直接成为学习素材。
 - `/v17/auth/practitioner-feedback` 已提供提交与查询接口；`practitioner / manager / admin` 可提交专业反馈，manager/admin 可用 `scope=all` 查看全量反馈。
 - 命盘核心页证据卡片已接入反馈入口；普通用户看到简明断语，`practitioner` 以上账号进入专业证据链工作台。
 - 专业工作台新增“命理师账本”，可回看最近反馈、确认/否定/复核状态，以及全量或本人范围的反馈记录。
@@ -210,6 +211,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 - `practitioner_cases` 已进入运行时认证数据库，记录真实样盘、期望判断、边界标签、错判类型、来源反馈和命理师权重。
 - `/v17/auth/practitioner-cases` 已提供提交与查询接口；`practitioner / manager / admin` 可提交案例，manager/admin 可用 `scope=all` 查看全量案例。
 - API 响应会生成 `benchmark_seed`，把真实案例整理成接近 `PractitionerBenchmarkCase` 的结构，为后续转入长期回归集做准备。
+- 从证据链沉淀的案例会携带 `learning_value / learning_tags`，与反馈素材共用 `v17.evidence.learning_material.v1` 契约。
 - 命盘核心页的证据卡片已接入案例收录入口：`practitioner` 以上账号可直接沉淀为命理师基准候选，并自动绑定命盘、运流、证据、反馈和 `chart_fingerprint`。
 - “命理师账本”同步展示真实案例与基准候选，作为后续参数候选、回归审计和学习治理的入口。
 - manager/admin 可将案例状态推进为 `accepted / rejected`，作为转入长期 Practitioner Benchmark 前的运营标记；该动作只更新运行时案例状态，不自动改测试文件。
@@ -235,7 +237,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 
 - `/v17/auth/practitioner-learning-candidates` 已把 `practitioner_feedback` 与 `practitioner_cases` 聚合为 `v17.practitioner.learning_candidates.v1` 报告。
 - 学习候选会按参数族归因，例如 `pattern_specialization.yangren_gate`、`pattern_specialization.follow_gate`、`relation_gate.*`、`authority.leader_axis`、`narrative.prompt_contract`。
-- 每个候选输出 `signal_score / priority / recommended_action / safety_gate / review_hints`，并保留来源插件、证据 ID、案例 key 和错判标签。
+- 每个候选输出 `signal_score / priority / recommended_action / safety_gate / review_hints`，并保留来源插件、证据 ID、案例 key、错判标签、学习价值、反馈意图、学习标签和边界标签。
 - 专业工作台“命理师账本”已展示学习候选摘要；候选只进入 `manual_review_required` 队列，不会自动修改运行时参数。
 - 学习候选已读取 `practitioner_contribution` 作为 reputation multiplier：贡献等级会影响候选分数、优先级与人工复核排序，并在账本 UI 中展示贡献等级来源。
 - `practitioner_learning_reviews` 已记录 manager/admin 对学习候选的审计意见，状态只允许 `watch / approved_for_experiment / rejected`；准入实验只代表可进入 shadow run，不会直接应用参数。

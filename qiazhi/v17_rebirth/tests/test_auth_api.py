@@ -756,7 +756,14 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
                 "source_title": "阳刃驾杀",
                 "source_summary": "候选误报。",
                 "chart_fingerprint": "fp-learning-yangren",
-                "payload": {"failure_mode": "false_yangren"},
+                "payload": {
+                    "material_protocol": "v17.evidence.learning_material.v1",
+                    "failure_mode": "false_yangren",
+                    "feedback_intent": "false_positive_or_wrong_claim",
+                    "learning_value": "counterexample",
+                    "learning_tags": ["needs_counterexample", "evidence_type:pattern"],
+                    "boundary_tags": ["无羊刃支"],
+                },
             },
         )
         assert feedback_resp.status_code == 200
@@ -779,6 +786,11 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
                 "source_feedback_ids": ["classical.pattern.yangren_jiasha.v1_evidence_false_positive"],
                 "chart_fingerprint": "fp-learning-yangren",
                 "status": "benchmark_candidate",
+                "payload": {
+                    "material_protocol": "v17.evidence.learning_material.v1",
+                    "learning_value": "counterexample",
+                    "learning_tags": ["benchmark_candidate", "source:practitioner_case"],
+                },
             },
         )
         assert case_resp.status_code == 200
@@ -805,6 +817,10 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert candidate["priority"] == "high"
         assert "classical.pattern.yangren_jiasha.v1" in candidate["source_plugins"]
         assert "learning.false_yangren.19770508" in candidate["source_cases"]
+        assert "counterexample" in candidate["learning_values"]
+        assert "false_positive_or_wrong_claim" in candidate["feedback_intents"]
+        assert "needs_counterexample" in candidate["learning_tags"]
+        assert "无羊刃支" in candidate["boundary_tags"]
         assert any("羊刃" in hint for hint in candidate["review_hints"])
 
         admin_all = client.get(

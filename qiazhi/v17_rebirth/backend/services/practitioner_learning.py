@@ -67,7 +67,14 @@ def build_practitioner_learning_candidates(
         _append_unique(bucket["source_plugins"], _text(row.get("plugin_id")), limit=8)
         _append_unique(bucket["source_evidence_ids"], _text(row.get("evidence_id")), limit=8)
         _append_unique(bucket["chart_fingerprints"], _text(row.get("chart_fingerprint")), limit=6)
-        _append_unique(bucket["failure_modes"], _text(row.get("payload", {}).get("failure_mode") if isinstance(row.get("payload"), dict) else ""), limit=8)
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+        _append_unique(bucket["failure_modes"], _text(payload.get("failure_mode")), limit=8)
+        _append_unique(bucket["learning_values"], _text(payload.get("learning_value")), limit=8)
+        _append_unique(bucket["feedback_intents"], _text(payload.get("feedback_intent")), limit=8)
+        for tag in _list_text(payload.get("learning_tags")):
+            _append_unique(bucket["learning_tags"], tag, limit=14)
+        for tag in _list_text(payload.get("boundary_tags")):
+            _append_unique(bucket["boundary_tags"], tag, limit=14)
         _append_unique(bucket["review_notes"], _text(row.get("reason") or row.get("source_summary")), limit=4, max_chars=180)
 
     for row in cases:
@@ -81,6 +88,10 @@ def build_practitioner_learning_candidates(
         _merge_contributor_reputation(bucket, row, contribution_map)
         if status == "benchmark_candidate":
             bucket["benchmark_candidate_count"] += 1
+        payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+        _append_unique(bucket["learning_values"], _text(payload.get("learning_value")), limit=8)
+        for tag in _list_text(payload.get("learning_tags")):
+            _append_unique(bucket["learning_tags"], tag, limit=14)
         _append_unique(bucket["source_cases"], _text(row.get("case_key") or row.get("case_title")), limit=8)
         _append_unique(bucket["chart_fingerprints"], _text(row.get("chart_fingerprint")), limit=6)
         for key in ("failure_modes", "boundary_flags", "tags", "expected_patterns", "expected_risks"):
@@ -89,6 +100,8 @@ def build_practitioner_learning_candidates(
                 for item in value:
                     target = "failure_modes" if key == "failure_modes" else "audit_tags"
                     _append_unique(bucket[target], _text(item), limit=10)
+                    if key == "boundary_flags":
+                        _append_unique(bucket["boundary_tags"], _text(item), limit=14)
         for feedback_id in row.get("source_feedback_ids") or []:
             _append_unique(bucket["source_feedback_ids"], _text(feedback_id), limit=8)
         _append_unique(bucket["review_notes"], _text(row.get("expected_notes") or row.get("description")), limit=4, max_chars=180)
@@ -202,6 +215,10 @@ def _empty_bucket(family: str) -> dict[str, Any]:
         "source_cases": [],
         "chart_fingerprints": [],
         "failure_modes": [],
+        "learning_values": [],
+        "feedback_intents": [],
+        "learning_tags": [],
+        "boundary_tags": [],
         "audit_tags": [],
         "review_notes": [],
     }

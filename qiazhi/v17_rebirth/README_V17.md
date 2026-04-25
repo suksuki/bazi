@@ -4,6 +4,7 @@
 
 - 产品需求宪法：[docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md](docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md)。
 - 产品路线与进化策略：[docs/V17_PRODUCT_ROADMAP_AND_EVOLUTION_STRATEGY_2026-04-25.md](docs/V17_PRODUCT_ROADMAP_AND_EVOLUTION_STRATEGY_2026-04-25.md)。
+- 证据链学习系统：[docs/V17_EVIDENCE_CHAIN_LEARNING_SYSTEM_2026-04-25.md](docs/V17_EVIDENCE_CHAIN_LEARNING_SYSTEM_2026-04-25.md)。
 - 后续产品、架构、UI、Prompt、插件、权限和学习闭环设计，默认都必须围绕这组中心文档展开。
 
 ## Scope
@@ -56,12 +57,12 @@
 - 当前用户验收用例：[docs/V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md](docs/V17_USER_ACCEPTANCE_USE_CASES_2026-04-24.md)。
 - 仓库根一键：`bash qiazhi/v17_rebirth/scripts/run_automated_tests.sh`（优先使用 `qiazhi/.venv`，覆盖后端 pytest、集成、审计门禁与前端 `pnpm run test:ci`）。
 
-### 当前产品/运行重点（2026-04-24）
+### 当前产品/运行重点（2026-04-25）
 
 - 多语言主链：中文、英文、韩文共用 `frontend/lib/i18n.ts`，前端文案与 LLM verdict prompt 都必须走统一字典或 `ui()` helper。
 - 多终端 UI：登录/注册入口、Oracle 主页面、Admin 页面均按桌面/手机 Chrome 响应式验收。
 - 授权控制：`admin / manager / practitioner / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API；`user` 只看简明断语，`practitioner` 进入专业证据链工作台。
-- 命理师准入：注册默认创建 `user`；用户可提交命理师申请，`manager / admin` 在用户权限面板审核后才授予 `practitioner`。
+- 命理师准入：当前使用期注册直接创建 `practitioner`，注册页不显示“申请命理师”选项；历史 `user` 账号可在主页面提交命理师申请，`manager / admin` 仍可在用户权限面板审核。
 - 命理师贡献画像：用户权限面板汇总 feedback / case / benchmark / contribution score；学习候选会读取贡献等级调整人工复核优先级，但不会自动修改参数。
 - 学习治理审计：manager/admin 可对学习候选写入 `watch / approved_for_experiment / rejected` 审计意见；准入实验不等于发布或调参。
 - 实验队列：已准入候选会生成 dry-run experiment queue，列出候选 patch 范围、必跑回归命令和回滚安全门。
@@ -71,7 +72,7 @@
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
 - LLM 协作层：LLM 分为 `Weaver / Reviewer / Arbiter / Analyst` 四个受治理角色；除短断语外，只能产出结构化复核、仲裁建议和学习归因，不得直接改写物理层、参数或发布状态。
-- 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库 -> 学习候选”的 P1-P4 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选，系统会把反馈和案例归因为只读的 `manual_review_required` 学习候选。
+- 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库 -> 学习候选”的 P1-P4 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选，反馈 payload 使用 `v17.evidence.learning_material.v1` 标记学习意图、学习价值和边界标签，系统会把反馈和案例归因为只读的 `manual_review_required` 学习候选。
 - 0.13 部署：使用 `scripts/update_v17_from_git.sh` 拉取、构建、重启并做健康检查。
 
 ### 可调环境变量（可选）
