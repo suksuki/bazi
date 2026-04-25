@@ -858,23 +858,114 @@ function compactEvidenceValue(value: unknown, term: TranslateText): string {
   return text ? term(text) : "";
 }
 
+type PractitionerFeedbackStatus = "confirm" | "reject" | "watch" | "review";
+
+function feedbackStatusLabel(status: PractitionerFeedbackStatus | string, ui: LocalizeText): string {
+  if (status === "confirm") return ui("确认", "Confirm", "확인");
+  if (status === "reject") return ui("否定", "Reject", "부정");
+  if (status === "watch") return ui("待观察", "Watch", "관찰");
+  if (status === "review") return ui("需复核", "Review", "재검토");
+  return ui("已反馈", "Sent", "피드백됨");
+}
+
+function feedbackStatusTone(status: PractitionerFeedbackStatus | string): string {
+  if (status === "confirm") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+  if (status === "reject") return "border-rose-400/25 bg-rose-500/10 text-rose-100";
+  if (status === "watch") return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+  if (status === "review") return "border-violet-400/25 bg-violet-500/10 text-violet-100";
+  return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
+}
+
 function V17EvidencePanel({
   ui,
   term,
   items,
   summary,
+  sessionId,
+  chartFingerprint,
+  reviewerRole,
 }: {
   ui: LocalizeText;
   term: TranslateText;
   items: Array<Record<string, unknown>>;
   summary: Record<string, unknown>;
+  sessionId: string;
+  chartFingerprint: string;
+  reviewerRole: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [reasonByEvidence, setReasonByEvidence] = useState<Record<string, string>>({});
+  const [pendingByEvidence, setPendingByEvidence] = useState<Record<string, boolean>>({});
+  const [feedbackByEvidence, setFeedbackByEvidence] = useState<Record<string, Record<string, unknown>>>({});
+  const [feedbackError, setFeedbackError] = useState("");
   const visibleItems = (expanded ? items.slice(0, 12) : items.slice(0, 4));
   const total = asNumberValue(summary.total, items.length);
   const candidateCount = asNumberValue(summary.candidate_count);
   const riskCount = asNumberValue(summary.risk_count);
   const observeOnlyCount = asNumberValue(summary.observe_only_count);
+  const professionalFeedback = reviewerRole === "manager" || reviewerRole === "admin";
+
+  useEffect(() => {
+    if (!sessionId || !items.length) return;
+    let cancelled = false;
+    const loadFeedback = async () => {
+      const query = new URLSearchParams({ session_id: sessionId, limit: "200" });
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>(
+        `/api/auth/practitioner-feedback?${query.toString()}`,
+        noStoreInit(),
+      );
+      if (!ok || cancelled) return;
+      const rows = Array.isArray(payload.feedback) ? payload.feedback as Array<Record<string, unknown>> : [];
+      const next: Record<string, Record<string, unknown>> = {};
+      for (const row of rows) {
+        const key = String(row.evidence_id || "").trim();
+        if (key && !next[key]) next[key] = row;
+      }
+      setFeedbackByEvidence(next);
+    };
+    void loadFeedback();
+    return () => {
+      cancelled = true;
+    };
+  }, [items.length, sessionId]);
+
+  async function submitFeedback(item: Record<string, unknown>, status: PractitionerFeedbackStatus) {
+    const evidenceId = String(item.evidence_id || item.claim_id || item.title || "").trim();
+    if (!evidenceId) return;
+    setFeedbackError("");
+    setPendingByEvidence((current) => ({ ...current, [evidenceId]: true }));
+    const { data: payload, ok, error } = await requestJson<Record<string, unknown>>(
+      "/api/auth/practitioner-feedback",
+      jsonPostInit({
+        session_id: sessionId || "default",
+        evidence_id: evidenceId,
+        claim_id: String(item.claim_id || "").trim(),
+        plugin_id: String(item.source_plugin || "").trim(),
+        evidence_type: String(item.evidence_type || "").trim(),
+        target_god: String(item.target_god || "").trim(),
+        status,
+        reason: String(reasonByEvidence[evidenceId] || "").trim(),
+        confidence: asNumberValue(item.confidence),
+        source_title: String(item.title || "").trim(),
+        source_summary: String(item.summary || "").trim(),
+        chart_fingerprint: chartFingerprint,
+        payload: {
+          detail_keys: asStringList(item.detail_keys),
+          candidate_status: String(item.candidate_status || "").trim(),
+          origin_type: String(item.origin_type || "").trim(),
+          manifestation_state: String(item.manifestation_state || "").trim(),
+        },
+      }),
+    );
+    setPendingByEvidence((current) => ({ ...current, [evidenceId]: false }));
+    if (!ok) {
+      setFeedbackError(error || ui("反馈提交失败。", "Failed to submit feedback.", "피드백 제출에 실패했습니다."));
+      return;
+    }
+    const row = asLooseRecord(payload.feedback);
+    setFeedbackByEvidence((current) => ({ ...current, [evidenceId]: row }));
+    setReasonByEvidence((current) => ({ ...current, [evidenceId]: "" }));
+  }
 
   if (!items.length) {
     return (
@@ -936,6 +1027,10 @@ function V17EvidencePanel({
           const source = String(item.source_plugin || "").trim().replace(/^classical\./, "");
           const title = String(item.title || item.summary || "").trim();
           const summaryText = String(item.summary || "").trim();
+          const evidenceId = String(item.evidence_id || item.claim_id || title || "").trim();
+          const pending = Boolean(pendingByEvidence[evidenceId]);
+          const existingFeedback = feedbackByEvidence[evidenceId];
+          const feedbackStatus = String(existingFeedback?.status || "").trim();
           return (
             <article key={`${String(item.evidence_id || item.claim_id || title)}_${index}`} className="rounded-xl border border-white/10 bg-[#0B0F16]/85 p-3">
               <div className="flex items-start justify-between gap-2">
@@ -981,10 +1076,54 @@ function V17EvidencePanel({
                   </div>
                 </details>
               ) : null}
+              <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.025] p-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-zinc-300">
+                    {professionalFeedback
+                      ? ui("命理师反馈", "Practitioner feedback", "명리사 피드백")
+                      : ui("用户反馈", "User feedback", "사용자 피드백")}
+                  </p>
+                  {feedbackStatus ? (
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${feedbackStatusTone(feedbackStatus)}`}>
+                      {feedbackStatusLabel(feedbackStatus, ui)}
+                    </span>
+                  ) : null}
+                </div>
+                <textarea
+                  value={reasonByEvidence[evidenceId] || ""}
+                  onChange={(event) => setReasonByEvidence((current) => ({ ...current, [evidenceId]: event.target.value }))}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder={ui("可补充理由，例如：羊刃不在命局，需否定。", "Optional note, e.g. no blade in the chart, reject it.", "선택 메모: 명식에 양인이 없어 부정 등")}
+                  className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-black/25 px-2 py-1.5 text-[11px] leading-5 text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400/45"
+                />
+                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                  {(["confirm", "reject", "watch", "review"] as PractitionerFeedbackStatus[]).map((status) => (
+                    <button
+                      key={`${evidenceId}_${status}`}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => void submitFeedback(item, status)}
+                      className={`rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+                        feedbackStatus === status
+                          ? feedbackStatusTone(status)
+                          : "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-50"
+                      }`}
+                    >
+                      {pending ? ui("提交中", "Sending", "전송 중") : feedbackStatusLabel(status, ui)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </article>
           );
         })}
       </div>
+      {feedbackError ? (
+        <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-100">
+          {feedbackError}
+        </p>
+      ) : null}
       {items.length > visibleItems.length ? (
         <button
           type="button"
@@ -1573,6 +1712,9 @@ export default function OraclePage() {
                     term={term}
                     items={evidenceItems}
                     summary={evidenceSummary}
+                    sessionId={s.sessionId}
+                    chartFingerprint={String(payload.physics_fingerprint || "")}
+                    reviewerRole={user?.role || "user"}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
                     <p className="text-xs text-zinc-400">

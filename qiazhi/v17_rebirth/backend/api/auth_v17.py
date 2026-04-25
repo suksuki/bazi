@@ -46,6 +46,32 @@ def _profile_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _feedback_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": int(row.get("id") or 0),
+        "user_id": int(row.get("user_id") or 0),
+        "reviewer_role": str(row.get("reviewer_role") or "user").strip(),
+        "reviewer_weight": float(row.get("reviewer_weight") or 1.0),
+        "reviewer_username": str(row.get("reviewer_username") or "").strip(),
+        "reviewer_display_name": str(row.get("reviewer_display_name") or "").strip(),
+        "session_id": str(row.get("session_id") or "").strip(),
+        "evidence_id": str(row.get("evidence_id") or "").strip(),
+        "claim_id": str(row.get("claim_id") or "").strip(),
+        "plugin_id": str(row.get("plugin_id") or "").strip(),
+        "evidence_type": str(row.get("evidence_type") or "").strip(),
+        "target_god": str(row.get("target_god") or "").strip(),
+        "status": str(row.get("status") or "").strip(),
+        "reason": str(row.get("reason") or "").strip(),
+        "confidence": float(row.get("confidence") or 0.0),
+        "source_title": str(row.get("source_title") or "").strip(),
+        "source_summary": str(row.get("source_summary") or "").strip(),
+        "chart_fingerprint": str(row.get("chart_fingerprint") or "").strip(),
+        "payload": row.get("payload") if isinstance(row.get("payload"), dict) else {},
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+    }
+
+
 @router.post("/v17/auth/register")
 @router.post("/api/v17/auth/register")
 async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
@@ -131,6 +157,62 @@ async def list_bazi_profiles(request: Request) -> Dict[str, Any]:
     user = require_authenticated_request(request)
     rows = [_profile_payload(row) for row in auth_storage.list_profiles(int(user["id"]))]
     return {"ok": True, "profiles": rows}
+
+
+@router.get("/v17/auth/practitioner-feedback")
+@router.get("/api/v17/auth/practitioner-feedback")
+async def list_practitioner_feedback(request: Request) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    rows = auth_storage.list_practitioner_feedback(
+        user_id=int(user["id"]),
+        reviewer_role=str(user.get("role") or "user"),
+        session_id=str(query.get("session_id") or "").strip(),
+        evidence_id=str(query.get("evidence_id") or "").strip(),
+        plugin_id=str(query.get("plugin_id") or "").strip(),
+        scope=str(query.get("scope") or "own").strip(),
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "feedback": [_feedback_payload(row) for row in rows],
+        "viewer_role": str(user.get("role") or "user"),
+    }
+
+
+@router.post("/v17/auth/practitioner-feedback")
+@router.post("/api/v17/auth/practitioner-feedback")
+async def create_practitioner_feedback(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    try:
+        row = auth_storage.create_practitioner_feedback(
+            user_id=int(user["id"]),
+            reviewer_role=str(user.get("role") or "user"),
+            session_id=str(payload.get("session_id") or "").strip(),
+            evidence_id=str(payload.get("evidence_id") or "").strip(),
+            claim_id=str(payload.get("claim_id") or "").strip(),
+            plugin_id=str(payload.get("plugin_id") or "").strip(),
+            evidence_type=str(payload.get("evidence_type") or "").strip(),
+            target_god=str(payload.get("target_god") or "").strip(),
+            status=str(payload.get("status") or "").strip(),
+            reason=str(payload.get("reason") or "").strip(),
+            confidence=float(payload.get("confidence") or 0.0),
+            source_title=str(payload.get("source_title") or "").strip(),
+            source_summary=str(payload.get("source_summary") or "").strip(),
+            chart_fingerprint=str(payload.get("chart_fingerprint") or "").strip(),
+            payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "feedback": _feedback_payload(row),
+        "trust_tier": "practitioner" if str(user.get("role") or "") in {"manager", "admin"} else "user",
+    }
 
 
 @router.post("/v17/auth/profiles")

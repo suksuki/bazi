@@ -160,6 +160,13 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 一条格局候选可以被命理师确认或否定。
 - 反馈可以回放到当时命盘和系统证据。
 
+当前落地：
+
+- `practitioner_feedback` 已进入运行时认证数据库，绑定 `session_id / evidence_id / claim_id / plugin_id`。
+- 反馈状态支持 `confirm / reject / watch / review`，并记录理由、置信度、角色与 `reviewer_weight`。
+- `/v17/auth/practitioner-feedback` 已提供提交与查询接口；manager/admin 可用 `scope=all` 查看全量反馈。
+- 命盘核心页证据卡片已接入反馈入口，手机与桌面均可直接对证据确认、否定、观察或复核。
+
 ### P3：真实案例库与基准测试
 
 目标：把命理师案例变成长期回归资产。

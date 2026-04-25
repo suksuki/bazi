@@ -203,3 +203,109 @@ def test_profile_crud_for_current_user(isolated_auth_db) -> None:
         list_after_delete = client.get("/v17/auth/profiles", cookies=cookies)
         assert list_after_delete.status_code == 200
         assert list_after_delete.json()["profiles"] == []
+
+
+def test_practitioner_feedback_records_evidence_claim_and_role_weight(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        token = login.json()["session_token"]
+        cookies = {"v17_session": token}
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies=cookies,
+            json={
+                "session_id": "oracle-session-1",
+                "evidence_id": "classical.pattern.yangren_jiasha.v1_evidence_0",
+                "claim_id": "classical.pattern.yangren_jiasha.v1_claim_0",
+                "plugin_id": "classical.pattern.yangren_jiasha.v1",
+                "evidence_type": "pattern",
+                "target_god": "七杀",
+                "status": "confirm",
+                "reason": "刃杀位置明确，候选可以保留。",
+                "confidence": 0.9,
+                "source_title": "阳刃驾杀",
+                "source_summary": "阳刃驾杀候选：刃杀同见。",
+                "chart_fingerprint": "fp-1",
+                "payload": {"detail_keys": ["blade_branch"]},
+            },
+        )
+
+        assert create_resp.status_code == 200
+        body = create_resp.json()
+        assert body["trust_tier"] == "practitioner"
+        feedback = body["feedback"]
+        assert feedback["status"] == "confirm"
+        assert feedback["reviewer_role"] == "admin"
+        assert feedback["reviewer_weight"] > 2.0
+        assert feedback["payload"]["detail_keys"] == ["blade_branch"]
+
+        list_resp = client.get(
+            "/v17/auth/practitioner-feedback?session_id=oracle-session-1",
+            cookies=cookies,
+        )
+        assert list_resp.status_code == 200
+        rows = list_resp.json()["feedback"]
+        assert len(rows) == 1
+        assert rows[0]["evidence_id"] == "classical.pattern.yangren_jiasha.v1_evidence_0"
+
+
+def test_practitioner_feedback_scope_all_requires_manager(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        admin_login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        admin_token = admin_login.json()["session_token"]
+
+        user_resp = client.post(
+            "/v17/auth/register",
+            json={"username": "feedback-user", "password": "very-secure-pass"},
+        )
+        user_token = user_resp.json()["session_token"]
+        user_id = int(user_resp.json()["user"]["id"])
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies={"v17_session": user_token},
+            json={
+                "session_id": "s-user",
+                "evidence_id": "e-user",
+                "plugin_id": "classical.risk_matrix.v1",
+                "status": "watch",
+                "reason": "先观察。",
+            },
+        )
+        assert create_resp.status_code == 200
+        assert create_resp.json()["trust_tier"] == "user"
+
+        user_all = client.get(
+            "/v17/auth/practitioner-feedback?scope=all",
+            cookies={"v17_session": user_token},
+        )
+        assert user_all.status_code == 200
+        assert len(user_all.json()["feedback"]) == 1
+
+        promote = client.post(
+            f"/v17/auth/users/{user_id}/role",
+            json={"role": "manager"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote.status_code == 200
+
+        manager_all = client.get(
+            "/v17/auth/practitioner-feedback?scope=all",
+            cookies={"v17_session": user_token},
+        )
+        assert manager_all.status_code == 200
+        assert len(manager_all.json()["feedback"]) == 1
+
+        invalid = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies={"v17_session": user_token},
+            json={"evidence_id": "e-invalid", "status": "maybe"},
+        )
+        assert invalid.status_code == 400

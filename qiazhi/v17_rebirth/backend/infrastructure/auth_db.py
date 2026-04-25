@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import secrets
 import sqlite3
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from v17_rebirth.paths import RUNTIME_DIR
 ROLE_VALUES = {"admin", "manager", "user"}
 GENDER_VALUES = {"male", "female"}
 CALENDAR_VALUES = {"solar", "lunar"}
+PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_DISPLAY_NAME = "System Admin"
 DEFAULT_ADMIN_PASSWORD = "abcd1235"
@@ -123,6 +125,35 @@ class V17AuthDB:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practitioner_feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    reviewer_role TEXT NOT NULL,
+                    reviewer_weight REAL NOT NULL,
+                    session_id TEXT NOT NULL,
+                    evidence_id TEXT NOT NULL,
+                    claim_id TEXT NOT NULL,
+                    plugin_id TEXT NOT NULL,
+                    evidence_type TEXT NOT NULL,
+                    target_god TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    source_title TEXT NOT NULL,
+                    source_summary TEXT NOT NULL,
+                    chart_fingerprint TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
             self._ensure_profile_columns(conn)
             conn.commit()
 
@@ -753,6 +784,178 @@ class V17AuthDB:
         if not updated:
             raise ValueError("角色更新失败。")
         return updated
+
+    def _clean_feedback_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["user_id"] = int(item.get("user_id") or 0)
+        item["reviewer_role"] = str(item.get("reviewer_role") or "user").strip().lower() or "user"
+        item["reviewer_weight"] = float(item.get("reviewer_weight") or 1.0)
+        item["session_id"] = str(item.get("session_id") or "").strip()
+        item["evidence_id"] = str(item.get("evidence_id") or "").strip()
+        item["claim_id"] = str(item.get("claim_id") or "").strip()
+        item["plugin_id"] = str(item.get("plugin_id") or "").strip()
+        item["evidence_type"] = str(item.get("evidence_type") or "").strip()
+        item["target_god"] = str(item.get("target_god") or "").strip()
+        item["status"] = str(item.get("status") or "").strip()
+        item["reason"] = str(item.get("reason") or "").strip()
+        item["confidence"] = float(item.get("confidence") or 0.0)
+        item["source_title"] = str(item.get("source_title") or "").strip()
+        item["source_summary"] = str(item.get("source_summary") or "").strip()
+        item["chart_fingerprint"] = str(item.get("chart_fingerprint") or "").strip()
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        try:
+            payload = json.loads(str(item.get("payload_json") or "{}"))
+        except Exception:
+            payload = {}
+        item["payload"] = payload if isinstance(payload, dict) else {}
+        item.pop("payload_json", None)
+        return item
+
+    def create_practitioner_feedback(
+        self,
+        *,
+        user_id: int,
+        reviewer_role: str,
+        session_id: str,
+        evidence_id: str,
+        claim_id: str = "",
+        plugin_id: str = "",
+        evidence_type: str = "",
+        target_god: str = "",
+        status: str,
+        reason: str = "",
+        confidence: float = 0.0,
+        source_title: str = "",
+        source_summary: str = "",
+        chart_fingerprint: str = "",
+        payload: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        role_clean = str(reviewer_role or "user").strip().lower() or "user"
+        if role_clean not in ROLE_VALUES:
+            role_clean = "user"
+        status_clean = str(status or "").strip().lower()
+        if status_clean not in PRACTITIONER_FEEDBACK_STATUS_VALUES:
+            raise ValueError("无效反馈状态。")
+        session_clean = str(session_id or "").strip()[:120]
+        evidence_clean = str(evidence_id or "").strip()[:180]
+        if not evidence_clean:
+            raise ValueError("证据 ID 不能为空。")
+        reason_clean = str(reason or "").strip()
+        if len(reason_clean) > 1000:
+            raise ValueError("反馈理由最多 1000 个字符。")
+        try:
+            confidence_value = max(0.0, min(1.0, float(confidence or 0.0)))
+        except Exception:
+            confidence_value = 0.0
+        reviewer_weight = {"user": 1.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
+        payload_obj = payload if isinstance(payload, dict) else {}
+        payload_json = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, default=str)
+        if len(payload_json) > 12000:
+            payload_json = json.dumps({"truncated": True, "source_title": str(source_title or "")[:240]}, ensure_ascii=False)
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO practitioner_feedback (
+                    user_id,
+                    reviewer_role,
+                    reviewer_weight,
+                    session_id,
+                    evidence_id,
+                    claim_id,
+                    plugin_id,
+                    evidence_type,
+                    target_god,
+                    status,
+                    reason,
+                    confidence,
+                    source_title,
+                    source_summary,
+                    chart_fingerprint,
+                    payload_json,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(user_id),
+                    role_clean,
+                    reviewer_weight,
+                    session_clean,
+                    evidence_clean,
+                    str(claim_id or "").strip()[:180],
+                    str(plugin_id or "").strip()[:180],
+                    str(evidence_type or "").strip()[:80],
+                    str(target_god or "").strip()[:80],
+                    status_clean,
+                    reason_clean,
+                    confidence_value,
+                    str(source_title or "").strip()[:240],
+                    str(source_summary or "").strip()[:800],
+                    str(chart_fingerprint or "").strip()[:160],
+                    payload_json,
+                    now,
+                    now,
+                ),
+            )
+            feedback_id = int(cursor.lastrowid)
+            row = conn.execute("SELECT * FROM practitioner_feedback WHERE id = ?", (feedback_id,)).fetchone()
+            conn.commit()
+        feedback = self._clean_feedback_row(row)
+        if not feedback:
+            raise ValueError("反馈记录失败。")
+        return feedback
+
+    def list_practitioner_feedback(
+        self,
+        *,
+        user_id: int,
+        reviewer_role: str,
+        session_id: str = "",
+        evidence_id: str = "",
+        plugin_id: str = "",
+        scope: str = "own",
+        limit: int = 80,
+    ) -> List[Dict[str, Any]]:
+        role_clean = str(reviewer_role or "user").strip().lower()
+        can_view_all = role_clean in {"manager", "admin"} and str(scope or "").strip().lower() == "all"
+        where: List[str] = []
+        params: List[Any] = []
+        if not can_view_all:
+            where.append("pf.user_id = ?")
+            params.append(int(user_id))
+        session_clean = str(session_id or "").strip()
+        evidence_clean = str(evidence_id or "").strip()
+        plugin_clean = str(plugin_id or "").strip()
+        if session_clean:
+            where.append("pf.session_id = ?")
+            params.append(session_clean)
+        if evidence_clean:
+            where.append("pf.evidence_id = ?")
+            params.append(evidence_clean)
+        if plugin_clean:
+            where.append("pf.plugin_id = ?")
+            params.append(plugin_clean)
+        sql = "SELECT pf.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name FROM practitioner_feedback pf JOIN auth_users u ON u.id = pf.user_id"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY pf.created_at DESC, pf.id DESC LIMIT ?"
+        params.append(max(1, min(300, int(limit or 80))))
+        with self._connect() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            item = self._clean_feedback_row(row)
+            if not item:
+                continue
+            item["reviewer_username"] = str(dict(row).get("reviewer_username") or "").strip()
+            item["reviewer_display_name"] = str(dict(row).get("reviewer_display_name") or "").strip()
+            out.append(item)
+        return out
 
 
 auth_storage = V17AuthDB()

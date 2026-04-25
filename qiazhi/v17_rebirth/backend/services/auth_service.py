@@ -18,6 +18,7 @@ ROLE_CAPABILITIES: Dict[str, List[str]] = {
         "oracle.access",
         "oracle.surface.core",
         "oracle.surface.auxiliary",
+        "evidence.feedback.write",
     ],
     "manager": [
         "auth.read",
@@ -25,6 +26,9 @@ ROLE_CAPABILITIES: Dict[str, List[str]] = {
         "oracle.surface.core",
         "oracle.surface.auxiliary",
         "oracle.surface.trace",
+        "evidence.feedback.write",
+        "evidence.feedback.practitioner",
+        "evidence.feedback.read_all",
         "user.manage",
     ],
     "admin": [
@@ -33,6 +37,9 @@ ROLE_CAPABILITIES: Dict[str, List[str]] = {
         "oracle.surface.core",
         "oracle.surface.auxiliary",
         "oracle.surface.trace",
+        "evidence.feedback.write",
+        "evidence.feedback.practitioner",
+        "evidence.feedback.read_all",
         "admin.access",
         "admin.write",
         "user.manage",
