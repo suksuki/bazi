@@ -19,6 +19,7 @@ ROLE_REQUEST_STATUS_VALUES = {"pending", "approved", "rejected", "cancelled"}
 PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
 PRACTITIONER_CASE_STATUS_VALUES = {"draft", "submitted", "accepted", "rejected", "benchmark_candidate"}
 LEARNING_REVIEW_STATUS_VALUES = {"watch", "approved_for_experiment", "rejected"}
+LEARNING_RELEASE_STATUS_VALUES = {"proposed", "approved", "rejected", "rolled_back"}
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_DISPLAY_NAME = "System Admin"
 DEFAULT_ADMIN_PASSWORD = "abcd1235"
@@ -286,6 +287,27 @@ class V17AuthDB:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practitioner_learning_releases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    experiment_id TEXT NOT NULL,
+                    candidate_id TEXT NOT NULL,
+                    parameter_family TEXT NOT NULL,
+                    reviewer_user_id INTEGER NOT NULL,
+                    reviewer_role TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    release_summary TEXT NOT NULL,
+                    test_report TEXT NOT NULL,
+                    rollback_plan TEXT NOT NULL,
+                    experiment_snapshot_json TEXT NOT NULL,
+                    applied INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(reviewer_user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
@@ -296,6 +318,8 @@ class V17AuthDB:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_fingerprint ON practitioner_cases(chart_fingerprint)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_reviews_candidate ON practitioner_learning_reviews(candidate_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_reviews_status ON practitioner_learning_reviews(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_releases_experiment ON practitioner_learning_releases(experiment_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_releases_status ON practitioner_learning_releases(status)")
             self._ensure_profile_columns(conn)
             conn.commit()
 
@@ -1839,6 +1863,154 @@ class V17AuthDB:
         with self._connect() as conn:
             rows = conn.execute(sql, tuple(params)).fetchall()
         return [item for row in rows if (item := self._clean_learning_review_row(row))]
+
+    def _clean_learning_release_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["reviewer_user_id"] = int(item.get("reviewer_user_id") or 0)
+        item["experiment_id"] = str(item.get("experiment_id") or "").strip()
+        item["candidate_id"] = str(item.get("candidate_id") or "").strip()
+        item["parameter_family"] = str(item.get("parameter_family") or "").strip()
+        item["reviewer_role"] = str(item.get("reviewer_role") or "").strip().lower()
+        item["status"] = str(item.get("status") or "").strip().lower()
+        item["release_summary"] = str(item.get("release_summary") or "").strip()
+        item["test_report"] = str(item.get("test_report") or "").strip()
+        item["rollback_plan"] = str(item.get("rollback_plan") or "").strip()
+        item["applied"] = bool(item.get("applied"))
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        try:
+            snapshot = json.loads(str(item.get("experiment_snapshot_json") or "{}"))
+        except Exception:
+            snapshot = {}
+        item["experiment_snapshot"] = snapshot if isinstance(snapshot, dict) else {}
+        item.pop("experiment_snapshot_json", None)
+        item["reviewer_username"] = str(item.get("reviewer_username") or "").strip()
+        item["reviewer_display_name"] = str(item.get("reviewer_display_name") or "").strip()
+        return item
+
+    def create_practitioner_learning_release(
+        self,
+        *,
+        reviewer_user_id: int,
+        reviewer_role: str,
+        experiment_id: str,
+        candidate_id: str,
+        parameter_family: str,
+        status: str,
+        release_summary: str,
+        test_report: str,
+        rollback_plan: str,
+        experiment_snapshot: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        role_clean = str(reviewer_role or "user").strip().lower() or "user"
+        if role_clean != "admin":
+            raise ValueError("只有 admin 可以记录学习发布审批。")
+        status_clean = str(status or "").strip().lower()
+        if status_clean not in LEARNING_RELEASE_STATUS_VALUES:
+            raise ValueError("无效学习发布状态。")
+        experiment_clean = str(experiment_id or "").strip()[:240]
+        candidate_clean = str(candidate_id or "").strip()[:240]
+        family_clean = str(parameter_family or "").strip()[:160]
+        summary_clean = str(release_summary or "").strip()
+        test_clean = str(test_report or "").strip()
+        rollback_clean = str(rollback_plan or "").strip()
+        if not experiment_clean or not candidate_clean or not family_clean:
+            raise ValueError("实验 ID、候选 ID 与参数族不能为空。")
+        if status_clean == "approved" and (not test_clean or not rollback_clean):
+            raise ValueError("批准发布必须包含测试报告和回滚方案。")
+        if len(summary_clean) > 1200 or len(test_clean) > 2000 or len(rollback_clean) > 1600:
+            raise ValueError("发布记录字段过长。")
+        snapshot_obj = experiment_snapshot if isinstance(experiment_snapshot, dict) else {}
+        snapshot_json = json.dumps(snapshot_obj, ensure_ascii=False, sort_keys=True, default=str)
+        if len(snapshot_json) > 18000:
+            snapshot_json = json.dumps(
+                {"truncated": True, "experiment_id": experiment_clean, "candidate_id": candidate_clean},
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO practitioner_learning_releases (
+                    experiment_id,
+                    candidate_id,
+                    parameter_family,
+                    reviewer_user_id,
+                    reviewer_role,
+                    status,
+                    release_summary,
+                    test_report,
+                    rollback_plan,
+                    experiment_snapshot_json,
+                    applied,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+                """,
+                (
+                    experiment_clean,
+                    candidate_clean,
+                    family_clean,
+                    int(reviewer_user_id),
+                    role_clean,
+                    status_clean,
+                    summary_clean,
+                    test_clean,
+                    rollback_clean,
+                    snapshot_json,
+                    now,
+                    now,
+                ),
+            )
+            release_id = int(cursor.lastrowid)
+            row = conn.execute(
+                """
+                SELECT lr.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+                FROM practitioner_learning_releases lr
+                JOIN auth_users u ON u.id = lr.reviewer_user_id
+                WHERE lr.id = ?
+                """,
+                (release_id,),
+            ).fetchone()
+            conn.commit()
+        release = self._clean_learning_release_row(row)
+        if not release:
+            raise ValueError("学习发布记录失败。")
+        return release
+
+    def list_practitioner_learning_releases(
+        self,
+        *,
+        experiment_id: str = "",
+        status: str = "",
+        limit: int = 80,
+    ) -> List[Dict[str, Any]]:
+        where: List[str] = []
+        params: List[Any] = []
+        experiment_clean = str(experiment_id or "").strip()
+        status_clean = str(status or "").strip().lower()
+        if experiment_clean:
+            where.append("lr.experiment_id = ?")
+            params.append(experiment_clean)
+        if status_clean:
+            where.append("lr.status = ?")
+            params.append(status_clean)
+        sql = """
+            SELECT lr.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+            FROM practitioner_learning_releases lr
+            JOIN auth_users u ON u.id = lr.reviewer_user_id
+        """
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY lr.created_at DESC, lr.id DESC LIMIT ?"
+        params.append(max(1, min(300, int(limit or 80))))
+        with self._connect() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        return [item for row in rows if (item := self._clean_learning_release_row(row))]
 
 
 auth_storage = V17AuthDB()

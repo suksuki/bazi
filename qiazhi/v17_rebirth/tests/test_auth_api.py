@@ -756,3 +756,45 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert experiment["application_mode"] == "dry_run_plan_only"
         assert experiment["candidate_patch"]["patch_mode"] == "review_only"
         assert "rollback_plan_required_before_apply" in experiment["safety_gates"]
+
+        bad_release = client.post(
+            "/v17/auth/practitioner-learning-releases",
+            cookies={"v17_session": admin_token},
+            json={
+                "experiment_id": experiment["experiment_id"],
+                "candidate_id": experiment["candidate_id"],
+                "parameter_family": experiment["parameter_family"],
+                "status": "approved",
+                "release_summary": "尝试缺少回滚方案的发布。",
+                "test_report": "synthetic + practitioner benchmark passed",
+            },
+        )
+        assert bad_release.status_code == 400
+
+        release_resp = client.post(
+            "/v17/auth/practitioner-learning-releases",
+            cookies={"v17_session": admin_token},
+            json={
+                "experiment_id": experiment["experiment_id"],
+                "candidate_id": experiment["candidate_id"],
+                "parameter_family": experiment["parameter_family"],
+                "status": "approved",
+                "release_summary": "仅记录发布审批，仍不自动写配置。",
+                "test_report": "synthetic + practitioner benchmark passed",
+                "rollback_plan": "保留旧配置，失败时恢复上一版参数并重跑 benchmark。",
+                "experiment_snapshot": experiment,
+            },
+        )
+        assert release_resp.status_code == 200
+        release_body = release_resp.json()
+        assert release_body["applied"] is False
+        assert release_body["guardrail"] == "release_record_only_no_config_change"
+        assert release_body["release"]["status"] == "approved"
+        assert release_body["release"]["applied"] is False
+
+        releases = client.get(
+            f"/v17/auth/practitioner-learning-releases?experiment_id={experiment['experiment_id']}",
+            cookies={"v17_session": admin_token},
+        )
+        assert releases.status_code == 200
+        assert len(releases.json()["releases"]) == 1

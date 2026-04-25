@@ -10,6 +10,7 @@ from v17_rebirth.backend.services.practitioner_learning import build_practitione
 from v17_rebirth.backend.services.auth_service import (
     build_user_payload,
     get_request_user,
+    require_admin_request,
     require_authenticated_request,
     require_manager_request,
 )
@@ -191,6 +192,27 @@ def _learning_review_payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "reviewer_note": str(row.get("reviewer_note") or "").strip(),
         "safety_gate": str(row.get("safety_gate") or "").strip(),
         "candidate_snapshot": row.get("candidate_snapshot") if isinstance(row.get("candidate_snapshot"), dict) else {},
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+    }
+
+
+def _learning_release_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": int(row.get("id") or 0),
+        "experiment_id": str(row.get("experiment_id") or "").strip(),
+        "candidate_id": str(row.get("candidate_id") or "").strip(),
+        "parameter_family": str(row.get("parameter_family") or "").strip(),
+        "reviewer_user_id": int(row.get("reviewer_user_id") or 0),
+        "reviewer_role": str(row.get("reviewer_role") or "").strip(),
+        "reviewer_username": str(row.get("reviewer_username") or "").strip(),
+        "reviewer_display_name": str(row.get("reviewer_display_name") or "").strip(),
+        "status": str(row.get("status") or "").strip(),
+        "release_summary": str(row.get("release_summary") or "").strip(),
+        "test_report": str(row.get("test_report") or "").strip(),
+        "rollback_plan": str(row.get("rollback_plan") or "").strip(),
+        "experiment_snapshot": row.get("experiment_snapshot") if isinstance(row.get("experiment_snapshot"), dict) else {},
+        "applied": bool(row.get("applied")),
         "created_at": str(row.get("created_at") or "").strip(),
         "updated_at": str(row.get("updated_at") or "").strip(),
     }
@@ -530,6 +552,55 @@ async def list_practitioner_learning_experiments(request: Request) -> Dict[str, 
     report = build_practitioner_experiment_queue(rows)
     report["viewer_role"] = str(user.get("role") or "user")
     return report
+
+
+@router.get("/v17/auth/practitioner-learning-releases")
+@router.get("/api/v17/auth/practitioner-learning-releases")
+async def list_practitioner_learning_releases(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    rows = auth_storage.list_practitioner_learning_releases(
+        experiment_id=str(query.get("experiment_id") or "").strip(),
+        status=str(query.get("status") or "").strip(),
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "releases": [_learning_release_payload(row) for row in rows],
+        "viewer_role": str(user.get("role") or "user"),
+    }
+
+
+@router.post("/v17/auth/practitioner-learning-releases")
+@router.post("/api/v17/auth/practitioner-learning-releases")
+async def create_practitioner_learning_release(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_admin_request(request)
+    snapshot = payload.get("experiment_snapshot") if isinstance(payload.get("experiment_snapshot"), dict) else {}
+    try:
+        row = auth_storage.create_practitioner_learning_release(
+            reviewer_user_id=int(user.get("id") or 0),
+            reviewer_role=str(user.get("role") or "user"),
+            experiment_id=str(payload.get("experiment_id") or snapshot.get("experiment_id") or "").strip(),
+            candidate_id=str(payload.get("candidate_id") or snapshot.get("candidate_id") or "").strip(),
+            parameter_family=str(payload.get("parameter_family") or snapshot.get("parameter_family") or "").strip(),
+            status=str(payload.get("status") or "").strip(),
+            release_summary=str(payload.get("release_summary") or "").strip(),
+            test_report=str(payload.get("test_report") or "").strip(),
+            rollback_plan=str(payload.get("rollback_plan") or "").strip(),
+            experiment_snapshot=snapshot,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "release": _learning_release_payload(row),
+        "applied": False,
+        "guardrail": "release_record_only_no_config_change",
+    }
 
 
 @router.post("/v17/auth/practitioner-cases")
