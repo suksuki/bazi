@@ -168,7 +168,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
           <div className="flex flex-col items-center gap-3 text-center lg:hidden">
               <div className="overflow-hidden rounded-2xl border border-amber-300/25 bg-[#03070D] shadow-[0_16px_42px_rgba(0,0,0,0.28)]">
                 <Image
-                  src="/branding/qiazhi-logo.png"
+                  src="/branding/qiazhi-logo-mark.png"
                   alt={t(language, "brand.title")}
                   width={64}
                   height={64}

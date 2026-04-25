@@ -53,7 +53,7 @@ export function V17_AppShell({
           <div className="flex min-w-0 items-center gap-3">
             <div className="overflow-hidden rounded-xl border border-amber-300/25 bg-[#03070D] shadow-[0_12px_40px_rgba(0,0,0,0.25)] sm:rounded-2xl">
               <Image
-                src="/branding/qiazhi-logo.png"
+                src="/branding/qiazhi-logo-mark.png"
                 alt={t(language, "brand.title")}
                 width={512}
                 height={512}
