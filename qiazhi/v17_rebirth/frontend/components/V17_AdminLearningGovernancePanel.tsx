@@ -37,6 +37,7 @@ function statusTone(status: string): string {
 
 export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRole: string }) {
   const [candidates, setCandidates] = useState<Row[]>([]);
+  const [cases, setCases] = useState<Row[]>([]);
   const [experiments, setExperiments] = useState<Row[]>([]);
   const [releases, setReleases] = useState<Row[]>([]);
   const [scorecards, setScorecards] = useState<Row[]>([]);
@@ -50,16 +51,18 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
     setLoading(true);
     setMessage("");
     try {
-      const [candidateResp, experimentResp, releaseResp, scorecardResp] = await Promise.all([
+      const [candidateResp, caseResp, experimentResp, releaseResp, scorecardResp] = await Promise.all([
         requestJson<Row>("/api/auth/practitioner-learning-candidates?scope=all&limit=120", noStoreInit()),
+        requestJson<Row>("/api/auth/practitioner-cases?scope=all&status=benchmark_candidate&limit=80", noStoreInit()),
         requestJson<Row>("/api/auth/practitioner-learning-experiments", noStoreInit()),
         requestJson<Row>("/api/auth/practitioner-learning-releases?limit=80", noStoreInit()),
         requestJson<Row>("/api/auth/practitioner-learning-scorecards?limit=80", noStoreInit()),
       ]);
-      for (const resp of [candidateResp, experimentResp, releaseResp, scorecardResp]) {
+      for (const resp of [candidateResp, caseResp, experimentResp, releaseResp, scorecardResp]) {
         if (!resp.ok) throw new Error(String(resp.data.detail || resp.error || "学习治理数据加载失败"));
       }
       setCandidates(asRows(candidateResp.data.candidates));
+      setCases(asRows(caseResp.data.cases));
       setSummary(asRecord(candidateResp.data.summary));
       setExperiments(asRows(experimentResp.data.experiments));
       setReleases(asRows(releaseResp.data.releases));
@@ -119,6 +122,32 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
       await loadGovernance();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "候选审计保存失败");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
+  async function updateCaseStatus(row: Row, status: string) {
+    const caseId = Number(row.id || 0);
+    if (!caseId) return;
+    setBusyKey(`case:${caseId}:${status}`);
+    setMessage("");
+    try {
+      const { data, ok } = await requestJson<Row>(
+        `/api/auth/practitioner-cases/${caseId}/status`,
+        jsonPostInit({
+          status,
+          reviewer_note:
+            status === "accepted"
+              ? "纳入长期 Practitioner Benchmark 候选池；静态测试文件需人工同步。"
+              : "当前案例证据不足，暂不纳入长期基准。",
+        }),
+      );
+      if (!ok) throw new Error(String(data.detail || "案例状态更新失败"));
+      setMessage(status === "accepted" ? "案例已标记为 accepted。" : "案例已标记为 rejected。");
+      await loadGovernance();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "案例状态更新失败");
     } finally {
       setBusyKey("");
     }
@@ -212,6 +241,7 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
   }
 
   const topCandidates = candidates.slice(0, 8);
+  const topCases = cases.slice(0, 5);
   const candidateCount = Number(summary.candidate_count || candidates.length || 0);
   const reviewCount = candidates.reduce((count, row) => count + (asText(row.review_status, "unreviewed") !== "unreviewed" ? 1 : 0), 0);
 
@@ -249,6 +279,7 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
           {[
             ["学习候选", candidateCount],
+            ["基准候选", cases.length],
             ["已审计", reviewCount],
             ["实验队列", experiments.length],
             ["评分记录", scorecards.length],
@@ -320,6 +351,47 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
         </div>
 
         <div className="space-y-4">
+          <div className="rounded-2xl border border-amber-400/15 bg-zinc-950/55 p-4">
+            <h3 className="text-sm font-semibold text-zinc-100">基准候选运营</h3>
+            <div className="mt-3 grid gap-2">
+              {topCases.map((row) => {
+                const caseId = Number(row.id || 0);
+                return (
+                  <article key={caseId || asText(row.case_key)} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-zinc-100">{asText(row.case_title, "未命名案例")}</p>
+                        <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-zinc-500">{asText(row.expected_notes) || asText(row.case_key)}</p>
+                      </div>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] ${statusTone(asText(row.status))}`}>{asText(row.status, "candidate")}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        disabled={Boolean(busyKey)}
+                        onClick={() => void updateCaseStatus(row, "accepted")}
+                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/40 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        {busyKey === `case:${caseId}:accepted` ? "保存中" : "接纳"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={Boolean(busyKey)}
+                        onClick={() => void updateCaseStatus(row, "rejected")}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-100 transition hover:border-rose-200/40 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <XCircle className="h-3 w-3" />
+                        {busyKey === `case:${caseId}:rejected` ? "保存中" : "驳回"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+              {!topCases.length ? <p className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-xs text-zinc-500">暂无待运营基准候选。</p> : null}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-emerald-400/15 bg-zinc-950/55 p-4">
             <h3 className="text-sm font-semibold text-zinc-100">实验队列</h3>
             <div className="mt-3 grid gap-2">
