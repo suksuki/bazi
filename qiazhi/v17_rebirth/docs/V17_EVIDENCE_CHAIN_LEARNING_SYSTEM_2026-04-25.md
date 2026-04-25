@@ -87,6 +87,7 @@ Date: 2026-04-25
 - 前端证据链反馈自动写入 `v17.evidence.learning_material.v1` payload。
 - 案例沉淀自动带上 `learning_value` 与 `learning_tags`。
 - 学习候选聚合展示 `learning_values / feedback_intents / learning_tags / boundary_tags`。
+- 命理师账本可按全部、反例、边界、复核缺口筛选学习候选，并在候选、反馈和案例卡片上展示学习素材标签。
 
 ## 5. Guardrails
 
@@ -102,6 +103,5 @@ Date: 2026-04-25
 ## 6. Next Steps
 
 1. 在证据链 UI 增加筛选：强证据、候选、反例、边界、需复核。
-2. 在命理师账本中展示学习素材字段，方便运营筛选。
-3. 把 accepted benchmark candidate 转入长期 practitioner benchmark 的人工导出流程。
-4. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。
+2. 把 accepted benchmark candidate 转入长期 practitioner benchmark 的人工导出流程。
+3. 让 LLM Analyst 只基于这些结构化素材生成学习候选解释，不直接改 evidence 或参数。

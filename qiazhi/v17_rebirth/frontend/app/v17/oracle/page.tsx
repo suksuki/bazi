@@ -1766,6 +1766,41 @@ function learningPriorityTone(priority: string): string {
   return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
 }
 
+function learningMaterialLabel(value: string, ui: LocalizeText): string {
+  if (value === "counterexample") return ui("反例", "Counterexample", "반례");
+  if (value === "benchmark_positive") return ui("正样本", "Positive sample", "양성 샘플");
+  if (value === "boundary_case") return ui("边界样本", "Boundary case", "경계 사례");
+  if (value === "review_gap") return ui("复核缺口", "Review gap", "검토 공백");
+  if (value === "case_evidence") return ui("案例证据", "Case evidence", "사례 근거");
+  if (value === "positive_support") return ui("正向支持", "Positive support", "긍정 근거");
+  if (value === "false_positive_or_wrong_claim") return ui("误报/错判", "False positive", "오탐/오판");
+  if (value === "boundary_observation") return ui("边界观察", "Boundary watch", "경계 관찰");
+  if (value === "needs_expert_review") return ui("专家复核", "Expert review", "전문가 검토");
+  return value
+    .replace(/^evidence_type:/, ui("证据:", "Evidence:", "근거:"))
+    .replace(/^candidate:/, ui("候选:", "Candidate:", "후보:"))
+    .replace(/^origin:/, ui("来源:", "Origin:", "출처:"))
+    .replace(/^state:/, ui("状态:", "State:", "상태:"))
+    .replace(/^detail:/, ui("细节:", "Detail:", "상세:"))
+    .replaceAll("_", " ");
+}
+
+function learningMaterialTone(value: string): string {
+  if (value.includes("counterexample") || value.includes("false_positive") || value.includes("错判")) {
+    return "border-rose-300/20 bg-rose-400/10 text-rose-100";
+  }
+  if (value.includes("boundary") || value.includes("watch") || value.includes("边界")) {
+    return "border-amber-300/20 bg-amber-400/10 text-amber-100";
+  }
+  if (value.includes("review") || value.includes("expert") || value.includes("复核")) {
+    return "border-violet-300/20 bg-violet-400/10 text-violet-100";
+  }
+  if (value.includes("positive") || value.includes("support")) {
+    return "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
+  }
+  return "border-white/10 bg-white/[0.04] text-zinc-400";
+}
+
 function learningReviewStatusLabel(status: string, ui: LocalizeText): string {
   if (status === "approved_for_experiment") return ui("已准入实验", "Experiment approved", "실험 승인");
   if (status === "rejected") return ui("已驳回", "Rejected", "거절됨");
@@ -1804,6 +1839,7 @@ function V17PractitionerLedgerPanel({
   const [experimentSummary, setExperimentSummary] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [reviewingCandidateId, setReviewingCandidateId] = useState("");
+  const [learningMaterialFilter, setLearningMaterialFilter] = useState<"all" | "counterexample" | "boundary" | "review">("all");
   const [message, setMessage] = useState("");
   const canViewAll = reviewerRole === "manager" || reviewerRole === "admin";
 
@@ -1908,7 +1944,20 @@ function V17PractitionerLedgerPanel({
   const learningCandidateCount = Number(learningSummary.candidate_count || learningRows.length || 0);
   const manualReviewCount = Number(learningSummary.manual_review_required_count || 0);
   const experimentCount = Number(experimentSummary.experiment_count || 0);
-  const latestLearning = learningRows.slice(0, 4);
+  const filteredLearningRows = learningRows.filter((row) => {
+    if (learningMaterialFilter === "all") return true;
+    const haystack = [
+      ...asStringList(row.learning_values),
+      ...asStringList(row.feedback_intents),
+      ...asStringList(row.learning_tags),
+      ...asStringList(row.boundary_tags),
+      ...asStringList(row.failure_modes),
+    ].join(" ").toLowerCase();
+    if (learningMaterialFilter === "counterexample") return haystack.includes("counterexample") || haystack.includes("false") || haystack.includes("reject");
+    if (learningMaterialFilter === "boundary") return haystack.includes("boundary") || haystack.includes("watch") || haystack.includes("detail:");
+    return haystack.includes("review") || haystack.includes("expert");
+  });
+  const latestLearning = filteredLearningRows.slice(0, 4);
 
   return (
     <section className="space-y-3">
@@ -1978,6 +2027,27 @@ function V17PractitionerLedgerPanel({
               {ui("待审计", "Review", "검토")} {manualReviewCount}
             </span>
           </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[
+              { key: "all", label: ui("全部素材", "All", "전체") },
+              { key: "counterexample", label: ui("反例", "Counterexamples", "반례") },
+              { key: "boundary", label: ui("边界", "Boundary", "경계") },
+              { key: "review", label: ui("复核", "Review gaps", "검토") },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setLearningMaterialFilter(item.key as "all" | "counterexample" | "boundary" | "review")}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition ${
+                  learningMaterialFilter === item.key
+                    ? "border-violet-200/45 bg-violet-400/15 text-violet-50"
+                    : "border-white/10 bg-white/[0.035] text-zinc-400 hover:border-violet-300/25 hover:text-violet-100"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <div className="mt-3 grid gap-2 xl:grid-cols-2">
             {latestLearning.map((row) => {
               const priority = String(row.priority || "").trim();
@@ -1988,6 +2058,13 @@ function V17PractitionerLedgerPanel({
               const plugins = asStringList(row.source_plugins).slice(0, 2);
               const cases = asStringList(row.source_cases).slice(0, 2);
               const contributorTiers = asStringList(row.contributor_tiers).slice(0, 2);
+              const materialChips = Array.from(new Set([
+                ...asStringList(row.learning_values),
+                ...asStringList(row.feedback_intents),
+                ...asStringList(row.learning_tags),
+                ...asStringList(row.boundary_tags),
+                ...asStringList(row.failure_modes),
+              ])).slice(0, 7);
               const reputationScore = Number(row.contributor_reputation_score || 0);
               const reviewStatus = String(row.review_status || "").trim();
               const latestReview = asLooseRecord(row.latest_review);
@@ -2009,6 +2086,15 @@ function V17PractitionerLedgerPanel({
                   <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
                     {hints.join(" / ") || ui("等待更多命理师反馈形成审计说明。", "Waiting for more practitioner signals.", "더 많은 명리사 신호 대기 중")}
                   </p>
+                  {materialChips.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {materialChips.map((item, index) => (
+                        <span key={`material_${item}_${index}`} className={`rounded-full border px-2 py-0.5 text-[10px] ${learningMaterialTone(item)}`}>
+                          {learningMaterialLabel(item, ui)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {[learningReviewStatusLabel(reviewStatus, ui), ...contributorTiers.map((tier) => contributionTierLabel(tier, ui)), ...plugins, ...cases].slice(0, 4).map((item, index) => (
                       <span key={`${item}_${index}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-400">
@@ -2043,7 +2129,9 @@ function V17PractitionerLedgerPanel({
             })}
             {!latestLearning.length && !loading ? (
               <p className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-[12px] text-zinc-500">
-                {ui("暂无学习候选。继续收集命理师反馈和基准案例。", "No learning candidates yet. Keep collecting practitioner feedback and benchmark cases.", "아직 학습 후보가 없습니다. 피드백과 기준 사례를 계속 수집하세요.")}
+                {learningRows.length
+                  ? ui("当前筛选下暂无学习候选。", "No learning candidates for this filter.", "현재 필터에 해당하는 학습 후보가 없습니다.")
+                  : ui("暂无学习候选。继续收集命理师反馈和基准案例。", "No learning candidates yet. Keep collecting practitioner feedback and benchmark cases.", "아직 학습 후보가 없습니다. 피드백과 기준 사례를 계속 수집하세요.")}
               </p>
             ) : null}
           </div>
@@ -2061,6 +2149,13 @@ function V17PractitionerLedgerPanel({
               const status = String(row.status || "").trim();
               const title = String(row.source_title || row.evidence_id || row.claim_id || "").trim();
               const reviewer = String(row.reviewer_display_name || row.reviewer_username || row.reviewer_role || "").trim();
+              const payload = asLooseRecord(row.payload);
+              const materialChips = Array.from(new Set([
+                String(payload.learning_value || "").trim(),
+                String(payload.feedback_intent || "").trim(),
+                ...asStringList(payload.learning_tags),
+                ...asStringList(payload.boundary_tags),
+              ].filter(Boolean))).slice(0, 4);
               return (
                 <article key={`feedback_${String(row.id || title)}`} className="rounded-xl border border-white/10 bg-black/25 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -2077,6 +2172,15 @@ function V17PractitionerLedgerPanel({
                   <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
                     {String(row.reason || row.source_summary || row.plugin_id || ui("暂无补充理由。", "No note yet.", "추가 메모 없음"))}
                   </p>
+                  {materialChips.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {materialChips.map((item, index) => (
+                        <span key={`feedback_material_${item}_${index}`} className={`rounded-full border px-2 py-0.5 text-[10px] ${learningMaterialTone(item)}`}>
+                          {learningMaterialLabel(item, ui)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
@@ -2098,6 +2202,13 @@ function V17PractitionerLedgerPanel({
               const status = String(row.status || "").trim();
               const title = String(row.case_title || row.case_key || "").trim();
               const owner = String(row.owner_display_name || row.owner_username || row.owner_role || "").trim();
+              const payload = asLooseRecord(row.payload);
+              const materialChips = Array.from(new Set([
+                String(payload.learning_value || "").trim(),
+                ...asStringList(payload.learning_tags),
+                ...asStringList(row.boundary_flags),
+                ...asStringList(row.failure_modes),
+              ].filter(Boolean))).slice(0, 5);
               return (
                 <article key={`case_${String(row.id || title)}`} className="rounded-xl border border-white/10 bg-black/25 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -2114,6 +2225,15 @@ function V17PractitionerLedgerPanel({
                   <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
                     {String(row.expected_notes || row.description || row.chart_fingerprint || ui("暂无案例说明。", "No case note yet.", "사례 설명 없음"))}
                   </p>
+                  {materialChips.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {materialChips.map((item, index) => (
+                        <span key={`case_material_${item}_${index}`} className={`rounded-full border px-2 py-0.5 text-[10px] ${learningMaterialTone(item)}`}>
+                          {learningMaterialLabel(item, ui)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
