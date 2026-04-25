@@ -561,6 +561,13 @@ export default function V17AdminPage() {
 	            role_request_reason: asString(item.role_request_reason),
 	            role_request_created_at: asString(item.role_request_created_at),
 	            role_request_updated_at: asString(item.role_request_updated_at),
+	            practitioner_contribution: asLooseObject(item.practitioner_contribution),
+	            practitioner_contribution_score: Number(item.practitioner_contribution_score || 0),
+	            practitioner_contribution_tier: asString(item.practitioner_contribution_tier, "none"),
+	            practitioner_feedback_count: Number(item.practitioner_feedback_count || 0),
+	            practitioner_case_count: Number(item.practitioner_case_count || 0),
+	            practitioner_benchmark_count: Number(item.practitioner_benchmark_count || 0),
+	            practitioner_latest_contribution_at: asString(item.practitioner_latest_contribution_at),
 	          };
 	        }),
 	      );

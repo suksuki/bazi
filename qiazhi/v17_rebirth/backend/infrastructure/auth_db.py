@@ -108,6 +108,16 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _contribution_tier(score: float) -> str:
+    if score >= 24:
+        return "anchor"
+    if score >= 10:
+        return "active"
+    if score > 0:
+        return "seed"
+    return "none"
+
+
 @dataclass
 class V17AuthDB:
     db_path: Path | None = None
@@ -338,6 +348,42 @@ class V17AuthDB:
         ):
             if key in item:
                 item[key] = str(item.get(key) or "").strip()
+        contribution_int_keys = (
+            "practitioner_feedback_count",
+            "practitioner_confirm_count",
+            "practitioner_reject_count",
+            "practitioner_watch_count",
+            "practitioner_review_count",
+            "practitioner_case_count",
+            "practitioner_benchmark_count",
+        )
+        for key in contribution_int_keys:
+            if key in item:
+                try:
+                    item[key] = int(item.get(key) or 0)
+                except Exception:
+                    item[key] = 0
+        if "practitioner_feedback_count" in item or "practitioner_case_count" in item:
+            feedback_count = int(item.get("practitioner_feedback_count") or 0)
+            confirm_count = int(item.get("practitioner_confirm_count") or 0)
+            review_count = int(item.get("practitioner_review_count") or 0)
+            watch_count = int(item.get("practitioner_watch_count") or 0)
+            case_count = int(item.get("practitioner_case_count") or 0)
+            benchmark_count = int(item.get("practitioner_benchmark_count") or 0)
+            score = (
+                feedback_count * 1.0
+                + confirm_count * 0.8
+                + (review_count + watch_count) * 0.4
+                + case_count * 3.0
+                + benchmark_count * 4.0
+            )
+            item["practitioner_contribution_score"] = round(score, 2)
+            item["practitioner_contribution_tier"] = _contribution_tier(score)
+            latest_feedback_at = str(item.get("practitioner_latest_feedback_at") or "").strip()
+            latest_case_at = str(item.get("practitioner_latest_case_at") or "").strip()
+            item["practitioner_latest_contribution_at"] = max(latest_feedback_at, latest_case_at)
+            item.pop("practitioner_latest_feedback_at", None)
+            item.pop("practitioner_latest_case_at", None)
         return item
 
     def create_user(
@@ -586,7 +632,52 @@ class V17AuthDB:
                         WHERE rr.user_id = u.id
                         ORDER BY rr.created_at DESC, rr.id DESC
                         LIMIT 1
-                    ) AS role_request_updated_at
+                    ) AS role_request_updated_at,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id
+                    ) AS practitioner_feedback_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id AND pf.status = 'confirm'
+                    ) AS practitioner_confirm_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id AND pf.status = 'reject'
+                    ) AS practitioner_reject_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id AND pf.status = 'watch'
+                    ) AS practitioner_watch_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id AND pf.status = 'review'
+                    ) AS practitioner_review_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_cases pc
+                        WHERE pc.user_id = u.id
+                    ) AS practitioner_case_count,
+                    (
+                        SELECT COUNT(*)
+                        FROM practitioner_cases pc
+                        WHERE pc.user_id = u.id AND pc.status = 'benchmark_candidate'
+                    ) AS practitioner_benchmark_count,
+                    (
+                        SELECT MAX(pf.updated_at)
+                        FROM practitioner_feedback pf
+                        WHERE pf.user_id = u.id
+                    ) AS practitioner_latest_feedback_at,
+                    (
+                        SELECT MAX(pc.updated_at)
+                        FROM practitioner_cases pc
+                        WHERE pc.user_id = u.id
+                    ) AS practitioner_latest_case_at
                 FROM auth_users u
                 ORDER BY id ASC
                 """

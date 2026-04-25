@@ -2230,6 +2230,13 @@ export default function OraclePage() {
 	            role_request_reason: String(item.role_request_reason || "").trim(),
 	            role_request_created_at: String(item.role_request_created_at || "").trim(),
 	            role_request_updated_at: String(item.role_request_updated_at || "").trim(),
+	            practitioner_contribution: asLooseRecord(item.practitioner_contribution),
+	            practitioner_contribution_score: Number(item.practitioner_contribution_score || 0),
+	            practitioner_contribution_tier: String(item.practitioner_contribution_tier || "none").trim(),
+	            practitioner_feedback_count: Number(item.practitioner_feedback_count || 0),
+	            practitioner_case_count: Number(item.practitioner_case_count || 0),
+	            practitioner_benchmark_count: Number(item.practitioner_benchmark_count || 0),
+	            practitioner_latest_contribution_at: String(item.practitioner_latest_contribution_at || "").trim(),
 	          };
 	        }),
 	      );

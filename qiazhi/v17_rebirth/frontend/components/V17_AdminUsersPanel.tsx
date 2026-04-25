@@ -20,6 +20,24 @@ export type AdminAuthUser = {
   role_request_reason?: string;
   role_request_created_at?: string;
   role_request_updated_at?: string;
+  practitioner_contribution?: {
+    feedback_count?: number;
+    confirm_count?: number;
+    reject_count?: number;
+    watch_count?: number;
+    review_count?: number;
+    case_count?: number;
+    benchmark_count?: number;
+    score?: number;
+    tier?: "none" | "seed" | "active" | "anchor" | string;
+    latest_at?: string;
+  };
+  practitioner_contribution_score?: number;
+  practitioner_contribution_tier?: "none" | "seed" | "active" | "anchor" | string;
+  practitioner_feedback_count?: number;
+  practitioner_case_count?: number;
+  practitioner_benchmark_count?: number;
+  practitioner_latest_contribution_at?: string;
 };
 
 type Props = {
@@ -41,6 +59,20 @@ function roleOptionsForUser(
   if (user.role === "admin") return ["admin"];
   if (operatorRole === "manager") return ["manager", "practitioner", "user"];
   return ["manager", "practitioner", "user"];
+}
+
+function contributionTierLabel(tier: string): string {
+  if (tier === "anchor") return "核心共建";
+  if (tier === "active") return "活跃命理师";
+  if (tier === "seed") return "初始贡献";
+  return "未沉淀";
+}
+
+function contributionTierTone(tier: string): string {
+  if (tier === "anchor") return "border-yellow-300/35 bg-yellow-400/15 text-yellow-100";
+  if (tier === "active") return "border-emerald-300/30 bg-emerald-400/12 text-emerald-100";
+  if (tier === "seed") return "border-violet-300/30 bg-violet-400/12 text-violet-100";
+  return "border-zinc-700 bg-zinc-900/60 text-zinc-400";
 }
 
 export function V17_AdminUsersPanel({
@@ -156,6 +188,19 @@ export function V17_AdminUsersPanel({
 	            user.role_request_role === "practitioner" &&
 	            Boolean(user.role_request_id);
 	          const requestBusy = busyRequestId === user.role_request_id;
+	          const contribution = user.practitioner_contribution || {};
+	          const contributionScore = Number(contribution.score ?? user.practitioner_contribution_score ?? 0);
+	          const contributionTier = String(contribution.tier || user.practitioner_contribution_tier || "none");
+	          const contributionFeedback = Number(contribution.feedback_count ?? user.practitioner_feedback_count ?? 0);
+	          const contributionCases = Number(contribution.case_count ?? user.practitioner_case_count ?? 0);
+	          const contributionBenchmarks = Number(contribution.benchmark_count ?? user.practitioner_benchmark_count ?? 0);
+	          const showContribution =
+	            contributionScore > 0 ||
+	            contributionFeedback > 0 ||
+	            contributionCases > 0 ||
+	            user.role === "practitioner" ||
+	            user.role === "manager" ||
+	            user.role === "admin";
 	          return (
             <article key={user.id} className={`min-w-0 rounded-2xl border border-zinc-800 bg-[linear-gradient(180deg,rgba(24,24,27,0.72),rgba(9,9,11,0.92))] ${compact ? "p-3" : "p-4"}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -202,6 +247,27 @@ export function V17_AdminUsersPanel({
 	                  </button>
 	                </div>
 	              </div>
+	              {showContribution ? (
+	                <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+	                  <div className="flex flex-wrap items-center justify-between gap-2">
+	                    <div>
+	                      <div className="text-xs font-semibold text-zinc-100">命理师贡献画像</div>
+	                      <p className="mt-1 text-[10px] text-zinc-500">
+	                        最近贡献 {contribution.latest_at || user.practitioner_latest_contribution_at || "—"}
+	                      </p>
+	                    </div>
+	                    <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${contributionTierTone(contributionTier)}`}>
+	                      {contributionTierLabel(contributionTier)} · {contributionScore.toFixed(1)}
+	                    </span>
+	                  </div>
+	                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+	                    <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-cyan-100">反馈 {contributionFeedback}</span>
+	                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-100">确认 {Number(contribution.confirm_count || 0)}</span>
+	                    <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-2 py-1 text-amber-100">案例 {contributionCases}</span>
+	                    <span className="rounded-full border border-violet-400/20 bg-violet-400/10 px-2 py-1 text-violet-100">基准 {contributionBenchmarks}</span>
+	                  </div>
+	                </div>
+	              ) : null}
 	              {roleRequestPending ? (
 	                <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-950/15 p-3">
 	                  <div className="flex flex-wrap items-start justify-between gap-3">

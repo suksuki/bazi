@@ -118,6 +118,48 @@ def test_practitioner_role_request_requires_manager_approval(isolated_auth_db) -
         assert "oracle.professional" in after_me.json()["user"]["capabilities"]
         assert "practitioner.case.write" in after_me.json()["user"]["capabilities"]
 
+        feedback = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies={"v17_session": applicant_token},
+            json={
+                "session_id": "role-request-flow",
+                "evidence_id": "pattern.yangren.audit",
+                "claim_id": "claim-1",
+                "plugin_id": "classical.ziping.pattern_bridge.v1",
+                "status": "confirm",
+                "reason": "此处证据链成立。",
+                "confidence": 0.8,
+                "source_title": "格局证据",
+            },
+        )
+        assert feedback.status_code == 200
+
+        case = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies={"v17_session": applicant_token},
+            json={
+                "case_title": "命理师样盘",
+                "birth_time_iso": "1990-01-01T00:00:00",
+                "gender": "male",
+                "calendar_type": "solar",
+                "four_pillars": {"year": "庚午", "month": "戊子", "day": "乙亥", "hour": "丙子"},
+                "expected_patterns": ["常规身弱"],
+                "expected_notes": "用于验证贡献画像统计。",
+                "status": "benchmark_candidate",
+            },
+        )
+        assert case.status_code == 200
+
+        users_after_contribution = client.get("/v17/auth/users", cookies={"v17_session": admin_token})
+        contributor_row = next(row for row in users_after_contribution.json()["users"] if row["id"] == applicant_id)
+        contribution = contributor_row["practitioner_contribution"]
+        assert contribution["feedback_count"] == 1
+        assert contribution["confirm_count"] == 1
+        assert contribution["case_count"] == 1
+        assert contribution["benchmark_count"] == 1
+        assert contribution["score"] > 0
+        assert contribution["tier"] in {"seed", "active", "anchor"}
+
 
 def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
     with TestClient(app) as client:

@@ -260,6 +260,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 反馈和审计。
 - 案例库。
 - 身份申请通过 manager/admin 审核后才开放专业工作台和高可信反馈权重。
+- 贡献画像沉淀 feedback / case / benchmark / score / tier，后续可进入可信权重与共建档案。
 
 管理员/研究者：
 
@@ -279,6 +280,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - `Decision Inbox`：裁决项和反馈入口基础。
 - 多语言、多终端、权限控制主链。
 - `auth_role_requests`：命理师身份申请与审核链路，保证 practitioner 权限不是注册时自选标签。
+- `practitioner_contribution`：从反馈、真实案例和基准候选聚合出的贡献画像，已随用户权限数据返回。
 
 下一步不需要另起炉灶，而是把这些能力串成产品闭环。
 
@@ -292,6 +294,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 4. `BenchmarkCase`：真实案例结构化入库。
 5. `LearningCandidateReview`：参数候选和 synthetic case 审计。
 6. `PractitionerOnboarding`：命理师申请、审核、可信身份权重与后续贡献档案。
+7. `PractitionerReputation`：基于贡献画像调整学习候选优先级和人工复核队列排序，但不直接自动改参数。
 
 其中 P1 和 P2 应优先完成，因为没有证据与反馈，后面的学习系统就缺少高质量燃料。
 

@@ -105,6 +105,18 @@ def build_user_payload(row: Dict[str, Any]) -> Dict[str, Any]:
             "created_at": str(row.get("role_request_created_at") or "").strip(),
             "updated_at": str(row.get("role_request_updated_at") or "").strip(),
         }
+    contribution = {
+        "feedback_count": int(row.get("practitioner_feedback_count") or 0),
+        "confirm_count": int(row.get("practitioner_confirm_count") or 0),
+        "reject_count": int(row.get("practitioner_reject_count") or 0),
+        "watch_count": int(row.get("practitioner_watch_count") or 0),
+        "review_count": int(row.get("practitioner_review_count") or 0),
+        "case_count": int(row.get("practitioner_case_count") or 0),
+        "benchmark_count": int(row.get("practitioner_benchmark_count") or 0),
+        "score": float(row.get("practitioner_contribution_score") or 0.0),
+        "tier": str(row.get("practitioner_contribution_tier") or "none").strip() or "none",
+        "latest_at": str(row.get("practitioner_latest_contribution_at") or "").strip(),
+    }
     return {
         "id": int(row.get("id") or 0),
         "username": str(row.get("username") or "").strip(),
@@ -125,6 +137,13 @@ def build_user_payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "role_request_reason": str(row.get("role_request_reason") or "").strip(),
         "role_request_created_at": str(row.get("role_request_created_at") or "").strip(),
         "role_request_updated_at": str(row.get("role_request_updated_at") or "").strip(),
+        "practitioner_contribution": contribution,
+        "practitioner_contribution_score": contribution["score"],
+        "practitioner_contribution_tier": contribution["tier"],
+        "practitioner_feedback_count": contribution["feedback_count"],
+        "practitioner_case_count": contribution["case_count"],
+        "practitioner_benchmark_count": contribution["benchmark_count"],
+        "practitioner_latest_contribution_at": contribution["latest_at"],
         "capabilities": capabilities,
         "surface_access": {
             "oracle": oracle_surfaces,
