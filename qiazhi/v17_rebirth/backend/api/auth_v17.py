@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, HTTPException, Request
 
 from v17_rebirth.backend.infrastructure.auth_db import auth_storage
+from v17_rebirth.backend.services.learning_experiment_queue import build_practitioner_experiment_queue
 from v17_rebirth.backend.services.practitioner_learning import build_practitioner_learning_candidates
 from v17_rebirth.backend.services.auth_service import (
     build_user_payload,
@@ -516,6 +517,19 @@ async def create_practitioner_learning_review(request: Request, payload: Dict[st
         "applied": False,
         "guardrail": "review_only_no_runtime_parameter_change",
     }
+
+
+@router.get("/v17/auth/practitioner-learning-experiments")
+@router.get("/api/v17/auth/practitioner-learning-experiments")
+async def list_practitioner_learning_experiments(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    rows = auth_storage.list_practitioner_learning_reviews(
+        status="approved_for_experiment",
+        limit=120,
+    )
+    report = build_practitioner_experiment_queue(rows)
+    report["viewer_role"] = str(user.get("role") or "user")
+    return report
 
 
 @router.post("/v17/auth/practitioner-cases")

@@ -248,6 +248,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 
 - 学习候选已有审计留痕接口 `/v17/auth/practitioner-learning-reviews`。
 - `approved_for_experiment` 只准入实验队列，仍需 synthetic + practitioner benchmark 与后续发布审批。
+- `/v17/auth/practitioner-learning-experiments` 会把已准入候选转换为 dry-run 实验队列，输出候选 patch 范围、必跑命令和安全门。
 
 ### P6：产品化分层
 

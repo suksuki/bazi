@@ -741,3 +741,18 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert reviewed_candidate["review_status"] == "approved_for_experiment"
         assert reviewed_candidate["review_count"] == 1
         assert reviewed_candidate["latest_review"]["reviewer_note"].startswith("允许进入 synthetic")
+
+        experiments = client.get(
+            "/v17/auth/practitioner-learning-experiments",
+            cookies={"v17_session": admin_token},
+        )
+        assert experiments.status_code == 200
+        experiment_body = experiments.json()
+        assert experiment_body["protocol"] == "v17.practitioner.experiment_queue.v1"
+        assert experiment_body["state"] == "ready_for_shadow_run"
+        assert experiment_body["experiment_count"] == 1
+        experiment = experiment_body["experiments"][0]
+        assert experiment["candidate_id"] == candidate["candidate_id"]
+        assert experiment["application_mode"] == "dry_run_plan_only"
+        assert experiment["candidate_patch"]["patch_mode"] == "review_only"
+        assert "rollback_plan_required_before_apply" in experiment["safety_gates"]

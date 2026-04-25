@@ -191,6 +191,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - 用户权限面板应展示命理师贡献画像：反馈数、案例数、基准候选数、贡献分和等级；没有贡献时不能伪造高可信标签。
 - 命理师学习候选应读取贡献画像调整人工复核优先级，并在候选中保留 `contributor_tiers / contributor_reputation_score`；该分数只能影响审计排序，不能自动改参数。
 - manager/admin 可对学习候选写入审计意见；`approved_for_experiment` 只能表示准入 shadow run，API 响应必须保留 `applied=false`。
+- 已准入实验的学习候选应出现在 dry-run 实验队列中，携带 `candidate_patch.patch_mode=review_only` 和回滚安全门。
 - `/v17/oracle` 主页面使用 `命盘总览 / 深度解读 / 幕后观察` 三个角色过滤后的 Tab；手机端必须呈现为明确的横向 Tab，而不是三张大按钮。
 - `命盘总览` 的主断言按钮必须显示 `掐指一算`；LLM 生成中必须显示 `正在掐指一算` 并带轻量 loading 动效。
 - App 顶部重置入口必须显示 `返回填写八字`，语义上指向出生信息输入页，而不是模糊的刷新/重测。

@@ -1633,6 +1633,7 @@ function V17PractitionerLedgerPanel({
   const [caseRows, setCaseRows] = useState<Array<Record<string, unknown>>>([]);
   const [learningRows, setLearningRows] = useState<Array<Record<string, unknown>>>([]);
   const [learningSummary, setLearningSummary] = useState<Record<string, unknown>>({});
+  const [experimentSummary, setExperimentSummary] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [reviewingCandidateId, setReviewingCandidateId] = useState("");
   const [message, setMessage] = useState("");
@@ -1650,10 +1651,19 @@ function V17PractitionerLedgerPanel({
       learningQuery.set("scope", "all");
     }
     try {
-      const [feedbackResp, caseResp, learningResp] = await Promise.all([
+      const experimentPromise = canViewAll
+        ? requestJson<Record<string, unknown>>("/api/auth/practitioner-learning-experiments", noStoreInit())
+        : Promise.resolve({
+            resp: new Response(null, { status: 200 }),
+            ok: true,
+            error: "",
+            data: { experiment_count: 0, state: "not_available" } as Record<string, unknown>,
+          });
+      const [feedbackResp, caseResp, learningResp, experimentResp] = await Promise.all([
         requestJson<Record<string, unknown>>(`/api/auth/practitioner-feedback?${feedbackQuery.toString()}`, noStoreInit()),
         requestJson<Record<string, unknown>>(`/api/auth/practitioner-cases?${caseQuery.toString()}`, noStoreInit()),
         requestJson<Record<string, unknown>>(`/api/auth/practitioner-learning-candidates?${learningQuery.toString()}`, noStoreInit()),
+        experimentPromise,
       ]);
       if (!feedbackResp.ok) {
         throw new Error(String(feedbackResp.data.detail || ui("反馈账本加载失败。", "Failed to load feedback ledger.", "피드백 장부 로드 실패")));
@@ -1664,6 +1674,9 @@ function V17PractitionerLedgerPanel({
       if (!learningResp.ok) {
         throw new Error(String(learningResp.data.detail || ui("学习候选加载失败。", "Failed to load learning candidates.", "학습 후보 로드 실패")));
       }
+      if (!experimentResp.ok) {
+        throw new Error(String(experimentResp.data.detail || ui("实验队列加载失败。", "Failed to load experiment queue.", "실험 대기열 로드 실패")));
+      }
       setFeedbackRows(Array.isArray(feedbackResp.data.feedback) ? feedbackResp.data.feedback as Array<Record<string, unknown>> : []);
       setCaseRows(Array.isArray(caseResp.data.cases) ? caseResp.data.cases as Array<Record<string, unknown>> : []);
       setLearningRows(Array.isArray(learningResp.data.candidates) ? learningResp.data.candidates as Array<Record<string, unknown>> : []);
@@ -1672,6 +1685,7 @@ function V17PractitionerLedgerPanel({
           ? learningResp.data.summary as Record<string, unknown>
           : {},
       );
+      setExperimentSummary(experimentResp.data);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : ui("命理师账本加载失败。", "Failed to load practitioner ledger.", "명리사 장부 로드 실패"));
     } finally {
@@ -1725,6 +1739,7 @@ function V17PractitionerLedgerPanel({
   const reviewCount = countStatus(feedbackRows, "review") + countStatus(feedbackRows, "watch");
   const learningCandidateCount = Number(learningSummary.candidate_count || learningRows.length || 0);
   const manualReviewCount = Number(learningSummary.manual_review_required_count || 0);
+  const experimentCount = Number(experimentSummary.experiment_count || 0);
   const latestLearning = learningRows.slice(0, 4);
 
   return (
@@ -1764,7 +1779,7 @@ function V17PractitionerLedgerPanel({
             { label: ui("确认", "Confirm", "확인"), value: confirmedCount, tone: "text-emerald-100" },
             { label: ui("否定", "Reject", "부정"), value: rejectedCount, tone: "text-rose-100" },
             { label: ui("基准候选", "Benchmark", "기준 후보"), value: benchmarkCount || reviewCount, tone: "text-amber-100" },
-            { label: ui("学习候选", "Learning", "학습 후보"), value: learningCandidateCount, tone: "text-violet-100" },
+            { label: canViewAll ? ui("实验队列", "Experiments", "실험 대기열") : ui("学习候选", "Learning", "학습 후보"), value: canViewAll ? experimentCount : learningCandidateCount, tone: "text-violet-100" },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-[10px] text-zinc-500">{item.label}</p>
