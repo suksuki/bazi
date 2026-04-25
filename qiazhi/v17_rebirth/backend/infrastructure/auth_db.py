@@ -2185,5 +2185,24 @@ class V17AuthDB:
             rows = conn.execute(sql, tuple(params)).fetchall()
         return [item for row in rows if (item := self._clean_learning_scorecard_row(row))]
 
+    def has_promote_learning_scorecard(self, *, experiment_id: str) -> bool:
+        experiment_clean = str(experiment_id or "").strip()
+        if not experiment_clean:
+            return False
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT COUNT(*) AS c
+                FROM practitioner_learning_scorecards
+                WHERE experiment_id = ?
+                  AND verdict = 'promote'
+                  AND synthetic_passed = 1
+                  AND practitioner_passed = 1
+                  AND regression_count = 0
+                """,
+                (experiment_clean,),
+            ).fetchone()
+        return int(row["c"] if row else 0) > 0
+
 
 auth_storage = V17AuthDB()

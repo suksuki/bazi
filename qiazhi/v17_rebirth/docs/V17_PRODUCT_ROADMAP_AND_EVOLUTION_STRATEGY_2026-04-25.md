@@ -250,7 +250,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - `approved_for_experiment` 只准入实验队列，仍需 synthetic + practitioner benchmark 与后续发布审批。
 - `/v17/auth/practitioner-learning-experiments` 会把已准入候选转换为 dry-run 实验队列，输出候选 patch 范围、必跑命令和安全门。
 - `/v17/auth/practitioner-learning-scorecards` 记录 shadow run 的 synthetic / practitioner benchmark 结果、改善/退化数量和 promote/rework/reject 结论。
-- `/v17/auth/practitioner-learning-releases` 记录 admin 发布审批、测试报告和回滚方案，响应固定 `applied=false`，不自动写配置。
+- `/v17/auth/practitioner-learning-releases` 记录 admin 发布审批、测试报告和回滚方案；批准发布前必须存在无退化的 `promote` scorecard，响应固定 `applied=false`，不自动写配置。
 
 ### P6：产品化分层
 

@@ -757,6 +757,22 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert experiment["candidate_patch"]["patch_mode"] == "review_only"
         assert "rollback_plan_required_before_apply" in experiment["safety_gates"]
 
+        release_without_scorecard = client.post(
+            "/v17/auth/practitioner-learning-releases",
+            cookies={"v17_session": admin_token},
+            json={
+                "experiment_id": experiment["experiment_id"],
+                "candidate_id": experiment["candidate_id"],
+                "parameter_family": experiment["parameter_family"],
+                "status": "approved",
+                "release_summary": "不能绕过 scorecard。",
+                "test_report": "synthetic + practitioner benchmark passed",
+                "rollback_plan": "恢复上一版参数。",
+            },
+        )
+        assert release_without_scorecard.status_code == 400
+        assert "promote scorecard" in release_without_scorecard.json()["detail"]
+
         bad_scorecard = client.post(
             "/v17/auth/practitioner-learning-scorecards",
             cookies={"v17_session": admin_token},

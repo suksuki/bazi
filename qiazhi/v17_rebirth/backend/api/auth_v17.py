@@ -602,14 +602,18 @@ async def list_practitioner_learning_releases(request: Request) -> Dict[str, Any
 async def create_practitioner_learning_release(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     user = require_admin_request(request)
     snapshot = payload.get("experiment_snapshot") if isinstance(payload.get("experiment_snapshot"), dict) else {}
+    experiment_id = str(payload.get("experiment_id") or snapshot.get("experiment_id") or "").strip()
+    status = str(payload.get("status") or "").strip()
+    if status == "approved" and not auth_storage.has_promote_learning_scorecard(experiment_id=experiment_id):
+        raise HTTPException(status_code=400, detail="批准发布前必须存在通过 synthetic 与 practitioner benchmark 的 promote scorecard。")
     try:
         row = auth_storage.create_practitioner_learning_release(
             reviewer_user_id=int(user.get("id") or 0),
             reviewer_role=str(user.get("role") or "user"),
-            experiment_id=str(payload.get("experiment_id") or snapshot.get("experiment_id") or "").strip(),
+            experiment_id=experiment_id,
             candidate_id=str(payload.get("candidate_id") or snapshot.get("candidate_id") or "").strip(),
             parameter_family=str(payload.get("parameter_family") or snapshot.get("parameter_family") or "").strip(),
-            status=str(payload.get("status") or "").strip(),
+            status=status,
             release_summary=str(payload.get("release_summary") or "").strip(),
             test_report=str(payload.get("test_report") or "").strip(),
             rollback_plan=str(payload.get("rollback_plan") or "").strip(),
