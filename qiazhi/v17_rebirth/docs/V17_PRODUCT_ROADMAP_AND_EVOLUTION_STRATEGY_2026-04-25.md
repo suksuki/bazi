@@ -300,6 +300,8 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 当前落地：
 
 - 普通用户与命理师已通过 `user / practitioner / manager / admin` 权限分层进入不同工作台；普通用户保留简明断语，命理师进入专业证据链、反馈、案例与账本。
+- 物理快照新增 `v17.practitioner.choice_candidates.v1`，由系统返回格局、用神、忌神候选及置信度；命理师可在排盘工作区选择本次断语采用项。
+- 命理师选择会生成 `v17.practitioner.override_context.v1`，只作为本次 `掐指一算` 的叙事前提，不改系统候选排序、运行时参数或学习治理状态。
 - 命理师身份通过 `auth_role_requests` 申请与审核，不再由注册入口直接授予。
 - 管理员可在 `/v17/admin` 管理成员权限、命理师申请、插件/参数/学习任务，以及学习治理链路。
 - Admin 学习治理面板已串起学习候选、审计、dry-run 实验队列、scorecard、发布审批和回滚记录。

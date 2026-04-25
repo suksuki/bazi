@@ -32,6 +32,11 @@ from v17_rebirth.backend.services.narrative_pipeline_cache import (
     get_realtime_pipeline,
     restart_pipeline_cache,
 )
+from v17_rebirth.backend.services.practitioner_choice_candidates import (
+    normalize_practitioner_override_context,
+    practitioner_override_prompt_lines,
+    selected_override_gods,
+)
 from v17_rebirth.infrastructure.llm_bridge import V17_ROLE_JUDGE, V17_ROLE_WEAVER, V17LlmBridge
 from v17_rebirth.infrastructure.llm_micro_client import _normalize_fuse_role
 from v17_rebirth.backend.services.physics_canonical import six_pillars_tensor_complete
@@ -204,6 +209,14 @@ class VerdictOrchestrator:
         god_of_use = list(god_ring_authority.get("god_of_use") or [])
         god_of_taboo = list(god_ring_authority.get("god_of_taboo") or [])
         tongguan_gods = list(god_ring_authority.get("tongguan_gods") or [])
+        override_context = normalize_practitioner_override_context(raw_physics.get("practitioner_override_context"))
+        override_use, override_taboo = selected_override_gods(override_context)
+        if override_use:
+            god_of_use = [*override_use, *[god for god in god_of_use if god not in override_use]]
+        if override_taboo:
+            god_of_taboo = [*override_taboo, *[god for god in god_of_taboo if god not in override_taboo]]
+        if override_context.get("has_override"):
+            raw_physics["practitioner_override_context"] = override_context
         total_energy_index = float(raw_physics.get("total_energy_index") or sum(scores.values()) or 0.0)
 
         def _merge_rows() -> List[Dict[str, Any]]:
@@ -218,6 +231,7 @@ class VerdictOrchestrator:
             [*facts, *plugin_rows],
             total_energy_index=total_energy_index,
         )
+        fragments = [*practitioner_override_prompt_lines(override_context), *fragments]
         arbitration = build_decision_arbitration(
             raw_physics=raw_physics,
             spec_facts=facts if all(isinstance(f, V17Fact) for f in facts) else None,

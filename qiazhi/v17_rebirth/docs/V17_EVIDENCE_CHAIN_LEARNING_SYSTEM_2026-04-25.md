@@ -34,6 +34,8 @@ Date: 2026-04-25
 
 命理师可以补充理由，并把证据沉淀为真实案例或 `benchmark_candidate`。
 
+命理师也可以在排盘工作区查看系统返回的格局、用神、忌神候选及置信度，并选择本次断语采用项。该选择进入 `v17.practitioner.override_context.v1`，只影响本次叙事生成，不直接修改参数、候选排序或学习治理状态。
+
 ### 2.3 Learning Governance Layer
 
 系统把反馈和案例聚合为学习候选：

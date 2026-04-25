@@ -44,6 +44,8 @@ type LocalizeText = (zh: string, en: string, ko: string) => string;
 type TranslateText = (value: string) => string;
 type TranslateList = (values: string[]) => string[];
 type FourPillarsSummary = { year?: string; month?: string; day?: string; hour?: string };
+type PractitionerChoiceKind = "pattern" | "use_god" | "taboo_god";
+type PractitionerChoiceState = Partial<Record<PractitionerChoiceKind, string>>;
 
 function asLooseRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -56,6 +58,71 @@ function asNumberValue(value: unknown, fallback = 0): number {
 
 function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
+}
+
+function confidencePercent(value: unknown): number {
+  const raw = Number(value || 0);
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.round((raw <= 1 ? raw * 100 : raw));
+}
+
+function practitionerChoiceRows(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) : [];
+}
+
+function selectedPractitionerChoice(
+  rows: Array<Record<string, unknown>>,
+  selectedId: string | undefined,
+): Record<string, unknown> | undefined {
+  if (!rows.length) return undefined;
+  if (selectedId) {
+    const found = rows.find((row) => String(row.id || "").trim() === selectedId);
+    if (found) return found;
+  }
+  return rows.find((row) => row.selected_by_system === true) || rows[0];
+}
+
+function practitionerChoicePromptLine(
+  ui: LocalizeText,
+  selections: Partial<Record<PractitionerChoiceKind, Record<string, unknown> | undefined>>,
+): string {
+  const parts = [
+    selections.pattern?.name ? `${ui("格局", "Pattern", "격국")}=${String(selections.pattern.name)}` : "",
+    selections.use_god?.name ? `${ui("用神", "Use god", "용신")}=${String(selections.use_god.name)}` : "",
+    selections.taboo_god?.name ? `${ui("忌神", "Taboo god", "기신")}=${String(selections.taboo_god.name)}` : "",
+  ].filter(Boolean);
+  return parts.length ? `${ui("按命理师选定前提生成：", "Generate from practitioner selections: ", "명리사 선택 전제로 생성: ")}${parts.join(" / ")}` : "";
+}
+
+function buildPractitionerOverrideContext(
+  selections: Partial<Record<PractitionerChoiceKind, Record<string, unknown> | undefined>>,
+): Record<string, unknown> | undefined {
+  const selected = Object.fromEntries(
+    (["pattern", "use_god", "taboo_god"] as PractitionerChoiceKind[]).map((kind) => {
+      const row = selections[kind];
+      return [
+        kind,
+        row
+          ? {
+              id: String(row.id || "").trim(),
+              kind,
+              name: String(row.name || row.label || "").trim(),
+              label: String(row.label || row.name || "").trim(),
+              confidence: Number(row.confidence || 0),
+              source: String(row.source || "").trim(),
+              selected_by_system: row.selected_by_system === true,
+            }
+          : {},
+      ];
+    }),
+  );
+  const hasSelection = Object.values(selected).some((row) => String((row as Record<string, unknown>).name || "").trim());
+  if (!hasSelection) return undefined;
+  return {
+    contract: "v17.practitioner.override_context.v1",
+    source: "oracle_practitioner_choice_panel",
+    selections: selected,
+  };
 }
 
 function topicHubTone(tone: "primary" | "stable" | "watch" | "soft" | "risk" | "muted"): string {
@@ -2373,6 +2440,124 @@ function V17PractitionerLedgerPanel({
   );
 }
 
+function V17PractitionerChoicePanel({
+  ui,
+  term,
+  candidates,
+  selected,
+  onSelect,
+}: {
+  ui: LocalizeText;
+  term: TranslateText;
+  candidates: Record<string, unknown>;
+  selected: PractitionerChoiceState;
+  onSelect: (kind: PractitionerChoiceKind, id: string) => void;
+}) {
+  const selections = asLooseRecord(candidates.selections);
+  const rawGroups: Array<{ kind: PractitionerChoiceKind; label: string; rows: Array<Record<string, unknown>>; tone: string }> = [
+    {
+      kind: "pattern",
+      label: ui("格局", "Pattern", "격국"),
+      rows: practitionerChoiceRows(selections.pattern),
+      tone: "border-amber-300/20 bg-amber-400/10 text-amber-100",
+    },
+    {
+      kind: "use_god",
+      label: ui("用神", "Use god", "용신"),
+      rows: practitionerChoiceRows(selections.use_god),
+      tone: "border-emerald-300/20 bg-emerald-400/10 text-emerald-100",
+    },
+    {
+      kind: "taboo_god",
+      label: ui("忌神", "Taboo god", "기신"),
+      rows: practitionerChoiceRows(selections.taboo_god),
+      tone: "border-rose-300/20 bg-rose-400/10 text-rose-100",
+    },
+  ];
+  const groups = rawGroups.filter((group) => group.rows.length);
+
+  if (!groups.length) return null;
+
+  return (
+    <section className="rounded-2xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(8,47,73,0.20),rgba(9,9,11,0.78))] p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
+            {ui("命理师裁决覆盖", "Practitioner Choices", "명리사 선택")}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-cyan-50">
+            {ui("本次断语前提", "Reading premise", "이번 해석 전제")}
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[10px] text-cyan-100">
+          {ui("只影响本次断语", "This reading only", "이번 해석만")}
+        </span>
+      </div>
+      <div className="grid gap-2 lg:grid-cols-3">
+        {groups.map((group) => {
+          const current = selectedPractitionerChoice(group.rows, selected[group.kind]);
+          return (
+            <div key={group.kind} className="rounded-xl border border-white/10 bg-black/20 p-2">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${group.tone}`}>
+                  {group.label}
+                </span>
+                {current ? (
+                  <span className="text-[10px] text-zinc-500">
+                    {confidencePercent(current.confidence)}%
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+                {group.rows.map((row) => {
+                  const id = String(row.id || "").trim();
+                  const active = current && String(current.id || "").trim() === id;
+                  const systemSelected = row.selected_by_system === true;
+                  const confidence = confidencePercent(row.confidence);
+                  return (
+                    <button
+                      key={id || `${group.kind}_${String(row.name || row.label)}`}
+                      type="button"
+                      onClick={() => onSelect(group.kind, id)}
+                      className={`min-h-10 shrink-0 rounded-lg border px-2 py-1.5 text-left transition lg:w-full ${
+                        active
+                          ? "border-cyan-300/45 bg-cyan-400/12 text-cyan-50"
+                          : "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-50"
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="text-[12px] font-semibold">{term(String(row.label || row.name || ""))}</span>
+                        <span className="rounded-full border border-white/10 bg-black/25 px-1.5 py-0.5 text-[10px]">
+                          {confidence}%
+                        </span>
+                      </span>
+                      <span className="mt-1 flex flex-wrap gap-1 text-[9px] text-zinc-500">
+                        {systemSelected ? (
+                          <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-1.5 py-0.5 text-emerald-100">
+                            {ui("系统首选", "System", "시스템")}
+                          </span>
+                        ) : null}
+                        {!systemSelected && active ? (
+                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-1.5 py-0.5 text-cyan-100">
+                            {ui("命理师采用", "Chosen", "선택됨")}
+                          </span>
+                        ) : null}
+                        {String(row.scope || row.status || row.source || "").trim() ? (
+                          <span>{term(String(row.scope || row.status || row.source || "").trim())}</span>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function OraclePage() {
   const router = useRouter();
   const { language, user, authLoading, logout, refreshAuth, access, ui, term, termList } = useV17Runtime();
@@ -2395,8 +2580,15 @@ export default function OraclePage() {
   const [practitionerRequestBusy, setPractitionerRequestBusy] = useState(false);
   const [practitionerRequestMessage, setPractitionerRequestMessage] = useState("");
   const [practitionerRequestError, setPractitionerRequestError] = useState("");
+  const [practitionerChoices, setPractitionerChoices] = useState<PractitionerChoiceState>({});
+  const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
+  const canAccessTraceSurface = access.canAccessOracleSurface("trace");
+  const canManageUsers = access.canManageUsers;
+  const canUseProfessionalOracle = access.canUseProfessionalOracle;
+  const canReadEvidence = access.canReadEvidence;
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
+  const physicsFingerprint = String(payload.physics_fingerprint || "");
   const energyMeta = payload.energy_meta && typeof payload.energy_meta === "object"
     ? (payload.energy_meta as Record<string, unknown>)
     : {};
@@ -2542,6 +2734,25 @@ export default function OraclePage() {
   const tongguanGods = asStringList(godRingInfo?.tongguan_gods);
   const coreUseCandidates = Array.isArray(godRingInfo?.core_use_candidates) ? godRingInfo.core_use_candidates : [];
   const coreTabooCandidates = Array.isArray(godRingInfo?.core_taboo_candidates) ? godRingInfo.core_taboo_candidates : [];
+  const practitionerChoiceCandidates = asLooseRecord(payload.practitioner_choice_candidates);
+  const practitionerChoiceSelections = asLooseRecord(practitionerChoiceCandidates.selections);
+  const practitionerChoiceRowsByKind: Record<PractitionerChoiceKind, Array<Record<string, unknown>>> = {
+    pattern: practitionerChoiceRows(practitionerChoiceSelections.pattern),
+    use_god: practitionerChoiceRows(practitionerChoiceSelections.use_god),
+    taboo_god: practitionerChoiceRows(practitionerChoiceSelections.taboo_god),
+  };
+  const selectedPractitionerChoices: Partial<Record<PractitionerChoiceKind, Record<string, unknown> | undefined>> = {
+    pattern: selectedPractitionerChoice(practitionerChoiceRowsByKind.pattern, practitionerChoices.pattern),
+    use_god: selectedPractitionerChoice(practitionerChoiceRowsByKind.use_god, practitionerChoices.use_god),
+    taboo_god: selectedPractitionerChoice(practitionerChoiceRowsByKind.taboo_god, practitionerChoices.taboo_god),
+  };
+  const hasPractitionerChoiceOverride = Object.values(practitionerChoices).some(Boolean);
+  const practitionerOverrideContext = canUseProfessionalOracle && hasPractitionerChoiceOverride
+    ? buildPractitionerOverrideContext(selectedPractitionerChoices)
+    : undefined;
+  const practitionerChoicePrompt = practitionerOverrideContext
+    ? practitionerChoicePromptLine(ui, selectedPractitionerChoices)
+    : "";
   const blindTheme = asLooseRecord(godRingInfo?.blind_theme);
   const blindBiasProtocol = asLooseRecord(godRingInfo?.blind_bias_protocol);
   const blindBias = asLooseRecord(godRingInfo?.blind_bias);
@@ -2674,11 +2885,6 @@ export default function OraclePage() {
     s.traceFacts.length +
     s.heartbeatHistory.length +
     (s.fullTrace ? 1 : 0);
-  const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
-  const canAccessTraceSurface = access.canAccessOracleSurface("trace");
-  const canManageUsers = access.canManageUsers;
-  const canUseProfessionalOracle = access.canUseProfessionalOracle;
-  const canReadEvidence = access.canReadEvidence;
   const surfaceTabs = resolveFeatureTabs(ORACLE_FEATURE_MODULES, {
     language,
     access,
@@ -2823,6 +3029,9 @@ export default function OraclePage() {
     "Generate a concise BaZi verdict from the approved decisions. Use short judgement lines.",
     "현재 승인된 결정을 바탕으로 간결한 사주 단언을 짧은 판단 문장으로 생성하세요.",
   );
+  const effectiveVerdictPrompt = practitionerChoicePrompt
+    ? `${verdictTriggerPrompt}\n${practitionerChoicePrompt}`
+    : verdictTriggerPrompt;
 
   const switchContentSurface = (tab: ContentSurfaceTab) => {
     if (tab === "auxiliary" && !canAccessAuxiliarySurface) return;
@@ -2857,6 +3066,10 @@ export default function OraclePage() {
       s.setTraceOpen(false);
     }
   }, [activeSurfaceTab, authLoading, canAccessAuxiliarySurface, canAccessTraceSurface, s, user]);
+
+  useEffect(() => {
+    setPractitionerChoices({});
+  }, [physicsFingerprint]);
 
   useEffect(() => {
     if (!authLoading && user && canManageUsers) {
@@ -3061,6 +3274,17 @@ export default function OraclePage() {
                     detailMode="core"
                     lang={language}
                   />
+                  {canUseProfessionalOracle ? (
+                    <V17PractitionerChoicePanel
+                      ui={ui}
+                      term={term}
+                      candidates={practitionerChoiceCandidates}
+                      selected={practitionerChoices}
+                      onSelect={(kind, id) => {
+                        setPractitionerChoices((current) => ({ ...current, [kind]: id }));
+                      }}
+                    />
+                  ) : null}
                   </div>
                   ) : null}
                   <V17_PurpleVerdictCard
@@ -3081,7 +3305,7 @@ export default function OraclePage() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => s.triggerVerdict(verdictTriggerPrompt)}
+                      onClick={() => s.triggerVerdict(effectiveVerdictPrompt, { practitionerOverrideContext })}
                       disabled={verdictButtonBusy}
                       aria-busy={verdictButtonBusy}
                       className={`group relative inline-flex min-h-9 w-full items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-3 py-2 text-sm font-semibold transition sm:w-auto ${
@@ -3245,7 +3469,7 @@ export default function OraclePage() {
                       items={evidenceItems}
                       summary={evidenceSummary}
                       sessionId={s.sessionId}
-                      chartFingerprint={String(payload.physics_fingerprint || "")}
+                      chartFingerprint={physicsFingerprint}
                       reviewerRole={user?.role || "user"}
                       birthTimeISO={s.birthTimeISO}
                       gender={s.natalGender || "male"}

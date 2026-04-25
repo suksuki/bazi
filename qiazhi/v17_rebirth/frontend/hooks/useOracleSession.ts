@@ -106,7 +106,7 @@ export interface OracleSession {
     batchIds?: string[],
   ) => Promise<void>;
   handlePlanAction: (plan: PlanActionInput, status: PlanActionStatus) => Promise<void>;
-  triggerVerdict: (reason?: string) => void;
+  triggerVerdict: (reason?: string, options?: { practitionerOverrideContext?: Record<string, unknown> }) => void;
   pendingDecisionWorkCount: number;
   canAutoGenerateVerdict: boolean;
   decisionInboxLocked: boolean;
@@ -515,7 +515,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
     setDecisionDirtySinceLastVerdict(false);
   }
 
-  const triggerVerdict = useCallback((reason: string = t(uiLanguage, "verdict.prompt.default")) => {
+  const triggerVerdict = useCallback((reason: string = t(uiLanguage, "verdict.prompt.default"), options?: { practitionerOverrideContext?: Record<string, unknown> }) => {
     setStreamEndpoint(refreshEndpointLanguage(streamEndpoint, uiLanguage));
     setStreamBody((prevBody) => ({
       ...(prevBody || {}),
@@ -524,6 +524,7 @@ export function useOracleSession({ uiLanguage = "zh" }: { uiLanguage?: AppLangua
       suppress_narrator: false,
       user_message: String(reason || "").trim() || t(uiLanguage, "verdict.prompt.generate"),
       ui_lang: uiLanguage,
+      practitioner_override_context: options?.practitionerOverrideContext || undefined,
     }));
     setRunning(true);
     setDecisionDirtySinceLastVerdict(false);

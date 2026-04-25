@@ -7,6 +7,7 @@ from v17_rebirth.backend.narrative.NarrativeMappingEngine import NarrativeMappin
 from v17_rebirth.backend.services.god_ring_authority import resolve_god_ring_authority
 from v17_rebirth.backend.services.physics_canonical import six_pillars_tensor_complete
 from v17_rebirth.backend.services.physics_service import DataSovereigntyError
+from v17_rebirth.backend.services.practitioner_choice_candidates import build_practitioner_choice_candidates
 
 
 def _dedupe_decision_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -155,6 +156,12 @@ def build_snapshot_payload(
     meta = pt.get("meta") or {}
     if not isinstance(meta, dict):
         meta = {}
+    practitioner_choice_candidates = build_practitioner_choice_candidates(
+        raw_physics=raw_physics,
+        god_ring_authority=god_ring_authority,
+        plugin_rows=plugin_rows,
+        plugin_claims=list((meta.get("plugin_claims") or [])) if isinstance(meta.get("plugin_claims"), list) else [],
+    )
     evidence_payload = (
         dict(evidence_bundle)
         if isinstance(evidence_bundle, dict)
@@ -220,6 +227,7 @@ def build_snapshot_payload(
             "facts": plugin_facts[:64],
         },
         "god_rings": dict(god_ring_authority),
+        "practitioner_choice_candidates": practitioner_choice_candidates,
     }
     inner["pillars"] = {
         "four_pillars": dict(inner.get("four_pillars") or {}),
