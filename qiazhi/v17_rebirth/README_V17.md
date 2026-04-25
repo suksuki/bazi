@@ -3,7 +3,8 @@
 ## Product North Star
 
 - 产品需求宪法：[docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md](docs/V17_PRODUCT_REQUIREMENTS_CONSTITUTION.md)。
-- 后续产品、架构、UI、Prompt、插件、权限和学习闭环设计，默认都必须围绕这份中心文档展开。
+- 产品路线与进化策略：[docs/V17_PRODUCT_ROADMAP_AND_EVOLUTION_STRATEGY_2026-04-25.md](docs/V17_PRODUCT_ROADMAP_AND_EVOLUTION_STRATEGY_2026-04-25.md)。
+- 后续产品、架构、UI、Prompt、插件、权限和学习闭环设计，默认都必须围绕这组中心文档展开。
 
 ## Scope
 
