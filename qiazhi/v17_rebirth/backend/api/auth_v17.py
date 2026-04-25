@@ -7,6 +7,11 @@ from fastapi import APIRouter, Body, HTTPException, Request
 
 from v17_rebirth.backend.infrastructure.auth_db import auth_storage
 from v17_rebirth.backend.services.learning_experiment_queue import build_practitioner_experiment_queue
+from v17_rebirth.backend.services.llm_collaboration import (
+    build_evidence_review_contract,
+    build_evidence_review_draft,
+    build_evidence_review_prompt_text,
+)
 from v17_rebirth.backend.services.practitioner_learning import build_practitioner_learning_candidates
 from v17_rebirth.backend.services.auth_service import (
     build_user_payload,
@@ -503,6 +508,33 @@ async def create_practitioner_feedback(request: Request, payload: Dict[str, Any]
         "ok": True,
         "feedback": _feedback_payload(row),
         "trust_tier": "practitioner" if _is_practitioner_trust_role(user.get("role")) else "user",
+    }
+
+
+@router.post("/v17/auth/practitioner-evidence-review")
+@router.post("/api/v17/auth/practitioner-evidence-review")
+async def create_practitioner_evidence_review(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    _require_practitioner_trust(user)
+    raw_items = payload.get("items")
+    items = raw_items if isinstance(raw_items, list) else []
+    summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+    contract = build_evidence_review_contract(
+        items=[item for item in items if isinstance(item, dict)],
+        summary=summary,
+        session_id=str(payload.get("session_id") or "").strip(),
+        chart_fingerprint=str(payload.get("chart_fingerprint") or "").strip(),
+        verdict_text=str(payload.get("verdict_text") or "").strip(),
+        reviewer_role=str(user.get("role") or "user"),
+    )
+    return {
+        "ok": True,
+        "mode": "draft",
+        "review": build_evidence_review_draft(contract),
+        "prompt_contract": contract,
+        "prompt_text": build_evidence_review_prompt_text(contract),
+        "viewer_role": str(user.get("role") or "user"),
+        "safety_gate": "review_only",
     }
 
 

@@ -161,6 +161,79 @@ def test_practitioner_role_request_requires_manager_approval(isolated_auth_db) -
         assert contribution["tier"] in {"seed", "active", "anchor"}
 
 
+def test_practitioner_evidence_review_is_trusted_review_only(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        admin_login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        admin_token = admin_login.json()["session_token"]
+        register = client.post(
+            "/v17/auth/register",
+            json={"username": "reviewer", "password": "very-secure-pass", "display_name": "Reviewer"},
+        )
+        user_token = register.json()["session_token"]
+        user_id = int(register.json()["user"]["id"])
+
+        payload = {
+            "session_id": "evidence-review-flow",
+            "chart_fingerprint": "fp-review",
+            "summary": {"total": 2, "candidate_count": 1, "risk_count": 1, "observe_only_count": 1},
+            "items": [
+                {
+                    "evidence_id": "ev-strong",
+                    "claim_id": "claim-strong",
+                    "title": "羊刃证据",
+                    "summary": "羊刃与七杀同链。",
+                    "source_plugin": "classical.pattern.yangren",
+                    "evidence_type": "pattern",
+                    "confidence": 0.82,
+                    "match_ratio": 0.76,
+                },
+                {
+                    "evidence_id": "ev-watch",
+                    "title": "破格风险",
+                    "source_plugin": "classical.risk.break_guard",
+                    "evidence_type": "risk",
+                    "confidence": 0.4,
+                    "candidate_status": "watch",
+                    "observe_only": True,
+                },
+            ],
+        }
+
+        denied = client.post(
+            "/v17/auth/practitioner-evidence-review",
+            cookies={"v17_session": user_token},
+            json=payload,
+        )
+        assert denied.status_code == 403
+
+        promote = client.post(
+            f"/v17/auth/users/{user_id}/role",
+            json={"role": "practitioner"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote.status_code == 200
+
+        review = client.post(
+            "/v17/auth/practitioner-evidence-review",
+            cookies={"v17_session": user_token},
+            json=payload,
+        )
+        assert review.status_code == 200
+        body = review.json()
+        assert body["mode"] == "draft"
+        assert body["safety_gate"] == "review_only"
+        assert body["prompt_contract"]["task_type"] == "evidence_chain_review"
+        assert body["prompt_contract"]["policy_version"] == "v17.evidence.review.v1.0"
+        assert body["review"]["review_version"] == "v17.evidence.review.result.v1"
+        assert body["review"]["summary"]["strong_count"] == 1
+        assert body["review"]["summary"]["practitioner_review_required"] is False
+        assert body["review"]["items"][1]["review_action"] == "keep_candidate"
+        assert "observe_only" in body["review"]["items"][1]["risk_flags"]
+
+
 def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
     with TestClient(app) as client:
         admin_login = client.post(

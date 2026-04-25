@@ -118,6 +118,17 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 参数候选必须经过 synthetic + practitioner benchmark 双轨验证。
 - LLM 可以帮助整理反馈，但不能替代命理师审计。
 
+### 3.1 LLM 协作角色
+
+LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration Layer](V17_LLM_COLLABORATION_LAYER_2026-04-25.md)：
+
+- `Weaver`：生成短断语。
+- `Reviewer`：审阅 evidence / claim 是否足以支撑强断语。
+- `Arbiter`：对 `PLAN / CONFLICT` 批次给出结构化仲裁建议。
+- `Analyst`：把反馈、错判和回归结果归因为学习候选解释。
+
+其中 `Reviewer / Arbiter / Analyst` 只能产出辅助建议，不得直接改写物理层、参数、authority 或发布状态。
+
 ## 4. 阶段路线
 
 ### P1：证据工作台

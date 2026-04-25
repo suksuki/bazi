@@ -1158,6 +1158,9 @@ function V17EvidencePanel({
   const [casePendingByEvidence, setCasePendingByEvidence] = useState<Record<string, boolean>>({});
   const [caseMessageByEvidence, setCaseMessageByEvidence] = useState<Record<string, string>>({});
   const [caseError, setCaseError] = useState("");
+  const [reviewPending, setReviewPending] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewResult, setReviewResult] = useState<Record<string, unknown>>({});
   const visibleItems = (expanded ? items.slice(0, 12) : items.slice(0, 4));
   const total = asNumberValue(summary.total, items.length);
   const candidateCount = asNumberValue(summary.candidate_count);
@@ -1341,6 +1344,27 @@ function V17EvidencePanel({
     }));
   }
 
+  async function requestEvidenceReview() {
+    if (!professionalFeedback || !items.length) return;
+    setReviewPending(true);
+    setReviewError("");
+    const { data: payload, ok, error } = await requestJson<Record<string, unknown>>(
+      "/api/v17/auth/practitioner-evidence-review",
+      jsonPostInit({
+        session_id: sessionId || "default",
+        chart_fingerprint: chartFingerprint,
+        summary,
+        items,
+      }),
+    );
+    setReviewPending(false);
+    if (!ok) {
+      setReviewError(error || ui("AI 复核失败。", "AI review failed.", "AI 검토에 실패했습니다."));
+      return;
+    }
+    setReviewResult(asLooseRecord(payload.review));
+  }
+
   if (!items.length) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
@@ -1389,6 +1413,71 @@ function V17EvidencePanel({
           ))}
         </div>
       </div>
+
+      {professionalFeedback ? (
+        <div className="mt-4 rounded-xl border border-cyan-400/15 bg-cyan-500/[0.06] p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[12px] font-semibold text-cyan-50">
+                {ui("AI 证据复核", "AI Evidence Review", "AI 근거 검토")}
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-zinc-400">
+                {ui(
+                  "按 Reviewer 合同检查强证据、候选证据与需命理师复核项；结果只作审阅草案，不自动改写参数。",
+                  "Checks strong evidence, candidates, and practitioner-review items under the Reviewer contract. Draft only; no parameter changes.",
+                  "Reviewer 계약에 따라 강한 근거, 후보 근거, 명리사 검토 항목을 확인합니다. 초안일 뿐 매개변수는 바꾸지 않습니다.",
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={reviewPending}
+              onClick={() => void requestEvidenceReview()}
+              className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-[12px] font-semibold text-cyan-50 transition hover:border-cyan-200/50 hover:bg-cyan-500/15 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+            >
+              <FileSearch className="h-3.5 w-3.5" />
+              {reviewPending ? ui("复核中", "Reviewing", "검토 중") : ui("AI 复核", "AI Review", "AI 검토")}
+            </button>
+          </div>
+          {reviewError ? (
+            <p className="mt-2 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-100">
+              {reviewError}
+            </p>
+          ) : null}
+          {Object.keys(reviewResult).length ? (
+            <div className="mt-3 grid gap-2 md:grid-cols-[0.8fr_1.2fr]">
+              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300">
+                  {ui("复核摘要", "Review Summary", "검토 요약")}
+                </p>
+                <p className="mt-2 text-[12px] font-semibold text-cyan-50">
+                  {String(reviewResult.overall_status || ui("已生成", "Generated", "생성됨"))}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-zinc-300">
+                  {Object.entries(asLooseRecord(reviewResult.summary)).map(([key, value]) => (
+                    <span key={`review_summary_${key}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">
+                      {key}: {String(value)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-2">
+                {(Array.isArray(reviewResult.items) ? reviewResult.items as Array<Record<string, unknown>> : []).slice(0, 4).map((row) => (
+                  <div key={`review_${String(row.evidence_id || row.review_action)}`} className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold text-zinc-100">{String(row.evidence_id || "")}</p>
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100">
+                        {String(row.review_action || "")}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] leading-5 text-zinc-400">{String(row.reason || "")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {visibleItems.map((item, index) => {
