@@ -29,6 +29,7 @@ _DETAIL_KEYS: tuple[str, ...] = (
     "projection_share",
     "origin_type",
     "manifestation_state",
+    "wealth_profile",
 )
 
 _ROW_META_KEYS: tuple[str, ...] = (
@@ -44,6 +45,8 @@ _ROW_META_KEYS: tuple[str, ...] = (
     "risk_driver",
     "macro_topic",
     "macro_topic_label",
+    "topic_profile",
+    "topic_profile_label",
     "origin_type",
     "manifestation_state",
     "pattern_confidence",
@@ -128,6 +131,8 @@ def _evidence_type(plugin_id: str, meta: Mapping[str, Any]) -> str:
         return "semantic"
     if "macro" in pid or "macro" in claim_type:
         return "macro"
+    if "topic_profile" in claim_type or "modern.topic." in pid:
+        return "topic"
     return "diagnostic"
 
 

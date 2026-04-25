@@ -168,6 +168,19 @@ def classify_plugin_governance(
             notes=("Macro theme reads lower-layer signals and structures life-topic interpretation; it cannot change physics or authority.",),
         ).to_dict()
 
+    if pid.startswith("modern.topic."):
+        return PluginGovernanceProfile(
+            plugin_id=pid,
+            governance_class="topic_decoder",
+            authority_level="level_3_topic_decoder",
+            output_contract="topic_profile",
+            metadata_scope="public_topic_contract",
+            learning_family="topic_decoder",
+            can_enter_authority=False,
+            max_bias_ratio=0.0,
+            notes=("Topic decoders produce auditable profile contracts for LLM prompts; they cannot rewrite physics, authority, or parameters.",),
+        ).to_dict()
+
     if "risk" in pid or pid in {"officer_see_hurt", "kong_wang", "shensha"}:
         return PluginGovernanceProfile(
             plugin_id=pid,

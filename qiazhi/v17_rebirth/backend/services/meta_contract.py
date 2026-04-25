@@ -19,6 +19,7 @@ PUBLIC_META_KEYS: tuple[str, ...] = (
     "climate_theme",
     "xiangfa_theme",
     "macro_theme",
+    "wealth_profile",
     "plugin_execution_status",
     "plugin_governance_manifest",
     "decision_bucket_contract",
@@ -56,6 +57,7 @@ LEARNING_SIGNAL_KEYS: tuple[str, ...] = (
     "relation_dynamics_summary",
     "climate_modifier_layer",
     "macro_theme",
+    "wealth_profile",
 )
 
 

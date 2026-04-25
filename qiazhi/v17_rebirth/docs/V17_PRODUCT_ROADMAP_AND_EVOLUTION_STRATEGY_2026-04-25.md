@@ -304,6 +304,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 - 命理师选择会生成 `v17.practitioner.override_context.v1`，只作为本次 `掐指一算` 的叙事前提，不改系统候选排序、运行时参数或学习治理状态。
 - L3 宏观象主题层已新增 `v17.macro.theme.v1`：财富、事业、感情、性格由插件碰撞生成主题激活度、置信度、证据、机会和风险；UI 在运势分析专题中枢展示，LLM 只能消费该结构化摘要，不得自行改写置信度或参数。
 - 主题解码器设计已明确：`macro_theme` 只做主题总览，后续财富、事业、感情、性格断言先由 `wealth_profile.v1` 等专题画像解出来源、承载、风险和证据，再交给领域专属 LLM prompt。
+- 财富画像第一阶段已落地 `modern.topic.wealth_profile.v1`：只读生成 `v17.topic.wealth_profile.v1`，输出显性度、可用状态、主通道、承载条件、风险和 LLM 边界；当前仅进入公开 meta、证据包和 canonical prompt，不生成财富断言。
 - 命理师身份通过 `auth_role_requests` 申请与审核，不再由注册入口直接授予。
 - 管理员可在 `/v17/admin` 管理成员权限、命理师申请、插件/参数/学习任务，以及学习治理链路。
 - Admin 学习治理面板已串起学习候选、审计、dry-run 实验队列、scorecard、发布审批和回滚记录。

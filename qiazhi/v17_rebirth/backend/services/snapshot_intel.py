@@ -19,6 +19,7 @@ _SNAPSHOT_PUBLIC_META_KEYS = (
     "climate_theme",
     "xiangfa_theme",
     "macro_theme",
+    "wealth_profile",
 )
 
 

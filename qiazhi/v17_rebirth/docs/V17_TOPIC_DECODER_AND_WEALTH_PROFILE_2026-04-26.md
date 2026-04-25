@@ -202,9 +202,18 @@ LLM 只消费 `wealth_profile.v1` 和必要的短证据，不直接自由解释�
 
 ## 9. 分阶段实施建议
 
-1. 文档阶段：确认 `topic_decoder` 架构和 `wealth_profile.v1` 合同。
-2. 解析阶段：实现只读 `wealth_profile` resolver，不接 LLM，不改 UI。
-3. 审计阶段：把 `wealth_profile` 暴露到证据链/幕后观察，先让命理师看结构是否合理。
+1. 文档阶段：确认 `topic_decoder` 架构和 `wealth_profile.v1` 合同。（已完成）
+2. 解析阶段：实现只读 `wealth_profile` resolver，不接 LLM，不改 UI。（已完成：`modern.topic.wealth_profile.v1`）
+3. 审计阶段：把 `wealth_profile` 暴露到证据链/幕后观察，先让命理师看结构是否合理。（已完成第一步：公开 meta、证据包和 canonical prompt 已可消费）
 4. Prompt 阶段：新增财富专属 prompt，让 LLM 只基于 `wealth_profile` 写财富断言。
 5. UI 阶段：在运势分析中增加“财富断言”专题入口，支持证据展开。
 6. 学习阶段：把命理师反馈和案例归入财富专题校准，不自动改参数。
+
+## 10. 第一阶段实现状态
+
+已新增只读插件 `modern.topic.wealth_profile.v1`：
+
+- `wealth_profile_core.resolve_wealth_profile` 负责从十神、体用、宏观象、格局事实、盲派、象法、调候和关系动力中生成 `v17.topic.wealth_profile.v1`。
+- 输出财富显性度、可用状态、主财富通道、优势、风险、矛盾、承接条件、触发观察点、证据、LLM 写作边界和学习 hooks。
+- 合成样本覆盖输出变现、财星忌侧且比劫竞争、食伤强而财弱的隐藏财富路径。
+- 该层仍不生成财富断言，不接专属 Prompt，不新增 UI 入口。

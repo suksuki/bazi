@@ -77,6 +77,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "宏观象·性格",
         "definition": "综合十神主轴、体态、表达和边界信号，输出性格画像的结构化摘要。",
     },
+    "modern.topic.wealth_profile.v1": {
+        "display_name": "财富画像解码器",
+        "definition": "从十神、体用、格局、盲派、象法、调候和关系动力中提取财富来源、可用状态、承载与风险。",
+    },
     "l1.physics.op_geography": {
         "display_name": "地理势场",
         "definition": "识别地支空间位势与分布结构对当前命局的势场影响。",

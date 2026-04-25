@@ -23,6 +23,7 @@ _FAMILY_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("relation_dynamics.runtime_origin", ("runtime", "流年", "大运", "运流", "触发")),
     ("ten_gods.calibration", ("ten_god", "十神", "比劫", "印星", "食伤", "财星", "官杀")),
     ("authority.leader_axis", ("use_god", "target_god", "用神", "忌神", "通关", "体用", "主轴")),
+    ("topic.wealth.profile", ("wealth_profile", "财富画像", "财富密码", "财富来源", "守财", "现金流")),
     ("macro_theme.calibration", ("macro", "宏观象", "财富", "事业", "感情", "性格", "relationship", "career", "wealth")),
     ("narrative.prompt_contract", ("narrative", "prompt", "llm", "断语", "文案", "表达")),
 )
@@ -34,6 +35,7 @@ _GOVERNANCE_FAMILY_MAP = {
     "blind_theme": "narrative.blind_theme",
     "xiangfa_theme": "narrative.xiangfa_theme",
     "macro_theme": "macro_theme.calibration",
+    "topic_decoder": "topic.wealth.profile",
     "risk_matrix": "risk_matrix.calibration",
     "narrative": "narrative.prompt_contract",
 }

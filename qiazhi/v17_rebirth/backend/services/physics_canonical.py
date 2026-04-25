@@ -13,6 +13,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import no
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import normalize_wealth_profile_meta
 from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
@@ -317,6 +318,51 @@ def _macro_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     digest = str(macro_theme.get("prompt_digest") or "").strip()
     if digest:
         rows.append("宏观象主线：" + digest)
+    return rows
+
+
+def _wealth_profile_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    wealth_profile = normalize_wealth_profile_meta(meta.get("wealth_profile"))
+    if not wealth_profile:
+        return []
+    rows = [
+        "财富画像合同：财富画像是 L3 专题解码层，只读微观事实、体用、格局、宏观象和关系动力；LLM 只能基于 wealth_profile 写财富断言，不得自行改写来源、风险或置信度。",
+    ]
+    score = _safe_float(wealth_profile.get("score"), 0.0)
+    confidence = _safe_float(wealth_profile.get("confidence"), 0.0)
+    risk = _safe_float(wealth_profile.get("risk"), 0.0)
+    stance = str(wealth_profile.get("stance") or "").strip()
+    visibility = str(wealth_profile.get("visibility") or "").strip()
+    usable = str(wealth_profile.get("usable_state") or "").strip()
+    rows.append(
+        "财富画像摘要："
+        f"激活{round(score * 100):.0f}%"
+        f"；置信{round(confidence * 100):.0f}%"
+        f"；风险{round(risk * 100):.0f}%"
+        + (f"；状态{stance}" if stance else "")
+        + (f"；显性{visibility}" if visibility else "")
+        + (f"；可用{usable}" if usable else "")
+    )
+    channels = wealth_profile.get("primary_channels") if isinstance(wealth_profile.get("primary_channels"), list) else []
+    channel_bits: List[str] = []
+    for row in channels[:3]:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label") or row.get("id") or "").strip()
+        channel_score = _safe_float(row.get("score"), 0.0)
+        if label:
+            channel_bits.append(f"{label}{round(channel_score * 100):.0f}%")
+    if channel_bits:
+        rows.append("财富主通道：" + "；".join(channel_bits))
+    risks = wealth_profile.get("risks") if isinstance(wealth_profile.get("risks"), list) else []
+    bridges = wealth_profile.get("bridge_requirements") if isinstance(wealth_profile.get("bridge_requirements"), list) else []
+    if risks:
+        rows.append("财富风险：" + "；".join(str(item).strip() for item in risks[:3] if str(item).strip()))
+    if bridges:
+        rows.append("财富承接条件：" + "；".join(str(item).strip() for item in bridges[:3] if str(item).strip()))
     return rows
 
 
@@ -730,6 +776,7 @@ class PhysicsCanonicalService:
         rows.extend(_climate_theme_prompt_lines(physics_tensor))
         rows.extend(_xiangfa_theme_prompt_lines(physics_tensor))
         rows.extend(_macro_theme_prompt_lines(physics_tensor))
+        rows.extend(_wealth_profile_prompt_lines(physics_tensor))
         rows.extend(_authority_axis_prompt_lines(physics_tensor))
         rows.extend(_blind_theme_prompt_lines(physics_tensor))
         rows.extend(_relation_summary_prompt_lines(physics_tensor))

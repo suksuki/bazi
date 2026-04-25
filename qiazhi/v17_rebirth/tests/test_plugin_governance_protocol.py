@@ -29,6 +29,11 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
         plugin_id="narrative_clip",
         causal_tier=2,
     )
+    topic = classify_plugin_governance(
+        plugin_id="modern.topic.wealth_profile.v1",
+        layer="L3",
+        causal_tier=2,
+    )
 
     assert ziping["authority_level"] == "level_1_hard"
     assert ziping["can_enter_authority"] is True
@@ -50,6 +55,10 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
     assert narrative["can_enter_authority"] is False
     assert narrative["learning_family"] == "narrative"
 
+    assert topic["governance_class"] == "topic_decoder"
+    assert topic["can_enter_authority"] is False
+    assert topic["output_contract"] == "topic_profile"
+
 
 def test_admin_registry_exposes_governance_profile() -> None:
     rows = registry_rows_for_admin()
@@ -62,6 +71,7 @@ def test_admin_registry_exposes_governance_profile() -> None:
     ziping = by_id["classical.ziping.god_ring_resolver.v1"]
     blind = by_id["classical.blind.work_axis.v1"]
     xiangfa = by_id["classical.xiangfa.semantic_mapping.v1"]
+    wealth_profile = by_id["modern.topic.wealth_profile.v1"]
 
     assert ziping["governance_profile"]["protocol"] == "v17.plugin_governance.v1"
     assert ziping["governance_class"] == "ziping_umbrella"
@@ -72,3 +82,6 @@ def test_admin_registry_exposes_governance_profile() -> None:
 
     assert xiangfa["governance_profile"]["can_enter_authority"] is False
     assert xiangfa["output_contract"] == "semantic_mapping"
+
+    assert wealth_profile["governance_profile"]["governance_class"] == "topic_decoder"
+    assert wealth_profile["learning_family"] == "topic_decoder"

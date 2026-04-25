@@ -31,6 +31,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import no
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import normalize_wealth_profile_meta
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import (
     _branch_dominant_ten_god,
     build_clash_stress_map,
@@ -672,6 +673,13 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 current_conf = float(current_macro.get("confidence") or -1.0)
                 if incoming_conf >= current_conf:
                     meta["macro_theme"] = incoming_macro
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("wealth_profile"), dict):
+                incoming_wealth_profile = normalize_wealth_profile_meta(f.meta.get("wealth_profile"))
+                current_wealth_profile = normalize_wealth_profile_meta(meta.get("wealth_profile"))
+                incoming_conf = float(incoming_wealth_profile.get("confidence") or 0.0)
+                current_conf = float(current_wealth_profile.get("confidence") or -1.0)
+                if incoming_conf >= current_conf:
+                    meta["wealth_profile"] = incoming_wealth_profile
             # 记录基础事实，以便后续 L2+ 插件可见
             pt["facts"].append({
                 "fact": str(f.text or "").strip(),
@@ -735,6 +743,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
             "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
+            "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
         },
     )
 
@@ -963,6 +972,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
             "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
+            "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
             "authority_layer_protocol_present": isinstance((meta.get("god_ring_authority") or {}).get("authority_layer_protocol"), dict),
         },
     )
