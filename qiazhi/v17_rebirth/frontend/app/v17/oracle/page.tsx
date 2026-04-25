@@ -60,12 +60,6 @@ function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
 }
 
-function confidencePercent(value: unknown): number {
-  const raw = Number(value || 0);
-  if (!Number.isFinite(raw) || raw <= 0) return 0;
-  return Math.round((raw <= 1 ? raw * 100 : raw));
-}
-
 function practitionerChoiceRows(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item))) : [];
 }
@@ -120,7 +114,7 @@ function buildPractitionerOverrideContext(
   if (!hasSelection) return undefined;
   return {
     contract: "v17.practitioner.override_context.v1",
-    source: "oracle_practitioner_choice_panel",
+    source: "oracle_six_pillars_panel",
     selections: selected,
   };
 }
@@ -2440,124 +2434,6 @@ function V17PractitionerLedgerPanel({
   );
 }
 
-function V17PractitionerChoicePanel({
-  ui,
-  term,
-  candidates,
-  selected,
-  onSelect,
-}: {
-  ui: LocalizeText;
-  term: TranslateText;
-  candidates: Record<string, unknown>;
-  selected: PractitionerChoiceState;
-  onSelect: (kind: PractitionerChoiceKind, id: string) => void;
-}) {
-  const selections = asLooseRecord(candidates.selections);
-  const rawGroups: Array<{ kind: PractitionerChoiceKind; label: string; rows: Array<Record<string, unknown>>; tone: string }> = [
-    {
-      kind: "pattern",
-      label: ui("格局", "Pattern", "격국"),
-      rows: practitionerChoiceRows(selections.pattern),
-      tone: "border-amber-300/20 bg-amber-400/10 text-amber-100",
-    },
-    {
-      kind: "use_god",
-      label: ui("用神", "Use god", "용신"),
-      rows: practitionerChoiceRows(selections.use_god),
-      tone: "border-emerald-300/20 bg-emerald-400/10 text-emerald-100",
-    },
-    {
-      kind: "taboo_god",
-      label: ui("忌神", "Taboo god", "기신"),
-      rows: practitionerChoiceRows(selections.taboo_god),
-      tone: "border-rose-300/20 bg-rose-400/10 text-rose-100",
-    },
-  ];
-  const groups = rawGroups.filter((group) => group.rows.length);
-
-  if (!groups.length) return null;
-
-  return (
-    <section className="rounded-2xl border border-cyan-500/20 bg-[linear-gradient(180deg,rgba(8,47,73,0.20),rgba(9,9,11,0.78))] p-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.22em] text-cyan-300">
-            {ui("命理师裁决覆盖", "Practitioner Choices", "명리사 선택")}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-cyan-50">
-            {ui("本次断语前提", "Reading premise", "이번 해석 전제")}
-          </p>
-        </div>
-        <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[10px] text-cyan-100">
-          {ui("只影响本次断语", "This reading only", "이번 해석만")}
-        </span>
-      </div>
-      <div className="grid gap-2 lg:grid-cols-3">
-        {groups.map((group) => {
-          const current = selectedPractitionerChoice(group.rows, selected[group.kind]);
-          return (
-            <div key={group.kind} className="rounded-xl border border-white/10 bg-black/20 p-2">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${group.tone}`}>
-                  {group.label}
-                </span>
-                {current ? (
-                  <span className="text-[10px] text-zinc-500">
-                    {confidencePercent(current.confidence)}%
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-                {group.rows.map((row) => {
-                  const id = String(row.id || "").trim();
-                  const active = current && String(current.id || "").trim() === id;
-                  const systemSelected = row.selected_by_system === true;
-                  const confidence = confidencePercent(row.confidence);
-                  return (
-                    <button
-                      key={id || `${group.kind}_${String(row.name || row.label)}`}
-                      type="button"
-                      onClick={() => onSelect(group.kind, id)}
-                      className={`min-h-10 shrink-0 rounded-lg border px-2 py-1.5 text-left transition lg:w-full ${
-                        active
-                          ? "border-cyan-300/45 bg-cyan-400/12 text-cyan-50"
-                          : "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-cyan-400/30 hover:text-cyan-50"
-                      }`}
-                    >
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="text-[12px] font-semibold">{term(String(row.label || row.name || ""))}</span>
-                        <span className="rounded-full border border-white/10 bg-black/25 px-1.5 py-0.5 text-[10px]">
-                          {confidence}%
-                        </span>
-                      </span>
-                      <span className="mt-1 flex flex-wrap gap-1 text-[9px] text-zinc-500">
-                        {systemSelected ? (
-                          <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-1.5 py-0.5 text-emerald-100">
-                            {ui("系统首选", "System", "시스템")}
-                          </span>
-                        ) : null}
-                        {!systemSelected && active ? (
-                          <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-1.5 py-0.5 text-cyan-100">
-                            {ui("命理师采用", "Chosen", "선택됨")}
-                          </span>
-                        ) : null}
-                        {String(row.scope || row.status || row.source || "").trim() ? (
-                          <span>{term(String(row.scope || row.status || row.source || "").trim())}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export default function OraclePage() {
   const router = useRouter();
   const { language, user, authLoading, logout, refreshAuth, access, ui, term, termList } = useV17Runtime();
@@ -3265,6 +3141,12 @@ export default function OraclePage() {
                     }
                     relationFormationSummary={relationFormationSummary}
                     relationDynamicsSummary={relationDynamicsSummary}
+                    practitionerChoiceCandidates={practitionerChoiceCandidates}
+                    practitionerChoices={practitionerChoices}
+                    canSelectPractitionerChoices={canUseProfessionalOracle}
+                    onPractitionerChoiceSelect={(kind, id) => {
+                      setPractitionerChoices((current) => ({ ...current, [kind]: id }));
+                    }}
                     birthTimeISO={s.birthTimeISO}
                     gender={s.natalGender}
                     calendarType={s.natalCalendar}
@@ -3274,17 +3156,6 @@ export default function OraclePage() {
                     detailMode="core"
                     lang={language}
                   />
-                  {canUseProfessionalOracle ? (
-                    <V17PractitionerChoicePanel
-                      ui={ui}
-                      term={term}
-                      candidates={practitionerChoiceCandidates}
-                      selected={practitionerChoices}
-                      onSelect={(kind, id) => {
-                        setPractitionerChoices((current) => ({ ...current, [kind]: id }));
-                      }}
-                    />
-                  ) : null}
                   </div>
                   ) : null}
                   <V17_PurpleVerdictCard

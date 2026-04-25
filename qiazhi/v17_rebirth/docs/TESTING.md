@@ -188,7 +188,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 
 - `/login` 与 `/register` 使用 `V17_AuthScreen`，桌面为品牌区 + 表单，手机为紧凑单列表单；语言切换、登录/注册切换和页面内必填错误必须多语言化。
 - 当前使用期 `/register` 不显示命理师申请入口，新账号直接进入 `practitioner`；历史 `user` 账号的命理师申请入口应放在 `/v17/oracle` 主页面空白位置，并进入用户权限面板由 manager/admin 批准或驳回。
-- 物理快照必须返回系统计算的 `v17.practitioner.choice_candidates.v1`：格局、用神、忌神候选均需带置信度和 `selected_by_system`；命理师覆盖选择只能生成本次断语的 `v17.practitioner.override_context.v1`，不得改参数或候选排序。
+- 物理快照必须返回系统计算的 `v17.practitioner.choice_candidates.v1`：格局、用神、忌神候选均需带置信度和 `selected_by_system`；命理师应在排盘页“体用中枢”原位选择覆盖项，且覆盖选择只能生成本次断语的 `v17.practitioner.override_context.v1`，不得改参数或候选排序。
 - 证据链面板应提供全部、强证据、候选、反例、边界、需复核筛选；手机端筛选控件必须可横向滚动，展开/收起数量应按当前筛选结果计算。
 - 证据链反馈 payload 应带 `v17.evidence.learning_material.v1` 学习素材契约；学习候选应保留 `learning_values / feedback_intents / learning_tags / boundary_tags`，但这些字段只能影响候选归因和审计排序，不能自动改参数。
 - 用户权限面板应展示命理师贡献画像：反馈数、案例数、基准候选数、贡献分和等级；没有贡献时不能伪造高可信标签。

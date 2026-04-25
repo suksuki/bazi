@@ -57,7 +57,7 @@ def normalize_practitioner_override_context(value: Any) -> dict[str, Any]:
     selections = raw.get("selections") if isinstance(raw.get("selections"), dict) else {}
     normalized = {
         "contract": OVERRIDE_CONTEXT_CONTRACT,
-        "source": str(raw.get("source") or "oracle_practitioner_choice_panel").strip(),
+        "source": str(raw.get("source") or "oracle_six_pillars_panel").strip(),
         "selections": {
             "pattern": _normalize_selected_candidate(selections.get("pattern"), "pattern"),
             "use_god": _normalize_selected_candidate(selections.get("use_god"), "use_god"),

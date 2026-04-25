@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { t, translateTerm, translateTermList, type AppLanguage } from "@/lib/i18n";
 
 type Pillar = { stem: string; branch: string };
@@ -125,6 +126,9 @@ type LedgerEntry = {
   delta?: number;
   val?: number;
 };
+
+type PractitionerChoiceKind = "pattern" | "use_god" | "taboo_god";
+type PractitionerChoiceState = Partial<Record<PractitionerChoiceKind, string>>;
 
 /** 解析后端/表单传来的出生时刻：无时区后缀时按本地墙钟理解，与 NatalInput 一致。 */
 export function parseBirthTimeLocal(iso: string | undefined): Date | null {
@@ -351,6 +355,36 @@ function signed(value: number): string {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 }
 
+function asLooseRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function practitionerChoiceRows(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+    : [];
+}
+
+function choiceConfidencePercent(row: Record<string, unknown>): number {
+  const direct = Number(row.confidence_percent);
+  if (Number.isFinite(direct) && direct > 0) return Math.round(direct);
+  const confidence = Number(row.confidence || 0);
+  if (!Number.isFinite(confidence) || confidence <= 0) return 0;
+  return Math.round(confidence <= 1 ? confidence * 100 : confidence);
+}
+
+function selectedPractitionerChoice(
+  rows: Array<Record<string, unknown>>,
+  selectedId: string | undefined,
+): Record<string, unknown> | undefined {
+  if (!rows.length) return undefined;
+  if (selectedId) {
+    const found = rows.find((row) => String(row.id || "").trim() === selectedId);
+    if (found) return found;
+  }
+  return rows.find((row) => row.selected_by_system === true) || rows[0];
+}
+
 type RelationFormationRow = {
   formationLabel: string;
   formationPercent: number;
@@ -545,6 +579,10 @@ export function V17_SixPillarsPanel({
   projectionBridgeProtocol,
   relationFormationSummary,
   relationDynamicsSummary,
+  practitionerChoiceCandidates,
+  practitionerChoices = {},
+  canSelectPractitionerChoices = false,
+  onPractitionerChoiceSelect,
   birthTimeISO,
   gender,
   calendarType,
@@ -569,6 +607,10 @@ export function V17_SixPillarsPanel({
   projectionBridgeProtocol?: ProjectionBridgeProtocol;
   relationFormationSummary?: Array<Record<string, unknown>>;
   relationDynamicsSummary?: Array<Record<string, unknown>>;
+  practitionerChoiceCandidates?: Record<string, unknown>;
+  practitionerChoices?: PractitionerChoiceState;
+  canSelectPractitionerChoices?: boolean;
+  onPractitionerChoiceSelect?: (kind: PractitionerChoiceKind, id: string) => void;
   birthTimeISO?: string;
   gender?: "male" | "female";
   calendarType?: "solar" | "lunar";
@@ -601,6 +643,21 @@ export function V17_SixPillarsPanel({
   const tongguanGods = Array.isArray(godRingInfo?.tongguan_gods)
     ? godRingInfo?.tongguan_gods.map((item) => String(item || "").trim()).filter(Boolean)
     : [];
+  const choiceSelections = asLooseRecord(practitionerChoiceCandidates?.selections);
+  const canChoosePractitionerCandidate = canSelectPractitionerChoices && Boolean(onPractitionerChoiceSelect);
+  const practitionerChoiceRowsByKind: Record<PractitionerChoiceKind, Array<Record<string, unknown>>> = {
+    pattern: practitionerChoiceRows(choiceSelections.pattern),
+    use_god: practitionerChoiceRows(choiceSelections.use_god),
+    taboo_god: practitionerChoiceRows(choiceSelections.taboo_god),
+  };
+  const selectedChoicesByKind: Partial<Record<PractitionerChoiceKind, Record<string, unknown> | undefined>> = {
+    pattern: selectedPractitionerChoice(practitionerChoiceRowsByKind.pattern, practitionerChoices.pattern),
+    use_god: selectedPractitionerChoice(practitionerChoiceRowsByKind.use_god, practitionerChoices.use_god),
+    taboo_god: selectedPractitionerChoice(practitionerChoiceRowsByKind.taboo_god, practitionerChoices.taboo_god),
+  };
+  const activeUseGodName = String(selectedChoicesByKind.use_god?.name || selectedChoicesByKind.use_god?.label || useGods[0] || "").trim();
+  const activeTabooGodName = String(selectedChoicesByKind.taboo_god?.name || selectedChoicesByKind.taboo_god?.label || tabooGods[0] || "").trim();
+  const activePatternName = String(selectedChoicesByKind.pattern?.name || selectedChoicesByKind.pattern?.label || patternLeaderRow.name || "").trim();
   const confidence = Number(godRingInfo?.confidence || 0);
   const pathCount = Number(godRingInfo?.core_path_count || 0);
   const mode = String(godRingInfo?.mode || "").trim();
@@ -681,27 +738,28 @@ export function V17_SixPillarsPanel({
     }
     return chips.slice(0, 3);
   };
-  const useMetricChips = authorityMode ? buildAuthorityMetricChips(useGods[0]) : [];
-  const tabooMetricChips = authorityMode ? buildAuthorityMetricChips(tabooGods[0]) : [];
+  const useMetricChips = authorityMode ? buildAuthorityMetricChips(activeUseGodName) : [];
+  const tabooMetricChips = authorityMode ? buildAuthorityMetricChips(activeTabooGodName) : [];
   const tongguanMetricChips = authorityMode ? buildAuthorityMetricChips(tongguanGods[0]) : [];
-  const patternMetricChips = patternLeaderRow.name
+  const patternChoiceRow = selectedChoicesByKind.pattern;
+  const patternMetricChips = activePatternName
     ? [
         {
-          label: `${ui("置信", "Confidence", "신뢰도")} ${Math.round(Number(patternLeaderRow.confidence || 0) * 100)}%`,
+          label: `${ui("置信", "Confidence", "신뢰도")} ${choiceConfidencePercent(patternChoiceRow || { confidence: patternLeaderRow.confidence || 0 })}%`,
           tone: "text-amber-100 border-amber-400/20 bg-amber-950/35",
         },
-        ...(patternLeaderRow.statusLabel
+        ...(String(patternChoiceRow?.status || patternLeaderRow.statusLabel || "").trim()
           ? [
               {
-                label: translateTerm(lang, String(patternLeaderRow.statusLabel)),
+                label: translateTerm(lang, String(patternChoiceRow?.status || patternLeaderRow.statusLabel || "")),
                 tone: "text-zinc-100 border-zinc-700 bg-zinc-950/70",
               },
             ]
           : []),
-        ...(patternLeaderRow.scope
+        ...(String(patternChoiceRow?.scope || patternLeaderRow.scope || "").trim()
           ? [
               {
-                label: translateTerm(lang, String(patternLeaderRow.scope)),
+                label: translateTerm(lang, String(patternChoiceRow?.scope || patternLeaderRow.scope || "")),
                 tone: "text-zinc-200 border-zinc-700 bg-black/20",
               },
             ]
@@ -737,6 +795,88 @@ export function V17_SixPillarsPanel({
       : calendarType === "solar"
         ? t(lang, "natal.calendar.solar")
         : "—";
+  const practitionerChoiceCount =
+    practitionerChoiceRowsByKind.pattern.length +
+    practitionerChoiceRowsByKind.use_god.length +
+    practitionerChoiceRowsByKind.taboo_god.length;
+  const renderFallbackGodChips = (
+    gods: string[],
+    tone: "emerald" | "rose" | "cyan" | "amber",
+    emptyLabel: string,
+  ) => {
+    const toneClass =
+      tone === "emerald"
+        ? "border-emerald-300/25 bg-emerald-950/35 text-emerald-100"
+        : tone === "rose"
+          ? "border-rose-300/25 bg-rose-950/35 text-rose-100"
+          : tone === "cyan"
+            ? "border-cyan-300/25 bg-cyan-950/35 text-cyan-100"
+            : "border-amber-300/25 bg-amber-950/35 text-amber-100";
+    if (authorityMode && gods.length) {
+      return gods.map((god) => (
+        <span key={god} className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass}`}>
+          {translateTerm(lang, god)}
+        </span>
+      ));
+    }
+    return (
+      <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+        {translateTerm(lang, emptyLabel)}
+      </span>
+    );
+  };
+  const renderPractitionerChoiceChips = (
+    kind: PractitionerChoiceKind,
+    rowsForKind: Array<Record<string, unknown>>,
+    tone: "emerald" | "rose" | "amber",
+    fallback: () => ReactNode,
+  ) => {
+    if (!canChoosePractitionerCandidate || !rowsForKind.length || !onPractitionerChoiceSelect) {
+      return fallback();
+    }
+    const selectedRow = selectedChoicesByKind[kind];
+    const selectedId = practitionerChoices[kind];
+    return rowsForKind.map((row) => {
+      const id = String(row.id || "").trim();
+      const name = String(row.label || row.name || "").trim();
+      if (!id || !name) return null;
+      const active = String(selectedRow?.id || "").trim() === id;
+      const manuallySelected = selectedId === id;
+      const systemSelected = row.selected_by_system === true;
+      const toneClass =
+        tone === "emerald"
+          ? active
+            ? "border-emerald-200/55 bg-emerald-300/15 text-emerald-50"
+            : "border-emerald-300/20 bg-emerald-950/25 text-emerald-100 hover:border-emerald-200/45 hover:bg-emerald-400/12"
+          : tone === "rose"
+            ? active
+              ? "border-rose-200/55 bg-rose-300/15 text-rose-50"
+              : "border-rose-300/20 bg-rose-950/25 text-rose-100 hover:border-rose-200/45 hover:bg-rose-400/12"
+            : active
+              ? "border-amber-200/55 bg-amber-300/15 text-amber-50"
+              : "border-amber-300/20 bg-amber-950/25 text-amber-100 hover:border-amber-200/45 hover:bg-amber-400/12";
+      return (
+        <button
+          key={id}
+          type="button"
+          aria-pressed={active}
+          title={String(row.reason || row.source || "").trim() || undefined}
+          onClick={() => onPractitionerChoiceSelect(kind, id)}
+          className={`inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${toneClass}`}
+        >
+          <span className="truncate">{translateTerm(lang, name)}</span>
+          <span className="rounded-full border border-white/10 bg-black/25 px-1.5 py-0 text-[9px] font-medium text-current/80">
+            {choiceConfidencePercent(row)}%
+          </span>
+          {manuallySelected || systemSelected ? (
+            <span className="rounded-full border border-white/10 bg-white/[0.06] px-1.5 py-0 text-[9px] font-medium text-current/75">
+              {manuallySelected ? ui("已选", "Chosen", "선택") : ui("系统", "System", "시스템")}
+            </span>
+          ) : null}
+        </button>
+      );
+    });
+  };
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-violet-500/35 bg-gradient-to-br from-violet-900/20 via-zinc-950/90 to-zinc-900/80 p-4 shadow-[0_0_24px_rgba(124,58,237,0.25)]">
@@ -850,22 +990,19 @@ export function V17_SixPillarsPanel({
                 {t(lang, "god_ring.path", { count: pathCount })}
               </span>
             ) : null}
+            {canChoosePractitionerCandidate && practitionerChoiceCount > 0 ? (
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 text-cyan-100/90">
+                {ui("可点选本次断语前提", "Selectable premise", "전제 선택 가능")}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="grid gap-2 px-3 py-2.5 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">{t(lang, "god_ring.use")}</p>
             <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
-              {authorityMode && useGods.length ? (
-                useGods.map((god) => (
-                  <span key={god} className="rounded-full border border-emerald-300/25 bg-emerald-950/35 px-2 py-0.5 text-[11px] font-semibold text-emerald-100">
-                    {translateTerm(lang, god)}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
-                  {translateTerm(lang, "等待裁决")}
-                </span>
+              {renderPractitionerChoiceChips("use_god", practitionerChoiceRowsByKind.use_god, "emerald", () =>
+                renderFallbackGodChips(useGods, "emerald", "等待裁决"),
               )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -879,16 +1016,8 @@ export function V17_SixPillarsPanel({
           <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 p-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-200/80">{t(lang, "god_ring.taboo")}</p>
             <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
-              {authorityMode && tabooGods.length ? (
-                tabooGods.map((god) => (
-                  <span key={god} className="rounded-full border border-rose-300/25 bg-rose-950/35 px-2 py-0.5 text-[11px] font-semibold text-rose-100">
-                    {translateTerm(lang, god)}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
-                  {translateTerm(lang, "等待裁决")}
-                </span>
+              {renderPractitionerChoiceChips("taboo_god", practitionerChoiceRowsByKind.taboo_god, "rose", () =>
+                renderFallbackGodChips(tabooGods, "rose", "等待裁决"),
               )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -925,14 +1054,18 @@ export function V17_SixPillarsPanel({
           <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">{t(lang, "god_ring.pattern")}</p>
             <div className="mt-1.5 flex min-h-[28px] flex-wrap gap-1.5">
-              {patternLeaderRow.name ? (
-                <span className="rounded-full border border-amber-300/25 bg-amber-950/35 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
-                  {translateTerm(lang, patternLeaderRow.name)}
-                </span>
-              ) : (
-                <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
-                  {translateTerm(lang, "等待稳定格局")}
-                </span>
+              {renderPractitionerChoiceChips("pattern", practitionerChoiceRowsByKind.pattern, "amber", () =>
+                activePatternName
+                  ? (
+                      <span className="rounded-full border border-amber-300/25 bg-amber-950/35 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
+                        {translateTerm(lang, activePatternName)}
+                      </span>
+                    )
+                  : (
+                      <span className="rounded-full border border-zinc-700 bg-zinc-950/70 px-2 py-0.5 text-[10px] text-zinc-300">
+                        {translateTerm(lang, "等待稳定格局")}
+                      </span>
+                    ),
               )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
