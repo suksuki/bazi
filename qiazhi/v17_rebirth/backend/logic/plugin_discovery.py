@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from v17_rebirth.backend.plugins.spec import V17Decision, V17Fact, V17PluginSpec
 from v17_rebirth.backend.services.decision_compiler import infer_decision_hint
 from v17_rebirth.backend.services.pattern_confidence import derive_pattern_confidence
+from v17_rebirth.backend.services.evidence_bundle import compact_fact_meta
 from v17_rebirth.backend.services.plugin_display import plugin_display_profile
 from v17_rebirth.backend.services.plugin_governance import classify_plugin_governance
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
@@ -285,12 +286,15 @@ def collect_pending_decisions_from_specs(facts: List[V17Fact]) -> List[V17Decisi
 
 
 def v17_fact_to_row(f: V17Fact) -> Dict[str, Any]:
+    meta = dict(f.meta or {}) if isinstance(f.meta, dict) else {}
     return {
         "plugin": f.plugin_id,
+        "plugin_id": f.plugin_id,
         "fact": f.text,
         "label": f.decision_hint or f.text,
         "weight": float(f.salience_weight or 0.0),
         "priority": float(f.priority or 0.0),
+        **compact_fact_meta(meta),
     }
 
 

@@ -8,6 +8,8 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   ChevronUp,
+  FileSearch,
+  ListChecks,
   Network,
   ScrollText,
   ShieldAlert,
@@ -788,6 +790,216 @@ function deriveLivePatternCandidates(
     .sort((a, b) => b.confidence - a.confidence);
 }
 
+function evidenceKindLabel(kind: string, ui: LocalizeText): string {
+  const key = kind.trim();
+  if (key === "pattern") return ui("格局", "Pattern", "격국");
+  if (key === "risk") return ui("风险", "Risk", "위험");
+  if (key === "work") return ui("做功", "Work", "작용");
+  if (key === "climate") return ui("调候", "Climate", "조후");
+  if (key === "semantic") return ui("象法", "Semantic", "상법");
+  return ui("诊断", "Diagnostic", "진단");
+}
+
+function evidenceKindTone(kind: string): string {
+  if (kind === "pattern") return "border-violet-400/25 bg-violet-500/10 text-violet-100";
+  if (kind === "risk") return "border-rose-400/25 bg-rose-500/10 text-rose-100";
+  if (kind === "work") return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
+  if (kind === "climate") return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+  if (kind === "semantic") return "border-fuchsia-400/25 bg-fuchsia-500/10 text-fuchsia-100";
+  return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
+}
+
+function evidenceDetailLabel(key: string, ui: LocalizeText): string {
+  const labels: Record<string, string> = {
+    work_evidence: ui("做功路径", "Work path", "작용 경로"),
+    static_basis: ui("静态依据", "Static basis", "정적 근거"),
+    zaqi_evidence: ui("杂气证据", "Mixed-Qi evidence", "잡기 근거"),
+    follow_evidence: ui("从格证据", "Follow evidence", "종격 근거"),
+    self_party_evidence: ui("身党证据", "Self-party evidence", "신강 근거"),
+    structure_evidence: ui("结构证据", "Structure evidence", "구조 근거"),
+    blade_branch: ui("羊刃支", "Blade branch", "양인 지지"),
+    blade_scopes: ui("羊刃位置", "Blade scopes", "양인 위치"),
+    runtime_blade_scopes: ui("运限羊刃", "Runtime blade", "운한 양인"),
+    pattern_scope_label: ui("来源层", "Source scope", "출처 층"),
+    pattern_break_risks: ui("破格风险", "Break risks", "파격 위험"),
+    pattern_gate: ui("成格门", "Formation gate", "성격 문"),
+    pattern_gate_reason: ui("成格说明", "Gate reason", "성격 설명"),
+    origin_type: ui("来源类型", "Origin", "출처"),
+    manifestation_state: ui("显化态", "State", "현현 상태"),
+  };
+  return labels[key] || key.replace(/_/g, " ");
+}
+
+function percentText(value: unknown): string {
+  const raw = asNumberValue(value);
+  if (!raw) return "";
+  return `${Math.round((raw <= 1 ? raw * 100 : raw))}%`;
+}
+
+function compactEvidenceValue(value: unknown, term: TranslateText): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => compactEvidenceValue(item, term))
+      .filter(Boolean)
+      .slice(0, 4)
+      .join(" / ");
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .map(([key, raw]) => {
+        const compact = compactEvidenceValue(raw, term);
+        return compact ? `${key}: ${compact}` : "";
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+    return entries.join(" · ");
+  }
+  const text = String(value ?? "").trim();
+  return text ? term(text) : "";
+}
+
+function V17EvidencePanel({
+  ui,
+  term,
+  items,
+  summary,
+}: {
+  ui: LocalizeText;
+  term: TranslateText;
+  items: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visibleItems = (expanded ? items.slice(0, 12) : items.slice(0, 4));
+  const total = asNumberValue(summary.total, items.length);
+  const candidateCount = asNumberValue(summary.candidate_count);
+  const riskCount = asNumberValue(summary.risk_count);
+  const observeOnlyCount = asNumberValue(summary.observe_only_count);
+
+  if (!items.length) {
+    return (
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+          <FileSearch className="h-4 w-4 text-cyan-200" />
+          {ui("证据链", "Evidence Chain", "근거 체인")}
+        </div>
+        <p className="mt-2 text-[12px] leading-5 text-zinc-500">
+          {ui(
+            "等待插件输出可核验依据；出现格局、风险或做功链后会在这里汇总。",
+            "Waiting for verifiable plugin evidence. Pattern, risk, and work-path evidence will appear here.",
+            "검증 가능한 플러그인 근거를 기다리는 중입니다. 격국, 위험, 작용 경로 근거가 여기에 모입니다.",
+          )}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-2xl border border-cyan-500/15 bg-[linear-gradient(180deg,rgba(8,13,21,0.96),rgba(12,10,24,0.82))] p-4 shadow-[0_18px_70px_rgba(8,47,73,0.16)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-2 text-cyan-100">
+              <FileSearch className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-zinc-50">{ui("证据链", "Evidence Chain", "근거 체인")}</p>
+              <p className="mt-0.5 text-[12px] text-zinc-500">
+                {ui("把断语背后的插件、条件与置信度摊开。", "Expose the plugin, condition, and confidence behind each judgement.", "판단 뒤의 플러그인, 조건, 신뢰도를 펼칩니다.")}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5 text-center sm:flex sm:flex-wrap sm:justify-end">
+          {[
+            [ui("总数", "Total", "합계"), total],
+            [ui("格局", "Pattern", "격국"), candidateCount],
+            [ui("风险", "Risk", "위험"), riskCount],
+            [ui("观察", "Watch", "관찰"), observeOnlyCount],
+          ].map(([label, value]) => (
+            <span key={String(label)} className="rounded-xl border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[11px] text-zinc-300">
+              <b className="mr-1 text-zinc-50">{String(value)}</b>
+              {String(label)}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {visibleItems.map((item, index) => {
+          const kind = String(item.evidence_type || "diagnostic").trim();
+          const details = asLooseRecord(item.details);
+          const detailKeys = asStringList(item.detail_keys);
+          const confidence = percentText(item.confidence);
+          const matchRatio = percentText(item.match_ratio);
+          const target = String(item.target_god || "").trim();
+          const source = String(item.source_plugin || "").trim().replace(/^classical\./, "");
+          const title = String(item.title || item.summary || "").trim();
+          const summaryText = String(item.summary || "").trim();
+          return (
+            <article key={`${String(item.evidence_id || item.claim_id || title)}_${index}`} className="rounded-xl border border-white/10 bg-[#0B0F16]/85 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${evidenceKindTone(kind)}`}>
+                      {evidenceKindLabel(kind, ui)}
+                    </span>
+                    {target ? (
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-100">
+                        {term(target)}
+                      </span>
+                    ) : null}
+                    {item.observe_only ? (
+                      <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-100">
+                        {ui("观察", "Watch", "관찰")}
+                      </span>
+                    ) : null}
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold leading-5 text-zinc-50">{term(title)}</h3>
+                </div>
+                <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200/80" />
+              </div>
+              <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-zinc-400">{summaryText}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-zinc-400">
+                {confidence ? <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">{ui("置信", "Conf", "신뢰")} {confidence}</span> : null}
+                {matchRatio ? <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">{ui("命中", "Match", "적중")} {matchRatio}</span> : null}
+                {source ? <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5">{source}</span> : null}
+              </div>
+              {detailKeys.length ? (
+                <details className="group mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-2">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] text-zinc-300">
+                    <span>{ui("查看依据", "View evidence", "근거 보기")}</span>
+                    <ChevronDown className="h-3.5 w-3.5 text-zinc-500 transition group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2">
+                    {Object.entries(details).slice(0, 5).map(([key, value]) => (
+                      <div key={key} className="rounded-lg bg-black/20 px-2 py-1.5">
+                        <p className="text-[10px] text-zinc-500">{evidenceDetailLabel(key, ui)}</p>
+                        <p className="mt-0.5 text-[11px] leading-5 text-zinc-200">{compactEvidenceValue(value, term)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+      {items.length > visibleItems.length ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] font-semibold text-zinc-200 transition hover:border-cyan-400/30 hover:text-cyan-50 sm:w-auto"
+        >
+          {expanded
+            ? ui("收起证据链", "Collapse evidence", "근거 접기")
+            : ui(`展开更多证据（${items.length - visibleItems.length}）`, `Show more evidence (${items.length - visibleItems.length})`, `근거 더 보기 (${items.length - visibleItems.length})`)}
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 export default function OraclePage() {
   const router = useRouter();
   const { language, user, authLoading, logout, access, ui, term, termList } = useV17Runtime();
@@ -852,7 +1064,16 @@ export default function OraclePage() {
       : undefined;
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
   const meta = payload.meta && typeof payload.meta === "object" ? payload.meta as Record<string, unknown> : {};
-  const pluginClaims = Array.isArray(meta.plugin_claims) ? meta.plugin_claims as Array<Record<string, unknown>> : [];
+  const pluginsPayload = asLooseRecord(payload.plugins);
+  const pluginRows = Array.isArray(pluginsPayload.rows) ? pluginsPayload.rows as Array<Record<string, unknown>> : [];
+  const pluginClaims = Array.isArray(pluginsPayload.claims)
+    ? pluginsPayload.claims as Array<Record<string, unknown>>
+    : Array.isArray(meta.plugin_claims)
+      ? meta.plugin_claims as Array<Record<string, unknown>>
+      : [];
+  const evidenceBundle = asLooseRecord(payload.evidence_bundle);
+  const evidenceItems = Array.isArray(evidenceBundle.items) ? evidenceBundle.items as Array<Record<string, unknown>> : [];
+  const evidenceSummary = asLooseRecord(evidenceBundle.summary);
   const relationFormationSummary = Array.isArray(energyMeta.relation_formation_summary)
     ? energyMeta.relation_formation_summary as Array<Record<string, unknown>>
     : [];
@@ -871,7 +1092,7 @@ export default function OraclePage() {
   const xiangfaTheme = meta.xiangfa_theme && typeof meta.xiangfa_theme === "object"
     ? meta.xiangfa_theme as Record<string, unknown>
     : {};
-  const livePatternCandidates = deriveLivePatternCandidates(allRows, pluginClaims);
+  const livePatternCandidates = deriveLivePatternCandidates([...allRows, ...pluginRows], pluginClaims);
   const patternLeader = livePatternCandidates[0];
   const patternRunners = livePatternCandidates.slice(1, 4);
   const activePatternScopes = Array.from(new Set(livePatternCandidates.map((item) => item.scope).filter(Boolean))).slice(0, 5);
@@ -953,7 +1174,7 @@ export default function OraclePage() {
   const xiangfaSemantic = asStringList(xiangfaTheme.semantic_mapping);
   const xiangfaEvidence = asStringList(xiangfaTheme.evidence);
   const xiangfaTopics = asStringList(xiangfaTheme.source_topics);
-  const riskRows = [...pluginClaims, ...allRows].filter((row) => {
+  const riskRows = [...pluginClaims, ...pluginRows, ...allRows].filter((row) => {
     const key = normalizePluginKey(row.plugin_id || row.source);
     const label = decisionPluginLabel(row);
     return key.includes("risk") || key.includes("break_guard") || label.includes("风险") || label.includes("破格");
@@ -1346,6 +1567,12 @@ export default function OraclePage() {
                     llmStatusDetail={s.llmStatusDetail}
                     llmLifecyclePhase={s.llmLifecyclePhase}
                     lang={language}
+                  />
+                  <V17EvidencePanel
+                    ui={ui}
+                    term={term}
+                    items={evidenceItems}
+                    summary={evidenceSummary}
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
                     <p className="text-xs text-zinc-400">

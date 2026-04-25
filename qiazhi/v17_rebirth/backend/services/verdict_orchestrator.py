@@ -17,6 +17,7 @@ from v17_rebirth.backend.services.decision_intel import (
     build_decision_arbitration,
 )
 from v17_rebirth.backend.services.decision_batches import build_decision_batches
+from v17_rebirth.backend.services.evidence_bundle import build_evidence_bundle
 from v17_rebirth.backend.services.god_ring_authority import resolve_god_ring_authority
 from v17_rebirth.backend.services.narrative_intel import (
     build_fact_fragments,
@@ -142,6 +143,7 @@ class VerdictOrchestrator:
         pt = raw_physics if isinstance(raw_physics, dict) else {}
         spec_facts = logic_pd.collect_all_spec_facts_and_record(pt)
         plugin_rows = sorted([v17_fact_to_row(f) for f in spec_facts], key=lambda row: float(row.get("weight", 0.0)), reverse=True)
+        evidence_bundle = build_evidence_bundle(spec_facts, physics_tensor=pt)
         plugin_facts = [str(x.get("fact", "")).strip() for x in plugin_rows if str(x.get("fact", "")).strip()]
         plugin_hits = sorted({str(x.get("plugin", "")).strip() for x in plugin_rows if str(x.get("plugin", "")).strip()})
         arbitration = build_decision_arbitration(raw_physics=raw_physics, spec_facts=spec_facts)
@@ -162,6 +164,7 @@ class VerdictOrchestrator:
             plugin_rows=plugin_rows,
             plugin_hits=list(plugin_hits),
             plugin_facts=plugin_facts,
+            evidence_bundle=evidence_bundle,
             sorted_fact_rows=sorted_fact_rows,
             claim_conflict_graph=claim_conflict_graph,
             causal_anchor=causal_anchor,

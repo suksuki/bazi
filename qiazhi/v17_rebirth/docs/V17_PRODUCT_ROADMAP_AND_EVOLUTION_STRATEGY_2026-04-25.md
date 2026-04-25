@@ -137,6 +137,12 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 用户看到“羊刃制杀”时，能看到羊刃在哪里、七杀在哪里、是否只是候选。
 - 没有 evidence 的结论不能作为强断语展示。
 
+当前落地：
+
+- `v17.evidence.bundle.v1` 已作为后端快照协议接入，统一汇总 pattern / risk / work / climate / semantic 等插件证据。
+- 命盘核心页已接入 `EvidencePanel`，桌面端可展开证据，手机端默认以摘要卡片展示并折叠细节。
+- 快照前端读取已切换到 `payload.plugins.claims` 与 `payload.evidence_bundle`，避免 claim/evidence 因位置不一致而丢失。
+
 ### P2：命理师反馈闭环
 
 目标：让命理师可以对 evidence 和 claim 做结构化反馈。

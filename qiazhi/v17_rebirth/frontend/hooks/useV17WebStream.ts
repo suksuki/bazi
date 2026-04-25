@@ -141,12 +141,18 @@ export type V17Frame = {
     plugins?: {
       hits?: unknown[];
       rows?: Array<Record<string, unknown>>;
+      evidence?: Array<Record<string, unknown>>;
       statuses?: Array<Record<string, unknown>>;
       claims?: Array<Record<string, unknown>>;
       conflicts?: Array<Record<string, unknown>>;
       conflict_resolutions?: Array<Record<string, unknown>>;
       knowledge_snapshot?: Record<string, unknown>;
       brain_action_queue?: Array<Record<string, unknown>>;
+    };
+    evidence_bundle?: {
+      contract?: string;
+      summary?: Record<string, unknown>;
+      items?: Array<Record<string, unknown>>;
     };
     decision_brain_state?: {
       plan_queue?: Array<{

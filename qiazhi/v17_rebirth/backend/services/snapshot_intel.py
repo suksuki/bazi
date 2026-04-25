@@ -124,6 +124,7 @@ def build_snapshot_payload(
     claim_conflict_graph: Dict[str, Any],
     causal_anchor: str,
     trace_index_builder: Callable[[Dict[str, Any]], Dict[str, Any]],
+    evidence_bundle: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     decisions = arbitration.get("manual_decisions", [])
     auto_resolutions = arbitration.get("auto_resolutions", []) if isinstance(arbitration.get("auto_resolutions"), list) else []
@@ -154,6 +155,12 @@ def build_snapshot_payload(
     meta = pt.get("meta") or {}
     if not isinstance(meta, dict):
         meta = {}
+    evidence_payload = (
+        dict(evidence_bundle)
+        if isinstance(evidence_bundle, dict)
+        else {"contract": "v17.evidence.bundle.v1", "summary": {"total": 0}, "items": []}
+    )
+    evidence_items = evidence_payload.get("items") if isinstance(evidence_payload.get("items"), list) else []
 
     inner: Dict[str, Any] = {
         "snapshot_kind": "physics",
@@ -194,9 +201,11 @@ def build_snapshot_payload(
         "pending_decisions": decisions,
         "facts": fact_rows,
         "fact_rows": sorted_fact_rows[:160],
+        "evidence_bundle": evidence_payload,
         "plugins": {
             "hits": list(plugin_hits),
             "rows": plugin_rows[:128],
+            "evidence": list(evidence_items)[:128],
             "statuses": list((meta.get("plugin_execution_status") or []))[:128],
             "claims": list((meta.get("plugin_claims") or []))[:128],
             "conflicts": list((meta.get("plugin_conflicts") or []))[:128],
