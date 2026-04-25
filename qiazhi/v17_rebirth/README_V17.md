@@ -63,6 +63,7 @@
 - 授权控制：`admin / manager / practitioner / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API；`user` 只看简明断语，`practitioner` 进入专业证据链工作台。
 - 命理师准入：注册默认创建 `user`；用户可提交命理师申请，`manager / admin` 在用户权限面板审核后才授予 `practitioner`。
 - 命理师贡献画像：用户权限面板汇总 feedback / case / benchmark / contribution score；学习候选会读取贡献等级调整人工复核优先级，但不会自动修改参数。
+- 学习治理审计：manager/admin 可对学习候选写入 `watch / approved_for_experiment / rejected` 审计意见；准入实验不等于发布或调参。
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
 - 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库 -> 学习候选”的 P1-P4 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选，系统会把反馈和案例归因为只读的 `manual_review_required` 学习候选。

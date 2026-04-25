@@ -226,6 +226,7 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 每个候选输出 `signal_score / priority / recommended_action / safety_gate / review_hints`，并保留来源插件、证据 ID、案例 key 和错判标签。
 - 专业工作台“命理师账本”已展示学习候选摘要；候选只进入 `manual_review_required` 队列，不会自动修改运行时参数。
 - 学习候选已读取 `practitioner_contribution` 作为 reputation multiplier：贡献等级会影响候选分数、优先级与人工复核排序，并在账本 UI 中展示贡献等级来源。
+- `practitioner_learning_reviews` 已记录 manager/admin 对学习候选的审计意见，状态只允许 `watch / approved_for_experiment / rejected`；准入实验只代表可进入 shadow run，不会直接应用参数。
 
 ### P5：学习治理与进化发布
 
@@ -235,13 +236,18 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 
 - 参数候选版本化。
 - 回归报告。
-- 命理师审计意见。
+- 命理师与管理端审计意见。
 - admin 批准。
 - 回滚机制。
 
 验收：
 
 - 每次系统进化都有来源、理由、测试、审计和回滚路径。
+
+当前落地：
+
+- 学习候选已有审计留痕接口 `/v17/auth/practitioner-learning-reviews`。
+- `approved_for_experiment` 只准入实验队列，仍需 synthetic + practitioner benchmark 与后续发布审批。
 
 ### P6：产品化分层
 

@@ -1598,6 +1598,13 @@ function learningPriorityTone(priority: string): string {
   return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
 }
 
+function learningReviewStatusLabel(status: string, ui: LocalizeText): string {
+  if (status === "approved_for_experiment") return ui("已准入实验", "Experiment approved", "실험 승인");
+  if (status === "rejected") return ui("已驳回", "Rejected", "거절됨");
+  if (status === "watch") return ui("继续观察", "Watching", "관찰 중");
+  return ui("未审计", "Unreviewed", "미검토");
+}
+
 function contributionTierLabel(tier: string, ui: LocalizeText): string {
   if (tier === "anchor") return ui("锚点贡献者", "Anchor", "앵커 기여자");
   if (tier === "active") return ui("活跃贡献者", "Active", "활성 기여자");
@@ -1627,6 +1634,7 @@ function V17PractitionerLedgerPanel({
   const [learningRows, setLearningRows] = useState<Array<Record<string, unknown>>>([]);
   const [learningSummary, setLearningSummary] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
+  const [reviewingCandidateId, setReviewingCandidateId] = useState("");
   const [message, setMessage] = useState("");
   const canViewAll = reviewerRole === "manager" || reviewerRole === "admin";
 
@@ -1674,6 +1682,40 @@ function V17PractitionerLedgerPanel({
   useEffect(() => {
     void loadLedger();
   }, [loadLedger]);
+
+  const submitLearningReview = useCallback(async (row: Record<string, unknown>, status: string) => {
+    const candidateId = String(row.candidate_id || "").trim();
+    const parameterFamily = String(row.parameter_family || "").trim();
+    if (!candidateId || !parameterFamily) return;
+    setReviewingCandidateId(candidateId);
+    setMessage("");
+    try {
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>(
+        "/api/auth/practitioner-learning-reviews",
+        jsonPostInit({
+          candidate_id: candidateId,
+          parameter_family: parameterFamily,
+          status,
+          reviewer_note:
+            status === "approved_for_experiment"
+              ? ui("准入 shadow run；不自动修改线上参数。", "Approved for shadow run; no live parameter changes.", "섀도 실행 승인, 실시간 매개변수 변경 없음.")
+              : status === "rejected"
+                ? ui("当前证据不足，暂不进入实验。", "Insufficient evidence for experiment.", "증거 부족으로 실험 보류.")
+                : ui("继续观察，等待更多命理师反馈。", "Keep watching for more practitioner signals.", "명리사 신호를 더 관찰합니다."),
+          safety_gate: String(row.safety_gate || "manual_review_required"),
+          candidate_snapshot: row,
+        }),
+      );
+      if (!ok) {
+        throw new Error(String(payload.detail || ui("候选审计保存失败。", "Failed to save candidate review.", "후보 검토 저장 실패")));
+      }
+      await loadLedger();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : ui("候选审计保存失败。", "Failed to save candidate review.", "후보 검토 저장 실패"));
+    } finally {
+      setReviewingCandidateId("");
+    }
+  }, [loadLedger, ui]);
 
   const latestFeedback = feedbackRows.slice(0, 6);
   const latestCases = caseRows.slice(0, 6);
@@ -1764,6 +1806,9 @@ function V17PractitionerLedgerPanel({
               const cases = asStringList(row.source_cases).slice(0, 2);
               const contributorTiers = asStringList(row.contributor_tiers).slice(0, 2);
               const reputationScore = Number(row.contributor_reputation_score || 0);
+              const reviewStatus = String(row.review_status || "").trim();
+              const latestReview = asLooseRecord(row.latest_review);
+              const isReviewing = reviewingCandidateId === String(row.candidate_id || "").trim();
               return (
                 <article key={String(row.candidate_id || family)} className="rounded-xl border border-white/10 bg-black/25 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1782,12 +1827,34 @@ function V17PractitionerLedgerPanel({
                     {hints.join(" / ") || ui("等待更多命理师反馈形成审计说明。", "Waiting for more practitioner signals.", "더 많은 명리사 신호 대기 중")}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[...contributorTiers.map((tier) => contributionTierLabel(tier, ui)), ...plugins, ...cases].slice(0, 4).map((item, index) => (
+                    {[learningReviewStatusLabel(reviewStatus, ui), ...contributorTiers.map((tier) => contributionTierLabel(tier, ui)), ...plugins, ...cases].slice(0, 4).map((item, index) => (
                       <span key={`${item}_${index}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-400">
                         {item}
                       </span>
                     ))}
                   </div>
+                  {latestReview.reviewer_note ? (
+                    <p className="mt-2 line-clamp-1 text-[10px] text-zinc-500">{String(latestReview.reviewer_note)}</p>
+                  ) : null}
+                  {canViewAll ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {[
+                        { status: "approved_for_experiment", label: ui("准入实验", "Experiment", "실험 승인") },
+                        { status: "watch", label: ui("观察", "Watch", "관찰") },
+                        { status: "rejected", label: ui("驳回", "Reject", "거절") },
+                      ].map((actionItem) => (
+                        <button
+                          key={actionItem.status}
+                          type="button"
+                          disabled={isReviewing}
+                          onClick={() => void submitLearningReview(row, actionItem.status)}
+                          className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2 py-1 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/35 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {isReviewing ? ui("保存中", "Saving", "저장 중") : actionItem.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
