@@ -15,6 +15,15 @@ from v17_rebirth.backend.services.auth_service import (
 router = APIRouter(tags=["v17-auth"])
 
 
+def _is_practitioner_trust_role(role: Any) -> bool:
+    return str(role or "").strip().lower() in {"practitioner", "manager", "admin"}
+
+
+def _require_practitioner_trust(user: Dict[str, Any]) -> None:
+    if not _is_practitioner_trust_role(user.get("role")):
+        raise HTTPException(status_code=403, detail="当前账号不是命理师账号，无法提交专业反馈或案例。")
+
+
 def _client_meta(request: Request) -> Dict[str, str]:
     forwarded = str(request.headers.get("x-forwarded-for") or "").strip()
     if forwarded:
@@ -250,6 +259,7 @@ async def list_practitioner_feedback(request: Request) -> Dict[str, Any]:
 @router.post("/api/v17/auth/practitioner-feedback")
 async def create_practitioner_feedback(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     user = require_authenticated_request(request)
+    _require_practitioner_trust(user)
     try:
         row = auth_storage.create_practitioner_feedback(
             user_id=int(user["id"]),
@@ -273,7 +283,7 @@ async def create_practitioner_feedback(request: Request, payload: Dict[str, Any]
     return {
         "ok": True,
         "feedback": _feedback_payload(row),
-        "trust_tier": "practitioner" if str(user.get("role") or "") in {"manager", "admin"} else "user",
+        "trust_tier": "practitioner" if _is_practitioner_trust_role(user.get("role")) else "user",
     }
 
 
@@ -306,6 +316,7 @@ async def list_practitioner_cases(request: Request) -> Dict[str, Any]:
 @router.post("/api/v17/auth/practitioner-cases")
 async def create_practitioner_case(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     user = require_authenticated_request(request)
+    _require_practitioner_trust(user)
     try:
         row = auth_storage.create_practitioner_case(
             user_id=int(user["id"]),
@@ -343,7 +354,7 @@ async def create_practitioner_case(request: Request, payload: Dict[str, Any] = B
     return {
         "ok": True,
         "case": case,
-        "trust_tier": "practitioner" if str(user.get("role") or "") in {"manager", "admin"} else "user",
+        "trust_tier": "practitioner" if _is_practitioner_trust_role(user.get("role")) else "user",
         "benchmark_seed": case["benchmark_seed"],
     }
 

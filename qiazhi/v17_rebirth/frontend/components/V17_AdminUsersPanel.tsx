@@ -7,7 +7,7 @@ export type AdminAuthUser = {
   username: string;
   display_name: string;
   email?: string;
-  role: "admin" | "manager" | "user";
+  role: "admin" | "manager" | "practitioner" | "user";
   is_active: boolean;
   created_at?: string;
   last_login_at?: string;
@@ -32,8 +32,8 @@ function roleOptionsForUser(
   operatorRole: AdminAuthUser["role"] = "admin",
 ): Array<AdminAuthUser["role"]> {
   if (user.role === "admin") return ["admin"];
-  if (operatorRole === "manager") return ["manager", "user"];
-  return ["manager", "user"];
+  if (operatorRole === "manager") return ["manager", "practitioner", "user"];
+  return ["manager", "practitioner", "user"];
 }
 
 export function V17_AdminUsersPanel({
@@ -56,7 +56,7 @@ export function V17_AdminUsersPanel({
         acc[row.role] += 1;
         return acc;
       },
-      { total: 0, admin: 0, manager: 0, user: 0 },
+      { total: 0, admin: 0, manager: 0, practitioner: 0, user: 0 },
     );
   }, [users]);
 
@@ -74,7 +74,7 @@ export function V17_AdminUsersPanel({
   const panelTitle = title || (compact ? "协作权限" : "用户与权限");
   const panelDescription =
     description ||
-    "账号写入数据库。系统保留唯一管理员账号 `admin`，后续账号默认注册为 `user`；管理员或经理可将普通账号调整为 `manager / user`。";
+    "账号写入数据库。系统保留唯一管理员账号 `admin`，后续账号默认注册为 `user`；管理员或经理可将账号调整为 `manager / practitioner / user`。";
 
   return (
     <section className="min-w-0 space-y-5">
@@ -94,11 +94,12 @@ export function V17_AdminUsersPanel({
         </div>
 
         {!compact ? (
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
             {[
               { label: "总用户", value: counts.total, tone: "text-zinc-50" },
               { label: "管理员", value: counts.admin, tone: "text-cyan-100" },
               { label: "经理", value: counts.manager, tone: "text-amber-100" },
+              { label: "命理师", value: counts.practitioner, tone: "text-violet-100" },
               { label: "普通用户", value: counts.user, tone: "text-emerald-100" },
             ].map((item) => (
               <div key={item.label} className="rounded-2xl border border-zinc-800 bg-black/35 p-4">
@@ -112,6 +113,7 @@ export function V17_AdminUsersPanel({
             <span className="rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-1 text-zinc-100">总用户 {counts.total}</span>
             <span className="rounded-full border border-cyan-500/25 bg-cyan-950/20 px-3 py-1 text-cyan-100">管理员 {counts.admin}</span>
             <span className="rounded-full border border-amber-500/25 bg-amber-950/20 px-3 py-1 text-amber-100">经理 {counts.manager}</span>
+            <span className="rounded-full border border-violet-500/25 bg-violet-950/20 px-3 py-1 text-violet-100">命理师 {counts.practitioner}</span>
             <span className="rounded-full border border-emerald-500/25 bg-emerald-950/20 px-3 py-1 text-emerald-100">用户 {counts.user}</span>
           </div>
         )}

@@ -158,7 +158,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              {["admin", "manager", "user"].map((role) => (
+              {["admin", "manager", "practitioner", "user"].map((role) => (
                 <span key={role} className="rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-xs font-medium text-zinc-300">
                   {t(language, `auth.role.${role}.title`)}
                 </span>

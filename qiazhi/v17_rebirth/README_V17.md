@@ -60,10 +60,10 @@
 
 - 多语言主链：中文、英文、韩文共用 `frontend/lib/i18n.ts`，前端文案与 LLM verdict prompt 都必须走统一字典或 `ui()` helper。
 - 多终端 UI：登录/注册入口、Oracle 主页面、Admin 页面均按桌面/手机 Chrome 响应式验收。
-- 授权控制：`admin / manager / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API。
+- 授权控制：`admin / manager / practitioner / user` 通过 `frontend/lib/accessControl.ts` 与后端 auth profile 共同约束页面和 API；`user` 只看简明断语，`practitioner` 进入专业证据链工作台。
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。
-- 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库”的 P1-P3 闭环；命盘核心页可从单条证据直接收录真实案例或命理师基准候选。
+- 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库”的 P1-P3 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选。
 - 0.13 部署：使用 `scripts/update_v17_from_git.sh` 拉取、构建、重启并做健康检查。
 
 ### 可调环境变量（可选）

@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from v17_rebirth.paths import RUNTIME_DIR
 
-ROLE_VALUES = {"admin", "manager", "user"}
+ROLE_VALUES = {"admin", "manager", "practitioner", "user"}
 GENDER_VALUES = {"male", "female"}
 CALENDAR_VALUES = {"solar", "lunar"}
 PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
@@ -326,7 +326,7 @@ class V17AuthDB:
 
         if requested_role == "admin":
             raise ValueError("管理员账号为系统保留账号，不允许直接注册。")
-        final_role = requested_role if requested_role in {"manager", "user"} else "user"
+        final_role = requested_role if requested_role in {"manager", "practitioner", "user"} else "user"
         now = _iso(_now_utc())
         encoded = _password_hash(password)
 
@@ -940,7 +940,7 @@ class V17AuthDB:
             confidence_value = max(0.0, min(1.0, float(confidence or 0.0)))
         except Exception:
             confidence_value = 0.0
-        reviewer_weight = {"user": 1.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
+        reviewer_weight = {"user": 1.0, "practitioner": 2.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
         payload_obj = payload if isinstance(payload, dict) else {}
         payload_json = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, default=str)
         if len(payload_json) > 12000:
@@ -1150,7 +1150,7 @@ class V17AuthDB:
         status_clean = str(status or "submitted").strip().lower() or "submitted"
         if status_clean not in PRACTITIONER_CASE_STATUS_VALUES:
             raise ValueError("无效案例状态。")
-        if role_clean not in {"manager", "admin"} and status_clean not in {"draft", "submitted"}:
+        if role_clean not in {"practitioner", "manager", "admin"} and status_clean not in {"draft", "submitted"}:
             status_clean = "submitted"
         key_clean = str(case_key or "").strip().replace(" ", "_")[:120]
         if not key_clean:
@@ -1168,7 +1168,7 @@ class V17AuthDB:
         payload_json = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, default=str)
         if len(payload_json) > 20000:
             payload_json = json.dumps({"truncated": True, "case_title": title_clean[:120]}, ensure_ascii=False)
-        owner_weight = {"user": 1.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
+        owner_weight = {"user": 1.0, "practitioner": 2.0, "manager": 2.2, "admin": 2.6}.get(role_clean, 1.0)
         now = _iso(_now_utc())
         values = (
             int(user_id),

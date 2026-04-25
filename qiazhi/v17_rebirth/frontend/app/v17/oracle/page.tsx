@@ -458,6 +458,112 @@ function V17MobileResultSummary({
   );
 }
 
+function V17SimpleOracleSummary({
+  ui,
+  term,
+  termList,
+  fourPillars,
+  luckPillar,
+  flowPillar,
+  birthLine,
+  judgement,
+  patternLeader,
+  useGods,
+  tabooGods,
+  tongguanGods,
+}: {
+  ui: LocalizeText;
+  term: TranslateText;
+  termList: TranslateList;
+  fourPillars?: FourPillarsSummary;
+  luckPillar?: unknown;
+  flowPillar?: unknown;
+  birthLine: string;
+  judgement: string;
+  patternLeader?: LivePatternCandidate;
+  useGods: string[];
+  tabooGods: string[];
+  tongguanGods: string[];
+}) {
+  const pillars = [
+    { key: "year", label: ui("年柱", "Year", "년주"), value: compactPillarText(fourPillars?.year) },
+    { key: "month", label: ui("月柱", "Month", "월주"), value: compactPillarText(fourPillars?.month) },
+    { key: "day", label: ui("日柱", "Day", "일주"), value: compactPillarText(fourPillars?.day) },
+    { key: "hour", label: ui("时柱", "Hour", "시주"), value: compactPillarText(fourPillars?.hour) },
+  ];
+  const godGroups = [
+    { key: "use", label: ui("宜", "Favorable", "유리"), values: useGods, tone: "border-emerald-400/20 bg-emerald-500/10 text-emerald-100" },
+    { key: "taboo", label: ui("忌", "Watch", "주의"), values: tabooGods, tone: "border-rose-400/20 bg-rose-500/10 text-rose-100" },
+    { key: "bridge", label: ui("通关", "Bridge", "통관"), values: tongguanGods, tone: "border-cyan-400/20 bg-cyan-500/10 text-cyan-100" },
+  ];
+
+  return (
+    <section className="hidden rounded-2xl border border-amber-400/20 bg-[radial-gradient(circle_at_top_left,rgba(212,175,55,0.12),transparent_34%),linear-gradient(180deg,rgba(14,18,25,0.96),rgba(7,11,18,0.96))] p-4 sm:block">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-amber-300">
+            {ui("简明断语", "Concise Reading", "간결 판독")}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-zinc-50">
+            {patternLeader ? term(patternLeader.name) : ui("命盘核心判断", "Chart judgement", "명반 핵심 판단")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">{birthLine}</p>
+        </div>
+        <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
+          {ui("普通用户模式", "User Mode", "일반 사용자 모드")}
+        </span>
+      </div>
+
+      <p className="mt-4 max-w-4xl text-base leading-8 text-zinc-100">{judgement}</p>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="text-xs text-zinc-500">{ui("四柱简表", "Four pillars", "사주 간표")}</p>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {pillars.map((pillar) => (
+              <div key={pillar.key} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-center">
+                <p className="text-[11px] text-zinc-500">{pillar.label}</p>
+                <MobileColoredPillarText value={pillar.value} className="mt-2 justify-center text-2xl font-semibold" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {[
+              { key: "luck", label: ui("大运", "Luck", "대운"), value: luckPillar },
+              { key: "flow", label: ui("流年", "Flow", "세운"), value: flowPillar },
+            ].map((pillar) => (
+              <div key={pillar.key} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
+                <span className="text-xs text-zinc-500">{pillar.label}</span>
+                <MobileColoredPillarText value={compactPillarText(pillar.value)} className="text-lg font-semibold" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+          <p className="text-xs text-zinc-500">{ui("行动提示", "Reading cues", "판독 단서")}</p>
+          <div className="mt-3 grid gap-2">
+            {godGroups.map((group) => (
+              <div key={group.key} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+                <p className="text-[11px] text-zinc-500">{group.label}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {group.values.length ? termList(group.values).slice(0, 4).map((value) => (
+                    <span key={`${group.key}_${value}`} className={`rounded-full border px-2 py-1 text-[11px] ${group.tone}`}>
+                      {value}
+                    </span>
+                  )) : (
+                    <span className="text-[12px] text-zinc-500">{ui("暂无显性信号", "No explicit signal", "명시 신호 없음")}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function V17MobileAnalysisDeck({
   ui,
   counts,
@@ -634,11 +740,13 @@ function V17ToolboxDeck({
 function OracleStartDashboard({
   language,
   name,
+  professionalMode,
 }: {
   language: Parameters<typeof t>[0];
   name: string;
+  professionalMode: boolean;
 }) {
-  const cards = [
+  const allCards = [
     {
       key: "chart",
       icon: <ScrollText className="h-5 w-5" />,
@@ -667,6 +775,7 @@ function OracleStartDashboard({
       orb: "from-amber-400/24 to-transparent",
     },
   ];
+  const cards = professionalMode ? allCards : allCards.slice(0, 1);
 
   return (
     <section className="rounded-none border-y border-white/10 bg-[#0B0F16] px-4 py-5 sm:rounded-2xl sm:border sm:bg-white/[0.035] sm:p-5">
@@ -678,7 +787,7 @@ function OracleStartDashboard({
           <p className="mt-1 text-sm leading-6 text-zinc-400">{t(language, "oracle.dashboard.subtitle")}</p>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className={`mt-4 grid gap-3 ${professionalMode ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
         {cards.map((card) => (
           <a
             key={card.key}
@@ -1038,7 +1147,7 @@ function V17EvidencePanel({
   const candidateCount = asNumberValue(summary.candidate_count);
   const riskCount = asNumberValue(summary.risk_count);
   const observeOnlyCount = asNumberValue(summary.observe_only_count);
-  const professionalFeedback = reviewerRole === "manager" || reviewerRole === "admin";
+  const professionalFeedback = reviewerRole === "practitioner" || reviewerRole === "manager" || reviewerRole === "admin";
 
   useEffect(() => {
     if (!sessionId || !items.length) return;
@@ -1734,6 +1843,8 @@ export default function OraclePage() {
   const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
   const canAccessTraceSurface = access.canAccessOracleSurface("trace");
   const canManageUsers = access.canManageUsers;
+  const canUseProfessionalOracle = access.canUseProfessionalOracle;
+  const canReadEvidence = access.canReadEvidence;
   const surfaceTabs = resolveFeatureTabs(ORACLE_FEATURE_MODULES, {
     language,
     access,
@@ -1882,6 +1993,7 @@ export default function OraclePage() {
           <OracleStartDashboard
             language={language}
             name={user?.display_name || user?.username || "Admin"}
+            professionalMode={canUseProfessionalOracle}
           />
         ) : null}
 
@@ -1897,17 +2009,19 @@ export default function OraclePage() {
         {s.running ? (
           <div className="min-h-[60vh]">
             <div className="w-full space-y-3">
-              <V17_SurfaceTabs
-                items={surfaceTabs}
-                activeId={activeSurfaceTab}
-                onChange={(tab) => {
-                  if (tab === "trace") {
-                    openTraceSurface();
-                  } else {
-                    switchContentSurface(tab);
-                  }
-                }}
-              />
+              {surfaceTabs.length > 1 ? (
+                <V17_SurfaceTabs
+                  items={surfaceTabs}
+                  activeId={activeSurfaceTab}
+                  onChange={(tab) => {
+                    if (tab === "trace") {
+                      openTraceSurface();
+                    } else {
+                      switchContentSurface(tab);
+                    }
+                  }}
+                />
+              ) : null}
 
               <V17_FeatureOutlet
                 activeId={activeSurfaceTab}
@@ -1932,6 +2046,23 @@ export default function OraclePage() {
                     relationRows={relationDynamicsSummary}
                     riskRows={riskRows}
                   />
+                  {!canUseProfessionalOracle ? (
+                    <V17SimpleOracleSummary
+                      ui={ui}
+                      term={term}
+                      termList={termList}
+                      fourPillars={fourPillars}
+                      luckPillar={luckPillarSnap}
+                      flowPillar={flowPillarSnap}
+                      birthLine={`${s.birthTimeISO} · ${term(s.natalGender || "")}`}
+                      judgement={patternJudgement}
+                      patternLeader={patternLeader}
+                      useGods={useGods}
+                      tabooGods={tabooGods}
+                      tongguanGods={tongguanGods}
+                    />
+                  ) : null}
+                  {canUseProfessionalOracle ? (
                   <div className="hidden sm:block">
                     <V17_SixPillarsPanel
                     fourPillars={fourPillars}
@@ -1996,6 +2127,7 @@ export default function OraclePage() {
                     lang={language}
                   />
                   </div>
+                  ) : null}
                   <V17_PurpleVerdictCard
                     frames={s.frames}
                     connectTickMs={s.connectTickMs}
@@ -2005,27 +2137,31 @@ export default function OraclePage() {
                     llmLifecyclePhase={s.llmLifecyclePhase}
                     lang={language}
                   />
-                  <V17EvidencePanel
-                    ui={ui}
-                    term={term}
-                    items={evidenceItems}
-                    summary={evidenceSummary}
-                    sessionId={s.sessionId}
-                    chartFingerprint={String(payload.physics_fingerprint || "")}
-                    reviewerRole={user?.role || "user"}
-                    birthTimeISO={s.birthTimeISO}
-                    gender={s.natalGender || "male"}
-                    calendarType={s.natalCalendar || "solar"}
-                    lunarIsLeapMonth={s.lunarIsLeapMonth}
-                    fourPillars={fourPillars}
-                    luckPillar={luckPillarSnap}
-                    flowPillar={flowPillarSnap}
-                    selectedYear={s.selectedLuckYear}
-                  />
+                  {canReadEvidence ? (
+                    <V17EvidencePanel
+                      ui={ui}
+                      term={term}
+                      items={evidenceItems}
+                      summary={evidenceSummary}
+                      sessionId={s.sessionId}
+                      chartFingerprint={String(payload.physics_fingerprint || "")}
+                      reviewerRole={user?.role || "user"}
+                      birthTimeISO={s.birthTimeISO}
+                      gender={s.natalGender || "male"}
+                      calendarType={s.natalCalendar || "solar"}
+                      lunarIsLeapMonth={s.lunarIsLeapMonth}
+                      fourPillars={fourPillars}
+                      luckPillar={luckPillarSnap}
+                      flowPillar={flowPillarSnap}
+                      selectedYear={s.selectedLuckYear}
+                    />
+                  ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
                     <p className="text-xs text-zinc-400">
-                      {t(language, "oracle.core.decision_notice")}
-                      {s.canAutoGenerateVerdict ? ` ${t(language, "oracle.core.ready_for_verdict")}` : ""}
+                      {canUseProfessionalOracle
+                        ? t(language, "oracle.core.decision_notice")
+                        : ui("系统会基于当前命盘生成简明断语。", "The system will generate a concise reading from the current chart.", "현재 명반을 바탕으로 간결한 단언을 생성합니다.")}
+                      {canUseProfessionalOracle && s.canAutoGenerateVerdict ? ` ${t(language, "oracle.core.ready_for_verdict")}` : ""}
                     </p>
                     <button
                       type="button"
@@ -2049,18 +2185,20 @@ export default function OraclePage() {
                       ) : null}
                     </button>
                   </div>
-                  <V17_DecisionInbox
-                    frames={s.frames}
-                    adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
-                    focusedDecisionId={focusedDecisionId}
-                    viewMode="manual_only"
-                    locked={s.decisionInboxLocked}
-                    lockMessage={s.decisionInboxLockMessage}
-                    onAdopted={s.handleAdopted}
-                    onAdoptedBatch={s.handleAdoptedBatch}
-                    onPlanAction={s.handlePlanAction}
-                    lang={language}
-                  />
+                  {canUseProfessionalOracle ? (
+                    <V17_DecisionInbox
+                      frames={s.frames}
+                      adoptedIds={s.adoptedDecisions.map((x) => x.id).filter((id): id is string => !!id)}
+                      focusedDecisionId={focusedDecisionId}
+                      viewMode="manual_only"
+                      locked={s.decisionInboxLocked}
+                      lockMessage={s.decisionInboxLockMessage}
+                      onAdopted={s.handleAdopted}
+                      onAdoptedBatch={s.handleAdoptedBatch}
+                      onPlanAction={s.handlePlanAction}
+                      lang={language}
+                    />
+                  ) : null}
                   {!s.hasNarrative ? (
                     <p className="mt-3 text-xs text-violet-200/80">{t(language, "oracle.core.weaving")}</p>
                   ) : null}

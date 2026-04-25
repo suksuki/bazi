@@ -53,7 +53,10 @@ def test_register_bootstraps_first_admin_and_me(isolated_auth_db) -> None:
         me_body = me.json()
         assert me_body["user"]["username"] == "founder"
         assert "oracle.access" in me_body["user"]["capabilities"]
-        assert me_body["user"]["surface_access"]["oracle"] == ["core", "auxiliary"]
+        assert "oracle.simple" in me_body["user"]["capabilities"]
+        assert "oracle.professional" not in me_body["user"]["capabilities"]
+        assert "practitioner.case.write" not in me_body["user"]["capabilities"]
+        assert me_body["user"]["surface_access"]["oracle"] == ["core"]
         assert me_body["user"]["surface_access"]["admin"] is False
 
 
@@ -80,6 +83,18 @@ def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated
         operator_row = next(row for row in list_resp.json()["users"] if row["username"] == "operator")
         assert operator_row["latest_ip_address"] == "203.0.113.25"
 
+        promote_practitioner = client.post(
+            f"/v17/auth/users/{operator_id}/role",
+            json={"role": "practitioner"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote_practitioner.status_code == 200
+        practitioner_user = promote_practitioner.json()["updated_user"]
+        assert practitioner_user["role"] == "practitioner"
+        assert "oracle.professional" in practitioner_user["capabilities"]
+        assert "evidence.feedback.practitioner" in practitioner_user["capabilities"]
+        assert practitioner_user["surface_access"]["oracle"] == ["core", "auxiliary"]
+
         promote = client.post(
             f"/v17/auth/users/{operator_id}/role",
             json={"role": "manager"},
@@ -100,11 +115,11 @@ def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated
 
         manager_promote = client.post(
             f"/v17/auth/users/{member_id}/role",
-            json={"role": "manager"},
+            json={"role": "practitioner"},
             cookies={"v17_session": manager_token},
         )
         assert manager_promote.status_code == 200
-        assert manager_promote.json()["updated_user"]["role"] == "manager"
+        assert manager_promote.json()["updated_user"]["role"] == "practitioner"
 
         manager_to_admin = client.post(
             f"/v17/auth/users/{member_id}/role",
@@ -279,8 +294,31 @@ def test_practitioner_feedback_scope_all_requires_manager(isolated_auth_db) -> N
                 "reason": "先观察。",
             },
         )
+        assert create_resp.status_code == 403
+
+        promote_practitioner = client.post(
+            f"/v17/auth/users/{user_id}/role",
+            json={"role": "practitioner"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote_practitioner.status_code == 200
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies={"v17_session": user_token},
+            json={
+                "session_id": "s-user",
+                "evidence_id": "e-user",
+                "plugin_id": "classical.risk_matrix.v1",
+                "status": "watch",
+                "reason": "先观察。",
+                "confidence": 0.8,
+            },
+        )
         assert create_resp.status_code == 200
-        assert create_resp.json()["trust_tier"] == "user"
+        assert create_resp.json()["trust_tier"] == "practitioner"
+        assert create_resp.json()["feedback"]["reviewer_role"] == "practitioner"
+        assert create_resp.json()["feedback"]["reviewer_weight"] == pytest.approx(2.0)
 
         user_all = client.get(
             "/v17/auth/practitioner-feedback?scope=all",
@@ -398,6 +436,29 @@ def test_practitioner_case_scope_and_user_status_guard(isolated_auth_db) -> None
             json={"username": "case-user", "password": "very-secure-pass"},
         )
         user_token = user_resp.json()["session_token"]
+        user_id = int(user_resp.json()["user"]["id"])
+
+        create_resp = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies={"v17_session": user_token},
+            json={
+                "case_key": "user.case.false_follow",
+                "case_title": "假从边界样盘",
+                "birth_time_iso": "1985-02-01T08:00:00",
+                "gender": "female",
+                "calendar_type": "solar",
+                "status": "benchmark_candidate",
+                "failure_modes": ["false_follow"],
+            },
+        )
+        assert create_resp.status_code == 403
+
+        promote_practitioner = client.post(
+            f"/v17/auth/users/{user_id}/role",
+            json={"role": "practitioner"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote_practitioner.status_code == 200
 
         create_resp = client.post(
             "/v17/auth/practitioner-cases",
@@ -413,8 +474,10 @@ def test_practitioner_case_scope_and_user_status_guard(isolated_auth_db) -> None
             },
         )
         assert create_resp.status_code == 200
-        assert create_resp.json()["trust_tier"] == "user"
-        assert create_resp.json()["case"]["status"] == "submitted"
+        assert create_resp.json()["trust_tier"] == "practitioner"
+        assert create_resp.json()["case"]["status"] == "benchmark_candidate"
+        assert create_resp.json()["case"]["owner_role"] == "practitioner"
+        assert create_resp.json()["case"]["owner_weight"] == pytest.approx(2.0)
 
         user_all = client.get(
             "/v17/auth/practitioner-cases?scope=all",

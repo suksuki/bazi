@@ -10,6 +10,10 @@ export type V17AccessPolicy = {
   canAccessOracleSurface: (surface: OracleSurface) => boolean;
   canAccessAdmin: boolean;
   canManageUsers: boolean;
+  canUseSimpleOracle: boolean;
+  canUseProfessionalOracle: boolean;
+  canReadEvidence: boolean;
+  canSubmitPractitionerFeedback: boolean;
   hasCapability: (capability: string) => boolean;
 };
 
@@ -32,6 +36,7 @@ export function getOracleSurfaces(user: AuthUser | null | undefined): OracleSurf
 export function createAccessPolicy(user: AuthUser | null | undefined): V17AccessPolicy {
   const oracleSurfaces = getOracleSurfaces(user);
   const capabilitySet = new Set((user?.capabilities || []).map((capability) => String(capability || "").trim()).filter(Boolean));
+  const hasCapability = (capability: string) => capabilitySet.has(capability);
 
   return {
     role: user?.role || "guest",
@@ -39,6 +44,10 @@ export function createAccessPolicy(user: AuthUser | null | undefined): V17Access
     canAccessOracleSurface: (surface) => oracleSurfaces.includes(surface),
     canAccessAdmin: Boolean(user?.surface_access?.admin),
     canManageUsers: Boolean(user?.surface_access?.user_management),
-    hasCapability: (capability) => capabilitySet.has(capability),
+    canUseSimpleOracle: hasCapability("oracle.simple"),
+    canUseProfessionalOracle: hasCapability("oracle.professional"),
+    canReadEvidence: hasCapability("evidence.read"),
+    canSubmitPractitionerFeedback: hasCapability("evidence.feedback.practitioner"),
+    hasCapability,
   };
 }

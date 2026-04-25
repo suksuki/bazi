@@ -8,25 +8,39 @@ from v17_rebirth.backend.infrastructure.auth_db import auth_storage
 
 ROLE_PRIORITY = {
     "user": 1,
-    "manager": 2,
-    "admin": 3,
+    "practitioner": 2,
+    "manager": 3,
+    "admin": 4,
 }
 
 ROLE_CAPABILITIES: Dict[str, List[str]] = {
     "user": [
         "auth.read",
         "oracle.access",
+        "oracle.simple",
+        "oracle.surface.core",
+    ],
+    "practitioner": [
+        "auth.read",
+        "oracle.access",
+        "oracle.simple",
+        "oracle.professional",
         "oracle.surface.core",
         "oracle.surface.auxiliary",
+        "evidence.read",
         "evidence.feedback.write",
+        "evidence.feedback.practitioner",
         "practitioner.case.write",
     ],
     "manager": [
         "auth.read",
         "oracle.access",
+        "oracle.simple",
+        "oracle.professional",
         "oracle.surface.core",
         "oracle.surface.auxiliary",
         "oracle.surface.trace",
+        "evidence.read",
         "evidence.feedback.write",
         "evidence.feedback.practitioner",
         "evidence.feedback.read_all",
@@ -38,9 +52,12 @@ ROLE_CAPABILITIES: Dict[str, List[str]] = {
     "admin": [
         "auth.read",
         "oracle.access",
+        "oracle.simple",
+        "oracle.professional",
         "oracle.surface.core",
         "oracle.surface.auxiliary",
         "oracle.surface.trace",
+        "evidence.read",
         "evidence.feedback.write",
         "evidence.feedback.practitioner",
         "evidence.feedback.read_all",
@@ -72,7 +89,9 @@ def _session_token_from_request(request: Request) -> str:
 def build_user_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     role = str(row.get("role") or "user").strip().lower() or "user"
     capabilities = ROLE_CAPABILITIES.get(role, ROLE_CAPABILITIES["user"])
-    oracle_surfaces = ["core", "auxiliary"]
+    oracle_surfaces = ["core"]
+    if role in {"practitioner", "manager", "admin"}:
+        oracle_surfaces.append("auxiliary")
     if role in {"manager", "admin"}:
         oracle_surfaces.append("trace")
     return {

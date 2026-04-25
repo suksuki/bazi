@@ -19,8 +19,17 @@ Use `lib/accessControl.ts` for role, capability, and surface checks.
 - `createAccessPolicy(user)` produces the page-facing policy object.
 - `access.canAccessOracleSurface("trace")` replaces direct `surface_access` reads.
 - `access.canManageUsers` replaces ad hoc `user.surface_access?.user_management` checks.
+- `access.canUseProfessionalOracle` gates practitioner-only evidence, decision, and auxiliary analysis surfaces.
+- `access.canReadEvidence` / `access.canSubmitPractitionerFeedback` gate evidence review UI and feedback writes.
 
 This keeps role names, capabilities, and surface gating in one place.
+
+Current role intent:
+
+- `user`: concise BaZi reading and basic chart only.
+- `practitioner`: professional oracle workspace, evidence chain, practitioner feedback, and real-case capture.
+- `manager`: practitioner workspace plus collaboration/user-role maintenance.
+- `admin`: full admin console and all operational surfaces.
 
 ## Responsive Shell
 

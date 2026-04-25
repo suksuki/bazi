@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 
-export type AuthRole = "admin" | "manager" | "user";
+export type AuthRole = "admin" | "manager" | "practitioner" | "user";
 
 export type AuthUser = {
   id: number;
@@ -33,7 +33,7 @@ function asUser(value: unknown): AuthUser | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   const role = String(row.role || "").trim().toLowerCase();
-  if (role !== "admin" && role !== "manager" && role !== "user") return null;
+  if (role !== "admin" && role !== "manager" && role !== "practitioner" && role !== "user") return null;
   return {
     id: Number(row.id || 0),
     username: String(row.username || "").trim(),
