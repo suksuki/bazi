@@ -127,6 +127,81 @@ type TopicHubItem = {
 };
 
 type MobileResultTab = "chart" | "gods" | "relations" | "risks";
+type StemBranchMeta = { element: "木" | "火" | "土" | "金" | "水"; yinYang: "阳" | "阴" };
+
+const MOBILE_STEM_META: Record<string, StemBranchMeta> = {
+  甲: { element: "木", yinYang: "阳" },
+  乙: { element: "木", yinYang: "阴" },
+  丙: { element: "火", yinYang: "阳" },
+  丁: { element: "火", yinYang: "阴" },
+  戊: { element: "土", yinYang: "阳" },
+  己: { element: "土", yinYang: "阴" },
+  庚: { element: "金", yinYang: "阳" },
+  辛: { element: "金", yinYang: "阴" },
+  壬: { element: "水", yinYang: "阳" },
+  癸: { element: "水", yinYang: "阴" },
+};
+
+const MOBILE_BRANCH_META: Record<string, StemBranchMeta> = {
+  子: { element: "水", yinYang: "阳" },
+  丑: { element: "土", yinYang: "阴" },
+  寅: { element: "木", yinYang: "阳" },
+  卯: { element: "木", yinYang: "阴" },
+  辰: { element: "土", yinYang: "阳" },
+  巳: { element: "火", yinYang: "阴" },
+  午: { element: "火", yinYang: "阳" },
+  未: { element: "土", yinYang: "阴" },
+  申: { element: "金", yinYang: "阳" },
+  酉: { element: "金", yinYang: "阴" },
+  戌: { element: "土", yinYang: "阳" },
+  亥: { element: "水", yinYang: "阴" },
+};
+
+function mobileStemBranchMeta(value: string): StemBranchMeta | undefined {
+  return MOBILE_STEM_META[value] || MOBILE_BRANCH_META[value];
+}
+
+function mobileStemBranchTextTone(value: string): string {
+  const meta = mobileStemBranchMeta(value);
+  if (!meta) return "text-zinc-100";
+  const tone: Record<StemBranchMeta["element"], Record<StemBranchMeta["yinYang"], string>> = {
+    木: { 阳: "text-lime-300", 阴: "text-emerald-300" },
+    火: { 阳: "text-orange-300", 阴: "text-rose-300" },
+    土: { 阳: "text-amber-300", 阴: "text-yellow-200" },
+    金: { 阳: "text-slate-100", 阴: "text-zinc-300" },
+    水: { 阳: "text-sky-300", 阴: "text-cyan-200" },
+  };
+  return tone[meta.element][meta.yinYang];
+}
+
+function MobileStemBranchGlyph({ value, className = "" }: { value: string; className?: string }) {
+  const text = value || "—";
+  const meta = mobileStemBranchMeta(text);
+  return (
+    <span
+      className={`inline-block font-semibold ${mobileStemBranchTextTone(text)} ${className}`}
+      title={meta ? `${meta.yinYang}${meta.element}` : undefined}
+    >
+      {text}
+    </span>
+  );
+}
+
+function MobileColoredPillarText({
+  value,
+  className = "",
+}: {
+  value: ReturnType<typeof compactPillarText>;
+  className?: string;
+}) {
+  if (value.text === "—") return <span className={className}>—</span>;
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      <MobileStemBranchGlyph value={value.stem} />
+      <MobileStemBranchGlyph value={value.branch} />
+    </span>
+  );
+}
 
 function compactPillarText(value: unknown): { stem: string; branch: string; text: string } {
   const text = String(value || "").trim();
@@ -247,8 +322,12 @@ function V17MobileResultSummary({
             <div key={pillar.key} className="rounded-xl border border-white/10 bg-[#0B0F16] p-2 text-center">
               <p className="text-[10px] text-zinc-500">{pillar.label}</p>
               <div className="mt-1 grid grid-rows-2 overflow-hidden rounded-lg border border-white/10">
-                <span className="bg-zinc-900 py-2 text-xl font-semibold text-zinc-100">{pillar.value.stem}</span>
-                <span className="bg-zinc-950 py-2 text-lg font-semibold text-amber-200">{pillar.value.branch}</span>
+                <span className="bg-zinc-900 py-2 text-xl font-semibold">
+                  <MobileStemBranchGlyph value={pillar.value.stem} />
+                </span>
+                <span className="bg-zinc-950 py-2 text-lg font-semibold">
+                  <MobileStemBranchGlyph value={pillar.value.branch} />
+                </span>
               </div>
             </div>
           ))}
@@ -257,7 +336,7 @@ function V17MobileResultSummary({
           {runtimePillars.map((pillar) => (
             <div key={pillar.key} className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B0F16] px-3 py-2">
               <span className="text-[11px] text-zinc-500">{pillar.label}</span>
-              <span className="text-sm font-semibold text-zinc-100">{pillar.value.text}</span>
+              <MobileColoredPillarText value={pillar.value} className="text-base" />
             </div>
           ))}
         </div>
