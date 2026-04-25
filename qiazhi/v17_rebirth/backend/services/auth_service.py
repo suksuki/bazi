@@ -94,6 +94,17 @@ def build_user_payload(row: Dict[str, Any]) -> Dict[str, Any]:
         oracle_surfaces.append("auxiliary")
     if role in {"manager", "admin"}:
         oracle_surfaces.append("trace")
+    role_request_id = int(row.get("role_request_id") or 0)
+    role_request = None
+    if role_request_id:
+        role_request = {
+            "id": role_request_id,
+            "requested_role": str(row.get("role_request_role") or "").strip(),
+            "status": str(row.get("role_request_status") or "").strip(),
+            "reason": str(row.get("role_request_reason") or "").strip(),
+            "created_at": str(row.get("role_request_created_at") or "").strip(),
+            "updated_at": str(row.get("role_request_updated_at") or "").strip(),
+        }
     return {
         "id": int(row.get("id") or 0),
         "username": str(row.get("username") or "").strip(),
@@ -107,6 +118,13 @@ def build_user_payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "latest_ip_address": str(row.get("latest_ip_address") or "").strip(),
         "latest_user_agent": str(row.get("latest_user_agent") or "").strip(),
         "latest_seen_at": str(row.get("latest_seen_at") or "").strip(),
+        "role_request": role_request,
+        "role_request_id": role_request_id,
+        "role_request_status": str(row.get("role_request_status") or "").strip(),
+        "role_request_role": str(row.get("role_request_role") or "").strip(),
+        "role_request_reason": str(row.get("role_request_reason") or "").strip(),
+        "role_request_created_at": str(row.get("role_request_created_at") or "").strip(),
+        "role_request_updated_at": str(row.get("role_request_updated_at") or "").strip(),
         "capabilities": capabilities,
         "surface_access": {
             "oracle": oracle_surfaces,

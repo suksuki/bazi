@@ -15,6 +15,7 @@ from v17_rebirth.paths import RUNTIME_DIR
 ROLE_VALUES = {"admin", "manager", "practitioner", "user"}
 GENDER_VALUES = {"male", "female"}
 CALENDAR_VALUES = {"solar", "lunar"}
+ROLE_REQUEST_STATUS_VALUES = {"pending", "approved", "rejected", "cancelled"}
 PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
 PRACTITIONER_CASE_STATUS_VALUES = {"draft", "submitted", "accepted", "rejected", "benchmark_candidate"}
 DEFAULT_ADMIN_USERNAME = "admin"
@@ -158,6 +159,25 @@ class V17AuthDB:
             )
             conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS auth_role_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    requested_role TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    reviewer_user_id INTEGER,
+                    reviewer_role TEXT NOT NULL DEFAULT '',
+                    reviewer_note TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    decided_at TEXT,
+                    FOREIGN KEY(user_id) REFERENCES auth_users(id),
+                    FOREIGN KEY(reviewer_user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS auth_bazi_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -240,6 +260,8 @@ class V17AuthDB:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_auth_role_requests_user_status ON auth_role_requests(user_id, status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_auth_role_requests_status ON auth_role_requests(status)")
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_practitioner_cases_user_key ON practitioner_cases(user_id, case_key)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_status ON practitioner_cases(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_cases_fingerprint ON practitioner_cases(chart_fingerprint)")
@@ -302,6 +324,20 @@ class V17AuthDB:
         item["id"] = int(item.get("id") or 0)
         item["is_active"] = bool(item.get("is_active"))
         item["role"] = str(item.get("role") or "user").strip() or "user"
+        if "role_request_id" in item:
+            try:
+                item["role_request_id"] = int(item.get("role_request_id") or 0)
+            except Exception:
+                item["role_request_id"] = 0
+        for key in (
+            "role_request_status",
+            "role_request_role",
+            "role_request_reason",
+            "role_request_created_at",
+            "role_request_updated_at",
+        ):
+            if key in item:
+                item[key] = str(item.get(key) or "").strip()
         return item
 
     def create_user(
@@ -508,12 +544,248 @@ class V17AuthDB:
                         WHERE s.user_id = u.id
                         ORDER BY coalesce(s.last_seen_at, s.created_at) DESC, s.id DESC
                         LIMIT 1
-                    ) AS latest_seen_at
+                    ) AS latest_seen_at,
+                    (
+                        SELECT rr.id
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_id,
+                    (
+                        SELECT rr.status
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_status,
+                    (
+                        SELECT rr.requested_role
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_role,
+                    (
+                        SELECT rr.reason
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_reason,
+                    (
+                        SELECT rr.created_at
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_created_at,
+                    (
+                        SELECT rr.updated_at
+                        FROM auth_role_requests rr
+                        WHERE rr.user_id = u.id
+                        ORDER BY rr.created_at DESC, rr.id DESC
+                        LIMIT 1
+                    ) AS role_request_updated_at
                 FROM auth_users u
                 ORDER BY id ASC
                 """
             ).fetchall()
         return [self._clean_user_row(row) or {} for row in rows]
+
+    def _clean_role_request_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["user_id"] = int(item.get("user_id") or 0)
+        item["requested_role"] = str(item.get("requested_role") or "").strip().lower()
+        item["status"] = str(item.get("status") or "pending").strip().lower() or "pending"
+        item["reason"] = str(item.get("reason") or "").strip()
+        item["reviewer_user_id"] = int(item.get("reviewer_user_id") or 0)
+        item["reviewer_role"] = str(item.get("reviewer_role") or "").strip().lower()
+        item["reviewer_note"] = str(item.get("reviewer_note") or "").strip()
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        item["decided_at"] = str(item.get("decided_at") or "").strip()
+        item["username"] = str(item.get("username") or "").strip()
+        item["display_name"] = str(item.get("display_name") or "").strip()
+        item["email"] = str(item.get("email") or "").strip()
+        item["current_role"] = str(item.get("current_role") or "").strip().lower()
+        item["reviewer_username"] = str(item.get("reviewer_username") or "").strip()
+        item["reviewer_display_name"] = str(item.get("reviewer_display_name") or "").strip()
+        return item
+
+    def _fetch_role_request(self, conn: sqlite3.Connection, request_id: int) -> sqlite3.Row | None:
+        return conn.execute(
+            """
+            SELECT
+                rr.*,
+                u.username,
+                u.display_name,
+                u.email,
+                u.role AS current_role,
+                reviewer.username AS reviewer_username,
+                reviewer.display_name AS reviewer_display_name
+            FROM auth_role_requests rr
+            JOIN auth_users u ON u.id = rr.user_id
+            LEFT JOIN auth_users reviewer ON reviewer.id = rr.reviewer_user_id
+            WHERE rr.id = ?
+            LIMIT 1
+            """,
+            (int(request_id),),
+        ).fetchone()
+
+    def create_role_request(self, *, user_id: int, requested_role: str, reason: str | None = None) -> Dict[str, Any]:
+        requested_role_clean = str(requested_role or "").strip().lower()
+        if requested_role_clean != "practitioner":
+            raise ValueError("当前仅支持申请命理师权限。")
+        reason_clean = str(reason or "").strip()[:1200]
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            user_row = conn.execute("SELECT * FROM auth_users WHERE id = ?", (int(user_id),)).fetchone()
+            user = self._clean_user_row(user_row)
+            if not user:
+                raise ValueError("用户不存在。")
+            if str(user.get("role") or "user") in {"practitioner", "manager", "admin"}:
+                raise ValueError("当前账号已具备命理师工作权限。")
+            pending = conn.execute(
+                """
+                SELECT id FROM auth_role_requests
+                WHERE user_id = ? AND requested_role = ? AND status = 'pending'
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """,
+                (int(user_id), requested_role_clean),
+            ).fetchone()
+            if pending:
+                request_id = int(pending["id"])
+                conn.execute(
+                    """
+                    UPDATE auth_role_requests
+                    SET reason = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (reason_clean, now, request_id),
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO auth_role_requests (
+                        user_id, requested_role, status, reason, created_at, updated_at
+                    ) VALUES (?, ?, 'pending', ?, ?, ?)
+                    """,
+                    (int(user_id), requested_role_clean, reason_clean, now, now),
+                )
+                request_id = int(cursor.lastrowid)
+            row = self._fetch_role_request(conn, request_id)
+            conn.commit()
+        request_row = self._clean_role_request_row(row)
+        if not request_row:
+            raise ValueError("角色申请创建失败。")
+        return request_row
+
+    def list_role_requests(self, *, status: str | None = "pending", limit: int = 80) -> List[Dict[str, Any]]:
+        status_clean = str(status or "pending").strip().lower()
+        limit_clean = max(1, min(int(limit or 80), 200))
+        params: List[Any] = []
+        where = ""
+        if status_clean and status_clean != "all":
+            if status_clean not in ROLE_REQUEST_STATUS_VALUES:
+                raise ValueError("无效申请状态。")
+            where = "WHERE rr.status = ?"
+            params.append(status_clean)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    rr.*,
+                    u.username,
+                    u.display_name,
+                    u.email,
+                    u.role AS current_role,
+                    reviewer.username AS reviewer_username,
+                    reviewer.display_name AS reviewer_display_name
+                FROM auth_role_requests rr
+                JOIN auth_users u ON u.id = rr.user_id
+                LEFT JOIN auth_users reviewer ON reviewer.id = rr.reviewer_user_id
+                {where}
+                ORDER BY
+                    CASE rr.status WHEN 'pending' THEN 0 ELSE 1 END,
+                    rr.created_at DESC,
+                    rr.id DESC
+                LIMIT ?
+                """,
+                (*params, limit_clean),
+            ).fetchall()
+        return [self._clean_role_request_row(row) or {} for row in rows]
+
+    def decide_role_request(
+        self,
+        request_id: int,
+        *,
+        status: str,
+        reviewer_user_id: int,
+        reviewer_role: str,
+        reviewer_note: str | None = None,
+    ) -> Dict[str, Any]:
+        status_clean = str(status or "").strip().lower()
+        if status_clean in {"approve", "accept"}:
+            status_clean = "approved"
+        if status_clean in {"reject", "deny"}:
+            status_clean = "rejected"
+        if status_clean not in {"approved", "rejected"}:
+            raise ValueError("审核结果必须是 approved 或 rejected。")
+        reviewer_role_clean = str(reviewer_role or "").strip().lower()
+        if reviewer_role_clean not in {"manager", "admin"}:
+            raise ValueError("只有 manager 或 admin 可以审核命理师申请。")
+        note_clean = str(reviewer_note or "").strip()[:1200]
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            row = self._fetch_role_request(conn, int(request_id))
+            request_row = self._clean_role_request_row(row)
+            if not request_row:
+                raise ValueError("角色申请不存在。")
+            if request_row["status"] != "pending":
+                raise ValueError("该申请已经处理。")
+            if request_row["requested_role"] != "practitioner":
+                raise ValueError("当前仅支持审核命理师权限申请。")
+
+            updated_user_row = conn.execute(
+                "SELECT * FROM auth_users WHERE id = ?",
+                (int(request_row["user_id"]),),
+            ).fetchone()
+            updated_user = self._clean_user_row(updated_user_row)
+            if not updated_user:
+                raise ValueError("申请用户不存在。")
+            if status_clean == "approved" and str(updated_user.get("role") or "user") == "user":
+                conn.execute(
+                    "UPDATE auth_users SET role = 'practitioner', updated_at = ? WHERE id = ?",
+                    (now, int(request_row["user_id"])),
+                )
+                updated_user_row = conn.execute(
+                    "SELECT * FROM auth_users WHERE id = ?",
+                    (int(request_row["user_id"]),),
+                ).fetchone()
+                updated_user = self._clean_user_row(updated_user_row)
+            conn.execute(
+                """
+                UPDATE auth_role_requests
+                SET status = ?, reviewer_user_id = ?, reviewer_role = ?, reviewer_note = ?, updated_at = ?, decided_at = ?
+                WHERE id = ?
+                """,
+                (status_clean, int(reviewer_user_id), reviewer_role_clean, note_clean, now, now, int(request_id)),
+            )
+            final_row = self._fetch_role_request(conn, int(request_id))
+            conn.commit()
+
+        final_request = self._clean_role_request_row(final_row)
+        if not final_request:
+            raise ValueError("角色申请审核失败。")
+        return {
+            "request": final_request,
+            "updated_user": updated_user or {},
+        }
 
     def _clean_profile_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
         if row is None:
@@ -867,6 +1139,24 @@ class V17AuthDB:
                 "UPDATE auth_users SET role = ?, updated_at = ? WHERE id = ?",
                 (next_role, now, user_id),
             )
+            if next_role == "practitioner":
+                conn.execute(
+                    """
+                    UPDATE auth_role_requests
+                    SET status = 'approved',
+                        reviewer_role = ?,
+                        reviewer_note = CASE
+                            WHEN reviewer_note = '' THEN 'manual role update'
+                            ELSE reviewer_note
+                        END,
+                        updated_at = ?,
+                        decided_at = coalesce(decided_at, ?)
+                    WHERE user_id = ?
+                      AND requested_role = 'practitioner'
+                      AND status = 'pending'
+                    """,
+                    (actor_role_clean, now, now, user_id),
+                )
             row = conn.execute("SELECT * FROM auth_users WHERE id = ?", (user_id,)).fetchone()
             conn.commit()
         updated = self._clean_user_row(row)

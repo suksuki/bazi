@@ -38,6 +38,8 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [requestPractitioner, setRequestPractitioner] = useState(false);
+  const [practitionerRequestNote, setPractitionerRequestNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -62,11 +64,13 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
           ? {
               username: normalizedUsername,
               display_name: displayName.trim() || normalizedUsername,
-              email: email.trim(),
-              password,
-            }
-          : {
-              identifier: normalizedUsername,
+	              email: email.trim(),
+	              password,
+	              request_practitioner: requestPractitioner,
+	              practitioner_request_note: practitionerRequestNote.trim(),
+	            }
+	          : {
+	              identifier: normalizedUsername,
               password,
             };
       const { data, ok } = await requestJson<Record<string, unknown>>(`/api/auth/${mode}`, jsonPostInit(payload));
@@ -76,7 +80,9 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
       }
       setMessage(
         mode === "register"
-          ? t(language, "auth.message.register_success")
+          ? data.role_request
+            ? t(language, "auth.message.register_success_practitioner_pending")
+            : t(language, "auth.message.register_success")
           : t(language, "auth.message.login_success"),
       );
       router.replace(next);
@@ -270,6 +276,35 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
                   placeholder={t(language, "auth.placeholder.confirm_password")}
                 />
               </label>
+            ) : null}
+
+            {mode === "register" ? (
+              <div className="rounded-xl border border-amber-300/15 bg-amber-950/10 p-3">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={requestPractitioner}
+                    onChange={(event) => setRequestPractitioner(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-white/20 bg-black accent-amber-300"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-amber-100">
+                      {t(language, "auth.field.practitioner_request")}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                      {t(language, "auth.field.practitioner_request_note")}
+                    </span>
+                  </span>
+                </label>
+                {requestPractitioner ? (
+                  <textarea
+                    value={practitionerRequestNote}
+                    onChange={(event) => setPractitionerRequestNote(event.target.value)}
+                    className="mt-3 min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/35 px-3.5 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-300/60 focus:ring-1 focus:ring-amber-300/30"
+                    placeholder={t(language, "auth.placeholder.practitioner_request_note")}
+                  />
+                ) : null}
+              </div>
             ) : null}
 
             {error ? <p className="rounded-md border border-rose-500/30 bg-rose-950/25 px-3.5 py-3 text-sm text-rose-200">{error}</p> : null}

@@ -60,6 +60,65 @@ def test_register_bootstraps_first_admin_and_me(isolated_auth_db) -> None:
         assert me_body["user"]["surface_access"]["admin"] is False
 
 
+def test_practitioner_role_request_requires_manager_approval(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        admin_login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        admin_token = admin_login.json()["session_token"]
+
+        register = client.post(
+            "/v17/auth/register",
+            json={
+                "username": "consultant",
+                "password": "very-secure-pass",
+                "display_name": "Consultant",
+                "request_practitioner": True,
+                "practitioner_request_note": "十年案例校验经验，愿意参与格局审计。",
+            },
+        )
+        assert register.status_code == 200
+        body = register.json()
+        applicant_token = body["session_token"]
+        applicant_id = int(body["user"]["id"])
+        assert body["user"]["role"] == "user"
+        assert body["role_request"]["status"] == "pending"
+        assert body["role_request"]["requested_role"] == "practitioner"
+        request_id = int(body["role_request"]["id"])
+
+        before_me = client.get("/v17/auth/me", cookies={"v17_session": applicant_token})
+        assert "oracle.professional" not in before_me.json()["user"]["capabilities"]
+
+        requests = client.get(
+            "/v17/auth/role-requests",
+            cookies={"v17_session": admin_token},
+        )
+        assert requests.status_code == 200
+        pending = requests.json()["role_requests"]
+        assert any(row["id"] == request_id and row["username"] == "consultant" for row in pending)
+
+        users = client.get("/v17/auth/users", cookies={"v17_session": admin_token})
+        applicant_row = next(row for row in users.json()["users"] if row["id"] == applicant_id)
+        assert applicant_row["role_request_status"] == "pending"
+        assert applicant_row["role_request_role"] == "practitioner"
+
+        approve = client.post(
+            f"/v17/auth/role-requests/{request_id}/decision",
+            json={"status": "approved", "reviewer_note": "通过测试审核"},
+            cookies={"v17_session": admin_token},
+        )
+        assert approve.status_code == 200
+        assert approve.json()["role_request"]["status"] == "approved"
+        assert approve.json()["updated_user"]["role"] == "practitioner"
+
+        after_me = client.get("/v17/auth/me", cookies={"v17_session": applicant_token})
+        assert after_me.status_code == 200
+        assert after_me.json()["user"]["role"] == "practitioner"
+        assert "oracle.professional" in after_me.json()["user"]["capabilities"]
+        assert "practitioner.case.write" in after_me.json()["user"]["capabilities"]
+
+
 def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
     with TestClient(app) as client:
         admin_login = client.post(

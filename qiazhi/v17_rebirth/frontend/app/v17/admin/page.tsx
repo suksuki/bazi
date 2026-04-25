@@ -552,18 +552,24 @@ export default function V17AdminPage() {
             is_active: Boolean(item.is_active),
             created_at: asString(item.created_at),
             last_login_at: asString(item.last_login_at),
-            latest_ip_address: asString(item.latest_ip_address),
-            latest_user_agent: asString(item.latest_user_agent),
-            latest_seen_at: asString(item.latest_seen_at),
-          };
-        }),
-      );
+	            latest_ip_address: asString(item.latest_ip_address),
+	            latest_user_agent: asString(item.latest_user_agent),
+	            latest_seen_at: asString(item.latest_seen_at),
+	            role_request_id: Number(item.role_request_id || 0),
+	            role_request_status: asString(item.role_request_status) as AdminAuthUser["role_request_status"],
+	            role_request_role: asString(item.role_request_role) as AdminAuthUser["role_request_role"],
+	            role_request_reason: asString(item.role_request_reason),
+	            role_request_created_at: asString(item.role_request_created_at),
+	            role_request_updated_at: asString(item.role_request_updated_at),
+	          };
+	        }),
+	      );
     } finally {
       setAuthUsersLoading(false);
     }
   }, []);
 
-  async function updateAuthUserRole(userId: number, role: AdminAuthUser["role"]) {
+	  async function updateAuthUserRole(userId: number, role: AdminAuthUser["role"]) {
     const { resp, data } = await requestJson(`/api/auth/users/${userId}/role`, jsonPostInit({ role }));
     const payload = asLooseObject(data);
     if (!resp.ok || payload.ok === false) {
@@ -571,8 +577,22 @@ export default function V17AdminPage() {
       return;
     }
     setMsg(`用户角色已更新为 ${role}`);
-    await loadAuthUsers();
-  }
+	    await loadAuthUsers();
+	  }
+
+	  async function decideAuthRoleRequest(requestId: number, decision: "approved" | "rejected") {
+	    const { resp, data } = await requestJson(
+	      `/api/auth/role-requests/${requestId}/decision`,
+	      jsonPostInit({ status: decision }),
+	    );
+	    const payload = asLooseObject(data);
+	    if (!resp.ok || payload.ok === false) {
+	      setMsg(`命理师申请审核失败：${asString(payload.detail || payload.error, "未知错误")}`);
+	      return;
+	    }
+	    setMsg(decision === "approved" ? "命理师申请已批准。" : "命理师申请已驳回。");
+	    await loadAuthUsers();
+	  }
 
   async function startLearningCampaign() {
     setLearningBusy(true);
@@ -997,10 +1017,11 @@ export default function V17AdminPage() {
       <V17_AdminUsersPanel
         users={authUsers}
         loading={authUsersLoading}
-        onRefresh={loadAuthUsers}
-        onUpdateRole={updateAuthUserRole}
-        operatorRole="admin"
-      />
+	        onRefresh={loadAuthUsers}
+	        onUpdateRole={updateAuthUserRole}
+	        onDecideRoleRequest={decideAuthRoleRequest}
+	        operatorRole="admin"
+	      />
     ),
   };
 

@@ -2221,12 +2221,18 @@ export default function OraclePage() {
             is_active: Boolean(item.is_active),
             created_at: String(item.created_at || "").trim(),
             last_login_at: String(item.last_login_at || "").trim(),
-            latest_ip_address: String(item.latest_ip_address || "").trim(),
-            latest_user_agent: String(item.latest_user_agent || "").trim(),
-            latest_seen_at: String(item.latest_seen_at || "").trim(),
-          };
-        }),
-      );
+	            latest_ip_address: String(item.latest_ip_address || "").trim(),
+	            latest_user_agent: String(item.latest_user_agent || "").trim(),
+	            latest_seen_at: String(item.latest_seen_at || "").trim(),
+	            role_request_id: Number(item.role_request_id || 0),
+	            role_request_status: String(item.role_request_status || "").trim() as AdminAuthUser["role_request_status"],
+	            role_request_role: String(item.role_request_role || "").trim() as AdminAuthUser["role_request_role"],
+	            role_request_reason: String(item.role_request_reason || "").trim(),
+	            role_request_created_at: String(item.role_request_created_at || "").trim(),
+	            role_request_updated_at: String(item.role_request_updated_at || "").trim(),
+	          };
+	        }),
+	      );
     } catch (error) {
       setAuthUsersMessage(error instanceof Error ? error.message : ui("用户列表加载失败。", "Failed to load users.", "사용자 목록을 불러오지 못했습니다."));
     } finally {
@@ -2234,7 +2240,7 @@ export default function OraclePage() {
     }
   }, [canManageUsers, ui]);
 
-  const updateAuthUserRole = useCallback(
+	  const updateAuthUserRole = useCallback(
     async (userId: number, role: AdminAuthUser["role"]) => {
       const { data: payload, ok } = await requestJson<Record<string, unknown>>(`/api/auth/users/${userId}/role`, jsonPostInit({ role }));
       if (!ok || payload.ok === false) {
@@ -2244,7 +2250,26 @@ export default function OraclePage() {
       await loadAuthUsers();
     },
     [loadAuthUsers, ui],
-  );
+	  );
+
+	  const decideAuthRoleRequest = useCallback(
+	    async (requestId: number, decision: "approved" | "rejected") => {
+	      const { data: payload, ok } = await requestJson<Record<string, unknown>>(
+	        `/api/auth/role-requests/${requestId}/decision`,
+	        jsonPostInit({ status: decision }),
+	      );
+	      if (!ok || payload.ok === false) {
+	        throw new Error(String(payload.detail || ui("申请审核失败。", "Failed to review request.", "신청을 검토하지 못했습니다.")));
+	      }
+	      setAuthUsersMessage(
+	        decision === "approved"
+	          ? ui("命理师申请已批准。", "Practitioner request approved.", "명리사 신청이 승인되었습니다.")
+	          : ui("命理师申请已驳回。", "Practitioner request rejected.", "명리사 신청이 거절되었습니다."),
+	      );
+	      await loadAuthUsers();
+	    },
+	    [loadAuthUsers, ui],
+	  );
 
   const verdictTriggerPrompt = ui(
     "请基于当前已通过的决策，生成精炼八字断语，短句为主。",
@@ -3030,9 +3055,10 @@ export default function OraclePage() {
                         <V17_AdminUsersPanel
                           users={authUsers}
                           loading={authUsersLoading}
-                          onRefresh={() => void loadAuthUsers()}
-                          onUpdateRole={updateAuthUserRole}
-                          operatorRole="manager"
+	                          onRefresh={() => void loadAuthUsers()}
+	                          onUpdateRole={updateAuthUserRole}
+	                          onDecideRoleRequest={decideAuthRoleRequest}
+	                          operatorRole="manager"
                           compact
                           title={t(language, "oracle.section.collab.title")}
                           description={t(language, "oracle.collab.desc")}

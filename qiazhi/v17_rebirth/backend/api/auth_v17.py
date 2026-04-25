@@ -56,6 +56,28 @@ def _profile_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _role_request_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": int(row.get("id") or 0),
+        "user_id": int(row.get("user_id") or 0),
+        "username": str(row.get("username") or "").strip(),
+        "display_name": str(row.get("display_name") or "").strip(),
+        "email": str(row.get("email") or "").strip(),
+        "current_role": str(row.get("current_role") or "").strip(),
+        "requested_role": str(row.get("requested_role") or "").strip(),
+        "status": str(row.get("status") or "").strip(),
+        "reason": str(row.get("reason") or "").strip(),
+        "reviewer_user_id": int(row.get("reviewer_user_id") or 0),
+        "reviewer_role": str(row.get("reviewer_role") or "").strip(),
+        "reviewer_username": str(row.get("reviewer_username") or "").strip(),
+        "reviewer_display_name": str(row.get("reviewer_display_name") or "").strip(),
+        "reviewer_note": str(row.get("reviewer_note") or "").strip(),
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+        "decided_at": str(row.get("decided_at") or "").strip(),
+    }
+
+
 def _feedback_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": int(row.get("id") or 0),
@@ -151,6 +173,8 @@ async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(..
     password = str(payload.get("password") or "")
     display_name = str(payload.get("display_name") or username).strip()
     email = str(payload.get("email") or "").strip()
+    request_practitioner = bool(payload.get("request_practitioner"))
+    practitioner_request_note = str(payload.get("practitioner_request_note") or "").strip()
 
     try:
         user = auth_storage.create_user(
@@ -158,6 +182,15 @@ async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(..
             password=password,
             display_name=display_name,
             email=email or None,
+        )
+        role_request = (
+            auth_storage.create_role_request(
+                user_id=int(user.get("id") or 0),
+                requested_role="practitioner",
+                reason=practitioner_request_note,
+            )
+            if request_practitioner
+            else None
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -174,6 +207,7 @@ async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(..
         "session_token": session["session_token"],
         "session_expires_at": session["expires_at"],
         "bootstrap_admin": bool(user.get("bootstrap_admin")),
+        "role_request": _role_request_payload(role_request) if role_request else None,
     }
 
 
@@ -221,6 +255,42 @@ async def list_auth_users(request: Request) -> Dict[str, Any]:
     require_manager_request(request)
     rows = [build_user_payload(row) for row in auth_storage.list_users()]
     return {"ok": True, "users": rows}
+
+
+@router.post("/v17/auth/role-requests")
+@router.post("/api/v17/auth/role-requests")
+async def create_auth_role_request(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    requested_role = str(payload.get("requested_role") or "practitioner").strip().lower()
+    reason = str(payload.get("reason") or payload.get("practitioner_request_note") or "").strip()
+    try:
+        row = auth_storage.create_role_request(
+            user_id=int(user.get("id") or 0),
+            requested_role=requested_role,
+            reason=reason,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "role_request": _role_request_payload(row)}
+
+
+@router.get("/v17/auth/role-requests")
+@router.get("/api/v17/auth/role-requests")
+async def list_auth_role_requests(request: Request) -> Dict[str, Any]:
+    require_manager_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    try:
+        rows = auth_storage.list_role_requests(
+            status=str(query.get("status") or "pending").strip(),
+            limit=limit,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "role_requests": [_role_request_payload(row) for row in rows]}
 
 
 @router.get("/v17/auth/profiles")
@@ -481,6 +551,38 @@ async def update_auth_user_role(
     return {
         "ok": True,
         "updated_user": build_user_payload(updated),
+        "operator": {
+            "id": actor["id"],
+            "username": actor["username"],
+        },
+    }
+
+
+@router.post("/v17/auth/role-requests/{request_id}/decision")
+@router.post("/api/v17/auth/role-requests/{request_id}/decision")
+async def decide_auth_role_request(
+    request_id: int,
+    request: Request,
+    payload: Dict[str, Any] = Body(...),
+) -> Dict[str, Any]:
+    actor = require_manager_request(request)
+    decision = str(payload.get("status") or payload.get("decision") or "").strip().lower()
+    reviewer_note = str(payload.get("reviewer_note") or payload.get("note") or "").strip()
+    try:
+        result = auth_storage.decide_role_request(
+            request_id,
+            status=decision,
+            reviewer_user_id=int(actor.get("id") or 0),
+            reviewer_role=str(actor.get("role") or "manager"),
+            reviewer_note=reviewer_note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    updated_user = result.get("updated_user") if isinstance(result.get("updated_user"), dict) else {}
+    return {
+        "ok": True,
+        "role_request": _role_request_payload(result["request"]),
+        "updated_user": build_user_payload(updated_user) if updated_user else None,
         "operator": {
             "id": actor["id"],
             "username": actor["username"],
