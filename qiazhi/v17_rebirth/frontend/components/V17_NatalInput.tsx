@@ -308,7 +308,7 @@ export function V17_NatalInput({
   return (
     <section className="w-full border-y border-white/10 bg-[#0B0F16] px-4 pb-28 pt-5 shadow-none backdrop-blur-xl sm:rounded-2xl sm:border sm:border-violet-400/30 sm:bg-[linear-gradient(180deg,rgba(76,29,149,0.18),rgba(9,9,11,0.88))] sm:p-5 sm:shadow-[0_10px_40px_rgba(76,29,149,0.28)]">
       <header className="mb-4 sm:mb-5">
-        <p className="text-xs font-semibold text-amber-300 sm:hidden">{t(lang, "brand.title")}</p>
+        <p className="bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-500 bg-clip-text text-xs font-semibold text-transparent sm:hidden">{t(lang, "brand.title")}</p>
         <h2 className="mt-1 text-xl font-semibold text-zinc-50 sm:mt-0 sm:text-base sm:text-violet-100">{t(lang, "natal.title")}</h2>
         <p className="mt-1 text-sm leading-6 text-zinc-400 sm:text-xs sm:text-violet-200/80">{t(lang, "natal.desc")}</p>
       </header>

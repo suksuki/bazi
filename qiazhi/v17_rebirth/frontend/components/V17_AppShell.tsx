@@ -18,6 +18,8 @@ type Props = {
   maxWidthClassName?: string;
 };
 
+const brandGoldClass = "bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-500 bg-clip-text text-transparent";
+
 export function V17_AppShell({
   language,
   user,
@@ -60,7 +62,7 @@ export function V17_AppShell({
               />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-wide text-amber-300 sm:text-xl">{t(language, "brand.title")}</h1>
+              <h1 className={`truncate text-base font-semibold tracking-wide sm:text-xl ${brandGoldClass}`}>{t(language, "brand.title")}</h1>
               <p className="truncate text-[10px] tracking-[0.2em] text-violet-200/65 sm:text-[11px] sm:tracking-[0.24em]">{t(language, "brand.subtitle")}</p>
             </div>
           </div>

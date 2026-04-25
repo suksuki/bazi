@@ -14,10 +14,12 @@ type Props = {
   nextPath?: string;
 };
 
+const brandGoldClass = "bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-500 bg-clip-text text-transparent";
+
 function tone(active: boolean) {
   return active
-    ? "border-cyan-300 bg-cyan-300 text-zinc-950 shadow-[0_10px_28px_rgba(34,211,238,0.18)]"
-    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-white/20 hover:bg-white/[0.07] hover:text-zinc-100";
+    ? "border-amber-300/80 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 text-zinc-950 shadow-[0_10px_28px_rgba(212,175,55,0.2)]"
+    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:border-amber-300/25 hover:bg-white/[0.07] hover:text-zinc-100";
 }
 
 function authTabHref(mode: "login" | "register", next: string) {
@@ -97,8 +99,8 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
           aria-pressed={language === option.value}
           className={`rounded-md px-2.5 py-1.5 text-xs transition ${
             language === option.value
-              ? "bg-cyan-300 text-zinc-950"
-              : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+              ? "bg-gradient-to-r from-amber-300 to-yellow-500 text-zinc-950"
+              : "text-zinc-400 hover:bg-zinc-900 hover:text-amber-100"
           }`}
         >
           {t(language, `lang.${option.value}`)}
@@ -111,14 +113,14 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
   const subtitleKey = mode === "register" ? "auth.entry.subtitle.register" : "auth.entry.subtitle.login";
   const submitIcon = mode === "register" ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />;
   const inputClass =
-    "mt-2 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-400 focus:bg-white/[0.07] focus:ring-1 focus:ring-cyan-400/70";
+    "mt-2 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3.5 py-3 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-amber-300/70 focus:bg-white/[0.07] focus:ring-1 focus:ring-amber-300/40";
   const labelClass = "block text-sm font-medium text-zinc-300";
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[#0B0F16] px-4 py-5 text-zinc-100 sm:px-6 lg:min-h-screen lg:px-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(212,175,55,0.13),transparent_24%),radial-gradient(circle_at_82%_20%,rgba(34,211,238,0.1),transparent_26%),linear-gradient(180deg,#060b10_0%,#0B0F16_58%,#07090d_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(212,175,55,0.14),transparent_24%),radial-gradient(circle_at_82%_20%,rgba(245,158,11,0.08),transparent_28%),linear-gradient(180deg,#060b10_0%,#0B0F16_58%,#07090d_100%)]" />
       <div className="pointer-events-none absolute left-[-18%] top-[-10%] h-72 w-72 rounded-full border border-amber-400/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-18%] right-[-18%] h-80 w-80 rounded-full border border-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-18%] right-[-18%] h-80 w-80 rounded-full border border-amber-400/10 blur-3xl" />
       <div className="mx-auto grid min-h-[calc(100dvh-40px)] w-full max-w-6xl items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
         <section className="relative hidden min-w-0 lg:block">
           <div className="max-w-xl rounded-2xl border border-white/10 bg-white/[0.035] p-8 shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl">
@@ -134,7 +136,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
                 />
               </div>
               <div>
-                <div className="text-lg font-semibold text-amber-300">{t(language, "brand.title")}</div>
+                <div className={`text-lg font-semibold ${brandGoldClass}`}>{t(language, "brand.title")}</div>
                 <div className="mt-1 text-sm text-zinc-500">{t(language, "brand.subtitle")}</div>
               </div>
             </div>
@@ -144,12 +146,12 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             <p className="mt-5 max-w-lg text-base leading-8 text-zinc-400">
               {t(language, "auth.entry.hero_subtitle")}
             </p>
-            <div className="mt-8 grid h-40 overflow-hidden rounded-2xl border border-amber-400/15 bg-[radial-gradient(circle_at_50%_45%,rgba(212,175,55,0.16),transparent_32%),linear-gradient(135deg,rgba(34,211,238,0.06),rgba(124,58,237,0.07))] p-5">
+            <div className="mt-8 grid h-40 overflow-hidden rounded-2xl border border-amber-400/15 bg-[radial-gradient(circle_at_50%_45%,rgba(212,175,55,0.18),transparent_32%),linear-gradient(135deg,rgba(245,158,11,0.08),rgba(124,58,237,0.06))] p-5">
               <div className="relative flex items-center justify-center">
                 <div className="absolute h-24 w-24 rounded-full border border-amber-400/35" />
-                <div className="absolute h-32 w-32 rounded-full border border-cyan-400/10" />
+                <div className="absolute h-32 w-32 rounded-full border border-amber-300/12" />
                 <div className="absolute h-px w-56 rotate-12 bg-gradient-to-r from-transparent via-amber-300/40 to-transparent" />
-                <div className="absolute h-px w-48 -rotate-12 bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
+                <div className="absolute h-px w-48 -rotate-12 bg-gradient-to-r from-transparent via-amber-200/25 to-transparent" />
                 <span className="rounded-full border border-amber-300/30 bg-black/35 px-4 py-2 text-sm font-semibold text-amber-200">
                   {t(language, "brand.subtitle")}
                 </span>
@@ -178,12 +180,12 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
                   className="h-16 w-16 object-cover"
                 />
               </div>
-            <div className="text-2xl font-semibold text-amber-300">{t(language, "brand.title")}</div>
+            <div className={`text-2xl font-semibold ${brandGoldClass}`}>{t(language, "brand.title")}</div>
             <p className="text-sm text-zinc-400">{t(language, "auth.entry.hero_subtitle")}</p>
           </div>
           <div className="hidden items-start justify-between gap-3 lg:flex">
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-amber-300">{t(language, "brand.title")}</div>
+              <div className={`truncate text-sm font-medium ${brandGoldClass}`}>{t(language, "brand.title")}</div>
               <h1 className="mt-1 text-2xl font-semibold text-zinc-50">{t(language, headingKey)}</h1>
             </div>
             <div className="shrink-0">{languageSelector}</div>
@@ -276,7 +278,7 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-cyan-300/70 bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-base font-semibold text-zinc-950 shadow-[0_14px_30px_rgba(34,211,238,0.18)] transition-all duration-200 hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-amber-300/70 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 px-4 py-3 text-base font-semibold text-zinc-950 shadow-[0_14px_30px_rgba(212,175,55,0.22)] transition-all duration-200 hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? null : submitIcon}
               {loading

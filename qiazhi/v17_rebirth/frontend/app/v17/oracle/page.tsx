@@ -158,6 +158,8 @@ function V17MobileResultSummary({
   fourPillars,
   luckPillar,
   flowPillar,
+  selectedYear,
+  onYearChange,
   birthLine,
   judgement,
   patternLeader,
@@ -173,6 +175,8 @@ function V17MobileResultSummary({
   fourPillars?: FourPillarsSummary;
   luckPillar?: unknown;
   flowPillar?: unknown;
+  selectedYear: number;
+  onYearChange: (year: number) => void;
   birthLine: string;
   judgement: string;
   patternLeader?: LivePatternCandidate;
@@ -193,6 +197,7 @@ function V17MobileResultSummary({
     { key: "luck", label: ui("大运", "Luck", "대운"), value: compactPillarText(luckPillar) },
     { key: "flow", label: ui("流年", "Flow", "세운"), value: compactPillarText(flowPillar) },
   ];
+  const mobileYearChoices = Array.from({ length: 101 }, (_, index) => selectedYear - 50 + index);
   const tabs: Array<{ id: MobileResultTab; label: string }> = [
     { id: "chart", label: ui("命盘", "Chart", "명반") },
     { id: "gods", label: ui("用神", "Gods", "용신") },
@@ -220,7 +225,7 @@ function V17MobileResultSummary({
         </div>
         <p className="mt-3 text-[13px] leading-6 text-zinc-200">{judgement}</p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full border border-cyan-400/25 bg-cyan-500/10 px-2 py-1 text-[10px] text-cyan-100">
+          <span className="rounded-full border border-amber-300/25 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-100">
             {birthLine}
           </span>
           {useGods.slice(0, 2).map((god) => (
@@ -243,7 +248,7 @@ function V17MobileResultSummary({
               <p className="text-[10px] text-zinc-500">{pillar.label}</p>
               <div className="mt-1 grid grid-rows-2 overflow-hidden rounded-lg border border-white/10">
                 <span className="bg-zinc-900 py-2 text-xl font-semibold text-zinc-100">{pillar.value.stem}</span>
-                <span className="bg-zinc-950 py-2 text-lg font-semibold text-cyan-200">{pillar.value.branch}</span>
+                <span className="bg-zinc-950 py-2 text-lg font-semibold text-amber-200">{pillar.value.branch}</span>
               </div>
             </div>
           ))}
@@ -256,6 +261,21 @@ function V17MobileResultSummary({
             </div>
           ))}
         </div>
+        <label className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2">
+          <span className="text-[11px] text-amber-100/80">{ui("选择流年", "Flow year", "세운 선택")}</span>
+          <select
+            value={selectedYear}
+            onChange={(event) => onYearChange(Number(event.target.value))}
+            className="min-h-8 rounded-lg border border-amber-300/25 bg-[#0B0F16] px-2 text-sm font-semibold text-amber-100 outline-none transition focus:border-amber-300/70 focus:ring-1 focus:ring-amber-300/35"
+            aria-label={ui("选择流年", "Select flow year", "세운 선택")}
+          >
+            {mobileYearChoices.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-[#0B0F16] p-3">
@@ -267,7 +287,7 @@ function V17MobileResultSummary({
               onClick={() => setActiveTab(tab.id)}
               className={`rounded-lg px-2 py-2 text-[12px] font-medium transition ${
                 activeTab === tab.id
-                  ? "bg-cyan-400 text-zinc-950"
+                  ? "bg-amber-300 text-zinc-950 shadow-[0_0_18px_rgba(212,175,55,0.18)]"
                   : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100"
               }`}
             >
@@ -1625,6 +1645,8 @@ export default function OraclePage() {
                     fourPillars={fourPillars}
                     luckPillar={luckPillarSnap}
                     flowPillar={flowPillarSnap}
+                    selectedYear={s.selectedLuckYear}
+                    onYearChange={s.setSelectedLuckYear}
                     birthLine={`${s.birthTimeISO} · ${term(s.natalGender || "")}`}
                     judgement={patternJudgement}
                     patternLeader={patternLeader}
