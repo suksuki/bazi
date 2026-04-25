@@ -1613,7 +1613,11 @@ function V17EvidencePanel({
                             : ui("收录为真实案例", "Save as real case", "실제 사례로 저장")}
                         </p>
                         <p className="mt-0.5 text-[10px] leading-4 text-zinc-500">
-                          {ui("用于后续回归、审计与自动学习。", "Feeds later regression, audit, and learning.", "이후 회귀, 감사, 학습에 사용됩니다.")}
+                          {ui(
+                            "只用于后续回归、审计与学习候选；不会自动修改系统参数。",
+                            "Feeds later regression, audit, and learning candidates only; no system parameters are changed automatically.",
+                            "이후 회귀, 감사, 학습 후보에만 사용되며 시스템 매개변수는 자동 변경되지 않습니다.",
+                          )}
                         </p>
                       </div>
                     </div>
@@ -2080,7 +2084,7 @@ function V17PractitionerLedgerPanel({
 
 export default function OraclePage() {
   const router = useRouter();
-  const { language, user, authLoading, logout, access, ui, term, termList } = useV17Runtime();
+  const { language, user, authLoading, logout, refreshAuth, access, ui, term, termList } = useV17Runtime();
   const s = useOracleSession({ uiLanguage: language });
   const [focusedDecisionId, setFocusedDecisionId] = useState<string>("");
   const [activeSurfaceTab, setActiveSurfaceTab] = useState<OracleSurfaceTab>("core");
@@ -2097,6 +2101,9 @@ export default function OraclePage() {
   const [authUsers, setAuthUsers] = useState<AdminAuthUser[]>([]);
   const [authUsersLoading, setAuthUsersLoading] = useState(false);
   const [authUsersMessage, setAuthUsersMessage] = useState("");
+  const [practitionerRequestBusy, setPractitionerRequestBusy] = useState(false);
+  const [practitionerRequestMessage, setPractitionerRequestMessage] = useState("");
+  const [practitionerRequestError, setPractitionerRequestError] = useState("");
 
   const payload = (s.physicsSnapshot?.payload || {}) as Record<string, unknown>;
   const energyMeta = payload.energy_meta && typeof payload.energy_meta === "object"
@@ -2491,6 +2498,35 @@ export default function OraclePage() {
 	    [loadAuthUsers, ui],
 	  );
 
+  const submitPractitionerAccessRequest = useCallback(async () => {
+    if (practitionerRequestBusy) return;
+    setPractitionerRequestBusy(true);
+    setPractitionerRequestMessage("");
+    setPractitionerRequestError("");
+    try {
+      const { data: payload, ok } = await requestJson<Record<string, unknown>>(
+        "/api/auth/role-requests",
+        jsonPostInit({
+          requested_role: "practitioner",
+          reason: ui(
+            "用户在主页面申请命理师权限。",
+            "User requested practitioner access from the main page.",
+            "사용자가 메인 화면에서 명리사 권한을 신청했습니다.",
+          ),
+        }),
+      );
+      if (!ok || payload.ok === false) {
+        throw new Error(String(payload.detail || ui("申请提交失败。", "Failed to submit request.", "신청을 제출하지 못했습니다.")));
+      }
+      setPractitionerRequestMessage(ui("申请已提交，等待管理员审核。", "Request submitted. Waiting for admin review.", "신청이 제출되었습니다. 관리자 검토를 기다립니다."));
+      await refreshAuth();
+    } catch (error) {
+      setPractitionerRequestError(error instanceof Error ? error.message : ui("申请提交失败。", "Failed to submit request.", "신청을 제출하지 못했습니다."));
+    } finally {
+      setPractitionerRequestBusy(false);
+    }
+  }, [practitionerRequestBusy, refreshAuth, ui]);
+
   const verdictTriggerPrompt = ui(
     "请基于当前已通过的决策，生成精炼八字断语，短句为主。",
     "Generate a concise BaZi verdict from the approved decisions. Use short judgement lines.",
@@ -2630,6 +2666,45 @@ export default function OraclePage() {
                       tabooGods={tabooGods}
                       tongguanGods={tongguanGods}
                     />
+                  ) : null}
+                  {user?.role === "user" ? (
+                    <section className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-amber-100">
+                            {ui("申请命理师权限", "Request Practitioner Access", "명리사 권한 신청")}
+                          </p>
+                          <p className="mt-1 text-[12px] leading-5 text-zinc-500">
+                            {ui(
+                              "开启专业证据链、案例沉淀与反馈入口。",
+                              "Enable professional evidence chains, case capture, and feedback tools.",
+                              "전문 근거 체인, 사례 저장, 피드백 도구를 엽니다.",
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void submitPractitionerAccessRequest()}
+                          disabled={practitionerRequestBusy}
+                          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 py-2 text-[12px] font-semibold text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                        >
+                          <BriefcaseBusiness className="h-3.5 w-3.5" />
+                          {practitionerRequestBusy
+                            ? ui("提交中", "Submitting", "제출 중")
+                            : ui("提交申请", "Submit Request", "신청 제출")}
+                        </button>
+                      </div>
+                      {practitionerRequestMessage ? (
+                        <p className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-2.5 py-2 text-[11px] text-emerald-200">
+                          {practitionerRequestMessage}
+                        </p>
+                      ) : null}
+                      {practitionerRequestError ? (
+                        <p className="mt-2 rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-2 text-[11px] text-rose-200">
+                          {practitionerRequestError}
+                        </p>
+                      ) : null}
+                    </section>
                   ) : null}
                   {canUseProfessionalOracle ? (
                   <div className="hidden sm:block">

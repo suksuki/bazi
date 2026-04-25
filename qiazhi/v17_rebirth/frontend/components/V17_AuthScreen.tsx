@@ -274,13 +274,6 @@ export function V17_AuthScreen({ mode, nextPath }: Props) {
               </label>
             ) : null}
 
-            {mode === "register" ? (
-              <div className="rounded-xl border border-amber-300/15 bg-amber-950/10 p-3">
-                <p className="text-sm font-medium text-amber-100">{t(language, "auth.field.practitioner_request")}</p>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">{t(language, "auth.field.practitioner_request_note")}</p>
-              </div>
-            ) : null}
-
             {error ? <p className="rounded-md border border-rose-500/30 bg-rose-950/25 px-3.5 py-3 text-sm text-rose-200">{error}</p> : null}
             {message ? <p className="rounded-md border border-emerald-500/30 bg-emerald-950/25 px-3.5 py-3 text-sm text-emerald-200">{message}</p> : null}
 
