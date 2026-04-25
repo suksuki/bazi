@@ -643,6 +643,26 @@ def test_practitioner_case_library_records_real_case_and_benchmark_seed(isolated
         assert "PRACTITIONER_ACCEPTED_REAL_AUDIT_YANGREN_FALSE_POSITIVE_19770508" in export_body["python_registry_snippet"]
         assert export_body["guardrails"][0] == "export is read-only"
 
+        shadow_resp = client.post(
+            "/v17/auth/practitioner-learning-shadow-run",
+            cookies=cookies,
+            json={
+                "experiment_snapshot": {
+                    "experiment_id": "practitioner_experiment::demo",
+                    "candidate_id": "candidate::demo",
+                    "parameter_family": "pattern_specialization.yangren_gate",
+                    "candidate_patch": {"patch_mode": "review_only"},
+                }
+            },
+        )
+        assert shadow_resp.status_code == 200
+        shadow_body = shadow_resp.json()
+        assert shadow_body["protocol"] == "v17.practitioner.shadow_run_report.v1"
+        assert shadow_body["benchmark_export"]["summary"]["accepted_case_count"] == 1
+        assert shadow_body["practitioner_benchmarks"]["accepted_case_count"] == 1
+        assert shadow_body["scorecard"]["verdict"] == "rework"
+        assert "candidate patch is not applied automatically" in shadow_body["guardrails"]
+
         duplicate = client.post(
             "/v17/auth/practitioner-cases",
             cookies=cookies,

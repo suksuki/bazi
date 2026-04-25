@@ -91,6 +91,7 @@ scripts/train_wrapper.sh
 data/ignored/
 results/
 *.json
+!qiazhi/v17_rebirth/frontend/package.json
 !qiazhi/v17_rebirth/backend/logic/L1_atomic_ops/manifests/l1_physics_manifest.json
 !qiazhi/v17_rebirth/backend/logic/configs/classical.pattern.caipoyin.v1.json
 !qiazhi/v17_rebirth/backend/logic/configs/classical.ziping.climate_bridge.v1.json

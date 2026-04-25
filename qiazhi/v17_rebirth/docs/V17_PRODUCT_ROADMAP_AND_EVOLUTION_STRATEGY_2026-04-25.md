@@ -265,6 +265,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 - `approved_for_experiment` 只准入实验队列，仍需 synthetic + practitioner benchmark 与后续发布审批。
 - `/v17/auth/practitioner-learning-experiments` 会把已准入候选转换为 dry-run 实验队列，输出候选 patch 范围、必跑命令和安全门。
 - `/v17/auth/practitioner-learning-scorecards` 记录 shadow run 的 synthetic / practitioner benchmark 结果、改善/退化数量和 promote/rework/reject 结论；支持导入 `shadow_run_report`，自动推导评分字段并引用 accepted benchmark case IDs。
+- `/v17/auth/practitioner-learning-shadow-run` 可基于实验队列生成只读 shadow-run 报告：运行当前 synthetic baseline，审计静态与 accepted practitioner benchmarks，并输出可直接导入 scorecard 的报告结构；候选 patch 仍不自动应用。
 - `/v17/auth/practitioner-learning-releases` 记录 admin 发布审批、测试报告和回滚方案；批准发布前必须存在无退化的 `promote` scorecard，响应固定 `applied=false`，不自动写配置。
 - `/v17/auth/practitioner-learning-governance-export` 可导出候选、审计、实验、scorecard 与发布记录，作为长期归档和版本对照的审计包。
 
@@ -323,7 +324,7 @@ LLM 后续按四个受治理角色进入系统，详见 [V17 LLM Collaboration L
 当前主线已完成，后续建议转入运营化打磨：
 
 1. 扩充真实命理师案例库，把更多 `benchmark_candidate` 接纳并导出为长期 `PractitionerBenchmarkCase`。
-2. 将 scorecard 的 shadow run 报告导入接到真实 Experiment Runner 输出，而不是只上传 JSON。
+2. 将 shadow-run 报告生成器升级为真正的 A/B Experiment Runner：在安全沙盒中比较 baseline 与候选 patch，而不是只跑当前基线。
 3. 继续做移动端验收与普通用户表达减噪，让 P6 的消费侧体验更顺。
 4. 持续把审计包与真实版本号、配置 diff 和部署记录对齐，形成长期发布档案。
 

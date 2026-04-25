@@ -12,6 +12,7 @@ from v17_rebirth.backend.services.llm_collaboration import (
     build_evidence_review_draft,
     build_evidence_review_prompt_text,
 )
+from v17_rebirth.backend.services.practitioner_shadow_run import build_practitioner_shadow_run_report
 from v17_rebirth.backend.services.practitioner_learning import build_practitioner_learning_candidates
 from v17_rebirth.backend.services.auth_service import (
     build_user_payload,
@@ -862,6 +863,19 @@ async def list_practitioner_learning_experiments(request: Request) -> Dict[str, 
         limit=120,
     )
     report = build_practitioner_experiment_queue(rows)
+    report["viewer_role"] = str(user.get("role") or "user")
+    return report
+
+
+@router.post("/v17/auth/practitioner-learning-shadow-run")
+@router.post("/api/v17/auth/practitioner-learning-shadow-run")
+async def create_practitioner_learning_shadow_run(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    experiment = payload.get("experiment_snapshot") if isinstance(payload.get("experiment_snapshot"), dict) else {}
+    report = build_practitioner_shadow_run_report(
+        experiment=experiment,
+        benchmark_export=_build_practitioner_benchmark_export(),
+    )
     report["viewer_role"] = str(user.get("role") or "user")
     return report
 

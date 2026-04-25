@@ -249,6 +249,42 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
     }
   }
 
+  async function generateShadowRunScorecard(experiment: Row) {
+    const experimentId = asText(experiment.experiment_id);
+    if (!experimentId) return;
+    setBusyKey(`scorecard-run:${experimentId}`);
+    setMessage("");
+    try {
+      const shadowResp = await requestJson<Row>(
+        "/api/auth/practitioner-learning-shadow-run",
+        jsonPostInit({ experiment_snapshot: experiment }),
+      );
+      if (!shadowResp.ok) throw new Error(String(shadowResp.data.detail || "shadow run 报告生成失败"));
+      const scoreResp = await requestJson<Row>(
+        "/api/auth/practitioner-learning-scorecards",
+        jsonPostInit({
+          experiment_id: experimentId,
+          candidate_id: asText(experiment.candidate_id),
+          parameter_family: asText(experiment.parameter_family),
+          experiment_snapshot: experiment,
+          shadow_run_report: shadowResp.data,
+          payload: {
+            generated_by: "admin_learning_governance_panel",
+            required_commands: experiment.required_commands,
+          },
+        }),
+      );
+      if (!scoreResp.ok) throw new Error(String(scoreResp.data.detail || "shadow run 评分记录失败"));
+      const scorecard = asRecord(scoreResp.data.scorecard);
+      setMessage(`shadow run 已生成并记录评分：${asText(scorecard.verdict, "scorecard")}，未自动写配置。`);
+      await loadGovernance();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "shadow run 报告生成失败");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
   async function exportGovernance() {
     setBusyKey("export");
     setMessage("");
@@ -468,6 +504,7 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
                 const scored = Boolean(scorecard);
                 const promotable = asText(scorecard?.verdict) === "promote";
                 const importBusy = busyKey === `scorecard-import:${experimentId}`;
+                const runBusy = busyKey === `scorecard-run:${experimentId}`;
                 return (
                   <article key={experimentId} className="rounded-xl border border-white/10 bg-black/25 p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -498,8 +535,17 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
                         <Eye className="h-3 w-3" />
                         {busyKey === `scorecard:${experimentId}:rework` ? "保存中" : "记录返工"}
                       </button>
+                      <button
+                        type="button"
+                        disabled={Boolean(busyKey) || scored}
+                        onClick={() => void generateShadowRunScorecard(experiment)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/40 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        <Rocket className="h-3 w-3" />
+                        {runBusy ? "生成中" : "生成报告评分"}
+                      </button>
                       <label
-                        className={`inline-flex items-center gap-1 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/40 ${
+                        className={`inline-flex items-center gap-1 rounded-lg border border-zinc-600 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-zinc-200 transition hover:border-zinc-400 ${
                           Boolean(busyKey) || scored ? "cursor-not-allowed opacity-55" : "cursor-pointer"
                         }`}
                       >
