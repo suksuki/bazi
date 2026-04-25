@@ -1669,67 +1669,6 @@ function V17EvidencePanel({
   );
 }
 
-function V17EvidenceEntryCard({
-  ui,
-  items,
-  summary,
-  onOpen,
-}: {
-  ui: LocalizeText;
-  items: Array<Record<string, unknown>>;
-  summary: Record<string, unknown>;
-  onOpen: () => void;
-}) {
-  const total = asNumberValue(summary.total, items.length);
-  const candidateCount = asNumberValue(summary.candidate_count);
-  const riskCount = asNumberValue(summary.risk_count);
-  const observeOnlyCount = asNumberValue(summary.observe_only_count);
-
-  return (
-    <section className="rounded-xl border border-cyan-500/20 bg-cyan-950/15 p-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-2">
-          <span className="rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-2 text-cyan-100">
-            <FileSearch className="h-4 w-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-cyan-50">{ui("专业证据已移至运势分析", "Professional evidence moved to Analysis", "전문 근거는 분석으로 이동했습니다.")}</p>
-            <p className="mt-1 text-[12px] leading-5 text-zinc-400">
-              {ui(
-                "基础排盘只保留摘要入口，完整插件依据、反馈和案例沉淀在运势分析中查看。",
-                "The chart keeps only a summary entry. Full plugin evidence, feedback, and case capture live in Analysis.",
-                "기본 명반에는 요약 입구만 남기고, 전체 플러그인 근거와 피드백, 사례 저장은 분석에서 봅니다.",
-              )}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-3 py-2 text-[12px] font-semibold text-cyan-50 transition hover:border-cyan-300/55 hover:bg-cyan-500/15 sm:w-auto"
-        >
-          <FileSearch className="h-3.5 w-3.5" />
-          {ui("查看证据链", "Open evidence", "근거 보기")}
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
-        {[
-          [ui("总数", "Total", "합계"), total],
-          [ui("格局", "Pattern", "격국"), candidateCount],
-          [ui("风险", "Risk", "위험"), riskCount],
-          [ui("观察", "Watch", "관찰"), observeOnlyCount],
-        ].map(([label, value]) => (
-          <span key={String(label)} className="rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-[10px] text-zinc-400">
-            <b className="mr-1 text-zinc-100">{String(value)}</b>
-            {String(label)}
-          </span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function caseStatusLabel(status: string, ui: LocalizeText): string {
   if (status === "benchmark_candidate") return ui("基准候选", "Benchmark", "기준 후보");
   if (status === "accepted") return ui("已采纳", "Accepted", "채택");
@@ -2767,14 +2706,6 @@ export default function OraclePage() {
                     llmLifecyclePhase={s.llmLifecyclePhase}
                     lang={language}
                   />
-                  {canReadEvidence ? (
-                    <V17EvidenceEntryCard
-                      ui={ui}
-                      items={evidenceItems}
-                      summary={evidenceSummary}
-                      onOpen={() => openAuxiliarySection("evidence")}
-                    />
-                  ) : null}
                   <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
                     <p className="text-xs text-zinc-400">
                       {canUseProfessionalOracle
