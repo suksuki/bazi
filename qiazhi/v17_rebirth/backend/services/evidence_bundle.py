@@ -42,6 +42,8 @@ _ROW_META_KEYS: tuple[str, ...] = (
     "observe_only",
     "source_event",
     "risk_driver",
+    "macro_topic",
+    "macro_topic_label",
     "origin_type",
     "manifestation_state",
     "pattern_confidence",
@@ -124,6 +126,8 @@ def _evidence_type(plugin_id: str, meta: Mapping[str, Any]) -> str:
         return "climate"
     if "xiangfa" in pid:
         return "semantic"
+    if "macro" in pid or "macro" in claim_type:
+        return "macro"
     return "diagnostic"
 
 

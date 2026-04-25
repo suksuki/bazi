@@ -137,6 +137,27 @@ function topicHubBadgeTone(tone: "primary" | "stable" | "watch" | "soft" | "risk
   return "border-zinc-700 bg-zinc-900/70 text-zinc-300";
 }
 
+function macroTopicTone(row: Record<string, unknown>): "primary" | "stable" | "watch" | "soft" | "risk" | "muted" {
+  const score = asNumberValue(row.score);
+  const risk = asNumberValue(row.risk);
+  const stance = String(row.stance || "").trim();
+  if (!score) return "muted";
+  if (stance === "volatile" || risk >= 0.42) return "risk";
+  if (score >= 0.72) return "primary";
+  if (score >= 0.6) return "stable";
+  if (score >= 0.48) return "watch";
+  return "muted";
+}
+
+function macroStanceLabel(row: Record<string, unknown>, ui: LocalizeText): string {
+  const stance = String(row.stance || "").trim();
+  if (stance === "active") return ui("活跃", "Active", "활성");
+  if (stance === "volatile") return ui("波动", "Volatile", "변동");
+  if (stance === "watch") return ui("观察", "Watch", "관찰");
+  if (stance === "latent") return ui("潜伏", "Latent", "잠재");
+  return ui("未定", "Pending", "미정");
+}
+
 function patternConfidenceTone(score: number): string {
   if (score >= 0.82) return "border-emerald-500/25 bg-emerald-950/35 text-emerald-100";
   if (score >= 0.64) return "border-cyan-500/25 bg-cyan-950/35 text-cyan-100";
@@ -2538,6 +2559,15 @@ export default function OraclePage() {
   const xiangfaTheme = meta.xiangfa_theme && typeof meta.xiangfa_theme === "object"
     ? meta.xiangfa_theme as Record<string, unknown>
     : {};
+  const macroTheme = meta.macro_theme && typeof meta.macro_theme === "object"
+    ? meta.macro_theme as Record<string, unknown>
+    : {};
+  const macroTopicRows = Array.isArray(macroTheme.topics)
+    ? (macroTheme.topics as Array<Record<string, unknown>>).filter((row) => row && typeof row === "object")
+    : [];
+  const macroTopRows = [...macroTopicRows]
+    .sort((left, right) => asNumberValue(right.score) - asNumberValue(left.score))
+    .slice(0, 4);
   const livePatternCandidates = deriveLivePatternCandidates([...allRows, ...pluginRows], pluginClaims);
   const patternLeader = livePatternCandidates[0];
   const patternRunners = livePatternCandidates.slice(1, 4);
@@ -2662,6 +2692,25 @@ export default function OraclePage() {
   const authoritySignalCount = useGods.length + tabooGods.length + tongguanGods.length;
   const collaborationUserCount = authUsers.length;
   const topicHubItems: TopicHubItem[] = [
+    {
+      key: "macro",
+      title: ui("宏观象", "Macro Themes", "거시 주제"),
+      subtitle: ui("财富 / 事业 / 感情 / 性格", "Wealth / Career / Relationship / Personality", "재물 / 직업 / 관계 / 성향"),
+      status: macroTopRows.length
+        ? `${term(String(macroTopRows[0].label || macroTopRows[0].id || ""))} ${Math.round(asNumberValue(macroTopRows[0].score) * 100)}%`
+        : ui("等待宏观象", "Waiting", "대기"),
+      tone: macroTopRows.length ? macroTopicTone(macroTopRows[0]) : "muted",
+      details: [
+        `${ui("主题", "Topics", "주제")} ${macroTopicRows.length}`,
+        macroTopRows[0]?.summary
+          ? String(macroTopRows[0].summary)
+          : ui("等待 L3 汇总财富、事业、感情与性格。", "Waiting for L3 macro synthesis.", "L3 거시 종합 대기 중"),
+        `${ui("LLM", "LLM", "LLM")} ${macroTheme.contract ? ui("已接入", "connected", "연결") : ui("未接入", "pending", "대기")}`,
+      ],
+      badges: macroTopRows.length
+        ? macroTopRows.map((row) => `${term(String(row.label || row.id || ""))} ${Math.round(asNumberValue(row.score) * 100)}%`).slice(0, 4)
+        : ["L3 macro"],
+    },
     {
       key: "ziping",
       title: ui("子平主裁决", "ZiPing Authority", "자평 주판정"),
@@ -3386,6 +3435,51 @@ export default function OraclePage() {
                         </span>
                       </div>
                     </div>
+                    {macroTopRows.length ? (
+                      <div className="mt-3 grid gap-2 lg:grid-cols-4">
+                        {macroTopRows.map((row) => {
+                          const tone = macroTopicTone(row);
+                          const evidence = asStringList(row.evidence).slice(0, 2);
+                          const risks = asStringList(row.risks).slice(0, 2);
+                          const sourceGods = asStringList(row.source_gods).slice(0, 3);
+                          return (
+                            <div key={String(row.id || row.label)} className={`rounded-xl border p-2.5 ${topicHubTone(tone)}`}>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-[12px] font-semibold">{term(String(row.label || row.id || ""))}</p>
+                                  <p className="mt-0.5 text-[10px] text-zinc-500">{macroStanceLabel(row, ui)}</p>
+                                </div>
+                                <span className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(tone)}`}>
+                                  {Math.round(asNumberValue(row.score) * 100)}%
+                                </span>
+                              </div>
+                              <p className="mt-2 line-clamp-2 min-h-10 text-[10px] leading-5 text-zinc-300">
+                                {String(row.summary || ui("等待宏观象摘要。", "Waiting for macro summary.", "거시 요약 대기 중"))}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {sourceGods.map((god) => (
+                                  <span key={`${String(row.id)}_${god}`} className={`rounded-full border px-2 py-0.5 text-[9px] ${topicHubBadgeTone(tone)}`}>
+                                    {term(god)}
+                                  </span>
+                                ))}
+                                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] text-zinc-400">
+                                  {ui("风险", "risk", "위험")} {Math.round(asNumberValue(row.risk) * 100)}%
+                                </span>
+                              </div>
+                              {[...evidence, ...risks].length ? (
+                                <div className="mt-2 grid gap-1 text-[9px] text-zinc-400">
+                                  {[...evidence, ...risks].slice(0, 2).map((item, index) => (
+                                    <span key={`${String(row.id)}_${item}_${index}`} className="truncate rounded-lg border border-white/10 bg-black/20 px-2 py-1">
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                       {topicHubItems.map((item) => (
                         <div key={item.key} className={`rounded-xl border p-3 ${topicHubTone(item.tone)}`}>

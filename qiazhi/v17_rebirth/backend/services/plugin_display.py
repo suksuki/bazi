@@ -61,6 +61,22 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "叙事剪辑",
         "definition": "将物理事实翻译为现代执行建议的叙事插件。",
     },
+    "modern.macro.wealth.v1": {
+        "display_name": "宏观象·财富",
+        "definition": "综合十神、体用、格局和专题信号，输出财富主题的激活度、机会、风险与证据。",
+    },
+    "modern.macro.career.v1": {
+        "display_name": "宏观象·事业",
+        "definition": "综合官杀、印星、财官结构和运行关系，输出事业主题的激活度、机会、风险与证据。",
+    },
+    "modern.macro.relationship.v1": {
+        "display_name": "宏观象·感情",
+        "definition": "综合财官、合冲、家里家外与关系动力，输出感情主题的激活度、机会、风险与证据。",
+    },
+    "modern.macro.personality.v1": {
+        "display_name": "宏观象·性格",
+        "definition": "综合十神主轴、体态、表达和边界信号，输出性格画像的结构化摘要。",
+    },
     "l1.physics.op_geography": {
         "display_name": "地理势场",
         "definition": "识别地支空间位势与分布结构对当前命局的势场影响。",

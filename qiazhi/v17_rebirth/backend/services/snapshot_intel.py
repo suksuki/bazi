@@ -10,6 +10,32 @@ from v17_rebirth.backend.services.physics_service import DataSovereigntyError
 from v17_rebirth.backend.services.practitioner_choice_candidates import build_practitioner_choice_candidates
 
 
+_SNAPSHOT_PUBLIC_META_KEYS = (
+    "meta_contract",
+    "algorithm_execution_policy",
+    "algorithm_execution_audit",
+    "god_ring_authority",
+    "blind_theme",
+    "climate_theme",
+    "xiangfa_theme",
+    "macro_theme",
+)
+
+
+def _public_meta_snapshot(meta: Dict[str, Any]) -> Dict[str, Any]:
+    source = meta if isinstance(meta, dict) else {}
+    out: Dict[str, Any] = {}
+    for key in _SNAPSHOT_PUBLIC_META_KEYS:
+        value = source.get(key)
+        if isinstance(value, dict):
+            out[key] = dict(value)
+        elif isinstance(value, list):
+            out[key] = list(value)
+        elif value not in (None, "", [], {}):
+            out[key] = value
+    return out
+
+
 def _dedupe_decision_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -191,6 +217,7 @@ def build_snapshot_payload(
         "ten_gods_absolute_intensity": scores,
         "total_energy_index": round(total_energy_index, 2),
         "energy_meta": {k: v for k, v in (pt.get("energy_meta") or {}).items() if k != "ledger"},
+        "meta": _public_meta_snapshot(meta),
         "ten_gods_ledger": pt.get("ten_gods_ledger", {}),
         "flow_topology": pt.get("flow_topology", []),
         "physics_report": NarrativeMappingEngine.build_physics_report_lines(pt),

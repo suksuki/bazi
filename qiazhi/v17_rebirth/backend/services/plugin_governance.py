@@ -155,6 +155,19 @@ def classify_plugin_governance(
             notes=("Xiangfa only supplies semantic mapping, evidence, narrative hints, and event framing.",),
         ).to_dict()
 
+    if pid.startswith("modern.macro."):
+        return PluginGovernanceProfile(
+            plugin_id=pid,
+            governance_class="macro_theme_topic",
+            authority_level="level_3_macro_topic",
+            output_contract="macro_theme_reading",
+            metadata_scope="public_topic_contract",
+            learning_family="macro_theme",
+            can_enter_authority=False,
+            max_bias_ratio=0.0,
+            notes=("Macro theme reads lower-layer signals and structures life-topic interpretation; it cannot change physics or authority.",),
+        ).to_dict()
+
     if "risk" in pid or pid in {"officer_see_hurt", "kong_wang", "shensha"}:
         return PluginGovernanceProfile(
             plugin_id=pid,

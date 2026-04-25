@@ -12,6 +12,7 @@ from v17_rebirth.backend.logic.climate_field_protocol import climate_field_promp
 from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import normalize_blind_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
+from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
 from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
 
@@ -275,6 +276,47 @@ def _xiangfa_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
         rows.append("象法证据：" + "；".join(str(item).strip() for item in evidence[:3] if str(item).strip()))
     if fragments:
         rows.append("象法专题摘要：" + "；".join(fragment for fragment in fragments if fragment))
+    return rows
+
+
+def _macro_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    macro_theme = normalize_macro_theme_meta(meta.get("macro_theme"))
+    if not macro_theme:
+        return []
+    rows = [
+        "宏观象合同：宏观象是 L3 主题层，只读十神、体用、格局、盲派、象法、调候与关系动力；不得反写物理参数，也不得把弱主题写成强定论。",
+    ]
+    topics = macro_theme.get("topics") if isinstance(macro_theme.get("topics"), list) else []
+    ranked = sorted(
+        (row for row in topics if isinstance(row, dict) and str(row.get("id") or "").strip()),
+        key=lambda row: float(row.get("score") or 0.0),
+        reverse=True,
+    )
+    fragments: List[str] = []
+    for row in ranked[:4]:
+        label = str(row.get("label") or row.get("id") or "").strip()
+        score = _safe_float(row.get("score"), 0.0)
+        confidence = _safe_float(row.get("confidence"), 0.0)
+        risk = _safe_float(row.get("risk"), 0.0)
+        stance = str(row.get("stance") or "").strip()
+        summary = str(row.get("summary") or "").strip()
+        bits = [f"{label}{round(score * 100):.0f}%"]
+        if stance:
+            bits.append(stance)
+        bits.append(f"置信{round(confidence * 100):.0f}%")
+        if risk > 0.0:
+            bits.append(f"风险{round(risk * 100):.0f}%")
+        if summary:
+            bits.append(summary[:80])
+        fragments.append("，".join(bits[:5]))
+    if fragments:
+        rows.append("宏观象摘要：" + "；".join(fragments))
+    digest = str(macro_theme.get("prompt_digest") or "").strip()
+    if digest:
+        rows.append("宏观象主线：" + digest)
     return rows
 
 
@@ -687,6 +729,7 @@ class PhysicsCanonicalService:
         rows.extend(_climate_field_prompt_lines(physics_tensor))
         rows.extend(_climate_theme_prompt_lines(physics_tensor))
         rows.extend(_xiangfa_theme_prompt_lines(physics_tensor))
+        rows.extend(_macro_theme_prompt_lines(physics_tensor))
         rows.extend(_authority_axis_prompt_lines(physics_tensor))
         rows.extend(_blind_theme_prompt_lines(physics_tensor))
         rows.extend(_relation_summary_prompt_lines(physics_tensor))
