@@ -326,24 +326,13 @@ async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(..
     password = str(payload.get("password") or "")
     display_name = str(payload.get("display_name") or username).strip()
     email = str(payload.get("email") or "").strip()
-    request_practitioner = bool(payload.get("request_practitioner"))
-    practitioner_request_note = str(payload.get("practitioner_request_note") or "").strip()
-
     try:
         user = auth_storage.create_user(
             username=username,
             password=password,
             display_name=display_name,
             email=email or None,
-        )
-        role_request = (
-            auth_storage.create_role_request(
-                user_id=int(user.get("id") or 0),
-                requested_role="practitioner",
-                reason=practitioner_request_note,
-            )
-            if request_practitioner
-            else None
+            role="practitioner",
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -360,7 +349,7 @@ async def register_auth_user(request: Request, payload: Dict[str, Any] = Body(..
         "session_token": session["session_token"],
         "session_expires_at": session["expires_at"],
         "bootstrap_admin": bool(user.get("bootstrap_admin")),
-        "role_request": _role_request_payload(role_request) if role_request else None,
+        "role_request": None,
     }
 
 

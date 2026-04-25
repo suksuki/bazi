@@ -45,7 +45,8 @@ def test_register_bootstraps_first_admin_and_me(isolated_auth_db) -> None:
         body = r.json()
         assert body["ok"] is True
         assert body["bootstrap_admin"] is False
-        assert body["user"]["role"] == "user"
+        assert body["user"]["role"] == "practitioner"
+        assert body["role_request"] is None
 
         token = body["session_token"]
         me = client.get("/v17/auth/me", cookies={"v17_session": token})
@@ -54,9 +55,9 @@ def test_register_bootstraps_first_admin_and_me(isolated_auth_db) -> None:
         assert me_body["user"]["username"] == "founder"
         assert "oracle.access" in me_body["user"]["capabilities"]
         assert "oracle.simple" in me_body["user"]["capabilities"]
-        assert "oracle.professional" not in me_body["user"]["capabilities"]
-        assert "practitioner.case.write" not in me_body["user"]["capabilities"]
-        assert me_body["user"]["surface_access"]["oracle"] == ["core"]
+        assert "oracle.professional" in me_body["user"]["capabilities"]
+        assert "practitioner.case.write" in me_body["user"]["capabilities"]
+        assert me_body["user"]["surface_access"]["oracle"] == ["core", "auxiliary"]
         assert me_body["user"]["surface_access"]["admin"] is False
 
 
@@ -68,24 +69,24 @@ def test_practitioner_role_request_requires_manager_approval(isolated_auth_db) -
         )
         admin_token = admin_login.json()["session_token"]
 
-        register = client.post(
-            "/v17/auth/register",
-            json={
-                "username": "consultant",
-                "password": "very-secure-pass",
-                "display_name": "Consultant",
-                "request_practitioner": True,
-                "practitioner_request_note": "十年案例校验经验，愿意参与格局审计。",
-            },
+        applicant = isolated_auth_db.create_user(
+            username="consultant",
+            password="very-secure-pass",
+            display_name="Consultant",
+            role="user",
         )
-        assert register.status_code == 200
-        body = register.json()
-        applicant_token = body["session_token"]
-        applicant_id = int(body["user"]["id"])
-        assert body["user"]["role"] == "user"
-        assert body["role_request"]["status"] == "pending"
-        assert body["role_request"]["requested_role"] == "practitioner"
-        request_id = int(body["role_request"]["id"])
+        role_request = isolated_auth_db.create_role_request(
+            user_id=int(applicant["id"]),
+            requested_role="practitioner",
+            reason="十年案例校验经验，愿意参与格局审计。",
+        )
+        login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "consultant", "password": "very-secure-pass"},
+        )
+        applicant_token = login.json()["session_token"]
+        applicant_id = int(applicant["id"])
+        request_id = int(role_request["id"])
 
         before_me = client.get("/v17/auth/me", cookies={"v17_session": applicant_token})
         assert "oracle.professional" not in before_me.json()["user"]["capabilities"]
@@ -168,9 +169,15 @@ def test_practitioner_evidence_review_is_trusted_review_only(isolated_auth_db) -
             json={"identifier": "admin", "password": "abcd1235"},
         )
         admin_token = admin_login.json()["session_token"]
+        isolated_auth_db.create_user(
+            username="reviewer",
+            password="very-secure-pass",
+            display_name="Reviewer",
+            role="user",
+        )
         register = client.post(
-            "/v17/auth/register",
-            json={"username": "reviewer", "password": "very-secure-pass", "display_name": "Reviewer"},
+            "/v17/auth/login",
+            json={"identifier": "reviewer", "password": "very-secure-pass"},
         )
         user_token = register.json()["session_token"]
         user_id = int(register.json()["user"]["id"])
@@ -246,7 +253,7 @@ def test_practitioner_evidence_review_is_trusted_review_only(isolated_auth_db) -
         assert "evidence is strong enough" in english_body["review"]["items"][0]["reason"]
 
 
-def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
+def test_registered_user_defaults_to_practitioner_and_manager_can_promote_non_admin(isolated_auth_db) -> None:
     with TestClient(app) as client:
         admin_login = client.post(
             "/v17/auth/login",
@@ -260,7 +267,7 @@ def test_second_user_defaults_to_user_and_manager_can_promote_non_admin(isolated
             headers={"x-forwarded-for": "203.0.113.25"},
         )
         second_body = second.json()
-        assert second_body["user"]["role"] == "user"
+        assert second_body["user"]["role"] == "practitioner"
         operator_id = int(second_body["user"]["id"])
 
         list_resp = client.get("/v17/auth/users", cookies={"v17_session": admin_token})
@@ -462,9 +469,14 @@ def test_practitioner_feedback_scope_all_requires_manager(isolated_auth_db) -> N
         )
         admin_token = admin_login.json()["session_token"]
 
+        isolated_auth_db.create_user(
+            username="feedback-user",
+            password="very-secure-pass",
+            role="user",
+        )
         user_resp = client.post(
-            "/v17/auth/register",
-            json={"username": "feedback-user", "password": "very-secure-pass"},
+            "/v17/auth/login",
+            json={"identifier": "feedback-user", "password": "very-secure-pass"},
         )
         user_token = user_resp.json()["session_token"]
         user_id = int(user_resp.json()["user"]["id"])
@@ -639,9 +651,14 @@ def test_practitioner_case_scope_and_user_status_guard(isolated_auth_db) -> None
         )
         admin_token = admin_login.json()["session_token"]
 
+        isolated_auth_db.create_user(
+            username="case-user",
+            password="very-secure-pass",
+            role="user",
+        )
         user_resp = client.post(
-            "/v17/auth/register",
-            json={"username": "case-user", "password": "very-secure-pass"},
+            "/v17/auth/login",
+            json={"identifier": "case-user", "password": "very-secure-pass"},
         )
         user_token = user_resp.json()["session_token"]
         user_id = int(user_resp.json()["user"]["id"])
@@ -716,20 +733,13 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
             json={"username": "candidate-user", "password": "very-secure-pass"},
         )
         user_token = user_resp.json()["session_token"]
-        user_id = int(user_resp.json()["user"]["id"])
 
-        user_forbidden = client.get(
+        initial_own = client.get(
             "/v17/auth/practitioner-learning-candidates",
             cookies={"v17_session": user_token},
         )
-        assert user_forbidden.status_code == 403
-
-        promote = client.post(
-            f"/v17/auth/users/{user_id}/role",
-            json={"role": "practitioner"},
-            cookies={"v17_session": admin_token},
-        )
-        assert promote.status_code == 200
+        assert initial_own.status_code == 200
+        assert initial_own.json()["scope"] == "own"
 
         feedback_resp = client.post(
             "/v17/auth/practitioner-feedback",
