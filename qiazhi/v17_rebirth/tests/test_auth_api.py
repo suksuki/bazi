@@ -942,13 +942,13 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
                 "experiment_id": experiment["experiment_id"],
                 "candidate_id": experiment["candidate_id"],
                 "parameter_family": experiment["parameter_family"],
-                "synthetic_passed": True,
-                "practitioner_passed": True,
-                "improvement_count": 2,
-                "regression_count": 0,
-                "verdict": "promote",
-                "summary": "shadow run 通过，可进入发布审批记录。",
                 "experiment_snapshot": experiment,
+                "shadow_run_report": {
+                    "synthetic": {"passed": True, "improvement_count": 2, "regression_count": 0},
+                    "practitioner_benchmarks": {"passed": True, "case_count": 1, "regression_count": 0},
+                    "benchmark_export": {"summary": {"case_ids": ["learning.false_yangren.19770508"]}},
+                    "scorecard": {"verdict": "promote", "summary": "shadow run 报告导入通过。"},
+                },
                 "payload": {"commands": experiment["required_commands"]},
             },
         )
@@ -956,6 +956,11 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert scorecard_resp.json()["applied"] is False
         assert scorecard_resp.json()["guardrail"] == "scorecard_record_only_no_config_change"
         assert scorecard_resp.json()["scorecard"]["verdict"] == "promote"
+        assert scorecard_resp.json()["scorecard"]["synthetic_passed"] is True
+        assert scorecard_resp.json()["scorecard"]["practitioner_passed"] is True
+        assert scorecard_resp.json()["scorecard"]["improvement_count"] == 2
+        assert scorecard_resp.json()["scorecard"]["payload"]["scorecard_source"] == "shadow_run_report"
+        assert scorecard_resp.json()["scorecard"]["payload"]["accepted_benchmark_case_ids"] == ["learning.false_yangren.19770508"]
 
         scorecards = client.get(
             f"/v17/auth/practitioner-learning-scorecards?experiment_id={experiment['experiment_id']}",

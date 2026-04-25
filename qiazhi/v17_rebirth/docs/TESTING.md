@@ -195,7 +195,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - 命理师学习候选应读取贡献画像调整人工复核优先级，并在候选中保留 `contributor_tiers / contributor_reputation_score`；该分数只能影响审计排序，不能自动改参数。
 - manager/admin 可对学习候选写入审计意见；`approved_for_experiment` 只能表示准入 shadow run，API 响应必须保留 `applied=false`。
 - 已准入实验的学习候选应出现在 dry-run 实验队列中，携带 `candidate_patch.patch_mode=review_only` 和回滚安全门。
-- shadow run 评分必须记录 synthetic/practitioner benchmark 是否通过、改善/退化数量和结论；`promote` 不得允许 benchmark 未通过或存在退化。
+- shadow run 评分必须记录 synthetic/practitioner benchmark 是否通过、改善/退化数量和结论；可通过 `shadow_run_report` 导入并引用 accepted benchmark case IDs；`promote` 不得允许 benchmark 未通过或存在退化。
 - admin 发布审批必须先存在通过 synthetic/practitioner benchmark 且无退化的 `promote` scorecard，并记录测试报告和回滚方案；发布记录 API 仍返回 `applied=false`，不得自动写入配置。
 - 学习治理审计包导出应包含候选、审计、实验、scorecard、发布记录和 guardrails，供长期归档与版本对照。
 - `/v17/oracle` 主页面使用 `命盘总览 / 深度解读 / 幕后观察` 三个角色过滤后的 Tab；手机端必须呈现为明确的横向 Tab，而不是三张大按钮。

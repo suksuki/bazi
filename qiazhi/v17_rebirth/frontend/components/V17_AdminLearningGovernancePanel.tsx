@@ -217,6 +217,38 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
     }
   }
 
+  async function importShadowRunScorecard(experiment: Row, file: File) {
+    const experimentId = asText(experiment.experiment_id);
+    if (!experimentId) return;
+    setBusyKey(`scorecard-import:${experimentId}`);
+    setMessage("");
+    try {
+      const report = JSON.parse(await file.text()) as Row;
+      const { data, ok } = await requestJson<Row>(
+        "/api/auth/practitioner-learning-scorecards",
+        jsonPostInit({
+          experiment_id: experimentId,
+          candidate_id: asText(experiment.candidate_id),
+          parameter_family: asText(experiment.parameter_family),
+          experiment_snapshot: experiment,
+          shadow_run_report: report,
+          payload: {
+            imported_file_name: file.name,
+            required_commands: experiment.required_commands,
+          },
+        }),
+      );
+      if (!ok) throw new Error(String(data.detail || "shadow run 报告导入失败"));
+      const scorecard = asRecord(data.scorecard);
+      setMessage(`shadow run 报告已导入：${asText(scorecard.verdict, "scorecard")}，未自动写配置。`);
+      await loadGovernance();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "shadow run 报告导入失败");
+    } finally {
+      setBusyKey("");
+    }
+  }
+
   async function exportGovernance() {
     setBusyKey("export");
     setMessage("");
@@ -435,6 +467,7 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
                 const released = Boolean(release);
                 const scored = Boolean(scorecard);
                 const promotable = asText(scorecard?.verdict) === "promote";
+                const importBusy = busyKey === `scorecard-import:${experimentId}`;
                 return (
                   <article key={experimentId} className="rounded-xl border border-white/10 bg-black/25 p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -465,6 +498,25 @@ export function V17_AdminLearningGovernancePanel({ operatorRole }: { operatorRol
                         <Eye className="h-3 w-3" />
                         {busyKey === `scorecard:${experimentId}:rework` ? "保存中" : "记录返工"}
                       </button>
+                      <label
+                        className={`inline-flex items-center gap-1 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/40 ${
+                          Boolean(busyKey) || scored ? "cursor-not-allowed opacity-55" : "cursor-pointer"
+                        }`}
+                      >
+                        <Download className="h-3 w-3" />
+                        {importBusy ? "导入中" : "导入报告评分"}
+                        <input
+                          type="file"
+                          accept="application/json,.json"
+                          disabled={Boolean(busyKey) || scored}
+                          className="sr-only"
+                          onChange={(event) => {
+                            const file = event.currentTarget.files?.[0];
+                            event.currentTarget.value = "";
+                            if (file) void importShadowRunScorecard(experiment, file);
+                          }}
+                        />
+                      </label>
                     </div>
                     {canRelease ? (
                       <button

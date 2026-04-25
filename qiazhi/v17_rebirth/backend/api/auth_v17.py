@@ -316,6 +316,123 @@ def _learning_scorecard_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _optional_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    text = str(value or "").strip().lower()
+    if text in {"true", "1", "yes", "passed", "pass", "green", "ok"}:
+        return True
+    if text in {"false", "0", "no", "failed", "fail", "red", "error"}:
+        return False
+    return None
+
+
+def _int_value(value: Any, fallback: int = 0) -> int:
+    if isinstance(value, list):
+        return len(value)
+    try:
+        return int(value or fallback)
+    except Exception:
+        return fallback
+
+
+def _section_passed(section: Dict[str, Any], fallback: Optional[bool]) -> Optional[bool]:
+    for key in ("passed", "ok", "green", "success"):
+        parsed = _optional_bool(section.get(key))
+        if parsed is not None:
+            return parsed
+    for key in ("failed_count", "failure_count", "regression_count", "error_count"):
+        if key in section:
+            return _int_value(section.get(key)) == 0
+    state = str(section.get("state") or section.get("status") or section.get("verdict") or "").strip().lower()
+    if state:
+        if state in {"passed", "pass", "green", "ok", "promote"}:
+            return True
+        if state in {"failed", "fail", "red", "error", "reject"}:
+            return False
+    return fallback
+
+
+def _derive_scorecard_input(payload: Dict[str, Any]) -> Dict[str, Any]:
+    report = payload.get("shadow_run_report") if isinstance(payload.get("shadow_run_report"), dict) else {}
+    if not report:
+        return {
+            "synthetic_passed": bool(payload.get("synthetic_passed")),
+            "practitioner_passed": bool(payload.get("practitioner_passed")),
+            "improvement_count": int(payload.get("improvement_count") or 0),
+            "regression_count": int(payload.get("regression_count") or 0),
+            "verdict": str(payload.get("verdict") or "").strip(),
+            "summary": str(payload.get("summary") or "").strip(),
+            "payload": payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+        }
+
+    scorecard = report.get("scorecard") if isinstance(report.get("scorecard"), dict) else {}
+    synthetic = report.get("synthetic") if isinstance(report.get("synthetic"), dict) else {}
+    practitioner = report.get("practitioner_benchmarks") if isinstance(report.get("practitioner_benchmarks"), dict) else {}
+    benchmark_export = report.get("benchmark_export") if isinstance(report.get("benchmark_export"), dict) else {}
+    benchmark_summary = benchmark_export.get("summary") if isinstance(benchmark_export.get("summary"), dict) else {}
+
+    synthetic_passed = _optional_bool(scorecard.get("synthetic_passed"))
+    synthetic_passed = synthetic_passed if synthetic_passed is not None else _optional_bool(report.get("synthetic_passed"))
+    synthetic_passed = _section_passed(synthetic, synthetic_passed)
+    practitioner_passed = _optional_bool(scorecard.get("practitioner_passed"))
+    practitioner_passed = practitioner_passed if practitioner_passed is not None else _optional_bool(report.get("practitioner_passed"))
+    practitioner_passed = _section_passed(practitioner, practitioner_passed)
+
+    improvement_count = max(
+        _int_value(scorecard.get("improvement_count")),
+        _int_value(report.get("improvement_count")),
+        _int_value(report.get("improvements")),
+        _int_value(synthetic.get("improvement_count")),
+        _int_value(practitioner.get("improvement_count")),
+    )
+    regression_count = max(
+        _int_value(scorecard.get("regression_count")),
+        _int_value(report.get("regression_count")),
+        _int_value(report.get("regressions")),
+        _int_value(synthetic.get("regression_count")),
+        _int_value(practitioner.get("regression_count")),
+    )
+    verdict = str(scorecard.get("verdict") or report.get("verdict") or payload.get("verdict") or "").strip().lower()
+    if not verdict:
+        verdict = "promote" if synthetic_passed and practitioner_passed and regression_count == 0 else "rework"
+    case_ids = benchmark_summary.get("case_ids") if isinstance(benchmark_summary.get("case_ids"), list) else []
+    summary = str(scorecard.get("summary") or report.get("summary") or payload.get("summary") or "").strip()
+    if not summary:
+        summary = (
+            "shadow run report imported: "
+            f"synthetic={'passed' if synthetic_passed else 'failed'}, "
+            f"practitioner={'passed' if practitioner_passed else 'failed'}, "
+            f"improvements={improvement_count}, regressions={regression_count}, "
+            f"accepted_cases={len(case_ids)}."
+        )
+    stored_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+    stored_payload = {
+        **stored_payload,
+        "scorecard_source": "shadow_run_report",
+        "shadow_run_report": report,
+        "accepted_benchmark_case_ids": case_ids,
+        "derived_scorecard": {
+            "synthetic_passed": bool(synthetic_passed),
+            "practitioner_passed": bool(practitioner_passed),
+            "improvement_count": int(improvement_count),
+            "regression_count": int(regression_count),
+            "verdict": verdict,
+        },
+    }
+    return {
+        "synthetic_passed": bool(synthetic_passed),
+        "practitioner_passed": bool(practitioner_passed),
+        "improvement_count": int(improvement_count),
+        "regression_count": int(regression_count),
+        "verdict": verdict,
+        "summary": summary,
+        "payload": stored_payload,
+    }
+
+
 def _attach_latest_learning_reviews(report: Dict[str, Any]) -> Dict[str, Any]:
     reviews = auth_storage.list_practitioner_learning_reviews(limit=240)
     latest_by_candidate: Dict[str, Dict[str, Any]] = {}
@@ -837,6 +954,7 @@ async def list_practitioner_learning_scorecards(request: Request) -> Dict[str, A
 async def create_practitioner_learning_scorecard(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     user = require_manager_request(request)
     experiment = payload.get("experiment_snapshot") if isinstance(payload.get("experiment_snapshot"), dict) else {}
+    scorecard_input = _derive_scorecard_input(payload)
     try:
         row = auth_storage.create_practitioner_learning_scorecard(
             reviewer_user_id=int(user.get("id") or 0),
@@ -844,13 +962,13 @@ async def create_practitioner_learning_scorecard(request: Request, payload: Dict
             experiment_id=str(payload.get("experiment_id") or experiment.get("experiment_id") or "").strip(),
             candidate_id=str(payload.get("candidate_id") or experiment.get("candidate_id") or "").strip(),
             parameter_family=str(payload.get("parameter_family") or experiment.get("parameter_family") or "").strip(),
-            synthetic_passed=bool(payload.get("synthetic_passed")),
-            practitioner_passed=bool(payload.get("practitioner_passed")),
-            improvement_count=int(payload.get("improvement_count") or 0),
-            regression_count=int(payload.get("regression_count") or 0),
-            verdict=str(payload.get("verdict") or "").strip(),
-            summary=str(payload.get("summary") or "").strip(),
-            payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+            synthetic_passed=bool(scorecard_input.get("synthetic_passed")),
+            practitioner_passed=bool(scorecard_input.get("practitioner_passed")),
+            improvement_count=int(scorecard_input.get("improvement_count") or 0),
+            regression_count=int(scorecard_input.get("regression_count") or 0),
+            verdict=str(scorecard_input.get("verdict") or "").strip(),
+            summary=str(scorecard_input.get("summary") or "").strip(),
+            payload=scorecard_input.get("payload") if isinstance(scorecard_input.get("payload"), dict) else {},
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
