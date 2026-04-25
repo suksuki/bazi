@@ -218,6 +218,28 @@ def _learning_release_payload(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _learning_scorecard_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": int(row.get("id") or 0),
+        "experiment_id": str(row.get("experiment_id") or "").strip(),
+        "candidate_id": str(row.get("candidate_id") or "").strip(),
+        "parameter_family": str(row.get("parameter_family") or "").strip(),
+        "reviewer_user_id": int(row.get("reviewer_user_id") or 0),
+        "reviewer_role": str(row.get("reviewer_role") or "").strip(),
+        "reviewer_username": str(row.get("reviewer_username") or "").strip(),
+        "reviewer_display_name": str(row.get("reviewer_display_name") or "").strip(),
+        "synthetic_passed": bool(row.get("synthetic_passed")),
+        "practitioner_passed": bool(row.get("practitioner_passed")),
+        "improvement_count": int(row.get("improvement_count") or 0),
+        "regression_count": int(row.get("regression_count") or 0),
+        "verdict": str(row.get("verdict") or "").strip(),
+        "summary": str(row.get("summary") or "").strip(),
+        "payload": row.get("payload") if isinstance(row.get("payload"), dict) else {},
+        "created_at": str(row.get("created_at") or "").strip(),
+        "updated_at": str(row.get("updated_at") or "").strip(),
+    }
+
+
 def _attach_latest_learning_reviews(report: Dict[str, Any]) -> Dict[str, Any]:
     reviews = auth_storage.list_practitioner_learning_reviews(limit=240)
     latest_by_candidate: Dict[str, Dict[str, Any]] = {}
@@ -600,6 +622,57 @@ async def create_practitioner_learning_release(request: Request, payload: Dict[s
         "release": _learning_release_payload(row),
         "applied": False,
         "guardrail": "release_record_only_no_config_change",
+    }
+
+
+@router.get("/v17/auth/practitioner-learning-scorecards")
+@router.get("/api/v17/auth/practitioner-learning-scorecards")
+async def list_practitioner_learning_scorecards(request: Request) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    query = request.query_params
+    try:
+        limit = int(query.get("limit") or 80)
+    except Exception:
+        limit = 80
+    rows = auth_storage.list_practitioner_learning_scorecards(
+        experiment_id=str(query.get("experiment_id") or "").strip(),
+        verdict=str(query.get("verdict") or "").strip(),
+        limit=limit,
+    )
+    return {
+        "ok": True,
+        "scorecards": [_learning_scorecard_payload(row) for row in rows],
+        "viewer_role": str(user.get("role") or "user"),
+    }
+
+
+@router.post("/v17/auth/practitioner-learning-scorecards")
+@router.post("/api/v17/auth/practitioner-learning-scorecards")
+async def create_practitioner_learning_scorecard(request: Request, payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    user = require_manager_request(request)
+    experiment = payload.get("experiment_snapshot") if isinstance(payload.get("experiment_snapshot"), dict) else {}
+    try:
+        row = auth_storage.create_practitioner_learning_scorecard(
+            reviewer_user_id=int(user.get("id") or 0),
+            reviewer_role=str(user.get("role") or "user"),
+            experiment_id=str(payload.get("experiment_id") or experiment.get("experiment_id") or "").strip(),
+            candidate_id=str(payload.get("candidate_id") or experiment.get("candidate_id") or "").strip(),
+            parameter_family=str(payload.get("parameter_family") or experiment.get("parameter_family") or "").strip(),
+            synthetic_passed=bool(payload.get("synthetic_passed")),
+            practitioner_passed=bool(payload.get("practitioner_passed")),
+            improvement_count=int(payload.get("improvement_count") or 0),
+            regression_count=int(payload.get("regression_count") or 0),
+            verdict=str(payload.get("verdict") or "").strip(),
+            summary=str(payload.get("summary") or "").strip(),
+            payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "scorecard": _learning_scorecard_payload(row),
+        "applied": False,
+        "guardrail": "scorecard_record_only_no_config_change",
     }
 
 

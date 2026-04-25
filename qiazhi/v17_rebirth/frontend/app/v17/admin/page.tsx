@@ -26,6 +26,7 @@ import {
   type LearningCampaignRuntime,
   type LearningCampaignUiConfig,
 } from "@/components/V17_AdminLearningPanel";
+import { V17_AdminLearningGovernancePanel } from "@/components/V17_AdminLearningGovernancePanel";
 import { V17_AdminUsersPanel, type AdminAuthUser } from "@/components/V17_AdminUsersPanel";
 import {
   ADMIN_GHOST_BTN,
@@ -1010,15 +1011,18 @@ export default function V17AdminPage() {
       </div>
     ),
     learning: () => (
-      <V17_AdminLearningPanel
-        campaign={learningCampaign}
-        config={learningConfig}
-        setConfig={setLearningConfig}
-        loading={learningBusy}
-        onStart={startLearningCampaign}
-        onPause={pauseLearningCampaign}
-        onRefresh={loadLearningCampaign}
-      />
+      <div className="space-y-5">
+        <V17_AdminLearningPanel
+          campaign={learningCampaign}
+          config={learningConfig}
+          setConfig={setLearningConfig}
+          loading={learningBusy}
+          onStart={startLearningCampaign}
+          onPause={pauseLearningCampaign}
+          onRefresh={loadLearningCampaign}
+        />
+        <V17_AdminLearningGovernancePanel operatorRole={user?.role || "user"} />
+      </div>
     ),
     users: () => (
       <V17_AdminUsersPanel

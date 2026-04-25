@@ -65,6 +65,7 @@
 - 命理师贡献画像：用户权限面板汇总 feedback / case / benchmark / contribution score；学习候选会读取贡献等级调整人工复核优先级，但不会自动修改参数。
 - 学习治理审计：manager/admin 可对学习候选写入 `watch / approved_for_experiment / rejected` 审计意见；准入实验不等于发布或调参。
 - 实验队列：已准入候选会生成 dry-run experiment queue，列出候选 patch 范围、必跑回归命令和回滚安全门。
+- 学习评分：shadow run 结果进入 scorecard，记录 synthetic/practitioner benchmark、改善/退化和 promote/rework/reject 结论。
 - 发布控制：admin 发布记录必须包含测试报告和回滚方案，当前只留痕，不自动写配置。
 - 出生信息：支持阳历/阴历，阴历包含闰月开关；相关回归见 `tests/test_lunar_calendar_conversion.py`。
 - 八字断言：主按钮为 `掐指一算`，LLM 回复应为短断语；深度解释和 Prompt 审计留在 `深度解读 / 幕后观察`。

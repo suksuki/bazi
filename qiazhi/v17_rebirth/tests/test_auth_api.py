@@ -757,6 +757,51 @@ def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_
         assert experiment["candidate_patch"]["patch_mode"] == "review_only"
         assert "rollback_plan_required_before_apply" in experiment["safety_gates"]
 
+        bad_scorecard = client.post(
+            "/v17/auth/practitioner-learning-scorecards",
+            cookies={"v17_session": admin_token},
+            json={
+                "experiment_id": experiment["experiment_id"],
+                "candidate_id": experiment["candidate_id"],
+                "parameter_family": experiment["parameter_family"],
+                "synthetic_passed": True,
+                "practitioner_passed": False,
+                "regression_count": 0,
+                "verdict": "promote",
+                "summary": "缺少 practitioner benchmark 通过，不应建议发布。",
+            },
+        )
+        assert bad_scorecard.status_code == 400
+
+        scorecard_resp = client.post(
+            "/v17/auth/practitioner-learning-scorecards",
+            cookies={"v17_session": admin_token},
+            json={
+                "experiment_id": experiment["experiment_id"],
+                "candidate_id": experiment["candidate_id"],
+                "parameter_family": experiment["parameter_family"],
+                "synthetic_passed": True,
+                "practitioner_passed": True,
+                "improvement_count": 2,
+                "regression_count": 0,
+                "verdict": "promote",
+                "summary": "shadow run 通过，可进入发布审批记录。",
+                "experiment_snapshot": experiment,
+                "payload": {"commands": experiment["required_commands"]},
+            },
+        )
+        assert scorecard_resp.status_code == 200
+        assert scorecard_resp.json()["applied"] is False
+        assert scorecard_resp.json()["guardrail"] == "scorecard_record_only_no_config_change"
+        assert scorecard_resp.json()["scorecard"]["verdict"] == "promote"
+
+        scorecards = client.get(
+            f"/v17/auth/practitioner-learning-scorecards?experiment_id={experiment['experiment_id']}",
+            cookies={"v17_session": admin_token},
+        )
+        assert scorecards.status_code == 200
+        assert len(scorecards.json()["scorecards"]) == 1
+
         bad_release = client.post(
             "/v17/auth/practitioner-learning-releases",
             cookies={"v17_session": admin_token},

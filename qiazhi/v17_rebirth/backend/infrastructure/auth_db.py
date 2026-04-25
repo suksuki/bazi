@@ -20,6 +20,7 @@ PRACTITIONER_FEEDBACK_STATUS_VALUES = {"confirm", "reject", "watch", "review"}
 PRACTITIONER_CASE_STATUS_VALUES = {"draft", "submitted", "accepted", "rejected", "benchmark_candidate"}
 LEARNING_REVIEW_STATUS_VALUES = {"watch", "approved_for_experiment", "rejected"}
 LEARNING_RELEASE_STATUS_VALUES = {"proposed", "approved", "rejected", "rolled_back"}
+LEARNING_SCORECARD_VERDICT_VALUES = {"promote", "rework", "reject"}
 DEFAULT_ADMIN_USERNAME = "admin"
 DEFAULT_ADMIN_DISPLAY_NAME = "System Admin"
 DEFAULT_ADMIN_PASSWORD = "abcd1235"
@@ -308,6 +309,28 @@ class V17AuthDB:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practitioner_learning_scorecards (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    experiment_id TEXT NOT NULL,
+                    candidate_id TEXT NOT NULL,
+                    parameter_family TEXT NOT NULL,
+                    reviewer_user_id INTEGER NOT NULL,
+                    reviewer_role TEXT NOT NULL,
+                    synthetic_passed INTEGER NOT NULL DEFAULT 0,
+                    practitioner_passed INTEGER NOT NULL DEFAULT 0,
+                    improvement_count INTEGER NOT NULL DEFAULT 0,
+                    regression_count INTEGER NOT NULL DEFAULT 0,
+                    verdict TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(reviewer_user_id) REFERENCES auth_users(id)
+                )
+                """
+            )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_session ON practitioner_feedback(session_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_evidence ON practitioner_feedback(evidence_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_feedback_plugin ON practitioner_feedback(plugin_id)")
@@ -320,6 +343,8 @@ class V17AuthDB:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_reviews_status ON practitioner_learning_reviews(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_releases_experiment ON practitioner_learning_releases(experiment_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_releases_status ON practitioner_learning_releases(status)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_scorecards_experiment ON practitioner_learning_scorecards(experiment_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_practitioner_learning_scorecards_verdict ON practitioner_learning_scorecards(verdict)")
             self._ensure_profile_columns(conn)
             conn.commit()
 
@@ -2011,6 +2036,154 @@ class V17AuthDB:
         with self._connect() as conn:
             rows = conn.execute(sql, tuple(params)).fetchall()
         return [item for row in rows if (item := self._clean_learning_release_row(row))]
+
+    def _clean_learning_scorecard_row(self, row: sqlite3.Row | Dict[str, Any] | None) -> Dict[str, Any] | None:
+        if row is None:
+            return None
+        item = dict(row)
+        item["id"] = int(item.get("id") or 0)
+        item["reviewer_user_id"] = int(item.get("reviewer_user_id") or 0)
+        item["experiment_id"] = str(item.get("experiment_id") or "").strip()
+        item["candidate_id"] = str(item.get("candidate_id") or "").strip()
+        item["parameter_family"] = str(item.get("parameter_family") or "").strip()
+        item["reviewer_role"] = str(item.get("reviewer_role") or "").strip().lower()
+        item["synthetic_passed"] = bool(item.get("synthetic_passed"))
+        item["practitioner_passed"] = bool(item.get("practitioner_passed"))
+        item["improvement_count"] = int(item.get("improvement_count") or 0)
+        item["regression_count"] = int(item.get("regression_count") or 0)
+        item["verdict"] = str(item.get("verdict") or "").strip().lower()
+        item["summary"] = str(item.get("summary") or "").strip()
+        item["created_at"] = str(item.get("created_at") or "").strip()
+        item["updated_at"] = str(item.get("updated_at") or "").strip()
+        try:
+            payload = json.loads(str(item.get("payload_json") or "{}"))
+        except Exception:
+            payload = {}
+        item["payload"] = payload if isinstance(payload, dict) else {}
+        item.pop("payload_json", None)
+        item["reviewer_username"] = str(item.get("reviewer_username") or "").strip()
+        item["reviewer_display_name"] = str(item.get("reviewer_display_name") or "").strip()
+        return item
+
+    def create_practitioner_learning_scorecard(
+        self,
+        *,
+        reviewer_user_id: int,
+        reviewer_role: str,
+        experiment_id: str,
+        candidate_id: str,
+        parameter_family: str,
+        synthetic_passed: bool,
+        practitioner_passed: bool,
+        improvement_count: int = 0,
+        regression_count: int = 0,
+        verdict: str,
+        summary: str,
+        payload: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        role_clean = str(reviewer_role or "user").strip().lower() or "user"
+        if role_clean not in {"manager", "admin"}:
+            raise ValueError("只有 manager/admin 可以记录学习实验评分。")
+        verdict_clean = str(verdict or "").strip().lower()
+        if verdict_clean not in LEARNING_SCORECARD_VERDICT_VALUES:
+            raise ValueError("无效学习实验结论。")
+        experiment_clean = str(experiment_id or "").strip()[:240]
+        candidate_clean = str(candidate_id or "").strip()[:240]
+        family_clean = str(parameter_family or "").strip()[:160]
+        summary_clean = str(summary or "").strip()
+        if not experiment_clean or not candidate_clean or not family_clean:
+            raise ValueError("实验 ID、候选 ID 与参数族不能为空。")
+        if not summary_clean:
+            raise ValueError("评分摘要不能为空。")
+        if verdict_clean == "promote" and (not synthetic_passed or not practitioner_passed or int(regression_count or 0) > 0):
+            raise ValueError("建议发布必须同时通过 synthetic/practitioner benchmark 且无退化。")
+        payload_obj = payload if isinstance(payload, dict) else {}
+        payload_json = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, default=str)
+        if len(payload_json) > 16000:
+            payload_json = json.dumps({"truncated": True, "experiment_id": experiment_clean}, ensure_ascii=False)
+        now = _iso(_now_utc())
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO practitioner_learning_scorecards (
+                    experiment_id,
+                    candidate_id,
+                    parameter_family,
+                    reviewer_user_id,
+                    reviewer_role,
+                    synthetic_passed,
+                    practitioner_passed,
+                    improvement_count,
+                    regression_count,
+                    verdict,
+                    summary,
+                    payload_json,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    experiment_clean,
+                    candidate_clean,
+                    family_clean,
+                    int(reviewer_user_id),
+                    role_clean,
+                    1 if synthetic_passed else 0,
+                    1 if practitioner_passed else 0,
+                    max(0, int(improvement_count or 0)),
+                    max(0, int(regression_count or 0)),
+                    verdict_clean,
+                    summary_clean[:1600],
+                    payload_json,
+                    now,
+                    now,
+                ),
+            )
+            scorecard_id = int(cursor.lastrowid)
+            row = conn.execute(
+                """
+                SELECT sc.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+                FROM practitioner_learning_scorecards sc
+                JOIN auth_users u ON u.id = sc.reviewer_user_id
+                WHERE sc.id = ?
+                """,
+                (scorecard_id,),
+            ).fetchone()
+            conn.commit()
+        scorecard = self._clean_learning_scorecard_row(row)
+        if not scorecard:
+            raise ValueError("学习实验评分记录失败。")
+        return scorecard
+
+    def list_practitioner_learning_scorecards(
+        self,
+        *,
+        experiment_id: str = "",
+        verdict: str = "",
+        limit: int = 80,
+    ) -> List[Dict[str, Any]]:
+        where: List[str] = []
+        params: List[Any] = []
+        experiment_clean = str(experiment_id or "").strip()
+        verdict_clean = str(verdict or "").strip().lower()
+        if experiment_clean:
+            where.append("sc.experiment_id = ?")
+            params.append(experiment_clean)
+        if verdict_clean:
+            where.append("sc.verdict = ?")
+            params.append(verdict_clean)
+        sql = """
+            SELECT sc.*, u.username AS reviewer_username, u.display_name AS reviewer_display_name
+            FROM practitioner_learning_scorecards sc
+            JOIN auth_users u ON u.id = sc.reviewer_user_id
+        """
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY sc.created_at DESC, sc.id DESC LIMIT ?"
+        params.append(max(1, min(300, int(limit or 80))))
+        with self._connect() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        return [item for row in rows if (item := self._clean_learning_scorecard_row(row))]
 
 
 auth_storage = V17AuthDB()
