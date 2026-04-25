@@ -493,3 +493,102 @@ def test_practitioner_case_scope_and_user_status_guard(isolated_auth_db) -> None
         assert admin_all.status_code == 200
         assert len(admin_all.json()["cases"]) == 1
         assert admin_all.json()["cases"][0]["owner_username"] == "case-user"
+
+
+def test_practitioner_learning_candidates_summarize_feedback_and_cases(isolated_auth_db) -> None:
+    with TestClient(app) as client:
+        admin_login = client.post(
+            "/v17/auth/login",
+            json={"identifier": "admin", "password": "abcd1235"},
+        )
+        admin_token = admin_login.json()["session_token"]
+
+        user_resp = client.post(
+            "/v17/auth/register",
+            json={"username": "candidate-user", "password": "very-secure-pass"},
+        )
+        user_token = user_resp.json()["session_token"]
+        user_id = int(user_resp.json()["user"]["id"])
+
+        user_forbidden = client.get(
+            "/v17/auth/practitioner-learning-candidates",
+            cookies={"v17_session": user_token},
+        )
+        assert user_forbidden.status_code == 403
+
+        promote = client.post(
+            f"/v17/auth/users/{user_id}/role",
+            json={"role": "practitioner"},
+            cookies={"v17_session": admin_token},
+        )
+        assert promote.status_code == 200
+
+        feedback_resp = client.post(
+            "/v17/auth/practitioner-feedback",
+            cookies={"v17_session": user_token},
+            json={
+                "session_id": "s-candidate",
+                "evidence_id": "classical.pattern.yangren_jiasha.v1_evidence_false_positive",
+                "claim_id": "classical.pattern.yangren_jiasha.v1_claim_false_positive",
+                "plugin_id": "classical.pattern.yangren_jiasha.v1",
+                "evidence_type": "pattern",
+                "status": "reject",
+                "reason": "此盘没有羊刃，也没有劫财根，阳刃驾杀应判为误报。",
+                "confidence": 0.95,
+                "source_title": "阳刃驾杀",
+                "source_summary": "候选误报。",
+                "chart_fingerprint": "fp-learning-yangren",
+                "payload": {"failure_mode": "false_yangren"},
+            },
+        )
+        assert feedback_resp.status_code == 200
+
+        case_resp = client.post(
+            "/v17/auth/practitioner-cases",
+            cookies={"v17_session": user_token},
+            json={
+                "case_key": "learning.false_yangren.19770508",
+                "case_title": "羊刃误判学习候选",
+                "birth_time_iso": "1977-05-08T17:30:00",
+                "gender": "male",
+                "calendar_type": "solar",
+                "four_pillars": {"year": "丁巳", "month": "乙巳", "day": "乙丑", "hour": "乙酉"},
+                "tags": ["羊刃误判", "格局审计"],
+                "expected_patterns": ["不成立:阳刃驾杀"],
+                "boundary_flags": ["无羊刃支", "无劫财根"],
+                "failure_modes": ["false_yangren"],
+                "expected_notes": "用于学习候选，不允许直接调参。",
+                "source_feedback_ids": ["classical.pattern.yangren_jiasha.v1_evidence_false_positive"],
+                "chart_fingerprint": "fp-learning-yangren",
+                "status": "benchmark_candidate",
+            },
+        )
+        assert case_resp.status_code == 200
+
+        own_report = client.get(
+            "/v17/auth/practitioner-learning-candidates",
+            cookies={"v17_session": user_token},
+        )
+        assert own_report.status_code == 200
+        body = own_report.json()
+        assert body["protocol"] == "v17.practitioner.learning_candidates.v1"
+        assert body["scope"] == "own"
+        assert body["summary"]["learning_loop_state"] == "review_candidates_ready"
+        assert body["summary"]["manual_review_required_count"] == 1
+        candidate = body["candidates"][0]
+        assert candidate["parameter_family"] == "pattern_specialization.yangren_gate"
+        assert candidate["safety_gate"] == "manual_review_required"
+        assert candidate["recommended_action"] == "review_classical_pattern_gate"
+        assert candidate["reject_count"] == 1
+        assert candidate["benchmark_candidate_count"] == 1
+        assert "classical.pattern.yangren_jiasha.v1" in candidate["source_plugins"]
+        assert "learning.false_yangren.19770508" in candidate["source_cases"]
+        assert any("羊刃" in hint for hint in candidate["review_hints"])
+
+        admin_all = client.get(
+            "/v17/auth/practitioner-learning-candidates?scope=all",
+            cookies={"v17_session": admin_token},
+        )
+        assert admin_all.status_code == 200
+        assert admin_all.json()["scope"] == "all"
+        assert admin_all.json()["summary"]["candidate_count"] == 1

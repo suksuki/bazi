@@ -1586,6 +1586,28 @@ function countStatus(rows: Array<Record<string, unknown>>, status: string): numb
   return rows.filter((row) => String(row.status || "").trim() === status).length;
 }
 
+function learningPriorityLabel(priority: string, ui: LocalizeText): string {
+  if (priority === "high") return ui("高优先", "High", "높음");
+  if (priority === "medium") return ui("中优先", "Medium", "중간");
+  return ui("低优先", "Low", "낮음");
+}
+
+function learningPriorityTone(priority: string): string {
+  if (priority === "high") return "border-rose-400/25 bg-rose-500/10 text-rose-100";
+  if (priority === "medium") return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+  return "border-cyan-400/25 bg-cyan-500/10 text-cyan-100";
+}
+
+function learningActionLabel(action: string, ui: LocalizeText): string {
+  if (action === "review_classical_pattern_gate") return ui("复核格局门槛", "Review pattern gate", "격국 조건 검토");
+  if (action === "review_relation_gate_and_runtime_origin") return ui("复核运流来源", "Review relation origin", "관계 출처 검토");
+  if (action === "review_authority_weighting") return ui("复核体用权重", "Review authority weights", "권위 가중치 검토");
+  if (action === "review_static_ten_gods_calibration") return ui("复核十神校准", "Review ten-god calibration", "십성 보정 검토");
+  if (action === "review_prompt_contract") return ui("复核断语协议", "Review prompt contract", "단어 프로토콜 검토");
+  if (action === "expand_benchmark_coverage") return ui("扩充基准样本", "Expand benchmarks", "기준 샘플 확장");
+  return ui("人工协议复核", "Manual protocol review", "수동 프로토콜 검토");
+}
+
 function V17PractitionerLedgerPanel({
   ui,
   reviewerRole,
@@ -1595,6 +1617,8 @@ function V17PractitionerLedgerPanel({
 }) {
   const [feedbackRows, setFeedbackRows] = useState<Array<Record<string, unknown>>>([]);
   const [caseRows, setCaseRows] = useState<Array<Record<string, unknown>>>([]);
+  const [learningRows, setLearningRows] = useState<Array<Record<string, unknown>>>([]);
+  const [learningSummary, setLearningSummary] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const canViewAll = reviewerRole === "manager" || reviewerRole === "admin";
@@ -1604,14 +1628,17 @@ function V17PractitionerLedgerPanel({
     setMessage("");
     const feedbackQuery = new URLSearchParams({ limit: "80" });
     const caseQuery = new URLSearchParams({ limit: "80" });
+    const learningQuery = new URLSearchParams({ limit: "120" });
     if (canViewAll) {
       feedbackQuery.set("scope", "all");
       caseQuery.set("scope", "all");
+      learningQuery.set("scope", "all");
     }
     try {
-      const [feedbackResp, caseResp] = await Promise.all([
+      const [feedbackResp, caseResp, learningResp] = await Promise.all([
         requestJson<Record<string, unknown>>(`/api/auth/practitioner-feedback?${feedbackQuery.toString()}`, noStoreInit()),
         requestJson<Record<string, unknown>>(`/api/auth/practitioner-cases?${caseQuery.toString()}`, noStoreInit()),
+        requestJson<Record<string, unknown>>(`/api/auth/practitioner-learning-candidates?${learningQuery.toString()}`, noStoreInit()),
       ]);
       if (!feedbackResp.ok) {
         throw new Error(String(feedbackResp.data.detail || ui("反馈账本加载失败。", "Failed to load feedback ledger.", "피드백 장부 로드 실패")));
@@ -1619,8 +1646,17 @@ function V17PractitionerLedgerPanel({
       if (!caseResp.ok) {
         throw new Error(String(caseResp.data.detail || ui("案例账本加载失败。", "Failed to load case ledger.", "사례 장부 로드 실패")));
       }
+      if (!learningResp.ok) {
+        throw new Error(String(learningResp.data.detail || ui("学习候选加载失败。", "Failed to load learning candidates.", "학습 후보 로드 실패")));
+      }
       setFeedbackRows(Array.isArray(feedbackResp.data.feedback) ? feedbackResp.data.feedback as Array<Record<string, unknown>> : []);
       setCaseRows(Array.isArray(caseResp.data.cases) ? caseResp.data.cases as Array<Record<string, unknown>> : []);
+      setLearningRows(Array.isArray(learningResp.data.candidates) ? learningResp.data.candidates as Array<Record<string, unknown>> : []);
+      setLearningSummary(
+        learningResp.data.summary && typeof learningResp.data.summary === "object"
+          ? learningResp.data.summary as Record<string, unknown>
+          : {},
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : ui("命理师账本加载失败。", "Failed to load practitioner ledger.", "명리사 장부 로드 실패"));
     } finally {
@@ -1638,6 +1674,9 @@ function V17PractitionerLedgerPanel({
   const confirmedCount = countStatus(feedbackRows, "confirm");
   const rejectedCount = countStatus(feedbackRows, "reject");
   const reviewCount = countStatus(feedbackRows, "review") + countStatus(feedbackRows, "watch");
+  const learningCandidateCount = Number(learningSummary.candidate_count || learningRows.length || 0);
+  const manualReviewCount = Number(learningSummary.manual_review_required_count || 0);
+  const latestLearning = learningRows.slice(0, 4);
 
   return (
     <section className="space-y-3">
@@ -1654,9 +1693,9 @@ function V17PractitionerLedgerPanel({
             </h2>
             <p className="mt-1 max-w-2xl text-[11px] leading-5 text-zinc-400">
               {ui(
-                "这里把证据反馈、真实案例和基准候选聚合成可回看的学习账本，后续会接入参数候选和回归审计。",
-                "This turns evidence feedback, real cases, and benchmark candidates into a reviewable learning ledger.",
-                "근거 피드백, 실제 사례, 기준 후보를 되돌아볼 수 있는 학습 장부로 모읍니다.",
+                "这里把证据反馈、真实案例和基准候选聚合成学习候选，进入人工审计而不是自动调参。",
+                "Evidence feedback, real cases, and benchmarks become review-only learning candidates.",
+                "근거 피드백, 실제 사례, 기준 후보를 검토 전용 학습 후보로 모읍니다.",
               )}
             </p>
           </div>
@@ -1670,12 +1709,13 @@ function V17PractitionerLedgerPanel({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid gap-2 sm:grid-cols-5">
           {[
             { label: ui("反馈", "Feedback", "피드백"), value: feedbackRows.length, tone: "text-cyan-100" },
             { label: ui("确认", "Confirm", "확인"), value: confirmedCount, tone: "text-emerald-100" },
             { label: ui("否定", "Reject", "부정"), value: rejectedCount, tone: "text-rose-100" },
             { label: ui("基准候选", "Benchmark", "기준 후보"), value: benchmarkCount || reviewCount, tone: "text-amber-100" },
+            { label: ui("学习候选", "Learning", "학습 후보"), value: learningCandidateCount, tone: "text-violet-100" },
           ].map((item) => (
             <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
               <p className="text-[10px] text-zinc-500">{item.label}</p>
@@ -1689,6 +1729,63 @@ function V17PractitionerLedgerPanel({
             {message}
           </p>
         ) : null}
+
+        <div className="mt-3 rounded-2xl border border-violet-400/18 bg-violet-950/10 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-100">{ui("学习候选", "Learning Candidates", "학습 후보")}</h3>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                {ui(
+                  "只进入人工审计队列，不会自动改参数。",
+                  "Review-only queue; no parameter changes are applied automatically.",
+                  "검토 전용 대기열이며 매개변수를 자동 변경하지 않습니다.",
+                )}
+              </p>
+            </div>
+            <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-1 text-[10px] font-semibold text-violet-100">
+              {ui("待审计", "Review", "검토")} {manualReviewCount}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 xl:grid-cols-2">
+            {latestLearning.map((row) => {
+              const priority = String(row.priority || "").trim();
+              const family = String(row.parameter_family || "").trim();
+              const action = String(row.recommended_action || "").trim();
+              const score = Number(row.signal_score || 0);
+              const hints = asStringList(row.review_hints).slice(0, 2);
+              const plugins = asStringList(row.source_plugins).slice(0, 2);
+              const cases = asStringList(row.source_cases).slice(0, 2);
+              return (
+                <article key={String(row.candidate_id || family)} className="rounded-xl border border-white/10 bg-black/25 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold text-zinc-100">{family || ui("未分类候选", "Unclassified candidate", "미분류 후보")}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">{learningActionLabel(action, ui)} · {ui("分数", "score", "점수")} {score.toFixed(2)}</p>
+                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${learningPriorityTone(priority)}`}>
+                      {learningPriorityLabel(priority, ui)}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-zinc-400">
+                    {hints.join(" / ") || ui("等待更多命理师反馈形成审计说明。", "Waiting for more practitioner signals.", "더 많은 명리사 신호 대기 중")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[...plugins, ...cases].slice(0, 4).map((item, index) => (
+                      <span key={`${item}_${index}`} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] text-zinc-400">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+            {!latestLearning.length && !loading ? (
+              <p className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-[12px] text-zinc-500">
+                {ui("暂无学习候选。继续收集命理师反馈和基准案例。", "No learning candidates yet. Keep collecting practitioner feedback and benchmark cases.", "아직 학습 후보가 없습니다. 피드백과 기준 사례를 계속 수집하세요.")}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

@@ -219,6 +219,13 @@ V17 已经具备自动学习、自我进化、参数优化、合成数据和治�
 - 系统能说清楚“这个失败更像是羊刃门槛问题、从格根气问题，还是 LLM 表达问题”。
 - 参数候选不会自动上线，必须经过审计。
 
+当前落地：
+
+- `/v17/auth/practitioner-learning-candidates` 已把 `practitioner_feedback` 与 `practitioner_cases` 聚合为 `v17.practitioner.learning_candidates.v1` 报告。
+- 学习候选会按参数族归因，例如 `pattern_specialization.yangren_gate`、`pattern_specialization.follow_gate`、`relation_gate.*`、`authority.leader_axis`、`narrative.prompt_contract`。
+- 每个候选输出 `signal_score / priority / recommended_action / safety_gate / review_hints`，并保留来源插件、证据 ID、案例 key 和错判标签。
+- 专业工作台“命理师账本”已展示学习候选摘要；候选只进入 `manual_review_required` 队列，不会自动修改运行时参数。
+
 ### P5：学习治理与进化发布
 
 目标：建立系统进化的发布流程。

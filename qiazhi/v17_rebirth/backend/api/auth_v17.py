@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Body, HTTPException, Request
 
 from v17_rebirth.backend.infrastructure.auth_db import auth_storage
+from v17_rebirth.backend.services.practitioner_learning import build_practitioner_learning_candidates
 from v17_rebirth.backend.services.auth_service import (
     build_user_payload,
     get_request_user,
@@ -310,6 +311,40 @@ async def list_practitioner_cases(request: Request) -> Dict[str, Any]:
         "cases": [_case_payload(row) for row in rows],
         "viewer_role": str(user.get("role") or "user"),
     }
+
+
+@router.get("/v17/auth/practitioner-learning-candidates")
+@router.get("/api/v17/auth/practitioner-learning-candidates")
+async def list_practitioner_learning_candidates(request: Request) -> Dict[str, Any]:
+    user = require_authenticated_request(request)
+    _require_practitioner_trust(user)
+    query = request.query_params
+    try:
+        limit = max(20, min(180, int(query.get("limit") or 120)))
+    except Exception:
+        limit = 120
+    requested_scope = str(query.get("scope") or "own").strip().lower()
+    viewer_role = str(user.get("role") or "user").strip().lower()
+    effective_scope = "all" if requested_scope == "all" and viewer_role in {"manager", "admin"} else "own"
+    feedback_rows = auth_storage.list_practitioner_feedback(
+        user_id=int(user["id"]),
+        reviewer_role=viewer_role,
+        scope=effective_scope,
+        limit=limit,
+    )
+    case_rows = auth_storage.list_practitioner_cases(
+        user_id=int(user["id"]),
+        owner_role=viewer_role,
+        scope=effective_scope,
+        limit=limit,
+    )
+    report = build_practitioner_learning_candidates(
+        feedback_rows=feedback_rows,
+        case_rows=case_rows,
+        scope=effective_scope,
+    )
+    report["viewer_role"] = viewer_role
+    return report
 
 
 @router.post("/v17/auth/practitioner-cases")
