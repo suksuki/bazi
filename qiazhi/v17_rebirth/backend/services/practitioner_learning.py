@@ -25,7 +25,7 @@ _FAMILY_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("authority.leader_axis", ("use_god", "target_god", "用神", "忌神", "通关", "体用", "主轴")),
     ("topic.wealth.profile", ("wealth_profile", "财富画像", "财富密码", "财富来源", "守财", "现金流")),
     ("macro_theme.calibration", ("macro", "宏观象", "财富", "事业", "感情", "性格", "relationship", "career", "wealth")),
-    ("narrative.prompt_contract", ("narrative", "prompt", "llm", "断语", "文案", "表达")),
+    ("narrative.prompt_contract", ("narrative", "prompt", "llm", "断语", "文案", "表达", "wealth_assertion_prompt", "财富prompt")),
 )
 
 _GOVERNANCE_FAMILY_MAP = {

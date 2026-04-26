@@ -205,7 +205,7 @@ LLM 只消费 `wealth_profile.v1` 和必要的短证据，不直接自由解释�
 1. 文档阶段：确认 `topic_decoder` 架构和 `wealth_profile.v1` 合同。（已完成）
 2. 解析阶段：实现只读 `wealth_profile` resolver，不接 LLM，不改 UI。（已完成：`modern.topic.wealth_profile.v1`）
 3. 审计阶段：把 `wealth_profile` 暴露到证据链/幕后观察，先让命理师看结构是否合理。（已完成第一步：公开 meta、证据包和 canonical prompt 已可消费）
-4. Prompt 阶段：新增财富专属 prompt，让 LLM 只基于 `wealth_profile` 写财富断言。
+4. Prompt 阶段：新增财富专属 prompt，让 LLM 只基于 `wealth_profile` 写财富断言。（已完成第一步：`build_wealth_assertion_prompt_bundle/text` 可生成独立 Prompt 合同，尚未接 UI/LLM 调用）
 5. UI 阶段：在运势分析中增加“财富断言”专题入口，支持证据展开。
 6. 学习阶段：把命理师反馈和案例归入财富专题校准，不自动改参数。
 
@@ -216,4 +216,12 @@ LLM 只消费 `wealth_profile.v1` 和必要的短证据，不直接自由解释�
 - `wealth_profile_core.resolve_wealth_profile` 负责从十神、体用、宏观象、格局事实、盲派、象法、调候和关系动力中生成 `v17.topic.wealth_profile.v1`。
 - 输出财富显性度、可用状态、主财富通道、优势、风险、矛盾、承接条件、触发观察点、证据、LLM 写作边界和学习 hooks。
 - 合成样本覆盖输出变现、财星忌侧且比劫竞争、食伤强而财弱的隐藏财富路径。
-- 该层仍不生成财富断言，不接专属 Prompt，不新增 UI 入口。
+- 该层仍不直接生成财富断言，不新增 UI 入口。
+
+财富专属 Prompt 第一阶段已新增：
+
+- `build_wealth_assertion_prompt_bundle` 输出 `v17.topic.wealth_assertion_prompt.v1.0` 合同。
+- `build_wealth_assertion_prompt_text` 输出财富断言专用提示词，支持中文、英文、韩文。
+- Prompt 只允许消费 `wealth_profile`，要求输出财富总断、财富来源、可用与承接、风险、行动五段。
+- Prompt 禁止必发财、无财、破产、确定金额、确定年份，以及把财星强弱直接等同于财富成败。
+- 当前 builder 尚未绑定到前端入口或真实 LLM 调用。

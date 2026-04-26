@@ -191,6 +191,7 @@ pnpm --dir qiazhi/v17_rebirth/frontend build
 - 物理快照必须返回系统计算的 `v17.practitioner.choice_candidates.v1`：格局、用神、忌神候选均需带置信度和 `selected_by_system`；命理师应在排盘页“体用中枢”原位选择覆盖项，且覆盖选择只能生成本次断语的 `v17.practitioner.override_context.v1`，不得改参数或候选排序。
 - 宏观象主题层必须返回 `v17.macro.theme.v1`：财富、事业、感情、性格主题均需带 `score / confidence / risk / evidence / opportunities / risks`；该层只能作为 L3 prompt/UI 结构，不得反写物理能量、体用裁决或参数。
 - 财富画像解码器必须返回 `v17.topic.wealth_profile.v1`：财富来源、主通道、可用状态、风险、矛盾、承接条件和 LLM 边界均需可审计；当前只进入公开 meta、证据包和 canonical prompt，不生成财富断言、不改 UI、不改参数。
+- 财富专属 Prompt 必须返回 `v17.topic.wealth_assertion_prompt.v1.0`：只消费 `wealth_profile`，输出合同固定为财富总断、财富来源、可用与承接、风险、行动；缺少画像时必须拒绝生成财富断言。
 - 证据链面板应提供全部、强证据、候选、反例、边界、需复核筛选；手机端筛选控件必须可横向滚动，展开/收起数量应按当前筛选结果计算。
 - 证据链反馈 payload 应带 `v17.evidence.learning_material.v1` 学习素材契约；学习候选应保留 `learning_values / feedback_intents / learning_tags / boundary_tags`，但这些字段只能影响候选归因和审计排序，不能自动改参数。
 - 用户权限面板应展示命理师贡献画像：反馈数、案例数、基准候选数、贡献分和等级；没有贡献时不能伪造高可信标签。

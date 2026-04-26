@@ -74,6 +74,7 @@
 - 宏观象主题层：`v17.macro.theme.v1` 在 L3 汇总财富、事业、感情、性格的主题激活度、证据、机会和风险；UI 位于运势分析专题中枢，LLM 只消费结构化摘要。
 - 主题解码设计：专题断言将先由 `topic_decoder` 产出 `wealth_profile.v1` 等结构化画像，再交给财富/事业/感情/性格专属 Prompt；详见 `docs/V17_TOPIC_DECODER_AND_WEALTH_PROFILE_2026-04-26.md`。
 - 财富画像：`modern.topic.wealth_profile.v1` 已实现只读 `v17.topic.wealth_profile.v1`，用于审计财富来源、主通道、可用状态、风险和承接条件；当前不生成财富断言。
+- 财富 Prompt：`v17.topic.wealth_assertion_prompt.v1.0` 已提供独立 builder，只消费 `wealth_profile`，当前尚未接 UI/LLM 调用。
 - LLM 协作层：LLM 分为 `Weaver / Reviewer / Arbiter / Analyst` 四个受治理角色；除短断语外，只能产出结构化复核、仲裁建议和学习归因，不得直接改写物理层、参数或发布状态。
 - 证据与学习主线：`evidence_bundle`、`practitioner_feedback` 与 `practitioner_cases` 构成“证据 -> 命理师反馈 -> 真实案例库 -> 学习候选”的 P1-P4 闭环；专业账号可从单条证据直接提交反馈并收录命理师基准候选，反馈 payload 使用 `v17.evidence.learning_material.v1` 标记学习意图、学习价值和边界标签，系统会把反馈和案例归因为只读的 `manual_review_required` 学习候选。
 - 0.13 部署：使用 `scripts/update_v17_from_git.sh` 拉取、构建、重启并做健康检查。
