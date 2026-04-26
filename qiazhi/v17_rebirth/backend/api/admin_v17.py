@@ -997,19 +997,21 @@ async def preview_wealth_assertion(payload: Dict[str, Any]) -> Dict[str, Any]:
     output_language = str(p.get("ui_lang") or p.get("output_language") or p.get("language") or "zh")
     execute_llm = bool(p.get("execute_llm", True))
     persist = bool(p.get("persist", True))
+    wealth_code = p.get("wealth_code") if isinstance(p.get("wealth_code"), dict) else None
     wealth_profile = p.get("wealth_profile") if isinstance(p.get("wealth_profile"), dict) else None
 
     backend = get_state_backend()
     physics: Dict[str, Any] = {}
-    if not wealth_profile:
+    if not wealth_code and not wealth_profile:
         physics = await backend.get_physics(session_id)
         if not isinstance(physics, dict) or not physics:
             raise HTTPException(
                 status_code=404,
-                detail="physics not found; provide session_id with server physics or wealth_profile",
+                detail="physics not found; provide session_id with server physics, wealth_code, or wealth_profile",
             )
 
     preview = build_wealth_assertion_preview(
+        wealth_code=wealth_code,
         wealth_profile=wealth_profile,
         physics_tensor=physics if physics else None,
         output_language=output_language,

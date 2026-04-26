@@ -11,6 +11,10 @@ from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import (
     normalize_wealth_profile_meta,
     resolve_wealth_profile,
 )
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import (
+    normalize_wealth_code_meta,
+    resolve_wealth_code,
+)
 from v17_rebirth.backend.services.llm_prompt_contracts import (
     WEALTH_ASSERTION_PROMPT_VERSION,
     build_wealth_assertion_prompt_bundle,
@@ -55,22 +59,39 @@ def _profile_from_inputs(
     return {}, "missing"
 
 
+def _code_from_inputs(
+    *,
+    wealth_code: Dict[str, Any] | None = None,
+    physics_tensor: Dict[str, Any] | None = None,
+) -> tuple[Dict[str, Any], str]:
+    if isinstance(wealth_code, dict) and wealth_code:
+        return normalize_wealth_code_meta(wealth_code), "payload.wealth_code"
+    pt = physics_tensor if isinstance(physics_tensor, dict) else {}
+    meta = pt.get("meta") if isinstance(pt.get("meta"), dict) else {}
+    if isinstance(meta.get("wealth_code"), dict) and meta.get("wealth_code"):
+        return normalize_wealth_code_meta(meta.get("wealth_code")), "physics.meta.wealth_code"
+    if pt:
+        resolved = resolve_wealth_code(pt).get("wealth_code")
+        return normalize_wealth_code_meta(resolved), "computed.from_server_physics"
+    return {}, "missing"
+
+
 def _system_prompt(lang: str) -> str:
     if lang == "en":
         return (
             "You are the V17 backstage wealth reading writer. "
-            "Use only the supplied wealth_profile prompt contract. "
+            "Use only the supplied wealth_code/wealth_profile prompt contract. "
             "Do not request, infer, or reinterpret raw BaZi chart data."
         )
     if lang == "ko":
         return (
             "당신은 V17 백스테이지 재물 해석 작성자입니다. "
-            "제공된 wealth_profile 프롬프트 계약만 사용하십시오. "
+            "제공된 wealth_code/wealth_profile 프롬프트 계약만 사용하십시오. "
             "원국 자료를 요청하거나 재해석하지 마십시오."
         )
     return (
         "你是 V17 后台财富解读预览器。"
-        "只能使用输入的 wealth_profile prompt contract。"
+        "只能使用输入的 wealth_code/wealth_profile prompt contract。"
         "不得请求、推断或重新解释原始八字。"
     )
 
@@ -139,6 +160,7 @@ def _timeout_from_config(cfg: Dict[str, Any]) -> float:
 
 def build_wealth_assertion_preview(
     *,
+    wealth_code: Dict[str, Any] | None = None,
     wealth_profile: Dict[str, Any] | None = None,
     physics_tensor: Dict[str, Any] | None = None,
     output_language: Any = "zh",
@@ -146,12 +168,16 @@ def build_wealth_assertion_preview(
     llm_chat: LlmChatCallable | None = None,
 ) -> Dict[str, Any]:
     lang = _normalize_output_language(output_language)
+    code, code_source = _code_from_inputs(
+        wealth_code=wealth_code,
+        physics_tensor=physics_tensor,
+    )
     profile, profile_source = _profile_from_inputs(
         wealth_profile=wealth_profile,
         physics_tensor=physics_tensor,
     )
-    prompt_bundle = build_wealth_assertion_prompt_bundle(wealth_profile=profile, output_language=lang)
-    prompt_text = build_wealth_assertion_prompt_text(wealth_profile=profile, output_language=lang)
+    prompt_bundle = build_wealth_assertion_prompt_bundle(wealth_code=code, wealth_profile=profile, output_language=lang)
+    prompt_text = build_wealth_assertion_prompt_text(wealth_code=code, wealth_profile=profile, output_language=lang)
     messages = [
         {"role": "system", "content": _system_prompt(lang)},
         {"role": "user", "content": prompt_text},
@@ -167,15 +193,19 @@ def build_wealth_assertion_preview(
         "mode": "backstage_preview",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "output_language": lang,
+        "code_source": code_source,
+        "code_present": bool(code),
         "profile_source": profile_source,
         "profile_present": bool(profile),
+        "material_present": bool(code or profile),
         "safety": {
-            "llm_input_scope": "wealth_profile_only",
+            "llm_input_scope": "wealth_code_first_profile_fallback",
             "raw_chart_access": False,
             "physics_mutation": False,
             "parameter_mutation": False,
             "body_use_mutation": False,
         },
+        "wealth_code": code,
         "wealth_profile": profile,
         "prompt_contract": prompt_bundle,
         "prompt_text": prompt_text,
@@ -195,11 +225,11 @@ def build_wealth_assertion_preview(
             "reply": "",
         },
     }
-    if not profile:
+    if not code and not profile:
         preview["llm_result"] = {
             "ok": False,
             "skipped": True,
-            "reason": "missing_wealth_profile",
+            "reason": "missing_wealth_material",
             "reply": "",
         }
         return preview
@@ -252,6 +282,8 @@ def attach_wealth_assertion_preview_meta(meta: Dict[str, Any], preview: Dict[str
         "policy_version": WEALTH_ASSERTION_PROMPT_VERSION,
         "created_at": str(preview.get("created_at") or ""),
         "topic": "wealth",
+        "code_present": bool(preview.get("code_present")),
+        "code_source": str(preview.get("code_source") or ""),
         "profile_present": bool(preview.get("profile_present")),
         "profile_source": str(preview.get("profile_source") or ""),
         "llm_ok": bool((preview.get("llm_result") or {}).get("ok"))
@@ -277,6 +309,7 @@ def summarize_wealth_assertion_preview(
             "preview_present": False,
         }
     profile = preview.get("wealth_profile") if isinstance(preview.get("wealth_profile"), dict) else {}
+    code = preview.get("wealth_code") if isinstance(preview.get("wealth_code"), dict) else {}
     channels = profile.get("primary_channels") if isinstance(profile.get("primary_channels"), list) else []
     top_channel = channels[0] if channels and isinstance(channels[0], dict) else {}
     llm_request = preview.get("llm_request") if isinstance(preview.get("llm_request"), dict) else {}
@@ -288,9 +321,24 @@ def summarize_wealth_assertion_preview(
         "mode": str(preview.get("mode") or "backstage_preview"),
         "created_at": str(preview.get("created_at") or ""),
         "output_language": str(preview.get("output_language") or "zh"),
+        "code_source": str(preview.get("code_source") or ""),
+        "code_present": bool(preview.get("code_present")),
         "profile_source": str(preview.get("profile_source") or ""),
         "profile_present": bool(preview.get("profile_present")),
+        "material_present": bool(preview.get("material_present")),
         "safety": preview.get("safety") if isinstance(preview.get("safety"), dict) else {},
+        "wealth_code_summary": {
+            "score": code.get("score"),
+            "confidence": code.get("confidence"),
+            "risk": code.get("risk"),
+            "primary_wealth_path": code.get("primary_wealth_path") if isinstance(code.get("primary_wealth_path"), dict) else {},
+            "wealth_source": code.get("wealth_source") if isinstance(code.get("wealth_source"), dict) else {},
+            "monetization_engine": code.get("monetization_engine") if isinstance(code.get("monetization_engine"), dict) else {},
+            "carrier": code.get("carrier") if isinstance(code.get("carrier"), dict) else {},
+            "wealth_vault": code.get("wealth_vault") if isinstance(code.get("wealth_vault"), dict) else {},
+            "leakage_points": code.get("leakage_points") if isinstance(code.get("leakage_points"), list) else [],
+            "flow_year_watchlist": code.get("flow_year_watchlist") if isinstance(code.get("flow_year_watchlist"), list) else [],
+        },
         "wealth_profile_summary": {
             "score": profile.get("score"),
             "confidence": profile.get("confidence"),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import resolve_wealth_profile
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import resolve_wealth_code
 from v17_rebirth.backend.services.llm_prompt_contracts import (
     WEALTH_ASSERTION_PROMPT_VERSION,
     build_wealth_assertion_prompt_bundle,
@@ -60,7 +61,7 @@ def test_wealth_assertion_prompt_text_is_domain_specific_and_bounded() -> None:
     text = build_wealth_assertion_prompt_text(wealth_profile=profile, output_language="zh")
 
     assert "V17 财富解读写作者" in text
-    assert "只基于输入的 wealth_profile" in text
+    assert "没有 wealth_code 时，才退回使用 wealth_profile" in text
     assert "不得自由重读原始八字" in text
     assert "【总体判断】【钱怎么来】【能不能接住】【要避开的坑】【接下来怎么做】" in text
     assert "收入来源、赚钱方式、现金流" in text
@@ -71,11 +72,28 @@ def test_wealth_assertion_prompt_text_is_domain_specific_and_bounded() -> None:
     assert "plain_summary" in text
 
 
+def test_wealth_assertion_prompt_prefers_wealth_code_contract() -> None:
+    tensor = _tensor()
+    code = resolve_wealth_code(tensor)["wealth_code"]
+
+    bundle = build_wealth_assertion_prompt_bundle(wealth_code=code, output_language="zh")
+    text = build_wealth_assertion_prompt_text(wealth_code=code, output_language="zh")
+
+    assert bundle["input_contract"] == "v17.topic.wealth_code.v1"
+    assert bundle["wealth_code_present"] is True
+    assert bundle["material_present"] is True
+    assert bundle["wealth_code"]["plain_summary"]["primary_path"]
+    assert "财富密码" in text
+    assert "至少引用 2 条 wealth_code.evidence" in text
+    assert "ten_gods_runtime" not in text
+
+
 def test_wealth_assertion_prompt_can_resolve_from_physics_tensor() -> None:
     bundle = build_wealth_assertion_prompt_bundle(physics_tensor=_tensor(), output_language="en")
     text = build_wealth_assertion_prompt_text(physics_tensor=_tensor(), output_language="en")
 
     assert "guaranteed fortune" in bundle["output_contract"]["forbidden_claims"]
+    assert bundle["input_contract"] == "v17.topic.wealth_code.v1"
     assert "V17 wealth-topic assertion writer" in text
     assert "[Overall]" in text
     assert "do not read raw chart data freely" in text
@@ -100,5 +118,6 @@ def test_wealth_assertion_prompt_missing_profile_refuses_assertion() -> None:
     text = build_wealth_assertion_prompt_text(output_language="zh")
 
     assert bundle["profile_present"] is False
-    assert "缺少 wealth_profile" in text
+    assert bundle["material_present"] is False
+    assert "缺少 wealth_code 和 wealth_profile" in text
     assert "不能生成财富解读" in text

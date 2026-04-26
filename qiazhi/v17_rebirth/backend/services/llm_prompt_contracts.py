@@ -82,6 +82,27 @@ def _profile_from_inputs(
     return {}
 
 
+def _wealth_code_from_inputs(
+    *,
+    wealth_code: Dict[str, Any] | None = None,
+    physics_tensor: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import (
+        normalize_wealth_code_meta,
+        resolve_wealth_code,
+    )
+
+    if isinstance(wealth_code, dict) and wealth_code:
+        return normalize_wealth_code_meta(wealth_code)
+    pt = physics_tensor if isinstance(physics_tensor, dict) else {}
+    meta = pt.get("meta") if isinstance(pt.get("meta"), dict) else {}
+    if isinstance(meta.get("wealth_code"), dict) and meta.get("wealth_code"):
+        return normalize_wealth_code_meta(meta.get("wealth_code"))
+    if pt:
+        return normalize_wealth_code_meta(resolve_wealth_code(pt).get("wealth_code"))
+    return {}
+
+
 def _compact_profile_list(value: Any, limit: int = 6) -> List[str]:
     out: List[str] = []
     seen: set[str] = set()
@@ -141,6 +162,85 @@ def _plain_wealth_summary(profile: Dict[str, Any], channels: List[Dict[str, Any]
     }
 
 
+def _compact_code_rows(value: Any, limit: int = 4) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for row in _safe_list(value):
+        if not isinstance(row, dict):
+            continue
+        plain_name = _safe_str(row.get("plain_name") or row.get("focus") or row.get("plain_summary") or row.get("id") or row.get("year"))
+        if not plain_name:
+            continue
+        rows.append(
+            {
+                "id": _safe_str(row.get("id")),
+                "year": row.get("year"),
+                "plain_name": plain_name,
+                "focus": _safe_str(row.get("focus")),
+                "attention_type": _safe_str(row.get("attention_type")),
+                "plain_summary": _safe_str(row.get("plain_summary")),
+                "score": round(max(0.0, min(1.0, _safe_float(row.get("score"), 0.0))), 3),
+                "risk": round(max(0.0, min(1.0, _safe_float(row.get("risk"), 0.0))), 3),
+                "tags": _compact_profile_list(row.get("triggered_components") or row.get("tags"), limit=4),
+                "evidence": _compact_profile_list(row.get("evidence"), limit=3),
+            }
+        )
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def _compact_wealth_code(code: Dict[str, Any]) -> Dict[str, Any]:
+    primary = _safe_dict(code.get("primary_wealth_path"))
+    source = _safe_dict(code.get("wealth_source"))
+    engine = _safe_dict(code.get("monetization_engine"))
+    carrier = _safe_dict(code.get("carrier"))
+    vault = _safe_dict(code.get("wealth_vault"))
+    return {
+        "plain_summary": {
+            "user_question": "钱从哪里来、靠什么变现、怎么接住、哪里漏钱、哪些年份值得看",
+            "primary_path": _safe_str(primary.get("plain_name"), default="待观察"),
+            "primary_path_summary": _safe_str(primary.get("plain_summary")),
+            "wealth_source": _safe_str(source.get("plain_source"), default="待观察"),
+            "wealth_source_material": _safe_str(source.get("material")),
+            "monetization_driver": _safe_str(engine.get("plain_driver"), default="待观察"),
+            "carrier": _safe_str(carrier.get("plain_type"), default="待观察"),
+            "vault": _safe_str(vault.get("plain_summary")),
+        },
+        "primary_wealth_path": {
+            "id": _safe_str(primary.get("id")),
+            "plain_name": _safe_str(primary.get("plain_name")),
+            "plain_summary": _safe_str(primary.get("plain_summary")),
+            "score": round(max(0.0, min(1.0, _safe_float(primary.get("score"), 0.0))), 3),
+            "confidence": round(max(0.0, min(1.0, _safe_float(primary.get("confidence"), 0.0))), 3),
+            "risk": round(max(0.0, min(1.0, _safe_float(primary.get("risk"), 0.0))), 3),
+            "evidence": _compact_profile_list(primary.get("evidence"), limit=4),
+        },
+        "secondary_paths": _compact_code_rows(code.get("secondary_paths"), limit=4),
+        "wealth_source": {
+            "plain_source": _safe_str(source.get("plain_source")),
+            "material": _safe_str(source.get("material")),
+            "evidence": _compact_profile_list(source.get("evidence"), limit=4),
+        },
+        "monetization_engine": {
+            "plain_driver": _safe_str(engine.get("plain_driver")),
+            "chain_integrity": round(max(0.0, min(1.0, _safe_float(engine.get("chain_integrity"), 0.0))), 3),
+        },
+        "carrier": {
+            "plain_type": _safe_str(carrier.get("plain_type")),
+            "score": round(max(0.0, min(1.0, _safe_float(carrier.get("score"), 0.0))), 3),
+            "requirements": _compact_profile_list(carrier.get("requirements"), limit=5),
+        },
+        "wealth_vault": {
+            "has_vault_signal": bool(vault.get("has_vault_signal")),
+            "plain_summary": _safe_str(vault.get("plain_summary")),
+            "evidence": _compact_profile_list(vault.get("evidence"), limit=4),
+        },
+        "leakage_points": _compact_code_rows(code.get("leakage_points"), limit=5),
+        "flow_year_watchlist": _compact_code_rows(code.get("flow_year_watchlist"), limit=5),
+        "evidence": _compact_profile_list(code.get("evidence"), limit=10),
+    }
+
+
 def _wealth_forbidden_claims(lang: OUTPUT_LANGUAGE) -> List[str]:
     if lang == "en":
         return [
@@ -175,31 +275,39 @@ def _wealth_forbidden_claims(lang: OUTPUT_LANGUAGE) -> List[str]:
 
 def build_wealth_assertion_prompt_bundle(
     *,
+    wealth_code: Dict[str, Any] | None = None,
     wealth_profile: Dict[str, Any] | None = None,
     physics_tensor: Dict[str, Any] | None = None,
     output_language: Any = "zh",
 ) -> Dict[str, Any]:
     lang = _normalize_output_language(output_language)
+    code = _wealth_code_from_inputs(wealth_code=wealth_code, physics_tensor=physics_tensor)
     profile = _profile_from_inputs(wealth_profile=wealth_profile, physics_tensor=physics_tensor)
     assertion_style = _safe_dict(profile.get("assertion_style"))
     channels = _compact_channel_rows(profile.get("primary_channels"))
+    material_contract = _safe_str(code.get("contract")) if code else _safe_str(profile.get("contract"), default="v17.topic.wealth_profile.v1")
     return {
         "prompt_contract_version": LLM_PROMPT_CONTRACT_VERSION,
         "task_type": "wealth_topic_assertion",
         "policy_version": WEALTH_ASSERTION_PROMPT_VERSION,
         "output_language": lang,
-        "input_contract": _safe_str(profile.get("contract"), default="v17.topic.wealth_profile.v1"),
+        "input_contract": material_contract,
+        "input_priority": ["wealth_code", "wealth_profile"],
+        "wealth_code_present": bool(code),
         "profile_present": bool(profile),
+        "material_present": bool(code or profile),
         "summary": {
             "topic": _safe_str(profile.get("topic"), default="wealth"),
-            "score": round(_safe_float(profile.get("score"), 0.0), 3),
-            "confidence": round(_safe_float(profile.get("confidence"), 0.0), 3),
-            "risk": round(_safe_float(profile.get("risk"), 0.0), 3),
+            "score": round(_safe_float(code.get("score") if code else profile.get("score"), 0.0), 3),
+            "confidence": round(_safe_float(code.get("confidence") if code else profile.get("confidence"), 0.0), 3),
+            "risk": round(_safe_float(code.get("risk") if code else profile.get("risk"), 0.0), 3),
             "stance": _safe_str(profile.get("stance")),
             "visibility": _safe_str(profile.get("visibility")),
             "usable_state": _safe_str(profile.get("usable_state")),
             "top_channel": channels[0] if channels else {},
+            "primary_wealth_path": _safe_dict(code.get("primary_wealth_path")) if code else {},
         },
+        "wealth_code": _compact_wealth_code(code) if code else {},
         "wealth_profile": {
             "plain_summary": _plain_wealth_summary(profile, channels),
             "primary_channels": channels,
@@ -225,6 +333,7 @@ def build_wealth_assertion_prompt_bundle(
             "audience": "ordinary_user_not_practitioner",
             "writing_rules": [
                 "write in plain wealth language: income source, earning path, cash flow, clients, projects, pricing, contracts, savings, cooperation, risk control",
+                "if wealth_code is present, make it the primary basis for wealth path, monetization, carrier, leakage, vault, and year watchlist",
                 "do not expose internal BaZi or ten-god terminology to the user",
                 "each block should answer a real user question, not describe the system contract",
             ],
@@ -236,11 +345,13 @@ def build_wealth_assertion_prompt_bundle(
 
 def build_wealth_assertion_prompt_text(
     *,
+    wealth_code: Dict[str, Any] | None = None,
     wealth_profile: Dict[str, Any] | None = None,
     physics_tensor: Dict[str, Any] | None = None,
     output_language: Any = "zh",
 ) -> str:
     contract = build_wealth_assertion_prompt_bundle(
+        wealth_code=wealth_code,
         wealth_profile=wealth_profile,
         physics_tensor=physics_tensor,
         output_language=output_language,
@@ -249,7 +360,7 @@ def build_wealth_assertion_prompt_text(
     if lang == "en":
         lines: List[str] = [
             "You are the V17 wealth-topic assertion writer.",
-            "Task: write a wealth-specific reading for an ordinary user using only the supplied wealth_profile.",
+            "Task: write a wealth-specific reading for an ordinary user using only the supplied wealth_code first, falling back to wealth_profile only when wealth_code is missing.",
             "Boundary: do not read raw chart data freely, do not re-infer the chart, and do not change confidence, risk, channels, or usable_state.",
             "Forbidden: guaranteed fortune, guaranteed poverty, bankruptcy claims, exact money amounts, exact years, or treating strong wealth stars as money already obtained.",
             "Style: translate every technical signal into wealth language: income source, earning path, cash flow, clients, projects, contracts, cooperation, pricing, and risk control.",
@@ -257,7 +368,10 @@ def build_wealth_assertion_prompt_text(
             "",
             "## Required Output",
             "Use five compact blocks: [Overall], [How Money Comes], [Can It Be Held], [Money Leaks], [Next Actions].",
-            "Cite at least two evidence items from wealth_profile.evidence or channel evidence.",
+            "Cite at least two evidence items from wealth_code.evidence, path evidence, wealth_profile.evidence, or channel evidence.",
+            "",
+            "## Wealth Code",
+            json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),
             "",
             "## Wealth Profile",
         ]
@@ -265,7 +379,7 @@ def build_wealth_assertion_prompt_text(
     elif lang == "ko":
         lines = [
             "당신은 V17 재물 주제 단언 작성자입니다.",
-            "작업: 제공된 wealth_profile 만 사용하여 일반 사용자가 이해할 수 있는 재물 해석을 작성하십시오.",
+            "작업: 제공된 wealth_code 를 우선 사용하고, 없을 때만 wealth_profile 을 보조로 사용하여 일반 사용자가 이해할 수 있는 재물 해석을 작성하십시오.",
             "경계: 원국 자료를 자유롭게 다시 해석하지 말고, confidence/risk/channel/usable_state 를 바꾸지 마십시오.",
             "금지: 반드시 큰돈을 번다, 재물이 없다, 파산한다, 정확한 금액·연도, 재성이 강하니 이미 돈이 많다는 식의 표현.",
             "문체: 모든 기술적 신호를 수입원, 돈 버는 방식, 현금흐름, 고객, 프로젝트, 계약, 협업, 가격 책정, 위험 관리 언어로 바꾸십시오.",
@@ -273,7 +387,10 @@ def build_wealth_assertion_prompt_text(
             "",
             "## 필수 출력",
             "[전체 판단], [돈이 들어오는 방식], [돈을 받아내는 조건], [새는 돈], [다음 행동]의 다섯 짧은 블록을 사용하십시오.",
-            "wealth_profile.evidence 또는 channel evidence 에서 최소 2개 근거를 인용하십시오.",
+            "wealth_code.evidence, path evidence, wealth_profile.evidence 또는 channel evidence 에서 최소 2개 근거를 인용하십시오.",
+            "",
+            "## 재물 코드",
+            json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),
             "",
             "## 재물 프로필",
         ]
@@ -281,7 +398,7 @@ def build_wealth_assertion_prompt_text(
     else:
         lines = [
             "你是 V17 财富解读写作者。",
-            "任务：只基于输入的 wealth_profile，给普通用户写一段能读懂的财富解读。",
+            "任务：只基于输入的 wealth_code 优先写财富解读；没有 wealth_code 时，才退回使用 wealth_profile。",
             "边界：不得自由重读原始八字，不得重新推盘，不得改写置信度、风险、主通道或可用状态。",
             "禁区：不得写必发财、无财、破产、确定金额、确定年份，也不得把财星强等同于已经有钱。",
             "文风：把所有技术信号翻译成财富语言，只讲收入来源、赚钱方式、现金流、客户/项目、合同、合作、定价、储蓄和风险控制。",
@@ -290,7 +407,10 @@ def build_wealth_assertion_prompt_text(
             "",
             "## 必须输出",
             "使用五个紧凑段落：【总体判断】【钱怎么来】【能不能接住】【要避开的坑】【接下来怎么做】。",
-            "至少引用 2 条 wealth_profile.evidence 或通道证据。",
+            "至少引用 2 条 wealth_code.evidence、财富路径证据、wealth_profile.evidence 或通道证据。",
+            "",
+            "## 财富密码",
+            json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),
             "",
             "## 财富画像",
         ]
@@ -306,13 +426,13 @@ def build_wealth_assertion_prompt_text(
             json.dumps(contract["output_contract"], ensure_ascii=False, indent=2),
         ]
     )
-    if not contract.get("profile_present"):
+    if not contract.get("material_present"):
         missing = {
-            "zh": "缺少 wealth_profile 时，只能说明资料不足，不能生成财富解读。",
-            "en": "If wealth_profile is missing, say the material is insufficient and do not generate a wealth assertion.",
-            "ko": "wealth_profile 이 없으면 자료가 부족하다고 말하고 재물 단언을 생성하지 마십시오.",
+            "zh": "缺少 wealth_code 和 wealth_profile 时，只能说明资料不足，不能生成财富解读。",
+            "en": "If both wealth_code and wealth_profile are missing, say the material is insufficient and do not generate a wealth assertion.",
+            "ko": "wealth_code 와 wealth_profile 이 모두 없으면 자료가 부족하다고 말하고 재물 단언을 생성하지 마십시오.",
         }[lang]
-        lines.extend(["", "## Missing Profile Rule", missing])
+        lines.extend(["", "## Missing Material Rule", missing])
     return "\n".join(lines).strip()
 
 

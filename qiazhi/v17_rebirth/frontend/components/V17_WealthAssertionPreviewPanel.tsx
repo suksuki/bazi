@@ -116,6 +116,7 @@ export function V17_WealthAssertionPreviewPanel({
   resetKey,
   wealthProfile,
   initialPreview,
+  initialCodePreview,
   initialTimeline,
   canRequest,
   physicsReady,
@@ -127,17 +128,21 @@ export function V17_WealthAssertionPreviewPanel({
   resetKey: string;
   wealthProfile: Record<string, unknown>;
   initialPreview: Record<string, unknown>;
+  initialCodePreview: Record<string, unknown>;
   initialTimeline: Record<string, unknown>;
   canRequest: boolean;
   physicsReady: boolean;
 }) {
   const [previewOverride, setPreviewOverride] = useState<{ resetKey: string; preview: Record<string, unknown> } | null>(null);
+  const [codePreviewOverride, setCodePreviewOverride] = useState<{ resetKey: string; preview: Record<string, unknown> } | null>(null);
   const [timelineOverride, setTimelineOverride] = useState<{ resetKey: string; preview: Record<string, unknown> } | null>(null);
   const [pendingMode, setPendingMode] = useState<WealthPreviewMode>("");
+  const [codePending, setCodePending] = useState(false);
   const [timelinePending, setTimelinePending] = useState(false);
   const [errorState, setErrorState] = useState<{ resetKey: string; message: string } | null>(null);
 
   const preview = previewOverride?.resetKey === resetKey ? previewOverride.preview : initialPreview;
+  const codePreview = codePreviewOverride?.resetKey === resetKey ? codePreviewOverride.preview : initialCodePreview;
   const timeline = timelineOverride?.resetKey === resetKey ? timelineOverride.preview : initialTimeline;
   const error = errorState?.resetKey === resetKey ? errorState.message : "";
   const previewProfile = asLooseRecord(preview.wealth_profile);
@@ -152,6 +157,21 @@ export function V17_WealthAssertionPreviewPanel({
   const evidence = asStringList(profile.evidence).slice(0, 4);
   const llmResult = asLooseRecord(preview.llm_result);
   const promptContract = asLooseRecord(preview.prompt_contract);
+  const codeFromPreview = asLooseRecord(preview.wealth_code);
+  const codeSummaryFromCodePreview = asLooseRecord(codePreview.wealth_code_summary);
+  const wealthCode = Object.keys(codeFromPreview).length
+    ? codeFromPreview
+    : Object.keys(codeSummaryFromCodePreview).length
+      ? codeSummaryFromCodePreview
+      : asLooseRecord(codePreview.wealth_code);
+  const pathSummary = asLooseRecord(codePreview.path_summary);
+  const primaryPath = asLooseRecord(wealthCode.primary_wealth_path);
+  const wealthSource = asLooseRecord(wealthCode.wealth_source);
+  const monetizationEngine = asLooseRecord(wealthCode.monetization_engine);
+  const carrier = asLooseRecord(wealthCode.carrier);
+  const wealthVault = asLooseRecord(wealthCode.wealth_vault);
+  const leakagePoints = asRecordList(wealthCode.leakage_points).slice(0, 3);
+  const yearWatchlist = asRecordList(wealthCode.flow_year_watchlist).slice(0, 3);
   const luckWindow = asLooseRecord(timeline.luck_window);
   const currentFlow = asLooseRecord(timeline.current_flow);
   const topAttentionYears = asRecordList(timeline.top_attention_years).slice(0, 4);
@@ -163,8 +183,10 @@ export function V17_WealthAssertionPreviewPanel({
   const hasProfile = Object.keys(profile).length > 0;
   const hasPreview = Object.keys(preview).length > 0;
   const hasTimeline = Object.keys(timeline).length > 0;
+  const hasWealthCode = Object.keys(wealthCode).length > 0;
   const timelineReady = Boolean(timeline.timeline_ready);
   const canSubmit = canRequest && physicsReady && Boolean(sessionId) && !pendingMode;
+  const canCodeSubmit = canRequest && physicsReady && Boolean(sessionId) && !codePending;
   const canTimelineSubmit = canRequest && physicsReady && Boolean(sessionId) && !timelinePending;
   const score = percentLabel(profile.score);
   const confidence = percentLabel(profile.confidence);
@@ -182,6 +204,7 @@ export function V17_WealthAssertionPreviewPanel({
     const mode: WealthPreviewMode = executeLlm ? "llm" : "contract";
     setPendingMode(mode);
     setErrorState(null);
+    await requestCodePreview({ silent: true });
     const { data, ok, error: requestError } = await requestJson<Record<string, unknown>>(
       "/api/v17-admin/topic/wealth-assertion-preview",
       jsonPostInit({
@@ -202,6 +225,40 @@ export function V17_WealthAssertionPreviewPanel({
       return;
     }
     setPreviewOverride({ resetKey, preview: nextPreview });
+  }
+
+  async function requestCodePreview({ silent = false }: { silent?: boolean } = {}) {
+    if (!canRequest) {
+      if (!silent) setErrorState({ resetKey, message: ui("需要管理员权限。", "Admin access required.", "관리자 권한이 필요합니다.") });
+      return null;
+    }
+    if (!sessionId || !physicsReady) {
+      if (!silent) setErrorState({ resetKey, message: ui("等待命盘快照。", "Waiting for chart snapshot.", "명반 스냅샷 대기 중입니다.") });
+      return null;
+    }
+    setCodePending(true);
+    if (!silent) setErrorState(null);
+    const { data, ok, error: requestError } = await requestJson<Record<string, unknown>>(
+      "/api/v17-admin/topic/wealth-code-preview",
+      jsonPostInit({
+        v17_origin: "v17_rebirth",
+        session_id: sessionId,
+        persist: true,
+      }),
+    );
+    setCodePending(false);
+    const nextPreview = asLooseRecord(data.preview);
+    if (!ok || data.ok === false || !Object.keys(nextPreview).length) {
+      if (!silent) {
+        setErrorState({
+          resetKey,
+          message: requestError || String(data.detail || "") || ui("财富路径生成失败。", "Failed to build wealth path.", "재물 경로 생성에 실패했습니다."),
+        });
+      }
+      return null;
+    }
+    setCodePreviewOverride({ resetKey, preview: nextPreview });
+    return nextPreview;
   }
 
   async function requestTimeline() {
@@ -365,6 +422,108 @@ export function V17_WealthAssertionPreviewPanel({
           {ui("正在等待财富分析数据。", "Waiting for wealth analysis data.", "재물 분석 데이터를 기다립니다.")}
         </p>
       )}
+
+      {hasProfile ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+                {ui("财富路径", "Wealth Path", "재물 경로")}
+              </p>
+              <h4 className="mt-0.5 text-sm font-semibold text-zinc-50">
+                {hasWealthCode
+                  ? term(String(primaryPath.plain_name || pathSummary.primary_path_label || ui("主要财富路径", "Main wealth path", "주 재물 경로")))
+                  : ui("等待财富路径解码", "Waiting for wealth-path decoding", "재물 경로 해독 대기")}
+              </h4>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] text-emerald-100">
+                {hasWealthCode ? `${ui("路径闭合", "Path", "경로")} ${percentLabel(wealthCode.score)}` : ui("待生成", "Pending", "대기")}
+              </span>
+              {hasWealthCode ? (
+                <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] text-amber-100">
+                  {ui("漏财风险", "Leak risk", "누수 위험")} {percentLabel(wealthCode.risk)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {hasWealthCode ? (
+            <div className="mt-3 grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <p className="text-[11px] text-zinc-500">{ui("钱从哪里来", "Where money comes from", "돈이 어디서 오는가")}</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-zinc-100">
+                  {term(String(wealthSource.plain_source || pathSummary.wealth_source || primaryPath.plain_summary || ui("需要继续观察收入来源。", "Income source needs more observation.", "수입원은 추가 관찰이 필요합니다.")))}
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[11px] text-zinc-500">{ui("靠什么变现", "Monetization", "수익화 방식")}</p>
+                    <p className="mt-1 text-[12px] leading-5 text-emerald-100">
+                      {term(String(monetizationEngine.plain_driver || ui("混合变现链路", "Mixed monetization chain", "혼합 수익화 흐름")))}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">{ui("靠什么接住", "How to hold it", "어떻게 받아낼까")}</p>
+                    <p className="mt-1 text-[12px] leading-5 text-cyan-100">
+                      {term(String(carrier.plain_type || ui("综合承接能力", "Overall carrying capacity", "종합 수용 능력")))}
+                    </p>
+                  </div>
+                </div>
+                {asStringList(carrier.requirements).length ? (
+                  <div className="mt-3 space-y-1">
+                    {asStringList(carrier.requirements).slice(0, 3).map((item) => (
+                      <p key={`wealth_carrier_${item}`} className="text-[11px] leading-5 text-zinc-400">
+                        {term(item)}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <div>
+                    <p className="text-[11px] text-zinc-500">{ui("财富沉淀", "Wealth storage", "재물 축적")}</p>
+                    <p className="mt-1 text-[12px] leading-5 text-zinc-300">
+                      {term(String(wealthVault.plain_summary || ui("先按收入路径和现金流承接判断。", "Read by income path and cash-flow capacity first.", "수입 경로와 현금흐름 수용력으로 봅니다.")))}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">{ui("哪里容易漏钱", "Where money leaks", "돈이 새는 곳")}</p>
+                    <div className="mt-1 space-y-1">
+                      {leakagePoints.length ? leakagePoints.map((row) => (
+                        <p key={`wealth_leak_${String(row.id || row.plain_name)}`} className="text-[11px] leading-5 text-amber-100/90">
+                          {term(String(row.plain_name || ""))}
+                        </p>
+                      )) : (
+                        <p className="text-[11px] leading-5 text-zinc-500">
+                          {ui("未见突出的漏财点，仍要看合同、账期和合作边界。", "No standout leak point; still watch contracts, payment terms, and cooperation boundaries.", "뚜렷한 누수점은 약하지만 계약, 회수 주기, 협업 경계를 봐야 합니다.")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {yearWatchlist.length ? (
+                  <div className="mt-3 border-t border-white/10 pt-2">
+                    <p className="text-[11px] text-zinc-500">{ui("路径触发年份", "Path-trigger years", "경로 촉발 연도")}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {yearWatchlist.map((row) => (
+                        <span key={`wealth_code_year_${String(row.year || row.focus)}`} className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[10px] text-cyan-100">
+                          {String(row.year || "—")} {term(String(row.focus || row.plain_name || ""))}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-[12px] leading-5 text-zinc-500">
+              {ui("可以先生成财富路径，再让财富解读围绕真实的收入路径、变现链路和漏财点来写。", "Build the wealth path first so the reading can focus on income path, monetization, and leakage points.", "먼저 재물 경로를 생성하면 해석이 수입 경로, 수익화, 누수 지점을 중심으로 작성됩니다.")}
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {hasProfile ? (
         <div className="mt-4 border-t border-white/10 pt-4">
@@ -548,6 +707,15 @@ export function V17_WealthAssertionPreviewPanel({
           ))}
         </div>
         <div className="grid grid-cols-1 gap-2 sm:flex sm:justify-end">
+          <button
+            type="button"
+            disabled={!canCodeSubmit}
+            onClick={() => void requestCodePreview()}
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-[12px] font-semibold text-emerald-50 transition hover:border-emerald-200/55 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <TrendingUp className="h-3.5 w-3.5" />
+            {codePending ? ui("生成中", "Building", "생성 중") : ui("生成财富路径", "Wealth path", "재물 경로 생성")}
+          </button>
           <button
             type="button"
             disabled={!canTimelineSubmit}

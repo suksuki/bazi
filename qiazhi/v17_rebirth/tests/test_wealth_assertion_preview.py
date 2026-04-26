@@ -10,6 +10,7 @@ from v17_rebirth.backend.api import auth_v17
 from v17_rebirth.backend.api.app import app
 from v17_rebirth.backend.infrastructure import auth_db
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import resolve_wealth_profile
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import resolve_wealth_code
 from v17_rebirth.backend.services import auth_service
 from v17_rebirth.backend.services.wealth_assertion_preview import (
     WEALTH_ASSERTION_PREVIEW_PROTOCOL,
@@ -64,7 +65,7 @@ def _tensor() -> dict:
     }
 
 
-def test_wealth_assertion_preview_calls_llm_with_profile_only(monkeypatch) -> None:
+def test_wealth_assertion_preview_calls_llm_with_wealth_code_first(monkeypatch) -> None:
     captured: dict = {}
 
     def fake_chat(**kwargs):
@@ -96,10 +97,13 @@ def test_wealth_assertion_preview_calls_llm_with_profile_only(monkeypatch) -> No
     )
 
     assert preview["protocol"] == WEALTH_ASSERTION_PREVIEW_PROTOCOL
+    assert preview["code_source"] == "computed.from_server_physics"
+    assert preview["code_present"] is True
     assert preview["profile_source"] == "computed.from_server_physics"
-    assert preview["safety"]["llm_input_scope"] == "wealth_profile_only"
+    assert preview["safety"]["llm_input_scope"] == "wealth_code_first_profile_fallback"
     assert preview["safety"]["raw_chart_access"] is False
     assert preview["llm_result"]["ok"] is True
+    assert "wealth_code" in captured["messages"][1]["content"]
     assert "wealth_profile" in captured["messages"][1]["content"]
     assert "ten_gods_runtime" not in captured["messages"][1]["content"]
     assert "four_pillars" not in captured["messages"][1]["content"]
@@ -115,9 +119,26 @@ def test_wealth_assertion_preview_refuses_without_profile_or_physics(monkeypatch
     preview = build_wealth_assertion_preview(execute_llm=True)
 
     assert preview["profile_present"] is False
+    assert preview["material_present"] is False
     assert preview["llm_result"]["skipped"] is True
-    assert preview["llm_result"]["reason"] == "missing_wealth_profile"
-    assert "缺少 wealth_profile" in preview["prompt_text"]
+    assert preview["llm_result"]["reason"] == "missing_wealth_material"
+    assert "缺少 wealth_code 和 wealth_profile" in preview["prompt_text"]
+
+
+def test_wealth_assertion_preview_accepts_payload_wealth_code(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "v17_rebirth.backend.services.wealth_assertion_preview.get_runtime_llm_config",
+        lambda: {"provider": "test", "base_url": "", "model": ""},
+    )
+    code = resolve_wealth_code(_tensor())["wealth_code"]
+
+    preview = build_wealth_assertion_preview(wealth_code=code, execute_llm=False)
+
+    assert preview["code_present"] is True
+    assert preview["profile_present"] is False
+    assert preview["material_present"] is True
+    assert preview["code_source"] == "payload.wealth_code"
+    assert preview["prompt_contract"]["input_contract"] == "v17.topic.wealth_code.v1"
 
 
 def test_attach_wealth_assertion_preview_meta_keeps_audit_trail() -> None:
@@ -129,6 +150,7 @@ def test_attach_wealth_assertion_preview_meta_keeps_audit_trail() -> None:
     assert meta["existing"] is True
     assert meta["wealth_assertion_preview"]["protocol"] == WEALTH_ASSERTION_PREVIEW_PROTOCOL
     assert meta["topic_assertion_audits"][0]["topic"] == "wealth"
+    assert meta["topic_assertion_audits"][0]["code_present"] is False
     assert meta["topic_assertion_audits"][0]["profile_present"] is True
 
 
@@ -139,6 +161,7 @@ def test_wealth_assertion_preview_summary_hides_prompt_by_default() -> None:
     summary = summarize_wealth_assertion_preview(preview, include_prompt=False, include_reply=False)
 
     assert summary["preview_present"] is True
+    assert summary["wealth_code_summary"]["primary_wealth_path"] == {}
     assert summary["wealth_profile_summary"]["usable_state"] == profile["usable_state"]
     assert summary["wealth_profile_summary"]["top_channel"]["id"] == profile["primary_channels"][0]["id"]
     assert "prompt_text" not in summary
@@ -176,6 +199,7 @@ def test_admin_wealth_assertion_preview_persists_backstage_audit(isolated_auth_d
     meta = stored["meta"]
     assert meta["wealth_assertion_preview"]["protocol"] == WEALTH_ASSERTION_PREVIEW_PROTOCOL
     assert meta["wealth_assertion_preview"]["safety"]["raw_chart_access"] is False
+    assert meta["wealth_assertion_preview"]["code_present"] is True
 
 
 def test_admin_get_wealth_assertion_preview_returns_audit_summary(isolated_auth_db) -> None:
@@ -236,5 +260,5 @@ def test_admin_get_wealth_assertion_preview_can_include_prompt(isolated_auth_db)
     assert response.status_code == 200
     preview_body = response.json()["preview"]
     assert "prompt_text" in preview_body
-    assert "只基于输入的 wealth_profile" in preview_body["prompt_text"]
+    assert "没有 wealth_code 时，才退回使用 wealth_profile" in preview_body["prompt_text"]
     assert preview_body["prompt_contract"]["task_type"] == "wealth_topic_assertion"
