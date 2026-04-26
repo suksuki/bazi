@@ -32,6 +32,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import no
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import normalize_wealth_code_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import normalize_wealth_profile_meta
 from v17_rebirth.backend.logic.L0_physics_fields.vector_physics_engine import (
     _branch_dominant_ten_god,
@@ -695,6 +696,13 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 current_conf = float(current_wealth_profile.get("confidence") or -1.0)
                 if incoming_conf >= current_conf:
                     meta["wealth_profile"] = incoming_wealth_profile
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("wealth_code"), dict):
+                incoming_wealth_code = normalize_wealth_code_meta(f.meta.get("wealth_code"))
+                current_wealth_code = normalize_wealth_code_meta(meta.get("wealth_code"))
+                incoming_conf = float(incoming_wealth_code.get("confidence") or 0.0)
+                current_conf = float(current_wealth_code.get("confidence") or -1.0)
+                if incoming_wealth_code and incoming_conf >= current_conf:
+                    meta["wealth_code"] = incoming_wealth_code
             # 记录基础事实，以便后续 L2+ 插件可见
             pt["facts"].append({
                 "fact": str(f.text or "").strip(),
@@ -760,6 +768,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "bazi_image_present": isinstance(meta.get("bazi_image"), dict) and bool(meta.get("bazi_image")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
             "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
+            "wealth_code_present": isinstance(meta.get("wealth_code"), dict) and bool(meta.get("wealth_code")),
         },
     )
 
@@ -990,6 +999,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "bazi_image_present": isinstance(meta.get("bazi_image"), dict) and bool(meta.get("bazi_image")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
             "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
+            "wealth_code_present": isinstance(meta.get("wealth_code"), dict) and bool(meta.get("wealth_code")),
             "authority_layer_protocol_present": isinstance((meta.get("god_ring_authority") or {}).get("authority_layer_protocol"), dict),
         },
     )

@@ -81,6 +81,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "财富画像解码器",
         "definition": "从十神、体用、格局、盲派、象法、调候和关系动力中提取财富来源、可用状态、承载与风险。",
     },
+    "modern.topic.wealth_code.v1": {
+        "display_name": "财富密码解码器",
+        "definition": "综合八字象义、财富画像、十神路径、财库和漏财点，识别钱从哪里来、靠什么变现、如何承接。",
+    },
     "v17.symbolic.bazi_image.v1": {
         "display_name": "八字象义底座",
         "definition": "把天干、地支、十神、宫位、藏透和库象转成只读象义事实，供财富、事业、感情等专题解码器消费。",

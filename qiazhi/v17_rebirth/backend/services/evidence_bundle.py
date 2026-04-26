@@ -31,6 +31,7 @@ _DETAIL_KEYS: tuple[str, ...] = (
     "manifestation_state",
     "bazi_image",
     "wealth_profile",
+    "wealth_code",
 )
 
 _ROW_META_KEYS: tuple[str, ...] = (
@@ -49,6 +50,9 @@ _ROW_META_KEYS: tuple[str, ...] = (
     "topic_profile",
     "topic_profile_label",
     "symbolic_layer",
+    "primary_path_id",
+    "primary_path_label",
+    "wealth_source_material",
     "origin_type",
     "manifestation_state",
     "pattern_confidence",

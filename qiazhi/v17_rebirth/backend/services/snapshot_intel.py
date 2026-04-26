@@ -21,6 +21,7 @@ _SNAPSHOT_PUBLIC_META_KEYS = (
     "bazi_image",
     "macro_theme",
     "wealth_profile",
+    "wealth_code",
     "wealth_assertion_preview",
     "wealth_timeline_preview",
 )

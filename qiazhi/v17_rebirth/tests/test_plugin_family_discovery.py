@@ -38,6 +38,7 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "modern.macro.relationship.v1" in plugin_ids
     assert "modern.macro.personality.v1" in plugin_ids
     assert "modern.topic.wealth_profile.v1" in plugin_ids
+    assert "modern.topic.wealth_code.v1" in plugin_ids
     assert "classical.pattern.axis.v1" in plugin_ids
     assert "classical.pattern.dynamic_scope.v1" in plugin_ids
     assert "classical.pattern.jianlu_yuejie.v1" in plugin_ids
@@ -174,6 +175,7 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
     assert "modern.macro.wealth.v1" in fact_plugins
     assert "modern.macro.personality.v1" in fact_plugins
     assert "modern.topic.wealth_profile.v1" in fact_plugins
+    assert "modern.topic.wealth_code.v1" in fact_plugins
     assert "classical.pattern.axis.v1" in fact_plugins
     assert "classical.pattern.dynamic_scope.v1" in fact_plugins
     by_plugin = {str(f.plugin_id or ""): f for f in facts}

@@ -14,6 +14,7 @@ from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import n
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
 from v17_rebirth.backend.logic.L0_physics_fields.bazi_image_core import normalize_bazi_image_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
+from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import normalize_wealth_code_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import normalize_wealth_profile_meta
 from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
@@ -391,6 +392,44 @@ def _wealth_profile_prompt_lines(pt: Dict[str, Any]) -> List[str]:
         rows.append("要避开的坑：" + "；".join(str(item).strip() for item in risks[:3] if str(item).strip()))
     if bridges:
         rows.append("要先做到：" + "；".join(str(item).strip() for item in bridges[:3] if str(item).strip()))
+    return rows
+
+
+def _wealth_code_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    wealth_code = normalize_wealth_code_meta(meta.get("wealth_code"))
+    if not wealth_code:
+        return []
+    rows = [
+        "财富密码合同：wealth_code 是 L3 财富路径解码层，只读 bazi_image、wealth_profile 和底层证据；面向用户时只写钱从哪里来、靠什么变现、如何接住和哪里漏钱，不得承诺金额或确定发财年份。",
+    ]
+    primary = wealth_code.get("primary_wealth_path") if isinstance(wealth_code.get("primary_wealth_path"), dict) else {}
+    source = wealth_code.get("wealth_source") if isinstance(wealth_code.get("wealth_source"), dict) else {}
+    carrier = wealth_code.get("carrier") if isinstance(wealth_code.get("carrier"), dict) else {}
+    if primary:
+        rows.append(
+            "财富主路径："
+            + str(primary.get("plain_name") or primary.get("id") or "").strip()
+            + (f"；{str(primary.get('plain_summary') or '').strip()[:100]}" if primary.get("plain_summary") else "")
+        )
+    if source:
+        rows.append("财源材质：" + str(source.get("plain_source") or source.get("material") or "").strip()[:120])
+    if carrier:
+        requirements = carrier.get("requirements") if isinstance(carrier.get("requirements"), list) else []
+        if requirements:
+            rows.append("财富承接：" + "；".join(str(item).strip() for item in requirements[:3] if str(item).strip()))
+    leakage = wealth_code.get("leakage_points") if isinstance(wealth_code.get("leakage_points"), list) else []
+    if leakage:
+        rows.append(
+            "漏财风险："
+            + "；".join(
+                str(row.get("plain_name") or "").strip()
+                for row in leakage[:3]
+                if isinstance(row, dict) and str(row.get("plain_name") or "").strip()
+            )
+        )
     return rows
 
 
@@ -806,6 +845,7 @@ class PhysicsCanonicalService:
         rows.extend(_bazi_image_prompt_lines(physics_tensor))
         rows.extend(_macro_theme_prompt_lines(physics_tensor))
         rows.extend(_wealth_profile_prompt_lines(physics_tensor))
+        rows.extend(_wealth_code_prompt_lines(physics_tensor))
         rows.extend(_authority_axis_prompt_lines(physics_tensor))
         rows.extend(_blind_theme_prompt_lines(physics_tensor))
         rows.extend(_relation_summary_prompt_lines(physics_tensor))
