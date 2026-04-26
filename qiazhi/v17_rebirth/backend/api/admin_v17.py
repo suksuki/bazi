@@ -29,6 +29,11 @@ from v17_rebirth.backend.services.wealth_assertion_preview import (
     build_wealth_assertion_preview,
     summarize_wealth_assertion_preview,
 )
+from v17_rebirth.backend.services.wealth_code_preview import (
+    attach_wealth_code_preview_meta,
+    build_wealth_code_preview,
+    summarize_wealth_code_preview,
+)
 from v17_rebirth.backend.services.wealth_timeline_preview import (
     attach_wealth_timeline_preview_meta,
     build_wealth_timeline_preview,
@@ -918,6 +923,69 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         "arbiter": arbiter,
         "conflicts": updated_meta.get("plugin_conflicts", []),
         "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
+    }
+
+
+@router.post("/v17/admin/topic/wealth-code-preview")
+async def preview_wealth_code(payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload if isinstance(payload, dict) else {})
+    p = payload if isinstance(payload, dict) else {}
+    session_id = str(p.get("session_id") or "").strip() or "default"
+    persist = bool(p.get("persist", True))
+    wealth_code = p.get("wealth_code") if isinstance(p.get("wealth_code"), dict) else None
+
+    backend = get_state_backend()
+    physics: Dict[str, Any] = {}
+    if not wealth_code:
+        physics = await backend.get_physics(session_id)
+        if not isinstance(physics, dict) or not physics:
+            raise HTTPException(
+                status_code=404,
+                detail="physics not found; provide session_id with server physics or wealth_code",
+            )
+
+    preview = build_wealth_code_preview(
+        physics_tensor=physics if physics else None,
+        wealth_code=wealth_code,
+    )
+    if persist and physics:
+        meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+        physics["meta"] = attach_wealth_code_preview_meta(meta, preview)
+        await backend.set_physics(session_id, physics)
+    return {
+        "ok": bool(preview.get("code_present")),
+        "session_id": session_id,
+        "persisted": bool(persist and physics),
+        "preview": preview,
+    }
+
+
+@router.get("/v17/admin/topic/wealth-code-preview")
+async def get_wealth_code_preview(
+    session_id: str = Query(default="default"),
+    include_code: bool = Query(default=True),
+    include_graph: bool = Query(default=True),
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    resolved_session_id = str(session_id or "").strip() or "default"
+    physics = await get_state_backend().get_physics(resolved_session_id)
+    if not isinstance(physics, dict) or not physics:
+        raise HTTPException(status_code=404, detail="physics not found")
+    meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+    preview = meta.get("wealth_code_preview") if isinstance(meta.get("wealth_code_preview"), dict) else {}
+    audits = meta.get("topic_code_audits") if isinstance(meta.get("topic_code_audits"), list) else []
+    return {
+        "ok": True,
+        "session_id": resolved_session_id,
+        "preview_present": bool(preview),
+        "preview": summarize_wealth_code_preview(
+            preview,
+            include_code=bool(include_code),
+            include_graph=bool(include_graph),
+        ),
+        "topic_code_audits": audits,
     }
 
 
