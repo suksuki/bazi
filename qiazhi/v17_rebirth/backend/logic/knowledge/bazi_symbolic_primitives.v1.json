@@ -1,0 +1,66 @@
+{
+  "id": "v17.knowledge.bazi_symbolic_primitives.v1",
+  "version": "2026-04-26",
+  "mode": "versioned_symbolic_knowledge",
+  "palace_context": {
+    "year": {"life_domain": "family_origin", "label": "外部背景", "image_summary": "家族、早年环境、外部资源与社会入口。"},
+    "month": {"life_domain": "career_environment", "label": "事业环境", "image_summary": "工作环境、平台规则、主气场与现实承载。"},
+    "day": {"life_domain": "spouse_self", "label": "自身与亲密关系", "image_summary": "日主自身、亲密关系和贴身生活场景。"},
+    "hour": {"life_domain": "later_output", "label": "后续输出", "image_summary": "子女、作品、长期输出、晚景与未来延展。"}
+  },
+  "stem_image_rules": {
+    "甲": {"image_tags": ["大树", "梁柱", "长期生长", "组织骨架"], "domain_projection": {"wealth": ["长期项目", "组织资源", "成长型业务"], "career": ["框架建设", "管理骨干", "长期责任"], "relationship": ["稳定支撑", "边界较直"], "personality": ["向上", "直接", "有主干"], "risk": ["周期长", "转身慢", "过直"]}},
+    "乙": {"image_tags": ["花草", "藤蔓", "柔性连接", "审美细节"], "domain_projection": {"wealth": ["细分服务", "审美产品", "关系复购"], "career": ["协调", "设计", "内容服务"], "relationship": ["柔和连接", "需要环境滋养"], "personality": ["细腻", "适应", "有韧性"], "risk": ["依附性", "边界弱", "易受环境影响"]}},
+    "丙": {"image_tags": ["太阳", "曝光", "公开", "热度"], "domain_projection": {"wealth": ["品牌", "流量", "传播", "公开市场"], "career": ["表达", "影响力", "舞台"], "relationship": ["热情外放", "需要被看见"], "personality": ["开朗", "直接", "有感染力"], "risk": ["过热", "消耗快", "声量大于沉淀"]}},
+    "丁": {"image_tags": ["灯火", "技术", "洞察", "精细判断"], "domain_projection": {"wealth": ["咨询", "技术", "手艺", "精密服务"], "career": ["策略", "研究", "专业判断"], "relationship": ["敏感", "照明", "细节关照"], "personality": ["洞察", "专注", "感受细"], "risk": ["能量不稳", "过度敏感", "需要载体"]}},
+    "戊": {"image_tags": ["高山", "平台", "承载", "边界"], "domain_projection": {"wealth": ["平台", "地产", "重资产", "稳定承载"], "career": ["组织平台", "基础设施", "资源承接"], "relationship": ["稳定", "厚重", "边界清楚"], "personality": ["稳重", "能扛事", "讲秩序"], "risk": ["固化", "迟钝", "压住流通"]}},
+    "己": {"image_tags": ["田园", "培育", "运营", "系统维护"], "domain_projection": {"wealth": ["运营", "库存", "供应链", "服务系统"], "career": ["流程", "管理细节", "持续经营"], "relationship": ["照料", "磨合", "日常维护"], "personality": ["细致", "务实", "能经营"], "risk": ["琐碎", "内耗", "泥沙混杂"]}},
+    "庚": {"image_tags": ["矿石", "机器", "工具", "规则", "执行"], "domain_projection": {"wealth": ["硬资产", "工具化产品", "制造", "执行收益"], "career": ["工程", "制度", "攻坚", "执行"], "relationship": ["直接", "重规则", "有锋芒"], "personality": ["果断", "硬朗", "重效率"], "risk": ["刚硬", "冲突", "成本高"]}},
+    "辛": {"image_tags": ["珠玉", "精密", "审美溢价", "凭证"], "domain_projection": {"wealth": ["金融凭证", "品牌质感", "精密产品"], "career": ["品控", "审美", "法务", "金融"], "relationship": ["讲品质", "重细节", "边界精确"], "personality": ["精致", "敏锐", "标准高"], "risk": ["挑剔", "脆弱", "过度包装"]}},
+    "壬": {"image_tags": ["江河", "流通", "远方", "信息流"], "domain_projection": {"wealth": ["贸易", "流通", "跨区域资源", "信息差"], "career": ["资源调度", "市场", "迁移", "传播网络"], "relationship": ["流动", "包容", "边界易变"], "personality": ["开阔", "聪明", "流动性强"], "risk": ["漂移", "失控", "现金流波动"]}},
+    "癸": {"image_tags": ["雨露", "数据", "隐性需求", "微循环"], "domain_projection": {"wealth": ["数据", "研究", "小额持续现金流", "隐性服务"], "career": ["研究", "分析", "隐性服务"], "relationship": ["细水长流", "敏感", "润物无声"], "personality": ["细腻", "观察力", "潜在适应"], "risk": ["隐蔽", "迟缓", "方向感弱"]}}
+  },
+  "branch_image_rules": {
+    "子": {"image_tags": ["寒水", "流动", "夜间", "隐性需求"], "season_context": "冬水，主流动、信息和隐性需求。"},
+    "丑": {"image_tags": ["湿土", "金库", "寒湿", "沉淀"], "season_context": "冬末湿土，主沉淀、库存和慢变量。"},
+    "寅": {"image_tags": ["初春木", "启动", "生发", "远行"], "season_context": "初春木气，主启动、生长和外展。"},
+    "卯": {"image_tags": ["仲春木", "审美", "关系", "细分"], "season_context": "仲春木气，主审美、关系与生长。"},
+    "辰": {"image_tags": ["湿土", "水库", "混合资源", "蓄藏"], "season_context": "春末湿土，主混合资源、蓄藏和转化。"},
+    "巳": {"image_tags": ["初夏火", "技术", "传播", "暗藏金土"], "season_context": "初夏火气，主技术、热度和显化。"},
+    "午": {"image_tags": ["盛夏火", "曝光", "平台", "热度"], "season_context": "盛夏火气，主曝光、公开与高能量。"},
+    "未": {"image_tags": ["燥土", "木库", "服务系统", "培育"], "season_context": "夏末燥土，主培育、经营和资源收束。"},
+    "申": {"image_tags": ["初秋金", "工具", "规则", "流通入口"], "season_context": "初秋金气，主工具、制度与执行。"},
+    "酉": {"image_tags": ["仲秋金", "精密", "审美", "凭证"], "season_context": "仲秋金气，主精密、品质和凭证。"},
+    "戌": {"image_tags": ["燥土", "火库", "边界", "资产结构"], "season_context": "秋末燥土，主边界、资产结构和收束。"},
+    "亥": {"image_tags": ["初冬水", "远方", "流通", "根源"], "season_context": "初冬水气，主远方、流通和潜在资源。"}
+  },
+  "vault_rules": {
+    "辰": {"vault_element": "水", "plain_material": "资金流、信息流或隐性资源的蓄藏"},
+    "戌": {"vault_element": "火", "plain_material": "品牌、曝光、项目热度或资产结构的蓄藏"},
+    "丑": {"vault_element": "金", "plain_material": "凭证、硬资产、金融或精密资源的蓄藏"},
+    "未": {"vault_element": "木", "plain_material": "项目、客户、成长资源或服务系统的蓄藏"}
+  },
+  "ten_god_family": {
+    "正财": {"fact_type": "wealth_material", "topic_hint": "wealth", "role": "稳定收入"},
+    "偏财": {"fact_type": "wealth_material", "topic_hint": "wealth", "role": "项目机会"},
+    "食神": {"fact_type": "output_material", "topic_hint": "wealth", "role": "稳定输出"},
+    "伤官": {"fact_type": "output_material", "topic_hint": "wealth", "role": "表达与销售转化"},
+    "正官": {"fact_type": "authority_material", "topic_hint": "career", "role": "平台规则"},
+    "七杀": {"fact_type": "authority_material", "topic_hint": "career", "role": "高压任务"},
+    "正印": {"fact_type": "seal_material", "topic_hint": "career", "role": "资质信用"},
+    "偏印": {"fact_type": "seal_material", "topic_hint": "career", "role": "专业方法"},
+    "比肩": {"fact_type": "peer_material", "topic_hint": "relationship", "role": "同辈合作"},
+    "劫财": {"fact_type": "peer_material", "topic_hint": "wealth", "role": "竞争分利"}
+  },
+  "relation_tags": {
+    "liu_chong": "冲动",
+    "liu_hai": "隐性牵制",
+    "liu_po": "破损",
+    "liuhe": "六合绑定",
+    "san_he": "三合聚势",
+    "ban_he": "半合聚势",
+    "san_hui": "三会成势",
+    "sanxing": "刑压",
+    "anhe": "暗合牵引"
+  }
+}

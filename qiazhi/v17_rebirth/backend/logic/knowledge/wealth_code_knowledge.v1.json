@@ -1,0 +1,234 @@
+{
+  "id": "v17.knowledge.wealth_path_templates.v1",
+  "version": "2026-04-26",
+  "mode": "versioned_rule_knowledge",
+  "path_keywords": {
+    "direct_wealth": ["正财格", "偏财格", "财星直取", "从财"],
+    "output_to_wealth": ["食伤生财", "伤官生财", "输出换财"],
+    "output_controls_pressure": ["食伤制杀", "食神制杀", "伤官制杀", "制杀", "shishen_zhisha"],
+    "wealth_officer_platform": ["财官", "财官相生", "财官协同", "平台收入"],
+    "wealth_seal_asset": ["财印", "财印路径", "财印相战", "财破印"],
+    "resource_integration": ["合财", "资源整合", "合伙", "从财"],
+    "wealth_vault": ["财库", "墓库", "开库", "库"],
+    "leakage_risk": ["比劫夺财", "劫财夺财", "分财", "争财"]
+  },
+  "path_templates": {
+    "direct_wealth": {
+      "classic_label": "财星直取",
+      "plain_name": "直接收入/明确客户",
+      "plain_summary": "钱更容易来自明确客户、固定收入、直接资源或可被管理的现金流。",
+      "driver": "wealth",
+      "carrier_type": "contract",
+      "threshold": 0.36,
+      "risk_hint": "直接机会越明显，越要注意预算、账期和收入稳定性。"
+    },
+    "output_to_wealth": {
+      "classic_label": "食伤生财",
+      "plain_name": "技能、产品或表达变现",
+      "plain_summary": "钱更容易从专业能力、内容、产品、服务、销售表达中转出来。",
+      "driver": "output",
+      "carrier_type": "self_capacity",
+      "threshold": 0.36,
+      "risk_hint": "能力强不等于马上有钱，需要产品化、定价和复购路径。"
+    },
+    "output_controls_pressure": {
+      "classic_label": "食伤制杀",
+      "plain_name": "靠解决难题赚钱",
+      "plain_summary": "钱更容易来自复杂任务、高压项目、竞争场景和别人解决不了的问题。",
+      "driver": "output_authority",
+      "carrier_type": "method_and_contract",
+      "threshold": 0.34,
+      "risk_hint": "机会常带压力，必须管理合同、交付成本和规则边界。"
+    },
+    "wealth_officer_platform": {
+      "classic_label": "财官路径",
+      "plain_name": "平台、职位或规则收入",
+      "plain_summary": "钱更容易通过平台、职位、组织授权、合同规则和责任边界兑现。",
+      "driver": "authority",
+      "carrier_type": "platform",
+      "threshold": 0.34,
+      "risk_hint": "收入依赖平台和规则，不能只看机会，还要看授权与合规。"
+    },
+    "wealth_seal_asset": {
+      "classic_label": "财印路径",
+      "plain_name": "专业资产/知识信用变现",
+      "plain_summary": "钱更容易从知识、证书、方法论、信用、IP 或长期专业资产中沉淀。",
+      "driver": "seal",
+      "carrier_type": "knowledge",
+      "threshold": 0.32,
+      "risk_hint": "短期变现不能牺牲长期口碑、资质和专业壁垒。"
+    },
+    "resource_integration": {
+      "classic_label": "比劫合财",
+      "plain_name": "合作资源整合",
+      "plain_summary": "钱更容易从团队、人脉、合伙项目、资源撮合和共同经营中出现。",
+      "driver": "peer",
+      "carrier_type": "team",
+      "threshold": 0.32,
+      "risk_hint": "合作能带来钱，也容易卡在权责、分账和退出机制。"
+    },
+    "wealth_vault": {
+      "classic_label": "财库路径",
+      "plain_name": "资产沉淀/资金蓄水",
+      "plain_summary": "财富更像被收藏在项目、资产、库存、回款或资金结构里，等待条件引动。",
+      "driver": "vault",
+      "carrier_type": "asset",
+      "threshold": 0.28,
+      "risk_hint": "开库不等于必进财，也可能是投入、回款、资产转换或现金流波动。"
+    },
+    "leakage_risk": {
+      "classic_label": "比劫夺财/漏财风险",
+      "plain_name": "合作分账与现金流泄漏",
+      "plain_summary": "钱容易被合作、竞争、分账、成本或现金流节奏分走。",
+      "driver": "risk",
+      "carrier_type": "boundary",
+      "threshold": 0.28,
+      "risk_hint": "先定义边界、分配、账期和退出条件，再谈放大。"
+    }
+  },
+  "signal_labels": [
+    {"min": 0.26, "label": "偏强"},
+    {"min": 0.16, "label": "中等"},
+    {"min": 0.000001, "label": "偏弱"},
+    {"min": 0.0, "label": "未显"}
+  ],
+  "global_scoring": {
+    "hit_bonus_per_keyword": 0.07,
+    "hit_bonus_cap": 0.18,
+    "output_symbol_bonus_per_fact": 0.08,
+    "output_symbol_bonus_cap": 0.2,
+    "hidden_wealth_bonus_per_fact": 0.035,
+    "hidden_wealth_bonus_cap": 0.14,
+    "hidden_authority_bonus_per_fact": 0.035,
+    "hidden_authority_bonus_cap": 0.16,
+    "output_wealth_nested_bonus": 0.12,
+    "vault_bonus": 0.1,
+    "wealth_low_threshold": 0.12,
+    "wealth_low_risk_bonus": 0.08,
+    "top_channel_resource_integration_risk_bonus": 0.08,
+    "wealth_vault_without_vault_score_min": 0.35,
+    "leakage_risk_min": 0.42,
+    "leakage_score_min": 0.34
+  },
+  "path_scoring": {
+    "direct_wealth": {
+      "score": {"base": 0.12, "terms": [["wealth", 1.65], ["profile_score", 0.18], ["hit_bonus", 1.0], ["channel_stable_or_opportunity", 1.0]]},
+      "risk": {"base": 0.12, "terms": [["profile_risk", 0.42], ["peer", 0.22]]},
+      "score_parts": [
+        {"label": "直接收入信号", "feature": "wealth", "format": "signal"},
+        {"label": "画像支持", "feature": "channel_stable_or_opportunity", "format": "signal"}
+      ]
+    },
+    "output_to_wealth": {
+      "score": {"base": 0.1, "terms": [["output", 1.05], ["wealth", 0.72], ["hit_bonus", 1.0], ["channel_output", 1.0], ["output_symbol_bonus", 1.0], ["hidden_wealth_bonus", 1.0], ["output_wealth_nested_bonus", 1.0]]},
+      "risk": {"base": 0.14, "terms": [["profile_risk", 0.36], ["wealth_low", 0.08]]},
+      "score_parts": [
+        {"label": "技能/表达信号", "feature": "output", "format": "signal"},
+        {"label": "财富资源信号", "feature": "wealth", "format": "signal"},
+        {"label": "输出场景中藏财", "feature": "output_wealth_nested_bonus", "when_gt": 0.0}
+      ]
+    },
+    "output_controls_pressure": {
+      "score": {"base": 0.08, "terms": [["output", 0.92], ["authority", 0.88], ["hit_bonus", 1.0], ["channel_output_small", 1.0], ["output_symbol_bonus", 1.0], ["hidden_authority_bonus", 1.0]]},
+      "risk": {"base": 0.22, "terms": [["authority", 0.42], ["profile_risk", 0.34]]},
+      "score_parts": [
+        {"label": "技能输出", "feature": "output", "format": "signal"},
+        {"label": "高压/规则", "feature": "authority", "format": "signal"},
+        {"label": "支中见规则/压力材料", "feature": "hidden_authority_bonus", "when_gt": 0.0}
+      ]
+    },
+    "wealth_officer_platform": {
+      "score": {"base": 0.09, "terms": [["wealth", 0.82], ["authority", 0.96], ["hit_bonus", 1.0], ["channel_authority", 1.0]]},
+      "risk": {"base": 0.17, "terms": [["profile_risk", 0.32], ["authority", 0.16]]},
+      "score_parts": [
+        {"label": "财富资源", "feature": "wealth", "format": "signal"},
+        {"label": "平台/规则", "feature": "authority", "format": "signal"}
+      ]
+    },
+    "wealth_seal_asset": {
+      "score": {"base": 0.08, "terms": [["wealth", 0.74], ["seal", 0.98], ["hit_bonus", 1.0], ["channel_knowledge", 1.0]]},
+      "risk": {"base": 0.16, "terms": [["profile_risk", 0.3], ["seal_conflict", 0.14]]},
+      "score_parts": [
+        {"label": "财富资源", "feature": "wealth", "format": "signal"},
+        {"label": "专业/信用", "feature": "seal", "format": "signal"}
+      ]
+    },
+    "resource_integration": {
+      "score": {"base": 0.08, "terms": [["wealth", 0.66], ["peer", 0.82], ["hit_bonus", 1.0], ["channel_resource", 1.0]]},
+      "risk": {"base": 0.26, "terms": [["peer", 0.46], ["profile_risk", 0.3]]},
+      "score_parts": [
+        {"label": "合作/竞争", "feature": "peer", "format": "signal"},
+        {"label": "财富资源", "feature": "wealth", "format": "signal"}
+      ]
+    },
+    "wealth_vault": {
+      "score": {"base": 0.08, "terms": [["vault_bonus", 1.0], ["wealth", 0.34], ["hit_bonus", 1.0], ["has_wealth_material", 0.06]]},
+      "risk": {"base": 0.2, "terms": [["profile_risk", 0.28], ["vault_activated", 0.14], ["vault_static", 0.04]]},
+      "score_parts": [
+        {"label": "已见库象", "feature": "has_vault_signal", "when_gt": 0.0},
+        {"label": "未见明确库象", "feature": "has_vault_signal", "when_eq": 0.0}
+      ]
+    },
+    "leakage_risk": {
+      "score": {"base": 0.06, "terms": [["peer", 1.05], ["wealth", 0.42], ["hit_bonus", 1.0], ["wealth_as_taboo", 0.1]]},
+      "risk": {"base": 0.34, "terms": [["peer", 0.58], ["profile_risk", 0.38], ["top_channel_resource_integration", 0.08]]},
+      "score_parts": [
+        {"label": "合作/竞争", "feature": "peer", "format": "signal"},
+        {"label": "画像风险", "feature": "profile_risk", "format": "signal"}
+      ]
+    }
+  },
+  "combination_paths": {
+    "output_work_to_money": {
+      "source_ids": ["output_controls_pressure", "output_to_wealth"],
+      "classic_label": "食伤制杀 + 食伤生财",
+      "plain_name": "用专业输出解决难题并变现",
+      "plain_summary": "主线不是单纯靠职位吃工资，而是先用技术、表达、方案或产品处理复杂问题、规则压力和竞争场景，再把解决方案转成项目收入、服务收入、产品收入或更高议价。",
+      "driver": "output_authority",
+      "carrier_type": "method_and_contract",
+      "risk_hint": "这类钱来自做功后的转化，必须把交付边界、定价、回款和合规先写清。",
+      "evidence": "组合路径：专业输出先处理压力，再把成果转成收入"
+    }
+  },
+  "source_rewrites": {
+    "output_hidden_wealth": "钱更像藏在专业输出、内容表达、方案交付和复杂项目里；先把能力做成服务、产品、合同和回款，财才容易出来。"
+  },
+  "profile_channel_sources": {
+    "stable_income": "稳定收入与固定现金流",
+    "opportunity_income": "项目机会与市场资源",
+    "output_to_wealth": "技能、产品或表达变现",
+    "authority_income": "平台、职位或合同收入",
+    "knowledge_asset": "专业资产与知识信用",
+    "resource_integration": "合作资源与项目撮合"
+  },
+  "carrier_requirements": {
+    "self_capacity": ["把技能、产品和交付做成可复用的变现方式"],
+    "method_and_contract": ["把方法、合同、交付边界和成本控制先建好"],
+    "platform": ["用平台授权、职位职责和合同规则承接机会"],
+    "knowledge": ["沉淀证书、方法论、IP 或专业信用"],
+    "team": ["先写清合伙权责、分账和退出机制"],
+    "asset": ["把现金流、库存、回款和资产转换节奏管理好"],
+    "contract": ["把客户、账期、预算和回款规则先写清楚"],
+    "boundary": ["先守住分账、成本、账期和合作边界"]
+  },
+  "carrier_plain_types": {
+    "self_capacity": "个人能力与产品化交付",
+    "method_and_contract": "方法论、合同与交付边界",
+    "platform": "平台、职位与规则授权",
+    "knowledge": "知识、资质与专业信用",
+    "team": "团队、合伙与资源边界",
+    "asset": "资产、库存、回款与现金流",
+    "contract": "客户、合同与稳定现金流",
+    "boundary": "合作边界与现金流纪律"
+  },
+  "monetization_drivers": {
+    "wealth": "直接收入与客户资源",
+    "output": "技能、产品、内容或表达",
+    "output_authority": "解决高压复杂问题",
+    "authority": "平台、职位、合同和规则",
+    "seal": "知识、资质、方法论和信用",
+    "peer": "合作资源、人脉和团队",
+    "vault": "资产沉淀、回款和资金结构",
+    "risk": "风险控制与边界管理"
+  }
+}

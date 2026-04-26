@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any, Dict, List, Mapping, Sequence
 
 from v17_rebirth.backend.logic.L0_physics_fields.bazi_image_core import (
@@ -12,6 +14,7 @@ from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import (
     resolve_wealth_profile,
 )
 from v17_rebirth.backend.services.physics_layers import read_runtime_scores
+from v17_rebirth.paths import V17_REBIRTH_ROOT
 
 
 WEALTH_CODE_CONTRACT = "v17.topic.wealth_code.v1"
@@ -47,91 +50,34 @@ _AUTHORITY_GODS = ("正官", "七杀")
 _SEAL_GODS = ("正印", "偏印")
 _PEER_GODS = ("比肩", "劫财")
 
+WEALTH_CODE_KNOWLEDGE_PATH = V17_REBIRTH_ROOT / "backend" / "logic" / "knowledge" / "wealth_code_knowledge.v1.json"
+
+
+@lru_cache(maxsize=1)
+def load_wealth_code_knowledge() -> Dict[str, Any]:
+    return json.loads(WEALTH_CODE_KNOWLEDGE_PATH.read_text(encoding="utf-8"))
+
+
+def _knowledge_section(name: str) -> Dict[str, Any]:
+    section = load_wealth_code_knowledge().get(name)
+    return dict(section) if isinstance(section, Mapping) else {}
+
+
+def _knowledge_list(name: str) -> List[Any]:
+    section = load_wealth_code_knowledge().get(name)
+    return list(section) if isinstance(section, list) else []
+
+
 _PATH_KEYWORDS: Dict[str, tuple[str, ...]] = {
-    "direct_wealth": ("正财格", "偏财格", "财星直取", "从财"),
-    "output_to_wealth": ("食伤生财", "伤官生财", "输出换财"),
-    "output_controls_pressure": ("食伤制杀", "食神制杀", "伤官制杀", "制杀", "shishen_zhisha"),
-    "wealth_officer_platform": ("财官", "财官相生", "财官协同", "平台收入"),
-    "wealth_seal_asset": ("财印", "财印路径", "财印相战", "财破印"),
-    "resource_integration": ("合财", "资源整合", "合伙", "从财"),
-    "wealth_vault": ("财库", "墓库", "开库", "库"),
-    "leakage_risk": ("比劫夺财", "劫财夺财", "分财", "争财"),
+    str(path_id): tuple(str(item) for item in words)
+    for path_id, words in _knowledge_section("path_keywords").items()
+    if isinstance(words, list)
 }
 
-
 WEALTH_PATH_TEMPLATES: Dict[str, Dict[str, Any]] = {
-    "direct_wealth": {
-        "classic_label": "财星直取",
-        "plain_name": "直接收入/明确客户",
-        "plain_summary": "钱更容易来自明确客户、固定收入、直接资源或可被管理的现金流。",
-        "driver": "wealth",
-        "carrier_type": "contract",
-        "threshold": 0.36,
-        "risk_hint": "直接机会越明显，越要注意预算、账期和收入稳定性。",
-    },
-    "output_to_wealth": {
-        "classic_label": "食伤生财",
-        "plain_name": "技能、产品或表达变现",
-        "plain_summary": "钱更容易从专业能力、内容、产品、服务、销售表达中转出来。",
-        "driver": "output",
-        "carrier_type": "self_capacity",
-        "threshold": 0.36,
-        "risk_hint": "能力强不等于马上有钱，需要产品化、定价和复购路径。",
-    },
-    "output_controls_pressure": {
-        "classic_label": "食伤制杀",
-        "plain_name": "靠解决难题赚钱",
-        "plain_summary": "钱更容易来自复杂任务、高压项目、竞争场景和别人解决不了的问题。",
-        "driver": "output_authority",
-        "carrier_type": "method_and_contract",
-        "threshold": 0.34,
-        "risk_hint": "机会常带压力，必须管理合同、交付成本和规则边界。",
-    },
-    "wealth_officer_platform": {
-        "classic_label": "财官路径",
-        "plain_name": "平台、职位或规则收入",
-        "plain_summary": "钱更容易通过平台、职位、组织授权、合同规则和责任边界兑现。",
-        "driver": "authority",
-        "carrier_type": "platform",
-        "threshold": 0.34,
-        "risk_hint": "收入依赖平台和规则，不能只看机会，还要看授权与合规。",
-    },
-    "wealth_seal_asset": {
-        "classic_label": "财印路径",
-        "plain_name": "专业资产/知识信用变现",
-        "plain_summary": "钱更容易从知识、证书、方法论、信用、IP 或长期专业资产中沉淀。",
-        "driver": "seal",
-        "carrier_type": "knowledge",
-        "threshold": 0.32,
-        "risk_hint": "短期变现不能牺牲长期口碑、资质和专业壁垒。",
-    },
-    "resource_integration": {
-        "classic_label": "比劫合财",
-        "plain_name": "合作资源整合",
-        "plain_summary": "钱更容易从团队、人脉、合伙项目、资源撮合和共同经营中出现。",
-        "driver": "peer",
-        "carrier_type": "team",
-        "threshold": 0.32,
-        "risk_hint": "合作能带来钱，也容易卡在权责、分账和退出机制。",
-    },
-    "wealth_vault": {
-        "classic_label": "财库路径",
-        "plain_name": "资产沉淀/资金蓄水",
-        "plain_summary": "财富更像被收藏在项目、资产、库存、回款或资金结构里，等待条件引动。",
-        "driver": "vault",
-        "carrier_type": "asset",
-        "threshold": 0.28,
-        "risk_hint": "开库不等于必进财，也可能是投入、回款、资产转换或现金流波动。",
-    },
-    "leakage_risk": {
-        "classic_label": "比劫夺财/漏财风险",
-        "plain_name": "合作分账与现金流泄漏",
-        "plain_summary": "钱容易被合作、竞争、分账、成本或现金流节奏分走。",
-        "driver": "risk",
-        "carrier_type": "boundary",
-        "threshold": 0.28,
-        "risk_hint": "先定义边界、分配、账期和退出条件，再谈放大。",
-    },
+    str(path_id): dict(template)
+    for path_id, template in _knowledge_section("path_templates").items()
+    if isinstance(template, Mapping)
 }
 
 
@@ -181,13 +127,44 @@ def _share(scores: Mapping[str, Any], gods: Sequence[str], total: float) -> floa
 
 
 def _signal_label(value: float) -> str:
-    if value >= 0.26:
-        return "偏强"
-    if value >= 0.16:
-        return "中等"
-    if value > 0:
-        return "偏弱"
+    for row in _knowledge_list("signal_labels"):
+        if not isinstance(row, Mapping):
+            continue
+        if value >= _safe_float(row.get("min"), 0.0):
+            return _clean_label(row.get("label")) or "未显"
     return "未显"
+
+
+def _formula_value(formula: Mapping[str, Any], features: Mapping[str, float]) -> float:
+    value = _safe_float(formula.get("base"), 0.0)
+    terms = formula.get("terms") if isinstance(formula.get("terms"), list) else []
+    for term in terms:
+        if not isinstance(term, Sequence) or isinstance(term, (str, bytes)) or len(term) < 2:
+            continue
+        feature = str(term[0] or "").strip()
+        value += _safe_float(features.get(feature), 0.0) * _safe_float(term[1], 0.0)
+    return value
+
+
+def _score_parts_from_config(rows: Any, features: Mapping[str, float]) -> List[str]:
+    out: List[str] = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, Mapping):
+            continue
+        feature = str(row.get("feature") or "").strip()
+        raw = _safe_float(features.get(feature), 0.0)
+        if "when_gt" in row and not raw > _safe_float(row.get("when_gt"), 0.0):
+            continue
+        if "when_eq" in row and abs(raw - _safe_float(row.get("when_eq"), 0.0)) > 1e-9:
+            continue
+        label = _clean_label(row.get("label"))
+        if not label:
+            continue
+        if row.get("format") == "signal":
+            out.append(f"{label}{_signal_label(raw)}")
+        else:
+            out.append(label)
+    return out
 
 
 def _facts_text(physics_tensor: Mapping[str, Any], meta: Mapping[str, Any]) -> str:
@@ -342,10 +319,8 @@ def _wealth_source(
         terms = row.get("classic_terms") if isinstance(row.get("classic_terms"), list) else []
         plain_source = _clean_label(row.get("plain_meaning"), limit=120)
         if driver in {"output", "output_authority"} and (output_facts or output_wealth_nested):
-            plain_source = (
-                "钱更像藏在专业输出、内容表达、方案交付和复杂项目里；"
-                "先把能力做成服务、产品、合同和回款，财才容易出来。"
-            )
+            rewrite = _knowledge_section("source_rewrites").get("output_hidden_wealth")
+            plain_source = _clean_label(rewrite, limit=160) or plain_source
         return {
             "material": _clean_label(terms[1] if len(terms) > 1 else ""),
             "ten_god": _clean_label(terms[0] if terms else ""),
@@ -355,17 +330,11 @@ def _wealth_source(
             "evidence": list(row.get("evidence") or []),
         }
     top_channel = _top_channel_id(profile)
+    channel_sources = _knowledge_section("profile_channel_sources")
     return {
         "material": "",
         "ten_god": "",
-        "plain_source": {
-            "stable_income": "稳定收入与固定现金流",
-            "opportunity_income": "项目机会与市场资源",
-            "output_to_wealth": "技能、产品或表达变现",
-            "authority_income": "平台、职位或合同收入",
-            "knowledge_asset": "专业资产与知识信用",
-            "resource_integration": "合作资源与项目撮合",
-        }.get(top_channel, "财富来源需要继续观察"),
+        "plain_source": _clean_label(channel_sources.get(top_channel)) or "财富来源需要继续观察",
         "visibility": _clean_label(profile.get("visibility")) or "unclear",
         "location": "wealth_profile",
         "evidence": _clean_str_list(profile.get("evidence"), limit=3),
@@ -506,56 +475,62 @@ def _score_paths(
     usable_state = _clean_label(profile.get("usable_state"))
     top_channel = _top_channel_id(profile)
     wealth_materials = _wealth_material_rows(bazi_image)
-    output_symbol_bonus = min(0.2, len(_symbolic_fact_rows(bazi_image, fact_type="output_material")) * 0.08)
-    hidden_wealth_bonus = min(0.14, len(wealth_materials) * 0.035)
-    hidden_authority_bonus = min(0.16, _hidden_ten_god_count(bazi_image, _AUTHORITY_GODS) * 0.035)
-    output_wealth_nested_bonus = 0.12 if _has_output_wealth_nesting(bazi_image) else 0.0
     vault = _wealth_vault(bazi_image)
-    vault_bonus = 0.1 if vault.get("has_vault_signal") else 0.0
+    scoring = _knowledge_section("global_scoring")
+    output_wealth_nested = _has_output_wealth_nesting(bazi_image)
+    features: Dict[str, float] = {
+        "wealth": wealth,
+        "output": output,
+        "authority": authority,
+        "seal": seal,
+        "peer": peer,
+        "profile_score": profile_score,
+        "profile_risk": profile_risk,
+        "channel_stable_or_opportunity": max(_channel_score(profile, "stable_income"), _channel_score(profile, "opportunity_income")) * 0.2,
+        "channel_output": _channel_score(profile, "output_to_wealth") * 0.24,
+        "channel_output_small": min(0.08, _channel_score(profile, "output_to_wealth") * 0.12),
+        "channel_authority": _channel_score(profile, "authority_income") * 0.26,
+        "channel_knowledge": _channel_score(profile, "knowledge_asset") * 0.26,
+        "channel_resource": _channel_score(profile, "resource_integration") * 0.28,
+        "output_symbol_bonus": min(
+            _safe_float(scoring.get("output_symbol_bonus_cap"), 0.0),
+            len(_symbolic_fact_rows(bazi_image, fact_type="output_material")) * _safe_float(scoring.get("output_symbol_bonus_per_fact"), 0.0),
+        ),
+        "hidden_wealth_bonus": min(
+            _safe_float(scoring.get("hidden_wealth_bonus_cap"), 0.0),
+            len(wealth_materials) * _safe_float(scoring.get("hidden_wealth_bonus_per_fact"), 0.0),
+        ),
+        "hidden_authority_bonus": min(
+            _safe_float(scoring.get("hidden_authority_bonus_cap"), 0.0),
+            _hidden_ten_god_count(bazi_image, _AUTHORITY_GODS) * _safe_float(scoring.get("hidden_authority_bonus_per_fact"), 0.0),
+        ),
+        "output_wealth_nested_bonus": _safe_float(scoring.get("output_wealth_nested_bonus"), 0.0) if output_wealth_nested else 0.0,
+        "vault_bonus": _safe_float(scoring.get("vault_bonus"), 0.0) if vault.get("has_vault_signal") else 0.0,
+        "has_wealth_material": 1.0 if wealth_materials else 0.0,
+        "has_vault_signal": 1.0 if vault.get("has_vault_signal") else 0.0,
+        "vault_activated": 1.0 if vault.get("vault_state") == "activated" else 0.0,
+        "vault_static": 1.0 if vault.get("vault_state") != "activated" else 0.0,
+        "wealth_low": 1.0 if wealth < _safe_float(scoring.get("wealth_low_threshold"), 0.0) else 0.0,
+        "wealth_as_taboo": 1.0 if usable_state == "wealth_as_taboo" else 0.0,
+        "top_channel_resource_integration": 1.0 if top_channel == "resource_integration" else 0.0,
+        "seal_conflict": 1.0 if "财破印" in text or "财印相战" in text else 0.0,
+    }
 
     raw: Dict[str, tuple[float, float, List[str], List[Mapping[str, Any]]]] = {}
+    formulas = _knowledge_section("path_scoring")
     for path_id in WEALTH_PATH_TEMPLATES:
+        formula = formulas.get(path_id) if isinstance(formulas.get(path_id), Mapping) else {}
+        if not formula:
+            continue
         hits = _keyword_hits(text, path_id)
-        hit_bonus = min(0.18, len(hits) * 0.07)
-        channel_bonus = 0.0
-        score_parts: List[str] = []
-        if path_id == "direct_wealth":
-            channel_bonus = max(_channel_score(profile, "stable_income"), _channel_score(profile, "opportunity_income")) * 0.2
-            score = 0.12 + wealth * 1.65 + profile_score * 0.18 + hit_bonus + channel_bonus
-            risk = 0.12 + profile_risk * 0.42 + peer * 0.22
-            score_parts = [f"直接收入信号{_signal_label(wealth)}", f"画像支持{_signal_label(channel_bonus)}"]
-        elif path_id == "output_to_wealth":
-            channel_bonus = _channel_score(profile, "output_to_wealth") * 0.24
-            score = 0.1 + output * 1.05 + wealth * 0.72 + hit_bonus + channel_bonus + output_symbol_bonus + hidden_wealth_bonus + output_wealth_nested_bonus
-            risk = 0.14 + profile_risk * 0.36 + (0.08 if wealth < 0.12 else 0.0)
-            score_parts = [f"技能/表达信号{_signal_label(output)}", f"财富资源信号{_signal_label(wealth)}", *(["输出场景中藏财"] if output_wealth_nested_bonus else [])]
-        elif path_id == "output_controls_pressure":
-            score = 0.08 + output * 0.92 + authority * 0.88 + hit_bonus + min(0.08, _channel_score(profile, "output_to_wealth") * 0.12) + output_symbol_bonus + hidden_authority_bonus
-            risk = 0.22 + authority * 0.42 + profile_risk * 0.34
-            score_parts = [f"技能输出{_signal_label(output)}", f"高压/规则{_signal_label(authority)}", *(["支中见规则/压力材料"] if hidden_authority_bonus else [])]
-        elif path_id == "wealth_officer_platform":
-            channel_bonus = _channel_score(profile, "authority_income") * 0.26
-            score = 0.09 + wealth * 0.82 + authority * 0.96 + hit_bonus + channel_bonus
-            risk = 0.17 + profile_risk * 0.32 + authority * 0.16
-            score_parts = [f"财富资源{_signal_label(wealth)}", f"平台/规则{_signal_label(authority)}"]
-        elif path_id == "wealth_seal_asset":
-            channel_bonus = _channel_score(profile, "knowledge_asset") * 0.26
-            score = 0.08 + wealth * 0.74 + seal * 0.98 + hit_bonus + channel_bonus
-            risk = 0.16 + profile_risk * 0.3 + (0.14 if "财破印" in hits or "财印相战" in text else 0.0)
-            score_parts = [f"财富资源{_signal_label(wealth)}", f"专业/信用{_signal_label(seal)}"]
-        elif path_id == "resource_integration":
-            channel_bonus = _channel_score(profile, "resource_integration") * 0.28
-            score = 0.08 + wealth * 0.66 + peer * 0.82 + hit_bonus + channel_bonus
-            risk = 0.26 + peer * 0.46 + profile_risk * 0.3
-            score_parts = [f"合作/竞争{_signal_label(peer)}", f"财富资源{_signal_label(wealth)}"]
-        elif path_id == "wealth_vault":
-            score = 0.08 + vault_bonus + wealth * 0.34 + hit_bonus + (0.06 if wealth_materials else 0.0)
-            risk = 0.2 + profile_risk * 0.28 + (0.14 if vault.get("vault_state") == "activated" else 0.04)
-            score_parts = ["已见库象" if vault.get("has_vault_signal") else "未见明确库象"]
-        else:
-            score = 0.06 + peer * 1.05 + wealth * 0.42 + hit_bonus + (0.1 if usable_state == "wealth_as_taboo" else 0.0)
-            risk = 0.34 + peer * 0.58 + profile_risk * 0.38 + (0.08 if top_channel == "resource_integration" else 0.0)
-            score_parts = [f"合作/竞争{_signal_label(peer)}", f"画像风险{_signal_label(profile_risk)}"]
+        local_features = dict(features)
+        local_features["hit_bonus"] = min(
+            _safe_float(scoring.get("hit_bonus_cap"), 0.0),
+            len(hits) * _safe_float(scoring.get("hit_bonus_per_keyword"), 0.0),
+        )
+        score = _formula_value(formula.get("score") if isinstance(formula.get("score"), Mapping) else {}, local_features)
+        risk = _formula_value(formula.get("risk") if isinstance(formula.get("risk"), Mapping) else {}, local_features)
+        score_parts = _score_parts_from_config(formula.get("score_parts"), local_features)
         raw[path_id] = (score, risk, score_parts, wealth_materials)
 
     rows: List[Dict[str, Any]] = []
@@ -563,9 +538,9 @@ def _score_paths(
         threshold = _safe_float(WEALTH_PATH_TEMPLATES[path_id].get("threshold"), 0.3)
         if score < threshold and path_id not in {"wealth_vault", "leakage_risk"}:
             continue
-        if path_id == "wealth_vault" and not vault.get("has_vault_signal") and score < 0.35:
+        if path_id == "wealth_vault" and not vault.get("has_vault_signal") and score < _safe_float(scoring.get("wealth_vault_without_vault_score_min"), 0.35):
             continue
-        if path_id == "leakage_risk" and risk < 0.42 and score < 0.34:
+        if path_id == "leakage_risk" and risk < _safe_float(scoring.get("leakage_risk_min"), 0.42) and score < _safe_float(scoring.get("leakage_score_min"), 0.34):
             continue
         rows.append(
             _path_row(
@@ -585,25 +560,33 @@ def _merge_output_work_path(primary: Mapping[str, Any], secondary: Sequence[Mapp
     out = dict(primary)
     secondary_by_id = {str(row.get("id") or ""): row for row in secondary if isinstance(row, Mapping)}
     primary_id = _clean_label(out.get("id"))
+    combinations = _knowledge_section("combination_paths")
+    combo_id = ""
     pair_id = ""
-    if primary_id == "output_controls_pressure" and "output_to_wealth" in secondary_by_id:
-        pair_id = "output_to_wealth"
-    elif primary_id == "output_to_wealth" and "output_controls_pressure" in secondary_by_id:
-        pair_id = "output_controls_pressure"
-    if not pair_id:
+    combo: Mapping[str, Any] = {}
+    for candidate_id, candidate in combinations.items():
+        if not isinstance(candidate, Mapping):
+            continue
+        source_ids = [str(item or "") for item in candidate.get("source_ids") or []]
+        if primary_id not in source_ids:
+            continue
+        matched_pair = next((source_id for source_id in source_ids if source_id != primary_id and source_id in secondary_by_id), "")
+        if not matched_pair:
+            continue
+        combo_id = str(candidate_id)
+        pair_id = matched_pair
+        combo = candidate
+        break
+    if not combo_id or not pair_id:
         return out
+
     pair = secondary_by_id[pair_id]
-    out["id"] = "output_work_to_money"
-    out["classic_label"] = "食伤制杀 + 食伤生财"
-    out["plain_name"] = "用专业输出解决难题并变现"
-    out["plain_summary"] = (
-        "主线不是单纯靠职位吃工资，而是先用技术、表达、方案或产品处理复杂问题、规则压力和竞争场景，"
-        "再把解决方案转成项目收入、服务收入、产品收入或更高议价。"
-    )
-    out["driver"] = "output_authority"
-    out["carrier_type"] = "method_and_contract"
-    out["risk_hint"] = "这类钱来自做功后的转化，必须把交付边界、定价、回款和合规先写清。"
-    evidence = ["组合路径：专业输出先处理压力，再把成果转成收入"]
+    out["id"] = combo_id
+    for key in ("classic_label", "plain_name", "plain_summary", "driver", "carrier_type", "risk_hint"):
+        value = _clean_label(combo.get(key), limit=320)
+        if value:
+            out[key] = value
+    evidence = _clean_str_list([combo.get("evidence")], limit=1)
     evidence.extend(item for item in out.get("evidence") or [] if item not in evidence)
     evidence.extend(item for item in pair.get("evidence") or [] if item not in evidence)
     out["evidence"] = _clean_str_list(evidence, limit=10)
@@ -617,29 +600,13 @@ def _carrier(primary_path: Mapping[str, Any], profile: Mapping[str, Any]) -> Dic
     carrier_type = _clean_label(primary_path.get("carrier_type")) or "mixed"
     requirements = _clean_str_list(profile.get("bridge_requirements"), limit=4)
     if not requirements:
-        requirements = {
-            "self_capacity": ["把技能、产品和交付做成可复用的变现方式"],
-            "method_and_contract": ["把方法、合同、交付边界和成本控制先建好"],
-            "platform": ["用平台授权、职位职责和合同规则承接机会"],
-            "knowledge": ["沉淀证书、方法论、IP 或专业信用"],
-            "team": ["先写清合伙权责、分账和退出机制"],
-            "asset": ["把现金流、库存、回款和资产转换节奏管理好"],
-            "contract": ["把客户、账期、预算和回款规则先写清楚"],
-            "boundary": ["先守住分账、成本、账期和合作边界"],
-        }.get(carrier_type, ["先明确收入来源、承接条件和风险边界"])
+        requirement_map = _knowledge_section("carrier_requirements")
+        requirements = _clean_str_list(requirement_map.get(carrier_type), limit=4) or ["先明确收入来源、承接条件和风险边界"]
     score = _clamp(_safe_float(primary_path.get("score"), 0.0) - _safe_float(primary_path.get("risk"), 0.0) * 0.22 + 0.18)
+    plain_types = _knowledge_section("carrier_plain_types")
     return {
         "type": carrier_type,
-        "plain_type": {
-            "self_capacity": "个人能力与产品化交付",
-            "method_and_contract": "方法论、合同与交付边界",
-            "platform": "平台、职位与规则授权",
-            "knowledge": "知识、资质与专业信用",
-            "team": "团队、合伙与资源边界",
-            "asset": "资产、库存、回款与现金流",
-            "contract": "客户、合同与稳定现金流",
-            "boundary": "合作边界与现金流纪律",
-        }.get(carrier_type, "综合承接能力"),
+        "plain_type": _clean_label(plain_types.get(carrier_type)) or "综合承接能力",
         "score": round(score, 3),
         "requirements": requirements,
     }
@@ -649,18 +616,10 @@ def _monetization_engine(primary_path: Mapping[str, Any]) -> Dict[str, Any]:
     driver = _clean_label(primary_path.get("driver")) or "mixed"
     score = _safe_float(primary_path.get("score"), 0.0)
     risk = _safe_float(primary_path.get("risk"), 0.0)
+    drivers = _knowledge_section("monetization_drivers")
     return {
         "driver": driver,
-        "plain_driver": {
-            "wealth": "直接收入与客户资源",
-            "output": "技能、产品、内容或表达",
-            "output_authority": "解决高压复杂问题",
-            "authority": "平台、职位、合同和规则",
-            "seal": "知识、资质、方法论和信用",
-            "peer": "合作资源、人脉和团队",
-            "vault": "资产沉淀、回款和资金结构",
-            "risk": "风险控制与边界管理",
-        }.get(driver, "混合变现链路"),
+        "plain_driver": _clean_label(drivers.get(driver)) or "混合变现链路",
         "chain_integrity": round(_clamp(score * 0.72 + (1.0 - risk) * 0.28), 3),
     }
 
@@ -785,7 +744,7 @@ def normalize_wealth_code_meta(value: Any) -> Dict[str, Any]:
     out["is_l3_topic_decoder"] = bool(out.get("is_l3_topic_decoder", True))
     out["knowledge_base"] = dict(out.get("knowledge_base")) if isinstance(out.get("knowledge_base"), Mapping) else {
         "id": WEALTH_PATH_KNOWLEDGE_ID,
-        "mode": "curated_rule_templates",
+        "mode": "versioned_rule_knowledge",
     }
     for key in (
         "secondary_paths",
@@ -856,8 +815,8 @@ def resolve_wealth_code(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         "is_l3_topic_decoder": True,
         "knowledge_base": {
             "id": WEALTH_PATH_KNOWLEDGE_ID,
-            "mode": "curated_rule_templates",
-            "version": "2026-04-26",
+            "mode": _clean_label(load_wealth_code_knowledge().get("mode")) or "versioned_rule_knowledge",
+            "version": _clean_label(load_wealth_code_knowledge().get("version")),
             "template_count": len(WEALTH_PATH_TEMPLATES),
         },
         "score": round(score, 3),

@@ -18,6 +18,7 @@ from v17_rebirth.testing.synthetic_lab import (
     SYNTHETIC_PATTERN_CASES,
     SYNTHETIC_RISK_CASES,
 )
+from v17_rebirth.testing.synthetic_wealth_lab import SYNTHETIC_WEALTH_CASES
 
 
 TUNING_BRIDGE_VERSION = "v17.synthetic_tuning_bridge.v1"
@@ -213,11 +214,12 @@ def _catalog_index() -> list[dict[str, Any]]:
         *SYNTHETIC_AUTHORITY_CASES,
         *SYNTHETIC_PATTERN_CASES,
         *SYNTHETIC_CORE_CASES,
+        *SYNTHETIC_WEALTH_CASES,
     ]:
         rows.append(
             {
                 "case_id": str(case.case_id),
-                "layer": str(case.layer),
+                "layer": str(getattr(case, "layer", "")),
                 "description": str(case.description),
                 "tags": list(getattr(case, "tags", ()) or ()),
             }
