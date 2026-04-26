@@ -3,14 +3,345 @@
   "version": "2026-04-26",
   "mode": "versioned_rule_knowledge",
   "path_keywords": {
-    "direct_wealth": ["正财格", "偏财格", "财星直取", "从财"],
-    "output_to_wealth": ["食伤生财", "伤官生财", "输出换财"],
-    "output_controls_pressure": ["食伤制杀", "食神制杀", "伤官制杀", "制杀", "shishen_zhisha"],
-    "wealth_officer_platform": ["财官", "财官相生", "财官协同", "平台收入"],
-    "wealth_seal_asset": ["财印", "财印路径", "财印相战", "财破印"],
-    "resource_integration": ["合财", "资源整合", "合伙", "从财"],
-    "wealth_vault": ["财库", "墓库", "开库", "库"],
-    "leakage_risk": ["比劫夺财", "劫财夺财", "分财", "争财"]
+    "direct_wealth": [
+      "正财格",
+      "偏财格",
+      "财星直取",
+      "从财"
+    ],
+    "output_to_wealth": [
+      "食伤生财",
+      "伤官生财",
+      "输出换财"
+    ],
+    "output_controls_pressure": [
+      "食伤制杀",
+      "食神制杀",
+      "伤官制杀",
+      "制杀",
+      "shishen_zhisha"
+    ],
+    "wealth_officer_platform": [
+      "财官",
+      "财官相生",
+      "财官协同",
+      "平台收入"
+    ],
+    "wealth_seal_asset": [
+      "财印",
+      "财印路径",
+      "财印相战",
+      "财破印"
+    ],
+    "resource_integration": [
+      "合财",
+      "资源整合",
+      "合伙",
+      "从财"
+    ],
+    "wealth_vault": [
+      "财库",
+      "墓库",
+      "开库",
+      "库"
+    ],
+    "leakage_risk": [
+      "比劫夺财",
+      "劫财夺财",
+      "分财",
+      "争财"
+    ]
+  },
+  "god_groups": {
+    "wealth_gods": [
+      "正财",
+      "偏财"
+    ],
+    "output_gods": [
+      "食神",
+      "伤官"
+    ],
+    "authority_gods": [
+      "正官",
+      "七杀"
+    ],
+    "seal_gods": [
+      "正印",
+      "偏印"
+    ],
+    "peer_gods": [
+      "比肩",
+      "劫财"
+    ]
+  },
+  "path_claim_rules": {
+    "direct_wealth": [
+      {
+        "id": "dc-wealth-stem",
+        "label": "正偏财明晰",
+        "weight": 0.65,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura"
+        ],
+        "target_gods": [
+          "正财",
+          "偏财"
+        ],
+        "keywords": [
+          "正财",
+          "偏财",
+          "财星",
+          "财库",
+          "财运",
+          "财路"
+        ]
+      },
+      {
+        "id": "dc-wealth-explicit",
+        "label": "财富结构路径",
+        "weight": 0.45,
+        "plugins": [],
+        "keywords": [
+          "财库",
+          "财星",
+          "月令财",
+          "正财",
+          "偏财",
+          "从财"
+        ]
+      }
+    ],
+    "output_to_wealth": [
+      {
+        "id": "otw-text",
+        "label": "食伤生财",
+        "weight": 0.8,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "食伤生财",
+          "伤官生财",
+          "生财",
+          "输出换财",
+          "输出"
+        ]
+      },
+      {
+        "id": "otw-plugin",
+        "label": "食伤生财模型",
+        "weight": 0.6,
+        "plugin_prefixes": [
+          "classical.pattern.shishen_shengcai"
+        ]
+      }
+    ],
+    "output_controls_pressure": [
+      {
+        "id": "ocp-text",
+        "label": "食伤制杀",
+        "weight": 1.0,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "食伤制杀",
+          "食神制杀",
+          "伤官制杀",
+          "制杀",
+          "解决压力",
+          "破解压力",
+          "难题"
+        ]
+      },
+      {
+        "id": "ocp-plugin",
+        "label": "食伤制杀模型",
+        "weight": 0.72,
+        "plugin_prefixes": [
+          "classical.pattern.shishen_zhisha",
+          "classical.pattern.shishang_zhisha"
+        ]
+      }
+    ],
+    "wealth_officer_platform": [
+      {
+        "id": "wop-text",
+        "label": "财官/官财",
+        "weight": 0.72,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "财官",
+          "财官相生",
+          "财官协同",
+          "正官",
+          "七杀",
+          "官星",
+          "平台",
+          "职位",
+          "规则",
+          "岗位"
+        ]
+      },
+      {
+        "id": "wop-plugin",
+        "label": "官星变现",
+        "weight": 0.6,
+        "plugin_prefixes": [
+          "classical.pattern",
+          "l1.physics.op_officer",
+          "l1.physics.role"
+        ]
+      }
+    ],
+    "wealth_seal_asset": [
+      {
+        "id": "wsa-text",
+        "label": "财印",
+        "weight": 0.72,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "财印",
+          "财印相生",
+          "财印相战",
+          "偏印",
+          "正印",
+          "证书",
+          "方法论",
+          "IP",
+          "知识",
+          "信用",
+          "资质"
+        ]
+      },
+      {
+        "id": "wsa-plugin",
+        "label": "知识资产",
+        "weight": 0.6,
+        "plugin_prefixes": [
+          "l1.physics",
+          "l1.atomic.op_god_interplay"
+        ]
+      }
+    ],
+    "resource_integration": [
+      {
+        "id": "ri-text",
+        "label": "比劫合财",
+        "weight": 0.72,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "合财",
+          "比劫",
+          "合伙",
+          "资源整合",
+          "协作",
+          "人脉",
+          "合作",
+          "团队",
+          "资源"
+        ]
+      },
+      {
+        "id": "ri-plugin",
+        "label": "合作资源",
+        "weight": 0.5,
+        "plugin_prefixes": [
+          "classical.pattern.hepai",
+          "l1.physics.op_partner",
+          "l1.physics.op_merge"
+        ]
+      }
+    ],
+    "wealth_vault": [
+      {
+        "id": "wv-text",
+        "label": "财库",
+        "weight": 0.74,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern"
+        ],
+        "keywords": [
+          "财库",
+          "仓储",
+          "墓",
+          "藏",
+          "资产",
+          "回款",
+          "库存",
+          "资金"
+        ]
+      },
+      {
+        "id": "wv-plugin",
+        "label": "库象",
+        "weight": 0.58,
+        "plugin_prefixes": [
+          "l1.physics.op_branch_muku",
+          "l1.physics.vault",
+          "classical.pattern.op_branch_muku"
+        ]
+      }
+    ],
+    "leakage_risk": [
+      {
+        "id": "lr-text",
+        "label": "比劫夺财",
+        "weight": 0.8,
+        "claim_types": [
+          "pattern_observation",
+          "pattern_candidate",
+          "classical_aura",
+          "pattern",
+          "risk_observation"
+        ],
+        "keywords": [
+          "比劫夺财",
+          "劫财夺财",
+          "分财",
+          "争财",
+          "合作分账",
+          "现金流风险",
+          "分账",
+          "流失"
+        ]
+      },
+      {
+        "id": "lr-plugin",
+        "label": "漏财风险",
+        "weight": 0.58,
+        "plugin_prefixes": [
+          "l1.physics.op_robber_wealth",
+          "l1.physics.risk_rob"
+        ]
+      }
+    ]
   },
   "path_templates": {
     "direct_wealth": {
@@ -87,12 +418,26 @@
     }
   },
   "signal_labels": [
-    {"min": 0.26, "label": "偏强"},
-    {"min": 0.16, "label": "中等"},
-    {"min": 0.000001, "label": "偏弱"},
-    {"min": 0.0, "label": "未显"}
+    {
+      "min": 0.26,
+      "label": "偏强"
+    },
+    {
+      "min": 0.16,
+      "label": "中等"
+    },
+    {
+      "min": 1e-06,
+      "label": "偏弱"
+    },
+    {
+      "min": 0.0,
+      "label": "未显"
+    }
   ],
   "global_scoring": {
+    "claim_hit_bonus_per_keyword": 0.11,
+    "claim_hit_bonus_cap": 0.22,
     "hit_bonus_per_keyword": 0.07,
     "hit_bonus_cap": 0.18,
     "output_symbol_bonus_per_fact": 0.08,
@@ -112,75 +457,700 @@
   },
   "path_scoring": {
     "direct_wealth": {
-      "score": {"base": 0.12, "terms": [["wealth", 1.65], ["profile_score", 0.18], ["hit_bonus", 1.0], ["channel_stable_or_opportunity", 1.0]]},
-      "risk": {"base": 0.12, "terms": [["profile_risk", 0.42], ["peer", 0.22]]},
+      "score": {
+        "base": 0.12,
+        "terms": [
+          [
+            "wealth",
+            1.65
+          ],
+          [
+            "profile_score",
+            0.18
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_stable_or_opportunity",
+            1.0
+          ],
+          [
+            "sym_direct_wealth_material",
+            1.02
+          ],
+          [
+            "sym_direct_hidden",
+            0.62
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.12,
+        "terms": [
+          [
+            "profile_risk",
+            0.42
+          ],
+          [
+            "peer",
+            0.22
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "直接收入信号", "feature": "wealth", "format": "signal"},
-        {"label": "画像支持", "feature": "channel_stable_or_opportunity", "format": "signal"}
+        {
+          "label": "直接收入信号",
+          "feature": "wealth",
+          "format": "signal"
+        },
+        {
+          "label": "画像支持",
+          "feature": "channel_stable_or_opportunity",
+          "format": "signal"
+        }
       ]
     },
     "output_to_wealth": {
-      "score": {"base": 0.1, "terms": [["output", 1.05], ["wealth", 0.72], ["hit_bonus", 1.0], ["channel_output", 1.0], ["output_symbol_bonus", 1.0], ["hidden_wealth_bonus", 1.0], ["output_wealth_nested_bonus", 1.0]]},
-      "risk": {"base": 0.14, "terms": [["profile_risk", 0.36], ["wealth_low", 0.08]]},
+      "score": {
+        "base": 0.1,
+        "terms": [
+          [
+            "output",
+            1.05
+          ],
+          [
+            "wealth",
+            0.18
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_output",
+            1.0
+          ],
+          [
+            "output_symbol_bonus",
+            1.0
+          ],
+          [
+            "hidden_wealth_bonus",
+            1.0
+          ],
+          [
+            "output_wealth_nested_bonus",
+            1.0
+          ],
+          [
+            "sym_output_material",
+            1.0
+          ],
+          [
+            "sym_output_stem_support",
+            0.72
+          ],
+          [
+            "sym_output_hidden",
+            0.5
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.14,
+        "terms": [
+          [
+            "profile_risk",
+            0.36
+          ],
+          [
+            "wealth_low",
+            0.08
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "技能/表达信号", "feature": "output", "format": "signal"},
-        {"label": "财富资源信号", "feature": "wealth", "format": "signal"},
-        {"label": "输出场景中藏财", "feature": "output_wealth_nested_bonus", "when_gt": 0.0}
+        {
+          "label": "技能/表达信号",
+          "feature": "output",
+          "format": "signal"
+        },
+        {
+          "label": "财富资源信号",
+          "feature": "wealth",
+          "format": "signal"
+        },
+        {
+          "label": "输出场景中藏财",
+          "feature": "output_wealth_nested_bonus",
+          "when_gt": 0.0
+        }
       ]
     },
     "output_controls_pressure": {
-      "score": {"base": 0.08, "terms": [["output", 0.92], ["authority", 0.88], ["hit_bonus", 1.0], ["channel_output_small", 1.0], ["output_symbol_bonus", 1.0], ["hidden_authority_bonus", 1.0]]},
-      "risk": {"base": 0.22, "terms": [["authority", 0.42], ["profile_risk", 0.34]]},
+      "score": {
+        "base": 0.08,
+        "terms": [
+          [
+            "output",
+            0.92
+          ],
+          [
+            "authority",
+            0.88
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_output_small",
+            1.0
+          ],
+          [
+            "output_symbol_bonus",
+            1.0
+          ],
+          [
+            "hidden_authority_bonus",
+            1.0
+          ],
+          [
+            "sym_output_pressure_authority",
+            0.74
+          ],
+          [
+            "sym_output_pressure_output",
+            0.58
+          ],
+          [
+            "sym_output_pressure_structure",
+            0.4
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.22,
+        "terms": [
+          [
+            "authority",
+            0.42
+          ],
+          [
+            "profile_risk",
+            0.34
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "技能输出", "feature": "output", "format": "signal"},
-        {"label": "高压/规则", "feature": "authority", "format": "signal"},
-        {"label": "支中见规则/压力材料", "feature": "hidden_authority_bonus", "when_gt": 0.0}
+        {
+          "label": "技能输出",
+          "feature": "output",
+          "format": "signal"
+        },
+        {
+          "label": "高压/规则",
+          "feature": "authority",
+          "format": "signal"
+        },
+        {
+          "label": "支中见规则/压力材料",
+          "feature": "hidden_authority_bonus",
+          "when_gt": 0.0
+        }
       ]
     },
     "wealth_officer_platform": {
-      "score": {"base": 0.09, "terms": [["wealth", 0.82], ["authority", 0.96], ["hit_bonus", 1.0], ["channel_authority", 1.0]]},
-      "risk": {"base": 0.17, "terms": [["profile_risk", 0.32], ["authority", 0.16]]},
+      "score": {
+        "base": 0.09,
+        "terms": [
+          [
+            "wealth",
+            0.82
+          ],
+          [
+            "authority",
+            0.96
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_authority",
+            1.0
+          ],
+          [
+            "sym_officer_authority",
+            0.82
+          ],
+          [
+            "sym_officer_platform",
+            0.45
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.17,
+        "terms": [
+          [
+            "profile_risk",
+            0.32
+          ],
+          [
+            "authority",
+            0.16
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "财富资源", "feature": "wealth", "format": "signal"},
-        {"label": "平台/规则", "feature": "authority", "format": "signal"}
+        {
+          "label": "财富资源",
+          "feature": "wealth",
+          "format": "signal"
+        },
+        {
+          "label": "平台/规则",
+          "feature": "authority",
+          "format": "signal"
+        }
       ]
     },
     "wealth_seal_asset": {
-      "score": {"base": 0.08, "terms": [["wealth", 0.74], ["seal", 0.98], ["hit_bonus", 1.0], ["channel_knowledge", 1.0]]},
-      "risk": {"base": 0.16, "terms": [["profile_risk", 0.3], ["seal_conflict", 0.14]]},
+      "score": {
+        "base": 0.08,
+        "terms": [
+          [
+            "wealth",
+            0.74
+          ],
+          [
+            "seal",
+            0.98
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_knowledge",
+            1.0
+          ],
+          [
+            "sym_seal_asset",
+            0.88
+          ],
+          [
+            "sym_seal_convert",
+            0.43
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.16,
+        "terms": [
+          [
+            "profile_risk",
+            0.3
+          ],
+          [
+            "seal_conflict",
+            0.14
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "财富资源", "feature": "wealth", "format": "signal"},
-        {"label": "专业/信用", "feature": "seal", "format": "signal"}
+        {
+          "label": "财富资源",
+          "feature": "wealth",
+          "format": "signal"
+        },
+        {
+          "label": "专业/信用",
+          "feature": "seal",
+          "format": "signal"
+        }
       ]
     },
     "resource_integration": {
-      "score": {"base": 0.08, "terms": [["wealth", 0.66], ["peer", 0.82], ["hit_bonus", 1.0], ["channel_resource", 1.0]]},
-      "risk": {"base": 0.26, "terms": [["peer", 0.46], ["profile_risk", 0.3]]},
+      "score": {
+        "base": 0.08,
+        "terms": [
+          [
+            "wealth",
+            0.66
+          ],
+          [
+            "peer",
+            0.82
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "channel_resource",
+            1.0
+          ],
+          [
+            "sym_peer_integration",
+            0.74
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.26,
+        "terms": [
+          [
+            "peer",
+            0.46
+          ],
+          [
+            "profile_risk",
+            0.3
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "合作/竞争", "feature": "peer", "format": "signal"},
-        {"label": "财富资源", "feature": "wealth", "format": "signal"}
+        {
+          "label": "合作/竞争",
+          "feature": "peer",
+          "format": "signal"
+        },
+        {
+          "label": "财富资源",
+          "feature": "wealth",
+          "format": "signal"
+        }
       ]
     },
     "wealth_vault": {
-      "score": {"base": 0.08, "terms": [["vault_bonus", 1.0], ["wealth", 0.34], ["hit_bonus", 1.0], ["has_wealth_material", 0.06]]},
-      "risk": {"base": 0.2, "terms": [["profile_risk", 0.28], ["vault_activated", 0.14], ["vault_static", 0.04]]},
+      "score": {
+        "base": 0.08,
+        "terms": [
+          [
+            "vault_bonus",
+            1.0
+          ],
+          [
+            "wealth",
+            0.34
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "has_wealth_material",
+            0.06
+          ],
+          [
+            "sym_wealth_vault",
+            0.62
+          ],
+          [
+            "sym_wealth_vault_hidden",
+            0.33
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.2,
+        "terms": [
+          [
+            "profile_risk",
+            0.28
+          ],
+          [
+            "vault_activated",
+            0.14
+          ],
+          [
+            "vault_static",
+            0.04
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "已见库象", "feature": "has_vault_signal", "when_gt": 0.0},
-        {"label": "未见明确库象", "feature": "has_vault_signal", "when_eq": 0.0}
+        {
+          "label": "已见库象",
+          "feature": "has_vault_signal",
+          "when_gt": 0.0
+        },
+        {
+          "label": "未见明确库象",
+          "feature": "has_vault_signal",
+          "when_eq": 0.0
+        }
       ]
     },
     "leakage_risk": {
-      "score": {"base": 0.06, "terms": [["peer", 1.05], ["wealth", 0.42], ["hit_bonus", 1.0], ["wealth_as_taboo", 0.1]]},
-      "risk": {"base": 0.34, "terms": [["peer", 0.58], ["profile_risk", 0.38], ["top_channel_resource_integration", 0.08]]},
+      "score": {
+        "base": 0.06,
+        "terms": [
+          [
+            "peer",
+            1.05
+          ],
+          [
+            "wealth",
+            0.42
+          ],
+          [
+            "hit_bonus",
+            1.0
+          ],
+          [
+            "wealth_as_taboo",
+            0.1
+          ],
+          [
+            "sym_leak_peer",
+            0.18
+          ]
+        ]
+      },
+      "risk": {
+        "base": 0.34,
+        "terms": [
+          [
+            "peer",
+            0.58
+          ],
+          [
+            "profile_risk",
+            0.38
+          ],
+          [
+            "top_channel_resource_integration",
+            0.08
+          ]
+        ]
+      },
       "score_parts": [
-        {"label": "合作/竞争", "feature": "peer", "format": "signal"},
-        {"label": "画像风险", "feature": "profile_risk", "format": "signal"}
+        {
+          "label": "合作/竞争",
+          "feature": "peer",
+          "format": "signal"
+        },
+        {
+          "label": "画像风险",
+          "feature": "profile_risk",
+          "format": "signal"
+        }
       ]
     }
   },
+  "symbolic_path_boosters": {
+    "direct_wealth": [
+      {
+        "id": "sym-direct-wealth-material",
+        "label": "正偏财直接透干",
+        "feature": "sym_direct_wealth_material",
+        "fact_types": ["wealth_material"],
+        "ten_gods": ["正财", "偏财"],
+        "weight": 0.26,
+        "weight_scale_with_count": true,
+        "cap": 0.58,
+        "min_count": 1
+      },
+      {
+        "id": "sym-direct-wealth-hidden",
+        "label": "财星藏干",
+        "feature": "sym_direct_hidden",
+        "fact_types": ["hidden_wealth_material"],
+        "ten_gods": ["正财", "偏财"],
+        "weight": 0.24,
+        "weight_scale_with_count": true,
+        "cap": 0.42,
+        "min_count": 1
+      }
+    ],
+    "output_to_wealth": [
+      {
+        "id": "sym-output-material",
+        "label": "食伤可见",
+        "feature": "sym_output_material",
+        "fact_types": ["output_material"],
+        "ten_gods": ["食神", "伤官"],
+        "weight": 0.34,
+        "weight_scale_with_count": true,
+        "cap": 0.72,
+        "min_count": 1
+      },
+      {
+        "id": "sym-output-乙柔性",
+        "label": "乙木食伤更像服务",
+        "feature": "sym_output_stem_support",
+        "fact_types": ["output_material"],
+        "ten_gods": ["食神", "伤官"],
+        "stems": ["乙"],
+        "weight": 0.2,
+        "weight_scale_with_count": false,
+        "cap": 0.2
+      },
+      {
+        "id": "sym-output-hidden",
+        "label": "财地合局转财",
+        "feature": "sym_output_hidden",
+        "fact_types": ["hidden_wealth_material"],
+        "ten_gods": ["正财", "偏财"],
+        "weight": 0.18,
+        "weight_scale_with_count": true,
+        "cap": 0.34,
+        "min_count": 1
+      }
+    ],
+    "output_controls_pressure": [
+      {
+        "id": "sym-output-pressure-authority",
+        "label": "食伤制杀结构",
+        "feature": "sym_output_pressure_authority",
+        "fact_types": ["authority_material"],
+        "ten_gods": ["七杀"],
+        "stems": ["丙", "丁", "壬", "戊"],
+        "weight": 0.38,
+        "weight_scale_with_count": false,
+        "cap": 0.56,
+        "min_count": 1
+      },
+      {
+        "id": "sym-output-pressure-output",
+        "label": "食伤输出抗压",
+        "feature": "sym_output_pressure_output",
+        "fact_types": ["output_material"],
+        "ten_gods": ["食神", "伤官"],
+        "stems": ["丙", "丁", "壬", "庚", "乙"],
+        "weight": 0.28,
+        "weight_scale_with_count": true,
+        "cap": 0.38,
+        "min_count": 1
+      },
+      {
+        "id": "sym-output-pressure-structure",
+        "label": "高压结构可转化",
+        "feature": "sym_output_pressure_structure",
+        "fact_types": ["authority_material"],
+        "ten_gods": ["正官", "七杀"],
+        "stems": ["庚", "辛", "戊", "己"],
+        "weight": 0.22,
+        "weight_scale_with_count": false,
+        "cap": 0.24,
+        "min_count": 1
+      }
+    ],
+    "wealth_officer_platform": [
+      {
+        "id": "sym-officer-authority",
+        "label": "财官协同",
+        "feature": "sym_officer_authority",
+        "fact_types": ["authority_material"],
+        "ten_gods": ["正官", "七杀"],
+        "stems": ["丁", "己", "庚", "癸"],
+        "weight": 0.34,
+        "weight_scale_with_count": true,
+        "cap": 0.72,
+        "min_count": 1
+      },
+      {
+        "id": "sym-officer-platform",
+        "label": "平台岗位象义",
+        "feature": "sym_officer_platform",
+        "fact_types": ["authority_material", "seal_material"],
+        "topic_hints": ["career", "wealth"],
+        "ten_gods": ["正官", "正印", "偏印", "七杀"],
+        "weight": 0.12,
+        "weight_scale_with_count": false,
+        "cap": 0.24,
+        "min_count": 1
+      }
+    ],
+    "wealth_seal_asset": [
+      {
+        "id": "sym-seal-asset",
+        "label": "知识/资质可变现",
+        "feature": "sym_seal_asset",
+        "fact_types": ["seal_material"],
+        "ten_gods": ["正印", "偏印"],
+        "weight": 0.44,
+        "weight_scale_with_count": true,
+        "cap": 0.82,
+        "min_count": 1
+      },
+      {
+        "id": "sym-seal-convert",
+        "label": "知识资产转化",
+        "feature": "sym_seal_convert",
+        "fact_types": ["seal_material"],
+        "ten_gods": ["正印", "偏印"],
+        "topic_hints": ["career", "wealth"],
+        "stems": ["辛", "丁", "己"],
+        "weight": 0.16,
+        "weight_scale_with_count": false,
+        "cap": 0.28,
+        "min_count": 1
+      }
+    ],
+    "resource_integration": [
+      {
+        "id": "sym-peer-integration",
+        "label": "比劫共生协同",
+        "feature": "sym_peer_integration",
+        "fact_types": ["peer_material"],
+        "ten_gods": ["比肩", "劫财"],
+        "stems": ["甲", "乙", "庚", "辛"],
+        "weight": 0.45,
+        "weight_scale_with_count": true,
+        "cap": 0.72,
+        "min_count": 1
+      }
+    ],
+    "wealth_vault": [
+      {
+        "id": "sym-wealth-vault",
+        "label": "可见财库",
+        "feature": "sym_wealth_vault",
+        "fact_types": ["vault_material"],
+        "weight": 0.44,
+        "weight_scale_with_count": false,
+        "cap": 0.62,
+        "min_count": 1
+      },
+      {
+        "id": "sym-wealth-vault-hidden",
+        "label": "暗伏财星入库",
+        "feature": "sym_wealth_vault_hidden",
+        "fact_types": ["hidden_wealth_material"],
+        "ten_gods": ["正财", "偏财"],
+        "weight": 0.28,
+        "weight_scale_with_count": true,
+        "cap": 0.4,
+        "min_count": 1
+      }
+    ],
+    "leakage_risk": [
+      {
+        "id": "sym-leak-peer",
+        "label": "比劫分财",
+        "feature": "sym_leak_peer",
+        "fact_types": ["peer_material"],
+        "ten_gods": ["比肩", "劫财"],
+        "stems": ["甲", "乙", "庚", "辛"],
+        "weight": 0.24,
+        "weight_scale_with_count": false,
+        "cap": 0.22,
+        "min_count": 1
+      }
+    ]
+  },
   "combination_paths": {
     "output_work_to_money": {
-      "source_ids": ["output_controls_pressure", "output_to_wealth"],
+      "source_ids": [
+        "output_controls_pressure",
+        "output_to_wealth"
+      ],
       "classic_label": "食伤制杀 + 食伤生财",
       "plain_name": "用专业输出解决难题并变现",
       "plain_summary": "主线不是单纯靠职位吃工资，而是先用技术、表达、方案或产品处理复杂问题、规则压力和竞争场景，再把解决方案转成项目收入、服务收入、产品收入或更高议价。",
@@ -188,6 +1158,61 @@
       "carrier_type": "method_and_contract",
       "risk_hint": "这类钱来自做功后的转化，必须把交付边界、定价、回款和合规先写清。",
       "evidence": "组合路径：专业输出先处理压力，再把成果转成收入"
+    }
+  },
+  "mechanism_chains": {
+    "output_work_to_money": {
+      "chain_name": "输出—承接—变现",
+      "classic_label": "食伤制杀 + 食伤生财",
+      "plain_name": "先解决难题，再把成果变现金流",
+      "plain_summary": "先靠专业能力承接复杂/高压任务，确认对价和边界；再把方案、内容、服务、产品转为项目、合同或长期服务收入。",
+      "required_path_ids": [
+        "output_controls_pressure",
+        "output_to_wealth"
+      ],
+      "min_steps": 2,
+      "step_roles": {
+        "output_controls_pressure": "先承接难题与规则压力，先定清交付边界、报价和节奏。",
+        "output_to_wealth": "再把可交付成果转成服务、课程、顾问、项目等现金流。"
+      },
+      "boost": 0.07,
+      "default_weight": 0.9,
+      "forbidden_terms": [
+        "单靠职位",
+        "靠单一客户报酬",
+        "天降财富",
+        "随机发财"
+      ]
+    },
+    "single_output_to_wealth": {
+      "chain_name": "能力变现链",
+      "classic_label": "食伤生财",
+      "plain_name": "先把技能转交付，再兑现现金流",
+      "plain_summary": "技能、表达、方案被打包为可复用交付，先建立交付节奏与质量标准，再按项目、课程、服务的方式获取收入。",
+      "required_path_ids": [
+        "output_to_wealth"
+      ],
+      "min_steps": 1,
+      "step_roles": {
+        "output_to_wealth": "把输出能力转成可复用交付内容或服务。"
+      },
+      "boost": 0.03,
+      "default_weight": 0.88
+    },
+    "single_officer_platform": {
+      "chain_name": "平台承接链",
+      "classic_label": "财官路径",
+      "plain_name": "先拿到平台/职位规则，再稳定兑现",
+      "plain_summary": "以组织、岗位、合作规则为承接结构，把能力和资源转为稳定的项目与合同收入。",
+      "required_path_ids": [
+        "wealth_officer_platform"
+      ],
+      "min_steps": 1,
+      "step_roles": {
+        "wealth_officer_platform": "用平台授权、职位职责和合同规则承接机会。"
+      },
+      "boost": 0.02,
+      "default_weight": 0.84
     }
   },
   "source_rewrites": {
@@ -202,14 +1227,30 @@
     "resource_integration": "合作资源与项目撮合"
   },
   "carrier_requirements": {
-    "self_capacity": ["把技能、产品和交付做成可复用的变现方式"],
-    "method_and_contract": ["把方法、合同、交付边界和成本控制先建好"],
-    "platform": ["用平台授权、职位职责和合同规则承接机会"],
-    "knowledge": ["沉淀证书、方法论、IP 或专业信用"],
-    "team": ["先写清合伙权责、分账和退出机制"],
-    "asset": ["把现金流、库存、回款和资产转换节奏管理好"],
-    "contract": ["把客户、账期、预算和回款规则先写清楚"],
-    "boundary": ["先守住分账、成本、账期和合作边界"]
+    "self_capacity": [
+      "把技能、产品和交付做成可复用的变现方式"
+    ],
+    "method_and_contract": [
+      "把方法、合同、交付边界和成本控制先建好"
+    ],
+    "platform": [
+      "用平台授权、职位职责和合同规则承接机会"
+    ],
+    "knowledge": [
+      "沉淀证书、方法论、IP 或专业信用"
+    ],
+    "team": [
+      "先写清合伙权责、分账和退出机制"
+    ],
+    "asset": [
+      "把现金流、库存、回款和资产转换节奏管理好"
+    ],
+    "contract": [
+      "把客户、账期、预算和回款规则先写清楚"
+    ],
+    "boundary": [
+      "先守住分账、成本、账期和合作边界"
+    ]
   },
   "carrier_plain_types": {
     "self_capacity": "个人能力与产品化交付",
@@ -230,5 +1271,33 @@
     "peer": "合作资源、人脉和团队",
     "vault": "资产沉淀、回款和资金结构",
     "risk": "风险控制与边界管理"
-  }
+  },
+  "path_size_tiers": [
+    {
+      "id": "large",
+      "label": "大",
+      "min_effective": 0.68
+    },
+    {
+      "id": "medium",
+      "label": "中",
+      "min_effective": 0.42
+    },
+    {
+      "id": "small",
+      "label": "小",
+      "min_effective": 0.0
+    }
+  ],
+  "path_priority": {
+    "direct_wealth": 30,
+    "output_controls_pressure": 15,
+    "wealth_officer_platform": 35,
+    "wealth_seal_asset": 20,
+    "output_to_wealth": 22,
+    "resource_integration": 60,
+    "wealth_vault": 70,
+    "leakage_risk": 90
+  },
+  "path_rank_limit": 6
 }

@@ -338,6 +338,7 @@ def summarize_wealth_assertion_preview(
             "wealth_vault": code.get("wealth_vault") if isinstance(code.get("wealth_vault"), dict) else {},
             "leakage_points": code.get("leakage_points") if isinstance(code.get("leakage_points"), list) else [],
             "flow_year_watchlist": code.get("flow_year_watchlist") if isinstance(code.get("flow_year_watchlist"), list) else [],
+            "path_rankings": code.get("path_rankings") if isinstance(code.get("path_rankings"), list) else [],
         },
         "wealth_profile_summary": {
             "score": profile.get("score"),

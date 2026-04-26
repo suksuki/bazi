@@ -42,6 +42,23 @@ function localizedWealthStance(value: unknown, ui: LocalizeText): string {
   return ui("未定", "Pending", "미정");
 }
 
+
+function localizedPathSize(value: unknown, ui: LocalizeText): string {
+  const key = String(value || "").trim();
+  if (key === "大") return ui("大（主路径）", "Large (top)", "대(주)");
+  if (key === "中") return ui("中（次级）", "Medium", "중(보통)");
+  if (key === "小") return ui("小（低）", "Small", "소(낮음)");
+  return ui("待观察", "Pending", "관찰");
+}
+
+function pathSizeToneClass(value: unknown): string {
+  const key = String(value || "").trim();
+  if (key === "大") return "bg-emerald-400/12 text-emerald-100 border-emerald-300/35";
+  if (key === "中") return "bg-cyan-400/12 text-cyan-100 border-cyan-300/30";
+  if (key === "小") return "bg-zinc-400/12 text-zinc-100 border-zinc-300/30";
+  return "bg-white/10 text-zinc-300 border-white/15";
+}
+
 function localizedWealthUsableState(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
   if (key === "wealth_as_use") return ui("容易落地", "Easier to land", "실현 쉬움");
@@ -108,6 +125,24 @@ function shortPreviewTime(value: unknown): string {
   });
 }
 
+function graphLabelOf(node: Record<string, unknown> | undefined | null, fallback: string): string {
+  const item = asLooseRecord(node);
+  const label = String(item.label || "").trim();
+  return label || fallback;
+}
+
+function graphNodeText(node: Record<string, unknown>): string {
+  const nodeType = String(node.type || "").trim();
+  const label = graphLabelOf(node, String(node.id || ""));
+  if (nodeType === "claim") {
+    const source = String(node.plugin_id || "").trim();
+    const shortSource = source ? source.split(".").slice(0, 2).join(".") : "";
+    const coreLabel = label.includes("#") ? label.split("#").slice(-1)[0] || label : label;
+    return shortSource ? `${coreLabel}（${shortSource}）` : coreLabel;
+  }
+  return label;
+}
+
 export function V17_WealthAssertionPreviewPanel({
   ui,
   term,
@@ -163,6 +198,7 @@ export function V17_WealthAssertionPreviewPanel({
     : Object.keys(codeSummaryFromCodePreview).length
       ? codeSummaryFromCodePreview
       : asLooseRecord(codePreview.wealth_code);
+  const evidenceGraph = asLooseRecord(wealthCode.evidence_graph) || asLooseRecord(codeSummaryFromCodePreview.evidence_graph);
   const pathSummary = asLooseRecord(codePreview.path_summary);
   const primaryPath = asLooseRecord(wealthCode.primary_wealth_path);
   const wealthSource = asLooseRecord(wealthCode.wealth_source);
@@ -172,6 +208,41 @@ export function V17_WealthAssertionPreviewPanel({
   const secondaryPaths = asRecordList(wealthCode.secondary_paths).slice(0, 3);
   const leakagePoints = asRecordList(wealthCode.leakage_points).slice(0, 3);
   const yearWatchlist = asRecordList(wealthCode.flow_year_watchlist).slice(0, 3);
+  const mechanismChains = asRecordList(wealthCode.mechanism_chains).slice(0, 2);
+  const pathRankings = asRecordList(wealthCode.path_rankings).slice(0, 5);
+  const graphNodes = asRecordList(evidenceGraph.nodes);
+  const graphEdges = asRecordList(evidenceGraph.edges);
+  const pathNodeIds = new Set(
+    [primaryPath.id, ...secondaryPaths.map((row) => row.id)]
+      .map((row) => String(row || ""))
+      .filter(Boolean),
+  );
+  const claimNodes = graphNodes.filter((row) => String(row.type || "") === "claim");
+  const claimNodeById = new Map<string, Record<string, unknown>>();
+  for (const row of claimNodes) {
+    const id = String(row.id || "");
+    if (id) {
+      claimNodeById.set(id, row);
+    }
+  }
+  const claimSupportEdges = graphEdges.filter((row) => {
+    const rel = String(row.relation || "");
+    const from = String(row.from || "");
+    const to = String(row.to || "");
+    return rel === "supports" && to && pathNodeIds.has(to) && claimNodeById.has(from);
+  });
+  const claimSupportRows = claimSupportEdges
+    .map((row) => {
+      const from = String(row.from || "");
+      const to = String(row.to || "");
+      const edgeWeight = asNumberValue(row.evidence_weight, 0);
+      const target = graphNodes.find((node) => String(node.id || "") === to) || ({ id: to } as Record<string, unknown>);
+      const source = claimNodeById.get(from) || ({ id: from } as Record<string, unknown>);
+      return { from: graphNodeText(source), to: graphLabelOf(target, ui("待识别路径", "Unknown path", "미확인 경로")), relation: String(row.relation || ""), weight: edgeWeight, rule: String(row.rule_id || ""), id: `${from}->${to}:${String(row.rule_id || "")}` };
+    })
+    .sort((left, right) => right.weight - left.weight)
+    .slice(0, 6);
+  const primaryClaims = asRecordList(primaryPath.claim_supports).slice(0, 6);
   const hasWealthCode = Object.keys(wealthCode).length > 0;
   const displayChannels = hasWealthCode
     ? [
@@ -465,6 +536,79 @@ export function V17_WealthAssertionPreviewPanel({
 
           {hasWealthCode ? (
             <div className="mt-3 grid gap-3 xl:grid-cols-[1.05fr_0.95fr]">
+              {pathRankings.length ? (
+                <div className="rounded-lg border border-cyan-300/20 bg-black/20 p-3">
+                  <p className="text-[11px] text-zinc-500">{ui("路径规模排序", "Path ranking by scale", "경로 규모 순위")}</p>
+                  <div className="mt-2 space-y-1.5">
+                    {pathRankings.slice(0, 5).map((row, index) => {
+                      const rowSize = localizedPathSize(row.size, ui);
+                      const isPrimary = index === 0;
+                      return (
+                        <div
+                          key={`path_ranking_${String(row.id || index)}`}
+                          className={`rounded-lg border px-2 py-1.5 ${pathSizeToneClass(row.size)}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 text-[11px]">
+                            <p className="font-medium text-zinc-100">
+                              {ui("排名", "Rank", "순위")} {String(row.rank || index + 1)} · {term(String(row.plain_name || row.id || ""))}
+                            </p>
+                            <span className={isPrimary ? "rounded-full border border-white/25 bg-white/15 px-1.5 py-0.5 text-zinc-100" : "text-zinc-300"}>
+                              {rowSize}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-zinc-300">
+                            {ui("规模分", "Scale score", "규모 점수")} {percentLabel(row.combined_score || row.score || 0)}
+                            {row.risk ? ` · ${ui("风险", "Risk", "위험")} ${percentLabel(row.risk)}` : null}
+                            {row.evidence_count ? ` · ${ui("证据", "Evidence", "근거")} ${String(row.evidence_count)}` : null}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {mechanismChains.length ? (
+                <div className="rounded-lg border border-emerald-300/20 bg-black/20 p-3">
+                  <p className="text-[11px] text-zinc-500">{ui("核心机制链", "Core mechanism chain", "핵심 메커니즘 체인")}</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-zinc-100">
+                    {term(String(mechanismChains[0].plain_name || mechanismChains[0].chain_name || ui("待生成机制链", "Awaiting mechanism chain", "메커니즘 준비 중")))}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-zinc-300">
+                    {term(String(mechanismChains[0].plain_summary || ""))}
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {asRecordList(mechanismChains[0].steps).map((step, idx) => (
+                      <p key={`mechanism_step_${String(idx)}_${String(step.path_id || "")}`} className="text-[11px] leading-5 text-zinc-400">
+                        {ui(
+                          `${idx + 1}. `,
+                          `${idx + 1}. `,
+                          `${idx + 1}. `,
+                        )}
+                        <span className={step.present ? "text-emerald-100" : "text-zinc-500"}>
+                          {term(String(step.plain_name || step.path_id || ""))}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                  {asStringList(mechanismChains[0].forbidden_terms).length ? (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="text-[11px] text-zinc-500">
+                        {ui("防偏差提醒", "Avoid bias", "편향 경고")}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {asStringList(mechanismChains[0].forbidden_terms).slice(0, 3).map((item) => (
+                          <span
+                            key={`mechanism-forbid-${item}`}
+                            className="rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-1 text-[10px] text-rose-100"
+                          >
+                            {term(item)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="rounded-lg border border-white/10 bg-black/20 p-3">
                 <p className="text-[11px] text-zinc-500">{ui("钱从哪里来", "Where money comes from", "돈이 어디서 오는가")}</p>
                 <p className="mt-1 text-sm font-semibold leading-6 text-zinc-100">
@@ -537,6 +681,53 @@ export function V17_WealthAssertionPreviewPanel({
               {ui("可以先生成财富路径，再让财富解读围绕真实的收入路径、变现链路和漏财点来写。", "Build the wealth path first so the reading can focus on income path, monetization, and leakage points.", "먼저 재물 경로를 생성하면 해석이 수입 경로, 수익화, 누수 지점을 중심으로 작성됩니다.")}
             </p>
           )}
+        </div>
+      ) : null}
+
+      {hasWealthCode && (claimSupportRows.length || claimNodes.length) ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="flex items-center gap-2">
+            <FileSearch className="h-4 w-4 text-cyan-200" />
+            <p className="text-sm font-semibold text-zinc-50">
+              {ui("审计支撑链路", "Audit support path", "감사 근거 경로")}
+            </p>
+          </div>
+          {claimSupportRows.length ? (
+            <div className="mt-2 space-y-2">
+              {claimSupportRows.map((row) => (
+                <div key={row.id} className="rounded-lg border border-white/10 bg-black/20 p-2 text-[11px] text-zinc-200">
+                  <p className="font-medium text-cyan-100">{term(`证据：${row.from}`)}</p>
+                  <p className="mt-1 text-zinc-300">
+                    {ui("支持", "supports", "지원")} {term(row.to)} · {ui("权重", "weight", "가중치")} {percentLabel(row.weight)}
+                  </p>
+                  {row.rule ? <p className="mt-1 text-zinc-500">{ui("规则", "Rule", "규칙")}：{row.rule}</p> : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {primaryClaims.length ? (
+                primaryClaims.map((row, idx) => {
+                  const claim = asLooseRecord(row);
+                  return (
+                    <div key={`fallback-claim-${idx}`} className="rounded-lg border border-white/10 bg-black/20 p-2 text-[11px]">
+                      <p className="font-medium text-cyan-100">{term(String(claim.claim_text || claim.label || claim.claim_id || ""))}</p>
+                      <p className="mt-1 text-zinc-400">
+                        {ui("支持路径", "Supports path", "지원 경로")} {term(graphLabelOf(primaryPath, ui("主路径", "Primary path", "주 경로")))} · {ui("权重", "weight", "가중치")} {percentLabel(claim.weight)}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-[11px] text-zinc-500">
+                  {ui("待补充可审计证据链。", "No auditable support chain yet.", "감사 가능한 근거 체인이 아직 없습니다.")}
+                </p>
+              )}
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-zinc-500">
+            {ui("该面板仅展示可追溯证据，不展示原始八字。", "This panel only shows traceable evidence, not raw chart data.", "이 패널은 원본 사주 원문을 보여주지 않고 추적 가능한 증거만 표시합니다.")}
+          </p>
         </div>
       ) : null}
 

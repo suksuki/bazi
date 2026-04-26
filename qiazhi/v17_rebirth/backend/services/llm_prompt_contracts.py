@@ -189,12 +189,35 @@ def _compact_code_rows(value: Any, limit: int = 4) -> List[Dict[str, Any]]:
     return rows
 
 
+def _compact_path_rankings(value: Any, limit: int = 6) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for row in _safe_list(value):
+        if not isinstance(row, dict):
+            continue
+        row_dict = {
+            "rank": int(max(1, _safe_float(row.get("rank"), len(rows) + 1))),
+            "id": _safe_str(row.get("id")),
+            "plain_name": _safe_str(row.get("plain_name") or row.get("focus") or row.get("plain_summary") or row.get("id")),
+            "size": _safe_str(row.get("size"), "中"),
+            "combined_score": round(max(0.0, min(1.0, _safe_float(row.get("combined_score"), 0.0))), 3),
+            "score": round(max(0.0, min(1.0, _safe_float(row.get("score"), 0.0))), 3),
+            "risk": round(max(0.0, min(1.0, _safe_float(row.get("risk"), 0.0))), 3),
+            "evidence_count": int(_safe_float(row.get("evidence_count"), 0)),
+        }
+        if row_dict["id"]:
+            rows.append(row_dict)
+        if len(rows) >= limit:
+            break
+    return rows
+
+
 def _compact_wealth_code(code: Dict[str, Any]) -> Dict[str, Any]:
     primary = _safe_dict(code.get("primary_wealth_path"))
     source = _safe_dict(code.get("wealth_source"))
     engine = _safe_dict(code.get("monetization_engine"))
     carrier = _safe_dict(code.get("carrier"))
     vault = _safe_dict(code.get("wealth_vault"))
+    mechanism_chains = _safe_list(code.get("mechanism_chains"))
     return {
         "plain_summary": {
             "user_question": "钱从哪里来、靠什么变现、怎么接住、哪里漏钱、哪些年份值得看",
@@ -215,7 +238,31 @@ def _compact_wealth_code(code: Dict[str, Any]) -> Dict[str, Any]:
             "risk": round(max(0.0, min(1.0, _safe_float(primary.get("risk"), 0.0))), 3),
             "evidence": _compact_profile_list(primary.get("evidence"), limit=4),
         },
+        "mechanism_chains": [
+            {
+                "id": _safe_str(chain.get("id")),
+                "plain_name": _safe_str(chain.get("plain_name")),
+                "chain_name": _safe_str(chain.get("chain_name")),
+                "plain_summary": _safe_str(chain.get("plain_summary")),
+                "met": bool(chain.get("met")),
+                "score": round(max(0.0, min(1.0, _safe_float(chain.get("score"), 0.0))), 3),
+                "risk": round(max(0.0, min(1.0, _safe_float(chain.get("risk"), 0.0))), 3),
+                "completeness": round(max(0.0, min(1.0, _safe_float(chain.get("completeness"), 0.0))), 3),
+                "steps": [
+                    {
+                        "path_id": _safe_str(item.get("path_id")),
+                        "plain_name": _safe_str(item.get("plain_name")),
+                        "present": bool(item.get("present")),
+                        "path_score": _safe_float(item.get("path_score"), 0.0),
+                    }
+                    for item in _safe_list(chain.get("steps")) if isinstance(item, dict)
+                ][:4],
+            }
+            for chain in mechanism_chains[:2]
+            if isinstance(chain, dict)
+        ],
         "secondary_paths": _compact_code_rows(code.get("secondary_paths"), limit=4),
+        "path_rankings": _compact_path_rankings(code.get("path_rankings"), limit=5),
         "wealth_source": {
             "plain_source": _safe_str(source.get("plain_source")),
             "material": _safe_str(source.get("material")),
@@ -341,11 +388,14 @@ def build_wealth_assertion_prompt_bundle(
                 "write in plain wealth language: income source, earning path, cash flow, clients, projects, pricing, contracts, savings, cooperation, risk control",
                 "if wealth_code is present, make it the primary basis for wealth path, monetization, carrier, leakage, vault, and year watchlist",
                 "if wealth_code and wealth_profile.primary_channels disagree, follow wealth_code.primary_wealth_path and use primary_channels only as secondary conditions",
+                "organize responses by mechanism chain order: trigger condition -> conversion -> carrying and monetization, and mention path_rankings from wealth_code in descending order of size from highest to lowest",
+                "when mechanism chain is output-to-wealth, explain as: solve high-difficulty problems, convert outputs into saleable or project outputs, then lock in cash-flow via contracts/positions/contracts.",
                 "do not expose internal BaZi or ten-god terminology to the user",
                 "each block should answer a real user question, not describe the system contract",
             ],
             "forbidden_user_terms": _ZH_WEALTH_FORBIDDEN_TERMS if lang == "zh" else [],
             "max_chars": 520 if lang == "zh" else 900,
+            "mechanism_chain_required": code.get("mechanism_chains", []) if code else [],
         },
     }
 
@@ -373,10 +423,12 @@ def build_wealth_assertion_prompt_text(
             "Forbidden: guaranteed fortune, guaranteed poverty, bankruptcy claims, exact money amounts, exact years, or treating strong wealth stars as money already obtained.",
             "Style: translate every technical signal into wealth language: income source, earning path, cash flow, clients, projects, contracts, cooperation, pricing, and risk control.",
             "Do not mention ten-god names or internal contract fields in the user-facing answer.",
+            "Mechanism rule: first describe trigger conditions, then conversion path, then carry/closure (contracts/platform/jobs).",
             "",
             "## Required Output",
             "Use five compact blocks: [Overall], [How Money Comes], [Can It Be Held], [Money Leaks], [Next Actions].",
             "Cite at least two evidence items from wealth_code.evidence, path evidence, wealth_profile.evidence, or channel evidence.",
+            "In your outline, prioritize the highest-score item in contract.wealth_code.mechanism_chains, and use contract.wealth_code.path_rankings to describe money paths from highest to lowest scale.",
             "",
             "## Wealth Code",
             json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),
@@ -393,10 +445,12 @@ def build_wealth_assertion_prompt_text(
             "금지: 반드시 큰돈을 번다, 재물이 없다, 파산한다, 정확한 금액·연도, 재성이 강하니 이미 돈이 많다는 식의 표현.",
             "문체: 모든 기술적 신호를 수입원, 돈 버는 방식, 현금흐름, 고객, 프로젝트, 계약, 협업, 가격 책정, 위험 관리 언어로 바꾸십시오.",
             "사용자에게 십성 이름이나 내부 계약 필드를 드러내지 마십시오.",
+            "절차는 먼저 트리거 조건을 말하고, 그 다음 현금화 전환 단계(서비스/제품/프로젝트), 마지막으로 계약/조직/포지션으로의 수용단계를 설명하십시오.",
             "",
             "## 필수 출력",
             "[전체 판단], [돈이 들어오는 방식], [돈을 받아내는 조건], [새는 돈], [다음 행동]의 다섯 짧은 블록을 사용하십시오.",
             "wealth_code.evidence, path evidence, wealth_profile.evidence 또는 channel evidence 에서 최소 2개 근거를 인용하십시오.",
+            "우선 contract.mechanism_chains 의 최고 점수 체인을 스토리 중심축으로 반영하고, 이어서 path_rankings 을 규모(大→小) 순으로 정리하세요。",
             "",
             "## 재물 코드",
             json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),
@@ -414,10 +468,12 @@ def build_wealth_assertion_prompt_text(
             "文风：把所有技术信号翻译成财富语言，只讲收入来源、赚钱方式、现金流、客户/项目、合同、合作、定价、储蓄和风险控制。",
             "用户正文里不要出现正财、偏财、食伤、比劫、官杀、体用、用神、忌神、桥接神等内部术语。",
             "不要说“画像显示”“系统判定”“可用状态”；要直接说“你更适合怎样赚钱、哪里容易漏钱、先做什么”。",
+            "写作顺序：先讲触发条件，再讲变现转换（方案/服务/产品），最后讲承接机制（岗位、平台、合同、边界）。",
             "",
             "## 必须输出",
             "使用五个紧凑段落：【总体判断】【钱怎么来】【能不能接住】【要避开的坑】【接下来怎么做】。",
             "至少引用 2 条 wealth_code.evidence、财富路径证据、wealth_profile.evidence 或通道证据。",
+            "先读 contract.wealth_code.mechanism_chains，并优先用分数最高的机制链组织叙事；同时结合 path_rankings 从规模从高到低说明财富路径排序。",
             "",
             "## 财富密码",
             json.dumps(contract["wealth_code"], ensure_ascii=False, indent=2),

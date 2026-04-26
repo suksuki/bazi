@@ -58,6 +58,7 @@ def build_wealth_code_preview(
     vault = code.get("wealth_vault") if isinstance(code.get("wealth_vault"), dict) else {}
     leakage = code.get("leakage_points") if isinstance(code.get("leakage_points"), list) else []
     secondary = code.get("secondary_paths") if isinstance(code.get("secondary_paths"), list) else []
+    rankings = code.get("path_rankings") if isinstance(code.get("path_rankings"), list) else []
     return {
         "protocol": WEALTH_CODE_PREVIEW_PROTOCOL,
         "contract": WEALTH_CODE_CONTRACT,
@@ -90,6 +91,17 @@ def build_wealth_code_preview(
             "wealth_source_material": _clean_label(source.get("material")),
             "vault_present": bool(vault.get("has_vault_signal")),
             "leakage_count": len(leakage),
+            "path_rankings": [
+                {
+                    "rank": int(_safe_float(item.get("rank"), 0)),
+                    "id": _clean_label(item.get("id")),
+                    "plain_name": _clean_label(item.get("plain_name") or item.get("id") or ""),
+                    "size": _clean_label(item.get("size"), limit=8) or "中",
+                    "score": round(_safe_float(item.get("combined_score"), _safe_float(item.get("score"), 0.0)), 3),
+                }
+                for item in rankings[:5]
+                if isinstance(item, Mapping) and _clean_label(item.get("id"))
+            ],
             "secondary_path_ids": [
                 _clean_label(row.get("id"))
                 for row in secondary[:5]
@@ -107,6 +119,7 @@ def attach_wealth_code_preview_meta(meta: Dict[str, Any], preview: Dict[str, Any
         out["wealth_code"] = normalize_wealth_code_meta(code)
     audits = out.get("topic_code_audits") if isinstance(out.get("topic_code_audits"), list) else []
     path_summary = preview.get("path_summary") if isinstance(preview.get("path_summary"), Mapping) else {}
+    top_rankings = path_summary.get("path_rankings") if isinstance(path_summary.get("path_rankings"), list) else []
     compact = {
         "protocol": WEALTH_CODE_PREVIEW_PROTOCOL,
         "contract": WEALTH_CODE_CONTRACT,
@@ -120,6 +133,7 @@ def attach_wealth_code_preview_meta(meta: Dict[str, Any], preview: Dict[str, Any
         "wealth_source_material": str(path_summary.get("wealth_source_material") or ""),
         "vault_present": bool(path_summary.get("vault_present")),
         "leakage_count": int(path_summary.get("leakage_count") or 0),
+        "top_ranked_path_id": _clean_label(top_rankings[0].get("id")) if top_rankings else str(path_summary.get("primary_path_id") or ""),
     }
     out["topic_code_audits"] = [compact, *audits[:9]]
     return out

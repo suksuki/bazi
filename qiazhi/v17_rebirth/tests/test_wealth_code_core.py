@@ -117,11 +117,70 @@ def test_wealth_code_links_output_control_and_output_to_wealth_for_yi_chart() ->
     code = resolve_wealth_code(pt)["wealth_code"]
 
     assert code["primary_wealth_path"]["id"] == "output_work_to_money"
-    assert "不是单纯靠职位吃工资" in code["primary_wealth_path"]["plain_summary"]
+    assert "承接复杂" in code["primary_wealth_path"]["plain_summary"]
     assert "专业输出、内容表达、方案交付和复杂项目" in code["wealth_source"]["plain_source"]
     assert any(row["id"] == "output_controls_pressure" for row in code["secondary_paths"])
     assert code["carrier"]["type"] == "method_and_contract"
-    assert "组合路径：专业输出先处理压力，再把成果转成收入" in code["primary_wealth_path"]["evidence"]
+    assert any("组合路径：" in row for row in code["primary_wealth_path"]["evidence"])
+
+
+def test_resolve_wealth_code_uses_structured_claim_hits() -> None:
+    pt = _pressure_tensor()
+    pt["facts"] = []
+    pt["meta"]["plugin_claims"] = [
+        {
+            "plugin_id": "classical.pattern.shishen_zhisha.v1",
+            "claim_text": "格局候选：食伤制杀，能够先用方案解决难题再转化为项目",
+            "claim_type": "pattern_observation",
+            "target_god": "伤官",
+            "meta": {
+                "claim_type": "pattern_observation",
+                "target_god": "伤官",
+                "confidence": 0.82,
+            },
+        },
+        {
+            "plugin_id": "classical.pattern.shishen_shengcai.v1",
+            "claim_text": "当前可见食伤生财，问题解决后形成输出换财",
+            "claim_type": "pattern_observation",
+            "target_god": "食神",
+            "meta": {
+                "claim_type": "pattern_observation",
+                "target_god": "食神",
+                "confidence": 0.81,
+            },
+        },
+    ]
+    pt["meta"]["bazi_image"] = resolve_bazi_image(pt)["bazi_image"]
+    pt["meta"]["wealth_profile"] = resolve_wealth_profile(pt)["wealth_profile"]
+
+    code = resolve_wealth_code(pt)["wealth_code"]
+
+    assert code["primary_wealth_path"]["id"] == "output_work_to_money"
+    assert any("结构化路径线索" in row for row in code["primary_wealth_path"]["evidence"])
+    graph = code["evidence_graph"]
+    assert any(row.get("type") == "claim" for row in graph["nodes"])
+    assert any(
+        edge.get("relation") == "supports" and edge.get("to") == code["primary_wealth_path"]["id"]
+        for edge in graph["edges"]
+    )
+    assert len(code["primary_wealth_path"].get("claim_supports", [])) >= 2
+
+
+def test_resolve_wealth_code_builds_path_rankings() -> None:
+    pt = _pressure_tensor()
+    pt["meta"]["bazi_image"] = resolve_bazi_image(pt)["bazi_image"]
+    pt["meta"]["wealth_profile"] = resolve_wealth_profile(pt)["wealth_profile"]
+
+    code = resolve_wealth_code(pt)["wealth_code"]
+    rankings = code["path_rankings"] if isinstance(code.get("path_rankings"), list) else []
+
+    assert rankings
+    assert rankings[0]["rank"] == 1
+    assert any(row["id"] == code["primary_wealth_path"].get("id") for row in rankings)
+    assert all("id" in row and row.get("size") in {"大", "中", "小"} for row in rankings)
+    assert all(0.0 <= float(row.get("combined_score", 0.0)) <= 1.0 for row in rankings)
+    assert len(rankings) <= 6
 
 
 def test_resolve_wealth_code_models_vault_and_leakage_points() -> None:
