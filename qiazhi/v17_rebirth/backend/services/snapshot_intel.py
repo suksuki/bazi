@@ -20,6 +20,8 @@ _SNAPSHOT_PUBLIC_META_KEYS = (
     "xiangfa_theme",
     "macro_theme",
     "wealth_profile",
+    "wealth_assertion_preview",
+    "wealth_timeline_preview",
 )
 
 

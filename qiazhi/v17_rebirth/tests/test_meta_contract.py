@@ -13,6 +13,8 @@ def test_meta_contract_splits_public_and_solver_trace_keys() -> None:
             "algorithm_execution_trace": {"stages": [{"stage": "geometry_built"}]},
             "god_ring_authority": {"use_gods": ["食神"]},
             "wealth_profile": {"contract": "v17.topic.wealth_profile.v1"},
+            "wealth_timeline_preview": {"contract": "v17.topic.wealth_timeline.v1"},
+            "topic_prediction_audits": [{"kind": "timeline_preview"}],
             "relation_formation_summary": [{"family_key": "sanhe"}],
             "plugin_claims": [{"claim_id": "c1"}],
             "knowledge_snapshot": {"claim_history": {}},
@@ -25,13 +27,16 @@ def test_meta_contract_splits_public_and_solver_trace_keys() -> None:
     assert "algorithm_execution_audit" in contract["public_meta_keys"]
     assert "god_ring_authority" in contract["public_meta_keys"]
     assert "wealth_profile" in contract["public_meta_keys"]
+    assert "wealth_timeline_preview" in contract["public_meta_keys"]
     assert "relation_formation_summary" in contract["public_meta_keys"]
+    assert "topic_prediction_audits" in contract["solver_trace_keys"]
     assert "algorithm_execution_trace" in contract["solver_trace_keys"]
     assert "plugin_claims" in contract["solver_trace_keys"]
     assert "algorithm_execution_audit" in contract["learning_signal_keys"]
     assert "algorithm_execution_policy" in contract["learning_signal_keys"]
     assert "knowledge_snapshot" in contract["learning_signal_keys"]
     assert "wealth_profile" in contract["learning_signal_keys"]
+    assert "wealth_timeline_preview" in contract["learning_signal_keys"]
     assert contract["boundary"]["solver_trace_meta"]
 
 

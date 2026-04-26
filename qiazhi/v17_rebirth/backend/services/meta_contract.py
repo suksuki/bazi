@@ -20,6 +20,8 @@ PUBLIC_META_KEYS: tuple[str, ...] = (
     "xiangfa_theme",
     "macro_theme",
     "wealth_profile",
+    "wealth_assertion_preview",
+    "wealth_timeline_preview",
     "plugin_execution_status",
     "plugin_governance_manifest",
     "decision_bucket_contract",
@@ -39,6 +41,8 @@ SOLVER_TRACE_KEYS: tuple[str, ...] = (
     "plugin_recompute_contributions",
     "plugin_auto_ratio_totals",
     "plugin_auto_settlement_signatures",
+    "topic_assertion_audits",
+    "topic_prediction_audits",
     "flow_topology",
     "clash_stress_map",
 )
@@ -58,6 +62,7 @@ LEARNING_SIGNAL_KEYS: tuple[str, ...] = (
     "climate_modifier_layer",
     "macro_theme",
     "wealth_profile",
+    "wealth_timeline_preview",
 )
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BriefcaseBusiness, ChevronDown, FileSearch, Sparkles } from "lucide-react";
+import { BriefcaseBusiness, CalendarRange, ChevronDown, FileSearch, Sparkles, TrendingUp } from "lucide-react";
 
 import { jsonPostInit, requestJson } from "@/lib/apiClient";
 import type { AppLanguage } from "@/lib/i18n";
@@ -21,6 +21,10 @@ function asNumberValue(value: unknown, fallback = 0): number {
 
 function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
+}
+
+function asRecordList(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value.map(asLooseRecord).filter((row) => Object.keys(row).length > 0) : [];
 }
 
 function percentLabel(value: unknown): string {
@@ -64,6 +68,33 @@ function wealthResultReasonLabel(value: unknown, ui: LocalizeText): string {
   return reason;
 }
 
+function localizedTimelineStance(value: unknown, ui: LocalizeText): string {
+  const key = String(value || "").trim();
+  if (key === "opportunity_with_pressure") return ui("机会带压", "Opportunity with pressure", "기회와 압박");
+  if (key === "opportunity_period") return ui("机会大运", "Opportunity decade", "기회 대운");
+  if (key === "pressure_period") return ui("压力大运", "Pressure decade", "압박 대운");
+  if (key === "conversion_period") return ui("转化大运", "Conversion decade", "전환 대운");
+  if (key === "steady_observation") return ui("稳态观察", "Steady watch", "안정 관찰");
+  return ui("待推演", "Pending", "대기");
+}
+
+function localizedAttentionType(value: unknown, ui: LocalizeText): string {
+  const key = String(value || "").trim();
+  if (key === "opportunity_with_risk") return ui("机会与风险", "Opportunity + risk", "기회와 위험");
+  if (key === "opportunity") return ui("机会窗口", "Opportunity", "기회");
+  if (key === "risk_watch") return ui("风险关注", "Risk watch", "위험 관찰");
+  if (key === "conversion_watch") return ui("转化关注", "Conversion", "전환 관찰");
+  if (key === "steady_watch") return ui("稳态观察", "Steady", "안정 관찰");
+  return ui("关注", "Watch", "관찰");
+}
+
+function attentionToneClass(level: unknown): string {
+  const key = String(level || "").trim();
+  if (key === "high") return "border-amber-300/35 bg-amber-400/10 text-amber-50";
+  if (key === "medium") return "border-cyan-300/25 bg-cyan-400/10 text-cyan-50";
+  return "border-white/10 bg-white/[0.035] text-zinc-200";
+}
+
 function shortPreviewTime(value: unknown): string {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -85,6 +116,7 @@ export function V17_WealthAssertionPreviewPanel({
   resetKey,
   wealthProfile,
   initialPreview,
+  initialTimeline,
   canRequest,
   physicsReady,
 }: {
@@ -95,14 +127,18 @@ export function V17_WealthAssertionPreviewPanel({
   resetKey: string;
   wealthProfile: Record<string, unknown>;
   initialPreview: Record<string, unknown>;
+  initialTimeline: Record<string, unknown>;
   canRequest: boolean;
   physicsReady: boolean;
 }) {
   const [previewOverride, setPreviewOverride] = useState<{ resetKey: string; preview: Record<string, unknown> } | null>(null);
+  const [timelineOverride, setTimelineOverride] = useState<{ resetKey: string; preview: Record<string, unknown> } | null>(null);
   const [pendingMode, setPendingMode] = useState<WealthPreviewMode>("");
+  const [timelinePending, setTimelinePending] = useState(false);
   const [errorState, setErrorState] = useState<{ resetKey: string; message: string } | null>(null);
 
   const preview = previewOverride?.resetKey === resetKey ? previewOverride.preview : initialPreview;
+  const timeline = timelineOverride?.resetKey === resetKey ? timelineOverride.preview : initialTimeline;
   const error = errorState?.resetKey === resetKey ? errorState.message : "";
   const previewProfile = asLooseRecord(preview.wealth_profile);
   const profile = Object.keys(wealthProfile).length ? wealthProfile : previewProfile;
@@ -116,12 +152,20 @@ export function V17_WealthAssertionPreviewPanel({
   const evidence = asStringList(profile.evidence).slice(0, 4);
   const llmResult = asLooseRecord(preview.llm_result);
   const promptContract = asLooseRecord(preview.prompt_contract);
+  const luckWindow = asLooseRecord(timeline.luck_window);
+  const currentFlow = asLooseRecord(timeline.current_flow);
+  const topAttentionYears = asRecordList(timeline.top_attention_years).slice(0, 4);
+  const decadeYears = asRecordList(timeline.decade_years).slice(0, 10);
   const reply = String(llmResult.reply || "").trim();
   const promptText = String(preview.prompt_text || "").trim();
   const previewCreatedAt = String(preview.created_at || "").trim();
+  const timelineCreatedAt = String(timeline.created_at || "").trim();
   const hasProfile = Object.keys(profile).length > 0;
   const hasPreview = Object.keys(preview).length > 0;
+  const hasTimeline = Object.keys(timeline).length > 0;
+  const timelineReady = Boolean(timeline.timeline_ready);
   const canSubmit = canRequest && physicsReady && Boolean(sessionId) && !pendingMode;
+  const canTimelineSubmit = canRequest && physicsReady && Boolean(sessionId) && !timelinePending;
   const score = percentLabel(profile.score);
   const confidence = percentLabel(profile.confidence);
   const risk = percentLabel(profile.risk);
@@ -158,6 +202,37 @@ export function V17_WealthAssertionPreviewPanel({
       return;
     }
     setPreviewOverride({ resetKey, preview: nextPreview });
+  }
+
+  async function requestTimeline() {
+    if (!canRequest) {
+      setErrorState({ resetKey, message: ui("需要管理员权限。", "Admin access required.", "관리자 권한이 필요합니다.") });
+      return;
+    }
+    if (!sessionId || !physicsReady) {
+      setErrorState({ resetKey, message: ui("等待命盘快照。", "Waiting for chart snapshot.", "명반 스냅샷 대기 중입니다.") });
+      return;
+    }
+    setTimelinePending(true);
+    setErrorState(null);
+    const { data, ok, error: requestError } = await requestJson<Record<string, unknown>>(
+      "/api/v17-admin/topic/wealth-timeline-preview",
+      jsonPostInit({
+        v17_origin: "v17_rebirth",
+        session_id: sessionId,
+        persist: true,
+      }),
+    );
+    setTimelinePending(false);
+    const nextPreview = asLooseRecord(data.preview);
+    if (!ok || data.ok === false || !Object.keys(nextPreview).length) {
+      setErrorState({
+        resetKey,
+        message: requestError || String(data.detail || "") || ui("财富时间窗推演失败。", "Failed to build wealth timeline.", "재물 시간 창 추론에 실패했습니다."),
+      });
+      return;
+    }
+    setTimelineOverride({ resetKey, preview: nextPreview });
   }
 
   return (
@@ -291,6 +366,174 @@ export function V17_WealthAssertionPreviewPanel({
         </p>
       )}
 
+      {hasProfile ? (
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">
+                  <CalendarRange className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300">
+                    {ui("大运/流年", "Luck / Flow", "대운 / 세운")}
+                  </p>
+                  <h4 className="mt-0.5 text-sm font-semibold text-zinc-50">
+                    {ui("财富时间窗", "Wealth Timeline", "재물 시간 창")}
+                  </h4>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {timelineCreatedAt ? (
+                <span className="rounded-full border border-white/10 bg-white/[0.035] px-2 py-1 text-[10px] text-zinc-400">
+                  {shortPreviewTime(timelineCreatedAt)}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[10px] text-cyan-100">
+                {timelineReady ? ui("已推演", "Ready", "준비됨") : ui("待推演", "Pending", "대기")}
+              </span>
+              {luckWindow.stance ? (
+                <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] text-amber-100">
+                  {localizedTimelineStance(luckWindow.stance, ui)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {timelineReady ? (
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-3 xl:grid-cols-[0.85fr_1.15fr]">
+                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] text-zinc-500">{ui("当前大运", "Current luck decade", "현재 대운")}</p>
+                      <p className="mt-1 text-sm font-semibold text-zinc-100">
+                        {String(luckWindow.luck_pillar || "—")}
+                        <span className="ml-2 text-[11px] font-medium text-cyan-200">
+                          {String(luckWindow.start_year || "—")}-{String(luckWindow.end_year || "—")}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="text-right text-[11px] text-zinc-400">
+                      <p>{ui("机会", "Signal", "신호")} {percentLabel(luckWindow.score)}</p>
+                      <p>{ui("风险", "Risk", "위험")} {percentLabel(luckWindow.risk)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 line-clamp-3 text-[12px] leading-5 text-zinc-300">
+                    {term(String(luckWindow.summary || ""))}
+                  </p>
+                  {asStringList(luckWindow.reasons).length ? (
+                    <div className="mt-2 space-y-1">
+                      {asStringList(luckWindow.reasons).slice(0, 2).map((item) => (
+                        <p key={`luck_reason_${item}`} className="line-clamp-2 text-[11px] leading-5 text-zinc-500">
+                          {term(item)}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] text-zinc-500">{ui("本年流年", "Current flow year", "올해 세운")}</p>
+                      <p className="mt-1 text-sm font-semibold text-zinc-100">
+                        {String(currentFlow.year || "—")} {String(currentFlow.flow_pillar || "—")}
+                      </p>
+                    </div>
+                    <span className={`rounded-full border px-2 py-1 text-[10px] ${attentionToneClass(currentFlow.attention_level)}`}>
+                      {localizedAttentionType(currentFlow.attention_type, ui)}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-[minmax(0,1fr)_56px] items-center gap-2">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-cyan-300" style={{ width: `${Math.max(6, Math.min(100, asNumberValue(currentFlow.score) * 100))}%` }} />
+                    </div>
+                    <span className="text-right text-[11px] text-cyan-100">{percentLabel(currentFlow.score)}</span>
+                  </div>
+                  <p className="mt-2 text-[12px] font-semibold text-zinc-100">
+                    {term(String(currentFlow.focus || ui("稳态观察", "Steady watch", "안정 관찰")))}
+                  </p>
+                  {asStringList(currentFlow.reasons).slice(0, 2).map((item) => (
+                    <p key={`current_flow_${item}`} className="mt-1 line-clamp-2 text-[11px] leading-5 text-zinc-500">
+                      {term(item)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {topAttentionYears.length ? (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-amber-200" />
+                    <p className="text-[12px] font-semibold text-amber-50">
+                      {ui("十年关注流年", "Decade watch years", "10년 주목 세운")}
+                    </p>
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    {topAttentionYears.map((row) => {
+                      const key = `wealth_timeline_${String(row.year || "")}_${String(row.flow_pillar || "")}`;
+                      return (
+                        <div key={key} className={`min-w-0 rounded-lg border p-3 ${attentionToneClass(row.attention_level)}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold">
+                                {String(row.year || "—")} {String(row.flow_pillar || "—")}
+                              </p>
+                              <p className="mt-0.5 truncate text-[11px] opacity-80">
+                                {term(String(row.focus || ""))}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[11px] opacity-80">{percentLabel(row.score)}</span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {asStringList(row.tags).slice(0, 3).map((tag) => (
+                              <span key={`${key}_${tag}`} className="rounded-full border border-current/20 bg-black/15 px-1.5 py-0.5 text-[10px]">
+                                {term(tag)}
+                              </span>
+                            ))}
+                          </div>
+                          {asStringList(row.reasons).slice(0, 1).map((item) => (
+                            <p key={`${key}_${item}`} className="mt-2 line-clamp-2 text-[11px] leading-5 opacity-80">
+                              {term(item)}
+                            </p>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {decadeYears.length ? (
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] text-zinc-400">
+                    <span>{ui("完整十年序列", "Full decade sequence", "전체 10년 흐름")}</span>
+                    <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                    {decadeYears.map((row) => (
+                      <div key={`decade_${String(row.year || "")}_${String(row.flow_pillar || "")}`} className="grid grid-cols-[72px_minmax(0,1fr)_52px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.025] px-2 py-1.5 text-[11px] text-zinc-300">
+                        <span className="font-semibold text-zinc-100">{String(row.year || "—")} {String(row.flow_pillar || "—")}</span>
+                        <span className="truncate">{term(String(row.focus || ""))}</span>
+                        <span className="text-right text-cyan-100">{percentLabel(row.score)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-3 text-[12px] leading-5 text-zinc-500">
+              {hasTimeline
+                ? ui("时间窗材料不足，等待服务端快照补齐。", "Timeline material is incomplete.", "시간 창 자료가 부족합니다.")
+                : ui("可基于当前财富画像推演本步大运与十年流年关注窗口。", "Build the current luck decade and flow-year watch list from the wealth profile.", "현재 재물 프로필로 대운과 10년 세운 주목 창을 추론할 수 있습니다.")}
+            </p>
+          )}
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5 text-[10px] text-zinc-500">
           {previewCreatedAt ? (
@@ -304,7 +547,16 @@ export function V17_WealthAssertionPreviewPanel({
             </span>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:justify-end">
+          <button
+            type="button"
+            disabled={!canTimelineSubmit}
+            onClick={() => void requestTimeline()}
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-[12px] font-semibold text-cyan-50 transition hover:border-cyan-200/55 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CalendarRange className="h-3.5 w-3.5" />
+            {timelinePending ? ui("推演中", "Building", "추론 중") : ui("推演十年", "Timeline", "10년 추론")}
+          </button>
           <button
             type="button"
             disabled={!canSubmit}

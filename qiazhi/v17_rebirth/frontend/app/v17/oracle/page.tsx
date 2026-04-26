@@ -2538,6 +2538,10 @@ export default function OraclePage() {
     () => asLooseRecord(meta.wealth_assertion_preview),
     [meta.wealth_assertion_preview],
   );
+  const wealthTimelinePreview = useMemo(
+    () => asLooseRecord(meta.wealth_timeline_preview),
+    [meta.wealth_timeline_preview],
+  );
   const pluginsPayload = asLooseRecord(payload.plugins);
   const pluginRows = Array.isArray(pluginsPayload.rows) ? pluginsPayload.rows as Array<Record<string, unknown>> : [];
   const pluginClaims = Array.isArray(pluginsPayload.claims)
@@ -3257,9 +3261,10 @@ export default function OraclePage() {
                     term={term}
                     language={language}
                     sessionId={s.sessionId || "default"}
-                    resetKey={`${physicsFingerprint || s.sessionId || "pending"}:${String(wealthAssertionPreview.created_at || "")}`}
+                    resetKey={`${physicsFingerprint || s.sessionId || "pending"}:${String(wealthAssertionPreview.created_at || "")}:${String(wealthTimelinePreview.created_at || "")}`}
                     wealthProfile={wealthProfile}
                     initialPreview={wealthAssertionPreview}
+                    initialTimeline={wealthTimelinePreview}
                     canRequest={canAccessAdmin}
                     physicsReady={Boolean(s.physicsSnapshot && s.sessionId)}
                   />

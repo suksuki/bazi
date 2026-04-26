@@ -29,6 +29,11 @@ from v17_rebirth.backend.services.wealth_assertion_preview import (
     build_wealth_assertion_preview,
     summarize_wealth_assertion_preview,
 )
+from v17_rebirth.backend.services.wealth_timeline_preview import (
+    attach_wealth_timeline_preview_meta,
+    build_wealth_timeline_preview,
+    summarize_wealth_timeline_preview,
+)
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.infrastructure.state_backend import get_state_backend
@@ -980,6 +985,62 @@ async def get_wealth_assertion_preview(
             include_reply=bool(include_reply),
         ),
         "topic_assertion_audits": audits,
+    }
+
+
+@router.post("/v17/admin/topic/wealth-timeline-preview")
+async def preview_wealth_timeline(payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload if isinstance(payload, dict) else {})
+    p = payload if isinstance(payload, dict) else {}
+    session_id = str(p.get("session_id") or "").strip() or "default"
+    persist = bool(p.get("persist", True))
+    wealth_profile = p.get("wealth_profile") if isinstance(p.get("wealth_profile"), dict) else None
+
+    backend = get_state_backend()
+    physics = await backend.get_physics(session_id)
+    if not isinstance(physics, dict) or not physics:
+        raise HTTPException(
+            status_code=404,
+            detail="physics not found; provide session_id with server physics",
+        )
+
+    preview = build_wealth_timeline_preview(
+        physics_tensor=physics,
+        wealth_profile=wealth_profile,
+    )
+    if persist:
+        meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+        physics["meta"] = attach_wealth_timeline_preview_meta(meta, preview)
+        await backend.set_physics(session_id, physics)
+    return {
+        "ok": bool(preview.get("timeline_ready")),
+        "session_id": session_id,
+        "persisted": bool(persist),
+        "preview": preview,
+    }
+
+
+@router.get("/v17/admin/topic/wealth-timeline-preview")
+async def get_wealth_timeline_preview(
+    session_id: str = Query(default="default"),
+    include_rows: bool = Query(default=True),
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    resolved_session_id = str(session_id or "").strip() or "default"
+    physics = await get_state_backend().get_physics(resolved_session_id)
+    if not isinstance(physics, dict) or not physics:
+        raise HTTPException(status_code=404, detail="physics not found")
+    meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+    preview = meta.get("wealth_timeline_preview") if isinstance(meta.get("wealth_timeline_preview"), dict) else {}
+    audits = meta.get("topic_prediction_audits") if isinstance(meta.get("topic_prediction_audits"), list) else []
+    return {
+        "ok": True,
+        "session_id": resolved_session_id,
+        "preview_present": bool(preview),
+        "preview": summarize_wealth_timeline_preview(preview, include_rows=bool(include_rows)),
+        "topic_prediction_audits": audits,
     }
 
 
