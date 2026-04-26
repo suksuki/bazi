@@ -10,6 +10,7 @@ def test_new_plugin_families_are_discoverable() -> None:
     assert "l0.foundation.rooted_stems.v1" in plugin_ids
     assert "l0.foundation.exposed_hidden_stems.v1" in plugin_ids
     assert "l0.foundation.month_command.v1" in plugin_ids
+    assert "v17.symbolic.bazi_image.v1" in plugin_ids
     assert "l1.physics.op_branch_sanhui" in plugin_ids
     assert "l1.physics.op_branch_liuchong" in plugin_ids
     assert "classical.blind.work_axis.v1" in plugin_ids
@@ -156,6 +157,7 @@ def test_new_plugin_families_emit_facts_on_structured_tensor() -> None:
     fact_plugins = {str(f.plugin_id or "") for f in facts}
 
     assert "l0.foundation.hidden_stems.v1" in fact_plugins
+    assert "v17.symbolic.bazi_image.v1" in fact_plugins
     assert "l1.physics.op_branch_liuchong" in fact_plugins
     assert "classical.blind.work_axis.v1" in fact_plugins
     assert "classical.blind.timing_window.v1" in fact_plugins

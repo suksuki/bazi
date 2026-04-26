@@ -359,6 +359,7 @@ def build_algorithm_execution_audit(trace_value: Any) -> dict[str, Any]:
         "blind_theme_present": _flag("blind_theme_present"),
         "climate_theme_present": _flag("climate_theme_present"),
         "xiangfa_theme_present": _flag("xiangfa_theme_present"),
+        "bazi_image_present": _flag("bazi_image_present"),
         "macro_theme_present": _flag("macro_theme_present"),
         "wealth_profile_present": _flag("wealth_profile_present"),
         "authority_layer_protocol_present": authority_gate_present,

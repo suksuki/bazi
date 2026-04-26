@@ -81,6 +81,10 @@ _DISPLAY_OVERRIDES: Dict[str, Dict[str, str]] = {
         "display_name": "财富画像解码器",
         "definition": "从十神、体用、格局、盲派、象法、调候和关系动力中提取财富来源、可用状态、承载与风险。",
     },
+    "v17.symbolic.bazi_image.v1": {
+        "display_name": "八字象义底座",
+        "definition": "把天干、地支、十神、宫位、藏透和库象转成只读象义事实，供财富、事业、感情等专题解码器消费。",
+    },
     "l1.physics.op_geography": {
         "display_name": "地理势场",
         "definition": "识别地支空间位势与分布结构对当前命局的势场影响。",

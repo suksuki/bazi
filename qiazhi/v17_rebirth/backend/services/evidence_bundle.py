@@ -29,6 +29,7 @@ _DETAIL_KEYS: tuple[str, ...] = (
     "projection_share",
     "origin_type",
     "manifestation_state",
+    "bazi_image",
     "wealth_profile",
 )
 
@@ -47,6 +48,7 @@ _ROW_META_KEYS: tuple[str, ...] = (
     "macro_topic_label",
     "topic_profile",
     "topic_profile_label",
+    "symbolic_layer",
     "origin_type",
     "manifestation_state",
     "pattern_confidence",
@@ -129,6 +131,8 @@ def _evidence_type(plugin_id: str, meta: Mapping[str, Any]) -> str:
         return "climate"
     if "xiangfa" in pid:
         return "semantic"
+    if "symbolic" in pid or "symbolic" in claim_type:
+        return "symbolic"
     if "macro" in pid or "macro" in claim_type:
         return "macro"
     if "topic_profile" in claim_type or "modern.topic." in pid:

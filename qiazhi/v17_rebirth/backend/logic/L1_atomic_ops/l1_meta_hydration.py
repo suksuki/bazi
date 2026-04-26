@@ -27,6 +27,7 @@ from v17_rebirth.backend.logic.L1_atomic_ops.stem_fusion_geometry import (
     branches_and_stems_from_runtime_pillars,
     detect_stem_fusion_cases,
 )
+from v17_rebirth.backend.logic.L0_physics_fields.bazi_image_core import normalize_bazi_image_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import normalize_blind_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
@@ -666,6 +667,20 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
                 current_conf = float(current_xiangfa.get("confidence") or -1.0)
                 if incoming_conf >= current_conf:
                     meta["xiangfa_theme"] = incoming_xiangfa
+            if isinstance(f.meta, dict) and isinstance(f.meta.get("bazi_image"), dict):
+                incoming_bazi_image = normalize_bazi_image_meta(f.meta.get("bazi_image"))
+                incoming_conf = float(
+                    (f.meta.get("bazi_image") or {}).get("confidence")
+                    or f.meta.get("confidence")
+                    or 0.0
+                )
+                current_conf = (
+                    float((meta.get("bazi_image") or {}).get("confidence") or -1.0)
+                    if isinstance(meta.get("bazi_image"), dict)
+                    else -1.0
+                )
+                if incoming_bazi_image and incoming_conf >= current_conf:
+                    meta["bazi_image"] = incoming_bazi_image
             if isinstance(f.meta, dict) and isinstance(f.meta.get("macro_theme"), dict):
                 incoming_macro = normalize_macro_theme_meta(f.meta.get("macro_theme"))
                 current_macro = normalize_macro_theme_meta(meta.get("macro_theme"))
@@ -742,6 +757,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "blind_theme_present": isinstance(meta.get("blind_theme"), dict) and bool(meta.get("blind_theme")),
             "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
             "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
+            "bazi_image_present": isinstance(meta.get("bazi_image"), dict) and bool(meta.get("bazi_image")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
             "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
         },
@@ -971,6 +987,7 @@ def hydrate_v17_physics_tensor(pt: Dict[str, Any]) -> None:
             "blind_theme_present": isinstance(meta.get("blind_theme"), dict) and bool(meta.get("blind_theme")),
             "climate_theme_present": isinstance(meta.get("climate_theme"), dict) and bool(meta.get("climate_theme")),
             "xiangfa_theme_present": isinstance(meta.get("xiangfa_theme"), dict) and bool(meta.get("xiangfa_theme")),
+            "bazi_image_present": isinstance(meta.get("bazi_image"), dict) and bool(meta.get("bazi_image")),
             "macro_theme_present": isinstance(meta.get("macro_theme"), dict) and bool(meta.get("macro_theme")),
             "wealth_profile_present": isinstance(meta.get("wealth_profile"), dict) and bool(meta.get("wealth_profile")),
             "authority_layer_protocol_present": isinstance((meta.get("god_ring_authority") or {}).get("authority_layer_protocol"), dict),

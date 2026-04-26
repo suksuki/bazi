@@ -18,6 +18,7 @@ _SNAPSHOT_PUBLIC_META_KEYS = (
     "blind_theme",
     "climate_theme",
     "xiangfa_theme",
+    "bazi_image",
     "macro_theme",
     "wealth_profile",
     "wealth_assertion_preview",

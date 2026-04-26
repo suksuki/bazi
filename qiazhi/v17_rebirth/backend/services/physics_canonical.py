@@ -12,6 +12,7 @@ from v17_rebirth.backend.logic.climate_field_protocol import climate_field_promp
 from v17_rebirth.backend.logic.L2_structure_patterns.blind_school_core import normalize_blind_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.climate_theme_core import normalize_climate_theme_meta
 from v17_rebirth.backend.logic.L2_structure_patterns.xiangfa_theme_core import normalize_xiangfa_theme_meta
+from v17_rebirth.backend.logic.L0_physics_fields.bazi_image_core import normalize_bazi_image_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.macro_theme_core import normalize_macro_theme_meta
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import normalize_wealth_profile_meta
 from v17_rebirth.backend.logic.runtime_field_protocol import runtime_field_prompt_lines
@@ -318,6 +319,33 @@ def _macro_theme_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     digest = str(macro_theme.get("prompt_digest") or "").strip()
     if digest:
         rows.append("宏观象主线：" + digest)
+    return rows
+
+
+def _bazi_image_prompt_lines(pt: Dict[str, Any]) -> List[str]:
+    if not isinstance(pt, dict):
+        return []
+    meta = _meta_rows(pt)
+    bazi_image = normalize_bazi_image_meta(meta.get("bazi_image"))
+    if not bazi_image:
+        return []
+    rows = [
+        "八字象义合同：bazi_image 是 L0 象义事实层，只说明天干、地支、十神、宫位、藏透和库象的材质；不得据此直接生成吉凶断语、体用裁决或参数修改。",
+    ]
+    day_master = str(bazi_image.get("day_master_stem") or "").strip()
+    digest = str(bazi_image.get("prompt_digest") or "").strip()
+    if day_master or digest:
+        rows.append("八字象义摘要：" + "；".join(item for item in [f"日主{day_master}" if day_master else "", digest] if item))
+    facts = bazi_image.get("symbolic_facts") if isinstance(bazi_image.get("symbolic_facts"), list) else []
+    fact_bits: List[str] = []
+    for fact in facts[:4]:
+        if not isinstance(fact, dict):
+            continue
+        meaning = str(fact.get("plain_meaning") or "").strip()
+        if meaning:
+            fact_bits.append(meaning[:90])
+    if fact_bits:
+        rows.append("象义事实：" + "；".join(fact_bits))
     return rows
 
 
@@ -775,6 +803,7 @@ class PhysicsCanonicalService:
         rows.extend(_climate_field_prompt_lines(physics_tensor))
         rows.extend(_climate_theme_prompt_lines(physics_tensor))
         rows.extend(_xiangfa_theme_prompt_lines(physics_tensor))
+        rows.extend(_bazi_image_prompt_lines(physics_tensor))
         rows.extend(_macro_theme_prompt_lines(physics_tensor))
         rows.extend(_wealth_profile_prompt_lines(physics_tensor))
         rows.extend(_authority_axis_prompt_lines(physics_tensor))

@@ -59,6 +59,19 @@ def classify_plugin_governance(
     manifest = manifest if isinstance(manifest, dict) else {}
     domain = str(manifest.get("Domain") or manifest.get("domain") or "").strip().lower()
 
+    if pid.startswith("v17.symbolic."):
+        return PluginGovernanceProfile(
+            plugin_id=pid,
+            governance_class="symbolic_foundation",
+            authority_level="level_0_symbolic",
+            output_contract="symbolic_fact_contract",
+            metadata_scope="public_symbolic_contract",
+            learning_family="l0_symbolic_basis",
+            can_emit_physical_proposal=False,
+            can_enter_authority=False,
+            notes=("Symbolic L0 exposes auditable image facts; it cannot settle body-use, authority, or runtime parameters.",),
+        ).to_dict()
+
     if pid.startswith("l0.foundation.") or layer_tag == "L0":
         return PluginGovernanceProfile(
             plugin_id=pid,

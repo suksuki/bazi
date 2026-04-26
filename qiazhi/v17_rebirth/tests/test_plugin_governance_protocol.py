@@ -34,6 +34,11 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
         layer="L3",
         causal_tier=2,
     )
+    symbolic = classify_plugin_governance(
+        plugin_id="v17.symbolic.bazi_image.v1",
+        layer="L0",
+        causal_tier=5,
+    )
 
     assert ziping["authority_level"] == "level_1_hard"
     assert ziping["can_enter_authority"] is True
@@ -59,6 +64,10 @@ def test_plugin_governance_classifies_core_authority_boundaries() -> None:
     assert topic["can_enter_authority"] is False
     assert topic["output_contract"] == "topic_profile"
 
+    assert symbolic["governance_class"] == "symbolic_foundation"
+    assert symbolic["can_enter_authority"] is False
+    assert symbolic["output_contract"] == "symbolic_fact_contract"
+
 
 def test_admin_registry_exposes_governance_profile() -> None:
     rows = registry_rows_for_admin()
@@ -71,6 +80,7 @@ def test_admin_registry_exposes_governance_profile() -> None:
     ziping = by_id["classical.ziping.god_ring_resolver.v1"]
     blind = by_id["classical.blind.work_axis.v1"]
     xiangfa = by_id["classical.xiangfa.semantic_mapping.v1"]
+    symbolic = by_id["v17.symbolic.bazi_image.v1"]
     wealth_profile = by_id["modern.topic.wealth_profile.v1"]
 
     assert ziping["governance_profile"]["protocol"] == "v17.plugin_governance.v1"
@@ -85,3 +95,7 @@ def test_admin_registry_exposes_governance_profile() -> None:
 
     assert wealth_profile["governance_profile"]["governance_class"] == "topic_decoder"
     assert wealth_profile["learning_family"] == "topic_decoder"
+
+    assert symbolic["display_name"] == "八字象义底座"
+    assert symbolic["governance_profile"]["governance_class"] == "symbolic_foundation"
+    assert symbolic["learning_family"] == "l0_symbolic_basis"
