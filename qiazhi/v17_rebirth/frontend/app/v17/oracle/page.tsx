@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -29,6 +29,7 @@ import { V17_SixPillarsPanel } from "@/components/V17_SixPillarsPanel";
 import { V17_SurfaceTabs } from "@/components/V17_SurfaceTabs";
 import { V17_FeatureOutlet } from "@/components/V17_FeatureOutlet";
 import { V17_TracePanel } from "@/components/V17_TracePanel";
+import { V17_WealthAssertionPreviewPanel } from "@/components/V17_WealthAssertionPreviewPanel";
 import type { OracleSurface } from "@/lib/accessControl";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
 import { ORACLE_FEATURE_MODULES, resolveFeatureTabs } from "@/lib/featureRegistry";
@@ -2481,6 +2482,7 @@ export default function OraclePage() {
   const canAccessAuxiliarySurface = access.canAccessOracleSurface("auxiliary");
   const canAccessTraceSurface = access.canAccessOracleSurface("trace");
   const canManageUsers = access.canManageUsers;
+  const canAccessAdmin = access.canAccessAdmin;
   const canUseProfessionalOracle = access.canUseProfessionalOracle;
   const canReadEvidence = access.canReadEvidence;
 
@@ -2531,6 +2533,11 @@ export default function OraclePage() {
       : undefined;
   const allRows = Array.isArray(payload.all_decisions) ? payload.all_decisions as Array<Record<string, unknown>> : [];
   const meta = payload.meta && typeof payload.meta === "object" ? payload.meta as Record<string, unknown> : {};
+  const wealthProfile = useMemo(() => asLooseRecord(meta.wealth_profile), [meta.wealth_profile]);
+  const wealthAssertionPreview = useMemo(
+    () => asLooseRecord(meta.wealth_assertion_preview),
+    [meta.wealth_assertion_preview],
+  );
   const pluginsPayload = asLooseRecord(payload.plugins);
   const pluginRows = Array.isArray(pluginsPayload.rows) ? pluginsPayload.rows as Array<Record<string, unknown>> : [];
   const pluginClaims = Array.isArray(pluginsPayload.claims)
@@ -3245,6 +3252,17 @@ export default function OraclePage() {
                       ) : null}
                     </button>
                   </div>
+                  <V17_WealthAssertionPreviewPanel
+                    ui={ui}
+                    term={term}
+                    language={language}
+                    sessionId={s.sessionId || "default"}
+                    resetKey={`${physicsFingerprint || s.sessionId || "pending"}:${String(wealthAssertionPreview.created_at || "")}`}
+                    wealthProfile={wealthProfile}
+                    initialPreview={wealthAssertionPreview}
+                    canRequest={canAccessAdmin}
+                    physicsReady={Boolean(s.physicsSnapshot && s.sessionId)}
+                  />
                   {canUseProfessionalOracle ? (
                     <V17_DecisionInbox
                       frames={s.frames}
