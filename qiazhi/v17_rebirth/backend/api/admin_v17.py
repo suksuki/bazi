@@ -24,6 +24,11 @@ from v17_rebirth.backend.services.llm_conflict_arbiter import (
     build_llm_conflict_prompt,
     parse_llm_conflict_reply,
 )
+from v17_rebirth.backend.services.wealth_assertion_preview import (
+    attach_wealth_assertion_preview_meta,
+    build_wealth_assertion_preview,
+    summarize_wealth_assertion_preview,
+)
 from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config, update_runtime_llm_config
 from v17_rebirth.backend.infrastructure.evolution_db import evolution_storage
 from v17_rebirth.infrastructure.state_backend import get_state_backend
@@ -908,6 +913,73 @@ async def resolve_plugin_conflict(payload: Dict[str, Any]) -> Dict[str, Any]:
         "arbiter": arbiter,
         "conflicts": updated_meta.get("plugin_conflicts", []),
         "conflict_resolutions": updated_meta.get("plugin_conflict_resolutions", []),
+    }
+
+
+@router.post("/v17/admin/topic/wealth-assertion-preview")
+async def preview_wealth_assertion(payload: Dict[str, Any]) -> Dict[str, Any]:
+    _ensure_v17_origin(payload if isinstance(payload, dict) else {})
+    p = payload if isinstance(payload, dict) else {}
+    session_id = str(p.get("session_id") or "").strip() or "default"
+    output_language = str(p.get("ui_lang") or p.get("output_language") or p.get("language") or "zh")
+    execute_llm = bool(p.get("execute_llm", True))
+    persist = bool(p.get("persist", True))
+    wealth_profile = p.get("wealth_profile") if isinstance(p.get("wealth_profile"), dict) else None
+
+    backend = get_state_backend()
+    physics: Dict[str, Any] = {}
+    if not wealth_profile:
+        physics = await backend.get_physics(session_id)
+        if not isinstance(physics, dict) or not physics:
+            raise HTTPException(
+                status_code=404,
+                detail="physics not found; provide session_id with server physics or wealth_profile",
+            )
+
+    preview = build_wealth_assertion_preview(
+        wealth_profile=wealth_profile,
+        physics_tensor=physics if physics else None,
+        output_language=output_language,
+        execute_llm=execute_llm,
+    )
+    if persist and physics:
+        meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+        physics["meta"] = attach_wealth_assertion_preview_meta(meta, preview)
+        await backend.set_physics(session_id, physics)
+    return {
+        "ok": bool(preview.get("profile_present")),
+        "session_id": session_id,
+        "persisted": bool(persist and physics),
+        "preview": preview,
+    }
+
+
+@router.get("/v17/admin/topic/wealth-assertion-preview")
+async def get_wealth_assertion_preview(
+    session_id: str = Query(default="default"),
+    include_prompt: bool = Query(default=False),
+    include_reply: bool = Query(default=True),
+    v17_origin: Optional[str] = Query(default=None),
+    v17_origin_header: Optional[str] = Header(default=None, alias="v17_origin"),
+) -> Dict[str, Any]:
+    _ensure_get_v17_origin(v17_origin=v17_origin, v17_origin_header=v17_origin_header)
+    resolved_session_id = str(session_id or "").strip() or "default"
+    physics = await get_state_backend().get_physics(resolved_session_id)
+    if not isinstance(physics, dict) or not physics:
+        raise HTTPException(status_code=404, detail="physics not found")
+    meta = physics.get("meta") if isinstance(physics.get("meta"), dict) else {}
+    preview = meta.get("wealth_assertion_preview") if isinstance(meta.get("wealth_assertion_preview"), dict) else {}
+    audits = meta.get("topic_assertion_audits") if isinstance(meta.get("topic_assertion_audits"), list) else []
+    return {
+        "ok": True,
+        "session_id": resolved_session_id,
+        "preview_present": bool(preview),
+        "preview": summarize_wealth_assertion_preview(
+            preview,
+            include_prompt=bool(include_prompt),
+            include_reply=bool(include_reply),
+        ),
+        "topic_assertion_audits": audits,
     }
 
 
